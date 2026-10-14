@@ -79,8 +79,9 @@ android {
     }
 
     packaging.resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/NOTICE.md", "META-INF/LICENSE.md")
-    // sherpa-onnx (eigene Weckwort-Phrase) bringt dieselbe ONNX Runtime mit wie „Hey Jarvis“ (beide 1.23.2): nur eine Kopie einpacken.
-    packaging.jniLibs.pickFirsts += listOf("**/libonnxruntime.so")
+    // sherpa-onnx (eigene Weckwort-Phrase) und „Hey Jarvis“ teilen EINE ONNX Runtime: die neueste von Microsoft
+    // (libs.versions.toml). Aus der sherpa-AAR ist ihre eigene libonnxruntime.so entfernt (libs/LIESMICH.md), damit
+    // nur diese eine geladen wird und der KleidiAI-Schalter in WeckwortErkenner für beide gilt.
 }
 
 kotlin {
@@ -119,7 +120,7 @@ dependencies {
     // Weckwort „Hey Jarvis“: Modelle von openWakeWord (assets/weckwort/), gerechnet mit ONNX Runtime.
     implementation(libs.onnxruntime.android)
     // Eigene Weckwort-Phrase: sherpa-onnx KeywordSpotter (Apache-2.0), Modell in assets/kws/ (Gigaspeech, englisch).
-    implementation(files("libs/sherpa-onnx-1.12.34.aar"))
+    implementation(files("libs/sherpa-onnx-1.13.8-ohne-onnxruntime.aar"))
 
     // Unit-Tests der Ablage ohne Gerät (org.json ersetzt die Android-Attrappe, MockWebServer für Downloads).
     testImplementation(libs.junit)

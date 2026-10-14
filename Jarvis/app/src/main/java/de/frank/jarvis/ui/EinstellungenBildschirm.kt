@@ -116,8 +116,11 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             val hoertZu by de.frank.jarvis.weckwort.Weckwort.hoertZu.collectAsState()
             val treffer by de.frank.jarvis.weckwort.Weckwort.letzter.collectAsState()
             val bereit = e.weckwortAn && vm.weckwortMikro
+            val aktivesWort by de.frank.jarvis.weckwort.Weckwort.aktivesWort.collectAsState()
+            // Das gewählte Weckwort, in allen Texten dieses Abschnitts.
+            val wort = if (e.weckwortArt == "phrase") e.weckwortPhrase else "Hey Jarvis"
             Zeile(
-                "Auf „Hey Jarvis“ hören",
+                "Auf „$wort“ hören",
                 when { !e.weckwortAn -> "Aus"; !vm.weckwortMikro -> "Mikrofon fehlt"; hoertZu -> "Hört zu"; else -> "Pausiert" },
                 when { !e.weckwortAn -> f.textLeise; !vm.weckwortMikro -> f.gefahr; else -> f.erfolg },
             )
@@ -126,7 +129,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Chip("Aus", aktiv = !e.weckwortAn) { vm.weckwortSchalten(false, activity) }
             }
             Text(
-                "Sag „Hey Jarvis“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
+                "Sag „$wort“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
                     "Erst nach 4,5 Sekunden Stille schickt er ab, du kannst also zwischendurch nachdenken. " +
                     "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
                     "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
@@ -146,7 +149,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             if (e.weckwortArt == "phrase") {
                 var phrase by rememberSaveable { mutableStateOf(e.weckwortPhrase) }
                 Text(
-                    "Aktiv: „${e.weckwortPhrase}“. Das Modell kennt nur englische Laute: Sprich die Phrase englisch aus. " +
+                    (if (e.weckwortAn && aktivesWort == "Hey Jarvis") "Die Phrase ließ sich nicht laden, Jarvis hört solange auf „Hey Jarvis“. " else "Aktiv: „${e.weckwortPhrase}“. ") +
+                        "Das Modell kennt nur englische Laute: Sprich die Phrase englisch aus. " +
                         "Drei Wörter mit verschiedenen Anfangslauten erkennt es am sichersten. Weckt sie schlecht auf, Empfindlichkeit auf Hoch oder zurück zu „Hey Jarvis“.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                 )
@@ -168,7 +172,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
             }
             Text(
-                "Hoch: springt leichter an, auch bei deutscher Aussprache, aber öfter ohne Grund. Niedrig: nur bei deutlichem „Hey Jarvis“.",
+                "Hoch: springt leichter an, auch bei deutscher Aussprache, aber öfter ohne Grund. Niedrig: nur bei deutlichem „$wort“.",
                 color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
             )
             treffer?.let { t ->
@@ -186,7 +190,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 anlernen != null -> {
                     Zeile("Anlernen läuft", "$anlernen von ${de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL}", f.primaer)
                     Text(
-                        if (hoertZu) "Sag jetzt deutlich „Hey Jarvis“, so wie du es sonst auch sagst. Nach jedem erkannten Mal kommt ein kurzer Ton; dann kurz warten und noch einmal."
+                        if (hoertZu) "Sag jetzt deutlich „$wort“, so wie du es sonst auch sagst. Nach jedem erkannten Mal kommt ein kurzer Ton; dann kurz warten und noch einmal."
                         else "Jarvis hört gerade nicht zu (er liest vor oder nimmt auf). Sobald „Hört zu“ oben steht, kann es losgehen.",
                         color = f.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
                     )
@@ -196,7 +200,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Zeile("Stimmprofil", "Aktiv", f.erfolg)
                     Text(
                         "Angelernt mit ${stimme.proben} Proben" + (if (stimme.fehlalarme > 0) ", ${stimme.fehlalarme} Fehlalarme gelernt" else "") +
-                            ". Klingt ein „Hey Jarvis“ nicht nach dir, bleibt Jarvis still. Kommt nach dem Piepton nichts, merkt er sich das als Fehlalarm.",
+                            " für „$wort“. Klingt es nicht nach dir, bleibt Jarvis still. Kommt nach dem Piepton nichts, merkt er sich das als Fehlalarm.",
                         color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                     )
                     abgewiesen?.let { t ->
@@ -211,7 +215,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 else -> {
                     Text(
-                        "Sag sechsmal „Hey Jarvis“, und Jarvis lernt, wie es bei dir klingt. Danach springt er nicht mehr auf ähnlich klingende Wörter, " +
+                        "Sag sechsmal „$wort“, und Jarvis lernt, wie es bei dir klingt. Danach springt er nicht mehr auf ähnlich klingende Wörter, " +
                             "Fernseher oder andere Leute an. Dauert eine Minute.",
                         color = f.textSchwach, fontSize = 13.sp,
                     )

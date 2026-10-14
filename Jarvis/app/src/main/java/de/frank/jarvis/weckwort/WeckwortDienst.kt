@@ -152,6 +152,7 @@ class WeckwortDienst : Service() {
         val phr = if (tokens == null) null else phrasenErkenner ?: runCatching { PhrasenErkenner(this, tokens, phrasenSchwelle) }
             .onFailure { Log.e(TAG, "Phrasen-Modell nicht ladbar, nehme Hey Jarvis", it) }
             .getOrNull()?.also { phrasenErkenner = it }
+        Weckwort.aktivesWort(if (phr != null) PhrasenTokens.normiert(Einstellungen.get(this).weckwortPhrase) else "Hey Jarvis")
         val an = AtomicBoolean(true)
         lauf = an
         faden = Thread({ schleife(erk, phr, an) }, "Weckwort").apply { start() }
@@ -326,6 +327,7 @@ class WeckwortDienst : Service() {
         phrasenErkenner = null
         runCatching { if (wach?.isHeld == true) wach?.release() }
         Weckwort.hoertZu(false)
+        Weckwort.aktivesWort(null)
         super.onDestroy()
     }
 

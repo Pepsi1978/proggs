@@ -19,11 +19,16 @@ import java.nio.FloatBuffer
  * `best-practices/android/voice-assistant-trigger.md` Abschnitt openWakeWord.
  */
 class WeckwortErkenner(context: Context) : AutoCloseable {
-    private val umgebung = OrtEnvironment.getEnvironment()
+    // Telemetrie an Microsoft (ab ORT 1.31) aus, zusätzlich zum entfernten Start-Baustein im Manifest.
+    private val umgebung = OrtEnvironment.getEnvironment().also { u -> runCatching { u.setTelemetry(false) } }
     private val optionen = OrtSession.SessionOptions().apply {
         // Ein Kern genügt für 80-ms-Blöcke und hält das Handy kühl.
         setIntraOpNumThreads(1)
         setInterOpNumThreads(1)
+        // ORT ab 1.22 rechnet auf ARM mit KleidiAI-Kernen, die SME2-Befehle nutzen. Prozessoren mit SME, aber ohne
+        // SME2 (Galaxy Fold 8) stürzen daran mit SIGILL ab. Nur dort abschalten; Geräte mit SME2 behalten sie.
+        // Der Schalter wirkt auf die ganze Bibliothek, also auch auf sherpa-onnx (eigene Phrase), das dieselbe nutzt.
+        if (KLEIDIAI_ABSCHALTEN) addConfigEntry("mlas.disable_kleidiai", "1")
     }
     private val mel = sitzung(context, "melspectrogram.onnx")
     private val einbettung = sitzung(context, "embedding_model.onnx")
@@ -97,6 +102,14 @@ class WeckwortErkenner(context: Context) : AutoCloseable {
     }
 
     companion object {
+        /** SME ohne SME2: Die KleidiAI-Kerne von ORT würden hier abstürzen (siehe oben). */
+        val KLEIDIAI_ABSCHALTEN: Boolean by lazy {
+            val merkmale = runCatching {
+                java.io.File("/proc/cpuinfo").useLines { z -> z.firstOrNull { it.startsWith("Features") }.orEmpty() }
+            }.getOrDefault("").substringAfter(':').trim().split(' ').toSet()
+            ("sme" in merkmale && "sme2" !in merkmale).also { android.util.Log.i("Weckwort", "SME ${"sme" in merkmale}, SME2 ${"sme2" in merkmale}, KleidiAI aus: $it") }
+        }
+
         const val ABTASTRATE = 16_000
         /** 80 ms bei 16 kHz. */
         const val BLOCK = 1280

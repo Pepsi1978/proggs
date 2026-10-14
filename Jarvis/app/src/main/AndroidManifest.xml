@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -126,5 +127,12 @@
             android:name=".speech.VorleseDienst"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- ONNX Runtime ab 1.31 startet hierüber beim App-Start eine Telemetrie an Microsoft (Geräte-ID, Netz,
+             Akku). Jarvis sendet nichts davon: Baustein entfernen; WeckwortErkenner schaltet sie zusätzlich ab. -->
+        <provider
+            android:name="ai.onnxruntime.TelemetryInitializer"
+            android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
+            tools:node="remove" />
     </application>
 </manifest>

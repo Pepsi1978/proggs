@@ -131,11 +131,18 @@ Umsetzung: `Jarvis/app/src/main/java/de/frank/jarvis/weckwort/WeckwortErkenner.k
   (klingt wie „hey Jarvis“); normale Saetze ohne Jarvis < 0,01.
 
 ### 2.1b openWakeWord und sherpa-onnx in EINER App (Jarvis, 14.10.2026)
-- Die sherpa-onnx-AAR (1.12.34) bringt ihre eigene `libonnxruntime.so` mit (**ORT 1.23.2**, per `strings` im .so
-  geprüft). Neben `com.microsoft.onnxruntime:onnxruntime-android` kollidiert der Pfad beim Packen.
-- Lösung: Microsoft-ORT auf **genau dieselbe Version** heben (1.23.2) und `packaging.jniLibs.pickFirsts +=
-  "**/libonnxruntime.so"`. Nie eine ältere ORT gewinnen lassen: Die JNI-Schicht fordert ihre API-Version an,
-  ältere Laufzeiten liefern dafür null → Absturz beim ersten Modell.
+- Die sherpa-onnx-AAR bringt ihre eigene `libonnxruntime.so` mit (1.13.8: ORT 1.28.2). Neben
+  `com.microsoft.onnxruntime:onnxruntime-android` kollidiert der Pfad; `pickFirsts` wählt eine ZUFÄLLIGE Kopie.
+- **SIGILL auf SME ohne SME2 (Fold 8 / SM8850):** ORT ab 1.22 rechnet auf ARM mit KleidiAI-Routinen, die SME2-Befehle
+  (`ptrue pn9.b`) ausführen, obwohl die CPU nur SME hat → Absturz in `OrtSession.run`. Prüfen: `/proc/cpuinfo`
+  Features `sme` ohne `sme2`. Abhilfe ohne alte Versionen: Session-Option `mlas.disable_kleidiai = 1` (ab ORT 1.28
+  im Binary), nur auf solchen Geräten. Gilt bibliotheksweit, also nur sicher, wenn alle Nutzer DIESELBE ORT laden.
+- **Eine ORT für beide:** sherpa-AAR ohne `libonnxruntime.so` einbinden und die Symbolversion von `OrtGetApiBase`
+  (`VERS_<ort>`) in `libsherpa-onnx-jni.so` auf die Microsoft-ORT umschreiben (Name + ELF-Hash im `.gnu.version_r`).
+  Sonst: `dlopen failed: cannot locate symbol "OrtGetApiBase"`. Skript: `Jarvis/app/libs/sherpa_anpassen.py`.
+- **ORT 1.31 (Android) hat Telemetrie** an Microsoft (android_id, Netz, Akku) über den ContentProvider
+  `ai.onnxruntime.TelemetryInitializer`, der beim App-Start läuft: im Manifest `tools:node="remove"`, zusätzlich
+  `OrtEnvironment.getEnvironment().setTelemetry(false)`.
 - Version der mitgelieferten ORT vor jedem AAR-Update prüfen (Regex `1\.\d\d\.\d` über die Bytes des .so).
 - Umsetzung: `Jarvis/.../weckwort/PhrasenErkenner.kt` (KeywordSpotter aus Assets, Kotlin-Port des Unigram-Tokenizers
   aus `VoiceAgent/Core/SentencePieceUnigram.cs`), umschaltbar neben „Hey Jarvis“, weil das EN-Gigaspeech-Modell

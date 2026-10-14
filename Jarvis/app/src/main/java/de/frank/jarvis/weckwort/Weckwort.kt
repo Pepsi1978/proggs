@@ -26,6 +26,11 @@ object Weckwort {
     private val _letzter = MutableStateFlow<Treffer?>(null)
     val letzter: StateFlow<Treffer?> = _letzter.asStateFlow()
 
+    private val _aktivesWort = MutableStateFlow<String?>(null)
+    /** Worauf der Dienst gerade wirklich hört („Hey Jarvis“ oder die eigene Phrase); null = er hört nicht. */
+    val aktivesWort: StateFlow<String?> = _aktivesWort.asStateFlow()
+    internal fun aktivesWort(wort: String?) { _aktivesWort.value = wort }
+
     /** Ab diesem Wert gilt „Hey Jarvis“ als erkannt (aus den Einstellungen, gilt sofort beim nächsten Block). */
     @Volatile var schwelle = 0.5f
 
