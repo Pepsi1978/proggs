@@ -1,8 +1,18 @@
 package de.frank.wecker
 
 import android.content.Context
+import android.net.Uri
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import org.json.JSONArray
 import java.io.File
 
@@ -16,6 +26,16 @@ class AlarmStore private constructor(context: Context) {
     private val issueState = MutableStateFlow(readIssues())
     /** Sichtbare Zuverlässigkeitshinweise je Wecker, z. B. eine fehlgeschlagene Folgeplanung. */
     val issues = issueState.asStateFlow()
+
+    /**
+     * Live-Gedächtnis von Jarvis: Jede Änderung an Weckern oder Hinweisen (App, Planung, Klingeln, Jarvis-Brücke)
+     * läuft hier durch den Speicher und meldet sich entprellt als EIN Signal an die Brücken-URI. Lesen ändert
+     * keinen Zustand und löst daher kein Signal aus. Ohne installiertes Jarvis bleibt der Aufruf wirkungslos.
+     */
+    @OptIn(FlowPreview::class)
+    private val jarvisMeldung = combine(alarms, issues) { _, _ -> Unit }.drop(1).debounce(700)
+        .onEach { runCatching { this.context.contentResolver.notifyChange(JARVIS_URI, null) } }
+        .launchIn(CoroutineScope(SupervisorJob() + Dispatchers.Default))
     /**
      * Ein einzelner unlesbarer Eintrag darf weder den App-Start blockieren noch die übrigen Wecker
      * verdecken. Vor dem ersten Überschreiben wird der Rohstand einmalig gesichert.
@@ -109,6 +129,8 @@ class AlarmStore private constructor(context: Context) {
         issueState.value = issueState.value.let { if (message == null) it - id else it + (id to message) }
     }
     companion object {
+        /** Wurzel der Jarvis-Brücke, genau die authority aus dem Manifest. */
+        private val JARVIS_URI: Uri = Uri.parse("content://de.frank.genialerwecker.jarvis")
         @androidx.annotation.VisibleForTesting @Volatile var failRingingWriteForTestId: String? = null
         @Volatile private var instance: AlarmStore? = null
         fun get(context: Context): AlarmStore = instance ?: synchronized(this) {
