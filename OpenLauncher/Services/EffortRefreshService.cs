@@ -23,6 +23,14 @@ public sealed class EffortRefreshService
         EffortSnapshot? current = null;
         EffortSnapshot? local = null;
         var conflict = false;
+        // Gemini CLI: die Stufen legt das installierte CLI fest (thinkingLevel LOW/HIGH), nicht
+        // models.dev -- ein fremder Katalog wuerde sonst die waehlbaren Stufen ueberschreiben.
+        if (access == "gemini")
+        {
+            var gemini = new EffortSnapshot(OpenCodeVariantCatalog.GetLauncherLevels(model).ToList(), "Gemini CLI (thinkingLevel)", DateTimeOffset.UtcNow, true);
+            Record(model, access, gemini, "Aktualisiert");
+            return gemini;
+        }
         if (access == "codex" && model.ProviderId == "openai")
         {
             local = ReadCodexCache(model);

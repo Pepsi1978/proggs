@@ -464,11 +464,18 @@ public sealed class ModelRegistry
             var group = Groups.FirstOrDefault(g => string.Equals(g.Id, defaults.Id, StringComparison.OrdinalIgnoreCase));
             if (group == null)
             {
-                // Moonshot AI (Kimi) gehoert direkt unter OpenAI, nicht ans Ende hinter LM Studio.
-                var openAiIndex = string.Equals(defaults.Id, MoonshotGroupId, StringComparison.OrdinalIgnoreCase)
-                    ? Groups.ToList().FindIndex(g => string.Equals(g.Id, "openai", StringComparison.OrdinalIgnoreCase))
-                    : -1;
-                if (openAiIndex >= 0) Groups.Insert(openAiIndex + 1, defaults);
+                // Moonshot AI (Kimi) gehoert direkt unter OpenAI, Google (Gemini) direkt unter Moonshot AI
+                // -- nicht ans Ende hinter LM Studio.
+                var anchorId = defaults.Id.ToLowerInvariant() switch
+                {
+                    MoonshotGroupId => "openai",
+                    GoogleGroupId => MoonshotGroupId,
+                    _ => null
+                };
+                var anchorIndex = anchorId == null
+                    ? -1
+                    : Groups.ToList().FindIndex(g => string.Equals(g.Id, anchorId, StringComparison.OrdinalIgnoreCase));
+                if (anchorIndex >= 0) Groups.Insert(anchorIndex + 1, defaults);
                 else Groups.Add(defaults);
                 continue;
             }
@@ -662,6 +669,21 @@ public sealed class ModelRegistry
             Model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", MoonshotProviderId, "Moonshot AI"),
             Model("kimi-for-coding-highspeed", "Kimi for Coding HighSpeed", MoonshotProviderId, "Moonshot AI"),
         }),
+        // Google-Gemini-Abo (Google-Konto per OAuth, "Login with Google") im originalen Gemini CLI.
+        // Die IDs stammen aus dem Modellkatalog des installierten Gemini CLI (0.64,
+        // DEFAULT_MODEL_CONFIGS); "auto"/"pro"/"flash" sind dessen eigene Aliasse, die das CLI
+        // selbst auf das passende Modell des Abos lenkt.
+        CreateGroup(GoogleGroupId, "Google", GoogleProviderId, "Google", new[]
+        {
+            Model("auto", "Gemini Auto (CLI wählt)", GoogleProviderId, "Google"),
+            Model("gemini-3.1-pro-preview", "Gemini 3.1 Pro", GoogleProviderId, "Google"),
+            Model("gemini-3-pro-preview", "Gemini 3 Pro", GoogleProviderId, "Google"),
+            Model("gemini-3.8-flash", "Gemini 3.8 Flash", GoogleProviderId, "Google"),
+            Model("gemini-3.5-flash", "Gemini 3.5 Flash", GoogleProviderId, "Google"),
+            Model("gemini-3-flash-preview", "Gemini 3 Flash", GoogleProviderId, "Google"),
+            Model("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", GoogleProviderId, "Google"),
+            Model("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", GoogleProviderId, "Google"),
+        }),
         CreateGroup("nvidia", "NVIDIA", NvidiaProviderId, NvidiaProviderName, NvidiaFreeModels),
         // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server
         // (SyncLmStudioModels); die Vorgabe hier ist nur der Platzhalter, damit der Reiter
@@ -722,6 +744,8 @@ public sealed class ModelRegistry
     private const string NvidiaProviderId = ModelEntry.NvidiaProviderId;
     public const string MoonshotGroupId = "moonshot";
     public const string MoonshotProviderId = "kimi-code-plan-global";
+    public const string GoogleGroupId = "google";
+    public const string GoogleProviderId = "google";
     private const string NvidiaProviderName = "NVIDIA";
 
     private static ModelEntry NvidiaModel(string slug, string displayName) =>

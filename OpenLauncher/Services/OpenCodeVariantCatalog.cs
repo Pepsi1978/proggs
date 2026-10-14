@@ -21,6 +21,7 @@ public static class OpenCodeVariantCatalog
             "nvidia" => GetNvidiaLevels(slug),
             "anthropic" => GetAnthropicLevels(slug),
             "kimi-code-plan-global" => GetKimiLevels(slug),
+            "google" => GetGeminiLevels(slug),
             "openrouter" => GetOpenRouterLevels(slug, KnownOpenRouterReasoning(slug)),
             _ => []
         };
@@ -29,6 +30,13 @@ public static class OpenCodeVariantCatalog
     /// <summary>Kimi-Code-Abo: OpenCode und Kimi CLI kennen low/high/max; HighSpeed hat keine Stufen.</summary>
     private static IReadOnlyList<string> GetKimiLevels(string slug) =>
         slug is "k3" or "k3-256k" or "kimi-for-coding" ? ["low", "high", "max"] : [];
+
+    /// <summary>
+    /// Gemini CLI: Gemini-3.x-Modelle denken mit thinkingLevel, das CLI (0.64) kennt LOW und HIGH
+    /// (Vorgabe HIGH). Gemini 2.5 arbeitet mit einem Token-Budget statt Stufen.
+    /// </summary>
+    private static IReadOnlyList<string> GetGeminiLevels(string slug) =>
+        slug.StartsWith("gemini-2", StringComparison.Ordinal) ? [] : ["low", "high"];
 
     private static IReadOnlyList<string> GetAnthropicLevels(string slug)
     {

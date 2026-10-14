@@ -639,6 +639,202 @@ try {
     }
 
     /// <summary>
+    /// Startet das originale Gemini CLI (Google, npm @google/gemini-cli) mit dem gewaehlten Modell.
+    /// Angemeldet ist das CLI selbst ueber das Google-Konto (OAuth, "Login with Google") -- so laeuft
+    /// das eigene Gemini-Abo. Profil und Modus stehen wie bei Codex/Kimi in der AGENTS.md des
+    /// Arbeitsverzeichnisses. Alles Weitere setzt eine eigene System-Einstellungsdatei pro Start
+    /// (GEMINI_CLI_SYSTEM_SETTINGS_PATH), ~/.gemini/settings.json bleibt unberuehrt:
+    /// AGENTS.md als Kontextdatei, OAuth als Anmeldeart und die Denkstufe (thinkingLevel).
+    /// </summary>
+    public void LaunchGeminiCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false)
+    {
+        var log = Logger.Instance;
+        var effort = NormalizeThinkingLevel(effortLevel);
+        if (effort is not ("low" or "high")) effort = null;
+        var slug = model.Slug.Trim();
+
+        try
+        {
+            Directory.CreateDirectory(workDir);
+            var settingsPath = WriteGeminiSystemSettings(effort);
+            var wt = ResolveWt();
+            var tabColor = PickCodexTerminalTabColor();
+            var innerScript = BuildGeminiStartScript(slug, workDir, settingsPath, log.LogPath);
+            var shell = ResolvePowerShellExecutable();
+            if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
+            var title = string.IsNullOrWhiteSpace(effort) ? $"Gemini-{tabColor.Name}" : $"Gemini-{tabColor.Name}-{effort}";
+            var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
+
+            // Wie Claude, Codex und Kimi: Reiter im offenen Terminal-Fenster (-w 0), farbiger Reiter
+            // und Pruefung, dass die innere Sitzung wirklich laeuft.
+            if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
+            {
+                var process = LaunchCodexCliViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, title, slug, effort, tabColor, log, "openlauncher-gemini-cli-");
+                log.Info("OpenLauncherService", "LaunchGeminiCli", $"robuster Gemini-CLI-Launcher gestartet (PID {process?.Id})", new { slug, workDir, effort, tabColor = tabColor.Name });
+                return;
+            }
+
+            var psi = new ProcessStartInfo
+            {
+                UseShellExecute = false,
+                CreateNoWindow = false,
+                WorkingDirectory = workDir,
+            };
+            if (!string.IsNullOrEmpty(wt))
+            {
+                psi.FileName = wt;
+                psi.ArgumentList.Add("new-tab");
+                psi.ArgumentList.Add("--tabColor");
+                psi.ArgumentList.Add(tabColor.Hex);
+                psi.ArgumentList.Add("--title");
+                psi.ArgumentList.Add(title);
+                psi.ArgumentList.Add("--startingDirectory");
+                psi.ArgumentList.Add(workDir);
+                psi.ArgumentList.Add(shell.Path);
+            }
+            else
+            {
+                psi.FileName = shell.Path;
+            }
+            psi.ArgumentList.Add("-NoExit");
+            psi.ArgumentList.Add("-ExecutionPolicy");
+            psi.ArgumentList.Add("Bypass");
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(innerScript);
+
+            var p = Process.Start(psi);
+            log.Info("OpenLauncherService", "LaunchGeminiCli", $"Gemini CLI gestartet (PID {p?.Id})", new { slug, workDir, effort, wtUsed = wt != null });
+        }
+        catch (Exception ex)
+        {
+            log.Error("OpenLauncherService", "LaunchGeminiCli", ex, new { model.Slug, workDir, effortLevel });
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// System-Einstellungen fuer einen Gemini-Start. Sie gelten vor ~/.gemini/settings.json und
+    /// betreffen nur diesen Start: AGENTS.md (Profil + Modus) als Kontextdatei, Anmeldung per
+    /// Google-Konto (oauth-personal) und -- falls gewaehlt -- die Denkstufe fuer alle Gemini-3-
+    /// Modelle (Alias "chat-base-3", von dem jedes 3.x-Modell erbt).
+    /// </summary>
+    private static string WriteGeminiSystemSettings(string? effort)
+    {
+        var settings = new Dictionary<string, object>
+        {
+            ["context"] = new Dictionary<string, object> { ["fileName"] = new[] { "AGENTS.md", "GEMINI.md" } },
+            ["security"] = new Dictionary<string, object>
+            {
+                ["auth"] = new Dictionary<string, object> { ["selectedType"] = "oauth-personal" }
+            },
+        };
+        if (effort != null)
+        {
+            settings["modelConfigs"] = new Dictionary<string, object>
+            {
+                ["customOverrides"] = new object[]
+                {
+                    new Dictionary<string, object>
+                    {
+                        ["match"] = new Dictionary<string, object> { ["model"] = "chat-base-3" },
+                        ["modelConfig"] = new Dictionary<string, object>
+                        {
+                            ["generateContentConfig"] = new Dictionary<string, object>
+                            {
+                                ["thinkingConfig"] = new Dictionary<string, object> { ["thinkingLevel"] = effort.ToUpperInvariant() }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+        var path = Path.Combine(Path.GetTempPath(), $"openlauncher-gemini-settings-{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }),
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return path;
+    }
+
+    /// <summary>
+    /// Temp-Script fuer den Gemini-Start (-File statt inline -Command, wie beim Codex-Weg).
+    /// --approval-mode yolo: Gemini fragt nie nach, alle Werkzeugaufrufe laufen automatisch (wie
+    /// Kimi --auto). Der erste Start oeffnet einmal den Browser fuer die Google-Anmeldung.
+    /// </summary>
+    private static string BuildGeminiStartScript(string slug, string workDir, string settingsPath, string logPath)
+    {
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-gemini-cli-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+{{ProgrammerProcessPriorityScript}}
+[Console]::Write("`e[?1004l")
+Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
+
+# Aktuellen persistenten Windows-PATH laden, damit gemini (npm, %APPDATA%\npm) erreichbar ist.
+{{PersistentPathRefreshScript}}
+
+# Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
+{{InheritedAgentEnvScrubScript}}
+
+$profilePath = Join-Path $HOME 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
+if (Test-Path $profilePath) {
+    . $profilePath
+}
+
+# Eigene System-Einstellungen dieses Starts: AGENTS.md als Kontext, Google-OAuth, Denkstufe.
+$env:GEMINI_CLI_SYSTEM_SETTINGS_PATH = {{PowerShellLiteral(settingsPath)}}
+# Ein API-Schluessel in der Umgebung wuerde die Abo-Anmeldung ueberstimmen.
+Remove-Item Env:GEMINI_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:GOOGLE_API_KEY -ErrorAction SilentlyContinue
+
+try {
+    $agentsFile = Join-Path {{PowerShellLiteral(workDir)}} 'AGENTS.md'
+    if (Test-Path -LiteralPath $agentsFile) {
+        $firstLine = (Get-Content -LiteralPath $agentsFile -TotalCount 1 -ErrorAction SilentlyContinue)
+        Write-Host ("[OpenLauncher] Profil-AGENTS.md aktiv: {0}" -f $firstLine) -ForegroundColor DarkGray
+    } else {
+        Write-Host "[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - Gemini startet ohne Profil." -ForegroundColor Yellow
+    }
+    $gemini = Get-Command gemini -ErrorAction SilentlyContinue
+    if (-not $gemini) {
+        Write-Host "[OpenLauncher] Gemini CLI fehlt - wird installiert (npm install -g @google/gemini-cli) ..." -ForegroundColor Yellow
+        npm install -g @google/gemini-cli
+        $gemini = Get-Command gemini -ErrorAction SilentlyContinue
+    }
+    if (-not $gemini) {
+        Write-Host "[OpenLauncher] Gemini CLI nicht gefunden. Bitte 'npm install -g @google/gemini-cli' ausfuehren." -ForegroundColor Red
+        return
+    }
+    $startedAt = Get-Date
+    & $gemini.Source --approval-mode yolo -m {{PowerShellLiteral(slug)}}
+    $geminiExit = $LASTEXITCODE
+    $geminiSeconds = [Math]::Round(((Get-Date) - $startedAt).TotalSeconds, 1)
+    # Jedes Gemini-Ende ins Launcher-Log, damit ein Sofort-Beenden spaeter zuzuordnen ist.
+    try {
+        $logEntry = [ordered]@{
+            ts = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
+            level = if ($geminiExit -ne 0) { 'WARN' } else { 'INFO' }
+            module = 'GeminiStartScript'
+            fn = 'GeminiExit'
+            msg = 'Gemini CLI beendet'
+            ctx = [ordered]@{ model = {{PowerShellLiteral(slug)}}; exitCode = $geminiExit; seconds = $geminiSeconds }
+        }
+        Add-Content -LiteralPath {{PowerShellLiteral(logPath)}} -Value ($logEntry | ConvertTo-Json -Compress -Depth 4) -Encoding utf8
+    } catch {
+        Write-Host ("[OpenLauncher] Gemini-Ende konnte nicht ins Launcher-Log geschrieben werden: {0}" -f $_.Exception.Message) -ForegroundColor DarkGray
+    }
+    if ($geminiExit -ne 0) {
+        Write-Host ("[OpenLauncher] Gemini beendet mit Exit-Code {0}." -f $geminiExit) -ForegroundColor Yellow
+    }
+} finally {
+    [Console]::Write("`e[?1004l")
+    Remove-Item -LiteralPath {{PowerShellLiteral(settingsPath)}} -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return tempScript;
+    }
+
+    /// <summary>
     /// Uebersetzt einen Launcher-Slug in die Modell-ID, die das Codex CLI kennt. Die "-fast"-
     /// Eintraege sind in OpenCode eigene Modelle, im Codex-Katalog dagegen nur eine Geschwindigkeits-
     /// stufe desselben Modells (service_tier "priority") -- deshalb Suffix abschneiden und den Tarif

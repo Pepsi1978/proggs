@@ -190,7 +190,9 @@ public sealed partial class MainViewModel : ObservableObject
             // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode -- das bisherige
             // Verhalten bleibt damit die Vorauswahl.
             FillCliTargets(value);
-            SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == "opencode");
+            // Google-Modelle laufen ueber das Gemini-Abo (OAuth) nur im Gemini CLI -- OpenCode haette
+            // dafuer keine Anmeldung, deshalb ist dort das Gemini CLI die Vorauswahl.
+            SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == (IsGoogleModel(value) ? "gemini" : "opencode"));
             if (_pendingModelDefault != null)
             {
                 SelectedProfile = Profiles.FirstOrDefault(profile =>
@@ -264,7 +266,9 @@ public sealed partial class MainViewModel : ObservableObject
             ? "Codex CLI · Profil + Modus in der AGENTS.md"
             : IsKimiCliSelected
                 ? "Kimi Code CLI · Profil + Modus in der AGENTS.md"
-                : "OpenCode · Profil-Snapshots";
+                : IsGeminiCliSelected
+                    ? "Gemini CLI · Profil + Modus in der AGENTS.md"
+                    : "OpenCode · Profil-Snapshots";
 
     private async Task LoadThinkingOptionsAsync(ModelEntry model, bool forceRefresh = false)
     {
@@ -952,9 +956,9 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = "Für Start (Codex) bitte ein Claude-Code-Modell wählen.";
             return;
         }
-        // Codex CLI und Kimi Code CLI sprechen immer direkt mit ihrem Anbieter -- dort gibt es keine
-        // Provider-Wahl, die Auswahl darf den Start also nicht blockieren.
-        if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected && !IsKimiCliSelected))
+        // Codex CLI, Kimi Code CLI und Gemini CLI sprechen immer direkt mit ihrem Anbieter -- dort gibt
+        // es keine Provider-Wahl, die Auswahl darf den Start also nicht blockieren.
+        if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected && !IsKimiCliSelected && !IsGeminiCliSelected))
         {
             StatusText = "Bitte Modell und Provider wählen.";
             return;
@@ -1062,6 +1066,23 @@ public sealed partial class MainViewModel : ObservableObject
                 var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
                 _launcher.LaunchKimiCli(SelectedModel, WorkDir, thinkingLevel, UseTmux);
                 Logger.Instance.Info("MainViewModel", "Start", "Kimi-CLI-Kontext geschrieben", new
+                {
+                    profile = SelectedProfile.Id,
+                    workMode = SelectedWorkMode.Id,
+                    agentsPath
+                });
+                StatusText = launchStatus;
+                return;
+            }
+
+            if (IsGeminiCliSelected)
+            {
+                // Gemini CLI bekommt dieselbe Profil-AGENTS.md wie Codex und Kimi (Profil UND Modus-
+                // Prompt zusammen); der Launcher stellt das CLI per Einstellung auf AGENTS.md um.
+                // Angemeldet ist das CLI selbst ueber das Google-Konto (OAuth, Gemini-Abo).
+                var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
+                _launcher.LaunchGeminiCli(SelectedModel, WorkDir, thinkingLevel, UseTmux);
+                Logger.Instance.Info("MainViewModel", "Start", "Gemini-CLI-Kontext geschrieben", new
                 {
                     profile = SelectedProfile.Id,
                     workMode = SelectedWorkMode.Id,
@@ -1357,8 +1378,14 @@ public sealed partial class MainViewModel : ObservableObject
     private static bool IsMoonshotModel(ModelEntry? model) =>
         string.Equals(model?.ProviderId, ModelRegistry.MoonshotProviderId, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>OpenAI-Modelle laufen wahlweise im Codex CLI, Moonshot-AI-Modelle im Kimi Code CLI.</summary>
-    private static bool HasExternalCli(ModelEntry? model) => IsOpenAiModel(model) || IsMoonshotModel(model);
+    private static bool IsGoogleModel(ModelEntry? model) =>
+        string.Equals(model?.ProviderId, ModelRegistry.GoogleProviderId, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// OpenAI-Modelle laufen wahlweise im Codex CLI, Moonshot-AI-Modelle im Kimi Code CLI,
+    /// Google-Modelle im Gemini CLI.
+    /// </summary>
+    private static bool HasExternalCli(ModelEntry? model) => IsOpenAiModel(model) || IsMoonshotModel(model) || IsGoogleModel(model);
 
     /// <summary>Fuellt die CLI-Wahl passend zum Anbieter: OpenCode plus das eigene CLI des Anbieters.</summary>
     private void FillCliTargets(ModelEntry? model)
@@ -1370,7 +1397,14 @@ public sealed partial class MainViewModel : ObservableObject
             DisplayName = "OpenCode",
             Description = "Wie bisher: OpenCode-TUI mit Provider-Wahl"
         });
-        CliTargets.Add(IsMoonshotModel(model)
+        CliTargets.Add(IsGoogleModel(model)
+            ? new CliTargetEntry
+            {
+                Id = "gemini",
+                DisplayName = "Gemini CLI",
+                Description = "Originales Google-CLI mit Gemini-Abo (OAuth), Profil aus der AGENTS.md"
+            }
+            : IsMoonshotModel(model)
             ? new CliTargetEntry
             {
                 Id = "kimi",
@@ -1384,6 +1418,9 @@ public sealed partial class MainViewModel : ObservableObject
                 Description = "Eigenes OpenAI-CLI, Profil aus der AGENTS.md"
             });
     }
+
+    private bool IsGeminiCliSelected =>
+        HasCliChoice && string.Equals(SelectedCliTarget?.Id, "gemini", StringComparison.Ordinal);
 
     private bool IsKimiCliSelected =>
         HasCliChoice && string.Equals(SelectedCliTarget?.Id, "kimi", StringComparison.Ordinal);
