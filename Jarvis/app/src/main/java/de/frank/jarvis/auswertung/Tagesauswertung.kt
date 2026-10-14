@@ -327,7 +327,7 @@ object Tagesauswertung {
 
         buildString {
             append("STAND: ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append('\n')
-            append("Biodaten vor der Auswertung frisch abgeglichen: ").append(if (abgeglichen) "ja" else "nein oder nur teilweise (steht unten bei den Biomarkern „ACHTUNG“, ist der Abruf einer Quelle gestört: das gehört an den Anfang der Auswertung)").append("\n\n")
+            append("Biodaten aktuell (Abgleich höchstens eine Stunde alt): ").append(if (abgeglichen) "ja" else "nein oder nur teilweise (steht unten bei den Biomarkern „ACHTUNG“, ist der Abruf einer Quelle gestört: das gehört an den Anfang der Auswertung)").append("\n\n")
 
             append("== RAHMEN DER NÄCHSTEN TAGE (fest gerechnet, verbindlich) ==\n")
             append(rahmen.await()).append("\n\n")

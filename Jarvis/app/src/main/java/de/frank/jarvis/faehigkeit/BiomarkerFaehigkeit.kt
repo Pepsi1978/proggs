@@ -2,7 +2,6 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import de.frank.jarvis.observability.Logbuch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -28,19 +27,21 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             "nicht jede Zahl, und leite eine kurze, konkrete Empfehlung ab. Die Daten sind nur lesbar. Du stellst keine medizinischen Diagnosen. " +
             "WICHTIG: Beginnt eine Antwort dieser Werkzeuge mit „ACHTUNG“, dann ist der Datenabruf gestört (zum Beispiel eine abgelaufene Whoop-Anmeldung) " +
             "oder eine Quelle liefert seit Tagen nichts Neues. Sag Frank das von dir aus und ZUERST: welche Quelle betroffen ist, seit wann, und was er tun muss. " +
-            "Gib alte Werte nie als aktuelle aus, sondern nenne ihr Datum. Vor jedem Lesen holt Jarvis von selbst frische Daten, wenn der letzte Abgleich älter als 30 Minuten ist; " +
-            "mit biomarker_aktualisieren stößt du den Abgleich ausdrücklich an und siehst den Zustand jeder Quelle."
+            "Gib alte Werte nie als aktuelle aus, sondern nenne ihr Datum. Entropie Reductor holt die Daten selbst im Hintergrund (alle 30 Minuten, Whoop höchstens alle 2 Stunden); " +
+            "Jarvis liest nur. biomarker_aktualisieren nur, wenn Frank ausdrücklich um frische Daten bittet, nie von dir aus."
 
     override fun stoerung(): String? = rufeDirekt("katalog", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
     /**
-     * Holt frische Daten von Whoop, Oura und Waage in Entropie Reductor. true = Abgleich lief durch UND
-     * jede Quelle hat geliefert. false heißt auch: Der Abgleich lief, aber eine Quelle scheiterte
+     * Für die Tagesauswertung: stößt in Entropie Reductor nur dann einen Abgleich an, wenn dessen eigener
+     * Hintergrund-Abgleich seit über einer Stunde nicht gelaufen ist (Frank-Wunsch 2026-10-14: Jarvis soll
+     * lesen, nicht ständig neu holen lassen; Whoop fragt Entropie Reductor ohnehin höchstens alle 2 Stunden ab).
+     * true = die Daten sind frisch UND jede Quelle hat geliefert. false heißt auch: Eine Quelle scheiterte
      * (etwa eine abgelaufene Whoop-Anmeldung) — die Einzelheiten stehen dann als „ACHTUNG“ in jeder Lese-Antwort.
      */
     suspend fun abgleich(): Boolean {
         // Wartezeit ausdrücklich (wie die Vorgabe in Entropie Reductor), damit das Zeitlimit der Brücke dazu passt.
-        val antwort = rufe("abgleich", JSONObject().put("warte_ms", 90_000))
+        val antwort = rufe("abgleich", JSONObject().put("max_alter_min", 60).put("warte_ms", 90_000))
         return antwort.optBoolean("fertig", false) && antwort.optJSONObject("stand")?.optBoolean("alles_ok", true) != false
     }
 
@@ -121,8 +122,10 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             titel = "Biomarker aktualisieren",
             beschreibung = "Jarvis: lässt Entropie Reductor jetzt frische Daten von Whoop, Oura, Waage und Health Connect holen und meldet den Zustand jeder Quelle: " +
                 "ob der Abruf geklappt hat, welcher Fehler auftrat (zum Beispiel abgelaufene Anmeldung) und bis zu welchem Tag Daten vorliegen. " +
-                "Nutze es bei „Aktualisiere meine Biodaten“, „Warum sind meine Werte alt?“, „Funktioniert der Abruf von Whoop?“ oder wenn Werte fehlen oder veraltet wirken. " +
-                "Dauert bis zu einer Minute. Ändert keine Daten von Frank.",
+                "Nur wenn Frank ausdrücklich darum bittet („Aktualisiere meine Biodaten“, „Hol frische Werte“), nie von dir aus: " +
+                "Entropie Reductor gleicht selbst im Hintergrund ab, und jeder Abruf belastet die Whoop-Anmeldung. " +
+                "Für „Warum sind meine Werte alt?“ oder „Funktioniert der Abruf von Whoop?“ genügt ein Lesewerkzeug, dessen Antwort den Zustand der Quellen enthält. " +
+                "Whoop holt Entropie Reductor dabei höchstens alle 2 Stunden neu. Dauert bis zu einer Minute. Ändert keine Daten von Frank.",
             schema = schema(),
             nurLesen = true,
         ) { _ ->
@@ -344,18 +347,12 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Lesen mit frischen Daten: Vorher klopft Jarvis in Entropie Reductor an. Dort wird nur abgeglichen, wenn der
-     * letzte Versuch älter als 30 Minuten ist (sonst kommt die Antwort sofort). Gewartet wird höchstens 25 Sekunden,
-     * damit eine Antwort im Sprachmodus nicht hängt; ein längerer Abgleich läuft im Hintergrund zu Ende.
-     * Das Anklopfen wird nicht wiederholt (sonst bis zu zweimal 25 Sekunden); scheitert es, wird trotzdem gelesen —
-     * der Zustand der Quellen steht in der Antwort selbst.
+     * Nur lesen (Frank-Wunsch 2026-10-14). Bis dahin klopfte Jarvis vor jedem Lesen an und ließ Entropie Reductor
+     * neu abgleichen, wenn der letzte Versuch älter als 30 Minuten war — zusätzlich zu dessen eigenem
+     * Hintergrund-Abgleich. Jetzt hält Entropie Reductor die Daten selbst aktuell; wie frisch sie sind und ob
+     * eine Quelle hängt, steht unter „stand“ in jeder Antwort und erscheint als „ACHTUNG“.
      */
-    private suspend fun lies(methode: String, anfrage: JSONObject): JSONObject {
-        val beginn = System.currentTimeMillis()
-        runCatching { rufe("abgleich", JSONObject().put("max_alter_min", 30).put("warte_ms", 25_000), lesend = false) }
-        System.currentTimeMillis().minus(beginn).takeIf { it >= 3_000 }?.let { Logbuch.dauer("Biodaten-Abgleich vor dem Lesen", it, methode) }
-        return rufe(methode, anfrage)
-    }
+    private suspend fun lies(methode: String, anfrage: JSONObject): JSONObject = rufe(methode, anfrage)
 
     /**
      * Macht Störungen beim Datenabruf sichtbar: Steht in der Antwort von Entropie Reductor ein Problem, beginnt der
