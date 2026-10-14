@@ -50,8 +50,14 @@ constructor(
     /** Nur EIN Whoop-Refresh gleichzeitig: zwei parallele wuerden denselben Einmal-Token verbrauchen. */
     private val whoopRefreshMutex = Mutex()
 
-    /** Wann zuletzt geprueft wurde, ob Whoop die abgelaufene Anmeldung doch wieder annimmt. */
-    @Volatile private var lastWhoopReauthProbeMs = 0L
+    /**
+     * Wann zuletzt geprueft wurde, ob Whoop die abgelaufene Anmeldung doch wieder annimmt. Liegt seit
+     * 2026-10-14 im gespeicherten Stand: Im Speicher allein begann der 6-Stunden-Abstand bei jedem
+     * frisch gestarteten Hintergrund-Prozess von vorn (neuer Versuch und neue Benachrichtigung).
+     */
+    private var lastWhoopReauthProbeMs: Long
+        get() = secrets.whoopReauthProbeMs
+        set(value) { secrets.whoopReauthProbeMs = value }
 
     /** Konfiguration für Google Calendar. Endpoints von Google's OpenID-Connect-Discovery. */
     val googleConfig =

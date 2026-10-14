@@ -130,9 +130,23 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_GOOGLE_AUTH_STATE, null)
         set(value) { prefs.edit().putString(KEY_GOOGLE_AUTH_STATE, value).apply() }
 
+    /**
+     * commit() statt apply() (2026-10-14): Whoop entwertet bei jedem Refresh den alten Refresh-Token.
+     * Ginge der neue Stand verloren, weil der Hintergrund-Prozess vor dem asynchronen Schreiben endet,
+     * laege danach nur noch der verbrauchte Token auf der Platte — und Frank muesste sich neu anmelden.
+     */
     var whoopAuthStateJson: String?
         get() = prefs.getString(KEY_WHOOP_AUTH_STATE, null)
-        set(value) { prefs.edit().putString(KEY_WHOOP_AUTH_STATE, value).apply() }
+        set(value) { prefs.edit().putString(KEY_WHOOP_AUTH_STATE, value).commit() }
+
+    /**
+     * Letzte Pruefung, ob Whoop eine als abgelaufen markierte Anmeldung wieder annimmt (ms). Gespeichert
+     * statt nur im Speicher, damit der 6-Stunden-Abstand auch gilt, wenn der Hintergrund-Abgleich in
+     * einem frisch gestarteten Prozess laeuft.
+     */
+    var whoopReauthProbeMs: Long
+        get() = prefs.getLong(KEY_WHOOP_REAUTH_PROBE, 0L)
+        set(value) { prefs.edit().putLong(KEY_WHOOP_REAUTH_PROBE, value).apply() }
 
     // Zepp / Amazfit Cloud-API wurde entfernt (Sprint 3, 2026-05-22):
     // - API lieferte seit Mai 2026 keine neuen Workouts mehr (Zepp-App-Update)
@@ -218,6 +232,7 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_WHOOP_CLIENT_ID = "whoop_client_id"
         private const val KEY_WHOOP_CLIENT_SECRET = "whoop_client_secret"
         private const val KEY_WHOOP_REAUTH_SINCE = "whoop_reauth_since_ms"
+        private const val KEY_WHOOP_REAUTH_PROBE = "whoop_reauth_probe_ms"
         private const val KEY_WHOOP_ACCESS = "whoop_access_token"
         private const val KEY_WHOOP_REFRESH = "whoop_refresh_token"
         private const val KEY_WHOOP_EXPIRY = "whoop_expiry"

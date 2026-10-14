@@ -49,6 +49,8 @@ import org.json.JSONObject
  *  - `abgleich`    — holt vorher frische Daten von Whoop, Oura, Waage und Health Connect (derselbe Abgleich wie
  *                    beim Öffnen des Biomarker-Reiters); wartet höchstens `warte_ms` (Vorgabe und Obergrenze
  *                    90 Sekunden). Mit `max_alter_min` nur, wenn der letzte Abgleich älter ist. Ändert keine Nutzerdaten.
+ *                    Whoop fragt auch dieser Abgleich höchstens alle 2 Stunden ab (siehe
+ *                    [ForegroundSyncManager.WHOOP_MIN_ABSTAND_MS]); Jarvis liest seit 2026-10-14 sonst nur.
  *  - `stand`       — nur der Zustand der Quellen, ohne Abgleich.
  *
  * Jede Lese-Antwort trägt unter `stand` den Zustand der Quellen (letzter Abgleich, Fehler je Quelle, neueste
