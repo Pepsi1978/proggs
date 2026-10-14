@@ -6,14 +6,18 @@ import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.security.MessageDigest
 
@@ -53,29 +57,74 @@ object Installierer {
     private val ladePlaetze = Semaphore(GLEICHZEITIG)
 
     /**
-     * Die Übergabe an Android läuft dagegen einzeln: Solange der Bestätigungsdialog einer App offen
-     * ist, verwirft Android den Dialog der nächsten oft still. Die Sperre hält bis zum endgültigen
-     * Ergebnis; nach [UEBERGABE_WARTEN_MS] geht es trotzdem weiter, damit ein liegengelassener
-     * Dialog die übrigen Updates nicht aufhält. Besitzer der Sperre ist das Paket.
+     * Installationen laufen in einem eigenen Bereich, unabhängig von der Activity: Drehen oder ein
+     * Designwechsel bricht keinen Download und keine wartende Übergabe ab.
      */
-    private val uebergabe = Mutex()
-    private const val UEBERGABE_WARTEN_MS = 2 * 60_000L
+    private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private suspend fun warteAufUebergabe(paket: String) {
-        if (!uebergabe.holdsLock(paket)) withTimeoutOrNull(UEBERGABE_WARTEN_MS) { uebergabe.lock(paket) }
+    /** Startet die Installation im eigenen Bereich; das Ergebnis darf die Activity abwarten, ohne sie festzuhalten. */
+    fun starte(context: Context, eintrag: AppEintrag): Deferred<Start> {
+        val app = context.applicationContext
+        return bereich.async { installiere(app, eintrag) }
+    }
+
+    /**
+     * Alle Updates werden sofort an Android übergeben, nur die Bestätigungsdialoge öffnen einzeln:
+     * Solange einer offen ist, verwirft Android den nächsten oft still. Die übrigen warten hier, bis
+     * das Ergebnis des offenen kommt; nach [DIALOG_WARTEN_MS] geht es trotzdem weiter, damit ein
+     * liegengelassener Dialog nicht alles aufhält. Die Benachrichtigungen zum Bestätigen kommen
+     * davon unabhängig sofort. Nur im Speicher: nach einem Prozessneustart bleiben die Benachrichtigungen.
+     */
+    private class Dialog(val paket: String, val intent: Intent)
+    private val wartendeDialoge = ArrayDeque<Dialog>()
+    private var offenerDialog: String? = null
+    private val zeitgeber = Handler(Looper.getMainLooper())
+    private const val DIALOG_WARTEN_MS = 2 * 60_000L
+
+    /** Vom Receiver bei STATUS_PENDING_USER_ACTION. Liefert false, wenn sich der Dialog nicht öffnen ließ. */
+    fun zeigeBestaetigung(context: Context, paket: String, intent: Intent): Boolean {
+        val jetzt = synchronized(wartendeDialoge) {
+            wartendeDialoge.removeAll { it.paket == paket }
+            if (offenerDialog == null || offenerDialog == paket) { offenerDialog = paket; true }
+            else { wartendeDialoge += Dialog(paket, intent); false }
+        }
+        if (!jetzt) {
+            ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufDialog)
+            return true
+        }
+        return oeffne(context.applicationContext, paket, intent)
+    }
+
+    private fun oeffne(context: Context, paket: String, intent: Intent): Boolean {
+        ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
+        zeitgeber.removeCallbacksAndMessages(null)
+        zeitgeber.postDelayed({ gibDialogFrei(context, paket) }, DIALOG_WARTEN_MS)
+        val geoeffnet = runCatching { context.startActivity(intent) }
+            .onFailure { Log.w(TAG, "$paket: Bestätigungsdialog ließ sich nicht öffnen", it) }
+            .isSuccess
+        if (!geoeffnet) gibDialogFrei(context, paket)
+        return geoeffnet
+    }
+
+    /** Gibt den Dialogplatz von [paket] frei und öffnet den nächsten wartenden Dialog. */
+    private fun gibDialogFrei(context: Context, paket: String) {
+        val naechster = synchronized(wartendeDialoge) {
+            wartendeDialoge.removeAll { it.paket == paket }
+            if (offenerDialog != paket) return
+            offenerDialog = null
+            wartendeDialoge.removeFirstOrNull()?.also { offenerDialog = it.paket }
+        } ?: return
+        oeffne(context, naechster.paket, naechster.intent)
     }
 
     /** Bei eigenen Fehlern vor der Übergabe an Android. */
-    fun beende(paket: String) {
-        synchronized(laufend) { laufend -= paket }
-        // unlock(paket) wirft, wenn das Paket die Sperre nicht hält – dann ist nichts freizugeben.
-        runCatching { uebergabe.unlock(paket) }
-    }
+    fun beende(paket: String) = synchronized(laufend) { laufend -= paket }
 
-    /** Vom Receiver bei endgültigem Ergebnis (Erfolg, Fehler, Abbruch): Sperre und gespeicherte Session lösen. */
+    /** Vom Receiver bei endgültigem Ergebnis (Erfolg, Fehler, Abbruch): Sperre, Session und Dialogplatz lösen. */
     fun abschliessen(context: Context, paket: String) {
         beende(paket)
         Einstellungen(context).loescheOffeneSession(paket)
+        gibDialogFrei(context.applicationContext, paket)
     }
 
     /**
@@ -94,7 +143,7 @@ object Installierer {
      * an den Paket-Installer. Installiert wird nur, wenn der versionCode wirklich höher ist, und
      * immer erst nach Bestätigung im Android-Dialog.
      */
-    suspend fun installiere(context: Context, eintrag: AppEintrag): Start {
+    private suspend fun installiere(context: Context, eintrag: AppEintrag): Start {
         val m = eintrag.fund.manifest
         val paket = m.paket
         if (!beginne(paket)) {
@@ -116,12 +165,11 @@ object Installierer {
         var ersetzt = false
         Diagnose.ereignis(context, Phase.INSTALLATION, "START", "paket" to paket, "vc" to m.versionCode)
         try {
-            ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Laedt(0))
+            ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufLadeplatz)
             val geladen = ladePlaetze.withPermit { lade(context, eintrag) }.also { datei = it }
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Prueft)
             pruefe(context, geladen, m)
 
-            warteAufUebergabe(paket)
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
             ersetzt = uebergebe(context, geladen, m, eintrag.label)
             Diagnose.ereignis(context, Phase.INSTALLATION, if (ersetzt) "UEBERGEBEN_ERSETZT" else "UEBERGEBEN", "paket" to paket, "vc" to m.versionCode)

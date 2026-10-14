@@ -40,13 +40,11 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                     return
                 }
                 bestaetigen.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
                 // Immer zusätzlich eine Benachrichtigung: Aus dem Hintergrund verwirft Android den
                 // startActivity-Aufruf oft still, dann bliebe die Installation ohne Hinweis liegen.
                 val gemeldet = Benachrichtigungen.bestaetigen(context, paket, label, bestaetigen)
-                val geoeffnet = runCatching { context.startActivity(bestaetigen) }
-                    .onFailure { Log.w(TAG, "$paket: Bestätigungsdialog ließ sich nicht öffnen", it) }
-                    .isSuccess
+                // Öffnet den Dialog sofort oder reiht ihn hinter einen schon offenen ein.
+                val geoeffnet = Installierer.zeigeBestaetigung(context, paket, bestaetigen)
                 Log.i(TAG, "$paket: Bestätigung nötig (Dialog geöffnet=$geoeffnet, Benachrichtigung=$gemeldet)")
                 Diagnose.ereignis(context, Phase.INSTALLATION, "BESTAETIGUNG_NOETIG", "paket" to paket,
                     "dialog" to geoeffnet, "benachrichtigung" to gemeldet)

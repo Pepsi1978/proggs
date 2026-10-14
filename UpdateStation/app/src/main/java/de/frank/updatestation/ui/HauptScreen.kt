@@ -535,6 +535,8 @@ private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren
 @Composable
 private fun InstallBereich(install: InstallStatus?, darfInstallieren: Boolean, knopf: String, onInstallieren: () -> Unit) {
     when (install) {
+        InstallStatus.WartetAufLadeplatz -> Fortschritt("Wartet in der Reihe – lädt, sobald ein anderes Update fertig geladen ist …", null)
+        InstallStatus.WartetAufDialog -> Zeile(Icons.Rounded.TouchApp, "Wartet in der Reihe – der Systemdialog kommt nach dem aktuellen.", MaterialTheme.colorScheme.onSurfaceVariant)
         is InstallStatus.WirdBereitgestellt -> Fortschritt(
             if (install.megabyte >= 50) "Google Drive stellt die Datei bereit (${install.megabyte} MB) … das kann einige Minuten dauern."
             else "Google Drive stellt die Datei bereit …",

@@ -110,11 +110,15 @@ data class AppEintrag(
 }
 
 sealed interface InstallStatus {
+    /** Alle Ladeplätze sind belegt; der Download startet, sobald einer frei wird. */
+    data object WartetAufLadeplatz : InstallStatus
     data class Laedt(val prozent: Int) : InstallStatus
     /** Die Quelle stellt die Datei erst bereit (Google-Drive-Ordner lädt große APKs komplett vor). */
     data class WirdBereitgestellt(val megabyte: Long) : InstallStatus
     data object Prueft : InstallStatus
     data object WartetAufBestaetigung : InstallStatus
+    /** Übergeben, der Bestätigungsdialog wartet hinter einem schon offenen. */
+    data object WartetAufDialog : InstallStatus
     data object Fertig : InstallStatus
     /** [versionCode] = Version, deren Installation scheiterte; null bei Ergebnissen aus älteren Sessions ohne diese Angabe. */
     data class Fehler(val text: String, val versionCode: Long? = null) : InstallStatus

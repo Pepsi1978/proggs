@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                         pruefen = ::pruefe,
                         installiere = ::installiere,
                         installiereAlle = {
-                            // Jedes Update über den Einzelweg in einer eigenen Coroutine: Laden und Prüfen laufen nebeneinander.
+                            // Jedes Update über den Einzelweg: Laden und Prüfen laufen nebeneinander.
                             ZustandsSpeicher.zustand.value.eintraege
                                 .filter { it.status == Status.UPDATE && !Installierer.laeuft(it.paket) }
                                 .forEach(::installiere)
@@ -183,7 +183,8 @@ class MainActivity : ComponentActivity() {
             return
         }
         lifecycleScope.launch {
-            when (Installierer.installiere(this@MainActivity, eintrag)) {
+            // Die Installation selbst läuft im Installierer weiter, auch wenn die Activity neu entsteht.
+            when (Installierer.starte(this@MainActivity, eintrag).await()) {
                 Start.LAEUFT_BEREITS -> melde("${eintrag.label}: Installation läuft bereits.")
                 Start.WARTET_AUF_BESTAETIGUNG ->
                     melde("${eintrag.label}: Ein früherer Versuch wartet noch auf deine Bestätigung – Benachrichtigung antippen oder abbrechen.")
