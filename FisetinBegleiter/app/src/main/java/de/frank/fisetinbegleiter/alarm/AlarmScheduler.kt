@@ -12,6 +12,7 @@ import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
 import de.frank.fisetinbegleiter.domain.currentDay
 import de.frank.fisetinbegleiter.domain.plannedStartAt
+import de.frank.fisetinbegleiter.domain.prePhaseStartAt
 import java.time.LocalDate
 
 enum class AlarmType {
@@ -23,6 +24,7 @@ enum class AlarmType {
     CURE_ENDED,
     CURE_START,
     CURE_PREPARATION,
+    PRE_PHASE,
 }
 
 internal const val CURE_PREPARATION_LEAD_MILLIS = 24 * 60 * 60 * 1_000L
@@ -55,6 +57,7 @@ class AlarmScheduler(private val context: Context) {
         cancel(day.id, AlarmType.CURE_PREPARATION)
         cancel(day.id, AlarmType.CURE_START)
         cancel(day.id, AlarmType.NEXT_DAY)
+        cancel(day.id, AlarmType.PRE_PHASE)
         if (day.mealDoneAt == null) {
             schedule(day.id, AlarmType.MEAL_WARNING, t0 + protocol.mealWarningMinutes * 60_000L)
         }
@@ -70,13 +73,16 @@ class AlarmScheduler(private val context: Context) {
             val nextDate = LocalDate.ofEpochDay(day.plannedEpochDay).plusDays(1)
             val nextStart = plannedStartAt(nextDate, cure.preferredStartMinuteOfDay)
             schedule(day.id, AlarmType.NEXT_DAY, nextStart, day.dayNumber + 1)
+            schedule(day.id, AlarmType.PRE_PHASE, prePhaseStartAt(nextStart, protocol), day.dayNumber + 1)
         }
     }
 
-    fun scheduleCureStart(firstDayId: Long, triggerAt: Long) {
+    fun scheduleCureStart(firstDayId: Long, triggerAt: Long, protocol: ProtocolTemplateEntity) {
         cancel(firstDayId, AlarmType.CURE_PREPARATION)
         cancel(firstDayId, AlarmType.CURE_START)
+        cancel(firstDayId, AlarmType.PRE_PHASE)
         schedule(firstDayId, AlarmType.CURE_PREPARATION, curePreparationAt(triggerAt), targetDay = 1)
+        schedule(firstDayId, AlarmType.PRE_PHASE, prePhaseStartAt(triggerAt, protocol), targetDay = 1)
         schedule(firstDayId, AlarmType.CURE_START, triggerAt, targetDay = 1)
     }
 
@@ -98,7 +104,7 @@ class AlarmScheduler(private val context: Context) {
             if (triggerAt <= System.currentTimeMillis()) {
                 NotificationHelper.show(context, AlarmType.CURE_START, day.id, day.dayNumber, protocol)
             } else {
-                scheduleCureStart(day.id, triggerAt)
+                scheduleCureStart(day.id, triggerAt, protocol)
             }
             return
         }
@@ -107,6 +113,7 @@ class AlarmScheduler(private val context: Context) {
             NotificationHelper.show(context, type, day.id, day.dayNumber, protocol)
         } else {
             schedule(day.id, type, triggerAt, targetDay = day.dayNumber)
+            schedule(day.id, AlarmType.PRE_PHASE, prePhaseStartAt(triggerAt, protocol), targetDay = day.dayNumber)
         }
     }
 

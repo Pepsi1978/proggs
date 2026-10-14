@@ -16,6 +16,8 @@ import de.frank.fisetinbegleiter.domain.completedThroughDay
 import de.frank.fisetinbegleiter.domain.cureState
 import de.frank.fisetinbegleiter.domain.currentDay
 import de.frank.fisetinbegleiter.domain.plannedStartAt
+import de.frank.fisetinbegleiter.domain.plannedT0
+import de.frank.fisetinbegleiter.domain.prePhaseStartAt
 import de.frank.fisetinbegleiter.domain.timeline
 import java.time.LocalDate
 import kotlinx.coroutines.delay
@@ -43,7 +45,26 @@ data class MainUiState(
     val canCompleteDay: Boolean get() = canComplete(currentDay, now, protocol)
     val completedDayCount: Int
         get() = completedThroughDay(activeCure).coerceAtMost(activeCure?.cure?.plannedDurationDays ?: 0)
+
+    /** Geplanter Drink des aktuellen Kurtags, solange T0 noch nicht gesetzt ist. */
+    val plannedDrinkAt: Long?
+        get() {
+            val cure = activeCure?.cure ?: return null
+            val day = currentDay?.takeIf { it.t0 == null && it.completedAt == null } ?: return null
+            return plannedT0(cure, day)
+        }
+    val prePhaseStart: Long? get() = plannedDrinkAt?.let { prePhaseStartAt(it, protocol) }
+    val prePhaseActive: Boolean get() = prePhaseStart?.let { now >= it } == true
+    val stackPhase: StackPhase
+        get() = when {
+            blockActive -> StackPhase.SPERRFENSTER
+            prePhaseActive -> StackPhase.VORSTUFE
+            currentDay?.t0 != null -> StackPhase.NACH_SPERRE
+            else -> StackPhase.NORMAL
+        }
 }
+
+enum class StackPhase { NORMAL, VORSTUFE, SPERRFENSTER, NACH_SPERRE }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as FisetinApplication
@@ -100,7 +121,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 preferredStartMinuteOfDay = startMinute,
             )
             if (uiState.value.protocol.remindersEnabled) {
-                scheduler.scheduleCureStart(firstDayId, startAt)
+                scheduler.scheduleCureStart(firstDayId, startAt, uiState.value.protocol)
             }
         }
     }

@@ -53,6 +53,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,6 +82,9 @@ import de.frank.fisetinbegleiter.ui.theme.AppThemeVariant
 import de.frank.fisetinbegleiter.ui.theme.LocalAppColors
 
 private val FbEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+
+/** Unterer Innenabstand der Listen: Platz für schwebende Navigation und Systemleiste. */
+internal val LocalScreenBottomPadding = compositionLocalOf { 18.dp }
 private val CssEaseInOut = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
 
 private enum class MainScreen(val route: String, val label: String, val icon: ImageVector) {
@@ -106,7 +115,7 @@ fun FisetinApp(
     val colors = LocalAppColors.current
     val backgroundStart by animateColorAsState(colors.bg0, tween(500), label = "background-start")
     val backgroundEnd by animateColorAsState(colors.bg1, tween(500), label = "background-end")
-    var screen by remember { mutableStateOf(MainScreen.TODAY) }
+    var screen by rememberSaveable { mutableStateOf(MainScreen.TODAY) }
     var noticeVisible by remember(showFirstStartNotice) { mutableStateOf(showFirstStartNotice) }
 
     LaunchedEffect(externalDestination) {
@@ -153,14 +162,17 @@ fun FisetinApp(
                         },
                         label = "main-screen",
                     ) { destination ->
+                        // Inhalte laufen hinter der schwebenden Navigation durch und enden darüber;
+                        // auf dem breiten Innendisplay bleibt die Lesebreite begrenzt.
+                        val navigationInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        val bottomPadding = navigationInset + if (useRail) 18.dp else 100.dp
                         val contentModifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                start = 18.dp,
-                                top = 6.dp,
-                                end = 18.dp,
-                                bottom = if (useRail) 18.dp else 130.dp,
-                            )
+                            .fillMaxHeight()
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth()
+                            .padding(start = 18.dp, top = 6.dp, end = 18.dp)
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                        CompositionLocalProvider(LocalScreenBottomPadding provides bottomPadding) {
                         when (destination) {
                             MainScreen.TODAY -> TodayScreen(
                                 state = state,
@@ -179,6 +191,7 @@ fun FisetinApp(
                                 state = state,
                                 onMealDone = viewModel::markMeal,
                                 onSpermidinDone = viewModel::markSpermidin,
+                                onDrinkNow = viewModel::drinkNow,
                                 onCompleteDay = viewModel::completeDay,
                                 onFinishCureAfterDay = viewModel::finishCureAfterCurrentDay,
                                 modifier = contentModifier,
@@ -200,6 +213,8 @@ fun FisetinApp(
                                 onOpenBatterySettings = onOpenBatterySettings,
                                 modifier = contentModifier,
                             )
+                        }
+                        }
                         }
                     }
                 }
@@ -564,8 +579,11 @@ private fun headerSubtitle(state: MainUiState): String {
     val cure = state.activeCure?.cure ?: return "Bereit für die nächste Kur"
     val day = state.currentDay ?: return "Bereit für die nächste Kur"
     val prefix = "Tag ${day.dayNumber} von ${cure.plannedDurationDays}"
+    val drinkAt = state.plannedDrinkAt
     return when {
-        day.t0 == null -> "$prefix · wartet auf den Drink"
+        day.t0 == null && drinkAt != null && state.now >= drinkAt -> "$prefix · Zeit für den Drink"
+        day.t0 == null && state.prePhaseActive -> "$prefix · Vorstufe läuft"
+        day.t0 == null -> "$prefix · geplant"
         state.blockActive -> "$prefix · Sperrfenster läuft"
         else -> "$prefix · alles erlaubt"
     }

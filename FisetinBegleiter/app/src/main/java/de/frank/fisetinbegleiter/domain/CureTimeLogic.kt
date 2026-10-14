@@ -2,6 +2,7 @@ package de.frank.fisetinbegleiter.domain
 
 import de.frank.fisetinbegleiter.data.AppCureState
 import de.frank.fisetinbegleiter.data.CureDayEntity
+import de.frank.fisetinbegleiter.data.CureEntity
 import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
 import java.time.LocalDate
@@ -29,6 +30,14 @@ fun plannedStartAt(startDate: LocalDate, startMinuteOfDay: Int, zoneId: ZoneId =
         .plusMinutes(startMinuteOfDay.coerceIn(0, 1_439).toLong())
         .toInstant()
         .toEpochMilli()
+
+/** Geplanter Drink-Zeitpunkt eines Kurtags (Startzeit der Kur am geplanten Kalendertag). */
+fun plannedT0(cure: CureEntity, day: CureDayEntity, zoneId: ZoneId = ZoneId.systemDefault()): Long =
+    plannedStartAt(LocalDate.ofEpochDay(day.plannedEpochDay), cure.preferredStartMinuteOfDay, zoneId)
+
+/** Beginn der Vorstufe: ab hier keine starken Antioxidantien mehr bis zum Ende des Sperrfensters. */
+fun prePhaseStartAt(plannedT0: Long, protocol: ProtocolTemplateEntity): Long =
+    plannedT0 - protocol.preBlockMinutes * 60_000L
 
 fun currentDay(cure: CureWithDays?): CureDayEntity? = cure?.days
     ?.sortedBy { it.dayNumber }

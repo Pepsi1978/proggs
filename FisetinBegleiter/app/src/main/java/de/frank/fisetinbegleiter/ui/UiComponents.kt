@@ -52,6 +52,20 @@ fun formatTime(timestamp: Long): String = Instant.ofEpochMilli(timestamp)
     .atZone(ZoneId.systemDefault())
     .format(timeFormatter)
 
+/** Uhrzeit mit Tagesbezug: „08:30 Uhr“, „morgen 08:30 Uhr“ oder „Do 16.10., 08:30 Uhr“. */
+fun formatDayTime(timestamp: Long, now: Long): String {
+    val zone = ZoneId.systemDefault()
+    val target = Instant.ofEpochMilli(timestamp).atZone(zone)
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val time = target.format(timeFormatter)
+    return when (target.toLocalDate()) {
+        today -> time
+        today.plusDays(1) -> "morgen $time"
+        today.minusDays(1) -> "gestern $time"
+        else -> target.format(DateTimeFormatter.ofPattern("EE dd.MM., ", java.util.Locale.GERMANY)) + time
+    }
+}
+
 fun formatCountdown(target: Long, now: Long): String {
     val seconds = max(0L, (target - now + 999) / 1_000)
     val hours = seconds / 3_600

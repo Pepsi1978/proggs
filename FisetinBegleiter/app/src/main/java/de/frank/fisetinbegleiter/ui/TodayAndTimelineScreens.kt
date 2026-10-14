@@ -26,6 +26,20 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.drawBehind
+import de.frank.fisetinbegleiter.alarm.hourLabel
+import de.frank.fisetinbegleiter.data.StackCategory
+import de.frank.fisetinbegleiter.domain.plannedT0
+import de.frank.fisetinbegleiter.domain.prePhaseStartAt
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -122,9 +136,9 @@ fun TodayScreen(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    var showSetup by remember { mutableStateOf(false) }
-    var showDrink by remember { mutableStateOf(false) }
-    var showCancelConfirmation by remember { mutableStateOf(false) }
+    var showSetup by rememberSaveable { mutableStateOf(false) }
+    var showDrink by rememberSaveable { mutableStateOf(false) }
+    var showCancelConfirmation by rememberSaveable { mutableStateOf(false) }
 
     if (!state.initialized) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -137,7 +151,7 @@ fun TodayScreen(
     val day = state.currentDay
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(bottom = 18.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = LocalScreenBottomPadding.current),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { SectionTitle(todaySectionTitle(state.activeCure?.cure), "Dein persönliches Protokoll, Schritt für Schritt.") }
@@ -147,7 +161,7 @@ fun TodayScreen(
             item { NextStepCard(state, onGoTimeline) }
             item {
                 DesignOutlineButton(
-                    text = "Angepassten Morgen-Stack ansehen",
+                    text = "Stack: Was darf ich jetzt nehmen?",
                     onClick = onGoStack,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -160,6 +174,20 @@ fun TodayScreen(
                 ) {
                     Text("Drink-Checkliste öffnen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
+            }
+            item {
+                DesignOutlineButton(
+                    text = "Stack: Was darf ich jetzt nehmen?",
+                    onClick = onGoStack,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                DesignOutlineButton(
+                    text = "Ganzen Ablauf ansehen",
+                    onClick = onGoTimeline,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         } else {
             item {
@@ -189,8 +217,8 @@ fun TodayScreen(
         if (!notificationsAvailable) {
             item {
                 StatusNotice(
-                    title = "Notifications freigeben",
-                    text = "Android blockiert derzeit die Kur-Erinnerungen. Aktiviere den Channel „Kur-Schritte“ in den App-Einstellungen.",
+                    title = "Benachrichtigungen freigeben",
+                    text = "Android blockiert derzeit die Kur-Erinnerungen. Aktiviere den Kanal „Kur-Schritte“ in den App-Einstellungen.",
                     containerColor = colors.warnBg,
                     contentColor = colors.warn,
                     icon = { Icon(Icons.Outlined.WarningAmber, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
@@ -202,8 +230,9 @@ fun TodayScreen(
         }
         item {
             StatusNotice(
-                title = "Harte Regel",
-                text = "Kein Vitamin C oder andere starke Antioxidantien zeitgleich oder in den ersten 4 Stunden nach T0.",
+                title = "Antioxidantien-Regel",
+                text = "Vorstufe: ab ${hourLabel(state.protocol.preBlockMinutes)} vor dem Drink kein Vitamin C, Vitamin E, Curcumin, Q10 oder Astaxanthin. " +
+                    "Sperre: bis ${hourLabel(state.protocol.antioxidantBlockMinutes)} nach T0. Am Kurmorgen nüchtern bleiben, nur Wasser.",
                 containerColor = colors.badBg,
                 contentColor = colors.bad,
                 icon = { Icon(Icons.Outlined.WarningAmber, null, tint = colors.bad, modifier = Modifier.size(20.dp)) },
@@ -231,9 +260,10 @@ fun TodayScreen(
         SetupSheet(
             defaultDuration = state.protocol.standardDurationDays,
             defaultStartMinute = state.protocol.preferredStartMinuteOfDay,
+            preBlockMinutes = state.protocol.preBlockMinutes,
             onDismiss = { showSetup = false },
-            onConfirm = { duration, liquid, fat, startDate, startMinute ->
-                onCreateCure(duration, liquid, fat, startDate, startMinute)
+            onConfirm = { duration, startDate, startMinute ->
+                onCreateCure(duration, DRINK_LIQUID, DRINK_FAT, startDate, startMinute)
                 showSetup = false
             },
         )
@@ -241,8 +271,6 @@ fun TodayScreen(
     if (showDrink) {
         DrinkSheet(
             ingredients = state.ingredients.filter { it.phase == IngredientPhase.DRINK },
-            carrierLiquid = state.activeCure?.cure?.carrierLiquid.orEmpty(),
-            fatCarrier = state.activeCure?.cure?.fatCarrier.orEmpty(),
             onDismiss = { showDrink = false },
             onDrinkNow = {
                 onDrinkNow()
@@ -291,6 +319,10 @@ fun TodayScreen(
     }
 }
 
+/** Der Fisetin-Drink wird immer mit Wasser und Olivenöl zubereitet. */
+internal const val DRINK_LIQUID = "Wasser"
+internal const val DRINK_FAT = "Olivenöl"
+
 internal fun todaySectionTitle(cure: CureEntity?, today: LocalDate = LocalDate.now()): String {
     if (cure?.status != CureStatus.GEPLANT) return "Heute"
     val startDate = LocalDate.ofEpochDay(cure.startEpochDay)
@@ -306,8 +338,15 @@ private fun TodayHero(state: MainUiState) {
     val active = state.activeCure != null
     val day = state.currentDay
     val cure = state.activeCure?.cure
+    val drinkAt = state.plannedDrinkAt
+    val preStart = state.prePhaseStart
+    val drinkDue = day?.t0 == null && drinkAt != null && state.now >= drinkAt
+    val inPrePhase = day?.t0 == null && state.prePhaseActive && !drinkDue
     val (title, text) = when {
         !active -> "Keine Kur aktiv" to "Lege die Kur in einen Freiblock: nüchterner Morgen, Mahlzeiten und das 4-Stunden-Fenster brauchen einen freien Tag."
+        drinkDue -> "Zeit für den Fisetin-Drink" to "Geplant war ${formatTime(drinkAt!!)}. Nüchtern trinken und T0 direkt danach bestätigen."
+        inPrePhase && drinkAt != null -> "Vorstufe läuft" to "Drink um ${formatTime(drinkAt)} · noch ${formatCountdown(drinkAt, state.now)}. Ab jetzt keine starken Antioxidantien mehr – der Stack zeigt, was tabu ist."
+        day?.t0 == null && preStart != null && drinkAt != null -> "Kur geplant" to "Vorstufe ab ${formatDayTime(preStart, state.now)}, Drink ${formatDayTime(drinkAt, state.now)}. Bis zur Vorstufe nimmst du alles wie gewohnt."
         day?.t0 == null -> "Nächster Schritt: Fisetin-Drink" to "Morgens nüchtern. Öffne die Checkliste und setze T0 erst direkt nach dem Trinken."
         state.blockActive -> "Sperrfenster aktiv" to "Antioxidantien sind ab ${formatTime(state.blockEnd!!)} wieder erlaubt."
         else -> "Alles im erlaubten Bereich" to "Grünes Licht: Aktuell ist keine Antioxidantien-Sperre aktiv."
@@ -330,6 +369,9 @@ private fun TodayHero(state: MainUiState) {
         ) {
             when {
                 state.blockActive && day?.t0 != null -> CountdownRing(day.t0, state.blockEnd!!, state.now)
+                drinkDue -> HeroIcon(colors.accentSoft, colors.accent, Icons.Outlined.WaterDrop, pulse = true)
+                inPrePhase -> HeroIcon(colors.warnBg, colors.warn, Icons.Outlined.Schedule, pulse = true)
+                active && day?.t0 == null && preStart != null -> HeroIcon(colors.accentSoft, colors.accent, Icons.Outlined.Schedule)
                 active && day?.t0 == null -> HeroIcon(colors.accentSoft, colors.accent, Icons.Outlined.WaterDrop, pulse = true)
                 active -> HeroIcon(colors.okBg, colors.ok, Icons.Outlined.Check)
                 else -> HeroIcon(colors.chip, colors.sub, Icons.Outlined.Add)
@@ -337,14 +379,15 @@ private fun TodayHero(state: MainUiState) {
             Text(
                 title,
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp),
-                color = colors.text,
+                color = if (inPrePhase) colors.warn else colors.text,
                 fontSize = 19.sp,
                 lineHeight = 26.6.sp,
                 fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
             Text(
                 text,
-                modifier = Modifier.align(Alignment.CenterHorizontally).widthIn(max = 290.dp),
+                modifier = Modifier.align(Alignment.CenterHorizontally).widthIn(max = 320.dp),
                 color = colors.sub,
                 fontSize = 13.5.sp,
                 lineHeight = 20.25.sp,
@@ -353,7 +396,7 @@ private fun TodayHero(state: MainUiState) {
             if (active && day != null && cure != null) {
                 val percent = (((day.dayNumber - 1f) / cure.plannedDurationDays) * 100).roundToInt()
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 6.dp),
+                    Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("Tag ${day.dayNumber} von ${cure.plannedDurationDays}", color = colors.sub, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -467,6 +510,7 @@ private fun NextStepCard(state: MainUiState, onGoTimeline: () -> Unit) {
             .clip(shape)
             .background(Brush.linearGradient(listOf(colors.accentSoft, Color.Transparent)))
             .border(1.dp, colors.cardBorder, shape)
+            .clickable(onClick = onGoTimeline)
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -490,90 +534,40 @@ private fun NextStepCard(state: MainUiState, onGoTimeline: () -> Unit) {
 private fun SetupSheet(
     defaultDuration: Int,
     defaultStartMinute: Int,
+    preBlockMinutes: Int,
     onDismiss: () -> Unit,
-    onConfirm: (Int, String, String, LocalDate, Int) -> Unit,
+    onConfirm: (Int, LocalDate, Int) -> Unit,
 ) {
-    var duration by remember { mutableIntStateOf(defaultDuration.coerceIn(1, 3)) }
-    var liquid by remember { mutableStateOf("Wasser") }
-    var fat by remember { mutableStateOf("MCT-Öl") }
-    var startDate by remember { mutableStateOf<LocalDate?>(null) }
-    var startMinute by remember { mutableIntStateOf(defaultStartMinute.coerceIn(0, 1_425)) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var startError by remember { mutableStateOf(false) }
+    var duration by rememberSaveable { mutableIntStateOf(defaultDuration.coerceIn(1, 3)) }
+    var startEpochDay by rememberSaveable { mutableStateOf<Long?>(null) }
+    var startMinute by rememberSaveable { mutableIntStateOf(defaultStartMinute.coerceIn(0, 1_425)) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
     val colors = LocalAppColors.current
+    val today = LocalDate.now()
+    val tomorrow = today.plusDays(1)
+    val startDate = startEpochDay?.let(LocalDate::ofEpochDay)
+    val now = System.currentTimeMillis()
     val plannedStart = startDate?.let { plannedStartAt(it, startMinute) }
-    val validStart = plannedStart?.let { it > System.currentTimeMillis() } == true
-    FbBottomSheet(onDismiss) {
-        Text("Kur einrichten", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-        SheetLabel("Dauer")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(1, 2, 3).forEach { value ->
-                SelectionButton(dayLabel(value), duration == value, { duration = value }, Modifier.weight(1f))
-            }
+    val validStart = plannedStart?.let { it > now } == true
+
+    fun selectDate(selected: LocalDate) {
+        startEpochDay = selected.toEpochDay()
+        if (selected == LocalDate.now()) {
+            val current = LocalTime.now()
+            val nowMinute = current.hour * 60 + current.minute
+            if (startMinute <= nowMinute) startMinute = ((nowMinute / 15 + 1) * 15).coerceAtMost(1_425)
         }
-        SheetLabel("Trägerflüssigkeit")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Wasser", "Grüner Tee").forEach { value ->
-                SelectionButton(value, liquid == value, { liquid = value }, Modifier.weight(1f))
-            }
-        }
-        SheetLabel("Fettträger")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("MCT-Öl", "Olivenöl").forEach { value ->
-                SelectionButton(value, fat == value, { fat = value }, Modifier.weight(1f))
-            }
-        }
-        SheetLabel("Geplantes Datum / Startzeit")
-        DesignOutlineButton(
-            text = startDate?.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) ?: "Datum auswählen",
-            onClick = { showDatePicker = true },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (startDate != null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                SquareControl("−15", {
-                    startMinute = (startMinute - 15).coerceAtLeast(0)
-                    startError = false
-                })
-                Text(
-                    "%02d:%02d".format(startMinute / 60, startMinute % 60),
-                    modifier = Modifier.weight(1f),
-                    color = colors.text,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-                SquareControl("+15", {
-                    startMinute = (startMinute + 15).coerceAtMost(1_425)
-                    startError = false
-                })
-            }
-            Text(
-                if (validStart && !startError) {
-                    "Start-Erinnerung am ${startDate!!.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))} um %02d:%02d Uhr.".format(startMinute / 60, startMinute % 60)
-                } else {
-                    "Datum und Startzeit müssen in der Zukunft liegen."
-                },
-                color = if (validStart && !startError) colors.sub else colors.bad,
-                fontSize = 12.5.sp,
-                lineHeight = 18.75.sp,
-            )
-        } else {
-            Text("Wähle zuerst den Kurtag und danach die Startzeit.", color = colors.sub, fontSize = 12.5.sp, lineHeight = 18.75.sp)
-        }
-        Text("T0 wird erst gesetzt, wenn du „Drink getrunken – jetzt“ bestätigst.", color = colors.sub, fontSize = 12.5.sp, lineHeight = 18.75.sp)
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+    }
+
+    FbBottomSheet(
+        onDismiss = onDismiss,
+        footer = {
             DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
             AccentGradientButton(
                 onClick = {
                     val selectedDate = startDate
                     if (selectedDate != null && plannedStartAt(selectedDate, startMinute) > System.currentTimeMillis()) {
-                        onConfirm(duration, liquid, fat, selectedDate, startMinute)
-                    } else {
-                        startError = true
+                        onConfirm(duration, selectedDate, startMinute)
                     }
                 },
                 enabled = validStart,
@@ -581,13 +575,72 @@ private fun SetupSheet(
                 shape = RoundedCornerShape(16.dp),
                 contentPadding = PaddingValues(14.dp),
             ) { Text("Kur anlegen", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+        },
+    ) {
+        Text("Kur einrichten", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        SheetLabel("Dauer")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(1, 2, 3).forEach { value ->
+                SelectionButton(dayLabel(value), duration == value, { duration = value }, Modifier.weight(1f))
+            }
         }
+        SheetLabel("Drink")
+        Text(
+            "Fisetin-Drink immer mit lauwarmem Wasser und Olivenöl.",
+            color = colors.sub,
+            fontSize = 13.sp,
+            lineHeight = 19.sp,
+        )
+        SheetLabel("Kurtag")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SelectionButton("Heute", startDate == today, { selectDate(today) }, Modifier.weight(1f))
+            SelectionButton("Morgen", startDate == tomorrow, { selectDate(tomorrow) }, Modifier.weight(1f))
+            val otherDate = startDate?.takeIf { it != today && it != tomorrow }
+            SelectionButton(
+                otherDate?.format(DateTimeFormatter.ofPattern("dd.MM.")) ?: "Datum …",
+                otherDate != null,
+                { showDatePicker = true },
+                Modifier.weight(1f),
+            )
+        }
+        if (startDate != null) {
+            SheetLabel("Uhrzeit für den Drink")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                SquareControl("−1 h") { startMinute = (startMinute - 60).coerceAtLeast(0) }
+                SquareControl("−15") { startMinute = (startMinute - 15).coerceAtLeast(0) }
+                Text(
+                    "%02d:%02d".format(startMinute / 60, startMinute % 60),
+                    modifier = Modifier.weight(1f),
+                    color = colors.text,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                SquareControl("+15") { startMinute = (startMinute + 15).coerceAtMost(1_425) }
+                SquareControl("+1 h") { startMinute = (startMinute + 60).coerceAtMost(1_425) }
+            }
+            if (validStart && plannedStart != null) {
+                val preStart = plannedStart - preBlockMinutes * 60_000L
+                StatusNotice(
+                    title = if (preStart <= now) "Vorstufe beginnt sofort" else "Vorstufe ab ${formatDayTime(preStart, now)}",
+                    text = "Ab dann kein Vitamin C, Vitamin E, Curcumin, Q10 oder Astaxanthin mehr. Am Kurmorgen nüchtern bleiben, nur Wasser. Drink ${formatDayTime(plannedStart, now)}.",
+                    containerColor = colors.warnBg,
+                    contentColor = colors.warn,
+                    icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
+                )
+            } else {
+                Text("Die Uhrzeit muss in der Zukunft liegen.", color = colors.bad, fontSize = 12.5.sp, lineHeight = 18.75.sp)
+            }
+        } else {
+            Text("Wähle den Kurtag – danach die Uhrzeit für den Drink.", color = colors.sub, fontSize = 12.5.sp, lineHeight = 18.75.sp)
+        }
+        Text("T0 wird erst gesetzt, wenn du „Drink getrunken – jetzt“ bestätigst.", color = colors.sub, fontSize = 12.5.sp, lineHeight = 18.75.sp)
     }
 
     if (showDatePicker) {
-        val today = LocalDate.now()
         val todayUtcMillis = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-        val calendarSurface = colors.bg0.copy(alpha = 0.90f)
+        val calendarSurface = colors.bg0
         val calendarColorScheme = MaterialTheme.colorScheme.copy(
             background = calendarSurface,
             surface = calendarSurface,
@@ -610,19 +663,8 @@ private fun SetupSheet(
                     TextButton(
                         enabled = datePickerState.selectedDateMillis != null,
                         onClick = {
-                            val selected = datePickerState.selectedDateMillis?.let { millis ->
-                                Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
-                            }
-                            if (selected != null) {
-                                startDate = selected
-                                if (selected == LocalDate.now()) {
-                                    val current = LocalTime.now()
-                                    val nextQuarter = ((current.hour * 60 + current.minute) / 15 + 1) * 15
-                                    if (startMinute <= current.hour * 60 + current.minute) {
-                                        startMinute = nextQuarter.coerceAtMost(1_425)
-                                    }
-                                }
-                                startError = false
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                selectDate(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
                                 showDatePicker = false
                             }
                         },
@@ -634,6 +676,7 @@ private fun SetupSheet(
             ) {
                 DatePicker(
                     state = datePickerState,
+                    showModeToggle = false,
                     colors = DatePickerDefaults.colors(
                         containerColor = calendarSurface,
                         titleContentColor = colors.sub,
@@ -651,17 +694,27 @@ private fun SetupSheet(
 @Composable
 private fun DrinkSheet(
     ingredients: List<IngredientEntity>,
-    carrierLiquid: String,
-    fatCarrier: String,
     onDismiss: () -> Unit,
     onDrinkNow: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     val checked = remember(ingredients) { mutableStateMapOf<Long, Boolean>().apply { ingredients.forEach { put(it.id, false) } } }
     val complete = ingredients.isNotEmpty() && ingredients.all { checked[it.id] == true }
-    FbBottomSheet(onDismiss) {
+    FbBottomSheet(
+        onDismiss = onDismiss,
+        footer = {
+            DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
+            AccentGradientButton(
+                onClick = onDrinkNow,
+                enabled = complete,
+                modifier = Modifier.weight(1.5f),
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(14.dp),
+            ) { Text("Drink getrunken – jetzt", fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+        },
+    ) {
         Text("Drink-Checkliste", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-        Text("Gewählt: $carrierLiquid · $fatCarrier", color = colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text("Mit Wasser und Olivenöl · alles abhaken, dann trinken.", color = colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         ingredients.forEach { ingredient ->
             Row(
                 Modifier
@@ -671,35 +724,37 @@ private fun DrinkSheet(
                     .clickable { checked[ingredient.id] = checked[ingredient.id] != true }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 DesignCheckbox(checked[ingredient.id] == true) { checked[ingredient.id] = it }
-                Column {
-                    Row {
-                        Text(ingredient.name, color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Text(" · ${ingredient.amount}", color = colors.sub, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    }
-                    Text(ingredient.note, color = colors.sub, fontSize = 12.sp, lineHeight = 16.8.sp)
+                Column(Modifier.weight(1f)) {
+                    Text(ingredient.name, color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        listOf(ingredient.amount, ingredient.note).filter { it.isNotBlank() }.joinToString(" · "),
+                        color = colors.sub,
+                        fontSize = 12.sp,
+                        lineHeight = 16.8.sp,
+                    )
                 }
             }
         }
-        Text("Alles intensiv mixen oder shaken und sofort trinken.", modifier = Modifier.fillMaxWidth(), color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
-            AccentGradientButton(
-                onClick = onDrinkNow,
-                enabled = complete,
-                modifier = Modifier.weight(1.5f),
-                shape = RoundedCornerShape(16.dp),
-                contentPadding = PaddingValues(14.dp),
-            ) { Text("Drink getrunken – jetzt", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
-        }
+        Text(
+            if (complete) "Alles intensiv mixen oder shaken und sofort trinken." else "Hake alle Zutaten ab, dann kannst du T0 setzen.",
+            modifier = Modifier.fillMaxWidth(),
+            color = if (complete) colors.text else colors.sub,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
+
+private enum class StepState { DONE, ACTIVE, OPEN }
 
 @Composable
 fun TimelineScreen(
     state: MainUiState,
+    onDrinkNow: () -> Unit,
     onMealDone: () -> Unit,
     onSpermidinDone: () -> Unit,
     onCompleteDay: () -> Unit,
@@ -708,31 +763,102 @@ fun TimelineScreen(
 ) {
     val colors = LocalAppColors.current
     val day = state.currentDay
-    var showCompletionChoice by remember(day?.id) { mutableStateOf(false) }
+    val cure = state.activeCure?.cure
+    var showCompletionChoice by rememberSaveable(day?.id) { mutableStateOf(false) }
+    var showDrink by rememberSaveable { mutableStateOf(false) }
+    val hardItems = remember(state.stackItems) {
+        state.stackItems.filter { it.category == StackCategory.HARTE_SPERRE }.map { it.name.substringBefore(" (") }
+    }
+    val drinkItems = state.ingredients.filter { it.phase == IngredientPhase.DRINK }.map { "${it.name} · ${it.amount}" }
+    val spermidinItems = state.ingredients.filter { it.phase == IngredientPhase.SPERMIDIN }.map { "${it.name} · ${it.amount}" }
+    val prePhaseNote = "Keine starken Antioxidantien. Am Kurmorgen nüchtern bleiben, nur Wasser. Medikamente wie gewohnt."
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(bottom = 18.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = LocalScreenBottomPadding.current),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { SectionTitle("Tagesablauf", "Alle Uhrzeiten werden ab T0 berechnet.") }
-        if (day?.t0 == null) {
+        item {
+            SectionTitle(
+                "Tagesablauf",
+                if (day?.t0 == null) "Geplante Zeiten – nach dem Drink richtet sich alles nach T0." else "Alle Uhrzeiten werden ab T0 berechnet.",
+            )
+        }
+        if (cure == null || day == null) {
             item {
                 GlassCard(shape = RoundedCornerShape(20.dp), contentPadding = PaddingValues(18.dp)) {
-                    Text("Noch kein T0", color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text("Trinke zuerst den Fisetin-Drink über den Heute-Bildschirm.", modifier = Modifier.padding(top = 3.dp), color = colors.sub, fontSize = 13.sp)
+                    Text("Keine Kur geplant", color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Lege auf dem Heute-Bildschirm eine neue Kur an. Danach siehst du hier den ganzen Ablauf – von der Vorstufe bis zum Ende des Sperrfensters.",
+                        modifier = Modifier.padding(top = 3.dp),
+                        color = colors.sub,
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                    )
+                }
+            }
+        } else if (day.t0 == null) {
+            val drinkAt = state.plannedDrinkAt ?: plannedT0(cure, day)
+            val preStart = prePhaseStartAt(drinkAt, state.protocol)
+            val planned = timeline(drinkAt, state.protocol)
+            val preActive = state.now >= preStart
+            item {
+                Column {
+                    TimelineStep(
+                        title = "Vorstufe",
+                        time = if (preActive) "läuft seit ${formatDayTime(preStart, state.now)}" else "ab ${formatDayTime(preStart, state.now)}",
+                        state = if (preActive) StepState.ACTIVE else StepState.OPEN,
+                        note = prePhaseNote,
+                        ingredients = hardItems.map { "kein $it" },
+                        warningChips = true,
+                    )
+                    TimelineStep(
+                        title = "Fisetin-Drink · T0",
+                        time = "geplant ${formatDayTime(drinkAt, state.now)}",
+                        state = if (state.now >= drinkAt) StepState.ACTIVE else StepState.OPEN,
+                        actionLabel = "Checkliste",
+                        action = { showDrink = true },
+                        ingredients = drinkItems,
+                    )
+                    TimelineStep("Fettige Mahlzeit", "ca. bis ${formatTime(planned.mealDeadline)}", StepState.OPEN)
+                    TimelineStep("Spermidin + leichte Mahlzeit", "ca. ${clock(planned.spermidinStart)}–${formatTime(planned.spermidinEnd)}", StepState.OPEN, ingredients = spermidinItems)
+                    TimelineStep("Sperrfenster vorbei", "ca. ${formatTime(planned.blockEnd)}", StepState.OPEN, last = true)
                 }
             }
         } else {
             val times = timeline(day.t0, state.protocol)
-            val drinkItems = state.ingredients.filter { it.phase == IngredientPhase.DRINK }.map { "${it.name} · ${it.amount}" }
-            val mealItems = listOfNotNull(state.activeCure?.cure?.fatCarrier?.takeIf { it.isNotBlank() })
-            val spermidinItems = state.ingredients.filter { it.phase == IngredientPhase.SPERMIDIN }.map { "${it.name} · ${it.amount}" }
+            val mealDone = day.mealDoneAt != null
+            val spermidinDone = day.spermidinDoneAt != null
             item {
                 Column {
-                    TimelineStep("Fisetin-Drink", "${formatTime(times.t0)} · T0 gesetzt", true, null, drinkItems, false)
-                    TimelineStep("Fettige Mahlzeit", "bis ${formatTime(times.mealDeadline)}", day.mealDoneAt != null, if (day.mealDoneAt == null) onMealDone else null, mealItems, false)
-                    TimelineStep("Spermidin + leichte Mahlzeit", "${clock(times.spermidinStart)}–${formatTime(times.spermidinEnd)}", day.spermidinDoneAt != null, if (day.spermidinDoneAt == null) onSpermidinDone else null, spermidinItems, false)
-                    TimelineStep("Sperrfenster vorbei", formatTime(times.blockEnd), !state.blockActive, null, emptyList(), true)
+                    TimelineStep("Vorstufe", "erledigt", StepState.DONE)
+                    TimelineStep("Fisetin-Drink · T0", "${formatTime(times.t0)} · T0 gesetzt", StepState.DONE, ingredients = drinkItems)
+                    TimelineStep(
+                        title = "Fettige Mahlzeit",
+                        time = "bis ${formatTime(times.mealDeadline)}",
+                        state = when {
+                            mealDone -> StepState.DONE
+                            state.now < times.mealDeadline -> StepState.ACTIVE
+                            else -> StepState.OPEN
+                        },
+                        action = if (mealDone) null else onMealDone,
+                    )
+                    TimelineStep(
+                        title = "Spermidin + leichte Mahlzeit",
+                        time = "${clock(times.spermidinStart)}–${formatTime(times.spermidinEnd)}",
+                        state = when {
+                            spermidinDone -> StepState.DONE
+                            state.now >= times.spermidinStart -> StepState.ACTIVE
+                            else -> StepState.OPEN
+                        },
+                        action = if (spermidinDone) null else onSpermidinDone,
+                        ingredients = spermidinItems,
+                    )
+                    TimelineStep(
+                        title = "Sperrfenster vorbei",
+                        time = formatTime(times.blockEnd),
+                        state = if (state.blockActive) StepState.ACTIVE else StepState.DONE,
+                        last = true,
+                    )
                 }
             }
             if (state.blockActive) {
@@ -747,13 +873,13 @@ fun TimelineScreen(
                 }
             }
             item {
-                val hasAnotherDay = day.dayNumber < (state.activeCure?.cure?.plannedDurationDays ?: day.dayNumber)
+                val hasAnotherDay = day.dayNumber < cure.plannedDurationDays
                 AccentGradientButton(
                     onClick = { if (hasAnotherDay) showCompletionChoice = true else onCompleteDay() },
                     enabled = state.canCompleteDay,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (day.dayNumber == state.activeCure?.cure?.plannedDurationDays) "Kur abschließen" else "Tag ${day.dayNumber} abschließen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(if (day.dayNumber == cure.plannedDurationDays) "Kur abschließen" else "Tag ${day.dayNumber} abschließen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
             }
             if (!state.canCompleteDay) {
@@ -771,6 +897,16 @@ fun TimelineScreen(
         }
     }
 
+    if (showDrink) {
+        DrinkSheet(
+            ingredients = state.ingredients.filter { it.phase == IngredientPhase.DRINK },
+            onDismiss = { showDrink = false },
+            onDrinkNow = {
+                onDrinkNow()
+                showDrink = false
+            },
+        )
+    }
     if (showCompletionChoice && day != null) {
         FbPopDialog(onDismiss = { showCompletionChoice = false }) {
             Text("Tag ${day.dayNumber} vollständig", color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
@@ -810,90 +946,141 @@ private fun dayLabel(days: Int): String = if (days == 1) "1 Tag" else "$days Tag
 private fun TimelineStep(
     title: String,
     time: String,
-    done: Boolean,
-    action: (() -> Unit)?,
-    ingredients: List<String>,
-    last: Boolean,
+    state: StepState,
+    actionLabel: String = "Erledigt",
+    action: (() -> Unit)? = null,
+    ingredients: List<String> = emptyList(),
+    last: Boolean = false,
+    note: String? = null,
+    warningChips: Boolean = false,
 ) {
     val colors = LocalAppColors.current
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Column(Modifier.width(36.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier.size(36.dp).clip(CircleShape).background(if (done) colors.okBg else colors.chip).border(1.dp, colors.line, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(if (done) Icons.Outlined.Check else Icons.Outlined.RadioButtonUnchecked, null, tint = if (done) colors.ok else colors.sub, modifier = Modifier.size(17.dp))
+    val lineColor = colors.line
+    val (circleBackground, circleBorder, iconTint) = when (state) {
+        StepState.DONE -> Triple(colors.okBg, colors.line, colors.ok)
+        StepState.ACTIVE -> Triple(colors.accentSoft, colors.accent, colors.accent)
+        StepState.OPEN -> Triple(colors.chip, colors.line, colors.sub)
+    }
+    // Verbindungslinie wird gezeichnet statt per IntrinsicSize gemessen: FlowRow-Inhalte
+    // wurden mit Intrinsic-Messung abgeschnitten.
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                if (!last) {
+                    val x = 18.dp.toPx()
+                    drawLine(lineColor, Offset(x, 36.dp.toPx()), Offset(x, size.height), strokeWidth = 2.dp.toPx())
+                }
             }
-            if (!last) Box(Modifier.width(2.dp).weight(1f).background(colors.line))
+            .padding(bottom = if (last) 0.dp else 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(
+            Modifier.size(36.dp).clip(CircleShape).background(circleBackground).border(if (state == StepState.ACTIVE) 2.dp else 1.dp, circleBorder, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            val icon = when (state) {
+                StepState.DONE -> Icons.Outlined.Check
+                StepState.ACTIVE -> Icons.Outlined.Schedule
+                StepState.OPEN -> Icons.Outlined.RadioButtonUnchecked
+            }
+            Icon(icon, null, tint = iconTint, modifier = Modifier.size(17.dp))
         }
         GlassCard(
-            modifier = Modifier.weight(1f).padding(bottom = if (last) 0.dp else 10.dp),
+            modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(18.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(title, color = colors.text, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
-                    Text(time, color = colors.sub, fontSize = 12.5.sp)
-                    if (ingredients.isNotEmpty()) {
-                        FlowRow(
-                            modifier = Modifier.padding(top = 7.dp),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            verticalArrangement = Arrangement.spacedBy(5.dp),
-                        ) {
-                            ingredients.forEach { IngredientChip(it) }
-                        }
-                    }
+                    Text(
+                        time,
+                        color = if (state == StepState.ACTIVE) colors.accent else colors.sub,
+                        fontSize = 12.5.sp,
+                        fontWeight = if (state == StepState.ACTIVE) FontWeight.SemiBold else FontWeight.Normal,
+                    )
                 }
-                action?.let { SmallActionButton("Erledigt", it) }
+                action?.let { SmallActionButton(actionLabel, it) }
+            }
+            note?.let {
+                Text(it, modifier = Modifier.padding(top = 6.dp), color = colors.sub, fontSize = 12.5.sp, lineHeight = 18.sp)
+            }
+            if (ingredients.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    ingredients.forEach { IngredientChip(it, warning = warningChips) }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun IngredientChip(text: String) {
+private fun IngredientChip(text: String, warning: Boolean = false) {
     val colors = LocalAppColors.current
     Text(
         text,
-        modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(colors.chip).border(1.dp, colors.line, RoundedCornerShape(999.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
-        color = colors.sub,
-        fontSize = 10.5.sp,
-        lineHeight = 14.7.sp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (warning) colors.badBg else colors.chip)
+            .border(1.dp, if (warning) colors.badBg else colors.line, RoundedCornerShape(999.dp))
+            .padding(horizontal = 9.dp, vertical = 4.dp),
+        color = if (warning) colors.bad else colors.sub,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
         fontWeight = FontWeight.SemiBold,
     )
 }
 
 private fun clock(timestamp: Long): String = formatTime(timestamp).removeSuffix(" Uhr")
 
+private val SheetScrim = Color(0x73080614)
+
+/**
+ * Eigenes Bottom-Sheet: randlos im Dialog-Fenster, Inhalt scrollt, die Aktionsleiste
+ * bleibt fest über Navigationsleiste und Tastatur sichtbar.
+ */
 @Composable
-internal fun FbBottomSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+internal fun FbBottomSheet(
+    onDismiss: () -> Unit,
+    footer: (@Composable RowScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val colors = LocalAppColors.current
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
         BoxWithConstraints(
             Modifier
                 .fillMaxSize()
-                .background(Color(0x73080614))
-                .navigationBarsPadding()
-                .imePadding()
+                .background(SheetScrim)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onDismiss,
-                ),
+                )
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(top = 24.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
+            val sheetMaxHeight = maxHeight
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(400, easing = FbMotionEasing)) + slideInVertically(tween(400, easing = FbMotionEasing)) { it },
+                enter = fadeIn(tween(300, easing = FbMotionEasing)) + slideInVertically(tween(300, easing = FbMotionEasing)) { it / 3 },
             ) {
                 val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
                 Column(
                     Modifier
+                        .widthIn(max = 640.dp)
                         .fillMaxWidth()
-                        .heightIn(max = maxHeight * 0.94f)
+                        .heightIn(max = sheetMaxHeight)
                         .clip(shape)
                         .background(colors.card)
                         .border(BorderStroke(1.dp, colors.cardBorder), shape)
@@ -902,12 +1089,34 @@ internal fun FbBottomSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
                             indication = null,
                             onClick = {},
                         )
-                        .verticalScroll(rememberScrollState())
-                        .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 38.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
                 ) {
-                    Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp).clip(RoundedCornerShape(99.dp)).background(colors.line))
-                    content()
+                    Box(
+                        Modifier
+                            .padding(top = 12.dp, bottom = 4.dp)
+                            .align(Alignment.CenterHorizontally)
+                            .width(40.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(colors.line),
+                    )
+                    Column(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = if (footer == null) 24.dp else 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        content = content,
+                    )
+                    if (footer != null) {
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line))
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            content = footer,
+                        )
+                    }
                 }
             }
         }
@@ -916,27 +1125,48 @@ internal fun FbBottomSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
 
 @Composable
 internal fun FbPopDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    val colors = LocalAppColors.current
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
         Box(
-            Modifier.fillMaxSize().background(Color(0x73080614)).padding(24.dp),
+            Modifier
+                .fillMaxSize()
+                .background(SheetScrim)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss,
+                )
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(24.dp),
             contentAlignment = Alignment.Center,
         ) {
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(tween(350, easing = FbMotionEasing)) + scaleIn(
-                    animationSpec = tween(350, easing = FbMotionEasing),
-                    initialScale = 0.92f,
+                enter = fadeIn(tween(300, easing = FbMotionEasing)) + scaleIn(
+                    animationSpec = tween(300, easing = FbMotionEasing),
+                    initialScale = 0.94f,
                 ),
             ) {
                 GlassCard(
-                    modifier = Modifier.fillMaxWidth().widthIn(max = 320.dp),
+                    modifier = Modifier
+                        .widthIn(max = 420.dp)
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {},
+                        ),
                     shape = RoundedCornerShape(24.dp),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
-                    content = content,
-                )
+                ) {
+                    Column(
+                        Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp),
+                        content = content,
+                    )
+                }
             }
         }
     }
@@ -978,13 +1208,13 @@ internal fun FlatDesignButton(text: String, onClick: () -> Unit, modifier: Modif
 }
 
 @Composable
-internal fun SmallActionButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
+internal fun SmallActionButton(text: String, onClick: () -> Unit, enabled: Boolean = true, modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
     Box(
-        Modifier.clip(RoundedCornerShape(12.dp)).background(colors.accentSoft).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp),
+        modifier.heightIn(min = 38.dp).clip(RoundedCornerShape(12.dp)).background(colors.accentSoft).clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = colors.accent.copy(alpha = if (enabled) 1f else 0.45f), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = colors.accent.copy(alpha = if (enabled) 1f else 0.45f), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
@@ -996,7 +1226,7 @@ internal fun SelectionButton(text: String, selected: Boolean, onClick: () -> Uni
         modifier.clip(shape).background(if (selected) colors.accentSoft else colors.chip).border(1.dp, if (selected) colors.accent else colors.line, shape).clickable(onClick = onClick).padding(12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = if (selected) colors.accent else colors.sub, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(text, color = if (selected) colors.accent else colors.sub, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1)
     }
 }
 
@@ -1021,9 +1251,9 @@ private fun SheetLabel(text: String) {
 private fun SquareControl(text: String, onClick: () -> Unit) {
     val colors = LocalAppColors.current
     Box(
-        Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(colors.chip).border(1.dp, colors.line, RoundedCornerShape(14.dp)).clickable(onClick = onClick),
+        Modifier.size(width = 48.dp, height = 46.dp).clip(RoundedCornerShape(14.dp)).background(colors.chip).border(1.dp, colors.line, RoundedCornerShape(14.dp)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }

@@ -34,6 +34,7 @@ data class ProtocolTemplateEntity(
     val spermidinReminderMinutes: Int = 225,
     val preferredStartMinuteOfDay: Int = 480,
     val remindersEnabled: Boolean = true,
+    val preBlockMinutes: Int = 720,
 )
 
 @Entity(tableName = "ingredients")

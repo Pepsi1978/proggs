@@ -98,7 +98,7 @@ interface FisetinDao {
         CureEntity::class,
         CureDayEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class FisetinDatabase : RoomDatabase() {
@@ -111,10 +111,20 @@ abstract class FisetinDatabase : RoomDatabase() {
             }
         }
 
+        // Vorstufe vor T0 und feste Drink-Basis: immer Wasser und Olivenöl.
+        private val migration2To3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `protocol_templates` ADD COLUMN `preBlockMinutes` INTEGER NOT NULL DEFAULT 720")
+                database.execSQL("UPDATE `ingredients` SET `name` = 'Olivenöl' WHERE `name` = 'MCT-Öl oder Olivenöl'")
+                database.execSQL("UPDATE `ingredients` SET `name` = 'Lauwarmes Wasser' WHERE `name` = 'Lauwarmes Wasser oder grüner Tee'")
+                database.execSQL("UPDATE `cures` SET `carrierLiquid` = 'Wasser', `fatCarrier` = 'Olivenöl' WHERE `status` != 'ABGESCHLOSSEN'")
+            }
+        }
+
         fun create(context: Context): FisetinDatabase = Room.databaseBuilder(
             context.applicationContext,
             FisetinDatabase::class.java,
             "fisetin-begleiter.db",
-        ).addMigrations(migration1To2).build()
+        ).addMigrations(migration1To2, migration2To3).build()
     }
 }

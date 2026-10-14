@@ -11,6 +11,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.Icon
+import de.frank.fisetinbegleiter.alarm.hourLabel
+import de.frank.fisetinbegleiter.domain.timeline
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,57 +52,117 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
-    val blocked = state.blockActive
+    val phase = state.stackPhase
+    val drinkAt = state.plannedDrinkAt
+    val upcomingPrePhase = state.prePhaseStart?.takeIf { phase == StackPhase.NORMAL }
     val groupedItems = remember(state.stackItems) { state.stackItems.groupBy { it.category } }
     val safeItems = groupedItems[StackCategory.UNPROBLEMATISCH].orEmpty()
     val safeGroups = remember(safeItems) { safeItems.partition { it.isMedication } }
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(bottom = 18.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = LocalScreenBottomPadding.current),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             SectionTitle(
-                "Morgen-Stack",
-                if (blocked) "Für heute während des aktiven Sperrfensters." else "Aktuell besteht keine Antioxidantien-Sperre.",
+                "Stack",
+                when (phase) {
+                    StackPhase.VORSTUFE -> "Vorstufe: Was du vor dem Drink nicht mehr nehmen darfst."
+                    StackPhase.SPERRFENSTER -> "Sperrfenster: Was du jetzt weglassen musst."
+                    StackPhase.NACH_SPERRE -> "Sperrfenster vorbei – alles wieder erlaubt."
+                    StackPhase.NORMAL -> "Was du rund um die Kur nehmen darfst."
+                },
             )
         }
-        if (blocked) {
-            item {
-                StatusNotice(
-                    "Freigabe um ${formatTime(state.blockEnd!!)}",
-                    "Bis dahin rote Substanzen weglassen. Gelbe Grenzfälle im Zweifel ebenfalls verschieben.",
-                    colors.warnBg,
-                    colors.warn,
+        item {
+            when (phase) {
+                StackPhase.VORSTUFE -> {
+                    val releaseAt = drinkAt?.let { timeline(it, state.protocol).blockEnd }
+                    StatusNotice(
+                        title = if (drinkAt != null && state.now >= drinkAt) "Vorstufe – Drink jetzt fällig" else "Vorstufe läuft – Drink ${drinkAt?.let { formatDayTime(it, state.now) }.orEmpty()}",
+                        text = "Alles in Rot ab sofort nicht mehr nehmen, gelbe Grenzfälle ebenfalls weglassen" +
+                            (releaseAt?.let { " – wieder erlaubt ab ca. ${formatDayTime(it, state.now)}" } ?: "") +
+                            ". Am Kurmorgen nüchtern bleiben, bis zum Drink nur Wasser. Medikamente wie gewohnt.",
+                        containerColor = colors.badBg,
+                        contentColor = colors.bad,
+                        icon = { Icon(Icons.Outlined.WarningAmber, null, tint = colors.bad, modifier = Modifier.size(20.dp)) },
+                    )
+                }
+                StackPhase.SPERRFENSTER -> StatusNotice(
+                    title = "Freigabe um ${formatTime(state.blockEnd!!)}",
+                    text = "Bis dahin rote Substanzen weglassen. Gelbe Grenzfälle im Zweifel ebenfalls verschieben.",
+                    containerColor = colors.warnBg,
+                    contentColor = colors.warn,
+                    icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
                 )
+                StackPhase.NACH_SPERRE -> StatusNotice(
+                    title = "Sperrfenster vorbei",
+                    text = "Alles ist wieder erlaubt – verpasste Antioxidantien kannst du jetzt nachholen.",
+                    containerColor = colors.okBg,
+                    contentColor = colors.ok,
+                    icon = { Icon(Icons.Outlined.CheckCircle, null, tint = colors.ok, modifier = Modifier.size(20.dp)) },
+                )
+                StackPhase.NORMAL -> if (upcomingPrePhase != null) {
+                    StatusNotice(
+                        title = "Vorstufe ab ${formatDayTime(upcomingPrePhase, state.now)}",
+                        text = "Bis dahin nimmst du alles wie gewohnt. Ab der Vorstufe sind die roten Substanzen tabu – bis ${hourLabel(state.protocol.antioxidantBlockMinutes)} nach dem Drink.",
+                        containerColor = colors.accentSoft,
+                        contentColor = colors.accent,
+                        icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.accent, modifier = Modifier.size(20.dp)) },
+                    )
+                } else {
+                    StatusNotice(
+                        title = "Keine Einschränkung",
+                        text = "Aktuell ist keine Kur geplant – alles wie gewohnt einnehmen.",
+                        containerColor = colors.okBg,
+                        contentColor = colors.ok,
+                        icon = { Icon(Icons.Outlined.CheckCircle, null, tint = colors.ok, modifier = Modifier.size(20.dp)) },
+                    )
+                }
             }
         }
 
         val hardItems = groupedItems[StackCategory.HARTE_SPERRE].orEmpty()
         if (hardItems.isNotEmpty()) {
-            item { StackSectionTitle(if (blocked) "Harte Sperre" else "Jetzt wieder erlaubt") }
-            items(hardItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, blocked) }
+            item {
+                StackSectionTitle(
+                    when (phase) {
+                        StackPhase.VORSTUFE, StackPhase.SPERRFENSTER -> "Nicht nehmen"
+                        StackPhase.NACH_SPERRE -> "Wieder erlaubt"
+                        StackPhase.NORMAL -> "Starke Antioxidantien"
+                    },
+                )
+            }
+            items(hardItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, upcomingPrePhase != null) }
         }
 
         val cautionItems = groupedItems[StackCategory.GRENZFALL].orEmpty()
         if (cautionItems.isNotEmpty()) {
             item { StackSectionTitle("Grenzfälle", topPadding = 6.dp) }
-            items(cautionItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, blocked) }
+            items(cautionItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, upcomingPrePhase != null) }
         }
 
-        if (safeItems.isNotEmpty()) {
+        if (safeGroups.first.isNotEmpty()) {
+            item { StackSectionTitle("Medikamente", topPadding = 6.dp) }
+            items(safeGroups.first, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, upcomingPrePhase != null) }
+        }
+
+        if (safeGroups.second.isNotEmpty()) {
             item { StackSectionTitle("Unproblematisch", topPadding = 6.dp) }
-            items(safeGroups.first, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, blocked = false) }
-            item { SafeItemChips(safeGroups.second) }
             item {
                 Text(
-                    "Alle unproblematischen Substanzen: wie im Morgen-Stack einnehmen.",
-                    modifier = Modifier.fillMaxWidth(),
-                    color = colors.sub,
-                    fontSize = 12.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    if (phase == StackPhase.VORSTUFE) {
+                        "Abends wie gewohnt. Am Kurmorgen erst nach dem Drink einnehmen – bis dahin nüchtern bleiben, nur Wasser."
+                    } else {
+                        "Wie gewohnt einnehmen."
+                    },
+                    color = if (phase == StackPhase.VORSTUFE) colors.warn else colors.sub,
+                    fontSize = 12.5.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = if (phase == StackPhase.VORSTUFE) FontWeight.SemiBold else FontWeight.Normal,
                 )
             }
+            item { SafeItemChips(safeGroups.second) }
         }
     }
 }
@@ -105,10 +174,11 @@ private fun StackSectionTitle(text: String, topPadding: androidx.compose.ui.unit
 }
 
 @Composable
-private fun StackStatusCard(item: StackItemEntity, blocked: Boolean) {
+private fun StackStatusCard(item: StackItemEntity, phase: StackPhase, curePlanned: Boolean) {
     val colors = LocalAppColors.current
-    val isBlocked = item.category == StackCategory.HARTE_SPERRE && blocked
-    val caution = item.category == StackCategory.GRENZFALL && blocked
+    val restricted = phase == StackPhase.VORSTUFE || phase == StackPhase.SPERRFENSTER
+    val isBlocked = item.category == StackCategory.HARTE_SPERRE && restricted && !item.isMedication
+    val caution = item.category == StackCategory.GRENZFALL && restricted && !item.isMedication
     val background = when {
         isBlocked -> colors.badBg
         caution -> colors.warnBg
@@ -120,16 +190,18 @@ private fun StackStatusCard(item: StackItemEntity, blocked: Boolean) {
         else -> colors.ok
     }
     val status = when {
-        item.isMedication -> "Medikament — immer einnehmen, nie wegen der Kur weglassen."
+        item.isMedication -> "Medikament – immer einnehmen, nie wegen der Kur weglassen."
+        isBlocked && phase == StackPhase.VORSTUFE -> "Nicht mehr nehmen – erst wieder nach dem Sperrfenster."
         isBlocked -> "Während des Sperrfensters weglassen."
-        caution -> "Im Zweifel hinter das 4-Stunden-Fenster verschieben."
-        item.category == StackCategory.HARTE_SPERRE -> "Sperrfenster vorbei – jetzt nachholbar."
+        caution -> "Weglassen, bis das Sperrfenster vorbei ist."
+        item.category == StackCategory.HARTE_SPERRE && phase == StackPhase.NACH_SPERRE -> "Sperrfenster vorbei – jetzt nachholbar."
+        item.category != StackCategory.UNPROBLEMATISCH && curePlanned -> "Jetzt noch normal – ab der Vorstufe weglassen."
         else -> "Normal einnehmen."
     }
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(background).padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
             Text(
                 item.name,
                 modifier = Modifier.weight(1f),
@@ -138,7 +210,13 @@ private fun StackStatusCard(item: StackItemEntity, blocked: Boolean) {
                 fontWeight = FontWeight.Bold,
                 textDecoration = if (isBlocked) TextDecoration.LineThrough else TextDecoration.None,
             )
-            Text(item.usualDose, color = colors.sub, fontSize = 12.sp)
+            Text(
+                item.usualDose,
+                modifier = Modifier.widthIn(max = 150.dp).padding(top = 2.dp),
+                color = colors.sub,
+                fontSize = 12.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            )
         }
         Text(status, modifier = Modifier.padding(top = 3.dp), color = foreground, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
         if (item.note.isNotBlank()) {
@@ -174,7 +252,7 @@ fun HistoryScreen(
     val colors = LocalAppColors.current
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(bottom = 18.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = LocalScreenBottomPadding.current),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { SectionTitle("Protokoll", "Alle Daten bleiben lokal auf diesem Gerät.") }
@@ -212,7 +290,11 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                if (completed) "Abgeschlossen" else "Aktiv",
+                when {
+                    completed -> "Abgeschlossen"
+                    cure.cure.status == CureStatus.GEPLANT -> "Geplant"
+                    else -> "Aktiv"
+                },
                 modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(if (completed) colors.okBg else colors.warnBg).padding(horizontal = 11.dp, vertical = 5.dp),
                 color = if (completed) colors.ok else colors.warn,
                 fontSize = 11.5.sp,
@@ -235,12 +317,22 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
             letterSpacing = 0.4.sp,
         )
         NoteEditor(note, { note = it })
-        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SmallActionButton("Notiz speichern", { onUpdateNote(cure, note) }, enabled = note != cure.cure.note)
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SmallActionButton(
+                "Notiz speichern",
+                { onUpdateNote(cure, note) },
+                enabled = note != cure.cure.note,
+                modifier = Modifier.weight(1f),
+            )
             if (!completed) {
                 DesignOutlineButton(
-                    if (completedDays > 0) "Nach ${historyDayLabel(completedDays)} beenden" else "Abbrechen & zurücksetzen",
+                    if (completedDays > 0) "Nach ${historyDayLabel(completedDays)} beenden" else "Abbrechen",
                     { showCancelConfirmation = true },
+                    modifier = Modifier.weight(1f),
                     contentColor = colors.bad,
                     borderColor = colors.badBg,
                     verticalPadding = 10.dp,

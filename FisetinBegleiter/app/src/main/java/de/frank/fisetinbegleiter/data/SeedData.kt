@@ -4,9 +4,9 @@ object SeedData {
     val ingredients = listOf(
         IngredientEntity(phase = IngredientPhase.DRINK, name = "Fisetin", amount = "2.000 mg", note = "Pulver oder Kapseln, laborgeprüft", sortOrder = 1),
         IngredientEntity(phase = IngredientPhase.DRINK, name = "Piperin", amount = "15–20 mg", note = "Zusammen mit Fisetin im Drink", sortOrder = 2),
-        IngredientEntity(phase = IngredientPhase.DRINK, name = "MCT-Öl oder Olivenöl", amount = "10 ml", note = "Fettträger für die Aufnahme", sortOrder = 3),
+        IngredientEntity(phase = IngredientPhase.DRINK, name = "Olivenöl", amount = "10 ml", note = "Fettträger für die Aufnahme", sortOrder = 3),
         IngredientEntity(phase = IngredientPhase.DRINK, name = "Sonnenblumenlecithin", amount = "5–10 g (1–2 TL)", note = "Verbessert die Bioverfügbarkeit", sortOrder = 4),
-        IngredientEntity(phase = IngredientPhase.DRINK, name = "Lauwarmes Wasser oder grüner Tee", amount = "200–250 ml", note = "Trägerflüssigkeit", sortOrder = 5),
+        IngredientEntity(phase = IngredientPhase.DRINK, name = "Lauwarmes Wasser", amount = "200–250 ml", note = "Trägerflüssigkeit", sortOrder = 5),
         IngredientEntity(phase = IngredientPhase.SPERMIDIN, name = "Piperin", amount = "10–15 mg", note = "Als Kapsel", optional = true, sortOrder = 1),
         IngredientEntity(phase = IngredientPhase.SPERMIDIN, name = "Spermidin", amount = "6 mg", note = "Fester Bestandteil", sortOrder = 2),
         IngredientEntity(phase = IngredientPhase.SPERMIDIN, name = "Leichte Mahlzeit", amount = "1 Portion", note = "Zusammen einnehmen", sortOrder = 3),

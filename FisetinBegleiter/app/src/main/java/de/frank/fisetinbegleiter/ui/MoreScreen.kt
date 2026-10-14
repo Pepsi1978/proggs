@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -69,14 +70,15 @@ fun MoreScreen(
     var protocol by remember(state.protocol) { mutableStateOf(state.protocol) }
     var editedIngredient by remember { mutableStateOf<IngredientEntity?>(null) }
     var ingredientDialog by remember { mutableStateOf(false) }
+    var deleteCandidate by remember { mutableStateOf<IngredientEntity?>(null) }
     val ingredientsByPhase = remember(state.ingredients) { state.ingredients.groupBy { it.phase } }
 
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(bottom = 18.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = LocalScreenBottomPadding.current),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { SectionTitle("System", "Berechtigungen und Zuverlässigkeit der App.") }
+        item { SectionTitle("System", "Darstellung, Protokoll und Zuverlässigkeit der App.") }
         item { ThemeFamilySelector(themeVariant, onThemeVariantChange) }
         item {
             Text("Standard-Protokoll", modifier = Modifier.padding(top = 8.dp), color = colors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
@@ -95,6 +97,11 @@ fun MoreScreen(
         item {
             ProtocolNumberRow("Standarddauer (Tage)", protocol.standardDurationDays, 1, 1, 3, !locked) {
                 protocol = protocol.copy(standardDurationDays = it)
+            }
+        }
+        item {
+            ProtocolNumberRow("Vorstufe vor dem Drink (Std.)", protocol.preBlockMinutes / 60, 1, 1, 24, !locked) {
+                protocol = protocol.copy(preBlockMinutes = it * 60)
             }
         }
         item {
@@ -169,7 +176,7 @@ fun MoreScreen(
                             editedIngredient = ingredient
                             ingredientDialog = true
                         },
-                        onDelete = { onDeleteIngredient(ingredient) },
+                        onDelete = { deleteCandidate = ingredient },
                     )
                 }
             }
@@ -198,6 +205,32 @@ fun MoreScreen(
                 fontSize = 11.5.sp,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
+        }
+    }
+
+    deleteCandidate?.let { candidate ->
+        FbPopDialog(onDismiss = { deleteCandidate = null }) {
+            Text("Zutat löschen?", color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "„${candidate.name}“ wird aus dem Protokoll entfernt.",
+                modifier = Modifier.padding(top = 10.dp),
+                color = colors.sub,
+                fontSize = 13.5.sp,
+                lineHeight = 20.sp,
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DesignOutlineButton("Behalten", { deleteCandidate = null }, Modifier.weight(1f), verticalPadding = 13.dp)
+                FlatDesignButton(
+                    "Löschen",
+                    {
+                        onDeleteIngredient(candidate)
+                        deleteCandidate = null
+                    },
+                    Modifier.weight(1f),
+                    colors.badBg,
+                    colors.bad,
+                )
+            }
         }
     }
 
@@ -267,7 +300,7 @@ private fun ProtocolNumberRow(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, modifier = Modifier.weight(1f), color = colors.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
             NumberButton("−", enabled && value > min) { onValue((value - step).coerceAtLeast(min)) }
-            Text(value.toString(), modifier = Modifier.size(width = 44.dp, height = 32.dp).padding(top = 5.dp), color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(value.toString(), modifier = Modifier.widthIn(min = 44.dp), color = colors.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             NumberButton("+", enabled && value < max) { onValue(if (value > max - step) max else value + step) }
         }
     }
@@ -278,7 +311,7 @@ private fun NumberButton(text: String, enabled: Boolean, onClick: () -> Unit) {
     val colors = LocalAppColors.current
     val shape = RoundedCornerShape(11.dp)
     Box(
-        Modifier.size(32.dp).clip(shape).background(colors.chip).border(1.dp, colors.line, shape).clickable(enabled = enabled, onClick = onClick),
+        Modifier.size(38.dp).clip(shape).background(colors.chip).border(1.dp, colors.line, shape).clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = colors.text.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -309,18 +342,15 @@ private fun DesignToggle(checked: Boolean, enabled: Boolean, onCheckedChange: (B
 private fun IngredientRow(ingredient: IngredientEntity, canEdit: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
     val colors = LocalAppColors.current
     GlassCard(shape = RoundedCornerShape(16.dp), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("${ingredient.name} · ${ingredient.amount}", color = colors.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    listOfNotNull(if (ingredient.optional) "optional" else null, ingredient.note.takeIf { it.isNotBlank() }).joinToString(" · "),
-                    color = colors.sub,
-                    fontSize = 11.5.sp,
-                )
-            }
-            if (canEdit) {
+        Text("${ingredient.name} · ${ingredient.amount}", color = colors.text, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+        val details = listOfNotNull(if (ingredient.optional) "optional" else null, ingredient.note.takeIf { it.isNotBlank() }).joinToString(" · ")
+        if (details.isNotBlank()) {
+            Text(details, color = colors.sub, fontSize = 12.sp, lineHeight = 16.5.sp)
+        }
+        if (canEdit) {
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                 SmallActionButton("Ändern", onEdit)
-                FlatDesignButton("Löschen", onDelete, background = colors.badBg, contentColor = colors.bad)
+                SmallActionButton("Löschen", onDelete)
             }
         }
     }
@@ -365,27 +395,9 @@ private fun IngredientEditorSheet(item: IngredientEntity?, nextSort: Int, onDism
     var optional by remember(item) { mutableStateOf(item?.optional ?: false) }
     val valid = name.isNotBlank() && amount.isNotBlank()
 
-    FbBottomSheet(onDismiss) {
-        Text(if (item == null) "Zutat hinzufügen" else "Zutat bearbeiten", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-        DesignTextField(name, { name = it }, "Name")
-        DesignTextField(amount, { amount = it }, "Menge")
-        DesignTextField(note, { note = it }, "Hinweis")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SelectionButton("Drink", phase == IngredientPhase.DRINK, { phase = IngredientPhase.DRINK }, Modifier.weight(1f))
-            SelectionButton("Spermidin", phase == IngredientPhase.SPERMIDIN, { phase = IngredientPhase.SPERMIDIN }, Modifier.weight(1f))
-        }
-        Row(
-            Modifier.fillMaxWidth().clickable { optional = !optional },
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DesignCheckbox(optional) { optional = it }
-            Text("Optional", color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+    FbBottomSheet(
+        onDismiss = onDismiss,
+        footer = {
             DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
             AccentGradientButton(
                 onClick = {
@@ -406,6 +418,23 @@ private fun IngredientEditorSheet(item: IngredientEntity?, nextSort: Int, onDism
                 shape = RoundedCornerShape(16.dp),
                 contentPadding = PaddingValues(14.dp),
             ) { Text("Speichern", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+        },
+    ) {
+        Text(if (item == null) "Zutat hinzufügen" else "Zutat bearbeiten", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        DesignTextField(name, { name = it }, "Name")
+        DesignTextField(amount, { amount = it }, "Menge")
+        DesignTextField(note, { note = it }, "Hinweis")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SelectionButton("Drink", phase == IngredientPhase.DRINK, { phase = IngredientPhase.DRINK }, Modifier.weight(1f))
+            SelectionButton("Spermidin", phase == IngredientPhase.SPERMIDIN, { phase = IngredientPhase.SPERMIDIN }, Modifier.weight(1f))
+        }
+        Row(
+            Modifier.fillMaxWidth().clickable { optional = !optional },
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DesignCheckbox(optional) { optional = it }
+            Text("Optional", color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -433,6 +462,7 @@ internal fun ingredientListKey(id: Long): String = "ingredient:$id"
 
 internal fun ProtocolTemplateEntity.validatedForDesign(): ProtocolTemplateEntity = copy(
     standardDurationDays = standardDurationDays.coerceIn(1, 3),
+    preBlockMinutes = preBlockMinutes.coerceIn(60, 1_440),
     antioxidantBlockMinutes = antioxidantBlockMinutes.coerceIn(60, 480),
     mealDeadlineMinutes = mealDeadlineMinutes.coerceIn(5, 120),
     mealWarningMinutes = mealWarningMinutes.coerceIn(0, 120),

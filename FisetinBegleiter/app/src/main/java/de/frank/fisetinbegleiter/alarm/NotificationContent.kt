@@ -67,9 +67,24 @@ fun notificationContent(
     )
     AlarmType.CURE_PREPARATION -> NotificationContent(
         title = "Morgen beginnt eine Fisetin-Kur",
-        text = "Deine geplante Kur startet in 24 Stunden. Halte dir den nüchternen Morgen und den Freiblock frei.",
+        text = "Deine geplante Kur startet in 24 Stunden. Die Vorstufe beginnt ${hourLabel(protocol.preBlockMinutes)} vor dem Drink – ab dann keine starken Antioxidantien mehr.",
         destination = "today",
     )
+    AlarmType.PRE_PHASE -> NotificationContent(
+        title = if (targetDay > 1) "Vorstufe für Tag $targetDay beginnt" else "Vorstufe beginnt",
+        text = "Dein Fisetin-Drink ist in ${hourLabel(protocol.preBlockMinutes)} geplant. Ab jetzt kein Vitamin C, Vitamin E, Curcumin, Q10 oder Astaxanthin mehr. Am Kurmorgen nüchtern bleiben, nur Wasser.",
+        destination = "stack",
+    )
+}
+
+internal fun hourLabel(minutes: Int): String {
+    val hours = minutes / 60
+    val rest = minutes % 60
+    return when {
+        hours == 0 -> minuteLabel(rest)
+        rest == 0 -> if (hours == 1) "1 Stunde" else "$hours Stunden"
+        else -> "$hours h $rest min"
+    }
 }
 
 private fun minuteLabel(minutes: Int): String = if (minutes == 1) "1 Minute" else "$minutes Minuten"
