@@ -645,13 +645,34 @@ public sealed partial class ProgrammViewModel : ObservableObject
     };
 
     [RelayCommand]
-    private void Starten()
+    private async Task StartenAsync()
     {
+        // A staged package update is registered only once every process of the app has ended. A
+        // new window of an app that still runs changes nothing -- Windows Terminal hosts all its
+        // windows in one process, so "start" alone left the card pending forever. The takeover
+        // therefore closes the app, registers the staged package and starts it fresh.
+        var uebernehmen = UebernahmeOffen && Eintrag.IstPaketApp;
+        if (uebernehmen)
+        {
+            if (!Dialoge.Fragen("Zum Übernehmen werden alle Fenster von " + Name + " geschlossen – auch darin "
+                                + "laufende Claude- oder Codex-Sitzungen. Danach startet " + Name
+                                + " in der neuen Version.\n\nJetzt schließen und übernehmen?", "Update übernehmen"))
+                return;
+
+            var lauf = await Kommandozeile.AusfuehrenAsync("powershell.exe",
+                "-NoProfile -NonInteractive -Command \"Add-AppxPackage -RegisterByFamilyName -MainPackage '"
+                + Eintrag.PackageFamilyName + "' -ForceApplicationShutdown\"",
+                TimeSpan.FromMinutes(5));
+            if (lauf.ExitCode != 0)
+                Melde("Das Update ließ sich nicht übernehmen:\n" + lauf.Ausgabe);
+        }
+
         if (!Prozessdienst.Starten(Eintrag, AlsAdministrator))
         {
             Melde("Konnte nicht gestartet werden: " + Pfade.Aufloesen(Eintrag.ExePfadWirksam));
         }
         ZustandAktualisieren();
+        if (uebernehmen) await AusstehendesPruefenAsync();
     }
 
     private void Doppelt(string art)
