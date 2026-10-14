@@ -186,15 +186,20 @@ constructor(
         // Abgleich alle 30 Minuten hiess das bis zu 24 Refreshes am Tag — jeder eine Gelegenheit, die
         // Anmeldung zu verlieren (Netzabriss genau beim Wechsel). Schlaf und Erholung kommen ohnehin nur
         // einmal nach dem Aufwachen: Whoop deshalb hoechstens alle 2 Stunden, ausser auf Knopfdruck.
+        // Der Abstand zaehlt ab dem letzten VERSUCH, nicht nur ab dem letzten Erfolg: Sonst liesse eine
+        // laengere Whoop-Stoerung jeden 30-Minuten-Lauf erneut einen Token-Refresh ausloesen.
         val letzterWhoopOkMs = appSettings.lastWhoopSyncMsFlow.first()
+        val letzterWhoopVersuchMs = maxOf(letzterWhoopOkMs, appSettings.lastWhoopAttemptMsFlow.first())
         val whoopFaellig =
-            whoopErzwingen || System.currentTimeMillis() - letzterWhoopOkMs !in 0 until WHOOP_MIN_ABSTAND_MS
+            whoopErzwingen || System.currentTimeMillis() - letzterWhoopVersuchMs !in 0 until WHOOP_MIN_ABSTAND_MS
         val whoopAbfragen = whoopVerbunden && whoopFaellig
-        if (whoopVerbunden && !whoopFaellig) {
+        if (whoopAbfragen) {
+            runCatchingCancellable { appSettings.setLastWhoopAttempt(System.currentTimeMillis()) }
+        } else if (whoopVerbunden) {
             Diag.i(
                 DiagnosticArea.WHOOP,
                 "ForegroundSync",
-                "Whoop uebersprungen (letzter Abruf vor ${(System.currentTimeMillis() - letzterWhoopOkMs) / 60000} min, Mindestabstand ${WHOOP_MIN_ABSTAND_MS / 60000} min)",
+                "Whoop uebersprungen (letzter Versuch vor ${(System.currentTimeMillis() - letzterWhoopVersuchMs) / 60000} min, Mindestabstand ${WHOOP_MIN_ABSTAND_MS / 60000} min)",
             )
         }
         val ouraVerbunden = oura.isTokenConfigured()
@@ -247,10 +252,13 @@ constructor(
             )
         }
         // Whoop diesmal bewusst nicht abgefragt: den letzten Stand weiterfuehren, sonst stuende in der
-        // Fusszeile und bei Jarvis "nicht verbunden" oder eine Stoerung.
+        // Fusszeile und bei Jarvis "nicht verbunden" oder eine Stoerung. Einen alten Fehler aber nur,
+        // solange seitdem kein Whoop-Abruf geglueckt ist (etwa der Einzel-Abruf nach neuer Anmeldung).
         val whoopStand =
             if (whoopVerbunden && !whoopAbfragen) {
-                vorher?.quellen?.firstOrNull { it.id == QUELLE_WHOOP && it.verbunden }
+                vorher?.quellen
+                    ?.firstOrNull { it.id == QUELLE_WHOOP && it.verbunden }
+                    ?.takeIf { it.ok || it.zuletztOkMs >= letzterWhoopOkMs }
                     ?: QuellenStand(
                         id = QUELLE_WHOOP, name = "Whoop", verbunden = true, ok = true, anzahl = 0,
                         fehler = null, zuletztOkMs = letzterWhoopOkMs, eingriffNoetig = false,
