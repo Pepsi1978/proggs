@@ -9,9 +9,12 @@ Rüstet NVIDIAs DLSS-5-Neural-Rendering-Modell (`nvngx_dlssnr.dll`) in Spiele na
 | Datei | Zweck |
 |-------|-------|
 | `installieren.ps1` | Lädt beide Pakete, prüft SHA-256 (fest gepinnt) und die NVIDIA-Signatur des Modells, kopiert alles in den Exe-Ordner jedes Spiels (`OptiScaler.dll` → `dxgi.dll`), schaltet `[DlssNr] Enabled=true` ein und schreibt `dlss5-mod-dateien.txt` als Dateiliste. Blockiert Spiele mit Kernel-Anti-Cheat, laufende Spiele und fremde `dxgi.dll`. `-Spiel 'Name'` für ein einzelnes Spiel. |
-| `entfernen.ps1` | Löscht anhand der Dateiliste alles wieder (`-Spiel` optional). |
+| `renodx-installieren.ps1` | **Aktuelle Route (seit 14.10.2026):** ShortFuses „RenoDX DLSS“-Add-on. Lädt ReShade 6.8.0 Add-on-Edition (reshade.me), `renodx-dlss.addon64` SF-26.1003.2350 (Spiegel `RankFTW/rhi-repo`) und das Modell, prüft SHA-256 + NVIDIA-Signatur, entfernt eine vorhandene OptiScaler-Installation und legt `dxgi.dll` (= ReShade64.dll), Add-on, Modell und `ReShade.ini` neben die Exe. Gleiche Schutzregeln wie unten. |
+| `entfernen.ps1` | Löscht anhand der Dateiliste alles wieder (`-Spiel` optional, Teil des Ordnernamens). Gilt für beide Routen. |
 
-Installiert (21.09.2026): Cyberpunk 2077 (`bin\x64`), Starfield, Manor Lords (`ManorLords\Binaries\Win64`), Star Trek Voyager (`STVoyager\Binaries\Win64`), AC Shadows.
+**Stand 14.10.2026: RenoDX DLSS installiert** in Cyberpunk 2077, Starfield, Manor Lords, Star Trek Voyager, AC Shadows (OptiScaler-DLSSNR dort ersetzt). Im Spiel: DLSS/DLAA an, `Pos1` → Add-ons → „RenoDX DLSS“, Hook Method „Upscaled“, Intensity 0,3–0,5, Character Mask an, Pass Count 1. Läuft, wenn „DLSSNR: RUNNING“ steht. Zurück zu OptiScaler: `entfernen.ps1` + `installieren.ps1`.
+
+OptiScaler-Route installiert (21.09.2026, bis 14.10.2026): Cyberpunk 2077 (`bin\x64`), Starfield, Manor Lords (`ManorLords\Binaries\Win64`), Star Trek Voyager (`STVoyager\Binaries\Win64`), AC Shadows.
 **Nie** im Standardlauf: Battlefield 6 (Javelin), CoD BO7/MW3 (Ricochet), Delta Force (ACE), PUBG (BattlEye): Bann-Risiko.
 **MW2-Versuch (21.09.2026, auf ausdrücklichen Wunsch, Zweitaccount):** `cod22-cod.exe` stürzt ca. 1 s nach dem OptiScaler-Start ab (`0xc0000005` in `ntdll.dll`), der Manipulationsschutz von CoD verhindert den Mod. Wieder entfernt. CoD ist damit technisch **und** wegen des Bann-Risikos ausgeschlossen.
 

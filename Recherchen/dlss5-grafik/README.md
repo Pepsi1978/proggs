@@ -1,16 +1,16 @@
 # DLSS 5 & Grafik-Optimierung — Wissensstand (Einstieg)
 
-> Stand: 21.09.2026 18:40 · System: RTX 5090, NVIDIA-Treiber 616.92, Windows 11, Steam-Bibliotheken `D:\SteamLibrary`, `G:\SteamLibrary`
+> Stand: 14.10.2026 14:40 (Wechsel auf ShortFuse „RenoDX DLSS“), vorher 21.09.2026 18:40 · System: RTX 5090, NVIDIA-Treiber 616.92, Windows 11, Steam-Bibliotheken `D:\SteamLibrary`, `G:\SteamLibrary`
 > Zweck: Startpunkt für jede spätere Frage wie „Wie holen wir noch mehr aus der Grafik raus?“. Erst diese Seite lesen, dann die verlinkten Detaildateien.
 
 ## 1. Das Wichtigste in vier Sätzen
 1. Echtes DLSS 5 (NVIDIA Neural Rendering) muss das Spiel selbst einbauen. Offiziell läuft es bisher nur in NBA 2K27. **Starfield, AC Shadows und Delta Force** sind angekündigt, noch ohne Termin.
-2. Der „DLSS 5 Mod“ aus YouTube schleust NVIDIAs echtes, geleaktes Modell `nvngx_dlssnr.dll` über **OptiScaler-DLSSNR** in Spiele, die schon DLSS haben. Das Bild läuft nach dem Upscaler und vor dem HUD durch das Modell.
+2. Der „DLSS 5 Mod“ aus YouTube schleust NVIDIAs echtes, geleaktes Modell `nvngx_dlssnr.dll` in Spiele, die schon DLSS haben. **Seit 14.10.2026 läuft dafür ShortFuses „RenoDX DLSS“-Add-on** (ReShade 6.8.0 als `dxgi.dll` + `renodx-dlss.addon64` SF-26.1003.2350) statt OptiScaler-DLSSNR. Das Bild läuft nach dem Upscaler und vor dem HUD durch das Modell.
 3. Nur in Singleplayer-Spielen ohne Kernel-Anti-Cheat. **CoD MW2 wurde probiert und stürzt ab** (Manipulationsschutz), BF6, CoD, Delta Force und PUBG sind tabu.
 4. Treiber-Overrides (neuestes DLSS 4.5) sind für 10 Spiele gesetzt. Ohne die Freigabeschlüssel der NVIDIA App ignoriert Treiber 616.92 sie aber vermutlich.
 
 ## 2. Aufbau auf diesem PC
-| Spiel | DLSS-5-Mod | Spiel-DLLs (SR / RR / FG) | Treiber-Override | Offizielles DLSS 5 |
+| Spiel | DLSS-5-Mod (Stand 21.09., seit 14.10. RenoDX DLSS in allen ✅-Spielen) | Spiel-DLLs (SR / RR / FG) | Treiber-Override | Offizielles DLSS 5 |
 |---|---|---|---|---|
 | Cyberpunk 2077 (2.31) | ✅ läuft (verifiziert, 7,7 ms/Bild), Start-Preset gesetzt | 310.1 / 310.1 / 310.1 | gesetzt, Wirkung offen | – |
 | Starfield | ✅ installiert, ungetestet | **3.5** / – / 3.5 | gesetzt, Wirkung offen | angekündigt |
@@ -22,12 +22,16 @@
 | DREADZONE | nicht installiert (Anti-Cheat unklar) | 310.6 | gesetzt | – |
 | Civilization VII | nicht installiert (kein DLSS, nur FSR/XeSS) | – | – | – |
 
+**Weitere installierte Spiele (Prüfung 14.10.2026):** Civilization VII (kein DLSS, nur Present-Hook, wenig Nutzen), DREADZONE (DLSS 4.5, Anti-Cheat unklar → nicht installiert), CoD BO3 2015 (DX11, kein DLSS, nur offline), Sudden Strike 5 Demo (DX11, kein DLSS), Arena Breakout: Infinite (`ABInfinite`, Anti-Cheat Expert → tabu), MW4 Beta (Ricochet → tabu).
+
 Treiber-Cache (`C:\ProgramData\NVIDIA\NGX\models`): DLSS 310.9, Streamline 2.14, **kein** NR-Modell.
 
 ## 3. Beste Einstellungen (Stand heute)
 **Im Spiel (Cyberpunk, gilt sinngemäß für andere Path-Tracing-Spiele):** Path Tracing an, Ray Reconstruction an, DLSS Quality (DLAA nur bei FPS-Reserve), DLSS-Preset K statt L, Frame Generation 3x–4x, Bewegungsunschärfe/Filmkörnung/chromatische Aberration aus, SDR.
 
-**Im Mod-Menü (Einfg → „DLSS Neural Rendering“) bzw. `OptiScaler.ini` `[DlssNr]`:**
+**RenoDX DLSS (aktuell, `Pos1` → Add-ons → „RenoDX DLSS“):** Hook Method Upscaled, Overall Intensity 0,3–0,5, Model C (Cinematic) für Fotorealismus, Structure 0,1–0,25, Character Mask an, Skin Structure < Structure, UI Correction an, Pass Count 1. Details `best-practices/gaming/dlss5-mod-inoffiziell.md` 4b.
+
+**Alte Route — Mod-Menü OptiScaler (Einfg → „DLSS Neural Rendering“) bzw. `OptiScaler.ini` `[DlssNr]`:**
 | Regler | INI-Schlüssel | Start-Wert | Hinweis |
 |---|---|---|---|
 | Detail strength | `TransferStrength` | 0,85 | 0 = Mod aus, 1 = voll, >1 übertrieben |
@@ -58,7 +62,8 @@ Treiber-Cache (`C:\ProgramData\NVIDIA\NGX\models`): DLSS 310.9, Streamline 2.14,
 ## 6. Prüfen und Werkzeuge
 | Zweck | Befehl / Ort |
 |---|---|
-| Mod installieren (alle 5 Spiele oder eines) | `Werkzeuge\dlss5-mod\installieren.ps1 [-Spiel 'Starfield']` |
+| RenoDX DLSS installieren (aktuell) | `Werkzeuge\dlss5-mod\renodx-installieren.ps1 [-Spiel 'Starfield']` |
+| OptiScaler-Route installieren (alt) | `Werkzeuge\dlss5-mod\installieren.ps1 [-Spiel 'Starfield']` |
 | Mod entfernen | `Werkzeuge\dlss5-mod\entfernen.ps1 [-Spiel 'Starfield']` |
 | Läuft DLSS 5? | `OptiScaler.log` neben der Spiel-Exe, Zeile `DlssNr_Dx12::Dispatch DLSS-NR cost` |
 | Treiber-Overrides + App-Keys anzeigen | `Werkzeuge\dlss-override\werte-lesen.ps1` |
@@ -73,4 +78,5 @@ Treiber-Cache (`C:\ProgramData\NVIDIA\NGX\models`): DLSS 310.9, Streamline 2.14,
 - Werkzeuge: `Werkzeuge/dlss5-mod/README.md` · `Werkzeuge/dlss-override/README.md`
 - Rohberichte der Recherchen vom 21.09.2026 (13 Researcher, Sonnet-5-Schwarm, alle Quellen-URLs): `rohberichte/`
   - Runde 1 (allgemein): `runde1-r1-identitaet` (was der Mod ist), `-r2-installation`, `-r3-kompatibilitaet` (deine Spiele), `-r4-anticheat`, `-r5-echtes-dlss5` (offizielle Liste), `-r6-sicherheit`, `-r7-alternativen` (RTGI, LumeniteFX, DLAA), `-r8-feeder-swapper`
+  - Runde 3 (14.10.2026, ShortFuse RenoDX DLSS, 6 Researcher Sonnet 5.5): `runde3-renodx-r1-identitaet`, `-r2-installation`, `-r3-regler`, `-r4-spiele`, `-r5-bugs`, `-r6-sicherheit`
   - Runde 2 (Cyberpunk): `runde2-cyberpunk-r1-regler`, `-r2-spieleinstellungen`, `-r3-realismus-mods`, `-r4-fertige-presets`, `-r5-probleme`

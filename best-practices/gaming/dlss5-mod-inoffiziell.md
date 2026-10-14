@@ -1,6 +1,6 @@
 # DLSS 5 Mod (inoffiziell: NVIDIA-Neural-Rendering in fremden Spielen) — Best Practices
 
-> Stand: 21.09.2026 16:26 · Versions-Anker: NVIDIA-Treiber 616.92, RTX 5090, OptiScaler-DLSSNR v0.2.0 (03.09.2026), `nvngx_dlssnr.dll` 310.8.0, DLSS5-Feeder 1.16.0-beta.6, DLSS5 Swapper 2.2.7, ReShade 6.8.0 · Anlass: YouTube-„DLSS 5“-Videos nachbauen
+> Stand: 14.10.2026 14:40 (Abschnitt 4b RenoDX DLSS), vorher 21.09.2026 16:26 · Versions-Anker: NVIDIA-Treiber 616.92, RTX 5090, OptiScaler-DLSSNR v0.2.0 (03.09.2026), `nvngx_dlssnr.dll` 310.8.0, DLSS5-Feeder 1.16.0-beta.6, DLSS5 Swapper 2.2.7, ReShade 6.8.0 · Anlass: YouTube-„DLSS 5“-Videos nachbauen
 > Gegenstück: `bugs/gaming/dlss5-mod-inoffiziell.md` · Kurzcheck: `dlss5-mod-inoffiziell-kurzcheck.md` · Werkzeug: `Werkzeuge/dlss5-mod/` · Nachbarbereich: `nvidia-dlss-override.md` · **Einstieg mit Stand je Spiel und Fahrplan: `Recherchen/dlss5-grafik/README.md`**
 
 ## 1. Was der „DLSS 5 Mod“ wirklich ist
@@ -14,7 +14,8 @@
 | hat DLSS, FSR oder XeSS; DX12, DX11 oder Vulkan; 64 Bit | **OptiScaler-DLSSNR** (Dagherbou): OptiScaler als `dxgi.dll` + Forwarder `nvngx.dll_dlssnr.dll` + `nvngx_dlssnr.dll` in den Exe-Ordner. Keine ReShade nötig. `extern` https://github.com/Dagherbou/OptiScaler_DLSSNR/releases |
 | kein Upscaler, 32 Bit oder Vulkan ohne DLSS | **DLSS5-Feeder** (jlrouzies-fr) + ReShade 6.8 Add-on-Edition + ein Neural-Consumer. `extern` https://github.com/jlrouzies-fr/DLSS5-Feeder |
 | Oberfläche gewünscht | **DLSS5 Swapper** (rakanki911), bündelt alle Routen. Kein Silent-Install. `extern` https://github.com/rakanki911/DLSS5-Swapper |
-- Automatisch ladbar sind nur OptiScaler-DLSSNR und renodx-dlss5 4.70 (Mirror). Deep Fried Chicken und ShortFuses `renodx-dlss` gibt es nur über Discord. Auf Treiber ≥ 616.64 ist renodx-dlss5 4.6/4.7 kaputt (Bug M2), also dort OptiScaler-DLSSNR nehmen.
+| hat DLSS (Standard seit 14.10.2026 auf diesem PC) | **ShortFuse „RenoDX DLSS“** (`renodx-dlss.addon64`) + ReShade 6.8.0 Add-on-Edition als `dxgi.dll` + `nvngx_dlssnr.dll`. Hook „Upscaled“ nutzt die echten DLSS-Eingaben des Spiels. Abschnitt 4b. |
+- ShortFuses `renodx-dlss` steht **nicht** auf GitHub (nur Discord), wird aber mit SHA-256-Digest im Spiegel `RankFTW/rhi-repo` (Tags `renodx-dlss-SF-*`) geführt (Bug M20). Deep Fried Chicken gibt es nur über Discord. Der 616.64-Absturz (Bug M2) betrifft nur Krishs `renodx-dlss5` 4.6/4.7, nicht ShortFuses `renodx-dlss`.
 
 ## 3. Bezug und Prüfung (Pflicht vor jeder Installation)
 - Nur die Original-Releases laden (Tabelle oben, ReShade nur von reshade.me). **imod.gg meiden**: nirgends Bewertungen oder Spuren. `extern` Research 21.09.2026
@@ -52,6 +53,15 @@
 ## 7. Stärkste legale Hebel ohne Mod
 - DLAA statt DLSS Quality plus Preset K/M, Ray Reconstruction und Path Tracing, wo vorhanden. Multi Frame Generation bringt nur FPS, kein schöneres Bild, und nur mit Reflex nutzen. `extern` https://www.techpowerup.com/review/nvidia-dlss-4-5-ray-reconstruction/2.html
 - Filter der NVIDIA App (Freestyle, RTX HDR, Dynamic Vibrance) werden in Anti-Cheat-Spielen abgeschaltet, sie bergen kein Bann-Risiko.
+
+## 4b. ShortFuse „RenoDX DLSS“ (Stand 14.10.2026 14:40, installiert in 5 Spielen, ungetestet im Spiel)
+- **Was:** ReShade-Add-on von ShortFuse (RenoDX-Autor), Panel „RenoDX DLSS“, Links Discord/GitHub/„ShortFuse's Ko-Fi“. Neuestes Build **SF-26.1003.2350** (04.10.2026, SHA-256 `34ef92d6…7f0f`); das Build 2026-09-04 ist veraltet (Bug M16). `extern` https://github.com/RankFTW/rhi-repo/releases/tag/renodx-dlss-SF-26.1003.2350
+- **Dateien neben der Spiel-Exe:** `dxgi.dll` (= `ReShade64.dll` 6.8.0.2155 aus `ReShade_Setup_6.8.0_Addon.exe`, nur die Add-on-Edition lädt Add-ons), `renodx-dlss.addon64`, `nvngx_dlssnr.dll` 310.8.0 (NVIDIA-signiert, auf RTX 50 ohne Patch). Nur DX11/DX12, 64 Bit. `extern` https://dlss5mod.com/guides/install · https://github.com/clshortfuse/renodx/issues/668 (RTX 5090 + 616.92 läuft)
+- **Ohne Klicks installieren:** `Werkzeuge/dlss5-mod/renodx-installieren.ps1`. Der ReShade-Installer ist eine Exe mit angehängtem ZIP: `Expand-Archive` scheitert still, `tar -xf setup.exe ReShade64.dll` (Windows-bsdtar) klappt. `ReShade.ini` mit `[OVERLAY] TutorialProgress=4` überspringt das Tutorial.
+- **Bedienung:** `Pos1` öffnet ReShade → Reiter „Add-ons“ → „RenoDX DLSS“. Läuft, wenn „DLSSNR: RUNNING“ steht und der Zähler „Successful NR frames“ steigt.
+- **Startwerte:** Im Spiel DLSS oder DLAA an. Hook Method **Upscaled** (Present nur als Notweg für Spiele ohne DLSS oder bei Absturz, M17). Overall Intensity 0,3–0,5 (über 0,4 wird es wachsig), Model A/B/C = Stil Default/Natural/Cinematic (C am fotorealistischsten), Structure 0,1–0,25, Character Mask an, Skin Structure unter Structure, UI Correction an, Pass Count 1 (jeder Pass kostet voll). Encoding Auto; Diffuse White nur im HDR auf das Paper White des Spiels (Default 203). `extern` https://github.com/RianGoossens/reshade-dlss5-linux · https://www.igorslab.de/en/install-dlss-5-reshade-compatible-games/
+- **Kosten:** Cyberpunk RTX 5090 4K ca. 63 → 42 FPS. Frame Generation kann kollidieren (M18), RTSS/Afterburner und Smooth Motion aus, wenn es abstürzt.
+- **Zurück zu OptiScaler-DLSSNR:** `entfernen.ps1 -Spiel <Ordnerteil>` + `installieren.ps1 -Spiel '<Name>'`. Beide Skripte schreiben `dlss5-mod-dateien.txt`, `renodx-installieren.ps1` entfernt eine vorhandene OptiScaler-Installation selbst.
 
 ## 8. Rückbau
 - `Werkzeuge/dlss5-mod/entfernen.ps1` (liest `dlss5-mod-dateien.txt` je Spiel) oder `Remove_OptiScaler.bat`. Beim Swapper vor dem Deinstallieren „Restore originals“ ausführen, sonst bleiben die Dateien in den Spielordnern (Bug M7).

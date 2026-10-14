@@ -1,6 +1,6 @@
 # Bug-Almanach: DLSS 5 Mod (inoffiziell: OptiScaler-DLSSNR, DLSS5-Feeder, DLSS5 Swapper, RenoDX)
 
-> Stand: 21.09.2026 16:26 · Versions-Anker: NVIDIA-Treiber 616.92, `nvngx_dlssnr.dll` 310.8.0, OptiScaler-DLSSNR v0.2.0, DLSS5-Feeder 1.16.0-beta.6, DLSS5 Swapper 2.2.7, renodx-dlss5 4.70 · Gegenstück: `best-practices/gaming/dlss5-mod-inoffiziell.md`
+> Stand: 14.10.2026 14:40 (M16–M20 + M2-Korrektur) · Versions-Anker: NVIDIA-Treiber 616.92, `nvngx_dlssnr.dll` 310.8.0, OptiScaler-DLSSNR v0.2.0, ShortFuse `renodx-dlss` SF-26.1003.2350, ReShade 6.8.0, DLSS5-Feeder 1.16.0-beta.6, DLSS5 Swapper 2.2.7, renodx-dlss5 4.70 · Gegenstück: `best-practices/gaming/dlss5-mod-inoffiziell.md`
 
 ## M1 — Fake-Repos und Malware-Repacks
 - **Symptom:** „DLSS 5“-Download bringt Fernwartung (ScreenConnect), Krypto-Miner (srbminer), getarnte geplante Aufgaben („Windows System Health“) oder Cookie-Stealer mit.
@@ -9,6 +9,7 @@
 - **Quellen:** https://github.com/rakanki911/DLSS5-Swapper/issues/363 · https://raw.githubusercontent.com/jlrouzies-fr/DLSS5-Feeder/main/CAREFUL_FAKE_MALICIOUS_FEEDER.txt · https://github.com/faisalkindi/DLSS5oneclick/issues/102
 
 ## M2 — renodx-dlss5 v4.6/v4.7 auf Treiber ≥ 616.64 kaputt
+- **Achtung Verwechslung (14.10.2026):** Betrifft nur Krishs `renodx-dlss5.addon64` (Panel „DLSS 5 Neural Rendering“), **nicht** ShortFuses `renodx-dlss.addon64` (Panel „RenoDX DLSS“). Krishs Linie läuft ab v6.1.0 / 7.0.0-rc8 / 8.0.1 wieder (Treiber 617.14, RTX 5090, 300/300).
 - **Symptom:** Kein Neural Pass, `--test` meldet 0/300 (v4.7) bzw. 1/300 (v4.6) erfolgreiche Evaluates.
 - **Ursache:** Die „lazy-adoption engine“ löst auf 616.64+ einen Fault in NVIDIAs eigener `nvngx_dlssnr.dll` aus (Feeder #54).
 - **Versionen:** Treiber 616.64 gemessen, 616.92 ungeprüft. Der automatische Feeder-Installer lädt genau renodx-dlss5 **4.70**.
@@ -82,3 +83,31 @@
 - **Symptom:** Bei der ReShade-/Feeder-Route fällt der Effekt in Dialogen und Zwischensequenzen aus.
 - **Einordnung:** Für AC Mirage belegt, auf AC Shadows übertragbar. Betrifft nur die ReShade-Route, nicht OptiScaler (der liest Tiefe und Bewegungsvektoren aus dem DLSS-Aufruf).
 - **Quelle:** https://reshade.me/forum/troubleshooting/9101-assassins-creed-mirage-loss-of-depth-buffer
+
+## M16 — ShortFuse RenoDX DLSS: Status bleibt „Waiting“ (Build 2026-09-04)
+- **Symptom:** Mit „Require DLSS = On“ startet der Neural Pass nie, Status dauerhaft „Waiting“; mit Off läuft er auf dem fertigen Bild („presentation backbuffer with dummy temporal inputs“) und flimmert stärker.
+- **Versionen:** `renodx-dlss` Build 2026-09-04T08:48:41, offen, keine Maintainer-Antwort. Ab SF-26.1003.2350 gibt es die Option nicht mehr (Hook Method Render/Upscaled/Present, „Use DLSS Upscaling Resources“).
+- **Fix:** Neuestes Build nehmen, im Spiel DLSS/DLAA aktivieren, Hook Method „Upscaled“.
+- **Quelle:** https://github.com/clshortfuse/renodx/issues/651
+
+## M17 — ShortFuse RenoDX DLSS: Absturz mit Hook „Render/Upscaled“
+- **Symptom:** Spiel stürzt beim Einschalten ab (Monster Hunter Wilds, v0.2026.1003.2333).
+- **Fix:** Hook Method „Present“ (läuft, aber ohne echte Bewegungsvektoren).
+- **Quelle:** https://github.com/clshortfuse/renodx/issues/697
+
+## M18 — ShortFuse RenoDX DLSS + Frame Generation: Einfrieren/Flackern
+- **Symptom:** Flackern oder Freeze, Log „one live swapchain per device“ (Darktide u. a.).
+- **Fix:** Erst Frame Generation (und NVIDIA Smooth Motion, M10) ausschalten, dann einzeln wieder zuschalten.
+- **Quelle:** https://github.com/clshortfuse/renodx/issues/648 · https://github.com/clshortfuse/renodx/issues/612
+
+## M19 — Cyberpunk: Schattenflackern mit RenoDX DLSS
+- **Symptom:** Flackernde Schatten seit dem Cyberpunk-Patch vom 28.09.2026.
+- **Versionen:** offen; ein „Fix“ existiert nur als unveröffentlichtes Drittbinary (nicht nutzen).
+- **Fix:** Intensität senken bzw. in Cyberpunk auf OptiScaler-DLSSNR zurückwechseln (`entfernen.ps1 -Spiel Cyberpunk` + `installieren.ps1 -Spiel 'Cyberpunk 2077'`).
+- **Quelle:** https://github.com/clshortfuse/renodx/issues/642
+
+## M20 — ShortFuse-Add-on fehlt auf GitHub, Snapshot enthält nur `renodx-dlssfix`
+- **Symptom:** In `github.com/clshortfuse/renodx/releases` (snapshot/nightly) gibt es kein `renodx-dlss.addon64`, nur `renodx-dlssfix.*` (anderes Add-on).
+- **Ursache:** ShortFuse verteilt das Add-on nur im RenoDX-Discord (#dlss5). Spiegel mit SHA-256-Digests: `RankFTW/rhi-repo`, Tags `renodx-dlss-SF-*`.
+- **Fix:** Aus dem Spiegel laden und gegen den API-`digest` prüfen (`Werkzeuge/dlss5-mod/renodx-installieren.ps1` pinnt SF-26.1003.2350). Das Add-on ist unsigniert, Echtheit nur über Digest.
+- **Quelle:** https://github.com/faisalkindi/DLSS5oneclick/issues/18 · https://github.com/RankFTW/rhi-repo/releases
