@@ -67,6 +67,11 @@ Kompatibilitätsschalter RUNASADMIN noch die Benutzerkontensteuerung, und Homebr
 Betrieb als root ausdrücklich. Alles läuft mit den normalen Benutzerrechten. Begründung in
 [PORTING.md](PORTING.md), Abschnitt C.
 
+Einzige Ausnahme: Casks, die alte Pakete per `sudo` wegräumen (`dotnet-sdk`). Dafür zeigt die App
+einen Passwortdialog (Askpass-Helfer unter `~/Library/Application Support/UpdaterZentrale/askpass.sh`,
+übergeben als `SUDO_ASKPASS`). Abbrechen oder fünf Minuten ohne Eingabe lassen das Update sauber
+scheitern – mit Grund auf der Karte.
+
 ---
 
 ## Neue Programme hinzufügen (ohne Neubau)
@@ -127,7 +132,7 @@ Ein Cask ohne `appPfad` (z. B. `dotnet-sdk`) liest die installierte Version aus 
 
 ### Entwicklungswerkzeuge
 
-Die Gruppen „Entwicklung: …“ halten die Programmierumgebung aktuell – Gegenstück zur Windows-Fassung 1.3.21:
+Die Gruppen „Entwicklung: …“ halten die Programmierumgebung aktuell – Gegenstück zur Windows-Fassung 1.3.25:
 .NET SDK, Node.js, OpenJDK 17/21, Rust (rustup), Go, Python 3.14, Kotlin, Gradle, VS Code, Android Studio,
 Android SDK (sdkmanager), Git, GitHub CLI, Bun, Biome, iTerm2, PowerShell 7 sowie globale npm-Pakete
 (TypeScript, tsx, npm, OpenCode CLI, Firebase und Gemini nur wenn installiert). Visual Studio, Build Tools,

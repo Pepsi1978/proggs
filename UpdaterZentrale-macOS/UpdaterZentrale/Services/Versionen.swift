@@ -53,6 +53,15 @@ enum Versionen {
         vergleiche(verfuegbar, installiert) > 0
     }
 
+    /// Ist `kurz` eine verkuerzte Schreibweise von `lang` ("2026.2" von "2026.2.1.8")?
+    /// Android Studio traegt in der Info.plist nur die ersten beiden Stellen; das Cask nennt vier.
+    /// Ohne diese Regel wuerde dieselbe Fassung dauerhaft als Update angeboten.
+    static func istVerkuerzteForm(_ kurz: String, von lang: String) -> Bool {
+        let k = kurz.trimmed, l = lang.trimmed
+        guard !k.isEmpty, !l.isEmpty, k != l else { return false }
+        return l.hasPrefix(k + ".")
+    }
+
     private static func teile(_ version: String) -> [Int] {
         version
             .split(whereSeparator: { $0 == "." || $0 == "+" || $0 == "-" || $0 == "," })

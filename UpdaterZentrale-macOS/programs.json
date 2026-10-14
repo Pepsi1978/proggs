@@ -124,11 +124,12 @@
       "id": "kimi-cli",
       "name": "Kimi Code CLI",
       "gruppe": "Kommandozeile",
-      "beschreibung": "Moonshot AI Kimi Code im Terminal. Nativer Installer unter ~/.kimi-code, sonst npm.",
+      "beschreibung": "Moonshot AI Kimi Code im Terminal. Nativer Installer unter ~/.kimi-code, sonst npm (Update fällt automatisch auf npm zurück).",
       "art": "cli",
       "exePfad": "~/.kimi-code/bin/kimi",
       "versionsArgumente": "--version",
-      "updateArgumente": "update --yes",
+      "updateExePfad": "/bin/sh",
+      "updateArgumente": "-c \"$HOME/.kimi-code/bin/kimi update --yes || npm install -g --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest\"",
       "versionsUrl": "https://code.kimi.ai/kimi-code/latest",
       "zeitlimitMinuten": 15,
       "prozesse": [
@@ -191,7 +192,7 @@
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Der Installer fragt nach dem Mac-Passwort; klappt das hier nicht, den Befehl einmal im Terminal ausführen.",
+      "hinweis": "Beim Einspielen fragt macOS einmal nach dem Mac-Passwort (sudo räumt das alte Paket weg) – der Dialog kommt von der Updater-Zentrale.",
       "akzent": "#512BD4"
     },
     {
@@ -360,7 +361,7 @@
       "helferProzesse": [],
       "beendenVorUpdate": true,
       "neuStartenNachUpdate": false,
-      "hinweis": "Wird für das Update geschlossen (mit Rückfrage). Neue Studio-Versionen können einen Gradle-/AGP-Hinweis zeigen – Projekte erst gezielt umstellen.",
+      "hinweis": "Wird für das Update geschlossen (mit Rückfrage). Die Info.plist nennt nur „2026.2“, das Cask „2026.2.1.8“ – das gilt als dieselbe Fassung. Neue Studio-Versionen können einen Gradle-/AGP-Hinweis zeigen – Projekte erst gezielt umstellen.",
       "akzent": "#3DDC84"
     },
     {
@@ -588,7 +589,7 @@
       "versionsArgumente": "--version",
       "npmPaket": "opencode-ai",
       "updateExePfad": "/opt/homebrew/bin/npm",
-      "updateArgumente": "install -g opencode-ai@latest",
+      "updateArgumente": "install -g --allow-scripts=opencode-ai opencode-ai@latest",
       "zeitlimitMinuten": 15,
       "prozesse": [],
       "helferProzesse": [],
@@ -596,7 +597,7 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "akzent": "#CB3837",
-      "hinweis": "Laufende OpenCode-Sitzungen vorher beenden."
+      "hinweis": "Laufende OpenCode-Sitzungen vorher beenden. npm 12 überspringt Installationsskripte fremder Pakete; ohne „--allow-scripts=opencode-ai“ fehlt danach die eigentliche Programmdatei."
     },
     {
       "id": "openlauncher",

@@ -29,12 +29,7 @@ struct BrewAktualisierer: Aktualisierer {
         }
 
         let appPfad = Pfade.aufloesen(eintrag.appPfad)
-        var installiert = appPfad.isEmpty ? "" : Pfade.appVersion(appPfad)
-
-        // Casks ohne App-Buendel (dotnet-sdk): die installierte Version kennt nur brew selbst.
-        if appPfad.isEmpty, let cask = eintrag.cask, !cask.istLeer {
-            installiert = await caskInstalliert(cask)
-        }
+        let installiert = await installierteVersion(eintrag)
 
         if installiert.istLeer {
             return PruefErgebnis(zustand: .nichtInstalliert,
@@ -80,6 +75,14 @@ struct BrewAktualisierer: Aktualisierer {
             return PruefErgebnis(zustand: .unbekannt, installierteVersion: installiert,
                                  meldung: "Homebrew nennt für „\(cask)“ keine Version.",
                                  protokoll: lauf.ausgabe)
+        }
+
+        // Android Studio traegt in seiner Info.plist nur "2026.2", das Cask heisst "2026.2.1.8":
+        // eine verkuerzte installierte Version ist die angebotene, kein ewig offenes Update
+        // (Windows-Gegenstueck: `verfuegbar.StartsWith(installiert + ".")`, 1.3.22).
+        if Versionen.istVerkuerzteForm(installiert, von: verfuegbar) {
+            return PruefErgebnis(zustand: .aktuell, installierteVersion: installiert,
+                                 meldung: "Auf dem neuesten Stand (\(verfuegbar)).", protokoll: lauf.ausgabe)
         }
 
         // Der Downgrade-Schutz: nur eine echt neuere Version ist ein Update.
@@ -164,10 +167,28 @@ struct BrewAktualisierer: Aktualisierer {
         if let formel = eintrag.formel, !formel.istLeer {
             return formelInfo(await infoLauf(["info", "--json=v2", formel]).ausgabe)?.installiert ?? ""
         }
+        return await installierteVersion(eintrag)
+    }
+
+    /// Die installierte Version eines Casks -- fuer Pruefung UND Fingerabdruck dieselbe Lesart.
+    ///
+    /// Grundlage ist die Info.plist des Programms. Hat brew das Cask selbst installiert und kennt
+    /// es eine LAENGERE Fassung derselben Version (Android Studio: Info.plist "2026.2", brew
+    /// "2026.2.1.8"), zaehlt die laengere: sie unterscheidet Patch-Staende, die die Info.plist
+    /// verschluckt, und bewegt sich bei jedem brew-Update -- sonst saehe ein Patch-Update
+    /// (2026.2.1.8 → 2026.2.1.9) wie "nichts passiert" aus. Weicht brew ab, weil die App sich
+    /// selbst weiter aktualisiert hat, bleibt die Info.plist die Wahrheit.
+    /// Casks ohne App-Buendel (dotnet-sdk): die installierte Version kennt nur brew selbst.
+    private func installierteVersion(_ eintrag: ProgrammEintrag) async -> String {
         let appPfad = Pfade.aufloesen(eintrag.appPfad)
-        if appPfad.isEmpty, let cask = eintrag.cask, !cask.istLeer { return await caskInstalliert(cask) }
-        guard !appPfad.isEmpty else { return "" }
-        return Pfade.appVersion(appPfad)
+        guard let cask = eintrag.cask, !cask.istLeer else {
+            return appPfad.isEmpty ? "" : Pfade.appVersion(appPfad)
+        }
+        if appPfad.isEmpty { return await caskInstalliert(cask) }
+        let plist = Pfade.appVersion(appPfad)
+        if plist.istLeer { return "" }
+        let brewStand = await caskInstalliert(cask)
+        return Versionen.istVerkuerzteForm(plist, von: brewStand) ? brewStand : plist
     }
 
     // MARK: - Formeln
@@ -305,11 +326,27 @@ struct BrewAktualisierer: Aktualisierer {
     /// anfangen kann. Das Gegenstueck zu `BrauchtRechte` unter Windows ist hier der Fall, dass
     /// brew nach einem Passwort fragen will -- ohne Terminal kann es das nicht.
     static func fehlergrundText(_ ausgabe: String, exitCode: Int) -> String {
+        // sudo fragt ueber den Askpass-Helfer der App (Kommandozeile.umgebung) nach dem Passwort.
+        // Die drei Ausgaenge des Dialogs lesen sich in der sudo-Ausgabe so:
+        if ausgabe.localizedCaseInsensitiveContains("no password was provided")
+            || ausgabe.localizedCaseInsensitiveContains("User canceled")
+            || ausgabe.localizedCaseInsensitiveContains("gave up") {
+            return "Die Passwort-Abfrage wurde abgebrochen – ohne Mac-Passwort kann Homebrew dieses Update nicht einspielen."
+        }
+        if ausgabe.localizedCaseInsensitiveContains("incorrect password")
+            || ausgabe.localizedCaseInsensitiveContains("Sorry, try again")
+            || ausgabe.localizedCaseInsensitiveContains("incorrect password attempt") {
+            return "Das Mac-Passwort war falsch – das Update erneut starten und das Passwort noch einmal eingeben."
+        }
+        if ausgabe.localizedCaseInsensitiveContains("a terminal is required")
+            || ausgabe.localizedCaseInsensitiveContains("askpass") {
+            return "Homebrew wollte nach dem Passwort fragen, der Passwort-Dialog der App kam aber nicht zustande. "
+                 + "Den Befehl einmal im Terminal ausführen (Schaltfläche „Fenster“ rechts unten)."
+        }
         if ausgabe.localizedCaseInsensitiveContains("sudo")
             || ausgabe.localizedCaseInsensitiveContains("password")
             || ausgabe.localizedCaseInsensitiveContains("Passwort") {
-            return "Homebrew wollte nach dem Passwort fragen – das geht hier nicht. "
-                 + "Den Befehl einmal im Terminal ausführen (Schaltfläche „Fenster“ rechts unten)."
+            return "Homebrew ist an der Passwort-Abfrage (sudo) gescheitert – Einzelheiten stehen im Protokoll."
         }
         if ausgabe.localizedCaseInsensitiveContains("It seems the App source")
             || ausgabe.localizedCaseInsensitiveContains("is already an App") {

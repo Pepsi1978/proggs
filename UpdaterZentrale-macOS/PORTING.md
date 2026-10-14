@@ -262,3 +262,32 @@ Nicht portiert:
   bräuchte das einen LaunchAgent; offen.
 * **IPv4-zuerst** – betrifft den .NET-HttpClient; URLSession nutzt Happy Eyeballs.
 * **`wingetName`**, winget-Neustart-Codes, Tabellen-Parsing von winget – winget-spezifisch.
+
+## H) Windows-Gleichstand 14.10.2026 (Mac 1.0.8, Windows bis 1.3.25)
+
+Portiert:
+* **1.3.22** – verkürzte installierte Version gilt als die angebotene (Android Studio: Info.plist
+  „2026.2“, Cask „2026.2.1.8“): `Versionen.istVerkuerzteForm`, in `BrewAktualisierer.pruefen` vor dem
+  Zahlenvergleich. Zusätzlich nur auf dem Mac: hat brew das Cask selbst installiert und kennt die
+  längere Fassung derselben Version, zählt die längere als installierter Stand und Fingerabdruck –
+  so bleibt ein Patch-Update (…1.8 → …1.9) sichtbar und verifizierbar.
+* **1.3.22** – Kimi-Update fällt auf npm zurück (`/bin/sh -c "kimi update --yes || npm install -g
+  --allow-scripts=… @moonshot-ai/kimi-code@latest"`).
+* **1.3.22** – `FrischeUmgebung`: ein ungültiges JAVA_HOME (JDK-Update hat den Ordner entfernt) wird
+  je Kindprozess durch das Homebrew-JDK ersetzt oder entfernt (`Kommandozeile.umgebung`).
+
+Nur auf dem Mac (Fehler aus dem Lauf vom 14.10.2026):
+* **sudo ohne Terminal** – `dotnet-sdk` räumt alte Pakete per sudo weg; ohne Terminal scheiterte das.
+  Die App legt `~/Library/Application Support/UpdaterZentrale/askpass.sh` an (osascript-Passwortdialog,
+  5 Minuten Frist) und setzt `SUDO_ASKPASS`; Homebrew reicht die Variable durch und hängt `-A` an.
+  `fehlergrundText` unterscheidet Abbruch, falsches Passwort und fehlenden Dialog.
+* **npm 12 überspringt Installationsskripte** fremder Pakete (`allow-scripts`-Richtlinie). OpenCode
+  braucht sein Postinstall (lädt die Programmdatei): `--allow-scripts=opencode-ai` im Katalog.
+
+Nicht portiert:
+* **1.3.22** `wingetUpdatePerInstall`, `wingetInstallerTyp`, „nur über Hersteller“ – winget-Verben;
+  PowerShell ist hier eine Formel, Android Studio läuft ohnehin über `brew install --cask --force`.
+* **1.3.22** Terminal-Startknopf – gibt es auf dem Mac bereits („Fenster“).
+* **1.3.23** Backslashes im Windows-Katalog.
+* **1.3.24 / 1.3.25** Übernahme-Knopf für Paket-Apps (Appx-Staging, Windows Terminal) – kein
+  macOS-Gegenstück; iTerm2 wird beendet und direkt ersetzt.

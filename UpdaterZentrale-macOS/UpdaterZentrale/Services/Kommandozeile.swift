@@ -51,8 +51,54 @@ enum Kommandozeile {
         // Ohne Terminal keine Fortschrittsbalken -- die machen das Protokoll unlesbar.
         umwelt["TERM"] = "dumb"
         umwelt["NO_COLOR"] = "1"
+
+        // Manche Casks (dotnet-sdk) raeumen alte Pakete per sudo weg. Ohne Terminal kann sudo kein
+        // Passwort lesen ("a terminal is required to read the password"); mit SUDO_ASKPASS fragt es
+        // ueber einen Helfer, und Homebrew reicht die Variable durch und haengt selbst `-A` an.
+        // Der Helfer zeigt einen macOS-Passwortdialog (osascript) und gibt die Eingabe zurueck.
+        if let askpass = askpassHelfer { umwelt["SUDO_ASKPASS"] = askpass }
+
+        // Gegenstueck zu `FrischeUmgebung` (Windows 1.3.22): ein JDK-Update kann den Ordner hinter
+        // JAVA_HOME wegraeumen -- sdkmanager bricht dann mit "JAVA_HOME is set to an invalid
+        // directory" ab, bis die App neu gestartet wird. Ein ungueltiger Wert wird deshalb durch das
+        // Homebrew-JDK ersetzt (stabiler opt-Pfad) oder entfernt; ein gueltiger bleibt unangetastet.
+        if let javaHome = umwelt["JAVA_HOME"], !javaHome.istLeer,
+           !FileManager.default.fileExists(atPath: (javaHome as NSString).appendingPathComponent("bin/java")) {
+            let ersatz = "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+            if FileManager.default.fileExists(atPath: (ersatz as NSString).appendingPathComponent("bin/java")) {
+                umwelt["JAVA_HOME"] = ersatz
+            } else {
+                umwelt.removeValue(forKey: "JAVA_HOME")
+            }
+        }
         return umwelt
     }
+
+    /// Pfad des Askpass-Helfers; wird einmal je Lauf der App angelegt (chmod 755), danach nur
+    /// zurueckgegeben. nil, wenn er sich nicht schreiben laesst -- dann bleibt es beim alten
+    /// Verhalten, und `BrewAktualisierer.fehlergrundText` erklaert den Terminal-Weg.
+    private static let askpassHelfer: String? = {
+        let pfad = (Pfade.benutzerOrdner as NSString).appendingPathComponent("askpass.sh")
+        let inhalt = """
+        #!/bin/sh
+        # Askpass-Helfer der Updater-Zentrale macOS. sudo (aus Homebrew heraus) hat kein Terminal und
+        # ruft dieses Skript auf; es zeigt einen Passwortdialog und schreibt die Eingabe auf stdout.
+        # Abbrechen oder 5 Minuten ohne Antwort beenden das Skript mit Fehler -- sudo gibt dann auf.
+        /usr/bin/osascript <<'ENDE'
+        set antwort to display dialog "Homebrew braucht für dieses Update das Mac-Passwort (sudo)." & return & return & "Updater-Zentrale macOS" default answer "" with hidden answer with title "Updater-Zentrale macOS" with icon caution buttons {"Abbrechen", "OK"} default button "OK" cancel button "Abbrechen" giving up after 300
+        if gave up of antwort then error "gave up" number -128
+        text returned of antwort
+        ENDE
+
+        """
+        Pfade.ordnerAnlegen(Pfade.benutzerOrdner)
+        let vorhanden = (try? String(contentsOfFile: pfad, encoding: .utf8)) ?? ""
+        if vorhanden != inhalt {
+            guard (try? inhalt.write(toFile: pfad, atomically: true, encoding: .utf8)) != nil else { return nil }
+        }
+        guard (try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: pfad)) != nil else { return nil }
+        return pfad
+    }()
 
     /// Fuehrt ein Programm aus und wartet auf das Ergebnis.
     /// - Parameter argumente: als EINE Zeile wie unter Windows; wird nach Shell-Regeln zerlegt.
