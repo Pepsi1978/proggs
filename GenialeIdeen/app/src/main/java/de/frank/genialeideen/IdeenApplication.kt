@@ -1,9 +1,12 @@
 package de.frank.genialeideen
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.room.InvalidationTracker
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import de.frank.genialeideen.bridge.JarvisGlaettung
 import de.frank.genialeideen.di.AppContainer
@@ -31,6 +34,8 @@ class GenialeIdeenApplication : Application() {
         IdeenLog.start(this)
         IdeenCrashHandler.installiere(this)
         container = AppContainer(this)
+        // Vor der Freigabe: Ein Schreibaufruf der Brücke beim Kaltstart soll schon gemeldet werden.
+        meldeAenderungenAnJarvis()
         bereit.countDown()
         // Von Jarvis angelegte Ideen, deren KI-Glättung ein beendeter Prozess unterbrochen hat.
         JarvisGlaettung.nachholen(container, this)
@@ -51,6 +56,35 @@ class GenialeIdeenApplication : Application() {
             object : InvalidationTracker.Observer("ideen", "kategorien", "nachrichten") {
                 override fun onInvalidated(tables: Set<String>) {
                     container.autoSicherung.melde("Bestand geändert")
+                }
+            },
+        )
+    }
+
+    /** Eigener Faden für das Signal an Jarvis — hält den Hauptfaden frei. */
+    private val jarvisTakt = Executors.newSingleThreadScheduledExecutor()
+    @Volatile private var jarvisSignal: ScheduledFuture<*>? = null
+
+    /**
+     * Jede Änderung an Ideen, Kategorien oder Gesprächen meldet sich bei Jarvis, damit sein
+     * Gedächtnis sofort nachzieht.
+     *
+     * Wie bei der Sicherung über den Änderungsmelder von Room: So zählen Oberfläche, Glättung,
+     * Einspielen einer Sicherung und Schreibaufrufe über die Brücke gleichermaßen. Lesen über die
+     * Brücke ändert nichts und löst daher kein Signal aus. Mehrere Änderungen binnen 700 ms
+     * ergeben ein Signal; ohne installiertes Jarvis geht es ins Leere.
+     */
+    private fun meldeAenderungenAnJarvis() {
+        val bruecke = Uri.parse("content://$packageName.jarvis")
+        container.database.invalidationTracker.addObserver(
+            object : InvalidationTracker.Observer("ideen", "kategorien", "nachrichten") {
+                override fun onInvalidated(tables: Set<String>) {
+                    jarvisSignal?.cancel(false)
+                    jarvisSignal = jarvisTakt.schedule(
+                        { runCatching { contentResolver.notifyChange(bruecke, null) } },
+                        700,
+                        TimeUnit.MILLISECONDS,
+                    )
                 }
             },
         )
