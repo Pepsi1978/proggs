@@ -67,8 +67,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
     fun geaendert(block: () -> Unit) { block(); stand++ }
     stand.let { }
 
-    Abschnitt("Spracheingabe")
-    Karte {
+    Bereich("Spracheingabe") {
         val eingerichtet = s.groqApiKey.isNotBlank()
         Zeile("Mikrofon", if (eingerichtet) "Eingerichtet" else "Groq-Schlüssel fehlt", if (eingerichtet) f.erfolg else f.textLeise)
         Text("Der Knopf rechts neben dem Eingabefeld wird zum Mikrofon, solange das Feld leer ist. Die Aufnahme schreibt Groq mit (whisper-large-v3-turbo) in Text um und geht direkt an Jarvis.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
@@ -89,8 +88,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         }
     }
 
-    Abschnitt("Vorlesen")
-    Karte {
+    Bereich("Vorlesen") {
         val anbieter = TtsCatalog.providers.firstOrNull { it.id == s.ttsProvider } ?: TtsCatalog.DEFAULT_PROVIDER
         Zeile("Stimme", anbieter.label, f.erfolg)
         Text("Jarvis liest absatzweise vor und lädt die nächsten Absätze schon im Voraus, damit keine Pausen entstehen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))

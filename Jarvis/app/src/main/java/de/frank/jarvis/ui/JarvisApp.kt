@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.mutableStateOf
@@ -236,6 +237,26 @@ private fun DrawScope.kernZeichnen(farbe: Color, winkel: Float, p: Float) {
 fun Karte(modifier: Modifier = Modifier, toenung: Color? = null, inhalt: @Composable ColumnScope.() -> Unit) {
     val f = LocalFarben.current
     Column(modifier.fillMaxWidth().glas(f, toenung = toenung).padding(18.dp), content = inhalt)
+}
+
+/** Aufklappbarer Einstellungsbereich: Kopfzeile antippen klappt den Inhalt auf und zu. Startet zugeklappt. */
+@Composable
+fun Bereich(titel: String, inhalt: @Composable ColumnScope.() -> Unit) {
+    val f = LocalFarben.current
+    var offen by androidx.compose.runtime.saveable.rememberSaveable(titel) { mutableStateOf(false) }
+    val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
+    Column(Modifier.fillMaxWidth().glas(f)) {
+        Row(
+            Modifier.fillMaxWidth().antippen { offen = !offen }.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(titel, Modifier.weight(1f), color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen", Modifier.size(26.dp).graphicsLayer { rotationZ = drehung }, tint = f.textLeise)
+        }
+        AnimatedVisibility(offen, enter = androidx.compose.animation.expandVertically() + fadeIn(), exit = androidx.compose.animation.shrinkVertically() + fadeOut()) {
+            Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 18.dp), content = inhalt)
+        }
+    }
 }
 
 @Composable

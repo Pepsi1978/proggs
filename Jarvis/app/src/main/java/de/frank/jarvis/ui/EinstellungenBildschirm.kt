@@ -59,8 +59,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         Text("Einstellungen", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
 
         // ---------------------------------------------------------------- Kopf
-        Abschnitt("Jarvis' Kopf")
-        Karte {
+        Bereich("Jarvis' Kopf") {
             Zeile("ChatGPT-Konto", if (vm.kiVerbunden) vm.kiKonto.ifEmpty { "Verbunden" } else "Nicht verbunden", if (vm.kiVerbunden) f.erfolg else f.textLeise)
             val code = vm.geraeteCode
             when {
@@ -94,8 +93,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- Gedächtnis
-        Abschnitt("Jarvis' Gedächtnis")
-        Karte {
+        Bereich("Jarvis' Gedächtnis") {
             androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
             Text("Drei Dateien, die Jarvis selbst pflegt und bei jeder Antwort vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
             listOf(
@@ -111,8 +109,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- Hey Jarvis
-        Abschnitt("Hey Jarvis")
-        Karte {
+        Bereich("Hey Jarvis") {
             val hoertZu by de.frank.jarvis.weckwort.Weckwort.hoertZu.collectAsState()
             val treffer by de.frank.jarvis.weckwort.Weckwort.letzter.collectAsState()
             val bereit = e.weckwortAn && vm.weckwortMikro
@@ -236,8 +233,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- Plugin
-        Abschnitt("ChatGPT-Plugin")
-        Karte {
+        Bereich("ChatGPT-Plugin") {
             val (stand, farbe) = when (tunnel.stufe) {
                 TunnelStufe.ONLINE -> "Online" to f.erfolg
                 TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
@@ -275,10 +271,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 Knopf("Speichern und verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.serverSpeichern(host, token) }
             }
-        }
-
-        Karte {
-            Text("So kommt Jarvis in ChatGPT", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        
+            Text("So kommt Jarvis in ChatGPT", Modifier.padding(top = 18.dp), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             listOf(
                 "Warten, bis oben „Online“ steht. Dann die Plugin-Adresse kopieren oder an den PC teilen.",
                 "Am PC chatgpt.com öffnen: Einstellungen → Apps und Konnektoren → Erweitert → Entwicklermodus einschalten.",
@@ -293,8 +287,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- Tagesauswertung
-        Abschnitt("Tagesauswertungs-Synchronisation")
-        Karte {
+        Bereich("Tagesauswertungs-Synchronisation") {
             Zeile("Automatisch synchronisieren", if (e.auswertungAn) "Nächste: ${vm.naechsteAuswertung}" else "Aus", if (e.auswertungAn) f.erfolg else f.textLeise)
             Text("Jarvis liest dabei alle angebundenen Apps und schreibt die Tagesauswertung neu: Rückblick, aktueller Tag und Ausblick. In ChatGPT fragst du dann nur: „Wie ist meine Tagesauswertung?“", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -347,8 +340,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         SpracheEinstellungen(vm)
 
         // ---------------------------------------------------------------- Kalender und Wetter
-        Abschnitt("Kalender und Wetter")
-        Karte {
+        Bereich("Kalender und Wetter") {
             val lesen = vm.stoerungen["kalender"] == null
             Zeile("Kalender", if (!lesen) "Kein Zugriff" else if (vm.kalenderSchreibenErlaubt) "Lesen und Schreiben" else "Nur Lesen", if (lesen) f.erfolg else f.gefahr)
             if (!lesen || !vm.kalenderSchreibenErlaubt) Knopf(if (lesen) "Schreiben erlauben" else "Kalender-Zugriff erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
@@ -360,8 +352,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- Tagebuch
-        Abschnitt("Tagebuch (Google Drive)")
-        Karte {
+        Bereich("Tagebuch (Google Drive)") {
             val stoerung = vm.stoerungen["tagebuch"]
             Zeile("Lesezugang", if (stoerung == null) "In Ordnung" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
             Text(stoerung ?: "Dein Server liest die Tagebuch-Dateien mit einem Nur-Lese-Zugang aus Google Drive. Sollte Google ihn einmal widerrufen, erteilst du ihn hier neu.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
@@ -370,8 +361,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- E-Mail
-        Abschnitt("E-Mail (Gmail)")
-        Karte {
+        Bereich("E-Mail (Gmail)") {
             val eingerichtet = e.mailPasswort.isNotBlank()
             Zeile("Senden und Lesen", if (eingerichtet) "Eingerichtet" else "Nicht eingerichtet", if (eingerichtet) f.erfolg else f.textLeise)
             Text("Jarvis braucht dafür ein App-Passwort deines Google-Kontos: Google-Konto → Sicherheit → Bestätigung in zwei Schritten → App-Passwörter, dort eines für „Jarvis“ erzeugen und die 16 Zeichen hier einfügen. Dein normales Passwort gehört nicht hierher.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
@@ -395,8 +385,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- GitHub
-        Abschnitt("GitHub-Repo")
-        Karte {
+        Bereich("GitHub-Repo") {
             val mitSchluessel = e.githubToken.isNotBlank()
             Zeile("Nur lesen", if (mitSchluessel) "Mit Code-Suche" else "Ohne Schlüssel", if (mitSchluessel) f.erfolg else f.textLeise)
             Text("Jarvis liest dein ganzes Repo und wertet es aus, ändert dort aber nie etwas. Das geht ohne Schlüssel (60 Abfragen je Stunde). Für die Code-Suche und mehr Abfragen: " +
@@ -407,8 +396,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- Apps
-        Abschnitt("Angebundene Apps und Fähigkeiten")
-        Karte {
+        Bereich("Angebundene Apps und Fähigkeiten") {
             Register.alle(activity).forEachIndexed { i, app ->
                 val stoerung = vm.stoerungen[app.id]
                 if (i > 0) Spacer(Modifier.height(14.dp))
@@ -420,8 +408,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- System
-        Abschnitt("System")
-        Karte {
+        Bereich("System") {
             Zeile("Bereitschaft", if (e.dienstAn) "Jarvis läuft im Hintergrund" else "Angehalten", if (e.dienstAn) f.erfolg else f.textLeise)
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("An", aktiv = e.dienstAn) { vm.dienstSchalten(true) }

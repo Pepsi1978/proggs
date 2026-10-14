@@ -35,8 +35,7 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
     val f = LocalFarben.current
     val e = vm.einstellungen
     LaunchedEffect(Unit) { vm.abfahrtLaden() }
-    Abschnitt("Pünktlich losfahren")
-    Karte {
+    Bereich("Pünktlich losfahren") {
         val bereit = e.abfahrtAn && e.mapsSchluessel.isNotBlank()
         Zeile("Losfahr-Meldung", if (!e.abfahrtAn) "Aus" else if (e.mapsSchluessel.isBlank()) "Schlüssel fehlt" else "An", if (bereit) f.erfolg else if (e.abfahrtAn) f.gefahr else f.textLeise)
         Text(vm.abfahrtStatus.ifEmpty { "Stand wird geladen …" }, color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 6.dp))
