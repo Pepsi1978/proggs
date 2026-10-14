@@ -16,7 +16,7 @@ import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
  * Bekannte Schwäche (Bug-Almanach android/voice-assistant-trigger §7): Das Gigaspeech-Modell weckt bei manchen
  * Wörtern schwach auf. Deshalb Boost und Schwelle je nach Empfindlichkeit, und „Hey Jarvis“ bleibt wählbar.
  */
-class PhrasenErkenner(context: Context, tokens: String, private val schwelle: Float) : AutoCloseable {
+class PhrasenErkenner(context: Context, private val tokens: String, schwelle: Float) : AutoCloseable {
     private val spotter = KeywordSpotter(
         context.assets,
         KeywordSpotterConfig().apply {
@@ -37,9 +37,18 @@ class PhrasenErkenner(context: Context, tokens: String, private val schwelle: Fl
         },
     )
     // Eine Zeile: Tokens, Boost (:), Schwelle (#). Ohne „@Original“, das parst sherpa-onnx als Tokens (Almanach #32).
-    private val zeile = "$tokens :$BOOST #$schwelle"
+    private var zeile = "$tokens :$BOOST #$schwelle"
     private var strom: OnlineStream = spotter.createStream(zeile)
     private val puffer = FloatArray(WeckwortErkenner.BLOCK)
+
+    /** Schwelle des KeywordSpotters; eine neue gilt ab sofort (neuer Strom). */
+    var schwelle: Float = schwelle
+        set(neu) {
+            if (neu == field) return
+            field = neu
+            zeile = "$tokens :$BOOST #$neu"
+            zuruecksetzen()
+        }
 
     /** Nach jeder Pause neu anfangen, damit kein Rest der letzten Aufnahme mitzählt. */
     fun zuruecksetzen() {
@@ -69,6 +78,12 @@ class PhrasenErkenner(context: Context, tokens: String, private val schwelle: Fl
 
         /** Schwelle des KeywordSpotters je Empfindlichkeit (Vorgabe des Modells 0,25; kleiner = springt leichter an). */
         fun schwelleFuer(empfindlichkeit: String): Float = when (empfindlichkeit) { "niedrig" -> 0.35f; "hoch" -> 0.15f; else -> 0.25f }
+
+        /** Beim Anlernen: so leicht wie möglich, damit auch Proben aus fünf Metern Entfernung ankommen. */
+        const val SCHWELLE_ANLERNEN = 0.12f
+
+        /** Mit Stimmerkennung eine Stufe empfindlicher: Sie siebt Fremde aus, die Phrase soll auch von weitem greifen. */
+        const val SPRECHER_BONUS = 0.07f
     }
 }
 

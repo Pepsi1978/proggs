@@ -188,19 +188,30 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             val anlernen = stimme.anlernen
             when {
                 anlernen != null -> {
-                    Zeile("Anlernen läuft", "$anlernen von ${de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL}", f.primaer)
+                    val ziel = de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL
+                    Zeile("Anlernen läuft", "Probe ${minOf(anlernen + 1, ziel)} von $ziel", f.primaer)
+                    // Abstand je Probe: So lernt Jarvis deine Stimme nah, im Raum und von weitem (etwa aus der Küche).
+                    val (abstand, anleitung) = when {
+                        anlernen < 4 -> "Nah" to "Halte das Handy wie gewohnt und sag „$wort“ in normaler Lautstärke."
+                        anlernen < 7 -> "Etwa 2 Meter" to "Leg das Handy hin, geh etwa zwei Meter weg und sag „$wort“ so, wie du es im Raum sagen würdest."
+                        else -> "Etwa 5 Meter" to "Geh etwa fünf Meter weg, zum Beispiel in die Küche, und sag „$wort“ so laut, wie du es von dort sagen würdest."
+                    }
                     Text(
-                        if (hoertZu) "Sag jetzt deutlich „$wort“, so wie du es sonst auch sagst. Nach jedem erkannten Mal kommt ein kurzer Ton; dann kurz warten und noch einmal."
+                        if (hoertZu) "$abstand: $anleitung Nach jedem erkannten Mal kommt ein kurzer Ton, dann kurz warten und noch einmal. " +
+                            "Hörst du keinen Ton, etwas lauter oder einen Schritt näher."
                         else "Jarvis hört gerade nicht zu (er liest vor oder nimmt auf). Sobald „Hört zu“ oben steht, kann es losgehen.",
                         color = f.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
                     )
                     Knopf("Abbrechen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.stimmeAnlernenAbbrechen() }
                 }
-                stimme.proben > 0 -> {
-                    Zeile("Stimmprofil", "Aktiv", f.erfolg)
+                stimme.proben > 0 || stimme.stimmen > 0 -> {
+                    Zeile("Stimmerkennung", if (stimme.stimmen > 0) "Aktiv" else "Nur Klangprofil", if (stimme.stimmen > 0) f.erfolg else f.primaer)
                     Text(
-                        "Angelernt mit ${stimme.proben} Proben" + (if (stimme.fehlalarme > 0) ", ${stimme.fehlalarme} Fehlalarme gelernt" else "") +
-                            " für „$wort“. Klingt es nicht nach dir, bleibt Jarvis still. Kommt nach dem Piepton nichts, merkt er sich das als Fehlalarm.",
+                        if (stimme.stimmen > 0) "Jarvis kennt deinen Stimm-Fingerabdruck (${stimme.stimmen} Proben, nah bis fünf Meter). Nach dem Weckwort prüft er, ob wirklich du sprichst; " +
+                            "andere Menschen, Fernseher und Radio weist er ab, auch wenn sie „$wort“ sagen." +
+                            (stimme.letzteStimme?.let { s -> " Zuletzt: Übereinstimmung ${(s * 100).toInt()} %, nötig ${((stimme.stimmSchwelle ?: 0f) * 100).toInt()} %." } ?: "")
+                        else "Angelernt mit ${stimme.proben} Proben für „$wort“ (Klangprofil, unterscheidet Wörter, aber Menschen nur teilweise). " +
+                            "Neu anlernen, dann lernt Jarvis auch deinen Stimm-Fingerabdruck.",
                         color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                     )
                     abgewiesen?.let { t ->
@@ -215,8 +226,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 else -> {
                     Text(
-                        "Sag sechsmal „$wort“, und Jarvis lernt, wie es bei dir klingt. Danach springt er nicht mehr auf ähnlich klingende Wörter, " +
-                            "Fernseher oder andere Leute an. Dauert eine Minute.",
+                        "Sag zehnmal „$wort“: viermal nah, dreimal aus etwa zwei Metern, dreimal aus etwa fünf Metern. Jarvis lernt deinen Stimm-Fingerabdruck " +
+                            "und springt danach nur noch auf deine Stimme an, auch von weitem. Dauert zwei Minuten.",
                         color = f.textSchwach, fontSize = 13.sp,
                     )
                     Knopf("Stimme anlernen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.stimmeAnlernen() }

@@ -19,11 +19,17 @@ object WeckwortProtokoll {
     private const val MAX_BYTES = 512 * 1024L
     private const val BEHALTEN = 1500
 
-    fun treffer(context: Context, art: String, modellwert: Float?, pruefung: Stimmprofil.Pruefung?, urteil: String) {
+    fun treffer(
+        context: Context, art: String, modellwert: Float?, pruefung: Stimmprofil.Pruefung?, urteil: String,
+        stimme: Stimmprofil.StimmPruefung? = null, mitStimme: Boolean = false,
+    ) {
         val j = JSONObject().put("ereignis", "treffer").put("art", art).put("urteil", urteil)
         modellwert?.let { j.put("modell", runde(it)) }
         if (pruefung != null) j.put("aehnlich", runde(pruefung.aehnlich)).put("schwelle", runde(pruefung.schwelle)).put("fehlalarm", runde(pruefung.fremd))
         else j.put("profil", false)
+        // Stimmerkennung: Ähnlichkeit des Stimm-Fingerabdrucks zu Franks Mitte und ihre Schwelle (sie entscheidet).
+        if (stimme != null) j.put("stimme", runde(stimme.aehnlich)).put("stimmSchwelle", runde(stimme.schwelle))
+        else if (mitStimme) j.put("stimme", "zu wenig Sprache")
         schreibe(context, j)
     }
 

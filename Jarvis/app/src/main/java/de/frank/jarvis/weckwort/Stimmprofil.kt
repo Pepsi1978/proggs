@@ -23,16 +23,61 @@ import org.json.JSONObject
  * Fehlalarme lernt Jarvis von allein: Kommt nach dem Piepton nichts, hat ihn wohl niemand gemeint.
  */
 object Stimmprofil {
-    /** So viele Proben braucht das Anlernen. */
-    const val ANLERN_ZIEL = 6
+    /** So viele Proben braucht das Anlernen: 1–4 nah, 5–7 aus etwa zwei Metern, 8–10 aus etwa fünf Metern. */
+    const val ANLERN_ZIEL = 10
     private const val MIN_PROBEN = 3
+    private const val MIN_STIMMEN = 5
     private const val MAX_FEHLALARME = 40
     private const val TAG = "Stimmprofil"
 
-    data class Stand(val proben: Int, val fehlalarme: Int, val anlernen: Int?, val letzteAehnlichkeit: Float?, val letzteSchwelle: Float?)
+    data class Stand(
+        val proben: Int, val fehlalarme: Int, val anlernen: Int?, val letzteAehnlichkeit: Float?, val letzteSchwelle: Float?,
+        /** Angelernte Stimm-Fingerabdrücke (echte Stimmerkennung); ab fünf entscheidet sie allein. */
+        val stimmen: Int = 0,
+        val letzteStimme: Float? = null,
+        val stimmSchwelle: Float? = null,
+    )
 
     private val _stand = MutableStateFlow(Stand(0, 0, null, null, null))
     val stand: StateFlow<Stand> = _stand.asStateFlow()
+
+    /** Stimm-Fingerabdrücke ([SprecherErkenner]); gelten unabhängig von der Phrase, denn sie erkennen die Person. */
+    @Volatile private var stimmen: List<FloatArray> = emptyList()
+    @Volatile private var neueStimmen: MutableList<FloatArray>? = null
+
+    /** Echte Stimmerkennung angelernt: Sie entscheidet, ob Frank spricht. */
+    val stimmeAktiv: Boolean get() = stimmen.size >= MIN_STIMMEN
+
+    /** Ergebnis der Stimmerkennung, auch fürs Protokoll. */
+    data class StimmPruefung(val ok: Boolean, val aehnlich: Float, val schwelle: Float)
+
+    /** Ist das Franks Stimme? null = keine Stimmerkennung angelernt oder zu wenig Sprache in der Aufnahme. */
+    fun pruefeStimme(fingerabdruck: FloatArray?): StimmPruefung? {
+        val s = stimmen
+        if (s.size < MIN_STIMMEN || fingerabdruck == null) return null
+        val mitte = SprecherErkenner.normiert(mittel(s))
+        val aehnlich = SprecherErkenner.kosinus(fingerabdruck, mitte)
+        val schwelle = stimmSchwelle(s)
+        val ok = aehnlich >= schwelle
+        _stand.value = _stand.value.copy(letzteStimme = aehnlich, stimmSchwelle = schwelle)
+        Log.i(TAG, "Stimme ${"%.3f".format(aehnlich)}, Schwelle ${"%.3f".format(schwelle)} → ${if (ok) "Frank" else "fremde Stimme"}")
+        return StimmPruefung(ok, aehnlich, schwelle)
+    }
+
+    /**
+     * Schwelle der Stimmerkennung aus Franks eigenen Proben: Wie ähnlich ist jede Probe der Mitte der übrigen? Die
+     * geringste davon (meist eine aus fünf Metern), mit etwas Spielraum. Nie unter 0,40, darunter fängt CAM++ an,
+     * fremde Stimmen durchzulassen; nie über 0,60, sonst scheitert Frank an einem schlechten Tag.
+     */
+    private fun stimmSchwelle(s: List<FloatArray>): Float {
+        val min = s.indices.minOf { i ->
+            val rest = SprecherErkenner.normiert(mittel(s.filterIndexed { j, _ -> j != i }))
+            SprecherErkenner.kosinus(s[i], rest)
+        }
+        return (min - 0.08f).coerceIn(0.40f, 0.60f)
+    }
+
+    private fun mittel(s: List<FloatArray>): FloatArray = FloatArray(s.first().size) { k -> s.sumOf { it[k].toDouble() }.toFloat() / s.size }
 
     @Volatile private var proben: List<FloatArray> = emptyList()
     @Volatile private var fehl: List<FloatArray> = emptyList()
@@ -63,6 +108,7 @@ object Stimmprofil {
             fehl = liste(json.optJSONArray("fehlalarme"))
             hintergrund = json.optJSONArray("hintergrund")?.let { feld(it) }
             gespeicherterSchluessel = json.optString("schluessel", "jarvis")
+            stimmen = liste(json.optJSONArray("stimmen"))
         }.onFailure { Log.w(TAG, "Stimmprofil nicht lesbar", it) }
         melden()
     }
@@ -120,24 +166,33 @@ object Stimmprofil {
 
     fun anlernenStarten() {
         neu = mutableListOf()
+        neueStimmen = mutableListOf()
         melden()
     }
 
     fun anlernenAbbrechen() {
         neu = null
+        neueStimmen = null
         melden()
     }
 
-    /** Eine Probe beim Anlernen. true = genug Proben, das Profil ist gespeichert. */
-    fun probe(merkmale: FloatArray): Boolean {
+    /**
+     * Eine Probe beim Anlernen: Lautmerkmale des Weckworts und, wenn genug Sprache darin war, der Stimm-Fingerabdruck.
+     * true = genug Proben, das Profil ist gespeichert.
+     */
+    fun probe(merkmale: FloatArray, fingerabdruck: FloatArray?): Boolean {
         val liste = neu ?: return false
         liste += merkmale.copyOf()
+        fingerabdruck?.let { neueStimmen?.add(it.copyOf()) }
         if (liste.size < ANLERN_ZIEL) { melden(); return false }
         proben = liste.toList()
         gespeicherterSchluessel = schluessel
         // Ein neues Profil fängt auch bei den Fehlalarmen von vorn an.
         fehl = emptyList()
+        neueStimmen?.takeIf { it.size >= MIN_STIMMEN }?.let { stimmen = it.toList() }
+        Log.i(TAG, "Angelernt: ${liste.size} Proben, ${neueStimmen?.size ?: 0} Stimm-Fingerabdrücke")
         neu = null
+        neueStimmen = null
         speichern()
         melden()
         return true
@@ -154,7 +209,9 @@ object Stimmprofil {
     fun loeschen() {
         proben = emptyList()
         fehl = emptyList()
+        stimmen = emptyList()
         neu = null
+        neueStimmen = null
         speichern()
         _stand.value = Stand(0, 0, null, null, null)
     }
@@ -163,7 +220,7 @@ object Stimmprofil {
 
     private fun melden() {
         val passend = gespeicherterSchluessel == schluessel
-        _stand.value = _stand.value.copy(proben = if (passend) proben.size else 0, fehlalarme = if (passend) fehl.size else 0, anlernen = neu?.size)
+        _stand.value = _stand.value.copy(proben = if (passend) proben.size else 0, fehlalarme = if (passend) fehl.size else 0, anlernen = neu?.size, stimmen = stimmen.size)
     }
 
     @Synchronized
@@ -174,6 +231,7 @@ object Stimmprofil {
                 .put("proben", JSONArray().apply { proben.forEach { put(alsJson(it)) } })
                 .put("fehlalarme", JSONArray().apply { fehl.forEach { put(alsJson(it)) } })
                 .put("schluessel", gespeicherterSchluessel)
+                .put("stimmen", JSONArray().apply { stimmen.forEach { put(alsJson(it)) } })
             hintergrund?.let { json.put("hintergrund", alsJson(it)) }
             val tmp = File(d.parentFile, d.name + ".tmp")
             tmp.writeText(json.toString())

@@ -63,6 +63,7 @@ class WeckwortDienst : Service() {
     /** Tokens der eigenen Phrase aus den Einstellungen; null = „Hey Jarvis“. */
     private var phrasenTokens: String? = null
     private var phrasenSchwelle = 0.25f
+    private var sprecherErkenner: SprecherErkenner? = null
     private var vorleser: Vorleser? = null
     @Volatile private var lauf: AtomicBoolean? = null
     private var faden: Thread? = null
@@ -153,9 +154,13 @@ class WeckwortDienst : Service() {
             .onFailure { Log.e(TAG, "Phrasen-Modell nicht ladbar, nehme Hey Jarvis", it) }
             .getOrNull()?.also { phrasenErkenner = it }
         Weckwort.aktivesWort(if (phr != null) PhrasenTokens.normiert(Einstellungen.get(this).weckwortPhrase) else "Hey Jarvis")
+        // Stimmerkennung (Stimm-Fingerabdruck). Fehlt sie, bleibt es beim Stimmprofil aus den Lautmerkmalen.
+        val spr = sprecherErkenner ?: runCatching { SprecherErkenner(this) }
+            .onFailure { Log.e(TAG, "Stimmerkennung nicht ladbar", it) }
+            .getOrNull()?.also { sprecherErkenner = it }
         val an = AtomicBoolean(true)
         lauf = an
-        faden = Thread({ schleife(erk, phr, an) }, "Weckwort").apply { start() }
+        faden = Thread({ schleife(erk, phr, spr, an) }, "Weckwort").apply { start() }
     }
 
     /** Hält das Lauschen an und wartet kurz, bis das Mikrofon wirklich frei ist. */
@@ -168,7 +173,7 @@ class WeckwortDienst : Service() {
     }
 
     @SuppressLint("MissingPermission") // geprüft in onStartCommand
-    private fun schleife(erk: WeckwortErkenner, phr: PhrasenErkenner?, an: AtomicBoolean) {
+    private fun schleife(erk: WeckwortErkenner, phr: PhrasenErkenner?, spr: SprecherErkenner?, an: AtomicBoolean) {
         var aufnahme: AudioRecord? = null
         try {
             val minimum = AudioRecord.getMinBufferSize(WeckwortErkenner.ABTASTRATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
@@ -187,6 +192,13 @@ class WeckwortDienst : Service() {
             // Ein einzelner Block über der Schwelle reicht nicht: Erst zwei in Folge (160 ms) zählen, wie „patience“
             // bei openWakeWord. Kurze Ausreißer bei ähnlich klingenden Wörtern fallen so weg.
             var inFolge = 0
+            // Die letzten Sekunden Ton für den Stimm-Fingerabdruck: Das Weckwort ist schon gesagt, wenn es erkannt wird.
+            val ring = ShortArray(RING_WERTE)
+            var ringPos = 0
+            fun letzterTon(): FloatArray {
+                val n = TON_WERTE
+                return FloatArray(n) { i -> ring[(ringPos - n + i + RING_WERTE) % RING_WERTE] / 32768f }
+            }
             while (an.get()) {
                 var gelesen = 0
                 while (gelesen < block.size && an.get()) {
@@ -195,18 +207,31 @@ class WeckwortDienst : Service() {
                     gelesen += n
                 }
                 if (!an.get()) break
+                for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
                 // „Hey Jarvis“-Modell läuft immer mit: Seine Merkmale braucht das Stimmprofil auch bei eigener Phrase.
                 val wert = erk.bewerte(block)
                 val merkmale = erk.letzteMerkmale
                 val anlernen = Stimmprofil.lerntAn
+                // Mit angelernter Stimmerkennung springt das Weckwort leichter an (auch aus fünf Metern); Fremde
+                // weist danach die Stimmerkennung ab. Beim Anlernen so leicht wie möglich.
+                val mitStimme = Stimmprofil.stimmeAktiv && spr != null
                 if (phr != null) {
+                    phr.schwelle = when {
+                        anlernen -> PhrasenErkenner.SCHWELLE_ANLERNEN
+                        mitStimme -> (phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_ANLERNEN)
+                        else -> phrasenSchwelle
+                    }
                     if (!phr.erkannt(block)) {
                         if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
                 } else {
                     // Beim Anlernen etwas großzügiger, damit auch Franks deutsche Aussprache Proben liefert.
-                    val schwelle = if (anlernen) minOf(Weckwort.schwelle, 0.35f) else Weckwort.schwelle
+                    val schwelle = when {
+                        anlernen -> minOf(Weckwort.schwelle, 0.3f)
+                        mitStimme -> Weckwort.schwelle * 0.8f
+                        else -> Weckwort.schwelle
+                    }
                     if (wert < schwelle) {
                         inFolge = 0
                         if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
@@ -218,9 +243,10 @@ class WeckwortDienst : Service() {
                 val modellwert = if (phr == null) wert else null
                 if (anlernen) {
                     if (merkmale != null) {
-                        Log.i(TAG, "Probe fürs Stimmprofil (${"%.2f".format(wert)})")
-                        Stimmprofil.probe(merkmale)
-                        bereich.launch { piepKurz() }
+                        val fingerabdruck = runCatching { spr?.fingerabdruck(letzterTon()) }.getOrNull()
+                        Log.i(TAG, "Probe fürs Stimmprofil (${"%.2f".format(wert)}), Stimm-Fingerabdruck: ${fingerabdruck != null}")
+                        val fertig = Stimmprofil.probe(merkmale, fingerabdruck)
+                        bereich.launch { piepKurz(); if (fertig) { delay(150); piepKurz() } }
                     }
                     // Neu anfangen: Die nächste Probe soll ein neues „Hey Jarvis“ sein, nicht der Rest von diesem.
                     erk.zuruecksetzen()
@@ -228,16 +254,20 @@ class WeckwortDienst : Service() {
                     continue
                 }
                 val pruefung = Stimmprofil.pruefe(merkmale)
-                if (pruefung?.ok == false) {
+                // Mit Stimmerkennung entscheidet allein sie: Sie erkennt die Person, auch aus fünf Metern, wo die
+                // Lautmerkmale schon stark abweichen. Zu wenig Sprache im Ton zählt als „nicht Frank“.
+                val stimme = if (mitStimme) Stimmprofil.pruefeStimme(runCatching { spr?.fingerabdruck(letzterTon()) }.getOrNull()) else null
+                val ok = if (mitStimme) stimme?.ok == true else pruefung?.ok != false
+                if (!ok) {
                     Log.i(TAG, "Weckwort ($art) abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
-                    WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "abgewiesen")
+                    WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "abgewiesen", stimme, mitStimme)
                     Weckwort.abgewiesen(modellwert ?: 1f)
                     erk.zuruecksetzen()
                     phr?.zuruecksetzen()
                     continue
                 }
                 Log.i(TAG, "Weckwort ($art) erkannt (${"%.2f".format(wert)})")
-                WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "gerufen")
+                WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "gerufen", stimme, mitStimme)
                 Weckwort.erkannt(modellwert ?: 1f)
                 Weckwort.trefferMerkmale = merkmale
                 an.set(false)
@@ -260,12 +290,12 @@ class WeckwortDienst : Service() {
         }
     }
 
-    /** Bestätigt beim Anlernen jede Probe mit einem kurzen Ton. */
+    /** Bestätigt beim Anlernen jede Probe mit einem Ton, laut genug für fünf Meter; am Ende zweimal. */
     private suspend fun piepKurz() {
-        val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 80) }.getOrNull() ?: return
+        val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100) }.getOrNull() ?: return
         try {
-            ton.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 120)
-            delay(200)
+            ton.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 220)
+            delay(300)
         } finally {
             ton.release()
         }
@@ -325,6 +355,8 @@ class WeckwortDienst : Service() {
         erkenner = null
         runCatching { phrasenErkenner?.close() }
         phrasenErkenner = null
+        runCatching { sprecherErkenner?.close() }
+        sprecherErkenner = null
         runCatching { if (wach?.isHeld == true) wach?.release() }
         Weckwort.hoertZu(false)
         Weckwort.aktivesWort(null)
@@ -339,6 +371,9 @@ class WeckwortDienst : Service() {
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
+        /** Ringpuffer 2,5 s; davon gehen die letzten 2,2 s (das Weckwort samt Rand) in den Stimm-Fingerabdruck. */
+        private const val RING_WERTE = WeckwortErkenner.ABTASTRATE * 5 / 2
+        private const val TON_WERTE = WeckwortErkenner.ABTASTRATE * 22 / 10
         private const val AKTION_NEU_LADEN = "de.frank.jarvis.weckwort.NEU_LADEN"
 
         /** Weckwort, Phrase oder Empfindlichkeit geändert: Der laufende Dienst liest sie neu ein. Nur aus der sichtbaren App. */
