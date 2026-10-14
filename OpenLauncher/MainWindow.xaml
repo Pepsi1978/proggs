@@ -781,13 +781,14 @@
                                  Style="{x:Null}"
                                  Background="Transparent"
                                  BorderThickness="0"
-                                 Height="72"
+                                 MinHeight="72"
                                  VerticalAlignment="Top"
                                  Visibility="{Binding HasCliChoice, Converter={StaticResource BoolToVisibility}}"
                                  ItemsSource="{Binding CliTargets}"
                                  SelectedItem="{Binding SelectedCliTarget, Mode=TwoWay}"
                                  IsSynchronizedWithCurrentItem="False"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <UniformGrid Rows="1" Columns="2"/>
