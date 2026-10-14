@@ -14,5 +14,6 @@ class JarvisApplication : Application() {
         Protokoll.lade(this)
         // Laufende Timer nach einem Neustart wieder scharf stellen.
         de.frank.jarvis.timer.Timer.starte(this)
+        de.frank.jarvis.timer.Stoppuhr.starte(this)
     }
 }

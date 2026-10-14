@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.AvTimer
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
@@ -124,8 +125,10 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     val raum = androidx.compose.runtime.rememberCoroutineScope()
     GespraecheSchublade(vm, schublade) {
     Column(Modifier.fillMaxSize()) {
-        Kopf(vm, tunnel, auswertung.laeuft) { raum.launch { schublade.open() } }
+        var stoppuhrOffen by rememberSaveable { mutableStateOf(false) }
+        Kopf(vm, tunnel, auswertung.laeuft, stoppuhrOeffnen = { stoppuhrOffen = true }) { raum.launch { schublade.open() } }
         LaeuftGerade(vm)
+        StoppuhrKarte(stoppuhrOffen, { stoppuhrOffen = false }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(), state = liste,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -233,7 +236,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
 }
 
 @Composable
-private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, leisteOeffnen: () -> Unit) {
+private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, stoppuhrOeffnen: () -> Unit, leisteOeffnen: () -> Unit) {
     val f = LocalFarben.current
     val (zeile, farbe) = when (tunnel.stufe) {
         TunnelStufe.ONLINE -> "Online" to f.erfolg
@@ -253,6 +256,13 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
         }
         if (vm.gespraech.isNotEmpty()) {
             Rundknopf(Icons.Rounded.AddComment, "Neues Gespräch", farbe = f.primaer) { vm.neuesGespraech() }
+            Spacer(Modifier.width(8.dp))
+        }
+        // Stoppuhr öffnen (mit Start-Knopf); läuft sie schon, steht sie ohnehin unter der Kopfzeile.
+        // Im Gespräch hat „Neues Gespräch“ diesen Platz, damit die Kopfzeile auf dem zugeklappten Fold nicht überläuft.
+        val stoppuhr by de.frank.jarvis.timer.Stoppuhr.stand.collectAsState()
+        if (!stoppuhr.aktiv && vm.gespraech.isEmpty()) {
+            Rundknopf(Icons.Rounded.AvTimer, "Stoppuhr", farbe = f.primaer) { stoppuhrOeffnen() }
             Spacer(Modifier.width(8.dp))
         }
         // Tagesauswertung jetzt neu erstellen: frische Daten aller Apps holen und alles neu auswerten.
