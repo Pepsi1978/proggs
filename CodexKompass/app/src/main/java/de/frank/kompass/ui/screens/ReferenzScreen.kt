@@ -43,6 +43,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -329,7 +331,15 @@ private fun EintragKarte(
         }
 
         AnimatedVisibility(visible = ausgeklappt) {
-            Column(modifier = Modifier.padding(horizontal = Mass.abstand)) {
+            // Doppelt tippen irgendwo in die Erklärung klappt sie wieder zu. Knöpfe und
+            // Eingabefelder darin verbrauchen ihre Tipps selbst, Wischen scrollt weiter.
+            Column(
+                modifier = Modifier
+                    .pointerInput(eintrag.id) {
+                        detectTapGestures(onDoubleTap = { viewModel.schalteAusgeklappt(eintrag.id) })
+                    }
+                    .padding(horizontal = Mass.abstand),
+            ) {
                 Box(
                     Modifier
                         .fillMaxWidth()
