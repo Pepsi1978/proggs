@@ -2,7 +2,6 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import android.os.Bundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -139,16 +138,8 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
 
     private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
 
-    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject = try {
-        val antwort = context.contentResolver.call(BRUECKE, methode, null, Bundle().apply { putString("json", anfrage.toString()) })
-        antwort?.getString("json")?.let(::JSONObject) ?: fehler("Genialer Wecker hat nicht geantwortet.")
-    } catch (_: SecurityException) {
-        fehler("Genialer Wecker verweigert den Zugriff. Beide Apps müssen mit demselben Schlüssel signiert sein; danach Jarvis neu installieren.")
-    } catch (_: IllegalArgumentException) {
-        fehler("Genialer Wecker ist nicht installiert oder zu alt (die Jarvis-Brücke fehlt).")
-    } catch (e: Exception) {
-        fehler("Genialer Wecker ist nicht erreichbar: ${e.message ?: e.javaClass.simpleName}")
-    }
+    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
+        AppBruecke.rufe(context, "Genialer Wecker", BRUECKE, methode, anfrage, lesend = methode in LESEND)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
@@ -156,6 +147,7 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
         optString("fehler").takeIf { it.isNotEmpty() }?.let { Ergebnis(it, fehler = true) } ?: Ergebnis(gut(this))
 
     companion object {
+        private val LESEND = setOf("lesen", "optionen")
         private val BRUECKE: Uri = Uri.parse("content://de.frank.genialerwecker.jarvis")
     }
 }

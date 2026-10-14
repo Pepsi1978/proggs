@@ -2,7 +2,6 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import android.os.Bundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -328,23 +327,8 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject {
-        var letzter = fehler("Entropie Reductor ist nicht installiert oder zu alt (die Jarvis-Brücke fehlt).")
-        // Auf dem Handy liegt die Debug-Variante; die zweite Adresse greift, falls einmal die andere installiert ist.
-        for (adresse in BRUECKEN) {
-            try {
-                val antwort = context.contentResolver.call(adresse, methode, null, Bundle().apply { putString("json", anfrage.toString()) })
-                return antwort?.getString("json")?.let(::JSONObject) ?: fehler("Entropie Reductor hat nicht geantwortet.")
-            } catch (_: SecurityException) {
-                return fehler("Entropie Reductor verweigert den Zugriff. Beide Apps müssen mit demselben Schlüssel signiert sein; danach Jarvis neu installieren.")
-            } catch (_: IllegalArgumentException) {
-                // Diese Variante ist nicht installiert: nächste Adresse versuchen.
-            } catch (e: Exception) {
-                letzter = fehler("Entropie Reductor ist nicht erreichbar: ${e.message ?: e.javaClass.simpleName}")
-            }
-        }
-        return letzter
-    }
+    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
+        AppBruecke.rufe(context, "Entropie Reductor", BRUECKEN, methode, anfrage, lesend = methode in LESEND)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
@@ -352,6 +336,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         optString("fehler").takeIf { it.isNotEmpty() }?.let { Ergebnis(it, fehler = true) } ?: Ergebnis(standText(this) + gut(this))
 
     companion object {
+        private val LESEND = setOf("katalog", "abgleich")
         private val BRUECKEN = listOf(
             Uri.parse("content://de.frank.entropyreducer.debug.jarvis"),
             Uri.parse("content://de.frank.entropyreducer.jarvis"),

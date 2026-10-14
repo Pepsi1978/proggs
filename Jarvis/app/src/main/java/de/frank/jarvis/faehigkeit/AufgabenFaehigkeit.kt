@@ -2,7 +2,6 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import android.os.Bundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -191,16 +190,8 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
 
     private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
 
-    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject = try {
-        val antwort = context.contentResolver.call(BRUECKE, methode, null, Bundle().apply { putString("json", anfrage.toString()) })
-        antwort?.getString("json")?.let(::JSONObject) ?: fehler("Geniale Aufgaben hat nicht geantwortet.")
-    } catch (_: SecurityException) {
-        fehler("Geniale Aufgaben verweigert den Zugriff. Beide Apps müssen mit demselben Schlüssel signiert sein; danach Jarvis neu installieren.")
-    } catch (_: IllegalArgumentException) {
-        fehler("Geniale Aufgaben ist nicht installiert oder zu alt (die Jarvis-Brücke fehlt).")
-    } catch (e: Exception) {
-        fehler("Geniale Aufgaben ist nicht erreichbar: ${e.message ?: e.javaClass.simpleName}")
-    }
+    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
+        AppBruecke.rufe(context, "Geniale Aufgaben", BRUECKE, methode, anfrage, lesend = methode in LESEND)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
@@ -255,6 +246,7 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     companion object {
+        private val LESEND = setOf("lesen", "info")
         private val BRUECKE: Uri = Uri.parse("content://de.frank.aufgaben.jarvis")
     }
 }

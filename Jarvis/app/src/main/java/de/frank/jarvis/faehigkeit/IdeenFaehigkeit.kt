@@ -2,7 +2,6 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import android.os.Bundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -200,36 +199,8 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
 
     private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
 
-    /**
-     * Ein zweiter Versuch fängt den Moment ab, in dem Android Geniale Ideen gerade beendet oder neu startet.
-     * Schreibende Methoden nur, wenn die App sicher noch nichts getan hat („App nicht bereit.“) — sonst entstünde ein Doppel.
-     */
-    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject {
-        val erste = rufeEinmal(methode, anfrage)
-        val fehler = erste.optString("fehler")
-        val voruebergehend = fehler == "App nicht bereit." || (methode in LESEND && (fehler.startsWith(NICHT_ERREICHBAR) || fehler == KEINE_ANTWORT))
-        if (!voruebergehend) return erste
-        Thread.sleep(1_500)
-        return rufeEinmal(methode, anfrage)
-    }
-
-    /** Unstabiler Client: Stürzt Geniale Ideen mitten im Aufruf ab, beendet Android nicht auch Jarvis. */
-    private fun rufeEinmal(methode: String, anfrage: JSONObject): JSONObject = try {
-        val client = context.contentResolver.acquireUnstableContentProviderClient(BRUECKE)
-            ?: throw IllegalArgumentException("Brücke fehlt")
-        val antwort = try {
-            client.call(methode, null, Bundle().apply { putString("json", anfrage.toString()) })
-        } finally {
-            client.close()
-        }
-        antwort?.getString("json")?.let(::JSONObject) ?: fehler(KEINE_ANTWORT)
-    } catch (_: SecurityException) {
-        fehler("Geniale Ideen verweigert den Zugriff. Beide Apps müssen mit demselben Schlüssel signiert sein; danach Jarvis neu installieren.")
-    } catch (_: IllegalArgumentException) {
-        fehler("Geniale Ideen ist nicht installiert oder zu alt (die Jarvis-Brücke fehlt).")
-    } catch (e: Exception) {
-        fehler("$NICHT_ERREICHBAR ${e.message ?: e.javaClass.simpleName}")
-    }
+    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
+        AppBruecke.rufe(context, "Geniale Ideen", BRUECKE, methode, anfrage, lesend = methode in LESEND)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
@@ -239,7 +210,5 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         private val BRUECKE: Uri = Uri.parse("content://de.frank.genialeideen.jarvis")
         private val LESEND = setOf("kategorien", "lesen", "idee")
-        private const val NICHT_ERREICHBAR = "Geniale Ideen ist nicht erreichbar:"
-        private const val KEINE_ANTWORT = "Geniale Ideen hat nicht geantwortet."
     }
 }
