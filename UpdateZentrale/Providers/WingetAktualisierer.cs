@@ -30,6 +30,13 @@ public sealed class WingetAktualisierer : IAktualisierer
             ? $"--id {eintrag.WingetId} --exact"
             : $"--name \"{eintrag.WingetName.Trim()}\"";
 
+    /// <summary>Verb and package selection of the update run -- see <see cref="ProgrammEintrag.WingetUpdatePerInstall"/>.</summary>
+    internal static string UpdateBefehl(ProgrammEintrag eintrag)
+        => (eintrag.WingetUpdatePerInstall
+               ? $"install --id {eintrag.WingetId} --exact --force"
+               : "upgrade " + Auswahl(eintrag))
+           + (string.IsNullOrWhiteSpace(eintrag.WingetInstallerTyp) ? "" : " --installer-type " + eintrag.WingetInstallerTyp.Trim());
+
     /// <summary>Something on this machine says the program is there, whatever winget answers.</summary>
     private static bool HierVorhanden(ProgrammEintrag eintrag)
         => eintrag.IstPaketApp || (!string.IsNullOrWhiteSpace(eintrag.ExePfadWirksam)
@@ -127,7 +134,10 @@ public sealed class WingetAktualisierer : IAktualisierer
             return new PruefErgebnis(UpdateZustand.Unbekannt,
                 Meldung: "winget nannte keine installierte Version – siehe Protokoll.", Protokoll: lauf.Ausgabe);
 
+        // Android Studio registers "2026.2" while winget offers "2026.2.1.8" for the same build:
+        // a shortened installed version is the offered one, not an endless pending update.
         var zustand = string.IsNullOrWhiteSpace(verfuegbar) || verfuegbar == installiert
+                      || verfuegbar.StartsWith(installiert + ".", StringComparison.Ordinal)
             ? UpdateZustand.Aktuell
             : UpdateZustand.UpdateVerfuegbar;
 
@@ -141,7 +151,7 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (!File.Exists(Pfade.Winget))
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
 
-        var args = $"upgrade {Auswahl(eintrag)} --silent --disable-interactivity "
+        var args = UpdateBefehl(eintrag) + " --silent --disable-interactivity "
                  + "--accept-source-agreements --accept-package-agreements" + QuellArgument(eintrag);
         protokoll.Report($"winget {args}");
 
@@ -163,6 +173,12 @@ public sealed class WingetAktualisierer : IAktualisierer
                 Meldung: "Installiert – wird nach dem nächsten Neustart des PCs vollständig übernommen.",
                 Protokoll: lauf.Ausgabe, ErstNachNeustart: true);
         }
+
+        // Some manifests forbid upgrades through winget (Android Studio). Saying so beats a hex code.
+        if (NurUeberHersteller(lauf))
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: eintrag.Name + " lässt sich nicht über winget aktualisieren – das Update im Programm selbst starten.",
+                Protokoll: lauf.Ausgabe);
 
         if (lauf.ExitCode is InstallationInBenutzung or DateiInBenutzung)
             return new PruefErgebnis(UpdateZustand.Fehler,
@@ -234,6 +250,11 @@ public sealed class WingetAktualisierer : IAktualisierer
            && (lauf.ExitCode is NeustartZumAbschluss or 3010
                || lauf.Ausgabe.Contains("Restart your PC to finish installation", StringComparison.OrdinalIgnoreCase)
                || lauf.Ausgabe.Contains("um die Installation abzuschließen", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The manifest denies upgrades through winget; only the publisher's own updater may.</summary>
+    internal static bool NurUeberHersteller(BefehlErgebnis lauf)
+        => lauf.Ausgabe.Contains("cannot be upgraded using WinGet", StringComparison.OrdinalIgnoreCase)
+           || lauf.Ausgabe.Contains("nicht mit WinGet aktualisiert werden", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>winget's "installed, nothing newer" answer to an upgrade, in code or in words.</summary>
     internal static bool IstNichtsZuTun(BefehlErgebnis lauf)

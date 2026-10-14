@@ -111,6 +111,34 @@ public static class Kommandozeile
             });
     }
 
+    /// <summary>
+    /// The app keeps the environment it was started with, but the tools it updates change it: a
+    /// JDK update moves JAVA_HOME to a new folder and deletes the old one, a Node or Go update
+    /// edits PATH. sdkmanager then failed with "JAVA_HOME is set to an invalid directory" until the
+    /// app was restarted. Every child gets the values a freshly started program would see.
+    /// </summary>
+    internal static void FrischeUmgebung(IDictionary<string, string?> umgebung)
+    {
+        try
+        {
+            var javaHome = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.User)
+                           ?? Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.Machine);
+            if (!string.IsNullOrWhiteSpace(javaHome)) umgebung["JAVA_HOME"] = javaHome;
+            else umgebung.Remove("JAVA_HOME");
+
+            var maschine = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine);
+            var benutzer = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User);
+            if (!string.IsNullOrWhiteSpace(maschine))
+                umgebung["PATH"] = Environment.ExpandEnvironmentVariables(
+                    string.IsNullOrWhiteSpace(benutzer) ? maschine : maschine.TrimEnd(';') + ";" + benutzer);
+        }
+        catch (Exception diagAusnahme)
+        {
+            // Registry not readable: the inherited environment is the best that is left.
+            Diagnose.Gefangen(diagAusnahme, "kommandozeile", Schwere.Warnung);
+        }
+    }
+
     private static async Task<BefehlErgebnis> AusfuehrenKernAsync(
         string datei,
         string argumente,
@@ -135,6 +163,8 @@ public static class Kommandozeile
         };
 
         if (alsAufrufer) start.Environment["__COMPAT_LAYER"] = "RunAsInvoker";
+
+        FrischeUmgebung(start.Environment);
 
         // npm shims (claude.cmd, codex.cmd) run on node, which tries a host's IPv6 addresses
         // first. On a network whose IPv6 goes nowhere their own "update" then fails to reach the

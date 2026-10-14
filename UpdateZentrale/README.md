@@ -150,6 +150,8 @@ Weitere optionale Felder:
 | `hinweis` | Kursive Zeile auf der Karte |
 | `pfeilZaehlen` | Dokumentiert, dass die Prüfausgabe ihre Updates als `alt → neu` auflistet |
 | `wingetName` | Nur `winget`: Paket per Anzeigename statt per Kennung auswählen (`--name` statt `--id … --exact`), bei Prüfung **und** Update. Nötig für Programme, die nicht über winget installiert wurden: winget ordnet sie nur über den Namen zu (PowerShell als MSI meldet bei `--id` „kein installiertes Paket“). Die Tabellenzeile wird weiter über `wingetId` gefunden, ein loser Name greift also nie ein fremdes Paket. |
+| `wingetUpdatePerInstall` | Nur `winget`: Update mit `winget install --id … --exact` statt `upgrade`. `upgrade` findet nicht zugeordnete Pakete auch mit `--name` nicht (PowerShell-MSI); das neuere MSI ersetzt die alte Fassung beim Installieren selbst. |
+| `wingetInstallerTyp` | Nur `winget`: Installer-Typ des Updates festlegen (`wix` = MSI). Ohne ihn nimmt winget den bevorzugten Typ des Manifests – bei PowerShell das MSIX-Paket, das sich **neben** die MSI-Installation legt statt sie zu ersetzen. |
 | `pruefExitCodes` | Nur `cli`: Exit-Codes der Prüfung, die eine gültige Antwort sind (Standard `[0]`). `rustup check` endet mit 100, sobald Updates anstehen. |
 | `pruefAbschnitt` | Nur `cli`: erst Zeilen nach der ersten Zeile mit diesem Text zählen (sdkmanager: `Available Updates`). Fehlt der Abschnitt, ist nichts offen. |
 | `pruefZeilenMuster` | Nur `cli`: regulärer Ausdruck für eine geplante Update-Zeile statt des Pfeils – für Werkzeuge mit Tabellenausgabe. |

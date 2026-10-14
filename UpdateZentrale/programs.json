@@ -138,7 +138,8 @@
         "%APPDATA%/npm/kimi.cmd"
       ],
       "versionsArgumente": "--version",
-      "updateArgumente": "update --yes",
+      "updateExePfad": "C:/Windows/System32/cmd.exe",
+      "updateArgumente": "/d /c %USERPROFILE%\.kimi-code\bin\kimi.exe update --yes || %APPDATA%\npm\npm.cmd install -g --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest",
       "versionsUrl": "https://code.kimi.ai/kimi-code/latest",
       "zeitlimitMinuten": 15,
       "prozesse": [
@@ -167,7 +168,9 @@
       "neuStartenNachUpdate": false,
       "hinweis": "Offene PowerShell-Fenster bleiben offen. Sind Dateien in Benutzung, schließt Windows das Update beim nächsten PC-Neustart ab.",
       "akzent": "#2671BE",
-      "wingetName": "PowerShell"
+      "wingetName": "PowerShell",
+      "wingetUpdatePerInstall": true,
+      "wingetInstallerTyp": "wix"
     },
     {
       "id": "streamdeck",
@@ -381,7 +384,8 @@
       "beendenVorUpdate": true,
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
-      "hinweis": "Wird für das Update geschlossen (mit Rückfrage). Neue Studio-Versionen können einen Gradle-/AGP-Hinweis zeigen – Projekte erst gezielt umstellen. Für Programme unter „Program Files“ fragt Windows nach Administratorrechten, außer die UpdateZentrale läuft schon als Administrator.",
+      "wingetUpdatePerInstall": true,
+      "hinweis": "Wird für das Update geschlossen (mit Rückfrage). winget sperrt „upgrade“ für Android Studio, deshalb läuft das Update als „winget install --force“ über die bestehende Installation. Neue Studio-Versionen können einen Gradle-/AGP-Hinweis zeigen – Projekte erst gezielt umstellen. Für Programme unter „Program Files“ fragt Windows nach Administratorrechten, außer die UpdateZentrale läuft schon als Administrator.",
       "akzent": "#3DDC84"
     },
     {
@@ -490,13 +494,16 @@
       "beschreibung": "Das Terminal, in dem die CLI-Sitzungen laufen.",
       "art": "winget",
       "wingetId": "Microsoft.WindowsTerminal",
+      "appxName": "Microsoft.WindowsTerminal",
+      "packageFamilyName": "Microsoft.WindowsTerminal_8wekyb3d8bbwe",
+      "appxAnwendungsId": "App",
       "exePfad": "",
       "zeitlimitMinuten": 30,
       "prozesse": [],
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Achtung: Das Update schließt alle Terminal-Fenster samt laufenden Claude-/Codex-Sitzungen. Nur ausführen, wenn keine Sitzung läuft.",
+      "hinweis": "Laufende Terminal-Fenster bleiben offen. Windows übernimmt das Update erst, wenn ALLE Terminal-Fenster geschlossen sind – ein neues Fenster neben offenen reicht nicht.",
       "akzent": "#4D4D4D"
     },
     {

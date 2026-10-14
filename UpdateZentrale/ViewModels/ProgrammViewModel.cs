@@ -636,7 +636,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// <summary>Human-readable description of what this card actually runs, for the log header.</summary>
     private string BefehlsBeschreibung() => Eintrag.Art switch
     {
-        "winget" => "winget upgrade " + Providers.WingetAktualisierer.Auswahl(Eintrag) + " --silent",
+        "winget" => "winget " + Providers.WingetAktualisierer.UpdateBefehl(Eintrag) + " --silent",
         "store" or "msstore" => "winget upgrade --id " + Eintrag.StoreProduktId + " --source msstore --silent",
         "cli" => Pfade.Aufloesen(string.IsNullOrWhiteSpace(Eintrag.UpdateExePfad) ? Eintrag.ExePfadWirksam : Eintrag.UpdateExePfad)
                  + " " + (Eintrag.UpdateArgumente ?? "update"),

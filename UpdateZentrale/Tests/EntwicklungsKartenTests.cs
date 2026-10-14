@@ -23,6 +23,16 @@ public sealed class EntwicklungsKartenTests
     }
 
     [Fact]
+    public void Update_per_Install_nutzt_immer_die_Kennung()
+    {
+        var ps = new ProgrammEintrag { WingetId = "Microsoft.PowerShell", WingetName = "PowerShell", WingetUpdatePerInstall = true };
+        Assert.Equal("install --id Microsoft.PowerShell --exact", WingetAktualisierer.UpdateBefehl(ps));
+        ps.WingetInstallerTyp = "wix";
+        Assert.Equal("install --id Microsoft.PowerShell --exact --installer-type wix", WingetAktualisierer.UpdateBefehl(ps));
+        Assert.Equal("upgrade --id Go --exact", WingetAktualisierer.UpdateBefehl(new ProgrammEintrag { WingetId = "Go" }));
+    }
+
+    [Fact]
     public void PowerShell_aus_der_Namenssuche_wird_mit_Update_erkannt()
     {
         const string ausgabe = "Name                   Id                   Version Available Source\n"
@@ -85,6 +95,27 @@ public sealed class EntwicklungsKartenTests
     [InlineData(1, "Installer failed", false)]
     public void Neustart_noetig_wird_erkannt(int code, string ausgabe, bool erwartet)
         => Assert.Equal(erwartet, WingetAktualisierer.BrauchtNeustart(Lauf(ausgabe, code)));
+
+    [Fact]
+    public void Vom_Hersteller_gesperrtes_Update_wird_erkannt()
+    {
+        Assert.True(WingetAktualisierer.NurUeberHersteller(Lauf(
+            "The package cannot be upgraded using WinGet. Please use the method provided by the publisher for upgrading this package.", 20)));
+        Assert.False(WingetAktualisierer.NurUeberHersteller(Lauf("Successfully installed")));
+    }
+
+    [Fact]
+    public void Kindprozesse_bekommen_JAVA_HOME_und_PATH_frisch_aus_Windows()
+    {
+        var umgebung = new Dictionary<string, string?> { ["JAVA_HOME"] = @"C:\gibt\es\nicht", ["PATH"] = "alt" };
+        Kommandozeile.FrischeUmgebung(umgebung);
+
+        var erwartet = Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.User)
+                       ?? Environment.GetEnvironmentVariable("JAVA_HOME", EnvironmentVariableTarget.Machine);
+        Assert.Equal(erwartet, umgebung.GetValueOrDefault("JAVA_HOME"));
+        Assert.NotEqual("alt", umgebung["PATH"]);
+        Assert.Contains(@"\Windows\System32", umgebung["PATH"], StringComparison.OrdinalIgnoreCase);
+    }
 
     private const string RustupCheck =
         "stable-x86_64-pc-windows-msvc - update available: 1.96.0 (ac68faa20 2026-05-25) -> 1.99.0 (b940084d7 2026-09-28)\n"
@@ -159,6 +190,8 @@ public sealed class EntwicklungsKartenTests
 
         var ps = alle.Single(e => e.Id == "powershell");
         Assert.Equal("PowerShell", ps.WingetName);
+        Assert.True(ps.WingetUpdatePerInstall);
+        Assert.Equal("wix", ps.WingetInstallerTyp);
         Assert.False(ps.IstPaketApp);
     }
 }

@@ -32,6 +32,20 @@ public sealed class ProgrammEintrag
     /// The row is still anchored on <see cref="WingetId"/>, so a loose name cannot pick a stranger.
     /// </summary>
     public string? WingetName { get; set; }
+
+    /// <summary>
+    /// Updates with "winget install --id … --exact" instead of "upgrade". "upgrade" only acts on
+    /// packages winget correlates, and for PowerShell's MSI it answers "no installed package" even
+    /// with --name. Installing the newer MSI performs the in-place major upgrade itself.
+    /// </summary>
+    public bool WingetUpdatePerInstall { get; set; }
+
+    /// <summary>
+    /// Pins the installer type of the update run ("wix" = MSI). Without it winget picks the
+    /// manifest's preferred one -- for PowerShell the MSIX bundle, which landed beside the MSI
+    /// install as a second PowerShell instead of replacing it.
+    /// </summary>
+    public string? WingetInstallerTyp { get; set; }
     public string? AppxName { get; set; }
     public string? PackageFamilyName { get; set; }
 
