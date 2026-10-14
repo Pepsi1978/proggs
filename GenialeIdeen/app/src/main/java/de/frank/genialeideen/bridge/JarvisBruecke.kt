@@ -56,7 +56,7 @@ class JarvisBruecke : ContentProvider() {
     }
 
     private suspend fun verarbeite(methode: String, a: JSONObject): JSONObject {
-        val c = (context?.applicationContext as? GenialeIdeenApplication)?.container ?: return fehler("App nicht bereit.")
+        val c = (context?.applicationContext as? GenialeIdeenApplication)?.warteAufContainer() ?: return fehler("App nicht bereit.")
         val repo = c.ideenRepository
         val kategorien = repo.alleKategorien().first()
         return when (methode) {
