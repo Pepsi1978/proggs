@@ -130,6 +130,17 @@ Umsetzung: `Jarvis/app/src/main/java/de/frank/jarvis/weckwort/WeckwortErkenner.k
   Aussprache Schwelle 0,3–0,5 einstellbar machen**. Fehlausloeser: „Mein Assistent **heißt Jarvis**“ → 0,99
   (klingt wie „hey Jarvis“); normale Saetze ohne Jarvis < 0,01.
 
+### 2.1b openWakeWord und sherpa-onnx in EINER App (Jarvis, 14.10.2026)
+- Die sherpa-onnx-AAR (1.12.34) bringt ihre eigene `libonnxruntime.so` mit (**ORT 1.23.2**, per `strings` im .so
+  geprüft). Neben `com.microsoft.onnxruntime:onnxruntime-android` kollidiert der Pfad beim Packen.
+- Lösung: Microsoft-ORT auf **genau dieselbe Version** heben (1.23.2) und `packaging.jniLibs.pickFirsts +=
+  "**/libonnxruntime.so"`. Nie eine ältere ORT gewinnen lassen: Die JNI-Schicht fordert ihre API-Version an,
+  ältere Laufzeiten liefern dafür null → Absturz beim ersten Modell.
+- Version der mitgelieferten ORT vor jedem AAR-Update prüfen (Regex `1\.\d\d\.\d` über die Bytes des .so).
+- Umsetzung: `Jarvis/.../weckwort/PhrasenErkenner.kt` (KeywordSpotter aus Assets, Kotlin-Port des Unigram-Tokenizers
+  aus `VoiceAgent/Core/SentencePieceUnigram.cs`), umschaltbar neben „Hey Jarvis“, weil das EN-Gigaspeech-Modell
+  je nach Wort schwach aufweckt (Almanach §7).
+
 ### 2.2 Wake-Rate VOR dem Bau verifizieren
 Englische Modelle (z.B. sherpa-onnx EN-Gigaspeech) wecken empirisch teils schwach auf (Almanach #7).
 Daher: Aufweck-Rate fuers konkrete Weckwort LIVE testen, `keywords_threshold` + `keywords_score`
