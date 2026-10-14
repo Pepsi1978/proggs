@@ -29,7 +29,7 @@ Treiber-Cache (`C:\ProgramData\NVIDIA\NGX\models`): DLSS 310.9, Streamline 2.14,
 ## 3. Beste Einstellungen (Stand heute)
 **Im Spiel (Cyberpunk, gilt sinngemäß für andere Path-Tracing-Spiele):** Path Tracing an, Ray Reconstruction an, DLSS Quality (DLAA nur bei FPS-Reserve), DLSS-Preset K statt L, Frame Generation 3x–4x, Bewegungsunschärfe/Filmkörnung/chromatische Aberration aus, SDR.
 
-**RenoDX DLSS (aktuell, `Pos1` → Add-ons → „RenoDX DLSS“):** Hook Method Upscaled, Overall Intensity 0,3–0,5, Model C (Cinematic) für Fotorealismus, Structure 0,1–0,25, Character Mask an, Skin Structure < Structure, UI Correction an, Pass Count 1. Details `best-practices/gaming/dlss5-mod-inoffiziell.md` 4b.
+**RenoDX DLSS (aktuell, `Pos1` → Add-ons → „RenoDX DLSS“):** Hook Method Upscaled, Overall Intensity 0,3–0,5, Model C (vermutlich Cinematic, unbestätigt) für Fotorealismus, Structure 0,1–0,25, Character Mask an, Skin Structure < Structure, UI Correction an, Pass Count 1. Details `best-practices/gaming/dlss5-mod-inoffiziell.md` 4b.
 
 **Alte Route — Mod-Menü OptiScaler (Einfg → „DLSS Neural Rendering“) bzw. `OptiScaler.ini` `[DlssNr]`:**
 | Regler | INI-Schlüssel | Start-Wert | Hinweis |

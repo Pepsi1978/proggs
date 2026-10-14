@@ -82,6 +82,7 @@
 ## M11 — AnvilNext (AC-Reihe): Tiefenpuffer geht bei Kamerawechsel verloren
 - **Symptom:** Bei der ReShade-/Feeder-Route fällt der Effekt in Dialogen und Zwischensequenzen aus.
 - **Einordnung:** Für AC Mirage belegt, auf AC Shadows übertragbar. Betrifft nur die ReShade-Route, nicht OptiScaler (der liest Tiefe und Bewegungsvektoren aus dem DLSS-Aufruf).
+- **RenoDX DLSS (14.10.2026):** Mit Hook „Upscaled“ liest das Add-on Tiefe/Bewegung aus dem DLSS-Aufruf, vermutlich nicht betroffen — ungetestet; in AC Shadows zuerst Zwischensequenzen prüfen.
 - **Quelle:** https://reshade.me/forum/troubleshooting/9101-assassins-creed-mirage-loss-of-depth-buffer
 
 ## M16 — ShortFuse RenoDX DLSS: Status bleibt „Waiting“ (Build 2026-09-04)
