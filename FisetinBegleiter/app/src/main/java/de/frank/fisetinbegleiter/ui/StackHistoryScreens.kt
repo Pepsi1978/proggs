@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import de.frank.fisetinbegleiter.domain.FASTING_RULE
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
@@ -55,6 +56,7 @@ fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
     val phase = state.stackPhase
     val drinkAt = state.plannedDrinkAt
     val upcomingPrePhase = state.prePhaseStart?.takeIf { phase == StackPhase.NORMAL }
+    val curePlanned = upcomingPrePhase != null
     val groupedItems = remember(state.stackItems) { state.stackItems.groupBy { it.category } }
     val safeItems = groupedItems[StackCategory.UNPROBLEMATISCH].orEmpty()
     val safeGroups = remember(safeItems) { safeItems.partition { it.isMedication } }
@@ -79,13 +81,13 @@ fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
                 StackPhase.VORSTUFE -> {
                     val releaseAt = drinkAt?.let { timeline(it, state.protocol).blockEnd }
                     StatusNotice(
-                        title = if (drinkAt != null && state.now >= drinkAt) "Vorstufe – Drink jetzt fällig" else "Vorstufe läuft – Drink ${drinkAt?.let { formatDayTime(it, state.now) }.orEmpty()}",
+                        title = if (state.drinkDue) "Vorstufe – Drink jetzt fällig" else "Vorstufe läuft – Drink ${drinkAt?.let { formatDayTime(it, state.now) }.orEmpty()}",
                         text = "Alles in Rot ab sofort nicht mehr nehmen, gelbe Grenzfälle ebenfalls weglassen" +
                             (releaseAt?.let { " – wieder erlaubt ab ca. ${formatDayTime(it, state.now)}" } ?: "") +
-                            ". Am Kurmorgen nüchtern bleiben, bis zum Drink nur Wasser. Medikamente wie gewohnt.",
+                            ". $FASTING_RULE Medikamente wie gewohnt.",
                         containerColor = colors.badBg,
                         contentColor = colors.bad,
-                        icon = { Icon(Icons.Outlined.WarningAmber, null, tint = colors.bad, modifier = Modifier.size(20.dp)) },
+                        iconVector = Icons.Outlined.WarningAmber,
                     )
                 }
                 StackPhase.SPERRFENSTER -> StatusNotice(
@@ -93,14 +95,14 @@ fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
                     text = "Bis dahin rote Substanzen weglassen. Gelbe Grenzfälle im Zweifel ebenfalls verschieben.",
                     containerColor = colors.warnBg,
                     contentColor = colors.warn,
-                    icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
+                    iconVector = Icons.Outlined.Schedule,
                 )
                 StackPhase.NACH_SPERRE -> StatusNotice(
                     title = "Sperrfenster vorbei",
                     text = "Alles ist wieder erlaubt – verpasste Antioxidantien kannst du jetzt nachholen.",
                     containerColor = colors.okBg,
                     contentColor = colors.ok,
-                    icon = { Icon(Icons.Outlined.CheckCircle, null, tint = colors.ok, modifier = Modifier.size(20.dp)) },
+                    iconVector = Icons.Outlined.CheckCircle,
                 )
                 StackPhase.NORMAL -> if (upcomingPrePhase != null) {
                     StatusNotice(
@@ -108,7 +110,7 @@ fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
                         text = "Bis dahin nimmst du alles wie gewohnt. Ab der Vorstufe sind die roten Substanzen tabu – bis ${hourLabel(state.protocol.antioxidantBlockMinutes)} nach dem Drink.",
                         containerColor = colors.accentSoft,
                         contentColor = colors.accent,
-                        icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.accent, modifier = Modifier.size(20.dp)) },
+                        iconVector = Icons.Outlined.Schedule,
                     )
                 } else {
                     StatusNotice(
@@ -116,7 +118,7 @@ fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
                         text = "Aktuell ist keine Kur geplant – alles wie gewohnt einnehmen.",
                         containerColor = colors.okBg,
                         contentColor = colors.ok,
-                        icon = { Icon(Icons.Outlined.CheckCircle, null, tint = colors.ok, modifier = Modifier.size(20.dp)) },
+                        iconVector = Icons.Outlined.CheckCircle,
                     )
                 }
             }
@@ -133,18 +135,18 @@ fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
                     },
                 )
             }
-            items(hardItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, upcomingPrePhase != null) }
+            items(hardItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, curePlanned) }
         }
 
         val cautionItems = groupedItems[StackCategory.GRENZFALL].orEmpty()
         if (cautionItems.isNotEmpty()) {
             item { StackSectionTitle("Grenzfälle", topPadding = 6.dp) }
-            items(cautionItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, upcomingPrePhase != null) }
+            items(cautionItems, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, curePlanned) }
         }
 
         if (safeGroups.first.isNotEmpty()) {
             item { StackSectionTitle("Medikamente", topPadding = 6.dp) }
-            items(safeGroups.first, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, upcomingPrePhase != null) }
+            items(safeGroups.first, key = { it.id }, contentType = { "stack-status" }) { StackStatusCard(it, phase, curePlanned) }
         }
 
         if (safeGroups.second.isNotEmpty()) {
@@ -152,7 +154,7 @@ fun StackScreen(state: MainUiState, modifier: Modifier = Modifier) {
             item {
                 Text(
                     if (phase == StackPhase.VORSTUFE) {
-                        "Abends wie gewohnt. Am Kurmorgen erst nach dem Drink einnehmen – bis dahin nüchtern bleiben, nur Wasser."
+                        "Abends wie gewohnt. Am Kurmorgen erst nach dem Drink einnehmen. $FASTING_RULE"
                     } else {
                         "Wie gewohnt einnehmen."
                     },
@@ -303,7 +305,7 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
             )
         }
         Text(
-            "${historyDayLabel(cure.cure.plannedDurationDays)} · $doneSteps von $allSteps Schritten dokumentiert",
+            "${dayLabel(cure.cure.plannedDurationDays)} · $doneSteps von $allSteps Schritten dokumentiert",
             modifier = Modifier.padding(top = 10.dp),
             color = colors.sub,
             fontSize = 13.sp,
@@ -330,7 +332,7 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
             )
             if (!completed) {
                 DesignOutlineButton(
-                    if (completedDays > 0) "Nach ${historyDayLabel(completedDays)} beenden" else "Abbrechen",
+                    if (completedDays > 0) "Nach ${dayLabel(completedDays)} beenden" else "Abbrechen",
                     { showCancelConfirmation = true },
                     modifier = Modifier.weight(1f),
                     contentColor = colors.bad,
@@ -342,46 +344,24 @@ private fun HistoryCard(cure: CureWithDays, onUpdateNote: (CureWithDays, String)
     }
 
     if (showCancelConfirmation) {
-        FbPopDialog(onDismiss = { showCancelConfirmation = false }) {
-            Text(
-                if (completedDays > 0) "Kur nach Tag $completedDays beenden?" else "Aktiven Ablauf löschen?",
-                color = colors.text,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                if (completedDays > 0) {
-                    if (completedDays == 1) {
-                        "Der vollständige Tag bleibt als Kur gespeichert. Offene Folgetage, Alarme und Benachrichtigungen werden entfernt."
-                    } else {
-                        "Die $completedDays vollständigen Tage bleiben als Kur gespeichert. Offene Folgetage, Alarme und Benachrichtigungen werden entfernt."
-                    }
+        FbConfirmDialog(
+            title = if (completedDays > 0) "Kur nach Tag $completedDays beenden?" else "Aktiven Ablauf löschen?",
+            text = if (completedDays > 0) {
+                if (completedDays == 1) {
+                    "Der vollständige Tag bleibt als Kur gespeichert. Offene Folgetage, Alarme und Benachrichtigungen werden entfernt."
                 } else {
-                    "Der aktive Ablauf verschwindet vollständig aus dem Verlauf. Zugehörige Schritte, Alarme und Benachrichtigungen werden ebenfalls gelöscht."
-                },
-                modifier = Modifier.padding(top = 10.dp),
-                color = colors.sub,
-                fontSize = 13.5.sp,
-                lineHeight = 20.925.sp,
-            )
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DesignOutlineButton("Behalten", { showCancelConfirmation = false }, Modifier.weight(1f), verticalPadding = 13.dp)
-                FlatDesignButton(
-                    if (completedDays > 0) "Als Kur speichern" else "Vollständig löschen",
-                    {
-                        onCancelCure()
-                        showCancelConfirmation = false
-                    },
-                    Modifier.weight(1f),
-                    colors.badBg,
-                    colors.bad,
-                )
-            }
-        }
+                    "Die $completedDays vollständigen Tage bleiben als Kur gespeichert. Offene Folgetage, Alarme und Benachrichtigungen werden entfernt."
+                }
+            } else {
+                "Der aktive Ablauf verschwindet vollständig aus dem Verlauf. Zugehörige Schritte, Alarme und Benachrichtigungen werden ebenfalls gelöscht."
+            },
+            confirmLabel = if (completedDays > 0) "Als Kur speichern" else "Vollständig löschen",
+            onConfirm = onCancelCure,
+            onDismiss = { showCancelConfirmation = false },
+        )
     }
 }
 
-private fun historyDayLabel(days: Int): String = if (days == 1) "1 Tag" else "$days Tage"
 
 @Composable
 private fun NoteEditor(value: String, onValueChange: (String) -> Unit) {

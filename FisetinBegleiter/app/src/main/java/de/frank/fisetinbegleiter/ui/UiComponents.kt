@@ -17,7 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -47,6 +50,9 @@ import kotlin.math.max
 import kotlin.math.sin
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm 'Uhr'")
+private val weekdayDateFormatter = DateTimeFormatter.ofPattern("EE dd.MM., ", java.util.Locale.GERMANY)
+
+internal fun dayLabel(days: Int): String = if (days == 1) "1 Tag" else "$days Tage"
 
 fun formatTime(timestamp: Long): String = Instant.ofEpochMilli(timestamp)
     .atZone(ZoneId.systemDefault())
@@ -62,7 +68,7 @@ fun formatDayTime(timestamp: Long, now: Long): String {
         today -> time
         today.plusDays(1) -> "morgen $time"
         today.minusDays(1) -> "gestern $time"
-        else -> target.format(DateTimeFormatter.ofPattern("EE dd.MM., ", java.util.Locale.GERMANY)) + time
+        else -> target.format(weekdayDateFormatter) + time
     }
 }
 
@@ -216,7 +222,10 @@ fun StatusNotice(
     containerColor: Color,
     contentColor: Color,
     modifier: Modifier = Modifier,
-    icon: (@Composable () -> Unit)? = null,
+    iconVector: ImageVector? = null,
+    icon: (@Composable () -> Unit)? = iconVector?.let { vector ->
+        { Icon(vector, null, tint = contentColor, modifier = Modifier.size(20.dp)) }
+    },
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current

@@ -209,29 +209,13 @@ fun MoreScreen(
     }
 
     deleteCandidate?.let { candidate ->
-        FbPopDialog(onDismiss = { deleteCandidate = null }) {
-            Text("Zutat löschen?", color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(
-                "„${candidate.name}“ wird aus dem Protokoll entfernt.",
-                modifier = Modifier.padding(top = 10.dp),
-                color = colors.sub,
-                fontSize = 13.5.sp,
-                lineHeight = 20.sp,
-            )
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DesignOutlineButton("Behalten", { deleteCandidate = null }, Modifier.weight(1f), verticalPadding = 13.dp)
-                FlatDesignButton(
-                    "Löschen",
-                    {
-                        onDeleteIngredient(candidate)
-                        deleteCandidate = null
-                    },
-                    Modifier.weight(1f),
-                    colors.badBg,
-                    colors.bad,
-                )
-            }
-        }
+        FbConfirmDialog(
+            title = "Zutat löschen?",
+            text = "„${candidate.name}“ wird aus dem Protokoll entfernt.",
+            confirmLabel = "Löschen",
+            onConfirm = { onDeleteIngredient(candidate) },
+            onDismiss = { deleteCandidate = null },
+        )
     }
 
     if (ingredientDialog) {

@@ -6,6 +6,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 
+/** Der Fisetin-Drink wird immer mit Wasser und Olivenöl zubereitet. */
+const val DRINK_LIQUID = "Wasser"
+const val DRINK_FAT = "Olivenöl"
+
 enum class CureStatus {
     GEPLANT,
     AKTIV,

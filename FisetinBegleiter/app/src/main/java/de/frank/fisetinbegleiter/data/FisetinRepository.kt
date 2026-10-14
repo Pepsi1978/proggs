@@ -22,8 +22,6 @@ class FisetinRepository(private val database: FisetinDatabase) {
     suspend fun createCure(
         durationDays: Int,
         startDate: LocalDate,
-        carrierLiquid: String,
-        fatCarrier: String,
         preferredStartMinuteOfDay: Int,
     ): Long = database.withTransaction {
         val validDurationDays = durationDays.coerceIn(1, 3)
@@ -32,8 +30,8 @@ class FisetinRepository(private val database: FisetinDatabase) {
                 startEpochDay = startDate.toEpochDay(),
                 plannedDurationDays = validDurationDays,
                 status = CureStatus.GEPLANT,
-                carrierLiquid = carrierLiquid,
-                fatCarrier = fatCarrier,
+                carrierLiquid = DRINK_LIQUID,
+                fatCarrier = DRINK_FAT,
                 preferredStartMinuteOfDay = preferredStartMinuteOfDay,
                 isTestRun = false,
             ),

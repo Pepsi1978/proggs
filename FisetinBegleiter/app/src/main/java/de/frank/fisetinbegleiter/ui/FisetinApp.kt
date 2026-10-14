@@ -63,6 +63,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
@@ -172,49 +175,49 @@ fun FisetinApp(
                             .fillMaxWidth()
                             .padding(start = 18.dp, top = 6.dp, end = 18.dp)
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                        CompositionLocalProvider(LocalScreenBottomPadding provides bottomPadding) {
-                        when (destination) {
-                            MainScreen.TODAY -> TodayScreen(
-                                state = state,
-                                onCreateCure = viewModel::createCure,
-                                onDrinkNow = viewModel::drinkNow,
-                                onCancelCure = viewModel::stopActiveCure,
-                                onGoTimeline = { screen = MainScreen.TIMELINE },
-                                onGoStack = { screen = MainScreen.STACK },
-                                onOpenExactAlarmSettings = onOpenExactAlarmSettings,
-                                notificationsAvailable = notificationsAvailable,
-                                onOpenNotificationSettings = onOpenNotificationSettings,
-                                exactAlarmsAvailable = viewModel.canScheduleExactAlarms(),
-                                modifier = contentModifier,
-                            )
-                            MainScreen.TIMELINE -> TimelineScreen(
-                                state = state,
-                                onMealDone = viewModel::markMeal,
-                                onSpermidinDone = viewModel::markSpermidin,
-                                onDrinkNow = viewModel::drinkNow,
-                                onCompleteDay = viewModel::completeDay,
-                                onFinishCureAfterDay = viewModel::finishCureAfterCurrentDay,
-                                modifier = contentModifier,
-                            )
-                            MainScreen.STACK -> StackScreen(state, contentModifier)
-                            MainScreen.HISTORY -> HistoryScreen(
-                                state = state,
-                                onUpdateNote = viewModel::updateNote,
-                                onCancelCure = viewModel::stopActiveCure,
-                                modifier = contentModifier,
-                            )
-                            MainScreen.MORE -> MoreScreen(
-                                state = state,
-                                themeVariant = themeVariant,
-                                onThemeVariantChange = onThemeVariantChange,
-                                onSaveProtocol = viewModel::saveProtocol,
-                                onSaveIngredient = viewModel::saveIngredient,
-                                onDeleteIngredient = viewModel::deleteIngredient,
-                                onOpenBatterySettings = onOpenBatterySettings,
-                                modifier = contentModifier,
-                            )
-                        }
-                        }
+                            CompositionLocalProvider(LocalScreenBottomPadding provides bottomPadding) {
+                                when (destination) {
+                                    MainScreen.TODAY -> TodayScreen(
+                                        state = state,
+                                        onCreateCure = viewModel::createCure,
+                                        onDrinkNow = viewModel::drinkNow,
+                                        onCancelCure = viewModel::stopActiveCure,
+                                        onGoTimeline = { screen = MainScreen.TIMELINE },
+                                        onGoStack = { screen = MainScreen.STACK },
+                                        onOpenExactAlarmSettings = onOpenExactAlarmSettings,
+                                        notificationsAvailable = notificationsAvailable,
+                                        onOpenNotificationSettings = onOpenNotificationSettings,
+                                        exactAlarmsAvailable = viewModel.canScheduleExactAlarms(),
+                                        modifier = contentModifier,
+                                    )
+                                    MainScreen.TIMELINE -> TimelineScreen(
+                                        state = state,
+                                        onMealDone = viewModel::markMeal,
+                                        onSpermidinDone = viewModel::markSpermidin,
+                                        onDrinkNow = viewModel::drinkNow,
+                                        onCompleteDay = viewModel::completeDay,
+                                        onFinishCureAfterDay = viewModel::finishCureAfterCurrentDay,
+                                        modifier = contentModifier,
+                                    )
+                                    MainScreen.STACK -> StackScreen(state, contentModifier)
+                                    MainScreen.HISTORY -> HistoryScreen(
+                                        state = state,
+                                        onUpdateNote = viewModel::updateNote,
+                                        onCancelCure = viewModel::stopActiveCure,
+                                        modifier = contentModifier,
+                                    )
+                                    MainScreen.MORE -> MoreScreen(
+                                        state = state,
+                                        themeVariant = themeVariant,
+                                        onThemeVariantChange = onThemeVariantChange,
+                                        onSaveProtocol = viewModel::saveProtocol,
+                                        onSaveIngredient = viewModel::saveIngredient,
+                                        onDeleteIngredient = viewModel::deleteIngredient,
+                                        onOpenBatterySettings = onOpenBatterySettings,
+                                        modifier = contentModifier,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -363,27 +366,15 @@ private fun FloatingBottomNavigation(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    // Fester Untergrund ab der Leistenmitte bis zum Bildschirmrand: unter der Leiste scheint kein Listentext durch.
-    Box(modifier.fillMaxWidth()) {
-        Box(
-            Modifier
-                .matchParentSize()
-                .padding(top = 36.dp)
-                .background(colors.bg1),
-        )
-        FloatingBottomNavigationBar(selected, onSelected)
-    }
-}
-
-@Composable
-private fun FloatingBottomNavigationBar(
-    selected: MainScreen,
-    onSelected: (MainScreen) -> Unit,
-) {
-    val colors = LocalAppColors.current
+    val underlay = colors.bg1
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            // Fester Untergrund ab der Leistenmitte bis zum Bildschirmrand: unter der Leiste scheint kein Listentext durch.
+            .drawBehind {
+                val top = 36.dp.toPx()
+                drawRect(underlay, topLeft = Offset(0f, top), size = Size(size.width, size.height - top))
+            }
             .navigationBarsPadding()
             .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
             .shadow(
@@ -597,10 +588,9 @@ private fun headerSubtitle(state: MainUiState): String {
     val cure = state.activeCure?.cure ?: return "Bereit für die nächste Kur"
     val day = state.currentDay ?: return "Bereit für die nächste Kur"
     val prefix = "Tag ${day.dayNumber} von ${cure.plannedDurationDays}"
-    val drinkAt = state.plannedDrinkAt
     return when {
-        day.t0 == null && drinkAt != null && state.now >= drinkAt -> "$prefix · Zeit für den Drink"
-        day.t0 == null && state.prePhaseActive -> "$prefix · Vorstufe läuft"
+        state.drinkDue -> "$prefix · Zeit für den Drink"
+        state.prePhaseActive -> "$prefix · Vorstufe läuft"
         day.t0 == null -> "$prefix · geplant"
         state.blockActive -> "$prefix · Sperrfenster läuft"
         else -> "$prefix · alles erlaubt"

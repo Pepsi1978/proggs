@@ -11,8 +11,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,13 +18,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import de.frank.fisetinbegleiter.data.DRINK_FAT
+import de.frank.fisetinbegleiter.data.DRINK_LIQUID
+import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
+import de.frank.fisetinbegleiter.domain.FASTING_RULE
+import de.frank.fisetinbegleiter.domain.STRONG_ANTIOXIDANTS
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -38,26 +39,18 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.drawBehind
 import de.frank.fisetinbegleiter.alarm.hourLabel
 import de.frank.fisetinbegleiter.data.StackCategory
-import de.frank.fisetinbegleiter.domain.plannedT0
 import de.frank.fisetinbegleiter.domain.prePhaseStartAt
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -127,12 +120,14 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
+private val shortDateFormatter = DateTimeFormatter.ofPattern("dd.MM.")
+
 internal val FbMotionEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
 
 @Composable
 fun TodayScreen(
     state: MainUiState,
-    onCreateCure: (Int, String, String, LocalDate, Int) -> Unit,
+    onCreateCure: (Int, LocalDate, Int) -> Unit,
     onDrinkNow: () -> Unit,
     onCancelCure: () -> Unit,
     onGoTimeline: () -> Unit,
@@ -167,13 +162,6 @@ fun TodayScreen(
 
         if (active && day?.t0 != null) {
             item { NextStepCard(state, onGoTimeline) }
-            item {
-                DesignOutlineButton(
-                    text = "Stack: Was darf ich jetzt nehmen?",
-                    onClick = onGoStack,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
         } else if (active) {
             item {
                 AccentGradientButton(
@@ -183,6 +171,8 @@ fun TodayScreen(
                     Text("Drink-Checkliste öffnen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
             }
+        }
+        if (active) {
             item {
                 DesignOutlineButton(
                     text = "Stack: Was darf ich jetzt nehmen?",
@@ -190,6 +180,8 @@ fun TodayScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+        }
+        if (active && day?.t0 == null) {
             item {
                 DesignOutlineButton(
                     text = "Ganzen Ablauf ansehen",
@@ -197,7 +189,8 @@ fun TodayScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-        } else {
+        }
+        if (!active) {
             item {
                 AccentGradientButton(
                     onClick = { showSetup = true },
@@ -215,7 +208,7 @@ fun TodayScreen(
                     text = "Android erlaubt derzeit nur angenäherte Erinnerungen. Gib exakte Alarme für punktgenaue Timer frei.",
                     containerColor = colors.warnBg,
                     contentColor = colors.warn,
-                    icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
+                    iconVector = Icons.Outlined.Schedule,
                     trailing = {
                         SmallActionButton("Öffnen", onOpenExactAlarmSettings)
                     },
@@ -229,7 +222,7 @@ fun TodayScreen(
                     text = "Android blockiert derzeit die Kur-Erinnerungen. Aktiviere den Kanal „Kur-Schritte“ in den App-Einstellungen.",
                     containerColor = colors.warnBg,
                     contentColor = colors.warn,
-                    icon = { Icon(Icons.Outlined.WarningAmber, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
+                    iconVector = Icons.Outlined.WarningAmber,
                     trailing = {
                         SmallActionButton("Öffnen", onOpenNotificationSettings)
                     },
@@ -239,11 +232,11 @@ fun TodayScreen(
         item {
             StatusNotice(
                 title = "Antioxidantien-Regel",
-                text = "Vorstufe: ab ${hourLabel(state.protocol.preBlockMinutes)} vor dem Drink kein Vitamin C, Vitamin E, Curcumin, Q10 oder Astaxanthin. " +
-                    "Sperre: bis ${hourLabel(state.protocol.antioxidantBlockMinutes)} nach T0. Am Kurmorgen nüchtern bleiben, nur Wasser.",
+                text = "Vorstufe: ab ${hourLabel(state.protocol.preBlockMinutes)} vor dem Drink kein $STRONG_ANTIOXIDANTS. " +
+                    "Sperre: bis ${hourLabel(state.protocol.antioxidantBlockMinutes)} nach T0. $FASTING_RULE",
                 containerColor = colors.badBg,
                 contentColor = colors.bad,
-                icon = { Icon(Icons.Outlined.WarningAmber, null, tint = colors.bad, modifier = Modifier.size(20.dp)) },
+                iconVector = Icons.Outlined.WarningAmber,
             )
         }
         if (active) {
@@ -266,19 +259,17 @@ fun TodayScreen(
 
     if (showSetup) {
         SetupSheet(
-            defaultDuration = state.protocol.standardDurationDays,
-            defaultStartMinute = state.protocol.preferredStartMinuteOfDay,
-            preBlockMinutes = state.protocol.preBlockMinutes,
+            protocol = state.protocol,
             onDismiss = { showSetup = false },
             onConfirm = { duration, startDate, startMinute ->
-                onCreateCure(duration, DRINK_LIQUID, DRINK_FAT, startDate, startMinute)
+                onCreateCure(duration, startDate, startMinute)
                 showSetup = false
             },
         )
     }
     if (showDrink) {
         DrinkSheet(
-            ingredients = state.ingredients.filter { it.phase == IngredientPhase.DRINK },
+            ingredients = state.drinkIngredients,
             onDismiss = { showDrink = false },
             onDrinkNow = {
                 onDrinkNow()
@@ -288,48 +279,23 @@ fun TodayScreen(
     }
     if (showCancelConfirmation) {
         val completedDays = state.completedDayCount
-        FbPopDialog(onDismiss = { showCancelConfirmation = false }) {
-            Text(
-                if (completedDays > 0) "Kur nach Tag $completedDays beenden?" else "Vollständig zurücksetzen?",
-                color = colors.text,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                if (completedDays > 0) {
-                    if (completedDays == 1) {
-                        "Der vollständige Tag bleibt als Kur im Verlauf gespeichert. Der offene Folgetag und seine Alarme werden entfernt."
-                    } else {
-                        "Die $completedDays vollständigen Tage bleiben als Kur im Verlauf gespeichert. Der offene Folgetag und seine Alarme werden entfernt."
-                    }
+        FbConfirmDialog(
+            title = if (completedDays > 0) "Kur nach Tag $completedDays beenden?" else "Vollständig zurücksetzen?",
+            text = if (completedDays > 0) {
+                if (completedDays == 1) {
+                    "Der vollständige Tag bleibt als Kur im Verlauf gespeichert. Der offene Folgetag und seine Alarme werden entfernt."
                 } else {
-                    "Der aktive Ablauf, alle zugehörigen Schritte, Alarme und der Eintrag im Verlauf werden vollständig gelöscht."
-                },
-                modifier = Modifier.padding(top = 10.dp),
-                color = colors.sub,
-                fontSize = 13.5.sp,
-                lineHeight = 20.925.sp,
-            )
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DesignOutlineButton("Behalten", { showCancelConfirmation = false }, Modifier.weight(1f), verticalPadding = 13.dp)
-                FlatDesignButton(
-                    text = if (completedDays > 0) "Als Kur speichern" else "Löschen",
-                    onClick = {
-                        onCancelCure()
-                        showCancelConfirmation = false
-                    },
-                    modifier = Modifier.weight(1f),
-                    background = colors.badBg,
-                    contentColor = colors.bad,
-                )
-            }
-        }
+                    "Die $completedDays vollständigen Tage bleiben als Kur im Verlauf gespeichert. Der offene Folgetag und seine Alarme werden entfernt."
+                }
+            } else {
+                "Der aktive Ablauf, alle zugehörigen Schritte, Alarme und der Eintrag im Verlauf werden vollständig gelöscht."
+            },
+            confirmLabel = if (completedDays > 0) "Als Kur speichern" else "Löschen",
+            onConfirm = onCancelCure,
+            onDismiss = { showCancelConfirmation = false },
+        )
     }
 }
-
-/** Der Fisetin-Drink wird immer mit Wasser und Olivenöl zubereitet. */
-internal const val DRINK_LIQUID = "Wasser"
-internal const val DRINK_FAT = "Olivenöl"
 
 internal fun todaySectionTitle(cure: CureEntity?, today: LocalDate = LocalDate.now()): String {
     if (cure?.status != CureStatus.GEPLANT) return "Heute"
@@ -348,14 +314,15 @@ private fun TodayHero(state: MainUiState) {
     val cure = state.activeCure?.cure
     val drinkAt = state.plannedDrinkAt
     val preStart = state.prePhaseStart
-    val drinkDue = day?.t0 == null && drinkAt != null && state.now >= drinkAt
-    val inPrePhase = day?.t0 == null && state.prePhaseActive && !drinkDue
+    val drinkDue = state.drinkDue
+    val inPrePhase = state.prePhaseActive && !drinkDue
     val (title, text) = when {
         !active -> "Keine Kur aktiv" to "Lege die Kur in einen Freiblock: nüchterner Morgen, Mahlzeiten und das 4-Stunden-Fenster brauchen einen freien Tag."
-        drinkDue -> "Zeit für den Fisetin-Drink" to "Geplant war ${formatTime(drinkAt!!)}. Nüchtern trinken und T0 direkt danach bestätigen."
-        inPrePhase && drinkAt != null -> "Vorstufe läuft" to "Drink um ${formatTime(drinkAt)} · noch ${formatCountdown(drinkAt, state.now)}. Ab jetzt keine starken Antioxidantien mehr – der Stack zeigt, was tabu ist."
-        day?.t0 == null && preStart != null && drinkAt != null -> "Kur geplant" to "Vorstufe ab ${formatDayTime(preStart, state.now)}, Drink ${formatDayTime(drinkAt, state.now)}. Bis zur Vorstufe nimmst du alles wie gewohnt."
-        day?.t0 == null -> "Nächster Schritt: Fisetin-Drink" to "Morgens nüchtern. Öffne die Checkliste und setze T0 erst direkt nach dem Trinken."
+        drinkAt != null && preStart != null -> when {
+            drinkDue -> "Zeit für den Fisetin-Drink" to "Geplant war ${formatTime(drinkAt)}. Nüchtern trinken und T0 direkt danach bestätigen."
+            inPrePhase -> "Vorstufe läuft" to "Drink um ${formatTime(drinkAt)} · noch ${formatCountdown(drinkAt, state.now)}. Ab jetzt keine starken Antioxidantien mehr – der Stack zeigt, was tabu ist."
+            else -> "Kur geplant" to "Vorstufe ab ${formatDayTime(preStart, state.now)}, Drink ${formatDayTime(drinkAt, state.now)}. Bis zur Vorstufe nimmst du alles wie gewohnt."
+        }
         state.blockActive -> "Sperrfenster aktiv" to "Antioxidantien sind ab ${formatTime(state.blockEnd!!)} wieder erlaubt."
         else -> "Alles im erlaubten Bereich" to "Grünes Licht: Aktuell ist keine Antioxidantien-Sperre aktiv."
     }
@@ -379,8 +346,7 @@ private fun TodayHero(state: MainUiState) {
                 state.blockActive && day?.t0 != null -> CountdownRing(day.t0, state.blockEnd!!, state.now)
                 drinkDue -> HeroIcon(colors.accentSoft, colors.accent, Icons.Outlined.WaterDrop, pulse = true)
                 inPrePhase -> HeroIcon(colors.warnBg, colors.warn, Icons.Outlined.Schedule, pulse = true)
-                active && day?.t0 == null && preStart != null -> HeroIcon(colors.accentSoft, colors.accent, Icons.Outlined.Schedule)
-                active && day?.t0 == null -> HeroIcon(colors.accentSoft, colors.accent, Icons.Outlined.WaterDrop, pulse = true)
+                drinkAt != null -> HeroIcon(colors.accentSoft, colors.accent, Icons.Outlined.Schedule)
                 active -> HeroIcon(colors.okBg, colors.ok, Icons.Outlined.Check)
                 else -> HeroIcon(colors.chip, colors.sub, Icons.Outlined.Add)
             }
@@ -540,15 +506,13 @@ private fun NextStepCard(state: MainUiState, onGoTimeline: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SetupSheet(
-    defaultDuration: Int,
-    defaultStartMinute: Int,
-    preBlockMinutes: Int,
+    protocol: ProtocolTemplateEntity,
     onDismiss: () -> Unit,
     onConfirm: (Int, LocalDate, Int) -> Unit,
 ) {
-    var duration by rememberSaveable { mutableIntStateOf(defaultDuration.coerceIn(1, 3)) }
+    var duration by rememberSaveable { mutableIntStateOf(protocol.standardDurationDays.coerceIn(1, 3)) }
     var startEpochDay by rememberSaveable { mutableStateOf<Long?>(null) }
-    var startMinute by rememberSaveable { mutableIntStateOf(defaultStartMinute.coerceIn(0, 1_425)) }
+    var startMinute by rememberSaveable { mutableIntStateOf(protocol.preferredStartMinuteOfDay.coerceIn(0, 1_425)) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
     val colors = LocalAppColors.current
     val today = LocalDate.now()
@@ -572,12 +536,7 @@ private fun SetupSheet(
         footer = {
             SheetCancelButton(Modifier.weight(1f))
             AccentGradientButton(
-                onClick = {
-                    val selectedDate = startDate
-                    if (selectedDate != null && plannedStartAt(selectedDate, startMinute) > System.currentTimeMillis()) {
-                        onConfirm(duration, selectedDate, startMinute)
-                    }
-                },
+                onClick = { startDate?.let { onConfirm(duration, it, startMinute) } },
                 enabled = validStart,
                 modifier = Modifier.weight(1.4f),
                 shape = RoundedCornerShape(16.dp),
@@ -594,7 +553,7 @@ private fun SetupSheet(
         }
         SheetLabel("Drink")
         Text(
-            "Fisetin-Drink immer mit lauwarmem Wasser und Olivenöl.",
+            "Fisetin-Drink immer mit lauwarmem $DRINK_LIQUID und $DRINK_FAT.",
             color = colors.sub,
             fontSize = 13.sp,
             lineHeight = 19.sp,
@@ -605,7 +564,7 @@ private fun SetupSheet(
             SelectionButton("Morgen", startDate == tomorrow, { selectDate(tomorrow) }, Modifier.weight(1f))
             val otherDate = startDate?.takeIf { it != today && it != tomorrow }
             SelectionButton(
-                otherDate?.format(DateTimeFormatter.ofPattern("dd.MM.")) ?: "Datum …",
+                otherDate?.format(shortDateFormatter) ?: "Datum …",
                 otherDate != null,
                 { showDatePicker = true },
                 Modifier.weight(1f),
@@ -629,13 +588,13 @@ private fun SetupSheet(
                 SquareControl("+1 h") { startMinute = (startMinute + 60).coerceAtMost(1_425) }
             }
             if (validStart && plannedStart != null) {
-                val preStart = plannedStart - preBlockMinutes * 60_000L
+                val preStart = prePhaseStartAt(plannedStart, protocol)
                 StatusNotice(
                     title = if (preStart <= now) "Vorstufe beginnt sofort" else "Vorstufe ab ${formatDayTime(preStart, now)}",
-                    text = "Ab dann kein Vitamin C, Vitamin E, Curcumin, Q10 oder Astaxanthin mehr. Am Kurmorgen nüchtern bleiben, nur Wasser. Drink ${formatDayTime(plannedStart, now)}.",
+                    text = "Ab dann kein $STRONG_ANTIOXIDANTS mehr. $FASTING_RULE Drink ${formatDayTime(plannedStart, now)}.",
                     containerColor = colors.warnBg,
                     contentColor = colors.warn,
-                    icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
+                    iconVector = Icons.Outlined.Schedule,
                 )
             } else {
                 Text("Die Uhrzeit muss in der Zukunft liegen.", color = colors.bad, fontSize = 12.5.sp, lineHeight = 18.75.sp)
@@ -722,7 +681,7 @@ private fun DrinkSheet(
         },
     ) {
         Text("Drink-Checkliste", color = colors.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-        Text("Mit Wasser und Olivenöl · alles abhaken, dann trinken.", color = colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text("Mit $DRINK_LIQUID und $DRINK_FAT · alles abhaken, dann trinken.", color = colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         ingredients.forEach { ingredient ->
             Row(
                 Modifier
@@ -777,9 +736,12 @@ fun TimelineScreen(
     val hardItems = remember(state.stackItems) {
         state.stackItems.filter { it.category == StackCategory.HARTE_SPERRE }.map { it.name.substringBefore(" (") }
     }
-    val drinkItems = state.ingredients.filter { it.phase == IngredientPhase.DRINK }.map { "${it.name} · ${it.amount}" }
-    val spermidinItems = state.ingredients.filter { it.phase == IngredientPhase.SPERMIDIN }.map { "${it.name} · ${it.amount}" }
-    val prePhaseNote = "Keine starken Antioxidantien. Am Kurmorgen nüchtern bleiben, nur Wasser. Medikamente wie gewohnt."
+    val hardItemChips = remember(hardItems) { hardItems.map { "kein $it" } }
+    val (drinkItems, spermidinItems) = remember(state.ingredients) {
+        fun chips(phase: IngredientPhase) = state.ingredients.filter { it.phase == phase }.map { "${it.name} · ${it.amount}" }
+        chips(IngredientPhase.DRINK) to chips(IngredientPhase.SPERMIDIN)
+    }
+    val prePhaseNote = "Keine starken Antioxidantien. $FASTING_RULE Medikamente wie gewohnt."
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(top = 4.dp, bottom = LocalScreenBottomPadding.current),
@@ -804,11 +766,11 @@ fun TimelineScreen(
                     )
                 }
             }
-        } else if (day.t0 == null) {
-            val drinkAt = state.plannedDrinkAt ?: plannedT0(cure, day)
-            val preStart = prePhaseStartAt(drinkAt, state.protocol)
+        } else if (day.t0 == null && state.plannedDrinkAt != null && state.prePhaseStart != null) {
+            val drinkAt = state.plannedDrinkAt
+            val preStart = state.prePhaseStart
             val planned = timeline(drinkAt, state.protocol)
-            val preActive = state.now >= preStart
+            val preActive = state.prePhaseActive
             item {
                 Column {
                     TimelineStep(
@@ -816,13 +778,13 @@ fun TimelineScreen(
                         time = if (preActive) "läuft seit ${formatDayTime(preStart, state.now)}" else "ab ${formatDayTime(preStart, state.now)}",
                         state = if (preActive) StepState.ACTIVE else StepState.OPEN,
                         note = prePhaseNote,
-                        ingredients = hardItems.map { "kein $it" },
+                        ingredients = hardItemChips,
                         warningChips = true,
                     )
                     TimelineStep(
                         title = "Fisetin-Drink · T0",
                         time = "geplant ${formatDayTime(drinkAt, state.now)}",
-                        state = if (state.now >= drinkAt) StepState.ACTIVE else StepState.OPEN,
+                        state = if (state.drinkDue) StepState.ACTIVE else StepState.OPEN,
                         actionLabel = "Checkliste",
                         action = { showDrink = true },
                         ingredients = drinkItems,
@@ -832,7 +794,7 @@ fun TimelineScreen(
                     TimelineStep("Sperrfenster vorbei", "ca. ${formatTime(planned.blockEnd)}", StepState.OPEN, last = true)
                 }
             }
-        } else {
+        } else if (day.t0 != null) {
             val times = timeline(day.t0, state.protocol)
             val mealDone = day.mealDoneAt != null
             val spermidinDone = day.spermidinDoneAt != null
@@ -876,7 +838,7 @@ fun TimelineScreen(
                         "Noch ${formatCountdown(times.blockEnd, state.now)}.",
                         colors.warnBg,
                         colors.warn,
-                        icon = { Icon(Icons.Outlined.Schedule, null, tint = colors.warn, modifier = Modifier.size(20.dp)) },
+                        iconVector = Icons.Outlined.Schedule,
                     )
                 }
             }
@@ -907,7 +869,7 @@ fun TimelineScreen(
 
     if (showDrink) {
         DrinkSheet(
-            ingredients = state.ingredients.filter { it.phase == IngredientPhase.DRINK },
+            ingredients = state.drinkIngredients,
             onDismiss = { showDrink = false },
             onDrinkNow = {
                 onDrinkNow()
@@ -947,8 +909,6 @@ fun TimelineScreen(
     }
 }
 
-private fun dayLabel(days: Int): String = if (days == 1) "1 Tag" else "$days Tage"
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TimelineStep(
@@ -969,8 +929,7 @@ private fun TimelineStep(
         StepState.ACTIVE -> Triple(colors.accentSoft, colors.accent, colors.accent)
         StepState.OPEN -> Triple(colors.chip, colors.line, colors.sub)
     }
-    // Verbindungslinie wird gezeichnet statt per IntrinsicSize gemessen: FlowRow-Inhalte
-    // wurden mit Intrinsic-Messung abgeschnitten.
+    // Verbindungslinie wird gezeichnet statt per Intrinsic-Messung: FlowRow-Inhalte wurden sonst abgeschnitten.
     Row(
         Modifier
             .fillMaxWidth()
@@ -1069,8 +1028,8 @@ internal fun FbBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val currentOnDismiss by rememberUpdatedState(onDismiss)
-    val close: () -> Unit = {
-        scope.launch { sheetState.hide() }.invokeOnCompletion { currentOnDismiss() }
+    val close: () -> Unit = remember(scope, sheetState) {
+        { scope.launch { sheetState.hide() }.invokeOnCompletion { currentOnDismiss() } }
     }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1170,6 +1129,35 @@ internal fun FbPopDialog(onDismiss: () -> Unit, content: @Composable ColumnScope
                     )
                 }
             }
+        }
+    }
+}
+
+/** Rückfrage mit „Behalten“ und einer roten Bestätigung. */
+@Composable
+internal fun FbConfirmDialog(
+    title: String,
+    text: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    FbPopDialog(onDismiss = onDismiss) {
+        Text(title, color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(text, modifier = Modifier.padding(top = 10.dp), color = colors.sub, fontSize = 13.5.sp, lineHeight = 20.925.sp)
+        Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DesignOutlineButton("Behalten", onDismiss, Modifier.weight(1f), verticalPadding = 13.dp)
+            FlatDesignButton(
+                text = confirmLabel,
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                },
+                modifier = Modifier.weight(1f),
+                background = colors.badBg,
+                contentColor = colors.bad,
+            )
         }
     }
 }

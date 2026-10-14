@@ -7,6 +7,7 @@
     {"versionCode": 31, "versionName": "1.0.30", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
     {"versionCode": 32, "versionName": "1.0.31", "stand": "14.10.2026, 07:53 Uhr", "notiz": "Neue Vorstufe vor dem Drink zeigt klar, was vor der Kur tabu ist; Drink immer mit Wasser und Olivenöl; Sheets und Dialoge auf dem Fold nicht mehr abgeschnitten, Ablauf und Stack übersichtlicher"},
     {"versionCode": 33, "versionName": "1.0.32", "stand": "14.10.2026, 08:03 Uhr", "notiz": "Checklisten und Eingabe-Fenster lassen sich am Griff nach unten wegwischen; die Buttons unten sitzen sichtbar über der Gestenleiste"},
-    {"versionCode": 34, "versionName": "1.0.33", "stand": "14.10.2026, 08:06 Uhr", "notiz": "Die Navigationsleiste unten ist jetzt fest und undurchsichtig, darunter scheint kein Text mehr durch"}
+    {"versionCode": 34, "versionName": "1.0.33", "stand": "14.10.2026, 08:06 Uhr", "notiz": "Die Navigationsleiste unten ist jetzt fest und undurchsichtig, darunter scheint kein Text mehr durch"},
+    {"versionCode": 35, "versionName": "1.0.34", "stand": "14.10.2026, 08:20 Uhr", "notiz": "Interne Aufräumarbeiten: gleiche Regeltexte überall, flüssigere Anzeige durch weniger Neuberechnungen"}
   ]
 }

@@ -9,6 +9,7 @@ import de.frank.fisetinbegleiter.alarm.NotificationHelper
 import de.frank.fisetinbegleiter.data.AppCureState
 import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.IngredientEntity
+import de.frank.fisetinbegleiter.data.IngredientPhase
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
 import de.frank.fisetinbegleiter.data.StackItemEntity
 import de.frank.fisetinbegleiter.domain.canComplete
@@ -38,30 +39,29 @@ data class MainUiState(
     val now: Long = System.currentTimeMillis(),
     val initialized: Boolean = false,
 ) {
-    val currentDay get() = de.frank.fisetinbegleiter.domain.currentDay(activeCure)
+    // Einmal pro Zustand berechnet (der Zustand entsteht sekündlich neu), nicht bei jedem Zugriff.
+    val currentDay = de.frank.fisetinbegleiter.domain.currentDay(activeCure)
     val cureState: AppCureState get() = cureState(activeCure, protocol, now)
-    val blockEnd: Long? get() = currentDay?.t0?.let { timeline(it, protocol).blockEnd }
-    val blockActive: Boolean get() = blockEnd?.let { now < it } == true
+    val blockEnd: Long? = currentDay?.t0?.let { timeline(it, protocol).blockEnd }
+    val blockActive: Boolean = blockEnd?.let { now < it } == true
     val canCompleteDay: Boolean get() = canComplete(currentDay, now, protocol)
     val completedDayCount: Int
         get() = completedThroughDay(activeCure).coerceAtMost(activeCure?.cure?.plannedDurationDays ?: 0)
+    val drinkIngredients: List<IngredientEntity> = ingredients.filter { it.phase == IngredientPhase.DRINK }
 
     /** Geplanter Drink des aktuellen Kurtags, solange T0 noch nicht gesetzt ist. */
-    val plannedDrinkAt: Long?
-        get() {
-            val cure = activeCure?.cure ?: return null
-            val day = currentDay?.takeIf { it.t0 == null && it.completedAt == null } ?: return null
-            return plannedT0(cure, day)
-        }
-    val prePhaseStart: Long? get() = plannedDrinkAt?.let { prePhaseStartAt(it, protocol) }
-    val prePhaseActive: Boolean get() = prePhaseStart?.let { now >= it } == true
-    val stackPhase: StackPhase
-        get() = when {
-            blockActive -> StackPhase.SPERRFENSTER
-            prePhaseActive -> StackPhase.VORSTUFE
-            currentDay?.t0 != null -> StackPhase.NACH_SPERRE
-            else -> StackPhase.NORMAL
-        }
+    val plannedDrinkAt: Long? = activeCure?.cure?.let { cure ->
+        currentDay?.takeIf { it.t0 == null && it.completedAt == null }?.let { plannedT0(cure, it) }
+    }
+    val prePhaseStart: Long? = plannedDrinkAt?.let { prePhaseStartAt(it, protocol) }
+    val prePhaseActive: Boolean = prePhaseStart?.let { now >= it } == true
+    val drinkDue: Boolean = plannedDrinkAt?.let { now >= it } == true
+    val stackPhase: StackPhase = when {
+        blockActive -> StackPhase.SPERRFENSTER
+        prePhaseActive -> StackPhase.VORSTUFE
+        currentDay?.t0 != null -> StackPhase.NACH_SPERRE
+        else -> StackPhase.NORMAL
+    }
 }
 
 enum class StackPhase { NORMAL, VORSTUFE, SPERRFENSTER, NACH_SPERRE }
@@ -109,15 +109,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun createCure(duration: Int, liquid: String, fat: String, startDate: LocalDate, startMinute: Int) {
+    fun createCure(duration: Int, startDate: LocalDate, startMinute: Int) {
         val startAt = plannedStartAt(startDate, startMinute)
         if (startAt <= System.currentTimeMillis()) return
         viewModelScope.launch {
             val firstDayId = repository.createCure(
                 durationDays = duration.coerceIn(1, 3),
                 startDate = startDate,
-                carrierLiquid = liquid,
-                fatCarrier = fat,
                 preferredStartMinuteOfDay = startMinute,
             )
             if (uiState.value.protocol.remindersEnabled) {

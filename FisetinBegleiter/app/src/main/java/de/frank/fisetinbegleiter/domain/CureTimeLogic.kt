@@ -31,6 +31,12 @@ fun plannedStartAt(startDate: LocalDate, startMinuteOfDay: Int, zoneId: ZoneId =
         .toInstant()
         .toEpochMilli()
 
+/** Starke Antioxidantien, die ab der Vorstufe bis zum Ende des Sperrfensters tabu sind. */
+const val STRONG_ANTIOXIDANTS = "Vitamin C, Vitamin E, Curcumin, Q10 oder Astaxanthin"
+
+/** Nüchtern-Regel für den Kurmorgen bis zum Drink. */
+const val FASTING_RULE = "Am Kurmorgen nüchtern bleiben, nur Wasser."
+
 /** Geplanter Drink-Zeitpunkt eines Kurtags (Startzeit der Kur am geplanten Kalendertag). */
 fun plannedT0(cure: CureEntity, day: CureDayEntity, zoneId: ZoneId = ZoneId.systemDefault()): Long =
     plannedStartAt(LocalDate.ofEpochDay(day.plannedEpochDay), cure.preferredStartMinuteOfDay, zoneId)

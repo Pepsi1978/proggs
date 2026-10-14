@@ -1,6 +1,8 @@
 package de.frank.fisetinbegleiter.alarm
 
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
+import de.frank.fisetinbegleiter.domain.FASTING_RULE
+import de.frank.fisetinbegleiter.domain.STRONG_ANTIOXIDANTS
 
 data class NotificationContent(
     val title: String,
@@ -72,7 +74,7 @@ fun notificationContent(
     )
     AlarmType.PRE_PHASE -> NotificationContent(
         title = if (targetDay > 1) "Vorstufe für Tag $targetDay beginnt" else "Vorstufe beginnt",
-        text = "Dein Fisetin-Drink ist in ${hourLabel(protocol.preBlockMinutes)} geplant. Ab jetzt kein Vitamin C, Vitamin E, Curcumin, Q10 oder Astaxanthin mehr. Am Kurmorgen nüchtern bleiben, nur Wasser.",
+        text = "Dein Fisetin-Drink ist in ${hourLabel(protocol.preBlockMinutes)} geplant. Ab jetzt kein $STRONG_ANTIOXIDANTS mehr. $FASTING_RULE",
         destination = "stack",
     )
 }

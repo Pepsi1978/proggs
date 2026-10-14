@@ -12,6 +12,7 @@ import de.frank.fisetinbegleiter.data.CureWithDays
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
 import de.frank.fisetinbegleiter.domain.currentDay
 import de.frank.fisetinbegleiter.domain.plannedStartAt
+import de.frank.fisetinbegleiter.domain.plannedT0
 import de.frank.fisetinbegleiter.domain.prePhaseStartAt
 import java.time.LocalDate
 
@@ -94,10 +95,7 @@ class AlarmScheduler(private val context: Context) {
             scheduleDay(cureWithDays.cure, day, protocol, t0)
             return
         }
-        val triggerAt = plannedStartAt(
-            LocalDate.ofEpochDay(day.plannedEpochDay),
-            cureWithDays.cure.preferredStartMinuteOfDay,
-        )
+        val triggerAt = plannedT0(cureWithDays.cure, day)
         if (day.dayNumber == 1) {
             cancel(day.id, AlarmType.CURE_PREPARATION)
             cancel(day.id, AlarmType.CURE_START)
