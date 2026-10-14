@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * dem [de.frank.aufgaben.tts.TtsManager] — gleicher Speichername, gleiche Schlüsselnamen.
  */
 class Einstellungen private constructor(context: Context) {
+    private val app: Context = context.applicationContext
     private val roh: SharedPreferences = try {
         EncryptedSharedPreferences.create(
             NAME,
@@ -84,7 +85,11 @@ class Einstellungen private constructor(context: Context) {
     var ton: String get() = s("ton", "chime"); set(v) = put { putString("ton", v) }
     var tonName: String get() = s("ton_name", "Erinnerungszeichen"); set(v) = put { putString("ton_name", v) }
     var lautstaerke: Float get() = prefs.getFloat("lautstaerke", 0.8f); set(v) = put { putFloat("lautstaerke", v.coerceIn(0f, 1f)) }
-    var vorlaufStandard: Int get() = prefs.getInt("vorlauf", 10); set(v) = put { putInt("vorlauf", v) }
+    /** Liest auch Jarvis über die Brücke („info“), daher meldet eine Änderung ein Signal an Jarvis. */
+    var vorlaufStandard: Int get() = prefs.getInt("vorlauf", 10); set(v) {
+        put { putInt("vorlauf", v) }
+        runCatching { app.contentResolver.notifyChange(android.net.Uri.parse("content://${app.packageName}.jarvis"), null) }
+    }
     var vibration: Boolean get() = prefs.getBoolean("vibration", true); set(v) = put { putBoolean("vibration", v) }
     /** Neue Erinnerungen lesen den Aufgabentext standardmäßig vor. */
     var vorlesenStandard: Boolean get() = prefs.getBoolean("vorlesen_standard", true); set(v) = put { putBoolean("vorlesen_standard", v) }

@@ -1,16 +1,24 @@
 package de.frank.aufgaben.data
 
 import android.content.Context
+import android.net.Uri
 import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.InvalidationTracker
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 @Dao
 interface AufgabenDao {
@@ -52,7 +60,31 @@ abstract class AufgabenDatenbank : RoomDatabase() {
 
         fun get(context: Context): AufgabenDatenbank = instanz ?: synchronized(this) {
             instanz ?: Room.databaseBuilder(context.applicationContext, AufgabenDatenbank::class.java, "aufgaben.db")
-                .build().also { instanz = it }
+                .build().also { instanz = it; jarvisMelden(context.applicationContext, it) }
+        }
+
+        // Live-Gedächtnis: Jede Änderung an der Tabelle (Oberfläche, Erinnerungen, Jarvis-Brücke) meldet
+        // Jarvis ein Signal auf die Wurzel der Brücke. Nur Schreibzugriffe lösen Room-Invalidierungen aus,
+        // Lesen über die Brücke also nicht. Mehrere Änderungen in Folge ergeben nach 700 ms ein Signal.
+        private val jarvisScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private var jarvisSignal: Job? = null
+        private var jarvisBeobachter: InvalidationTracker.Observer? = null
+
+        private fun jarvisMelden(app: Context, db: AufgabenDatenbank) {
+            val uri = Uri.parse("content://${app.packageName}.jarvis")
+            val beobachter = object : InvalidationTracker.Observer("aufgaben") {
+                override fun onInvalidated(tables: Set<String>) {
+                    synchronized(this@Companion) {
+                        jarvisSignal?.cancel()
+                        jarvisSignal = jarvisScope.launch {
+                            delay(700)
+                            runCatching { app.contentResolver.notifyChange(uri, null) }
+                        }
+                    }
+                }
+            }
+            jarvisBeobachter = beobachter
+            runCatching { db.invalidationTracker.addObserver(beobachter) }
         }
     }
 }
