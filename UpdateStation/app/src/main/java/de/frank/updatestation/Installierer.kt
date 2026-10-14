@@ -56,27 +56,20 @@ object Installierer {
      * Die Übergabe an Android läuft dagegen einzeln: Solange der Bestätigungsdialog einer App offen
      * ist, verwirft Android den Dialog der nächsten oft still. Die Sperre hält bis zum endgültigen
      * Ergebnis; nach [UEBERGABE_WARTEN_MS] geht es trotzdem weiter, damit ein liegengelassener
-     * Dialog die übrigen Updates nicht aufhält.
+     * Dialog die übrigen Updates nicht aufhält. Besitzer der Sperre ist das Paket.
      */
     private val uebergabe = Mutex()
-    private var uebergabeBei: String? = null
     private const val UEBERGABE_WARTEN_MS = 2 * 60_000L
 
     private suspend fun warteAufUebergabe(paket: String) {
-        if (withTimeoutOrNull(UEBERGABE_WARTEN_MS) { uebergabe.lock(); true } == true) {
-            synchronized(laufend) { uebergabeBei = paket }
-        }
-    }
-
-    private fun gibUebergabeFrei(paket: String) {
-        val frei = synchronized(laufend) { if (uebergabeBei == paket) { uebergabeBei = null; true } else false }
-        if (frei) runCatching { uebergabe.unlock() }
+        if (!uebergabe.holdsLock(paket)) withTimeoutOrNull(UEBERGABE_WARTEN_MS) { uebergabe.lock(paket) }
     }
 
     /** Bei eigenen Fehlern vor der Übergabe an Android. */
     fun beende(paket: String) {
         synchronized(laufend) { laufend -= paket }
-        gibUebergabeFrei(paket)
+        // unlock(paket) wirft, wenn das Paket die Sperre nicht hält – dann ist nichts freizugeben.
+        runCatching { uebergabe.unlock(paket) }
     }
 
     /** Vom Receiver bei endgültigem Ergebnis (Erfolg, Fehler, Abbruch): Sperre und gespeicherte Session lösen. */
@@ -124,16 +117,13 @@ object Installierer {
         Diagnose.ereignis(context, Phase.INSTALLATION, "START", "paket" to paket, "vc" to m.versionCode)
         try {
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Laedt(0))
-            val geladen = ladePlaetze.withPermit {
-                val d = lade(context, eintrag).also { datei = it }
-                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Prueft)
-                withContext(Dispatchers.IO) { pruefe(context, d, m) }
-                d
-            }
+            val geladen = ladePlaetze.withPermit { lade(context, eintrag) }.also { datei = it }
+            ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Prueft)
+            pruefe(context, geladen, m)
 
             warteAufUebergabe(paket)
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
-            ersetzt = withContext(Dispatchers.IO) { uebergebe(context, geladen, m, eintrag.label) }
+            ersetzt = uebergebe(context, geladen, m, eintrag.label)
             Diagnose.ereignis(context, Phase.INSTALLATION, if (ersetzt) "UEBERGEBEN_ERSETZT" else "UEBERGEBEN", "paket" to paket, "vc" to m.versionCode)
             // Sperre bleibt bis zum Ergebnis im InstallErgebnisReceiver.
         } catch (e: CancellationException) {
@@ -207,7 +197,7 @@ object Installierer {
     }
 
     /** Paket, Version, Hash (in [lade]), Signatur laut update.json und Signatur der installierten App müssen zusammenpassen. */
-    private fun pruefe(context: Context, datei: File, m: UpdateManifest) {
+    private suspend fun pruefe(context: Context, datei: File, m: UpdateManifest) = withContext(Dispatchers.IO) {
         val pm = context.packageManager
         @Suppress("DEPRECATION")
         val archiv = pm.getPackageArchiveInfo(datei.path, PackageManager.GET_SIGNING_CERTIFICATES)
@@ -235,7 +225,7 @@ object Installierer {
     }
 
     /** Übergibt die geprüfte APK an Android. Liefert true, wenn dabei ein vorheriger Versuch ersetzt wurde. */
-    private fun uebergebe(context: Context, datei: File, m: UpdateManifest, label: String): Boolean {
+    private suspend fun uebergebe(context: Context, datei: File, m: UpdateManifest, label: String): Boolean = withContext(Dispatchers.IO) {
         val installer = context.packageManager.packageInstaller
         val einst = Einstellungen(context)
         // Nur hier landen alte Sessions, die abgelaufen (älter als SPERRE_MAX_MS) oder unbekannt sind:
@@ -282,6 +272,6 @@ object Installierer {
             einst.loescheOffeneSession(m.paket)
             throw e
         }
-        return alte.isNotEmpty()
+        alte.isNotEmpty()
     }
 }

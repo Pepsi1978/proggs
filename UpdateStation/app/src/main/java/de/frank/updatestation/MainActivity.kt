@@ -106,10 +106,10 @@ class MainActivity : ComponentActivity() {
                         pruefen = ::pruefe,
                         installiere = ::installiere,
                         installiereAlle = {
-                            // Jedes Update in einer eigenen Coroutine: Laden und Prüfen laufen nebeneinander.
+                            // Jedes Update über den Einzelweg in einer eigenen Coroutine: Laden und Prüfen laufen nebeneinander.
                             ZustandsSpeicher.zustand.value.eintraege
                                 .filter { it.status == Status.UPDATE && !Installierer.laeuft(it.paket) }
-                                .forEach { lifecycleScope.launch { Installierer.installiere(this@MainActivity, it) } }
+                                .forEach(::installiere)
                         },
                         verbindeDrive = ::verbindeDrive,
                         waehleOrdner = { ordnerWahl.launch(null) },
