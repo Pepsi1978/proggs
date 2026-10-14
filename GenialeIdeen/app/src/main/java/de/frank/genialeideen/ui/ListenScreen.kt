@@ -52,7 +52,6 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -97,6 +96,7 @@ import de.frank.module.draganddrop.rememberReorderState
 import de.frank.module.draganddrop.reorderHandle
 import de.frank.module.draganddrop.reorderItem
 import de.frank.module.draganddrop.reorderViewport
+import de.frank.module.sidebar.Sidebar
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.IdeenSchriftDick
 import de.frank.genialeideen.ui.theme.LocalGold
@@ -187,8 +187,7 @@ fun ListenScreen(
         viewModel.waehleKategorie(null)
         umgesetztArt = null
     }
-    // Später registriert, greift also zuerst: Eine offene Schublade schliesst, statt die App zu beenden.
-    BackHandler(enabled = schublade.isOpen) { bereichsraum.launch { schublade.close() } }
+    // Die Sidebar registriert ihren BackHandler später, er greift also zuerst.
 
     val roheListe = when {
         // Die Sammelkategorie zeigt nur Umgesetztes der jeweiligen Art.
@@ -223,45 +222,8 @@ fun ListenScreen(
     val reduziert = LocalBewegungReduziert.current
     ReorderAutoScroll(zustand)
 
-    ModalNavigationDrawer(
-        drawerState = schublade,
-        gesturesEnabled = schublade.isOpen && !schublade.isAnimationRunning,
-        modifier = Modifier.pointerInput(schublade) {
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                if (schublade.isAnimationRunning) return@awaitEachGesture
-                val schliessen = schublade.isOpen
-                var weg = Offset.Zero
-                var erkannt = false
-                while (true) {
-                    // Vor dem nativen Drawer-Drag übernehmen, damit auch beim Schließen
-                    // kein Finger-Offset vor die durchgehende Animation geschaltet wird.
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                    if (erkannt) {
-                        change.consume()
-                        if (!change.pressed) break
-                        continue
-                    }
-                    if (!change.pressed || change.isConsumed) break
-                    weg += change.position - change.previousPosition
-                    if (abs(weg.y) > viewConfiguration.touchSlop && abs(weg.y) >= abs(weg.x)) break
-                    if (abs(weg.x) > viewConfiguration.touchSlop) {
-                        if ((schliessen && weg.x >= 0f) || (!schliessen && weg.x <= 0f)) break
-                        if (schublade.isAnimationRunning) break
-                        erkannt = true
-                        change.consume()
-                        bereichsraum.launch {
-                            if (schliessen) schublade.close() else schublade.open()
-                        }
-                    } else {
-                        // Bereits von einer scrollenden Liste übernommene Gesten nicht stehlen.
-                        val finalEvent = awaitPointerEvent(PointerEventPass.Final)
-                        if (finalEvent.changes.any { it.id == down.id && it.isConsumed }) break
-                    }
-                }
-            }
-        },
+    Sidebar(
+        schublade = schublade,
         drawerContent = {
             KategorienLeiste(
                 kategorien = sortierteKategorien,
