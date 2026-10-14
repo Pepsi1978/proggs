@@ -17,7 +17,8 @@ Verknüpfungspfeil) oder über Spotlight.
 
 | Bereich | Verhalten |
 |---|---|
-| **Prüfen** | Läuft beim Start automatisch für alle Einträge, danach jederzeit einzeln oder gesammelt. Zeigt installierte Version → verfügbare Version. |
+| **Prüfen** | Alle Einträge werden gleichzeitig geprüft; die Kopfzeile zeigt „x von n fertig“. Zeigt installierte Version → verfügbare Version. Das Ergebnis wird gemerkt (`pruefstand.json`): Beim nächsten Öffnen steht es sofort da, neu geprüft wird nur, was älter als 60 Minuten ist – die eigenen Werkzeuge immer. |
+| **Repo-Abgleich** | Vor der Prüfung der eigenen Werkzeuge wird `~/proggs` einmal mit GitHub abgeglichen: `git fetch` und Vorspulen (`--ff-only`), nie ein Merge. Lässt sich das Repo nicht vorspulen, steht das in der Kopfzeile, und die Karten zählen weiter die wartenden Commits. |
 | **Aktualisieren** | Läuft für jedes Programm still durch, ohne dass eine fremde Oberfläche aufgeht. Die Schaltfläche lädt nur dann zum Klick ein, wenn wirklich eine neuere Version vorliegt; ist alles aktuell, steht dort „Aktuell" und sie ist abgeschaltet. |
 | **Laufende Programme** | Wird pfadgenau erkannt (inklusive Helferprogramme). Muss ein Programm für das Update beendet werden, fragt die App vorher und startet es danach wieder, wenn es vorher lief. |
 | **Autostart** | Wird pro Programm angezeigt – gelesen aus `~/Library/LaunchAgents` und den Anmeldeobjekten. Nur lesend. |
@@ -99,7 +100,7 @@ enthalten (damit ein Eintrag aus dem Windows-Katalog nicht stumm ins Leere zeigt
 
 | `art` | Wofür | Pflichtfelder | Prüfung | Update |
 |---|---|---|---|---|
-| `brew` | Grafische Programme mit Homebrew-Cask | `cask`, `appPfad` | Info.plist gegen `brew info --cask … --json=v2` | `brew upgrade --cask …` bzw. `brew install --cask --force …` |
+| `brew` | Grafische Programme mit Homebrew-Cask, **oder** Kommandozeilen-Werkzeuge als Homebrew-Formel | `cask` (+ `appPfad`) **oder** `formel` | Info.plist gegen `brew info --cask … --json=v2` | `brew upgrade --cask …` bzw. `brew install --cask --force …` |
 | `cli` | Werkzeuge, die sich selbst aktualisieren | `exePfad`, `updateArgumente` | `pruefArgumente` (Trockenlauf) **oder** `npmPaket` | `exePfad updateArgumente` |
 | `reposkript` | Eigene Werkzeuge in `~/proggs` | `skript`, `projektDatei` | `git rev-list HEAD..origin/main` + Quell-Info.plist gegen gebaute App | ruft das vorhandene Shell-Skript auf |
 
@@ -116,6 +117,23 @@ Weitere optionale Felder:
 | `dialogWartezeitSekunden` | Nur `reposkript`: wie lange auf den Ja/Nein-Klick gewartet wird |
 | `statusPraefix` | Nur `reposkript`: Praefix der Statuszeile des Skripts. **Leer lassen**, wenn das Skript keine ausgibt – dann fragt die App selbst vorher nach |
 | `hinweis` | Kursive Zeile auf der Karte |
+| `formel` | Nur `brew`: Homebrew-Formel statt Cask (git, node, go, `oven-sh/bun/bun` …). Installierte und verfügbare Version kommen aus `brew info --json=v2`, Update über `brew upgrade`. |
+| `pruefExitCodes` | Nur `cli`: Exit-Codes der Prüfung, die eine gültige Antwort sind (Standard `[0]`). `rustup check` endet mit 100, sobald Updates anstehen. |
+| `pruefAbschnitt` | Nur `cli`: erst Zeilen nach der ersten Zeile mit diesem Text zählen (sdkmanager: `Available Updates`). Fehlt der Abschnitt, ist nichts offen. |
+| `pruefZeilenMuster` | Nur `cli`: regulärer Ausdruck für eine geplante Update-Zeile statt des Pfeils – für Werkzeuge mit Tabellenausgabe. |
+| `updateExePfad` | Nur `cli`: anderes Programm für den Update-Lauf als für die Versionsabfrage (npm-Pakete: Version über `tsc --version`, Update über `npm install -g …`). Läuft im eigenen Ordner, damit npm seine Module findet. |
+
+Ein Cask ohne `appPfad` (z. B. `dotnet-sdk`) liest die installierte Version aus dem `installed`-Feld von brew.
+
+### Entwicklungswerkzeuge
+
+Die Gruppen „Entwicklung: …“ halten die Programmierumgebung aktuell – Gegenstück zur Windows-Fassung 1.3.21:
+.NET SDK, Node.js, OpenJDK 17/21, Rust (rustup), Go, Python 3.14, Kotlin, Gradle, VS Code, Android Studio,
+Android SDK (sdkmanager), Git, GitHub CLI, Bun, Biome, iTerm2, PowerShell 7 sowie globale npm-Pakete
+(TypeScript, tsx, npm, OpenCode CLI, Firebase und Gemini nur wenn installiert). Visual Studio, Build Tools,
+CMake, WSL, Python Launcher und Windows-Terminal gibt es auf dem Mac nicht bzw. nicht installiert.
+Der Cask `android-commandlinetools` ist bewusst **kein** Eintrag: sein Ordner ist das SDK selbst
+(`ANDROID_HOME`), ein Cask-Upgrade würde die installierten SDK-Pakete mitreißen.
 
 ---
 

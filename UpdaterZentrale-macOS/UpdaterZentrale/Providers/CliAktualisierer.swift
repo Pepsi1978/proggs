@@ -31,7 +31,17 @@ struct CliAktualisierer: Aktualisierer {
             let lauf = await Kommandozeile.ausfuehren(exe, pruefArgumente, zeitlimit: 360)
             protokoll.berichte(lauf.ausgabe)
 
-            let geplant = geplanteZeilen(lauf.ausgabe)
+            // Ein Trockenlauf, der scheiterte oder abbrach, listet nichts -- das hiesse "nichts
+            // offen". Nur ein sauberer Lauf darf "aktuell" sagen.
+            if lauf.abgelaufen || !Self.pruefCodeGueltig(eintrag, lauf.exitCode) {
+                return PruefErgebnis(zustand: .fehler, installierteVersion: installiert,
+                                     meldung: lauf.abgelaufen
+                                        ? "Die Prüfung hat das Zeitlimit überschritten – der Stand ist unbekannt."
+                                        : "Die Prüfung endete mit Code \(lauf.exitCode) – der Stand ist unbekannt.",
+                                     protokoll: lauf.ausgabe)
+            }
+
+            let geplant = Self.geplanteZeilen(lauf.ausgabe, eintrag)
             if !geplant.isEmpty {
                 return PruefErgebnis(zustand: .updateVerfuegbar,
                                      installierteVersion: installiert,
@@ -73,7 +83,7 @@ struct CliAktualisierer: Aktualisierer {
     }
 
     func aktualisieren(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
-        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
+        let exe = Pfade.aufloesen(Self.updateExe(eintrag))
         guard FileManager.default.isExecutableFile(atPath: exe) else {
             return PruefErgebnis(zustand: .nichtInstalliert, meldung: "Nicht gefunden: \(exe)")
         }
@@ -81,8 +91,11 @@ struct CliAktualisierer: Aktualisierer {
         let argumente = eintrag.updateArgumente ?? "update"
         protokoll.berichte("\((exe as NSString).lastPathComponent) \(argumente)")
 
+        // npm sucht seine Module relativ zum Arbeitsverzeichnis (MODULE_NOT_FOUND); der eigene
+        // Ordner des Programms ist immer richtig und fuer jedes andere Werkzeug harmlos.
         let lauf = await Kommandozeile.ausfuehren(exe, argumente,
-                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60))
+                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                                  arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent)
         protokoll.berichte(lauf.ausgabe)
 
         if lauf.abgelaufen {
@@ -110,7 +123,8 @@ struct CliAktualisierer: Aktualisierer {
 
         if let pruefArgumente = eintrag.pruefArgumente, !pruefArgumente.istLeer {
             let lauf = await Kommandozeile.ausfuehren(exe, pruefArgumente, zeitlimit: 480)
-            let geplant = geplanteZeilen(lauf.ausgabe)
+            if lauf.abgelaufen || !Self.pruefCodeGueltig(eintrag, lauf.exitCode) { return "" }
+            let geplant = Self.geplanteZeilen(lauf.ausgabe, eintrag)
             return geplant.isEmpty ? "nichts offen" : geplant.joined(separator: " | ")
         }
 
@@ -119,14 +133,43 @@ struct CliAktualisierer: Aktualisierer {
 
     // MARK: - Intern
 
-    /// Zeilen, die eine geplante Aktualisierung als "alt → neu" ausweisen.
-    private func geplanteZeilen(_ ausgabe: String) -> [String] {
-        ausgabe
+    /// Das Programm fuer den Update-Lauf: `updateExePfad`, sonst dasselbe wie fuer die Version.
+    static func updateExe(_ eintrag: ProgrammEintrag) -> String {
+        if let pfad = eintrag.updateExePfad, !pfad.istLeer { return pfad }
+        return eintrag.exePfadWirksam
+    }
+
+    /// Exit-Codes, die trotzdem eine gueltige Antwort tragen (rustup check: 100 = Updates offen).
+    static func pruefCodeGueltig(_ eintrag: ProgrammEintrag, _ exitCode: Int) -> Bool {
+        exitCode == 0 || eintrag.pruefExitCodes.contains(exitCode)
+    }
+
+    /// Die geplanten Updates einer Pruefung: standardmaessig Zeilen mit Pfeil ("alt → neu"), oder --
+    /// wenn der Katalog sie nennt -- Zeilen nach einer Abschnittsmarke, die einem Muster folgen.
+    static func geplanteZeilen(_ ausgabe: String, _ eintrag: ProgrammEintrag) -> [String] {
+        var zeilen = ausgabe
+            .replacingOccurrences(of: "\r", with: "")
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map(String.init)
-            .filter { $0.contains("→") || $0.contains("->") }
-            .map { $0.trimmed }
-            .filter { !$0.isEmpty }
+
+        if let marke = eintrag.pruefAbschnitt, !marke.istLeer {
+            // Kein Abschnitt heisst nichts offen -- sdkmanager laesst "Available Updates" dann weg.
+            if let start = zeilen.firstIndex(where: { $0.localizedCaseInsensitiveContains(marke) }) {
+                zeilen = Array(zeilen[(start + 1)...])
+            } else {
+                zeilen = []
+            }
+        }
+
+        let passt: (String) -> Bool
+        if let muster = eintrag.pruefZeilenMuster, !muster.istLeer,
+           let regex = try? NSRegularExpression(pattern: muster) {
+            passt = { regex.firstMatch(in: $0, range: NSRange($0.startIndex..., in: $0)) != nil }
+        } else {
+            passt = { $0.contains("→") || $0.contains("->") }
+        }
+
+        return zeilen.filter(passt).map { $0.trimmed }.filter { !$0.isEmpty }
     }
 
     /// Fragt die Version direkt per HTTPS ab statt ueber "npm view": das braucht weder node noch

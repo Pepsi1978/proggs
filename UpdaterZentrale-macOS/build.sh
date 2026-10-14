@@ -49,6 +49,8 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/Darstellung.swift"
     "$SRC_DIR/Services/Diagnose.swift"
     "$SRC_DIR/Services/Laufkoordination.swift"
+    "$SRC_DIR/Services/RepoAbgleich.swift"
+    "$SRC_DIR/Services/Pruefstand.swift"
     "$SRC_DIR/Providers/Aktualisierer.swift"
     "$SRC_DIR/Providers/BrewAktualisierer.swift"
     "$SRC_DIR/Providers/CliAktualisierer.swift"

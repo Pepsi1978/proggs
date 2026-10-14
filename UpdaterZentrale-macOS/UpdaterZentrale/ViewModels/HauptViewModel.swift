@@ -177,6 +177,9 @@ final class HauptViewModel {
             // Der Verlauf ueberlebt Neustarts -- jede Karte kann zeigen, wie ihr letzter Lauf ging.
             if let bericht = berichte[eintrag.id] { karte.letzterBericht = bericht }
 
+            // Ebenso die Antwort der letzten Pruefung -- die Liste ist aussagekraeftig, bevor etwas laeuft.
+            if let stand = Pruefstand.lesen(eintrag.id) { karte.standUebernehmen(stand) }
+
             programme.append(karte)
         }
 
@@ -266,9 +269,28 @@ final class HauptViewModel {
         // Ist ein zuvor abgelegtes Update inzwischen angekommen -- oder haengt es noch?
         for programm in programme { await programm.ausstehendesPruefen() }
 
-        await allePruefenMitBesitz(besitz)
+        // Neu geprueft wird nur, was keine frische Antwort hat. Die eigenen Werkzeuge immer: das
+        // kostet einen gemeinsamen git pull und ist der einzige Weg, wie eine gerade im Repo
+        // angekommene Version ohne Klick erscheint.
+        let grenze = Date().addingTimeInterval(-Self.standGueltig)
+        let faellig = programme.filter { p in
+            guard let zeit = p.standVom else { return true }
+            return zeit < grenze || p.eintrag.art == "reposkript"
+        }
+        if faellig.isEmpty {
+            let aeltester = programme.compactMap(\.standVom).min()
+            kopfStatus = "Stand der letzten Prüfung von " + (aeltester.map(Formate.uhrzeit) ?? "–") + " Uhr – "
+                       + updateZusammenfassung + ". „Alle prüfen“ fragt neu ab."
+            vorgang.beenden("uebernommen", kopfStatus)
+            return
+        }
+
+        await allePruefenMitBesitz(besitz, nur: faellig)
         vorgang.beenden("abgeschlossen", kopfStatus)
     }
+
+    /// Wie lange eine gemerkte Antwort beim naechsten Start die Pruefung erspart.
+    private static let standGueltig: TimeInterval = 60 * 60
 
     func allePruefen() async {
         guard let besitz = koordination.sammelBeginnen() else {
@@ -284,27 +306,55 @@ final class HauptViewModel {
         vorgang.beenden("abgeschlossen", kopfStatus)
     }
 
-    private func allePruefenMitBesitz(_ besitz: Laufbesitz) async {
+    private func allePruefenMitBesitz(_ besitz: Laufbesitz, nur: [ProgrammViewModel]? = nil) async {
+        // Eine Momentaufnahme: die Liste darf sich unter dem Lauf nicht verschieben.
+        let liste = nur ?? programme
 
         // Erst den Homebrew-Katalog auffrischen, DANN pruefen. Ohne das liest `brew info` den
         // lokalen Tap, und der kann Tage alt sein -- die Pruefung meldete dann "Aktuell", obwohl
         // ein Cask laengst neuer ist. `winget list` unter Windows hat dieses Problem nicht, weil es
         // seine Quelle selbst aktuell haelt.
-        if programme.contains(where: { $0.eintrag.art == "brew" }) {
+        if liste.contains(where: { $0.eintrag.art == "brew" }) {
             kopfStatus = "Homebrew-Katalog wird aufgefrischt …"
             _ = await Kommandozeile.ausfuehren(Pfade.brew, ["update", "--quiet"], zeitlimit: 300)
         }
 
-        // Bewusst nacheinander: brew greift ohnehin seriell auf seinen Katalog zu, und ein
-        // paralleler Schwung macht das Protokoll unlesbar. Eine Momentaufnahme: die Liste darf
-        // sich unter der Schleife nicht verschieben.
-        let liste = programme
-        let gesamt = liste.count
-        for (i, programm) in liste.enumerated() {
-            kopfStatus = "Prüft \(programm.name) (\(i + 1) von \(gesamt)) …"
-            await programm.pruefen(sammel: besitz)
+        // Die eigenen Werkzeuge werden aus ~/proggs gebaut -- also zuerst den Checkout abgleichen,
+        // einmal fuer alle und bevor eine Karte daraus eine Version liest.
+        var repoHinweis: String?
+        if liste.contains(where: { $0.eintrag.art == "reposkript" }) {
+            kopfStatus = "Gleicht das Repo mit GitHub ab (git pull) …"
+            let abgleich = await RepoAbgleich.shared.abgleichen(erzwingen: true)
+            if !abgleich.gezogenOk { repoHinweis = abgleich.meldung }
         }
+
+        // Alle gleichzeitig: die Pruefungen warten auf verschiedene Dinge (brew, die Registries,
+        // git, lms). Nacheinander dauerte derselbe Durchgang Minuten; jetzt bestimmt die
+        // langsamste einzelne Pruefung das Tempo.
+        var offen = liste.map(\.name)
+        var fertig = 0
+        func anzeigen() {
+            kopfStatus = "Prüft … \(fertig) von \(liste.count) fertig"
+                + (offen.isEmpty ? "" : " – läuft noch: " + offen.prefix(4).joined(separator: ", ")
+                                        + (offen.count > 4 ? " …" : ""))
+        }
+        anzeigen()
+        await withTaskGroup(of: String.self) { gruppe in
+            for programm in liste {
+                gruppe.addTask {
+                    await programm.pruefen(sammel: besitz)
+                    return await programm.name
+                }
+            }
+            for await name in gruppe {
+                if let stelle = offen.firstIndex(of: name) { offen.remove(at: stelle) }
+                fertig += 1
+                anzeigen()
+            }
+        }
+
         kopfStatus = "Prüfung abgeschlossen – " + updateZusammenfassung + "."
+                   + (repoHinweis.map { "  ·  " + $0 } ?? "")
     }
 
     func alleAktualisieren() async {

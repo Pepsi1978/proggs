@@ -24,8 +24,17 @@ struct BrewAktualisierer: Aktualisierer {
     // MARK: - Pruefen
 
     func pruefen(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
+        if let formel = eintrag.formel, !formel.istLeer {
+            return await formelPruefen(formel, protokoll)
+        }
+
         let appPfad = Pfade.aufloesen(eintrag.appPfad)
-        let installiert = appPfad.isEmpty ? "" : Pfade.appVersion(appPfad)
+        var installiert = appPfad.isEmpty ? "" : Pfade.appVersion(appPfad)
+
+        // Casks ohne App-Buendel (dotnet-sdk): die installierte Version kennt nur brew selbst.
+        if appPfad.isEmpty, let cask = eintrag.cask, !cask.istLeer {
+            installiert = await caskInstalliert(cask)
+        }
 
         if installiert.istLeer {
             return PruefErgebnis(zustand: .nichtInstalliert,
@@ -98,6 +107,9 @@ struct BrewAktualisierer: Aktualisierer {
     // MARK: - Aktualisieren
 
     func aktualisieren(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
+        if let formel = eintrag.formel, !formel.istLeer {
+            return await formelAktualisieren(eintrag, formel, protokoll)
+        }
         guard let cask = eintrag.cask, !cask.istLeer else {
             return PruefErgebnis(zustand: .fehler, meldung: "Kein Homebrew-Cask hinterlegt.")
         }
@@ -129,7 +141,7 @@ struct BrewAktualisierer: Aktualisierer {
         }
 
         if istBereitsAktuell(lauf.ausgabe) {
-            let stand = Pfade.appVersion(Pfade.aufloesen(eintrag.appPfad))
+            let stand = await fingerabdruck(eintrag)
             return PruefErgebnis(zustand: .aktuell, installierteVersion: stand,
                                  meldung: "War bereits aktuell.", protokoll: lauf.ausgabe)
         }
@@ -139,7 +151,7 @@ struct BrewAktualisierer: Aktualisierer {
                                  protokoll: lauf.ausgabe)
         }
 
-        let neu = Pfade.appVersion(Pfade.aufloesen(eintrag.appPfad))
+        let neu = await fingerabdruck(eintrag)
         return PruefErgebnis(zustand: .fertig, installierteVersion: neu,
                              meldung: "Update installiert.", protokoll: lauf.ausgabe)
     }
@@ -147,10 +159,115 @@ struct BrewAktualisierer: Aktualisierer {
     // MARK: - Fingerabdruck
 
     /// Die Version aus der Info.plist -- direkt vom Programm gelesen, ohne Netz und ohne brew.
+    /// Formeln und Casks ohne App-Buendel: die installierte Version laut brew (ebenfalls ohne Netz).
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String {
+        if let formel = eintrag.formel, !formel.istLeer {
+            return formelInfo(await infoLauf(["info", "--json=v2", formel]).ausgabe)?.installiert ?? ""
+        }
         let appPfad = Pfade.aufloesen(eintrag.appPfad)
+        if appPfad.isEmpty, let cask = eintrag.cask, !cask.istLeer { return await caskInstalliert(cask) }
         guard !appPfad.isEmpty else { return "" }
         return Pfade.appVersion(appPfad)
+    }
+
+    // MARK: - Formeln
+
+    /// Kommandozeilen-Werkzeuge aus Homebrew (git, node, go …). Anders als bei den Casks ist brew
+    /// hier die Wahrheit fuer beide Seiten: es hat sie installiert, und es kennt die neue Version.
+    private func formelPruefen(_ formel: String, _ protokoll: Fortschritt) async -> PruefErgebnis {
+        guard FileManager.default.isExecutableFile(atPath: Pfade.brew) else {
+            return PruefErgebnis(zustand: .unbekannt, meldung: "Homebrew wurde nicht gefunden (\(Pfade.brew)).")
+        }
+        protokoll.berichte("brew info --json=v2 \(formel)")
+        let lauf = await infoLauf(["info", "--json=v2", formel])
+        if lauf.abgelaufen {
+            return PruefErgebnis(zustand: .unbekannt, meldung: "Zeitlimit beim Abfragen von Homebrew überschritten.",
+                                 protokoll: lauf.ausgabe)
+        }
+        guard let info = formelInfo(lauf.ausgabe) else {
+            return PruefErgebnis(zustand: .unbekannt,
+                                 meldung: "Homebrew kennt die Formel „\(formel)“ nicht oder lieferte keine lesbare Antwort.",
+                                 protokoll: lauf.ausgabe)
+        }
+        protokoll.berichte("Formel \(formel): installiert \(info.installiert.istLeer ? "–" : info.installiert), "
+                           + "verfügbar \(info.verfuegbar)\(info.veraltet ? "  (veraltet)" : "")")
+
+        if info.installiert.istLeer {
+            return PruefErgebnis(zustand: .nichtInstalliert, verfuegbareVersion: info.verfuegbar,
+                                 meldung: "Nicht über Homebrew installiert.", protokoll: lauf.ausgabe)
+        }
+        // brew selbst entscheidet "veraltet" (es kennt Revisionen wie 2.56.0_1); der Zahlenvergleich
+        // faengt nur ab, wenn das Feld fehlt.
+        if info.veraltet || Versionen.istNeuer(info.verfuegbar, als: info.installiert) {
+            return PruefErgebnis(zustand: .updateVerfuegbar, installierteVersion: info.installiert,
+                                 verfuegbareVersion: info.verfuegbar,
+                                 meldung: "Neue Version \(info.verfuegbar) verfügbar.", protokoll: lauf.ausgabe)
+        }
+        return PruefErgebnis(zustand: .aktuell, installierteVersion: info.installiert,
+                             meldung: "Auf dem neuesten Stand.", protokoll: lauf.ausgabe)
+    }
+
+    private func formelAktualisieren(_ eintrag: ProgrammEintrag, _ formel: String,
+                                     _ protokoll: Fortschritt) async -> PruefErgebnis {
+        guard FileManager.default.isExecutableFile(atPath: Pfade.brew) else {
+            return PruefErgebnis(zustand: .fehler, meldung: "Homebrew wurde nicht gefunden (\(Pfade.brew)).")
+        }
+        protokoll.berichte("brew update --quiet")
+        let auffrischen = await Kommandozeile.ausfuehren(Pfade.brew, ["update", "--quiet"], zeitlimit: 300)
+        if !auffrischen.ausgabe.istLeer { protokoll.berichte(auffrischen.ausgabe) }
+
+        protokoll.berichte("brew upgrade \(formel)")
+        let lauf = await Kommandozeile.ausfuehren(Pfade.brew, ["upgrade", formel],
+                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60))
+        protokoll.berichte(lauf.ausgabe)
+
+        if lauf.abgelaufen {
+            return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
+        }
+        let neu = await fingerabdruck(eintrag)
+        if lauf.exitCode != 0 {
+            if istBereitsAktuell(lauf.ausgabe) {
+                return PruefErgebnis(zustand: .aktuell, installierteVersion: neu,
+                                     meldung: "War bereits aktuell.", protokoll: lauf.ausgabe)
+            }
+            return PruefErgebnis(zustand: .fehler, meldung: fehlergrund(lauf.ausgabe, exitCode: lauf.exitCode),
+                                 protokoll: lauf.ausgabe)
+        }
+        return PruefErgebnis(zustand: .fertig, installierteVersion: neu,
+                             meldung: "Update installiert.", protokoll: lauf.ausgabe)
+    }
+
+    private struct FormelInfo {
+        let installiert: String
+        let verfuegbar: String
+        let veraltet: Bool
+    }
+
+    /// `versions.stable` ist die verfuegbare, der juengste `installed`-Eintrag die installierte Version.
+    private func formelInfo(_ json: String) -> FormelInfo? {
+        guard let daten = json.data(using: .utf8),
+              let wurzel = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
+              let formeln = wurzel["formulae"] as? [[String: Any]],
+              let erste = formeln.first else { return nil }
+        let versionen = erste["versions"] as? [String: Any]
+        let stabil = (versionen?["stable"] as? String) ?? ""
+        let revision = (erste["revision"] as? Int) ?? 0
+        let installiert = ((erste["installed"] as? [[String: Any]]) ?? [])
+            .compactMap { $0["version"] as? String }
+            .max { Versionen.istNeuer($1, als: $0) } ?? ""
+        return FormelInfo(installiert: installiert,
+                          verfuegbar: revision > 0 ? "\(stabil)_\(revision)" : stabil,
+                          veraltet: (erste["outdated"] as? Bool) ?? false)
+    }
+
+    private func infoLauf(_ argumente: [String]) async -> BefehlErgebnis {
+        await Kommandozeile.ausfuehren(Pfade.brew, argumente, zeitlimit: 180)
+    }
+
+    /// Die ueber brew installierte Cask-Version, ohne Komma-Anhaengsel; leer, wenn nicht ueber brew.
+    private func caskInstalliert(_ cask: String) async -> String {
+        let lauf = await infoLauf(["info", "--cask", cask, "--json=v2"])
+        return Versionen.caskBereinigen(caskInfo(lauf.ausgabe)?.installiert ?? "")
     }
 
     // MARK: - Intern

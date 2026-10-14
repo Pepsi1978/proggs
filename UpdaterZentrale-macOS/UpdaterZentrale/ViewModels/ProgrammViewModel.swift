@@ -86,6 +86,20 @@ final class ProgrammViewModel {
 
     var letzterBericht: UpdateBericht? { didSet { melden() } }
 
+    /// Zeitpunkt der Antwort, die die Karte gerade zeigt -- aus dem gemerkten Pruefstand oder der
+    /// letzten Pruefung. Nil: noch nie geprueft.
+    private(set) var standVom: Date?
+
+    /// Uebernimmt die gemerkte Antwort der letzten Pruefung, damit die Liste sofort etwas zeigt.
+    func standUebernehmen(_ stand: PruefstandEintrag) {
+        guard let gemerkt = Pruefstand.zustand(stand.zustand) else { return }
+        zustand = gemerkt
+        installierteVersion = stand.installiert
+        verfuegbareVersion = stand.verfuegbar
+        statusText = stand.meldung.istLeer ? "Stand vom " + Formate.zeitpunkt(stand.zeit) : stand.meldung
+        standVom = stand.zeit
+    }
+
     var protokoll: String { protokollPuffer }
 
     var hatUpdate: Bool { zustand == .updateVerfuegbar }
@@ -358,9 +372,10 @@ final class ProgrammViewModel {
     private func befehlsBeschreibung() -> String {
         switch eintrag.art {
         case "brew":
+            if let formel = eintrag.formel, !formel.istLeer { return "brew upgrade " + formel }
             return "brew install --cask --force " + (eintrag.cask ?? "?")
         case "cli":
-            return Pfade.aufloesen(eintrag.exePfadWirksam) + " " + (eintrag.updateArgumente ?? "update")
+            return Pfade.aufloesen(CliAktualisierer.updateExe(eintrag)) + " " + (eintrag.updateArgumente ?? "update")
         case "reposkript":
             return "bash " + (eintrag.skript ?? "") + " " + (eintrag.skriptArgumente ?? "")
         default:
@@ -400,6 +415,15 @@ final class ProgrammViewModel {
         default: schwere = .info
         }
         vorgang.beenden("\(ergebnis.zustand)", ergebnis.meldung, schwere)
+
+        // Eine Pruefung wird gemerkt (nur klare Antworten); nach einem Update ist sie hinfaellig.
+        if art == "pruefung" {
+            Pruefstand.merken(eintrag.id, ergebnis)
+            standVom = Pruefstand.zustandsName(ergebnis.zustand) == nil ? nil : Date()
+        } else {
+            Pruefstand.vergessen(eintrag.id)
+            standVom = nil
+        }
 
         istBeschaeftigt = false
         zustandAktualisieren()

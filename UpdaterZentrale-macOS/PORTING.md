@@ -244,3 +244,21 @@ Bewusst nicht übernommen (nur Windows): Startmenü-Verknüpfung, PowerShell 7 a
 Selbst-Update einer Administrator-Instanz, Einzelstart-/Admin-Übergabe (`Einzelstart.cs`,
 `Rechte.cs`), Fenster-Deckelung und schwarzer Rand beim Maximieren (WPF-spezifisch), das
 xUnit-Testprojekt.
+
+## G) Windows-Gleichstand 14.10.2026 (Mac 1.0.7, Windows bis 1.3.21)
+
+Portiert:
+* **1.3.17** – alle Karten werden gleichzeitig geprüft (TaskGroup, Kopfzeile „x von n fertig“), vorher
+  ein gemeinsamer Repo-Abgleich (`Services/RepoAbgleich.swift`: fetch + `merge --ff-only @{u}`, 2 min
+  gültig, auch von den Repo-Karten genutzt statt je eigenem fetch) und gemerkter Prüfstand
+  (`Services/Pruefstand.swift`, 60 min; eigene Werkzeuge immer neu).
+* **1.3.20** – Kimi Code CLI auch als npm-Installation (`/opt/homebrew/bin/kimi`).
+* **1.3.21** – Programmierumgebung als Update-Karten; Katalogfelder `pruefExitCodes`, `pruefAbschnitt`,
+  `pruefZeilenMuster`, `updateExePfad`; neu nur auf dem Mac: `formel` (Homebrew-Formeln statt winget) und
+  Casks ohne `appPfad`. PowerShell 7 als Formel.
+
+Nicht portiert:
+* **Prüfung beim Windows-Start** (`--hintergrund`, geplante Aufgabe, Einzelstart-Signal) – auf dem Mac
+  bräuchte das einen LaunchAgent; offen.
+* **IPv4-zuerst** – betrifft den .NET-HttpClient; URLSession nutzt Happy Eyeballs.
+* **`wingetName`**, winget-Neustart-Codes, Tabellen-Parsing von winget – winget-spezifisch.

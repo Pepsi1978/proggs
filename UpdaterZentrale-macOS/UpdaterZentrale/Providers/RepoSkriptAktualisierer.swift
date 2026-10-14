@@ -23,10 +23,11 @@ struct RepoSkriptAktualisierer: Aktualisierer {
 
     func pruefen(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
         let installiert = installierteVersion(eintrag)
-        let quelle = quellVersion(eintrag)
 
         // Merkmal 1: liegen auf der Gegenstelle Commits mit Quellcode fuer diesen Ordner, die hier fehlen?
+        // Zuerst: der Abgleich darin spult das Repo vor, erst danach steht die wartende Version fest.
         let hinterstand = await Self.hinterstand(eintrag.repoOrdner, protokoll)
+        let quelle = quellVersion(eintrag)
         let hatRepoOrdner = !(eintrag.repoOrdner?.istLeer ?? true)
 
         // Merkmal 2: ist der Quellstand neuer als die gebaute Fassung? Numerisch verglichen -- ein
@@ -69,13 +70,14 @@ struct RepoSkriptAktualisierer: Aktualisierer {
     /// git nicht antworten konnte -- nie eine stille 0, die als "aktuell" gelesen wuerde.
     static func hinterstand(_ ordner: String?, _ protokoll: Fortschritt) async -> Int? {
         guard let ordner, !ordner.istLeer else { return 0 }
-        let holen = await Kommandozeile.ausfuehren("/usr/bin/git", ["fetch", "--quiet"],
-                                                   zeitlimit: 180, arbeitsverzeichnis: Pfade.repoWurzel)
-        if holen.abgelaufen || holen.exitCode != 0 {
-            protokoll.berichte("git fetch fehlgeschlagen (\(holen.abgelaufen ? "Zeitlimit" : "Code \(holen.exitCode)")) "
-                               + "– Remote-Stand unbekannt: \(holen.ausgabe)")
+        // Ein gemeinsamer Abgleich fuer alle Karten: fetch plus Vorspulen, hoechstens alle zwei
+        // Minuten -- parallele Karten stuenden sich sonst mit eigenen fetches im Weg.
+        let abgleich = await RepoAbgleich.shared.abgleichen()
+        if !abgleich.geholtOk {
+            protokoll.berichte(abgleich.meldung + " – Remote-Stand unbekannt.")
             return nil
         }
+        if !abgleich.gezogenOk { protokoll.berichte(abgleich.meldung) }
         let sauber = ordner.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let muster = bauQuellen.map { ":(glob)\(sauber)/**/\($0)" }
         let zaehl = await Kommandozeile.ausfuehren("/usr/bin/git",

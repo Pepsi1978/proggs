@@ -23,6 +23,11 @@ struct ProgrammEintrag: Codable {
     /// Name des Homebrew-Casks, z. B. "lm-studio".
     var cask: String?
 
+    /// Name einer Homebrew-Formel (Kommandozeilen-Werkzeug ohne App-Buendel, z. B. "git", "node",
+    /// "oven-sh/bun/bun"). Gegenstueck zu den winget-Eintraegen der Programmierumgebung unter
+    /// Windows: installierte und verfuegbare Version kommen hier beide aus `brew info --json=v2`.
+    var formel: String?
+
     /// Das App-Buendel, dessen Info.plist die installierte Version traegt.
     /// Ersetzt den Windows-Weg ueber `winget list` bzw. `Get-AppxPackage`: auf dem Mac ist die
     /// Info.plist die Wahrheit, auch wenn die App gar nicht ueber brew installiert wurde.
@@ -47,6 +52,22 @@ struct ProgrammEintrag: Codable {
     var versionsArgumente: String?
     var updateArgumente: String?
     var pruefArgumente: String?
+
+    /// Exit-Codes der Pruefung, die trotzdem eine gueltige Antwort sind. `rustup check` endet mit
+    /// 100, genau wenn Updates anstehen -- ohne das las sich jedes offene Update als Fehler.
+    var pruefExitCodes: [Int] = [0]
+
+    /// Erst Zeilen nach der ersten Zeile mit diesem Text zaehlen als geplante Updates.
+    var pruefAbschnitt: String?
+
+    /// Regulaerer Ausdruck fuer eine geplante Update-Zeile statt des Pfeils -- fuer Werkzeuge mit
+    /// Tabellenausgabe (sdkmanager: "emulator | 36.4.10 | 37.2.12").
+    var pruefZeilenMuster: String?
+
+    /// Anderes Programm fuer den Update-Lauf als fuer die Versionsabfrage: die npm-Pakete melden
+    /// ihre Version selbst (tsc --version), aktualisiert werden sie aber ueber npm.
+    var updateExePfad: String?
+
     var npmPaket: String?
     /// Klartext-Adresse, deren Inhalt die neueste Version nennt (z. B. das Kimi-CDN "latest").
     var versionsUrl: String?
@@ -118,9 +139,10 @@ struct ProgrammEintrag: Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, gruppe, beschreibung, art
-        case cask, appPfad, bundleId
+        case cask, formel, appPfad, bundleId
         case exePfad, exePfadAlternativen, ausblendenWennFehlt
-        case versionsArgumente, updateArgumente, pruefArgumente, npmPaket, versionsUrl, startArgumente
+        case versionsArgumente, updateArgumente, pruefArgumente, npmPaket,
+             pruefExitCodes, pruefAbschnitt, pruefZeilenMuster, updateExePfad, versionsUrl, startArgumente
         case pfeilZaehlen, zeitlimitMinuten
         case repoOrdner, skript, skriptArgumente, statusPraefix, projektDatei, dialogWartezeitSekunden
         case prozesse, helferProzesse, beendenVorUpdate, neuStartenNachUpdate
@@ -138,6 +160,7 @@ struct ProgrammEintrag: Codable {
         beschreibung = (try? c.decode(String.self, forKey: .beschreibung)) ?? ""
         art = (try? c.decode(String.self, forKey: .art)) ?? "brew"
         cask = try? c.decode(String.self, forKey: .cask)
+        formel = try? c.decode(String.self, forKey: .formel)
         appPfad = try? c.decode(String.self, forKey: .appPfad)
         bundleId = try? c.decode(String.self, forKey: .bundleId)
         exePfad = (try? c.decode(String.self, forKey: .exePfad)) ?? ""
@@ -148,6 +171,10 @@ struct ProgrammEintrag: Codable {
         updateArgumente = try? c.decode(String.self, forKey: .updateArgumente)
         pruefArgumente = try? c.decode(String.self, forKey: .pruefArgumente)
         npmPaket = try? c.decode(String.self, forKey: .npmPaket)
+        pruefExitCodes = (try? c.decode([Int].self, forKey: .pruefExitCodes)) ?? [0]
+        pruefAbschnitt = try? c.decode(String.self, forKey: .pruefAbschnitt)
+        pruefZeilenMuster = try? c.decode(String.self, forKey: .pruefZeilenMuster)
+        updateExePfad = try? c.decode(String.self, forKey: .updateExePfad)
         startArgumente = try? c.decode(String.self, forKey: .startArgumente)
         pfeilZaehlen = (try? c.decode(Bool.self, forKey: .pfeilZaehlen)) ?? false
         zeitlimitMinuten = (try? c.decode(Int.self, forKey: .zeitlimitMinuten)) ?? 20
@@ -336,6 +363,12 @@ enum Formate {
         let f = DateFormatter()
         f.locale = Locale(identifier: "de_DE")
         f.dateFormat = "dd.MM.yyyy"
+        return f.string(from: datum)
+    }
+
+    static func uhrzeit(_ datum: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
         return f.string(from: datum)
     }
 
