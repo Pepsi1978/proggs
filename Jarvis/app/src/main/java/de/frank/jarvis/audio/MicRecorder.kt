@@ -47,6 +47,33 @@ class MicRecorder(context: Context) {
     private var activeSampleRate = SAMPLE_RATE
 
     /**
+     * Sprachaktivitätserkennung (Silero). Einmal geladen und dann behalten; schlägt das Laden fehl, bleibt es bei
+     * null und alles läuft wie früher über den Pegel. Vorgeladen im Hintergrund, damit die erste Aufnahme nicht wartet.
+     */
+    private val vad: SileroVad? by lazy {
+        runCatching { SileroVad(appContext) }
+            .onFailure { logger.warning("Silero VAD not available: ${it.message}") }
+            .getOrNull()
+    }
+
+    @Volatile
+    private var zeitachse: SprachZeitachse? = null
+
+    /**
+     * Wie viele 32-ms-Rahmen der laufenden Aufnahme bisher sicher Sprache waren; wächst nur. Null ohne
+     * Spracherkennung (Modell fehlt, andere Abtastrate): Dann zählt wie früher der Pegel.
+     */
+    val sprachRahmen: Long? get() = zeitachse?.sprachRahmen
+
+    /** Nach [stop]: je 32-ms-Rahmen, ob die Aufnahme dort nach Stimme klang; null ohne Spracherkennung. */
+    var letzteStimmhaft: BooleanArray? = null
+        private set
+
+    init {
+        Thread({ vad }, "vad-laden").apply { isDaemon = true }.start()
+    }
+
+    /**
      * Starts capturing.
      *
      * [requestedSampleRate] lets voice cloning record in higher quality than speech recognition
@@ -114,6 +141,8 @@ class MicRecorder(context: Context) {
         }
 
         synchronized(bufferLock) { pcmBuffer.reset() }
+        letzteStimmhaft = null
+        zeitachse = null
         recorder = activeRecorder
         startedAtMs = System.currentTimeMillis()
         // Während gesprochen wird, schon die Verbindung zu Groq öffnen — beim Hochladen steht sie dann.
@@ -121,6 +150,13 @@ class MicRecorder(context: Context) {
         if (requestedSampleRate == SAMPLE_RATE) GroqNetz.vorwaermen()
         recordingJob = scope.launch(Dispatchers.IO) {
             val readBuffer = ByteArray(minBufferSize)
+            // Silero kennt nur 16 kHz; die Stimm-Aufnahme in höherer Qualität läuft ohne.
+            var achse = if (sampleRate == SAMPLE_RATE) {
+                vad?.let { modell -> modell.zuruecksetzen(); SprachZeitachse(modell::wahrscheinlichkeit) }
+            } else {
+                null
+            }
+            zeitachse = achse
             try {
                 while (isActive && recording.get()) {
                     val read = activeRecorder.read(
@@ -133,6 +169,16 @@ class MicRecorder(context: Context) {
                     when {
                         read > 0 -> {
                             _pegel.value = messePegel(readBuffer, read)
+                            achse?.let { a ->
+                                try {
+                                    a.pcm(readBuffer, read)
+                                } catch (error: Throwable) {
+                                    // Nie die Aufnahme opfern: ohne Spracherkennung weiter, wie früher über den Pegel.
+                                    logger.warning("Silero VAD failed, falling back to level: ${error.message}")
+                                    achse = null
+                                    zeitachse = null
+                                }
+                            }
                             synchronized(bufferLock) {
                                 if (pcmBuffer.size() + read <= MAX_BUFFER_BYTES) {
                                     pcmBuffer.write(readBuffer, 0, read)
@@ -189,6 +235,9 @@ class MicRecorder(context: Context) {
             true
         } ?: false
         if (!joined) logger.warning("AudioRecord read job did not stop within timeout")
+        // Erst nach dem Ende des Lese-Jobs: Er schreibt die Zeitachse.
+        letzteStimmhaft = if (joined) runCatching { zeitachse?.stimmhaft() }.getOrNull() else null
+        zeitachse = null
 
         val pcm = synchronized(bufferLock) {
             pcmBuffer.toByteArray().also { pcmBuffer.reset() }

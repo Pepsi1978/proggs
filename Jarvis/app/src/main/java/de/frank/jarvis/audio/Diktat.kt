@@ -17,8 +17,10 @@ class Diktat(private val transcriber: GroqTranscriber) {
 
     data class Ergebnis(val text: String, val teileGesamt: Int, val teileFehlend: Int)
 
-    suspend fun transkribiere(wav: ByteArray): Ergebnis {
+    /** [stimmhaft]: Zeitachse der Spracherkennung zur ganzen Aufnahme (32-ms-Rahmen), passt nur ungeschnitten. */
+    suspend fun transkribiere(wav: ByteArray, stimmhaft: BooleanArray? = null): Ergebnis {
         val teile = schneide(wav)
+        val zeitachse = stimmhaft?.takeIf { teile.size == 1 }
         if (teile.size > 1) {
             IdeenLog.info(
                 "Diktat",
@@ -31,7 +33,7 @@ class Diktat(private val transcriber: GroqTranscriber) {
         var fehlend = 0
         var ersterFehler: Throwable? = null
         teile.forEach { teil ->
-            runCatching { transcriber.transcribe(teil) }
+            runCatching { transcriber.transcribe(teil, zeitachse) }
                 .onSuccess { text -> if (text.isNotBlank()) stuecke += text.trim() }
                 .onFailure { fehler ->
                     // Ein Abbruch durch den Nutzer ist kein Übertragungsfehler.

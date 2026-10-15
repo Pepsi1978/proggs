@@ -56,7 +56,23 @@ class SpeechAnalysis(
 }
 
 class SpeechAnalyzer {
-    fun analyze(wav: ByteArray?): SpeechAnalysis? = runCatching { decode(wav) }
+    /**
+     * Mit [stimmhaft] (Zeitachse der Spracherkennung, je [SprachZeitachse.RAHMEN_MS]) zählt nur erkannte Stimme als
+     * Sprache, nicht der Pegel: Fahrgeräusch liegt über [RMS_THRESHOLD] und hätte sonst jeden Rahmen „stimmhaft“
+     * gemacht. Der Schnitt richtet sich dann ebenfalls nach der Stimme (ohne Pegelwerte, siehe [SpeechAnalysis]).
+     */
+    fun analyze(wav: ByteArray?, stimmhaft: BooleanArray? = null): SpeechAnalysis? {
+        if (stimmhaft != null && wav != null && wav.size > WAV_HEADER_BYTES + 4) {
+            return SpeechAnalysis(
+                voicedMs = stimmhaft.count { it } * SprachZeitachse.RAHMEN_MS,
+                frameMs = SprachZeitachse.RAHMEN_MS,
+                voicedFrames = stimmhaft,
+            )
+        }
+        return analyzePegel(wav)
+    }
+
+    private fun analyzePegel(wav: ByteArray?): SpeechAnalysis? = runCatching { decode(wav) }
         .getOrElse { error ->
             logger.warning("PCM analysis failed open: ${error.message}")
             null

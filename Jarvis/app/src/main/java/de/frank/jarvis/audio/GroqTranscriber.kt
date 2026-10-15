@@ -34,7 +34,12 @@ class GroqTranscriber(
     val isConfigured: Boolean
         get() = apiKey.isNotBlank()
 
-    suspend fun transcribe(wav: ByteArray): String = withContext(Dispatchers.IO) {
+    /**
+     * [stimmhaft]: Zeitachse der Spracherkennung zu genau dieser Aufnahme (je 32 ms, aus [MicRecorder]). Mit ihr
+     * zählt für Zuschnitt und Filter nur erkannte Stimme statt des Pegels: Im Auto liegt das Fahrgeräusch überall
+     * über der Pegel-Schwelle, dann griffe kein Zuschnitt und Whisper bekäme die Rauschpause am Ende mit.
+     */
+    suspend fun transcribe(wav: ByteArray, stimmhaft: BooleanArray? = null): String = withContext(Dispatchers.IO) {
         if (!isConfigured) {
             throw GroqTranscriptionException("Groq ist auf diesem Geraet nicht konfiguriert.")
         }
@@ -42,7 +47,7 @@ class GroqTranscriber(
             throw GroqTranscriptionException("Die Aufnahme ist fuer die Groq-Transkription zu gross.")
         }
 
-        val roheAnalyse = analyzer.analyze(wav)
+        val roheAnalyse = analyzer.analyze(wav, stimmhaft)
         if (filterStille && roheAnalyse != null && roheAnalyse.voicedMs < SpeechAnalyzer.MIN_SPEECH_MS) {
             logger.info("Layer 1: recording rejected before upload (${roheAnalyse.voicedMs} ms voiced)")
             return@withContext ""
@@ -52,8 +57,15 @@ class GroqTranscriber(
         // der Aufnahme Schweigen. Danach neu analysieren, damit die Zeitstempel des
         // Halluzinationsfilters zur hochgeladenen Datei passen. Der Stille-Filter ist zugleich der
         // Schalter: Ist er aus, geht die Aufnahme unverändert hoch.
-        val hochladen = if (filterStille && roheAnalyse != null) stilleAbschneiden(wav, roheAnalyse) else wav
-        val analysis = if (hochladen === wav) roheAnalyse else analyzer.analyze(hochladen)
+        val schnitt = if (filterStille && roheAnalyse != null) stilleAbschneiden(wav, roheAnalyse) else null
+        val hochladen = schnitt?.first ?: wav
+        val analysis = if (schnitt == null) {
+            roheAnalyse
+        } else {
+            // Die Zeitachse um den abgeschnittenen Anfang verschieben, damit sie zur hochgeladenen Datei passt.
+            val ab = (schnitt.second / SprachZeitachse.RAHMEN_MS).toInt()
+            analyzer.analyze(hochladen, stimmhaft?.let { it.copyOfRange(ab.coerceAtMost(it.size), it.size) })
+        }
 
         val beginn = System.currentTimeMillis()
         val multipart = MultipartBody.Builder()
@@ -119,12 +131,13 @@ class GroqTranscriber(
      * liegt oft darunter, und nur betonte Silben kämen sonst darüber. Bringt der Schnitt weniger als
      * [MIN_ERSPARNIS_MS], bleibt die Aufnahme, wie sie ist.
      */
-    private fun stilleAbschneiden(wav: ByteArray, analyse: SpeechAnalysis): ByteArray {
-        if (wav.size <= WAV_KOPF_BYTES) return wav
+    /** Liefert die geschnittene Aufnahme und wie viele ms vorn wegfielen; null, wenn sie bleibt, wie sie ist. */
+    private fun stilleAbschneiden(wav: ByteArray, analyse: SpeechAnalysis): Pair<ByteArray, Long>? {
+        if (wav.size <= WAV_KOPF_BYTES) return null
         val schwelle = analyse.schnittSchwelle()
         val erster = analyse.ersterFrameUeber(schwelle)
         val letzter = analyse.letzterFrameUeber(schwelle)
-        if (erster < 0 || letzter < erster) return wav
+        if (erster < 0 || letzter < erster) return null
         val abtastrate = SpeechAnalyzer.abtastrate(wav)
         // 16 Bit mono: zwei Byte je Abtastwert.
         val bytesJeMs = abtastrate * 2 / 1_000.0
@@ -138,7 +151,7 @@ class GroqTranscriber(
         val von = alsByte(vonMs)
         val bis = alsByte(bisMs)
         val gespart = datenLaenge - (bis - von)
-        if (bis <= von || gespart < MIN_ERSPARNIS_MS * bytesJeMs) return wav
+        if (bis <= von || gespart < MIN_ERSPARNIS_MS * bytesJeMs) return null
         val ergebnis = ByteArray(WAV_KOPF_BYTES + (bis - von))
         System.arraycopy(wav, 0, ergebnis, 0, WAV_KOPF_BYTES)
         System.arraycopy(wav, WAV_KOPF_BYTES + von, ergebnis, WAV_KOPF_BYTES, bis - von)
@@ -146,7 +159,7 @@ class GroqTranscriber(
         schreibeLittleEndian(ergebnis, 4, ergebnis.size - 8)
         schreibeLittleEndian(ergebnis, 40, bis - von)
         logger.info("Silence trimmed: ${wav.size} -> ${ergebnis.size} bytes (cut threshold $schwelle)")
-        return ergebnis
+        return ergebnis to (von / bytesJeMs).toLong()
     }
 
     private fun schreibeLittleEndian(ziel: ByteArray, offset: Int, wert: Int) {

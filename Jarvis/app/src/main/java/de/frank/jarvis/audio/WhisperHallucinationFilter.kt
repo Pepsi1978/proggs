@@ -146,6 +146,13 @@ class WhisperHallucinationFilter {
             "thanks for watching",
             "please subscribe",
             "subtitles by the amara org community",
+            // Aus dem Genialen Wecker (WhisperDiktat) übernommen; gelten wie alle nur kurz, exakt und in Stille.
+            "danke fürs zuschauen",
+            "untertitel im auftrag des zdf",
+            "sous titrage société radio canada",
+            "merci d avoir regardé",
+            "subtítulos realizados por la comunidad de amara org",
+            "gracias por ver el video",
         )
     }
 }

@@ -27,7 +27,7 @@ class SprechEndeTest {
             }
         })
         assertEquals(SprechEnde.Lage.FERTIG, lage)
-        assertTrue("Ende nach 1,6 s Stille, war $ms", ms in 4_550..4_800)
+        assertTrue("Ende nach 4,5 s Stille, war $ms", ms in 7_500..7_600)
     }
 
     @Test
@@ -64,7 +64,7 @@ class SprechEndeTest {
             }
         })
         assertEquals(SprechEnde.Lage.FERTIG, lage)
-        assertTrue("Ende nach 1,6 s Stille, war $ms", ms in 4_500..4_800)
+        assertTrue("Ende nach 4,5 s Stille, war $ms", ms in 7_450..7_600)
     }
 
     @Test

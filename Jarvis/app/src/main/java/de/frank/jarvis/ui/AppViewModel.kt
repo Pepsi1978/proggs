@@ -475,12 +475,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Wartet, bis „Hey Jarvis“ das Mikrofon losgelassen hat, und startet dann die Aufnahme. */
     private suspend fun aufnahmeStarten(): Boolean {
+        val stand = wechselStand
         de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
-        if (mikro.start(viewModelScope)) { nimmtAuf = true; return true }
+        // Während des Wartens von Hand die Session gewechselt: Diese Aufnahme gehört zur alten und startet nicht mehr.
+        if (stand != wechselStand) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return false }
+        if (mikro.start(viewModelScope)) { nimmtAuf = true; aufnahmeStand = stand; return true }
         de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         return false
     }
     private var holtMikro = false
+    /** Zählt Sessionwechsel von Hand. Jede Aufnahme merkt sich den Stand beim Start ([aufnahmeStand]) und gehört nur zu dieser Session. */
+    private var wechselStand = 0
+    private var aufnahmeStand = 0
+    /** Die Mitschrift der zuletzt beendeten Aufnahme; ein Wechsel von Hand bricht sie ab. */
+    private var mitschriftJob: Job? = null
+
+    /**
+     * Frank wechselt von Hand die Session (Seitenleiste, „Neues Gespräch“, Löschen): Aufnahme, Mitschrift und Gesprächsmodus
+     * der alten Session enden sofort. Nichts davon darf in der neuen Session landen oder dort das Mikrofon wieder öffnen.
+     * Laufende Antworten und Programmieraufträge der alten Session bleiben unberührt und schreiben in deren Datei.
+     */
+    private fun aufnahmeVerwerfen() {
+        wechselStand++
+        val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
+        weckwortLauf?.cancel()
+        mitschriftJob?.cancel()
+        mitschriftJob = null
+        weichendeRunde = null
+        if (!aktiv) return
+        nimmtAuf = false
+        freihaendig = false
+        schreibtMit = false
+        diktatZiel = null
+        Logbuch.sprache("Aufnahme verworfen", "Session von Hand gewechselt")
+        viewModelScope.launch {
+            mikro.stop()
+            de.frank.jarvis.audio.AufnahmeDienst.stoppen()
+            de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        }
+    }
 
     // ---- Hey Jarvis ----
 
@@ -577,7 +610,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Kam „Hey Jarvis“ aus einer anderen App, aus dem Hintergrund oder per Kaltstart, beginnt ein neues Gespräch (beim
         // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
         // gespeichert; arbeitet Jarvis dort noch, landet die Antwort in dessen Datei, der Programmierauftrag läuft weiter.
-        if (!fortsetzen && (gespraech.isNotEmpty() || sitzungId != null)) neuesGespraech()
+        if (!fortsetzen && (gespraech.isNotEmpty() || sitzungId != null)) gespraechLeeren()
         // Ausdrücklich aktiviert: Eine früher beendete Sprachsession hindert die neue nicht mehr.
         sprachsitzungBeendet = false
         val treffer = de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
@@ -648,7 +681,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         var lage = de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER
         while (nimmtAuf && lage == de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER) {
             kotlinx.coroutines.delay(50)
-            lage = ende.neu(pegel.value, System.currentTimeMillis() - start)
+            lage = ende.neu(pegel.value, System.currentTimeMillis() - start, mikro.sprachRahmen)
         }
         freihaendig = false
         when {
@@ -692,20 +725,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** [freigeben] = false im Gesprächsmodus: Das Mikrofon bleibt für die nächste Runde reserviert. */
     private fun aufnahmeBeenden(freigeben: Boolean = true) {
         nimmtAuf = false
+        // Die Mitschrift gehört zur Session, in der die Aufnahme begann.
+        val stand = aufnahmeStand
         schreibtMit = true
         // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
         val ziel = diktatZiel?.takeIf { merkOffen != null }
         diktatZiel = null
-        viewModelScope.launch {
+        mitschriftJob = viewModelScope.launch {
             try {
                 val wav = mikro.stop()
+                val stimmhaft = mikro.letzteStimmhaft
                 de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 if (freigeben && weckwortLauf?.isActive != true) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
                 val groq = transkribierer()
-                val text = withContext(Dispatchers.IO) { de.frank.jarvis.audio.Diktat(groq).transkribiere(wav).text.trim() }
+                val text = withContext(Dispatchers.IO) { de.frank.jarvis.audio.Diktat(groq).transkribiere(wav, stimmhaft).text.trim() }
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
+                // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
+                if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", "Session von Hand gewechselt"); return@launch }
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
                 else if ((weckwortLauf?.isActive == true && istAusbefehl(text)) || istSprachsessionEnde(text)) {
@@ -914,6 +952,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste; arbeitet Jarvis dort noch, macht er weiter. */
     fun neuesGespraech() {
+        // Von Hand (Knopf, Seitenleiste, Löschen): Aufnahme und Gesprächsmodus der alten Session enden.
+        aufnahmeVerwerfen()
+        gespraechLeeren()
+    }
+
+    /** Leert die Ansicht ohne die Aufnahme anzufassen: für „Hey Jarvis“ und den Wechsel per Sprache, die im neuen Gespräch weiterhören. */
+    private fun gespraechLeeren() {
         sitzungId?.let { vorherigeSitzung = it }
         vorleser.stopp()
         gespraech.clear()
@@ -956,6 +1001,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Ein altes Gespräch öffnen und dort weitermachen. Läuft im bisherigen Gespräch noch eine Antwort, arbeitet sie im Hintergrund weiter. */
     fun sitzungOeffnen(id: String) {
         if (id == sitzungId) return
+        // Von Hand gewechselt: Aufnahme, Mitschrift und Gesprächsmodus der alten Session enden sofort, nicht erst nach dem Laden.
+        aufnahmeVerwerfen()
         viewModelScope.launch { sitzungLaden(id) }
     }
 
@@ -1005,7 +1052,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         reiter = Reiter.JARVIS
         merkOffen = null
         when (befehl) {
-            NaviBefehl.Neu -> { neuesGespraech(); navigiertMelden("Neue Session ist offen.", vorlesen) }
+            NaviBefehl.Neu -> { gespraechLeeren(); navigiertMelden("Neue Session ist offen.", vorlesen) }
             NaviBefehl.Zurueck -> {
                 val ziel = vorherigeSitzung?.takeIf { v -> v != sitzungId && sitzungen.any { it.id == v } }
                     ?: sitzungen.firstOrNull { it.id != sitzungId }?.id
