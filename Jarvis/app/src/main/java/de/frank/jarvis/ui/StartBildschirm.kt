@@ -309,11 +309,10 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
     val f = LocalFarben.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (n.vonMir) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
         val grund = if (n.vonMir) Modifier.knopf3d(f.primaer, f.tertiaer, 20.dp, f.dunkel) else Modifier.glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark)
-        Text(
-            n.text,
-            Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp),
-            color = if (n.vonMir) f.aufPrimaer else f.text, fontSize = 16.sp, lineHeight = 22.sp,
-        )
+        val form = Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp)
+        // Meldungen eines Programmierauftrags: Symbole statt Emojis, wichtige Fakten fett.
+        if (n.art == "programmieren") ProgrammierText(n.text, form, farbe = f.text)
+        else Text(n.text, form, color = if (n.vonMir) f.aufPrimaer else f.text, fontSize = 16.sp, lineHeight = 22.sp)
         if (!n.vonMir) {
             Spacer(Modifier.width(6.dp))
             Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
@@ -346,13 +345,29 @@ private fun ProgrammierAktivitaet(vm: AppViewModel) {
     val wort = remember(a.schritt) { SPINNER_WOERTER.random() }
     val sekunden = ((jetzt - a.zuletzt) / 1_000).coerceAtLeast(0)
     val seit = if (sekunden < 90) "${sekunden}s" else "${sekunden / 60} min"
-    Row(Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(SPINNER[bild], color = CLAUDE_ORANGE, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp))
-        Text("$wort…", color = CLAUDE_ORANGE, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+    // Zwei Zeilen, damit auf dem zugeklappten Handy nichts abgeschnitten wird: oben Wort und Laufzeit des Auftrags,
+    // darunter (eingerückt, bis drei Zeilen) App und letzte Aktivität.
+    Column(Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(SPINNER[bild], color = CLAUDE_ORANGE, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp))
+            Text("$wort…", color = CLAUDE_ORANGE, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+            if (a.start > 0) Text(" · " + laufzeit((jetzt - a.start) / 1_000), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
         Text(
-            " (${a.app} · letzte Aktivität vor $seit)",
-            color = if (sekunden > 180) f.gefahr else f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            "(${a.app} · letzte Aktivität vor $seit)",
+            color = if (sekunden > 180) f.gefahr else f.textLeise, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 28.dp, top = 1.dp),
         )
+    }
+}
+
+/** Laufzeit wie im Terminal: „42 s“, „4 min 12 s“, „1 h 3 min“. */
+private fun laufzeit(sekunden: Long): String {
+    val s = sekunden.coerceAtLeast(0)
+    return when {
+        s < 60 -> "$s s"
+        s < 3_600 -> "${s / 60} min ${s % 60} s"
+        else -> "${s / 3_600} h ${s % 3_600 / 60} min"
     }
 }
 
@@ -375,7 +390,7 @@ private fun Rueckfrage(vm: AppViewModel, n: Nachricht) {
     val f = LocalFarben.current
     val k = remember(n.kontext) { runCatching { org.json.JSONObject(n.kontext) }.getOrNull() }
     Column(Modifier.fillMaxWidth().widthIn(max = 520.dp).glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(n.text, color = f.text, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold)
+        ProgrammierText(n.text, farbe = f.text, fontWeight = FontWeight.SemiBold)
         if (k == null) return@Column
         if (k.optBoolean("beantwortet")) {
             Text("✓ Beantwortet: " + k.optString("antwort"), color = f.erfolg, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))

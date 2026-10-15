@@ -235,7 +235,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun aktivitaetMelden(eintrag: JSONObject) = ProgrammierChat.setze(
         eintrag.optString("gespraech"),
-        ProgrammierChat.Aktivitaet(eintrag.optString("app"), eintrag.optBoolean("arbeitet"), eintrag.optLong("aktiv", eintrag.optLong("zeit")), eintrag.optString("schritt")),
+        ProgrammierChat.Aktivitaet(eintrag.optString("app"), eintrag.optBoolean("arbeitet"), eintrag.optLong("aktiv", eintrag.optLong("zeit")), eintrag.optString("schritt"), eintrag.optLong("start")),
     )
 
     /** Beim Start der App: die drehende Anzeige für Aufträge, die noch arbeiten, aus dem Auftragsbuch herstellen. */
@@ -312,7 +312,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "fehler" -> "Problem beim Programmieren: $appName"
                 else -> "Jarvis programmiert: $appName"
             }
-            val text = eintrag.optString("schritt")
+            // In der Benachrichtigung kein Markdown: Fettungen gibt es nur im Chat.
+            val text = eintrag.optString("schritt").replace("**", "")
             val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
             app.getSystemService(NotificationManager::class.java).notify(
                 nummer,

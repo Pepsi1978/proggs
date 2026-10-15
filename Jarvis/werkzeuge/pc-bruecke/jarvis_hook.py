@@ -183,8 +183,8 @@ def sammel_und_sende(z: dict, neu: str | None, sofort: bool = False, stand: str 
 
 
 def lesbar(text: str) -> str:
-    """Markdown fürs Handy entschärfen: Fett- und Code-Zeichen weg, Zeilen bleiben."""
-    return re.sub(r"\*\*|`", "", text).strip()
+    """Code-Zeichen weg, Zeilen bleiben. **Fett** bleibt: Jarvis zeigt es im Chat fett an."""
+    return text.replace("`", "").strip()
 
 
 def schon_gesehen(z: dict, text: str) -> bool:

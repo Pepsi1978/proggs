@@ -26,7 +26,7 @@ object ProgrammierChat {
     }
 
     /** Ob die Sitzung eines Auftrags gerade arbeitet, je Gespräch: für die drehende Anzeige unter der letzten Nachricht. */
-    data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String)
+    data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String, val start: Long = 0L)
 
     private val _aktivitaet = MutableStateFlow<Map<String, Aktivitaet>>(emptyMap())
     val aktivitaet: StateFlow<Map<String, Aktivitaet>> = _aktivitaet
