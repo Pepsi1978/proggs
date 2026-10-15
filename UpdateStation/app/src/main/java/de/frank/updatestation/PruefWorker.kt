@@ -49,6 +49,8 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             // Eigene Nachprüfung erkennen: sie darf die nächste nur anhängen, nie sich selbst ersetzen.
             val liste = if (nurVorladen) Pruefer.bewerte(app, Einstellungen(app).funde)
                 else Pruefer.pruefe(app, ausNachpruefung = TAG_NACHPRUEFUNG in tags)
+            // Inzwischen anders installiert (adb, andere Sitzung): alte „bereit“-Meldung wegräumen.
+            liste.filter { it.status != Status.UPDATE }.forEach { Benachrichtigungen.entferneUpdate(app, it.paket) }
             val fertig = Vorladen.lade(app, liste)
             if (fertig.isNotEmpty()) {
                 Pruefer.bewerteGespeichert(app)
