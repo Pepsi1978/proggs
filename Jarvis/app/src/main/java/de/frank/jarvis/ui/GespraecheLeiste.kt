@@ -164,7 +164,11 @@ private fun Leiste(vm: AppViewModel, aufNeu: () -> Unit, aufWahl: (String) -> Un
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                         ) {
                             Text(s.titel.ifBlank { "Gespräch" }, color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
-                            Text(zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                            val arbeitet = vm.laufende.containsKey(s.id)
+                            Text(
+                                if (arbeitet) "Jarvis arbeitet …" else zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten",
+                                color = if (arbeitet) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
+                            )
                         }
                     }
                 }

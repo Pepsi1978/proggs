@@ -181,7 +181,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String): Ergebnis {
         val uebersprungen = mutableListOf<String>()
-        val gespraech = ProgrammierChat.aktivesGespraech.orEmpty()
+        val gespraech = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.GespraechKennung]?.id ?: ProgrammierChat.aktivesGespraech.orEmpty()
         for (ziel in wahl) {
             val mitFortschritt = auftrag + "\n\n" + fortschrittsAnweisung(nummer, pc = ziel is PcBruecke)
             val start = try {

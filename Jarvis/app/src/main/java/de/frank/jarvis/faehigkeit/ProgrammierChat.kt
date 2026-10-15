@@ -17,6 +17,14 @@ import kotlinx.coroutines.flow.StateFlow
 object ProgrammierChat {
     @Volatile var aktivesGespraech: String? = null
 
+    /**
+     * Die Kennung des Gesprächs im Koroutinen-Kontext der laufenden Antwort. Arbeiten mehrere Gespräche gleichzeitig, findet
+     * ein Programmierauftrag so sein eigenes Gespräch; [aktivesGespraech] bleibt der Ersatz für Aufrufer ohne Kennung.
+     */
+    class GespraechKennung(val id: String) : kotlin.coroutines.AbstractCoroutineContextElement(GespraechKennung) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<GespraechKennung>
+    }
+
     /** Ob die Sitzung eines Auftrags gerade arbeitet, je Gespräch: für die drehende Anzeige unter der letzten Nachricht. */
     data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String)
 

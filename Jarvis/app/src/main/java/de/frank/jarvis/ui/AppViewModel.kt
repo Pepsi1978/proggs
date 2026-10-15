@@ -86,10 +86,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Gespräch mit Jarvis ----
     val gespraech = mutableStateListOf<Nachricht>()
-    var denkt by mutableStateOf(false); private set
-    /** Was Jarvis gerade tut („Aufgaben lesen“), solange er arbeitet. */
-    var schritt by mutableStateOf(""); private set
-    private var lauf: Job? = null
+
+    /**
+     * Eine laufende Antwort, gebunden an ihr Gespräch: Sie läuft weiter, wenn Frank in ein anderes Gespräch wechselt oder ein
+     * neues beginnt, und mehrere Gespräche dürfen gleichzeitig arbeiten. [frage] ist die Stelle der Frage im Gespräch,
+     * [erledigt], was schreibende Werkzeuge in dieser Runde schon geändert haben.
+     */
+    inner class Runde(val sitzung: String, val frage: Int) {
+        var schritt by mutableStateOf("")
+        lateinit var job: Job
+        val erledigt: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
+    }
+
+    /** Die laufenden Antworten je Gespräch (Kennung → Runde). */
+    val laufende = androidx.compose.runtime.mutableStateMapOf<String, Runde>()
+    /** Jarvis arbeitet gerade im offenen Gespräch. */
+    val denkt: Boolean get() = sitzungId?.let { laufende.containsKey(it) } == true
+    /** Was Jarvis im offenen Gespräch gerade tut („Aufgaben lesen“), solange er arbeitet. */
+    val schritt: String get() = sitzungId?.let { laufende[it]?.schritt }.orEmpty()
 
     // ---- ChatGPT-Anmeldung ----
     var kiVerbunden by mutableStateOf(auth.isConnected); private set
@@ -178,18 +192,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         val verlauf = verlaufFuersModell()
         gespraech += Nachricht(true, text)
-        laufendeFrage = gespraech.size - 1
-        val erledigt = java.util.Collections.synchronizedList(mutableListOf<String>())
-        laufendErledigt = erledigt
         sitzungSichern()
-        // Startet Jarvis in dieser Runde einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
-        de.frank.jarvis.faehigkeit.ProgrammierChat.aktivesGespraech = sitzungId
-        denkt = true
-        schritt = ""
-        lauf = viewModelScope.launch {
+        val id = sitzungId ?: return
+        val runde = Runde(id, gespraech.size - 1)
+        laufende[id] = runde
+        // Die Kennung des Gesprächs läuft im Koroutinen-Kontext mit: Startet Jarvis in dieser Runde einen Programmierauftrag,
+        // kommen dessen Meldungen in genau dieses Gespräch, auch wenn inzwischen andere Gespräche arbeiten.
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id)) {
             var art = "antwort"
             val antwort = try {
-                agent.versuche(text, verlauf, beiSchritt = { schritt = it }, lernen = true, abschluss = true, beiAenderung = { erledigt += it })
+                agent.versuche(text, verlauf, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true, beiAenderung = { runde.erledigt += it })
                     ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText()).also { art = "fehler" }
             } catch (e: CancellationException) {
                 throw e
@@ -198,28 +210,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 art = "fehler"
                 e.message ?: "Das hat nicht geklappt."
             }
-            if (art == "fehler") {
-                // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
-                // (wie bei einem Abbruch), sonst führte „versuch es nochmal“ alles ein zweites Mal aus. Der Index wird vor dem
-                // Anhängen geprüft, weil abbrechen oder neuesGespraech laufendeFrage schon zurückgesetzt haben können.
-                val i = laufendeFrage
-                val n = gespraech.getOrNull(i)
-                val notiz = erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", erledigt)
-                if (n != null && n.vonMir && i == gespraech.lastIndex && notiz.isNotEmpty()) gespraech[i] = n.copy(kontext = notiz)
-            }
-            gespraech += Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", erledigt))
-            de.frank.jarvis.faehigkeit.ProgrammierChat.aktivesGespraech = null
-            laufendeFrage = -1
-            sitzungSichern()
-            denkt = false
-            schritt = ""
-            if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
+            rundeFertig(runde, antwort, art, vorlesen)
         }
     }
 
-    /** Die Frage, auf die gerade geantwortet wird (Stelle im Gespräch), und was in dieser Runde schon geändert wurde. */
-    private var laufendeFrage = -1
-    private var laufendErledigt: MutableList<String> = mutableListOf()
+    /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
+    private fun rundeFertig(runde: Runde, antwort: String, art: String, vorlesen: Boolean) {
+        // Schon abgebrochen (oder das Gespräch gelöscht): nichts mehr anhängen.
+        if (laufende[runde.sitzung] !== runde) return
+        laufende.remove(runde.sitzung)
+        // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
+        // (wie bei einem Abbruch), sonst führte „versuch es nochmal“ alles ein zweites Mal aus.
+        val frageNotiz = if (art == "fehler") erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", runde.erledigt) else ""
+        val neu = Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", runde.erledigt))
+        if (runde.sitzung == sitzungId) {
+            val i = runde.frage
+            val n = gespraech.getOrNull(i)
+            if (frageNotiz.isNotEmpty() && n != null && n.vonMir && i == gespraech.lastIndex) gespraech[i] = n.copy(kontext = frageNotiz)
+            gespraech += neu
+            sitzungSichern()
+            if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
+            return
+        }
+        // Frank ist inzwischen in einem anderen Gespräch: Die Antwort kommt in die gespeicherte Datei und steht beim nächsten Öffnen da.
+        viewModelScope.launch {
+            sicherung.withLock {
+                withContext(Dispatchers.IO) {
+                    if (frageNotiz.isNotEmpty()) de.frank.jarvis.data.Gespraeche.letzteFrageKontext(getApplication(), runde.sitzung, frageNotiz)
+                    de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), runde.sitzung, de.frank.jarvis.data.GespeicherteNachricht(false, neu.text, neu.art, neu.kontext))
+                }
+            }
+            sitzungenLaden()
+            de.frank.jarvis.gedaechtnis.Lagebild.anstossen(getApplication(), listOf(de.frank.jarvis.gedaechtnis.Bereich.GESPRAECHE), "Gespräch mit Jarvis")
+        }
+    }
 
     private fun erledigtNotiz(kopf: String, erledigt: List<String>): String =
         synchronized(erledigt) { erledigt.toList() }.takeIf { it.isNotEmpty() }?.let { "($kopf: " + it.joinToString("; ") + ")" }.orEmpty()
@@ -756,23 +780,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
     }
 
+    /** Bricht die Antwort im offenen Gespräch ab. Antworten in anderen Gesprächen laufen weiter. */
     fun abbrechen() {
-        // Läuft noch eine Frage, bleibt sie als unbeantwortet im Verlauf, samt dem, was in dieser Runde schon erledigt war.
-        if (denkt) frageAbgebrochen()
-        de.frank.jarvis.faehigkeit.ProgrammierChat.aktivesGespraech = null
-        lauf?.cancel()
-        auth.cancelChat()
-        denkt = false
-        schritt = ""
+        val id = sitzungId ?: return
+        val runde = laufende.remove(id) ?: return
+        // Die Frage bleibt als unbeantwortet im Verlauf, samt dem, was in dieser Runde schon erledigt war.
+        frageAbgebrochen(runde)
+        // Der Wächter in der Anfrage schließt die Verbindung, sobald die Koroutine abgebrochen wird: nur diese eine Antwort.
+        runde.job.cancel()
     }
 
-    /** Markiert die laufende Frage als abgebrochen, sofort und auf dem Hauptfaden (danach kann schon ein neues Gespräch beginnen). */
-    private fun frageAbgebrochen() {
-        val i = laufendeFrage
-        laufendeFrage = -1
+    /** Bricht die Antwort eines beliebigen Gesprächs ab (beim Löschen), ohne den Verlauf anzufassen. */
+    private fun rundeAbbrechen(id: String) {
+        laufende.remove(id)?.job?.cancel()
+    }
+
+    /** Markiert die Frage der Runde als abgebrochen, sofort und auf dem Hauptfaden (danach kann schon ein neues Gespräch beginnen). */
+    private fun frageAbgebrochen(runde: Runde) {
+        val i = runde.frage
         val n = gespraech.getOrNull(i) ?: return
         if (!n.vonMir || i != gespraech.lastIndex) return
-        gespraech[i] = n.copy(art = "abgebrochen", kontext = erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", laufendErledigt))
+        gespraech[i] = n.copy(art = "abgebrochen", kontext = erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", runde.erledigt))
         sitzungSichern()
     }
 
@@ -855,9 +883,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste. */
+    /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste; arbeitet Jarvis dort noch, macht er weiter. */
     fun neuesGespraech() {
-        abbrechen()
+        vorleser.stopp()
         gespraech.clear()
         sitzungId = null
         sitzungErstellt = 0L
@@ -910,13 +938,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         Logbuch.gedaechtnis("Offenes Gespräch fortgesetzt", "${gespraech.size} Nachrichten")
     }
 
-    /** Ein altes Gespräch öffnen und dort weitermachen. */
+    /** Ein altes Gespräch öffnen und dort weitermachen. Läuft im bisherigen Gespräch noch eine Antwort, arbeitet sie im Hintergrund weiter. */
     fun sitzungOeffnen(id: String) {
         if (id == sitzungId) return
         viewModelScope.launch {
-            val geladen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) }
+            // Unter der Sicherung: Eine Antwort, die genau jetzt in diese Datei geschrieben wird, ist dann mit im geladenen Stand.
+            val geladen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } }
             if (geladen == null) { meldung = "Dieses Gespräch ließ sich nicht öffnen."; sitzungenLaden(); return@launch }
-            abbrechen()
             vorleser.stopp()
             gespraech.clear()
             gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
@@ -941,6 +969,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sitzungLoeschen(id: String) {
+        rundeAbbrechen(id)
         if (id == sitzungId) neuesGespraech()
         viewModelScope.launch {
             sitzungen = sicherung.withLock {

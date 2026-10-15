@@ -151,6 +151,21 @@ object Gespraeche {
         }
     }
 
+    /** Hängt an die letzte Nachricht, wenn sie von Frank ist, einen Kontext (was in einer abgebrochenen Runde schon erledigt war), in der Datei. */
+    fun letzteFrageKontext(context: Context, id: String, kontext: String) {
+        synchronized(sperre) {
+            runCatching {
+                val d = datei(context, id)
+                val j = lies(d)
+                val liste = j.optJSONArray("nachrichten") ?: return@runCatching
+                val n = liste.optJSONObject(liste.length() - 1) ?: return@runCatching
+                if (!n.optBoolean("mir")) return@runCatching
+                n.put("kontext", kontext)
+                schreiben(d, j)
+            }.onFailure { Log.w(TAG, "Kontext der Frage nicht gesetzt", it) }
+        }
+    }
+
     /** Trägt bei einer Rückfrage (art „rueckfrage“, kontext = JSON mit frage_id) die Antwort ein, in der Datei. */
     fun rueckfrageBeantwortet(context: Context, id: String, frageId: String, antwort: String) {
         synchronized(sperre) {
