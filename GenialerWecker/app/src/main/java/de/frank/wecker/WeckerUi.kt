@@ -1001,13 +1001,16 @@ private fun MorgenruheHero(
                     Modifier.fillMaxWidth().height(buehne).padding(start = 8.dp, end = 8.dp, top = 8.dp)
                         .clip(zimmerForm).border(1.dp, gold.heroKante, zimmerForm),
                 )
-                // Seit 1.1.118 eine einzige Zeile unter dem Zimmer: links Datum und Uhr, rechts Termin
-                // bzw. Leerstatus, Weckbereitschaft und Aktionen — keine eigenen Zeilen mehr darunter.
-                Row(Modifier.fillMaxWidth().padding(start = KARTE_INNEN, end = KARTE_INNEN, bottom = KARTE_INNEN,
-                    top = if (zeigtMotiv) 10.dp else KARTE_INNEN),
+                // Seit 1.1.118 eine einzige Zeile unter dem Zimmer: links Weckbereitschaft, Datum und Uhr,
+                // rechts Termin bzw. Leerstatus und Aktionen — keine eigenen Zeilen mehr darunter.
+                // Seit dem Wegfall von „Öffnen“ (1.1.119) knapper gesetzt, damit der Hero niedriger wird.
+                Row(Modifier.fillMaxWidth().padding(start = KARTE_INNEN, end = KARTE_INNEN, bottom = 12.dp,
+                    top = if (zeigtMotiv) 8.dp else 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND),
                     verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.width(linksBreite), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        // Ganz oben, über Strich und Datum: wird der Wecker überhaupt klingeln?
+                        BereitZeile(daten, aufEinstellungen, LocalSemantisch.current.erfolg, LocalSemantisch.current.warnung)
                         // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
                         Box(Modifier.width(40.dp).height(2.dp).background(gold.akzentWarm))
                         Text(datumsZeile(daten.now), style = MaterialTheme.typography.titleSmall,
@@ -1026,7 +1029,7 @@ private fun MorgenruheHero(
                             )
                         }
                     }
-                    MorgenruheRechts(daten, rechtsBreite, oeffnen, aufNeu, aufEinstellungen, aufSchlummernBeenden,
+                    MorgenruheRechts(daten, rechtsBreite, oeffnen, aufNeu, aufSchlummernBeenden,
                         Modifier.weight(1f))
                 }
             }
@@ -3108,15 +3111,16 @@ private fun Sternenhimmel(modifier: Modifier) {
 }
 
 /**
- * Morgenruhes rechter Block neben Datum und Uhr: Termin oder Leerstatus, Weckbereitschaft und die
- * Wecker-Aktionen, rechtsbündig gestapelt. Früher standen sie als eigene Zeilen unter der Uhr.
+ * Morgenruhes rechter Block neben Datum und Uhr: Termin oder Leerstatus und die Wecker-Aktionen,
+ * rechtsbündig gestapelt. Früher standen sie als eigene Zeilen unter der Uhr. Die Weckbereitschaft
+ * steht seit 1.1.119 links über dem Messingstrich; „Öffnen“ entfällt, der Termin selbst ist antippbar.
  * In schmalen Spalten (zugeklappt, geteilter Bildschirm) brechen Texte auf zwei Zeilen und die
  * Knöpfe untereinander um, statt abgeschnitten zu werden. [spalte] ist die Breite dieses Blocks.
  */
 @Composable
 private fun MorgenruheRechts(
     daten: HeroDaten, spalte: androidx.compose.ui.unit.Dp, aufOeffnen: () -> Unit, aufNeu: () -> Unit,
-    aufEinstellungen: () -> Unit, aufSchlummernBeenden: () -> Unit, modifier: Modifier = Modifier,
+    aufSchlummernBeenden: () -> Unit, modifier: Modifier = Modifier,
 ) {
     val gold = LocalGold.current
     val semantisch = LocalSemantisch.current
@@ -3150,17 +3154,13 @@ private fun MorgenruheRechts(
                     textAlign = rechts, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-        BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             GoldKnopf(knopfText, aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
                 symbol = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) })
-            when {
-                daten.nextIsSnooze -> StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
-                daten.nextAlarm != null -> GoldKnopf("Öffnen", aufOeffnen, beschreibung = "Nächsten Wecker öffnen")
-            }
+            if (daten.nextIsSnooze) StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
         }
     }
 }
