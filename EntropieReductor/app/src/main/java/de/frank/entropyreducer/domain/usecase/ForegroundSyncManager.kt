@@ -217,9 +217,22 @@ constructor(
             .maxOrNull() ?: 0L
     }.getOrDefault(0L)
 
-    /** Ergebnis des letzten Abgleichs (auch aus einem frueheren Prozess), null = noch nie gelaufen. */
-    suspend fun letzterStand(): ApiSyncBericht? =
-        letzterBericht ?: ApiSyncBericht.ausJson(appSettings.biomarkerSyncStatusFlow.first())?.also { letzterBericht = it }
+    /**
+     * Ergebnis des letzten Abgleichs (auch aus einem frueheren Prozess), null = noch nie gelaufen.
+     * Ein Whoop-Abruf, der danach ausserhalb des Abgleichs glueckte (Abruf direkt nach neuer Anmeldung,
+     * "Alles neu laden"), ersetzt einen alten Whoop-Fehler sofort (2026-10-15): sonst meldete Jarvis
+     * "Anmeldung abgelaufen, letzter Erfolg 11:24" neben "zuletzt abgerufen 16:22".
+     */
+    suspend fun letzterStand(): ApiSyncBericht? {
+        val gespeichert = letzterBericht
+            ?: ApiSyncBericht.ausJson(appSettings.biomarkerSyncStatusFlow.first())?.also { letzterBericht = it }
+            ?: return null
+        return gespeichert.mitSpaeteremWhoopErfolg(
+            letzterOkMs = appSettings.lastWhoopSyncMsFlow.first(),
+            anmeldungAbgelaufen = oauth.whoopNeedsReauth(),
+            fehlversuche = appSettings.whoopAbrufStandFlow.first().fehlversuche,
+        )
+    }
 
     private suspend fun fuehreApiSyncAus(reason: String, anlass: WhoopAbrufPlan.Anlass): ApiSyncBericht {
         Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
@@ -475,6 +488,23 @@ data class ApiSyncBericht(val versuchMs: Long, val anlass: String, val quellen: 
             } else ""
             "${q.name}: ${q.fehler ?: "Fehler"}$seit"
         }
+
+    /**
+     * Whoop glückte nach diesem Bericht ([letzterOkMs] = letzter erfolgreicher Whoop-Abruf): einen alten Whoop-Fehler
+     * nicht weiter melden — aber nur, wenn die Anmeldung nicht als abgelaufen markiert ist und seitdem kein Versuch
+     * scheiterte. Ein geglückter Stand bekommt die neuere Erfolgszeit. Ohne Netz.
+     */
+    fun mitSpaeteremWhoopErfolg(letzterOkMs: Long, anmeldungAbgelaufen: Boolean, fehlversuche: Int): ApiSyncBericht {
+        val whoop = quellen.firstOrNull { it.id == ForegroundSyncManager.QUELLE_WHOOP && it.verbunden } ?: return this
+        if (letzterOkMs <= whoop.zuletztOkMs) return this
+        val neu = when {
+            whoop.ok -> whoop.copy(zuletztOkMs = letzterOkMs)
+            letzterOkMs > versuchMs && !anmeldungAbgelaufen && fehlversuche == 0 ->
+                whoop.copy(ok = true, fehler = null, eingriffNoetig = false, zuletztOkMs = letzterOkMs)
+            else -> return this
+        }
+        return copy(quellen = quellen.map { if (it === whoop) neu else it })
+    }
 
     fun alsJson(): JSONObject = JSONObject()
         .put("versuch_ms", versuchMs)

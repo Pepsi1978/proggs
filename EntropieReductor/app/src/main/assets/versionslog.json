@@ -15,6 +15,7 @@
     {"versionCode": 351, "versionName": "0.29.16", "stand": "14.10.2026, 12:08 Uhr", "notiz": "Meldet neue und geänderte Biomarker, Trainings und den Abgleich-Stand sofort an Jarvis, damit sein Gedächtnis immer aktuell ist."},
     {"versionCode": 352, "versionName": "0.29.17", "stand": "14.10.2026, 22:28 Uhr", "notiz": "Whoop-Anmeldung hält länger: Whoop wird automatisch nur noch höchstens alle 2 Stunden abgefragt (der Aktualisieren-Knopf holt sofort), der neue Whoop-Zugang wird sicher gespeichert, und Lücken-Nachholen sowie Anmelde-Prüfung halten ihren Abstand jetzt auch im Hintergrund ein"},
     {"versionCode": 353, "versionName": "0.29.18", "stand": "15.10.2026, 13:11 Uhr", "notiz": "Second Brain nutzt jetzt einen bereits laufenden WireGuard-Tunnel (z. B. die WireGuard-App) mit, statt einen eigenen aufzubauen und ihn damit zu trennen"},
-    {"versionCode": 354, "versionName": "0.29.19", "stand": "15.10.2026, 16:17 Uhr", "notiz": "Whoop wird nur noch abgefragt, wenn ein neuer Schlaf fertig sein kann oder der letzte noch nicht berechnet ist; ein begonnener Anmelde-Tausch läuft jetzt sicher zu Ende, und Jarvis liest nur noch den gespeicherten Stand"}
+    {"versionCode": 354, "versionName": "0.29.19", "stand": "15.10.2026, 16:17 Uhr", "notiz": "Whoop wird nur noch abgefragt, wenn ein neuer Schlaf fertig sein kann oder der letzte noch nicht berechnet ist; ein begonnener Anmelde-Tausch läuft jetzt sicher zu Ende, und Jarvis liest nur noch den gespeicherten Stand"},
+    {"versionCode": 355, "versionName": "0.29.20", "stand": "15.10.2026, 16:35 Uhr", "notiz": "Nach einer neuen Whoop-Anmeldung verschwindet die Meldung „Anmeldung abgelaufen“ sofort aus Fußzeile und Jarvis, statt bis zum nächsten Hintergrund-Abgleich stehen zu bleiben"}
   ]
 }
