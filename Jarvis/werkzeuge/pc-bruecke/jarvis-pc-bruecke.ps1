@@ -82,7 +82,8 @@ VORGEHEN
     if ($kannJarvis) {
         $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name`"", '--profil', $Profil, '--modus', $Modus, '--modell', "`"$Modell`"", '--effort', $Effort)
         $prozess = Start-Process -FilePath $openLauncher -ArgumentList $argumente -PassThru -WindowStyle Hidden
-        if (-not $prozess.WaitForExit(60000)) { throw 'Der OpenLauncher hat nach 60 Sekunden nicht geantwortet.' }
+        # Spätestens nach 30 s quittieren: Der Relay wartet 45 s, danach wüsste das Handy nicht, ob die Sitzung läuft.
+        if (-not $prozess.WaitForExit(30000)) { throw 'Der OpenLauncher hat nach 30 Sekunden nicht geantwortet.' }
         if ($prozess.ExitCode -ne 0) { throw "Der OpenLauncher konnte die Sitzung nicht starten (Code $($prozess.ExitCode), siehe OpenLauncher-Log)." }
         return $name
     }
@@ -114,16 +115,33 @@ if (Test-Path `$sync) { try { `$null = python `$sync 2>`$null } catch { } }
     return $name
 }
 
+# Abfragen über curl.exe -4: Auf diesem Netz bekommt Windows IPv6-Adressen, leitet IPv6 aber zeitweise nicht weiter.
+# Invoke-WebRequest versucht IPv6 zuerst und hängt dann bis zum Zeitlimit (bugs/desktop/dotnet-httpclient-ipv6-haenger.md).
+$curl = Join-Path $env:SystemRoot 'System32\curl.exe'
+$antwortDatei = Join-Path $env:TEMP 'JarvisPcBruecke\antwort.json'
+$quittungDatei = Join-Path $env:TEMP 'JarvisPcBruecke\quittung.json'
+New-Item -ItemType Directory -Force -Path (Split-Path $antwortDatei) | Out-Null
+
+function Rufe([string]$adresse, [string]$token, [int]$sekunden, [string]$rumpfDatei) {
+    $argumente = @('-4', '-s', '-S', '--max-time', $sekunden, '-o', $antwortDatei, '-w', '%{http_code}',
+        '-H', "X-Jarvis-Token: $token", '-H', "X-Jarvis-Rechner: $env:COMPUTERNAME")
+    if ($rumpfDatei) { $argumente += @('-X', 'POST', '-H', 'Content-Type: application/json; charset=utf-8', '--data-binary', "@$rumpfDatei") }
+    Remove-Item -LiteralPath $antwortDatei -ErrorAction SilentlyContinue
+    $code = & $curl @argumente $adresse 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "curl $LASTEXITCODE`: $code" }
+    return [int]("$code".Trim())
+}
+
 Schreib 'Brücke gestartet'
 $pause = 2
 while ($true) {
     try {
         $zugang = Lies-Zugang
-        $kopf = @{ 'X-Jarvis-Token' = $zugang.token; 'X-Jarvis-Rechner' = $env:COMPUTERNAME }
-        $antwort = Invoke-WebRequest -Uri "https://$($zugang.host)/pc/auftrag" -Headers $kopf -TimeoutSec 45 -UseBasicParsing
+        $code = Rufe "https://$($zugang.host)/pc/auftrag" $zugang.token 40 $null
         $pause = 2
-        if ($antwort.StatusCode -ne 200) { continue }
-        $auftrag = [System.Text.Encoding]::UTF8.GetString($antwort.RawContentStream.ToArray()) | ConvertFrom-Json
+        if ($code -eq 204) { continue }
+        if ($code -ne 200) { throw "HTTP $code" }
+        $auftrag = Get-Content -Raw -Encoding utf8 -LiteralPath $antwortDatei | ConvertFrom-Json
         Schreib "Auftrag für $($auftrag.app)"
         try {
             $name = Starte-Sitzung $auftrag
@@ -133,11 +151,11 @@ while ($true) {
             $quittung = @{ id = $auftrag.id; ok = $false; text = "Start fehlgeschlagen: $($_.Exception.Message)" }
             Schreib $quittung.text
         }
-        $rumpf = [System.Text.Encoding]::UTF8.GetBytes(($quittung | ConvertTo-Json -Compress))
-        Invoke-WebRequest -Uri "https://$($zugang.host)/pc/quittung" -Method Post -Headers $kopf -ContentType 'application/json; charset=utf-8' -Body $rumpf -TimeoutSec 20 -UseBasicParsing | Out-Null
+        [System.IO.File]::WriteAllText($quittungDatei, ($quittung | ConvertTo-Json -Compress), [System.Text.UTF8Encoding]::new($false))
+        $null = Rufe "https://$($zugang.host)/pc/quittung" $zugang.token 20 $quittungDatei
     } catch {
         Schreib "Fehler: $($_.Exception.Message)"
         Start-Sleep -Seconds $pause
-        $pause = [Math]::Min($pause * 2, 30)
+        $pause = [Math]::Min($pause * 2, 10)
     }
 }

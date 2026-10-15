@@ -19,6 +19,8 @@ class StackLaborFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Stack-Labor ist Franks App für seine Nahrungsergänzungs-Stacks. Ein Stack ist eine geplante Einnahme zu einem Zeitpunkt (etwa „Nach Aufstehen 1“, „Sport 2“, " +
             "„Vor dem Schlafen 1“) mit Mitteln in fester Reihenfolge, Dosis (Menge, Einheit, Kapselanzahl) und Haken (aktiv oder inaktiv). Regeln: " +
+            "Franks tatsächliche Stacks und Einnahmeplanung stehen in Stack-Labor; die App Epigenetik hat einen eigenen Recherche-Stack. Bei „meine Stacks“, " +
+            "„Sport 2“ oder „was nehme ich nach dem Aufstehen“ gilt Stack-Labor. " +
             "(1) Nur aktive Mittel gehören zu Franks geplanter Einnahmeroutine; inaktive nennst du beim vollständigen Vorlesen mit, klar als ausgeschaltet. " +
             "(2) Ein geplanter oder aktiver Stack belegt KEINE Einnahme: Sag nie, Frank habe etwas genommen, wenn er es nicht ausdrücklich gesagt hat. " +
             "(3) Nach-Aufstehen-Stacks gehören nach dem Aufstehen, Sport-Stacks zum Sport, Vor-dem-Schlafen-Stacks vor das Schlafen; bei gleichem Namen mit Nummer " +

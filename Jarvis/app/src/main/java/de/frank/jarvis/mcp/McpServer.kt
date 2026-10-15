@@ -13,6 +13,7 @@ import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.AblageKarte
 import de.frank.jarvis.faehigkeit.Ergebnis
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
+import de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit
 import de.frank.jarvis.faehigkeit.Merkdatei
 import de.frank.jarvis.faehigkeit.merkKontext
 import de.frank.jarvis.faehigkeit.Register
@@ -138,7 +139,8 @@ class McpServer(context: Context) {
         Werkzeug(
             name = "jarvis_status",
             titel = "Jarvis-Status",
-            beschreibung = "Jarvis: sagt, ob Jarvis auf Franks Handy erreichbar ist, welche Apps angebunden sind und welches Datum und welche Uhrzeit dort gerade gelten. " +
+            beschreibung = "Jarvis: sagt, ob Jarvis auf Franks Handy erreichbar ist, welche Apps angebunden sind, welches Datum und welche Uhrzeit dort gerade gelten " +
+                "und ob Franks PC an und für Programmieraufträge erreichbar ist (genauer: pc_status). " +
                 "Nutze es bei „Jarvis, bist du da?“ oder wenn du das heutige Datum auf dem Handy brauchst. Mit funktionen=true kommt zusätzlich die vollständige, tatsächliche " +
                 "Liste aller Werkzeuge von Jarvis (Grundlage zum Beispiel für eine Übersicht oder Infografik über Jarvis' Funktionen).",
             schema = schema("funktionen" to schalter("true = alle Werkzeuge mit Kurzbeschreibung auflisten.")),
@@ -156,6 +158,8 @@ class McpServer(context: Context) {
                     ?: "keine Antwort (Zeitlimit)".also { Logbuch.system("jarvis_status: $name antwortet nicht", "Zeitlimit ${QUELLE_MS / 1000} s") })
             }.joinToString("; ")
             val dienst = withTimeoutOrNull(QUELLE_MS) { dienstHeute.await() }.orEmpty()
+            val programmieren = faehigkeiten.filterIsInstance<ProgrammierFaehigkeit>().firstOrNull()
+                ?.let { p -> withTimeoutOrNull(QUELLE_MS) { runCatching { p.zustand() }.getOrNull() } }.orEmpty()
             val funktionen = if (!it.optBoolean("funktionen")) "" else buildString {
                 append("\n\nFUNKTIONEN VON JARVIS (Version ").append(BuildConfig.VERSION_NAME).append("):\n")
                 Register.alle(app).forEach { f ->
@@ -164,7 +168,8 @@ class McpServer(context: Context) {
                 }
                 append("Jarvis selbst: ").append(eigene.joinToString(", ") { w -> w.titel }).append('\n')
             }
-            Ergebnis("Jarvis ist bereit. Auf dem Handy ist es $jetzt. " + (if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps." + funktionen)
+            Ergebnis("Jarvis ist bereit. Auf dem Handy ist es $jetzt. " + (if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps." +
+                (if (programmieren.isEmpty()) "" else " $programmieren") + funktionen)
         },
     )
 

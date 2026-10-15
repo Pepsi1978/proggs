@@ -52,7 +52,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 
 ## Werkzeuge im Plugin
 
-43 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
+Knapp 50 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
 welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl für ChatGPT überschaubar.
 
 | Werkzeug | Zweck |
@@ -66,6 +66,7 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf`, `trainings_lesen`, `biomarker_aktualisieren` | Biodaten; vor jedem Lesen holt Jarvis frische Daten (wenn älter als 30 Minuten), Störungen beim Abruf stehen als „ACHTUNG“ vorn; `biomarker_aktualisieren` stößt den Abgleich an und nennt den Zustand jeder Quelle; `biomarker_verlauf` ohne Messgrößen liefert den Katalog, `trainings_lesen` mit `id` ein Training im Detail |
 | `wecker_lesen`, `wecker_stellen`, `wecker_loeschen` | Genialer Wecker; Ändern, Schalten und Auslassen über `wecker_stellen` |
 | `ideen_lesen`, `idee_speichern`, `idee_loeschen` | Geniale Ideen; `ideen_lesen` mit `id` liefert den Volltext, `idee_speichern` legt an oder ändert |
+| `epigenetik_lesen`, `epigenetik_recherchieren`, `epigenetik_schalter`, `epigenetik_uebersicht` | App Epigenetik (`de.frank.epigenetik.jarvis`); `epigenetik_lesen` liefert die fertige Auswertung zu Mittel, Wirkung, Ziel oder Frage und startet fehlende Recherchen (wartet bis 50 s, sonst läuft sie in der App weiter); `epigenetik_schalter` zeigt ohne Recherche, welche Mittel auf einen Schalter wirken; `epigenetik_uebersicht` listet Bibliothek oder Stack mit Analyse |
 | `stacks_lesen` | Stack-Labor lesen: alle Stacks, ein Stack vollständig, alle vollständig, ein Mittel, der Katalog, die Ziele |
 | `stack_mittel_setzen`, `stack_speichern`, `mittel_speichern` | Stack-Labor ändern: Mittel in einem Stack (hinzufügen, Dosis, aktiv/inaktiv, kopieren, verschieben), Stacks, Mittel-Katalog |
 | `stacklabor_loeschen` | Stack-Labor: Mittel aus Stack, Stack, Mittel aus Katalog, Ziel, Frage löschen oder Mittel zusammenführen; nur mit Bestätigung |

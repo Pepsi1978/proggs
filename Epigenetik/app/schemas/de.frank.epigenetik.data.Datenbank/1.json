@@ -1,0 +1,219 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "5819f13d71e20572f0f38bcd218d03ae",
+    "entities": [
+      {
+        "tableName": "recherche",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `typ` TEXT NOT NULL, `kategorie` TEXT NOT NULL, `name` TEXT NOT NULL, `schluessel` TEXT NOT NULL, `aliase` TEXT NOT NULL, `status` TEXT NOT NULL, `fehler` TEXT NOT NULL, `kurz` TEXT NOT NULL, `potenzial` INTEGER NOT NULL, `evidenz` TEXT NOT NULL, `json` TEXT NOT NULL, `favorit` INTEGER NOT NULL, `imStack` INTEGER NOT NULL, `notiz` TEXT NOT NULL, `quelle` TEXT NOT NULL, `gelesen` INTEGER NOT NULL, `erstellt` INTEGER NOT NULL, `aktualisiert` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typ",
+            "columnName": "typ",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kategorie",
+            "columnName": "kategorie",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schluessel",
+            "columnName": "schluessel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aliase",
+            "columnName": "aliase",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fehler",
+            "columnName": "fehler",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kurz",
+            "columnName": "kurz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "potenzial",
+            "columnName": "potenzial",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "evidenz",
+            "columnName": "evidenz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "json",
+            "columnName": "json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "favorit",
+            "columnName": "favorit",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imStack",
+            "columnName": "imStack",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notiz",
+            "columnName": "notiz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quelle",
+            "columnName": "quelle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gelesen",
+            "columnName": "gelesen",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erstellt",
+            "columnName": "erstellt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aktualisiert",
+            "columnName": "aktualisiert",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_recherche_schluessel",
+            "unique": false,
+            "columnNames": [
+              "schluessel"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recherche_schluessel` ON `${TABLE_NAME}` (`schluessel`)"
+          },
+          {
+            "name": "index_recherche_typ",
+            "unique": false,
+            "columnNames": [
+              "typ"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_recherche_typ` ON `${TABLE_NAME}` (`typ`)"
+          }
+        ]
+      },
+      {
+        "tableName": "schalter_wirkung",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rechercheId` INTEGER NOT NULL, `schalter` TEXT NOT NULL, `richtung` TEXT NOT NULL, `staerke` INTEGER NOT NULL, `evidenz` TEXT NOT NULL, `mechanismus` TEXT NOT NULL, PRIMARY KEY(`rechercheId`, `schalter`))",
+        "fields": [
+          {
+            "fieldPath": "rechercheId",
+            "columnName": "rechercheId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schalter",
+            "columnName": "schalter",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "richtung",
+            "columnName": "richtung",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "staerke",
+            "columnName": "staerke",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "evidenz",
+            "columnName": "evidenz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mechanismus",
+            "columnName": "mechanismus",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "rechercheId",
+            "schalter"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_schalter_wirkung_schalter",
+            "unique": false,
+            "columnNames": [
+              "schalter"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_schalter_wirkung_schalter` ON `${TABLE_NAME}` (`schalter`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5819f13d71e20572f0f38bcd218d03ae')"
+    ]
+  }
+}

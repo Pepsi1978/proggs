@@ -380,7 +380,7 @@ class Tagebuch:
 
 PC_FRISCH_S = 45      # so lange nach seiner letzten Abfrage gilt der PC als da
 PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf einen Auftrag
-PC_QUITTUNG_S = 20    # so lange wartet das Handy auf die Bestaetigung, dass die Sitzung laeuft
+PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung; die Bruecke antwortet spaetestens nach 30 s
 
 
 class PcBruecke:
@@ -466,7 +466,8 @@ class PcBruecke:
     async def status(self, request: web.Request) -> web.Response:
         if not self._erlaubt(request):
             return web.Response(status=404, text="Not found")
-        return web.json_response({"pc": self.da(), "rechner": self.rechner if self.da() else ""})
+        vor = int(time.monotonic() - self.zuletzt) if self.zuletzt else None
+        return web.json_response({"pc": self.da(), "rechner": self.rechner, "zuletzt_vor_s": vor})
 
 
 async def gesund(_: web.Request) -> web.Response:
