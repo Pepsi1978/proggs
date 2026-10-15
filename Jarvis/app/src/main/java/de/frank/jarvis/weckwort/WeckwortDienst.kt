@@ -436,6 +436,8 @@ class WeckwortDienst : Service() {
     private fun rufAbsicht(): Intent = Intent(this, MainActivity::class.java)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         .putExtra(EXTRA_WECKWORT, true)
+        // Vor dem Öffnen festhalten, ob Jarvis schon vorn war: Danach ist die App ja immer sichtbar.
+        .putExtra(EXTRA_WAR_SICHTBAR, MainActivity.sichtbar)
 
     /** @param vollbild false für den Wächter: Die Meldung soll die womöglich schon startende App nicht erneut öffnen. */
     private fun zumAntippen(absicht: Intent, vollbild: Boolean = true) {
@@ -500,6 +502,7 @@ class WeckwortDienst : Service() {
 
     companion object {
         const val EXTRA_WECKWORT = "weckwort"
+        const val EXTRA_WAR_SICHTBAR = "war_sichtbar"
         private const val TAG = "Weckwort"
         private const val KANAL = "jarvis_weckwort"
         private const val KANAL_RUF = "jarvis_weckwort_ruf"

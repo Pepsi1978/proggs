@@ -63,6 +63,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+        sichtbar = true
         // Sperren beim Start und nach mehr als 30 Sekunden außerhalb der App. Ohne eingerichteten Fingerabdruck
         // und ohne Gerätesperre bleibt die App offen, sonst käme niemand mehr hinein.
         // Über dem Sperrbildschirm nicht nach dem Fingerabdruck fragen: Die Sperre bleibt, Jarvis hört und antwortet nur.
@@ -78,6 +79,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        sichtbar = false
         if (!vm.gesperrt) vm.zuletztSichtbar = System.currentTimeMillis()
         super.onStop()
     }
@@ -116,21 +118,25 @@ class MainActivity : FragmentActivity() {
         if (savedInstanceState == null) vm.hinweiseAnfragen()
         JarvisDienst.abgleichen(this)
         setContent { JarvisApp(vm, this) }
-        if (savedInstanceState == null) weckwortPruefen(intent)
+        if (savedInstanceState == null) weckwortPruefen(intent, neu = true)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        weckwortPruefen(intent)
+        weckwortPruefen(intent, neu = false)
     }
 
     /** „Hey Jarvis“ wurde erkannt: aufnehmen, piepen, antworten; bei gesperrtem Handy über dem Sperrbildschirm. */
-    private fun weckwortPruefen(intent: Intent?) {
+    private fun weckwortPruefen(intent: Intent?, neu: Boolean) {
         if (intent?.getBooleanExtra(WeckwortDienst.EXTRA_WECKWORT, false) != true) return
         // Sofort melden, dass die App übernommen hat: Sonst greift der Wächter des Weckworts während des Starts ein.
         de.frank.jarvis.weckwort.Weckwort.uebernommen()
+        // Zählt, ob Jarvis schon vorn war, bevor das Weckwort die App geöffnet hat (der Dienst hält es beim Ruf fest).
+        // Eine eben erst erzeugte Activity war nie sichtbar: Kaltstart beginnt immer ein neues Gespräch.
+        val fortsetzen = !neu && intent.getBooleanExtra(WeckwortDienst.EXTRA_WAR_SICHTBAR, false)
         intent.removeExtra(WeckwortDienst.EXTRA_WECKWORT)
+        intent.removeExtra(WeckwortDienst.EXTRA_WAR_SICHTBAR)
         if (getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
             vm.ueberSperre = true
             ueberSperreZeigen(true)
@@ -139,7 +145,7 @@ class MainActivity : FragmentActivity() {
         }
         // Nur das ViewModel festhalten, nicht diese Activity: Sie kann während des Gesprächs neu entstehen.
         val modell = vm
-        modell.weckwortStart {
+        modell.weckwortStart(fortsetzen) {
             // Fertig: Der Sperrbildschirm legt sich wieder darüber.
             if (modell.ueberSperre) {
                 modell.ueberSperre = false
@@ -157,6 +163,11 @@ class MainActivity : FragmentActivity() {
             val flaggen = WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             if (an) window.addFlags(flaggen) else window.clearFlags(flaggen)
         }
+    }
+
+    companion object {
+        /** Ist Jarvis gerade sichtbar (zwischen onStart und onStop)? Liest der Weckwort-Dienst, bevor er die App öffnet. */
+        @Volatile var sichtbar = false; private set
     }
 
     override fun onResume() {

@@ -541,7 +541,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * „Hey Jarvis“ wurde erkannt: aufnehmen, piepen (ab jetzt sprechen), nach der Frage von selbst abschicken und
      * die Antwort vorlesen. [fertig] läuft, wenn alles vorbei ist (die Antwort ist zu Ende gesprochen).
      */
-    fun weckwortStart(fertig: () -> Unit) {
+    fun weckwortStart(fortsetzen: Boolean, fertig: () -> Unit) {
         de.frank.jarvis.weckwort.Weckwort.uebernommen()
         val grund = when {
             nimmtAuf || schreibtMit || holtMikro -> ""
@@ -555,16 +555,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             fertig()
             return
         }
+        // War Jarvis beim Weckwort schon sichtbar vorn, geht das offene Gespräch weiter. Eine dort noch laufende Antwort
+        // weicht der neuen Frage (sonst verwirft [sende] sie); ein Programmierauftrag läuft davon unabhängig weiter.
+        if (fortsetzen && denkt) abbrechen()
         reiter = Reiter.JARVIS
         merkOffen = null
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
         GedaechtnisAnsicht.offen = false
         diktatZiel = null
         vorleser.stopp()
-        // Jedes „Hey Jarvis“ beginnt ein neues Gespräch, auch beim Kaltstart (dort ist womöglich schon das Gespräch eines
-        // laufenden Programmierauftrags offen). Das bisherige bleibt gespeichert; arbeitet Jarvis dort noch, landet die
-        // Antwort in dessen Datei, der Programmierauftrag läuft weiter.
-        if (gespraech.isNotEmpty() || sitzungId != null) neuesGespraech()
+        // Kam „Hey Jarvis“ aus einer anderen App, aus dem Hintergrund oder per Kaltstart, beginnt ein neues Gespräch (beim
+        // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
+        // gespeichert; arbeitet Jarvis dort noch, landet die Antwort in dessen Datei, der Programmierauftrag läuft weiter.
+        if (!fortsetzen && (gespraech.isNotEmpty() || sitzungId != null)) neuesGespraech()
         val treffer = de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
@@ -891,7 +894,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         offenesGespraechVergessen()
     }
 
-    // Zuletzt offenes Gespräch; „Hey Jarvis“ setzt es nicht mehr fort, sondern beginnt immer ein neues.
+    // Zuletzt offenes Gespräch; „Hey Jarvis“ führt nur das Gespräch einer schon sichtbaren App fort, nie ein gespeichertes.
     private fun offenePrefs() = getApplication<Application>().getSharedPreferences("jarvis_offenes_gespraech", Context.MODE_PRIVATE)
 
     private fun offenesGespraechMerken(id: String, zeit: Long) {
@@ -1164,7 +1167,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } ?: "ausgeschaltet"
 }
 
-/** So lange nach der letzten Nachricht führt „Hey Jarvis“ das offene Gespräch weiter, danach beginnt ein neues. */
 
 /** Wörter, die vor oder nach dem Ausbefehl nicht zählen („Okay Jarvis, Ende bitte“). */
 private val FUELLWORTE = setOf("jarvis", "okay", "ok", "bitte", "hey", "also", "gut", "dann", "ja", "nein", "nee", "so")
