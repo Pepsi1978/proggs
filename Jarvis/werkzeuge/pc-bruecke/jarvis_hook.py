@@ -142,9 +142,18 @@ def lies_zustand() -> dict:
         z = json.loads(ZUSTAND.read_text(encoding="utf-8"))
     except Exception:
         z = {}
-    for k, v in (("zuletzt", 0), ("dateien", []), ("offen", []), ("gesehen", []), ("stelle", 0)):
+    for k, v in (("zuletzt", 0), ("dateien", []), ("offen", []), ("gesehen", []), ("stelle", 0), ("beginn", time.time())):
         z.setdefault(k, v)
     return z
+
+
+def dauer_text(sekunden: float) -> str:
+    s = int(max(0, sekunden))
+    if s < 60:
+        return f"{s} s"
+    if s < 3600:
+        return f"{s // 60} min {s % 60} s"
+    return f"{s // 3600} h {s % 3600 // 60} min"
 
 
 def schreib_zustand(z: dict) -> None:
@@ -257,12 +266,6 @@ def post(eingabe: dict) -> None:
                 sammel_und_sende(z, "🔴 APK-Update fehlgeschlagen" if fehlgeschlagen else "☁️ APK-Update für UpdateStation bereit", sofort=True)
             else:
                 sammel_und_sende(z, None)
-        elif werkzeug == "advisor":
-            sammel_und_sende(z, "🧠 Advisor befragt", sofort=True)
-        elif werkzeug == "Skill":
-            sammel_und_sende(z, f"🧩 Skill {ein.get('skill', '')} geladen".replace("  ", " "), sofort=True)
-        elif werkzeug in ("Agent", "Task"):
-            sammel_und_sende(z, "🤖 Agent: " + str(ein.get("description") or ein.get("subagent_type") or "gestartet"), sofort=True)
         else:
             sammel_und_sende(z, None)
         schreib_zustand(z)
@@ -305,12 +308,15 @@ def stop(eingabe: dict) -> None:
     letzte = lesbar(str(eingabe.get("last_assistant_message") or ""))
     with Sperre():
         z = lies_zustand()
-        # Zwischentexte dieses Zuges, die noch kein Werkzeug-Hook gemeldet hat (die letzte Nachricht kommt gleich gesondert).
-        for text in neue_texte(eingabe, z):
+        # Zwischentexte dieses Zuges, die noch kein Werkzeug-Hook gemeldet hat. Die letzte Nachricht steht oft schon im
+        # Transkript und wird dabei als gesehen markiert: Sie kommt trotzdem gleich gesondert (Fehler vom 15.10.2026).
+        texte = neue_texte(eingabe, z)
+        for text in texte:
             if text != letzte:
                 melde("laeuft", "💬 " + text)
         sammel_und_sende(z, None, sofort=True)
-        neu = bool(letzte) and not schon_gesehen(z, letzte)
+        neu = bool(letzte) and (letzte in texte or not schon_gesehen(z, letzte))
+        dauer = dauer_text(time.time() - z["beginn"])
         schreib_zustand(z)
     if not neu:
         return
@@ -327,12 +333,30 @@ def stop(eingabe: dict) -> None:
             return
         schreib("Freie Rückfrage ohne Antwort über Jarvis")
         return
-    # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung).
-    melde("info", "🏁 " + letzte)
+    # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung), dazu die Dauer
+    # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal).
+    melde("info", "🏁 " + letzte + f"\n\n⏱️ Dauer seit Start: {dauer}")
 
 
 def puls(eingabe: dict) -> None:
-    """PreToolUse (alle Werkzeuge, async): Lebenszeichen für die drehende Anzeige in Jarvis, höchstens alle PULS_S."""
+    """
+    PreToolUse (alle Werkzeuge, async), also VOR dem Werkzeug: neue Zwischentexte der KI sofort melden (nicht erst, wenn das
+    Werkzeug fertig ist), Advisor, Skills und Agenten beim Start ankündigen, und ein Lebenszeichen für die drehende Anzeige
+    in Jarvis (höchstens alle PULS_S).
+    """
+    werkzeug = str(eingabe.get("tool_name", ""))
+    ein = eingabe.get("tool_input") or {}
+    with Sperre():
+        z = lies_zustand()
+        for text in neue_texte(eingabe, z):
+            melde("laeuft", "💬 " + text)
+        if werkzeug == "advisor":
+            melde("laeuft", "🧠 Advisor wird befragt …")
+        elif werkzeug == "Skill":
+            melde("laeuft", f"🧩 Skill {ein.get('skill', '')} geladen".replace("  ", " "))
+        elif werkzeug in ("Agent", "Task"):
+            melde("laeuft", "🤖 Agent: " + str(ein.get("description") or ein.get("subagent_type") or "gestartet"))
+        schreib_zustand(z)
     datei = ORDNER / f"puls-{AUFTRAG}.txt"
     try:
         if time.time() - datei.stat().st_mtime < PULS_S:
