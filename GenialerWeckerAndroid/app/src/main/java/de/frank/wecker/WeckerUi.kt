@@ -919,7 +919,6 @@ private fun MorgenruheHero(
     aufEinstellungen: () -> Unit, aufSchlummernBeenden: () -> Unit,
 ) {
     val gold = LocalGold.current
-    val semantisch = LocalSemantisch.current
     val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
     if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
     val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
@@ -934,7 +933,9 @@ private fun MorgenruheHero(
     // Kopf nicht mitscrollt.
     val zimmerHoehe = (innen / 2.4f).coerceIn(118.dp, if (daten.weit) 190.dp else 160.dp)
     val zimmerForm = RoundedCornerShape((LocalDesignTokens.current.karteRadius * 0.7f).coerceAtMost(18.dp))
-    val textBreite = innen
+    // Datum und Uhr bekommen knapp die Hälfte, der rechte Block den Rest — er trägt Knöpfe.
+    val linksBreite = (innen - SPALTEN_ABSTAND) * 0.46f
+    val rechtsBreite = innen - SPALTEN_ABSTAND - linksBreite
     Column(Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth()
             .tiefenSchatten(gold.akzentWarm, Hoehe.karteErhoeht, form)
@@ -951,15 +952,18 @@ private fun MorgenruheHero(
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 LocalGestalt.current.Motiv(Modifier.fillMaxWidth().height(zimmerHoehe).clip(zimmerForm)
                     .border(1.dp, gold.heroKante, zimmerForm))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                // Seit 1.0.53 eine einzige Zeile unter dem Zimmer: links Datum und Uhr, rechts Termin
+                // bzw. Leerstatus, Weckbereitschaft und Aktionen — keine eigenen Zeilen mehr darunter.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.width(linksBreite), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
                         Box(Modifier.width(40.dp).height(2.dp).background(gold.akzentWarm))
                         Text(datumsZeile(daten.now), style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Medium, color = gold.heroFuehrung,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
                         GedeckelteSchrift {
-                            val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
+                            val groesse = passendeUhrGroesse(linksBreite, uhrGroesse(daten.stufe),
                                 zahlSchrift(), zahlGewicht())
                             Text(formatClock(daten.now), Modifier.semantics { heading() },
                                 fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
@@ -967,16 +971,8 @@ private fun MorgenruheHero(
                                 maxLines = 1, softWrap = false)
                         }
                     }
-                }
-                // Der Termin nutzt jetzt die ganze Breite: links Weckzeit und Name, rechts die
-                // Restzeit — statt alles in die linke Spalte neben das Bett zu quetschen.
-                HorizontalDivider(color = gold.heroKante)
-                TerminVerteilt(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) {
-                        HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden, knopfText = "Wecker anlegen")
-                    }
-                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
+                    MorgenruheRechts(daten, rechtsBreite, oeffnen, aufNeu, aufEinstellungen, aufSchlummernBeenden,
+                        Modifier.weight(1f))
                 }
             }
         }
@@ -2860,36 +2856,59 @@ private fun Sternenhimmel(modifier: Modifier) {
 }
 
 /**
- * Morgenruhes Terminzeile über die volle Heldenbreite: links Weckzeit und Name, rechts die Restzeit.
- * Dieselben Angaben wie [TerminGruppe], nur ordentlich auf die Fläche verteilt.
+ * Morgenruhes rechter Block neben Datum und Uhr: Termin oder Leerstatus, Weckbereitschaft und die
+ * Wecker-Aktionen, rechtsbündig gestapelt. Früher standen sie als eigene Zeilen unter der Uhr.
+ * In schmalen Spalten (zugeklappt, geteilter Bildschirm) brechen Texte auf zwei Zeilen und die
+ * Knöpfe untereinander um, statt abgeschnitten zu werden. [spalte] ist die Breite dieses Blocks.
  */
 @Composable
-private fun TerminVerteilt(
-    daten: HeroDaten, aufOeffnen: () -> Unit,
-    textFarbe: androidx.compose.ui.graphics.Color, gedaempft: androidx.compose.ui.graphics.Color,
-    fuehrung: androidx.compose.ui.graphics.Color,
+private fun MorgenruheRechts(
+    daten: HeroDaten, spalte: androidx.compose.ui.unit.Dp, aufOeffnen: () -> Unit, aufNeu: () -> Unit,
+    aufEinstellungen: () -> Unit, aufSchlummernBeenden: () -> Unit, modifier: Modifier = Modifier,
 ) {
+    val gold = LocalGold.current
+    val semantisch = LocalSemantisch.current
+    val rechts = androidx.compose.ui.text.style.TextAlign.End
     val oeffenbar = daten.nextAlarm != null
-    Row(
-        Modifier.fillMaxWidth().then(if (oeffenbar) Modifier.clickable(
-            onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    // „Wecker anlegen“ samt Plus braucht rund 160 dp (mit der Systemschrift mehr); darunter genügt „Neu“.
+    val knopfText = if (spalte < 160.dp * LocalDensity.current.fontScale.coerceIn(1f, 1.5f)) "Neu" else "Wecker anlegen"
+    Column(modifier, horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(
+            Modifier.then(if (oeffenbar) Modifier.clickable(
+                onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+            horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
             if (daten.next == null) {
-                Text(daten.leerGrund, style = MaterialTheme.typography.titleSmall, color = textFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(daten.leerHilfe, style = MaterialTheme.typography.bodyMedium, color = fuehrung, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(daten.leerGrund, style = MaterialTheme.typography.titleSmall, color = gold.heroSchrift,
+                    textAlign = rechts, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(if (daten.anzahl == 0) "Tippe auf „$knopfText“" else daten.leerHilfe,
+                    style = MaterialTheme.typography.bodySmall, color = gold.heroFuehrung,
+                    textAlign = rechts, maxLines = 2, overflow = TextOverflow.Ellipsis)
             } else {
-                TerminZeile(daten.now, daten.next, daten.nextIsSnooze)
-                Text(daten.nextName ?: "Wecker", style = MaterialTheme.typography.titleSmall, color = textFarbe,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LegendenMarker(hollow = false, color = if (daten.nextIsSnooze) semantisch.info else gold.primaer)
+                    Text("${if (daten.nextIsSnooze) "Schlummern bis" else "Wecker"} ${terminAnzeige(daten.now, daten.next).einzeilig}",
+                        Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium,
+                        color = gold.heroSchrift, textAlign = rechts, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Text(daten.nextName ?: "Wecker", style = MaterialTheme.typography.titleSmall, color = gold.heroSchrift,
+                    textAlign = rechts, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("noch ${remainingLong(daten.next - daten.now)}", style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold, color = gold.heroFuehrung,
+                    textAlign = rechts, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-        if (daten.next != null) Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("noch", style = MaterialTheme.typography.labelSmall, color = gedaempft)
-            Text(remainingLong(daten.next - daten.now), style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold, color = fuehrung, maxLines = 1)
+        BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            GoldKnopf(knopfText, aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
+                symbol = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) })
+            when {
+                daten.nextIsSnooze -> StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
+                daten.nextAlarm != null -> GoldKnopf("Öffnen", aufOeffnen, beschreibung = "Nächsten Wecker öffnen")
+            }
         }
     }
 }

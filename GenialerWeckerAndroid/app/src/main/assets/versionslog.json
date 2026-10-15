@@ -54,6 +54,7 @@
     { "versionCode": 50, "versionName": "1.0.49", "stand": "29.09.2026, 22:09 Uhr", "notiz": "Pausen zwischen Absätzen jetzt mit einem kräftigeren, aber unhörbaren Füllsignal im gleichen Format wie die Stimme: Der Lautsprecher bleibt sicher an, jeder Absatz beginnt gleich laut." },
     { "versionCode": 51, "versionName": "1.0.50", "stand": "30.09.2026, 11:06 Uhr", "notiz": "Ausschalten und Schlummern in der kleinen schwebenden Wecker-Nachricht wirken jetzt zuverlässig, und der Vollbild-Weckbildschirm im Hintergrund schließt sich mit, sobald der Wecker irgendwo aus ist." },
     {"versionCode": 52, "versionName": "1.0.51", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 53, "versionName": "1.0.52", "stand": "15.10.2026, 15:03 Uhr", "notiz": "Morgenruhe zeigt oben jetzt ein zusammenhängendes Schlafzimmer mit Boden, Wänden und Tiefe: Bett unter dem Fenster, Nachttisch mit Lampe und Wecker, Blume auf der Fensterbank"}
+    {"versionCode": 53, "versionName": "1.0.52", "stand": "15.10.2026, 15:03 Uhr", "notiz": "Morgenruhe zeigt oben jetzt ein zusammenhängendes Schlafzimmer mit Boden, Wänden und Tiefe: Bett unter dem Fenster, Nachttisch mit Lampe und Wecker, Blume auf der Fensterbank"},
+    {"versionCode": 54, "versionName": "1.0.53", "stand": "15.10.2026, 15:46 Uhr", "notiz": "Morgenruhe: Wecker-Status, Weckbereitschaft und die Knöpfe zum Anlegen und Öffnen stehen jetzt rechts neben Datum und Uhrzeit statt in einer eigenen Zeile darunter."}
   ]
 }
