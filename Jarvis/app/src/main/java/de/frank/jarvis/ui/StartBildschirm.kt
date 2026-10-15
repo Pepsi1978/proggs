@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -307,16 +308,51 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
 private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
     if (n.art == "rueckfrage") { Rueckfrage(vm, n); return }
     val f = LocalFarben.current
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (n.vonMir) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
-        val grund = if (n.vonMir) Modifier.knopf3d(f.primaer, f.tertiaer, 20.dp, f.dunkel) else Modifier.glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark)
-        val form = Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp)
-        // Meldungen eines Programmierauftrags: Symbole statt Emojis, wichtige Fakten fett.
-        if (n.art == "programmieren") ProgrammierText(n.text, form, farbe = f.text)
-        else Text(n.text, form, color = if (n.vonMir) f.aufPrimaer else f.text, fontSize = 16.sp, lineHeight = 22.sp)
-        if (!n.vonMir) {
-            Spacer(Modifier.width(6.dp))
-            Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = if (n.vonMir) Alignment.End else Alignment.Start) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = if (n.vonMir) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
+            val grund = if (n.vonMir) Modifier.knopf3d(f.primaer, f.tertiaer, 20.dp, f.dunkel) else Modifier.glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark)
+            val form = Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp)
+            // Lange drücken markiert Text, die Android-Textauswahl kopiert ihn. Auf der blauen eigenen Blase in Textfarbe, sonst unsichtbar.
+            Markierbar(hell = n.vonMir) {
+                // Meldungen eines Programmierauftrags: Symbole statt Emojis, wichtige Fakten fett.
+                if (n.art == "programmieren") ProgrammierText(n.text, form, farbe = f.text)
+                else Text(n.text, form, color = if (n.vonMir) f.aufPrimaer else f.text, fontSize = 16.sp, lineHeight = 22.sp)
+            }
+            if (!n.vonMir) {
+                Spacer(Modifier.width(6.dp))
+                Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
+            }
         }
+        Kopierknopf(vm, n.text, if (n.vonMir) "Frage" else "Antwort")
+    }
+}
+
+/** Textauswahl mit Griffen und Markierung, die auf jedem Blasengrund sichtbar bleiben. */
+@Composable
+private fun Markierbar(hell: Boolean, inhalt: @Composable () -> Unit) {
+    val f = LocalFarben.current
+    val farbe = if (hell) f.aufPrimaer else f.primaer
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.foundation.text.selection.LocalTextSelectionColors provides
+            androidx.compose.foundation.text.selection.TextSelectionColors(handleColor = farbe, backgroundColor = farbe.copy(alpha = 0.35f)),
+    ) { androidx.compose.foundation.text.selection.SelectionContainer { inhalt() } }
+}
+
+/** Dezentes Kopiersymbol unter einer Nachricht: kopiert genau ihren ganzen Text und zeigt kurz einen Haken. */
+@Composable
+private fun Kopierknopf(vm: AppViewModel, text: String, was: String) {
+    val f = LocalFarben.current
+    var kopiert by remember(text) { mutableStateOf(false) }
+    LaunchedEffect(kopiert) { if (kopiert) { kotlinx.coroutines.delay(1_500); kopiert = false } }
+    Box(
+        Modifier.size(36.dp).antippen { vm.kopiere(text, was); kopiert = true },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            if (kopiert) Icons.Rounded.Check else Icons.Rounded.ContentCopy,
+            if (kopiert) "$was kopiert" else "$was kopieren",
+            tint = if (kopiert) f.erfolg else f.textLeise, modifier = Modifier.size(18.dp),
+        )
     }
 }
 
@@ -390,7 +426,8 @@ private fun Rueckfrage(vm: AppViewModel, n: Nachricht) {
     val f = LocalFarben.current
     val k = remember(n.kontext) { runCatching { org.json.JSONObject(n.kontext) }.getOrNull() }
     Column(Modifier.fillMaxWidth().widthIn(max = 520.dp).glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        ProgrammierText(n.text, farbe = f.text, fontWeight = FontWeight.SemiBold)
+        Markierbar(hell = false) { ProgrammierText(n.text, farbe = f.text, fontWeight = FontWeight.SemiBold) }
+        Kopierknopf(vm, n.text, "Frage")
         if (k == null) return@Column
         if (k.optBoolean("beantwortet")) {
             Text("✓ Beantwortet: " + k.optString("antwort"), color = f.erfolg, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
