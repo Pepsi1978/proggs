@@ -270,6 +270,7 @@ jobs:
           }
 
       - name: Signatur prüfen und nach Drive hochladen
+        id: hochladen
         if: steps.bau.outputs.status == 'ok'
         shell: pwsh
         env:
@@ -300,6 +301,29 @@ jobs:
             if ($alt -and $nachher -notcontains $alt) { rclone deletefile "$ziel/$alt"; Write-Host "Alte APK entfernt: $alt" }
           }
           "### $env:PROJEKT`n✅ Version $($m.versionName) (versionCode $($m.versionCode)) liegt in Google Drive unter Dokumente/Updates/$env:PROJEKT. UpdateStation findet sie bei der nächsten Prüfung." >> $env:GITHUB_STEP_SUMMARY
+          "update-paket=$($m.paket)" >> $env:GITHUB_OUTPUT
+          "update-vc=$($m.versionCode)" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      # Echtzeit-Signal: Jarvis-Relay → Jarvis → UpdateStation prüft sofort und lädt die APK vor.
+      # Nur ein Anstoß: Scheitert er, findet die regelmäßige Prüfung am Handy das Update trotzdem.
+      - name: Handy benachrichtigen
+        if: steps.hochladen.outputs.update-vc != ''
+        continue-on-error: true
+        shell: pwsh
+        env:
+          RELAY_PROPERTIES: ${{ secrets.SK_JARVIS_RELAY_PROPERTIES }}
+          PAKET: ${{ steps.hochladen.outputs.update-paket }}
+          VC: ${{ steps.hochladen.outputs.update-vc }}
+        run: |
+          if (-not $env:RELAY_PROPERTIES) { Write-Host "::warning::Secret SK_JARVIS_RELAY_PROPERTIES fehlt, kein Signal ans Handy."; exit 0 }
+          $relay = @{}
+          $env:RELAY_PROPERTIES -split "`r?`n" | ForEach-Object { $k, $v = $_ -split '=', 2; if ($v) { $relay[$k.Trim()] = $v.Trim() } }
+          $rumpf = Join-Path $env:RUNNER_TEMP 'signal.json'
+          [IO.File]::WriteAllText($rumpf, (@{ signal = 'update'; projekt = $env:PROJEKT; paket = $env:PAKET; versionCode = [long]$env:VC } | ConvertTo-Json -Compress))
+          $antwort = curl -s --max-time 15 -X POST -H "X-Jarvis-Token: $($relay.token)" -H "Content-Type: application/json" --data-binary "@$rumpf" "https://$($relay.host)/geraet/signal"
+          Remove-Item $rumpf -ErrorAction SilentlyContinue
+          Write-Host "Signal ans Handy: $antwort (curl $LASTEXITCODE)"
           exit 0
 
       - name: Aufräumen
