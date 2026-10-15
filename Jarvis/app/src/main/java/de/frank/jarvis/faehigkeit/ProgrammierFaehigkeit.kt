@@ -31,7 +31,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     override val name = "Programmieren"
     override val beschreibung = "Programmieraufträge an Franks Apps an Claude Code übergeben; die fertige App kommt über UpdateStation aufs Handy."
     override val hinweise =
-        "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
+        "Fragt Frank, ob sein PC (Rechner, Computer) an oder erreichbar ist oder wohin ein Programmierauftrag gehen würde, rufe pc_status auf. " +
+            "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
             "Schreib den Auftrag vollständig aus, mit allem, was Frank im Gespräch gesagt hat: welche App, was genau anders werden soll, wie es aussehen und sich verhalten soll, " +
             "woran man erkennt, dass es fertig ist. Ist unklar, welche App gemeint ist, frag Frank kurz, bevor du startest. Programmiere nie selbst im Gespräch."
 
@@ -43,8 +44,45 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = if (ziele.none { it.bereit() }) ziele.last().fehlt() else null
 
+    /**
+     * Zustand beider Wege in einem Absatz: ob die PC-Brücke gerade abfragt (dann gehen Aufträge an den PC) und ob die
+     * Cloud-Routine eingerichtet ist. Steht auch in jarvis_status.
+     */
+    suspend fun zustand(): String = withContext(Dispatchers.IO) {
+        val pc = if (e.serverToken.isBlank()) "PC: unbekannt, Jarvis ist nicht mit seinem Server verbunden." else runCatching {
+            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc").header("X-Jarvis-Token", e.serverToken).build()
+            STATUS_HTTP.newCall(anfrage).execute().use { antwort ->
+                if (!antwort.isSuccessful) return@use "PC: unbekannt, der Jarvis-Server antwortet mit HTTP ${antwort.code}."
+                val daten = JSONObject(antwort.body?.string().orEmpty())
+                val rechner = daten.optString("rechner").ifEmpty { "Franks PC" }
+                val vor = if (daten.isNull("zuletzt_vor_s")) -1 else daten.optInt("zuletzt_vor_s", -1)
+                if (daten.optBoolean("pc")) "PC: $rechner ist an und erreichbar (letzte Meldung vor $vor Sekunden). Programmieraufträge gehen an den PC."
+                else "PC: nicht erreichbar" + (if (vor >= 0) " (letzte Meldung von $rechner vor ${zeitspanne(vor)})" else "") +
+                    ". Entweder ist der PC aus, im Standby oder die PC-Brücke läuft nicht. Programmieraufträge gehen in die Cloud."
+            }
+        }.getOrElse { "PC: unbekannt, der Jarvis-Server ist nicht erreichbar (${it.message ?: it.javaClass.simpleName})." }
+        val cloud = if (e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()) "Cloud: eingerichtet (Claude-Code-Routine mit Token)."
+            else "Cloud: nicht eingerichtet, der Token fehlt (Einstellungen → Konten → Programmieren in der Cloud)."
+        "$pc $cloud"
+    }
+
+    private fun zeitspanne(sekunden: Int): String = when {
+        sekunden < 120 -> "$sekunden Sekunden"
+        sekunden < 7_200 -> "${sekunden / 60} Minuten"
+        else -> "${sekunden / 3_600} Stunden"
+    }
+
     override val werkzeuge: List<Werkzeug> by lazy {
         listOf(
+            Werkzeug(
+                name = "pc_status",
+                titel = "Ist Franks PC erreichbar?",
+                beschreibung = "Jarvis: prüft jetzt, ob Franks PC an und für Programmieraufträge erreichbar ist (die PC-Brücke meldet sich beim Jarvis-Server), " +
+                    "wann er sich zuletzt gemeldet hat, und ob der Cloud-Weg eingerichtet ist. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, " +
+                    "„Läuft die PC-Brücke?“ oder „Wohin geht ein Programmierauftrag gerade?“.",
+                schema = schema(),
+                nurLesen = true,
+            ) { Ergebnis(zustand()) },
             Werkzeug(
                 name = "programmieren",
                 titel = "Programmierauftrag starten",
@@ -208,6 +246,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     private companion object {
         const val CLAUDE_APP = "com.anthropic.claude"
+        val STATUS_HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
         val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     }
 }

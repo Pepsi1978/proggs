@@ -466,7 +466,8 @@ class PcBruecke:
     async def status(self, request: web.Request) -> web.Response:
         if not self._erlaubt(request):
             return web.Response(status=404, text="Not found")
-        return web.json_response({"pc": self.da(), "rechner": self.rechner if self.da() else ""})
+        vor = int(time.monotonic() - self.zuletzt) if self.zuletzt else None
+        return web.json_response({"pc": self.da(), "rechner": self.rechner, "zuletzt_vor_s": vor})
 
 
 async def gesund(_: web.Request) -> web.Response:

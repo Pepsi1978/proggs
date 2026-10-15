@@ -66,6 +66,7 @@
     {"versionCode": 61, "versionName": "1.8.50", "stand": "15.10.2026, 11:08 Uhr", "notiz": "E-Mails lesen und senden klappt wieder im Heim-WLAN: Jarvis verbindet sich mit Gmail jetzt über IPv4 statt am nicht funktionierenden IPv6 zu hängen"},
     {"versionCode": 62, "versionName": "1.8.51", "stand": "15.10.2026, 11:36 Uhr", "notiz": "Von Hand gestartete Aufnahmen laufen weiter, wenn du in eine andere App wechselst, bis du in Jarvis wieder auf das Mikrofon tippst"},
     {"versionCode": 63, "versionName": "1.8.52", "stand": "15.10.2026, 12:02 Uhr", "notiz": "Programmieraufträge laufen stabiler: Kann der PC eine Sitzung nicht starten, übernimmt automatisch die Cloud, und der Link in der Benachrichtigung öffnet die Cloud-Sitzung jetzt richtig"},
-    {"versionCode": 64, "versionName": "1.8.53", "stand": "15.10.2026, 12:08 Uhr", "notiz": "Jarvis ist an die neue App Epigenetik angebunden: Er liest fertige Auswertungen zu Nahrungsergänzungsmitteln, Wirkungen und Zielen, startet fehlende Recherchen und kennt deinen Stack"}
+    {"versionCode": 64, "versionName": "1.8.53", "stand": "15.10.2026, 12:08 Uhr", "notiz": "Jarvis ist an die neue App Epigenetik angebunden: Er liest fertige Auswertungen zu Nahrungsergänzungsmitteln, Wirkungen und Zielen, startet fehlende Recherchen und kennt deinen Stack"},
+    {"versionCode": 65, "versionName": "1.8.54", "stand": "15.10.2026, 12:12 Uhr", "notiz": "Jarvis kann jetzt jederzeit sagen, ob dein PC an und für Programmieraufträge erreichbar ist und ob der Cloud-Weg eingerichtet ist („Jarvis, ist mein Rechner an?“)"}
   ]
 }
