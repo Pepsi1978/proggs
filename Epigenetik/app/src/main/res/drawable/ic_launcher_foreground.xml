@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Doppelhelix: zwei Stränge und Sprossen, eine Sprosse leuchtet als "eingeschalteter" Schalter. -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4.5" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M40,28C40,40 68,44 68,54C68,64 40,68 40,80" />
+    <path android:strokeColor="#CCFFE3C4" android:strokeWidth="4.5" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M68,28C68,40 40,44 40,54C40,64 68,68 68,80" />
+    <path android:strokeColor="#99FFFFFF" android:strokeWidth="3" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M45,35H63M47,73H61M45,44H63" />
+    <path android:strokeColor="#FFFFD27A" android:strokeWidth="3.5" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M45,64H63" />
+    <path android:fillColor="#FFFFD27A" android:pathData="M75,62m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+</vector>
