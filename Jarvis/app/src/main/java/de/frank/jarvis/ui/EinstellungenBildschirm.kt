@@ -59,9 +59,10 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         Text("Einstellungen", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
 
         // Reiter: Die vielen Bereiche nach Themen gebündelt, damit nicht alles in einer langen Liste steht.
-        var reiter by rememberSaveable { mutableStateOf("jarvis") }
+        // Im ViewModel: Ein Neustart durch ein Update öffnet denselben Bereich wieder, eine normale Rückkehr beginnt bei „Jarvis“.
+        var reiter by vm::einstellungsReiter
         // Zurück-Geste führt durch die zuvor geöffneten Bereiche bis „Jarvis“; erst von dort geht es zum vorherigen App-Reiter.
-        var verlauf by rememberSaveable { mutableStateOf(listOf<String>()) }
+        var verlauf by vm::einstellungsVerlauf
         androidx.activity.compose.BackHandler(enabled = reiter != "jarvis") {
             reiter = verlauf.lastOrNull() ?: "jarvis"
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)

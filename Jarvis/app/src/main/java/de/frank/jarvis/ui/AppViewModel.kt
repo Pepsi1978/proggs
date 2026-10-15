@@ -38,6 +38,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
+/** So lange vor einem Update darf Frank Jarvis verlassen haben (etwa für UpdateStation), damit der Neustart dort weitermacht. */
+private const val UPDATE_VORLAUF = 15 * 60_000L
+/** So lange nach dem Update gilt das erste Öffnen noch als Neustart durch das Update, später als normaler Start. */
+private const val UPDATE_NACHLAUF = 60 * 60_000L
+
 enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Einstellungen") }
 
 /**
@@ -70,6 +75,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             aktuellerReiter = neu
         }
 
+    /** Offener Bereich der Einstellungen und die zuvor geöffneten, hier statt im Bildschirm: Ein Update stellt ihn wieder her. */
+    var einstellungsReiter by mutableStateOf("jarvis")
+    var einstellungsVerlauf by mutableStateOf(listOf<String>())
+
     /** Zurück-Geste auf einem Unterreiter: zum vorher offenen Reiter, ohne Verlauf zum Jarvis-Startbildschirm. Beendet nie die App. */
     fun reiterZurueck() {
         aktuellerReiter = reiterVerlauf.removeLastOrNull() ?: Reiter.JARVIS
@@ -79,6 +88,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Sperre ----
     /** true, solange die App auf den Fingerabdruck wartet. Der Dienst im Hintergrund läuft davon unberührt. */
     var gesperrt by mutableStateOf(false)
+    /** Seit wann die App nicht mehr auf dem Bildschirm ist; 0 = sichtbar oder eben erst gestartet. */
+    var hintergrundSeit = 0L
     /** Wann die App zuletzt sichtbar war; 0 = seit dem Start noch nie entsperrt. */
     var zuletztSichtbar = 0L
     /** Bis wann die Sperre nach einem bewusst gestarteten Teilen, Öffnen oder „Speichern unter“ wartet (sonst ginge das Ergebnis verloren). */
@@ -900,7 +911,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val sicherung = Mutex()
 
     init {
-        laufendenAuftragOeffnen()
+        // Normaler Start: Startbildschirm mit neuem Gespräch. Nur nach einem Update von Jarvis selbst geht es dort weiter, wo Frank war.
+        nachUpdateWiederherstellen()
+        bildschirmBeobachten()
         runCatching { de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.aktivitaetLaden() }
         sitzungenLaden()
         // Das Stimmprofil braucht erst „Hey Jarvis“ (und der Weckwort-Dienst lädt es selbst): nicht den ersten Frame aufhalten.
@@ -994,23 +1007,96 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         offenePrefs().edit().clear().apply()
     }
 
+    // ---- Start, Rückkehr und Neustart nach einem Update ----
+
+    /** Welcher Bildschirm offen ist und ob die App gerade sichtbar ist: Daraus stellt der Neustart nach einem Update alles wieder her. */
+    private fun bildPrefs() = getApplication<Application>().getSharedPreferences("jarvis_bildschirm", Context.MODE_PRIVATE)
+
+    /** Hält jeden Wechsel von Reiter, Merkliste, Gedächtnis-Ansicht und Einstellungsbereich sofort fest (ein Update beendet die App ohne Vorwarnung). */
+    private fun bildschirmBeobachten() {
+        viewModelScope.launch {
+            snapshotFlow { listOf(reiter.name, merkOffen?.titel.orEmpty(), GedaechtnisAnsicht.offen.toString(), einstellungsReiter, einstellungsVerlauf.joinToString(",")) }
+                .collect { (r, merk, ged, einst, verlauf) ->
+                    bildPrefs().edit().putString("reiter", r).putString("merk", merk).putBoolean("gedaechtnis", ged == "true")
+                        .putString("einstellungen", einst).putString("einstellungsVerlauf", verlauf).apply()
+                }
+        }
+    }
+
+    /** Sichtbar (onStart) oder verlassen (onStop). Beendet ein Update die App, bleibt „sichtbar“ stehen, weil onStop nie kommt. */
+    fun sichtbarMerken(sichtbar: Boolean) {
+        val e = bildPrefs().edit().putBoolean("sichtbar", sichtbar)
+        if (!sichtbar) e.putLong("verlassen", System.currentTimeMillis())
+        e.apply()
+    }
+
     /**
-     * Läuft ein Programmierauftrag aus einem Gespräch noch, öffnet die App beim Start genau dieses Gespräch (zum Beispiel nach
-     * einem Update von Jarvis selbst, bei dem Android die App beendet). Klein, deshalb direkt.
+     * Neustart durch ein Update von Jarvis: dieselbe Session und derselbe Bildschirm wie davor. Erkannt am Installationszeitpunkt
+     * der App, der sich seit dem letzten Start geändert hat, und daran, dass Frank Jarvis bis kurz vor dem Update benutzt hat
+     * (sichtbar oder höchstens [UPDATE_VORLAUF] vorher verlassen, etwa für UpdateStation). Ein altes gespeichertes Gespräch allein
+     * reicht nie. Nicht über MY_PACKAGE_REPLACED: Das überspringt Samsung, wenn Jarvis beim Update vorn war.
      */
-    private fun laufendenAuftragOeffnen() {
-        if (gespraech.isNotEmpty() || sitzungId != null) return
-        val id = runCatching {
-            de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.laufendesGespraech()
-        }.getOrNull() ?: return
-        programmierGespraech = id
-        val geladen = de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) ?: run { programmierGespraech = null; return }
-        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
-        sitzungId = id
-        sitzungErstellt = geladen.first.erstellt
-        letzteAktivitaet = System.currentTimeMillis()
-        offenesGespraechMerken(id, letzteAktivitaet)
-        Logbuch.gedaechtnis("Gespräch mit laufendem Programmierauftrag geöffnet", "${gespraech.size} Nachrichten")
+    private fun nachUpdateWiederherstellen() {
+        val app = getApplication<Application>()
+        val p = bildPrefs()
+        val installiert = runCatching { app.packageManager.getPackageInfo(app.packageName, 0).lastUpdateTime }.getOrDefault(0L)
+        val bekannt = p.getLong("installiert", 0L)
+        val warSichtbar = p.getBoolean("sichtbar", false)
+        val verlassen = p.getLong("verlassen", 0L)
+        p.edit().putLong("installiert", installiert).apply()
+        if (installiert == 0L || bekannt == 0L || installiert == bekannt) return
+        val kurzVorher = warSichtbar || (verlassen > 0L && installiert - verlassen in 0..UPDATE_VORLAUF)
+        val baldDanach = System.currentTimeMillis() - installiert in 0..UPDATE_NACHLAUF
+        if (!kurzVorher || !baldDanach) {
+            Logbuch.gedaechtnis("Start nach Update ohne Wiederherstellung", if (!kurzVorher) "Jarvis war vor dem Update nicht in Gebrauch" else "erst lange nach dem Update geöffnet")
+            return
+        }
+        // Dieselbe Session: das zuletzt offene Gespräch (keins = Frank war in einem neuen, noch leeren Gespräch).
+        val id = offenePrefs().getString("id", null)
+        if (id != null) {
+            // Vor dem Lesen setzen: Meldungen, die der Server genau jetzt nachliefert, gehen dann in das geladene Gespräch.
+            programmierGespraech = id
+            val geladen = de.frank.jarvis.data.Gespraeche.laden(app, id)
+            if (geladen != null) {
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
+                sitzungId = id
+                sitzungErstellt = geladen.first.erstellt
+                letzteAktivitaet = System.currentTimeMillis()
+            } else programmierGespraech = null
+        }
+        // Derselbe Bildschirm.
+        val r = runCatching { Reiter.valueOf(p.getString("reiter", null) ?: "") }.getOrNull() ?: Reiter.JARVIS
+        if (r != Reiter.JARVIS) { reiterVerlauf.clear(); aktuellerReiter = r }
+        einstellungsReiter = p.getString("einstellungen", null)?.takeIf { it.isNotBlank() } ?: "jarvis"
+        einstellungsVerlauf = p.getString("einstellungsVerlauf", null).orEmpty().split(',').filter { it.isNotBlank() }
+        GedaechtnisAnsicht.offen = p.getBoolean("gedaechtnis", false)
+        val merk = p.getString("merk", null).orEmpty()
+        listOf(regelListe, zielListe, infoListe, programmierListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
+        Logbuch.gedaechtnis("Zustand nach Update wiederhergestellt", "Reiter ${r.anzeige}, ${gespraech.size} Nachrichten")
+    }
+
+    /**
+     * Frank öffnet Jarvis wieder, nachdem es nicht auf dem Bildschirm war: Startbildschirm mit neuem, leerem Gespräch. Das bisherige
+     * bleibt gespeichert; laufende Antworten und Programmieraufträge arbeiten in ihrem Gespräch weiter. Ein laufender Gesprächsmodus
+     * oder eine Aufnahme bleibt, wo sie ist: Sonst landete die nächste gesprochene Frage mitten im Gespräch in einer neuen Session.
+     */
+    fun startbildschirmNeu() {
+        if (freihaendig || nimmtAuf || schreibtMit || holtMikro) return
+        reiter = Reiter.JARVIS
+        merkOffen = null
+        diktatZiel = null
+        GedaechtnisAnsicht.offen = false
+        einstellungsReiter = "jarvis"
+        einstellungsVerlauf = emptyList()
+        navigationsAuswahl = null
+        // Ohne vorleser.stopp(): Ein Vorlesen im Hintergrund (Tagesauswertung, Ablage) läuft weiter.
+        if (gespraech.isNotEmpty() || sitzungId != null) {
+            sitzungId?.let { vorherigeSitzung = it }
+            gespraech.clear()
+            sitzungId = null
+            sitzungErstellt = 0L
+            offenesGespraechVergessen()
+        }
     }
 
 

@@ -61,9 +61,37 @@ class MainActivity : FragmentActivity() {
         }).authenticate(BiometricPrompt.PromptInfo.Builder().setTitle("Jarvis entsperren").setSubtitle("Mit Fingerabdruck oder Gerätesperre").setAllowedAuthenticators(nachweis).build())
     }
 
+    /** Jarvis hat selbst eine andere App geöffnet (Teilen, Datei, Anmeldung im Browser): Die Rückkehr von dort ist kein neuer Start. */
+    private var eigenerAbsprung = false
+    /** Seit dem letzten onStop kam „Hey Jarvis“: Das beginnt selbst ein neues Gespräch oder führt das sichtbare fort. */
+    private var weckwortSeitStopp = false
+    /** Diese Rückkehr zeigt den Startbildschirm mit neuem Gespräch, ausgeführt in onResume (nach einem möglichen Weckwort-Intent). */
+    private var rueckkehrNeu = false
+
+    @Deprecated("Fängt alle Absprünge der App ab, auch startActivity und die Ergebnis-Launcher.")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        eigenerAbsprung = true
+        @Suppress("DEPRECATION")
+        super.startActivityForResult(intent, requestCode, options)
+    }
+
+    @Deprecated("Fängt Absprünge über IntentSender ab (etwa Google-Anmeldung).")
+    override fun startIntentSenderForResult(intent: android.content.IntentSender, requestCode: Int, fillInIntent: Intent?, flagsMask: Int, flagsValues: Int, extraFlags: Int, options: Bundle?) {
+        eigenerAbsprung = true
+        @Suppress("DEPRECATION")
+        super.startIntentSenderForResult(intent, requestCode, fillInIntent, flagsMask, flagsValues, extraFlags, options)
+    }
+
     override fun onStart() {
         super.onStart()
         sichtbar = true
+        vm.sichtbarMerken(true)
+        // War Jarvis nicht auf dem Bildschirm (andere App, Startbildschirm, Display aus), beginnt die Rückkehr neu. Nicht beim
+        // Kaltstart (das regelt das ViewModel samt Neustart nach Update), nicht nach Auf- oder Zuklappen, nicht nach einem
+        // Absprung, den Jarvis selbst geöffnet hat, und nicht über dem Sperrbildschirm.
+        rueckkehrNeu = vm.hintergrundSeit != 0L && !eigenerAbsprung && System.currentTimeMillis() > vm.sperrAufschubBis && !vm.ueberSperre
+        vm.hintergrundSeit = 0L
+        eigenerAbsprung = false
         // Sperren beim Start und nach mehr als 30 Sekunden außerhalb der App. Ohne eingerichteten Fingerabdruck
         // und ohne Gerätesperre bleibt die App offen, sonst käme niemand mehr hinein.
         // Über dem Sperrbildschirm nicht nach dem Fingerabdruck fragen: Die Sperre bleibt, Jarvis hört und antwortet nur.
@@ -80,6 +108,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         sichtbar = false
+        weckwortSeitStopp = false
+        if (!isChangingConfigurations) {
+            vm.sichtbarMerken(false)
+            vm.hintergrundSeit = System.currentTimeMillis()
+        }
         if (!vm.gesperrt) vm.zuletztSichtbar = System.currentTimeMillis()
         super.onStop()
     }
@@ -130,6 +163,7 @@ class MainActivity : FragmentActivity() {
     /** „Hey Jarvis“ wurde erkannt: aufnehmen, piepen, antworten; bei gesperrtem Handy über dem Sperrbildschirm. */
     private fun weckwortPruefen(intent: Intent?, neu: Boolean) {
         if (intent?.getBooleanExtra(WeckwortDienst.EXTRA_WECKWORT, false) != true) return
+        weckwortSeitStopp = true
         // Sofort melden, dass die App übernommen hat: Sonst greift der Wächter des Weckworts während des Starts ein.
         de.frank.jarvis.weckwort.Weckwort.uebernommen()
         // Zählt, ob Jarvis schon vorn war, bevor das Weckwort die App geöffnet hat (der Dienst hält es beim Ruf fest).
@@ -172,6 +206,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Bewusste Wechsel innerhalb der sichtbaren App sind davon nie betroffen: Das greift nur nach einer Rückkehr von außen.
+        if (rueckkehrNeu && !weckwortSeitStopp && !vm.ueberSperre) vm.startbildschirmNeu()
+        rueckkehrNeu = false
         // Gedrosselt: Die Prüfung weckt die Partner-Apps, das muss nicht bei jedem Zurückkehren sein.
         vm.lagePruefen(sofort = false)
         // Nicht in lagePruefen: Das läuft schon im Aufbau des ViewModels, bevor dessen spätere Felder bestehen.
