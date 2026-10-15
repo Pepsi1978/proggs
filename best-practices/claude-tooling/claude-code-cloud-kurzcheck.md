@@ -20,3 +20,4 @@
 | 12 | Übergabe | Nur Cloud → Terminal; Teleport ist fehleranfällig → lieber pushen + `git pull` | §6 |
 | 13 | GUI/Gerät/adb | Geht in der Cloud nicht → lokale Sitzung oder Remote Control | §1, §6 |
 | 14 | Android | Cloud programmiert, **GitHub Actions baut und signiert**; nie Keystore in die VM | §7 |
+| 15 | Routine per API auslösen | POST `…/routines/<trig>/fire`, `anthropic-version: 2023-06-01`, `{"text"}`; Prompt muss `<routine-fire-payload>` nennen; Token nur im Web, einmal sichtbar; nie automatisch wiederholen | §8 |

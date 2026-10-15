@@ -134,6 +134,27 @@
   Einstellungen stehen über den Benutzer-Einstellungen und würden am PC den Modus „alles erlauben“ überschreiben. Ob die Cloud die Repo-Freigabeliste beachtet, ist
   nicht dokumentiert. Fragt die Sitzung trotzdem nach, hier eintragen.
 
+
+## Routinen mit API-Trigger (Stand 15.10.2026)
+
+### §B17 Routine-Sitzung hängt auf Rückfrage
+- **Symptom:** Lauf steht in `requires_action`, keine Benachrichtigung, kein Timeout (#88997, #92006, #94595). Nach einem
+  Worker-Neustart kann die AskUserQuestion-Antwort verloren gehen (#96561).
+- **Fix:** Routine-Prompt auf autonomes Arbeiten auslegen; Link zur Sitzung dem Nutzer schicken, damit er Fragen sieht.
+
+### §B18 Fehlercodes beim Auslösen
+- 400: `anthropic-version` fehlt/falsch, `text` > 65.536 Zeichen **oder Routine pausiert**. 401: Token falsch. 403: Konto ohne
+  Zugriff. 404: Routine fehlt. 429: Stundenlimit (`Retry-After`). Wiederholen erzeugt doppelte Sitzungen.
+- Quelle: https://platform.claude.com/docs/en/api/claude-code/routines-fire
+
+### §B19 Doku widerspricht sich beim Beta-Header
+- code.claude.com zeigt `anthropic-beta: experimental-cc-routine-2026-04-01`, die API-Referenz nennt ihn optional. Mitsenden.
+
+### §B20 Weitere offene Issues
+- API-Fire ignoriert womöglich den Modell-Selektor und läuft mit Sonnet (#96219).
+- Läufe bleiben PENDING oder starten verspätet (#92910).
+- Per `create_trigger` angelegte Routinen ohne Repo/Connectors (#97480). Bei uns (RemoteTrigger, 15.10.2026) kam das Repo an: nach dem Anlegen `sources` prüfen.
+- Stiller Werkzeugfehler, Lauf trotzdem SUCCEEDED (#97895): grüner Status heißt nicht „Aufgabe erledigt“.
 ## Weitere, schwächer belegte Einträge
 - SKILL.md im System-Prompt angekündigt, aber nicht gemountet (#26254, offen).
 - Vorhandene Skills/Subagents werden vom Modell ignoriert (#90182) → Skill ausdrücklich nennen.

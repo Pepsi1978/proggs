@@ -143,6 +143,32 @@
 | Bauen + Signieren | `.github/workflows/android-cloud-build.yml`, nur PR-Merges auf `main` |
 | Codex-Review vor dem Merge | PR nicht als Entwurf öffnen → Codex läuft; Befunde per `gh api` abfragen (§5) |
 
+
+## §8 Routinen per API-Trigger starten (Stand 15.10.2026, Research Preview)
+
+Quellen (offiziell): https://code.claude.com/docs/en/routines, https://platform.claude.com/docs/en/api/claude-code/routines-fire
+
+- **Auslösen:** `POST https://api.anthropic.com/v1/claude_code/routines/<trig_…>/fire`, Header `Authorization: Bearer <Token>`
+  und `anthropic-version: 2023-06-01` (Pflicht, sonst 400). `anthropic-beta: experimental-cc-routine-2026-04-01` ist laut
+  API-Referenz optional, die Routines-Seite zeigt ihn noch: mitsenden schadet nicht. Body `{"text": "…"}`, höchstens
+  65.536 Zeichen, wird nicht geparst.
+- **Antwort** kommt sofort, sobald die Sitzung angelegt ist: `{"type":"routine_fire","claude_code_session_id":…,"claude_code_session_url":"https://claude.ai/code/session_…"}`.
+  Den Link dem Nutzer geben (Jarvis: Benachrichtigung öffnet ihn).
+- **Der Text ersetzt den Prompt nicht.** Er kommt als `<routine-fire-payload>`-Block (als nicht vertrauenswürdig markiert) zum
+  gespeicherten Prompt dazu. Der Routine-Prompt muss ausdrücklich sagen, dass dieser Block die Aufgabe ist, sonst gilt er nur als Kontext.
+- **Token** nur im Web: Routine → Edit → Add another trigger → API → Generate token. Wird **einmal** angezeigt (`sk-ant-oat01-…`),
+  gilt nur für diese Routine; Regenerate macht den alten ungültig. CLI und API können keine Tokens anlegen. Ablage: `~/SK/<Projekt>/`.
+- **Anlegen per `RemoteTrigger create`** verlangt `cron_expression` oder `run_once_at`. Für eine reine API-Routine
+  `run_once_at` weit in der Zukunft setzen (z. B. `2099-12-31T23:00:00Z`). Unmögliche Cron-Daten (31. Februar) lehnt die API ab.
+  Routine muss **aktiv** bleiben (pausiert = 400 beim Auslösen). Erstes Event `control_request` `set_permission_mode: bypassPermissions`
+  und `persist_session: false` (sonst landen alle Aufträge in einer Sitzung). Neue Routinen bekommen **alle** claude.ai-Connectors.
+- **Grenzen:** 30 Auslösungen pro Stunde je Routine, 100 pro Stunde je Konto; Läufe zählen gegen das Abo-Kontingent.
+  **Keine Idempotenz:** jeder erfolgreiche Aufruf = neue Sitzung, also nie automatisch wiederholen.
+- **Rückfragen vermeiden:** Routinen laufen autonom. Eine AskUserQuestion bleibt ohne Benachrichtigung hängen, bis jemand die
+  Sitzung öffnet (siehe Bugs §B17). Prompt so schreiben, dass nur bei echter Mehrdeutigkeit gefragt wird.
+- **Umsetzung im Repo:** `Jarvis/app/src/main/java/de/frank/jarvis/faehigkeit/ProgrammierFaehigkeit.kt` (Werkzeug `programmieren`,
+  Routine `trig_01HkrhPAiYAJ7msGLn5UUcyo`, Token aus `~/SK/Jarvis/routine.properties` bzw. Jarvis-Einstellungen).
+
 ## Wechselseitige Bezüge
 
 | Thema | Best Practice (hier) | Bug-Almanach |

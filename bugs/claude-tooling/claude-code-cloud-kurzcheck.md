@@ -21,3 +21,6 @@
 | B14 | Kein Browser in der Cloud | lokal / Remote Control |
 | B16 | Kein „Bypass permissions“ in der Cloud (so gewollt) | „Änderungen akzeptieren“ + Freigabeliste in `.claude/settings.json` |
 | B15 | `gh` fehlt, Warte-Skripte melden still `timeout` | Skripte nutzen curl + jq (`github-api.sh`); sonst GitHub-MCP |
+| B17 | Routine hängt auf AskUserQuestion, keine Meldung | autonom formulieren, Sitzungslink schicken |
+| B18 | Fire liefert 400 | `anthropic-version`, Textlänge, Routine pausiert? |
+| B20 | API-Fire ignoriert Modellwahl (#96219), PENDING (#92910) | Lauf mit `list_runs`/`get_run_log` prüfen |
