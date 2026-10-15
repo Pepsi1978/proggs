@@ -27,7 +27,7 @@ private const val PAKET_UPDATESTATION = "de.frank.updatestation"
 /**
  * Der Hintergrund-Agent des Live-Gedächtnisses. Läuft im Dienst von Jarvis, also rund um die Uhr:
  *
- * - **Änderungssignale:** Geniale Aufgaben, Geniale Ideen, Genialer Wecker und Entropie Reductor melden jede Änderung
+ * - **Änderungssignale:** Geniale Aufgaben, Geniale Ideen, Genialer Wecker, Stack-Labor und Entropie Reductor melden jede Änderung
  *   über ihre Jarvis-Brücke (`notifyChange`), der Kalender des Handys ebenso. Der Wächter liest dann genau den
  *   betroffenen Bereich neu, entprellt um 1,5 Sekunden (Kalender-Synchronisierungen kommen in Schüben).
  * - **Sicherheitsnetz:** Er frischt jeden Bereich auf, dessen Abstand abgelaufen ist (die signalfähigen Apps alle
@@ -43,6 +43,7 @@ object Waechter {
         Quelle("Geniale Aufgaben", Uri.parse("content://de.frank.aufgaben.jarvis"), listOf(Bereich.AUFGABEN)),
         Quelle("Geniale Ideen", Uri.parse("content://de.frank.genialeideen.jarvis"), listOf(Bereich.IDEEN)),
         Quelle("Genialer Wecker", Uri.parse("content://de.frank.genialerwecker.jarvis"), listOf(Bereich.WECKER)),
+        Quelle("Stack-Labor", Uri.parse("content://de.frank.stacklabor.werftstudio.jarvis"), listOf(Bereich.STACKS)),
         Quelle("Entropie Reductor", Uri.parse("content://de.frank.entropyreducer.jarvis"), listOf(Bereich.BIODATEN, Bereich.TRAININGS)),
         Quelle("Entropie Reductor", Uri.parse("content://de.frank.entropyreducer.debug.jarvis"), listOf(Bereich.BIODATEN, Bereich.TRAININGS)),
         Quelle("Kalender", CalendarContract.CONTENT_URI, listOf(Bereich.TERMINE, Bereich.RAHMEN)),

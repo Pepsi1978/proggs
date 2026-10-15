@@ -335,3 +335,24 @@ abgeleiteten Festlegungen zu bestätigen:
    da der Entwurf nur die einspaltige 412-x-915-Vorlage enthält.
 5. Der sichtbare Streamingfortschritt besteht aus Fortschrittserzählung und wachsendem
    Fließtextbereich; das endgültige, erst vollständig parsebare JSON wird danach gespeichert.
+
+## 15. Jarvis-Brücke (seit 0.3.43)
+
+Franks Assistent Jarvis (`Jarvis/`, Paket `de.frank.jarvis`) liest und bearbeitet Stacks und Mittel über einen
+ContentProvider. Doku aus Jarvis-Sicht: `Jarvis/README.md`, Abschnitt „Stack-Labor“.
+
+- `bruecke/JarvisBruecke.kt`: Provider `content://de.frank.stacklabor.werftstudio.jarvis`, geschützt mit der
+  Signatur-Erlaubnis `de.frank.jarvis.permission.BRUECKE` (beide Apps mit dem geteilten Schlüssel signiert). Aufruf
+  `ContentResolver.call(methode, Bundle("json"))`, Antwort JSON mit fertigem deutschem `text` oder `fehler`.
+- Lesend: `status`, `stacks` (mit `voll` alle Stacks vollständig), `stack`, `mittel` (ohne Name der Katalog), `ziele`.
+  Schreibend: `eintrag` (Mittel im Stack hinzufügen, ändern, aktivieren, deaktivieren, kopieren, verschieben),
+  `stack_speichern`, `mittel_speichern`, `loeschen` (nur mit `bestaetigt`).
+- `bruecke/JarvisStackDienst.kt`: Fachlogik über `StackLaborRepository` (dieselben Prüfungen und Transaktionen wie die
+  Oberfläche). Schreibaufrufe nacheinander (Mutex), kein Doppel bei Wiederholung, gesperrte Stacks bleiben unverändert,
+  nach jeder Änderung wird nachgelesen. Ein über Jarvis angelegtes Mittel ohne Löslichkeit bestimmt die KI wie im
+  Bearbeiten-Bildschirm; die Konkurrenzprüfung (Codex) läuft für Jarvis-Einträge nicht automatisch.
+- `bruecke/Namensaufloesung.kt`: gesprochene Namen („Sportmodus 2“ → „Sport 2“), Zahlen streng, Mehrdeutigkeit = Rückfrage.
+- `bruecke/DosisEingabe.kt`: Gesamtmenge je Einnahme → Stückzahl × Menge je Stück, Einheiten unverändert (g bleibt g).
+- Änderungssignal: `StackLaborApplication` meldet jede Änderung an Stacks, Einträgen, Dosen, Mitteln, Zielen und Fragen
+  per `notifyChange` auf die Provider-Adresse (entprellt 700 ms); Jarvis liest dann sein Gedächtnis neu.
+- Keine Schemaänderung, keine Migration. Tests: `app/src/test/.../bruecke/` mit erfundenen Daten im Speicher.
