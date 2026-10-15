@@ -1,6 +1,7 @@
 package de.frank.entropyreducer.data.settings
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -221,6 +222,9 @@ class AppSettings @Inject constructor(
     suspend fun setLastWhoopSync(value: Long) = ds.edit { it[KEY_LAST_WHOOP_SYNC] = value }
     suspend fun setLastWhoopGapFill(value: Long) = ds.edit { it[KEY_LAST_WHOOP_GAP_FILL] = value }
     suspend fun setLastWhoopAttempt(value: Long) = ds.edit { it[KEY_LAST_WHOOP_ATTEMPT] = value }
+    /** Bis zu diesem Tag (yyyy-MM-dd) wurden Whoop-Luecken schon einmal nachgefragt; "" = noch nie. */
+    val whoopLueckenGeprueftBisFlow: Flow<String> = ds.data.map { it[KEY_WHOOP_LUECKEN_GEPRUEFT_BIS] ?: "" }
+    suspend fun setWhoopLueckenGeprueftBis(tag: String) = ds.edit { it[KEY_WHOOP_LUECKEN_GEPRUEFT_BIS] = tag }
     suspend fun setLastCalendarSync(value: Long) = ds.edit { it[KEY_LAST_CALENDAR_SYNC] = value }
     suspend fun setLastOuraSync(value: Long) = ds.edit { it[KEY_LAST_OURA_SYNC] = value }
     suspend fun setLastAmazfitSync(value: Long) = ds.edit { it[KEY_LAST_AMAZFIT_SYNC] = value }
@@ -266,6 +270,36 @@ class AppSettings @Inject constructor(
     /** Ergebnis des letzten Biomarker-Abgleichs je Quelle als JSON (siehe ApiSyncBericht). "" = noch keiner. */
     val biomarkerSyncStatusFlow: Flow<String> = ds.data.map { it[KEY_BIOMARKER_SYNC_STATUS] ?: "" }.distinctUntilChanged()
     suspend fun setBiomarkerSyncStatus(json: String) = ds.edit { it[KEY_BIOMARKER_SYNC_STATUS] = json }
+
+    /**
+     * Stand der zentralen Whoop-Abrufsteuerung ([de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan]):
+     * letzter Versuch und Erfolg, neuester Schlaf und ob er fertig ist, Fehlversuche, Sperre, Tagesbudget.
+     * Vor dem ersten Speichern (Update von 0.29.18) aus den alten Zeitstempeln vorbelegt.
+     */
+    val whoopAbrufStandFlow: Flow<de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Stand> =
+        ds.data.map { whoopAbrufStandAus(it) }
+
+    private fun whoopAbrufStandAus(prefs: Preferences): de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Stand {
+        val text = prefs[KEY_WHOOP_ABRUF_STAND]
+        return if (text.isNullOrBlank()) {
+            de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Stand(
+                letzterVersuchMs = maxOf(prefs[KEY_LAST_WHOOP_ATTEMPT] ?: 0L, prefs[KEY_LAST_WHOOP_SYNC] ?: 0L),
+                letzterErfolgMs = prefs[KEY_LAST_WHOOP_SYNC] ?: 0L,
+            )
+        } else {
+            de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Stand.ausJson(text)
+        }
+    }
+
+    /** Ändert den Whoop-Abrufstand in einem Schritt (Lesen und Schreiben ohne fremden Schreiber dazwischen). */
+    suspend fun aendereWhoopAbrufStand(
+        aenderung: (de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Stand) -> de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Stand,
+    ) {
+        ds.edit { prefs ->
+            val alt = whoopAbrufStandAus(prefs)
+            prefs[KEY_WHOOP_ABRUF_STAND] = aenderung(alt).alsJson()
+        }
+    }
 
     suspend fun setLastRefreshFooter(text: String, atMs: Long) = ds.edit {
         it[KEY_LAST_REFRESH_FOOTER] = text
@@ -555,6 +589,8 @@ class AppSettings @Inject constructor(
             stringPreferencesKey("health_backup_fingerprint_sha256")
         private val KEY_LAST_REFRESH_FOOTER = stringPreferencesKey("last_refresh_footer_text")
         private val KEY_BIOMARKER_SYNC_STATUS = stringPreferencesKey("biomarker_sync_status_json")
+        private val KEY_WHOOP_ABRUF_STAND = stringPreferencesKey("whoop_abruf_stand_json")
+        private val KEY_WHOOP_LUECKEN_GEPRUEFT_BIS = stringPreferencesKey("whoop_luecken_geprueft_bis")
         private val KEY_LAST_REFRESH_FOOTER_AT = longPreferencesKey("last_refresh_footer_at_ms")
         private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")
         private val KEY_WORKOUT_CLEANUP_V2 = booleanPreferencesKey("workout_cleanup_v2_done")

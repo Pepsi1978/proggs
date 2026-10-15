@@ -27,26 +27,14 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             "nicht jede Zahl, und leite eine kurze, konkrete Empfehlung ab. Die Daten sind nur lesbar. Du stellst keine medizinischen Diagnosen. " +
             "WICHTIG: Beginnt eine Antwort dieser Werkzeuge mit „ACHTUNG“, dann ist der Datenabruf gestört (zum Beispiel eine abgelaufene Whoop-Anmeldung) " +
             "oder eine Quelle liefert seit Tagen nichts Neues. Sag Frank das von dir aus und ZUERST: welche Quelle betroffen ist, seit wann, und was er tun muss. " +
-            "Gib alte Werte nie als aktuelle aus, sondern nenne ihr Datum. Entropie Reductor holt die Daten selbst im Hintergrund (alle 30 Minuten, Whoop höchstens alle 2 Stunden); " +
+            "Gib alte Werte nie als aktuelle aus, sondern nenne ihr Datum. Entropie Reductor holt die Daten selbst: Oura, Waage und Health Connect laufend, " +
+            "Whoop sparsam, sobald ein neuer Schlaf fertig berechnet sein kann (Schlaf und Erholung ändern sich danach nicht mehr). Belastung und Energie von heute sind Zwischenstände; nenne ihre Uhrzeit. " +
             "Jarvis liest nur. biomarker_aktualisieren nur, wenn Frank ausdrücklich um frische Daten bittet, nie von dir aus."
 
     override fun stoerung(): String? = rufeDirekt("katalog", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
     /**
-     * Für die Tagesauswertung: stößt in Entropie Reductor nur dann einen Abgleich an, wenn dessen eigener
-     * Hintergrund-Abgleich seit über einer Stunde nicht gelaufen ist (Frank-Wunsch 2026-10-14: Jarvis soll
-     * lesen, nicht ständig neu holen lassen; Whoop fragt Entropie Reductor ohnehin höchstens alle 2 Stunden ab).
-     * true = die Daten sind frisch UND jede Quelle hat geliefert. false heißt auch: Eine Quelle scheiterte
-     * (etwa eine abgelaufene Whoop-Anmeldung) — die Einzelheiten stehen dann als „ACHTUNG“ in jeder Lese-Antwort.
-     */
-    suspend fun abgleich(): Boolean {
-        // Wartezeit ausdrücklich (wie die Vorgabe in Entropie Reductor), damit das Zeitlimit der Brücke dazu passt.
-        val antwort = rufe("abgleich", JSONObject().put("max_alter_min", 60).put("warte_ms", 90_000))
-        return antwort.optBoolean("fertig", false) && antwort.optJSONObject("stand")?.optBoolean("alles_ok", true) != false
-    }
-
-    /**
-     * Biodaten fürs Live-Gedächtnis, ohne neuen Abgleich (der läuft mit der Tagesauswertung): der neueste Tag mit allen
+     * Biodaten fürs Live-Gedächtnis, ohne Abgleich (Entropie Reductor gleicht selbst ab): der neueste Tag mit allen
      * Werten, die wichtigen Größen gegen den letzten Monat und der Verlauf der letzten 10 Tage.
      */
     suspend fun live(): String {
@@ -125,7 +113,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
                 "Nur wenn Frank ausdrücklich darum bittet („Aktualisiere meine Biodaten“, „Hol frische Werte“), nie von dir aus: " +
                 "Entropie Reductor gleicht selbst im Hintergrund ab, und jeder Abruf belastet die Whoop-Anmeldung. " +
                 "Für „Warum sind meine Werte alt?“ oder „Funktioniert der Abruf von Whoop?“ genügt ein Lesewerkzeug, dessen Antwort den Zustand der Quellen enthält. " +
-                "Whoop holt Entropie Reductor dabei höchstens alle 2 Stunden neu. Dauert bis zu einer Minute. Ändert keine Daten von Frank.",
+                "Whoop fragt Entropie Reductor dabei nur, wenn es dort etwas Neues geben kann und der letzte Versuch mindestens 10 Minuten her ist; sonst bleibt der gespeicherte Stand. Dauert bis zu einer Minute. Ändert keine Daten von Frank.",
             schema = schema(),
             nurLesen = true,
         ) { _ ->
@@ -360,14 +348,32 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
      */
     private fun standText(antwort: JSONObject): String {
         val stand = antwort.optJSONObject("stand") ?: return ""
-        val probleme = stand.optJSONArray("probleme") ?: return ""
-        if (probleme.length() == 0) return ""
+        val whoop = whoopText(stand)
+        val probleme = stand.optJSONArray("probleme") ?: return whoop
+        if (probleme.length() == 0) return whoop
+        // ACHTUNG bleibt der Anfang der Antwort: darauf reagiert das Modell laut Hinweis zuerst.
         return buildString {
             append("ACHTUNG, der Datenabruf in Entropie Reductor ist gestört. Sag Frank das zuerst und von dir aus:\n")
             for (i in 0 until probleme.length()) append("- ").append(probleme.optString(i)).append('\n')
             if (stand.optBoolean("eingriff_noetig")) append("Das behebt sich nicht von selbst: Frank muss es in Entropie Reductor erledigen.\n")
             if (!stand.isNull("letzter_abgleich")) append("Letzter Abgleich: ").append(stand.optString("letzter_abgleich").replace('T', ' ')).append(" Uhr.\n")
+            append(whoop)
             append("Die folgenden Werte sind der letzte bekannte Stand; nenne bei alten Werten ihr Datum.\n\n")
+        }
+    }
+
+    /** Datenalter der Whoop-Werte ehrlich nennen (seit 2026-10-15 liefert die Brücke es unter stand.whoop). */
+    private fun whoopText(stand: JSONObject): String {
+        val w = stand.optJSONObject("whoop") ?: return ""
+        fun zeit(k: String) = if (w.isNull(k)) null else w.optString(k).replace('T', ' ')
+        val abruf = zeit("letzter_abruf") ?: return ""
+        return buildString {
+            append("Whoop-Stand: zuletzt abgerufen ").append(abruf).append(" Uhr")
+            zeit("schlaf_ende")?.let { ende ->
+                append("; neuester Schlaf endete ").append(ende).append(" Uhr")
+                append(if (w.optBoolean("schlaf_vollstaendig")) " und ist fertig berechnet" else ", Erholung noch nicht fertig berechnet")
+            }
+            append("; Belastung und Energie von heute sind Stand ").append(abruf).append(" Uhr.\n")
         }
     }
 
@@ -381,7 +387,8 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
 
     companion object {
         /** Reine Lesemethoden: Bei einem vorübergehenden Fehler (Partner-App gerade beendet) wird einmal wiederholt. */
-        private val LESEND = setOf("katalog", "abgleich", "tag", "auswertung", "verlauf", "trainings", "training")
+        // "abgleich" ist kein Lesen: nie automatisch wiederholen (jede Wiederholung wäre ein weiterer Abruf).
+        private val LESEND = setOf("katalog", "tag", "auswertung", "verlauf", "trainings", "training")
         /** Was das Live-Gedächtnis im Vergleich zeigt: Franks vier Kerngrößen und was Schlaf und Erholung einordnet. */
         private val LIVE_METRIKEN = listOf("erholung", "hrv", "ruhepuls", "vo2max", "tiefschlaf_prozent", "tiefschlaf_min", "schlafdauer", "wach_min", "schlafdefizit_min", "oura_temperaturabweichung", "gewicht")
         /** Messgrößen, die Jarvis nie abruft oder auswertet. */

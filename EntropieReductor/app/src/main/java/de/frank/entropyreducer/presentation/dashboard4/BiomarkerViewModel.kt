@@ -299,7 +299,7 @@ constructor(
      */
     fun onBiomarkerOpened() {
         viewModelScope.launch {
-            val bericht = runCatching { foregroundSync.syncApisNow("Biomarker-Tab") }.getOrElse {
+            val bericht = runCatching { foregroundSync.syncApisNow("Biomarker-Tab", de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Anlass.VORDERGRUND) }.getOrElse {
                 if (it is CancellationException) throw it
                 return@launch
             }
@@ -661,7 +661,7 @@ constructor(
             _refreshing.value = true
             _message.value = "Wird synchronisiert: Whoop · Training · Oura · Zepp …"
             try {
-                val bericht = foregroundSync.syncApisNow("Aktualisieren-Knopf", whoopErzwingen = true)
+                val bericht = foregroundSync.syncApisNow("Aktualisieren-Knopf", de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan.Anlass.AUSDRUECKLICH)
                 val footer = settings.lastRefreshFooterFlow.first()
                 _message.value =
                     if (bericht.probleme.isEmpty()) footer else footer + "\n" + bericht.probleme.joinToString("\n")

@@ -706,3 +706,11 @@
   3. OAuth-Fehler beim Refresh dauerhaft merken, den Nutzer benachrichtigen und nur alle paar Stunden neu prüfen, statt bei jedem Abgleich anzuklopfen.
   4. Jede Quelle einzeln bewerten und den Zustand nach außen geben (Fußzeile, Brücke zu anderen Apps). Ein Sammel-Abgleich, der beim ersten Fehler abbricht, versteckt den Fehler und lässt auch die gesunden Quellen alt aussehen.
 - **Verwandt:** Ein „übersprungen, läuft bereits" (`tryLock`) darf einem Aufrufer nie als „abgeglichen" gemeldet werden: auf den laufenden Abgleich warten und dessen Ergebnis zurückgeben.
+- **Nachtrag 15.10.2026 (zweiter Ausfall, gleiche Kette):** 13:37:49 Refresh im Hintergrund-Worker, `SocketException: Software caused connection abort` beim LESEN der Antwort (Anfrage war raus), 15:41 `invalid_request`. Die geplante Wiederholung lief nie: Der `CoroutineWorker` wurde im selben Moment abgebrochen (Netz-Constraint fiel weg), `suspendCancellableCoroutine` gab die Sperre frei, obwohl AppAuth weiterlief. Zusätzlich lief fast jeder Abruf mit Refresh (Zugangs-Token 1 h, Abruf alle 2 h → ~12 Rotationen am Tag).
+- **Absicherung ergänzt:**
+  5. Refresh samt Speichern in `withContext(NonCancellable)`; Sperre bis zum gespeicherten Ergebnis halten.
+  6. Vor dem Senden eine „Refresh unterwegs"-Markierung mit `commit()` setzen, nach der Antwort löschen: Ein verlorenes Ergebnis ist beim nächsten Mal im Protokoll belegt.
+  7. Nur mit validiertem Netz (`NET_CAPABILITY_VALIDATED`) refreshen; sonst gar nicht senden.
+  8. Nur `invalid_grant`/`invalid_request`/`invalid_client`/`unauthorized_client` als „neu anmelden" werten; Netz, 5xx, unlesbare Antwort, 429 sind vorübergehend und löschen nichts.
+  9. Häufigkeit senken ist der Haupthebel: Abruf an fachliche Neuigkeit koppeln (bei Whoop: neuer Hauptschlaf möglich oder neuester Schlaf/Erholung noch nicht `SCORED`), nicht an die Uhr. Jarvis-artige Leser dürfen nie einen Abruf auslösen.
+  10. `"Token-Refresh OK"` nicht im Callback von `performActionWithFreshTokens` loggen: der feuert auch ohne Refresh und verfälscht jede Zählung. Echte Refreshes nur bei `needsTokenRefresh=true` zählen.

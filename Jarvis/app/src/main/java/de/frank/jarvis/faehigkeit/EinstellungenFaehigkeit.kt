@@ -208,7 +208,6 @@ class EinstellungsKatalog(context: Context) {
             schalter("auswertung_an", "Tagesauswertung", "Tagesauswertung", "Erstellt regelmäßig die Tagesauswertung.", { e.auswertungAn }) { e.auswertungAn = it; zeitplanNeu() },
             zahl("auswertung_abstand", "Tagesauswertung", "Abstand", "Alle wie viele Stunden die Auswertung läuft.", 1, 12, "Stunden", { e.auswertungAbstand }) { e.auswertungAbstand = it; zeitplanNeu() },
             schalter("auswertung_schlafpause", "Tagesauswertung", "Schlafpause", "Ruht, solange Frank laut Dienstplan schläft.", { e.auswertungSchlafpause }) { e.auswertungSchlafpause = it; zeitplanNeu() },
-            schalter("auswertung_abgleich", "Tagesauswertung", "Biodaten vorher abgleichen", "Holt vor jedem Lauf frische Daten von Whoop, Oura und Waage.", { e.auswertungAbgleich }) { e.auswertungAbgleich = it },
             schalter("auswertung_deutung", "Tagesauswertung", "Deutung schreiben", "Das Modell schreibt eine Deutung; aus = nur Daten abgleichen.", { e.auswertungDeutung }) { e.auswertungDeutung = it },
             schalter("auswertung_lernen", "Tagesauswertung", "Aus dem Tagebuch lernen", "Verdichtet alte Monate und notiert neue Tatsachen über Frank.", { e.auswertungLernen }) { e.auswertungLernen = it },
 

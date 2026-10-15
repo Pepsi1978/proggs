@@ -223,8 +223,6 @@ class Einstellungen private constructor(context: Context) {
     var auswertungAbstand: Int get() = prefs.getInt("auswertung_abstand", 1).coerceIn(1, 12); set(v) = put { putInt("auswertung_abstand", v) }
     /** Ruhen, solange Frank laut Dienstplan schläft (vor Tagdienst 20 bis 4 Uhr, nach Nachtdienst 6 bis 15 Uhr). */
     var auswertungSchlafpause: Boolean get() = prefs.getBoolean("auswertung_schlafpause", true); set(v) = put { putBoolean("auswertung_schlafpause", v) }
-    /** Vor jedem Lauf frische Biodaten von Whoop, Oura und Waage holen. */
-    var auswertungAbgleich: Boolean get() = prefs.getBoolean("auswertung_abgleich", true); set(v) = put { putBoolean("auswertung_abgleich", v) }
     /** Nach der Auswertung aus dem Tagebuch lernen: alte Monate verdichten, neue Tatsachen über Frank notieren. */
     var auswertungLernen: Boolean get() = prefs.getBoolean("auswertung_lernen", true); set(v) = put { putBoolean("auswertung_lernen", v) }
     /** Tag (JJJJ-MM-TT), an dem Jarvis zuletzt Tatsachen aus dem Tagebuch gelernt hat. */

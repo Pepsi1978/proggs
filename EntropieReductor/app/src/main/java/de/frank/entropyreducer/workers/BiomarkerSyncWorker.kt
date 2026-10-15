@@ -33,6 +33,8 @@ class BiomarkerSyncWorker @AssistedInject constructor(
         try {
             sync.syncApisNow("Hintergrund")
         } catch (cancelled: CancellationException) {
+            // Belegt den Ausloeser, wenn ein Lauf mittendrin endet (2026-10-15: zwei Starts in einer Sekunde).
+            Diag.w(DiagnosticArea.APP, "BiomarkerSyncWorker", "Hintergrund-Abgleich abgebrochen, stopReason=${if (android.os.Build.VERSION.SDK_INT >= 31) stopReason else "?"}")
             throw cancelled
         } catch (error: Exception) {
             Diag.w(DiagnosticArea.APP, "BiomarkerSyncWorker", "Hintergrund-Abgleich fehlgeschlagen", error)

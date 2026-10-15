@@ -331,13 +331,6 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 Text("Nach dem Dienstplan: vor einem Tagdienst ruht die Synchronisation von 20 bis 4 Uhr, nach einem Nachtdienst von 6 bis 15 Uhr. An freien Tagen läuft sie durch.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 
-                Unterzeile("Frische Biodaten holen")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("An", aktiv = e.auswertungAbgleich) { vm.auswertungAbgleich(true) }
-                    Chip("Aus", aktiv = !e.auswertungAbgleich) { vm.auswertungAbgleich(false) }
-                }
-                Text("Stößt vor jedem Lauf den Abgleich mit Whoop, Oura und Waage in Entropie Reductor an. Aus = Jarvis nimmt den Stand, der dort schon liegt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-
                 Unterzeile("Auswertung vom Modell schreiben lassen")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("An", aktiv = e.auswertungDeutung) { vm.auswertungDeutung(true) }

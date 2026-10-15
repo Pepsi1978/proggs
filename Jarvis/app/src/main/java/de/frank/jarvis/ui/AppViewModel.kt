@@ -1172,7 +1172,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun auswertungAbstand(stunden: Int) { einstellungen.auswertungAbstand = stunden; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
     fun auswertungSchlafpause(an: Boolean) { einstellungen.auswertungSchlafpause = an; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
-    fun auswertungAbgleich(an: Boolean) { einstellungen.auswertungAbgleich = an }
     fun auswertungDeutung(an: Boolean) { einstellungen.auswertungDeutung = an }
 
     val naechsteAuswertung: String

@@ -194,8 +194,8 @@ object Tagesauswertung {
         withTimeoutOrNull(2_500L) { nachziehen.join() }
         val fertig = Auswertung(
             System.currentTimeMillis(), anlass,
-            "Diese Fassung ist der reine Datenbericht, ohne die Deutung von Jarvis und ohne frischen Abgleich der Biodaten. Die vollständige Auswertung wird gerade im Hintergrund erstellt." + letzteDeutung(app),
-            sammle(app, false), false, "", vorlaeufig = true,
+            "Diese Fassung ist der reine Datenbericht, ohne die Deutung von Jarvis. Die vollständige Auswertung wird gerade im Hintergrund erstellt." + letzteDeutung(app),
+            sammle(app), false, "", vorlaeufig = true,
         )
         speichere(app, fertig)
         _stand.value = _stand.value.copy(neueste = fertig)
@@ -225,22 +225,21 @@ object Tagesauswertung {
             fun schritt(text: String) { _stand.value = _stand.value.copy(laeuft = true, schritt = text) }
             val einstellungen = Einstellungen.get(app)
             val alle = Register.alle(app)
-            val biomarker = alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
-            // Biodaten, Wetter, Tagebuch und Wissen hängen nicht voneinander ab: gleichzeitig holen, gewartet wird nur auf die langsamste Quelle.
-            schritt("Biodaten, Wetter, Tagebuch und Wissen holen")
-            val abgeglichen = coroutineScope {
-                val bio = async(Dispatchers.IO) { einstellungen.auswertungAbgleich && ohneAbbruch { biomarker?.abgleich() } == true }
+            // Wetter, Tagebuch und Wissen hängen nicht voneinander ab: gleichzeitig holen, gewartet wird nur auf die langsamste Quelle.
+            // Biodaten werden NICHT abgeglichen (Frank-Wunsch 2026-10-15): Entropie Reductor holt sie selbst, Jarvis liest
+            // nur den dort gespeicherten Stand. Jeder Whoop-Abruf kostet einen Token-Tausch und damit ein Risiko für die Anmeldung.
+            schritt("Wetter, Tagebuch und Wissen holen")
+            coroutineScope {
                 listOf(
                     async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
                     async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
                     async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WissenFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
                 ).awaitAll()
-                bio.await()
             }
-            Logbuch.dauer("Tagesauswertung: Quellen geholt", System.currentTimeMillis() - beginn, if (abgeglichen) "Biodaten abgeglichen" else "Biodaten nicht abgeglichen")
+            Logbuch.dauer("Tagesauswertung: Quellen geholt", System.currentTimeMillis() - beginn, "Biodaten aus dem gespeicherten Stand")
 
             schritt("Daten zusammentragen")
-            val daten = sammle(app, abgeglichen)
+            val daten = sammle(app)
 
             val deuten = einstellungen.auswertungDeutung
             if (deuten) schritt("Auswertung schreiben")
@@ -300,7 +299,7 @@ object Tagesauswertung {
      * abgefragt und danach in fester Reihenfolge zusammengesetzt: Der Text bleibt gleich, die Wartezeit ist die der
      * langsamsten Quelle statt der Summe.
      */
-    private suspend fun sammle(app: Context, abgeglichen: Boolean): String = coroutineScope {
+    private suspend fun sammle(app: Context): String = coroutineScope {
         val alle = Register.alle(app)
         val kalender = alle.filterIsInstance<KalenderFaehigkeit>().firstOrNull()
         val biomarker = alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
@@ -327,7 +326,7 @@ object Tagesauswertung {
 
         buildString {
             append("STAND: ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append('\n')
-            append("Biodaten aktuell (Abgleich höchstens eine Stunde alt): ").append(if (abgeglichen) "ja" else "nein oder nur teilweise (steht unten bei den Biomarkern „ACHTUNG“, ist der Abruf einer Quelle gestört: das gehört an den Anfang der Auswertung)").append("\n\n")
+            append("Biodaten: gespeicherter Stand aus Entropie Reductor, das selbst abgleicht. Wie alt die Whoop-Daten sind, steht bei den Biomarkern (Zeile „Whoop-Stand“); Belastung und Energie von heute sind Zwischenstände mit dieser Uhrzeit. Steht dort „ACHTUNG“, ist der Abruf einer Quelle gestört: das gehört an den Anfang der Auswertung.").append("\n\n")
 
             append("== RAHMEN DER NÄCHSTEN TAGE (fest gerechnet, verbindlich) ==\n")
             append(rahmen.await()).append("\n\n")

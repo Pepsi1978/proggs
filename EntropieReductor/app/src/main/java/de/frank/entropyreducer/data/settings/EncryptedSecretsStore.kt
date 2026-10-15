@@ -140,6 +140,16 @@ class EncryptedSecretsStore @Inject constructor(
         set(value) { prefs.edit().putString(KEY_WHOOP_AUTH_STATE, value).commit() }
 
     /**
+     * Ein Whoop-Refresh wurde abgeschickt, seine Antwort aber noch nicht gespeichert (ms), 0 = keiner offen.
+     * Steht der Wert beim naechsten Refresh noch, ging eine Antwort verloren (Prozess beendet, Netzabriss):
+     * Dann hat Whoop den Refresh-Token vermutlich schon getauscht, und ein folgender OAuth-Fehler ist eindeutig
+     * erklaert. commit(), damit die Markierung vor dem Senden sicher auf der Platte liegt.
+     */
+    var whoopRefreshUnterwegsSeitMs: Long
+        get() = prefs.getLong(KEY_WHOOP_REFRESH_UNTERWEGS, 0L)
+        set(value) { prefs.edit().putLong(KEY_WHOOP_REFRESH_UNTERWEGS, value).commit() }
+
+    /**
      * Letzte Pruefung, ob Whoop eine als abgelaufen markierte Anmeldung wieder annimmt (ms). Gespeichert
      * statt nur im Speicher, damit der 6-Stunden-Abstand auch gilt, wenn der Hintergrund-Abgleich in
      * einem frisch gestarteten Prozess laeuft.
@@ -233,6 +243,7 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_WHOOP_CLIENT_SECRET = "whoop_client_secret"
         private const val KEY_WHOOP_REAUTH_SINCE = "whoop_reauth_since_ms"
         private const val KEY_WHOOP_REAUTH_PROBE = "whoop_reauth_probe_ms"
+        private const val KEY_WHOOP_REFRESH_UNTERWEGS = "whoop_refresh_unterwegs_seit_ms"
         private const val KEY_WHOOP_ACCESS = "whoop_access_token"
         private const val KEY_WHOOP_REFRESH = "whoop_refresh_token"
         private const val KEY_WHOOP_EXPIRY = "whoop_expiry"

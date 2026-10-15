@@ -74,19 +74,13 @@ class OAuthViewModel @Inject constructor(
         // tatsaechlichen Zustand. freshWhoopAccessToken() heilt den AuthState bei
         // Fehler selbst (siehe OAuthService — Schicht 3), wir muessen hier nur den
         // UI-Status nachziehen.
-        viewModelScope.launch {
-            runCatching { oauth.freshWhoopAccessToken() }
-                .onSuccess { token ->
-                    val nowConnected = token != null
-                    if (nowConnected != _state.value.whoopConnected) {
-                        _state.update { it.copy(whoopConnected = nowConnected) }
-                    }
-                }
-                .onFailure {
-                    // IllegalStateException("Whoop-Client-Secret fehlt …") landet hier.
-                    // UI als nicht-verbunden markieren, damit Frank den Banner versteht.
-                    _state.update { it.copy(whoopConnected = false) }
-                }
+        // 2026-10-15: ohne Netz. Frueher loeste jedes Oeffnen der Einstellungen einen Token-Refresh aus —
+        // jeder Refresh tauscht bei Whoop den Refresh-Token und ist damit eine Gelegenheit, die Anmeldung zu
+        // verlieren. Der gespeicherte Zustand reicht: abgelaufen ist sie nur, wenn Whoop sie abgelehnt hat.
+        val nowConnected = oauth.loadWhoopAuthState().isAuthorized && !oauth.whoopNeedsReauth() &&
+            !secrets.whoopClientSecret.isNullOrBlank()
+        if (nowConnected != _state.value.whoopConnected) {
+            _state.update { it.copy(whoopConnected = nowConnected) }
         }
     }
 

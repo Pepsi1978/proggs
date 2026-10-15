@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -46,11 +47,11 @@ import org.json.JSONObject
  *  - `auswertung`  — aktueller Wert gegen die Durchschnitte der letzten 7/30/90 Tage, Abweichung, Trend
  *  - `trainings`   — Trainingsliste (`von`, `bis`, `limit`, `sport`)
  *  - `training`    — ein Training mit Kilometer-Abschnitten (`id`)
- *  - `abgleich`    — holt vorher frische Daten von Whoop, Oura, Waage und Health Connect (derselbe Abgleich wie
- *                    beim Öffnen des Biomarker-Reiters); wartet höchstens `warte_ms` (Vorgabe und Obergrenze
- *                    90 Sekunden). Mit `max_alter_min` nur, wenn der letzte Abgleich älter ist. Ändert keine Nutzerdaten.
- *                    Whoop fragt auch dieser Abgleich höchstens alle 2 Stunden ab (siehe
- *                    [ForegroundSyncManager.WHOOP_MIN_ABSTAND_MS]); Jarvis liest seit 2026-10-14 sonst nur.
+ *  - `abgleich`    — nur auf Franks ausdrücklichen Wunsch: holt frische Daten von Oura, Waage und Health Connect und
+ *                    fragt Whoop über die zentrale Steuerung ([WhoopAbrufPlan], Anlass AUSDRUECKLICH); wartet höchstens
+ *                    `warte_ms` (Vorgabe und Obergrenze 90 Sekunden). Mit `max_alter_min` (ältere Jarvis-Fassungen)
+ *                    nur, wenn der letzte Abgleich älter ist, und dann ohne Whoop. Ändert keine Nutzerdaten.
+ *                    Jarvis liest sonst nur (Frank-Wunsch 2026-10-15).
  *  - `stand`       — nur der Zustand der Quellen, ohne Abgleich.
  *
  * Jede Lese-Antwort trägt unter `stand` den Zustand der Quellen (letzter Abgleich, Fehler je Quelle, neueste
@@ -162,9 +163,14 @@ class JarvisBruecke : ContentProvider() {
                 val maxAlterMin = a.optInt("max_alter_min", 0)
                 val alterMs = abgleich.letzterStand()?.let { start - it.versuchMs }
                 val frischGenug = maxAlterMin > 0 && alterMs != null && alterMs in 0 until maxAlterMin * 60_000L
+                // Frank-Wunsch 2026-10-15: Jarvis liest nur. Whoop fragt die App nur auf ausdrücklichen Wunsch
+                // (biomarker_aktualisieren, ohne max_alter_min) und auch dann nur über die zentrale Steuerung.
+                // Ein Anstoß mit max_alter_min (ältere Jarvis-Fassungen vor der Tagesauswertung) gleicht nur die
+                // anderen Quellen ab und lässt Whoop unberührt.
+                val anlass = if (maxAlterMin > 0) WhoopAbrufPlan.Anlass.OHNE_WHOOP else WhoopAbrufPlan.Anlass.AUSDRUECKLICH
                 val fertig = frischGenug || withTimeoutOrNull(a.optLong("warte_ms", 90_000L).coerceIn(3_000L, 90_000L)) {
                     // Im app-weiten Scope: Läuft Jarvis' Wartezeit ab, arbeitet der Abgleich zu Ende.
-                    abgleich.starteApiSync("Jarvis").await()
+                    abgleich.starteApiSync("Jarvis", anlass).await()
                     true
                 } ?: false
                 JSONObject().put("fertig", fertig).put("abgeglichen", fertig && !frischGenug)
@@ -310,7 +316,23 @@ class JarvisBruecke : ContentProvider() {
                 }
             }
         }
+        // Whoop-Stand ohne Netz (2026-10-15): bis wann der Schlaf reicht, ob er fertig ist, wie alt die
+        // Tageswerte sind und wann die App frühestens wieder bei Whoop nachfragt — damit Jarvis das Datenalter
+        // ehrlich nennen kann, statt einen neuen Abruf anzustoßen.
+        val whoop = runCatching { EntryPointAccessors.fromApplication(ctx, Zugang::class.java).abgleich().whoopUebersicht() }.getOrNull()
+        fun zeit(ms: Long): Any = if (ms > 0L) Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDateTime().toString().take(16) else JSONObject.NULL
         return JSONObject()
+            .put(
+                "whoop",
+                whoop?.let { w ->
+                    JSONObject()
+                        .put("letzter_abruf", zeit(w.letzterErfolgMs))
+                        .put("schlaf_ende", zeit(w.schlafEndeMs))
+                        .put("schlaf_vollstaendig", w.schlafEndeMs > 0L && w.schlafVollstaendig)
+                        .put("naechster_abruf_fruehestens", zeit(w.naechsterAbrufFruehestensMs))
+                        .put("grund", w.grund)
+                } ?: JSONObject.NULL,
+            )
             .put("letzter_abgleich", bericht?.let { Instant.ofEpochMilli(it.versuchMs).atZone(ZoneId.systemDefault()).toLocalDateTime().toString().take(16) } ?: JSONObject.NULL)
             .put("alter_min", bericht?.let { ((jetzt - it.versuchMs) / 60_000L).coerceAtLeast(0) } ?: JSONObject.NULL)
             .put("alles_ok", probleme.length() == 0)

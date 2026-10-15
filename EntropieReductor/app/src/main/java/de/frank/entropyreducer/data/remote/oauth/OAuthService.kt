@@ -11,7 +11,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import de.frank.entropyreducer.workers.SyncProblemNotifier
 import kotlin.coroutines.resume
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -215,6 +217,7 @@ constructor(
 
     fun clearWhoopAuthState() {
         secrets.whoopReauthSinceMs = 0L
+        secrets.whoopRefreshUnterwegsSeitMs = 0L
         secrets.whoopAuthStateJson = null
         secrets.whoopAccessToken = null
         secrets.whoopRefreshToken = null
@@ -261,9 +264,12 @@ constructor(
                 state.update(tokenResp, null)
                 saveWhoopAuthState(state)
                 secrets.whoopReauthSinceMs = 0L
+                secrets.whoopRefreshUnterwegsSeitMs = 0L
                 problemNotifier.whoopWiederOk()
                 secrets.whoopAccessToken = tokenResp.accessToken
-                secrets.whoopRefreshToken = tokenResp.refreshToken
+                // Keine zweite Kopie des Refresh-Tokens mehr (2026-10-15): Er wechselt bei jedem Refresh,
+                // massgeblich ist allein der gespeicherte AuthState. Eine alte Kopie waere nur irrefuehrend.
+                secrets.whoopRefreshToken = null
                 secrets.whoopTokenExpiryEpochSec =
                     tokenResp.accessTokenExpirationTime?.div(1000L) ?: 0L
             }
@@ -300,12 +306,23 @@ constructor(
      * sagt "anmelden") Schicht 4 (Diagnose) — detaillierte Logs damit naechster Vorfall in 30s
      * diagnostiziert werden kann
      */
-    suspend fun freshWhoopAccessToken(): String? = whoopRefreshMutex.withLock {
+    suspend fun freshWhoopAccessToken(): String? =
+        // NonCancellable (2026-10-15, belegt 15.10. 13:37): Der Hintergrund-Abgleich wurde mitten im Refresh
+        // abgebrochen. Die Sperre wurde frei, obwohl die Anfrage an Whoop schon unterwegs war, und die
+        // geplante Wiederholung lief nie. Ein begonnener Refresh laeuft jetzt immer zu Ende und wird gespeichert.
+        // Das WARTEN auf die Sperre bleibt abbrechbar; nur der Teil mit der Sperre laeuft sicher zu Ende.
+        whoopRefreshMutex.withLock { withContext(NonCancellable) { freshWhoopAccessTokenGesperrt() } }
+
+    private suspend fun freshWhoopAccessTokenGesperrt(): String? {
         val state = loadWhoopAuthState()
         if (!state.isAuthorized) {
             Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: kein AuthState — kein Token zurückgeben")
-            return@withLock null
+            return null
         }
+        // Zugangs-Token noch gueltig: kein Refresh, kein Netz, kein Tausch des Refresh-Tokens.
+        val gueltig = state.accessToken
+        if (!state.needsTokenRefresh && gueltig != null) return gueltig
+
         val clientSecret = secrets.whoopClientSecret
         if (clientSecret.isNullOrBlank()) {
             Diag.e(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: Client-Secret fehlt im EncryptedSecretsStore")
@@ -314,10 +331,6 @@ constructor(
             )
         }
         val nowMs = System.currentTimeMillis()
-        val expiry = state.accessTokenExpirationTime
-        if (de.frank.entropyreducer.BuildConfig.DEBUG) {
-            Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: needsRefresh=${state.needsTokenRefresh} expiryDeltaMs=${if (expiry != null) expiry - nowMs else Long.MIN_VALUE}")
-        }
         if (state.refreshToken.isNullOrBlank()) {
             Diag.e(DiagnosticArea.OAUTH,
                 TAG,
@@ -334,40 +347,68 @@ constructor(
         // (invalid_request). Das heilt nur eine neue Anmeldung. Deshalb:
         //  - Ist die Anmeldung als abgelaufen markiert, nicht bei jedem Abgleich erneut anklopfen, sondern
         //    nur alle paar Stunden pruefen (heilt sich selbst, falls Whoop doch wieder annimmt).
+        //  - Ohne funktionierendes Netz gar nicht erst senden (2026-10-15).
         //  - Netzfehler sofort wiederholen (Schleife unten).
         //  - Endgueltige OAuth-Fehler merken, Frank benachrichtigen und klar benennen.
         val reauthSince = secrets.whoopReauthSinceMs
         if (reauthSince > 0L && nowMs - lastWhoopReauthProbeMs < REAUTH_PROBE_INTERVAL_MS) {
             throw WhoopReauthRequiredException()
         }
+        if (!netzBereit()) {
+            Diag.w(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh verschoben: kein geprüftes Netz — Refresh-Token bleibt unangetastet")
+            throw java.io.IOException("Kein funktionierendes Netz, Whoop-Abruf verschoben.")
+        }
         if (reauthSince > 0L) lastWhoopReauthProbeMs = nowMs
 
+        val offenSeit = secrets.whoopRefreshUnterwegsSeitMs
+        if (offenSeit > 0L) {
+            Diag.w(
+                DiagnosticArea.OAUTH,
+                TAG,
+                "Whoop-Refresh: Die Antwort des Refreshs von ${java.time.Instant.ofEpochMilli(offenSeit)} wurde nie gespeichert — Whoop hat den Refresh-Token dabei womöglich schon getauscht",
+            )
+        }
+
         var lastError: AuthorizationException? = null
+        var netzfehlerDavor = false
         for (attempt in 0..NETWORK_RETRY_DELAYS_MS.size) {
             if (attempt > 0) delay(NETWORK_RETRY_DELAYS_MS[attempt - 1])
+            // Vor dem Senden auf die Platte: Geht die Antwort verloren, ist das beim naechsten Mal belegt.
+            if (secrets.whoopRefreshUnterwegsSeitMs == 0L) secrets.whoopRefreshUnterwegsSeitMs = System.currentTimeMillis()
             val (token, error) = refreshWhoopOnce(state, ClientSecretPost(clientSecret))
             if (error == null) {
+                secrets.whoopRefreshUnterwegsSeitMs = 0L
+                letzterWhoopRefreshMs = System.currentTimeMillis()
+                Diag.i(DiagnosticArea.OAUTH, TAG, "Whoop-Token-Refresh OK (Versuch ${attempt + 1}) — neuer Zugangs- und Refresh-Token gespeichert")
                 if (reauthSince > 0L) {
                     Diag.i(DiagnosticArea.OAUTH, TAG, "Whoop-Anmeldung funktioniert wieder — Markierung entfernt")
                     secrets.whoopReauthSinceMs = 0L
                     problemNotifier.whoopWiederOk()
                 }
-                return@withLock token
+                return token
             }
             lastError = error
+            val art = WhoopRefreshFehler.art(error.type, error.code, error.error)
             Diag.e(DiagnosticArea.OAUTH,
                 TAG,
-                "Whoop-Token-Refresh fehlgeschlagen (Versuch ${attempt + 1}) — type=${error.type} code=${error.code} error=${error.error} desc=${error.errorDescription} uri=${error.errorUri}",
+                "Whoop-Token-Refresh fehlgeschlagen (Versuch ${attempt + 1}, $art) — type=${error.type} code=${error.code} error=${error.error} desc=${error.errorDescription}",
                 error,
             )
-            // Nur Netzfehler lohnen eine Wiederholung; alles andere ist eine Antwort von Whoop.
-            if (error.type != AuthorizationException.TYPE_GENERAL_ERROR) break
+            // Nur ohne Antwort lohnt eine Wiederholung; alles andere ist eine Antwort von Whoop.
+            if (art != WhoopRefreshFehler.Art.NETZ) break
+            netzfehlerDavor = true
         }
-        if (lastError?.type == AuthorizationException.TYPE_OAUTH_TOKEN_ERROR) {
+        val art = lastError?.let { WhoopRefreshFehler.art(it.type, it.code, it.error) }
+        if (art == WhoopRefreshFehler.Art.ANMELDUNG_UNGUELTIG) {
+            // Whoop hat geantwortet: es ist nichts mehr unterwegs.
+            secrets.whoopRefreshUnterwegsSeitMs = 0L
+            val ursache =
+                if (netzfehlerDavor || offenSeit > 0L) " — direkt nach einer verlorenen Refresh-Antwort, Refresh-Token vermutlich dabei verbraucht" else ""
             // Frank-Wunsch 2026-05-09 bleibt: AuthState NICHT loeschen, alte Daten bleiben sichtbar.
-            markWhoopReauthNeeded("${lastError.error}: ${lastError.errorDescription}")
+            markWhoopReauthNeeded("${lastError?.error}: ${lastError?.errorDescription}$ursache")
             throw WhoopReauthRequiredException()
         }
+        if (art == WhoopRefreshFehler.Art.VORUEBERGEHEND) secrets.whoopRefreshUnterwegsSeitMs = 0L
         throw java.io.IOException("Whoop ist gerade nicht erreichbar (${lastError?.errorDescription ?: "Netzwerkfehler"}).")
     }
 
@@ -383,10 +424,7 @@ constructor(
                 if (ex != null || accessToken == null) {
                     cont.resume(null to (ex ?: AuthorizationException.GeneralErrors.NETWORK_ERROR))
                 } else {
-                    Diag.d(DiagnosticArea.OAUTH,
-                        TAG,
-                        "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Länge=${accessToken.length})",
-                    )
+                    // Sofort und synchron speichern: Der neue Refresh-Token ist ab jetzt der einzige gueltige.
                     saveWhoopAuthState(state)
                     secrets.whoopAccessToken = accessToken
                     cont.resume(accessToken to null)
@@ -395,6 +433,30 @@ constructor(
             }
         }
     }
+
+    /** Verwirft den Zugangs-Token (Whoop hat ihn mit 401 abgelehnt); der naechste Abruf holt einen neuen. */
+    suspend fun verwerfeWhoopZugangsToken() {
+        whoopRefreshMutex.withLock {
+            val state = loadWhoopAuthState()
+            if (state.isAuthorized) {
+                state.needsTokenRefresh = true
+                saveWhoopAuthState(state)
+            }
+        }
+    }
+
+    /** true = es gibt ein Netz, das Android als funktionierend geprueft hat. */
+    private fun netzBereit(): Boolean = runCatching {
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java) ?: return true
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork ?: return false) ?: return false
+        caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }.getOrDefault(true)
+
+    /** Zeitpunkt des letzten geglueckten Refreshs in diesem Prozess (ms), 0 = keiner. */
+    @Volatile
+    var letzterWhoopRefreshMs: Long = 0L
+        private set
 
     /** True, solange Whoop die gespeicherte Anmeldung ablehnt und Frank sich neu anmelden muss. */
     fun whoopNeedsReauth(): Boolean = secrets.whoopReauthSinceMs > 0L

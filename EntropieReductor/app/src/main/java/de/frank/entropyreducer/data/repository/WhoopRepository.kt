@@ -27,6 +27,10 @@ import javax.inject.Singleton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import de.frank.entropyreducer.data.remote.oauth.WhoopReauthRequiredException
+import de.frank.entropyreducer.domain.usecase.WhoopAbrufPlan
 import retrofit2.HttpException
 
 /**
@@ -52,6 +56,8 @@ constructor(
     private val diagnostics: DiagnosticLogger,
 ) {
 
+    private val syncMutex = Mutex()
+
     fun observeLatest(): Flow<BiomarkerSnapshotEntity?> = dao.getLatest()
 
     fun observeRange(from: Long, to: Long): Flow<List<BiomarkerSnapshotEntity>> =
@@ -72,10 +78,25 @@ constructor(
      * syncFullHistory() die bis 2018 zurück zieht (Whoop-Gruendungs-Jahr).
      */
     suspend fun syncLastDays(days: Int = 365): Result<Int> =
+        // Zentrale Sperre fuer JEDEN Whoop-Abruf (2026-10-15): Hintergrund, Biomarker-Reiter, Knopf, Jarvis,
+        // Abruf nach der Anmeldung und "Alles neu laden" laufen alle hier durch — nie zwei gleichzeitig.
+        syncMutex.withLock { syncIntern(days) }
+
+    private suspend fun syncIntern(days: Int): Result<Int> {
+        val versuchMs = System.currentTimeMillis()
+        val vorher = settings.whoopAbrufStandFlow.first()
+        if (vorher.gesperrtBisMs > versuchMs) {
+            return Result.failure(WhoopAbruflimitException(vorher.gesperrtBisMs))
+        }
         runCatchingCancellable {
+            settings.aendereWhoopAbrufStand { WhoopAbrufPlan.nachVersuch(it, versuchMs) }
+            settings.setLastWhoopAttempt(versuchMs)
+        }
+        var neuesterSchlaf: WhoopAbrufPlan.Schlaf? = null
+        return runCatchingCancellable {
                 // freshWhoopAccessToken wirft selbst sprechende Fehler (Anmeldung abgelaufen,
                 // Whoop nicht erreichbar). null heisst nur noch: gar nicht mit Whoop verbunden.
-                val token =
+                var token =
                     oauth.freshWhoopAccessToken()
                         ?: throw IllegalStateException(
                             "Whoop ist nicht verbunden — bitte unter Einstellungen → API-Schlüssel anmelden."
@@ -116,10 +137,12 @@ constructor(
                 val lastGapFillMs = settings.lastWhoopGapFillMsFlow.first()
                 val gapStart =
                     if (nowMs - lastGapFillMs >= GAP_FILL_INTERVAL_MS) earliestGapStart() else null
+                var lueckenGeprueftBis: String? = null
                 val requestedStart =
                     if (gapStart != null && gapStart.isBefore(incrementalStart)) {
                         Diag.i(DiagnosticArea.WHOOP, TAG, "Whoop-Luecke ab $gapStart — Fenster erweitert")
                         settings.setLastWhoopGapFill(nowMs)
+                        lueckenGeprueftBis = java.time.LocalDate.now().minusDays(2).toString()
                         gapStart
                     } else {
                         incrementalStart
@@ -134,48 +157,41 @@ constructor(
                     } else {
                         requestedStart
                     }
-                val auth = "Bearer $token"
                 val isoStart = start.format(ISO)
                 val isoEnd = end.format(ISO)
 
-                val cycles = paged { token2 ->
-                    api.listCycles(
-                            authorization = auth,
-                            start = isoStart,
-                            end = isoEnd,
-                            nextToken = token2,
-                        )
-                        .let { it.records to it.nextToken }
-                }
-                val recoveries = paged { token2 ->
-                    api.listRecovery(
-                            authorization = auth,
-                            start = isoStart,
-                            end = isoEnd,
-                            nextToken = token2,
-                        )
-                        .let { it.records to it.nextToken }
-                }
-                val sleeps = paged { token2 ->
-                    api.listSleep(
-                            authorization = auth,
-                            start = isoStart,
-                            end = isoEnd,
-                            nextToken = token2,
-                        )
-                        .let { it.records to it.nextToken }
-                }
-                // Workouts werden pro Tag mehrfach abgerufen — jeweils eigene Tabelle
-                // (whoop_workouts), das Aggregat fuer den Tag macht das ViewModel.
-                val workouts = paged { token2 ->
-                    api.listWorkouts(
-                            authorization = auth,
-                            start = isoStart,
-                            end = isoEnd,
-                            nextToken = token2,
-                        )
-                        .let { it.records to it.nextToken }
-                }
+                // 401 auf einen Daten-Abruf: Der Zugangs-Token wurde verworfen (etwa nach einer Anmeldung
+                // auf einem anderen Geraet). Einmal frisch holen und wiederholen, erst dann aufgeben —
+                // ein einzelnes 401 heisst noch nicht, dass Frank sich neu anmelden muss.
+                val daten =
+                    try {
+                        holeAlles("Bearer $token", isoStart, isoEnd)
+                    } catch (e: HttpException) {
+                        if (e.code() != 401) throw e
+                        // Wurde der Token gerade erst frisch geholt, haette ein weiterer Refresh nur einen
+                        // zusaetzlichen Tausch des Refresh-Tokens zur Folge — dann aufgeben.
+                        if (System.currentTimeMillis() - oauth.letzterWhoopRefreshMs < FRISCH_MS) throw e
+                        Diag.w(DiagnosticArea.WHOOP, TAG, "Whoop 401 — Zugangs-Token verworfen, einmal neu holen")
+                        oauth.verwerfeWhoopZugangsToken()
+                        token = oauth.freshWhoopAccessToken() ?: throw e
+                        holeAlles("Bearer $token", isoStart, isoEnd)
+                    }
+                val cycles = daten.cycles
+                val recoveries = daten.recoveries
+                val sleeps = daten.sleeps
+                val workouts = daten.workouts
+                neuesterSchlaf =
+                    WhoopAbrufPlan.neuesterSchlaf(
+                        sleeps.map { sl ->
+                            WhoopAbrufPlan.SchlafRoh(
+                                id = sl.id,
+                                endeMs = sl.end?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() } ?: 0L,
+                                nap = sl.nap == true,
+                                scoreState = sl.scoreState,
+                            )
+                        },
+                        recoveries.map { WhoopAbrufPlan.ErholungRoh(it.sleepId, it.scoreState) },
+                    )
 
                 val recByCycleId = recoveries.associateBy { it.cycleId }
                 // Bug-Fix 2026-05-19: Recovery hat ein offizielles sleep_id-Feld das den
@@ -227,10 +243,33 @@ constructor(
                 )
 
                 settings.setLastWhoopSync(System.currentTimeMillis())
+                // Was Whoop beim Nachholen fuer alte Tage nicht hatte, hat es auch spaeter nicht (Band nicht
+                // getragen): diese Tage nicht alle 12 Stunden erneut anfragen (2026-10-15).
+                lueckenGeprueftBis?.let { settings.setWhoopLueckenGeprueftBis(it) }
                 snapshots.size
             }
             .onSuccess {
+                val schlaf = neuesterSchlaf
+                runCatchingCancellable {
+                    settings.aendereWhoopAbrufStand { WhoopAbrufPlan.nachErfolg(it, System.currentTimeMillis(), schlaf) }
+                }
+                Diag.i(
+                    DiagnosticArea.WHOOP,
+                    TAG,
+                    "Whoop-Schlafstand: Ende=${schlaf?.endeMs?.let { Instant.ofEpochMilli(it) }} vollständig=${schlaf?.vollstaendig}",
+                )
                 diagnostics.success(DiagnosticArea.WHOOP, "Sync OK — $it Snapshots gespeichert")
+            }
+            .onFailure { fehler ->
+                // Eine abgelaufene Anmeldung ist kein voruebergehender Fehler: die Pause davor regelt
+                // OAuthService. Netz, Server und Abruflimit verlaengern dagegen den Abstand.
+                if (fehler !is WhoopReauthRequiredException) {
+                    runCatchingCancellable {
+                        settings.aendereWhoopAbrufStand {
+                            WhoopAbrufPlan.nachFehler(it, (fehler as? WhoopAbruflimitException)?.bisMs ?: 0L)
+                        }
+                    }
+                }
             }
             .onFailure {
                 Diag.e(DiagnosticArea.WHOOP, TAG, "Whoop-Sync fehlgeschlagen", it)
@@ -240,6 +279,57 @@ constructor(
                     it,
                 )
             }
+    }
+
+    private class WhoopDaten(
+        val cycles: List<WhoopCycle>,
+        val recoveries: List<WhoopRecovery>,
+        val sleeps: List<WhoopSleep>,
+        val workouts: List<WhoopWorkout>,
+    )
+
+    /** Holt Cycles, Erholung, Schlaf und Workouts im Fenster [isoStart]..[isoEnd]. */
+    private suspend fun holeAlles(auth: String, isoStart: String, isoEnd: String): WhoopDaten {
+        val cycles = paged { token2 ->
+            api.listCycles(
+                    authorization = auth,
+                    start = isoStart,
+                    end = isoEnd,
+                    nextToken = token2,
+                )
+                .let { it.records to it.nextToken }
+        }
+        val recoveries = paged { token2 ->
+            api.listRecovery(
+                    authorization = auth,
+                    start = isoStart,
+                    end = isoEnd,
+                    nextToken = token2,
+                )
+                .let { it.records to it.nextToken }
+        }
+        val sleeps = paged { token2 ->
+            api.listSleep(
+                    authorization = auth,
+                    start = isoStart,
+                    end = isoEnd,
+                    nextToken = token2,
+                )
+                .let { it.records to it.nextToken }
+        }
+        // Workouts werden pro Tag mehrfach abgerufen — jeweils eigene Tabelle
+        // (whoop_workouts), das Aggregat fuer den Tag macht das ViewModel.
+        val workouts = paged { token2 ->
+            api.listWorkouts(
+                    authorization = auth,
+                    start = isoStart,
+                    end = isoEnd,
+                    nextToken = token2,
+                )
+                .let { it.records to it.nextToken }
+        }
+        return WhoopDaten(cycles, recoveries, sleeps, workouts)
+    }
 
     /**
      * Voller Initial-Sync seit 2018 (Whoop-Start). Wird einmalig vom Benutzer angestossen damit
@@ -340,7 +430,10 @@ constructor(
                 .first()
                 .filter { it.hrvMs != null }
                 .mapTo(HashSet()) { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
+        val geprueftBis =
+            runCatching { java.time.LocalDate.parse(settings.whoopLueckenGeprueftBisFlow.first()) }.getOrNull()
         var day = Instant.ofEpochMilli(WHOOP_DATA_START_MS).atZone(zone).toLocalDate().plusDays(1)
+        if (geprueftBis != null && !geprueftBis.isBefore(day)) day = geprueftBis.plusDays(1)
         // Heute und gestern auslassen: dort ist die Recovery evtl. noch nicht berechnet —
         // diese Tage deckt der 7-Tage-Ueberlapp ohnehin ab.
         val last = java.time.LocalDate.now(zone).minusDays(2)
@@ -401,28 +494,49 @@ constructor(
         val out = mutableListOf<T>()
         var token: String? = null
         var attempt = 0
-        do {
+        // while(true) statt do/while: ein "continue" nach einem 429 auf der ERSTEN Seite sprang frueher zur
+        // Bedingung (token == null) und beendete die Schleife mit einer leeren Liste, als waere alles gut.
+        while (true) {
             try {
                 val (records, next) = fetch(token)
                 out += records
                 token = next
                 attempt = 0
+                if (token == null) break
             } catch (e: HttpException) {
-                if (e.code() == 429 && attempt < 3) {
-                    val backoffMs = (1_000L shl attempt) // 1s, 2s, 4s
-                    Diag.w(DiagnosticArea.WHOOP, TAG, "Whoop 429 — backing off ${backoffMs}ms")
-                    delay(backoffMs)
-                    attempt++
-                    continue
+                if (e.code() == 429) {
+                    // Whoop nennt im Retry-After (bzw. X-RateLimit-Reset) die Wartezeit in Sekunden. Kurze
+                    // Wartezeiten hier abwarten, laengere als Sperre speichern statt weiter anzuklopfen.
+                    val warteMs = wartezeitMs(e) ?: (1_000L shl attempt) // ohne Angabe: 1 s, 2 s, 4 s
+                    if (attempt < 3 && warteMs <= KURZ_WARTEN_MS) {
+                        Diag.w(DiagnosticArea.WHOOP, TAG, "Whoop 429 — warte ${warteMs} ms")
+                        delay(warteMs)
+                        attempt++
+                        continue
+                    }
+                    val bis = System.currentTimeMillis() + maxOf(warteMs, MIN_SPERRE_MS)
+                    Diag.w(DiagnosticArea.WHOOP, TAG, "Whoop 429 — Abruflimit, gesperrt bis ${Instant.ofEpochMilli(bis)}")
+                    throw WhoopAbruflimitException(bis)
                 }
                 throw e
             }
-        } while (token != null)
+        }
         return out
     }
 
     companion object {
         private const val TAG = "WhoopRepository"
+        private const val KURZ_WARTEN_MS = 10_000L
+        private const val FRISCH_MS = 10L * 60L * 1000L
+        private const val MIN_SPERRE_MS = 15L * 60L * 1000L
+
+        /** Wartezeit aus Retry-After oder X-RateLimit-Reset (Sekunden), null = keine Angabe. */
+        fun wartezeitMs(e: HttpException): Long? {
+            val headers = e.response()?.headers() ?: return null
+            val sekunden =
+                (headers["Retry-After"] ?: headers["X-RateLimit-Reset"])?.trim()?.toLongOrNull() ?: return null
+            return sekunden.coerceIn(0L, 24L * 3600L) * 1000L
+        }
 
         /**
          * Sicherheits-Ueberlapp fuer inkrementelle Syncs: 7 Tage vor dem letzten Sync, um
@@ -445,3 +559,7 @@ constructor(
                 .toEpochMilli()
     }
 }
+
+/** Whoop hat mit 429 geantwortet: bis [bisMs] nicht wieder fragen. Voruebergehend, keine neue Anmeldung noetig. */
+class WhoopAbruflimitException(val bisMs: Long) :
+    java.io.IOException("Whoop-Abruflimit erreicht, nächster Versuch frühestens ${java.time.Instant.ofEpochMilli(bisMs).atZone(java.time.ZoneId.systemDefault()).toLocalTime().withNano(0)} Uhr")
