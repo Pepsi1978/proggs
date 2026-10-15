@@ -356,8 +356,9 @@ private fun ProgrammierAktivitaet(vm: AppViewModel) {
     }
 }
 
-private val CLAUDE_ORANGE = Color(0xFFD97757)
-private val SPINNER = listOf("·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢")
+internal val CLAUDE_ORANGE = Color(0xFFD97757)
+/** Die Bilder des Claude-Code-Arbeitssymbols, alle 120 ms eins weiter; auch die Seitenleiste zeigt es an arbeitenden Programmier-Gesprächen. */
+internal val SPINNER = listOf("·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢")
 private val SPINNER_WOERTER = listOf(
     "Drizzling", "Cooking", "Brewing", "Baking", "Clauding", "Cogitating", "Percolating", "Simmering", "Marinating", "Noodling",
     "Pondering", "Ruminating", "Conjuring", "Crafting", "Forging", "Hatching", "Mulling", "Musing", "Stewing", "Synthesizing",

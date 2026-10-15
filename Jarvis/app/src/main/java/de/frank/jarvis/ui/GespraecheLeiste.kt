@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.background
@@ -127,9 +129,22 @@ private fun Leiste(vm: AppViewModel, aufNeu: () -> Unit, aufWahl: (String) -> Un
     var umbenennen by remember { mutableStateOf<Sitzung?>(null) }
     var loeschen by remember { mutableStateOf<Sitzung?>(null) }
     val gruppen = remember(vm.sitzungen) { gruppiert(vm.sitzungen) }
+    // Welche Gespräche gerade arbeiten: Programmier-Sitzungen (Claude Code) und Jarvis' eigene Antworten.
+    val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
+    val arbeitende = remember(programmiert) { programmiert.filterValues { it.arbeitet }.keys }
+    // Ein Takt für alle Claude-Symbole in der Liste, nur solange eines zu sehen ist.
+    var bild by remember { mutableStateOf(0) }
+    LaunchedEffect(arbeitende.isNotEmpty()) {
+        while (arbeitende.isNotEmpty()) {
+            kotlinx.coroutines.delay(120)
+            bild = (bild + 1) % SPINNER.size
+        }
+    }
 
     // Im Stil des gewählten Designs (Blau oder Gold, hell oder dunkel): derselbe Verlauf wie der App-Hintergrund, leicht getönt.
+    // Breiter als die Vorgabe, damit neben den Überschriften Platz für die Arbeitssymbole bleibt.
     ModalDrawerSheet(
+        modifier = Modifier.fillMaxWidth(0.9f),
         drawerContainerColor = f.hgUnten,
         drawerContentColor = f.text,
         windowInsets = androidx.compose.foundation.layout.WindowInsets(0),
@@ -163,11 +178,24 @@ private fun Leiste(vm: AppViewModel, aufNeu: () -> Unit, aufWahl: (String) -> Un
                                 .combinedClickable(onClick = { aufWahl(s.id) }, onLongClick = { bearbeiten = s }, onClickLabel = "Öffnen", onLongClickLabel = "Umbenennen oder löschen")
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                         ) {
-                            Text(s.titel.ifBlank { "Gespräch" }, color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
-                            val arbeitet = vm.laufende.containsKey(s.id)
+                            val codet = s.id in arbeitende
+                            val denkt = vm.laufende.containsKey(s.id)
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(s.titel.ifBlank { "Gespräch" }, Modifier.weight(1f), color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
+                                // Jarvis antwortet oder recherchiert selbst: sein pulsierender Leuchtkern.
+                                if (denkt) Kern(22.dp, f.primaer, aktiv = true, modifier = Modifier.padding(start = 8.dp))
+                                // Eine Programmier-Sitzung (Claude Code) arbeitet: das laufende Claude-Symbol in Orange.
+                                if (codet) Text(SPINNER[bild], Modifier.padding(start = 8.dp).width(24.dp), color = CLAUDE_ORANGE, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
                             Text(
-                                if (arbeitet) "Jarvis arbeitet …" else zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten",
-                                color = if (arbeitet) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
+                                when {
+                                    codet && denkt -> "Programmiert · Jarvis arbeitet …"
+                                    codet -> "Programmiert …" + (programmiert[s.id]?.app?.takeIf { it.isNotEmpty() }?.let { " ($it)" } ?: "")
+                                    denkt -> "Jarvis arbeitet …"
+                                    else -> zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten"
+                                },
+                                color = if (codet) CLAUDE_ORANGE else if (denkt) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
