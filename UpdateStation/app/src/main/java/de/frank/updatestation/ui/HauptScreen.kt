@@ -144,10 +144,15 @@ fun HauptScreen(
     // Aus gespeichertem Zustand abgeleitet: sichtbar, auch wenn keine Benachrichtigung gezeigt werden durfte.
     val hinweise = remember(zustand) { Hinweise.aktuell(context) }
     var verlaufFuer by remember { mutableStateOf<AppEintrag?>(null) }
-    val updates = zustand.eintraege.filter { it.status == Status.UPDATE }
-    val warnungen = zustand.eintraege.filter { it.status == Status.SIGNATUR_ANDERS || it.status == Status.APK_FEHLT }
-    val aktuell = zustand.eintraege.filter { it.status == Status.AKTUELL || it.status == Status.INSTALLIERT_NEUER }
-    val fehlend = zustand.eintraege.filter { it.status == Status.NICHT_INSTALLIERT }
+    // Übersteht Drehen/Aufklappen, aber nicht einen neuen App-Start: dann gilt wieder Aktualität, neueste zuerst.
+    var sortKriterium by rememberSaveable { mutableStateOf(SortKriterium.AKTUALITAET) }
+    var sortAbsteigend by rememberSaveable { mutableStateOf(true) }
+    val sortierung = Sortierung(sortKriterium, sortAbsteigend)
+    val sortiert = remember(zustand.eintraege, sortierung) { sortierung.sortiere(zustand.eintraege) }
+    val updates = sortiert.filter { it.status == Status.UPDATE }
+    val warnungen = sortiert.filter { it.status == Status.SIGNATUR_ANDERS || it.status == Status.APK_FEHLT }
+    val aktuell = sortiert.filter { it.status == Status.AKTUELL || it.status == Status.INSTALLIERT_NEUER }
+    val fehlend = sortiert.filter { it.status == Status.NICHT_INSTALLIERT }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -204,6 +209,15 @@ fun HauptScreen(
             hinweise.forEach { (titel, text) ->
                 item {
                     Hinweis(Icons.Rounded.Warning, titel, text, "Diagnose", MaterialTheme.colorScheme.tertiary) { diagnoseOffen = true }
+                }
+            }
+
+            if (zustand.eintraege.size > 1) {
+                item(key = "sortierung") {
+                    SortierLeiste(sortierung) {
+                        sortKriterium = it.kriterium
+                        sortAbsteigend = it.absteigend
+                    }
                 }
             }
 
