@@ -14,7 +14,7 @@ $SerialDatei = Join-Path $env:USERPROFILE ".adb-wlan-serial"
 # WireGuard-Adresse des Handys im Second-Brain-Netz (10.8.0.0/24, Hub = VPS 10.8.0.1).
 # Überschreibbar per Datei ~/.adb-wlan-tunnel-ip (leere Datei = Tunnelweg aus).
 $TunnelDatei = Join-Path $env:USERPROFILE ".adb-wlan-tunnel-ip"
-$TunnelIp = if (Test-Path $TunnelDatei) { (Get-Content $TunnelDatei -Raw).Trim() } else { "10.8.0.3" }
+$TunnelIp = if (Test-Path $TunnelDatei) { (Get-Content $TunnelDatei -Raw).Trim() } else { "10.8.0.7" }
 $LogDir = Join-Path $env:LOCALAPPDATA "adb-wlan"
 $Log = Join-Path $LogDir "adb-wlan.log"
 New-Item -ItemType Directory -Force $LogDir | Out-Null
