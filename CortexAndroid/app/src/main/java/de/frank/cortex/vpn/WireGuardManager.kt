@@ -42,6 +42,11 @@ object WireGuardManager {
     // oder App geht in den Hintergrund): ohne dieses Signal fuehrte der Retry nach dem delay(500)
     // den Aufbau trotzdem zu Ende und ueberschrieb den gewollten Disconnect (Tunnel blieb an).
     @Volatile private var abortConnect = false
+    // true = Server ist ueber ein FREMDES aktives VPN (z.B. offizielle WireGuard-App mit Split-
+    // Tunnel 10.8.0.0/24) erreichbar; Cortex baut dann KEINEN eigenen Tunnel auf (Android erlaubt
+    // nur ein VPN) und disconnect() laesst das fremde VPN unangetastet.
+    @Volatile var usingExternalTunnel = false
+        private set
 
     private val tunnelImpl = object : Tunnel {
         override fun getName(): String = "cortex"
@@ -109,9 +114,68 @@ object WireGuardManager {
         return parseConfig(saved)
     }
 
+    /** Prueft, ob irgendein Netz mit TRANSPORT_VPN aktiv ist UND der Server per TCP erreichbar ist. */
+    private fun serverReachableViaExistingVpn(): Boolean {
+        val cm = de.frank.cortex.CortexApp.appContext
+            .getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            ?: return false
+        @Suppress("DEPRECATION")
+        val vpnActive = cm.allNetworks.any {
+            cm.getNetworkCapabilities(it)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) == true
+        }
+        if (!vpnActive) return false
+        val host = SettingsStore.serverHost.trim().ifBlank { "10.8.0.1" }
+        val port = SettingsStore.agentPort.trim().toIntOrNull() ?: 8002
+        return try {
+            java.net.Socket().use { it.connect(java.net.InetSocketAddress(host, port), 1500) }
+            true
+        } catch (_: Exception) {   // no-cancellation-rethrow (kein suspend im try)
+            false
+        }
+    }
+
+    /**
+     * Uebernimmt einen bereits vorhandenen fremden Tunnel, falls dieser den Server erreicht.
+     * true = erledigt (verbunden ueber vorhandenen Tunnel oder schon verbunden/abgebrochen) —
+     * dann KEIN eigener Tunnel und KEIN VpnService.prepare-Dialog. false = eigenen Tunnel bauen.
+     */
+    suspend fun adoptExistingTunnel(): Boolean = withContext(Dispatchers.IO) {
+        if (_state.value == TunnelState.CONNECTED) return@withContext true
+        // Eigener Tunnel steht (noch) -> das aktive VPN ist unseres, kein fremder Tunnel.
+        val ownUp = try {
+            val b = backend; val t = tunnel
+            b != null && t != null && b.getState(t) == Tunnel.State.UP
+        } catch (_: Exception) { false }   // no-cancellation-rethrow (kein suspend im try)
+        if (ownUp) return@withContext false
+        if (!connectInFlight.compareAndSet(false, true)) return@withContext false
+        val prev = _state.value
+        try {
+            abortConnect = false
+            val reachable = serverReachableViaExistingVpn()
+            if (abortConnect) {
+                _state.value = TunnelState.DISCONNECTED
+                return@withContext true
+            }
+            if (!reachable) {
+                _state.value = prev
+                return@withContext false
+            }
+            usingExternalTunnel = true
+            lastError = null
+            if (_state.value != TunnelState.CONNECTED) ApiClient.resetAgentConnections("external_vpn_up")
+            _state.value = TunnelState.CONNECTED
+            CortexLog.info("WireGuard", "connect", "Verbunden über vorhandenen Tunnel (fremdes VPN) — kein eigener Tunnel")
+            true
+        } finally {
+            connectInFlight.set(false)
+        }
+    }
+
     /** Uebernimmt eine bereits geparste neue Config auch in einen laufenden Tunnel. */
     fun reconnectAfterConfigChange() {
         if (_state.value != TunnelState.CONNECTED && _state.value != TunnelState.CONNECTING) return
+        // Fremder Tunnel: die eigene Config spielt keine Rolle — nichts neu aufbauen.
+        if (usingExternalTunnel) return
         if (!configReconnectInFlight.compareAndSet(false, true)) return
 
         scope.launch {
@@ -120,6 +184,7 @@ object WireGuardManager {
                 // Ein paralleler alter Connect muss seinen Abbruch erst im finally quittieren,
                 // bevor der neue Aufbau die frisch geparste Config sicher erfassen kann.
                 while (connectInFlight.get()) delay(25)
+                if (adoptExistingTunnel()) return@launch
                 connectInternal()
             } finally {
                 configReconnectInFlight.set(false)
@@ -134,7 +199,13 @@ object WireGuardManager {
      * Fehler/Verbunden-Wackelns). Plus 1 Wiederholversuch fuer den Service-Bind-Race.
      * VORAUSSETZUNG: Die Android-VPN-Erlaubnis ist erteilt (MainActivity ruft VpnService.prepare).
      */
-    fun connect() {
+    fun connect(checkExisting: Boolean = true) {
+        if (checkExisting) {
+            scope.launch {
+                if (!adoptExistingTunnel()) connect(checkExisting = false)
+            }
+            return
+        }
         // Ohne erteilte Android-VPN-Erlaubnis wuerde setState(UP) nur kryptisch scheitern.
         // Der Consent-Dialog kann nur aus der MainActivity gestartet werden (VpnService.prepare
         // + Activity-Result) — Aufrufer ohne Activity (z.B. "VPN aktivieren"-Overlay) bekommen
@@ -275,6 +346,15 @@ object WireGuardManager {
     suspend fun disconnect(): Boolean = withContext(Dispatchers.IO) {
         // Laufenden Connect-Versuch (Retry-Fenster) mit abbrechen.
         abortConnect = true
+        if (usingExternalTunnel) {
+            // Fremdes VPN NIE anfassen — nur den eigenen Zustand zuruecksetzen.
+            usingExternalTunnel = false
+            if (_state.value != TunnelState.DISCONNECTED) ApiClient.resetAgentConnections("external_vpn_released")
+            _state.value = TunnelState.DISCONNECTED
+            lastError = null
+            CortexLog.info("WireGuard", "disconnect", "Vorhandenen Tunnel freigegeben (fremdes VPN bleibt aktiv)")
+            return@withContext true
+        }
         val currentBackend = backend
         val currentTunnel = tunnel
 

@@ -74,7 +74,7 @@ class MainActivity : FragmentActivity() {
             // connect() ist nicht-suspendierend (launcht intern) — der fruehere
             // lifecycleScope-Wrapper war unnoetig und lief auf einer zerstoerten
             // Activity (Rotation waehrend des Prompts) nie.
-            WireGuardManager.connect()
+            WireGuardManager.connect(checkExisting = false)
         } else {
             WireGuardManager.reportConsentDenied()
         }
@@ -83,11 +83,16 @@ class MainActivity : FragmentActivity() {
     /** Holt bei Bedarf die VPN-Erlaubnis (System-Dialog), dann verbindet sie der Tunnel. */
     private fun startVpn() {
         if (SettingsStore.wgConfig.isBlank()) return
-        val prepareIntent = VpnService.prepare(this)
-        if (prepareIntent != null) {
-            vpnConsentLauncher.launch(prepareIntent)
-        } else {
-            WireGuardManager.connect()
+        // Erreicht ein bereits aktives fremdes VPN (z.B. WireGuard-App) den Server, KEIN eigener
+        // Tunnel und KEIN prepare-Dialog — der wuerde das fremde VPN rauswerfen.
+        lifecycleScope.launch {
+            if (WireGuardManager.adoptExistingTunnel()) return@launch
+            val prepareIntent = VpnService.prepare(this@MainActivity)
+            if (prepareIntent != null) {
+                vpnConsentLauncher.launch(prepareIntent)
+            } else {
+                WireGuardManager.connect(checkExisting = false)
+            }
         }
     }
 
