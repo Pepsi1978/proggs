@@ -159,7 +159,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
                 code == 504 -> throw IllegalStateException("Der PC hat den Start nicht bestätigt. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
                 code !in 200..299 -> throw IllegalStateException("HTTP $code vom Jarvis-Server")
-                !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").ifEmpty { "Der PC konnte die Sitzung nicht starten." })
+                // Sicher nicht gestartet (die Brücke hat es gemeldet): Dann übernimmt die Cloud, ohne doppelte Sitzung.
+                !antwort.optBoolean("ok") -> throw NichtDa("Der PC konnte die Sitzung nicht starten (${antwort.optString("text").take(160)}), deshalb die Cloud.")
             }
             Start("", "Die Sitzung „Jarvis: $app“ läuft auf ${antwort.optString("rechner").ifEmpty { "dem PC" }} und ist in der Claude-App unter Code zu sehen. " +
                 "Meist dauert es wenige Minuten, dann wird die App per WLAN installiert.")
@@ -196,7 +197,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     429 -> "Zu viele Aufträge in kurzer Zeit (HTTP 429). Bitte später noch einmal."
                     else -> "HTTP ${antwort.code}: ${roh.take(200)}"
                 })
-                Start(runCatching { JSONObject(roh).optString("claude_code_session_url") }.getOrDefault(""),
+                // Die API liefert den Link mit der internen id (…/code/cse_…); Claude-App und Web öffnen die Sitzung nur als
+                // …/code/session_… (gleiche Nummer, anderer Vorsatz).
+                val link = runCatching { JSONObject(roh).optString("claude_code_session_url") }.getOrDefault("").replace("/code/cse_", "/code/session_")
+                Start(link,
                     "Meist dauert es zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version.")
             }
         }
