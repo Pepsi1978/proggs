@@ -85,6 +85,6 @@
     {"versionCode": 80, "versionName": "1.8.69", "stand": "15.10.2026, 16:48 Uhr", "notiz": "„Hey Jarvis“ beginnt jetzt immer ein neues Gespräch, auch beim Kaltstart, statt das zuletzt offene oder ein Programmiergespräch fortzusetzen; bisherige Gespräche und laufende Programmieraufträge bleiben unberührt"},
     {"versionCode": 81, "versionName": "1.8.70", "stand": "15.10.2026, 16:55 Uhr", "notiz": "„Hey Jarvis“ führt bei sichtbarer Jarvis-App das gerade offene Gespräch fort; nur aus einer anderen App, aus dem Hintergrund oder beim Kaltstart beginnt ein neues Gespräch"},
     {"versionCode": 82, "versionName": "1.8.71", "stand": "15.10.2026, 17:02 Uhr", "notiz": "Der Sprachbefehl „Sprachsession beenden“ beendet die Sprachschleife: Das Mikrofon öffnet sich danach nicht mehr von selbst und piept nicht mehr, Gespräch und laufende Aufträge bleiben erhalten"},
-    {"versionCode": 82, "versionName": "1.8.71", "stand": "15.10.2026, 17:01 Uhr", "notiz": "Sessions per Sprache wechseln: „Öffne eine neue Session“, „Gehe in die letzte Session zurück“ und „Gehe in die Whoop-Session zurück“ wechseln direkt, ohne Programmierauftrag; die alte Session arbeitet weiter, bei mehreren Treffern fragt Jarvis nach"}
+    {"versionCode": 83, "versionName": "1.8.72", "stand": "15.10.2026, 17:05 Uhr", "notiz": "Sessions per Sprache wechseln: „Öffne eine neue Session“, „Gehe in die letzte Session zurück“ und „Gehe in die Whoop-Session zurück“ wechseln direkt, ohne Programmierauftrag; die alte Session arbeitet weiter, bei mehreren Treffern fragt Jarvis nach"}
   ]
 }
