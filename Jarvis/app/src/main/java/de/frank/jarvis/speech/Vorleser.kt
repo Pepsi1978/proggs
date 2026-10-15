@@ -96,7 +96,8 @@ class Vorleser(
     @Volatile private var laufBeginn = 0L
     @Volatile private var ersterTonGemessen = true
 
-    fun sprich(quelle: String, titel: String, rohText: String, wiederholen: Boolean = false) {
+    /** [wahl]: eigene Stimme und eigenes Tempo nur für diesen Auftrag (Update-Ansagen), sonst wie eingestellt. */
+    fun sprich(quelle: String, titel: String, rohText: String, wiederholen: Boolean = false, wahl: StimmWahl? = null) {
         if (_stand.value.quelle == quelle && _stand.value.zustand != VorleseZustand.AUS) {
             stopp()
             return
@@ -135,7 +136,7 @@ class Vorleser(
         laufenderJob = bereich.launch {
             try {
                 do {
-                    if (synthese.kannVorausschauen()) pipelineMitVorausschau(absaetze, pauseMs) else reihum(absaetze, pauseMs)
+                    if (synthese.kannVorausschauen(wahl)) pipelineMitVorausschau(absaetze, pauseMs, wahl) else reihum(absaetze, pauseMs)
                     // Derselbe abbrechbare Auftrag bleibt samt Dienst über alle Runden aktiv.
                     if (wiederholen) delay(ABSATZ_PAUSE_MS)
                 } while (wiederholen)
@@ -169,7 +170,7 @@ class Vorleser(
     private class Auftrag(val text: String, val ergebnis: Deferred<Result<List<File>>>)
 
     /** Alle Anbieter erzeugen vorab (Edge inzwischen auch) — hier greift die Vorausschau. */
-    private suspend fun pipelineMitVorausschau(absaetze: List<String>, pauseMs: Long) = coroutineScope {
+    private suspend fun pipelineMitVorausschau(absaetze: List<String>, pauseMs: Long, wahl: StimmWahl?) = coroutineScope {
         // Je Absatz ein oder (beim ersten) zwei Teile, die ohne Pause hintereinander laufen.
         val inArbeit = HashMap<Int, List<Auftrag>>()
 
@@ -182,7 +183,7 @@ class Vorleser(
             teil,
             async(Dispatchers.IO) {
                 try {
-                    Result.success(synthetisiereMitTeilung(teil))
+                    Result.success(synthetisiereMitTeilung(teil, wahl))
                 } catch (abbruch: CancellationException) {
                     throw abbruch
                 } catch (fehler: Exception) {
@@ -211,7 +212,7 @@ class Vorleser(
             var angekuendigt = false
             var gesprochen = false
             teile.forEach { auftrag ->
-                val dateien = hole(auftrag)
+                val dateien = hole(auftrag, wahl)
                 if (!angekuendigt) {
                     angekuendigt = true
                     beauftrage(index + VORAUSSCHAU + 1)
@@ -250,7 +251,7 @@ class Vorleser(
      * Zeit, wird er jetzt einmal direkt neu versucht; scheitert auch das, wird der Teil
      * übersprungen. Nur ein Abbruch der ganzen Sitzung (Schlüssel fehlt) hält alles an.
      */
-    private suspend fun hole(auftrag: Auftrag): List<File> {
+    private suspend fun hole(auftrag: Auftrag, wahl: StimmWahl?): List<File> {
         val erstes = auftrag.ergebnis.await()
         erstes.getOrNull()?.let { return it }
         val grund = erstes.exceptionOrNull()
@@ -263,7 +264,7 @@ class Vorleser(
             return emptyList()
         }
         return try {
-            withContext(Dispatchers.IO) { synthetisiereMitTeilung(auftrag.text) }
+            withContext(Dispatchers.IO) { synthetisiereMitTeilung(auftrag.text, wahl) }
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (abbruch: SyntheseAbbruch) {
@@ -286,23 +287,23 @@ class Vorleser(
      * einmal ungeteilt wiederholt. Hier wird nur erzeugt, nie abgespielt — die Vorausschau
      * läuft nebenher, und ein Abspielen von hier spräche mitten in den laufenden Absatz.
      */
-    private suspend fun synthetisiereMitTeilung(absatz: String): List<File> = try {
-        listOf(synthese.synthetisiere(absatz))
+    private suspend fun synthetisiereMitTeilung(absatz: String, wahl: StimmWahl?): List<File> = try {
+        listOf(synthese.synthetisiere(absatz, wahl))
     } catch (zeitlimit: SyntheseZeitlimit) {
         // Weder halbieren noch wiederholen: Jeder weitere Versuch wartete erneut die volle Frist.
         throw zeitlimit
     } catch (netz: IOException) {
         IdeenLog.warn("Vorleser", "synthetisiereMitTeilung", "Netzfehler, neuer Versuch", mapOf("art" to netz.javaClass.simpleName))
         delay(NETZ_WIEDERHOLUNG_MS)
-        listOf(synthese.synthetisiere(absatz))
+        listOf(synthese.synthetisiere(absatz, wahl))
     } catch (fehler: SyntheseFehler) {
         val mitte = absatz.length / 2
         val schnitt = absatz.lastIndexOf(' ', mitte).takeIf { it > 0 } ?: mitte
         IdeenLog.warn("Vorleser", "synthetisiereMitTeilung", "Absatz halbiert", mapOf("chars" to absatz.length))
-        val ersteHaelfte = synthese.synthetisiere(absatz.substring(0, schnitt).trim())
+        val ersteHaelfte = synthese.synthetisiere(absatz.substring(0, schnitt).trim(), wahl)
         // Die zweite Hälfte wird nach der ersten geholt; ein zweiter Fehlschlag zählt als echt.
         val zweiteHaelfte = try {
-            synthese.synthetisiere(absatz.substring(schnitt).trim())
+            synthese.synthetisiere(absatz.substring(schnitt).trim(), wahl)
         } catch (zweiter: Exception) {
             ersteHaelfte.delete()
             throw zweiter

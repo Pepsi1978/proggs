@@ -195,6 +195,15 @@ class Einstellungen private constructor(context: Context) {
     var abfahrtVorlesen: Boolean get() = prefs.getBoolean("abfahrt_vorlesen", true); set(v) = put { putBoolean("abfahrt_vorlesen", v) }
     /** Lautstärke der vorgelesenen Losfahr-Meldung in Prozent der höchsten Medienlautstärke. */
     var abfahrtLautstaerke: Int get() = prefs.getInt("abfahrt_lautstaerke", 100).coerceIn(10, 100); set(v) = put { putInt("abfahrt_lautstaerke", v.coerceIn(10, 100)) }
+
+    // ---- Ansagen anderer eigener Apps (UpdateStation: „Ein Update von … ist bereit“) ----
+    var ansageVorlesen: Boolean get() = prefs.getBoolean("ansage_vorlesen", true); set(v) = put { putBoolean("ansage_vorlesen", v) }
+    /** Stimm-Kennung aus dem TtsCatalog; leer = dieselbe Stimme wie Jarvis. */
+    var ansageStimme: String get() = s("ansage_stimme", ""); set(v) = put { putString("ansage_stimme", v) }
+    /** Sprechtempo der Ansage; 0 = wie Jarvis. */
+    var ansageTempo: Float get() = prefs.getFloat("ansage_tempo", 0f); set(v) = put { putFloat("ansage_tempo", v) }
+    /** Lautstärke der Ansage in Prozent der höchsten Medienlautstärke. */
+    var ansageLautstaerke: Int get() = prefs.getInt("ansage_lautstaerke", 100).coerceIn(10, 100); set(v) = put { putInt("ansage_lautstaerke", v.coerceIn(10, 100)) }
     var adresseZuhause: String get() = s("adresse_zuhause", "Niederheidenstraße 42, 15366 Neuenhagen bei Berlin"); set(v) = put { putString("adresse_zuhause", v.trim()) }
     var adresseArbeit: String get() = s("adresse_arbeit", "Bodestraße 1-3, 10178 Berlin"); set(v) = put { putString("adresse_arbeit", v.trim()) }
     /** Gewünschte Ankunft auf Arbeit als HH:MM, je Dienstart. */

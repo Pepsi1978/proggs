@@ -136,6 +136,57 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             Chip("Fertige Agenten-Ergebnisse", aktiv = e.ergebnisseVorlesen) { e.ergebnisseVorlesen = !e.ergebnisseVorlesen }
         }
     }
+
+    Bereich("Update-Ansagen") {
+        Zeile("Ansagen von UpdateStation", if (e.ansageVorlesen) "An" else "Aus", if (e.ansageVorlesen) f.erfolg else f.textLeise)
+        Text("Liegt ein Update fertig geladen in UpdateStation, sagt Jarvis es an. Stimme, Tempo und Lautstärke dafür stellst du hier getrennt von Jarvis' eigener Stimme ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("An", aktiv = e.ansageVorlesen) { geaendert { e.ansageVorlesen = true } }
+            Chip("Aus", aktiv = !e.ansageVorlesen) { geaendert { e.ansageVorlesen = false } }
+        }
+        if (e.ansageVorlesen) {
+            // null = dieselbe Stimme wie Jarvis; sonst der Anbieter, aus dem die Ansage-Stimme kommt.
+            var ansageAnbieter by remember { mutableStateOf(TtsCatalog.anbieterZu(e.ansageStimme)) }
+            Unterzeile("Stimme")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("Wie Jarvis", aktiv = ansageAnbieter == null) { ansageAnbieter = null; geaendert { e.ansageStimme = "" } }
+                listOf(TtsProvider.EDGE to TtsCatalog.DEFAULT_EDGE_VOICE, TtsProvider.GOOGLE_CLOUD to TtsCatalog.DEFAULT_GOOGLE_VOICE, TtsProvider.QWEN to TtsCatalog.DEFAULT_QWEN_VOICE).forEach { (p, standard) ->
+                    Chip(p.label, aktiv = ansageAnbieter == p) {
+                        ansageAnbieter = p
+                        if (TtsCatalog.anbieterZu(e.ansageStimme) != p) geaendert { e.ansageStimme = standard }
+                    }
+                }
+            }
+            val stimmen = when (ansageAnbieter) {
+                TtsProvider.EDGE -> TtsCatalog.edgeVoices
+                TtsProvider.GOOGLE_CLOUD -> TtsCatalog.googleVoices
+                TtsProvider.QWEN -> TtsCatalog.qwenVoices
+                else -> emptyList()
+            }
+            if (stimmen.isNotEmpty()) {
+                Unterzeile("Stimme für Update-Ansagen")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    stimmen.forEach { v -> Chip(v.name, aktiv = e.ansageStimme == v.id) { geaendert { e.ansageStimme = v.id } } }
+                }
+            }
+            if (ansageAnbieter == TtsProvider.GOOGLE_CLOUD && s.googleTtsApiKey.isBlank()) Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
+            if (ansageAnbieter == TtsProvider.QWEN && s.qwenTtsApiKey.isBlank()) Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { geaendert { s.qwenTtsApiKey = it } }
+            Unterzeile("Sprechtempo")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0f to "Wie Jarvis", 0.9f to "Ruhig", 1.0f to "Normal", 1.1f to "Zügig", 1.2f to "Schnell").forEach { (wert, name) ->
+                    Chip(name, aktiv = kotlin.math.abs(e.ansageTempo - wert) < 0.04f) { geaendert { e.ansageTempo = wert } }
+                }
+            }
+            Unterzeile("Lautstärke")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(20, 40, 60, 80, 100).forEach { prozent -> Chip(if (prozent == 100) "Maximal" else "$prozent %", aktiv = e.ansageLautstaerke == prozent) { geaendert { e.ansageLautstaerke = prozent } } }
+            }
+            Knopf("Probe hören", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) {
+                de.frank.jarvis.speech.Ansage.ansage(vm.getApplication(), "UpdateStation", "Ein Update von Jarvis ist bereit in UpdateStation.")
+            }
+            Text("Jarvis stellt die Medienlautstärke nur für die Ansage so ein und danach wieder zurück. Bei „Nicht stören“ bleibt es bei der stillen Benachrichtigung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+    }
 }
 
 @Composable

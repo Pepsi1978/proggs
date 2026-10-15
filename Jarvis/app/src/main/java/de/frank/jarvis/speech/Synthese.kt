@@ -51,6 +51,12 @@ class SyntheseFehler(message: String, cause: Throwable? = null) : Exception(mess
 class SyntheseZeitlimit(message: String) : Exception(message)
 
 /**
+ * Eigene Stimme für einzelne Meldungen (z. B. Update-Ansagen von UpdateStation), abweichend von Jarvis' Vorlese-Stimme.
+ * [stimme] ist eine Kennung aus dem [TtsCatalog] (Edge, Google oder Alibaba), null = wie Jarvis; [tempo] null = wie Jarvis.
+ */
+data class StimmWahl(val stimme: String? = null, val tempo: Float? = null)
+
+/**
  * Erzeugt Audio, ohne es abzuspielen — die Voraussetzung für die Vorausschau der
  * Absatz-Pipeline (Baustein D 4.2, Schritt 3).
  */
@@ -69,7 +75,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * Ob die gewählte Engine vorab synthetisieren kann. Edge schreibt seinen Ton inzwischen ebenfalls
      * erst in eine Datei — so greift die Vorausschau auch beim Standardanbieter.
      */
-    fun kannVorausschauen(): Boolean = when (settings.ttsProvider) {
+    fun kannVorausschauen(wahl: StimmWahl? = null): Boolean = when (anbieter(wahl)) {
         TtsProvider.GOOGLE_CLOUD.id, TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id, TtsProvider.EDGE.id -> true
         else -> false
     }
@@ -79,19 +85,25 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * würde die Prüfung über [synthetisiere] laufen und bei einer Edge- oder Alibaba-Stimme
      * mit "kann nicht vorab erzeugt werden" abbrechen, obwohl der Schlüssel in Ordnung ist.
      */
-    suspend fun pruefeGoogle(text: String = "Probe."): File = gleichzeitig.withPermit { google(text) }
+    suspend fun pruefeGoogle(text: String = "Probe."): File = gleichzeitig.withPermit { google(text, null, settings.ttsSpeechRate) }
 
-    suspend fun synthetisiere(text: String): File = gleichzeitig.withPermit {
-        when (settings.ttsProvider) {
-            TtsProvider.GOOGLE_CLOUD.id -> google(text)
+    /** Anbieter der [wahl], sonst der in Jarvis eingestellte. */
+    private fun anbieter(wahl: StimmWahl?): String =
+        wahl?.stimme?.let { TtsCatalog.anbieterZu(it)?.id } ?: settings.ttsProvider
+
+    suspend fun synthetisiere(text: String, wahl: StimmWahl? = null): File = gleichzeitig.withPermit {
+        val sonder = wahl?.stimme?.takeIf { TtsCatalog.anbieterZu(it) != null }
+        val tempo = wahl?.tempo ?: settings.ttsSpeechRate
+        when (anbieter(wahl)) {
+            TtsProvider.GOOGLE_CLOUD.id -> google(text, sonder, tempo)
             TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
-            TtsProvider.QWEN.id -> qwen(text, geklont = false)
-            TtsProvider.EDGE.id -> edge(text)
+            TtsProvider.QWEN.id -> qwen(text, geklont = false, sonder)
+            TtsProvider.EDGE.id -> edge(text, sonder, tempo)
             else -> throw SyntheseAbbruch("Diese Stimme kann nicht vorab erzeugt werden.")
         }
     }
 
-    private suspend fun google(text: String): File {
+    private suspend fun google(text: String, sonderStimme: String?, tempo: Float): File {
         val schluessel = settings.googleTtsApiKey.trim()
         if (schluessel.isBlank()) {
             throw SyntheseAbbruch(
@@ -99,7 +111,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                     "Trag ihn in den Einstellungen ein.",
             )
         }
-        val stimme = settings.googleTtsVoice
+        val stimme = sonderStimme ?: settings.googleTtsVoice
         // Chirp 3 HD versteht kein SSML — dort bleibt es beim reinen Text, die Sprache steuert
         // allein der languageCode. Alle uebrigen Google-Stimmen werden per <lang> festgenagelt.
         val alsSsml = settings.immerDeutschVorlesen && !stimme.contains("Chirp")
@@ -107,15 +119,15 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val aussprachen = if (!alsSsml && stimme.contains("Chirp")) chirpAussprachen(text) else null
         if (aussprachen != null) {
             try {
-                return googleAnfrage(text, stimme, schluessel, alsSsml, aussprachen)
+                return googleAnfrage(text, stimme, schluessel, alsSsml, aussprachen, tempo)
             } catch (fehler: SyntheseFehler) {
                 if (fehler.message?.contains("Fehler 400") != true) throw fehler
             }
         }
-        return googleAnfrage(text, stimme, schluessel, alsSsml, null)
+        return googleAnfrage(text, stimme, schluessel, alsSsml, null, tempo)
     }
 
-    private suspend fun googleAnfrage(text: String, stimme: String, schluessel: String, alsSsml: Boolean, aussprachen: JSONObject?): File {
+    private suspend fun googleAnfrage(text: String, stimme: String, schluessel: String, alsSsml: Boolean, aussprachen: JSONObject?, tempo: Float): File {
         val koerper = JSONObject()
             .put(
                 "input",
@@ -130,7 +142,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                 "audioConfig",
                 JSONObject()
                     .put("audioEncoding", "MP3")
-                    .put("speakingRate", settings.ttsSpeechRate.coerceIn(0.25f, 4f).toDouble()),
+                    .put("speakingRate", tempo.coerceIn(0.25f, 4f).toDouble()),
                 // Chirp-3-HD-Stimmen kennen keinen pitch-Parameter — er wird gar nicht erst
                 // gesendet, sonst antwortet Google mit Fehler 400.
             )
@@ -151,12 +163,12 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      *   Alibaba-Standardstimmen. Klonen und Sprechen müssen dasselbe Modell benutzen, sonst wird
      *   die Stimm-Kennung abgelehnt — darum zwei Modellnamen.
      */
-    private suspend fun qwen(text: String, geklont: Boolean): File {
+    private suspend fun qwen(text: String, geklont: Boolean, sonderStimme: String? = null): File {
         val schluessel = settings.qwenTtsApiKey.filterNot(Char::isWhitespace)
         val stimme = if (geklont) {
             settings.qwenTtsVoiceId.filterNot(Char::isWhitespace)
         } else {
-            settings.qwenStandardVoice
+            sonderStimme ?: settings.qwenStandardVoice
         }
         if (schluessel.isBlank()) {
             throw SyntheseAbbruch(
@@ -202,13 +214,13 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * Bewusst ohne withTimeout um die Erzeugung: Ein Zeitlimit-Abbruch wäre sonst eine
      * CancellationException und beendete das ganze Vorlesen statt nur diesen Absatz.
      */
-    private suspend fun edge(text: String): File {
+    private suspend fun edge(text: String, sonderStimme: String?, tempo: Float): File {
         val datei = neueDatei("mp3")
         val beginn = System.currentTimeMillis()
         // Zeitpunkt des letzten Tonrahmens; 0 = noch keiner da.
         val letzterRahmen = AtomicLong(0L)
         val fertig: File? = coroutineScope {
-            val erzeugung = async { edgeErzeuge(text, datei, letzterRahmen) }
+            val erzeugung = async { edgeErzeuge(text, datei, letzterRahmen, sonderStimme, tempo) }
             var ergebnis: File? = null
             var abgelaufen = false
             while (ergebnis == null && !abgelaufen) {
@@ -241,7 +253,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         return fertig
     }
 
-    private suspend fun edgeErzeuge(text: String, datei: File, letzterRahmen: AtomicLong): File = suspendCancellableCoroutine { fortsetzung ->
+    private suspend fun edgeErzeuge(text: String, datei: File, letzterRahmen: AtomicLong, sonderStimme: String?, tempo: Float): File = suspendCancellableCoroutine { fortsetzung ->
         val strom = FileOutputStream(datei)
         val beendet = AtomicBoolean(false)
         fun schliesse() {
@@ -260,8 +272,8 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 val ssml = EdgeTtsPlayer.ssmlNachricht(
                     text = text,
-                    voice = settings.edgeTtsVoice.ifBlank { TtsCatalog.DEFAULT_EDGE_VOICE },
-                    speechRate = settings.ttsSpeechRate,
+                    voice = sonderStimme ?: settings.edgeTtsVoice.ifBlank { TtsCatalog.DEFAULT_EDGE_VOICE },
+                    speechRate = tempo,
                     pitchPercent = 0,
                     erzwingeDeutsch = settings.immerDeutschVorlesen,
                 )

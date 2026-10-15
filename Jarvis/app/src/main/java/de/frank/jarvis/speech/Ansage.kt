@@ -24,7 +24,7 @@ object Ansage {
     private const val TAG = "JarvisAnsage"
 
     /** [art] wird Teil der Quelle (z. B. „abfahrt“); [lautstaerke] in Prozent der Medienlautstärke. */
-    fun sprich(context: Context, art: String, titel: String, text: String, lautstaerke: Int) {
+    fun sprich(context: Context, art: String, titel: String, text: String, lautstaerke: Int, wahl: StimmWahl? = null) {
         val app = context.applicationContext
         CoroutineScope(Dispatchers.Main).launch {
             val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:$art-stimme")
@@ -39,7 +39,7 @@ object Ansage {
                 // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
                 val quelle = "$art:" + System.currentTimeMillis()
                 val vorleser = Vorleser.hole(app, SecureSettings(app))
-                vorleser.sprich(quelle, titel, text)
+                vorleser.sprich(quelle, titel, text, wahl = wahl)
                 withTimeoutOrNull(110_000L) { vorleser.stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }
             } catch (f: Exception) {
                 Log.w(TAG, "Vorlesen nicht möglich", f)
@@ -49,6 +49,15 @@ object Ansage {
                 runCatching { if (wach.isHeld) wach.release() }
             }
         }
+    }
+
+    /** Stimme und Tempo für Ansagen anderer Apps, wie unter Einstellungen → Stimme → Update-Ansagen gewählt. */
+    fun wahlFuerAnsagen(e: Einstellungen) = StimmWahl(e.ansageStimme.ifBlank { null }, e.ansageTempo.takeIf { it > 0f })
+
+    /** Ansage anderer Apps mit den eigenen Einstellungen (Stimme, Tempo, Lautstärke). */
+    fun ansage(context: Context, titel: String, text: String) {
+        val e = Einstellungen.get(context)
+        sprich(context, "ansage", titel, text, e.ansageLautstaerke, wahlFuerAnsagen(e))
     }
 }
 
@@ -62,7 +71,8 @@ class AnsageEmpfaenger : BroadcastReceiver() {
         val text = intent.getStringExtra(EXTRA_TEXT)?.take(500)?.takeIf { it.isNotBlank() } ?: return
         val titel = intent.getStringExtra(EXTRA_TITEL)?.take(80) ?: "Jarvis"
         Logbuch.sprache("Ansage von $titel", text.take(120))
-        Ansage.sprich(context, "ansage", titel, text, Einstellungen.get(context).abfahrtLautstaerke)
+        if (!Einstellungen.get(context).ansageVorlesen) return
+        Ansage.ansage(context, titel, text)
     }
 
     companion object {
