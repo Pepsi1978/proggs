@@ -16,6 +16,11 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -25,6 +30,9 @@ import org.json.JSONObject
  * Zwei Ziele, in dieser Reihenfolge: Franks PC (Claude Code mit Remote Control, schnell, Installation per WLAN-adb),
  * solange dort die PC-Brücke läuft (Jarvis/werkzeuge/pc-bruecke), sonst die Claude-Code-Routine in der Cloud.
  * Beides läuft über Franks Claude-Abo, nicht über bezahlte API-Aufrufe.
+ *
+ * Fortschritt: Jeder Auftrag bekommt eine Nummer. Die Sitzung meldet ihre Schritte selbst über programmier_fortschritt
+ * (MCP-Server Jarvis); Jarvis hält sie im [Auftragsbuch] und zeigt je Auftrag eine Benachrichtigung, die mitwächst.
  */
 class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "programmieren"
@@ -32,6 +40,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     override val beschreibung = "Programmieraufträge an Franks Apps an Claude Code übergeben; die fertige App kommt über UpdateStation aufs Handy."
     override val hinweise =
         "Fragt Frank, ob sein PC (Rechner, Computer) an oder erreichbar ist oder wohin ein Programmierauftrag gehen würde, rufe pc_status auf. " +
+            "Fragt er, wie weit ein Programmierauftrag ist, was die Cloud-Sitzung gerade macht oder ob sie fertig ist, rufe programmierauftraege auf. " +
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
             "Schreib den Auftrag vollständig aus, mit allem, was Frank im Gespräch gesagt hat: welche App, was genau anders werden soll, wie es aussehen und sich verhalten soll, " +
             "woran man erkennt, dass es fertig ist. Ist unklar, welche App gemeint ist, frag Frank kurz, bevor du startest. Programmiere nie selbst im Gespräch."
@@ -84,6 +93,34 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 nurLesen = true,
             ) { Ergebnis(zustand()) },
             Werkzeug(
+                name = "programmierauftraege",
+                titel = "Programmieraufträge und ihr Fortschritt",
+                beschreibung = "Jarvis: zeigt die letzten Programmieraufträge mit Stand (läuft, Rückfrage, fertig, Problem), dem zuletzt gemeldeten Schritt, wann er kam, " +
+                    "wohin der Auftrag ging (PC oder Cloud) und dem Link zur Sitzung. Nutze es bei „Wie weit ist mein Programmierauftrag?“, „Was macht die Cloud-Sitzung?“, " +
+                    "„Ist die App schon fertig?“ oder „Gib mir den Link zur Sitzung“.",
+                schema = schema("anzahl" to zahl("Wie viele Aufträge, neueste zuerst; Vorgabe 5.")),
+                nurLesen = true,
+            ) { a -> Ergebnis(Auftragsbuch.uebersicht(app, a.optInt("anzahl", 5).coerceIn(1, 20))) },
+            Werkzeug(
+                name = "programmier_fortschritt",
+                titel = "Fortschritt eines Programmierauftrags melden",
+                beschreibung = "Nur für die Claude-Code-Sitzung, die einen Programmierauftrag von Jarvis bearbeitet (sie kennt die auftrag_id aus ihrem Auftrag): " +
+                    "meldet Frank einen Schritt. Jarvis zeigt ihn als Benachrichtigung auf dem Handy. stand=laeuft für Zwischenschritte, stand=frage bevor die Sitzung " +
+                    "Frank etwas fragt, stand=fertig oder stand=fehler am Ende mit einer Zusammenfassung in einem Satz. Nicht im Gespräch mit Frank benutzen.",
+                schema = schema(
+                    "auftrag_id" to text("Die Nummer aus dem Auftrag (AUFTRAG-ID)."),
+                    "stand" to text("laeuft, frage, fertig oder fehler.", listOf("laeuft", "frage", "fertig", "fehler")),
+                    "schritt" to text("Ein kurzer Satz auf Deutsch, was gerade passiert oder was gefragt wird, zum Beispiel „App gefunden: Aufgaben“ oder „Pull Request #212 gemergt, GitHub baut die APK“."),
+                    "link" to text("Optional: Adresse der eigenen Sitzung oder des Pull Requests."),
+                    pflicht = listOf("auftrag_id", "stand", "schritt"),
+                ),
+                nurLesen = false,
+            ) { a ->
+                val eintrag = Auftragsbuch.melde(app, a.optString("auftrag_id").trim(), a.optString("stand"), a.optString("schritt").trim().take(400), a.optString("link").trim())
+                if (eintrag == null) Ergebnis("Unbekannte auftrag_id.", fehler = true)
+                else { benachrichtige(eintrag); Ergebnis("Gemeldet.") }
+            },
+            Werkzeug(
                 name = "programmieren",
                 titel = "Programmierauftrag starten",
                 beschreibung = "Jarvis: programmiert etwas in einer von Franks Apps („Jarvis, programmiere in Geniale Aufgaben einen Filter für …“, „bau in den Wecker ein, dass …“, " +
@@ -111,48 +148,137 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     appName.isEmpty() -> Ergebnis("Welche App ist gemeint? Bitte Frank fragen.", fehler = true)
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     wahl.isEmpty() -> Ergebnis(ziele.last().fehlt(), fehler = true)
-                    else -> starteErstes(wahl, appName, auftrag, a.optBoolean("review"))
+                    else -> starteErstes(wahl, appName, auftrag, a.optBoolean("review"), Auftragsbuch.neueNummer())
                 }
             },
         )
     }
 
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
-    private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean): Ergebnis {
+    private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String): Ergebnis {
         val uebersprungen = mutableListOf<String>()
+        val mitFortschritt = auftrag + "\n\n" + fortschrittsAnweisung(nummer)
         for (ziel in wahl) {
             val start = try {
-                ziel.starte(appName, auftrag, review)
+                ziel.starte(appName, mitFortschritt, review)
             } catch (nichtDa: NichtDa) {
                 uebersprungen += nichtDa.message.orEmpty()
                 continue
             } catch (fehler: Exception) {
                 return Ergebnis("Der Auftrag ist nicht gestartet (${ziel.name}): ${fehler.message ?: fehler.javaClass.simpleName}", fehler = true)
             }
-            melde(appName, ziel, start)
-            return Ergebnis("Der Auftrag für $appName läuft jetzt: ${ziel.name}. ${start.hinweis}" +
+            val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}")
+            benachrichtige(eintrag)
+            return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt: ${ziel.name}. ${start.hinweis} " +
+                "Die Sitzung meldet ihre Schritte; Frank sieht sie als Benachrichtigung, und programmierauftraege nennt jederzeit den Stand." +
                 (if (start.link.isNotEmpty()) " Link zur Sitzung: ${start.link}" else "") +
                 (if (uebersprungen.isEmpty()) "" else " (${uebersprungen.joinToString(" ")})"))
         }
         return Ergebnis("Der Auftrag ist nicht gestartet: ${uebersprungen.joinToString(" ")}", fehler = true)
     }
 
-    /** Benachrichtigung; ein Tipp öffnet die Sitzung (Link) oder die Claude-App. */
-    private fun melde(appName: String, ziel: ProgrammierZiel, start: Start) {
+    /** Was die Sitzung zum Melden wissen muss; hängt am Auftrag, gilt für PC und Cloud gleich. */
+    private fun fortschrittsAnweisung(nummer: String) =
+        "FORTSCHRITT (AUFTRAG-ID: $nummer): Frank verfolgt diesen Auftrag am Handy. Melde jeden wichtigen Schritt mit dem Werkzeug programmier_fortschritt " +
+            "des MCP-Servers Jarvis (auftrag_id=$nummer, ein kurzer Satz auf Deutsch): sofort zu Beginn (stand=laeuft), wenn die App gefunden ist, wenn die " +
+            "Änderung programmiert ist, beim Commit oder Pull Request, beim Bau oder der Installation, und am Ende stand=fertig mit einem Satz, was jetzt neu ist " +
+            "und welche Version, oder stand=fehler mit dem Grund. Bevor du Frank mit AskUserQuestion etwas fragst, melde stand=frage mit der Frage, damit er eine " +
+            "Benachrichtigung bekommt. Ist das Werkzeug nicht verfügbar, arbeite ohne Meldungen weiter."
+
+    /** Eine Benachrichtigung je Auftrag, die mit jedem Schritt aktualisiert wird; ein Tipp öffnet die Sitzung oder die Claude-App. */
+    private fun benachrichtige(eintrag: JSONObject) {
         runCatching {
             JarvisDienst.kanalAnlegen(app)
-            val oeffnen = if (start.link.isNotEmpty()) Intent(Intent.ACTION_VIEW, Uri.parse(start.link))
+            val link = eintrag.optString("link")
+            val oeffnen = if (link.startsWith("https://")) Intent(Intent.ACTION_VIEW, Uri.parse(link))
                 else app.packageManager.getLaunchIntentForPackage(CLAUDE_APP) ?: app.packageManager.getLaunchIntentForPackage(app.packageName)
+            val stand = eintrag.optString("stand")
+            val appName = eintrag.optString("app")
+            val titel = when (stand) {
+                "frage" -> "Rückfrage: $appName"
+                "fertig" -> "Fertig programmiert: $appName"
+                "fehler" -> "Problem beim Programmieren: $appName"
+                else -> "Jarvis programmiert: $appName"
+            }
+            val text = eintrag.optString("schritt")
+            val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
             app.getSystemService(NotificationManager::class.java).notify(
-                (System.currentTimeMillis() % 100_000).toInt() + 300_000,
+                nummer,
                 NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis)
-                    .setContentTitle("Jarvis programmiert: $appName")
-                    .setContentText("${ziel.name}. ${start.hinweis}")
-                    .setStyle(NotificationCompat.BigTextStyle().bigText("${ziel.name}. ${start.hinweis}"))
-                    .setAutoCancel(true)
-                    .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } }
+                    .setContentTitle(titel)
+                    .setContentText(text)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n${eintrag.optString("ziel")} · Auftrag ${eintrag.optString("id")}"))
+                    // Zwischenschritte still aktualisieren; Rückfrage, Fertig und Problem melden sich hörbar.
+                    .setOnlyAlertOnce(stand == "laeuft")
+                    .setAutoCancel(stand == "fertig")
+                    .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } }
                     .build(),
             )
+        }
+    }
+
+    /** Die letzten Programmieraufträge mit ihren Schritten, dauerhaft in den App-Einstellungen (höchstens 20). */
+    private object Auftragsbuch {
+        private const val DATEI = "programmieren"
+        private const val SCHLUESSEL = "auftraege"
+        private val ZEIT: DateTimeFormatter = DateTimeFormatter.ofPattern("d.M. HH:mm", Locale.GERMAN)
+
+        fun neueNummer(): String {
+            val zeichen = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+            return (1..5).map { zeichen[java.security.SecureRandom().nextInt(zeichen.length)] }.joinToString("")
+        }
+
+        private fun lies(context: Context): JSONArray =
+            runCatching { JSONArray(context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getString(SCHLUESSEL, "[]")) }.getOrDefault(JSONArray())
+
+        private fun schreib(context: Context, liste: JSONArray) {
+            val gekuerzt = JSONArray().apply { for (i in maxOf(0, liste.length() - 20) until liste.length()) put(liste.get(i)) }
+            context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putString(SCHLUESSEL, gekuerzt.toString()).apply()
+        }
+
+        @Synchronized
+        fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String): JSONObject {
+            val jetzt = System.currentTimeMillis()
+            val eintrag = JSONObject().put("id", id).put("app", app).put("ziel", ziel).put("link", link).put("start", jetzt)
+                .put("stand", "laeuft").put("schritt", schritt).put("zeit", jetzt)
+                .put("schritte", JSONArray().put(JSONObject().put("zeit", jetzt).put("stand", "laeuft").put("text", schritt)))
+            schreib(context, lies(context).put(eintrag))
+            return eintrag
+        }
+
+        @Synchronized
+        fun melde(context: Context, id: String, stand: String, schritt: String, link: String): JSONObject? {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
+            val jetzt = System.currentTimeMillis()
+            val gueltig = if (stand in listOf("laeuft", "frage", "fertig", "fehler")) stand else "laeuft"
+            eintrag.put("stand", gueltig).put("schritt", schritt).put("zeit", jetzt)
+            if (link.startsWith("https://") && eintrag.optString("link").isEmpty()) eintrag.put("link", link)
+            val schritte = eintrag.optJSONArray("schritte") ?: JSONArray().also { eintrag.put("schritte", it) }
+            schritte.put(JSONObject().put("zeit", jetzt).put("stand", gueltig).put("text", schritt))
+            while (schritte.length() > 30) schritte.remove(0)
+            schreib(context, liste)
+            return eintrag
+        }
+
+        fun uebersicht(context: Context, anzahl: Int): String {
+            val liste = lies(context)
+            if (liste.length() == 0) return "Es gibt noch keine Programmieraufträge."
+            val jetzt = System.currentTimeMillis()
+            return buildString {
+                append("Programmieraufträge, neueste zuerst:\n")
+                (liste.length() - 1 downTo maxOf(0, liste.length() - anzahl)).forEach { i ->
+                    val e = liste.getJSONObject(i)
+                    val standText = when (e.optString("stand")) { "frage" -> "wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "Problem"; else -> "läuft" }
+                    val minuten = (jetzt - e.optLong("zeit")) / 60_000
+                    append("- ").append(e.optString("app")).append(" (Auftrag ").append(e.optString("id")).append(", ").append(e.optString("ziel"))
+                        .append(", gestartet ").append(ZEIT.format(Instant.ofEpochMilli(e.optLong("start")).atZone(ZoneId.systemDefault()))).append("): ")
+                        .append(standText).append(". Zuletzt vor ").append(minuten).append(" Minuten: ").append(e.optString("schritt"))
+                    e.optString("link").takeIf { it.isNotEmpty() }?.let { append(" Link: ").append(it) }
+                    if (e.optString("stand") == "laeuft" && minuten >= 30) append(" (seit über einer halben Stunde keine Meldung; Sitzung über den Link prüfen)")
+                    append('\n')
+                }
+            }.trim()
         }
     }
 
