@@ -105,7 +105,7 @@ class JarvisAgent(context: Context) {
         if (!auth.isConnected) { abbruchGrund = "Jarvis ist nicht mit ChatGPT angemeldet"; return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
-        val faehigkeiten = Register.alle(app).filter { (mitInternet || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "programmieren")) }
+        val faehigkeiten = Register.alle(app).filter { (mitInternet || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "programmieren" && it.id != "sprachsession")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else it }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
