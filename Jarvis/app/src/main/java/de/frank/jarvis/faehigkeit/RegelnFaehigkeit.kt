@@ -20,8 +20,9 @@ data class Regel(val id: Int, val text: String, val stand: String)
 
 /**
  * Eine Datei, die Jarvis selbst pflegt und jedem Modell als Kontext beilegt: dem Plugin (Anleitung und
- * Werkzeug-Ergebnisse), dem eigenen Chat, den Agenten und der Tagesauswertung. Es gibt drei davon:
- * [Regeln] (wie Jarvis arbeiten soll), [Ziele] (was Frank erreichen will) und [UeberFrank] (was Jarvis über Frank weiß).
+ * Werkzeug-Ergebnisse), dem eigenen Chat, den Agenten und der Tagesauswertung. Es gibt vier davon:
+ * [Regeln] (wie Jarvis arbeiten soll), [Ziele] (was Frank erreichen will), [UeberFrank] (was Jarvis über Frank weiß) und
+ * [Programmierregeln] (was jede Programmier-Session einhalten muss; geht zusätzlich vollständig mit jedem Programmierauftrag).
  * Im Code stehen deshalb keine einzelnen Regeln, Ziele oder Angaben über Frank, nur dieser Speicher.
  *
  * - ids werden nie wiederverwendet (Zähler `naechsteId` in der Datei): Eine veraltete id trifft nie einen fremden Eintrag.
@@ -252,7 +253,18 @@ object UeberFrank : Merkdatei(
     "WAS JARVIS ÜBER FRANK WEISS (aus Franks eigenen Angaben; beziehe es von dir aus ein, wo es passt; nicht ungefragt aufzählen):",
 )
 
-/** Die drei Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
+/**
+ * Franks Programmierregeln: Vorgaben, die jede Programmier-Session (Claude Code am PC oder in der Cloud) einhalten muss.
+ * Sie stehen wie die anderen Dateien in jedem Kontext und gehen außerdem vollständig mit jedem Programmierauftrag mit
+ * ([ProgrammierFaehigkeit]). Kein Lernlauf legt hier etwas an; Einträge kommen nur von Frank (Einstellungen oder jarvis_merken).
+ */
+object Programmierregeln : Merkdatei(
+    "programmierregeln.json", 40,
+    "FRANKS PROGRAMMIERREGELN (von Frank selbst festgelegt; gelten für jeden Programmierauftrag und jede Programmier-Session, am PC wie in der Cloud; " +
+        "Jarvis gibt sie jedem Auftrag vollständig mit; beachte sie beim Formulieren von Aufträgen; nicht ungefragt vorlesen):",
+)
+
+/** Die vier Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
 enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, val textHinweis: String, val bestaetigung: String) {
     REGEL(
         "regel", Regeln, "Regel",
@@ -268,6 +280,11 @@ enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, 
         "info", UeberFrank, "Notiz",
         "ein kurzer, für sich allein verständlicher Satz über Frank in der dritten Person, mit den genauen Namen und Zahlen, die er genannt hat („Frank fährt einen Toyota C-HR.“, „Frank geht bei Regen nicht gern im Wald laufen.“)",
         "Sag ihm in einem kurzen Satz, was du dir über ihn notiert hast, ohne daraus ein Thema zu machen, und beantworte dann, worum es ihm eigentlich ging.",
+    ),
+    PROGRAMMIERREGEL(
+        "programmierregel", Programmierregeln, "Programmierregel",
+        "eine vollständige, für sich allein verständliche Anweisung an die Programmier-Session (Claude Code) in ein bis zwei Sätzen: wann sie gilt und was dann zu tun ist („Vor jeder Änderung Projekt und Paketkennung prüfen.“)",
+        "Sag ihm in ein bis zwei Sätzen, welche Programmierregel du dir gemerkt hast; sie geht ab jetzt mit jedem Programmierauftrag mit.",
     );
 
     companion object {
@@ -275,17 +292,22 @@ enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, 
     }
 }
 
-/** Alle drei Dateien als ein Block für den Kontext eines Modells. */
-fun merkKontext(context: Context): String = Regeln.alsKontext(context) + Ziele.alsKontext(context) + UeberFrank.alsKontext(context)
+/** Alle Merkdateien in der Reihenfolge, in der sie im Kontext stehen. */
+val merkdateien: List<Merkdatei> get() = Merkart.entries.map { it.datei }
 
-/** Das Gedächtnis von Jarvis: drei Dateien, drei Werkzeuge (merken, vergessen, lesen). */
+/** Alle Dateien als ein Block für den Kontext eines Modells (jede Frage, Plugin, Agenten, Tagesauswertung). */
+fun merkKontext(context: Context): String = merkdateien.joinToString("") { it.alsKontext(context) }
+
+/** Das Gedächtnis von Jarvis: vier Dateien, drei Werkzeuge (merken, vergessen, lesen). */
 class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "regeln"
     override val name = "Jarvis' Gedächtnis"
-    override val beschreibung = "Franks Regeln, seine Ziele und was Jarvis über ihn weiß: merken, ändern, löschen. Jarvis pflegt das selbst und hat es bei allem im Blick."
+    override val beschreibung = "Franks Regeln, seine Ziele, was Jarvis über ihn weiß und seine Programmierregeln: merken, ändern, löschen. Jarvis pflegt das selbst und hat es bei allem im Blick."
     override val hinweise =
-        "Du führst drei Dateien über Frank und pflegst sie selbst mit jarvis_merken und jarvis_vergessen. " +
-            "REGEL = wie du arbeiten oder antworten sollst („immer“, „nie“, „in Zukunft“, „ab jetzt“, oder Frank bemängelt eine Antwort). " +
+        "Du führst vier Dateien über Frank und pflegst sie selbst mit jarvis_merken und jarvis_vergessen. " +
+            "REGEL = wie du arbeiten oder antworten sollst („immer“, „nie“, „in Zukunft“, „ab jetzt“, oder Frank bemängelt eine Antwort), auch wie du mit Programmieraufträgen umgehst. " +
+            "PROGRAMMIERREGEL = was die Programmier-Session (Claude Code) beim Programmieren selbst einhalten soll („beim Programmieren immer …“, „jede Programmier-Session soll …“); " +
+            "lege sie nur an, wenn Frank sie ausdrücklich als Programmierregel will, und nie doppelt zu einer Regel, die schon unter FRANKS REGELN steht. " +
             "ZIEL = was Frank erreichen will („ich will meine VO2max steigern“). " +
             "INFO = eine dauerhafte Tatsache über ihn: Vorlieben, Abneigungen, was ihm wichtig ist, Besitz, persönliche Daten, Gewohnheiten, Familie, Gesundheit. " +
             "Erkennst du so etwas in dem, was Frank sagt, auch nebenbei, merke es dir von selbst und ohne nachzufragen und sag ihm kurz, was du dir gemerkt hast. " +
@@ -294,7 +316,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             "Nichts Flüchtiges merken (Stimmung von heute, einmalige Wünsche, einzelne Termine). " +
             "Hängt ein Eintrag an einem Begriff aus einer von Franks Apps, dessen genauen Wert du nicht kennst (er will „eine grüne Erholung bei Whoop“: ab wie viel Prozent ist sie grün?), " +
             "schlag den Wert zuerst mit repo_lesen im Code der App nach und trag ihn mit ein („… also mindestens so viel Prozent“). Findest du ihn nicht, merk dir den Eintrag in Franks Worten. " +
-            "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE und WAS JARVIS ÜBER FRANK WEISS: Regeln hältst du ein, Ziele und Wissen beziehst du von dir aus ein."
+            "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE, WAS JARVIS ÜBER FRANK WEISS und FRANKS PROGRAMMIERREGELN: Regeln hältst du ein, Ziele und Wissen beziehst du von dir aus ein, " +
+            "Programmierregeln gehen automatisch vollständig mit jedem Programmierauftrag mit, du musst sie nicht in den Auftrag abschreiben."
 
     override fun stoerung(): String? = null
 
@@ -303,17 +326,18 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
             name = "jarvis_merken",
-            titel = "Merken oder ändern (Regel, Ziel, Info)",
-            beschreibung = "Jarvis: merkt sich dauerhaft etwas über Frank oder ändert einen vorhandenen Eintrag. Drei Arten: " +
+            titel = "Merken oder ändern (Regel, Ziel, Info, Programmierregel)",
+            beschreibung = "Jarvis: merkt sich dauerhaft etwas über Frank oder ändert einen vorhandenen Eintrag. Vier Arten: " +
                 "regel = wie Jarvis künftig arbeiten oder antworten soll („nenn mir bei Schlafwerten immer auch …“, „mach das nie wieder so“, „ab jetzt …“); " +
                 "ziel = was Frank erreichen will („ich will meine VO2max und HRV steigern und den Ruhepuls senken“); " +
-                "info = eine dauerhafte Tatsache über Frank („ich fahre einen …“, „ich bin am … geboren“, „bei Regen gehe ich nicht laufen“, „die Drohne … habe ich mir gekauft“). " +
+                "info = eine dauerhafte Tatsache über Frank („ich fahre einen …“, „ich bin am … geboren“, „bei Regen gehe ich nicht laufen“, „die Drohne … habe ich mir gekauft“); " +
+                "programmierregel = was jede Programmier-Session beim Programmieren einhalten soll, nur wenn Frank es ausdrücklich als Programmierregel will (geht mit jedem Programmierauftrag mit). " +
                 "Rufe es von dir aus auf, sobald Frank so etwas sagt, auch nebenbei und ohne „merk dir“. Mehrere Dinge in einem Satz = mehrere Aufrufe. " +
                 "Nennt Frank dabei einen Begriff aus einer seiner Apps, dessen genauen Wert du nicht kennst (zum Beispiel „grüne Erholung“), schlag ihn vorher mit repo_lesen im Code der App nach und nimm den Wert in den Text auf. " +
                 "PFLEGE: Steht zum selben Thema schon ein Eintrag da oder widerspricht das Neue einem alten, übergib dessen id und den vollständigen neuen Text; der alte wird ersetzt. " +
                 "Nicht für Flüchtiges (Stimmung von heute, einmalige Wünsche, einzelne Termine). Jarvis hat alles Gemerkte danach in jedem Gespräch, bei seinen Agenten und in der Tagesauswertung vor Augen.",
             schema = schema(
-                "art" to text("regel, ziel oder info.", arten),
+                "art" to text(arten.joinToString(", ") + ".", arten),
                 "text" to text("Der Eintrag, in Franks Sinn formuliert, Hörfehler der Spracherkennung bereinigt, höchstens ${Merkdatei.ZEICHEN} Zeichen. " +
                     Merkart.entries.joinToString(" ") { "Bei ${it.kennung}: ${it.textHinweis}." }),
                 "id" to zahl("Nur beim Ändern oder Ersetzen: id des vorhandenen Eintrags dieser Art (die Zahl in eckigen Klammern davor)."),
@@ -321,7 +345,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             ),
             nurLesen = false,
         ) { a ->
-            val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: regel, ziel oder info.", fehler = true)
+            val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: " + arten.joinToString(", ") + ".", fehler = true)
             val inhalt = a.optString("text").trim()
             if (inhalt.length < 10) return@Werkzeug Ergebnis("Der Text fehlt oder ist zu kurz, um allein verständlich zu sein.", fehler = true)
             // id 0 heißt bei vielen Modellen „nicht angegeben“: dann neu anlegen.
@@ -344,12 +368,12 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
         },
         Werkzeug(
             name = "jarvis_vergessen",
-            titel = "Gemerktes löschen (Regel, Ziel, Info)",
+            titel = "Gemerktes löschen (Regel, Ziel, Info, Programmierregel)",
             beschreibung = "Jarvis: löscht einen Eintrag, der nicht mehr gilt und nicht durch eine neue Fassung ersetzt wird: eine Regel, die Frank nicht mehr will („das gilt nicht mehr“), " +
                 "ein erreichtes oder aufgegebenes Ziel, eine Tatsache, die nicht mehr stimmt („das Auto habe ich verkauft“), oder ein doppelter Eintrag. Über id ODER Suchwort. " +
                 "Hat sich etwas nur geändert, nimm stattdessen jarvis_merken mit der id.",
             schema = schema(
-                "art" to text("regel, ziel oder info.", arten),
+                "art" to text(arten.joinToString(", ") + ".", arten),
                 "id" to zahl("id des Eintrags (die Zahl in eckigen Klammern davor)."),
                 "suche" to text("Statt id: Wort aus dem Text des Eintrags."),
                 pflicht = listOf("art"),
@@ -357,7 +381,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = false,
             loeschend = true,
         ) { a ->
-            val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: regel, ziel oder info.", fehler = true)
+            val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: " + arten.joinToString(", ") + ".", fehler = true)
             // id 0 heißt bei vielen Modellen „nicht angegeben“: dann gilt das Suchwort.
             val nummer = (if (a.has("id") && !a.isNull("id")) a.optInt("id", 0).takeIf { it > 0 } else null) ?: run {
                 val treffer = if (a.gesetzt("suche")) art.datei.suche(context, a.optString("suche")) else return@Werkzeug Ergebnis("Es fehlt die id oder ein Suchwort.", fehler = true)
@@ -373,8 +397,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
         },
         Werkzeug(
             name = "jarvis_gemerktes_lesen",
-            titel = "Gemerktes lesen (Regeln, Ziele, Infos)",
-            beschreibung = "Jarvis: liest alles, was Jarvis sich über Frank gemerkt hat: seine Regeln, seine Ziele und die Notizen über ihn, jeweils mit id. " +
+            titel = "Gemerktes lesen (Regeln, Ziele, Infos, Programmierregeln)",
+            beschreibung = "Jarvis: liest alles, was Jarvis sich über Frank gemerkt hat: seine Regeln, seine Ziele, die Notizen über ihn und seine Programmierregeln, jeweils mit id. " +
                 "Nutze es für „Welche Regeln hast du dir gemerkt?“, „Welche Ziele habe ich?“, „Was weißt du über mich?“ und bevor du etwas änderst oder löschst, wenn du die ids nicht vor dir hast.",
             schema = schema(),
             nurLesen = true,

@@ -188,8 +188,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String): Ergebnis {
         val uebersprungen = mutableListOf<String>()
         val gespraech = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.GespraechKennung]?.id ?: ProgrammierChat.aktivesGespraech.orEmpty()
+        // Frisch aus der Datei, bei jedem Auftrag: Was Frank in den Einstellungen geändert hat, gilt schon für diesen Start.
+        val regeln = withContext(Dispatchers.IO) { Programmierregeln.alsKontext(app) }
         for (ziel in wahl) {
-            val mitFortschritt = auftrag + "\n\n" + fortschrittsAnweisung(nummer, pc = ziel is PcBruecke)
+            val mitFortschritt = auftragMitRegeln(auftrag, regeln, fortschrittsAnweisung(nummer, pc = ziel is PcBruecke))
             val start = try {
                 ziel.starte(appName, mitFortschritt, review, nummer)
             } catch (nichtDa: NichtDa) {
@@ -521,7 +523,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         override fun fehlt() = "Jarvis ist nicht mit seinem Server verbunden."
 
         override suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String): Start = withContext(Dispatchers.IO) {
-            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(60_000)).put("review", review).put("nummer", nummer)
+            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer)
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             val (code, roh) = try {
@@ -560,7 +562,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 append("APP: ").append(app).append('\n')
                 append("CODEX-REVIEW: ").append(if (review) "ja" else "nein").append('\n')
                 append("AUFTRAG:\n").append(auftrag)
-            }.take(60_000)
+            }.take(HOECHSTENS)
             val anfrage = Request.Builder().url(e.routineUrl)
                 .header("Authorization", "Bearer ${e.routineToken}")
                 .header("anthropic-version", "2023-06-01")
@@ -584,9 +586,27 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    private companion object {
-        const val CLAUDE_APP = "com.anthropic.claude"
-        val STATUS_HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
-        val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
+    companion object {
+        /** So lang darf der ganze Text an ein Programmier-Ziel höchstens werden. */
+        const val HOECHSTENS = 60_000
+
+        /**
+         * Der Text, den PC und Cloud gleichermaßen bekommen: Auftrag, dann Franks Programmierregeln vollständig, dann die
+         * Fortschritts-Anweisung. Wird es zu lang, kürzt es nur den Auftrag; Regeln und Fortschritt kommen immer ganz an.
+         */
+        fun auftragMitRegeln(auftrag: String, regeln: String, fortschritt: String): String {
+            val block = regeln.trim().let {
+                if (it.isEmpty()) "" else "\n\n$it\nHalte diese Programmierregeln bei diesem Auftrag ein; sie gehen allgemeinen Vorgaben vor, wo sie ihnen widersprechen."
+            }
+            val rest = block + "\n\n" + fortschritt
+            // Platz für den Kopf der Cloud-Routine (APP, CODEX-REVIEW, AUFTRAG).
+            val platz = HOECHSTENS - 300 - rest.length
+            val kopf = if (auftrag.length <= platz) auftrag else auftrag.take(maxOf(0, platz)) + " … (gekürzt)"
+            return kopf + rest
+        }
+
+        private const val CLAUDE_APP = "com.anthropic.claude"
+        private val STATUS_HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
+        private val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     }
 }

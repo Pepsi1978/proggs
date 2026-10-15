@@ -421,12 +421,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         "Das weiß Jarvis über dich und hat es bei jeder Antwort, bei seinen Agenten und in der Tagesauswertung vor Augen. Er notiert es auch selbst, wenn du etwas über dich erzählst.",
         "Neue Notiz über dich eintippen oder einsprechen", INFO_KORREKTUR,
     )
+    val programmierListe = Merkliste(
+        de.frank.jarvis.faehigkeit.Programmierregeln, "Programmierregeln", "Programmierregel",
+        "Diese Regeln bekommt jeder Programmierauftrag vollständig mit, egal ob er am PC oder in der Cloud läuft, und Jarvis hat sie bei jeder Antwort vor Augen. Änderungen gelten ab dem nächsten Auftrag.",
+        "Neue Programmierregel eintippen oder einsprechen", PROGRAMMIERREGEL_KORREKTUR,
+    )
     /** Die Merkliste, die gerade im Vollbild offen ist. */
     var merkOffen by mutableStateOf<Merkliste?>(null); private set
     /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
     private var diktatZiel: ((String) -> Unit)? = null
 
-    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden() }
+    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden() }
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
     fun merkSchliessen() {
         // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
@@ -1421,6 +1426,15 @@ private const val REGEL_KORREKTUR =
         "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung an Jarvis: wann sie gilt und was dann zu tun ist. " +
         "Behalte jeden inhaltlichen Punkt und jeden genannten Wert, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
         "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). So kurz wie möglich, höchstens 400 Zeichen. " +
+        "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+
+/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Programmierregel. */
+private const val PROGRAMMIERREGEL_KORREKTUR =
+    "Du formulierst eine Vorgabe von Frank zu einer klaren Programmierregel um. Frank hat sie eingesprochen oder eingetippt; " +
+        "jede Programmier-Session (Claude Code) bekommt die Regel danach mit jedem Programmierauftrag als Anweisung und muss sie ohne weiteres Wissen verstehen. " +
+        "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung an die Programmier-Session: wann sie gilt und was dann zu tun ist. " +
+        "Behalte jeden inhaltlichen Punkt, jeden Namen, jeden Pfad und jeden genannten Wert genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
+        "und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur eines einzelnen Ziels. */

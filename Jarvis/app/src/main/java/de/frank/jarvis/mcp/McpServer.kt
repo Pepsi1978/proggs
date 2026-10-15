@@ -49,7 +49,7 @@ class McpServer(context: Context) {
             name = "jarvis_kontext",
             titel = "Gesamtbild von Frank holen",
             beschreibung = "Jarvis: liefert in EINEM Aufruf das Gesamtbild aus Jarvis' Live-Gedächtnis, mit dem Jarvis jede Frage von Frank betrachtet, live aus allen angebundenen Apps: " +
-                "Franks Regeln, Ziele und was Jarvis über ihn weiß, was sich in den letzten 24 Stunden geändert hat, Dienst und Schlafzeiten der nächsten 7 Tage, Termine der nächsten 14 Tage, " +
+                "Franks Regeln, Ziele, Programmierregeln und was Jarvis über ihn weiß, was sich in den letzten 24 Stunden geändert hat, Dienst und Schlafzeiten der nächsten 7 Tage, Termine der nächsten 14 Tage, " +
                 "alle offenen Aufgaben, Wecker, Biodaten mit Verlauf, die Gespräche mit Jarvis, die aktuelle Tagesauswertung, alle offenen Ideen, Trainings, Wetter, die letzten 10 Tage im Rückblick, " +
                 "Ablage, ungelesene Mails (nur Betreff) und das Tagebuch (letzte 10 Tage vollständig, Älteres verdichtet). Älteres findest du gezielt mit gedaechtnis_suchen. " +
                 "DAS ERSTE WERKZEUG IN JEDEM GESPRÄCH: Rufe es auf, bevor du Franks erste Frage beantwortest, auch wenn sie einfach wirkt, und noch einmal, wenn das Gespräch länger als eine Stunde läuft. " +
@@ -271,7 +271,7 @@ class McpServer(context: Context) {
         append("oder Erinnerungen, nutze diese Werkzeuge. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
         append("GESAMTBILD: Rufe in jedem Gespräch zuerst jarvis_kontext auf, bevor du Franks erste Frage beantwortest. Du bekommst in einem Aufruf Jarvis' Live-Gedächtnis aus allen angebundenen Apps: ")
-        append("Regeln, Ziele, Wissen über Frank, was sich zuletzt geändert hat, Dienst und Schlafzeiten, Termine, Aufgaben, Wecker, Biodaten, Ideen, die Gespräche mit Jarvis, die Tagesauswertung und das Tagebuch ")
+        append("Regeln, Ziele, Programmierregeln, Wissen über Frank, was sich zuletzt geändert hat, Dienst und Schlafzeiten, Termine, Aufgaben, Wecker, Biodaten, Ideen, die Gespräche mit Jarvis, die Tagesauswertung und das Tagebuch ")
         append("(die letzten 10 Tage vollständig, Älteres verdichtet). Betrachte jede Frage vor diesem Hintergrund und beziehe von dir aus ein, was die Antwort besser macht; was nicht dazugehört, lässt du weg. ")
         append("Für Älteres oder ein bestimmtes Thema suchst du gezielt mit gedaechtnis_suchen. Hast du selbst etwas geändert oder geht es um einen Messwert von gerade eben, lies die App frisch.\n")
         append(merkKontext(app))
