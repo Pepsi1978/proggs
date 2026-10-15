@@ -555,17 +555,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             fertig()
             return
         }
-        if (denkt) abbrechen()
         reiter = Reiter.JARVIS
         merkOffen = null
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
         GedaechtnisAnsicht.offen = false
         diktatZiel = null
         vorleser.stopp()
-        // Activity oder ViewModel wurden inzwischen neu aufgebaut: das offene Gespräch der letzten zehn Minuten zurückholen.
-        if (gespraech.isEmpty() && sitzungId == null) offenesGespraechWiederherstellen()
-        // Lange nichts mehr gesagt: „Hey Jarvis“ beginnt ein neues Gespräch. Sonst geht das offene weiter.
-        if (gespraech.isNotEmpty() && System.currentTimeMillis() - letzteAktivitaet > NEUES_GESPRAECH_NACH_MS) neuesGespraech()
+        // Jedes „Hey Jarvis“ beginnt ein neues Gespräch, auch beim Kaltstart (dort ist womöglich schon das Gespräch eines
+        // laufenden Programmierauftrags offen). Das bisherige bleibt gespeichert; arbeitet Jarvis dort noch, landet die
+        // Antwort in dessen Datei, der Programmierauftrag läuft weiter.
+        if (gespraech.isNotEmpty() || sitzungId != null) neuesGespraech()
         val treffer = de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
@@ -892,8 +891,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         offenesGespraechVergessen()
     }
 
-    // Das offene Gespräch überlebt den Neuaufbau von Activity und ViewModel (Wischen aus „Zuletzt verwendet“, Prozessende):
-    // „Hey Jarvis“ führt es zehn Minuten lang weiter, wie im laufenden Betrieb.
+    // Zuletzt offenes Gespräch; „Hey Jarvis“ setzt es nicht mehr fort, sondern beginnt immer ein neues.
     private fun offenePrefs() = getApplication<Application>().getSharedPreferences("jarvis_offenes_gespraech", Context.MODE_PRIVATE)
 
     private fun offenesGespraechMerken(id: String, zeit: Long) {
@@ -923,20 +921,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         Logbuch.gedaechtnis("Gespräch mit laufendem Programmierauftrag geöffnet", "${gespraech.size} Nachrichten")
     }
 
-    /** Holt das zuletzt geführte Gespräch zurück, wenn es jünger als [NEUES_GESPRAECH_NACH_MS] ist. Klein, deshalb direkt. */
-    private fun offenesGespraechWiederherstellen() {
-        val p = offenePrefs()
-        val id = p.getString("id", null) ?: return
-        val zeit = p.getLong("zeit", 0L)
-        if (System.currentTimeMillis() - zeit > NEUES_GESPRAECH_NACH_MS) return
-        val geladen = de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) ?: return
-        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
-        sitzungId = id
-        sitzungErstellt = geladen.first.erstellt
-        // Der gespeicherte Zeitpunkt, nicht jetzt: Die Zehn-Minuten-Regel rechnet von der letzten echten Nachricht.
-        letzteAktivitaet = zeit
-        Logbuch.gedaechtnis("Offenes Gespräch fortgesetzt", "${gespraech.size} Nachrichten")
-    }
 
     /** Ein altes Gespräch öffnen und dort weitermachen. Läuft im bisherigen Gespräch noch eine Antwort, arbeitet sie im Hintergrund weiter. */
     fun sitzungOeffnen(id: String) {
@@ -1181,7 +1165,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 /** So lange nach der letzten Nachricht führt „Hey Jarvis“ das offene Gespräch weiter, danach beginnt ein neues. */
-private const val NEUES_GESPRAECH_NACH_MS = 10 * 60_000L
 
 /** Wörter, die vor oder nach dem Ausbefehl nicht zählen („Okay Jarvis, Ende bitte“). */
 private val FUELLWORTE = setOf("jarvis", "okay", "ok", "bitte", "hey", "also", "gut", "dann", "ja", "nein", "nee", "so")
