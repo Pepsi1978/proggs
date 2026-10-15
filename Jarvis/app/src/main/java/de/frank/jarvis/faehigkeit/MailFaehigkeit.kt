@@ -6,6 +6,12 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.Properties
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.SocketAddress
+import javax.net.SocketFactory
 import javax.mail.Authenticator
 import javax.mail.FetchProfile
 import javax.mail.Folder
@@ -236,13 +242,35 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
+    /**
+     * Verbindet IPv4 zuerst. Im Heim-WLAN bekommt das Handy IPv6-Adressen, IPv6 wird aber nicht weitergeleitet;
+     * JavaMail nimmt die erste Adresse (IPv6) und hängt bis zum Zeitlimit. JavaMail legt das TLS danach selbst
+     * mit dem Hostnamen (SNI) über diesen Socket.
+     */
+    private object Ipv4Zuerst : SocketFactory() {
+        private class Ipv4Socket : Socket() {
+            override fun connect(ziel: SocketAddress, zeitlimit: Int) {
+                val adresse = ziel as? InetSocketAddress
+                val v4 = adresse?.hostString?.let { name -> runCatching { InetAddress.getAllByName(name).firstOrNull { it is Inet4Address } }.getOrNull() }
+                super.connect(if (v4 != null) InetSocketAddress(v4, adresse.port) else ziel, zeitlimit)
+            }
+        }
+        override fun createSocket(): Socket = Ipv4Socket()
+        override fun createSocket(host: String, port: Int): Socket = Ipv4Socket().apply { connect(InetSocketAddress(host, port), 15_000) }
+        override fun createSocket(host: String, port: Int, lokal: InetAddress?, lokalPort: Int): Socket = createSocket(host, port)
+        override fun createSocket(host: InetAddress, port: Int): Socket = Ipv4Socket().apply { connect(InetSocketAddress(host, port), 15_000) }
+        override fun createSocket(host: InetAddress, port: Int, lokal: InetAddress?, lokalPort: Int): Socket = createSocket(host, port)
+    }
+
     private fun sitzung(smtp: Boolean): Session {
         val eigenschaften = Properties().apply {
             if (smtp) {
                 put("mail.smtp.host", "smtp.gmail.com"); put("mail.smtp.port", "465"); put("mail.smtp.auth", "true"); put("mail.smtp.ssl.enable", "true")
                 put("mail.smtp.connectiontimeout", "15000"); put("mail.smtp.timeout", "30000"); put("mail.smtp.writetimeout", "30000")
+                put("mail.smtp.socketFactory", Ipv4Zuerst); put("mail.smtp.socketFactory.fallback", "false")
             } else {
                 put("mail.imaps.connectiontimeout", "15000"); put("mail.imaps.timeout", "30000")
+                put("mail.imaps.socketFactory", Ipv4Zuerst); put("mail.imaps.socketFactory.fallback", "false")
             }
         }
         return Session.getInstance(eigenschaften, object : Authenticator() {
