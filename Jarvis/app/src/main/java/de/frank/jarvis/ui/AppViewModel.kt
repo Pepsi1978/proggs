@@ -1028,7 +1028,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Das Gespräch vor dem jetzigen, für „Gehe in die letzte Session zurück“. */
     private var vorherigeSitzung: String? = null
     /** Offene Rückfrage „Welche Session meinst du?“ mit ihren Kandidaten. */
-    private var navigationsAuswahl: List<de.frank.jarvis.data.Sitzung>? = null
+    private var navigationsAuswahl: List<SessionLage>? = null
     /** Ein Wechsel sucht oder lädt gerade; der Gesprächsmodus wartet darauf wie auf eine Antwort. */
     var navigiert by mutableStateOf(false); private set
     /** „Hey Jarvis“ bei sichtbarer App, während Jarvis noch antwortet: Die laufende Antwort weicht der neuen Frage, nicht einem Wechsel. */
@@ -1053,14 +1053,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         merkOffen = null
         when (befehl) {
             NaviBefehl.Neu -> { gespraechLeeren(); navigiertMelden("Neue Session ist offen.", vorlesen) }
-            NaviBefehl.Zurueck -> {
-                val ziel = vorherigeSitzung?.takeIf { v -> v != sitzungId && sitzungen.any { it.id == v } }
-                    ?: sitzungen.firstOrNull { it.id != sitzungId }?.id
-                if (ziel == null) navigiertMelden("Es gibt noch keine andere Session.", vorlesen) else wechsleZu(ziel, vorlesen)
-            }
-            is NaviBefehl.Thema -> themaSuchen(befehl, vorlesen)
+            else -> sessionSuchen(befehl, vorlesen, gespraech.takeLast(6).joinToString(" ") { it.text })
         }
         return true
+    }
+
+    /**
+     * Was Jarvis über seine Sessions weiß, bei jedem Wechsel frisch von der Platte: gespeicherte Gespräche (Titel, letzte
+     * Änderung) und je Gespräch Stand, App und Inhalt seiner Programmieraufträge. So zählen Statusänderungen sofort, nicht ein
+     * alter Titel in der Seitenleiste.
+     */
+    private fun sessionLagen(app: Application): List<SessionLage> {
+        val auftraege = runCatching {
+            Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.auftragsLagen()
+        }.getOrNull().orEmpty()
+        return de.frank.jarvis.data.Gespraeche.alle(app).take(MAX_SUCHE).map { s ->
+            val a = auftraege[s.id]
+            if (a == null) SessionLage(s) else SessionLage(s, a.app, a.stand, a.aktiv, a.inhalt)
+        }
     }
 
     private fun wechsleZu(id: String, vorlesen: Boolean) {
@@ -1075,32 +1085,61 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Sucht das Gespräch zu den Stichwörtern in Titel, Inhalt und den Programmieraufträgen des Gesprächs. Ein klarer
-     * Treffer wird geöffnet, mehrere plausible führen zur Rückfrage statt zu raten.
+     * Sucht das Ziel von „zurück“, „die andere Programmier-Session“ und „die Whoop-Session“ im aktuellen Session-Bestand.
+     * Ein klarer Treffer wird geöffnet, mehrere plausible führen zur kurzen Rückfrage statt zu raten. Nur Navigation: Hier
+     * entsteht nie ein Programmierauftrag oder eine Ersatz-Session, und die Arbeit in der bisherigen Session läuft weiter.
      */
-    private fun themaSuchen(befehl: NaviBefehl.Thema, vorlesen: Boolean) {
+    private fun sessionSuchen(befehl: NaviBefehl, vorlesen: Boolean, kontext: String) {
         navigiert = true
+        val aktuell = sitzungId
+        val vorher = vorherigeSitzung
         viewModelScope.launch {
             try {
                 val app = getApplication<Application>()
-                val kandidaten = withContext(Dispatchers.IO) {
-                    val auftraege = runCatching {
-                        Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.auftraegeJeGespraech()
-                    }.getOrNull().orEmpty()
-                    GespraechsNavigation.auswahl(de.frank.jarvis.data.Gespraeche.alle(app).take(MAX_SUCHE).map { s ->
-                        val inhalt = de.frank.jarvis.data.Gespraeche.laden(app, s.id)?.second.orEmpty().joinToString(" ") { it.text }
-                        s to GespraechsNavigation.punkte(befehl, s.titel, inhalt, auftraege[s.id].orEmpty())
-                    })
+                val jetzt = System.currentTimeMillis()
+                val inhalte = HashMap<String, String>()
+                val inhalt: (SessionLage) -> String = { l ->
+                    inhalte.getOrPut(l.sitzung.id) { de.frank.jarvis.data.Gespraeche.laden(app, l.sitzung.id)?.second.orEmpty().joinToString(" ") { it.text } }
                 }
-                Logbuch.gedaechtnis("Session-Suche", "${befehl.stichworte.joinToString(" ")}: ${kandidaten.size} Treffer")
-                when (kandidaten.size) {
-                    0 -> navigiertMelden("Zu „${befehl.stichworte.joinToString(" ")}“ finde ich keine Session.", vorlesen)
-                    1 -> oeffnenUndMelden(kandidaten.first().id, vorlesen)
-                    else -> {
-                        navigationsAuswahl = kandidaten
+                val (ziel, mitDatum) = withContext(Dispatchers.IO) {
+                    val lagen = sessionLagen(app)
+                    fun zurueck(b: NaviBefehl.Zurueck): NaviZiel =
+                        GespraechsNavigation.zurueckZiel(b, lagen, aktuell, vorher, jetzt)?.let { NaviZiel.Oeffnen(it) }
+                            ?: NaviZiel.Keins(if (b.programmiert) "Es gibt noch keine andere Programmier-Session." else "Es gibt noch keine andere Session.")
+                    fun thema(b: NaviBefehl.Thema): NaviZiel {
+                        val k = GespraechsNavigation.themaZiel(b, lagen, aktuell, inhalt, jetzt)
+                        return when (k.size) {
+                            0 -> NaviZiel.Keins("Zu „${b.stichworte.joinToString(" ")}“ finde ich keine Session.")
+                            1 -> NaviZiel.Oeffnen(k.first())
+                            else -> NaviZiel.Rueckfrage(k)
+                        }
+                    }
+                    when (befehl) {
+                        is NaviBefehl.Zurueck -> zurueck(befehl) to false
+                        is NaviBefehl.Thema -> thema(befehl) to true
+                        is NaviBefehl.Andere -> (GespraechsNavigation.andereZiel(befehl, lagen, aktuell, kontext, inhalt, jetzt) ?: run {
+                            // „Die andere Session“ ohne Programmier-Bezug: mit Stichwörtern wie „die Whoop-Session“, sonst wie „zurück“.
+                            if (befehl.stichworte.isNotEmpty()) thema(NaviBefehl.Thema(befehl.stichworte, false)) else zurueck(NaviBefehl.Zurueck())
+                        }) to befehl.stichworte.isNotEmpty()
+                        NaviBefehl.Neu -> NaviZiel.Keins("") to false
+                    }
+                }
+                Logbuch.gedaechtnis("Session-Suche", "${befehl.javaClass.simpleName}: " + when (ziel) {
+                    is NaviZiel.Oeffnen -> "öffne ${ziel.lage.sitzung.id} (${ziel.lage.stand.ifEmpty { "ohne Auftrag" }})"
+                    is NaviZiel.Rueckfrage -> "${ziel.kandidaten.size} Kandidaten"
+                    is NaviZiel.Keins -> ziel.grund
+                })
+                when (ziel) {
+                    is NaviZiel.Oeffnen -> oeffnenUndMelden(ziel.lage.sitzung.id, vorlesen)
+                    is NaviZiel.Keins -> navigiertMelden(ziel.grund, vorlesen)
+                    is NaviZiel.Rueckfrage -> {
+                        navigationsAuswahl = ziel.kandidaten
                         val datum = java.text.SimpleDateFormat("d. MMMM", java.util.Locale.GERMAN)
-                        val liste = kandidaten.mapIndexed { i, k -> "${ORDINALE[i]} „${k.titel}“ vom ${datum.format(java.util.Date(k.geaendert))}" }
-                        navigiertMelden("Dazu passen mehrere Sessions: ${liste.joinToString(", ")}. Welche meinst du?", vorlesen)
+                        val liste = ziel.kandidaten.mapIndexed { i, k ->
+                            "${ORDINALE[i]} ${k.bezeichnung()}" + if (mitDatum && !k.offen(System.currentTimeMillis())) " vom ${datum.format(java.util.Date(k.sitzung.geaendert))}" else ""
+                        }
+                        val einleitung = if (ziel.kandidaten.all { it.offen(System.currentTimeMillis()) }) "Es laufen mehrere Programmier-Sessions" else "Dazu passen mehrere Sessions"
+                        navigiertMelden("$einleitung: ${liste.joinToString(", ")}. Welche meinst du?", vorlesen)
                     }
                 }
             } finally {
@@ -1134,7 +1173,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         rundeAbbrechen(id)
         if (id == sitzungId) neuesGespraech()
         if (vorherigeSitzung == id) vorherigeSitzung = null
-        if (navigationsAuswahl?.any { it.id == id } == true) navigationsAuswahl = null
+        if (navigationsAuswahl?.any { it.sitzung.id == id } == true) navigationsAuswahl = null
         viewModelScope.launch {
             sitzungen = sicherung.withLock {
                 withContext(Dispatchers.IO) {

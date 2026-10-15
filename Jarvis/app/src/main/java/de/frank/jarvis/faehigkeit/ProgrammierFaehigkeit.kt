@@ -37,13 +37,16 @@ import org.json.JSONObject
  * das Jarvis-Gespräch, aus dem der Auftrag kam ([ProgrammierChat]). Rückfragen beantwortet Frank dort per Knopf oder
  * Sprache ([beantworte]); die Antwort geht über den Relay an den wartenden Hook zurück.
  */
+/** Was das Auftragsbuch über die Programmieraufträge eines Gesprächs weiß: App, Stand (laeuft, frage, fertig, fehler), letztes Lebenszeichen, Inhalt. */
+data class AuftragsLage(val app: String, val stand: String, val aktiv: Long, val inhalt: String)
+
 class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "programmieren"
     override val name = "Programmieren"
     override val beschreibung = "Programmieraufträge an Franks Apps an Claude Code übergeben; die fertige App kommt über UpdateStation aufs Handy."
     override val hinweise =
         "Wechsel zwischen Gesprächen (Sessions) erledigt die App selbst: „Öffne eine neue Session“, „Gehe in die letzte Session zurück“, " +
-            "„Gehe in die Whoop-Session zurück“. Erreicht dich so ein Wunsch trotzdem, ist das nie ein Programmierauftrag: Starte nichts und bitte Frank, " +
+            "„Gehe in die Whoop-Session zurück“, „Geh in die andere Programmier-Session“, „Ich möchte in die andere Programmier-Session“. Erreicht dich so ein Wunsch trotzdem, ist das nie ein Programmierauftrag: Starte nichts und bitte Frank, " +
             "den Wechsel genau so zu sagen. " +
             "Fragt Frank, ob sein PC (Rechner, Computer) an oder erreichbar ist oder wohin ein Programmierauftrag gehen würde, rufe pc_status auf. " +
             "Fragt er, wie weit ein Programmierauftrag ist, was die Cloud-Sitzung gerade macht oder ob sie fertig ist, rufe programmierauftraege auf. " +
@@ -195,7 +198,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             } catch (fehler: Exception) {
                 return Ergebnis("Der Auftrag ist nicht gestartet (${ziel.name}): ${fehler.message ?: fehler.javaClass.simpleName}", fehler = true)
             }
-            val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech)
+            val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech, auftrag)
             verteile(eintrag, null)
             return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt: ${ziel.name}. ${start.hinweis} " +
                 "Die Sitzung meldet ihre Schritte in dieses Gespräch; eine Benachrichtigung kommt erst am Ende oder bei einer Rückfrage, und programmierauftraege nennt jederzeit den Stand." +
@@ -303,6 +306,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Je Gespräch die App und das Ziel seiner Programmieraufträge, für die Suche „die Whoop-Session“. */
     fun auftraegeJeGespraech(): Map<String, String> = Auftragsbuch.jeGespraech(app)
 
+    /** Je Gespräch Stand, App und Inhalt seiner Programmieraufträge, frisch aus dem Auftragsbuch: für den Wechsel per Sprache. */
+    fun auftragsLagen(): Map<String, AuftragsLage> = Auftragsbuch.lagen(app)
+
     /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject) {
         runCatching {
@@ -356,9 +362,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         @Synchronized
-        fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String, gespraech: String): JSONObject {
+        fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String, gespraech: String, auftrag: String): JSONObject {
             val jetzt = System.currentTimeMillis()
             val eintrag = JSONObject().put("id", id).put("app", app).put("ziel", ziel).put("link", link).put("start", jetzt).put("gespraech", gespraech)
+                .put("auftrag", auftrag.take(1_500))
                 .put("stand", "laeuft").put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt).put("arbeitet", true)
                 .put("schritte", JSONArray().put(JSONObject().put("zeit", jetzt).put("stand", "laeuft").put("text", schritt)))
             schreib(context, lies(context).put(eintrag))
@@ -410,6 +417,30 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return (0 until liste.length()).map { liste.getJSONObject(it) }.filter { it.optString("gespraech").isNotEmpty() }
                 .groupBy { it.optString("gespraech") }
                 .mapValues { (_, l) -> l.joinToString(" ") { it.optString("app") + " " + it.optString("ziel") + " " + it.optString("schritt") } }
+        }
+
+        /**
+         * Je Gespräch: Ist einer seiner Aufträge noch offen (läuft oder wartet auf Franks Antwort), zählt der offene mit seinem
+         * letzten Lebenszeichen, sonst der jüngste. Der Inhalt sammelt App, Auftragstext und die letzten Schritte aller Aufträge.
+         */
+        fun lagen(context: Context): Map<String, AuftragsLage> {
+            val liste = lies(context)
+            return (0 until liste.length()).map { liste.getJSONObject(it) }.filter { it.optString("gespraech").isNotEmpty() }
+                .groupBy { it.optString("gespraech") }
+                .mapValues { (_, l) ->
+                    val massgeblich = l.lastOrNull { it.optString("stand") in listOf("laeuft", "frage") } ?: l.last()
+                    val inhalt = l.joinToString(" ") { e ->
+                        val schritte = e.optJSONArray("schritte")
+                        val letzte = if (schritte == null) "" else (maxOf(0, schritte.length() - 5) until schritte.length()).joinToString(" ") { schritte.getJSONObject(it).optString("text").take(300) }
+                        e.optString("app") + " " + e.optString("auftrag") + " " + e.optString("schritt").take(300) + " " + letzte
+                    }
+                    AuftragsLage(
+                        app = massgeblich.optString("app").substringBefore(" (").trim(),
+                        stand = massgeblich.optString("stand"),
+                        aktiv = maxOf(massgeblich.optLong("aktiv"), massgeblich.optLong("zeit")),
+                        inhalt = inhalt,
+                    )
+                }
         }
 
         /** Aufträge der letzten zwei Stunden mit Gespräch. */
