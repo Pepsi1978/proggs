@@ -57,6 +57,7 @@
         <provider android:authorities="de.frank.genialeideen.jarvis" />
         <provider android:authorities="de.frank.genialerwecker.jarvis" />
         <provider android:authorities="de.frank.epigenetik.jarvis" />
+        <provider android:authorities="de.frank.stacklabor.werftstudio.jarvis" />
     </queries>
 
     <application

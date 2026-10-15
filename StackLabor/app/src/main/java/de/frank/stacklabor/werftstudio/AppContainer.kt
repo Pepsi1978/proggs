@@ -2,6 +2,7 @@ package de.frank.stacklabor.werftstudio
 
 import android.content.Context
 import android.provider.Settings
+import de.frank.stacklabor.werftstudio.bruecke.JarvisStackDienst
 import de.frank.stacklabor.werftstudio.data.local.StackLaborDatabase
 import de.frank.stacklabor.werftstudio.data.preferences.EinstellungenStore
 import de.frank.stacklabor.werftstudio.data.preferences.stackLaborEinstellungenDataStore
@@ -29,6 +30,7 @@ import de.frank.stacklabor.werftstudio.service.tts.TtsUsageStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** Die Schlüssel, die der Benutzer selbst hinterlegen kann. */
@@ -42,7 +44,8 @@ data class TtsSchluessel(
 class AppContainer(context: Context) {
     val applicationContext: Context = context.applicationContext
     private val appContext = applicationContext
-    private val database = StackLaborDatabase.getInstance(appContext)
+    /** Für das Änderungssignal an Jarvis (Room-Änderungsmelder), siehe [StackLaborApplication]. */
+    val database: StackLaborDatabase = StackLaborDatabase.getInstance(appContext)
 
     val repository: StackLaborRepository = RoomStackLaborRepository(
         database = database,
@@ -69,6 +72,23 @@ class AppContainer(context: Context) {
     val goalTextImprover = CodexGoalTextImprover(settings, codexResponsesClient)
     val solubilityClassifier = CodexSolubilityClassifier(settings, codexResponsesClient)
     val groqTranscriber = GroqTranscriber()
+
+    /**
+     * Fachlogik der Jarvis-Brücke ([de.frank.stacklabor.werftstudio.bruecke.JarvisBruecke]); eine Instanz je Prozess, damit
+     * ihre Schreibsperre für alle Aufrufe gilt. Legt Jarvis ein Mittel ohne Löslichkeit an, bestimmt die KI sie wie im
+     * Bearbeiten-Bildschirm. Ohne Codex-Anmeldung bleibt die Vorgabe stehen.
+     */
+    val jarvisDienst: JarvisStackDienst by lazy {
+        JarvisStackDienst(repository, nachNeuemMittel = { mittel ->
+            containerScope.launch {
+                runCatching { solubilityClassifier.determine(mittel.name) }.onSuccess { ergebnis ->
+                    repository.beobachteMittel().first()
+                        .firstOrNull { it.id == mittel.id && it.name == mittel.name && it.loeslichkeit == mittel.loeslichkeit && !it.loeslichkeitKiErmittelt }
+                        ?.let { repository.speichereMittel(it.copy(loeslichkeit = ergebnis, loeslichkeitKiErmittelt = true)) }
+                }
+            }
+        })
+    }
 
     val ttsUsage = TtsUsageStore(appContext)
     val ttsEngine: TtsEngine

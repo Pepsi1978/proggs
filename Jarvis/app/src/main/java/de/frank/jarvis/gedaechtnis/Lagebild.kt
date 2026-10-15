@@ -10,6 +10,7 @@ import de.frank.jarvis.faehigkeit.IdeenFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.MailFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
+import de.frank.jarvis.faehigkeit.StackLaborFaehigkeit
 import de.frank.jarvis.faehigkeit.TagebuchFaehigkeit
 import de.frank.jarvis.faehigkeit.WeckerFaehigkeit
 import de.frank.jarvis.faehigkeit.WetterFaehigkeit
@@ -63,6 +64,12 @@ enum class Bereich(
     TERMINE("termine", "Kalender", "TERMINE HEUTE UND IN DEN NÄCHSTEN 14 TAGEN (Vorausblick, mit der ausgewerteten Dienst-Zeile je Tag)", 30 * 60_000L, true, true, 4_000L, Regex("^\\s+- ")),
     AUFGABEN("aufgaben", "Geniale Aufgaben", "AUFGABEN (Geniale Aufgaben)", 30 * 60_000L, true, true, 5_000L),
     WECKER("wecker", "Genialer Wecker", "WECKER (Genialer Wecker)", 30 * 60_000L, true, true, 4_000L),
+    STACKS(
+        "stacks", "Stack-Labor",
+        "STACKS (Stack-Labor: Franks GEPLANTE Einnahmeroutine mit Nahrungsergänzung, Stacks in Reihenfolge mit Zeitpunkt, Einnahmehinweis, Mitteln, Dosis und Kapselanzahl; " +
+            "nur aktive Mittel zählen, INAKTIV markierte sind ausgeschaltet; ein Stack belegt keine Einnahme; vollständig mit stacks_lesen)",
+        30 * 60_000L, true, true, 5_000L,
+    ),
     GESPRAECHE("gespraeche", "Gespräche mit Jarvis", "AUS DEN GESPRÄCHEN MIT JARVIS (eigener Chat, Hey Jarvis und Aktionen über ChatGPT; was Frank zuletzt beschäftigt hat)", 15 * 60_000L, true, false, 3_000L),
     BIODATEN("biodaten", "Biodaten", "BIODATEN LIVE (Entropie Reductor: Whoop, Oura, Waage; der zuletzt abgeglichene Stand, ohne neuen Abruf gelesen)", 10 * 60_000L, false, false, 20_000L),
     AUSWERTUNG("auswertung", "Tagesauswertung", "TAGESAUSWERTUNG (Jarvis' Deutung des Tages; die Live-Bereiche sind neuer, wo sie sich unterscheiden)", 10 * 60_000L, true, false, 3_000L),
@@ -316,6 +323,7 @@ object Lagebild {
         "aufgaben" -> listOf(Bereich.AUFGABEN)
         "ideen" -> listOf(Bereich.IDEEN)
         "wecker" -> listOf(Bereich.WECKER)
+        "stacklabor" -> listOf(Bereich.STACKS)
         "kalender" -> listOf(Bereich.TERMINE, Bereich.RAHMEN)
         "ablage", "agenten" -> listOf(Bereich.ABLAGE)
         "regeln" -> listOf(Bereich.GEMERKT)
@@ -354,6 +362,7 @@ object Lagebild {
                     }
             }
             Bereich.WECKER -> alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick(mitJetzt = false) ?: "NICHT VERFÜGBAR"
+            Bereich.STACKS -> alle.filterIsInstance<StackLaborFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.GESPRAECHE -> Gespraechsgedaechtnis.kurzzeit(app)
             Bereich.BIODATEN -> alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()?.live() ?: "NICHT VERFÜGBAR"
             Bereich.AUSWERTUNG -> Tagesauswertung.neuesteGedeutete(app)?.let { a ->
@@ -539,5 +548,5 @@ object Lagebild {
     private const val TAGEBUCH_AELTER_MINDESTENS = 8_000
     private const val MONATE_MINDESTENS = 3_000
     /** Reicht das Budget nicht, werden diese großen Live-Bereiche gedeckelt (vollständig über ihre Werkzeuge). */
-    private val DECKEL = mapOf(Bereich.AUSWERTUNG to 8_000, Bereich.IDEEN to 6_000, Bereich.GESPRAECHE to 6_000, Bereich.AUFGABEN to 10_000, Bereich.RUECKBLICK to 6_000)
+    private val DECKEL = mapOf(Bereich.AUSWERTUNG to 8_000, Bereich.IDEEN to 6_000, Bereich.GESPRAECHE to 6_000, Bereich.AUFGABEN to 10_000, Bereich.RUECKBLICK to 6_000, Bereich.STACKS to 12_000)
 }

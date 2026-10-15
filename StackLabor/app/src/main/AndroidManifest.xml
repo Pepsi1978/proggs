@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
+    <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Stacks und Mittel lesen und bearbeiten. -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+
     <application
         android:name=".StackLaborApplication"
         android:allowBackup="true"
@@ -33,5 +38,12 @@
             android:name=".service.tts.TtsPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Brücke zu Jarvis: Stacks und Mittel lesen und bearbeiten, durch die Signatur-Erlaubnis geschützt. -->
+        <provider
+            android:name=".bruecke.JarvisBruecke"
+            android:authorities="de.frank.stacklabor.werftstudio.jarvis"
+            android:permission="de.frank.jarvis.permission.BRUECKE"
+            android:exported="true" />
     </application>
 </manifest>

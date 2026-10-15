@@ -12,8 +12,8 @@ Version 1 kann zwei Dinge:
 
 Angebundene Apps: **Geniale Aufgaben** (`de.frank.aufgaben`, lesen und schreiben) und der Biomarker-Bereich von
 **Entropie Reductor** (`de.frank.entropyreducer`, nur lesen) , **Geniale Ideen** (`de.frank.genialeideen`, lesen und schreiben), **Genialer Wecker**
-(`de.frank.genialerwecker`, lesen und stellen)
-sowie der **Kalender** des Handys (alle synchronisierten
+(`de.frank.genialerwecker`, lesen und stellen), **Stack-Labor** (`de.frank.stacklabor.werftstudio`, Stacks und Mittel lesen und
+bearbeiten) sowie der **Kalender** des Handys (alle synchronisierten
 Kalender, also auch Google; nur lesen, Android-Erlaubnis `READ_CALENDAR`).
 
 ## Aufbau
@@ -52,7 +52,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 
 ## Werkzeuge im Plugin
 
-38 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
+Knapp 50 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
 welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl für ChatGPT überschaubar.
 
 | Werkzeug | Zweck |
@@ -67,6 +67,9 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `wecker_lesen`, `wecker_stellen`, `wecker_loeschen` | Genialer Wecker; Ändern, Schalten und Auslassen über `wecker_stellen` |
 | `ideen_lesen`, `idee_speichern`, `idee_loeschen` | Geniale Ideen; `ideen_lesen` mit `id` liefert den Volltext, `idee_speichern` legt an oder ändert |
 | `epigenetik_lesen`, `epigenetik_recherchieren`, `epigenetik_schalter`, `epigenetik_uebersicht` | App Epigenetik (`de.frank.epigenetik.jarvis`); `epigenetik_lesen` liefert die fertige Auswertung zu Mittel, Wirkung, Ziel oder Frage und startet fehlende Recherchen (wartet bis 50 s, sonst läuft sie in der App weiter); `epigenetik_schalter` zeigt ohne Recherche, welche Mittel auf einen Schalter wirken; `epigenetik_uebersicht` listet Bibliothek oder Stack mit Analyse |
+| `stacks_lesen` | Stack-Labor lesen: alle Stacks, ein Stack vollständig, alle vollständig, ein Mittel, der Katalog, die Ziele |
+| `stack_mittel_setzen`, `stack_speichern`, `mittel_speichern` | Stack-Labor ändern: Mittel in einem Stack (hinzufügen, Dosis, aktiv/inaktiv, kopieren, verschieben), Stacks, Mittel-Katalog |
+| `stacklabor_loeschen` | Stack-Labor: Mittel aus Stack, Stack, Mittel aus Katalog, Ziel, Frage löschen oder Mittel zusammenführen; nur mit Bestätigung |
 | `tagebuch_lesen` | Tagebucheinträge für einen Tag, einen Zeitraum oder ein Suchwort |
 | `wissen_lesen` | Wissens-Datenbank: Inhaltsverzeichnis, Datei im Volltext oder Suche |
 | `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Ablage von Jarvis (Texte und Dateien); `ablage_lesen` ohne Titel liefert die Liste mit Dateitypen, laufenden und fehlgeschlagenen Übertragungen |
@@ -118,9 +121,10 @@ Ablage und Repo fließen nicht in die Auswertung ein.
 **Ziel:** Bei jeder Frage, egal über welchen Weg (eigener Chat, „Hey Jarvis“, ChatGPT-Plugin, Agenten), liegt der
 aktuelle Stand aus allen angebundenen Apps schon fertig im Kontext. Das Gesamtbild wird nicht erst beim Fragen gebaut.
 
-**Lagebild** (`filesDir/lagebild.json`, überlebt Neustarts): 17 Bereiche, je Bereich Text, Lese-Zeitpunkt, Zeitpunkt
+**Lagebild** (`filesDir/lagebild.json`, überlebt Neustarts): 18 Bereiche, je Bereich Text, Lese-Zeitpunkt, Zeitpunkt
 und Anlass der letzten inhaltlichen Änderung: Gemerktes (Regeln, Ziele, Wissen über Frank), Rahmen der nächsten 7 Tage,
 Termine der nächsten 14 Tage, Aufgaben (heute/überfällig und morgen vollständig, demnächst und Eingang knapp), Wecker,
+Stacks aus Stack-Labor (alle Stacks vollständig, siehe Abschnitt Stack-Labor),
 Gespräche mit Jarvis, Biodaten live (neuester Tag, Kerngrößen gegen den Monat, Verlauf 10 Tage; gelesen ohne neuen
 Abgleich), Tagesauswertung (die neueste gedeutete der letzten 24 Stunden), alle offenen Ideen (25 neueste mit Text,
 ältere mit Titel), Trainings 14 Tage, Wetter, Rückblick der letzten 10 Tage (Dienste/Termine und das Fazit jeder
@@ -130,12 +134,12 @@ Tagebuch. Eine Störung überschreibt nie einen guten Stand (der alte Text bleib
 LETZTEN 24 STUNDEN“ (72 Stunden aufbewahrt).
 
 **Wächter** (läuft im Dienst rund um die Uhr):
-- Änderungssignale: Geniale Aufgaben, Geniale Ideen, Genialer Wecker und Entropie Reductor rufen bei jeder
+- Änderungssignale: Geniale Aufgaben, Geniale Ideen, Genialer Wecker, Stack-Labor und Entropie Reductor rufen bei jeder
   Datenänderung `notifyChange("content://<paket>.jarvis")` auf (Room-InvalidationTracker bzw. zentraler Speicher in den
   Apps, entprellt 0,7 s). Jarvis beobachtet diese Adressen und den Kalender des Handys (`ContentObserver`, entprellt
   1,5 s) und liest genau den betroffenen Bereich neu. Fehlt eine App, versucht er die Anmeldung alle 10 Minuten neu.
 - Eigene Schreibaktionen (Plugin, Chat, Agenten): `Lagebild.nachAktion` liest den betroffenen Bereich sofort neu.
-- Sicherheitsnetz: jede Minute alle Bereiche, deren Abstand abgelaufen ist (Aufgaben 2 Min., Ideen/Ablage 3, Wecker,
+- Sicherheitsnetz: jede Minute alle Bereiche, deren Abstand abgelaufen ist (Aufgaben 2 Min., Ideen/Ablage 3, Wecker, Stacks,
   Kalender 5, Biodaten 10, Trainings 15, Wetter/Tagebuch/Mail/Rückblick 30, Wissen 6 Std.); nach Mitternacht alles.
 - Beim Fragen werden zusätzlich die schnellen, lokalen Bereiche (älter als 30 s) nachgelesen, höchstens 2,5 Sekunden
   gewartet; was dann noch läuft, landet für die nächste Frage im Speicher.
@@ -172,6 +176,40 @@ einer Änderung (sonst höchstens stündlich) nach, und `tagesauswertung_lesen` 
 
 **Oberfläche:** Startbildschirm → Karte „Live-Gedächtnis“: alle Bereiche mit Stand und Inhalt, Neuigkeiten,
 Gesprächsnotizen (löschbar), „Jetzt aus den Gesprächen lernen“, Logbuch herunterladen.
+
+## Stack-Labor
+
+`faehigkeit/StackLaborFaehigkeit.kt` in Jarvis, die Fachlogik in Stack-Labor unter `bruecke/` (`JarvisBruecke.kt` als
+ContentProvider `content://de.frank.stacklabor.werftstudio.jarvis`, `JarvisStackDienst.kt`, `Namensaufloesung.kt`,
+`DosisEingabe.kt`). Die Brücke spricht über das Repository der App, also mit denselben Prüfungen und Transaktionen wie die
+Oberfläche, und liefert fertige deutsche Texte.
+
+- **Lesen und Schreiben getrennt:** `stacks_lesen` liest nur; `stack_mittel_setzen`, `stack_speichern`, `mittel_speichern`
+  schreiben; `stacklabor_loeschen` ist das einzige löschende Werkzeug. Agenten und die Tagesauswertung bekommen nur
+  `stacks_lesen` (`StackLaborFaehigkeit.nurLesend`), ändern darf nur das Gespräch mit Frank.
+- **Namen:** Frank spricht Stack-Namen frei („Sportmodus 2“, „Sport-Stacks 2“, „zweiter Sport-Stack“ → „Sport 2“, „nach dem
+  Aufstehen 1“ → „Nach Aufstehen 1“). Zahlen gelten streng, bei mehreren Treffern kommt eine Rückfrage mit den Kandidaten.
+  Mittel werden zuerst im Stack, dann im Katalog gesucht; kleine Hörfehler („Glyzin“) werden erkannt.
+- **Dosis:** `menge` ist die Gesamtmenge je Einnahme, wie gesagt: „2 Gramm, zwei Kapseln“ wird 2 × 1 g, „6 Gramm“ wird 1 × 6 g.
+  Einheiten werden nie umgerechnet (g bleibt g, mg bleibt mg); nur zum Vergleich gelten 6 g und 6000 mg als gleich. Fehlt die
+  Einheit oder die Dosis, geht die Teilung nicht glatt auf oder ist beim Ändern nur die Stückzahl genannt, fragt die Brücke nach.
+  Getrennte Dosen für freie Tage und Diensttage (`variante`).
+- **Doppel-Schutz:** Gleicher Name = gleiches Mittel bzw. gleicher Stack; ein schon vorhandener Eintrag mit gleicher Dosis
+  bleibt unverändert, mit anderer Dosis kommt eine Rückfrage statt einer stillen Änderung. Ein neues Mittel entsteht nur mit
+  `neues_mittel` (nach Franks Ja); bei sehr ähnlichem Namen fragt die Brücke nach. Alle Schreibaufrufe laufen nacheinander.
+- **Sicherheit:** Signatur-Erlaubnis `de.frank.jarvis.permission.BRUECKE`. Gesperrte Stacks (Schloss in der App) ändert Jarvis
+  nie und entsperrt sie nie. Löschen nur mit `bestaetigt: true`; ohne nennt die Brücke, was verloren ginge, danach liefert sie
+  den alten Stand zum Wiederherstellen.
+- **Bestätigung:** Nach jeder Änderung liest die Brücke frisch nach; erst „Gespeichert und nachgelesen“ gilt als erledigt.
+  Ist die App nicht erreichbar, steht das so im Ergebnis.
+- **Gedächtnis:** Bereich „Stacks“ im Lagebild: alle Stacks in App-Reihenfolge mit Zeitpunkt und Einnahmehinweis (die
+  verbindliche Beschreibung), Zielen und allen Mitteln mit Dosis, Kapselanzahl, Frequenz, Notiz und aktiv/INAKTIV. Stack-Labor
+  meldet jede Änderung (auch aus der eigenen Oberfläche) über `notifyChange`, Jarvis liest den Bereich dann neu; eigene
+  Änderungen frischen ihn sofort auf. Regeln für die Modelle (in `hinweise`): nur aktive Mittel zählen zur geplanten Routine,
+  ein geplanter Stack belegt keine Einnahme, Aufstehen/Sport/Schlafen-Zuordnung und 1 vor 2.
+- **Tests:** `StackLabor/app/src/test/.../bruecke/` prüft die Beispielbefehle („Füge Ashwagandha in Sport 2 hinzu, 2 Gramm, zwei
+  Kapseln“, „Füge Glycin in Sport 2 hinzu, 6 Gramm“) mit erfundenen Daten im Speicher, nie mit Franks echten Daten.
+- Neue Werkzeuge: In ChatGPT die Werkzeugliste des Konnektors einmal neu laden.
 
 ## Logbuch
 
