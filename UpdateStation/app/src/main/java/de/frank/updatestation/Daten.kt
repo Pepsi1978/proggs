@@ -105,6 +105,8 @@ data class AppEintrag(
     val status: Status,
     /** Zeitpunkt (ms), zu dem diese Version auf dem Handy installiert bzw. aktualisiert wurde. */
     val installiertAm: Long? = null,
+    /** Die APK liegt schon fertig geladen auf dem Handy (siehe [Vorladen]). */
+    val vorgeladen: Boolean = false,
 ) {
     val paket get() = fund.manifest.paket
 }

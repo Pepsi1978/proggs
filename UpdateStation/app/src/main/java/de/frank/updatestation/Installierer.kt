@@ -191,7 +191,8 @@ object Installierer {
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(e.message ?: "Unbekannter Fehler", m.versionCode))
         } finally {
             // Die Session hat die Daten kopiert (oder es gab einen Fehler): nur die eigene Datei löschen.
-            datei?.delete()
+            // Eine vorgeladene bleibt liegen, bis die Installation gelungen ist (Dialog abgebrochen = nächstes Mal sofort).
+            datei?.takeIf { !Vorladen.istVorgeladen(context, it) }?.delete()
         }
         return if (ersetzt) Start.ERSETZT else Start.GESTARTET
     }
@@ -200,6 +201,18 @@ object Installierer {
         val m = eintrag.fund.manifest
         // Der Paketname kommt aus update.json: vor jeder Pfadbildung streng prüfen.
         if (!PAKET_MUSTER.matches(m.paket)) fehler("PAKETNAME", "Ungültiger Paketname in update.json.")
+        // Schon im Hintergrund geladen: Prüfsumme gegen update.json, dann ohne Download weiter.
+        Vorladen.vorhanden(context, m)?.let { fertig ->
+            val hash = MessageDigest.getInstance("SHA-256").let { d ->
+                fertig.inputStream().use { ein -> val p = ByteArray(64 * 1024); while (true) { val n = ein.read(p); if (n < 0) break; d.update(p, 0, n) } }
+                d.digest().joinToString("") { "%02x".format(it) }
+            }
+            if (hash == m.sha256) {
+                Diagnose.ereignis(context, Phase.DOWNLOAD, "AUS_VORLADEN", "paket" to m.paket, "vc" to m.versionCode)
+                return@withContext fertig
+            }
+            fertig.delete()
+        }
         val quelle = Quellen.aktuelle(context) ?: fehler("KEINE_QUELLE", "Keine Update-Quelle eingerichtet.")
         val ordner = File(context.cacheDir, "updates").apply { mkdirs() }
         // Nur liegengebliebene Reste aufräumen – laufende Downloads anderer Pakete bleiben unberührt.
@@ -289,9 +302,15 @@ object Installierer {
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(m.paket)
             setSize(datei.length())
-            // Nie still installieren: Android soll jede Installation ausdrücklich bestätigen lassen.
+            // Updates tippt Frank in UpdateStation selbst an, Paket, Version und Signatur sind oben geprüft: dann ohne
+            // zweiten Android-Dialog (klappt, wenn UpdateStation die App zuletzt installiert hat; sonst fragt Android
+            // trotzdem nach, das fängt STATUS_PENDING_USER_ACTION ab). Neue Apps bestätigt er immer ausdrücklich.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED)
+                val update = Pruefer.installiert(context.packageManager, m.paket) != null
+                setRequireUserAction(
+                    if (update) PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED
+                    else PackageInstaller.SessionParams.USER_ACTION_REQUIRED,
+                )
             }
         }
         val id = installer.createSession(params)

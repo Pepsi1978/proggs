@@ -131,7 +131,8 @@ object Pruefer {
                 fund.apkRef == null -> Status.APK_FEHLT
                 else -> Status.UPDATE
             }
-            AppEintrag(fund, label, code, info?.versionName, status, info?.lastUpdateTime)
+            val vorgeladen = status == Status.UPDATE && Vorladen.vorhanden(context, m) != null
+            AppEintrag(fund, label, code, info?.versionName, status, info?.lastUpdateTime, vorgeladen)
         }.sortedWith(compareBy({ it.status.ordinal }, { it.label.lowercase() }))
     }
 

@@ -11,6 +11,10 @@
     <!-- Debugging über WLAN nach Neustart wieder einschalten; Vergabe per adb (Werkzeuge/adb-wlan). -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Updates eigener Apps ohne zweiten Android-Dialog übergeben (Android 12+). -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+    <!-- Signatur-Erlaubnis von Jarvis: Update-Signal empfangen und Ansagen an Jarvis schicken. -->
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
 
     <application
         android:name=".UpdateStationApp"
@@ -35,6 +39,16 @@
         <receiver
             android:name=".InstallErgebnisReceiver"
             android:exported="false" />
+
+        <!-- Echtzeit-Signal „neue APK“ vom Server, weitergereicht von Jarvis. -->
+        <receiver
+            android:name=".SignalEmpfaenger"
+            android:exported="true"
+            android:permission="de.frank.jarvis.permission.BRUECKE">
+            <intent-filter>
+                <action android:name="de.frank.updatestation.UPDATE_SIGNAL" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".WlanDebugReceiver"

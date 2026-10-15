@@ -1,6 +1,9 @@
 package de.frank.updatestation
 
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -11,17 +14,55 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
+
+/**
+ * Echtzeit-Signal von Jarvis: Der Server meldet eine neu veröffentlichte APK (apk-update am PC), Jarvis reicht es
+ * über seine ohnehin offene Serververbindung hierher weiter. Kein eigenes Abfragen im Hintergrund nötig.
+ * Geschützt durch Jarvis' Signatur-Erlaubnis BRUECKE.
+ */
+class SignalEmpfaenger : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != AKTION) return
+        val paket = intent.getStringExtra("paket")
+        val vc = intent.getLongExtra("versionCode", 0L)
+        Log.i(TAG, "Update-Signal: ${intent.getStringExtra("projekt")} $paket vc $vc")
+        Diagnose.ereignis(context, Phase.SYNC, "SIGNAL", "paket" to paket, "vc" to vc)
+        PruefWorker.planeSignal(context.applicationContext, paket, vc)
+    }
+
+    companion object {
+        const val AKTION = "de.frank.updatestation.UPDATE_SIGNAL"
+    }
+}
 
 /** Prüft im eingestellten Takt (Standard 30 Minuten), ob in einem Update-Ordner eine neuere Version liegt. */
 class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         if (Quellen.aktuelle(applicationContext) == null) return Result.success()
         return try {
+            val app = applicationContext
+            // Aus der offenen App angestoßen: nur vorladen, die Liste hat die App gerade selbst geprüft.
+            val nurVorladen = inputData.getBoolean(EINGABE_NUR_VORLADEN, false)
             // Eigene Nachprüfung erkennen: sie darf die nächste nur anhängen, nie sich selbst ersetzen.
-            val liste = Pruefer.pruefe(applicationContext, ausNachpruefung = TAG_NACHPRUEFUNG in tags)
-            Benachrichtigungen.meldeNeue(applicationContext, liste)
+            val liste = if (nurVorladen) Pruefer.bewerte(app, Einstellungen(app).funde)
+                else Pruefer.pruefe(app, ausNachpruefung = TAG_NACHPRUEFUNG in tags)
+            val fertig = Vorladen.lade(app, liste)
+            if (fertig.isNotEmpty()) {
+                Pruefer.bewerteGespeichert(app)
+                if (!nurVorladen) {
+                    Benachrichtigungen.meldeBereit(app, fertig)
+                    // Nicht bei „Nicht stören“ (Schlafenszeit): dann bleibt es bei der stillen Benachrichtigung.
+                    val nm = app.getSystemService(NotificationManager::class.java)
+                    if (nm.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) Vorladen.sageAn(app, fertig)
+                }
+            }
+            if (!nurVorladen) {
+                Benachrichtigungen.meldeNeue(app, liste)
+                fasseSignalNach(liste)
+            }
             Result.success()
         } catch (e: AnmeldungNoetig) {
             Log.w(TAG, "Hintergrundprüfung: Anmeldung nötig")
@@ -49,7 +90,52 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         }
     }
 
+    /**
+     * Kam dieser Lauf von einem Echtzeit-Signal (neue APK am PC veröffentlicht), ist Drive für Desktop oft noch beim
+     * Hochladen. Bis die gemeldete Version vorgeladen (oder sonst erledigt) ist, in kurzen Abständen erneut prüfen.
+     */
+    private fun fasseSignalNach(liste: List<AppEintrag>) {
+        val paket = inputData.getString(EINGABE_PAKET)?.takeIf { it.isNotBlank() } ?: return
+        val vc = inputData.getLong(EINGABE_VC, 0L).takeIf { it > 0 } ?: return
+        val versuch = inputData.getInt(EINGABE_VERSUCH, 0)
+        val e = liste.firstOrNull { it.paket == paket }
+        val erledigt = e != null && e.fund.manifest.versionCode >= vc &&
+            (e.status != Status.UPDATE || Vorladen.vorhanden(applicationContext, e.fund.manifest) != null)
+        if (erledigt || versuch >= SIGNAL_ABSTAENDE_S.size) return
+        planeSignal(applicationContext, paket, vc, versuch + 1, ExistingWorkPolicy.APPEND_OR_REPLACE)
+        Log.i(TAG, "Signal $paket vc $vc noch nicht da: Versuch ${versuch + 1} in ${SIGNAL_ABSTAENDE_S[versuch]} s")
+    }
+
     companion object {
+        private const val EINGABE_NUR_VORLADEN = "nurVorladen"
+        private const val EINGABE_PAKET = "paket"
+        private const val EINGABE_VC = "versionCode"
+        private const val EINGABE_VERSUCH = "versuch"
+        private val SIGNAL_ABSTAENDE_S = longArrayOf(30, 60, 120, 240, 480)
+
+        /**
+         * Echtzeit-Signal: sofort prüfen und vorladen. Ein neues Signal ersetzt ein noch wartendes (REPLACE);
+         * das Nachfassen aus dem laufenden Lauf hängt sich dahinter (APPEND_OR_REPLACE), statt ihn abzubrechen.
+         */
+        fun planeSignal(context: Context, paket: String?, versionCode: Long, versuch: Int = 0,
+                        policy: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE) {
+            val anfrage = OneTimeWorkRequestBuilder<PruefWorker>()
+                .setInitialDelay(if (versuch == 0) 0 else SIGNAL_ABSTAENDE_S[versuch - 1], TimeUnit.SECONDS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setInputData(workDataOf(EINGABE_PAKET to paket.orEmpty(), EINGABE_VC to versionCode, EINGABE_VERSUCH to versuch))
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork("update-signal", policy, anfrage)
+        }
+
+        /** Aus der offenen App: gefundene Updates im Hintergrund vorladen (ohne Benachrichtigung und Ansage). */
+        fun planeVorladen(context: Context) {
+            val anfrage = OneTimeWorkRequestBuilder<PruefWorker>()
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setInputData(workDataOf(EINGABE_NUR_VORLADEN to true))
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork("update-vorladen", ExistingWorkPolicy.KEEP, anfrage)
+        }
+
         /**
          * Plant die periodische Prüfung mit dem eingestellten Intervall. Läuft bei jedem Prozessstart
          * (auch wenn WorkManager den Prozess nur für einen Worker startet): UPDATE nur, wenn sich das

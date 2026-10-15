@@ -479,6 +479,19 @@ Get-ChildItem $zielDir -Filter *.apk |
     Remove-Item -Force
 
 Write-Host "APK_UPDATE_STATUS=ok"
+# Echtzeit-Signal ans Handy: Jarvis-Relay → Jarvis → UpdateStation prüft sofort und lädt vor.
+# Nur ein Anstoß; scheitert er, findet die regelmäßige Prüfung das Update trotzdem.
+try {
+    $relay = @{}
+    Get-Content (Join-Path $HOME 'SK\Jarvis\relay.properties') -ErrorAction Stop | ForEach-Object { $k, $v = $_ -split '=', 2; if ($v) { $relay[$k.Trim()] = $v.Trim() } }
+    $signalDatei = Join-Path ([IO.Path]::GetTempPath()) "apk-update-signal-$lauf.json"
+    [IO.File]::WriteAllText($signalDatei, (@{ signal = 'update'; projekt = $Projekt; paket = $paket; versionCode = $apkCode } | ConvertTo-Json -Compress), $utf8)
+    # -4: IPv6 zu diesem Server hängt von diesem PC aus bis zum Zeitlimit (memory http-timeouts-fallback-wartezeit).
+    $antwort = curl.exe -4 -s --max-time 10 -X POST -H "X-Jarvis-Token: $($relay.token)" -H "Content-Type: application/json" --data-binary "@$signalDatei" "https://$($relay.host)/geraet/signal"
+    Remove-Item $signalDatei -ErrorAction SilentlyContinue
+    if ($LASTEXITCODE -eq 0 -and $antwort -match 'zugestellt') { Write-Host "APK_UPDATE_SIGNAL=$antwort" }
+    else { Write-Host "APK_UPDATE_WARNUNG=Signal ans Handy nicht gesendet (curl $LASTEXITCODE)" }
+} catch { Write-Host "APK_UPDATE_WARNUNG=Signal ans Handy nicht gesendet: $($_.Exception.Message)" }
 Write-Host "APK_UPDATE_BEREIT=lokal (liegt im Drive-Ordner; den Upload übernimmt Google Drive für Desktop, das Skript prüft ihn nicht)"
 Write-Host "APK_UPDATE_PAKET=$paket"
 Write-Host "APK_UPDATE_VERSION=$apkName (versionCode $apkCode, vorher veröffentlicht: $P, am Handy: $I)"

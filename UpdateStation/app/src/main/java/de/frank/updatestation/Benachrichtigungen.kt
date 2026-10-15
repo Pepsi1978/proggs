@@ -135,6 +135,33 @@ object Benachrichtigungen {
         return zeige(context, id, n)
     }
 
+    /**
+     * Ein Update ist fertig vorgeladen: ersetzt eine frühere „gefunden“-Meldung (gleiche ID) und gilt als gemeldet.
+     * Jarvis sagt es zusätzlich an ([Vorladen.sageAn]).
+     */
+    fun meldeBereit(context: Context, eintraege: List<AppEintrag>) {
+        if (!darf(context)) return
+        val einst = Einstellungen(context)
+        eintraege.forEach { e ->
+            val m = e.fund.manifest
+            val id = e.paket.hashCode()
+            val n = NotificationCompat.Builder(context, KANAL_UPDATES)
+                .setSmallIcon(R.drawable.ic_launcher_vordergrund)
+                .setColor(0xFF5B4BFF.toInt())
+                .setContentTitle("Update von ${e.label} ist bereit")
+                .setContentText("${e.installiertName} → ${m.versionName} · schon geladen, Tippen zum Installieren")
+                .setContentIntent(oeffneApp(context, id))
+                .addAction(0, "Jetzt installieren", oeffneApp(context, id + 1, e.paket))
+                .setGroup(GRUPPE)
+                .setAutoCancel(true)
+                .build()
+            if (zeige(context, id, n)) {
+                einst.setzeGemeldet(e.paket, m.versionCode)
+                Diagnose.ereignis(context, Phase.BENACHRICHTIGUNG, "BEREIT", "paket" to e.paket, "vc" to m.versionCode)
+            }
+        }
+    }
+
     fun entferneUpdate(context: Context, paket: String) =
         NotificationManagerCompat.from(context).cancel(paket.hashCode())
 

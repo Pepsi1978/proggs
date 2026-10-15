@@ -59,6 +59,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
             }
             PackageInstaller.STATUS_SUCCESS -> {
                 Installierer.abschliessen(context, paket)
+                Vorladen.entferne(context, paket)
                 Diagnose.ereignis(context, Phase.INSTALLATION, "ERFOLG", "paket" to paket)
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fertig)
                 Benachrichtigungen.entferneUpdate(context, paket)

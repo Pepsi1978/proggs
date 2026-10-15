@@ -524,6 +524,10 @@ private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren
                     (if (m.erstelltAm.isNotBlank()) " · bereitgestellt ${m.erstelltAm}" else ""),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (e.vorgeladen) {
+                Spacer(Modifier.height(6.dp))
+                Text("Schon heruntergeladen – sofort installierbar", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
             Spacer(Modifier.height(12.dp))
             Neuerungen(e)
             Spacer(Modifier.height(14.dp))

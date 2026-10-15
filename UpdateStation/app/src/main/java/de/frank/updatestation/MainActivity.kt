@@ -198,6 +198,8 @@ class MainActivity : ComponentActivity() {
         if (ZustandsSpeicher.zustand.value.prueftGerade) return
         lifecycleScope.launch {
             runCatching { Pruefer.pruefe(this@MainActivity) }
+            // Gefundene Updates gleich im Hintergrund laden: „Aktualisieren“ geht dann ohne Download.
+            PruefWorker.planeVorladen(this@MainActivity)
         }
     }
 
