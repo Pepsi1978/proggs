@@ -51,6 +51,9 @@
     "KarteikartenLernen": {
       "paket": "de.frank.karteikartenlernen"
     },
+    "ModellKompass": {
+      "paket": "de.frank.modellkompass"
+    },
     "NovaDrehen": {
       "paket": "de.frank.novadrehen"
     },
