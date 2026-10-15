@@ -47,6 +47,8 @@
 
     <queries>
         <package android:name="de.frank.aufgaben" />
+        <!-- Update-Signal vom Server an UpdateStation weiterreichen. -->
+        <package android:name="de.frank.updatestation" />
         <provider android:authorities="de.frank.aufgaben.jarvis" />
         <provider android:authorities="de.frank.entropyreducer.debug.jarvis" />
         <provider android:authorities="de.frank.entropyreducer.jarvis" />
@@ -111,6 +113,15 @@
 
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
         <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />
+        <!-- Ansagen eigener Apps (UpdateStation): nur mit Franks Signatur. -->
+        <receiver
+            android:name=".speech.AnsageEmpfaenger"
+            android:exported="true"
+            android:permission="de.frank.jarvis.permission.BRUECKE">
+            <intent-filter>
+                <action android:name="de.frank.jarvis.ANSAGE" />
+            </intent-filter>
+        </receiver>
         <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />
 
         <!-- Lässt einen abgelaufenen Timer wie einen Wecker klingeln, bis Frank ausschaltet. -->

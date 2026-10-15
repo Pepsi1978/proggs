@@ -19,6 +19,7 @@ import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.observability.Logbuch
+import de.frank.jarvis.speech.Ansage
 import de.frank.jarvis.speech.Vorleser
 import java.time.Duration
 import java.time.Instant
@@ -302,32 +303,7 @@ object Abfahrt {
             bauer.addAction(R.drawable.ic_stat_jarvis, "Heute still", PendingIntent.getBroadcast(context, 82, Intent(context, AbfahrtEmpfaenger::class.java).setAction(AKTION_STILL).apply { tag?.let { putExtra(EXTRA_TAG, it.toString()) } }, unveraenderlich))
         }
         runCatching { meldungen.notify(HINWEIS_ID, bauer.build()) }.onFailure { Log.w(TAG, "Benachrichtigung nicht möglich", it) }
-        if (e.abfahrtVorlesen) {
-            // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
-            CoroutineScope(Dispatchers.Main).launch {
-                // Bei gesperrtem Handy darf das Gerät nicht einschlafen, bevor die Stimme fertig ist (sie wird erst aus dem Netz geholt).
-                val wach = context.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:abfahrt-stimme")
-                runCatching { wach.acquire(120_000L) }
-                val ton = context.getSystemService(AudioManager::class.java)
-                val vorher = ton.getStreamVolume(AudioManager.STREAM_MUSIC)
-                val hoechste = ton.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                val laut = (hoechste * e.abfahrtLautstaerke / 100.0).roundToInt().coerceIn(1, hoechste)
-                try {
-                    // Die Meldung hat ihre eigene Lautstärke, unabhängig davon, wie leise das Handy gerade steht.
-                    runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
-                    val quelle = "abfahrt:" + System.currentTimeMillis()
-                    val vorleser = Vorleser.hole(context, SecureSettings(context))
-                    vorleser.sprich(quelle, "Losfahren", sprechtext)
-                    withTimeoutOrNull(110_000L) { vorleser.stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }
-                } catch (f: Exception) {
-                    Log.w(TAG, "Vorlesen nicht möglich", f)
-                } finally {
-                    // Zurück auf den Stand von vorher, außer Frank hat inzwischen selbst nachgeregelt.
-                    runCatching { if (ton.getStreamVolume(AudioManager.STREAM_MUSIC) == laut) ton.setStreamVolume(AudioManager.STREAM_MUSIC, vorher, 0) }
-                    runCatching { if (wach.isHeld) wach.release() }
-                }
-            }
-        }
+        if (e.abfahrtVorlesen) Ansage.sprich(context, "abfahrt", "Losfahren", sprechtext, e.abfahrtLautstaerke)
     }
 
     /** Ein Satz zum Stand, für die Einstellungen und für die Werkzeuge. */

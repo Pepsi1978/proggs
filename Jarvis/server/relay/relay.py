@@ -57,6 +57,7 @@ class Relay:
         self.geheimnis = ""          # zuletzt vom Handy gemeldetes Geheimnis
         self.gemerkt = {}            # Methode -> result-Objekt
         self.ws = None
+        self.ausstehend = None       # Signal, das ohne verbundenes Handy kam: geht beim naechsten Verbinden raus
         self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.da = asyncio.Event()
         self._lade()
@@ -99,6 +100,13 @@ class Relay:
             self._sichere()
         self.da.set()
         log.info("Handy verbunden")
+        if self.ausstehend is not None:
+            signal, self.ausstehend = self.ausstehend, None
+            try:
+                await ws.send_str(json.dumps(signal))
+                log.info("Ausstehendes Signal %s nachgereicht", signal.get("signal"))
+            except (ConnectionError, RuntimeError):
+                self.ausstehend = signal
         try:
             async for nachricht in ws:
                 if nachricht.type != WSMsgType.TEXT:
@@ -129,6 +137,27 @@ class Relay:
         for wartend, ws in list(self.offen.values()):
             if ws is alt and not wartend.done():
                 wartend.set_result(_UNKLAR)
+
+    async def signal(self, request: web.Request) -> web.Response:
+        """Ein Signal von aussen (z. B. "update" vom apk-update-Skript am PC) sofort ans Handy weiterreichen."""
+        if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = await request.json()
+            assert isinstance(daten, dict) and isinstance(daten.get("signal"), str) and daten["signal"]
+        except Exception:
+            return web.Response(status=400, text="Signal fehlt")
+        ws = self.ws
+        if ws is not None and not ws.closed:
+            try:
+                await ws.send_str(json.dumps(daten))
+                log.info("Signal %s ans Handy", daten["signal"])
+                return web.json_response({"zugestellt": True})
+            except (ConnectionError, RuntimeError):
+                pass
+        self.ausstehend = daten
+        log.info("Signal %s gemerkt: Handy nicht verbunden", daten["signal"])
+        return web.json_response({"zugestellt": False})
 
     # ---------------------------------------------------------------- ChatGPT
 
@@ -396,6 +425,7 @@ def app() -> web.Application:
     anwendung.on_startup.append(tagebuch_waechter)
     anwendung.router.add_get("/geraet/tagebuch", tagebuch.antwort)
     anwendung.router.add_post("/geraet/drive-zugang", tagebuch.neuer_zugang)
+    anwendung.router.add_post("/geraet/signal", relay.signal)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

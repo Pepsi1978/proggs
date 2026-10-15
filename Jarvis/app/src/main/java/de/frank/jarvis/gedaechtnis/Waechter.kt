@@ -1,6 +1,7 @@
 package de.frank.jarvis.gedaechtnis
 
 import android.content.Context
+import android.content.Intent
 import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
@@ -18,6 +19,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONObject
+
+private const val AKTION_UPDATE_SIGNAL = "de.frank.updatestation.UPDATE_SIGNAL"
+private const val PAKET_UPDATESTATION = "de.frank.updatestation"
 
 /**
  * Der Hintergrund-Agent des Live-Gedächtnisses. Läuft im Dienst von Jarvis, also rund um die Uhr:
@@ -93,8 +98,19 @@ object Waechter {
     }
 
     /** Ein Signal des Servers über die Verbindung. „tagebuch“: In Drive kam ein Eintrag dazu oder wurde geändert. */
-    fun serverSignal(context: Context, art: String) {
+    fun serverSignal(context: Context, nachricht: JSONObject) {
         val app = context.applicationContext
+        val art = nachricht.optString("signal")
+        if (art == "update") {
+            // Neue APK im Update-Ordner (apk-update am PC): UpdateStation sofort wecken, sie prüft und lädt vor.
+            val wecken = Intent(AKTION_UPDATE_SIGNAL).setPackage(PAKET_UPDATESTATION)
+                .putExtra("projekt", nachricht.optString("projekt"))
+                .putExtra("paket", nachricht.optString("paket"))
+                .putExtra("versionCode", nachricht.optLong("versionCode"))
+            runCatching { app.sendBroadcast(wecken) }.onFailure { Logbuch.fehler("Signal Update an UpdateStation", it) }
+            Logbuch.netz("Signal Update", "${nachricht.optString("projekt")} vc ${nachricht.optLong("versionCode")} an UpdateStation")
+            return
+        }
         if (art != "tagebuch") return
         bereich.launch {
             val beginn = System.currentTimeMillis()

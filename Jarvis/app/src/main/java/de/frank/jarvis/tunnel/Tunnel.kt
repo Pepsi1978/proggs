@@ -111,7 +111,7 @@ object Tunnel {
                         arbeiter.execute {
                             val nachricht = runCatching { JSONObject(text) }.getOrNull() ?: return@execute
                             // Ein Signal des Servers (zum Beispiel „tagebuch“: neuer Eintrag in Drive) ist kein Aufruf und bekommt keine Antwort.
-                            if (nachricht.has("signal")) { runCatching { beiSignal?.invoke(nachricht.optString("signal")) }; return@execute }
+                            if (nachricht.has("signal")) { runCatching { beiSignal?.invoke(nachricht) }; return@execute }
                             val antwort = runCatching { verarbeite(nachricht.optString("rumpf")) }
                                 .getOrElse { Logbuch.fehler("Tunnel: Aufruf verarbeiten", it); """{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"Interner Fehler in Jarvis"}}""" }
                             // Über die aktuelle Verbindung antworten: Riss die alte während des Aufrufs ab, käme die Antwort sonst nie an.
@@ -148,8 +148,8 @@ object Tunnel {
         }
     }
 
-    /** Empfänger für Signale des Servers (Art, z. B. „tagebuch“); setzt der Dienst. */
-    @Volatile var beiSignal: ((String) -> Unit)? = null
+    /** Empfänger für Signale des Servers (ganze Nachricht, Art unter „signal“, z. B. „tagebuch“ oder „update“); setzt der Dienst. */
+    @Volatile var beiSignal: ((JSONObject) -> Unit)? = null
 
     /** Sofort neu versuchen, statt die Wartezeit abzusitzen (das Netz ist wieder da). */
     fun jetztVerbinden() { anstoss.trySend(Unit) }
