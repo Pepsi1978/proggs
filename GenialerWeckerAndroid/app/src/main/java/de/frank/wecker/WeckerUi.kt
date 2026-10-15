@@ -928,11 +928,13 @@ private fun MorgenruheHero(
     // der Knopf — der Textspalte blieben bei 360 dp Gerätebreite nur 132 dp. Jetzt trägt die
     // rechte Spalte allein das Motiv, die Aktionen stehen darunter über die volle Breite.
     val innen = daten.breite - HERO_AUSSEN * 2 - KARTE_INNEN * 2
-    // Die Schlafszene darf groß werden: Sie nimmt der Textspalte bis auf 85 Prozent ihres Mindestmaßes Platz.
-    val motiv = (innen - SPALTEN_ABSTAND - textMindest() * 0.85f)
-        .coerceIn(0.dp, if (daten.weit) 180.dp else 150.dp)
-    val zeigtMotiv = motiv >= 72.dp
-    val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
+    // Seit 15.10.2026 steht das Schlafzimmer als breites Band über der vollen Kartenbreite statt als
+    // kleines Quadrat neben der Uhr: Erst in der Breite wird es ein Zimmer mit Boden, Wänden und
+    // Tiefe. Mehr Breite heißt mehr Raum, nicht größere Möbel; die Höhe bleibt gedeckelt, weil der
+    // Kopf nicht mitscrollt.
+    val zimmerHoehe = (innen / 2.4f).coerceIn(118.dp, if (daten.weit) 190.dp else 160.dp)
+    val zimmerForm = RoundedCornerShape((LocalDesignTokens.current.karteRadius * 0.7f).coerceAtMost(18.dp))
+    val textBreite = innen
     Column(Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth()
             .tiefenSchatten(gold.akzentWarm, Hoehe.karteErhoeht, form)
@@ -947,6 +949,8 @@ private fun MorgenruheHero(
             .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.14f else 0.5f), form)) {
             HeroDeko(Modifier.matchParentSize())
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LocalGestalt.current.Motiv(Modifier.fillMaxWidth().height(zimmerHoehe).clip(zimmerForm)
+                    .border(1.dp, gold.heroKante, zimmerForm))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
@@ -963,8 +967,6 @@ private fun MorgenruheHero(
                                 maxLines = 1, softWrap = false)
                         }
                     }
-                    // Nur das Motiv steht rechts — und nur, wenn dafür wirklich Platz ist.
-                    if (zeigtMotiv) LocalGestalt.current.Motiv(Modifier.size(motiv))
                 }
                 // Der Termin nutzt jetzt die ganze Breite: links Weckzeit und Name, rechts die
                 // Restzeit — statt alles in die linke Spalte neben das Bett zu quetschen.
