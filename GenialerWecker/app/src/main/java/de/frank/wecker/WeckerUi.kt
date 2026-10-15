@@ -969,6 +969,9 @@ private fun MorgenruheHero(
         .coerceIn(0.dp, if (daten.weit) 170.dp else 136.dp)
         .coerceAtMost(fensterHoehe * 0.17f)
     val zeigtMotiv = buehne >= 96.dp
+    // Seit 1.1.117 ist die Bühne ein geschlossenes Zimmer mit Decke, Wänden und Boden bis an den Rand:
+    // Es bekommt deshalb eigene runde Ecken und eine feine Kante, statt eckig in der Karte zu stehen.
+    val zimmerForm = RoundedCornerShape((LocalDesignTokens.current.karteRadius * 0.7f).coerceAtMost(18.dp))
     // Die Uhr steht rechts neben dem Datum; dem Datum bleiben mindestens 110 dp (notfalls zweizeilig).
     val textBreite = innen - SPALTEN_ABSTAND - 110.dp
     // Einstellbare Kartendeckkraft: Fläche, Licht, Kante und Schatten werden gemeinsam durchsichtig.
@@ -989,9 +992,10 @@ private fun MorgenruheHero(
             .glanzLauf(staerke = (if (gold.istDunkel) 0.10f else 0.45f) * deckkraft)) {
             HeroDeko(Modifier.matchParentSize().graphicsLayer { alpha = deckkraft })
             Column(Modifier.fillMaxWidth()) {
-                // Die Bühne: Tür, Zimmer und Bett über die volle Breite, nur knapp vom Kartenrand abgesetzt.
+                // Die Bühne: das Schlafzimmer über die volle Breite, nur knapp vom Kartenrand abgesetzt.
                 if (zeigtMotiv) LocalGestalt.current.Motiv(
-                    Modifier.fillMaxWidth().height(buehne).padding(start = 8.dp, end = 8.dp, top = 8.dp),
+                    Modifier.fillMaxWidth().height(buehne).padding(start = 8.dp, end = 8.dp, top = 8.dp)
+                        .clip(zimmerForm).border(1.dp, gold.heroKante, zimmerForm),
                 )
                 Column(Modifier.fillMaxWidth().padding(start = KARTE_INNEN, end = KARTE_INNEN, bottom = KARTE_INNEN,
                     top = if (zeigtMotiv) 4.dp else KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
