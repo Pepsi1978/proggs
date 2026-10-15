@@ -63,6 +63,7 @@
     {"versionCode": 59, "versionName": "1.8.48", "stand": "15.10.2026, 10:54 Uhr", "notiz": "Programmieraufträge startet nur noch Jarvis im Gespräch mit Frank; Agenten und die Tagesauswertung können keine Cloud-Programmierung auslösen"},
     {"versionCode": 60, "versionName": "1.8.49", "stand": "15.10.2026, 11:01 Uhr", "notiz": "Jarvis reicht das Echtzeit-Signal „neue App-Version“ vom Server an UpdateStation weiter und liest deren Ansage „Ein Update von … ist bereit“ vor"},
     {"versionCode": 60, "versionName": "1.8.49", "stand": "15.10.2026, 11:02 Uhr", "notiz": "Programmieraufträge gehen zuerst an deinen PC, wenn er an ist: dort startet eine Claude-Code-Sitzung mit Remote Control, die du in der Claude-App unter Code siehst; nur wenn der PC aus ist, geht der Auftrag in die Cloud"},
-    {"versionCode": 61, "versionName": "1.8.50", "stand": "15.10.2026, 11:08 Uhr", "notiz": "E-Mails lesen und senden klappt wieder im Heim-WLAN: Jarvis verbindet sich mit Gmail jetzt über IPv4 statt am nicht funktionierenden IPv6 zu hängen"}
+    {"versionCode": 61, "versionName": "1.8.50", "stand": "15.10.2026, 11:08 Uhr", "notiz": "E-Mails lesen und senden klappt wieder im Heim-WLAN: Jarvis verbindet sich mit Gmail jetzt über IPv4 statt am nicht funktionierenden IPv6 zu hängen"},
+    {"versionCode": 62, "versionName": "1.8.51", "stand": "15.10.2026, 11:36 Uhr", "notiz": "Von Hand gestartete Aufnahmen laufen weiter, wenn du in eine andere App wechselst, bis du in Jarvis wieder auf das Mikrofon tippst"}
   ]
 }

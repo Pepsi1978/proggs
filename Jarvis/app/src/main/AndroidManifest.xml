@@ -95,6 +95,12 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
+        <!-- Hält die von Hand gestartete Aufnahme am Leben, während eine andere App vorn ist. -->
+        <service
+            android:name=".audio.AufnahmeDienst"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <!-- Unsichtbar: startet nach Neustart und Update den Weckwort-Dienst (das darf nur eine sichtbare App). -->
         <activity
             android:name=".weckwort.WeckwortDienst$Starter"

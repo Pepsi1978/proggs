@@ -430,7 +430,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         holtMikro = true
         viewModelScope.launch {
             try {
+                // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
+                // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
                 if (!aufnahmeStarten()) { diktatZiel = null; meldung = "Die Aufnahme ließ sich nicht starten." }
+                else de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
             } finally {
                 holtMikro = false
             }
@@ -642,6 +645,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val wav = mikro.stop()
+                de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 if (freigeben && weckwortLauf?.isActive != true) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
@@ -693,6 +697,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         mikro.release()
+        de.frank.jarvis.audio.AufnahmeDienst.stoppen()
         groq?.shutdown()
         super.onCleared()
     }
