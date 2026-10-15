@@ -60,9 +60,17 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 
         // Reiter: Die vielen Bereiche nach Themen gebündelt, damit nicht alles in einer langen Liste steht.
         var reiter by rememberSaveable { mutableStateOf("jarvis") }
+        // Zurück-Geste führt durch die zuvor geöffneten Bereiche bis „Jarvis“; erst von dort geht es zum vorherigen App-Reiter.
+        var verlauf by rememberSaveable { mutableStateOf(listOf<String>()) }
+        androidx.activity.compose.BackHandler(enabled = reiter != "jarvis") {
+            reiter = verlauf.lastOrNull() ?: "jarvis"
+            verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
+        }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("jarvis" to "Jarvis", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und Apps", "system" to "System").forEach { (id, name) ->
-                Chip(name, aktiv = reiter == id) { reiter = id }
+                Chip(name, aktiv = reiter == id) {
+                    if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
+                }
             }
         }
 

@@ -89,6 +89,9 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
         val tunnel by Tunnel.zustand.collectAsState()
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))) {
             Hintergrund()
+            // Zurück-Geste auf Ablage, Aktivität oder Einstellungen: vorheriger Reiter, sonst Jarvis-Start, nie App schließen.
+            // Steht vor dem Inhalt, damit die Zurück-Behandlung innerer Ansichten (Ablage, Merkliste, Gedächtnis) Vorrang hat.
+            androidx.activity.compose.BackHandler(enabled = vm.reiter != Reiter.JARVIS && !vm.gesperrt) { vm.reiterZurueck() }
             val schublade = rememberGespraecheSchublade()
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
             val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen

@@ -58,7 +58,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val agent = JarvisAgent(app)
     private val auth get() = agent.auth
 
-    var reiter by mutableStateOf(Reiter.JARVIS)
+    private var aktuellerReiter by mutableStateOf(Reiter.JARVIS)
+    /** Zuvor geöffnete Reiter, neuester zuletzt. Der Jarvis-Reiter ist die Wurzel: Wer dort ankommt, beginnt neu. */
+    private val reiterVerlauf = mutableListOf<Reiter>()
+
+    var reiter: Reiter
+        get() = aktuellerReiter
+        set(neu) {
+            if (neu == aktuellerReiter) return
+            if (neu == Reiter.JARVIS) reiterVerlauf.clear() else { reiterVerlauf.remove(neu); reiterVerlauf += aktuellerReiter }
+            aktuellerReiter = neu
+        }
+
+    /** Zurück-Geste auf einem Unterreiter: zum vorher offenen Reiter, ohne Verlauf zum Jarvis-Startbildschirm. Beendet nie die App. */
+    fun reiterZurueck() {
+        aktuellerReiter = reiterVerlauf.removeLastOrNull() ?: Reiter.JARVIS
+        if (aktuellerReiter == Reiter.JARVIS) reiterVerlauf.clear()
+    }
 
     // ---- Sperre ----
     /** true, solange die App auf den Fingerabdruck wartet. Der Dienst im Hintergrund läuft davon unberührt. */
@@ -76,7 +92,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Sprache ----
     val sprache = de.frank.jarvis.data.settings.SecureSettings(app)
     val vorleser: de.frank.jarvis.speech.Vorleser = de.frank.jarvis.speech.Vorleser.hole(app, sprache)
-    private val mikro = de.frank.jarvis.audio.MicRecorder(app)
+    private val mikro = de.frank.module.transkriptionsmodul.TranskriptionAnbindung.mikrofon(app)
     val pegel get() = mikro.pegel
     var nimmtAuf by mutableStateOf(false); private set
     var schreibtMit by mutableStateOf(false); private set
@@ -572,7 +588,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var freihaendig by mutableStateOf(false); private set
     private var weckwortLauf: Job? = null
     /** „Sprachsession beenden“: Die laufende Sprachschleife öffnet das Mikrofon nicht mehr von selbst. Erst eine ausdrückliche Aktivierung hebt das auf. */
-    private var sprachsitzungBeendet = false
+    @Volatile private var sprachsitzungBeendet = false
+
+    /** Das Werkzeug `sprachsession_beenden` (vom Modell, auf einem Hintergrundfaden): Ende vormerken. true = eine Sprachschleife lief. */
+    private val sprachsessionBeenden: () -> Boolean = {
+        sprachsitzungBeendet = true
+        val lief = weckwortLauf?.isActive == true
+        Logbuch.sprache("Sprachsitzung beendet", if (lief) "per Werkzeug" else "per Werkzeug, keine Sprachschleife aktiv")
+        lief
+    }
 
     /** Was gerade passiert, für die Anzeige auch im gesperrten Zustand ([liestVor]: der Vorleser spricht). */
     fun sprachStatus(liestVor: Boolean): String? = when {
@@ -635,7 +659,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val antworten = gespraech.count { !it.vonMir }
                     val navi = navigationen
                     val ergebnis = runde(erste = runde == 0)
-                    if (ergebnis == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT) {
+                    if (ergebnis == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT) {
                         // Gleich nach „Hey Jarvis“ nichts gesagt: Das war wohl ein Fehlalarm, das Stimmprofil lernt ihn.
                         // Nicht, wenn nur das Mikrofon nicht starten wollte: Das sagt nichts über den Klang.
                         if (runde == 0 && !mikroFehlte) {
@@ -672,48 +696,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     private var mikroFehlte = false
 
-    private suspend fun runde(erste: Boolean): de.frank.jarvis.weckwort.SprechEnde.Lage {
+    private suspend fun runde(erste: Boolean): de.frank.module.transkriptionsmodul.SprechEnde.Lage {
         holtMikro = true
         val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }
         mikroFehlte = !gestartet
-        if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT }
+        if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT }
         freihaendig = true
         // Nach einer Antwort darf Frank etwas länger überlegen, bevor er anfängt.
-        val ende = de.frank.jarvis.weckwort.SprechEnde(wartenMs = if (erste) 7_000 else 9_000)
+        val ende = de.frank.module.transkriptionsmodul.SprechEnde(wartenMs = if (erste) 7_000 else 9_000)
         // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
         val start = System.currentTimeMillis()
         piep()
-        var lage = de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER
-        while (nimmtAuf && lage == de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER) {
+        var lage = de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER
+        while (nimmtAuf && lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.WEITER) {
             kotlinx.coroutines.delay(50)
             lage = ende.neu(pegel.value, System.currentTimeMillis() - start, mikro.sprachRahmen)
         }
         freihaendig = false
         when {
-            !nimmtAuf -> return de.frank.jarvis.weckwort.SprechEnde.Lage.FERTIG // Frank hat selbst auf Stopp getippt: Das Abschicken läuft schon.
-            lage == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT -> {
+            !nimmtAuf -> return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG // Frank hat selbst auf Stopp getippt: Das Abschicken läuft schon.
+            lage == de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT -> {
                 nimmtAuf = false
                 mikro.stop()
                 return lage
             }
             else -> aufnahmeBeenden(freigeben = false)
         }
-        return de.frank.jarvis.weckwort.SprechEnde.Lage.FERTIG
-    }
-
-    /** „Ende“, „Stopp“, „Danke, das war's“ …: beendet den Gesprächsmodus. Nur wenn der ganze Satz ein solcher Befehl ist. */
-    private fun istAusbefehl(text: String): Boolean {
-        val worte = text.lowercase(java.util.Locale.GERMAN).replace("’", "'").replace(Regex("[^a-zäöüß' ]"), " ")
-            .split(' ').filter { it.isNotBlank() && it !in FUELLWORTE }
-        val satz = worte.joinToString(" ").replace("'", "")
-        return satz in AUSBEFEHLE
-    }
-
-    /** Ausdrücklich „Sprachsession beenden“ und Verwandtes: gilt auch ohne laufende Sprachschleife, z. B. nach Tipp aufs Mikrofon. */
-    private fun istSprachsessionEnde(text: String): Boolean {
-        val worte = text.lowercase(java.util.Locale.GERMAN).replace(Regex("[^a-zäöüß ]"), " ")
-            .split(' ').filter { it.isNotBlank() && it !in FUELLWORTE && it !in ARTIKEL }
-        return worte.joinToString(" ") in SPRACHSESSION_ENDE
+        return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG
     }
 
     /** Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort. */
@@ -745,13 +754,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
                 val groq = transkribierer()
-                val text = withContext(Dispatchers.IO) { de.frank.jarvis.audio.Diktat(groq).transkribiere(wav, stimmhaft).text.trim() }
+                val text = withContext(Dispatchers.IO) { de.frank.module.transkriptionsmodul.TranskriptionAnbindung.diktat(groq).transkribiere(wav, stimmhaft).text.trim() }
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
                 // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
                 if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", "Session von Hand gewechselt"); return@launch }
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
-                else if ((weckwortLauf?.isActive == true && istAusbefehl(text)) || istSprachsessionEnde(text)) {
+                else if (SprachBefehle.istSessionEnde(text, imGespraechsmodus = weckwortLauf?.isActive == true)) {
                     // Ausbefehl im Gesprächsmodus oder ausdrücklich „Sprachsession beenden“: kurz bestätigen, danach kein Piepton
                     // und kein offenes Mikrofon mehr. Geht nie ans Modell: kein neues Gespräch, kein Auftrag. Das Gespräch und
                     // laufende Antworten, Agenten und Programmieraufträge bleiben unberührt.
@@ -772,15 +781,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Ein Groq-Client für alle Aufnahmen: Die Verbindung bleibt offen, statt bei jeder Frage neu aufgebaut zu werden. */
-    private var groq: de.frank.jarvis.audio.GroqTranscriber? = null
+    private var groq: de.frank.module.transkriptionsmodul.GroqTranscriber? = null
     private var groqStand = 0
 
     /** Der Transkribierer zu den aktuellen Einstellungen; neu gebaut nur, wenn sich Schlüssel oder Filter geändert haben. */
-    private fun transkribierer(): de.frank.jarvis.audio.GroqTranscriber {
+    private fun transkribierer(): de.frank.module.transkriptionsmodul.GroqTranscriber {
         val stand = listOf(sprache.groqApiKey, sprache.filterStilleVorabAn, sprache.filterSegmentmetrikenAn, sprache.filterZeitstempelAn, sprache.filterFloskelnAn).hashCode()
         groq?.takeIf { groqStand == stand }?.let { return it }
         groq?.shutdown()
-        return de.frank.jarvis.audio.GroqTranscriber(
+        return de.frank.module.transkriptionsmodul.GroqTranscriber(
             apiKey = sprache.groqApiKey,
             filterStille = sprache.filterStilleVorabAn, filterMetriken = sprache.filterSegmentmetrikenAn,
             filterZeitstempel = sprache.filterZeitstempelAn, filterFloskeln = sprache.filterFloskelnAn,
@@ -831,6 +840,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     init {
         de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = programmierEmpfaenger
         de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = programmierBeantwortet
+        de.frank.jarvis.faehigkeit.Sprachsession.beenden = sprachsessionBeenden
     }
 
     /** Knopf in einer Rückfrage: Franks Antwort an die wartende Programmier-Sitzung. */
@@ -845,6 +855,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger === programmierEmpfaenger) de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = null
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet === programmierBeantwortet) de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = null
+        if (de.frank.jarvis.faehigkeit.Sprachsession.beenden === sprachsessionBeenden) de.frank.jarvis.faehigkeit.Sprachsession.beenden = null
         if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         mikro.release()
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
@@ -1388,25 +1399,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } ?: "ausgeschaltet"
 }
 
-
-/** Wörter, die vor oder nach dem Ausbefehl nicht zählen („Okay Jarvis, Ende bitte“). */
-private val FUELLWORTE = setOf("jarvis", "okay", "ok", "bitte", "hey", "also", "gut", "dann", "ja", "nein", "nee", "so")
-
-/** Artikel, die beim ausdrücklichen „Beende die Sprachsession“ nicht zählen. */
-private val ARTIKEL = setOf("die", "den", "das", "der", "diese", "unsere", "meine")
-
-/** Ausdrückliche Befehle für das Ende der Sprachschleife (ohne Füllwörter und Artikel); „Sprach-Session“ wird zu zwei Wörtern. */
-private val SPRACHSESSION_ENDE = listOf("sprachsession", "sprach session", "sprachsitzung", "sprach sitzung", "sprachmodus", "sprach modus", "voice session")
-    .flatMap { n -> listOf("$n beenden", "$n beendet", "$n stoppen", "$n stop", "$n stopp", "$n aus", "$n ende", "beende $n", "stoppe $n", "$n schließen") }
-    .toSet()
-
-/** Ganze Sätze, die den Gesprächsmodus beenden (nach Kleinschreibung, ohne Satzzeichen und Füllwörter). */
-private val AUSBEFEHLE = setOf(
-    "ende", "stopp", "stop", "schluss", "aus", "fertig", "tschüss", "tschüs", "ciao", "danke", "danke schön", "dankeschön", "vielen dank",
-    "das wars", "danke das wars", "das wars danke", "das ist alles", "danke das ist alles", "das reicht", "mehr nicht", "nichts mehr",
-    "sprachsitzung beenden", "sprachsitzung beendet", "sitzung beenden", "gespräch beenden", "beenden", "beende", "aufhören", "hör auf",
-    "ende der sitzung", "session beenden", "schluss für jetzt", "erstmal nicht", "erst mal nicht", "nichts weiter", "sonst nichts", "danke sonst nichts",
-)
 
 /** So viele der zuletzt geführten Gespräche durchsucht „Gehe in die Whoop-Session zurück“. */
 private const val MAX_SUCHE = 150
