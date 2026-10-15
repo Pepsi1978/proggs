@@ -381,3 +381,18 @@ Jarvis und die angebundenen Apps müssen mit demselben Schlüssel signiert sein 
 - Ob der ChatGPT-Sprachmodus eigene Konnektoren aufruft und ob er Schreibaktionen ohne Bestätigungsdialog ausführt,
   muss am Gerät geprüft werden. Falls nicht: GPT Live direkt in Jarvis einbauen (Werkzeuge und Agent stehen bereit).
 - Bei tiefem Stromsparmodus ohne Ladekabel kann Android die Verbindung trotz Dienst kappen.
+
+## Programmieren per Sprache (`programmieren`)
+
+„Jarvis, programmiere in App … ein, dass …“ → Werkzeug `programmieren` (`faehigkeit/ProgrammierFaehigkeit.kt`). Zwei Ziele, beide
+über Franks Claude-Abo (keine API-Kosten):
+
+1. **PC** (zuerst): Läuft am PC die Brücke `werkzeuge/pc-bruecke/jarvis-pc-bruecke.ps1` (Aufgabe „JarvisPcBruecke“ bei der
+   Anmeldung, eingerichtet mit `einrichten.ps1`), holt sie den Auftrag über den Relay (`/pc/auftrag`, Long-Polling) ab und öffnet
+   ein Terminal mit `claude --remote-control "Jarvis: <App>"` im Profil `minimal`. Die Sitzung steht in der Claude-App unter Code.
+   Protokoll: `%LOCALAPPDATA%\JarvisPcBruecke\bruecke.log`.
+2. **Cloud** (wenn der PC nicht abfragt, Relay antwortet 409): Claude-Code-Routine „Jarvis: Programmieren“
+   (`trig_01HkrhPAiYAJ7msGLn5UUcyo`), Auslösen per API-Trigger; Token in den Einstellungen oder `~/SK/Jarvis/routine.properties`.
+   Danach `apk-update-cloud`. Doku: `best-practices/claude-tooling/claude-code-cloud.md` §8.
+
+Agenten und die Tagesauswertung bekommen das Werkzeug nicht (`JarvisAgent.versuche`).

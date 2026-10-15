@@ -49,6 +49,8 @@
         <package android:name="de.frank.aufgaben" />
         <!-- Update-Signal vom Server an UpdateStation weiterreichen. -->
         <package android:name="de.frank.updatestation" />
+        <!-- Programmieraufträge: Die Benachrichtigung öffnet die Claude-App (Sitzungen unter Code). -->
+        <package android:name="com.anthropic.claude" />
         <provider android:authorities="de.frank.aufgaben.jarvis" />
         <provider android:authorities="de.frank.entropyreducer.debug.jarvis" />
         <provider android:authorities="de.frank.entropyreducer.jarvis" />

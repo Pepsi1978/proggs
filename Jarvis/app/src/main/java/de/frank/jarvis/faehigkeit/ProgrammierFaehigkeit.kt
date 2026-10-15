@@ -22,8 +22,9 @@ import org.json.JSONObject
  * Programmieraufträge an Franks Apps: Jarvis formuliert den Auftrag und gibt ihn an ein Programmier-Ziel ab, das im
  * Repo programmiert und die App über UpdateStation ausliefert. Jarvis selbst ändert nie Code (siehe [RepoFaehigkeit]).
  *
- * Heute gibt es genau ein Ziel, die Claude-Code-Routine in der Cloud. Ein zweites Ziel (Claude Code am PC, schneller,
- * Installation per WLAN-adb) kommt später als weitere [ProgrammierZiel]-Implementierung vor die Cloud in [ziele].
+ * Zwei Ziele, in dieser Reihenfolge: Franks PC (Claude Code mit Remote Control, schnell, Installation per WLAN-adb),
+ * solange dort die PC-Brücke läuft (Jarvis/werkzeuge/pc-bruecke), sonst die Claude-Code-Routine in der Cloud.
+ * Beides läuft über Franks Claude-Abo, nicht über bezahlte API-Aufrufe.
  */
 class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "programmieren"
@@ -38,9 +39,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private val e get() = Einstellungen.get(app)
 
     /** In dieser Reihenfolge versucht; das erste bereite Ziel bekommt den Auftrag. */
-    private val ziele: List<ProgrammierZiel> by lazy { listOf(CloudRoutine()) }
+    private val ziele: List<ProgrammierZiel> by lazy { listOf(PcBruecke(), CloudRoutine()) }
 
-    override fun stoerung(): String? = if (ziele.none { it.bereit() }) ziele.first().fehlt() else null
+    override fun stoerung(): String? = if (ziele.none { it.bereit() }) ziele.last().fehlt() else null
 
     override val werkzeuge: List<Werkzeug> by lazy {
         listOf(
@@ -48,48 +49,68 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 name = "programmieren",
                 titel = "Programmierauftrag starten",
                 beschreibung = "Jarvis: programmiert etwas in einer von Franks Apps („Jarvis, programmiere in Geniale Aufgaben einen Filter für …“, „bau in den Wecker ein, dass …“, " +
-                    "„ändere in Jarvis …“). Der Auftrag geht an Claude Code in der Cloud: Es findet die App in Franks Repo, programmiert die Änderung, und die neue Version kommt nach " +
-                    "etwa zehn bis zwanzig Minuten über UpdateStation aufs Handy. Dieser Aufruf kehrt sofort zurück. Formuliere den Auftrag selbst vollständig aus, mit allem Wissen aus dem " +
+                    "„ändere in Jarvis …“). Der Auftrag geht an Claude Code: an Franks PC, wenn er an ist (schnell, die App kommt per WLAN aufs Handy), sonst in die Cloud " +
+                    "(etwa zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version). Es findet die App in Franks Repo und programmiert die Änderung. Dieser Aufruf kehrt sofort zurück. Formuliere den Auftrag selbst vollständig aus, mit allem Wissen aus dem " +
                     "Gespräch; die Cloud-Sitzung kennt nur diesen Text. Ein fertiger Auftrag vom Agenten Code-Analyse oder aus repo_lesen kann unverändert hinein. " +
                     "Ist unklar, welche App gemeint ist, frag Frank vorher.",
                 schema = schema(
                     "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt."),
                     "auftrag" to text("Der vollständige Programmierauftrag: Ziel, was genau anders werden soll (Bildschirm, Knopf, Verhalten, Texte), Randbedingungen, was Frank wichtig ist, woran man erkennt, dass es fertig ist."),
-                    "review" to schalter("true = vor der Auslieferung ein Codex-Review laufen lassen (dauert länger). Vorgabe false."),
+                    "review" to schalter("true = vor der Auslieferung ein Review laufen lassen (dauert länger). Vorgabe false."),
+                    "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc oder cloud. Vorgabe automatisch (PC, wenn er an ist, sonst Cloud).", listOf("automatisch", "pc", "cloud")),
                     pflicht = listOf("app", "auftrag"),
                 ),
                 nurLesen = false,
             ) { a ->
                 val appName = a.optString("app").trim()
                 val auftrag = a.optString("auftrag").trim()
-                val ziel = ziele.firstOrNull { it.bereit() }
+                val wahl = when (a.optString("ziel").lowercase()) {
+                    "pc" -> ziele.filterIsInstance<PcBruecke>()
+                    "cloud" -> ziele.filterIsInstance<CloudRoutine>()
+                    else -> ziele
+                }.filter { it.bereit() }
                 when {
                     appName.isEmpty() -> Ergebnis("Welche App ist gemeint? Bitte Frank fragen.", fehler = true)
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
-                    ziel == null -> Ergebnis(ziele.first().fehlt(), fehler = true)
-                    else -> runCatching { ziel.starte(appName, auftrag, a.optBoolean("review")) }.fold(
-                        onSuccess = { start ->
-                            melde(appName, start)
-                            Ergebnis("Der Auftrag für $appName läuft jetzt (${ziel.name}). Meist dauert es zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version. " +
-                                "Frank hat eine Benachrichtigung mit dem Link zur Sitzung bekommen" + (if (start.link.isNotEmpty()) ": ${start.link}" else "."))
-                        },
-                        onFailure = { Ergebnis("Der Auftrag ist nicht gestartet: ${it.message ?: it.javaClass.simpleName}", fehler = true) },
-                    )
+                    wahl.isEmpty() -> Ergebnis(ziele.last().fehlt(), fehler = true)
+                    else -> starteErstes(wahl, appName, auftrag, a.optBoolean("review"))
                 }
             },
         )
     }
 
-    /** Benachrichtigung; ein Tipp öffnet die Sitzung (Claude-App oder Browser). */
-    private fun melde(appName: String, start: Start) {
+    /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
+    private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean): Ergebnis {
+        val uebersprungen = mutableListOf<String>()
+        for (ziel in wahl) {
+            val start = try {
+                ziel.starte(appName, auftrag, review)
+            } catch (nichtDa: NichtDa) {
+                uebersprungen += nichtDa.message.orEmpty()
+                continue
+            } catch (fehler: Exception) {
+                return Ergebnis("Der Auftrag ist nicht gestartet (${ziel.name}): ${fehler.message ?: fehler.javaClass.simpleName}", fehler = true)
+            }
+            melde(appName, ziel, start)
+            return Ergebnis("Der Auftrag für $appName läuft jetzt: ${ziel.name}. ${start.hinweis}" +
+                (if (start.link.isNotEmpty()) " Link zur Sitzung: ${start.link}" else "") +
+                (if (uebersprungen.isEmpty()) "" else " (${uebersprungen.joinToString(" ")})"))
+        }
+        return Ergebnis("Der Auftrag ist nicht gestartet: ${uebersprungen.joinToString(" ")}", fehler = true)
+    }
+
+    /** Benachrichtigung; ein Tipp öffnet die Sitzung (Link) oder die Claude-App. */
+    private fun melde(appName: String, ziel: ProgrammierZiel, start: Start) {
         runCatching {
             JarvisDienst.kanalAnlegen(app)
-            val oeffnen = if (start.link.isNotEmpty()) Intent(Intent.ACTION_VIEW, Uri.parse(start.link)) else app.packageManager.getLaunchIntentForPackage(app.packageName)
+            val oeffnen = if (start.link.isNotEmpty()) Intent(Intent.ACTION_VIEW, Uri.parse(start.link))
+                else app.packageManager.getLaunchIntentForPackage(CLAUDE_APP) ?: app.packageManager.getLaunchIntentForPackage(app.packageName)
             app.getSystemService(NotificationManager::class.java).notify(
                 (System.currentTimeMillis() % 100_000).toInt() + 300_000,
                 NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis)
                     .setContentTitle("Jarvis programmiert: $appName")
-                    .setContentText("Läuft in der Cloud. Tippen öffnet die Sitzung; UpdateStation meldet die neue Version.")
+                    .setContentText("${ziel.name}. ${start.hinweis}")
+                    .setStyle(NotificationCompat.BigTextStyle().bigText("${ziel.name}. ${start.hinweis}"))
                     .setAutoCancel(true)
                     .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } }
                     .build(),
@@ -97,8 +118,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    /** Ergebnis eines Starts: Link zur laufenden Sitzung (leer, wenn das Ziel keinen liefert). */
-    data class Start(val link: String)
+    /** Ergebnis eines Starts: Link zur laufenden Sitzung (leer, wenn das Ziel keinen liefert) und ein Satz für Frank. */
+    data class Start(val link: String, val hinweis: String)
+
+    /** Das Ziel ist gerade nicht erreichbar; es wurde nichts gestartet. */
+    class NichtDa(grund: String) : Exception(grund)
 
     /** Wohin ein Programmierauftrag gehen kann. */
     interface ProgrammierZiel {
@@ -107,6 +131,39 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Ein Satz, was fehlt, solange das Ziel nicht bereit ist. */
         fun fehlt(): String
         suspend fun starte(app: String, auftrag: String, review: Boolean): Start
+    }
+
+    /**
+     * Franks PC über den Jarvis-Relay: Die PC-Brücke holt den Auftrag ab und öffnet eine Claude-Code-Sitzung mit Remote
+     * Control (in der Claude-App unter Code zu sehen). 409 vom Relay = Brücke fragt gerade nicht ab, der PC ist aus.
+     */
+    private inner class PcBruecke : ProgrammierZiel {
+        override val name = "Claude Code auf deinem PC"
+        override fun bereit() = e.serverToken.isNotBlank()
+        override fun fehlt() = "Jarvis ist nicht mit seinem Server verbunden."
+
+        override suspend fun starte(app: String, auftrag: String, review: Boolean): Start = withContext(Dispatchers.IO) {
+            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(60_000)).put("review", review)
+            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
+                .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
+            val (code, roh) = try {
+                HTTP.newCall(anfrage).execute().use { it.code to it.body?.string().orEmpty() }
+            } catch (fehler: java.net.UnknownHostException) {
+                // Kein Netz zum Server: Der Auftrag kam nirgends an, also darf die Cloud übernehmen.
+                throw NichtDa("Der Jarvis-Server war nicht erreichbar, deshalb die Cloud.")
+            } catch (fehler: java.net.ConnectException) {
+                throw NichtDa("Der Jarvis-Server war nicht erreichbar, deshalb die Cloud.")
+            }
+            val antwort = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
+            when {
+                code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
+                code == 504 -> throw IllegalStateException("Der PC hat den Start nicht bestätigt. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
+                code !in 200..299 -> throw IllegalStateException("HTTP $code vom Jarvis-Server")
+                !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").ifEmpty { "Der PC konnte die Sitzung nicht starten." })
+            }
+            Start("", "Die Sitzung „Jarvis: $app“ läuft auf ${antwort.optString("rechner").ifEmpty { "dem PC" }} und ist in der Claude-App unter Code zu sehen. " +
+                "Meist dauert es wenige Minuten, dann wird die App per WLAN installiert.")
+        }
     }
 
     /**
@@ -139,12 +196,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     429 -> "Zu viele Aufträge in kurzer Zeit (HTTP 429). Bitte später noch einmal."
                     else -> "HTTP ${antwort.code}: ${roh.take(200)}"
                 })
-                Start(runCatching { JSONObject(roh).optString("claude_code_session_url") }.getOrDefault(""))
+                Start(runCatching { JSONObject(roh).optString("claude_code_session_url") }.getOrDefault(""),
+                    "Meist dauert es zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version.")
             }
         }
     }
 
     private companion object {
+        const val CLAUDE_APP = "com.anthropic.claude"
         val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     }
 }

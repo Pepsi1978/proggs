@@ -10,6 +10,11 @@ Der Relay holt sie mit rclone (Zugang NUR LESEND, auf genau diesen Ordner als Wu
 dem Handy unter /geraet/tagebuch heraus – ebenfalls nur mit dem Geraete-Token. Solange das Handy verbunden ist,
 gleicht der Relay den Ordner alle zwei Minuten selbst ab und schickt bei einem neuen oder geaenderten Eintrag
 sofort {"signal": "tagebuch"} ueber die WebSocket: So steht ein neuer Eintrag nach Sekunden im Gedaechtnis von Jarvis.
+
+Dritte Aufgabe: die PC-Bruecke fuer Programmierauftraege. Das Skript Jarvis/werkzeuge/pc-bruecke auf Franks PC fragt
+/pc/auftrag in einer Dauerschleife ab (Long-Polling, Geraete-Token). Solange es das tut, gilt der PC als da. Das Handy
+schickt einen Auftrag an /geraet/pc-auftrag; ist der PC da, holt die Bruecke ihn ab, startet eine Claude-Code-Sitzung mit
+Remote Control und quittiert ueber /pc/quittung. Ist der PC nicht da, antwortet der Relay 409 und das Handy nimmt die Cloud.
 """
 import asyncio
 import hmac
@@ -373,6 +378,97 @@ class Tagebuch:
                                  dumps=lambda daten: json.dumps(daten, ensure_ascii=False))
 
 
+PC_FRISCH_S = 45      # so lange nach seiner letzten Abfrage gilt der PC als da
+PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf einen Auftrag
+PC_QUITTUNG_S = 20    # so lange wartet das Handy auf die Bestaetigung, dass die Sitzung laeuft
+
+
+class PcBruecke:
+    """Programmierauftraege vom Handy an Franks PC (siehe Kopf der Datei)."""
+
+    def __init__(self):
+        self.zuletzt = 0.0
+        self.rechner = ""
+        self.auftraege = asyncio.Queue()
+        self.quittungen = {}  # Auftrag-id -> Future mit der Quittung der Bruecke
+
+    @staticmethod
+    def _erlaubt(request: web.Request) -> bool:
+        return hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode())
+
+    def da(self) -> bool:
+        return time.monotonic() - self.zuletzt < PC_FRISCH_S
+
+    async def abholen(self, request: web.Request) -> web.Response:
+        """GET /pc/auftrag (Bruecke): wartet bis zu PC_WARTEN_S auf einen Auftrag, sonst 204."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        if not self.da():
+            log.info("PC-Bruecke verbunden")
+        self.zuletzt = time.monotonic()
+        self.rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
+        frist = asyncio.get_running_loop().time() + PC_WARTEN_S
+        while True:
+            rest = frist - asyncio.get_running_loop().time()
+            if rest <= 0:
+                self.zuletzt = time.monotonic()
+                return web.Response(status=204)
+            try:
+                auftrag = await asyncio.wait_for(self.auftraege.get(), rest)
+            except asyncio.TimeoutError:
+                self.zuletzt = time.monotonic()
+                return web.Response(status=204)
+            self.zuletzt = time.monotonic()
+            # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
+            wartend = self.quittungen.get(auftrag["id"])
+            if wartend is None or wartend.done():
+                continue
+            return web.json_response(auftrag)
+
+    async def quittung(self, request: web.Request) -> web.Response:
+        """POST /pc/quittung (Bruecke): {"id", "ok", "text"}."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = await request.json()
+            wartend = self.quittungen.get(daten["id"])
+        except Exception:
+            return web.Response(status=400, text="Quittung unlesbar")
+        if wartend is not None and not wartend.done():
+            wartend.set_result(daten)
+        return web.json_response({"angenommen": wartend is not None})
+
+    async def auftrag(self, request: web.Request) -> web.Response:
+        """POST /geraet/pc-auftrag (Handy): {"app", "auftrag", "review"}. 409 = kein PC da, 504 = keine Quittung."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        if not self.da():
+            return web.json_response({"pc": False}, status=409)
+        try:
+            daten = await request.json()
+            assert isinstance(daten.get("app"), str) and isinstance(daten.get("auftrag"), str) and daten["auftrag"].strip()
+        except Exception:
+            return web.Response(status=400, text="Auftrag unlesbar")
+        nummer = uuid.uuid4().hex
+        wartend = asyncio.get_running_loop().create_future()
+        self.quittungen[nummer] = wartend
+        try:
+            await self.auftraege.put({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review"))})
+            log.info("Programmierauftrag an den PC: %s", daten["app"][:40])
+            quittung = await asyncio.wait_for(wartend, PC_QUITTUNG_S)
+        except asyncio.TimeoutError:
+            log.info("PC hat den Auftrag nicht quittiert")
+            return web.json_response({"pc": True, "ok": False, "fehler": "Der PC hat den Start nicht bestaetigt."}, status=504)
+        finally:
+            self.quittungen.pop(nummer, None)
+        return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": self.rechner})
+
+    async def status(self, request: web.Request) -> web.Response:
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        return web.json_response({"pc": self.da(), "rechner": self.rechner if self.da() else ""})
+
+
 async def gesund(_: web.Request) -> web.Response:
     return web.Response(text="ok")
 
@@ -426,6 +522,11 @@ def app() -> web.Application:
     anwendung.router.add_get("/geraet/tagebuch", tagebuch.antwort)
     anwendung.router.add_post("/geraet/drive-zugang", tagebuch.neuer_zugang)
     anwendung.router.add_post("/geraet/signal", relay.signal)
+    pc = PcBruecke()
+    anwendung.router.add_post("/geraet/pc-auftrag", pc.auftrag)
+    anwendung.router.add_get("/geraet/pc", pc.status)
+    anwendung.router.add_get("/pc/auftrag", pc.abholen)
+    anwendung.router.add_post("/pc/quittung", pc.quittung)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

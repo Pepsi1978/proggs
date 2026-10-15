@@ -61,6 +61,7 @@
     {"versionCode": 57, "versionName": "1.8.46", "stand": "14.10.2026, 22:28 Uhr", "notiz": "Biodaten werden nur noch gelesen: Jarvis lässt Entropie Reductor nicht mehr vor jedem Lesen neu abrufen; die Tagesauswertung stößt einen Abruf nur an, wenn der letzte über eine Stunde alt ist, und „Biomarker aktualisieren“ gibt es nur auf ausdrücklichen Wunsch"},
     {"versionCode": 58, "versionName": "1.8.47", "stand": "15.10.2026, 10:46 Uhr", "notiz": "Jarvis kann programmieren: Mit „Jarvis, programmiere in App … ein, dass …“ geht der Auftrag an eine Claude-Code-Routine in der Cloud, die die App ändert und über UpdateStation ausliefert; eine Benachrichtigung führt zur laufenden Sitzung"},
     {"versionCode": 59, "versionName": "1.8.48", "stand": "15.10.2026, 10:54 Uhr", "notiz": "Programmieraufträge startet nur noch Jarvis im Gespräch mit Frank; Agenten und die Tagesauswertung können keine Cloud-Programmierung auslösen"},
-    {"versionCode": 60, "versionName": "1.8.49", "stand": "15.10.2026, 11:01 Uhr", "notiz": "Jarvis reicht das Echtzeit-Signal „neue App-Version“ vom Server an UpdateStation weiter und liest deren Ansage „Ein Update von … ist bereit“ vor"}
+    {"versionCode": 60, "versionName": "1.8.49", "stand": "15.10.2026, 11:01 Uhr", "notiz": "Jarvis reicht das Echtzeit-Signal „neue App-Version“ vom Server an UpdateStation weiter und liest deren Ansage „Ein Update von … ist bereit“ vor"},
+    {"versionCode": 60, "versionName": "1.8.49", "stand": "15.10.2026, 11:02 Uhr", "notiz": "Programmieraufträge gehen zuerst an deinen PC, wenn er an ist: dort startet eine Claude-Code-Sitzung mit Remote Control, die du in der Claude-App unter Code siehst; nur wenn der PC aus ist, geht der Auftrag in die Cloud"}
   ]
 }
