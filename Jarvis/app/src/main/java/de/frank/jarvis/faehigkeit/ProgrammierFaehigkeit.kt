@@ -223,13 +223,27 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * das Gespräch, aus dem der Auftrag kam. Mit „frage“ ist es eine Rückfrage, auf die der Hook wartet.
      */
     fun meldungVomServer(daten: JSONObject) {
+        if (daten.optString("stand") == "puls") {
+            // Lebenszeichen: nur die drehende Anzeige auffrischen, keine Nachricht, keine Benachrichtigung.
+            Auftragsbuch.puls(app, daten.optString("auftrag_id"))?.let { aktivitaetMelden(it) }
+            return
+        }
         val frage = daten.optJSONObject("frage")
-        val eintrag = Auftragsbuch.melde(app, daten.optString("auftrag_id"), daten.optString("stand"), daten.optString("schritt").take(600), "", frage) ?: return
+        val eintrag = Auftragsbuch.melde(app, daten.optString("auftrag_id"), daten.optString("stand"), daten.optString("schritt").take(4000), "", frage) ?: return
         verteile(eintrag, frage)
     }
 
+    private fun aktivitaetMelden(eintrag: JSONObject) = ProgrammierChat.setze(
+        eintrag.optString("gespraech"),
+        ProgrammierChat.Aktivitaet(eintrag.optString("app"), eintrag.optBoolean("arbeitet"), eintrag.optLong("aktiv", eintrag.optLong("zeit")), eintrag.optString("schritt")),
+    )
+
+    /** Beim Start der App: die drehende Anzeige für Aufträge, die noch arbeiten, aus dem Auftragsbuch herstellen. */
+    fun aktivitaetLaden() = Auftragsbuch.juengste(app).forEach { aktivitaetMelden(it) }
+
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
     private fun verteile(eintrag: JSONObject, frage: JSONObject?) {
+        aktivitaetMelden(eintrag)
         if (eintrag.optString("stand") != "info" || frage != null) benachrichtige(eintrag)
         val gespraech = eintrag.optString("gespraech")
         if (gespraech.isEmpty()) return
@@ -335,7 +349,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String, gespraech: String): JSONObject {
             val jetzt = System.currentTimeMillis()
             val eintrag = JSONObject().put("id", id).put("app", app).put("ziel", ziel).put("link", link).put("start", jetzt).put("gespraech", gespraech)
-                .put("stand", "laeuft").put("schritt", schritt).put("zeit", jetzt)
+                .put("stand", "laeuft").put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt).put("arbeitet", true)
                 .put("schritte", JSONArray().put(JSONObject().put("zeit", jetzt).put("stand", "laeuft").put("text", schritt)))
             schreib(context, lies(context).put(eintrag))
             return eintrag
@@ -349,7 +363,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val gueltig = if (stand in listOf("laeuft", "frage", "fertig", "fehler", "info")) stand else "laeuft"
             // „info“ (Zwischenstand am Zugende) ändert den Stand nicht: Ein fertiger Auftrag bleibt fertig.
             if (gueltig != "info") eintrag.put("stand", gueltig)
-            eintrag.put("letzterStand", gueltig).put("schritt", schritt).put("zeit", jetzt)
+            eintrag.put("letzterStand", gueltig).put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt)
+                // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende und solange sie auf Frank wartet.
+                .put("arbeitet", gueltig == "laeuft")
             if (frage != null) eintrag.put("offeneFrage", frage)
             if (link.startsWith("https://") && eintrag.optString("link").isEmpty()) eintrag.put("link", link)
             val schritte = eintrag.optJSONArray("schritte") ?: JSONArray().also { eintrag.put("schritte", it) }
@@ -367,6 +383,23 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (e.optString("gespraech").isNotEmpty() && e.optString("stand") in listOf("laeuft", "frage") && e.optLong("zeit") >= grenze) return e.optString("gespraech")
             }
             return null
+        }
+
+        /** Lebenszeichen der Sitzung (Puls vom Hook): Sie arbeitet. */
+        @Synchronized
+        fun puls(context: Context, id: String): JSONObject? {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
+            eintrag.put("aktiv", System.currentTimeMillis()).put("arbeitet", true)
+            schreib(context, liste)
+            return eintrag
+        }
+
+        /** Aufträge der letzten zwei Stunden mit Gespräch. */
+        fun juengste(context: Context): List<JSONObject> {
+            val liste = lies(context)
+            val grenze = System.currentTimeMillis() - 2 * 3_600_000L
+            return (0 until liste.length()).map { liste.getJSONObject(it) }.filter { it.optString("gespraech").isNotEmpty() && it.optLong("zeit") >= grenze }
         }
 
         /** Die offene Rückfrage mit dieser frage_id und ihr Auftrag, oder null. */

@@ -198,6 +198,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
+            item(key = "programmiert") { ProgrammierAktivitaet(vm) }
             if (vm.denkt) item(key = "denkt") {
                 Row(Modifier.padding(start = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Kern(30.dp, f.primaer, aktiv = true)
@@ -319,6 +320,49 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
         }
     }
 }
+
+/**
+ * Arbeitet die Programmier-Sitzung dieses Gesprächs gerade, steht unter der letzten Nachricht ein sich drehendes, pulsierendes
+ * Symbol wie im Terminal, dazu der letzte Schritt und wie lange die letzte Aktivität her ist. Kommt lange nichts mehr (über
+ * drei Minuten), wird die Zeit rot: Dann lohnt ein Blick in die Sitzung. Endet der Zug oder wartet sie auf Frank, verschwindet es.
+ */
+@Composable
+private fun ProgrammierAktivitaet(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val alle by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
+    val a = alle[vm.sitzungId ?: return] ?: return
+    if (!a.arbeitet) return
+    // Wie das Arbeitssymbol von Claude Code: die Zeichen laufen hin und zurück, alle 120 ms eins weiter, in Claude-Orange.
+    var bild by remember { mutableStateOf(0) }
+    var jetzt by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(120)
+            bild = (bild + 1) % SPINNER.size
+            jetzt = System.currentTimeMillis()
+        }
+    }
+    // Ein neues Wort je neuem Schritt, wie Claude Code je Zug („Drizzling…“, „Cooking…“).
+    val wort = remember(a.schritt) { SPINNER_WOERTER.random() }
+    val sekunden = ((jetzt - a.zuletzt) / 1_000).coerceAtLeast(0)
+    val seit = if (sekunden < 90) "${sekunden}s" else "${sekunden / 60} min"
+    Row(Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(SPINNER[bild], color = CLAUDE_ORANGE, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp))
+        Text("$wort…", color = CLAUDE_ORANGE, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+        Text(
+            " (${a.app} · letzte Aktivität vor $seit)",
+            color = if (sekunden > 180) f.gefahr else f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+private val CLAUDE_ORANGE = Color(0xFFD97757)
+private val SPINNER = listOf("·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢")
+private val SPINNER_WOERTER = listOf(
+    "Drizzling", "Cooking", "Brewing", "Baking", "Clauding", "Cogitating", "Percolating", "Simmering", "Marinating", "Noodling",
+    "Pondering", "Ruminating", "Conjuring", "Crafting", "Forging", "Hatching", "Mulling", "Musing", "Stewing", "Synthesizing",
+    "Transmuting", "Vibing", "Puttering", "Schlepping", "Reticulating", "Finagling", "Moseying", "Churning", "Crunching", "Computing",
+)
 
 /**
  * Rückfrage einer Programmier-Sitzung (AskUserQuestion oder freie Frage am Zugende): je Frage die Optionen als Knöpfe

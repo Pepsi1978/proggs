@@ -1418,9 +1418,12 @@ try {
         return new JsonObject
         {
             // Unter Windows heißt das Shell-Werkzeug je nach Installation Bash oder PowerShell; Fehlschläge kommen nur als PostToolUseFailure.
-            ["PostToolUse"] = Eintrag("Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell", "post", 15, imHintergrund: true),
+            // Alle Werkzeuge: Der Hook liest dabei die neuen Zwischentexte der KI aus dem Transkript und meldet Advisor, Skills, Agenten.
+            ["PostToolUse"] = Eintrag("*", "post", 15, imHintergrund: true),
             ["PostToolUseFailure"] = Eintrag("Bash|PowerShell", "post", 15, imHintergrund: true),
-            ["PreToolUse"] = Eintrag("AskUserQuestion", "frage", 660),
+            // Rückfragen exakt auf AskUserQuestion (ein Platzhalter mit updatedInput zerstört die Frage, #29530); dazu ein
+            // Lebenszeichen für die drehende Anzeige in Jarvis, async und ohne Ausgabe.
+            ["PreToolUse"] = new JsonArray(Eintrag("AskUserQuestion", "frage", 660)[0]!.DeepClone(), Eintrag("*", "puls", 10, imHintergrund: true)[0]!.DeepClone()),
             ["Stop"] = Eintrag(null, "stop", 660),
         };
     }

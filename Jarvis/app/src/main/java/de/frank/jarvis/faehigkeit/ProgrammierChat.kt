@@ -3,6 +3,8 @@ package de.frank.jarvis.faehigkeit
 import android.content.Context
 import de.frank.jarvis.data.Gespraeche
 import de.frank.jarvis.data.GespeicherteNachricht
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Bringt Meldungen eines Programmierauftrags in das Jarvis-Gespräch, aus dem er gestartet wurde.
@@ -14,6 +16,17 @@ import de.frank.jarvis.data.GespeicherteNachricht
  */
 object ProgrammierChat {
     @Volatile var aktivesGespraech: String? = null
+
+    /** Ob die Sitzung eines Auftrags gerade arbeitet, je Gespräch: für die drehende Anzeige unter der letzten Nachricht. */
+    data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String)
+
+    private val _aktivitaet = MutableStateFlow<Map<String, Aktivitaet>>(emptyMap())
+    val aktivitaet: StateFlow<Map<String, Aktivitaet>> = _aktivitaet
+
+    fun setze(gespraech: String, a: Aktivitaet) {
+        if (gespraech.isEmpty()) return
+        _aktivitaet.value = _aktivitaet.value + (gespraech to a)
+    }
 
     /** Setzt die offene App: true = sie hat die Nachricht übernommen (Gespräch ist gerade offen). */
     @Volatile var empfaenger: ((gespraech: String, nachricht: GespeicherteNachricht) -> Boolean)? = null

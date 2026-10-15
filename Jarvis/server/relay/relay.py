@@ -186,8 +186,10 @@ class Relay:
                 return True
             except (ConnectionError, RuntimeError):
                 pass
-        self.meldungen.append(daten)
-        del self.meldungen[:-100]
+        # Lebenszeichen nur live: nachgereicht hätten sie keinen Wert und verdrängten echte Meldungen aus der Warteschlange.
+        if daten.get("stand") != "puls":
+            self.meldungen.append(daten)
+            del self.meldungen[:-100]
         return False
 
     # ---------------------------------------------------------------- ChatGPT

@@ -75,6 +75,7 @@
     {"versionCode": 70, "versionName": "1.8.59", "stand": "15.10.2026, 14:13 Uhr", "notiz": "Jarvis kann seine Einstellungen per Sprache beschreiben und umstellen, z. B. „Schalte die Update-Ansagen aus“ oder „Was hast du beim Vorlesen für Einstellungen?“"},
     {"versionCode": 71, "versionName": "1.8.60", "stand": "15.10.2026, 14:14 Uhr", "notiz": "Programmieraufträge laufen live im Jarvis-Chat mit: Fortschritt erscheint als Nachricht, Rückfragen der Sitzung kommen als Karte mit Knöpfen A bis D und Freitext, und die Antwort geht direkt an die Sitzung zurück"},
     {"versionCode": 72, "versionName": "1.8.61", "stand": "15.10.2026, 14:23 Uhr", "notiz": "Programmiert Jarvis an sich selbst, geht es nach dem Update nahtlos weiter: Beim Öffnen zeigt Jarvis das Gespräch mit dem laufenden Auftrag, und Meldungen aus der Zeit des Neustarts erscheinen darin"},
-    {"versionCode": 73, "versionName": "1.8.62", "stand": "15.10.2026, 14:24 Uhr", "notiz": "Jarvis kennt auch die Ankunftszeiten für Tag- und Nachtdienst als Einstellung und stellt sie per Sprache um, z. B. „Nachtschicht Ankunft 17:10“"}
+    {"versionCode": 73, "versionName": "1.8.62", "stand": "15.10.2026, 14:24 Uhr", "notiz": "Jarvis kennt auch die Ankunftszeiten für Tag- und Nachtdienst als Einstellung und stellt sie per Sprache um, z. B. „Nachtschicht Ankunft 17:10“"},
+    {"versionCode": 74, "versionName": "1.8.63", "stand": "15.10.2026, 14:45 Uhr", "notiz": "Programmieraufträge zeigen im Chat jetzt auch die Zwischentexte der KI, Advisor, Skills und die vollständige Schlusszusammenfassung; solange die Sitzung arbeitet, dreht sich darunter der Claude-Spinner in Orange"}
   ]
 }

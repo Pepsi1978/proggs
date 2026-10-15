@@ -451,5 +451,9 @@ Agenten und die Tagesauswertung bekommen das Werkzeug nicht (`JarvisAgent.versuc
   Mehrfachauswahl und Freitext. Antwort per Knopf oder Sprache (`programmier_antwort`) → Relay `POST /geraet/antwort` → der Hook
   holt sie mit `GET /pc/antwort` ab (Long-Polling) und gibt sie per `updatedInput.answers` an Claude (freie Fragen: Stop-Hook mit
   `decision: block`). Ohne Antwort nach 10 Minuten erscheint der normale Dialog (auch per Remote Control in der Claude-App).
+- **Was im Chat ankommt (PC):** jeder Zwischentext der KI (💬, aus dem Transkript, ohne Doppelte), 🧠 Advisor, 🧩 Skill, 🤖 Agent,
+  Bau/Commit/Push/Installation und am Zugende die vollständige letzte Nachricht (🏁, bis 4000 Zeichen). Dazu ein Puls bei jedem
+  Werkzeugaufruf (höchstens alle 10 s, nur live): Solange die Sitzung arbeitet, steht unter der letzten Nachricht der Claude-Spinner
+  (`· ✢ ✳ ✶ ✻ ✽` in Orange, Wort wie „Drizzling…“) mit der Zeit seit der letzten Aktivität (über 3 Minuten rot).
 - **Cloud:** keine Hooks; die Sitzung meldet über `programmier_fortschritt` (Connector Jarvis, nur dieses Werkzeug), Rückfragen
   beantwortet Frank in der Claude-App.
