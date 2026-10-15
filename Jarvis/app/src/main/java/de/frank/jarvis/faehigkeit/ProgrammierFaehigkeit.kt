@@ -42,7 +42,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     override val name = "Programmieren"
     override val beschreibung = "Programmieraufträge an Franks Apps an Claude Code übergeben; die fertige App kommt über UpdateStation aufs Handy."
     override val hinweise =
-        "Fragt Frank, ob sein PC (Rechner, Computer) an oder erreichbar ist oder wohin ein Programmierauftrag gehen würde, rufe pc_status auf. " +
+        "Wechsel zwischen Gesprächen (Sessions) erledigt die App selbst: „Öffne eine neue Session“, „Gehe in die letzte Session zurück“, " +
+            "„Gehe in die Whoop-Session zurück“. Erreicht dich so ein Wunsch trotzdem, ist das nie ein Programmierauftrag: Starte nichts und bitte Frank, " +
+            "den Wechsel genau so zu sagen. " +
+            "Fragt Frank, ob sein PC (Rechner, Computer) an oder erreichbar ist oder wohin ein Programmierauftrag gehen würde, rufe pc_status auf. " +
             "Fragt er, wie weit ein Programmierauftrag ist, was die Cloud-Sitzung gerade macht oder ob sie fertig ist, rufe programmierauftraege auf. " +
             "Steht im Gespräch eine offene Rückfrage einer Programmier-Sitzung (❓ mit frage_id und Optionen) und Frank antwortet darauf, gib die Antwort mit " +
             "programmier_antwort weiter: ordne sie der passenden Option zu (genau deren label), sonst gib Franks Worte als Freitext weiter. " +
@@ -297,6 +300,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     fun laufendesGespraech(): String? = Auftragsbuch.laufendesGespraech(app)
 
+    /** Je Gespräch die App und das Ziel seiner Programmieraufträge, für die Suche „die Whoop-Session“. */
+    fun auftraegeJeGespraech(): Map<String, String> = Auftragsbuch.jeGespraech(app)
+
     /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject) {
         runCatching {
@@ -397,6 +403,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             eintrag.put("aktiv", System.currentTimeMillis()).put("arbeitet", true)
             schreib(context, liste)
             return eintrag
+        }
+
+        fun jeGespraech(context: Context): Map<String, String> {
+            val liste = lies(context)
+            return (0 until liste.length()).map { liste.getJSONObject(it) }.filter { it.optString("gespraech").isNotEmpty() }
+                .groupBy { it.optString("gespraech") }
+                .mapValues { (_, l) -> l.joinToString(" ") { it.optString("app") + " " + it.optString("ziel") + " " + it.optString("schritt") } }
         }
 
         /** Aufträge der letzten zwei Stunden mit Gespräch. */

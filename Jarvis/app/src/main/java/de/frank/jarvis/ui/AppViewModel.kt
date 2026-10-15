@@ -184,7 +184,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val vorlesen = gesprochen
         gesprochen = false
         val text = eingabe.trim()
-        if (text.isEmpty() || denkt) return
+        if (text.isEmpty()) return
+        // Wechsel zwischen Gesprächen erledigt die App selbst, auch während Jarvis im offenen Gespräch noch arbeitet.
+        // Der Befehl geht nie ans Modell und kann deshalb keinen Programmierauftrag auslösen.
+        if (navigieren(text, vorlesen)) return
+        // Die Antwort, die bei „Hey Jarvis“ lief, weicht jetzt der neuen Frage (nur genau sie und nur, wenn sie noch läuft).
+        weichendeRunde?.let { w -> weichendeRunde = null; if (vorlesen && sitzungId?.let { laufende[it] } === w) abbrechen() }
+        if (denkt) return
         if (!kiVerbunden) {
             meldung = "Bitte zuerst mit ChatGPT verbinden."
             reiter = Reiter.EINSTELLUNGEN
@@ -557,7 +563,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         // War Jarvis beim Weckwort schon sichtbar vorn, geht das offene Gespräch weiter. Eine dort noch laufende Antwort
         // weicht der neuen Frage (sonst verwirft [sende] sie); ein Programmierauftrag läuft davon unabhängig weiter.
-        if (fortsetzen && denkt) abbrechen()
+        // Abgebrochen wird erst in [sende], wenn feststeht, dass der Satz kein Wechsel der Session ist: Sonst endete die
+        // Arbeit im alten Gespräch, obwohl Frank nur nebenher eine neue Session öffnen will.
+        weichendeRunde = if (fortsetzen) sitzungId?.let { laufende[it] } else null
         reiter = Reiter.JARVIS
         merkOffen = null
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
@@ -581,6 +589,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 var runde = 0
                 while (true) {
                     val antworten = gespraech.count { !it.vonMir }
+                    val navi = navigationen
                     val ergebnis = runde(erste = runde == 0)
                     if (ergebnis == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT) {
                         // Gleich nach „Hey Jarvis“ nichts gesagt: Das war wohl ein Fehlalarm, das Stimmprofil lernt ihn.
@@ -594,10 +603,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (runde == 0) de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "frage")
                     // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist. Ohne feste Pausen:
                     // Der Vorleser steht schon auf „lädt“, wenn „denkt“ endet (beides im selben Schritt).
-                    snapshotFlow { schreibtMit || denkt }.first { !it }
+                    snapshotFlow { schreibtMit || denkt || navigiert }.first { !it }
                     vorleser.stand.first { it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
                     // Keine neue Antwort (abgebrochen, nichts verstanden) oder Frank hat selbst übernommen: Schluss.
-                    if (gespraech.count { !it.vonMir } <= antworten || nimmtAuf || holtMikro) break
+                    // Nach einem Wechsel der Session hört Jarvis weiter zu, dann im neuen Gespräch.
+                    if ((gespraech.count { !it.vonMir } <= antworten && navigationen == navi) || nimmtAuf || holtMikro) break
                     kotlinx.coroutines.delay(300)
                     runde++
                 }
@@ -887,6 +897,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste; arbeitet Jarvis dort noch, macht er weiter. */
     fun neuesGespraech() {
+        sitzungId?.let { vorherigeSitzung = it }
         vorleser.stopp()
         gespraech.clear()
         sitzungId = null
@@ -928,19 +939,119 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Ein altes Gespräch öffnen und dort weitermachen. Läuft im bisherigen Gespräch noch eine Antwort, arbeitet sie im Hintergrund weiter. */
     fun sitzungOeffnen(id: String) {
         if (id == sitzungId) return
-        viewModelScope.launch {
-            // Unter der Sicherung: Eine Antwort, die genau jetzt in diese Datei geschrieben wird, ist dann mit im geladenen Stand.
-            val geladen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } }
-            if (geladen == null) { meldung = "Dieses Gespräch ließ sich nicht öffnen."; sitzungenLaden(); return@launch }
-            vorleser.stopp()
-            gespraech.clear()
-            gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
-            sitzungId = id
-            sitzungErstellt = geladen.first.erstellt
-            // Wer ein altes Gespräch öffnet, will dort weitersprechen, auch mit „Hey Jarvis“.
-            letzteAktivitaet = System.currentTimeMillis()
-            offenesGespraechMerken(id, letzteAktivitaet)
+        viewModelScope.launch { sitzungLaden(id) }
+    }
+
+    /** Lädt ein gespeichertes Gespräch in die Ansicht. false = ließ sich nicht öffnen. */
+    private suspend fun sitzungLaden(id: String): Boolean {
+        // Unter der Sicherung: Eine Antwort, die genau jetzt in diese Datei geschrieben wird, ist dann mit im geladenen Stand.
+        val geladen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } }
+        if (geladen == null) { meldung = "Dieses Gespräch ließ sich nicht öffnen."; sitzungenLaden(); return false }
+        vorleser.stopp()
+        sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
+        gespraech.clear()
+        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
+        sitzungId = id
+        sitzungErstellt = geladen.first.erstellt
+        // Wer ein altes Gespräch öffnet, will dort weitersprechen, auch mit „Hey Jarvis“.
+        letzteAktivitaet = System.currentTimeMillis()
+        offenesGespraechMerken(id, letzteAktivitaet)
+        return true
+    }
+
+    // ---- Wechsel zwischen Gesprächen per Sprache ----
+
+    /** Das Gespräch vor dem jetzigen, für „Gehe in die letzte Session zurück“. */
+    private var vorherigeSitzung: String? = null
+    /** Offene Rückfrage „Welche Session meinst du?“ mit ihren Kandidaten. */
+    private var navigationsAuswahl: List<de.frank.jarvis.data.Sitzung>? = null
+    /** Ein Wechsel sucht oder lädt gerade; der Gesprächsmodus wartet darauf wie auf eine Antwort. */
+    var navigiert by mutableStateOf(false); private set
+    /** „Hey Jarvis“ bei sichtbarer App, während Jarvis noch antwortet: Die laufende Antwort weicht der neuen Frage, nicht einem Wechsel. */
+    private var weichendeRunde: Runde? = null
+    /** Zählt erledigte Wechsel: Der Gesprächsmodus hört danach weiter zu, obwohl im Gespräch keine neue Antwort steht. */
+    private var navigationen = 0
+
+    /** true = der Text war ein Navigationsbefehl (oder die Antwort auf die Rückfrage) und ist erledigt. */
+    private fun navigieren(text: String, vorlesen: Boolean): Boolean {
+        if (navigiert) return false
+        navigationsAuswahl?.let { kandidaten ->
+            navigationsAuswahl = null
+            when (val wahl = GespraechsNavigation.waehle(text, kandidaten)) {
+                is NaviWahl.Treffer -> { wechsleZu(wahl.sitzung.id, vorlesen); return true }
+                NaviWahl.Abbruch -> { navigiertMelden("Okay, wir bleiben hier.", vorlesen); return true }
+                NaviWahl.Keine -> Unit
+            }
         }
+        val befehl = GespraechsNavigation.erkenne(text) ?: return false
+        Logbuch.gedaechtnis("Wechsel zwischen Gesprächen", text)
+        reiter = Reiter.JARVIS
+        merkOffen = null
+        when (befehl) {
+            NaviBefehl.Neu -> { neuesGespraech(); navigiertMelden("Neue Session ist offen.", vorlesen) }
+            NaviBefehl.Zurueck -> {
+                val ziel = vorherigeSitzung?.takeIf { v -> v != sitzungId && sitzungen.any { it.id == v } }
+                    ?: sitzungen.firstOrNull { it.id != sitzungId }?.id
+                if (ziel == null) navigiertMelden("Es gibt noch keine andere Session.", vorlesen) else wechsleZu(ziel, vorlesen)
+            }
+            is NaviBefehl.Thema -> themaSuchen(befehl, vorlesen)
+        }
+        return true
+    }
+
+    private fun wechsleZu(id: String, vorlesen: Boolean) {
+        navigiert = true
+        viewModelScope.launch { try { oeffnenUndMelden(id, vorlesen) } finally { navigiert = false } }
+    }
+
+    private suspend fun oeffnenUndMelden(id: String, vorlesen: Boolean) {
+        if (id == sitzungId) { navigiertMelden("Wir sind schon in „${titelVon(id)}“.", vorlesen); return }
+        val geoeffnet = sitzungLaden(id)
+        navigiertMelden(if (geoeffnet) "Session „${titelVon(id)}“ ist offen." else "Diese Session ließ sich nicht öffnen.", vorlesen)
+    }
+
+    /**
+     * Sucht das Gespräch zu den Stichwörtern in Titel, Inhalt und den Programmieraufträgen des Gesprächs. Ein klarer
+     * Treffer wird geöffnet, mehrere plausible führen zur Rückfrage statt zu raten.
+     */
+    private fun themaSuchen(befehl: NaviBefehl.Thema, vorlesen: Boolean) {
+        navigiert = true
+        viewModelScope.launch {
+            try {
+                val app = getApplication<Application>()
+                val kandidaten = withContext(Dispatchers.IO) {
+                    val auftraege = runCatching {
+                        Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.auftraegeJeGespraech()
+                    }.getOrNull().orEmpty()
+                    GespraechsNavigation.auswahl(de.frank.jarvis.data.Gespraeche.alle(app).take(MAX_SUCHE).map { s ->
+                        val inhalt = de.frank.jarvis.data.Gespraeche.laden(app, s.id)?.second.orEmpty().joinToString(" ") { it.text }
+                        s to GespraechsNavigation.punkte(befehl, s.titel, inhalt, auftraege[s.id].orEmpty())
+                    })
+                }
+                Logbuch.gedaechtnis("Session-Suche", "${befehl.stichworte.joinToString(" ")}: ${kandidaten.size} Treffer")
+                when (kandidaten.size) {
+                    0 -> navigiertMelden("Zu „${befehl.stichworte.joinToString(" ")}“ finde ich keine Session.", vorlesen)
+                    1 -> oeffnenUndMelden(kandidaten.first().id, vorlesen)
+                    else -> {
+                        navigationsAuswahl = kandidaten
+                        val datum = java.text.SimpleDateFormat("d. MMMM", java.util.Locale.GERMAN)
+                        val liste = kandidaten.mapIndexed { i, k -> "${ORDINALE[i]} „${k.titel}“ vom ${datum.format(java.util.Date(k.geaendert))}" }
+                        navigiertMelden("Dazu passen mehrere Sessions: ${liste.joinToString(", ")}. Welche meinst du?", vorlesen)
+                    }
+                }
+            } finally {
+                navigiert = false
+            }
+        }
+    }
+
+    private fun titelVon(id: String): String = sitzungen.firstOrNull { it.id == id }?.titel?.takeIf { it.isNotBlank() } ?: "ohne Titel"
+
+    /** Bestätigung eines Wechsels: oben eingeblendet und, wenn gesprochen gefragt, vorgelesen. Nie ins Gespräch geschrieben. */
+    private fun navigiertMelden(text: String, vorlesen: Boolean) {
+        meldung = text
+        navigationen++
+        if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("navigation", "Jarvis", text)
     }
 
     fun sitzungUmbenennen(id: String, titel: String) {
@@ -958,6 +1069,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun sitzungLoeschen(id: String) {
         rundeAbbrechen(id)
         if (id == sitzungId) neuesGespraech()
+        if (vorherigeSitzung == id) vorherigeSitzung = null
+        if (navigationsAuswahl?.any { it.id == id } == true) navigationsAuswahl = null
         viewModelScope.launch {
             sitzungen = sicherung.withLock {
                 withContext(Dispatchers.IO) {
@@ -1178,6 +1291,11 @@ private val AUSBEFEHLE = setOf(
     "sprachsitzung beenden", "sprachsitzung beendet", "sitzung beenden", "gespräch beenden", "beenden", "beende", "aufhören", "hör auf",
     "ende der sitzung", "schluss für jetzt", "erstmal nicht", "erst mal nicht", "nichts weiter", "sonst nichts", "danke sonst nichts",
 )
+
+/** So viele der zuletzt geführten Gespräche durchsucht „Gehe in die Whoop-Session zurück“. */
+private const val MAX_SUCHE = 150
+
+private val ORDINALE = listOf("erstens", "zweitens", "drittens")
 
 /** Höchstens so viele frühere Nachrichten gehen als Verlauf an das Modell (der Agent kürzt zusätzlich nach Zeichen). */
 private const val MAX_VERLAUF = 40

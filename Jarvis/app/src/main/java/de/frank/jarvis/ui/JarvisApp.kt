@@ -199,7 +199,8 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
     val f = LocalFarben.current
     val text = vm.meldung
     LaunchedEffect(text) {
-        if (text != null) { delay(2_800); if (vm.meldung == text) vm.meldung = null }
+        // Längere Meldungen (etwa die Rückfrage, welche Session gemeint ist) bleiben länger stehen.
+        if (text != null) { delay(maxOf(2_800L, text.length * 60L)); if (vm.meldung == text) vm.meldung = null }
     }
     AnimatedVisibility(text != null, modifier, enter = slideInVertically { -it } + fadeIn(), exit = slideOutVertically { -it } + fadeOut()) {
         Text(
