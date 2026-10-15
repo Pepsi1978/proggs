@@ -15,5 +15,8 @@ class JarvisApplication : Application() {
         // Laufende Timer nach einem Neustart wieder scharf stellen.
         de.frank.jarvis.timer.Timer.starte(this)
         de.frank.jarvis.timer.Stoppuhr.starte(this)
+        // Dienst bei jedem Prozessstart sicherstellen: Samsung überspringt MY_PACKAGE_REPLACED, wenn Jarvis
+        // beim Update vorn war. Dann fehlten Tunnel und Update-Signale bis zum nächsten Öffnen.
+        JarvisDienst.abgleichen(this)
     }
 }
