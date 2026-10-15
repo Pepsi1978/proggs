@@ -45,6 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -88,9 +91,11 @@ fun BereichBildschirm(vm: AppViewModel, b: Bereich) {
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // ---- Überblick ----
-            Row(Modifier.fillMaxWidth().einblenden().glas(f, 26.dp, 1.4f, toenung = f.primaer).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(62.dp).knopf3d(f.primaer, f.sekundaer, 18.dp, f.dunkel), contentAlignment = Alignment.Center) { Text(b.emoji, fontSize = 30.sp) }
-                Column(Modifier.weight(1f).padding(start = 14.dp)) {
+            Box(Modifier.fillMaxWidth().einblenden().glas(f, 26.dp, 1.4f, toenung = f.primaer)) {
+                Box(Modifier.matchParentSize().clip(RoundedCornerShape(26.dp))) {
+                    BereichMotiv(b, Modifier.align(Alignment.CenterEnd).offset(x = 28.dp).size(150.dp))
+                }
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Text(b.beschreibung, color = f.text, fontSize = 14.sp, lineHeight = 19.sp)
                     Text("Läuft in: ${b.laufzeit}", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
                     if (e != null) Text("Stand ${standText(e.stand)} Uhr · ${e.modell}", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))

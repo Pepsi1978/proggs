@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -48,6 +49,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -69,6 +71,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -352,14 +355,18 @@ private fun BereichKarte(vm: AppViewModel, b: Bereich, index: Int) {
     val e = vm.ergebnisse[b.id]
     val status = vm.status[b.id]
     val fehler = vm.fehler[b.id]
-    Column(
+    Box(
         Modifier.fillMaxWidth().height(164.dp).einblenden(60 + (index % 6) * 45)
             .glas(f, 24.dp, 1.2f, toenung = if (e != null && e.modelle.isNotEmpty()) f.primaer else null)
-            .antippen { vm.oeffne(b) }.padding(14.dp),
+            .antippen { vm.oeffne(b) },
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(46.dp).knopf3d(f.primaer, f.sekundaer, 14.dp, f.dunkel), contentAlignment = Alignment.Center) { Text(b.emoji, fontSize = 22.sp) }
-            Spacer(Modifier.weight(1f))
+    // Nur die Motivebene wird beschnitten — ein clip am Glas würde dessen Schatten abschneiden.
+    Box(Modifier.matchParentSize().clip(RoundedCornerShape(24.dp))) {
+        BereichMotiv(b, Modifier.align(Alignment.BottomEnd).offset(x = 22.dp, y = 18.dp).size(140.dp))
+    }
+    Column(Modifier.fillMaxSize().padding(14.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Text(b.titel, color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             when {
                 status != null -> CircularProgressIndicator(color = f.primaer, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                 fehler != null -> Text("!", color = f.gefahr, fontSize = 20.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(end = 6.dp))
@@ -368,7 +375,6 @@ private fun BereichKarte(vm: AppViewModel, b: Bereich, index: Int) {
                 }
             }
         }
-        Text(b.titel, color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, lineHeight = 19.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp))
         Spacer(Modifier.weight(1f))
         val beste = e?.modelle?.firstOrNull()
         Text(
@@ -383,5 +389,6 @@ private fun BereichKarte(vm: AppViewModel, b: Bereich, index: Int) {
             fontSize = 13.sp, fontWeight = if (beste != null && status == null) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         if (e != null) Text("Stand ${standText(e.stand, "dd.MM.yyyy")}", color = f.textSchwach, fontSize = 11.sp, maxLines = 1)
+    }
     }
 }

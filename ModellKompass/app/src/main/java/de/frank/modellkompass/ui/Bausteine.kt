@@ -85,12 +85,11 @@ fun rememberSzenenZeit(): State<Long> {
     return zeit
 }
 
-/** Bewegter Hintergrund: weiche Farbwolken und langsam aufsteigende Glutpunkte. */
+/** Bewegter Hintergrund: weiche Farbwolken auf ruhiger Fläche, ohne Punktmuster. */
 @Composable
 fun Hintergrund(modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     val zeit = rememberSzenenZeit()
-    val punkte = remember { List(18) { Triple(Math.random().toFloat(), Math.random().toFloat(), Math.random().toFloat()) } }
     Canvas(modifier) {
         val t = zeit.value / 1000f
         drawRect(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
@@ -102,11 +101,6 @@ fun Hintergrund(modifier: Modifier = Modifier) {
         wolke(f.blob1, w * (0.2f + 0.12f * sin(t * 0.13f)), h * (0.12f + 0.06f * cos(t * 0.11f)), w * 0.75f)
         wolke(f.blob2, w * (0.9f + 0.1f * cos(t * 0.09f)), h * (0.42f + 0.08f * sin(t * 0.07f)), w * 0.7f)
         wolke(f.blob3, w * (0.25f + 0.15f * sin(t * 0.06f + 1f)), h * (0.85f + 0.05f * cos(t * 0.1f)), w * 0.8f)
-        punkte.forEach { (x, y, s) ->
-            val yy = ((y * h - t * (5f + s * 8f)) % h + h) % h
-            val r = 18f + s * 30f
-            drawCircle(Brush.radialGradient(listOf(f.primaer.copy(alpha = if (f.dunkel) 0.16f else 0.12f), Color.Transparent), Offset(x * w, yy), r), r, Offset(x * w, yy))
-        }
     }
 }
 
