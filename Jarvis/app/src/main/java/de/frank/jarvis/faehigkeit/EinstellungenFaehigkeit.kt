@@ -101,6 +101,13 @@ class EinstellungsKatalog(context: Context) {
             setze(zahl)
         }
 
+    /** Uhrzeit HH:MM; versteht auch „17.10“, „17:10 Uhr“ oder „5“. */
+    private fun uhrzeit(kennung: String, bereich: String, titel: String, beschreibung: String, lies: () -> String, setze: (String) -> Unit) =
+        Eintrag(kennung, bereich, titel, beschreibung, "eine Uhrzeit HH:MM", { lies() + " Uhr" }) { w ->
+            val minuten = Mitdenken.uhrzeitMinuten(w) ?: throw IllegalArgumentException("„$w“ ist keine Uhrzeit. Bitte als HH:MM, z. B. 17:10.")
+            setze(String.format(Locale.GERMAN, "%02d:%02d", minuten / 60, minuten % 60))
+        }
+
     /** [optionen]: gespeicherter Wert zu Anzeige. Erkannt wird beides, ohne Groß- und Kleinschreibung. */
     private fun auswahl(kennung: String, bereich: String, titel: String, beschreibung: String, optionen: () -> List<Pair<String, String>>, lies: () -> String, setze: (String) -> Unit) =
         Eintrag(kennung, bereich, titel, beschreibung, "", { val w = lies(); optionen().firstOrNull { it.first == w }?.second ?: w }) { w ->
@@ -194,6 +201,8 @@ class EinstellungsKatalog(context: Context) {
             schalter("abfahrt_vorlesen", "Losfahr-Meldung", "Losfahr-Meldung vorlesen", "Liest die Meldung zusätzlich vor.", { e.abfahrtVorlesen }) { e.abfahrtVorlesen = it },
             zahl("abfahrt_lautstaerke", "Losfahr-Meldung", "Lautstärke der Losfahr-Meldung", "Lautstärke der vorgelesenen Meldung.", 10, 100, "Prozent", { e.abfahrtLautstaerke }) { e.abfahrtLautstaerke = it },
             zahl("abfahrt_vorlauf", "Losfahr-Meldung", "Vorlauf", "So viele Minuten vor der nötigen Abfahrt kommt die Meldung.", 0, 60, "Minuten", { e.abfahrtVorlauf }) { e.abfahrtVorlauf = it; abfahrtNeu() },
+            uhrzeit("ankunft_nacht", "Losfahr-Meldung", "Ankunft vor dem Nachtdienst", "Wann Frank vor dem Nachtdienst auf Arbeit sein will; danach richtet sich die Losfahr-Meldung.", { e.ankunftNacht }) { e.ankunftNacht = it; abfahrtNeu() },
+            uhrzeit("ankunft_tag", "Losfahr-Meldung", "Ankunft vor dem Tagdienst", "Wann Frank vor dem Tagdienst auf Arbeit sein will; danach richtet sich die Losfahr-Meldung.", { e.ankunftTag }) { e.ankunftTag = it; abfahrtNeu() },
 
             // ---- Tagesauswertung ----
             schalter("auswertung_an", "Tagesauswertung", "Tagesauswertung", "Erstellt regelmäßig die Tagesauswertung.", { e.auswertungAn }) { e.auswertungAn = it; zeitplanNeu() },
