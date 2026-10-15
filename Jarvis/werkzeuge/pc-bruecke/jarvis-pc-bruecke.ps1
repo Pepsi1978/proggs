@@ -66,6 +66,14 @@ VORGEHEN
 2. Setze den Auftrag vollständig um. Ist etwas Wesentliches unklar, frag Frank mit AskUserQuestion; Kleinigkeiten entscheidest du selbst.
 3. Schließe nach den Profilregeln vollständig ab: bauen, Version bumpen, committen, pushen, per WLAN aufs Handy installieren und bei Android-Apps den Skill apk-update ausführen. Abschlussmeldung auf Deutsch.
 "@
+    # Die Brücke läuft tagelang und behielte sonst die Umgebung von ihrem Start: Nach einem JDK-Update zeigte
+    # JAVA_HOME in jeder neuen Sitzung auf den gelöschten Ordner, und gradlew brach ab. Darum vor jedem Auftrag
+    # JAVA_HOME und PATH frisch aus Windows lesen, wie ein neu gestartetes Programm.
+    $javaHome = [Environment]::GetEnvironmentVariable('JAVA_HOME', 'User')
+    if (-not $javaHome) { $javaHome = [Environment]::GetEnvironmentVariable('JAVA_HOME', 'Machine') }
+    if ($javaHome) { $env:JAVA_HOME = $javaHome.TrimEnd('\') }
+    $env:PATH = [Environment]::ExpandEnvironmentVariables(
+        ([Environment]::GetEnvironmentVariable('PATH', 'Machine').TrimEnd(';') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')))
     $stempel = Get-Date -Format 'yyyyMMdd-HHmmss'
     $ordner = Join-Path $env:TEMP 'JarvisPcBruecke'
     New-Item -ItemType Directory -Force -Path $ordner | Out-Null

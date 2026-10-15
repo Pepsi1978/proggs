@@ -48,5 +48,6 @@ Technik und Bedienung stehen in `README.md`.
 
 ## Bauen auf diesem PC
 
-`JAVA_HOME` zeigt (Stand 15.10.2026) auf ein gelöschtes JDK. Pro Aufruf setzen:
-`$env:JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"`, dann `./gradlew :app:assembleDebug`.
+`./gradlew :app:assembleDebug`. Das alte Problem mit `JAVA_HOME` auf einem gelöschten JDK ist seit 15.10.2026 behoben:
+OpenLauncher und Jarvis-PC-Brücke lesen `JAVA_HOME` vor jedem Sitzungsstart frisch aus Windows. Meldet gradlew trotzdem
+„JAVA_HOME is set to an invalid directory“, läuft die Sitzung noch mit alter Umgebung: neu starten.

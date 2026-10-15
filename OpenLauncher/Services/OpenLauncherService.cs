@@ -244,6 +244,7 @@ $env:Path = $pathEntries -join ';'
     public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode, bool useTmux = false)
     {
         var log = Logger.Instance;
+        FrischeUmgebung.Auffrischen();
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         try
         {
@@ -334,6 +335,7 @@ $env:Path = $pathEntries -join ';'
         string? remoteControlName = null, string? initialPromptFile = null, string? jarvisAuftragId = null)
     {
         var log = Logger.Instance;
+        FrischeUmgebung.Auffrischen();
         effortLevel = NormalizeThinkingLevel(effortLevel);
         try
         {
@@ -408,6 +410,7 @@ $env:Path = $pathEntries -join ';'
     public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel, string codexHome, bool useTmux = false)
     {
         var log = Logger.Instance;
+        FrischeUmgebung.Auffrischen();
         var slug = ResolveCodexModelSlug(model.Slug, out var serviceTier);
         var effort = NormalizeCodexEffort(effortLevel);
 
@@ -477,6 +480,7 @@ $env:Path = $pathEntries -join ';'
     public void LaunchKimiCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false)
     {
         var log = Logger.Instance;
+        FrischeUmgebung.Auffrischen();
         var effort = NormalizeThinkingLevel(effortLevel);
         if (effort is not ("low" or "high" or "max")) effort = null;
         var alias = $"kimi-code/{model.Slug}";
@@ -653,6 +657,7 @@ try {
     public void LaunchAntigravityCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false)
     {
         var log = Logger.Instance;
+        FrischeUmgebung.Auffrischen();
         var effort = NormalizeThinkingLevel(effortLevel);
         if (effort is not ("low" or "medium" or "high" or "xhigh" or "max")) effort = null;
         var slug = model.Slug.Trim();
