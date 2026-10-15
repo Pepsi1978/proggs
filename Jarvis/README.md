@@ -388,8 +388,10 @@ Jarvis und die angebundenen Apps müssen mit demselben Schlüssel signiert sein 
 über Franks Claude-Abo (keine API-Kosten):
 
 1. **PC** (zuerst): Läuft am PC die Brücke `werkzeuge/pc-bruecke/jarvis-pc-bruecke.ps1` (Aufgabe „JarvisPcBruecke“ bei der
-   Anmeldung, eingerichtet mit `einrichten.ps1`), holt sie den Auftrag über den Relay (`/pc/auftrag`, Long-Polling) ab und öffnet
-   ein Terminal mit `claude --remote-control "Jarvis: <App>"` im Profil `minimal`. Die Sitzung steht in der Claude-App unter Code.
+   Anmeldung, eingerichtet mit `einrichten.ps1`), holt sie den Auftrag über den Relay (`/pc/auftrag`, Long-Polling) ab und startet
+   über `OpenLauncher.exe --jarvis-auftrag` eine Sitzung wie der Startknopf: Profil Minimal, Schnellmodus, Opus 5.5 (1M),
+   Effort High, dazu Remote Control „Jarvis: <App>“. Die Sitzung steht in der Claude-App unter Code. Ob der PC an ist, erkennt
+   der Relay an der Brücke selbst (fragt sie 45 s nicht ab, gilt der PC als aus), nicht an offenen Remote-Control-Sitzungen.
    Protokoll: `%LOCALAPPDATA%\JarvisPcBruecke\bruecke.log`.
 2. **Cloud** (wenn der PC nicht abfragt, Relay antwortet 409): Claude-Code-Routine „Jarvis: Programmieren“
    (`trig_01HkrhPAiYAJ7msGLn5UUcyo`), Auslösen per API-Trigger; Token in den Einstellungen oder `~/SK/Jarvis/routine.properties`.

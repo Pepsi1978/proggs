@@ -35,6 +35,14 @@ public partial class App : Application
         // der alten Daten wuerde stillschweigend ausbleiben.
         MigrateLegacyAppData();
 
+        // Programmierauftrag von Jarvis (PC-Brücke): Sitzung ohne Fenster starten und sofort beenden. Bewusst VOR dem
+        // Single-Instance-Mutex, damit es auch neben einem offenen OpenLauncher geht.
+        if (JarvisAuftrag.Verarbeite(e.Args) is { } jarvisCode)
+        {
+            Shutdown(jarvisCode);
+            return;
+        }
+
         // Aktivierungs-Event VOR dem Single-Instance-Mutex anlegen: sonst existiert ein kurzes
         // Startfenster, in dem eine zweite Instanz den Mutex bereits sieht, das Event aber noch nicht
         // erzeugt ist — SignalRunningInstance (OpenExisting) würde dann fehlschlagen und das erste

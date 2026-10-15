@@ -5,9 +5,13 @@
 # beim Relay als da, und Jarvis schickt Aufträge hierher statt in die Cloud. Ist der PC aus, nimmt Jarvis die Cloud.
 # Start: Aufgabenplanung „JarvisPcBruecke“ bei der Anmeldung (einrichten.ps1). Zugang aus ~/SK/Jarvis/relay.properties.
 #
-# Umgebungsvariablen (optional): JARVIS_CLAUDE_PROFIL (Vorgabe minimal) = Ordner unter OpenLauncher/Profiles/ClaudeCode.
+# Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High (Franks Vorgabe vom 15.10.2026), siehe unten.
 
 $ErrorActionPreference = 'Stop'
+$Profil = 'minimal'
+$Modus = 'schnell'
+$Modell = 'claude-opus-5-5[1m]'
+$Effort = 'high'
 $proggs = Join-Path $env:USERPROFILE 'proggs'
 $protokoll = Join-Path $env:LOCALAPPDATA 'JarvisPcBruecke\bruecke.log'
 New-Item -ItemType Directory -Force -Path (Split-Path $protokoll) | Out-Null
@@ -68,11 +72,27 @@ VORGEHEN
     $auftragDatei = Join-Path $ordner "auftrag-$stempel.txt"
     Set-Content -Path $auftragDatei -Value $text -Encoding utf8
 
-    $profil = if ($env:JARVIS_CLAUDE_PROFIL) { $env:JARVIS_CLAUDE_PROFIL } else { 'minimal' }
-    $configDir = Join-Path $proggs "OpenLauncher\Profiles\ClaudeCode\$profil"
+    # Normalfall: über den OpenLauncher, genau wie der Startknopf (Profil Minimal, Schnellmodus, Opus 5.5, Effort High),
+    # dazu Remote Control mit Namen und der Auftrag als erste Nachricht. Ab OpenLauncher 1.24.89 (--jarvis-auftrag).
+    $openLauncher = Join-Path $proggs 'OpenLauncher\bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenLauncher.exe'
+    $kannJarvis = $false
+    if (Test-Path -LiteralPath $openLauncher) {
+        try { $kannJarvis = [version](Get-Item -LiteralPath $openLauncher).VersionInfo.ProductVersion.Split('+')[0] -ge [version]'1.24.89' } catch { }
+    }
+    if ($kannJarvis) {
+        $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name`"", '--profil', $Profil, '--modus', $Modus, '--modell', "`"$Modell`"", '--effort', $Effort)
+        $prozess = Start-Process -FilePath $openLauncher -ArgumentList $argumente -PassThru -WindowStyle Hidden
+        if (-not $prozess.WaitForExit(60000)) { throw 'Der OpenLauncher hat nach 60 Sekunden nicht geantwortet.' }
+        if ($prozess.ExitCode -ne 0) { throw "Der OpenLauncher konnte die Sitzung nicht starten (Code $($prozess.ExitCode), siehe OpenLauncher-Log)." }
+        return $name
+    }
+
+    # Notlösung für einen älteren OpenLauncher: direkt starten (Profil-Ordner, Modell und Effort wie oben; die aktive
+    # CLAUDE.md und damit der Modus bleiben dann so, wie der OpenLauncher sie zuletzt geschrieben hat).
+    Schreib 'OpenLauncher ohne --jarvis-auftrag, starte direkt'
+    $configDir = Join-Path $proggs "OpenLauncher\Profiles\ClaudeCode\$Profil"
     $claude = Finde-Claude
     $start = Join-Path $ordner "start-$stempel.ps1"
-    # Wie der OpenLauncher: Profil-Ordner, Anmeldung spiegeln, alle Rechte; dazu Remote Control mit Namen.
     @"
 `$Host.UI.RawUI.WindowTitle = '$($name -replace "'", "''")'
 Set-Location -LiteralPath '$proggs'
@@ -80,7 +100,7 @@ Set-Location -LiteralPath '$proggs'
 `$sync = Join-Path `$env:USERPROFILE 'proggs\OpenLauncher\Profiles\hooks\claude-login-sync.py'
 if (Test-Path `$sync) { try { `$null = python `$sync 2>`$null } catch { } }
 `$auftrag = Get-Content -Raw -Encoding utf8 -LiteralPath '$auftragDatei'
-& '$claude' --dangerously-skip-permissions --remote-control '$($name -replace "'", "''")' `$auftrag
+& '$claude' --dangerously-skip-permissions --model '$Modell' --effort '$Effort' --remote-control '$($name -replace "'", "''")' `$auftrag
 "@ | Set-Content -Path $start -Encoding utf8
 
     $pwsh = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source

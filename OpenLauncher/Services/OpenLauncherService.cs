@@ -328,7 +328,10 @@ $env:Path = $pathEntries -join ';'
     /// (Skills per Junction). Praktisch immer gesetzt; bei null (nicht mehr vorgesehen) wuerde Claude
     /// auf das echte ~/.claude zurueckfallen.
     /// </param>
-    public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel, string? claudeConfigDir = null, bool useTmux = false)
+    /// <param name="remoteControlName">Optional: Sitzung mit Remote Control unter diesem Namen (Jarvis-Aufträge).</param>
+    /// <param name="initialPromptFile">Optional: Datei, deren Inhalt als erste Nachricht an Claude geht (ersetzt /color).</param>
+    public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel, string? claudeConfigDir = null, bool useTmux = false,
+        string? remoteControlName = null, string? initialPromptFile = null)
     {
         var log = Logger.Instance;
         effortLevel = NormalizeThinkingLevel(effortLevel);
@@ -337,7 +340,8 @@ $env:Path = $pathEntries -join ';'
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickClaudeTerminalTabColor();
-            var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name, claudeConfigDir, embeddedTerminal: useTmux);
+            var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name, claudeConfigDir, embeddedTerminal: useTmux,
+                remoteControlName: remoteControlName, initialPromptFile: initialPromptFile);
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
@@ -1274,7 +1278,8 @@ try {
         return $"& {PowerShellLiteral(ResolvePowerShellExecutable().Path)} -NoLogo -NoProfile -ExecutionPolicy Bypass -File {PowerShellLiteral(script)}";
     }
 
-    private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName, string? claudeConfigDir, bool embeddedTerminal = false)
+    private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName, string? claudeConfigDir, bool embeddedTerminal = false,
+        string? remoteControlName = null, string? initialPromptFile = null)
     {
         effortLevel = NormalizeThinkingLevel(effortLevel);
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-claude-code-{Guid.NewGuid():N}.ps1");
@@ -1334,6 +1339,9 @@ try {
         # effort permanently and make /effort changes silently snap back (rule: never via env).
         $claudeArgs += @('--effort', $effort)
     }
+    $remoteControlName = {{PowerShellLiteral(remoteControlName ?? string.Empty)}}
+    if ($remoteControlName) { $claudeArgs += @('--remote-control', $remoteControlName) }
+    $initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
     $colorName = {{PowerShellLiteral(colorName)}}
     # Für beide Terminalarten dieselbe Installation auflösen: fnm-Shims können auf fehlende Dateien zeigen.
     $claudeCandidates = @(
@@ -1348,7 +1356,10 @@ try {
     }
     $claudeExecutable = $claudeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     if (-not $claudeExecutable) { throw 'Keine funktionsfähige Claude-Installation gefunden. Bitte Claude Code reparieren oder installieren.' }
-    if (-not $embeddedTerminal) {
+    if ($initialPromptFile) {
+        # Jarvis-Auftrag: Er ist die erste Nachricht (es gibt nur eine), die Tab-Farbe setzt das Terminal selbst.
+        $claudeArgs += (Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile)
+    } elseif (-not $embeddedTerminal) {
         if ($colorName) {
             $claudeArgs += "/color $colorName"
         } else {
