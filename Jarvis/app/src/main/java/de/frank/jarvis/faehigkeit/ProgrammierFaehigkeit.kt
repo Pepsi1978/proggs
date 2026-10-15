@@ -273,6 +273,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         "Die Antwort „$antwortText“ ist bei der Sitzung angekommen; sie arbeitet jetzt weiter."
     }
 
+    /**
+     * Das Gespräch eines noch laufenden Auftrags (läuft oder wartet auf eine Antwort, letzte Meldung höchstens zwei Stunden
+     * alt), oder null. Die App öffnet es beim Start: Nach einem Update von Jarvis selbst (die Sitzung installiert die neue
+     * Version, Android beendet dabei die App) geht es dort weiter, wo Frank war.
+     */
+    fun laufendesGespraech(): String? = Auftragsbuch.laufendesGespraech(app)
+
     /** Eine Benachrichtigung je Auftrag, die mit jedem Schritt aktualisiert wird; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject) {
         runCatching {
@@ -350,6 +357,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             while (schritte.length() > 30) schritte.remove(0)
             schreib(context, liste)
             return eintrag
+        }
+
+        fun laufendesGespraech(context: Context): String? {
+            val liste = lies(context)
+            val grenze = System.currentTimeMillis() - 2 * 3_600_000L
+            for (i in liste.length() - 1 downTo 0) {
+                val e = liste.getJSONObject(i)
+                if (e.optString("gespraech").isNotEmpty() && e.optString("stand") in listOf("laeuft", "frage") && e.optLong("zeit") >= grenze) return e.optString("gespraech")
+            }
+            return null
         }
 
         /** Die offene Rückfrage mit dieser frage_id und ihr Auftrag, oder null. */

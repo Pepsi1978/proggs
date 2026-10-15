@@ -699,8 +699,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Programmieraufträge im Gespräch ----
 
+    /**
+     * Das Gespräch, das die App beim Start wegen eines laufenden Programmierauftrags öffnet. Gesetzt, bevor die Datei gelesen
+     * wird: Meldungen, die der Server genau in diesem Moment nachliefert (nach einem Update von Jarvis), gehen dann in das
+     * geladene Gespräch statt in die Datei, die gerade gelesen wird.
+     */
+    @Volatile private var programmierGespraech: String? = null
+
     private val programmierEmpfaenger: (String, de.frank.jarvis.data.GespeicherteNachricht) -> Boolean = { id, n ->
-        if (id != sitzungId) false else {
+        if (id != sitzungId && id != programmierGespraech) false else {
             viewModelScope.launch(Dispatchers.Main) {
                 if (id == sitzungId) {
                     gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext)
@@ -712,7 +719,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private val programmierBeantwortet: (String, String, String) -> Boolean = { id, frageId, antwort ->
-        if (id != sitzungId) false else {
+        if (id != sitzungId && id != programmierGespraech) false else {
             viewModelScope.launch(Dispatchers.Main) {
                 val i = gespraech.indexOfLast { it.art == "rueckfrage" && it.kontext.contains(frageId) }
                 if (id == sitzungId && i >= 0) {
@@ -782,6 +789,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val sicherung = Mutex()
 
     init {
+        laufendenAuftragOeffnen()
         sitzungenLaden()
         // Das Stimmprofil braucht erst „Hey Jarvis“ (und der Weckwort-Dienst lädt es selbst): nicht den ersten Frame aufhalten.
         viewModelScope.launch(Dispatchers.IO) { de.frank.jarvis.weckwort.Stimmprofil.laden(app) }
@@ -865,6 +873,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun offenesGespraechVergessen() {
         offenePrefs().edit().clear().apply()
+    }
+
+    /**
+     * Läuft ein Programmierauftrag aus einem Gespräch noch, öffnet die App beim Start genau dieses Gespräch (zum Beispiel nach
+     * einem Update von Jarvis selbst, bei dem Android die App beendet). Klein, deshalb direkt.
+     */
+    private fun laufendenAuftragOeffnen() {
+        if (gespraech.isNotEmpty() || sitzungId != null) return
+        val id = runCatching {
+            de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.laufendesGespraech()
+        }.getOrNull() ?: return
+        programmierGespraech = id
+        val geladen = de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) ?: run { programmierGespraech = null; return }
+        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
+        sitzungId = id
+        sitzungErstellt = geladen.first.erstellt
+        letzteAktivitaet = System.currentTimeMillis()
+        offenesGespraechMerken(id, letzteAktivitaet)
+        Logbuch.gedaechtnis("Gespräch mit laufendem Programmierauftrag geöffnet", "${gespraech.size} Nachrichten")
     }
 
     /** Holt das zuletzt geführte Gespräch zurück, wenn es jünger als [NEUES_GESPRAECH_NACH_MS] ist. Klein, deshalb direkt. */
