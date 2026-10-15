@@ -14,6 +14,15 @@ object Tage {
 
     fun zeit(minuten: Int): String = "%02d:%02d".format(minuten / 60, minuten % 60)
 
+    /**
+     * Uhrzeit „HH:MM“, „H:MM“, „HH.MM“ oder nur „HH“ → Minuten seit Mitternacht; null, wenn keine gültige Uhrzeit.
+     * 2[0-3] steht vorn und danach darf keine Ziffer folgen: sonst liest die Regex aus „21:00“ nur die „2“ (= 02:00).
+     */
+    fun minutenAus(wert: String): Int? {
+        val treffer = Regex("^\\s*(2[0-3]|[01]?\\d)(?:[:.]([0-5]\\d))?(?!\\d)").find(wert) ?: return null
+        return treffer.groupValues[1].toInt() * 60 + (treffer.groupValues[2].toIntOrNull() ?: 0)
+    }
+
     fun datum(tag: Long): String {
         val datum = LocalDate.ofEpochDay(tag)
         return when (tag - heute()) {

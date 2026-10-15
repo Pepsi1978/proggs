@@ -37,6 +37,7 @@
     {"versionCode": 33, "versionName": "1.0.32", "stand": "14.10.2026, 12:07 Uhr", "notiz": "Meldet neue und geänderte Aufgaben sofort an Jarvis, damit sein Gedächtnis immer aktuell ist."},
     {"versionCode": 34, "versionName": "1.0.33", "stand": "14.10.2026, 23:00 Uhr", "notiz": "Orange-Design im Dunkelmodus: Das Zimmer oben in der Szene ist deutlich heller – warme Wand, hellere Fußleiste, Boden, Möbel, Fensterrahmen und Uhr, damit es nicht mehr wie ein komplett dunkler Raum wirkt."},
     {"versionCode": 35, "versionName": "1.0.34", "stand": "14.10.2026, 23:06 Uhr", "notiz": "Orange-Design im Dunkelmodus: Das Zimmer oben hat jetzt dieselben hellen Farben wie im Hellmodus, nur leicht abgedunkelt – kein braunes Zimmer mehr."},
-    {"versionCode": 36, "versionName": "1.0.35", "stand": "14.10.2026, 23:12 Uhr", "notiz": "Aurora, Garten und Kosmos im Dunkelmodus: Die Szene oben hat jetzt wie bei Orange dieselben hellen Farben wie im Hellmodus, nur leicht abgedunkelt."}
+    {"versionCode": 36, "versionName": "1.0.35", "stand": "14.10.2026, 23:12 Uhr", "notiz": "Aurora, Garten und Kosmos im Dunkelmodus: Die Szene oben hat jetzt wie bei Orange dieselben hellen Farben wie im Hellmodus, nur leicht abgedunkelt."},
+    {"versionCode": 37, "versionName": "1.0.36", "stand": "15.10.2026, 18:32 Uhr", "notiz": "Von Jarvis übergebene Uhrzeiten zwischen 20 und 23 Uhr werden jetzt richtig gespeichert statt als 02:00 Uhr."}
   ]
 }

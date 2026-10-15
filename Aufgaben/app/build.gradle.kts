@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.compose.animation)
     implementation(libs.compose.icons)
     debugImplementation(libs.compose.ui.tooling)
+    testImplementation(libs.junit)
 
     implementation(libs.core.ktx)
     implementation(libs.activity.compose)

@@ -98,7 +98,7 @@ class JarvisBruecke : ContentProvider() {
                 val tag = if (a.has("datum")) tagAus(a.optString("datum")) else null
                 if (a.has("datum") && tag == null && !ohne(a.optString("datum"))) return fehler("Datum nicht verstanden: ${a.optString("datum")}. Erlaubt: heute, morgen, uebermorgen, JJJJ-MM-TT, ohne.")
                 val minuten = if (a.has("uhrzeit") && !ohne(a.optString("uhrzeit"))) {
-                    minutenAus(a.optString("uhrzeit")) ?: return fehler("Uhrzeit nicht verstanden: ${a.optString("uhrzeit")}. Format HH:MM.")
+                    Tage.minutenAus(a.optString("uhrzeit")) ?: return fehler("Uhrzeit nicht verstanden: ${a.optString("uhrzeit")}. Format HH:MM.")
                 } else null
                 if (minuten != null && tag == null) return fehler("Eine Uhrzeit braucht einen Tag. Frage den Nutzer, an welchem Tag.")
                 val prio = a.optString("prioritaet").takeIf { it.isNotBlank() }?.let(::prioAus) ?: Prioritaet.SPAETER
@@ -133,7 +133,7 @@ class JarvisBruecke : ContentProvider() {
                 var minuten = alt.minuten
                 if (a.has("uhrzeit")) {
                     minuten = if (ohne(a.optString("uhrzeit"))) null
-                    else minutenAus(a.optString("uhrzeit")) ?: return fehler("Uhrzeit nicht verstanden: ${a.optString("uhrzeit")}.")
+                    else Tage.minutenAus(a.optString("uhrzeit")) ?: return fehler("Uhrzeit nicht verstanden: ${a.optString("uhrzeit")}.")
                 }
                 if (tag == null) minuten = null
                 var prio = if (a.has("prioritaet")) prioAus(a.optString("prioritaet")) else alt.prio
@@ -240,11 +240,6 @@ class JarvisBruecke : ContentProvider() {
             "uebermorgen", "übermorgen" -> heute + 2
             else -> runCatching { LocalDate.parse(w.take(10)).toEpochDay() }.getOrNull()
         }
-    }
-
-    private fun minutenAus(wert: String): Int? {
-        val treffer = Regex("^\\s*([01]?\\d|2[0-3])(?:[:.]([0-5]\\d))?").find(wert) ?: return null
-        return treffer.groupValues[1].toInt() * 60 + (treffer.groupValues[2].toIntOrNull() ?: 0)
     }
 
     private fun prioAus(wert: String): Prioritaet = when (wert.trim().lowercase(Locale.GERMAN)) {
