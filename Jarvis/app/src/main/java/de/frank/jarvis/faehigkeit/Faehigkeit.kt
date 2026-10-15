@@ -51,7 +51,7 @@ object Register {
             // Die Regeln stehen vorn: Manche Programme kürzen die Anleitung des Plugins, der Anfang kommt immer an.
             RegelnFaehigkeit(context.applicationContext),
             AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext), WetterFaehigkeit(context.applicationContext), FahrtFaehigkeit(context.applicationContext),
-            WeckerFaehigkeit(context.applicationContext), TimerFaehigkeit(context.applicationContext), StoppuhrFaehigkeit(context.applicationContext), IdeenFaehigkeit(context.applicationContext), EpigenetikFaehigkeit(context.applicationContext), StackLaborFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
+            WeckerFaehigkeit(context.applicationContext), TimerFaehigkeit(context.applicationContext), StoppuhrFaehigkeit(context.applicationContext), EinstellungenFaehigkeit(context.applicationContext), IdeenFaehigkeit(context.applicationContext), EpigenetikFaehigkeit(context.applicationContext), StackLaborFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
             GedaechtnisFaehigkeit(context.applicationContext), WebFaehigkeit(context.applicationContext), RepoFaehigkeit(context.applicationContext), ProgrammierFaehigkeit(context.applicationContext), AgentenFaehigkeit(context.applicationContext),
         ).also { liste = it }
     }

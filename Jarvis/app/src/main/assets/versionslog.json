@@ -71,6 +71,7 @@
     {"versionCode": 66, "versionName": "1.8.55", "stand": "15.10.2026, 12:23 Uhr", "notiz": "Programmieraufträge melden ihren Fortschritt: Jede Sitzung (PC oder Cloud) schickt ihre Schritte an Jarvis, die Benachrichtigung wächst mit, Rückfragen melden sich hörbar, und „Jarvis, wie weit ist mein Programmierauftrag?“ nennt Stand und Link"},
     {"versionCode": 67, "versionName": "1.8.56", "stand": "15.10.2026, 12:24 Uhr", "notiz": "Stack-Labor angebunden: Jarvis liest deine Stacks samt Beschreibung, Reihenfolge, Dosis und aktiv/inaktiv vor, legt Mittel an und ändert sie, kennt die Stacks im Live-Gedächtnis (geplant heißt nicht eingenommen); auch über ChatGPT"},
     {"versionCode": 68, "versionName": "1.8.57", "stand": "15.10.2026, 12:45 Uhr", "notiz": "Jarvis bleibt nach einem Update erreichbar: Der Dienst startet bei jedem App-Start selbst, auch wenn Samsung das Update-Signal verschluckt; Update-Meldungen von UpdateStation kommen so wieder sofort"},
-    {"versionCode": 69, "versionName": "1.8.58", "stand": "15.10.2026, 13:03 Uhr", "notiz": "Eigene Einstellungen für Update-Ansagen von UpdateStation (Einstellungen → Stimme): an/aus, eigene Stimme von Edge, Google oder Alibaba, Sprechtempo, Lautstärke und Probe hören"}
+    {"versionCode": 69, "versionName": "1.8.58", "stand": "15.10.2026, 13:03 Uhr", "notiz": "Eigene Einstellungen für Update-Ansagen von UpdateStation (Einstellungen → Stimme): an/aus, eigene Stimme von Edge, Google oder Alibaba, Sprechtempo, Lautstärke und Probe hören"},
+    {"versionCode": 70, "versionName": "1.8.59", "stand": "15.10.2026, 14:13 Uhr", "notiz": "Jarvis kann seine Einstellungen per Sprache beschreiben und umstellen, z. B. „Schalte die Update-Ansagen aus“ oder „Was hast du beim Vorlesen für Einstellungen?“"}
   ]
 }
