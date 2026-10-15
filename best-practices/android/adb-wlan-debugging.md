@@ -65,3 +65,9 @@ Fall: Handy in keinem WLAN, in einem anderen Netz oder in einem WLAN, das Gerät
 - Fremdes WLAN (Arbeit): Android fragt einmal "Debugging über WLAN in diesem Netzwerk zulassen?" → **"Immer zulassen"** ankreuzen. Gäste-WLAN mit Client-Isolation oder PC/Handy in verschiedenen Netzen: kein WLAN-adb möglich.
 - Unbenutzte adb-Schlüssel verfallen nach 7 Tagen → Entwickleroption **"ADB-Autorisierungstimeout deaktivieren"** einschalten.
 - Android Studio startet seinen adb-Server selbst mit der SDK-adb – passt, solange PATH und `ADB` auf dieselbe zeigen. Prüfen: `(Get-Process adb).Path`.
+
+## Unterwegs: adb über den WireGuard-Tunnel (seit 15.10.2026)
+- Second-Brain-Netz 10.8.0.0/24, Hub = VPS 10.8.0.1. PC = 10.8.0.2 (Schnittstelle `secondbrain`), Handy (WireGuard-App) = 10.8.0.3. Achtung: die Dateinamen `pc.conf`/`phone.conf` in `SK/second-brain/wireguard` sind vertauscht zur Nutzung.
+- VPS leitet Peer-zu-Peer weiter: `ufw route allow in on wg0 out on wg0` (ip_forward war durch Docker schon 1, FORWARD-Policy DROP). Split-Tunnel bleibt: nur 10.8.0.x läuft durchs VPN.
+- `adb-wlan.ps1` Schritt 3b: `adb connect 10.8.0.3:5555` (überschreibbar per `~/.adb-wlan-tunnel-ip`). Ist das Handy wieder im Heim-WLAN per mDNS auffindbar, wird auf WLAN umgestiegen und die Tunnelverbindung getrennt (nie zwei Einträge für dasselbe Handy).
+- Grenzen: Port 5555 überlebt keinen Handy-Neustart (dann erst wieder im Heim-WLAN). Android erlaubt nur ein VPN – Windscribe o. Ä. schaltet WireGuard ab. Eigene Apps (Cortex, EntropieReductor) nutzen einen vorhandenen Tunnel statt eines eigenen. Entwickleroption „Zeitüberschreitung der ADB-Autorisierung deaktivieren“ an, sonst verfällt die PC-Freigabe nach 7 Tagen ohne Nutzung.

@@ -11,6 +11,10 @@ param([switch]$Leise)
 $Port = 5555
 $State = Join-Path $env:USERPROFILE ".adb-wlan-last-ip"
 $SerialDatei = Join-Path $env:USERPROFILE ".adb-wlan-serial"
+# WireGuard-Adresse des Handys im Second-Brain-Netz (10.8.0.0/24, Hub = VPS 10.8.0.1).
+# Überschreibbar per Datei ~/.adb-wlan-tunnel-ip (leere Datei = Tunnelweg aus).
+$TunnelDatei = Join-Path $env:USERPROFILE ".adb-wlan-tunnel-ip"
+$TunnelIp = if (Test-Path $TunnelDatei) { (Get-Content $TunnelDatei -Raw).Trim() } else { "10.8.0.3" }
 $LogDir = Join-Path $env:LOCALAPPDATA "adb-wlan"
 $Log = Join-Path $LogDir "adb-wlan.log"
 New-Item -ItemType Directory -Force $LogDir | Out-Null
@@ -368,6 +372,14 @@ try {
         # 1. Schon per WLAN verbunden und antwortet?
         $netz = @(Netz-Verbunden)
         if ($netz) {
+            # Nur über den WireGuard-Tunnel verbunden: im Heim-WLAN direkt ist schneller -> umsteigen
+            if ($TunnelIp -and -not ($netz | Where-Object { $_.Serial -ne "${TunnelIp}:$Port" })) {
+                if (Mdns-Verbinden) {
+                    & $Adb disconnect "${TunnelIp}:$Port" 2>&1 | Out-Null
+                    Melde "Handy wieder im WLAN erreichbar – Tunnelverbindung getrennt"
+                }
+                break
+            }
             if ($netz | Where-Object { $_.Serial -match "^\d+\.\d+\.\d+\.\d+:$Port$" }) { break }
             # Nur TLS verbunden -> 5555 nachziehen, damit die Serial stabil IP:5555 bleibt
             $ip = ($netz[0].Serial -split ":")[0]
@@ -381,6 +393,10 @@ try {
         # 3. Zuletzt bekannte IP
         $letzte = if (Test-Path $State) { (Get-Content $State -Raw).Trim() }
         if ($letzte -and (Verbinde "${letzte}:$Port")) { break }
+
+        # 3b. WireGuard-Tunnel (Second-Brain-Netz über den VPS): Handy unterwegs im Mobilnetz.
+        #     Braucht WireGuard an auf PC und Handy und Port 5555 (seit dem letzten Handy-Neustart).
+        if ($TunnelIp -and (Verbinde "${TunnelIp}:$Port")) { Melde "Verbunden über WireGuard-Tunnel ${TunnelIp}:$Port"; break }
 
         # 4. Kabel: WLAN-IP holen, Port 5555 einschalten
         $usb = Usb-Geraet
