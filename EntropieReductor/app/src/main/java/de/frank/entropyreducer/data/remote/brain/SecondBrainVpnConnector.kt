@@ -1,6 +1,8 @@
 package de.frank.entropyreducer.data.remote.brain
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
@@ -10,6 +12,8 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import java.io.BufferedReader
 import java.io.StringReader
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -29,7 +33,7 @@ enum class SecondBrainVpnState {
 
 @Singleton
 class SecondBrainVpnConnector @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
     private val secrets: EncryptedSecretsStore,
 ) {
     @Volatile var state: SecondBrainVpnState = SecondBrainVpnState.DISCONNECTED
@@ -47,6 +51,10 @@ class SecondBrainVpnConnector @Inject constructor(
     // Config), die der onStateChange-Callback ignorieren soll — verhindert, dass ein verzoegerter
     // DOWN-Callback einen bereits neu gesetzten CONNECTED-Zustand faelschlich ueberschreibt.
     private val pendingSelfTeardowns = AtomicInteger(0)
+    // 2026-10-15: true, solange der Server ueber ein fremdes, bereits aktives VPN (z. B. die
+    // offizielle WireGuard-App mit Split-Tunnel) erreichbar ist und wir KEINEN eigenen Tunnel fahren.
+    // Android erlaubt nur ein aktives VPN — ein eigener Tunnel wuerde das fremde rauswerfen.
+    @Volatile private var usingExternalTunnel = false
 
     private val tunnel = object : Tunnel {
         override fun getName(): String = "entropie-second-brain"
@@ -128,7 +136,51 @@ class SecondBrainVpnConnector @Inject constructor(
         }
     }
 
+    /**
+     * Prueft (unter dem Lock), ob ein fremdes VPN den Server bereits erreicht, und meldet dann
+     * CONNECTED ohne eigenen Tunnel. Fuer Aufrufer, die VOR VpnService.prepare() pruefen muessen.
+     */
+    suspend fun useExternalTunnelIfAvailable(): Boolean = stateMutex.withLock { withContext(Dispatchers.IO) {
+        tryUseExternalTunnelLocked()
+    } }
+
+    /** Nur unter stateMutex aufrufen. */
+    private fun tryUseExternalTunnelLocked(): Boolean {
+        // Laeuft unser eigener Tunnel, waere jeder VPN-Treffer nur er selbst → keine Fremdpruefung.
+        if (state == SecondBrainVpnState.CONNECTED && !usingExternalTunnel) return false
+        if (externalVpnReachesServer()) {
+            usingExternalTunnel = true
+            state = SecondBrainVpnState.CONNECTED
+            lastError = null
+            Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnConnect expected=connected actual=external_tunnel ok=true")
+            return true
+        }
+        if (usingExternalTunnel) {
+            // Fremdes VPN ist weg → zurueck auf "getrennt", damit der eigene Tunnel normal hochkommt.
+            usingExternalTunnel = false
+            state = SecondBrainVpnState.DISCONNECTED
+            Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnExternalLost expected=external_tunnel actual=unreachable ok=false")
+        }
+        return false
+    }
+
+    private fun externalVpnReachesServer(): Boolean {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        @Suppress("DEPRECATION")
+        val vpnActive = cm.allNetworks.any { network ->
+            cm.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        }
+        if (!vpnActive) return false
+        return try {
+            Socket().use { it.connect(InetSocketAddress(SERVER_HOST, SERVER_PORT), EXTERNAL_PROBE_TIMEOUT_MS) }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun connect(): Boolean = stateMutex.withLock { withContext(Dispatchers.IO) {
+        if (tryUseExternalTunnelLocked()) return@withContext true
         val activeBackend = backend
         val activeConfig = config ?: run {
             if (!loadSavedConfig()) return@withContext false
@@ -185,6 +237,14 @@ class SecondBrainVpnConnector @Inject constructor(
     } }
 
     suspend fun disconnect(): Boolean = stateMutex.withLock { withContext(Dispatchers.IO) {
+        if (usingExternalTunnel) {
+            // Fremdes VPN gehoert nicht uns → nichts daran aendern, nur den eigenen Zustand loesen.
+            usingExternalTunnel = false
+            state = SecondBrainVpnState.DISCONNECTED
+            lastError = null
+            Diag.i(DiagnosticArea.SECOND_BRAIN, TAG, "CHECKPOINT step=vpnDisconnect expected=disconnected actual=external_tunnel_untouched ok=true")
+            return@withContext true
+        }
         val activeBackend = backend ?: run {
             state = SecondBrainVpnState.DISCONNECTED
             return@withContext true
@@ -229,5 +289,9 @@ class SecondBrainVpnConnector @Inject constructor(
 
     private companion object {
         const val TAG = "SecondBrainVpn"
+        // Second-Brain-Server (siehe NetworkModule: http://10.8.0.1:8000/).
+        const val SERVER_HOST = "10.8.0.1"
+        const val SERVER_PORT = 8000
+        const val EXTERNAL_PROBE_TIMEOUT_MS = 1500
     }
 }

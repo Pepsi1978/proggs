@@ -166,6 +166,9 @@ class MainActivity : ComponentActivity() {
             val hasConfig = !secrets.secondBrainWireGuardConfig.isNullOrBlank()
             if (!hasConfig) return@launch
             if (!secondBrainVpnConnector.loadSavedConfig()) return@launch
+            // 2026-10-15: Erreicht ein fremdes VPN (WireGuard-App) den Server schon, keinen eigenen
+            // Tunnel und keinen VPN-Berechtigungsdialog — sonst wuerde das fremde VPN rausgeworfen.
+            if (secondBrainVpnConnector.useExternalTunnelIfAvailable()) return@launch
             val permissionIntent = VpnService.prepare(this@MainActivity)
             if (permissionIntent != null) {
                 launch(Dispatchers.Main) { vpnPermissionLauncher.launch(permissionIntent) }
