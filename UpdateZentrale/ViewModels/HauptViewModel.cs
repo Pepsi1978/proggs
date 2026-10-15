@@ -211,13 +211,28 @@ public sealed partial class HauptViewModel : ObservableObject
 
     public bool HatUpdates => AnzahlUpdates > 0;
 
-    /// <summary>Label of the batch button: it only invites a click while updates are open.</summary>
-    public string SammelText => AnzahlUpdates switch
+    /// <summary>Open updates that cannot touch a running CLI session -- step 1 of "install all".</summary>
+    private List<ProgrammViewModel> SichereUpdates => Programme.Where(p => p.HatUpdate && !p.KannCliBeenden).ToList();
+
+    /// <summary>Open updates that can end a running CLI session -- step 2, once the CLIs are closed.</summary>
+    private List<ProgrammViewModel> CliUpdates => Programme.Where(p => p.HatUpdate && p.KannCliBeenden).ToList();
+
+    /// <summary>
+    /// Label of the batch button: it only invites a click while updates are open. With CLI-risky
+    /// updates among them it runs in two steps and says which step is next.
+    /// </summary>
+    public string SammelText
     {
-        0 => AllesAktuell ? "✔ Alles aktuell" : "Keine Updates offen",
-        1 => "1 Update installieren",
-        var n => $"Alle {n} Updates installieren"
-    };
+        get
+        {
+            var sicher = SichereUpdates.Count;
+            var cli = CliUpdates.Count;
+            if (sicher + cli == 0) return AllesAktuell ? "✔ Alles aktuell" : "Keine Updates offen";
+            if (cli == 0) return sicher == 1 ? "1 Update installieren" : $"Alle {sicher} Updates installieren";
+            if (sicher > 0) return $"Schritt 1: {sicher} Update{(sicher == 1 ? "" : "s")} installieren  ·  danach Schritt 2: {cli} CLI-kritische";
+            return $"Schritt 2: {cli} CLI-kritische{(cli == 1 ? "s Update" : " Updates")} installieren (CLI vorher schließen)";
+        }
+    }
 
     private void SammelAnzeigeMelden()
     {
@@ -538,7 +553,12 @@ public sealed partial class HauptViewModel : ObservableObject
             return;
         }
 
-        var offen = Programme.Where(p => p.HatUpdate).ToList();
+        // Two steps: first everything that cannot end a running CLI session; the CLI-risky updates
+        // stay open until a later click, after Claude Code, Codex and the terminals are closed.
+        var sicher = SichereUpdates;
+        var cli = CliUpdates;
+        var schritt2 = sicher.Count == 0;
+        var offen = schritt2 ? cli : sicher;
         if (offen.Count == 0)
         {
             Dialoge.Hinweis("Es ist kein Update offen. Prüfe zuerst, oder aktualisiere einzelne Programme gezielt.");
@@ -546,8 +566,21 @@ public sealed partial class HauptViewModel : ObservableObject
         }
 
         var liste = string.Join("\n", offen.Select(p => "  • " + p.Name));
-        if (!Dialoge.Fragen("Diese Programme werden jetzt aktualisiert:\n\n" + liste
-                            + "\n\nBei laufenden Programmen wird vorher nachgefragt.", "Alle Updates installieren?"))
+        var frage = schritt2
+            ? "Schritt 2 – diese Updates können laufende CLI-Sitzungen beenden:\n\n"
+              + string.Join("\n", cli.Select(p => "  • " + p.Name + " – " + p.Eintrag.CliRisiko))
+              + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster.\n"
+              + "Bei laufenden Programmen wird vorher nachgefragt."
+            : (cli.Count > 0 ? "Schritt 1 – diese Programme werden jetzt aktualisiert:\n\n" : "Diese Programme werden jetzt aktualisiert:\n\n")
+              + liste
+              + (cli.Count > 0
+                  ? "\n\nZurückgehalten für Schritt 2 (können CLI-Sitzungen beenden):\n"
+                    + string.Join("\n", cli.Select(p => "  • " + p.Name))
+                  : "")
+              + "\n\nBei laufenden Programmen wird vorher nachgefragt.";
+        var titel = schritt2 ? "Schritt 2: CLI-kritische Updates installieren?"
+            : cli.Count > 0 ? "Schritt 1: Updates installieren?" : "Alle Updates installieren?";
+        if (!Dialoge.Fragen(frage, titel))
         {
             return;
         }
@@ -571,7 +604,10 @@ public sealed partial class HauptViewModel : ObservableObject
                 AusgewaehltesProgramm = offen[i];
                 await offen[i].AktualisierenImSammelAsync(besitz);
             }
-            KopfStatus = "Alle Updates sind durchgelaufen.";
+            var rest = CliUpdates.Count;
+            KopfStatus = !schritt2 && rest > 0
+                ? "Schritt 1 ist durchgelaufen. Schließe jetzt die CLI-Sitzungen und starte Schritt 2 (" + rest + " CLI-kritische)."
+                : "Alle Updates sind durchgelaufen.";
             vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         finally

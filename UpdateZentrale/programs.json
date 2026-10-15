@@ -153,6 +153,7 @@
     },
     {
       "id": "powershell",
+      "cliRisiko": "Das Update ersetzt pwsh.exe; laufende PowerShell-Sitzungen (auch die von Claude Code und Codex) werden dabei beendet.",
       "name": "PowerShell 7",
       "gruppe": "Kommandozeile",
       "beschreibung": "PowerShell 7 (pwsh) als MSI-Installation unter Program Files, aktualisiert über winget.",
@@ -216,6 +217,7 @@
     },
     {
       "id": "nodejs",
+      "cliRisiko": "Der Installer ersetzt node.exe; CLIs, die auf Node laufen (Codex, Gemini, OpenCode, npm-Werkzeuge), können dabei abbrechen.",
       "name": "Node.js (LTS)",
       "gruppe": "Entwicklung: Sprachen & SDKs",
       "beschreibung": "Node.js mit npm – Grundlage aller npm-Werkzeuge und MCP-Server.",
@@ -271,6 +273,7 @@
     },
     {
       "id": "go",
+      "cliRisiko": "Vom Nutzer beobachtet: Das Go-Update hat schon laufende Terminal-Sitzungen beendet.",
       "name": "Go",
       "gruppe": "Entwicklung: Sprachen & SDKs",
       "beschreibung": "Die Programmiersprache Go.",
@@ -411,6 +414,7 @@
     },
     {
       "id": "git",
+      "cliRisiko": "Der Installer beendet laufende Git-Bash-Prozesse; Claude Code führt seine Befehle über Git Bash aus.",
       "name": "Git",
       "gruppe": "Entwicklung: Werkzeuge",
       "beschreibung": "Git für Windows inklusive Git Bash.",
@@ -458,6 +462,7 @@
     },
     {
       "id": "bun",
+      "cliRisiko": "Vom Nutzer beobachtet: Das Bun-Update hat schon laufende Terminal-Sitzungen beendet.",
       "name": "Bun",
       "gruppe": "Entwicklung: Werkzeuge",
       "beschreibung": "JavaScript-Laufzeit und Paketmanager.",
@@ -473,6 +478,7 @@
     },
     {
       "id": "wsl",
+      "cliRisiko": "Das Update fährt WSL herunter; tmux-Sitzungen und CLIs in WSL werden beendet.",
       "name": "Windows-Subsystem für Linux",
       "gruppe": "Entwicklung: Werkzeuge",
       "beschreibung": "WSL 2.",
@@ -489,6 +495,7 @@
     },
     {
       "id": "windows-terminal",
+      "cliRisiko": "Klappt nur, wenn kein Windows-Terminal-Fenster offen ist; das Update schließt alle Fenster mitsamt den Sitzungen darin.",
       "name": "Windows-Terminal",
       "gruppe": "Entwicklung: Werkzeuge",
       "beschreibung": "Das Terminal, in dem die CLI-Sitzungen laufen.",

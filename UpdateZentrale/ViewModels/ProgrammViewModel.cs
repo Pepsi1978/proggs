@@ -68,6 +68,10 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     public string? Hinweis => Eintrag.Hinweis;
     public bool HatHinweis => !string.IsNullOrWhiteSpace(Eintrag.Hinweis);
+
+    public string? CliRisiko => Eintrag.CliRisiko is { } r ? "⚠ Kann CLI-Sitzungen beenden: " + r : null;
+    public bool KannCliBeenden => Eintrag.KannCliBeenden;
+
     /// <summary>A packaged app is launched through the apps folder, so it needs no exe path.</summary>
     public bool KannStarten => !string.IsNullOrWhiteSpace(Eintrag.ExePfad) || Eintrag.IstPaketApp;
 
@@ -483,7 +487,18 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task AktualisierenAsync() => AktualisierenKernAsync(null);
+    private Task AktualisierenAsync()
+    {
+        // A single click on a risky card gets the same warning the batch gives by holding it back.
+        if (KannCliBeenden && !Dialoge.Fragen(
+                Name + " kann laufende CLI-Sitzungen beenden:\n\n" + Eintrag.CliRisiko
+                + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Jetzt trotzdem aktualisieren?",
+                "CLI-Sitzungen in Gefahr"))
+        {
+            return Task.CompletedTask;
+        }
+        return AktualisierenKernAsync(null);
+    }
 
     /// <summary>An update driven by "install all", inside the batch's exclusive ownership.</summary>
     internal Task AktualisierenImSammelAsync(Laufbesitz sammel) => AktualisierenKernAsync(sammel);

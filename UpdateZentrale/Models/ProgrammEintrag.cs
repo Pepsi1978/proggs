@@ -177,6 +177,17 @@ public sealed class ProgrammEintrag
     public bool NeuStartenNachUpdate { get; set; }
 
     public string? Hinweis { get; set; }
+
+    /// <summary>
+    /// Why this update can end a running CLI session (Claude Code, Codex, a terminal window).
+    /// Set = the card is marked, and "install all" holds it back for a second step that runs
+    /// only once the CLIs are closed.
+    /// </summary>
+    public string? CliRisiko { get; set; }
+
+    [JsonIgnore]
+    public bool KannCliBeenden => !string.IsNullOrWhiteSpace(CliRisiko);
+
     public string Akzent { get; set; } = "#7C5CFF";
 
     /// <summary>Default for the admin toggle; the user override in settings.json wins.</summary>
