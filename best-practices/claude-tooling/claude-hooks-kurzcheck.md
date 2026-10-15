@@ -34,3 +34,5 @@
 | 21 | Funktion in einem Hook schreiben | Endet sie auf einem Test (`[ … ]`, `grep`), gibt sie 1 zurück → `return 0` ans Ende | §13.10 |
 | 22 | `echo` in async `SessionEnd` | stdout ist dort oft schon zu → `echo … \|\| true` (EPIPE ist der Normalfall) | §13.11 |
 | 23 | Geteilte Projekt-`settings.json` | NIE absoluten Plattform-Pfad hart kodieren → `uname`-Weiche im `command` (nicht `args`) | §16.5 |
+| 25 | Rückfrage (AskUserQuestion) extern beantworten | PreToolUse, Matcher exakt `AskUserQuestion`, `allow` + `updatedInput` mit `questions` und `answers` (Fragetext → Label) | §9 |
+| 26 | Fehlgeschlagene Bash-Befehle melden | Nur PostToolUseFailure sieht sie; unter Windows `Bash\|PowerShell` | §9 |

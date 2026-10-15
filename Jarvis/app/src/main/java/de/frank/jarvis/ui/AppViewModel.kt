@@ -182,6 +182,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val erledigt = java.util.Collections.synchronizedList(mutableListOf<String>())
         laufendErledigt = erledigt
         sitzungSichern()
+        // Startet Jarvis in dieser Runde einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
+        de.frank.jarvis.faehigkeit.ProgrammierChat.aktivesGespraech = sitzungId
         denkt = true
         schritt = ""
         lauf = viewModelScope.launch {
@@ -206,6 +208,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (n != null && n.vonMir && i == gespraech.lastIndex && notiz.isNotEmpty()) gespraech[i] = n.copy(kontext = notiz)
             }
             gespraech += Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", erledigt))
+            de.frank.jarvis.faehigkeit.ProgrammierChat.aktivesGespraech = null
             laufendeFrage = -1
             sitzungSichern()
             denkt = false
@@ -694,7 +697,51 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (stand.quelle == quelle && stand.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) vorleser.stopp() else vorleser.sprich(quelle, titel, text)
     }
 
+    // ---- Programmieraufträge im Gespräch ----
+
+    private val programmierEmpfaenger: (String, de.frank.jarvis.data.GespeicherteNachricht) -> Boolean = { id, n ->
+        if (id != sitzungId) false else {
+            viewModelScope.launch(Dispatchers.Main) {
+                if (id == sitzungId) {
+                    gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext)
+                    sitzungSichern()
+                } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), id, n) }
+            }
+            true
+        }
+    }
+
+    private val programmierBeantwortet: (String, String, String) -> Boolean = { id, frageId, antwort ->
+        if (id != sitzungId) false else {
+            viewModelScope.launch(Dispatchers.Main) {
+                val i = gespraech.indexOfLast { it.art == "rueckfrage" && it.kontext.contains(frageId) }
+                if (id == sitzungId && i >= 0) {
+                    val k = runCatching { org.json.JSONObject(gespraech[i].kontext) }.getOrNull() ?: return@launch
+                    gespraech[i] = gespraech[i].copy(kontext = k.put("beantwortet", true).put("antwort", antwort).toString())
+                    sitzungSichern()
+                } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageBeantwortet(getApplication(), id, frageId, antwort) }
+            }
+            true
+        }
+    }
+
+    init {
+        de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = programmierEmpfaenger
+        de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = programmierBeantwortet
+    }
+
+    /** Knopf in einer Rückfrage: Franks Antwort an die wartende Programmier-Sitzung. */
+    fun programmierAntwort(frageId: String, antworten: List<String>, text: String) {
+        viewModelScope.launch {
+            val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
+            meldung = runCatching { faehigkeit?.beantworte(frageId, antworten, text) ?: "Programmieren ist nicht verfügbar." }
+                .getOrElse { it.message ?: "Die Antwort ging nicht raus." }
+        }
+    }
+
     override fun onCleared() {
+        if (de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger === programmierEmpfaenger) de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = null
+        if (de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet === programmierBeantwortet) de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = null
         if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         mikro.release()
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
@@ -705,6 +752,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun abbrechen() {
         // Läuft noch eine Frage, bleibt sie als unbeantwortet im Verlauf, samt dem, was in dieser Runde schon erledigt war.
         if (denkt) frageAbgebrochen()
+        de.frank.jarvis.faehigkeit.ProgrammierChat.aktivesGespraech = null
         lauf?.cancel()
         auth.cancelChat()
         denkt = false

@@ -160,6 +160,21 @@
 
 ---
 
+
+## §9 Rückfragen und Fortschritt an ein externes System (Jarvis, Stand 15.10.2026, CLI 2.1.300)
+
+Quellen (offiziell): https://code.claude.com/docs/en/hooks, https://code.claude.com/docs/en/agent-sdk/user-input, https://code.claude.com/docs/en/settings
+
+- **AskUserQuestion per PreToolUse beantworten:** Matcher exakt `AskUserQuestion` (Wildcard-`updatedInput` zerstört die Frage, #29530).
+  Ausgabe `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{<questions unverändert>,"answers":{"<voller Fragetext>":"<label>"}}}}`.
+  `allow` allein reicht bei AskUserQuestion ausdrücklich nicht. Mehrfachauswahl: Labels mit `", "`. Freitext: der Text selbst. `updatedInput` ersetzt den ganzen Input.
+- **Zeitlimit:** Standard 600 s je command-Hook (`timeout` in Sekunden, kein dokumentiertes Maximum). Läuft er ab, wird die Ausgabe verworfen und der normale Dialog erscheint (auch per Remote Control).
+- **Stop-Hook:** `last_assistant_message` statt Transkript lesen (seit 2.1.47; das Transkript kann hinterherhinken). `{"decision":"block","reason":"…"}` lässt Claude mit `reason` weiterarbeiten; `stop_hook_active` prüfen, Obergrenze 8 Fortsetzungen (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`).
+- **Fehlschläge:** PostToolUse feuert nur bei Erfolg; Bash/PowerShell mit Exit ≠ 0 kommt als **PostToolUseFailure** (`error`). Unter Windows Matcher `Bash|PowerShell`.
+- **`async: true`** für Hooks, die nur melden: laufen im Hintergrund, blockieren nie (`timeout` wird dann nicht erzwungen).
+- **Hooks nur für eine Sitzung:** über `claude --settings <datei.json>` mit `hooks`-Block; sie kommen zu den Profil-Hooks dazu. Zusätzlich eine Umgebungsvariable prüfen und ohne sie sofort enden.
+- **Umsetzung:** `Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py`, eingebunden von `OpenLauncher` (`JarvisHooks()` in `Services/OpenLauncherService.cs`) nur bei `--jarvis-auftrag … --auftrag-id`.
+
 ## Pflicht-Checkliste vor Hook-Arbeit
 
 - [ ] Almanach-VOLLTEXT [`claude-hooks.md`](../../bugs/claude-tooling/claude-hooks.md) gelesen (Stufe C) + dieser Kurzcheck?

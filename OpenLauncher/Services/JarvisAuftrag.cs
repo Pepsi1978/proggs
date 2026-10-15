@@ -5,7 +5,8 @@ namespace OpenLauncher.Services;
 /// <summary>
 /// Startbefehl ohne Fenster für Programmieraufträge von Jarvis (Franks Sprachassistent):
 /// <c>OpenLauncher.exe --jarvis-auftrag &lt;auftrag.txt&gt; [--name "Jarvis: App"] [--profil minimal] [--modus schnell]
-/// [--modell claude-opus-5-5[1m]] [--effort high] [--ordner C:\Users\…\proggs]</c>.
+/// [--modell claude-opus-5-5[1m]] [--effort high] [--ordner C:\Users\…\proggs] [--auftrag-id NUMMER]</c>.
+/// Mit --auftrag-id bekommt die Sitzung die Jarvis-Hooks (Fortschritt und Rückfragen in den Jarvis-Chat).
 /// Startet genau wie der Startknopf eine Claude-Code-Sitzung (Profil-Ordner, aktive CLAUDE.md mit Modus, Modell,
 /// Effort, Terminal-Farbe), dazu Remote Control mit Namen und den Auftrag als erste Nachricht. Aufrufer ist die
 /// PC-Brücke (Jarvis/werkzeuge/pc-bruecke). Läuft neben einem offenen OpenLauncher, ohne dessen Fenster zu berühren.
@@ -38,10 +39,14 @@ public static class JarvisAuftrag
             var effort = Wert("--effort", "high");
             var name = Wert("--name", "Jarvis");
             var ordner = Wert("--ordner", Path.Combine(home, "proggs"));
+            var auftragId = Wert("--auftrag-id", "");
+            if (auftragId.Length > 0 && !System.Text.RegularExpressions.Regex.IsMatch(auftragId, "^[A-Za-z0-9]{1,20}$"))
+                throw new ArgumentException("Ungültige Auftragsnummer", nameof(args));
 
             var configDir = new InstructionProfileService().EnsureClaudeConfigDir(profil, modus);
-            new OpenLauncherService().LaunchClaudeCode(modell, ordner, effort, configDir, useTmux: false, remoteControlName: name, initialPromptFile: datei);
-            log.Info("JarvisAuftrag", "Verarbeite", "Jarvis-Sitzung gestartet", new { name, profil, modus, modell, effort, ordner });
+            new OpenLauncherService().LaunchClaudeCode(modell, ordner, effort, configDir, useTmux: false, remoteControlName: name, initialPromptFile: datei,
+                jarvisAuftragId: auftragId.Length > 0 ? auftragId : null);
+            log.Info("JarvisAuftrag", "Verarbeite", "Jarvis-Sitzung gestartet", new { name, profil, modus, modell, effort, ordner, auftragId });
             return 0;
         }
         catch (Exception ex)

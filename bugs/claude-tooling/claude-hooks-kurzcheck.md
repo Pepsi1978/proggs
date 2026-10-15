@@ -36,3 +36,5 @@
 | 22 | Windows: `.sh`-Hook-Pfad mit Leerzeichen | Pfad in settings.json `"..."` quoten + Forward-Slashes + voller Interpreter-Pfad (sonst Arg-Splitting) | §16.6 |
 | 23 | Hook liest stdin per `python3 - <<'EOF'` | Heredoc belegt stdin → Daten kommen NIE an, Hook waehlt still den Default; `python3 -c` nutzen | §13.12 |
 | 24 | Hook schreibt Diagnose ins Whiteboard | NIE konstanten Fehlertext — echte Fehlerart auswerten, sonst falsche Erinnerungen | §13.13 |
+| 25 | Hook mit `updatedInput` für AskUserQuestion | Matcher exakt `AskUserQuestion`, nie Wildcard (#29530) | §16.9 |
+| 26 | Rückfrage in Remote Control unsichtbar | #33625: Frage per Hook nach außen schicken | §16.9 |

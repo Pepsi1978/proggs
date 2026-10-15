@@ -437,3 +437,19 @@ Jarvis und die angebundenen Apps müssen mit demselben Schlüssel signiert sein 
    Danach `apk-update-cloud`. Doku: `best-practices/claude-tooling/claude-code-cloud.md` §8.
 
 Agenten und die Tagesauswertung bekommen das Werkzeug nicht (`JarvisAgent.versuche`).
+
+### Fortschritt und Rückfragen im Jarvis-Chat
+
+- Startet Jarvis einen Auftrag im eigenen Chat, merkt sich das Auftragsbuch das Gespräch (`ProgrammierChat.aktivesGespraech`).
+  Jede Meldung erscheint dort als Nachricht (⚙️ läuft, ✅ fertig, ❌ Problem, ⏸️ Zwischenstand), dazu die mitwachsende Benachrichtigung.
+  Aus ChatGPT gestartete Aufträge haben kein Gespräch: dort Benachrichtigung und `programmierauftraege`.
+- **PC:** Die Brücke reicht die Auftragsnummer an `OpenLauncher.exe --jarvis-auftrag … --auftrag-id <Nr>`. Nur dann setzt der
+  OpenLauncher `JARVIS_AUFTRAG_ID` und hängt über `--settings` die Hooks `werkzeuge/pc-bruecke/jarvis_hook.py` an diese eine Sitzung:
+  PostToolUse/PostToolUseFailure (Dateien, Bau, Commit, Push, adb, async, höchstens alle 20 s), PreToolUse `AskUserQuestion`
+  (Rückfrage mit Optionen), Stop (Zwischenstand, freie Frage am Zugende). Protokoll `%LOCALAPPDATA%\JarvisPcBruecke\hook.log`.
+- **Rückfragen:** Hook → Relay `POST /pc/meldung` (mit `frage`) → Signal `programmieren` ans Handy → Karte im Chat mit Knöpfen A–D,
+  Mehrfachauswahl und Freitext. Antwort per Knopf oder Sprache (`programmier_antwort`) → Relay `POST /geraet/antwort` → der Hook
+  holt sie mit `GET /pc/antwort` ab (Long-Polling) und gibt sie per `updatedInput.answers` an Claude (freie Fragen: Stop-Hook mit
+  `decision: block`). Ohne Antwort nach 10 Minuten erscheint der normale Dialog (auch per Remote Control in der Claude-App).
+- **Cloud:** keine Hooks; die Sitzung meldet über `programmier_fortschritt` (Connector Jarvis, nur dieses Werkzeug), Rückfragen
+  beantwortet Frank in der Claude-App.

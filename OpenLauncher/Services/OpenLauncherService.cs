@@ -331,7 +331,7 @@ $env:Path = $pathEntries -join ';'
     /// <param name="remoteControlName">Optional: Sitzung mit Remote Control unter diesem Namen (Jarvis-Aufträge).</param>
     /// <param name="initialPromptFile">Optional: Datei, deren Inhalt als erste Nachricht an Claude geht (ersetzt /color).</param>
     public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel, string? claudeConfigDir = null, bool useTmux = false,
-        string? remoteControlName = null, string? initialPromptFile = null)
+        string? remoteControlName = null, string? initialPromptFile = null, string? jarvisAuftragId = null)
     {
         var log = Logger.Instance;
         effortLevel = NormalizeThinkingLevel(effortLevel);
@@ -341,7 +341,7 @@ $env:Path = $pathEntries -join ';'
             var wt = ResolveWt();
             var tabColor = PickClaudeTerminalTabColor();
             var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name, claudeConfigDir, embeddedTerminal: useTmux,
-                remoteControlName: remoteControlName, initialPromptFile: initialPromptFile);
+                remoteControlName: remoteControlName, initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId);
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
@@ -1279,11 +1279,11 @@ try {
     }
 
     private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName, string? claudeConfigDir, bool embeddedTerminal = false,
-        string? remoteControlName = null, string? initialPromptFile = null)
+        string? remoteControlName = null, string? initialPromptFile = null, string? jarvisAuftragId = null)
     {
         effortLevel = NormalizeThinkingLevel(effortLevel);
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-claude-code-{Guid.NewGuid():N}.ps1");
-        var tempSettings = BuildClaudeCodeSessionSettings(modelId, effortLevel);
+        var tempSettings = BuildClaudeCodeSessionSettings(modelId, effortLevel, jarvisHooks: !string.IsNullOrEmpty(jarvisAuftragId));
         var script = $$"""
 $ErrorActionPreference = 'Continue'
 {{(embeddedTerminal ? string.Empty : ProgrammerProcessPriorityScript)}}
@@ -1339,6 +1339,9 @@ try {
         # effort permanently and make /effort changes silently snap back (rule: never via env).
         $claudeArgs += @('--effort', $effort)
     }
+    # Jarvis-Auftrag: Die Hooks dieser Sitzung (siehe BuildClaudeCodeSessionSettings) melden nur mit dieser Nummer.
+    $jarvisAuftragId = {{PowerShellLiteral(jarvisAuftragId ?? string.Empty)}}
+    if ($jarvisAuftragId) { $env:JARVIS_AUFTRAG_ID = $jarvisAuftragId }
     $remoteControlName = {{PowerShellLiteral(remoteControlName ?? string.Empty)}}
     if ($remoteControlName) { $claudeArgs += @('--remote-control', $remoteControlName) }
     $initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
@@ -1381,7 +1384,7 @@ try {
         return tempScript;
     }
 
-    private static string BuildClaudeCodeSessionSettings(string modelId, string? effortLevel)
+    private static string BuildClaudeCodeSessionSettings(string modelId, string? effortLevel, bool jarvisHooks = false)
     {
         var tempSettings = Path.Combine(Path.GetTempPath(), $"openlauncher-claude-settings-{Guid.NewGuid():N}.json");
         var root = new JsonObject
@@ -1389,8 +1392,37 @@ try {
             ["model"] = modelId
         };
         if (IsPersistableClaudeEffort(effortLevel)) root["effortLevel"] = effortLevel;
+        if (jarvisHooks) root["hooks"] = JarvisHooks();
         File.WriteAllText(tempSettings, root.ToJsonString(JsonOpts), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return tempSettings;
+    }
+
+    /// <summary>
+    /// Hooks nur für Sitzungen eines Jarvis-Programmierauftrags (Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py): Fortschritt,
+    /// Rückfragen (AskUserQuestion) und freie Fragen am Zugende gehen in den Jarvis-Chat. Der Hook prüft zusätzlich
+    /// JARVIS_AUFTRAG_ID und tut ohne sie nichts. Frage und Stop warten bis zu zehn Minuten auf Franks Antwort.
+    /// </summary>
+    private static JsonObject JarvisHooks()
+    {
+        var skript = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs", "Jarvis", "werkzeuge", "pc-bruecke", "jarvis_hook.py")
+            .Replace('\\', '/');
+        // async: Fortschritt läuft im Hintergrund und hält die Sitzung nie auf; Frage und Stop müssen auf die Antwort warten.
+        JsonArray Eintrag(string? matcher, string art, int timeout, bool imHintergrund = false)
+        {
+            var hook = new JsonObject { ["type"] = "command", ["command"] = $"python \"{skript}\" {art}", ["timeout"] = timeout };
+            if (imHintergrund) hook["async"] = true;
+            var eintrag = new JsonObject { ["hooks"] = new JsonArray(hook) };
+            if (matcher != null) eintrag["matcher"] = matcher;
+            return new JsonArray(eintrag);
+        }
+        return new JsonObject
+        {
+            // Unter Windows heißt das Shell-Werkzeug je nach Installation Bash oder PowerShell; Fehlschläge kommen nur als PostToolUseFailure.
+            ["PostToolUse"] = Eintrag("Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell", "post", 15, imHintergrund: true),
+            ["PostToolUseFailure"] = Eintrag("Bash|PowerShell", "post", 15, imHintergrund: true),
+            ["PreToolUse"] = Eintrag("AskUserQuestion", "frage", 660),
+            ["Stop"] = Eintrag(null, "stop", 660),
+        };
     }
 
     private static bool IsPersistableClaudeEffort(string? effortLevel) =>

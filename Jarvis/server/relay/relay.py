@@ -15,6 +15,11 @@ Dritte Aufgabe: die PC-Bruecke fuer Programmierauftraege. Das Skript Jarvis/werk
 /pc/auftrag in einer Dauerschleife ab (Long-Polling, Geraete-Token). Solange es das tut, gilt der PC als da. Das Handy
 schickt einen Auftrag an /geraet/pc-auftrag; ist der PC da, holt die Bruecke ihn ab, startet eine Claude-Code-Sitzung mit
 Remote Control und quittiert ueber /pc/quittung. Ist der PC nicht da, antwortet der Relay 409 und das Handy nimmt die Cloud.
+
+Vierte Aufgabe: Meldungen und Rueckfragen dieser Sitzungen (Hook Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py). Der Hook schickt
+POST /pc/meldung; der Relay reicht sie als {"signal": "programmieren", ...} ans Handy (ohne Handy: Warteschlange, beim naechsten
+Verbinden zugestellt). Eine Rueckfrage traegt eine frage_id; der Hook fragt GET /pc/antwort?frage_id=… ab, bis Frank in Jarvis
+geantwortet hat (POST /geraet/antwort) oder sein Zeitlimit ablaeuft.
 """
 import asyncio
 import hmac
@@ -63,6 +68,7 @@ class Relay:
         self.gemerkt = {}            # Methode -> result-Objekt
         self.ws = None
         self.ausstehend = None       # Signal, das ohne verbundenes Handy kam: geht beim naechsten Verbinden raus
+        self.meldungen = []          # Programmier-Meldungen ohne verbundenes Handy (hoechstens 100, aelteste fallen weg)
         self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.da = asyncio.Event()
         self._lade()
@@ -105,6 +111,13 @@ class Relay:
             self._sichere()
         self.da.set()
         log.info("Handy verbunden")
+        while self.meldungen:
+            meldung = self.meldungen.pop(0)
+            try:
+                await ws.send_str(json.dumps(meldung))
+            except (ConnectionError, RuntimeError):
+                self.meldungen.insert(0, meldung)
+                break
         if self.ausstehend is not None:
             signal, self.ausstehend = self.ausstehend, None
             try:
@@ -163,6 +176,19 @@ class Relay:
         self.ausstehend = daten
         log.info("Signal %s gemerkt: Handy nicht verbunden", daten["signal"])
         return web.json_response({"zugestellt": False})
+
+    async def programmier_meldung(self, daten: dict) -> bool:
+        """Reicht eine Programmier-Meldung ans Handy; ohne Handy kommt sie in die Warteschlange. True = sofort zugestellt."""
+        ws = self.ws
+        if ws is not None and not ws.closed:
+            try:
+                await ws.send_str(json.dumps(daten))
+                return True
+            except (ConnectionError, RuntimeError):
+                pass
+        self.meldungen.append(daten)
+        del self.meldungen[:-100]
+        return False
 
     # ---------------------------------------------------------------- ChatGPT
 
@@ -383,10 +409,16 @@ PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf 
 PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung; die Bruecke antwortet spaetestens nach 30 s
 
 
+FRAGE_HALTEN_S = 3600     # so lange bleibt eine unbeantwortete Rueckfrage abrufbar
+ANTWORT_WARTEN_S = 25     # eine Abfrage des Hooks wartet hoechstens so lange auf Franks Antwort
+
+
 class PcBruecke:
     """Programmierauftraege vom Handy an Franks PC (siehe Kopf der Datei)."""
 
-    def __init__(self):
+    def __init__(self, relay):
+        self.relay = relay
+        self.fragen = {}      # frage_id -> {"zeit": monotonic, "antwort": dict|None, "da": asyncio.Event}
         self.zuletzt = 0.0
         self.rechner = ""
         self.auftraege = asyncio.Queue()
@@ -453,7 +485,8 @@ class PcBruecke:
         wartend = asyncio.get_running_loop().create_future()
         self.quittungen[nummer] = wartend
         try:
-            await self.auftraege.put({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review"))})
+            await self.auftraege.put({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
+                                      "nummer": str(daten.get("nummer", ""))[:20]})
             log.info("Programmierauftrag an den PC: %s", daten["app"][:40])
             quittung = await asyncio.wait_for(wartend, PC_QUITTUNG_S)
         except asyncio.TimeoutError:
@@ -462,6 +495,57 @@ class PcBruecke:
         finally:
             self.quittungen.pop(nummer, None)
         return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": self.rechner})
+
+    def _aufraeumen(self) -> None:
+        grenze = time.monotonic() - FRAGE_HALTEN_S
+        for frage_id in [k for k, v in self.fragen.items() if v["zeit"] < grenze]:
+            self.fragen.pop(frage_id, None)
+
+    async def meldung(self, request: web.Request) -> web.Response:
+        """POST /pc/meldung (Hook am PC): {"auftrag_id", "stand", "schritt", "frage"?: {"frage_id", "fragen", "frei"}}."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = await request.json()
+            assert isinstance(daten.get("auftrag_id"), str) and daten["auftrag_id"] and isinstance(daten.get("schritt"), str)
+        except Exception:
+            return web.Response(status=400, text="Meldung unlesbar")
+        self._aufraeumen()
+        frage = daten.get("frage")
+        if isinstance(frage, dict) and isinstance(frage.get("frage_id"), str) and frage["frage_id"]:
+            self.fragen.setdefault(frage["frage_id"], {"zeit": time.monotonic(), "antwort": None, "da": asyncio.Event()})
+        zugestellt = await self.relay.programmier_meldung({"signal": "programmieren", **daten})
+        return web.json_response({"zugestellt": zugestellt})
+
+    async def antwort_abholen(self, request: web.Request) -> web.Response:
+        """GET /pc/antwort?frage_id=… (Hook): 200 mit Antwort, 204 = noch keine, 404 = Frage unbekannt oder verfallen."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        eintrag = self.fragen.get(request.query.get("frage_id", ""))
+        if eintrag is None:
+            return web.Response(status=404, text="Frage unbekannt")
+        if eintrag["antwort"] is None:
+            try:
+                await asyncio.wait_for(eintrag["da"].wait(), ANTWORT_WARTEN_S)
+            except asyncio.TimeoutError:
+                return web.Response(status=204)
+        return web.json_response(eintrag["antwort"])
+
+    async def antwort_geben(self, request: web.Request) -> web.Response:
+        """POST /geraet/antwort (Handy): {"frage_id", "antworten": {Frage: Antwort}, "text"?}."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = await request.json()
+            eintrag = self.fragen[daten["frage_id"]]
+        except Exception:
+            return web.json_response({"angenommen": False, "grund": "Die Rueckfrage ist nicht mehr offen."}, status=404)
+        if eintrag["antwort"] is not None:
+            return web.json_response({"angenommen": False, "grund": "Die Rueckfrage ist schon beantwortet."}, status=409)
+        eintrag["antwort"] = {"antworten": daten.get("antworten") or {}, "text": str(daten.get("text", ""))[:4000]}
+        eintrag["da"].set()
+        log.info("Rueckfrage beantwortet")
+        return web.json_response({"angenommen": True})
 
     async def status(self, request: web.Request) -> web.Response:
         if not self._erlaubt(request):
@@ -523,11 +607,14 @@ def app() -> web.Application:
     anwendung.router.add_get("/geraet/tagebuch", tagebuch.antwort)
     anwendung.router.add_post("/geraet/drive-zugang", tagebuch.neuer_zugang)
     anwendung.router.add_post("/geraet/signal", relay.signal)
-    pc = PcBruecke()
+    pc = PcBruecke(relay)
     anwendung.router.add_post("/geraet/pc-auftrag", pc.auftrag)
     anwendung.router.add_get("/geraet/pc", pc.status)
     anwendung.router.add_get("/pc/auftrag", pc.abholen)
     anwendung.router.add_post("/pc/quittung", pc.quittung)
+    anwendung.router.add_post("/pc/meldung", pc.meldung)
+    anwendung.router.add_get("/pc/antwort", pc.antwort_abholen)
+    anwendung.router.add_post("/geraet/antwort", pc.antwort_geben)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

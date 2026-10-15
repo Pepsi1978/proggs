@@ -1,0 +1,34 @@
+package de.frank.jarvis.faehigkeit
+
+import android.content.Context
+import de.frank.jarvis.data.Gespraeche
+import de.frank.jarvis.data.GespeicherteNachricht
+
+/**
+ * Bringt Meldungen eines Programmierauftrags in das Jarvis-Gespräch, aus dem er gestartet wurde.
+ *
+ * [aktivesGespraech] setzt das Gespräch in der App, solange Jarvis auf eine Frage von Frank antwortet; startet in dieser
+ * Zeit ein Programmierauftrag, merkt sich das Auftragsbuch das Gespräch. Aufträge aus ChatGPT haben kein Gespräch.
+ * Ist das Gespräch gerade in der App offen, fügt die App die Nachricht selbst an ([empfaenger]); sonst wird sie an die
+ * gespeicherte Gesprächsdatei gehängt und erscheint beim nächsten Öffnen.
+ */
+object ProgrammierChat {
+    @Volatile var aktivesGespraech: String? = null
+
+    /** Setzt die offene App: true = sie hat die Nachricht übernommen (Gespräch ist gerade offen). */
+    @Volatile var empfaenger: ((gespraech: String, nachricht: GespeicherteNachricht) -> Boolean)? = null
+
+    fun poste(context: Context, gespraech: String, text: String, art: String, kontext: String = "") {
+        val nachricht = GespeicherteNachricht(false, text, art, kontext)
+        if (runCatching { empfaenger?.invoke(gespraech, nachricht) }.getOrNull() == true) return
+        Gespraeche.anhaengen(context, gespraech, nachricht)
+    }
+
+    /** Markiert eine Rückfrage im Gespräch als beantwortet (Knöpfe verschwinden, die Antwort steht darunter). */
+    @Volatile var beantwortet: ((gespraech: String, frageId: String, antwort: String) -> Boolean)? = null
+
+    fun alsBeantwortet(context: Context, gespraech: String, frageId: String, antwort: String) {
+        if (runCatching { beantwortet?.invoke(gespraech, frageId, antwort) }.getOrNull() == true) return
+        Gespraeche.rueckfrageBeantwortet(context, gespraech, frageId, antwort)
+    }
+}

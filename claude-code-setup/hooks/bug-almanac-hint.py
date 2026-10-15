@@ -33,7 +33,7 @@ AREAS = {
     "android-build/r8":             ("R8/ProGuard",          ["proguard", "keep rule", "r8 minify", "minifyenabled", "shrinkresources"]),
     "android/firebase-billing":     ("Firebase Billing",     ["firebase billing", "play billing", "in-app purchase", "paywall", "billingclient"]),
     "claude-tooling/claude-code-cloud": ("Claude Code Cloud", ["cloud-sitzung", "cloud sitzung", "cloud-session", "cloud session", "claude code on the web", "claude.ai/code", "claude_code_remote", "apk-update-cloud", "apk update cloud", "setup-skript", "setup skript", "cloud-umgebung", "cloud umgebung", "remote control", "remote-control", "teleport", "routine-fire", "routine fire", "api-trigger", "api trigger", "claude-code-routine", "claude code routine"]),
-    "claude-tooling/claude-hooks":  ("Claude Hooks",         ["posttooluse", "pretooluse", "sessionstart hook", "claude hook", "hookspecificoutput"]),
+    "claude-tooling/claude-hooks":  ("Claude Hooks",         ["posttooluse", "pretooluse", "sessionstart hook", "claude hook", "hookspecificoutput", "askuserquestion", "updatedinput", "stop-hook", "stop hook", "posttoolusefailure"]),
     "web/typescript":               ("TypeScript",           ["tsconfig", "moduleresolution", "ts-node", "strictnullchecks"]),
     "android/retrofit-okhttp-moshi":("Retrofit/OkHttp",      ["retrofit", "okhttp", "moshi", "interceptor"]),
     "server/docker":                ("Docker/Compose",       ["docker compose", "docker-compose", "compose.yaml", "compose.yml", "dockerfile", "depends_on", "mem_limit", "healthcheck", "restart: unless-stopped", "ufw docker", "named volume", "json-file log"]),

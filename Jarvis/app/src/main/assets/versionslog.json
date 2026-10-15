@@ -72,6 +72,7 @@
     {"versionCode": 67, "versionName": "1.8.56", "stand": "15.10.2026, 12:24 Uhr", "notiz": "Stack-Labor angebunden: Jarvis liest deine Stacks samt Beschreibung, Reihenfolge, Dosis und aktiv/inaktiv vor, legt Mittel an und ändert sie, kennt die Stacks im Live-Gedächtnis (geplant heißt nicht eingenommen); auch über ChatGPT"},
     {"versionCode": 68, "versionName": "1.8.57", "stand": "15.10.2026, 12:45 Uhr", "notiz": "Jarvis bleibt nach einem Update erreichbar: Der Dienst startet bei jedem App-Start selbst, auch wenn Samsung das Update-Signal verschluckt; Update-Meldungen von UpdateStation kommen so wieder sofort"},
     {"versionCode": 69, "versionName": "1.8.58", "stand": "15.10.2026, 13:03 Uhr", "notiz": "Eigene Einstellungen für Update-Ansagen von UpdateStation (Einstellungen → Stimme): an/aus, eigene Stimme von Edge, Google oder Alibaba, Sprechtempo, Lautstärke und Probe hören"},
-    {"versionCode": 70, "versionName": "1.8.59", "stand": "15.10.2026, 14:13 Uhr", "notiz": "Jarvis kann seine Einstellungen per Sprache beschreiben und umstellen, z. B. „Schalte die Update-Ansagen aus“ oder „Was hast du beim Vorlesen für Einstellungen?“"}
+    {"versionCode": 70, "versionName": "1.8.59", "stand": "15.10.2026, 14:13 Uhr", "notiz": "Jarvis kann seine Einstellungen per Sprache beschreiben und umstellen, z. B. „Schalte die Update-Ansagen aus“ oder „Was hast du beim Vorlesen für Einstellungen?“"},
+    {"versionCode": 71, "versionName": "1.8.60", "stand": "15.10.2026, 14:14 Uhr", "notiz": "Programmieraufträge laufen live im Jarvis-Chat mit: Fortschritt erscheint als Nachricht, Rückfragen der Sitzung kommen als Karte mit Knöpfen A bis D und Freitext, und die Antwort geht direkt an die Sitzung zurück"}
   ]
 }

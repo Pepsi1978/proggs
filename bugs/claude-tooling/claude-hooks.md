@@ -935,6 +935,14 @@ Diese kamen mit v2.1.152–v2.1.177 und gehoeren zum aktuellen Wissensstand (Det
 
 ---
 
+
+### 16.9 AskUserQuestion, Stop-Hook und Remote Control (Stand 15.10.2026, CLI 2.1.300)
+- **Wildcard-PreToolUse mit `updatedInput` zerstört AskUserQuestion** (leere Antworten, #29530): Matcher exakt `AskUserQuestion`. https://github.com/anthropics/claude-code/issues/29530
+- **Remote Control leitet AskUserQuestion teils nicht weiter** (#33625, ähnlich #36552, #34947, #28508): Frage bleibt in der App unsichtbar. Workaround: Frage per Hook an ein eigenes System (Jarvis) schicken. https://github.com/anthropics/claude-code/issues/33625
+- **60-s-Auto-Skip von AskUserQuestion** (#73125, ab 2.1.198, laut Maintainer behoben): bei Rückfragen-Hooks im Blick behalten.
+- **Stop-Hook hält die Eingabe 1–2 Minuten auf** (#51515, 2.1.116, Nutzerbericht): Ein wartender Stop-Hook kann Eingaben im Terminal blockieren; Wartezeit begrenzen.
+- **PostToolUse sieht keine Fehlschläge:** Exit ≠ 0 kommt nur als PostToolUseFailure (kein Bug, aber eine Falle für Melde-Hooks).
+
 ## 15. Fix-Status — was auf v2.1.177 schon behoben ist
 
 > Wichtig fuers Versions-Denken: Diese Eintraege waren frueher Bugs, sind aber in der

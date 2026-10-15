@@ -81,6 +81,8 @@ VORGEHEN
     }
     if ($kannJarvis) {
         $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name`"", '--profil', $Profil, '--modus', $Modus, '--modell', "`"$Modell`"", '--effort', $Effort)
+        # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.
+        if ("$($auftrag.nummer)" -match '^[A-Za-z0-9]{1,20}$') { $argumente += @('--auftrag-id', $auftrag.nummer) }
         $prozess = Start-Process -FilePath $openLauncher -ArgumentList $argumente -PassThru -WindowStyle Hidden
         # Spätestens nach 30 s quittieren: Der Relay wartet 45 s, danach wüsste das Handy nicht, ob die Sitzung läuft.
         if (-not $prozess.WaitForExit(30000)) { throw 'Der OpenLauncher hat nach 30 Sekunden nicht geantwortet.' }

@@ -130,6 +130,47 @@ object Gespraeche {
         }.onFailure { Log.w(TAG, "KI-Titel nicht gespeichert", it) }.getOrNull()
     }
 
+    /**
+     * Hängt eine Nachricht an ein gespeichertes Gespräch, das gerade nicht in der App offen ist (Meldungen eines
+     * Programmierauftrags). Gibt es das Gespräch nicht mehr, passiert nichts.
+     */
+    fun anhaengen(context: Context, id: String, n: GespeicherteNachricht) {
+        synchronized(sperre) {
+            runCatching {
+                val d = datei(context, id)
+                if (!d.exists() && !File(d.path + ".bak").exists()) return@runCatching
+                val j = lies(d)
+                val liste = j.optJSONArray("nachrichten") ?: JSONArray().also { j.put("nachrichten", it) }
+                liste.put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
+                    if (n.art != "antwort") put("art", n.art)
+                    if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
+                })
+                j.put("geaendert", System.currentTimeMillis())
+                schreiben(d, j)
+            }.onFailure { Log.w(TAG, "Nachricht nicht angehängt", it) }
+        }
+    }
+
+    /** Trägt bei einer Rückfrage (art „rueckfrage“, kontext = JSON mit frage_id) die Antwort ein, in der Datei. */
+    fun rueckfrageBeantwortet(context: Context, id: String, frageId: String, antwort: String) {
+        synchronized(sperre) {
+            runCatching {
+                val d = datei(context, id)
+                val j = lies(d)
+                val liste = j.optJSONArray("nachrichten") ?: return@runCatching
+                for (i in liste.length() - 1 downTo 0) {
+                    val n = liste.getJSONObject(i)
+                    if (n.optString("art") != "rueckfrage") continue
+                    val kontext = runCatching { JSONObject(n.optString("kontext")) }.getOrNull() ?: continue
+                    if (kontext.optString("frage_id") != frageId) continue
+                    n.put("kontext", kontext.put("beantwortet", true).put("antwort", antwort).toString())
+                    schreiben(d, j)
+                    return@runCatching
+                }
+            }.onFailure { Log.w(TAG, "Rückfrage nicht als beantwortet markiert", it) }
+        }
+    }
+
     fun loeschen(context: Context, id: String) {
         synchronized(sperre) { AtomicFile(datei(context, id)).delete() }
     }
