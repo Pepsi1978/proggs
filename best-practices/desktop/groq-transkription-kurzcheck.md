@@ -15,6 +15,8 @@
 > Blocklist), nie eine Teilmenge — alle funktionserhaltend. Kanonische Referenz: TVO
 > `GroqWhisperClient.cs` (C#) bzw. CortexAndroid `SpeechAnalyzer.kt`+`WhisperHallucinationFilter.kt`
 > (Kotlin). Details: Volltext-Abschnitt „Der 4-Schichten-Standard-Kanon".
+> **Android ab 15.10.2026:** Modul **M1.4 Transkriptionsmodul** einbauen — alle vier Schichten plus Silero-VAD
+> (Aufnahmeende per Stimme statt Pegel, robust gegen Fahr-/Lüftergeräusch). Siehe `best-practices/android/transkription-silero-vad.md`.
 
 | # | Situation | Best Practice (Kurzform) | Volltext |
 |---|-----------|--------------------------|----------|

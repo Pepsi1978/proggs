@@ -49,6 +49,13 @@ Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mon
 | **3 — Segment-Audio-Abgleich** | Segment-Zeitfenster gegen die eigene Voiced-Timeline | `< 10 %` laute Frames im Fenster = Trailing-Halluzination. **Drift-Sicherung:** wuerde Schicht 3 ALLES verwerfen, die Schicht-2-Ergebnisse behalten (Whisper-Timestamps driften) |
 | **4 — Floskel-Blocklist** | letzter Filter an ALLEN Ausgaengen | Floskel NUR verwerfen bei DREI Signalen zugleich: kurz (`≤6 Woerter`/`≤64 Zeichen`) + normalisierter EXAKTER Match (`==`, nicht contains) + Stille-Kontext (`voicedMs<600`). Ohne Voiced-Timeline NICHT verwerfen |
 
+**Lokale Ergänzung 15.10.2026 (Jarvis, Android):** Fünfter Schutzbaustein **Silero-VAD-Sprachaktivität** —
+erkennt Stimme statt Lautstärke, beendet die Aufnahme nach 4,5 s ohne Stimme und liefert die Zeitachse, mit der die
+Schichten 1, 3, 4 im Fahr- und Lüftergeräusch erst greifen. Er filtert selbst keinen Text. Fertig als Modul
+**M1.4 Transkriptionsmodul** (`Module/Android/M1.4-Transkriptionsmodul/`, einbauen mit `modul-einbauen`); Details,
+Grenzen und Tests: [`android/transkription-silero-vad.md`](../android/transkription-silero-vad.md). Für neue
+Android-Apps ist M1.4 die bevorzugte Kotlin-Referenz (Schicht 4 dort ≤ 8 Wörter).
+
 **Kanonische Referenz-Implementierungen (kopieren statt neu erfinden):**
 - **C# / .NET (Vollversion, alle 4):** `TerminalVoiceOverlay-Windows/Services/GroqWhisperClient.cs` (+ macOS/CVO-Pendants).
 - **Kotlin / Android (Vollversion, alle 4):** `CortexAndroid/.../audio/SpeechAnalyzer.kt` + `WhisperHallucinationFilter.kt` (WAV-PCM16 direkt, kein MediaCodec).

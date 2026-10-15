@@ -1,11 +1,16 @@
-"""Erzeugt Audio-Testfälle (TTS-Sprache + synthetisches Fahrgeräusch), rechnet Silero VAD v5 genau wie
+"""Erzeugt Audio-Testfälle (TTS-Sprache + synthetisches Fahr- und Lüftergeräusch), rechnet Silero VAD v5 genau wie
 SileroVad.kt (64 Werte Kontext + 512, Zustand [2,1,128]) und schreibt die Wahrscheinlichkeiten je 32-ms-Rahmen
-als Testdaten für die JVM-Tests von Jarvis."""
+als Testdaten für die JVM-Tests des Transkriptionsmoduls (M1.4).
+
+Aufruf: python vad_testfaelle.py <ORDNER mit satz1/satz2/kurz_ja/kurz_stopp.wav + silero_vad.onnx> <ZIEL> [fall,fall]
+Ohne Fall-Liste werden alle Fälle neu geschrieben; mit Liste nur diese (die übrigen Testdaten bleiben unberührt).
+TTS-Dateien: 16 kHz mono 16 Bit, z. B. Windows-Stimme „Microsoft Hedda Desktop“ über System.Speech."""
 import sys, wave, os
 import numpy as np
 import onnxruntime as ort
 
 ORDNER, ZIEL = sys.argv[1], sys.argv[2]
+NUR = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else None
 SR = 16000
 rng = np.random.default_rng(42)
 
@@ -51,6 +56,21 @@ def raum(sek):
     return (rng.standard_normal(int(sek * SR)) * 0.002).astype(np.float32)
 
 
+def luefter(sek, rms=0.05):
+    """Tisch- oder PC-Lüfter nah am Mikrofon: gleichmäßiges Rauschen (Luftstrom), Brummen der Flügel bei 120 Hz mit
+    Obertönen, leises Motorsingen bei 950 Hz und ein langsames Schwanken der Drehzahl."""
+    n = int(sek * SR); t = np.arange(n) / SR
+    weiss = rng.standard_normal(n).astype(np.float32)
+    luft = tiefpass(weiss, 0.25)
+    f = 120 * (1 + 0.02 * np.sin(2 * np.pi * 0.3 * t))
+    phase = 2 * np.pi * np.cumsum(f) / SR
+    brummen = sum(a * np.sin(k * phase) for k, a in [(1, 1.0), (2, 0.5), (3, 0.3), (5, 0.15)])
+    singen = np.sin(2 * np.pi * 950 * t)
+    x = luft / np.sqrt(np.mean(luft ** 2)) * 0.8 + brummen / np.sqrt(np.mean(brummen ** 2)) * 0.5 + singen * 0.05
+    x *= 1 + 0.1 * np.sin(2 * np.pi * 0.5 * t)
+    return (x / np.sqrt(np.mean(x ** 2)) * rms).astype(np.float32)
+
+
 def piep():
     t = np.arange(int(0.16 * SR)) / SR
     return (0.5 * np.sin(2 * np.pi * 1000 * t)).astype(np.float32)
@@ -83,10 +103,24 @@ faelle = {
     "auto_leise": baue([("piep", piep()), ("stille", leer(0.6)), ("sprache", s1 * 0.316), ("stille", leer(7))],
                        lambda sek: fahrt(sek, 0.08)),
 }
+ja, stopp = lade("kurz_ja.wav"), lade("kurz_stopp.wav")
+faelle.update({
+    # Nur Lüfter nach dem Piepton, niemand spricht.
+    "luefter_nur": baue([("piep", piep()), ("stille", leer(10))], luefter),
+    # Sprache am Lüfter, danach 7 s nur Lüfter.
+    "luefter_sprache_dann_luefter": baue([("piep", piep()), ("stille", leer(0.6)), ("sprache", s1), ("stille", leer(7))],
+                                         luefter),
+    # Ein einzelnes kurzes „Ja.“ im ruhigen Raum.
+    "kurz_ja_ruhig": baue([("piep", piep()), ("stille", leer(0.8)), ("sprache", ja), ("stille", leer(6))], raum),
+    # Ein kurzes „Stopp.“ im fahrenden Auto.
+    "kurz_stopp_auto": baue([("piep", piep()), ("stille", leer(0.8)), ("sprache", stopp), ("stille", leer(7))], fahrt),
+})
 
 sess = ort.InferenceSession(os.path.join(ORDNER, "silero_vad.onnx"))
 os.makedirs(ZIEL, exist_ok=True)
 for name, (x, zeiten) in faelle.items():
+    if NUR is not None and name not in NUR:
+        continue
     zustand = np.zeros((2, 1, 128), np.float32); kontext = np.zeros(64, np.float32)
     werte, pegel = [], []
     # Wie auf dem Handy: 16-Bit-Werte, durch 32768.
