@@ -110,7 +110,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 name = "programmier_fortschritt",
                 titel = "Fortschritt eines Programmierauftrags melden",
                 beschreibung = "Nur für die Claude-Code-Sitzung, die einen Programmierauftrag von Jarvis bearbeitet (sie kennt die auftrag_id aus ihrem Auftrag): " +
-                    "meldet Frank einen Schritt. Jarvis zeigt ihn als Benachrichtigung auf dem Handy. stand=laeuft für Zwischenschritte, stand=frage bevor die Sitzung " +
+                    "meldet Frank einen Schritt. Jarvis schreibt ihn ins Gespräch des Auftrags; eine Benachrichtigung gibt es nur bei frage, fertig und fehler. stand=laeuft für Zwischenschritte, stand=frage bevor die Sitzung " +
                     "Frank etwas fragt, stand=fertig oder stand=fehler am Ende mit einer Zusammenfassung in einem Satz. Nicht im Gespräch mit Frank benutzen.",
                 schema = schema(
                     "auftrag_id" to text("Die Nummer aus dem Auftrag (AUFTRAG-ID)."),
@@ -195,7 +195,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech)
             verteile(eintrag, null)
             return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt: ${ziel.name}. ${start.hinweis} " +
-                "Die Sitzung meldet ihre Schritte; Frank sieht sie als Benachrichtigung, und programmierauftraege nennt jederzeit den Stand." +
+                "Die Sitzung meldet ihre Schritte in dieses Gespräch; eine Benachrichtigung kommt erst am Ende oder bei einer Rückfrage, und programmierauftraege nennt jederzeit den Stand." +
                 (if (start.link.isNotEmpty()) " Link zur Sitzung: ${start.link}" else "") +
                 (if (uebersprungen.isEmpty()) "" else " (${uebersprungen.joinToString(" ")})"))
         }
@@ -244,7 +244,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
     private fun verteile(eintrag: JSONObject, frage: JSONObject?) {
         aktivitaetMelden(eintrag)
-        if (eintrag.optString("stand") != "info" || frage != null) benachrichtige(eintrag)
+        // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
+        // nur, wenn Frank gebraucht wird oder der Auftrag zu Ende ist: Rückfrage, fertig (App installiert) oder Problem.
+        val letzter = eintrag.optString("letzterStand", eintrag.optString("stand"))
+        if (frage != null || letzter == "fertig" || letzter == "fehler") benachrichtige(eintrag)
         val gespraech = eintrag.optString("gespraech")
         if (gespraech.isEmpty()) return
         val appName = eintrag.optString("app")
@@ -294,7 +297,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     fun laufendesGespraech(): String? = Auftragsbuch.laufendesGespraech(app)
 
-    /** Eine Benachrichtigung je Auftrag, die mit jedem Schritt aktualisiert wird; ein Tipp öffnet die Sitzung oder die Claude-App. */
+    /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject) {
         runCatching {
             JarvisDienst.kanalAnlegen(app)
