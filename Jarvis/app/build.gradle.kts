@@ -30,6 +30,12 @@ val driveClient = Properties().apply {
     File(System.getProperty("user.home"), "SK/rclone/google-oauth-client.txt").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
+// Auslöser der Claude-Code-Routine für das Werkzeug „programmieren“ (Adresse und Token aus dem API-Trigger der
+// Routine auf claude.ai/code/routines), ebenfalls nur aus ~/SK. Fehlt die Datei, trägt man beides in der App ein.
+val routine = Properties().apply {
+    File(System.getProperty("user.home"), "SK/Jarvis/routine.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 android {
     namespace = "de.frank.jarvis"
     compileSdk = 36
@@ -46,6 +52,8 @@ android {
         buildConfigField("String", "TAVILY_KEY", "\"$tavilyKey\"")
         buildConfigField("String", "MAPS_KEY", "\"$mapsKey\"")
         buildConfigField("String", "DRIVE_CLIENT_ID", "\"${driveClient.getProperty("client_id", "")}\"")
+        buildConfigField("String", "ROUTINE_URL", "\"${routine.getProperty("url", "")}\"")
+        buildConfigField("String", "ROUTINE_TOKEN", "\"${routine.getProperty("token", "")}\"")
         buildConfigField("String", "DRIVE_CLIENT_SECRET", "\"${driveClient.getProperty("client_secret", "")}\"")
 
         // „Hey Jarvis“ rechnet mit ONNX Runtime (native Bibliotheken); nur die Handy-Architekturen mitnehmen.

@@ -429,6 +429,16 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Schluesselfeld(vm, "Repo", e.repoName, geheim = false) { e.repoName = it }
                 Schluesselfeld(vm, "GitHub-Schlüssel", e.githubToken) { e.githubToken = it }
             }
+            // ---------------------------------------------------------------- Programmieren (Cloud)
+            Bereich("Programmieren in der Cloud") {
+                val bereit = e.routineUrl.isNotBlank() && e.routineToken.isNotBlank()
+                Zeile("Claude-Code-Routine", if (bereit) "Eingerichtet" else "Fehlt", if (bereit) f.erfolg else f.textLeise)
+                Text("Mit „programmieren“ schickt Jarvis einen Programmierauftrag an eine Claude-Code-Routine. Sie startet eine Cloud-Sitzung im Repo, setzt den Auftrag um " +
+                    "und liefert die App über UpdateStation aus. Adresse und Token stehen im API-Trigger der Routine auf claude.ai/code/routines.",
+                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Schluesselfeld(vm, "Auslöse-Adresse", e.routineUrl, geheim = false) { e.routineUrl = it }
+                Schluesselfeld(vm, "Token", e.routineToken) { e.routineToken = it }
+            }
         }
 
         if (reiter == "konten") {

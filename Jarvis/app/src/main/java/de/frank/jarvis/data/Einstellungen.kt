@@ -103,6 +103,7 @@ class Einstellungen private constructor(context: Context) {
         val eingebaut = mapOf(
             "server_host" to BuildConfig.RELAY_HOST, "server_token" to BuildConfig.RELAY_TOKEN, "such_schluessel" to BuildConfig.TAVILY_KEY,
             "drive_client_id" to BuildConfig.DRIVE_CLIENT_ID, "drive_client_secret" to BuildConfig.DRIVE_CLIENT_SECRET, "maps_schluessel" to BuildConfig.MAPS_KEY,
+            "routine_url" to BuildConfig.ROUTINE_URL, "routine_token" to BuildConfig.ROUTINE_TOKEN,
         ).filter { (k, v) -> v.isNotBlank() && roh.getString(k, "").isNullOrEmpty() }
         // Gestört: nichts davon in den Klartext-Ersatz schreiben; die Getter greifen ohnehin auf die Werte aus dem Bau zurück.
         if (eingebaut.isNotEmpty() && !gestoert) roh.edit().apply { eingebaut.forEach { (k, v) -> putString(k, v) } }.apply()
@@ -164,6 +165,12 @@ class Einstellungen private constructor(context: Context) {
     var repoName: String get() = s("repo_name", "").ifEmpty { "Pepsi1978/proggs" }; set(v) = put { putString("repo_name", v.trim().removePrefix("https://github.com/").trim('/')) }
     /** Zugriffsschlüssel für GitHub. Lesen geht beim öffentlichen Repo auch ohne; er erlaubt die Code-Suche und mehr Abfragen. Jarvis schreibt nie. */
     var githubToken: String get() = s("github_token", ""); set(v) = putGeheim("github_token", v.trim())
+
+    // ---- Programmieren in der Cloud (Claude-Code-Routine mit API-Trigger) ----
+    /** Auslöse-Adresse der Routine (…/routines/trig_…/fire). Vorgabe aus dem Bau (~/SK/Jarvis/routine.properties). */
+    var routineUrl: String get() = s("routine_url", "").ifEmpty { BuildConfig.ROUTINE_URL }.ifEmpty { STANDARD_ROUTINE }; set(v) = put { putString("routine_url", v.trim()) }
+    /** Token des API-Triggers dieser Routine; claude.ai zeigt ihn nur einmal an. */
+    var routineToken: String get() = s("routine_token", "").ifEmpty { BuildConfig.ROUTINE_TOKEN }; set(v) = putGeheim("routine_token", v.trim())
 
     // ---- Google-Zugang für „Berechtigung erneuern“ (Tagebuch) ----
     var driveClientId: String
@@ -264,10 +271,12 @@ class Einstellungen private constructor(context: Context) {
         /** Schlüssel, die nie unverschlüsselt abgelegt werden dürfen. */
         private val GEHEIM = listOf(
             "geheimnis", "server_token", "mail_passwort", "github_token", "such_schluessel", "drive_client_id", "drive_client_secret",
-            "maps_schluessel", "maps_schluessel_bau",
+            "maps_schluessel", "maps_schluessel_bau", "routine_token",
         )
         /** Der eigene Jarvis-Relay (öffentlich bekannte Adresse, siehe README). Der Schlüssel bleibt geheim. */
         const val STANDARD_SERVER = "srv1774016.hstgr.cloud"
+        /** Auslöse-Adresse der Routine „Jarvis: Programmieren“ (claude.ai/code/routines). Kein Geheimnis; ohne Token wirkungslos. */
+        const val STANDARD_ROUTINE = "https://api.anthropic.com/v1/claude_code/routines/trig_01HkrhPAiYAJ7msGLn5UUcyo/fire"
         @Volatile private var instanz: Einstellungen? = null
         fun get(context: Context): Einstellungen = instanz ?: synchronized(this) {
             instanz ?: Einstellungen(context).also { instanz = it }
