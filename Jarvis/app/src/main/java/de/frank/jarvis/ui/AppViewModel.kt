@@ -533,6 +533,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Die laufende Aufnahme kam über „Hey Jarvis“ und endet von selbst, sobald Frank fertig gesprochen hat. */
     var freihaendig by mutableStateOf(false); private set
     private var weckwortLauf: Job? = null
+    /** „Sprachsession beenden“: Die laufende Sprachschleife öffnet das Mikrofon nicht mehr von selbst. Erst eine ausdrückliche Aktivierung hebt das auf. */
+    private var sprachsitzungBeendet = false
 
     /** Was gerade passiert, für die Anzeige auch im gesperrten Zustand ([liestVor]: der Vorleser spricht). */
     fun sprachStatus(liestVor: Boolean): String? = when {
@@ -576,6 +578,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
         // gespeichert; arbeitet Jarvis dort noch, landet die Antwort in dessen Datei, der Programmierauftrag läuft weiter.
         if (!fortsetzen && (gespraech.isNotEmpty() || sitzungId != null)) neuesGespraech()
+        // Ausdrücklich aktiviert: Eine früher beendete Sprachsession hindert die neue nicht mehr.
+        sprachsitzungBeendet = false
         val treffer = de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
@@ -588,6 +592,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // schnappt es sich zwischen zwei Runden der Weckwort-Dienst.
                 var runde = 0
                 while (true) {
+                    // Vorgemerkte Runde nach „Sprachsession beenden“: nicht mehr piepen und nicht mehr zuhören.
+                    if (runde > 0 && sprachsitzungBeendet) break
                     val antworten = gespraech.count { !it.vonMir }
                     val navi = navigationen
                     val ergebnis = runde(erste = runde == 0)
@@ -605,6 +611,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // Der Vorleser steht schon auf „lädt“, wenn „denkt“ endet (beides im selben Schritt).
                     snapshotFlow { schreibtMit || denkt || navigiert }.first { !it }
                     vorleser.stand.first { it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
+                    // Ausdrücklich beendet: Schluss, auch wenn inzwischen eine Antwort aus dem Hintergrund (Programmierauftrag) ankam.
+                    if (sprachsitzungBeendet) break
                     // Keine neue Antwort (abgebrochen, nichts verstanden) oder Frank hat selbst übernommen: Schluss.
                     // Nach einem Wechsel der Session hört Jarvis weiter zu, dann im neuen Gespräch.
                     if ((gespraech.count { !it.vonMir } <= antworten && navigationen == navi) || nimmtAuf || holtMikro) break
@@ -663,6 +671,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return satz in AUSBEFEHLE
     }
 
+    /** Ausdrücklich „Sprachsession beenden“ und Verwandtes: gilt auch ohne laufende Sprachschleife, z. B. nach Tipp aufs Mikrofon. */
+    private fun istSprachsessionEnde(text: String): Boolean {
+        val worte = text.lowercase(java.util.Locale.GERMAN).replace(Regex("[^a-zäöüß ]"), " ")
+            .split(' ').filter { it.isNotBlank() && it !in FUELLWORTE && it !in ARTIKEL }
+        return worte.joinToString(" ") in SPRACHSESSION_ENDE
+    }
+
     /** Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort. */
     private suspend fun piep() {
         val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100) }.getOrNull() ?: return
@@ -693,11 +708,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
-                else if (weckwortLauf?.isActive == true && istAusbefehl(text)) {
-                    // Ausbefehl im Gesprächsmodus: kurz bestätigen, danach kein Piepton und kein offenes Mikrofon mehr.
-                    // Ohne neue Antwort im Gespräch endet die Schleife in weckwortStart von selbst.
+                else if ((weckwortLauf?.isActive == true && istAusbefehl(text)) || istSprachsessionEnde(text)) {
+                    // Ausbefehl im Gesprächsmodus oder ausdrücklich „Sprachsession beenden“: kurz bestätigen, danach kein Piepton
+                    // und kein offenes Mikrofon mehr. Geht nie ans Modell: kein neues Gespräch, kein Auftrag. Das Gespräch und
+                    // laufende Antworten, Agenten und Programmieraufträge bleiben unberührt.
+                    sprachsitzungBeendet = true
                     Logbuch.sprache("Sprachsitzung beendet", text)
-                    vorleser.sprich("sitzung-ende", "Jarvis", "Okay, Sprachsitzung beendet.")
+                    vorleser.sprich("sitzung-ende", "Jarvis", "Okay, Sprachsession beendet.")
                 }
                 else { schreibtMit = false; gesprochen = true; sende(text) }
             } catch (e: CancellationException) {
@@ -1284,12 +1301,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 /** Wörter, die vor oder nach dem Ausbefehl nicht zählen („Okay Jarvis, Ende bitte“). */
 private val FUELLWORTE = setOf("jarvis", "okay", "ok", "bitte", "hey", "also", "gut", "dann", "ja", "nein", "nee", "so")
 
+/** Artikel, die beim ausdrücklichen „Beende die Sprachsession“ nicht zählen. */
+private val ARTIKEL = setOf("die", "den", "das", "der", "diese", "unsere", "meine")
+
+/** Ausdrückliche Befehle für das Ende der Sprachschleife (ohne Füllwörter und Artikel); „Sprach-Session“ wird zu zwei Wörtern. */
+private val SPRACHSESSION_ENDE = listOf("sprachsession", "sprach session", "sprachsitzung", "sprach sitzung", "sprachmodus", "sprach modus", "voice session")
+    .flatMap { n -> listOf("$n beenden", "$n beendet", "$n stoppen", "$n stop", "$n stopp", "$n aus", "$n ende", "beende $n", "stoppe $n", "$n schließen") }
+    .toSet()
+
 /** Ganze Sätze, die den Gesprächsmodus beenden (nach Kleinschreibung, ohne Satzzeichen und Füllwörter). */
 private val AUSBEFEHLE = setOf(
     "ende", "stopp", "stop", "schluss", "aus", "fertig", "tschüss", "tschüs", "ciao", "danke", "danke schön", "dankeschön", "vielen dank",
     "das wars", "danke das wars", "das wars danke", "das ist alles", "danke das ist alles", "das reicht", "mehr nicht", "nichts mehr",
     "sprachsitzung beenden", "sprachsitzung beendet", "sitzung beenden", "gespräch beenden", "beenden", "beende", "aufhören", "hör auf",
-    "ende der sitzung", "schluss für jetzt", "erstmal nicht", "erst mal nicht", "nichts weiter", "sonst nichts", "danke sonst nichts",
+    "ende der sitzung", "session beenden", "schluss für jetzt", "erstmal nicht", "erst mal nicht", "nichts weiter", "sonst nichts", "danke sonst nichts",
 )
 
 /** So viele der zuletzt geführten Gespräche durchsucht „Gehe in die Whoop-Session zurück“. */
