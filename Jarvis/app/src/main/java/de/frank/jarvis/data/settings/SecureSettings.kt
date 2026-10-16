@@ -167,13 +167,10 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.OPENAI_API_KEY, "")
         set(value) = writeString(Keys.OPENAI_API_KEY, value)
 
-    var liveModell: String
-        get() = readString(Keys.LIVE_MODELL, "").ifBlank { "gpt-realtime" }
-        set(value) = writeString(Keys.LIVE_MODELL, value.trim())
+    /** Eine Einstellung des Live-Gesprächs (Liste in [de.frank.jarvis.live.LiveOptionen]); leer = Standard. */
+    fun liveOption(id: String): String = readString("liveopt_$id", "")
 
-    var liveStimme: String
-        get() = readString(Keys.LIVE_STIMME, "").ifBlank { "marin" }
-        set(value) = writeString(Keys.LIVE_STIMME, value)
+    fun setzeLiveOption(id: String, wert: String) = writeString("liveopt_$id", wert)
 
     var model: String
         get() = readString(Keys.MODEL, Defaults.MODEL)
@@ -296,8 +293,6 @@ class SecureSettings(context: Context) : Closeable {
         const val KI_ZUGANG = "ki_zugang"
         const val GEMINI_API_KEY = "gemini_api_key"
         const val OPENAI_API_KEY = "openai_api_key"
-        const val LIVE_MODELL = "live_modell"
-        const val LIVE_STIMME = "live_stimme"
         const val MODEL = "model"
         const val REASONING = "reasoning"
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"

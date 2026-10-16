@@ -1,7 +1,14 @@
 package de.frank.jarvis.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -91,15 +98,79 @@ fun SpracheEinstellungen(vm: AppViewModel) {
     Bereich("Live-Gespräch") {
         val bereit = s.openAiApiKey.isNotBlank()
         Zeile("Orange Blase", if (bereit) "Eingerichtet" else "OpenAI-Schlüssel fehlt", if (bereit) f.erfolg else f.textLeise)
-        Text("Echtes Gespräch über die OpenAI-Realtime-API: Jarvis antwortet sofort mit Stimme, hört dabei weiter zu, und du kannst ihn jederzeit unterbrechen. " +
-            "Für deine Daten fragt er im Hintergrund den normalen Jarvis mit allen Werkzeugen. Braucht einen eigenen API-Schlüssel von platform.openai.com (wird pro Minute abgerechnet, nicht über das ChatGPT-Abo).",
+        Text("Echtes Sprachgespräch mit OpenAI: Jarvis antwortet sofort mit Stimme, hört dabei weiter zu, und du kannst ihn jederzeit unterbrechen. " +
+            "Für deine Daten fragt er im Hintergrund den normalen Jarvis mit allen Werkzeugen. Braucht einen eigenen API-Schlüssel von platform.openai.com; " +
+            "abgerechnet wird dort, nicht über das ChatGPT-Abo. Preise in US-Dollar, Stand 16.10.2026.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         Schluesselfeld(vm, "OpenAI-API-Schlüssel", s.openAiApiKey) { geaendert { s.openAiApiKey = it } }
-        Schluesselfeld(vm, "Live-Modell", s.liveModell, geheim = false) { geaendert { s.liveModell = it } }
-        Unterzeile("Stimme")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            de.frank.jarvis.live.LiveGespraech.STIMMEN.forEach { (id, name) ->
-                Chip(name, aktiv = s.liveStimme == id) { geaendert { s.liveStimme = id } }
+        val st = de.frank.jarvis.live.LiveOptionen.Stand(s)
+        stand.let { }
+        val lo = de.frank.jarvis.live.LiveOptionen
+
+        // Schnellwahl: ein Tipp stellt alles Passende ein, mit geschätzten Kosten je Profil.
+        Unterzeile("Schnellwahl")
+        val aktiv = lo.aktivesProfil(st)
+        lo.PROFILE.forEach { p ->
+            val an = p == aktiv
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    .background(if (an) f.primaer.copy(alpha = 0.16f) else f.flaeche, RoundedCornerShape(16.dp))
+                    .antippen { geaendert { p.werte.forEach { (k, v) -> st.setze(k, v) } }; vm.meldung = "Live-Gespräch: ${p.titel} eingestellt." }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(p.titel, color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(p.beschreibung, color = f.textLeise, fontSize = 13.sp)
+                    Text(lo.schaetzung(de.frank.jarvis.live.LiveOptionen.Stand(s, p.werte)).removePrefix("Geschätzt für 10 Minuten: ").let { "10 Minuten: $it" }, color = f.primaer, fontSize = 13.sp)
+                }
+                if (an) Icon(Icons.Rounded.Check, null, tint = f.primaer)
+            }
+        }
+
+        // Was gerade eingestellt ist und was es kostet.
+        Unterzeile(if (aktiv == null) "Eingestellt (eigene Mischung)" else "Eingestellt: ${aktiv.titel}")
+        Text(lo.kurzfassung(st), color = f.text, fontSize = 14.sp)
+        Text(lo.schaetzung(st), color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
+        Text("Annahme: je zur Hälfte du und Jarvis, 10 Wortwechsel. Im Gespräch zeigt die Live-Leiste die echten Kosten, am Ende kommt die Summe. " +
+            "Verbrauch und ein festes Ausgabenlimit: platform.openai.com → Usage bzw. Settings → Limits.",
+            color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+
+        // Feineinstellungen: jede Option einzeln, mit Erklärung und Preis. Zu Beginn zu, damit es übersichtlich bleibt.
+        var feinOffen by rememberSaveable { mutableStateOf(false) }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 12.dp).background(f.flaeche, RoundedCornerShape(14.dp)).antippen { feinOffen = !feinOffen }.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Alle Einstellungen einzeln", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Icon(if (feinOffen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (feinOffen) "Zuklappen" else "Aufklappen", tint = f.text)
+        }
+        if (feinOffen) lo.alle.filter { it.gilt(st) }.forEach { o ->
+            val aktuell = st[o.id]
+            val werte = o.werte(st)
+            Unterzeile(o.titel)
+            Text(o.beschreibung, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+            if (werte.all { it.beschreibung.isEmpty() && it.preis.isEmpty() }) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    werte.forEach { w -> Chip(w.titel, aktiv = w.id == aktuell) { geaendert { st.setze(o.id, w.id) } } }
+                }
+            } else {
+                werte.forEach { w ->
+                    val an = w.id == aktuell
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                            .background(if (an) f.primaer.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(12.dp))
+                            .antippen { geaendert { st.setze(o.id, w.id) } }.padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(w.titel, color = f.text, fontSize = 15.sp, fontWeight = if (an) FontWeight.Bold else FontWeight.Normal)
+                            if (w.beschreibung.isNotEmpty()) Text(w.beschreibung, color = f.textLeise, fontSize = 13.sp)
+                            if (w.preis.isNotEmpty()) Text(w.preis, color = f.primaer, fontSize = 13.sp)
+                        }
+                        if (an) Icon(Icons.Rounded.Check, null, tint = f.primaer)
+                    }
+                }
             }
         }
     }

@@ -531,6 +531,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var liveStatus by mutableStateOf(""); private set
     var livePegel by androidx.compose.runtime.mutableFloatStateOf(0f); private set
     var liveStumm by mutableStateOf(false); private set
+    /** Was das laufende (oder zuletzt beendete) Live-Gespräch bisher gekostet hat, in USD. */
+    var liveKosten by mutableStateOf(0.0); private set
     var liveMikroAnfragen: () -> Unit = {}
     private var live: de.frank.jarvis.live.LiveGespraech? = null
     /** Zählt Live-Starts: Ein verspäteter Start oder das Ende einer alten Verbindung darf eine neuere nicht anfassen. */
@@ -568,13 +570,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (!liveAktiv) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
             de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
             val haupt: (() -> Unit) -> Unit = { block -> viewModelScope.launch(Dispatchers.Main) { if (stand == liveStand) block() } }
+            val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
+            val mitgeben = optionen["verlauf"].toIntOrNull() ?: 0
+            val bisher = gespraech.filter { it.art == "antwort" && it.text.isNotBlank() }.takeLast(mitgeben).map { it.vonMir to it.text }
+            liveKosten = 0.0
             live = de.frank.jarvis.live.LiveGespraech(
-                getApplication(), sprache.openAiApiKey, sprache.liveModell, sprache.liveStimme, liveAnweisung(),
+                getApplication(), sprache.openAiApiKey, optionen, liveAnweisung(optionen.istLive), bisher,
                 beiStatus = { s -> haupt { liveStatus = s } },
                 beiPegel = { p -> livePegel = p },
                 beiNutzerText = { t -> haupt { liveNachricht(Nachricht(true, t)) } },
                 beiJarvisText = { t -> haupt { liveNachricht(Nachricht(false, t)) } },
                 beiWerkzeug = { id, auftrag -> haupt { liveWerkzeug(id, auftrag) } },
+                // Die abgerechnete Dauer kommt bei GPT-Live erst nach dem Ende: auch dann noch übernehmen.
+                beiKosten = { k -> viewModelScope.launch(Dispatchers.Main) { if (stand == liveStand || !liveAktiv) liveKosten = k } },
                 beiFehler = { m -> haupt { meldung = m } },
                 beiEnde = { haupt { liveAufraeumen() } },
             ).also { it.start() }
@@ -594,6 +602,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         liveStatus = ""
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
         de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        viewModelScope.launch {
+            // Kurz warten: GPT-Live meldet die endgültige Dauer erst nach dem Schließen.
+            kotlinx.coroutines.delay(2_500)
+            if (!liveAktiv && liveKosten > 0) meldung = "Live-Gespräch beendet · ca. " + de.frank.jarvis.live.LiveOptionen.usdText(liveKosten)
+        }
     }
 
     private fun liveNachricht(n: Nachricht) {
@@ -609,20 +622,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
         viewModelScope.launch(kennung) {
             val antwort = runCatching {
-                agent.versuche(auftrag.ifBlank { "Fasse kurz zusammen, was gerade wichtig ist." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = 60_000)
+                agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = 60_000)
             }.getOrNull() ?: "Das konnte ich gerade nicht nachschlagen."
-            // Nur an dieselbe Verbindung: Eine neue kennt diese call_id nicht.
-            if (live === sitzung) sitzung?.werkzeugErgebnis(callId, antwort)
+            // Nur an dieselbe Verbindung: Eine neue kennt diese Kennung nicht.
+            if (live === sitzung) sitzung?.ergebnis(callId, antwort)
         }
     }
 
-    private fun liveAnweisung(): String =
-        "Du bist Jarvis, Franks persönlicher Assistent auf seinem Handy, im Live-Sprachgespräch. Sprich Deutsch, natürlich, warm und knapp, " +
-            "wie ein guter Gesprächspartner: kurze Sätze, keine Aufzählungszeichen, keine Formatierung, keine Links vorlesen. " +
-            "Frank kann dich jederzeit unterbrechen; dann hörst du auf und gehst auf ihn ein. " +
-            "Für alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, " +
-            "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), rufst du das Werkzeug jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest. " +
-            "Erfinde nie Daten. Sag kurz „Moment, ich schaue nach“, wenn du das Werkzeug nutzt. Lies keine Kennungen vor. " +
+    /** Anweisung für das Sprachmodell. GPT-Live delegiert, Realtime ruft das Werkzeug selbst. */
+    private fun liveAnweisung(gptLive: Boolean): String =
+        "# Rolle\nDu bist Jarvis, Franks persönlicher Assistent auf seinem Handy, im Live-Sprachgespräch.\n" +
+            "# Sprache\nSprich immer Deutsch, auch wenn Frank kurz Englisch spricht. Natürlich, warm und knapp wie ein guter Gesprächspartner: kurze Sätze, " +
+            "keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
+            "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf und gehst auf ihn ein. Lass ihm Denkpausen.\n" +
+            (if (gptLive) "# Nachschlagen\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, " +
+                "Mails, Wetter, Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), delegierst du, bevor du antwortest. Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n"
+            else "# Werkzeug\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, " +
+                "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), rufst du jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest. " +
+                "Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n") +
+            "# Regeln\nErfinde nie Daten. Melde etwas erst als erledigt, wenn das Ergebnis da ist.\n" +
             "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
 
     fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden() }

@@ -227,8 +227,12 @@ class EinstellungsKatalog(context: Context) {
                 { e.modell.supportedEfforts.map { it.name to it.label } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
 
             // ---- Live-Gespräch ----
-            auswahl("live_stimme", "Live-Gespräch", "Stimme im Live-Gespräch", "Mit welcher Stimme Jarvis im Live-Gespräch (orange Blase) spricht.",
-                { de.frank.jarvis.live.LiveGespraech.STIMMEN }, { s.liveStimme }) { s.liveStimme = it },
+            // Alle Einstellungen aus derselben Liste wie der Einstellungs-Bildschirm, samt Preis in der Beschreibung.
+            *de.frank.jarvis.live.LiveOptionen.alle.map { o ->
+                auswahl("live_" + o.id, o.bereich, o.titel, o.beschreibung,
+                    { o.werte(de.frank.jarvis.live.LiveOptionen.Stand(s)).map { w -> w.id to (w.titel + if (w.preis.isNotEmpty()) " (${w.preis})" else "") } },
+                    { de.frank.jarvis.live.LiveOptionen.Stand(s)[o.id] }) { de.frank.jarvis.live.LiveOptionen.Stand(s).setze(o.id, it) }
+            }.toTypedArray(),
 
             // ---- Darstellung ----
             auswahl("modus", "Darstellung", "Hell oder dunkel", "Helles oder dunkles Design.",

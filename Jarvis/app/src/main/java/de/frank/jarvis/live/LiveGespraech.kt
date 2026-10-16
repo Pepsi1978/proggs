@@ -24,33 +24,44 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 /**
- * Live-Gespräch über die OpenAI-Realtime-API (WebSocket, PCM16 mit 24 kHz in beide Richtungen).
- * Das Modell hört dauernd zu, auch während es spricht: Beginnt Frank zu reden, verstummt die Ausgabe sofort
- * (Server-Sprachaktivität mit `interrupt_response`). Die Echo-Unterdrückung des Handys verhindert, dass es sich selbst hört.
- * Für alles, was Franks Daten oder Aktionen braucht, ruft das Modell das Werkzeug `jarvis_fragen` auf; das beantwortet
- * der normale Jarvis-Agent mit allen Werkzeugen.
+ * Live-Gespräch mit OpenAI, PCM16 mit 24 kHz in beide Richtungen, über zwei getrennte Protokolle:
+ *
+ * - **GPT-Live** (`gpt-live-1`, `wss://…/v1/live/sessions`): hört und spricht gleichzeitig. Denken übernimmt entweder ein
+ *   Denk-Modell bei OpenAI (Responses-Delegation, das per Funktion `jarvis_fragen` den Jarvis-Agenten ruft) oder Jarvis
+ *   selbst (Client-Delegation: Auftrag aus der Mitschrift, Antwort per `session.commentary.append`).
+ * - **Realtime** (`gpt-realtime-*`, `wss://…/v1/realtime?model=`): ein Modell macht alles; `jarvis_fragen` als Funktion.
+ *
+ * Die Einstellungen kommen aus [LiveOptionen]. Die Kosten laufen mit ([beiKosten], in USD) und stehen in der Live-Leiste.
  */
 class LiveGespraech(
     context: Context,
     private val schluessel: String,
-    private val modell: String,
-    private val stimme: String,
+    private val st: LiveOptionen.Stand,
     private val anweisung: String,
+    /** Bisheriges Gespräch (true = Frank), damit das Live-Gespräch anknüpft. */
+    private val verlauf: List<Pair<Boolean, String>>,
     private val beiStatus: (String) -> Unit,
     private val beiPegel: (Float) -> Unit,
     private val beiNutzerText: (String) -> Unit,
     private val beiJarvisText: (String) -> Unit,
-    private val beiWerkzeug: (callId: String, auftrag: String) -> Unit,
+    /** Jarvis soll etwas nachschlagen oder erledigen; die Antwort kommt über [ergebnis] mit derselben Kennung zurück. */
+    private val beiWerkzeug: (kennung: String, auftrag: String) -> Unit,
+    private val beiKosten: (Double) -> Unit,
     private val beiFehler: (String) -> Unit,
     private val beiEnde: () -> Unit,
 ) {
     private val app = context.applicationContext
     private val audio = app.getSystemService(AudioManager::class.java)
     private val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).pingInterval(20, TimeUnit.SECONDS).build()
+    private val live = st.istLive
+    private val modell = st.modell
     private var ws: WebSocket? = null
     @Volatile private var laeuft = false
+    @Volatile private var bereit = false
     @Volatile var stumm = false
+        set(v) { field = v; if (live) ws?.send(JSONObject().put("type", if (v) "session.input_audio.mute" else "session.input_audio.unmute").toString()) }
     @Volatile private var sprichtGerade = false
+    @Volatile private var letzteAktivitaet = System.currentTimeMillis()
 
     private var aufnahme: AudioRecord? = null
     private var echo: AcousticEchoCanceler? = null
@@ -59,86 +70,267 @@ class LiveGespraech(
     private val ausgabe = LinkedBlockingQueue<ByteArray>()
     private var alterModus = AudioManager.MODE_NORMAL
 
+    // ---- Kosten ----
+    @Volatile private var liveSekunden = 0.0
+    @Volatile private var tokenKosten = 0.0
+    private val gezaehlt = HashSet<String>()
+    private fun kostenMelden() = beiKosten(liveSekunden / 60.0 * LiveOptionen.LIVE_PRO_MINUTE + tokenKosten)
+
     fun start() {
         laeuft = true
         beiStatus("Verbinde …")
-        val anfrage = Request.Builder()
-            .url("wss://api.openai.com/v1/realtime?model=$modell")
-            .header("Authorization", "Bearer $schluessel")
-            .build()
+        val url = if (live) "wss://api.openai.com/v1/live/sessions" else "wss://api.openai.com/v1/realtime?model=$modell"
+        val anfrage = Request.Builder().url(url).header("Authorization", "Bearer $schluessel").build()
         ws = client.newWebSocket(anfrage, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                webSocket.send(sitzung().toString())
-                // Die Mitschrift kommt getrennt: Kennt der Dienst das Mitschrift-Modell nicht, scheitert nur sie, nicht das Gespräch.
-                webSocket.send(JSONObject().put("type", "session.update").put("session", JSONObject().put("type", "realtime").put("audio",
-                    JSONObject().put("input", JSONObject().put("transcription", JSONObject().put("model", "gpt-4o-mini-transcribe").put("language", "de"))))).toString())
-                tonStarten()
-                if (laeuft) beiStatus("Ich höre zu")
+                if (live) {
+                    // GPT-Live: erst session.start, Audio erst nach session.started.
+                    webSocket.send(liveStart().toString())
+                } else {
+                    webSocket.send(realtimeSitzung().toString())
+                    val mitschrift = st["mitschrift"]
+                    // Getrennt: Lehnt der Dienst die Mitschrift ab, scheitert nur sie, nicht das Gespräch.
+                    if (mitschrift != "aus") webSocket.send(JSONObject().put("type", "session.update").put("session", JSONObject().put("type", "realtime").put("audio",
+                        JSONObject().put("input", JSONObject().put("transcription", JSONObject().put("model", mitschrift).put("language", "de"))))).toString())
+                    realtimeVerlauf(webSocket)
+                    bereit = true
+                    tonStarten()
+                    if (laeuft) beiStatus("Ich höre zu")
+                }
             }
 
-            override fun onMessage(webSocket: WebSocket, text: String) = ereignis(text)
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                val e = runCatching { JSONObject(text) }.getOrNull() ?: return
+                if (live) liveEreignis(e) else realtimeEreignis(e)
+            }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 if (!laeuft) return
                 val grund = when (response?.code) {
                     401 -> "Der OpenAI-Schlüssel wurde abgelehnt."
-                    403 -> "Der Schlüssel darf die Realtime-API nicht nutzen."
-                    404 -> "Das Live-Modell „$modell“ gibt es nicht."
+                    403 -> "Der Schlüssel darf dieses Live-Modell nicht nutzen."
+                    404 -> "Das Live-Modell „$modell“ gibt es nicht (mehr)."
                     429 -> "Kein Guthaben oder zu viele Anfragen bei OpenAI."
                     else -> "Live-Verbindung getrennt: " + (t.message ?: "unbekannt")
                 }
                 beiFehler(grund)
-                beenden()
+                beenden(senden = false)
             }
 
-            // Schließt der Dienst die Verbindung (etwa am Sitzungsende), meldet OkHttp nur onClosing; onClosed käme erst nach
-            // unserem eigenen close(). Ohne das hier liefe das Mikrofon weiter in eine tote Verbindung.
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden() }
-
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden() }
+            // Schließt der Dienst die Verbindung, meldet OkHttp nur onClosing; ohne das liefe das Mikrofon in eine tote Verbindung.
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden(senden = false) }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden(senden = false) }
         })
+        stilleWaechter()
     }
 
-    private fun sitzung(): JSONObject {
-        val werkzeug = JSONObject()
-            .put("type", "function")
-            .put("name", "jarvis_fragen")
-            .put("description", "Fragt Jarvis mit allen Werkzeugen und Franks Daten: Termine, Dienstplan, Aufgaben, Wecker, Biodaten, Ideen, Tagebuch, Mails, Wetter, " +
-                "Gedächtnis, Programmieraufträge, Timer und alles, was etwas nachschlägt oder ändert. Gib den Auftrag vollständig in Franks Worten weiter.")
-            .put("parameters", JSONObject().put("type", "object")
-                .put("properties", JSONObject().put("auftrag", JSONObject().put("type", "string").put("description", "Die vollständige Frage oder der Auftrag")))
-                .put("required", JSONArray().put("auftrag")))
+    // ======================= GPT-Live =======================
+
+    private fun liveStart(): JSONObject {
+        val sitzung = JSONObject()
+            .put("model", modell)
+            .put("instructions", anweisung)
+            .put("audio", JSONObject().put("format", JSONObject().put("type", "audio/pcm").put("rate", 24000)).put("output", JSONObject().put("voice", st["stimme"])))
+            .put("store", st["speichern"] == "an")
+        val eingabe = JSONArray()
+        verlauf.forEach { (mir, text) ->
+            eingabe.put(JSONObject().put("type", "message").put("role", if (mir) "user" else "assistant")
+                .put("content", JSONArray().put(JSONObject().put("type", if (mir) "input_text" else "output_text").put("text", text.take(1200)))))
+        }
+        eingabe.put(JSONObject().put("type", "message").put("role", "developer")
+            .put("content", JSONArray().put(JSONObject().put("type", "input_text").put("text", "Begrüße Frank kurz auf Deutsch, höchstens ein Satz, dann hör zu."))))
+        sitzung.put("input", eingabe)
+        if (st.denktBeiOpenAi) {
+            val r = JSONObject()
+                .put("model", st["backend"])
+                .put("instructions", "Du bist das Denk-Backend von Jarvis, Franks persönlichem Assistenten. Antworte auf Deutsch, knapp und zum Vorlesen geeignet, ohne Aufzählungen und Links. " +
+                    "Für alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, Fahrzeit, " +
+                    "Gedächtnis, Programmieraufträge, Recherchen), rufe die Funktion jarvis_fragen mit dem vollständigen Auftrag auf. Erfinde nie Daten. Melde Erfolg erst nach dem Werkzeugergebnis.")
+                .put("reasoning", JSONObject().put("effort", st["backend_effort"]))
+                .put("text", JSONObject().put("verbosity", st["ausfuehrlich"]))
+                .put("service_tier", st["tarif"])
+                .put("tool_choice", "auto")
+                .put("tools", JSONArray().put(jarvisWerkzeug()).apply { if (st["websuche"] == "an") put(JSONObject().put("type", "web_search")) })
+            st["backend_max"].toIntOrNull()?.takeIf { it > 0 }?.let { r.put("max_output_tokens", it) }
+            sitzung.put("delegation", JSONObject().put("type", "responses").put("responses", r))
+        } else {
+            sitzung.put("delegation", JSONObject().put("type", "client"))
+        }
+        return JSONObject().put("type", "session.start").put("session", sitzung)
+    }
+
+    private val nutzerTeile = StringBuilder()
+    private val jarvisTeile = StringBuilder()
+    /** Was Frank seit der letzten Client-Delegation gesagt hat: daraus erschließt Jarvis den Auftrag. */
+    private val seitAuftrag = StringBuilder()
+    private val kennungArt = HashMap<String, String>()
+
+    private fun nutzerFertig() { nutzerTeile.toString().trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText); nutzerTeile.setLength(0) }
+    private fun jarvisFertig() { jarvisTeile.toString().trim().takeIf { it.isNotEmpty() }?.let(beiJarvisText); jarvisTeile.setLength(0) }
+
+    private fun liveEreignis(e: JSONObject) {
+        when (e.optString("type")) {
+            "session.started" -> {
+                bereit = true
+                tonStarten()
+                if (laeuft) beiStatus("Ich höre zu")
+            }
+            "session.output_audio.delta" -> {
+                letzteAktivitaet = System.currentTimeMillis()
+                if (!sprichtGerade) { sprichtGerade = true; beiStatus("Jarvis spricht") }
+                ausgabe.offer(Base64.decode(e.optString("delta"), Base64.DEFAULT))
+            }
+            "session.input_transcript.delta" -> {
+                letzteAktivitaet = System.currentTimeMillis()
+                // GPT-Live meldet kein „Frank spricht“: Kommt seine Mitschrift, verstummt die gepufferte Ausgabe.
+                if (sprichtGerade) { ausgabeLeeren(); beiStatus("Ich höre zu") }
+                jarvisFertig()
+                val d = e.optString("delta")
+                nutzerTeile.append(d)
+                seitAuftrag.append(d)
+            }
+            "session.output_transcript.delta" -> {
+                nutzerFertig()
+                jarvisTeile.append(e.optString("delta"))
+            }
+            "session.delegation.created" -> {
+                val d = e.optJSONObject("delegation") ?: return
+                val id = d.optString("id")
+                beiStatus("Jarvis schaut nach …")
+                if (d.optString("target") == "client") {
+                    nutzerFertig()
+                    val auftrag = seitAuftrag.toString().trim()
+                    seitAuftrag.setLength(0)
+                    kennungArt[id] = "auftrag"
+                    beiWerkzeug(id, auftrag)
+                }
+            }
+            "response.event" -> {
+                val inner = e.optJSONObject("event") ?: return
+                when (inner.optString("type")) {
+                    "response.output_item.done" -> {
+                        val item = inner.optJSONObject("item") ?: return
+                        if (item.optString("type") != "function_call" || item.optString("name") != "jarvis_fragen") return
+                        val callId = item.optString("call_id")
+                        val auftrag = runCatching { JSONObject(item.optString("arguments")).optString("auftrag") }.getOrNull().orEmpty()
+                        kennungArt[callId] = "funktion"
+                        beiStatus("Jarvis schaut nach …")
+                        beiWerkzeug(callId, auftrag)
+                    }
+                    "response.completed", "response.done" -> {
+                        val resp = inner.optJSONObject("response") ?: return
+                        val rid = resp.optString("id")
+                        if (rid.isNotEmpty() && !gezaehlt.add(rid)) return
+                        val u = resp.optJSONObject("usage") ?: return
+                        val p = LiveOptionen.BACKENDS[st["backend"]] ?: return
+                        val f = LiveOptionen.TARIF_FAKTOR[st["tarif"]] ?: 1.0
+                        val cached = u.optJSONObject("input_tokens_details")?.optInt("cached_tokens") ?: 0
+                        val ein = u.optInt("input_tokens") - cached
+                        tokenKosten += (ein * p.ein + cached * p.cache + u.optInt("output_tokens") * p.aus) / 1_000_000 * f
+                        kostenMelden()
+                    }
+                }
+            }
+            "session.usage.updated", "session.closed" -> {
+                // Kumulativ: immer den neuesten Wert nehmen, nie addieren.
+                e.optJSONObject("usage")?.optDouble("seconds")?.takeIf { !it.isNaN() }?.let { liveSekunden = it; kostenMelden() }
+                if (e.optString("type") == "session.closed") {
+                    nutzerFertig(); jarvisFertig()
+                    val grund = e.optString("reason")
+                    if (grund == "expired") beiFehler("Das Live-Gespräch hat die Höchstdauer erreicht.")
+                    synchronized(this) { schliessenWartet = false }
+                    beenden(senden = false)
+                }
+            }
+            "error" -> {
+                val f = e.optJSONObject("error")
+                val text = listOfNotNull(f?.optString("message")?.takeIf { it.isNotBlank() }, f?.optString("code")?.takeIf { it.isNotBlank() }?.let { "Code $it" },
+                    f?.optString("param")?.takeIf { it.isNotBlank() }?.let { "Feld $it" }).joinToString(", ")
+                beiFehler("GPT-Live: " + text.ifBlank { "unbekannter Fehler" })
+                // Vor session.started ist die Sitzung nie zustande gekommen.
+                if (!bereit) beenden(senden = false)
+            }
+        }
+    }
+
+    // ======================= Realtime =======================
+
+    private fun jarvisWerkzeug(): JSONObject = JSONObject()
+        .put("type", "function")
+        .put("name", "jarvis_fragen")
+        .put("description", "Fragt Jarvis mit allen Werkzeugen und Franks Daten: Termine, Dienstplan, Aufgaben, Wecker, Biodaten, Ideen, Tagebuch, Mails, Wetter, " +
+            "Gedächtnis, Programmieraufträge, Timer und alles, was etwas nachschlägt oder ändert. Gib den Auftrag vollständig in Franks Worten weiter.")
+        .put("parameters", JSONObject().put("type", "object")
+            .put("properties", JSONObject().put("auftrag", JSONObject().put("type", "string").put("description", "Die vollständige Frage oder der Auftrag")))
+            .put("required", JSONArray().put("auftrag")))
+
+    private fun realtimeSitzung(): JSONObject {
         val format = JSONObject().put("type", "audio/pcm").put("rate", 24000)
-        return JSONObject().put("type", "session.update").put("session", JSONObject()
+        val unterbrechen = st["unterbrechen"] == "an"
+        val erkennung = st["erkennung"].let { e ->
+            if (e.startsWith("semantic_")) JSONObject().put("type", "semantic_vad").put("eagerness", e.removePrefix("semantic_"))
+            else JSONObject().put("type", "server_vad").put("silence_duration_ms", e.removePrefix("server_").toIntOrNull() ?: 500)
+        }.put("create_response", true).put("interrupt_response", unterbrechen)
+        val eingabe = JSONObject().put("format", format).put("turn_detection", erkennung)
+        st["rauschfilter"].takeIf { it != "aus" }?.let { eingabe.put("noise_reduction", JSONObject().put("type", it)) }
+        val s = JSONObject()
             .put("type", "realtime")
             .put("model", modell)
             .put("output_modalities", JSONArray().put("audio"))
             .put("instructions", anweisung)
-            .put("audio", JSONObject()
-                .put("input", JSONObject()
-                    .put("format", format)
-                    .put("turn_detection", JSONObject().put("type", "server_vad").put("silence_duration_ms", 550).put("create_response", true).put("interrupt_response", true)))
-                .put("output", JSONObject().put("format", format).put("voice", stimme)))
-            .put("tools", JSONArray().put(werkzeug))
-            .put("tool_choice", "auto"))
+            .put("audio", JSONObject().put("input", eingabe)
+                .put("output", JSONObject().put("format", format).put("voice", st["stimme"]).put("speed", st["tempo"].toDoubleOrNull() ?: 1.0)))
+            .put("tools", JSONArray().put(jarvisWerkzeug()))
+            .put("tool_choice", "auto")
+        if (alle(st).any { it.id == "rt_effort" }) s.put("reasoning", JSONObject().put("effort", st["rt_effort"]))
+        when (val k = st["kuerzen"]) {
+            "auto", "disabled" -> s.put("truncation", k)
+            else -> s.put("truncation", JSONObject().put("type", "retention_ratio").put("retention_ratio", k.toDoubleOrNull() ?: 0.8))
+        }
+        st["rt_max"].toIntOrNull()?.let { s.put("max_output_tokens", it) }
+        return JSONObject().put("type", "session.update").put("session", s)
     }
 
-    private val jarvisTeile = StringBuilder()
+    private fun alle(stand: LiveOptionen.Stand) = LiveOptionen.alle.filter { it.gilt(stand) }
 
-    private fun ereignis(text: String) {
-        val e = runCatching { JSONObject(text) }.getOrNull() ?: return
+    private fun realtimeVerlauf(w: WebSocket) {
+        verlauf.forEach { (mir, text) ->
+            w.send(JSONObject().put("type", "conversation.item.create").put("item", JSONObject().put("type", "message").put("role", if (mir) "user" else "assistant")
+                .put("content", JSONArray().put(JSONObject().put("type", if (mir) "input_text" else "output_text").put("text", text.take(1200))))).toString())
+        }
+    }
+
+    /** Die gerade gesprochene Antwort: zum Kürzen beim Dazwischenreden (sonst glaubt das Modell, Frank habe alles gehört). */
+    @Volatile private var antwortItem = ""
+    @Volatile private var empfangenBytes = 0L
+    @Volatile private var abgespieltBytes = 0L
+
+    private fun realtimeEreignis(e: JSONObject) {
         when (e.optString("type")) {
             "response.output_audio.delta", "response.audio.delta" -> {
+                letzteAktivitaet = System.currentTimeMillis()
+                val item = e.optString("item_id")
+                if (item != antwortItem) { antwortItem = item; empfangenBytes = 0; abgespieltBytes = 0 }
                 val daten = Base64.decode(e.optString("delta"), Base64.DEFAULT)
+                empfangenBytes += daten.size
                 if (!sprichtGerade) { sprichtGerade = true; beiStatus("Jarvis spricht") }
                 ausgabe.offer(daten)
             }
             "input_audio_buffer.speech_started" -> {
-                // Frank redet dazwischen: sofort verstummen, der Dienst bricht die laufende Antwort selbst ab.
-                ausgabeLeeren()
-                beiStatus("Ich höre zu")
+                letzteAktivitaet = System.currentTimeMillis()
+                if (sprichtGerade && antwortItem.isNotEmpty() && st["unterbrechen"] == "an") {
+                    val ms = (minOf(abgespieltBytes, empfangenBytes) / 48).toInt()
+                    ws?.send(JSONObject().put("type", "conversation.item.truncate").put("item_id", antwortItem).put("content_index", 0).put("audio_end_ms", ms).toString())
+                }
+                if (st["unterbrechen"] == "an") { ausgabeLeeren(); beiStatus("Ich höre zu") }
             }
-            "conversation.item.input_audio_transcription.completed" -> e.optString("transcript").trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText)
+            "conversation.item.input_audio_transcription.completed" -> {
+                e.optString("transcript").trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText)
+                // Mitschrift wird nach Dauer abgerechnet, sofern der Dienst sie meldet.
+                e.optJSONObject("usage")?.optDouble("seconds")?.takeIf { !it.isNaN() }?.let {
+                    tokenKosten += it / 60.0 * (LiveOptionen.MITSCHRIFT_PRO_MINUTE[st["mitschrift"]] ?: 0.0); kostenMelden()
+                }
+            }
             "response.output_audio_transcript.delta", "response.audio_transcript.delta" -> jarvisTeile.append(e.optString("delta"))
             "response.output_audio_transcript.done", "response.audio_transcript.done" -> {
                 val satz = e.optString("transcript").ifBlank { jarvisTeile.toString() }.trim()
@@ -147,42 +339,87 @@ class LiveGespraech(
             }
             "response.done" -> {
                 sprichtGerade = false
-                // Endet die Antwort mit einem Werkzeugaufruf, schaut Jarvis noch nach: „Jarvis schaut nach …“ bleibt stehen.
-                val ausgabe = e.optJSONObject("response")?.optJSONArray("output")
-                val ruftWerkzeug = ausgabe != null && (0 until ausgabe.length()).any { ausgabe.optJSONObject(it)?.optString("type") == "function_call" }
+                val resp = e.optJSONObject("response")
+                resp?.optJSONObject("usage")?.let { realtimeKosten(it) }
+                val out = resp?.optJSONArray("output")
+                val ruftWerkzeug = out != null && (0 until out.length()).any { out.optJSONObject(it)?.optString("type") == "function_call" }
                 if (laeuft && !ruftWerkzeug) beiStatus("Ich höre zu")
             }
             "response.function_call_arguments.done" -> {
-                // Nicht jede Fassung des Ereignisses nennt den Namen; es gibt ohnehin nur dieses eine Werkzeug.
                 val name = e.optString("name")
                 if (name.isNotEmpty() && name != "jarvis_fragen") return
                 val auftrag = runCatching { JSONObject(e.optString("arguments")).optString("auftrag") }.getOrNull().orEmpty()
+                val callId = e.optString("call_id")
+                kennungArt[callId] = "realtime"
                 beiStatus("Jarvis schaut nach …")
-                beiWerkzeug(e.optString("call_id"), auftrag)
+                beiWerkzeug(callId, auftrag)
             }
             "error" -> {
                 val f = e.optJSONObject("error")
+                val code = f?.optString("code").orEmpty()
+                if (code == "response_cancel_not_active" || code == "conversation_already_has_active_response") return
                 val meldung = f?.optString("message").orEmpty()
-                // Abgebrochene Antworten (Frank hat dazwischengeredet) sind kein Fehler.
-                if (f?.optString("code") == "response_cancel_not_active") return
-                // Hat Frank während des Nachschlagens gesprochen, läuft schon eine Antwort; das eigene response.create entfällt dann.
-                if (f?.optString("code") == "conversation_already_has_active_response") return
                 if (meldung.contains("transcription", ignoreCase = true)) return
-                beiFehler("Live: " + meldung.ifBlank { "unbekannter Fehler" })
+                beiFehler("Live: " + meldung.ifBlank { "unbekannter Fehler" } + (f?.optString("param")?.takeIf { it.isNotBlank() }?.let { " (Feld $it)" } ?: ""))
             }
         }
     }
 
-    /** Das Ergebnis von `jarvis_fragen` zurück an das Modell; danach spricht es die Antwort. */
-    fun werkzeugErgebnis(callId: String, ergebnis: String) {
+    private fun realtimeKosten(u: JSONObject) {
+        val r = LiveOptionen.REALTIME[modell] ?: return
+        val ein = u.optJSONObject("input_token_details")
+        val aus = u.optJSONObject("output_token_details")
+        val cache = ein?.optJSONObject("cached_tokens_details")
+        val audioCache = cache?.optInt("audio_tokens") ?: 0
+        val textCache = cache?.optInt("text_tokens") ?: 0
+        val audioEin = (ein?.optInt("audio_tokens") ?: 0) - audioCache
+        val textEin = (ein?.optInt("text_tokens") ?: 0) - textCache + (ein?.optInt("image_tokens") ?: 0)
+        tokenKosten += (audioEin.coerceAtLeast(0) * r.audio.ein + audioCache * r.audio.cache + textEin.coerceAtLeast(0) * r.text.ein + textCache * r.text.cache +
+            (aus?.optInt("audio_tokens") ?: 0) * r.audio.aus + (aus?.optInt("text_tokens") ?: 0) * r.text.aus) / 1_000_000
+        kostenMelden()
+    }
+
+    // ======================= Gemeinsam =======================
+
+    /** Jarvis' Antwort auf einen Auftrag zurück: als Funktionsergebnis oder (Client-Delegation) als Kommentar zum Vorsprechen. */
+    fun ergebnis(kennung: String, text: String) {
         val w = ws ?: return
-        w.send(JSONObject().put("type", "conversation.item.create").put("item", JSONObject()
-            .put("type", "function_call_output").put("call_id", callId).put("output", ergebnis)).toString())
-        w.send(JSONObject().put("type", "response.create").toString())
+        when (kennungArt.remove(kennung)) {
+            "auftrag" -> {
+                // Höchstens 500 Tokens je Kommentar.
+                w.send(JSONObject().put("type", "session.commentary.append").put("delegation_id", kennung).put("content", text.take(1500)).toString())
+            }
+            "funktion" -> {
+                w.send(JSONObject().put("type", "response.item.create").put("item", JSONObject().put("type", "function_call_output").put("call_id", kennung).put("output", text)).toString())
+                w.send(JSONObject().put("type", "response.create").toString())
+            }
+            else -> {
+                w.send(JSONObject().put("type", "conversation.item.create").put("item", JSONObject()
+                    .put("type", "function_call_output").put("call_id", kennung).put("output", text)).toString())
+                w.send(JSONObject().put("type", "response.create").toString())
+            }
+        }
+    }
+
+    /** Beendet das Gespräch nach der eingestellten Stille; GPT-Live kostet sonst im Leerlauf weiter. */
+    private fun stilleWaechter() {
+        val minuten = st["stille_ende"].toIntOrNull() ?: 0
+        Thread({
+            while (laeuft) {
+                runCatching { Thread.sleep(5_000) }
+                if (!laeuft) break
+                if (minuten > 0 && System.currentTimeMillis() - letzteAktivitaet > minuten * 60_000L) {
+                    beiFehler("Live-Gespräch nach $minuten Minuten Stille beendet.")
+                    beenden()
+                    break
+                }
+            }
+        }, "jarvis-live-stille").start()
     }
 
     @SuppressLint("MissingPermission")
     private fun tonStarten() {
+        if (aufnahme != null || !laeuft) return
         alterModus = audio.mode
         audio.mode = AudioManager.MODE_IN_COMMUNICATION
         lautsprecher(true)
@@ -209,28 +446,38 @@ class LiveGespraech(
         wiedergabe = track
         track.play()
 
-        // Fehler in den eigenen Fäden enden als Meldung, nie als Absturz der App.
+        // 100-ms-Blöcke (4.800 Byte), wie OpenAI empfiehlt; Fehler in den Fäden enden als Meldung, nie als Absturz.
         Thread({
-            val puffer = ByteArray(1920) // 40 ms
+            val puffer = ByteArray(4800)
             val ok = runCatching { rec.startRecording() }.isSuccess && rec.recordingState == AudioRecord.RECORDSTATE_RECORDING
             if (!ok) { if (laeuft) { beiFehler("Das Mikrofon ließ sich für das Live-Gespräch nicht starten."); beenden() }; return@Thread }
+            val anhaengen = if (live) "session.input_audio.append" else "input_audio_buffer.append"
             while (laeuft) {
-                val n = runCatching { rec.read(puffer, 0, puffer.size) }.getOrDefault(AudioRecord.ERROR_INVALID_OPERATION)
+                var n = 0
+                while (n < puffer.size && laeuft) {
+                    val r = runCatching { rec.read(puffer, n, puffer.size - n) }.getOrDefault(AudioRecord.ERROR_INVALID_OPERATION)
+                    if (r < 0) { if (laeuft) { beiFehler("Das Mikrofon ist ausgefallen."); beenden() }; return@Thread }
+                    n += r
+                }
                 if (n == 0) continue
-                if (n < 0) { if (laeuft) { beiFehler("Das Mikrofon ist ausgefallen."); beenden() }; break }
+                n -= n % 2
                 var summe = 0.0
                 var i = 0
                 while (i + 1 < n) { val s = (puffer[i].toInt() and 0xFF) or (puffer[i + 1].toInt() shl 8); summe += s.toDouble() * s; i += 2 }
                 beiPegel((kotlin.math.sqrt(summe / (n / 2)) / 6000.0).toFloat().coerceIn(0f, 1f))
-                val stueck = if (stumm) ByteArray(n) else puffer.copyOf(n)
-                ws?.send(JSONObject().put("type", "input_audio_buffer.append").put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
+                // GPT-Live hat eigenes Stummschalten (session.input_audio.mute); Realtime bekommt Stille.
+                val stueck = if (stumm && !live) ByteArray(n) else puffer.copyOf(n)
+                ws?.send(JSONObject().put("type", anhaengen).put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
             }
         }, "jarvis-live-mikro").start()
 
         Thread({
             while (laeuft) {
-                val stueck = runCatching { ausgabe.poll(200, TimeUnit.MILLISECONDS) }.getOrNull() ?: continue
+                val stueck = runCatching { ausgabe.poll(200, TimeUnit.MILLISECONDS) }.getOrNull()
+                // GPT-Live meldet kein Ende der Rede: Ist die Ausgabe leer gelaufen, hört Jarvis wieder zu.
+                if (stueck == null) { if (live && sprichtGerade && ausgabe.isEmpty()) { sprichtGerade = false; if (laeuft) beiStatus("Ich höre zu") }; continue }
                 runCatching { wiedergabe?.write(stueck, 0, stueck.size) }
+                abgespieltBytes += stueck.size
             }
         }, "jarvis-live-ton").start()
     }
@@ -253,12 +500,41 @@ class LiveGespraech(
         }
     }
 
-    @Synchronized
-    fun beenden() {
-        if (!laeuft) return
-        laeuft = false
-        runCatching { ws?.close(1000, "Ende") }
-        ws = null
+    @Volatile private var schliessenWartet = false
+
+    /**
+     * Beendet das Gespräch. Bei GPT-Live erst `session.close` senden und kurz auf `session.closed` warten: Erst dann steht die
+     * abgerechnete Dauer fest. Ton und Mikrofon enden sofort.
+     */
+    fun beenden(senden: Boolean = true) {
+        val w: WebSocket?
+        synchronized(this) {
+            if (!laeuft) return
+            laeuft = false
+            w = ws
+            ws = null
+        }
+        tonAus()
+        nutzerFertig(); jarvisFertig()
+        if (senden && live && w != null && bereit) {
+            schliessenWartet = true
+            runCatching { w.send(JSONObject().put("type", "session.close").toString()) }
+            Thread({
+                val bis = System.currentTimeMillis() + 5_000
+                while (schliessenWartet && System.currentTimeMillis() < bis) runCatching { Thread.sleep(100) }
+                runCatching { w.close(1000, "Ende") }
+                client.dispatcher.executorService.shutdown()
+            }, "jarvis-live-ende").start()
+            // Den Endwert noch annehmen, solange der Socket offen ist.
+            ws = w
+        } else {
+            runCatching { w?.close(1000, "Ende") }
+            client.dispatcher.executorService.shutdown()
+        }
+        beiEnde()
+    }
+
+    private fun tonAus() {
         runCatching { aufnahme?.stop() }
         runCatching { aufnahme?.release() }
         aufnahme = null
@@ -269,8 +545,6 @@ class LiveGespraech(
         wiedergabe = null
         lautsprecher(false)
         runCatching { audio.mode = alterModus }
-        client.dispatcher.executorService.shutdown()
-        beiEnde()
     }
 
     companion object {
