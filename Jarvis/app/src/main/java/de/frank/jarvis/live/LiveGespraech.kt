@@ -83,6 +83,18 @@ class LiveGespraech(
     @Volatile private var echoSperre = false
     /** Zeitpunkt des letzten Schreibens in die Wiedergabe: für den Nachlauf der Echosperre (Puffer und Bluetooth-Verzögerung). */
     @Volatile private var letzteAusgabeMs = 0L
+    /** Alle in die Wiedergabe geschriebenen Frames seit [kopfBasis], echte Sprache wie Füll-Stille. */
+    @Volatile private var geschriebeneFrames = 0L
+    /** Frame-Grenze hinter dem letzten echten Ton: Bis der Wiedergabekopf sie passiert, spricht Jarvis noch hörbar. */
+    @Volatile private var echtBisFrame = 0L
+    /** Kopfposition beim letzten Leeren, damit die Rechnung nach flush() stimmt, ob der Kopf zurückspringt oder nicht. */
+    @Volatile private var kopfBasis = 0L
+    /** Echosperre: Mikrofon frühestens ab hier wieder offen. */
+    @Volatile private var echoFreiAb = 0L
+    /** Nach Antippen: Reste der abgebrochenen Antwort nicht mehr abspielen. Realtime über die Kennung, GPT-Live über die Lücke. */
+    @Volatile private var verworfenItem = ""
+    @Volatile private var verwerfenLive = false
+    @Volatile private var letzteVerworfenMs = 0L
     private var routenWaechter: android.media.AudioRouting.OnRoutingChangedListener? = null
 
     // ---- Kosten ----
@@ -236,13 +248,19 @@ class LiveGespraech(
             }
             "session.output_audio.delta" -> {
                 letzteAktivitaet = System.currentTimeMillis()
-                if (!sprichtGerade) { sprichtGerade = true; beiStatus("Jarvis spricht") }
+                if (verwerfenLive) {
+                    // Die abgebrochene Antwort läuft noch nach; erst nach einer Pause von 1,5 s kommt wieder Neues.
+                    if (letzteAktivitaet - letzteVerworfenMs < 1_500) { letzteVerworfenMs = letzteAktivitaet; return }
+                    verwerfenLive = false
+                }
+                if (!sprichtGerade) { sprichtGerade = true; beiStatus(sprichtText()) }
                 ausgabe.offer(Base64.decode(e.optString("delta"), Base64.DEFAULT))
             }
             "session.input_transcript.delta" -> {
                 letzteAktivitaet = System.currentTimeMillis()
                 // GPT-Live meldet kein „Frank spricht“: Kommt seine Mitschrift, verstummt die gepufferte Ausgabe.
                 if (sprichtGerade) { ausgabeLeeren(); beiStatus("Ich höre zu") }
+                verwerfenLive = false
                 jarvisFertig()
                 val d = e.optString("delta")
                 synchronized(nutzerTeile) { nutzerTeile.append(d) }
@@ -378,10 +396,11 @@ class LiveGespraech(
             "response.output_audio.delta", "response.audio.delta" -> {
                 letzteAktivitaet = System.currentTimeMillis()
                 val item = e.optString("item_id")
+                if (item.isNotEmpty() && item == verworfenItem) return
                 if (item != antwortItem) { antwortItem = item; empfangenBytes = 0; abgespieltBytes = 0 }
                 val daten = Base64.decode(e.optString("delta"), Base64.DEFAULT)
                 empfangenBytes += daten.size
-                if (!sprichtGerade) { sprichtGerade = true; beiStatus("Jarvis spricht") }
+                if (!sprichtGerade) { sprichtGerade = true; beiStatus(sprichtText()) }
                 ausgabe.offer(daten)
             }
             "input_audio_buffer.speech_started" -> {
@@ -593,7 +612,14 @@ class LiveGespraech(
                 beiPegel((kotlin.math.sqrt(summe / (n / 2)) / 6000.0).toFloat().coerceIn(0f, 1f))
                 // GPT-Live hat eigenes Stummschalten (session.input_audio.mute); Realtime bekommt Stille.
                 // Echosperre: Solange Jarvis spricht (samt Nachlauf), bekommt der Dienst Stille statt des eigenen Echos.
-                val echoZu = echoSperre && (ausgabe.isNotEmpty() || System.currentTimeMillis() - letzteAusgabeMs < ECHO_NACHLAUF_MS)
+                // Zu, solange echter Ton wartet oder der Wiedergabekopf ihn noch nicht abgespielt hat; danach der Nachlauf für die
+                // Bluetooth-Strecke hinter dem Kopf. Die Füll-Stille zählt nicht, nur [echtBisFrame].
+                val jetzt = System.currentTimeMillis()
+                val echoZu = echoSperre && run {
+                    val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
+                    if (ausgabe.isNotEmpty() || kopf < echtBisFrame) echoFreiAb = jetzt + ECHO_NACHLAUF_MS
+                    jetzt < echoFreiAb
+                }
                 val stueck = if ((stumm && !live) || echoZu) ByteArray(n) else puffer.copyOf(n)
                 ws?.send(JSONObject().put("type", anhaengen).put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
             }
@@ -610,11 +636,12 @@ class LiveGespraech(
                 if (stueck == null) {
                     // Wie bisher erst nach 200 ms ohne Ton, auch wenn der Medienweg kürzer wartet.
                     if (live && sprichtGerade && ausgabe.isEmpty() && System.currentTimeMillis() - letzteAusgabeMs >= 200) { sprichtGerade = false; if (laeuft) beiStatus("Ich höre zu") }
-                    if (medienweg && laeuft) runCatching { wiedergabe?.write(stille, 0, stille.size) }
+                    if (medienweg && laeuft) runCatching { wiedergabe?.write(stille, 0, stille.size) }.getOrNull()?.takeIf { it > 0 }?.let { geschriebeneFrames += it / 2 }
                     continue
                 }
                 letzteAusgabeMs = System.currentTimeMillis()
-                runCatching { wiedergabe?.write(stueck, 0, stueck.size) }
+                val geschrieben = runCatching { wiedergabe?.write(stueck, 0, stueck.size) }.getOrNull() ?: 0
+                if (geschrieben > 0) { geschriebeneFrames += geschrieben / 2; echtBisFrame = geschriebeneFrames }
                 letzteAusgabeMs = System.currentTimeMillis()
                 abgespieltBytes += stueck.size
             }
@@ -625,6 +652,33 @@ class LiveGespraech(
         ausgabe.clear()
         sprichtGerade = false
         wiedergabe?.let { runCatching { it.pause(); it.flush(); it.play() } }
+        // Nach dem Leeren ist nichts Echtes mehr unterwegs: Die Echosperre öffnet sofort (nach ihrem kurzen Nachlauf).
+        geschriebeneFrames = 0
+        echtBisFrame = 0
+        kopfBasis = runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL
+    }
+
+    /** Im Medienweg mit Echosperre hört das Mikrofon nicht, solange Jarvis spricht: Dann den Tipp-Weg nennen. */
+    private fun sprichtText() = if (echoSperre) "Jarvis spricht · Blase antippen zum Unterbrechen" else "Jarvis spricht"
+
+    /**
+     * Unterbricht Jarvis per Antippen: nötig im Medienweg mit Echosperre, wo Dazwischenreden nicht geht, und überall sonst
+     * ein sicherer Weg. Realtime bricht die Antwort beim Dienst ab und kürzt sie auf das Gehörte; GPT-Live verwirft den Rest.
+     */
+    fun unterbrechen() {
+        if (!laeuft || (!sprichtGerade && ausgabe.isEmpty())) return
+        if (live) {
+            verwerfenLive = true
+            letzteVerworfenMs = System.currentTimeMillis()
+        } else if (antwortItem.isNotEmpty()) {
+            verworfenItem = antwortItem
+            val ms = (minOf(abgespieltBytes, empfangenBytes) / 48).toInt()
+            ws?.send(JSONObject().put("type", "response.cancel").toString())
+            ws?.send(JSONObject().put("type", "conversation.item.truncate").put("item_id", antwortItem).put("content_index", 0).put("audio_end_ms", ms).toString())
+        }
+        ausgabeLeeren()
+        Log.i(LiveRouting.TAG, "Jarvis per Antippen unterbrochen")
+        beiStatus("Ich höre zu")
     }
 
     /** Meldet Tonweg, Ausgabe und Mikrofon, wie das System sie gerade tatsächlich geroutet hat. */
@@ -785,7 +839,7 @@ class LiveGespraech(
 
     companion object {
         /** Echosperre bleibt so lange nach dem letzten Ton zu: Wiedergabepuffer plus Bluetooth-Verzögerung. */
-        private const val ECHO_NACHLAUF_MS = 600L
+        private const val ECHO_NACHLAUF_MS = 400L
         /** Länge eines Stilleblocks in Sprechpausen (Medienweg); hält den Bluetooth-Medienstrom wach. */
         private const val STILLE_MS = 20
 

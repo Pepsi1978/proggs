@@ -787,6 +787,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun liveStummSchalten() { liveStumm = !liveStumm; live?.stumm = liveStumm }
 
+    /** Antippen der Live-Blase: Jarvis verstummt sofort und hört wieder zu. */
+    fun liveUnterbrechen() { live?.unterbrechen() }
+
     fun liveBeenden() { live?.beenden() ?: liveAufraeumen() }
 
     private fun liveAufraeumen() {

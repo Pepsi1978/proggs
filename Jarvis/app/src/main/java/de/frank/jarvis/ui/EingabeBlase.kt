@@ -260,7 +260,8 @@ fun Wellen(farbe: Color, modifier: Modifier = Modifier, pegel: Float = 0f, beweg
 private fun LiveLeiste(vm: AppViewModel) {
     val f = LocalFarben.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(52.dp).clip(CircleShape).background(LIVE_ORANGE), contentAlignment = Alignment.Center) {
+        // Antippen unterbricht Jarvis: im Medienton mit Echosperre der einzige Weg, sonst eine Abkürzung zum Dazwischenreden.
+        Box(Modifier.size(52.dp).clip(CircleShape).background(LIVE_ORANGE).antippen { vm.liveUnterbrechen() }, contentAlignment = Alignment.Center) {
             Wellen(Color.White, Modifier.size(26.dp), pegel = vm.livePegel, bewegt = true)
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {

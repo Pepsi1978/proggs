@@ -251,7 +251,7 @@ object LiveOptionen {
             "Im Medienton hört das Handy-Mikrofon die Lautsprecher mit. Ob das Handy dieses Echo herausrechnet, hängt vom Gerät ab; sonst unterbricht Jarvis sich selbst.",
             "an", {
                 listOf(
-                    Wahl("an", "An", "Während Jarvis spricht, ist das Mikrofon zu. Kein Selbstunterbrechen, aber Dazwischenreden per Stimme geht dann nicht. Empfehlung im Auto."),
+                    Wahl("an", "An", "Während Jarvis spricht, ist das Mikrofon zu. Kein Selbstunterbrechen; statt Dazwischenreden tippst du auf die orange Blase. Empfehlung im Auto."),
                     Wahl("aus", "Aus", "Mikrofon immer offen, Dazwischenreden geht. Gut mit Kopfhörern; im Auto nur, wenn Jarvis sich nicht selbst unterbricht."),
                 )
             }, gilt = { it["audioweg"] == "medien" }),
