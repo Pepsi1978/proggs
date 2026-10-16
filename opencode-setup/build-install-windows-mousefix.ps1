@@ -6,7 +6,7 @@ param(
     [string]$InstallRoot = ""
 )
 
-# Stand: v1.00.26 – 16.10.2026 11:19 (windowsfix.23)
+# Stand: v1.00.27 – 16.10.2026 11:33 (windowsfix.23)
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version
@@ -312,6 +312,8 @@ try {
         Publish-Candidate $built $Version $customVersion $sourceCommit
     } finally {
         Pop-Location
+        # Klon samt node_modules: ohne Aufraeumen sammelten sich in %TEMP% je Lauf mehrere hundert MB.
+        Remove-Item -LiteralPath $workDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 catch {
