@@ -160,6 +160,21 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.GEMINI_API_KEY, "")
         set(value) = writeString(Keys.GEMINI_API_KEY, value)
 
+    // ---- Live-Gespräch (OpenAI Realtime) ----
+
+    /** Eigener OpenAI-Plattform-Schlüssel (sk-…) für das Live-Gespräch; das ChatGPT-Abo reicht dafür nicht. */
+    var openAiApiKey: String
+        get() = readString(Keys.OPENAI_API_KEY, "")
+        set(value) = writeString(Keys.OPENAI_API_KEY, value)
+
+    var liveModell: String
+        get() = readString(Keys.LIVE_MODELL, "").ifBlank { "gpt-realtime" }
+        set(value) = writeString(Keys.LIVE_MODELL, value.trim())
+
+    var liveStimme: String
+        get() = readString(Keys.LIVE_STIMME, "").ifBlank { "marin" }
+        set(value) = writeString(Keys.LIVE_STIMME, value)
+
     var model: String
         get() = readString(Keys.MODEL, Defaults.MODEL)
         set(value) {
@@ -280,6 +295,9 @@ class SecureSettings(context: Context) : Closeable {
         const val FILTER_PHRASES = "filter_phrases"
         const val KI_ZUGANG = "ki_zugang"
         const val GEMINI_API_KEY = "gemini_api_key"
+        const val OPENAI_API_KEY = "openai_api_key"
+        const val LIVE_MODELL = "live_modell"
+        const val LIVE_STIMME = "live_stimme"
         const val MODEL = "model"
         const val REASONING = "reasoning"
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"

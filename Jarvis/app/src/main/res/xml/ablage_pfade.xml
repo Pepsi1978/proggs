@@ -3,4 +3,6 @@
 <paths>
     <files-path name="texte" path="ablage/" />
     <files-path name="dateien" path="ablage-dateien/" />
+    <!-- Fotos der Kamera für Anhänge an Jarvis -->
+    <cache-path name="kamera" path="kamera/" />
 </paths>

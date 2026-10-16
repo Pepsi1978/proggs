@@ -40,6 +40,12 @@ class MainActivity : FragmentActivity() {
     private val standortImmerErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.lagePruefen() }
 
     private val mikroErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.mikrofonErlaubt(it) }
+    private val liveErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.liveErlaubt(it) }
+
+    /** Plus-Menü der Eingabeblase: Foto aufnehmen, Fotos wählen, Dateien wählen. Die Kamera schreibt in den Cache (FileProvider). */
+    private val kamera = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok -> vm.kameraZiel?.takeIf { ok }?.let { vm.anhangHinzu(listOf(it)) } }
+    private val fotos = registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(10)) { vm.anhangHinzu(it) }
+    private val dateien = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { vm.anhangHinzu(it) }
 
     /** Mikrofon für „Hey Jarvis“: danach gleich lauschen. */
     private val weckwortErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -132,6 +138,25 @@ class MainActivity : FragmentActivity() {
         vm.mikrofonAnfragen = {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.mikrofonErlaubt(true)
             else mikroErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
+        }
+        vm.liveMikroAnfragen = {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.liveErlaubt(true)
+            else liveErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
+        }
+        vm.kameraAnfragen = {
+            vm.sperrAufschubBis = System.currentTimeMillis() + 300_000
+            val datei = de.frank.jarvis.data.Anhaenge.kameraDatei(this)
+            val ziel = androidx.core.content.FileProvider.getUriForFile(this, "de.frank.jarvis.dateien", datei)
+            vm.kameraZiel = ziel
+            runCatching { kamera.launch(ziel) }.onFailure { vm.meldung = "Keine Kamera-App gefunden." }
+        }
+        vm.fotosAnfragen = {
+            vm.sperrAufschubBis = System.currentTimeMillis() + 300_000
+            fotos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+        vm.dateienAnfragen = {
+            vm.sperrAufschubBis = System.currentTimeMillis() + 300_000
+            dateien.launch(arrayOf("*/*"))
         }
         vm.kalenderAnfragen = { kalenderErlaubnis.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)) }
         vm.standortAnfragen = {

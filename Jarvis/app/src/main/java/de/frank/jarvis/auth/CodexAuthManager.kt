@@ -65,7 +65,7 @@ internal const val UMLAUT_HINWEIS =
         "Ersatzschreibung ae, oe, ue oder ss."
 
 /** Eine Sprechzeile im Gespräch: `user` für mich, `assistant` für das Modell. */
-data class ChatTurn(val role: String, val text: String)
+data class ChatTurn(val role: String, val text: String, val bilder: List<String> = emptyList())
 
 internal fun codexChatPayload(
     instructions: String,
@@ -75,7 +75,11 @@ internal fun codexChatPayload(
 ): JSONObject {
     val input = JSONArray()
     turns.forEach { turn ->
-        input.put(JSONObject().put("role", turn.role).put("content", turn.text))
+        if (turn.bilder.isEmpty()) input.put(JSONObject().put("role", turn.role).put("content", turn.text))
+        else input.put(JSONObject().put("role", turn.role).put("content", JSONArray().apply {
+            put(JSONObject().put("type", "input_text").put("text", turn.text))
+            turn.bilder.forEach { put(JSONObject().put("type", "input_image").put("image_url", it)) }
+        }))
     }
     return JSONObject()
         .put("model", model.apiId)

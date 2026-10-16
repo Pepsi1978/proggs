@@ -49,7 +49,7 @@ enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), AKT
  * Eine Nachricht im Gespräch. [art]: „antwort“, „fehler“ (Fehlermeldung statt Antwort, geht nicht ans Modell) oder
  * „abgebrochen“ (Franks Frage blieb unbeantwortet). [kontext] sieht nur das Modell, etwa was in der Runde erledigt wurde.
  */
-data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "")
+data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList())
 
 /** Ein Schritt für „Rückgängig“ in einer Merkliste: wie sich die eigene Änderung umkehren lässt, ohne fremde zu berühren. */
 private sealed class MerkSchritt {
@@ -205,16 +205,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Gespräch ----
 
-    fun sende(eingabe: String) {
+    fun sende(eingabe: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList()) {
         // Vorgelesen wird nur die Antwort auf genau diese gesprochene Frage. Endet sie vorzeitig (Abbruch, leer, nicht
         // verbunden), darf die nächste getippte Antwort nicht laut werden.
         val vorlesen = gesprochen
         gesprochen = false
-        val text = eingabe.trim()
+        val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) "Schau dir den Anhang an." else "" }
         if (text.isEmpty()) return
         // Wechsel zwischen Gesprächen erledigt die App selbst, auch während Jarvis im offenen Gespräch noch arbeitet.
         // Der Befehl geht nie ans Modell und kann deshalb keinen Programmierauftrag auslösen.
-        if (navigieren(text, vorlesen)) return
+        if (anhaenge.isEmpty() && navigieren(text, vorlesen)) return
         // Die Antwort, die bei „Hey Jarvis“ lief, weicht jetzt der neuen Frage (nur genau sie und nur, wenn sie noch läuft).
         weichendeRunde?.let { w -> weichendeRunde = null; if (vorlesen && sitzungId?.let { laufende[it] } === w) abbrechen() }
         if (denkt) return
@@ -224,8 +224,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val verlauf = verlaufFuersModell()
-        gespraech += Nachricht(true, text)
+        gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad })
         sitzungSichern()
+        val plugins = aktivePlugins.toList()
         val id = sitzungId ?: return
         val runde = Runde(id, gespraech.size - 1)
         laufende[id] = runde
@@ -234,7 +235,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id)) {
             var art = "antwort"
             val antwort = try {
-                agent.versuche(text, verlauf, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true, beiAenderung = { runde.erledigt += it })
+                val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
+                val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")")
+                agent.versuche(auftrag, verlauf, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true, beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty())
                     ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText()).also { art = "fehler" }
             } catch (e: CancellationException) {
                 throw e
@@ -288,7 +291,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun verlaufFuersModell(): List<ChatTurn> {
         val sicht = gespraech.takeLast(MAX_VERLAUF).filter { it.art != "fehler" }
         return sicht.mapIndexed { i, n ->
-            val text = if (n.kontext.isEmpty()) n.text else n.text + "\n" + n.kontext
+            // Anhänge früherer Fragen gehen nur als Name mit, sonst wüchse jede Anfrage um alle alten Bilder.
+            val mitAnhang = if (n.anhaenge.isEmpty()) n.text else n.text + "\n(Angehängt: " + n.anhaenge.joinToString(", ") { de.frank.jarvis.data.Anhang(it).name } + ")"
+            val text = if (n.kontext.isEmpty()) mitAnhang else mitAnhang + "\n" + n.kontext
             if (n.vonMir) {
                 val unbeantwortet = n.art == "abgebrochen" || i == sicht.lastIndex || sicht[i + 1].vonMir
                 ChatTurn("user", if (unbeantwortet) "$text\n(Diese Frage blieb unbeantwortet. Geh nur darauf ein, wenn Frank sich darauf bezieht.)" else text)
@@ -457,6 +462,149 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var merkOffen by mutableStateOf<Merkliste?>(null); private set
     /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
     private var diktatZiel: ((String) -> Unit)? = null
+    /** Die laufende Aufnahme kam vom Diktier-Mikrofon der Eingabeblase: Der Text geht ins Feld statt direkt an Jarvis. */
+    private var diktatInsFeld = false
+
+    // ---- Eingabeblase: Entwurf, Anhänge, Diktat ----
+
+    /** Der Text in der Eingabeblase. Im ViewModel, damit jedes Diktat ihn hinten ergänzen kann. */
+    var entwurf by mutableStateOf("")
+    /** Fotos und Dateien, die mit der nächsten Frage an Jarvis gehen. */
+    val anhaenge = mutableStateListOf<de.frank.jarvis.data.Anhang>()
+    var kameraAnfragen: () -> Unit = {}
+    /** Wohin die Kamera das Foto schreibt; im ViewModel, damit es ein Auf- oder Zuklappen während der Aufnahme übersteht. */
+    var kameraZiel: android.net.Uri? = null
+    var fotosAnfragen: () -> Unit = {}
+    var dateienAnfragen: () -> Unit = {}
+    /** Gewählte Plugins (vorbereitet: Kennungen aus [de.frank.jarvis.ui.Plugins.alle]). */
+    val aktivePlugins = mutableStateListOf<String>()
+
+    /** Übernimmt Fotos oder Dateien als Anhang der nächsten Frage. */
+    fun anhangHinzu(uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            val neu = withContext(Dispatchers.IO) { uris.take(10).mapNotNull { de.frank.jarvis.data.Anhaenge.uebernehmen(getApplication(), it) } }
+            if (neu.size < uris.size.coerceAtMost(10)) meldung = "Nicht jede Datei ließ sich übernehmen."
+            anhaenge += neu
+        }
+    }
+
+    fun anhangWeg(a: de.frank.jarvis.data.Anhang) { anhaenge.remove(a); runCatching { a.datei.delete() } }
+
+    /** Senden aus der Eingabeblase: Text und Anhänge zusammen. */
+    fun entwurfSenden() {
+        val text = entwurf
+        val anh = anhaenge.toList()
+        if (text.isBlank() && anh.isEmpty()) return
+        if (denkt) return
+        entwurf = ""
+        anhaenge.clear()
+        sende(text, anh)
+    }
+
+    /**
+     * Diktier-Mikrofon der Eingabeblase: Tippen startet die Aufnahme, nochmal Tippen schreibt den Text ins Feld.
+     * Jedes weitere Diktat kommt mit einem Leerzeichen hinter den vorhandenen Text; gesendet wird erst mit dem Pfeil.
+     */
+    fun diktatTippen() {
+        when {
+            schreibtMit -> Unit
+            nimmtAuf -> aufnahmeBeenden()
+            sprache.groqApiKey.isBlank() -> { meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel eintragen."; reiter = Reiter.EINSTELLUNGEN }
+            else -> {
+                diktatZiel = { t -> entwurf = if (entwurf.isBlank()) t else entwurf.trimEnd() + " " + t }
+                diktatInsFeld = true
+                mikrofonAnfragen()
+            }
+        }
+    }
+
+    // ---- Live-Gespräch (OpenAI Realtime) ----
+
+    var liveAktiv by mutableStateOf(false); private set
+    var liveStatus by mutableStateOf(""); private set
+    var livePegel by androidx.compose.runtime.mutableFloatStateOf(0f); private set
+    var liveStumm by mutableStateOf(false); private set
+    var liveMikroAnfragen: () -> Unit = {}
+    private var live: de.frank.jarvis.live.LiveGespraech? = null
+
+    /** Tipp auf die orange Blase: Live-Gespräch starten oder beenden. */
+    fun liveTippen() {
+        when {
+            liveAktiv -> liveBeenden()
+            sprache.openAiApiKey.isBlank() -> {
+                meldung = "Für das Live-Gespräch bitte zuerst den OpenAI-API-Schlüssel unter Einstellungen → Stimme eintragen."
+                einstellungsReiter = "stimme"
+                reiter = Reiter.EINSTELLUNGEN
+            }
+            else -> liveMikroAnfragen()
+        }
+    }
+
+    fun liveErlaubt(erlaubt: Boolean) {
+        if (!erlaubt) { meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (liveAktiv) return
+        if (nimmtAuf) aufnahmeVerwerfen()
+        vorleser.stopp()
+        liveAktiv = true
+        liveStumm = false
+        liveStatus = "Verbinde …"
+        viewModelScope.launch {
+            de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
+            if (!liveAktiv) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
+            de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
+            val haupt: (() -> Unit) -> Unit = { block -> viewModelScope.launch(Dispatchers.Main) { block() } }
+            live = de.frank.jarvis.live.LiveGespraech(
+                getApplication(), sprache.openAiApiKey, sprache.liveModell, sprache.liveStimme, liveAnweisung(),
+                beiStatus = { s -> haupt { liveStatus = s } },
+                beiPegel = { p -> livePegel = p },
+                beiNutzerText = { t -> haupt { liveNachricht(Nachricht(true, t)) } },
+                beiJarvisText = { t -> haupt { liveNachricht(Nachricht(false, t)) } },
+                beiWerkzeug = { id, auftrag -> haupt { liveWerkzeug(id, auftrag) } },
+                beiFehler = { m -> haupt { meldung = m } },
+                beiEnde = { haupt { liveAufraeumen() } },
+            ).also { it.start() }
+        }
+    }
+
+    fun liveStummSchalten() { liveStumm = !liveStumm; live?.stumm = liveStumm }
+
+    fun liveBeenden() { live?.beenden() ?: liveAufraeumen() }
+
+    private fun liveAufraeumen() {
+        if (!liveAktiv) return
+        liveAktiv = false
+        live = null
+        livePegel = 0f
+        liveStatus = ""
+        de.frank.jarvis.audio.AufnahmeDienst.stoppen()
+        de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+    }
+
+    private fun liveNachricht(n: Nachricht) {
+        gespraech += n
+        sitzungSichern()
+    }
+
+    /** Das Live-Modell fragt Jarvis mit allen Werkzeugen; die Antwort geht als Werkzeug-Ergebnis zurück und wird gesprochen. */
+    private fun liveWerkzeug(callId: String, auftrag: String) {
+        val verlauf = verlaufFuersModell()
+        viewModelScope.launch {
+            val antwort = runCatching {
+                agent.versuche(auftrag.ifBlank { "Fasse kurz zusammen, was gerade wichtig ist." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = 60_000)
+            }.getOrNull() ?: "Das konnte ich gerade nicht nachschlagen."
+            live?.werkzeugErgebnis(callId, antwort)
+        }
+    }
+
+    private fun liveAnweisung(): String =
+        "Du bist Jarvis, Franks persönlicher Assistent auf seinem Handy, im Live-Sprachgespräch. Sprich Deutsch, natürlich, warm und knapp, " +
+            "wie ein guter Gesprächspartner: kurze Sätze, keine Aufzählungszeichen, keine Formatierung, keine Links vorlesen. " +
+            "Frank kann dich jederzeit unterbrechen; dann hörst du auf und gehst auf ihn ein. " +
+            "Für alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, " +
+            "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), rufst du das Werkzeug jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest. " +
+            "Erfinde nie Daten. Sag kurz „Moment, ich schaue nach“, wenn du das Werkzeug nutzt. Lies keine Kennungen vor. " +
+            "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
 
     fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden() }
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
@@ -480,6 +628,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun mikrofonTippen() {
         // Der Knopf im Gespräch schickt immer an Jarvis, nie in eine geschlossene Merkliste.
         if (merkOffen == null) diktatZiel = null
+        if (!nimmtAuf) diktatInsFeld = false
         when {
             schreibtMit || denkt -> Unit
             nimmtAuf -> aufnahmeBeenden()
@@ -754,8 +903,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val stand = aufnahmeStand
         schreibtMit = true
         // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
-        val ziel = diktatZiel?.takeIf { merkOffen != null }
+        // Das Diktier-Mikrofon der Eingabeblase schreibt ins Feld, Hey Jarvis und der Gesprächsmodus senden weiter direkt.
+        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld }
         diktatZiel = null
+        diktatInsFeld = false
         mitschriftJob = viewModelScope.launch {
             try {
                 val wav = mikro.stop()
@@ -867,6 +1018,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger === programmierEmpfaenger) de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = null
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet === programmierBeantwortet) de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = null
         if (de.frank.jarvis.faehigkeit.Sprachsession.beenden === sprachsessionBeenden) de.frank.jarvis.faehigkeit.Sprachsession.beenden = null
+        live?.beenden()
         if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         mikro.release()
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
@@ -939,7 +1091,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         letzteAktivitaet = System.currentTimeMillis()
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
-        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext) }
+        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge) }
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
@@ -1058,7 +1210,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             programmierGespraech = id
             val geladen = de.frank.jarvis.data.Gespraeche.laden(app, id)
             if (geladen != null) {
-                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
                 letzteAktivitaet = System.currentTimeMillis()
@@ -1116,7 +1268,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vorleser.stopp()
         sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
         gespraech.clear()
-        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
+        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge) })
         sitzungId = id
         sitzungErstellt = geladen.first.erstellt
         // Wer ein altes Gespräch öffnet, will dort weitersprechen, auch mit „Hey Jarvis“.

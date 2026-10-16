@@ -82,10 +82,12 @@ class JarvisAgent(context: Context) {
         abschluss: Boolean = false,
         /** Meldet jede gelungene Änderung durch ein schreibendes Werkzeug („Titel: Ergebnis“), damit sie auch bei einem Abbruch nicht verloren geht. */
         beiAenderung: (String) -> Unit = {},
+        /** Bilder zur Frage (data-URLs: Fotos, PDF-Seiten); sie gehen nur mit dem neuesten Zug ans Modell. */
+        bilder: List<String> = emptyList(),
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
-            versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, lernen, abschluss, beiAenderung)
+            versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, lernen, abschluss, beiAenderung, bilder)
         }
 
     private suspend fun versucheIntern(
@@ -100,6 +102,7 @@ class JarvisAgent(context: Context) {
         lernen: Boolean,
         abschluss: Boolean,
         beiAenderung: (String) -> Unit,
+        bilder: List<String>,
     ): String? {
         abbruchGrund = null
         if (!auth.isConnected) { abbruchGrund = "Jarvis ist nicht mit ChatGPT angemeldet"; return null }
@@ -109,7 +112,7 @@ class JarvisAgent(context: Context) {
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else it }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
-        val zuege = (gekuerzt(verlauf) + ChatTurn("user", auftrag)).toMutableList()
+        val zuege = (gekuerzt(verlauf) + ChatTurn("user", auftrag, bilder)).toMutableList()
         val beginn = System.currentTimeMillis()
         // Im Gespräch und bei Agenten denkt Jarvis mit dem ganzen Gesamtbild aus dem Live-Gedächtnis (liegt fertig bereit,
         // nur die schnellen Bereiche werden höchstens 2,5 Sekunden nachgelesen). Beim Schreiben der Tagesauswertung selbst

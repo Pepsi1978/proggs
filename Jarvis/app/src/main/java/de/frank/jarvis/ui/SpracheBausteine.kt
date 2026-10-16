@@ -70,7 +70,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
     Bereich("Spracheingabe") {
         val eingerichtet = s.groqApiKey.isNotBlank()
         Zeile("Mikrofon", if (eingerichtet) "Eingerichtet" else "Groq-Schlüssel fehlt", if (eingerichtet) f.erfolg else f.textLeise)
-        Text("Der Knopf rechts neben dem Eingabefeld wird zum Mikrofon, solange das Feld leer ist. Die Aufnahme schreibt Groq mit (whisper-large-v3-turbo) in Text um und geht direkt an Jarvis.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        Text("Das Mikrofon in der Eingabeblase schreibt mit Groq (whisper-large-v3-turbo) mit und setzt den Text ins Feld. Jedes weitere Diktat kommt hinten dran; gesendet wird mit dem Pfeil. „Hey Jarvis“ sendet weiter direkt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         var groq by rememberSaveable { mutableStateOf(s.groqApiKey) }
         Unterzeile("Groq-Schlüssel")
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -85,6 +85,22 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             Chip("Segment-Werte", aktiv = s.filterSegmentmetrikenAn) { geaendert { s.filterSegmentmetrikenAn = !s.filterSegmentmetrikenAn } }
             Chip("Zeitstempel", aktiv = s.filterZeitstempelAn) { geaendert { s.filterZeitstempelAn = !s.filterZeitstempelAn } }
             Chip("Floskeln", aktiv = s.filterFloskelnAn) { geaendert { s.filterFloskelnAn = !s.filterFloskelnAn } }
+        }
+    }
+
+    Bereich("Live-Gespräch") {
+        val bereit = s.openAiApiKey.isNotBlank()
+        Zeile("Orange Blase", if (bereit) "Eingerichtet" else "OpenAI-Schlüssel fehlt", if (bereit) f.erfolg else f.textLeise)
+        Text("Echtes Gespräch über die OpenAI-Realtime-API: Jarvis antwortet sofort mit Stimme, hört dabei weiter zu, und du kannst ihn jederzeit unterbrechen. " +
+            "Für deine Daten fragt er im Hintergrund den normalen Jarvis mit allen Werkzeugen. Braucht einen eigenen API-Schlüssel von platform.openai.com (wird pro Minute abgerechnet, nicht über das ChatGPT-Abo).",
+            color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        Schluesselfeld(vm, "OpenAI-API-Schlüssel", s.openAiApiKey) { geaendert { s.openAiApiKey = it } }
+        Schluesselfeld(vm, "Live-Modell", s.liveModell, geheim = false) { geaendert { s.liveModell = it } }
+        Unterzeile("Stimme")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            de.frank.jarvis.live.LiveGespraech.STIMMEN.forEach { (id, name) ->
+                Chip(name, aktiv = s.liveStimme == id) { geaendert { s.liveStimme = id } }
+            }
         }
     }
 

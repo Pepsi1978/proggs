@@ -226,6 +226,10 @@ class EinstellungsKatalog(context: Context) {
             auswahl("denkstufe", "Modell", "Denkstufe", "Wie gründlich das Modell nachdenkt.",
                 { e.modell.supportedEfforts.map { it.name to it.label } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
 
+            // ---- Live-Gespräch ----
+            auswahl("live_stimme", "Live-Gespräch", "Stimme im Live-Gespräch", "Mit welcher Stimme Jarvis im Live-Gespräch (orange Blase) spricht.",
+                { de.frank.jarvis.live.LiveGespraech.STIMMEN }, { s.liveStimme }) { s.liveStimme = it },
+
             // ---- Darstellung ----
             auswahl("modus", "Darstellung", "Hell oder dunkel", "Helles oder dunkles Design.",
                 { listOf("system" to "Automatisch", "hell" to "Hell", "dunkel" to "Dunkel") }, { e.modus }) { e.modus = it },

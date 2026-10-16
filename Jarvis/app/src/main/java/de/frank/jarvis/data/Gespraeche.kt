@@ -15,7 +15,7 @@ data class Sitzung(val id: String, val titel: String, val erstellt: Long, val ge
  * Antwort) oder „abgebrochen“ (Franks Frage blieb unbeantwortet). [kontext] sieht nur das Modell im Verlauf,
  * etwa was in einer abgebrochenen Runde schon erledigt war.
  */
-data class GespeicherteNachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "")
+data class GespeicherteNachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList())
 
 /**
  * Jedes Gespräch mit Jarvis als eigene Datei unter `files/gespraeche/<id>.json`, damit Frank alte Gespräche in der
@@ -48,7 +48,10 @@ object Gespraeche {
         val j = lies(datei(context, id))
         val a = j.optJSONArray("nachrichten") ?: JSONArray()
         val nachrichten = (0 until a.length()).map {
-            a.getJSONObject(it).let { n -> GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext")) }
+            a.getJSONObject(it).let { n ->
+                val anh = n.optJSONArray("anhaenge")?.let { l -> (0 until l.length()).map { k -> l.getString(k) } }.orEmpty()
+                GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext"), anh)
+            }
         }
         Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), nachrichten.size) to nachrichten
     }.getOrNull()
@@ -86,6 +89,7 @@ object Gespraeche {
                                 // Nur Abweichungen speichern: Alte Dateien bleiben gültig, neue bleiben klein.
                                 if (n.art != "antwort") put("art", n.art)
                                 if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
+                                if (n.anhaenge.isNotEmpty()) put("anhaenge", JSONArray(n.anhaenge))
                             })
                         }
                     })
@@ -144,6 +148,7 @@ object Gespraeche {
                 liste.put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
                     if (n.art != "antwort") put("art", n.art)
                     if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
+                    if (n.anhaenge.isNotEmpty()) put("anhaenge", JSONArray(n.anhaenge))
                 })
                 j.put("geaendert", System.currentTimeMillis())
                 schreiben(d, j)

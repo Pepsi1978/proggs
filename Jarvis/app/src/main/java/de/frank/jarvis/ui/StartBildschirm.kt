@@ -83,7 +83,6 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         .collectAsState(initial = remember { Protokoll.eintraege.value.any { it.quelle == Quelle.CHATGPT } })
     val auswertung by Tagesauswertung.stand.collectAsState()
     var auswertungOffen by rememberSaveable { mutableStateOf(false) }
-    var eingabe by rememberSaveable { mutableStateOf("") }
     val liste = rememberLazyListState()
 
     val schritte = listOf(
@@ -207,31 +206,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.Bottom) {
-            Eingabe(eingabe, { eingabe = it }, if (vm.nimmtAuf) (if (vm.freihaendig) "Ich höre zu … sprich einfach" else "Ich höre zu … tippe zum Senden") else if (vm.schreibtMit) "Schreibe mit …" else "Nachricht an Jarvis", Modifier.weight(1f), einzeilig = false, senden = { vm.sende(eingabe); eingabe = "" })
-            Spacer(Modifier.width(10.dp))
-            // Leeres Feld: der Knopf ist das Mikrofon. Mit Text: senden. Während Jarvis arbeitet: abbrechen.
-            val alsMikro = eingabe.isBlank() && !vm.denkt
-            val rot = vm.denkt || vm.nimmtAuf
-            Box(
-                Modifier.size(52.dp).knopf3d(if (rot) f.gefahr else f.primaer, if (rot) f.gefahr else f.tertiaer, 26.dp, f.dunkel)
-                    .antippen {
-                        when {
-                            vm.denkt -> vm.abbrechen()
-                            alsMikro -> vm.mikrofonTippen()
-                            else -> { vm.sende(eingabe); eingabe = "" }
-                        }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                when {
-                    vm.schreibtMit -> Kern(34.dp, f.aufPrimaer, aktiv = true)
-                    vm.denkt || vm.nimmtAuf -> Icon(Icons.Rounded.Stop, if (vm.denkt) "Abbrechen" else "Aufnahme beenden und senden", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
-                    alsMikro -> Icon(Icons.Rounded.Mic, "Sprechen", tint = f.aufPrimaer, modifier = Modifier.size(24.dp))
-                    else -> Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
-                }
-            }
-        }
+        // Die Eingabeblase wie in der ChatGPT-App: Text, Plus-Menü, Modell, Diktat und Live-Gespräch.
+        EingabeBlase(vm)
     }
 }
 
@@ -304,11 +280,15 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
     if (n.art == "rueckfrage") { Rueckfrage(vm, n); return }
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (n.vonMir) Alignment.End else Alignment.Start) {
+        if (n.anhaenge.isNotEmpty()) FlowRow(Modifier.padding(start = 44.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            n.anhaenge.forEach { AnhangKachel(de.frank.jarvis.data.Anhang(it), 96.dp) }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = if (n.vonMir) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
             val grund = if (n.vonMir) Modifier.knopf3d(f.primaer, f.tertiaer, 20.dp, f.dunkel) else Modifier.glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark)
             val form = Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp)
