@@ -75,7 +75,9 @@ class LiveGespraech(
     private var echo: AcousticEchoCanceler? = null
     private var rauschen: NoiseSuppressor? = null
     private var wiedergabe: AudioTrack? = null
-    private val ausgabe = LinkedBlockingQueue<ByteArray>()
+    /** Ein Stück Ausgabe; [hoerbar] = echter Ton statt Stille. Nur hörbarer Ton hält Sprechanzeige und Echosperre. */
+    private class Stueck(val daten: ByteArray, val hoerbar: Boolean)
+    private val ausgabe = LinkedBlockingQueue<Stueck>()
     private var alterModus = AudioManager.MODE_NORMAL
     /** Medienweg (A2DP/Kopfhörer, Handy-Mikrofon, kein Telefonmodus) statt Freisprechen; fest ab Gesprächsbeginn. */
     @Volatile private var medienweg = false
@@ -95,6 +97,18 @@ class LiveGespraech(
     @Volatile private var verworfenItem = ""
     @Volatile private var verwerfenLive = false
     @Volatile private var letzteVerworfenMs = 0L
+    @Volatile private var verwerfenSeitMs = 0L
+    /** Letztes Schreiben von hörbarem Ton in die Wiedergabe (Ton-Faden): Deckel für Echosperre und Sprechanzeige. */
+    @Volatile private var letzteHoerbarMs = 0L
+    /** Letzter hörbarer Ton vom Dienst (OkHttp-Faden). */
+    @Volatile private var letzteHoerbarEmpfangMs = 0L
+    @Volatile private var letzterStatus = ""
+    // Protokoll der GPT-Live-Ausgabe, alle 2 s: zeigt im Logcat, ob Ton kommt und ob er hörbar ist.
+    private var statSeit = 0L
+    private var statDeltas = 0
+    private var statHoerbar = 0
+    private var statBytes = 0L
+    private val gemeldeteTypen = HashSet<String>()
     private var routenWaechter: android.media.AudioRouting.OnRoutingChangedListener? = null
 
     // ---- Kosten ----
@@ -131,7 +145,7 @@ class LiveGespraech(
 
     fun start() {
         laeuft = true
-        beiStatus("Verbinde …")
+        status("Verbinde …")
         val url = if (live) "wss://api.openai.com/v1/live/sessions" else "wss://api.openai.com/v1/realtime?model=$modell"
         val anfrage = Request.Builder().url(url).header("Authorization", "Bearer $schluessel").build()
         ws = client.newWebSocket(anfrage, object : WebSocketListener() {
@@ -149,7 +163,7 @@ class LiveGespraech(
                     bereit = true
                     startMs = System.currentTimeMillis()
                     tonStarten()
-                    if (laeuft) beiStatus("Ich höre zu")
+                    if (laeuft) status("Ich höre zu")
                 }
             }
 
@@ -244,23 +258,40 @@ class LiveGespraech(
                 bereit = true
                 startMs = System.currentTimeMillis()
                 tonStarten()
-                if (laeuft) beiStatus("Ich höre zu")
+                if (laeuft) status("Ich höre zu")
             }
             "session.output_audio.delta" -> {
-                letzteAktivitaet = System.currentTimeMillis()
+                val jetzt = System.currentTimeMillis()
+                letzteAktivitaet = jetzt
+                val daten = Base64.decode(e.optString("delta"), Base64.DEFAULT)
+                // GPT-Live sagt nicht, wann es spricht: Nur hörbarer Ton zählt als Sprechen, Stille hält nichts fest.
+                val hoerbar = hoerbar(daten)
+                ausgabeStatistik(jetzt, daten.size, hoerbar)
                 if (verwerfenLive) {
-                    // Die abgebrochene Antwort läuft noch nach; erst nach einer Pause von 1,5 s kommt wieder Neues.
-                    if (letzteAktivitaet - letzteVerworfenMs < 1_500) { letzteVerworfenMs = letzteAktivitaet; return }
+                    // Die abgebrochene Antwort läuft noch nach; erst nach 1,5 s ohne hörbaren Ton kommt wieder Neues, spätestens nach 10 s.
+                    if (jetzt - verwerfenSeitMs < VERWERFEN_MAX_MS && (!hoerbar || jetzt - letzteVerworfenMs < 1_500)) {
+                        if (hoerbar) letzteVerworfenMs = jetzt
+                        return
+                    }
                     verwerfenLive = false
+                    Log.i(LiveRouting.TAG, "Verwerfen nach dem Antippen beendet, neue Ausgabe wird gespielt")
                 }
-                if (!sprichtGerade) { sprichtGerade = true; beiStatus(sprichtText()) }
-                ausgabe.offer(Base64.decode(e.optString("delta"), Base64.DEFAULT))
+                if (hoerbar) {
+                    letzteHoerbarEmpfangMs = jetzt
+                    if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
+                }
+                ausgabe.offer(Stueck(daten, hoerbar))
             }
             "session.input_transcript.delta" -> {
                 letzteAktivitaet = System.currentTimeMillis()
-                // GPT-Live meldet kein „Frank spricht“: Kommt seine Mitschrift, verstummt die gepufferte Ausgabe.
-                if (sprichtGerade) { ausgabeLeeren(); beiStatus("Ich höre zu") }
-                verwerfenLive = false
+                // GPT-Live meldet kein „Frank spricht“: Kommt seine Mitschrift, verstummt die gepufferte Ausgabe. Mit Echosperre
+                // bekommt der Dienst während Jarvis' Rede nur Stille; eine Mitschrift ist dann die verspätete vom Satz davor und
+                // darf die gerade beginnende Antwort nicht löschen. Unterbrechen geht dort per Antippen.
+                if (sprichtGerade) {
+                    if (echoSperre) Log.i(LiveRouting.TAG, "Mitschrift kommt, während Jarvis spricht: Echosperre an, Ausgabe bleibt")
+                    else { ausgabeLeeren(); status("Ich höre zu") }
+                }
+                if (!echoSperre) verwerfenLive = false
                 jarvisFertig()
                 val d = e.optString("delta")
                 synchronized(nutzerTeile) { nutzerTeile.append(d) }
@@ -274,7 +305,7 @@ class LiveGespraech(
             "session.delegation.created" -> {
                 val d = e.optJSONObject("delegation") ?: return
                 val id = d.optString("id")
-                beiStatus("Jarvis schaut nach …")
+                status("Jarvis schaut nach …")
                 // Was Jarvis bis hier gesagt hat („Moment, ich schaue nach“), gehört noch in die Session vor einem möglichen Wechsel.
                 jarvisFertig()
                 bestaetigungVerschlucken = false
@@ -296,7 +327,7 @@ class LiveGespraech(
                         kennungArt[callId] = "funktion"
                         jarvisFertig()
                         bestaetigungVerschlucken = false
-                        beiStatus("Jarvis schaut nach …")
+                        status("Jarvis schaut nach …")
                         beiWerkzeug(callId, auftrag)
                     }
                     "response.completed", "response.done" -> {
@@ -331,11 +362,41 @@ class LiveGespraech(
                 val f = e.optJSONObject("error")
                 val text = listOfNotNull(f?.optString("message")?.takeIf { it.isNotBlank() }, f?.optString("code")?.takeIf { it.isNotBlank() }?.let { "Code $it" },
                     f?.optString("param")?.takeIf { it.isNotBlank() }?.let { "Feld $it" }).joinToString(", ")
+                Log.w(LiveRouting.TAG, "GPT-Live-Fehler: $text")
                 beiFehler("GPT-Live: " + text.ifBlank { "unbekannter Fehler" })
                 // Vor session.started ist die Sitzung nie zustande gekommen.
                 if (!bereit) beenden(senden = false)
+                // Sonst bliebe „Jarvis schaut nach …“ stehen, obwohl keine Antwort mehr kommt.
+                else if (!sprichtGerade && laeuft) status("Ich höre zu")
             }
+            else -> { val typ = e.optString("type"); if (gemeldeteTypen.add(typ)) Log.i(LiveRouting.TAG, "GPT-Live-Ereignis ohne Behandlung: $typ") }
         }
+    }
+
+    /** Echter Ton statt (fast) Stille: Effektivwert über der Schwelle. */
+    private fun hoerbar(b: ByteArray): Boolean {
+        val n = b.size - b.size % 2
+        if (n < 2) return false
+        var summe = 0.0
+        var i = 0
+        while (i + 1 < n) { val s = (b[i].toInt() and 0xFF) or (b[i + 1].toInt() shl 8); summe += s.toDouble() * s; i += 2 }
+        return kotlin.math.sqrt(summe / (n / 2)) > HOERBAR_EFFEKTIV
+    }
+
+    /** Nur im OkHttp-Faden. */
+    private fun ausgabeStatistik(jetzt: Long, bytes: Int, hoerbar: Boolean) {
+        if (statSeit == 0L) statSeit = jetzt
+        statDeltas++; statBytes += bytes; if (hoerbar) statHoerbar++
+        if (jetzt - statSeit < 2_000) return
+        Log.i(LiveRouting.TAG, "GPT-Live-Ausgabe in ${jetzt - statSeit} ms: $statDeltas Stücke, ${statBytes / 48} ms Ton, davon $statHoerbar hörbar, " +
+            "Warteschlange ${ausgabe.size}, spricht=$sprichtGerade, verwerfen=$verwerfenLive")
+        statSeit = jetzt; statDeltas = 0; statHoerbar = 0; statBytes = 0
+    }
+
+    /** Status an die Leiste, Wechsel auch ins Logcat. */
+    private fun status(s: String) {
+        if (s != letzterStatus) { letzterStatus = s; Log.i(LiveRouting.TAG, "Status: $s") }
+        beiStatus(s)
     }
 
     // ======================= Realtime =======================
@@ -400,8 +461,9 @@ class LiveGespraech(
                 if (item != antwortItem) { antwortItem = item; empfangenBytes = 0; abgespieltBytes = 0 }
                 val daten = Base64.decode(e.optString("delta"), Base64.DEFAULT)
                 empfangenBytes += daten.size
-                if (!sprichtGerade) { sprichtGerade = true; beiStatus(sprichtText()) }
-                ausgabe.offer(daten)
+                if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
+                // Realtime grenzt seine Antworten selbst ab: Jedes Stück zählt wie bisher als Ton.
+                ausgabe.offer(Stueck(daten, true))
             }
             "input_audio_buffer.speech_started" -> {
                 letzteAktivitaet = System.currentTimeMillis()
@@ -409,7 +471,7 @@ class LiveGespraech(
                     val ms = (minOf(abgespieltBytes, empfangenBytes) / 48).toInt()
                     ws?.send(JSONObject().put("type", "conversation.item.truncate").put("item_id", antwortItem).put("content_index", 0).put("audio_end_ms", ms).toString())
                 }
-                if (st["unterbrechen"] == "an") { ausgabeLeeren(); beiStatus("Ich höre zu") }
+                if (st["unterbrechen"] == "an") { ausgabeLeeren(); status("Ich höre zu") }
             }
             "conversation.item.input_audio_transcription.completed" -> {
                 e.optString("transcript").trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText)
@@ -433,7 +495,7 @@ class LiveGespraech(
                 resp?.optJSONObject("usage")?.let { realtimeKosten(it) }
                 val out = resp?.optJSONArray("output")
                 val ruftWerkzeug = out != null && (0 until out.length()).any { out.optJSONObject(it)?.optString("type") == "function_call" }
-                if (laeuft && !ruftWerkzeug) beiStatus("Ich höre zu")
+                if (laeuft && !ruftWerkzeug) status("Ich höre zu")
             }
             "response.function_call_arguments.done" -> {
                 val name = e.optString("name")
@@ -442,7 +504,7 @@ class LiveGespraech(
                 val callId = e.optString("call_id")
                 kennungArt[callId] = "realtime"
                 bestaetigungVerschlucken = false
-                beiStatus("Jarvis schaut nach …")
+                status("Jarvis schaut nach …")
                 beiWerkzeug(callId, auftrag)
             }
             "error" -> {
@@ -564,6 +626,7 @@ class LiveGespraech(
     private fun tonAnlegen(rec: AudioRecord, rate: Int) {
         if (AcousticEchoCanceler.isAvailable()) echo = AcousticEchoCanceler.create(rec.audioSessionId)?.also { it.enabled = true }
         if (NoiseSuppressor.isAvailable()) rauschen = NoiseSuppressor.create(rec.audioSessionId)?.also { it.enabled = true }
+        Log.i(LiveRouting.TAG, "Echounterdrückung des Geräts: verfügbar=${AcousticEchoCanceler.isAvailable()}, aktiv=${runCatching { echo?.enabled }.getOrNull() ?: false}")
 
         val minOut = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val track = AudioTrack.Builder()
@@ -597,6 +660,7 @@ class LiveGespraech(
             // Das Mikrofon kennt sein Gerät erst nach dem Start.
             hauptFaden.post { audiowegMelden() }
             val anhaengen = if (live) "session.input_audio.append" else "input_audio_buffer.append"
+            var warZu = false
             while (laeuft) {
                 var n = 0
                 while (n < puffer.size && laeuft) {
@@ -614,11 +678,30 @@ class LiveGespraech(
                 // Echosperre: Solange Jarvis spricht (samt Nachlauf), bekommt der Dienst Stille statt des eigenen Echos.
                 // Zu, solange echter Ton wartet oder der Wiedergabekopf ihn noch nicht abgespielt hat; danach der Nachlauf für die
                 // Bluetooth-Strecke hinter dem Kopf. Die Füll-Stille zählt nicht, nur [echtBisFrame].
+                // Dieser Faden blockiert nie an der Wiedergabe: Hier werden Sperre und Sprechanzeige auch dann frei, wenn der
+                // Ton-Faden hängt oder die Kopfposition nicht stimmt. Spätestens ECHO_SPERRE_MAX_MS nach dem letzten hörbaren Ton
+                // ist das Mikrofon wieder offen.
                 val jetzt = System.currentTimeMillis()
+                val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
+                val tonOffen = ausgabe.any { it.hoerbar } || kopf < echtBisFrame
                 val echoZu = echoSperre && run {
-                    val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
-                    if (ausgabe.isNotEmpty() || kopf < echtBisFrame) echoFreiAb = jetzt + ECHO_NACHLAUF_MS
-                    jetzt < echoFreiAb
+                    if (tonOffen) echoFreiAb = jetzt + ECHO_NACHLAUF_MS
+                    jetzt < echoFreiAb && jetzt - letzteHoerbarMs < ECHO_SPERRE_MAX_MS
+                }
+                if (echoZu != warZu) {
+                    warZu = echoZu
+                    Log.i(LiveRouting.TAG, "Echosperre " + (if (echoZu) "zu" else "auf") + ": Kopf $kopf, Ton bis $echtBisFrame, Warteschlange ${ausgabe.size}, " +
+                        "letzter Ton vor ${jetzt - letzteHoerbarMs} ms")
+                }
+                // GPT-Live meldet kein Ende der Rede: Ist kein hörbarer Ton mehr offen, hört Jarvis wieder zu. Hängt die
+                // Wiedergabe, gilt nach STATUS_MAX_MS ohne geschriebenen und empfangenen Ton dasselbe.
+                if (live && sprichtGerade) {
+                    val seit = jetzt - maxOf(letzteHoerbarMs, letzteHoerbarEmpfangMs)
+                    if ((!tonOffen && seit >= 300) || seit >= STATUS_MAX_MS) {
+                        if (tonOffen) Log.w(LiveRouting.TAG, "Wiedergabe kommt nicht voran: Sprechanzeige zurückgesetzt, Warteschlange ${ausgabe.size}")
+                        sprichtGerade = false
+                        if (laeuft) status("Ich höre zu")
+                    }
                 }
                 val stueck = if ((stumm && !live) || echoZu) ByteArray(n) else puffer.copyOf(n)
                 ws?.send(JSONObject().put("type", anhaengen).put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
@@ -632,18 +715,19 @@ class LiveGespraech(
         Thread({
             while (laeuft) {
                 val stueck = runCatching { ausgabe.poll(if (medienweg) STILLE_MS.toLong() else 200L, TimeUnit.MILLISECONDS) }.getOrNull()
-                // GPT-Live meldet kein Ende der Rede: Ist die Ausgabe leer gelaufen, hört Jarvis wieder zu.
+                // Die Sprechanzeige von GPT-Live setzt der Mikrofon-Faden zurück; dieser Faden kann im Schreiben blockieren.
                 if (stueck == null) {
-                    // Wie bisher erst nach 200 ms ohne Ton, auch wenn der Medienweg kürzer wartet.
-                    if (live && sprichtGerade && ausgabe.isEmpty() && System.currentTimeMillis() - letzteAusgabeMs >= 200) { sprichtGerade = false; if (laeuft) beiStatus("Ich höre zu") }
                     if (medienweg && laeuft) runCatching { wiedergabe?.write(stille, 0, stille.size) }.getOrNull()?.takeIf { it > 0 }?.let { geschriebeneFrames += it / 2 }
                     continue
                 }
+                // Vor und nach dem Schreiben: Ein großes Stück läuft schon hörbar an, während write() noch blockiert.
+                if (stueck.hoerbar) letzteHoerbarMs = System.currentTimeMillis()
                 letzteAusgabeMs = System.currentTimeMillis()
-                val geschrieben = runCatching { wiedergabe?.write(stueck, 0, stueck.size) }.getOrNull() ?: 0
-                if (geschrieben > 0) { geschriebeneFrames += geschrieben / 2; echtBisFrame = geschriebeneFrames }
+                val geschrieben = runCatching { wiedergabe?.write(stueck.daten, 0, stueck.daten.size) }.getOrNull() ?: 0
+                if (geschrieben > 0) { geschriebeneFrames += geschrieben / 2; if (stueck.hoerbar) echtBisFrame = geschriebeneFrames }
                 letzteAusgabeMs = System.currentTimeMillis()
-                abgespieltBytes += stueck.size
+                if (stueck.hoerbar) letzteHoerbarMs = letzteAusgabeMs
+                abgespieltBytes += stueck.daten.size
             }
         }, "jarvis-live-ton").start()
     }
@@ -666,10 +750,17 @@ class LiveGespraech(
      * ein sicherer Weg. Realtime bricht die Antwort beim Dienst ab und kürzt sie auf das Gehörte; GPT-Live verwirft den Rest.
      */
     fun unterbrechen() {
-        if (!laeuft || (!sprichtGerade && ausgabe.isEmpty())) return
+        if (!laeuft) return
+        // Nichts zu unterbrechen: Die Anzeige trotzdem auf den echten Zustand stellen, falls sie noch „spricht“ zeigt.
+        if (!sprichtGerade && ausgabe.isEmpty()) {
+            Log.i(LiveRouting.TAG, "Antippen ohne laufende Ausgabe, Status „$letzterStatus“")
+            if (bereit && letzterStatus.startsWith("Jarvis spricht")) status("Ich höre zu")
+            return
+        }
         if (live) {
             verwerfenLive = true
             letzteVerworfenMs = System.currentTimeMillis()
+            verwerfenSeitMs = letzteVerworfenMs
         } else if (antwortItem.isNotEmpty()) {
             verworfenItem = antwortItem
             val ms = (minOf(abgespieltBytes, empfangenBytes) / 48).toInt()
@@ -678,7 +769,7 @@ class LiveGespraech(
         }
         ausgabeLeeren()
         Log.i(LiveRouting.TAG, "Jarvis per Antippen unterbrochen")
-        beiStatus("Ich höre zu")
+        status("Ich höre zu")
     }
 
     /** Meldet Tonweg, Ausgabe und Mikrofon, wie das System sie gerade tatsächlich geroutet hat. */
@@ -840,6 +931,14 @@ class LiveGespraech(
     companion object {
         /** Echosperre bleibt so lange nach dem letzten Ton zu: Wiedergabepuffer plus Bluetooth-Verzögerung. */
         private const val ECHO_NACHLAUF_MS = 400L
+        /** Höchstens so lange nach dem letzten hörbaren Ton bleibt die Echosperre zu, egal was die Wiedergabe meldet. */
+        private const val ECHO_SPERRE_MAX_MS = 3_000L
+        /** GPT-Live: so lange ohne hörbaren Ton (geschrieben und empfangen), dann gilt Jarvis als fertig. */
+        private const val STATUS_MAX_MS = 4_000L
+        /** Nach dem Antippen wird die alte GPT-Live-Antwort höchstens so lange verworfen. */
+        private const val VERWERFEN_MAX_MS = 10_000L
+        /** Effektivwert (PCM16), ab dem ein Ausgabestück als hörbarer Ton zählt; Sprache liegt weit darüber. */
+        private const val HOERBAR_EFFEKTIV = 120.0
         /** Länge eines Stilleblocks in Sprechpausen (Medienweg); hält den Bluetooth-Medienstrom wach. */
         private const val STILLE_MS = 20
 

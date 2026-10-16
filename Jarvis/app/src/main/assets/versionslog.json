@@ -118,6 +118,7 @@
     {"versionCode": 113, "versionName": "1.8.102", "stand": "16.10.2026, 17:49 Uhr", "notiz": "Sagst du im Live-Gespräch „Gespräch beenden“ oder „Beende das Live-Gespräch“, schließt Jarvis jetzt wirklich Verbindung und Mikrofon, der Hörer verschwindet und eine kurze Ansage bestätigt das Ende."},
     {"versionCode": 114, "versionName": "1.8.103", "stand": "16.10.2026, 17:51 Uhr", "notiz": "Im Live-Gespräch unterbricht ein Tipp auf die orange Blase Jarvis sofort, und die Echosperre im Medienton gibt das Mikrofon genau dann frei, wenn Jarvis wirklich ausgesprochen hat."},
     {"versionCode": 115, "versionName": "1.8.104", "stand": "16.10.2026, 17:53 Uhr", "notiz": "Im Live-Gespräch zeigt der rote Knopf statt des Telefonhörers jetzt schwingende Audiostriche; Antippen beendet das Gespräch wie bisher."},
-    {"versionCode": 116, "versionName": "1.8.105", "stand": "16.10.2026, 18:01 Uhr", "notiz": "Das Live-Gespräch klingt ohne Bluetooth nicht mehr nach Telefon: Jarvis spricht in voller Medienqualität über den Handy-Lautsprecher, im Auto bleibt der Bluetooth-Medienton."}
+    {"versionCode": 116, "versionName": "1.8.105", "stand": "16.10.2026, 18:01 Uhr", "notiz": "Das Live-Gespräch klingt ohne Bluetooth nicht mehr nach Telefon: Jarvis spricht in voller Medienqualität über den Handy-Lautsprecher, im Auto bleibt der Bluetooth-Medienton."},
+    {"versionCode": 117, "versionName": "1.8.106", "stand": "16.10.2026, 18:22 Uhr", "notiz": "GPT-Live im Live-Gespräch bleibt nicht mehr bei „Jarvis spricht“ hängen: Anzeige und Echosperre folgen dem wirklich hörbaren Ton, späte Mitschriften löschen die Antwort nicht mehr, und das Mikrofon ist spätestens drei Sekunden nach Jarvis’ letztem Ton wieder offen."}
   ]
 }
