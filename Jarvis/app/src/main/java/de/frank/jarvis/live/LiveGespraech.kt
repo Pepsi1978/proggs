@@ -3,6 +3,7 @@ package de.frank.jarvis.live
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
@@ -12,7 +13,10 @@ import android.media.MediaRecorder
 import android.media.audiofx.AcousticEchoCanceler
 import android.media.audiofx.NoiseSuppressor
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Base64
+import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -435,7 +439,7 @@ class LiveGespraech(
             if (aufnahme != null || !laeuft) return
             alterModus = audio.mode
             audio.mode = AudioManager.MODE_IN_COMMUNICATION
-            lautsprecher(true)
+            routingStarten()
 
             val rate = 24000
             val minIn = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
@@ -517,16 +521,92 @@ class LiveGespraech(
         wiedergabe?.let { runCatching { it.pause(); it.flush(); it.play() } }
     }
 
-    private fun lautsprecher(an: Boolean) {
+    // ---- Ausgabegerät: Auto/Headset vor Handy-Lautsprecher, auch beim Verbinden und Trennen im Gespräch ----
+    private val hauptFaden = Handler(Looper.getMainLooper())
+    private var geraeteWaechter: AudioDeviceCallback? = null
+    private var kommWaechter: Any? = null
+    @Volatile private var routingAktiv = false
+    private var scoGestartet = false
+    private val nachpruefen = Runnable { synchronized(tonSperre) { if (routingAktiv) routen("Nachprüfung") } }
+
+    /** Nur unter [tonSperre]: meldet die Wächter an und wählt das Gerät. */
+    private fun routingStarten() {
+        routingAktiv = true
+        routen("Gesprächsbeginn")
+        val waechter = object : AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(neu: Array<out AudioDeviceInfo>) = geaendert("verbunden", neu)
+            override fun onAudioDevicesRemoved(weg: Array<out AudioDeviceInfo>) = geaendert("getrennt", weg)
+        }
+        runCatching { audio.registerAudioDeviceCallback(waechter, hauptFaden) }.onSuccess { geraeteWaechter = waechter }
+        if (Build.VERSION.SDK_INT >= 31) {
+            val l = AudioManager.OnCommunicationDeviceChangedListener { d ->
+                Log.i(LiveRouting.TAG, "System meldet Kommunikationsgerät: ${d?.let { "${LiveRouting.name(it.type)} „${it.productName}“" } ?: "keins"}")
+            }
+            runCatching { audio.addOnCommunicationDeviceChangedListener(app.mainExecutor, l) }.onSuccess { kommWaechter = l }
+        }
+    }
+
+    private fun geaendert(was: String, geraete: Array<out AudioDeviceInfo>) {
+        Log.i(LiveRouting.TAG, "Gerät $was: " + geraete.joinToString { "${LiveRouting.name(it.type)} „${it.productName}“" })
+        synchronized(tonSperre) { if (routingAktiv) routen("Gerät $was") }
+        // Bluetooth-Freisprechen taucht teils erst kurz nach der Gerätemeldung als Kommunikationsgerät auf.
+        hauptFaden.removeCallbacks(nachpruefen)
+        hauptFaden.postDelayed(nachpruefen, 1500)
+    }
+
+    /** Nur unter [tonSperre]. Wählt Auto/Headset, sonst den Lautsprecher; nie die Hörmuschel. */
+    private fun routen(anlass: String) {
         runCatching {
+            val ausgaenge = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             if (Build.VERSION.SDK_INT >= 31) {
-                if (an) audio.availableCommunicationDevices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }?.let { audio.setCommunicationDevice(it) }
-                else audio.clearCommunicationDevice()
+                val geraete = audio.availableCommunicationDevices
+                val i = LiveRouting.wahl(geraete.map { it.type })
+                Log.i(LiveRouting.TAG, "$anlass: verfügbar " + geraete.joinToString { "${LiveRouting.name(it.type)} „${it.productName}“" })
+                if (geraete.none { LiveRouting.istBluetooth(it.type) } && ausgaenge.any { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP })
+                    Log.w(LiveRouting.TAG, "Nur Bluetooth-Medien (A2DP) verbunden, kein Freisprechprofil: Live-Ton bleibt am Handy. In den Bluetooth-Einstellungen „Anrufe“ für das Gerät einschalten.")
+                if (i < 0) { audio.clearCommunicationDevice(); Log.w(LiveRouting.TAG, "$anlass: kein passendes Gerät, Systemwahl"); return@runCatching }
+                val ziel = geraete[i]
+                if (audio.communicationDevice?.id == ziel.id) { Log.i(LiveRouting.TAG, "$anlass: bleibt bei ${LiveRouting.name(ziel.type)} „${ziel.productName}“"); return@runCatching }
+                val ok = audio.setCommunicationDevice(ziel)
+                Log.i(LiveRouting.TAG, "$anlass: gewählt ${LiveRouting.name(ziel.type)} „${ziel.productName}“, angenommen=$ok")
             } else {
                 @Suppress("DEPRECATION")
-                audio.isSpeakerphoneOn = an
+                val sco = ausgaenge.any { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
+                val kabel = ausgaenge.any { it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || it.type == AudioDeviceInfo.TYPE_USB_HEADSET }
+                @Suppress("DEPRECATION")
+                if (sco) {
+                    if (!scoGestartet) { audio.startBluetoothSco(); scoGestartet = true }
+                    audio.isBluetoothScoOn = true
+                    audio.isSpeakerphoneOn = false
+                } else {
+                    if (scoGestartet) { audio.isBluetoothScoOn = false; audio.stopBluetoothSco(); scoGestartet = false }
+                    audio.isSpeakerphoneOn = !kabel
+                }
+                Log.i(LiveRouting.TAG, "$anlass: sco=$sco kabel=$kabel (vor Android 12)")
+            }
+        }.onFailure { Log.w(LiveRouting.TAG, "$anlass: Routing fehlgeschlagen", it) }
+    }
+
+    /** Nur unter [tonSperre]: Wächter ab, Gerätewahl zurück an das System. */
+    private fun routingBeenden() {
+        routingAktiv = false
+        hauptFaden.removeCallbacks(nachpruefen)
+        geraeteWaechter?.let { runCatching { audio.unregisterAudioDeviceCallback(it) } }
+        geraeteWaechter = null
+        if (Build.VERSION.SDK_INT >= 31) {
+            (kommWaechter as? AudioManager.OnCommunicationDeviceChangedListener)?.let { runCatching { audio.removeOnCommunicationDeviceChangedListener(it) } }
+            kommWaechter = null
+        }
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 31) audio.clearCommunicationDevice()
+            else {
+                @Suppress("DEPRECATION")
+                if (scoGestartet) { audio.isBluetoothScoOn = false; audio.stopBluetoothSco(); scoGestartet = false }
+                @Suppress("DEPRECATION")
+                audio.isSpeakerphoneOn = false
             }
         }
+        Log.i(LiveRouting.TAG, "Gesprächsende: Gerätewahl freigegeben")
     }
 
     @Volatile private var schliessenWartet = false
@@ -574,7 +654,7 @@ class LiveGespraech(
         runCatching { wiedergabe?.stop() }
         runCatching { wiedergabe?.release() }
         wiedergabe = null
-        lautsprecher(false)
+        if (routingAktiv || geraeteWaechter != null) routingBeenden()
         runCatching { audio.mode = alterModus }
     } }
 

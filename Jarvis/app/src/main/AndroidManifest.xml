@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Live-Gespräch über Bluetooth-Freisprechen (startBluetoothSco) bis Android 11 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Fahrzeit vom aktuellen Standort (Google Routes API). „Immer“, weil Jarvis im Hintergrund und für ChatGPT arbeitet. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
