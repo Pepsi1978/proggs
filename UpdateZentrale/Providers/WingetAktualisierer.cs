@@ -162,14 +162,12 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
 
         // A manifest that names one version but downloads another installs the old one again.
-        if (FalscherInstaller(lauf.Ausgabe) is { } falsch)
+        // Only checked where a vendor installer is configured: other packages may legitimately
+        // name their installer files differently (dependencies, own numbering).
+        if (!string.IsNullOrWhiteSpace(eintrag.HerstellerInstallerUrl)
+            && FalscherInstaller(lauf.Ausgabe, eintrag.WingetId ?? "") is { } falsch)
         {
             protokoll.Report("winget-Manifest " + falsch.Angeboten + " liefert den Installer von " + falsch.Geladen + ".");
-            if (string.IsNullOrWhiteSpace(eintrag.HerstellerInstallerUrl))
-                return new PruefErgebnis(UpdateZustand.Fehler,
-                    Meldung: "Der winget-Eintrag für " + falsch.Angeboten + " liefert noch den Installer von "
-                             + falsch.Geladen + " – das Update im Programm selbst starten.",
-                    Protokoll: lauf.Ausgabe);
             return await HerstellerInstallerAsync(eintrag, falsch.Angeboten, protokoll, abbruch);
         }
 
@@ -217,17 +215,17 @@ public sealed class WingetAktualisierer : IAktualisierer
         return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update installiert.", Protokoll: lauf.Ausgabe);
     }
 
-    private static readonly System.Text.RegularExpressions.Regex AngebotMuster =
-        new(@"^Found .*\] Version (\d+\.\d+\.\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
-
+    // Language-neutral: "Found …/Gefunden … [Id] Version x" and any installer URL in the output.
     private static readonly System.Text.RegularExpressions.Regex DownloadMuster =
-        new(@"^Downloading \S*?[-_](\d+\.\d+\.\d+)\.(?:exe|msi|msix|zip)\b",
-            System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        new(@"https?://\S*?[-_](\d+\.\d+\.\d+)\.(?:exe|msi|msix|zip)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     /// <summary>The offered and the downloaded version, when the installer file name contradicts the offer.</summary>
-    internal static (string Angeboten, string Geladen)? FalscherInstaller(string ausgabe)
+    internal static (string Angeboten, string Geladen)? FalscherInstaller(string ausgabe, string wingetId)
     {
-        var angebot = AngebotMuster.Match(ausgabe);
+        var angebot = System.Text.RegularExpressions.Regex.Match(ausgabe,
+            @"\[" + System.Text.RegularExpressions.Regex.Escape(wingetId) + @"\]\s+\S+\s+(\d+\.\d+\.\d+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         var download = DownloadMuster.Match(ausgabe);
         if (!angebot.Success || !download.Success) return null;
         var (a, d) = (angebot.Groups[1].Value, download.Groups[1].Value);
@@ -239,22 +237,35 @@ public sealed class WingetAktualisierer : IAktualisierer
                                                                       IProgress<string> protokoll, CancellationToken abbruch)
     {
         var url = eintrag.HerstellerInstallerUrl!.Replace("{version}", version);
-        var ziel = Path.Combine(Path.GetTempPath(), "UpdateZentrale-" + eintrag.Id + "-" + version + ".exe");
+        var ordner = Directory.CreateDirectory(Path.Combine(Pfade.BenutzerOrdner, "downloads", Guid.NewGuid().ToString("N")));
+        var ziel = Path.Combine(ordner.FullName, eintrag.Id + "-" + version + ".exe");
         protokoll.Report("Lade den Installer direkt vom Hersteller: " + url);
 
         // curl: IPv4 first (see Netzdienst) and no 15-second client timeout for a 100 MB download.
-        var laden = await Kommandozeile.AusfuehrenAsync("curl.exe", "-4 -fL --retry 2 -o \"" + ziel + "\" \"" + url + "\"",
+        var laden = await Kommandozeile.AusfuehrenAsync("curl.exe", "-4 -sS -fL --retry 2 -o \"" + ziel + "\" \"" + url + "\"",
             TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
         if (Kommandozeile.UnsauberesEnde(laden) is { } unsauber) return unsauber;
         if (laden.ExitCode != 0 || !File.Exists(ziel))
             return new PruefErgebnis(UpdateZustand.Fehler,
                 Meldung: "Der Hersteller-Download ist fehlgeschlagen (curl Code " + laden.ExitCode + ").", Protokoll: laden.Ausgabe);
 
+        // Never run an unverified download: a valid Authenticode signature is required.
+        var signatur = await Kommandozeile.AusfuehrenAsync("powershell.exe",
+            "-NoProfile -Command \"$s = Get-AuthenticodeSignature -LiteralPath '" + ziel + "'; $s.Status; $s.SignerCertificate.Subject\"",
+            TimeSpan.FromMinutes(2), abbruch: abbruch);
+        protokoll.Report("Signatur: " + signatur.Ausgabe.Trim());
+        if (!signatur.Ausgabe.TrimStart().StartsWith("Valid", StringComparison.OrdinalIgnoreCase))
+        {
+            try { ordner.Delete(true); } catch { /* best effort */ }
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: "Der Hersteller-Installer hat keine gültige Signatur – nicht ausgeführt.", Protokoll: signatur.Ausgabe);
+        }
+
         protokoll.Report(Path.GetFileName(ziel) + " " + eintrag.HerstellerInstallerArgumente);
         var lauf = await Kommandozeile.AusfuehrenAsync(ziel, eintrag.HerstellerInstallerArgumente ?? "",
             TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
         protokoll.Report(lauf.Ausgabe);
-        try { File.Delete(ziel); } catch { /* temp file, the next run overwrites it */ }
+        try { ordner.Delete(true); } catch { /* one-off folder, harmless if left behind */ }
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } abbruchEnde) return abbruchEnde;
         if (lauf.ExitCode != 0)

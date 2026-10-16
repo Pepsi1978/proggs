@@ -114,12 +114,19 @@ public sealed class ProgrammEintrag
     /// </summary>
     public bool AusblendenWennFehlt { get; set; }
 
+    /// <summary>
+    /// Presence marker for entries without a launchable exe (the OpenCode fix build: its exe sits
+    /// in a versioned folder, current.json points to it). Counts for <see cref="AufDiesemRechnerVorhanden"/>
+    /// only -- never started, never flagged as admin.
+    /// </summary>
+    public string? VorhandenPfad { get; set; }
+
     [JsonIgnore]
     public bool AufDiesemRechnerVorhanden
     {
         get
         {
-            foreach (var kandidat in new[] { ExePfad }.Concat(ExePfadAlternativen))
+            foreach (var kandidat in new[] { ExePfad, VorhandenPfad ?? "" }.Concat(ExePfadAlternativen))
             {
                 if (string.IsNullOrWhiteSpace(kandidat)) continue;
                 var aufgeloest = Services.Pfade.Aufloesen(kandidat);

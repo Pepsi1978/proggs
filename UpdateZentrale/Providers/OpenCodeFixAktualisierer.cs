@@ -49,9 +49,16 @@ public sealed class OpenCodeFixAktualisierer : IAktualisierer
         if (!File.Exists(Skript))
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Bauskript nicht gefunden: " + Skript);
 
-        // -Force: without it the script's own retry pause answers "deferred" with exit code 0.
-        var args = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + Skript + "\" -Force";
+        // The checked version is passed on: -Version skips the script's retry pause (which would
+        // answer "deferred" with exit code 0) but keeps its "already active" short cut, and the
+        // script needs no npm of its own.
+        var npm = await CliAktualisierer.NpmVersionAsync(eintrag.NpmPaket ?? "opencode-ai", protokoll, abbruch);
+        if (!npm.Erfolg)
+            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: npm.Problem ?? "Registry-Abfrage fehlgeschlagen.");
+
+        var args = Argumente + " -Version " + npm.Version;
         protokoll.Report("pwsh " + args);
+        var start = DateTime.UtcNow.AddSeconds(-5);
         var lauf = await Kommandozeile.AusfuehrenAsync(PwshPfad(), args,
             TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), Path.GetDirectoryName(Skript), abbruch: abbruch);
         protokoll.Report(lauf.Ausgabe);
@@ -62,14 +69,15 @@ public sealed class OpenCodeFixAktualisierer : IAktualisierer
                 Meldung: "Gerade baut schon ein anderer Lauf (meist der OpenLauncher) – kurz warten und erneut aktualisieren.",
                 Protokoll: lauf.Ausgabe);
 
-        var zustand = LetzterZustand();
+        // Only a state this run wrote counts; an older one would name somebody else's failure.
+        var zustand = LetzterZustand() is { } z && z.Zeit >= start ? z : (BauZustand?)null;
         if (lauf.ExitCode == 0 && zustand?.Status is "installed" or "up-to-date")
             return new PruefErgebnis(UpdateZustand.Fertig,
-                Meldung: (zustand?.Nachricht ?? "Mit Windows-Fix gebaut.") + " Laufende Sitzungen behalten die alte Version.",
+                Meldung: zustand.Value.Nachricht + " Laufende Sitzungen behalten die alte Version.",
                 Protokoll: lauf.Ausgabe);
 
         var grund = zustand is { Status: "failed" } ? zustand.Value.Nachricht : "Das Bauskript endete mit Code " + lauf.ExitCode + ".";
-        if (grund.Contains("kompatibel", StringComparison.OrdinalIgnoreCase) || grund.Contains("patch", StringComparison.OrdinalIgnoreCase))
+        if (IstPatchKonflikt(grund))
             grund += " Der Windows-Fix muss an die neue Version angepasst werden – das Update in OpenCode selbst beauftragen. Die bisherige Version bleibt aktiv.";
         return new PruefErgebnis(UpdateZustand.Fehler, Meldung: grund, Protokoll: lauf.Ausgabe);
     }
@@ -94,7 +102,17 @@ public sealed class OpenCodeFixAktualisierer : IAktualisierer
         }
     }
 
-    private readonly record struct BauZustand(string Status, string Nachricht, string Kandidat);
+    private static string Argumente => "-NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + Skript + "\"";
+
+    /// <summary>What the card's log header shows -- the same string the run uses.</summary>
+    public static string Befehlsbeschreibung => "pwsh " + Argumente + " -Version <neueste>";
+
+    /// <summary>The script's messages for patches that no longer fit the new upstream source.</summary>
+    internal static bool IstPatchKonflikt(string grund)
+        => new[] { "nicht kompatibel", "konnte nicht angewendet", "nicht sicher patchbar", "nicht sicher anwendbar", "weder vorhanden noch sicher" }
+            .Any(m => grund.Contains(m, StringComparison.OrdinalIgnoreCase));
+
+    private readonly record struct BauZustand(string Status, string Nachricht, string Kandidat, DateTime Zeit);
 
     private static BauZustand? LetzterZustand()
     {
@@ -103,7 +121,10 @@ public sealed class OpenCodeFixAktualisierer : IAktualisierer
             using var dok = JsonDocument.Parse(File.ReadAllText(ZustandDatei));
             var w = dok.RootElement;
             string Feld(string n) => w.TryGetProperty(n, out var f) && f.ValueKind == JsonValueKind.String ? f.GetString() ?? "" : "";
-            return new BauZustand(Feld("status"), Feld("message"), Feld("candidateVersion"));
+            var zeit = DateTime.TryParse(Feld("lastAttemptUtc"), System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var t)
+                ? t : DateTime.MinValue;
+            return new BauZustand(Feld("status"), Feld("message"), Feld("candidateVersion"), zeit);
         }
         catch
         {

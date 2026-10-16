@@ -74,7 +74,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     public bool KannCliBeenden => Eintrag.KannCliBeenden;
 
     /// <summary>A packaged app is launched through the apps folder, so it needs no exe path.</summary>
-    public bool KannStarten => (!string.IsNullOrWhiteSpace(Eintrag.ExePfad) && Eintrag.Art != "opencodefix") || Eintrag.IstPaketApp;
+    public bool KannStarten => !string.IsNullOrWhiteSpace(Eintrag.ExePfad) || Eintrag.IstPaketApp;
 
     /// <summary>
     /// Windows refuses to run packaged (MSIX/Store) apps elevated at all -- there is no
@@ -657,7 +657,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         "cli" => Pfade.Aufloesen(string.IsNullOrWhiteSpace(Eintrag.UpdateExePfad) ? Eintrag.ExePfadWirksam : Eintrag.UpdateExePfad)
                  + " " + (Eintrag.UpdateArgumente ?? "update"),
         "reposkript" => "pwsh -File " + Eintrag.Skript + " " + Eintrag.SkriptArgumente,
-        "opencodefix" => "pwsh -File opencode-setup/build-install-windows-mousefix.ps1 -Force",
+        "opencodefix" => Providers.OpenCodeFixAktualisierer.Befehlsbeschreibung,
         _ => Eintrag.Art
     };
 
