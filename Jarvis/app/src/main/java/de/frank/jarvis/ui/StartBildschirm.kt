@@ -25,6 +25,13 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.ThumbDown
+import androidx.compose.material.icons.rounded.ThumbDownOffAlt
+import androidx.compose.material.icons.rounded.ThumbUp
+import androidx.compose.material.icons.rounded.ThumbUpOffAlt
+import androidx.compose.material.icons.automirrored.rounded.CallSplit
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.AddComment
@@ -289,21 +296,80 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
         if (n.anhaenge.isNotEmpty()) FlowRow(Modifier.padding(start = 44.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             n.anhaenge.forEach { AnhangKachel(de.frank.jarvis.data.Anhang(it), 96.dp) }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = if (n.vonMir) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
-            val grund = if (n.vonMir) Modifier.knopf3d(f.primaer, f.tertiaer, 20.dp, f.dunkel) else Modifier.glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark)
-            val form = Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp)
-            // Lange drücken markiert Text, die Android-Textauswahl kopiert ihn. Auf der blauen eigenen Blase in Textfarbe, sonst unsichtbar.
-            Markierbar(hell = n.vonMir) {
-                // Meldungen eines Programmierauftrags: Symbole statt Emojis, wichtige Fakten fett.
-                if (n.art == "programmieren") ProgrammierText(n.text, form, farbe = f.text)
-                else Text(n.text, form, color = if (n.vonMir) f.aufPrimaer else f.text, fontSize = 16.sp, lineHeight = 22.sp)
+        if (n.vonMir) {
+            // Franks Nachricht: dezente Blase rechts, wie in der ChatGPT-App.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Markierbar(hell = false) {
+                    Text(
+                        n.text,
+                        Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = 48.dp)
+                            .background(f.flaecheStark, androidx.compose.foundation.shape.RoundedCornerShape(22.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
+                        color = f.text, fontSize = 16.sp, lineHeight = 22.sp,
+                    )
+                }
             }
-            if (!n.vonMir) {
-                Spacer(Modifier.width(6.dp))
-                Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
+            Kopierknopf(vm, n.text, "Frage")
+        } else {
+            // Jarvis' Antwort: Fließtext über die ganze Breite, ohne Blase, gut gegliedert.
+            Markierbar(hell = false) {
+                val form = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp)
+                when (n.art) {
+                    "programmieren" -> ProgrammierText(n.text, form, farbe = f.text)
+                    "fehler", "abgebrochen" -> Text(n.text, form, color = f.gefahr, fontSize = 15.sp, lineHeight = 21.sp)
+                    else -> AntwortText(n.text, form)
+                }
+            }
+            AntwortLeiste(vm, nummer, n)
+        }
+    }
+}
+
+/**
+ * Die Leiste unter einer Antwort wie in der ChatGPT-App: Kopieren, Daumen hoch, Daumen runter, Vorlesen, Teilen,
+ * in neuem Chat fortsetzen und erneut versuchen. Ein Daumen runter fragt kurz nach dem Grund (ein Tipp, kein Zwang).
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
+    val f = LocalFarben.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var grundFragen by remember { mutableStateOf(false) }
+    Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Kopierknopf(vm, n.text, "Antwort")
+        LeistenKnopf(if (n.bewertung > 0) Icons.Rounded.ThumbUp else Icons.Rounded.ThumbUpOffAlt, "Gute Antwort", if (n.bewertung > 0) f.primaer else f.textLeise) {
+            vm.bewerten(nummer, if (n.bewertung > 0) 0 else 1)
+        }
+        LeistenKnopf(if (n.bewertung < 0) Icons.Rounded.ThumbDown else Icons.Rounded.ThumbDownOffAlt, "Schlechte Antwort", if (n.bewertung < 0) f.primaer else f.textLeise) {
+            if (n.bewertung < 0) vm.bewerten(nummer, 0) else grundFragen = true
+        }
+        Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
+        LeistenKnopf(Icons.Rounded.Share, "Teilen", f.textLeise) {
+            vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
+            runCatching {
+                context.startActivity(android.content.Intent.createChooser(
+                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, n.text), "Antwort teilen",
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         }
-        Kopierknopf(vm, n.text, if (n.vonMir) "Frage" else "Antwort")
+        LeistenKnopf(Icons.AutoMirrored.Rounded.CallSplit, "In neuem Chat fortsetzen", f.textLeise) { vm.abzweigen(nummer) }
+        LeistenKnopf(Icons.Rounded.Refresh, "Erneut versuchen", f.textLeise) { vm.erneutVersuchen(nummer) }
+    }
+    if (grundFragen) androidx.compose.material3.ModalBottomSheet(onDismissRequest = { grundFragen = false }, containerColor = f.flaecheStark) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Text("Was hat nicht gepasst?", color = f.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+            Text("Ein Tipp genügt. Daraus lernt Jarvis, wie du Antworten lieber hättest.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                de.frank.jarvis.data.Stil.GRUENDE.forEach { (id, name) -> Chip(name, aktiv = false) { grundFragen = false; vm.bewerten(nummer, -1, id) } }
+                Chip("Überspringen", aktiv = false) { grundFragen = false; vm.bewerten(nummer, -1) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LeistenKnopf(icon: androidx.compose.ui.graphics.vector.ImageVector, beschreibung: String, farbe: Color, aktion: () -> Unit) {
+    Box(Modifier.size(36.dp).antippen(aktion = aktion), contentAlignment = Alignment.Center) {
+        Icon(icon, beschreibung, tint = farbe, modifier = Modifier.size(19.dp))
     }
 }
 

@@ -136,6 +136,23 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             "Verbrauch und ein festes Ausgabenlimit: platform.openai.com → Usage bzw. Settings → Limits.",
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
 
+        // Stimme immer sichtbar: Tippen wählt sie aus und spielt eine deutsche Hörprobe.
+        val stimmen = lo.alle.first { it.id == "stimme" }
+        Unterzeile("Stimme" + if (st.istLive) " (GPT-Live)" else " (Realtime)")
+        Text("Tippen wählt die Stimme und spielt eine kurze Hörprobe auf Deutsch. Die erste Probe je Stimme holt Jarvis einmalig von OpenAI (unter 1 Cent), danach ist sie gespeichert und kostenlos. " +
+            "OpenAI nennt keine Liste deutscher Stimmen: Hör einfach rein, welche am besten Deutsch spricht. ▶ = Probe schon gespeichert.",
+            color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            stimmen.werte(st).forEach { w ->
+                val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, st.istLive, w.id)
+                val laedt = vm.stimmProbeLaedt == w.id
+                Chip((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"]) {
+                    geaendert { st.setze("stimme", w.id) }
+                    vm.stimmProbe(st.istLive, w.id)
+                }
+            }
+        }
+
         // Feineinstellungen: jede Option einzeln, mit Erklärung und Preis. Zu Beginn zu, damit es übersichtlich bleibt.
         var feinOffen by rememberSaveable { mutableStateOf(false) }
         Row(
@@ -145,7 +162,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             Text("Alle Einstellungen einzeln", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Icon(if (feinOffen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (feinOffen) "Zuklappen" else "Aufklappen", tint = f.text)
         }
-        if (feinOffen) lo.alle.filter { it.gilt(st) }.forEach { o ->
+        if (feinOffen) lo.alle.filter { it.gilt(st) && it.id != "stimme" }.forEach { o ->
             val aktuell = st[o.id]
             val werte = o.werte(st)
             Unterzeile(o.titel)

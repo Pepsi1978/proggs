@@ -49,7 +49,7 @@ enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), AKT
  * Eine Nachricht im Gespräch. [art]: „antwort“, „fehler“ (Fehlermeldung statt Antwort, geht nicht ans Modell) oder
  * „abgebrochen“ (Franks Frage blieb unbeantwortet). [kontext] sieht nur das Modell, etwa was in der Runde erledigt wurde.
  */
-data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList())
+data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0)
 
 /** Ein Schritt für „Rückgängig“ in einer Merkliste: wie sich die eigene Änderung umkehren lässt, ohne fremde zu berühren. */
 private sealed class MerkSchritt {
@@ -227,9 +227,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val verlauf = verlaufFuersModell()
         gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad })
         sitzungSichern()
+        rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, vorlesen, "")
+        return true
+    }
+
+    /**
+     * Startet die Antwort auf die Frage an Stelle [frage] im offenen Gespräch. [hinweis] geht zusätzlich ans Modell
+     * (beim erneuten Versuch: was die verworfene Antwort schon erledigt hatte).
+     */
+    private fun rundeStarten(text: String, anhaenge: List<de.frank.jarvis.data.Anhang>, verlauf: List<ChatTurn>, frage: Int, vorlesen: Boolean, hinweis: String) {
         val plugins = aktivePlugins.toList()
-        val id = sitzungId ?: return true
-        val runde = Runde(id, gespraech.size - 1)
+        val id = sitzungId ?: return
+        val runde = Runde(id, frage)
         laufende[id] = runde
         // Die Kennung des Gesprächs läuft im Koroutinen-Kontext mit: Startet Jarvis in dieser Runde einen Programmierauftrag,
         // kommen dessen Meldungen in genau dieses Gespräch, auch wenn inzwischen andere Gespräche arbeiten.
@@ -237,7 +246,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
-                val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")")
+                val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
                 agent.versuche(auftrag, verlauf, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true, beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty())
                     ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText()).also { art = "fehler" }
             } catch (e: CancellationException) {
@@ -249,7 +258,90 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             rundeFertig(runde, antwort, art, vorlesen)
         }
-        return true
+    }
+
+    // ---- Aktionen unter einer Antwort ----
+
+    /** Ein Daumen für die Antwort an Stelle [i]: +1, -1 oder 0 (zurücknehmen). [grund] beim Daumen runter (Kennung aus Stil.GRUENDE). */
+    fun bewerten(i: Int, urteil: Int, grund: String = "") {
+        val n = gespraech.getOrNull(i) ?: return
+        if (n.vonMir) return
+        gespraech[i] = n.copy(bewertung = urteil)
+        sitzungSichern()
+        if (urteil == 0) return
+        val frage = (i - 1 downTo 0).firstOrNull { gespraech[it].vonMir }?.let { gespraech[it].text }.orEmpty()
+        val modell = einstellungen.modell
+        val stufe = einstellungen.denkstufe
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { de.frank.jarvis.data.Stil.bewerten(getApplication(), urteil, grund, frage, n.text, modell, stufe) }
+            meldung = if (urteil > 0) "Danke! Gemerkt, dass dir diese Antwort gefällt." else "Danke, gemerkt. Daraus lerne ich, wie du Antworten lieber hättest."
+            if (de.frank.jarvis.data.Stil.neueSeitAuswertung(getApplication()) >= de.frank.jarvis.data.Stil.AB) stilAuswerten(still = true)
+        }
+    }
+
+    var stilWertetAus by mutableStateOf(false); private set
+
+    /** Leitet aus den Bewertungen Stilregeln ab (Gedächtnis → Stil). [still] = von selbst, dann nur bei Änderungen melden. */
+    fun stilAuswerten(still: Boolean = false) {
+        if (stilWertetAus) return
+        if (!kiVerbunden) { if (!still) meldung = "Für die Stil-Auswertung bitte zuerst mit ChatGPT verbinden."; return }
+        if (de.frank.jarvis.data.Stil.anzahl(getApplication()) < de.frank.jarvis.data.Stil.AB) {
+            if (!still) meldung = "Noch keine Bewertungen: Tippe unter einer Antwort auf Daumen hoch oder runter."
+            return
+        }
+        stilWertetAus = true
+        viewModelScope.launch {
+            val ergebnis = runCatching { de.frank.jarvis.data.Stil.auswerten(getApplication(), auth, einstellungen.modell) }.getOrNull()
+            stilWertetAus = false
+            stilListe.laden()
+            if (ergebnis != null && (!still || !ergebnis.contains("nichts Neues"))) meldung = ergebnis
+            else if (ergebnis == null && !still) meldung = "Die Stil-Auswertung hat gerade nicht geklappt."
+        }
+    }
+
+    /**
+     * In neuem Chat fortsetzen: ein neues Gespräch mit den Nachrichten bis einschließlich [bis]. Anhänge werden kopiert,
+     * damit das Löschen des einen Gesprächs die Bilder des anderen nicht mitnimmt.
+     */
+    fun abzweigen(bis: Int, meldenAls: String = "Neuer Chat ab dieser Stelle.") {
+        if (bis < 0 || bis >= gespraech.size) return
+        val kopie = gespraech.take(bis + 1).map { n -> n.copy(bewertung = 0, anhaenge = n.anhaenge.mapNotNull { anhangKopieren(it) }) }
+        neuesGespraech()
+        gespraech.addAll(kopie)
+        sitzungSichern()
+        meldung = meldenAls
+    }
+
+    private fun anhangKopieren(pfad: String): String? = runCatching {
+        val alt = java.io.File(pfad)
+        if (!alt.exists()) return@runCatching null
+        val neu = java.io.File(alt.parentFile, "${System.currentTimeMillis()}${(100..999).random()}_" + alt.name.substringAfter('_'))
+        alt.copyTo(neu)
+        neu.path
+    }.getOrNull()
+
+    /**
+     * Erneut versuchen: Die letzte Antwort wird ersetzt. Bei einer älteren Antwort geht es in einem neuen Chat ab der
+     * Frage weiter, damit nichts verloren geht. Was die verworfene Antwort schon erledigt hat, wird nicht doppelt ausgeführt.
+     */
+    fun erneutVersuchen(i: Int) {
+        if (denkt) { meldung = "Jarvis arbeitet noch."; return }
+        if (!kiVerbunden) { meldung = "Bitte zuerst mit ChatGPT verbinden."; return }
+        val alt = gespraech.getOrNull(i) ?: return
+        if (alt.vonMir) return
+        val frage = (i - 1 downTo 0).firstOrNull { gespraech[it].vonMir } ?: run { meldung = "Zu dieser Antwort gibt es keine Frage."; return }
+        val erledigt = alt.kontext.takeIf { it.contains("Erledigt") }.orEmpty()
+        val hinweis = "\n\n(Frank wollte eine neue Antwort auf diese Frage; die vorige wurde verworfen." +
+            (if (erledigt.isNotEmpty()) " Schon erledigt und NICHT noch einmal ausführen: $erledigt" else "") + ")"
+        if (i != gespraech.lastIndex) {
+            abzweigen(frage, "Neuer Chat: Jarvis antwortet hier noch einmal neu.")
+        } else {
+            gespraech.removeAt(i)
+        }
+        val f = gespraech.lastIndex
+        val n = gespraech[f]
+        // Gespeichert wird die Entfernung erst mit der neuen Antwort (weniger Nachrichten überschreiben nie den Stand auf der Platte).
+        rundeStarten(n.text, n.anhaenge.map { de.frank.jarvis.data.Anhang(it) }, verlaufFuersModell(bis = f), f, vorlesen = false, hinweis = hinweis)
     }
 
     /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
@@ -290,8 +382,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Der Verlauf fürs Modell: Fehlermeldungen fallen weg (sie sind keine Antworten), unbeantwortete Fragen sind als solche
      * markiert, und der unsichtbare Kontext (was erledigt wurde) geht mit. Gekürzt wird nach Zeichen im Agenten.
      */
-    private fun verlaufFuersModell(): List<ChatTurn> {
-        val sicht = gespraech.takeLast(MAX_VERLAUF).filter { it.art != "fehler" }
+    private fun verlaufFuersModell(bis: Int = gespraech.size): List<ChatTurn> {
+        val sicht = gespraech.take(bis).takeLast(MAX_VERLAUF).filter { it.art != "fehler" }
         return sicht.mapIndexed { i, n ->
             // Anhänge früherer Fragen gehen nur als Name mit, sonst wüchse jede Anfrage um alle alten Bilder.
             val mitAnhang = if (n.anhaenge.isEmpty()) n.text else n.text + "\n(Angehängt: " + n.anhaenge.joinToString(", ") { de.frank.jarvis.data.Anhang(it).name } + ")"
@@ -460,6 +552,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         "Diese Regeln bekommt jeder Programmierauftrag vollständig mit, egal ob er am PC oder in der Cloud läuft, und Jarvis hat sie bei jeder Antwort vor Augen. Änderungen gelten ab dem nächsten Auftrag.",
         "Neue Programmierregel eintippen oder einsprechen", PROGRAMMIERREGEL_KORREKTUR,
     )
+    val stilListe = Merkliste(
+        de.frank.jarvis.faehigkeit.StilRegeln, "Stil", "Stilregel",
+        "So sollen Jarvis' Antworten aussehen: Länge, Gliederung, Ton und Symbole. Jarvis lernt das aus deinen Daumen hoch und runter unter den Antworten; du kannst alles ändern, löschen oder selbst eintragen.",
+        "Neue Stilregel eintippen oder einsprechen", STIL_KORREKTUR,
+    )
     /** Die Merkliste, die gerade im Vollbild offen ist. */
     var merkOffen by mutableStateOf<Merkliste?>(null); private set
     /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
@@ -589,6 +686,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Welche Stimme gerade ihre Hörprobe holt (für die Sanduhr am Knopf). */
+    var stimmProbeLaedt by mutableStateOf<String?>(null); private set
+
+    /** Spielt die deutsche Hörprobe einer Live-Stimme; die erste je Stimme kommt einmalig von OpenAI. */
+    fun stimmProbe(live: Boolean, stimme: String) {
+        if (liveAktiv) { meldung = "Während des Live-Gesprächs gibt es keine Hörprobe."; return }
+        if (stimmProbeLaedt != null) return
+        val neu = !de.frank.jarvis.live.StimmProbe.vorhanden(getApplication(), live, stimme)
+        if (neu) { stimmProbeLaedt = stimme; meldung = "Hörprobe für $stimme wird einmalig erzeugt …" }
+        viewModelScope.launch {
+            val fehler = de.frank.jarvis.live.StimmProbe.abspielen(getApplication(), sprache.openAiApiKey, live, stimme)
+            stimmProbeLaedt = null
+            if (fehler != null) meldung = fehler
+        }
+    }
+
     fun liveStummSchalten() { liveStumm = !liveStumm; live?.stumm = liveStumm }
 
     fun liveBeenden() { live?.beenden() ?: liveAufraeumen() }
@@ -641,9 +754,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), rufst du jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest. " +
                 "Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n") +
             "# Regeln\nErfinde nie Daten. Melde etwas erst als erledigt, wenn das Ergebnis da ist.\n" +
+            // Franks Antwort-Stil (aus seinen Bewertungen) gilt auch im Gespräch, soweit er zum Sprechen passt.
+            de.frank.jarvis.faehigkeit.StilRegeln.alle(getApplication()).takeIf { it.isNotEmpty() }
+                ?.joinToString("\n", "# Franks Stil (gilt, soweit es zum Sprechen passt)\n", "\n") { "- " + it.text }.orEmpty() +
             "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
 
-    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden() }
+    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden(); stilListe.laden() }
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
     fun merkSchliessen() {
         // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
@@ -1116,7 +1232,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         letzteAktivitaet = System.currentTimeMillis()
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
-        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge) }
+        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) }
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
@@ -1235,7 +1351,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             programmierGespraech = id
             val geladen = de.frank.jarvis.data.Gespraeche.laden(app, id)
             if (geladen != null) {
-                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge) })
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
                 letzteAktivitaet = System.currentTimeMillis()
@@ -1248,7 +1364,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         einstellungsVerlauf = p.getString("einstellungsVerlauf", null).orEmpty().split(',').filter { it.isNotBlank() }
         GedaechtnisAnsicht.offen = p.getBoolean("gedaechtnis", false)
         val merk = p.getString("merk", null).orEmpty()
-        listOf(regelListe, zielListe, infoListe, programmierListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
+        listOf(regelListe, zielListe, infoListe, programmierListe, stilListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
         Logbuch.gedaechtnis("Zustand nach Update wiederhergestellt", "Reiter ${r.anzeige}, ${gespraech.size} Nachrichten")
     }
 
@@ -1293,7 +1409,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vorleser.stopp()
         sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
         gespraech.clear()
-        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge) })
+        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
         sitzungId = id
         sitzungErstellt = geladen.first.erstellt
         // Wer ein altes Gespräch öffnet, will dort weitersprechen, auch mit „Hey Jarvis“.
@@ -1681,6 +1797,13 @@ private const val REGEL_KORREKTUR =
         "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung an Jarvis: wann sie gilt und was dann zu tun ist. " +
         "Behalte jeden inhaltlichen Punkt und jeden genannten Wert, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
         "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). So kurz wie möglich, höchstens 400 Zeichen. " +
+        "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+
+/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Stilregel. */
+private const val STIL_KORREKTUR =
+    "Du formulierst eine Vorgabe von Frank, wie die Antworten seines Assistenten Jarvis aussehen sollen (Länge, Gliederung, Ton, Symbole), zu einer klaren Stilregel um. " +
+        "Jarvis bekommt sie bei jeder Antwort beigelegt und muss sie ohne weiteres Wissen verstehen. Behalte jeden inhaltlichen Punkt, füge nichts hinzu und deute nichts um. " +
+        "Lass Füllwörter und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Programmierregel. */

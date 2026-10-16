@@ -550,7 +550,7 @@ fun markdownText(text: String, akzent: Color): AnnotatedString = buildAnnotatedS
     }
 }
 
-private fun AnnotatedString.Builder.inline(t: String) {
+internal fun AnnotatedString.Builder.inline(t: String) {
     val muster = Regex("\\*\\*(.+?)\\*\\*|__(.+?)__|`([^`]+)`|\\*([^*\\s][^*]*?)\\*|\\[([^\\]]+)]\\(([^)]+)\\)")
     var pos = 0
     muster.findAll(t).forEach { m ->

@@ -115,16 +115,25 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             // ---------------------------------------------------------------- Gedächtnis
             Bereich("Jarvis' Gedächtnis") {
                 androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
-                Text("Vier Dateien, die Jarvis selbst pflegt und bei jeder Antwort vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln gehen außerdem vollständig mit jedem Programmierauftrag mit. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
+                Text("Fünf Dateien, die Jarvis selbst pflegt und bei jeder Antwort, im Live-Gedächtnis und im Live-Gespräch vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln gehen außerdem vollständig mit jedem Programmierauftrag mit. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
                 listOf(
                     Triple(vm.regelListe, "Regeln", "wie Jarvis arbeiten und antworten soll"),
                     Triple(vm.zielListe, "Ziele", "was du erreichen willst"),
                     Triple(vm.infoListe, "Über Frank", "was Jarvis über dich weiß"),
                     Triple(vm.programmierListe, "Programmierregeln", "was jede Programmier-Session einhalten muss"),
+                    Triple(vm.stilListe, "Stil", "wie du Antworten am liebsten magst, gelernt aus deinen Daumen"),
                 ).forEach { (liste, name, wozu) ->
                     val anzahl = liste.eintraege.size
                     Unterzeile(name)
                     Zeile(wozu.replaceFirstChar { it.uppercase() }, when (anzahl) { 0 -> "Noch nichts"; 1 -> "1 Eintrag"; else -> "$anzahl Einträge" }, if (anzahl == 0) f.textLeise else f.erfolg)
+                    if (liste === vm.stilListe) {
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        val bewertet = androidx.compose.runtime.remember(vm.stilWertetAus, anzahl) { de.frank.jarvis.data.Stil.anzahl(ctx) }
+                        val offen = androidx.compose.runtime.remember(vm.stilWertetAus, anzahl) { de.frank.jarvis.data.Stil.neueSeitAuswertung(ctx) }
+                        Text("$bewertet Antworten bewertet, davon $offen noch nicht ausgewertet. Jarvis wertet jeden Daumen gleich aus und beschreibt, was dir an der Antwort gefallen hat oder nicht: Optik und Art der Antwort. " +
+                            "Alle Bewertungen liegen in Jarvis' Speicher unter stil/bewertungen.jsonl.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                        Knopf(if (vm.stilWertetAus) "Stil wird ausgewertet …" else "Stil jetzt auswerten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.stilAuswerten() }
+                    }
                     Knopf("$name ansehen und bearbeiten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.merkOeffnen(liste) }
                 }
             }

@@ -264,7 +264,16 @@ object Programmierregeln : Merkdatei(
         "Jarvis gibt sie jedem Auftrag vollständig mit; beachte sie beim Formulieren von Aufträgen; nicht ungefragt vorlesen):",
 )
 
-/** Die vier Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
+/**
+ * Franks Antwort-Stil: wie Jarvis' Antworten aussehen sollen (Länge, Gliederung, Ton, Symbole). Entsteht aus Franks
+ * Daumen-Bewertungen ([de.frank.jarvis.data.Stil]) und aus seinen eigenen Angaben; Frank bearbeitet ihn in den Einstellungen.
+ */
+object StilRegeln : Merkdatei(
+    "stil.json", 40,
+    "FRANKS ANTWORT-STIL (aus seinen Daumen-Bewertungen gelernt und von ihm bearbeitbar; gilt für Form, Länge, Gliederung und Ton deiner Antworten und geht den allgemeinen Formatvorgaben vor; nicht ungefragt vorlesen):",
+)
+
+/** Die fünf Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
 enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, val textHinweis: String, val bestaetigung: String) {
     REGEL(
         "regel", Regeln, "Regel",
@@ -285,6 +294,11 @@ enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, 
         "programmierregel", Programmierregeln, "Programmierregel",
         "eine vollständige, für sich allein verständliche Anweisung an die Programmier-Session (Claude Code) in ein bis zwei Sätzen: wann sie gilt und was dann zu tun ist („Vor jeder Änderung Projekt und Paketkennung prüfen.“)",
         "Sag ihm in ein bis zwei Sätzen, welche Programmierregel du dir gemerkt hast; sie geht ab jetzt mit jedem Programmierauftrag mit.",
+    ),
+    STIL(
+        "stil", StilRegeln, "Stilregel",
+        "eine kurze Anweisung, wie deine Antworten aussehen sollen: Länge, Gliederung, Ton oder Symbole („Bei Statusmeldungen jede Sache in eine eigene Zeile mit ✅ davor.“, „Antworten zu Biowerten mit kleiner Überschrift je Messgröße.“)",
+        "Sag ihm in einem Satz, welche Stilregel du dir gemerkt hast; ab jetzt antwortest du so.",
     );
 
     companion object {
@@ -304,7 +318,9 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override val name = "Jarvis' Gedächtnis"
     override val beschreibung = "Franks Regeln, seine Ziele, was Jarvis über ihn weiß und seine Programmierregeln: merken, ändern, löschen. Jarvis pflegt das selbst und hat es bei allem im Blick."
     override val hinweise =
-        "Du führst vier Dateien über Frank und pflegst sie selbst mit jarvis_merken und jarvis_vergessen. " +
+        "Du führst fünf Dateien über Frank und pflegst sie selbst mit jarvis_merken und jarvis_vergessen. " +
+            "STIL = wie deine Antworten aussehen sollen (Länge, Gliederung, Ton, Symbole), wenn Frank das sagt („antworte mir kürzer“, „mach bei so etwas immer Stichpunkte“); " +
+            "die Datei wächst außerdem von selbst aus seinen Daumen-Bewertungen. " +
             "REGEL = wie du arbeiten oder antworten sollst („immer“, „nie“, „in Zukunft“, „ab jetzt“, oder Frank bemängelt eine Antwort), auch wie du mit Programmieraufträgen umgehst. " +
             "PROGRAMMIERREGEL = was die Programmier-Session (Claude Code) beim Programmieren selbst einhalten soll („beim Programmieren immer …“, „jede Programmier-Session soll …“); " +
             "lege sie nur an, wenn Frank sie ausdrücklich als Programmierregel will, und nie doppelt zu einer Regel, die schon unter FRANKS REGELN steht. " +
@@ -316,7 +332,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             "Nichts Flüchtiges merken (Stimmung von heute, einmalige Wünsche, einzelne Termine). " +
             "Hängt ein Eintrag an einem Begriff aus einer von Franks Apps, dessen genauen Wert du nicht kennst (er will „eine grüne Erholung bei Whoop“: ab wie viel Prozent ist sie grün?), " +
             "schlag den Wert zuerst mit repo_lesen im Code der App nach und trag ihn mit ein („… also mindestens so viel Prozent“). Findest du ihn nicht, merk dir den Eintrag in Franks Worten. " +
-            "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE, WAS JARVIS ÜBER FRANK WEISS und FRANKS PROGRAMMIERREGELN: Regeln hältst du ein, Ziele und Wissen beziehst du von dir aus ein, " +
+            "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE, WAS JARVIS ÜBER FRANK WEISS, FRANKS PROGRAMMIERREGELN und FRANKS ANTWORT-STIL: Regeln und Stil hältst du ein, Ziele und Wissen beziehst du von dir aus ein, " +
             "Programmierregeln gehen automatisch vollständig mit jedem Programmierauftrag mit, du musst sie nicht in den Auftrag abschreiben."
 
     override fun stoerung(): String? = null
@@ -326,8 +342,9 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
             name = "jarvis_merken",
-            titel = "Merken oder ändern (Regel, Ziel, Info, Programmierregel)",
-            beschreibung = "Jarvis: merkt sich dauerhaft etwas über Frank oder ändert einen vorhandenen Eintrag. Vier Arten: " +
+            titel = "Merken oder ändern (Regel, Ziel, Info, Programmierregel, Stil)",
+            beschreibung = "Jarvis: merkt sich dauerhaft etwas über Frank oder ändert einen vorhandenen Eintrag. Fünf Arten: " +
+                "stil = wie Jarvis' Antworten aussehen sollen („antworte mir kürzer“, „bei so etwas immer Stichpunkte“); " +
                 "regel = wie Jarvis künftig arbeiten oder antworten soll („nenn mir bei Schlafwerten immer auch …“, „mach das nie wieder so“, „ab jetzt …“); " +
                 "ziel = was Frank erreichen will („ich will meine VO2max und HRV steigern und den Ruhepuls senken“); " +
                 "info = eine dauerhafte Tatsache über Frank („ich fahre einen …“, „ich bin am … geboren“, „bei Regen gehe ich nicht laufen“, „die Drohne … habe ich mir gekauft“); " +
