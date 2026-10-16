@@ -359,14 +359,7 @@ private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
             if (n.bewertung < 0) vm.bewerten(nummer, 0) else grundFragen = true
         }
         Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp, schlicht = true)
-        LeistenKnopf(Icons.Rounded.Share, "Teilen", f.textLeise) {
-            vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
-            runCatching {
-                context.startActivity(android.content.Intent.createChooser(
-                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, n.text), "Antwort teilen",
-                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-        }
+        LeistenKnopf(Icons.Rounded.Share, "Teilen", f.textLeise) { teilen(vm, context, n.text, "Antwort teilen") }
         LeistenKnopf(Icons.AutoMirrored.Rounded.CallSplit, "In neuem Chat fortsetzen", f.textLeise) { vm.abzweigen(nummer) }
         LeistenKnopf(Icons.Rounded.Refresh, "Erneut versuchen", f.textLeise) { vm.erneutVersuchen(nummer) }
     }
@@ -390,18 +383,21 @@ private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
 private fun FrageLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
     val f = LocalFarben.current
     val context = androidx.compose.ui.platform.LocalContext.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Kopierknopf(vm, n.text, "Frage")
         Vorleseknopf(vm, "gespraech:$nummer", "Deine Frage", n.text, groesse = 36.dp, schlicht = true)
-        LeistenKnopf(Icons.Rounded.Share, "Frage teilen", f.textLeise) {
-            vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
-            runCatching {
-                context.startActivity(android.content.Intent.createChooser(
-                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, n.text), "Frage teilen",
-                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-        }
+        LeistenKnopf(Icons.Rounded.Share, "Frage teilen", f.textLeise) { teilen(vm, context, n.text, "Frage teilen") }
         LeistenKnopf(Icons.AutoMirrored.Rounded.CallSplit, "In neuer Session weiterarbeiten", f.textLeise) { vm.mitFrageWeiterarbeiten(nummer) }
+    }
+}
+
+/** Öffnet Androids Teilen-Dialog mit genau [text]; die Sperre wartet solange, damit Jarvis nicht dazwischen sperrt. */
+private fun teilen(vm: AppViewModel, context: android.content.Context, text: String, titel: String) {
+    vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
+    runCatching {
+        context.startActivity(android.content.Intent.createChooser(
+            android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), titel,
+        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
 

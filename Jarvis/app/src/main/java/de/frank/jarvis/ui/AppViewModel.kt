@@ -211,7 +211,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // verbunden), darf die nächste getippte Antwort nicht laut werden.
         val vorlesen = gesprochen
         gesprochen = false
-        val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) "Schau dir den Anhang an." else "" }
+        val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) ANHANG_PLATZHALTER else "" }
         if (text.isEmpty()) return false
         // Wechsel zwischen Gesprächen erledigt die App selbst, auch während Jarvis im offenen Gespräch noch arbeitet.
         // Der Befehl geht nie ans Modell und kann deshalb keinen Programmierauftrag auslösen.
@@ -304,7 +304,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * damit das Löschen des einen Gesprächs die Bilder des anderen nicht mitnimmt.
      */
     fun abzweigen(bis: Int, meldenAls: String = "Neuer Chat ab dieser Stelle.") {
-        if (bis < 0 || bis >= gespraech.size) return
+        // bis = -1: ein leeres neues Gespräch.
+        if (bis < -1 || bis >= gespraech.size) return
         val kopie = gespraech.take(bis + 1).map { n -> n.copy(bewertung = 0, anhaenge = n.anhaenge.mapNotNull { anhangKopieren(it) }) }
         neuesGespraech()
         gespraech.addAll(kopie)
@@ -319,10 +320,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun mitFrageWeiterarbeiten(i: Int) {
         val n = gespraech.getOrNull(i)?.takeIf { it.vonMir } ?: return
+        // Arbeitet Jarvis gerade an genau dieser Frage, liefe sie nach dem Abschicken doppelt.
+        if (denkt && i == gespraech.lastIndex) { meldung = "Jarvis arbeitet noch an dieser Frage."; return }
         val bilder = n.anhaenge.mapNotNull { anhangKopieren(it) }
-        if (i > 0) abzweigen(i - 1, "Neue Session: Deine Frage steht bereit.") else { neuesGespraech(); meldung = "Neue Session: Deine Frage steht bereit." }
-        entwurf = n.text
-        anhaenge.clear()
+        val fehlen = n.anhaenge.size - bilder.size
+        abzweigen(i - 1, if (fehlen > 0) "Neue Session: Deine Frage steht bereit, $fehlen Anhang fehlt." else "Neue Session: Deine Frage steht bereit.")
+        // Ein noch nicht abgeschickter Entwurf weicht der Frage; seine Anhangdateien werden mit entfernt.
+        anhaenge.toList().forEach { anhangWeg(it) }
+        entwurf = if (n.anhaenge.isNotEmpty() && n.text == ANHANG_PLATZHALTER) "" else n.text
         bilder.forEach { anhaenge.add(de.frank.jarvis.data.Anhang(it)) }
     }
 
@@ -1794,6 +1799,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
 
 /** So viele der zuletzt geführten Gespräche durchsucht „Gehe in die Whoop-Session zurück“. */
+/** Text einer Frage, die nur aus Anhängen besteht. */
+private const val ANHANG_PLATZHALTER = "Schau dir den Anhang an."
+
 private const val MAX_SUCHE = 150
 
 private val ORDINALE = listOf("erstens", "zweitens", "drittens")
