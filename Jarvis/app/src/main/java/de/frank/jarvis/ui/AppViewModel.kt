@@ -680,6 +680,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var liveKosten by mutableStateOf(0.0); private set
     /** Summe aller Live-Gespräche seit dem letzten Zurücksetzen (Einstellungen → Live-Gespräch). */
     var liveKostenBuch by mutableStateOf(de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>())); private set
+    /** Start-Kennung des Gesprächs, dessen [liveKosten] noch nicht im [liveKostenBuch] stecken; null = verbucht oder keins. */
+    private var liveUnverbucht by mutableStateOf<Int?>(null)
+    /** Gesamtkosten aller Live-Gespräche seit dem Zurücksetzen, das laufende genau einmal eingerechnet (Live-Leiste). */
+    val liveKostenGesamt get() = liveKostenBuch.mitLaufendem(liveKosten, verbucht = liveUnverbucht == null)
     fun liveKostenZuruecksetzen() {
         liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.zuruecksetzen(getApplication<android.app.Application>())
         meldung = "Kostenzählung des Live-Gesprächs zurückgesetzt."
@@ -727,6 +731,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val mitgeben = optionen["verlauf"].toIntOrNull() ?: 0
             val bisher = gespraech.filter { it.art == "antwort" && it.text.isNotBlank() }.takeLast(mitgeben).map { it.vonMir to it.text }
             liveKosten = 0.0
+            liveUnverbucht = stand
             live = de.frank.jarvis.live.LiveGespraech(
                 getApplication(), sprache.openAiApiKey, optionen, liveAnweisung(optionen.istLive), bisher,
                 beiStatus = { s -> haupt { liveStatus = s } },
@@ -740,7 +745,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 beiAbrechnung = { a ->
                     de.frank.jarvis.live.LiveKostenBuch.buchen(getApplication<android.app.Application>(), a)
                     // Frisch lesen: Ein Zurücksetzen dazwischen darf nicht vom alten Stand überschrieben werden.
-                    viewModelScope.launch(Dispatchers.Main) { liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>()) }
+                    // Im selben Schritt als verbucht markieren, damit die Live-Leiste das Gespräch nie doppelt zählt.
+                    viewModelScope.launch(Dispatchers.Main) {
+                        liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>())
+                        if (liveUnverbucht == stand) liveUnverbucht = null
+                    }
                 },
                 beiFehler = { m -> haupt { meldung = m } },
                 beiEnde = { haupt { liveAufraeumen() } },

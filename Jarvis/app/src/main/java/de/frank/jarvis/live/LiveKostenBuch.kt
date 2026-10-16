@@ -37,6 +37,12 @@ object LiveKostenBuch {
         val gesamtUsd get() = berechnetUsd + geschaetztUsd
         val proMinute get() = if (dauerSek >= 1) gesamtUsd / (dauerSek / 60.0) else null
         val proStunde get() = proMinute?.times(60)
+
+        /**
+         * Gesamtsumme samt laufendem Gespräch für die Live-Leiste: Solange [laufendUsd] noch nicht verbucht ist, kommt er
+         * dazu; danach steckt das Gespräch schon in der Summe und zählt nicht ein zweites Mal.
+         */
+        fun mitLaufendem(laufendUsd: Double, verbucht: Boolean) = gesamtUsd + if (verbucht) 0.0 else laufendUsd
     }
 
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences("live_kosten", Context.MODE_PRIVATE)
