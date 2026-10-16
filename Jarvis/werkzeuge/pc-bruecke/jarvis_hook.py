@@ -334,7 +334,8 @@ def stop(eingabe: dict) -> None:
         schreib("Freie Rückfrage ohne Antwort über Jarvis")
         return
     # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung), dazu die Dauer
-    # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal).
+    # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal). Der Stand „info“ ist das Merkmal des ausführlichen
+    # Abschlussberichts: Jarvis zeigt ihn mit voller Aktionsleiste, alle anderen Stände als kurze Statusmeldung.
     melde("info", "🏁 " + letzte + f"\n\n⏱️ Dauer seit Start: {dauer}")
 
 

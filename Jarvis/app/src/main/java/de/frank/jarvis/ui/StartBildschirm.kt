@@ -288,10 +288,11 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
 }
 
 /**
- * Nachrichtentypen, die nicht Jarvis selbst schreibt, sondern ein fremder Dienst zustellt (Fortschritt, Abschluss und Fehler
- * einer Programmier-Sitzung über den Relay). Rückfragen („rueckfrage“) haben ihre eigene Karte und gehören nicht hierher.
+ * Nachrichtentypen für kurze Statusmeldungen, die ein fremder Dienst zustellt (Fortschritt, kurzer Fertig- und Fehlerstand
+ * einer Programmier-Sitzung über den Relay). Der ausführliche Abschlussbericht ([ProgrammierChat.ART_BERICHT]) gehört nicht
+ * dazu: Er bekommt die volle Aktionsleiste. Rückfragen („rueckfrage“) haben ihre eigene Karte.
  */
-private val EXTERNE_ARTEN = setOf("programmieren")
+private val EXTERNE_ARTEN = setOf(de.frank.jarvis.faehigkeit.ProgrammierChat.ART_STATUS)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -327,7 +328,7 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
             Markierbar(hell = false) {
                 val form = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp)
                 when (n.art) {
-                    "programmieren" -> ProgrammierText(n.text, form, farbe = f.text)
+                    de.frank.jarvis.faehigkeit.ProgrammierChat.ART_STATUS, de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT -> ProgrammierText(n.text, form, farbe = f.text)
                     "fehler", "abgebrochen" -> Text(n.text, form, color = f.gefahr, fontSize = 15.sp, lineHeight = 21.sp)
                     else -> AntwortText(n.text, form)
                 }

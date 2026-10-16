@@ -270,7 +270,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val zeichen = when (eintrag.optString("letzterStand")) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> ""; else -> "⚙️" }
         val mitZeichen = if (zeichen.isEmpty() || schritt.firstOrNull()?.isLetterOrDigit() == false) schritt else "$zeichen $schritt"
-        ProgrammierChat.poste(app, gespraech, "$appName · $mitZeichen", "programmieren")
+        // Stand „info“ schickt der Hook nur am Zugende mit der ganzen letzten Nachricht der Sitzung: der ausführliche
+        // Abschlussbericht. Er bekommt eine eigene Art (volle Aktionsleiste), alles andere bleibt Statusmeldung.
+        val art = if (eintrag.optString("letzterStand") == "info") ProgrammierChat.ART_BERICHT else ProgrammierChat.ART_STATUS
+        ProgrammierChat.poste(app, gespraech, "$appName · $mitZeichen", art)
     }
 
     /**

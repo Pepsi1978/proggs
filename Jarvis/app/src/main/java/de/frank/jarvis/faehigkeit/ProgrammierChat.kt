@@ -15,6 +15,12 @@ import kotlinx.coroutines.flow.StateFlow
  * gespeicherte Gesprächsdatei gehängt und erscheint beim nächsten Öffnen.
  */
 object ProgrammierChat {
+    /** Nachrichtenart einer kurzen Statusmeldung der Sitzung (App gefunden, Bau, Push, ✅ Fertig, ❌ Problem): Punkt, keine Leiste. */
+    const val ART_STATUS = "programmieren"
+
+    /** Nachrichtenart des ausführlichen Abschlussberichts am Zugende (Stand „info“ vom Hook): volle Aktionsleiste. */
+    const val ART_BERICHT = "programmierbericht"
+
     @Volatile var aktivesGespraech: String? = null
 
     /**
