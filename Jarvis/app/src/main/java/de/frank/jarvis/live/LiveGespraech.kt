@@ -464,6 +464,8 @@ class LiveGespraech(
             alterModus = audio.mode
             audio.mode = AudioManager.MODE_IN_COMMUNICATION
             routingStarten()
+            // Das Autoradio schickt nach dem Freisprechen ein Play; es soll hier landen, nicht bei Poweramp.
+            MedienTastenRiegel.sperren(app)
 
             val rate = 24000
             val minIn = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
@@ -680,6 +682,7 @@ class LiveGespraech(
         wiedergabe = null
         if (routingAktiv || geraeteWaechter != null) routingBeenden()
         runCatching { audio.mode = alterModus }
+        MedienTastenRiegel.freigebenSpaeter()
     } }
 
     companion object {
