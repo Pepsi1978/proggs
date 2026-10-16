@@ -814,6 +814,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (n.vonMir) liveAeusserung = n.text
         gespraech += n
         sitzungSichern()
+        // „Bitte das Gespräch beenden“: in der App erkannt, ohne Modell. Das Live-Modell bestätigt sonst oft nur, ohne zu delegieren.
+        if (n.vonMir && liveAktiv && SprachBefehle.istLiveEnde(n.text)) liveSprachEnde("gesagt: " + n.text)
+    }
+
+    /**
+     * Frank will das Live-Gespräch beenden: Verbindung, Mikrofon und Hörer sofort zu, danach eine kurze Bestätigung vom
+     * Vorleser. Das Mikrofon öffnet danach nicht von selbst; Gespräch, Agenten und Programmieraufträge laufen weiter.
+     */
+    private fun liveSprachEnde(anlass: String) {
+        if (!liveAktiv) return
+        sprachsitzungBeendet = true
+        Logbuch.sprache("Live-Gespräch beendet", anlass)
+        liveBeenden()
+        // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal hielte das Vorlesen an, statt zu sprechen.
+        vorleser.sprich("live-ende:" + System.currentTimeMillis(), "Jarvis", "Okay, Live-Gespräch beendet.")
     }
 
     /** Das Live-Modell fragt Jarvis mit allen Werkzeugen; die Antwort geht als Werkzeug-Ergebnis zurück und wird gesprochen. */
@@ -822,6 +837,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Genau einmal verbrauchen: Eine alte Äußerung darf nie an einem späteren Werkzeugaufruf hängen.
         val aeusserung = liveAeusserung
         liveAeusserung = null
+        // Gesprächsende vor allem anderen und ohne Modell: Die Antwort des Agenten ginge sonst nur als Bestätigung zurück.
+        if (listOfNotNull(auftrag, aeusserung).any { SprachBefehle.istLiveEnde(it) }) { liveSprachEnde("Werkzeugaufruf: $auftrag"); return }
         // Sessionwechsel laufen wie im Mikrofonpfad über [navigieren]: in der App, ohne Modell, nie als Programmierauftrag.
         val befehl = GespraechsNavigation.liveBefehl(auftrag, aeusserung, navigationsAuswahl)
         if (befehl != null) {
@@ -859,6 +876,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 "# Sessions\nWill Frank in eine andere Session (ein anderes Gespräch) wechseln, zurück in die letzte oder eine neue öffnen, etwa „Wechsle in die Whoop-Session“, " +
                 "rufst du jarvis_fragen mit seinen genauen Worten auf; auch mit seiner Antwort, wenn Jarvis fragt, welche Session er meint. Sag dann nur kurz, was Jarvis zurückmeldet. " +
                 "Behaupte nie selbst, gewechselt zu haben.\n") +
+            "# Beenden\nWill Frank das Gespräch beenden, etwa „Gespräch beenden“, „Beende das Live-Gespräch“ oder „Leg auf“, " +
+                (if (gptLive) "delegierst du das sofort mit seinen genauen Worten" else "rufst du sofort jarvis_fragen mit seinen genauen Worten auf") +
+                ". Jarvis schließt dann die Verbindung selbst. Sag vorher höchstens „Okay“ und behaupte nie selbst, das Gespräch sei beendet.\n" +
             "# Regeln\nErfinde nie Daten. Melde etwas erst als erledigt, wenn das Ergebnis da ist.\n" +
             // Franks Antwort-Stil (aus seinen Bewertungen) gilt auch im Gespräch, soweit er zum Sprechen passt.
             de.frank.jarvis.faehigkeit.StilRegeln.alle(getApplication()).takeIf { it.isNotEmpty() }
@@ -1005,8 +1025,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val sprachsessionBeenden: () -> Boolean = {
         sprachsitzungBeendet = true
         val lief = weckwortLauf?.isActive == true
-        Logbuch.sprache("Sprachsitzung beendet", if (lief) "per Werkzeug" else "per Werkzeug, keine Sprachschleife aktiv")
-        lief
+        // Im Live-Gespräch beendet dasselbe Werkzeug die Live-Verbindung: Sonst bestätigte das Modell nur und der Hörer bliebe offen.
+        val liveLief = liveAktiv
+        if (liveLief) viewModelScope.launch(Dispatchers.Main) { liveSprachEnde("per Werkzeug") }
+        else Logbuch.sprache("Sprachsitzung beendet", if (lief) "per Werkzeug" else "per Werkzeug, keine Sprachschleife aktiv")
+        lief || liveLief
     }
 
     /** Was gerade passiert, für die Anzeige auch im gesperrten Zustand ([liestVor]: der Vorleser spricht). */

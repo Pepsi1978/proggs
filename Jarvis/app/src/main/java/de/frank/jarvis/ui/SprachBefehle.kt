@@ -37,6 +37,23 @@ object SprachBefehle {
         return rest.any { it in NOMEN_IM_MODUS } || rest.any { it in KERN_VERBEN } || ("hör" in rest && "auf" in rest)
     }
 
+    /**
+     * Soll der Satz das laufende Live-Gespräch beenden („Bitte das Gespräch beenden“, „Beende das Live-Gespräch“, „Leg auf“)?
+     * Strenger als [istSessionEnde]: Ein bloßes „Stopp“ unterbricht im Live-Gespräch nur die Antwort, und „Danke“ ist dort
+     * meist Höflichkeit. Ohne Nomen zählen nur „beenden“ und „auflegen“.
+     */
+    fun istLiveEnde(text: String): Boolean {
+        val worte = normiert(text)
+        if (worte.isEmpty() || worte.size > 8) return false
+        if (worte.any { it in SPERRWORTE }) return false
+        val rest = worte.filter { it !in FUELLWORTE && it !in ARTIKEL && it !in HELFER && it !in LIVE_HELFER }
+        val nomen = NOMEN_IMMER + NOMEN_IM_MODUS + LIVE_NOMEN
+        if (rest.isEmpty() || rest.any { it !in ENDE_VERBEN && it !in nomen && it != "leg" && it != "auflegen" }) return false
+        if (rest.any { it in nomen }) return rest.any { it in ENDE_VERBEN }
+        return rest.any { it in setOf("beenden", "beende", "beendet", "beend", "auflegen") } ||
+            ("leg" in rest && "auf" in rest) || ("hör" in rest && "auf" in rest && "zuzuhören" in rest)
+    }
+
     /** Kleinschreibung, ohne Satzzeichen; „Sprach-Session“, „Sprach Session“ und „Voice Session“ werden zu „sprachsession“. */
     private fun normiert(text: String): List<String> {
         var s = " " + text.lowercase(Locale.GERMAN).replace(Regex("[^a-zäöüß ]"), " ").replace(Regex(" +"), " ").trim() + " "
@@ -78,6 +95,12 @@ object SprachBefehle {
     /** Allgemeine Nomen: nur, wenn gerade die Sprachschleife läuft („Session beenden“). */
     private val NOMEN_IM_MODUS = setOf("session", "sitzung", "gespräch", "unterhaltung")
 
+    /** Nur fürs Live-Gespräch: was dort das laufende Gespräch meint. */
+    private val LIVE_NOMEN = setOf("livegespräch", "livesession", "livemodus", "liveverbindung", "live", "verbindung", "telefonat", "anruf", "zuhören")
+
+    /** Wie [HELFER], für Aufträge, die das Live-Modell umformuliert weitergibt („Frank möchte das Gespräch beenden“). */
+    private val LIVE_HELFER = setOf("frank", "er", "bittet", "wünscht", "möchten", "soll", "sollen", "werden", "wird", "bitten")
+
     private val SPERRWORTE = setOf(
         "nicht", "kein", "keine", "nie", "wie", "warum", "wieso", "weshalb", "was", "wann", "wo", "ob", "erklär", "erkläre",
         "programmier", "programmiersession", "programmierauftrag", "auftrag", "app",
@@ -86,6 +109,8 @@ object SprachBefehle {
     private val ZUSAMMEN = listOf(
         "sprach session" to "sprachsession", "voice session" to "sprachsession", "sprach sitzung" to "sprachsitzung",
         "sprach modus" to "sprachmodus", "gesprächs modus" to "gesprächsmodus", "sprach schleife" to "sprachschleife",
+        "live gespräch" to "livegespräch", "live session" to "livesession", "live modus" to "livemodus", "live verbindung" to "liveverbindung",
+        "live sitzung" to "livesession",
     )
 
     /** Ganze Sätze, die den Gesprächsmodus beenden (nach Kleinschreibung, ohne Satzzeichen und Füllwörter). */
