@@ -6,7 +6,7 @@ param(
     [string]$InstallRoot = ""
 )
 
-# Stand: v1.00.25 – 04.09.2026 20:09 (windowsfix.23)
+# Stand: v1.00.26 – 16.10.2026 11:19 (windowsfix.23)
 
 $ErrorActionPreference = "Stop"
 $sourceVersion = $Version

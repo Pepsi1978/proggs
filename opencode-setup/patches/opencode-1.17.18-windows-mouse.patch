@@ -11,256 +11,11 @@ index a0eb78a..4710ae2 100644
    OPENCODE_MODELS_URL: process.env["OPENCODE_MODELS_URL"],
    OPENCODE_MODELS_PATH: process.env["OPENCODE_MODELS_PATH"],
    OPENCODE_DB: process.env["OPENCODE_DB"],
-diff --git a/packages/plugin/src/tui.ts b/packages/plugin/src/tui.ts
-index 6781216..43a05a3 100644
---- a/packages/plugin/src/tui.ts
-+++ b/packages/plugin/src/tui.ts
-@@ -201,6 +201,8 @@ export type TuiPromptInfo = {
- export type TuiPromptRef = {
-   focused: boolean
-   current: TuiPromptInfo
-+  contains?(x: number, y: number): boolean
-+  paste?(): void
-   set(prompt: TuiPromptInfo): void
-   reset(): void
-   blur(): void
-@@ -372,6 +374,15 @@ export type TuiKV = {
-   readonly ready: boolean
- }
- 
-+export type TuiModel = {
-+  current?: () => { providerID: string; modelID: string } | undefined
-+  variant: {
-+    current: () => string | undefined
-+    list: () => ReadonlyArray<string>
-+    set: (value: string | undefined) => boolean
-+  }
-+}
-+
- export type TuiState = {
-   readonly ready: boolean
-   readonly config: SdkConfig
-@@ -591,6 +602,7 @@ export type TuiPluginApi = {
-   keys: TuiKeys
-   keymap: TuiKeymap
-   mode: TuiModeApi
-+  model?: TuiModel
-   route: {
-     register: (routes: TuiRouteDefinition[]) => () => void
-     navigate: (name: string, params?: Record<string, unknown>) => void
-diff --git a/packages/tui/src/app.tsx b/packages/tui/src/app.tsx
-index 57f372e..758dbe0 100644
---- a/packages/tui/src/app.tsx
-+++ b/packages/tui/src/app.tsx
-@@ -9,7 +9,7 @@ import { ClipboardProvider, useClipboard } from "./context/clipboard"
- import { ExitProvider, useExit } from "./context/exit"
- import { EpilogueProvider } from "./context/epilogue"
- import * as Selection from "./util/selection"
--import { createCliRenderer, MouseButton } from "@opentui/core"
-+import { CliRenderEvents, createCliRenderer, MouseButton } from "@opentui/core"
- import { RouteProvider, useRoute } from "./context/route"
- import {
-   Switch,
-@@ -384,6 +384,11 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
-   const pluginRuntime = usePluginRuntime()
-   const attention = createTuiAttention({ renderer, config: tuiConfig, kv })
-   const clipboard = useClipboard()
-+  const copyFinishedSelection = () => {
-+    if (Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
-+    Selection.copy(renderer, toast, clipboard)
-+  }
-+  renderer.on(CliRenderEvents.SELECTION, copyFinishedSelection)
- 
-   const api = createTuiApi(
-     createTuiApiAdapters({
-@@ -391,6 +396,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
-       tuiConfig,
-       dialog,
-       keymap,
-+      local,
-       kv,
-       route,
-       routes: pluginRuntime.routes,
-@@ -430,6 +435,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
-   )
-   onCleanup(() => {
-     offSelectionKeys()
-+    renderer.off(CliRenderEvents.SELECTION, copyFinishedSelection)
-     attention.dispose()
-   })
- 
-@@ -1091,18 +1097,17 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
-       flexDirection="column"
-       backgroundColor={theme.background}
-       onMouseDown={(evt) => {
--        if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
-         if (evt.button !== MouseButton.RIGHT) return
- 
--        if (!Selection.copy(renderer, toast, clipboard)) return
-+        if (Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) {
-+          if (!Selection.copy(renderer, toast, clipboard)) return
-+        } else {
-+          if (!promptRef.current?.contains?.(evt.x, evt.y)) return
-+          promptRef.current.paste?.()
-+        }
-         evt.preventDefault()
-         evt.stopPropagation()
-       }}
--      onMouseUp={
--        !Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT
--          ? () => Selection.copy(renderer, toast, clipboard)
--          : undefined
--      }
-     >
-       <Show when={Flag.OPENCODE_SHOW_TTFD}>
-         <TimeToFirstDraw />
-diff --git a/packages/tui/src/plugin/adapters.tsx b/packages/tui/src/plugin/adapters.tsx
-index fef0ec8..45cbbe3 100644
---- a/packages/tui/src/plugin/adapters.tsx
-+++ b/packages/tui/src/plugin/adapters.tsx
-@@ -5,6 +5,7 @@ import type { useRoute } from "../context/route"
- import type { useSDK } from "../context/sdk"
- import type { useSync } from "../context/sync"
- import type { useTheme } from "../context/theme"
-+import type { useLocal } from "../context/local"
- import { Dialog as DialogUI, type useDialog } from "../ui/dialog"
- import type { useOpencodeKeymap } from "../keymap"
- import type { useKV } from "../context/kv"
-@@ -25,6 +26,7 @@ type Input = {
-   tuiConfig: TuiConfig.Resolved
-   dialog: ReturnType<typeof useDialog>
-   keymap: ReturnType<typeof useOpencodeKeymap>
-+  local: ReturnType<typeof useLocal>
-   kv: ReturnType<typeof useKV>
-   route: ReturnType<typeof useRoute>
-   routes: PluginRoutes
-@@ -193,6 +195,24 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
-         return Keymap.getOpencodeModeStack(input.keymap).push(mode)
-       },
-     },
-+    model: {
-+      current() {
-+        return input.local.model.current()
-+      },
-+      variant: {
-+        current() {
-+          return input.local.model.variant.current()
-+        },
-+        list() {
-+          return input.local.model.variant.list()
-+        },
-+        set(value) {
-+          if (value !== undefined && !input.local.model.variant.list().includes(value)) return false
-+          input.local.model.variant.set(value)
-+          return input.local.model.variant.current() === value
-+        },
-+      },
-+    },
-     route: {
-       register(list) {
-         return input.routes.register(list)
-diff --git a/packages/tui/src/clipboard.ts b/packages/tui/src/clipboard.ts
-index 08f86f9..4da53aa 100644
---- a/packages/tui/src/clipboard.ts
-+++ b/packages/tui/src/clipboard.ts
-@@ -57,6 +57,14 @@ export async function read() {
-       Buffer.alloc(0),
-     )
-     if (image.length) return { data: image.toString().trim(), mime: "image/png" }
-+
-+    const text = await command("powershell.exe", [
-+      "-NonInteractive",
-+      "-NoProfile",
-+      "-Command",
-+      "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); Get-Clipboard -Raw",
-+    ]).catch(() => Buffer.alloc(0))
-+    if (text.length) return { data: text.toString("utf8"), mime: "text/plain" }
-   }
- 
-   if (platform() === "linux") {
-diff --git a/packages/tui/src/component/prompt/index.tsx b/packages/tui/src/component/prompt/index.tsx
-index 115c102..60f5f21 100644
---- a/packages/tui/src/component/prompt/index.tsx
-+++ b/packages/tui/src/component/prompt/index.tsx
-@@ -88,6 +88,8 @@ function pastedFilepath(value: string, platform: string) {
- export type PromptRef = {
-   focused: boolean
-   current: PromptInfo
-+  contains?(x: number, y: number): boolean
-+  paste?(): void
-   set(prompt: PromptInfo): void
-   reset(): void
-   blur(): void
-@@ -372,18 +374,7 @@ export function Prompt(props: PromptProps) {
-         run: async (ctx: CommandContext<Renderable, KeyEvent>) => {
-           ctx.event.preventDefault()
-           ctx.event.stopPropagation()
--          const content = await clipboard.read?.()
--          if (content?.mime.startsWith("image/")) {
--            await pasteAttachment({
--              filename: "clipboard",
--              mime: content.mime,
--              content: content.data,
--            })
--            return
--          }
--          if (content?.mime === "text/plain") {
--            await pasteInputText(content.data)
--          }
-+          await pasteClipboard()
-         },
-       },
-       {
-@@ -583,6 +574,12 @@ export function Prompt(props: PromptProps) {
-     get current() {
-       return store.prompt
-     },
-+    contains(x, y) {
-+      return x >= input.screenX && x < input.screenX + input.width && y >= input.screenY && y < input.screenY + input.height
-+    },
-+    paste() {
-+      void pasteClipboard()
-+    },
-     focus() {
-       input.focus()
-     },
-@@ -1218,6 +1215,19 @@ export function Prompt(props: PromptProps) {
-     }, 0)
-   }
- 
-+  async function pasteClipboard() {
-+    const content = await clipboard.read?.()
-+    if (content?.mime.startsWith("image/")) {
-+      await pasteAttachment({
-+        filename: "clipboard",
-+        mime: content.mime,
-+        content: content.data,
-+      })
-+      return
-+    }
-+    if (content?.mime === "text/plain") await pasteInputText(content.data)
-+  }
-+
-   async function pasteAttachment(file: { filename?: string; filepath?: string; content: string; mime: string }) {
-     const currentOffset = input.cursorOffset
-     const extmarkStart = currentOffset
-diff --git a/packages/tui/src/ui/dialog.tsx b/packages/tui/src/ui/dialog.tsx
-index 5028163..8dd33ab 100644
---- a/packages/tui/src/ui/dialog.tsx
-+++ b/packages/tui/src/ui/dialog.tsx
-@@ -210,7 +210,6 @@ export function DialogProvider(props: ParentProps) {
-           evt.preventDefault()
-           evt.stopPropagation()
-         }}
--        onMouseUp={!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? copySelection : undefined}
-       >
-         <Show when={value.stack.length}>
-           <Dialog onClose={() => value.clear()} size={value.size}>
 diff --git a/packages/opencode/src/cli/cmd/tui.ts b/packages/opencode/src/cli/cmd/tui.ts
-index 6a9af10..dc42abf 100644
+index 3a837ba..e265bcd 100644
 --- a/packages/opencode/src/cli/cmd/tui.ts
 +++ b/packages/opencode/src/cli/cmd/tui.ts
-@@ -83,6 +83,10 @@ export const TuiThreadCommand = cmd({
+@@ -122,6 +122,10 @@ export const TuiThreadCommand = cmd({
          alias: ["m"],
          describe: "model to use in the format of provider/model",
        })
@@ -271,7 +26,7 @@ index 6a9af10..dc42abf 100644
        .option("continue", {
          alias: ["c"],
          describe: "continue the last session",
-@@ -285,6 +289,7 @@ export const TuiThreadCommand = cmd({
+@@ -327,6 +331,7 @@ export const TuiThreadCommand = cmd({
                sessionID: args.session,
                agent: args.agent,
                model: args.model,
@@ -279,116 +34,6 @@ index 6a9af10..dc42abf 100644
                prompt,
                fork: args.fork,
                auto: args.auto || args.yolo || args["dangerously-skip-permissions"],
-diff --git a/packages/opencode/test/cli/tui/thread.test.ts b/packages/opencode/test/cli/tui/thread.test.ts
-index 73f87d9..7515121 100644
---- a/packages/opencode/test/cli/tui/thread.test.ts
-+++ b/packages/opencode/test/cli/tui/thread.test.ts
-@@ -66,6 +66,16 @@ describe("tui thread", () => {
-     expect(args.mdns).toBe(false)
-   })
- 
-+  test("parses an initial TUI model variant", async () => {
-+    const args = await yargs([])
-+      .command({ ...TuiThreadCommand, handler: () => {} })
-+      .exitProcess(false)
-+      .parse(["--model", "openai/gpt-5.6-sol", "--variant", "high"])
-+
-+    expect(args.model).toBe("openai/gpt-5.6-sol")
-+    expect(args.variant).toBe("high")
-+  })
-+
-   cliIt.live("rejects mini-only options without --mini", ({ opencode }) =>
-     Effect.gen(function* () {
-       const result = yield* opencode.spawn(["--replay-limit", "10"])
-diff --git a/packages/tui/src/context/args.tsx b/packages/tui/src/context/args.tsx
-index 9a528f2..74afc41 100644
---- a/packages/tui/src/context/args.tsx
-+++ b/packages/tui/src/context/args.tsx
-@@ -2,6 +2,7 @@ import { createSimpleContext } from "./helper"
- 
- export interface Args {
-   model?: string
-+  variant?: string
-   agent?: string
-   prompt?: string
-   continue?: boolean
-diff --git a/packages/tui/src/context/local.tsx b/packages/tui/src/context/local.tsx
-index a05d315..3c25af1 100644
---- a/packages/tui/src/context/local.tsx
-+++ b/packages/tui/src/context/local.tsx
-@@ -48,6 +48,17 @@ export function recentModels(
-     .map((item) => ({ providerID: item.providerID, modelID: item.modelID }))
- }
- 
-+export function initialVariant(
-+  model: string | undefined,
-+  variant: string | undefined,
-+  current: { providerID: string; modelID: string } | undefined,
-+) {
-+  if (!model || !variant || !current) return undefined
-+  const initial = parseModel(model)
-+  if (initial.providerID !== current.providerID || initial.modelID !== current.modelID) return undefined
-+  return variant
-+}
-+
- export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
-   name: "Local",
-   init: () => {
-@@ -135,6 +146,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
-     const agent = createAgent()
- 
-     function createModel() {
-+      let startupVariant = args.variant
-       const [modelStore, setModelStore] = createStore<{
-         ready: boolean
-         model: Record<
-@@ -364,6 +376,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
-             const m = currentModel()
-             if (!m) return undefined
-             const key = `${m.providerID}/${m.modelID}`
-+            const initial = initialVariant(args.model, startupVariant, m)
-+            if (initial) return initial
-             return modelStore.variant[key]
-           },
-           current() {
-@@ -383,6 +397,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
-           set(value: string | undefined) {
-             const m = currentModel()
-             if (!m) return
-+            startupVariant = undefined
-             const key = `${m.providerID}/${m.modelID}`
-             setModelStore("variant", key, value ?? "default")
-             save()
-diff --git a/packages/tui/test/context/local.test.ts b/packages/tui/test/context/local.test.ts
-index e2f1e45..a90a931 100644
---- a/packages/tui/test/context/local.test.ts
-+++ b/packages/tui/test/context/local.test.ts
-@@ -1,5 +1,5 @@
- import { expect, test } from "bun:test"
--import { parseModel, recentModels } from "../../src/context/local"
-+import { initialVariant, parseModel, recentModels } from "../../src/context/local"
- 
- test("parses model IDs containing slashes", () => {
-   expect(parseModel("provider/family/model")).toEqual({
-@@ -20,3 +20,18 @@ test("moves a model to the front, deduplicates, and limits recents", () => {
-     ...recent.slice(6, 10),
-   ])
- })
-+
-+test("applies an initial variant only to its startup model", () => {
-+  expect(
-+    initialVariant("openai/gpt-5.6-sol", "high", {
-+      providerID: "openai",
-+      modelID: "gpt-5.6-sol",
-+    }),
-+  ).toBe("high")
-+  expect(
-+    initialVariant("openai/gpt-5.6-sol", "high", {
-+      providerID: "openai",
-+      modelID: "gpt-5.5",
-+    }),
-+  ).toBeUndefined()
-+})
 diff --git a/packages/opencode/src/config/plugin.ts b/packages/opencode/src/config/plugin.ts
 index 60bba4d..7108fd5 100644
 --- a/packages/opencode/src/config/plugin.ts
@@ -452,10 +97,10 @@ index 60bba4d..7108fd5 100644
      seen.add(name)
      list.push(plugin)
 diff --git a/packages/opencode/src/plugin/index.ts b/packages/opencode/src/plugin/index.ts
-index 1558c70..ba90f7c 100644
+index 6f05329..d30b0ad 100644
 --- a/packages/opencode/src/plugin/index.ts
 +++ b/packages/opencode/src/plugin/index.ts
-@@ -31,6 +31,7 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
+@@ -33,6 +33,7 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
  import { RuntimeFlags } from "@/effect/runtime-flags"
  import { EventV2Bridge } from "@/event-v2-bridge"
  import { InstallationChannel } from "@opencode-ai/core/installation/version"
@@ -463,7 +108,7 @@ index 1558c70..ba90f7c 100644
  
  type State = {
    hooks: Hooks[]
-@@ -174,7 +175,10 @@ const layer = Layer.effect(
+@@ -178,7 +179,10 @@ const layer = Layer.effect(
            if (init._tag === "Some") hooks.push(init.value)
          }
  
@@ -683,7 +328,7 @@ index 2a88ad3..47e39c6 100644
    if (state.plugins_by_id.has(plugin.id)) {
      fail("duplicate tui plugin id", {
        id: plugin.id,
-@@ -1068,6 +1137,7 @@ async function load(input: {
+@@ -1068,6 +1138,7 @@ async function load(input: {
      plugins_by_id: new Map(),
      pending: new Map(),
      dispose_timeout_ms: input.disposeTimeoutMs ?? DISPOSE_TIMEOUT_MS,
@@ -691,26 +336,6 @@ index 2a88ad3..47e39c6 100644
    }
    runtime = next
    next.view.update({
-diff --git a/packages/opencode/test/fixture/tui-plugin.ts b/packages/opencode/test/fixture/tui-plugin.ts
-index 5d93139..b89f441 100644
---- a/packages/opencode/test/fixture/tui-plugin.ts
-+++ b/packages/opencode/test/fixture/tui-plugin.ts
-@@ -90,6 +90,7 @@ type Opts = {
-   attention?: AttentionOpts
-   event?: HostPluginApi["event"]
-   mode?: HostPluginApi["mode"]
-+  model?: NonNullable<HostPluginApi["model"]>
-   count?: Count
-   keymap?: HostPluginApi["keymap"]
-   tuiConfig?: Partial<HostPluginApi["tuiConfig"]>
-@@ -242,6 +243,7 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
-       current: () => "base",
-       push: () => () => {},
-     },
-+    model: opts.model,
-     route: {
-       register: () => {
-         if (count) count.route_add += 1
 diff --git a/packages/opencode/test/cli/tui/plugin-toggle.test.ts b/packages/opencode/test/cli/tui/plugin-toggle.test.ts
 index 4702655..fb5da21 100644
 --- a/packages/opencode/test/cli/tui/plugin-toggle.test.ts
@@ -873,11 +498,32 @@ index 4702655..fb5da21 100644
 +    wait.mockRestore()
 +  }
 +})
+diff --git a/packages/opencode/test/cli/tui/thread.test.ts b/packages/opencode/test/cli/tui/thread.test.ts
+index 2b29698..b81833a 100644
+--- a/packages/opencode/test/cli/tui/thread.test.ts
++++ b/packages/opencode/test/cli/tui/thread.test.ts
+@@ -72,6 +72,16 @@ describe("tui thread", () => {
+     expect(args.mdns).toBe(false)
+   })
+ 
++  test("parses an initial TUI model variant", async () => {
++    const args = await yargs([])
++      .command({ ...TuiThreadCommand, handler: () => {} })
++      .exitProcess(false)
++      .parse(["--model", "openai/gpt-5.6-sol", "--variant", "high"])
++
++    expect(args.model).toBe("openai/gpt-5.6-sol")
++    expect(args.variant).toBe("high")
++  })
++
+   cliIt.live("rejects mini-only options without --mini", ({ opencode }) =>
+     Effect.gen(function* () {
+       const result = yield* opencode.spawn(["--replay-limit", "10"])
 diff --git a/packages/opencode/test/config/config.test.ts b/packages/opencode/test/config/config.test.ts
-index e281831..3a896ea 100644
+index 8d5baed..f99374a 100644
 --- a/packages/opencode/test/config/config.test.ts
 +++ b/packages/opencode/test/config/config.test.ts
-@@ -1810,6 +1810,39 @@ describe("deduplicatePluginOrigins", () => {
+@@ -1992,6 +1992,39 @@ describe("deduplicatePluginOrigins", () => {
    )
  })
  
@@ -917,6 +563,26 @@ index e281831..3a896ea 100644
  describe("OPENCODE_DISABLE_PROJECT_CONFIG", () => {
    it.instance(
      "skips project config files when flag is set",
+diff --git a/packages/opencode/test/fixture/tui-plugin.ts b/packages/opencode/test/fixture/tui-plugin.ts
+index 5d93139..b89f441 100644
+--- a/packages/opencode/test/fixture/tui-plugin.ts
++++ b/packages/opencode/test/fixture/tui-plugin.ts
+@@ -90,6 +90,7 @@ type Opts = {
+   attention?: AttentionOpts
+   event?: HostPluginApi["event"]
+   mode?: HostPluginApi["mode"]
++  model?: NonNullable<HostPluginApi["model"]>
+   count?: Count
+   keymap?: HostPluginApi["keymap"]
+   tuiConfig?: Partial<HostPluginApi["tuiConfig"]>
+@@ -242,6 +243,7 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
+       current: () => "base",
+       push: () => () => {},
+     },
++    model: opts.model,
+     route: {
+       register: () => {
+         if (count) count.route_add += 1
 diff --git a/packages/opencode/test/plugin/install.test.ts b/packages/opencode/test/plugin/install.test.ts
 index 6dc9175..26efc7d 100644
 --- a/packages/opencode/test/plugin/install.test.ts
@@ -1003,45 +669,253 @@ index 6dc9175..26efc7d 100644
  describe("plugin.install.task", () => {
    test("writes both server and tui config entries", async () => {
      await using tmp = await tmpdir()
-diff --git a/packages/tui/src/feature-plugins/system/plugins.tsx b/packages/tui/src/feature-plugins/system/plugins.tsx
-index 78611e0..6716070 100644
---- a/packages/tui/src/feature-plugins/system/plugins.tsx
-+++ b/packages/tui/src/feature-plugins/system/plugins.tsx
-@@ -15,11 +15,21 @@ function state(api: TuiPluginApi, item: TuiPluginStatus) {
- 
-   return (
-     <span style={{ fg: item.active ? api.theme.current.success : api.theme.current.error }}>
--      {item.active ? "active" : "inactive"}
-+      {item.id.startsWith("server-plugin:")
-+        ? item.active
-+          ? "enabled"
-+          : "disabled"
-+        : item.active
-+          ? "active"
-+          : "inactive"}
-     </span>
-   )
+diff --git a/packages/plugin/src/tui.ts b/packages/plugin/src/tui.ts
+index 6781216..92cb406 100644
+--- a/packages/plugin/src/tui.ts
++++ b/packages/plugin/src/tui.ts
+@@ -201,6 +201,8 @@ export type TuiPromptInfo = {
+ export type TuiPromptRef = {
+   focused: boolean
+   current: TuiPromptInfo
++  contains?(x: number, y: number): boolean
++  paste?(): void
+   set(prompt: TuiPromptInfo): void
+   reset(): void
+   blur(): void
+@@ -372,6 +374,15 @@ export type TuiKV = {
+   readonly ready: boolean
  }
  
-+function title(item: TuiPluginStatus) {
-+  return item.id.startsWith("server-plugin:") ? item.id.slice("server-plugin:".length) : item.id
++export type TuiModel = {
++  current?: () => { providerID: string; modelID: string } | undefined
++  variant: {
++    current: () => string | undefined
++    list: () => ReadonlyArray<string>
++    set: (value: string | undefined) => boolean
++  }
 +}
 +
- function source(spec: string) {
-   if (!spec.startsWith("file://")) return
-   return fileURLToPath(spec)
-@@ -134,9 +144,9 @@ function Install(props: { api: TuiPluginApi }) {
+ export type TuiState = {
+   readonly ready: boolean
+   readonly config: SdkConfig
+@@ -591,6 +602,7 @@ export type TuiPluginApi = {
+   keys: TuiKeys
+   keymap: TuiKeymap
+   mode: TuiModeApi
++  model?: TuiModel
+   route: {
+     register: (routes: TuiRouteDefinition[]) => () => void
+     navigate: (name: string, params?: Record<string, unknown>) => void
+diff --git a/packages/tui/src/app.tsx b/packages/tui/src/app.tsx
+index 1b21aaf..efff922 100644
+--- a/packages/tui/src/app.tsx
++++ b/packages/tui/src/app.tsx
+@@ -9,7 +9,7 @@ import { ClipboardProvider, useClipboard } from "./context/clipboard"
+ import { ExitProvider, useExit } from "./context/exit"
+ import { EpilogueProvider } from "./context/epilogue"
+ import * as Selection from "./util/selection"
+-import { createCliRenderer, MouseButton } from "@opentui/core"
++import { CliRenderEvents, createCliRenderer, MouseButton } from "@opentui/core"
+ import { RouteProvider, useRoute } from "./context/route"
+ import {
+   Switch,
+@@ -371,6 +371,11 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
+   const pluginRuntime = usePluginRuntime()
+   const attention = createTuiAttention({ renderer, config: tuiConfig, kv })
+   const clipboard = useClipboard()
++  const copyFinishedSelection = () => {
++    if (Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
++    Selection.copy(renderer, toast, clipboard)
++  }
++  renderer.on(CliRenderEvents.SELECTION, copyFinishedSelection)
+   const update = useUpdateNotification()
  
- function row(api: TuiPluginApi, item: TuiPluginStatus, width: number): DialogSelectOption<string> {
-   return {
--    title: item.id,
-+    title: title(item),
-     value: item.id,
--    category: item.source === "internal" ? "Internal" : "External",
-+    category: item.id.startsWith("server-plugin:") ? "Runtime" : item.source === "internal" ? "Internal" : "TUI",
-     description: meta(item, width),
-     footer: state(api, item),
-     disabled: item.id === id,
+   const api = createTuiApi(
+@@ -379,6 +384,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
+       tuiConfig,
+       dialog,
+       keymap,
++      local,
+       kv,
+       route,
+       routes: pluginRuntime.routes,
+@@ -418,6 +424,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
+   )
+   onCleanup(() => {
+     offSelectionKeys()
++    renderer.off(CliRenderEvents.SELECTION, copyFinishedSelection)
+     attention.dispose()
+   })
+ 
+@@ -1042,18 +1049,17 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
+       flexDirection="column"
+       backgroundColor={theme.background}
+       onMouseDown={(evt) => {
+-        if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+         if (evt.button !== MouseButton.RIGHT) return
+ 
+-        if (!Selection.copy(renderer, toast, clipboard)) return
++        if (Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) {
++          if (!Selection.copy(renderer, toast, clipboard)) return
++        } else {
++          if (!promptRef.current?.contains?.(evt.x, evt.y)) return
++          promptRef.current.paste?.()
++        }
+         evt.preventDefault()
+         evt.stopPropagation()
+       }}
+-      onMouseUp={
+-        !Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT
+-          ? () => Selection.copy(renderer, toast, clipboard)
+-          : undefined
+-      }
+     >
+       <Show when={Flag.OPENCODE_SHOW_TTFD}>
+         <TimeToFirstDraw />
+diff --git a/packages/tui/src/clipboard.ts b/packages/tui/src/clipboard.ts
+index 2ae29da..c80748c 100644
+--- a/packages/tui/src/clipboard.ts
++++ b/packages/tui/src/clipboard.ts
+@@ -58,6 +58,14 @@ export async function read() {
+       Buffer.alloc(0),
+     )
+     if (image.length) return { data: image.toString().trim(), mime: "image/png" }
++
++    const text = await command("powershell.exe", [
++      "-NonInteractive",
++      "-NoProfile",
++      "-Command",
++      "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); Get-Clipboard -Raw",
++    ]).catch(() => Buffer.alloc(0))
++    if (text.length) return { data: text.toString("utf8"), mime: "text/plain" }
+   }
+ 
+   if (platform() === "linux") {
+diff --git a/packages/tui/src/component/prompt/index.tsx b/packages/tui/src/component/prompt/index.tsx
+index c48c751..93ed761 100644
+--- a/packages/tui/src/component/prompt/index.tsx
++++ b/packages/tui/src/component/prompt/index.tsx
+@@ -89,6 +89,8 @@ function pastedFilepath(value: string, platform: string) {
+ export type PromptRef = {
+   focused: boolean
+   current: PromptInfo
++  contains?(x: number, y: number): boolean
++  paste?(): void
+   set(prompt: PromptInfo): void
+   reset(): void
+   blur(): void
+@@ -375,18 +377,7 @@ export function Prompt(props: PromptProps) {
+         run: async (ctx: CommandContext<Renderable, KeyEvent>) => {
+           ctx.event.preventDefault()
+           ctx.event.stopPropagation()
+-          const content = await clipboard.read?.()
+-          if (content?.mime.startsWith("image/")) {
+-            await pasteAttachment({
+-              filename: "clipboard",
+-              mime: content.mime,
+-              content: content.data,
+-            })
+-            return
+-          }
+-          if (content?.mime === "text/plain") {
+-            await pasteInputText(content.data)
+-          }
++          await pasteClipboard()
+         },
+       },
+       {
+@@ -586,6 +577,12 @@ export function Prompt(props: PromptProps) {
+     get current() {
+       return store.prompt
+     },
++    contains(x, y) {
++      return x >= input.screenX && x < input.screenX + input.width && y >= input.screenY && y < input.screenY + input.height
++    },
++    paste() {
++      void pasteClipboard()
++    },
+     focus() {
+       input.focus()
+     },
+@@ -1221,6 +1218,19 @@ export function Prompt(props: PromptProps) {
+     }, 0)
+   }
+ 
++  async function pasteClipboard() {
++    const content = await clipboard.read?.()
++    if (content?.mime.startsWith("image/")) {
++      await pasteAttachment({
++        filename: "clipboard",
++        mime: content.mime,
++        content: content.data,
++      })
++      return
++    }
++    if (content?.mime === "text/plain") await pasteInputText(content.data)
++  }
++
+   async function pasteAttachment(file: { filename?: string; filepath?: string; content: string; mime: string }) {
+     const currentOffset = input.cursorOffset
+     const extmarkStart = currentOffset
+diff --git a/packages/tui/src/context/args.tsx b/packages/tui/src/context/args.tsx
+index 9a528f2..74afc41 100644
+--- a/packages/tui/src/context/args.tsx
++++ b/packages/tui/src/context/args.tsx
+@@ -2,6 +2,7 @@ import { createSimpleContext } from "./helper"
+ 
+ export interface Args {
+   model?: string
++  variant?: string
+   agent?: string
+   prompt?: string
+   continue?: boolean
+diff --git a/packages/tui/src/context/local.tsx b/packages/tui/src/context/local.tsx
+index a05d315..3c25af1 100644
+--- a/packages/tui/src/context/local.tsx
++++ b/packages/tui/src/context/local.tsx
+@@ -48,6 +48,17 @@ export function recentModels(
+     .map((item) => ({ providerID: item.providerID, modelID: item.modelID }))
+ }
+ 
++export function initialVariant(
++  model: string | undefined,
++  variant: string | undefined,
++  current: { providerID: string; modelID: string } | undefined,
++) {
++  if (!model || !variant || !current) return undefined
++  const initial = parseModel(model)
++  if (initial.providerID !== current.providerID || initial.modelID !== current.modelID) return undefined
++  return variant
++}
++
+ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
+   name: "Local",
+   init: () => {
+@@ -135,6 +146,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
+     const agent = createAgent()
+ 
+     function createModel() {
++      let startupVariant = args.variant
+       const [modelStore, setModelStore] = createStore<{
+         ready: boolean
+         model: Record<
+@@ -364,6 +376,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
+             const m = currentModel()
+             if (!m) return undefined
+             const key = `${m.providerID}/${m.modelID}`
++            const initial = initialVariant(args.model, startupVariant, m)
++            if (initial) return initial
+             return modelStore.variant[key]
+           },
+           current() {
+@@ -383,6 +397,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
+           set(value: string | undefined) {
+             const m = currentModel()
+             if (!m) return
++            startupVariant = undefined
+             const key = `${m.providerID}/${m.modelID}`
+             setModelStore("variant", key, value ?? "default")
+             save()
 diff --git a/packages/tui/src/feature-plugins/sidebar/context.tsx b/packages/tui/src/feature-plugins/sidebar/context.tsx
 index f1c99d9..7c31f62 100644
 --- a/packages/tui/src/feature-plugins/sidebar/context.tsx
@@ -1111,15 +985,16 @@ index f1c99d9..7c31f62 100644
  const plugin: BuiltinTuiPlugin = {
    id,
 diff --git a/packages/tui/src/feature-plugins/sidebar/lsp.tsx b/packages/tui/src/feature-plugins/sidebar/lsp.tsx
-index c260cfb..e194f3c 100644
+index c260cfb..a8bbc15 100644
 --- a/packages/tui/src/feature-plugins/sidebar/lsp.tsx
 +++ b/packages/tui/src/feature-plugins/sidebar/lsp.tsx
-@@ -1,3 +1,4 @@
+@@ -1,4 +1,5 @@
  import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 +import { TextAttributes } from "@opentui/core"
  import type { BuiltinTuiPlugin } from "../builtins"
  import { createMemo, For, Show, createSignal } from "solid-js"
-@@ -16,7 +17,5 @@ function View(props: { api: TuiPluginApi }) {
+ 
+@@ -16,9 +17,7 @@ function View(props: { api: TuiPluginApi }) {
          <Show when={list().length > 2}>
            <text fg={theme().text}>{open() ? "▼" : "▶"}</text>
          </Show>
@@ -1128,17 +1003,146 @@ index c260cfb..e194f3c 100644
 -        </text>
 +        <text fg={theme().accent} attributes={TextAttributes.BOLD | TextAttributes.UNDERLINE}>LSP</text>
        </box>
+       <Show when={list().length <= 2 || open()}>
+         <Show when={list().length === 0}>
 diff --git a/packages/tui/src/feature-plugins/sidebar/mcp.tsx b/packages/tui/src/feature-plugins/sidebar/mcp.tsx
-index 99d8567..83c2db8 100644
+index 99d8567..f3ebe0f 100644
 --- a/packages/tui/src/feature-plugins/sidebar/mcp.tsx
 +++ b/packages/tui/src/feature-plugins/sidebar/mcp.tsx
-@@ -33,7 +33,7 @@ function View(props: { api: TuiPluginApi }) {
+@@ -33,8 +33,8 @@ function View(props: { api: TuiPluginApi }) {
            <Show when={list().length > 2}>
              <text fg={theme().text}>{open() ? "▼" : "▶"}</text>
            </Show>
 -          <text fg={theme().text}>
-+          <text fg={theme().accent}>
 -            <b>MCP</b>
++          <text fg={theme().accent}>
 +            <span style={{ bold: true, underline: true }}>MCP</span>
              <Show when={!open()}>
                <span style={{ fg: theme().textMuted }}>
+                 {" "}
+diff --git a/packages/tui/src/feature-plugins/system/plugins.tsx b/packages/tui/src/feature-plugins/system/plugins.tsx
+index dd07478..ab8f0f3 100644
+--- a/packages/tui/src/feature-plugins/system/plugins.tsx
++++ b/packages/tui/src/feature-plugins/system/plugins.tsx
+@@ -15,11 +15,21 @@ function state(api: TuiPluginApi, item: TuiPluginStatus) {
+ 
+   return (
+     <span style={{ fg: item.active ? api.theme.current.success : api.theme.current.error }}>
+-      {item.active ? "active" : "inactive"}
++      {item.id.startsWith("server-plugin:")
++        ? item.active
++          ? "enabled"
++          : "disabled"
++        : item.active
++          ? "active"
++          : "inactive"}
+     </span>
+   )
+ }
+ 
++function title(item: TuiPluginStatus) {
++  return item.id.startsWith("server-plugin:") ? item.id.slice("server-plugin:".length) : item.id
++}
++
+ function source(spec: string) {
+   if (!spec.startsWith("file://")) return
+   return fileURLToPath(spec)
+@@ -134,9 +144,9 @@ function Install(props: { api: TuiPluginApi }) {
+ 
+ function row(api: TuiPluginApi, item: TuiPluginStatus, width: number): DialogSelectOption<string> {
+   return {
+-    title: item.id,
++    title: title(item),
+     value: item.id,
+-    category: item.source === "internal" ? "Internal" : "External",
++    category: item.id.startsWith("server-plugin:") ? "Runtime" : item.source === "internal" ? "Internal" : "TUI",
+     description: meta(item, width),
+     footer: state(api, item),
+     disabled: item.id === id,
+diff --git a/packages/tui/src/plugin/adapters.tsx b/packages/tui/src/plugin/adapters.tsx
+index fef0ec8..580262a 100644
+--- a/packages/tui/src/plugin/adapters.tsx
++++ b/packages/tui/src/plugin/adapters.tsx
+@@ -5,6 +5,7 @@ import type { useRoute } from "../context/route"
+ import type { useSDK } from "../context/sdk"
+ import type { useSync } from "../context/sync"
+ import type { useTheme } from "../context/theme"
++import type { useLocal } from "../context/local"
+ import { Dialog as DialogUI, type useDialog } from "../ui/dialog"
+ import type { useOpencodeKeymap } from "../keymap"
+ import type { useKV } from "../context/kv"
+@@ -25,6 +26,7 @@ type Input = {
+   tuiConfig: TuiConfig.Resolved
+   dialog: ReturnType<typeof useDialog>
+   keymap: ReturnType<typeof useOpencodeKeymap>
++  local: ReturnType<typeof useLocal>
+   kv: ReturnType<typeof useKV>
+   route: ReturnType<typeof useRoute>
+   routes: PluginRoutes
+@@ -193,6 +195,24 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
+         return Keymap.getOpencodeModeStack(input.keymap).push(mode)
+       },
+     },
++    model: {
++      current() {
++        return input.local.model.current()
++      },
++      variant: {
++        current() {
++          return input.local.model.variant.current()
++        },
++        list() {
++          return input.local.model.variant.list()
++        },
++        set(value) {
++          if (value !== undefined && !input.local.model.variant.list().includes(value)) return false
++          input.local.model.variant.set(value)
++          return input.local.model.variant.current() === value
++        },
++      },
++    },
+     route: {
+       register(list) {
+         return input.routes.register(list)
+diff --git a/packages/tui/src/ui/dialog.tsx b/packages/tui/src/ui/dialog.tsx
+index 5028163..8dd33ab 100644
+--- a/packages/tui/src/ui/dialog.tsx
++++ b/packages/tui/src/ui/dialog.tsx
+@@ -210,7 +210,6 @@ export function DialogProvider(props: ParentProps) {
+           evt.preventDefault()
+           evt.stopPropagation()
+         }}
+-        onMouseUp={!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? copySelection : undefined}
+       >
+         <Show when={value.stack.length}>
+           <Dialog onClose={() => value.clear()} size={value.size}>
+diff --git a/packages/tui/test/context/local.test.ts b/packages/tui/test/context/local.test.ts
+index e2f1e45..a90a931 100644
+--- a/packages/tui/test/context/local.test.ts
++++ b/packages/tui/test/context/local.test.ts
+@@ -1,5 +1,5 @@
+ import { expect, test } from "bun:test"
+-import { parseModel, recentModels } from "../../src/context/local"
++import { initialVariant, parseModel, recentModels } from "../../src/context/local"
+ 
+ test("parses model IDs containing slashes", () => {
+   expect(parseModel("provider/family/model")).toEqual({
+@@ -20,3 +20,18 @@ test("moves a model to the front, deduplicates, and limits recents", () => {
+     ...recent.slice(6, 10),
+   ])
+ })
++
++test("applies an initial variant only to its startup model", () => {
++  expect(
++    initialVariant("openai/gpt-5.6-sol", "high", {
++      providerID: "openai",
++      modelID: "gpt-5.6-sol",
++    }),
++  ).toBe("high")
++  expect(
++    initialVariant("openai/gpt-5.6-sol", "high", {
++      providerID: "openai",
++      modelID: "gpt-5.5",
++    }),
++  ).toBeUndefined()
++})
