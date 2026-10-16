@@ -123,12 +123,19 @@ class MainActivity : FragmentActivity() {
         super.onStop()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        vm.kameraZiel?.let { outState.putString(KAMERA_ZIEL, it.toString()) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        // Die Kamera-App beendet Jarvis oft im Hintergrund: Das Ziel des Fotos kommt dann aus dem gesicherten Zustand zurück.
+        if (vm.kameraZiel == null) savedInstanceState?.getString(KAMERA_ZIEL)?.let { vm.kameraZiel = android.net.Uri.parse(it) }
         vm.hinweiseAnfragen = {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 hinweisErlaubnis.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -227,6 +234,7 @@ class MainActivity : FragmentActivity() {
     companion object {
         /** Ist Jarvis gerade sichtbar (zwischen onStart und onStop)? Liest der Weckwort-Dienst, bevor er die App öffnet. */
         @Volatile var sichtbar = false; private set
+        private const val KAMERA_ZIEL = "kamera_ziel"
     }
 
     override fun onResume() {

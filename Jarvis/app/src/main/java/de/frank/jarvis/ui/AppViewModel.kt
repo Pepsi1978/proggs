@@ -205,29 +205,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Gespräch ----
 
-    fun sende(eingabe: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList()) {
+    /** Gibt false zurück, wenn die Frage nicht angenommen wurde (leer, Jarvis denkt noch, nicht verbunden). */
+    fun sende(eingabe: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList()): Boolean {
         // Vorgelesen wird nur die Antwort auf genau diese gesprochene Frage. Endet sie vorzeitig (Abbruch, leer, nicht
         // verbunden), darf die nächste getippte Antwort nicht laut werden.
         val vorlesen = gesprochen
         gesprochen = false
         val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) "Schau dir den Anhang an." else "" }
-        if (text.isEmpty()) return
+        if (text.isEmpty()) return false
         // Wechsel zwischen Gesprächen erledigt die App selbst, auch während Jarvis im offenen Gespräch noch arbeitet.
         // Der Befehl geht nie ans Modell und kann deshalb keinen Programmierauftrag auslösen.
-        if (anhaenge.isEmpty() && navigieren(text, vorlesen)) return
+        if (anhaenge.isEmpty() && navigieren(text, vorlesen)) return true
         // Die Antwort, die bei „Hey Jarvis“ lief, weicht jetzt der neuen Frage (nur genau sie und nur, wenn sie noch läuft).
         weichendeRunde?.let { w -> weichendeRunde = null; if (vorlesen && sitzungId?.let { laufende[it] } === w) abbrechen() }
-        if (denkt) return
+        if (denkt) return false
         if (!kiVerbunden) {
             meldung = "Bitte zuerst mit ChatGPT verbinden."
             reiter = Reiter.EINSTELLUNGEN
-            return
+            return false
         }
         val verlauf = verlaufFuersModell()
         gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad })
         sitzungSichern()
         val plugins = aktivePlugins.toList()
-        val id = sitzungId ?: return
+        val id = sitzungId ?: return true
         val runde = Runde(id, gespraech.size - 1)
         laufende[id] = runde
         // Die Kennung des Gesprächs läuft im Koroutinen-Kontext mit: Startet Jarvis in dieser Runde einen Programmierauftrag,
@@ -248,6 +249,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             rundeFertig(runde, antwort, art, vorlesen)
         }
+        return true
     }
 
     /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
@@ -499,7 +501,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (denkt) return
         entwurf = ""
         anhaenge.clear()
-        sende(text, anh)
+        // Nicht angenommen (etwa nicht verbunden): Text und Anhänge bleiben in der Blase, statt verloren zu gehen.
+        if (!sende(text, anh)) {
+            if (entwurf.isEmpty()) entwurf = text
+            anhaenge.addAll(0, anh)
+        }
     }
 
     /**
@@ -527,6 +533,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var liveStumm by mutableStateOf(false); private set
     var liveMikroAnfragen: () -> Unit = {}
     private var live: de.frank.jarvis.live.LiveGespraech? = null
+    /** Zählt Live-Starts: Ein verspäteter Start oder das Ende einer alten Verbindung darf eine neuere nicht anfassen. */
+    private var liveStand = 0
 
     /** Tipp auf die orange Blase: Live-Gespräch starten oder beenden. */
     fun liveTippen() {
@@ -544,16 +552,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun liveErlaubt(erlaubt: Boolean) {
         if (!erlaubt) { meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (liveAktiv) return
-        if (nimmtAuf) aufnahmeVerwerfen()
+        // Eine laufende Aufnahme oder der Gesprächsmodus endet zuerst ganz (Dienst stoppen, Mikrofon freigeben), erst dann
+        // holt das Live-Gespräch das Mikrofon; sonst stoppte das verspätete Aufräumen den Dienst des Live-Gesprächs.
+        val aufraeumen = if (nimmtAuf || holtMikro || weckwortLauf?.isActive == true) aufnahmeVerwerfen() else null
         vorleser.stopp()
         liveAktiv = true
         liveStumm = false
         liveStatus = "Verbinde …"
+        val stand = ++liveStand
         viewModelScope.launch {
+            aufraeumen?.join()
             de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
+            // Ein neuerer Start gehört das Mikrofon schon: nichts freigeben, nichts starten.
+            if (stand != liveStand) return@launch
             if (!liveAktiv) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
             de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
-            val haupt: (() -> Unit) -> Unit = { block -> viewModelScope.launch(Dispatchers.Main) { block() } }
+            val haupt: (() -> Unit) -> Unit = { block -> viewModelScope.launch(Dispatchers.Main) { if (stand == liveStand) block() } }
             live = de.frank.jarvis.live.LiveGespraech(
                 getApplication(), sprache.openAiApiKey, sprache.liveModell, sprache.liveStimme, liveAnweisung(),
                 beiStatus = { s -> haupt { liveStatus = s } },
@@ -573,6 +587,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun liveAufraeumen() {
         if (!liveAktiv) return
+        liveStand++
         liveAktiv = false
         live = null
         livePegel = 0f
@@ -589,11 +604,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Das Live-Modell fragt Jarvis mit allen Werkzeugen; die Antwort geht als Werkzeug-Ergebnis zurück und wird gesprochen. */
     private fun liveWerkzeug(callId: String, auftrag: String) {
         val verlauf = verlaufFuersModell()
-        viewModelScope.launch {
+        val sitzung = live
+        // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
+        val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
+        viewModelScope.launch(kennung) {
             val antwort = runCatching {
                 agent.versuche(auftrag.ifBlank { "Fasse kurz zusammen, was gerade wichtig ist." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = 60_000)
             }.getOrNull() ?: "Das konnte ich gerade nicht nachschlagen."
-            live?.werkzeugErgebnis(callId, antwort)
+            // Nur an dieselbe Verbindung: Eine neue kennt diese call_id nicht.
+            if (live === sitzung) sitzung?.werkzeugErgebnis(callId, antwort)
         }
     }
 
@@ -624,21 +643,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Tipp auf den Mikrofon-Knopf: Aufnahme starten oder beenden und abschicken. */
-    fun mikrofonTippen() {
-        // Der Knopf im Gespräch schickt immer an Jarvis, nie in eine geschlossene Merkliste.
-        if (merkOffen == null) diktatZiel = null
-        if (!nimmtAuf) diktatInsFeld = false
-        when {
-            schreibtMit || denkt -> Unit
-            nimmtAuf -> aufnahmeBeenden()
-            sprache.groqApiKey.isBlank() -> { meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel eintragen."; reiter = Reiter.EINSTELLUNGEN }
-            else -> mikrofonAnfragen()
-        }
-    }
-
     fun mikrofonErlaubt(erlaubt: Boolean) {
-        if (!erlaubt) { diktatZiel = null; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (!erlaubt) { diktatZiel = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (holtMikro) return
         vorleser.stopp()
         holtMikro = true
@@ -676,20 +682,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * der alten Session enden sofort. Nichts davon darf in der neuen Session landen oder dort das Mikrofon wieder öffnen.
      * Laufende Antworten und Programmieraufträge der alten Session bleiben unberührt und schreiben in deren Datei.
      */
-    private fun aufnahmeVerwerfen() {
+    private fun aufnahmeVerwerfen(): Job? {
         wechselStand++
         val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
         weckwortLauf?.cancel()
         mitschriftJob?.cancel()
         mitschriftJob = null
         weichendeRunde = null
-        if (!aktiv) return
+        if (!aktiv) return null
         nimmtAuf = false
         freihaendig = false
         schreibtMit = false
         diktatZiel = null
         Logbuch.sprache("Aufnahme verworfen", "Session von Hand gewechselt")
-        viewModelScope.launch {
+        return viewModelScope.launch {
             mikro.stop()
             de.frank.jarvis.audio.AufnahmeDienst.stoppen()
             de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
@@ -1019,7 +1025,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet === programmierBeantwortet) de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = null
         if (de.frank.jarvis.faehigkeit.Sprachsession.beenden === sprachsessionBeenden) de.frank.jarvis.faehigkeit.Sprachsession.beenden = null
         live?.beenden()
-        if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        // Das Aufräumen des Live-Gesprächs liefe über den schon beendeten viewModelScope: Mikrofon hier direkt freigeben.
+        if (nimmtAuf || holtMikro || liveAktiv) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         mikro.release()
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
         groq?.shutdown()

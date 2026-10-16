@@ -73,7 +73,7 @@ class LiveGespraech(
                 webSocket.send(JSONObject().put("type", "session.update").put("session", JSONObject().put("type", "realtime").put("audio",
                     JSONObject().put("input", JSONObject().put("transcription", JSONObject().put("model", "gpt-4o-mini-transcribe").put("language", "de"))))).toString())
                 tonStarten()
-                beiStatus("Ich höre zu")
+                if (laeuft) beiStatus("Ich höre zu")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) = ereignis(text)
@@ -90,6 +90,10 @@ class LiveGespraech(
                 beiFehler(grund)
                 beenden()
             }
+
+            // Schließt der Dienst die Verbindung (etwa am Sitzungsende), meldet OkHttp nur onClosing; onClosed käme erst nach
+            // unserem eigenen close(). Ohne das hier liefe das Mikrofon weiter in eine tote Verbindung.
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden() }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden() }
         })
@@ -141,9 +145,17 @@ class LiveGespraech(
                 jarvisTeile.setLength(0)
                 if (satz.isNotEmpty()) beiJarvisText(satz)
             }
-            "response.done" -> { sprichtGerade = false; if (laeuft) beiStatus("Ich höre zu") }
+            "response.done" -> {
+                sprichtGerade = false
+                // Endet die Antwort mit einem Werkzeugaufruf, schaut Jarvis noch nach: „Jarvis schaut nach …“ bleibt stehen.
+                val ausgabe = e.optJSONObject("response")?.optJSONArray("output")
+                val ruftWerkzeug = ausgabe != null && (0 until ausgabe.length()).any { ausgabe.optJSONObject(it)?.optString("type") == "function_call" }
+                if (laeuft && !ruftWerkzeug) beiStatus("Ich höre zu")
+            }
             "response.function_call_arguments.done" -> {
-                if (e.optString("name") != "jarvis_fragen") return
+                // Nicht jede Fassung des Ereignisses nennt den Namen; es gibt ohnehin nur dieses eine Werkzeug.
+                val name = e.optString("name")
+                if (name.isNotEmpty() && name != "jarvis_fragen") return
                 val auftrag = runCatching { JSONObject(e.optString("arguments")).optString("auftrag") }.getOrNull().orEmpty()
                 beiStatus("Jarvis schaut nach …")
                 beiWerkzeug(e.optString("call_id"), auftrag)
@@ -153,6 +165,8 @@ class LiveGespraech(
                 val meldung = f?.optString("message").orEmpty()
                 // Abgebrochene Antworten (Frank hat dazwischengeredet) sind kein Fehler.
                 if (f?.optString("code") == "response_cancel_not_active") return
+                // Hat Frank während des Nachschlagens gesprochen, läuft schon eine Antwort; das eigene response.create entfällt dann.
+                if (f?.optString("code") == "conversation_already_has_active_response") return
                 if (meldung.contains("transcription", ignoreCase = true)) return
                 beiFehler("Live: " + meldung.ifBlank { "unbekannter Fehler" })
             }
@@ -177,6 +191,11 @@ class LiveGespraech(
         val minIn = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minIn, 9600) * 2)
         aufnahme = rec
+        if (rec.state != AudioRecord.STATE_INITIALIZED) {
+            beiFehler("Das Mikrofon ließ sich für das Live-Gespräch nicht öffnen.")
+            beenden()
+            return
+        }
         if (AcousticEchoCanceler.isAvailable()) echo = AcousticEchoCanceler.create(rec.audioSessionId)?.also { it.enabled = true }
         if (NoiseSuppressor.isAvailable()) rauschen = NoiseSuppressor.create(rec.audioSessionId)?.also { it.enabled = true }
 
@@ -190,12 +209,15 @@ class LiveGespraech(
         wiedergabe = track
         track.play()
 
+        // Fehler in den eigenen Fäden enden als Meldung, nie als Absturz der App.
         Thread({
             val puffer = ByteArray(1920) // 40 ms
-            rec.startRecording()
+            val ok = runCatching { rec.startRecording() }.isSuccess && rec.recordingState == AudioRecord.RECORDSTATE_RECORDING
+            if (!ok) { if (laeuft) { beiFehler("Das Mikrofon ließ sich für das Live-Gespräch nicht starten."); beenden() }; return@Thread }
             while (laeuft) {
-                val n = rec.read(puffer, 0, puffer.size)
-                if (n <= 0) continue
+                val n = runCatching { rec.read(puffer, 0, puffer.size) }.getOrDefault(AudioRecord.ERROR_INVALID_OPERATION)
+                if (n == 0) continue
+                if (n < 0) { if (laeuft) { beiFehler("Das Mikrofon ist ausgefallen."); beenden() }; break }
                 var summe = 0.0
                 var i = 0
                 while (i + 1 < n) { val s = (puffer[i].toInt() and 0xFF) or (puffer[i + 1].toInt() shl 8); summe += s.toDouble() * s; i += 2 }
@@ -231,6 +253,7 @@ class LiveGespraech(
         }
     }
 
+    @Synchronized
     fun beenden() {
         if (!laeuft) return
         laeuft = false

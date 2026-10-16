@@ -20,6 +20,14 @@ data class Anhang(val pfad: String) {
     val name: String get() = datei.name.substringAfter('_')
     val endung: String get() = name.substringAfterLast('.', "").lowercase()
     val istBild: Boolean get() = endung in BILDER
+    /** Der Bildtyp fürs Modell; null für Formate, die das Modell nicht liest (HEIC). */
+    val mime: String? get() = when (endung) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "webp" -> "image/webp"
+        "gif" -> "image/gif"
+        else -> null
+    }
     val istPdf: Boolean get() = endung == "pdf"
     val istText: Boolean get() = endung in TEXTE
 
@@ -39,8 +47,13 @@ object Anhaenge {
 
     fun ordner(context: Context) = File(context.filesDir, "gespraeche/anhaenge").apply { mkdirs() }
 
-    /** Eine Kamera-Datei im Cache, freigegeben über den FileProvider. */
-    fun kameraDatei(context: Context): File = File(context.cacheDir, "kamera").apply { mkdirs() }.let { File(it, "foto_${System.currentTimeMillis()}.jpg") }
+    /** Eine Kamera-Datei im Cache, freigegeben über den FileProvider. Ältere Aufnahmen sind längst übernommen und fallen weg. */
+    fun kameraDatei(context: Context): File {
+        val ordner = File(context.cacheDir, "kamera").apply { mkdirs() }
+        val grenze = System.currentTimeMillis() - 3_600_000
+        ordner.listFiles()?.filter { it.lastModified() < grenze }?.forEach { runCatching { it.delete() } }
+        return File(ordner, "foto_${System.currentTimeMillis()}.jpg")
+    }
 
     /** Kopiert eine gewählte Datei in Jarvis' Speicher; Bilder werden dabei aufrecht gedreht und verkleinert. */
     fun uebernehmen(context: Context, uri: Uri): Anhang? = runCatching {
@@ -55,7 +68,10 @@ object Anhaenge {
             else -> ""
         }
         name = name.replace(Regex("[\\\\/:*?\"<>|]"), "_")
-        val ziel = File(ordner(context), "${System.currentTimeMillis()}_$name")
+        // Gleichnamige Dateien in derselben Millisekunde (etwa zwei „scan.pdf“) dürfen sich nicht überschreiben.
+        val basis = System.currentTimeMillis()
+        val ziel = generateSequence(0) { it + 1 }.map { File(ordner(context), "${basis + it}_$name") }
+            .first { !it.exists() && !File(it.parentFile, it.nameWithoutExtension + ".jpg").exists() }
         val alsBild = mime.startsWith("image/") || name.substringAfterLast('.').lowercase() in Anhang.BILDER
         if (alsBild) {
             val roh = cr.openInputStream(uri)!!.use { it.readBytes() }
@@ -96,7 +112,8 @@ object Anhaenge {
             val f = a.datei
             if (!f.exists()) return@forEach
             when {
-                a.istBild -> bilder += "data:image/jpeg;base64," + Base64.encodeToString(f.readBytes(), Base64.NO_WRAP)
+                // Übernommene Bilder sind JPEG; ließ sich eines nicht umwandeln, bleibt seine Endung und damit sein Typ.
+                a.istBild && a.mime != null -> bilder += "data:${a.mime};base64," + Base64.encodeToString(f.readBytes(), Base64.NO_WRAP)
                 a.istPdf -> {
                     val seiten = runCatching { pdfSeiten(f) }.getOrDefault(emptyList())
                     bilder += seiten

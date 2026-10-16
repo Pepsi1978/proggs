@@ -192,7 +192,18 @@ object Gespraeche {
     }
 
     fun loeschen(context: Context, id: String) {
-        synchronized(sperre) { AtomicFile(datei(context, id)).delete() }
+        synchronized(sperre) {
+            // Die Anhänge des Gesprächs gehören nur ihm: mit löschen, sonst wüchse der Speicher mit jedem Foto.
+            runCatching {
+                val anhaenge = Anhaenge.ordner(context).canonicalPath
+                val a = lies(datei(context, id)).optJSONArray("nachrichten") ?: JSONArray()
+                for (i in 0 until a.length()) {
+                    val l = a.optJSONObject(i)?.optJSONArray("anhaenge") ?: continue
+                    for (k in 0 until l.length()) File(l.optString(k)).takeIf { it.canonicalPath.startsWith(anhaenge) }?.delete()
+                }
+            }
+            AtomicFile(datei(context, id)).delete()
+        }
     }
 
     /** Atomar mit fsync: Nach Absturz oder leerem Akku bleibt der alte oder der neue Stand, nie eine leere Datei. */
