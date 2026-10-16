@@ -150,6 +150,8 @@ class LiveGespraech(
         val anfrage = Request.Builder().url(url).header("Authorization", "Bearer $schluessel").build()
         ws = client.newWebSocket(anfrage, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                // Derselbe Faden liest danach alle Ereignisse: Vorrang vor Hintergrundarbeit, damit der Ton pünktlich ankommt.
+                runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO) }
                 if (live) {
                     // GPT-Live: erst session.start, Audio erst nach session.started.
                     webSocket.send(liveStart().toString())
@@ -651,6 +653,7 @@ class LiveGespraech(
 
         // 100-ms-Blöcke (4.800 Byte), wie OpenAI empfiehlt; Fehler in den Fäden enden als Meldung, nie als Absturz.
         Thread({
+            runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO) }
             val puffer = ByteArray(4800)
             // Unter der Sperre: Hat tonAus() die Aufnahme schon freigegeben, startet sie nicht mehr.
             val ok = synchronized(tonSperre) {
@@ -711,25 +714,71 @@ class LiveGespraech(
         // Medienweg: In Sprechpausen Stille nachschieben. Läuft die Wiedergabe leer, geht der Ausgang nach wenigen Sekunden in
         // Bereitschaft, der Bluetooth-Medienstrom (A2DP) wird ausgesetzt und viele Lautsprecher verschlucken beim Wiederanlauf
         // den Satzanfang. Die Stille zählt weder als Ausgabe (Echosperre) noch als abgespielt (Kürzen beim Dazwischenreden).
+        // Nachgeschoben wird nur, wenn die Wiedergabe gleich leerläuft: GPT-Live liefert in Echtzeit, ein verspätetes Stück
+        // bekäme sonst Stille vorgesetzt, obwohl noch genug Ton im Puffer liegt, und die Rede stockte hörbar.
         val stille = ByteArray(rate / 1000 * 2 * STILLE_MS)
+        val fuellUnter = rate / 1000L * FUELL_UNTER_MS
+        val startPolster = rate / 1000L * START_POLSTER_MS
+        val polster = ByteArray((startPolster * 2).toInt())
         Thread({
+            // Vorrang vor Hintergrundarbeit (Recherchen, Synchronisation): Der Ton darf nie auf die CPU warten.
+            runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO) }
+            // Messung alle 2 s, nur Zahlen: Füllstand, Füll-Stille, Startpolster, Unterläufe, längstes Schreiben.
+            var mSeit = System.currentTimeMillis()
+            var mMin = Long.MAX_VALUE; var mMax = 0L; var mFuell = 0L; var mFuellSprache = 0L; var mPolster = 0L; var mSchreiben = 0L; var mTon = false
+            var mUnterlauf = runCatching { track.underrunCount }.getOrDefault(0)
+            fun schreiben(b: ByteArray, n: Int): Int {
+                val t0 = System.currentTimeMillis()
+                val r = runCatching { wiedergabe?.write(b, 0, n) }.getOrNull() ?: 0
+                mSchreiben = maxOf(mSchreiben, System.currentTimeMillis() - t0)
+                if (r > 0) geschriebeneFrames += r / 2
+                return r
+            }
             while (laeuft) {
-                val stueck = runCatching { ausgabe.poll(if (medienweg) STILLE_MS.toLong() else 200L, TimeUnit.MILLISECONDS) }.getOrNull()
+                val stueck = runCatching { ausgabe.poll(if (medienweg) WARTE_MS else 200L, TimeUnit.MILLISECONDS) }.getOrNull()
+                val gepuffert = gepuffertFrames()
+                mMin = minOf(mMin, gepuffert); mMax = maxOf(mMax, gepuffert)
                 // Die Sprechanzeige von GPT-Live setzt der Mikrofon-Faden zurück; dieser Faden kann im Schreiben blockieren.
                 if (stueck == null) {
-                    if (medienweg && laeuft) runCatching { wiedergabe?.write(stille, 0, stille.size) }.getOrNull()?.takeIf { it > 0 }?.let { geschriebeneFrames += it / 2 }
-                    continue
+                    if (medienweg && laeuft && gepuffert < fuellUnter) {
+                        val r = schreiben(stille, stille.size)
+                        if (r > 0) { mFuell += r / 2; if (sprichtGerade) mFuellSprache += r / 2 }
+                    }
+                } else {
+                    // Satzanfang nach einer Pause: kleines Polster vorlegen, damit die nächsten, in Echtzeit kommenden Stücke
+                    // rechtzeitig nachrücken. Kostet höchstens START_POLSTER_MS Verzögerung und nur, wenn der Puffer fast leer ist.
+                    if (stueck.hoerbar && System.currentTimeMillis() - letzteHoerbarMs > NEUER_SATZ_MS && gepuffert < startPolster) {
+                        val n = ((startPolster - gepuffert) * 2).toInt()
+                        val r = schreiben(polster, n)
+                        if (r > 0) mPolster += r / 2
+                    }
+                    // Vor und nach dem Schreiben: Ein großes Stück läuft schon hörbar an, während write() noch blockiert.
+                    if (stueck.hoerbar) { letzteHoerbarMs = System.currentTimeMillis(); mTon = true }
+                    letzteAusgabeMs = System.currentTimeMillis()
+                    val geschrieben = schreiben(stueck.daten, stueck.daten.size)
+                    if (geschrieben > 0 && stueck.hoerbar) echtBisFrame = geschriebeneFrames
+                    letzteAusgabeMs = System.currentTimeMillis()
+                    if (stueck.hoerbar) letzteHoerbarMs = letzteAusgabeMs
+                    abgespieltBytes += stueck.daten.size
                 }
-                // Vor und nach dem Schreiben: Ein großes Stück läuft schon hörbar an, während write() noch blockiert.
-                if (stueck.hoerbar) letzteHoerbarMs = System.currentTimeMillis()
-                letzteAusgabeMs = System.currentTimeMillis()
-                val geschrieben = runCatching { wiedergabe?.write(stueck.daten, 0, stueck.daten.size) }.getOrNull() ?: 0
-                if (geschrieben > 0) { geschriebeneFrames += geschrieben / 2; if (stueck.hoerbar) echtBisFrame = geschriebeneFrames }
-                letzteAusgabeMs = System.currentTimeMillis()
-                if (stueck.hoerbar) letzteHoerbarMs = letzteAusgabeMs
-                abgespieltBytes += stueck.daten.size
+                val jetzt = System.currentTimeMillis()
+                if (jetzt - mSeit >= 2_000) {
+                    val unterlauf = runCatching { track.underrunCount }.getOrDefault(mUnterlauf)
+                    if (mTon || unterlauf != mUnterlauf || mFuellSprache > 0)
+                        Log.i(LiveRouting.TAG, "Wiedergabe in ${jetzt - mSeit} ms: Puffer ${if (mMin == Long.MAX_VALUE) 0 else mMin / 24}–${mMax / 24} ms, " +
+                            "Füll-Stille ${mFuell / 24} ms (beim Sprechen ${mFuellSprache / 24} ms), Startpolster ${mPolster / 24} ms, " +
+                            "Unterläufe +${unterlauf - mUnterlauf}, längstes Schreiben $mSchreiben ms, Warteschlange ${ausgabe.size}")
+                    mSeit = jetzt; mMin = Long.MAX_VALUE; mMax = 0; mFuell = 0; mFuellSprache = 0; mPolster = 0; mSchreiben = 0; mTon = false
+                    mUnterlauf = unterlauf
+                }
             }
         }, "jarvis-live-ton").start()
+    }
+
+    /** Frames, die noch auf den Lautsprecher warten (echter Ton wie Stille); 0, wenn die Wiedergabe leer ist. */
+    private fun gepuffertFrames(): Long {
+        val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
+        return (geschriebeneFrames - kopf).coerceAtLeast(0)
     }
 
     private fun ausgabeLeeren() {
@@ -941,6 +990,14 @@ class LiveGespraech(
         private const val HOERBAR_EFFEKTIV = 120.0
         /** Länge eines Stilleblocks in Sprechpausen (Medienweg); hält den Bluetooth-Medienstrom wach. */
         private const val STILLE_MS = 20
+        /** Stille nur nachschieben, wenn weniger als so viel Ton in der Wiedergabe wartet, also kurz vor dem Leerlaufen. */
+        private const val FUELL_UNTER_MS = 40L
+        /** Takt, in dem der Ton-Faden im Medienweg auf neue Stücke wartet und den Füllstand prüft. */
+        private const val WARTE_MS = 10L
+        /** Polster vor einem Satzanfang, falls die Wiedergabe fast leer ist: fängt Schwankungen beim Nachliefern ab. */
+        private const val START_POLSTER_MS = 150L
+        /** So lange ohne hörbaren Ton, dann gilt der nächste hörbare Ton als neuer Satzanfang. */
+        private const val NEUER_SATZ_MS = 300L
 
         /** Die Stimmen der Realtime-API; Marin und Cedar klingen am natürlichsten. */
         val STIMMEN = listOf("marin" to "Marin", "cedar" to "Cedar", "alloy" to "Alloy", "ash" to "Ash", "ballad" to "Ballad",
