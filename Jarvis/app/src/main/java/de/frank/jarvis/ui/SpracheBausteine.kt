@@ -336,8 +336,8 @@ private fun LiveKostenSumme(vm: AppViewModel) {
             "\n\nBerechnet = was OpenAI im Gespräch als Nutzung meldet (Sekunden bei GPT-Live, Tokens bei Denk-Modell und Realtime) mal Listenpreis, Stand 16.10.2026. " +
             "Geschätzt = Gesprächszeit, die OpenAI nicht bestätigt hat (etwa bei Verbindungsabbruch), mit 0,05 $ pro Minute. " +
             "Der Durchschnitt teilt die Summe durch die Gesprächszeit, nicht durch die Kalenderzeit.\n\n" +
-            "Unten im Live-Gespräch steht „bisher … / gesamt …“: links das laufende Gespräch, rechts diese Summe samt laufendem Gespräch, " +
-            "das beim Verbuchen am Ende nicht doppelt zählt. Zurücksetzen gilt auch dort.\n\n" +
+            "Unten im Live-Gespräch steht „ca. … / gesamt …“: links das laufende Gespräch, rechts diese Summe samt laufendem Gespräch, " +
+            "das beim Verbuchen am Ende nicht doppelt zählt. Geschätzte Zeit kommt erst beim Verbuchen dazu, die Summe kann dann noch leicht steigen. Zurücksetzen gilt auch dort.\n\n" +
             "Das ist keine Rechnung: Nicht enthalten sind die Aufträge, die das Live-Gespräch an den normalen Jarvis weitergibt (laufen über dessen Modell), " +
             "Websuche-Gebühren, Steuern und Preisänderungen. Gespräche vor Version 1.8.97 fehlen. Verbindlich ist nur platform.openai.com → Usage." +
             (if (k.ohnePreis > 0) "\n\n${k.ohnePreis} Antworten hatten ein Modell ohne hinterlegten Preis und fehlen in der Summe." else ""),

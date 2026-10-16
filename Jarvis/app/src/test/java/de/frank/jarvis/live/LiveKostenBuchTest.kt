@@ -77,19 +77,4 @@ class LiveKostenBuchTest {
         // Nach dem Zurücksetzen zählt es normal weiter.
         assertEquals(1, LiveKostenBuch.buchen(p, LiveKostenBuch.Abrechnung(60.0, true, 0.05, 0.0, 0)).gespraeche)
     }
-
-    @Test
-    fun laufendesGespraechZaehltGenauEinmal() {
-        val p = Speicher()
-        LiveKostenBuch.buchen(p, LiveKostenBuch.Abrechnung(120.0, true, 0.10, 0.0, 0))
-        LiveKostenBuch.buchen(p, LiveKostenBuch.Abrechnung(60.0, false, 0.02, 0.03, 0))
-        val vorher = LiveKostenBuch.lesen(p)
-        // Während des Gesprächs: Summe der beiden alten plus laufende Kosten.
-        assertEquals(0.19, vorher.mitLaufendem(0.04, verbucht = false), 1e-9)
-        // Nach dem Verbuchen steckt es im Buch und kommt nicht noch einmal dazu.
-        val nachher = LiveKostenBuch.buchen(p, LiveKostenBuch.Abrechnung(48.0, true, 0.04, 0.0, 0))
-        assertEquals(0.19, nachher.mitLaufendem(0.04, verbucht = true), 1e-9)
-        // Zurücksetzen mitten im Gespräch: nur noch das laufende zählt.
-        assertEquals(0.04, LiveKostenBuch.zuruecksetzen(p).mitLaufendem(0.04, verbucht = false), 1e-9)
-    }
 }

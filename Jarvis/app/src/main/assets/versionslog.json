@@ -111,6 +111,7 @@
     {"versionCode": 106, "versionName": "1.8.95", "stand": "16.10.2026, 14:31 Uhr", "notiz": "Im Live-Gespräch wechselst du jetzt per Sprache zwischen Sessions, etwa mit „Wechsle in die Whoop-Session“; bei unklarem Namen fragt Jarvis kurz nach, und die Bestätigung landet nicht in der neuen Session."},
     {"versionCode": 107, "versionName": "1.8.96", "stand": "16.10.2026, 14:36 Uhr", "notiz": "Nach einem Live-Gespräch über das Autoradio startet Poweramp nicht mehr ungefragt: Jarvis fängt den Play-Befehl ab, den das Autoradio nach dem Freisprechen schickt."},
     {"versionCode": 108, "versionName": "1.8.97", "stand": "16.10.2026, 14:57 Uhr", "notiz": "Unter Einstellungen → Live-Gespräch stehen jetzt dauerhaft die Gesamtkosten aller Live-Gespräche mit Durchschnitt pro Minute und Stunde, getrennt nach berechnet und geschätzt, mit Knopf zum Zurücksetzen."},
-    {"versionCode": 109, "versionName": "1.8.98", "stand": "16.10.2026, 15:04 Uhr", "notiz": "Unten im Live-Gespräch stehen jetzt neben den Kosten des laufenden Gesprächs auch die Gesamtkosten aller Live-Gespräche seit dem letzten Zurücksetzen, das laufende Gespräch genau einmal eingerechnet."}
+    {"versionCode": 109, "versionName": "1.8.98", "stand": "16.10.2026, 15:04 Uhr", "notiz": "Unten im Live-Gespräch stehen jetzt neben den Kosten des laufenden Gesprächs auch die Gesamtkosten aller Live-Gespräche seit dem letzten Zurücksetzen, das laufende Gespräch genau einmal eingerechnet."},
+    {"versionCode": 110, "versionName": "1.8.99", "stand": "16.10.2026, 15:09 Uhr", "notiz": "Die Gesamtkosten unten im Live-Gespräch bleiben jetzt auch richtig, wenn du direkt nach einem Gespräch ein neues startest, und sind auf schmalen Bildschirmen besser lesbar."}
   ]
 }

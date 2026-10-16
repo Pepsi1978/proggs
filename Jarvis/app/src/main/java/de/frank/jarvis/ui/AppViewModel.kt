@@ -680,10 +680,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var liveKosten by mutableStateOf(0.0); private set
     /** Summe aller Live-Gespräche seit dem letzten Zurücksetzen (Einstellungen → Live-Gespräch). */
     var liveKostenBuch by mutableStateOf(de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>())); private set
-    /** Start-Kennung des Gesprächs, dessen [liveKosten] noch nicht im [liveKostenBuch] stecken; null = verbucht oder keins. */
-    private var liveUnverbucht by mutableStateOf<Int?>(null)
-    /** Gesamtkosten aller Live-Gespräche seit dem Zurücksetzen, das laufende genau einmal eingerechnet (Live-Leiste). */
-    val liveKostenGesamt get() = liveKostenBuch.mitLaufendem(liveKosten, verbucht = liveUnverbucht == null)
+    /**
+     * Kosten je Gespräch (Start-Kennung), die noch nicht im [liveKostenBuch] stecken. Je Gespräch ein Eintrag: Endet eins
+     * und das nächste startet, bevor das erste verbucht ist, fällt das erste nicht aus der Summe.
+     */
+    private val liveUnverbucht = androidx.compose.runtime.mutableStateMapOf<Int, Double>()
+    /** Gesamtkosten aller Live-Gespräche seit dem Zurücksetzen, laufende genau einmal eingerechnet (Live-Leiste). */
+    val liveKostenGesamt get() = liveKostenBuch.gesamtUsd + liveUnverbucht.values.sum()
     fun liveKostenZuruecksetzen() {
         liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.zuruecksetzen(getApplication<android.app.Application>())
         meldung = "Kostenzählung des Live-Gesprächs zurückgesetzt."
@@ -717,12 +720,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         liveStumm = false
         liveStatus = "Verbinde …"
         val stand = ++liveStand
+        // Sofort, nicht erst nach dem Mikrofon: Sonst zeigt die Leiste kurz die Zahlen des letzten Gesprächs.
+        liveKosten = 0.0
+        liveUnverbucht[stand] = 0.0
         viewModelScope.launch {
             aufraeumen?.join()
             de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
             // Ein neuerer Start gehört das Mikrofon schon: nichts freigeben, nichts starten.
-            if (stand != liveStand) return@launch
-            if (!liveAktiv) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
+            if (stand != liveStand) { liveUnverbucht.remove(stand); return@launch }
+            if (!liveAktiv) { liveUnverbucht.remove(stand); de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
             de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
             // Wie im Gesprächsmodus: Andere Apps bleiben leise, sonst hört das Mikrofon die Musik und das Live-Gespräch antwortet darauf.
             de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
@@ -730,8 +736,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
             val mitgeben = optionen["verlauf"].toIntOrNull() ?: 0
             val bisher = gespraech.filter { it.art == "antwort" && it.text.isNotBlank() }.takeLast(mitgeben).map { it.vonMir to it.text }
-            liveKosten = 0.0
-            liveUnverbucht = stand
             live = de.frank.jarvis.live.LiveGespraech(
                 getApplication(), sprache.openAiApiKey, optionen, liveAnweisung(optionen.istLive), bisher,
                 beiStatus = { s -> haupt { liveStatus = s } },
@@ -740,7 +744,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 beiJarvisText = { t -> haupt { liveNachricht(Nachricht(false, t)) } },
                 beiWerkzeug = { id, auftrag -> haupt { liveWerkzeug(id, auftrag) } },
                 // Die abgerechnete Dauer kommt bei GPT-Live erst nach dem Ende: auch dann noch übernehmen.
-                beiKosten = { k -> viewModelScope.launch(Dispatchers.Main) { if (stand == liveStand || !liveAktiv) liveKosten = k } },
+                beiKosten = { k -> viewModelScope.launch(Dispatchers.Main) {
+                    if (stand == liveStand || !liveAktiv) liveKosten = k
+                    // Nach dem Verbuchen nicht wieder aufnehmen: Dann steckt das Gespräch schon im Buch.
+                    if (liveUnverbucht.containsKey(stand)) liveUnverbucht[stand] = k
+                } },
                 // Jedes Gespräch genau einmal ins dauerhafte Kostenbuch, auch wenn inzwischen ein neues läuft.
                 beiAbrechnung = { a ->
                     de.frank.jarvis.live.LiveKostenBuch.buchen(getApplication<android.app.Application>(), a)
@@ -748,7 +756,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // Im selben Schritt als verbucht markieren, damit die Live-Leiste das Gespräch nie doppelt zählt.
                     viewModelScope.launch(Dispatchers.Main) {
                         liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>())
-                        if (liveUnverbucht == stand) liveUnverbucht = null
+                        liveUnverbucht.remove(stand)
                     }
                 },
                 beiFehler = { m -> haupt { meldung = m } },

@@ -267,7 +267,7 @@ private fun LiveLeiste(vm: AppViewModel) {
             Text("Live mit Jarvis", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Text(if (vm.liveStumm) "Stumm geschaltet (kostet weiter)" else vm.liveStatus, color = f.textLeise, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             // Dieses Gespräch / alle Live-Gespräche seit dem Zurücksetzen (Einstellungen → Live-Gespräch).
-            Text("bisher ca. " + de.frank.jarvis.live.LiveOptionen.usdText(vm.liveKosten) + " / gesamt " + de.frank.jarvis.live.LiveOptionen.usdText(vm.liveKostenGesamt),
+            Text("ca. " + de.frank.jarvis.live.LiveOptionen.usdText(vm.liveKosten) + " / gesamt " + de.frank.jarvis.live.LiveOptionen.usdText(vm.liveKostenGesamt),
                 color = LIVE_ORANGE, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.size(46.dp).clip(CircleShape).background(if (vm.liveStumm) f.text else f.flaeche).antippen { vm.liveStummSchalten() }, contentAlignment = Alignment.Center) {
