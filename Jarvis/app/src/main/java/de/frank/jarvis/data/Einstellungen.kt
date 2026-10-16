@@ -239,6 +239,8 @@ class Einstellungen private constructor(context: Context) {
     var appSperre: Boolean get() = prefs.getBoolean("app_sperre", true); set(v) = put { putBoolean("app_sperre", v) }
     /** Antworten vorlesen, wenn die Frage gesprochen wurde. */
     var antwortenVorlesen: Boolean get() = prefs.getBoolean("antworten_vorlesen", true); set(v) = put { putBoolean("antworten_vorlesen", v) }
+    /** Die erste Antwort vorlesen, wenn die Frage mit dem Diktier-Mikrofon eingesprochen und dann von Hand gesendet wurde. */
+    var diktatAntwortVorlesen: Boolean get() = prefs.getBoolean("diktat_antwort_vorlesen", true); set(v) = put { putBoolean("diktat_antwort_vorlesen", v) }
     /** Fertige Agenten-Ergebnisse von selbst vorlesen. */
     var ergebnisseVorlesen: Boolean get() = prefs.getBoolean("ergebnisse_vorlesen", false); set(v) = put { putBoolean("ergebnisse_vorlesen", v) }
 

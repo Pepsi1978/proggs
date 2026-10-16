@@ -206,11 +206,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Gespräch ----
 
     /** Gibt false zurück, wenn die Frage nicht angenommen wurde (leer, Jarvis denkt noch, nicht verbunden). */
-    fun sende(eingabe: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList()): Boolean {
+    fun sende(eingabe: String, anhaenge: List<de.frank.jarvis.data.Anhang> = emptyList(), diktiert: Boolean = false): Boolean {
         // Vorgelesen wird nur die Antwort auf genau diese gesprochene Frage. Endet sie vorzeitig (Abbruch, leer, nicht
         // verbunden), darf die nächste getippte Antwort nicht laut werden.
         val vorlesen = gesprochen
         gesprochen = false
+        // Ob die Antwort laut wird: gesprochene Frage (Hey Jarvis, Gesprächsmodus) oder eingesprochen und von Hand gesendet.
+        // Nie im Live-Gespräch, das spricht selbst.
+        val antwortLaut = !liveAktiv && ((vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen))
         val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) ANHANG_PLATZHALTER else "" }
         if (text.isEmpty()) return false
         // Wechsel zwischen Gesprächen erledigt die App selbst, auch während Jarvis im offenen Gespräch noch arbeitet.
@@ -230,7 +233,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entwurfErledigt = null
         gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad }, kontext = erledigt)
         sitzungSichern()
-        rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, vorlesen,
+        rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, antwortLaut,
             if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
         return true
     }
@@ -337,6 +340,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             (if (erledigt.isNotEmpty()) " Teile davon waren schon erledigt, Jarvis weiß Bescheid." else ""))
         // Ein noch nicht abgeschickter Entwurf weicht der Frage; seine Anhangdateien werden mit entfernt.
         anhaenge.toList().forEach { anhangWeg(it) }
+        entwurfDiktiert = false
         entwurf = if (n.anhaenge.isNotEmpty() && n.text == ANHANG_PLATZHALTER) "" else n.text
         bilder.forEach { anhaenge.add(de.frank.jarvis.data.Anhang(it)) }
         entwurfErledigt = if (erledigt.isEmpty()) null else EntwurfNotiz(sitzungId, entwurf.trim(), erledigt)
@@ -407,7 +411,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (frageNotiz.isNotEmpty() && n != null && n.vonMir) gespraech[i] = n.copy(kontext = frageNotiz)
             gespraech += neu
             sitzungSichern()
-            if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
+            if (vorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
             return
         }
         // Frank ist inzwischen in einem anderen Gespräch: Die Antwort kommt in die gespeicherte Datei und steht beim nächsten Öffnen da.
@@ -644,14 +648,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val anh = anhaenge.toList()
         if (text.isBlank() && anh.isEmpty()) return
         if (denkt) return
+        // Kam Text ins Feld über das Diktier-Mikrofon, wird die erste Antwort darauf vorgelesen (Einstellung).
+        val diktiert = entwurfDiktiert
         entwurf = ""
         anhaenge.clear()
         // Nicht angenommen (etwa nicht verbunden): Text und Anhänge bleiben in der Blase, statt verloren zu gehen.
-        if (!sende(text, anh)) {
+        if (!sende(text, anh, diktiert)) {
             if (entwurf.isEmpty()) entwurf = text
             anhaenge.addAll(0, anh)
-        }
+        } else entwurfDiktiert = false
     }
+
+    /** Der aktuelle Entwurf enthält Text vom Diktier-Mikrofon; gilt nur für das nächste Absenden. */
+    private var entwurfDiktiert = false
 
     /**
      * Diktier-Mikrofon der Eingabeblase: Tippen startet die Aufnahme, nochmal Tippen schreibt den Text ins Feld.
@@ -663,7 +672,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             nimmtAuf -> aufnahmeBeenden()
             sprache.groqApiKey.isBlank() -> { meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel eintragen."; reiter = Reiter.EINSTELLUNGEN }
             else -> {
-                diktatZiel = { t -> entwurf = if (entwurf.isBlank()) t else entwurf.trimEnd() + " " + t }
+                diktatZiel = { t -> entwurf = if (entwurf.isBlank()) t else entwurf.trimEnd() + " " + t; entwurfDiktiert = true }
                 diktatInsFeld = true
                 mikrofonAnfragen()
             }

@@ -33,11 +33,27 @@ object LiveOptionen {
         fun roh(id: String): String = ueber[id] ?: s.liveOption(id)
         operator fun get(id: String): String {
             val o = alle.first { it.id == id }
-            val w = roh(id).ifBlank { o.standard }
+            val w = migriert(id, roh(id)).ifBlank { o.standard }
             val erlaubt = o.werte(this).map { it.id }
             return if (w in erlaubt || erlaubt.isEmpty()) w else if (o.standard in erlaubt) o.standard else erlaubt.first()
         }
         fun setze(id: String, wert: String) = s.setzeLiveOption(id, wert)
+
+        /**
+         * Alte Werte auf die heutigen Stufen: Die Realtime-Höchstlänge kannte früher 256, 512, 1024 und „Ohne Grenze“.
+         * Alles bis 1024 wird 1.000, „Ohne Grenze“ wird 4.000; der neue Wert wird einmal gespeichert.
+         */
+        private fun migriert(id: String, w: String): String {
+            if (id != "rt_max" || w.isBlank() || ueber.containsKey(id)) return w
+            val neu = when (val n = w.toIntOrNull()) {
+                null -> if (w == "inf") "4000" else w
+                in Int.MIN_VALUE..1024 -> "1000"
+                in 1025..4096 -> if (w in setOf("1000", "2000", "3000", "4000")) w else ((n + 500) / 1000 * 1000).coerceIn(1000, 4000).toString()
+                else -> "4000"
+            }
+            if (neu != w) s.setzeLiveOption(id, neu)
+            return neu
+        }
         val modell get() = get("modell")
         val istLive get() = modell.startsWith("gpt-live")
         val denktBeiOpenAi get() = istLive && get("denken") == "openai"
@@ -231,8 +247,9 @@ object LiveOptionen {
                 )
             }, gilt = { !it.istLive }),
         Option("rt_max", "Live-Gespräch", "Höchstlänge einer Antwort (Realtime)",
-            "Deckel je gesprochener Antwort; gesprochene Ausgabe ist der teuerste Posten.", "inf",
-            { listOf(Wahl("inf", "Ohne Grenze"), Wahl("1024", "1.024 Tokens", "etwa 50 Sekunden Sprache"), Wahl("512", "512 Tokens", "etwa 25 Sekunden Sprache"), Wahl("256", "256 Tokens", "etwa 12 Sekunden Sprache")) },
+            "Deckel je gesprochener Antwort; gesprochene Ausgabe ist der teuerste Posten.", "4000",
+            { listOf(Wahl("1000", "1.000 Tokens", "etwa 50 Sekunden Sprache"), Wahl("2000", "2.000 Tokens", "etwa 1,5 Minuten Sprache"),
+                Wahl("3000", "3.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("4000", "4.000 Tokens", "etwa 3 Minuten Sprache")) },
             gilt = { !it.istLive }),
 
         // ---- Beide ----

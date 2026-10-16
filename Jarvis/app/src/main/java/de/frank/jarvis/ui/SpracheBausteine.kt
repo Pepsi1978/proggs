@@ -242,6 +242,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         Unterzeile("Von selbst vorlesen")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Antworten auf Gesprochenes", aktiv = e.antwortenVorlesen) { e.antwortenVorlesen = !e.antwortenVorlesen }
+            Chip("Antwort nach Diktat (Mikrofon + Pfeil)", aktiv = e.diktatAntwortVorlesen) { geaendert { e.diktatAntwortVorlesen = !e.diktatAntwortVorlesen } }
             Chip("Fertige Agenten-Ergebnisse", aktiv = e.ergebnisseVorlesen) { e.ergebnisseVorlesen = !e.ergebnisseVorlesen }
         }
     }
