@@ -599,11 +599,20 @@ class LiveGespraech(
             }
         }, "jarvis-live-mikro").start()
 
+        // Medienweg: In Sprechpausen Stille nachschieben. Läuft die Wiedergabe leer, geht der Ausgang nach wenigen Sekunden in
+        // Bereitschaft, der Bluetooth-Medienstrom (A2DP) wird ausgesetzt und viele Lautsprecher verschlucken beim Wiederanlauf
+        // den Satzanfang. Die Stille zählt weder als Ausgabe (Echosperre) noch als abgespielt (Kürzen beim Dazwischenreden).
+        val stille = ByteArray(rate / 1000 * 2 * STILLE_MS)
         Thread({
             while (laeuft) {
-                val stueck = runCatching { ausgabe.poll(200, TimeUnit.MILLISECONDS) }.getOrNull()
+                val stueck = runCatching { ausgabe.poll(if (medienweg) STILLE_MS.toLong() else 200L, TimeUnit.MILLISECONDS) }.getOrNull()
                 // GPT-Live meldet kein Ende der Rede: Ist die Ausgabe leer gelaufen, hört Jarvis wieder zu.
-                if (stueck == null) { if (live && sprichtGerade && ausgabe.isEmpty()) { sprichtGerade = false; if (laeuft) beiStatus("Ich höre zu") }; continue }
+                if (stueck == null) {
+                    // Wie bisher erst nach 200 ms ohne Ton, auch wenn der Medienweg kürzer wartet.
+                    if (live && sprichtGerade && ausgabe.isEmpty() && System.currentTimeMillis() - letzteAusgabeMs >= 200) { sprichtGerade = false; if (laeuft) beiStatus("Ich höre zu") }
+                    if (medienweg && laeuft) runCatching { wiedergabe?.write(stille, 0, stille.size) }
+                    continue
+                }
                 letzteAusgabeMs = System.currentTimeMillis()
                 runCatching { wiedergabe?.write(stueck, 0, stueck.size) }
                 letzteAusgabeMs = System.currentTimeMillis()
@@ -777,6 +786,8 @@ class LiveGespraech(
     companion object {
         /** Echosperre bleibt so lange nach dem letzten Ton zu: Wiedergabepuffer plus Bluetooth-Verzögerung. */
         private const val ECHO_NACHLAUF_MS = 600L
+        /** Länge eines Stilleblocks in Sprechpausen (Medienweg); hält den Bluetooth-Medienstrom wach. */
+        private const val STILLE_MS = 20
 
         /** Die Stimmen der Realtime-API; Marin und Cedar klingen am natürlichsten. */
         val STIMMEN = listOf("marin" to "Marin", "cedar" to "Cedar", "alloy" to "Alloy", "ash" to "Ash", "ballad" to "Ballad",
