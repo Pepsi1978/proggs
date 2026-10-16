@@ -110,4 +110,64 @@ class GespraechsNavigationTest {
         assertEquals("b", GespraechsNavigation.zurueckZiel(NaviBefehl.Zurueck(), lagen, "a", "b", jetzt)?.sitzung?.id)
         assertEquals("c", GespraechsNavigation.zurueckZiel(NaviBefehl.Zurueck(), lagen, "a", null, jetzt)?.sitzung?.id)
     }
+
+    // ---- GPT-Live: Werkzeugaufrufe, die Sessionbefehle sind ----
+
+    @Test fun liveBenannterWechselOeffnetDieSession() {
+        val lagen = listOf(lage("a", "Wetter morgen"), lage("w", "Whoop-Abruf reparieren", vorMin = 90), lage("k", "Kalender aufräumen", vorMin = 30))
+        for (auftrag in listOf("Wechsle in die Whoop-Session", "Frank möchte in die Whoop-Session wechseln", "Jarvis, öffne bitte die Whoop-Session")) {
+            val text = GespraechsNavigation.liveBefehl(auftrag, null, null)
+            assertEquals(auftrag, auftrag, text)
+            val b = GespraechsNavigation.erkenne(text!!) as NaviBefehl.Thema
+            assertEquals(auftrag, listOf("whoop"), b.stichworte)
+            assertEquals(auftrag, listOf("w"), GespraechsNavigation.themaZiel(b, lagen, "a", keinInhalt, jetzt).map { it.sitzung.id })
+        }
+    }
+
+    @Test fun liveUmformulierterAuftragNimmtFranksWortlaut() {
+        assertEquals("Wechsle in die Whoop-Session",
+            GespraechsNavigation.liveBefehl("Frank fragt nach der Whoop-Unterhaltung", "Wechsle in die Whoop-Session", null))
+    }
+
+    @Test fun liveUnbekannterNameFindetNichts() {
+        val lagen = listOf(lage("a", "Wetter morgen"), lage("w", "Whoop-Abruf reparieren"))
+        val b = GespraechsNavigation.erkenne(GespraechsNavigation.liveBefehl("Wechsle in die Kochrezept-Session", null, null)!!) as NaviBefehl.Thema
+        assertTrue(GespraechsNavigation.themaZiel(b, lagen, "a", keinInhalt, jetzt).isEmpty())
+    }
+
+    @Test fun liveMehrdeutigerNameFragtNachUndNimmtDieAuswahl() {
+        val lagen = listOf(lage("a", "Wetter morgen"), lage("s", "Whoop Schlafdaten", vorMin = 60), lage("t", "Whoop Training", vorMin = 120))
+        val b = GespraechsNavigation.erkenne("Wechsle in die Whoop-Session") as NaviBefehl.Thema
+        val kandidaten = GespraechsNavigation.themaZiel(b, lagen, "a", keinInhalt, jetzt)
+        assertEquals(setOf("s", "t"), kandidaten.map { it.sitzung.id }.toSet())
+        // Franks Antwort auf die Rückfrage kommt im Live-Gespräch als neuer Werkzeugaufruf.
+        val antwort = GespraechsNavigation.liveBefehl("Frank meint die zweite", null, kandidaten)
+        assertEquals("Frank meint die zweite", antwort)
+        assertEquals(kandidaten[1].sitzung.id, (GespraechsNavigation.waehle(antwort!!, kandidaten) as NaviWahl.Treffer).sitzung.id)
+        assertTrue(GespraechsNavigation.waehle("Nein, abbrechen", kandidaten) is NaviWahl.Abbruch)
+        // Eine andere Frage statt einer Auswahl bleibt ein normaler Werkzeugaufruf.
+        assertNull(GespraechsNavigation.liveBefehl("Wie wird das Wetter morgen?", null, kandidaten))
+    }
+
+    @Test fun liveNormaleWerkzeugaufrufeBleibenBeiJarvis() {
+        for (auftrag in listOf(
+            "Wie sind meine Whoop-Werte heute?",
+            "Stell einen Timer auf zehn Minuten",
+            "Was steht morgen in meinem Kalender?",
+            "Starte einen Programmierauftrag für Jarvis, der die Session-Navigation verbessert",
+            "Was war in der anderen Programmier-Session?",
+        )) {
+            assertNull(auftrag, GespraechsNavigation.liveBefehl(auftrag, null, null))
+            // Auch Franks Wortlaut macht aus einem Auftrag keinen Sessionwechsel.
+            assertNull(auftrag, GespraechsNavigation.liveBefehl(auftrag, auftrag, null))
+        }
+        assertNull(GespraechsNavigation.liveBefehl("", null, null))
+    }
+
+    @Test fun mikrofonpfadErkenntSessionbefehleUnveraendert() {
+        assertTrue(GespraechsNavigation.erkenne("Wechsle in die Whoop-Session") is NaviBefehl.Thema)
+        assertTrue(GespraechsNavigation.erkenne("Geh zurück in die letzte Session") is NaviBefehl.Zurueck)
+        assertTrue(GespraechsNavigation.erkenne("Öffne eine neue Session") is NaviBefehl.Neu)
+        assertNull(GespraechsNavigation.erkenne("Wie sind meine Whoop-Werte heute?"))
+    }
 }

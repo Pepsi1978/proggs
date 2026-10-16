@@ -118,6 +118,16 @@ object GespraechsNavigation {
         }
     }
 
+    /**
+     * Live-Gespräch: Ist dieser Werkzeugaufruf ein Sessionbefehl? Zuerst zählt der Auftrag, den das Live-Modell weitergibt, sonst
+     * Franks eigene letzte Äußerung im Wortlaut (das Modell formuliert beim Delegieren oft um). Bei offener Rückfrage
+     * „Welche Session meinst du?“ zählt auch eine Auswahl wie „die erste“. null = normaler Werkzeugaufruf, er geht an Jarvis.
+     */
+    fun liveBefehl(auftrag: String, aeusserung: String?, rueckfrage: List<SessionLage>?): String? =
+        listOfNotNull(auftrag.takeIf { it.isNotBlank() }, aeusserung?.takeIf { it.isNotBlank() }).firstOrNull { t ->
+            erkenne(t) != null || rueckfrage != null && waehle(t, rueckfrage) !is NaviWahl.Keine
+        }
+
     /** Stimmt ein Wort mit einem Stichwort überein? Großzügig bei Endungen: „Kalender“ findet „Kalendern“, „Whoops“. */
     private fun passt(wort: String, stichwort: String): Boolean {
         val stamm = if (stichwort.length <= 4) stichwort else stichwort.take(maxOf(4, stichwort.length - 2))
@@ -257,7 +267,7 @@ object GespraechsNavigation {
         "rüber", "rübergehen", "rüberwechseln", "schalte", "schalt", "umschalten",
     )
     private val FUELL = setOf(
-        "jarvis", "hey", "okay", "ok", "bitte", "also", "und", "dann", "jetzt", "mal", "kannst", "könntest", "würdest", "du", "lass", "lasst",
+        "jarvis", "frank", "franks", "hey", "okay", "ok", "bitte", "also", "und", "dann", "jetzt", "mal", "kannst", "könntest", "würdest", "du", "lass", "lasst",
         "uns", "wir", "ich", "mich", "mir", "möchte", "will", "würde", "gern", "gerne", "eine", "ein", "einen", "einem", "einer", "die", "der",
         "das", "den", "dem", "des", "in", "ins", "zur", "zum", "zu", "noch", "mal", "doch",
     )

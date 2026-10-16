@@ -149,7 +149,9 @@ class LiveGespraech(
                 .put("model", st["backend"])
                 .put("instructions", "Du bist das Denk-Backend von Jarvis, Franks persönlichem Assistenten. Antworte auf Deutsch, knapp und zum Vorlesen geeignet, ohne Aufzählungen und Links. " +
                     "Für alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, Fahrzeit, " +
-                    "Gedächtnis, Programmieraufträge, Recherchen), rufe die Funktion jarvis_fragen mit dem vollständigen Auftrag auf. Erfinde nie Daten. Melde Erfolg erst nach dem Werkzeugergebnis.")
+                    "Gedächtnis, Programmieraufträge, Recherchen) und für jeden Wechsel zwischen Sessions (etwa „Wechsle in die Whoop-Session“, „Geh zurück in die letzte Session“, " +
+                    "„Öffne eine neue Session“, auch Franks Antwort auf „Welche Session meinst du?“), rufe die Funktion jarvis_fragen mit dem vollständigen Auftrag auf, " +
+                    "Sessionbefehle wörtlich in Franks Worten. Erfinde nie Daten. Melde Erfolg erst nach dem Werkzeugergebnis.")
                 .put("reasoning", JSONObject().put("effort", st["backend_effort"]))
                 .put("text", JSONObject().put("verbosity", st["ausfuehrlich"]))
                 .put("service_tier", st["tarif"])
@@ -173,7 +175,18 @@ class LiveGespraech(
     /** Liest den Puffer und leert ihn in einem Schritt; der Rückruf läuft außerhalb der Sperre. */
     private fun abholen(teile: StringBuilder) = synchronized(teile) { teile.toString().also { teile.setLength(0) } }
     private fun nutzerFertig() { abholen(nutzerTeile).trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText) }
-    private fun jarvisFertig() { abholen(jarvisTeile).trim().takeIf { it.isNotEmpty() }?.let(beiJarvisText) }
+    private fun jarvisFertig() { abholen(jarvisTeile).trim().takeIf { it.isNotEmpty() }?.let(::jarvisSatz) }
+
+    /**
+     * Die gesprochene Bestätigung eines Sessionwechsels: Wie im Mikrofonpfad steht sie nur oben in der App, nicht im Gespräch,
+     * und landet so nie in der Session, in die gerade gewechselt wurde. Gilt für genau die nächste Jarvis-Mitschrift.
+     */
+    @Volatile private var bestaetigungVerschlucken = false
+
+    private fun jarvisSatz(text: String) {
+        if (bestaetigungVerschlucken) { bestaetigungVerschlucken = false; return }
+        beiJarvisText(text)
+    }
 
     private fun liveEreignis(e: JSONObject) {
         when (e.optString("type")) {
@@ -205,6 +218,9 @@ class LiveGespraech(
                 val d = e.optJSONObject("delegation") ?: return
                 val id = d.optString("id")
                 beiStatus("Jarvis schaut nach …")
+                // Was Jarvis bis hier gesagt hat („Moment, ich schaue nach“), gehört noch in die Session vor einem möglichen Wechsel.
+                jarvisFertig()
+                bestaetigungVerschlucken = false
                 if (d.optString("target") == "client") {
                     nutzerFertig()
                     val auftrag = abholen(seitAuftrag).trim()
@@ -221,6 +237,8 @@ class LiveGespraech(
                         val callId = item.optString("call_id")
                         val auftrag = runCatching { JSONObject(item.optString("arguments")).optString("auftrag") }.getOrNull().orEmpty()
                         kennungArt[callId] = "funktion"
+                        jarvisFertig()
+                        bestaetigungVerschlucken = false
                         beiStatus("Jarvis schaut nach …")
                         beiWerkzeug(callId, auftrag)
                     }
@@ -266,7 +284,8 @@ class LiveGespraech(
         .put("type", "function")
         .put("name", "jarvis_fragen")
         .put("description", "Fragt Jarvis mit allen Werkzeugen und Franks Daten: Termine, Dienstplan, Aufgaben, Wecker, Biodaten, Ideen, Tagebuch, Mails, Wetter, " +
-            "Gedächtnis, Programmieraufträge, Timer und alles, was etwas nachschlägt oder ändert. Gib den Auftrag vollständig in Franks Worten weiter.")
+            "Gedächtnis, Programmieraufträge, Timer und alles, was etwas nachschlägt oder ändert, auch den Wechsel zwischen Sessions (Gesprächen). " +
+            "Gib den Auftrag vollständig in Franks Worten weiter, Sessionbefehle und Antworten auf „Welche Session meinst du?“ wörtlich.")
         .put("parameters", JSONObject().put("type", "object")
             .put("properties", JSONObject().put("auftrag", JSONObject().put("type", "string").put("description", "Die vollständige Frage oder der Auftrag")))
             .put("required", JSONArray().put("auftrag")))
@@ -345,7 +364,7 @@ class LiveGespraech(
             "response.output_audio_transcript.done", "response.audio_transcript.done" -> {
                 val gesammelt = abholen(jarvisTeile)
                 val satz = e.optString("transcript").ifBlank { gesammelt }.trim()
-                if (satz.isNotEmpty()) beiJarvisText(satz)
+                if (satz.isNotEmpty()) jarvisSatz(satz)
             }
             "response.done" -> {
                 sprichtGerade = false
@@ -361,6 +380,7 @@ class LiveGespraech(
                 val auftrag = runCatching { JSONObject(e.optString("arguments")).optString("auftrag") }.getOrNull().orEmpty()
                 val callId = e.optString("call_id")
                 kennungArt[callId] = "realtime"
+                bestaetigungVerschlucken = false
                 beiStatus("Jarvis schaut nach …")
                 beiWerkzeug(callId, auftrag)
             }
@@ -391,9 +411,13 @@ class LiveGespraech(
 
     // ======================= Gemeinsam =======================
 
-    /** Jarvis' Antwort auf einen Auftrag zurück: als Funktionsergebnis oder (Client-Delegation) als Kommentar zum Vorsprechen. */
-    fun ergebnis(kennung: String, text: String) {
+    /**
+     * Jarvis' Antwort auf einen Auftrag zurück: als Funktionsergebnis oder (Client-Delegation) als Kommentar zum Vorsprechen.
+     * [navigation] = Bestätigung eines Sessionwechsels: wird gesprochen, aber nicht ins Gespräch geschrieben.
+     */
+    fun ergebnis(kennung: String, text: String, navigation: Boolean = false) {
         val w = ws ?: return
+        if (navigation) bestaetigungVerschlucken = true
         when (kennungArt.remove(kennung)) {
             "auftrag" -> {
                 // Höchstens 500 Tokens je Kommentar.

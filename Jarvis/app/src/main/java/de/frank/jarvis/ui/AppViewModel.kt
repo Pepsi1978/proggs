@@ -773,15 +773,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Franks letzte Äußerung im Live-Gespräch, im Wortlaut: Ersatz, falls das Modell einen Sessionbefehl beim Delegieren umformuliert. */
+    private var liveAeusserung: String? = null
+
     private fun liveNachricht(n: Nachricht) {
+        if (n.vonMir) liveAeusserung = n.text
         gespraech += n
         sitzungSichern()
     }
 
     /** Das Live-Modell fragt Jarvis mit allen Werkzeugen; die Antwort geht als Werkzeug-Ergebnis zurück und wird gesprochen. */
     private fun liveWerkzeug(callId: String, auftrag: String) {
-        val verlauf = verlaufFuersModell()
         val sitzung = live
+        // Genau einmal verbrauchen: Eine alte Äußerung darf nie an einem späteren Werkzeugaufruf hängen.
+        val aeusserung = liveAeusserung
+        liveAeusserung = null
+        // Sessionwechsel laufen wie im Mikrofonpfad über [navigieren]: in der App, ohne Modell, nie als Programmierauftrag.
+        val befehl = GespraechsNavigation.liveBefehl(auftrag, aeusserung, navigationsAuswahl)
+        if (befehl != null) {
+            if (navigiert) { if (live === sitzung) sitzung?.ergebnis(callId, "Moment, ich wechsle gerade die Session.", navigation = true); return }
+            if (navigieren(befehl, vorlesen = false) { t -> if (live === sitzung) sitzung?.ergebnis(callId, t, navigation = true) }) return
+        }
+        // Wie im Mikrofonpfad: Die Rückfrage „Welche Session meinst du?“ gilt nur für die nächste Äußerung.
+        navigationsAuswahl = null
+        val verlauf = verlaufFuersModell()
         // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
         val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
         viewModelScope.launch(kennung) {
@@ -800,10 +815,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
             "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf und gehst auf ihn ein. Lass ihm Denkpausen.\n" +
             (if (gptLive) "# Nachschlagen\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, " +
-                "Mails, Wetter, Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), delegierst du, bevor du antwortest. Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n"
+                "Mails, Wetter, Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), delegierst du, bevor du antwortest. Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n" +
+                "# Sessions\nWill Frank in eine andere Session (ein anderes Gespräch) wechseln, zurück in die letzte oder eine neue öffnen, etwa „Wechsle in die Whoop-Session“, " +
+                "delegierst du das ebenfalls mit seinen genauen Worten; auch seine Antwort, wenn Jarvis fragt, welche Session er meint. Sag dann nur kurz, was Jarvis zurückmeldet. " +
+                "Behaupte nie selbst, gewechselt zu haben.\n"
             else "# Werkzeug\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, " +
                 "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), rufst du jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest. " +
-                "Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n") +
+                "Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n" +
+                "# Sessions\nWill Frank in eine andere Session (ein anderes Gespräch) wechseln, zurück in die letzte oder eine neue öffnen, etwa „Wechsle in die Whoop-Session“, " +
+                "rufst du jarvis_fragen mit seinen genauen Worten auf; auch mit seiner Antwort, wenn Jarvis fragt, welche Session er meint. Sag dann nur kurz, was Jarvis zurückmeldet. " +
+                "Behaupte nie selbst, gewechselt zu haben.\n") +
             "# Regeln\nErfinde nie Daten. Melde etwas erst als erledigt, wenn das Ergebnis da ist.\n" +
             // Franks Antwort-Stil (aus seinen Bewertungen) gilt auch im Gespräch, soweit er zum Sprechen passt.
             de.frank.jarvis.faehigkeit.StilRegeln.alle(getApplication()).takeIf { it.isNotEmpty() }
@@ -1495,13 +1516,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var navigationen = 0
 
     /** true = der Text war ein Navigationsbefehl (oder die Antwort auf die Rückfrage) und ist erledigt. */
-    private fun navigieren(text: String, vorlesen: Boolean): Boolean {
+    private fun navigieren(text: String, vorlesen: Boolean, antwort: ((String) -> Unit)? = null): Boolean {
         if (navigiert) return false
         navigationsAuswahl?.let { kandidaten ->
             navigationsAuswahl = null
             when (val wahl = GespraechsNavigation.waehle(text, kandidaten)) {
-                is NaviWahl.Treffer -> { wechsleZu(wahl.sitzung.id, vorlesen); return true }
-                NaviWahl.Abbruch -> { navigiertMelden("Okay, wir bleiben hier.", vorlesen); return true }
+                is NaviWahl.Treffer -> { wechsleZu(wahl.sitzung.id, vorlesen, antwort); return true }
+                NaviWahl.Abbruch -> { navigiertMelden("Okay, wir bleiben hier.", vorlesen, antwort); return true }
                 NaviWahl.Keine -> Unit
             }
         }
@@ -1510,8 +1531,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         reiter = Reiter.JARVIS
         merkOffen = null
         when (befehl) {
-            NaviBefehl.Neu -> { gespraechLeeren(); navigiertMelden("Neue Session ist offen.", vorlesen) }
-            else -> sessionSuchen(befehl, vorlesen, gespraech.takeLast(6).joinToString(" ") { it.text })
+            NaviBefehl.Neu -> { gespraechLeeren(); navigiertMelden("Neue Session ist offen.", vorlesen, antwort) }
+            else -> sessionSuchen(befehl, vorlesen, gespraech.takeLast(6).joinToString(" ") { it.text }, antwort)
         }
         return true
     }
@@ -1531,15 +1552,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun wechsleZu(id: String, vorlesen: Boolean) {
+    private fun wechsleZu(id: String, vorlesen: Boolean, antwort: ((String) -> Unit)? = null) {
         navigiert = true
-        viewModelScope.launch { try { oeffnenUndMelden(id, vorlesen) } finally { navigiert = false } }
+        viewModelScope.launch { try { oeffnenUndMelden(id, vorlesen, antwort) } finally { navigiert = false } }
     }
 
-    private suspend fun oeffnenUndMelden(id: String, vorlesen: Boolean) {
-        if (id == sitzungId) { navigiertMelden("Wir sind schon in „${titelVon(id)}“.", vorlesen); return }
+    private suspend fun oeffnenUndMelden(id: String, vorlesen: Boolean, antwort: ((String) -> Unit)? = null) {
+        if (id == sitzungId) { navigiertMelden("Wir sind schon in „${titelVon(id)}“.", vorlesen, antwort); return }
         val geoeffnet = sitzungLaden(id)
-        navigiertMelden(if (geoeffnet) "Session „${titelVon(id)}“ ist offen." else "Diese Session ließ sich nicht öffnen.", vorlesen)
+        navigiertMelden(if (geoeffnet) "Session „${titelVon(id)}“ ist offen." else "Diese Session ließ sich nicht öffnen.", vorlesen, antwort)
     }
 
     /**
@@ -1547,7 +1568,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Ein klarer Treffer wird geöffnet, mehrere plausible führen zur kurzen Rückfrage statt zu raten. Nur Navigation: Hier
      * entsteht nie ein Programmierauftrag oder eine Ersatz-Session, und die Arbeit in der bisherigen Session läuft weiter.
      */
-    private fun sessionSuchen(befehl: NaviBefehl, vorlesen: Boolean, kontext: String) {
+    private fun sessionSuchen(befehl: NaviBefehl, vorlesen: Boolean, kontext: String, antwort: ((String) -> Unit)? = null) {
         navigiert = true
         val aktuell = sitzungId
         val vorher = vorherigeSitzung
@@ -1588,8 +1609,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     is NaviZiel.Keins -> ziel.grund
                 })
                 when (ziel) {
-                    is NaviZiel.Oeffnen -> oeffnenUndMelden(ziel.lage.sitzung.id, vorlesen)
-                    is NaviZiel.Keins -> navigiertMelden(ziel.grund, vorlesen)
+                    is NaviZiel.Oeffnen -> oeffnenUndMelden(ziel.lage.sitzung.id, vorlesen, antwort)
+                    is NaviZiel.Keins -> navigiertMelden(ziel.grund, vorlesen, antwort)
                     is NaviZiel.Rueckfrage -> {
                         navigationsAuswahl = ziel.kandidaten
                         val datum = java.text.SimpleDateFormat("d. MMMM", java.util.Locale.GERMAN)
@@ -1597,7 +1618,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             "${ORDINALE[i]} ${k.bezeichnung()}" + if (mitDatum && !k.offen(System.currentTimeMillis())) " vom ${datum.format(java.util.Date(k.sitzung.geaendert))}" else ""
                         }
                         val einleitung = if (ziel.kandidaten.all { it.offen(System.currentTimeMillis()) }) "Es laufen mehrere Programmier-Sessions" else "Dazu passen mehrere Sessions"
-                        navigiertMelden("$einleitung: ${liste.joinToString(", ")}. Welche meinst du?", vorlesen)
+                        navigiertMelden("$einleitung: ${liste.joinToString(", ")}. Welche meinst du?", vorlesen, antwort)
                     }
                 }
             } finally {
@@ -1608,10 +1629,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun titelVon(id: String): String = sitzungen.firstOrNull { it.id == id }?.titel?.takeIf { it.isNotBlank() } ?: "ohne Titel"
 
-    /** Bestätigung eines Wechsels: oben eingeblendet und, wenn gesprochen gefragt, vorgelesen. Nie ins Gespräch geschrieben. */
-    private fun navigiertMelden(text: String, vorlesen: Boolean) {
+    /**
+     * Bestätigung eines Wechsels: oben eingeblendet und, wenn gesprochen gefragt, vorgelesen. Nie ins Gespräch geschrieben.
+     * Aus dem Live-Gespräch geht sie über [antwort] an das Live-Modell, das sie selbst spricht.
+     */
+    private fun navigiertMelden(text: String, vorlesen: Boolean, antwort: ((String) -> Unit)? = null) {
         meldung = text
         navigationen++
+        antwort?.invoke(text)
         if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("navigation:" + System.currentTimeMillis(), "Jarvis", text)
     }
 
