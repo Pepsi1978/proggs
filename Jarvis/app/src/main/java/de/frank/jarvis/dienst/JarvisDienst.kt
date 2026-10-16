@@ -207,6 +207,7 @@ class JarvisDienst : Service() {
                     20_000 + (System.currentTimeMillis() % 100_000).toInt(),
                     NotificationCompat.Builder(this@JarvisDienst, KANAL_ERGEBNIS).setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle("Jarvis: ${plan.name} fertig")
                         .setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
+                        .setSilent(de.frank.jarvis.speech.GespraechsFokus.stilleHinweise)
                         .setContentIntent(PendingIntent.getActivity(this@JarvisDienst, 0, Intent(this@JarvisDienst, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
                         .build(),
                 )

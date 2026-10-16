@@ -21,6 +21,12 @@ object GespraechsFokus {
     @Volatile private var anfrage: AudioFocusRequest? = null
     private var audioManager: AudioManager? = null
 
+    /**
+     * Ein Gespräch läuft (Gesprächsmodus oder Live): Jarvis' eigene Hinweise kommen dann ohne Ton. Ein Hinweiston
+     * pausiert sonst den Vorleser und läuft im Live-Gespräch über die Stimme (Regel: Sprachmodus vor Hintergrundarbeit).
+     */
+    val stilleHinweise: Boolean get() = anfrage != null || de.frank.jarvis.live.LiveGespraech.aktiv
+
     /** Holt den Fokus, falls er nicht schon gehalten wird. Ein mehrfacher Aufruf schadet nicht. */
     fun halten(context: Context) {
         synchronized(this) {

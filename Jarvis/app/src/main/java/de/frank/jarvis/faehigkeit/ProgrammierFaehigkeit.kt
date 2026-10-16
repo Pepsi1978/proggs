@@ -340,6 +340,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n${eintrag.optString("ziel")} · Auftrag ${eintrag.optString("id")}"))
                     // Zwischenschritte still aktualisieren; Rückfrage, Fertig und Problem melden sich hörbar.
                     .setOnlyAlertOnce(stand == "laeuft")
+                    // Zwischenschritte im Gespräch ganz still; Rückfrage, Fertig und Problem bleiben hörbar, damit nichts liegen bleibt.
+                    .setSilent(stand == "laeuft" && de.frank.jarvis.speech.GespraechsFokus.stilleHinweise)
                     .setAutoCancel(stand == "fertig")
                     .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } }
                     .build(),

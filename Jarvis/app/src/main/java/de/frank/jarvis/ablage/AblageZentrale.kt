@@ -262,6 +262,8 @@ object AblageZentrale {
                 (System.currentTimeMillis() % 100_000).toInt() + 200_000,
                 NotificationCompat.Builder(context, "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle(titel)
                     .setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
+                    // Im Gespräch kein Hinweiston: Er liefe über Jarvis' Stimme bzw. hielte den Vorleser an.
+                    .setSilent(de.frank.jarvis.speech.GespraechsFokus.stilleHinweise)
                     .setContentIntent(PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
                     .build(),
             )
