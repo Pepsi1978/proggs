@@ -148,7 +148,7 @@ Weitere optionale Felder:
 | `zeitlimitMinuten` | Zeitlimit des Update-Laufs (Standard 20) |
 | `dialogWartezeitSekunden` | Nur `reposkript`: wie lange auf den Ja/Nein-Klick gewartet wird |
 | `hinweis` | Kursive Zeile auf der Karte |
-| `cliRisiko` | Grund, warum dieses Update laufende CLI-Sitzungen (Claude Code, Codex, Terminalfenster) beenden kann. Die Karte zeigt eine rote Warnplakette, der Einzelknopf fragt nach, und „Alle Updates installieren“ läuft in zwei Schritten: Schritt 1 installiert alles Ungefährliche, Schritt 2 (nach dem Schließen der CLIs) die CLI-kritischen. |
+| `cliRisiko` | Grund, warum dieses Update laufende CLI-Sitzungen (Claude Code, Codex, Terminalfenster) beenden kann. Die Karte zeigt ein Warndreieck ⚠ neben dem Namen (Grund im Tooltip), der Einzelknopf fragt nach, und „Alle Updates installieren“ läuft in zwei Schritten: Schritt 1 installiert alles Ungefährliche, Schritt 2 (nach dem Schließen der CLIs) die CLI-kritischen. |
 | `pfeilZaehlen` | Dokumentiert, dass die Prüfausgabe ihre Updates als `alt → neu` auflistet |
 | `wingetName` | Nur `winget`: Paket per Anzeigename statt per Kennung auswählen (`--name` statt `--id … --exact`), bei Prüfung **und** Update. Nötig für Programme, die nicht über winget installiert wurden: winget ordnet sie nur über den Namen zu (PowerShell als MSI meldet bei `--id` „kein installiertes Paket“). Die Tabellenzeile wird weiter über `wingetId` gefunden, ein loser Name greift also nie ein fremdes Paket. |
 | `wingetUpdatePerInstall` | Nur `winget`: Update mit `winget install --id … --exact` statt `upgrade`. `upgrade` findet nicht zugeordnete Pakete auch mit `--name` nicht (PowerShell-MSI); das neuere MSI ersetzt die alte Fassung beim Installieren selbst. |

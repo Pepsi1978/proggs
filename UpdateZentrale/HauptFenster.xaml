@@ -209,6 +209,12 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{Binding Name}" Style="{StaticResource TitelKarte}" />
 
+                                    <!-- Schutzfilter: dieses Update kann laufende CLI-Sitzungen beenden (Grund im Tooltip) -->
+                                    <TextBlock Text="⚠" FontSize="15" Margin="7,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource PinselWarnText}" Cursor="Help"
+                                               ToolTip="{Binding CliRisiko}" ToolTipService.InitialShowDelay="150"
+                                               Visibility="{Binding KannCliBeenden, Converter={StaticResource BoolSichtbar}}" />
+
                                     <Border Margin="10,1,0,0" Padding="7,2" CornerRadius="6" VerticalAlignment="Center"
                                             Background="{DynamicResource PinselPlaketteFlaeche}"
                                             BorderBrush="{DynamicResource PinselPlaketteRand}" BorderThickness="1">
@@ -240,15 +246,6 @@
                                            Foreground="{DynamicResource PinselTextSehrLeise}" FontStyle="Italic"
                                            Margin="0,4,18,0"
                                            Visibility="{Binding HatHinweis, Converter={StaticResource BoolSichtbar}}" />
-
-                                <!-- Schutzfilter: dieses Update kann laufende CLI-Sitzungen beenden -->
-                                <Border Margin="0,6,18,0" Padding="8,4" CornerRadius="6" HorizontalAlignment="Left"
-                                        Background="{DynamicResource PinselFehlerFlaeche}"
-                                        BorderBrush="{DynamicResource PinselFehlerRand}" BorderThickness="1"
-                                        Visibility="{Binding KannCliBeenden, Converter={StaticResource BoolSichtbar}}">
-                                    <TextBlock Text="{Binding CliRisiko}" FontSize="11" TextWrapping="Wrap"
-                                               Foreground="{DynamicResource PinselFehlerText}" />
-                                </Border>
 
                                 <!-- Version und Zustand -->
                                 <StackPanel Orientation="Horizontal" Margin="0,9,0,0">

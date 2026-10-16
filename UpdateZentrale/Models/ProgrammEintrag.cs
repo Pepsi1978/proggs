@@ -188,6 +188,17 @@ public sealed class ProgrammEintrag
     [JsonIgnore]
     public bool KannCliBeenden => !string.IsNullOrWhiteSpace(CliRisiko);
 
+    /// <summary>
+    /// Vendor download for a winget package whose manifest ships the wrong installer (VS Code
+    /// 1.142.0 pointed at the 1.141.2 setup: "Successfully installed", nothing changed, the same
+    /// update offered forever). "{version}" is replaced with the version winget offers. Used only
+    /// when the downloaded installer's version contradicts the offered one.
+    /// </summary>
+    public string? HerstellerInstallerUrl { get; set; }
+
+    /// <summary>Silent switches for <see cref="HerstellerInstallerUrl"/>.</summary>
+    public string? HerstellerInstallerArgumente { get; set; }
+
     public string Akzent { get; set; } = "#7C5CFF";
 
     /// <summary>Default for the admin toggle; the user override in settings.json wins.</summary>

@@ -326,6 +326,8 @@
       "art": "winget",
       "wingetId": "Microsoft.VisualStudioCode",
       "exePfad": "%LOCALAPPDATA%/Programs/Microsoft VS Code/Code.exe",
+      "herstellerInstallerUrl": "https://update.code.visualstudio.com/{version}/win32-x64-user/stable",
+      "herstellerInstallerArgumente": "/VERYSILENT /NORESTART /MERGETASKS=!runcode",
       "zeitlimitMinuten": 30,
       "prozesse": [
         "Code"
@@ -634,21 +636,18 @@
       "id": "npm-opencode",
       "name": "OpenCode CLI",
       "gruppe": "Entwicklung: npm-Pakete",
-      "beschreibung": "OpenCode im Terminal.",
-      "art": "cli",
-      "exePfad": "%APPDATA%/npm/opencode.cmd",
-      "versionsArgumente": "--version",
+      "beschreibung": "OpenCode, wie der OpenLauncher es startet: neueste Version mit eingebautem Windows-Fix.",
+      "art": "opencodefix",
+      "exePfad": "%USERPROFILE%/.local/share/opencode-mousefix/current.json",
       "npmPaket": "opencode-ai",
-      "updateExePfad": "%APPDATA%/npm/npm.cmd",
-      "updateArgumente": "install -g opencode-ai@latest",
-      "zeitlimitMinuten": 15,
+      "zeitlimitMinuten": 60,
       "prozesse": [],
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "akzent": "#CB3837",
-      "hinweis": "Laufende OpenCode-Sitzungen vorher beenden, sonst sind Dateien gesperrt."
+      "hinweis": "Baut die neueste Version mit dem Windows-Fix (einige Minuten). Passt der Fix nicht zur neuen Version, das Update in OpenCode selbst beauftragen."
     },
     {
       "id": "openlauncher",

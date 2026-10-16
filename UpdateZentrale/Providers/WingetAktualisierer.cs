@@ -161,6 +161,18 @@ public sealed class WingetAktualisierer : IAktualisierer
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
 
+        // A manifest that names one version but downloads another installs the old one again.
+        if (FalscherInstaller(lauf.Ausgabe) is { } falsch)
+        {
+            protokoll.Report("winget-Manifest " + falsch.Angeboten + " liefert den Installer von " + falsch.Geladen + ".");
+            if (string.IsNullOrWhiteSpace(eintrag.HerstellerInstallerUrl))
+                return new PruefErgebnis(UpdateZustand.Fehler,
+                    Meldung: "Der winget-Eintrag für " + falsch.Angeboten + " liefert noch den Installer von "
+                             + falsch.Geladen + " – das Update im Programm selbst starten.",
+                    Protokoll: lauf.Ausgabe);
+            return await HerstellerInstallerAsync(eintrag, falsch.Angeboten, protokoll, abbruch);
+        }
+
         // Nothing to do is not a failure: the card must say "current", not show a red band.
         if (IstNichtsZuTun(lauf))
             return new PruefErgebnis(UpdateZustand.Aktuell, Meldung: "War bereits aktuell – kein Upgrade nötig.", Protokoll: lauf.Ausgabe);
@@ -203,6 +215,53 @@ public sealed class WingetAktualisierer : IAktualisierer
         }
 
         return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update installiert.", Protokoll: lauf.Ausgabe);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex AngebotMuster =
+        new(@"^Found .*\] Version (\d+\.\d+\.\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+    private static readonly System.Text.RegularExpressions.Regex DownloadMuster =
+        new(@"^Downloading \S*?[-_](\d+\.\d+\.\d+)\.(?:exe|msi|msix|zip)\b",
+            System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>The offered and the downloaded version, when the installer file name contradicts the offer.</summary>
+    internal static (string Angeboten, string Geladen)? FalscherInstaller(string ausgabe)
+    {
+        var angebot = AngebotMuster.Match(ausgabe);
+        var download = DownloadMuster.Match(ausgabe);
+        if (!angebot.Success || !download.Success) return null;
+        var (a, d) = (angebot.Groups[1].Value, download.Groups[1].Value);
+        return a == d ? null : (a, d);
+    }
+
+    /// <summary>Downloads the vendor installer for the offered version and runs it silently.</summary>
+    private static async Task<PruefErgebnis> HerstellerInstallerAsync(ProgrammEintrag eintrag, string version,
+                                                                      IProgress<string> protokoll, CancellationToken abbruch)
+    {
+        var url = eintrag.HerstellerInstallerUrl!.Replace("{version}", version);
+        var ziel = Path.Combine(Path.GetTempPath(), "UpdateZentrale-" + eintrag.Id + "-" + version + ".exe");
+        protokoll.Report("Lade den Installer direkt vom Hersteller: " + url);
+
+        // curl: IPv4 first (see Netzdienst) and no 15-second client timeout for a 100 MB download.
+        var laden = await Kommandozeile.AusfuehrenAsync("curl.exe", "-4 -fL --retry 2 -o \"" + ziel + "\" \"" + url + "\"",
+            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+        if (Kommandozeile.UnsauberesEnde(laden) is { } unsauber) return unsauber;
+        if (laden.ExitCode != 0 || !File.Exists(ziel))
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: "Der Hersteller-Download ist fehlgeschlagen (curl Code " + laden.ExitCode + ").", Protokoll: laden.Ausgabe);
+
+        protokoll.Report(Path.GetFileName(ziel) + " " + eintrag.HerstellerInstallerArgumente);
+        var lauf = await Kommandozeile.AusfuehrenAsync(ziel, eintrag.HerstellerInstallerArgumente ?? "",
+            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+        protokoll.Report(lauf.Ausgabe);
+        try { File.Delete(ziel); } catch { /* temp file, the next run overwrites it */ }
+
+        if (Kommandozeile.UnsauberesEnde(lauf) is { } abbruchEnde) return abbruchEnde;
+        if (lauf.ExitCode != 0)
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: "Der Hersteller-Installer endete mit Code " + lauf.ExitCode + ".", Protokoll: lauf.Ausgabe);
+        return new PruefErgebnis(UpdateZustand.Fertig,
+            Meldung: "Über den Hersteller-Installer aktualisiert (der winget-Eintrag war fehlerhaft).", Protokoll: lauf.Ausgabe);
     }
 
     /// <summary>

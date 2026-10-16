@@ -63,17 +63,18 @@ public sealed partial class ProgrammViewModel : ObservableObject
         "msstore" => "Microsoft Store",
         "cli" => "Selbst-Update",
         "reposkript" => "Eigenes Skript",
+        "opencodefix" => "Windows-Fix-Build",
         _ => Eintrag.Art
     };
 
     public string? Hinweis => Eintrag.Hinweis;
     public bool HatHinweis => !string.IsNullOrWhiteSpace(Eintrag.Hinweis);
 
-    public string? CliRisiko => Eintrag.CliRisiko is { } r ? "⚠ Kann CLI-Sitzungen beenden: " + r : null;
+    public string? CliRisiko => Eintrag.CliRisiko is { } r ? "Kann CLI-Sitzungen beenden: " + r : null;
     public bool KannCliBeenden => Eintrag.KannCliBeenden;
 
     /// <summary>A packaged app is launched through the apps folder, so it needs no exe path.</summary>
-    public bool KannStarten => !string.IsNullOrWhiteSpace(Eintrag.ExePfad) || Eintrag.IstPaketApp;
+    public bool KannStarten => (!string.IsNullOrWhiteSpace(Eintrag.ExePfad) && Eintrag.Art != "opencodefix") || Eintrag.IstPaketApp;
 
     /// <summary>
     /// Windows refuses to run packaged (MSIX/Store) apps elevated at all -- there is no
@@ -656,6 +657,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         "cli" => Pfade.Aufloesen(string.IsNullOrWhiteSpace(Eintrag.UpdateExePfad) ? Eintrag.ExePfadWirksam : Eintrag.UpdateExePfad)
                  + " " + (Eintrag.UpdateArgumente ?? "update"),
         "reposkript" => "pwsh -File " + Eintrag.Skript + " " + Eintrag.SkriptArgumente,
+        "opencodefix" => "pwsh -File opencode-setup/build-install-windows-mousefix.ps1 -Force",
         _ => Eintrag.Art
     };
 

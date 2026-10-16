@@ -29,7 +29,8 @@ public sealed partial class HauptViewModel : ObservableObject
             ["cli"] = new CliAktualisierer(),
             ["store"] = new StoreAktualisierer(),
             ["msstore"] = new StoreAktualisierer(),   // Altname aus früheren Katalogfassungen
-            ["reposkript"] = new RepoSkriptAktualisierer()
+            ["reposkript"] = new RepoSkriptAktualisierer(),
+            ["opencodefix"] = new OpenCodeFixAktualisierer()
         };
 
     public HauptViewModel()
