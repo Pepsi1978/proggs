@@ -49,15 +49,18 @@ import de.frank.jarvis.ui.theme.glas
  * ein zweiter Tipp hält an.
  */
 @Composable
-fun Vorleseknopf(vm: AppViewModel, quelle: String, titel: String, text: String, groesse: Dp = 44.dp) {
+fun Vorleseknopf(vm: AppViewModel, quelle: String, titel: String, text: String, groesse: Dp = 44.dp, schlicht: Boolean = false) {
     val f = LocalFarben.current
     val stand by vm.vorleser.stand.collectAsState()
     val meiner = stand.quelle == quelle && stand.zustand != VorleseZustand.AUS
-    Box(Modifier.size(groesse).glas(f, groesse / 2, erhoeht = 0.5f, toenung = if (meiner) f.primaer else null).antippen { vm.lies(quelle, titel, text) }, contentAlignment = Alignment.Center) {
+    // schlicht = ohne Glas-Einfassung, als einfaches Symbol wie die übrigen Knöpfe der Antwortleiste.
+    val form = if (schlicht) Modifier.size(groesse) else Modifier.size(groesse).glas(f, groesse / 2, erhoeht = 0.5f, toenung = if (meiner) f.primaer else null)
+    val symbol = if (schlicht) 19.dp else groesse * 0.45f
+    Box(form.antippen { vm.lies(quelle, titel, text) }, contentAlignment = Alignment.Center) {
         when {
-            meiner && stand.zustand == VorleseZustand.LAEDT -> Kern(groesse * 0.6f, f.primaer, aktiv = true)
-            meiner -> Icon(Icons.Rounded.Stop, "Vorlesen anhalten", tint = f.primaer, modifier = Modifier.size(groesse * 0.45f))
-            else -> Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Vorlesen", tint = f.textLeise, modifier = Modifier.size(groesse * 0.45f))
+            meiner && stand.zustand == VorleseZustand.LAEDT -> Kern(if (schlicht) 22.dp else groesse * 0.6f, f.primaer, aktiv = true)
+            meiner -> Icon(Icons.Rounded.Stop, "Vorlesen anhalten", tint = f.primaer, modifier = Modifier.size(symbol))
+            else -> Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Vorlesen", tint = f.textLeise, modifier = Modifier.size(symbol))
         }
     }
 }

@@ -27,9 +27,9 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ThumbDown
-import androidx.compose.material.icons.rounded.ThumbDownOffAlt
 import androidx.compose.material.icons.rounded.ThumbUp
-import androidx.compose.material.icons.rounded.ThumbUpOffAlt
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.automirrored.rounded.CallSplit
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.rounded.BrightnessAuto
@@ -336,13 +336,15 @@ private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
     var grundFragen by remember { mutableStateOf(false) }
     Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Kopierknopf(vm, n.text, "Antwort")
-        LeistenKnopf(if (n.bewertung > 0) Icons.Rounded.ThumbUp else Icons.Rounded.ThumbUpOffAlt, "Gute Antwort", if (n.bewertung > 0) f.primaer else f.textLeise) {
+        // Ausgefüllt nur der tatsächlich gewählte Daumen; neutral sind beide nur umrandet
+        // (Rounded.ThumbUpOffAlt ist im Rounded-Satz selbst ausgefüllt, daher Outlined).
+        LeistenKnopf(if (n.bewertung > 0) Icons.Rounded.ThumbUp else Icons.Outlined.ThumbUp, "Gute Antwort", if (n.bewertung > 0) f.primaer else f.textLeise) {
             vm.bewerten(nummer, if (n.bewertung > 0) 0 else 1)
         }
-        LeistenKnopf(if (n.bewertung < 0) Icons.Rounded.ThumbDown else Icons.Rounded.ThumbDownOffAlt, "Schlechte Antwort", if (n.bewertung < 0) f.primaer else f.textLeise) {
+        LeistenKnopf(if (n.bewertung < 0) Icons.Rounded.ThumbDown else Icons.Outlined.ThumbDown, "Schlechte Antwort", if (n.bewertung < 0) f.primaer else f.textLeise) {
             if (n.bewertung < 0) vm.bewerten(nummer, 0) else grundFragen = true
         }
-        Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
+        Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp, schlicht = true)
         LeistenKnopf(Icons.Rounded.Share, "Teilen", f.textLeise) {
             vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
             runCatching {
