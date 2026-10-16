@@ -3,7 +3,7 @@
 > **Nur der Kurzcheck (Stufe A).** Treffen Punkte auf deine konkrete Aufgabe zu — oder tritt in
 > diesem Bereich ein Fehler auf — dann lies den ENTSCHEIDENDEN Abschnitt im VOLLTEXT (gleicher
 > Titel ohne "Kurzcheck"), nicht nur diese Kurzfassung.
-> Stand: 2026-10-16 · Volltext: `best-practices/apis/openai-live-realtime.md`
+> Stand: 2026-10-16 (§14 Praxis-Erkenntnisse Jarvis 19:23) · Volltext: `best-practices/apis/openai-live-realtime.md`
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -24,3 +24,5 @@
 | 9 | Android-Audio | `VOICE_COMMUNICATION`, PCM16 mono 24 kHz, 100-ms-Blöcke (4.800 Byte), AEC prüfen, `setCommunicationDevice`, FGS-Typ `microphone` aus sichtbarer Activity | §11 |
 | 10 | Optionslisten | Stimmen/Effort/Backend-Modelle nicht fest verdrahten (SDK, Doku und Modellseiten weichen ab) | §13 |
 | 11 | API-Schlüssel | Standard-Key gehört auf einen Server; in einer verteilten App nur Ephemeral-Key — private Eigen-App mit eigenem Key ist bewusstes Restrisiko | §12 |
+| 12 | GPT-Live flüssig abspielen | Live liefert auch in Pausen Stille-Audio in Echtzeit → „spricht" nur per Pegel erkennen; Puffer wächst nie von selbst → Polster **in Pausen hinter Stille** aufbauen, Füll-Stille nur bei fast leerem Puffer, nie mitten in die Rede; Medienton statt Telefonmodus; Rückfall-Prüfung per Logcat-Tag `JarvisLiveRouting` | §14 |
+| 13 | Live vor Hintergrundarbeit | Ton-/Mikro-Faden `URGENT_AUDIO`, Socket-Lesefaden `AUDIO`; eigene Hinweise im Gespräch stumm (`GespraechsFokus.stilleHinweise`); nichts Blockierendes zwischen Füllstandsmessung und `write()` | §14.2 Nr. 9 |

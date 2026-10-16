@@ -28,3 +28,5 @@
 | 13 | KI unterbricht sich selbst (Lautsprecher, Samsung) | AEC prüfen/Software-AEC, erste Antwort nicht unterbrechbar, VAD-Schwelle hoch | F1, F2, F10 |
 | 14 | `SecurityException` beim Mikrofon-FGS | Foreground-Service `microphone` nur aus sichtbarer Activity starten (Android 14+) | F9 |
 | 15 | Altmodelle | `gpt-realtime`/`-mini` Abschaltung 20.01.2027; `gpt-4o-*-transcribe`/`whisper-1` 26.02.2027 | E3, E4 |
+| 16 | GPT-Live hackt (Wortanfang, Lücken im Satz) / „spricht" hängt | Live liefert Stille in Echtzeit: Sprechen nur per Pegel; Füll-Stille nur nach Füllstand; Polster nur hinter Stille in Pausen; Logcat-Prüfung Best Practice §14.6 | F13, F15, F16, F17 |
+| 17 | Telefonklang / Hinweiston über Live-Stimme | Medienweg statt Telefonmodus; Hinweise im Gespräch `setSilent` | F18, F19 |

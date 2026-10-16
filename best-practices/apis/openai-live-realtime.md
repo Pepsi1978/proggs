@@ -9,6 +9,8 @@
 > **Versions-Anker:** OpenAI API Stand 16.10.2026, gpt-live-1 GA 10.09.2026, gpt-realtime-2.1 06.07.2026,
 > openai-python Stand 16.10.2026.
 > **Anker:** openai-api=2026-10-16
+> Ergänzt 16.10.2026, 19:23: **§14 Praxis-Erkenntnisse aus Jarvis 1.8.100–1.8.108** (eigener Code, Commits, Logcat-Messung
+> eines Live-Tests) mit eigener Belegkennzeichnung, Ursachen der Abhacker, bewährten Werten und Rückfall-Prüfung.
 >
 > Markierung je Aussage: **[offiziell]** = OpenAI-/Google-Doku oder SDK-Quelltext · **[extern]** = Drittanbieter-Doku/Blog ·
 > **[Community]** = Forum-/Nutzerbericht · **[unbestätigt]** = widersprüchlich oder nicht verifiziert · **[Schluss]** = eigene Folgerung.
@@ -34,6 +36,8 @@
 | 9 | Android-Audio | `VOICE_COMMUNICATION`, PCM16 mono 24 kHz, 100-ms-Blöcke (4.800 Byte), AEC prüfen, `setCommunicationDevice`, FGS-Typ `microphone` aus sichtbarer Activity | §11 |
 | 10 | Optionslisten | Stimmen/Effort/Backend-Modelle nicht fest verdrahten (SDK, Doku und Modellseiten weichen ab) | §13 |
 | 11 | API-Schlüssel | Standard-Key gehört auf einen Server; in einer verteilten App nur Ephemeral-Key — private Eigen-App mit eigenem Key ist bewusstes Restrisiko | §12 |
+| 12 | GPT-Live flüssig abspielen | Live liefert auch in Pausen Stille-Audio in Echtzeit → „spricht" nur per Pegel erkennen; Puffer wächst nie von selbst → Polster **in Pausen hinter Stille** aufbauen, Füll-Stille nur bei fast leerem Puffer, nie mitten in die Rede; Medienton statt Telefonmodus; Rückfall-Prüfung per Logcat-Tag `JarvisLiveRouting` | §14 |
+| 13 | Live vor Hintergrundarbeit | Ton-/Mikro-Faden `URGENT_AUDIO`, Socket-Lesefaden `AUDIO`; eigene Hinweise im Gespräch stumm (`GespraechsFokus.stilleHinweise`); nichts Blockierendes zwischen Füllstandsmessung und `write()` | §14.2 Nr. 9 |
 
 ---
 
@@ -155,6 +159,7 @@ Mit Responses-Delegation (zusammengesetzt, nicht als Ganzes getestet):
 - Client → Server: `session.start`, `session.update`, `session.input_audio.append` (keine Bestätigung), `session.input_audio.mute`/`.unmute`, `session.output_audio.fixture.play` (≤ 30 s Festaudio), `session.instructions.append`, `session.thinking.append`, `session.commentary.append`, `response.item.create`, `response.create`, `session.close`. [offiziell] https://developers.openai.com/api/reference/resources/live/primary-websocket
 - Server → Client: `session.started` (`id`, `expires_at`, aufgelöste Konfig), `session.updated`, `session.output_audio.delta` (`delta`, `start_ms`/`end_ms` — auf primärer WebSocket evtl. ausgelassen, tolerant parsen), `session.input_transcript.delta`, `session.output_transcript.delta`, `session.input_audio.muted/unmuted`, `session.*.appended`, `session.delegation.created`, `response.event`, `session.usage.updated` (`usage.seconds` **kumulativ**, `context_window.usage_ratio`, ca. 1×/Min), `session.closed` (`reason`: `close_requested|expired|content|remote_hangup|connection_lost`), `error`, `info`. [offiziell]
 - **Kein** `speech_started`, **kein** „output_audio.done", **keine** Item-IDs oder Turn-Grenzen. Turns bildet die App selbst (Fragmente in Lieferreihenfolge anhängen, Sprecher und Zeitstempel erhalten, Grenze aus Stille, Pydantic AI nutzt 2.000 ms). Sprechanzeige aus dem Player ableiten. [offiziell + extern] https://developers.openai.com/api/docs/guides/live-migration · https://pydantic.dev/docs/ai/realtime/openai-live/
+- Praxis (Jarvis): Live sendet auch in Pausen durchgehend Stille-Deltas → „spricht" nur aus hörbarem Pegel ableiten, nie aus dem Eintreffen von Daten; Details §14.1/§14.2 Nr. 3.
 - Transkripte asynchron und ungenau: nur finale Texte speichern, unterbrochene Antworten markieren; der Chat-/Textverlauf bleibt Wahrheitsquelle, nicht das Live-Transkript (Verlauf kann verdichtet werden). [offiziell] https://developers.openai.com/api/docs/guides/live-migration
 - Kontext 128.000 Tokens; ab 90 % startet eine Ersatz-Engine mit Original-Instructions und ≤ 8.192 Tokens Verlauf. `usage_ratio` beobachten. [offiziell] https://developers.openai.com/api/docs/guides/live-conversations
 - **Sitzungsende:** `session.close` senden, weiterlesen bis `session.closed` (Beispiel wartet bis 15 s), `usage.seconds` **einmal** übernehmen. EOF/Socket-Schließen beendet nicht sauber; Abbruch vor `session.closed` = Nutzung „unbestätigt". Kein automatischer Reconnect: Fortsetzen per Fork (`store:true`) oder neue Sitzung mit Textverlauf in `input`. Maximaldauer: unbelegt, `expires_at` aus `session.started` lesen. [offiziell] https://developers.openai.com/api/docs/guides/live-conversations
@@ -164,6 +169,7 @@ Mit Responses-Delegation (zusammengesetzt, nicht als Ganzes getestet):
 
 - **Live:** Vollduplex, modellgesteuert; kein Cancel-/Truncate-Kommando. Hört der Server auf zu senden, muss die App ihre Audio-Queue selbst leeren (`AudioTrack.flush()`), sonst spielt Gepuffertes weiter. Unterbrechungsverhalten im Prompt steuern („Stop speaking when the user interrupts", „Keep listening while the user pauses to think"). Mute stoppt weder Ausgabe noch Backend. [offiziell] https://developers.openai.com/api/docs/guides/live-migration · https://developers.openai.com/api/docs/guides/live-prompting
 - **Realtime per WebSocket:** Client verwaltet die Wiedergabe. Bei `input_audio_buffer.speech_started` Wiedergabe sofort stoppen, tatsächlich **abgespielte** Millisekunden ermitteln und `conversation.item.truncate` mit `item_id` (Assistenten-Item), `content_index: 0`, `audio_end_ms` senden — **auf die empfangene Audiolänge klemmen** (sonst Fehler). Erfolg: `conversation.item.truncated`. [offiziell] https://developers.openai.com/api/docs/guides/realtime-conversations · https://developers.openai.com/api/reference/resources/realtime/client-events · https://github.com/openai/openai-agents-python/pull/4122
+- Praxis (Jarvis, Live + Echosperre): Eine `session.input_transcript.delta` während der eigenen Rede ist bei geschlossenem Mikrofon die **verspätete** Mitschrift des vorigen Satzes → Ausgabe dann nicht leeren; Unterbrechen per Antippen. Details §14.2 Nr. 4.
 - Realtime per WebRTC/SIP: Server kennt den Wiedergabestand und kürzt automatisch; `output_audio_buffer.clear` nur dort, nach `response.cancel`. [offiziell]
 
 ## 8. Kostenmodell und Preise (Stand 16.10.2026, USD)
@@ -239,6 +245,7 @@ Annahmen: 5 Min Nutzer, 5 Min Assistent, 20 Antworten, 10 Delegationen, 1.000 To
 - **AEC:** `AcousticEchoCanceler.isAvailable()` prüfen, `AcousticEchoCanceler.create(audioRecord.audioSessionId)`, danach `getEnabled()` kontrollieren (Plattform kann AEC je nach AudioSource schon einsetzen); `NoiseSuppressor` analog. Hardware-AEC kann gerätespezifisch wirkungslos sein → Software-AEC (libwebrtc) als Rückfall. [offiziell + extern] https://developer.android.com/reference/android/media/audiofx/AcousticEchoCanceler
 - **Modus und Routing:** `AudioManager.MODE_IN_COMMUNICATION` für die Gesprächsdauer, im `finally` zurücksetzen. Lautsprecher ab API 31 mit `setCommunicationDevice(device)` aus `availableCommunicationDevices`: Rückgabewert prüfen, bis zu 30 s auf Bestätigung (`AudioDeviceCallback`/Listener) warten, bei Fehler `clearCommunicationDevice()` und neu setzen, am Ende `clearCommunicationDevice()`. `setSpeakerphoneOn` ist veraltet. [offiziell] https://developer.android.com/develop/connectivity/bluetooth/ble-audio/audio-manager
 - **Playback:** `AudioTrack` `MODE_STREAM`, 24 kHz mono PCM16, Puffer ≥ `getMinBufferSize * 4`; eingehende Deltas in eine `LinkedBlockingQueue`, eigener Schreib-Thread (poll 50 ms). Bei Unterbrechung Queue leeren + `flush()`. `USAGE_MEDIA`/`CONTENT_TYPE_SPEECH` lässt die Lautstärke regelbar (`USAGE_VOICE_COMMUNICATION` geht auf `STREAM_VOICE_CALL`). Wiedergabe-Ende des Players ist das „fertig gesprochen"-Signal. [extern] https://docs.smallest.ai/atoms/atoms-platform/integrate/mobile-integrations/android-kotlin.md
+- **Abweichung in der Praxis (Jarvis 1.8.100/1.8.105):** `MODE_IN_COMMUNICATION` + `USAGE_VOICE_COMMUNICATION` (+ Bluetooth-SCO) klingt nach Telefon. Jarvis nutzt standardmäßig den **Medienweg**: Ausgabe `USAGE_MEDIA`, kein Telefonmodus, Bluetooth als A2DP; Aufnahme weiter `VOICE_COMMUNICATION` (wegen Geräte-AEC), fest am Handy-Mikrofon, plus Echosperre. Telefonmodus nur als Rückfallweg. Details §14.2 Nr. 1.
 - **Audio-Fokus:** `AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE` mit `USAGE_VOICE_COMMUNICATION`; bei `LOSS`/`LOSS_TRANSIENT` Gespräch beenden bzw. pausieren. [extern]
 - **Hintergrund:** Foreground-Service mit `android:foregroundServiceType="microphone"`, Permission `FOREGROUND_SERVICE_MICROPHONE`, `RECORD_AUDIO` gewährt, `startForeground(..., FOREGROUND_SERVICE_TYPE_MICROPHONE)`. **Nur aus sichtbarer Activity** (oder definierter Ausnahme: Benachrichtigung, Widget, PendingIntent aus sichtbarer App) starten — ab Android 14 sonst `SecurityException`. Reconnect aus dem Hintergrund darf den Service nicht neu starten, sondern im laufenden Service bleiben [Schluss]. `phoneCall`-Typ nur mit echter Telecom-Anbindung. [offiziell] https://developer.android.com/develop/background-work/services/fgs/service-types · https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start
 - **Echo in der Begrüßung (Realtime):** erste Antwort nicht unterbrechbar (`interrupt_response:false`), VAD-Schwelle anheben (Nutzerbericht: threshold 0.85, prefix 300 ms, silence 500 ms), danach zurücksetzen; Kopfhörer-Hinweis. [Community] https://community.openai.com/t/realtime-api-echo-issue-when-on-speaker-phone/1370092
@@ -257,6 +264,158 @@ Annahmen: 5 Min Nutzer, 5 Min Assistent, 20 Antworten, 10 Delegationen, 1.000 To
 - Stimme, Effort (`max` fehlt im SDK), Backend-Modell und Service-Tier daher **konfigurierbar** halten (freier String), beim Start die aufgelöste Konfig aus `session.started` übernehmen und Fehler (`unknown_parameter`, `responses_validation_failed`) als „Option nicht verfügbar" anzeigen. Preise in der App mit Stand-Datum anzeigen. [Schluss aus offiziellen Abweichungen]
 - Realtime-`audio.output.speed` 0,25–1,5 (nur zwischen Antworten änderbar; schnelleres Sprechen klingt per Prompt natürlicher). [offiziell] openai-python `realtime_audio_config_output.py`
 
+## 14. Flüssige Wiedergabe in der Praxis (Jarvis 1.8.100–1.8.108, Android, GPT-Live über WebSocket)
+
+> Stand 16.10.2026, 19:23. Quellen: eigener Code `Jarvis/app/src/main/java/de/frank/jarvis/live/LiveGespraech.kt`,
+> `live/LiveRouting.kt`, `speech/GespraechsFokus.kt`; Commits `dc0e26d3e` (1.8.100) bis `50289b26b` (1.8.108);
+> Versionslog `Jarvis/app/src/main/assets/versionslog.json`; Logcat-Mitschnitt von Franks Live-Test am 16.10.2026,
+> 19:16:27–19:18:45 Uhr (Rohbeleg: `bugs/bug-cases/2026-10-16-jarvis-gpt-live-wiedergabe.md`);
+> `dumpsys media.audio_flinger` vom 16.10.2026, ca. 19:22 Uhr.
+>
+> Markierungen in diesem Abschnitt: **[Messung]** = in Logcat/dumpsys dieses Tests belegt · **[Code-Kommentar]** =
+> Messwert aus einer früheren Sitzung, nur im Quelltext-Kommentar erhalten, Rohprotokoll fehlt · **[Code]** = so
+> umgesetzt, Wirkung nicht einzeln gemessen · **[Vermutung]** · **[offen]**.
+>
+> **Geltungsbereich der Messung:** nur Galaxy Z Fold 8 (SM-F971B), Handy-Lautsprecher, Medienweg mit Echosperre,
+> GPT-Live mit Client-Delegation (Jarvis denkt selbst), ein Gespräch von gut 2 Minuten, Handy im Heim-WLAN.
+> **Nicht gemessen:** Bluetooth/A2DP, Freisprechen (Telefonmodus), Realtime-Pfad, Mobilfunk.
+>
+> **Subjektives Feedback (Frank, Live-Test mit 1.8.108):** „deutlich besser als vorher; Klang, Sprachfluss und Aussprache
+> sehr gut". Positiver Eindruck, **kein Beleg für Fehlerfreiheit**.
+
+### 14.1 Grundbefund: So liefert GPT-Live das Audio
+
+- GPT-Live sendet `session.output_audio.delta` **durchgehend**, auch in Sprechpausen, dann als (fast) digitale Stille.
+  Beleg: „21 Stücke, 2100 ms Ton, davon 0 hörbar" in einem 2-s-Fenster ohne Rede [Messung]. Folge: Ob Jarvis spricht,
+  ist nur am Pegel des Tons erkennbar, nie am Eintreffen von Daten. Es gibt kein „Antwort fertig"-Ereignis (§6).
+- Die Stücke sind 100 ms lang und kommen im Mittel genau in Echtzeit (20 Stücke je 2 s) [Messung]. Der
+  Wiedergabepuffer wächst deshalb **nicht von selbst**; jede Verspätung eines Stücks verbraucht Reserve.
+- Ausnahme am Antwortanfang: Beim Begrüßungssatz lief der Puffer bis an seine Grenze von 1000 ms (Fenster 19:16:34:
+  „Puffer 380–1000 ms, längstes Schreiben 360 ms") [Messung]. Das „längste Schreiben" ist hier `write()`, das am vollen
+  Puffer wartet, kein CPU-Mangel. Deutung: Der Dienst liefert am Anfang zeitweise schneller als Echtzeit [Vermutung].
+  Deshalb ist das Kappen überschüssiger Stille nötig (§14.2 Nr. 8).
+- Empfangsschwankung (größte Lücke zwischen zwei Stücken je 2-s-Fenster, Sollwert 100 ms): Median 148 ms, Maximum
+  386 ms; 20 von 65 Fenstern über 200 ms, 7 über 300 ms, davon nur eines während der Rede (312 ms) [Messung].
+  Frühere Sitzung mit 1.8.107 im WLAN: Stücke „bis gut 200 ms zu spät" [Code-Kommentar].
+- Realtime (`gpt-realtime-*`) liefert dagegen schubweise schneller als Echtzeit und grenzt Antworten selbst ab. Polster
+  und Kappen sind dort abgeschaltet, der Puffer bleibt klein (`minOut * 4`), damit das Kürzen beim Dazwischenreden
+  stimmt [Code].
+
+### 14.2 Ursachen der bisherigen Abhacker und Verzögerungen und was dagegen umgesetzt ist
+
+| Nr. | Version | Symptom | Ursache | Umsetzung | Beleglage |
+|---|---|---|---|---|---|
+| 1 | 1.8.100, 1.8.105 | Live klang nach Telefon (Auto und Handy-Lautsprecher) | Freisprechweg: `MODE_IN_COMMUNICATION` + `USAGE_VOICE_COMMUNICATION`, im Auto Bluetooth-SCO (schmalbandiges Telefonprofil) | **Medienweg** als Standard: Ausgabe `USAGE_MEDIA` + `CONTENT_TYPE_SPEECH`, Audiomodus unangetastet, Bluetooth als A2DP; Aufnahme weiter `VOICE_COMMUNICATION` (nur diese Quelle bekommt die Geräte-AEC), fest am Handy-Mikrofon (`setPreferredDevice(TYPE_BUILTIN_MIC)`), dazu Echosperre. Freisprechen nur als Rückfallweg, wenn gewünscht **und** ein Gerät mit eigenem Mikrofon verbunden ist (`LiveRouting.medienweg`) | [Code]; im Test „Tonweg Medien … Ton: Lautsprecher · Mikro: Handy-Mikrofon", Geräte-AEC „verfügbar=true, aktiv=true" [Messung] |
+| 2 | 1.8.101 | Bluetooth-Lautsprecher verschluckt den Satzanfang | Läuft der AudioTrack leer, geht der Ausgang in Bereitschaft (Standby-Verzögerung 2 s: `Standby delay ns=2000000000` [Messung]); der A2DP-Strom wird ausgesetzt, beim Wiederanlauf fehlt der Anfang [Vermutung, am Bluetooth-Gerät nicht gemessen] | Im Medienweg in Pausen Stille nachschieben (20-ms-Blöcke, `STILLE_MS`). Füll-Stille zählt weder als Ton (Echosperre) noch als gehört (Kürzen) | [Code] |
+| 3 | 1.8.103, 1.8.106 | Anzeige hing auf „Jarvis spricht", Echosperre hielt zu lange bzw. öffnete zu früh | Sperre mit fester Wartezeit bzw. nach eintreffenden Daten; GPT-Live liefert aber auch Stille (§14.1) | Hörbar-Erkennung per Effektivwert (`HOERBAR_EFFEKTIV`); Sperre an die Wiedergabeposition gekoppelt (`playbackHeadPosition` gegen `echtBisFrame`, `kopfBasis` nach `flush()`), danach Nachlauf `ECHO_NACHLAUF_MS`, harter Deckel `ECHO_SPERRE_MAX_MS` nach dem letzten hörbaren Ton. Sprechanzeige zurück, wenn kein hörbarer Ton mehr offen ist und 300 ms nichts Hörbares kam, spätestens nach `STATUS_MAX_MS`. Sperre und Anzeige entscheidet der Mikrofon-Faden, der nie an der Wiedergabe blockiert | Echosperre öffnete 591–1225 ms nach dem letzten geschriebenen hörbaren Stück; kein „Wiedergabe kommt nicht voran" [Messung] |
+| 4 | 1.8.106 | Späte Mitschrift löschte die gerade beginnende Antwort | GPT-Live meldet kein „Nutzer spricht"; `session.input_transcript.delta` diente als Barge-in-Signal. Mit Echosperre bekommt der Dienst während der Rede nur Stille, eine Mitschrift ist dann die verspätete des vorigen Satzes | Mit Echosperre Ausgabe nicht leeren; Unterbrechen per Antippen der Blase (1.8.103), danach Rest der alten Antwort verwerfen (1,5 s ohne hörbaren Ton, höchstens `VERWERFEN_MAX_MS`) | Einmal im Test: „Mitschrift kommt, während Jarvis spricht: Echosperre an, Ausgabe bleibt" [Messung] |
+| 5 | 1.8.107 | Stillelücken mitten in der Rede | Die Füll-Stille aus 1.8.101 wurde schon geschrieben, wenn 20 ms kein neues Stück kam, obwohl noch genug Ton im Puffer lag; ein leicht verspätetes Stück bekam Stille vorgesetzt | Füll-Stille nur nach Füllstand (`gepuffertFrames()` unter der Füllgrenze), nicht nach Zeit; Prüftakt `WARTE_MS` | [Code]; Test: Füll-Stille beim Sprechen insgesamt 60 ms in 52 Fenstern [Messung] |
+| 6 | 1.8.108 | Abhacker im ersten Wort (etwa das „K" von „Klar") | Das Startpolster (1.8.107: 150 ms) kam direkt vor das erste *hörbare* Stück. Lag der leise Wortansatz noch im Stück davor (unter der Hörbar-Schwelle), riss die Polster-Stille das Wort auf [Code-Kommentar]. Außerdem reichten 150 ms nicht: 40–80 ms Füll-Stille im Satz [Code-Kommentar] | Polster 250 ms (`START_POLSTER_MS`), nur **hinter Stille** (`vorherStill`; „ganz still" = Spitze unter `STILLE_SPITZE`, etwa −44 dBFS) und nur nach mindestens `NEUER_SATZ_MS` ohne Ton; nachgefüllt, wenn der Puffer unter Polster minus einem Mischtakt liegt | Im Test vor jedem Satzanfang 220–470 ms im Puffer [Messung] |
+| 7 | 1.8.108 | Strom flog aus dem Mischer | Der Lautsprecher-Mischer holt je Takt 40 ms; mit 40 ms Füllgrenze bekam er in Pausen teils weniger als einen Takt [Code-Kommentar]. Ein leer gestarteter Strom wurde nach einer Sekunde wegen Unterlauf abgeschaltet: „BUFFER TIMEOUT … underrun", danach „restartIfDisabled" [Code-Kommentar] | Füllgrenze in Pausen 80 ms (`FUELL_UNTER_MS`, zwei Takte), beim Sprechen 45 ms (`FUELL_SPRACHE_MS`, knapp über einem Takt); 250 ms Stille **vor** `play()` vorlegen | Lautsprecher-Ausgabethread mit 1920 Frames bei 48 kHz = 40 ms vorhanden [Messung]; ob genau dieser Thread den Live-Ton mischt, wurde nicht erneut zugeordnet. Start-Unterlauf **nicht vollständig behoben**, siehe §14.5 |
+| 8 | 1.8.108 | Unnötige Verzögerung nach einem Empfangsschub | Ein Schub füllt den Puffer, die Reserve bleibt bis zur nächsten Antwort als Verzögerung stehen | In Pausen ab `KAPPEN_PAUSE_MS` ganz stille Stücke kappen, solange mehr als Polster plus `KAPPEN_UEBER_MS` im Puffer liegt | Gekappt bis 860 ms je Fenster, Satzanfang danach 220–470 ms [Messung] |
+| 9 | 1.8.107, 1.8.108 | Risiko: Hintergrundarbeit (Recherchen, Synchronisation, Hinweise) stört Ton und Erkennung (Franks Regel 7) | — | Ton- und Mikrofon-Faden `THREAD_PRIORITY_URGENT_AUDIO`, OkHttp-Lesefaden `THREAD_PRIORITY_AUDIO`; Hinweise von Ablage, Dienst und Programmieraufträgen im Gespräch stumm (`setSilent(GespraechsFokus.stilleHinweise)`; bei Programmieraufträgen nur Zwischenschritte, Rückfrage/Fertig/Problem bleiben hörbar); `LiveGespraech.aktiv` zählt offene Gespräche | [Code]. **Dass Hintergrundlast die Wiedergabe je gestört hat, wurde nie gemessen**; die Prioritäten sind Vorsorge. Im Test „längstes Schreiben" 0–1 ms außer am vollen Puffer [Messung] |
+| 10 | 1.8.108 | Realtime: Modell glaubt, Frank habe Ungehörtes gehört | `audio_end_ms` aus geschriebenen statt gehörten Bytes | `gehoertMs()` = geschrieben minus noch gepuffert; kleiner Puffer nur bei Realtime | [Code], nicht gemessen |
+
+### 14.3 Bewährte Einstellungen (Stand 1.8.108)
+
+Alle Werte in `Jarvis/app/src/main/java/de/frank/jarvis/live/LiveGespraech.kt` (Konstanten im `companion object` ab Zeile 1036). Werte nur mit Messung vorher und nachher ändern und den Messwert im Kommentar an der Konstante festhalten.
+
+| Konstante / Einstellung | Wert | Zweck | Herkunft |
+|---|---|---|---|
+| Format | PCM16 mono 24 kHz, Senden in 100-ms-Blöcken (4.800 Byte) | OpenAI-Vorgabe (§11) | [offiziell] |
+| `AudioRecord` | `VOICE_COMMUNICATION`, Puffer `max(minIn, 9600) * 2`, Geräte-AEC und `NoiseSuppressor` an | Echo-Unterdrückung | [Code] |
+| `AudioTrack` (Medienweg) | `USAGE_MEDIA` + `CONTENT_TYPE_SPEECH`, `MODE_STREAM` | Medienqualität statt Telefon | [Code] |
+| `AudioTrack`-Puffer | GPT-Live `max(minOut * 4, 1 s)`, Realtime `minOut * 4` (Zeile 661) | Platz für Polster und Schübe, ohne dass `write()` blockiert; die Verzögerung bestimmt der Füllstand, nicht die Größe | Test: Mindestpuffer 120 ms, Puffer 1000 ms [Messung] |
+| Vorlauf vor `play()` | 250 ms Stille (Zeile 667) | Kein leerer Start | [Code-Kommentar] |
+| `START_POLSTER_MS` | 250 | Reserve gegen Empfangslücken | 150 ms reichten nicht [Code-Kommentar] |
+| `NEUER_SATZ_MS` | 300 | ab so viel Stille gilt Ton als Satzanfang | [Code] |
+| `MISCHTAKT_MS` | 40 | Fold-8-Lautsprechertakt (1920 Frames @ 48 kHz) | [Messung, dumpsys] |
+| `FUELL_UNTER_MS` | 80 | Füll-Stille in Pausen erst unter zwei Takten | 40 ms zu knapp [Code-Kommentar] |
+| `FUELL_SPRACHE_MS` | 45 | Füll-Stille beim Sprechen erst knapp über einem Takt | [Code] |
+| `STILLE_MS` | 20 | Länge eines Füll-Stilleblocks | [Code] |
+| `WARTE_MS` | 10 | Prüftakt des Ton-Fadens im Medienweg | [Code] |
+| `KAPPEN_PAUSE_MS` / `KAPPEN_UEBER_MS` | 600 / 30 | Überschuss-Stille erst in längeren Pausen kappen | [Code] |
+| `STILLE_SPITZE` | 200 (etwa −44 dBFS) | „ganz still" = darf gekappt werden, Polster darf dahinter | [Code] |
+| `HOERBAR_EFFEKTIV` | 120 (Effektivwert PCM16) | hörbarer Ton vs. Stille | [Code] |
+| `ECHO_NACHLAUF_MS` | 400 | Mikrofon bleibt nach dem Kopf noch zu (Puffer, Bluetooth-Strecke) | [Code] |
+| `ECHO_SPERRE_MAX_MS` | 3000 | spätestens dann Mikrofon offen | [Code] |
+| `STATUS_MAX_MS` | 4000 | spätestens dann „Ich höre zu" | [Code] |
+| `VERWERFEN_MAX_MS` | 10000 | Rest einer abgebrochenen Antwort höchstens so lange verwerfen | [Code] |
+| OkHttp | `readTimeout(0)`, `pingInterval(20 s)` | Dauerverbindung | [Code] |
+| Fäden | `jarvis-live-ton` und `jarvis-live-mikro` `URGENT_AUDIO`, Socket-Leser `AUDIO` | Vorrang vor Hintergrundarbeit | [Code] |
+
+Bauregeln, die sich daraus ergeben:
+- Füll-Stille nur nach Füllstand schreiben, nie nach Zeit und nie, solange noch genug Ton im Puffer liegt.
+- Ein Polster nie direkt vor ein Stück legen, das hinter Ton folgt; nur hinter Stille.
+- Den Sprechzustand von GPT-Live nie aus dem Datenfluss ableiten, nur aus hörbarem Pegel und der Wiedergabeposition.
+- Nichts Blockierendes (auch kein Log) zwischen Füllstandsmessung und `write()`; protokolliert wird danach.
+- Echosperre und Sprechanzeige im Mikrofon-Faden entscheiden, nicht im Ton-Faden (der kann in `write()` hängen).
+- Neue Benachrichtigungen, die während eines Gesprächs feuern können, mit `setSilent(GespraechsFokus.stilleHinweise)`.
+
+### 14.4 Messergebnis des Live-Tests vom 16.10.2026 (1.8.108) [Messung]
+
+- Dauer: 19:16:27 („Verbinde …") bis 19:18:45, 14 Sprechphasen („Jarvis spricht") mit 16 Satzanfängen, eine
+  Client-Delegation.
+- Unterläufe laut `AudioTrack.underrunCount`: **0** in allen 52 Messfenstern.
+- Füll-Stille während der Rede: **60 ms insgesamt**, in einem einzigen Fenster (19:16:46), zeitgleich mit einer
+  Empfangslücke von 312 ms mitten in der Rede, bei nur 60 ms Puffer vor dem Satzanfang.
+- Puffer vor einem Satzanfang: 220–470 ms bei 14 Satzanfängen; zweimal lag er darunter (60 und 180 ms) und das Polster
+  füllte direkt davor auf 250 ms auf. Der Puffer am Satzanfang ist zugleich die zusätzliche Verzögerung bis zum Hören.
+- Echosperre öffnete 591–1225 ms nach dem letzten geschriebenen hörbaren Stück (1225 ms beim Begrüßungssatz mit vollem
+  Puffer, sonst 591–928 ms).
+- „Längstes Schreiben" 0–1 ms, außer 94 ms und 360 ms in den ersten Fenstern am vollen Puffer.
+- Delegation (Jarvis-Agent, Client-Delegation): „Jarvis schaut nach" 19:18:17,2 → `session.commentary.appended`
+  19:18:30,7, also gut 13 s Antwortzeit des Backends. Das ist Backend-Latenz, kein Audioproblem; Hebel dafür in §5.1.
+
+### 14.5 Offene Punkte und Vermutungen
+
+- **[offen]** Beim Start erscheint trotz Vorlauf zweimal `restartIfDisabled … disabled due to previous underrun,
+  restarting` (19:16:31,4 und 19:16:32,5), vor dem ersten hörbaren Wort; `underrunCount` blieb 0. Die
+  Versionslog-Aussage von 1.8.108 „der Ton startet ohne Unterlauf" ist damit **nicht belegt**. Ob man es hört, ist
+  unbekannt (Frank hat nichts bemängelt). Spur [Vermutung]: Im ersten Fenster wurden 670 ms Stille gekappt.
+- **[offen]** `AudioFlinger: moveEffectChain_ll: effect chain for session 0 not on source thread` beim Start und bei
+  Routing-Meldungen. Bedeutung unklar, keine hörbare Wirkung bekannt.
+- **[offen]** Eine Empfangslücke von über 300 ms mitten in der Rede reicht weiterhin für kurze Füll-Stille (60 ms).
+  Ein größeres Polster würde jede Antwort weiter verzögern; Abwägung Flüssigkeit gegen Reaktionszeit ist nicht gemessen.
+- **[offen]** Bluetooth/A2DP, Freisprechen, Realtime und Mobilfunk sind ohne Messprotokoll; Franks positiver Eindruck
+  gilt nur für den getesteten Weg (Handy-Lautsprecher, Medienweg).
+- **[offen]** Ob Hintergrundlast (Recherche, Synchronisation) die Wiedergabe je gestört hat, ist nicht gemessen. Zum
+  Prüfen: während einer laufenden Jarvis-Recherche ein Live-Gespräch führen und die Werte aus §14.6 vergleichen.
+- Log-Eigenheit, kein Fehler: Der erste „Satzanfang … Stille davor 1792170992339 ms" kommt vom Startwert 0 der Zeitmarke.
+
+### 14.6 Rückfall-Prüfung (nach jeder Änderung an `live/`, Pflicht vor dem Commit)
+
+1. Installieren, Logcat leeren (`adb -s <IP>:5555 logcat -c`), dann ein Live-Gespräch von mindestens 2 Minuten mit
+   mehreren Antworten und einer Delegation führen. Für den Vorrang-Test zusätzlich eines während einer Recherche.
+2. Logcat sichern:
+   ```powershell
+   adb -s <IP>:5555 logcat -d -v time -s JarvisLiveRouting:* AudioFlinger:W AudioTrack:W > live-logcat.txt
+   ```
+3. Auswerten:
+   ```powershell
+   $w = Select-String -Path live-logcat.txt 'Wiedergabe in'
+   "Unterläufe: " + ($w | % { [int]([regex]::Match($_.Line,'Unterläufe \+(\d+)').Groups[1].Value) } | Measure -Sum).Sum
+   "Füll-Stille beim Sprechen: " + ($w | % { [int]([regex]::Match($_.Line,'beim Sprechen (\d+) ms').Groups[1].Value) } | Measure -Sum).Sum + " ms"
+   $g = Select-String -Path live-logcat.txt 'GPT-Live-Ausgabe in' | % { [int]([regex]::Match($_.Line,'größte Lücke (\d+) ms').Groups[1].Value) }
+   "Empfangslücke max / Median: " + ($g | Measure -Max).Maximum + " / " + ($g | Sort)[[int]($g.Count/2)] + " ms"
+   "restartIfDisabled: " + (Select-String -Path live-logcat.txt 'restartIfDisabled').Count
+   "Wiedergabe hängt: " + (Select-String -Path live-logcat.txt 'Wiedergabe kommt nicht voran').Count
+   Select-String -Path live-logcat.txt 'Satzanfang|Echosperre auf|Gesprächsbeginn|Tatsächlich' | % { $_.Line }
+   ```
+4. Grenzwerte (Referenz = Test 16.10.2026 mit 1.8.108):
+
+   | Prüfwert | Soll | Referenz 1.8.108 |
+   |---|---|---|
+   | Unterläufe (Summe) | 0 | 0 |
+   | Füll-Stille beim Sprechen | 0; einzelne ≤ 60 ms nur bei gleichzeitiger Empfangslücke über dem Polster | 60 ms (Lücke 312 ms) |
+   | „Wiedergabe kommt nicht voran" | 0 | 0 |
+   | Puffer am Satzanfang | etwa 200–500 ms; deutlich mehr = unnötige Verzögerung, unter 100 ms = Polster greift nicht | 220–470 ms |
+   | Echosperre auf nach letztem Ton | ≤ ca. 1300 ms | 591–1225 ms |
+   | `restartIfDisabled` | notieren; mehr als 2 beim Start oder welche mitten im Gespräch = Rückfall | 2 beim Start |
+   | `Gesprächsbeginn` / `Tatsächlich` | erwarteter Tonweg, Ausgabe und Mikrofon | Medien · Lautsprecher · Handy-Mikrofon |
+
+5. Hörprobe durch Frank (Satzanfänge vollständig, kein Stottern, kein Telefonklang). Ergänzend, ersetzt die Zahlen nicht.
+
 ## 🔗 Bezug zum Bug-Almanach
 
 | Best-Practice | Bug-Abschnitt (`bugs/apis/openai-live-realtime.md`) |
@@ -272,3 +431,4 @@ Annahmen: 5 Min Nutzer, 5 Min Assistent, 20 Antworten, 10 Delegationen, 1.000 To
 | §11 Android | F1–F12 |
 | §12 Sicherheit | D6 |
 | §13 Optionskataloge | A13, E1, E2 |
+| §14 Praxis Jarvis (Wiedergabe) | F13–F19 |

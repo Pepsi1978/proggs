@@ -37,6 +37,8 @@
 | 13 | KI unterbricht sich selbst (Lautsprecher, Samsung) | AEC prüfen/Software-AEC, erste Antwort nicht unterbrechbar, VAD-Schwelle hoch | F1, F2, F10 |
 | 14 | `SecurityException` beim Mikrofon-FGS | Foreground-Service `microphone` nur aus sichtbarer Activity starten (Android 14+) | F9 |
 | 15 | Altmodelle | `gpt-realtime`/`-mini` Abschaltung 20.01.2027; `gpt-4o-*-transcribe`/`whisper-1` 26.02.2027 | E3, E4 |
+| 16 | GPT-Live hackt (Wortanfang, Lücken im Satz) / „spricht" hängt | Live liefert Stille in Echtzeit: Sprechen nur per Pegel; Füll-Stille nur nach Füllstand; Polster nur hinter Stille in Pausen; Logcat-Prüfung Best Practice §14.6 | F13, F15, F16, F17 |
+| 17 | Telefonklang / Hinweiston über Live-Stimme | Medienweg statt Telefonmodus; Hinweise im Gespräch `setSilent` | F18, F19 |
 
 ---
 
@@ -521,6 +523,55 @@
 - **FIX:** `setCommunicationDevice(device)` aus `availableCommunicationDevices`, Rückgabewert prüfen, bis 30 s auf Bestätigung warten, bei Fehler `clearCommunicationDevice()` + erneut; am Ende `clearCommunicationDevice()`; `MODE_IN_COMMUNICATION` im `finally` zurücksetzen.
 - **Quelle:** https://developer.android.com/develop/connectivity/bluetooth/ble-audio/audio-manager [offiziell]
 
+### 13. GPT-Live: „spricht"-Anzeige hängt, Echosperre hält zu lange ⭐
+- **Symptom:** Anzeige bleibt auf „Jarvis spricht", Mikrofon bleibt nach der Antwort gesperrt oder öffnet zu früh.
+- **Ursache:** GPT-Live sendet auch in Pausen durchgehend Stille-Deltas in Echtzeit; wer „spricht" am Eintreffen von Daten oder mit fester Wartezeit festmacht, liegt falsch [Messung Jarvis 16.10.2026: „21 Stücke, 2100 ms Ton, davon 0 hörbar"].
+- **Versionen:** Jarvis bis 1.8.105; behoben 1.8.103/1.8.106.
+- **FIX:** Sprechen nur aus hörbarem Pegel (Effektivwert) ableiten; Sperre an `playbackHeadPosition` hinter dem letzten hörbaren Frame koppeln, kurzer Nachlauf, harter Deckel nach dem letzten Ton; Entscheidung im Mikrofon-Faden, der nie an `write()` blockiert.
+- **Quelle:** eigener Code `Jarvis/.../live/LiveGespraech.kt`, Commits `b0655e53a`, `2ffd66945`; Best Practice §14.2 Nr. 3.
+
+### 14. GPT-Live + Echosperre: späte Mitschrift löscht die neue Antwort
+- **Symptom:** Jarvis beginnt zu sprechen und verstummt sofort.
+- **Ursache:** `session.input_transcript.delta` als Barge-in-Signal; bei geschlossenem Mikrofon ist eine Mitschrift während der Rede die verspätete des vorigen Satzes.
+- **Versionen:** Jarvis bis 1.8.105; behoben 1.8.106 (im Test 16.10.2026 einmal korrekt abgefangen).
+- **FIX:** Mit Echosperre Ausgabe nicht leeren; Unterbrechen per Antippen anbieten.
+- **Quelle:** Commit `2ffd66945`; Best Practice §14.2 Nr. 4.
+
+### 15. Stillelücken mitten in der Rede durch Füll-Stille ⭐
+- **Symptom:** Rede stockt kurz mitten im Satz.
+- **Ursache:** Füll-Stille (gegen Ausgang-Standby) wurde nach Zeit geschrieben, sobald 20 ms kein Stück kam, obwohl noch Ton im Puffer lag; das verspätete Stück bekam Stille vorgesetzt.
+- **Versionen:** Jarvis 1.8.101–1.8.106; behoben 1.8.107.
+- **FIX:** Füll-Stille nur nach Füllstand (unter etwa zwei Mischtakten in Pausen, knapp über einem beim Sprechen).
+- **Quelle:** Commit `fb2b06d9f`; Best Practice §14.2 Nr. 5.
+
+### 16. Abhacker im ersten Wort durch falsch platziertes Polster ⭐
+- **Symptom:** Wortanfang zerrissen („K … lar").
+- **Ursache:** Polster-Stille direkt vor das erste *hörbare* Stück gelegt; der leise Wortansatz lag im Stück davor unter der Hörbar-Schwelle [Code-Kommentar, Rohprotokoll nicht erhalten].
+- **Versionen:** Jarvis 1.8.107; behoben 1.8.108.
+- **FIX:** Polster nur hinter digitaler Stille (Spitzenwert-Schwelle) und nur in Pausen aufbauen; 250 statt 150 ms.
+- **Quelle:** Commit `50289b26b`; Best Practice §14.2 Nr. 6.
+
+### 17. Puffer unter einem Mischtakt / leerer Start → Strom fliegt aus dem Mischer
+- **Symptom:** Logcat `AudioTrack: restartIfDisabled … disabled due to previous underrun, restarting`, vorher „BUFFER TIMEOUT … underrun".
+- **Ursache:** Lautsprecher-Mischer (Fold 8) holt 40 ms je Takt (dumpsys: 1920 Frames @ 48 kHz); Füllgrenze 40 ms bzw. leer gestarteter Track reicht nicht.
+- **Versionen:** Jarvis bis 1.8.107; teilweise behoben 1.8.108. **Offen:** Im Test 16.10.2026 trotz Vorlauf zweimal `restartIfDisabled` beim Start (vor dem ersten Wort), `underrunCount` 0.
+- **FIX:** Füllgrenze ≥ zwei Mischtakte in Pausen; Stille vor `play()` vorlegen; Start-Restfall weiter beobachten (Best Practice §14.5).
+- **Quelle:** Commit `50289b26b`; Rohbeleg `bugs/bug-cases/2026-10-16-jarvis-gpt-live-wiedergabe.md`.
+
+### 18. Telefonklang im Live-Gespräch
+- **Symptom:** Stimme schmalbandig wie ein Anruf, auch am Handy-Lautsprecher.
+- **Ursache:** `MODE_IN_COMMUNICATION` + `USAGE_VOICE_COMMUNICATION`, im Auto Bluetooth-SCO.
+- **Versionen:** Jarvis 1.8.94–1.8.104; behoben 1.8.100 (Bluetooth) und 1.8.105 (ohne Bluetooth).
+- **FIX:** Medienweg: `USAGE_MEDIA`, kein Telefonmodus, A2DP; Aufnahme `VOICE_COMMUNICATION` am Handy-Mikrofon plus Echosperre; Freisprechen nur als Rückfallweg.
+- **Quelle:** Commits `dc0e26d3e`, `10952d23e`; Best Practice §14.2 Nr. 1.
+
+### 19. Hinweistöne aus Hintergrundarbeit laufen über die Live-Stimme
+- **Symptom:** Benachrichtigungston (Ablage, Recherche, Programmierauftrag) mitten in Jarvis' Rede.
+- **Ursache:** Hintergrundarbeit meldet sich mit Ton, ohne zu wissen, dass ein Gespräch läuft.
+- **Versionen:** Jarvis bis 1.8.107; behoben 1.8.108.
+- **FIX:** `setSilent(GespraechsFokus.stilleHinweise)` (true, solange Gesprächsmodus oder `LiveGespraech.aktiv`); Ton- und Mikrofon-Faden mit `URGENT_AUDIO`. Störung durch CPU-Last selbst ist nicht gemessen.
+- **Quelle:** Commits `fb2b06d9f`, `50289b26b`; Best Practice §14.2 Nr. 9.
+
 ## G) Kosten und Abrechnung
 
 ### 1. Live kostet bei Stille und Mute weiter ⭐
@@ -594,4 +645,5 @@
 | D1–D9 | §5, §10, §12 |
 | E1–E8 | §2 Modell-IDs, §13 Optionskataloge |
 | F1–F12 | §11 Android |
+| F13–F19 | §14 Praxis Jarvis (Wiedergabe, Rückfall-Prüfung) |
 | G1–G8 | §8 Preise, §9 Kostenhebel |
