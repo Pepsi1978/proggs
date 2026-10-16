@@ -165,9 +165,11 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(6.dp))
             val sendbar = vm.entwurf.isNotBlank() || vm.anhaenge.isNotEmpty()
+            // Symbol in der deckenden Grundfarbe: flaecheStark ist im dunklen Design fast durchsichtig, der Pfeil
+            // verschwand dann im hellen Kreis.
             when {
-                vm.denkt -> RundBlase(f.text, Icons.Rounded.Stop, "Abbrechen", f.flaecheStark) { vm.abbrechen() }
-                sendbar -> RundBlase(f.text, Icons.Rounded.ArrowUpward, "Senden", f.flaecheStark) { vm.entwurfSenden() }
+                vm.denkt -> RundBlase(f.text, Icons.Rounded.Stop, "Abbrechen", f.hgOben) { vm.abbrechen() }
+                sendbar -> RundBlase(f.text, Icons.Rounded.ArrowUpward, "Senden", f.hgOben) { vm.entwurfSenden() }
                 else -> Box(Modifier.size(48.dp).clip(CircleShape).background(LIVE_ORANGE).antippen { vm.liveTippen() }, contentAlignment = Alignment.Center) {
                     Wellen(Color.White, Modifier.size(24.dp))
                 }
@@ -295,7 +297,7 @@ private fun LiveLeiste(vm: AppViewModel) {
                 color = LIVE_ORANGE, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.size(46.dp).clip(CircleShape).background(if (vm.liveStumm) f.text else f.flaeche).antippen { vm.liveStummSchalten() }, contentAlignment = Alignment.Center) {
-            Icon(if (vm.liveStumm) Icons.Rounded.MicOff else Icons.Rounded.Mic, if (vm.liveStumm) "Mikrofon an" else "Stumm schalten", tint = if (vm.liveStumm) f.flaecheStark else f.text, modifier = Modifier.size(24.dp))
+            Icon(if (vm.liveStumm) Icons.Rounded.MicOff else Icons.Rounded.Mic, if (vm.liveStumm) "Mikrofon an" else "Stumm schalten", tint = if (vm.liveStumm) f.hgOben else f.text, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(8.dp))
         // Rote Fläche mit schwingenden Audiostrichen statt Telefonhörer; Antippen beendet das Gespräch wie bisher.
