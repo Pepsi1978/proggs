@@ -287,6 +287,12 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
     }
 }
 
+/**
+ * Nachrichtentypen, die nicht Jarvis selbst schreibt, sondern ein fremder Dienst zustellt (Fortschritt, Abschluss und Fehler
+ * einer Programmier-Sitzung über den Relay). Rückfragen („rueckfrage“) haben ihre eigene Karte und gehören nicht hierher.
+ */
+private val EXTERNE_ARTEN = setOf("programmieren")
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
@@ -309,6 +315,13 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
                 }
             }
             Kopierknopf(vm, n.text, "Frage")
+        } else if (n.art in EXTERNE_ARTEN) {
+            // Von außen zugestellte Meldung (z. B. Fortschritt einer Programmier-Sitzung am PC): keine Antwort von Jarvis,
+            // daher mit Punkt davor und ohne Aktionsleiste (Wiederholen, Bewerten, Vorlesen ergeben hier keinen Sinn).
+            Row(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp, bottom = 4.dp)) {
+                Text("•", color = if (f.dunkel) f.text else Color.Black, fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
+                Markierbar(hell = false) { ProgrammierText(n.text, Modifier.weight(1f), farbe = f.text) }
+            }
         } else {
             // Jarvis' Antwort: Fließtext über die ganze Breite, ohne Blase, gut gegliedert.
             Markierbar(hell = false) {
