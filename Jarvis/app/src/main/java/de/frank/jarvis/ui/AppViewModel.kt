@@ -674,6 +674,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     var liveAktiv by mutableStateOf(false); private set
     var liveStatus by mutableStateOf(""); private set
+    /** Tonweg, Ausgabegerät und Mikrofon, wie das System sie im Live-Gespräch tatsächlich nutzt. */
+    var liveAudioweg by mutableStateOf(""); private set
     var livePegel by androidx.compose.runtime.mutableFloatStateOf(0f); private set
     var liveStumm by mutableStateOf(false); private set
     /** Was das laufende (oder zuletzt beendete) Live-Gespräch bisher gekostet hat, in USD. */
@@ -719,6 +721,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         liveAktiv = true
         liveStumm = false
         liveStatus = "Verbinde …"
+        liveAudioweg = ""
         val stand = ++liveStand
         // Sofort, nicht erst nach dem Mikrofon: Sonst zeigt die Leiste kurz die Zahlen des letzten Gesprächs.
         liveKosten = 0.0
@@ -740,6 +743,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 getApplication(), sprache.openAiApiKey, optionen, liveAnweisung(optionen.istLive), bisher,
                 beiStatus = { s -> haupt { liveStatus = s } },
                 beiPegel = { p -> livePegel = p },
+                beiAudioweg = { a -> haupt { liveAudioweg = a } },
                 beiNutzerText = { t -> haupt { liveNachricht(Nachricht(true, t)) } },
                 beiJarvisText = { t -> haupt { liveNachricht(Nachricht(false, t)) } },
                 beiWerkzeug = { id, auftrag -> haupt { liveWerkzeug(id, auftrag) } },
@@ -792,6 +796,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         live = null
         livePegel = 0f
         liveStatus = ""
+        liveAudioweg = ""
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
         de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         de.frank.jarvis.speech.GespraechsFokus.freigeben()

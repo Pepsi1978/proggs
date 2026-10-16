@@ -46,6 +46,8 @@ class LiveGespraech(
     private val verlauf: List<Pair<Boolean, String>>,
     private val beiStatus: (String) -> Unit,
     private val beiPegel: (Float) -> Unit,
+    /** Was das System tatsächlich nutzt: Tonweg, Ausgabegerät und Mikrofon, für die Live-Leiste. */
+    private val beiAudioweg: (String) -> Unit,
     private val beiNutzerText: (String) -> Unit,
     private val beiJarvisText: (String) -> Unit,
     /** Jarvis soll etwas nachschlagen oder erledigen; die Antwort kommt über [ergebnis] mit derselben Kennung zurück. */
@@ -75,6 +77,13 @@ class LiveGespraech(
     private var wiedergabe: AudioTrack? = null
     private val ausgabe = LinkedBlockingQueue<ByteArray>()
     private var alterModus = AudioManager.MODE_NORMAL
+    /** Medienweg (A2DP/Kopfhörer, Handy-Mikrofon, kein Telefonmodus) statt Freisprechen; fest ab Gesprächsbeginn. */
+    @Volatile private var medienweg = false
+    /** Im Medienweg: Mikrofon zu, solange Jarvis spricht, damit er sich nicht selbst hört. */
+    @Volatile private var echoSperre = false
+    /** Zeitpunkt des letzten Schreibens in die Wiedergabe: für den Nachlauf der Echosperre (Puffer und Bluetooth-Verzögerung). */
+    @Volatile private var letzteAusgabeMs = 0L
+    private var routenWaechter: android.media.AudioRouting.OnRoutingChangedListener? = null
 
     // ---- Kosten ----
     @Volatile private var liveSekunden = 0.0
@@ -494,16 +503,31 @@ class LiveGespraech(
     private fun tonStarten() {
         val mikroOffen = synchronized(tonSperre) {
             if (aufnahme != null || !laeuft) return
-            alterModus = audio.mode
-            audio.mode = AudioManager.MODE_IN_COMMUNICATION
-            routingStarten()
+            // Medienweg nur mit Bluetooth-Medien oder Kopfhörer: Am Handy-Lautsprecher bringt er keinen besseren Klang,
+            // nimmt aber die Echounterdrückung des Telefonmodus weg. Dann bleibt es beim bisherigen Weg.
+            val ausgaenge = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            medienweg = st["audioweg"] == "medien" && LiveRouting.medienAusgang(ausgaenge.map { it.type })
+            echoSperre = medienweg && st["echo_sperre"] == "an"
+            Log.i(LiveRouting.TAG, "Gesprächsbeginn: Tonweg " + (if (medienweg) "Medien (kein Telefonmodus), Echosperre=$echoSperre" else "Freisprechen (Telefonmodus)") +
+                ", Wunsch ${st["audioweg"]}, Ausgänge " + ausgaenge.joinToString { "${LiveRouting.name(it.type)} „${it.productName}“" })
+            if (!medienweg) {
+                alterModus = audio.mode
+                audio.mode = AudioManager.MODE_IN_COMMUNICATION
+                routingStarten()
+            }
             // Das Autoradio schickt nach dem Freisprechen ein Play; es soll hier landen, nicht bei Poweramp.
             MedienTastenRiegel.sperren(app)
 
             val rate = 24000
             val minIn = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            // VOICE_COMMUNICATION auch im Medienweg: Nur diese Quelle bekommt die Echounterdrückung des Geräts.
             val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minIn, 9600) * 2)
             aufnahme = rec
+            if (medienweg) {
+                // Fest das Handy-Mikrofon: Das Bluetooth-Mikrofon ginge nur über das Telefonprofil und risse den Medienton mit.
+                audio.getDevices(AudioManager.GET_DEVICES_INPUTS).firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC }
+                    ?.let { m -> runCatching { rec.setPreferredDevice(m) } }
+            }
             if (rec.state != AudioRecord.STATE_INITIALIZED) false
             else {
                 tonAnlegen(rec, rate)
@@ -524,7 +548,9 @@ class LiveGespraech(
 
         val minOut = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val track = AudioTrack.Builder()
-            .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            // Medienweg: USAGE_MEDIA folgt sicher dem Medienton (A2DP); Freisprechen: Gesprächston über das Kommunikationsgerät.
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(if (medienweg) AudioAttributes.USAGE_MEDIA else AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             .setAudioFormat(AudioFormat.Builder().setSampleRate(rate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).setEncoding(AudioFormat.ENCODING_PCM_16BIT).build())
             .setBufferSizeInBytes(minOut * 4)
             .setTransferMode(AudioTrack.MODE_STREAM)
@@ -535,6 +561,12 @@ class LiveGespraech(
         // Kam beenden() während des Anlegens, sofort alles wieder freigeben: sonst blieben Mikrofon und Audiomodus belegt.
         if (!laeuft) { tonAus(); return }
 
+        // Zeigt, was das System tatsächlich nutzt, auch nach Verbinden oder Trennen im Gespräch.
+        val waechter = android.media.AudioRouting.OnRoutingChangedListener { audiowegMelden() }
+        runCatching { track.addOnRoutingChangedListener(waechter, hauptFaden); rec.addOnRoutingChangedListener(waechter, hauptFaden) }
+        routenWaechter = waechter
+        audiowegMelden()
+
         // 100-ms-Blöcke (4.800 Byte), wie OpenAI empfiehlt; Fehler in den Fäden enden als Meldung, nie als Absturz.
         Thread({
             val puffer = ByteArray(4800)
@@ -543,6 +575,8 @@ class LiveGespraech(
                 laeuft && aufnahme === rec && runCatching { rec.startRecording() }.isSuccess && rec.recordingState == AudioRecord.RECORDSTATE_RECORDING
             }
             if (!ok) { if (laeuft) { beiFehler("Das Mikrofon ließ sich für das Live-Gespräch nicht starten."); beenden() }; return@Thread }
+            // Das Mikrofon kennt sein Gerät erst nach dem Start.
+            hauptFaden.post { audiowegMelden() }
             val anhaengen = if (live) "session.input_audio.append" else "input_audio_buffer.append"
             while (laeuft) {
                 var n = 0
@@ -558,7 +592,9 @@ class LiveGespraech(
                 while (i + 1 < n) { val s = (puffer[i].toInt() and 0xFF) or (puffer[i + 1].toInt() shl 8); summe += s.toDouble() * s; i += 2 }
                 beiPegel((kotlin.math.sqrt(summe / (n / 2)) / 6000.0).toFloat().coerceIn(0f, 1f))
                 // GPT-Live hat eigenes Stummschalten (session.input_audio.mute); Realtime bekommt Stille.
-                val stueck = if (stumm && !live) ByteArray(n) else puffer.copyOf(n)
+                // Echosperre: Solange Jarvis spricht (samt Nachlauf), bekommt der Dienst Stille statt des eigenen Echos.
+                val echoZu = echoSperre && (ausgabe.isNotEmpty() || System.currentTimeMillis() - letzteAusgabeMs < ECHO_NACHLAUF_MS)
+                val stueck = if ((stumm && !live) || echoZu) ByteArray(n) else puffer.copyOf(n)
                 ws?.send(JSONObject().put("type", anhaengen).put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
             }
         }, "jarvis-live-mikro").start()
@@ -568,7 +604,9 @@ class LiveGespraech(
                 val stueck = runCatching { ausgabe.poll(200, TimeUnit.MILLISECONDS) }.getOrNull()
                 // GPT-Live meldet kein Ende der Rede: Ist die Ausgabe leer gelaufen, hört Jarvis wieder zu.
                 if (stueck == null) { if (live && sprichtGerade && ausgabe.isEmpty()) { sprichtGerade = false; if (laeuft) beiStatus("Ich höre zu") }; continue }
+                letzteAusgabeMs = System.currentTimeMillis()
                 runCatching { wiedergabe?.write(stueck, 0, stueck.size) }
+                letzteAusgabeMs = System.currentTimeMillis()
                 abgespieltBytes += stueck.size
             }
         }, "jarvis-live-ton").start()
@@ -578,6 +616,18 @@ class LiveGespraech(
         ausgabe.clear()
         sprichtGerade = false
         wiedergabe?.let { runCatching { it.pause(); it.flush(); it.play() } }
+    }
+
+    /** Meldet Tonweg, Ausgabe und Mikrofon, wie das System sie gerade tatsächlich geroutet hat. */
+    private fun audiowegMelden() {
+        val track = wiedergabe ?: return
+        val raus = runCatching { track.routedDevice }.getOrNull()
+        val rein = runCatching { aufnahme?.routedDevice }.getOrNull()
+        fun geraet(d: AudioDeviceInfo?) = d?.let { LiveRouting.name(it.type) + (it.productName?.toString()?.takeIf { n -> n.isNotBlank() && !n.equals(android.os.Build.MODEL, true) }?.let { n -> " „$n“" } ?: "") } ?: "Systemwahl"
+        val weg = if (medienweg) "Medienton" + (if (echoSperre) " · Echosperre" else "") else "Freisprechen (Telefonklang)"
+        val text = "$weg · Ton: ${geraet(raus)} · Mikro: ${geraet(rein)}"
+        Log.i(LiveRouting.TAG, "Tatsächlich: $text")
+        if (laeuft) beiAudioweg(text)
     }
 
     // ---- Ausgabegerät: Auto/Headset vor Handy-Lautsprecher, auch beim Verbinden und Trennen im Gespräch ----
@@ -706,6 +756,8 @@ class LiveGespraech(
     }
 
     private fun tonAus() { synchronized(tonSperre) {
+        routenWaechter?.let { w -> runCatching { wiedergabe?.removeOnRoutingChangedListener(w) }; runCatching { aufnahme?.removeOnRoutingChangedListener(w) } }
+        routenWaechter = null
         runCatching { aufnahme?.stop() }
         runCatching { aufnahme?.release() }
         aufnahme = null
@@ -717,11 +769,15 @@ class LiveGespraech(
         runCatching { wiedergabe?.release() }
         wiedergabe = null
         if (routingAktiv || geraeteWaechter != null) routingBeenden()
-        runCatching { audio.mode = alterModus }
+        // Den Modus nur zurückstellen, wenn das Gespräch ihn gesetzt hat; der Medienweg fasst ihn nie an (etwa während eines Anrufs).
+        if (!medienweg) runCatching { audio.mode = alterModus }
         MedienTastenRiegel.freigebenSpaeter()
     } }
 
     companion object {
+        /** Echosperre bleibt so lange nach dem letzten Ton zu: Wiedergabepuffer plus Bluetooth-Verzögerung. */
+        private const val ECHO_NACHLAUF_MS = 600L
+
         /** Die Stimmen der Realtime-API; Marin und Cedar klingen am natürlichsten. */
         val STIMMEN = listOf("marin" to "Marin", "cedar" to "Cedar", "alloy" to "Alloy", "ash" to "Ash", "ballad" to "Ballad",
             "coral" to "Coral", "echo" to "Echo", "sage" to "Sage", "shimmer" to "Shimmer", "verse" to "Verse")

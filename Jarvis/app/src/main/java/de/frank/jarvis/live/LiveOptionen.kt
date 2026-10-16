@@ -236,6 +236,25 @@ object LiveOptionen {
             gilt = { !it.istLive }),
 
         // ---- Beide ----
+        Option("audioweg", "Live-Gespräch", "Tonweg (Bluetooth)",
+            "Wie Jarvis' Stimme im Auto oder Kopfhörer ankommt. Bluetooth kann nicht beides zugleich: Medienqualität (A2DP) gibt es nur mit dem Handy-Mikrofon; " +
+                "wer das Mikrofon des Autos oder Headsets nutzt, bekommt das Telefonprofil (HFP) mit Telefonklang. Gilt ab dem nächsten Gespräch.",
+            "medien", {
+                listOf(
+                    Wahl("medien", "Medienton, Handy-Mikrofon", "Stimme in voller Medienqualität über Bluetooth-Medien oder Kopfhörer, kein Telefonmodus. " +
+                        "Gesprochen wird ins Handy. Ohne Bluetooth und Kopfhörer läuft es wie bisher über den Handy-Lautsprecher mit Echounterdrückung. Empfehlung."),
+                    Wahl("freisprechen", "Freisprechen, Auto-Mikrofon", "Telefonprofil wie bei einem Anruf: Das Mikrofon im Auto oder Headset hört, die Stimme klingt " +
+                        "aber nach Telefon. Rückfallweg, falls der Medienton nicht klappt."),
+                )
+            }),
+        Option("echo_sperre", "Live-Gespräch", "Echosperre im Medienton",
+            "Im Medienton hört das Handy-Mikrofon die Lautsprecher mit. Ob das Handy dieses Echo herausrechnet, hängt vom Gerät ab; sonst unterbricht Jarvis sich selbst.",
+            "an", {
+                listOf(
+                    Wahl("an", "An", "Während Jarvis spricht, ist das Mikrofon zu. Kein Selbstunterbrechen, aber Dazwischenreden per Stimme geht dann nicht. Empfehlung im Auto."),
+                    Wahl("aus", "Aus", "Mikrofon immer offen, Dazwischenreden geht. Gut mit Kopfhörern; im Auto nur, wenn Jarvis sich nicht selbst unterbricht."),
+                )
+            }, gilt = { it["audioweg"] == "medien" }),
         Option("stimme", "Live-Gespräch", "Stimme",
             "Mit welcher Stimme Jarvis im Live-Gespräch spricht. Deutsch steuert die Anweisung; probiere aus, welche Stimme am besten Deutsch spricht. Gilt ab dem nächsten Gespräch.",
             "marin", { st ->
