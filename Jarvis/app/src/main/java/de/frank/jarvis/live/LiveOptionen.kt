@@ -242,9 +242,9 @@ object LiveOptionen {
             "medien", {
                 listOf(
                     Wahl("medien", "Medienton, Handy-Mikrofon", "Stimme in voller Medienqualität über Bluetooth-Medien oder Kopfhörer, kein Telefonmodus. " +
-                        "Gesprochen wird ins Handy. Ohne Bluetooth und Kopfhörer läuft es wie bisher über den Handy-Lautsprecher mit Echounterdrückung. Empfehlung."),
+                        "Gesprochen wird ins Handy. Ohne Bluetooth und Kopfhörer ebenfalls Medienton über den Handy-Lautsprecher. Empfehlung."),
                     Wahl("freisprechen", "Freisprechen, Auto-Mikrofon", "Telefonprofil wie bei einem Anruf: Das Mikrofon im Auto oder Headset hört, die Stimme klingt " +
-                        "aber nach Telefon. Rückfallweg, falls der Medienton nicht klappt."),
+                        "aber nach Telefon. Ohne Headset oder Freisprechanlage trotzdem Medienton am Handy-Lautsprecher. Rückfallweg, falls der Medienton nicht klappt."),
                 )
             }),
         Option("echo_sperre", "Live-Gespräch", "Echosperre im Medienton",
@@ -254,7 +254,7 @@ object LiveOptionen {
                     Wahl("an", "An", "Während Jarvis spricht, ist das Mikrofon zu. Kein Selbstunterbrechen; statt Dazwischenreden tippst du auf die orange Blase. Empfehlung im Auto."),
                     Wahl("aus", "Aus", "Mikrofon immer offen, Dazwischenreden geht. Gut mit Kopfhörern; im Auto nur, wenn Jarvis sich nicht selbst unterbricht."),
                 )
-            }, gilt = { it["audioweg"] == "medien" }),
+            }),
         Option("stimme", "Live-Gespräch", "Stimme",
             "Mit welcher Stimme Jarvis im Live-Gespräch spricht. Deutsch steuert die Anweisung; probiere aus, welche Stimme am besten Deutsch spricht. Gilt ab dem nächsten Gespräch.",
             "marin", { st ->

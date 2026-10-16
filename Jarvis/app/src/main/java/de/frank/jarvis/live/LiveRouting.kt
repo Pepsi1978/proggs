@@ -27,13 +27,17 @@ object LiveRouting {
         return -1
     }
 
-    /** Ausgänge, über die Medienton in voller Qualität geht; nur dann lohnt der Medienweg statt des Telefonmodus. */
-    private val MEDIEN_AUSGAENGE = setOf(
-        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLE_SPEAKER,
-        AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET,
+    /** Ausgänge mit eigenem Mikrofon; nur über sie hat Freisprechen (Telefonmodus) einen Sinn. */
+    private val FREISPRECH_AUSGAENGE = setOf(
+        AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_HEARING_AID,
+        AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_USB_HEADSET,
     )
 
-    fun medienAusgang(typen: List<Int>) = typen.any { it in MEDIEN_AUSGAENGE }
+    /**
+     * Medienton (USAGE_MEDIA, kein Telefonmodus) oder Freisprechen. Medienton immer, außer Freisprechen ist gewünscht und ein
+     * Gerät mit eigenem Mikrofon verbunden: Am Handy-Lautsprecher klingt der Telefonmodus nach Anruf und bringt nichts.
+     */
+    fun medienweg(wunsch: String?, typen: List<Int>) = wunsch != "freisprechen" || typen.none { it in FREISPRECH_AUSGAENGE }
 
     fun istBluetooth(typ: Int) = typ == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || typ == AudioDeviceInfo.TYPE_BLE_HEADSET ||
         typ == AudioDeviceInfo.TYPE_BLE_SPEAKER || typ == AudioDeviceInfo.TYPE_HEARING_AID

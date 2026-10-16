@@ -522,10 +522,10 @@ class LiveGespraech(
     private fun tonStarten() {
         val mikroOffen = synchronized(tonSperre) {
             if (aufnahme != null || !laeuft) return
-            // Medienweg nur mit Bluetooth-Medien oder Kopfhörer: Am Handy-Lautsprecher bringt er keinen besseren Klang,
-            // nimmt aber die Echounterdrückung des Telefonmodus weg. Dann bleibt es beim bisherigen Weg.
+            // Medienweg auch am Handy-Lautsprecher: Der Telefonmodus klingt dort nach Anruf. Freisprechen nur, wenn es gewünscht
+            // ist und ein Headset oder die Freisprechanlage ein eigenes Mikrofon mitbringt; ohne Bluetooth immer Medienton.
             val ausgaenge = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            medienweg = st["audioweg"] == "medien" && LiveRouting.medienAusgang(ausgaenge.map { it.type })
+            medienweg = LiveRouting.medienweg(st["audioweg"], ausgaenge.map { it.type })
             echoSperre = medienweg && st["echo_sperre"] == "an"
             Log.i(LiveRouting.TAG, "Gesprächsbeginn: Tonweg " + (if (medienweg) "Medien (kein Telefonmodus), Echosperre=$echoSperre" else "Freisprechen (Telefonmodus)") +
                 ", Wunsch ${st["audioweg"]}, Ausgänge " + ausgaenge.joinToString { "${LiveRouting.name(it.type)} „${it.productName}“" })
