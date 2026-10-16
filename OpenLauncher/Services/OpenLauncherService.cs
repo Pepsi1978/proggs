@@ -1610,6 +1610,11 @@ Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 $env:OPENCODE_CONFIG = {{PowerShellLiteral(profileConfigPath)}}
 $env:OPENLAUNCHER_MODEL = {{PowerShellLiteral(modelString)}}
 $env:OPENLAUNCHER_SOURCE = 'OpenLauncher'
+# Ab OpenCode 1.19 meldet die TUI Updates selbst. Den eigenen Windows-Fix-Build
+# (1.19.2-windowsfix.23) haelt sie nach semver fuer aelter als 1.19.2, und /update
+# aktualisiert nur das ungepatchte npm-Paket -- eine Dauerschleife. Updates kommen
+# ausschliesslich ueber build-install-windows-mousefix.ps1 (Launcher/UpdateZentrale).
+$env:OPENCODE_DISABLE_AUTOUPDATE = '1'
 $env:OPENLAUNCHER_SERVICE_TIER = {{PowerShellLiteral(launcherServiceTier)}}
 $env:OPENLAUNCHER_WORK_MODE = {{PowerShellLiteral(workMode)}}
 {{minimalEnv}}
