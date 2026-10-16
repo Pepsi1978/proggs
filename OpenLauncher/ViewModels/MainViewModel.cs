@@ -14,6 +14,7 @@ namespace OpenLauncher.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     [ObservableProperty] private bool _useTmux;
+    private const string StartModelSlug = "claude-opus-5-5[1m]";
     private readonly ModelRegistry _registry;
     private readonly OpenRouterService _router = new();
     private readonly OpenCodeCatalogService _openCodeCatalog = new();
@@ -103,7 +104,10 @@ public sealed partial class MainViewModel : ObservableObject
         // das Minimalprofil, der Profilwechsel setzt wieder diesen Modus -> ohne aktives Umschalten
         // laeuft jede Session ohne zusaetzlichen Modus-Prompt.
         SelectedWorkMode = WorkModes.Single(mode => mode.Id == "frei");
-        SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
+        // Beim Start ist Opus 5.5 vorausgewaehlt, unabhaengig von der Reihenfolge in models.json.
+        var visibleModels = ModelGroups.SelectMany(group => group.Models).Where(model => !model.IsHidden).ToList();
+        SelectedModel = visibleModels.FirstOrDefault(model => model.ProviderId == "anthropic" && model.Slug == StartModelSlug)
+            ?? visibleModels.FirstOrDefault();
         _ = RefreshOpenRouterFreeModelsAsync();
         _ = RefreshLmStudioModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
