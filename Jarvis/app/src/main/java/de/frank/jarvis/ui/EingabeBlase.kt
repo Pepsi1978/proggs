@@ -1,6 +1,7 @@
 package de.frank.jarvis.ui
 
 import android.graphics.BitmapFactory
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -64,6 +65,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -255,6 +258,24 @@ fun Wellen(farbe: Color, modifier: Modifier = Modifier, pegel: Float = 0f, beweg
     }
 }
 
+/** Aufnahmeanzeige im Live-Gespräch: fünf senkrechte Striche, die versetzt auf und ab schwingen; [pegel] verstärkt den Ausschlag. */
+@Composable
+private fun AudioStriche(farbe: Color, modifier: Modifier = Modifier, pegel: Float = 0f) {
+    val phase by rememberInfiniteTransition(label = "striche").animateFloat(0f, (2 * Math.PI).toFloat(),
+        infiniteRepeatable(tween(900, easing = LinearEasing)), label = "p")
+    Canvas(modifier) {
+        val anzahl = 5
+        val breite = size.width / 9f
+        val abstand = (size.width - breite * anzahl) / (anzahl - 1)
+        val ausschlag = 0.45f + pegel.coerceIn(0f, 1f) * 0.55f
+        for (i in 0 until anzahl) {
+            val welle = (kotlin.math.sin(phase + i * 1.3f) + 1f) / 2f
+            val hh = size.height * (0.25f + 0.75f * welle * ausschlag)
+            drawRoundRect(farbe, Offset(i * (breite + abstand), (size.height - hh) / 2f), Size(breite, hh), CornerRadius(breite / 2f))
+        }
+    }
+}
+
 /** Die Leiste während eines Live-Gesprächs: schwingende Blase, Status, stumm schalten und beenden. */
 @Composable
 private fun LiveLeiste(vm: AppViewModel) {
@@ -277,8 +298,10 @@ private fun LiveLeiste(vm: AppViewModel) {
             Icon(if (vm.liveStumm) Icons.Rounded.MicOff else Icons.Rounded.Mic, if (vm.liveStumm) "Mikrofon an" else "Stumm schalten", tint = if (vm.liveStumm) f.flaecheStark else f.text, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.size(46.dp).clip(CircleShape).background(f.gefahr).antippen { vm.liveBeenden() }, contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.CallEnd, "Live-Gespräch beenden", tint = Color.White, modifier = Modifier.size(24.dp))
+        // Rote Fläche mit schwingenden Audiostrichen statt Telefonhörer; Antippen beendet das Gespräch wie bisher.
+        Box(Modifier.size(46.dp).clip(CircleShape).background(f.gefahr).antippen { vm.liveBeenden() }
+            .semantics { contentDescription = "Live-Gespräch beenden" }, contentAlignment = Alignment.Center) {
+            AudioStriche(Color.White, Modifier.size(26.dp, 22.dp), pegel = vm.livePegel)
         }
     }
 }
