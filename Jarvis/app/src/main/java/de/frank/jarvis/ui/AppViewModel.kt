@@ -678,6 +678,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var liveStumm by mutableStateOf(false); private set
     /** Was das laufende (oder zuletzt beendete) Live-Gespräch bisher gekostet hat, in USD. */
     var liveKosten by mutableStateOf(0.0); private set
+    /** Summe aller Live-Gespräche seit dem letzten Zurücksetzen (Einstellungen → Live-Gespräch). */
+    var liveKostenBuch by mutableStateOf(de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>())); private set
+    fun liveKostenZuruecksetzen() {
+        liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.zuruecksetzen(getApplication<android.app.Application>())
+        meldung = "Kostenzählung des Live-Gesprächs zurückgesetzt."
+    }
     var liveMikroAnfragen: () -> Unit = {}
     private var live: de.frank.jarvis.live.LiveGespraech? = null
     /** Zählt Live-Starts: Ein verspäteter Start oder das Ende einer alten Verbindung darf eine neuere nicht anfassen. */
@@ -730,6 +736,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 beiWerkzeug = { id, auftrag -> haupt { liveWerkzeug(id, auftrag) } },
                 // Die abgerechnete Dauer kommt bei GPT-Live erst nach dem Ende: auch dann noch übernehmen.
                 beiKosten = { k -> viewModelScope.launch(Dispatchers.Main) { if (stand == liveStand || !liveAktiv) liveKosten = k } },
+                // Jedes Gespräch genau einmal ins dauerhafte Kostenbuch, auch wenn inzwischen ein neues läuft.
+                beiAbrechnung = { a ->
+                    de.frank.jarvis.live.LiveKostenBuch.buchen(getApplication<android.app.Application>(), a)
+                    // Frisch lesen: Ein Zurücksetzen dazwischen darf nicht vom alten Stand überschrieben werden.
+                    viewModelScope.launch(Dispatchers.Main) { liveKostenBuch = de.frank.jarvis.live.LiveKostenBuch.lesen(getApplication<android.app.Application>()) }
+                },
                 beiFehler = { m -> haupt { meldung = m } },
                 beiEnde = { haupt { liveAufraeumen() } },
             ).also { it.start() }

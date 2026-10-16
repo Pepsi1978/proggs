@@ -51,6 +51,8 @@ class LiveGespraech(
     /** Jarvis soll etwas nachschlagen oder erledigen; die Antwort kommt über [ergebnis] mit derselben Kennung zurück. */
     private val beiWerkzeug: (kennung: String, auftrag: String) -> Unit,
     private val beiKosten: (Double) -> Unit,
+    /** Genau einmal je Gespräch, sobald die Kosten feststehen: für [LiveKostenBuch]. */
+    private val beiAbrechnung: (LiveKostenBuch.Abrechnung) -> Unit,
     private val beiFehler: (String) -> Unit,
     private val beiEnde: () -> Unit,
 ) {
@@ -78,7 +80,33 @@ class LiveGespraech(
     @Volatile private var liveSekunden = 0.0
     @Volatile private var tokenKosten = 0.0
     private val gezaehlt = HashSet<String>()
+    /** GPT-Live: `session.closed` hat die endgültige Dauer gemeldet; vorher ist `usage.seconds` nur ein Zwischenstand. */
+    @Volatile private var dauerBestaetigt = false
+    /** Antworten mit Nutzungsdaten, deren Modell keinen Preis in [LiveOptionen] hat. */
+    @Volatile private var ohnePreis = 0
+    @Volatile private var startMs = 0L
+    @Volatile private var endeMs = 0L
+    private val abgerechnet = java.util.concurrent.atomic.AtomicBoolean(false)
     private fun kostenMelden() = beiKosten(liveSekunden / 60.0 * LiveOptionen.LIVE_PRO_MINUTE + tokenKosten)
+
+    /**
+     * Verbucht das Gespräch einmal. Berechnet = Nutzungsdaten der API mal Listenpreis. Geschätzt = bei GPT-Live die Zeit,
+     * die die App gemessen, OpenAI aber nicht bestätigt hat (Abbruch vor `session.closed`), mit 0,05 $/Min.
+     */
+    private fun abrechnen() {
+        if (startMs == 0L || !abgerechnet.compareAndSet(false, true)) return
+        val gemessen = ((if (endeMs > 0) endeMs else System.currentTimeMillis()) - startMs) / 1000.0
+        val berechnet = liveSekunden / 60.0 * LiveOptionen.LIVE_PRO_MINUTE + tokenKosten
+        val a = if (live) {
+            val offen = if (dauerBestaetigt) 0.0 else (gemessen - liveSekunden).coerceAtLeast(0.0)
+            LiveKostenBuch.Abrechnung(if (dauerBestaetigt) liveSekunden else maxOf(liveSekunden, gemessen), dauerBestaetigt,
+                berechnet, offen / 60.0 * LiveOptionen.LIVE_PRO_MINUTE, ohnePreis)
+        } else {
+            // Realtime rechnet nur nach Tokens ab; die Dauer misst die App und dient nur der Zeitbasis.
+            LiveKostenBuch.Abrechnung(gemessen, false, berechnet, 0.0, ohnePreis)
+        }
+        beiAbrechnung(a)
+    }
 
     fun start() {
         laeuft = true
@@ -98,6 +126,7 @@ class LiveGespraech(
                         JSONObject().put("input", JSONObject().put("transcription", JSONObject().put("model", mitschrift).put("language", "de"))))).toString())
                     realtimeVerlauf(webSocket)
                     bereit = true
+                    startMs = System.currentTimeMillis()
                     tonStarten()
                     if (laeuft) beiStatus("Ich höre zu")
                 }
@@ -192,6 +221,7 @@ class LiveGespraech(
         when (e.optString("type")) {
             "session.started" -> {
                 bereit = true
+                startMs = System.currentTimeMillis()
                 tonStarten()
                 if (laeuft) beiStatus("Ich höre zu")
             }
@@ -247,7 +277,7 @@ class LiveGespraech(
                         val rid = resp.optString("id")
                         if (rid.isNotEmpty() && !gezaehlt.add(rid)) return
                         val u = resp.optJSONObject("usage") ?: return
-                        val p = LiveOptionen.BACKENDS[st["backend"]] ?: return
+                        val p = LiveOptionen.BACKENDS[st["backend"]] ?: run { ohnePreis++; return }
                         val f = LiveOptionen.TARIF_FAKTOR[st["tarif"]] ?: 1.0
                         val cached = u.optJSONObject("input_tokens_details")?.optInt("cached_tokens") ?: 0
                         val ein = u.optInt("input_tokens") - cached
@@ -258,7 +288,10 @@ class LiveGespraech(
             }
             "session.usage.updated", "session.closed" -> {
                 // Kumulativ: immer den neuesten Wert nehmen, nie addieren.
-                e.optJSONObject("usage")?.optDouble("seconds")?.takeIf { !it.isNaN() }?.let { liveSekunden = it; kostenMelden() }
+                e.optJSONObject("usage")?.optDouble("seconds")?.takeIf { !it.isNaN() }?.let {
+                    liveSekunden = it; kostenMelden()
+                    if (e.optString("type") == "session.closed") dauerBestaetigt = true
+                }
                 if (e.optString("type") == "session.closed") {
                     nutzerFertig(); jarvisFertig()
                     val grund = e.optString("reason")
@@ -396,7 +429,7 @@ class LiveGespraech(
     }
 
     private fun realtimeKosten(u: JSONObject) {
-        val r = LiveOptionen.REALTIME[modell] ?: return
+        val r = LiveOptionen.REALTIME[modell] ?: run { ohnePreis++; return }
         val ein = u.optJSONObject("input_token_details")
         val aus = u.optJSONObject("output_token_details")
         val cache = ein?.optJSONObject("cached_tokens_details")
@@ -646,6 +679,7 @@ class LiveGespraech(
         synchronized(this) {
             if (!laeuft) return
             laeuft = false
+            endeMs = System.currentTimeMillis()
             w = ws
             ws = null
         }
@@ -657,6 +691,7 @@ class LiveGespraech(
             Thread({
                 val bis = System.currentTimeMillis() + 5_000
                 while (schliessenWartet && System.currentTimeMillis() < bis) runCatching { Thread.sleep(100) }
+                abrechnen()
                 runCatching { w.close(1000, "Ende") }
                 client.dispatcher.executorService.shutdown()
             }, "jarvis-live-ende").start()
@@ -665,6 +700,7 @@ class LiveGespraech(
         } else {
             runCatching { w?.close(1000, "Ende") }
             client.dispatcher.executorService.shutdown()
+            abrechnen()
         }
         beiEnde()
     }

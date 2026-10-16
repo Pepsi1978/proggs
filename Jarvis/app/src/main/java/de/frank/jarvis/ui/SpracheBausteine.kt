@@ -139,6 +139,8 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             "Verbrauch und ein festes Ausgabenlimit: platform.openai.com → Usage bzw. Settings → Limits.",
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
 
+        LiveKostenSumme(vm)
+
         // Stimme immer sichtbar: Tippen wählt sie aus und spielt eine deutsche Hörprobe.
         val stimmen = lo.alle.first { it.id == "stimme" }
         Unterzeile("Stimme" + if (st.istLive) " (GPT-Live)" else " (Realtime)")
@@ -306,4 +308,47 @@ fun Schluesselfeld(vm: AppViewModel, titel: String, gespeichert: String, geheim:
         Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { wert = it } }
     }
     if (wert.trim() != gespeichert) Knopf("Speichern", Modifier.padding(top = 10.dp).fillMaxWidth()) { speichern(wert.trim()); vm.meldung = "Gespeichert." }
+}
+
+/**
+ * Dauerhafte Kostensumme aller Live-Gespräche mit Durchschnitt je Gesprächsminute und -stunde. Berechnet (Nutzungsdaten der
+ * API mal Listenpreis) und geschätzt (von OpenAI nicht bestätigte Zeit) stehen getrennt; Zurücksetzen mit Rückfrage.
+ */
+@Composable
+private fun LiveKostenSumme(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val k = vm.liveKostenBuch
+    val lo = de.frank.jarvis.live.LiveOptionen
+    val datum = java.text.SimpleDateFormat("dd.MM.yyyy, HH:mm 'Uhr'", java.util.Locale.GERMANY)
+    Unterzeile("Kosten seit ${datum.format(java.util.Date(k.seit))}")
+    Zeile("Gesamt", (if (k.geschaetztUsd > 0) "ca. " else "") + lo.usdText(k.gesamtUsd), f.primaer)
+    Zeile("Pro Gesprächsminute", k.proMinute?.let { "ca. " + lo.usdText(it) } ?: "noch keine Daten", f.text)
+    Zeile("Pro Gesprächsstunde", k.proStunde?.let { "ca. " + lo.usdText(it) } ?: "noch keine Daten", f.text)
+    Zeile("Berechnet aus API-Nutzungsdaten", lo.usdText(k.berechnetUsd), f.text)
+    Zeile("Geschätzt", lo.usdText(k.geschaetztUsd), f.text)
+    val minuten = k.dauerSek / 60.0
+    val dauer = if (minuten < 60) String.format(java.util.Locale.GERMAN, "%.1f Minuten", minuten)
+        else String.format(java.util.Locale.GERMAN, "%.2f Stunden", minuten / 60.0)
+    Text(
+        "Zeitbasis: $dauer Gesprächszeit in ${k.gespraeche} " + (if (k.gespraeche == 1) "Gespräch" else "Gesprächen") +
+            (if (k.gespraeche > 0) ", bei ${k.bestaetigt} davon hat OpenAI die Dauer am Ende bestätigt" else "") +
+            (if (k.zuletzt > 0) ". Zuletzt verbucht: ${datum.format(java.util.Date(k.zuletzt))}." else ".") +
+            "\n\nBerechnet = was OpenAI im Gespräch als Nutzung meldet (Sekunden bei GPT-Live, Tokens bei Denk-Modell und Realtime) mal Listenpreis, Stand 16.10.2026. " +
+            "Geschätzt = Gesprächszeit, die OpenAI nicht bestätigt hat (etwa bei Verbindungsabbruch), mit 0,05 $ pro Minute. " +
+            "Der Durchschnitt teilt die Summe durch die Gesprächszeit, nicht durch die Kalenderzeit.\n\n" +
+            "Das ist keine Rechnung: Nicht enthalten sind die Aufträge, die das Live-Gespräch an den normalen Jarvis weitergibt (laufen über dessen Modell), " +
+            "Websuche-Gebühren, Steuern und Preisänderungen. Gespräche vor Version 1.8.97 fehlen. Verbindlich ist nur platform.openai.com → Usage." +
+            (if (k.ohnePreis > 0) "\n\n${k.ohnePreis} Antworten hatten ein Modell ohne hinterlegten Preis und fehlen in der Summe." else ""),
+        color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
+    )
+    var fragen by remember { mutableStateOf(false) }
+    if (!fragen) {
+        Knopf("Kostenzählung zurücksetzen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { fragen = true }
+    } else {
+        Text("Summe, Durchschnitte und Zeitbasis auf null setzen? Die Zählung beginnt dann jetzt neu.", color = f.text, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Knopf("Ja, zurücksetzen", Modifier.weight(1f)) { vm.liveKostenZuruecksetzen(); fragen = false }
+            Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { fragen = false }
+        }
+    }
 }
