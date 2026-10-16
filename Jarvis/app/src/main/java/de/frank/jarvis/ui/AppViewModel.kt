@@ -312,6 +312,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         meldung = meldenAls
     }
 
+    /**
+     * Mit einer eigenen Frage in einer neuen, getrennten Session weiterarbeiten: Das neue Gespräch bekommt den Verlauf vor
+     * dieser Frage (nichts danach), die Frage selbst samt Anhängen liegt fertig in der Eingabeblase. So läuft nichts doppelt,
+     * und Frank kann sie abschicken oder vorher ändern. Die alte Session und laufende Aufträge bleiben unberührt.
+     */
+    fun mitFrageWeiterarbeiten(i: Int) {
+        val n = gespraech.getOrNull(i)?.takeIf { it.vonMir } ?: return
+        val bilder = n.anhaenge.mapNotNull { anhangKopieren(it) }
+        if (i > 0) abzweigen(i - 1, "Neue Session: Deine Frage steht bereit.") else { neuesGespraech(); meldung = "Neue Session: Deine Frage steht bereit." }
+        entwurf = n.text
+        anhaenge.clear()
+        bilder.forEach { anhaenge.add(de.frank.jarvis.data.Anhang(it)) }
+    }
+
     private fun anhangKopieren(pfad: String): String? = runCatching {
         val alt = java.io.File(pfad)
         if (!alt.exists()) return@runCatching null

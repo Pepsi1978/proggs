@@ -315,7 +315,7 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
                     )
                 }
             }
-            Kopierknopf(vm, n.text, "Frage")
+            FrageLeiste(vm, nummer, n)
         } else if (n.art in EXTERNE_ARTEN) {
             // Von außen zugestellte Meldung (z. B. Fortschritt einer Programmier-Sitzung am PC): keine Antwort von Jarvis,
             // daher mit Punkt davor und ohne Aktionsleiste (Wiederholen, Bewerten, Vorlesen ergeben hier keinen Sinn).
@@ -379,6 +379,29 @@ private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
                 Chip("Überspringen", aktiv = false) { grundFragen = false; vm.bewerten(nummer, -1) }
             }
         }
+    }
+}
+
+/**
+ * Die Leiste unter Franks eigener Frage: Kopieren, Vorlesen, Teilen und in neuer Session weiterarbeiten,
+ * jeweils mit genau dieser Nachricht. Bewerten und Wiederholen gibt es hier nicht.
+ */
+@Composable
+private fun FrageLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
+    val f = LocalFarben.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Kopierknopf(vm, n.text, "Frage")
+        Vorleseknopf(vm, "gespraech:$nummer", "Deine Frage", n.text, groesse = 36.dp, schlicht = true)
+        LeistenKnopf(Icons.Rounded.Share, "Frage teilen", f.textLeise) {
+            vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
+            runCatching {
+                context.startActivity(android.content.Intent.createChooser(
+                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, n.text), "Frage teilen",
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+        LeistenKnopf(Icons.AutoMirrored.Rounded.CallSplit, "In neuer Session weiterarbeiten", f.textLeise) { vm.mitFrageWeiterarbeiten(nummer) }
     }
 }
 

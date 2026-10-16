@@ -103,6 +103,7 @@
     {"versionCode": 98, "versionName": "1.8.87", "stand": "16.10.2026, 12:49 Uhr", "notiz": "Chat wie in der ChatGPT-App: Antworten als gegliederter Fließtext mit Überschriften, Stichpunkten und Symbolen vorn; darunter Kopieren, Daumen hoch und runter, Vorlesen, Teilen, in neuem Chat fortsetzen und erneut versuchen; aus den Daumen lernt Jarvis deinen Stil (Gedächtnis → Stil, bearbeitbar); Hörproben der Live-Stimmen auf Deutsch"},
     {"versionCode": 99, "versionName": "1.8.88", "stand": "16.10.2026, 13:04 Uhr", "notiz": "Antwortleiste: Lautsprecher als schlichtes Symbol ohne Einfassung, Daumen hoch und runter sind unbewertet nur umrandet und erst nach deiner Wahl ausgefüllt"},
     {"versionCode": 100, "versionName": "1.8.89", "stand": "16.10.2026, 13:12 Uhr", "notiz": "Meldungen von außen wie der Fortschritt einer Programmier-Sitzung stehen jetzt mit einem schwarzen Punkt davor und ohne Aktionsleiste; echte Jarvis-Antworten behalten ihre Leiste"},
-    {"versionCode": 101, "versionName": "1.8.90", "stand": "16.10.2026, 13:16 Uhr", "notiz": "Der ausführliche Abschlussbericht einer Programmierung hat wieder die volle Aktionsleiste und lässt sich komplett kopieren; kurze Status- und Fertigmeldungen bleiben ohne Leiste"}
+    {"versionCode": 101, "versionName": "1.8.90", "stand": "16.10.2026, 13:16 Uhr", "notiz": "Der ausführliche Abschlussbericht einer Programmierung hat wieder die volle Aktionsleiste und lässt sich komplett kopieren; kurze Status- und Fertigmeldungen bleiben ohne Leiste"},
+    {"versionCode": 102, "versionName": "1.8.91", "stand": "16.10.2026, 13:22 Uhr", "notiz": "Unter deinen eigenen Fragen kannst du jetzt außer Kopieren auch Vorlesen, Teilen und mit genau dieser Frage in einer neuen Session weiterarbeiten"}
   ]
 }
