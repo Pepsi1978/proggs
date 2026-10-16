@@ -37,6 +37,7 @@ INTENTIONALLY_UNMAPPED = {
     "groq-api", "openrouter-api", "xai-grok-api", "mistral-api", "deepseek-api",
     "local-openai-compatible", "other-llm-apis", "oauth-device-code",
     "cli-impersonation-subscription-auth", "tts-provider", "firecrawl",
+    "openai-live-realtime",  # Sprach-API (GPT-Live/Realtime); Kotlin-Dateimuster wie /live/ wuerde fremde Projekte kapern (2026-10-16)
     # android-build/ — Release-PROZESS (Play Console, kein Datei-Edit; AndroidManifest.xml/build.gradle
     # teilen sich android-platform/gradle — ein eigener Datei-Trigger wuerde diese kapern)
     "play-store-release",
