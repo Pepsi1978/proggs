@@ -2,12 +2,15 @@ package de.frank.jarvis.data.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.SystemClock
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.ReasoningEffort
 import java.io.Closeable
 import java.util.WeakHashMap
+import javax.crypto.AEADBadTagException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +27,18 @@ import org.json.JSONObject
 class SecureSettings(context: Context) : Closeable {
     private val appContext = context.applicationContext
 
-    private val preferences: SharedPreferences? by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { speicher(appContext) }
+    // Vor den Flows deklariert, damit sie schon stehen, wenn deren Startwerte [preferences] lesen.
+    /** true, sobald der Aufbau fertig ist: Erst dann darf der Hörer [beiAenderung] rufen (braucht die Flows). */
+    @Volatile private var aufgebaut = false
+    /** true = beim geteilten Hörer angemeldet oder per [close] abgemeldet; dann nicht (wieder) anmelden. */
+    @Volatile private var angemeldet = false
+
+    /**
+     * Kein `lazy`: Das hätte ein einmaliges Scheitern beim Öffnen (Keystore beim Start noch nicht bereit) für immer als
+     * null behalten. [speicher] gibt nach dem ersten Erfolg die gecachte Instanz zurück und versucht es sonst erneut.
+     */
+    private val preferences: SharedPreferences?
+        get() = speicher(appContext)?.also { if (aufgebaut && !angemeldet) anmelden(spaet = true) }
 
     private val _themeFlow = MutableStateFlow(readString(Keys.THEME, Defaults.THEME))
     val themeFlow: StateFlow<String> = _themeFlow.asStateFlow()
@@ -50,7 +64,23 @@ class SecureSettings(context: Context) : Closeable {
 
     init {
         // Schwach gehalten: Instanzen ohne close() (etwa je Vorlesen) bleiben so nicht ewig am Speicher hängen.
-        if (preferences != null) synchronized(instanzen) { instanzen[this] = true }
+        aufgebaut = true
+        if (preferences != null) anmelden(spaet = false)
+    }
+
+    /**
+     * Meldet diese Instanz beim geteilten Hörer an. [spaet] = der Speicher ließ sich erst nach dem Aufbau öffnen; dann
+     * standen die Flows noch auf den Standardwerten und werden einmal aus dem Speicher nachgezogen.
+     */
+    private fun anmelden(spaet: Boolean) {
+        val neu = synchronized(instanzen) {
+            if (angemeldet) false else { instanzen[this] = true; angemeldet = true; true }
+        }
+        if (neu && spaet) {
+            _themeFlow.value = readString(Keys.THEME, Defaults.THEME)
+            _ausrichtungFlow.value = ausrichtung
+            _appLockEnabledFlow.value = readFlag(Keys.APP_LOCK_ENABLED, Defaults.APP_LOCK_ENABLED)
+        }
     }
 
     // ---- Vorlesen (Baustein D und E) ----
@@ -255,7 +285,7 @@ class SecureSettings(context: Context) : Closeable {
 
     override fun close() {
         // Die geteilte Instanz aus get() bleibt angemeldet; sie lebt so lange wie die App.
-        if (this !== instanz) synchronized(instanzen) { instanzen.remove(this) }
+        if (this !== instanz) synchronized(instanzen) { instanzen.remove(this); angemeldet = true }
     }
 
     private fun readString(key: String, default: String): String =
@@ -323,6 +353,7 @@ class SecureSettings(context: Context) : Closeable {
 
     companion object {
         const val STORE_NAME = "jarvis_sprache_prefs"
+        private const val TAG = "SecureSettings"
 
         @Volatile private var geteilt: SharedPreferences? = null
         @Volatile private var instanz: SecureSettings? = null
@@ -332,18 +363,43 @@ class SecureSettings(context: Context) : Closeable {
             alle.forEach { it.beiAenderung(prefs, key) }
         }
 
-        /** Der verschlüsselte Speicher, einmal je Prozess geöffnet. Scheitert es, wird beim nächsten Zugriff neu versucht. */
+        /** Letzter gescheiterter Öffnungsversuch: Jeder Lesezugriff versucht neu, aber höchstens alle paar Sekunden. */
+        @Volatile private var letzterFehlversuch = 0L
+        private const val WIEDERHOLEN_NACH_MS = 5_000L
+
+        private fun verschluesselt(context: Context): SharedPreferences = EncryptedSharedPreferences.create(
+            STORE_NAME,
+            MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
+            context.applicationContext,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
+
+        /**
+         * Der verschlüsselte Speicher, einmal je Prozess geöffnet. Scheitert es, wird beim nächsten Zugriff neu versucht
+         * (gedrosselt). Passt der Schlüssel nicht mehr zu den Daten (AEADBadTag, etwa nach einer Wiederherstellung auf
+         * einem neuen Gerät), sind sie ohnehin unlesbar: dann wie in Einstellungen löschen und neu anlegen.
+         */
         private fun speicher(context: Context): SharedPreferences? = geteilt ?: synchronized(this) {
-            geteilt ?: try {
-                EncryptedSharedPreferences.create(
-                    STORE_NAME,
-                    MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
-                    context.applicationContext,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-                ).also { it.registerOnSharedPreferenceChangeListener(hoerer); geteilt = it }
-            } catch (_: Exception) {
-                null
+            geteilt ?: run {
+                if (letzterFehlversuch != 0L && SystemClock.elapsedRealtime() - letzterFehlversuch < WIEDERHOLEN_NACH_MS) return@run null
+                val app = context.applicationContext
+                val offen = try {
+                    // Ein zweiter Versuch nach kurzer Pause, wie in Einstellungen: Ein einmaliger Keystore-Fehler beim Kaltstart
+                    // darf nicht alle Schlüssel löschen.
+                    runCatching { verschluesselt(app) }.getOrElse { Thread.sleep(200); verschluesselt(app) }
+                } catch (e: Exception) {
+                    if (generateSequence<Throwable>(e) { it.cause }.any { it is AEADBadTagException }) {
+                        Log.e(TAG, "Verschlüsselter Speicher war unlesbar und wird neu angelegt. Schlüssel bitte neu eintragen.", e)
+                        runCatching { app.deleteSharedPreferences(STORE_NAME) }
+                        runCatching { verschluesselt(app) }.onFailure { Log.w(TAG, "Neu anlegen fehlgeschlagen", it) }.getOrNull()
+                    } else {
+                        Log.w(TAG, "Verschlüsselter Speicher ließ sich nicht öffnen; neuer Versuch beim nächsten Zugriff", e)
+                        null
+                    }
+                }
+                if (offen == null) { letzterFehlversuch = SystemClock.elapsedRealtime(); null }
+                else offen.also { it.registerOnSharedPreferenceChangeListener(hoerer); geteilt = it; letzterFehlversuch = 0L }
             }
         }
 

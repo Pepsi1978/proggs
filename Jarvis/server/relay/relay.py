@@ -349,7 +349,14 @@ class Tagebuch:
                     "rclone", "sync", "gdrive-lesen:", str(TAGEBUCH_ORDNER), "--include", "*.md", "--max-depth", "1",
                     "--config", RCLONE_KONFIG, "--contimeout", "15s", "--timeout", "40s", "--retries", "2",
                     stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
-                _, fehler = await asyncio.wait_for(prozess.communicate(), 90)
+                try:
+                    _, fehler = await asyncio.wait_for(prozess.communicate(), 90)
+                except asyncio.TimeoutError:
+                    # wait_for bricht nur das Warten ab: rclone liefe sonst weiter, und der naechste Lauf startete einen zweiten
+                    # Abgleich in denselben Ordner.
+                    prozess.kill()
+                    await prozess.wait()
+                    raise
                 if prozess.returncode == 0:
                     self.zuletzt, self.fehler = time.time(), ""
                 else:
@@ -387,7 +394,10 @@ class Tagebuch:
     async def antwort(self, request: web.Request) -> web.Response:
         if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
             return web.Response(status=404, text="Not found")
-        await self.hole()
+        # Laeuft gerade ein Abgleich (bis 90 s), den lokalen Stand liefern statt danach womoeglich noch einen zu starten:
+        # Zusammen laege das ueber Caddys 90 s, und das Handy bekaeme 502.
+        if not self.sperre.locked():
+            await self.hole()
         try:
             tage = max(1, min(int(request.query.get("tage", "60")), 4000))
         except ValueError:
@@ -457,6 +467,11 @@ class PcBruecke:
             wartend = self.quittungen.get(auftrag["id"])
             if wartend is None or wartend.done():
                 continue
+            # Ist die Abfrage der Bruecke inzwischen abgerissen (Ruhezustand, Netzwechsel), ginge der Auftrag ins Leere:
+            # zuruecklegen, die naechste Abfrage holt ihn.
+            if request.transport is None or request.transport.is_closing():
+                self.auftraege.put_nowait(auftrag)
+                return web.Response(status=204)
             return web.json_response(auftrag)
 
     async def quittung(self, request: web.Request) -> web.Response:

@@ -59,7 +59,25 @@ object Weckwort {
     }
     internal fun erkannt(sicherheit: Float) { _letzter.value = Treffer(System.currentTimeMillis(), sicherheit) }
     internal fun abgewiesen(sicherheit: Float) { _abgewiesen.value = Treffer(System.currentTimeMillis(), sicherheit) }
-    internal fun rufen() { gerufenUm = System.currentTimeMillis(); nachRuf = true; _belegt.value = true }
+    internal fun rufen() { rufCode = java.util.UUID.randomUUID().toString(); gerufenUm = System.currentTimeMillis(); nachRuf = true; _belegt.value = true }
+
+    /** Extra mit dem Einmal-Code des Rufs: Nur damit startet die App nach „Hey Jarvis“ eine Aufnahme. */
+    const val EXTRA_RUF_CODE = "weckwort_code"
+
+    /**
+     * Einmal-Code des letzten Rufs. Die Activity ist exportiert; ohne diesen Code könnte jede App sie mit dem
+     * Weckwort-Extra öffnen und eine Aufnahme starten, auch über dem Sperrbildschirm.
+     */
+    @Volatile var rufCode: String? = null
+        private set
+
+    /** Passt [code] zum letzten Ruf? Dann gilt er als verbraucht; jeder weitere Start damit nimmt nicht mehr auf. */
+    @Synchronized fun rufCodeEinloesen(code: String?): Boolean {
+        val erwartet = rufCode ?: return false
+        if (code == null || code != erwartet) return false
+        rufCode = null
+        return true
+    }
 
     /** Entfernt die „Tippen“-Meldung des Wächters, falls eine steht; null = keine. */
     @Volatile private var rufMeldungEntfernen: (() -> Unit)? = null

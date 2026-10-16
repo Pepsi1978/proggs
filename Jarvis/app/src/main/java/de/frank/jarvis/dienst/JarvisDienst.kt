@@ -34,11 +34,13 @@ import de.frank.jarvis.tunnel.Tunnel
 import de.frank.jarvis.tunnel.TunnelStufe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import android.os.PowerManager
 import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Hält Jarvis erreichbar: MCP-Server auf dem Handy plus Verbindung zum eigenen Server, als Vordergrunddienst
@@ -49,6 +51,10 @@ class JarvisDienst : Service() {
     private val mcp by lazy { McpServer(this) }
     /** Lange Arbeit im Hintergrund (Tagesauswertung) läuft hier, nicht auf dem Hauptfaden. */
     private val arbeit = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** false = Android hat den Vordergrund verweigert; der Dienst beendet sich und nimmt keine Aufträge mehr an. */
+    @Volatile private var vordergrund = false
+    /** Die neueste Start-ID: stopSelf(id) greift nur mit ihr; ältere IDs ignoriert Android. */
+    @Volatile private var letzteStartId = 0
 
     /**
      * Netzwechsel (WLAN ↔ Mobilfunk) oder Funkloch vorbei: sofort über das neue Netz neu verbinden, statt
@@ -66,7 +72,16 @@ class JarvisDienst : Service() {
         kanalAnlegen(this)
         // Sofort in den Vordergrund: Android gibt dafür nur wenige Sekunden.
         val typ = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
-        ServiceCompat.startForeground(this, HINWEIS_ID, hinweis("Jarvis startet …"), typ)
+        try {
+            ServiceCompat.startForeground(this, HINWEIS_ID, hinweis("Jarvis startet …"), typ)
+        } catch (fehler: Exception) {
+            // Aus dem Hintergrund (etwa nach einem Neustart durch Android) verweigert: nicht ohne Vordergrund weiterlaufen.
+            Log.w("JarvisDienst", "Vordergrund aus dem Hintergrund nicht erlaubt", fehler)
+            Logbuch.fehler("Dienst: Vordergrund nicht erlaubt", fehler)
+            stopSelf()
+            return
+        }
+        vordergrund = true
         Protokoll.lade(this)
         Logbuch.starte(this)
         Logbuch.system("Dienst gestartet", "Version ${de.frank.jarvis.BuildConfig.VERSION_NAME}")
@@ -92,39 +107,54 @@ class JarvisDienst : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Vordergrund verweigert (siehe onCreate): Der Dienst beendet sich gerade, nichts mehr anfangen.
+        if (!vordergrund) { stopSelf(startId); return START_NOT_STICKY }
+        letzteStartId = startId
         val e = Einstellungen.get(this)
-        Tunnel.starte(e.serverHost, e.serverToken, e.geheimnis) { rumpf -> mcp.verarbeite(rumpf) }
+        // Bereitschaft aus: Der Dienst läuft nur für den Auftrag (Abfahrt, Agent, Auswertung), ohne Verbindung für ChatGPT,
+        // und beendet sich danach selbst (unten im finally).
+        if (e.dienstAn) Tunnel.starte(e.serverHost, e.serverToken, e.geheimnis) { rumpf -> mcp.verarbeite(rumpf) }
         val anlass = intent?.getStringExtra(EXTRA_AUSWERTEN)
         val agent = intent?.getStringExtra(EXTRA_AGENT)
         val auftrag = intent?.getStringExtra(EXTRA_AUFTRAG).orEmpty()
         val perMail = intent?.getBooleanExtra(EXTRA_MAIL, false) == true
         val vorlesen = intent?.getBooleanExtra(EXTRA_VORLESEN, false) == true
         val abfahrt = intent?.getBooleanExtra(EXTRA_ABFAHRT, false) == true
+        offen.incrementAndGet()
         // Alles Weitere liest Dateien und den Kalender: nicht auf dem Hauptfaden, sonst ruckelt jedes Öffnen der App.
         arbeit.launch {
             try {
                 Tagesauswertung.lade(this@JarvisDienst)
-                when {
+                val auftraege = mutableListOf<Job?>()
+                auftraege += when {
                     abfahrt -> pruefeAbfahrt()
                     agent != null -> lasseArbeiten(agent, auftrag, perMail, vorlesen)
                     anlass != null -> werteAus(anlass)
+                    else -> null
                 }
                 // Verpasst (Handy war aus, App wurde beendet): nachholen, sobald der Dienst wieder läuft, auch wenn er gerade
                 // für etwas anderes (Abfahrt, Agent) gestartet wurde. Die Sperre in der Auswertung verhindert Doppelläufe.
-                if (anlass == null && verpasst()) werteAus("nachgeholt, der geplante Lauf wurde verpasst")
+                if (anlass == null && verpasst()) auftraege += werteAus("nachgeholt, der geplante Lauf wurde verpasst")
                 Zeitplan.stelle(this@JarvisDienst)
                 // Die Prüfung stellt ihren nächsten Wecker am Ende selbst.
                 if (!abfahrt) Abfahrt.stelle(this@JarvisDienst)
+                // Erst wenn die Arbeit fertig ist, darf sich der Dienst bei ausgeschalteter Bereitschaft beenden.
+                auftraege.forEach { it?.join() }
             } catch (fehler: Exception) {
                 if (fehler is kotlinx.coroutines.CancellationException) throw fehler
                 Logbuch.fehler("Dienst: Start-Auftrag", fehler)
+            } finally {
+                // stopSelf(startId) greift nicht, falls inzwischen ein neuerer Auftrag kam; der beendet den Dienst dann selbst.
+                // Mit der neuesten ID: Endet ein älterer Auftrag zuletzt, beendete stopSelf(startId) den Dienst nie. Kommt
+                // inzwischen ein neuer Start, hat er eine höhere ID und der Stopp wird ignoriert.
+                if (offen.decrementAndGet() == 0 && !Einstellungen.get(this@JarvisDienst).dienstAn) stopSelf(letzteStartId)
             }
         }
-        return START_STICKY
+        return if (e.dienstAn) START_STICKY else START_NOT_STICKY
     }
 
     /** Fahrzeit zur Arbeit prüfen und melden, wenn es Zeit zum Losfahren ist. */
-    private fun pruefeAbfahrt() {
+    private fun pruefeAbfahrt(): Job =
         arbeit.launch {
             val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:abfahrt")
             runCatching { wach.acquire(90_000L) }
@@ -134,7 +164,6 @@ class JarvisDienst : Service() {
                 runCatching { if (wach.isHeld) wach.release() }
             }
         }
-    }
 
     private fun verpasst(): Boolean {
         val faellig = Zeitplan.letzterFaelliger(this) ?: return false
@@ -146,9 +175,10 @@ class JarvisDienst : Service() {
     }
 
     /** Ein Agent arbeitet im Hintergrund, legt sein Ergebnis in die Ablage und meldet sich mit einer Benachrichtigung. */
-    private fun lasseArbeiten(name: String, auftrag: String, perMail: Boolean, vorlesen: Boolean) {
-        val plan = Agenten.finde(this, name) ?: return
-        arbeit.launch {
+    private fun lasseArbeiten(name: String, auftrag: String, perMail: Boolean, vorlesen: Boolean): Job? {
+        // Agent inzwischen gelöscht: Den reservierten Platz sofort zurückgeben, statt ihn zwei Minuten zu blockieren.
+        val plan = Agenten.finde(this, name) ?: run { Agenten.gibFrei(name, auftrag); return null }
+        return arbeit.launch {
             val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:agent")
             runCatching { wach.acquire((plan.minuten + 5) * 60_000L) }
             try {
@@ -173,7 +203,8 @@ class JarvisDienst : Service() {
                     }
                 }
                 getSystemService(NotificationManager::class.java).notify(
-                    (System.currentTimeMillis() % 100_000).toInt() + 10,
+                    // Eigener Bereich: trifft keine feste Meldung (1, 4200, 4300, 4301, 4310, 4711, 7000–7999) und keine der Ablage (ab 200_000).
+                    20_000 + (System.currentTimeMillis() % 100_000).toInt(),
                     NotificationCompat.Builder(this@JarvisDienst, KANAL_ERGEBNIS).setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle("Jarvis: ${plan.name} fertig")
                         .setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
                         .setContentIntent(PendingIntent.getActivity(this@JarvisDienst, 0, Intent(this@JarvisDienst, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -185,7 +216,7 @@ class JarvisDienst : Service() {
         }
     }
 
-    private fun werteAus(anlass: String) {
+    private fun werteAus(anlass: String): Job =
         arbeit.launch {
             // Das Gerät darf währenddessen nicht einschlafen; nach spätestens 12 Minuten gibt das System die Sperre frei (Auswertung und danach das Lernen aus dem Tagebuch).
             val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:tagesauswertung")
@@ -201,7 +232,6 @@ class JarvisDienst : Service() {
                 Zeitplan.stelle(this@JarvisDienst)
             }
         }
-    }
 
     override fun onDestroy() {
         Logbuch.system("Dienst beendet")
@@ -227,6 +257,11 @@ class JarvisDienst : Service() {
         .build()
 
     companion object {
+        /** Laufende Start-Aufträge: Bei ausgeschalteter Bereitschaft beendet sich der Dienst erst, wenn keiner mehr läuft. */
+        private val offen = AtomicInteger(0)
+        /** Wie viele Aufträge der Dienst gerade abarbeitet (für [abgleichen]). */
+        val arbeitet: Int get() = offen.get()
+
         private const val KANAL = "jarvis_dienst"
         private const val HINWEIS_ID = 1
         private const val EXTRA_AUSWERTEN = "auswerten"
@@ -280,6 +315,12 @@ class JarvisDienst : Service() {
             if (Einstellungen.get(app).dienstAn) {
                 runCatching { ContextCompat.startForegroundService(app, absicht) }
                     .onFailure { Log.w("JarvisDienst", "Start nicht möglich", it) }
+            } else if (arbeitet > 0) {
+                // Bereitschaft aus, aber der Dienst arbeitet gerade für einen Auftrag (Agent, Auswertung, Abfahrt): nur die
+                // Verbindung trennen. Der Dienst beendet sich nach dem Auftrag selbst; stopService bräche ihn mittendrin ab
+                // (etwa bei jedem Öffnen der App oder Auf- und Zuklappen).
+                Tunnel.stoppe()
+                Thread { runCatching { Zeitplan.stelle(app) } }.start()
             } else {
                 app.stopService(absicht)
                 // Ohne Dienst muss der nächste Auswertungslauf trotzdem geplant sein (der Wecker startet ihn dann selbst).
@@ -295,8 +336,23 @@ class StartEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                // Plant den nächsten Auswertungslauf auf beiden Wegen selbst (Dienst an oder aus), abseits des Hauptfadens.
-                JarvisDienst.abgleichen(context)
+                val app = context.applicationContext
+                if (Einstellungen.get(app).dienstAn) {
+                    // Der Dienst plant beim Start Auswertungslauf und Abfahrtsprüfung selbst.
+                    JarvisDienst.abgleichen(app)
+                } else {
+                    // Bereitschaft aus: Ohne Dienst beide Wecker hier planen (sie starten den Dienst dann selbst).
+                    // Abseits des Hauptfadens: Das Planen liest den Kalender.
+                    val ergebnis = goAsync()
+                    Thread {
+                        try {
+                            runCatching { Zeitplan.stelle(app) }
+                            runCatching { Abfahrt.stelle(app) }
+                        } finally {
+                            ergebnis.finish()
+                        }
+                    }.start()
+                }
                 de.frank.jarvis.weckwort.WeckwortDienst.nachNeustart(context)
             }
             // Uhr oder Zeitzone verstellt: Der gestellte Wecker passt nicht mehr.

@@ -16,6 +16,7 @@ import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit
 import de.frank.jarvis.faehigkeit.Merkdatei
 import de.frank.jarvis.faehigkeit.merkKontext
+import de.frank.jarvis.faehigkeit.ohneNull
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.Werkzeug
 import de.frank.jarvis.faehigkeit.schema
@@ -218,7 +219,8 @@ class McpServer(context: Context) {
         val werkzeug = alleWerkzeuge().firstOrNull { it.name == name }
             ?: return inhalt("Das Werkzeug $name gibt es nicht.", fehler = true)
         val beginn = System.currentTimeMillis()
-        val r = runCatching { runBlocking { werkzeug.ausfuehren(argumente) } }
+        // JSON-null zählt als nicht angegeben (sonst läse das Werkzeug den Text „null“).
+        val r = runCatching { runBlocking { werkzeug.ausfuehren(argumente.ohneNull()) } }
             .getOrElse { Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
         Logbuch.dauer("Plugin: $name", System.currentTimeMillis() - beginn, if (r.fehler) "Fehler: " + r.text.take(200) else "${r.text.length} Zeichen")
         // Synchron und vor der Auffrischung: Die Gespräche im Live-Gedächtnis lesen das Protokoll und sollen diese Aktion schon sehen.

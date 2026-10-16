@@ -436,6 +436,7 @@ class WeckwortDienst : Service() {
     private fun rufAbsicht(): Intent = Intent(this, MainActivity::class.java)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         .putExtra(EXTRA_WECKWORT, true)
+        .putExtra(Weckwort.EXTRA_RUF_CODE, Weckwort.rufCode)
         // Vor dem Öffnen festhalten, ob Jarvis schon vorn war: Danach ist die App ja immer sichtbar.
         .putExtra(EXTRA_WAR_SICHTBAR, MainActivity.sichtbar)
 

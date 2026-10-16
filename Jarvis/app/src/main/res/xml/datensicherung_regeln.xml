@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 und neuer: Cloud-Sicherung und Geräteumzug.
+     Ausgeschlossen sind die Einstellungen (shared_prefs): Die verschlüsselten Speicher hängen an einem Schlüssel im
+     Keystore, der nie mitwandert. Wiederhergestellt wären sie unlesbar (AEADBadTag) und würden den Start stören.
+     Ebenso die offenen Download-Aufträge: Sie enthalten private, kurzlebige Adressen. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="ablage-uebertragungen.json" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="ablage-uebertragungen.json" />
+    </device-transfer>
+</data-extraction-rules>

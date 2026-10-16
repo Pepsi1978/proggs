@@ -83,8 +83,10 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                     plan == null -> Ergebnis("Diesen Agenten gibt es nicht. Vorhanden: " + Agenten.alle(app).joinToString { it.name } + ". Mit agenten (aktion=anlegen) lässt sich ein neuer bauen.", fehler = true)
                     a.optString("auftrag").isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
                     !CodexAuthManager(app).isConnected -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
-                    Agenten.laeufe.value.size >= 2 -> Ergebnis("Es arbeiten schon zwei Agenten. Bitte warten, bis einer fertig ist.", fehler = true)
+                    // Synchron reservieren: Der Lauf beginnt erst asynchron im Dienst, ein paralleler Aufruf sähe sonst noch einen freien Platz.
+                    !Agenten.reserviere(plan.name, a.optString("auftrag")) -> Ergebnis("Es arbeiten schon zwei Agenten. Bitte warten, bis einer fertig ist.", fehler = true)
                     else -> {
+                        // Startet der Dienst nicht (agentStarten schluckt den Fehler), verfällt die Reservierung nach zwei Minuten.
                         JarvisDienst.agentStarten(app, plan.name, a.optString("auftrag"), a.optBoolean("per_mail"), a.optBoolean("vorlesen"))
                         Ergebnis("Der Agent ${plan.name} arbeitet jetzt, meist fünf bis zwanzig Minuten. Das Ergebnis landet in der Ablage" + (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung.")
                     }

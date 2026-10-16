@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.Lifecycle
@@ -18,11 +19,13 @@ import java.util.Base64
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import javax.crypto.AEADBadTagException
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -505,32 +508,36 @@ class CodexAuthManager(context: Context) {
             if (!tokenNeedsRefresh()) return@withLock tokenAfterLock
             val refreshToken = store.getString(KEY_REFRESH_TOKEN, null)
                 ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Die Anmeldung ist abgelaufen. Bitte erneut anmelden.")
-            val result = postForm(
-                TOKEN_URL,
-                FormBody.Builder()
-                    .add("grant_type", "refresh_token")
-                    .add("refresh_token", refreshToken)
-                    .add("client_id", CLIENT_ID)
-                    .build(),
-            )
-            classifyHttpError(result.code, result.body)
-            val json = parseJson(result.body, "OpenAI hat beim Aktualisieren keine gültigen Tokens geliefert.")
-            val newAccessToken = json.optString("access_token").takeIf(String::isNotBlank)
-                ?: throw CodexAuthException(AuthErrorKind.REAUTH, "OpenAI hat keinen neuen Zugriffstoken geliefert.")
-            val newRefreshToken = json.optString("refresh_token").takeIf(String::isNotBlank)
-            val idToken = json.optString("id_token").takeIf(String::isNotBlank)
-            val foundEmail = idToken?.let(::jwtEmail) ?: jwtEmail(newAccessToken)
-            val foundAccountId = jwtAccountId(newAccessToken) ?: idToken?.let(::jwtAccountId)
-            store.edit()
-                .putString(KEY_ACCESS_TOKEN, newAccessToken)
-                .putLong(KEY_EXPIRES_AT, expiryTime(json))
-                .apply {
-                    if (newRefreshToken != null) putString(KEY_REFRESH_TOKEN, newRefreshToken)
-                    if (foundEmail != null) putString(KEY_EMAIL, foundEmail)
-                    if (foundAccountId != null) putString(KEY_ACCOUNT_ID, foundAccountId)
-                }
-                .apply()
-            newAccessToken
+            // Nicht abbrechbar: OpenAI rotiert den Refresh-Token beim Erneuern. Bricht der Aufrufer zwischen Antwort und
+            // Speichern ab, wäre der neue Token verloren und der alte verbraucht. Deshalb auch commit() statt apply().
+            withContext(NonCancellable) {
+                val result = postForm(
+                    TOKEN_URL,
+                    FormBody.Builder()
+                        .add("grant_type", "refresh_token")
+                        .add("refresh_token", refreshToken)
+                        .add("client_id", CLIENT_ID)
+                        .build(),
+                )
+                classifyHttpError(result.code, result.body)
+                val json = parseJson(result.body, "OpenAI hat beim Aktualisieren keine gültigen Tokens geliefert.")
+                val newAccessToken = json.optString("access_token").takeIf(String::isNotBlank)
+                    ?: throw CodexAuthException(AuthErrorKind.REAUTH, "OpenAI hat keinen neuen Zugriffstoken geliefert.")
+                val newRefreshToken = json.optString("refresh_token").takeIf(String::isNotBlank)
+                val idToken = json.optString("id_token").takeIf(String::isNotBlank)
+                val foundEmail = idToken?.let(::jwtEmail) ?: jwtEmail(newAccessToken)
+                val foundAccountId = jwtAccountId(newAccessToken) ?: idToken?.let(::jwtAccountId)
+                store.edit()
+                    .putString(KEY_ACCESS_TOKEN, newAccessToken)
+                    .putLong(KEY_EXPIRES_AT, expiryTime(json))
+                    .apply {
+                        if (newRefreshToken != null) putString(KEY_REFRESH_TOKEN, newRefreshToken)
+                        if (foundEmail != null) putString(KEY_EMAIL, foundEmail)
+                        if (foundAccountId != null) putString(KEY_ACCOUNT_ID, foundAccountId)
+                    }
+                    .commit()
+                newAccessToken
+            }
         }
     }
 
@@ -841,19 +848,40 @@ class CodexAuthManager(context: Context) {
         @Volatile private var speicher: SharedPreferences? = null
 
         private fun gemeinsamerStore(context: Context): SharedPreferences = speicher ?: synchronized(this) {
-            speicher ?: run {
-                val app = context.applicationContext
-                val masterKey = MasterKey.Builder(app)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-                EncryptedSharedPreferences.create(
-                    app,
-                    STORE_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-                ).also { speicher = it }
+            speicher ?: oeffneStore(context.applicationContext).also { speicher = it }
+        }
+
+        private fun verschluesselterStore(app: Context): SharedPreferences {
+            val masterKey = MasterKey.Builder(app)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            return EncryptedSharedPreferences.create(
+                app,
+                STORE_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        }
+
+        /**
+         * Öffnet den Token-Speicher wie Einstellungen.oeffne: Keystore-Fehler sind oft vorübergehend, also einmal kurz
+         * warten und erneut versuchen. Passt der Schlüssel nicht mehr zu den Daten (AEADBadTag, etwa nach einer
+         * Wiederherstellung auf einem neuen Gerät), sind die Tokens ohnehin unlesbar: Datei löschen und neu anlegen,
+         * dann ist nur eine neue Anmeldung nötig statt eines Absturzes bei jedem Start. Einen Klartext-Ersatz gibt es
+         * für Tokens bewusst nicht; scheitert auch das, geht der Fehler weiter (beim nächsten Zugriff neuer Versuch).
+         */
+        private fun oeffneStore(app: Context): SharedPreferences {
+            try { return verschluesselterStore(app) } catch (e: Exception) { Log.w(TAG, "Token-Speicher: erster Versuch fehlgeschlagen", e) }
+            SystemClock.sleep(200)
+            val fehler = try { return verschluesselterStore(app) } catch (e: Exception) { e }
+            if (generateSequence<Throwable>(fehler) { it.cause }.any { it is AEADBadTagException }) {
+                runCatching { app.deleteSharedPreferences(STORE_NAME) }
+                val neu = verschluesselterStore(app)
+                Log.e(TAG, "Token-Speicher war unlesbar und wurde neu angelegt. Bitte erneut bei OpenAI anmelden.", fehler)
+                return neu
             }
+            throw fehler
         }
     }
 }

@@ -93,7 +93,12 @@ VORGEHEN
         if ("$($auftrag.nummer)" -match '^[A-Za-z0-9]{1,20}$') { $argumente += @('--auftrag-id', $auftrag.nummer) }
         $prozess = Start-Process -FilePath $openLauncher -ArgumentList $argumente -PassThru -WindowStyle Hidden
         # Spätestens nach 30 s quittieren: Der Relay wartet 45 s, danach wüsste das Handy nicht, ob die Sitzung läuft.
-        if (-not $prozess.WaitForExit(30000)) { throw 'Der OpenLauncher hat nach 30 Sekunden nicht geantwortet.' }
+        # Kein Fehler melden, wenn der OpenLauncher nur langsam ist: Er startet die Sitzung womöglich noch. Mit ok=false
+        # spränge das Handy auf die Cloud aus, und zwei Sitzungen arbeiteten am selben Repo.
+        if (-not $prozess.WaitForExit(30000)) {
+            Schreib 'OpenLauncher nach 30 s noch nicht fertig, Start unbestätigt'
+            return "$name (Start unbestätigt: der OpenLauncher war nach 30 Sekunden noch nicht fertig)"
+        }
         if ($prozess.ExitCode -ne 0) { throw "Der OpenLauncher konnte die Sitzung nicht starten (Code $($prozess.ExitCode), siehe OpenLauncher-Log)." }
         return $name
     }
@@ -162,7 +167,16 @@ while ($true) {
             Schreib $quittung.text
         }
         [System.IO.File]::WriteAllText($quittungDatei, ($quittung | ConvertTo-Json -Compress), [System.Text.UTF8Encoding]::new($false))
-        $null = Rufe "https://$($zugang.host)/pc/quittung" $zugang.token 20 $quittungDatei
+        # Ohne Quittung kennt das Handy die Sitzung nicht und verwirft ihre Meldungen: kurz wiederholen.
+        for ($versuch = 1; $versuch -le 3; $versuch++) {
+            try {
+                $quittungCode = Rufe "https://$($zugang.host)/pc/quittung" $zugang.token 20 $quittungDatei
+                # curl meldet HTTP-Fehler nur als Code (etwa 502 beim Neustart des Relays): auch das ist ein Fehlversuch.
+                if ($quittungCode -ge 300) { throw "HTTP $quittungCode" }
+                break
+            }
+            catch { Schreib "Quittung, Versuch $versuch`: $($_.Exception.Message)"; if ($versuch -lt 3) { Start-Sleep -Seconds 2 } }
+        }
     } catch {
         Schreib "Fehler: $($_.Exception.Message)"
         Start-Sleep -Seconds $pause

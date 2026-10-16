@@ -8,6 +8,7 @@ import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 /**
  * Jarvis stellt sich selbst ein: „Schalte die Update-Ansagen aus“, „Lies schneller vor“, „Was hast du beim Vorlesen
@@ -32,7 +33,7 @@ class EinstellungenFaehigkeit(private val context: Context) : Faehigkeit {
             name = "einstellungen",
             titel = "Jarvis-Einstellungen",
             beschreibung = "Jarvis: beschreibt, liest und ändert die Einstellungen der Jarvis-App (Vorlesen, Update-Ansagen, Spracheingabe, Hey Jarvis, " +
-                "Losfahr-Meldung, Tagesauswertung, Timer, Modell, Darstellung, System). aktion lesen ohne bereich = alle Bereiche mit ihren Schaltern, Stand und möglichen Werten; " +
+                "Wetter-Ort, Losfahr-Meldung, Tagesauswertung, Timer, Modell, Darstellung, System). aktion lesen ohne bereich = alle Bereiche mit ihren Schaltern, Stand und möglichen Werten; " +
                 "mit bereich nur diesen. aktion aendern setzt einen Schalter: kennung aus der Liste, wert wie dort angegeben (an/aus, Zahl oder eine der Auswahlen). " +
                 "Mehrere Änderungen auf einmal über aenderungen. Beispiele: „Schalte die Update-Ansagen aus“ → aendern, kennung ansage_vorlesen, wert aus. " +
                 "„Was hast du beim Vorlesen für Einstellungen?“ → lesen, bereich Vorlesen. „Lies schneller vor“ → aendern, kennung vorlese_tempo, wert Zügig. " +
@@ -155,6 +156,28 @@ class EinstellungsKatalog(context: Context) {
     private fun abfahrtNeu() { e.abfahrtZustand = ""; de.frank.jarvis.fahrt.Abfahrt.stelle(app) }
     private fun zeitplanNeu() = de.frank.jarvis.auswertung.Zeitplan.stelle(app)
 
+    /**
+     * Wie in der Oberfläche: Koordinaten zum Ortsnamen suchen (Open-Meteo), speichern und die Vorhersage neu holen.
+     * Die Suche läuft vor dem Speichern: Scheitert sie (kein Netz, unbekannter Ort), bleibt der alte Ort.
+     * Werkzeuge laufen nie auf dem Hauptfaden, der Netzaufruf darf hier blockieren.
+     */
+    private fun setzeWetterOrt(name: String) {
+        val gefunden = (try {
+            val adresse = "https://geocoding-api.open-meteo.com/v1/search?count=1&language=de&name=" + java.net.URLEncoder.encode(name.trim(), "UTF-8")
+            ORTSSUCHE.newCall(okhttp3.Request.Builder().url(adresse).build()).execute().use { a ->
+                if (!a.isSuccessful) throw IllegalStateException("Open-Meteo antwortet mit ${a.code}")
+                org.json.JSONObject(a.body?.string().orEmpty()).optJSONArray("results")?.optJSONObject(0)
+            }
+        } catch (f: Exception) {
+            throw IllegalArgumentException("Die Ortssuche geht gerade nicht (${f.message ?: f.javaClass.simpleName}); der alte Ort bleibt.")
+        }) ?: throw IllegalArgumentException("Den Ort „${name.trim()}“ habe ich nicht gefunden.")
+        e.wetterBreite = gefunden.optDouble("latitude")
+        e.wetterLaenge = gefunden.optDouble("longitude")
+        e.wetterOrt = listOf(gefunden.optString("name"), gefunden.optString("admin1")).filter { it.isNotBlank() }.distinct().joinToString(", ")
+        // Folgeaktion im Hintergrund; wetter_lesen holt bei geändertem Ort ohnehin frisch.
+        NEBENHER.launch { runCatching { Register.alle(app).filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() } }
+    }
+
     val eintraege: List<Eintrag> by lazy {
         listOf(
             // ---- Vorlesen ----
@@ -195,6 +218,25 @@ class EinstellungsKatalog(context: Context) {
                 { listOf("jarvis" to "Hey Jarvis", "phrase" to "Eigene Phrase") }, { e.weckwortArt }) {
                 if (e.weckwortArt != it) { e.weckwortArt = it; de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app) }
             },
+            // Wie „Übernehmen“ in der Oberfläche: prüfen, speichern, auf die eigene Phrase umschalten, Weckwort neu laden.
+            Eintrag("weckwort_phrase", "Hey Jarvis", "Eigene Phrase", "Das eigene Weckwort, englisch ausgesprochen; drei Wörter mit verschiedenen Anfangslauten erkennt es am sichersten. Setzen schaltet auf die eigene Phrase um.",
+                "zwei bis drei englische Wörter, nur A bis Z, z. B. OKAY COMPUTER JARVIS", { e.weckwortPhrase }) { w ->
+                val phrase = de.frank.jarvis.weckwort.PhrasenTokens.normiert(w)
+                if (phrase.split(' ').size < 2) throw IllegalArgumentException("Bitte mindestens zwei Wörter, besser drei.")
+                val zerlegt = try {
+                    de.frank.jarvis.weckwort.PhrasenTokens.zerlege(app, phrase)
+                } catch (f: Exception) {
+                    throw IllegalArgumentException("Das Phrasen-Modell ließ sich nicht laden (${f.message ?: f.javaClass.simpleName}); die alte Phrase bleibt.")
+                }
+                if (zerlegt == null) throw IllegalArgumentException("Das Modell kennt nur englische Buchstaben A bis Z, ohne Umlaute und Ziffern.")
+                e.weckwortPhrase = phrase
+                e.weckwortArt = "phrase"
+                de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)
+            },
+
+            // ---- Kalender und Wetter ----
+            Eintrag("wetter_ort", "Kalender und Wetter", "Ort für die Wettervorhersage", "Für welchen Ort Jarvis das Wetter vorhersagt; der Name wird gesucht wie in der App.",
+                "ein Ortsname, z. B. Potsdam", { e.wetterOrt }) { setzeWetterOrt(it) },
 
             // ---- Losfahr-Meldung ----
             schalter("abfahrt_an", "Losfahr-Meldung", "Losfahr-Meldung", "Meldet an Arbeitstagen rechtzeitig vor der nötigen Abfahrt.", { e.abfahrtAn }) { e.abfahrtAn = it; abfahrtNeu() },
@@ -264,6 +306,12 @@ class EinstellungsKatalog(context: Context) {
         }
     }
 
+    private companion object {
+        val ORTSSUCHE: okhttp3.OkHttpClient = okhttp3.OkHttpClient.Builder().connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS).readTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build()
+        /** Für Folgeaktionen, auf die die Antwort nicht warten muss. */
+        val NEBENHER = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    }
+
     /** first = geklappt, second = Antwort in einem Satz. */
     fun setze(kennung: String, wert: String): Pair<Boolean, String> {
         val k = norm(kennung)
@@ -275,6 +323,11 @@ class EinstellungsKatalog(context: Context) {
             true to "${eintrag.titel}: jetzt ${eintrag.lesen()}."
         } catch (f: IllegalArgumentException) {
             false to "${eintrag.titel}: ${f.message}"
+        } catch (f: Exception) {
+            // Wert geprüft und gespeichert, aber die Folgeaktion (Dienst, Zeitplan, Weckwort …) scheiterte: das melden,
+            // statt die Änderung als fehlgeschlagen auszugeben und die weiteren Änderungen abzubrechen.
+            de.frank.jarvis.observability.Logbuch.fehler("Einstellung $k", f)
+            true to "${eintrag.titel}: gesetzt (jetzt ${runCatching { eintrag.lesen() }.getOrDefault("?")}), Folgeaktion fehlgeschlagen: ${f.message ?: f.javaClass.simpleName}"
         }
     }
 }

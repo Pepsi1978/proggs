@@ -225,9 +225,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return false
         }
         val verlauf = verlaufFuersModell()
-        gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad })
+        // Aus „In neuer Session weiterarbeiten“: Was die ursprüngliche Runde schon erledigt hatte, geht einmal mit (nur in diesem Gespräch).
+        val erledigt = entwurfErledigt?.takeIf { it.sitzung == sitzungId && it.text == eingabe.trim() }?.erledigt.orEmpty()
+        entwurfErledigt = null
+        gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad }, kontext = erledigt)
         sitzungSichern()
-        rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, vorlesen, "")
+        rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, vorlesen,
+            if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
         return true
     }
 
@@ -268,7 +272,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (n.vonMir) return
         gespraech[i] = n.copy(bewertung = urteil)
         sitzungSichern()
-        if (urteil == 0) return
+        // Der Abschlussbericht stammt von der Programmier-Sitzung, nicht von Jarvis: Er lehrt Jarvis keinen Stil.
+        if (urteil == 0 || n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT) return
         val frage = (i - 1 downTo 0).firstOrNull { gespraech[it].vonMir }?.let { gespraech[it].text }.orEmpty()
         val modell = einstellungen.modell
         val stufe = einstellungen.denkstufe
@@ -309,7 +314,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val kopie = gespraech.take(bis + 1).map { n -> n.copy(bewertung = 0, anhaenge = n.anhaenge.mapNotNull { anhangKopieren(it) }) }
         neuesGespraech()
         gespraech.addAll(kopie)
-        sitzungSichern()
+        // Ein leeres Gespräch bekommt erst mit der ersten Frage eine Kennung und eine Datei.
+        if (kopie.isNotEmpty()) sitzungSichern()
         meldung = meldenAls
     }
 
@@ -320,21 +326,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun mitFrageWeiterarbeiten(i: Int) {
         val n = gespraech.getOrNull(i)?.takeIf { it.vonMir } ?: return
-        // Arbeitet Jarvis gerade an genau dieser Frage, liefe sie nach dem Abschicken doppelt.
-        if (denkt && i == gespraech.lastIndex) { meldung = "Jarvis arbeitet noch an dieser Frage."; return }
+        // Arbeitet Jarvis gerade an genau dieser Frage, liefe sie nach dem Abschicken doppelt. Nach der Stelle gefragt, nicht nach
+        // „letzte Nachricht“: Statusmeldungen eines Programmierauftrags können während der Runde schon dahinter stehen.
+        if (sitzungId?.let { laufende[it] }?.frage == i) { meldung = "Jarvis arbeitet noch an dieser Frage."; return }
         val bilder = n.anhaenge.mapNotNull { anhangKopieren(it) }
         val fehlen = n.anhaenge.size - bilder.size
-        abzweigen(i - 1, if (fehlen > 0) "Neue Session: Deine Frage steht bereit, $fehlen Anhang fehlt." else "Neue Session: Deine Frage steht bereit.")
+        // Was eine abgebrochene Runde zu dieser Frage schon erledigt hat, geht beim Abschicken mit ans Modell (nicht doppelt ausführen).
+        val erledigt = n.kontext.takeIf { it.contains("Bereits erledigt") }.orEmpty()
+        abzweigen(i - 1, "Neue Session: Deine Frage steht bereit" + (when (fehlen) { 0 -> "."; 1 -> ", 1 Anhang fehlt."; else -> ", $fehlen Anhänge fehlen." }) +
+            (if (erledigt.isNotEmpty()) " Teile davon waren schon erledigt, Jarvis weiß Bescheid." else ""))
         // Ein noch nicht abgeschickter Entwurf weicht der Frage; seine Anhangdateien werden mit entfernt.
         anhaenge.toList().forEach { anhangWeg(it) }
         entwurf = if (n.anhaenge.isNotEmpty() && n.text == ANHANG_PLATZHALTER) "" else n.text
         bilder.forEach { anhaenge.add(de.frank.jarvis.data.Anhang(it)) }
+        entwurfErledigt = if (erledigt.isEmpty()) null else EntwurfNotiz(sitzungId, entwurf.trim(), erledigt)
     }
+
+    /** Erledigt-Notiz der Frage, die [mitFrageWeiterarbeiten] in die Eingabe gelegt hat. */
+    private class EntwurfNotiz(val sitzung: String?, val text: String, val erledigt: String)
+
+    /** Gilt nur, wenn genau diese Frage unverändert in genau diesem Gespräch abgeschickt wird. */
+    private var entwurfErledigt: EntwurfNotiz? = null
 
     private fun anhangKopieren(pfad: String): String? = runCatching {
         val alt = java.io.File(pfad)
         if (!alt.exists()) return@runCatching null
-        val neu = java.io.File(alt.parentFile, "${System.currentTimeMillis()}${(100..999).random()}_" + alt.name.substringAfter('_'))
+        // Freien Namen suchen: Viele Kopien in derselben Millisekunde dürfen nicht kollidieren (copyTo überschreibt nicht).
+        val basis = System.currentTimeMillis()
+        val neu = generateSequence(0) { it + 1 }.map { java.io.File(alt.parentFile, "${basis + it}_" + alt.name.substringAfter('_')) }.first { !it.exists() }
         alt.copyTo(neu)
         neu.path
     }.getOrNull()
@@ -348,8 +367,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!kiVerbunden) { meldung = "Bitte zuerst mit ChatGPT verbinden."; return }
         val alt = gespraech.getOrNull(i) ?: return
         if (alt.vonMir) return
+        // Der Abschlussbericht und Statusmeldungen einer Programmier-Sitzung sind keine Antwort von Jarvis: Ein neuer Versuch
+        // schickte die Frage erneut ab, die den Programmierauftrag gestartet hat, und startete ihn ein zweites Mal.
+        if (alt.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT || alt.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_STATUS || alt.art == "rueckfrage") {
+            meldung = "Das ist eine Meldung der Programmier-Sitzung, keine Antwort von Jarvis. Für einen neuen Auftrag frag Jarvis direkt."
+            return
+        }
         val frage = (i - 1 downTo 0).firstOrNull { gespraech[it].vonMir } ?: run { meldung = "Zu dieser Antwort gibt es keine Frage."; return }
-        val erledigt = alt.kontext.takeIf { it.contains("Erledigt") }.orEmpty()
+        // Erledigtes steht an der Antwort („Erledigt in dieser Antwort“) oder, nach einem Fehler oder Abbruch, an der Frage.
+        val erledigt = listOfNotNull(alt.kontext.takeIf { it.contains("Erledigt") }, gespraech[frage].kontext.takeIf { it.contains("Bereits erledigt") })
+            .joinToString(" ")
         val hinweis = "\n\n(Frank wollte eine neue Antwort auf diese Frage; die vorige wurde verworfen." +
             (if (erledigt.isNotEmpty()) " Schon erledigt und NICHT noch einmal ausführen: $erledigt" else "") + ")"
         if (i != gespraech.lastIndex) {
@@ -357,7 +384,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             gespraech.removeAt(i)
         }
-        val f = gespraech.lastIndex
+        // Die Frage selbst, nicht „die letzte Nachricht“: Statusmeldungen eines Programmierauftrags können dazwischen stehen.
+        // Nach dem Abzweigen endet das neue Gespräch genau mit ihr, sonst steht sie unverändert an ihrer Stelle.
+        val f = frage
         val n = gespraech[f]
         // Gespeichert wird die Entfernung erst mit der neuen Antwort (weniger Nachrichten überschreiben nie den Stand auf der Platte).
         rundeStarten(n.text, n.anhaenge.map { de.frank.jarvis.data.Anhang(it) }, verlaufFuersModell(bis = f), f, vorlesen = false, hinweis = hinweis)
@@ -375,7 +404,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (runde.sitzung == sitzungId) {
             val i = runde.frage
             val n = gespraech.getOrNull(i)
-            if (frageNotiz.isNotEmpty() && n != null && n.vonMir && i == gespraech.lastIndex) gespraech[i] = n.copy(kontext = frageNotiz)
+            if (frageNotiz.isNotEmpty() && n != null && n.vonMir) gespraech[i] = n.copy(kontext = frageNotiz)
             gespraech += neu
             sitzungSichern()
             if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
@@ -685,6 +714,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (stand != liveStand) return@launch
             if (!liveAktiv) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
             de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
+            // Wie im Gesprächsmodus: Andere Apps bleiben leise, sonst hört das Mikrofon die Musik und das Live-Gespräch antwortet darauf.
+            de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
             val haupt: (() -> Unit) -> Unit = { block -> viewModelScope.launch(Dispatchers.Main) { if (stand == liveStand) block() } }
             val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
             val mitgeben = optionen["verlauf"].toIntOrNull() ?: 0
@@ -734,6 +765,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         liveStatus = ""
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
         de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        de.frank.jarvis.speech.GespraechsFokus.freigeben()
         viewModelScope.launch {
             // Kurz warten: GPT-Live meldet die endgültige Dauer erst nach dem Schließen.
             kotlinx.coroutines.delay(2_500)
@@ -806,7 +838,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
                 if (!aufnahmeStarten()) { diktatZiel = null; meldung = "Die Aufnahme ließ sich nicht starten." }
-                else de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
+                else {
+                    de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
+                    // Laufende Musik pausiert fürs Diktat, sonst landet sie in der Mitschrift.
+                    de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
+                }
             } finally {
                 holtMikro = false
             }
@@ -852,6 +888,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             mikro.stop()
             de.frank.jarvis.audio.AufnahmeDienst.stoppen()
             de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+            de.frank.jarvis.speech.GespraechsFokus.freigeben()
         }
     }
 
@@ -1071,7 +1108,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val wav = mikro.stop()
                 val stimmhaft = mikro.letzteStimmhaft
                 de.frank.jarvis.audio.AufnahmeDienst.stoppen()
-                if (freigeben && weckwortLauf?.isActive != true) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+                if (freigeben && weckwortLauf?.isActive != true) {
+                    de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+                    de.frank.jarvis.speech.GespraechsFokus.freigeben()
+                }
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
                 val groq = transkribierer()
@@ -1087,7 +1127,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // laufende Antworten, Agenten und Programmieraufträge bleiben unberührt.
                     sprachsitzungBeendet = true
                     Logbuch.sprache("Sprachsitzung beendet", text)
-                    vorleser.sprich("sitzung-ende", "Jarvis", "Okay, Sprachsession beendet.")
+                    // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal hielte das Vorlesen an, statt zu sprechen.
+                    vorleser.sprich("sitzung-ende:" + System.currentTimeMillis(), "Jarvis", "Okay, Sprachsession beendet.")
                 }
                 else { schreibtMit = false; gesprochen = true; sende(text) }
             } catch (e: CancellationException) {
@@ -1180,6 +1221,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         live?.beenden()
         // Das Aufräumen des Live-Gesprächs liefe über den schon beendeten viewModelScope: Mikrofon hier direkt freigeben.
         if (nimmtAuf || holtMikro || liveAktiv) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        // Ebenso den Audiofokus von Diktat und Live-Gespräch: Sonst blieben andere Apps pausiert.
+        if (nimmtAuf || holtMikro || liveAktiv || weckwortLauf?.isActive == true) de.frank.jarvis.speech.GespraechsFokus.freigeben()
         mikro.release()
         de.frank.jarvis.audio.AufnahmeDienst.stoppen()
         groq?.shutdown()
@@ -1302,6 +1345,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun gespraechLeeren() {
         sitzungId?.let { vorherigeSitzung = it }
         vorleser.stopp()
+        entwurfErledigt = null
         gespraech.clear()
         sitzungId = null
         sitzungErstellt = 0L
@@ -1568,7 +1612,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun navigiertMelden(text: String, vorlesen: Boolean) {
         meldung = text
         navigationen++
-        if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("navigation", "Jarvis", text)
+        if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("navigation:" + System.currentTimeMillis(), "Jarvis", text)
     }
 
     fun sitzungUmbenennen(id: String, titel: String) {
@@ -1798,10 +1842,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 
-/** So viele der zuletzt geführten Gespräche durchsucht „Gehe in die Whoop-Session zurück“. */
 /** Text einer Frage, die nur aus Anhängen besteht. */
 private const val ANHANG_PLATZHALTER = "Schau dir den Anhang an."
 
+/** So viele der zuletzt geführten Gespräche durchsucht „Gehe in die Whoop-Session zurück“. */
 private const val MAX_SUCHE = 150
 
 private val ORDINALE = listOf("erstens", "zweitens", "drittens")

@@ -81,6 +81,13 @@ fun JSONObject.mit(vararg felder: Pair<String, JSONObject>, pflicht: List<String
 /** Hat die Eingabe dieses Feld mit einem echten Wert? */
 fun JSONObject.gesetzt(name: String): Boolean = has(name) && !isNull(name) && optString(name).isNotBlank()
 
+/**
+ * Die Eingabe ohne Felder mit JSON-null (nur oberste Ebene). Modelle schicken optionale Felder gern als null mit;
+ * Androids optString machte daraus den Text „null“ (als Ort, Suchwort, Kategorie …). Kein Werkzeug unterscheidet null
+ * bewusst: Leeren heißt überall „ohne“. Vor jedem Werkzeugaufruf von außen (Jarvis-Modell, Plugin) angewandt.
+ */
+fun JSONObject.ohneNull(): JSONObject = JSONObject().also { sauber -> keys().forEach { k -> if (!isNull(k)) sauber.put(k, opt(k)) } }
+
 // ---- Kleine Helfer für JSON-Schemas ----
 
 fun schema(vararg felder: Pair<String, JSONObject>, pflicht: List<String> = emptyList()): JSONObject = JSONObject()

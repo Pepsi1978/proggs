@@ -104,6 +104,10 @@ def warte_auf_antwort(frage_id: str) -> dict | None:
             return daten
         if code == 404:
             return None
+        # 204 = noch keine Antwort (der Relay hat schon gewartet); alles andere (etwa 502 beim Neustart des Relays) kommt
+        # sofort zurück und darf die Schleife nicht ohne Pause gegen den Server laufen lassen.
+        if code != 204:
+            time.sleep(3)
     return None
 
 
@@ -159,7 +163,11 @@ def dauer_text(sekunden: float) -> str:
 def schreib_zustand(z: dict) -> None:
     try:
         ORDNER.mkdir(parents=True, exist_ok=True)
-        ZUSTAND.write_text(json.dumps(z, ensure_ascii=False), encoding="utf-8")
+        # Atomar: Ein gleichzeitig lesender Hook darf nie eine halb geschriebene Datei sehen (sonst gälte alles als ungesehen
+        # und die ganze Sitzung ginge noch einmal an Jarvis).
+        teil = ZUSTAND.with_name(ZUSTAND.name + f".{os.getpid()}.tmp")
+        teil.write_text(json.dumps(z, ensure_ascii=False), encoding="utf-8")
+        os.replace(teil, ZUSTAND)
     except Exception:
         pass
 

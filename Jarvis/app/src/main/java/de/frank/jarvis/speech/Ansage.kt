@@ -23,6 +23,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 object Ansage {
     private const val TAG = "JarvisAnsage"
 
+    // Mehrere Ansagen können sich überlappen: Die Ausgangslautstärke merkt sich nur die erste, zurück stellt erst die letzte.
+    private val sperre = Any()
+    private var aktiv = 0
+    private var ausgang = 0
+    private var zuletztGesetzt = 0
+
     /** [art] wird Teil der Quelle (z. B. „abfahrt“); [lautstaerke] in Prozent der Medienlautstärke. */
     fun sprich(context: Context, art: String, titel: String, text: String, lautstaerke: Int, wahl: StimmWahl? = null) {
         val app = context.applicationContext
@@ -30,9 +36,12 @@ object Ansage {
             val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:$art-stimme")
             runCatching { wach.acquire(120_000L) }
             val ton = app.getSystemService(AudioManager::class.java)
-            val vorher = ton.getStreamVolume(AudioManager.STREAM_MUSIC)
             val hoechste = ton.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             val laut = (hoechste * lautstaerke / 100.0).roundToInt().coerceIn(1, hoechste)
+            synchronized(sperre) {
+                if (aktiv++ == 0) ausgang = runCatching { ton.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrDefault(laut)
+                zuletztGesetzt = laut
+            }
             try {
                 // Die Meldung hat ihre eigene Lautstärke, unabhängig davon, wie leise das Handy gerade steht.
                 runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
@@ -44,8 +53,11 @@ object Ansage {
             } catch (f: Exception) {
                 Log.w(TAG, "Vorlesen nicht möglich", f)
             } finally {
-                // Zurück auf den Stand von vorher, außer Frank hat inzwischen selbst nachgeregelt.
-                runCatching { if (ton.getStreamVolume(AudioManager.STREAM_MUSIC) == laut) ton.setStreamVolume(AudioManager.STREAM_MUSIC, vorher, 0) }
+                // Erst nach der letzten aktiven Ansage zurück auf den Stand von vorher, außer Frank hat inzwischen selbst nachgeregelt.
+                val zurueck = synchronized(sperre) { if (--aktiv == 0) ausgang to zuletztGesetzt else null }
+                zurueck?.let { (vorher, gesetzt) ->
+                    runCatching { if (ton.getStreamVolume(AudioManager.STREAM_MUSIC) == gesetzt) ton.setStreamVolume(AudioManager.STREAM_MUSIC, vorher, 0) }
+                }
                 runCatching { if (wach.isHeld) wach.release() }
             }
         }

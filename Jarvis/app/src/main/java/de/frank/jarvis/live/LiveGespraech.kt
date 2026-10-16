@@ -163,10 +163,13 @@ class LiveGespraech(
     private val jarvisTeile = StringBuilder()
     /** Was Frank seit der letzten Client-Delegation gesagt hat: daraus erschließt Jarvis den Auftrag. */
     private val seitAuftrag = StringBuilder()
-    private val kennungArt = HashMap<String, String>()
+    // OkHttp-Faden schreibt, ergebnis() und beenden() kommen von anderen Fäden: daher threadsicher bzw. unter Sperre.
+    private val kennungArt = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-    private fun nutzerFertig() { nutzerTeile.toString().trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText); nutzerTeile.setLength(0) }
-    private fun jarvisFertig() { jarvisTeile.toString().trim().takeIf { it.isNotEmpty() }?.let(beiJarvisText); jarvisTeile.setLength(0) }
+    /** Liest den Puffer und leert ihn in einem Schritt; der Rückruf läuft außerhalb der Sperre. */
+    private fun abholen(teile: StringBuilder) = synchronized(teile) { teile.toString().also { teile.setLength(0) } }
+    private fun nutzerFertig() { abholen(nutzerTeile).trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText) }
+    private fun jarvisFertig() { abholen(jarvisTeile).trim().takeIf { it.isNotEmpty() }?.let(beiJarvisText) }
 
     private fun liveEreignis(e: JSONObject) {
         when (e.optString("type")) {
@@ -186,12 +189,13 @@ class LiveGespraech(
                 if (sprichtGerade) { ausgabeLeeren(); beiStatus("Ich höre zu") }
                 jarvisFertig()
                 val d = e.optString("delta")
-                nutzerTeile.append(d)
-                seitAuftrag.append(d)
+                synchronized(nutzerTeile) { nutzerTeile.append(d) }
+                synchronized(seitAuftrag) { seitAuftrag.append(d) }
             }
             "session.output_transcript.delta" -> {
                 nutzerFertig()
-                jarvisTeile.append(e.optString("delta"))
+                val d = e.optString("delta")
+                synchronized(jarvisTeile) { jarvisTeile.append(d) }
             }
             "session.delegation.created" -> {
                 val d = e.optJSONObject("delegation") ?: return
@@ -199,8 +203,7 @@ class LiveGespraech(
                 beiStatus("Jarvis schaut nach …")
                 if (d.optString("target") == "client") {
                     nutzerFertig()
-                    val auftrag = seitAuftrag.toString().trim()
-                    seitAuftrag.setLength(0)
+                    val auftrag = abholen(seitAuftrag).trim()
                     kennungArt[id] = "auftrag"
                     beiWerkzeug(id, auftrag)
                 }
@@ -331,10 +334,13 @@ class LiveGespraech(
                     tokenKosten += it / 60.0 * (LiveOptionen.MITSCHRIFT_PRO_MINUTE[st["mitschrift"]] ?: 0.0); kostenMelden()
                 }
             }
-            "response.output_audio_transcript.delta", "response.audio_transcript.delta" -> jarvisTeile.append(e.optString("delta"))
+            "response.output_audio_transcript.delta", "response.audio_transcript.delta" -> {
+                val d = e.optString("delta")
+                synchronized(jarvisTeile) { jarvisTeile.append(d) }
+            }
             "response.output_audio_transcript.done", "response.audio_transcript.done" -> {
-                val satz = e.optString("transcript").ifBlank { jarvisTeile.toString() }.trim()
-                jarvisTeile.setLength(0)
+                val gesammelt = abholen(jarvisTeile)
+                val satz = e.optString("transcript").ifBlank { gesammelt }.trim()
                 if (satz.isNotEmpty()) beiJarvisText(satz)
             }
             "response.done" -> {
@@ -417,22 +423,39 @@ class LiveGespraech(
         }, "jarvis-live-stille").start()
     }
 
+    /**
+     * Schützt Anlegen und Freigeben von Mikrofon, Wiedergabe und Audiomodus: tonStarten() läuft im OkHttp-Faden,
+     * beenden()/tonAus() in beliebigen anderen. Unter der Sperre wird nie auf einen anderen Faden gewartet.
+     */
+    private val tonSperre = Any()
+
     @SuppressLint("MissingPermission")
     private fun tonStarten() {
-        if (aufnahme != null || !laeuft) return
-        alterModus = audio.mode
-        audio.mode = AudioManager.MODE_IN_COMMUNICATION
-        lautsprecher(true)
+        val mikroOffen = synchronized(tonSperre) {
+            if (aufnahme != null || !laeuft) return
+            alterModus = audio.mode
+            audio.mode = AudioManager.MODE_IN_COMMUNICATION
+            lautsprecher(true)
 
-        val rate = 24000
-        val minIn = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minIn, 9600) * 2)
-        aufnahme = rec
-        if (rec.state != AudioRecord.STATE_INITIALIZED) {
-            beiFehler("Das Mikrofon ließ sich für das Live-Gespräch nicht öffnen.")
-            beenden()
-            return
+            val rate = 24000
+            val minIn = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minIn, 9600) * 2)
+            aufnahme = rec
+            if (rec.state != AudioRecord.STATE_INITIALIZED) false
+            else {
+                tonAnlegen(rec, rate)
+                true
+            }
         }
+        // Meldung und Beenden außerhalb der Sperre: beenden() ruft tonAus() und damit selbst die Sperre.
+        if (!mikroOffen) {
+            if (laeuft) beiFehler("Das Mikrofon ließ sich für das Live-Gespräch nicht öffnen.")
+            beenden()
+        }
+    }
+
+    /** Nur unter [tonSperre] aufrufen. */
+    private fun tonAnlegen(rec: AudioRecord, rate: Int) {
         if (AcousticEchoCanceler.isAvailable()) echo = AcousticEchoCanceler.create(rec.audioSessionId)?.also { it.enabled = true }
         if (NoiseSuppressor.isAvailable()) rauschen = NoiseSuppressor.create(rec.audioSessionId)?.also { it.enabled = true }
 
@@ -446,10 +469,16 @@ class LiveGespraech(
         wiedergabe = track
         track.play()
 
+        // Kam beenden() während des Anlegens, sofort alles wieder freigeben: sonst blieben Mikrofon und Audiomodus belegt.
+        if (!laeuft) { tonAus(); return }
+
         // 100-ms-Blöcke (4.800 Byte), wie OpenAI empfiehlt; Fehler in den Fäden enden als Meldung, nie als Absturz.
         Thread({
             val puffer = ByteArray(4800)
-            val ok = runCatching { rec.startRecording() }.isSuccess && rec.recordingState == AudioRecord.RECORDSTATE_RECORDING
+            // Unter der Sperre: Hat tonAus() die Aufnahme schon freigegeben, startet sie nicht mehr.
+            val ok = synchronized(tonSperre) {
+                laeuft && aufnahme === rec && runCatching { rec.startRecording() }.isSuccess && rec.recordingState == AudioRecord.RECORDSTATE_RECORDING
+            }
             if (!ok) { if (laeuft) { beiFehler("Das Mikrofon ließ sich für das Live-Gespräch nicht starten."); beenden() }; return@Thread }
             val anhaengen = if (live) "session.input_audio.append" else "input_audio_buffer.append"
             while (laeuft) {
@@ -534,18 +563,20 @@ class LiveGespraech(
         beiEnde()
     }
 
-    private fun tonAus() {
+    private fun tonAus() { synchronized(tonSperre) {
         runCatching { aufnahme?.stop() }
         runCatching { aufnahme?.release() }
         aufnahme = null
         runCatching { echo?.release(); rauschen?.release() }
+        echo = null
+        rauschen = null
         ausgabe.clear()
         runCatching { wiedergabe?.stop() }
         runCatching { wiedergabe?.release() }
         wiedergabe = null
         lautsprecher(false)
         runCatching { audio.mode = alterModus }
-    }
+    } }
 
     companion object {
         /** Die Stimmen der Realtime-API; Marin und Cedar klingen am natürlichsten. */

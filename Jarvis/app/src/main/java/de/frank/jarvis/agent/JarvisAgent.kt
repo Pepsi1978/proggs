@@ -8,6 +8,7 @@ import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.merkKontext
+import de.frank.jarvis.faehigkeit.ohneNull
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.gedaechtnis.Lagebild
 import de.frank.jarvis.observability.Logbuch
@@ -207,7 +208,8 @@ class JarvisAgent(context: Context) {
     ): Pair<String, String> {
         val name = aufruf.optString("werkzeug")
         val werkzeug = werkzeuge.firstOrNull { it.name == name }
-        val argumente = aufruf.optJSONObject("argumente") ?: JSONObject()
+        // JSON-null zählt als nicht angegeben (sonst läse das Werkzeug den Text „null“).
+        val argumente = (aufruf.optJSONObject("argumente") ?: JSONObject()).ohneNull()
         val titel = werkzeug?.titel ?: name
         beiSchritt(titel)
         if (werkzeug == null) return titel to "FEHLER: Das Werkzeug $name gibt es nicht."

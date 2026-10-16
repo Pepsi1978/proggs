@@ -81,7 +81,22 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     val teilOrdner: File get() = File(dateiOrdner, ".teil").apply { mkdirs() }
     private val index = File(wurzel, "ablage-index.json")
     private val sicherung = File(wurzel, "ablage-index.json.bak")
+    /**
+     * Merker auf der Platte: Das Verzeichnis war einmal beschädigt (ganz oder einzelne Einträge). Anhänge ohne Eintrag
+     * sind dann womöglich nur aus dem Verzeichnis gefallen; das Aufräumen lässt sie deshalb dauerhaft stehen.
+     */
+    private val defektMerker = File(wurzel, "ablage-index.defekt")
     private val sperre = Any()
+
+    // Zustand des letzten Ladens (alles unter [sperre]).
+    /** true = ablage-index.json ließ sich lesen; nur dann darf er zur Sicherung (.bak) werden. */
+    private var indexLesbar = false
+    /** true = Verzeichnis und Sicherung waren beide unlesbar: In diesem Prozess löscht das Aufräumen nichts. */
+    private var verzeichnisDefekt = false
+    /** Je Datei höchstens eine `.defekt-<Zeit>`-Kopie pro Prozess, sonst entstünde bei jedem Lesen eine neue. */
+    private val defektKopiert = HashSet<String>()
+    /** Beim letzten [ausJson] übersprungene (beschädigte) Einträge und Anhänge. */
+    private var uebersprungen = 0
 
     private val _stand = MutableStateFlow(0L)
     /** Ändert sich bei jeder Änderung der Ablage; die Oberfläche liest dann neu ein. */
@@ -248,12 +263,17 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     /**
      * Räumt Reste auf: Teil-Dateien abgebrochener Übertragungen (älter als [teilAlterMs], außer [behalten]) und
      * Dateien, die nach einem Absturz zwischen Ablegen und Verzeichnis-Schreiben ohne Eintrag liegen blieben.
+     * Ist das Verzeichnis unlesbar, wird nichts gelöscht; war es einmal beschädigt, bleiben Anhänge ohne Eintrag stehen.
      */
-    fun aufraeumen(behalten: Set<String> = emptySet(), teilAlterMs: Long = 48 * 3_600_000L) = synchronized(sperre) {
+    fun aufraeumen(behalten: Set<String> = emptySet(), teilAlterMs: Long = 48 * 3_600_000L): Unit = synchronized(sperre) {
         val jetzt = System.currentTimeMillis()
+        // Zuerst laden: erst danach steht fest, ob das Verzeichnis lesbar ist.
+        val alle = abgeglichen()
+        if (verzeichnisDefekt) return@synchronized
         teilOrdner.listFiles()?.forEach { if (it.name !in behalten && jetzt - it.lastModified() > teilAlterMs) it.delete() }
-        val bekannt = abgeglichen().flatMap { e -> e.anhaenge.flatMap { a -> listOfNotNull(a.speicher, a.vorschau, vorschauDatei(a).relativeTo(wurzel).invariantSeparatorsPath) } }.toSet()
-        val eintragIds = abgeglichen().map { it.id }.toSet()
+        if (defektMerker.exists()) return@synchronized
+        val bekannt = alle.flatMap { e -> e.anhaenge.flatMap { a -> listOfNotNull(a.speicher, a.vorschau, vorschauDatei(a).relativeTo(wurzel).invariantSeparatorsPath) } }.toSet()
+        val eintragIds = alle.map { it.id }.toSet()
         dateiOrdner.listFiles()?.filter { it.isDirectory && it.name != ".teil" }?.forEach { ordner ->
             ordner.listFiles()?.forEach { f ->
                 if (f.relativeTo(wurzel).invariantSeparatorsPath !in bekannt && jetzt - f.lastModified() > 3_600_000L) f.delete()
@@ -293,20 +313,42 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     }
 
     private fun lade(): List<Eintrag> {
+        indexLesbar = false
+        var vorhanden = false
         for (quelle in listOf(index, sicherung)) {
             if (!quelle.isFile) continue
+            vorhanden = true
+            uebersprungen = 0
             val liste = runCatching { ausJson(JSONObject(quelle.readText())) }.getOrNull()
-            if (liste != null) return liste
+            if (liste != null) {
+                if (quelle == index) indexLesbar = true
+                // Einzelne Einträge waren kaputt: Original sichern und Anhänge ohne Eintrag künftig stehen lassen.
+                if (uebersprungen > 0) { beiseitelegen(quelle); merkeDefekt() }
+                return liste
+            }
             // Beschädigt: zur Untersuchung beiseitelegen, dann die Vorgängerfassung versuchen.
-            quelle.copyTo(File(wurzel, quelle.name + ".defekt-" + System.currentTimeMillis()), overwrite = true)
+            beiseitelegen(quelle)
         }
+        // Beide unlesbar (nicht bloß fehlend wie bei einer frischen Installation): nichts aufräumen, Merker setzen.
+        if (vorhanden) { verzeichnisDefekt = true; merkeDefekt() }
         return emptyList()
+    }
+
+    private fun beiseitelegen(quelle: File) {
+        if (!defektKopiert.add(quelle.name)) return
+        runCatching { quelle.copyTo(File(wurzel, quelle.name + ".defekt-" + System.currentTimeMillis()), overwrite = true) }
+    }
+
+    private fun merkeDefekt() {
+        if (!defektMerker.exists()) runCatching { defektMerker.writeText(System.currentTimeMillis().toString()) }
     }
 
     private fun speichere(liste: List<Eintrag>, melden: Boolean = true) {
         val json = JSONObject().put("format", 1).put("eintraege", JSONArray(liste.map(::alsJson))).toString(1)
-        if (index.isFile) index.copyTo(sicherung, overwrite = true)
+        // Sicherung nur aus einem lesbaren Verzeichnis: ein kaputtes würde sonst die letzte gute Fassung ersetzen.
+        if (indexLesbar && index.isFile) index.copyTo(sicherung, overwrite = true)
         schreibeAtomar(index, json.toByteArray())
+        indexLesbar = true
         if (melden) _stand.value = _stand.value + 1
     }
 
@@ -320,31 +362,42 @@ class AblageSpeicher private constructor(private val wurzel: File) {
                 .put("kennung", a.kennung ?: JSONObject.NULL)
         }))
 
+    /**
+     * Liest das Verzeichnis. Jeder Eintrag und jeder Anhang wird einzeln gelesen: ein beschädigter wird übersprungen
+     * (gezählt in [uebersprungen]) statt das ganze Verzeichnis zu verwerfen. Ist kein einziger Eintrag lesbar, gilt
+     * das Verzeichnis als kaputt (Ausnahme), damit die Sicherung zum Zug kommt.
+     */
     private fun ausJson(json: JSONObject): List<Eintrag> {
         val liste = json.getJSONArray("eintraege")
-        return (0 until liste.length()).map { i ->
-            val e = liste.getJSONObject(i)
-            val anhaenge = e.optJSONArray("anhaenge") ?: JSONArray()
-            Eintrag(
-                id = e.getString("id"),
-                titel = e.getString("titel"),
-                textDatei = e.optString("text").takeIf { !e.isNull("text") && it.isNotEmpty() },
-                erstellt = e.optLong("erstellt"),
-                geaendert = e.optLong("geaendert"),
-                herkunft = e.optString("herkunft"),
-                beschreibung = e.optString("beschreibung"),
-                anhaenge = (0 until anhaenge.length()).map { j ->
-                    val a = anhaenge.getJSONObject(j)
-                    Anhang(
-                        id = a.getString("id"), titel = a.optString("titel"), originalName = a.optString("name"), endung = a.optString("endung"),
-                        mime = a.optString("mime"), groesse = a.optLong("groesse"), erstellt = a.optLong("erstellt"), herkunft = a.optString("herkunft"),
-                        speicher = a.getString("speicher"), sha256 = a.optString("sha256"), beschreibung = a.optString("beschreibung"),
-                        vorschau = a.optString("vorschau").takeIf { !a.isNull("vorschau") && it.isNotEmpty() },
-                        kennung = a.optString("kennung").takeIf { !a.isNull("kennung") && it.isNotEmpty() },
-                    )
-                }.filter { File(wurzel, it.speicher).isFile },
-            )
+        val ergebnis = (0 until liste.length()).mapNotNull { i ->
+            runCatching {
+                val e = liste.getJSONObject(i)
+                val anhaenge = e.optJSONArray("anhaenge") ?: JSONArray()
+                Eintrag(
+                    id = e.getString("id"),
+                    titel = e.getString("titel"),
+                    textDatei = e.optString("text").takeIf { !e.isNull("text") && it.isNotEmpty() },
+                    erstellt = e.optLong("erstellt"),
+                    geaendert = e.optLong("geaendert"),
+                    herkunft = e.optString("herkunft"),
+                    beschreibung = e.optString("beschreibung"),
+                    anhaenge = (0 until anhaenge.length()).mapNotNull { j ->
+                        runCatching {
+                            val a = anhaenge.getJSONObject(j)
+                            Anhang(
+                                id = a.getString("id"), titel = a.optString("titel"), originalName = a.optString("name"), endung = a.optString("endung"),
+                                mime = a.optString("mime"), groesse = a.optLong("groesse"), erstellt = a.optLong("erstellt"), herkunft = a.optString("herkunft"),
+                                speicher = a.getString("speicher"), sha256 = a.optString("sha256"), beschreibung = a.optString("beschreibung"),
+                                vorschau = a.optString("vorschau").takeIf { !a.isNull("vorschau") && it.isNotEmpty() },
+                                kennung = a.optString("kennung").takeIf { !a.isNull("kennung") && it.isNotEmpty() },
+                            )
+                        }.onFailure { uebersprungen++ }.getOrNull()
+                    }.filter { File(wurzel, it.speicher).isFile },
+                )
+            }.onFailure { uebersprungen++ }.getOrNull()
         }
+        if (liste.length() > 0 && ergebnis.isEmpty()) throw AblageFehler("Kein Eintrag im Ablage-Verzeichnis lesbar.")
+        return ergebnis
     }
 
     companion object {

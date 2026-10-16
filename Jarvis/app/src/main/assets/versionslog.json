@@ -105,6 +105,7 @@
     {"versionCode": 100, "versionName": "1.8.89", "stand": "16.10.2026, 13:12 Uhr", "notiz": "Meldungen von außen wie der Fortschritt einer Programmier-Sitzung stehen jetzt mit einem schwarzen Punkt davor und ohne Aktionsleiste; echte Jarvis-Antworten behalten ihre Leiste"},
     {"versionCode": 101, "versionName": "1.8.90", "stand": "16.10.2026, 13:16 Uhr", "notiz": "Der ausführliche Abschlussbericht einer Programmierung hat wieder die volle Aktionsleiste und lässt sich komplett kopieren; kurze Status- und Fertigmeldungen bleiben ohne Leiste"},
     {"versionCode": 102, "versionName": "1.8.91", "stand": "16.10.2026, 13:22 Uhr", "notiz": "Unter deinen eigenen Fragen kannst du jetzt außer Kopieren auch Vorlesen, Teilen und mit genau dieser Frage in einer neuen Session weiterarbeiten"},
-    {"versionCode": 103, "versionName": "1.8.92", "stand": "16.10.2026, 13:25 Uhr", "notiz": "Weiterarbeiten in neuer Session übernimmt Fragen mit Fotos sauber, meldet fehlende Anhänge und startet keine Frage doppelt, an der Jarvis noch arbeitet"}
+    {"versionCode": 103, "versionName": "1.8.92", "stand": "16.10.2026, 13:25 Uhr", "notiz": "Weiterarbeiten in neuer Session übernimmt Fragen mit Fotos sauber, meldet fehlende Anhänge und startet keine Frage doppelt, an der Jarvis noch arbeitet"},
+    {"versionCode": 104, "versionName": "1.8.93", "stand": "16.10.2026, 13:54 Uhr", "notiz": "Vollständiges Code-Review: Timer klingeln auch nach beendeter App, Erneut versuchen und Weiterarbeiten starten nichts doppelt, Ablage und Schlüssel sind gegen Datenverlust geschützt und Live-Gespräch, Diktat und Hintergrunddienst laufen stabiler"}
   ]
 }

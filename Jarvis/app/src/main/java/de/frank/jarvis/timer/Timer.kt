@@ -37,6 +37,8 @@ object Timer {
     const val AKTION_ZEIGEN = "de.frank.jarvis.TIMER_ZEIGEN"
     const val EXTRA_ID = "id"
     private const val KANAL = "jarvis-timer"
+    /** Erst so lange nach dem Ende gilt ein Timer beim App-Start als verpasst; Jüngeres klingelt noch über seinen Wecker. */
+    private const val SPAET_MS = 60_000L
     /** Ohne eigenen Ton: Der Klingel-Dienst spielt den Weckton selbst; auch für stille Meldungen. */
     internal const val KANAL_STILL = "jarvis-timer-wecker"
 
@@ -49,17 +51,20 @@ object Timer {
     val klingelt: StateFlow<List<LaufenderTimer>> = _klingelt.asStateFlow()
 
     /** Beim App-Start: Liste laden, Abgelaufenes melden, alle Wecker neu stellen (etwa nach einem Neustart des Handys). */
-    fun starte(context: Context) {
+    @Synchronized fun starte(context: Context) {
         val app = context.applicationContext
         kanalAnlegen(app)
         lade(app)
         val jetzt = System.currentTimeMillis()
-        // Beim Start Verpasstes nur still melden: Es ist ohnehin zu spät, und nach einem Neustart darf kein Klingel-Dienst starten.
-        _laufend.value.filter { it.ende <= jetzt }.forEach { abgelaufen(app, it.id, spaet = true) }
+        // Nur lange Verpasstes ohne Klingel-Dienst melden: Es ist ohnehin zu spät, und nach einem Neustart darf kein Klingel-Dienst starten.
+        // Eben erst Abgelaufenes nicht: Meist hat gerade sein Wecker diesen Prozess gestartet, und der Broadcast kommt gleich
+        // hinterher. Sein Wecker wird unten neu gestellt (ein vergangener Zeitpunkt löst sofort aus), so klingelt er richtig;
+        // kommt der Broadcast doppelt, findet der zweite den Timer nicht mehr und bleibt still.
+        _laufend.value.filter { jetzt - it.ende > SPAET_MS }.forEach { abgelaufen(app, it.id, spaet = true) }
         _laufend.value.forEach { stelleWecker(app, it) }
     }
 
-    fun starten(context: Context, dauerMs: Long, name: String): LaufenderTimer {
+    @Synchronized fun starten(context: Context, dauerMs: Long, name: String): LaufenderTimer {
         val app = context.applicationContext
         lade(app)
         val id = (_laufend.value.maxOfOrNull { it.id } ?: 0) + 1
@@ -71,7 +76,7 @@ object Timer {
     }
 
     /** Hält einen Timer an und entfernt ihn. true = es gab ihn. */
-    fun stoppen(context: Context, id: Int): Boolean {
+    @Synchronized fun stoppen(context: Context, id: Int): Boolean {
         val app = context.applicationContext
         lade(app)
         val gab = _laufend.value.any { it.id == id }
@@ -88,14 +93,16 @@ object Timer {
      * Der Wecker hat ausgelöst. Im Wecker-Modus (Einstellung) klingelt der Klingel-Dienst in einer Schleife, bis Frank
      * in der Meldung oder in der App „Aus“ tippt; sonst eine Meldung, die klingelt, bis sie weggewischt wird.
      */
-    fun abgelaufen(context: Context, id: Int, spaet: Boolean = false) {
+    @Synchronized fun abgelaufen(context: Context, id: Int, spaet: Boolean = false) {
         val app = context.applicationContext
         lade(app)
-        val t = _laufend.value.firstOrNull { it.id == id }
+        // Unbekannt: schon gemeldet (doppelter Broadcast nach dem Neustellen in [starte]) oder inzwischen gestoppt.
+        // Keine Meldung, sonst überschriebe sie die Meldung oder das Klingeln des echten Ablaufs.
+        val t = _laufend.value.firstOrNull { it.id == id } ?: return
         _laufend.value = _laufend.value.filterNot { it.id == id }
         speichere(app)
         kanalAnlegen(app)
-        if (!spaet && t != null && de.frank.jarvis.data.Einstellungen.get(app).timerWecker) {
+        if (!spaet && de.frank.jarvis.data.Einstellungen.get(app).timerWecker) {
             _klingelt.value = (_klingelt.value.filterNot { it.id == id } + t)
             val gestartet = runCatching { androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, TimerKlingelDienst::class.java)) }
                 .onFailure { Log.w(TAG, "Klingel-Dienst ließ sich nicht starten", it) }.isSuccess

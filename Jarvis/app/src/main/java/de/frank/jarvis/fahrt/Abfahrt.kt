@@ -245,7 +245,8 @@ object Abfahrt {
             ?.let { t -> zustand(app, t).also { it.erledigt = true; sichere(app, it) } }
         Logbuch.aktion("Abfahrt heute still", "Dienst ${tag ?: "unbekannt"}")
         app.getSystemService(NotificationManager::class.java).cancel(HINWEIS_ID)
-        runCatching { Vorleser.aktuell()?.stopp() }
+        // Das Vorlesen gehört dem Hauptfaden; still() selbst läuft im Empfänger abseits davon (stelle() liest den Kalender).
+        android.os.Handler(android.os.Looper.getMainLooper()).post { runCatching { Vorleser.aktuell()?.stopp() } }
         stelle(app)
     }
 
@@ -341,7 +342,19 @@ class AbfahrtEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Abfahrt.AKTION -> JarvisDienst.abfahrtPruefen(context)
-            Abfahrt.AKTION_STILL -> Abfahrt.still(context, intent.getStringExtra(Abfahrt.EXTRA_TAG))
+            // Abseits des Hauptfadens: still() plant neu und liest dabei den Kalender.
+            Abfahrt.AKTION_STILL -> {
+                val app = context.applicationContext
+                val tag = intent.getStringExtra(Abfahrt.EXTRA_TAG)
+                val ergebnis = goAsync()
+                Thread {
+                    try {
+                        runCatching { Abfahrt.still(app, tag) }.onFailure { Log.w("Abfahrt", "Heute still nicht möglich", it) }
+                    } finally {
+                        ergebnis.finish()
+                    }
+                }.start()
+            }
         }
     }
 }

@@ -47,9 +47,12 @@ object StimmProbe {
         null
     }
 
-    fun anhalten() { laufend?.let { runCatching { it.pause(); it.flush(); it.release() } }; laufend = null }
+    @Synchronized fun anhalten() { laufend?.let { runCatching { it.pause(); it.flush(); it.release() } }; laufend = null }
 
-    private fun spielen(pcm: ByteArray) {
+    /** Gibt die Probe nach ihrem Ende frei, aber nur, wenn inzwischen keine neue begonnen hat. */
+    @Synchronized private fun freigeben(track: AudioTrack) { if (laufend === track) anhalten() }
+
+    @Synchronized private fun spielen(pcm: ByteArray) {
         anhalten()
         val track = AudioTrack.Builder()
             .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
@@ -60,6 +63,8 @@ object StimmProbe {
         track.write(pcm, 0, pcm.size)
         laufend = track
         track.play()
+        // 24 kHz, 16 Bit mono = 48 Byte je Millisekunde; mit Reserve nach dem Ende freigeben, sonst bleibt der AudioTrack liegen.
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ freigeben(track) }, pcm.size / 48L + 500)
     }
 
     /** Baut eine kurze Sitzung auf, lässt den Satz sprechen und sammelt das Audio. */

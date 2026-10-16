@@ -249,10 +249,12 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
             ),
             nurLesen = true,
         ) { a ->
-            stoerung()?.let { return@Werkzeug Ergebnis(it, fehler = true) }
+            // Eine Störung (Drive-Fehler, fehlender Schlüssel) bricht nur ab, wenn lokal nichts vorliegt; sonst kommt der lokale Stand mit Hinweis.
+            if (eintraege().isEmpty()) stoerung()?.let { return@Werkzeug Ergebnis(it, fehler = true) }
             frisch()
             val alle = eintraege()
             if (alle.isEmpty()) return@Werkzeug Ergebnis("Es liegen keine Tagebucheinträge vor. " + (stoerung() ?: "Server oder Drive sind gerade nicht erreichbar."), fehler = true)
+            val hinweis = stoerung()?.let { "HINWEIS: Das ist der zuletzt geholte Stand auf dem Handy, neuere Einträge fehlen womöglich. $it\n\n" }.orEmpty()
             val heute = LocalDate.now()
             val suche = a.optString("suche").trim().lowercase(Locale.GERMAN)
             val einzeln = datum(a.optString("datum"))
@@ -261,7 +263,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
             var treffer = alle.filter { !it.first.isBefore(von) && !it.first.isAfter(bis) }
             if (suche.isNotEmpty()) treffer = treffer.filter { suche in it.second.readText().lowercase(Locale.GERMAN) }
             if (treffer.isEmpty()) return@Werkzeug Ergebnis(
-                "Kein Tagebucheintrag " + (if (einzeln != null) "für ${lang(einzeln)}" else "im Zeitraum") + (if (suche.isEmpty()) "" else " mit „$suche“") +
+                hinweis + "Kein Tagebucheintrag " + (if (einzeln != null) "für ${lang(einzeln)}" else "im Zeitraum") + (if (suche.isEmpty()) "" else " mit „$suche“") +
                     ". Vorhanden sind Einträge von ${lang(alle.last().first)} bis ${lang(alle.first().first)} (${alle.size} Tage).",
             )
             // Viele Tage auf einmal: je Eintrag kürzen, damit die Antwort handhabbar bleibt.
@@ -270,7 +272,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
             val kopf = if (treffer.size > gezeigt.size) "${treffer.size} Treffer, gezeigt die ${gezeigt.size} neuesten. Ältere reichen zurück bis ${lang(treffer.last().first)}; " +
                 "für Älteres von/bis setzen. Alle Trefferdaten: ${treffer.joinToString(", ") { it.first.toString() }}.\n\n"
             else "${treffer.size} Tagebucheintrag/-einträge:\n\n"
-            Ergebnis("Heute ist ${lang(heute)}. " + kopf + gezeigt.joinToString("\n\n") { (tag, datei) ->
+            Ergebnis(hinweis + "Heute ist ${lang(heute)}. " + kopf + gezeigt.joinToString("\n\n") { (tag, datei) ->
                 "### " + lang(tag) + "\n" + datei.readText().trim().let { if (it.length > jeTag) it.take(jeTag) + " … (gekürzt)" else it }
             })
         },

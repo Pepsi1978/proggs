@@ -195,6 +195,14 @@ class MainActivity : FragmentActivity() {
     /** „Hey Jarvis“ wurde erkannt: aufnehmen, piepen, antworten; bei gesperrtem Handy über dem Sperrbildschirm. */
     private fun weckwortPruefen(intent: Intent?, neu: Boolean) {
         if (intent?.getBooleanExtra(WeckwortDienst.EXTRA_WECKWORT, false) != true) return
+        // Nur der eigene Weckwort-Dienst darf so eine Aufnahme starten: Er gibt einen Einmal-Code mit, den nur er kennt.
+        val code = intent.getStringExtra(de.frank.jarvis.weckwort.Weckwort.EXTRA_RUF_CODE)
+        intent.removeExtra(de.frank.jarvis.weckwort.Weckwort.EXTRA_RUF_CODE)
+        if (!de.frank.jarvis.weckwort.Weckwort.rufCodeEinloesen(code)) {
+            intent.removeExtra(WeckwortDienst.EXTRA_WECKWORT)
+            intent.removeExtra(WeckwortDienst.EXTRA_WAR_SICHTBAR)
+            return
+        }
         weckwortSeitStopp = true
         // Sofort melden, dass die App übernommen hat: Sonst greift der Wächter des Weckworts während des Starts ein.
         de.frank.jarvis.weckwort.Weckwort.uebernommen()

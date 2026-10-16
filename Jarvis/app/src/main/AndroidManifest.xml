@@ -63,6 +63,8 @@
     <application
         android:name=".JarvisApplication"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/datensicherung_regeln"
+        android:fullBackupContent="@xml/datensicherung_alt"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"

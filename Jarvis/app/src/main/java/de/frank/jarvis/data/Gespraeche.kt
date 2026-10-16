@@ -164,8 +164,8 @@ object Gespraeche {
                 val d = datei(context, id)
                 val j = lies(d)
                 val liste = j.optJSONArray("nachrichten") ?: return@runCatching
-                val n = liste.optJSONObject(liste.length() - 1) ?: return@runCatching
-                if (!n.optBoolean("mir")) return@runCatching
+                // Die letzte Frage, nicht die letzte Nachricht: Statusmeldungen eines Programmierauftrags können dahinter stehen.
+                val n = (liste.length() - 1 downTo 0).mapNotNull { liste.optJSONObject(it) }.firstOrNull { it.optBoolean("mir") } ?: return@runCatching
                 n.put("kontext", kontext)
                 schreiben(d, j)
             }.onFailure { Log.w(TAG, "Kontext der Frage nicht gesetzt", it) }

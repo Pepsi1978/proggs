@@ -39,6 +39,39 @@ object Agenten {
     /** Eindeutige Nummer je Lauf: Zwei Läufe aus derselben Millisekunde dürfen sich nicht gegenseitig austragen. */
     private val naechsteId = java.util.concurrent.atomic.AtomicLong()
 
+    /** So viele Agenten arbeiten höchstens gleichzeitig. */
+    const val HOECHSTENS = 2
+    /** Ein vorgemerkter Start: Agent, Auftrag und Zeitpunkt. */
+    private class Vormerkung(val agent: String, val auftrag: String, val seit: Long)
+    /** Gestartet, aber noch nicht in [laeufe]: Der Dienst beginnt den Lauf erst asynchron. Geschützt durch [platz]. */
+    private val vorgemerkt = ArrayList<Vormerkung>()
+    private val platz = Any()
+    /** Kommt ein vorgemerkter Lauf so lange nicht an (Dienst startete nicht, Agent inzwischen gelöscht), verfällt der Platz. */
+    private const val VORMERKUNG_MS = 2 * 60_000L
+
+    /**
+     * Reserviert synchron einen Platz für einen Lauf, bevor er asynchron über den Dienst startet. Sonst sähen zwei
+     * gleichzeitige Aufrufe beide noch einen freien Platz und es liefen mehr als [HOECHSTENS] Agenten.
+     * false = kein Platz frei. Der Platz geht an den Lauf über ([fuehreAus]), mit [gibFrei] zurück oder verfällt.
+     */
+    fun reserviere(agent: String, auftrag: String): Boolean = synchronized(platz) {
+        val jetzt = System.currentTimeMillis()
+        vorgemerkt.removeAll { jetzt - it.seit > VORMERKUNG_MS }
+        if (_laeufe.value.size + vorgemerkt.size >= HOECHSTENS) return@synchronized false
+        vorgemerkt += Vormerkung(agent, auftrag, jetzt)
+        true
+    }
+
+    /** Gibt einen reservierten Platz zurück, dessen Start nicht zustande kam. */
+    fun gibFrei(agent: String, auftrag: String) {
+        synchronized(platz) { nimmVormerkung(agent, auftrag) }
+    }
+
+    /** Nur unter [platz] aufrufen. */
+    private fun nimmVormerkung(agent: String, auftrag: String) {
+        vorgemerkt.indexOfFirst { it.agent.equals(agent, ignoreCase = true) && it.auftrag == auftrag }.takeIf { it >= 0 }?.let { vorgemerkt.removeAt(it) }
+    }
+
     private val VORGABEN = listOf(
         AgentenBauplan(
             "Recherche",
@@ -98,7 +131,11 @@ object Agenten {
         val app = context.applicationContext
         val lauf = AgentenLauf(plan.name, auftrag, System.currentTimeMillis(), id = naechsteId.incrementAndGet())
         // Atomar ändern: Zwei Agenten laufen parallel, sonst schreibt einer den alten Stand des anderen zurück.
-        _laeufe.update { it + lauf }
+        // Zusammen mit der Vormerkung: Der Platz wechselt vom vorgemerkten zum laufenden Agenten, ohne dass reserviere() ihn doppelt zählt oder übersieht.
+        synchronized(platz) {
+            nimmVormerkung(plan.name, auftrag)
+            _laeufe.update { it + lauf }
+        }
         // Der Titel steht vorab fest: Dateien, die der Agent unterwegs erzeugt (Bilder, PDFs, Downloads), landen im selben Eintrag wie sein Bericht.
         val titel = "${plan.name} – ${auftrag.replace(Regex("\\s+"), " ").take(50).trim()} – ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M. HH.mm"))}"
         try {

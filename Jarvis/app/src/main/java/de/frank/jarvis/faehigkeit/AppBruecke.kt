@@ -20,7 +20,7 @@ import org.json.JSONObject
  * - Mehrere Adressen: Ist eine Variante nicht installiert, kommt die nächste dran.
  * - Zeitlimit: Der Aufruf läuft auf einem eigenen Faden (lesend 6 s, schreibend 25 s, bei `warte_ms` entsprechend länger).
  *   Hängt die Partner-App, kommt der Aufrufer trotzdem frei; der hängende Binder-Aufruf läuft im Hintergrund aus.
- *   Lesende Aufrufe werden danach einmal wiederholt; schreibende tragen [ZEITLIMIT], weil sie womöglich doch ankamen.
+ *   Lesende Aufrufe werden danach einmal wiederholt (nicht mit `warte_ms`); schreibende tragen [ZEITLIMIT], weil sie womöglich doch ankamen.
  */
 object AppBruecke {
     private const val NICHT_BEREIT = "App nicht bereit."
@@ -71,6 +71,9 @@ object AppBruecke {
                 } catch (_: TimeoutException) {
                     Logbuch.fehler("Brücke Zeitlimit", null, "$app.$methode nach $grenze ms")
                     // Lesend: einmal wiederholen (meist ein Kaltstart, der zweite Aufruf trifft den warmen Prozess).
+                    // Nicht bei warte_ms: Die Partner-App hat schon lange gearbeitet (ein zweiter Durchgang überschritte die Relay-Grenze
+                    // von 75 s und stieße womöglich eine zweite, bezahlte Recherche an).
+                    if (lesend && anfrage.optLong("warte_ms", 0L) > 0L) return fehler("$app antwortet nicht (Zeitlimit).")
                     if (lesend) return fehler("$app antwortet nicht (Zeitlimit).").put(VORUEBERGEHEND, true)
                     // Schreibend kein zweiter Versuch: Der Binder-Aufruf läuft weiter und kommt womöglich doch an.
                     // [ZEITLIMIT] bleibt in der Antwort, damit der Doppel-Schutz der Aufrufer greift.

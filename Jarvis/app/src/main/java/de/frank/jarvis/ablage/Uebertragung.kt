@@ -76,13 +76,17 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
             if (auftragsDatei.isFile) {
                 val a = JSONArray(auftragsDatei.readText())
                 for (i in 0 until a.length()) {
-                    val o = a.getJSONObject(i)
-                    val auftrag = DownloadAuftrag(o.getString("url"), o.getString("eintrag"), o.optString("name"), o.optString("mime"), o.optString("beschreibung"), o.optString("kennung"), o.optString("titel"), o.optString("herkunft", "Download"))
-                    val id = o.getString("id")
-                    auftraege[id] = auftrag to o.getString("teil")
-                    o.optString("pruefwert").takeIf { it.isNotEmpty() }?.let { pruefwerte[id] = it }
-                    val teil = File(speicher.teilOrdner, o.getString("teil"))
-                    _liste.value = _liste.value + Uebertragung(id, auftrag.eintragTitel, anzeigeName(auftrag), host(auftrag.url), if (teil.isFile) teil.length() else 0, o.optLong("gesamt").takeIf { it > 0 }, UebertragungsZustand.FEHLER, o.optString("fehler").ifEmpty { "Unterbrochen (App oder Handy wurde neu gestartet)." })
+                    // Je Auftrag einzeln: ein beschädigter Eintrag darf die übrigen nicht mitreißen.
+                    runCatching {
+                        val o = a.getJSONObject(i)
+                        val auftrag = DownloadAuftrag(o.getString("url"), o.getString("eintrag"), o.optString("name"), o.optString("mime"), o.optString("beschreibung"), o.optString("kennung"), o.optString("titel"), o.optString("herkunft", "Download"))
+                        val id = o.getString("id")
+                        val teilName = o.getString("teil")
+                        auftraege[id] = auftrag to teilName
+                        o.optString("pruefwert").takeIf { it.isNotEmpty() }?.let { pruefwerte[id] = it }
+                        val teil = File(speicher.teilOrdner, teilName)
+                        _liste.value = _liste.value + Uebertragung(id, auftrag.eintragTitel, anzeigeName(auftrag), host(auftrag.url), if (teil.isFile) teil.length() else 0, o.optLong("gesamt").takeIf { it > 0 }, UebertragungsZustand.FEHLER, o.optString("fehler").ifEmpty { "Unterbrochen (App oder Handy wurde neu gestartet)." })
+                    }
                 }
             }
         }
