@@ -156,6 +156,7 @@
     {"versionCode": 151, "versionName": "1.8.140", "stand": "17.10.2026, 18:28 Uhr", "notiz": "Jarvis direkt gibt es jetzt auch bei Gemini Live; dazu wählst du Denk-Modell und Denkstufe, mit denen Jarvis im Live-Gespräch denkt, und Jarvis antwortet dort schneller, weil er nicht mehr auf das Nachlesen der Apps wartet."},
     {"versionCode": 152, "versionName": "1.8.141", "stand": "17.10.2026, 18:35 Uhr", "notiz": "Jarvis direkt im Live-Gespräch bekommt bei hoher Denkstufe genug Zeit, auch wenn sie aus dem Chat kommt; Gemini sucht in diesem Modus nicht mehr selbst bei Google."},
     {"versionCode": 153, "versionName": "1.8.142", "stand": "17.10.2026, 19:01 Uhr", "notiz": "Das Fenster für Modell und Aufwand hat jetzt einen deckenden Hintergrund; im Live-Gespräch gibt es zusätzlich 6.000 und 8.000 Tokens Antwortlänge sowie 30 und 40 Minuten Gedächtnis (Gemini)."},
-    {"versionCode": 154, "versionName": "1.8.143", "stand": "17.10.2026, 19:44 Uhr", "notiz": "Das Gemini-Live-Gespräch schreibt jetzt ein Diagnoseprotokoll (Aufbau, Werkzeugaufrufe, Abbrüche), damit sich der Fehler bei „Jarvis direkt“ nachweisen lässt; an der Bedienung ändert sich nichts."}
+    {"versionCode": 154, "versionName": "1.8.143", "stand": "17.10.2026, 19:44 Uhr", "notiz": "Das Gemini-Live-Gespräch schreibt jetzt ein Diagnoseprotokoll (Aufbau, Werkzeugaufrufe, Abbrüche), damit sich der Fehler bei „Jarvis direkt“ nachweisen lässt; an der Bedienung ändert sich nichts."},
+    {"versionCode": 155, "versionName": "1.8.144", "stand": "17.10.2026, 20:07 Uhr", "notiz": "Einstellungen → Live-Gespräch sind deutlich kompakter: Schnellwahl, Stimme und die Einzeleinstellungen öffnen sich als Aufklappmenü, die Erklärungen sind kurz und knapp."}
   ]
 }

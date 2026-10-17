@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.ui.text.font.FontWeight
@@ -103,75 +105,70 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         val st = de.frank.jarvis.live.LiveOptionen.Stand(s)
         val bereit = vm.liveSchluessel(st).first.isNotBlank()
         Zeile("Orange Blase", if (bereit) "Eingerichtet" else if (st.istGemini) "Gemini-Schlüssel fehlt" else "OpenAI-Schlüssel fehlt", if (bereit) f.erfolg else f.textLeise)
-        Text("Echtes Sprachgespräch mit OpenAI (GPT-Live, Realtime) oder Google (Gemini Live): Jarvis antwortet sofort mit Stimme, hört dabei weiter zu, und du kannst ihn jederzeit unterbrechen. " +
-            "Für deine Daten fragt er im Hintergrund den normalen Jarvis mit allen Werkzeugen. OpenAI braucht einen eigenen API-Schlüssel von platform.openai.com; " +
-            "abgerechnet wird dort, nicht über das ChatGPT-Abo. Gemini braucht einen Schlüssel aus aistudio.google.com. Preise in US-Dollar, Stand 17.10.2026.",
+        Text("Sprachgespräch mit OpenAI oder Google: Jarvis antwortet sofort, hört weiter zu und lässt sich unterbrechen. Für deine Daten fragt er den normalen Jarvis. " +
+            "OpenAI-Schlüssel von platform.openai.com (eigene Abrechnung, nicht das ChatGPT-Abo), Gemini-Schlüssel von aistudio.google.com.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         Schluesselfeld(vm, "OpenAI-API-Schlüssel", s.openAiApiKey) { geaendert { s.openAiApiKey = it } }
         Schluesselfeld(vm, "Gemini-Schlüssel, kostenlos (Projekt ohne Abrechnung)", s.geminiApiKey) { geaendert { s.geminiApiKey = it } }
         Schluesselfeld(vm, "Gemini-Schlüssel, bezahlt (Projekt mit Abrechnung)", s.geminiApiKeyBezahlt) { geaendert { s.geminiApiKeyBezahlt = it } }
-        Text("Ein normaler Schlüssel aus AI Studio reicht, ein eigener Live-Schlüssel ist nicht nötig. Kostenlos oder bezahlt entscheidet das Projekt des Schlüssels: " +
-            "Alle Gemini-Live-Modelle haben ein kostenloses Kontingent; dort nutzt Google die Gespräche zum Training, im bezahlten nicht. Wie groß das Kontingent ist, nennt Google " +
-            "für die Live-Modelle nicht; Verbrauch und Grenzen zeigt aistudio.google.com → Usage. Unter „Gemini-Schlüssel“ stellst du ein, welcher genutzt wird.",
+        Text("Ein normaler AI-Studio-Schlüssel reicht. Kostenlos oder bezahlt entscheidet sein Projekt; im kostenlosen nutzt Google die Gespräche zum Training. " +
+            "Welcher genutzt wird, stellst du unter „Gemini-Schlüssel“ ein.",
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         stand.let { }
         val lo = de.frank.jarvis.live.LiveOptionen
 
         // Schnellwahl: ein Tipp stellt alles Passende ein, mit geschätzten Kosten je Profil.
-        Unterzeile("Schnellwahl")
         val aktiv = lo.aktivesProfil(st)
-        lo.PROFILE.forEach { p ->
-            val an = p == aktiv
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    .background(if (an) f.primaer.copy(alpha = 0.16f) else f.flaeche, RoundedCornerShape(16.dp))
-                    .antippen { geaendert { p.werte.forEach { (k, v) -> st.setze(k, v) } }; vm.meldung = "Live-Gespräch: ${p.titel} eingestellt." }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(p.titel, color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(p.beschreibung, color = f.textLeise, fontSize = 13.sp)
-                    Text(lo.schaetzung(de.frank.jarvis.live.LiveOptionen.Stand(s, p.werte)).removePrefix("Geschätzt für 10 Minuten: ").let { "10 Minuten: $it" }, color = f.primaer, fontSize = 13.sp)
+        Unterzeile("Schnellwahl")
+        Auswahlfeld(aktiv?.titel ?: "Eigene Mischung", lo.kurzfassung(st)) { schliessen ->
+            lo.PROFILE.forEach { p ->
+                WahlEintrag(p.titel, p.beschreibung,
+                    lo.schaetzung(de.frank.jarvis.live.LiveOptionen.Stand(s, p.werte)).removePrefix("Geschätzt für 10 Minuten: ").let { "10 Minuten: $it" },
+                    gewaehlt = p == aktiv) {
+                    geaendert { p.werte.forEach { (k, v) -> st.setze(k, v) } }; vm.meldung = "Live-Gespräch: ${p.titel} eingestellt."; schliessen()
                 }
-                if (an) Icon(Icons.Rounded.Check, null, tint = f.primaer)
             }
         }
-
-        // Was gerade eingestellt ist und was es kostet.
-        Unterzeile(if (aktiv == null) "Eingestellt (eigene Mischung)" else "Eingestellt: ${aktiv.titel}")
-        Text(lo.kurzfassung(st), color = f.text, fontSize = 14.sp)
-        Text(lo.schaetzung(st), color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
-        Text("Annahme: je zur Hälfte du und Jarvis, 10 Wortwechsel. Im Gespräch zeigt die Live-Leiste die echten Kosten, am Ende kommt die Summe. " +
-            "Verbrauch und ein festes Ausgabenlimit: platform.openai.com → Usage bzw. Settings → Limits; bei Gemini aistudio.google.com → Usage und Billing (Ausgabengrenze).",
+        Text(lo.schaetzung(st), color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+        Text("Annahme: halb du, halb Jarvis, 10 Wortwechsel; Preise in US-Dollar, Stand 17.10.2026. Echte Kosten zeigt die Live-Leiste. " +
+            "Ausgabenlimit: platform.openai.com → Settings → Limits bzw. aistudio.google.com → Billing.",
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
 
         LiveKostenSumme(vm)
 
-        // Stimme immer sichtbar: Tippen wählt sie aus und spielt eine deutsche Hörprobe.
+        // Stimme: Tippen wählt sie und spielt eine Hörprobe; das Menü bleibt offen, damit man weitere anhören kann.
         val stimmen = lo.alle.first { it.id == "stimme" }
-        Unterzeile("Stimme" + if (st.istGemini) " (Gemini, 30 Stimmen)" else if (st.istLive) " (GPT-Live)" else " (Realtime)")
-        Text("Tippen wählt die Stimme und spielt eine kurze Hörprobe auf Deutsch. Die erste Probe je Stimme holt Jarvis einmalig " +
-            (if (st.istGemini) "von Google (unter 1 Cent, mit kostenlosem Schlüssel gratis)" else "von OpenAI (unter 1 Cent)") + ", danach ist sie gespeichert und kostenlos. " +
-            (if (st.istGemini) "Alle Gemini-Stimmen sprechen jede Sprache; Deutsch steuert die Anweisung. " else "OpenAI nennt keine Liste deutscher Stimmen: Hör einfach rein, welche am besten Deutsch spricht. ") +
-            "▶ = Probe gespeichert, sie bleibt in der App und ist jederzeit wieder anhörbar. Lange drücken = Favorit mit ★, steht dann ganz oben; nochmal lange drücken nimmt den Stern weg.",
-            color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
         val probeArt = de.frank.jarvis.live.StimmProbe.art(st)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            stimmen.werte(st).sortedByDescending { de.frank.jarvis.live.StimmProbe.favoritSchluessel(probeArt, it.id) in vm.stimmFavoriten }.forEach { w ->
-                val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, probeArt, w.id)
+        val kontext = androidx.compose.ui.platform.LocalContext.current
+        val stimmWerte = stimmen.werte(st)
+        Unterzeile("Stimme" + if (st.istGemini) " (Gemini, 30 Stimmen)" else if (st.istLive) " (GPT-Live)" else " (Realtime)")
+        Auswahlfeld(stimmWerte.firstOrNull { it.id == st["stimme"] }?.titel ?: st["stimme"]) { _ ->
+            stimmWerte.sortedByDescending { de.frank.jarvis.live.StimmProbe.favoritSchluessel(probeArt, it.id) in vm.stimmFavoriten }.forEach { w ->
+                val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(kontext, probeArt, w.id)
                 val laedt = vm.stimmProbeLaedt == w.id
                 val favorit = de.frank.jarvis.live.StimmProbe.favoritSchluessel(probeArt, w.id) in vm.stimmFavoriten
-                Chip((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"],
-                    icon = if (favorit) Icons.Rounded.Star else null, iconFarbe = androidx.compose.ui.graphics.Color(0xFFFFC107), iconGroesse = 22.dp,
-                    lange = { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) }, langeText = if (favorit) "Favorit entfernen" else "Als Favorit markieren") {
-                    geaendert { st.setze("stimme", w.id) }
-                    vm.stimmProbe(probeArt, w.id)
-                }
+                val gewaehlt = w.id == st["stimme"]
+                androidx.compose.material3.DropdownMenuItem(
+                    text = {
+                        Text((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, color = if (gewaehlt) f.primaer else f.text,
+                            fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Normal)
+                    },
+                    onClick = { geaendert { st.setze("stimme", w.id) }; vm.stimmProbe(probeArt, w.id) },
+                    leadingIcon = {
+                        Box(Modifier.size(36.dp).antippen { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) }, contentAlignment = Alignment.Center) {
+                            Icon(if (favorit) Icons.Rounded.Star else Icons.Rounded.StarBorder, if (favorit) "Favorit entfernen" else "Als Favorit markieren",
+                                tint = if (favorit) androidx.compose.ui.graphics.Color(0xFFFFC107) else f.textLeise, modifier = Modifier.size(22.dp))
+                        }
+                    },
+                    trailingIcon = { if (gewaehlt) Icon(Icons.Rounded.Check, null, tint = f.primaer) },
+                )
             }
         }
+        Text("Tippen wählt und spielt eine Hörprobe (die erste einmalig unter 1 Cent, danach gespeichert: ▶). ★ = Favorit, steht oben. " +
+            (if (st.istGemini) "Alle Gemini-Stimmen sprechen Deutsch." else "Hör rein, welche am besten Deutsch spricht."),
+            color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
-        // Feineinstellungen: jede Option einzeln, mit Erklärung und Preis. Zu Beginn zu, damit es übersichtlich bleibt.
+        // Feineinstellungen: jede Option einzeln. Zu Beginn zu, damit es übersichtlich bleibt.
         var feinOffen by rememberSaveable { mutableStateOf(false) }
         Row(
             Modifier.fillMaxWidth().padding(top = 12.dp).background(f.flaeche, RoundedCornerShape(14.dp)).antippen { feinOffen = !feinOffen }.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -184,29 +181,17 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             val aktuell = st[o.id]
             val werte = o.werte(st)
             Unterzeile(o.titel)
-            Text(o.beschreibung, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
             if (werte.all { it.beschreibung.isEmpty() && it.preis.isEmpty() }) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     werte.forEach { w -> Chip(w.titel, aktiv = w.id == aktuell) { geaendert { st.setze(o.id, w.id) } } }
                 }
             } else {
-                werte.forEach { w ->
-                    val an = w.id == aktuell
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 3.dp)
-                            .background(if (an) f.primaer.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(12.dp))
-                            .antippen { geaendert { st.setze(o.id, w.id) } }.padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(w.titel, color = f.text, fontSize = 15.sp, fontWeight = if (an) FontWeight.Bold else FontWeight.Normal)
-                            if (w.beschreibung.isNotEmpty()) Text(w.beschreibung, color = f.textLeise, fontSize = 13.sp)
-                            if (w.preis.isNotEmpty()) Text(w.preis, color = f.primaer, fontSize = 13.sp)
-                        }
-                        if (an) Icon(Icons.Rounded.Check, null, tint = f.primaer)
-                    }
+                val gewaehlt = werte.firstOrNull { it.id == aktuell }
+                Auswahlfeld(gewaehlt?.titel ?: aktuell, gewaehlt?.preis.orEmpty()) { schliessen ->
+                    werte.forEach { w -> WahlEintrag(w.titel, w.beschreibung, w.preis, gewaehlt = w.id == aktuell) { geaendert { st.setze(o.id, w.id) }; schliessen() } }
                 }
             }
+            Text(o.beschreibung, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         }
     }
 
@@ -345,16 +330,11 @@ private fun LiveKostenSumme(vm: AppViewModel) {
         else String.format(java.util.Locale.GERMAN, "%.2f Stunden", minuten / 60.0)
     Text(
         "Zeitbasis: $dauer Gesprächszeit in ${k.gespraeche} " + (if (k.gespraeche == 1) "Gespräch" else "Gesprächen") +
-            (if (k.gespraeche > 0) ", bei ${k.bestaetigt} davon hat OpenAI die Dauer am Ende bestätigt" else "") +
+            (if (k.gespraeche > 0) ", ${k.bestaetigt} davon von OpenAI bestätigt" else "") +
             (if (k.zuletzt > 0) ". Zuletzt verbucht: ${datum.format(java.util.Date(k.zuletzt))}." else ".") +
-            "\n\nBerechnet = was der Dienst im Gespräch als Nutzung meldet (Sekunden bei GPT-Live, Tokens bei Denk-Modell, Realtime und Gemini) mal Listenpreis, Stand 17.10.2026. " +
-            "Gemini über den kostenlosen Schlüssel zählt mit 0 $; erst nach dem Wechsel auf den bezahlten Schlüssel kommt der Listenpreis dazu. " +
-            "Geschätzt = Gesprächszeit, die OpenAI nicht bestätigt hat (etwa bei Verbindungsabbruch), mit 0,05 $ pro Minute. " +
-            "Der Durchschnitt teilt die Summe durch die Gesprächszeit, nicht durch die Kalenderzeit.\n\n" +
-            "Unten im Live-Gespräch steht „ca. … / gesamt …“: links das laufende Gespräch, rechts diese Summe samt laufendem Gespräch, " +
-            "das beim Verbuchen am Ende nicht doppelt zählt. Geschätzte Zeit kommt erst beim Verbuchen dazu, die Summe kann dann noch leicht steigen. Zurücksetzen gilt auch dort.\n\n" +
-            "Das ist keine Rechnung: Nicht enthalten sind die Aufträge, die das Live-Gespräch an den normalen Jarvis weitergibt (laufen über dessen Modell), " +
-            "Websuche-Gebühren, Steuern und Preisänderungen. Gespräche vor Version 1.8.97 fehlen. Verbindlich ist nur platform.openai.com → Usage." +
+            "\n\nBerechnet = gemeldete Nutzung mal Listenpreis (Gemini mit kostenlosem Schlüssel = 0 $). Geschätzt = von OpenAI nicht bestätigte Zeit mit 0,05 $ pro Minute. " +
+            "Der Durchschnitt bezieht sich auf die Gesprächszeit. Die Live-Leiste zeigt „dieses Gespräch / gesamt“.\n\n" +
+            "Keine Rechnung: Aufträge an den normalen Jarvis, Websuche, Steuern und Gespräche vor 1.8.97 fehlen. Verbindlich ist platform.openai.com → Usage." +
             (if (k.ohnePreis > 0) "\n\n${k.ohnePreis} Antworten hatten ein Modell ohne hinterlegten Preis und fehlen in der Summe." else ""),
         color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
     )
@@ -368,4 +348,41 @@ private fun LiveKostenSumme(vm: AppViewModel) {
             Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { fragen = false }
         }
     }
+}
+
+/** Aufklappfeld: zeigt die gewählte Option und öffnet beim Tippen alle Optionen als Menü. */
+@Composable
+private fun Auswahlfeld(titel: String, unter: String = "", inhalt: @Composable ColumnScope.(schliessen: () -> Unit) -> Unit) {
+    val f = LocalFarben.current
+    var offen by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().background(f.flaeche, RoundedCornerShape(14.dp)).antippen { offen = true }.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                if (unter.isNotEmpty()) Text(unter, color = f.textLeise, fontSize = 13.sp)
+            }
+            Icon(Icons.Rounded.ExpandMore, "Auswahl öffnen", tint = f.text)
+        }
+        Menue(offen, { offen = false }) { inhalt { offen = false } }
+    }
+}
+
+/** Menüpunkt mit Titel, kurzer Erklärung und Preis; der gewählte steht fett mit Haken. */
+@Composable
+private fun WahlEintrag(titel: String, beschreibung: String, preis: String, gewaehlt: Boolean, aktion: () -> Unit) {
+    val f = LocalFarben.current
+    androidx.compose.material3.DropdownMenuItem(
+        text = {
+            Column(Modifier.padding(vertical = 4.dp)) {
+                Text(titel, color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Normal)
+                if (beschreibung.isNotEmpty()) Text(beschreibung, color = f.textLeise, fontSize = 13.sp)
+                if (preis.isNotEmpty()) Text(preis, color = f.primaer, fontSize = 13.sp)
+            }
+        },
+        onClick = aktion,
+        trailingIcon = { if (gewaehlt) Icon(Icons.Rounded.Check, null, tint = f.primaer) },
+    )
 }

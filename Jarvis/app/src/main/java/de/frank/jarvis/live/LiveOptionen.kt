@@ -239,7 +239,7 @@ object LiveOptionen {
 
     val alle: List<Option> = listOf(
         Option("modell", "Live-Gespräch", "Live-Modell",
-            "Womit das Live-Gespräch läuft. GPT-Live hört und spricht gleichzeitig und lässt ein Denk-Modell arbeiten; die Realtime-Modelle machen alles selbst. Ein Wechsel gilt ab dem nächsten Gespräch.",
+            "GPT-Live spricht und lässt ein Denk-Modell arbeiten, Realtime und Gemini machen alles selbst. Gilt ab dem nächsten Gespräch.",
             "gpt-live-1", {
                 listOf(
                     Wahl("gpt-live-1", "GPT-Live 1 (neuestes)", "Das neue Sprachmodell von OpenAI (seit 10.09.2026). Hört dauernd zu, man kann jederzeit dazwischenreden. Denken übernimmt das gewählte Denk-Modell.",
@@ -261,7 +261,7 @@ object LiveOptionen {
 
         // ---- Nur Gemini ----
         Option("g_schluessel", "Live-Gespräch", "Gemini-Schlüssel",
-            "Welcher deiner Gemini-Schlüssel das Gespräch bezahlt. Ob ein Schlüssel kostenlos oder bezahlt ist, hängt an seinem Projekt in AI Studio (mit oder ohne Abrechnung).",
+            "Welcher Gemini-Schlüssel genutzt wird.",
             "auto", {
                 listOf(
                     Wahl("auto", "Erst kostenlos, dann bezahlt", "Nutzt immer den kostenlosen Schlüssel. Nur wenn sein Kontingent erschöpft ist oder er abgelehnt wird bzw. nicht erreichbar ist, spricht Jarvis mit dem bezahlten weiter und meldet den Wechsel. Empfehlung.", "meist 0 $"),
@@ -270,7 +270,7 @@ object LiveOptionen {
                 )
             }, gilt = { it.istGemini }),
         Option("g_wer", "Live-Gespräch", "Wer denkt (Gemini)",
-            "Gemini kann selbst antworten und Jarvis nur für deine Daten fragen, oder jede deiner Fragen an Jarvis weitergeben und nur dessen Antwort sprechen.",
+            "Gemini antwortet selbst oder gibt jede Frage an Jarvis weiter.",
             "gemini", {
                 listOf(
                     Wahl("gemini", "Gemini denkt selbst", "Gemini antwortet selbst und fragt Jarvis mit allen Werkzeugen nur für deine Daten. Am schnellsten. Empfehlung."),
@@ -280,19 +280,19 @@ object LiveOptionen {
                 )
             }, gilt = { it.istGemini }),
         Option("j_modell", "Live-Gespräch", "Denk-Modell von Jarvis (Jarvis direkt)",
-            "Mit welchem Modell aus deinem ChatGPT-Abo Jarvis im Live-Gespräch denkt, wenn er direkt antwortet. Größere Modelle denken gründlicher, brauchen aber länger.",
+            "Modell aus deinem ChatGPT-Abo für „Jarvis direkt“. Größer = gründlicher, aber langsamer.",
             "standard", {
                 listOf(Wahl("standard", "Wie im Chat", "Dasselbe Modell wie im normalen Jarvis-Chat.")) +
                     de.frank.jarvis.auth.CodexModel.entries.map { Wahl(it.apiId, it.label, JARVIS_MODELL_TEXT[it.apiId].orEmpty()) }
             }, gilt = { it.jarvisDirekt }),
         Option("j_denken", "Live-Gespräch", "Denkstufe von Jarvis (Jarvis direkt)",
-            "Wie lange Jarvis vor der Antwort nachdenkt. Höher heißt gründlicher, aber längere Pausen im Gespräch. Kostet nichts extra, zählt aber gegen dein Abo-Kontingent.",
+            "Höher = gründlicher, aber längere Pausen. Zählt gegen dein Abo-Kontingent.",
             "standard", { st ->
                 listOf(Wahl("standard", "Wie im Chat", "Dieselbe Denkstufe wie im normalen Jarvis-Chat.")) +
                     (gewaehltesModell(st)?.supportedEfforts ?: de.frank.jarvis.auth.ReasoningEffort.entries.toList()).map { Wahl(it.apiValue, it.label, JARVIS_STUFE_TEXT[it.apiValue].orEmpty()) }
             }, gilt = { it.jarvisDirekt }),
         Option("g_denken", "Live-Gespräch", "Denkstufe (Gemini)",
-            "Wie gründlich Gemini vor der Antwort nachdenkt. Mehr Denken heißt längere Pausen und mehr Ausgabe-Tokens. 3.8 Live hat keine Stufe, es denkt immer kurz.",
+            "Mehr Denken = längere Pausen und mehr Tokens.",
             "low", { st ->
                 geminiStufen(st.modell).map { e ->
                     when (e) {
@@ -335,7 +335,7 @@ object LiveOptionen {
             "Ob deine gesprochenen Sätze im Chat erscheinen. Gemini schreibt selbst mit, ohne Zusatzpreis.",
             "an", { AN_AUS }, gilt = { it.istGemini }),
         Option("g_kuerzen", "Live-Gespräch", "Gedächtnis im langen Gespräch (Gemini)",
-            "Gemini rechnet bei jeder Antwort den ganzen bisherigen Verlauf neu als Eingabe ab, ohne Cache. Kürzen hält die Kosten flach und erlaubt Gespräche über 15 Minuten.",
+            "Gemini berechnet bei jeder Antwort den ganzen Verlauf neu. Kürzen hält die Kosten flach.",
             "16000", {
                 listOf(
                     Wahl("8000", "Kürzen ab 8.000 Tokens", "Am günstigsten, vergisst nach gut 5 Minuten Gespräch.", "höchstens ca. 0,024 $ Eingabe je Antwort"),
@@ -364,7 +364,7 @@ object LiveOptionen {
 
         // ---- Nur GPT-Live ----
         Option("denken", "Live-Gespräch", "Wer denkt (GPT-Live)",
-            "GPT-Live spricht nur; nachdenken und nachschlagen lässt es ein Denk-Modell. Beide Wege fragen für deine Daten den normalen Jarvis mit allen Werkzeugen.",
+            "GPT-Live spricht nur, gedacht wird woanders.",
             "openai", {
                 listOf(
                     Wahl("openai", "Denk-Modell bei OpenAI", "Ein OpenAI-Modell entscheidet und ruft bei Bedarf Jarvis mit allen Werkzeugen. Am zuverlässigsten. Empfehlung.", "Denk-Modell nach Tokens, über deinen API-Schlüssel"),
@@ -376,7 +376,7 @@ object LiveOptionen {
             "gpt-6-luna", { BACKENDS.map { (id, p) -> Wahl(id, BACKEND_NAMEN.getValue(id), BACKEND_TEXT.getValue(id), mio(p)) } },
             gilt = { it.denktBeiOpenAi }),
         Option("backend_effort", "Live-Gespräch", "Denkstufe des Denk-Modells",
-            "Wie lange das Denk-Modell nachdenkt. Denk-Tokens werden wie Ausgabe bezahlt, und jede Stufe macht die Pausen im Gespräch länger.",
+            "Höher = gründlicher, aber teurer und längere Pausen.",
             "low", { st -> backendEfforts(st["backend"]).map { e -> EFFORTS.getValue(e).let { w -> Wahl(w.id, w.titel, w.beschreibung, preisEffort(st, e)) } } },
             gilt = { it.denktBeiOpenAi }),
         Option("tarif", "Live-Gespräch", "Tempo-Tarif",
@@ -463,26 +463,23 @@ object LiveOptionen {
 
         // ---- Beide ----
         Option("audioweg", "Live-Gespräch", "Tonweg (Bluetooth)",
-            "Wie Jarvis' Stimme im Auto oder Kopfhörer ankommt. Bluetooth kann nicht beides zugleich: Medienqualität (A2DP) gibt es nur mit dem Handy-Mikrofon; " +
-                "wer das Mikrofon des Autos oder Headsets nutzt, bekommt das Telefonprofil (HFP) mit Telefonklang. Gilt ab dem nächsten Gespräch.",
+            "Bluetooth: Medienklang nur mit Handy-Mikrofon, Auto- oder Headset-Mikrofon nur mit Telefonklang. Gilt ab dem nächsten Gespräch.",
             "medien", {
                 listOf(
-                    Wahl("medien", "Medienton, Handy-Mikrofon", "Stimme in voller Medienqualität über Bluetooth-Medien oder Kopfhörer, kein Telefonmodus. " +
-                        "Gesprochen wird ins Handy. Ohne Bluetooth und Kopfhörer ebenfalls Medienton über den Handy-Lautsprecher. Empfehlung."),
-                    Wahl("freisprechen", "Freisprechen, Auto-Mikrofon", "Telefonprofil wie bei einem Anruf: Das Mikrofon im Auto oder Headset hört, die Stimme klingt " +
-                        "aber nach Telefon. Ohne Headset oder Freisprechanlage trotzdem Medienton am Handy-Lautsprecher. Rückfallweg, falls der Medienton nicht klappt."),
+                    Wahl("medien", "Medienton, Handy-Mikrofon", "Volle Medienqualität, du sprichst ins Handy. Empfehlung."),
+                    Wahl("freisprechen", "Freisprechen, Auto-Mikrofon", "Wie ein Anruf: Auto- oder Headset-Mikrofon, Telefonklang. Rückfallweg."),
                 )
             }),
         Option("echo_sperre", "Live-Gespräch", "Echosperre im Medienton",
-            "Im Medienton hört das Handy-Mikrofon die Lautsprecher mit. Ob das Handy dieses Echo herausrechnet, hängt vom Gerät ab; sonst unterbricht Jarvis sich selbst.",
+            "Verhindert, dass Jarvis sich im Medienton selbst hört und unterbricht.",
             "an", {
                 listOf(
-                    Wahl("an", "An", "Während Jarvis spricht, ist das Mikrofon zu. Kein Selbstunterbrechen; statt Dazwischenreden tippst du auf die orange Blase. Empfehlung im Auto."),
-                    Wahl("aus", "Aus", "Mikrofon immer offen, Dazwischenreden geht. Gut mit Kopfhörern; im Auto nur, wenn Jarvis sich nicht selbst unterbricht."),
+                    Wahl("an", "An", "Mikrofon zu, solange Jarvis spricht; unterbrechen per Tipp auf die Blase. Empfehlung im Auto."),
+                    Wahl("aus", "Aus", "Mikrofon immer offen, Dazwischenreden geht. Gut mit Kopfhörern."),
                 )
             }),
         Option("stimme", "Live-Gespräch", "Stimme",
-            "Mit welcher Stimme Jarvis im Live-Gespräch spricht. Deutsch steuert die Anweisung; probiere aus, welche Stimme am besten Deutsch spricht. Gilt ab dem nächsten Gespräch.",
+            "Stimme im Live-Gespräch. Gilt ab dem nächsten Gespräch.",
             "marin", { st ->
                 if (st.istGemini) GEMINI_STIMMEN.map { Wahl(it.first, it.first + " · " + it.second) }
                 else if (st.istLive) LIVE_STIMMEN.map { Wahl(it.first, it.second) }
