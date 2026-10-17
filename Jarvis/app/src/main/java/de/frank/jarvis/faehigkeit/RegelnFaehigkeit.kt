@@ -372,8 +372,8 @@ enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, 
 
 /**
  * Die Zusammenarbeit von ChatGPT Live und Jarvis: dieselben Regeln, die Frank 1:1 bei ChatGPT unter Personalisierung →
- * Benutzerdefinierte Anweisungen einträgt (die App kopiert sie ihm mit [fuerChatGpt]). Sie steht vor allen anderen Merkdateien
- * in jedem Kontext: beim Plugin, im eigenen Chat, bei den Agenten und in der Tagesauswertung. Bewusst keine [Merkart]: Kein
+ * Benutzerdefinierte Anweisungen einträgt (die App kopiert sie ihm mit [fuerChatGpt]). Sie steht in jedem Kontext (Plugin, eigener
+ * Chat, Agenten), nicht aber beim Schreiben der Tagesauswertung (die ist für Frank persönlich) und nicht in Nachträgen an Werkzeug-Ergebnisse. Bewusst keine [Merkart]: Kein
  * Modell soll die Regeln über jarvis_merken umschreiben können, sonst wiche die Kopie bei ChatGPT still ab; bearbeitet wird in
  * der App. Die Reihenfolge der ids ist die Priorität (neue Einträge kommen ans Ende).
  * [fassung] ist eine kurze Prüfsumme der Regeln; sie steht in beiden Fassungen, damit ChatGPT eine veraltete Kopie erkennt.

@@ -98,7 +98,7 @@ geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90
 - **Derselbe Text in ChatGPT**: „Text für ChatGPT kopieren“ legt Überschrift (Stand, Fassung) und Regeln in die Zwischenablage,
   für ChatGPT → Einstellungen → Personalisierung → Benutzerdefinierte Anweisungen (höchstens 4.000 Zeichen; die Vorgabe hat 3.932).
 - **In jedem Kontext zuerst**: Der Block steht vor allen anderen Merkdateien (Plugin-Anleitung, `jarvis_kontext`, eigener Chat,
-  Agenten, Tagesauswertung), mit einem Kopf, der für beide Leser trägt („Du“ = ChatGPT Live, „Jarvis“ = die App).
+  Agenten; nicht beim Schreiben der Tagesauswertung, die ist für Frank persönlich), mit einem Kopf, der für beide Leser trägt („Du“ = ChatGPT Live, „Jarvis“ = die App).
 - **Fassung**: vier Zeichen Prüfsumme über die Regeln, in beiden Texten gleich. Sieht ChatGPT im Startkontext eine andere Fassung
   als in seinen Anweisungen, soll es Frank einmal ans Neukopieren erinnern (Regel 10).
 - Bewusst keine `Merkart`: Kein Modell schreibt die Regeln über `jarvis_merken` um, sonst wiche die Kopie bei ChatGPT still ab.

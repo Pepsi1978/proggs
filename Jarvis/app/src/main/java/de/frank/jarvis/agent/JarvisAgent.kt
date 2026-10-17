@@ -8,6 +8,7 @@ import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.merkKontext
+import de.frank.jarvis.faehigkeit.merkKontextOhneSymbiose
 import de.frank.jarvis.faehigkeit.ohneNull
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.gedaechtnis.Lagebild
@@ -118,7 +119,8 @@ class JarvisAgent(context: Context) {
         // Im Gespräch und bei Agenten denkt Jarvis mit dem ganzen Gesamtbild aus dem Live-Gedächtnis (liegt fertig bereit,
         // nur die schnellen Bereiche werden höchstens 2,5 Sekunden nachgelesen). Beim Schreiben der Tagesauswertung selbst
         // genügen Regeln und Wissen über Frank: Die Daten stehen dort im Auftrag, und die alte Auswertung soll die neue nicht färben.
-        val gesamtbild = if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontext(app) }
+        // Ohne die Symbiose-Regeln: Sie regeln die Zusammenarbeit mit ChatGPT und haben in Franks persönlicher Auswertung nichts zu suchen.
+        val gesamtbild = if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
         val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
         Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen, Verlauf ${zuege.size} Züge")
