@@ -168,6 +168,39 @@ bzw. AGC vor der Aufnahme ist der eigentliche Hebel.
 - Bei wenigen tausend Punkten sucht Qdrant ohnehin erschöpfend; Quantisierung spart dort Speicher, kaum Zeit. Einfacher Hebel ist die Matryoshka-Kürzung auf 1536 oder 768.
 - Fallen: `bugs/apis/google-gemini-api.md` §L35–§L39.
 
+## 13. Live-Sprachdialog (native audio): Modelle, Protokoll, Kosten, Schlüssel (Stand 17.10.2026)
+
+> Quellen (abgerufen 17.10.2026, offiziell soweit nicht markiert): ai.google.dev/gemini-api/docs/models, /models/gemini-3.8-live,
+> /models/gemini-3.8-live-extended-thinking, /models/gemini-3.1-flash-live-preview, /live-api/capabilities, /live-api/thinking,
+> /live-api/session-management, /live-api/best-practices, /pricing, /api-key, /ephemeral-tokens, https://ai.google.dev/api/live.
+> Umgesetzt in Jarvis 1.8.132 (`Jarvis/app/src/main/java/de/frank/jarvis/live/LiveGespraech.kt`, `LiveOptionen.kt`); noch nicht am Gerät gemessen.
+
+**Modelle (Developer API):**
+
+| Modell-ID | Status | Denken | Werkzeuge |
+|---|---|---|---|
+| `gemini-3.8-live` | GA seit 15.09.2026, Standard | keine Stufe: `thinkingConfig` MUSS fehlen | async `NON_BLOCKING` (Standard) oder `BLOCKING`; Antwort mit `scheduling` INTERRUPT / WHEN_IDLE / SILENT |
+| `gemini-3.8-live-extended-thinking` | GA, eigenes Modell | `thinkingLevel` low / medium / high (kein minimal) | NUR `NON_BLOCKING`; Leerlauf über `serverContent.interactionStatus` (IDLE), nicht über `turnComplete` |
+| `gemini-3.1-flash-live-preview` | Preview/legacy, Abschaltung frühestens 17.11.2026 | `thinkingLevel` minimal (Standard) bis high; „Flash Live High“ = `high` | nur synchron, kein async |
+
+Ein „Gemini 3 Flash Live“ gibt es nicht; gemeint ist 3.1 Flash Live. Proactive Audio ist bei 3.8 fest an (`proactiveAudio:false` = Fehler), Affective Dialog bei 3.8 aus der API entfernt, bei 3.1 nicht unterstützt.
+
+**Protokoll (roher WebSocket, z. B. OkHttp):**
+- `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=…` (Key in der Adresse ist hier der belegte Weg; Ephemeral: `BidiGenerateContentConstrained?access_token=`). Das Extended-Thinking-Rohbeispiel nutzt v1alpha: v1beta zuerst, bei Ablehnung v1alpha.
+- Erste Nachricht `{"setup":{model:"models/<id>", generationConfig:{responseModalities:["AUDIO"], speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName}}}, thinkingConfig?}, systemInstruction:{parts:[{text}]}, tools:[{functionDeclarations:[…]}], realtimeInputConfig:{automaticActivityDetection:{startOfSpeechSensitivity, endOfSpeechSensitivity, prefixPaddingMs, silenceDurationMs}, activityHandling}, inputAudioTranscription:{}, outputAudioTranscription:{}, contextWindowCompression:{slidingWindow:{}, triggerTokens}, sessionResumption:{handle?}}}`, danach auf `setupComplete` warten.
+- **Server schickt JSON als Binär-Frame** (auch `setupComplete`): `onMessage(ByteString)` mit `utf8()` behandeln (extern: ax-llm PR 692).
+- Audio hinein `{"realtimeInput":{"audio":{"data":b64,"mimeType":"audio/pcm;rate=16000"}}}` (PCM16 mono LE 16 kHz; 24-kHz-Mikrofon 3:2 umrechnen), Text hinein `realtimeInput.text`. Heraus: `serverContent.modelTurn.parts[].inlineData` = PCM16 24 kHz.
+- `serverContent.interrupted` = Barge-in: Wiedergabepuffer sofort leeren. `toolCall.functionCalls[] {id,name,args}` → `{"toolResponse":{"functionResponses":[{id,name,response:{result},scheduling?}]}}`.
+- **Sprache:** Native-Audio-Modelle nehmen KEIN `languageCode` (1007-Abbruch). Deutsch per systemInstruction, Googles Formel: „RESPOND IN GERMAN. YOU MUST RESPOND UNMISTAKABLY IN GERMAN.“
+- **Sitzung:** Audio ohne Kompression 15 Min, Verbindung etwa 10 Min, vorher `goAway{timeLeft}`. Mit `sessionResumption` die Kennung aus `sessionResumptionUpdate.newHandle` merken (gültig 2 h) und auf neuer Verbindung weitermachen.
+- Keine serverseitige Echounterdrückung: am Lautsprecher eigene AEC + Echosperre.
+
+**Kosten (USD je 1 Mio. Tokens, alle drei 3.x-Live-Modelle gleich):** Audio 3,00 ein / 12,00 aus (≈ 0,005 $/Min hören, 0,018 $/Min sprechen), Text 0,75 / 4,50, Bild/Video 1,00 ein; Denk-Tokens wie Ausgabe. Kein Cache, kein Batch/Flex/Priority. **Jede Antwort rechnet den ganzen bisherigen Verlauf (auch altes Audio) neu als Eingabe** → Kosten wachsen quadratisch; `contextWindowCompression.triggerTokens` klein halten (Jarvis: 16.000). `usageMetadata` (Felder `promptTokenCount`, `responseTokenCount` statt `candidatesTokenCount`, `thoughtsTokenCount`, `promptTokensDetails`/`responseTokensDetails` je Modality) ist kumulativ je Antwort: je Antwort den größten Stand nehmen, über Antworten summieren.
+
+**Schlüssel und Gratis-Kontingent:** Ein normaler AI-Studio-Schlüssel reicht, kein eigener Live-Schlüssel. Alle Live-Modelle haben ein kostenloses Kontingent; dort Daten fürs Training (im EWR laut Terms Paid-Regeln, Preisseite widerspricht). Free/Paid hängt am **Projekt** (Billing, ≥ 5 $ Prepay), nicht am Schlüssel; Limits pro Projekt, für Live nicht veröffentlicht. Ausweichen vom kostenlosen auf den bezahlten Schlüssel bei Kontingent-Abbruch ist technisch möglich (Jarvis macht es automatisch). Verbrauch: AI Studio → Usage / Billing / Spend Caps.
+
+**Stimmen:** 30 (Zephyr, Puck, Charon, Kore, Fenrir, Leda, Orus, Aoede, Callirrhoe, Autonoe, Enceladus, Iapetus, Umbriel, Algieba, Despina, Erinome, Algenib, Rasalgethi, Laomedeia, Achernar, Alnilam, Schedar, Gacrux, Pulcherrima, Achird, Zubenelgenubi, Vindemiatrix, Sadachbia, Sadaltager, Sulafat), gelten für alle Live-Modelle und sprechen jede Sprache. Standardstimme undokumentiert → `voiceName` immer setzen. Hörprobe: einmal je Stimme erzeugen und zwischenspeichern.
+
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/google-gemini-api.md`) |
 |---|---|
@@ -182,3 +215,4 @@ bzw. AGC vor der Aufnahme ist der eigentliche Hebel.
 | 9 Embeddings (modell-abhängig) | J23, J24, J25 |
 | 11 Embedding-Modellwahl | `bugs/apis/local-openai-compatible.md` §22–§26 |
 | 12 Marktstand und multimodale Suche | L35, L36, L37, L38, L39 |
+| 13 Live-Sprachdialog | M40, M41, M42, M43, M44, M45 |

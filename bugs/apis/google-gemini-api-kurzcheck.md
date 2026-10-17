@@ -27,3 +27,4 @@
 | 14 | Woerter fehlen im Transkript | `transcription_config.mode` auf `verbatim` — `smart` formuliert um und laesst weg | §K31 |
 | 15 | 429 mitten im Betrieb | Free-Tier-Limits undokumentiert; auf Zweitanbieter ausweichen, aber NUR bei technischen Fehlern (nicht bei stiller Aufnahme) | §K32 |
 | 16 | ⭐ Bild/Video/PDF/Audio mit `gemini-embedding-2` einbetten | Über dem Limit wird STILL abgeschnitten (8.192 Token gesamt, Video 32 Bilder/120 s, 6 PDF-Seiten); Videoton wird ignoriert → Transkript extra; Vektorlänge nach jedem Aufruf prüfen | §L35-L39 |
+| 17 | ⭐ Gemini Live (3.8 / 3.1) im Sprachdialog | Setup je Modell (kein `thinkingConfig` bei 3.8 Live, kein `languageCode`); Binär-Frames lesen; goAway + Resumption; Verlauf kostet je Antwort neu; 429 → bezahlter Zweitschlüssel | §M40-M45 |

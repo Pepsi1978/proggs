@@ -28,3 +28,4 @@
 | 14 | STT-Ausfallsicherheit | Bei 429/Netzfehler auf Zweitanbieter ausweichen — aber NIE bei stiller Aufnahme (eigene Ausnahmeklasse) | §10 |
 | 15 | Embedding-Modell wechseln (z. B. auf lokales EmbeddingGemma 2) | Erst am eigenen Bestand messen; `gemini-embedding-2` liegt 8,5 MTEB-Punkte vorn und kostet bei kleinem Bestand < 1 $/Monat; Wechsel = neue Collection + alles neu einbetten | §11 |
 | 16 | Bilder, Videos, Code oder Seiten durchsuchbar machen | `gemini-embedding-2` reicht (kein besseres Modell belegt); Code mit Präfix `task: code retrieval`; Video in 20–30-s-Abschnitten plus Transkript; Fotos plus Beschreibung in Worten | §12 |
+| 17 | Live-Sprachdialog (Gemini 3.8 Live / Extended Thinking / 3.1 Flash Live) | IDs exakt; 3.8 Live ohne `thinkingConfig`; Binär-Frames lesen; kein `languageCode`, Deutsch per Anweisung; Verlauf wird je Antwort neu bezahlt → `contextWindowCompression`; goAway + `sessionResumption`; normaler AI-Studio-Key, Free-Tier ja | §13 |

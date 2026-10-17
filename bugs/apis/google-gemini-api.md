@@ -334,6 +334,40 @@ Modell nicht dokumentiert. Das Kontextfenster ist nicht der Engpass (25 Tokens/s
 
 ---
 
+## M. Live-Sprachdialog mit Gemini 3.x (native audio) (Stand 17.10.2026)
+
+> Quellen: offizielle Doku ai.google.dev (live-api/*, models/*, pricing) und Forum discuss.ai.google.dev, abgerufen 17.10.2026.
+> Betroffen: `gemini-3.8-live`, `gemini-3.8-live-extended-thinking`, `gemini-3.1-flash-live-preview`. In Jarvis 1.8.132 vorsorglich abgefangen, nicht selbst getroffen.
+
+### 40. ⭐ Verbindung bricht direkt nach dem Setup ab (Close 1007/1008)
+- **Symptom:** kein `setupComplete`, Close-Code 1007 oder 1008 mit kurzem Grund.
+- **Ursache:** Felder, die das Modell nicht kennt: `thinkingConfig` bei `gemini-3.8-live`, `speechConfig.languageCode` bei native audio, `proactiveAudio:false` oder `enableAffectiveDialog` bei 3.8, Modalities AUDIO+TEXT, `BLOCKING`-Werkzeuge bei Extended Thinking, `NON_BLOCKING` bei 3.1.
+- **Fix:** Setup je Modell bauen; Close-Grund (`reason`) immer anzeigen. Quelle: https://ai.google.dev/gemini-api/docs/models/gemini-3.8-live , https://ai.google.dev/gemini-api/docs/live-api/thinking
+
+### 41. ⭐ Antworten kommen nie an, obwohl die Verbindung steht
+- **Symptom:** OkHttp-`onMessage(String)` wird nie gerufen.
+- **Ursache:** Der Server schickt alle JSON-Nachrichten als **Binär-Frames** (nicht dokumentiert).
+- **Fix:** `onMessage(WebSocket, ByteString)` überschreiben und `bytes.utf8()` parsen. Quelle (extern): ax-llm/ax PR 692 (24.09.2026).
+
+### 42. Gespräch endet nach etwa 10 bzw. 15 Minuten
+- **Symptom:** Verbindung schließt (teils 1011) mitten im Gespräch.
+- **Ursache:** Verbindungen halten etwa 10 Min (vorher `goAway`), Audio-Sitzungen ohne Kompression 15 Min; bei 3.1 blieb `goAway` seit August 2026 teils aus.
+- **Fix:** `contextWindowCompression` + `sessionResumption`; bei `goAway` mit `newHandle` neu verbinden. Quelle: https://ai.google.dev/gemini-api/docs/live-api/session-management
+
+### 43. Kosten deutlich höher als der Minutenpreis
+- **Symptom:** Rechnung etwa 4-fach über „0,005 $/Min hören + 0,018 $/Min sprechen“.
+- **Ursache:** Jede Antwort berechnet den ganzen Verlauf (inkl. altem Audio) neu als Eingabe, kein Cache. Kompression greift laut einem Nutzer bei echtem Audio nicht immer (unbestätigt).
+- **Fix:** kleine `triggerTokens` (8.000–16.000), kurze Anweisung; Kosten aus `usageMetadata` je Antwort (größter Stand) summieren. Quelle: Vertex Best Practices, Forum-Antwort einer Google-Mitarbeiterin.
+
+### 44. Antwort mit Mitschrift, aber ohne Ton; Stimme wechselt
+- **Symptom:** `gemini-3.8-live` liefert Transkript, aber stilles/leeres Audio, `turnComplete` bleibt aus; Stimme Kore springt vereinzelt auf einen männlichen Sprecher; Akzent-/Sprachdrift.
+- **Status:** offen, Google „investigating“ (15.10.2026). **Workaround:** Stille-Wächter, Gespräch neu starten; andere Stimme. Quellen: https://discuss.ai.google.dev/t/gemini-3-8-live-model-replies-with-transcription-but-no-audio/186220 , https://discuss.ai.google.dev/t/gemini-3-8-live-prebuilt-voice-kore-intermittently-switches-to-a-different-male-sounding-speaker-for-a-whole-reply/187351
+
+### 45. 429 / RESOURCE_EXHAUSTED im kostenlosen Kontingent
+- **Symptom:** Abbruch mit Kontingent-Grund, obwohl das Dashboard kaum Verbrauch zeigt; Close 1008 „reported as leaked“ bei veröffentlichten Schlüsseln.
+- **Ursache:** Limits gelten pro Projekt und sind für Live nicht veröffentlicht; gleichzeitige Sitzungen nicht garantiert.
+- **Fix:** Zweiten Schlüssel aus einem Projekt mit Abrechnung hinterlegen und bei Kontingent-Abbruch wechseln (Jarvis: „Erst kostenlos, dann bezahlt“). Schlüssel nie ins Repo. Quelle: https://ai.google.dev/gemini-api/docs/rate-limits , Forum.
+
 ## Fix-Status (Stand 2026-06-08)
 
 | Frueherer Zustand | Status | Bezug |
