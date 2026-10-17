@@ -7,6 +7,7 @@ import de.frank.jarvis.auth.CodexAuthManager
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
+import de.frank.jarvis.faehigkeit.Programmierregeln
 import de.frank.jarvis.faehigkeit.merkKontext
 import de.frank.jarvis.faehigkeit.merkKontextOhneSymbiose
 import de.frank.jarvis.faehigkeit.ohneNull
@@ -133,7 +134,7 @@ class JarvisAgent(context: Context) {
         // sonst wartet Frank bei jeder Frage bis zu 2,5 Sekunden, bevor das Denk-Modell überhaupt anfängt.
         // wartenMs = 0: Die schnellen Bereiche frischen im Hintergrund für die nächste Frage auf, ohne dass diese Frage wartet;
         // nur beim allerersten Start (Bereiche fehlen ganz) wird kurz gewartet. Abbruch wird nie verschluckt.
-        val gesamtbild = if (schnell) try { withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, wartenMs = 0L) } }
+        val gesamtbild = if (schnell) try { withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, wartenMs = 0L) + Programmierregeln.alsKontext(app) } }
             catch (e: CancellationException) { throw e } catch (e: Exception) { Logbuch.fehler("Gesamtbild", e); gesamtbildMitZeitlimit() }
             else if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
@@ -271,7 +272,8 @@ class JarvisAgent(context: Context) {
             Logbuch.fehler("Gesamtbild", e)
             null
         }
-        if (bild != null) return bild
+        // Das Live-Gedächtnis enthält die Programmierregeln nicht mehr (es geht auch an Programmier-Sitzungen); Jarvis selbst braucht sie.
+        if (bild != null) return bild + withContext(Dispatchers.IO) { Programmierregeln.alsKontext(app) }
         aufbau.cancel()
         Logbuch.gedaechtnis("Gesamtbild: Zeitlimit oder Fehler, nur Gemerktes", "", System.currentTimeMillis() - beginn)
         return "GESAMTBILD NICHT VERFÜGBAR (Zeitlimit): nur Regeln, Ziele und Wissen liegen vor; lies Termine und Aufgaben selbst.\n" +

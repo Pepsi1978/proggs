@@ -616,7 +616,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     )
     val programmierListe = Merkliste(
         de.frank.jarvis.faehigkeit.Programmierregeln, "Programmierregeln", "Programmierregel",
-        "Diese Regeln bekommt jeder Programmierauftrag vollständig mit, egal ob er am PC oder in der Cloud läuft, und Jarvis hat sie bei jeder Antwort vor Augen. Änderungen gelten ab dem nächsten Auftrag.",
+        "Diese Regeln sind nur für Jarvis selbst: Er hat sie bei jeder Antwort vor Augen und richtet Programmieraufträge danach aus. An den Programmierer (PC, Mac oder Cloud) gehen sie nie mit, weder im Auftrag noch über das Live-Gedächtnis.",
         "Neue Programmierregel eintippen oder einsprechen", PROGRAMMIERREGEL_KORREKTUR,
     )
     val stilListe = Merkliste(
@@ -2099,8 +2099,8 @@ private const val STIL_KORREKTUR =
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Programmierregel. */
 private const val PROGRAMMIERREGEL_KORREKTUR =
     "Du formulierst eine Vorgabe von Frank zu einer klaren Programmierregel um. Frank hat sie eingesprochen oder eingetippt; " +
-        "jede Programmier-Session (Claude Code) bekommt die Regel danach mit jedem Programmierauftrag als Anweisung und muss sie ohne weiteres Wissen verstehen. " +
-        "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung an die Programmier-Session: wann sie gilt und was dann zu tun ist. " +
+        "Jarvis nutzt die Regel danach als eigenen Kontext, um Programmieraufträge zu steuern und den Programmierer passend zu instruieren, und muss sie ohne weiteres Wissen verstehen. " +
+        "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung: wann sie gilt und was dann zu tun ist. " +
         "Behalte jeden inhaltlichen Punkt, jeden Namen, jeden Pfad und jeden genannten Wert genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
         "und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."

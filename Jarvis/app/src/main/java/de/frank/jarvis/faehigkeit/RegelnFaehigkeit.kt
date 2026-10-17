@@ -22,7 +22,7 @@ data class Regel(val id: Int, val text: String, val stand: String)
  * Eine Datei, die Jarvis selbst pflegt und jedem Modell als Kontext beilegt: dem Plugin (Anleitung und
  * Werkzeug-Ergebnisse), dem eigenen Chat, den Agenten und der Tagesauswertung. Es gibt vier davon:
  * [Regeln] (wie Jarvis arbeiten soll), [Ziele] (was Frank erreichen will), [UeberFrank] (was Jarvis über Frank weiß) und
- * [Programmierregeln] (was jede Programmier-Session einhalten muss; geht zusätzlich vollständig mit jedem Programmierauftrag).
+ * [Programmierregeln] (wie Jarvis Programmieraufträge steuert und den Programmierer instruiert; reiner Jarvis-Kontext, geht nie an Programmier-Sitzungen).
  * Im Code stehen deshalb keine einzelnen Regeln, Ziele oder Angaben über Frank, nur dieser Speicher.
  *
  * - ids werden nie wiederverwendet (Zähler `naechsteId` in der Datei): Eine veraltete id trifft nie einen fremden Eintrag.
@@ -304,14 +304,17 @@ object UeberFrank : Merkdatei(
 )
 
 /**
- * Franks Programmierregeln: Vorgaben, die jede Programmier-Session (Claude Code am PC oder in der Cloud) einhalten muss.
- * Sie stehen wie die anderen Dateien in jedem Kontext und gehen außerdem vollständig mit jedem Programmierauftrag mit
- * ([ProgrammierFaehigkeit]). Kein Lernlauf legt hier etwas an; Einträge kommen nur von Frank (Einstellungen oder jarvis_merken).
+ * Franks Programmierregeln: ausschließlich Kontext für Jarvis selbst, damit er Programmieraufgaben richtig steuert und den
+ * Programmierer passend instruiert. Sie gehen nie automatisch an eine Programmier-Session (PC, Mac, Cloud): nicht im Auftrag
+ * ([ProgrammierFaehigkeit]), nicht in der Plugin-Anleitung, nicht in nachgereichten Gedächtnis-Blöcken und nicht im
+ * Live-Gedächtnis (jarvis_kontext), weil all das auch die Programmier-Sitzungen über MCP lesen. Jarvis' eigene Modelle
+ * bekommen sie dazu ([merkKontext], [JarvisAgent]); ChatGPT liest sie bei Bedarf mit jarvis_gemerktes_lesen.
+ * Kein Lernlauf legt hier etwas an; Einträge kommen nur von Frank (Einstellungen oder jarvis_merken).
  */
 object Programmierregeln : Merkdatei(
     "programmierregeln.json", 40,
-    "FRANKS PROGRAMMIERREGELN (von Frank selbst festgelegt; gelten für jeden Programmierauftrag und jede Programmier-Session, am PC wie in der Cloud; " +
-        "Jarvis gibt sie jedem Auftrag vollständig mit; beachte sie beim Formulieren von Aufträgen; nicht ungefragt vorlesen):",
+    "FRANKS PROGRAMMIERREGELN (von Frank selbst festgelegt; ausschließlich Kontext für Jarvis: wie du Programmieraufträge steuerst, formulierst " +
+        "und den Programmierer instruierst; nutze sie dafür, schicke den Regeltext aber nie an Programmierer, Programmier-Sitzungen oder PC/Mac mit; nicht ungefragt vorlesen):",
 )
 
 /**
@@ -351,8 +354,8 @@ enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, 
     ),
     PROGRAMMIERREGEL(
         "programmierregel", Programmierregeln, "Programmierregel",
-        "eine vollständige, für sich allein verständliche Anweisung an die Programmier-Session (Claude Code) in ein bis zwei Sätzen: wann sie gilt und was dann zu tun ist („Vor jeder Änderung Projekt und Paketkennung prüfen.“)",
-        "Sag ihm in ein bis zwei Sätzen, welche Programmierregel du dir gemerkt hast; sie geht ab jetzt mit jedem Programmierauftrag mit.",
+        "eine vollständige, für sich allein verständliche Anweisung an Jarvis in ein bis zwei Sätzen, wie er mit Programmieraufträgen umgeht oder den Programmierer instruiert: wann sie gilt und was dann zu tun ist („Bei Aufträgen an Android-Apps im Auftrag immer die Paketkennung nennen.“)",
+        "Sag ihm in ein bis zwei Sätzen, welche Programmierregel du dir gemerkt hast; du richtest künftige Programmieraufträge danach aus, ohne den Regeltext an den Programmierer zu schicken.",
     ),
     STIL(
         "stil", StilRegeln, "Stilregel",
@@ -450,8 +453,19 @@ internal val SYMBIOSE_VORGABE = listOf(
  */
 val merkdateien: List<Merkdatei> get() = Merkart.entries.map { it.datei } + Symbiose
 
-/** Alle Dateien als ein Block für den Kontext eines Modells (jede Frage, Plugin, Agenten, Tagesauswertung). */
+/** Alle Dateien als ein Block für den Kontext von Jarvis' eigenen Modellen (Chat, Agenten, Tagesauswertung). */
 fun merkKontext(context: Context): String = merkdateien.joinToString("") { it.alsKontext(context) }
+
+/**
+ * Alles ohne die [Programmierregeln]: für jeden Text, der das Handy über das Plugin verlässt (Anleitung, Werkzeug-Ergebnisse,
+ * Live-Gedächtnis in jarvis_kontext). Auch Programmier-Sitzungen lesen das über MCP; der Relay unterscheidet sie nicht von ChatGPT.
+ */
+fun merkKontextOhneProgrammierregeln(context: Context, ohneSymbiose: Boolean = false): String =
+    merkKontextAusser(merkdateien, ohneSymbiose).joinToString("") { it.alsKontext(context) }
+
+/** Die Auswahl dazu, rein und ohne Dateizugriff (auch für die Tests). */
+fun merkKontextAusser(dateien: List<Merkdatei>, ohneSymbiose: Boolean): List<Merkdatei> =
+    dateien.filter { it !== Programmierregeln && !(ohneSymbiose && it === Symbiose) }
 
 /** Dasselbe ohne die Symbiose: für Nachträge an einzelne Werkzeug-Ergebnisse, die den Startkontext schon haben. */
 fun merkKontextOhneSymbiose(context: Context): String = merkdateien.filter { it !== Symbiose }.joinToString("") { it.alsKontext(context) }
@@ -466,7 +480,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             "STIL = wie deine Antworten aussehen sollen (Länge, Gliederung, Ton, Symbole), wenn Frank das sagt („antworte mir kürzer“, „mach bei so etwas immer Stichpunkte“); " +
             "die Datei wächst außerdem von selbst aus seinen Daumen-Bewertungen. " +
             "REGEL = wie du arbeiten oder antworten sollst („immer“, „nie“, „in Zukunft“, „ab jetzt“, oder Frank bemängelt eine Antwort), auch wie du mit Programmieraufträgen umgehst. " +
-            "PROGRAMMIERREGEL = was die Programmier-Session (Claude Code) beim Programmieren selbst einhalten soll („beim Programmieren immer …“, „jede Programmier-Session soll …“); " +
+            "PROGRAMMIERREGEL = wie du (Jarvis) Programmieraufträge steuerst, formulierst und den Programmierer instruierst; reiner Jarvis-Kontext, der nie an Programmierer mitgeht; " +
             "lege sie nur an, wenn Frank sie ausdrücklich als Programmierregel will, und nie doppelt zu einer Regel, die schon unter FRANKS REGELN steht. " +
             "ZIEL = was Frank erreichen will („ich will meine VO2max steigern“). " +
             "INFO = eine dauerhafte Tatsache über ihn: Vorlieben, Abneigungen, was ihm wichtig ist, Besitz, persönliche Daten, Gewohnheiten, Familie, Gesundheit. " +
@@ -479,7 +493,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             "Hängt ein Eintrag an einem Begriff aus einer von Franks Apps, dessen genauen Wert du nicht kennst (er will „eine grüne Erholung bei Whoop“: ab wie viel Prozent ist sie grün?), " +
             "schlag den Wert zuerst mit repo_lesen im Code der App nach und trag ihn mit ein („… also mindestens so viel Prozent“). Findest du ihn nicht, merk dir den Eintrag in Franks Worten. " +
             "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE, WAS JARVIS ÜBER FRANK WEISS, FRANKS PROGRAMMIERREGELN und FRANKS ANTWORT-STIL: Regeln und Stil hältst du ein, Ziele und Wissen beziehst du von dir aus ein, " +
-            "Programmierregeln gehen automatisch vollständig mit jedem Programmierauftrag mit, du musst sie nicht in den Auftrag abschreiben."
+            "Programmierregeln nutzt du beim Formulieren und Begleiten von Programmieraufträgen; sie gehen nie automatisch mit, und du schreibst den Regeltext auch nicht in den Auftrag. " +
+            "Stehen sie nicht in deinem Kontext (Plugin), lies sie vor einem Programmierauftrag mit jarvis_gemerktes_lesen."
 
     override fun stoerung(): String? = null
 
@@ -496,7 +511,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "regel = wie Jarvis künftig arbeiten oder antworten soll („nenn mir bei Schlafwerten immer auch …“, „mach das nie wieder so“, „ab jetzt …“); " +
                 "ziel = was Frank erreichen will („ich will meine VO2max und HRV steigern und den Ruhepuls senken“); " +
                 "info = eine dauerhafte Tatsache über Frank („ich fahre einen …“, „ich bin am … geboren“, „bei Regen gehe ich nicht laufen“, „die Drohne … habe ich mir gekauft“); " +
-                "programmierregel = was jede Programmier-Session beim Programmieren einhalten soll, nur wenn Frank es ausdrücklich als Programmierregel will (geht mit jedem Programmierauftrag mit). " +
+                "programmierregel = wie Jarvis Programmieraufträge steuert und den Programmierer instruiert, nur wenn Frank es ausdrücklich als Programmierregel will (reiner Jarvis-Kontext, geht nie an den Programmierer mit). " +
                 "Rufe es von dir aus auf, sobald Frank so etwas sagt, auch nebenbei und ohne „merk dir“. Mehrere Dinge in einem Satz = mehrere Aufrufe. " +
                 "Nennt Frank dabei einen Begriff aus einer seiner Apps, dessen genauen Wert du nicht kennst (zum Beispiel „grüne Erholung“), schlag ihn vorher mit repo_lesen im Code der App nach und nimm den Wert in den Text auf. " +
                 "PFLEGE: Steht zum selben Thema schon ein Eintrag da oder widerspricht das Neue einem alten, übergib dessen id und den vollständigen neuen Text; der alte wird ersetzt. " +
@@ -583,6 +598,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             name = "jarvis_gemerktes_lesen",
             titel = "Gemerktes lesen (Regeln, Ziele, Infos, Programmierregeln)",
             beschreibung = "Jarvis: liest alles, was Jarvis sich über Frank gemerkt hat: seine Regeln, seine Ziele, die Notizen über ihn und seine Programmierregeln, jeweils mit id. " +
+                "Die Programmierregeln stehen nicht im Plugin-Kontext: Lies sie hier, bevor du einen Programmierauftrag formulierst, und richte den Auftrag danach aus, ohne ihren Text mitzuschicken. " +
                 "Nutze es für „Welche Regeln hast du dir gemerkt?“, „Welche Ziele habe ich?“, „Was weißt du über mich?“ und bevor du etwas änderst oder löschst, wenn du die ids nicht vor dir hast.",
             schema = schema(),
             nurLesen = true,

@@ -16,8 +16,7 @@ import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.ProgrammierChat
 import de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit
 import de.frank.jarvis.faehigkeit.Merkdatei
-import de.frank.jarvis.faehigkeit.merkKontext
-import de.frank.jarvis.faehigkeit.merkKontextOhneSymbiose
+import de.frank.jarvis.faehigkeit.merkKontextOhneProgrammierregeln
 import de.frank.jarvis.faehigkeit.ohneNull
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.Werkzeug
@@ -281,7 +280,7 @@ class McpServer(context: Context) {
         val eigenes = r.fehler || name == "jarvis_kontext" || name in GEDAECHTNIS || name == "programmier_fortschritt"
         val bekannt = maxOf(Gehirn.zuletztGeholt, Gehirn.zuletztNachgereicht)
         val stundeUm = jetzt - Gehirn.zuletztGeholt >= 60 * 60_000L && jetzt - Gehirn.zuletztNachgereicht >= 60 * 60_000L
-        val gedaechtnis = if (eigenes || !(stundeUm || Merkdatei.zuletztGeaendert > bekannt)) "" else merkKontextOhneSymbiose(app).let { if (it.isEmpty()) "" else "\n\n$it" }
+        val gedaechtnis = if (eigenes || !(stundeUm || Merkdatei.zuletztGeaendert > bekannt)) "" else merkKontextOhneProgrammierregeln(app, ohneSymbiose = true).let { if (it.isEmpty()) "" else "\n\n$it" }
         // Was sich seit dem letzten Überblick in Franks Apps geändert hat (eigene Aktionen über ChatGPT kennt das Gespräch schon).
         val neues = if (eigenes || Gehirn.zuletztGeholt == 0L) "" else Lagebild.neuigkeitenSeit(bekannt, ohneAnlass = "ChatGPT", hoechstens = 12).let {
             if (it.isEmpty()) "" else "\n\nNEU IN FRANKS APPS SEIT DEINEM LETZTEN ÜBERBLICK (beziehe es ein, wo es zur Frage passt):\n$it"
@@ -335,7 +334,10 @@ class McpServer(context: Context) {
         append("GESAMTBILD: jarvis_kontext liefert in einem Aufruf Jarvis' Live-Gedächtnis aus allen angebundenen Apps, jeden Bereich mit Datenstand ")
         append("(kurz als Vorgabe; einzelne Bereiche mit bereiche nachladen, nur Geändertes mit seit, alles mit umfang voll). Betrachte jede Frage vor diesem Hintergrund und beziehe von dir aus ein, was die Antwort besser macht; was nicht dazugehört, lässt du weg. ")
         append("Für Älteres oder ein bestimmtes Thema suchst du gezielt mit gedaechtnis_suchen. Hast du selbst etwas geändert oder geht es um einen Messwert von gerade eben, lies die App frisch.\n")
-        append(merkKontext(app))
+        // Ohne Programmierregeln: Die Anleitung lesen auch Programmier-Sitzungen (Claude Code über denselben Relay); die Regeln sind reiner Jarvis-Kontext.
+        append(merkKontextOhneProgrammierregeln(app))
+        append("PROGRAMMIERREGELN: Franks Programmierregeln stehen bewusst nicht hier. Sie sind nur für dich (Jarvis bzw. ChatGPT als Jarvis' Gesprächspartner): Lies sie mit jarvis_gemerktes_lesen, bevor du einen Programmierauftrag formulierst, und richte den Auftrag danach aus, ohne ihren Text an den Programmierer zu schicken. ")
+        append("Bist du selbst eine Programmier-Sitzung, gehen sie dich nichts an.\n")
         Register.alle(app).filter { it.imPlugin }.forEach { append(it.name).append(": ").append(it.hinweise).append('\n') }
         append("MITDENKEN: Bei jeder Bitte und Frage von Frank prüfst du, ob sein Tag sie berührt – Dienst und Schlafzeiten, Termine, Wetter, Erholung, offene Aufgaben. ")
         append("Das Gesamtbild sagt dir das meiste davon; die schreibenden Werkzeuge hängen zusätzlich einen Abschnitt MITGEDACHT an, und für Fragen zu einem Zeitpunkt nimmst du wetter_lesen mit datum und uhrzeit. ")

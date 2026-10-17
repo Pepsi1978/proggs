@@ -11,7 +11,7 @@ class ProgrammierregelnTest {
     private val cloud = "FORTSCHRITT (AUFTRAG-ID: ABCDE): Cloud"
 
     @Test fun programmierregelnSindEigeneDateiImKontextUndAlsArtMerkbar() {
-        // merkKontext() baut aus genau dieser Liste: steht die Datei hier, steht sie bei jeder Frage, im Plugin, bei Agenten und in der Tagesauswertung.
+        // merkKontext() baut aus genau dieser Liste: Jarvis' eigene Modelle (Chat, Agenten) haben die Programmierregeln vor Augen.
         assertTrue(Programmierregeln in merkdateien)
         assertEquals(listOf(Regeln, Ziele, UeberFrank, Programmierregeln, StilRegeln, Entscheidungen, Symbiose), merkdateien)
         assertEquals(Programmierregeln, Merkart.von("programmierregel")?.datei)
@@ -27,26 +27,25 @@ class ProgrammierregelnTest {
         assertEquals("[1] $lang\n[2] Zweite Regel.", text)
     }
 
-    @Test fun pcUndCloudBekommenDieRegelnVollstaendigVorDerFortschrittsAnweisung() {
+    @Test fun pcUndCloudBekommenNurAuftragUndFortschrittOhneProgrammierregeln() {
+        val marke = "TESTEINTRAG-E838F-ZEBRA"
         for (fortschritt in listOf(pc, cloud)) {
-            val text = ProgrammierFaehigkeit.auftragMitRegeln("Baue einen Filter in Geniale Aufgaben ein.", regeln, fortschritt)
-            assertTrue(text.startsWith("Baue einen Filter in Geniale Aufgaben ein."))
-            assertTrue(text.contains(regeln.trim()))
-            assertTrue(text.indexOf(regeln.trim()) < text.indexOf(fortschritt))
-            assertTrue(text.endsWith(fortschritt))
+            val text = ProgrammierFaehigkeit.auftragMitFortschritt("Baue einen Filter in Geniale Aufgaben ein.", fortschritt)
+            assertEquals("Baue einen Filter in Geniale Aufgaben ein.\n\n$fortschritt", text)
+            assertFalse(text.contains(marke))
+            assertFalse(text.contains("PROGRAMMIERREGELN"))
         }
     }
 
-    @Test fun ohneProgrammierregelnBleibtDerAuftragWieBisher() {
-        assertEquals("Auftrag\n\n$pc", ProgrammierFaehigkeit.auftragMitRegeln("Auftrag", "", pc))
-        assertFalse(ProgrammierFaehigkeit.auftragMitRegeln("Auftrag", "  ", pc).contains("Programmierregeln"))
+    @Test fun pluginUndLiveGedaechtnisLassenNurDieProgrammierregelnWeg() {
+        // Anleitung, nachgereichte Blöcke und jarvis_kontext lesen auch Programmier-Sitzungen: dort nie die Programmierregeln.
+        assertEquals(listOf(Regeln, Ziele, UeberFrank, StilRegeln, Entscheidungen, Symbiose), merkKontextAusser(merkdateien, ohneSymbiose = false))
+        assertEquals(listOf(Regeln, Ziele, UeberFrank, StilRegeln, Entscheidungen), merkKontextAusser(merkdateien, ohneSymbiose = true))
     }
 
-    @Test fun zuLangerAuftragWirdGekuerztNieDieRegeln() {
-        val vieleRegeln = "FRANKS PROGRAMMIERREGELN:\n" + (1..40).joinToString("\n") { "[$it] " + "x".repeat(1_400) }
-        val text = ProgrammierFaehigkeit.auftragMitRegeln("A".repeat(80_000), vieleRegeln, cloud)
+    @Test fun zuLangerAuftragWirdGekuerztNieDerFortschritt() {
+        val text = ProgrammierFaehigkeit.auftragMitFortschritt("A".repeat(80_000), cloud)
         assertTrue(text.length <= ProgrammierFaehigkeit.HOECHSTENS)
-        assertTrue(text.contains(vieleRegeln))
         assertTrue(text.endsWith(cloud))
         assertTrue(text.contains("(gekürzt)"))
     }

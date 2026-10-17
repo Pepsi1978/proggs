@@ -15,7 +15,7 @@ import de.frank.jarvis.faehigkeit.TagebuchFaehigkeit
 import de.frank.jarvis.faehigkeit.WeckerFaehigkeit
 import de.frank.jarvis.faehigkeit.WetterFaehigkeit
 import de.frank.jarvis.faehigkeit.WissenFaehigkeit
-import de.frank.jarvis.faehigkeit.merkKontext
+import de.frank.jarvis.faehigkeit.merkKontextOhneProgrammierregeln
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
@@ -342,7 +342,8 @@ object Lagebild {
 
         val heute = LocalDate.now()
         when (b) {
-            Bereich.GEMERKT -> merkKontext(app).ifEmpty { "Du hast dir noch keine Regeln, Ziele oder Notizen über Frank gemerkt." }
+            // Ohne Programmierregeln: jarvis_kontext lesen auch Programmier-Sitzungen; Jarvis' eigene Modelle bekommen sie im JarvisAgent dazu.
+            Bereich.GEMERKT -> merkKontextOhneProgrammierregeln(app).ifEmpty { "Du hast dir noch keine Regeln, Ziele oder Notizen über Frank gemerkt." }
             Bereich.RAHMEN -> alle.filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.rahmen(7)?.ifEmpty { null } ?: "NICHT VERFÜGBAR: Kalender nicht lesbar"
             Bereich.TERMINE -> rufe("kalender_lesen", JSONObject().put("von", heute.toString()).put("bis", heute.plusDays(14).toString()))
             Bereich.AUFGABEN -> coroutineScope {

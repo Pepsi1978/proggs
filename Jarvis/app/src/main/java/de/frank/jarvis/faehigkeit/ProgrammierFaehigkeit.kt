@@ -202,7 +202,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "„ändere in Jarvis …“, „schicke bitte folgenden Auftrag an den Programmierer: …“, „schick das an den Programmierer“, „lass das programmieren“). " +
                     "Aus ChatGPT bekommt jeder Auftrag in Jarvis eine eigene Programmier-Session, in der Frank Schritte und Rückfragen sieht. Der Auftrag geht an Claude Code: an Franks PC, wenn er an ist (schnell, die App kommt per WLAN aufs Handy), sonst in die Cloud " +
                     "(etwa zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version). Es findet die App in Franks Repo und programmiert die Änderung. Dieser Aufruf kehrt sofort zurück. Formuliere den Auftrag selbst vollständig aus, mit allem Wissen aus dem " +
-                    "Gespräch; die Cloud-Sitzung kennt nur diesen Text. Ein fertiger Auftrag vom Agenten Code-Analyse oder aus repo_lesen kann unverändert hinein. " +
+                    "Gespräch; die Cloud-Sitzung kennt nur diesen Text. Franks Programmierregeln sind nur für dich: Richte den Auftrag nach ihnen aus " +
+                    "(im Plugin vorher mit jarvis_gemerktes_lesen lesen), schreibe ihren Text aber nicht hinein; Jarvis hängt sie nicht an. Ein fertiger Auftrag vom Agenten Code-Analyse oder aus repo_lesen kann unverändert hinein. " +
                     "Ist unklar, welche App gemeint ist, frag Frank vorher. Jeder Aufruf ist ein NEUER Auftrag mit eigener Sitzung, auch wenn zur selben App oder zum selben " +
                     "Thema schon einer läuft oder gerade fertig wurde; er hängt sich nie an einen alten. Hat das Gespräch schon einen Auftrag, bekommt der neue eine eigene, " +
                     "getrennte Jarvis-Session. In eine bestehende Sitzung geht ein Wunsch nur, wenn Frank ausdrücklich einen Nachtrag dorthin verlangt (programmier_nachtrag); " +
@@ -245,10 +246,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // ausdrücklich neuer Session immer: Der Auftrag bekommt nach dem Start sein eigenes (siehe unten).
         val eigenes = NachtragsRegel.eigenesGespraech(ausChatGpt, neu, if (aufrufGespraech.isEmpty()) 0 else Auftragsbuch.alleImGespraech(app, aufrufGespraech).size)
         var gespraech = if (eigenes) "" else aufrufGespraech
-        // Frisch aus der Datei, bei jedem Auftrag: Was Frank in den Einstellungen geändert hat, gilt schon für diesen Start.
-        val regeln = withContext(Dispatchers.IO) { Programmierregeln.alsKontext(app) }
+        // Franks Programmierregeln gehen bewusst nicht mit: Sie sind reiner Jarvis-Kontext (wie Jarvis Aufträge steuert), keine Anweisung an die Sitzung.
         for (ziel in wahl) {
-            val mitFortschritt = auftragMitRegeln(auftrag, regeln, fortschrittsAnweisung(nummer, pc = ziel is PcBruecke))
+            val mitFortschritt = auftragMitFortschritt(auftrag, fortschrittsAnweisung(nummer, pc = ziel is PcBruecke))
             val start = try {
                 ziel.starte(appName, mitFortschritt, review, nummer)
             } catch (nichtDa: NichtDa) {
@@ -906,14 +906,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         const val ZIEL_CLOUD = "Claude Code in der Cloud"
 
         /**
-         * Der Text, den PC und Cloud gleichermaßen bekommen: Auftrag, dann Franks Programmierregeln vollständig, dann die
-         * Fortschritts-Anweisung. Wird es zu lang, kürzt es nur den Auftrag; Regeln und Fortschritt kommen immer ganz an.
+         * Der Text, den PC und Cloud gleichermaßen bekommen: Auftrag, dann die Fortschritts-Anweisung. Franks Programmierregeln
+         * gehören nicht hinein (reiner Jarvis-Kontext). Wird es zu lang, kürzt es nur den Auftrag; der Fortschritt kommt immer ganz an.
          */
-        fun auftragMitRegeln(auftrag: String, regeln: String, fortschritt: String): String {
-            val block = regeln.trim().let {
-                if (it.isEmpty()) "" else "\n\n$it\nHalte diese Programmierregeln bei diesem Auftrag ein; sie gehen allgemeinen Vorgaben vor, wo sie ihnen widersprechen."
-            }
-            val rest = block + "\n\n" + fortschritt
+        fun auftragMitFortschritt(auftrag: String, fortschritt: String): String {
+            val rest = "\n\n" + fortschritt
             // Platz für den Kopf der Cloud-Routine (APP, CODEX-REVIEW, AUFTRAG).
             val platz = HOECHSTENS - 300 - rest.length
             val kopf = if (auftrag.length <= platz) auftrag else auftrag.take(maxOf(0, platz)) + " … (gekürzt)"

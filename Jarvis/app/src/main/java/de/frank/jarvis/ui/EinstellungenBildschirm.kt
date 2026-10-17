@@ -115,13 +115,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             // ---------------------------------------------------------------- Gedächtnis
             Bereich("Jarvis' Gedächtnis") {
                 androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
-                Text("Sieben Dateien, die Jarvis bei jeder Antwort, im Live-Gedächtnis, im Live-Gespräch und für ChatGPT vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln gehen außerdem vollständig mit jedem Programmierauftrag mit; die Zusammenarbeit mit ChatGPT steht zusätzlich 1:1 in ChatGPT. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
+                Text("Sieben Dateien, die Jarvis bei jeder Antwort, im Live-Gedächtnis, im Live-Gespräch und für ChatGPT vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln sind nur für Jarvis selbst: Er steuert damit Programmieraufträge, schickt ihren Text aber nie an den Programmierer, auch nicht über das Live-Gedächtnis; die Zusammenarbeit mit ChatGPT steht zusätzlich 1:1 in ChatGPT. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
                 listOf(
                     Triple(vm.symbioseListe, "Zusammenarbeit mit ChatGPT", "wie ChatGPT Live und Jarvis zusammenarbeiten, nach Wichtigkeit"),
                     Triple(vm.regelListe, "Regeln", "wie Jarvis arbeiten und antworten soll"),
                     Triple(vm.zielListe, "Ziele", "was du erreichen willst"),
                     Triple(vm.infoListe, "Über Frank", "was Jarvis über dich weiß"),
-                    Triple(vm.programmierListe, "Programmierregeln", "was jede Programmier-Session einhalten muss"),
+                    Triple(vm.programmierListe, "Programmierregeln", "wie Jarvis Programmieraufträge steuert, geht nie an den Programmierer"),
                     Triple(vm.stilListe, "Stil", "wie du Antworten am liebsten magst, gelernt aus deinen Daumen"),
                     Triple(vm.entscheidungsListe, "Entscheidungen", "was du ausdrücklich beschlossen hast"),
                 ).forEach { (liste, name, wozu) ->
