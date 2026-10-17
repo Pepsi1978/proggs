@@ -263,7 +263,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                         Text(
                             if (stimme.stimmen > 0) "Jarvis kennt deinen Stimm-Fingerabdruck (${stimme.stimmen} Proben, nah bis fünf Meter). Nach dem Weckwort prüft er, ob wirklich du sprichst; " +
                                 "andere Menschen, Fernseher und Radio weist er ab, auch wenn sie „$wort“ sagen." +
-                                (stimme.letzteStimme?.let { s -> " Zuletzt: Übereinstimmung ${(s * 100).toInt()} %, nötig ${((stimme.stimmSchwelle ?: 0f) * 100).toInt()} %." } ?: "")
+                                (stimme.letzteStimme?.let { s -> " Zuletzt: Übereinstimmung ${(s * 100).toInt()} %, nötig ${((stimme.stimmSchwelle ?: 0f) * 100).toInt()} %." } ?: "") +
+                                (if (stimme.stimmen < de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL) " Bitte neu anlernen: Mit ${de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL} Proben (schnell, leise, aus allen Richtungen) erkennt Jarvis dich viel sicherer." else "")
                             else "Angelernt mit ${stimme.proben} Proben für „$wort“ (Klangprofil, unterscheidet Wörter, aber Menschen nur teilweise). " +
                                 "Neu anlernen, dann lernt Jarvis auch deinen Stimm-Fingerabdruck.",
                             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),

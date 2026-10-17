@@ -276,18 +276,17 @@ class WeckwortDienst : Service() {
             var boden = -1f
             var stilleBloecke = 0
             var uebersprungen = 0
-            // Silero für den Stille-Filter: Rahmen von 512 Werten, der Rest eines Blocks wartet auf den nächsten.
+            // Silero für den Stille-Filter: die zwei vollen Rahmen (je 512 Werte) eines Blocks. Lief Silero im Block davor
+            // nicht, fängt es frisch an, damit kein Zustand aus älterem Ton nachwirkt.
             val vadRahmen = FloatArray(SprecherErkenner.VAD_RAHMEN)
-            var vadFuellung = 0
+            var vadLief = false
             /** Hört Silero in diesem Block eine Stimme? */
             fun stimmeImBlock(v: SileroVad): Boolean {
+                if (!vadLief) v.zuruecksetzen()
                 var stimme = false
-                for (w in block) {
-                    vadRahmen[vadFuellung++] = w / 32768f
-                    if (vadFuellung == vadRahmen.size) {
-                        vadFuellung = 0
-                        if (v.wahrscheinlichkeit(vadRahmen) >= VAD_STIMME) stimme = true
-                    }
+                for (r in 0 until block.size / vadRahmen.size) {
+                    for (i in vadRahmen.indices) vadRahmen[i] = block[r * vadRahmen.size + i] / 32768f
+                    if (v.wahrscheinlichkeit(vadRahmen) >= VAD_STIMME) stimme = true
                 }
                 return stimme
             }
@@ -297,8 +296,8 @@ class WeckwortDienst : Service() {
                 return runCatching {
                     v.zuruecksetzen()
                     val r = SprecherErkenner.VAD_RAHMEN
-                    BooleanArray(ton.size / r) { i -> v.wahrscheinlichkeit(ton.copyOfRange(i * r, (i + 1) * r)) >= VAD_MASKE }
-                        .also { v.zuruecksetzen(); vadFuellung = 0 }
+                    BooleanArray(ton.size / r) { i -> System.arraycopy(ton, i * r, vadRahmen, 0, r); v.wahrscheinlichkeit(vadRahmen) >= VAD_MASKE }
+                        .also { vadLief = false }
                 }.getOrNull()
             }
             /** Fingerabdruck der letzten Sekunden: nur die Stimme darin, wenn Silero da ist (hilft bei Lärm). */
@@ -307,9 +306,6 @@ class WeckwortDienst : Service() {
                 val ton = letzterTon()
                 return runCatching { s.fingerabdruck(ton, stimmMaske(ton)) }.getOrNull()
             }
-            // Nach einer Abweisung ein paar Blöcke nicht urteilen, das Modell aber warm halten: Ein volles Zurücksetzen
-            // machte 1,3 s taub, und ein gleich wiederholtes „Hey Jarvis“ ging verloren.
-            var abklingen = 0
             // Knapp an der Stimme gescheitert: Wann, damit ein gleich wiederholter Ruf als Nachdruck durchgeht.
             var knappUm = 0L
             while (an.get()) {
@@ -337,7 +333,9 @@ class WeckwortDienst : Service() {
                 // Bei gleichmäßigem Lärm (Auto, Lüfter, Straße) steigt der Rauschboden mit, eine Stimme aus der Ferne
                 // liegt kaum darüber: Dann entscheidet Silero, ob jemand spricht, statt die Modelle schlafen zu legen.
                 val laut = rms > maxOf(boden * STILLE_FAKTOR, STILLE_MIN)
-                val stimmeImLaerm = !laut && boden > LAERM_BODEN && vad != null && runCatching { stimmeImBlock(vad) }.getOrDefault(false)
+                val mitVad = !laut && boden > LAERM_BODEN && vad != null
+                val stimmeImLaerm = mitVad && runCatching { stimmeImBlock(vad!!) }.getOrDefault(false)
+                vadLief = mitVad
                 if (laut || stimmeImLaerm) stilleBloecke = 0 else stilleBloecke++
                 if (!anlernen && stilleBloecke > STILLE_BLOECKE) {
                     uebersprungen++
@@ -376,7 +374,6 @@ class WeckwortDienst : Service() {
                         mitStimme -> Weckwort.schwelle * 0.7f
                         else -> Weckwort.schwelle
                     }
-                    if (abklingen > 0) { abklingen--; inFolge = 0; continue }
                     if (wert < schwelle) {
                         inFolge = 0
                         if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
@@ -414,7 +411,8 @@ class WeckwortDienst : Service() {
                 val stimme = if (mitStimme) Stimmprofil.pruefeStimme(fingerabdruck()) else null
                 // Nachdruck: Zwei knappe Abweisungen kurz hintereinander sind Frank, der es noch einmal sagt (schnell,
                 // heiser, im Lärm). Fremde und Fernseher sagen das Weckwort kaum zweimal in wenigen Sekunden.
-                val knapp = stimme != null && !stimme.ok && stimme.aehnlich >= stimme.schwelle - NACHDRUCK_SPIEL
+                // Nie unter [NACHDRUCK_MIN]: Darunter lässt CAM++ fremde Stimmen durch (siehe Stimmprofil).
+                val knapp = stimme != null && !stimme.ok && stimme.aehnlich >= maxOf(stimme.schwelle - NACHDRUCK_SPIEL, NACHDRUCK_MIN)
                 val jetzt = SystemClock.elapsedRealtime()
                 // Mindestabstand: Sonst urteilt das gleitende „Hey Jarvis“-Fenster nach dem Abklingen über denselben Ruf noch einmal.
                 val nachdruck = knapp && jetzt - knappUm in NACHDRUCK_ABSTAND_MS..NACHDRUCK_MS
@@ -424,7 +422,8 @@ class WeckwortDienst : Service() {
                     Log.i(TAG, "Weckwort ($art) abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
                     WeckwortProtokoll.treffer(this, art, modellwert, pruefung, if (knapp) "knapp abgewiesen" else "abgewiesen", stimme, mitStimme, phr?.letzterTreffer)
                     Weckwort.abgewiesen(modellwert ?: 1f)
-                    if (phr == null) abklingen = ABKLINGEN_BLOECKE
+                    // Neu anfangen: Ein zweites Urteil über denselben Ruf darf nicht als Nachdruck zählen.
+                    if (phr == null) erk.zuruecksetzen()
                     phr?.zuruecksetzen()
                     continue
                 }
@@ -587,12 +586,11 @@ class WeckwortDienst : Service() {
         /** Silero-Werte: ab hier zählt ein Rahmen im Lärm als Stimme (Stille-Filter) bzw. für den Fingerabdruck. */
         private const val VAD_STIMME = 0.5f
         private const val VAD_MASKE = 0.3f
-        /** Nach einer Abweisung so viele Blöcke (je 80 ms) nicht urteilen. */
-        private const val ABKLINGEN_BLOECKE = 6
         /** Nachdruck: knapp heißt höchstens so weit unter der Stimm-Schwelle, und der zweite Ruf binnen dieser Zeit. */
         private const val NACHDRUCK_SPIEL = 0.08f
         private const val NACHDRUCK_MS = 10_000L
         private const val NACHDRUCK_ABSTAND_MS = 1_500L
+        private const val NACHDRUCK_MIN = 0.42f
         /** Erst ab diesem Rauschboden (16 Bit, etwa -47 dBFS) ist es Lärm und Silero entscheidet; im ruhigen Raum schlafen die Modelle wie bisher. */
         private const val LAERM_BODEN = 150f
         /**

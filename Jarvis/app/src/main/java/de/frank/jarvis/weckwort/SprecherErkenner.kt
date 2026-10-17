@@ -24,7 +24,8 @@ class SprecherErkenner(context: Context) : AutoCloseable {
      * [stimmhaft]: je 32-ms-Rahmen, ob Silero dort eine Stimme hört. Dann zählt nur die Stimme, nicht Lärm drumherum.
      */
     fun fingerabdruck(ton: FloatArray, stimmhaft: BooleanArray? = null): FloatArray? {
-        val sprache = (if (stimmhaft != null) nurStimme(ton, stimmhaft) else nurSprache(ton)) ?: return null
+        // Hört Silero zu wenig Stimme (sehr schnell, sehr leise), bleibt der Zuschnitt nach Lautstärke.
+        val sprache = (stimmhaft?.let { nurStimme(ton, it) } ?: nurSprache(ton)) ?: return null
         val strom = extraktor.createStream()
         return try {
             strom.acceptWaveform(sprache, WeckwortErkenner.ABTASTRATE)
