@@ -133,6 +133,7 @@
     {"versionCode": 128, "versionName": "1.8.117", "stand": "17.10.2026, 13:05 Uhr", "notiz": "Nachträge kommen zuverlässiger an: auch wenn die Bestätigung hakt, nach einer im Terminal beantworteten Rückfrage und ohne eine Rückfrage der Cloud-Sitzung zu verdecken."},
     {"versionCode": 129, "versionName": "1.8.118", "stand": "17.10.2026, 13:23 Uhr", "notiz": "„Hey Jarvis“ außerhalb der App öffnet Jarvis nicht mehr: Das Gespräch läuft im Hintergrund, oben schwebt eine kleine Sprachblase mit Pegel-Animation (blau du, orange Jarvis); antippen öffnet Jarvis, lang drücken beendet."},
     {"versionCode": 130, "versionName": "1.8.119", "stand": "17.10.2026, 13:48 Uhr", "notiz": "Beim Start der App ragt die Gesprächsleiste nicht mehr anderthalb Zentimeter ins Bild, auch nicht nach einem Gespräch über die Sprachblase."},
-    {"versionCode": 131, "versionName": "1.8.120", "stand": "17.10.2026, 13:56 Uhr", "notiz": "Gesprächsleiste zuverlässiger: Ändert sich die Fensterbreite beim Start oder beim Auf- und Zuklappen, bleibt sie ganz geschlossen statt halb im Bild zu stehen."}
+    {"versionCode": 131, "versionName": "1.8.120", "stand": "17.10.2026, 13:56 Uhr", "notiz": "Gesprächsleiste zuverlässiger: Ändert sich die Fensterbreite beim Start oder beim Auf- und Zuklappen, bleibt sie ganz geschlossen statt halb im Bild zu stehen."},
+    {"versionCode": 132, "versionName": "1.8.121", "stand": "17.10.2026, 14:07 Uhr", "notiz": "Weckwort zuverlässiger: Jarvis erkennt dich auch, wenn du das Weckwort schnell sprichst oder es laut um dich ist (Stimmerkennung mit Silero), ein gleich wiederholter Ruf kommt durch, und das Stimm-Anlernen nimmt jetzt 15 Proben mit eigener Anleitung für Tempo, Lautstärke, Richtung und Entfernung."}
   ]
 }

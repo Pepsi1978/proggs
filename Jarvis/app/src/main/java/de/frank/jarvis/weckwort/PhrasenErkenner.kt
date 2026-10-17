@@ -115,7 +115,7 @@ class PhrasenErkenner(
          * von weitem greifen. (14.10.2026: schnell gesprochenes „Hey Jarvis One“ griff bei 0,18 kaum, langsam schon.)
          */
         const val SPRECHER_BONUS = 0.13f
-        const val SCHWELLE_MIN = 0.08f
+        const val SCHWELLE_MIN = 0.06f
     }
 }
 

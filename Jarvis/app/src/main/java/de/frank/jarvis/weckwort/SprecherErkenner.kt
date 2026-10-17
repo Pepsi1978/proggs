@@ -19,9 +19,12 @@ class SprecherErkenner(context: Context) : AutoCloseable {
         SpeakerEmbeddingExtractorConfig("sprecher/campplus.onnx", 1, false, "cpu"),
     )
 
-    /** Fingerabdruck der Aufnahme (16 kHz, ±1), auf Länge 1 gebracht; null, wenn zu wenig Sprache darin ist. */
-    fun fingerabdruck(ton: FloatArray): FloatArray? {
-        val sprache = nurSprache(ton) ?: return null
+    /**
+     * Fingerabdruck der Aufnahme (16 kHz, ±1), auf Länge 1 gebracht; null, wenn zu wenig Sprache darin ist.
+     * [stimmhaft]: je 32-ms-Rahmen, ob Silero dort eine Stimme hört. Dann zählt nur die Stimme, nicht Lärm drumherum.
+     */
+    fun fingerabdruck(ton: FloatArray, stimmhaft: BooleanArray? = null): FloatArray? {
+        val sprache = (if (stimmhaft != null) nurStimme(ton, stimmhaft) else nurSprache(ton)) ?: return null
         val strom = extraktor.createStream()
         return try {
             strom.acceptWaveform(sprache, WeckwortErkenner.ABTASTRATE)
@@ -61,6 +64,32 @@ class SprecherErkenner(context: Context) : AutoCloseable {
             for (i in stueck.indices) stueck[i] = (stueck[i] * faktor).coerceIn(-1f, 1f)
             return stueck
         }
+
+        /**
+         * Wie [nurSprache], aber nach Silero statt nach Lautstärke: Bei Lärm (Auto, Küche, Straße) ist die Stimme kaum
+         * lauter als der Hintergrund, die Lautstärke findet sie dann nicht. Behält nur die Rahmen mit Stimme (je einen
+         * Rahmen Rand) und bringt sie auf feste Lautstärke; null unter 0,3 s Stimme.
+         */
+        internal fun nurStimme(ton: FloatArray, stimmhaft: BooleanArray): FloatArray? {
+            val r = VAD_RAHMEN
+            val n = minOf(stimmhaft.size, ton.size / r)
+            val behalten = BooleanArray(n) { i -> (maxOf(0, i - 1)..minOf(n - 1, i + 1)).any { stimmhaft[it] } }
+            if (stimmhaft.take(n).count { it } < 10) return null
+            val stueck = FloatArray(behalten.count { it } * r)
+            var pos = 0
+            for (i in 0 until n) if (behalten[i]) { System.arraycopy(ton, i * r, stueck, pos, r); pos += r }
+            val rahmen = stueck.size / RAHMEN
+            if (rahmen < 1) return null
+            val energie = FloatArray(rahmen) { k -> var s = 0f; for (i in k * RAHMEN until (k + 1) * RAHMEN) s += stueck[i] * stueck[i]; sqrt(s / RAHMEN) }
+            val spitze = energie.sorted()[rahmen - 1 - rahmen / 20]
+            if (spitze <= 0f) return null
+            val faktor = (0.1f / spitze).coerceIn(0.5f, 30f)
+            for (i in stueck.indices) stueck[i] = (stueck[i] * faktor).coerceIn(-1f, 1f)
+            return stueck
+        }
+
+        /** Rahmenlänge der Sprachaktivitätserkennung (Silero, 32 ms). */
+        const val VAD_RAHMEN = 512
 
         fun normiert(v: FloatArray): FloatArray {
             var s = 0.0

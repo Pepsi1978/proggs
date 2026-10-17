@@ -32,6 +32,7 @@ import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.speech.VorleseZustand
 import de.frank.jarvis.speech.Vorleser
+import de.frank.module.transkriptionsmodul.SileroVad
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.sqrt
 import kotlinx.coroutines.CoroutineScope
@@ -73,6 +74,8 @@ class WeckwortDienst : Service() {
     private var phrasenSchwelle = 0.25f
     private var phrasenVarianten: List<String> = emptyList()
     @Volatile private var sprecherErkenner: SprecherErkenner? = null
+    /** Sprachaktivitätserkennung (Silero, wie im Sprachmodus): hört Stimmen aus Lärm heraus. null = nicht ladbar. */
+    @Volatile private var vad: SileroVad? = null
     private val modellSperre = Any()
     private var vorleser: Vorleser? = null
     @Volatile private var lauf: AtomicBoolean? = null
@@ -177,17 +180,20 @@ class WeckwortDienst : Service() {
             // Hängt ein alter Durchgang noch (Treffer, Mikrofon), erst ihn auslaufen lassen: nie zwei Leser zugleich.
             val vorgaengerFertig = vorher == null || runCatching { vorher.join(3_000); !vorher.isAlive }.getOrDefault(false)
             if (!an.get()) return@Thread
-            val (erk, phr, spr) = modelleHolen(tokens, schwelle, varianten, stand, vorgaengerFertig)
+            val m = modelleHolen(tokens, schwelle, varianten, stand, vorgaengerFertig)
+            val erk = m.erk
             if (erk == null || !an.get()) return@Thread
-            Weckwort.aktivesWort(if (phr != null) PhrasenTokens.normiert(phrase) else "Hey Jarvis")
-            schleife(erk, phr, spr, an)
+            Weckwort.aktivesWort(if (m.phr != null) PhrasenTokens.normiert(phrase) else "Hey Jarvis")
+            schleife(erk, m.phr, m.spr, m.vad, an)
         }, "Weckwort").also { letzterFaden = it; it.start() }
     }
+
+    private class Modelle(val erk: WeckwortErkenner?, val phr: PhrasenErkenner?, val spr: SprecherErkenner?, val vad: SileroVad?)
 
     /** Lädt fehlende Modelle (im Weckwort-Faden) und hält sie für den nächsten Durchgang bereit. */
     private fun modelleHolen(
         tokens: String?, schwelle: Float, varianten: List<String>, stand: Int, vorgaengerFertig: Boolean,
-    ): Triple<WeckwortErkenner?, PhrasenErkenner?, SprecherErkenner?> = synchronized(modellSperre) {
+    ): Modelle = synchronized(modellSperre) {
         val beginn = SystemClock.elapsedRealtime()
         var geladen = false
         val erk = erkenner ?: runCatching { WeckwortErkenner(this) }
@@ -208,8 +214,12 @@ class WeckwortDienst : Service() {
         val spr = sprecherErkenner ?: runCatching { SprecherErkenner(this) }
             .onFailure { Log.e(TAG, "Stimmerkennung nicht ladbar", it); Logbuch.fehler("Stimmerkennung nicht ladbar", it) }
             .getOrNull()?.also { sprecherErkenner = it; geladen = true }
+        // Silero: Fehlt es, bleibt es bei Lautstärke-Filter und Zuschnitt nach Lautstärke.
+        val v = vad ?: runCatching { SileroVad(this, WeckwortErkenner.KLEIDIAI_ABSCHALTEN) }
+            .onFailure { Log.e(TAG, "Silero nicht ladbar", it); Logbuch.fehler("Weckwort: Silero nicht ladbar", it) }
+            .getOrNull()?.also { vad = it; geladen = true }
         if (geladen) Logbuch.dauer("Weckwort-Modelle geladen", SystemClock.elapsedRealtime() - beginn, if (phr != null) "mit Phrase" else "Hey Jarvis")
-        Triple(erk, phr, spr)
+        Modelle(erk, phr, spr, v)
     }
 
     /** Hält das Lauschen an und wartet abseits des Hauptfadens kurz, bis das Mikrofon wirklich frei ist. */
@@ -228,7 +238,7 @@ class WeckwortDienst : Service() {
     }
 
     @SuppressLint("MissingPermission") // geprüft in onStartCommand
-    private fun schleife(erk: WeckwortErkenner, phr: PhrasenErkenner?, spr: SprecherErkenner?, an: AtomicBoolean) {
+    private fun schleife(erk: WeckwortErkenner, phr: PhrasenErkenner?, spr: SprecherErkenner?, vad: SileroVad?, an: AtomicBoolean) {
         var aufnahme: AudioRecord? = null
         try {
             val minimum = AudioRecord.getMinBufferSize(WeckwortErkenner.ABTASTRATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
@@ -266,6 +276,42 @@ class WeckwortDienst : Service() {
             var boden = -1f
             var stilleBloecke = 0
             var uebersprungen = 0
+            // Silero für den Stille-Filter: Rahmen von 512 Werten, der Rest eines Blocks wartet auf den nächsten.
+            val vadRahmen = FloatArray(SprecherErkenner.VAD_RAHMEN)
+            var vadFuellung = 0
+            /** Hört Silero in diesem Block eine Stimme? */
+            fun stimmeImBlock(v: SileroVad): Boolean {
+                var stimme = false
+                for (w in block) {
+                    vadRahmen[vadFuellung++] = w / 32768f
+                    if (vadFuellung == vadRahmen.size) {
+                        vadFuellung = 0
+                        if (v.wahrscheinlichkeit(vadRahmen) >= VAD_STIMME) stimme = true
+                    }
+                }
+                return stimme
+            }
+            /** Je 32-ms-Rahmen des letzten Tons: Stimme ja/nein, für den Stimm-Fingerabdruck. null ohne Silero. */
+            fun stimmMaske(ton: FloatArray): BooleanArray? {
+                val v = vad ?: return null
+                return runCatching {
+                    v.zuruecksetzen()
+                    val r = SprecherErkenner.VAD_RAHMEN
+                    BooleanArray(ton.size / r) { i -> v.wahrscheinlichkeit(ton.copyOfRange(i * r, (i + 1) * r)) >= VAD_MASKE }
+                        .also { v.zuruecksetzen(); vadFuellung = 0 }
+                }.getOrNull()
+            }
+            /** Fingerabdruck der letzten Sekunden: nur die Stimme darin, wenn Silero da ist (hilft bei Lärm). */
+            fun fingerabdruck(): FloatArray? {
+                val s = spr ?: return null
+                val ton = letzterTon()
+                return runCatching { s.fingerabdruck(ton, stimmMaske(ton)) }.getOrNull()
+            }
+            // Nach einer Abweisung ein paar Blöcke nicht urteilen, das Modell aber warm halten: Ein volles Zurücksetzen
+            // machte 1,3 s taub, und ein gleich wiederholtes „Hey Jarvis“ ging verloren.
+            var abklingen = 0
+            // Knapp an der Stimme gescheitert: Wann, damit ein gleich wiederholter Ruf als Nachdruck durchgeht.
+            var knappUm = 0L
             while (an.get()) {
                 var gelesen = 0
                 while (gelesen < block.size && an.get()) {
@@ -288,7 +334,11 @@ class WeckwortDienst : Service() {
                 // Auch leise Sprache aus fünf Metern liegt darüber. Der Ring läuft weiter.
                 val rms = lautstaerke(block)
                 boden = if (boden < 0f || rms < boden) rms else boden + (rms - boden) * BODEN_ANSTIEG
-                if (rms > maxOf(boden * STILLE_FAKTOR, STILLE_MIN)) stilleBloecke = 0 else stilleBloecke++
+                // Bei gleichmäßigem Lärm (Auto, Lüfter, Straße) steigt der Rauschboden mit, eine Stimme aus der Ferne
+                // liegt kaum darüber: Dann entscheidet Silero, ob jemand spricht, statt die Modelle schlafen zu legen.
+                val laut = rms > maxOf(boden * STILLE_FAKTOR, STILLE_MIN)
+                val stimmeImLaerm = !laut && rms > STILLE_MIN && vad != null && runCatching { stimmeImBlock(vad) }.getOrDefault(false)
+                if (laut || stimmeImLaerm) stilleBloecke = 0 else stilleBloecke++
                 if (!anlernen && stilleBloecke > STILLE_BLOECKE) {
                     uebersprungen++
                     inFolge = 0
@@ -323,21 +373,25 @@ class WeckwortDienst : Service() {
                     // Beim Anlernen etwas großzügiger, damit auch Franks deutsche Aussprache Proben liefert.
                     val schwelle = when {
                         anlernen -> minOf(Weckwort.schwelle, 0.3f)
-                        mitStimme -> Weckwort.schwelle * 0.8f
+                        mitStimme -> Weckwort.schwelle * 0.7f
                         else -> Weckwort.schwelle
                     }
+                    if (abklingen > 0) { abklingen--; inFolge = 0; continue }
                     if (wert < schwelle) {
                         inFolge = 0
                         if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
-                    if (++inFolge < BLOCKS_IN_FOLGE) continue
+                    // Schnell gesprochen ist der Gipfel oft nur einen Block (80 ms) breit: Beim Anlernen und mit
+                    // Stimmerkennung genügt einer, sonst kämen schnelle Rufe nie an (und nie als Probe ins Profil).
+                    val noetig = if (anlernen || mitStimme) 1 else BLOCKS_IN_FOLGE
+                    if (++inFolge < noetig) continue
                     inFolge = 0
                 }
                 val modellwert = if (phr == null) wert else null
                 if (anlernen) {
                     if (merkmale != null) {
-                        val fingerabdruck = runCatching { spr?.fingerabdruck(letzterTon()) }.getOrNull()
+                        val fingerabdruck = fingerabdruck()
                         Log.i(TAG, "Probe fürs Stimmprofil (${"%.2f".format(wert)}), Stimm-Fingerabdruck: ${fingerabdruck != null}")
                         val fertig = Stimmprofil.probe(merkmale, fingerabdruck)
                         bereich.launch { piepKurz(); if (fertig) { delay(150); piepKurz() } }
@@ -357,18 +411,25 @@ class WeckwortDienst : Service() {
                 val pruefung = Stimmprofil.pruefe(merkmale)
                 // Mit Stimmerkennung entscheidet allein sie: Sie erkennt die Person, auch aus fünf Metern, wo die
                 // Lautmerkmale schon stark abweichen. Zu wenig Sprache im Ton zählt als „nicht Frank“.
-                val stimme = if (mitStimme) Stimmprofil.pruefeStimme(runCatching { spr?.fingerabdruck(letzterTon()) }.getOrNull()) else null
-                val ok = if (mitStimme) stimme?.ok == true else pruefung?.ok != false
+                val stimme = if (mitStimme) Stimmprofil.pruefeStimme(fingerabdruck()) else null
+                // Nachdruck: Zwei knappe Abweisungen kurz hintereinander sind Frank, der es noch einmal sagt (schnell,
+                // heiser, im Lärm). Fremde und Fernseher sagen das Weckwort kaum zweimal in wenigen Sekunden.
+                val knapp = stimme != null && !stimme.ok && stimme.aehnlich >= stimme.schwelle - NACHDRUCK_SPIEL
+                val jetzt = SystemClock.elapsedRealtime()
+                val nachdruck = knapp && jetzt - knappUm < NACHDRUCK_MS
+                val ok = if (mitStimme) stimme?.ok == true || nachdruck else pruefung?.ok != false
                 if (!ok) {
+                    if (knapp) knappUm = jetzt
                     Log.i(TAG, "Weckwort ($art) abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
-                    WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "abgewiesen", stimme, mitStimme, phr?.letzterTreffer)
+                    WeckwortProtokoll.treffer(this, art, modellwert, pruefung, if (knapp) "knapp abgewiesen" else "abgewiesen", stimme, mitStimme, phr?.letzterTreffer)
                     Weckwort.abgewiesen(modellwert ?: 1f)
-                    if (phr == null) erk.zuruecksetzen()
+                    if (phr == null) abklingen = ABKLINGEN_BLOECKE
                     phr?.zuruecksetzen()
                     continue
                 }
-                Log.i(TAG, "Weckwort ($art) erkannt (${"%.2f".format(wert)})")
-                WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "gerufen", stimme, mitStimme, phr?.letzterTreffer)
+                knappUm = 0L
+                Log.i(TAG, "Weckwort ($art) erkannt (${"%.2f".format(wert)})${if (nachdruck) ", Nachdruck" else ""}")
+                WeckwortProtokoll.treffer(this, art, modellwert, pruefung, if (nachdruck) "gerufen (Nachdruck)" else "gerufen", stimme, mitStimme, phr?.letzterTreffer)
                 Weckwort.erkannt(modellwert ?: 1f)
                 // Hat die Stimmerkennung Frank bestätigt, war es kein Fehlalarm, auch wenn danach nichts kommt: Dann
                 // gibt es keine Merkmale zum Lernen, sonst sperrt ein solcher Eintrag später Franks eigene Rufe aus.
@@ -503,6 +564,8 @@ class WeckwortDienst : Service() {
                 phrasenErkenner = null
                 runCatching { sprecherErkenner?.close() }
                 sprecherErkenner = null
+                runCatching { vad?.close() }
+                vad = null
             }
         }, "Weckwort-Ende").start()
         runCatching { if (wach?.isHeld == true) wach?.release() }
@@ -520,6 +583,14 @@ class WeckwortDienst : Service() {
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
+        /** Silero-Werte: ab hier zählt ein Rahmen im Lärm als Stimme (Stille-Filter) bzw. für den Fingerabdruck. */
+        private const val VAD_STIMME = 0.5f
+        private const val VAD_MASKE = 0.3f
+        /** Nach einer Abweisung so viele Blöcke (je 80 ms) nicht urteilen. */
+        private const val ABKLINGEN_BLOECKE = 6
+        /** Nachdruck: knapp heißt höchstens so weit unter der Stimm-Schwelle, und der zweite Ruf binnen dieser Zeit. */
+        private const val NACHDRUCK_SPIEL = 0.08f
+        private const val NACHDRUCK_MS = 10_000L
         /**
          * Stille-Filter: so viele Blöcke (je 80 ms, also 4 s) ohne Laut, dann ruhen die Modelle; beim Aufwachen so viele
          * nachholen (rund 1 s). Der Ring hält 2,5 s; so fehlt den Modellen auch ein leiser Anlaut („Hey“) nicht, der

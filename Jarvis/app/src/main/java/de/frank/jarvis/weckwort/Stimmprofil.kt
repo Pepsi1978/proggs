@@ -16,7 +16,7 @@ import org.json.JSONObject
  * Franks Stimmprofil für „Hey Jarvis“: Ein zweiter Prüfschritt nach dem Weckwort-Modell, wie die „custom verifier“
  * von openWakeWord, nur ohne Training auf dem PC.
  *
- * Beim Anlernen sagt Frank sechsmal „Hey Jarvis“; gespeichert werden jeweils die 16 Einbettungen (1536 Werte), über
+ * Beim Anlernen sagt Frank fünfzehnmal „Hey Jarvis“ (nah bis fünf Meter, schnell, leise, laut, aus allen Richtungen); gespeichert werden jeweils die 16 Einbettungen (1536 Werte), über
  * die das Modell geurteilt hat. Später zählt ein Treffer nur, wenn er einer dieser Proben ähnlich genug ist (Kosinus,
  * vorher um den Hintergrund bereinigt, damit nicht alles gleich ähnlich wirkt) und keinem gelernten Fehlalarm näher
  * liegt. Die Schwelle ergibt sich aus den Proben selbst: so ähnlich, wie sich Franks eigene Proben untereinander sind,
@@ -25,8 +25,8 @@ import org.json.JSONObject
  * Fehlalarme lernt Jarvis von allein: Kommt nach dem Piepton nichts, hat ihn wohl niemand gemeint.
  */
 object Stimmprofil {
-    /** So viele Proben braucht das Anlernen: 1–4 nah, 5–7 aus etwa zwei Metern, 8–10 aus etwa fünf Metern. */
-    const val ANLERN_ZIEL = 10
+    /** So viele Proben braucht das Anlernen: 1–5 nah, 6–10 aus etwa zwei Metern, 11–15 aus etwa fünf Metern. */
+    const val ANLERN_ZIEL = 15
     private const val MIN_PROBEN = 3
     private const val MIN_STIMMEN = 5
     private const val MAX_FEHLALARME = 40
@@ -71,14 +71,15 @@ object Stimmprofil {
     /**
      * Schwelle der Stimmerkennung aus Franks eigenen Proben: Wie ähnlich ist jede Probe der Mitte der übrigen? Die
      * geringste davon (meist eine aus fünf Metern), mit etwas Spielraum. Nie unter 0,40, darunter fängt CAM++ an,
-     * fremde Stimmen durchzulassen; nie über 0,60, sonst scheitert Frank an einem schlechten Tag.
+     * fremde Stimmen durchzulassen; nie über 0,55: Schnell gesprochen lag Frank am 15. bis 17.10.2026 oft bei 0,53 bis
+     * 0,60 und scheiterte an der alten Grenze 0,60.
      */
     private fun stimmSchwelle(s: List<FloatArray>): Float {
         val min = s.indices.minOf { i ->
             val rest = SprecherErkenner.normiert(mittel(s.filterIndexed { j, _ -> j != i }))
             SprecherErkenner.kosinus(s[i], rest)
         }
-        return (min - 0.08f).coerceIn(0.40f, 0.60f)
+        return (min - 0.10f).coerceIn(0.40f, 0.55f)
     }
 
     private fun mittel(s: List<FloatArray>): FloatArray = FloatArray(s.first().size) { k -> s.sumOf { it[k].toDouble() }.toFloat() / s.size }

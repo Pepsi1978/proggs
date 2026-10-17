@@ -231,11 +231,24 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     anlernen != null -> {
                         val ziel = de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL
                         Zeile("Anlernen läuft", "Probe ${minOf(anlernen + 1, ziel)} von $ziel", f.primaer)
-                        // Abstand je Probe: So lernt Jarvis deine Stimme nah, im Raum und von weitem (etwa aus der Küche).
-                        val (abstand, anleitung) = when {
-                            anlernen < 4 -> "Nah" to "Halte das Handy wie gewohnt und sag „$wort“ in normaler Lautstärke."
-                            anlernen < 7 -> "Etwa 2 Meter" to "Leg das Handy hin, geh etwa zwei Meter weg und sag „$wort“ so, wie du es im Raum sagen würdest."
-                            else -> "Etwa 5 Meter" to "Geh etwa fünf Meter weg, zum Beispiel in die Küche, und sag „$wort“ so laut, wie du es von dort sagen würdest."
+                        // Je Probe Abstand, Richtung und Sprechweise: So lernt Jarvis deine Stimme nah, im Raum und von weitem,
+                        // schnell und langsam, leise und laut, auch wenn du vom Handy weg sprichst.
+                        val (abstand, anleitung) = when (anlernen) {
+                            0 -> "Nah, normal" to "Halte das Handy wie gewohnt und sag „$wort“ in normaler Lautstärke."
+                            1 -> "Nah, schnell" to "Sag „$wort“ schnell, in einem Zug, so wie es dir im Alltag rausrutscht."
+                            2 -> "Nah, leise" to "Sag „$wort“ leise, fast beiläufig."
+                            3 -> "Nah, betont" to "Sag „$wort“ deutlich lauter und mit Nachdruck."
+                            4 -> "Nah, langsam" to "Sag „$wort“ langsam und gedehnt."
+                            5 -> "2 Meter, von vorn" to "Leg das Handy hin, geh etwa zwei Meter weg und sag „$wort“ normal zum Handy hin."
+                            6 -> "2 Meter, von links" to "Stell dich etwa zwei Meter links vom Handy hin und sag „$wort“ schnell."
+                            7 -> "2 Meter, von rechts" to "Stell dich etwa zwei Meter rechts vom Handy hin und sag „$wort“ normal."
+                            8 -> "2 Meter, von hinten" to "Geh etwa zwei Meter hinter das Handy und sag „$wort“ etwas tiefer, entspannt."
+                            9 -> "2 Meter, abgewandt" to "Dreh dem Handy in etwa zwei Metern den Rücken zu und sag „$wort“ schnell."
+                            10 -> "5 Meter, normal" to "Geh etwa fünf Meter weg, zum Beispiel in die Küche, und sag „$wort“ so laut, wie du es von dort sagen würdest."
+                            11 -> "5 Meter, schnell" to "Aus etwa fünf Metern: Sag „$wort“ schnell, in einem Zug."
+                            12 -> "5 Meter, gerufen" to "Aus etwa fünf Metern: Ruf „$wort“ laut."
+                            13 -> "5 Meter, Nebenraum" to "Geh in den Nebenraum oder hinter eine Ecke und sag „$wort“ so, wie du es von dort sagen würdest."
+                            else -> "5 Meter, beiläufig" to "Aus etwa fünf Metern, vom Handy abgewandt: Sag „$wort“ schnell und beiläufig, wie beim Hantieren in der Küche."
                         }
                         Text(
                             if (hoertZu) "$abstand: $anleitung Nach jedem erkannten Mal kommt ein kurzer Ton, dann kurz warten und noch einmal. " +
@@ -267,8 +280,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     }
                     else -> {
                         Text(
-                            "Sag zehnmal „$wort“: viermal nah, dreimal aus etwa zwei Metern, dreimal aus etwa fünf Metern. Jarvis lernt deinen Stimm-Fingerabdruck " +
-                                "und springt danach nur noch auf deine Stimme an, auch von weitem. Dauert zwei Minuten.",
+                            "Sag fünfzehnmal „$wort“: fünfmal nah, fünfmal aus etwa zwei Metern, fünfmal aus etwa fünf Metern, mal schnell, mal langsam, leise, laut und " +
+                                "aus verschiedenen Richtungen; Jarvis sagt dir jedes Mal, wie. Er lernt deinen Stimm-Fingerabdruck und springt danach nur noch auf deine " +
+                                "Stimme an, auch schnell gesprochen, von weitem und bei Lärm. Dauert drei Minuten.",
                             color = f.textSchwach, fontSize = 13.sp,
                         )
                         Knopf("Stimme anlernen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.stimmeAnlernen() }
