@@ -251,6 +251,8 @@ class Einstellungen private constructor(context: Context) {
     var weckwortEmpfindlichkeit: String get() = s("weckwort_empfindlichkeit", "normal"); set(v) = put { putString("weckwort_empfindlichkeit", v) }
     /** Ab diesem Wert (0 bis 1) gilt „Hey Jarvis“ als erkannt. */
     val weckwortSchwelle: Float get() = when (weckwortEmpfindlichkeit) { "niedrig" -> 0.7f; "hoch" -> 0.3f; "sehr_hoch" -> 0.2f; else -> 0.5f }
+    /** So viel tiefer liegt die Schwelle der Stimmerkennung je Empfindlichkeit (Stimmprofil.schwellenAbzug). */
+    val weckwortStimmAbzug: Float get() = when (weckwortEmpfindlichkeit) { "niedrig" -> 0f; "hoch" -> 0.07f; "sehr_hoch" -> 0.10f; else -> 0.03f }
     /** jarvis = „Hey Jarvis“ (openWakeWord) | phrase = eigene Phrase (sherpa-onnx, englische Lautung). */
     var weckwortArt: String get() = s("weckwort_art", "jarvis"); set(v) = put { putString("weckwort_art", v) }
     /** Die eigene Weckwort-Phrase in Großbuchstaben, z. B. „OKAY COMPUTER JARVIS“. */

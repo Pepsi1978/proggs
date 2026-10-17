@@ -152,7 +152,7 @@ class WeckwortDienst : Service() {
         } else null
         phrasenVarianten = if (phrasenTokens != null) PhrasenTokens.varianten(this, e.weckwortPhrase) else emptyList()
         phrasenSchwelle = PhrasenErkenner.schwelleFuer(e.weckwortEmpfindlichkeit)
-        Stimmprofil.schwellenAbzug = stimmAbzugFuer(e.weckwortEmpfindlichkeit)
+        Stimmprofil.schwellenAbzug = e.weckwortStimmAbzug
         Stimmprofil.schluesselSetzen(if (phrasenTokens != null) "phrase:" + PhrasenTokens.normiert(e.weckwortPhrase) else "jarvis")
     }
 
@@ -345,6 +345,18 @@ class WeckwortDienst : Service() {
                     if (brauchtLaut && stilleBloecke % STILLE_BLOECKE == 0) erk.letzteMerkmale?.let { Stimmprofil.hintergrundLernen(it) }
                     continue
                 }
+                // Mit Stimmerkennung auch die Aussprache-Varianten (schnell, verschliffen, mit Akzent): Fremde fallen
+                // danach an der Stimme durch, Frank soll die Phrase sagen dürfen, wie sie ihm über die Lippen geht.
+                // Vor dem Nachholen einstellen: Eine Änderung legt einen neuen Strom an und verwürfe sonst den nachgeholten Anfang.
+                when {
+                    phr == null -> Unit
+                    // Beim Anlernen mit allen Aussprache-Varianten und so leicht wie möglich: Sonst kommen nur
+                    // deutliche Proben ins Profil, und später scheitern gerade die schnellen, leisen Rufe daran.
+                    anlernen -> phr.einstellen(PhrasenErkenner.SCHWELLE_ANLERNEN, breit = true)
+                    mitStimme -> phr.einstellen((phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_MIN), breit = true)
+                    else -> phr.einstellen(phrasenSchwelle, breit = false)
+                }
+                var nachgeholt = false
                 if (uebersprungen > 0) {
                     // Wortanfang nachholen: die zuletzt übersprungenen Blöcke vor diesem durch die Modelle schicken.
                     // Der Spotter fängt dafür frisch an: Sein Strom stammt von vor der Stille, und sherpa-onnx 1.13.8
@@ -353,23 +365,15 @@ class WeckwortDienst : Service() {
                     for (k in minOf(uebersprungen, NACHHOLEN) downTo 1) {
                         val frueher = frueherBlock(k)
                         if (brauchtLaut) erk.bewerte(frueher)
-                        phr?.erkannt(frueher, boden)
+                        // Ein Treffer schon im nachgeholten Ton zählt: Der Spotter hat danach zurückgesetzt und meldet ihn nicht noch einmal.
+                        if (phr?.erkannt(frueher, boden) == true) nachgeholt = true
                     }
                     uebersprungen = 0
                 }
                 val wert = if (brauchtLaut) erk.bewerte(block) else 0f
                 val merkmale = if (brauchtLaut) erk.letzteMerkmale else null
                 if (phr != null) {
-                    // Mit Stimmerkennung auch die Aussprache-Varianten (schnell, verschliffen, mit Akzent): Fremde fallen
-                    // danach an der Stimme durch, Frank soll die Phrase sagen dürfen, wie sie ihm über die Lippen geht.
-                    when {
-                        // Beim Anlernen mit allen Aussprache-Varianten und so leicht wie möglich: Sonst kommen nur
-                        // deutliche Proben ins Profil, und später scheitern gerade die schnellen, leisen Rufe daran.
-                        anlernen -> phr.einstellen(PhrasenErkenner.SCHWELLE_MIN, breit = true)
-                        mitStimme -> phr.einstellen((phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_MIN), breit = true)
-                        else -> phr.einstellen(phrasenSchwelle, breit = false)
-                    }
-                    if (!phr.erkannt(block, boden)) {
+                    if (!nachgeholt && !phr.erkannt(block, boden)) {
                         if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
@@ -590,9 +594,16 @@ class WeckwortDienst : Service() {
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
 
-        /** So viel tiefer liegt die Stimm-Schwelle je Empfindlichkeit (Stimmprofil.schwellenAbzug). */
-        fun stimmAbzugFuer(empfindlichkeit: String): Float =
-            when (empfindlichkeit) { "niedrig" -> 0f; "hoch" -> 0.07f; "sehr_hoch" -> 0.10f; else -> 0.03f }
+        /**
+         * Empfindlichkeit geändert (App oder Jarvis per Sprache): Schwellen sofort übernehmen; die eigene Phrase bekommt
+         * ihre Schwelle beim Anlegen, dafür liest der Dienst neu ein.
+         */
+        fun empfindlichkeitUebernehmen(context: Context) {
+            val e = Einstellungen.get(context)
+            Weckwort.schwelle = e.weckwortSchwelle
+            Stimmprofil.schwellenAbzug = e.weckwortStimmAbzug
+            if (e.weckwortArt == "phrase") neuLaden(context)
+        }
         /** Silero-Werte: ab hier zählt ein Rahmen im Lärm als Stimme (Stille-Filter) bzw. für den Fingerabdruck. */
         private const val VAD_STIMME = 0.5f
         private const val VAD_MASKE = 0.3f
@@ -600,7 +611,7 @@ class WeckwortDienst : Service() {
         private const val NACHDRUCK_SPIEL = 0.08f
         private const val NACHDRUCK_MS = 10_000L
         private const val NACHDRUCK_ABSTAND_MS = 1_500L
-        private const val NACHDRUCK_MIN = 0.42f
+        private const val NACHDRUCK_MIN = Stimmprofil.STIMM_BODEN
         /** Erst ab diesem Rauschboden (16 Bit, etwa -47 dBFS) ist es Lärm und Silero entscheidet; im ruhigen Raum schlafen die Modelle wie bisher. */
         private const val LAERM_BODEN = 150f
         /**

@@ -175,7 +175,7 @@ Daher: Aufweck-Rate fuers konkrete Weckwort LIVE testen, `keywords_threshold` + 
   ModelScope-Beispiel fuer CAM++: 0,31. Apple „Hey Siri": mehrere Einzel-Templates, Ergaenzung aus akzeptierten Rufen,
   Grauzone mit Nachpruefung an der Folge-Anfrage. (`extern`: machinelearning.apple.com/research/personalized-hey-siri)
 - Rezept: Wert = max(Kosinus zum Zentroid, Mittel Top-3 Einzelproben); dieselbe Funktion fuer Leave-one-out-Schwelle;
-  Abzug je Empfindlichkeit und Sprachdauer; Boden ~0,40. Anlernen mit lockerem Spotter + Varianten, damit schnelle/leise
+  Abzug je Empfindlichkeit und Sprachdauer; Boden 0,45 (nicht 0,40: der max-Wert hebt auch Fremde leicht an). Anlernen mit lockerem Spotter + Varianten, damit schnelle/leise
   Proben ins Profil kommen. Sprachdauer + Wert protokollieren und Schwellen aus Besitzer-Quantilen nachziehen.
 - Groessere SV-Modelle (ERes2NetV2, 71 MB, ~7x Rechenlast) nur per A/B am eigenen Protokoll; WeSpeaker `_LM`-Varianten meiden.
 

@@ -1034,10 +1034,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun weckwortEmpfindlichkeit(stufe: String) {
         einstellungen.weckwortEmpfindlichkeit = stufe
-        de.frank.jarvis.weckwort.Weckwort.schwelle = einstellungen.weckwortSchwelle
-        de.frank.jarvis.weckwort.Stimmprofil.schwellenAbzug = de.frank.jarvis.weckwort.WeckwortDienst.stimmAbzugFuer(stufe)
-        // Die eigene Phrase bekommt ihre Schwelle beim Anlegen: Dienst neu einlesen lassen.
-        if (einstellungen.weckwortArt == "phrase") de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(getApplication())
+        de.frank.jarvis.weckwort.WeckwortDienst.empfindlichkeitUebernehmen(getApplication())
     }
 
     /** „jarvis“ = „Hey Jarvis“, „phrase“ = eigene Phrase über sherpa-onnx. */

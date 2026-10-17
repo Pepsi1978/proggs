@@ -273,7 +273,7 @@ Sprache liefert CAM++ systematisch niedrigere Kosinuswerte. (4) Die Empfindlichk
 Schwelle mit Stimmerkennung schon am Anschlag stand.
 **Fix:** Anlernen mit Varianten und niedrigster Schwelle; Wert = max(Zentroid-Kosinus, Mittel der Top-3
 Einzelproben), dieselbe Funktion fuer Schwelle und Pruefung; Abzug je Empfindlichkeit (0/0,03/0,07/0,10) und bis
-0,04 fuer < 1,2 s Sprache; Boden 0,40. Sprachdauer ins Protokoll schreiben, um nachzujustieren.
+0,04 fuer < 1,2 s Sprache; Boden 0,45 (max-Wert liegt fuer Fremde hoeher als der Zentroid-Wert, Nachdruck nie darunter); Anlernen mit Varianten, aber Spotter-Schwelle 0,10 (sonst rutschen TV/Fremde als Probe ins Profil). Sprachdauer ins Protokoll schreiben, um nachzujustieren.
 **Versionen:** CAM++ `3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced`, sherpa-onnx 1.13.8.
 **Quelle:** Jarvis `weckwort/Stimmprofil.kt`; machinelearning.apple.com/research/personalized-hey-siri (Mehrfach-Templates);
 ModelScope CAM++-Doku (Beispielschwelle 0,31).

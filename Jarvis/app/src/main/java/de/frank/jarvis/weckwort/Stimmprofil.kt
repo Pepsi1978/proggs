@@ -92,12 +92,18 @@ object Stimmprofil {
      * 17.10.2026 oft bei 0,53 bis 0,60 und scheiterte an der alten Grenze 0,60. Nie unter [STIMM_BODEN].
      */
     private fun stimmSchwelle(s: List<FloatArray>): Float {
+        // Hängt nur an den Proben: einmal je Profil rechnen, nicht bei jedem Treffer (n² Kosinusse).
+        schwellenMerker?.let { (liste, wert) -> if (liste === s) return wert }
         val min = s.indices.minOf { i -> stimmWert(s[i], s.filterIndexed { j, _ -> j != i }) }
-        return (min - 0.10f).coerceIn(STIMM_BODEN, 0.55f)
+        return (min - 0.10f).coerceIn(STIMM_BODEN, 0.55f).also { schwellenMerker = s to it }
     }
+    @Volatile private var schwellenMerker: Pair<List<FloatArray>, Float>? = null
 
-    /** Darunter fängt CAM++ an, fremde Stimmen durchzulassen. */
-    private const val STIMM_BODEN = 0.40f
+    /**
+     * Darunter fängt CAM++ an, fremde Stimmen durchzulassen (gemessen am Wert zur Mitte, 0,40). Der Wert aus den drei
+     * ähnlichsten Einzelproben liegt für Fremde etwas höher, daher 0,45. Gilt auch für den Nachdruck.
+     */
+    const val STIMM_BODEN = 0.45f
 
     private fun mittel(s: List<FloatArray>): FloatArray = FloatArray(s.first().size) { k -> s.sumOf { it[k].toDouble() }.toFloat() / s.size }
 

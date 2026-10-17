@@ -212,9 +212,7 @@ class EinstellungsKatalog(context: Context) {
             auswahl("weckwort_empfindlichkeit", "Hey Jarvis", "Empfindlichkeit", "Wie leicht das Weckwort anspringt und wie großzügig die Stimmerkennung urteilt.",
                 { listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch", "sehr_hoch" to "Sehr hoch") }, { e.weckwortEmpfindlichkeit }) {
                 e.weckwortEmpfindlichkeit = it
-                de.frank.jarvis.weckwort.Weckwort.schwelle = e.weckwortSchwelle
-                de.frank.jarvis.weckwort.Stimmprofil.schwellenAbzug = de.frank.jarvis.weckwort.WeckwortDienst.stimmAbzugFuer(it)
-                if (e.weckwortArt == "phrase") de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)
+                de.frank.jarvis.weckwort.WeckwortDienst.empfindlichkeitUebernehmen(app)
             },
             auswahl("weckwort_art", "Hey Jarvis", "Weckwort", "„Hey Jarvis“ oder die eigene Phrase „${e.weckwortPhrase}“.",
                 { listOf("jarvis" to "Hey Jarvis", "phrase" to "Eigene Phrase") }, { e.weckwortArt }) {
