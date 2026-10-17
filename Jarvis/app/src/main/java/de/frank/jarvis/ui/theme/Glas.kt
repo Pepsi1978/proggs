@@ -204,6 +204,9 @@ fun Chip(
     icon: ImageVector? = null,
     modifier: Modifier = Modifier,
     lange: (() -> Unit)? = null,
+    /** Feste Farbe und Größe fürs Symbol, etwa der gelbe Favoritenstern; null = wie der Chip. */
+    iconFarbe: Color? = null,
+    iconGroesse: Dp = 16.dp,
     aktion: () -> Unit,
 ) {
     val f = LocalFarben.current
@@ -215,7 +218,7 @@ fun Chip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (icon != null) Icon(icon, null, tint = if (aktiv) Color.White else c, modifier = Modifier.size(16.dp))
+        if (icon != null) Icon(icon, null, tint = iconFarbe ?: if (aktiv) Color.White else c, modifier = Modifier.size(iconGroesse))
         else if (farbe != null && !aktiv) Box(Modifier.size(8.dp).glas(f, 99.dp, 0f, c, rand = false))
         Text(text, color = if (aktiv) Color.White else f.text, fontSize = 14.sp, fontWeight = if (aktiv) FontWeight.SemiBold else FontWeight.Medium)
     }

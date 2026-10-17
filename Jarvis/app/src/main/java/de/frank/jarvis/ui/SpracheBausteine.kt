@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.ui.text.font.FontWeight
@@ -161,7 +162,8 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, probeArt, w.id)
                 val laedt = vm.stimmProbeLaedt == w.id
                 val favorit = probeArt + "_" + w.id in vm.stimmFavoriten
-                Chip((if (favorit) "★ " else "") + (if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"],
+                Chip((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"],
+                    icon = if (favorit) Icons.Rounded.Star else null, iconFarbe = androidx.compose.ui.graphics.Color(0xFFFFC107), iconGroesse = 22.dp,
                     lange = { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) }) {
                     geaendert { st.setze("stimme", w.id) }
                     vm.stimmProbe(de.frank.jarvis.live.StimmProbe.art(st), w.id)
