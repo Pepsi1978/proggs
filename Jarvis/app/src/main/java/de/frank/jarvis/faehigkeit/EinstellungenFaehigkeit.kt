@@ -267,6 +267,8 @@ class EinstellungsKatalog(context: Context) {
             },
             auswahl("denkstufe", "Modell", "Denkstufe", "Wie gründlich das Modell nachdenkt.",
                 { e.modell.supportedEfforts.map { it.name to it.label } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
+            auswahl("schrittlimit", "Modell", "Schrittlimit pro Anfrage", "Höchstens so viele Bearbeitungsrunden samt Werkzeugaufrufen je Anfrage; Unbegrenzt hebt nur dieses Limit auf (Zeitlimit und Abbrechen gelten weiter) und kann mehr kosten und länger dauern.",
+                { de.frank.jarvis.data.Einstellungen.SCHRITTLIMITS.map { it.toString() to (if (it == 0) "Unbegrenzt" else "$it Schritte") } }, { e.schrittlimit.toString() }) { e.schrittlimit = it.toInt() },
 
             // ---- Live-Gespräch ----
             // Alle Einstellungen aus derselben Liste wie der Einstellungs-Bildschirm, samt Preis in der Beschreibung.

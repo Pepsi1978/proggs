@@ -1889,6 +1889,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setzeDenkstufe(stufe: ReasoningEffort) { einstellungen.denkstufe = stufe }
+    fun setzeSchrittlimit(limit: Int) { einstellungen.schrittlimit = limit }
 
     // ---- Plugin und Tunnel ----
 

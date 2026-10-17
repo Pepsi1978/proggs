@@ -121,6 +121,10 @@ class Einstellungen private constructor(context: Context) {
     var denkstufe: ReasoningEffort
         get() = ReasoningEffort.entries.firstOrNull { it.name == s("reasoning", "") } ?: ReasoningEffort.LOW
         set(v) = put { putString("reasoning", v.name) }
+    /** Höchstens so viele Bearbeitungsrunden (Modellschritt samt Werkzeugaufrufen) je Anfrage im Gespräch; 0 = unbegrenzt. */
+    var schrittlimit: Int
+        get() = prefs.getInt("schrittlimit", STANDARD_SCHRITTLIMIT).takeIf { it in SCHRITTLIMITS } ?: STANDARD_SCHRITTLIMIT
+        set(v) = put { putInt("schrittlimit", if (v in SCHRITTLIMITS) v else STANDARD_SCHRITTLIMIT) }
 
     // ---- Plugin und Server ----
     /** Adresse des eigenen Servers (Jarvis-Relay). Vorgabe aus dem Bau, hier nur zum Überschreiben. */
@@ -278,6 +282,9 @@ class Einstellungen private constructor(context: Context) {
 
     companion object {
         const val NAME = "jarvis_secure_prefs"
+        /** Wählbare Schrittlimits pro Anfrage; 0 = unbegrenzt. */
+        val SCHRITTLIMITS = (10..100 step 10).toList() + 0
+        const val STANDARD_SCHRITTLIMIT = 10
         private const val TAG = "JarvisEinstellungen"
         /** Schlüssel, die nie unverschlüsselt abgelegt werden dürfen. */
         private val GEHEIM = listOf(

@@ -35,7 +35,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
   gesperrtem Handy, startet nach dem Einschalten und nach Updates von selbst.
 - **Werkzeuge** (`faehigkeit/`): Jede angebundene App ist eine `Faehigkeit` mit einer Liste von `Werkzeug`en.
   Plugin, eigener Chat und Oberfläche lesen alle dasselbe `Register`.
-- **Agent** (`agent/JarvisAgent.kt`): Schleife Modell → Werkzeug → Ergebnis, höchstens 8 Schritte. Werkzeugaufrufe
+- **Agent** (`agent/JarvisAgent.kt`): Schleife Modell → Werkzeug → Ergebnis, höchstens so viele Schritte wie unter Einstellungen → Jarvis → „Schrittlimit pro Anfrage“ gewählt (10 bis 100 oder unbegrenzt, Vorgabe 10). Werkzeugaufrufe
   laufen über ein festes JSON-Format im Antworttext, damit jedes Text-Modell Jarvis antreiben kann.
 
 ## Zugangsschutz

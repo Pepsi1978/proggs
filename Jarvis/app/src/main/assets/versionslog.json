@@ -162,6 +162,7 @@
     {"versionCode": 157, "versionName": "1.8.146", "stand": "17.10.2026, 20:34 Uhr", "notiz": "Die Modellauswahl im Live-Gespräch bietet Realtime 2, Realtime 1.5, Realtime (alt) und Realtime mini (alt) nicht mehr an; war eines davon eingestellt, läuft das Gespräch jetzt mit GPT-Live 1."},
     {"versionCode": 158, "versionName": "1.8.147", "stand": "17.10.2026, 20:39 Uhr", "notiz": "Bei Gemini Live lässt sich die Pause bis zur Antwort jetzt auch auf 1,5, 2,5 oder 3 Sekunden stellen, damit Gemini bei Denkpausen nicht zu früh antwortet."},
     {"versionCode": 159, "versionName": "1.8.148", "stand": "17.10.2026, 20:52 Uhr", "notiz": "Jarvis schickt Programmierwünsche nur noch als Nachtrag in eine bestehende Sitzung, wenn du das ausdrücklich verlangst und die Sitzung eindeutig ist; sonst fragt er nach, und neue Aufträge bekommen eine eigene Session."},
-    {"versionCode": 160, "versionName": "1.8.149", "stand": "17.10.2026, 21:04 Uhr", "notiz": "Die Programmierregeln sind jetzt reiner Jarvis-Kontext: Jarvis steuert damit Programmieraufträge, schickt ihren Text aber nicht mehr an PC, Mac oder Cloud mit, weder im Auftrag noch über das Live-Gedächtnis."}
+    {"versionCode": 160, "versionName": "1.8.149", "stand": "17.10.2026, 21:04 Uhr", "notiz": "Die Programmierregeln sind jetzt reiner Jarvis-Kontext: Jarvis steuert damit Programmieraufträge, schickt ihren Text aber nicht mehr an PC, Mac oder Cloud mit, weder im Auftrag noch über das Live-Gedächtnis."},
+    {"versionCode": 161, "versionName": "1.8.150", "stand": "17.10.2026, 21:20 Uhr", "notiz": "Unter Einstellungen → Jarvis lässt sich jetzt das Schrittlimit pro Anfrage wählen (10 bis 100 Schritte oder unbegrenzt) statt der festen acht Schritte."}
   ]
 }

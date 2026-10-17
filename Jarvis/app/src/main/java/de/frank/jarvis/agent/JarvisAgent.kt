@@ -49,7 +49,8 @@ class JarvisAgent(context: Context) {
         auftrag: String,
         verlauf: List<ChatTurn> = emptyList(),
         zeitlimitMs: Long = 120_000,
-        maxSchritte: Int = 8,
+        /** Höchstens so viele Bearbeitungsrunden; Vorgabe aus den Einstellungen („Schrittlimit pro Anfrage“), 0 = unbegrenzt. */
+        maxSchritte: Int = einstellungen.schrittlimit,
         beiSchritt: (String) -> Unit = {},
     ): String {
         if (!auth.isConnected) return NICHT_VERBUNDEN
@@ -75,7 +76,8 @@ class JarvisAgent(context: Context) {
         auftrag: String,
         verlauf: List<ChatTurn> = emptyList(),
         zeitlimitMs: Long = 120_000,
-        maxSchritte: Int = 8,
+        /** Höchstens so viele Bearbeitungsrunden; Vorgabe aus den Einstellungen („Schrittlimit pro Anfrage“), 0 = unbegrenzt. Das Zeitlimit gilt immer. */
+        maxSchritte: Int = einstellungen.schrittlimit,
         beiSchritt: (String) -> Unit = {},
         rolle: String? = null,
         mitInternet: Boolean = false,
@@ -146,7 +148,8 @@ class JarvisAgent(context: Context) {
         var alleSchritte = false
         var letztesWerkzeug = ""
         val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs - reserve) {
-            repeat(maxSchritte) {
+            // 0 = unbegrenzt: Dann beendet nur die fertige Antwort, das Zeitlimit oder Franks Abbruch die Schleife.
+            while (maxSchritte <= 0 || schritte < maxSchritte) {
                 schritte++
                 val modellBeginn = System.currentTimeMillis()
                 val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe)

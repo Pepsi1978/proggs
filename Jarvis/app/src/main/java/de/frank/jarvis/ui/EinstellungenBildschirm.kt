@@ -108,6 +108,15 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     e.modell.supportedEfforts.forEach { s -> Chip(s.label, aktiv = e.denkstufe == s) { vm.setzeDenkstufe(s) } }
                 }
                 Text("Niedrig antwortet am schnellsten. Höhere Stufen denken gründlicher, brauchen aber länger.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                Unterzeile("Schrittlimit pro Anfrage")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    de.frank.jarvis.data.Einstellungen.SCHRITTLIMITS.forEach { n ->
+                        Chip(if (n == 0) "Unbegrenzt" else "$n", aktiv = e.schrittlimit == n) { vm.setzeSchrittlimit(n) }
+                    }
+                }
+                Text("Ein Schritt ist eine Bearbeitungsrunde: Jarvis denkt nach und ruft dabei bei Bedarf Werkzeuge auf. Ist das Limit erreicht, schreibt Jarvis einen Zwischenstand aus dem bisher Gesammelten." +
+                    if (e.schrittlimit == 0) " Unbegrenzt hebt nur dieses Limit auf; Zeitlimit und Abbrechen gelten weiter. Lange Anfragen können mehr kosten und länger dauern." else "",
+                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
 
