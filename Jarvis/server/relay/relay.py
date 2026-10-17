@@ -448,7 +448,7 @@ class PcBruecke:
         self.quittungen = {}  # Auftrag-id -> Future mit der Quittung der Bruecke
         self.nachtraege = {}  # AUFTRAG-ID -> [{"nachtrag_id", "text", "zeit"}], aelteste zuerst
         self.erledigt = {}    # nachtrag_id -> Zeit der Zustellung (Schutz gegen doppelte Zustellung)
-        self.kontakt = {}     # AUFTRAG-ID -> monotonic des letzten Lebenszeichens der Sitzung (Meldung, Puls, Abfrage)
+        self.kontakt = {}     # AUFTRAG-ID -> monotonic der letzten Meldung der Sitzung (Schritt, Puls): Zeichen, dass sie arbeitet
         self.warter = {}      # AUFTRAG-ID -> monotonic der letzten Nachtrags-Abfrage des Warters
         self.neu_da = {}      # AUFTRAG-ID -> asyncio.Event: ein Nachtrag kam dazu
         self.zugestellt = {}  # nachtrag_id -> asyncio.Event: der Hook hat quittiert
@@ -525,9 +525,13 @@ class PcBruecke:
                 pass
             finally:
                 self.zugestellt.pop(nachtrag_id, None)
-        kontakt = self.kontakt.get(auftrag_id)
+        jetzt = time.monotonic()
+        kontakt, warter = self.kontakt.get(auftrag_id), self.warter.get(auftrag_id)
+        # kontakt = letzte Arbeit (Meldung, Puls), warter = letzte Nachtrags-Abfrage im Leerlauf. Fragte der Warter nach der
+        # letzten Arbeit noch ab und tut es jetzt nicht mehr, ist die Sitzung weg; Jarvis unterscheidet das an beiden Zeiten.
         return web.json_response({"angenommen": True, "zugestellt": nachtrag_id in self.erledigt, "wartet": self._wartet(auftrag_id),
-                                  "kontakt_vor_s": int(time.monotonic() - kontakt) if kontakt else None, "pc": self.da()})
+                                  "kontakt_vor_s": int(jetzt - kontakt) if kontakt else None,
+                                  "warter_vor_s": int(jetzt - warter) if warter else None, "pc": self.da()})
 
     async def nachtrag_abholen(self, request: web.Request) -> web.Response:
         """GET /pc/nachtrag?auftrag_id=…&warten=… (Hook): 200 {"nachtraege": [...]}, 204 = keiner. Entfernt nichts (erst die Quittung)."""
@@ -540,10 +544,8 @@ class PcBruecke:
             warten = max(0, min(int(request.query.get("warten", "0")), NACHTRAG_WARTEN_S))
         except ValueError:
             warten = 0
-        jetzt = time.monotonic()
-        self.kontakt[auftrag_id] = jetzt
         if warten:
-            self.warter[auftrag_id] = jetzt
+            self.warter[auftrag_id] = time.monotonic()
         if not self.nachtraege.get(auftrag_id) and warten:
             ereignis = self._ereignis(auftrag_id)
             ereignis.clear()
@@ -551,7 +553,7 @@ class PcBruecke:
                 await asyncio.wait_for(ereignis.wait(), warten)
             except asyncio.TimeoutError:
                 pass
-            self.warter[auftrag_id] = self.kontakt[auftrag_id] = time.monotonic()
+            self.warter[auftrag_id] = time.monotonic()
         offen = self.nachtraege.get(auftrag_id) or []
         if not offen:
             return web.Response(status=204)

@@ -393,10 +393,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "Umgesetzt ist er, wenn programmierauftraege ihn als bearbeitet zeigt.")
         }
         val vor = if (antwort.isNull("kontakt_vor_s")) -1 else antwort.optInt("kontakt_vor_s", -1)
+        val warterVor = if (antwort.isNull("warter_vor_s")) -1 else antwort.optInt("warter_vor_s", -1)
+        // Arbeitet: kürzlich eine Meldung, und danach hat kein Warter mehr im Leerlauf abgefragt (sonst ist die Sitzung seitdem weg).
+        val arbeitet = vor in 0..600 && (warterVor < 0 || warterVor > vor)
         return when {
-            antwort.optBoolean("wartet") -> Ergebnis("Angenommen und bereitgestellt: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung wartet auf Nachträge und holt " +
-                "ihn in wenigen Sekunden ab; zugestellt ist er, wenn programmierauftraege das zeigt.")
-            vor in 0..900 -> Ergebnis("Angenommen und eingereiht: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung arbeitet gerade (letztes Lebenszeichen vor " +
+            // Der Relay hat schon bis zu 8 s auf die Übernahme gewartet: Kam sie nicht, ist die Sitzung womöglich gerade geschlossen worden.
+            antwort.optBoolean("wartet") -> Ergebnis("Angenommen, aber noch NICHT zugestellt: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung hat eben noch auf " +
+                "Nachträge gewartet, ihn aber nicht sofort übernommen; vielleicht wurde sie gerade geschlossen. Er bleibt eingereiht und geht nur in genau diese Sitzung; " +
+                "ob er ankommt, zeigt programmierauftraege. Eine neue Sitzung startet Jarvis nicht von selbst.")
+            arbeitet -> Ergebnis("Angenommen und eingereiht: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung arbeitet gerade (letztes Lebenszeichen vor " +
                 "${zeitspanne(vor)}) und bekommt ihn spätestens am Ende ihres aktuellen Schritts; zugestellt ist er, wenn programmierauftraege das zeigt.")
             else -> Ergebnis("Angenommen, aber NICHT zugestellt: Die Sitzung von Auftrag $id ($appName) ist gerade nicht erreichbar (" +
                 (if (vor < 0) "seit dem letzten Neustart des Jarvis-Servers kein Lebenszeichen" else "letztes Lebenszeichen vor ${zeitspanne(vor)}") + "; " +
