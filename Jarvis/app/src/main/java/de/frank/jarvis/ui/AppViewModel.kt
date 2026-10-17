@@ -733,12 +733,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun liveTippen() {
         when {
             liveAktiv -> liveBeenden()
-            sprache.openAiApiKey.isBlank() -> {
-                meldung = "Für das Live-Gespräch bitte zuerst den OpenAI-API-Schlüssel unter Einstellungen → Stimme eintragen."
+            liveSchluessel().first.isBlank() -> {
+                meldung = if (de.frank.jarvis.live.LiveOptionen.Stand(sprache).istGemini)
+                    "Für Gemini Live bitte zuerst einen Gemini-Schlüssel aus AI Studio unter Einstellungen → Stimme eintragen."
+                else "Für das Live-Gespräch bitte zuerst den OpenAI-API-Schlüssel unter Einstellungen → Stimme eintragen."
                 einstellungsReiter = "stimme"
                 reiter = Reiter.EINSTELLUNGEN
             }
             else -> liveMikroAnfragen()
+        }
+    }
+
+    /**
+     * Schlüssel für das eingestellte Live-Modell und (nur Gemini) der bezahlte Ersatz, falls das kostenlose Kontingent ausgeht.
+     * „Erst kostenlos, dann bezahlt“ nimmt den bezahlten allein, wenn kein kostenloser eingetragen ist.
+     */
+    fun liveSchluessel(st: de.frank.jarvis.live.LiveOptionen.Stand = de.frank.jarvis.live.LiveOptionen.Stand(sprache)): Pair<String, String> {
+        if (!st.istGemini) return sprache.openAiApiKey to ""
+        val frei = sprache.geminiApiKey
+        val bezahlt = sprache.geminiApiKeyBezahlt
+        return when (st["g_schluessel"]) {
+            "frei" -> frei to ""
+            "bezahlt" -> bezahlt to ""
+            else -> if (frei.isNotBlank()) frei to bezahlt else bezahlt to ""
         }
     }
 
@@ -771,7 +788,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val mitgeben = optionen["verlauf"].toIntOrNull() ?: 0
             val bisher = gespraech.filter { it.art == "antwort" && it.text.isNotBlank() }.takeLast(mitgeben).map { it.vonMir to it.text }
             live = de.frank.jarvis.live.LiveGespraech(
-                getApplication(), sprache.openAiApiKey, optionen, liveAnweisung(optionen.istLive), bisher,
+                getApplication(), liveSchluessel(optionen).first, optionen, liveAnweisung(optionen.istLive), bisher,
                 beiStatus = { s -> haupt { liveStatus = s } },
                 beiPegel = { p -> livePegel = p },
                 beiAudioweg = { a -> haupt { liveAudioweg = a } },
@@ -796,6 +813,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 },
                 beiFehler = { m -> haupt { meldung = m } },
                 beiEnde = { haupt { liveAufraeumen() } },
+                ersatzSchluessel = liveSchluessel(optionen).second,
+                schluesselGratis = optionen.istGemini && optionen["g_schluessel"] != "bezahlt" && liveSchluessel(optionen).first == sprache.geminiApiKey,
             ).also { it.start() }
         }
     }
@@ -804,13 +823,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var stimmProbeLaedt by mutableStateOf<String?>(null); private set
 
     /** Spielt die deutsche Hörprobe einer Live-Stimme; die erste je Stimme kommt einmalig von OpenAI. */
-    fun stimmProbe(live: Boolean, stimme: String) {
+    fun stimmProbe(art: String, stimme: String) {
         if (liveAktiv) { meldung = "Während des Live-Gesprächs gibt es keine Hörprobe."; return }
         if (stimmProbeLaedt != null) return
-        val neu = !de.frank.jarvis.live.StimmProbe.vorhanden(getApplication(), live, stimme)
+        val neu = !de.frank.jarvis.live.StimmProbe.vorhanden(getApplication(), art, stimme)
         if (neu) { stimmProbeLaedt = stimme; meldung = "Hörprobe für $stimme wird einmalig erzeugt …" }
         viewModelScope.launch {
-            val fehler = de.frank.jarvis.live.StimmProbe.abspielen(getApplication(), sprache.openAiApiKey, live, stimme)
+            val fehler = de.frank.jarvis.live.StimmProbe.abspielen(getApplication(), liveSchluessel().first, art, stimme, liveSchluessel().second)
             stimmProbeLaedt = null
             if (fehler != null) meldung = fehler
         }

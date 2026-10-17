@@ -22,24 +22,35 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Hörproben der Live-Stimmen auf Deutsch. Eine Probe entsteht einmalig über OpenAI (GPT-Live: etwa 10 Sekunden, unter
- * 1 Cent; Realtime: über das günstige mini-Modell) und liegt danach unter `files/stimmproben/`; jedes weitere Anhören ist gratis.
+ * 1 Cent; Realtime: über das günstige mini-Modell) oder Google (Gemini 3.8 Live, etwa 0,3 Cent, mit kostenlosem Schlüssel gratis)
+ * und liegt danach unter `files/stimmproben/`; jedes weitere Anhören ist gratis.
+ *
+ * [art]: `live` (GPT-Live), `realtime` oder `gemini`.
  */
 object StimmProbe {
     const val SATZ = "Hallo Frank, ich bin Jarvis. So klinge ich auf Deutsch. Was steht heute bei dir an?"
 
-    private fun datei(context: Context, live: Boolean, stimme: String) =
-        File(File(context.filesDir, "stimmproben").apply { mkdirs() }, (if (live) "live_" else "realtime_") + stimme + ".pcm")
+    private fun datei(context: Context, art: String, stimme: String) =
+        File(File(context.filesDir, "stimmproben").apply { mkdirs() }, art + "_" + stimme + ".pcm")
 
-    fun vorhanden(context: Context, live: Boolean, stimme: String) = datei(context, live, stimme).let { it.exists() && it.length() > 4800 }
+    fun vorhanden(context: Context, art: String, stimme: String) = datei(context, art, stimme).let { it.exists() && it.length() > 4800 }
+
+    /** Welche Hörproben-Art zum eingestellten Live-Modell gehört. */
+    fun art(st: LiveOptionen.Stand) = if (st.istGemini) "gemini" else if (st.istLive) "live" else "realtime"
 
     @Volatile private var laufend: AudioTrack? = null
 
     /** Spielt die Probe ab; fehlt sie, wird sie zuerst erzeugt. Liefert eine Fehlermeldung oder null. */
-    suspend fun abspielen(context: Context, schluessel: String, live: Boolean, stimme: String): String? = withContext(Dispatchers.IO) {
-        val f = datei(context, live, stimme)
-        if (!vorhanden(context, live, stimme)) {
-            if (schluessel.isBlank()) return@withContext "Für Hörproben bitte zuerst den OpenAI-API-Schlüssel eintragen."
-            val (pcm, fehler) = erzeugen(schluessel, live, stimme)
+    suspend fun abspielen(context: Context, schluessel: String, art: String, stimme: String, ersatz: String = ""): String? = withContext(Dispatchers.IO) {
+        val f = datei(context, art, stimme)
+        if (!vorhanden(context, art, stimme)) {
+            if (schluessel.isBlank()) return@withContext if (art == "gemini") "Für Hörproben bitte zuerst einen Gemini-Schlüssel eintragen." else "Für Hörproben bitte zuerst den OpenAI-API-Schlüssel eintragen."
+            var (pcm, fehler) = if (art == "gemini") erzeugenGemini(schluessel, stimme) else erzeugen(schluessel, art == "live", stimme)
+            // Kostenloses Kontingent erschöpft: einmal mit dem bezahlten Schlüssel.
+            if (pcm == null && art == "gemini" && ersatz.isNotBlank() && ersatz != schluessel) {
+                val zweiter = erzeugenGemini(ersatz, stimme)
+                pcm = zweiter.first; fehler = zweiter.second
+            }
             if (pcm == null) return@withContext fehler ?: "Die Hörprobe kam nicht zustande."
             f.writeBytes(pcm)
         }
@@ -65,6 +76,56 @@ object StimmProbe {
         track.play()
         // 24 kHz, 16 Bit mono = 48 Byte je Millisekunde; mit Reserve nach dem Ende freigeben, sonst bleibt der AudioTrack liegen.
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ freigeben(track) }, pcm.size / 48L + 500)
+    }
+
+    /** Gemini: kurze Live-Sitzung mit 3.8 Live, Text hinein, Audio (24 kHz) bis turnComplete sammeln. */
+    private suspend fun erzeugenGemini(schluessel: String, stimme: String): Pair<ByteArray?, String?> {
+        val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).build()
+        val audio = ByteArrayOutputStream()
+        val fertig = CompletableDeferred<String?>()
+        val url = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=" +
+            java.net.URLEncoder.encode(schluessel, "UTF-8")
+        val ws = client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                webSocket.send(JSONObject().put("setup", JSONObject()
+                    .put("model", "models/gemini-3.8-live")
+                    .put("generationConfig", JSONObject().put("responseModalities", JSONArray().put("AUDIO"))
+                        .put("speechConfig", JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", stimme)))))
+                    .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
+                        "Du sprichst ausschließlich Deutsch. Sprich genau den Satz, den du bekommst, natürlich und freundlich, und danach nichts mehr. RESPOND IN GERMAN."))))).toString())
+            }
+            override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) = onMessage(webSocket, bytes.utf8())
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                val e = runCatching { JSONObject(text) }.getOrNull() ?: return
+                if (e.has("setupComplete")) webSocket.send(JSONObject().put("realtimeInput", JSONObject().put("text", "Sag jetzt genau diesen Satz: „$SATZ“")).toString())
+                val c = e.optJSONObject("serverContent") ?: return
+                val teile = c.optJSONObject("modelTurn")?.optJSONArray("parts")
+                if (teile != null) for (i in 0 until teile.length()) {
+                    teile.optJSONObject(i)?.optJSONObject("inlineData")?.optString("data")?.takeIf { it.isNotEmpty() }
+                        ?.let { synchronized(audio) { audio.write(Base64.decode(it, Base64.DEFAULT)) } }
+                }
+                if (c.optBoolean("turnComplete")) fertig.complete(null)
+            }
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                fertig.complete(if (code == 1000) null else when {
+                    reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) -> "Gemini-Kontingent erschöpft: Hörprobe gerade nicht möglich."
+                    reason.contains("API key", true) -> "Der Gemini-Schlüssel wurde abgelehnt."
+                    else -> "Hörprobe (Gemini $code): " + reason.take(160)
+                })
+            }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                fertig.complete(when (response?.code) {
+                    401, 403 -> "Der Gemini-Schlüssel wurde abgelehnt."
+                    429 -> "Gemini-Kontingent erschöpft: Hörprobe gerade nicht möglich."
+                    else -> "Hörprobe: Verbindung zu Gemini fehlgeschlagen (" + (t.message ?: "unbekannt") + ")."
+                })
+            }
+        })
+        val fehler = withTimeoutOrNull(25_000) { fertig.await() }
+        runCatching { ws.close(1000, "Probe fertig") }
+        client.dispatcher.executorService.shutdown()
+        val pcm = synchronized(audio) { audio.toByteArray() }
+        return if (pcm.size > 4800) pcm.copyOf(pcm.size - pcm.size % 2) to null else null to (fehler ?: "Die Stimme hat nichts gesagt. Bitte nochmal versuchen.")
     }
 
     /** Baut eine kurze Sitzung auf, lässt den Satz sprechen und sammelt das Audio. */

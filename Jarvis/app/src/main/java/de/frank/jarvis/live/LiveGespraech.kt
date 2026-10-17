@@ -28,12 +28,14 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 /**
- * Live-Gespräch mit OpenAI, PCM16 mit 24 kHz in beide Richtungen, über zwei getrennte Protokolle:
+ * Live-Gespräch mit OpenAI oder Google, PCM16 mit 24 kHz (Gemini: Mikrofon auf 16 kHz umgerechnet), über drei Protokolle:
  *
  * - **GPT-Live** (`gpt-live-1`, `wss://…/v1/live/sessions`): hört und spricht gleichzeitig. Denken übernimmt entweder ein
  *   Denk-Modell bei OpenAI (Responses-Delegation, das per Funktion `jarvis_fragen` den Jarvis-Agenten ruft) oder Jarvis
  *   selbst (Client-Delegation: Auftrag aus der Mitschrift, Antwort per `session.commentary.append`).
  * - **Realtime** (`gpt-realtime-*`, `wss://…/v1/realtime?model=`): ein Modell macht alles; `jarvis_fragen` als Funktion.
+ * - **Gemini Live** (`gemini-*`, `BidiGenerateContent`): wie Realtime ein Modell mit `jarvis_fragen` als Funktion; Verbindungen
+ *   enden nach etwa 10 Minuten (goAway) und werden mit der Fortsetzungskennung nahtlos erneuert.
  *
  * Die Einstellungen kommen aus [LiveOptionen]. Die Kosten laufen mit ([beiKosten], in USD) und stehen in der Live-Leiste.
  */
@@ -57,13 +59,24 @@ class LiveGespraech(
     private val beiAbrechnung: (LiveKostenBuch.Abrechnung) -> Unit,
     private val beiFehler: (String) -> Unit,
     private val beiEnde: () -> Unit,
+    /** Nur Gemini: bezahlter Schlüssel, auf den Jarvis wechselt, wenn der kostenlose an sein Kontingent stößt (leer = keiner). */
+    private val ersatzSchluessel: String = "",
+    /** Nur Gemini: Der erste Schlüssel gehört zu einem Projekt ohne Abrechnung; seine Gespräche kosten nichts. */
+    schluesselGratis: Boolean = false,
 ) {
     private val app = context.applicationContext
     private val audio = app.getSystemService(AudioManager::class.java)
     private val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).pingInterval(20, TimeUnit.SECONDS).build()
     private val live = st.istLive
+    private val gemini = st.istGemini
     private val modell = st.modell
     private var ws: WebSocket? = null
+    /** Gemini: Schlüssel der laufenden Verbindung und der bezahlte Ersatz, falls das kostenlose Kontingent ausgeht. */
+    @Volatile private var aktuellerSchluessel = schluessel
+    /** Gemini: Kennung zum Fortsetzen derselben Sitzung auf einer neuen Verbindung (goAway, Schlüsselwechsel). */
+    @Volatile private var fortsetzKennung = ""
+    @Volatile private var begruesst = false
+    @Volatile private var gratis = schluesselGratis
     @Volatile private var laeuft = false
     @Volatile private var bereit = false
     @Volatile var stumm = false
@@ -153,6 +166,7 @@ class LiveGespraech(
             offene.incrementAndGet()
         }
         status("Verbinde …")
+        if (gemini) { geminiVerbinden(schluessel); stilleWaechter(); return }
         val url = if (live) "wss://api.openai.com/v1/live/sessions" else "wss://api.openai.com/v1/realtime?model=$modell"
         val anfrage = Request.Builder().url(url).header("Authorization", "Bearer $schluessel").build()
         ws = client.newWebSocket(anfrage, object : WebSocketListener() {
@@ -200,6 +214,242 @@ class LiveGespraech(
         })
         stilleWaechter()
     }
+
+    // ======================= Gemini Live =======================
+
+    /**
+     * Öffnet eine Verbindung zur Gemini Live API. Bei goAway oder einem Schlüsselwechsel kommt eine neue Verbindung mit der
+     * Fortsetzungskennung; Ereignisse und das Schließen einer abgelösten Verbindung zählen dann nicht mehr ([ws] ist neu).
+     */
+    private fun geminiVerbinden(schluessel: String) {
+        aktuellerSchluessel = schluessel
+        bereit = false
+        // Der Schlüssel gehört laut Google in die Adresse; ein Kopfzeilen-Schlüssel ist für die Live-Verbindung nicht belegt.
+        val url = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.$apiVersion.GenerativeService.BidiGenerateContent?key=" +
+            java.net.URLEncoder.encode(schluessel, "UTF-8")
+        val anfrage = Request.Builder().url(url).build()
+        val alt = ws
+        ws = client.newWebSocket(anfrage, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO) }
+                webSocket.send(geminiSetup().toString())
+            }
+
+            // Gemini schickt sein JSON meist als Binär-Frame.
+            override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) = onMessage(webSocket, bytes.utf8())
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                if (webSocket !== ws) return
+                val e = runCatching { JSONObject(text) }.getOrNull() ?: return
+                geminiEreignis(webSocket, e)
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                if (!laeuft || webSocket !== ws) return
+                val grund = when (response?.code) {
+                    400 -> "Gemini hat den Verbindungsaufbau abgelehnt (Modell oder Einstellung)."
+                    401, 403 -> "Der Gemini-Schlüssel wurde abgelehnt."
+                    404 -> "Das Gemini-Modell „$modell“ gibt es nicht (mehr)."
+                    429 -> if (geminiErsatz("429")) return else "Gemini-Kontingent erschöpft oder zu viele Anfragen."
+                    else -> "Gemini-Verbindung getrennt: " + (t.message ?: "unbekannt")
+                }
+                beiFehler(grund)
+                beenden(senden = false)
+            }
+
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (!laeuft || webSocket !== ws) return
+                Log.w(LiveRouting.TAG, "Gemini schließt: $code $reason")
+                if (code != 1000) {
+                    if (istKontingent(reason) && geminiErsatz(reason)) return
+                    // Extended Thinking zeigt Google teils über v1alpha: lehnt v1beta den Aufbau ab, einmal dort versuchen.
+                    if (!bereit && apiVersion == "v1beta" && modell.contains("extended") && !istKontingent(reason) && !reason.contains("API key", true)) {
+                        Log.w(LiveRouting.TAG, "Gemini: v1beta lehnt ab ($code $reason), versuche v1alpha")
+                        apiVersion = "v1alpha"
+                        geminiVerbinden(aktuellerSchluessel)
+                        return
+                    }
+                    beiFehler(geminiGrund(code, reason))
+                }
+                beenden(senden = false)
+            }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft && webSocket === ws) beenden(senden = false) }
+        })
+        // Die abgelöste Verbindung erst schließen, wenn die neue steht: ihr Schließen zählt dann nicht mehr.
+        alt?.let { a -> runCatching { a.close(1000, "Neue Verbindung") } }
+    }
+
+    @Volatile private var apiVersion = "v1beta"
+
+    private fun istKontingent(reason: String) = reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true)
+
+    private fun geminiGrund(code: Int, reason: String): String = when {
+        istKontingent(reason) -> "Gemini-Kontingent erschöpft: " + reason.take(160)
+        reason.contains("API key", true) -> "Der Gemini-Schlüssel wurde abgelehnt."
+        reason.contains("not found", true) || reason.contains("not supported", true) -> "Gemini kennt das Modell oder eine Einstellung nicht: " + reason.take(160)
+        reason.isNotBlank() -> "Gemini ($code): " + reason.take(200)
+        else -> "Gemini hat die Verbindung beendet (Code $code)."
+    }
+
+    /** Kostenloses Kontingent aus: einmal auf den bezahlten Schlüssel wechseln, das Gespräch läuft weiter. */
+    private fun geminiErsatz(anlass: String): Boolean {
+        val ersatz = ersatzSchluessel
+        if (ersatz.isBlank() || ersatz == aktuellerSchluessel || !laeuft) return false
+        Log.w(LiveRouting.TAG, "Gemini: kostenloses Kontingent erschöpft ($anlass), wechsle auf den bezahlten Schlüssel")
+        beiFehler("Kostenloses Gemini-Kontingent erschöpft: Jarvis spricht mit dem bezahlten Schlüssel weiter.")
+        gratis = false
+        geminiVerbinden(ersatz)
+        return true
+    }
+
+    private fun geminiSetup(): JSONObject {
+        val g = JSONObject().put("responseModalities", JSONArray().put("AUDIO"))
+        val sprache = JSONObject().put("voiceConfig", JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", st["stimme"])))
+        g.put("speechConfig", sprache)
+        LiveOptionen.geminiDenken(st)?.let { g.put("thinkingConfig", it) }
+        st["g_temperatur"].toDoubleOrNull()?.let { g.put("temperature", it) }
+        st["g_max"].toIntOrNull()?.takeIf { it > 0 }?.let { g.put("maxOutputTokens", it) }
+        // Das bisherige Gespräch steht in der Anweisung: Das funktioniert bei allen Live-Modellen, auch ohne Verlaufs-Freigabe.
+        val bisher = if (verlauf.isEmpty()) "" else verlauf.joinToString("\n", "\n# Bisheriges Gespräch (zum Anknüpfen)\n") { (mir, t) -> (if (mir) "Frank: " else "Jarvis: ") + t.take(1200) }
+        val werkzeuge = JSONArray().put(JSONObject().put("functionDeclarations", JSONArray().put(JSONObject()
+            .put("name", "jarvis_fragen")
+            .put("description", jarvisWerkzeug().optString("description"))
+            .put("parameters", JSONObject().put("type", "OBJECT")
+                .put("properties", JSONObject().put("auftrag", JSONObject().put("type", "STRING").put("description", "Die vollständige Frage oder der Auftrag")))
+                .put("required", JSONArray().put("auftrag")))
+            .apply { if (LiveOptionen.geminiNebenbei(st)) put("behavior", "NON_BLOCKING") })))
+        if (st["g_suche"] == "an") werkzeuge.put(JSONObject().put("googleSearch", JSONObject()))
+        val erkennung = JSONObject()
+            .put("startOfSpeechSensitivity", if (st["g_start"] == "hoch") "START_SENSITIVITY_HIGH" else "START_SENSITIVITY_LOW")
+            .put("endOfSpeechSensitivity", if (st["g_ende"] == "hoch") "END_SENSITIVITY_HIGH" else "END_SENSITIVITY_LOW")
+            .put("prefixPaddingMs", 20)
+            .put("silenceDurationMs", st["g_stille"].toIntOrNull() ?: 500)
+        val s = JSONObject()
+            .put("model", "models/$modell")
+            .put("generationConfig", g)
+            // Native-Audio-Modelle nehmen keinen Sprachcode: Deutsch erzwingt die Anweisung (Googles Formulierung).
+            .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text",
+                anweisung + bisher + "\n# Language\nRESPOND IN GERMAN. YOU MUST RESPOND UNMISTAKABLY IN GERMAN."))))
+            .put("tools", werkzeuge)
+            .put("realtimeInputConfig", JSONObject().put("automaticActivityDetection", erkennung)
+                .put("activityHandling", if (st["unterbrechen"] == "an") "START_OF_ACTIVITY_INTERRUPTS" else "NO_INTERRUPTION"))
+            .put("outputAudioTranscription", JSONObject())
+            .put("contextWindowCompression", JSONObject().put("slidingWindow", JSONObject()).apply { LiveOptionen.geminiKuerzenAb(st)?.let { put("triggerTokens", it) } })
+            .put("sessionResumption", JSONObject().apply { if (fortsetzKennung.isNotEmpty()) put("handle", fortsetzKennung) })
+        if (st["g_mitschrift"] != "aus") s.put("inputAudioTranscription", JSONObject())
+        return JSONObject().put("setup", s)
+    }
+
+    /** Gemini verwirft nach dem Antippen den Rest der laufenden Antwort bis zu ihrem Ende. */
+    @Volatile private var verwerfenGemini = false
+    /** Nutzungsdaten der laufenden Antwort: Gemini schickt sie oft mehrfach, verbucht wird der letzte Stand je Antwort. */
+    private var geminiNutzung: JSONObject? = null
+
+    private fun geminiEreignis(w: WebSocket, e: JSONObject) {
+        // Je Antwort den größten Stand nehmen: Die letzte Meldung (mit turnComplete) ist teils leer.
+        e.optJSONObject("usageMetadata")?.let { u -> if (u.optInt("totalTokenCount") >= (geminiNutzung?.optInt("totalTokenCount") ?: 0)) geminiNutzung = u }
+        when {
+            e.has("setupComplete") -> {
+                bereit = true
+                if (startMs == 0L) startMs = System.currentTimeMillis()
+                tonStarten()
+                if (!begruesst) {
+                    begruesst = true
+                    w.send(JSONObject().put("realtimeInput", JSONObject().put("text", "Begrüße Frank kurz auf Deutsch, höchstens ein Satz, dann hör zu.")).toString())
+                }
+                if (laeuft) status("Ich höre zu")
+            }
+            e.has("serverContent") -> {
+                val c = e.optJSONObject("serverContent") ?: return
+                letzteAktivitaet = System.currentTimeMillis()
+                c.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d -> synchronized(nutzerTeile) { nutzerTeile.append(d) } }
+                if (c.optBoolean("interrupted")) {
+                    // Frank redet dazwischen: Gemini hat die Antwort schon abgebrochen, der gepufferte Rest verstummt.
+                    verwerfenGemini = false
+                    ausgabeLeeren()
+                    jarvisFertig()
+                    status("Ich höre zu")
+                }
+                c.optJSONObject("outputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d ->
+                    nutzerFertig()
+                    if (!verwerfenGemini) synchronized(jarvisTeile) { jarvisTeile.append(d) }
+                }
+                val teile = c.optJSONObject("modelTurn")?.optJSONArray("parts")
+                if (teile != null && !verwerfenGemini) for (i in 0 until teile.length()) {
+                    val p = teile.optJSONObject(i) ?: continue
+                    if (p.optBoolean("thought")) continue
+                    val daten = p.optJSONObject("inlineData")?.optString("data")?.takeIf { it.isNotEmpty() } ?: continue
+                    nutzerFertig()
+                    if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
+                    ausgabe.offer(Stueck(Base64.decode(daten, Base64.DEFAULT), true))
+                }
+                if (c.optBoolean("turnComplete")) {
+                    verwerfenGemini = false
+                    sprichtGerade = false
+                    nutzerFertig(); jarvisFertig()
+                    geminiKosten()
+                    if (laeuft && kennungArt.isEmpty()) status("Ich höre zu")
+                }
+            }
+            e.has("toolCall") -> {
+                val aufrufe = e.optJSONObject("toolCall")?.optJSONArray("functionCalls") ?: return
+                for (i in 0 until aufrufe.length()) {
+                    val f = aufrufe.optJSONObject(i) ?: continue
+                    if (f.optString("name") != "jarvis_fragen") continue
+                    val id = f.optString("id")
+                    kennungArt[id] = "gemini"
+                    nutzerFertig(); jarvisFertig()
+                    bestaetigungVerschlucken = false
+                    status("Jarvis schaut nach …")
+                    beiWerkzeug(id, f.optJSONObject("args")?.optString("auftrag").orEmpty())
+                }
+            }
+            e.has("toolCallCancellation") -> {
+                val ids = e.optJSONObject("toolCallCancellation")?.optJSONArray("ids") ?: return
+                for (i in 0 until ids.length()) kennungArt.remove(ids.optString(i))
+            }
+            e.has("sessionResumptionUpdate") -> {
+                val u = e.optJSONObject("sessionResumptionUpdate") ?: return
+                if (u.optBoolean("resumable") && u.optString("newHandle").isNotEmpty()) fortsetzKennung = u.optString("newHandle")
+            }
+            e.has("goAway") -> {
+                // Gemini trennt gleich (Verbindungen halten etwa 10 Minuten): mit der Kennung nahtlos auf eine neue Verbindung.
+                Log.i(LiveRouting.TAG, "Gemini goAway, Rest ${e.optJSONObject("goAway")?.optString("timeLeft")}, Fortsetzung " + if (fortsetzKennung.isEmpty()) "nicht möglich" else "folgt")
+                if (fortsetzKennung.isNotEmpty() && laeuft) { geminiKosten(); geminiVerbinden(aktuellerSchluessel) }
+            }
+        }
+    }
+
+    /** Verbucht die Nutzungsdaten der fertigen Antwort genau einmal, mit den Gemini-Preisen aus [LiveOptionen]. */
+    private fun geminiKosten() {
+        val u = geminiNutzung ?: return
+        geminiNutzung = null
+        val k = LiveOptionen.geminiKosten(modell, u) ?: run { ohnePreis++; return }
+        // Kostenloser Schlüssel: Google berechnet nichts, nur fürs Protokoll der Listenpreis.
+        if (gratis) { Log.i(LiveRouting.TAG, "Gemini-Antwort über das kostenlose Kontingent, Listenpreis wäre " + LiveOptionen.usdText(k)); return }
+        tokenKosten += k
+        kostenMelden()
+    }
+
+    /** Mikrofon (24 kHz) auf die 16 kHz, die Gemini erwartet: lineare Interpolation, 3 Eingangs- auf 2 Ausgangsproben. */
+    private fun auf16k(b: ByteArray): ByteArray {
+        val n = b.size / 2
+        val m = n * 2 / 3
+        val aus = ByteArray(m * 2)
+        for (j in 0 until m) {
+            val pos = j * 1.5
+            val i = pos.toInt()
+            val t = pos - i
+            val a = ((b[2 * i].toInt() and 0xFF) or (b[2 * i + 1].toInt() shl 8))
+            val c = if (i + 1 < n) ((b[2 * i + 2].toInt() and 0xFF) or (b[2 * i + 3].toInt() shl 8)) else a
+            val s = (a + (c - a) * t).toInt()
+            aus[2 * j] = s.toByte(); aus[2 * j + 1] = (s shr 8).toByte()
+        }
+        return aus
+    }
+
+    private fun geminiAudio(pcm: ByteArray): String = JSONObject().put("realtimeInput", JSONObject().put("audio", JSONObject()
+        .put("data", Base64.encodeToString(auf16k(pcm), Base64.NO_WRAP)).put("mimeType", "audio/pcm;rate=16000"))).toString()
 
     // ======================= GPT-Live =======================
 
@@ -564,6 +814,12 @@ class LiveGespraech(
         val w = ws ?: return
         if (navigation) bestaetigungVerschlucken = true
         when (kennungArt.remove(kennung)) {
+            "gemini" -> {
+                val r = JSONObject().put("id", kennung).put("name", "jarvis_fragen").put("response", JSONObject().put("result", text))
+                if (LiveOptionen.geminiNebenbei(st) && modell == "gemini-3.8-live") r.put("scheduling", st["g_melden"])
+                w.send(JSONObject().put("toolResponse", JSONObject().put("functionResponses", JSONArray().put(r))).toString())
+                if (kennungArt.isEmpty() && !sprichtGerade && laeuft) status("Ich höre zu")
+            }
             "auftrag" -> {
                 // Höchstens 500 Tokens je Kommentar.
                 w.send(JSONObject().put("type", "session.commentary.append").put("delegation_id", kennung).put("content", text.take(1500)).toString())
@@ -735,6 +991,8 @@ class LiveGespraech(
                     }
                 }
                 val stueck = if ((stumm && !live) || echoZu) ByteArray(n) else puffer.copyOf(n)
+                // Gemini: nur an eine fertig aufgebaute Verbindung, beim Wechsel (goAway, Schlüssel) kurz nichts.
+                if (gemini) { if (bereit) ws?.send(geminiAudio(stueck)); continue }
                 ws?.send(JSONObject().put("type", anhaengen).put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
             }
         }, "jarvis-live-mikro").start()
@@ -861,7 +1119,11 @@ class LiveGespraech(
             if (bereit && letzterStatus.startsWith("Jarvis spricht")) status("Ich höre zu")
             return
         }
-        if (live) {
+        if (gemini) {
+            // Gemini kennt kein Abbrechen von außen: Der Rest der Antwort wird bis zu ihrem Ende verworfen.
+            verwerfenGemini = true
+            synchronized(jarvisTeile) { jarvisTeile.setLength(0) }
+        } else if (live) {
             verwerfenLive = true
             letzteVerworfenMs = System.currentTimeMillis()
             verwerfenSeitMs = letzteVerworfenMs

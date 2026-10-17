@@ -1,6 +1,7 @@
 package de.frank.jarvis.live
 
 import de.frank.jarvis.data.settings.SecureSettings
+import org.json.JSONObject
 import java.util.Locale
 
 /**
@@ -56,6 +57,8 @@ object LiveOptionen {
         }
         val modell get() = get("modell")
         val istLive get() = modell.startsWith("gpt-live")
+        val istGemini get() = modell.startsWith("gemini")
+        val istRealtime get() = !istLive && !istGemini
         val denktBeiOpenAi get() = istLive && get("denken") == "openai"
     }
 
@@ -98,6 +101,70 @@ object LiveOptionen {
         "gpt-realtime" to RealtimePreis(Preis(32.0, 0.40, 64.0), Preis(4.0, 0.40, 16.0)),
         "gpt-realtime-mini" to RealtimePreis(Preis(10.0, 0.30, 20.0), Preis(0.60, 0.06, 2.40)),
     )
+    /**
+     * Gemini-Live-Modelle (Developer API, Stand 17.10.2026, ai.google.dev/gemini-api/docs/pricing): Audio- und Textpreise je
+     * 1 Mio. Tokens, Denk-Tokens wie Text-Ausgabe. Kein Cache: Gemini rechnet bei jeder Antwort den ganzen Verlauf neu als Eingabe.
+     * Mit kostenlosem Schlüssel (Projekt ohne Abrechnung) kostet alles nichts; Google nutzt die Daten dann zum Training.
+     */
+    class GeminiPreis(val audioEin: Double, val textEin: Double, val audioAus: Double, val textAus: Double)
+    val GEMINI = linkedMapOf(
+        "gemini-3.8-live" to GeminiPreis(3.00, 0.75, 12.00, 4.50),
+        "gemini-3.8-live-extended-thinking" to GeminiPreis(3.00, 0.75, 12.00, 4.50),
+        "gemini-3.1-flash-live-preview" to GeminiPreis(3.00, 0.75, 12.00, 4.50),
+    )
+
+    /** Kosten einer Antwort aus `usageMetadata` (Eingabe und Ausgabe nach Audio und Text getrennt); null = Modell ohne Preis. */
+    fun geminiKosten(modell: String, u: JSONObject): Double? {
+        val p = GEMINI[modell] ?: return null
+        fun anteil(feld: String, art: String): Int {
+            val a = u.optJSONArray(feld) ?: return 0
+            return (0 until a.length()).sumOf { i -> a.optJSONObject(i)?.takeIf { it.optString("modality") == art }?.optInt("tokenCount") ?: 0 }
+        }
+        val ein = u.optInt("promptTokenCount")
+        val aus = u.optInt("responseTokenCount").let { if (it == 0) u.optInt("candidatesTokenCount") else it }
+        val audioEin = anteil("promptTokensDetails", "AUDIO")
+        val audioAus = anteil("responseTokensDetails", "AUDIO").let { if (it == 0) anteil("candidatesTokensDetails", "AUDIO") else it }
+        val denken = u.optInt("thoughtsTokenCount")
+        // Fehlen die Einzelheiten, zählt alles als Audio: lieber etwas zu hoch als zu niedrig geschätzt.
+        val audioE = if (audioEin == 0 && ein > 0 && u.optJSONArray("promptTokensDetails") == null) ein else audioEin
+        val audioA = if (audioAus == 0 && aus > 0 && u.optJSONArray("responseTokensDetails") == null && u.optJSONArray("candidatesTokensDetails") == null) aus else audioAus
+        return (audioE * p.audioEin + (ein - audioE).coerceAtLeast(0) * p.textEin + audioA * p.audioAus + ((aus - audioA).coerceAtLeast(0) + denken) * p.textAus) / 1_000_000
+    }
+
+    /** Denkstufe je Modell: 3.8 Live hat keine (thinkingConfig muss fehlen), Extended Thinking low bis high, 3.1 Flash minimal bis high. */
+    private fun geminiStufen(modell: String): List<String> = when (modell) {
+        "gemini-3.8-live-extended-thinking" -> listOf("low", "medium", "high")
+        "gemini-3.1-flash-live-preview" -> listOf("minimal", "low", "medium", "high")
+        else -> emptyList()
+    }
+    fun geminiDenken(st: Stand): JSONObject? =
+        if (geminiStufen(st.modell).isEmpty()) null else JSONObject().put("thinkingLevel", st["g_denken"])
+
+    /** Ab so vielen Tokens kürzt Gemini den Verlauf (Sliding Window); null = Googles Vorgabe. */
+    fun geminiKuerzenAb(st: Stand): Int? = st["g_kuerzen"].toIntOrNull()
+
+    /** Extended Thinking zeigt Google im Rohbeispiel über v1alpha, die übrigen über v1beta. */
+    fun geminiApiVersion(st: Stand) = if (st.modell == "gemini-3.8-live-extended-thinking") "v1alpha" else "v1beta"
+
+    /** Werkzeugaufrufe: Extended Thinking nur nebenbei (NON_BLOCKING), 3.1 Flash nur wartend, 3.8 Live nach Einstellung. */
+    fun geminiNebenbei(st: Stand) = when (st.modell) {
+        "gemini-3.8-live-extended-thinking" -> true
+        "gemini-3.1-flash-live-preview" -> false
+        else -> st["g_werkzeug"] == "nebenbei"
+    }
+
+    /** Die 30 Stimmen der Gemini Live API (Name, Googles Charakterwort, Geschlecht nach den gleichnamigen Chirp-3-HD-Stimmen). */
+    private val GEMINI_STIMMEN = listOf(
+        "Charon" to "sachlich, männlich", "Puck" to "munter, männlich", "Kore" to "bestimmt, weiblich", "Zephyr" to "hell, weiblich",
+        "Fenrir" to "aufgeweckt, männlich", "Leda" to "jugendlich, weiblich", "Orus" to "bestimmt, männlich", "Aoede" to "locker, weiblich",
+        "Callirrhoe" to "gelassen, weiblich", "Autonoe" to "klar, weiblich", "Enceladus" to "hauchig, männlich", "Iapetus" to "deutlich, männlich",
+        "Umbriel" to "gelassen, männlich", "Algieba" to "weich, männlich", "Despina" to "weich, weiblich", "Erinome" to "deutlich, weiblich",
+        "Algenib" to "rau, männlich", "Rasalgethi" to "informativ, männlich", "Laomedeia" to "beschwingt, weiblich", "Achernar" to "sanft, weiblich",
+        "Alnilam" to "fest, männlich", "Schedar" to "ausgeglichen, männlich", "Gacrux" to "reif, weiblich", "Pulcherrima" to "direkt, weiblich",
+        "Achird" to "freundlich, männlich", "Zubenelgenubi" to "ungezwungen, männlich", "Vindemiatrix" to "behutsam, weiblich", "Sadachbia" to "lebhaft, männlich",
+        "Sadaltager" to "kenntnisreich, männlich", "Sulafat" to "warm, weiblich",
+    )
+
     const val LIVE_PRO_MINUTE = 0.05
     val MITSCHRIFT_PRO_MINUTE = mapOf("gpt-transcribe" to 0.0045, "gpt-live-transcribe" to 0.017, "gpt-4o-mini-transcribe" to 0.003, "aus" to 0.0)
     val TARIF_FAKTOR = mapOf("auto" to 1.0, "default" to 1.0, "flex" to 0.5, "priority" to 2.0, "ultrafast" to 6.0)
@@ -138,6 +205,7 @@ object LiveOptionen {
     )
 
     private val AN_AUS = listOf(Wahl("an", "An"), Wahl("aus", "Aus"))
+    private const val GEMINI_PREIS_TEXT = "Audio 3 / 12 $, Text 0,75 / 4,50 $ je 1 Mio. Tokens (ein / aus), etwa 0,005 $ je Minute hören und 0,018 $ je Minute sprechen; mit kostenlosem Schlüssel 0 $"
 
     val alle: List<Option> = listOf(
         Option("modell", "Live-Gespräch", "Live-Modell",
@@ -152,8 +220,91 @@ object LiveOptionen {
                     Wahl("gpt-realtime-1.5", "Realtime 1.5", "Ältere Generation ohne Denkstufe, kleiner Kontext (32.000 Tokens).", "Audio " + mio(REALTIME.getValue("gpt-realtime-1.5").audio)),
                     Wahl("gpt-realtime", "Realtime (alt)", "Wird am 20.01.2027 abgeschaltet.", "Audio " + mio(REALTIME.getValue("gpt-realtime").audio)),
                     Wahl("gpt-realtime-mini", "Realtime mini (alt)", "Wird am 20.01.2027 abgeschaltet.", "Audio " + mio(REALTIME.getValue("gpt-realtime-mini").audio)),
+                    Wahl("gemini-3.8-live", "Gemini 3.8 Live", "Googles aktuelles Live-Modell (seit 15.09.2026): hört und spricht gleichzeitig, denkt mit fester, kurzer Verzögerung selbst. " +
+                        "Braucht einen Gemini-Schlüssel aus AI Studio.", GEMINI_PREIS_TEXT),
+                    Wahl("gemini-3.8-live-extended-thinking", "Gemini 3.8 Live Extended Thinking", "Wie 3.8 Live, denkt aber im Hintergrund gründlicher nach (Stufe einstellbar) " +
+                        "und überbrückt die Zeit mit kurzen Sätzen. Werkzeuge laufen nebenher.", GEMINI_PREIS_TEXT + "; Denk-Tokens wie Text-Ausgabe"),
+                    Wahl("gemini-3.1-flash-live-preview", "Gemini 3.1 Flash Live", "Das Flash-Live-Modell (Vorschau, wird laut Google am 17.11.2026 abgeschaltet). " +
+                        "Denkstufe Minimal bis Hoch; „Flash Live High“ = Denkstufe Hoch.", GEMINI_PREIS_TEXT),
                 )
             }),
+
+        // ---- Nur Gemini ----
+        Option("g_schluessel", "Live-Gespräch", "Gemini-Schlüssel",
+            "Welcher deiner Gemini-Schlüssel das Gespräch bezahlt. Ob ein Schlüssel kostenlos oder bezahlt ist, hängt an seinem Projekt in AI Studio (mit oder ohne Abrechnung).",
+            "auto", {
+                listOf(
+                    Wahl("auto", "Erst kostenlos, dann bezahlt", "Nutzt den kostenlosen Schlüssel; ist sein Kontingent erschöpft, spricht Jarvis mit dem bezahlten weiter. Empfehlung.", "meist 0 $"),
+                    Wahl("frei", "Nur kostenlos", "Endet, wenn das kostenlose Kontingent erschöpft ist. Google nutzt die Gespräche zum Training.", "0 $"),
+                    Wahl("bezahlt", "Nur bezahlt", "Immer der Schlüssel mit Abrechnung; Google nutzt die Gespräche nicht zum Training.", GEMINI_PREIS_TEXT),
+                )
+            }, gilt = { it.istGemini }),
+        Option("g_denken", "Live-Gespräch", "Denkstufe (Gemini)",
+            "Wie gründlich Gemini vor der Antwort nachdenkt. Mehr Denken heißt längere Pausen und mehr Ausgabe-Tokens. 3.8 Live hat keine Stufe, es denkt immer kurz.",
+            "low", { st ->
+                geminiStufen(st.modell).map { e ->
+                    when (e) {
+                        "minimal" -> Wahl("minimal", "Minimal", "Antwortet am schnellsten, Googles Standard bei Flash Live.", "kaum Denk-Tokens")
+                        "low" -> Wahl("low", "Niedrig", "Kurz nachdenken, gut fürs Gespräch. Empfehlung.", "wenige Denk-Tokens")
+                        "medium" -> Wahl("medium", "Mittel", "Merklich längere Pausen.", "mehr Denk-Tokens")
+                        else -> Wahl("high", "Hoch", "Für schwierige Fragen; deutlich längere Pausen. Bei Flash Live ist das „Flash Live High“.", "die meisten Denk-Tokens")
+                    }
+                }
+            }, gilt = { it.istGemini && geminiStufen(it.modell).isNotEmpty() }),
+        Option("g_werkzeug", "Live-Gespräch", "Jarvis fragen (Gemini 3.8 Live)",
+            "Ob Gemini weiterredet, während Jarvis nachschlägt. Extended Thinking macht das immer, Flash Live nie.",
+            "warten", {
+                listOf(
+                    Wahl("warten", "Warten, bis Jarvis antwortet", "Gemini sagt kurz „Moment“ und antwortet mit dem Ergebnis. Am verlässlichsten. Empfehlung."),
+                    Wahl("nebenbei", "Nebenbei weiterreden", "Gemini bleibt ansprechbar und baut das Ergebnis ein, sobald es da ist."),
+                )
+            }, gilt = { it.modell == "gemini-3.8-live" }),
+        Option("g_melden", "Live-Gespräch", "Ergebnis von Jarvis einbringen (Gemini)",
+            "Wann Gemini ein Ergebnis von Jarvis vorträgt, das nebenbei kam.",
+            "WHEN_IDLE", {
+                listOf(
+                    Wahl("WHEN_IDLE", "Wenn gerade niemand spricht", "Unterbricht nichts. Empfehlung."),
+                    Wahl("INTERRUPT", "Sofort", "Gemini bricht ab, was es gerade sagt, und meldet das Ergebnis."),
+                )
+            }, gilt = { it.modell == "gemini-3.8-live" && it["g_werkzeug"] == "nebenbei" }),
+        Option("g_start", "Live-Gespräch", "Wann du anfängst (Gemini)",
+            "Wie schnell Gemini merkt, dass du sprichst. Empfindlich reagiert früh, kann aber auf Geräusche anspringen.",
+            "niedrig", { listOf(Wahl("niedrig", "Gelassen", "Springt auf Geräusche seltener an. Empfehlung am Lautsprecher und im Auto."), Wahl("hoch", "Empfindlich", "Reagiert schon auf leises Ansprechen.")) },
+            gilt = { it.istGemini }),
+        Option("g_ende", "Live-Gespräch", "Wann du fertig bist (Gemini)",
+            "Wie schnell Gemini nach deinem Satzende antwortet.",
+            "niedrig", { listOf(Wahl("niedrig", "Geduldig", "Lässt dir Denkpausen. Empfehlung."), Wahl("hoch", "Flott", "Antwortet schnell, fällt dir eher ins Wort.")) },
+            gilt = { it.istGemini }),
+        Option("g_stille", "Live-Gespräch", "Pause bis zur Antwort (Gemini)",
+            "So lange musst du schweigen, bis Gemini deinen Satz als beendet ansieht.",
+            "800", { listOf(Wahl("300", "0,3 s"), Wahl("500", "0,5 s"), Wahl("800", "0,8 s", "Empfehlung."), Wahl("1200", "1,2 s"), Wahl("2000", "2 s")) },
+            gilt = { it.istGemini }),
+        Option("g_mitschrift", "Live-Gespräch", "Mitschrift deiner Sprache (Gemini)",
+            "Ob deine gesprochenen Sätze im Chat erscheinen. Gemini schreibt selbst mit, ohne Zusatzpreis.",
+            "an", { AN_AUS }, gilt = { it.istGemini }),
+        Option("g_kuerzen", "Live-Gespräch", "Gedächtnis im langen Gespräch (Gemini)",
+            "Gemini rechnet bei jeder Antwort den ganzen bisherigen Verlauf neu als Eingabe ab, ohne Cache. Kürzen hält die Kosten flach und erlaubt Gespräche über 15 Minuten.",
+            "16000", {
+                listOf(
+                    Wahl("8000", "Kürzen ab 8.000 Tokens", "Am günstigsten, vergisst nach gut 5 Minuten Gespräch.", "höchstens ca. 0,024 $ Eingabe je Antwort"),
+                    Wahl("16000", "Kürzen ab 16.000 Tokens", "Etwa 10 Minuten Gedächtnis. Empfehlung.", "höchstens ca. 0,048 $ Eingabe je Antwort"),
+                    Wahl("32000", "Kürzen ab 32.000 Tokens", "Etwa 20 Minuten Gedächtnis.", "höchstens ca. 0,096 $ Eingabe je Antwort"),
+                    Wahl("auto", "Googles Vorgabe", "Kürzt erst, wenn der Kontext fast voll ist.", "kann je Antwort deutlich teurer werden"),
+                )
+            }, gilt = { it.istGemini }),
+        Option("g_suche", "Live-Gespräch", "Google-Suche (Gemini)",
+            "Gemini darf selbst bei Google suchen. Jarvis kann über seine eigene Recherche ohnehin nachschlagen.",
+            "aus", { listOf(Wahl("aus", "Aus", "Empfehlung."), Wahl("an", "An", "", "Suchanfragen laut Google-Preisliste, im kostenlosen Kontingent begrenzt")) },
+            gilt = { it.istGemini }),
+        Option("g_temperatur", "Live-Gespräch", "Kreativität (Gemini)",
+            "Wie frei Gemini formuliert. Google empfiehlt für die 3er-Modelle die Vorgabe.",
+            "standard", { listOf(Wahl("standard", "Vorgabe", "Empfehlung."), Wahl("0.7", "Ruhiger"), Wahl("1.3", "Lebhafter")) },
+            gilt = { it.istGemini }),
+        Option("g_max", "Live-Gespräch", "Höchstlänge einer Antwort (Gemini)",
+            "Deckel je Antwort; gesprochene Ausgabe ist der teuerste Posten (etwa 25 Tokens je Sekunde).",
+            "0", { listOf(Wahl("1000", "1.000 Tokens", "etwa 40 Sekunden Sprache"), Wahl("2000", "2.000 Tokens", "etwa 80 Sekunden Sprache"),
+                Wahl("4000", "4.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("0", "Ohne Grenze", "Empfehlung bei Denkstufen: Denk-Tokens zählen mit.")) },
+            gilt = { it.istGemini }),
 
         // ---- Nur GPT-Live ----
         Option("denken", "Live-Gespräch", "Wer denkt (GPT-Live)",
@@ -203,7 +354,7 @@ object LiveOptionen {
         Option("rt_effort", "Live-Gespräch", "Denkstufe (Realtime)",
             "Wie lange das Realtime-Modell vor der Antwort nachdenkt. Minimal antwortet nach etwa 1 Sekunde, Hoch nach etwa 2,3 Sekunden.",
             "low", { listOf("minimal", "low", "medium", "high", "xhigh").map { EFFORTS.getValue(it) } },
-            gilt = { !it.istLive && it.modell in setOf("gpt-realtime-2.1", "gpt-realtime-2.1-mini", "gpt-realtime-2") }),
+            gilt = { it.istRealtime && it.modell in setOf("gpt-realtime-2.1", "gpt-realtime-2.1-mini", "gpt-realtime-2") }),
         Option("erkennung", "Live-Gespräch", "Wann du fertig bist (Realtime)",
             "Wie das Modell erkennt, dass du ausgeredet hast. „Nach Sinn“ hört auf den Satz, „Nach Stille“ nur auf die Pause.",
             "semantic_auto", {
@@ -215,17 +366,17 @@ object LiveOptionen {
                     Wahl("server_800", "Nach Stille, 0,8 s", "Etwas geduldiger."),
                     Wahl("server_1200", "Nach Stille, 1,2 s", "Fällt dir kaum ins Wort."),
                 )
-            }, gilt = { !it.istLive }),
-        Option("unterbrechen", "Live-Gespräch", "Dazwischenreden (Realtime)",
+            }, gilt = { it.istRealtime }),
+        Option("unterbrechen", "Live-Gespräch", "Dazwischenreden (Realtime und Gemini)",
             "Ob Jarvis sofort verstummt, wenn du anfängst zu sprechen.", "an", { AN_AUS }, gilt = { !it.istLive }),
         Option("rauschfilter", "Live-Gespräch", "Rauschfilter (Realtime)",
             "Filtert Geräusche vor der Erkennung. Fern passt zum Lautsprecherbetrieb des Handys.",
             "far_field", { listOf(Wahl("far_field", "Fern (Lautsprecher)", "Empfehlung."), Wahl("near_field", "Nah (Headset)"), Wahl("aus", "Aus")) },
-            gilt = { !it.istLive }),
+            gilt = { it.istRealtime }),
         Option("tempo", "Live-Gespräch", "Sprechtempo (Realtime)",
             "Wie schnell Jarvis spricht.", "1.0",
             { listOf("0.8", "0.9", "1.0", "1.1", "1.25", "1.5").map { Wahl(it, it.replace('.', ',') + "×", if (it == "1.0") "Normal" else "") } },
-            gilt = { !it.istLive }),
+            gilt = { it.istRealtime }),
         Option("mitschrift", "Live-Gespräch", "Mitschrift deiner Sprache (Realtime)",
             "Welches Modell deine gesprochenen Sätze für den Chatverlauf mitschreibt. GPT-Live schreibt selbst mit.",
             "gpt-transcribe", {
@@ -235,7 +386,7 @@ object LiveOptionen {
                     Wahl("gpt-4o-mini-transcribe", "GPT-4o mini Transcribe (alt)", "Wird am 26.02.2027 abgeschaltet.", "ca. 0,003 $ pro Minute"),
                     Wahl("aus", "Aus", "Deine Sätze erscheinen dann nicht im Chat.", "0 $"),
                 )
-            }, gilt = { !it.istLive }),
+            }, gilt = { it.istRealtime }),
         Option("kuerzen", "Live-Gespräch", "Gedächtnis im langen Gespräch (Realtime)",
             "Realtime schickt den ganzen Verlauf bei jeder Antwort mit; das treibt die Kosten. Kürzen hält sie niedrig.",
             "0.8", {
@@ -245,12 +396,12 @@ object LiveOptionen {
                     Wahl("auto", "Automatisch", "OpenAI kürzt erst, wenn der Kontext voll ist."),
                     Wahl("disabled", "Nie kürzen", "Fehler, sobald der Kontext voll ist."),
                 )
-            }, gilt = { !it.istLive }),
+            }, gilt = { it.istRealtime }),
         Option("rt_max", "Live-Gespräch", "Höchstlänge einer Antwort (Realtime)",
             "Deckel je gesprochener Antwort; gesprochene Ausgabe ist der teuerste Posten.", "4000",
             { listOf(Wahl("1000", "1.000 Tokens", "etwa 50 Sekunden Sprache"), Wahl("2000", "2.000 Tokens", "etwa 1,5 Minuten Sprache"),
                 Wahl("3000", "3.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("4000", "4.000 Tokens", "etwa 3 Minuten Sprache")) },
-            gilt = { !it.istLive }),
+            gilt = { it.istRealtime }),
 
         // ---- Beide ----
         Option("audioweg", "Live-Gespräch", "Tonweg (Bluetooth)",
@@ -275,7 +426,8 @@ object LiveOptionen {
         Option("stimme", "Live-Gespräch", "Stimme",
             "Mit welcher Stimme Jarvis im Live-Gespräch spricht. Deutsch steuert die Anweisung; probiere aus, welche Stimme am besten Deutsch spricht. Gilt ab dem nächsten Gespräch.",
             "marin", { st ->
-                if (st.istLive) LIVE_STIMMEN.map { Wahl(it.first, it.second) }
+                if (st.istGemini) GEMINI_STIMMEN.map { Wahl(it.first, it.first + " · " + it.second) }
+                else if (st.istLive) LIVE_STIMMEN.map { Wahl(it.first, it.second) }
                 else LiveGespraech.STIMMEN.map { Wahl(it.first, it.second, if (it.first == "marin" || it.first == "cedar") "Von OpenAI empfohlen." else "") }
             }),
         Option("stille_ende", "Live-Gespräch", "Bei Stille beenden",
@@ -298,6 +450,19 @@ object LiveOptionen {
      * aus der OpenAI-Kostenhilfe. Realtime als Spanne zwischen gut und gar nicht zwischengespeichert.
      */
     fun schaetzung(st: Stand): String {
+        if (st.istGemini) {
+            val p = GEMINI[st.modell] ?: return ""
+            // 25 Tokens je Sekunde Audio: 5 Minuten du = 7.500 Tokens ein, 5 Minuten Jarvis = 7.500 Tokens aus, 10 Wortwechsel.
+            // Gemini liest bei jeder Antwort den Verlauf neu (bis zur Kürzungsgrenze); die Anweisung (~2.000 Tokens) jedes Mal.
+            val grenze = st["g_kuerzen"].toIntOrNull() ?: 100_000
+            val verlauf = (1..10).sumOf { minOf(it * 1_500, grenze) }
+            val denk = (EFFORT_TOKENS[st["g_denken"]] ?: 0) * 10 * if (geminiStufen(st.modell).isEmpty()) 0 else 1
+            val fest = (7_500 * p.audioAus + 20_000 * p.textEin + denk * p.textAus) / 1_000_000
+            val gering = fest + 7_500 * p.audioEin / 1_000_000
+            val voll = fest + verlauf * p.audioEin / 1_000_000
+            val frei = when (st["g_schluessel"]) { "bezahlt" -> ""; "frei" -> " Mit dem kostenlosen Schlüssel: 0 $."; else -> " Solange das kostenlose Kontingent reicht: 0 $." }
+            return "Geschätzt für 10 Minuten: " + usd(gering) + " bis " + usd(voll) + " mit bezahltem Schlüssel (je nachdem, wie viel Verlauf Gemini neu liest)." + frei
+        }
         if (st.istLive) {
             val sprache = 10 * LIVE_PRO_MINUTE
             if (!st.denktBeiOpenAi) return "Geschätzt für 10 Minuten: " + usd(sprache) + " (nur Sprache; Jarvis denkt über dein Abo)."
@@ -333,6 +498,14 @@ object LiveOptionen {
             mapOf("modell" to "gpt-live-1", "denken" to "openai", "backend" to "gpt-6.1-sol", "backend_effort" to "medium", "tarif" to "priority", "ausfuehrlich" to "low")),
         Profil("realtime", "Realtime 2.1", "Ein Modell macht alles selbst, mit eigener Denkstufe. Kosten wachsen mit der Gesprächslänge.",
             mapOf("modell" to "gpt-realtime-2.1", "rt_effort" to "low", "erkennung" to "semantic_auto", "kuerzen" to "0.8", "mitschrift" to "gpt-transcribe")),
+        Profil("gemini38", "Gemini 3.8 Live", "Google: hört und spricht gleichzeitig, mit kostenlosem Kontingent. Braucht einen Gemini-Schlüssel.",
+            mapOf("modell" to "gemini-3.8-live", "g_werkzeug" to "warten", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
+        Profil("gemini38x", "Gemini 3.8 Live Extended Thinking", "Google: denkt im Hintergrund gründlicher nach, Stufe Niedrig.",
+            mapOf("modell" to "gemini-3.8-live-extended-thinking", "g_denken" to "low", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
+        Profil("gemini31", "Gemini 3.1 Flash Live", "Google Flash Live mit minimaler Denkstufe: am schnellsten. Vorschau, endet laut Google am 17.11.2026.",
+            mapOf("modell" to "gemini-3.1-flash-live-preview", "g_denken" to "minimal", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
+        Profil("gemini31hoch", "Gemini 3.1 Flash Live High", "Flash Live mit hoher Denkstufe: gründlicher, längere Pausen.",
+            mapOf("modell" to "gemini-3.1-flash-live-preview", "g_denken" to "high", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
     )
 
     /** Welches Profil gerade genau eingestellt ist (null = eigene Mischung). */
@@ -341,6 +514,8 @@ object LiveOptionen {
     /** Ein Satz, was gerade eingestellt ist, für die Übersicht. */
     fun kurzfassung(st: Stand): String {
         val m = alle.first { it.id == "modell" }.werte(st).first { it.id == st.modell }.titel
+        if (st.istGemini) return m + (if (geminiStufen(st.modell).isEmpty()) "" else " · Denkstufe " + alle.first { it.id == "g_denken" }.werte(st).first { it.id == st["g_denken"] }.titel) +
+            " · Stimme " + st["stimme"] + " · " + alle.first { it.id == "g_schluessel" }.werte(st).first { it.id == st["g_schluessel"] }.titel
         if (!st.istLive) return "$m · Denkstufe " + (alle.first { it.id == "rt_effort" }.takeIf { it.gilt(st) }?.let { o -> o.werte(st).first { it.id == st["rt_effort"] }.titel } ?: "–") +
             " · Stimme " + st["stimme"]
         if (!st.denktBeiOpenAi) return "$m · Jarvis denkt selbst · Stimme " + st["stimme"]

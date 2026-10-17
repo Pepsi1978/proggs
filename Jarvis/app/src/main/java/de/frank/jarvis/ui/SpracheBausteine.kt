@@ -99,14 +99,20 @@ fun SpracheEinstellungen(vm: AppViewModel) {
     }
 
     Bereich("Live-Gespräch") {
-        val bereit = s.openAiApiKey.isNotBlank()
-        Zeile("Orange Blase", if (bereit) "Eingerichtet" else "OpenAI-Schlüssel fehlt", if (bereit) f.erfolg else f.textLeise)
-        Text("Echtes Sprachgespräch mit OpenAI: Jarvis antwortet sofort mit Stimme, hört dabei weiter zu, und du kannst ihn jederzeit unterbrechen. " +
-            "Für deine Daten fragt er im Hintergrund den normalen Jarvis mit allen Werkzeugen. Braucht einen eigenen API-Schlüssel von platform.openai.com; " +
-            "abgerechnet wird dort, nicht über das ChatGPT-Abo. Preise in US-Dollar, Stand 16.10.2026.",
+        val st = de.frank.jarvis.live.LiveOptionen.Stand(s)
+        val bereit = vm.liveSchluessel(st).first.isNotBlank()
+        Zeile("Orange Blase", if (bereit) "Eingerichtet" else if (st.istGemini) "Gemini-Schlüssel fehlt" else "OpenAI-Schlüssel fehlt", if (bereit) f.erfolg else f.textLeise)
+        Text("Echtes Sprachgespräch mit OpenAI (GPT-Live, Realtime) oder Google (Gemini Live): Jarvis antwortet sofort mit Stimme, hört dabei weiter zu, und du kannst ihn jederzeit unterbrechen. " +
+            "Für deine Daten fragt er im Hintergrund den normalen Jarvis mit allen Werkzeugen. OpenAI braucht einen eigenen API-Schlüssel von platform.openai.com; " +
+            "abgerechnet wird dort, nicht über das ChatGPT-Abo. Gemini braucht einen Schlüssel aus aistudio.google.com. Preise in US-Dollar, Stand 17.10.2026.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         Schluesselfeld(vm, "OpenAI-API-Schlüssel", s.openAiApiKey) { geaendert { s.openAiApiKey = it } }
-        val st = de.frank.jarvis.live.LiveOptionen.Stand(s)
+        Schluesselfeld(vm, "Gemini-Schlüssel, kostenlos (Projekt ohne Abrechnung)", s.geminiApiKey) { geaendert { s.geminiApiKey = it } }
+        Schluesselfeld(vm, "Gemini-Schlüssel, bezahlt (Projekt mit Abrechnung)", s.geminiApiKeyBezahlt) { geaendert { s.geminiApiKeyBezahlt = it } }
+        Text("Ein normaler Schlüssel aus AI Studio reicht, ein eigener Live-Schlüssel ist nicht nötig. Kostenlos oder bezahlt entscheidet das Projekt des Schlüssels: " +
+            "Alle Gemini-Live-Modelle haben ein kostenloses Kontingent; dort nutzt Google die Gespräche zum Training, im bezahlten nicht. Wie groß das Kontingent ist, nennt Google " +
+            "für die Live-Modelle nicht; Verbrauch und Grenzen zeigt aistudio.google.com → Usage. Unter „Gemini-Schlüssel“ stellst du ein, welcher genutzt wird.",
+            color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         stand.let { }
         val lo = de.frank.jarvis.live.LiveOptionen
 
@@ -136,24 +142,26 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         Text(lo.kurzfassung(st), color = f.text, fontSize = 14.sp)
         Text(lo.schaetzung(st), color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
         Text("Annahme: je zur Hälfte du und Jarvis, 10 Wortwechsel. Im Gespräch zeigt die Live-Leiste die echten Kosten, am Ende kommt die Summe. " +
-            "Verbrauch und ein festes Ausgabenlimit: platform.openai.com → Usage bzw. Settings → Limits.",
+            "Verbrauch und ein festes Ausgabenlimit: platform.openai.com → Usage bzw. Settings → Limits; bei Gemini aistudio.google.com → Usage und Billing (Ausgabengrenze).",
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
 
         LiveKostenSumme(vm)
 
         // Stimme immer sichtbar: Tippen wählt sie aus und spielt eine deutsche Hörprobe.
         val stimmen = lo.alle.first { it.id == "stimme" }
-        Unterzeile("Stimme" + if (st.istLive) " (GPT-Live)" else " (Realtime)")
-        Text("Tippen wählt die Stimme und spielt eine kurze Hörprobe auf Deutsch. Die erste Probe je Stimme holt Jarvis einmalig von OpenAI (unter 1 Cent), danach ist sie gespeichert und kostenlos. " +
-            "OpenAI nennt keine Liste deutscher Stimmen: Hör einfach rein, welche am besten Deutsch spricht. ▶ = Probe schon gespeichert.",
+        Unterzeile("Stimme" + if (st.istGemini) " (Gemini, 30 Stimmen)" else if (st.istLive) " (GPT-Live)" else " (Realtime)")
+        Text("Tippen wählt die Stimme und spielt eine kurze Hörprobe auf Deutsch. Die erste Probe je Stimme holt Jarvis einmalig " +
+            (if (st.istGemini) "von Google (unter 1 Cent, mit kostenlosem Schlüssel gratis)" else "von OpenAI (unter 1 Cent)") + ", danach ist sie gespeichert und kostenlos. " +
+            (if (st.istGemini) "Alle Gemini-Stimmen sprechen jede Sprache; Deutsch steuert die Anweisung. " else "OpenAI nennt keine Liste deutscher Stimmen: Hör einfach rein, welche am besten Deutsch spricht. ") +
+            "▶ = Probe schon gespeichert.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             stimmen.werte(st).forEach { w ->
-                val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, st.istLive, w.id)
+                val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, de.frank.jarvis.live.StimmProbe.art(st), w.id)
                 val laedt = vm.stimmProbeLaedt == w.id
                 Chip((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"]) {
                     geaendert { st.setze("stimme", w.id) }
-                    vm.stimmProbe(st.istLive, w.id)
+                    vm.stimmProbe(de.frank.jarvis.live.StimmProbe.art(st), w.id)
                 }
             }
         }
@@ -334,7 +342,8 @@ private fun LiveKostenSumme(vm: AppViewModel) {
         "Zeitbasis: $dauer Gesprächszeit in ${k.gespraeche} " + (if (k.gespraeche == 1) "Gespräch" else "Gesprächen") +
             (if (k.gespraeche > 0) ", bei ${k.bestaetigt} davon hat OpenAI die Dauer am Ende bestätigt" else "") +
             (if (k.zuletzt > 0) ". Zuletzt verbucht: ${datum.format(java.util.Date(k.zuletzt))}." else ".") +
-            "\n\nBerechnet = was OpenAI im Gespräch als Nutzung meldet (Sekunden bei GPT-Live, Tokens bei Denk-Modell und Realtime) mal Listenpreis, Stand 16.10.2026. " +
+            "\n\nBerechnet = was der Dienst im Gespräch als Nutzung meldet (Sekunden bei GPT-Live, Tokens bei Denk-Modell, Realtime und Gemini) mal Listenpreis, Stand 17.10.2026. " +
+            "Gemini über den kostenlosen Schlüssel zählt mit 0 $; erst nach dem Wechsel auf den bezahlten Schlüssel kommt der Listenpreis dazu. " +
             "Geschätzt = Gesprächszeit, die OpenAI nicht bestätigt hat (etwa bei Verbindungsabbruch), mit 0,05 $ pro Minute. " +
             "Der Durchschnitt teilt die Summe durch die Gesprächszeit, nicht durch die Kalenderzeit.\n\n" +
             "Unten im Live-Gespräch steht „ca. … / gesamt …“: links das laufende Gespräch, rechts diese Summe samt laufendem Gespräch, " +

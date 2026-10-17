@@ -186,9 +186,15 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.KI_ZUGANG, Defaults.KI_ZUGANG)
         set(value) = writeString(Keys.KI_ZUGANG, value)
 
+    /** Gemini-Schlüssel aus AI Studio, Projekt ohne Abrechnung (kostenloses Kontingent); für Gemini Live. */
     var geminiApiKey: String
         get() = readString(Keys.GEMINI_API_KEY, "")
         set(value) = writeString(Keys.GEMINI_API_KEY, value)
+
+    /** Gemini-Schlüssel aus einem AI-Studio-Projekt mit Abrechnung; Ersatz, wenn das kostenlose Kontingent erschöpft ist. */
+    var geminiApiKeyBezahlt: String
+        get() = readString(Keys.GEMINI_API_KEY_BEZAHLT, "")
+        set(value) = writeString(Keys.GEMINI_API_KEY_BEZAHLT, value)
 
     // ---- Live-Gespräch (OpenAI Realtime) ----
 
@@ -322,6 +328,7 @@ class SecureSettings(context: Context) : Closeable {
         const val FILTER_PHRASES = "filter_phrases"
         const val KI_ZUGANG = "ki_zugang"
         const val GEMINI_API_KEY = "gemini_api_key"
+        const val GEMINI_API_KEY_BEZAHLT = "gemini_api_key_bezahlt"
         const val OPENAI_API_KEY = "openai_api_key"
         const val MODEL = "model"
         const val REASONING = "reasoning"
