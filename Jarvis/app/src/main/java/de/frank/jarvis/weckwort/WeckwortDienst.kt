@@ -337,7 +337,7 @@ class WeckwortDienst : Service() {
                 // Bei gleichmäßigem Lärm (Auto, Lüfter, Straße) steigt der Rauschboden mit, eine Stimme aus der Ferne
                 // liegt kaum darüber: Dann entscheidet Silero, ob jemand spricht, statt die Modelle schlafen zu legen.
                 val laut = rms > maxOf(boden * STILLE_FAKTOR, STILLE_MIN)
-                val stimmeImLaerm = !laut && rms > STILLE_MIN && vad != null && runCatching { stimmeImBlock(vad) }.getOrDefault(false)
+                val stimmeImLaerm = !laut && boden > LAERM_BODEN && vad != null && runCatching { stimmeImBlock(vad) }.getOrDefault(false)
                 if (laut || stimmeImLaerm) stilleBloecke = 0 else stilleBloecke++
                 if (!anlernen && stilleBloecke > STILLE_BLOECKE) {
                     uebersprungen++
@@ -416,7 +416,8 @@ class WeckwortDienst : Service() {
                 // heiser, im Lärm). Fremde und Fernseher sagen das Weckwort kaum zweimal in wenigen Sekunden.
                 val knapp = stimme != null && !stimme.ok && stimme.aehnlich >= stimme.schwelle - NACHDRUCK_SPIEL
                 val jetzt = SystemClock.elapsedRealtime()
-                val nachdruck = knapp && jetzt - knappUm < NACHDRUCK_MS
+                // Mindestabstand: Sonst urteilt das gleitende „Hey Jarvis“-Fenster nach dem Abklingen über denselben Ruf noch einmal.
+                val nachdruck = knapp && jetzt - knappUm in NACHDRUCK_ABSTAND_MS..NACHDRUCK_MS
                 val ok = if (mitStimme) stimme?.ok == true || nachdruck else pruefung?.ok != false
                 if (!ok) {
                     if (knapp) knappUm = jetzt
@@ -591,6 +592,9 @@ class WeckwortDienst : Service() {
         /** Nachdruck: knapp heißt höchstens so weit unter der Stimm-Schwelle, und der zweite Ruf binnen dieser Zeit. */
         private const val NACHDRUCK_SPIEL = 0.08f
         private const val NACHDRUCK_MS = 10_000L
+        private const val NACHDRUCK_ABSTAND_MS = 1_500L
+        /** Erst ab diesem Rauschboden (16 Bit, etwa -47 dBFS) ist es Lärm und Silero entscheidet; im ruhigen Raum schlafen die Modelle wie bisher. */
+        private const val LAERM_BODEN = 150f
         /**
          * Stille-Filter: so viele Blöcke (je 80 ms, also 4 s) ohne Laut, dann ruhen die Modelle; beim Aufwachen so viele
          * nachholen (rund 1 s). Der Ring hält 2,5 s; so fehlt den Modellen auch ein leiser Anlaut („Hey“) nicht, der
