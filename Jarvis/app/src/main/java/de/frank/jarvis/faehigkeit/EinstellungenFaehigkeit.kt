@@ -189,7 +189,7 @@ class EinstellungsKatalog(context: Context) {
             schalter("immer_deutsch", "Vorlesen", "Immer deutsch aussprechen", "Englisch aussehende Wörter trotzdem deutsch aussprechen.", { s.immerDeutschVorlesen }) { s.immerDeutschVorlesen = it },
             schalter("antworten_vorlesen", "Vorlesen", "Antworten auf Gesprochenes vorlesen", "Liest die Antwort vor, wenn die Frage gesprochen wurde.", { e.antwortenVorlesen }) { e.antwortenVorlesen = it },
             schalter("diktat_antwort_vorlesen", "Vorlesen", "Antwort nach Diktat vorlesen", "Liest die erste Antwort vor, wenn die Frage mit dem Mikrofon in der Eingabeblase eingesprochen und dann mit dem Pfeil gesendet wurde.", { e.diktatAntwortVorlesen }) { e.diktatAntwortVorlesen = it },
-            schalter("ergebnisse_vorlesen", "Vorlesen", "Fertige Agenten-Ergebnisse vorlesen", "Liest Ergebnisse von Agenten von selbst vor, sobald sie fertig sind.", { e.ergebnisseVorlesen }) { e.ergebnisseVorlesen = it },
+            schalter("ergebnisse_vorlesen", "Vorlesen", "Fertige Agenten-Ergebnisse vorlesen", "Liest eine kurze, vorlesetaugliche Zusammenfassung des Agenten-Ergebnisses von selbst vor, sobald er fertig ist; der ganze Bericht bleibt in der Ablage.", { e.ergebnisseVorlesen }) { e.ergebnisseVorlesen = it },
 
             // ---- Update-Ansagen ----
             schalter("ansage_vorlesen", "Update-Ansagen", "Update-Ansagen vorlesen", "Sagt an, wenn in UpdateStation ein neues Update bereitliegt. Aus = nur die stille Benachrichtigung.", { e.ansageVorlesen }) { e.ansageVorlesen = it },

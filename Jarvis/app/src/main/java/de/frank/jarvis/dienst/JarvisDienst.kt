@@ -208,8 +208,11 @@ class JarvisDienst : Service() {
                 }
                 if (titel != null && (vorlesen || Einstellungen.get(this@JarvisDienst).ergebnisseVorlesen)) {
                     de.frank.jarvis.faehigkeit.Ablage.finde(this@JarvisDienst, titel)?.let { datei ->
+                        // Vorgelesen wird eine eigene kurze Zusammenfassung fürs Ohr, nicht Auftrag und Bericht; der Bericht bleibt unverändert.
+                        // Eigene Quelle „agent:“: kurzer Tonfokus und kein Zusammenstoß mit dem Vorleseknopf der Ablage.
+                        val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, datei.readText(), lauf.grund)
                         kotlinx.coroutines.withContext(Dispatchers.Main) {
-                            de.frank.jarvis.speech.Vorleser.hole(this@JarvisDienst, de.frank.jarvis.data.settings.SecureSettings(this@JarvisDienst)).sprich("ablage:" + datei.name, plan.name, datei.readText())
+                            de.frank.jarvis.speech.Vorleser.hole(this@JarvisDienst, de.frank.jarvis.data.settings.SecureSettings(this@JarvisDienst)).sprich("agent:" + datei.name, plan.name, fassung)
                         }
                     }
                 }

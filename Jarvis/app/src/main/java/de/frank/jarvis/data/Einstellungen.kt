@@ -241,7 +241,7 @@ class Einstellungen private constructor(context: Context) {
     var antwortenVorlesen: Boolean get() = prefs.getBoolean("antworten_vorlesen", true); set(v) = put { putBoolean("antworten_vorlesen", v) }
     /** Die erste Antwort vorlesen, wenn die Frage mit dem Diktier-Mikrofon eingesprochen und dann von Hand gesendet wurde. */
     var diktatAntwortVorlesen: Boolean get() = prefs.getBoolean("diktat_antwort_vorlesen", true); set(v) = put { putBoolean("diktat_antwort_vorlesen", v) }
-    /** Fertige Agenten-Ergebnisse von selbst vorlesen. */
+    /** Fertige Agenten-Ergebnisse von selbst vorlesen, als kurze Zusammenfassung (Vorlesefassung), nicht den ganzen Bericht. */
     var ergebnisseVorlesen: Boolean get() = prefs.getBoolean("ergebnisse_vorlesen", false); set(v) = put { putBoolean("ergebnisse_vorlesen", v) }
 
     // ---- Hey Jarvis ----
