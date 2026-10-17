@@ -89,7 +89,30 @@ Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nac
 Aufgaben-App mit einem Hinweis ab. Mehrere Treffer bei einem Suchwort führen zu einer Rückfrage statt zu einer
 geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90 Sekunden legt nichts doppelt an.
 
-## Zusammenarbeit mit ChatGPT (Integration v2)
+## Symbiose mit ChatGPT Live (seit 1.8.113)
+
+- **Eine Regeldatei für beide Seiten** (`Symbiose` in `faehigkeit/RegelnFaehigkeit.kt`, `filesDir/symbiose.json`): Die Regeln
+  der Zusammenarbeit nach Wichtigkeit (Rollen, Start, wer macht was, Ehrlichkeit, Gedächtnis, lange Arbeit, Programmierer,
+  Auslöser je App, Sprechen, Abgleich). Beim ersten Lesen mit der Vorgabe angelegt, danach bearbeitet Frank sie in der App
+  unter Einstellungen → Gedächtnis → „Zusammenarbeit mit ChatGPT“ (älteste Regel oben = wichtigste; neue kommen ans Ende).
+- **Derselbe Text in ChatGPT**: „Text für ChatGPT kopieren“ legt Überschrift (Stand, Fassung) und Regeln in die Zwischenablage,
+  für ChatGPT → Einstellungen → Personalisierung → Benutzerdefinierte Anweisungen (höchstens 4.000 Zeichen; die Vorgabe hat 3.932).
+- **In jedem Kontext zuerst**: Der Block steht vor allen anderen Merkdateien (Plugin-Anleitung, `jarvis_kontext`, eigener Chat,
+  Agenten, Tagesauswertung), mit einem Kopf, der für beide Leser trägt („Du“ = ChatGPT Live, „Jarvis“ = die App).
+- **Fassung**: vier Zeichen Prüfsumme über die Regeln, in beiden Texten gleich. Sieht ChatGPT im Startkontext eine andere Fassung
+  als in seinen Anweisungen, soll es Frank einmal ans Neukopieren erinnern (Regel 10).
+- Bewusst keine `Merkart`: Kein Modell schreibt die Regeln über `jarvis_merken` um, sonst wiche die Kopie bei ChatGPT still ab.
+- **Ids [S1] …**: Die Regeln tragen ein eigenes Kennzeichen, damit sie nie mit den ids von FRANKS REGELN verwechselt werden
+  (die jarvis_merken ändert). Der Block steht im Kontext zuletzt (gekürzte Anleitungen behalten Franks eigene Regeln); einem
+  Nachtrag an Werkzeug-Ergebnisse liegt er nicht bei. Wurde die Datei nach einem Defekt weggeräumt, legt Jarvis die Vorgabe
+  nicht still neu an (Franks Fassung liegt in der Sicherung).
+- **Grenze**: Ob das Feld in ChatGPT wirklich 4.000 Zeichen fasst, hängt von der ChatGPT-Version ab; nach dem Einfügen prüfen,
+  ob Regel [S10] am Ende angekommen ist.
+- **Programmierauftrag aus ChatGPT**: bekommt in Jarvis eine eigene Programmier-Session „Programmieren: <App> (über ChatGPT/MCP)“
+  mit dem Auftrag als erster Nachricht; Schritte und Rückfragen landen dort (Kennzeichen `ProgrammierChat.AusChatGpt`, gesetzt in
+  `McpServer.rufe`). Die Session entsteht erst nach dem gelungenen Start.
+
+## Zusammenarbeit mit ChatGPT (Integration v2, seit 1.8.113 v3: Regeln im Symbiose-Block, hier nur noch die Technik)
 
 Ziel: Frank spricht in der ChatGPT-App, Jarvis ist Gedächtnis, Datenzentrale und ausführende Stelle. Alles, was Jarvis
 selbst kann, geht auch über das Plugin (alle Fähigkeiten stehen seit 1.8.111 im Plugin).

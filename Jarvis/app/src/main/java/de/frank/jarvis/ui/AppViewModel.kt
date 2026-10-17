@@ -462,8 +462,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val erklaerung: String,
         val platzhalter: String,
         private val korrekturAuftrag: String,
+        /** true = älteste id zuerst (Regelwerk nach Priorität), sonst das Neueste zuerst. */
+        private val aufsteigend: Boolean = false,
     ) {
         var eintraege by mutableStateOf(emptyList<de.frank.jarvis.faehigkeit.Regel>()); private set
+        private fun geordnet(l: List<de.frank.jarvis.faehigkeit.Regel>) = if (aufsteigend) l.sortedBy { it.id } else l.sortedByDescending { it.id }
         /** Der in diesem Bildschirm zuletzt hinzugefügte Eintrag: nur er bekommt die KI-Korrektur. */
         var letzter by mutableStateOf<Int?>(null); private set
         var korrigiert by mutableStateOf(false); private set
@@ -475,14 +478,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Schreibt irgendwer eine Merkdatei (Plugin, Lernlauf, Jarvis im Gespräch), zeigt die Liste sofort den neuen Stand.
             viewModelScope.launch {
                 Merkdatei.stand.collect {
-                    val neu = withContext(Dispatchers.IO) { datei.alle(getApplication()) }.sortedByDescending { it.id }
+                    val neu = geordnet(withContext(Dispatchers.IO) { datei.alle(getApplication()) })
                     eintraege = neu
                     if (neu.none { it.id == letzter }) letzter = null
                 }
             }
         }
 
-        fun laden() { eintraege = datei.alle(getApplication()).sortedByDescending { it.id } }
+        fun laden() { eintraege = geordnet(datei.alle(getApplication())) }
 
         private fun merke(schritt: MerkSchritt) {
             verlauf += schritt
@@ -608,6 +611,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         de.frank.jarvis.faehigkeit.StilRegeln, "Stil", "Stilregel",
         "So sollen Jarvis' Antworten aussehen: Länge, Gliederung, Ton und Symbole. Jarvis lernt das aus deinen Daumen hoch und runter unter den Antworten; du kannst alles ändern, löschen oder selbst eintragen.",
         "Neue Stilregel eintippen oder einsprechen", STIL_KORREKTUR,
+    )
+    val symbioseListe = Merkliste(
+        de.frank.jarvis.faehigkeit.Symbiose, "Zusammenarbeit mit ChatGPT", "Regel",
+        "Die Regeln, nach denen ChatGPT Live und Jarvis zusammenarbeiten, nach Wichtigkeit geordnet (oben das Wichtigste). Derselbe Text gehört 1:1 in ChatGPT unter Einstellungen → Personalisierung → " +
+            "Benutzerdefinierte Anweisungen; „Text für ChatGPT kopieren“ legt ihn in die Zwischenablage. Nach jeder Änderung neu kopieren: ChatGPT erkennt eine alte Kopie an der Fassung.",
+        "Neue Regel für die Zusammenarbeit eintippen oder einsprechen", SYMBIOSE_KORREKTUR, aufsteigend = true,
     )
     val entscheidungsListe = Merkliste(
         de.frank.jarvis.faehigkeit.Entscheidungen, "Entscheidungen", "Entscheidung",
@@ -902,7 +911,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 ?.joinToString("\n", "# Franks Stil (gilt, soweit es zum Sprechen passt)\n", "\n") { "- " + it.text }.orEmpty() +
             "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
 
-    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden(); stilListe.laden(); entscheidungsListe.laden() }
+    /** Der Symbiose-Text genau so, wie er in ChatGPT eingetragen wird (Überschrift mit Stand und Fassung, dann die Regeln). */
+    fun symbioseText(): String = de.frank.jarvis.faehigkeit.Symbiose.fuerChatGpt(getApplication())
+
+    /** Legt den Symbiose-Text in die Zwischenablage, damit Frank ihn in ChatGPT einfügen kann. */
+    fun symbioseKopieren() {
+        val text = symbioseText()
+        val ablage = getApplication<Application>().getSystemService(android.content.ClipboardManager::class.java)
+        ablage?.setPrimaryClip(android.content.ClipData.newPlainText("Jarvis-Symbiose für ChatGPT", text))
+        val grenze = de.frank.jarvis.faehigkeit.Symbiose.GRENZE
+        meldung = if (text.length > grenze) "Kopiert, aber ${text.length} von höchstens $grenze Zeichen: Für ChatGPT bitte erst Regeln kürzen."
+            else "Kopiert (${text.length} von $grenze Zeichen). In ChatGPT unter Einstellungen → Personalisierung → Benutzerdefinierte Anweisungen einfügen und den alten Jarvis-Text ersetzen."
+    }
+
+    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden(); stilListe.laden(); entscheidungsListe.laden(); symbioseListe.laden() }
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
     fun merkSchliessen() {
         // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
@@ -1522,7 +1544,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         einstellungsVerlauf = p.getString("einstellungsVerlauf", null).orEmpty().split(',').filter { it.isNotBlank() }
         GedaechtnisAnsicht.offen = p.getBoolean("gedaechtnis", false)
         val merk = p.getString("merk", null).orEmpty()
-        listOf(regelListe, zielListe, infoListe, programmierListe, stilListe, entscheidungsListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
+        listOf(symbioseListe, regelListe, zielListe, infoListe, programmierListe, stilListe, entscheidungsListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
         Logbuch.gedaechtnis("Zustand nach Update wiederhergestellt", "Reiter ${r.anzeige}, ${gespraech.size} Nachrichten")
     }
 
@@ -1964,7 +1986,12 @@ private const val REGEL_KORREKTUR =
         "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). So kurz wie möglich, höchstens 400 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
-/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Stilregel. */
+/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel der Zusammenarbeit mit ChatGPT. */
+private const val SYMBIOSE_KORREKTUR =
+    "Du formulierst eine Regel für die Zusammenarbeit zwischen ChatGPT Live (der Sprachmodus der ChatGPT-App) und Franks Assistenten-App Jarvis um. Sie steht in ChatGPTs benutzerdefinierten Anweisungen " +
+        "und spricht ChatGPT mit „du“ an, Frank spricht als „ich“. Beginne mit einem Stichwort und Doppelpunkt (zum Beispiel „Termine:“). Behalte jeden inhaltlichen Punkt und genannte Werkzeugnamen genau, " +
+        "füge nichts hinzu. Lass Füllwörter weg und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. Antworte nur mit der Regel, ohne Anführungszeichen und ohne Erklärung."
+
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Entscheidung. */
 private const val ENTSCHEIDUNG_KORREKTUR =
     "Du formulierst eine Entscheidung, die Frank getroffen hat, zu einem klaren, für sich allein verständlichen Satz in der dritten Person um („Frank hat entschieden, …“), mit Datum, wenn er eines nennt. " +
@@ -1972,6 +1999,7 @@ private const val ENTSCHEIDUNG_KORREKTUR =
         "Lass Füllwörter und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
         "Antworte nur mit dem Satz, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
+/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Stilregel. */
 private const val STIL_KORREKTUR =
     "Du formulierst eine Vorgabe von Frank, wie die Antworten seines Assistenten Jarvis aussehen sollen (Länge, Gliederung, Ton, Symbole), zu einer klaren Stilregel um. " +
         "Jarvis bekommt sie bei jeder Antwort beigelegt und muss sie ohne weiteres Wissen verstehen. Behalte jeden inhaltlichen Punkt, füge nichts hinzu und deute nichts um. " +

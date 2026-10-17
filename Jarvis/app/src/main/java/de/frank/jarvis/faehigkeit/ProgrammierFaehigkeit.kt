@@ -154,7 +154,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 name = "programmieren",
                 titel = "Programmierauftrag starten",
                 beschreibung = "Jarvis: programmiert etwas in einer von Franks Apps („Jarvis, programmiere in Geniale Aufgaben einen Filter für …“, „bau in den Wecker ein, dass …“, " +
-                    "„ändere in Jarvis …“). Der Auftrag geht an Claude Code: an Franks PC, wenn er an ist (schnell, die App kommt per WLAN aufs Handy), sonst in die Cloud " +
+                    "„ändere in Jarvis …“, „schicke bitte folgenden Auftrag an den Programmierer: …“, „schick das an den Programmierer“, „lass das programmieren“). " +
+                    "Aus ChatGPT bekommt jeder Auftrag in Jarvis eine eigene Programmier-Session, in der Frank Schritte und Rückfragen sieht. Der Auftrag geht an Claude Code: an Franks PC, wenn er an ist (schnell, die App kommt per WLAN aufs Handy), sonst in die Cloud " +
                     "(etwa zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version). Es findet die App in Franks Repo und programmiert die Änderung. Dieser Aufruf kehrt sofort zurück. Formuliere den Auftrag selbst vollständig aus, mit allem Wissen aus dem " +
                     "Gespräch; die Cloud-Sitzung kennt nur diesen Text. Ein fertiger Auftrag vom Agenten Code-Analyse oder aus repo_lesen kann unverändert hinein. " +
                     "Ist unklar, welche App gemeint ist, frag Frank vorher.",
@@ -187,7 +188,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String): Ergebnis {
         val uebersprungen = mutableListOf<String>()
-        val gespraech = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.GespraechKennung]?.id ?: ProgrammierChat.aktivesGespraech.orEmpty()
+        val ctx = kotlinx.coroutines.currentCoroutineContext()
+        val ausChatGpt = ctx[ProgrammierChat.GespraechKennung] == null && ctx[ProgrammierChat.AusChatGpt] != null
+        // Aus ChatGPT nie das gerade offene App-Gespräch: Der Auftrag bekommt nach dem Start sein eigenes (siehe unten).
+        var gespraech = ctx[ProgrammierChat.GespraechKennung]?.id ?: if (ausChatGpt) "" else ProgrammierChat.aktivesGespraech.orEmpty()
         // Frisch aus der Datei, bei jedem Auftrag: Was Frank in den Einstellungen geändert hat, gilt schon für diesen Start.
         val regeln = withContext(Dispatchers.IO) { Programmierregeln.alsKontext(app) }
         for (ziel in wahl) {
@@ -200,10 +204,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             } catch (fehler: Exception) {
                 return Ergebnis("Der Auftrag ist nicht gestartet (${ziel.name}): ${fehler.message ?: fehler.javaClass.simpleName}", fehler = true)
             }
+            // Erst jetzt, nach dem gelungenen Start: Bei „nicht erreichbar“ bliebe sonst eine leere Session zurück.
+            if (ausChatGpt) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag) }.getOrDefault("") }
             val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech, auftrag)
             verteile(eintrag, null)
             return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt: ${ziel.name}. ${start.hinweis} " +
-                "Die Sitzung meldet ihre Schritte in dieses Gespräch; eine Benachrichtigung kommt erst am Ende oder bei einer Rückfrage, und programmierauftraege nennt jederzeit den Stand." +
+                (if (!ausChatGpt) "" else if (gespraech.isNotEmpty()) "In Jarvis steht er als eigene Programmier-Session „Programmieren: $appName (über ChatGPT/MCP)“. "
+                    else "Eine eigene Session ließ sich in Jarvis nicht anlegen; die Schritte stehen dann nur in programmierauftraege und vorgaenge. ") +
+                "Die Sitzung meldet ihre Schritte ${if (ausChatGpt && gespraech.isEmpty()) "an Jarvis" else if (ausChatGpt) "in diese Session" else "in dieses Gespräch"}; eine Benachrichtigung kommt erst am Ende oder bei einer Rückfrage, und programmierauftraege nennt jederzeit den Stand." +
                 (if (start.link.isNotEmpty()) " Link zur Sitzung: ${start.link}" else "") +
                 (if (uebersprungen.isEmpty()) "" else " (${uebersprungen.joinToString(" ")})"))
         }

@@ -115,8 +115,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             // ---------------------------------------------------------------- Gedächtnis
             Bereich("Jarvis' Gedächtnis") {
                 androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
-                Text("Sechs Dateien, die Jarvis selbst pflegt und bei jeder Antwort, im Live-Gedächtnis und im Live-Gespräch vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln gehen außerdem vollständig mit jedem Programmierauftrag mit. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
+                Text("Sieben Dateien, die Jarvis bei jeder Antwort, im Live-Gedächtnis, im Live-Gespräch und für ChatGPT vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln gehen außerdem vollständig mit jedem Programmierauftrag mit; die Zusammenarbeit mit ChatGPT steht zusätzlich 1:1 in ChatGPT. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
                 listOf(
+                    Triple(vm.symbioseListe, "Zusammenarbeit mit ChatGPT", "wie ChatGPT Live und Jarvis zusammenarbeiten, nach Wichtigkeit"),
                     Triple(vm.regelListe, "Regeln", "wie Jarvis arbeiten und antworten soll"),
                     Triple(vm.zielListe, "Ziele", "was du erreichen willst"),
                     Triple(vm.infoListe, "Über Frank", "was Jarvis über dich weiß"),
@@ -127,6 +128,16 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     val anzahl = liste.eintraege.size
                     Unterzeile(name)
                     Zeile(wozu.replaceFirstChar { it.uppercase() }, when (anzahl) { 0 -> "Noch nichts"; 1 -> "1 Eintrag"; else -> "$anzahl Einträge" }, if (anzahl == 0) f.textLeise else f.erfolg)
+                    if (liste === vm.symbioseListe) {
+                        // Neu berechnet, sobald sich die Regeln ändern (eintraege ist der beobachtete Stand).
+                        // Aus den schon geladenen Einträgen, ohne Datei-Zugriff im Oberflächen-Faden.
+                        val text = androidx.compose.runtime.remember(liste.eintraege) { de.frank.jarvis.faehigkeit.Symbiose.text(liste.eintraege) }
+                        val grenze = de.frank.jarvis.faehigkeit.Symbiose.GRENZE
+                        Text("Text für ChatGPT: ${text.length} von $grenze Zeichen" + (if (text.length > grenze) " – zu lang, bitte Regeln kürzen." else ".") +
+                            " Einfügen in ChatGPT unter Einstellungen → Personalisierung → Benutzerdefinierte Anweisungen; nach jeder Änderung hier neu kopieren.",
+                            color = if (text.length > grenze) f.gefahr else f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                        Knopf("Text für ChatGPT kopieren", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = true) { vm.symbioseKopieren() }
+                    }
                     if (liste === vm.stilListe) {
                         val ctx = androidx.compose.ui.platform.LocalContext.current
                         val bewertet = androidx.compose.runtime.remember(vm.stilWertetAus, anzahl) { de.frank.jarvis.data.Stil.anzahl(ctx) }

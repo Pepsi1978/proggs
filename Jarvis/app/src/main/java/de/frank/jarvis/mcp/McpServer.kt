@@ -13,9 +13,11 @@ import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.AblageKarte
 import de.frank.jarvis.faehigkeit.Ergebnis
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
+import de.frank.jarvis.faehigkeit.ProgrammierChat
 import de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit
 import de.frank.jarvis.faehigkeit.Merkdatei
 import de.frank.jarvis.faehigkeit.merkKontext
+import de.frank.jarvis.faehigkeit.merkKontextOhneSymbiose
 import de.frank.jarvis.faehigkeit.ohneNull
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.Werkzeug
@@ -250,7 +252,8 @@ class McpServer(context: Context) {
                 .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
         }
         // Schreibende Aufrufe, die doppelt Schaden anrichten, laufen durch den Wiederholschutz (Wiederholung nach Verbindungsabbruch).
-        val (r, wiederholt) = runCatching { runBlocking { if (name in GESCHUETZT) schutz.fuehreAus(Wiederholschutz.schluessel(name, sauber), ausfuehren) else ausfuehren() to false } }
+        // AusChatGpt: Werkzeuge erkennen daran den Weg (ein Programmierauftrag bekommt dann seine eigene Session).
+        val (r, wiederholt) = runCatching { runBlocking(ProgrammierChat.AusChatGpt()) { if (name in GESCHUETZT) schutz.fuehreAus(Wiederholschutz.schluessel(name, sauber), ausfuehren) else ausfuehren() to false } }
             .getOrElse { Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) to false }
         Logbuch.dauer("Plugin: $name", System.currentTimeMillis() - beginn, (if (wiederholt) "Wiederholung, nicht erneut ausgeführt; " else "") + if (r.fehler) "Fehler: " + r.text.take(200) else "${r.text.length} Zeichen")
         if (wiederholt) return inhalt("WIEDERHOLUNG ERKANNT: Derselbe Aufruf wurde gerade schon ausgeführt, es ist nichts doppelt passiert. Ergebnis des ersten Aufrufs:\n" + r.text, r.fehler)
@@ -278,7 +281,7 @@ class McpServer(context: Context) {
         val eigenes = r.fehler || name == "jarvis_kontext" || name in GEDAECHTNIS || name == "programmier_fortschritt"
         val bekannt = maxOf(Gehirn.zuletztGeholt, Gehirn.zuletztNachgereicht)
         val stundeUm = jetzt - Gehirn.zuletztGeholt >= 60 * 60_000L && jetzt - Gehirn.zuletztNachgereicht >= 60 * 60_000L
-        val gedaechtnis = if (eigenes || !(stundeUm || Merkdatei.zuletztGeaendert > bekannt)) "" else merkKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" }
+        val gedaechtnis = if (eigenes || !(stundeUm || Merkdatei.zuletztGeaendert > bekannt)) "" else merkKontextOhneSymbiose(app).let { if (it.isEmpty()) "" else "\n\n$it" }
         // Was sich seit dem letzten Überblick in Franks Apps geändert hat (eigene Aktionen über ChatGPT kennt das Gespräch schon).
         val neues = if (eigenes || Gehirn.zuletztGeholt == 0L) "" else Lagebild.neuigkeitenSeit(bekannt, ohneAnlass = "ChatGPT", hoechstens = 12).let {
             if (it.isEmpty()) "" else "\n\nNEU IN FRANKS APPS SEIT DEINEM LETZTEN ÜBERBLICK (beziehe es ein, wo es zur Frage passt):\n$it"

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
  * Bringt Meldungen eines Programmierauftrags in das Jarvis-Gespräch, aus dem er gestartet wurde.
  *
  * [aktivesGespraech] setzt das Gespräch in der App, solange Jarvis auf eine Frage von Frank antwortet; startet in dieser
- * Zeit ein Programmierauftrag, merkt sich das Auftragsbuch das Gespräch. Aufträge aus ChatGPT haben kein Gespräch.
+ * Zeit ein Programmierauftrag, merkt sich das Auftragsbuch das Gespräch. Aufträge aus ChatGPT bekommen ein eigenes ([neuesGespraech]).
  * Ist das Gespräch gerade in der App offen, fügt die App die Nachricht selbst an ([empfaenger]); sonst wird sie an die
  * gespeicherte Gesprächsdatei gehängt und erscheint beim nächsten Öffnen.
  */
@@ -29,6 +29,26 @@ object ProgrammierChat {
      */
     class GespraechKennung(val id: String) : kotlin.coroutines.AbstractCoroutineContextElement(GespraechKennung) {
         companion object Key : kotlin.coroutines.CoroutineContext.Key<GespraechKennung>
+    }
+
+    /**
+     * Markiert einen Aufruf, der über das Plugin kommt (ChatGPT, aber auch jeder andere MCP-Client wie Claude; der Relay unterscheidet sie nicht). Ein Programmierauftrag von dort hat kein Jarvis-Gespräch;
+     * er bekommt dann ein eigenes neues, wie eine Programmier-Session aus der App (nicht das gerade offene Gespräch).
+     */
+    class AusChatGpt : kotlin.coroutines.AbstractCoroutineContextElement(AusChatGpt) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<AusChatGpt>
+    }
+
+    /**
+     * Legt für einen Programmierauftrag aus ChatGPT ein eigenes Gespräch an: Franks Auftrag als erste Nachricht, fester Titel.
+     * Leer = ließ sich nicht anlegen (dann läuft der Auftrag ohne Gespräch, wie bisher).
+     */
+    fun neuesGespraech(context: Context, app: String, auftrag: String): String {
+        val id = Gespraeche.neueId()
+        val erste = GespeicherteNachricht(true, "Über das Jarvis-Plugin (ChatGPT/MCP) an den Programmierer ($app):\n\n$auftrag")
+        Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste)) ?: return ""
+        Gespraeche.umbenennen(context, id, "Programmieren: $app (über ChatGPT/MCP)")
+        return id
     }
 
     /** Ob die Sitzung eines Auftrags gerade arbeitet, je Gespräch: für die drehende Anzeige unter der letzten Nachricht. */

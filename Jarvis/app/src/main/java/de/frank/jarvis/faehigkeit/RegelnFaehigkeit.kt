@@ -31,7 +31,13 @@ data class Regel(val id: Int, val text: String, val stand: String)
  *   leer neu (Hinweis in [alsKontext] und [neuBegonnen]). Nur wenn das Sichern scheitert, bleibt die Datei gesperrt;
  *   sonst würde das nächste Merken alle Einträge unwiederbringlich überschreiben.
  */
-open class Merkdatei(private val dateiname: String, private val hoechstens: Int, private val kopf: String) {
+open class Merkdatei(
+    private val dateiname: String,
+    private val hoechstens: Int,
+    private val kopf: String,
+    /** Einträge, mit denen die Datei beim allerersten Lesen angelegt wird. Eine vorhandene (auch leere) Datei bleibt unberührt. */
+    private val vorgabe: List<String> = emptyList(),
+) {
     private fun datei(context: Context) = File(context.applicationContext.filesDir, dateiname)
 
     /** Inhalt der Datei. [defekt] = vorhanden, aber nicht lesbar (Grund), dann wird nichts geschrieben. */
@@ -56,7 +62,19 @@ open class Merkdatei(private val dateiname: String, private val hoechstens: Int,
         val text = try {
             String(AtomicFile(f).readFully(), Charsets.UTF_8)
         } catch (_: FileNotFoundException) {
-            return Stand(emptyList(), 1)
+            // Wurde die Datei nach einem Defekt weggeräumt, nie still die Vorgabe darüberlegen: Franks Fassung liegt in der
+            // Sicherung, und die Warnung (neuBegonnen) soll bleiben, bis er selbst etwas schreibt.
+            val gesichert = f.parentFile?.listFiles { d -> d.name.startsWith("$dateiname.defekt-") }?.isNotEmpty() == true
+            if (vorgabe.isEmpty() || gesichert) return Stand(emptyList(), 1)
+            // Erste Nutzung: mit der Vorgabe anlegen (ids 1 bis n in ihrer Reihenfolge). Klappt das Schreiben nicht, gilt sie für
+            // diesen Lauf trotzdem, ohne es bei jedem Lesen erneut zu versuchen (fehlende Datei: Zeit und Länge 0).
+            val eintraege = vorgabe.mapIndexed { i, t -> Regel(i + 1, saeubere(t), heute()) }
+            val stand = Stand(eintraege, eintraege.size + 1)
+            if (!schreibe(context, Stand(emptyList(), 1), eintraege)) {
+                Logbuch.gedaechtnis("Merkdatei-Vorgabe nicht geschrieben", dateiname)
+                zwischen = Triple(0L, 0L, stand)
+            }
+            return stand
         } catch (e: Exception) {
             return defekt(f, e)
         }
@@ -209,11 +227,18 @@ open class Merkdatei(private val dateiname: String, private val hoechstens: Int,
 
     fun suche(context: Context, wort: String): List<Regel> = wort.trim().lowercase(Locale.GERMAN).let { w -> alle(context).filter { w in it.text.lowercase(Locale.GERMAN) } }
 
-    fun liste(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[${it.id}] ${it.text}" }
+    fun liste(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[$kennzeichen${it.id}] ${it.text}" }
+
+    /** Vorsatz vor den ids im Kontext; leer bei den Dateien, die über jarvis_merken mit ihrer id bearbeitet werden. */
+    protected open val kennzeichen: String = ""
+
+    /** Die Überschrift des Blocks; eine Datei kann sie aus ihren Einträgen ableiten (Stand, Fassung). */
+    protected open fun kopfText(eintraege: List<Regel>): String = kopf
 
     /** Der Block, der jedem Modell beiliegt. Leer, solange nichts drinsteht; bei einer defekten Datei die Warnung. */
     fun alsKontext(context: Context): String {
         val s = lies(context)
+        val kopf = kopfText(s.eintraege)
         s.defekt?.let { return "$kopf\nGEDÄCHTNIS-DATEI DEFEKT: $it Sag Frank das.\n" }
         val hinweis = neuBegonnen?.let { "GEDÄCHTNIS-DATEI ZURÜCKGESETZT: $it Frühere Einträge stehen nur noch in der Sicherung. Sag Frank das.\n" }.orEmpty()
         val eintraege = s.eintraege.takeIf { it.isNotEmpty() }?.let { liste(it) + "\n" }.orEmpty()
@@ -345,11 +370,91 @@ enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, 
     }
 }
 
-/** Alle Merkdateien in der Reihenfolge, in der sie im Kontext stehen. */
-val merkdateien: List<Merkdatei> get() = Merkart.entries.map { it.datei }
+/**
+ * Die Zusammenarbeit von ChatGPT Live und Jarvis: dieselben Regeln, die Frank 1:1 bei ChatGPT unter Personalisierung →
+ * Benutzerdefinierte Anweisungen einträgt (die App kopiert sie ihm mit [fuerChatGpt]). Sie steht vor allen anderen Merkdateien
+ * in jedem Kontext: beim Plugin, im eigenen Chat, bei den Agenten und in der Tagesauswertung. Bewusst keine [Merkart]: Kein
+ * Modell soll die Regeln über jarvis_merken umschreiben können, sonst wiche die Kopie bei ChatGPT still ab; bearbeitet wird in
+ * der App. Die Reihenfolge der ids ist die Priorität (neue Einträge kommen ans Ende).
+ * [fassung] ist eine kurze Prüfsumme der Regeln; sie steht in beiden Fassungen, damit ChatGPT eine veraltete Kopie erkennt.
+ */
+object Symbiose : Merkdatei("symbiose.json", 30, "", SYMBIOSE_VORGABE) {
+    /** So lang darf der Text für ChatGPT höchstens sein (Feld der benutzerdefinierten Anweisungen). */
+    const val GRENZE = 4_000
+    private val TAG_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+
+    /** Vier Zeichen Prüfsumme über die Regeln (ohne Überschrift), gleich in beiden Fassungen. */
+    fun fassung(eintraege: List<Regel>): String {
+        val crc = java.util.zip.CRC32()
+        crc.update(liste(eintraege).toByteArray(Charsets.UTF_8))
+        return "%04X".format(crc.value and 0xFFFF)
+    }
+
+    /** Der jüngste Änderungstag der Regeln. */
+    fun stand(eintraege: List<Regel>): String =
+        eintraege.mapNotNull { runCatching { LocalDate.parse(it.stand, TAG_FORMAT) }.getOrNull() }.maxOrNull()?.format(TAG_FORMAT).orEmpty()
+
+    /** Die Überschrift der Fassung für ChatGPT. */
+    fun titel(eintraege: List<Regel>): String =
+        "JARVIS-SYMBIOSE · Stand ${stand(eintraege)} · Fassung ${fassung(eintraege)} · gilt nur im Sprachmodus; im Textmodus gelten meine übrigen Anweisungen."
+
+    /** Ids als [S1], [S2] …: nie zu verwechseln mit den ids von FRANKS REGELN, die jarvis_merken ändert. */
+    override val kennzeichen: String = "S"
+
+    /** Der Text für ChatGPT aus gegebenen Einträgen (ohne Dateizugriff, etwa für die Oberfläche). */
+    fun text(eintraege: List<Regel>): String = titel(eintraege) + "\n" + liste(eintraege)
+
+    /** Der Text, den Frank in ChatGPT einfügt: Überschrift und Regeln, genau wie im Kontext von Jarvis. */
+    fun fuerChatGpt(context: Context): String = text(alle(context))
+
+    internal fun kopfTextFuerTest(eintraege: List<Regel>): String = kopfText(eintraege)
+
+    override fun kopfText(eintraege: List<Regel>): String =
+        "SYMBIOSE CHATGPT LIVE ⇄ JARVIS · Stand ${stand(eintraege)} · Fassung ${fassung(eintraege)} (von Frank festgelegt, nach Wichtigkeit geordnet; dieselben Regeln stehen 1:1 bei ChatGPT unter " +
+            "Einstellungen → Personalisierung → Benutzerdefinierte Anweisungen. „Du“ meint darin ChatGPT Live in der ChatGPT-App, „Jarvis“ die Jarvis-App mit ihren Werkzeugen. " +
+            "Bist du Jarvis selbst oder einer seiner Agenten, weißt du daraus, wie ChatGPT dich über MCP anspricht und was es von dir erwartet; die Grundsätze zu Ehrlichkeit, Gedächtnis " +
+            "und Hintergrundarbeit gelten für dich sinngemäß, Werkzeuge, die du nicht hast, rufst du nicht auf. Die Regeln [S…] ändert nur Frank in der App, nie über jarvis_merken oder jarvis_vergessen; „Korrektur über die id“ darin meint die Einträge der anderen Dateien. Nicht ungefragt vorlesen):"
+}
+
+/** Die erste Fassung der Symbiose-Regeln (Stand 17.10.2026). Danach gilt, was Frank in der App daraus macht. */
+internal val SYMBIOSE_VORGABE = listOf(
+    "Rollen: Du bist ChatGPT Live, mein Gesprächspartner. Jarvis ist meine App auf dem Handy, angebunden als Konnektor „Jarvis“: mein dauerhaftes Gedächtnis, Zugang zu meinen Apps und Daten, " +
+        "ausführende Stelle, Hintergrund-Agenten und Übergabe an den Programmierer. Du sprichst, denkst mit und formulierst; Jarvis weiß, speichert und führt aus.",
+    "Start: Vor deiner ersten Antwort in jedem Gespräch rufst du jarvis_kontext auf, nach etwa einer Stunde erneut. Darin stehen meine Regeln, Ziele, Entscheidungen, " +
+        "Tageslage und offene Aufträge, je mit Datenstand. Verlass dich nicht auf alte Chats. Details lädst du gezielt nach: jarvis_kontext mit bereiche, gedaechtnis_suchen für Früheres und frühere Entscheidungen.",
+    "Wer macht was: Alles zu meinen Daten, Apps, Terminen, Gesundheit, Gedächtnis und Aufträgen läuft über Jarvis, auch wenn ich „Jarvis“ nicht sage. Sage ich „nicht über Jarvis“, machst du es selbst. " +
+        "Allgemeinwissen und Gespräch übernimmst du selbst, mit meinem Kontext im Blick.",
+    "Ehrlichkeit: Erledigt ist etwas erst, wenn das Werkzeug es bestätigt; „angenommen“ heißt nicht fertig. Scheitert etwas, sag es in einem Satz. Kam keine Antwort, prüfe mit dem passenden " +
+        "Lese-Werkzeug, statt blind zu wiederholen. Daten mit altem Stand nennst du als alt.",
+    "Gedächtnis: Sage ich etwas Dauerhaftes, speichere es sofort mit jarvis_merken, auch ohne „merk dir“: info (Tatsache über mich), regel („ab jetzt“, „immer“, „nie“), ziel, entscheidung " +
+        "(„ich habe entschieden“), stil (wie du antworten sollst). Korrektur: alten Eintrag über seine id ersetzen. Nur was ich sage oder bestätige: deine Vorschläge erst nach meinem Ja, " +
+        "offene Gedanken mit idee_speichern, nie als Aufgabe.",
+    "Lange Arbeit: Recherchen und alles über eine Minute gibst du mit agent_starten an einen Jarvis-Agenten und redest weiter. Fertiges holst du mit vorgaenge, sagst es mir an passender Stelle " +
+        "und bestätigst dann mit vorgaenge (aktion mitgeteilt); ebenso bei „VORGANG FERTIG“ an einem Ergebnis. Jarvis kann dich nicht von sich aus ansprechen.",
+    "Programmierer: „Schicke bitte folgenden Auftrag an den Programmierer“, „schick das an den Programmierer“ oder „lass das programmieren“ heißt: Auftrag mit programmieren an Claude Code; " +
+        "Jarvis legt dafür eine eigene Programmier-Session an. Nenne die App und schreib den Auftrag vollständig aus dem Gespräch: Ziel, was sich ändern soll, woran man erkennt, dass es fertig ist. " +
+        "Unklare App: kurz fragen. Rückfragen der Sitzung beantwortest du mit programmier_antwort, den Stand holst du mit vorgaenge.",
+    "Auslöser: „Erstelle eine Aufgabe …“, „erinnere mich …“, „hake ab …“ → Aufgaben-App (aufgabe_anlegen). „Ich habe eine Idee …“ → Geniale Ideen (idee_speichern). Termin, Dienst, " +
+        "„wann muss ich arbeiten“ → kalender_eintragen, dienstplan_lesen. „Stell den Wecker …“ → wecker_stellen. „Timer …“, „Stoppuhr …“ → timer, stoppuhr. Schlaf, HRV, Erholung, Training → " +
+        "biomarker_auswertung, trainings_lesen. Wetter, „wie lange zur Arbeit“ → wetter_lesen, fahrzeit_lesen. Tagebuch → tagebuch_lesen. Nahrungsergänzung → stacks_lesen; Epigenetik → " +
+        "epigenetik_lesen. Mail → mail_lesen, mail_senden. „Leg das in die Ablage“, Bild → ablage_schreiben, bild_erzeugen. „Guten Morgen“, Tagesauswertung → tagesauswertung_lesen. " +
+        "Jarvis-Einstellung → einstellungen. „Bist du da?“ → jarvis_status.",
+    "Sprechen: kurz und natürlich; nie Kennungen oder Werkzeugnamen vorlesen. Datum und Uhrzeit nimmst du von Jarvis. Fehlt Tag oder Uhrzeit oder ist etwas mehrdeutig, frag kurz nach. " +
+        "Dienst, Schlafzeiten, Wetter und Erholung nennst du von dir aus, wenn sie zählen. Mehrere Dinge in einem Satz = mehrere Aufrufe.",
+    "Abgleich: Nennt jarvis_kontext unter SYMBIOSE eine andere Fassung als oben, sag mir einmal, dass ich diesen Text in der Jarvis-App neu kopieren soll; bis dahin gilt die Fassung aus Jarvis.",
+)
+
+/**
+ * Alle Merkdateien in der Reihenfolge, in der sie im Kontext stehen. Die Symbiose zuletzt: Manche Programme kürzen die Anleitung
+ * des Plugins, dann sollen Franks eigene Regeln ankommen; ChatGPT hat die Symbiose ohnehin in seinen Anweisungen.
+ */
+val merkdateien: List<Merkdatei> get() = Merkart.entries.map { it.datei } + Symbiose
 
 /** Alle Dateien als ein Block für den Kontext eines Modells (jede Frage, Plugin, Agenten, Tagesauswertung). */
 fun merkKontext(context: Context): String = merkdateien.joinToString("") { it.alsKontext(context) }
+
+/** Dasselbe ohne die Symbiose: für Nachträge an einzelne Werkzeug-Ergebnisse, die den Startkontext schon haben. */
+fun merkKontextOhneSymbiose(context: Context): String = merkdateien.filter { it !== Symbiose }.joinToString("") { it.alsKontext(context) }
 
 /** Das Gedächtnis von Jarvis: vier Dateien, drei Werkzeuge (merken, vergessen, lesen). */
 class RegelnFaehigkeit(private val context: Context) : Faehigkeit {

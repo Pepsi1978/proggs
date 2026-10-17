@@ -12,22 +12,25 @@ import org.json.JSONObject
  * Bei jeder inhaltlichen Änderung der Regeln [VERSION] erhöhen und [STAND] mitziehen.
  */
 object Integration {
-    const val VERSION = "2"
+    const val VERSION = "3"
     const val STAND = "17.10.2026"
 
     /** Die Kurzfassung für Werkzeugbeschreibungen (wenige Sätze). */
-    const val KURZ = "Zu Beginn jedes Gesprächs einmal jarvis_kontext aufrufen (kurzer Startkontext mit Franks Regeln, Zielen, Entscheidungen, Neuem, Tageslage und offenen Hintergrundaufträgen); " +
+    const val KURZ = "Zu Beginn jedes Gesprächs einmal jarvis_kontext aufrufen (kurzer Startkontext mit den Symbiose-Regeln, Franks Regeln, Zielen, Entscheidungen, Neuem, Tageslage und offenen Hintergrundaufträgen); " +
         "Details gezielt nachladen statt alles; neue dauerhafte Angaben und Entscheidungen von Frank mit jarvis_merken zurückgeben; lange Arbeit mit agent_starten, Ergebnisse mit vorgaenge."
 
-    /** Die Grundregeln im Wortlaut. */
+    /**
+     * Die technischen Ergänzungen. Die Regeln der Zusammenarbeit selbst stehen im Block SYMBIOSE (Merkdatei [de.frank.jarvis.faehigkeit.Symbiose],
+     * von Frank in der App bearbeitet und 1:1 in ChatGPT eingetragen); hier nur, was dort aus Platzgründen fehlt.
+     */
     val REGELN: String = """
-        JARVIS-INTEGRATION v$VERSION (Stand $STAND), Grundregeln für die Zusammenarbeit:
-        1. START: Ist Jarvis in einem Gespräch verfügbar, rufe vor deiner ersten Antwort einmal jarvis_kontext auf (Vorgabe: kurz). Er enthält Franks Regeln, Ziele, Entscheidungen, Neues, die Tageslage und offene Hintergrundaufträge. Verlass dich nicht auf frühere Chats.
-        2. NACHLADEN: Details nur bei Bedarf: jarvis_kontext mit bereiche (zum Beispiel tagebuch, biodaten, ideen), gedaechtnis_suchen für Früheres und frühere Entscheidungen, die App-Werkzeuge für Aktuelles und Änderungen. Jeder Bereich nennt seinen Datenstand; prüfe ihn, bevor du Werte als aktuell darstellst. In längeren Gesprächen holt jarvis_kontext mit seit (STAND-MARKE des letzten Abrufs) nur das Geänderte.
-        3. ZURÜCKGEBEN: Neue dauerhafte Angaben, Regeln, Ziele und ausdrückliche Entscheidungen von Frank sofort mit jarvis_merken festhalten; eine Korrektur ersetzt den alten Eintrag über seine id. Nur was Frank sagt oder bestätigt: eigene Vorschläge erst nach seinem Ja, offene Gedanken mit idee_speichern. Nie etwas als beschlossen oder erledigt darstellen, was es nicht ist.
-        4. LANGE ARBEIT: Recherchen, Ausarbeitungen und alles, was länger als etwa eine Minute dauert, mit agent_starten. Du bekommst eine Vorgangskennung; angenommen ist nicht fertig. Sag es Frank kurz und rede weiter.
-        5. ERGEBNISSE: Jarvis kann ChatGPT nicht von sich aus ansprechen. Fertiges erfährst du über den Startkontext und über „VORGANG FERTIG“ an Werkzeug-Ergebnissen: dann mit vorgaenge (aktion lesen) holen, Frank an passender Stelle sagen und mit vorgaenge (aktion mitgeteilt) bestätigen. Nicht wiederholt abfragen, während etwas läuft.
-        6. VERLÄSSLICHKEIT: Nach jeder Aktion kurz sagen, was erledigt ist und was noch läuft. Meldet ein Ergebnis, dass die Antwort nicht ankam, erst mit dem passenden Lese-Werkzeug prüfen. Ein identischer schreibender Aufruf kurz hintereinander wird nicht doppelt ausgeführt.
+        JARVIS-INTEGRATION v$VERSION (Stand $STAND): Die Regeln der Zusammenarbeit stehen im Block SYMBIOSE CHATGPT LIVE ⇄ JARVIS (Franks benutzerdefinierte Anweisungen, nach Wichtigkeit geordnet); er geht allem hier vor. Fest, auch wenn dort etwas fehlt:
+        - Zu Beginn jedes Gesprächs einmal jarvis_kontext (Vorgabe kurz). Erledigt ist nur, was ein Werkzeug bestätigt; angenommen heißt nicht fertig. Nach jeder Aktion kurz sagen, was erledigt ist und was noch läuft.
+        - Neue dauerhafte Angaben und ausdrückliche Entscheidungen von Frank mit jarvis_merken zurückgeben; eigene Vorschläge erst nach seinem Ja. Lange Arbeit mit agent_starten.
+        Technisch dazu:
+        - Datenstand: Jeder Bereich trägt [Stand …]. In längeren Gesprächen holt jarvis_kontext mit seit (die STAND-MARKE des letzten Abrufs) nur das Geänderte; umfang voll liefert alles, bereiche einzelne Bereiche vollständig.
+        - Vorgänge: agent_starten liefert eine Kennung; vorgaenge (aktion lesen) holt das Ergebnis, aktion mitgeteilt bestätigt erst, wenn du es Frank gesagt hast. Abbrechen nur mit vorgang_abbrechen. Während etwas läuft, nicht wiederholt abfragen.
+        - Wiederholung: Ein identischer schreibender Aufruf kurz hintereinander wird nicht doppelt ausgeführt („WIEDERHOLUNG ERKANNT“). Meldet ein Ergebnis, dass die Antwort nicht ankam, erst mit dem passenden Lese-Werkzeug prüfen.
     """.trimIndent()
 }
 
