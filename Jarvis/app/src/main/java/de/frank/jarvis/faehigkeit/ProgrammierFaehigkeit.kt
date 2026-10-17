@@ -315,7 +315,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     fun auftragsLagen(): Map<String, AuftragsLage> = Auftragsbuch.lagen(app)
 
     /** Offene und zuletzt beendete Programmieraufträge als Zeilen für vorgaenge und den Startkontext. */
-    fun vorgangsZeilen(): List<String> = Auftragsbuch.vorgangsZeilen(app)
+    fun vorgangsZeilen(alle: Boolean = false): List<String> = Auftragsbuch.vorgangsZeilen(app, alle)
 
     /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject) {
@@ -489,12 +489,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private fun standText(stand: String) = when (stand) { "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"; else -> "läuft" }
 
         /** Für vorgaenge: Aufträge mit Lebenszeichen der letzten 24 Stunden (offene und beendete), neueste zuerst, je eine Zeile. */
-        fun vorgangsZeilen(context: Context): List<String> {
+        fun vorgangsZeilen(context: Context, alle: Boolean): List<String> {
             val liste = lies(context)
             val jetzt = System.currentTimeMillis()
-            // Auch offene nur mit Lebenszeichen der letzten 24 Stunden: Eine Sitzung, die nie „fertig“ meldete, steht sonst ewig als laufend da.
+            // Auch offene nur mit Lebenszeichen der letzten Stunden: Eine Sitzung, die nie „fertig“ meldete, steht sonst ewig als laufend da.
+            // Kurz (Startkontext): sechs Stunden, höchstens sechs; alle: 24 Stunden.
+            val fenster = (if (alle) 24 else 6) * 3_600_000L
             return (liste.length() - 1 downTo 0).map { liste.getJSONObject(it) }
-                .filter { jetzt - maxOf(it.optLong("zeit"), it.optLong("aktiv")) < 24 * 3_600_000L }
+                .filter { jetzt - maxOf(it.optLong("zeit"), it.optLong("aktiv")) < fenster }
+                .take(if (alle) 20 else 6)
                 .map { e ->
                     val still = e.optString("stand") == "laeuft" && jetzt - maxOf(e.optLong("zeit"), e.optLong("aktiv")) >= 30 * 60_000L
                     "[" + e.optString("id") + "] Programmierauftrag " + e.optString("app") + ": " + standText(e.optString("stand")) +

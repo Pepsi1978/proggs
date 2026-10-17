@@ -223,7 +223,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
 fun vorgangsBlock(context: Context, alle: Boolean = false): String {
     val app = context.applicationContext
     val agenten = Vorgaenge.buch(app).liste(alle).map { Vorgaenge.zeile(it) }
-    val programmieren = runCatching { Register.alle(app).filterIsInstance<ProgrammierFaehigkeit>().firstOrNull()?.vorgangsZeilen() }.getOrNull().orEmpty()
+    val programmieren = runCatching { Register.alle(app).filterIsInstance<ProgrammierFaehigkeit>().firstOrNull()?.vorgangsZeilen(alle) }.getOrNull().orEmpty()
     if (agenten.isEmpty() && programmieren.isEmpty()) return ""
     return buildString {
         append("HINTERGRUNDAUFTRÄGE (Kennung in eckigen Klammern; angenommen heißt nicht fertig):\n")
