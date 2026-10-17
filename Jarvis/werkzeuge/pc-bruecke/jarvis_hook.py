@@ -3,7 +3,8 @@
 Der OpenLauncher hängt diesen Hook nur an Jarvis-Sitzungen (über --settings) und setzt JARVIS_AUFTRAG_ID. Ohne die Variable
 endet der Hook sofort ohne Ausgabe: In normalen Sitzungen passiert nie etwas.
 
-Aufruf: python jarvis_hook.py <post|frage|stop>, die Hook-Eingabe kommt als JSON auf stdin.
+Aufruf: python jarvis_hook.py <post|frage|stop> (macOS: python3), die Hook-Eingabe kommt als JSON auf stdin.
+Eine Datei für Windows und macOS; der Mac-Start (OpenLauncherMac --jarvis-auftrag) setzt dieselben Hooks.
   post   PostToolUse (alle Werkzeuge) und PostToolUseFailure (Bash|PowerShell, nur dort stehen fehlgeschlagene Befehle).
          Läuft async. Neue Zwischentexte der KI (aus dem Transkript) gehen sofort als eigene Meldung raus, dazu Advisor,
          Skills und Agenten; geänderte Dateien, Bau, Commit/Push und adb install werden gedrosselt:
@@ -21,7 +22,7 @@ Aufruf: python jarvis_hook.py <post|frage|stop>, die Hook-Eingabe kommt als JSON
 
 Wege: Relay https://<host>/pc/meldung und /pc/antwort mit dem Geräte-Token aus ~/SK/Jarvis/relay.properties, nur IPv4
 (auf diesem Netz hängt IPv6 zeitweise, siehe bugs/desktop/dotnet-httpclient-ipv6-haenger.md).
-Protokoll: %LOCALAPPDATA%/JarvisPcBruecke/hook.log
+Protokoll: %LOCALAPPDATA%/JarvisPcBruecke/hook.log, macOS ~/Library/Logs/JarvisPcBruecke/hook.log
 """
 import json
 import os
@@ -41,7 +42,12 @@ DROSSEL_S = 20
 FRAGE_WARTEN_S = 600
 PULS_S = 10               # Lebenszeichen höchstens so oft
 MAX_TEXT = 4000           # so lang darf eine Meldung werden (die Schlusszusammenfassung kommt vollständig)
-ORDNER = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "JarvisPcBruecke"
+if os.environ.get("LOCALAPPDATA"):
+    ORDNER = Path(os.environ["LOCALAPPDATA"]) / "JarvisPcBruecke"
+elif sys.platform == "darwin":
+    ORDNER = Path.home() / "Library" / "Logs" / "JarvisPcBruecke"
+else:
+    ORDNER = Path.home() / "JarvisPcBruecke"
 PROTOKOLL = ORDNER / "hook.log"
 ZUSTAND = ORDNER / f"hook-{AUFTRAG or 'ohne'}.json"
 
@@ -325,9 +331,29 @@ def _windows_prozesse() -> dict[int, tuple[int, str]]:
     return alle
 
 
+def _posix_eltern(pid: int) -> tuple[int, str]:
+    """(Eltern-pid, Programmname) eines Prozesses über ps (macOS, Linux); (0, "") wenn er fehlt."""
+    import subprocess
+    try:
+        aus = subprocess.run(["ps", "-o", "ppid=,comm=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout.strip()
+        eltern, _, name = aus.partition(" ")
+        return int(eltern), os.path.basename(name.strip()).lower()
+    except Exception:
+        return 0, ""
+
+
 def claude_prozess() -> int | None:
-    """Der Claude-Code-Prozess, der diesen Hook gestartet hat (nächster Vorfahr claude*.exe), oder None."""
+    """Der Claude-Code-Prozess, der diesen Hook gestartet hat (nächster Vorfahr claude*), oder None."""
     if os.name != "nt":
+        # Ohne diesen Zweig merkte der Warter das Ende der Sitzung nicht und wartete bis zu zwölf Stunden weiter.
+        pid = os.getpid()
+        for _ in range(12):
+            eltern, _ = _posix_eltern(pid)
+            if eltern <= 1:
+                return None
+            if _posix_eltern(eltern)[1].startswith("claude"):
+                return eltern
+            pid = eltern
         return None
     try:
         alle = _windows_prozesse()
@@ -346,6 +372,12 @@ def claude_prozess() -> int | None:
 
 def lebt(pid: int) -> bool:
     if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
         return True
     import ctypes
     k = ctypes.windll.kernel32

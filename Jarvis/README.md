@@ -500,8 +500,7 @@ Jarvis und die angebundenen Apps müssen mit demselben Schlüssel signiert sein 
 
 Agenten und die Tagesauswertung bekommen das Werkzeug nicht (`JarvisAgent.versuche`).
 
-**Mac:** Einrichtung der ganzen Zusammenarbeit (Plugin in allen Programmen, Mac-Brücke, Hooks, adb über WLAN und WireGuard,
-apk-update) per Prompt: `JARVIS-MACOS-PROMPT.md` in Claude Code auf dem Mac einfügen.
+**Mac:** eigene Brücke als Ersatz für den PC, siehe Abschnitt „Mac“ unten. Einrichtung per Prompt `JARVIS-MACOS-PROMPT.md`.
 
 ### Fortschritt und Rückfragen im Jarvis-Chat
 
@@ -538,3 +537,36 @@ apk-update) per Prompt: `JARVIS-MACOS-PROMPT.md` in Claude Code auf dem Mac einf
   `OpenLauncherService.JarvisHooks` (ab OpenLauncher 1.24.95); ältere Sitzungen bekommen Nachträge nur am nächsten Zugende.
 - **Cloud:** Nachträge reisen mit der Antwort auf `programmier_fortschritt` zurück („NACHTRAG VON FRANK“); nach „fertig“ ist
   die Sitzung beendet, dann meldet Jarvis „nicht zustellbar“ statt eine neue zu starten.
+
+## Mac
+
+Stand 17.10.2026 (OpenLauncherMac 1.24.39). Voraussetzung: `~/SK/Jarvis/` (`relay.properties`, `routine.properties`,
+`plugin-url.txt`) vom Windows-PC kopiert, per USB-Stick oder AirDrop, nie über Git oder Cloud.
+
+- **Brücke** `werkzeuge/pc-bruecke/jarvis_pc_bruecke.py` (Python 3, Gegenstück zur .ps1): gleiche Schleife, Endpunkte, Wartezeiten,
+  Auftragstext und Quittung, nur IPv4, Rechnername aus `scutil --get ComputerName`, eine Brücke je Benutzer (`fcntl.flock`),
+  PATH und JAVA_HOME vor jedem Auftrag frisch aus der Login-Shell. Startet die Sitzung über
+  `/Applications/OpenLauncher.app/Contents/MacOS/OpenLauncher --jarvis-auftrag …` (ab 1.24.39, `Services/JarvisAuftrag.swift`):
+  Terminal.app, Profil Minimal (`Profiles/ClaudeCodeMac/minimal`), Schnellmodus, Opus 5.5 (1M), Effort High, Remote Control
+  „Jarvis: <App>“, mit Nummer dieselben Hooks wie unter Windows (`python3 …/jarvis_hook.py`). Notweg ohne passenden Launcher:
+  `claude` direkt in Terminal.app mit eigenem `--settings`.
+- **Vorrang Windows** (Franks Wahl, Lösung B): Die Mac-Brücke fragt mit `X-Jarvis-Rang: ersatz`. Der Relay gibt ihr nur
+  Aufträge, solange die Windows-Brücke (ohne Rang) seit 45 s nicht abgefragt hat; wartet sie schon, wenn der PC dazukommt, legt
+  der Relay den Auftrag zurück. `GET /geraet/pc` nennt unter `rechner_alle` beide Brücken mit Rang und Alter, `rechner` ist der
+  Rechner, der den nächsten Auftrag bekäme.
+- **Hook** `jarvis_hook.py` ist eine Datei für beide Systeme: auf dem Mac Protokoll und Zustand in `~/Library/Logs/JarvisPcBruecke/`,
+  Claude-Prozess über die Elternkette (`ps -o ppid=,comm=`), Lebenszeichen über `os.kill(pid, 0)`; so endet der Warter mit der Sitzung.
+- **LaunchAgents:** `de.frank.jarvis.pc-bruecke` (`werkzeuge/pc-bruecke/einrichten.sh`, RunAtLoad + KeepAlive) und
+  `de.frank.adb-wlan.wachhund` (`Werkzeuge/adb-wlan/wachhund-einrichten.sh`, alle 2 Minuten, richtet `adb-wlan.sh` beim ersten
+  Lauf selbst ein). Logs: `~/Library/Logs/JarvisPcBruecke/` (`bruecke.log`, `hook.log`) und `~/Library/Logs/adb-wlan/adb-wlan.log`.
+- **Plugin-Einträge:** `werkzeuge/plugin-adresse-setzen.sh` trägt die Adresse aus `plugin-url.txt` ein: Claude Code (`~/.claude.json`
+  und die Profile `ClaudeCodeMac/minimal|standard|strict`, HTTP), Codex (`~/.codex/config.toml` und das Codex-Zuhause des
+  OpenLauncherMac), OpenCode (`~/.config/opencode/opencode.jsonc`, remote) und Claude Desktop (`npx mcp-remote`, IPv4 zuerst).
+  Nach „Plugin-Adresse erneuern“ erneut ausführen. ChatGPT hängt am Konto, nicht am Rechner.
+- **WireGuard:** eigener Peer „Mac“ = 10.8.0.6 (`~/SK/second-brain/wireguard/mac.conf`, in der WireGuard-App importieren). Der frühere
+  Tunnel „second-brain“ der App nutzte die Adresse des Windows-PCs (10.8.0.2) und verdrängte ihn; nicht mehr verwenden.
+  `adb-wlan.sh` hat denselben Tunnelschritt wie die .ps1 (`10.8.0.7:5555`, `~/.adb-wlan-tunnel-ip`); die Direktverbindung über
+  den PC-Hotspot gibt es am Mac nicht.
+- **apk-update:** dasselbe `apk-update.ps1` mit `pwsh`; der Drive-Ordner wird unter `~/Library/CloudStorage/GoogleDrive-*/Meine Ablage/Dokumente/Updates` gefunden.
+- **Ruhezustand:** Schläft der Mac (beim MacBook Air immer bei zugeklapptem Deckel ohne externen Bildschirm), fragt die Brücke nicht ab
+  und Aufträge gehen an den PC oder in die Cloud; gewollt.

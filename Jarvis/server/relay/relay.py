@@ -444,6 +444,12 @@ class PcBruecke:
         self.fragen = {}      # frage_id -> {"zeit": monotonic, "antwort": dict|None, "da": asyncio.Event}
         self.zuletzt = 0.0
         self.rechner = ""
+        # Zwei Bruecken (Franks Wahl vom 17.10.2026, Loesung B): Die Windows-Bruecke ist der Hauptrechner, die Mac-Bruecke
+        # meldet sich mit X-Jarvis-Rang: ersatz und bekommt nur Auftraege, solange der Hauptrechner nicht abfragt.
+        self.haupt_zuletzt = 0.0
+        self.haupt_rechner = ""
+        self.ersatz_zuletzt = 0.0
+        self.ersatz_rechner = ""
         self.auftraege = asyncio.Queue()
         self.quittungen = {}  # Auftrag-id -> Future mit der Quittung der Bruecke
         self.nachtraege = {}  # AUFTRAG-ID -> [{"nachtrag_id", "text", "zeit"}], aelteste zuerst
@@ -565,26 +571,49 @@ class PcBruecke:
     def da(self) -> bool:
         return time.monotonic() - self.zuletzt < PC_FRISCH_S
 
+    def _haupt_da(self) -> bool:
+        return time.monotonic() - self.haupt_zuletzt < PC_FRISCH_S
+
+    def _melde_dich(self, ersatz: bool, rechner: str) -> None:
+        jetzt = time.monotonic()
+        self.zuletzt = jetzt
+        if ersatz:
+            self.ersatz_zuletzt, self.ersatz_rechner = jetzt, rechner
+        else:
+            self.haupt_zuletzt, self.haupt_rechner = jetzt, rechner
+
     async def abholen(self, request: web.Request) -> web.Response:
         """GET /pc/auftrag (Bruecke): wartet bis zu PC_WARTEN_S auf einen Auftrag, sonst 204."""
         if not self._erlaubt(request):
             return web.Response(status=404, text="Not found")
         if not self.da():
             log.info("PC-Bruecke verbunden")
-        self.zuletzt = time.monotonic()
-        self.rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
+        ersatz = request.headers.get("X-Jarvis-Rang", "").strip().lower() == "ersatz"
+        rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
+        self._melde_dich(ersatz, rechner)
         frist = asyncio.get_running_loop().time() + PC_WARTEN_S
         while True:
             rest = frist - asyncio.get_running_loop().time()
             if rest <= 0:
-                self.zuletzt = time.monotonic()
+                self._melde_dich(ersatz, rechner)
                 return web.Response(status=204)
+            # Der Ersatz wartet in kurzen Stuecken und greift nie zu, solange der Hauptrechner abfragt: So merkt er binnen
+            # Sekunden, wenn der PC wieder da ist oder wegfaellt.
+            if ersatz and self._haupt_da():
+                await asyncio.sleep(min(rest, 5))
+                continue
             try:
-                auftrag = await asyncio.wait_for(self.auftraege.get(), rest)
+                auftrag = await asyncio.wait_for(self.auftraege.get(), min(rest, 5) if ersatz else rest)
             except asyncio.TimeoutError:
-                self.zuletzt = time.monotonic()
+                if ersatz:
+                    continue
+                self._melde_dich(ersatz, rechner)
                 return web.Response(status=204)
-            self.zuletzt = time.monotonic()
+            self._melde_dich(ersatz, rechner)
+            # Der Ersatz wartete schon, als der Hauptrechner dazukam: zurueckgeben, der Hauptrechner holt ihn.
+            if ersatz and self._haupt_da():
+                self.auftraege.put_nowait(auftrag)
+                continue
             # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
             wartend = self.quittungen.get(auftrag["id"])
             if wartend is None or wartend.done():
@@ -594,6 +623,7 @@ class PcBruecke:
             if request.transport is None or request.transport.is_closing():
                 self.auftraege.put_nowait(auftrag)
                 return web.Response(status=204)
+            self.rechner = rechner
             return web.json_response(auftrag)
 
     async def quittung(self, request: web.Request) -> web.Response:
@@ -693,8 +723,15 @@ class PcBruecke:
     async def status(self, request: web.Request) -> web.Response:
         if not self._erlaubt(request):
             return web.Response(status=404, text="Not found")
-        vor = int(time.monotonic() - self.zuletzt) if self.zuletzt else None
-        return web.json_response({"pc": self.da(), "rechner": self.rechner, "zuletzt_vor_s": vor})
+        jetzt = time.monotonic()
+        vor = int(jetzt - self.zuletzt) if self.zuletzt else None
+        rechner = []
+        for rang, zuletzt, name in (("haupt", self.haupt_zuletzt, self.haupt_rechner), ("ersatz", self.ersatz_zuletzt, self.ersatz_rechner)):
+            if zuletzt:
+                rechner.append({"rechner": name, "rang": rang, "da": jetzt - zuletzt < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - zuletzt)})
+        # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
+        aktiv = self.haupt_rechner if self._haupt_da() else (self.ersatz_rechner if self.da() else self.rechner)
+        return web.json_response({"pc": self.da(), "rechner": aktiv, "zuletzt_vor_s": vor, "rechner_alle": rechner})
 
 
 async def gesund(_: web.Request) -> web.Response:
