@@ -33,6 +33,14 @@ cat > "$PLIST" <<PLIST
 </dict>
 </plist>
 PLIST
+# bootout kehrt zurück, bevor launchd den Job ganz abgebaut hat; ein sofortiges bootstrap scheitert dann mit
+# „Bootstrap failed: 5“ und ließe den Dienst entladen zurück. Darum warten und notfalls wiederholen.
 launchctl bootout "gui/$(id -u)/$NAME" 2>/dev/null || true
-launchctl bootstrap "gui/$(id -u)" "$PLIST"
+for _ in $(seq 1 20); do launchctl print "gui/$(id -u)/$NAME" >/dev/null 2>&1 || break; sleep 0.5; done
+GELADEN=0
+for _ in 1 2 3 4 5; do
+    if launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null; then GELADEN=1; break; fi
+    sleep 1
+done
+[ $GELADEN -eq 1 ] || { echo "FEHLER: launchctl bootstrap $PLIST ist fehlgeschlagen"; exit 1; }
 echo "$NAME eingerichtet (alle 2 Minuten). Protokoll: $LOGS/adb-wlan.log"
