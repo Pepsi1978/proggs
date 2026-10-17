@@ -249,11 +249,15 @@ class LiveGespraech(
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 if (!laeuft || webSocket !== ws) return
-                val grund = when (response?.code) {
+                val code = response?.code
+                // Schlüssel abgelehnt, Kontingent aus, Server oder Netz nicht erreichbar: einmal mit dem bezahlten Schlüssel.
+                // Modell- und Einstellungsfehler (400, 404) träfen den bezahlten genauso.
+                if (code != 400 && code != 404 && geminiErsatz("HTTP ${code ?: "-"} ${t.message ?: ""}".trim())) return
+                val grund = when (code) {
                     400 -> "Gemini hat den Verbindungsaufbau abgelehnt (Modell oder Einstellung)."
                     401, 403 -> "Der Gemini-Schlüssel wurde abgelehnt."
                     404 -> "Das Gemini-Modell „$modell“ gibt es nicht (mehr)."
-                    429 -> if (geminiErsatz("429")) return else "Gemini-Kontingent erschöpft oder zu viele Anfragen."
+                    429 -> "Gemini-Kontingent erschöpft oder zu viele Anfragen."
                     else -> "Gemini-Verbindung getrennt: " + (t.message ?: "unbekannt")
                 }
                 beiFehler(grund)
@@ -264,14 +268,16 @@ class LiveGespraech(
                 if (!laeuft || webSocket !== ws) return
                 Log.w(LiveRouting.TAG, "Gemini schließt: $code $reason")
                 if (code != 1000) {
-                    if (istKontingent(reason) && geminiErsatz(reason)) return
+                    if ((istKontingent(reason) || istSchluesselFehler(reason)) && geminiErsatz("$code $reason")) return
                     // Extended Thinking zeigt Google teils über v1alpha: lehnt v1beta den Aufbau ab, einmal dort versuchen.
-                    if (!bereit && apiVersion == "v1beta" && modell.contains("extended") && !istKontingent(reason) && !reason.contains("API key", true)) {
+                    if (!bereit && apiVersion == "v1beta" && modell.contains("extended") && !istKontingent(reason) && !istSchluesselFehler(reason)) {
                         Log.w(LiveRouting.TAG, "Gemini: v1beta lehnt ab ($code $reason), versuche v1alpha")
                         apiVersion = "v1alpha"
                         geminiVerbinden(aktuellerSchluessel)
                         return
                     }
+                    // Sonstige Störung beim kostenlosen Schlüssel (Serverfehler, nicht erreichbar): einmal mit dem bezahlten.
+                    if (!istModellFehler(reason) && geminiErsatz("$code $reason")) return
                     beiFehler(geminiGrund(code, reason))
                 }
                 beenden(senden = false)
@@ -289,6 +295,9 @@ class LiveGespraech(
     @Volatile private var geminiAntwortLaeuft = false
 
     private fun istKontingent(reason: String) = reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true)
+    private fun istSchluesselFehler(reason: String) = reason.contains("API key", true) || reason.contains("PERMISSION_DENIED", true) ||
+        reason.contains("UNAUTHENTICATED", true) || reason.contains("billing", true)
+    private fun istModellFehler(reason: String) = reason.contains("not found", true) || reason.contains("not supported", true) || reason.contains("INVALID_ARGUMENT", true)
 
     private fun geminiGrund(code: Int, reason: String): String = when {
         istKontingent(reason) -> "Gemini-Kontingent erschöpft: " + reason.take(160)
@@ -298,18 +307,35 @@ class LiveGespraech(
         else -> "Gemini hat die Verbindung beendet (Code $code)."
     }
 
-    /** Kostenloses Kontingent aus: einmal auf den bezahlten Schlüssel wechseln, das Gespräch läuft weiter. */
+    /** Kostenloser Schlüssel gestört (Kontingent aus, abgelehnt, nicht erreichbar): einmal auf den bezahlten wechseln, das Gespräch läuft weiter. */
     private fun geminiErsatz(anlass: String): Boolean {
         val ersatz = ersatzSchluessel
         if (ersatz.isBlank() || ersatz == aktuellerSchluessel || !laeuft) return false
-        Log.w(LiveRouting.TAG, "Gemini: kostenloses Kontingent erschöpft ($anlass), wechsle auf den bezahlten Schlüssel")
-        beiFehler("Kostenloses Gemini-Kontingent erschöpft: Jarvis spricht mit dem bezahlten Schlüssel weiter.")
+        Log.w(LiveRouting.TAG, "Gemini: kostenloser Schlüssel gestört ($anlass), wechsle auf den bezahlten Schlüssel")
+        val grund = if (istKontingent(anlass) || anlass.startsWith("HTTP 429")) "Das kostenlose Gemini-Kontingent ist erschöpft"
+            else "Der kostenlose Gemini-Schlüssel ist gerade nicht nutzbar"
+        val text = "$grund. Jarvis spricht jetzt mit dem bezahlten Schlüssel weiter."
+        beiFehler(text)
+        schluesselWechselMelden(text, anlass)
         gratis = false
         // Eine Fortsetzungskennung gehört zum Projekt des alten Schlüssels: frisch beginnen, ohne neue Begrüßung.
         fortsetzKennung = ""
         geminiVerbinden(ersatz)
         return true
     }
+
+    /** Kleine Mitteilung von Jarvis, dass ab jetzt der bezahlte Gemini-Schlüssel läuft; im Gespräch ohne Ton. */
+    private fun schluesselWechselMelden(text: String, anlass: String) = runCatching {
+        de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
+        app.getSystemService(android.app.NotificationManager::class.java).notify(4320,
+            androidx.core.app.NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(de.frank.jarvis.R.drawable.ic_stat_jarvis)
+                .setContentTitle("Jarvis: bezahlter Gemini-Schlüssel aktiv")
+                .setContentText(text)
+                .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText("$text\nAnlass: ${anlass.take(200)}"))
+                .setAutoCancel(true)
+                .setSilent(de.frank.jarvis.speech.GespraechsFokus.stilleHinweise)
+                .build())
+    }.onFailure { Log.w(LiveRouting.TAG, "Gemini: Mitteilung zum Schlüsselwechsel fehlgeschlagen: ${it.message}") }
 
     private fun geminiSetup(): JSONObject {
         val g = JSONObject().put("responseModalities", JSONArray().put("AUDIO"))

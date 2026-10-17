@@ -46,8 +46,9 @@ object StimmProbe {
         if (!vorhanden(context, art, stimme)) {
             if (schluessel.isBlank()) return@withContext if (art == "gemini") "Für Hörproben bitte zuerst einen Gemini-Schlüssel eintragen." else "Für Hörproben bitte zuerst den OpenAI-API-Schlüssel eintragen."
             var (pcm, fehler) = if (art == "gemini") erzeugenGemini(schluessel, stimme) else erzeugen(schluessel, art == "live", stimme)
-            // Kostenloses Kontingent erschöpft: einmal mit dem bezahlten Schlüssel.
-            if (pcm == null && art == "gemini" && ersatz.isNotBlank() && ersatz != schluessel && fehler?.contains("Kontingent") == true) {
+            // Kostenloser Schlüssel gestört (Kontingent, abgelehnt, nicht erreichbar): einmal mit dem bezahlten.
+            if (pcm == null && art == "gemini" && ersatz.isNotBlank() && ersatz != schluessel &&
+                fehler?.let { it.contains("Kontingent") || it.contains("abgelehnt") || it.contains("Verbindung") } == true) {
                 val zweiter = erzeugenGemini(ersatz, stimme)
                 pcm = zweiter.first; fehler = zweiter.second
             }

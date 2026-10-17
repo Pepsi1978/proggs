@@ -234,7 +234,7 @@ object LiveOptionen {
             "Welcher deiner Gemini-Schlüssel das Gespräch bezahlt. Ob ein Schlüssel kostenlos oder bezahlt ist, hängt an seinem Projekt in AI Studio (mit oder ohne Abrechnung).",
             "auto", {
                 listOf(
-                    Wahl("auto", "Erst kostenlos, dann bezahlt", "Nutzt den kostenlosen Schlüssel; ist sein Kontingent erschöpft, spricht Jarvis mit dem bezahlten weiter. Empfehlung.", "meist 0 $"),
+                    Wahl("auto", "Erst kostenlos, dann bezahlt", "Nutzt immer den kostenlosen Schlüssel. Nur wenn sein Kontingent erschöpft ist oder er abgelehnt wird bzw. nicht erreichbar ist, spricht Jarvis mit dem bezahlten weiter und meldet den Wechsel. Empfehlung.", "meist 0 $"),
                     Wahl("frei", "Nur kostenlos", "Endet, wenn das kostenlose Kontingent erschöpft ist. Google nutzt die Gespräche zum Training.", "0 $"),
                     Wahl("bezahlt", "Nur bezahlt", "Immer der Schlüssel mit Abrechnung; Google nutzt die Gespräche nicht zum Training.", GEMINI_PREIS_TEXT),
                 )
