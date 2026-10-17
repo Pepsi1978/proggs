@@ -2,6 +2,8 @@ package de.frank.jarvis.agent
 
 import android.content.Context
 import de.frank.jarvis.auth.ChatTurn
+import de.frank.jarvis.auth.CodexAuthManager
+import de.frank.jarvis.auth.ReasoningEffort
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.observability.Logbuch
 import kotlinx.coroutines.CancellationException
@@ -15,14 +17,16 @@ import kotlinx.coroutines.withTimeoutOrNull
 object Vorlesefassung {
     /** [inhalt] = die Ablage-Datei (Überschrift mit Auftrag plus Bericht); [grund] = warum der Lauf nicht vollständig ist, sonst null. */
     suspend fun erstelle(context: Context, agent: String, titel: String, inhalt: String, grund: String?): String {
-        val ersatz = "Der Agent $agent ist fertig. „$titel“ liegt in der Ablage."
-        val denker = JarvisAgent(context)
-        if (!denker.verbunden) return ersatz
-        val e = Einstellungen.get(context)
+        // Ohne Modell nie der ganze Bericht: der sprengt jedes Vorleselimit. Dann nur, dass er da ist (und ob vollständig).
+        val ersatz = if (grund == null) "Der Agent $agent ist fertig. „$titel“ liegt in der Ablage."
+        else "Der Agent $agent ist nicht vollständig fertig geworden. Was er geschafft hat, liegt als „$titel“ in der Ablage."
+        val auth = CodexAuthManager(context.applicationContext)
+        if (!auth.isConnected) return ersatz
         val text = "AGENT: $agent\n" + (grund?.let { "HINWEIS: Der Lauf ist nicht vollständig: $it\n" } ?: "") +
             "\nABGELEGTER BERICHT:\n" + inhalt.take(MAX_ZEICHEN)
+        // Niedrige Denkstufe wie bei den anderen kurzen Helfern: Mit Franks eingestellter (hoher) Stufe reißt ein langer Bericht das Zeitlimit.
         val antwort = withTimeoutOrNull(75_000L) {
-            runCatching { denker.auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", text)), e.modell, e.denkstufe).trim() }
+            runCatching { auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", text)), Einstellungen.get(context).modell, ReasoningEffort.LOW).trim() }
                 .onFailure { if (it is CancellationException) throw it; Logbuch.fehler("Vorlesefassung: Modell", it) }.getOrNull()
         }
         return antwort?.takeIf { it.isNotBlank() } ?: ersatz

@@ -120,7 +120,7 @@ class Vorleser(
             absaetzeGesamt = absaetze.size,
         )
         // Gesprächsantworten und Ansagen: kurzer Atem und nur vorübergehender Tonfokus.
-        val kurz = quelle.startsWith("gespraech:") || quelle.startsWith("abfahrt:") || quelle.startsWith("ansage:") || quelle == "probe"
+        val kurz = quelle.startsWith("gespraech:") || quelle.startsWith("abfahrt:") || quelle.startsWith("ansage:") || quelle.startsWith("agent:") || quelle == "probe"
         val pauseMs = if (kurz) KURZE_PAUSE_MS else ABSATZ_PAUSE_MS
         fokusArt = if (quelle.startsWith("ablage:")) AudioManager.AUDIOFOCUS_GAIN else AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
         VorleseDienst.starten(appContext)

@@ -206,16 +206,6 @@ class JarvisDienst : Service() {
                     titel != null -> "„$titel“ liegt in der Ablage.$zusatz"
                     else -> "Der Agent ${plan.name} ist nicht fertig geworden: ${lauf.grund ?: "Grund unbekannt"}. Details unter Aktivität."
                 }
-                if (titel != null && (vorlesen || Einstellungen.get(this@JarvisDienst).ergebnisseVorlesen)) {
-                    de.frank.jarvis.faehigkeit.Ablage.finde(this@JarvisDienst, titel)?.let { datei ->
-                        // Vorgelesen wird eine eigene kurze Zusammenfassung fürs Ohr, nicht Auftrag und Bericht; der Bericht bleibt unverändert.
-                        // Eigene Quelle „agent:“: kurzer Tonfokus und kein Zusammenstoß mit dem Vorleseknopf der Ablage.
-                        val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, datei.readText(), lauf.grund)
-                        kotlinx.coroutines.withContext(Dispatchers.Main) {
-                            de.frank.jarvis.speech.Vorleser.hole(this@JarvisDienst, de.frank.jarvis.data.settings.SecureSettings(this@JarvisDienst)).sprich("agent:" + datei.name, plan.name, fassung)
-                        }
-                    }
-                }
                 getSystemService(NotificationManager::class.java).notify(
                     // Eigener Bereich: trifft keine feste Meldung (1, 4200, 4300, 4301, 4310, 4711, 7000–7999) und keine der Ablage (ab 200_000).
                     20_000 + (System.currentTimeMillis() % 100_000).toInt(),
@@ -225,6 +215,22 @@ class JarvisDienst : Service() {
                         .setContentIntent(PendingIntent.getActivity(this@JarvisDienst, 0, Intent(this@JarvisDienst, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
                         .build(),
                 )
+                // Nach der Benachrichtigung: Die Zusammenfassung braucht bis zu 75 Sekunden und soll die Meldung nicht aufhalten.
+                if (titel != null && (vorlesen || Einstellungen.get(this@JarvisDienst).ergebnisseVorlesen)) {
+                    de.frank.jarvis.faehigkeit.Ablage.finde(this@JarvisDienst, titel)?.let { datei ->
+                        // Vorgelesen wird eine eigene kurze Zusammenfassung fürs Ohr, nicht Auftrag und Bericht; der Bericht bleibt unverändert.
+                        val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, datei.readText(), lauf.grund)
+                        // Der Live-Sprachmodus hat Vorrang: Läuft ein Gespräch, wartet die Zusammenfassung, bis es vorbei ist (höchstens 15 Minuten).
+                        val frei = kotlinx.coroutines.withTimeoutOrNull(15 * 60_000L) {
+                            while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) kotlinx.coroutines.delay(2_000L)
+                            true
+                        }
+                        // Eigene Quelle „agent:“: kurzer Tonfokus, kurze Pausen und kein Zusammenstoß mit dem Vorleseknopf der Ablage.
+                        if (frei == true) kotlinx.coroutines.withContext(Dispatchers.Main) {
+                            de.frank.jarvis.speech.Vorleser.hole(this@JarvisDienst, de.frank.jarvis.data.settings.SecureSettings(this@JarvisDienst)).sprich("agent:" + datei.name, plan.name, fassung)
+                        }
+                    }
+                }
             } finally {
                 runCatching { if (wach.isHeld) wach.release() }
             }
