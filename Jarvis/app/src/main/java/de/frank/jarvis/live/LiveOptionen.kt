@@ -225,8 +225,10 @@ object LiveOptionen {
     )
 
     /** Modell und Denkstufe für Jarvis im Modus „Jarvis direkt“; null = wie im Chat. */
-    fun jarvisModell(st: Stand): de.frank.jarvis.auth.CodexModel? =
-        if (!st.jarvisDirekt) null else st["j_modell"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.CodexModel.fromLabel(it) }
+    fun jarvisModell(st: Stand): de.frank.jarvis.auth.CodexModel? = if (!st.jarvisDirekt) null else gewaehltesModell(st)
+    /** Das unter „Denk-Modell von Jarvis“ gewählte Modell; null = wie im Chat. */
+    private fun gewaehltesModell(st: Stand): de.frank.jarvis.auth.CodexModel? =
+        st["j_modell"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.CodexModel.fromLabel(it) }
     fun jarvisDenkstufe(st: Stand): de.frank.jarvis.auth.ReasoningEffort? =
         if (!st.jarvisDirekt) null else st["j_denken"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.ReasoningEffort.fromLabel(it) }
 
@@ -273,7 +275,7 @@ object LiveOptionen {
                 listOf(
                     Wahl("gemini", "Gemini denkt selbst", "Gemini antwortet selbst und fragt Jarvis mit allen Werkzeugen nur für deine Daten. Am schnellsten. Empfehlung."),
                     Wahl("jarvis", "Jarvis direkt (experimentell)", "Gemini ist nur die Stimme: Jede Frage geht an Jarvis, der mit dem Modell aus deinem ChatGPT-Abo denkt (Modell und Denkstufe unten). " +
-                        "Gemini Live kennt keine echte Weitergabe wie GPT-Live; das läuft über die Anweisung und kann gelegentlich danebengehen. Am besten mit 3.8 Live, dort denkt Gemini nicht zusätzlich.",
+                        "Gemini Live kennt keine echte Weitergabe wie GPT-Live; das läuft über die Anweisung und kann gelegentlich danebengehen. Am besten mit 3.8 Live: Extended Thinking ruft Jarvis nur nebenbei auf und kann dabei selbst weiterreden.",
                         "Gemini-Preis wie oben, Jarvis über dein Abo"),
                 )
             }, gilt = { it.istGemini }),
@@ -286,9 +288,8 @@ object LiveOptionen {
         Option("j_denken", "Live-Gespräch", "Denkstufe von Jarvis (Jarvis direkt)",
             "Wie lange Jarvis vor der Antwort nachdenkt. Höher heißt gründlicher, aber längere Pausen im Gespräch. Kostet nichts extra, zählt aber gegen dein Abo-Kontingent.",
             "standard", { st ->
-                val m = st["j_modell"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.CodexModel.fromLabel(it) }
                 listOf(Wahl("standard", "Wie im Chat", "Dieselbe Denkstufe wie im normalen Jarvis-Chat.")) +
-                    (m?.supportedEfforts ?: de.frank.jarvis.auth.ReasoningEffort.entries.toList()).map { Wahl(it.apiValue, it.label, JARVIS_STUFE_TEXT[it.apiValue].orEmpty()) }
+                    (gewaehltesModell(st)?.supportedEfforts ?: de.frank.jarvis.auth.ReasoningEffort.entries.toList()).map { Wahl(it.apiValue, it.label, JARVIS_STUFE_TEXT[it.apiValue].orEmpty()) }
             }, gilt = { it.jarvisDirekt }),
         Option("g_denken", "Live-Gespräch", "Denkstufe (Gemini)",
             "Wie gründlich Gemini vor der Antwort nachdenkt. Mehr Denken heißt längere Pausen und mehr Ausgabe-Tokens. 3.8 Live hat keine Stufe, es denkt immer kurz.",
@@ -346,7 +347,7 @@ object LiveOptionen {
         Option("g_suche", "Live-Gespräch", "Google-Suche (Gemini)",
             "Gemini darf selbst bei Google suchen. Jarvis kann über seine eigene Recherche ohnehin nachschlagen.",
             "aus", { listOf(Wahl("aus", "Aus", "Empfehlung."), Wahl("an", "An", "", "Suchanfragen laut Google-Preisliste, im kostenlosen Kontingent begrenzt")) },
-            gilt = { it.istGemini }),
+            gilt = { it.istGemini && !it.jarvisDirekt }),
         Option("g_temperatur", "Live-Gespräch", "Kreativität (Gemini)",
             "Wie frei Gemini formuliert. Google empfiehlt für die 3er-Modelle die Vorgabe.",
             "standard", { listOf(Wahl("standard", "Vorgabe", "Empfehlung."), Wahl("0.7", "Ruhiger"), Wahl("1.3", "Lebhafter")) },

@@ -376,7 +376,8 @@ class LiveGespraech(
                 .put("properties", JSONObject().put("auftrag", JSONObject().put("type", "STRING").put("description", "Die vollständige Frage oder der Auftrag")))
                 .put("required", JSONArray().put("auftrag")))
             .apply { if (LiveOptionen.geminiNebenbei(st)) put("behavior", "NON_BLOCKING") })))
-        if (st["g_suche"] == "an") werkzeuge.put(JSONObject().put("googleSearch", JSONObject()))
+        // Jarvis direkt: Gemini sucht nicht selbst, sonst beantwortet es Wissensfragen an Jarvis vorbei.
+        if (st["g_suche"] == "an" && !st.jarvisDirekt) werkzeuge.put(JSONObject().put("googleSearch", JSONObject()))
         val erkennung = JSONObject()
             .put("startOfSpeechSensitivity", if (st["g_start"] == "hoch") "START_SENSITIVITY_HIGH" else "START_SENSITIVITY_LOW")
             .put("endOfSpeechSensitivity", if (st["g_ende"] == "hoch") "END_SENSITIVITY_HIGH" else "END_SENSITIVITY_LOW")

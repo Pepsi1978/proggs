@@ -914,7 +914,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
         val modell = de.frank.jarvis.live.LiveOptionen.jarvisModell(optionen)
         val denkstufe = de.frank.jarvis.live.LiveOptionen.jarvisDenkstufe(optionen)
-        val zeitlimit = if (denkstufe != null && denkstufe.ordinal >= de.frank.jarvis.auth.ReasoningEffort.HIGH.ordinal) 120_000L else 60_000L
+        // Die Stufe, die wirklich ans Modell geht: „Wie im Chat“ zählt mit, und ein Modell ohne die Stufe fällt wie in der Anfrage zurück.
+        val wirksameStufe = if (!optionen.jarvisDirekt) null
+            else (modell ?: einstellungen.modell).normalizeEffort(denkstufe ?: einstellungen.denkstufe)
+        val zeitlimit = if (wirksameStufe != null && wirksameStufe >= de.frank.jarvis.auth.ReasoningEffort.HIGH) 120_000L else 60_000L
         // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
         val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
         viewModelScope.launch(kennung) {

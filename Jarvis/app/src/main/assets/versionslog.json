@@ -153,6 +153,7 @@
     {"versionCode": 148, "versionName": "1.8.137", "stand": "17.10.2026, 18:15 Uhr", "notiz": "Gemini Live: Netz- oder Serveraussetzer verbinden erst mit dem kostenlosen Schlüssel neu und behalten das Gespräch, die Mitteilung zum bezahlten Schlüssel kommt erst, wenn er wirklich läuft, und bereits verbrauchte Gratis-Tokens zählen nicht als Kosten."},
     {"versionCode": 149, "versionName": "1.8.138", "stand": "17.10.2026, 18:17 Uhr", "notiz": "Der Favoritenstern vor einer Live-Stimme ist jetzt groß und gelb, damit Favoriten sofort ins Auge fallen."},
     {"versionCode": 150, "versionName": "1.8.139", "stand": "17.10.2026, 18:19 Uhr", "notiz": "Langes Drücken auf eine Live-Stimme vibriert nur noch einmal, und TalkBack sagt an, dass es den Favoriten umschaltet."},
-    {"versionCode": 151, "versionName": "1.8.140", "stand": "17.10.2026, 18:28 Uhr", "notiz": "Jarvis direkt gibt es jetzt auch bei Gemini Live; dazu wählst du Denk-Modell und Denkstufe, mit denen Jarvis im Live-Gespräch denkt, und Jarvis antwortet dort schneller, weil er nicht mehr auf das Nachlesen der Apps wartet."}
+    {"versionCode": 151, "versionName": "1.8.140", "stand": "17.10.2026, 18:28 Uhr", "notiz": "Jarvis direkt gibt es jetzt auch bei Gemini Live; dazu wählst du Denk-Modell und Denkstufe, mit denen Jarvis im Live-Gespräch denkt, und Jarvis antwortet dort schneller, weil er nicht mehr auf das Nachlesen der Apps wartet."},
+    {"versionCode": 152, "versionName": "1.8.141", "stand": "17.10.2026, 18:35 Uhr", "notiz": "Jarvis direkt im Live-Gespräch bekommt bei hoher Denkstufe genug Zeit, auch wenn sie aus dem Chat kommt; Gemini sucht in diesem Modus nicht mehr selbst bei Google."}
   ]
 }

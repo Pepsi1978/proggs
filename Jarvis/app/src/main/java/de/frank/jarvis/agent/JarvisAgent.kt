@@ -131,7 +131,10 @@ class JarvisAgent(context: Context) {
         // Ohne die Symbiose-Regeln: Sie regeln die Zusammenarbeit mit ChatGPT und haben in Franks persönlicher Auswertung nichts zu suchen.
         // Live-Gespräch „Jarvis direkt“: Das Gesamtbild liegt fertig bereit (jede App frischt ihren Bereich selbst auf); nicht erst nachlesen,
         // sonst wartet Frank bei jeder Frage bis zu 2,5 Sekunden, bevor das Denk-Modell überhaupt anfängt.
-        val gesamtbild = if (schnell) runCatching { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, frisch = false) }.getOrElse { gesamtbildMitZeitlimit() }
+        // wartenMs = 0: Die schnellen Bereiche frischen im Hintergrund für die nächste Frage auf, ohne dass diese Frage wartet;
+        // nur beim allerersten Start (Bereiche fehlen ganz) wird kurz gewartet. Abbruch wird nie verschluckt.
+        val gesamtbild = if (schnell) try { withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, wartenMs = 0L) } }
+            catch (e: CancellationException) { throw e } catch (e: Exception) { Logbuch.fehler("Gesamtbild", e); gesamtbildMitZeitlimit() }
             else if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
         val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
