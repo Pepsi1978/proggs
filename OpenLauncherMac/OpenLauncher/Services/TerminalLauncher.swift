@@ -59,9 +59,13 @@ enum TerminalLauncher {
         let result = Shell.run("/usr/bin/open", ["-a", "Terminal", terminalScript],
                                workingDirectory: workDir, timeout: 20)
         if result.exitCode != 0 {
+            let grund = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
             Logger.shared.error("TerminalLauncher", "openScript",
-                                "Terminal.app konnte nicht geoeffnet werden: \(result.stderr.trimmingCharacters(in: .whitespacesAndNewlines))",
+                                "Terminal.app konnte nicht geoeffnet werden: \(grund)",
                                 ["script": scriptPath])
+            // Werfen statt nur loggen: Sonst meldete der Jarvis-Startbefehl „gestartet“, und das Handy wartete auf eine
+            // Sitzung, die es nicht gibt (Review 17.10.2026). Der Startknopf zeigt den Fehler im Fenster.
+            throw LauncherError.message("Terminal.app konnte nicht geöffnet werden: \(grund)")
         }
         return useTmux ? "Terminal.app · tmux" : "Terminal.app"
     }
