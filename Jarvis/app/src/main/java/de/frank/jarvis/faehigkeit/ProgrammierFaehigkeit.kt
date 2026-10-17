@@ -137,7 +137,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     verteile(eintrag, null)
                     // Die Cloud-Sitzung erreicht Jarvis nur über ihre eigenen Meldungen: Nachträge reisen mit der Antwort zurück.
                     // Am PC stellt der Hook zu (sonst käme ein Nachtrag doppelt an).
-                    val nachtraege = if (eintrag.optString("ziel") == ZIEL_CLOUD) Auftragsbuch.setzeNachtraege(app, id, null, setOf("angenommen"), "zugestellt") else emptyList()
+                    // Nicht bei frage (die Rückfrage bliebe sonst unsichtbar) und nicht bei fehler: dann bleibt er für die nächste Meldung liegen.
+                    val nachtraege = if (eintrag.optString("ziel") == ZIEL_CLOUD && a.optString("stand") in listOf("laeuft", "fertig"))
+                        Auftragsbuch.setzeNachtraege(app, id, null, setOf("angenommen"), "zugestellt") else emptyList()
                     if (nachtraege.isEmpty()) Ergebnis("Gemeldet.")
                     else {
                         Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(200) }, "")
@@ -213,9 +215,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val auftrag = a.optString("auftrag").trim()
                 // Nie still eine zweite Sitzung neben einer bestehenden: ein Nachtrag gehört in die vorhandene (programmier_nachtrag).
                 if (appName.isNotEmpty() && !a.optBoolean("neu")) {
-                    val ctx = kotlinx.coroutines.currentCoroutineContext()
-                    val ausChatGpt = ctx[ProgrammierChat.GespraechKennung] == null && ctx[ProgrammierChat.AusChatGpt] != null
-                    val gespraech = ctx[ProgrammierChat.GespraechKennung]?.id ?: if (ausChatGpt) "" else ProgrammierChat.aktivesGespraech.orEmpty()
+                    val (_, gespraech) = herkunft()
                     Auftragsbuch.bestehende(app, gespraech, appName).takeIf { it.isNotEmpty() }?.let { bestehend ->
                         return@Werkzeug Ergebnis("Nicht gestartet: Zu ${if (gespraech.isNotEmpty()) "diesem Gespräch" else "dieser App"} gibt es schon " +
                             (if (bestehend.size == 1) "einen Auftrag" else "${bestehend.size} Aufträge") + ":\n" + bestehend.joinToString("\n") { "- " + Auftragsbuch.kurzZeile(it) } +
@@ -313,6 +313,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         verteile(eintrag, frage)
     }
 
+    /** Woher der Aufruf kommt: aus ChatGPT/MCP (ohne Jarvis-Gespräch) und das Jarvis-Gespräch dazu (leer = keins). */
+    private suspend fun herkunft(): Pair<Boolean, String> {
+        val ctx = kotlinx.coroutines.currentCoroutineContext()
+        val ausChatGpt = ctx[ProgrammierChat.GespraechKennung] == null && ctx[ProgrammierChat.AusChatGpt] != null
+        return ausChatGpt to (ctx[ProgrammierChat.GespraechKennung]?.id ?: if (ausChatGpt) "" else ProgrammierChat.aktivesGespraech.orEmpty())
+    }
+
     /** Nachträge sind in der Sitzung angekommen: Stand zugestellt, die Sitzung arbeitet wieder, ein Satz ins Gespräch (je Nachtrag nur einmal). */
     private fun alsZugestellt(auftragId: String, ids: Set<String>, schritt: String) {
         val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler"), "zugestellt")
@@ -326,9 +333,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * andere Sitzung. Am PC über den Relay an den Hook genau dieser Sitzung, in der Cloud mit der nächsten Fortschrittsmeldung.
      */
     private suspend fun nachtrag(auftragId: String, text: String): Ergebnis {
-        val ctx = kotlinx.coroutines.currentCoroutineContext()
-        val ausChatGpt = ctx[ProgrammierChat.GespraechKennung] == null && ctx[ProgrammierChat.AusChatGpt] != null
-        val gespraech = ctx[ProgrammierChat.GespraechKennung]?.id ?: if (ausChatGpt) "" else ProgrammierChat.aktivesGespraech.orEmpty()
+        val (ausChatGpt, gespraech) = herkunft()
         if (text.length < 3) return Ergebnis("Der Nachtrag ist leer. Formuliere ihn vollständig aus.", fehler = true)
         val eintrag = if (auftragId.isNotEmpty()) {
             Auftragsbuch.finde(app, auftragId) ?: return Ergebnis("Einen Programmierauftrag $auftragId kennt Jarvis nicht. Nichts wurde gesendet. " +
@@ -347,7 +352,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val id = eintrag.optString("id")
         val appName = eintrag.optString("app")
-        eintrag.optJSONObject("offeneFrage")?.let { frage ->
+        // Nur solange sie wirklich wartet: Eine im Terminal beantwortete oder verfallene Rückfrage bleibt als offeneFrage stehen
+        // und sperrte sonst jeden Nachtrag an diesen Auftrag für immer.
+        eintrag.optJSONObject("offeneFrage")?.takeIf { eintrag.optString("stand") == "frage" }?.let { frage ->
             return Ergebnis("Die Sitzung von Auftrag $id ($appName) wartet gerade auf eine Antwort zu ihrer Rückfrage (frage_id ${frage.optString("frage_id")}): " +
                 Auftragsbuch.frageText(frage) + " Ist das die Antwort darauf, nimm programmier_antwort. Ist es ein zusätzlicher Wunsch, beantworte zuerst die Rückfrage " +
                 "und schick den Nachtrag danach. Nichts wurde gesendet.", fehler = true)
@@ -768,7 +775,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         (if (still) " (seit über einer halben Stunde keine Meldung)" else "") + " · zuletzt " +
                         ZEIT.format(Instant.ofEpochMilli(e.optLong("zeit")).atZone(ZoneId.systemDefault())) + ": " + e.optString("schritt").replace('\n', ' ').take(200) +
                         (e.optJSONObject("offeneFrage")?.optString("frage_id")?.takeIf { it.isNotEmpty() }?.let { " · frage_id $it (Antwort mit programmier_antwort)" } ?: "") +
-                        (e.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).count { l.optJSONObject(it)?.optString("stand") in listOf("angenommen", "zugestellt") } }
+                        (e.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).count { l.optJSONObject(it)?.optString("stand") in listOf("angenommen", "zugestellt", "fehler") } }
                             ?.takeIf { it > 0 }?.let { " · $it Nachtrag/Nachträge noch nicht bearbeitet" } ?: "")
                 }
         }

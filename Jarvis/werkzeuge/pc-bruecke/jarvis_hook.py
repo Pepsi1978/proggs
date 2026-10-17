@@ -257,7 +257,9 @@ def hole_nachtraege(warten: int) -> list[dict]:
     """Nachträge zu diesem Auftrag vom Relay; mit [warten] Long-Polling. Leer = keiner (oder Relay nicht erreichbar)."""
     code, daten = rufe(f"/pc/nachtrag?auftrag_id={urllib.parse.quote(AUFTRAG)}&warten={warten}", zeitlimit=warten + 10)
     if code != 200:
-        if code not in (204, 404):
+        # Beim Long-Polling nie ohne Pause neu fragen: 404 (Relay ohne Endpunkt, falsches Token) käme sofort zurück und liefe
+        # sonst bis zu zwölf Stunden im Kreis gegen den Server.
+        if warten and code != 204:
             time.sleep(3)
         return []
     return [n for n in daten.get("nachtraege") or [] if isinstance(n, dict) and n.get("nachtrag_id") and n.get("text")]
@@ -274,15 +276,23 @@ def beanspruche(liste: list[dict]) -> list[dict]:
         alt = [n["nachtrag_id"] for n in liste if n["nachtrag_id"] in z["nachtraege"]]
         z["nachtraege"] = (z["nachtraege"] + [n["nachtrag_id"] for n in neu])[-200:]
         schreib_zustand(z)
+    # Die Quittung darf die Übergabe nie verhindern: Die neuen sind schon als übergeben vermerkt und kämen sonst nie an.
+    # Scheitert sie, bietet der Relay sie wieder an, und die nächste Abfrage quittiert sie still nach.
     if alt:
-        melde("nachtrag", "", nachtrag_ids=alt)
+        try:
+            melde("nachtrag", "", nachtrag_ids=alt)
+        except Exception as fehler:
+            schreib(f"Nachquittung: {fehler}")
     return neu
 
 
 def uebergib(neu: list[dict]) -> str:
     """Quittiert die Übergabe (Relay und Jarvis) und liefert den Text, mit dem die Sitzung weiterarbeitet."""
     kurz = " · ".join(n["text"].replace("\n", " ")[:300] for n in neu)
-    melde("nachtrag", "📨 Nachtrag in der Sitzung angekommen: " + kurz, nachtrag_ids=[n["nachtrag_id"] for n in neu])
+    try:
+        melde("nachtrag", "📨 Nachtrag in der Sitzung angekommen: " + kurz, nachtrag_ids=[n["nachtrag_id"] for n in neu])
+    except Exception as fehler:
+        schreib(f"Quittung der Übergabe: {fehler}")
     teile = "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in neu)
     return (f"Frank hat über Jarvis {'einen Nachtrag' if len(neu) == 1 else str(len(neu)) + ' Nachträge'} zu diesem Programmierauftrag "
             f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "

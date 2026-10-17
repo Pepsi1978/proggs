@@ -557,6 +557,9 @@ class PcBruecke:
         offen = self.nachtraege.get(auftrag_id) or []
         if not offen:
             return web.Response(status=204)
+        if warten:
+            # Der Warter uebergibt jetzt und endet: Er wartet nicht mehr, bis er (falls nur schon Uebergebenes kam) neu abfragt.
+            self.warter.pop(auftrag_id, None)
         return web.json_response({"nachtraege": offen}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
 
     def da(self) -> bool:
