@@ -1,6 +1,7 @@
 # Android Voice-Assistant-Auslösung + Wake-Word + Mikrofon — Best Practices
 
-**Stand:** 2026-06-11 (Best-Practices-Recherchelauf, 7 Researcher, offizielle Quellen zuerst).
+**Stand:** 2026-10-17 (Erstlauf 2026-06-11, 7 Researcher; §2.3–§2.5 2026-10-17, 10-Researcher-Schwarm, Jarvis 1.8.130,
+sherpa-onnx 1.13.8, ORT 1.31, Galaxy Fold 8).
 **Anlass:** App, die per Weckwort den ChatGPT-Sprachmodus startet (Wake-Word → Assist-Geste).
 **Versions-Anker:**
 - **Zielgeraet:** Samsung Galaxy S23 Ultra, **One UI 6.1.1 / Android 14 (API 34)**.
@@ -34,6 +35,9 @@
 | 9 | Wake-Word-App `setPrivacySensitive` | NIEMALS `true` (sperrt ChatGPT vom Mic aus) | §4.2 |
 | 10 | Fremde Voice-Session WIEDER beenden | `KEYCODE_HEADSETHOOK` an ChatGPTs Media-Session (`AudioManager.dispatchMediaKeyEvent`); Erkennung via `mode == MODE_IN_COMMUNICATION`, nicht via `micSilenced` | §1.4 |
 | 11 | Dauer-Lauschen ohne Akkufresser/Waerme | Zweistufige Pipeline: WebRTC-VAD (`VERY_AGGRESSIVE`!) gate't die ASR; Pre-Roll ~300 ms; Silence-Hangover > ASR-Endpoint (~800 ms); Gate-Statistik-Sonde ins Log | §6 |
+| 12 | Eigene Phrase mit sherpa-KWS auf Recall trimmen | `numTrailingBlanks=0`, `maxActivePaths=8`, Schwelle/Boost je Zeile, Teilphrase ohne Auftakt + Lautvarianten (nur Tokens aus `tokens.txt`), leise Rufe vor dem Spotter in Float verstaerken (Begrenzer, nicht im Laerm) | §2.3 |
+| 13 | Weckwort + Sprecherverifikation fuer kurze Rufe | Anlernen auch schnell/leise mit lockerem Spotter; Mehrfach-Templates (max(Zentroid, Top-3)); Schwelle je Empfindlichkeit + Sprachdauer; Dauer protokollieren | §2.4 |
+| 14 | Wake-Word fuer deutschen Sprecher langfristig | Open-Vocab-EN-Modell bleibt Notloesung: eigenes Modell (livekit-wakeword / openWakeWord) mit ECHTEN Aufnahmen trainieren, gegen Hold-out messen; ASR-Zweitstufe (Canary-180M-Flash, sherpa) optional | §2.5 |
 
 ---
 
@@ -153,6 +157,39 @@ Englische Modelle (z.B. sherpa-onnx EN-Gigaspeech) wecken empirisch teils schwac
 Daher: Aufweck-Rate fuers konkrete Weckwort LIVE testen, `keywords_threshold` + `keywords_score`
 (Boosting) tunen, ggf. Modell wechseln. Nicht blind auf Default-Threshold 0.5 verlassen.
 
+### 2.3 sherpa-onnx KWS auf Recall trimmen (Jarvis 1.8.130, 17.10.2026)
+- **Kotlin-Vorgaben ueberschreiben** (`offiziell`, AAR 1.13.8 per javap): `numTrailingBlanks=0` (Vorgabe 2 verlangt
+  eine Pause hinter der Phrase), `maxActivePaths=8` (Vorgabe 4), `keywordsThreshold`/`keywordsScore` auf die eigenen
+  Werte. Almanach §15.
+- Zeilen-Syntax `tokens :boost #schwelle`, Varianten mit `/`; nie `#0` (faellt auf global 0,25). Varianten: Teilphrase
+  ohne Auftakt, deutsche Lautung in englischer Schreibung („HANDY" → HENDY/HENDI). Nur Tokens aus `tokens.txt`.
+- Offizielle KWS-Modelle (Stand 10/2026): nur gigaspeech-3.3M (EN, BPE), wenetspeech-3.3M (ZH) und **zh-en-3M-2025-12-20**
+  (EN ueber Phoneme) — A/B-Kandidat fuer Akzent. Kein deutsches KWS-Modell. (`extern`: github.com/k2-fsa/sherpa-onnx/releases/tag/kws-models)
+- Leise Sprache: Log-Mel ist NICHT pegelinvariant, sherpa hat kein CMVN → vor dem Spotter in Float verstaerken
+  (Ziel aus dem Rauschboden, max ~x6, Begrenzer sofort, Anstieg langsam), im Laerm nicht. AudioSource
+  `VOICE_RECOGNITION` behalten (CDD 5.4.2: kein AGC/NS), keine `audiofx`-AGC. openWakeWord-Eingang nicht anfassen (int16-Skala).
+- Bug #3990 (Reset nach Stille) abfangen: Strom nach eigener Stille-Erkennung neu anlegen (Almanach §16).
+
+### 2.4 Sprecherverifikation fuer kurze Weckwort-Rufe (CAM++, 17.10.2026)
+- Kurze Aeusserungen (< 1,5 s) liefern niedrigere Kosinuswerte; feste Schwellen um 0,6 sperren den Besitzer aus.
+  ModelScope-Beispiel fuer CAM++: 0,31. Apple „Hey Siri": mehrere Einzel-Templates, Ergaenzung aus akzeptierten Rufen,
+  Grauzone mit Nachpruefung an der Folge-Anfrage. (`extern`: machinelearning.apple.com/research/personalized-hey-siri)
+- Rezept: Wert = max(Kosinus zum Zentroid, Mittel Top-3 Einzelproben); dieselbe Funktion fuer Leave-one-out-Schwelle;
+  Abzug je Empfindlichkeit und Sprachdauer; Boden ~0,40. Anlernen mit lockerem Spotter + Varianten, damit schnelle/leise
+  Proben ins Profil kommen. Sprachdauer + Wert protokollieren und Schwellen aus Besitzer-Quantilen nachziehen.
+- Groessere SV-Modelle (ERes2NetV2, 71 MB, ~7x Rechenlast) nur per A/B am eigenen Protokoll; WeSpeaker `_LM`-Varianten meiden.
+
+### 2.5 Langfristig: eigenes Weckwort-Modell (Recherche 17.10.2026)
+- Einziger neutraler Mehr-Engine-Test (Jaco, EN): openWakeWord/Porcupine ~3–6 % FRR bei 1 FA/h, microWakeWord 34 %.
+  Keine unabhaengigen Zahlen fuer DE-Sprecher. Home Assistant senkte FRR mit echten Mehrsprecher-Aufnahmen 18 % → 5 %.
+- **livekit-wakeword** (Apache-2.0): gleiche Mel/Embedding-Modelle wie openWakeWord, ONNX-Export passt in dieselbe
+  Kotlin-Pipeline (Klassifikator-Eingabe in Netron pruefen), 30 Sprachen ueber VoxCPM-TTS; Training auf GPU/WSL2.
+  Eigene Aufnahmen als Positive + Hold-out, mindestens 3 h Umgebungsaudio als Negativ messen.
+- Android-Hotword-API (`HotwordDetectionService`) bleibt fuer Dritt-Apps gesperrt (`MANAGE_HOTWORD_DETECTION`);
+  EU-DMA-Entscheidung 16.07.2026: Oeffnung fuer Dritte ab Android 18 bis 01.08.2027. Porcupine: kein Free/Privat-Tarif mehr.
+- ASR als Zweitstufe: Canary-180M-Flash int8 (DE-WER ~4,8, ~198 MB, CC-BY-4.0) laeuft in sherpa 1.13.8; Whisper tiny/base
+  fuer DE zu schwach; Vosk small-de nur Notloesung.
+
 ## 3. Dauer-Mic-Foreground-Service (Android 14 / One UI 6)
 
 ### 3.1 Manifest (Pflicht)
@@ -253,6 +290,7 @@ AudioRecord (16 kHz mono, 100-ms-Chunks)
 |----------------------|-------------------------------|
 | §1 Realistische Auslöse-Wege | #1 (ACTION_ASSIST unzuverlässig), #2 (INJECT_EVENTS), #3 (Shizuku-Persistenz) |
 | §2 Engine-Wahl + Wake-Rate-Test | #7 (schwache Wake-Rate) |
+| §2.3 KWS-Tuning, §2.4 SV fuer kurze Rufe | #15 (Kotlin-Vorgaben), #16 (Reset nach Stille), #17 (Besitzer abgewiesen) |
 | §3 FGS korrekt + Samsung-Setup | #4 (FGS-Type), #5 (Hintergrund-Start), #6 (Samsung killt) |
 | §4 Mic-Übergabe | #8 (HAL-Delay), #9 (setPrivacySensitive) |
 | §5 ChatGPT-Einstiegspunkte | #10 (kein Deep-Link/Hotword) |

@@ -4,8 +4,9 @@
 > ausloest, Wake-Word-Daueraufnahme, Foreground-Mic-Service, Mikrofon-Uebergabe zwischen Apps,
 > Shizuku/KEYCODE_ASSIST, Default-Assistant-Integration.
 >
-> **Stand:** 2026-06-12 (Erstrecherche 2026-06-11, 7-Researcher-Schwarm; §13/§14 ergaenzt
-> 2026-06-12 nach Low-Power-Recherche + Live-Vorfall VoiceKey 0.6.0).
+> **Stand:** 2026-10-17 (Erstrecherche 2026-06-11, 7-Researcher-Schwarm; §13/§14 ergaenzt
+> 2026-06-12 nach Low-Power-Recherche + Live-Vorfall VoiceKey 0.6.0; §15–§17 2026-10-17, 10-Researcher-Schwarm
+> + Jarvis-Weckwort-Protokoll, sherpa-onnx 1.13.8 / ORT 1.31 / Galaxy Fold 8).
 > **Zielgeraet-Anker:** Samsung Galaxy S23 Ultra, One UI 6.1.1 / Android 14 (API 34).
 > ChatGPT-App ab v1.2025.070. Wake-Word: sherpa-onnx KWS / openWakeWord.
 >
@@ -34,6 +35,9 @@
 | 13 | Dauer-Lauschen frisst Akku / Handy wird warm | ASR (Vosk) nie 24/7 nackt laufen lassen — WebRTC-VAD-Gate davor, Mode `VERY_AGGRESSIVE` (NORMAL laesst Raum-Rauschen durch = Gate dauernd offen) | §13 |
 | 13b | VAD-Gate da, aber "Wake + beenden" geht waehrend Session nicht mehr | Gate WAEHREND fremder Session aussetzen (`micSilenced`/`MODE_IN_COMMUNICATION`) — gedaempftes Session-Audio wertet das Gate sonst als Stille | §13b |
 | 14 | Wake-Word-Engine auswaehlen (2026) | Porcupine-Free-Tier ENDET 30.06.2026; sherpa-KWS hat kein DE-Modell; openWakeWord braucht Training pro Wort; fuer frei waehlbare Woerter: Vosk-Grammatik + VAD-Gate | §14 |
+| 15 | sherpa-KWS (Kotlin) erkennt schnell gesprochene Phrase nie, langsam schon | Kotlin-`KeywordSpotterConfig` hat `numTrailingBlanks=2`, `maxActivePaths=4`: explizit `numTrailingBlanks=0`, `maxActivePaths=8` setzen | §15 |
+| 16 | sherpa-KWS 1.13.8 verpasst ~10 % der Rufe direkt nach einer Pause | Bug #3990 (Auto-Reset nach 1,5 s Stille verwirft Encoder-Zustand): Strom nach eigener Stille-Erkennung selbst neu anlegen, sonst zwei versetzte Stroeme | §16 |
+| 17 | Weckwort feuert, aber Sprecherpruefung weist schnelle/leise Rufe des Besitzers ab | Anlernen nimmt nur deutliche Proben (Spotter beim Anlernen zu streng) + Schwelle nur aus Zentroid; Empfindlichkeit muss auch die Stimm-Schwelle senken | §17 |
 
 ---
 
@@ -236,6 +240,43 @@ waehlbaren (auch deutschen) Woertern.
 **Fix/Entscheidung:** Fuer frei waehlbare Woerter: zweistufige Pipeline VAD→Vosk-Grammatik (§13).
 Nur bei festem Wortschatz lohnt openWakeWord (Training) als sparsamste freie Engine.
 **Versionen:** Stand 2026-06-12.
+
+## §15 — sherpa-onnx KWS: Kotlin-Vorgaben verhindern schnell gesprochene Weckwoerter ⭐ SELBST ERLEBT (Jarvis 1.8.130)
+**Symptom:** Eigene Weckwort-Phrase greift nur langsam und deutlich gesprochen; schnell gesprochen oder direkt
+mit dem Befehl weitergeredet kommt kein Treffer, auch bei `#0.06` und Boost 3.
+**Root Cause:** Die Kotlin-API (`com.k2fsa.sherpa.onnx.KeywordSpotterConfig`, 1.13.8, per `javap` geprueft) setzt
+`numTrailingBlanks = 2`, `maxActivePaths = 4`, `keywordsScore = 1.5`, `keywordsThreshold = 0.25`. Mit 2 Leer-Rahmen
+meldet der Spotter die Phrase erst nach einer Pause dahinter; 4 Pfade werfen unsichere (akzentbehaftete) Aussprache
+frueh aus dem Beam.
+**Fix:** `numTrailingBlanks = 0` (Fallback 1, falls Doppeltreffer), `maxActivePaths = 8`, `keywordsThreshold` und
+`keywordsScore` auf die eigenen Werte (sonst faellt eine Zeile ohne `#`/`:` auf 0,25 zurueck). Entprellung ueber
+`spotter.reset(stream)` direkt nach dem Treffer. Jedes Token einer Variante muss in `tokens.txt` stehen, sonst ist
+der ganze Keyword-Strom leer (Kotlin `createStream` prueft das nicht).
+**Versionen:** sherpa-onnx 1.13.8 (Kotlin-AAR). **Quelle:** sherpa-onnx `kotlin-api/KeywordSpotter.kt`;
+`keyword-spotter-transducer-impl.h`; Issues #634, #1213, #2678.
+
+## §16 — sherpa-onnx 1.13.8: Auto-Reset nach Stille verschluckt Rufe nach einer Pause
+**Symptom:** Etwa jedes zehnte Weckwort, das nach einer Sprechpause kommt, wird nicht erkannt.
+**Root Cause:** `keyword-spotter-transducer-impl.h` setzt den Strom nach ~1,5 s Stille selbst zurueck und verwirft
+dabei auch die Encoder-Zustaende; beginnt der Ruf genau dann, fehlt sein Anfang (Repro: 59 von 65 erkannt).
+**Fix:** Fix-PR #3994 offen (Stand 17.10.2026, nicht im Release). Workaround: Strom selbst neu anlegen, wenn die
+eigene Stille-Erkennung wieder Ton meldet (vor dem Nachholen des Vorlaufs); vollstaendig: zwei um ~1 s versetzte
+Stroeme parallel und Treffer zusammenfuehren (doppelte KWS-Last).
+**Versionen:** sherpa-onnx 1.13.8. **Quelle:** github.com/k2-fsa/sherpa-onnx/issues/3990, /pull/3994.
+
+## §17 — Sprecherverifikation (CAM++) weist kurze Rufe des Besitzers ab ⭐ SELBST ERLEBT (Jarvis, 15.–17.10.2026)
+**Symptom:** Protokoll: Weckwort erkannt, Stimm-Aehnlichkeit 0,46–0,598 bei Schwelle 0,6 → abgewiesen; der Nutzer muss
+dreimal rufen. „Empfindlichkeit hoch" aendert nichts.
+**Root Cause:** (1) Beim Anlernen lief der Spotter strenger und ohne Aussprache-Varianten → nur deutliche, lange
+Proben im Profil, die Leave-one-out-Schwelle liegt hoch. (2) Vergleich nur mit dem Zentroid. (3) Bei 0,8–1,2 s
+Sprache liefert CAM++ systematisch niedrigere Kosinuswerte. (4) Die Empfindlichkeit wirkte nur auf das KWS, dessen
+Schwelle mit Stimmerkennung schon am Anschlag stand.
+**Fix:** Anlernen mit Varianten und niedrigster Schwelle; Wert = max(Zentroid-Kosinus, Mittel der Top-3
+Einzelproben), dieselbe Funktion fuer Schwelle und Pruefung; Abzug je Empfindlichkeit (0/0,03/0,07/0,10) und bis
+0,04 fuer < 1,2 s Sprache; Boden 0,40. Sprachdauer ins Protokoll schreiben, um nachzujustieren.
+**Versionen:** CAM++ `3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced`, sherpa-onnx 1.13.8.
+**Quelle:** Jarvis `weckwort/Stimmprofil.kt`; machinelearning.apple.com/research/personalized-hey-siri (Mehrfach-Templates);
+ModelScope CAM++-Doku (Beispielschwelle 0,31).
 
 
 ---

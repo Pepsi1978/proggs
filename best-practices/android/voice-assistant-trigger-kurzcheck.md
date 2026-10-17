@@ -21,3 +21,6 @@
 | 9 | Wake-Word-App `setPrivacySensitive` | NIEMALS `true` (sperrt ChatGPT vom Mic aus) | §4.2 |
 | 10 | Fremde Voice-Session WIEDER beenden | `KEYCODE_HEADSETHOOK` an ChatGPTs Media-Session (`AudioManager.dispatchMediaKeyEvent`); Erkennung via `mode == MODE_IN_COMMUNICATION`, nicht via `micSilenced` | §1.4 |
 | 11 | Dauer-Lauschen ohne Akkufresser/Waerme | Zweistufige Pipeline: WebRTC-VAD (`VERY_AGGRESSIVE`!) gate't die ASR; Pre-Roll ~300 ms; Silence-Hangover > ASR-Endpoint (~800 ms); Gate-Statistik-Sonde ins Log | §6 |
+| 12 | Eigene Phrase mit sherpa-KWS auf Recall trimmen | `numTrailingBlanks=0`, `maxActivePaths=8`, Schwelle/Boost je Zeile, Teilphrase ohne Auftakt + Lautvarianten (nur Tokens aus `tokens.txt`), leise Rufe vor dem Spotter in Float verstaerken (Begrenzer, nicht im Laerm) | §2.3 |
+| 13 | Weckwort + Sprecherverifikation fuer kurze Rufe | Anlernen auch schnell/leise mit lockerem Spotter; Mehrfach-Templates (max(Zentroid, Top-3)); Schwelle je Empfindlichkeit + Sprachdauer; Dauer protokollieren | §2.4 |
+| 14 | Wake-Word fuer deutschen Sprecher langfristig | Open-Vocab-EN-Modell bleibt Notloesung: eigenes Modell (livekit-wakeword / openWakeWord) mit ECHTEN Aufnahmen trainieren, gegen Hold-out messen; ASR-Zweitstufe (Canary-180M-Flash, sherpa) optional | §2.5 |

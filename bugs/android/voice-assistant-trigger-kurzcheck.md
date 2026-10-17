@@ -23,3 +23,6 @@
 | 13 | Dauer-Lauschen frisst Akku / Handy wird warm | ASR (Vosk) nie 24/7 nackt laufen lassen — WebRTC-VAD-Gate davor, Mode `VERY_AGGRESSIVE` (NORMAL laesst Raum-Rauschen durch = Gate dauernd offen) | §13 |
 | 13b | VAD-Gate da, aber "Wake + beenden" geht waehrend Session nicht mehr | Gate WAEHREND fremder Session aussetzen (`micSilenced`/`MODE_IN_COMMUNICATION`) — gedaempftes Session-Audio wertet das Gate sonst als Stille | §13b |
 | 14 | Wake-Word-Engine auswaehlen (2026) | Porcupine-Free-Tier ENDET 30.06.2026; sherpa-KWS hat kein DE-Modell; openWakeWord braucht Training pro Wort; fuer frei waehlbare Woerter: Vosk-Grammatik + VAD-Gate | §14 |
+| 15 | sherpa-KWS (Kotlin) erkennt schnell gesprochene Phrase nie, langsam schon | Kotlin-`KeywordSpotterConfig` hat `numTrailingBlanks=2`, `maxActivePaths=4`: explizit `numTrailingBlanks=0`, `maxActivePaths=8` setzen | §15 |
+| 16 | sherpa-KWS 1.13.8 verpasst ~10 % der Rufe direkt nach einer Pause | Bug #3990 (Auto-Reset nach 1,5 s Stille verwirft Encoder-Zustand): Strom nach eigener Stille-Erkennung selbst neu anlegen, sonst zwei versetzte Stroeme | §16 |
+| 17 | Weckwort feuert, aber Sprecherpruefung weist schnelle/leise Rufe des Besitzers ab | Anlernen nimmt nur deutliche Proben (Spotter beim Anlernen zu streng) + Schwelle nur aus Zentroid; Empfindlichkeit muss auch die Stimm-Schwelle senken | §17 |
