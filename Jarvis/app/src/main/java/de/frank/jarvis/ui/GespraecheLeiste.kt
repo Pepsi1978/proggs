@@ -36,17 +36,15 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,16 +72,10 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
     val raum = rememberCoroutineScope()
     BackHandler(enabled = schublade.isOpen) { raum.launch { schublade.close() } }
     LaunchedEffect(schublade.isOpen) { if (schublade.isOpen) vm.sitzungenLaden() }
-    // Ändert sich beim Start die Fensterbreite (etwa beim Öffnen aus der Sprachblase), bleibt die geschlossene Leiste sonst
-    // mit dem alten Versatz stehen und ragt ein Stück ins Bild. Liegt sie geschlossen und ruhig nicht ganz draußen, zurückschnappen.
-    var leistenBreite by remember { mutableIntStateOf(0) }
-    LaunchedEffect(schublade) {
-        snapshotFlow {
-            val breite = leistenBreite
-            val versatz = schublade.currentOffset
-            breite > 0 && !versatz.isNaN() && versatz > -breite + 1f &&
-                schublade.currentValue == DrawerValue.Closed && schublade.targetValue == DrawerValue.Closed && !schublade.isAnimationRunning
-        }.collect { ragtHinein -> if (ragtHinein) runCatching { schublade.snapTo(DrawerValue.Closed) } }
+    // Zurück in der App (etwa nach einem Gespräch über die Sprachblase): eine geschlossene Leiste, die mitten in ihrer
+    // Animation angehalten wurde, ganz hinausschieben, damit kein Streifen am Rand stehen bleibt.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        if (schublade.currentValue == DrawerValue.Closed && schublade.targetValue == DrawerValue.Closed) raum.launch { schublade.snapTo(DrawerValue.Closed) }
     }
 
     ModalNavigationDrawer(
@@ -125,13 +117,11 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
             }
         },
         drawerContent = {
-            Box(Modifier.onSizeChanged { leistenBreite = it.width }) {
-                Leiste(
-                    vm,
-                    aufNeu = { vm.neuesGespraech(); raum.launch { schublade.close() } },
-                    aufWahl = { vm.sitzungOeffnen(it); raum.launch { schublade.close() } },
-                )
-            }
+            Leiste(
+                vm,
+                aufNeu = { vm.neuesGespraech(); raum.launch { schublade.close() } },
+                aufWahl = { vm.sitzungOeffnen(it); raum.launch { schublade.close() } },
+            )
         },
         content = inhalt,
     )
@@ -282,6 +272,9 @@ private fun gruppiert(sitzungen: List<Sitzung>): List<Pair<String, List<Sitzung>
     }.toList()
 }
 
-/** Schublade für den Jarvis-Reiter, über Reiterwechsel hinweg dieselbe. */
+/**
+ * Schublade für den Jarvis-Reiter, über Reiterwechsel hinweg dieselbe. Neu angelegt, sobald sich die Fensterbreite ändert (Start aus der Sprachblase, Fold auf- oder zuklappen): Material3 1.3
+ * verankert die Leiste sonst nach der alten Breite und lässt sie ein Stück im Bild oder halb geöffnet stehen.
+ */
 @Composable
-fun rememberGespraecheSchublade(): DrawerState = rememberDrawerState(DrawerValue.Closed)
+fun rememberGespraecheSchublade(fensterBreite: Int): DrawerState = remember(fensterBreite) { DrawerState(DrawerValue.Closed) }
