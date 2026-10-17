@@ -500,6 +500,9 @@ Jarvis und die angebundenen Apps müssen mit demselben Schlüssel signiert sein 
 
 Agenten und die Tagesauswertung bekommen das Werkzeug nicht (`JarvisAgent.versuche`).
 
+**Mac:** Einrichtung der ganzen Zusammenarbeit (Plugin in allen Programmen, Mac-Brücke, Hooks, adb über WLAN und WireGuard,
+apk-update) per Prompt: `JARVIS-MACOS-PROMPT.md` in Claude Code auf dem Mac einfügen.
+
 ### Fortschritt und Rückfragen im Jarvis-Chat
 
 - Startet Jarvis einen Auftrag im eigenen Chat, merkt sich das Auftragsbuch das Gespräch (`ProgrammierChat.aktivesGespraech`).
