@@ -115,6 +115,7 @@ fun AufgabenApp(vm: AppViewModel, activity: ComponentActivity) {
                     is Bildschirm.Bearbeiten -> BearbeitenBildschirm(vm)
                     Bildschirm.Einstellungen -> EinstellungenBildschirm(vm, activity)
                     is Bildschirm.Fokus -> FokusBildschirm(vm, b.id)
+                    Bildschirm.Kalender -> KalenderBildschirm(vm)
                 }
             }
             Konfetti(vm.konfetti)

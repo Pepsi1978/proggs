@@ -76,6 +76,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -219,7 +221,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
                 Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40,
                 leer = b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(), automatik = suche.isBlank(),
-                aktionen = { VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
+                aktionen = { KalenderKnopf(vm, f.primaer); VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
                 b.heuteOffen.forEach { a -> Karte(vm, a, heute, zustand) }
@@ -234,7 +236,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 "morgen", "Morgen", Icons.Rounded.WbTwilight, f.sekundaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
                 Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80,
                 leer = b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty(), automatik = suche.isBlank(),
-                aktionen = { VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
+                aktionen = { KalenderKnopf(vm, f.sekundaer); VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
                 if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis(Icons.Rounded.EventNote, "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
                 b.morgenOffen.forEach { a -> Karte(vm, a, heute, zustand) }
@@ -252,9 +254,11 @@ fun ListeBildschirm(vm: AppViewModel) {
             )
             Prioritaet.entries.forEachIndexed { i, p ->
                 val liste = b.nachPrio[p].orEmpty()
+                val farbe = if (p == Prioritaet.SPAETER) f.textLeise else f.prio(p)
                 Sektion(
-                    p.name, p.anzeige, info[p]!!.first, if (p == Prioritaet.SPAETER) f.textLeise else f.prio(p), liste.size, zustand, Ziel.Prio(p),
+                    p.name, p.anzeige, info[p]!!.first, farbe, liste.size, zustand, Ziel.Prio(p),
                     untertitel = info[p]!!.second, verzoegerung = 120 + i * 40, leer = liste.isEmpty(), automatik = suche.isBlank(),
+                    aktionen = { KalenderKnopf(vm, farbe); VorlesenKnopf(vm, "bereich_${p.name}") { vm.bereichVorlesen(p.name, p.anzeige, liste) } },
                 ) {
                     if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) Icons.Rounded.Mic else Icons.Rounded.SwipeDown, if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")
                     liste.forEach { a -> Karte(vm, a, heute, zustand) }
@@ -263,10 +267,12 @@ fun ListeBildschirm(vm: AppViewModel) {
             if (b.demnaechst.isNotEmpty()) Sektion(
                 "demnaechst", "Demnächst", Icons.Rounded.Event, f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
                 untertitel = "Nach morgen geplant", verzoegerung = 300,
+                aktionen = { KalenderKnopf(vm, f.tertiaer); VorlesenKnopf(vm, "bereich_demnaechst") { vm.bereichVorlesen("demnaechst", "Demnächst", b.demnaechst, mitDatum = true) } },
             ) { b.demnaechst.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             if (b.erledigt.isNotEmpty()) Sektion(
                 "erledigt", "Erledigt", Icons.Rounded.TaskAlt, f.erfolg, b.erledigt.size, zustand, Ziel.Erledigt,
                 untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", startOffen = false, verzoegerung = 340,
+                aktionen = { KalenderKnopf(vm, f.erfolg); VorlesenKnopf(vm, "bereich_erledigt") { vm.bereichVorlesen("erledigt", "Erledigt", b.erledigt) } },
             ) { b.erledigt.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             Spacer(Modifier.height(140.dp))
             Spacer(Modifier.navigationBarsPadding())
@@ -325,8 +331,19 @@ private fun Karte(vm: AppViewModel, a: Aufgabe, heute: Long, zustand: ZiehZustan
     }
 }
 
+/** Öffnet den Vier-Wochen-Kalender; sitzt in jedem Bereich direkt vor dem Lautsprecher. */
 @Composable
-private fun VorlesenKnopf(vm: AppViewModel, schluessel: String, aktion: () -> Unit) {
+private fun KalenderKnopf(vm: AppViewModel, farbe: Color) {
+    val f = LocalFarben.current
+    Box(Modifier.size(44.dp).antippen { vm.kalenderOeffnen() }, contentAlignment = Alignment.Center) {
+        Box(Modifier.size(34.dp).glas(f, 99.dp, 0.5f, farbe.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.CalendarMonth, "Kalender öffnen", tint = farbe, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+@Composable
+internal fun VorlesenKnopf(vm: AppViewModel, schluessel: String, aktion: () -> Unit) {
     val f = LocalFarben.current
     val spricht = vm.sprichtId == schluessel
     Box(Modifier.size(40.dp).antippen(aktion = aktion), contentAlignment = Alignment.Center) {
@@ -342,7 +359,8 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
     // gleich groß, rechtsbündig zur rechten Kante der Szene (14 dp Rand). Auf schmalen Bildschirmen schrumpfen die Knöpfe.
     BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp)) {
         val titelBreite = 98.dp
-        val g = ((maxWidth - titelBreite - 6.dp * 5) / 6).coerceIn(30.dp, 44.dp)
+        val fokusPlus = 8.dp
+        val g = ((maxWidth - titelBreite - fokusPlus - 6.dp * 5) / 6).coerceIn(30.dp, 44.dp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             // „Geniale“ klein, „Aufgaben“ groß: Das Hauptwort der App trägt den Titel.
             Column(Modifier.weight(1f).padding(start = 2.dp)) {
@@ -353,7 +371,13 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
                 )
             }
             Fortschritt(b.heuteFertig, b.heuteGesamt, g)
-            RundKnopf(Icons.Rounded.SelfImprovement, "Fokus-Timer", g) { vm.fokusStarten(null) }
+            // Fokus etwas größer und farbig gefüllt, damit er sich von den übrigen Knöpfen abhebt.
+            Box(
+                Modifier.size(g + fokusPlus).knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel).antippen { vm.fokusStarten(null) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.SelfImprovement, "Fokus-Timer", tint = Color.White, modifier = Modifier.size((g + fokusPlus) * 0.62f))
+            }
             RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", g, sucheUmschalten)
             RundKnopf(Icons.Rounded.Palette, "Design wechseln", g) {
                 val alle = Design.entries
@@ -375,11 +399,12 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
             RundKnopf(Icons.Rounded.Settings, "Einstellungen", g) { vm.zeige(Bildschirm.Einstellungen) }
         }
     }
-    // Darunter linksbündig nur die Serie bzw. das Datum.
+    // Darunter rechtsbündig die Serie bzw. das Datum.
     Text(
         if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else Tage.langesDatum(vm.heute),
-        color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+        color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 2, textAlign = TextAlign.End,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
     )
 }
 

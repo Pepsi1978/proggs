@@ -47,6 +47,8 @@ sealed interface Bildschirm {
     data object Einstellungen : Bildschirm
     /** [id] = null: freier Fokus vom Hauptbildschirm, ohne Aufgabe. */
     data class Fokus(val id: Long?) : Bildschirm
+    /** Vier-Wochen-Kalender: eine Woche zurück, heute, drei Wochen voraus. */
+    data object Kalender : Bildschirm
 }
 
 enum class Aufnahme { AUS, LAEUFT, VERARBEITET }
@@ -96,6 +98,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var korrekturFassungen = emptyList<String>()
     var korrigiert by mutableStateOf(false); private set
     private var editorQuelle: Aufgabe? = null
+    /** Wohin der Editor zurückkehrt: in die Liste oder, wenn er aus dem Kalender kam, dorthin. */
+    private var nachEditor: Bildschirm = Bildschirm.Liste
 
     // ---- Aufnahme ----
     var aufnahme by mutableStateOf(Aufnahme.AUS); private set
@@ -148,6 +152,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun zeige(b: Bildschirm) { bildschirm = b }
 
+    /** Im Kalender gewählter Tag (Epochentag); null = Vier-Wochen-Übersicht. Bleibt beim Ausflug in den Editor erhalten. */
+    var kalenderTag by mutableStateOf<Long?>(null)
+
+    fun kalenderOeffnen() { kalenderTag = null; bildschirm = Bildschirm.Kalender }
+
     fun zurueck(): Boolean = when (bildschirm) {
         is Bildschirm.Bearbeiten -> { editorVerlassen(); true }
         Bildschirm.Liste -> false
@@ -158,6 +167,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             true
         }
         is Bildschirm.Fokus -> { fokusBeenden(); true }
+        // Zurück: erst von der Tagesübersicht in den Kalender, dann in die Liste.
+        Bildschirm.Kalender -> { if (kalenderTag != null) kalenderTag = null else bildschirm = Bildschirm.Liste; true }
     }
 
     fun melde(text: String, undo: (() -> Unit)? = null) {
@@ -169,8 +180,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ================= Editor =================
 
-    fun neueAufgabe(mitMikro: Boolean = true, tag: Long? = null) {
+    fun neueAufgabe(mitMikro: Boolean = true, tag: Long? = null, zurueckZu: Bildschirm = Bildschirm.Liste) {
         editorQuelle = null
+        nachEditor = zurueckZu
         eId = null; eTitel = ""; eText = ""; ePrio = Prioritaet.SPAETER; eTag = tag; eMinuten = null
         eDauer = 30; eErinnerung = false; eVorlauf = einstellungen.vorlaufStandard; eWdh = Wiederholung.KEINE
         eVorlesen = einstellungen.vorlesenStandard; eAlsWecker = false
@@ -179,10 +191,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (mitMikro && einstellungen.autoMikro && einstellungen.groqKey.isNotBlank()) mikroTippen()
     }
 
-    fun oeffne(id: Long) {
+    fun oeffne(id: Long, zurueckZu: Bildschirm = Bildschirm.Liste) {
         viewModelScope.launch {
             val a = repo.eine(id) ?: return@launch
             editorQuelle = a
+            nachEditor = zurueckZu
             eId = a.id; eTitel = a.titel; eText = a.text; ePrio = a.prio; eTag = a.tag; eMinuten = a.minuten
             eDauer = a.dauer; eErinnerung = a.erinnerung; eVorlauf = a.vorlauf; eWdh = a.wdh
             eVorlesen = a.vorlesen; eAlsWecker = a.alsWecker
@@ -251,14 +264,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun editorVerlassen() {
         if (aufnahme != Aufnahme.AUS || eTitel.isNotBlank() || eText.isNotBlank()) speichern()
-        else bildschirm = Bildschirm.Liste
+        else bildschirm = nachEditor
     }
 
     fun verwerfen() {
         mikro.release()
         aufnahmeJob?.cancel()
         aufnahme = Aufnahme.AUS
-        bildschirm = Bildschirm.Liste
+        bildschirm = nachEditor
     }
 
     fun speichern() {
@@ -270,7 +283,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val titelEingabe = eTitel.trim()
         val text = eText.trim()
         if (titelEingabe.isEmpty() && text.isEmpty() && eSchritte.isEmpty()) {
-            bildschirm = Bildschirm.Liste
+            bildschirm = nachEditor
             return
         }
         val kiTitel = titelEingabe.isEmpty() && text.isNotEmpty()
@@ -284,7 +297,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             titelVonKi = if (kiTitel) false else basis.titelVonKi && titelEingabe == basis.titel,
             schritteJson = Aufgabe.schritteAlsJson(eSchritte.filter { it.text.isNotBlank() }),
         )
-        bildschirm = Bildschirm.Liste
+        bildschirm = nachEditor
         viewModelScope.launch {
             val id = if (editorQuelle == null) repo.neu(neu) else { repo.speichere(neu); neu.id }
             hervorgehoben = id
@@ -439,6 +452,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         vorlesen("tag_$tag", text)
+    }
+
+    /** Liest einen Bereich ohne festen Tag vor (Hoch, Mittel, Gering, Später, Demnächst, Erledigt). */
+    fun bereichVorlesen(schluessel: String, name: String, liste: List<Aufgabe>, mitDatum: Boolean = false) {
+        val text = if (liste.isEmpty()) "In $name steht nichts." else buildString {
+            append("In $name ${if (liste.size == 1) "steht eine Aufgabe" else "stehen ${liste.size} Aufgaben"}. ")
+            liste.forEach { a ->
+                if (mitDatum && a.tag != null) append("${Tage.datum(a.tag)}${a.minuten?.let { " um ${Tage.zeit(it)} Uhr" } ?: ""}: ")
+                append("${a.titel}. ")
+            }
+        }
+        vorlesen("bereich_$schluessel", text)
     }
 
     // ================= KI-Verbindung =================
