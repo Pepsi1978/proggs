@@ -101,6 +101,8 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     private val glanz = Paint(Paint.ANTI_ALIAS_FLAG)
     private val strich = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND; strokeWidth = 3.2f * dp }
     private val form = RectF()
+    private var strichFarbe = 0
+    private var strichHoehe = 0f
 
     private val gesten = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = true
@@ -172,7 +174,12 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
         val start = w / 2 - abstand * (balken - 1) / 2
         val maxHoehe = h * 0.62f
         val mitte = h / 2
-        strich.shader = LinearGradient(0f, mitte - maxHoehe / 2, 0f, mitte + maxHoehe / 2, aufhellen(farbe), farbe, Shader.TileMode.MIRROR)
+        // Neuer Verlauf nur bei anderer Farbe: sonst entstünden 60 bis 120 Shader je Sekunde neben dem Live-Ton.
+        if (farbe != strichFarbe || maxHoehe != strichHoehe) {
+            strichFarbe = farbe
+            strichHoehe = maxHoehe
+            strich.shader = LinearGradient(0f, mitte - maxHoehe / 2, 0f, mitte + maxHoehe / 2, aufhellen(farbe), farbe, Shader.TileMode.MIRROR)
+        }
         for (i in 0 until balken) {
             val lage = (i - (balken - 1) / 2f) / ((balken - 1) / 2f)
             val huelle = 1f - 0.55f * lage * lage
@@ -201,8 +208,8 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     private fun aufhellen(c: Int) = mische(c, 0xFFFFFFFF.toInt(), 0.35f)
 
     companion object {
-        // Alles in einer Orange-Familie: Frank etwas heller, Jarvis kräftig, Ruhe gedämpft.
-        private const val FRANK = 0xFFFFB25C.toInt()
+        // Alles in einer Orange-Familie: Frank deutlich heller (man sieht noch, wer spricht), Jarvis kräftig, Ruhe gedämpft.
+        private const val FRANK = 0xFFFFC98A.toInt()
         private const val JARVIS = 0xFFFF9A3D.toInt()
         private const val RUHE = 0xFFE08A3C.toInt()
     }
