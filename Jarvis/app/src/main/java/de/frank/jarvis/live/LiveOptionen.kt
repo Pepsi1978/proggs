@@ -341,6 +341,8 @@ object LiveOptionen {
                     Wahl("8000", "Kürzen ab 8.000 Tokens", "Am günstigsten, vergisst nach gut 5 Minuten Gespräch.", "höchstens ca. 0,024 $ Eingabe je Antwort"),
                     Wahl("16000", "Kürzen ab 16.000 Tokens", "Etwa 10 Minuten Gedächtnis. Empfehlung.", "höchstens ca. 0,048 $ Eingabe je Antwort"),
                     Wahl("32000", "Kürzen ab 32.000 Tokens", "Etwa 20 Minuten Gedächtnis.", "höchstens ca. 0,096 $ Eingabe je Antwort"),
+                    Wahl("48000", "Kürzen ab 48.000 Tokens", "Etwa 30 Minuten Gedächtnis.", "höchstens ca. 0,144 $ Eingabe je Antwort"),
+                    Wahl("64000", "Kürzen ab 64.000 Tokens", "Etwa 40 Minuten Gedächtnis.", "höchstens ca. 0,192 $ Eingabe je Antwort"),
                     Wahl("auto", "Googles Vorgabe", "Kürzt erst, wenn der Kontext fast voll ist.", "kann je Antwort deutlich teurer werden"),
                 )
             }, gilt = { it.istGemini }),
@@ -355,7 +357,9 @@ object LiveOptionen {
         Option("g_max", "Live-Gespräch", "Höchstlänge einer Antwort (Gemini)",
             "Deckel je Antwort; gesprochene Ausgabe ist der teuerste Posten (etwa 25 Tokens je Sekunde).",
             "0", { listOf(Wahl("1000", "1.000 Tokens", "etwa 40 Sekunden Sprache"), Wahl("2000", "2.000 Tokens", "etwa 80 Sekunden Sprache"),
-                Wahl("4000", "4.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("0", "Ohne Grenze", "Empfehlung bei Denkstufen: Denk-Tokens zählen mit.")) },
+                Wahl("4000", "4.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("6000", "6.000 Tokens", "etwa 4 Minuten Sprache"),
+                Wahl("8000", "8.000 Tokens", "etwa 5 Minuten Sprache; mehr gibt Gemini Live je Antwort ohnehin nicht aus (8.192)."),
+                Wahl("0", "Ohne Grenze", "Empfehlung bei Denkstufen: Denk-Tokens zählen mit.")) },
             gilt = { it.istGemini }),
 
         // ---- Nur GPT-Live ----
@@ -392,7 +396,7 @@ object LiveOptionen {
             gilt = { it.denktBeiOpenAi }),
         Option("backend_max", "Live-Gespräch", "Höchstlänge einer Denk-Antwort",
             "Deckel für Text und Denk-Tokens je Antwort des Denk-Modells. Schützt vor teuren Ausreißern.",
-            "2048", { listOf(Wahl("512", "512 Tokens", "Sehr kurz; bei hoher Denkstufe kann die Antwort abbrechen."), Wahl("1024", "1.024 Tokens"), Wahl("2048", "2.048 Tokens", "Empfehlung."), Wahl("4096", "4.096 Tokens"), Wahl("0", "Ohne Grenze", "", "kein Kostendeckel")) },
+            "2048", { listOf(Wahl("512", "512 Tokens", "Sehr kurz; bei hoher Denkstufe kann die Antwort abbrechen."), Wahl("1024", "1.024 Tokens"), Wahl("2048", "2.048 Tokens", "Empfehlung."), Wahl("4096", "4.096 Tokens"), Wahl("6000", "6.000 Tokens"), Wahl("8000", "8.000 Tokens"), Wahl("0", "Ohne Grenze", "", "kein Kostendeckel")) },
             gilt = { it.denktBeiOpenAi }),
         Option("websuche", "Live-Gespräch", "Websuche des Denk-Modells",
             "Das Denk-Modell darf selbst im Internet suchen. Jarvis kann das über seine eigene Recherche ohnehin.",
@@ -452,7 +456,9 @@ object LiveOptionen {
         Option("rt_max", "Live-Gespräch", "Höchstlänge einer Antwort (Realtime)",
             "Deckel je gesprochener Antwort; gesprochene Ausgabe ist der teuerste Posten.", "4000",
             { listOf(Wahl("1000", "1.000 Tokens", "etwa 50 Sekunden Sprache"), Wahl("2000", "2.000 Tokens", "etwa 1,5 Minuten Sprache"),
-                Wahl("3000", "3.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("4000", "4.000 Tokens", "etwa 3 Minuten Sprache")) },
+                Wahl("3000", "3.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("4000", "4.000 Tokens", "etwa 3 Minuten Sprache"),
+                Wahl("6000", "6.000 Tokens", "OpenAI nimmt bei Realtime als Zahl höchstens 4.096 an; Jarvis schickt dafür „ohne Grenze“, die Antwort endet dann von selbst."),
+                Wahl("8000", "8.000 Tokens", "Wie 6.000: über 4.096 schickt Jarvis „ohne Grenze“, weil OpenAI größere Zahlen ablehnt.")) },
             gilt = { it.istRealtime }),
 
         // ---- Beide ----

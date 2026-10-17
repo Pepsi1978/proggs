@@ -762,7 +762,8 @@ class LiveGespraech(
             "auto", "disabled" -> s.put("truncation", k)
             else -> s.put("truncation", JSONObject().put("type", "retention_ratio").put("retention_ratio", k.toDoubleOrNull() ?: 0.8))
         }
-        st["rt_max"].toIntOrNull()?.let { s.put("max_output_tokens", it) }
+        // OpenAI nimmt bei Realtime als Zahl höchstens 4.096 an; darüber gilt „inf“ (in der Auswahl so beschrieben).
+        st["rt_max"].toIntOrNull()?.let { s.put("max_output_tokens", if (it > REALTIME_MAX_ZAHL) "inf" else it) }
         return JSONObject().put("type", "session.update").put("session", s)
     }
 
@@ -1365,6 +1366,8 @@ class LiveGespraech(
         val aktiv: Boolean get() = offene.get() > 0
 
         /** Echosperre bleibt so lange nach dem letzten Ton zu: Wiedergabepuffer plus Bluetooth-Verzögerung. */
+        /** Größte Zahl, die OpenAI bei Realtime als max_output_tokens annimmt; darüber nur „inf“. */
+        private const val REALTIME_MAX_ZAHL = 4096
         private const val ECHO_NACHLAUF_MS = 400L
         /** Höchstens so lange nach dem letzten hörbaren Ton bleibt die Echosperre zu, egal was die Wiedergabe meldet. */
         private const val ECHO_SPERRE_MAX_MS = 3_000L

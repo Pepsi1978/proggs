@@ -177,7 +177,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    if (plusOffen) ModalBottomSheet(onDismissRequest = { plusOffen = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = f.flaecheStark) {
+    if (plusOffen) ModalBottomSheet(onDismissRequest = { plusOffen = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = menueFlaeche(f)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp)) {
             MenueZeile(Icons.Rounded.PhotoCamera, "Kamera") { plusOffen = false; vm.kameraAnfragen() }
             MenueZeile(Icons.Rounded.PhotoLibrary, "Fotos") { plusOffen = false; vm.fotosAnfragen() }
@@ -186,7 +186,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    if (pluginsOffen) ModalBottomSheet(onDismissRequest = { pluginsOffen = false }, containerColor = f.flaecheStark) {
+    if (pluginsOffen) ModalBottomSheet(onDismissRequest = { pluginsOffen = false }, containerColor = menueFlaeche(f)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
             Text("Plugins", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             if (Plugins.alle.isEmpty()) Text("Noch keine Plugins. Sobald es welche gibt, wählst du sie hier für die nächste Frage aus.", color = f.textLeise, fontSize = 15.sp, modifier = Modifier.padding(top = 8.dp))
@@ -203,7 +203,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    if (modellOffen) ModalBottomSheet(onDismissRequest = { modellOffen = false }, containerColor = f.flaecheStark) {
+    if (modellOffen) ModalBottomSheet(onDismissRequest = { modellOffen = false }, containerColor = menueFlaeche(f)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
             Text("Modell", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             CodexModel.entries.forEach { m ->

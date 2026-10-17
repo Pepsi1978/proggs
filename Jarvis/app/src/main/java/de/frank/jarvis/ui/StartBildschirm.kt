@@ -363,7 +363,7 @@ private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
         LeistenKnopf(Icons.AutoMirrored.Rounded.CallSplit, "In neuem Chat fortsetzen", f.textLeise) { vm.abzweigen(nummer) }
         LeistenKnopf(Icons.Rounded.Refresh, "Erneut versuchen", f.textLeise) { vm.erneutVersuchen(nummer) }
     }
-    if (grundFragen) androidx.compose.material3.ModalBottomSheet(onDismissRequest = { grundFragen = false }, containerColor = f.flaecheStark) {
+    if (grundFragen) androidx.compose.material3.ModalBottomSheet(onDismissRequest = { grundFragen = false }, containerColor = menueFlaeche(f)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             Text("Was hat nicht gepasst?", color = f.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text("Ein Tipp genügt. Daraus lernt Jarvis, wie du Antworten lieber hättest.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
