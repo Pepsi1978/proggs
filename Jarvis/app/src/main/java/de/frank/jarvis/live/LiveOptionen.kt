@@ -246,10 +246,6 @@ object LiveOptionen {
                         "0,05 $ pro Minute, sekundengenau, auch bei Stille; plus Denk-Modell"),
                     Wahl("gpt-realtime-2.1", "Realtime 2.1", "Bestes Realtime-Modell mit eigener Denkstufe und Werkzeugen. Kosten wachsen mit der Gesprächslänge.", "Audio " + mio(REALTIME.getValue("gpt-realtime-2.1").audio)),
                     Wahl("gpt-realtime-2.1-mini", "Realtime 2.1 mini", "Schneller und rund dreimal günstiger, folgt Anweisungen und Werkzeugen etwas schlechter.", "Audio " + mio(REALTIME.getValue("gpt-realtime-2.1-mini").audio)),
-                    Wahl("gpt-realtime-2", "Realtime 2", "Vorgänger von 2.1, gleicher Preis.", "Audio " + mio(REALTIME.getValue("gpt-realtime-2").audio)),
-                    Wahl("gpt-realtime-1.5", "Realtime 1.5", "Ältere Generation ohne Denkstufe, kleiner Kontext (32.000 Tokens).", "Audio " + mio(REALTIME.getValue("gpt-realtime-1.5").audio)),
-                    Wahl("gpt-realtime", "Realtime (alt)", "Wird am 20.01.2027 abgeschaltet.", "Audio " + mio(REALTIME.getValue("gpt-realtime").audio)),
-                    Wahl("gpt-realtime-mini", "Realtime mini (alt)", "Wird am 20.01.2027 abgeschaltet.", "Audio " + mio(REALTIME.getValue("gpt-realtime-mini").audio)),
                     Wahl("gemini-3.8-live", "Gemini 3.8 Live", "Googles aktuelles Live-Modell (seit 15.09.2026): hört und spricht gleichzeitig, denkt mit fester, kurzer Verzögerung selbst. " +
                         "Braucht einen Gemini-Schlüssel aus AI Studio.", GEMINI_PREIS_TEXT),
                     Wahl("gemini-3.8-live-extended-thinking", "Gemini 3.8 Live Extended Thinking", "Wie 3.8 Live, denkt aber im Hintergrund gründlicher nach (Stufe einstellbar) " +
@@ -410,7 +406,7 @@ object LiveOptionen {
         Option("rt_effort", "Live-Gespräch", "Denkstufe (Realtime)",
             "Wie lange das Realtime-Modell vor der Antwort nachdenkt. Minimal antwortet nach etwa 1 Sekunde, Hoch nach etwa 2,3 Sekunden.",
             "low", { listOf("minimal", "low", "medium", "high", "xhigh").map { EFFORTS.getValue(it) } },
-            gilt = { it.istRealtime && it.modell in setOf("gpt-realtime-2.1", "gpt-realtime-2.1-mini", "gpt-realtime-2") }),
+            gilt = { it.istRealtime && it.modell in setOf("gpt-realtime-2.1", "gpt-realtime-2.1-mini") }),
         Option("erkennung", "Live-Gespräch", "Wann du fertig bist (Realtime)",
             "Wie das Modell erkennt, dass du ausgeredet hast. „Nach Sinn“ hört auf den Satz, „Nach Stille“ nur auf die Pause.",
             "semantic_auto", {
