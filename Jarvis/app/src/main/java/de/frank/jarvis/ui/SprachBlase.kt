@@ -205,12 +205,12 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
         return (0xFF shl 24) or k(16) or k(8) or k(0)
     }
 
-    private fun aufhellen(c: Int) = mische(c, 0xFFFFFFFF.toInt(), 0.35f)
+    private fun aufhellen(c: Int) = mische(c, 0xFFFFFFFF.toInt(), 0.15f)
 
     companion object {
-        // Alles in einer Orange-Familie: Frank deutlich heller (man sieht noch, wer spricht), Jarvis kräftig, Ruhe gedämpft.
-        private const val FRANK = 0xFFFFC98A.toInt()
-        private const val JARVIS = 0xFFFF9A3D.toInt()
-        private const val RUHE = 0xFFE08A3C.toInt()
+        // Immer das knallige Claude-Code-Orange (#D97757), egal wer spricht (Franks Wunsch).
+        private const val FRANK = 0xFFD97757.toInt()
+        private const val JARVIS = 0xFFD97757.toInt()
+        private const val RUHE = 0xFFD97757.toInt()
     }
 }
