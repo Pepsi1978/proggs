@@ -65,7 +65,10 @@ verbinde() {
   for i in 1 2 3 4 5; do
     z=$(adb devices 2>/dev/null | awk -v s="$1" '$1==s {print $2}')
     if [ "$z" = "device" ]; then
+      # Direkt nach der ersten Freigabe meldet adb kurz „still authorizing“ (gesehen über den Tunnel, 17.10.2026).
       ist_unser_handy "$1" && return 0
+      sleep 2; ist_unser_handy "$1" && return 0
+      sleep 3; ist_unser_handy "$1" && return 0
       melde "$1 ist nicht das gemerkte Handy – getrennt"; adb disconnect "$1" >/dev/null 2>&1; return 1
     fi
     [ "$z" = "unauthorized" ] && [ $i -eq 1 ] && melde "HINWEIS: Auf dem Handy 'Debugging zulassen' bestätigen (Haken 'Immer zulassen')."
