@@ -207,13 +207,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     }
                 }
                 Unterzeile("Empfindlichkeit")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch").forEach { (id, name) ->
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch", "sehr_hoch" to "Sehr hoch").forEach { (id, name) ->
                         Chip(name, aktiv = e.weckwortEmpfindlichkeit == id) { vm.weckwortEmpfindlichkeit(id) }
                     }
                 }
                 Text(
-                    "Hoch: springt leichter an, auch bei deutscher Aussprache, aber öfter ohne Grund. Niedrig: nur bei deutlichem „$wort“.",
+                    "Hoch: springt leichter an, auch bei deutscher Aussprache, und lässt die Stimmerkennung großzügiger urteilen. Sehr hoch: auch schnell, leise und verschliffen gesprochen, dafür öfter ohne Grund. Niedrig: nur bei deutlichem „$wort“.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                 )
                 treffer?.let { t ->

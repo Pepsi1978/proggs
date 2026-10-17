@@ -19,13 +19,19 @@ class SprecherErkenner(context: Context) : AutoCloseable {
         SpeakerEmbeddingExtractorConfig("sprecher/campplus.onnx", 1, false, "cpu"),
     )
 
+    /** Sekunden Sprache, aus denen der letzte Fingerabdruck entstand (null = zu wenig). Nur im Weckwort-Faden. */
+    var letzteDauer: Float? = null
+        private set
+
     /**
      * Fingerabdruck der Aufnahme (16 kHz, ±1), auf Länge 1 gebracht; null, wenn zu wenig Sprache darin ist.
      * [stimmhaft]: je 32-ms-Rahmen, ob Silero dort eine Stimme hört. Dann zählt nur die Stimme, nicht Lärm drumherum.
      */
     fun fingerabdruck(ton: FloatArray, stimmhaft: BooleanArray? = null): FloatArray? {
+        letzteDauer = null
         // Hört Silero zu wenig Stimme (sehr schnell, sehr leise), bleibt der Zuschnitt nach Lautstärke.
         val sprache = (stimmhaft?.let { nurStimme(ton, it) } ?: nurSprache(ton)) ?: return null
+        letzteDauer = sprache.size / WeckwortErkenner.ABTASTRATE.toFloat()
         val strom = extraktor.createStream()
         return try {
             strom.acceptWaveform(sprache, WeckwortErkenner.ABTASTRATE)

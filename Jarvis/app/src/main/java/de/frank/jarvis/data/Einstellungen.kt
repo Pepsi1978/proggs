@@ -247,10 +247,10 @@ class Einstellungen private constructor(context: Context) {
     // ---- Hey Jarvis ----
     /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
     var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", true); set(v) = put { putBoolean("weckwort_an", v) }
-    /** niedrig | normal | hoch: wie leicht „Hey Jarvis“ anspringt. */
+    /** niedrig | normal | hoch | sehr_hoch: wie leicht „Hey Jarvis“ anspringt und wie großzügig die Stimmerkennung urteilt. */
     var weckwortEmpfindlichkeit: String get() = s("weckwort_empfindlichkeit", "normal"); set(v) = put { putString("weckwort_empfindlichkeit", v) }
     /** Ab diesem Wert (0 bis 1) gilt „Hey Jarvis“ als erkannt. */
-    val weckwortSchwelle: Float get() = when (weckwortEmpfindlichkeit) { "niedrig" -> 0.7f; "hoch" -> 0.3f; else -> 0.5f }
+    val weckwortSchwelle: Float get() = when (weckwortEmpfindlichkeit) { "niedrig" -> 0.7f; "hoch" -> 0.3f; "sehr_hoch" -> 0.2f; else -> 0.5f }
     /** jarvis = „Hey Jarvis“ (openWakeWord) | phrase = eigene Phrase (sherpa-onnx, englische Lautung). */
     var weckwortArt: String get() = s("weckwort_art", "jarvis"); set(v) = put { putString("weckwort_art", v) }
     /** Die eigene Weckwort-Phrase in Großbuchstaben, z. B. „OKAY COMPUTER JARVIS“. */

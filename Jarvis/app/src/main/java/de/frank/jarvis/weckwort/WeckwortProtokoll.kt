@@ -30,7 +30,11 @@ object WeckwortProtokoll {
         if (pruefung != null) j.put("aehnlich", runde(pruefung.aehnlich)).put("schwelle", runde(pruefung.schwelle)).put("fehlalarm", runde(pruefung.fremd))
         else j.put("profil", false)
         // Stimmerkennung: Ähnlichkeit des Stimm-Fingerabdrucks zu Franks Mitte und ihre Schwelle (sie entscheidet).
-        if (stimme != null) j.put("stimme", runde(stimme.aehnlich)).put("stimmSchwelle", runde(stimme.schwelle))
+        if (stimme != null) {
+            j.put("stimme", runde(stimme.aehnlich)).put("stimmSchwelle", runde(stimme.schwelle))
+            // Sekunden Sprache im Fingerabdruck: Grundlage, um die Schwelle für kurze Rufe nachzujustieren.
+            stimme.dauer?.let { j.put("sprache", runde(it)) }
+        }
         else if (mitStimme) j.put("stimme", "zu wenig Sprache")
         schreibe(context, j)
     }

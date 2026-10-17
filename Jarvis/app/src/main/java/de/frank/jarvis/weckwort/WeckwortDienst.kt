@@ -152,6 +152,7 @@ class WeckwortDienst : Service() {
         } else null
         phrasenVarianten = if (phrasenTokens != null) PhrasenTokens.varianten(this, e.weckwortPhrase) else emptyList()
         phrasenSchwelle = PhrasenErkenner.schwelleFuer(e.weckwortEmpfindlichkeit)
+        Stimmprofil.schwellenAbzug = stimmAbzugFuer(e.weckwortEmpfindlichkeit)
         Stimmprofil.schluesselSetzen(if (phrasenTokens != null) "phrase:" + PhrasenTokens.normiert(e.weckwortPhrase) else "jarvis")
     }
 
@@ -346,10 +347,13 @@ class WeckwortDienst : Service() {
                 }
                 if (uebersprungen > 0) {
                     // Wortanfang nachholen: die zuletzt übersprungenen Blöcke vor diesem durch die Modelle schicken.
+                    // Der Spotter fängt dafür frisch an: Sein Strom stammt von vor der Stille, und sherpa-onnx 1.13.8
+                    // setzt ihn in Stille von selbst zurück und verliert dabei den Anfang eines Rufs (Almanach §16).
+                    phr?.zuruecksetzen()
                     for (k in minOf(uebersprungen, NACHHOLEN) downTo 1) {
                         val frueher = frueherBlock(k)
                         if (brauchtLaut) erk.bewerte(frueher)
-                        phr?.erkannt(frueher)
+                        phr?.erkannt(frueher, boden)
                     }
                     uebersprungen = 0
                 }
@@ -359,11 +363,13 @@ class WeckwortDienst : Service() {
                     // Mit Stimmerkennung auch die Aussprache-Varianten (schnell, verschliffen, mit Akzent): Fremde fallen
                     // danach an der Stimme durch, Frank soll die Phrase sagen dürfen, wie sie ihm über die Lippen geht.
                     when {
-                        anlernen -> phr.einstellen(PhrasenErkenner.SCHWELLE_ANLERNEN, breit = false)
+                        // Beim Anlernen mit allen Aussprache-Varianten und so leicht wie möglich: Sonst kommen nur
+                        // deutliche Proben ins Profil, und später scheitern gerade die schnellen, leisen Rufe daran.
+                        anlernen -> phr.einstellen(PhrasenErkenner.SCHWELLE_MIN, breit = true)
                         mitStimme -> phr.einstellen((phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_MIN), breit = true)
                         else -> phr.einstellen(phrasenSchwelle, breit = false)
                     }
-                    if (!phr.erkannt(block)) {
+                    if (!phr.erkannt(block, boden)) {
                         if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
                         continue
                     }
@@ -408,7 +414,7 @@ class WeckwortDienst : Service() {
                 val pruefung = Stimmprofil.pruefe(merkmale)
                 // Mit Stimmerkennung entscheidet allein sie: Sie erkennt die Person, auch aus fünf Metern, wo die
                 // Lautmerkmale schon stark abweichen. Zu wenig Sprache im Ton zählt als „nicht Frank“.
-                val stimme = if (mitStimme) Stimmprofil.pruefeStimme(fingerabdruck()) else null
+                val stimme = if (mitStimme) fingerabdruck().let { Stimmprofil.pruefeStimme(it, spr?.letzteDauer) } else null
                 // Nachdruck: Zwei knappe Abweisungen kurz hintereinander sind Frank, der es noch einmal sagt (schnell,
                 // heiser, im Lärm). Fremde und Fernseher sagen das Weckwort kaum zweimal in wenigen Sekunden.
                 // Nie unter [NACHDRUCK_MIN]: Darunter lässt CAM++ fremde Stimmen durch (siehe Stimmprofil).
@@ -583,6 +589,10 @@ class WeckwortDienst : Service() {
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
+
+        /** So viel tiefer liegt die Stimm-Schwelle je Empfindlichkeit (Stimmprofil.schwellenAbzug). */
+        fun stimmAbzugFuer(empfindlichkeit: String): Float =
+            when (empfindlichkeit) { "niedrig" -> 0f; "hoch" -> 0.07f; "sehr_hoch" -> 0.10f; else -> 0.03f }
         /** Silero-Werte: ab hier zählt ein Rahmen im Lärm als Stimme (Stille-Filter) bzw. für den Fingerabdruck. */
         private const val VAD_STIMME = 0.5f
         private const val VAD_MASKE = 0.3f

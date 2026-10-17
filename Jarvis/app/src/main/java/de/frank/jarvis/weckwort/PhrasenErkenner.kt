@@ -41,6 +41,14 @@ class PhrasenErkenner(
             }
             // Pflichtangabe; die eigentliche Phrase kommt unten mit dem Strom.
             keywordsFile = "kws/keywords.txt"
+            // Die Kotlin-Vorgaben passen nicht zum Weckwort (Almanach android/voice-assistant-trigger §15): Mit 2
+            // Leer-Rahmen meldet der Spotter die Phrase erst nach einer Pause, schnell weitergesprochen nie. Die
+            // Entprellung übernimmt spotter.reset() nach jedem Treffer. Mehr Pfade halten unsichere Aussprache im Beam.
+            numTrailingBlanks = 0
+            maxActivePaths = 8
+            // Gilt nur für Zeilen ohne eigenes „#“/„:“; unsere tragen beides, aber nie auf 0,25 zurückfallen.
+            keywordsThreshold = schwelle
+            keywordsScore = BOOST
         },
     )
     var schwelle: Float = schwelle
@@ -80,9 +88,23 @@ class PhrasenErkenner(
         strom = spotter.createStream(zeile)
     }
 
-    /** Nimmt einen Block (16 kHz, 16 Bit) und meldet, ob die Phrase gerade zu Ende gesprochen wurde. */
-    fun erkannt(block: ShortArray): Boolean {
-        for (i in block.indices) puffer[i] = block[i] / 32768f
+    /** Verstärkung vor dem Spotter: leise und entfernte Rufe in den Pegelbereich bringen, den das Modell kennt. */
+    private var verstaerkung = 1f
+
+    /**
+     * Nimmt einen Block (16 kHz, 16 Bit) und meldet, ob die Phrase gerade zu Ende gesprochen wurde.
+     * [rauschboden]: Effektivwert der Stille (16 Bit) aus dem Dienst. Im ruhigen Raum wird bis zu [MAX_VERSTAERKUNG]fach
+     * verstärkt, im Lärm nicht (das hebt nur den Lärm). Laute Rufe senkt der Begrenzer sofort, danach steigt die
+     * Verstärkung langsam wieder an, so bleibt sie innerhalb einer Phrase gleich.
+     */
+    fun erkannt(block: ShortArray, rauschboden: Float = -1f): Boolean {
+        val ziel = if (rauschboden > 0f) (BODEN_ZIEL / rauschboden).coerceIn(1f, MAX_VERSTAERKUNG) else 1f
+        verstaerkung = if (ziel < verstaerkung) ziel else verstaerkung + (ziel - verstaerkung) * ANSTIEG
+        var spitze = 0
+        for (w in block) { val a = kotlin.math.abs(w.toInt()); if (a > spitze) spitze = a }
+        val spitzeFloat = spitze / 32768f
+        if (spitzeFloat * verstaerkung > GRENZE) verstaerkung = maxOf(1f, GRENZE / spitzeFloat)
+        for (i in block.indices) puffer[i] = (block[i] / 32768f * verstaerkung).coerceIn(-1f, 1f)
         strom.acceptWaveform(if (block.size == puffer.size) puffer else puffer.copyOf(block.size), WeckwortErkenner.ABTASTRATE)
         // Pflicht: so lange dekodieren, wie Daten bereitliegen, nicht nur einmal (Almanach #21).
         while (spotter.isReady(strom)) spotter.decode(strom)
@@ -105,17 +127,22 @@ class PhrasenErkenner(
         private const val BOOST_BREIT = 3.0f
 
         /** Schwelle des KeywordSpotters je Empfindlichkeit (Vorgabe des Modells 0,25; kleiner = springt leichter an). */
-        fun schwelleFuer(empfindlichkeit: String): Float = when (empfindlichkeit) { "niedrig" -> 0.35f; "hoch" -> 0.15f; else -> 0.25f }
+        fun schwelleFuer(empfindlichkeit: String): Float =
+            when (empfindlichkeit) { "niedrig" -> 0.35f; "hoch" -> 0.15f; "sehr_hoch" -> 0.10f; else -> 0.25f }
 
-        /** Beim Anlernen: so leicht wie möglich, damit auch Proben aus fünf Metern Entfernung ankommen. */
-        const val SCHWELLE_ANLERNEN = 0.12f
+        /** Rauschboden (16 Bit, etwa -47 dBFS), auf den die Verstärkung zielt; Spitzen begrenzt auf [GRENZE]. */
+        private const val BODEN_ZIEL = 150f
+        private const val MAX_VERSTAERKUNG = 6f
+        private const val GRENZE = 0.9f
+        /** Je Block (80 ms) so viel des Wegs zurück zum Ziel: rund 8 s nach einem lauten Ruf wieder voll. */
+        private const val ANSTIEG = 0.01f
 
         /**
          * Mit Stimmerkennung deutlich empfindlicher: Sie siebt Fremde aus, die Phrase soll auch schnell gesprochen und
          * von weitem greifen. (14.10.2026: schnell gesprochenes „Hey Jarvis One“ griff bei 0,18 kaum, langsam schon.)
          */
         const val SPRECHER_BONUS = 0.13f
-        const val SCHWELLE_MIN = 0.06f
+        const val SCHWELLE_MIN = 0.05f
     }
 }
 
@@ -153,6 +180,8 @@ object PhrasenTokens {
         "HI" to listOf("HEY"),
         "ONE" to listOf("WON", "WAN", "WHAN"),
         "JARVIS" to listOf("JARVES", "JAVIS"),
+        // Deutsches „Handy“ klingt wie „Hendi“.
+        "HANDY" to listOf("HENDY", "HENDI", "HANDI"),
         "OKAY" to listOf("OK", "OKEY"),
         "TWO" to listOf("TOO", "TU"),
         "WAKE" to listOf("WEAK"),

@@ -52,35 +52,52 @@ object Stimmprofil {
     /** Echte Stimmerkennung angelernt: Sie entscheidet, ob Frank spricht. */
     val stimmeAktiv: Boolean get() = stimmen.size >= MIN_STIMMEN
 
-    /** Ergebnis der Stimmerkennung, auch fürs Protokoll. */
-    data class StimmPruefung(val ok: Boolean, val aehnlich: Float, val schwelle: Float)
+    /** Ergebnis der Stimmerkennung, auch fürs Protokoll. [dauer]: Sekunden Sprache im Fingerabdruck. */
+    data class StimmPruefung(val ok: Boolean, val aehnlich: Float, val schwelle: Float, val dauer: Float? = null)
+
+    /**
+     * So viel tiefer liegt die Stimm-Schwelle je Empfindlichkeit (aus den Einstellungen). Bis 17.10.2026 wirkte die
+     * Empfindlichkeit nur aufs Weckwort-Modell, Franks schnelle Rufe scheiterten aber an der Stimmerkennung.
+     */
+    @Volatile var schwellenAbzug = 0f
 
     /** Ist das Franks Stimme? null = keine Stimmerkennung angelernt oder zu wenig Sprache in der Aufnahme. */
-    fun pruefeStimme(fingerabdruck: FloatArray?): StimmPruefung? {
+    fun pruefeStimme(fingerabdruck: FloatArray?, dauer: Float? = null): StimmPruefung? {
         val s = stimmen
         if (s.size < MIN_STIMMEN || fingerabdruck == null) return null
-        val mitte = SprecherErkenner.normiert(mittel(s))
-        val aehnlich = SprecherErkenner.kosinus(fingerabdruck, mitte)
-        val schwelle = stimmSchwelle(s)
+        val aehnlich = stimmWert(fingerabdruck, s)
+        // Kurze Rufe (schnell gesprochen, unter 1,2 s Sprache) geben CAM++ wenig Stimme: bis zu 0,04 Spielraum.
+        val kurz = dauer?.let { (1.2f - it).coerceIn(0f, 0.4f) * 0.1f } ?: 0f
+        val schwelle = maxOf(stimmSchwelle(s) - schwellenAbzug - kurz, STIMM_BODEN)
         val ok = aehnlich >= schwelle
         _stand.value = _stand.value.copy(letzteStimme = aehnlich, stimmSchwelle = schwelle)
-        Log.i(TAG, "Stimme ${"%.3f".format(aehnlich)}, Schwelle ${"%.3f".format(schwelle)} → ${if (ok) "Frank" else "fremde Stimme"}")
-        return StimmPruefung(ok, aehnlich, schwelle)
+        Log.i(TAG, "Stimme ${"%.3f".format(aehnlich)}, Schwelle ${"%.3f".format(schwelle)}, Sprache ${dauer?.let { "%.2f s".format(it) }} → ${if (ok) "Frank" else "fremde Stimme"}")
+        return StimmPruefung(ok, aehnlich, schwelle, dauer)
     }
 
     /**
-     * Schwelle der Stimmerkennung aus Franks eigenen Proben: Wie ähnlich ist jede Probe der Mitte der übrigen? Die
-     * geringste davon (meist eine aus fünf Metern), mit etwas Spielraum. Nie unter 0,40, darunter fängt CAM++ an,
-     * fremde Stimmen durchzulassen; nie über 0,55: Schnell gesprochen lag Frank am 15. bis 17.10.2026 oft bei 0,53 bis
-     * 0,60 und scheiterte an der alten Grenze 0,60.
+     * Ähnlichkeit zu Franks Proben: zur Mitte aller, oder zu den drei ähnlichsten einzelnen, was höher ist. So passt
+     * ein schneller, leiser Ruf auch zu den schnellen, leisen Proben, statt nur zur von deutlichen Proben geprägten Mitte.
+     * Derselbe Wert bestimmt die Schwelle ([stimmSchwelle]), sonst lägen beide auf verschiedenen Skalen.
+     */
+    private fun stimmWert(f: FloatArray, s: List<FloatArray>): Float {
+        val mitte = SprecherErkenner.kosinus(f, SprecherErkenner.normiert(mittel(s)))
+        val besteDrei = s.map { SprecherErkenner.kosinus(f, it) }.sortedDescending().take(3).average().toFloat()
+        return maxOf(mitte, besteDrei)
+    }
+
+    /**
+     * Schwelle der Stimmerkennung aus Franks eigenen Proben: Wie ähnlich ist jede Probe den übrigen? Die geringste
+     * davon (meist eine aus fünf Metern), mit etwas Spielraum. Nie über 0,55: Schnell gesprochen lag Frank am 15. bis
+     * 17.10.2026 oft bei 0,53 bis 0,60 und scheiterte an der alten Grenze 0,60. Nie unter [STIMM_BODEN].
      */
     private fun stimmSchwelle(s: List<FloatArray>): Float {
-        val min = s.indices.minOf { i ->
-            val rest = SprecherErkenner.normiert(mittel(s.filterIndexed { j, _ -> j != i }))
-            SprecherErkenner.kosinus(s[i], rest)
-        }
-        return (min - 0.10f).coerceIn(0.40f, 0.55f)
+        val min = s.indices.minOf { i -> stimmWert(s[i], s.filterIndexed { j, _ -> j != i }) }
+        return (min - 0.10f).coerceIn(STIMM_BODEN, 0.55f)
     }
+
+    /** Darunter fängt CAM++ an, fremde Stimmen durchzulassen. */
+    private const val STIMM_BODEN = 0.40f
 
     private fun mittel(s: List<FloatArray>): FloatArray = FloatArray(s.first().size) { k -> s.sumOf { it[k].toDouble() }.toFloat() / s.size }
 

@@ -142,6 +142,7 @@
     {"versionCode": 137, "versionName": "1.8.126", "stand": "17.10.2026, 14:30 Uhr", "notiz": "Die schwebende Sprachblase außerhalb der App leuchtet jetzt immer in Orange, egal ob du sprichst, Jarvis spricht oder zuhört, bei Tag, Nacht und jedem Design."},
     {"versionCode": 138, "versionName": "1.8.127", "stand": "17.10.2026, 14:34 Uhr", "notiz": "Sprachblase: Wenn du sprichst, leuchtet sie in hellerem Orange als bei Jarvis, und sie zeichnet sparsamer, damit der Live-Ton ungestört bleibt."},
     {"versionCode": 139, "versionName": "1.8.128", "stand": "17.10.2026, 14:36 Uhr", "notiz": "Sprachblase leuchtet jetzt immer im knalligen Claude-Code-Orange statt in hellem Orange."},
-    {"versionCode": 140, "versionName": "1.8.129", "stand": "17.10.2026, 15:20 Uhr", "notiz": "Sprachblase leuchtet jetzt in knalligem, sattem Orange mit kräftigem Rand statt in blassem Orange."}
+    {"versionCode": 140, "versionName": "1.8.129", "stand": "17.10.2026, 15:20 Uhr", "notiz": "Sprachblase leuchtet jetzt in knalligem, sattem Orange mit kräftigem Rand statt in blassem Orange."},
+    {"versionCode": 141, "versionName": "1.8.130", "stand": "17.10.2026, 15:52 Uhr", "notiz": "Die eigene Weckwort-Phrase greift jetzt auch schnell, leise und verschliffen gesprochen: Die Erkennung wartet nicht mehr auf eine Pause, leise Rufe werden verstärkt, die Stimmerkennung urteilt je nach Empfindlichkeit großzügiger, und es gibt die neue Stufe „Sehr hoch“."}
   ]
 }

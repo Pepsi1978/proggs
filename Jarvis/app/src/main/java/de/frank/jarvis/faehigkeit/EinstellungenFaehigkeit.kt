@@ -209,10 +209,11 @@ class EinstellungsKatalog(context: Context) {
             schalter("weckwort_an", "Hey Jarvis", "Auf „Hey Jarvis“ lauschen", "Dauerhaft auf das Weckwort hören, auch bei gesperrtem Handy.", { e.weckwortAn }) {
                 e.weckwortAn = it; de.frank.jarvis.weckwort.WeckwortDienst.abgleichen(app)
             },
-            auswahl("weckwort_empfindlichkeit", "Hey Jarvis", "Empfindlichkeit", "Wie leicht das Weckwort anspringt.",
-                { listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch") }, { e.weckwortEmpfindlichkeit }) {
+            auswahl("weckwort_empfindlichkeit", "Hey Jarvis", "Empfindlichkeit", "Wie leicht das Weckwort anspringt und wie großzügig die Stimmerkennung urteilt.",
+                { listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch", "sehr_hoch" to "Sehr hoch") }, { e.weckwortEmpfindlichkeit }) {
                 e.weckwortEmpfindlichkeit = it
                 de.frank.jarvis.weckwort.Weckwort.schwelle = e.weckwortSchwelle
+                de.frank.jarvis.weckwort.Stimmprofil.schwellenAbzug = de.frank.jarvis.weckwort.WeckwortDienst.stimmAbzugFuer(it)
                 if (e.weckwortArt == "phrase") de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)
             },
             auswahl("weckwort_art", "Hey Jarvis", "Weckwort", "„Hey Jarvis“ oder die eigene Phrase „${e.weckwortPhrase}“.",
