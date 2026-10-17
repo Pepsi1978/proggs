@@ -14,7 +14,6 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.ui.AppViewModel
@@ -23,7 +22,8 @@ import de.frank.jarvis.weckwort.WeckwortDienst
 
 /** FragmentActivity, weil die Abfrage des Fingerabdrucks sie verlangt. */
 class MainActivity : FragmentActivity() {
-    private val vm: AppViewModel by viewModels()
+    // Prozessweit, nicht an diese Activity gebunden: Ein Sprachmodus aus dem Hintergrund (Sprachblase) läuft darin weiter.
+    private val vm: AppViewModel by lazy { AppViewModel.hole(this) }
 
     private val hinweisErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         vm.lagePruefen()
@@ -91,6 +91,7 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         sichtbar = true
+        de.frank.jarvis.ui.SprachBlase.abgleichen(this)
         vm.sichtbarMerken(true)
         // War Jarvis nicht auf dem Bildschirm (andere App, Startbildschirm, Display aus), beginnt die Rückkehr neu. Nicht beim
         // Kaltstart (das regelt das ViewModel samt Neustart nach Update), nicht nach Auf- oder Zuklappen, nicht nach einem
@@ -114,6 +115,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         sichtbar = false
+        // Läuft der Sprachmodus weiter, während Frank in eine andere App wechselt, erscheint die Sprachblase.
+        de.frank.jarvis.ui.SprachBlase.abgleichen(this)
         weckwortSeitStopp = false
         if (!isChangingConfigurations) {
             vm.sichtbarMerken(false)

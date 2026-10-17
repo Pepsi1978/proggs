@@ -59,6 +59,14 @@ private sealed class MerkSchritt {
 }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
+    companion object {
+        /** Das eine ViewModel des Prozesses, für die Activity wie für die Sprachblase im Hintergrund. Nur auf dem Hauptfaden. */
+        fun hole(context: Context): AppViewModel {
+            val app = context.applicationContext as de.frank.jarvis.JarvisApplication
+            return androidx.lifecycle.ViewModelProvider(app, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(app))[AppViewModel::class.java]
+        }
+    }
+
     val einstellungen = Einstellungen.get(app)
     private val agent = JarvisAgent(app)
     private val auth get() = agent.auth
@@ -1118,6 +1126,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val treffer = de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
+        val nr = ++sprachmodusNr
+        sprachmodusAktiv = true
         weckwortLauf = viewModelScope.launch {
             // Für das ganze Gespräch den Audiofokus halten: Andere Apps bleiben leise, bis Jarvis fertig ist.
             de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
@@ -1158,9 +1168,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 de.frank.jarvis.speech.GespraechsFokus.freigeben()
                 freihaendig = false
                 if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+                // Ein inzwischen neu gestarteter Sprachmodus bleibt aktiv: Nur der eigene Lauf setzt das Zeichen zurück.
+                if (sprachmodusNr == nr) sprachmodusAktiv = false
                 fertig()
+                SprachBlase.abgleichen(getApplication())
             }
         }
+    }
+
+    /** Läuft der Sprachmodus von „Hey Jarvis“ (Gesprächsmodus)? Danach richtet sich die Sprachblase. */
+    var sprachmodusAktiv by mutableStateOf(false); private set
+    private var sprachmodusNr = 0
+
+    /** Für die Sprachblase: Wer spricht gerade? */
+    val sprichtFrank: Boolean get() = nimmtAuf
+    val sprichtJarvis: Boolean get() = vorleser.stand.value.zustand == de.frank.jarvis.speech.VorleseZustand.SPRICHT
+
+    /**
+     * Langes Drücken auf die Sprachblase: Sprachmodus sofort beenden. Aufnahme, offene Antwort und Vorlesen enden, das
+     * Mikrofon öffnet nicht mehr von selbst. Das Gespräch bleibt gespeichert.
+     */
+    fun sprachmodusBeenden() {
+        sprachsitzungBeendet = true
+        Logbuch.sprache("Sprachsitzung beendet", "Sprachblase lang gedrückt")
+        aufnahmeVerwerfen()
+        abbrechen()
+        vorleser.stopp()
+        SprachBlase.abgleichen(getApplication())
     }
 
     /**

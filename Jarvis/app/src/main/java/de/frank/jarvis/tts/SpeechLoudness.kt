@@ -37,6 +37,7 @@ object SpeechLoudness {
 
     /** Call directly after [MediaPlayer.prepare] and before start(). */
     fun boost(player: MediaPlayer) {
+        WiedergabePegel.anmelden(player)
         try {
             player.setVolume(1f, 1f)
         } catch (error: Exception) {
@@ -57,6 +58,7 @@ object SpeechLoudness {
 
     /** Call before [MediaPlayer.release] - the effect outlives the player otherwise. */
     fun release(player: MediaPlayer?) {
+        WiedergabePegel.abmelden(player)
         val enhancer = synchronized(enhancers) { enhancers.remove(player) } ?: return
         try {
             enhancer.enabled = false

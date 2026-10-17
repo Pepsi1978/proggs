@@ -1,10 +1,18 @@
 package de.frank.jarvis
 
 import android.app.Application
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.dienst.JarvisDienst
 
-class JarvisApplication : Application() {
+/**
+ * Hält auch das [de.frank.jarvis.ui.AppViewModel] für den ganzen Prozess: „Hey Jarvis“ aus einer anderen App führt das
+ * Gespräch ohne sichtbare Activity (Sprachblase), und öffnet Frank Jarvis danach, sieht er genau dieses Gespräch.
+ */
+class JarvisApplication : Application(), ViewModelStoreOwner {
+    override val viewModelStore = ViewModelStore()
+
     override fun onCreate() {
         super.onCreate()
         // Das Logbuch schreibt ab dem ersten Augenblick mit, auch Abstürze der Oberfläche ohne laufenden Dienst.

@@ -419,6 +419,16 @@ class WeckwortDienst : Service() {
     private suspend fun rufen() {
         Weckwort.rufen()
         anhalten()
+        // Jarvis nicht vorn und das Handy entsperrt: Gespräch im Hintergrund, oben nur die Sprachblase, die App bleibt zu.
+        // Das Mikrofon darf der Prozess über diesen Dienst (Mikrofon-Typ, im Vordergrund) weiter nutzen.
+        if (!MainActivity.sichtbar && de.frank.jarvis.ui.SprachBlase.darf(this) &&
+            !getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
+        ) {
+            val gestartet = runCatching { de.frank.jarvis.ui.SprachBlase.sprachmodusStarten(this) }
+                .onFailure { Logbuch.fehler("Weckwort: Sprachblase ließ sich nicht starten", it) }
+                .getOrDefault(false)
+            if (gestartet) return
+        }
         val absicht = rufAbsicht()
         val direkt = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this)
         if (direkt) {
@@ -446,7 +456,7 @@ class WeckwortDienst : Service() {
         val tippen = PendingIntent.getActivity(this, 31, absicht, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val darfDirekt = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this)
         val text = if (darfDirekt) "Tippen, um mit Jarvis zu sprechen."
-        else "Tippen, um mit Jarvis zu sprechen. Für den direkten Start in Jarvis „Über anderen Apps einblenden“ erlauben."
+        else "Tippen, um mit Jarvis zu sprechen. Für die Sprachblase über anderen Apps bei Jarvis „Über anderen Apps einblenden“ erlauben."
         val meldung = NotificationCompat.Builder(this, KANAL_RUF)
             .setSmallIcon(R.drawable.ic_stat_jarvis)
             .setContentTitle("Hey Jarvis")

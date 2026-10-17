@@ -130,6 +130,7 @@
     {"versionCode": 125, "versionName": "1.8.114", "stand": "17.10.2026, 12:08 Uhr", "notiz": "Die Tagesauswertung wird ohne die Regeln für die Zusammenarbeit mit ChatGPT geschrieben; sie bleibt ganz auf dich und deinen Tag bezogen."},
     {"versionCode": 126, "versionName": "1.8.115", "stand": "17.10.2026, 12:47 Uhr", "notiz": "Nachträge zu einem Programmierauftrag gehen jetzt in genau dieselbe Sitzung statt in eine neue, aus Jarvis wie aus ChatGPT; die Auftragsübersicht zeigt dazu Kurzfassung, offene Rückfrage und den Stand jedes Nachtrags."},
     {"versionCode": 127, "versionName": "1.8.116", "stand": "17.10.2026, 12:59 Uhr", "notiz": "Jarvis sagt bei einem Nachtrag ehrlicher, ob die Sitzung ihn wirklich übernommen hat oder ob sie gerade geschlossen wurde."},
-    {"versionCode": 128, "versionName": "1.8.117", "stand": "17.10.2026, 13:05 Uhr", "notiz": "Nachträge kommen zuverlässiger an: auch wenn die Bestätigung hakt, nach einer im Terminal beantworteten Rückfrage und ohne eine Rückfrage der Cloud-Sitzung zu verdecken."}
+    {"versionCode": 128, "versionName": "1.8.117", "stand": "17.10.2026, 13:05 Uhr", "notiz": "Nachträge kommen zuverlässiger an: auch wenn die Bestätigung hakt, nach einer im Terminal beantworteten Rückfrage und ohne eine Rückfrage der Cloud-Sitzung zu verdecken."},
+    {"versionCode": 129, "versionName": "1.8.118", "stand": "17.10.2026, 13:23 Uhr", "notiz": "„Hey Jarvis“ außerhalb der App öffnet Jarvis nicht mehr: Das Gespräch läuft im Hintergrund, oben schwebt eine kleine Sprachblase mit Pegel-Animation (blau du, orange Jarvis); antippen öffnet Jarvis, lang drücken beendet."}
   ]
 }
