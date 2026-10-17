@@ -350,23 +350,38 @@ private fun LiveKostenSumme(vm: AppViewModel) {
     }
 }
 
-/** Aufklappfeld: zeigt die gewählte Option und öffnet beim Tippen alle Optionen als Menü. */
+/**
+ * Aufklappfeld: zeigt die gewählte Option und öffnet beim Tippen alle Optionen. Das Menü dockt direkt unter (oder bei
+ * wenig Platz über) dem Feld an, ist genau so breit und nie höher als der freie Platz im Fenster; lange Listen scrollen.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun Auswahlfeld(titel: String, unter: String = "", inhalt: @Composable ColumnScope.(schliessen: () -> Unit) -> Unit) {
     val f = LocalFarben.current
     var offen by remember { mutableStateOf(false) }
-    Box(Modifier.fillMaxWidth()) {
+    androidx.compose.material3.ExposedDropdownMenuBox(offen, { offen = it }, Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().background(f.flaeche, RoundedCornerShape(14.dp)).antippen { offen = true }.padding(horizontal = 14.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
+                .background(if (offen) f.primaer.copy(alpha = 0.14f) else f.flaeche, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
                 Text(titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 if (unter.isNotEmpty()) Text(unter, color = f.textLeise, fontSize = 13.sp)
             }
-            Icon(Icons.Rounded.ExpandMore, "Auswahl öffnen", tint = f.text)
+            Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Auswahl schließen" else "Auswahl öffnen", tint = f.text)
         }
-        Menue(offen, { offen = false }) { inhalt { offen = false } }
+        val schema = androidx.compose.material3.MaterialTheme.colorScheme.copy(onSurface = f.text, onSurfaceVariant = f.primaer)
+        androidx.compose.material3.MaterialTheme(colorScheme = schema) {
+            ExposedDropdownMenu(
+                offen, { offen = false }, shape = RoundedCornerShape(14.dp), containerColor = menueFlaeche(f),
+                tonalElevation = 0.dp, shadowElevation = 10.dp, border = androidx.compose.foundation.BorderStroke(1.dp, f.rand),
+            ) {
+                inhalt { offen = false }
+                // Etwas Luft unter dem letzten Eintrag, damit er nie an der Menükante klebt.
+                Spacer(Modifier.size(6.dp))
+            }
+        }
     }
 }
 
