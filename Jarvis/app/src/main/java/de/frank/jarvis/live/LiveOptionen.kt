@@ -138,13 +138,11 @@ object LiveOptionen {
         else -> emptyList()
     }
     fun geminiDenken(st: Stand): JSONObject? =
-        if (geminiStufen(st.modell).isEmpty()) null else JSONObject().put("thinkingLevel", st["g_denken"])
+        // Googles Roh-WebSocket-Beispiel schreibt die Stufe groß ("LOW"), nur das SDK nimmt sie klein.
+        if (geminiStufen(st.modell).isEmpty()) null else JSONObject().put("thinkingLevel", st["g_denken"].uppercase(Locale.ROOT))
 
     /** Ab so vielen Tokens kürzt Gemini den Verlauf (Sliding Window); null = Googles Vorgabe. */
     fun geminiKuerzenAb(st: Stand): Int? = st["g_kuerzen"].toIntOrNull()
-
-    /** Extended Thinking zeigt Google im Rohbeispiel über v1alpha, die übrigen über v1beta. */
-    fun geminiApiVersion(st: Stand) = if (st.modell == "gemini-3.8-live-extended-thinking") "v1alpha" else "v1beta"
 
     /** Werkzeugaufrufe: Extended Thinking nur nebenbei (NON_BLOCKING), 3.1 Flash nur wartend, 3.8 Live nach Einstellung. */
     fun geminiNebenbei(st: Stand) = when (st.modell) {
@@ -224,7 +222,7 @@ object LiveOptionen {
                         "Braucht einen Gemini-Schlüssel aus AI Studio.", GEMINI_PREIS_TEXT),
                     Wahl("gemini-3.8-live-extended-thinking", "Gemini 3.8 Live Extended Thinking", "Wie 3.8 Live, denkt aber im Hintergrund gründlicher nach (Stufe einstellbar) " +
                         "und überbrückt die Zeit mit kurzen Sätzen. Werkzeuge laufen nebenher.", GEMINI_PREIS_TEXT + "; Denk-Tokens wie Text-Ausgabe"),
-                    Wahl("gemini-3.1-flash-live-preview", "Gemini 3.1 Flash Live", "Das Flash-Live-Modell (Vorschau, wird laut Google am 17.11.2026 abgeschaltet). " +
+                    Wahl("gemini-3.1-flash-live-preview", "Gemini 3.1 Flash Live", "Das Flash-Live-Modell (Vorschau, Google nennt eine Abschaltung frühestens am 17.11.2026). " +
                         "Denkstufe Minimal bis Hoch; „Flash Live High“ = Denkstufe Hoch.", GEMINI_PREIS_TEXT),
                 )
             }),
@@ -502,7 +500,7 @@ object LiveOptionen {
             mapOf("modell" to "gemini-3.8-live", "g_werkzeug" to "warten", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
         Profil("gemini38x", "Gemini 3.8 Live Extended Thinking", "Google: denkt im Hintergrund gründlicher nach, Stufe Niedrig.",
             mapOf("modell" to "gemini-3.8-live-extended-thinking", "g_denken" to "low", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
-        Profil("gemini31", "Gemini 3.1 Flash Live", "Google Flash Live mit minimaler Denkstufe: am schnellsten. Vorschau, endet laut Google am 17.11.2026.",
+        Profil("gemini31", "Gemini 3.1 Flash Live", "Google Flash Live mit minimaler Denkstufe: am schnellsten. Vorschau, endet frühestens am 17.11.2026.",
             mapOf("modell" to "gemini-3.1-flash-live-preview", "g_denken" to "minimal", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
         Profil("gemini31hoch", "Gemini 3.1 Flash Live High", "Flash Live mit hoher Denkstufe: gründlicher, längere Pausen.",
             mapOf("modell" to "gemini-3.1-flash-live-preview", "g_denken" to "high", "g_kuerzen" to "16000", "g_schluessel" to "auto")),

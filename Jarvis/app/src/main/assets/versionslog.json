@@ -145,6 +145,7 @@
     {"versionCode": 140, "versionName": "1.8.129", "stand": "17.10.2026, 15:20 Uhr", "notiz": "Sprachblase leuchtet jetzt in knalligem, sattem Orange mit kräftigem Rand statt in blassem Orange."},
     {"versionCode": 141, "versionName": "1.8.130", "stand": "17.10.2026, 15:52 Uhr", "notiz": "Die eigene Weckwort-Phrase greift jetzt auch schnell, leise und verschliffen gesprochen: Die Erkennung wartet nicht mehr auf eine Pause, leise Rufe werden verstärkt, die Stimmerkennung urteilt je nach Empfindlichkeit großzügiger, und es gibt die neue Stufe „Sehr hoch“."},
     {"versionCode": 142, "versionName": "1.8.131", "stand": "17.10.2026, 16:05 Uhr", "notiz": "Weckwort sicherer: Fremde Stimmen und Fernseher rutschen beim Anlernen und bei hoher Empfindlichkeit nicht mehr durch, ein Ruf direkt nach einer Stille geht nicht mehr verloren."},
-    {"versionCode": 143, "versionName": "1.8.132", "stand": "17.10.2026, 16:22 Uhr", "notiz": "Live-Gespräch auch mit Google: Gemini 3.8 Live, 3.8 Live Extended Thinking und 3.1 Flash Live (auch High) mit 30 Stimmen samt Hörprobe, allen Einstellungen, Kostenanzeige und kostenlosem oder bezahltem Gemini-Schlüssel."}
+    {"versionCode": 143, "versionName": "1.8.132", "stand": "17.10.2026, 16:22 Uhr", "notiz": "Live-Gespräch auch mit Google: Gemini 3.8 Live, 3.8 Live Extended Thinking und 3.1 Flash Live (auch High) mit 30 Stimmen samt Hörprobe, allen Einstellungen, Kostenanzeige und kostenlosem oder bezahltem Gemini-Schlüssel."},
+    {"versionCode": 144, "versionName": "1.8.133", "stand": "17.10.2026, 16:30 Uhr", "notiz": "Gemini Live: Denkstufe in der Schreibweise, die Google erwartet, damit Extended Thinking und Flash Live sicher verbinden."}
   ]
 }
