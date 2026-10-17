@@ -48,6 +48,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/OpenCodeUpdateService.swift"
     "$SRC_DIR/Services/TerminalLauncher.swift"
     "$SRC_DIR/Services/OpenLauncherService.swift"
+    "$SRC_DIR/Services/JarvisAuftrag.swift"
     "$SRC_DIR/ViewModels/MainViewModel.swift"
     "$SRC_DIR/Views/Controls.swift"
     "$SRC_DIR/Views/ModelListView.swift"

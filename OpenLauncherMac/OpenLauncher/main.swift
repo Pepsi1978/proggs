@@ -9,6 +9,10 @@ nonisolated(unsafe) var retainedDelegate: AppDelegate?
 // wuerde nie aufgerufen (die App startete, zeigte aber nichts an).
 // main.swift laeuft ausserhalb des MainActors; der Aufbau selbst gehoert aber dorthin
 // (Best-Practice §B6: MainActor-Isolation bewusst setzen statt zu umgehen).
+// Jarvis-Programmierauftrag (Mac-Brücke): Sitzung starten und ohne Fenster enden, noch vor dem Aufbau der App.
+if let code = JarvisAuftrag.verarbeite(CommandLine.arguments) {
+    exit(code)
+}
 let application = NSApplication.shared
 MainActor.assumeIsolated {
     let delegate = AppDelegate()

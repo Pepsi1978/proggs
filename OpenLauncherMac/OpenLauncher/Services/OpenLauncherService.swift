@@ -225,7 +225,8 @@ final class OpenLauncherService {
     ///   (Profiles/ClaudeCodeMac/<id>) -> CLAUDE_CONFIG_DIR. Standard/Strikt tragen versionierte
     ///   skills/rules/agents/commands, Minimal ist regelfrei (Skills per Symlink).
     func launchClaudeCode(modelId: String, workDir: String, effortLevel rawEffort: String?,
-                          claudeConfigDir: String?, useTmux: Bool = false) throws {
+                          claudeConfigDir: String?, useTmux: Bool = false, remoteControlName: String? = nil,
+                          initialPromptFile: String? = nil, jarvisAuftragId: String? = nil) throws {
         let effortLevel = Self.normalizeThinkingLevel(rawEffort)
         do {
             Paths.ensureDirectory(workDir)
@@ -234,7 +235,10 @@ final class OpenLauncherService {
             let script = try Self.buildClaudeCodeStartScript(modelId: modelId, workDir: workDir,
                                                              effortLevel: effortLevel, colorName: tabColor.name,
                                                              claudeConfigDir: claudeConfigDir,
-                                                             tabColor: tabColor, title: title)
+                                                             tabColor: tabColor, title: remoteControlName ?? title,
+                                                             remoteControlName: remoteControlName,
+                                                             initialPromptFile: initialPromptFile,
+                                                             jarvisAuftragId: jarvisAuftragId)
             let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launchClaudeCode", "Claude Code gestartet (\(terminal))",
                                ["modelId": modelId, "workDir": workDir,
@@ -591,10 +595,12 @@ final class OpenLauncherService {
     static func buildClaudeCodeStartScript(modelId: String, workDir: String, effortLevel: String?,
                                                    colorName: String, claudeConfigDir: String?,
                                                    tabColor: TerminalTabColor?, title: String?,
-                                                   embeddedTerminal: Bool = false) throws -> String {
+                                                   embeddedTerminal: Bool = false, remoteControlName: String? = nil,
+                                                   initialPromptFile: String? = nil, jarvisAuftragId: String? = nil) throws -> String {
         let tempScript = (Paths.tempDir as NSString)
             .appendingPathComponent("openlauncher-claude-code-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
-        let tempSettings = try buildClaudeCodeSessionSettings(modelId: modelId, effortLevel: effortLevel)
+        let tempSettings = try buildClaudeCodeSessionSettings(modelId: modelId, effortLevel: effortLevel,
+                                                              jarvisHooks: !(jarvisAuftragId ?? "").isEmpty)
 
         let script = """
         #!/bin/zsh
@@ -642,7 +648,17 @@ final class OpenLauncherService {
             # ueberstimmt den /effort-Befehl zur Laufzeit, sodass jede Aenderung still zurueckspringt.
             claudeArgs+=(--effort "$EFFORT")
         fi
-        \(embeddedTerminal ? "" : """
+        # Jarvis-Auftrag: Die Hooks dieser Sitzung (siehe buildClaudeCodeSessionSettings) melden nur mit dieser Nummer.
+        JARVIS_ID=\(Shell.singleQuoted(jarvisAuftragId ?? ""))
+        if [ -n "$JARVIS_ID" ]; then export JARVIS_AUFTRAG_ID="$JARVIS_ID"; fi
+        REMOTE_NAME=\(Shell.singleQuoted(remoteControlName ?? ""))
+        if [ -n "$REMOTE_NAME" ]; then claudeArgs+=(--remote-control "$REMOTE_NAME"); fi
+        PROMPT_FILE=\(Shell.singleQuoted(initialPromptFile ?? ""))
+        if [ -n "$PROMPT_FILE" ]; then
+            # Jarvis-Auftrag: Er ist die erste Nachricht (es gibt nur eine), die Tab-Farbe setzt das Terminal selbst.
+            claudeArgs+=("$(cat "$PROMPT_FILE")")
+        fi
+        \(embeddedTerminal || initialPromptFile != nil ? "" : """
         COLORNAME=\(Shell.singleQuoted(colorName))
         if [ -n "$COLORNAME" ]; then
             claudeArgs+=("/color $COLORNAME")
@@ -665,7 +681,7 @@ final class OpenLauncherService {
         return tempScript
     }
 
-    private static func buildClaudeCodeSessionSettings(modelId: String, effortLevel: String?) throws -> String {
+    private static func buildClaudeCodeSessionSettings(modelId: String, effortLevel: String?, jarvisHooks: Bool = false) throws -> String {
         let tempSettings = (Paths.tempDir as NSString)
             .appendingPathComponent("openlauncher-claude-settings-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).json")
         let root = JSONNode.object()
@@ -673,10 +689,54 @@ final class OpenLauncherService {
         if let effortLevel, isPersistableClaudeEffort(effortLevel) {
             root["effortLevel"] = .string(effortLevel)
         }
+        if jarvisHooks { root["hooks"] = jarvisHooksNode() }
         guard Paths.writeAtomic(root.serialized(), to: tempSettings) else {
             throw LauncherError.message("Sitzungs-Settings konnten nicht geschrieben werden: \(tempSettings)")
         }
         return tempSettings
+    }
+
+    /// Hooks nur für Sitzungen eines Jarvis-Programmierauftrags (Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py), 1:1 wie
+    /// OpenLauncherService.JarvisHooks() unter Windows: Fortschritt, Rückfragen (AskUserQuestion) und freie Fragen am Zugende
+    /// gehen in den Jarvis-Chat. Der Hook prüft zusätzlich JARVIS_AUFTRAG_ID und tut ohne sie nichts. Frage und Stop warten
+    /// bis zu zehn Minuten auf Franks Antwort; der Warter (asyncRewake) stellt Nachträge zu genau diesem Auftrag zu.
+    private static func jarvisHooksNode() -> JSONNode {
+        let skript = (Paths.home as NSString).appendingPathComponent("proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py")
+        // async: Fortschritt läuft im Hintergrund und hält die Sitzung nie auf; Frage und Stop müssen auf die Antwort warten.
+        func eintrag(_ matcher: String?, _ art: String, _ timeout: Int, imHintergrund: Bool = false) -> JSONNode {
+            let hook = JSONNode.object()
+            hook["type"] = .string("command")
+            hook["command"] = .string("python3 \"\(skript)\" \(art)")
+            hook["timeout"] = .number(Double(timeout))
+            if imHintergrund { hook["async"] = .bool(true) }
+            let e = JSONNode.object()
+            e["hooks"] = .array([hook])
+            if let matcher { e["matcher"] = .string(matcher) }
+            return e
+        }
+        // Nachträge zum Auftrag: wartet im Hintergrund am Relay (höchstens 12 h, einer je Auftrag) und weckt die Sitzung mit
+        // Exit 2, auch wenn sie gerade nichts tut. Beim Start und nach jedem Zug neu, falls der vorige schon geweckt hat.
+        func warter() -> JSONNode {
+            let hook = JSONNode.object()
+            hook["type"] = .string("command")
+            hook["command"] = .string("python3 \"\(skript)\" warte")
+            hook["timeout"] = .number(43200)
+            hook["asyncRewake"] = .bool(true)
+            hook["rewakeSummary"] = .string("Nachtrag von Frank über Jarvis")
+            let e = JSONNode.object()
+            e["hooks"] = .array([hook])
+            return e
+        }
+        let root = JSONNode.object()
+        // Alle Werkzeuge: Der Hook liest dabei die neuen Zwischentexte der KI aus dem Transkript und meldet Advisor, Skills, Agenten.
+        root["PostToolUse"] = .array([eintrag("*", "post", 15, imHintergrund: true)])
+        root["PostToolUseFailure"] = .array([eintrag("Bash|PowerShell", "post", 15, imHintergrund: true)])
+        // Rückfragen exakt auf AskUserQuestion (ein Platzhalter mit updatedInput zerstört die Frage, #29530); dazu ein
+        // Lebenszeichen für die drehende Anzeige in Jarvis, async und ohne Ausgabe.
+        root["PreToolUse"] = .array([eintrag("AskUserQuestion", "frage", 660), eintrag("*", "puls", 10, imHintergrund: true)])
+        root["Stop"] = .array([eintrag(nil, "stop", 660), warter()])
+        root["SessionStart"] = .array([warter()])
+        return root
     }
 
     private static func isPersistableClaudeEffort(_ effortLevel: String?) -> Bool {
