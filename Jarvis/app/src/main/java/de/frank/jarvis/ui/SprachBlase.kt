@@ -27,8 +27,9 @@ import kotlin.math.sin
 
 /**
  * Die schwebende Sprachblase: „Hey Jarvis“ aus einer anderen App öffnet Jarvis nicht, das Gespräch läuft im Hintergrund
- * und oben mittig zeigt eine kleine Blase (etwa 2 × 0,7 cm) ein Pegel-Spektrum. Blau spricht Frank (Mikrofon), Orange
- * spricht Jarvis (Wiedergabe), dazwischen eine ruhige Welle: Jarvis hört noch zu.
+ * und oben mittig zeigt eine kleine Blase (etwa 2 × 0,7 cm) ein Pegel-Spektrum. Immer in Orange, unabhängig von Tag,
+ * Nacht und Design (Franks Wunsch): sprechen Frank oder Jarvis, zittert das Spektrum nach dem Pegel, dazwischen eine
+ * ruhige Welle: Jarvis hört noch zu.
  *
  * Sichtbar genau dann, wenn der Sprachmodus läuft und Jarvis nicht vorn ist ([abgleichen] an Start, Ende, onStart und
  * onStop der Activity). Das Fenster nimmt nie den Fokus; nur die Blase selbst ist berührbar: Antippen öffnet Jarvis,
@@ -118,7 +119,7 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) = setMeasuredDimension(breite, hoehe)
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        flaeche.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), 0xF2132238.toInt(), 0xF2060B16.toInt(), Shader.TileMode.CLAMP)
+        flaeche.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), 0xF2241A10.toInt(), 0xF20E0A06.toInt(), Shader.TileMode.CLAMP)
         glanz.shader = LinearGradient(0f, 0f, 0f, h * 0.5f, 0x22FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
     }
 
@@ -200,8 +201,9 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
     private fun aufhellen(c: Int) = mische(c, 0xFFFFFFFF.toInt(), 0.35f)
 
     companion object {
-        private const val FRANK = 0xFF4FC8FF.toInt()
+        // Alles in einer Orange-Familie: Frank etwas heller, Jarvis kräftig, Ruhe gedämpft.
+        private const val FRANK = 0xFFFFB25C.toInt()
         private const val JARVIS = 0xFFFF9A3D.toInt()
-        private const val RUHE = 0xFF6FA6D6.toInt()
+        private const val RUHE = 0xFFE08A3C.toInt()
     }
 }
