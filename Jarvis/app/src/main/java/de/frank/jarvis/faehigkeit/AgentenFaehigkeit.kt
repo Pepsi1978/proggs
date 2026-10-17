@@ -229,5 +229,7 @@ fun vorgangsBlock(context: Context, alle: Boolean = false): String {
         append("HINTERGRUNDAUFTRÄGE (Kennung in eckigen Klammern; angenommen heißt nicht fertig):\n")
         (agenten + programmieren).forEach { append("- ").append(it).append('\n') }
         if (agenten.any { "noch nicht mitgeteilt" in it || "nicht als mitgeteilt" in it }) append("Fertige Ergebnisse: vorgaenge aktion lesen mit id; danach aktion mitgeteilt.\n")
+        // Laufende Programmieraufträge sind kein Ziel für neue Wünsche: Ein Nachtrag nur, wenn Frank ihn ausdrücklich dorthin verlangt.
+        if (programmieren.isNotEmpty()) append("Neue Programmierwünsche sind neue Aufträge; Nachträge an diese Aufträge nur, wenn Frank sie ausdrücklich in eine von ihm bezeichnete Sitzung verlangt.\n")
     }.trim()
 }

@@ -257,7 +257,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         laufende[id] = runde
         // Die Kennung des Gesprächs läuft im Koroutinen-Kontext mit: Startet Jarvis in dieser Runde einen Programmierauftrag,
         // kommen dessen Meldungen in genau dieses Gespräch, auch wenn inzwischen andere Gespräche arbeiten.
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id)) {
+        // Franks eigene Worte (diese Frage und seine vorige, getippt oder eingesprochen): Nur daran entscheidet programmier_nachtrag,
+        // ob er einen Nachtrag ausdrücklich verlangt hat. Die erste Nachricht eines Auftrags-Gesprächs ist der Auftrag selbst, nicht Franks Wort.
+        val worte = gespraech.take(frage + 1).filter { it.vonMir && !de.frank.jarvis.faehigkeit.ProgrammierChat.istAuftragsVorspann(it.text) }
+            .takeLast(2).joinToString("\n") { it.text }
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(worte, streng = true)) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
@@ -920,7 +924,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val zeitlimit = if (wirksameStufe != null && wirksameStufe >= de.frank.jarvis.auth.ReasoningEffort.HIGH) 120_000L else 60_000L
         // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
         val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
-        viewModelScope.launch(kennung) {
+        // Live: die Mitschrift von Franks Äußerung für die Nachtrags-Prüfung (unsicher, daher nicht streng).
+        val worte = aeusserung?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(it, streng = false) } ?: kotlin.coroutines.EmptyCoroutineContext
+        viewModelScope.launch(kennung + worte) {
             val antwort = runCatching {
                 agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = zeitlimit,
                     modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)

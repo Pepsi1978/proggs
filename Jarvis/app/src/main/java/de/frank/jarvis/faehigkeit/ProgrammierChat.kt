@@ -40,14 +40,30 @@ object ProgrammierChat {
     }
 
     /**
-     * Legt für einen Programmierauftrag aus ChatGPT ein eigenes Gespräch an: Franks Auftrag als erste Nachricht, fester Titel.
+     * Franks eigene Worte der laufenden Runde im Koroutinen-Kontext: daran prüft programmier_nachtrag, ob Frank einen Nachtrag
+     * wirklich ausdrücklich verlangt hat, statt der Deutung des Modells zu folgen. [streng] im Standard-Chat (getippt oder
+     * eingesprochen): nur diese Worte zählen. Im Live-Modus ist die Mitschrift unsicher; dort zählen auch die Worte des Modells.
+     */
+    class FranksWorte(val text: String, val streng: Boolean) : kotlin.coroutines.AbstractCoroutineContextElement(FranksWorte) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<FranksWorte>
+    }
+
+    /** Anfang der ersten Nachricht eines eigenen Auftrags-Gesprächs: Sie ist der Auftrag, nicht Franks Wort an Jarvis. */
+    const val AUFTRAG_VORSPANN = "An den Programmierer ("
+    private const val PLUGIN_VORSPANN = "Über das Jarvis-Plugin (ChatGPT/MCP) an den Programmierer ("
+
+    fun istAuftragsVorspann(text: String) = text.startsWith(AUFTRAG_VORSPANN) || text.startsWith(PLUGIN_VORSPANN)
+
+    /**
+     * Legt für einen Programmierauftrag ein eigenes Gespräch an: Franks Auftrag als erste Nachricht, fester Titel. Aus ChatGPT
+     * immer, in der App für eine ausdrücklich neue Session oder wenn das Gespräch schon einen Auftrag hat ([ueberPlugin] false).
      * Leer = ließ sich nicht anlegen (dann läuft der Auftrag ohne Gespräch, wie bisher).
      */
-    fun neuesGespraech(context: Context, app: String, auftrag: String): String {
+    fun neuesGespraech(context: Context, app: String, auftrag: String, ueberPlugin: Boolean = true): String {
         val id = Gespraeche.neueId()
-        val erste = GespeicherteNachricht(true, "Über das Jarvis-Plugin (ChatGPT/MCP) an den Programmierer ($app):\n\n$auftrag")
+        val erste = GespeicherteNachricht(true, (if (ueberPlugin) PLUGIN_VORSPANN else AUFTRAG_VORSPANN) + "$app):\n\n$auftrag")
         Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste)) ?: return ""
-        Gespraeche.umbenennen(context, id, "Programmieren: $app (über ChatGPT/MCP)")
+        Gespraeche.umbenennen(context, id, "Programmieren: $app" + if (ueberPlugin) " (über ChatGPT/MCP)" else "")
         return id
     }
 

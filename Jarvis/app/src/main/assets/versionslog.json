@@ -160,6 +160,7 @@
     {"versionCode": 155, "versionName": "1.8.144", "stand": "17.10.2026, 20:07 Uhr", "notiz": "Einstellungen → Live-Gespräch sind deutlich kompakter: Schnellwahl, Stimme und die Einzeleinstellungen öffnen sich als Aufklappmenü, die Erklärungen sind kurz und knapp."},
     {"versionCode": 156, "versionName": "1.8.145", "stand": "17.10.2026, 20:29 Uhr", "notiz": "Die Aufklappmenüs unter Einstellungen → Live-Gespräch docken direkt am Auswahlfeld an, sind genau so breit und passen sich dem freien Platz an; lange Stimmenlisten scrollen bis zum letzten Eintrag."},
     {"versionCode": 157, "versionName": "1.8.146", "stand": "17.10.2026, 20:34 Uhr", "notiz": "Die Modellauswahl im Live-Gespräch bietet Realtime 2, Realtime 1.5, Realtime (alt) und Realtime mini (alt) nicht mehr an; war eines davon eingestellt, läuft das Gespräch jetzt mit GPT-Live 1."},
-    {"versionCode": 158, "versionName": "1.8.147", "stand": "17.10.2026, 20:39 Uhr", "notiz": "Bei Gemini Live lässt sich die Pause bis zur Antwort jetzt auch auf 1,5, 2,5 oder 3 Sekunden stellen, damit Gemini bei Denkpausen nicht zu früh antwortet."}
+    {"versionCode": 158, "versionName": "1.8.147", "stand": "17.10.2026, 20:39 Uhr", "notiz": "Bei Gemini Live lässt sich die Pause bis zur Antwort jetzt auch auf 1,5, 2,5 oder 3 Sekunden stellen, damit Gemini bei Denkpausen nicht zu früh antwortet."},
+    {"versionCode": 159, "versionName": "1.8.148", "stand": "17.10.2026, 20:52 Uhr", "notiz": "Jarvis schickt Programmierwünsche nur noch als Nachtrag in eine bestehende Sitzung, wenn du das ausdrücklich verlangst und die Sitzung eindeutig ist; sonst fragt er nach, und neue Aufträge bekommen eine eigene Session."}
   ]
 }
