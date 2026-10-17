@@ -47,7 +47,7 @@ object StimmProbe {
             if (schluessel.isBlank()) return@withContext if (art == "gemini") "Für Hörproben bitte zuerst einen Gemini-Schlüssel eintragen." else "Für Hörproben bitte zuerst den OpenAI-API-Schlüssel eintragen."
             var (pcm, fehler) = if (art == "gemini") erzeugenGemini(schluessel, stimme) else erzeugen(schluessel, art == "live", stimme)
             // Kostenloses Kontingent erschöpft: einmal mit dem bezahlten Schlüssel.
-            if (pcm == null && art == "gemini" && ersatz.isNotBlank() && ersatz != schluessel) {
+            if (pcm == null && art == "gemini" && ersatz.isNotBlank() && ersatz != schluessel && fehler?.contains("Kontingent") == true) {
                 val zweiter = erzeugenGemini(ersatz, stimme)
                 pcm = zweiter.first; fehler = zweiter.second
             }
@@ -108,7 +108,7 @@ object StimmProbe {
             }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 fertig.complete(if (code == 1000) null else when {
-                    reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) -> "Gemini-Kontingent erschöpft: Hörprobe gerade nicht möglich."
+                    reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true) -> "Gemini-Kontingent erschöpft: Hörprobe gerade nicht möglich."
                     reason.contains("API key", true) -> "Der Gemini-Schlüssel wurde abgelehnt."
                     else -> "Hörprobe (Gemini $code): " + reason.take(160)
                 })

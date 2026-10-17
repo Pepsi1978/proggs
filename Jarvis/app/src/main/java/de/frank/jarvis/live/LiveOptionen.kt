@@ -125,10 +125,12 @@ object LiveOptionen {
         val audioEin = anteil("promptTokensDetails", "AUDIO")
         val audioAus = anteil("responseTokensDetails", "AUDIO").let { if (it == 0) anteil("candidatesTokensDetails", "AUDIO") else it }
         val denken = u.optInt("thoughtsTokenCount")
+        // Jarvis' Werkzeug-Ergebnisse meldet Gemini getrennt; sie sind Text-Eingabe.
+        val werkzeug = u.optInt("toolUsePromptTokenCount")
         // Fehlen die Einzelheiten, zählt alles als Audio: lieber etwas zu hoch als zu niedrig geschätzt.
         val audioE = if (audioEin == 0 && ein > 0 && u.optJSONArray("promptTokensDetails") == null) ein else audioEin
         val audioA = if (audioAus == 0 && aus > 0 && u.optJSONArray("responseTokensDetails") == null && u.optJSONArray("candidatesTokensDetails") == null) aus else audioAus
-        return (audioE * p.audioEin + (ein - audioE).coerceAtLeast(0) * p.textEin + audioA * p.audioAus + ((aus - audioA).coerceAtLeast(0) + denken) * p.textAus) / 1_000_000
+        return (audioE * p.audioEin + ((ein - audioE).coerceAtLeast(0) + werkzeug) * p.textEin + audioA * p.audioAus + ((aus - audioA).coerceAtLeast(0) + denken) * p.textAus) / 1_000_000
     }
 
     /** Denkstufe je Modell: 3.8 Live hat keine (thinkingConfig muss fehlen), Extended Thinking low bis high, 3.1 Flash minimal bis high. */

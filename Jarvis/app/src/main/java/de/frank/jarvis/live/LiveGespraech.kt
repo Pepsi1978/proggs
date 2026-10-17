@@ -228,7 +228,8 @@ class LiveGespraech(
         val url = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.$apiVersion.GenerativeService.BidiGenerateContent?key=" +
             java.net.URLEncoder.encode(schluessel, "UTF-8")
         val anfrage = Request.Builder().url(url).build()
-        val alt = ws
+        // Die abgelöste Verbindung liefert den Rest der laufenden Antwort noch; geschlossen wird sie erst bei setupComplete der neuen.
+        ws?.let { a -> abgeloest?.takeIf { it !== a }?.let { runCatching { it.close(1000, "Neue Verbindung") } }; abgeloest = a }
         ws = client.newWebSocket(anfrage, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO) }
@@ -239,8 +240,10 @@ class LiveGespraech(
             override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) = onMessage(webSocket, bytes.utf8())
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                if (webSocket !== ws) return
+                if (webSocket !== ws && webSocket !== abgeloest) return
                 val e = runCatching { JSONObject(text) }.getOrNull() ?: return
+                // Von der abgelösten Verbindung nur noch Ton, Mitschrift und Werkzeugaufrufe, kein neues Setup.
+                if (webSocket !== ws && (e.has("setupComplete") || e.has("goAway") || e.has("sessionResumptionUpdate"))) return
                 geminiEreignis(webSocket, e)
             }
 
@@ -275,11 +278,15 @@ class LiveGespraech(
             }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft && webSocket === ws) beenden(senden = false) }
         })
-        // Die abgelöste Verbindung erst schließen, wenn die neue steht: ihr Schließen zählt dann nicht mehr.
-        alt?.let { a -> runCatching { a.close(1000, "Neue Verbindung") } }
     }
 
     @Volatile private var apiVersion = "v1beta"
+    /** Gemini: die Verbindung vor einem goAway- oder Schlüsselwechsel, bis die neue steht. */
+    @Volatile private var abgeloest: WebSocket? = null
+    /** Gemini: über welche Verbindung ein Werkzeugaufruf kam; das Ergebnis geht dorthin zurück, solange sie offen ist. */
+    private val aufrufVerbindung = java.util.concurrent.ConcurrentHashMap<String, WebSocket>()
+    /** Gemini: eine Antwort läuft (erster Ton bis turnComplete); nur dann verwirft das Antippen ihren Rest. */
+    @Volatile private var geminiAntwortLaeuft = false
 
     private fun istKontingent(reason: String) = reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true)
 
@@ -298,6 +305,8 @@ class LiveGespraech(
         Log.w(LiveRouting.TAG, "Gemini: kostenloses Kontingent erschöpft ($anlass), wechsle auf den bezahlten Schlüssel")
         beiFehler("Kostenloses Gemini-Kontingent erschöpft: Jarvis spricht mit dem bezahlten Schlüssel weiter.")
         gratis = false
+        // Eine Fortsetzungskennung gehört zum Projekt des alten Schlüssels: frisch beginnen, ohne neue Begrüßung.
+        fortsetzKennung = ""
         geminiVerbinden(ersatz)
         return true
     }
@@ -351,6 +360,7 @@ class LiveGespraech(
         when {
             e.has("setupComplete") -> {
                 bereit = true
+                abgeloest?.let { a -> abgeloest = null; Thread({ runCatching { Thread.sleep(1_500); a.close(1000, "Neue Verbindung") } }, "jarvis-gemini-alt").start() }
                 if (startMs == 0L) startMs = System.currentTimeMillis()
                 tonStarten()
                 if (!begruesst) {
@@ -362,10 +372,16 @@ class LiveGespraech(
             e.has("serverContent") -> {
                 val c = e.optJSONObject("serverContent") ?: return
                 letzteAktivitaet = System.currentTimeMillis()
-                c.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d -> synchronized(nutzerTeile) { nutzerTeile.append(d) } }
+                c.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d ->
+                    // Frank spricht neu: Was danach kommt, ist die Antwort darauf und wird nie verworfen.
+                    if (!geminiAntwortLaeuft) verwerfenGemini = false
+                    synchronized(nutzerTeile) { nutzerTeile.append(d) }
+                }
                 if (c.optBoolean("interrupted")) {
                     // Frank redet dazwischen: Gemini hat die Antwort schon abgebrochen, der gepufferte Rest verstummt.
                     verwerfenGemini = false
+                    geminiAntwortLaeuft = false
+                    geminiKosten()
                     ausgabeLeeren()
                     jarvisFertig()
                     status("Ich höre zu")
@@ -380,15 +396,18 @@ class LiveGespraech(
                     if (p.optBoolean("thought")) continue
                     val daten = p.optJSONObject("inlineData")?.optString("data")?.takeIf { it.isNotEmpty() } ?: continue
                     nutzerFertig()
+                    geminiAntwortLaeuft = true
+                    letzteHoerbarEmpfangMs = System.currentTimeMillis()
                     if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
                     ausgabe.offer(Stueck(Base64.decode(daten, Base64.DEFAULT), true))
                 }
                 if (c.optBoolean("turnComplete")) {
                     verwerfenGemini = false
-                    sprichtGerade = false
+                    geminiAntwortLaeuft = false
                     nutzerFertig(); jarvisFertig()
                     geminiKosten()
-                    if (laeuft && kennungArt.isEmpty()) status("Ich höre zu")
+                    // Der Ton läuft noch aus dem Puffer: „Jarvis spricht“ setzt der Mikrofon-Faden zurück, wenn er verklungen ist.
+                    if (laeuft && kennungArt.isEmpty() && !sprichtGerade) status("Ich höre zu")
                 }
             }
             e.has("toolCall") -> {
@@ -398,6 +417,7 @@ class LiveGespraech(
                     if (f.optString("name") != "jarvis_fragen") continue
                     val id = f.optString("id")
                     kennungArt[id] = "gemini"
+                    aufrufVerbindung[id] = w
                     nutzerFertig(); jarvisFertig()
                     bestaetigungVerschlucken = false
                     status("Jarvis schaut nach …")
@@ -406,7 +426,8 @@ class LiveGespraech(
             }
             e.has("toolCallCancellation") -> {
                 val ids = e.optJSONObject("toolCallCancellation")?.optJSONArray("ids") ?: return
-                for (i in 0 until ids.length()) kennungArt.remove(ids.optString(i))
+                // Die Kennung bleibt als „verworfen“ stehen: Ein spätes Ergebnis darf nie als anderes Protokoll hinausgehen.
+                for (i in 0 until ids.length()) { kennungArt[ids.optString(i)] = "gemini_abgebrochen"; aufrufVerbindung.remove(ids.optString(i)) }
             }
             e.has("sessionResumptionUpdate") -> {
                 val u = e.optJSONObject("sessionResumptionUpdate") ?: return
@@ -431,25 +452,8 @@ class LiveGespraech(
         kostenMelden()
     }
 
-    /** Mikrofon (24 kHz) auf die 16 kHz, die Gemini erwartet: lineare Interpolation, 3 Eingangs- auf 2 Ausgangsproben. */
-    private fun auf16k(b: ByteArray): ByteArray {
-        val n = b.size / 2
-        val m = n * 2 / 3
-        val aus = ByteArray(m * 2)
-        for (j in 0 until m) {
-            val pos = j * 1.5
-            val i = pos.toInt()
-            val t = pos - i
-            val a = ((b[2 * i].toInt() and 0xFF) or (b[2 * i + 1].toInt() shl 8))
-            val c = if (i + 1 < n) ((b[2 * i + 2].toInt() and 0xFF) or (b[2 * i + 3].toInt() shl 8)) else a
-            val s = (a + (c - a) * t).toInt()
-            aus[2 * j] = s.toByte(); aus[2 * j + 1] = (s shr 8).toByte()
-        }
-        return aus
-    }
-
     private fun geminiAudio(pcm: ByteArray): String = JSONObject().put("realtimeInput", JSONObject().put("audio", JSONObject()
-        .put("data", Base64.encodeToString(auf16k(pcm), Base64.NO_WRAP)).put("mimeType", "audio/pcm;rate=16000"))).toString()
+        .put("data", Base64.encodeToString(pcm, Base64.NO_WRAP)).put("mimeType", "audio/pcm;rate=16000"))).toString()
 
     // ======================= GPT-Live =======================
 
@@ -814,10 +818,13 @@ class LiveGespraech(
         val w = ws ?: return
         if (navigation) bestaetigungVerschlucken = true
         when (kennungArt.remove(kennung)) {
+            "gemini_abgebrochen" -> Log.i(LiveRouting.TAG, "Gemini hat den Werkzeugaufruf abgebrochen: Ergebnis verworfen")
             "gemini" -> {
                 val r = JSONObject().put("id", kennung).put("name", "jarvis_fragen").put("response", JSONObject().put("result", text))
                 if (LiveOptionen.geminiNebenbei(st) && modell == "gemini-3.8-live") r.put("scheduling", st["g_melden"])
-                w.send(JSONObject().put("toolResponse", JSONObject().put("functionResponses", JSONArray().put(r))).toString())
+                // An die Verbindung, über die der Aufruf kam, solange sie noch offen ist (goAway-Wechsel).
+                val ziel = aufrufVerbindung.remove(kennung)?.takeIf { it === w || it === abgeloest } ?: w
+                ziel.send(JSONObject().put("toolResponse", JSONObject().put("functionResponses", JSONArray().put(r))).toString())
                 if (kennungArt.isEmpty() && !sprichtGerade && laeuft) status("Ich höre zu")
             }
             "auftrag" -> {
@@ -829,6 +836,7 @@ class LiveGespraech(
                 w.send(JSONObject().put("type", "response.create").toString())
             }
             else -> {
+                if (gemini) { Log.w(LiveRouting.TAG, "Gemini: Ergebnis zu unbekannter Kennung verworfen"); return }
                 w.send(JSONObject().put("type", "conversation.item.create").put("item", JSONObject()
                     .put("type", "function_call_output").put("call_id", kennung).put("output", text)).toString())
                 w.send(JSONObject().put("type", "response.create").toString())
@@ -878,9 +886,11 @@ class LiveGespraech(
             MedienTastenRiegel.sperren(app)
 
             val rate = 24000
-            val minIn = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            // Gemini erwartet 16 kHz: das Mikrofon gleich so öffnen statt umzurechnen; die Wiedergabe bleibt bei 24 kHz.
+            val mikroRate = if (gemini) 16000 else rate
+            val minIn = AudioRecord.getMinBufferSize(mikroRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             // VOICE_COMMUNICATION auch im Medienweg: Nur diese Quelle bekommt die Echounterdrückung des Geräts.
-            val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minIn, 9600) * 2)
+            val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, mikroRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minIn, mikroRate / 5 * 2) * 2)
             aufnahme = rec
             if (medienweg) {
                 // Fest das Handy-Mikrofon: Das Bluetooth-Mikrofon ginge nur über das Telefonprofil und risse den Medienton mit.
@@ -889,7 +899,7 @@ class LiveGespraech(
             }
             if (rec.state != AudioRecord.STATE_INITIALIZED) false
             else {
-                tonAnlegen(rec, rate)
+                tonAnlegen(rec, rate, mikroRate)
                 true
             }
         }
@@ -901,7 +911,7 @@ class LiveGespraech(
     }
 
     /** Nur unter [tonSperre] aufrufen. */
-    private fun tonAnlegen(rec: AudioRecord, rate: Int) {
+    private fun tonAnlegen(rec: AudioRecord, rate: Int, mikroRate: Int) {
         if (AcousticEchoCanceler.isAvailable()) echo = AcousticEchoCanceler.create(rec.audioSessionId)?.also { it.enabled = true }
         if (NoiseSuppressor.isAvailable()) rauschen = NoiseSuppressor.create(rec.audioSessionId)?.also { it.enabled = true }
         Log.i(LiveRouting.TAG, "Echounterdrückung des Geräts: verfügbar=${AcousticEchoCanceler.isAvailable()}, aktiv=${runCatching { echo?.enabled }.getOrNull() ?: false}")
@@ -938,7 +948,8 @@ class LiveGespraech(
         // 100-ms-Blöcke (4.800 Byte), wie OpenAI empfiehlt; Fehler in den Fäden enden als Meldung, nie als Absturz.
         Thread({
             runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO) }
-            val puffer = ByteArray(4800)
+            // 100 ms je Block: 4.800 Byte bei 24 kHz, 3.200 bei 16 kHz (Gemini).
+            val puffer = ByteArray(mikroRate / 10 * 2)
             // Unter der Sperre: Hat tonAus() die Aufnahme schon freigegeben, startet sie nicht mehr.
             val ok = synchronized(tonSperre) {
                 laeuft && aufnahme === rec && runCatching { rec.startRecording() }.isSuccess && rec.recordingState == AudioRecord.RECORDSTATE_RECORDING
@@ -982,7 +993,7 @@ class LiveGespraech(
                 }
                 // GPT-Live meldet kein Ende der Rede: Ist kein hörbarer Ton mehr offen, hört Jarvis wieder zu. Hängt die
                 // Wiedergabe, gilt nach STATUS_MAX_MS ohne geschriebenen und empfangenen Ton dasselbe.
-                if (live && sprichtGerade) {
+                if ((live || gemini) && sprichtGerade) {
                     val seit = jetzt - maxOf(letzteHoerbarMs, letzteHoerbarEmpfangMs)
                     if ((!tonOffen && seit >= 300) || seit >= STATUS_MAX_MS) {
                         if (tonOffen) Log.w(LiveRouting.TAG, "Wiedergabe kommt nicht voran: Sprechanzeige zurückgesetzt, Warteschlange ${ausgabe.size}")
@@ -1120,8 +1131,9 @@ class LiveGespraech(
             return
         }
         if (gemini) {
-            // Gemini kennt kein Abbrechen von außen: Der Rest der Antwort wird bis zu ihrem Ende verworfen.
-            verwerfenGemini = true
+            // Gemini kennt kein Abbrechen von außen: Der Rest der Antwort wird bis zu ihrem Ende verworfen. Ist sie schon
+            // vollständig da (nur noch im Puffer), genügt das Leeren; sonst verschluckte das Verwerfen die nächste Antwort.
+            if (geminiAntwortLaeuft) verwerfenGemini = true
             synchronized(jarvisTeile) { jarvisTeile.setLength(0) }
         } else if (live) {
             verwerfenLive = true
