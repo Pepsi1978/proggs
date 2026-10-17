@@ -86,10 +86,16 @@ class JarvisAgent(context: Context) {
         beiAenderung: (String) -> Unit = {},
         /** Bilder zur Frage (data-URLs: Fotos, PDF-Seiten); sie gehen nur mit dem neuesten Zug ans Modell. */
         bilder: List<String> = emptyList(),
+        /** Modell und Denkstufe nur für diesen Aufruf (Live-Gespräch „Jarvis direkt“); null = wie in den Einstellungen. */
+        modell: de.frank.jarvis.auth.CodexModel? = null,
+        denkstufe: de.frank.jarvis.auth.ReasoningEffort? = null,
+        /** true = Live-Gespräch „Jarvis direkt“: Gesamtbild so, wie es bereitliegt, ohne auf Nachlesen zu warten. */
+        schnell: Boolean = false,
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
-            versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, lernen, abschluss, beiAenderung, bilder)
+            versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, lernen, abschluss, beiAenderung, bilder,
+                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell)
         }
 
     private suspend fun versucheIntern(
@@ -105,6 +111,9 @@ class JarvisAgent(context: Context) {
         abschluss: Boolean,
         beiAenderung: (String) -> Unit,
         bilder: List<String>,
+        modell: de.frank.jarvis.auth.CodexModel,
+        denkstufe: de.frank.jarvis.auth.ReasoningEffort,
+        schnell: Boolean,
     ): String? {
         abbruchGrund = null
         if (!auth.isConnected) { abbruchGrund = "Jarvis ist nicht mit ChatGPT angemeldet"; return null }
@@ -120,7 +129,10 @@ class JarvisAgent(context: Context) {
         // nur die schnellen Bereiche werden höchstens 2,5 Sekunden nachgelesen). Beim Schreiben der Tagesauswertung selbst
         // genügen Regeln und Wissen über Frank: Die Daten stehen dort im Auftrag, und die alte Auswertung soll die neue nicht färben.
         // Ohne die Symbiose-Regeln: Sie regeln die Zusammenarbeit mit ChatGPT und haben in Franks persönlicher Auswertung nichts zu suchen.
-        val gesamtbild = if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
+        // Live-Gespräch „Jarvis direkt“: Das Gesamtbild liegt fertig bereit (jede App frischt ihren Bereich selbst auf); nicht erst nachlesen,
+        // sonst wartet Frank bei jeder Frage bis zu 2,5 Sekunden, bevor das Denk-Modell überhaupt anfängt.
+        val gesamtbild = if (schnell) runCatching { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, frisch = false) }.getOrElse { gesamtbildMitZeitlimit() }
+            else if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
         val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
         Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen, Verlauf ${zuege.size} Züge")
@@ -133,8 +145,8 @@ class JarvisAgent(context: Context) {
             repeat(maxSchritte) {
                 schritte++
                 val modellBeginn = System.currentTimeMillis()
-                val roh = auth.streamChat(anweisungText, zuege, einstellungen.modell, einstellungen.denkstufe)
-                Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${einstellungen.modell.label}, ${roh.length} Zeichen")
+                val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe)
+                Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen")
                 val schritt = lies(roh)
                 val (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
                 if (schritt == null || aufrufe.isEmpty()) {
@@ -179,7 +191,7 @@ class JarvisAgent(context: Context) {
         zuege += ChatTurn("user", "ABSCHLUSS: $grund. Rufe KEIN Werkzeug mehr auf. Antworte jetzt sofort mit {\"antwort\": \"…\"} und schreibe das Ergebnis aus allem, " +
             "was du bisher hast. Sag am Anfang in einem Satz, dass es ein Zwischenstand ist und was noch fehlt. Nenne nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat.")
         val ende = withTimeoutOrNull(reserve) {
-            runCatching { auth.streamChat(anweisungText, zuege, einstellungen.modell, einstellungen.denkstufe) }.getOrNull()
+            runCatching { auth.streamChat(anweisungText, zuege, modell, denkstufe) }.getOrNull()
         }
         val antwort = ende?.let { roh -> lies(roh)?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim().takeIf { it.isNotEmpty() && !it.trimStart().startsWith("{") } }
         abbruchGrund = if (antwort != null) "$grund; Zwischenstand geschrieben" else "$grund; auch der Zwischenstand kam nicht zustande"

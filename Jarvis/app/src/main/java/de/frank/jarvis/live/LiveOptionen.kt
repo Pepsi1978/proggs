@@ -60,6 +60,8 @@ object LiveOptionen {
         val istGemini get() = modell.startsWith("gemini")
         val istRealtime get() = !istLive && !istGemini
         val denktBeiOpenAi get() = istLive && get("denken") == "openai"
+        /** Jarvis denkt selbst mit dem Modell aus dem ChatGPT-Abo; das Sprachmodell spricht nur (GPT-Live oder Gemini, experimentell). */
+        val jarvisDirekt get() = (istLive && get("denken") == "jarvis") || (istGemini && get("g_wer") == "jarvis")
     }
 
     // ---- Preise (USD) ----
@@ -150,7 +152,8 @@ object LiveOptionen {
     fun geminiNebenbei(st: Stand) = when (st.modell) {
         "gemini-3.8-live-extended-thinking" -> true
         "gemini-3.1-flash-live-preview" -> false
-        else -> st["g_werkzeug"] == "nebenbei"
+        // Jarvis direkt: Gemini wartet auf Jarvis' Antwort, statt selbst weiterzureden.
+        else -> st["g_werkzeug"] == "nebenbei" && !st.jarvisDirekt
     }
 
     /** Die 30 Stimmen der Gemini Live API (Name, Googles Charakterwort, Geschlecht nach den gleichnamigen Chirp-3-HD-Stimmen). */
@@ -205,6 +208,31 @@ object LiveOptionen {
     )
 
     private val AN_AUS = listOf(Wahl("an", "An"), Wahl("aus", "Aus"))
+
+    private val JARVIS_MODELL_TEXT = mapOf(
+        "gpt-6-luna" to "Schnell, für Gespräche meist genug. Empfehlung bei hoher Denkstufe.",
+        "gpt-5.6-terra" to "Mittelklasse, gründlicher als Luna.",
+        "gpt-6.1-sol" to "Kräftig für schwierige Fragen, längere Pausen.",
+        "gpt-6-astra" to "Das stärkste Modell, die längsten Pausen.",
+    )
+    private val JARVIS_STUFE_TEXT = mapOf(
+        "low" to "Kurz nachdenken, kurze Pausen. Empfehlung fürs Gespräch.",
+        "medium" to "Gründlicher, merklich längere Pausen.",
+        "high" to "Für schwierige Fragen; lange Pausen.",
+        "xhigh" to "Sehr lange Pausen, nur wenn nötig.",
+        "max" to "Das Gründlichste; kann länger als eine Minute dauern.",
+        "ultra" to "Nicht bei Luna; sehr lange Denkzeit.",
+    )
+
+    /** Modell und Denkstufe für Jarvis im Modus „Jarvis direkt“; null = wie im Chat. */
+    fun jarvisModell(st: Stand): de.frank.jarvis.auth.CodexModel? =
+        if (!st.jarvisDirekt) null else st["j_modell"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.CodexModel.fromLabel(it) }
+    fun jarvisDenkstufe(st: Stand): de.frank.jarvis.auth.ReasoningEffort? =
+        if (!st.jarvisDirekt) null else st["j_denken"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.ReasoningEffort.fromLabel(it) }
+
+    /** Ein kurzer Text, womit Jarvis direkt denkt, für die Übersicht. */
+    private fun jarvisDenktText(st: Stand): String =
+        "Jarvis denkt selbst (" + (jarvisModell(st)?.label ?: "Modell wie im Chat") + ", " + (jarvisDenkstufe(st)?.label ?: "Stufe wie im Chat") + ")"
     private const val GEMINI_PREIS_TEXT = "Audio 3 / 12 $, Text 0,75 / 4,50 $ je 1 Mio. Tokens (ein / aus), etwa 0,005 $ je Minute hören und 0,018 $ je Minute sprechen; mit kostenlosem Schlüssel 0 $"
 
     val alle: List<Option> = listOf(
@@ -239,6 +267,29 @@ object LiveOptionen {
                     Wahl("bezahlt", "Nur bezahlt", "Immer der Schlüssel mit Abrechnung; Google nutzt die Gespräche nicht zum Training.", GEMINI_PREIS_TEXT),
                 )
             }, gilt = { it.istGemini }),
+        Option("g_wer", "Live-Gespräch", "Wer denkt (Gemini)",
+            "Gemini kann selbst antworten und Jarvis nur für deine Daten fragen, oder jede deiner Fragen an Jarvis weitergeben und nur dessen Antwort sprechen.",
+            "gemini", {
+                listOf(
+                    Wahl("gemini", "Gemini denkt selbst", "Gemini antwortet selbst und fragt Jarvis mit allen Werkzeugen nur für deine Daten. Am schnellsten. Empfehlung."),
+                    Wahl("jarvis", "Jarvis direkt (experimentell)", "Gemini ist nur die Stimme: Jede Frage geht an Jarvis, der mit dem Modell aus deinem ChatGPT-Abo denkt (Modell und Denkstufe unten). " +
+                        "Gemini Live kennt keine echte Weitergabe wie GPT-Live; das läuft über die Anweisung und kann gelegentlich danebengehen. Am besten mit 3.8 Live, dort denkt Gemini nicht zusätzlich.",
+                        "Gemini-Preis wie oben, Jarvis über dein Abo"),
+                )
+            }, gilt = { it.istGemini }),
+        Option("j_modell", "Live-Gespräch", "Denk-Modell von Jarvis (Jarvis direkt)",
+            "Mit welchem Modell aus deinem ChatGPT-Abo Jarvis im Live-Gespräch denkt, wenn er direkt antwortet. Größere Modelle denken gründlicher, brauchen aber länger.",
+            "standard", {
+                listOf(Wahl("standard", "Wie im Chat", "Dasselbe Modell wie im normalen Jarvis-Chat.")) +
+                    de.frank.jarvis.auth.CodexModel.entries.map { Wahl(it.apiId, it.label, JARVIS_MODELL_TEXT[it.apiId].orEmpty()) }
+            }, gilt = { it.jarvisDirekt }),
+        Option("j_denken", "Live-Gespräch", "Denkstufe von Jarvis (Jarvis direkt)",
+            "Wie lange Jarvis vor der Antwort nachdenkt. Höher heißt gründlicher, aber längere Pausen im Gespräch. Kostet nichts extra, zählt aber gegen dein Abo-Kontingent.",
+            "standard", { st ->
+                val m = st["j_modell"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.CodexModel.fromLabel(it) }
+                listOf(Wahl("standard", "Wie im Chat", "Dieselbe Denkstufe wie im normalen Jarvis-Chat.")) +
+                    (m?.supportedEfforts ?: de.frank.jarvis.auth.ReasoningEffort.entries.toList()).map { Wahl(it.apiValue, it.label, JARVIS_STUFE_TEXT[it.apiValue].orEmpty()) }
+            }, gilt = { it.jarvisDirekt }),
         Option("g_denken", "Live-Gespräch", "Denkstufe (Gemini)",
             "Wie gründlich Gemini vor der Antwort nachdenkt. Mehr Denken heißt längere Pausen und mehr Ausgabe-Tokens. 3.8 Live hat keine Stufe, es denkt immer kurz.",
             "low", { st ->
@@ -258,7 +309,7 @@ object LiveOptionen {
                     Wahl("warten", "Warten, bis Jarvis antwortet", "Gemini sagt kurz „Moment“ und antwortet mit dem Ergebnis. Am verlässlichsten. Empfehlung."),
                     Wahl("nebenbei", "Nebenbei weiterreden", "Gemini bleibt ansprechbar und baut das Ergebnis ein, sobald es da ist."),
                 )
-            }, gilt = { it.modell == "gemini-3.8-live" }),
+            }, gilt = { it.modell == "gemini-3.8-live" && !it.jarvisDirekt }),
         Option("g_melden", "Live-Gespräch", "Ergebnis von Jarvis einbringen (Gemini)",
             "Wann Gemini ein Ergebnis von Jarvis vorträgt, das nebenbei kam.",
             "WHEN_IDLE", {
@@ -266,7 +317,7 @@ object LiveOptionen {
                     Wahl("WHEN_IDLE", "Wenn gerade niemand spricht", "Unterbricht nichts. Empfehlung."),
                     Wahl("INTERRUPT", "Sofort", "Gemini bricht ab, was es gerade sagt, und meldet das Ergebnis."),
                 )
-            }, gilt = { it.modell == "gemini-3.8-live" && it["g_werkzeug"] == "nebenbei" }),
+            }, gilt = { it.modell == "gemini-3.8-live" && it["g_werkzeug"] == "nebenbei" && !it.jarvisDirekt }),
         Option("g_start", "Live-Gespräch", "Wann du anfängst (Gemini)",
             "Wie schnell Gemini merkt, dass du sprichst. Empfindlich reagiert früh, kann aber auf Geräusche anspringen.",
             "niedrig", { listOf(Wahl("niedrig", "Gelassen", "Springt auf Geräusche seltener an. Empfehlung am Lautsprecher und im Auto."), Wahl("hoch", "Empfindlich", "Reagiert schon auf leises Ansprechen.")) },
@@ -515,10 +566,10 @@ object LiveOptionen {
     fun kurzfassung(st: Stand): String {
         val m = alle.first { it.id == "modell" }.werte(st).first { it.id == st.modell }.titel
         if (st.istGemini) return m + (if (geminiStufen(st.modell).isEmpty()) "" else " · Denkstufe " + alle.first { it.id == "g_denken" }.werte(st).first { it.id == st["g_denken"] }.titel) +
-            " · Stimme " + st["stimme"] + " · " + alle.first { it.id == "g_schluessel" }.werte(st).first { it.id == st["g_schluessel"] }.titel
+            (if (st.jarvisDirekt) " · " + jarvisDenktText(st) else "") + " · Stimme " + st["stimme"] + " · " + alle.first { it.id == "g_schluessel" }.werte(st).first { it.id == st["g_schluessel"] }.titel
         if (!st.istLive) return "$m · Denkstufe " + (alle.first { it.id == "rt_effort" }.takeIf { it.gilt(st) }?.let { o -> o.werte(st).first { it.id == st["rt_effort"] }.titel } ?: "–") +
             " · Stimme " + st["stimme"]
-        if (!st.denktBeiOpenAi) return "$m · Jarvis denkt selbst · Stimme " + st["stimme"]
+        if (!st.denktBeiOpenAi) return "$m · " + jarvisDenktText(st) + " · Stimme " + st["stimme"]
         val b = BACKEND_NAMEN.getValue(st["backend"])
         val e = EFFORTS.getValue(st["backend_effort"]).titel
         val t = alle.first { it.id == "tarif" }.werte(st).first { it.id == st["tarif"] }.titel

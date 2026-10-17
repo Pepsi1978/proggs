@@ -788,7 +788,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val mitgeben = optionen["verlauf"].toIntOrNull() ?: 0
             val bisher = gespraech.filter { it.art == "antwort" && it.text.isNotBlank() }.takeLast(mitgeben).map { it.vonMir to it.text }
             live = de.frank.jarvis.live.LiveGespraech(
-                getApplication(), liveSchluessel(optionen).first, optionen, liveAnweisung(optionen.istLive), bisher,
+                getApplication(), liveSchluessel(optionen).first, optionen, liveAnweisung(optionen.istLive, optionen.istGemini && optionen.jarvisDirekt), bisher,
                 beiStatus = { s -> haupt { liveStatus = s } },
                 beiPegel = { p -> livePegel = p },
                 beiAudioweg = { a -> haupt { liveAudioweg = a } },
@@ -910,19 +910,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Wie im Mikrofonpfad: Die Rückfrage „Welche Session meinst du?“ gilt nur für die nächste Äußerung.
         navigationsAuswahl = null
         val verlauf = verlaufFuersModell()
+        // „Jarvis direkt“: Modell und Denkstufe aus den Live-Einstellungen; hohe Stufen bekommen mehr Zeit.
+        val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
+        val modell = de.frank.jarvis.live.LiveOptionen.jarvisModell(optionen)
+        val denkstufe = de.frank.jarvis.live.LiveOptionen.jarvisDenkstufe(optionen)
+        val zeitlimit = if (denkstufe != null && denkstufe.ordinal >= de.frank.jarvis.auth.ReasoningEffort.HIGH.ordinal) 120_000L else 60_000L
         // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
         val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
         viewModelScope.launch(kennung) {
             val antwort = runCatching {
-                agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = 60_000)
+                agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = zeitlimit,
+                    modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)
             }.getOrNull() ?: "Das konnte ich gerade nicht nachschlagen."
             // Nur an dieselbe Verbindung: Eine neue kennt diese Kennung nicht.
             if (live === sitzung) sitzung?.ergebnis(callId, antwort)
         }
     }
 
-    /** Anweisung für das Sprachmodell. GPT-Live delegiert, Realtime ruft das Werkzeug selbst. */
-    private fun liveAnweisung(gptLive: Boolean): String =
+    /**
+     * Anweisung für das Sprachmodell. GPT-Live delegiert, Realtime und Gemini rufen das Werkzeug selbst.
+     * [nurStimme]: Gemini mit „Jarvis direkt“ gibt jede Äußerung an Jarvis weiter und spricht nur dessen Antwort.
+     */
+    private fun liveAnweisung(gptLive: Boolean, nurStimme: Boolean = false): String =
+        if (nurStimme) "# Rolle\nDu bist die Stimme von Jarvis, Franks persönlichem Assistenten auf seinem Handy, im Live-Sprachgespräch. Denken und Antworten übernimmt Jarvis.\n" +
+            "# Sprache\nSprich immer Deutsch. Natürlich, warm und knapp: kurze Sätze, keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
+            "# Weitergeben\nZu JEDER Äußerung von Frank, die eine Antwort braucht (Fragen, Bitten, Aufträge, Sessionwechsel, Gesprächsende, auch Smalltalk), rufst du sofort " +
+            "jarvis_fragen auf, mit seinem vollständigen Anliegen in seinen eigenen Worten und dem nötigen Zusammenhang aus dem Gespräch. Antworte nie selbst inhaltlich, " +
+            "auch nicht, wenn du die Antwort zu wissen glaubst. Sag beim Aufruf höchstens ein kurzes „Moment“.\n" +
+            "# Vorlesen\nKommt das Ergebnis von Jarvis, sprich es natürlich und sinngemäß vollständig vor. Füge nichts hinzu, lass nichts Wichtiges weg und bewerte es nicht. " +
+            "Ist das Ergebnis eine Rückfrage, stell sie Frank genau so.\n" +
+            "# Ausnahmen\nDie kurze Begrüßung zu Beginn und ein „Okay“ oder „Gern“ als Antwort auf ein bloßes Danke darfst du selbst sprechen.\n" +
+            "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf und gehst auf ihn ein.\n" +
+            "# Regeln\nErfinde nie Daten. Behaupte nie selbst, etwas erledigt, eine Session gewechselt oder das Gespräch beendet zu haben.\n" +
+            "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
+        else
         "# Rolle\nDu bist Jarvis, Franks persönlicher Assistent auf seinem Handy, im Live-Sprachgespräch.\n" +
             "# Sprache\nSprich immer Deutsch, auch wenn Frank kurz Englisch spricht. Natürlich, warm und knapp wie ein guter Gesprächspartner: kurze Sätze, " +
             "keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
