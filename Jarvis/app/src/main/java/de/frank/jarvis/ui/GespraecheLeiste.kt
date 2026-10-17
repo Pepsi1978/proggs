@@ -40,10 +40,13 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +74,17 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
     val raum = rememberCoroutineScope()
     BackHandler(enabled = schublade.isOpen) { raum.launch { schublade.close() } }
     LaunchedEffect(schublade.isOpen) { if (schublade.isOpen) vm.sitzungenLaden() }
+    // Ändert sich beim Start die Fensterbreite (etwa beim Öffnen aus der Sprachblase), bleibt die geschlossene Leiste sonst
+    // mit dem alten Versatz stehen und ragt ein Stück ins Bild. Liegt sie geschlossen und ruhig nicht ganz draußen, zurückschnappen.
+    var leistenBreite by remember { mutableIntStateOf(0) }
+    LaunchedEffect(schublade) {
+        snapshotFlow {
+            val breite = leistenBreite
+            val versatz = schublade.currentOffset
+            breite > 0 && !versatz.isNaN() && versatz > -breite + 1f &&
+                schublade.currentValue == DrawerValue.Closed && schublade.targetValue == DrawerValue.Closed && !schublade.isAnimationRunning
+        }.collect { ragtHinein -> if (ragtHinein) runCatching { schublade.snapTo(DrawerValue.Closed) } }
+    }
 
     ModalNavigationDrawer(
         drawerState = schublade,
@@ -111,11 +125,13 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
             }
         },
         drawerContent = {
-            Leiste(
-                vm,
-                aufNeu = { vm.neuesGespraech(); raum.launch { schublade.close() } },
-                aufWahl = { vm.sitzungOeffnen(it); raum.launch { schublade.close() } },
-            )
+            Box(Modifier.onSizeChanged { leistenBreite = it.width }) {
+                Leiste(
+                    vm,
+                    aufNeu = { vm.neuesGespraech(); raum.launch { schublade.close() } },
+                    aufWahl = { vm.sitzungOeffnen(it); raum.launch { schublade.close() } },
+                )
+            }
         },
         content = inhalt,
     )
