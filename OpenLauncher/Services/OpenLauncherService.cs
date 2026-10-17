@@ -1405,7 +1405,8 @@ try {
     /// <summary>
     /// Hooks nur für Sitzungen eines Jarvis-Programmierauftrags (Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py): Fortschritt,
     /// Rückfragen (AskUserQuestion) und freie Fragen am Zugende gehen in den Jarvis-Chat. Der Hook prüft zusätzlich
-    /// JARVIS_AUFTRAG_ID und tut ohne sie nichts. Frage und Stop warten bis zu zehn Minuten auf Franks Antwort.
+    /// JARVIS_AUFTRAG_ID und tut ohne sie nichts. Frage und Stop warten bis zu zehn Minuten auf Franks Antwort; der Warter
+    /// (asyncRewake) stellt Nachträge zu genau diesem Auftrag in dieselbe Sitzung zu.
     /// </summary>
     private static JsonObject JarvisHooks()
     {
@@ -1420,6 +1421,16 @@ try {
             if (matcher != null) eintrag["matcher"] = matcher;
             return new JsonArray(eintrag);
         }
+        // Nachträge zum Auftrag: wartet im Hintergrund am Relay (höchstens 12 h, einer je Auftrag) und weckt die Sitzung mit
+        // Exit 2, auch wenn sie gerade nichts tut. Beim Start und nach jedem Zug neu, falls der vorige schon geweckt hat.
+        JsonNode Warter() => new JsonObject
+        {
+            ["hooks"] = new JsonArray(new JsonObject
+            {
+                ["type"] = "command", ["command"] = $"python \"{skript}\" warte", ["timeout"] = 43200,
+                ["asyncRewake"] = true, ["rewakeSummary"] = "Nachtrag von Frank über Jarvis",
+            }),
+        };
         return new JsonObject
         {
             // Unter Windows heißt das Shell-Werkzeug je nach Installation Bash oder PowerShell; Fehlschläge kommen nur als PostToolUseFailure.
@@ -1429,7 +1440,8 @@ try {
             // Rückfragen exakt auf AskUserQuestion (ein Platzhalter mit updatedInput zerstört die Frage, #29530); dazu ein
             // Lebenszeichen für die drehende Anzeige in Jarvis, async und ohne Ausgabe.
             ["PreToolUse"] = new JsonArray(Eintrag("AskUserQuestion", "frage", 660)[0]!.DeepClone(), Eintrag("*", "puls", 10, imHintergrund: true)[0]!.DeepClone()),
-            ["Stop"] = Eintrag(null, "stop", 660),
+            ["Stop"] = new JsonArray(Eintrag(null, "stop", 660)[0]!.DeepClone(), Warter()),
+            ["SessionStart"] = new JsonArray(Warter()),
         };
     }
 

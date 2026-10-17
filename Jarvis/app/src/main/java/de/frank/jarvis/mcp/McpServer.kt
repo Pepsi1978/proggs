@@ -374,7 +374,7 @@ class McpServer(context: Context) {
          */
         private val GESCHUETZT = setOf(
             "aufgabe_anlegen", "aufgabe_aendern", "aufgabe_loeschen", "kalender_eintragen", "kalender_loeschen", "idee_speichern", "idee_loeschen",
-            "mail_senden", "agent_starten", "programmieren", "ablage_schreiben", "jarvis_merken", "jarvis_vergessen", "wecker_stellen", "wecker_loeschen",
+            "mail_senden", "agent_starten", "programmieren", "programmier_nachtrag", "ablage_schreiben", "jarvis_merken", "jarvis_vergessen", "wecker_stellen", "wecker_loeschen",
             "stack_speichern", "mittel_speichern", "stack_mittel_setzen",
         )
         private val schutz = Wiederholschutz()

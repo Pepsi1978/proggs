@@ -20,6 +20,11 @@ Vierte Aufgabe: Meldungen und Rueckfragen dieser Sitzungen (Hook Jarvis/werkzeug
 POST /pc/meldung; der Relay reicht sie als {"signal": "programmieren", ...} ans Handy (ohne Handy: Warteschlange, beim naechsten
 Verbinden zugestellt). Eine Rueckfrage traegt eine frage_id; der Hook fragt GET /pc/antwort?frage_id=… ab, bis Frank in Jarvis
 geantwortet hat (POST /geraet/antwort) oder sein Zeitlimit ablaeuft.
+
+Fuenfte Aufgabe: Nachtraege zu einem laufenden Auftrag. Das Handy legt einen freien Nachtrag fuer genau eine auftrag_id ab
+(POST /geraet/nachtrag, mit nachtrag_id gegen doppelte Zustellung). Der Hook dieser Sitzung holt ihn ab (GET /pc/nachtrag,
+Long-Polling) und quittiert die Zustellung mit einer Meldung (stand "nachtrag", nachtrag_ids); erst dann faellt er aus der
+Warteschlange. Die Warteschlange ueberlebt Neustarts (/data/nachtraege.json) und haelt hoechstens sieben Tage.
 """
 import asyncio
 import hmac
@@ -424,6 +429,12 @@ PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung; die Brue
 FRAGE_HALTEN_S = 3600     # so lange bleibt eine unbeantwortete Rueckfrage abrufbar
 ANTWORT_WARTEN_S = 25     # eine Abfrage des Hooks wartet hoechstens so lange auf Franks Antwort
 
+NACHTRAG_HALTEN_S = 7 * 86400   # so lange bleibt ein nicht zugestellter Nachtrag eingereiht
+NACHTRAG_WARTEN_S = 25          # eine Abfrage des Hooks wartet hoechstens so lange auf einen Nachtrag
+NACHTRAG_ZUSTELLEN_S = 8        # so lange wartet das Handy auf die Quittung, wenn die Sitzung gerade abfragt
+WARTER_FRISCH_S = 40            # so lange nach seiner letzten Abfrage gilt der Warter einer Sitzung als da
+NACHTRAEGE = ZUSTAND.with_name("nachtraege.json")
+
 
 class PcBruecke:
     """Programmierauftraege vom Handy an Franks PC (siehe Kopf der Datei)."""
@@ -435,10 +446,116 @@ class PcBruecke:
         self.rechner = ""
         self.auftraege = asyncio.Queue()
         self.quittungen = {}  # Auftrag-id -> Future mit der Quittung der Bruecke
+        self.nachtraege = {}  # AUFTRAG-ID -> [{"nachtrag_id", "text", "zeit"}], aelteste zuerst
+        self.erledigt = {}    # nachtrag_id -> Zeit der Zustellung (Schutz gegen doppelte Zustellung)
+        self.kontakt = {}     # AUFTRAG-ID -> monotonic des letzten Lebenszeichens der Sitzung (Meldung, Puls, Abfrage)
+        self.warter = {}      # AUFTRAG-ID -> monotonic der letzten Nachtrags-Abfrage des Warters
+        self.neu_da = {}      # AUFTRAG-ID -> asyncio.Event: ein Nachtrag kam dazu
+        self.zugestellt = {}  # nachtrag_id -> asyncio.Event: der Hook hat quittiert
+        self._lade_nachtraege()
 
     @staticmethod
     def _erlaubt(request: web.Request) -> bool:
         return hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode())
+
+    # ---------------------------------------------------------------- Nachtraege
+
+    def _lade_nachtraege(self) -> None:
+        try:
+            daten = json.loads(NACHTRAEGE.read_text("utf-8"))
+            self.nachtraege = {k: v for k, v in (daten.get("offen") or {}).items() if isinstance(v, list)}
+            self.erledigt = dict(daten.get("erledigt") or {})
+        except Exception:
+            pass
+
+    def _sichere_nachtraege(self) -> None:
+        grenze = time.time() - NACHTRAG_HALTEN_S
+        self.nachtraege = {k: [n for n in v if n.get("zeit", 0) >= grenze] for k, v in self.nachtraege.items()}
+        self.nachtraege = {k: v for k, v in self.nachtraege.items() if v}
+        self.erledigt = dict(sorted(self.erledigt.items(), key=lambda e: e[1])[-500:])
+        try:
+            NACHTRAEGE.parent.mkdir(parents=True, exist_ok=True)
+            NACHTRAEGE.write_text(json.dumps({"offen": self.nachtraege, "erledigt": self.erledigt}, ensure_ascii=False), "utf-8")
+        except Exception as fehler:
+            log.warning("Nachtraege nicht gesichert: %s", fehler)
+
+    def _ereignis(self, auftrag_id: str) -> asyncio.Event:
+        return self.neu_da.setdefault(auftrag_id, asyncio.Event())
+
+    def _wartet(self, auftrag_id: str) -> bool:
+        return time.monotonic() - self.warter.get(auftrag_id, -1e9) < WARTER_FRISCH_S
+
+    def _quittiert(self, auftrag_id: str, ids: list) -> None:
+        """Der Hook hat diese Nachtraege an seine Sitzung gegeben: aus der Warteschlange, nie wieder ausliefern."""
+        ids = {str(i) for i in ids}
+        jetzt = time.time()
+        for i in ids:
+            self.erledigt[i] = jetzt
+            ereignis = self.zugestellt.get(i)
+            if ereignis is not None:
+                ereignis.set()
+        self.nachtraege[auftrag_id] = [n for n in self.nachtraege.get(auftrag_id, []) if n.get("nachtrag_id") not in ids]
+        self._sichere_nachtraege()
+
+    async def nachtrag_geben(self, request: web.Request) -> web.Response:
+        """POST /geraet/nachtrag (Handy): {"auftrag_id", "nachtrag_id", "text"}. Antwort: angenommen, zugestellt, wartet, kontakt_vor_s, pc."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            daten = await request.json()
+            auftrag_id = str(daten["auftrag_id"]).strip().upper()
+            nachtrag_id = str(daten["nachtrag_id"]).strip()
+            text = str(daten["text"]).strip()
+            assert auftrag_id and nachtrag_id and text
+        except Exception:
+            return web.Response(status=400, text="Nachtrag unlesbar")
+        liste = self.nachtraege.setdefault(auftrag_id, [])
+        if nachtrag_id not in self.erledigt and not any(n.get("nachtrag_id") == nachtrag_id for n in liste):
+            liste.append({"nachtrag_id": nachtrag_id, "text": text[:20_000], "zeit": time.time()})
+            self._sichere_nachtraege()
+            log.info("Nachtrag fuer %s eingereiht", auftrag_id)
+        self._ereignis(auftrag_id).set()
+        # Wartet die Sitzung gerade, holt ihr Hook den Nachtrag sofort: kurz auf die Quittung warten, damit Jarvis
+        # „zugestellt“ statt nur „angenommen“ sagen kann.
+        if nachtrag_id not in self.erledigt and self._wartet(auftrag_id):
+            ereignis = self.zugestellt.setdefault(nachtrag_id, asyncio.Event())
+            try:
+                await asyncio.wait_for(ereignis.wait(), NACHTRAG_ZUSTELLEN_S)
+            except asyncio.TimeoutError:
+                pass
+            finally:
+                self.zugestellt.pop(nachtrag_id, None)
+        kontakt = self.kontakt.get(auftrag_id)
+        return web.json_response({"angenommen": True, "zugestellt": nachtrag_id in self.erledigt, "wartet": self._wartet(auftrag_id),
+                                  "kontakt_vor_s": int(time.monotonic() - kontakt) if kontakt else None, "pc": self.da()})
+
+    async def nachtrag_abholen(self, request: web.Request) -> web.Response:
+        """GET /pc/nachtrag?auftrag_id=…&warten=… (Hook): 200 {"nachtraege": [...]}, 204 = keiner. Entfernt nichts (erst die Quittung)."""
+        if not self._erlaubt(request):
+            return web.Response(status=404, text="Not found")
+        auftrag_id = request.query.get("auftrag_id", "").strip().upper()
+        if not auftrag_id:
+            return web.Response(status=400, text="auftrag_id fehlt")
+        try:
+            warten = max(0, min(int(request.query.get("warten", "0")), NACHTRAG_WARTEN_S))
+        except ValueError:
+            warten = 0
+        jetzt = time.monotonic()
+        self.kontakt[auftrag_id] = jetzt
+        if warten:
+            self.warter[auftrag_id] = jetzt
+        if not self.nachtraege.get(auftrag_id) and warten:
+            ereignis = self._ereignis(auftrag_id)
+            ereignis.clear()
+            try:
+                await asyncio.wait_for(ereignis.wait(), warten)
+            except asyncio.TimeoutError:
+                pass
+            self.warter[auftrag_id] = self.kontakt[auftrag_id] = time.monotonic()
+        offen = self.nachtraege.get(auftrag_id) or []
+        if not offen:
+            return web.Response(status=204)
+        return web.json_response({"nachtraege": offen}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
 
     def da(self) -> bool:
         return time.monotonic() - self.zuletzt < PC_FRISCH_S
@@ -528,6 +645,10 @@ class PcBruecke:
         except Exception:
             return web.Response(status=400, text="Meldung unlesbar")
         self._aufraeumen()
+        auftrag_id = daten["auftrag_id"].strip().upper()
+        self.kontakt[auftrag_id] = time.monotonic()
+        if daten.get("stand") == "nachtrag" and isinstance(daten.get("nachtrag_ids"), list):
+            self._quittiert(auftrag_id, daten["nachtrag_ids"])
         frage = daten.get("frage")
         if isinstance(frage, dict) and isinstance(frage.get("frage_id"), str) and frage["frage_id"]:
             self.fragen.setdefault(frage["frage_id"], {"zeit": time.monotonic(), "antwort": None, "da": asyncio.Event()})
@@ -632,6 +753,8 @@ def app() -> web.Application:
     anwendung.router.add_post("/pc/meldung", pc.meldung)
     anwendung.router.add_get("/pc/antwort", pc.antwort_abholen)
     anwendung.router.add_post("/geraet/antwort", pc.antwort_geben)
+    anwendung.router.add_post("/geraet/nachtrag", pc.nachtrag_geben)
+    anwendung.router.add_get("/pc/nachtrag", pc.nachtrag_abholen)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

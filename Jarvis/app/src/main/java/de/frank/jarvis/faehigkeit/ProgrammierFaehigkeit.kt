@@ -52,6 +52,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "Fragt er, wie weit ein Programmierauftrag ist, was die Cloud-Sitzung gerade macht oder ob sie fertig ist, rufe programmierauftraege auf. " +
             "Steht im Gespräch eine offene Rückfrage einer Programmier-Sitzung (❓ mit frage_id und Optionen) und Frank antwortet darauf, gib die Antwort mit " +
             "programmier_antwort weiter: ordne sie der passenden Option zu (genau deren label), sonst gib Franks Worte als Freitext weiter. " +
+            "Will Frank zu einem bestehenden Auftrag noch etwas (zusätzlicher Wunsch, Zusatzfrage, weitere Aufgabe, Korrektur), auch nachdem er fertig gemeldet hat, " +
+            "schick es mit programmier_nachtrag in dieselbe Sitzung, nie mit programmieren. Hat das Gespräch mehrere Aufträge und ist unklar welcher, frag kurz. " +
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
             "Schreib den Auftrag vollständig aus, mit allem, was Frank im Gespräch gesagt hat: welche App, was genau anders werden soll, wie es aussehen und sich verhalten soll, " +
             "woran man erkennt, dass es fertig ist. Ist unklar, welche App gemeint ist, frag Frank kurz, bevor du startest. Programmiere nie selbst im Gespräch."
@@ -106,9 +108,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             Werkzeug(
                 name = "programmierauftraege",
                 titel = "Programmieraufträge und ihr Fortschritt",
-                beschreibung = "Jarvis: zeigt die letzten Programmieraufträge mit Stand (läuft, Rückfrage, fertig, Problem), dem zuletzt gemeldeten Schritt, wann er kam, " +
-                    "wohin der Auftrag ging (PC oder Cloud) und dem Link zur Sitzung. Nutze es bei „Wie weit ist mein Programmierauftrag?“, „Was macht die Cloud-Sitzung?“, " +
-                    "„Ist die App schon fertig?“ oder „Gib mir den Link zur Sitzung“.",
+                beschreibung = "Jarvis: zeigt die letzten Programmieraufträge, je mit auftrag_id, App, Ziel (PC oder Cloud), Stand (läuft, Rückfrage, fertig, Problem), " +
+                    "zuletzt gemeldetem Schritt, Kurzfassung des ursprünglichen Auftrags, einer offenen Rückfrage mit frage_id und Optionen, den Nachträgen mit ihrem Stand " +
+                    "(angenommen, zugestellt, bearbeitet) und ob die Sitzung noch Nachträge annehmen kann. Grundlage, um Rückfragen selbst zu beantworten und Nachträge dem " +
+                    "richtigen Auftrag zuzuordnen. Nutze es bei „Wie weit ist mein Programmierauftrag?“, „Was macht die Cloud-Sitzung?“, „Ist die App schon fertig?“ oder „Gib mir den Link zur Sitzung“.",
                 schema = schema("anzahl" to zahl("Wie viele Aufträge, neueste zuerst; Vorgabe 5.")),
                 nurLesen = true,
             ) { a -> Ergebnis(Auftragsbuch.uebersicht(app, a.optInt("anzahl", 5).coerceIn(1, 20))) },
@@ -127,16 +130,33 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 ),
                 nurLesen = false,
             ) { a ->
-                val eintrag = Auftragsbuch.melde(app, a.optString("auftrag_id").trim(), a.optString("stand"), a.optString("schritt").trim().take(400), a.optString("link").trim())
+                val id = a.optString("auftrag_id").trim()
+                val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"), a.optString("schritt").trim().take(400), a.optString("link").trim())
                 if (eintrag == null) Ergebnis("Unbekannte auftrag_id.", fehler = true)
-                else { verteile(eintrag, null); Ergebnis("Gemeldet.") }
+                else {
+                    verteile(eintrag, null)
+                    // Die Cloud-Sitzung erreicht Jarvis nur über ihre eigenen Meldungen: Nachträge reisen mit der Antwort zurück.
+                    // Am PC stellt der Hook zu (sonst käme ein Nachtrag doppelt an).
+                    val nachtraege = if (eintrag.optString("ziel") == ZIEL_CLOUD) Auftragsbuch.setzeNachtraege(app, id, null, setOf("angenommen"), "zugestellt") else emptyList()
+                    if (nachtraege.isEmpty()) Ergebnis("Gemeldet.")
+                    else {
+                        Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(200) }, "")
+                            ?.let { verteile(it, null) }
+                        Ergebnis("Gemeldet.\n\nNACHTRAG VON FRANK zu diesem Auftrag (AUFTRAG-ID ${eintrag.optString("id")}), über Jarvis. Er gehört zu genau diesem Auftrag: " +
+                            "Setze ihn in dieser Sitzung um, schließe danach wieder vollständig ab und melde erneut stand=fertig.\n\n" +
+                            nachtraege.joinToString("\n\n") { "NACHTRAG ${it.optString("id")}:\n${it.optString("text")}" })
+                    }
+                }
             },
             Werkzeug(
                 name = "programmier_antwort",
                 titel = "Rückfrage einer Programmier-Sitzung beantworten",
-                beschreibung = "Jarvis: gibt Franks Antwort auf eine Rückfrage einer laufenden Programmier-Sitzung weiter (die Rückfrage steht im Gespräch mit ❓, " +
-                    "frage_id und Optionen). Die Sitzung wartet darauf und arbeitet danach weiter. Ordne Franks Worte der passenden Option zu und gib genau deren label an; " +
-                    "passt keine, gib Franks Worte als Antwort weiter.",
+                beschreibung = "Jarvis: gibt die Antwort auf eine Rückfrage einer laufenden Programmier-Sitzung weiter (die Rückfrage steht im Gespräch mit ❓ oder in " +
+                    "programmierauftraege, mit frage_id und Optionen). Die frage_id bestimmt Auftrag und Sitzung; die Sitzung wartet darauf und arbeitet danach weiter. " +
+                    "Beantworte die Rückfrage selbst aus dem Gesprächskontext, dem ursprünglichen Auftrag (Kurzfassung in programmierauftraege) und den verfügbaren Informationen, " +
+                    "wenn die Antwort ableitbar ist oder eine Routineentscheidung betrifft, und beschreib die Anforderung dabei bei Bedarf genauer. Frag Frank nur kurz, wenn " +
+                    "eine notwendige Angabe oder eine echte Entscheidung von ihm fehlt und sich nicht ableiten lässt; erfinde nie eine Antwort. Ordne die Antwort der passenden " +
+                    "Option zu und gib genau deren label an; passt keine, gib sie als Freitext weiter. Für einen Wunsch ohne offene Rückfrage gibt es programmier_nachtrag.",
                 schema = schema(
                     "frage_id" to text("Die frage_id der Rückfrage."),
                     "antworten" to textListe("Eine Antwort je Frage, in der Reihenfolge der Fragen: das label der gewählten Option, bei Mehrfachauswahl mehrere labels mit Komma, sonst Franks Worte."),
@@ -151,6 +171,24 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     .getOrElse { Ergebnis(it.message ?: "Die Antwort ging nicht raus.", fehler = true) }
             },
             Werkzeug(
+                name = "programmier_nachtrag",
+                titel = "Nachtrag zu einem bestehenden Programmierauftrag",
+                beschreibung = "Jarvis: schickt einen Nachtrag (zusätzlicher Wunsch, Zusatzfrage, weitere Aufgabe, Korrektur) an einen BESTEHENDEN Programmierauftrag, " +
+                    "in genau dessen Jarvis-Session und dieselbe Claude-Code-Sitzung, auch nachdem sie fertig gemeldet hat. Startet nie einen neuen Auftrag und nie eine neue Sitzung, " +
+                    "auch nicht als Ersatz. Nutze es, wenn Frank zu einem Auftrag noch etwas will („und mach noch …“, „sag dem Programmierer noch …“, „frag ihn, ob …“). " +
+                    "Ziel ist die auftrag_id (aus dem Ergebnis von programmieren oder aus programmierauftraege), nie der App-Name allein: Mehrere Aufträge zur selben App können " +
+                    "parallel laufen. Ist aus dem Gespräch eindeutig, welcher Auftrag gemeint ist, nimm ihn; sonst frag Frank kurz. Wartet die Sitzung auf eine Antwort zu " +
+                    "ihrer Rückfrage (frage_id), nimm stattdessen programmier_antwort. Das Ergebnis unterscheidet ehrlich: zugestellt (die Sitzung hat ihn übernommen), " +
+                    "angenommen und eingereiht (sie bekommt ihn bei ihrem nächsten Schritt) oder nicht zustellbar (Sitzung beendet oder nicht erreichbar). Umgesetzt ist er, " +
+                    "wenn programmierauftraege ihn als bearbeitet zeigt. Derselbe Nachtrag ein zweites Mal wird nicht doppelt zugestellt.",
+                schema = schema(
+                    "auftrag_id" to text("Die Nummer des Auftrags (fünf Zeichen, zum Beispiel BD2XW). Über das Plugin Pflicht; in einem Jarvis-Gespräch darf sie fehlen, wenn es genau einen Auftrag hat."),
+                    "text" to text("Der Nachtrag, vollständig und für sich verständlich: was zusätzlich oder anders werden soll, mit dem nötigen Kontext aus dem Gespräch."),
+                    pflicht = listOf("text"),
+                ),
+                nurLesen = false,
+            ) { a -> nachtrag(a.optString("auftrag_id").trim(), a.optString("text").trim()) },
+            Werkzeug(
                 name = "programmieren",
                 titel = "Programmierauftrag starten",
                 beschreibung = "Jarvis: programmiert etwas in einer von Franks Apps („Jarvis, programmiere in Geniale Aufgaben einen Filter für …“, „bau in den Wecker ein, dass …“, " +
@@ -158,18 +196,33 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "Aus ChatGPT bekommt jeder Auftrag in Jarvis eine eigene Programmier-Session, in der Frank Schritte und Rückfragen sieht. Der Auftrag geht an Claude Code: an Franks PC, wenn er an ist (schnell, die App kommt per WLAN aufs Handy), sonst in die Cloud " +
                     "(etwa zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version). Es findet die App in Franks Repo und programmiert die Änderung. Dieser Aufruf kehrt sofort zurück. Formuliere den Auftrag selbst vollständig aus, mit allem Wissen aus dem " +
                     "Gespräch; die Cloud-Sitzung kennt nur diesen Text. Ein fertiger Auftrag vom Agenten Code-Analyse oder aus repo_lesen kann unverändert hinein. " +
-                    "Ist unklar, welche App gemeint ist, frag Frank vorher.",
+                    "Ist unklar, welche App gemeint ist, frag Frank vorher. Nur für einen NEUEN Auftrag: Nachträge, Zusatzfragen und weitere Wünsche zu einem bestehenden " +
+                    "Auftrag gehen mit programmier_nachtrag in dieselbe Sitzung. Läuft zum selben Gespräch oder zur selben App schon ein Auftrag (oder ist gerade fertig geworden), " +
+                    "startet Jarvis nur mit neu=true, also nur wenn Frank ausdrücklich einen neuen, eigenen Auftrag will.",
                 schema = schema(
                     "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt."),
                     "auftrag" to text("Der vollständige Programmierauftrag: Ziel, was genau anders werden soll (Bildschirm, Knopf, Verhalten, Texte), Randbedingungen, was Frank wichtig ist, woran man erkennt, dass es fertig ist."),
                     "review" to schalter("true = vor der Auslieferung ein Review laufen lassen (dauert länger). Vorgabe false."),
                     "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc oder cloud. Vorgabe automatisch (PC, wenn er an ist, sonst Cloud).", listOf("automatisch", "pc", "cloud")),
+                    "neu" to schalter("true nur, wenn Frank ausdrücklich einen neuen, eigenen Auftrag mit eigener Sitzung will, obwohl zum selben Gespräch oder zur selben App schon einer läuft. Vorgabe false."),
                     pflicht = listOf("app", "auftrag"),
                 ),
                 nurLesen = false,
             ) { a ->
                 val appName = a.optString("app").trim()
                 val auftrag = a.optString("auftrag").trim()
+                // Nie still eine zweite Sitzung neben einer bestehenden: ein Nachtrag gehört in die vorhandene (programmier_nachtrag).
+                if (appName.isNotEmpty() && !a.optBoolean("neu")) {
+                    val ctx = kotlinx.coroutines.currentCoroutineContext()
+                    val ausChatGpt = ctx[ProgrammierChat.GespraechKennung] == null && ctx[ProgrammierChat.AusChatGpt] != null
+                    val gespraech = ctx[ProgrammierChat.GespraechKennung]?.id ?: if (ausChatGpt) "" else ProgrammierChat.aktivesGespraech.orEmpty()
+                    Auftragsbuch.bestehende(app, gespraech, appName).takeIf { it.isNotEmpty() }?.let { bestehend ->
+                        return@Werkzeug Ergebnis("Nicht gestartet: Zu ${if (gespraech.isNotEmpty()) "diesem Gespräch" else "dieser App"} gibt es schon " +
+                            (if (bestehend.size == 1) "einen Auftrag" else "${bestehend.size} Aufträge") + ":\n" + bestehend.joinToString("\n") { "- " + Auftragsbuch.kurzZeile(it) } +
+                            "\nGehört Franks Wunsch zu einem davon, schick ihn mit programmier_nachtrag (mit dessen auftrag_id) in dieselbe Sitzung; ist unklar zu welchem, frag Frank kurz. " +
+                            "Nur wenn Frank ausdrücklich einen neuen, eigenen Auftrag will, ruf programmieren mit neu=true auf.", fehler = true)
+                    }
+                }
                 val wahl = when (a.optString("ziel").lowercase()) {
                     "pc" -> ziele.filterIsInstance<PcBruecke>()
                     "cloud" -> ziele.filterIsInstance<CloudRoutine>()
@@ -226,13 +279,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         "FORTSCHRITT (AUFTRAG-ID: $nummer): Frank verfolgt diesen Auftrag in Jarvis. Zwischenschritte (geänderte Dateien, Bau, Commit, Push, Installation) " +
             "und Rückfragen meldet diese Sitzung automatisch an Jarvis; stell Rückfragen also ganz normal mit AskUserQuestion, Frank beantwortet sie in Jarvis. " +
             "Melde mit dem Werkzeug programmier_fortschritt des MCP-Servers Jarvis (auftrag_id=$nummer) nur, wenn die App gefunden ist (stand=laeuft), und am " +
-            "Ende stand=fertig mit einem Satz, was jetzt neu ist und welche Version, oder stand=fehler mit dem Grund."
+            "Ende stand=fertig mit einem Satz, was jetzt neu ist und welche Version, oder stand=fehler mit dem Grund. " +
+            "NACHTRÄGE: Schickt Frank über Jarvis einen Nachtrag zu diesem Auftrag, kommt er in dieser Sitzung als Rückmeldung „Frank hat über Jarvis einen Nachtrag …“ " +
+            "an, auch nach dem Abschluss. Setze ihn hier um, schließe danach wieder vollständig ab und melde erneut stand=fertig."
     else
         "FORTSCHRITT (AUFTRAG-ID: $nummer): Frank verfolgt diesen Auftrag am Handy. Melde jeden wichtigen Schritt mit dem Werkzeug programmier_fortschritt " +
             "des MCP-Servers Jarvis (auftrag_id=$nummer, ein kurzer Satz auf Deutsch): sofort zu Beginn (stand=laeuft), wenn die App gefunden ist, wenn die " +
             "Änderung programmiert ist, beim Commit oder Pull Request, beim Bau oder der Installation, und am Ende stand=fertig mit einem Satz, was jetzt neu ist " +
             "und welche Version, oder stand=fehler mit dem Grund. Bevor du Frank mit AskUserQuestion etwas fragst, melde stand=frage mit der Frage, damit er eine " +
-            "Benachrichtigung bekommt. Ist das Werkzeug nicht verfügbar, arbeite ohne Meldungen weiter."
+            "Benachrichtigung bekommt. Ist das Werkzeug nicht verfügbar, arbeite ohne Meldungen weiter. " +
+            "NACHTRÄGE: Antwortet programmier_fortschritt mit „NACHTRAG VON FRANK“, gehört er zu diesem Auftrag: Setze ihn in dieser Sitzung um und melde danach erneut. " +
+            "Melde unmittelbar vor stand=fertig noch einen Schritt mit stand=laeuft, damit ein später Nachtrag ankommt; kommt dabei einer, arbeite ihn ab statt fertig zu melden."
 
     /**
      * Eine Meldung des Hooks vom PC (Signal „programmieren“ über den Relay): ins Auftragsbuch, als Benachrichtigung und in
@@ -244,9 +301,109 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             Auftragsbuch.puls(app, daten.optString("auftrag_id"))?.let { aktivitaetMelden(it) }
             return
         }
+        if (daten.optString("stand") == "nachtrag") {
+            // Der Hook hat Nachträge in die Sitzung gegeben: zugestellt, die Sitzung arbeitet wieder. Eine Nachquittung für
+            // schon Zugestelltes ändert nichts und erscheint nicht noch einmal im Gespräch.
+            val ids = daten.optJSONArray("nachtrag_ids")?.let { l -> (0 until l.length()).map { l.optString(it) }.toSet() } ?: return
+            alsZugestellt(daten.optString("auftrag_id"), ids, daten.optString("schritt"))
+            return
+        }
         val frage = daten.optJSONObject("frage")
         val eintrag = Auftragsbuch.melde(app, daten.optString("auftrag_id"), daten.optString("stand"), daten.optString("schritt").take(4000), "", frage) ?: return
         verteile(eintrag, frage)
+    }
+
+    /** Nachträge sind in der Sitzung angekommen: Stand zugestellt, die Sitzung arbeitet wieder, ein Satz ins Gespräch (je Nachtrag nur einmal). */
+    private fun alsZugestellt(auftragId: String, ids: Set<String>, schritt: String) {
+        val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler"), "zugestellt")
+        if (neu.isEmpty()) return
+        val text = schritt.ifBlank { "📨 Nachtrag in der Sitzung angekommen: " + neu.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(300) } }
+        Auftragsbuch.melde(app, auftragId, "laeuft", text.take(4000), "")?.let { verteile(it, null) }
+    }
+
+    /**
+     * Ein Nachtrag an einen bestehenden Auftrag ([auftragId], leer = aus dem Gespräch ableiten): nie ein neuer Auftrag, nie eine
+     * andere Sitzung. Am PC über den Relay an den Hook genau dieser Sitzung, in der Cloud mit der nächsten Fortschrittsmeldung.
+     */
+    private suspend fun nachtrag(auftragId: String, text: String): Ergebnis {
+        val ctx = kotlinx.coroutines.currentCoroutineContext()
+        val ausChatGpt = ctx[ProgrammierChat.GespraechKennung] == null && ctx[ProgrammierChat.AusChatGpt] != null
+        val gespraech = ctx[ProgrammierChat.GespraechKennung]?.id ?: if (ausChatGpt) "" else ProgrammierChat.aktivesGespraech.orEmpty()
+        if (text.length < 3) return Ergebnis("Der Nachtrag ist leer. Formuliere ihn vollständig aus.", fehler = true)
+        val eintrag = if (auftragId.isNotEmpty()) {
+            Auftragsbuch.finde(app, auftragId) ?: return Ergebnis("Einen Programmierauftrag $auftragId kennt Jarvis nicht. Nichts wurde gesendet. " +
+                Auftragsbuch.kandidatenText(app, ""), fehler = true)
+        } else {
+            val kandidaten = if (gespraech.isEmpty()) emptyList() else Auftragsbuch.imGespraech(app, gespraech)
+            when {
+                kandidaten.size == 1 -> kandidaten.first()
+                gespraech.isEmpty() -> return Ergebnis("Welcher Auftrag? Über das Plugin braucht ein Nachtrag die auftrag_id. Nichts wurde gesendet. " +
+                    Auftragsbuch.kandidatenText(app, "") + " Ist aus dem Gespräch eindeutig, welcher gemeint ist, ruf programmier_nachtrag mit dessen auftrag_id auf; sonst frag Frank kurz.", fehler = true)
+                kandidaten.isEmpty() -> return Ergebnis("Dieses Gespräch hat keinen Programmierauftrag. Nichts wurde gesendet. " + Auftragsbuch.kandidatenText(app, "") +
+                    " Gehört der Wunsch zu einem davon, ruf programmier_nachtrag mit dessen auftrag_id auf; ist das unklar, frag Frank. Einen neuen Auftrag nur, wenn Frank das ausdrücklich will.", fehler = true)
+                else -> return Ergebnis("Nicht eindeutig: Dieses Gespräch hat mehrere Aufträge. Nichts wurde gesendet. Frag Frank kurz, welcher gemeint ist, und ruf dann " +
+                    "programmier_nachtrag mit dessen auftrag_id auf:\n" + kandidaten.joinToString("\n") { "- " + Auftragsbuch.kurzZeile(it) }, fehler = true)
+            }
+        }
+        val id = eintrag.optString("id")
+        val appName = eintrag.optString("app")
+        eintrag.optJSONObject("offeneFrage")?.let { frage ->
+            return Ergebnis("Die Sitzung von Auftrag $id ($appName) wartet gerade auf eine Antwort zu ihrer Rückfrage (frage_id ${frage.optString("frage_id")}): " +
+                Auftragsbuch.frageText(frage) + " Ist das die Antwort darauf, nimm programmier_antwort. Ist es ein zusätzlicher Wunsch, beantworte zuerst die Rückfrage " +
+                "und schick den Nachtrag danach. Nichts wurde gesendet.", fehler = true)
+        }
+        val cloud = eintrag.optString("ziel") == ZIEL_CLOUD
+        if (cloud && eintrag.optString("stand") in listOf("fertig", "fehler")) {
+            return Ergebnis("Nicht zustellbar: Die Cloud-Sitzung von Auftrag $id ($appName) ist beendet (${Auftragsbuch.standText(eintrag.optString("stand"))}) und lässt sich " +
+                "nicht fortsetzen. Der Nachtrag wurde nicht gesendet. Eine neue Sitzung startet Jarvis nur, wenn Frank das ausdrücklich will (programmieren mit neu=true, " +
+                "mit dem Nachtrag und dem Bezug auf Auftrag $id).", fehler = true)
+        }
+        val (n, doppelt) = Auftragsbuch.nachtragNeu(app, id, text, if (ausChatGpt) "ChatGPT/MCP" else "Jarvis")
+            ?: return Ergebnis("Den Auftrag $id gibt es nicht mehr im Auftragsbuch. Nichts wurde gesendet.", fehler = true)
+        val nummer = n.optString("id")
+        if (doppelt && n.optString("stand") !in listOf("angenommen", "fehler")) {
+            return Ergebnis("Diesen Nachtrag hat Auftrag $id ($appName) schon (Nachtrag $nummer, ${n.optString("stand")}). Nichts wurde doppelt gesendet.")
+        }
+        val zielGespraech = eintrag.optString("gespraech")
+        if (!doppelt && zielGespraech.isNotEmpty() && zielGespraech != gespraech) {
+            ProgrammierChat.poste(app, zielGespraech, "📝 Nachtrag ${if (ausChatGpt) "über ChatGPT/MCP" else "aus einem anderen Gespräch"}: $text", ProgrammierChat.ART_STATUS)
+        }
+        if (cloud) {
+            return Ergebnis("Angenommen: Nachtrag $nummer für Auftrag $id ($appName) liegt bereit. Die Cloud-Sitzung bekommt ihn mit ihrer nächsten Fortschrittsmeldung; " +
+                "zugestellt ist er erst, wenn programmierauftraege das zeigt. Meldet sie sich nicht mehr, kommt er nicht an; eine neue Sitzung startet Jarvis nicht von selbst.")
+        }
+        val antwort = runCatching {
+            withContext(Dispatchers.IO) {
+                val rumpf = JSONObject().put("auftrag_id", id).put("nachtrag_id", nummer).put("text", text)
+                val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/nachtrag").header("X-Jarvis-Token", e.serverToken)
+                    .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
+                HTTP.newCall(anfrage).execute().use { a ->
+                    if (!a.isSuccessful) throw IllegalStateException("HTTP ${a.code} vom Jarvis-Server")
+                    JSONObject(a.body?.string().orEmpty())
+                }
+            }
+        }.getOrElse { fehler ->
+            Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("angenommen"), "fehler")
+            return Ergebnis("Nachtrag $nummer ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}). Er ist im Auftrag $id vermerkt, " +
+                "aber nicht zugestellt; ein erneuter Aufruf mit demselben Text schickt ihn noch einmal, ohne ihn zu verdoppeln.", fehler = true)
+        }
+        if (antwort.optBoolean("zugestellt")) {
+            alsZugestellt(id, setOf(nummer), "")
+            return Ergebnis("Zugestellt: Nachtrag $nummer ist in derselben Sitzung von Auftrag $id ($appName) angekommen, sie arbeitet ihn jetzt ab. " +
+                "Umgesetzt ist er, wenn programmierauftraege ihn als bearbeitet zeigt.")
+        }
+        val vor = if (antwort.isNull("kontakt_vor_s")) -1 else antwort.optInt("kontakt_vor_s", -1)
+        return when {
+            antwort.optBoolean("wartet") -> Ergebnis("Angenommen und bereitgestellt: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung wartet auf Nachträge und holt " +
+                "ihn in wenigen Sekunden ab; zugestellt ist er, wenn programmierauftraege das zeigt.")
+            vor in 0..900 -> Ergebnis("Angenommen und eingereiht: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung arbeitet gerade (letztes Lebenszeichen vor " +
+                "${zeitspanne(vor)}) und bekommt ihn spätestens am Ende ihres aktuellen Schritts; zugestellt ist er, wenn programmierauftraege das zeigt.")
+            else -> Ergebnis("Angenommen, aber NICHT zugestellt: Die Sitzung von Auftrag $id ($appName) ist gerade nicht erreichbar (" +
+                (if (vor < 0) "seit dem letzten Neustart des Jarvis-Servers kein Lebenszeichen" else "letztes Lebenszeichen vor ${zeitspanne(vor)}") + "; " +
+                (if (antwort.optBoolean("pc")) "der PC ist an" else "der PC ist aus oder die PC-Brücke läuft nicht") + "). Vermutlich ist die Sitzung geschlossen oder " +
+                "wartet ohne Nachtrags-Empfang. Nachtrag $nummer bleibt sieben Tage eingereiht und geht nur in genau diese Sitzung, sobald sie sich wieder meldet. " +
+                "Eine neue Sitzung startet Jarvis nicht von selbst, nur wenn Frank es ausdrücklich will (programmieren mit neu=true).")
+        }
     }
 
     private fun aktivitaetMelden(eintrag: JSONObject) = ProgrammierChat.setze(
@@ -402,6 +559,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende und solange sie auf Frank wartet.
                 .put("arbeitet", gueltig == "laeuft")
             if (frage != null) eintrag.put("offeneFrage", frage)
+            // Zugende oder fertig: Was die Sitzung bis dahin an Nachträgen bekommen hatte, hat sie in diesem Zug bearbeitet.
+            if (gueltig == "fertig" || gueltig == "info") eintrag.optJSONArray("nachtraege")?.let { l ->
+                for (i in 0 until l.length()) l.optJSONObject(i)?.takeIf { it.optString("stand") == "zugestellt" }?.put("stand", "bearbeitet")?.put("bearbeitet", jetzt)
+            }
             if (link.startsWith("https://") && eintrag.optString("link").isEmpty()) eintrag.put("link", link)
             val schritte = eintrag.optJSONArray("schritte") ?: JSONArray().also { eintrag.put("schritte", it) }
             schritte.put(JSONObject().put("zeit", jetzt).put("stand", gueltig).put("text", schritt))
@@ -494,7 +655,97 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         /** Der Stand eines Auftrags in Worten, für alle Übersichten gleich. */
-        private fun standText(stand: String) = when (stand) { "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"; else -> "läuft" }
+        fun standText(stand: String) = when (stand) { "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"; else -> "läuft" }
+
+        private fun alle(context: Context): List<JSONObject> = lies(context).let { l -> (0 until l.length()).map { l.getJSONObject(it) } }
+
+        private fun offen(e: JSONObject) = e.optString("stand") in listOf("laeuft", "frage")
+
+        private fun zuletzt(e: JSONObject) = maxOf(e.optLong("zeit"), e.optLong("aktiv"))
+
+        fun finde(context: Context, id: String): JSONObject? = alle(context).lastOrNull { it.optString("id").equals(id, ignoreCase = true) }
+
+        /** Die Aufträge eines Jarvis-Gesprächs, neueste zuletzt; sind darunter offene, nur die offenen. */
+        fun imGespraech(context: Context, gespraech: String): List<JSONObject> {
+            val eigene = alle(context).filter { it.optString("gespraech") == gespraech }
+            return eigene.filter { offen(it) }.ifEmpty { eigene }
+        }
+
+        /** App-Name ohne Zusatz in Klammern, klein: „Jarvis (Ordner Jarvis)“ und „jarvis“ sind dieselbe App. */
+        private fun appSchluessel(app: String) = app.substringBefore(" (").trim().lowercase(Locale.GERMAN)
+
+        /**
+         * Aufträge, neben denen programmieren ohne neu=true nichts Neues startet: im Jarvis-Gespräch dessen Aufträge der letzten
+         * zwölf Stunden, über das Plugin die offenen oder vor höchstens zwei Stunden fertig gewordenen derselben App.
+         */
+        fun bestehende(context: Context, gespraech: String, app: String): List<JSONObject> {
+            val jetzt = System.currentTimeMillis()
+            return if (gespraech.isNotEmpty()) alle(context).filter { it.optString("gespraech") == gespraech && (offen(it) || jetzt - zuletzt(it) < 12 * 3_600_000L) }
+            else alle(context).filter {
+                appSchluessel(it.optString("app")) == appSchluessel(app) &&
+                    ((offen(it) && jetzt - zuletzt(it) < 6 * 3_600_000L) || (it.optString("stand") == "fertig" && jetzt - zuletzt(it) < 2 * 3_600_000L))
+            }
+        }
+
+        /** Eine Zeile je Auftrag für Auswahl und Rückfragen: Nummer, App, Ziel, Stand, Zeit, Kurzfassung. */
+        fun kurzZeile(e: JSONObject): String =
+            "[${e.optString("id")}] ${e.optString("app")} · ${e.optString("ziel")} · ${standText(e.optString("stand"))} · gestartet " +
+                ZEIT.format(Instant.ofEpochMilli(e.optLong("start")).atZone(ZoneId.systemDefault())) + " · Auftrag: " +
+                e.optString("auftrag").replace('\n', ' ').take(160)
+
+        /** Die Aufträge der letzten 24 Stunden als Auswahl (für Fehlermeldungen ohne eindeutiges Ziel). */
+        fun kandidatenText(context: Context, ohne: String): String {
+            val jetzt = System.currentTimeMillis()
+            val liste = alle(context).filter { it.optString("id") != ohne && (offen(it) || jetzt - zuletzt(it) < 24 * 3_600_000L) }.reversed().take(8)
+            return if (liste.isEmpty()) "Es gibt keine Programmieraufträge der letzten 24 Stunden." else "Infrage kommen:\n" + liste.joinToString("\n") { "- " + kurzZeile(it) }
+        }
+
+        /** Eine offene Rückfrage in Worten: Fragen und ihre Optionen (labels). */
+        fun frageText(frage: JSONObject): String {
+            val fragen = frage.optJSONArray("fragen") ?: return ""
+            return (0 until fragen.length()).mapNotNull { fragen.optJSONObject(it) }.joinToString(" / ") { f ->
+                val optionen = f.optJSONArray("options")?.let { o -> (0 until o.length()).mapNotNull { o.optJSONObject(it)?.optString("label")?.takeIf { l -> l.isNotEmpty() } } }.orEmpty()
+                f.optString("question").replace('\n', ' ').take(600) + (if (optionen.isEmpty()) " (freie Antwort)" else " — Optionen: " + optionen.joinToString(" | "))
+            }
+        }
+
+        private fun normiert(text: String) = text.lowercase(Locale.GERMAN).replace(Regex("\\s+"), " ").trim()
+
+        /**
+         * Legt einen Nachtrag an (Stand angenommen). Derselbe Text an denselben Auftrag binnen 30 Minuten ist kein neuer:
+         * dann der vorhandene und true. null = Auftrag unbekannt.
+         */
+        @Synchronized
+        fun nachtragNeu(context: Context, id: String, text: String, quelle: String): Pair<JSONObject, Boolean>? {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
+            val nachtraege = eintrag.optJSONArray("nachtraege") ?: JSONArray().also { eintrag.put("nachtraege", it) }
+            val jetzt = System.currentTimeMillis()
+            for (i in nachtraege.length() - 1 downTo 0) {
+                val n = nachtraege.getJSONObject(i)
+                if (jetzt - n.optLong("zeit") < 30 * 60_000L && normiert(n.optString("text")) == normiert(text)) return n to true
+            }
+            val n = JSONObject().put("id", "N" + neueNummer()).put("text", text.take(4_000)).put("zeit", jetzt).put("quelle", quelle).put("stand", "angenommen")
+            nachtraege.put(n)
+            while (nachtraege.length() > 20) nachtraege.remove(0)
+            schreib(context, liste)
+            return n to false
+        }
+
+        /** Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. */
+        @Synchronized
+        fun setzeNachtraege(context: Context, id: String, ids: Set<String>?, von: Set<String>, nach: String): List<JSONObject> {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return emptyList()
+            val nachtraege = eintrag.optJSONArray("nachtraege") ?: return emptyList()
+            val geaendert = (0 until nachtraege.length()).map { nachtraege.getJSONObject(it) }
+                .filter { (ids == null || it.optString("id") in ids) && it.optString("stand") in von }
+            if (geaendert.isEmpty()) return emptyList()
+            val jetzt = System.currentTimeMillis()
+            geaendert.forEach { it.put("stand", nach).put(nach, jetzt) }
+            schreib(context, liste)
+            return geaendert
+        }
 
         /** Für vorgaenge: Aufträge mit Lebenszeichen der letzten 24 Stunden (offene und beendete), neueste zuerst, je eine Zeile. */
         fun vorgangsZeilen(context: Context, alle: Boolean): List<String> {
@@ -511,7 +762,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "[" + e.optString("id") + "] Programmierauftrag " + e.optString("app") + ": " + standText(e.optString("stand")) +
                         (if (still) " (seit über einer halben Stunde keine Meldung)" else "") + " · zuletzt " +
                         ZEIT.format(Instant.ofEpochMilli(e.optLong("zeit")).atZone(ZoneId.systemDefault())) + ": " + e.optString("schritt").replace('\n', ' ').take(200) +
-                        (e.optJSONObject("offeneFrage")?.optString("frage_id")?.takeIf { it.isNotEmpty() }?.let { " · frage_id $it (Antwort mit programmier_antwort)" } ?: "")
+                        (e.optJSONObject("offeneFrage")?.optString("frage_id")?.takeIf { it.isNotEmpty() }?.let { " · frage_id $it (Antwort mit programmier_antwort)" } ?: "") +
+                        (e.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).count { l.optJSONObject(it)?.optString("stand") in listOf("angenommen", "zugestellt") } }
+                            ?.takeIf { it > 0 }?.let { " · $it Nachtrag/Nachträge noch nicht bearbeitet" } ?: "")
                 }
         }
 
@@ -525,11 +778,24 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     val e = liste.getJSONObject(i)
                     val standText = standText(e.optString("stand"))
                     val minuten = (jetzt - e.optLong("zeit")) / 60_000
-                    append("- ").append(e.optString("app")).append(" (Auftrag ").append(e.optString("id")).append(", ").append(e.optString("ziel"))
-                        .append(", gestartet ").append(ZEIT.format(Instant.ofEpochMilli(e.optLong("start")).atZone(ZoneId.systemDefault()))).append("): ")
-                        .append(standText).append(". Zuletzt vor ").append(minuten).append(" Minuten: ").append(e.optString("schritt"))
+                    append("- [auftrag_id ").append(e.optString("id")).append("] ").append(e.optString("app")).append(" (").append(e.optString("ziel"))
+                        .append(", gestartet ").append(ZEIT.format(Instant.ofEpochMilli(e.optLong("start")).atZone(ZoneId.systemDefault())))
+                        .append(if (e.optString("gespraech").isNotEmpty()) ", eigene Jarvis-Session" else "").append("): ")
+                        .append(standText).append(". Zuletzt vor ").append(minuten).append(" Minuten: ").append(e.optString("schritt").take(600))
                     e.optString("link").takeIf { it.isNotEmpty() }?.let { append(" Link: ").append(it) }
                     if (e.optString("stand") == "laeuft" && minuten >= 30) append(" (seit über einer halben Stunde keine Meldung; Sitzung über den Link prüfen)")
+                    e.optString("auftrag").takeIf { it.isNotEmpty() }?.let { append("\n  Ursprünglicher Auftrag (Kurzfassung): ").append(it.replace('\n', ' ').take(500)) }
+                    e.optJSONObject("offeneFrage")?.let { f ->
+                        append("\n  OFFENE RÜCKFRAGE (frage_id ").append(f.optString("frage_id")).append(", Antwort mit programmier_antwort): ").append(frageText(f))
+                    }
+                    e.optJSONArray("nachtraege")?.takeIf { it.length() > 0 }?.let { l ->
+                        append("\n  Nachträge: ").append((0 until l.length()).mapNotNull { l.optJSONObject(it) }.joinToString("; ") { n ->
+                            n.optString("id") + " " + n.optString("stand") + " („" + n.optString("text").replace('\n', ' ').take(80) + "“)"
+                        })
+                    }
+                    append("\n  Nachträge möglich: ").append(
+                        if (e.optString("ziel") == ZIEL_CLOUD && e.optString("stand") in listOf("fertig", "fehler")) "nein, die Cloud-Sitzung ist beendet"
+                        else "ja, mit programmier_nachtrag in dieselbe Sitzung")
                     append('\n')
                 }
             }.trim()
@@ -556,7 +822,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Control (in der Claude-App unter Code zu sehen). 409 vom Relay = Brücke fragt gerade nicht ab, der PC ist aus.
      */
     private inner class PcBruecke : ProgrammierZiel {
-        override val name = "Claude Code auf deinem PC"
+        override val name = ZIEL_PC
         override fun bereit() = e.serverToken.isNotBlank()
         override fun fehlt() = "Jarvis ist nicht mit seinem Server verbunden."
 
@@ -591,7 +857,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Kein automatischer Neuversuch: Jeder erfolgreiche Aufruf legt eine neue Sitzung an.
      */
     private inner class CloudRoutine : ProgrammierZiel {
-        override val name = "Claude Code in der Cloud"
+        override val name = ZIEL_CLOUD
         override fun bereit() = e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()
         override fun fehlt() = "Die Claude-Code-Routine ist in Jarvis nicht eingerichtet: Auslöse-Adresse und Token unter Einstellungen → Konten → Programmieren in der Cloud eintragen."
 
@@ -627,6 +893,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         /** So lang darf der ganze Text an ein Programmier-Ziel höchstens werden. */
         const val HOECHSTENS = 60_000
+
+        /** Die Namen der Ziele, so stehen sie im Auftragsbuch (Feld „ziel“). */
+        const val ZIEL_PC = "Claude Code auf deinem PC"
+        const val ZIEL_CLOUD = "Claude Code in der Cloud"
 
         /**
          * Der Text, den PC und Cloud gleichermaßen bekommen: Auftrag, dann Franks Programmierregeln vollständig, dann die

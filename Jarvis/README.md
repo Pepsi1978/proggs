@@ -519,3 +519,19 @@ Agenten und die Tagesauswertung bekommen das Werkzeug nicht (`JarvisAgent.versuc
   (`· ✢ ✳ ✶ ✻ ✽` in Orange, Wort wie „Drizzling…“) mit der Zeit seit der letzten Aktivität (über 3 Minuten rot).
 - **Cloud:** keine Hooks; die Sitzung meldet über `programmier_fortschritt` (Connector Jarvis, nur dieses Werkzeug), Rückfragen
   beantwortet Frank in der Claude-App.
+
+### Nachträge in dieselbe Sitzung
+
+- `programmier_nachtrag(auftrag_id, text)` schickt einen freien Nachtrag an genau einen bestehenden Auftrag, nie in eine neue Sitzung.
+  Über das Plugin ist die `auftrag_id` Pflicht; im Jarvis-Chat darf sie fehlen, wenn das Gespräch genau einen (offenen) Auftrag hat.
+  Mehrdeutig, unbekannt, offene Rückfrage (→ `programmier_antwort`) oder beendete Cloud-Sitzung: Fehler mit Auswahl, nichts gesendet.
+- `programmieren` startet neben einem Auftrag desselben Gesprächs (12 h) oder derselben App (offen, oder vor ≤ 2 h fertig) nur mit `neu=true`.
+- Auftragsbuch: je Auftrag `nachtraege` mit Stand `angenommen` → `zugestellt` (Sitzung hat ihn) → `bearbeitet` (nächstes
+  Zugende bzw. fertig), `fehler` = Server nicht erreicht. Gleicher Text binnen 30 min = derselbe Nachtrag (keine Doppelzustellung).
+- **PC:** Handy → Relay `POST /geraet/nachtrag` (Warteschlange je Auftrag, `/data/nachtraege.json`, 7 Tage, nachtrag_id gegen
+  Doppelte; wartet die Sitzung, bis 8 s auf die Quittung). Der Hook holt mit `GET /pc/nachtrag` ab: im Stop-Hook am Zugende
+  (`decision: block`) und im Warter (`warte`, SessionStart und Stop mit `asyncRewake`, einer je Auftrag, endet mit der Claude-Sitzung),
+  der eine ruhende Sitzung mit Exit 2 weckt. Quittung: Meldung `stand: nachtrag` mit `nachtrag_ids`. Der Warter-Eintrag kommt aus
+  `OpenLauncherService.JarvisHooks` (ab OpenLauncher 1.24.95); ältere Sitzungen bekommen Nachträge nur am nächsten Zugende.
+- **Cloud:** Nachträge reisen mit der Antwort auf `programmier_fortschritt` zurück („NACHTRAG VON FRANK“); nach „fertig“ ist
+  die Sitzung beendet, dann meldet Jarvis „nicht zustellbar“ statt eine neue zu starten.

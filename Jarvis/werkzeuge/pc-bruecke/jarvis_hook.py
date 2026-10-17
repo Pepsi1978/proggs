@@ -12,7 +12,12 @@ Aufruf: python jarvis_hook.py <post|frage|stop>, die Hook-Eingabe kommt als JSON
          und gibt sie an Claude zurück. Ohne Antwort gibt der Hook frei, und der normale Dialog erscheint (auch per Remote Control).
   puls   PreToolUse (alle Werkzeuge, async): Lebenszeichen für die drehende Anzeige im Jarvis-Chat, höchstens alle PULS_S.
   stop   Stop: meldet den Zwischenstand (letzte Nachricht). Endet sie mit einer Frage, wartet der Hook auf Franks Antwort und
-         lässt Claude damit weiterarbeiten (decision block).
+         lässt Claude damit weiterarbeiten (decision block). Liegen Nachträge zu diesem Auftrag bereit, gehen sie danach
+         ebenso als decision block in dieselbe Sitzung.
+  warte  SessionStart und Stop mit asyncRewake: wartet im Hintergrund am Relay auf Nachträge zu diesem Auftrag (höchstens
+         einer je Auftrag, bis WARTER_MAX_S oder bis die Claude-Sitzung endet) und weckt die Sitzung mit Exit 2 und dem
+         Nachtrag, auch wenn sie gerade nichts tut. Jeder Nachtrag geht genau einmal hinein (nachtrag_id im Zustand) und
+         wird mit stand „nachtrag“ quittiert; erst dann nimmt der Relay ihn aus der Warteschlange.
 
 Wege: Relay https://<host>/pc/meldung und /pc/antwort mit dem Geräte-Token aus ~/SK/Jarvis/relay.properties, nur IPv4
 (auf diesem Netz hängt IPv6 zeitweise, siehe bugs/desktop/dotnet-httpclient-ipv6-haenger.md).
@@ -83,12 +88,15 @@ def rufe(pfad: str, daten: dict | None = None, zeitlimit: float = 5) -> tuple[in
         return fehler.code, {}
 
 
-def melde(stand: str, schritt: str, frage: dict | None = None) -> None:
+def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: list[str] | None = None) -> int:
     daten = {"auftrag_id": AUFTRAG, "stand": stand, "schritt": schritt[:MAX_TEXT]}
     if frage:
         daten["frage"] = frage
+    if nachtrag_ids:
+        daten["nachtrag_ids"] = nachtrag_ids
     code, _ = rufe("/pc/meldung", daten)
     schreib(f"Meldung {stand}: {schritt[:120]} -> {code}")
+    return code
 
 
 def warte_auf_antwort(frage_id: str) -> dict | None:
@@ -146,7 +154,7 @@ def lies_zustand() -> dict:
         z = json.loads(ZUSTAND.read_text(encoding="utf-8"))
     except Exception:
         z = {}
-    for k, v in (("zuletzt", 0), ("dateien", []), ("offen", []), ("gesehen", []), ("stelle", 0), ("beginn", time.time())):
+    for k, v in (("zuletzt", 0), ("dateien", []), ("offen", []), ("gesehen", []), ("stelle", 0), ("beginn", time.time()), ("nachtraege", [])):
         z.setdefault(k, v)
     return z
 
@@ -239,6 +247,164 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
     return texte
 
 
+# ---------------------------------------------------------------- Nachträge
+
+WARTER_MAX_S = 12 * 3600  # so lange wartet ein Warter höchstens (Hook-Zeitlimit im OpenLauncher: 43200 s)
+WARTER = ORDNER / f"warter-{AUFTRAG or 'ohne'}.pid"
+
+
+def hole_nachtraege(warten: int) -> list[dict]:
+    """Nachträge zu diesem Auftrag vom Relay; mit [warten] Long-Polling. Leer = keiner (oder Relay nicht erreichbar)."""
+    code, daten = rufe(f"/pc/nachtrag?auftrag_id={urllib.parse.quote(AUFTRAG)}&warten={warten}", zeitlimit=warten + 10)
+    if code != 200:
+        if code not in (204, 404):
+            time.sleep(3)
+        return []
+    return [n for n in daten.get("nachtraege") or [] if isinstance(n, dict) and n.get("nachtrag_id") and n.get("text")]
+
+
+def beanspruche(liste: list[dict]) -> list[dict]:
+    """
+    Nimmt nur Nachträge, die noch kein anderer Hook dieser Sitzung übergeben hat (Stop und Warter laufen gleichzeitig).
+    Schon übergebene, die der Relay noch anbietet (Quittung kam nicht an), werden still nachquittiert.
+    """
+    with Sperre():
+        z = lies_zustand()
+        neu = [n for n in liste if n["nachtrag_id"] not in z["nachtraege"]]
+        alt = [n["nachtrag_id"] for n in liste if n["nachtrag_id"] in z["nachtraege"]]
+        z["nachtraege"] = (z["nachtraege"] + [n["nachtrag_id"] for n in neu])[-200:]
+        schreib_zustand(z)
+    if alt:
+        melde("nachtrag", "", nachtrag_ids=alt)
+    return neu
+
+
+def uebergib(neu: list[dict]) -> str:
+    """Quittiert die Übergabe (Relay und Jarvis) und liefert den Text, mit dem die Sitzung weiterarbeitet."""
+    kurz = " · ".join(n["text"].replace("\n", " ")[:300] for n in neu)
+    melde("nachtrag", "📨 Nachtrag in der Sitzung angekommen: " + kurz, nachtrag_ids=[n["nachtrag_id"] for n in neu])
+    teile = "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in neu)
+    return (f"Frank hat über Jarvis {'einen Nachtrag' if len(neu) == 1 else str(len(neu)) + ' Nachträge'} zu diesem Programmierauftrag "
+            f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "
+            f"Auftrags, und schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde "
+            f"stand=fertig mit programmier_fortschritt. Ist er unklar, frag mit AskUserQuestion.\n\n{teile}")
+
+
+def _windows_prozesse() -> dict[int, tuple[int, str]]:
+    """pid -> (Eltern-pid, Programmname) aller Prozesse (nur Windows)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Eintrag(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD), ("pcPriClassBase", ctypes.c_long), ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", ctypes.c_wchar * 260)]
+
+    k = ctypes.windll.kernel32
+    k.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    schnappschuss = k.CreateToolhelp32Snapshot(2, 0)
+    e = Eintrag()
+    e.dwSize = ctypes.sizeof(Eintrag)
+    alle = {}
+    weiter = k.Process32FirstW(schnappschuss, ctypes.byref(e))
+    while weiter:
+        alle[e.th32ProcessID] = (e.th32ParentProcessID, e.szExeFile.lower())
+        weiter = k.Process32NextW(schnappschuss, ctypes.byref(e))
+    k.CloseHandle(schnappschuss)
+    return alle
+
+
+def claude_prozess() -> int | None:
+    """Der Claude-Code-Prozess, der diesen Hook gestartet hat (nächster Vorfahr claude*.exe), oder None."""
+    if os.name != "nt":
+        return None
+    try:
+        alle = _windows_prozesse()
+        pid = os.getpid()
+        for _ in range(12):
+            eltern = alle.get(pid, (0, ""))[0]
+            if not eltern or eltern not in alle:
+                return None
+            if alle[eltern][1].startswith("claude"):
+                return eltern
+            pid = eltern
+    except Exception as fehler:
+        schreib(f"Claude-Prozess nicht gefunden: {fehler}")
+    return None
+
+
+def lebt(pid: int) -> bool:
+    if os.name != "nt":
+        return True
+    import ctypes
+    k = ctypes.windll.kernel32
+    griff = k.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not griff:
+        return False
+    try:
+        code = ctypes.c_ulong()
+        return bool(k.GetExitCodeProcess(griff, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
+    finally:
+        k.CloseHandle(griff)
+
+
+def nachtraege_im_stop() -> bool:
+    """Stop: Liegen Nachträge bereit, gehen sie als decision block in die Sitzung. True = übergeben."""
+    try:
+        neu = beanspruche(hole_nachtraege(0))
+    except Exception as fehler:
+        schreib(f"Nachträge im Stop: {fehler}")
+        return False
+    if not neu:
+        return False
+    sys.stdout.write(json.dumps({"decision": "block", "reason": uebergib(neu)}, ensure_ascii=False))
+    return True
+
+
+def warte(eingabe: dict) -> int:
+    """asyncRewake: wartet auf Nachträge; Exit 2 mit dem Nachtrag weckt die Sitzung. Nur ein Warter je Auftrag."""
+    ORDNER.mkdir(parents=True, exist_ok=True)
+    try:
+        alter = int(WARTER.read_text(encoding="utf-8").strip() or 0)
+    except Exception:
+        alter = 0
+    if alter and alter != os.getpid() and lebt(alter):
+        return 0
+    WARTER.write_text(str(os.getpid()), encoding="utf-8")
+    claude = claude_prozess()
+    schreib(f"Warter gestartet ({eingabe.get('hook_event_name', '')}, Claude-Prozess {claude})")
+    try:
+        ende = time.monotonic() + WARTER_MAX_S
+        while time.monotonic() < ende:
+            if claude and not lebt(claude):
+                schreib("Warter: Claude-Sitzung beendet")
+                return 0
+            try:
+                liste = hole_nachtraege(25)
+            except Exception as fehler:
+                schreib(f"Warter: {fehler}")
+                time.sleep(5)
+                continue
+            if not liste:
+                continue
+            neu = beanspruche(liste)
+            if not neu:
+                # Schon übergeben (Stop war schneller), Quittung noch unterwegs: nicht im Kreis fragen.
+                time.sleep(3)
+                continue
+            sys.stderr.write(uebergib(neu))
+            schreib(f"Warter: {len(neu)} Nachtrag/Nachträge übergeben, Sitzung wird geweckt")
+            return 2
+        return 0
+    finally:
+        try:
+            if WARTER.read_text(encoding="utf-8").strip() == str(os.getpid()):
+                WARTER.unlink()
+        except Exception:
+            pass
+
+
 # ---------------------------------------------------------------- Ereignisse
 
 def post(eingabe: dict) -> None:
@@ -327,6 +493,7 @@ def stop(eingabe: dict) -> None:
         dauer = dauer_text(time.time() - z["beginn"])
         schreib_zustand(z)
     if not neu:
+        nachtraege_im_stop()
         return
     # Eine echte Rückfrage steht am Ende der Nachricht; nur dann wartet der Hook (und nie zweimal hintereinander).
     ende = letzte.rstrip().rstrip("*_ )\"“”").strip()
@@ -340,11 +507,14 @@ def stop(eingabe: dict) -> None:
             sys.stdout.write(json.dumps({"decision": "block", "reason": f"Frank hat über Jarvis geantwortet: {inhalt}"}))
             return
         schreib("Freie Rückfrage ohne Antwort über Jarvis")
+        nachtraege_im_stop()
         return
     # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung), dazu die Dauer
     # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal). Der Stand „info“ ist das Merkmal des ausführlichen
     # Abschlussberichts: Jarvis zeigt ihn mit voller Aktionsleiste, alle anderen Stände als kurze Statusmeldung.
     melde("info", "🏁 " + letzte + f"\n\n⏱️ Dauer seit Start: {dauer}")
+    # Danach (nicht davor: „info“ markiert in Jarvis die zuvor übergebenen Nachträge als bearbeitet) die neuen Nachträge.
+    nachtraege_im_stop()
 
 
 def puls(eingabe: dict) -> None:
@@ -377,20 +547,21 @@ def puls(eingabe: dict) -> None:
     melde("puls", str(eingabe.get("tool_name", "")))
 
 
-def main() -> None:
+def main() -> int:
     if not AUFTRAG:
-        return
+        return 0
     art = sys.argv[1] if len(sys.argv) > 1 else ""
     try:
         eingabe = json.loads(sys.stdin.buffer.read().decode("utf-8") or "{}")
     except Exception:
         eingabe = {}
     try:
-        {"post": post, "frage": frage, "stop": stop, "puls": puls}.get(art, lambda _: None)(eingabe)
+        # Nur warte liefert einen Exit-Code (2 = Sitzung wecken); alle anderen enden mit 0.
+        return {"post": post, "frage": frage, "stop": stop, "puls": puls, "warte": warte}.get(art, lambda _: None)(eingabe) or 0
     except Exception as fehler:
         schreib(f"{art}: {type(fehler).__name__}: {fehler}")
+        return 0
 
 
 if __name__ == "__main__":
-    main()
-    sys.exit(0)
+    sys.exit(main())
