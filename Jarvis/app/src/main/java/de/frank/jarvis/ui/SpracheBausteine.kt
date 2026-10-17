@@ -153,13 +153,16 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         Text("Tippen wählt die Stimme und spielt eine kurze Hörprobe auf Deutsch. Die erste Probe je Stimme holt Jarvis einmalig " +
             (if (st.istGemini) "von Google (unter 1 Cent, mit kostenlosem Schlüssel gratis)" else "von OpenAI (unter 1 Cent)") + ", danach ist sie gespeichert und kostenlos. " +
             (if (st.istGemini) "Alle Gemini-Stimmen sprechen jede Sprache; Deutsch steuert die Anweisung. " else "OpenAI nennt keine Liste deutscher Stimmen: Hör einfach rein, welche am besten Deutsch spricht. ") +
-            "▶ = Probe schon gespeichert.",
+            "▶ = Probe gespeichert, sie bleibt in der App und ist jederzeit wieder anhörbar. Lange drücken = Favorit mit ★, steht dann ganz oben; nochmal lange drücken nimmt den Stern weg.",
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+        val probeArt = de.frank.jarvis.live.StimmProbe.art(st)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            stimmen.werte(st).forEach { w ->
-                val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, de.frank.jarvis.live.StimmProbe.art(st), w.id)
+            stimmen.werte(st).sortedByDescending { probeArt + "_" + it.id in vm.stimmFavoriten }.forEach { w ->
+                val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, probeArt, w.id)
                 val laedt = vm.stimmProbeLaedt == w.id
-                Chip((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"]) {
+                val favorit = probeArt + "_" + w.id in vm.stimmFavoriten
+                Chip((if (favorit) "★ " else "") + (if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"],
+                    lange = { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) }) {
                     geaendert { st.setze("stimme", w.id) }
                     vm.stimmProbe(de.frank.jarvis.live.StimmProbe.art(st), w.id)
                 }

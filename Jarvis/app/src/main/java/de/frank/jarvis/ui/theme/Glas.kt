@@ -3,6 +3,7 @@ package de.frank.jarvis.ui.theme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -133,9 +134,15 @@ fun Modifier.druck3d(quelle: MutableInteractionSource, staerke: Float = 1f): Mod
 }
 
 @Composable
-fun Modifier.antippen(rolle: Role = Role.Button, haptik: Boolean = true, aktion: () -> Unit): Modifier {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+fun Modifier.antippen(rolle: Role = Role.Button, haptik: Boolean = true, lange: (() -> Unit)? = null, aktion: () -> Unit): Modifier {
     val quelle = remember { MutableInteractionSource() }
     val haptic = LocalHapticFeedback.current
+    if (lange != null) return this.druck3d(quelle).combinedClickable(quelle, null, role = rolle,
+        onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); lange() }) {
+        if (haptik) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        aktion()
+    }
     return this.druck3d(quelle).clickable(quelle, null, role = rolle) {
         if (haptik) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         aktion()
@@ -196,6 +203,7 @@ fun Chip(
     farbe: Color? = null,
     icon: ImageVector? = null,
     modifier: Modifier = Modifier,
+    lange: (() -> Unit)? = null,
     aktion: () -> Unit,
 ) {
     val f = LocalFarben.current
@@ -203,7 +211,7 @@ fun Chip(
     val grund = if (aktiv) Modifier.knopf3d(c, c.copy(alpha = 0.82f), 999.dp, f.dunkel)
     else Modifier.glas(f, 999.dp, erhoeht = 0.4f, fuellung = f.flaeche)
     Row(
-        modifier.height(38.dp).then(grund).antippen(aktion = aktion).padding(horizontal = 14.dp),
+        modifier.height(38.dp).then(grund).antippen(lange = lange, aktion = aktion).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {

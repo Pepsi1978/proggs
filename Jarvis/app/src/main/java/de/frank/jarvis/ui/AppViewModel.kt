@@ -822,6 +822,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Welche Stimme gerade ihre Hörprobe holt (für die Sanduhr am Knopf). */
     var stimmProbeLaedt by mutableStateOf<String?>(null); private set
 
+    /** Favoriten-Stimmen als `art_stimme`: mit Stern ganz oben in der Liste. */
+    var stimmFavoriten by mutableStateOf(de.frank.jarvis.live.StimmProbe.favoriten(app)); private set
+
+    /** Langes Drücken auf eine Stimme: Stern an oder wieder aus. */
+    fun stimmFavoritUmschalten(art: String, stimme: String, titel: String) {
+        stimmFavoriten = de.frank.jarvis.live.StimmProbe.favoritUmschalten(getApplication(), art, stimme)
+        meldung = if (art + "_" + stimme in stimmFavoriten) "★ $titel ist jetzt Favorit." else "$titel ist kein Favorit mehr."
+    }
+
     /** Spielt die deutsche Hörprobe einer Live-Stimme; die erste je Stimme kommt einmalig von OpenAI. */
     fun stimmProbe(art: String, stimme: String) {
         if (liveAktiv) { meldung = "Während des Live-Gesprächs gibt es keine Hörprobe."; return }

@@ -35,6 +35,17 @@ object StimmProbe {
 
     fun vorhanden(context: Context, art: String, stimme: String) = datei(context, art, stimme).let { it.exists() && it.length() > 4800 }
 
+    /** Favoriten-Stimmen (langes Drücken) je Art als `art_stimme`; sie stehen in der Liste oben mit Stern. */
+    fun favoriten(context: Context): Set<String> =
+        context.getSharedPreferences("stimmproben", Context.MODE_PRIVATE).getStringSet("favoriten", emptySet())!!.toSet()
+
+    fun favoritUmschalten(context: Context, art: String, stimme: String): Set<String> {
+        val schluessel = art + "_" + stimme
+        val neu = favoriten(context).let { if (schluessel in it) it - schluessel else it + schluessel }
+        context.getSharedPreferences("stimmproben", Context.MODE_PRIVATE).edit().putStringSet("favoriten", neu).apply()
+        return neu
+    }
+
     /** Welche Hörproben-Art zum eingestellten Live-Modell gehört. */
     fun art(st: LiveOptionen.Stand) = if (st.istGemini) "gemini" else if (st.istLive) "live" else "realtime"
 
