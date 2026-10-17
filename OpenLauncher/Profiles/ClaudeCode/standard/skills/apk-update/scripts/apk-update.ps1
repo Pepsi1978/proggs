@@ -11,8 +11,9 @@ param(
     [Parameter(Mandatory = $true)][string]$Projekt,
     [switch]$OhneBuild,
     # Nur für Tests: andere Wurzeln statt ~/proggs und des Drive-Ordners, kein Handy abfragen.
-    [string]$ProggsWurzel = (Join-Path $env:USERPROFILE 'proggs'),
-    [string]$UpdatesWurzel = (Join-Path $env:USERPROFILE 'Meine Ablage\Dokumente\Updates'),
+    # Leer = Vorgabe je System (Windows: %USERPROFILE%, macOS: $HOME und der Drive-Ordner unter ~/Library/CloudStorage).
+    [string]$ProggsWurzel = '',
+    [string]$UpdatesWurzel = '',
     [switch]$OhneGeraet
 )
 
@@ -38,6 +39,17 @@ trap {
 }
 
 $skillDir   = Split-Path -Parent $PSScriptRoot
+# Linux/macOS kennen kein USERPROFILE: dort liegen proggs und SK unter $HOME.
+$heim = if ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME }
+if (-not $ProggsWurzel) { $ProggsWurzel = Join-Path $heim 'proggs' }
+if (-not $UpdatesWurzel) {
+    if ($IsMacOS) {
+        # Google Drive für den Desktop legt „Meine Ablage“ unter ~/Library/CloudStorage/GoogleDrive-<Konto> ab.
+        $UpdatesWurzel = Get-ChildItem (Join-Path $HOME 'Library/CloudStorage') -Directory -Filter 'GoogleDrive-*' -ErrorAction SilentlyContinue |
+            ForEach-Object { Join-Path $_.FullName 'Meine Ablage/Dokumente/Updates' } | Where-Object { Test-Path $_ -PathType Container } | Select-Object -First 1
+        if (-not $UpdatesWurzel) { Fehler "Drive-Ordner 'Meine Ablage/Dokumente/Updates' unter ~/Library/CloudStorage nicht gefunden (Google Drive für den Desktop angemeldet?)." }
+    } else { $UpdatesWurzel = Join-Path $heim 'Meine Ablage\Dokumente\Updates' }
+}
 $proggs     = [IO.Path]::GetFullPath($ProggsWurzel).TrimEnd('\')
 $updatesDir = [IO.Path]::GetFullPath($UpdatesWurzel).TrimEnd('\')
 # Linux (GitHub-Rechner des Cloud-Baus) kennt kein USERPROFILE: dort liegt SK unter $HOME (= Javas user.home).
@@ -97,7 +109,7 @@ if (-not $erwartetesPaket) {
 }
 
 # --- Build-Tools ----------------------------------------------------------------------------
-$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
+$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } elseif ($IsMacOS) { Join-Path $HOME 'Library/Android/sdk' } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
 # Unter Windows Batch- und exe-Dateien, unter Linux dieselben Werkzeuge ohne Endung.
 $apksignerName = if ($aufUnix) { 'apksigner' } else { 'apksigner.bat' }
 $aapt2Name     = if ($aufUnix) { 'aapt2' } else { 'aapt2.exe' }
@@ -154,7 +166,7 @@ if (Test-Path $manifestPfad) {
 # würde den laufenden adb-Server neu starten. Hier wird nur gelesen.
 $installiertCode = 0
 if (-not $OhneGeraet) {
-    $adb = @($env:ADB, (Join-Path $sdk 'platform-tools\adb.exe')) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    $adb = @($env:ADB, (Join-Path $sdk $(if ($aufUnix) { 'platform-tools/adb' } else { 'platform-tools\adb.exe' }))) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
     if (-not $adb) { $adb = 'adb' }
     try {
         $geraete = @(& $adb devices 2>$null | Select-String '^(\S+)\s+device$' | ForEach-Object { $_.Matches[0].Groups[1].Value })
@@ -489,7 +501,8 @@ else { try {
     $signalDatei = Join-Path ([IO.Path]::GetTempPath()) "apk-update-signal-$lauf.json"
     [IO.File]::WriteAllText($signalDatei, (@{ signal = 'update'; projekt = $Projekt; paket = $paket; versionCode = $apkCode } | ConvertTo-Json -Compress), $utf8)
     # -4: IPv6 zu diesem Server hängt von diesem PC aus bis zum Zeitlimit (memory http-timeouts-fallback-wartezeit).
-    $antwort = curl.exe -4 -s --max-time 10 -X POST -H "X-Jarvis-Token: $($relay.token)" -H "Content-Type: application/json" --data-binary "@$signalDatei" "https://$($relay.host)/geraet/signal"
+    $curl = if ($aufUnix) { 'curl' } else { 'curl.exe' }
+    $antwort = & $curl -4 -s --max-time 10 -X POST -H "X-Jarvis-Token: $($relay.token)" -H "Content-Type: application/json" --data-binary "@$signalDatei" "https://$($relay.host)/geraet/signal"
     Remove-Item $signalDatei -ErrorAction SilentlyContinue
     if ($LASTEXITCODE -eq 0 -and $antwort -match 'zugestellt') { Write-Host "APK_UPDATE_SIGNAL=$antwort" }
     else { Write-Host "APK_UPDATE_WARNUNG=Signal ans Handy nicht gesendet (curl $LASTEXITCODE)" }

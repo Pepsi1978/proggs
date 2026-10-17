@@ -65,6 +65,11 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
    ```powershell
    pwsh -NoProfile -File "C:\Users\barwa\proggs\OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1" -Projekt <Projekt>
    ```
+   Am Mac dasselbe Skript mit `pwsh` (Homebrew); der Drive-Ordner wird unter
+   `~/Library/CloudStorage/GoogleDrive-*/Meine Ablage/Dokumente/Updates` selbst gefunden:
+   ```bash
+   pwsh -NoProfile -File ~/proggs/OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/scripts/apk-update.ps1 -Projekt <Projekt>
+   ```
    Das Skript
    - liest `projekte.json` (Gradle-Task, APK-Ordner, erwartetes Paket),
    - liest den **Versionslog** `<Projekt>/app/src/main/assets/versionslog.json` (siehe unten) —
