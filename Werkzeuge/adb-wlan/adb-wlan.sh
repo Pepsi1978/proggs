@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Verbindet das Android-Handy per WLAN mit adb – mit Kabel und ohne.
 # Reihenfolge: schon verbunden und antwortet? -> mDNS (findet das Handy in jedem Netz, auch nach IP-Wechsel)
-# -> zuletzt bekannte IP -> Kabel (schaltet WLAN-Debugging + Port 5555 ein).
+# -> zuletzt bekannte IP -> WireGuard-Tunnel (Handy unterwegs im Mobilnetz) -> Kabel (schaltet WLAN-Debugging + Port 5555 ein).
+# Gleicher Stand wie adb-wlan.ps1; nur die Direktverbindung über den PC-Hotspot (Schritt 6) gibt es am Mac nicht.
 # Ohne Kabel wird nach einem Handy-Neustart Port 5555 über "Debugging über WLAN" (TLS) wiederhergestellt.
 # Gebunden an die Seriennummer des Handys (gemerkt bei Kabelverbindung): fremde Geräte werden nie angesprochen.
 # --leise: für den Wachhund (launchd), schreibt nur ins Log und startet den adb-Server nie neu.
@@ -10,7 +11,12 @@ set -u
 PORT=5555
 STATE="$HOME/.adb-wlan-last-ip"
 SERIAL_DATEI="$HOME/.adb-wlan-serial"
-LOG="$HOME/Library/Logs/adb-wlan.log"; [ -d "$HOME/Library/Logs" ] || LOG="$HOME/.adb-wlan.log"
+# WireGuard-Adresse des Handys im Second-Brain-Netz (10.8.0.0/24, Hub = VPS 10.8.0.1).
+# Überschreibbar per Datei ~/.adb-wlan-tunnel-ip (leere Datei = Tunnelweg aus), dieselbe Datei wie unter Windows.
+TUNNEL_DATEI="$HOME/.adb-wlan-tunnel-ip"
+if [ -f "$TUNNEL_DATEI" ]; then TUNNEL_IP=$(tr -d '[:space:]' <"$TUNNEL_DATEI"); else TUNNEL_IP="10.8.0.7"; fi
+LOGDIR="$HOME/Library/Logs/adb-wlan"; mkdir -p "$LOGDIR" 2>/dev/null || LOGDIR="$HOME"
+LOG="$LOGDIR/adb-wlan.log"
 LEISE=0; [ "${1:-}" = "--leise" ] && LEISE=1
 
 # Immer dieselbe adb wie Gradle (SDK): verschiedene adb-Versionen beenden sich gegenseitig
@@ -68,7 +74,8 @@ verbinde() {
   return 1
 }
 
-merke_ip() { [ -n "$1" ] && echo "$1" > "$STATE"; }
+# Nie den TLS-Port und nie die Tunnel-Adresse speichern: nur die WLAN-IP des Handys.
+merke_ip() { [ -n "$1" ] && [ "$1" != "$TUNNEL_IP" ] && echo "$1" > "$STATE"; return 0; }
 
 # Handy-Seite dauerhaft vorbereiten (über Kabel ODER WLAN, höchstens stündlich; $2=sofort erzwingt):
 # Berechtigung für UpdateStation + Ausnahme von der Doze-Drosselung. Idempotent.
@@ -97,12 +104,41 @@ stabilisiere() { # $1 TLS-Serial, $2 IP
   return 1
 }
 
+# mDNS: findet das Handy mit aktueller IP in jedem Netz (nur Dienste unseres Handys). 0 = verbunden.
+mdns_verbinden() {
+  local dienste="" z ip
+  for _ in 1 2 3; do
+    dienste=$(adb mdns services 2>/dev/null | grep -E $'\t_adb(-tls-connect)?\\._tcp\\.?\t')
+    [ -n "$SOLL" ] && dienste=$(echo "$dienste" | grep -F "adb-$SOLL-")
+    [ -n "$dienste" ] && break; sleep 2
+  done
+  for z in $(echo "$dienste" | awk -F'\t' '$2 ~ /^_adb\._tcp/ {print $3}'); do
+    if verbinde "$z"; then merke_ip "${z%%:*}"; return 0; fi
+  done
+  for z in $(echo "$dienste" | awk -F'\t' '$2 ~ /^_adb-tls-connect/ {print $3}'); do
+    if verbinde "$z"; then ip=${z%%:*}; merke_ip "$ip"; stabilisiere "$z" "$ip"; return 0; fi
+  done
+  return 1
+}
+
 # Parallele Aufrufe nicht gegeneinander laufen lassen
 LOCK="${TMPDIR:-/tmp}/adb-wlan.lock"
 for _ in $(seq 1 90); do mkdir "$LOCK" 2>/dev/null && break; sleep 1; done
-trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+aufraeumen() {
+  # Log klein halten
+  if [ -f "$LOG" ] && [ "$(stat -f %z "$LOG" 2>/dev/null || echo 0)" -gt 524288 ]; then
+    tail -n 2000 "$LOG" > "$LOG.tmp" && mv -f "$LOG.tmp" "$LOG"
+  fi
+  rmdir "$LOCK" 2>/dev/null
+}
+trap aufraeumen EXIT
 
 adb start-server >/dev/null 2>&1
+
+# Neuer Mac: Wachhund (LaunchAgent) beim ersten Aufruf selbst einrichten
+if [ $LEISE -eq 0 ] && [ ! -f "$HOME/Library/LaunchAgents/de.frank.adb-wlan.wachhund.plist" ]; then
+  bash "$(cd "$(dirname "$0")" && pwd)/wachhund-einrichten.sh" >/dev/null 2>&1 && melde "Wachhund de.frank.adb-wlan.wachhund eingerichtet"
+fi
 
 # Tote oder hängende Netz-Einträge räumen; antwortende fremde Geräte bleiben unberührt
 adb devices 2>/dev/null | awk 'NR>1 && NF>=2 {print $1, $2}' | while read -r s z; do
@@ -127,33 +163,30 @@ for RUNDE in 1 2; do
   # 1. Schon per WLAN verbunden und antwortet?
   NETZ=$(netz_verbunden)
   if [ -n "$NETZ" ]; then
+    # Nur über den WireGuard-Tunnel verbunden: im Heim-WLAN direkt ist schneller -> umsteigen
+    if [ -n "$TUNNEL_IP" ] && [ -z "$(echo "$NETZ" | grep -vxF "$TUNNEL_IP:$PORT")" ]; then
+      if mdns_verbinden; then
+        adb disconnect "$TUNNEL_IP:$PORT" >/dev/null 2>&1
+        melde "Handy wieder im WLAN erreichbar – Tunnelverbindung getrennt"
+      fi
+      break
+    fi
     echo "$NETZ" | grep -qE "^[0-9.]+:$PORT$" && break
     T=$(echo "$NETZ" | head -1); IP=${T%%:*}
     if echo "$IP" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then merke_ip "$IP"; stabilisiere "$T" "$IP"; fi
     break
   fi
 
-  # 2. mDNS: nur Dienste unseres Handys
-  DIENSTE=""
-  for _ in 1 2 3; do
-    DIENSTE=$(adb mdns services 2>/dev/null | grep -E $'\t_adb(-tls-connect)?\\._tcp\\.?\t')
-    [ -n "$SOLL" ] && DIENSTE=$(echo "$DIENSTE" | grep -F "adb-$SOLL-")
-    [ -n "$DIENSTE" ] && break; sleep 2
-  done
-  OK=0
-  for Z in $(echo "$DIENSTE" | awk -F'\t' '$2 ~ /^_adb\._tcp/ {print $3}'); do
-    if verbinde "$Z"; then merke_ip "${Z%%:*}"; OK=1; break; fi
-  done
-  if [ $OK -eq 0 ]; then
-    for Z in $(echo "$DIENSTE" | awk -F'\t' '$2 ~ /^_adb-tls-connect/ {print $3}'); do
-      if verbinde "$Z"; then IP=${Z%%:*}; merke_ip "$IP"; stabilisiere "$Z" "$IP"; OK=1; break; fi
-    done
-  fi
-  [ $OK -eq 1 ] && break
+  # 2. mDNS
+  mdns_verbinden && break
 
   # 3. Zuletzt bekannte IP
   LETZTE=$(tr -d '[:space:]' <"$STATE" 2>/dev/null)
   [ -n "$LETZTE" ] && verbinde "$LETZTE:$PORT" && break
+
+  # 3b. WireGuard-Tunnel (Second-Brain-Netz über den VPS): Handy unterwegs im Mobilnetz.
+  #     Braucht WireGuard an auf Mac und Handy und Port 5555 (seit dem letzten Handy-Neustart).
+  if [ -n "$TUNNEL_IP" ] && verbinde "$TUNNEL_IP:$PORT"; then melde "Verbunden über WireGuard-Tunnel $TUNNEL_IP:$PORT"; break; fi
 
   # 4. Kabel
   USB=$(usb_geraet)
