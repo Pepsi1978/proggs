@@ -166,7 +166,7 @@ class LiveGespraech(
             offene.incrementAndGet()
         }
         status("Verbinde …")
-        if (gemini) { geminiVerbinden(schluessel); stilleWaechter(); return }
+        if (gemini) { testEingabeAn(); geminiVerbinden(schluessel); stilleWaechter(); return }
         val url = if (live) "wss://api.openai.com/v1/live/sessions" else "wss://api.openai.com/v1/realtime?model=$modell"
         val anfrage = Request.Builder().url(url).header("Authorization", "Bearer $schluessel").build()
         ws = client.newWebSocket(anfrage, object : WebSocketListener() {
@@ -396,6 +396,10 @@ class LiveGespraech(
             .put("contextWindowCompression", JSONObject().put("slidingWindow", JSONObject()).apply { LiveOptionen.geminiKuerzenAb(st)?.let { put("triggerTokens", it) } })
             .put("sessionResumption", JSONObject().apply { if (fortsetzKennung.isNotEmpty()) put("handle", fortsetzKennung) })
         if (st["g_mitschrift"] != "aus") s.put("inputAudioTranscription", JSONObject())
+        // Diagnose ohne Schlüssel: Womit das Gespräch wirklich aufgebaut wird (Modell, Weg, Anweisung, Werkzeug).
+        Log.i(LiveRouting.TAG, "Gemini-Setup: $modell über $apiVersion, jarvisDirekt=${st.jarvisDirekt}, nurStimme=${anweisung.startsWith("# Rolle\nDu bist die Stimme")}, " +
+            "Anweisung ${anweisung.length} Zeichen, Verlauf ${verlauf.size}, Werkzeuge ${werkzeuge.length()}, nebenbei=${LiveOptionen.geminiNebenbei(st)}, " +
+            "denken=${g.optJSONObject("thinkingConfig")?.optString("thinkingLevel") ?: "-"}, max=${g.optInt("maxOutputTokens", 0)}, kuerzen=${LiveOptionen.geminiKuerzenAb(st) ?: "auto"}, gratis=$gratis")
         return JSONObject().put("setup", s)
     }
 
@@ -405,6 +409,7 @@ class LiveGespraech(
     private var geminiNutzung: JSONObject? = null
 
     private fun geminiEreignis(w: WebSocket, e: JSONObject) {
+        geminiDiagnose(e)
         // Je Antwort den größten Stand nehmen: Die letzte Meldung (mit turnComplete) ist teils leer.
         e.optJSONObject("usageMetadata")?.let { u -> if (u.optInt("totalTokenCount") >= (geminiNutzung?.optInt("totalTokenCount") ?: 0)) geminiNutzung = u }
         when {
@@ -478,6 +483,7 @@ class LiveGespraech(
             }
             e.has("toolCallCancellation") -> {
                 val ids = e.optJSONObject("toolCallCancellation")?.optJSONArray("ids") ?: return
+                Log.w(LiveRouting.TAG, "Gemini bricht Werkzeugaufruf ab: $ids")
                 // Die Kennung bleibt als „verworfen“ stehen: Ein spätes Ergebnis darf nie als anderes Protokoll hinausgehen.
                 for (i in 0 until ids.length()) { kennungArt[ids.optString(i)] = "gemini_abgebrochen"; aufrufVerbindung.remove(ids.optString(i)) }
             }
@@ -491,6 +497,38 @@ class LiveGespraech(
                 if (fortsetzKennung.isNotEmpty() && laeuft) { geminiKosten(); geminiVerbinden(aktuellerSchluessel) }
             }
         }
+    }
+
+    /** Nur im Debug-Build: Prüfsätze per adb statt Mikrofon, damit Gemini-Abläufe ohne Sprechen nachstellbar sind. */
+    @Volatile private var testEingabe: android.content.BroadcastReceiver? = null
+    private fun testEingabeAn() {
+        if (!de.frank.jarvis.BuildConfig.DEBUG) return
+        val r = object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: Context, i: android.content.Intent) {
+                val text = i.getStringExtra("text")?.takeIf { it.isNotBlank() } ?: return
+                Log.i(LiveRouting.TAG, "Prüfsatz: $text")
+                if (bereit) ws?.send(JSONObject().put("realtimeInput", JSONObject().put("text", text)).toString())
+            }
+        }
+        testEingabe = r
+        androidx.core.content.ContextCompat.registerReceiver(app, r, android.content.IntentFilter("de.frank.jarvis.LIVE_PRUEFSATZ"), androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
+    }
+
+    /**
+     * Diagnose: jedes Gemini-Ereignis außer reinem Ton mit seinen Schlüsseln, Werkzeug- und Sprach-Ereignisse samt Inhalt.
+     * Ohne das ließ sich nicht belegen, ob ein Werkzeugaufruf überhaupt ankam.
+     */
+    private fun geminiDiagnose(e: JSONObject) {
+        val c = e.optJSONObject("serverContent")
+        val nurTon = c != null && c.length() == 1 && c.has("modelTurn") && e.keys().asSequence().all { it == "serverContent" || it == "usageMetadata" }
+        if (nurTon) return
+        val teile = c?.keys()?.asSequence()?.filter { it != "modelTurn" }?.joinToString(",").orEmpty()
+        val inhalt = when {
+            e.has("toolCall") || e.has("toolCallCancellation") || e.has("voiceActivity") || e.has("goAway") -> e.toString().take(500)
+            c?.has("inputTranscription") == true -> "Mitschrift „" + c.optJSONObject("inputTranscription")?.optString("text").orEmpty().take(200) + "“"
+            else -> ""
+        }
+        Log.d(LiveRouting.TAG, "Gemini-Ereignis " + e.keys().asSequence().sorted().joinToString(",") + (if (teile.isNotEmpty()) " [$teile]" else "") + (if (inhalt.isNotEmpty()) " $inhalt" else ""))
     }
 
     /** Verbucht die Nutzungsdaten der fertigen Antwort genau einmal, mit den Gemini-Preisen aus [LiveOptionen]. */
@@ -1320,6 +1358,7 @@ class LiveGespraech(
             ws = null
         }
         tonAus()
+        testEingabe?.let { r -> testEingabe = null; runCatching { app.unregisterReceiver(r) } }
         nutzerFertig(); jarvisFertig()
         if (senden && live && w != null && bereit) {
             schliessenWartet = true
