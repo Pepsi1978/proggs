@@ -158,15 +158,15 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
         val probeArt = de.frank.jarvis.live.StimmProbe.art(st)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            stimmen.werte(st).sortedByDescending { probeArt + "_" + it.id in vm.stimmFavoriten }.forEach { w ->
+            stimmen.werte(st).sortedByDescending { de.frank.jarvis.live.StimmProbe.favoritSchluessel(probeArt, it.id) in vm.stimmFavoriten }.forEach { w ->
                 val gespeichert = de.frank.jarvis.live.StimmProbe.vorhanden(androidx.compose.ui.platform.LocalContext.current, probeArt, w.id)
                 val laedt = vm.stimmProbeLaedt == w.id
-                val favorit = probeArt + "_" + w.id in vm.stimmFavoriten
+                val favorit = de.frank.jarvis.live.StimmProbe.favoritSchluessel(probeArt, w.id) in vm.stimmFavoriten
                 Chip((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, aktiv = w.id == st["stimme"],
                     icon = if (favorit) Icons.Rounded.Star else null, iconFarbe = androidx.compose.ui.graphics.Color(0xFFFFC107), iconGroesse = 22.dp,
-                    lange = { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) }) {
+                    lange = { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) }, langeText = if (favorit) "Favorit entfernen" else "Als Favorit markieren") {
                     geaendert { st.setze("stimme", w.id) }
-                    vm.stimmProbe(de.frank.jarvis.live.StimmProbe.art(st), w.id)
+                    vm.stimmProbe(probeArt, w.id)
                 }
             }
         }

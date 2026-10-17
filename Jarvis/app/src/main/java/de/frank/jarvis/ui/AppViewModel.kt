@@ -828,7 +828,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Langes Drücken auf eine Stimme: Stern an oder wieder aus. */
     fun stimmFavoritUmschalten(art: String, stimme: String, titel: String) {
         stimmFavoriten = de.frank.jarvis.live.StimmProbe.favoritUmschalten(getApplication(), art, stimme)
-        meldung = if (art + "_" + stimme in stimmFavoriten) "★ $titel ist jetzt Favorit." else "$titel ist kein Favorit mehr."
+        meldung = if (de.frank.jarvis.live.StimmProbe.favoritSchluessel(art, stimme) in stimmFavoriten) "★ $titel ist jetzt Favorit." else "$titel ist kein Favorit mehr."
     }
 
     /** Spielt die deutsche Hörprobe einer Live-Stimme; die erste je Stimme kommt einmalig von OpenAI. */

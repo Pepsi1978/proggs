@@ -39,8 +39,11 @@ object StimmProbe {
     fun favoriten(context: Context): Set<String> =
         context.getSharedPreferences("stimmproben", Context.MODE_PRIVATE).getStringSet("favoriten", emptySet())!!.toSet()
 
+    /** Schlüssel einer Stimme in [favoriten]. */
+    fun favoritSchluessel(art: String, stimme: String) = art + "_" + stimme
+
     fun favoritUmschalten(context: Context, art: String, stimme: String): Set<String> {
-        val schluessel = art + "_" + stimme
+        val schluessel = favoritSchluessel(art, stimme)
         val neu = favoriten(context).let { if (schluessel in it) it - schluessel else it + schluessel }
         context.getSharedPreferences("stimmproben", Context.MODE_PRIVATE).edit().putStringSet("favoriten", neu).apply()
         return neu
