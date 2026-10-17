@@ -115,13 +115,14 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             // ---------------------------------------------------------------- Gedächtnis
             Bereich("Jarvis' Gedächtnis") {
                 androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
-                Text("Fünf Dateien, die Jarvis selbst pflegt und bei jeder Antwort, im Live-Gedächtnis und im Live-Gespräch vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln gehen außerdem vollständig mit jedem Programmierauftrag mit. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
+                Text("Sechs Dateien, die Jarvis selbst pflegt und bei jeder Antwort, im Live-Gedächtnis und im Live-Gespräch vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Die Programmierregeln gehen außerdem vollständig mit jedem Programmierauftrag mit. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
                 listOf(
                     Triple(vm.regelListe, "Regeln", "wie Jarvis arbeiten und antworten soll"),
                     Triple(vm.zielListe, "Ziele", "was du erreichen willst"),
                     Triple(vm.infoListe, "Über Frank", "was Jarvis über dich weiß"),
                     Triple(vm.programmierListe, "Programmierregeln", "was jede Programmier-Session einhalten muss"),
                     Triple(vm.stilListe, "Stil", "wie du Antworten am liebsten magst, gelernt aus deinen Daumen"),
+                    Triple(vm.entscheidungsListe, "Entscheidungen", "was du ausdrücklich beschlossen hast"),
                 ).forEach { (liste, name, wozu) ->
                     val anzahl = liste.eintraege.size
                     Unterzeile(name)

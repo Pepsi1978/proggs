@@ -21,6 +21,10 @@ import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.Werkzeug
 import de.frank.jarvis.faehigkeit.schema
 import de.frank.jarvis.faehigkeit.text
+import de.frank.jarvis.faehigkeit.textListe
+import de.frank.jarvis.faehigkeit.vorgangsBlock
+import de.frank.jarvis.agent.Vorgaenge
+import de.frank.jarvis.gedaechtnis.Bereich
 import de.frank.jarvis.gedaechtnis.Lagebild
 import de.frank.jarvis.observability.Logbuch
 import java.time.LocalDate
@@ -48,22 +52,42 @@ class McpServer(context: Context) {
     private val eigene: List<Werkzeug> = listOf(
         Werkzeug(
             name = "jarvis_kontext",
-            titel = "Gesamtbild von Frank holen",
-            beschreibung = "Jarvis: liefert in EINEM Aufruf das Gesamtbild aus Jarvis' Live-Gedächtnis, mit dem Jarvis jede Frage von Frank betrachtet, live aus allen angebundenen Apps: " +
-                "Franks Regeln, Ziele, Programmierregeln und was Jarvis über ihn weiß, was sich in den letzten 24 Stunden geändert hat, Dienst und Schlafzeiten der nächsten 7 Tage, Termine der nächsten 14 Tage, " +
-                "alle offenen Aufgaben, Wecker, Biodaten mit Verlauf, die Gespräche mit Jarvis, die aktuelle Tagesauswertung, alle offenen Ideen, Trainings, Wetter, die letzten 10 Tage im Rückblick, " +
-                "Ablage, ungelesene Mails (nur Betreff) und das Tagebuch (letzte 10 Tage vollständig, Älteres verdichtet). Älteres findest du gezielt mit gedaechtnis_suchen. " +
-                "DAS ERSTE WERKZEUG IN JEDEM GESPRÄCH: Rufe es auf, bevor du Franks erste Frage beantwortest, auch wenn sie einfach wirkt, und noch einmal, wenn das Gespräch länger als eine Stunde läuft. " +
-                "Betrachte danach jede Frage vor diesem Hintergrund und beziehe von dir aus ein, was die Antwort besser macht. Die einzelnen Apps fragst du nur noch für Details oder Änderungen ab.",
-            schema = schema(),
+            titel = "Startkontext und Gesamtbild von Frank holen",
+            beschreibung = "Jarvis: Franks persönlicher Kontext aus Jarvis' Live-Gedächtnis, live aus allen angebundenen Apps, jeder Bereich mit Datenstand. " +
+                "DAS ERSTE WERKZEUG IN JEDEM GESPRÄCH: Rufe es auf, bevor du Franks erste Frage beantwortest, auch wenn sie einfach wirkt, und noch einmal nach etwa einer Stunde. " +
+                "Vorgabe umfang=kurz (schnell, für Sprachgespräche): Integrationsregeln v${Integration.VERSION}, Fähigkeiten, offene und neu fertige Hintergrundaufträge, Franks Regeln, Ziele, Entscheidungen und Wissen über ihn, " +
+                "Neues der letzten 24 Stunden, Dienst und Schlafzeiten, Aufgaben, Termine, Wecker, Tagesfazit, Biodaten, Wetter und eine Liste der übrigen Bereiche. " +
+                "bereiche=[…] lädt einzelne Bereiche vollständig nach (zum Beispiel tagebuch, gespraeche, ideen, trainings, rueckblick, stacks, ablage, mail, wissen). " +
+                "seit=<STAND-MARKE eines früheren Abrufs> liefert nur, was sich seither geändert hat. umfang=voll liefert das ganze Gesamtbild (groß, für Auswertungen und Rückblicke). " +
+                "Älteres und frühere Entscheidungen findest du mit gedaechtnis_suchen. Regeln in Kürze: ${Integration.KURZ}",
+            schema = schema(
+                "umfang" to text("kurz (Vorgabe) oder voll.", listOf("kurz", "voll")),
+                "bereiche" to textListe("Nur diese Bereiche vollständig und frisch: " + Bereich.entries.joinToString { it.kennung } + "."),
+                "seit" to text("STAND-MARKE aus einem früheren Abruf: dann nur Neuigkeiten und geänderte Bereiche seither."),
+            ),
             nurLesen = true,
-        ) { _ ->
-            // Der Zeitpunkt gilt erst, wenn das Gesamtbild wirklich da ist; der Beginn zählt, damit Änderungen währenddessen als neuer gelten.
+        ) { a ->
+            // Der Zeitpunkt gilt erst, wenn der Kontext wirklich da ist; der Beginn zählt, damit Änderungen währenddessen als neuer gelten.
             val beginn = System.currentTimeMillis()
-            val text = Gehirn.kontext(app)
-            Gehirn.zuletztGeholt = beginn
-            Gehirn.zuletztNachgereicht = beginn
-            Ergebnis(text)
+            val gewaehlt = a.optJSONArray("bereiche")?.let { l -> (0 until l.length()).map { l.optString(it) }.filter { it.isNotBlank() } }.orEmpty()
+            val seit = a.optString("seit").trim().toLongOrNull()?.takeIf { it in 1 until beginn }
+            val marke = "STAND-MARKE: $beginn (für jarvis_kontext seit=$beginn)"
+            when {
+                gewaehlt.isNotEmpty() -> Ergebnis(Lagebild.bereiche(app, gewaehlt) + "\n\n" + marke)
+                seit != null -> Ergebnis(Lagebild.seit(app, seit) + "\n\n" + vorgangsBlock(app).let { if (it.isEmpty()) "" else "$it\n\n" } + marke)
+                    // Die Neuigkeiten sind damit geliefert: nicht noch einmal an das nächste Ergebnis hängen, keine falsche GESAMTBILD-Mahnung.
+                    .also { Gehirn.zuletztNachgereicht = beginn }
+                else -> {
+                    val voll = a.optString("umfang").equals("voll", ignoreCase = true)
+                    val jetzt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))
+                    val kopf = "JARVIS-${if (voll) "GESAMTBILD" else "STARTKONTEXT (kurz)"} · Jarvis ${BuildConfig.VERSION_NAME} · Integration v${Integration.VERSION} · $jetzt · $marke\n\n" +
+                        Integration.REGELN + "\n\n" + faehigkeiten() + "\n\n" + vorgangsBlock(app).let { if (it.isEmpty()) "HINTERGRUNDAUFTRÄGE: keine offenen und keine neuen Ergebnisse.\n\n" else "$it\n\n" }
+                    val text = kopf + if (voll) Gehirn.kontext(app) else Lagebild.kurz(app)
+                    Gehirn.zuletztGeholt = beginn
+                    Gehirn.zuletztNachgereicht = beginn
+                    Ergebnis(text)
+                }
+            }
         },
         Werkzeug(
             name = "tagesauswertung_lesen",
@@ -169,7 +193,7 @@ class McpServer(context: Context) {
                 }
                 append("Jarvis selbst: ").append(eigene.joinToString(", ") { w -> w.titel }).append('\n')
             }
-            Ergebnis("Jarvis ist bereit. Auf dem Handy ist es $jetzt. " + (if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps." +
+            Ergebnis("Jarvis ist bereit (Version ${BuildConfig.VERSION_NAME}, Integration v${Integration.VERSION}). Auf dem Handy ist es $jetzt. " +(if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps." +
                 (if (programmieren.isEmpty()) "" else " $programmieren") + funktionen)
         },
     )
@@ -201,7 +225,7 @@ class McpServer(context: Context) {
             "initialize" -> ergebnis(id, JSONObject()
                 .put("protocolVersion", parameter.optString("protocolVersion").takeIf { it in VERSIONEN } ?: VERSIONEN.first())
                 .put("capabilities", JSONObject().put("tools", JSONObject().put("listChanged", false)).put("resources", JSONObject()))
-                .put("serverInfo", JSONObject().put("name", "Jarvis").put("title", "Jarvis").put("version", BuildConfig.VERSION_NAME))
+                .put("serverInfo", JSONObject().put("name", "Jarvis").put("title", "Jarvis").put("version", "${BuildConfig.VERSION_NAME} (Integration v${Integration.VERSION})"))
                 .put("instructions", anleitung()))
             "ping" -> ergebnis(id, JSONObject())
             "tools/list" -> ergebnis(id, JSONObject().put("tools", JSONArray(alleWerkzeuge().map(::beschreibe))))
@@ -220,14 +244,26 @@ class McpServer(context: Context) {
             ?: return inhalt("Das Werkzeug $name gibt es nicht.", fehler = true)
         val beginn = System.currentTimeMillis()
         // JSON-null zählt als nicht angegeben (sonst läse das Werkzeug den Text „null“).
-        val r = runCatching { runBlocking { werkzeug.ausfuehren(argumente.ohneNull()) } }
-            .getOrElse { Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
-        Logbuch.dauer("Plugin: $name", System.currentTimeMillis() - beginn, if (r.fehler) "Fehler: " + r.text.take(200) else "${r.text.length} Zeichen")
+        val sauber = argumente.ohneNull()
+        val ausfuehren: suspend () -> Ergebnis = {
+            runCatching { werkzeug.ausfuehren(sauber) }
+                .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
+        }
+        // Schreibende Aufrufe, die doppelt Schaden anrichten, laufen durch den Wiederholschutz (Wiederholung nach Verbindungsabbruch).
+        val (r, wiederholt) = runCatching { runBlocking { if (name in GESCHUETZT) schutz.fuehreAus(Wiederholschutz.schluessel(name, sauber), ausfuehren) else ausfuehren() to false } }
+            .getOrElse { Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) to false }
+        Logbuch.dauer("Plugin: $name", System.currentTimeMillis() - beginn, (if (wiederholt) "Wiederholung, nicht erneut ausgeführt; " else "") + if (r.fehler) "Fehler: " + r.text.take(200) else "${r.text.length} Zeichen")
+        if (wiederholt) return inhalt("WIEDERHOLUNG ERKANNT: Derselbe Aufruf wurde gerade schon ausgeführt, es ist nichts doppelt passiert. Ergebnis des ersten Aufrufs:\n" + r.text, r.fehler)
+            .apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
         // Synchron und vor der Auffrischung: Die Gespräche im Live-Gedächtnis lesen das Protokoll und sollen diese Aktion schon sehen.
         // Teuer ist das nicht, melde() ändert nur den Speicher und schreibt die Datei gebündelt auf dem eigenen Faden.
         runCatching { Protokoll.melde(Quelle.CHATGPT, werkzeug.titel, r.text, !r.fehler) }
         // Eine Schreibaktion landet sofort im Live-Gedächtnis (der betroffene Bereich wird neu gelesen).
         if (!werkzeug.nurLesen && !r.fehler) Lagebild.nachAktion(app, name, "ChatGPT")
+        // Fertige Hintergrundaufträge, die Frank noch nicht erfahren hat: als kurze Zeile an passende Ergebnisse (nicht konsumierend;
+        // erst vorgaenge mit aktion mitgeteilt nimmt sie heraus). Je Vorgang höchstens alle fünf Minuten, damit es nicht an jedem Ergebnis klebt.
+        // Nicht an Werkzeuge, die Programmier-Sitzungen (Claude Code) benutzen: Sonst „verbraucht“ eine fremde Sitzung die Meldung fürs Gespräch.
+        val vorgangFertig = if (name in OHNE_VORGANGSMELDUNG || name.startsWith("programmier")) "" else fertigeVorgaenge()
         // Inzwischen fertig Gewordenes reicht Jarvis nach (ChatGPT lässt sich nicht von hier aus ansprechen). Jede Meldung gibt es nur
         // einmal; deshalb nur an Ergebnisse, die zur Ablage gehören oder ein Gespräch beginnen. Sonst verbrauchte sie ein fremdes
         // Gespräch (z. B. eine Programmiersitzung, die nur die Tagesauswertung liest), und das anstoßende erführe nichts.
@@ -238,7 +274,8 @@ class McpServer(context: Context) {
         // - eine kurze Erinnerung an jarvis_kontext an jedem Ergebnis (ein neues Gespräch innerhalb der Stunde bekäme sonst nie eine),
         // - Gedächtnis und Neuigkeiten genau einmal nach einer Änderung, sonst höchstens einmal je Stunde (nicht an jedem weiteren Ergebnis).
         val jetzt = System.currentTimeMillis()
-        val eigenes = r.fehler || name == "jarvis_kontext" || name in GEDAECHTNIS
+        // Fortschrittsmeldungen kommen von Programmier-Sitzungen, nicht aus einem Gespräch mit Frank: ihnen nichts anhängen.
+        val eigenes = r.fehler || name == "jarvis_kontext" || name in GEDAECHTNIS || name == "programmier_fortschritt"
         val bekannt = maxOf(Gehirn.zuletztGeholt, Gehirn.zuletztNachgereicht)
         val stundeUm = jetzt - Gehirn.zuletztGeholt >= 60 * 60_000L && jetzt - Gehirn.zuletztNachgereicht >= 60 * 60_000L
         val gedaechtnis = if (eigenes || !(stundeUm || Merkdatei.zuletztGeaendert > bekannt)) "" else merkKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" }
@@ -252,7 +289,25 @@ class McpServer(context: Context) {
             stundeUm -> "\n\nGESAMTBILD FEHLT: Hast du in diesem Gespräch jarvis_kontext noch nicht aufgerufen, hole es jetzt nach, bevor du Frank antwortest (Live-Gedächtnis aus allen Apps in einem Aufruf)."
             else -> "\n\n(Falls in diesem Gespräch noch nicht geschehen: zuerst jarvis_kontext aufrufen.)"
         }
-        return inhalt(r.text + nachtrag + gedaechtnis + neues + erinnerung, r.fehler).apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
+        return inhalt(r.text + nachtrag + vorgangFertig + gedaechtnis + neues + erinnerung, r.fehler).apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
+    }
+
+    /** Die Zeile „VORGANG FERTIG“ für fertige, noch nicht mitgeteilte Hintergrundaufträge; leer, wenn keiner fällig ist. */
+    private fun fertigeVorgaenge(): String {
+        val jetzt = System.currentTimeMillis()
+        val faellig = runCatching { Vorgaenge.buch(app).liste().filter { !it.offen && it.neu } }.getOrDefault(emptyList())
+            .filter { v -> synchronized(gezeigt) { (gezeigt[v.id] ?: 0L).let { jetzt - it >= 5 * 60_000L }.also { if (it) gezeigt[v.id] = jetzt } } }
+        if (faellig.isEmpty()) return ""
+        return "\n\nVORGANG FERTIG (Hintergrundauftrag, gehört vielleicht zu einem früheren Gespräch; sprichst du gerade mit Frank, sag es ihm an passender Stelle, " +
+            "Details mit vorgaenge aktion lesen; aktion mitgeteilt erst, nachdem du es ihm wirklich gesagt hast):\n" +
+            faellig.joinToString("\n") { "- " + Vorgaenge.zeile(it) }
+    }
+
+    /** Was Jarvis kann, je angebundene App eine Zeile mit den Werkzeugnamen (für den Startkontext). */
+    private fun faehigkeiten(): String = buildString {
+        append("FÄHIGKEITEN (Werkzeuge je Bereich; Störungen stehen bei jarvis_status):\n")
+        Register.alle(app).filter { it.imPlugin && it.werkzeuge.isNotEmpty() }.forEach { f -> append("- ").append(f.name).append(": ").append(f.werkzeuge.joinToString(", ") { it.name }).append('\n') }
+        append("- Jarvis selbst: ").append(eigene.joinToString(", ") { it.name })
     }
 
     private fun beschreibe(w: Werkzeug): JSONObject = JSONObject()
@@ -272,9 +327,10 @@ class McpServer(context: Context) {
         append("Dies ist Jarvis, Franks persönlicher Assistent auf seinem Handy. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
         append("oder Erinnerungen, nutze diese Werkzeuge. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
-        append("GESAMTBILD: Rufe in jedem Gespräch zuerst jarvis_kontext auf, bevor du Franks erste Frage beantwortest. Du bekommst in einem Aufruf Jarvis' Live-Gedächtnis aus allen angebundenen Apps: ")
-        append("Regeln, Ziele, Programmierregeln, Wissen über Frank, was sich zuletzt geändert hat, Dienst und Schlafzeiten, Termine, Aufgaben, Wecker, Biodaten, Ideen, die Gespräche mit Jarvis, die Tagesauswertung und das Tagebuch ")
-        append("(die letzten 10 Tage vollständig, Älteres verdichtet). Betrachte jede Frage vor diesem Hintergrund und beziehe von dir aus ein, was die Antwort besser macht; was nicht dazugehört, lässt du weg. ")
+        // Die versionierten Grundregeln stehen vorn: Manche Programme kürzen die Anleitung, der Anfang kommt immer an.
+        append(Integration.REGELN).append('\n')
+        append("GESAMTBILD: jarvis_kontext liefert in einem Aufruf Jarvis' Live-Gedächtnis aus allen angebundenen Apps, jeden Bereich mit Datenstand ")
+        append("(kurz als Vorgabe; einzelne Bereiche mit bereiche nachladen, nur Geändertes mit seit, alles mit umfang voll). Betrachte jede Frage vor diesem Hintergrund und beziehe von dir aus ein, was die Antwort besser macht; was nicht dazugehört, lässt du weg. ")
         append("Für Älteres oder ein bestimmtes Thema suchst du gezielt mit gedaechtnis_suchen. Hast du selbst etwas geändert oder geht es um einen Messwert von gerade eben, lies die App frisch.\n")
         append(merkKontext(app))
         Register.alle(app).filter { it.imPlugin }.forEach { append(it.name).append(": ").append(it.hinweise).append('\n') }
@@ -308,6 +364,21 @@ class McpServer(context: Context) {
         private val nebenher = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         /** Die Werkzeuge des Gedächtnisses geben ihre Einträge selbst zurück; ihnen liegt der Kontext nicht noch einmal bei. */
         private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_lesen")
+        /**
+         * Schreibende Werkzeuge, bei denen eine Wiederholung nach Verbindungsabbruch Schaden anrichtet (doppelt angelegt,
+         * doppelt verschickt, doppelt gestartet). Nicht hierher: Werkzeuge, die zum Nachfragen bewusst wiederholt werden
+         * (bild_erzeugen, ablage_datei_speichern), und Schalter wie Timer und Stoppuhr.
+         */
+        private val GESCHUETZT = setOf(
+            "aufgabe_anlegen", "aufgabe_aendern", "aufgabe_loeschen", "kalender_eintragen", "kalender_loeschen", "idee_speichern", "idee_loeschen",
+            "mail_senden", "agent_starten", "programmieren", "ablage_schreiben", "jarvis_merken", "jarvis_vergessen", "wecker_stellen", "wecker_loeschen",
+            "stack_speichern", "mittel_speichern", "stack_mittel_setzen",
+        )
+        private val schutz = Wiederholschutz()
+        /** Werkzeuge ohne „VORGANG FERTIG“: eigene Übersichten und die Werkzeuge der Programmier-Sitzungen. */
+        private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen")
+        /** Wann eine Vorgangsmeldung zuletzt an einem Ergebnis hing (Kennung → Zeit). */
+        private val gezeigt = HashMap<String, Long>()
         /** Unterstützte Protokollstände, neuester zuerst. Wünscht der Client einen davon, bekommt er ihn. */
         val VERSIONEN = listOf("2025-06-18", "2025-11-25", "2025-03-26", "2024-11-05")
     }

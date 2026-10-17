@@ -609,6 +609,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         "So sollen Jarvis' Antworten aussehen: Länge, Gliederung, Ton und Symbole. Jarvis lernt das aus deinen Daumen hoch und runter unter den Antworten; du kannst alles ändern, löschen oder selbst eintragen.",
         "Neue Stilregel eintippen oder einsprechen", STIL_KORREKTUR,
     )
+    val entscheidungsListe = Merkliste(
+        de.frank.jarvis.faehigkeit.Entscheidungen, "Entscheidungen", "Entscheidung",
+        "Was du ausdrücklich entschieden hast, mit Datum. Jarvis und ChatGPT halten das fest, damit ein neues Gespräch nicht wieder bei null anfängt. Nur deine eigenen Beschlüsse, keine Vorschläge.",
+        "Neue Entscheidung eintippen oder einsprechen", ENTSCHEIDUNG_KORREKTUR,
+    )
     /** Die Merkliste, die gerade im Vollbild offen ist. */
     var merkOffen by mutableStateOf<Merkliste?>(null); private set
     /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
@@ -897,7 +902,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 ?.joinToString("\n", "# Franks Stil (gilt, soweit es zum Sprechen passt)\n", "\n") { "- " + it.text }.orEmpty() +
             "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
 
-    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden(); stilListe.laden() }
+    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden(); programmierListe.laden(); stilListe.laden(); entscheidungsListe.laden() }
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
     fun merkSchliessen() {
         // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
@@ -1517,7 +1522,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         einstellungsVerlauf = p.getString("einstellungsVerlauf", null).orEmpty().split(',').filter { it.isNotBlank() }
         GedaechtnisAnsicht.offen = p.getBoolean("gedaechtnis", false)
         val merk = p.getString("merk", null).orEmpty()
-        listOf(regelListe, zielListe, infoListe, programmierListe, stilListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
+        listOf(regelListe, zielListe, infoListe, programmierListe, stilListe, entscheidungsListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
         Logbuch.gedaechtnis("Zustand nach Update wiederhergestellt", "Reiter ${r.anzeige}, ${gespraech.size} Nachrichten")
     }
 
@@ -1960,6 +1965,13 @@ private const val REGEL_KORREKTUR =
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Stilregel. */
+/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Entscheidung. */
+private const val ENTSCHEIDUNG_KORREKTUR =
+    "Du formulierst eine Entscheidung, die Frank getroffen hat, zu einem klaren, für sich allein verständlichen Satz in der dritten Person um („Frank hat entschieden, …“), mit Datum, wenn er eines nennt. " +
+        "Behalte jeden inhaltlichen Punkt, füge nichts hinzu und deute nichts um; mach aus einer Überlegung keinen Beschluss. " +
+        "Lass Füllwörter und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. So kurz wie möglich, höchstens 400 Zeichen. " +
+        "Antworte nur mit dem Satz, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+
 private const val STIL_KORREKTUR =
     "Du formulierst eine Vorgabe von Frank, wie die Antworten seines Assistenten Jarvis aussehen sollen (Länge, Gliederung, Ton, Symbole), zu einer klaren Stilregel um. " +
         "Jarvis bekommt sie bei jeder Antwort beigelegt und muss sie ohne weiteres Wissen verstehen. Behalte jeden inhaltlichen Punkt, füge nichts hinzu und deute nichts um. " +

@@ -467,6 +467,73 @@ object Lagebild {
         }.trim()
     }
 
+    // ---------------------------------------------------------------- Kurzer Startkontext und gezieltes Nachladen (Plugin)
+
+    /**
+     * Der kurze Startkontext für Sprachgespräche: Gemerktes vollständig, Neues der letzten 24 Stunden, dazu die Kernbereiche
+     * gedeckelt (Rahmen, Aufgaben, Termine, Wecker, Tagesauswertung, Biodaten, Wetter) und eine Liste der übrigen Bereiche
+     * mit Datenstand und Größe zum gezielten Nachladen. Liest nur, was ohnehin schnell und lokal ist; nie eine externe Synchronisation.
+     */
+    suspend fun kurz(context: Context, wartenMs: Long = 1_500L): String {
+        val app = context.applicationContext
+        lade(app)
+        val schnell = Bereich.entries.filter { it.schnell }
+        val laeuft = bereich.async { auffrischen(app, schnell.filter { it in KURZ || it == Bereich.GEMERKT }, "beim Abruf (kurz)", hoechstensAlterMs = 30_000L) }
+        withTimeoutOrNull(wartenMs) { laeuft.await() }
+        val s = _stand.value
+        return buildString {
+            s.abschnitte[Bereich.GEMERKT]?.let { append(it.text.trim()).append("\n\n") }
+            val neu = neuigkeitenSeit(System.currentTimeMillis() - 24 * 3_600_000L, hoechstens = 15)
+            if (neu.isNotEmpty()) append("NEU IN DEN LETZTEN 24 STUNDEN (neueste zuerst):\n").append(neu).append("\n\n")
+            KURZ.forEach { (b, grenze) -> s.abschnitte[b]?.let { a -> append(abschnitt(b, a.copy(text = gedeckelt(a.text, grenze)))).append('\n') } }
+            append("WEITERE BEREICHE (nicht enthalten; bei Bedarf mit jarvis_kontext bereiche=[kennung] vollständig nachladen):\n")
+            Bereich.entries.filter { it != Bereich.GEMERKT && it !in KURZ }.forEach { b ->
+                val a = s.abschnitte[b]
+                append("- ").append(b.kennung).append(": ").append(b.titel)
+                append(if (a == null) " (noch nicht geladen)" else " (Stand ${uhr(a.stand)} Uhr, ${a.text.length} Zeichen" + (if (a.fehler.isNotEmpty()) ", gerade gestört" else "") + ")")
+                append('\n')
+            }
+        }.trim()
+    }
+
+    /** Ausgewählte Bereiche vollständig, vorher frisch gelesen (höchstens [wartenMs]; sonst der letzte Stand mit seinem Zeitstempel). */
+    suspend fun bereiche(context: Context, kennungen: List<String>, wartenMs: Long = 8_000L): String {
+        val app = context.applicationContext
+        lade(app)
+        val gewaehlt = kennungen.mapNotNull { Bereich.von(it.trim().lowercase(Locale.GERMAN)) }.distinct()
+        val unbekannt = kennungen.filter { Bereich.von(it.trim().lowercase(Locale.GERMAN)) == null }
+        if (gewaehlt.isNotEmpty()) {
+            // Ein Bereich, der jünger als eine Minute ist, wird nicht noch einmal gelesen (wiederholte Abrufe kosten nichts).
+            val laeuft = bereich.async { auffrischen(app, gewaehlt, "gezielt nachgeladen", hoechstensAlterMs = 60_000L) }
+            withTimeoutOrNull(wartenMs) { laeuft.await() }
+        }
+        val s = _stand.value
+        return buildString {
+            gewaehlt.forEach { b -> s.abschnitte[b]?.let { append(abschnitt(b, it)).append('\n') } ?: append(b.ueberschrift).append(":\nwird gerade geladen, gleich noch einmal abrufen.\n\n") }
+            if (unbekannt.isNotEmpty()) append("Unbekannte Bereiche: ").append(unbekannt.joinToString()).append(". Möglich: ").append(Bereich.entries.joinToString { it.kennung }).append('.')
+        }.trim()
+    }
+
+    /**
+     * Nur was sich seit [seit] (Millisekunden, die STAND-MARKE eines früheren Abrufs) geändert hat: die Neuigkeiten und jeder
+     * Bereich, dessen Inhalt sich seither geändert hat. Unveränderte Bereiche werden nur genannt, nicht noch einmal übertragen.
+     */
+    suspend fun seit(context: Context, seit: Long, wartenMs: Long = 1_500L): String {
+        val app = context.applicationContext
+        lade(app)
+        val laeuft = bereich.async { auffrischen(app, Bereich.entries.filter { it.schnell }, "beim Abruf (Änderungen)", hoechstensAlterMs = 30_000L) }
+        withTimeoutOrNull(wartenMs) { laeuft.await() }
+        val s = _stand.value
+        val geaendert = Bereich.entries.filter { b -> (s.abschnitte[b]?.geaendert ?: 0L) > seit }
+        return buildString {
+            val neu = neuigkeitenSeit(seit, hoechstens = 25)
+            if (neu.isNotEmpty()) append("NEU SEIT DEINEM LETZTEN ABRUF (neueste zuerst):\n").append(neu).append("\n\n")
+            geaendert.forEach { b -> s.abschnitte[b]?.let { a -> append(abschnitt(b, a.copy(text = gedeckelt(a.text, SEIT_DECKEL)))).append('\n') } }
+            if (neu.isEmpty() && geaendert.isEmpty()) append("Seit deinem letzten Abruf hat sich nichts geändert.\n")
+            else append("Unverändert: ").append(Bereich.entries.filter { it !in geaendert }.joinToString { it.kennung }).append('.')
+        }.trim()
+    }
+
     /** Kürzt einen Live-Bereich zeilenweise auf [grenze] Zeichen. */
     private fun gedeckelt(text: String, grenze: Int): String =
         if (text.length <= grenze) text else text.take(grenze).substringBeforeLast('\n') + "\n… (gekürzt; vollständig mit dem Werkzeug dieses Bereichs)"
@@ -547,6 +614,13 @@ object Lagebild {
     /** So viel bekommen verdichtete Monate und Stichpunkt-Tage zusammen mindestens, neben den vollen 10 Tagen. */
     private const val TAGEBUCH_AELTER_MINDESTENS = 8_000
     private const val MONATE_MINDESTENS = 3_000
+    /** Die Bereiche im kurzen Startkontext mit ihrer Höchstlänge, in dieser Reihenfolge. */
+    private val KURZ = linkedMapOf(
+        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.TERMINE to 1_800, Bereich.WECKER to 700,
+        Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.WETTER to 900,
+    )
+    /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */
+    private const val SEIT_DECKEL = 5_000
     /** Reicht das Budget nicht, werden diese großen Live-Bereiche gedeckelt (vollständig über ihre Werkzeuge). */
     private val DECKEL = mapOf(Bereich.AUSWERTUNG to 8_000, Bereich.IDEEN to 6_000, Bereich.GESPRAECHE to 6_000, Bereich.AUFGABEN to 10_000, Bereich.RUECKBLICK to 6_000, Bereich.STACKS to 12_000)
 }

@@ -314,6 +314,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Je Gespräch Stand, App und Inhalt seiner Programmieraufträge, frisch aus dem Auftragsbuch: für den Wechsel per Sprache. */
     fun auftragsLagen(): Map<String, AuftragsLage> = Auftragsbuch.lagen(app)
 
+    /** Offene und zuletzt beendete Programmieraufträge als Zeilen für vorgaenge und den Startkontext. */
+    fun vorgangsZeilen(): List<String> = Auftragsbuch.vorgangsZeilen(app)
+
     /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject) {
         runCatching {
@@ -482,6 +485,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             schreib(context, liste)
         }
 
+        /** Der Stand eines Auftrags in Worten, für alle Übersichten gleich. */
+        private fun standText(stand: String) = when (stand) { "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"; else -> "läuft" }
+
+        /** Für vorgaenge: Aufträge mit Lebenszeichen der letzten 24 Stunden (offene und beendete), neueste zuerst, je eine Zeile. */
+        fun vorgangsZeilen(context: Context): List<String> {
+            val liste = lies(context)
+            val jetzt = System.currentTimeMillis()
+            // Auch offene nur mit Lebenszeichen der letzten 24 Stunden: Eine Sitzung, die nie „fertig“ meldete, steht sonst ewig als laufend da.
+            return (liste.length() - 1 downTo 0).map { liste.getJSONObject(it) }
+                .filter { jetzt - maxOf(it.optLong("zeit"), it.optLong("aktiv")) < 24 * 3_600_000L }
+                .map { e ->
+                    val still = e.optString("stand") == "laeuft" && jetzt - maxOf(e.optLong("zeit"), e.optLong("aktiv")) >= 30 * 60_000L
+                    "[" + e.optString("id") + "] Programmierauftrag " + e.optString("app") + ": " + standText(e.optString("stand")) +
+                        (if (still) " (seit über einer halben Stunde keine Meldung)" else "") + " · zuletzt " +
+                        ZEIT.format(Instant.ofEpochMilli(e.optLong("zeit")).atZone(ZoneId.systemDefault())) + ": " + e.optString("schritt").replace('\n', ' ').take(200) +
+                        (e.optJSONObject("offeneFrage")?.optString("frage_id")?.takeIf { it.isNotEmpty() }?.let { " · frage_id $it (Antwort mit programmier_antwort)" } ?: "")
+                }
+        }
+
         fun uebersicht(context: Context, anzahl: Int): String {
             val liste = lies(context)
             if (liste.length() == 0) return "Es gibt noch keine Programmieraufträge."
@@ -490,7 +512,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 append("Programmieraufträge, neueste zuerst:\n")
                 (liste.length() - 1 downTo maxOf(0, liste.length() - anzahl)).forEach { i ->
                     val e = liste.getJSONObject(i)
-                    val standText = when (e.optString("stand")) { "frage" -> "wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "Problem"; else -> "läuft" }
+                    val standText = standText(e.optString("stand"))
                     val minuten = (jetzt - e.optLong("zeit")) / 60_000
                     append("- ").append(e.optString("app")).append(" (Auftrag ").append(e.optString("id")).append(", ").append(e.optString("ziel"))
                         .append(", gestartet ").append(ZEIT.format(Instant.ofEpochMilli(e.optLong("start")).atZone(ZoneId.systemDefault()))).append("): ")

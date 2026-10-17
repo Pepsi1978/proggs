@@ -75,16 +75,55 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Ablage von Jarvis (Texte und Dateien); `ablage_lesen` ohne Titel liefert die Liste mit Dateitypen, laufenden und fehlgeschlagenen Übertragungen |
 | `ablage_datei_speichern` | Dateien in einen Ablage-Eintrag übernehmen: ChatGPT-Dateiverweise (`chatgpt_dateien`, `openai/fileParams`), https-Adresse, Text oder kleines Base64 |
 | `bild_erzeugen` | Bild oder Infografik über das Codex-Bildwerkzeug erzeugen und als PNG (auf Wunsch auch DIN-A4-PDF) ablegen |
-| `agenten`, `agent_starten` | Agenten ansehen, anlegen, löschen und beauftragen |
+| `agenten`, `agent_starten` | Agenten ansehen, anlegen, löschen und beauftragen; `agent_starten` kehrt sofort mit einer Vorgangskennung zurück |
+| `vorgaenge`, `vorgang_abbrechen` | Hintergrundaufträge (Agenten und Programmieraufträge): Liste, `lesen` mit Ergebnis, `mitgeteilt`; Abbrechen nur über das eigene, schreibende Werkzeug |
 | `mail_senden`, `mail_lesen` | Gmail; `mail_lesen` mit `nr` liefert eine Mail vollständig |
-| `jarvis_status` | Erreichbarkeit, Datum, Dienst heute, angebundene Apps |
-| `jarvis_kontext` | Das Gesamtbild aus dem Live-Gedächtnis (alle Apps, letzte 10 Tage vollständig) |
+| `jarvis_status` | Erreichbarkeit, Datum, Dienst heute, angebundene Apps, Version und Integrationsversion |
+| `jarvis_kontext` | Startkontext (`kurz`, Vorgabe), einzelne Bereiche (`bereiche`), nur Geändertes (`seit`) oder das ganze Gesamtbild (`umfang=voll`) |
 | `gedaechtnis_suchen` | Gezielte Suche im ganzen Gedächtnis: Tagebuch, Gespräche, Notizen, Gemerktes, Ideen, Ablage, frühere Auswertungen |
 | `logbuch_lesen` | Logbuch der App: Fehler, Dauer, Aktionen, mit Zusammenfassung |
+| `web_suche`, `web_seite_lesen` | Jarvis' eigene Internet-Suche (seit 1.8.111 auch im Plugin) |
+| `sprachsession_beenden` | Jarvis' eigenes Zuhören bzw. Live-Gespräch auf dem Handy beenden (seit 1.8.111 auch im Plugin) |
 
 Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nach; ruft es trotzdem auf, lehnt die
 Aufgaben-App mit einem Hinweis ab. Mehrere Treffer bei einem Suchwort führen zu einer Rückfrage statt zu einer
 geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90 Sekunden legt nichts doppelt an.
+
+## Zusammenarbeit mit ChatGPT (Integration v2)
+
+Ziel: Frank spricht in der ChatGPT-App, Jarvis ist Gedächtnis, Datenzentrale und ausführende Stelle. Alles, was Jarvis
+selbst kann, geht auch über das Plugin (alle Fähigkeiten stehen seit 1.8.111 im Plugin).
+
+- **Grundregeln** (`mcp/Integration.kt`, versioniert): stehen vorn in der Anleitung (`initialize`), in der Beschreibung
+  von `jarvis_kontext` und am Anfang jedes `jarvis_kontext`-Ergebnisses. Sicher beim Modell kommen nur
+  Werkzeugbeschreibungen und -ergebnisse an; ob ChatGPT die `initialize`-Anleitung nutzt, ist nicht belegt.
+- **Startkontext** (`Lagebild.kurz`): Regeln, Fähigkeiten, Hintergrundaufträge, Gemerktes, Neues der letzten 24 Stunden
+  und die Kernbereiche gedeckelt, je Bereich mit Datenstand; dazu die Liste der übrigen Bereiche mit Stand und Größe.
+  Liest nur schnelle, lokale Bereiche nach, nie eine externe Synchronisation. Jede Antwort trägt eine `STAND-MARKE`;
+  `seit=<Marke>` liefert danach nur Neuigkeiten und geänderte Bereiche.
+- **Gedächtnisrückfluss** (`jarvis_merken`): neue Art `entscheidung` (`filesDir/entscheidungen.json`). Gleiche Einträge
+  werden nicht doppelt angelegt, sehr ähnliche (≥ 60 % gemeinsame tragende Wörter) nur mit `neu_erzwingen`; sonst soll
+  das Modell den alten Eintrag über seine id ersetzen. `quelle=vorschlag` wird abgewiesen: Nur Franks eigene oder
+  bestätigte Angaben, offene Gedanken gehören in Geniale Ideen.
+- **Vorgänge** (`agent/Vorgaenge.kt`, `filesDir/vorgaenge.json`): Jeder Agentenauftrag bekommt sofort eine Kennung
+  (`V` + 4 Zeichen) mit Stand `angenommen → laeuft → fertig | fehlgeschlagen | abgebrochen`; Programmieraufträge zeigt
+  `vorgaenge` mit ihrem Stand (auch Rückfrage). Gleicher Auftrag, solange offen oder innerhalb von 10 Minuten: dieselbe
+  Kennung, nichts startet doppelt. Nach einem App-Neustart gelten offene Läufe als abgebrochen (der Lauf ist tot),
+  ein nie angelaufener nach 3 Minuten als gescheitert. `abgerufen` (Ergebnis ausgeliefert) und `mitgeteilt` (ChatGPT
+  hat bestätigt, es Frank gesagt zu haben) sind getrennt; erst `mitgeteilt` nimmt einen Vorgang aus der Liste.
+  Statuswechsel mit Dauer stehen im Logbuch (Art system), ohne Zugangsdaten.
+- **Zustellung**: Der MCP-Server ist zustandslos und antwortet nur auf Anfragen (kein Server-Stream, `listChanged=false`),
+  der Relay reicht nur Anfrage und Antwort weiter. Jarvis kann ChatGPT deshalb nicht von sich aus ansprechen. Fertige,
+  noch nicht mitgeteilte Vorgänge hängen als „VORGANG FERTIG“ an Werkzeug-Ergebnissen (je Vorgang höchstens alle
+  5 Minuten), dazu die Benachrichtigung auf dem Handy. Kein Dauerabfragen.
+- **Wiederholschutz** (`Wiederholschutz` in `mcp/Integration.kt`): Schreibende Werkzeuge, bei denen Doppeltes schadet
+  (anlegen, löschen, Mail, Agent, Programmieren, Merken …), laufen bei identischen Angaben nicht zweimal: Läuft der erste
+  Aufruf noch, wartet die Wiederholung auf sein Ergebnis; war er in den letzten 45 Sekunden erfolgreich und kam seither
+  kein erfolgreicher Aufruf eines anderen Werkzeugs, bekommt sie dasselbe Ergebnis mit „WIEDERHOLUNG ERKANNT“. Grenze:
+  Was Frank in der App selbst löscht und binnen 45 Sekunden mit genau denselben Angaben neu anlegen lässt, gilt als Wiederholung.
+- **Fremde Sitzungen**: „VORGANG FERTIG“ hängt nicht an Werkzeugen der Programmier-Sitzungen (`programmier_*`,
+  `programmierauftraege`, `pc_status`, `repo_lesen`, `tagesauswertung_lesen`), damit eine Claude-Code-Sitzung kein
+  Ergebnis für ChatGPT „verbraucht“. `mitgeteilt` soll nur bestätigen, wer es Frank im Gespräch wirklich gesagt hat.
 
 ## Tagesauswertung
 

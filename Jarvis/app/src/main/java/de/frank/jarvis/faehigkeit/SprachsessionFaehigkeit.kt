@@ -25,15 +25,19 @@ class SprachsessionFaehigkeit : Faehigkeit {
 
     override fun stoerung(): String? = null
 
-    /** Nur in der App: ChatGPT hat keine Sprachsession auf dem Handy. */
-    override val imPlugin: Boolean get() = false
+    /**
+     * Auch im Plugin: Spricht Frank mit ChatGPT, kann eine gleichzeitig offene Sprachsession von Jarvis (Mikrofon, Live-Gespräch)
+     * stören; ChatGPT kann sie dann auf Franks Wunsch schließen.
+     */
+    override val imPlugin: Boolean get() = true
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
             name = "sprachsession_beenden",
             titel = "Sprachsession beenden",
             beschreibung = "Jarvis: beendet die laufende Sprachsession auf dem Handy, auch ein laufendes Live-Gespräch samt Verbindung. Nach deiner Antwort piept es nicht mehr und das Mikrofon " +
-                "bleibt zu, bis Frank Jarvis wieder ausdrücklich aufruft. Gespräch und Aufträge bleiben unberührt.",
+                "bleibt zu, bis Frank Jarvis wieder ausdrücklich aufruft. Gespräch und Aufträge bleiben unberührt. Aus ChatGPT: wenn Frank Jarvis' eigenes Zuhören oder Live-Gespräch " +
+                "auf dem Handy beenden will, etwa weil er gerade mit ChatGPT spricht.",
             schema = schema(),
             // Ändert keine Daten: kein Eintrag im Live-Gedächtnis, keine „Erledigt“-Notiz.
             nurLesen = true,

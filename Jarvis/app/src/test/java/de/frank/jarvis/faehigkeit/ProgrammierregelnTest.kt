@@ -13,7 +13,7 @@ class ProgrammierregelnTest {
     @Test fun programmierregelnSindEigeneDateiImKontextUndAlsArtMerkbar() {
         // merkKontext() baut aus genau dieser Liste: steht die Datei hier, steht sie bei jeder Frage, im Plugin, bei Agenten und in der Tagesauswertung.
         assertTrue(Programmierregeln in merkdateien)
-        assertEquals(listOf(Regeln, Ziele, UeberFrank, Programmierregeln, StilRegeln), merkdateien)
+        assertEquals(listOf(Regeln, Ziele, UeberFrank, Programmierregeln, StilRegeln, Entscheidungen), merkdateien)
         assertEquals(Programmierregeln, Merkart.von("programmierregel")?.datei)
         // Die bestehenden Dateien bleiben unverändert erreichbar.
         assertEquals(Regeln, Merkart.von("regel")?.datei)

@@ -2,6 +2,10 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import de.frank.jarvis.agent.Agenten
+import de.frank.jarvis.agent.Annahme
+import de.frank.jarvis.agent.Vorgaenge
+import de.frank.jarvis.agent.Vorgang
+import de.frank.jarvis.agent.VorgangsBuch
 import de.frank.jarvis.auth.CodexAuthManager
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.dienst.JarvisDienst
@@ -23,6 +27,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
         "Für Recherchen, Ausarbeitungen, Berichte als PDF (auch mit Bildern) und alles, was Internet braucht oder länger als eine Minute dauert, startest du mit agent_starten " +
             "einen Agenten (meist Recherche). Er arbeitet bis zu 25 Minuten im Hintergrund, legt Bericht, Bilder und PDF in die Ablage und meldet sich per Benachrichtigung. " +
             "Gib ihm den vollständigen Auftrag mit, auch die gewünschte Form (zum Beispiel „als PDF mit Illustrationen“). Versuche so etwas nie selbst im Gespräch. " +
+            "agent_starten liefert eine Vorgangskennung; angenommen heißt nicht fertig. Stand und Ergebnis über vorgaenge, nach dem Mitteilen mit aktion mitgeteilt bestätigen. " +
             "Fragt Frank, warum etwas nicht geklappt hat, oder meldet ein Werkzeug einen Fehler, lies mit protokoll_lesen nach, was Jarvis zuletzt getan hat und woran es scheiterte."
 
     override fun stoerung(): String? = null
@@ -67,8 +72,9 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, zum Beispiel einer Internet-Recherche („Jarvis, recherchiere, wie man … am besten baut“), " +
                     "einem Bericht als PDF mit Illustrationen, einer Machbarkeitsprüfung einer Idee, oder den Agenten Code-Analyse mit der Auswertung einer App in Franks Repo (er liest den Code und liefert den Stand samt fertigem Auftrag für ein Programmier-Werkzeug; er ändert nichts). " +
                     "Der Agent arbeitet bis zu 25 Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Bilderzeugung, Zugriff auf Ideen, " +
-                    "Aufgaben, Kalender, Biomarker), legt Bericht, Bilder und auf Wunsch ein PDF in die Ablage und meldet sich per Benachrichtigung. Dieser Aufruf kehrt sofort zurück. " +
-                    "Das Ergebnis holst du später mit ablage_lesen (ohne titel die Liste, mit titel der Bericht). Mit per_mail wird der Bericht zusätzlich an Frank gemailt.",
+                    "Aufgaben, Kalender, Biomarker), legt Bericht, Bilder und auf Wunsch ein PDF in die Ablage und meldet sich per Benachrichtigung. Dieser Aufruf kehrt sofort zurück " +
+                    "und liefert eine Vorgangskennung (zum Beispiel V7K2P): Der Auftrag ist dann ANGENOMMEN, nicht fertig. Sag Frank das kurz und rede normal weiter. " +
+                    "Stand und Ergebnis holst du später mit vorgaenge (auch in einem neuen Gespräch); ein wiederholter Aufruf mit demselben Auftrag startet nichts doppelt. Mit per_mail wird der Bericht zusätzlich an Frank gemailt.",
                 schema = schema(
                     "agent" to text("Name des Agenten, zum Beispiel Recherche oder Machbarkeit (siehe agenten)."),
                     "auftrag" to text("Der vollständige Auftrag mit allem Wissen aus dem Gespräch: Ziel, Rahmen, was Frank wichtig ist, gewünschte Form des Ergebnisses (zum Beispiel „als PDF mit Illustrationen“)."),
@@ -79,19 +85,57 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 nurLesen = false,
             ) { a ->
                 val plan = Agenten.finde(app, a.optString("agent"))
+                val auftrag = a.optString("auftrag")
                 when {
                     plan == null -> Ergebnis("Diesen Agenten gibt es nicht. Vorhanden: " + Agenten.alle(app).joinToString { it.name } + ". Mit agenten (aktion=anlegen) lässt sich ein neuer bauen.", fehler = true)
-                    a.optString("auftrag").isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
+                    auftrag.isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
                     !CodexAuthManager(app).isConnected -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
-                    // Synchron reservieren: Der Lauf beginnt erst asynchron im Dienst, ein paralleler Aufruf sähe sonst noch einen freien Platz.
-                    !Agenten.reserviere(plan.name, a.optString("auftrag")) -> Ergebnis("Es arbeiten schon zwei Agenten. Bitte warten, bis einer fertig ist.", fehler = true)
-                    else -> {
-                        // Startet der Dienst nicht (agentStarten schluckt den Fehler), verfällt die Reservierung nach zwei Minuten.
-                        JarvisDienst.agentStarten(app, plan.name, a.optString("auftrag"), a.optBoolean("per_mail"), a.optBoolean("vorlesen"))
-                        Ergebnis("Der Agent ${plan.name} arbeitet jetzt, meist fünf bis zwanzig Minuten. Das Ergebnis landet in der Ablage" + (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung.")
+                    // Unter der Sperre des Vorgangsbuchs: erst nach Doppeln suchen, dann synchron reservieren. Der Lauf beginnt erst
+                    // asynchron im Dienst; ein paralleler oder wiederholter Aufruf (Verbindungsabbruch) sähe sonst noch einen freien Platz.
+                    else -> when (val annahme = Vorgaenge.buch(app).annehmen(plan.name, auftrag) { Agenten.reserviere(plan.name, auftrag) }) {
+                        is Annahme.Doppelt -> Ergebnis("Dieser Auftrag ist schon angenommen, es wurde nichts doppelt gestartet: ${Vorgaenge.zeile(annahme.vorgang)}\n" +
+                            "Sag Frank den Stand in einem Satz. Das Ergebnis holst du mit vorgaenge (aktion lesen, id ${annahme.vorgang.id}), sobald es fertig ist.")
+                        Annahme.KeinPlatz -> Ergebnis("Nicht angenommen: Es arbeiten schon ${Agenten.HOECHSTENS} Agenten. Bitte warten, bis einer fertig ist (Stand mit vorgaenge).", fehler = true)
+                        is Annahme.Neu -> {
+                            val id = annahme.vorgang.id
+                            if (!JarvisDienst.agentStarten(app, plan.name, auftrag, a.optBoolean("per_mail"), a.optBoolean("vorlesen"), id)) {
+                                Agenten.gibFrei(plan.name, auftrag)
+                                Vorgaenge.buch(app).beende(id, Vorgang.FEHLGESCHLAGEN, null, "Der Hintergrunddienst ließ sich nicht starten")
+                                Ergebnis("Nicht gestartet: Der Hintergrunddienst von Jarvis ließ sich nicht starten (Vorgang $id fehlgeschlagen). Frank soll Jarvis einmal öffnen.", fehler = true)
+                            } else Ergebnis("ANGENOMMEN, noch nicht fertig: Vorgang $id, Agent ${plan.name}. Er arbeitet im Hintergrund, meist fünf bis zwanzig Minuten. Das Ergebnis landet in der Ablage" +
+                                (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung. " +
+                                "Sag Frank in einem Satz, dass der Auftrag angenommen ist, und rede normal weiter. Später: vorgaenge (aktion lesen, id $id).")
+                        }
                     }
                 }
             },
+            Werkzeug(
+                name = "vorgaenge",
+                titel = "Hintergrundaufträge: Stand und Ergebnisse",
+                beschreibung = "Jarvis: Stand und Ergebnisse von Franks Hintergrundaufträgen (Agenten aus agent_starten und Programmieraufträge), auch aus früheren Gesprächen und nach einem Neustart. " +
+                    "Ohne aktion (oder aktion=liste): kurze Liste der laufenden und der fertigen, die Frank noch nicht mitgeteilt wurden, je mit Kennung und Stand " +
+                    "(angenommen, läuft, Rückfrage, fertig, fehlgeschlagen, abgebrochen); mit alle=true auch schon Mitgeteiltes der letzten 7 Tage. " +
+                    "aktion=lesen mit id: Details und das Ergebnis (Bericht aus der Ablage, gekürzt). aktion=mitgeteilt mit ids: bestätigt, dass du Frank die Ergebnisse in diesem Gespräch gesagt hast; " +
+                    "erst dann verschwinden sie aus der Liste. Rufe es, wenn der Startkontext offene oder fertige Vorgänge zeigt oder ein Werkzeug-Ergebnis „VORGANG FERTIG“ meldet. " +
+                    "Ein Abruf startet und beendet nie etwas; abbrechen geht nur mit vorgang_abbrechen.",
+                schema = schema(
+                    "aktion" to text("liste (Vorgabe), lesen oder mitgeteilt.", listOf("liste", "lesen", "mitgeteilt")),
+                    "id" to text("Bei lesen: die Vorgangskennung, zum Beispiel V7K2P."),
+                    "ids" to textListe("Bei mitgeteilt: die Kennungen, deren Ergebnis du Frank gesagt hast."),
+                    "alle" to schalter("Bei liste: true = auch schon Mitgeteiltes der letzten 7 Tage."),
+                ),
+                // Ändert nur die Buchführung (abgerufen, mitgeteilt), nie einen Lauf: als lesend markiert, damit ChatGPT es im Gespräch ohne Rückfrage nutzt.
+                nurLesen = true,
+            ) { a -> if (a.optString("aktion").equals("abbrechen", ignoreCase = true)) Ergebnis("Abbrechen geht nur mit vorgang_abbrechen.", fehler = true) else vorgaenge(a) },
+            Werkzeug(
+                name = "vorgang_abbrechen",
+                titel = "Hintergrundauftrag abbrechen",
+                beschreibung = "Jarvis: bricht einen laufenden oder noch nicht angelaufenen Agenten-Auftrag ab (Kennung aus agent_starten oder vorgaenge). Nur wenn Frank das ausdrücklich will. " +
+                    "Was der Agent bis dahin erzeugt hat, bleibt in der Ablage.",
+                schema = schema("id" to text("Die Vorgangskennung, zum Beispiel V7K2P."), pflicht = listOf("id")),
+                nurLesen = false,
+                loeschend = true,
+            ) { a -> vorgaenge(a.put("aktion", "abbrechen")) },
             Werkzeug(
                 name = "protokoll_lesen",
                 titel = "Protokoll lesen",
@@ -122,7 +166,68 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
         )
     }
 
+    private fun vorgaenge(a: org.json.JSONObject): Ergebnis {
+        val buch = Vorgaenge.buch(app)
+        return when (a.optString("aktion", "liste").lowercase()) {
+            "lesen" -> {
+                val v = buch.finde(a.optString("id")) ?: return Ergebnis("Einen Vorgang „${a.optString("id")}“ gibt es nicht (oder er ist älter als ${VorgangsBuch.TAGE} Tage). Liste mit vorgaenge.", fehler = true)
+                if (!v.offen) buch.abgerufen(listOf(v.id))
+                val bericht = if (v.ergebnis.isEmpty()) "" else Ablage.finde(app, v.ergebnis)?.let { runCatching { it.readText() }.getOrNull() }?.let { text ->
+                    "\n\nERGEBNIS (Bericht aus der Ablage" + (if (text.length > BERICHT) ", gekürzt; vollständig mit ablage_lesen titel „${v.ergebnis}“" else "") + "):\n" + text.take(BERICHT)
+                } ?: "\n\nDer Ablage-Eintrag „${v.ergebnis}“ ist nicht mehr da."
+                Ergebnis(Vorgaenge.zeile(buch.finde(v.id) ?: v) + bericht + when {
+                    v.offen -> "\n\nNoch nicht fertig. Nicht wiederholt abfragen; der Stand kommt mit dem nächsten passenden Werkzeug-Ergebnis."
+                    else -> "\n\nSobald du Frank das Ergebnis gesagt hast: vorgaenge mit aktion mitgeteilt und ids [${v.id}]."
+                })
+            }
+            "mitgeteilt" -> {
+                val liste = a.optJSONArray("ids")
+                val ids = (0 until (liste?.length() ?: 0)).map { liste!!.optString(it).trim() }.filter { it.isNotEmpty() } + listOfNotNull(a.optString("id").trim().takeIf { it.isNotEmpty() })
+                if (ids.isEmpty()) return Ergebnis("Es fehlen die Kennungen (ids).", fehler = true)
+                val bestaetigt = buch.mitgeteilt(ids)
+                val rest = ids.filter { id -> bestaetigt.none { it.id.equals(id, ignoreCase = true) } }
+                Ergebnis((if (bestaetigt.isEmpty()) "Nichts bestätigt." else "Als mitgeteilt vermerkt: " + bestaetigt.joinToString { it.id } + ".") +
+                    (if (rest.isEmpty()) "" else " Nicht bestätigt (unbekannt oder noch offen): " + rest.joinToString() + "."), fehler = bestaetigt.isEmpty())
+            }
+            "abbrechen" -> {
+                val v = buch.finde(a.optString("id")) ?: return Ergebnis("Einen Vorgang „${a.optString("id")}“ gibt es nicht.", fehler = true)
+                when {
+                    !v.offen -> Ergebnis("Vorgang ${v.id} ist schon beendet: ${Vorgang.standText(v.stand)}.")
+                    Agenten.brichAb(v.id) -> Ergebnis("Vorgang ${v.id} wird abgebrochen.")
+                    else -> {
+                        // Noch nicht angelaufen: als abgebrochen eintragen. Der Dienst startet ihn dann nicht mehr, und ein Lauf,
+                        // der gerade erst anläuft, sieht den Eintrag in fuehreAus und hört sofort auf.
+                        buch.beende(v.id, Vorgang.ABGEBROCHEN, null, "von Frank abgebrochen, bevor er anlief")
+                        Agenten.gibFrei(v.agent, v.auftrag)
+                        // Lief er inzwischen doch an, auch den Lauf selbst beenden.
+                        Agenten.brichAb(v.id)
+                        Ergebnis("Vorgang ${v.id} ist abgebrochen.")
+                    }
+                }
+            }
+            else -> Ergebnis(vorgangsBlock(app, alle = a.optBoolean("alle")).ifEmpty { "Keine laufenden und keine neuen fertigen Hintergrundaufträge." })
+        }
+    }
+
     private companion object {
         val ZEIT: DateTimeFormatter = DateTimeFormatter.ofPattern("d.M. HH:mm:ss", Locale.GERMAN)
+        /** So viel vom Bericht kommt bei vorgaenge lesen mit; der Rest über ablage_lesen. */
+        const val BERICHT = 4_000
     }
+}
+
+/**
+ * Die Hintergrundaufträge als kurzer Block (für vorgaenge und den Startkontext): Agenten-Vorgänge, die laufen oder fertig,
+ * aber noch nicht mitgeteilt sind, dazu offene und in den letzten 24 Stunden beendete Programmieraufträge. Leer = nichts.
+ */
+fun vorgangsBlock(context: Context, alle: Boolean = false): String {
+    val app = context.applicationContext
+    val agenten = Vorgaenge.buch(app).liste(alle).map { Vorgaenge.zeile(it) }
+    val programmieren = runCatching { Register.alle(app).filterIsInstance<ProgrammierFaehigkeit>().firstOrNull()?.vorgangsZeilen() }.getOrNull().orEmpty()
+    if (agenten.isEmpty() && programmieren.isEmpty()) return ""
+    return buildString {
+        append("HINTERGRUNDAUFTRÄGE (Kennung in eckigen Klammern; angenommen heißt nicht fertig):\n")
+        (agenten + programmieren).forEach { append("- ").append(it).append('\n') }
+        if (agenten.any { "noch nicht mitgeteilt" in it || "nicht als mitgeteilt" in it }) append("Fertige Ergebnisse: vorgaenge aktion lesen mit id; danach aktion mitgeteilt.\n")
+    }.trim()
 }

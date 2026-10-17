@@ -227,6 +227,31 @@ open class Merkdatei(private val dateiname: String, private val hoechstens: Int,
         const val LAENGSTENS = 1500
         /** Sicherung gegen ausufernde Diktate; erst darüber wird (an einer Satzgrenze) gekürzt. */
         private const val HARTE_GRENZE = 4000
+        /** Ab diesem Anteil gemeinsamer Wörter gilt ein neuer Eintrag als mögliche Dublette oder Korrektur eines alten. */
+        const val AEHNLICH = 0.6
+        private val FUELL = setOf(
+            "frank", "franks", "jarvis", "der", "die", "das", "den", "dem", "des", "und", "oder", "ist", "sind", "ein", "eine", "einen", "einem", "einer",
+            "mit", "bei", "für", "von", "vom", "zum", "zur", "auf", "aus", "nicht", "immer", "soll", "sollen", "wenn", "dann", "auch", "noch", "nur", "dass",
+            "hat", "haben", "wird", "werden", "sich", "ihm", "ihn", "sein", "seine", "seinen", "seiner", "will", "ich", "mir", "mich", "wie", "was", "als", "über", "nach", "vor", "bis",
+        )
+
+        /** Die tragenden Wörter eines Eintrags (ohne Füllwörter und sehr kurze Wörter) für den Dublettenvergleich. */
+        fun woerter(text: String): Set<String> = text.lowercase(Locale.GERMAN).split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 && it !in FUELL }.toSet()
+
+        /** Anteil gemeinsamer tragender Wörter (0 bis 1). */
+        fun aehnlichkeit(a: String, b: String): Double {
+            val x = woerter(a)
+            val y = woerter(b)
+            if (x.isEmpty() || y.isEmpty()) return 0.0
+            return (x intersect y).size.toDouble() / (x union y).size
+        }
+
+        /** Gleich bis auf Leerraum, Groß/Klein und Satzzeichen am Ende: eine Wiederholung desselben Eintrags. */
+        fun gleich(a: String, b: String): Boolean {
+            fun n(t: String) = t.lowercase(Locale.GERMAN).replace(Regex("\\s+"), " ").trim().trimEnd('.', '!', '?', ' ')
+            return n(a) == n(b)
+        }
+
         /** Wann zuletzt eine der Dateien geschrieben wurde; daran erkennt das Plugin, ob ein Programm den neuen Stand schon hat. */
         @Volatile var zuletztGeaendert = 0L
         private val _stand = MutableStateFlow(0L)
@@ -273,7 +298,16 @@ object StilRegeln : Merkdatei(
     "FRANKS ANTWORT-STIL (aus seinen Daumen-Bewertungen gelernt und von ihm bearbeitbar; gilt für Form, Länge, Gliederung und Ton deiner Antworten und geht den allgemeinen Formatvorgaben vor; nicht ungefragt vorlesen):",
 )
 
-/** Die fünf Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
+/**
+ * Franks ausdrückliche Entscheidungen („wir machen es so“, „ich habe mich für … entschieden“), damit ein neues Gespräch
+ * nicht wieder bei null anfängt. Nur was Frank selbst beschlossen hat; Vorschläge und offene Überlegungen gehören nicht hierher.
+ */
+object Entscheidungen : Merkdatei(
+    "entscheidungen.json", 80,
+    "FRANKS ENTSCHEIDUNGEN (von Frank ausdrücklich getroffen, mit Datum; gelten, bis er sie ändert; frühere Entscheidungen gezielt mit gedaechtnis_suchen; nicht ungefragt aufzählen):",
+)
+
+/** Die Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
 enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, val textHinweis: String, val bestaetigung: String) {
     REGEL(
         "regel", Regeln, "Regel",
@@ -299,6 +333,11 @@ enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, 
         "stil", StilRegeln, "Stilregel",
         "eine kurze Anweisung, wie deine Antworten aussehen sollen: Länge, Gliederung, Ton oder Symbole („Bei Statusmeldungen jede Sache in eine eigene Zeile mit ✅ davor.“, „Antworten zu Biowerten mit kleiner Überschrift je Messgröße.“)",
         "Sag ihm in einem Satz, welche Stilregel du dir gemerkt hast; ab jetzt antwortest du so.",
+    ),
+    ENTSCHEIDUNG(
+        "entscheidung", Entscheidungen, "Entscheidung",
+        "ein für sich allein verständlicher Satz, was Frank ausdrücklich entschieden hat, worum es geht und mit Datum, wenn es zählt („Frank hat am 17.10.2026 entschieden, ChatGPT als Gesprächsoberfläche zu nutzen und Jarvis als Gedächtnis im Hintergrund.“)",
+        "Sag ihm in einem Satz, welche Entscheidung du festgehalten hast.",
     );
 
     companion object {
@@ -318,7 +357,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override val name = "Jarvis' Gedächtnis"
     override val beschreibung = "Franks Regeln, seine Ziele, was Jarvis über ihn weiß und seine Programmierregeln: merken, ändern, löschen. Jarvis pflegt das selbst und hat es bei allem im Blick."
     override val hinweise =
-        "Du führst fünf Dateien über Frank und pflegst sie selbst mit jarvis_merken und jarvis_vergessen. " +
+        "Du führst sechs Dateien über Frank und pflegst sie selbst mit jarvis_merken und jarvis_vergessen. " +
             "STIL = wie deine Antworten aussehen sollen (Länge, Gliederung, Ton, Symbole), wenn Frank das sagt („antworte mir kürzer“, „mach bei so etwas immer Stichpunkte“); " +
             "die Datei wächst außerdem von selbst aus seinen Daumen-Bewertungen. " +
             "REGEL = wie du arbeiten oder antworten sollst („immer“, „nie“, „in Zukunft“, „ab jetzt“, oder Frank bemängelt eine Antwort), auch wie du mit Programmieraufträgen umgehst. " +
@@ -326,6 +365,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             "lege sie nur an, wenn Frank sie ausdrücklich als Programmierregel will, und nie doppelt zu einer Regel, die schon unter FRANKS REGELN steht. " +
             "ZIEL = was Frank erreichen will („ich will meine VO2max steigern“). " +
             "INFO = eine dauerhafte Tatsache über ihn: Vorlieben, Abneigungen, was ihm wichtig ist, Besitz, persönliche Daten, Gewohnheiten, Familie, Gesundheit. " +
+            "ENTSCHEIDUNG = was Frank ausdrücklich beschlossen hat. Merke nur, was Frank selbst sagt oder bestätigt; deine Vorschläge erst nach seinem Ja, " +
+            "offene Gedanken ohne Beschluss als Idee (idee_speichern), nie als Aufgabe oder als bereits Erledigtes. " +
             "Erkennst du so etwas in dem, was Frank sagt, auch nebenbei, merke es dir von selbst und ohne nachzufragen und sag ihm kurz, was du dir gemerkt hast. " +
             "Halte die Dateien wahr: Gehört Neues zu einem vorhandenen Eintrag oder widerspricht es ihm (notiert ist „geht bei Regen nicht laufen“, jetzt sagt er „im Regen laufen ist doch gut, das mache ich öfter“), " +
             "ersetze diesen Eintrag über seine id, statt einen zweiten anzulegen; was gar nicht mehr gilt (Ziel erreicht, Auto verkauft), löschst du. " +
@@ -342,8 +383,10 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
             name = "jarvis_merken",
-            titel = "Merken oder ändern (Regel, Ziel, Info, Programmierregel, Stil)",
-            beschreibung = "Jarvis: merkt sich dauerhaft etwas über Frank oder ändert einen vorhandenen Eintrag. Fünf Arten: " +
+            titel = "Merken oder ändern (Regel, Ziel, Info, Entscheidung, Programmierregel, Stil)",
+            beschreibung = "Jarvis: merkt sich dauerhaft etwas über Frank oder ändert einen vorhandenen Eintrag. Nur was Frank selbst gesagt oder ausdrücklich bestätigt hat; " +
+                "eigene Vorschläge erst nach seinem Ja, offene Überlegungen ohne Beschluss mit idee_speichern (nie als Aufgabe oder als schon Erledigtes). " +
+                "entscheidung = was Frank ausdrücklich beschlossen hat („wir machen es so“, „ich nehme …“). Weitere Arten: " +
                 "stil = wie Jarvis' Antworten aussehen sollen („antworte mir kürzer“, „bei so etwas immer Stichpunkte“); " +
                 "regel = wie Jarvis künftig arbeiten oder antworten soll („nenn mir bei Schlafwerten immer auch …“, „mach das nie wieder so“, „ab jetzt …“); " +
                 "ziel = was Frank erreichen will („ich will meine VO2max und HRV steigern und den Ruhepuls senken“); " +
@@ -358,6 +401,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "text" to text("Der Eintrag, in Franks Sinn formuliert, Hörfehler der Spracherkennung bereinigt, höchstens ${Merkdatei.ZEICHEN} Zeichen. " +
                     Merkart.entries.joinToString(" ") { "Bei ${it.kennung}: ${it.textHinweis}." }),
                 "id" to zahl("Nur beim Ändern oder Ersetzen: id des vorhandenen Eintrags dieser Art (die Zahl in eckigen Klammern davor)."),
+                "quelle" to text("frank (Vorgabe) = Frank hat es selbst gesagt oder ausdrücklich bestätigt; vorschlag = eigener Vorschlag oder Deutung von dir, den Frank noch nicht bestätigt hat (wird dann nicht gemerkt).", listOf("frank", "vorschlag")),
+                "neu_erzwingen" to schalter("Nur nach dem Hinweis „sehr ähnlicher Eintrag“: true = trotzdem als eigenen Eintrag anlegen, weil es wirklich etwas anderes ist."),
                 pflicht = listOf("art", "text"),
             ),
             nurLesen = false,
@@ -367,9 +412,26 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             if (inhalt.length < 10) return@Werkzeug Ergebnis("Der Text fehlt oder ist zu kurz, um allein verständlich zu sein.", fehler = true)
             // id 0 heißt bei vielen Modellen „nicht angegeben“: dann neu anlegen.
             val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id", 0).takeIf { it > 0 } else null
+            // Nur Franks eigene oder von ihm bestätigte Angaben: Ein Vorschlag des Assistenten darf nicht als Franks Regel, Ziel oder Entscheidung erscheinen.
+            if (a.optString("quelle").equals("vorschlag", ignoreCase = true)) return@Werkzeug Ergebnis(
+                "Nicht gemerkt: Das ist ein Vorschlag, keine Angabe von Frank. Frag ihn kurz („Soll ich mir merken, dass …?“) und rufe jarvis_merken erst nach seinem Ja mit quelle frank auf. " +
+                    "Eine offene Überlegung ohne Beschluss gehört mit idee_speichern in Geniale Ideen, nicht ins Gedächtnis und nicht als Aufgabe.", fehler = true,
+            )
             art.datei.defekt(context)?.let { return@Werkzeug Ergebnis("Nicht gemerkt. $it Sag Frank das.", fehler = true) }
             val laenge = inhalt.replace(Regex("\\s+"), " ").length
             if (laenge > Merkdatei.LAENGSTENS) return@Werkzeug Ergebnis("Zu lang (${laenge} von höchstens ${Merkdatei.LAENGSTENS} Zeichen), nichts gemerkt. Fasse den Eintrag auf etwa ${Merkdatei.ZEICHEN} Zeichen zusammen und rufe jarvis_merken noch einmal auf; mehrere Dinge = mehrere Einträge.", fehler = true)
+            if (nummer == null) {
+                val vorhanden = art.datei.alle(context)
+                // Dieselbe Angabe noch einmal (Wiederholung nach Verbindungsabbruch, oder Frank sagt es erneut): nichts doppelt anlegen.
+                vorhanden.firstOrNull { Merkdatei.gleich(it.text, inhalt) }?.let { return@Werkzeug Ergebnis("War schon gemerkt, nichts doppelt angelegt: [${it.id}] ${it.text}") }
+                // Sehr ähnlich: meist eine Korrektur oder neue Fassung desselben Eintrags. Ohne neu_erzwingen nicht anlegen.
+                val aehnlich = vorhanden.map { it to Merkdatei.aehnlichkeit(it.text, inhalt) }.filter { it.second >= Merkdatei.AEHNLICH }.sortedByDescending { it.second }.map { it.first }
+                if (aehnlich.isNotEmpty() && !a.optBoolean("neu_erzwingen")) return@Werkzeug Ergebnis(
+                    "Nicht angelegt: Es gibt schon einen sehr ähnlichen Eintrag der Art ${art.kennung}:\n" + art.datei.liste(aehnlich.take(3)) + "\n" +
+                        "Ist das Neue eine Korrektur oder neue Fassung davon, rufe jarvis_merken mit art ${art.kennung}, id ${aehnlich.first().id} und dem vollständigen neuen Text auf (der alte wird ersetzt). " +
+                        "Ist es wirklich etwas anderes, rufe es noch einmal mit neu_erzwingen true auf.", fehler = true,
+                )
+            }
             val eintrag = art.datei.speichere(context, inhalt, nummer)
                 ?: return@Werkzeug Ergebnis(
                     art.datei.defekt(context)?.let { "Nicht gemerkt. $it Sag Frank das." } ?: when {

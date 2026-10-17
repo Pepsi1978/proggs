@@ -10,6 +10,7 @@ import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -69,7 +70,7 @@ object Agenten {
 
     /** Nur unter [platz] aufrufen. */
     private fun nimmVormerkung(agent: String, auftrag: String) {
-        vorgemerkt.indexOfFirst { it.agent.equals(agent, ignoreCase = true) && it.auftrag == auftrag }.takeIf { it >= 0 }?.let { vorgemerkt.removeAt(it) }
+        vorgemerkt.indexOfFirst { it.agent.equals(agent, ignoreCase = true) && it.auftrag.trim() == auftrag.trim() }.takeIf { it >= 0 }?.let { vorgemerkt.removeAt(it) }
     }
 
     private val VORGABEN = listOf(
@@ -126,16 +127,56 @@ object Agenten {
 
     private val PDF_WUNSCH = Regex("\\bpdf", RegexOption.IGNORE_CASE)
 
-    /** Führt einen Auftrag aus und legt das Ergebnis in die Ablage (auf Wunsch auch als PDF mit den erzeugten Bildern). */
-    suspend fun fuehreAus(context: Context, plan: AgentenBauplan, auftrag: String): AgentenErgebnis {
+    /** Laufende Agenten je Vorgangskennung, damit vorgaenge (aktion abbrechen) einen Lauf beenden kann. */
+    private val jobs = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+
+    fun merkeJob(vorgang: String, job: kotlinx.coroutines.Job) {
+        jobs[vorgang] = job
+        job.invokeOnCompletion { jobs.remove(vorgang, job) }
+    }
+
+    /** Bricht den Lauf zu [vorgang] ab. false = es läuft gerade keiner dazu. */
+    fun brichAb(vorgang: String): Boolean = jobs[vorgang]?.let { it.cancel(kotlinx.coroutines.CancellationException("von Frank abgebrochen")); true } ?: false
+
+    /**
+     * Führt einen Auftrag aus und legt das Ergebnis in die Ablage (auf Wunsch auch als PDF mit den erzeugten Bildern).
+     * [vorgang] = Kennung im [Vorgaenge]-Buch; Start, Schritte und Ende werden dort festgehalten.
+     */
+    suspend fun fuehreAus(context: Context, plan: AgentenBauplan, auftrag: String, vorgang: String? = null): AgentenErgebnis {
         val app = context.applicationContext
         val lauf = AgentenLauf(plan.name, auftrag, System.currentTimeMillis(), id = naechsteId.incrementAndGet())
+        val buch = vorgang?.let { Vorgaenge.buch(app) }
         // Atomar ändern: Zwei Agenten laufen parallel, sonst schreibt einer den alten Stand des anderen zurück.
         // Zusammen mit der Vormerkung: Der Platz wechselt vom vorgemerkten zum laufenden Agenten, ohne dass reserviere() ihn doppelt zählt oder übersieht.
         synchronized(platz) {
             nimmVormerkung(plan.name, auftrag)
             _laeufe.update { it + lauf }
         }
+        // Das Ende steht im Buch, bevor der Lauf aus laeufe verschwindet.
+        var ende: Pair<String, AgentenErgebnis>? = null
+        try {
+            if (vorgang != null) {
+                // Wurde der Vorgang abgebrochen, während der Dienst ihn startete, gar nicht erst anfangen.
+                if (buch?.gestartet(vorgang)?.offen == false) throw kotlinx.coroutines.CancellationException("vor dem Anlauf abgebrochen")
+            }
+            val r = fuehreAusIntern(app, plan, auftrag, lauf) { schritt -> if (vorgang != null) runCatching { buch?.schritt(vorgang, schritt) } }
+            // Ein Abbruch während des Abschluss-Schritts wird dort verschluckt; dann zählt er trotzdem als Abbruch.
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            return r.also { ende = (if (r.titel == null) Vorgang.FEHLGESCHLAGEN else Vorgang.FERTIG) to r }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            ende = Vorgang.ABGEBROCHEN to AgentenErgebnis(null, e.message ?: "abgebrochen")
+            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Abgebrochen: ${auftrag.take(120)}", ok = false)
+            throw e
+        } finally {
+            if (vorgang != null) {
+                val (stand, r) = ende ?: (Vorgang.FEHLGESCHLAGEN to AgentenErgebnis(null, "unerwartet beendet"))
+                runCatching { buch?.beende(vorgang, stand, r.titel, r.grund) }
+            }
+            _laeufe.update { l -> l.filter { it.id != lauf.id } }
+        }
+    }
+
+    private suspend fun fuehreAusIntern(app: Context, plan: AgentenBauplan, auftrag: String, lauf: AgentenLauf, beiSchritt: (String) -> Unit): AgentenErgebnis {
         // Der Titel steht vorab fest: Dateien, die der Agent unterwegs erzeugt (Bilder, PDFs, Downloads), landen im selben Eintrag wie sein Bericht.
         val titel = "${plan.name} – ${auftrag.replace(Regex("\\s+"), " ").take(50).trim()} – ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M. HH.mm"))}"
         try {
@@ -151,7 +192,7 @@ object Agenten {
             val denker = JarvisAgent(app)
             val bericht = denker.versuche(
                 auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel, abschluss = true,
-                beiSchritt = { schritt -> _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = schritt) else it } } },
+                beiSchritt = { schritt -> _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = schritt) else it } }; beiSchritt(schritt) },
             )
             val grund = denker.abbruchGrund
             if (bericht.isNullOrBlank()) {
@@ -170,12 +211,12 @@ object Agenten {
             Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", (if (gesamt == null) "Fertig" else "Nicht vollständig ($gesamt)") + ", abgelegt als „${datei.nameWithoutExtension}“.$pdf", ok = gesamt == null)
             return AgentenErgebnis(datei.nameWithoutExtension, gesamt)
         } catch (e: Exception) {
+            // Ein Abbruch ist kein Fehler des Agenten: weiterreichen, fuehreAus trägt ihn als abgebrochen ein.
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Agent fehlgeschlagen", e)
             val text = AblageZentrale.fehlerText(e)
             Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Fehlgeschlagen: $text", ok = false)
             return AgentenErgebnis(null, text)
-        } finally {
-            _laeufe.update { l -> l.filter { it.id != lauf.id } }
         }
     }
 }
