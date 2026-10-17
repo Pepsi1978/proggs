@@ -49,6 +49,9 @@ object StimmProbe {
     /** Welche Hörproben-Art zum eingestellten Live-Modell gehört. */
     fun art(st: LiveOptionen.Stand) = if (st.istGemini) "gemini" else if (st.istLive) "live" else "realtime"
 
+    /** Anfang der Meldung, wenn Gemini Modell oder Stimme ablehnt; dann hilft der bezahlte Schlüssel nicht. */
+    private const val MODELL_FEHLER = "Hörprobe: Gemini lehnt Modell oder Stimme ab"
+
     @Volatile private var laufend: AudioTrack? = null
 
     /** Spielt die Probe ab; fehlt sie, wird sie zuerst erzeugt. Liefert eine Fehlermeldung oder null. */
@@ -57,9 +60,9 @@ object StimmProbe {
         if (!vorhanden(context, art, stimme)) {
             if (schluessel.isBlank()) return@withContext if (art == "gemini") "Für Hörproben bitte zuerst einen Gemini-Schlüssel eintragen." else "Für Hörproben bitte zuerst den OpenAI-API-Schlüssel eintragen."
             var (pcm, fehler) = if (art == "gemini") erzeugenGemini(schluessel, stimme) else erzeugen(schluessel, art == "live", stimme)
-            // Kostenloser Schlüssel gestört (Kontingent, abgelehnt, nicht erreichbar): einmal mit dem bezahlten.
-            if (pcm == null && art == "gemini" && ersatz.isNotBlank() && ersatz != schluessel &&
-                fehler?.let { it.contains("Kontingent") || it.contains("abgelehnt") || it.contains("Verbindung") } == true) {
+            // Kostenloser Schlüssel gestört (Kontingent, abgelehnt, nicht erreichbar, keine Antwort): einmal mit dem bezahlten.
+            // Nur Modell- oder Einstellungsfehler nicht, die träfen ihn genauso.
+            if (pcm == null && art == "gemini" && ersatz.isNotBlank() && ersatz != schluessel && fehler?.startsWith(MODELL_FEHLER) != true) {
                 val zweiter = erzeugenGemini(ersatz, stimme)
                 pcm = zweiter.first; fehler = zweiter.second
             }
@@ -92,7 +95,8 @@ object StimmProbe {
 
     /** Gemini: kurze Live-Sitzung mit 3.8 Live, Text hinein, Audio (24 kHz) bis turnComplete sammeln. */
     private suspend fun erzeugenGemini(schluessel: String, stimme: String): Pair<ByteArray?, String?> {
-        val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).build()
+        // Kurzer Verbindungsaufbau: Ist der kostenlose Schlüssel nicht erreichbar, bleibt Zeit für den bezahlten.
+        val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).connectTimeout(8, TimeUnit.SECONDS).build()
         val audio = ByteArrayOutputStream()
         val fertig = CompletableDeferred<String?>()
         val url = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=" +
@@ -120,8 +124,9 @@ object StimmProbe {
             }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 fertig.complete(if (code == 1000) null else when {
-                    reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true) -> "Gemini-Kontingent erschöpft: Hörprobe gerade nicht möglich."
-                    reason.contains("API key", true) -> "Der Gemini-Schlüssel wurde abgelehnt."
+                    GeminiFehler.kontingent(reason) -> "Gemini-Kontingent erschöpft: Hörprobe gerade nicht möglich."
+                    GeminiFehler.schluessel(reason) -> "Der Gemini-Schlüssel wurde abgelehnt."
+                    GeminiFehler.modell(code, reason) -> "$MODELL_FEHLER ($code): " + reason.take(160)
                     else -> "Hörprobe (Gemini $code): " + reason.take(160)
                 })
             }
@@ -129,6 +134,7 @@ object StimmProbe {
                 fertig.complete(when (response?.code) {
                     401, 403 -> "Der Gemini-Schlüssel wurde abgelehnt."
                     429 -> "Gemini-Kontingent erschöpft: Hörprobe gerade nicht möglich."
+                    400, 404 -> "$MODELL_FEHLER (HTTP ${response.code})."
                     else -> "Hörprobe: Verbindung zu Gemini fehlgeschlagen (" + (t.message ?: "unbekannt") + ")."
                 })
             }

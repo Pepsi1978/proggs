@@ -250,9 +250,14 @@ class LiveGespraech(
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 if (!laeuft || webSocket !== ws) return
                 val code = response?.code
-                // Schlüssel abgelehnt, Kontingent aus, Server oder Netz nicht erreichbar: einmal mit dem bezahlten Schlüssel.
-                // Modell- und Einstellungsfehler (400, 404) träfen den bezahlten genauso.
-                if (code != 400 && code != 404 && geminiErsatz("HTTP ${code ?: "-"} ${t.message ?: ""}".trim())) return
+                val anlass = "HTTP ${code ?: "-"} ${t.message ?: ""}".trim()
+                // Modell- und Einstellungsfehler (400, 404) träfen den bezahlten Schlüssel genauso.
+                when (code) {
+                    400, 404 -> {}
+                    401, 403, 429 -> if (geminiErsatz(anlass)) return
+                    // Netz weg oder Serverfehler: erst derselbe Schlüssel noch einmal, dann der bezahlte.
+                    else -> if (geminiStoerung(anlass)) return
+                }
                 val grund = when (code) {
                     400 -> "Gemini hat den Verbindungsaufbau abgelehnt (Modell oder Einstellung)."
                     401, 403 -> "Der Gemini-Schlüssel wurde abgelehnt."
@@ -268,21 +273,21 @@ class LiveGespraech(
                 if (!laeuft || webSocket !== ws) return
                 Log.w(LiveRouting.TAG, "Gemini schließt: $code $reason")
                 if (code != 1000) {
-                    if ((istKontingent(reason) || istSchluesselFehler(reason)) && geminiErsatz("$code $reason")) return
-                    // Extended Thinking zeigt Google teils über v1alpha: lehnt v1beta den Aufbau ab, einmal dort versuchen.
-                    if (!bereit && apiVersion == "v1beta" && modell.contains("extended") && !istKontingent(reason) && !istSchluesselFehler(reason)) {
-                        Log.w(LiveRouting.TAG, "Gemini: v1beta lehnt ab ($code $reason), versuche v1alpha")
-                        apiVersion = "v1alpha"
-                        geminiVerbinden(aktuellerSchluessel)
-                        return
-                    }
-                    // Sonstige Störung beim kostenlosen Schlüssel (Serverfehler, nicht erreichbar): einmal mit dem bezahlten.
-                    if (!istModellFehler(reason) && geminiErsatz("$code $reason")) return
+                    if ((GeminiFehler.kontingent(reason) || GeminiFehler.schluessel(reason)) && geminiErsatz("$code $reason")) return
+                    if (GeminiFehler.modell(code, reason)) {
+                        // Extended Thinking zeigt Google teils über v1alpha: lehnt v1beta das Modell ab, einmal dort versuchen.
+                        if (!bereit && apiVersion == "v1beta" && modell.contains("extended")) {
+                            Log.w(LiveRouting.TAG, "Gemini: v1beta lehnt ab ($code $reason), versuche v1alpha")
+                            apiVersion = "v1alpha"
+                            geminiVerbinden(aktuellerSchluessel)
+                            return
+                        }
+                    } else if (geminiStoerung("$code $reason")) return
                     beiFehler(geminiGrund(code, reason))
                 }
                 beenden(senden = false)
             }
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft && webSocket === ws) beenden(senden = false) }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft && webSocket === ws && !wartetAufNeu) beenden(senden = false) }
         })
     }
 
@@ -294,17 +299,35 @@ class LiveGespraech(
     /** Gemini: eine Antwort läuft (erster Ton bis turnComplete); nur dann verwirft das Antippen ihren Rest. */
     @Volatile private var geminiAntwortLaeuft = false
 
-    private fun istKontingent(reason: String) = reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true)
-    private fun istSchluesselFehler(reason: String) = reason.contains("API key", true) || reason.contains("PERMISSION_DENIED", true) ||
-        reason.contains("UNAUTHENTICATED", true) || reason.contains("billing", true)
-    private fun istModellFehler(reason: String) = reason.contains("not found", true) || reason.contains("not supported", true) || reason.contains("INVALID_ARGUMENT", true)
-
     private fun geminiGrund(code: Int, reason: String): String = when {
-        istKontingent(reason) -> "Gemini-Kontingent erschöpft: " + reason.take(160)
-        reason.contains("API key", true) -> "Der Gemini-Schlüssel wurde abgelehnt."
-        reason.contains("not found", true) || reason.contains("not supported", true) -> "Gemini kennt das Modell oder eine Einstellung nicht: " + reason.take(160)
+        GeminiFehler.kontingent(reason) -> "Gemini-Kontingent erschöpft: " + reason.take(160)
+        GeminiFehler.schluessel(reason) -> "Der Gemini-Schlüssel wurde abgelehnt."
+        GeminiFehler.modell(code, reason) -> "Gemini kennt das Modell oder eine Einstellung nicht: " + reason.take(160)
         reason.isNotBlank() -> "Gemini ($code): " + reason.take(200)
         else -> "Gemini hat die Verbindung beendet (Code $code)."
+    }
+
+    /** Ein Wiederholversuch mit demselben Schlüssel läuft schon; zurückgesetzt, sobald eine Verbindung steht. */
+    @Volatile private var gleicherVersuch = false
+    /** Der Wiederholversuch wartet kurz; bis dahin beendet das Schließen der alten Verbindung das Gespräch nicht. */
+    @Volatile private var wartetAufNeu = false
+    /** Mitteilung zum Schlüsselwechsel, die erst rausgeht, wenn die bezahlte Verbindung wirklich steht (Text, Anlass). */
+    @Volatile private var wechselMeldung: Pair<String, String>? = null
+
+    /**
+     * Netz weg oder Serverfehler: Das muss nicht am kostenlosen Schlüssel liegen. Erst einmal mit demselben Schlüssel
+     * und der Fortsetzungskennung neu verbinden; scheitert auch das, auf den bezahlten wechseln.
+     */
+    private fun geminiStoerung(anlass: String): Boolean {
+        if (!laeuft) return false
+        if (gleicherVersuch) return geminiErsatz(anlass)
+        gleicherVersuch = true
+        Log.w(LiveRouting.TAG, "Gemini: Störung ($anlass), verbinde mit demselben Schlüssel neu")
+        geminiKosten()
+        status("Verbinde neu …")
+        wartetAufNeu = true
+        Thread({ runCatching { Thread.sleep(2_000) }; wartetAufNeu = false; if (laeuft) geminiVerbinden(aktuellerSchluessel) }, "jarvis-gemini-neu").start()
+        return true
     }
 
     /** Kostenloser Schlüssel gestört (Kontingent aus, abgelehnt, nicht erreichbar): einmal auf den bezahlten wechseln, das Gespräch läuft weiter. */
@@ -312,11 +335,11 @@ class LiveGespraech(
         val ersatz = ersatzSchluessel
         if (ersatz.isBlank() || ersatz == aktuellerSchluessel || !laeuft) return false
         Log.w(LiveRouting.TAG, "Gemini: kostenloser Schlüssel gestört ($anlass), wechsle auf den bezahlten Schlüssel")
-        val grund = if (istKontingent(anlass) || anlass.startsWith("HTTP 429")) "Das kostenlose Gemini-Kontingent ist erschöpft"
+        val grund = if (GeminiFehler.kontingent(anlass) || anlass.startsWith("HTTP 429")) "Das kostenlose Gemini-Kontingent ist erschöpft"
             else "Der kostenlose Gemini-Schlüssel ist gerade nicht nutzbar"
-        val text = "$grund. Jarvis spricht jetzt mit dem bezahlten Schlüssel weiter."
-        beiFehler(text)
-        schluesselWechselMelden(text, anlass)
+        wechselMeldung = "$grund. Jarvis spricht jetzt mit dem bezahlten Schlüssel weiter." to anlass
+        // Was die kostenlose Verbindung schon verbraucht hat, kostet nichts: noch als kostenlos verbuchen.
+        geminiKosten()
         gratis = false
         // Eine Fortsetzungskennung gehört zum Projekt des alten Schlüssels: frisch beginnen, ohne neue Begrüßung.
         fortsetzKennung = ""
@@ -386,6 +409,8 @@ class LiveGespraech(
         when {
             e.has("setupComplete") -> {
                 bereit = true
+                gleicherVersuch = false
+                wechselMeldung?.let { (text, anlass) -> wechselMeldung = null; beiFehler(text); schluesselWechselMelden(text, anlass) }
                 abgeloest?.let { a -> abgeloest = null; Thread({ runCatching { Thread.sleep(1_500); a.close(1000, "Neue Verbindung") } }, "jarvis-gemini-alt").start() }
                 if (startMs == 0L) startMs = System.currentTimeMillis()
                 tonStarten()
@@ -1380,4 +1405,14 @@ class LiveGespraech(
         val STIMMEN = listOf("marin" to "Marin", "cedar" to "Cedar", "alloy" to "Alloy", "ash" to "Ash", "ballad" to "Ballad",
             "coral" to "Coral", "echo" to "Echo", "sage" to "Sage", "shimmer" to "Shimmer", "verse" to "Verse")
     }
+}
+
+/** Einordnung der Gemini-Fehlergründe, gemeinsam für Live-Gespräch und Hörprobe. */
+internal object GeminiFehler {
+    fun kontingent(reason: String) = reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true)
+    fun schluessel(reason: String) = reason.contains("API key", true) || reason.contains("PERMISSION_DENIED", true) ||
+        reason.contains("UNAUTHENTICATED", true) || reason.contains("billing", true)
+    /** Modell oder Einstellung abgelehnt: träfe den bezahlten Schlüssel genauso. 1007/1008 = ungültige Anfrage bzw. Richtlinie. */
+    fun modell(code: Int, reason: String) = code == 1007 || code == 1008 || reason.contains("not found", true) ||
+        reason.contains("not supported", true) || reason.contains("invalid argument", true) || reason.contains("INVALID_ARGUMENT", true)
 }
