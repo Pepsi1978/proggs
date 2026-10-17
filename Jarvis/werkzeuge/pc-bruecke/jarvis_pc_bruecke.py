@@ -9,6 +9,8 @@ die Cloud. Start: LaunchAgent de.frank.jarvis.pc-bruecke (einrichten.sh). Zugang
 Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
 """
+from __future__ import annotations
+
 import fcntl
 import json
 import os
@@ -93,17 +95,27 @@ def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> 
 
 def frische_umgebung() -> dict:
     """
-    Die Brücke läuft tagelang und behielte sonst die Umgebung von ihrem Start (unter Windows zeigte JAVA_HOME nach einem
-    JDK-Update auf einen gelöschten Ordner). Darum vor jedem Auftrag PATH und JAVA_HOME frisch aus der Login-Shell lesen.
-    launchd startet mit einem sehr kurzen PATH: Homebrew, ~/.local/bin, platform-tools und der Ordner von claude kommen dazu.
+    Nur für den Notweg (der OpenLauncher lädt die Login-Umgebung im Startskript selbst). Die Brücke läuft tagelang und
+    behielte sonst die Umgebung von ihrem Start (unter Windows zeigte JAVA_HOME nach einem JDK-Update auf einen gelöschten
+    Ordner). Darum PATH, JAVA_HOME und die Android-Variablen frisch aus der Shell lesen, samt ~/.zshrc (dort setzt Frank
+    ANDROID_HOME, JAVA_HOME und die build-tools; `zsh -l` allein liest sie nicht). launchd startet mit sehr kurzem PATH:
+    Homebrew, ~/.local/bin, platform-tools und der Ordner von claude kommen dazu.
     """
     umgebung = dict(os.environ)
+    namen = ("PATH", "JAVA_HOME", "ANDROID_HOME", "ANDROID_SDK_ROOT", "ANDROID_NDK_HOME")
+    werte = {}
     try:
-        aus = subprocess.run(["/bin/zsh", "-lc", 'printf "%s\\n%s" "$PATH" "$JAVA_HOME"'], capture_output=True, text=True, timeout=20).stdout
-        pfad, _, java = aus.partition("\n")
+        skript = "source ~/.zshrc >/dev/null 2>&1; " + "; ".join(f'printf "%s\\0" "${n}"' for n in namen)
+        aus = subprocess.run(["/bin/zsh", "-lc", skript], capture_output=True, text=True, timeout=20,
+                             stdin=subprocess.DEVNULL).stdout.split("\0")
+        werte = {n: w for n, w in zip(namen, aus) if w}
     except Exception:
-        pfad, java = "", ""
-    sdk = os.environ.get("ANDROID_HOME") or "/opt/homebrew/share/android-commandlinetools"
+        pass
+    pfad, java = werte.get("PATH", ""), werte.get("JAVA_HOME", "")
+    for n in ("ANDROID_HOME", "ANDROID_SDK_ROOT", "ANDROID_NDK_HOME"):
+        if werte.get(n):
+            umgebung[n] = werte[n]
+    sdk = umgebung.get("ANDROID_HOME") or "/opt/homebrew/share/android-commandlinetools"
     teile = [t for t in pfad.split(":") if t] + ["/opt/homebrew/bin", "/opt/homebrew/sbin", str(HOME / ".local" / "bin"),
                                                   f"{sdk}/platform-tools", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
     claude = finde_claude(teile)
@@ -180,7 +192,6 @@ VORGEHEN
 2. Setze den Auftrag vollständig um. Ist etwas Wesentliches unklar, frag Frank mit AskUserQuestion; Kleinigkeiten entscheidest du selbst.
 3. Schließe nach den Profilregeln vollständig ab: bauen, Version bumpen, committen, pushen, per WLAN aufs Handy installieren und bei Android-Apps den Skill apk-update ausführen. Abschlussmeldung auf Deutsch.
 """
-    umgebung = frische_umgebung()
     stempel = time.strftime("%Y%m%d-%H%M%S")
     TEMP.mkdir(parents=True, exist_ok=True)
     auftrag_datei = TEMP / f"auftrag-{stempel}.txt"
@@ -196,7 +207,7 @@ VORGEHEN
         # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.
         if mit_hooks:
             argumente += ["--auftrag-id", nummer]
-        prozess = subprocess.Popen(argumente, env=umgebung, cwd=str(PROGGS), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        prozess = subprocess.Popen(argumente, cwd=str(PROGGS), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # Spätestens nach 30 s quittieren: Der Relay wartet 45 s. Kein Fehler melden, wenn der OpenLauncher nur langsam ist:
         # Mit ok=false spränge das Handy auf die Cloud aus, und zwei Sitzungen arbeiteten am selben Repo.
         try:
@@ -211,6 +222,7 @@ VORGEHEN
     # Notweg für einen älteren OpenLauncherMac: direkt in Terminal.app starten (Profil-Ordner, Modell, Effort, Hooks wie
     # oben; die aktive CLAUDE.md und damit der Modus bleiben so, wie der OpenLauncher sie zuletzt geschrieben hat).
     schreib("OpenLauncher ohne --jarvis-auftrag, starte direkt")
+    umgebung = frische_umgebung()
     claude = finde_claude(umgebung["PATH"].split(":"))
     if not claude:
         raise RuntimeError("Keine Claude-Code-Installation gefunden.")
@@ -226,7 +238,7 @@ VORGEHEN
 printf '\\033]0;%s\\a' {q(name)}
 cd {q(str(PROGGS))} || exit 1
 export PATH={q(umgebung['PATH'])}
-{f"export JAVA_HOME={q(umgebung['JAVA_HOME'])}" if umgebung.get('JAVA_HOME') else ''}
+{chr(10).join(f"export {n}={q(umgebung[n])}" for n in ("JAVA_HOME", "ANDROID_HOME", "ANDROID_SDK_ROOT", "ANDROID_NDK_HOME") if umgebung.get(n))}
 export CLAUDE_CONFIG_DIR={q(str(config_dir))}
 {f"export JARVIS_AUFTRAG_ID={q(nummer)}" if mit_hooks else ''}
 SYNC="$HOME/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.py"

@@ -422,6 +422,7 @@ class Tagebuch:
 
 
 PC_FRISCH_S = 45      # so lange nach seiner letzten Abfrage gilt der PC als da
+PC_HAUPT_LUECKE_S = 3  # so kurz nach einer Abfrage des Hauptrechners gilt er noch als „holt gleich ab“
 PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf einen Auftrag
 PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung; die Bruecke antwortet spaetestens nach 30 s
 
@@ -450,6 +451,8 @@ class PcBruecke:
         self.haupt_rechner = ""
         self.ersatz_zuletzt = 0.0
         self.ersatz_rechner = ""
+        self.haupt_abfragen = {}  # id(request) -> request: offene Abfragen des Hauptrechners, nur lebende zaehlen
+        self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
         self.auftraege = asyncio.Queue()
         self.quittungen = {}  # Auftrag-id -> Future mit der Quittung der Bruecke
         self.nachtraege = {}  # AUFTRAG-ID -> [{"nachtrag_id", "text", "zeit"}], aelteste zuerst
@@ -574,6 +577,16 @@ class PcBruecke:
     def _haupt_da(self) -> bool:
         return time.monotonic() - self.haupt_zuletzt < PC_FRISCH_S
 
+    def _haupt_nimmt(self) -> bool:
+        """
+        Der Hauptrechner holt einen Auftrag gleich selbst: Er wartet gerade mit einer lebenden Abfrage, oder seine letzte
+        Abfrage endete eben erst (die naechste folgt sofort). Nicht die 45 s von PC_FRISCH_S: Solange wartete das Handy
+        schon auf die Quittung, der Ersatz griffe erst zu, wenn das Handy auf die Cloud ausweicht (zwei Sitzungen).
+        """
+        if any(a.transport is not None and not a.transport.is_closing() for a in self.haupt_abfragen.values()):
+            return True
+        return time.monotonic() - self.haupt_zuletzt < PC_HAUPT_LUECKE_S
+
     def _melde_dich(self, ersatz: bool, rechner: str) -> None:
         jetzt = time.monotonic()
         self.zuletzt = jetzt
@@ -591,6 +604,14 @@ class PcBruecke:
         ersatz = request.headers.get("X-Jarvis-Rang", "").strip().lower() == "ersatz"
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
         self._melde_dich(ersatz, rechner)
+        if not ersatz:
+            self.haupt_abfragen[id(request)] = request
+        try:
+            return await self._warte_auf_auftrag(request, ersatz, rechner)
+        finally:
+            self.haupt_abfragen.pop(id(request), None)
+
+    async def _warte_auf_auftrag(self, request: web.Request, ersatz: bool, rechner: str) -> web.Response:
         frist = asyncio.get_running_loop().time() + PC_WARTEN_S
         while True:
             rest = frist - asyncio.get_running_loop().time()
@@ -599,11 +620,11 @@ class PcBruecke:
                 return web.Response(status=204)
             # Der Ersatz wartet in kurzen Stuecken und greift nie zu, solange der Hauptrechner abfragt: So merkt er binnen
             # Sekunden, wenn der PC wieder da ist oder wegfaellt.
-            if ersatz and self._haupt_da():
-                await asyncio.sleep(min(rest, 5))
+            if ersatz and self._haupt_nimmt():
+                await asyncio.sleep(min(rest, 1))
                 continue
             try:
-                auftrag = await asyncio.wait_for(self.auftraege.get(), min(rest, 5) if ersatz else rest)
+                auftrag = await asyncio.wait_for(self.auftraege.get(), min(rest, 1) if ersatz else rest)
             except asyncio.TimeoutError:
                 if ersatz:
                     continue
@@ -611,7 +632,7 @@ class PcBruecke:
                 return web.Response(status=204)
             self._melde_dich(ersatz, rechner)
             # Der Ersatz wartete schon, als der Hauptrechner dazukam: zurueckgeben, der Hauptrechner holt ihn.
-            if ersatz and self._haupt_da():
+            if ersatz and self._haupt_nimmt():
                 self.auftraege.put_nowait(auftrag)
                 continue
             # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
@@ -624,6 +645,7 @@ class PcBruecke:
                 self.auftraege.put_nowait(auftrag)
                 return web.Response(status=204)
             self.rechner = rechner
+            self.zugestellt_an[auftrag["id"]] = rechner
             return web.json_response(auftrag)
 
     async def quittung(self, request: web.Request) -> web.Response:
@@ -663,7 +685,8 @@ class PcBruecke:
             return web.json_response({"pc": True, "ok": False, "fehler": "Der PC hat den Start nicht bestaetigt."}, status=504)
         finally:
             self.quittungen.pop(nummer, None)
-        return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": self.rechner})
+            rechner = self.zugestellt_an.pop(nummer, self.rechner)
+        return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner})
 
     def _aufraeumen(self) -> None:
         grenze = time.monotonic() - FRAGE_HALTEN_S
@@ -730,7 +753,8 @@ class PcBruecke:
             if zuletzt:
                 rechner.append({"rechner": name, "rang": rang, "da": jetzt - zuletzt < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - zuletzt)})
         # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
-        aktiv = self.haupt_rechner if self._haupt_da() else (self.ersatz_rechner if self.da() else self.rechner)
+        ersatz_da = time.monotonic() - self.ersatz_zuletzt < PC_FRISCH_S
+        aktiv = self.haupt_rechner if self._haupt_nimmt() or not ersatz_da else self.ersatz_rechner
         return web.json_response({"pc": self.da(), "rechner": aktiv, "zuletzt_vor_s": vor, "rechner_alle": rechner})
 
 

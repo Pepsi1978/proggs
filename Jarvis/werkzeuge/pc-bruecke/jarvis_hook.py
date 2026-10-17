@@ -370,15 +370,16 @@ def claude_prozess() -> int | None:
     return None
 
 
-def lebt(pid: int) -> bool:
+def lebt(pid: int, merkmal: str = "") -> bool:
+    """[merkmal]: Teil der Befehlszeile, den der Prozess tragen muss (POSIX vergibt PIDs neu, sonst gälte ein fremder
+    Prozess als alter Warter, und kein neuer Warter stellte Nachträge mehr zu)."""
     if os.name != "nt":
+        import subprocess
         try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        except PermissionError:
+            befehl = subprocess.run(["ps", "-o", "args=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout.strip()
+        except Exception:
             return True
-        return True
+        return bool(befehl) and (not merkmal or merkmal in befehl)
     import ctypes
     k = ctypes.windll.kernel32
     griff = k.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
@@ -411,7 +412,7 @@ def warte(eingabe: dict) -> int:
         alter = int(WARTER.read_text(encoding="utf-8").strip() or 0)
     except Exception:
         alter = 0
-    if alter and alter != os.getpid() and lebt(alter):
+    if alter and alter != os.getpid() and lebt(alter, "jarvis_hook.py"):
         return 0
     WARTER.write_text(str(os.getpid()), encoding="utf-8")
     claude = claude_prozess()
@@ -419,7 +420,7 @@ def warte(eingabe: dict) -> int:
     try:
         ende = time.monotonic() + WARTER_MAX_S
         while time.monotonic() < ende:
-            if claude and not lebt(claude):
+            if claude and not lebt(claude, "claude"):
                 schreib("Warter: Claude-Sitzung beendet")
                 return 0
             try:

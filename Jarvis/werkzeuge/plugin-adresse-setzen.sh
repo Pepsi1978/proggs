@@ -33,7 +33,7 @@ for nr, d in enumerate(ordner):
     if d:
         umgebung["CLAUDE_CONFIG_DIR"] = d
     json_datei = Path(d, ".claude.json") if d else home / ".claude.json"
-    sichere(json_datei, f"claude-{Path(d).name if d else 'standard'}")
+    sichere(json_datei, f"claude-{('profil-' + Path(d).name) if d else 'home'}")
     subprocess.run(["claude", "mcp", "remove", "--scope", "user", "jarvis"], env=umgebung, capture_output=True)
     r = subprocess.run(["claude", "mcp", "add", "--transport", "http", "--scope", "user", "jarvis", url],
                        env=umgebung, capture_output=True, text=True)
@@ -46,9 +46,19 @@ for toml in (home / ".codex/config.toml", home / "Library/Application Support/Op
         continue
     sichere(toml, "codex" if ".codex" in str(toml) else "codex-openlauncher")
     text = toml.read_text(encoding="utf-8")
-    # Vorhandenen Block (bis zur nächsten Tabelle) ersetzen, sonst anhängen.
-    muster = re.compile(r"^\[mcp_servers\.jarvis\]\n(?:(?!\[).*\n?)*", re.M)
-    text = muster.sub(block + "\n", text, count=1) if muster.search(text) else text.rstrip("\n") + "\n\n" + block
+    # Vorhandenen Block samt Untertabellen [mcp_servers.jarvis.*] ersetzen; Leerzeilen und Kommentare direkt vor der
+    # nächsten fremden Tabelle gehören zu ihr und bleiben. Ohne Block: anhängen.
+    zeilen = text.split("\n")
+    kopf = next((i for i, z in enumerate(zeilen) if z.strip() == "[mcp_servers.jarvis]"), None)
+    if kopf is None:
+        text = text.rstrip("\n") + "\n\n" + block
+    else:
+        ende = kopf + 1
+        while ende < len(zeilen) and not (zeilen[ende].startswith("[") and not zeilen[ende].startswith("[mcp_servers.jarvis")):
+            ende += 1
+        while ende > kopf + 1 and ende < len(zeilen) and (not zeilen[ende - 1].strip() or zeilen[ende - 1].lstrip().startswith("#")):
+            ende -= 1
+        text = "\n".join(zeilen[:kopf] + block.rstrip("\n").split("\n") + [""] + zeilen[ende:])
     toml.write_text(text, encoding="utf-8")
     print(f"Codex {toml}: ok")
 
@@ -58,9 +68,27 @@ if oc.exists():
     sichere(oc, "opencode")
     text = oc.read_text(encoding="utf-8")
     eintrag = f'"jarvis": {{ "type": "remote", "url": "{url}", "enabled": true, "oauth": false, "timeout": 120000 }}'
-    vorhanden = re.compile(r'"jarvis"\s*:\s*\{[^{}]*\}')
-    if vorhanden.search(text):
-        text = vorhanden.sub(eintrag, text, count=1)
+    # Vorhandenen Eintrag bis zur passenden schließenden Klammer ersetzen (auch mit verschachtelten Objekten wie headers).
+    treffer = re.search(r'"jarvis"\s*:\s*\{', text)
+    if treffer:
+        tiefe, i, in_text = 0, treffer.end() - 1, False
+        while i < len(text):
+            zeichen = text[i]
+            if in_text:
+                if zeichen == "\\":
+                    i += 1
+                elif zeichen == '"':
+                    in_text = False
+            elif zeichen == '"':
+                in_text = True
+            elif zeichen == "{":
+                tiefe += 1
+            elif zeichen == "}":
+                tiefe -= 1
+                if tiefe == 0:
+                    break
+            i += 1
+        text = text[:treffer.start()] + eintrag + text[i + 1:]
     elif re.search(r'"mcp"\s*:\s*\{', text):
         text = re.sub(r'("mcp"\s*:\s*\{)', lambda m: m.group(1) + "\n    " + eintrag + ",", text, count=1)
     else:
