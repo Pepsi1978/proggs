@@ -167,7 +167,7 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
         canvas.drawRoundRect(form, r, r, glanz)
 
         val farbe = mische(mische(RUHE, FRANK, mischFrank), JARVIS, mischJarvis)
-        rand.color = (farbe and 0x00FFFFFF) or (0x70 shl 24)
+        rand.color = (farbe and 0x00FFFFFF) or (0xD0 shl 24)
         canvas.drawRoundRect(form, r, r, rand)
 
         val abstand = 5.6f * dp
@@ -205,12 +205,12 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
         return (0xFF shl 24) or k(16) or k(8) or k(0)
     }
 
-    private fun aufhellen(c: Int) = mische(c, 0xFFFFFFFF.toInt(), 0.15f)
+    private fun aufhellen(c: Int) = mische(c, 0xFFFFB000.toInt(), 0.45f) // zu Gelb-Orange statt Weiß: bleibt satt
 
     companion object {
-        // Immer das knallige Claude-Code-Orange (#D97757), egal wer spricht (Franks Wunsch).
-        private const val FRANK = 0xFFD97757.toInt()
-        private const val JARVIS = 0xFFD97757.toInt()
-        private const val RUHE = 0xFFD97757.toInt()
+        // Immer leuchtendes, knalliges Orange (#FF6D00), egal wer spricht (Franks Wunsch).
+        private const val FRANK = 0xFFFF6D00.toInt()
+        private const val JARVIS = 0xFFFF6D00.toInt()
+        private const val RUHE = 0xFFFF6D00.toInt()
     }
 }

@@ -141,6 +141,7 @@
     {"versionCode": 136, "versionName": "1.8.125", "stand": "17.10.2026, 14:20 Uhr", "notiz": "Weckwort sicherer: Ein wiederholter Ruf lässt fremde Stimmen nicht mehr durch, schnelle oder leise Rufe bekommen ihre Stimmprüfung auch dann, wenn Silero nur wenig Stimme hört, und die Einstellungen erinnern ans Neu-Anlernen mit 15 Proben."},
     {"versionCode": 137, "versionName": "1.8.126", "stand": "17.10.2026, 14:30 Uhr", "notiz": "Die schwebende Sprachblase außerhalb der App leuchtet jetzt immer in Orange, egal ob du sprichst, Jarvis spricht oder zuhört, bei Tag, Nacht und jedem Design."},
     {"versionCode": 138, "versionName": "1.8.127", "stand": "17.10.2026, 14:34 Uhr", "notiz": "Sprachblase: Wenn du sprichst, leuchtet sie in hellerem Orange als bei Jarvis, und sie zeichnet sparsamer, damit der Live-Ton ungestört bleibt."},
-    {"versionCode": 139, "versionName": "1.8.128", "stand": "17.10.2026, 14:36 Uhr", "notiz": "Sprachblase leuchtet jetzt immer im knalligen Claude-Code-Orange statt in hellem Orange."}
+    {"versionCode": 139, "versionName": "1.8.128", "stand": "17.10.2026, 14:36 Uhr", "notiz": "Sprachblase leuchtet jetzt immer im knalligen Claude-Code-Orange statt in hellem Orange."},
+    {"versionCode": 140, "versionName": "1.8.129", "stand": "17.10.2026, 15:20 Uhr", "notiz": "Sprachblase leuchtet jetzt in knalligem, sattem Orange mit kräftigem Rand statt in blassem Orange."}
   ]
 }
