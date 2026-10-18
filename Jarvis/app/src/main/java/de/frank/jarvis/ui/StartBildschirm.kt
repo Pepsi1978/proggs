@@ -58,6 +58,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -240,16 +242,29 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
         // Der Kern ist zugleich der Knopf „Tagesauswertung aktualisieren“: frische Daten aller Apps holen und alles neu auswerten.
         // Sperre gegen Doppeltippen: „läuft“ springt erst um, wenn der Dienst wirklich angefangen hat.
         var angestossen by remember { mutableStateOf(0L) }
-        Kern(
-            56.dp, if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer,
-            aktiv = vm.denkt || wertetAus || tunnel.stufe == TunnelStufe.VERBINDET,
-            modifier = Modifier
+        val kernFarbe = if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer
+        Box(
+            Modifier
                 .semantics { contentDescription = "Tagesauswertung aktualisieren"; role = Role.Button }
                 .antippen {
                     if (wertetAus || System.currentTimeMillis() - angestossen < 15_000) vm.meldung = "Die Tagesauswertung läuft schon."
                     else { angestossen = System.currentTimeMillis(); vm.auswertungJetzt() }
                 },
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Kern(56.dp, kernFarbe, aktiv = vm.denkt || wertetAus || tunnel.stufe == TunnelStufe.VERBINDET)
+            // Aktualisierungspfeil in der Mitte, damit der Kern als Knopf erkennbar ist; während der Auswertung dreht er sich.
+            val drehung = if (wertetAus && de.frank.jarvis.ui.theme.LocalBewegung.current) {
+                androidx.compose.animation.core.rememberInfiniteTransition(label = "pfeil").animateFloat(
+                    0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1_200, easing = androidx.compose.animation.core.LinearEasing)), label = "pfeilDreh",
+                )
+            } else null
+            Icon(
+                Icons.Rounded.Refresh, null,
+                Modifier.size(24.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f },
+                tint = androidx.compose.ui.graphics.lerp(kernFarbe, Color.Black, 0.45f),
+            )
+        }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text("Jarvis", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
             Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
