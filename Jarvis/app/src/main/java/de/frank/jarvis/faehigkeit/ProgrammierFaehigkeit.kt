@@ -284,7 +284,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             } catch (nichtDa: NichtDa) {
                 uebersprungen += nichtDa.message.orEmpty()
                 continue
-            } catch (_: java.net.SocketTimeoutException) {
+            } catch (zeit: java.net.SocketTimeoutException) {
+                if (vorDemSenden(zeit)) {
+                    // Die Verbindung kam gar nicht zustande, also kam auch nichts an: wie „nicht erreichbar“, das nächste Ziel (die Cloud) übernimmt.
+                    uebersprungen += "${ziel.name} war nicht erreichbar (Zeitlimit beim Verbindungsaufbau)" + if (ziel is PcBruecke) ", deshalb die Cloud." else "."
+                    continue
+                }
                 // Keine Antwort mehr nach dem Senden: Der Auftrag kam womöglich an und läuft. Nicht als gescheitert melden (sonst
                 // startet ihn Frank ein zweites Mal), sondern als „unklar“ eintragen; meldet sich die Sitzung, wird daraus ein normaler Auftrag.
                 if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt) }.getOrDefault("") }
@@ -951,6 +956,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         /** Stand eines Auftrags, dessen Start nach dem Senden ins Zeitlimit lief: vielleicht gestartet. Die erste Meldung der Sitzung ersetzt ihn. */
         const val STAND_UNKLAR = "unklar"
+
+        /**
+         * Lief das Zeitlimit ab, bevor die Anfrage gesendet war? OkHttp meldet auch den Verbindungsaufbau („failed to connect … after“,
+         * „connect timed out“) und den TLS-Handschlag als SocketTimeoutException; dann kam sicher nichts an. Nur ein Zeitlimit beim
+         * Warten auf die Antwort („timeout“, „Read timed out“) heißt: womöglich angekommen.
+         */
+        internal fun vorDemSenden(fehler: java.net.SocketTimeoutException): Boolean =
+            fehler.message.orEmpty().lowercase(Locale.ROOT).let { "connect" in it || "handshake" in it }
 
         /**
          * Der Text, den PC und Cloud gleichermaßen bekommen: Auftrag, dann die Fortschritts-Anweisung. Franks Programmierregeln

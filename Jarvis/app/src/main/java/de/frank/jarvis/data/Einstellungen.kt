@@ -75,6 +75,11 @@ class Einstellungen private constructor(context: Context) {
      */
     private val sitzung = ConcurrentHashMap<String, String>()
 
+    /** Neue Zugangsdaten, abgelegt vom adb-Skript per run-as (siehe [zugangPruefen]). */
+    private val zugangDatei = java.io.File(context.applicationContext.filesDir, "zugang.json")
+    /** Gestört: Stand (Änderungszeit) der zuletzt übernommenen zugang.json, damit jedes Wiederverbinden sie nicht neu einliest. */
+    private var zugangStand = 0L
+
     private fun s(key: String, def: String): String {
         val p = prefs
         if (gestoert && key in GEHEIM) return sitzung[key] ?: def
@@ -106,42 +111,60 @@ class Einstellungen private constructor(context: Context) {
         ).filter { (k, v) -> v.isNotBlank() && roh.getString(k, "").isNullOrEmpty() }
         // Gestört: nichts davon in den Klartext-Ersatz schreiben; die Getter greifen ohnehin auf die Werte aus dem Bau zurück.
         if (eingebaut.isNotEmpty() && !gestoert) roh.edit().apply { eingebaut.forEach { (k, v) -> putString(k, v) } }.apply()
-        uebernimmZugang(context.applicationContext)
+        zugangPruefen()
     }
 
     /**
-     * Neue Zugangsdaten kommen einmalig über `files/zugang.json`, die ein adb-Skript per run-as ablegt
+     * Neue Zugangsdaten kommen über `files/zugang.json`, die ein adb-Skript per run-as ablegt
      * ({"server_token": …, "routine_token": …, "such_schluessel": …, "maps_schluessel": …, "drive_client_secret": …, "server_host"?: …}).
-     * Jeder nicht leere Wert ersetzt den gespeicherten (verschlüsselt; gestört nur für diese Sitzung). Danach wird die Datei
-     * gelöscht, auch wenn sie unlesbar war; protokolliert wird nie ein Wert.
+     * Jeder nicht leere Wert ersetzt den gespeicherten. Geprüft wird beim Start und vor jedem Verbindungsversuch des Tunnels
+     * (nur ein exists, solange keine Datei da ist): Der Vordergrunddienst hält den Prozess, das Skript startet nichts neu.
+     * - Ungestört: verschlüsselt und synchron gespeichert; erst danach wird die Datei gelöscht.
+     * - Gestört: Die Werte gelten nur für diese Sitzung. Die Datei bleibt deshalb liegen (sie ist app-privat) und wird bei
+     *   jedem Start erneut gelesen; im selben Prozess nur, wenn sie sich geändert hat.
+     * Eine unlesbare Datei wird gelöscht (sie würde nie lesbar). Protokolliert wird nie ein Wert.
+     * Rückgabe: true, wenn etwas übernommen wurde (der Tunnel verbindet dann mit den neuen Daten).
      */
-    private fun uebernimmZugang(app: Context) {
-        val datei = java.io.File(app.filesDir, "zugang.json")
-        if (!datei.exists()) return
-        try {
-            val j = org.json.JSONObject(datei.readText())
-            val uebernommen = ZUGANG.filter { k ->
-                val wert = j.optString(k).trim()
-                if (wert.isEmpty()) return@filter false
-                when (k) {
-                    "server_host" -> put { putString(k, wert.removePrefix("https://").removePrefix("wss://").trimEnd('/')) }
-                    else -> {
-                        // Ein anderer Maps-Schlüssel: Die Planung der Losfahr-Meldung beginnt damit von vorn (wie früher beim Bau-Schlüssel).
-                        if (k == "maps_schluessel" && wert != s(k, "")) put { remove("abfahrt_zustand") }
-                        putGeheim(k, wert)
-                    }
-                }
-                true
-            }
-            Log.i(TAG, "Zugangsdaten aus zugang.json übernommen: ${uebernommen.joinToString()}")
-            runCatching { Protokoll.melde(Quelle.SYSTEM, "Einstellungen", "Zugangsdaten übernommen: ${uebernommen.joinToString()}") }
+    @Synchronized
+    fun zugangPruefen(): Boolean {
+        val datei = zugangDatei
+        if (!datei.exists()) return false
+        val stand = datei.lastModified()
+        if (gestoert && stand == zugangStand) return false
+        val j = try {
+            org.json.JSONObject(datei.readText())
         } catch (e: Exception) {
             // Nur die Art des Fehlers: Die Meldung einer JSONException enthielte Teile der Datei, also Schlüssel.
             Log.w(TAG, "zugang.json unlesbar (${e.javaClass.simpleName})")
             Logbuch.fehler("Einstellungen: zugang.json unlesbar", null, e.javaClass.simpleName)
-        } finally {
             if (!datei.delete()) Log.w(TAG, "zugang.json ließ sich nicht löschen")
+            return false
         }
+        val werte = ZUGANG.mapNotNull { k -> j.optString(k).trim().takeIf { it.isNotEmpty() }?.let { k to it } }
+            .map { (k, v) -> k to if (k == "server_host") v.removePrefix("https://").removePrefix("wss://").trimEnd('/') else v }
+        // Ein anderer Maps-Schlüssel: Die Planung der Losfahr-Meldung beginnt damit von vorn (wie früher beim Bau-Schlüssel).
+        val mapsNeu = werte.any { (k, v) -> k == "maps_schluessel" && v != s(k, "") }
+        val gespeichert = if (gestoert) {
+            werte.forEach { (k, v) -> if (k in GEHEIM) sitzung[k] = v }
+            // Die Adresse ist kein Geheimnis: Sie darf in den Ersatzspeicher.
+            roh.edit().apply { werte.filter { it.first !in GEHEIM }.forEach { (k, v) -> putString(k, v) }; if (mapsNeu) remove("abfahrt_zustand") }.apply()
+            zugangStand = stand
+            true
+        } else {
+            // commit statt apply: Die Datei wird gleich gelöscht, die Werte müssen vorher sicher auf der Platte stehen.
+            roh.edit().apply { werte.forEach { (k, v) -> putString(k, v) }; if (mapsNeu) remove("abfahrt_zustand") }.commit()
+        }
+        version.intValue++
+        val namen = werte.joinToString { it.first }
+        if (!gespeichert) {
+            Log.w(TAG, "zugang.json nicht gespeichert; sie bleibt für den nächsten Versuch liegen")
+            Logbuch.fehler("Einstellungen: zugang.json nicht gespeichert", null, namen)
+            return false
+        }
+        if (!gestoert && !datei.delete()) Log.w(TAG, "zugang.json ließ sich nicht löschen")
+        Log.i(TAG, "Zugangsdaten aus zugang.json übernommen: $namen")
+        runCatching { Protokoll.melde(Quelle.SYSTEM, "Einstellungen", "Zugangsdaten übernommen: $namen" + if (gestoert) " (nur bis zum Neustart; die Datei bleibt liegen)" else "") }
+        return werte.isNotEmpty()
     }
 
     // ---- Das eigene Modell von Jarvis ----
@@ -340,7 +363,7 @@ class Einstellungen private constructor(context: Context) {
         /** So heißt ein Schrittlimit in Oberfläche und Sprachantworten. */
         fun schrittlimitLabel(n: Int): String = if (n == 0) "Unbegrenzt" else "$n Schritte"
         private const val TAG = "JarvisEinstellungen"
-        /** Die Schlüssel, die zugang.json setzen darf (siehe uebernimmZugang). */
+        /** Die Schlüssel, die zugang.json setzen darf (siehe zugangPruefen). */
         private val ZUGANG = listOf("server_token", "routine_token", "such_schluessel", "maps_schluessel", "drive_client_secret", "server_host")
         /** Schlüssel, die nie unverschlüsselt abgelegt werden dürfen. */
         private val GEHEIM = listOf(
@@ -352,6 +375,8 @@ class Einstellungen private constructor(context: Context) {
         /** Auslöse-Adresse der Routine „Jarvis: Programmieren“ (claude.ai/code/routines). Kein Geheimnis; ohne Token wirkungslos. */
         const val STANDARD_ROUTINE = "https://api.anthropic.com/v1/claude_code/routines/trig_01HkrhPAiYAJ7msGLn5UUcyo/fire"
         @Volatile private var instanz: Einstellungen? = null
+        /** Die Instanz, falls schon angelegt (für Stellen ohne Context wie den Tunnel). */
+        fun vorhanden(): Einstellungen? = instanz
         fun get(context: Context): Einstellungen = instanz ?: synchronized(this) {
             instanz ?: Einstellungen(context).also { instanz = it }
         }

@@ -178,9 +178,11 @@ class JarvisAgent(context: Context) {
           } catch (e: CancellationException) {
             throw e
           } catch (e: Exception) {
-            // Ein Modellfehler (Kontingent, HTTP 400 etwa wegen der Kontextlänge) mitten in der Arbeit: Mit Abschluss wird das
-            // Gesammelte nicht verworfen, sondern unten zum Zwischenstand. Ohne Abschluss entscheidet der Aufrufer wie bisher.
-            if (!abschluss) throw e
+            // Ein Modellfehler (HTTP 400 etwa wegen der Kontextlänge) mitten in der Arbeit: Mit Abschluss wird das Gesammelte nicht
+            // verworfen, sondern unten zum Zwischenstand. Ohne Abschluss entscheidet der Aufrufer wie bisher. Abgelaufene Anmeldung
+            // und ausgeschöpftes Kontingent gehen immer an den Aufrufer: Der zeigt dafür gezielt „bitte anmelden“ bzw. „Kontingent“,
+            // und ein Zwischenstand käme ohnehin nicht zustande.
+            if (!abschluss || (e is de.frank.jarvis.auth.CodexAuthException && e.kind != de.frank.jarvis.auth.AuthErrorKind.NETWORK)) throw e
             Logbuch.fehler("Antwort: Modellschritt", e)
             modellFehler = e
             null

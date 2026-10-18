@@ -2,8 +2,6 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runInterruptible
 import org.json.JSONObject
 
 /**
@@ -167,8 +165,7 @@ class EpigenetikFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    /** Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe [AppBruecke]). */
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = runInterruptible(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = AppBruecke.unterbrechbar { rufeDirekt(methode, anfrage) }
 
     private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
         AppBruecke.rufe(context, "Epigenetik", BRUECKE, methode, anfrage, lesend = methode in LESEND)

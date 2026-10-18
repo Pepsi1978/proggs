@@ -2,8 +2,6 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runInterruptible
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -314,8 +312,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
     // ---------------------------------------------------------------- Brücke
 
     private suspend fun rufe(methode: String, anfrage: JSONObject, lesend: Boolean = methode in LESEND): JSONObject =
-        // Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe AppBruecke).
-        runInterruptible(Dispatchers.IO) { ohneAusgelassene(rufeDirekt(methode, ohneAusgelassene(anfrage), lesend)) }
+        AppBruecke.unterbrechbar { ohneAusgelassene(rufeDirekt(methode, ohneAusgelassene(anfrage), lesend)) }
 
     /**
      * Frank braucht die Sauerstoffsättigung nicht: Sie wird weder angefragt noch weitergegeben, auch nicht in den Tageswerten,

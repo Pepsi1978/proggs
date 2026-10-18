@@ -2,10 +2,8 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.runInterruptible
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -243,8 +241,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
         }.trim()
     }
 
-    /** Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe [AppBruecke]). */
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = runInterruptible(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = AppBruecke.unterbrechbar { rufeDirekt(methode, anfrage) }
 
     private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
         AppBruecke.rufe(context, "Geniale Ideen", BRUECKE, methode, anfrage, lesend = methode in LESEND)

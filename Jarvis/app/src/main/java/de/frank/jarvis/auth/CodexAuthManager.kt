@@ -274,16 +274,18 @@ class CodexAuthManager(context: Context) {
     /**
      * [context] am besten der Application-Context: Die Anmeldung wartet bis zu einer Viertelstunde und überlebt so ein
      * Auf- oder Zuklappen, ohne eine alte Activity festzuhalten. [imVordergrund] meldet, ob die App gerade sichtbar ist.
+     * [vorDemOeffnen] läuft auf dem Hauptfaden unmittelbar bevor die Anmeldeseite im Browser aufgeht.
      */
     suspend fun login(
         context: Context,
         imVordergrund: () -> Boolean,
+        vorDemOeffnen: () -> Unit = {},
         onDeviceCode: (DeviceAuthInfo) -> Unit,
     ): AuthResult = loginMutex.withLock {
         val loginJob = currentCoroutineContext().job
         activeLoginJob.set(loginJob)
         try {
-            withContext(Dispatchers.IO) { loginInternal(context, imVordergrund, onDeviceCode) }
+            withContext(Dispatchers.IO) { loginInternal(context, imVordergrund, vorDemOeffnen, onDeviceCode) }
         } catch (error: IOException) {
             throw networkException("Die OpenAI-Anmeldung ist wegen eines Netzwerkfehlers fehlgeschlagen.", error)
         } finally {
@@ -395,6 +397,7 @@ class CodexAuthManager(context: Context) {
     private suspend fun loginInternal(
         context: Context,
         imVordergrund: () -> Boolean,
+        vorDemOeffnen: () -> Unit,
         onDeviceCode: (DeviceAuthInfo) -> Unit,
     ): AuthResult {
         val start = postJson(
@@ -419,6 +422,7 @@ class CodexAuthManager(context: Context) {
         // Kurz stehen lassen, damit der Code sichtbar ist, bevor der Browser übernimmt.
         delay(1_400)
         withContext(Dispatchers.Main) {
+            vorDemOeffnen()
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(deviceInfo.verificationUri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
 

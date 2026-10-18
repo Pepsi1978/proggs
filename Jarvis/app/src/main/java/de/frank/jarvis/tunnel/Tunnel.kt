@@ -78,7 +78,11 @@ object Tunnel {
 
     /** [verarbeite] bekommt den Rumpf eines MCP-Aufrufs und liefert die Antwort (null = nichts zu antworten). */
     @Synchronized
-    fun starte(host: String, token: String, geheimnis: String, verarbeite: (String) -> String?) {
+    fun starte(hostVorgabe: String, tokenVorgabe: String, geheimnis: String, verarbeite: (String) -> String?) {
+        // Liegt eine frisch eingespielte zugang.json bereit, gelten schon jetzt deren Adresse und Schlüssel.
+        var host = hostVorgabe
+        var token = tokenVorgabe
+        neuerZugang()?.let { (h, t) -> host = h; token = t }
         // Unveränderte Daten und die Schleife läuft: nichts tun. Sonst risse jedes Öffnen der App die Verbindung kurz ab.
         val daten = Triple(host, token, geheimnis)
         if (daten == aktuell && lauf?.isActive == true) return
@@ -91,6 +95,9 @@ object Tunnel {
         lauf = bereich.launch {
             var pause = 2_000L
             while (isActive) {
+                // Vor jedem Versuch: Hat das adb-Skript inzwischen eine zugang.json abgelegt (neuer Handy-Token), mit ihr verbinden.
+                // Lehnt der Relay den alten Token ab, kommt der nächste Versuch so von selbst mit dem neuen.
+                neuerZugang()?.let { (h, t) -> host = h; token = t; synchronized(this@Tunnel) { aktuell = Triple(host, token, geheimnis) } }
                 _zustand.value = TunnelZustand(TunnelStufe.VERBINDET, "Verbinde mit dem Server …")
                 val ende = Channel<String>(Channel.CONFLATED)
                 val anfrage = Request.Builder()
@@ -146,6 +153,13 @@ object Tunnel {
                 pause = (pause * 2).coerceAtMost(30_000L)
             }
         }
+    }
+
+    /** Übernimmt eine bereitliegende zugang.json; liefert dann die neue Adresse und den neuen Schlüssel, sonst null. */
+    private fun neuerZugang(): Pair<String, String>? {
+        val e = de.frank.jarvis.data.Einstellungen.vorhanden() ?: return null
+        val neu = runCatching { e.zugangPruefen() }.getOrElse { Logbuch.fehler("Tunnel: zugang.json", it); false }
+        return if (neu) e.serverHost to e.serverToken else null
     }
 
     /** Empfänger für Signale des Servers (ganze Nachricht, Art unter „signal“, z. B. „tagebuch“ oder „update“); setzt der Dienst. */

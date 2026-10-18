@@ -2,10 +2,8 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.runInterruptible
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -164,8 +162,7 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
         return (if (mitJetzt) "Jetzt ist ${antwort.optString("jetzt").replace('T', ' ')}. " else "") + "${wecker.length()} Wecker:\n" + (0 until wecker.length()).joinToString("\n") { "- " + satz(wecker.getJSONObject(it)) }
     }
 
-    /** Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe [AppBruecke]). */
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = runInterruptible(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = AppBruecke.unterbrechbar { rufeDirekt(methode, anfrage) }
 
     private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
         AppBruecke.rufe(context, "Genialer Wecker", BRUECKE, methode, anfrage, lesend = methode in LESEND)

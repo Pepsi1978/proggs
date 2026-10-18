@@ -9,6 +9,8 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONObject
 
 /**
@@ -21,8 +23,8 @@ import org.json.JSONObject
  * - Zeitlimit: Der Aufruf läuft auf einem eigenen Faden (lesend 6 s, schreibend 25 s, bei `warte_ms` entsprechend länger).
  *   Hängt die Partner-App, kommt der Aufrufer trotzdem frei; der hängende Binder-Aufruf läuft im Hintergrund aus.
  *   Lesende Aufrufe werden danach einmal wiederholt (nicht mit `warte_ms`); schreibende tragen [ZEITLIMIT], weil sie womöglich doch ankamen.
- * - Abbruch: Der Aufruf blockiert. Aufrufer nehmen deshalb `runInterruptible(Dispatchers.IO)`, dann beendet ein Abbruch der
- *   Coroutine das Warten sofort (InterruptedException), statt bis zum Zeitlimit zu blockieren.
+ * - Abbruch: Der Aufruf blockiert. Aus Coroutinen deshalb über [unterbrechbar], dann beendet ein Abbruch der Coroutine das
+ *   Warten sofort (InterruptedException), statt bis zum Zeitlimit zu blockieren.
  */
 object AppBruecke {
     private const val NICHT_BEREIT = "App nicht bereit."
@@ -51,6 +53,12 @@ object AppBruecke {
 
     fun rufe(context: Context, app: String, adresse: Uri, methode: String, anfrage: JSONObject, lesend: Boolean): JSONObject =
         rufe(context, app, listOf(adresse), methode, anfrage, lesend)
+
+    /**
+     * Ein Brücken-Aufruf ([rufe], gern samt Auf- und Nachbereitung) aus einer Coroutine: auf dem IO-Dispatcher und unterbrechbar.
+     * Ein Abbruch der Coroutine beendet das Warten sofort (InterruptedException), statt bis zum Zeitlimit zu blockieren.
+     */
+    suspend fun <T> unterbrechbar(aufruf: () -> T): T = runInterruptible(Dispatchers.IO, aufruf)
 
     /** Langsame Aufrufe ins Logbuch, damit sich hängende Partner-Apps später finden lassen. */
     private fun gemessen(app: String, methode: String, beginn: Long) {

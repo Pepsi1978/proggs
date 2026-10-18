@@ -268,9 +268,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
                 val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
-                // Franks Schrittlimit gilt hier; das Zeitlimit wächst mit (je Schritt 12 s, mindestens 2 Minuten; unbegrenzt = 15 Minuten).
+                // Franks Schrittlimit gilt hier; das Zeitlimit wächst mit (je Schritt 12 s, mindestens 2 Minuten; unbegrenzt = 30 Minuten, also mehr als die 20 Minuten bei 100 Schritten).
                 val schritte = einstellungen.schrittlimit
-                val zeitlimit = if (schritte <= 0) 15 * 60_000L else maxOf(120_000L, schritte * 12_000L)
+                val zeitlimit = if (schritte <= 0) 30 * 60_000L else maxOf(120_000L, schritte * 12_000L)
                 var grund: String? = null
                 agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true,
                     beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it })
@@ -1931,8 +1931,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Mit dem Application-Context: Die Anmeldung wartet lange und darf keine Activity festhalten (Fold auf- oder zuklappen).
                 // Die Anmeldeseite öffnet Jarvis selbst: Die Rückkehr von dort ist kein neuer Start (wie startActivityForResult in MainActivity).
-                eigenerAbsprung = true
-                auth.login(getApplication(), { de.frank.jarvis.MainActivity.sichtbar }) { info -> geraeteCode = info }
+                // Erst unmittelbar vor dem Öffnen gesetzt: Scheitert die Anmeldung vorher, schluckte es sonst die nächste echte Rückkehr.
+                auth.login(getApplication(), { de.frank.jarvis.MainActivity.sichtbar }, vorDemOeffnen = { eigenerAbsprung = true }) { info -> geraeteCode = info }
                 kiVerbunden = true
                 kiKonto = auth.email.orEmpty()
                 meldung = "Mit ChatGPT verbunden."
@@ -1943,6 +1943,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 geraeteCode = null
                 kiVerbindet = false
+                // Ist Jarvis jetzt sichtbar, war Frank schon zurück (oder nie weg): Das Zeichen hat ausgedient, auch nach Fehler
+                // oder Abbruch. Ist er noch auf der Anmeldeseite, bleibt es für seine Rückkehr von dort stehen.
+                if (de.frank.jarvis.MainActivity.sichtbar) eigenerAbsprung = false
             }
         }
     }

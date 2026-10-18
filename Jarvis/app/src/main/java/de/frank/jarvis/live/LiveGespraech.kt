@@ -737,16 +737,6 @@ class LiveGespraech(
         }
     }
 
-    /** Echter Ton statt (fast) Stille: Effektivwert über der Schwelle. */
-    private fun hoerbar(b: ByteArray): Boolean {
-        val n = b.size - b.size % 2
-        if (n < 2) return false
-        var summe = 0.0
-        var i = 0
-        while (i + 1 < n) { val s = (b[i].toInt() and 0xFF) or (b[i + 1].toInt() shl 8); summe += s.toDouble() * s; i += 2 }
-        return kotlin.math.sqrt(summe / (n / 2)) > HOERBAR_EFFEKTIV
-    }
-
     /** Größter Ausschlag (PCM16): Auch ein leiser Wortansatz liegt weit über [STILLE_SPITZE]. */
     private fun spitze(b: ByteArray): Int {
         var max = 0
@@ -994,10 +984,23 @@ class LiveGespraech(
             status("Telefonat · Jarvis wartet")
         } else {
             Log.i(LiveRouting.TAG, "Telefonat beendet: Gespräch geht weiter")
+            tonwegNachAnruf()
             // Das Telefonat zählt nicht als Stille: Das Stille-Ende zählt ab jetzt.
             letzteAktivitaet = System.currentTimeMillis()
             if (laeuft) status("Ich höre zu")
         }
+    }
+
+    /**
+     * Nach dem Telefonat stellt Android den Modus auf normal und gibt das Kommunikationsgerät frei. Hatte das Gespräch den
+     * Freisprechweg gesetzt (Telefonmodus, Gerätewahl), ihn genauso wiederherstellen, sonst fehlten Echounterdrückung und Routing.
+     * Der Medienweg fasst Modus und Gerät nie an, dort bleibt alles, wie es ist.
+     */
+    private fun tonwegNachAnruf() = synchronized(tonSperre) {
+        if (!laeuft || aufnahme == null || medienweg) return@synchronized
+        runCatching { if (audio.mode != AudioManager.MODE_IN_COMMUNICATION) audio.mode = AudioManager.MODE_IN_COMMUNICATION }
+            .onFailure { Log.w(LiveRouting.TAG, "Telefonmodus nach dem Telefonat nicht wiederhergestellt", it) }
+        if (routingAktiv) routen("Nach dem Telefonat")
     }
 
     /** Beendet das Gespräch nach der eingestellten Stille; GPT-Live kostet sonst im Leerlauf weiter. */
@@ -1502,6 +1505,16 @@ class LiveGespraech(
         private val offene = java.util.concurrent.atomic.AtomicInteger(0)
         /** Ein Live-Gespräch läuft: Hintergrundarbeit meldet sich dann still, damit kein Hinweiston die Stimme absenkt. */
         val aktiv: Boolean get() = offene.get() > 0
+
+        /** Echter Ton statt (fast) Stille: Effektivwert (PCM16) über der Schwelle. Auch für die Hörproben ([StimmProbe]). */
+        internal fun hoerbar(b: ByteArray): Boolean {
+            val n = b.size - b.size % 2
+            if (n < 2) return false
+            var summe = 0.0
+            var i = 0
+            while (i + 1 < n) { val s = (b[i].toInt() and 0xFF) or (b[i + 1].toInt() shl 8); summe += s.toDouble() * s; i += 2 }
+            return kotlin.math.sqrt(summe / (n / 2)) > HOERBAR_EFFEKTIV
+        }
 
         /** Echosperre bleibt so lange nach dem letzten Ton zu: Wiedergabepuffer plus Bluetooth-Verzögerung. */
         /** Größte Zahl, die OpenAI bei Realtime als max_output_tokens annimmt; darüber nur „inf“. */
