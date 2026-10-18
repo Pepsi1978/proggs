@@ -80,10 +80,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (!antwort.isSuccessful) return@use "PC: unbekannt, der Jarvis-Server antwortet mit HTTP ${antwort.code}."
                 val daten = JSONObject(antwort.body?.string().orEmpty())
                 val rechner = daten.optString("rechner").ifEmpty { "Franks PC" }
-                val vor = if (daten.isNull("zuletzt_vor_s")) -1 else daten.optInt("zuletzt_vor_s", -1)
                 val alle = daten.optJSONArray("rechner_alle")
-                if (alle != null) rechnerZustand(alle, daten.optBoolean("pc"), rechner)
-                else if (daten.optBoolean("pc")) "PC: $rechner ist an und erreichbar (letzte Meldung vor $vor Sekunden). Programmieraufträge gehen an den PC."
+                if (alle != null) return@use rechnerZustand(alle, daten.optBoolean("pc"), rechner)
+                val vor = if (daten.isNull("zuletzt_vor_s")) -1 else daten.optInt("zuletzt_vor_s", -1)
+                if (daten.optBoolean("pc")) "PC: $rechner ist an und erreichbar (letzte Meldung vor $vor Sekunden). Programmieraufträge gehen an den PC."
                 else "PC: nicht erreichbar" + (if (vor >= 0) " (letzte Meldung von $rechner vor ${zeitspanne(vor)})" else "") +
                     ". Entweder ist der PC aus, im Standby oder die PC-Brücke läuft nicht. Programmieraufträge gehen in die Cloud."
             }
@@ -97,19 +97,27 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“. Ein Rechner, der sich
      * seit dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
      */
-    private fun rechnerZustand(alle: org.json.JSONArray, pcDa: Boolean, naechster: String): String {
+    private fun rechnerZustand(alle: JSONArray, pcDa: Boolean, naechster: String): String {
         val eintraege = (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }
-        fun zeile(rang: String, art: String): String {
-            val r = eintraege.firstOrNull { it.optString("rang") == rang }
-                ?: return "$art: hat sich seit dem letzten Serverstart nicht gemeldet (aus oder die Brücke läuft nicht)."
+        val haupt = eintraege.firstOrNull { it.optString("rang") == "haupt" }
+        val ersatz = eintraege.firstOrNull { it.optString("rang") == "ersatz" }
+        fun zeile(r: JSONObject?, art: String): String {
+            if (r == null) return "$art: hat sich seit dem letzten Serverstart nicht gemeldet (aus oder die Brücke läuft nicht)."
             val name = r.optString("rechner").ifEmpty { art }
-            val vor = r.optInt("zuletzt_vor_s", -1)
-            return if (r.optBoolean("da")) "$art $name: an und erreichbar (letzte Meldung vor $vor Sekunden)."
-                else "$art $name: nicht erreichbar (letzte Meldung vor ${zeitspanne(vor)}); aus, im Standby oder die Brücke läuft nicht."
+            val vor = if (r.isNull("zuletzt_vor_s")) -1 else r.optInt("zuletzt_vor_s", -1)
+            val seit = if (vor >= 0) " (letzte Meldung vor ${zeitspanne(vor)})" else ""
+            return if (r.optBoolean("da")) "$art $name: an und erreichbar$seit."
+                else "$art $name: nicht erreichbar$seit; aus, im Standby oder die Brücke läuft nicht."
         }
-        val wohin = if (pcDa) "Programmieraufträge gehen an $naechster (der Windows-PC hat Vorrang, der Mac springt ein, wenn er aus ist)."
-            else "Programmieraufträge gehen in die Cloud."
-        return "${zeile("haupt", "Windows-PC")} ${zeile("ersatz", "Mac")} $wohin"
+        // „rechner“ ist der Rechner, den der Relay für den nächsten Auftrag wählt (Hauptrechner nur mit frischer Abfrage).
+        val wohin = when {
+            !pcDa -> "Programmieraufträge gehen in die Cloud."
+            haupt?.optBoolean("da") == true && ersatz?.optBoolean("da") == true && naechster != haupt.optString("rechner") ->
+                "Der nächste Auftrag ginge an $naechster: Der Windows-PC fragt gerade nicht ab, deshalb springt der Mac ein."
+            ersatz?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der Windows-PC hat Vorrang, ist er aus, springt der Mac ein."
+            else -> "Der nächste Auftrag ginge an $naechster."
+        }
+        return "${zeile(haupt, "Windows-PC")} ${zeile(ersatz, "Mac")} $wohin"
     }
 
     private fun zeitspanne(sekunden: Int): String = when {

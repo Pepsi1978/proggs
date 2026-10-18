@@ -167,7 +167,7 @@ class McpServer(context: Context) {
             name = "jarvis_status",
             titel = "Jarvis-Status",
             beschreibung = "Jarvis: sagt, ob Jarvis auf Franks Handy erreichbar ist, welche Apps angebunden sind, welches Datum und welche Uhrzeit dort gerade gelten " +
-                "und ob Franks PC an und für Programmieraufträge erreichbar ist (genauer: pc_status). " +
+                "und ob Franks Windows-PC und sein Mac an und für Programmieraufträge erreichbar sind (genauer: pc_status). " +
                 "Nutze es bei „Jarvis, bist du da?“ oder wenn du das heutige Datum auf dem Handy brauchst. Mit funktionen=true kommt zusätzlich die vollständige, tatsächliche " +
                 "Liste aller Werkzeuge von Jarvis (Grundlage zum Beispiel für eine Übersicht oder Infografik über Jarvis' Funktionen).",
             schema = schema("funktionen" to schalter("true = alle Werkzeuge mit Kurzbeschreibung auflisten.")),
