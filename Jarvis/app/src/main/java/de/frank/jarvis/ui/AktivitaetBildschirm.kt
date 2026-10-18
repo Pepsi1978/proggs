@@ -1,6 +1,16 @@
 package de.frank.jarvis.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import de.frank.jarvis.data.Eintrag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,6 +60,9 @@ fun AktivitaetBildschirm(vm: AppViewModel) {
         confirmButton = { androidx.compose.material3.TextButton(onClick = { leerenFragen = false; vm.protokollLeeren() }) { Text("Alle löschen", color = f.gefahr) } },
         dismissButton = { androidx.compose.material3.TextButton(onClick = { leerenFragen = false }) { Text("Abbrechen") } },
     )
+    // Angetippter Eintrag, gemerkt über seine Zeit: Die Liste zeigt nur eine Vorschau, das Vollbild den ganzen Text.
+    var offen by rememberSaveable { mutableStateOf<Long?>(null) }
+    eintraege.firstOrNull { it.zeit == offen }?.let { e -> EintragVollbild(e) { offen = null } }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -77,7 +90,7 @@ fun AktivitaetBildschirm(vm: AppViewModel) {
                     e.quelle == Quelle.CHATGPT -> f.erfolg
                     else -> f.primaer
                 }
-                Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f, toenung = farbe).padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f, toenung = farbe).antippen { offen = e.zeit }.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(8.dp).glas(f, 4.dp, 0f, farbe, rand = false))
                         Text(e.werkzeug, Modifier.weight(1f).padding(start = 8.dp), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -89,3 +102,30 @@ fun AktivitaetBildschirm(vm: AppViewModel) {
         }
     }
 }
+
+/** Ein Eintrag im Vollbild, ungekürzt und scrollbar; Zurück oder der Pfeil führt zur Liste. */
+@Composable
+private fun EintragVollbild(e: Eintrag, zurueck: () -> Unit) {
+    val f = LocalFarben.current
+    Dialog(zurueck, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten))).systemBarsPadding()) {
+            Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Rundknopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück", aktion = zurueck)
+                Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                    Text(e.werkzeug, color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(e.quelle.anzeige + " · " + zeitLang(e.zeit) + if (e.ok) "" else " · Fehler", color = if (e.ok) f.textSchwach else f.gefahr, fontSize = 13.sp)
+                }
+            }
+            SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
+                Text(
+                    e.text, color = if (e.ok) f.text else f.gefahr, fontSize = 16.sp, lineHeight = 23.sp,
+                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+                )
+            }
+        }
+    }
+}
+
+private fun zeitLang(millis: Long): String =
+    java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault())
+        .format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm:ss 'Uhr'", java.util.Locale.GERMAN))

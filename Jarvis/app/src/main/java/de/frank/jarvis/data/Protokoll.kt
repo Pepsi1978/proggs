@@ -26,6 +26,7 @@ data class Eintrag(val zeit: Long, val quelle: Quelle, val werkzeug: String, val
  */
 object Protokoll {
     private const val MAX = 200
+    private const val MAX_TEXT = 20_000
     private const val BUENDELN_MS = 300L
     private val _eintraege = MutableStateFlow<List<Eintrag>>(emptyList())
     val eintraege: StateFlow<List<Eintrag>> = _eintraege.asStateFlow()
@@ -59,7 +60,9 @@ object Protokoll {
     }
 
     fun melde(quelle: Quelle, werkzeug: String, text: String, ok: Boolean = true) {
-        val neu = Eintrag(System.currentTimeMillis(), quelle, werkzeug, text.take(600), ok)
+        // Ganzer Text für die Vollbildansicht; nur Riesenergebnisse werden begrenzt, damit 200 Einträge die Datei nicht aufblähen.
+        val gespeichert = if (text.length <= MAX_TEXT) text else text.take(MAX_TEXT) + "\n\n[Beim Aufzeichnen nach $MAX_TEXT von ${text.length} Zeichen gekürzt]"
+        val neu = Eintrag(System.currentTimeMillis(), quelle, werkzeug, gespeichert, ok)
         _eintraege.update { (listOf(neu) + it).take(MAX) }
         // Spiegel ins Logbuch, gekürzt: Das Protokoll enthält nur Kurzbeschreibungen, keine Inhalte.
         val ereignis = "${quelle.anzeige}: $werkzeug"
