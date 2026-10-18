@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.4 — Transkriptionsmodul · Stand v2
+// Modul M1.4 — Transkriptionsmodul · Stand v3
 // Quelle: Module/Android/M1.4-Transkriptionsmodul/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -36,7 +36,12 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
     private val appContext = context.applicationContext
     private val lifecycleLock = Any()
     private val bufferLock = Any()
-    private val pcmBuffer = ByteArrayOutputStream()
+    private val pcmBuffer = PcmPuffer()
+
+    /** Wie ByteArrayOutputStream, dazu ein Ausschnitt, ohne jedes Mal den ganzen Puffer zu kopieren. */
+    private class PcmPuffer : ByteArrayOutputStream() {
+        fun stueck(von: Int, bis: Int): ByteArray = buf.copyOfRange(von, bis)
+    }
     private val recording = AtomicBoolean(false)
 
     /**
@@ -207,6 +212,8 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
         recordingJob = scope.launch(Dispatchers.IO) {
             val readBuffer = ByteArray(minBufferSize)
             var achse: SprachZeitachse? = null
+            /** So viele Bytes der Aufnahme hat die Zeitachse schon gesehen. */
+            var achseStand = 0
             var vadMoeglich = sampleRate == SAMPLE_RATE
             try {
                 while (isActive && recording.get()) {
@@ -220,26 +227,32 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                     when {
                         read > 0 -> {
                             _pegel.value = messePegel(readBuffer, read)
+                            val gesamt = synchronized(bufferLock) {
+                                if (pcmBuffer.size() + read <= MAX_BUFFER_BYTES) {
+                                    pcmBuffer.write(readBuffer, 0, read)
+                                    pcmBuffer.size()
+                                } else {
+                                    logger.warning("Maximum recording buffer reached")
+                                    return@launch
+                                }
+                            }
                             if (achse == null && vadMoeglich) {
                                 val modell = vadModell
                                 if (modell != null) {
-                                    // Nie auf das Modell warten, sondern ab jetzt mitrechnen. Was schon im Puffer
-                                    // liegt, geht zuerst hinein, damit die Zeitachse genau zur WAV-Datei passt.
-                                    val bisher = synchronized(bufferLock) { pcmBuffer.toByteArray() }
-                                    if (bisher.size > MAX_NACHREICHEN_BYTES) {
+                                    // Nie auf das Modell warten, sondern ab jetzt mitrechnen; was schon im Puffer liegt,
+                                    // holt die Zeitachse unten portionsweise nach, damit sie genau zur WAV-Datei passt.
+                                    if (gesamt - read > MAX_NACHREICHEN_BYTES) {
                                         vadMoeglich = false
                                     } else {
                                         achse = try {
                                             modell.zuruecksetzen()
-                                            SprachZeitachse(modell::wahrscheinlichkeit).also { a ->
-                                                if (bisher.isNotEmpty()) a.pcm(bisher, bisher.size)
-                                            }
+                                            SprachZeitachse(modell::wahrscheinlichkeit)
                                         } catch (error: Throwable) {
                                             logger.warning("Silero VAD failed, falling back to level: ${error.message}")
                                             vadMoeglich = false
                                             null
                                         }
-                                        zeitachse = achse
+                                        achseStand = 0
                                     }
                                 } else if (vadFehlgeschlagen) {
                                     vadMoeglich = false
@@ -247,21 +260,24 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                             }
                             achse?.let { a ->
                                 try {
-                                    a.pcm(readBuffer, read)
+                                    // Je Durchlauf höchstens der neue Block und NACHHOL_BYTES Rückstand: So wartet read
+                                    // nie länger als ein paar Rahmen, und der kleine Aufnahmepuffer läuft nicht über.
+                                    var bis = minOf(gesamt, achseStand + read + NACHHOL_BYTES)
+                                    bis -= (bis - achseStand) % 2
+                                    if (bis > achseStand) {
+                                        val stueck = synchronized(bufferLock) { pcmBuffer.stueck(achseStand, bis) }
+                                        a.pcm(stueck, stueck.size)
+                                        achseStand = bis
+                                    }
+                                    // Fürs Aufnahmeende zählt die Spracherkennung erst, wenn sie die Gegenwart erreicht
+                                    // hat; bis dahin gilt der Pegel (sonst wirkte frische Sprache wie Stille).
+                                    if (zeitachse == null && achseStand >= gesamt) zeitachse = a
                                 } catch (error: Throwable) {
                                     // Nie die Aufnahme opfern: ohne Spracherkennung weiter, wie früher über den Pegel.
                                     logger.warning("Silero VAD failed, falling back to level: ${error.message}")
                                     achse = null
                                     vadMoeglich = false
                                     zeitachse = null
-                                }
-                            }
-                            synchronized(bufferLock) {
-                                if (pcmBuffer.size() + read <= MAX_BUFFER_BYTES) {
-                                    pcmBuffer.write(readBuffer, 0, read)
-                                } else {
-                                    logger.warning("Maximum recording buffer reached")
-                                    return@launch
                                 }
                             }
                         }
@@ -411,6 +427,9 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
 
         /** Höchstens so viel schon Aufgenommenes (10 s) rechnet ein spät geladenes Modell nach, sonst läuft der Puffer über. */
         private const val MAX_NACHREICHEN_BYTES = SAMPLE_RATE * 2 * 10
+
+        /** Rückstand je Durchlauf der Leseschleife: zwei Silero-Rahmen (je 512 Werte zu 2 Byte), rund 64 ms Ton. */
+        private const val NACHHOL_BYTES = 2 * SileroVad.RAHMEN * 2
         private val logger = Logger.getLogger(MicRecorder::class.java.name)
     }
 }
