@@ -5,7 +5,7 @@ Sprachaktivitätserkennung (Silero VAD) für das Aufnahmeende und die Sprachzeit
 gegen stille Whisper-Halluzinationen. Fahr- und Lüftergeräusch halten das Mikrofon nicht offen, reine
 Geräuschaufnahmen gehen gar nicht erst an Groq, angehängte Floskeln fallen, kurze echte Äußerungen bleiben.
 
-- **Stand:** v1
+- **Stand:** v2
 - **Plattform:** Android (Kotlin, ohne Compose)
 - **Angelegt:** 15.10.2026 20:02
 - **Ordner:** `Module/Android/M1.4-Transkriptionsmodul/`
@@ -109,7 +109,7 @@ Keiner. Die Filterschalter und der Schlüssel liegen in den Einstellungen der Ap
 
 | App | Stand | Pfad der Kopie |
 |---|---|---|
-| Jarvis | v1 | `Jarvis/app/src/main/java/de/frank/module/transkriptionsmodul/` (Tests: `Jarvis/app/src/test/java/de/frank/module/transkriptionsmodul/`) |
+| Jarvis | v2 | `Jarvis/app/src/main/java/de/frank/module/transkriptionsmodul/` (Tests: `Jarvis/app/src/test/java/de/frank/module/transkriptionsmodul/`) |
 
 ## Abnahme
 
@@ -135,3 +135,4 @@ AudioRecord). Die Testdaten sind TTS-Sprache mit synthetischem Geräusch, keine 
 | Version | Datum | Was | Bricht Anbindung | Commit |
 |---|---|---|---|---|
 | v1 | 15.10.2026 | aus Jarvis herausgelöst. Code verschoben; neu sind nur der Parameter `kleidiaiAbschalten`, der Anschluss `Protokoll` und der Parameter `nachbearbeitung` von `Diktat`. Testfälle Lüfter und kurze Äußerungen ergänzt. Die nie benutzte Konstante `MicRecorder.CLONING_SAMPLE_RATE` blieb draußen (`start(scope, requestedSampleRate)` nimmt andere Raten weiter an). | — | — |
+| v2 | 18.10.2026 | `MicRecorder`: Die Leseschleife wartet nicht mehr auf das Laden von Silero (beim Kaltstart lief sonst der Aufnahmepuffer über, die ersten Silben fehlten); ein spät geladenes Modell bekommt das schon Aufgenommene (bis 10 s) nachgereicht, damit die Zeitachse zur WAV passt. `release()` schließt die ONNX-Sitzung (nach dem Ende des Lese-Jobs), die nächste Aufnahme lädt sie neu. | nein | — |

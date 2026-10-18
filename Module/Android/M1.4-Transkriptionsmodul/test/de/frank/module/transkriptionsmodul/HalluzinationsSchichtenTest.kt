@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.4 — Transkriptionsmodul · Stand v1
+// Modul M1.4 — Transkriptionsmodul · Stand v2
 // Quelle: Module/Android/M1.4-Transkriptionsmodul/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen

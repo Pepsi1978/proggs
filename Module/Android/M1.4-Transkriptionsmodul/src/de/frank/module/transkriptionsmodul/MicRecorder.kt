@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.4 — Transkriptionsmodul · Stand v1
+// Modul M1.4 — Transkriptionsmodul · Stand v2
 // Quelle: Module/Android/M1.4-Transkriptionsmodul/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -56,14 +56,20 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
     private var activeSampleRate = SAMPLE_RATE
 
     /**
-     * Sprachaktivitätserkennung (Silero). Einmal geladen und dann behalten; schlägt das Laden fehl, bleibt es bei
-     * null und alles läuft wie früher über den Pegel. Vorgeladen im Hintergrund, damit die erste Aufnahme nicht wartet.
+     * Sprachaktivitätserkennung (Silero). Im Hintergrund geladen und dann behalten; schlägt das Laden fehl, läuft
+     * alles wie früher über den Pegel. Die Leseschleife wartet nie darauf: Sonst liefe beim Kaltstart der
+     * Aufnahmepuffer über, solange das Modell lädt, und die ersten Silben fehlten. Ist es erst während einer Aufnahme
+     * fertig, bekommt es das bis dahin Aufgenommene nachgereicht. [release] schließt es wieder.
      */
-    private val vad: SileroVad? by lazy {
-        runCatching { SileroVad(appContext, kleidiaiAbschalten) }
-            .onFailure { logger.warning("Silero VAD not available: ${it.message}") }
-            .getOrNull()
-    }
+    private val vadLock = Any()
+    @Volatile private var vadModell: SileroVad? = null
+    @Volatile private var vadFehlgeschlagen = false
+    private var vadLaedt = false
+    private var vadGeneration = 0
+
+    /** Der zuletzt gestartete Lese-Job; er benutzt das Modell, bis er ganz zu Ende ist. */
+    @Volatile
+    private var letzterLeseJob: Job? = null
 
     @Volatile
     private var zeitachse: SprachZeitachse? = null
@@ -79,7 +85,46 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
         private set
 
     init {
-        Thread({ vad }, "vad-laden").apply { isDaemon = true }.start()
+        vadLaden()
+    }
+
+    /** Lädt Silero im Hintergrund, falls es weder geladen ist noch gerade lädt noch schon gescheitert ist. */
+    private fun vadLaden() {
+        val generation = synchronized(vadLock) {
+            if (vadModell != null || vadFehlgeschlagen || vadLaedt) return
+            vadLaedt = true
+            vadGeneration
+        }
+        Thread({
+            val geladen = runCatching { SileroVad(appContext, kleidiaiAbschalten) }
+                .onFailure { logger.warning("Silero VAD not available: ${it.message}") }
+                .getOrNull()
+            val behalten = synchronized(vadLock) {
+                if (generation != vadGeneration) {
+                    false // Inzwischen freigegeben: Dieses Modell gehört niemandem mehr.
+                } else {
+                    vadLaedt = false
+                    if (geladen == null) vadFehlgeschlagen = true else vadModell = geladen
+                    true
+                }
+            }
+            if (!behalten) runCatching { geladen?.close() }
+        }, "vad-laden").apply { isDaemon = true }.start()
+    }
+
+    /** Gibt das Modell frei, erst wenn [leseJob] ganz zu Ende ist: Er könnte noch mitten in einer Rechnung stecken. */
+    private fun vadFreigeben(leseJob: Job?) {
+        val modell = synchronized(vadLock) {
+            vadGeneration++
+            vadLaedt = false
+            vadFehlgeschlagen = false
+            vadModell.also { vadModell = null }
+        } ?: return
+        if (leseJob == null || leseJob.isCompleted) {
+            runCatching { modell.close() }
+        } else {
+            leseJob.invokeOnCompletion { runCatching { modell.close() } }
+        }
     }
 
     /**
@@ -157,15 +202,12 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
         // Während gesprochen wird, schon die Verbindung zu Groq öffnen — beim Hochladen steht sie dann.
         // Nur für Sprachaufnahmen, nicht für die Stimm-Aufnahme in höherer Qualität.
         if (requestedSampleRate == SAMPLE_RATE) GroqNetz.vorwaermen()
+        // Silero kennt nur 16 kHz; die Stimm-Aufnahme in höherer Qualität läuft ohne.
+        if (sampleRate == SAMPLE_RATE) vadLaden()
         recordingJob = scope.launch(Dispatchers.IO) {
             val readBuffer = ByteArray(minBufferSize)
-            // Silero kennt nur 16 kHz; die Stimm-Aufnahme in höherer Qualität läuft ohne.
-            var achse = if (sampleRate == SAMPLE_RATE) {
-                vad?.let { modell -> modell.zuruecksetzen(); SprachZeitachse(modell::wahrscheinlichkeit) }
-            } else {
-                null
-            }
-            zeitachse = achse
+            var achse: SprachZeitachse? = null
+            var vadMoeglich = sampleRate == SAMPLE_RATE
             try {
                 while (isActive && recording.get()) {
                     val read = activeRecorder.read(
@@ -178,6 +220,31 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                     when {
                         read > 0 -> {
                             _pegel.value = messePegel(readBuffer, read)
+                            if (achse == null && vadMoeglich) {
+                                val modell = vadModell
+                                if (modell != null) {
+                                    // Nie auf das Modell warten, sondern ab jetzt mitrechnen. Was schon im Puffer
+                                    // liegt, geht zuerst hinein, damit die Zeitachse genau zur WAV-Datei passt.
+                                    val bisher = synchronized(bufferLock) { pcmBuffer.toByteArray() }
+                                    if (bisher.size > MAX_NACHREICHEN_BYTES) {
+                                        vadMoeglich = false
+                                    } else {
+                                        achse = try {
+                                            modell.zuruecksetzen()
+                                            SprachZeitachse(modell::wahrscheinlichkeit).also { a ->
+                                                if (bisher.isNotEmpty()) a.pcm(bisher, bisher.size)
+                                            }
+                                        } catch (error: Throwable) {
+                                            logger.warning("Silero VAD failed, falling back to level: ${error.message}")
+                                            vadMoeglich = false
+                                            null
+                                        }
+                                        zeitachse = achse
+                                    }
+                                } else if (vadFehlgeschlagen) {
+                                    vadMoeglich = false
+                                }
+                            }
                             achse?.let { a ->
                                 try {
                                     a.pcm(readBuffer, read)
@@ -185,6 +252,7 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                                     // Nie die Aufnahme opfern: ohne Spracherkennung weiter, wie früher über den Pegel.
                                     logger.warning("Silero VAD failed, falling back to level: ${error.message}")
                                     achse = null
+                                    vadMoeglich = false
                                     zeitachse = null
                                 }
                             }
@@ -221,6 +289,7 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
                 }
             }
         }
+        letzterLeseJob = recordingJob
         true
     }
 
@@ -290,6 +359,8 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
         }
         activeJob?.cancel()
         stopAndRelease(activeRecorder)
+        // Die native ONNX-Sitzung lebt sonst bis zum Prozessende weiter. Die nächste Aufnahme lädt neu.
+        vadFreigeben(letzterLeseJob)
     }
 
     private fun stopAndRelease(activeRecorder: AudioRecord?) {
@@ -337,6 +408,9 @@ class MicRecorder(context: Context, private val kleidiaiAbschalten: Boolean) {
         private const val WAV_HEADER_BYTES = 44
         private const val MAX_BUFFER_BYTES = SAMPLE_RATE * 2 * 60 * 10
         private const val STOP_JOIN_TIMEOUT_MS = 1_500L
+
+        /** Höchstens so viel schon Aufgenommenes (10 s) rechnet ein spät geladenes Modell nach, sonst läuft der Puffer über. */
+        private const val MAX_NACHREICHEN_BYTES = SAMPLE_RATE * 2 * 10
         private val logger = Logger.getLogger(MicRecorder::class.java.name)
     }
 }
