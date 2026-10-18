@@ -83,8 +83,12 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
         gesturesEnabled = schublade.isOpen && !schublade.isAnimationRunning,
         scrimColor = Color.Black.copy(alpha = if (f.dunkel) 0.55f else 0.32f),
         // Waagerechtes Wischen irgendwo im Gespräch öffnet die Leiste (nicht nur am Rand); senkrechtes Scrollen bleibt der Liste.
+        // Erst ein deutlicher Wisch zählt: mindestens 56 dp oder 8 % der Fensterbreite (auf dem Fold innen breiter), klar
+        // waagerecht. Antippen mit etwas Zittern und schräges Scrollen öffnen die Leiste nicht mehr.
         modifier = Modifier.pointerInput(schublade, wischen) {
             if (!wischen) return@pointerInput
+            val schlupf = viewConfiguration.touchSlop
+            val schwelle = maxOf(schlupf * 3f, 56.dp.toPx(), size.width * 0.08f)
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 if (schublade.isAnimationRunning) return@awaitEachGesture
@@ -101,9 +105,11 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
                     }
                     if (!change.pressed || change.isConsumed) break
                     weg += change.position - change.previousPosition
-                    if (abs(weg.y) > viewConfiguration.touchSlop && abs(weg.y) >= abs(weg.x)) break
-                    if (abs(weg.x) > viewConfiguration.touchSlop) {
-                        if ((schliessen && weg.x >= 0f) || (!schliessen && weg.x <= 0f)) break
+                    // Senkrecht oder steiler als etwa 37 Grad: das ist Scrollen, keine Leistengeste.
+                    if (abs(weg.y) > schlupf && abs(weg.y) > abs(weg.x) * 0.75f) break
+                    // Falsche Richtung früh aufgeben, damit Wischen in der Gegenrichtung frei bleibt.
+                    if (abs(weg.x) > schlupf && ((schliessen && weg.x >= 0f) || (!schliessen && weg.x <= 0f))) break
+                    if (abs(weg.x) >= schwelle && abs(weg.x) >= abs(weg.y) * 2f) {
                         if (schublade.isAnimationRunning) break
                         erkannt = true
                         change.consume()
