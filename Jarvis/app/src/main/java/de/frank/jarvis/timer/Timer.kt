@@ -134,10 +134,13 @@ object Timer {
         runCatching { app.getSystemService(NotificationManager::class.java).notify(meldungsId(id), meldung) }.onFailure { Log.w(TAG, "Meldung nicht möglich", it) }
     }
 
-    /** Schaltet das Klingeln aus: [id] = nur diesen Timer, null = alle klingelnden. */
-    fun klingelnAus(context: Context, id: Int? = null) {
+    /**
+     * Schaltet das Klingeln aus: [id] = nur diesen Timer, null = alle klingelnden. [erledigt] = Frank hat „Aus“ getippt;
+     * beim Schlummern nicht: Dann bleibt die Ansage, und der geschlummerte Timer meldet sich bei seinem Ablauf neu mit Ton und Ansage.
+     */
+    fun klingelnAus(context: Context, id: Int? = null, erledigt: Boolean = true) {
         // Ausgeschaltet heißt erledigt: ein noch wartendes „… ist abgelaufen“ (etwa nach einem Gespräch) nicht mehr sprechen.
-        de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.TIMER, id?.toString())
+        if (erledigt) de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.TIMER, id?.toString())
         _klingelt.value = if (id == null) emptyList() else _klingelt.value.filterNot { it.id == id }
         TimerKlingelDienst.abgleichen()
     }
@@ -146,7 +149,7 @@ object Timer {
     fun schlummern(context: Context, id: Int? = null) {
         val app = context.applicationContext
         val t = _klingelt.value.firstOrNull { id == null || it.id == id } ?: return
-        klingelnAus(app, t.id)
+        klingelnAus(app, t.id, erledigt = false)
         starten(app, de.frank.jarvis.data.Einstellungen.get(app).timerSchlummern * 60_000L, t.name)
     }
 
