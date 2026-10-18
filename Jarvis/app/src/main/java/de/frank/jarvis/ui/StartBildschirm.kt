@@ -683,7 +683,7 @@ fun KlingelndeTimer(modifier: Modifier = Modifier) {
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Knopf("Aus", Modifier.weight(1f), farbe = f.gefahr) { de.frank.jarvis.timer.Timer.klingelnAus(kontext, t.id) }
+                Knopf("Aus", Modifier.weight(1f), farbe = f.gefahr) { de.frank.jarvis.timer.Timer.klingelnAus(kontext, t.id, erledigt = true) }
                 Knopf("Schlummern $schlummern min", Modifier.weight(1f), haupt = false) { de.frank.jarvis.timer.Timer.schlummern(kontext, t.id) }
             }
         }

@@ -114,7 +114,16 @@ object Timer {
             if (gestartet) return
             _klingelt.value = _klingelt.value.filterNot { it.id == id }
         }
-        meldung(app, id, t, laut = true)
+        // Spricht Jarvis gerade eine Antwort (exklusiver Tonfokus, Android spielt dann keine Hinweistöne), hätte der Timer-Ton
+        // keine Chance: erst die Antwort beenden, dann klingeln. Der Timer ist wichtiger.
+        val v = de.frank.jarvis.speech.Vorleser.aktuell()
+        if (v != null && v.stand.value.quelle.startsWith("gespraech:") && v.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS)
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                // Erneut prüfen: Inzwischen kann schon die eigene Timer-Ansage laufen, die bleibt.
+                if (v.stand.value.quelle.startsWith("gespraech:")) runCatching { v.stopp() }
+                meldung(app, id, t, laut = true)
+            }
+        else meldung(app, id, t, laut = true)
     }
 
     /** Einfache Meldung. [laut] = klingelt, bis sie weggewischt wird; sonst still (etwa nach der Höchstdauer). */
@@ -135,11 +144,12 @@ object Timer {
     }
 
     /**
-     * Schaltet das Klingeln aus: [id] = nur diesen Timer, null = alle klingelnden. [erledigt] = Frank hat „Aus“ getippt;
-     * beim Schlummern nicht: Dann bleibt die Ansage, und der geschlummerte Timer meldet sich bei seinem Ablauf neu mit Ton und Ansage.
+     * Schaltet das Klingeln aus: [id] = nur diesen Timer, null = alle klingelnden. [erledigt] = Frank hat reagiert („Aus“ oder
+     * Schlummern): Dann verwirft das eine noch wartende Ansage dieses Ablaufs. Der geschlummerte Timer meldet sich bei seinem
+     * eigenen Ablauf neu mit Ton und Ansage. Ohne Franks Zutun (Höchstdauer) bleibt sie.
      */
-    fun klingelnAus(context: Context, id: Int? = null, erledigt: Boolean = true) {
-        // Ausgeschaltet heißt erledigt: ein noch wartendes „… ist abgelaufen“ (etwa nach einem Gespräch) nicht mehr sprechen.
+    fun klingelnAus(context: Context, id: Int? = null, erledigt: Boolean = false) {
+        // Erledigt: ein noch wartendes „… ist abgelaufen“ (etwa nach einem Gespräch) nicht mehr sprechen.
         if (erledigt) de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.TIMER, id?.toString())
         _klingelt.value = if (id == null) emptyList() else _klingelt.value.filterNot { it.id == id }
         TimerKlingelDienst.abgleichen()
@@ -149,7 +159,7 @@ object Timer {
     fun schlummern(context: Context, id: Int? = null) {
         val app = context.applicationContext
         val t = _klingelt.value.firstOrNull { id == null || it.id == id } ?: return
-        klingelnAus(app, t.id, erledigt = false)
+        klingelnAus(app, t.id, erledigt = true)
         starten(app, de.frank.jarvis.data.Einstellungen.get(app).timerSchlummern * 60_000L, t.name)
     }
 
@@ -237,7 +247,7 @@ class TimerEmpfaenger : BroadcastReceiver() {
         val id = intent.getIntExtra(Timer.EXTRA_ID, -1)
         when (intent.action) {
             Timer.AKTION_ABGELAUFEN -> Timer.abgelaufen(context, id)
-            Timer.AKTION_STOPPEN -> if (id < 0) Timer.klingelnAus(context) else { Timer.meldungAus(context, id); Timer.klingelnAus(context, id) }
+            Timer.AKTION_STOPPEN -> if (id < 0) Timer.klingelnAus(context, erledigt = true) else { Timer.meldungAus(context, id); Timer.klingelnAus(context, id, erledigt = true) }
             Timer.AKTION_SCHLUMMERN -> Timer.schlummern(context, id.takeIf { it >= 0 })
             Timer.AKTION_ZEIGEN -> TimerKlingelDienst.abgleichen()
         }

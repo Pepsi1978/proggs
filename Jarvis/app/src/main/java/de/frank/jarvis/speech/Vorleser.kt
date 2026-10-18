@@ -87,8 +87,8 @@ class Vorleser(
     private var zustandVorPause = VorleseZustand.SPRICHT
 
     /**
-     * Kurze Antworten holen den Tonfokus nur vorübergehend: Musik anderer Apps pausiert und läuft
-     * danach von selbst weiter. Nur lange Ablage-Texte nehmen ihn dauerhaft.
+     * Kurzes holt den Tonfokus nur vorübergehend: Musik anderer Apps pausiert und läuft danach von selbst weiter.
+     * Gesprächsantworten exklusiv (keine Hinweistöne währenddessen), lange Ablage-Texte dauerhaft.
      */
     private var fokusArt = AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
 
@@ -122,10 +122,14 @@ class Vorleser(
         // Gesprächsantworten und Ansagen: kurzer Atem und nur vorübergehender Tonfokus.
         val kurz = quelle.startsWith("gespraech:") || quelle.startsWith("abfahrt:") || quelle.startsWith("ansage:") || quelle.startsWith("agent:") || quelle == "probe"
         val pauseMs = if (kurz) KURZE_PAUSE_MS else ABSATZ_PAUSE_MS
-        // Exklusiv: Solange Jarvis kurz spricht, spielt Android keine Hinweistöne anderer Apps (etwa die Claude-App beim Start
-        // eines Programmierauftrags); die Meldungen erscheinen trotzdem, nur stumm, und das Vorlesen wird nicht mehr angehalten.
-        // Lange Ablage-Texte nicht: Sie sollen nicht minutenlang jeden Hinweiston schlucken.
-        fokusArt = if (quelle.startsWith("ablage:")) AudioManager.AUDIOFOCUS_GAIN else AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+        // Exklusiv nur bei Gesprächsantworten: Solange Jarvis antwortet, spielt Android keine Hinweistöne (etwa die Claude-App beim
+        // Start eines Programmierauftrags); die Meldungen erscheinen trotzdem, nur stumm. Längeres (Auswertung, Agent, Ablage) nicht,
+        // es soll nicht minutenlang jeden Hinweiston schlucken. Ein ablaufender Timer beendet die Antwort (Timer.abgelaufen).
+        fokusArt = when {
+            quelle.startsWith("ablage:") -> AudioManager.AUDIOFOCUS_GAIN
+            quelle.startsWith("gespraech:") -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+            else -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        }
         VorleseDienst.starten(appContext)
         IdeenLog.info(
             "Vorleser",
@@ -479,8 +483,10 @@ class Vorleser(
         if (fokusAnfrage != null) return true
         val zuhoerer = AudioManager.OnAudioFocusChangeListener { aenderung ->
             when (aenderung) {
+                // Ein kurzer Ton einer anderen App (Hinweiston, der den Fokus mit Leiserstellen will): nicht anhalten, Android stellt
+                // die Stimme dafür selbst kurz leiser. Sonst brach jeder fremde Piepton das Vorlesen ab.
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {}
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
-                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
                 -> if (_stand.value.zustand == VorleseZustand.SPRICHT ||
                     _stand.value.zustand == VorleseZustand.LAEDT
                 ) {

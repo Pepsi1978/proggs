@@ -51,9 +51,9 @@ class TimerFaehigkeit(private val context: Context) : Faehigkeit {
                     val alle = Timer.alle(context)
                     val klingelnd = Timer.klingelt.value
                     when {
-                        klingelnd.isNotEmpty() && !a.has("id") && (!a.optBoolean("alle") || alle.isEmpty()) -> { Timer.klingelnAus(context); Ergebnis("Klingeln ausgeschaltet (${klingelnd.joinToString { "„${it.name}“" }}).") }
+                        klingelnd.isNotEmpty() && !a.has("id") && (!a.optBoolean("alle") || alle.isEmpty()) -> { Timer.klingelnAus(context, erledigt = true); Ergebnis("Klingeln ausgeschaltet (${klingelnd.joinToString { "„${it.name}“" }}).") }
                         alle.isEmpty() -> Ergebnis("Es läuft kein Timer.")
-                        a.optBoolean("alle") -> { Timer.klingelnAus(context); alle.forEach { Timer.stoppen(context, it.id) }; Ergebnis("Alle ${alle.size} Timer gestoppt.") }
+                        a.optBoolean("alle") -> { Timer.klingelnAus(context, erledigt = true); alle.forEach { Timer.stoppen(context, it.id) }; Ergebnis("Alle ${alle.size} Timer gestoppt.") }
                         else -> {
                             val t = if (a.has("id") && !a.isNull("id")) alle.firstOrNull { it.id == a.optInt("id") } else alle.first()
                             if (t == null) Ergebnis("Keinen Timer mit Nummer ${a.optInt("id")} gefunden. Laufend: " + liste(), fehler = true)
