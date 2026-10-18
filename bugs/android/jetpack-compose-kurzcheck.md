@@ -34,3 +34,4 @@
 | 19 | Umsortieren wirkt wirkungslos, obwohl die Daten neu sortiert ankommen | Schluessel-Verankerung: `LaunchedEffect(sortierung){ listState.scrollToItem(0) }` | §4.2b |
 | 18 | Glanz-/Bevel-Overlay faerbt auch den Text | `drawBehind` nach `background` statt `drawWithContent` | §5.4 |
 | 20 | Helles Rechteck mit harten Kanten in einer Glas-/Milchglas-Flaeche | Kein `Modifier.shadow` auf halbtransparenter Flaeche — Schatten selbst zeichnen und die Flaeche ausstanzen | §5.5 |
+| 21 | Vollbild-Dialog unten abgeschnitten, Tastatur verdeckt Knöpfe (randlose App) | Kein `Dialog`-Fenster: Ebene in der Activity-Wurzel mit `safeDrawing`-Abstand und `BackHandler` | §8.9 |

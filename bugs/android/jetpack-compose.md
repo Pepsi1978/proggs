@@ -692,6 +692,13 @@ SearchBar-Modell (`SearchBarState` + `ExpandedFullScreenSearchBar`).
 **FIX (funktionserhaltend):** Bei fokussiertem Langtextfeld und sichtbarer `WindowInsets.ime` die festen Geschwister ausblenden und dieselbe Textfeld-Instanz den verfügbaren Bereich oberhalb der Tastatur ausfüllen lassen. Beim Schließen der IME die Aktionen wieder einblenden. Das Textfeld nicht durch eine zweite Instanz ersetzen, damit Cursor, Auswahl und interner Scrollzustand erhalten bleiben.
 **Quelle:** eigener Vorfall PerfectMoment 2026-07-20.
 
+### 8.9 Vollbild-`Dialog` ragt bei randloser App unter den Bildschirmrand und weicht der Tastatur nicht   ⭐ (Jarvis 2026-10-18, Fold 8)
+**Symptom:** Ein `Dialog(properties = DialogProperties(usePlatformDefaultWidth = false))` mit `fillMaxSize()` zeigt unten nur den obersten Knopf, der Rest liegt außerhalb des Bildschirms. Bei offener Tastatur verdeckt sie Textfeld und Senden-Knopf. Das passiert mit `decorFitsSystemWindows = false` **und** mit `true`.
+**Ursache:** Die Activity ist randlos (`enableEdgeToEdge`, targetSdk 35+). Das Dialogfenster beginnt unter der Statusleiste, wird aber in voller Displayhöhe angelegt; `WindowInsets.safeDrawing` im Dialog kommt nicht an. Auch `setSoftInputMode(ADJUST_RESIZE)` am Dialogfenster änderte nichts.
+**FIX (funktionserhaltend):** Für Vollbild-Eingaben kein eigenes Fenster nehmen, sondern eine Ebene in der Wurzel der Activity-Composition (`Box` über allem) mit `windowInsetsPadding(WindowInsets.safeDrawing)`, `BackHandler` zum Schließen und einer Fläche, die Berührungen schluckt (`pointerInput { detectTapGestures { } }`). Die Ebene verkleinert sich mit der Tastatur wie der Rest der App. Kopf und Fuß fest, Inhalt dazwischen `weight(1f).verticalScroll(...)`.
+**Prüfung:** Bildschirmfoto mit `adb exec-out screencap -d <display-id>` (beim Fold zwei Displays, `dumpsys SurfaceFlinger --display-id`), einmal ohne und einmal mit Tastatur.
+**Quelle:** eigener Vorfall Jarvis 1.8.181/1.8.182 → Fix 1.8.183.
+
 ---
 
 ## 9. Animation
