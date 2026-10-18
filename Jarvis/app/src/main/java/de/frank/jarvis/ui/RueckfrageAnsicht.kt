@@ -61,8 +61,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import de.frank.jarvis.faehigkeit.RueckfrageStand
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
@@ -181,7 +181,7 @@ fun RueckfrageKarte(vm: AppViewModel, n: Nachricht) {
 }
 
 /**
- * Hält das Vollbild der Rückfragen: öffnet die älteste offene Frage des Gesprächs von selbst (beim Eintreffen und beim Öffnen
+ * Steuert das Vollbild der Rückfragen ([RueckfrageEbene]): öffnet die älteste offene Frage des Gesprächs von selbst (beim Eintreffen und beim Öffnen
  * des Gesprächs) und gleicht offene Rückfragen alle 20 Sekunden mit dem Jarvis-Server ab, solange eine darauf wartet.
  */
 @Composable
@@ -201,20 +201,21 @@ fun RueckfrageFenster(vm: AppViewModel) {
             if (wartet) vm.rueckfragenAbgleichen()
         }
     }
+}
+
+/**
+ * Das Vollbild als Ebene über der ganzen App (in [JarvisApp]), kein eigenes Dialogfenster: Ein Dialogfenster legte Android
+ * bei randloser App unter der Statusleiste in voller Bildschirmhöhe an (unten fehlte ein Stück, „In der Claude-App
+ * beantworten“ war unsichtbar) und verkleinerte es nicht für die Tastatur (Tests 5 und 7 am 18.10.2026, Fold 8). Hier gelten
+ * dieselben Abstände für Statusleiste, Navigationsleiste und Tastatur wie im übrigen Jarvis.
+ */
+@Composable
+fun RueckfrageEbene(vm: AppViewModel) {
     val id = vm.rueckfrageDialog ?: return
     val nachricht = vm.gespraech.lastOrNull { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == id } ?: return
     val r = remember(nachricht.kontext) { lies(nachricht.kontext) } ?: return
-    Dialog(
-        onDismissRequest = { vm.rueckfrageSchliessen() },
-        // decorFitsSystemWindows bleibt an: Ohne passte Android das Fenster nicht an die Systemleisten an, es ragte unten über den
-        // Bildschirm hinaus, und „In der Claude-App beantworten“ lag unsichtbar unter dem Rand (Test 5 am 18.10.2026, Fold 8).
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
-    ) {
-        // Mit Tastatur schrumpft das Fenster, statt dass sie Textfeld und Senden-Knopf verdeckt.
-        val fenster = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
-        androidx.compose.runtime.SideEffect { fenster?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE) }
-        Vollbild(vm, r)
-    }
+    androidx.activity.compose.BackHandler { vm.rueckfrageSchliessen() }
+    Vollbild(vm, r)
 }
 
 @Composable
@@ -272,7 +273,10 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
     }
 
     Box(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten))).windowInsetsPadding(WindowInsets.safeDrawing),
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
+            // Berührungen neben den Bedienelementen gehen nicht an den Chat darunter.
+            .pointerInput(Unit) { detectTapGestures { } }
+            .windowInsetsPadding(WindowInsets.safeDrawing),
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(Modifier.fillMaxSize().widthIn(max = 720.dp)) {

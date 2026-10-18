@@ -144,6 +144,8 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             }
             }
             }
+            // Rückfrage einer Programmier-Sitzung im Vollbild, über allem außer der kurzen Meldung.
+            if (!vm.gesperrt) RueckfrageEbene(vm)
             Meldung(vm, Modifier.align(Alignment.TopCenter).statusBarsPadding())
         }
     }
