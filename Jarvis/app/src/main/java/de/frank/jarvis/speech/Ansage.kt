@@ -29,7 +29,7 @@ object Ansage {
     private var ausgang = 0
     private var zuletztGesetzt = 0
 
-    /** [art] wird Teil der Quelle (z. B. „abfahrt“); [lautstaerke] in Prozent der Medienlautstärke. */
+    /** [art] wird Teil der Quelle (z. B. „abfahrt“); [lautstaerke] in Prozent der Medienlautstärke, 0 = so laut, wie das Handy steht. */
     fun sprich(context: Context, art: String, titel: String, text: String, lautstaerke: Int, wahl: StimmWahl? = null) {
         val app = context.applicationContext
         CoroutineScope(Dispatchers.Main).launch {
@@ -37,14 +37,15 @@ object Ansage {
             runCatching { wach.acquire(120_000L) }
             val ton = app.getSystemService(AudioManager::class.java)
             val hoechste = ton.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val eigen = lautstaerke > 0
             val laut = (hoechste * lautstaerke / 100.0).roundToInt().coerceIn(1, hoechste)
-            synchronized(sperre) {
+            if (eigen) synchronized(sperre) {
                 if (aktiv++ == 0) ausgang = runCatching { ton.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrDefault(laut)
                 zuletztGesetzt = laut
             }
             try {
                 // Die Meldung hat ihre eigene Lautstärke, unabhängig davon, wie leise das Handy gerade steht.
-                runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
+                if (eigen) runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
                 // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
                 val quelle = "$art:" + System.currentTimeMillis()
                 val vorleser = Vorleser.hole(app, SecureSettings(app))
@@ -54,7 +55,7 @@ object Ansage {
                 Log.w(TAG, "Vorlesen nicht möglich", f)
             } finally {
                 // Erst nach der letzten aktiven Ansage zurück auf den Stand von vorher, außer Frank hat inzwischen selbst nachgeregelt.
-                val zurueck = synchronized(sperre) { if (--aktiv == 0) ausgang to zuletztGesetzt else null }
+                val zurueck = if (!eigen) null else synchronized(sperre) { if (--aktiv == 0) ausgang to zuletztGesetzt else null }
                 zurueck?.let { (vorher, gesetzt) ->
                     runCatching { if (ton.getStreamVolume(AudioManager.STREAM_MUSIC) == gesetzt) ton.setStreamVolume(AudioManager.STREAM_MUSIC, vorher, 0) }
                 }
@@ -68,8 +69,8 @@ object Ansage {
 
     /** Ansage anderer Apps mit den eigenen Einstellungen (Stimme, Tempo, Lautstärke). */
     fun ansage(context: Context, titel: String, text: String) {
-        val e = Einstellungen.get(context)
-        sprich(context, "ansage", titel, text, e.ansageLautstaerke, wahlFuerAnsagen(e))
+        val p = de.frank.jarvis.meldung.Meldungen.profil(context, de.frank.jarvis.meldung.Meldungsarten.ANSAGE)
+        sprich(context, "ansage", titel, text, p.lautstaerke, p.stimmWahl)
     }
 }
 
@@ -84,6 +85,7 @@ class AnsageEmpfaenger : BroadcastReceiver() {
         val titel = intent.getStringExtra(EXTRA_TITEL)?.take(80) ?: "Jarvis"
         Logbuch.sprache("Ansage von $titel", text.take(120))
         if (!Einstellungen.get(context).ansageVorlesen) return
+        if (de.frank.jarvis.meldung.Meldungen.inRuhe(context, de.frank.jarvis.meldung.Meldungsarten.ANSAGE)) return
         Ansage.ansage(context, titel, text)
     }
 

@@ -92,11 +92,15 @@ object Stoppuhr {
         geladen = true
     }
 
+    /** Nach dem Schalter unter Einstellungen → Benachrichtigungen: Meldung zeigen oder entfernen. */
+    fun meldungErneuern(context: Context) = meldung(context.applicationContext)
+
     /** Läuft sie, steht eine stille Meldung mit mitlaufender Zeit da; angehalten oder zurückgesetzt verschwindet sie. */
     private fun meldung(app: Context) {
         val nm = app.getSystemService(NotificationManager::class.java)
         val s = _stand.value
-        if (!s.laeuft) { runCatching { nm.cancel(MELDUNG_ID) }; return }
+        // Angehalten, oder unter Einstellungen → Benachrichtigungen abgeschaltet: keine Meldung.
+        if (!s.laeuft || !de.frank.jarvis.meldung.Meldungen.an(app, de.frank.jarvis.meldung.Meldungsarten.STOPPUHR)) { runCatching { nm.cancel(MELDUNG_ID) }; return }
         if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(
             NotificationChannel(KANAL, "Stoppuhr", NotificationManager.IMPORTANCE_LOW).apply { description = "Zeigt die laufende Stoppuhr."; setShowBadge(false) },
         )

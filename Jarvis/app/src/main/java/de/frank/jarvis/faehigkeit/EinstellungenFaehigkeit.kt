@@ -32,7 +32,7 @@ class EinstellungenFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "einstellungen",
             titel = "Jarvis-Einstellungen",
-            beschreibung = "Jarvis: beschreibt, liest und ändert die Einstellungen der Jarvis-App (Vorlesen, Update-Ansagen, Spracheingabe, Hey Jarvis, " +
+            beschreibung = "Jarvis: beschreibt, liest und ändert die Einstellungen der Jarvis-App (Benachrichtigungen je Meldung mit Ton, Wecker, Vorlesen, Stimme und Lautstärke, Ruhezeit, Vorlesen, Update-Ansagen, Spracheingabe, Hey Jarvis, " +
                 "Wetter-Ort, Losfahr-Meldung, Tagesauswertung, Timer, Modell, Darstellung, System). aktion lesen ohne bereich = alle Bereiche mit ihren Schaltern, Stand und möglichen Werten; " +
                 "mit bereich nur diesen. aktion aendern setzt einen Schalter: kennung aus der Liste, wert wie dort angegeben (an/aus, Zahl oder eine der Auswahlen). " +
                 "Mehrere Änderungen auf einmal über aenderungen. Beispiele: „Schalte die Update-Ansagen aus“ → aendern, kennung ansage_vorlesen, wert aus. " +
@@ -178,6 +178,32 @@ class EinstellungsKatalog(context: Context) {
         NEBENHER.launch { runCatching { Register.alle(app).filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() } }
     }
 
+    /** Je Meldungsart die Schalter, die sie kann; Felder mit alter Kennung (ansage_…, abfahrt_…, ergebnisse_vorlesen) stehen schon einzeln da. */
+    private fun meldungsEintraege(): List<Eintrag> = de.frank.jarvis.meldung.Meldungsarten.alle.flatMap { art ->
+        val p = de.frank.jarvis.meldung.MeldungsProfil(e, art)
+        val b = "Benachrichtigungen: ${art.titel}"
+        fun neu(feld: String) = feld !in art.alt
+        buildList {
+            if (art.schaltbar && neu("an")) add(schalter(art.schluessel("an"), b, "${art.titel} anzeigen", art.wozu, { p.an }) {
+                p.an = it
+                if (art == de.frank.jarvis.meldung.Meldungsarten.STOPPUHR) de.frank.jarvis.timer.Stoppuhr.meldungErneuern(app)
+            })
+            if (art.minimierbar) add(schalter(art.schluessel("minimiert"), b, "${art.titel} minimiert", "Klein bei den stillen Meldungen, ohne Symbol in der Statusleiste.", { p.minimiert }) {
+                p.minimiert = it
+                if (art == de.frank.jarvis.meldung.Meldungsarten.BEREITSCHAFT) de.frank.jarvis.dienst.JarvisDienst.hinweisErneuern(app)
+                else de.frank.jarvis.weckwort.WeckwortDienst.hinweisErneuern(app)
+            })
+            if (art.ton) add(schalter(art.schluessel("ton"), b, "${art.titel} mit Ton", "Aus = die Meldung kommt lautlos.", { p.ton }) { p.ton = it })
+            if (art.wecker) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Klingelt mit dem Weckton, auch bei „Nicht stören“, bis die Meldung angetippt oder weggewischt wird.", { p.wecker }) { p.wecker = it })
+            if (art.vorlesen && neu("vorlesen")) add(schalter(art.schluessel("vorlesen"), b, "${art.titel} vorlesen", "Liest die Meldung zusätzlich vor; ein Live-Gespräch wartet sie ab.", { p.vorlesen }) { p.vorlesen = it })
+            if ((art.vorlesen || art.sprichtImmer) && neu("stimme")) add(auswahl(art.schluessel("stimme"), b, "Stimme für ${art.titel}", "Eigene Vorlese-Stimme nur für diese Meldung.",
+                { listOf("" to "Wie Jarvis") + alleStimmen() }, { p.stimme }) { p.stimme = it })
+            if ((art.vorlesen || art.sprichtImmer) && neu("tempo")) add(auswahl(art.schluessel("tempo"), b, "Tempo für ${art.titel}", "Sprechtempo nur für diese Meldung.",
+                { listOf("0" to "Wie Jarvis") + tempi }, { if (p.tempo <= 0f) "0" else tempoText(p.tempo) }) { p.tempo = it.toFloat() })
+            if ((art.vorlesen || art.sprichtImmer) && neu("lautstaerke")) add(zahl(art.schluessel("lautstaerke"), b, "Lautstärke für ${art.titel}", "Lautstärke beim Vorlesen; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { p.lautstaerke }) { p.lautstaerke = it })
+        }
+    }
+
     val eintraege: List<Eintrag> by lazy {
         listOf(
             // ---- Vorlesen ----
@@ -189,15 +215,15 @@ class EinstellungsKatalog(context: Context) {
             schalter("immer_deutsch", "Vorlesen", "Immer deutsch aussprechen", "Englisch aussehende Wörter trotzdem deutsch aussprechen.", { s.immerDeutschVorlesen }) { s.immerDeutschVorlesen = it },
             schalter("antworten_vorlesen", "Vorlesen", "Antworten auf Gesprochenes vorlesen", "Liest die Antwort vor, wenn die Frage gesprochen wurde.", { e.antwortenVorlesen }) { e.antwortenVorlesen = it },
             schalter("diktat_antwort_vorlesen", "Vorlesen", "Antwort nach Diktat vorlesen", "Liest die erste Antwort vor, wenn die Frage mit dem Mikrofon in der Eingabeblase eingesprochen und dann mit dem Pfeil gesendet wurde.", { e.diktatAntwortVorlesen }) { e.diktatAntwortVorlesen = it },
-            schalter("ergebnisse_vorlesen", "Vorlesen", "Fertige Agenten-Ergebnisse vorlesen", "Liest eine kurze, vorlesetaugliche Zusammenfassung des Agenten-Ergebnisses von selbst vor, sobald er fertig ist; der ganze Bericht bleibt in der Ablage.", { e.ergebnisseVorlesen }) { e.ergebnisseVorlesen = it },
+            schalter("ergebnisse_vorlesen", "Benachrichtigungen: Agent fertig", "Fertige Agenten-Ergebnisse vorlesen", "Liest eine kurze, vorlesetaugliche Zusammenfassung des Agenten-Ergebnisses von selbst vor, sobald er fertig ist; der ganze Bericht bleibt in der Ablage.", { e.ergebnisseVorlesen }) { e.ergebnisseVorlesen = it },
 
             // ---- Update-Ansagen ----
-            schalter("ansage_vorlesen", "Update-Ansagen", "Update-Ansagen vorlesen", "Sagt an, wenn in UpdateStation ein neues Update bereitliegt. Aus = nur die stille Benachrichtigung.", { e.ansageVorlesen }) { e.ansageVorlesen = it },
-            auswahl("ansage_stimme", "Update-Ansagen", "Stimme der Ansagen", "Eigene Stimme nur für die Update-Ansagen.",
+            schalter("ansage_vorlesen", "Benachrichtigungen: Update-Ansagen", "Update-Ansagen vorlesen", "Sagt an, wenn in UpdateStation ein neues Update bereitliegt. Aus = nur die stille Benachrichtigung.", { e.ansageVorlesen }) { e.ansageVorlesen = it },
+            auswahl("ansage_stimme", "Benachrichtigungen: Update-Ansagen", "Stimme der Ansagen", "Eigene Stimme nur für die Update-Ansagen.",
                 { listOf("" to "Wie Jarvis") + alleStimmen() }, { e.ansageStimme }) { e.ansageStimme = it },
-            auswahl("ansage_tempo", "Update-Ansagen", "Tempo der Ansagen", "Sprechtempo nur für die Update-Ansagen.",
+            auswahl("ansage_tempo", "Benachrichtigungen: Update-Ansagen", "Tempo der Ansagen", "Sprechtempo nur für die Update-Ansagen.",
                 { listOf("0" to "Wie Jarvis") + tempi }, { if (e.ansageTempo <= 0f) "0" else tempoText(e.ansageTempo) }) { e.ansageTempo = it.toFloat() },
-            zahl("ansage_lautstaerke", "Update-Ansagen", "Lautstärke der Ansagen", "Lautstärke nur für die Ansage, danach gilt wieder die alte.", 10, 100, "Prozent", { e.ansageLautstaerke }) { e.ansageLautstaerke = it },
+            zahl("ansage_lautstaerke", "Benachrichtigungen: Update-Ansagen", "Lautstärke der Ansagen", "Lautstärke nur für die Ansage, danach gilt wieder die alte; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { e.ansageLautstaerke }) { e.ansageLautstaerke = it },
 
             // ---- Spracheingabe ----
             schalter("filter_stille", "Spracheingabe", "Filter: Stille vorab", "Wirft Aufnahmen ohne Sprache weg, bevor sie umgeschrieben werden.", { s.filterStilleVorabAn }) { s.filterStilleVorabAn = it },
@@ -239,10 +265,10 @@ class EinstellungsKatalog(context: Context) {
                 "ein Ortsname, z. B. Potsdam", { e.wetterOrt }) { setzeWetterOrt(it) },
 
             // ---- Losfahr-Meldung ----
-            schalter("abfahrt_an", "Losfahr-Meldung", "Losfahr-Meldung", "Meldet an Arbeitstagen rechtzeitig vor der nötigen Abfahrt.", { e.abfahrtAn }) { e.abfahrtAn = it; abfahrtNeu() },
-            schalter("abfahrt_vorlesen", "Losfahr-Meldung", "Losfahr-Meldung vorlesen", "Liest die Meldung zusätzlich vor.", { e.abfahrtVorlesen }) { e.abfahrtVorlesen = it },
-            zahl("abfahrt_lautstaerke", "Losfahr-Meldung", "Lautstärke der Losfahr-Meldung", "Lautstärke der vorgelesenen Meldung.", 10, 100, "Prozent", { e.abfahrtLautstaerke }) { e.abfahrtLautstaerke = it },
-            zahl("abfahrt_vorlauf", "Losfahr-Meldung", "Vorlauf", "So viele Minuten vor der nötigen Abfahrt kommt die Meldung.", 0, 60, "Minuten", { e.abfahrtVorlauf }) { e.abfahrtVorlauf = it; abfahrtNeu() },
+            schalter("abfahrt_an", "Benachrichtigungen: Losfahren", "Losfahr-Meldung", "Meldet an Arbeitstagen rechtzeitig vor der nötigen Abfahrt.", { e.abfahrtAn }) { e.abfahrtAn = it; abfahrtNeu() },
+            schalter("abfahrt_vorlesen", "Benachrichtigungen: Losfahren", "Losfahr-Meldung vorlesen", "Liest die Meldung zusätzlich vor.", { e.abfahrtVorlesen }) { e.abfahrtVorlesen = it },
+            zahl("abfahrt_lautstaerke", "Benachrichtigungen: Losfahren", "Lautstärke der Losfahr-Meldung", "Lautstärke der vorgelesenen Meldung; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { e.abfahrtLautstaerke }) { e.abfahrtLautstaerke = it },
+            zahl("abfahrt_vorlauf", "Benachrichtigungen: Losfahren", "Vorlauf", "So viele Minuten vor der nötigen Abfahrt kommt die Meldung.", 0, 60, "Minuten", { e.abfahrtVorlauf }) { e.abfahrtVorlauf = it; abfahrtNeu() },
             uhrzeit("ankunft_nacht", "Losfahr-Meldung", "Ankunft vor dem Nachtdienst", "Wann Frank vor dem Nachtdienst auf Arbeit sein will; danach richtet sich die Losfahr-Meldung.", { e.ankunftNacht }) { e.ankunftNacht = it; abfahrtNeu() },
             uhrzeit("ankunft_tag", "Losfahr-Meldung", "Ankunft vor dem Tagdienst", "Wann Frank vor dem Tagdienst auf Arbeit sein will; danach richtet sich die Losfahr-Meldung.", { e.ankunftTag }) { e.ankunftTag = it; abfahrtNeu() },
 
@@ -254,11 +280,18 @@ class EinstellungsKatalog(context: Context) {
             schalter("auswertung_lernen", "Tagesauswertung", "Aus dem Tagebuch lernen", "Verdichtet alte Monate und notiert neue Tatsachen über Frank.", { e.auswertungLernen }) { e.auswertungLernen = it },
 
             // ---- Timer ----
-            schalter("timer_wecker", "Timer", "Timer klingelt wie ein Wecker", "An = klingelt bis zum Ausschalten, aus = kurze Meldung mit Ton.", { e.timerWecker }) { e.timerWecker = it },
-            schalter("timer_vibration", "Timer", "Vibration", "Vibriert beim Klingeln.", { e.timerVibration }) { e.timerVibration = it },
-            zahl("timer_lautstaerke", "Timer", "Lautstärke des Wecktons", "In Prozent der Wecker-Lautstärke des Handys.", 10, 100, "Prozent", { e.timerLautstaerke }) { e.timerLautstaerke = it },
-            zahl("timer_schlummern", "Timer", "Schlummern", "Minuten für „Schlummern“.", 1, 30, "Minuten", { e.timerSchlummern }) { e.timerSchlummern = it },
-            zahl("timer_klingel_max", "Timer", "Höchstens klingeln", "Danach bleibt eine stille Meldung; 0 = bis zum Ausschalten.", 0, 60, "Minuten", { e.timerKlingelMax }) { e.timerKlingelMax = it },
+            schalter("timer_wecker", "Benachrichtigungen: Timer", "Timer klingelt wie ein Wecker", "An = klingelt bis zum Ausschalten, aus = kurze Meldung mit Ton.", { e.timerWecker }) { e.timerWecker = it },
+            schalter("timer_vibration", "Benachrichtigungen: Timer", "Vibration", "Vibriert beim Klingeln.", { e.timerVibration }) { e.timerVibration = it },
+            zahl("timer_lautstaerke", "Benachrichtigungen: Timer", "Lautstärke des Wecktons", "In Prozent der Wecker-Lautstärke des Handys.", 10, 100, "Prozent", { e.timerLautstaerke }) { e.timerLautstaerke = it },
+            zahl("timer_schlummern", "Benachrichtigungen: Timer", "Schlummern", "Minuten für „Schlummern“.", 1, 30, "Minuten", { e.timerSchlummern }) { e.timerSchlummern = it },
+            zahl("timer_klingel_max", "Benachrichtigungen: Timer", "Höchstens klingeln", "Danach bleibt eine stille Meldung; 0 = bis zum Ausschalten.", 0, 60, "Minuten", { e.timerKlingelMax }) { e.timerKlingelMax = it },
+
+            // ---- Benachrichtigungen: je Meldungsart aus derselben Liste wie der Bildschirm; Felder mit alten Kennungen stehen oben ----
+            *meldungsEintraege().toTypedArray(),
+            schalter("meldung_ruhe_an", "Benachrichtigungen", "Ruhezeit", "In der Ruhezeit kommen Agenten, Ablage, Programmieraufträge und Update-Ansagen lautlos, ohne Vorlesen und Wecker.", { e.meldungRuheAn }) { e.meldungRuheAn = it },
+            uhrzeit("meldung_ruhe_von", "Benachrichtigungen", "Ruhezeit beginnt", "Ab dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheVon }) { e.meldungRuheVon = it },
+            uhrzeit("meldung_ruhe_bis", "Benachrichtigungen", "Ruhezeit endet", "Bis zu dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheBis }) { e.meldungRuheBis = it },
+            schalter("meldung_inhalt_verbergen", "Benachrichtigungen", "Inhalt auf dem Sperrbildschirm verbergen", "Auf dem Sperrbildschirm steht nur „Jarvis“, nicht der Text der Meldung.", { e.meldungInhaltVerbergen }) { e.meldungInhaltVerbergen = it },
 
             // ---- Modell ----
             auswahl("modell", "Modell", "Modell", "Das Sprachmodell, mit dem Jarvis denkt.",

@@ -349,6 +349,8 @@ class LiveGespraech(
 
     /** Kleine Mitteilung von Jarvis, dass ab jetzt der bezahlte Gemini-Schlüssel läuft; im Gespräch ohne Ton. */
     private fun schluesselWechselMelden(text: String, anlass: String) = runCatching {
+        // Unter Einstellungen → Benachrichtigungen abschaltbar.
+        if (!de.frank.jarvis.meldung.Meldungen.an(app, de.frank.jarvis.meldung.Meldungsarten.GEMINI)) return@runCatching
         de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
         app.getSystemService(android.app.NotificationManager::class.java).notify(4320,
             androidx.core.app.NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(de.frank.jarvis.R.drawable.ic_stat_jarvis)

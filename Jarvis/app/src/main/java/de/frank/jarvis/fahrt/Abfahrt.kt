@@ -283,13 +283,14 @@ object Abfahrt {
             context.applicationContext, "Probe: In 10 Minuten losfahren",
             "Fahre um ${abfahrt.format(UHR)} Uhr los, damit du pünktlich auf Arbeit bist. So klingt die Losfahr-Meldung.",
             "Frank, das ist eine Probe. Fahre in 10 Minuten los, um ${gesprochen(abfahrt)}, damit du pünktlich auf Arbeit bist.",
+            probe = true,
         )
     }
 
     /** Uhrzeit so, wie eine Stimme sie natürlich spricht: „16 Uhr 10“, „17 Uhr“. */
     private fun gesprochen(t: ZonedDateTime): String = if (t.minute == 0) "${t.hour} Uhr" else "${t.hour} Uhr ${t.minute}"
 
-    private fun sende(context: Context, titel: String, text: String, sprechtext: String, navigation: Boolean = false, tag: LocalDate? = null) {
+    private fun sende(context: Context, titel: String, text: String, sprechtext: String, navigation: Boolean = false, tag: LocalDate? = null, probe: Boolean = false) {
         val e = Einstellungen.get(context)
         val meldungen = context.getSystemService(NotificationManager::class.java)
         // Wichtigkeit hoch von Anfang an: Sie lässt sich später nicht mehr anheben.
@@ -303,8 +304,8 @@ object Abfahrt {
             bauer.addAction(R.drawable.ic_stat_jarvis, "Navigation starten", PendingIntent.getActivity(context, 81, ziel, unveraenderlich))
             bauer.addAction(R.drawable.ic_stat_jarvis, "Heute still", PendingIntent.getBroadcast(context, 82, Intent(context, AbfahrtEmpfaenger::class.java).setAction(AKTION_STILL).apply { tag?.let { putExtra(EXTRA_TAG, it.toString()) } }, unveraenderlich))
         }
-        runCatching { meldungen.notify(HINWEIS_ID, bauer.build()) }.onFailure { Log.w(TAG, "Benachrichtigung nicht möglich", it) }
-        if (e.abfahrtVorlesen) Ansage.sprich(context, "abfahrt", "Losfahren", sprechtext, e.abfahrtLautstaerke)
+        // Ton, Wecker, Vorlesen, Stimme und Lautstärke wie unter Einstellungen → Benachrichtigungen → Losfahren.
+        de.frank.jarvis.meldung.Meldungen.zeige(context, de.frank.jarvis.meldung.Meldungsarten.ABFAHRT, HINWEIS_ID, bauer, "Losfahren", sprechtext, probe = probe)
     }
 
     /** Ein Satz zum Stand, für die Einstellungen und für die Werkzeuge. */

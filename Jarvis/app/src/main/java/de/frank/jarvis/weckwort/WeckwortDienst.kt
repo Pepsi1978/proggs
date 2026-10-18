@@ -27,6 +27,8 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
+import de.frank.jarvis.meldung.Meldungen
+import de.frank.jarvis.meldung.Meldungsarten
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
@@ -96,7 +98,7 @@ class WeckwortDienst : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (gestartet) {
-            if (intent?.action == AKTION_NEU_LADEN) bereich.launch { neuLaden() }
+            if (intent?.action == AKTION_NEU_LADEN) { hinweisErneuern(this); bereich.launch { neuLaden() } }
             return START_STICKY
         }
         val e = Einstellungen.get(this)
@@ -107,6 +109,7 @@ class WeckwortDienst : Service() {
         try {
             val typ = if (Build.VERSION.SDK_INT >= 30) ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0
             ServiceCompat.startForeground(this, HINWEIS_ID, hinweis(), typ)
+            laeuft = true
         } catch (fehler: Exception) {
             // Aus dem Hintergrund (etwa nach einem Neustart durch Android) verweigert: über die App neu starten.
             Log.w(TAG, "Mikrofon-Dienst aus dem Hintergrund nicht erlaubt", fehler)
@@ -524,6 +527,9 @@ class WeckwortDienst : Service() {
     /** @param vollbild false für den Wächter: Die Meldung soll die womöglich schon startende App nicht erneut öffnen. */
     private fun zumAntippen(absicht: Intent, vollbild: Boolean = true) {
         Weckwort.mikrofonFreigeben()
+        // Unter Einstellungen → Benachrichtigungen abgeschaltet: kein Ruf zum Antippen.
+        val profil = Meldungen.profil(this, Meldungsarten.RUF)
+        if (!profil.an) return
         val tippen = PendingIntent.getActivity(this, 31, absicht, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val darfDirekt = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this)
         val text = if (darfDirekt) "Tippen, um mit Jarvis zu sprechen."
@@ -538,6 +544,7 @@ class WeckwortDienst : Service() {
             .apply { if (vollbild) setFullScreenIntent(tippen, true) }
             .setAutoCancel(true)
             .setTimeoutAfter(60_000)
+            .setSilent(!profil.ton)
             .build()
         val nm = getSystemService(NotificationManager::class.java)
         runCatching { nm.notify(RUF_ID, meldung) }
@@ -545,21 +552,10 @@ class WeckwortDienst : Service() {
         Weckwort.rufMeldungGezeigt { runCatching { nm.cancel(RUF_ID) } }
     }
 
-    private fun hinweis(): Notification {
-        val oeffnen = PendingIntent.getActivity(
-            this, 30, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE,
-        )
-        return NotificationCompat.Builder(this, KANAL)
-            .setSmallIcon(R.drawable.ic_stat_jarvis)
-            .setContentTitle("Jarvis hört auf „Hey Jarvis“")
-            .setContentText("Abschalten unter Einstellungen → Hey Jarvis")
-            .setOngoing(true)
-            .setSilent(true)
-            .setContentIntent(oeffnen)
-            .build()
-    }
+    private fun hinweis(): Notification = baueHinweis(this)
 
     override fun onDestroy() {
+        laeuft = false
         anhaltenSofort()
         bereich.cancel()
         // Modelle erst freigeben, wenn der letzte Durchgang zu Ende ist; darauf nicht auf dem Hauptfaden warten.
@@ -590,6 +586,36 @@ class WeckwortDienst : Service() {
         private const val TAG = "Weckwort"
         private const val KANAL = "jarvis_weckwort"
         private const val KANAL_RUF = "jarvis_weckwort_ruf"
+        const val KANAL_MIN = "jarvis_weckwort_min"
+        /** Läuft der Dienst im Vordergrund (für [hinweisErneuern]). */
+        @Volatile private var laeuft = false
+
+        /** Mit dem gewählten Weckwort im Text; minimiert auf eigenem Kanal mit kleinster Wichtigkeit. */
+        private fun baueHinweis(context: Context): Notification {
+            val e = Einstellungen.get(context)
+            val wort = if (e.weckwortArt == "phrase") e.weckwortPhrase else "Hey Jarvis"
+            val minimiert = Meldungen.profil(context, Meldungsarten.WECKWORT_HOERT).minimiert
+            val oeffnen = PendingIntent.getActivity(
+                context, 30, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE,
+            )
+            return NotificationCompat.Builder(context, if (minimiert) KANAL_MIN else KANAL)
+                .setSmallIcon(R.drawable.ic_stat_jarvis)
+                .setContentTitle("Jarvis hört auf „$wort“")
+                .setContentText("Einstellen unter Einstellungen → Benachrichtigungen")
+                .setOngoing(true)
+                .setSilent(true)
+                .setPriority(if (minimiert) NotificationCompat.PRIORITY_MIN else NotificationCompat.PRIORITY_LOW)
+                .setContentIntent(oeffnen)
+                .build()
+        }
+
+        /** Nach „Minimiert“ oder neuem Weckwort: die laufende Meldung sofort erneuern. */
+        fun hinweisErneuern(context: Context) {
+            if (!laeuft) return
+            val app = context.applicationContext
+            kanaeleAnlegen(app)
+            runCatching { app.getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, baueHinweis(app)) }
+        }
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
@@ -665,6 +691,12 @@ class WeckwortDienst : Service() {
                     description = "Meldet „Hey Jarvis“, wenn Jarvis nicht von selbst nach vorn kommen darf."
                 },
             )
+            nm.createNotificationChannel(
+                NotificationChannel(KANAL_MIN, "Hey Jarvis (minimiert)", NotificationManager.IMPORTANCE_MIN).apply {
+                    description = "Dieselbe Anzeige, klein unten bei den stillen Meldungen und ohne Symbol in der Statusleiste."
+                    setShowBadge(false)
+                },
+            )
         }
 
         /** Nur aufrufen, während Jarvis sichtbar ist: Dann darf Android den Mikrofon-Dienst starten. */
@@ -692,6 +724,7 @@ class WeckwortDienst : Service() {
                 val ok = runCatching { app.startActivity(Intent(app, Starter::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }.isSuccess
                 if (ok) return
             }
+            if (!Meldungen.an(app, Meldungsarten.WECKWORT_AUS)) return
             kanaeleAnlegen(app)
             val tippen = PendingIntent.getActivity(
                 app, 32, Intent(app, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE,

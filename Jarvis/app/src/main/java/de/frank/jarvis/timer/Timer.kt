@@ -102,6 +102,9 @@ object Timer {
         _laufend.value = _laufend.value.filterNot { it.id == id }
         speichere(app)
         kanalAnlegen(app)
+        // Auf Wunsch zusätzlich vorgelesen (Einstellungen → Benachrichtigungen → Timer abgelaufen).
+        if (!spaet && de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, de.frank.jarvis.meldung.Meldungsarten.TIMER))
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, de.frank.jarvis.meldung.Meldungsarten.TIMER, t.name, "${t.name} ist abgelaufen.")
         if (!spaet && de.frank.jarvis.data.Einstellungen.get(app).timerWecker) {
             _klingelt.value = (_klingelt.value.filterNot { it.id == id } + t)
             val gestartet = runCatching { androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, TimerKlingelDienst::class.java)) }

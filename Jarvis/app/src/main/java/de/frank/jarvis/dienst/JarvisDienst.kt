@@ -84,6 +84,7 @@ class JarvisDienst : Service() {
             return
         }
         vordergrund = true
+        laeuft = true
         Protokoll.lade(this)
         Logbuch.starte(this)
         // Offene Vorgänge eines beendeten Prozesses gleich als abgebrochen eintragen, nicht erst beim nächsten Abruf.
@@ -206,29 +207,24 @@ class JarvisDienst : Service() {
                     titel != null -> "„$titel“ liegt in der Ablage.$zusatz"
                     else -> "Der Agent ${plan.name} ist nicht fertig geworden: ${lauf.grund ?: "Grund unbekannt"}. Details unter Aktivität."
                 }
-                getSystemService(NotificationManager::class.java).notify(
-                    // Eigener Bereich: trifft keine feste Meldung (1, 4200, 4300, 4301, 4310, 4711, 7000–7999) und keine der Ablage (ab 200_000).
+                val agentTitel = "Jarvis: ${plan.name} fertig" + (vorgang?.let { " (Vorgang $it)" } ?: "")
+                de.frank.jarvis.meldung.Meldungen.zeige(
+                    this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT,
+                    // Eigener Bereich: trifft keine feste Meldung (1, 4200, 4300, 4301, 4310, 4400–4499, 4711, 7000–7999) und keine der Ablage (ab 200_000).
                     20_000 + (System.currentTimeMillis() % 100_000).toInt(),
-                    NotificationCompat.Builder(this@JarvisDienst, KANAL_ERGEBNIS).setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle("Jarvis: ${plan.name} fertig" + (vorgang?.let { " (Vorgang $it)" } ?: ""))
+                    NotificationCompat.Builder(this@JarvisDienst, KANAL_ERGEBNIS).setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle(agentTitel)
                         .setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
-                        .setSilent(de.frank.jarvis.speech.GespraechsFokus.stilleHinweise)
-                        .setContentIntent(PendingIntent.getActivity(this@JarvisDienst, 0, Intent(this@JarvisDienst, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
-                        .build(),
+                        .setContentIntent(PendingIntent.getActivity(this@JarvisDienst, 0, Intent(this@JarvisDienst, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)),
+                    // Vorgelesen wird unten die eigene Zusammenfassung, nicht der Meldungstext.
+                    agentTitel, sprechtext = null,
                 )
                 // Nach der Benachrichtigung: Die Zusammenfassung braucht bis zu 75 Sekunden und soll die Meldung nicht aufhalten.
-                if (titel != null && (vorlesen || Einstellungen.get(this@JarvisDienst).ergebnisseVorlesen)) {
+                if (titel != null && (vorlesen || de.frank.jarvis.meldung.Meldungen.vorlesenAn(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT))) {
                     de.frank.jarvis.faehigkeit.Ablage.finde(this@JarvisDienst, titel)?.let { datei ->
                         // Vorgelesen wird eine eigene kurze Zusammenfassung fürs Ohr, nicht Auftrag und Bericht; der Bericht bleibt unverändert.
                         val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, datei.readText(), lauf.grund)
-                        // Der Live-Sprachmodus hat Vorrang: Läuft ein Gespräch, wartet die Zusammenfassung, bis es vorbei ist (höchstens 15 Minuten).
-                        val frei = kotlinx.coroutines.withTimeoutOrNull(15 * 60_000L) {
-                            while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) kotlinx.coroutines.delay(2_000L)
-                            true
-                        }
-                        // Eigene Quelle „agent:“: kurzer Tonfokus, kurze Pausen und kein Zusammenstoß mit dem Vorleseknopf der Ablage.
-                        if (frei == true) kotlinx.coroutines.withContext(Dispatchers.Main) {
-                            de.frank.jarvis.speech.Vorleser.hole(this@JarvisDienst, de.frank.jarvis.data.settings.SecureSettings(this@JarvisDienst)).sprich("agent:" + datei.name, plan.name, fassung)
-                        }
+                        // Mit Stimme und Lautstärke aus Einstellungen → Benachrichtigungen → Agent fertig; ein laufendes Gespräch wartet sie ab.
+                        de.frank.jarvis.meldung.Meldungen.sprich(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT, plan.name, fassung)
                     }
                 }
             } finally {
@@ -255,6 +251,7 @@ class JarvisDienst : Service() {
         }
 
     override fun onDestroy() {
+        laeuft = false
         Logbuch.system("Dienst beendet")
         Waechter.stoppe(this)
         runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netz) }
@@ -265,25 +262,44 @@ class JarvisDienst : Service() {
         super.onDestroy()
     }
 
-    private fun hinweis(text: String): Notification = NotificationCompat.Builder(this, KANAL)
-        .setSmallIcon(R.drawable.ic_stat_jarvis)
-        .setContentTitle("Jarvis")
-        .setContentText(text)
-        .setOngoing(true)
-        .setOnlyAlertOnce(true)
-        .setShowWhen(false)
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-        .setContentIntent(PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
-        .build()
+    private fun hinweis(text: String): Notification = baueHinweis(this, text)
 
     companion object {
+        /** Läuft der Dienst im Vordergrund, und was steht gerade in seiner Meldung (für [hinweisErneuern]). */
+        @Volatile private var laeuft = false
+        @Volatile private var letzterText = "Jarvis startet …"
+
+        /** Minimiert (Einstellungen → Benachrichtigungen): eigener Kanal mit kleinster Wichtigkeit, ohne Symbol in der Statusleiste. */
+        private fun baueHinweis(context: Context, text: String): Notification {
+            letzterText = text
+            val minimiert = de.frank.jarvis.meldung.Meldungen.profil(context, de.frank.jarvis.meldung.Meldungsarten.BEREITSCHAFT).minimiert
+            return NotificationCompat.Builder(context, if (minimiert) KANAL_MIN else KANAL)
+                .setSmallIcon(R.drawable.ic_stat_jarvis)
+                .setContentTitle("Jarvis")
+                .setContentText(text)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setPriority(if (minimiert) NotificationCompat.PRIORITY_MIN else NotificationCompat.PRIORITY_LOW)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+                .setContentIntent(PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+                .build()
+        }
+
+        /** Nach „Minimiert“ an oder aus: die laufende Meldung sofort auf den passenden Kanal umstellen. */
+        fun hinweisErneuern(context: Context) {
+            if (!laeuft) return
+            val app = context.applicationContext
+            kanalAnlegen(app)
+            runCatching { app.getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, baueHinweis(app, letzterText)) }
+        }
         /** Laufende Start-Aufträge: Bei ausgeschalteter Bereitschaft beendet sich der Dienst erst, wenn keiner mehr läuft. */
         private val offen = AtomicInteger(0)
         /** Wie viele Aufträge der Dienst gerade abarbeitet (für [abgleichen]). */
         val arbeitet: Int get() = offen.get()
 
         private const val KANAL = "jarvis_dienst"
+        const val KANAL_MIN = "jarvis_dienst_min"
         private const val HINWEIS_ID = 1
         private const val EXTRA_AUSWERTEN = "auswerten"
         private const val EXTRA_AGENT = "agent"
@@ -321,6 +337,12 @@ class JarvisDienst : Service() {
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(KANAL, "Jarvis-Bereitschaft", NotificationManager.IMPORTANCE_LOW).apply {
                     description = "Zeigt, dass Jarvis für ChatGPT erreichbar ist."
+                    setShowBadge(false)
+                },
+            )
+            context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(KANAL_MIN, "Jarvis-Bereitschaft (minimiert)", NotificationManager.IMPORTANCE_MIN).apply {
+                    description = "Dieselbe Anzeige, klein unten bei den stillen Meldungen und ohne Symbol in der Statusleiste."
                     setShowBadge(false)
                 },
             )

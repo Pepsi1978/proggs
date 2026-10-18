@@ -198,7 +198,7 @@ class Einstellungen private constructor(context: Context) {
     var abfahrtAn: Boolean get() = prefs.getBoolean("abfahrt_an", true); set(v) = put { putBoolean("abfahrt_an", v) }
     var abfahrtVorlesen: Boolean get() = prefs.getBoolean("abfahrt_vorlesen", true); set(v) = put { putBoolean("abfahrt_vorlesen", v) }
     /** Lautstärke der vorgelesenen Losfahr-Meldung in Prozent der höchsten Medienlautstärke. */
-    var abfahrtLautstaerke: Int get() = prefs.getInt("abfahrt_lautstaerke", 100).coerceIn(10, 100); set(v) = put { putInt("abfahrt_lautstaerke", v.coerceIn(10, 100)) }
+    var abfahrtLautstaerke: Int get() = prefs.getInt("abfahrt_lautstaerke", 100).coerceIn(0, 100); set(v) = put { putInt("abfahrt_lautstaerke", v.coerceIn(0, 100)) }
 
     // ---- Ansagen anderer eigener Apps (UpdateStation: „Ein Update von … ist bereit“) ----
     var ansageVorlesen: Boolean get() = prefs.getBoolean("ansage_vorlesen", true); set(v) = put { putBoolean("ansage_vorlesen", v) }
@@ -207,7 +207,7 @@ class Einstellungen private constructor(context: Context) {
     /** Sprechtempo der Ansage; 0 = wie Jarvis. */
     var ansageTempo: Float get() = prefs.getFloat("ansage_tempo", 0f); set(v) = put { putFloat("ansage_tempo", v) }
     /** Lautstärke der Ansage in Prozent der höchsten Medienlautstärke. */
-    var ansageLautstaerke: Int get() = prefs.getInt("ansage_lautstaerke", 100).coerceIn(10, 100); set(v) = put { putInt("ansage_lautstaerke", v.coerceIn(10, 100)) }
+    var ansageLautstaerke: Int get() = prefs.getInt("ansage_lautstaerke", 100).coerceIn(0, 100); set(v) = put { putInt("ansage_lautstaerke", v.coerceIn(0, 100)) }
     var adresseZuhause: String get() = s("adresse_zuhause", "Niederheidenstraße 42, 15366 Neuenhagen bei Berlin"); set(v) = put { putString("adresse_zuhause", v.trim()) }
     var adresseArbeit: String get() = s("adresse_arbeit", "Bodestraße 1-3, 10178 Berlin"); set(v) = put { putString("adresse_arbeit", v.trim()) }
     /** Gewünschte Ankunft auf Arbeit als HH:MM, je Dienstart. */
@@ -274,6 +274,22 @@ class Einstellungen private constructor(context: Context) {
     var timerKlingelMax: Int get() = prefs.getInt("timer_klingel_max", 0).coerceIn(0, 60); set(v) = put { putInt("timer_klingel_max", v.coerceIn(0, 60)) }
     /** Minuten für „Schlummern“ in der Meldung. */
     var timerSchlummern: Int get() = prefs.getInt("timer_schlummern", 5).coerceIn(1, 30); set(v) = put { putInt("timer_schlummern", v.coerceIn(1, 30)) }
+
+    // ---- Benachrichtigungen (je Meldungsart über meldung/Meldungen.kt) ----
+    fun wahr(key: String, def: Boolean) = prefs.getBoolean(key, def)
+    fun setzeWahr(key: String, v: Boolean) = put { putBoolean(key, v) }
+    fun ganz(key: String, def: Int) = prefs.getInt(key, def)
+    fun setzeGanz(key: String, v: Int) = put { putInt(key, v) }
+    fun komma(key: String, def: Float) = prefs.getFloat(key, def)
+    fun setzeKomma(key: String, v: Float) = put { putFloat(key, v) }
+    fun wort(key: String, def: String) = s(key, def)
+    fun setzeWort(key: String, v: String) = put { putString(key, v) }
+    /** Ruhezeit: Ergebnis-Meldungen und Update-Ansagen kommen dann lautlos, ohne Vorlesen und Wecker. */
+    var meldungRuheAn: Boolean get() = prefs.getBoolean("meldung_ruhe_an", false); set(v) = put { putBoolean("meldung_ruhe_an", v) }
+    var meldungRuheVon: String get() = s("meldung_ruhe_von", "21:00"); set(v) = put { putString("meldung_ruhe_von", v) }
+    var meldungRuheBis: String get() = s("meldung_ruhe_bis", "06:00"); set(v) = put { putString("meldung_ruhe_bis", v) }
+    /** Auf dem Sperrbildschirm nur „Jarvis“ zeigen, nicht den Inhalt. */
+    var meldungInhaltVerbergen: Boolean get() = prefs.getBoolean("meldung_inhalt_verbergen", false); set(v) = put { putBoolean("meldung_inhalt_verbergen", v) }
 
     /** Farbdesign: blau (Jarvis) oder gold (wie Geniale Ideen); hell oder dunkel regelt [modus]. */
     var design: String get() = s("design", "blau"); set(v) = put { putString("design", v) }

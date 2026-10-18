@@ -13,15 +13,15 @@ import androidx.compose.ui.unit.sp
 import de.frank.jarvis.ui.theme.Chip
 import de.frank.jarvis.ui.theme.LocalFarben
 
-/** Wie ein abgelaufener Timer klingelt: wie ein Wecker bis zum Ausschalten oder als kurze Meldung. */
+/** Wie ein abgelaufener Timer klingelt: wie ein Wecker bis zum Ausschalten oder als kurze Meldung (Einstellungen → Benachrichtigungen). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TimerEinstellungen(vm: AppViewModel) {
+fun TimerOptionen(vm: AppViewModel) {
     val f = LocalFarben.current
     val e = vm.einstellungen
-    Bereich("Timer") {
-        Zeile("Wenn der Timer abläuft", if (e.timerWecker) "Klingelt wie ein Wecker" else "Kurze Meldung", if (e.timerWecker) f.erfolg else f.textLeise)
-        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    run {
+        Unterzeile("Wenn der Timer abläuft")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Wie ein Wecker", aktiv = e.timerWecker) { e.timerWecker = true }
             Chip("Kurze Meldung", aktiv = !e.timerWecker) { e.timerWecker = false }
         }

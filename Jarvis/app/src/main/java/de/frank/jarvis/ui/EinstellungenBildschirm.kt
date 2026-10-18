@@ -68,7 +68,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
         }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("jarvis" to "Jarvis", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und Apps", "system" to "System").forEach { (id, name) ->
+            listOf("jarvis" to "Jarvis", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und Apps", "system" to "System").forEach { (id, name) ->
                 Chip(name, aktiv = reiter == id) {
                     if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
                 }
@@ -357,9 +357,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             }
         }
 
-        if (reiter == "alltag") {
-            // ---------------------------------------------------------------- Timer
-            TimerEinstellungen(vm)
+        if (reiter == "meldungen") {
+            // ---------------------------------------------------------------- Benachrichtigungen (samt Timer, Losfahren, Update-Ansagen)
+            BenachrichtigungenEinstellungen(vm, activity)
         }
 
         if (reiter == "alltag") {
@@ -517,10 +517,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                         runCatching { activity.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${activity.packageName}"))) }
                     }
                 }
-                if (!vm.hinweiseAn) {
-                    Text("Ohne Benachrichtigungen fehlt die Statuszeile, die Jarvis wach hält.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
-                    Knopf("Benachrichtigungen erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.hinweiseAnfragen() }
-                }
+                if (!vm.hinweiseAn) Text("Ohne Benachrichtigungen fehlt die Statuszeile, die Jarvis wach hält. Erlauben unter Einstellungen → Benachrichtigungen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
                 Unterzeile("App-Sperre mit Fingerabdruck")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("An", aktiv = e.appSperre) { e.appSperre = true }

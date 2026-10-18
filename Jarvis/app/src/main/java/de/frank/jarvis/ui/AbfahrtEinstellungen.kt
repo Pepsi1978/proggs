@@ -39,11 +39,8 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
         val bereit = e.abfahrtAn && e.mapsSchluessel.isNotBlank()
         Zeile("Losfahr-Meldung", if (!e.abfahrtAn) "Aus" else if (e.mapsSchluessel.isBlank()) "Schlüssel fehlt" else "An", if (bereit) f.erfolg else if (e.abfahrtAn) f.gefahr else f.textLeise)
         Text(vm.abfahrtStatus.ifEmpty { "Stand wird geladen …" }, color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 6.dp))
-        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("An", aktiv = e.abfahrtAn) { e.abfahrtAn = true; vm.abfahrtGeaendert() }
-            Chip("Aus", aktiv = !e.abfahrtAn) { e.abfahrtAn = false; vm.abfahrtGeaendert() }
-        }
-        Text("An Arbeitstagen laut Kalender (Tag 1–4, Nacht 1–4, ohne X, F und U) fragt Jarvis bei Google Maps die Fahrzeit mit Verkehr ab und meldet sich rechtzeitig vor der Abfahrt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        Text("An Arbeitstagen laut Kalender (Tag 1–4, Nacht 1–4, ohne X, F und U) fragt Jarvis bei Google Maps die Fahrzeit mit Verkehr ab und meldet sich rechtzeitig vor der Abfahrt. " +
+            "Ein- und ausschalten, Vorlauf, Ton, Wecker, Vorlesen, Stimme und Lautstärke: Einstellungen → Benachrichtigungen → Losfahren.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 
         Knopf(if (vm.fahrzeitLaeuft) "Frage Google Maps …" else "Fahrzeit zur Arbeit jetzt prüfen", Modifier.padding(top = 14.dp).fillMaxWidth()) { vm.fahrzeitPruefen("arbeit") }
         vm.fahrzeitText?.let { Text(it, color = f.text, fontSize = 14.sp, lineHeight = 19.sp, modifier = Modifier.padding(top = 10.dp)) }
@@ -61,27 +58,6 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
                 waehle = ""
                 vm.abfahrtGeaendert()
             }
-        }
-
-        Unterzeile("Meldung vor der Abfahrt")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(5, 10, 15, 20, 30).forEach { minuten -> Chip("$minuten min", aktiv = e.abfahrtVorlauf == minuten) { e.abfahrtVorlauf = minuten; vm.abfahrtGeaendert() } }
-        }
-
-        Unterzeile("Meldung vorlesen")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("An", aktiv = e.abfahrtVorlesen) { e.abfahrtVorlesen = true }
-            Chip("Aus", aktiv = !e.abfahrtVorlesen) { e.abfahrtVorlesen = false }
-        }
-        Text("Mit der Stimme, die unter Sprache eingerichtet ist. Auch bei gesperrtem Handy.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-
-        if (e.abfahrtVorlesen) {
-            Unterzeile("Lautstärke der Meldung")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(40, 60, 80, 100).forEach { prozent -> Chip(if (prozent == 100) "Maximal" else "$prozent %", aktiv = e.abfahrtLautstaerke == prozent) { e.abfahrtLautstaerke = prozent } }
-            }
-            Knopf("Probe hören", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.abfahrtProbe() }
-            Text("Jarvis stellt die Medienlautstärke nur für diese Meldung so ein und danach wieder zurück. Ist ein Kopfhörer oder das Auto per Bluetooth verbunden, kommt die Stimme dort.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         }
 
         Unterzeile("Start der Fahrt")
@@ -128,7 +104,7 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
 /** Uhrzeit über die Zifferntasten wählen (24 Stunden); [uebernehmen] bekommt HH:MM. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Uhrzeitwahl(titel: String, wert: String, abbrechen: () -> Unit, uebernehmen: (String) -> Unit) {
+internal fun Uhrzeitwahl(titel: String, wert: String, abbrechen: () -> Unit, uebernehmen: (String) -> Unit) {
     val teile = wert.split(":")
     val stand = rememberTimePickerState(initialHour = teile.getOrNull(0)?.toIntOrNull() ?: 17, initialMinute = teile.getOrNull(1)?.toIntOrNull() ?: 0, is24Hour = true)
     AlertDialog(

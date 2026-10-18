@@ -523,7 +523,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // In der Benachrichtigung kein Markdown: Fettungen gibt es nur im Chat.
             val text = eintrag.optString("schritt").replace("**", "")
             val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
-            app.getSystemService(NotificationManager::class.java).notify(
+            de.frank.jarvis.meldung.Meldungen.zeige(
+                app, de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN,
                 nummer,
                 NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis)
                     .setContentTitle(titel)
@@ -531,11 +532,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n${eintrag.optString("ziel")} · Auftrag ${eintrag.optString("id")}"))
                     // Zwischenschritte still aktualisieren; Rückfrage, Fertig und Problem melden sich hörbar.
                     .setOnlyAlertOnce(stand == "laeuft")
-                    // Zwischenschritte im Gespräch ganz still; Rückfrage, Fertig und Problem bleiben hörbar, damit nichts liegen bleibt.
-                    .setSilent(stand == "laeuft" && de.frank.jarvis.speech.GespraechsFokus.stilleHinweise)
                     .setAutoCancel(stand == "fertig")
-                    .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } }
-                    .build(),
+                    .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } },
+                // Zwischenschritte still; Rückfrage, Fertig und Problem nach Franks Einstellung (Ton, Wecker, Vorlesen).
+                titel, "$titel. $text", laut = stand != "laeuft", imGespraechStill = false,
             )
         }
     }
