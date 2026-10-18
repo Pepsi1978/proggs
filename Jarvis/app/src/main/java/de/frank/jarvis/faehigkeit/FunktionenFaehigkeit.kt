@@ -8,6 +8,7 @@ import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.ablage.AblageSpeicher
 import de.frank.jarvis.agent.JarvisAgent
 import de.frank.jarvis.auth.ChatTurn
+import de.frank.jarvis.auth.ReasoningEffort
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
@@ -48,6 +49,9 @@ object Funktionen {
     private const val META = "funktionen.json"
     private const val VORHER = "funktionen_vorher.md"
     private const val PFLEGE_MS = 4 * 60_000L
+    /** So viele Versionen gehen höchstens in einen Modellaufruf, so viele Portionen höchstens in einen Lauf. */
+    private const val PORTION = 30
+    private const val PORTIONEN = 4
 
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sperre = Mutex()
@@ -70,24 +74,31 @@ object Funktionen {
     val installiertCode: Int get() = BuildConfig.VERSION_CODE
     val installiertName: String get() = BuildConfig.VERSION_NAME
 
+    /** Jarvis' Versionslog aus der APK; nur ein gelesenes Log wird gemerkt, ein Lesefehler wird beim nächsten Mal neu versucht. */
     fun versionslog(c: Context): List<Versionseintrag> = log ?: runCatching {
         Funktionsdatei.versionslog(c.applicationContext.assets.open("versionslog.json").bufferedReader().use { it.readText() })
-    }.getOrDefault(emptyList()).also { log = it }
+    }.getOrDefault(emptyList()).also { if (it.isNotEmpty()) log = it }
 
-    /** Lädt den Stand; fehlt die Datei, kommt die Erstbefüllung aus der APK (einmalig, danach nie wieder überschrieben). */
+    /**
+     * Der Stand; beim ersten Aufruf von der Platte, danach aus dem Speicher (alle Änderungen laufen über [schreibe]).
+     * Fehlt die Datei, kommt die Erstbefüllung aus der APK (einmalig, danach nie wieder überschrieben). Der geprüfte Stand
+     * steht als Marke vorn im Text selbst: So passen Text und Stand immer zusammen, auch wenn die Verwaltung verloren geht.
+     */
     fun lade(c: Context): FunktionsStand = synchronized(schreiben) {
+        _stand.value?.let { return it }
         val d = ordner(c)
         val text = File(d, TEXT)
         val geladen = if (text.exists()) {
+            val (code, name, inhalt) = Funktionsdatei.erstbefuellung(text.readText())
             val meta = runCatching { JSONObject(File(d, META).readText()) }.getOrNull()
-            if (meta != null) FunktionsStand.aus(text.readText(), meta)
+            if (meta != null) FunktionsStand.aus(inhalt + "\n", meta).let { if (code > 0) it.copy(geprueftCode = code, geprueftName = name) else it }
             else {
-                // Verwaltung fehlt oder ist kaputt (etwa Abbruch zwischen den beiden Schreibvorgängen): Text behalten, als geprüften
-                // Stand den der Erstbefüllung annehmen, statt bei 0 alle Versionen erneut einzuarbeiten.
-                val (code, name, _) = Funktionsdatei.erstbefuellung(erstbefuellung(c))
-                FunktionsStand(text.readText(), 1, code, name, 0L, 0L, emptySet(), emptyList(), "Verwaltung neu angelegt").also {
+                // Verwaltung fehlt oder ist kaputt: Text und Stand aus der Datei behalten; eine neue Revision, die kein offener Entwurf trägt.
+                val (asset, assetName, _) = Funktionsdatei.erstbefuellung(erstbefuellung(c))
+                FunktionsStand(inhalt + "\n", (System.currentTimeMillis() / 1000L).toInt(), if (code > 0) code else asset, if (code > 0) name else assetName,
+                    0L, 0L, emptySet(), emptyList(), "Verwaltung neu angelegt").also {
                     AblageSpeicher.schreibeAtomar(File(d, META), it.metaJson().toString().toByteArray())
-                    Logbuch.gedaechtnis("Funktionsübersicht: Verwaltung neu angelegt", "geprüft bis versionCode $code angenommen")
+                    Logbuch.gedaechtnis("Funktionsübersicht: Verwaltung neu angelegt", "geprüft bis versionCode ${it.geprueftCode}")
                 }
             }
         } else {
@@ -107,41 +118,52 @@ object Funktionen {
 
     private fun schreibe(c: Context, s: FunktionsStand) {
         val d = ordner(c)
-        AblageSpeicher.schreibeAtomar(File(d, TEXT), s.text.toByteArray())
+        AblageSpeicher.schreibeAtomar(File(d, TEXT), Funktionsdatei.mitMarke(s.text, s.geprueftCode, s.geprueftName).toByteArray())
         AblageSpeicher.schreibeAtomar(File(d, META), s.metaJson().toString().toByteArray())
         _stand.value = s
     }
 
-    private fun sichere(c: Context, alt: FunktionsStand) = AblageSpeicher.schreibeAtomar(File(ordner(c), VORHER), alt.text.toByteArray())
+    /** Die Fassung vor einer Änderung, mit ihrem geprüften Stand: Rückgängig holt beides zurück. */
+    private fun sichere(c: Context, alt: FunktionsStand) =
+        AblageSpeicher.schreibeAtomar(File(ordner(c), VORHER), Funktionsdatei.mitMarke(alt.text, alt.geprueftCode, alt.geprueftName).toByteArray())
 
     fun hatVorfassung(c: Context): Boolean = File(ordner(c), VORHER).exists()
 
+    private fun nameVon(c: Context, code: Int, sonst: String) = versionslog(c).firstOrNull { it.code == code }?.name ?: sonst
+
     /**
-     * Franks Bearbeitung von Hand. Gelingt nur, wenn seit dem Öffnen niemand (auch nicht die Pflege) gespeichert hat;
-     * sonst false und nichts wird überschrieben. Neu geschriebene Zeilen merkt sich Jarvis als Franks eigene.
+     * Franks Bearbeitung von Hand. [ausRevision], [basis] und [ausGeprueft] beschreiben die Fassung, von der der Entwurf
+     * ausging. Hat seitdem jemand gespeichert (auch die Pflege), kommt false und nichts wird überschrieben. Speichert Frank
+     * danach bewusst trotzdem, fällt der geprüfte Stand auf den seines Entwurfs zurück: Was die Pflege inzwischen eingearbeitet
+     * hatte, arbeitet sie erneut ein, statt es zu verlieren. Als Franks eigene Zeilen zählt nur, was er gegenüber [basis] geändert hat.
      */
-    fun speichereVonHand(c: Context, text: String, ausRevision: Int): Boolean = synchronized(schreiben) {
+    fun speichereVonHand(c: Context, text: String, ausRevision: Int, basis: String, ausGeprueft: Int): Boolean = synchronized(schreiben) {
         val alt = lade(c)
         if (alt.revision != ausRevision) return false
         val sauber = text.replace("\r\n", "\n").trim() + "\n"
         if (sauber == alt.text) return true
         sichere(c, alt)
+        val geprueft = minOf(alt.geprueftCode, ausGeprueft)
         schreibe(c, alt.copy(text = sauber, revision = alt.revision + 1, manuell = System.currentTimeMillis(),
-            manuelleZeilen = Funktionsdatei.manuelleZeilenNach(alt.text, sauber, alt.manuelleZeilen), hinweise = emptyList()))
-        Logbuch.gedaechtnis("Funktionsübersicht von Hand bearbeitet", "${sauber.length} Zeichen")
+            geprueftCode = geprueft, geprueftName = if (geprueft == alt.geprueftCode) alt.geprueftName else nameVon(c, geprueft, alt.geprueftName),
+            manuelleZeilen = Funktionsdatei.manuelleZeilenNach(basis, sauber, alt.manuelleZeilen), hinweise = emptyList()))
+        Logbuch.gedaechtnis("Funktionsübersicht von Hand bearbeitet", "${sauber.length} Zeichen" + if (geprueft < alt.geprueftCode) ", geprüfter Stand zurück auf $geprueft" else "")
+        if (geprueft < alt.geprueftCode) anstossen(c, "nach dem Überschreiben")
         true
     }
 
-    /** Holt die Fassung vor der letzten Änderung zurück (von Hand oder durch die Pflege). */
+    /** Holt die Fassung vor der letzten Änderung zurück, samt ihrem geprüften Stand (eine zurückgenommene Pflege wird so wieder fällig). */
     fun rueckgaengig(c: Context): Boolean = synchronized(schreiben) {
         val vorher = File(ordner(c), VORHER)
         if (!vorher.exists()) return false
         val alt = lade(c)
-        val text = vorher.readText()
+        val (code, name, text) = Funktionsdatei.erstbefuellung(vorher.readText())
+        val inhalt = text + "\n"
         sichere(c, alt)
         // Zurückgeholte Zeilen werden nicht zu Franks eigenen: Was die Pflege geschrieben hatte, darf sie weiter pflegen.
-        schreibe(c, alt.copy(text = text, revision = alt.revision + 1, manuell = System.currentTimeMillis(),
-            manuelleZeilen = Funktionsdatei.manuelleZeilenNach(text, text, alt.manuelleZeilen)))
+        schreibe(c, alt.copy(text = inhalt, revision = alt.revision + 1, manuell = System.currentTimeMillis(),
+            geprueftCode = if (code > 0) code else alt.geprueftCode, geprueftName = if (code > 0) name else alt.geprueftName,
+            manuelleZeilen = Funktionsdatei.manuelleZeilenNach(inhalt, inhalt, alt.manuelleZeilen)))
         true
     }
 
@@ -178,9 +200,9 @@ object Funktionen {
         bereich.launch { runCatching { pflege(app, "von Hand") }.onFailure { if (it !is CancellationException) Logbuch.fehler("Funktionsübersicht pflegen", it) } }
     }
 
-    private fun hindernis(app: Context): String? {
+    private fun hindernis(app: Context, agent: JarvisAgent): String? {
         if (de.frank.jarvis.live.LiveGespraech.aktiv) return "ein Live-Gespräch läuft"
-        if (!JarvisAgent(app).verbunden) return "Jarvis ist nicht mit ChatGPT angemeldet"
+        if (!agent.verbunden) return "Jarvis ist nicht mit ChatGPT angemeldet"
         val netz = runCatching {
             val cm = app.getSystemService(ConnectivityManager::class.java)
             cm.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
@@ -216,39 +238,52 @@ object Funktionen {
         val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:funktionen")
         runCatching { wach.acquire(PFLEGE_MS + 60_000L) }
         try {
-            val s = lade(app)
-            val offen = Funktionsdatei.offeneVersionen(versionslog(app), s.geprueftCode, installiertCode)
-            if (!Funktionsdatei.pflegeFaellig(s.geprueftCode, installiertCode)) return@withContext melde("Die Übersicht ist auf dem Stand der installierten Version ${installiertName}.")
-            hindernis(app)?.let { return@withContext melde("Pflege verschoben: $it. Bis dahin zeigt die Übersicht die noch nicht eingearbeiteten Versionen.") }
-            if (offen.isEmpty()) return@withContext melde(abschliessen(app, installiertCode, emptyList(), emptyList(), "Pflege: keine neuen Versionslog-Einträge"))
-            _pflege.value = "Jarvis arbeitet ${offen.size} neue Version(en) ein …"
-            val auftraege = runCatching { ProgrammierFaehigkeit.fertigeAuftraege(app, "jarvis", s.gepflegt - 86_400_000L) }.getOrDefault(emptyList())
-            val eingabe = buildString {
-                append("AKTUELLE ÜBERSICHT:\n").append(s.text.take(16_000)).append("\n\n")
-                append("NEU INSTALLIERTE VERSIONEN (Versionslog, Beleg):\n")
-                if (offen.size > 30) append("(").append(offen.size - 30).append(" ältere Versionen ausgelassen)\n")
-                offen.takeLast(30).forEach { append("- ").append(it.name).append(" (").append(it.stand).append("): ").append(it.notiz).append('\n') }
-                append("\nFERTIG GEMELDETE PROGRAMMIERAUFTRÄGE AN JARVIS (nur Zusatzinfo, kein Beleg):\n").append(auftraege.joinToString("\n").take(6_000).ifEmpty { "(keine)" })
-                if (s.manuelleZeilen.isNotEmpty()) append("\n\nFRANKS EIGENE ZEILEN:\n").append(s.manuelleZeilen.joinToString("\n") { "- $it" }.take(3_000))
-            }
-            val e = Einstellungen.get(app)
-            // Das Live-Gespräch hat Vorrang: Beginnt eines, bricht die Pflege ab und bleibt fällig.
-            var live = false
-            val roh = withTimeoutOrNull(PFLEGE_MS) {
-                coroutineScope {
-                    val anfrage = async { JarvisAgent(app).auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", eingabe)), e.modell, e.denkstufe) }
-                    while (!anfrage.isCompleted) {
-                        if (de.frank.jarvis.live.LiveGespraech.aktiv) { live = true; anfrage.cancel(); break }
-                        delay(1_000L)
-                    }
-                    if (live) null else anfrage.await()
+            val agent = JarvisAgent(app)
+            var ergebnis = ""
+            // Viele offene Versionen (lange nicht gepflegt) in Portionen, älteste zuerst; jede Portion hebt den Stand nur bis zu ihrer letzten Version.
+            for (portion in 1..PORTIONEN) {
+                val s = lade(app)
+                if (!Funktionsdatei.pflegeFaellig(s.geprueftCode, installiertCode)) return@withContext melde(ergebnis.ifEmpty { "Die Übersicht ist auf dem Stand der installierten Version ${installiertName}." })
+                hindernis(app, agent)?.let { return@withContext melde("Pflege verschoben: $it. Bis dahin zeigt die Übersicht die noch nicht eingearbeiteten Versionen.") }
+                val log = versionslog(app)
+                // Ohne lesbares Versionslog gibt es keinen Beleg: nichts als geprüft markieren.
+                if (log.isEmpty()) return@withContext melde("Das Versionslog ist nicht lesbar; die Pflege wartet, die Übersicht bleibt unverändert.")
+                val offen = Funktionsdatei.offeneVersionen(log, s.geprueftCode, installiertCode)
+                if (offen.isEmpty()) return@withContext melde(abschliessen(app, installiertCode, emptyList(), emptyList(), "Pflege: keine neuen Versionslog-Einträge"))
+                val teil = offen.take(PORTION)
+                val bis = if (teil.size == offen.size) installiertCode else teil.last().code
+                _pflege.value = "Jarvis arbeitet ${teil.size} neue Version(en) ein" + (if (offen.size > teil.size) " (von ${offen.size})" else "") + " …"
+                // Fertige Aufträge ab dem zuletzt geprüften Stand (Zeit aus dem Versionslog), neueste zuerst.
+                val seit = (log.firstOrNull { it.code == s.geprueftCode }?.let { Funktionsdatei.standZeit(it.stand) } ?: (System.currentTimeMillis() - 14 * 86_400_000L)) - 3_600_000L
+                val auftraege = runCatching { ProgrammierFaehigkeit.fertigeAuftraege(app, "jarvis", seit) }.getOrDefault(emptyList()).asReversed()
+                val eingabe = buildString {
+                    append("AKTUELLE ÜBERSICHT:\n").append(s.text.take(16_000)).append("\n\n")
+                    append("NEU INSTALLIERTE VERSIONEN (Versionslog, Beleg):\n")
+                    teil.forEach { append("- ").append(it.name).append(" (").append(it.stand).append("): ").append(it.notiz.take(800)).append('\n') }
+                    append("\nFERTIG GEMELDETE PROGRAMMIERAUFTRÄGE AN JARVIS (neueste zuerst, nur Zusatzinfo, kein Beleg):\n").append(auftraege.joinToString("\n").take(6_000).ifEmpty { "(keine)" })
+                    if (s.manuelleZeilen.isNotEmpty()) append("\n\nFRANKS EIGENE ZEILEN:\n").append(s.manuelleZeilen.joinToString("\n") { "- $it" }.take(3_000))
                 }
+                val e = Einstellungen.get(app)
+                // Feste, niedrige Denkstufe: Die Aufgabe ist klein, und Franks Chat-Einstellung soll sie nicht über das Zeitlimit treiben.
+                val stufe = e.modell.normalizeEffort(ReasoningEffort.LOW)
+                // Das Live-Gespräch hat Vorrang: Beginnt eines, bricht die Pflege ab und bleibt fällig.
+                var live = false
+                val roh = withTimeoutOrNull(PFLEGE_MS) {
+                    coroutineScope {
+                        val anfrage = async { agent.auth.streamChat(ANWEISUNG, listOf(ChatTurn("user", eingabe)), e.modell, stufe) }
+                        while (!anfrage.isCompleted) {
+                            if (de.frank.jarvis.live.LiveGespraech.aktiv) { live = true; anfrage.cancel(); break }
+                            delay(1_000L)
+                        }
+                        if (live) null else anfrage.await()
+                    }
+                }
+                if (live) return@withContext melde("Pflege abgebrochen: ein Live-Gespräch hat begonnen; der nächste Anlauf holt es nach.")
+                if (roh == null) return@withContext melde("Pflege nicht rechtzeitig fertig; der nächste Anlauf holt es nach.")
+                val antwort = jsonAus(roh) ?: return@withContext melde("Pflege lieferte kein lesbares Ergebnis; die Übersicht bleibt unverändert.")
+                ergebnis = melde(abschliessen(app, bis, Funktionsdatei.operationen(antwort), teil, "Pflege ($ausloeser)"))
             }
-            if (live) return@withContext melde("Pflege abgebrochen: ein Live-Gespräch hat begonnen; der nächste Anlauf holt es nach.")
-            if (roh == null) return@withContext melde("Pflege nicht rechtzeitig fertig; der nächste Anlauf holt es nach.")
-            val antwort = jsonAus(roh) ?: return@withContext melde("Pflege lieferte kein lesbares Ergebnis; die Übersicht bleibt unverändert.")
-            val ops = Funktionsdatei.operationen(antwort)
-            melde(abschliessen(app, installiertCode, ops, offen, "Pflege ($ausloeser)"))
+            ergebnis
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: Exception) {
@@ -265,7 +300,7 @@ object Funktionen {
     private fun abschliessen(app: Context, bisCode: Int, ops: List<de.frank.jarvis.gedaechtnis.FunktionsOperation>, offen: List<Versionseintrag>, anlass: String): String = synchronized(schreiben) {
         val s = lade(app)
         val r = Funktionsdatei.wende(s.text, ops, s.manuelleZeilen)
-        val name = versionslog(app).firstOrNull { it.code == bisCode }?.name ?: installiertName
+        val name = nameVon(app, bisCode, installiertName)
         val geaendert = r.text != s.text
         if (geaendert) sichere(app, s)
         // Die Revision steigt nur mit dem Text: Eine Pflege ohne Änderung stört Franks offene Bearbeitung nicht.

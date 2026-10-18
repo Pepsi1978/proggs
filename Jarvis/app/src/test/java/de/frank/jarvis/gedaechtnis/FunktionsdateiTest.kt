@@ -168,6 +168,43 @@ class FunktionsdateiTest {
         assertTrue(Funktionsdatei.manuelleZeilenNach(text, text, emptySet()).isEmpty())
     }
 
+    @Test fun doppelteZeileWirdImGenanntenBereichGeaendert() {
+        val doppelt = text + "\n## Werkzeuge\n\n- Timer (`timer`): klingeln wie ein Wecker.\n"
+        val r = Funktionsdatei.wende(doppelt, listOf(op("entfernen", "Werkzeuge", alt = "Timer (`timer`): klingeln wie ein Wecker.")))
+        assertTrue(r.text.contains("## Alltag\n\n- Timer"))
+        assertFalse(r.text.contains("## Werkzeuge"))
+    }
+
+    @Test fun bereichMitZeilenumbruchZerreisstDieGliederungNicht() {
+        val ops = Funktionsdatei.operationen(JSONObject().put("operationen", JSONArray()
+            .put(JSONObject().put("aktion", "neu").put("bereich", "## Fotos\n## Kaputt").put("neu", "Fotos beschreiben."))))
+        val r = Funktionsdatei.wende(text, ops)
+        assertEquals(1, r.text.lines().count { it.startsWith("## Fotos") })
+        assertFalse(r.text.lines().any { it == "## Kaputt" })
+    }
+
+    @Test fun nurAuftraegeGenauDieserAppZaehlen() {
+        assertTrue(Funktionsdatei.appPasst("Jarvis", "jarvis"))
+        assertTrue(Funktionsdatei.appPasst("Jarvis (Ordner Jarvis, Android)", "jarvis"))
+        assertFalse(Funktionsdatei.appPasst("JarvisWatch", "jarvis"))
+        assertFalse(Funktionsdatei.appPasst("Jarvis-Server", "jarvis"))
+        assertFalse(Funktionsdatei.appPasst("Geniale Aufgaben", "jarvis"))
+    }
+
+    @Test fun standZeitDesVersionslogsWirdGelesen() {
+        val z = Funktionsdatei.standZeit("18.10.2026, 19:46 Uhr", java.time.ZoneOffset.UTC)
+        assertEquals(java.time.LocalDateTime.of(2026, 10, 18, 19, 46).toInstant(java.time.ZoneOffset.UTC).toEpochMilli(), z)
+        assertNull(Funktionsdatei.standZeit("gestern"))
+    }
+
+    @Test fun textUndGepruefterStandWerdenZusammenGespeichert() {
+        // Die Marke vorn im Text überlebt auch eine verlorene Verwaltung (funktionen.json).
+        val (code, name, inhalt) = Funktionsdatei.erstbefuellung(Funktionsdatei.mitMarke(text, 203, "1.8.192"))
+        assertEquals(203, code)
+        assertEquals("1.8.192", name)
+        assertEquals(text.trim(), inhalt)
+    }
+
     // ---- Speichern und Lesen
 
     @Test fun standUeberstehtSpeichernUndLaden() {

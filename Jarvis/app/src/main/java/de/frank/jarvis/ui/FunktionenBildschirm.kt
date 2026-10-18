@@ -28,7 +28,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +49,13 @@ import kotlinx.coroutines.withContext
 /** Ob die Funktionsübersicht offen ist (Vollbild über allem, auch über dem Live-Gedächtnis). */
 object FunktionenAnsicht {
     var offen by mutableStateOf(false)
+    // Der Entwurf lebt hier statt im Bildschirm: Zurück-Geste oder „Hey Jarvis“ schließen nur die Ansicht, der Entwurf bleibt bis zum Speichern oder Abbrechen.
+    var bearbeite by mutableStateOf(false)
+    var entwurf by mutableStateOf("")
+    /** Die Fassung, von der der Entwurf ausging: Revision, Text und geprüfter Stand. */
+    var ausRevision by mutableIntStateOf(-1)
+    var basis by mutableStateOf("")
+    var ausGeprueft by mutableIntStateOf(0)
 }
 
 /**
@@ -67,11 +73,14 @@ fun FunktionenBildschirm(modifier: Modifier = Modifier) {
     val stand by Funktionen.stand.collectAsState()
     val pflege by Funktionen.pflegeText.collectAsState()
     val pflegt by Funktionen.laeuft.collectAsState()
-    var bearbeite by rememberSaveable { mutableStateOf(false) }
-    var entwurf by rememberSaveable { mutableStateOf("") }
-    /** Die Revision, von der die Bearbeitung ausging. */
-    var ausRevision by rememberSaveable { mutableIntStateOf(-1) }
+    val a = FunktionenAnsicht
     var meldung by remember { mutableStateOf("") }
+    var offen by remember { mutableStateOf(emptyList<de.frank.jarvis.gedaechtnis.Versionseintrag>()) }
+    // Das Versionslog liest die Platte: nicht im Oberflächen-Faden.
+    LaunchedEffect(stand?.geprueftCode) {
+        val code = stand?.geprueftCode ?: return@LaunchedEffect
+        offen = withContext(Dispatchers.IO) { Funktionsdatei.offeneVersionen(Funktionen.versionslog(app), code, Funktionen.installiertCode) }
+    }
     var vorfassung by remember { mutableStateOf(false) }
     LaunchedEffect(stand?.revision) { vorfassung = withContext(Dispatchers.IO) { Funktionen.hatVorfassung(app) } }
 
@@ -96,7 +105,6 @@ fun FunktionenBildschirm(modifier: Modifier = Modifier) {
                 )
             }
             item(key = "stand") {
-                val offen = remember(s.geprueftCode) { Funktionsdatei.offeneVersionen(Funktionen.versionslog(app), s.geprueftCode, Funktionen.installiertCode) }
                 Karte(toenung = f.primaer) {
                     Text("Geprüft bis Jarvis ${s.geprueftName.ifEmpty { "?" }}", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text(
@@ -117,7 +125,7 @@ fun FunktionenBildschirm(modifier: Modifier = Modifier) {
                             Knopf(if (pflegt) "Pflegt …" else "Jetzt einarbeiten", Modifier.weight(1f), Icons.Rounded.Refresh, haupt = false) {
                                 if (!pflegt) { meldung = ""; Funktionen.pflegeVonHand(app) }
                             }
-                        if (vorfassung && !bearbeite) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) {
+                        if (vorfassung && !a.bearbeite) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) {
                             bereich.launch { meldung = if (withContext(Dispatchers.IO) { Funktionen.rueckgaengig(app) }) "Vorherige Fassung wiederhergestellt." else "Keine vorherige Fassung." }
                         }
                     }
@@ -125,9 +133,9 @@ fun FunktionenBildschirm(modifier: Modifier = Modifier) {
             }
             item(key = "text") {
                 Karte {
-                    if (bearbeite) {
+                    if (a.bearbeite) {
                         BasicTextField(
-                            entwurf, { entwurf = it },
+                            a.entwurf, { a.entwurf = it },
                             Modifier.fillMaxWidth().heightIn(min = 240.dp).glas(f, 12.dp, erhoeht = 0.2f, fuellung = f.flaecheStark).padding(12.dp),
                             textStyle = TextStyle(color = f.text, fontSize = 14.sp, lineHeight = 20.sp),
                             cursorBrush = SolidColor(f.primaer),
@@ -136,21 +144,22 @@ fun FunktionenBildschirm(modifier: Modifier = Modifier) {
                         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Knopf("Speichern", Modifier.weight(1f), Icons.Rounded.Check) {
                                 bereich.launch {
-                                    val ok = withContext(Dispatchers.IO) { Funktionen.speichereVonHand(app, entwurf, ausRevision) }
-                                    if (ok) { bearbeite = false; meldung = "Gespeichert." }
+                                    val ok = withContext(Dispatchers.IO) { Funktionen.speichereVonHand(app, a.entwurf, a.ausRevision, a.basis, a.ausGeprueft) }
+                                    if (ok) { a.bearbeite = false; meldung = "Gespeichert." }
                                     else {
                                         // Inzwischen hat die Pflege (oder ein zweites Fenster) gespeichert: Entwurf bleibt, das nächste Speichern überschreibt bewusst.
-                                        ausRevision = Funktionen.stand.value?.revision ?: ausRevision
-                                        meldung = "Inzwischen hat Jarvis die Übersicht geändert. Dein Entwurf ist noch da; nochmal Speichern überschreibt die neue Fassung."
+                                        // Basis und geprüfter Stand bleiben die des Entwurfs: Was die Pflege einarbeitete, wird dann erneut eingearbeitet.
+                                        a.ausRevision = Funktionen.stand.value?.revision ?: a.ausRevision
+                                        meldung = "Inzwischen hat Jarvis die Übersicht geändert. Dein Entwurf ist noch da; nochmal Speichern überschreibt die neue Fassung, Jarvis arbeitet seine Änderungen danach erneut ein."
                                     }
                                 }
                             }
-                            Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { bearbeite = false }
+                            Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { a.bearbeite = false }
                         }
                     } else {
                         Text(s.text.trim(), color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
                         Knopf("Bearbeiten", Modifier.padding(top = 12.dp).fillMaxWidth(), Icons.Rounded.Edit, haupt = false) {
-                            entwurf = s.text.trim(); ausRevision = s.revision; meldung = ""; bearbeite = true
+                            a.entwurf = s.text.trim(); a.basis = s.text; a.ausRevision = s.revision; a.ausGeprueft = s.geprueftCode; meldung = ""; a.bearbeite = true
                         }
                     }
                 }

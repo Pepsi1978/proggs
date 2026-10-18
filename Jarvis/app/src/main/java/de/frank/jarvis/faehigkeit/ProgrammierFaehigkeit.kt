@@ -881,7 +881,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         /** Fertig gemeldete Aufträge an eine App seit [seit]: Auftrag und Abschlussmeldung, je eine Zeile (für die Funktionsübersicht). */
         fun fertige(context: Context, app: String, seit: Long): List<String> = alle(context)
-            .filter { it.optString("stand") == "fertig" && it.optString("app").contains(app, ignoreCase = true) && zuletzt(it) >= seit }
+            .filter { it.optString("stand") == "fertig" && de.frank.jarvis.gedaechtnis.Funktionsdatei.appPasst(it.optString("app"), app) && zuletzt(it) >= seit }
             .map { "- [${it.optString("id")}] Auftrag: " + it.optString("auftrag").replace('\n', ' ').take(300) + " → gemeldet: " + it.optString("schritt").replace('\n', ' ').take(300) }
 
         /** Alle Aufträge eines Jarvis-Gesprächs, neueste zuletzt, offene wie beendete: Frank bezeichnet mit „dieser Session“ das ganze Gespräch. */

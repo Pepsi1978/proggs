@@ -68,6 +68,20 @@ object Funktionsdatei {
         return if (m == null) Triple(0, "", roh.trim()) else Triple(m.groupValues[1].toInt(), m.groupValues[2], zeilen.drop(1).joinToString("\n").trim())
     }
 
+    /** Der Text, wie er auf dem Handy liegt: mit der Stand-Marke vorn, damit Text und geprüfter Stand zusammen gespeichert werden. */
+    fun mitMarke(text: String, code: Int, name: String): String = "<!-- stand: $code ${name.ifBlank { "?" }} -->\n" + text
+
+    private val STAND_ZEIT = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm", Locale.GERMAN)
+
+    /** Zeitpunkt einer Versionslog-Angabe „18.10.2026, 19:46 Uhr“ in Millisekunden, sonst null. */
+    fun standZeit(stand: String, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): Long? = runCatching {
+        java.time.LocalDateTime.parse(stand.removeSuffix(" Uhr").trim(), STAND_ZEIT).atZone(zone).toInstant().toEpochMilli()
+    }.getOrNull()
+
+    /** Die App eines Auftrags heißt [name], gern mit Ordner in Klammern („Jarvis (Ordner Jarvis)“), aber nicht „JarvisWatch“ oder „Jarvis-Server“. */
+    fun appPasst(appFeld: String, name: String): Boolean =
+        Regex("^\\s*" + Regex.escape(name) + "(?![\\w-])(\\s*\\(.*\\))?\\s*$", RegexOption.IGNORE_CASE).matches(appFeld.trim())
+
     /** Liest Jarvis' Versionslog; ein kaputtes Log ergibt eine leere Liste. */
     fun versionslog(json: String): List<Versionseintrag> = runCatching {
         val a = JSONObject(json).getJSONArray("eintraege")
@@ -115,7 +129,7 @@ object Funktionsdatei {
         return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.mapNotNull { o ->
             val aktion = o.optString("aktion").trim().lowercase(Locale.GERMAN)
             if (aktion !in listOf("neu", "ersetzen", "entfernen")) return@mapNotNull null
-            FunktionsOperation(aktion, o.optString("bereich").trim().take(80), einzeilig(o.optString("alt")), einzeilig(o.optString("neu")), o.optString("beleg").trim().take(200))
+            FunktionsOperation(aktion, einzeilig(o.optString("bereich")).trimStart('#', ' ').trim().take(80), einzeilig(o.optString("alt")), einzeilig(o.optString("neu")), o.optString("beleg").trim().take(200))
         }.take(40)
     }
 
@@ -133,7 +147,17 @@ object Funktionsdatei {
         val angewandt = mutableListOf<String>()
         val uebersprungen = mutableListOf<String>()
         val hinweise = mutableListOf<String>()
-        fun finde(alt: String): Int = normal(alt).let { n -> if (n.isEmpty()) -1 else zeilen.indexOfFirst { !istBereich(it) && !it.startsWith("#") && normal(it) == n } }
+        // Steht dieselbe Zeile in mehreren Bereichen, gilt die im genannten Bereich; sonst die erste.
+        fun finde(alt: String, bereich: String): Int {
+            val n = normal(alt)
+            if (n.isEmpty()) return -1
+            val treffer = zeilen.indices.filter { !istBereich(zeilen[it]) && !zeilen[it].startsWith("#") && normal(zeilen[it]) == n }
+            if (treffer.size < 2 || bereich.isBlank()) return treffer.firstOrNull() ?: -1
+            val kopf = passenderBereich(zeilen, bereich)
+            if (kopf < 0) return treffer.first()
+            val ende = (kopf + 1 until zeilen.size).firstOrNull { istBereich(zeilen[it]) } ?: zeilen.size
+            return treffer.firstOrNull { it in kopf + 1 until ende } ?: treffer.first()
+        }
         fun vorhanden(neu: String): Boolean = normal(neu).let { n -> zeilen.any { !istBereich(it) && normal(it) == n } }
 
         for (op in ops) {
@@ -158,7 +182,7 @@ object Funktionsdatei {
                     angewandt += "Neu ($bereich): ${op.neu}"
                 }
                 "ersetzen", "entfernen" -> {
-                    val i = finde(op.alt)
+                    val i = finde(op.alt, op.bereich)
                     if (i < 0) { uebersprungen += "Nicht gefunden (vielleicht von Hand geändert): ${op.alt.ifBlank { "(leer)" }}"; continue }
                     if (normal(zeilen[i]) in manuelle) {
                         hinweise += (if (op.aktion == "entfernen") "Vielleicht veraltet: „${zeilen[i].trim().removePrefix("- ")}“" else "Vorschlag: „${zeilen[i].trim().removePrefix("- ")}“ → „${op.neu}“") +

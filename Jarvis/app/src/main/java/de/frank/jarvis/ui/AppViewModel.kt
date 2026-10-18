@@ -1748,9 +1748,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Hält jeden Wechsel von Reiter, Merkliste, Gedächtnis-Ansicht und Einstellungsbereich sofort fest (ein Update beendet die App ohne Vorwarnung). */
     private fun bildschirmBeobachten() {
         viewModelScope.launch {
-            snapshotFlow { listOf(reiter.name, merkOffen?.titel.orEmpty(), GedaechtnisAnsicht.offen.toString(), einstellungsReiter, einstellungsVerlauf.joinToString(",")) }
-                .collect { (r, merk, ged, einst, verlauf) ->
-                    bildPrefs().edit().putString("reiter", r).putString("merk", merk).putBoolean("gedaechtnis", ged == "true")
+            snapshotFlow { listOf(reiter.name, merkOffen?.titel.orEmpty(), GedaechtnisAnsicht.offen.toString(), einstellungsReiter, einstellungsVerlauf.joinToString(","), FunktionenAnsicht.offen.toString()) }
+                .collect { l ->
+                    val (r, merk, ged, einst, verlauf) = l
+                    bildPrefs().edit().putString("reiter", r).putString("merk", merk).putBoolean("gedaechtnis", ged == "true").putBoolean("funktionen", l[5] == "true")
                         .putString("einstellungen", einst).putString("einstellungsVerlauf", verlauf).apply()
                 }
         }
@@ -1803,6 +1804,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         einstellungsReiter = p.getString("einstellungen", null)?.takeIf { it.isNotBlank() } ?: "jarvis"
         einstellungsVerlauf = p.getString("einstellungsVerlauf", null).orEmpty().split(',').filter { it.isNotBlank() }
         GedaechtnisAnsicht.offen = p.getBoolean("gedaechtnis", false)
+        FunktionenAnsicht.offen = p.getBoolean("funktionen", false)
         val merk = p.getString("merk", null).orEmpty()
         listOf(symbioseListe, regelListe, zielListe, infoListe, programmierListe, stilListe, entscheidungsListe).firstOrNull { it.titel == merk }?.let { merkOeffnen(it) }
         Logbuch.gedaechtnis("Zustand nach Update wiederhergestellt", "Reiter ${r.anzeige}, ${gespraech.size} Nachrichten")
