@@ -96,6 +96,14 @@ class JarvisDienst : Service() {
         // Meldet der Server einen neuen Tagebucheintrag, liest Jarvis ihn sofort. Nur den App-Kontext festhalten, nicht den Dienst.
         val app = applicationContext
         Tunnel.beiSignal = { art -> Waechter.serverSignal(app, art) }
+        // Nach jedem Verbinden: Rückfragen der Programmier-Sitzungen mit dem Server abgleichen. Eine Meldung, die über eine
+        // halb tote Verbindung ging, ist sonst verloren, und Frank sähe die Frage nie.
+        Tunnel.beiVerbunden = {
+            arbeit.launch {
+                runCatching { de.frank.jarvis.faehigkeit.Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.fragenAbgleichen() }
+                    .onFailure { Logbuch.fehler("Rückfragen abgleichen", it) }
+            }
+        }
         // Ablage: Reste abgebrochener Übertragungen aufräumen, unterbrochene Downloads fortsetzen.
         de.frank.jarvis.ablage.AblageZentrale.beimStart(this)
         // Die erste Meldung des Rückrufs ist nur die Bestandsaufnahme: kein Abriss wegen eines Netzes aus einem früheren Dienstlauf.
@@ -296,6 +304,7 @@ class JarvisDienst : Service() {
         Waechter.stoppe(this)
         runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netz) }
         Tunnel.beiSignal = null
+        Tunnel.beiVerbunden = null
         Tunnel.stoppe()
         bereich.cancel()
         arbeit.cancel()

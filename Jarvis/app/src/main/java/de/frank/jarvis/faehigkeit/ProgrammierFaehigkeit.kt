@@ -353,9 +353,82 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             alsZugestellt(daten.optString("auftrag_id"), ids, daten.optString("schritt"))
             return
         }
+        if (daten.optString("stand") == "frage_status") {
+            daten.optJSONObject("frage")?.let { frageAusgang(daten.optString("auftrag_id"), it) }
+            return
+        }
         val frage = daten.optJSONObject("frage")
-        val eintrag = Auftragsbuch.melde(app, daten.optString("auftrag_id"), daten.optString("stand"), daten.optString("schritt").take(4000), "", frage) ?: return
+        // Dieselbe Rückfrage zweimal (der Hook wiederholt, wenn die Antwort des Servers ausblieb): nur einmal zeigen und melden.
+        if (frage != null && Auftragsbuch.kenntFrage(app, frage.optString("frage_id"))) return
+        val eintrag = Auftragsbuch.melde(app, daten.optString("auftrag_id"), daten.optString("stand"), daten.optString("schritt").take(4000), "", frage)
+        if (eintrag == null) {
+            // Unbekannter Auftrag: nie still verwerfen, sondern sichtbar im Logbuch (Grund für „Frage kam nicht an“).
+            Logbuch.system("Meldung ohne Auftrag", "${daten.optString("stand")} für ${daten.optString("auftrag_id")}: ${daten.optString("schritt").take(120)}")
+            return
+        }
         verteile(eintrag, frage)
+    }
+
+    /** Stand einer Rückfrage aus dem Wort des Servers bzw. des Hooks. */
+    private fun standVomServer(status: String): String? = when (status) {
+        "angenommen" -> RueckfrageStand.ANGENOMMEN
+        "beantwortet" -> RueckfrageStand.BEANTWORTET
+        "beantwortet_am_pc" -> RueckfrageStand.AM_PC_BEANTWORTET
+        "am_pc", "freigegeben" -> RueckfrageStand.AM_PC
+        "erledigt" -> RueckfrageStand.ERLEDIGT
+        "verwaist", "unbekannt" -> RueckfrageStand.VERWAIST
+        else -> null
+    }
+
+    /** Ausgang einer Rückfrage vom Hook (stand „frage_status“): überall als beantwortet bzw. am Rechner zeigen. */
+    private fun frageAusgang(auftragId: String, frage: JSONObject) {
+        val frageId = frage.optString("frage_id")
+        val stand = standVomServer(frage.optString("status")) ?: return
+        val eintrag = Auftragsbuch.zuFrage(app, frageId) ?: Auftragsbuch.finde(app, auftragId) ?: return
+        val gespraech = eintrag.optString("gespraech")
+        Auftragsbuch.frageErledigt(app, frageId)
+        aktivitaetMelden(Auftragsbuch.finde(app, eintrag.optString("id")) ?: eintrag)
+        if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, stand, frage.optString("antwort"), frage.optString("grund"))
+    }
+
+    /**
+     * Gleicht die Rückfragen mit dem Jarvis-Server ab: Eine Rückfrage, deren Meldung über die WebSocket verloren ging (halb
+     * tote Verbindung, Ruhezustand), erscheint nachträglich im richtigen Gespräch; ein Ausgang, den Jarvis verpasst hat
+     * (am Rechner beantwortet, Sitzung geschlossen), wird nachgetragen. Beim Verbinden mit dem Server und solange die App offen ist.
+     */
+    suspend fun fragenAbgleichen() = withContext(Dispatchers.IO) {
+        if (e.serverHost.isBlank() || e.serverToken.isBlank()) return@withContext
+        val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/fragen").header("X-Jarvis-Token", e.serverToken).get().build()
+        val liste = runCatching {
+            HTTP.newCall(anfrage).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONArray("fragen") }
+        }.getOrNull() ?: return@withContext
+        val jetzt = System.currentTimeMillis() / 1000
+        for (i in 0 until liste.length()) {
+            val f = liste.optJSONObject(i) ?: continue
+            val frageId = f.optString("frage_id").takeIf { it.isNotEmpty() } ?: continue
+            val eintrag = Auftragsbuch.finde(app, f.optString("auftrag_id")) ?: continue
+            val gespraech = eintrag.optString("gespraech")
+            val status = f.optString("status")
+            val wartet = f.optBoolean("wartet")
+            if (status == "offen") {
+                val daSchon = gespraech.isNotEmpty() && ProgrammierChat.rueckfrageAendern(app, gespraech, frageId) { false }
+                when {
+                    !daSchon && wartet && !Auftragsbuch.kenntFrage(app, frageId) -> {
+                        Logbuch.system("Rückfrage nachgereicht", "Auftrag ${eintrag.optString("id")}: Meldung kam nicht über die Verbindung, Abgleich mit dem Server")
+                        val frage = f.optJSONObject("frage") ?: continue
+                        Auftragsbuch.melde(app, eintrag.optString("id"), "frage", f.optString("schritt").take(4000), "", frage)?.let { verteile(it, frage) }
+                    }
+                    daSchon && !wartet && jetzt - f.optLong("zeit") > 120 -> {
+                        Auftragsbuch.frageErledigt(app, frageId)
+                        ProgrammierChat.rueckfrageStand(app, gespraech, frageId, RueckfrageStand.VERWAIST)
+                    }
+                }
+                continue
+            }
+            val stand = standVomServer(status) ?: continue
+            if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, stand, f.optString("antwort_text"), f.optString("grund"))
+            if (RueckfrageStand.endgueltig(stand)) Auftragsbuch.frageErledigt(app, frageId)
+        }
     }
 
     /** Woher der Aufruf kommt: aus ChatGPT/MCP (ohne Jarvis-Gespräch) und das Jarvis-Gespräch dazu (leer = keins). */
@@ -498,6 +571,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val kurz = (0 until fragen.length()).joinToString(" / ") { fragen.optJSONObject(it)?.optString("question").orEmpty() }.trim()
             val kontext = JSONObject().put("frage_id", frage.optString("frage_id")).put("auftrag", eintrag.optString("id")).put("app", appName)
                 .put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
+                .put("status", RueckfrageStand.OFFEN).put("bis", frage.optLong("bis")).put("eingang", System.currentTimeMillis() / 1000)
             ProgrammierChat.poste(app, gespraech, "❓ Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             return
         }
@@ -511,27 +585,63 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /**
      * Gibt Franks Antwort auf eine Rückfrage an den wartenden Hook weiter. [antworten] in der Reihenfolge der Fragen (label der
-     * Option, bei Mehrfachauswahl mit Komma), [text] als freie Antwort. Liefert einen Satz für Frank; Fehler als Ausnahme.
+     * Option, bei Mehrfachauswahl mit Komma, bei „Eigene Antwort“ Franks Text), [text] als freie Antwort. Mit [freigeben] statt
+     * einer Antwort: Die Sitzung wartet nicht länger auf Jarvis, die Frage erscheint sofort am Rechner und in der Claude-App.
+     * Der Stand steht danach an der Rückfrage im Gespräch. Liefert einen Satz für Frank; Fehler als Ausnahme (mit Grund).
      */
-    suspend fun beantworte(frageId: String, antworten: List<String>, text: String): String = withContext(Dispatchers.IO) {
+    suspend fun beantworte(frageId: String, antworten: List<String>, text: String, freigeben: Boolean = false): String = withContext(Dispatchers.IO) {
         if (frageId.isEmpty()) throw IllegalArgumentException("Die frage_id fehlt.")
-        if (antworten.none { it.isNotEmpty() } && text.isEmpty()) throw IllegalArgumentException("Die Antwort ist leer.")
-        val offen = Auftragsbuch.offeneFrage(app, frageId)
-        val fragen = offen?.second?.optJSONArray("fragen") ?: JSONArray()
+        if (!freigeben && antworten.none { it.isNotEmpty() } && text.isEmpty()) throw IllegalArgumentException("Die Antwort ist leer.")
+        val eintrag = Auftragsbuch.zuFrage(app, frageId)
+        val gespraech = eintrag?.optString("gespraech").orEmpty()
+        val fragen = Auftragsbuch.offeneFrage(app, frageId)?.second?.optJSONArray("fragen")
+            ?: (if (gespraech.isNotEmpty()) de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, gespraech, frageId)?.optJSONArray("fragen") else null)
+            ?: JSONArray()
         val zuordnung = JSONObject()
         antworten.forEachIndexed { i, antwort ->
             val frage = fragen.optJSONObject(i)?.optString("question").orEmpty()
             if (frage.isNotEmpty() && antwort.isNotEmpty()) zuordnung.put(frage, antwort)
         }
         val rumpf = JSONObject().put("frage_id", frageId).put("antworten", zuordnung).put("text", text.ifEmpty { if (zuordnung.length() == 0) antworten.joinToString("; ") else "" })
+        val antwortText = if (freigeben) "" else if (zuordnung.length() > 0) antworten.filter { it.isNotEmpty() }.joinToString("; ") + (if (text.isNotEmpty()) " ($text)" else "") else rumpf.optString("text")
+        // Gleicher Inhalt = gleiche Kennung: Ein zweiter Versuch nach verlorener Antwort des Servers gilt als derselbe, nie doppelt.
+        val antwortId = java.security.MessageDigest.getInstance("SHA-256").digest((frageId + "|" + freigeben + "|" + rumpf.toString()).toByteArray())
+            .take(12).joinToString("") { "%02x".format(it) }
+        rumpf.put("antwort_id", antwortId).put("freigeben", freigeben)
+        fun stand(s: String, antwort: String = antwortText, grund: String = "") {
+            if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, s, antwort, grund)
+        }
+        stand(RueckfrageStand.SENDET)
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/antwort").header("X-Jarvis-Token", e.serverToken)
             .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
-        val (code, roh) = HTTP.newCall(anfrage).execute().use { it.code to it.body?.string().orEmpty() }
-        if (code !in 200..299) throw IllegalStateException(runCatching { JSONObject(roh).optString("grund") }.getOrNull()?.takeIf { it.isNotEmpty() } ?: "Der Jarvis-Server hat die Antwort nicht angenommen (HTTP $code).")
-        val antwortText = if (zuordnung.length() > 0) antworten.filter { it.isNotEmpty() }.joinToString("; ") + (if (text.isNotEmpty()) " ($text)" else "") else rumpf.optString("text")
+        val (code, roh) = runCatching { HTTP.newCall(anfrage).execute().use { it.code to it.body?.string().orEmpty() } }.getOrElse { fehler ->
+            val grund = "Keine Verbindung zum Jarvis-Server (${fehler.message ?: fehler.javaClass.simpleName}). Die Antwort ist nicht angekommen; erneut senden."
+            stand(RueckfrageStand.FEHLER, grund = grund)
+            throw IllegalStateException(grund)
+        }
+        val json = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
+        if (code !in 200..299) {
+            val grund = json.optString("grund").takeIf { it.isNotEmpty() } ?: "Der Jarvis-Server hat die Antwort nicht angenommen (HTTP $code)."
+            val ausgang = when (code) {
+                409 -> standVomServer(json.optString("status"))
+                404, 410 -> RueckfrageStand.VERWAIST
+                else -> null
+            }
+            if (ausgang != null) {
+                stand(ausgang, json.optString("antwort_text"), grund)
+                Auftragsbuch.frageErledigt(app, frageId)
+            } else stand(RueckfrageStand.FEHLER, grund = grund)
+            throw IllegalStateException(grund)
+        }
         Auftragsbuch.frageErledigt(app, frageId)
-        offen?.first?.optString("gespraech")?.takeIf { it.isNotEmpty() }?.let { ProgrammierChat.alsBeantwortet(app, it, frageId, antwortText) }
-        "Die Antwort „$antwortText“ ist bei der Sitzung angekommen; sie arbeitet jetzt weiter."
+        eintrag?.let { Auftragsbuch.finde(app, it.optString("id"))?.let { e -> aktivitaetMelden(e) } }
+        if (freigeben) {
+            stand(RueckfrageStand.AM_PC, "", "freigegeben")
+            return@withContext "Die Frage liegt jetzt am Rechner und in der Claude-App; beantworte sie dort."
+        }
+        // Angenommen heißt: Der Server hat sie, die Sitzung holt sie in Sekunden ab. Ihre Bestätigung setzt „beantwortet“.
+        stand(RueckfrageStand.ANGENOMMEN)
+        "Die Antwort „$antwortText“ ist beim Jarvis-Server; die Sitzung übernimmt sie jetzt."
     }
 
     /**
@@ -558,9 +668,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         runCatching {
             JarvisDienst.kanalAnlegen(app)
             val link = eintrag.optString("link")
-            val oeffnen = if (link.startsWith("https://")) Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                else app.packageManager.getLaunchIntentForPackage(CLAUDE_APP) ?: app.packageManager.getLaunchIntentForPackage(app.packageName)
             val stand = eintrag.optString("stand")
+            val frageId = eintrag.optJSONObject("offeneFrage")?.optString("frage_id").orEmpty()
+            // Eine Rückfrage öffnet Jarvis im Gespräch des Auftrags mit der Frage im Vollbild; sonst die Sitzung bzw. die Claude-App.
+            val oeffnen = if (stand == "frage" && frageId.isNotEmpty() && eintrag.optString("gespraech").isNotEmpty())
+                Intent(app, de.frank.jarvis.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .putExtra(EXTRA_GESPRAECH, eintrag.optString("gespraech")).putExtra(EXTRA_RUECKFRAGE, frageId)
+            else if (link.startsWith("https://")) Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                else app.packageManager.getLaunchIntentForPackage(CLAUDE_APP) ?: app.packageManager.getLaunchIntentForPackage(app.packageName)
             val appName = eintrag.optString("app")
             val titel = when (stand) {
                 "frage" -> "Rückfrage: $appName"
@@ -603,7 +718,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             runCatching { JSONArray(context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).getString(SCHLUESSEL, "[]")) }.getOrDefault(JSONArray())
 
         private fun schreib(context: Context, liste: JSONArray) {
-            val gekuerzt = JSONArray().apply { for (i in maxOf(0, liste.length() - 20) until liste.length()) put(liste.get(i)) }
+            // Die letzten 60 Aufträge, dazu ältere, die noch laufen oder auf Frank warten (höchstens drei Tage alt): Sonst fiel
+            // eine lange Sitzung mit vielen neueren Aufträgen heraus, und ihre Meldungen und Rückfragen kamen nirgends mehr an.
+            val grenze = System.currentTimeMillis() - 3 * 86_400_000L
+            val gekuerzt = JSONArray().apply {
+                for (i in 0 until liste.length()) {
+                    val e = liste.optJSONObject(i) ?: continue
+                    if (i >= liste.length() - 60 || (offen(e) && zuletzt(e) >= grenze)) put(e)
+                }
+            }
             context.getSharedPreferences(DATEI, Context.MODE_PRIVATE).edit().putString(SCHLUESSEL, gekuerzt.toString()).apply()
         }
 
@@ -629,7 +752,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             eintrag.put("letzterStand", gueltig).put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt)
                 // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende und solange sie auf Frank wartet.
                 .put("arbeitet", gueltig == "laeuft")
-            if (frage != null) eintrag.put("offeneFrage", frage)
+            if (frage != null) {
+                eintrag.put("offeneFrage", frage)
+                // Alle Rückfragen des Auftrags: Antwort und Ausgang finden ihr Gespräch auch, wenn längst eine neuere offen ist.
+                val ids = eintrag.optJSONArray("frageIds") ?: JSONArray().also { eintrag.put("frageIds", it) }
+                ids.put(frage.optString("frage_id"))
+                while (ids.length() > 30) ids.remove(0)
+            }
             // Zugende oder fertig: Was die Sitzung bis dahin an Nachträgen bekommen hatte, hat sie in diesem Zug bearbeitet.
             if (gueltig == "fertig" || gueltig == "info") eintrag.optJSONArray("nachtraege")?.let { l ->
                 for (i in 0 until l.length()) l.optJSONObject(i)?.takeIf { it.optString("stand") == "zugestellt" }?.put("stand", "bearbeitet")?.put("bearbeitet", jetzt)
@@ -699,6 +828,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val grenze = System.currentTimeMillis() - 2 * 3_600_000L
             return (0 until liste.length()).map { liste.getJSONObject(it) }.filter { it.optString("gespraech").isNotEmpty() && it.optLong("zeit") >= grenze }
         }
+
+        /** Der Auftrag, zu dem diese Rückfrage gehört (auch nach ihrem Ausgang), oder null. */
+        fun zuFrage(context: Context, frageId: String): JSONObject? = if (frageId.isEmpty()) null else alle(context).lastOrNull { e ->
+            e.optJSONObject("offeneFrage")?.optString("frage_id") == frageId ||
+                e.optJSONArray("frageIds")?.let { l -> (0 until l.length()).any { l.optString(it) == frageId } } == true
+        }
+
+        /** Kennt Jarvis diese Rückfrage schon (gezeigt oder erledigt)? */
+        fun kenntFrage(context: Context, frageId: String): Boolean = zuFrage(context, frageId) != null
 
         /** Die offene Rückfrage mit dieser frage_id und ihr Auftrag, oder null. */
         @Synchronized
@@ -981,6 +1119,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         private const val CLAUDE_APP = "com.anthropic.claude"
+
+        /** Extras der Benachrichtigung einer Rückfrage: welches Gespräch und welche Rückfrage die App öffnet. */
+        const val EXTRA_GESPRAECH = "de.frank.jarvis.rueckfrage_gespraech"
+        const val EXTRA_RUECKFRAGE = "de.frank.jarvis.rueckfrage_id"
         private val STATUS_HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
         private val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     }

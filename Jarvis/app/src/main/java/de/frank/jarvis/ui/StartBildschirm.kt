@@ -106,6 +106,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     val auswertung by Tagesauswertung.stand.collectAsState()
     var auswertungOffen by rememberSaveable { mutableStateOf(false) }
     val liste = rememberLazyListState()
+    // Rückfragen der Programmier-Sitzungen: Vollbild zum Beantworten, Abgleich mit dem Server.
+    RueckfrageFenster(vm)
 
     val schritte = listOf(
         Schritt("Mit ChatGPT verbinden", "Gibt Jarvis sein eigenes Denken. Einmal anmelden, fertig.", vm.kiVerbunden, "Verbinden") { vm.reiter = Reiter.EINSTELLUNGEN; vm.kiVerbinden() },
@@ -365,7 +367,7 @@ private val EXTERNE_ARTEN = setOf(de.frank.jarvis.faehigkeit.ProgrammierChat.ART
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
-    if (n.art == "rueckfrage") { Rueckfrage(vm, n); return }
+    if (n.art == "rueckfrage") { RueckfrageKarte(vm, n); return }
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (n.vonMir) Alignment.End else Alignment.Start) {
         if (n.vonMir && n.anhaenge.isNotEmpty()) FlowRow(Modifier.padding(start = 44.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -572,56 +574,6 @@ private val SPINNER_WOERTER = listOf(
     "Pondering", "Ruminating", "Conjuring", "Crafting", "Forging", "Hatching", "Mulling", "Musing", "Stewing", "Synthesizing",
     "Transmuting", "Vibing", "Puttering", "Schlepping", "Reticulating", "Finagling", "Moseying", "Churning", "Crunching", "Computing",
 )
-
-/**
- * Rückfrage einer Programmier-Sitzung (AskUserQuestion oder freie Frage am Zugende): je Frage die Optionen als Knöpfe
- * A, B, C, D (bei Mehrfachauswahl zum Umschalten), dazu ein Feld für eine eigene Antwort. Nach dem Senden steht die
- * Antwort darunter, die Knöpfe verschwinden. Frank kann auch einfach sprechen; Jarvis ordnet es mit programmier_antwort zu.
- */
-@Composable
-private fun Rueckfrage(vm: AppViewModel, n: Nachricht) {
-    val f = LocalFarben.current
-    val k = remember(n.kontext) { runCatching { org.json.JSONObject(n.kontext) }.getOrNull() }
-    Column(Modifier.fillMaxWidth().widthIn(max = 520.dp).glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Markierbar(hell = false) { ProgrammierText(n.text, farbe = f.text, fontWeight = FontWeight.SemiBold) }
-        Kopierknopf(vm, n.text, "Frage")
-        if (k == null) return@Column
-        if (k.optBoolean("beantwortet")) {
-            Text("✓ Beantwortet: " + k.optString("antwort"), color = f.erfolg, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-            return@Column
-        }
-        val fragen = k.optJSONArray("fragen") ?: org.json.JSONArray()
-        val auswahl = remember(n.kontext) { androidx.compose.runtime.mutableStateMapOf<Int, Set<String>>() }
-        var frei by remember(n.kontext) { mutableStateOf("") }
-        if (!k.optBoolean("frei")) for (i in 0 until fragen.length()) {
-            val frage = fragen.optJSONObject(i) ?: continue
-            val mehrfach = frage.optBoolean("multiSelect")
-            if (fragen.length() > 1 || frage.optString("header").isNotEmpty()) Text(
-                listOf(frage.optString("header"), frage.optString("question")).filter { it.isNotEmpty() }.joinToString(": ") + if (mehrfach) " (mehrere möglich)" else "",
-                color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp),
-            )
-            val optionen = frage.optJSONArray("options") ?: org.json.JSONArray()
-            for (j in 0 until optionen.length()) {
-                val option = optionen.optJSONObject(j) ?: continue
-                val label = option.optString("label")
-                val gewaehlt = label in auswahl[i].orEmpty()
-                Knopf("${'A' + j} · $label", Modifier.padding(top = 6.dp).fillMaxWidth(), haupt = gewaehlt) {
-                    val bisher = auswahl[i].orEmpty()
-                    auswahl[i] = if (mehrfach) (if (gewaehlt) bisher - label else bisher + label) else setOf(label)
-                }
-                option.optString("description").takeIf { it.isNotEmpty() }?.let {
-                    Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
-                }
-            }
-        }
-        Eingabe(frei, { frei = it }, if (k.optBoolean("frei")) "Deine Antwort" else "Eigene Antwort (Sonstiges)", Modifier.padding(top = 10.dp).fillMaxWidth(), einzeilig = false)
-        val bereit = frei.isNotBlank() || auswahl.values.any { it.isNotEmpty() }
-        if (bereit) Knopf("Antwort senden", Modifier.padding(top = 10.dp).fillMaxWidth()) {
-            val antworten = (0 until fragen.length()).map { i -> auswahl[i].orEmpty().joinToString(", ").ifEmpty { frei.trim() } }
-            vm.programmierAntwort(k.optString("frage_id"), if (k.optBoolean("frei")) emptyList() else antworten, frei.trim())
-        }
-    }
-}
 
 /**
  * Alles, was gerade läuft (Timer mit Restzeit, arbeitende Agenten), steht immer oben auf der Startseite,

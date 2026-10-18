@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -288,7 +289,8 @@ fun Knopf(text: String, modifier: Modifier = Modifier, icon: ImageVector? = null
     val c = farbe ?: f.primaer
     val grund = if (haupt) Modifier.knopf3d(c, if (farbe == null) f.tertiaer else c.copy(alpha = 0.8f), 16.dp, f.dunkel) else Modifier.glas(f, 16.dp, erhoeht = 0.5f)
     Row(
-        modifier.height(48.dp).then(grund).antippen(aktion = aktion).padding(horizontal = 16.dp),
+        // Mindesthöhe statt fester Höhe: Bei großer Schrift wächst der Knopf mit, statt dass Text und Nachbarn überlappen.
+        modifier.heightIn(min = 48.dp).then(grund).antippen(aktion = aktion).padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) Icon(icon, null, tint = if (haupt) f.aufPrimaer else c, modifier = Modifier.padding(end = 8.dp).size(18.dp))

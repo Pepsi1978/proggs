@@ -478,8 +478,12 @@ PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf 
 PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung; die Bruecke antwortet spaetestens nach 30 s
 
 
-FRAGE_HALTEN_S = 3600     # so lange bleibt eine unbeantwortete Rueckfrage abrufbar
+FRAGE_HALTEN_S = 48 * 3600  # so lange bleibt eine Rueckfrage samt Ausgang abrufbar (fuer den Abgleich der App)
 ANTWORT_WARTEN_S = 25     # eine Abfrage des Hooks wartet hoechstens so lange auf Franks Antwort
+HOOK_FRISCH_S = 90        # so lange nach seiner letzten Abfrage gilt der Frage-Hook als wartend
+FRAGEN = ZUSTAND.with_name("fragen.json")
+# Ausgang einer Rueckfrage: Danach nimmt der Relay keine Antwort mehr an.
+FRAGE_ZU = ("beantwortet", "am_pc", "beantwortet_am_pc", "erledigt", "freigegeben")
 
 NACHTRAG_HALTEN_S = 7 * 86400   # so lange bleibt ein nicht zugestellter Nachtrag eingereiht
 NACHTRAG_WARTEN_S = 25          # eine Abfrage des Hooks wartet hoechstens so lange auf einen Nachtrag
@@ -493,7 +497,10 @@ class PcBruecke:
 
     def __init__(self, relay):
         self.relay = relay
-        self.fragen = {}      # frage_id -> {"zeit": monotonic, "antwort": dict|None, "da": asyncio.Event}
+        # frage_id -> {"zeit", "auftrag_id", "frage", "schritt", "status", "antwort", "antwort_id", "antwort_text", "abgefragt"}
+        # (Zeiten in Sekunden seit 1970), dauerhaft in fragen.json: Ein Neustart des Relays verliert keine wartende Frage mehr.
+        self.fragen = {}
+        self.frage_da = {}    # frage_id -> asyncio.Event: Franks Antwort oder Freigabe kam
         self.zuletzt = 0.0
         self.rechner = ""
         # Zwei Bruecken (Franks Wahl vom 17.10.2026, Loesung B): Die Windows-Bruecke ist der Hauptrechner, die Mac-Bruecke
@@ -513,6 +520,68 @@ class PcBruecke:
         self.neu_da = {}      # AUFTRAG-ID -> asyncio.Event: ein Nachtrag kam dazu
         self.zugestellt = {}  # nachtrag_id -> asyncio.Event: der Hook hat quittiert
         self._lade_nachtraege()
+        self._lade_fragen()
+
+    # ---------------------------------------------------------------- Rueckfragen
+
+    def _lade_fragen(self) -> None:
+        try:
+            daten = json.loads(FRAGEN.read_text("utf-8"))
+            self.fragen = {k: v for k, v in daten.items() if isinstance(v, dict) and isinstance(v.get("zeit"), (int, float))}
+        except Exception:
+            pass
+
+    def _sichere_fragen(self) -> None:
+        grenze = time.time() - FRAGE_HALTEN_S
+        self.fragen = dict(sorted(((k, v) for k, v in self.fragen.items() if v.get("zeit", 0) >= grenze), key=lambda e: e[1]["zeit"])[-100:])
+        for frage_id in [k for k in self.frage_da if k not in self.fragen]:
+            self.frage_da.pop(frage_id, None)
+        try:
+            FRAGEN.parent.mkdir(parents=True, exist_ok=True)
+            FRAGEN.write_text(json.dumps(self.fragen, ensure_ascii=False), "utf-8")
+        except Exception as fehler:
+            log.warning("Rueckfragen nicht gesichert: %s", fehler)
+
+    def _da(self, frage_id: str) -> asyncio.Event:
+        return self.frage_da.setdefault(frage_id, asyncio.Event())
+
+    def _wartet_hook(self, eintrag: dict) -> bool:
+        return time.time() - eintrag.get("abgefragt", eintrag.get("zeit", 0)) < HOOK_FRISCH_S
+
+    def _frage_merken(self, auftrag_id: str, stand: str, schritt: str, frage: dict) -> None:
+        """Neue Rueckfrage (stand frage) oder ihr Ausgang (stand frage_status) vom Hook."""
+        frage_id = frage["frage_id"]
+        jetzt = time.time()
+        if stand == "frage_status":
+            eintrag = self.fragen.get(frage_id)
+            if eintrag is None:
+                return
+            status = str(frage.get("status", ""))
+            if status in FRAGE_ZU:
+                eintrag["status"] = status
+                if frage.get("antwort"):
+                    eintrag["antwort_text"] = str(frage["antwort"])[:2000]
+                if frage.get("grund"):
+                    eintrag["grund"] = str(frage["grund"])[:40]
+                eintrag["ausgang"] = jetzt
+        elif frage_id not in self.fragen:
+            # Der Hook wiederholt eine Meldung, wenn die Antwort ausblieb: dieselbe frage_id nie zweimal anlegen.
+            nutzlast = {k: v for k, v in frage.items() if k in ("frage_id", "fragen", "frei", "bis", "tool_use_id")}
+            self.fragen[frage_id] = {"zeit": jetzt, "abgefragt": jetzt, "auftrag_id": auftrag_id, "frage": nutzlast, "schritt": schritt[:4000],
+                                     "status": "offen", "antwort": None, "antwort_id": "", "antwort_text": ""}
+        self._sichere_fragen()
+
+    def _frage_fuer_handy(self, frage_id: str, e: dict) -> dict:
+        return {"frage_id": frage_id, "auftrag_id": e.get("auftrag_id", ""), "zeit": int(e.get("zeit", 0)), "status": e.get("status", "offen"),
+                "wartet": e.get("status") in ("offen", "angenommen") and self._wartet_hook(e), "frage": e.get("frage") or {},
+                "schritt": e.get("schritt", ""), "antwort_text": e.get("antwort_text", ""), "grund": e.get("grund", "")}
+
+    async def fragen_liste(self, request: web.Request) -> web.Response:
+        """GET /geraet/fragen (Handy): alle Rueckfragen der letzten 48 Stunden mit Stand. Die App gleicht damit ab, falls eine
+        Meldung ueber die WebSocket verloren ging (halb tote Verbindung, Handy im Ruhezustand)."""
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        return web.json_response({"fragen": [self._frage_fuer_handy(k, v) for k, v in self.fragen.items()]})
 
     # ---------------------------------------------------------------- Nachtraege
 
@@ -735,11 +804,6 @@ class PcBruecke:
             rechner = self.zugestellt_an.pop(nummer, self.rechner)
         return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner})
 
-    def _aufraeumen(self) -> None:
-        grenze = time.monotonic() - FRAGE_HALTEN_S
-        for frage_id in [k for k, v in self.fragen.items() if v["zeit"] < grenze]:
-            self.fragen.pop(frage_id, None)
-
     async def meldung(self, request: web.Request) -> web.Response:
         """POST /pc/meldung (Hook am PC): {"auftrag_id", "stand", "schritt", "frage"?: {"frage_id", "fragen", "frei"}}."""
         if not darf_pc(request):
@@ -749,46 +813,81 @@ class PcBruecke:
             assert isinstance(daten.get("auftrag_id"), str) and daten["auftrag_id"] and isinstance(daten.get("schritt"), str)
         except Exception:
             return web.Response(status=400, text="Meldung unlesbar")
-        self._aufraeumen()
         auftrag_id = daten["auftrag_id"].strip().upper()
         self.kontakt[auftrag_id] = time.monotonic()
         if daten.get("stand") == "nachtrag" and isinstance(daten.get("nachtrag_ids"), list):
             self._quittiert(auftrag_id, daten["nachtrag_ids"])
         frage = daten.get("frage")
-        if isinstance(frage, dict) and isinstance(frage.get("frage_id"), str) and frage["frage_id"]:
-            self.fragen.setdefault(frage["frage_id"], {"zeit": time.monotonic(), "antwort": None, "da": asyncio.Event()})
+        if isinstance(frage, dict) and isinstance(frage.get("frage_id"), str) and frage["frage_id"] and daten.get("stand") in ("frage", "frage_status"):
+            self._frage_merken(auftrag_id, daten["stand"], daten["schritt"], frage)
         zugestellt = await self.relay.programmier_meldung({"signal": "programmieren", **daten})
         return web.json_response({"zugestellt": zugestellt})
 
     async def antwort_abholen(self, request: web.Request) -> web.Response:
-        """GET /pc/antwort?frage_id=… (Hook): 200 mit Antwort, 204 = noch keine, 404 = Frage unbekannt oder verfallen."""
+        """GET /pc/antwort?frage_id=… (Hook): 200 mit Antwort (oder {"freigeben": true}: Frank will am Rechner antworten),
+        204 = noch keine, 404 = Frage unbekannt oder verfallen, 410 = schon anders ausgegangen."""
         if not darf_pc(request):
             return web.Response(status=404, text="Not found")
-        eintrag = self.fragen.get(request.query.get("frage_id", ""))
+        frage_id = request.query.get("frage_id", "")
+        eintrag = self.fragen.get(frage_id)
         if eintrag is None:
             return web.Response(status=404, text="Frage unbekannt")
-        if eintrag["antwort"] is None:
+        eintrag["abgefragt"] = time.time()
+        if eintrag.get("status") == "freigegeben":
+            return web.json_response({"freigeben": True})
+        if eintrag.get("antwort") is None and eintrag.get("status") in FRAGE_ZU:
+            return web.Response(status=410, text="Frage schon ausgegangen")
+        if eintrag.get("antwort") is None:
             try:
-                await asyncio.wait_for(eintrag["da"].wait(), ANTWORT_WARTEN_S)
+                await asyncio.wait_for(self._da(frage_id).wait(), ANTWORT_WARTEN_S)
             except asyncio.TimeoutError:
                 return web.Response(status=204)
+            eintrag = self.fragen.get(frage_id) or eintrag
+            if eintrag.get("status") == "freigegeben":
+                return web.json_response({"freigeben": True})
         return web.json_response(eintrag["antwort"])
 
     async def antwort_geben(self, request: web.Request) -> web.Response:
-        """POST /geraet/antwort (Handy): {"frage_id", "antworten": {Frage: Antwort}, "text"?}."""
+        """POST /geraet/antwort (Handy): {"frage_id", "antworten": {Frage: Antwort}, "text"?, "antwort_id"?, "freigeben"?}.
+        Dieselbe antwort_id noch einmal (Antwort kam beim Handy nicht an) gilt als angenommen, nie doppelt."""
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         try:
             daten = await request.json()
-            eintrag = self.fragen[daten["frage_id"]]
+            frage_id = str(daten["frage_id"])
+            eintrag = self.fragen[frage_id]
         except Exception:
-            return web.json_response({"angenommen": False, "grund": "Die Rueckfrage ist nicht mehr offen."}, status=404)
-        if eintrag["antwort"] is not None:
-            return web.json_response({"angenommen": False, "grund": "Die Rueckfrage ist schon beantwortet."}, status=409)
-        eintrag["antwort"] = {"antworten": daten.get("antworten") or {}, "text": str(daten.get("text", ""))[:4000]}
-        eintrag["da"].set()
-        log.info("Rueckfrage beantwortet")
-        return web.json_response({"angenommen": True})
+            return web.json_response({"angenommen": False, "status": "unbekannt", "grund": "Die Rückfrage ist nicht mehr offen."}, status=404)
+        antwort_id = str(daten.get("antwort_id", ""))[:64]
+        if antwort_id and antwort_id == eintrag.get("antwort_id"):
+            return web.json_response({"angenommen": True, "status": eintrag.get("status"), "wiederholt": True})
+        status = eintrag.get("status", "offen")
+        if eintrag.get("antwort") is not None or status != "offen":
+            grund = {
+                "beantwortet": "Die Rückfrage ist schon beantwortet",
+                "angenommen": "Die Rückfrage ist schon beantwortet",
+                "beantwortet_am_pc": "Die Rückfrage wurde schon am Rechner beantwortet",
+                "am_pc": "Die Rückfrage liegt jetzt am Rechner und in der Claude-App; dort beantworten",
+                "freigegeben": "Die Rückfrage liegt jetzt am Rechner und in der Claude-App; dort beantworten",
+                "erledigt": "Die Sitzung hat ohne diese Antwort weitergearbeitet",
+            }.get(status, "Die Rückfrage ist nicht mehr offen")
+            text = eintrag.get("antwort_text", "")
+            return web.json_response({"angenommen": False, "status": status, "antwort_text": text,
+                                      "grund": grund + (f": {text}" if text else ".")}, status=409)
+        if not self._wartet_hook(eintrag):
+            return web.json_response({"angenommen": False, "status": "verwaist",
+                                      "grund": "Die Sitzung wartet nicht mehr auf diese Antwort (vermutlich geschlossen oder am Rechner weiter)."}, status=410)
+        eintrag["antwort_id"] = antwort_id
+        if daten.get("freigeben"):
+            eintrag["status"] = "freigegeben"
+            log.info("Rueckfrage an den Rechner freigegeben")
+        else:
+            eintrag["antwort"] = {"antworten": daten.get("antworten") or {}, "text": str(daten.get("text", ""))[:4000]}
+            eintrag["status"] = "angenommen"
+            log.info("Rueckfrage beantwortet")
+        self._sichere_fragen()
+        self._da(frage_id).set()
+        return web.json_response({"angenommen": True, "status": eintrag["status"]})
 
     async def status(self, request: web.Request) -> web.Response:
         if not darf_handy(request):
@@ -863,6 +962,7 @@ def app() -> web.Application:
     anwendung.router.add_post("/pc/meldung", pc.meldung)
     anwendung.router.add_get("/pc/antwort", pc.antwort_abholen)
     anwendung.router.add_post("/geraet/antwort", pc.antwort_geben)
+    anwendung.router.add_get("/geraet/fragen", pc.fragen_liste)
     anwendung.router.add_post("/geraet/nachtrag", pc.nachtrag_geben)
     anwendung.router.add_get("/pc/nachtrag", pc.nachtrag_abholen)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)

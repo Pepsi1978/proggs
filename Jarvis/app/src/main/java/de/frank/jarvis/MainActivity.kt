@@ -196,12 +196,24 @@ class MainActivity : FragmentActivity() {
         JarvisDienst.abgleichen(this)
         setContent { JarvisApp(vm, this) }
         if (savedInstanceState == null) weckwortPruefen(intent, neu = true)
+        if (savedInstanceState == null) rueckfragePruefen(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         weckwortPruefen(intent, neu = false)
+        rueckfragePruefen(intent)
+    }
+
+    /** Tipp auf die Benachrichtigung einer Rückfrage: ihr Gespräch öffnen und die Frage im Vollbild zeigen. */
+    private fun rueckfragePruefen(intent: Intent?) {
+        val gespraech = intent?.getStringExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_GESPRAECH) ?: return
+        val frageId = intent.getStringExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_RUECKFRAGE).orEmpty()
+        intent.removeExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_GESPRAECH)
+        intent.removeExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_RUECKFRAGE)
+        vm.sitzungOeffnen(gespraech)
+        if (frageId.isNotEmpty()) vm.rueckfrageOeffnen(frageId)
     }
 
     /** „Hey Jarvis“ wurde erkannt: aufnehmen, piepen, antworten; bei gesperrtem Handy über dem Sperrbildschirm. */
@@ -268,6 +280,8 @@ class MainActivity : FragmentActivity() {
         vm.lagePruefen(sofort = false)
         // Nicht in lagePruefen: Das läuft schon im Aufbau des ViewModels, bevor dessen spätere Felder bestehen.
         vm.abfahrtLaden()
+        // Verpasste Rückfragen der Programmier-Sitzungen und ihren Ausgang vom Server holen.
+        vm.rueckfragenAbgleichen()
         // Hier ist Jarvis sichtbar: Nur dann darf Android den Mikrofon-Dienst starten.
         WeckwortDienst.abgleichen(this)
     }

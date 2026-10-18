@@ -10,7 +10,11 @@ Eine Datei für Windows und macOS; der Mac-Start (OpenLauncherMac --jarvis-auftr
          Skills und Agenten; geänderte Dateien, Bau, Commit/Push und adb install werden gedrosselt:
          höchstens eine Meldung je DROSSEL_S, Fehler sofort. Lesen und Suchen meldet niemand (anderer Matcher).
   frage  PreToolUse (AskUserQuestion): schickt Fragen und Optionen an Jarvis, wartet bis FRAGE_WARTEN_S auf Franks Antwort
-         und gibt sie an Claude zurück. Ohne Antwort gibt der Hook frei, und der normale Dialog erscheint (auch per Remote Control).
+         und gibt sie an Claude zurück. Ohne Antwort (oder wenn Frank in Jarvis „In der Claude-App beantworten“ tippt) gibt
+         der Hook frei, und der normale Dialog erscheint (auch per Remote Control). Solange der Hook wartet, zeigt die
+         Claude-App die Frage zwar an, nimmt aber keine Antwort an: Claude Code öffnet seinen Dialog erst nach dem Hook.
+         Jeder Ausgang geht als stand „frage_status“ an Jarvis (beantwortet, am_pc, erledigt), damit die Frage dort
+         überall als erledigt gilt, auch wenn sie am Rechner beantwortet wurde (post erkennt das am AskUserQuestion-Ergebnis).
   puls   PreToolUse (alle Werkzeuge, async): Lebenszeichen für die drehende Anzeige im Jarvis-Chat, höchstens alle PULS_S.
   stop   Stop: meldet den Zwischenstand (letzte Nachricht). Endet sie mit einer Frage, wartet der Hook auf Franks Antwort und
          lässt Claude damit weiterarbeiten (decision block). Liegen Nachträge zu diesem Auftrag bereit, gehen sie danach
@@ -39,7 +43,7 @@ from pathlib import Path
 
 AUFTRAG = os.environ.get("JARVIS_AUFTRAG_ID", "").strip()
 DROSSEL_S = 20
-FRAGE_WARTEN_S = 600
+FRAGE_WARTEN_S = 300      # Franks Wahl vom 18.10.2026: höchstens fünf Minuten nur in Jarvis
 PULS_S = 10               # Lebenszeichen höchstens so oft
 MAX_TEXT = 4000           # so lang darf eine Meldung werden (die Schlusszusammenfassung kommt vollständig)
 if os.environ.get("LOCALAPPDATA"):
@@ -108,6 +112,25 @@ def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: lis
     return code
 
 
+def melde_sicher(stand: str, schritt: str, frage: dict | None = None, versuche: int = 5) -> bool:
+    """Für Rückfragen und ihren Ausgang: mehrmals versuchen (Relay-Neustart, Funkloch). Doppelt schadet nicht, Jarvis und
+    der Relay erkennen dieselbe frage_id wieder."""
+    for versuch in range(versuche):
+        try:
+            if melde(stand, schritt, frage) == 200:
+                return True
+        except Exception as fehler:
+            schreib(f"Meldung {stand} Versuch {versuch + 1}: {fehler}")
+        time.sleep(min(8, 1 + 2 * versuch))
+    schreib(f"Meldung {stand} nach {versuche} Versuchen aufgegeben")
+    return False
+
+
+def frage_status(frage_id: str, status: str, antwort: str = "", grund: str = "") -> None:
+    """Ausgang einer Rückfrage an Relay und Jarvis: beantwortet (in Jarvis), am_pc (Dialog am Rechner), erledigt."""
+    melde_sicher("frage_status", "", {"frage_id": frage_id, "status": status, "antwort": antwort[:2000], "grund": grund}, versuche=3)
+
+
 def warte_auf_antwort(frage_id: str) -> dict | None:
     frist = time.monotonic() + FRAGE_WARTEN_S
     while time.monotonic() < frist:
@@ -118,8 +141,10 @@ def warte_auf_antwort(frage_id: str) -> dict | None:
             time.sleep(3)
             continue
         if code == 200:
+            if daten.get("freigeben"):
+                return {"freigeben": True}
             return daten
-        if code == 404:
+        if code in (404, 410):
             return None
         # 204 = noch keine Antwort (der Relay hat schon gewartet); alles andere (etwa 502 beim Neustart des Relays) kommt
         # sofort zurück und darf die Schleife nicht ohne Pause gegen den Server laufen lassen.
@@ -298,6 +323,47 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
             if text and not schon_gesehen(z, text):
                 texte.append(text)
     return texte
+
+
+# ---------------------------------------------------------------- Freie Rückfragen am Zugende
+
+# Ein Aufzählungspunkt mit eindeutigem Trenner: „A)“, „A.“, „A:“, „(A)“, „**A**“, „**A)**“ oder „A — “; nie „Antworte …“.
+_OPTION = re.compile(r"^\s*(?:[-*•]\s*)?(?:(?:\*\*|__)\(?(?P<a>[A-H]|[1-9])[).:]?(?:\*\*|__)|\(?(?P<b>[A-H]|[1-9])[).:]|(?P<c>[A-H]|[1-9])\s+[—–-])\s*(?:[—–:-]\s*)?(?P<text>\S.*?)\s*$")
+
+
+def optionen_im_text(text: str) -> tuple[list[dict], bool]:
+    """
+    Die Auswahl, die im letzten Absatz einer freien Rückfrage wörtlich aufgezählt ist (A) …, **B** …, 1. …), nur wenn sie
+    lückenlos bei A bzw. 1 beginnt und mindestens zwei Einträge hat; nichts wird erfunden. Liefert die Optionen und, ob
+    nach der Aufzählung nur noch eine kurze Schlusszeile steht (dann ist die Nachricht eine Auswahlfrage, auch ohne „?“ am Ende).
+    """
+    zeilen = text.rstrip().splitlines()
+    ende = len(zeilen)
+    # Höchstens eine kurze Schlusszeile („Antworte mit A, B oder C.“) und Leerzeilen hinter der Aufzählung.
+    while ende and not zeilen[ende - 1].strip():
+        ende -= 1
+    schluss = ende
+    if ende and not _OPTION.match(zeilen[ende - 1]) and len(zeilen[ende - 1]) <= 200:
+        schluss = ende - 1
+        while schluss and not zeilen[schluss - 1].strip():
+            schluss -= 1
+    gefunden = []
+    i = schluss
+    while i and _OPTION.match(zeilen[i - 1]):
+        m = _OPTION.match(zeilen[i - 1])
+        gefunden.insert(0, (m.group("a") or m.group("b") or m.group("c"), m.group("text")))
+        i -= 1
+    if len(gefunden) < 2:
+        return [], False
+    start = "A" if gefunden[0][0].isalpha() else "1"
+    if any(kennung != chr(ord(start) + nr) for nr, (kennung, _) in enumerate(gefunden)):
+        return [], False
+    # Davor muss eine Frage stehen (eine Zeile mit „?“ in den letzten Zeilen vor der Aufzählung).
+    davor = "\n".join(zeilen[max(0, i - 6):i])
+    if "?" not in davor and "?" not in "\n".join(zeilen[schluss:ende]):
+        return [], False
+    optionen = [{"label": text.replace("**", "").strip(), "kennung": kennung} for kennung, text in gefunden]
+    return optionen, True
 
 
 # ---------------------------------------------------------------- Nachträge
@@ -528,10 +594,17 @@ def post(eingabe: dict) -> None:
     werkzeug = eingabe.get("tool_name", "")
     ein = eingabe.get("tool_input") or {}
     aus = eingabe.get("tool_response")
+    erledigt = []
     with Sperre():
         z = lies_zustand()
         # Zuerst, was die KI seit dem letzten Werkzeug geschrieben hat: sofort, jeder Text als eigene Meldung.
         raus = [("laeuft", "💬 " + text) for text in neue_texte(eingabe, z)]
+        # Eine Rückfrage, die am Rechner (Terminal, Claude-App) beantwortet wurde: AskUserQuestion ist gelaufen. Läuft danach
+        # ein anderes Werkzeug, ist jede noch am Rechner offene Frage ebenfalls erledigt (abgebrochen oder anders beantwortet).
+        if werkzeug == "AskUserQuestion":
+            erledigt = [(v["frage_id"], "beantwortet_am_pc", antwort_text(aus)) for _, v in offene_am_pc(z, str(eingabe.get("tool_use_id") or ""))]
+        else:
+            erledigt = [(v["frage_id"], "erledigt", "") for _, v in offene_am_pc(z)]
         if werkzeug in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
             pfad = ein.get("file_path") or ein.get("notebook_path") or ""
             if pfad:
@@ -560,6 +633,44 @@ def post(eingabe: dict) -> None:
             raus += sammel(z, None)
         schreib_zustand(z)
     sende(raus)
+    for frage_id, status, text in erledigt:
+        frage_status(frage_id, status, antwort=text)
+
+
+def antwort_text(antwort) -> str:
+    """Die Antworten aus dem Ergebnis von AskUserQuestion als lesbarer Text (Format laut Doku: Frage -> label, mehrere mit Komma)."""
+    if isinstance(antwort, dict):
+        werte = antwort.get("answers") if isinstance(antwort.get("answers"), dict) else None
+        if werte:
+            return "; ".join(f"{v}" for v in werte.values() if str(v).strip())
+        return "; ".join(str(v) for k, v in antwort.items() if isinstance(v, str) and v.strip() and k not in ("questions",))[:2000]
+    if isinstance(antwort, list):
+        return " ".join(antwort_text(t) if not isinstance(t, dict) or t.get("type") != "text" else str(t.get("text", "")) for t in antwort)[:2000]
+    return str(antwort or "")[:2000]
+
+
+def merke_frage(tool_use_id: str, frage_id: str, status: str) -> None:
+    """Welche frage_id zu welchem AskUserQuestion-Aufruf gehört und wo sie steht (jarvis, am_pc): post meldet dann den Ausgang."""
+    try:
+        with Sperre():
+            z = lies_zustand()
+            fragen = z.setdefault("fragen", {})
+            fragen[tool_use_id or frage_id] = {"frage_id": frage_id, "status": status}
+            z["fragen"] = dict(list(fragen.items())[-20:])
+            schreib_zustand(z)
+    except SperreBelegt as fehler:
+        schreib(f"merke_frage: {fehler}")
+
+
+def offene_am_pc(z: dict, tool_use_id: str | None = None) -> list[tuple[str, dict]]:
+    """Fragen, die am Rechner offen sind; mit [tool_use_id] nur diese (auch eine, die noch in Jarvis wartete). Nimmt sie aus
+    dem Zustand (einmal melden). Ohne [tool_use_id] nie eine, auf die der Frage-Hook gerade noch wartet."""
+    fragen = z.get("fragen") or {}
+    erlaubt = ("am_pc", "jarvis") if tool_use_id else ("am_pc",)
+    treffer = [(k, v) for k, v in fragen.items() if v.get("status") in erlaubt and (tool_use_id is None or k == tool_use_id)]
+    for k, _ in treffer:
+        fragen.pop(k, None)
+    return treffer
 
 
 def frage(eingabe: dict) -> None:
@@ -578,19 +689,32 @@ def frage(eingabe: dict) -> None:
         # Die Frage selbst ist wichtiger als die Zwischentexte: Die holt der nächste Hook nach.
         schreib(f"frage: {fehler}")
     sende(raus)
+    tool_use_id = str(eingabe.get("tool_use_id") or "")
     frage_id = uuid.uuid4().hex[:12]
     kurz = " / ".join(str(f.get("question", "")) for f in fragen)
-    melde("frage", "❓ " + kurz, {"frage_id": frage_id, "fragen": fragen})
+    # Mit Frist (Sekunden seit 1970): Jarvis zeigt, wie lange die Frage dort noch beantwortbar ist.
+    daten = {"frage_id": frage_id, "fragen": fragen, "bis": int(time.time() + FRAGE_WARTEN_S), "tool_use_id": tool_use_id}
+    if not melde_sicher("frage", "❓ " + kurz, daten):
+        schreib("Rückfrage nicht an Jarvis zugestellt: normaler Dialog")
+        return
+    merke_frage(tool_use_id, frage_id, "jarvis")
     antwort = warte_auf_antwort(frage_id)
-    if not antwort:
-        schreib("Keine Antwort über Jarvis: normaler Dialog")
+    if not antwort or antwort.get("freigeben"):
+        grund = "freigegeben" if antwort else "abgelaufen"
+        schreib(f"Keine Antwort über Jarvis ({grund}): normaler Dialog")
+        merke_frage(tool_use_id, frage_id, "am_pc")
+        frage_status(frage_id, "am_pc", grund=grund)
         return
     antworten = {str(k): str(v) for k, v in (antwort.get("antworten") or {}).items()}
     zusatz = str(antwort.get("text", "")).strip()
     if zusatz and not antworten:
         # Nur Freitext (Sprache): jede Frage bekommt ihn als „Sonstiges“, Claude ordnet ihn selbst ein.
         antworten = {str(f.get("question", "")): zusatz for f in fragen}
-    melde("laeuft", "💬 Antwort von Frank: " + "; ".join(f"{v}" for v in antworten.values()))
+    text = "; ".join(f"{v}" for v in antworten.values())
+    # Angekommen: Jarvis zeigt die Frage überall als beantwortet (auch auf einem zweiten Weg, etwa per ChatGPT).
+    merke_frage(tool_use_id, frage_id, "beantwortet")
+    frage_status(frage_id, "beantwortet", antwort=text)
+    melde("laeuft", "💬 Antwort von Frank: " + text)
     ausgabe = {"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "permissionDecision": "allow",
@@ -603,9 +727,11 @@ def frage(eingabe: dict) -> None:
 def stop(eingabe: dict) -> None:
     letzte = lesbar(str(eingabe.get("last_assistant_message") or ""))
     raus = []
+    erledigt = []
     try:
         with Sperre():
             z = lies_zustand()
+            erledigt = [v["frage_id"] for _, v in offene_am_pc(z)]
             # Zwischentexte dieses Zuges, die noch kein Werkzeug-Hook gemeldet hat. Die letzte Nachricht steht oft schon im
             # Transkript und wird dabei als gesehen markiert: Sie kommt trotzdem gleich gesondert (Fehler vom 15.10.2026).
             texte = neue_texte(eingabe, z)
@@ -621,20 +747,32 @@ def stop(eingabe: dict) -> None:
         neu = bool(letzte) and not schon_gesehen(dict(z, gesehen=list(z["gesehen"])), letzte)
         dauer = dauer_text(time.time() - z["beginn"])
     sende(raus)
+    for frage_id in erledigt:
+        frage_status(frage_id, "erledigt")
     if not neu:
         nachtraege_im_stop()
         return
-    # Eine echte Rückfrage steht am Ende der Nachricht; nur dann wartet der Hook (und nie zweimal hintereinander).
+    # Eine echte Rückfrage steht am Ende der Nachricht (Fragezeichen oder eine wörtlich aufgezählte Auswahl A/B/C … bzw.
+    # 1/2/3 nach einer Frage, etwa Frage 1 des Research-Skills ohne AskUserQuestion); nur dann wartet der Hook (nie zweimal).
     ende = letzte.rstrip().rstrip("*_ )\"“”").strip()
-    if ende.endswith("?") and not eingabe.get("stop_hook_active"):
+    optionen, auswahl = optionen_im_text(letzte)
+    if (ende.endswith("?") or auswahl) and not eingabe.get("stop_hook_active"):
         frage_id = uuid.uuid4().hex[:12]
-        melde("frage", "❓ " + letzte[-MAX_TEXT:], {"frage_id": frage_id, "frei": True, "fragen": [{"question": letzte[-1500:], "options": []}]})
-        antwort = warte_auf_antwort(frage_id)
-        if antwort:
-            inhalt = str(antwort.get("text", "")).strip() or "; ".join(str(v) for v in (antwort.get("antworten") or {}).values())
-            melde("laeuft", "💬 Antwort von Frank: " + inhalt)
-            sys.stdout.write(json.dumps({"decision": "block", "reason": f"Frank hat über Jarvis geantwortet: {inhalt}"}))
+        daten = {"frage_id": frage_id, "frei": True, "bis": int(time.time() + FRAGE_WARTEN_S),
+                 "fragen": [{"question": letzte[-3000:], "options": optionen}]}
+        if not melde_sicher("frage", "❓ " + letzte[-MAX_TEXT:], daten):
+            schreib("Freie Rückfrage nicht an Jarvis zugestellt")
+            nachtraege_im_stop()
             return
+        antwort = warte_auf_antwort(frage_id)
+        if antwort and not antwort.get("freigeben"):
+            inhalt = str(antwort.get("text", "")).strip() or "; ".join(str(v) for v in (antwort.get("antworten") or {}).values())
+            frage_status(frage_id, "beantwortet", antwort=inhalt)
+            melde("laeuft", "💬 Antwort von Frank: " + inhalt)
+            sys.stdout.write(json.dumps({"decision": "block", "reason": f"Frank hat über Jarvis geantwortet: {inhalt}"}, ensure_ascii=False))
+            return
+        # Ohne Antwort endet der Zug: Frank antwortet dann am Rechner oder in der Claude-App wie auf jede Nachricht.
+        frage_status(frage_id, "am_pc", grund="freigegeben" if antwort else "abgelaufen")
         schreib("Freie Rückfrage ohne Antwort über Jarvis")
         nachtraege_im_stop()
         return

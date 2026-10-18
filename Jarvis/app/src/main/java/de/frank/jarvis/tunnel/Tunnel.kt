@@ -112,6 +112,7 @@ object Tunnel {
                         Log.i(TAG, "Verbunden mit $host")
                         // Unter derselben Sperre wie das Einreihen in sende(): Keine Antwort fällt zwischen beide.
                         synchronized(this@Tunnel) { offen = webSocket; nachsenden(webSocket) }
+                        runCatching { beiVerbunden?.invoke() }
                     }
 
                     override fun onMessage(webSocket: WebSocket, text: String) {
@@ -164,6 +165,9 @@ object Tunnel {
 
     /** Empfänger für Signale des Servers (ganze Nachricht, Art unter „signal“, z. B. „tagebuch“ oder „update“); setzt der Dienst. */
     @Volatile var beiSignal: ((JSONObject) -> Unit)? = null
+
+    /** Nach jedem Verbinden mit dem Server (etwa Rückfragen abgleichen, die während der Trennung verloren gingen); setzt der Dienst. */
+    @Volatile var beiVerbunden: (() -> Unit)? = null
 
     /** Sofort neu versuchen, statt die Wartezeit abzusitzen (das Netz ist wieder da). */
     fun jetztVerbinden() { anstoss.trySend(Unit) }

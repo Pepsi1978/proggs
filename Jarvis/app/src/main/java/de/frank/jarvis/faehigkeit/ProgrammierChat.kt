@@ -95,11 +95,57 @@ object ProgrammierChat {
         Gespraeche.anhaengen(context, gespraech, nachricht)
     }
 
-    /** Markiert eine Rückfrage im Gespräch als beantwortet (Knöpfe verschwinden, die Antwort steht darunter). */
-    @Volatile var beantwortet: ((gespraech: String, frageId: String, antwort: String) -> Boolean)? = null
+    /**
+     * Ändert eine Rückfrage im offenen Gespräch der App (Stand, Antwort, Entwurf): null = das Gespräch ist gerade nicht offen,
+     * sonst true, wenn die Rückfrage darin steht. [aenderung] bekommt eine Kopie des Kontexts und liefert false für „nichts ändern“.
+     */
+    @Volatile var aendern: ((gespraech: String, frageId: String, aenderung: (org.json.JSONObject) -> Boolean) -> Boolean?)? = null
 
-    fun alsBeantwortet(context: Context, gespraech: String, frageId: String, antwort: String) {
-        if (runCatching { beantwortet?.invoke(gespraech, frageId, antwort) }.getOrNull() == true) return
-        Gespraeche.rueckfrageBeantwortet(context, gespraech, frageId, antwort)
+    /** Ändert eine Rückfrage, im offenen Gespräch oder in der Datei. true = sie steht im Gespräch. */
+    fun rueckfrageAendern(context: Context, gespraech: String, frageId: String, aenderung: (org.json.JSONObject) -> Boolean): Boolean {
+        runCatching { aendern?.invoke(gespraech, frageId, aenderung) }.getOrNull()?.let { return it }
+        return Gespraeche.rueckfrageAendern(context, gespraech, frageId, aenderung)
     }
+
+    /** Setzt den Stand einer Rückfrage (siehe [RueckfrageStand]) samt Antworttext und Grund. */
+    fun rueckfrageStand(context: Context, gespraech: String, frageId: String, stand: String, antwort: String = "", grund: String = ""): Boolean =
+        rueckfrageAendern(context, gespraech, frageId) { k ->
+            // Ein endgültiger Ausgang wird nie zurückgedreht (spät eintreffende Meldungen, Abgleich mit dem Server).
+            if (RueckfrageStand.endgueltig(k.optString("status")) && !RueckfrageStand.endgueltig(stand)) return@rueckfrageAendern false
+            if (k.optString("status") == stand && k.optString("antwort") == antwort.ifEmpty { k.optString("antwort") }) return@rueckfrageAendern false
+            k.put("status", stand).put("beantwortet", stand in RueckfrageStand.BEANTWORTET_ALLE)
+            if (antwort.isNotEmpty()) k.put("antwort", antwort)
+            if (grund.isNotEmpty()) k.put("grund", grund) else k.remove("grund")
+            true
+        }
+}
+
+/**
+ * Stände einer Rückfrage im Gespräch (Kontext „status“). Offen: in Jarvis beantwortbar. Sendet/Fehler: Franks Antwort ist
+ * unterwegs bzw. nicht angekommen. Angenommen: der Server hat sie, die Sitzung holt sie ab. Beantwortet: in der Sitzung
+ * angekommen (über Jarvis), beantwortet_am_pc: am Rechner oder in der Claude-App. am_pc: Jarvis gab die Frage an den Rechner
+ * weiter (Frist um oder „In der Claude-App beantworten“). Erledigt: die Sitzung arbeitete ohne Antwort weiter. Verwaist: die
+ * Sitzung wartet nicht mehr.
+ */
+object RueckfrageStand {
+    const val OFFEN = "offen"
+    const val SENDET = "sendet"
+    const val FEHLER = "fehler"
+    const val ANGENOMMEN = "angenommen"
+    const val BEANTWORTET = "beantwortet"
+    const val AM_PC_BEANTWORTET = "beantwortet_am_pc"
+    const val AM_PC = "am_pc"
+    const val ERLEDIGT = "erledigt"
+    const val VERWAIST = "verwaist"
+
+    val BEANTWORTET_ALLE = setOf(ANGENOMMEN, BEANTWORTET, AM_PC_BEANTWORTET)
+
+    /** Danach ist die Frage in Jarvis nicht mehr beantwortbar. */
+    fun endgueltig(stand: String) = stand in setOf(BEANTWORTET, AM_PC_BEANTWORTET, AM_PC, ERLEDIGT, VERWAIST)
+
+    /** In Jarvis noch zu beantworten (auch nach einem Fehler beim Senden). */
+    fun beantwortbar(stand: String) = stand.isEmpty() || stand == OFFEN || stand == FEHLER
+
+    /** Stand eines Kontexts; ältere Rückfragen kannten nur „beantwortet“. */
+    fun von(k: org.json.JSONObject): String = k.optString("status").ifEmpty { if (k.optBoolean("beantwortet")) BEANTWORTET else OFFEN }
 }

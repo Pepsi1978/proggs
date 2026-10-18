@@ -1483,6 +1483,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch(Dispatchers.Main) {
                 sicherung.withLock {
                     if (id == sitzungId) {
+                        // Dieselbe Rückfrage nur einmal (Wiederholung des Hooks, Abgleich mit dem Server).
+                        val frageId = if (n.art == "rueckfrage") de.frank.jarvis.data.Gespraeche.rueckfrageId(n.kontext) else ""
+                        if (frageId.isNotEmpty() && gespraech.any { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == frageId }) return@withLock
                         gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext, n.anhaenge)
                         sitzungSichern()
                     } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), id, n) }
@@ -1492,40 +1495,99 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private val programmierBeantwortet: (String, String, String) -> Boolean = { id, frageId, antwort ->
-        if (id != sitzungId && id != programmierGespraech && id != ladeZiel) false else {
-            viewModelScope.launch(Dispatchers.Main) {
+    private val programmierAendern: (String, String, (org.json.JSONObject) -> Boolean) -> Boolean? = { id, frageId, aenderung ->
+        val istOffen = id == sitzungId
+        if (!istOffen && id != programmierGespraech && id != ladeZiel) null else {
+            val gefunden = if (istOffen) gespraech.toList().any { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == frageId }
+            else de.frank.jarvis.data.Gespraeche.rueckfrageKontext(getApplication(), id, frageId) != null
+            if (gefunden) viewModelScope.launch(Dispatchers.Main) {
                 sicherung.withLock {
-                    val i = gespraech.indexOfLast { it.art == "rueckfrage" && it.kontext.contains(frageId) }
+                    val i = gespraech.indexOfLast { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == frageId }
                     if (id == sitzungId && i >= 0) {
-                        val k = runCatching { org.json.JSONObject(gespraech[i].kontext) }.getOrNull() ?: return@launch
-                        gespraech[i] = gespraech[i].copy(kontext = k.put("beantwortet", true).put("antwort", antwort).toString())
+                        val k = runCatching { org.json.JSONObject(gespraech[i].kontext) }.getOrNull() ?: return@withLock
+                        if (!aenderung(k)) return@withLock
+                        gespraech[i] = gespraech[i].copy(kontext = k.toString())
                         sitzungSichern()
-                    } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageBeantwortet(getApplication(), id, frageId, antwort) }
+                    } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageAendern(getApplication(), id, frageId, aenderung) }
                 }
             }
-            true
+            gefunden
+        }
+    }
+
+    /** Die Rückfrage (frage_id), die gerade im Vollbild offen ist, oder null. */
+    var rueckfrageDialog by mutableStateOf<String?>(null)
+        private set
+
+    /** Rückfragen, die Frank in diesem Lauf geschlossen hat: Sie öffnen sich nicht von selbst wieder (der Chat zeigt „Beantworten“). */
+    private val rueckfrageGeschlossen = mutableSetOf<String>()
+
+    fun rueckfrageOeffnen(frageId: String) { rueckfrageDialog = frageId }
+
+    fun rueckfrageSchliessen() {
+        rueckfrageDialog?.let { rueckfrageGeschlossen += it }
+        rueckfrageDialog = null
+    }
+
+    /**
+     * Öffnet die älteste noch offene Rückfrage des Gesprächs im Vollbild, wenn gerade keine offen ist und Frank sie nicht
+     * selbst geschlossen hat: beim Eintreffen und beim Öffnen des Gesprächs.
+     */
+    fun rueckfrageVonSelbst() {
+        if (rueckfrageDialog != null) return
+        val jetzt = System.currentTimeMillis() / 1000
+        gespraech.firstOrNull { n ->
+            if (n.art != "rueckfrage") return@firstOrNull false
+            val k = runCatching { org.json.JSONObject(n.kontext) }.getOrNull() ?: return@firstOrNull false
+            val stand = de.frank.jarvis.faehigkeit.RueckfrageStand.von(k)
+            stand == de.frank.jarvis.faehigkeit.RueckfrageStand.OFFEN && k.optString("frage_id") !in rueckfrageGeschlossen &&
+                (k.optLong("bis") == 0L || k.optLong("bis") > jetzt)
+        }?.let { rueckfrageDialog = de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) }
+    }
+
+    /** Merkt sich die angefangene Auswahl im Gespräch: Nach dem Schließen oder einem Neustart der App ist sie wieder da. */
+    fun rueckfrageEntwurf(frageId: String, entwurf: org.json.JSONObject) {
+        val gespraechId = sitzungId ?: return
+        de.frank.jarvis.faehigkeit.ProgrammierChat.rueckfrageAendern(getApplication(), gespraechId, frageId) { k ->
+            if (k.optJSONObject("entwurf")?.toString() == entwurf.toString()) false else { k.put("entwurf", entwurf); true }
         }
     }
 
     init {
         de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = programmierEmpfaenger
-        de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = programmierBeantwortet
+        de.frank.jarvis.faehigkeit.ProgrammierChat.aendern = programmierAendern
         de.frank.jarvis.faehigkeit.Sprachsession.beenden = sprachsessionBeenden
     }
 
-    /** Knopf in einer Rückfrage: Franks Antwort an die wartende Programmier-Sitzung. */
-    fun programmierAntwort(frageId: String, antworten: List<String>, text: String) {
+    /**
+     * Knopf in einer Rückfrage: Franks Antwort an die wartende Programmier-Sitzung, oder mit [freigeben] die Frage an den
+     * Rechner und die Claude-App weitergeben. Der Stand steht danach an der Rückfrage (sendet, beantwortet, Fehler mit Grund).
+     */
+    fun programmierAntwort(frageId: String, antworten: List<String>, text: String, freigeben: Boolean = false) {
         viewModelScope.launch {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
-            meldung = runCatching { faehigkeit?.beantworte(frageId, antworten, text) ?: "Programmieren ist nicht verfügbar." }
-                .getOrElse { it.message ?: "Die Antwort ging nicht raus." }
+            val ergebnis = runCatching { faehigkeit?.beantworte(frageId, antworten, text, freigeben) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
+            meldung = ergebnis.getOrElse { it.message ?: "Die Antwort ging nicht raus." }
+            // Angekommen: weiter zur nächsten offenen Rückfrage dieses Gesprächs. Bei einem Fehler bleibt das Fenster offen
+            // und zeigt den Grund samt „Erneut senden“.
+            if (ergebnis.isSuccess) {
+                if (rueckfrageDialog == frageId) { rueckfrageDialog = null; rueckfrageGeschlossen += frageId }
+                rueckfrageVonSelbst()
+            }
+        }
+    }
+
+    /** Gleicht offene Rückfragen mit dem Jarvis-Server ab (verlorene Meldungen, Ausgang am Rechner). */
+    fun rueckfragenAbgleichen() {
+        viewModelScope.launch {
+            de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
+                ?.let { runCatching { it.fragenAbgleichen() } }
         }
     }
 
     override fun onCleared() {
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger === programmierEmpfaenger) de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = null
-        if (de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet === programmierBeantwortet) de.frank.jarvis.faehigkeit.ProgrammierChat.beantwortet = null
+        if (de.frank.jarvis.faehigkeit.ProgrammierChat.aendern === programmierAendern) de.frank.jarvis.faehigkeit.ProgrammierChat.aendern = null
         if (de.frank.jarvis.faehigkeit.Sprachsession.beenden === sprachsessionBeenden) de.frank.jarvis.faehigkeit.Sprachsession.beenden = null
         live?.beenden()
         // Das Aufräumen des Live-Gesprächs liefe über den schon beendeten viewModelScope: Mikrofon hier direkt freigeben.

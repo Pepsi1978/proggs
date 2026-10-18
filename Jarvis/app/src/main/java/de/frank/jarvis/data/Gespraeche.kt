@@ -147,6 +147,8 @@ object Gespraeche {
                 if (!d.exists() && !File(d.path + ".bak").exists()) return@runCatching
                 val j = lies(d)
                 val liste = j.optJSONArray("nachrichten") ?: JSONArray().also { j.put("nachrichten", it) }
+                // Dieselbe Rückfrage (frage_id) nur einmal: Der Hook wiederholt Meldungen, und der Abgleich mit dem Server reicht nach.
+                if (n.art == "rueckfrage" && rueckfrageIndex(liste, rueckfrageId(n.kontext)) >= 0) return@runCatching
                 liste.put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
                     if (n.art != "antwort") put("art", n.art)
                     if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
@@ -173,24 +175,47 @@ object Gespraeche {
         }
     }
 
-    /** Trägt bei einer Rückfrage (art „rueckfrage“, kontext = JSON mit frage_id) die Antwort ein, in der Datei. */
-    fun rueckfrageBeantwortet(context: Context, id: String, frageId: String, antwort: String) {
-        synchronized(sperre) {
-            runCatching {
-                val d = datei(context, id)
-                val j = lies(d)
-                val liste = j.optJSONArray("nachrichten") ?: return@runCatching
-                for (i in liste.length() - 1 downTo 0) {
-                    val n = liste.getJSONObject(i)
-                    if (n.optString("art") != "rueckfrage") continue
-                    val kontext = runCatching { JSONObject(n.optString("kontext")) }.getOrNull() ?: continue
-                    if (kontext.optString("frage_id") != frageId) continue
-                    n.put("kontext", kontext.put("beantwortet", true).put("antwort", antwort).toString())
-                    schreiben(d, j)
-                    return@runCatching
-                }
-            }.onFailure { Log.w(TAG, "Rückfrage nicht als beantwortet markiert", it) }
+    /** Die frage_id im Kontext einer Rückfrage, leer ohne. */
+    fun rueckfrageId(kontext: String): String = runCatching { JSONObject(kontext).optString("frage_id") }.getOrDefault("")
+
+    private fun rueckfrageIndex(liste: JSONArray, frageId: String): Int {
+        if (frageId.isEmpty()) return -1
+        for (i in liste.length() - 1 downTo 0) {
+            val n = liste.optJSONObject(i) ?: continue
+            if (n.optString("art") == "rueckfrage" && rueckfrageId(n.optString("kontext")) == frageId) return i
         }
+        return -1
+    }
+
+    /**
+     * Ändert den Kontext einer Rückfrage (art „rueckfrage“, kontext = JSON mit frage_id) in der Datei: Stand, Antwort, Entwurf.
+     * [aenderung] liefert false, wenn sich nichts ändern soll. Ergebnis: true = die Rückfrage steht in diesem Gespräch.
+     */
+    fun rueckfrageAendern(context: Context, id: String, frageId: String, aenderung: (JSONObject) -> Boolean): Boolean = synchronized(sperre) {
+        runCatching {
+            val d = datei(context, id)
+            if (!d.exists() && !File(d.path + ".bak").exists()) return@runCatching false
+            val j = lies(d)
+            val liste = j.optJSONArray("nachrichten") ?: return@runCatching false
+            val i = rueckfrageIndex(liste, frageId)
+            if (i < 0) return@runCatching false
+            val n = liste.getJSONObject(i)
+            val kontext = runCatching { JSONObject(n.optString("kontext")) }.getOrNull() ?: return@runCatching true
+            if (aenderung(kontext)) {
+                n.put("kontext", kontext.toString())
+                schreiben(d, j)
+            }
+            true
+        }.onFailure { Log.w(TAG, "Rückfrage nicht geändert", it) }.getOrDefault(false)
+    }
+
+    /** Der Kontext einer Rückfrage in der Datei, oder null. */
+    fun rueckfrageKontext(context: Context, id: String, frageId: String): JSONObject? = synchronized(sperre) {
+        runCatching {
+            val liste = lies(datei(context, id)).optJSONArray("nachrichten") ?: return@runCatching null
+            val i = rueckfrageIndex(liste, frageId)
+            if (i < 0) null else JSONObject(liste.getJSONObject(i).optString("kontext"))
+        }.getOrNull()
     }
 
     fun loeschen(context: Context, id: String) {
