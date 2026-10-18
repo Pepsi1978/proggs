@@ -117,10 +117,10 @@ object Timer {
         // Spricht Jarvis gerade eine Antwort (exklusiver Tonfokus, Android spielt dann keine Hinweistöne), hätte der Timer-Ton
         // keine Chance: erst die Antwort beenden, dann klingeln. Der Timer ist wichtiger.
         val v = de.frank.jarvis.speech.Vorleser.aktuell()
-        if (v != null && v.stand.value.quelle.startsWith("gespraech:") && v.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS)
+        if (v != null && v.stand.value.quelle?.startsWith("gespraech:") == true &&v.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS)
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 // Erneut prüfen: Inzwischen kann schon die eigene Timer-Ansage laufen, die bleibt.
-                if (v.stand.value.quelle.startsWith("gespraech:")) runCatching { v.stopp() }
+                if (v.stand.value.quelle?.startsWith("gespraech:") == true) runCatching { v.stopp() }
                 meldung(app, id, t, laut = true)
             }
         else meldung(app, id, t, laut = true)
