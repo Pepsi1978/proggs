@@ -191,8 +191,12 @@ fun RueckfrageFenster(vm: AppViewModel) {
     LaunchedEffect(vm.sitzungId) {
         while (true) {
             delay(20_000)
+            // Nur Rückfragen der letzten zwei Stunden, deren Ausgang noch aussteht; ein liegen gebliebener Fehler fragt nicht ewig nach.
+            val grenze = System.currentTimeMillis() / 1000 - 2 * 3600
             val wartet = vm.gespraech.any { n ->
-                n.art == "rueckfrage" && lies(n.kontext)?.stand.let { it == null || it in setOf(RueckfrageStand.OFFEN, RueckfrageStand.SENDET, RueckfrageStand.ANGENOMMEN, RueckfrageStand.FEHLER) }
+                if (n.art != "rueckfrage") return@any false
+                val r = lies(n.kontext) ?: return@any false
+                r.k.optLong("eingang") >= grenze && r.stand in setOf(RueckfrageStand.OFFEN, RueckfrageStand.SENDET, RueckfrageStand.ANGENOMMEN)
             }
             if (wartet) vm.rueckfragenAbgleichen()
         }
@@ -202,8 +206,15 @@ fun RueckfrageFenster(vm: AppViewModel) {
     val r = remember(nachricht.kontext) { lies(nachricht.kontext) } ?: return
     Dialog(
         onDismissRequest = { vm.rueckfrageSchliessen() },
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false, dismissOnClickOutside = false),
-    ) { Vollbild(vm, r) }
+        // decorFitsSystemWindows bleibt an: Ohne passte Android das Fenster nicht an die Systemleisten an, es ragte unten über den
+        // Bildschirm hinaus, und „In der Claude-App beantworten“ lag unsichtbar unter dem Rand (Test 5 am 18.10.2026, Fold 8).
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+    ) {
+        // Mit Tastatur schrumpft das Fenster, statt dass sie Textfeld und Senden-Knopf verdeckt.
+        val fenster = (androidx.compose.ui.platform.LocalView.current.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+        androidx.compose.runtime.SideEffect { fenster?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE) }
+        Vollbild(vm, r)
+    }
 }
 
 @Composable

@@ -126,9 +126,9 @@ def melde_sicher(stand: str, schritt: str, frage: dict | None = None, versuche: 
     return False
 
 
-def frage_status(frage_id: str, status: str, antwort: str = "", grund: str = "") -> None:
+def frage_status(frage_id: str, status: str, antwort: str = "", grund: str = "", versuche: int = 3) -> bool:
     """Ausgang einer Rückfrage an Relay und Jarvis: beantwortet (in Jarvis), am_pc (Dialog am Rechner), erledigt."""
-    melde_sicher("frage_status", "", {"frage_id": frage_id, "status": status, "antwort": antwort[:2000], "grund": grund}, versuche=3)
+    return melde_sicher("frage_status", "", {"frage_id": frage_id, "status": status, "antwort": antwort[:2000], "grund": grund}, versuche=versuche)
 
 
 def warte_auf_antwort(frage_id: str) -> dict | None:
@@ -358,9 +358,11 @@ def optionen_im_text(text: str) -> tuple[list[dict], bool]:
     start = "A" if gefunden[0][0].isalpha() else "1"
     if any(kennung != chr(ord(start) + nr) for nr, (kennung, _) in enumerate(gefunden)):
         return [], False
-    # Davor muss eine Frage stehen (eine Zeile mit „?“ in den letzten Zeilen vor der Aufzählung).
-    davor = "\n".join(zeilen[max(0, i - 6):i])
-    if "?" not in davor and "?" not in "\n".join(zeilen[schluss:ende]):
+    # Die Frage steht unmittelbar davor (letzte nicht leere Zeile vor der Aufzählung endet mit „?“ oder „?:“) oder in der
+    # kurzen Schlusszeile danach. Eine Liste in einem Bericht („Verbesserungsvorschläge:“) ist keine Auswahlfrage.
+    vorher = next((z.strip() for z in reversed(zeilen[:i]) if z.strip()), "")
+    nachher = "\n".join(zeilen[schluss:ende]).strip()
+    if not re.search(r"\?\**\s*:?\s*$", vorher) and not nachher.endswith("?"):
         return [], False
     optionen = [{"label": text.replace("**", "").strip(), "kennung": kennung} for kennung, text in gefunden]
     return optionen, True
@@ -604,7 +606,7 @@ def post(eingabe: dict) -> None:
         if werkzeug == "AskUserQuestion":
             erledigt = [(v["frage_id"], "beantwortet_am_pc", antwort_text(aus)) for _, v in offene_am_pc(z, str(eingabe.get("tool_use_id") or ""))]
         else:
-            erledigt = [(v["frage_id"], "erledigt", "") for _, v in offene_am_pc(z)]
+            erledigt = [(v["frage_id"], v.get("ausgang") or "erledigt", v.get("text", "")) for _, v in offene_am_pc(z)]
         if werkzeug in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
             pfad = ein.get("file_path") or ein.get("notebook_path") or ""
             if pfad:
@@ -633,8 +635,11 @@ def post(eingabe: dict) -> None:
             raus += sammel(z, None)
         schreib_zustand(z)
     sende(raus)
+    # post läuft async mit 15 s Zeitlimit: höchstens zwei Versuche (je bis 5 s). Ging der Ausgang nicht durch, bleibt die Frage
+    # vorgemerkt, und das nächste Werkzeug oder der Stop meldet ihn erneut.
     for frage_id, status, text in erledigt:
-        frage_status(frage_id, status, antwort=text)
+        if not frage_status(frage_id, status, antwort=text, versuche=2):
+            merke_frage(f"nachmelden-{frage_id}", frage_id, "am_pc", ausgang=status, text=text)
 
 
 def antwort_text(antwort) -> str:
@@ -649,13 +654,13 @@ def antwort_text(antwort) -> str:
     return str(antwort or "")[:2000]
 
 
-def merke_frage(tool_use_id: str, frage_id: str, status: str) -> None:
+def merke_frage(tool_use_id: str, frage_id: str, status: str, ausgang: str = "", text: str = "") -> None:
     """Welche frage_id zu welchem AskUserQuestion-Aufruf gehört und wo sie steht (jarvis, am_pc): post meldet dann den Ausgang."""
     try:
         with Sperre():
             z = lies_zustand()
             fragen = z.setdefault("fragen", {})
-            fragen[tool_use_id or frage_id] = {"frage_id": frage_id, "status": status}
+            fragen[tool_use_id or frage_id] = {"frage_id": frage_id, "status": status, "ausgang": ausgang, "text": text}
             z["fragen"] = dict(list(fragen.items())[-20:])
             schreib_zustand(z)
     except SperreBelegt as fehler:
@@ -731,7 +736,7 @@ def stop(eingabe: dict) -> None:
     try:
         with Sperre():
             z = lies_zustand()
-            erledigt = [v["frage_id"] for _, v in offene_am_pc(z)]
+            erledigt = [(v["frage_id"], v.get("ausgang") or "erledigt", v.get("text", "")) for _, v in offene_am_pc(z)]
             # Zwischentexte dieses Zuges, die noch kein Werkzeug-Hook gemeldet hat. Die letzte Nachricht steht oft schon im
             # Transkript und wird dabei als gesehen markiert: Sie kommt trotzdem gleich gesondert (Fehler vom 15.10.2026).
             texte = neue_texte(eingabe, z)
@@ -747,8 +752,8 @@ def stop(eingabe: dict) -> None:
         neu = bool(letzte) and not schon_gesehen(dict(z, gesehen=list(z["gesehen"])), letzte)
         dauer = dauer_text(time.time() - z["beginn"])
     sende(raus)
-    for frage_id in erledigt:
-        frage_status(frage_id, "erledigt")
+    for frage_id, ausgang, text in erledigt:
+        frage_status(frage_id, ausgang, antwort=text)
     if not neu:
         nachtraege_im_stop()
         return

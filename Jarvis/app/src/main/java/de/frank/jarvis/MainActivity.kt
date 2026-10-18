@@ -212,8 +212,10 @@ class MainActivity : FragmentActivity() {
         val frageId = intent.getStringExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_RUECKFRAGE).orEmpty()
         intent.removeExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_GESPRAECH)
         intent.removeExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_RUECKFRAGE)
+        // Die Rückfrage lebt im Jarvis-Reiter: Stand die App zuletzt auf einem anderen, erschiene sonst kein Vollbild.
+        vm.reiter = de.frank.jarvis.ui.Reiter.JARVIS
         vm.sitzungOeffnen(gespraech)
-        if (frageId.isNotEmpty()) vm.rueckfrageOeffnen(frageId)
+        if (frageId.isNotEmpty()) vm.rueckfrageOeffnen(frageId, gespraech)
     }
 
     /** „Hey Jarvis“ wurde erkannt: aufnehmen, piepen, antworten; bei gesperrtem Handy über dem Sperrbildschirm. */

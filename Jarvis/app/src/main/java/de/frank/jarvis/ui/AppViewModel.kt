@@ -1515,18 +1515,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Die Rückfrage (frage_id), die gerade im Vollbild offen ist, oder null. */
-    var rueckfrageDialog by mutableStateOf<String?>(null)
-        private set
+    /** Gespräch und frage_id der Rückfrage, die gerade im Vollbild offen ist, oder null. */
+    private var rueckfrageOffen by mutableStateOf<Pair<String, String>?>(null)
+
+    /** Die Rückfrage (frage_id), die im offenen Gespräch im Vollbild steht, oder null (eine aus einem anderen Gespräch zählt nicht). */
+    val rueckfrageDialog: String? get() = rueckfrageOffen?.takeIf { it.first == sitzungId }?.second
 
     /** Rückfragen, die Frank in diesem Lauf geschlossen hat: Sie öffnen sich nicht von selbst wieder (der Chat zeigt „Beantworten“). */
     private val rueckfrageGeschlossen = mutableSetOf<String>()
 
-    fun rueckfrageOeffnen(frageId: String) { rueckfrageDialog = frageId }
+    fun rueckfrageOeffnen(frageId: String, gespraech: String? = sitzungId) {
+        rueckfrageOffen = (gespraech ?: return) to frageId
+    }
 
     fun rueckfrageSchliessen() {
-        rueckfrageDialog?.let { rueckfrageGeschlossen += it }
-        rueckfrageDialog = null
+        rueckfrageOffen?.let { rueckfrageGeschlossen += it.second }
+        rueckfrageOffen = null
     }
 
     /**
@@ -1542,7 +1546,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val stand = de.frank.jarvis.faehigkeit.RueckfrageStand.von(k)
             stand == de.frank.jarvis.faehigkeit.RueckfrageStand.OFFEN && k.optString("frage_id") !in rueckfrageGeschlossen &&
                 (k.optLong("bis") == 0L || k.optLong("bis") > jetzt)
-        }?.let { rueckfrageDialog = de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) }
+        }?.let { rueckfrageOeffnen(de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext)) }
     }
 
     /** Merkt sich die angefangene Auswahl im Gespräch: Nach dem Schließen oder einem Neustart der App ist sie wieder da. */
@@ -1571,7 +1575,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Angekommen: weiter zur nächsten offenen Rückfrage dieses Gesprächs. Bei einem Fehler bleibt das Fenster offen
             // und zeigt den Grund samt „Erneut senden“.
             if (ergebnis.isSuccess) {
-                if (rueckfrageDialog == frageId) { rueckfrageDialog = null; rueckfrageGeschlossen += frageId }
+                if (rueckfrageOffen?.second == frageId) { rueckfrageOffen = null; rueckfrageGeschlossen += frageId }
                 rueckfrageVonSelbst()
             }
         }

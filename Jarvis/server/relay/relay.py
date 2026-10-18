@@ -530,17 +530,33 @@ class PcBruecke:
             self.fragen = {k: v for k, v in daten.items() if isinstance(v, dict) and isinstance(v.get("zeit"), (int, float))}
         except Exception:
             pass
+        # Nach einem Neustart: Ein wartender Hook fragt gleich wieder ab. Bis dahin nicht als verwaist gelten (abgefragt
+        # steht nur im Speicher aktuell, in der Datei ist es alt).
+        jetzt = time.time()
+        for eintrag in self.fragen.values():
+            if eintrag.get("status") in ("offen", "angenommen"):
+                eintrag["abgefragt"] = jetzt
 
     def _sichere_fragen(self) -> None:
         grenze = time.time() - FRAGE_HALTEN_S
         self.fragen = dict(sorted(((k, v) for k, v in self.fragen.items() if v.get("zeit", 0) >= grenze), key=lambda e: e[1]["zeit"])[-100:])
         for frage_id in [k for k in self.frage_da if k not in self.fragen]:
             self.frage_da.pop(frage_id, None)
+        inhalt = json.dumps(self.fragen, ensure_ascii=False)
+
+        def schreiben():
+            try:
+                FRAGEN.parent.mkdir(parents=True, exist_ok=True)
+                teil = FRAGEN.with_name(FRAGEN.name + ".tmp")
+                teil.write_text(inhalt, "utf-8")
+                os.replace(teil, FRAGEN)
+            except Exception as fehler:
+                log.warning("Rueckfragen nicht gesichert: %s", fehler)
+        # Abseits der Ereignisschleife: Das Schreiben haelt sonst jede andere Anfrage auf.
         try:
-            FRAGEN.parent.mkdir(parents=True, exist_ok=True)
-            FRAGEN.write_text(json.dumps(self.fragen, ensure_ascii=False), "utf-8")
-        except Exception as fehler:
-            log.warning("Rueckfragen nicht gesichert: %s", fehler)
+            asyncio.get_running_loop().run_in_executor(None, schreiben)
+        except RuntimeError:
+            schreiben()
 
     def _da(self, frage_id: str) -> asyncio.Event:
         return self.frage_da.setdefault(frage_id, asyncio.Event())
@@ -567,21 +583,27 @@ class PcBruecke:
         elif frage_id not in self.fragen:
             # Der Hook wiederholt eine Meldung, wenn die Antwort ausblieb: dieselbe frage_id nie zweimal anlegen.
             nutzlast = {k: v for k, v in frage.items() if k in ("frage_id", "fragen", "frei", "bis", "tool_use_id")}
-            self.fragen[frage_id] = {"zeit": jetzt, "abgefragt": jetzt, "auftrag_id": auftrag_id, "frage": nutzlast, "schritt": schritt[:4000],
+            self.fragen[frage_id] = {"zeit": jetzt, "abgefragt": jetzt, "auftrag_id": auftrag_id, "frage": nutzlast, "schritt": schritt[:2000],
                                      "status": "offen", "antwort": None, "antwort_id": "", "antwort_text": ""}
         self._sichere_fragen()
 
     def _frage_fuer_handy(self, frage_id: str, e: dict) -> dict:
-        return {"frage_id": frage_id, "auftrag_id": e.get("auftrag_id", ""), "zeit": int(e.get("zeit", 0)), "status": e.get("status", "offen"),
-                "wartet": e.get("status") in ("offen", "angenommen") and self._wartet_hook(e), "frage": e.get("frage") or {},
-                "schritt": e.get("schritt", ""), "antwort_text": e.get("antwort_text", ""), "grund": e.get("grund", "")}
+        offen = e.get("status") == "offen"
+        aus = {"frage_id": frage_id, "auftrag_id": e.get("auftrag_id", ""), "zeit": int(e.get("zeit", 0)), "status": e.get("status", "offen"),
+               "wartet": e.get("status") in ("offen", "angenommen") and self._wartet_hook(e),
+               "antwort_text": e.get("antwort_text", ""), "grund": e.get("grund", "")}
+        # Den Inhalt braucht die App nur, um eine verlorene offene Frage nachzutragen.
+        if offen:
+            aus.update({"frage": e.get("frage") or {}, "schritt": e.get("schritt", "")})
+        return aus
 
     async def fragen_liste(self, request: web.Request) -> web.Response:
         """GET /geraet/fragen (Handy): alle Rueckfragen der letzten 48 Stunden mit Stand. Die App gleicht damit ab, falls eine
         Meldung ueber die WebSocket verloren ging (halb tote Verbindung, Handy im Ruhezustand)."""
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
-        return web.json_response({"fragen": [self._frage_fuer_handy(k, v) for k, v in self.fragen.items()]})
+        grenze = time.time() - 24 * 3600
+        return web.json_response({"fragen": [self._frage_fuer_handy(k, v) for k, v in self.fragen.items() if v.get("zeit", 0) >= grenze]})
 
     # ---------------------------------------------------------------- Nachtraege
 
@@ -845,6 +867,11 @@ class PcBruecke:
             eintrag = self.fragen.get(frage_id) or eintrag
             if eintrag.get("status") == "freigegeben":
                 return web.json_response({"freigeben": True})
+        # Der Hook hat die Antwort: beantwortet, auch wenn seine eigene Bestaetigung (frage_status) danach verloren ginge.
+        if eintrag.get("status") == "angenommen":
+            eintrag["status"] = "beantwortet"
+            eintrag["ausgang"] = time.time()
+            self._sichere_fragen()
         return web.json_response(eintrag["antwort"])
 
     async def antwort_geben(self, request: web.Request) -> web.Response:
@@ -884,6 +911,8 @@ class PcBruecke:
         else:
             eintrag["antwort"] = {"antworten": daten.get("antworten") or {}, "text": str(daten.get("text", ""))[:4000]}
             eintrag["status"] = "angenommen"
+            werte = [str(v) for v in (daten.get("antworten") or {}).values() if str(v).strip()]
+            eintrag["antwort_text"] = ("; ".join(werte) or str(daten.get("text", "")))[:2000]
             log.info("Rueckfrage beantwortet")
         self._sichere_fragen()
         self._da(frage_id).set()

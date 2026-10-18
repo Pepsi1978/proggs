@@ -611,7 +611,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun stand(s: String, antwort: String = antwortText, grund: String = "") {
             if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, s, antwort, grund)
         }
-        stand(RueckfrageStand.SENDET)
+        // Ohne Antworttext: Der steht erst an der Rückfrage, wenn der Server sie angenommen hat (sonst zeigte sie nach einem
+        // Fehler oder einer früher angenommenen Antwort einen Text, der nie ankam).
+        stand(RueckfrageStand.SENDET, antwort = "")
         val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/antwort").header("X-Jarvis-Token", e.serverToken)
             .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
         val (code, roh) = runCatching { HTTP.newCall(anfrage).execute().use { it.code to it.body?.string().orEmpty() } }.getOrElse { fehler ->
@@ -622,13 +624,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val json = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
         if (code !in 200..299) {
             val grund = json.optString("grund").takeIf { it.isNotEmpty() } ?: "Der Jarvis-Server hat die Antwort nicht angenommen (HTTP $code)."
-            val ausgang = when (code) {
-                409 -> standVomServer(json.optString("status"))
-                404, 410 -> RueckfrageStand.VERWAIST
-                else -> null
-            }
+            // Endgültig nur, was der Relay selbst als Ausgang nennt (status im Rumpf). Ein nacktes 404 (Schlüssel abgelehnt,
+            // Proxy beim Neustart) heißt nicht, dass die Sitzung weg ist: dann Fehler mit „Erneut senden“.
+            val ausgang = if (code in setOf(404, 409, 410)) standVomServer(json.optString("status")) else null
             if (ausgang != null) {
-                stand(ausgang, json.optString("antwort_text"), grund)
+                stand(ausgang, json.optString("antwort_text").ifEmpty { if (ausgang in RueckfrageStand.BEANTWORTET_ALLE) "eine frühere Antwort" else "" }, grund)
                 Auftragsbuch.frageErledigt(app, frageId)
             } else stand(RueckfrageStand.FEHLER, grund = grund)
             throw IllegalStateException(grund)

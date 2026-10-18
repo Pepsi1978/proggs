@@ -113,7 +113,7 @@ object ProgrammierChat {
             // Ein endgültiger Ausgang wird nie zurückgedreht (spät eintreffende Meldungen, Abgleich mit dem Server).
             if (RueckfrageStand.endgueltig(k.optString("status")) && !RueckfrageStand.endgueltig(stand)) return@rueckfrageAendern false
             if (k.optString("status") == stand && k.optString("antwort") == antwort.ifEmpty { k.optString("antwort") }) return@rueckfrageAendern false
-            k.put("status", stand).put("beantwortet", stand in RueckfrageStand.BEANTWORTET_ALLE)
+            k.put("status", stand).put("beantwortet", stand in RueckfrageStand.BEANTWORTET_ALLE).put("seit", System.currentTimeMillis() / 1000)
             if (antwort.isNotEmpty()) k.put("antwort", antwort)
             if (grund.isNotEmpty()) k.put("grund", grund) else k.remove("grund")
             true
@@ -146,6 +146,12 @@ object RueckfrageStand {
     /** In Jarvis noch zu beantworten (auch nach einem Fehler beim Senden). */
     fun beantwortbar(stand: String) = stand.isEmpty() || stand == OFFEN || stand == FEHLER
 
-    /** Stand eines Kontexts; ältere Rückfragen kannten nur „beantwortet“. */
-    fun von(k: org.json.JSONObject): String = k.optString("status").ifEmpty { if (k.optBoolean("beantwortet")) BEANTWORTET else OFFEN }
+    /**
+     * Stand eines Kontexts; ältere Rückfragen kannten nur „beantwortet“. Ein „sendet“, das länger als 90 Sekunden steht (App
+     * beim Senden beendet), gilt als Fehler: Frank kann erneut senden, die gleiche Antwort zählt beim Server nie doppelt.
+     */
+    fun von(k: org.json.JSONObject): String {
+        val stand = k.optString("status").ifEmpty { if (k.optBoolean("beantwortet")) BEANTWORTET else OFFEN }
+        return if (stand == SENDET && System.currentTimeMillis() / 1000 - k.optLong("seit") > 90) FEHLER else stand
+    }
 }
