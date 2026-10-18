@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,13 +40,14 @@ fun AktivitaetBildschirm(vm: AppViewModel) {
     val f = LocalFarben.current
     val eintraege by Protokoll.eintraege.collectAsState()
     // Leeren ist endgültig: erst nach einer Rückfrage, damit ein versehentlicher Tipp nichts löscht.
-    var leerenFragen by remember { mutableStateOf(false) }
+    // rememberSaveable: Auf- oder Zuklappen des Fold schließt die Rückfrage nicht. Abbrechen, Zurück und Tippen daneben löschen nichts.
+    var leerenFragen by rememberSaveable { mutableStateOf(false) }
     if (leerenFragen) androidx.compose.material3.AlertDialog(
         onDismissRequest = { leerenFragen = false },
         containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
-        title = { Text("Verlauf leeren?") },
-        text = { Text("Alle ${eintraege.size} Einträge der Aktivität werden endgültig gelöscht.") },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { leerenFragen = false; vm.protokollLeeren() }) { Text("Leeren", color = f.gefahr) } },
+        title = { Text("Alle Aktivitäten löschen?") },
+        text = { Text("Möchtest du wirklich alle Aufzeichnungen im Bereich Aktivität löschen?") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { leerenFragen = false; vm.protokollLeeren() }) { Text("Alle löschen", color = f.gefahr) } },
         dismissButton = { androidx.compose.material3.TextButton(onClick = { leerenFragen = false }) { Text("Abbrechen") } },
     )
     Column(Modifier.fillMaxSize()) {
