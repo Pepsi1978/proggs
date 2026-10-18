@@ -52,6 +52,8 @@ class Meldungsart(
     /** Zeitkritisch (Losfahren, Timer): auch im Live-Gespräch mit Ton und Wecker; Vorlesen wartet höchstens 90 Sekunden, sonst wäre es veraltet. */
     val dringend: Boolean = false,
     val vorlesenStandard: Boolean = false,
+    /** Der vorgelesene Satz kommt nicht von woanders (Bericht, Route, Update), sondern ist fest: dann lässt er sich selbst schreiben. Leer = [eigenerTextStandard]. */
+    val eigenerTextStandard: String? = null,
     /** 0 = so laut, wie das Handy steht: Ohne eigene Wahl stellt Jarvis die Lautstärke nicht um. */
     val lautStandard: Int = 0,
     val alt: Map<String, String> = emptyMap(),
@@ -72,6 +74,12 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     var lautstaerke: Int get() = e.ganz(art.schluessel("lautstaerke"), art.lautStandard).coerceIn(0, 100); set(v) = e.setzeGanz(art.schluessel("lautstaerke"), v.coerceIn(0, 100))
     var wecker: Boolean get() = e.wahr(art.schluessel("wecker"), false); set(v) = e.setzeWahr(art.schluessel("wecker"), v)
     var minimiert: Boolean get() = e.wahr(art.schluessel("minimiert"), false); set(v) = e.setzeWahr(art.schluessel("minimiert"), v)
+
+    /** Selbst geschriebener Vorlesetext; „{name}“ steht für den Namen (etwa des Timers). Leer = der Standardsatz der Art. */
+    var vorlesetext: String get() = e.wort(art.schluessel("vorlesetext"), ""); set(v) = e.setzeWort(art.schluessel("vorlesetext"), v)
+
+    /** Der Satz, den Jarvis vorliest, mit [name] für „{name}“. */
+    fun sprechtext(name: String) = vorlesetext.ifBlank { art.eigenerTextStandard.orEmpty() }.replace("{name}", name)
 
     val stimmWahl get() = StimmWahl(stimme.ifBlank { null }, tempo.takeIf { it > 0f })
 
@@ -119,7 +127,7 @@ object Meldungsarten {
         "timer", "Timer abgelaufen", "Klingelt, wenn ein Timer abgelaufen ist.",
         // Der hörbare Timer-Kanal („jarvis-timer“), nicht der stumme des Klingel-Dienstes.
         "Wenn ein Timer abläuft.", ALLTAG, "jarvis-timer",
-        schaltbar = false, vorlesen = true, dringend = true,
+        schaltbar = false, vorlesen = true, dringend = true, eigenerTextStandard = "{name} ist abgelaufen.",
     )
     val STOPPUHR = Meldungsart(
         "stoppuhr", "Stoppuhr", "Zeigt die laufende Stoppuhr mit mitlaufender Zeit.",

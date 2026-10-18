@@ -262,6 +262,7 @@ private fun MeldungsKarte(vm: AppViewModel, p: MeldungsProfil, activity: Compone
                 if (art.vorlesen) {
                     Unterzeile(if (art == Meldungsarten.AGENT) "Vorlesen (kurze Zusammenfassung)" else "Vorlesen")
                     AnAus(p.vorlesen) { p.vorlesen = it }
+                    if (p.vorlesen && art.eigenerTextStandard != null) VorleseText(p)
                     if (p.vorlesen) StimmOptionen(vm, p)
                 }
                 if (art.sprichtImmer && p.an) StimmOptionen(vm, p)
@@ -364,6 +365,16 @@ private fun WecktonOptionen(p: MeldungsProfil, app: android.content.Context) {
         p.art.vorlesen && p.vorlesen -> "Klingelt $sekunden Sekunden, dann verstummt der Weckton, die Meldung bleibt stehen und Jarvis liest sofort vor. Antippen oder Wegwischen beendet den Ton früher."
         else -> "Klingelt $sekunden Sekunden, dann verstummt der Weckton; die Meldung bleibt stehen."
     }, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+}
+
+/** Der selbst geschriebene Vorlesetext; leer = der Standardsatz. Gespeichert wird bei jeder Änderung. */
+@Composable
+private fun VorleseText(p: MeldungsProfil) {
+    val f = LocalFarben.current
+    var text by remember(p.art.id) { mutableStateOf(p.vorlesetext) }
+    Unterzeile("Text, den Jarvis vorliest")
+    Eingabe(text, { text = it; p.vorlesetext = it.trim() }, p.art.eigenerTextStandard.orEmpty(), Modifier.fillMaxWidth(), einzeilig = false)
+    Text("Leer = „${p.art.eigenerTextStandard}“. „{name}“ setzt den Namen ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 }
 
 /** Stimme, Tempo und Lautstärke einer Meldung; „Wie Jarvis“ übernimmt die Einstellungen unter Stimme → Vorlesen. */

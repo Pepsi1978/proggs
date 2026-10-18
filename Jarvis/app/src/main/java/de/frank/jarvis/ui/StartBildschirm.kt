@@ -253,17 +253,23 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             contentAlignment = Alignment.Center,
         ) {
             Kern(56.dp, kernFarbe, aktiv = vm.denkt || wertetAus || tunnel.stufe == TunnelStufe.VERBINDET)
-            // Aktualisierungspfeil in der Mitte, damit der Kern als Knopf erkennbar ist; während der Auswertung dreht er sich.
-            val drehung = if (wertetAus && de.frank.jarvis.ui.theme.LocalBewegung.current) {
+            // Aktualisierungspfeil in der Mitte, weiß auf dunkler Scheibe, damit der Kern klar als Knopf erkennbar ist.
+            // Er dreht sich ständig langsam und während der Auswertung schnell.
+            val drehung = if (de.frank.jarvis.ui.theme.LocalBewegung.current) {
                 androidx.compose.animation.core.rememberInfiniteTransition(label = "pfeil").animateFloat(
-                    0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1_200, easing = androidx.compose.animation.core.LinearEasing)), label = "pfeilDreh",
+                    0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(if (wertetAus) 900 else 3_500, easing = androidx.compose.animation.core.LinearEasing)), label = "pfeilDreh",
                 )
             } else null
-            Icon(
-                Icons.Rounded.Refresh, null,
-                Modifier.size(24.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f },
-                tint = androidx.compose.ui.graphics.lerp(kernFarbe, Color.Black, 0.45f),
-            )
+            Box(
+                Modifier.size(30.dp).background(androidx.compose.ui.graphics.lerp(kernFarbe, Color.Black, 0.55f).copy(alpha = 0.9f), androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Refresh, null,
+                    Modifier.size(24.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f },
+                    tint = Color.White,
+                )
+            }
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text("Jarvis", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
