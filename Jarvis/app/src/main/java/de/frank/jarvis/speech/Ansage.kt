@@ -64,9 +64,6 @@ object Ansage {
         }
     }
 
-    /** Stimme und Tempo für Ansagen anderer Apps, wie unter Einstellungen → Stimme → Update-Ansagen gewählt. */
-    fun wahlFuerAnsagen(e: Einstellungen) = StimmWahl(e.ansageStimme.ifBlank { null }, e.ansageTempo.takeIf { it > 0f })
-
     /** Ansage anderer Apps mit den eigenen Einstellungen (Stimme, Tempo, Lautstärke). */
     fun ansage(context: Context, titel: String, text: String) {
         val p = de.frank.jarvis.meldung.Meldungen.profil(context, de.frank.jarvis.meldung.Meldungsarten.ANSAGE)

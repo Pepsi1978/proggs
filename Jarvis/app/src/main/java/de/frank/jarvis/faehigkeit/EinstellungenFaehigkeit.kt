@@ -186,12 +186,11 @@ class EinstellungsKatalog(context: Context) {
         buildList {
             if (art.schaltbar && neu("an")) add(schalter(art.schluessel("an"), b, "${art.titel} anzeigen", art.wozu, { p.an }) {
                 p.an = it
-                if (art == de.frank.jarvis.meldung.Meldungsarten.STOPPUHR) de.frank.jarvis.timer.Stoppuhr.meldungErneuern(app)
+                de.frank.jarvis.meldung.Meldungen.folgen(app, art)
             })
-            if (art.minimierbar) add(schalter(art.schluessel("minimiert"), b, "${art.titel} minimiert", "Klein bei den stillen Meldungen, ohne Symbol in der Statusleiste.", { p.minimiert }) {
+            if (art.minimierbar) add(schalter(art.schluessel("minimiert"), b, "${art.titel} wegwischbar", "Die Daueranzeige lässt sich wegwischen, Jarvis läuft trotzdem weiter.", { p.minimiert }) {
                 p.minimiert = it
-                if (art == de.frank.jarvis.meldung.Meldungsarten.BEREITSCHAFT) de.frank.jarvis.dienst.JarvisDienst.hinweisErneuern(app)
-                else de.frank.jarvis.weckwort.WeckwortDienst.hinweisErneuern(app)
+                de.frank.jarvis.meldung.Meldungen.folgen(app, art)
             })
             if (art.ton) add(schalter(art.schluessel("ton"), b, "${art.titel} mit Ton", "Aus = die Meldung kommt lautlos.", { p.ton }) { p.ton = it })
             if (art.wecker) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Klingelt mit dem Weckton, auch bei „Nicht stören“, bis die Meldung angetippt oder weggewischt wird.", { p.wecker }) { p.wecker = it })
@@ -291,7 +290,7 @@ class EinstellungsKatalog(context: Context) {
             schalter("meldung_ruhe_an", "Benachrichtigungen", "Ruhezeit", "In der Ruhezeit kommen Agenten, Ablage, Programmieraufträge und Update-Ansagen lautlos, ohne Vorlesen und Wecker.", { e.meldungRuheAn }) { e.meldungRuheAn = it },
             uhrzeit("meldung_ruhe_von", "Benachrichtigungen", "Ruhezeit beginnt", "Ab dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheVon }) { e.meldungRuheVon = it },
             uhrzeit("meldung_ruhe_bis", "Benachrichtigungen", "Ruhezeit endet", "Bis zu dieser Uhrzeit gilt die Ruhezeit.", { e.meldungRuheBis }) { e.meldungRuheBis = it },
-            schalter("meldung_inhalt_verbergen", "Benachrichtigungen", "Inhalt auf dem Sperrbildschirm verbergen", "Auf dem Sperrbildschirm steht nur „Jarvis“, nicht der Text der Meldung.", { e.meldungInhaltVerbergen }) { e.meldungInhaltVerbergen = it },
+            schalter("meldung_inhalt_verbergen", "Benachrichtigungen", "Auf dem Sperrbildschirm ausblenden", "Agenten, Ablage, Programmieraufträge und Losfahren erscheinen erst nach dem Entsperren.", { e.meldungInhaltVerbergen }) { e.meldungInhaltVerbergen = it },
 
             // ---- Modell ----
             auswahl("modell", "Modell", "Modell", "Das Sprachmodell, mit dem Jarvis denkt.",

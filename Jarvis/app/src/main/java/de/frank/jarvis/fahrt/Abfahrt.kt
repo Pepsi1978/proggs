@@ -236,6 +236,8 @@ object Abfahrt {
      */
     fun still(context: Context, tagText: String? = null) {
         val app = context.applicationContext
+        // Ein noch wartendes Vorlesen (etwa nach einem Live-Gespräch) soll nach „Heute still“ nicht mehr kommen.
+        de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.ABFAHRT)
         val gespeicherterTag = runCatching { JSONObject(Einstellungen.get(app).abfahrtZustand).optString("tag") }.getOrNull()
             ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
         val tag = tagText?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: gespeicherterTag

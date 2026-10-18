@@ -47,8 +47,11 @@ class Meldungsart(
     val ruhezeit: Boolean = false,
     /** An heißt hier: Jarvis spricht (Update-Ansagen); dann gehören Stimme und Lautstärke zum Schalter selbst. */
     val sprichtImmer: Boolean = false,
+    /** Zeitkritisch (Losfahren, Timer): auch im Live-Gespräch mit Ton und Wecker; Vorlesen wartet höchstens 90 Sekunden, sonst wäre es veraltet. */
+    val dringend: Boolean = false,
     val vorlesenStandard: Boolean = false,
-    val lautStandard: Int = 70,
+    /** 0 = so laut, wie das Handy steht: Ohne eigene Wahl stellt Jarvis die Lautstärke nicht um. */
+    val lautStandard: Int = 0,
     val alt: Map<String, String> = emptyMap(),
 ) {
     fun schluessel(feld: String) = alt[feld] ?: "meldung_${id}_$feld"
@@ -99,13 +102,13 @@ object Meldungsarten {
     val ABFAHRT = Meldungsart(
         "abfahrt", "Losfahren", "Sagt dir an Arbeitstagen, wann du zur Arbeit losfahren musst, mit Navigation per Tipp.",
         "Vor jedem Dienst, rechtzeitig vor der nötigen Abfahrt.", ALLTAG, "jarvis_abfahrt",
-        ton = true, vorlesen = true, wecker = true, vorlesenStandard = true, lautStandard = 100,
+        ton = true, vorlesen = true, wecker = true, vorlesenStandard = true, lautStandard = 100, dringend = true,
         alt = mapOf("an" to "abfahrt_an", "vorlesen" to "abfahrt_vorlesen", "lautstaerke" to "abfahrt_lautstaerke"),
     )
     val TIMER = Meldungsart(
         "timer", "Timer abgelaufen", "Klingelt, wenn ein Timer abgelaufen ist.",
         "Wenn ein Timer abläuft.", ALLTAG, "jarvis-timer-wecker",
-        schaltbar = false, vorlesen = true,
+        schaltbar = false, vorlesen = true, dringend = true,
     )
     val STOPPUHR = Meldungsart(
         "stoppuhr", "Stoppuhr", "Zeigt die laufende Stoppuhr mit mitlaufender Zeit.",
@@ -196,15 +199,18 @@ object Meldungen {
         val p = profil(app, art)
         if (!probe && !an(app, art)) return false
         val ruhe = !probe && inRuhe(app, art)
-        val gespraech = GespraechsFokus.stilleHinweise
-        val klingeln = laut && art.wecker && p.wecker && !ruhe && !gespraech
-        val still = !laut || ruhe || (gespraech && imGespraechStill) || (art.ton && !p.ton)
+        val gespraech = GespraechsFokus.stilleHinweise && !art.dringend
+        // Lautlos gewählt heißt auch: kein Wecker, selbst wenn er noch eingeschaltet ist.
+        val tonAus = art.ton && !p.ton
+        val klingeln = laut && art.wecker && p.wecker && !tonAus && !ruhe && !gespraech
+        val still = !laut || ruhe || (gespraech && imGespraechStill) || tonAus
         if (klingeln) {
             weckerKanalAnlegen(app)
             bauer.setChannelId(KANAL_WECKER).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_MAX)
         }
         bauer.setSilent(still && !klingeln)
-        if (e.meldungInhaltVerbergen) bauer.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+        // SECRET: auf dem Sperrbildschirm gar nicht, erst nach dem Entsperren (PRIVATE wäre der Standard und hülfe nicht).
+        if (e.meldungInhaltVerbergen) bauer.setVisibility(NotificationCompat.VISIBILITY_SECRET)
         val meldung = bauer.build()
         // Dauerton bis zum Antippen oder Wegwischen, wie bei einem Wecker.
         if (klingeln) meldung.flags = meldung.flags or Notification.FLAG_INSISTENT
@@ -213,15 +219,21 @@ object Meldungen {
         return true
     }
 
+    /** Wartendes Vorlesen je Art, damit „Heute still“ oder ein Abschalten es noch verhindern kann. */
+    private val wartend = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+
     /** Liest im Hintergrund vor, mit Stimme, Tempo und Lautstärke dieser Art; wartet ein laufendes Gespräch ab. */
     fun vorlesenSpaeter(context: Context, art: Meldungsart, titel: String, text: String) {
         val app = context.applicationContext
-        nebenher.launch { sprich(app, art, titel, text) }
+        wartend.put(art.id, nebenher.launch { sprich(app, art, titel, text) })?.cancel()
     }
+
+    /** Noch nicht gesprochenes Vorlesen dieser Art verwerfen (etwa nach „Heute still“). */
+    fun vorlesenAbbrechen(art: Meldungsart) { wartend.remove(art.id)?.cancel() }
 
     /** Wie [vorlesenSpaeter], aber wartend. Der Live-Sprachmodus hat Vorrang: höchstens 15 Minuten warten, dann verwerfen. */
     suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String) {
-        val frei = withTimeoutOrNull(15 * 60_000L) {
+        val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
             while (GespraechsFokus.stilleHinweise) delay(2_000L)
             true
         }
@@ -248,6 +260,19 @@ object Meldungen {
                 zeige(app, art, 4_400 + Meldungsarten.alle.indexOf(art), bauer, "Probe: ${art.titel}", "Probe. ${art.wozu}", probe = true)
             }
         }
+    }
+
+    /** Folgeaktionen nach einer Änderung, für den Bildschirm und für Jarvis' Werkzeug gleich. */
+    fun folgen(context: Context, art: Meldungsart) {
+        val app = context.applicationContext
+        when (art) {
+            Meldungsarten.STOPPUHR -> de.frank.jarvis.timer.Stoppuhr.meldungErneuern(app)
+            Meldungsarten.BEREITSCHAFT -> de.frank.jarvis.dienst.JarvisDienst.hinweisErneuern(app)
+            Meldungsarten.WECKWORT_HOERT -> de.frank.jarvis.weckwort.WeckwortDienst.hinweisErneuern(app)
+            Meldungsarten.ABFAHRT -> { Einstellungen.get(app).abfahrtZustand = ""; de.frank.jarvis.fahrt.Abfahrt.stelle(app) }
+            else -> {}
+        }
+        if (art.schaltbar && !profil(app, art).an) vorlesenAbbrechen(art)
     }
 
     fun weckerKanalAnlegen(context: Context) {

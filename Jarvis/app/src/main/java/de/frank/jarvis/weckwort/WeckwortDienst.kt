@@ -586,11 +586,10 @@ class WeckwortDienst : Service() {
         private const val TAG = "Weckwort"
         private const val KANAL = "jarvis_weckwort"
         private const val KANAL_RUF = "jarvis_weckwort_ruf"
-        const val KANAL_MIN = "jarvis_weckwort_min"
         /** Läuft der Dienst im Vordergrund (für [hinweisErneuern]). */
         @Volatile private var laeuft = false
 
-        /** Mit dem gewählten Weckwort im Text; minimiert auf eigenem Kanal mit kleinster Wichtigkeit. */
+        /** Mit dem gewählten Weckwort im Text; wegwischbar (Einstellungen → Benachrichtigungen) nicht fest. */
         private fun baueHinweis(context: Context): Notification {
             val e = Einstellungen.get(context)
             val wort = if (e.weckwortArt == "phrase") e.weckwortPhrase else "Hey Jarvis"
@@ -598,13 +597,13 @@ class WeckwortDienst : Service() {
             val oeffnen = PendingIntent.getActivity(
                 context, 30, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE,
             )
-            return NotificationCompat.Builder(context, if (minimiert) KANAL_MIN else KANAL)
+            return NotificationCompat.Builder(context, KANAL)
                 .setSmallIcon(R.drawable.ic_stat_jarvis)
                 .setContentTitle("Jarvis hört auf „$wort“")
                 .setContentText("Einstellen unter Einstellungen → Benachrichtigungen")
-                .setOngoing(true)
+                .setOngoing(!minimiert)
                 .setSilent(true)
-                .setPriority(if (minimiert) NotificationCompat.PRIORITY_MIN else NotificationCompat.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setContentIntent(oeffnen)
                 .build()
         }
@@ -691,12 +690,8 @@ class WeckwortDienst : Service() {
                     description = "Meldet „Hey Jarvis“, wenn Jarvis nicht von selbst nach vorn kommen darf."
                 },
             )
-            nm.createNotificationChannel(
-                NotificationChannel(KANAL_MIN, "Hey Jarvis (minimiert)", NotificationManager.IMPORTANCE_MIN).apply {
-                    description = "Dieselbe Anzeige, klein unten bei den stillen Meldungen und ohne Symbol in der Statusleiste."
-                    setShowBadge(false)
-                },
-            )
+            // Der frühere Kanal „minimiert“ (1.8.151) wirkte bei Vordergrund-Diensten nicht.
+            runCatching { nm.deleteNotificationChannel("jarvis_weckwort_min") }
         }
 
         /** Nur aufrufen, während Jarvis sichtbar ist: Dann darf Android den Mikrofon-Dienst starten. */

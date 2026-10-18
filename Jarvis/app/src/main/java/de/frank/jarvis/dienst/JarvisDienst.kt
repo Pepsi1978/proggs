@@ -106,7 +106,9 @@ class JarvisDienst : Service() {
             Tunnel.zustand.collect { zustand ->
                 if (zustand.stufe != vorher) { Logbuch.netz("Verbindung: ${zustand.stufe}", zustand.meldung); vorher = zustand.stufe }
                 val text = if (zustand.stufe == TunnelStufe.ONLINE) "Bereit für ChatGPT" else zustand.meldung
-                getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, hinweis(text))
+                // Weggewischt soll weg bleiben: dann nur den Text merken, nicht bei jedem Netzwechsel neu zeigen.
+                if (de.frank.jarvis.meldung.Meldungen.profil(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.BEREITSCHAFT).minimiert) letzterText = text
+                else getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, hinweis(text))
             }
         }
     }
@@ -269,18 +271,21 @@ class JarvisDienst : Service() {
         @Volatile private var laeuft = false
         @Volatile private var letzterText = "Jarvis startet …"
 
-        /** Minimiert (Einstellungen → Benachrichtigungen): eigener Kanal mit kleinster Wichtigkeit, ohne Symbol in der Statusleiste. */
+        /**
+         * Wegwischbar (Einstellungen → Benachrichtigungen): nicht fest, ab Android 14 lässt sich die Anzeige wegwischen und Jarvis
+         * läuft weiter. Ein eigener Kanal mit kleinster Wichtigkeit hülfe nicht: Android hebt ihn für Vordergrund-Dienste an.
+         */
         private fun baueHinweis(context: Context, text: String): Notification {
             letzterText = text
             val minimiert = de.frank.jarvis.meldung.Meldungen.profil(context, de.frank.jarvis.meldung.Meldungsarten.BEREITSCHAFT).minimiert
-            return NotificationCompat.Builder(context, if (minimiert) KANAL_MIN else KANAL)
+            return NotificationCompat.Builder(context, KANAL)
                 .setSmallIcon(R.drawable.ic_stat_jarvis)
                 .setContentTitle("Jarvis")
                 .setContentText(text)
-                .setOngoing(true)
+                .setOngoing(!minimiert)
                 .setOnlyAlertOnce(true)
                 .setShowWhen(false)
-                .setPriority(if (minimiert) NotificationCompat.PRIORITY_MIN else NotificationCompat.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
                 .setContentIntent(PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
                 .build()
@@ -299,7 +304,6 @@ class JarvisDienst : Service() {
         val arbeitet: Int get() = offen.get()
 
         private const val KANAL = "jarvis_dienst"
-        const val KANAL_MIN = "jarvis_dienst_min"
         private const val HINWEIS_ID = 1
         private const val EXTRA_AUSWERTEN = "auswerten"
         private const val EXTRA_AGENT = "agent"
@@ -340,12 +344,8 @@ class JarvisDienst : Service() {
                     setShowBadge(false)
                 },
             )
-            context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(KANAL_MIN, "Jarvis-Bereitschaft (minimiert)", NotificationManager.IMPORTANCE_MIN).apply {
-                    description = "Dieselbe Anzeige, klein unten bei den stillen Meldungen und ohne Symbol in der Statusleiste."
-                    setShowBadge(false)
-                },
-            )
+            // Der frühere Kanal „minimiert“ (1.8.151) wirkte bei Vordergrund-Diensten nicht.
+            runCatching { context.getSystemService(NotificationManager::class.java).deleteNotificationChannel("jarvis_dienst_min") }
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(
                 NotificationChannel(KANAL_ERGEBNIS, "Jarvis-Ergebnisse", NotificationManager.IMPORTANCE_DEFAULT).apply {
                     description = "Meldet, wenn ein Agent von Jarvis fertig ist."

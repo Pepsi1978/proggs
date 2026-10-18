@@ -110,7 +110,7 @@ fun BenachrichtigungenEinstellungen(vm: AppViewModel, activity: ComponentActivit
             Kennzahl("$vorgelesen", "vorgelesen", Icons.Rounded.RecordVoiceOver, Modifier.weight(1f))
             Kennzahl("$wecker", "als Wecker", Icons.Rounded.Alarm, Modifier.weight(1f))
         }
-        Text("Tippe auf eine Meldung: Ton, Vorlesen mit Stimme und Lautstärke, Wecker und Probe. Im Live-Gespräch bleibt alles lautlos, Vorlesen wartet, bis das Gespräch vorbei ist.",
+        Text("Tippe auf eine Meldung: Ton, Vorlesen mit Stimme und Lautstärke, Wecker und Probe. Im Live-Gespräch bleibt alles lautlos und Vorlesen wartet, bis das Gespräch vorbei ist; nur Losfahren und Timer melden sich sofort.",
             color = f.textSchwach, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 14.dp))
     }
 
@@ -134,8 +134,8 @@ fun BenachrichtigungenEinstellungen(vm: AppViewModel, activity: ComponentActivit
             }
         }
         Trenner()
-        SchalterZeile(Icons.Rounded.Lock, "Inhalt auf dem Sperrbildschirm verbergen", if (e.meldungInhaltVerbergen) "Nur „Jarvis“ sichtbar" else "Ganzer Text sichtbar", e.meldungInhaltVerbergen) { e.meldungInhaltVerbergen = it }
-        Text("Gilt für Agenten, Ablage, Programmieraufträge und Losfahren. Entsperrt siehst du immer alles.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        SchalterZeile(Icons.Rounded.Lock, "Auf dem Sperrbildschirm ausblenden", if (e.meldungInhaltVerbergen) "Erst nach dem Entsperren sichtbar" else "Auch gesperrt sichtbar", e.meldungInhaltVerbergen) { e.meldungInhaltVerbergen = it }
+        Text("Gilt für Agenten, Ablage, Programmieraufträge und Losfahren: Sie erscheinen erst, wenn du das Handy entsperrst. Ton, Wecker und Vorlesen bleiben.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         Knopf("Alle Jarvis-Benachrichtigungen in Android", Modifier.padding(top = 14.dp).fillMaxWidth(), Icons.AutoMirrored.Rounded.OpenInNew, haupt = false) {
             runCatching { activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)) }
         }
@@ -215,16 +215,17 @@ private fun MeldungsKarte(vm: AppViewModel, p: MeldungsProfil, activity: Compone
                         Unterzeile("Auf das Weckwort hören")
                         AnAus(e.weckwortAn) { vm.weckwortSchalten(it, activity) }
                     }
-                    Meldungsarten.RUF -> if (!vm.ueberlagernErlaubt) Text("Ohne diese Meldung reagiert Jarvis auf das Weckwort nicht, solange „Über anderen Apps einblenden“ fehlt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                    Meldungsarten.RUF -> Text("Aus heißt: Kann Jarvis nach dem Weckwort nicht von selbst nach vorn kommen (gesperrtes Handy, Android blockiert den Start" +
+                        (if (!vm.ueberlagernErlaubt) ", „Über anderen Apps einblenden“ fehlt gerade" else "") + "), passiert gar nichts.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                     else -> {}
                 }
                 if (art.minimierbar) {
                     Unterzeile("Darstellung")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Chip("Normal", aktiv = !p.minimiert) { p.minimiert = false; nachMinimieren(art, app) }
-                        Chip("Minimiert", aktiv = p.minimiert, icon = Icons.Rounded.UnfoldLess) { p.minimiert = true; nachMinimieren(art, app) }
+                        Chip("Fest", aktiv = !p.minimiert) { p.minimiert = false; Meldungen.folgen(app, art) }
+                        Chip("Wegwischbar", aktiv = p.minimiert, icon = Icons.Rounded.UnfoldLess) { p.minimiert = true; Meldungen.folgen(app, art) }
                     }
-                    Text("Minimiert rutscht die Anzeige nach unten zu den stillen Meldungen, klein und ohne Symbol in der Statusleiste.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text("Wegwischbar: Du kannst die Anzeige wegwischen, Jarvis läuft trotzdem weiter. Mit einem Neustart von Jarvis ist sie wieder da. Ganz kleiner geht nicht: Android hebt Daueranzeigen laufender Dienste immer an.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 }
                 if (art.ton) {
                     Unterzeile("Ton")
@@ -275,7 +276,7 @@ private fun merkmale(vm: AppViewModel, p: MeldungsProfil, an: Boolean): List<Pai
     val e = vm.einstellungen
     if (!an) return listOf(Icons.Rounded.NotificationsOff to "Aus")
     return buildList {
-        if (art.minimierbar && p.minimiert) add(Icons.Rounded.UnfoldLess to "Minimiert")
+        if (art.minimierbar && p.minimiert) add(Icons.Rounded.UnfoldLess to "Wegwischbar")
         if (art.ton) add(if (p.ton) Icons.Rounded.NotificationsActive to "Mit Ton" else Icons.Rounded.NotificationsOff to "Lautlos")
         if ((art.wecker && p.wecker) || (art == Meldungsarten.TIMER && e.timerWecker)) add(Icons.Rounded.Alarm to "Wecker")
         if ((art.vorlesen && p.vorlesen) || art.sprichtImmer) add(Icons.Rounded.RecordVoiceOver to if (p.lautstaerke == 0) "Vorlesen" else "Vorlesen ${p.lautstaerke} %")
@@ -291,10 +292,8 @@ private fun pflichtText(art: Meldungsart) = when (art) {
     else -> "Android verlangt sie für die Wiedergabe im Hintergrund. Sie verschwindet, sobald Jarvis fertig vorgelesen hat."
 }
 
-/** Der Android-Kanal, den „In Android“ öffnet; bei minimierten Daueranzeigen der kleine. */
+/** Der Android-Kanal, den „In Android“ öffnet; als Wecker der Wecker-Kanal. */
 private fun kanalVon(p: MeldungsProfil): String? = when {
-    p.art == Meldungsarten.BEREITSCHAFT && p.minimiert -> de.frank.jarvis.dienst.JarvisDienst.KANAL_MIN
-    p.art == Meldungsarten.WECKWORT_HOERT && p.minimiert -> de.frank.jarvis.weckwort.WeckwortDienst.KANAL_MIN
     p.art.wecker && p.wecker -> Meldungen.KANAL_WECKER
     else -> p.art.kanal
 }
@@ -311,19 +310,10 @@ private fun androidKanalOeffnen(activity: ComponentActivity, kanal: String) {
     runCatching { activity.startActivity(absicht) }
 }
 
-/** Folgeaktionen wie im Einstellungs-Katalog. */
+/** Folgeaktionen wie im Einstellungs-Katalog (Meldungen.folgen); bei Losfahren danach den Stand neu laden. */
 private fun nachSchalten(vm: AppViewModel, art: Meldungsart) {
-    val app = vm.getApplication<android.app.Application>()
-    when (art) {
-        Meldungsarten.ABFAHRT -> vm.abfahrtGeaendert()
-        Meldungsarten.STOPPUHR -> de.frank.jarvis.timer.Stoppuhr.meldungErneuern(app)
-        else -> {}
-    }
-}
-
-private fun nachMinimieren(art: Meldungsart, app: android.content.Context) {
-    if (art == Meldungsarten.BEREITSCHAFT) de.frank.jarvis.dienst.JarvisDienst.hinweisErneuern(app)
-    if (art == Meldungsarten.WECKWORT_HOERT) de.frank.jarvis.weckwort.WeckwortDienst.hinweisErneuern(app)
+    Meldungen.folgen(vm.getApplication(), art)
+    if (art == Meldungsarten.ABFAHRT) vm.abfahrtLaden()
 }
 
 /** Stimme, Tempo und Lautstärke einer Meldung; „Wie Jarvis“ übernimmt die Einstellungen unter Stimme → Vorlesen. */
