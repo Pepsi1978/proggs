@@ -59,11 +59,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.key
+import de.frank.jarvis.ui.theme.LocalBewegung
+import kotlinx.coroutines.delay
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -240,33 +248,35 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
         Rundknopf(Icons.Rounded.Menu, "Gespräche", farbe = f.primaer) { leisteOeffnen() }
         Spacer(Modifier.width(6.dp))
         // Der Kern ist zugleich der Knopf „Tagesauswertung aktualisieren“: frische Daten aller Apps holen und alles neu auswerten.
-        // Sperre gegen Doppeltippen: „läuft“ springt erst um, wenn der Dienst wirklich angefangen hat.
-        var angestossen by remember { mutableStateOf(0L) }
+        // Sperre gegen Doppeltippen: „wertetAus“ springt erst um, wenn der Dienst wirklich angefangen hat; bis dahin gilt „startet“.
+        var startet by remember { mutableStateOf(false) }
+        LaunchedEffect(startet, wertetAus) { if (startet) { if (wertetAus) startet = false else { delay(15_000); startet = false } } }
+        val laeuft = wertetAus || startet
         val kernFarbe = if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer
         Box(
             Modifier
-                .semantics { contentDescription = "Tagesauswertung aktualisieren"; role = Role.Button }
+                .semantics { contentDescription = "Tagesauswertung aktualisieren"; stateDescription = if (laeuft) "läuft gerade" else "" }
                 .antippen {
-                    if (wertetAus || System.currentTimeMillis() - angestossen < 15_000) vm.meldung = "Die Tagesauswertung läuft schon."
-                    else { angestossen = System.currentTimeMillis(); vm.auswertungJetzt() }
+                    if (laeuft) vm.meldung = "Die Tagesauswertung läuft schon."
+                    else { startet = true; vm.auswertungJetzt() }
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Kern(56.dp, kernFarbe, aktiv = vm.denkt || wertetAus || tunnel.stufe == TunnelStufe.VERBINDET)
+            Kern(56.dp, kernFarbe, aktiv = vm.denkt || laeuft || tunnel.stufe == TunnelStufe.VERBINDET)
             // Aktualisierungspfeil in der Mitte, weiß auf dunkler Scheibe, damit der Kern klar als Knopf erkennbar ist.
-            // Er dreht sich ständig langsam und während der Auswertung schnell.
-            val drehung = if (de.frank.jarvis.ui.theme.LocalBewegung.current) {
-                androidx.compose.animation.core.rememberInfiniteTransition(label = "pfeil").animateFloat(
-                    0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(if (wertetAus) 900 else 3_500, easing = androidx.compose.animation.core.LinearEasing)), label = "pfeilDreh",
-                )
+            // Er dreht sich ständig langsam und während der Auswertung schnell. Die Scheibe lässt den inneren Ring frei.
+            // key: InfiniteTransition übernimmt ein geändertes Tempo nicht, deshalb wird sie beim Wechsel neu angelegt.
+            val drehung = if (LocalBewegung.current) key(laeuft) {
+                rememberInfiniteTransition(label = "pfeil")
+                    .animateFloat(0f, 360f, infiniteRepeatable(tween(if (laeuft) 900 else 3_500, easing = LinearEasing)), label = "pfeilDreh")
             } else null
             Box(
-                Modifier.size(30.dp).background(androidx.compose.ui.graphics.lerp(kernFarbe, Color.Black, 0.55f).copy(alpha = 0.9f), androidx.compose.foundation.shape.CircleShape),
+                Modifier.size(25.dp).background(lerp(kernFarbe, Color.Black, 0.55f).copy(alpha = 0.9f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Rounded.Refresh, null,
-                    Modifier.size(24.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f },
+                    Modifier.size(21.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f },
                     tint = Color.White,
                 )
             }

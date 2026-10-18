@@ -222,7 +222,8 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
 /** Der Leuchtkern: zwei gegenläufige Ringe um einen pulsierenden Mittelpunkt. [aktiv] = schneller und heller. */
 @Composable
 fun Kern(groesse: Dp, farbe: Color, aktiv: Boolean, modifier: Modifier = Modifier) {
-    if (LocalBewegung.current) {
+    // key: InfiniteTransition übernimmt ein geändertes Tempo nicht, deshalb wird sie beim Wechsel von [aktiv] neu angelegt.
+    if (LocalBewegung.current) androidx.compose.runtime.key(aktiv) {
         val lauf = rememberInfiniteTransition(label = "kern")
         val dreh = lauf.animateFloat(0f, 360f, infiniteRepeatable(tween(if (aktiv) 2_600 else 9_000, easing = LinearEasing)), label = "dreh")
         val puls = lauf.animateFloat(0.78f, 1f, infiniteRepeatable(tween(if (aktiv) 620 else 1_900), RepeatMode.Reverse), label = "puls")
