@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -232,7 +233,12 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
         // Gespräche: dasselbe wie von links nach rechts wischen.
         Rundknopf(Icons.Rounded.Menu, "Gespräche", farbe = f.primaer) { leisteOeffnen() }
         Spacer(Modifier.width(6.dp))
-        Kern(56.dp, if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer, aktiv = vm.denkt || tunnel.stufe == TunnelStufe.VERBINDET)
+        // Der Kern ist zugleich der Knopf „Tagesauswertung aktualisieren“: frische Daten aller Apps holen und alles neu auswerten.
+        Kern(
+            56.dp, if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer,
+            aktiv = vm.denkt || wertetAus || tunnel.stufe == TunnelStufe.VERBINDET,
+            modifier = Modifier.antippen { if (!wertetAus) vm.auswertungJetzt() },
+        )
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text("Jarvis", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
             Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -241,10 +247,25 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             Rundknopf(Icons.Rounded.AddComment, "Neues Gespräch", farbe = f.primaer) { vm.neuesGespraech() }
             Spacer(Modifier.width(8.dp))
         }
-        // Tagesauswertung jetzt neu erstellen: frische Daten aller Apps holen und alles neu auswerten.
-        if (wertetAus) Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Kern(34.dp, f.primaer, aktiv = true) }
-        else Rundknopf(Icons.Rounded.Refresh, "Tagesauswertung aktualisieren", farbe = f.primaer) { vm.auswertungJetzt() }
-        Spacer(Modifier.width(8.dp))
+        // Aktuelles Gespräch löschen: verschwindet danach auch aus der Gesprächsleiste.
+        var loeschenFragen by remember { mutableStateOf(false) }
+        if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
+            Rundknopf(Icons.Rounded.Delete, "Gespräch löschen", farbe = f.primaer) { loeschenFragen = true }
+            Spacer(Modifier.width(8.dp))
+        }
+        if (loeschenFragen) androidx.compose.material3.AlertDialog(
+            onDismissRequest = { loeschenFragen = false },
+            containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+            title = { Text("Gespräch löschen?") },
+            text = { Text("Möchtest du dieses Gespräch wirklich löschen? Es wird endgültig entfernt und erscheint nicht mehr unter Gespräche.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    vm.sitzungId?.let { vm.sitzungLoeschen(it) } ?: vm.neuesGespraech()
+                    loeschenFragen = false
+                }) { Text("Löschen", color = f.gefahr) }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenFragen = false }) { Text("Abbrechen") } },
+        )
         // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
         Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
             val ids = de.frank.jarvis.ui.theme.DESIGNS
