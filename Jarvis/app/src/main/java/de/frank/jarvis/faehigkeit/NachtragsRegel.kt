@@ -28,7 +28,6 @@ object NachtragsRegel {
     private val bestehendeSitzung = Regex("\\b(gleiche|selbe|dieselbe|derselbe|demselbe|bestehende|laufende|vorherige|alte|bisherige|diese|letzte|andere)\\S*\\s+(\\S+\\s+)?\\S*(session|sitzung)")
     private val bestehenderAuftrag = Regex("\\b(gleiche|selbe|dieselbe|derselbe|demselbe|bestehende|laufende|vorherige|alte|bisherige)\\S*\\s+(\\S+\\s+)?\\S*auftrag")
     private val nochSagen = Regex("programmierer\\s+(noch|zusätzlich|außerdem|auch noch)|\\b(sag|schreib|gib)\\s+(ihm|der sitzung|der session)\\s+(noch|zusätzlich)")
-    private val dieseSitzung = Regex("\\b(gleiche|selbe|dieselbe|derselbe|demselbe|diese)\\S*\\s+(\\S+\\s+)?\\S*(session|sitzung)")
 
     private fun normiert(text: String) = text.lowercase(Locale.GERMAN).replace(Regex("\\s+"), " ").trim()
 
@@ -57,8 +56,11 @@ object NachtragsRegel {
      * Das Ziel eines Nachtrags. [auftragId] = was das Modell angibt (leer = keins), [worte] = Franks eigene Worte, [bekannte] =
      * alle Auftragsnummern, [imGespraech] = alle Aufträge des Jarvis-Gesprächs, aus dem der Aufruf kommt (leer über das Plugin).
      * Ohne aufgerufenes Gespräch bezeichnet nur eine Nummer das Ziel, im Gespräch auch „die gleiche Session“ bei genau einem Auftrag.
+     * Eine Nummer nur vom Modell gilt im Gespräch mit Aufträgen nur, wenn sie dorthin gehört und eindeutig ist: der einzige Auftrag
+     * des Gesprächs oder, bei mehreren, der einzige noch laufende ([laufendImGespraech], Teil von [imGespraech]). Nachgefragt wird
+     * nur, wenn wirklich mehrere Sitzungen passen.
      */
-    fun ziel(auftragId: String, worte: String, bekannte: Collection<String>, imGespraech: List<String>): Ziel {
+    fun ziel(auftragId: String, worte: String, bekannte: Collection<String>, imGespraech: List<String>, laufendImGespraech: List<String> = emptyList()): Ziel {
         if (!ausdruecklich(worte)) return Ziel.Nachfrage(KEIN_WUNSCH)
         val genannt = genannteIds(worte, bekannte)
         if (genannt.size > 1) return Ziel.Nachfrage(MEHRDEUTIG)
@@ -66,15 +68,20 @@ object NachtragsRegel {
             val id = genannt.first()
             return if (auftragId.isNotEmpty() && !auftragId.equals(id, ignoreCase = true)) Ziel.Nachfrage(WIDERSPRUCH) else Ziel.Auftrag(id)
         }
-        val diese = dieseSitzung.containsMatchIn(normiert(worte))
+        // Bei mehreren Aufträgen im Gespräch ist der einzige noch laufende eindeutig gemeint.
+        val eindeutig = imGespraech.singleOrNull() ?: laufendImGespraech.filter { l -> imGespraech.any { it.equals(l, ignoreCase = true) } }.singleOrNull()
         if (auftragId.isNotEmpty()) {
-            // „In die gleiche Session“ aus einem Gespräch mit Auftrag: Dann ist nur einer von dessen Aufträgen gemeint.
-            if (diese && imGespraech.isNotEmpty() && imGespraech.none { it.equals(auftragId, ignoreCase = true) }) return Ziel.Nachfrage(WIDERSPRUCH)
+            // Die Nummer stammt nur vom Modell, nicht aus Franks Worten: Im Gespräch mit Aufträgen zählt sie nur, wenn sie zu diesem
+            // Gespräch gehört und eindeutig ist. Sonst wählte das Modell die Sitzung selbst (gleiche App, zuletzt fertig …).
+            if (imGespraech.isNotEmpty()) {
+                if (imGespraech.none { it.equals(auftragId, ignoreCase = true) }) return Ziel.Nachfrage(WIDERSPRUCH)
+                if (eindeutig == null || !eindeutig.equals(auftragId, ignoreCase = true)) return Ziel.Nachfrage(MEHRDEUTIG)
+            }
             return Ziel.Auftrag(auftragId)
         }
-        return when (imGespraech.size) {
-            1 -> Ziel.Auftrag(imGespraech.first())
-            0 -> Ziel.Nachfrage(KEIN_ZIEL)
+        return when {
+            imGespraech.isEmpty() -> Ziel.Nachfrage(KEIN_ZIEL)
+            eindeutig != null -> Ziel.Auftrag(eindeutig)
             else -> Ziel.Nachfrage(MEHRDEUTIG)
         }
     }

@@ -85,11 +85,16 @@ class EinstellungsKatalog(context: Context) {
         val titel: String,
         val beschreibung: String,
         /** Mögliche Werte in Worten, z. B. „an oder aus“. */
-        val werte: String,
+        private val werteFest: String,
         val lesen: () -> String,
+        /** Statt [werteFest], wenn die möglichen Werte erst beim Lesen feststehen (etwa die Denkstufen des gerade gewählten Modells). */
+        private val werteJetzt: (() -> String)? = null,
         /** Wirft [IllegalArgumentException] mit verständlichem Text, wenn der Wert nicht passt. */
         val setzen: (String) -> Unit,
-    )
+    ) {
+        /** Mögliche Werte in Worten, immer zum aktuellen Stand. */
+        val werte: String get() = werteJetzt?.invoke() ?: werteFest
+    }
 
     private fun schalter(kennung: String, bereich: String, titel: String, beschreibung: String, lies: () -> Boolean, setze: (Boolean) -> Unit) =
         Eintrag(kennung, bereich, titel, beschreibung, "an oder aus", { if (lies()) "an" else "aus" }) { setze(jaNein(it)) }
@@ -109,15 +114,36 @@ class EinstellungsKatalog(context: Context) {
             setze(String.format(Locale.GERMAN, "%02d:%02d", minuten / 60, minuten % 60))
         }
 
-    /** [optionen]: gespeicherter Wert zu Anzeige. Erkannt wird beides, ohne Groß- und Kleinschreibung. */
+    /**
+     * [optionen]: gespeicherter Wert zu Anzeige. Erkannt wird beides, ohne Groß- und Kleinschreibung. Ein Wert mit Ziffern gilt nur
+     * genau („5“ ist nicht „50 Schritte“, „1“ nicht „10“); passt er nicht eindeutig, wird er abgelehnt statt geraten.
+     * Die möglichen Werte stehen immer zum aktuellen Stand da (die Denkstufen etwa hängen vom gewählten Modell ab).
+     */
     private fun auswahl(kennung: String, bereich: String, titel: String, beschreibung: String, optionen: () -> List<Pair<String, String>>, lies: () -> String, setze: (String) -> Unit) =
-        Eintrag(kennung, bereich, titel, beschreibung, "", { val w = lies(); optionen().firstOrNull { it.first == w }?.second ?: w }) { w ->
+        Eintrag(kennung, bereich, titel, beschreibung, "", { val w = lies(); optionen().firstOrNull { it.first == w }?.second ?: w },
+            { "eine von: " + optionen().joinToString(", ") { it.second } }) { w ->
             val o = optionen()
-            val treffer = o.firstOrNull { norm(it.first) == norm(w) || norm(it.second) == norm(w) }
-                ?: o.firstOrNull { norm(it.second).startsWith(norm(w)) || norm(it.second).substringBefore(" (") == norm(w) }
-                ?: throw IllegalArgumentException("„$w“ gibt es hier nicht. Möglich: ${o.joinToString(", ") { it.second }}.")
+            val nw = norm(w)
+            // Anfang des Namens („Gemini 3.8“ → „Gemini 3.8 Live“), aber eine Zahl nie als Anfang einer längeren Zahl („5“ → „50 Schritte“).
+            fun anfang(name: String) = name.startsWith(nw) && (!nw.last().isDigit() || name.length == nw.length || name[nw.length].isWhitespace() || name[nw.length] == '(')
+            val z = zahlIn(nw)
+            val ungefaehr = o.firstOrNull { anfang(norm(it.second)) || norm(it.second).substringBefore(" (") == nw }
+                // Sonst nur genau dieselbe Zahl wie eine rein numerische Kennung („Schrittlimit 50“ → 50), und nur wenn eindeutig.
+                ?: if (z == null) null else o.filter { norm(it.first).all { c -> c.isDigit() || c == '.' } && zahlIn(norm(it.first)) == z }.singleOrNull()
+            val treffer = o.firstOrNull { norm(it.first) == nw || norm(it.second) == nw } ?: ungefaehr
+                ?: throw IllegalArgumentException("„$w“ gibt es hier nicht eindeutig. Möglich: ${o.joinToString(", ") { it.second }}.")
             setze(treffer.first)
-        }.let { roh -> Eintrag(roh.kennung, roh.bereich, roh.titel, roh.beschreibung, "eine von: " + optionen().joinToString(", ") { it.second }, roh.lesen, roh.setzen) }
+        }
+
+    /** Freier Text (Adresse, Repo); leer wird abgelehnt, damit eine Spracheingabe nie still eine Angabe löscht. */
+    private fun freitext(kennung: String, bereich: String, titel: String, beschreibung: String, werte: String, lies: () -> String, setze: (String) -> Unit) =
+        Eintrag(kennung, bereich, titel, beschreibung, werte, lies) { w ->
+            if (w.isBlank()) throw IllegalArgumentException("Bitte einen Wert nennen: $werte.")
+            setze(w.trim())
+        }
+
+    /** Die erste Zahl in einem Text, Komma als Punkt („1,1“ → „1.1“); null ohne Zahl. */
+    private fun zahlIn(t: String): String? = Regex("\\d+(?:[.,]\\d+)?").find(t)?.value?.replace(',', '.')
 
     private fun norm(t: String) = t.trim().lowercase(Locale.GERMAN)
 
@@ -270,6 +296,24 @@ class EinstellungsKatalog(context: Context) {
             zahl("abfahrt_vorlauf", "Benachrichtigungen: Losfahren", "Vorlauf", "So viele Minuten vor der nötigen Abfahrt kommt die Meldung.", 0, 60, "Minuten", { e.abfahrtVorlauf }) { e.abfahrtVorlauf = it; abfahrtNeu() },
             uhrzeit("ankunft_nacht", "Losfahr-Meldung", "Ankunft vor dem Nachtdienst", "Wann Frank vor dem Nachtdienst auf Arbeit sein will; danach richtet sich die Losfahr-Meldung.", { e.ankunftNacht }) { e.ankunftNacht = it; abfahrtNeu() },
             uhrzeit("ankunft_tag", "Losfahr-Meldung", "Ankunft vor dem Tagdienst", "Wann Frank vor dem Tagdienst auf Arbeit sein will; danach richtet sich die Losfahr-Meldung.", { e.ankunftTag }) { e.ankunftTag = it; abfahrtNeu() },
+            // Wie „Adressen speichern“ in der Oberfläche: speichern und die Losfahr-Meldung neu planen.
+            freitext("adresse_zuhause","Losfahr-Meldung", "Adresse Zuhause", "Franks Zuhause: Start der Fahrzeit, wenn der Standort fehlt, und Ziel für „nach Hause“.",
+                "eine Adresse, z. B. Straße Hausnummer, PLZ Ort", { e.adresseZuhause }) { e.adresseZuhause = it; abfahrtNeu() },
+            freitext("adresse_arbeit","Losfahr-Meldung", "Adresse Arbeit", "Wohin die Losfahr-Meldung vor dem Dienst rechnet.",
+                "eine Adresse, z. B. Straße Hausnummer, PLZ Ort", { e.adresseArbeit }) { e.adresseArbeit = it; abfahrtNeu() },
+
+            // ---- E-Mail und GitHub ----
+            Eintrag("mail_adresse", "E-Mail (Gmail)", "Gmail-Adresse", "Das Gmail-Konto, über das Jarvis Mails sendet und liest; das App-Passwort gehört zu ihm und wird nur in der App eingetragen.",
+                "eine E-Mail-Adresse", { e.mailAdresse }) { w ->
+                val adresse = w.trim()
+                if (!Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(adresse)) throw IllegalArgumentException("„$w“ ist keine E-Mail-Adresse.")
+                e.mailAdresse = adresse
+            },
+            freitext("repo_name","GitHub-Repo", "Repo", "Welches GitHub-Repo Jarvis mit repo_lesen liest, als Besitzer/Name.",
+                "Besitzer/Name, z. B. Pepsi1978/proggs", { e.repoName }) { w ->
+                if (!Regex("^[\\w.-]+/[\\w.-]+$").matches(w.trim().removePrefix("https://github.com/").trim('/'))) throw IllegalArgumentException("„$w“ ist kein Repo der Form Besitzer/Name.")
+                e.repoName = w
+            },
 
             // ---- Tagesauswertung ----
             schalter("auswertung_an", "Tagesauswertung", "Tagesauswertung", "Erstellt regelmäßig die Tagesauswertung.", { e.auswertungAn }) { e.auswertungAn = it; zeitplanNeu() },
@@ -300,7 +344,7 @@ class EinstellungsKatalog(context: Context) {
             auswahl("denkstufe", "Modell", "Denkstufe", "Wie gründlich das Modell nachdenkt.",
                 { e.modell.supportedEfforts.map { it.name to it.label } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
             auswahl("schrittlimit", "Modell", "Schrittlimit pro Anfrage", "Höchstens so viele Bearbeitungsrunden samt Werkzeugaufrufen je Anfrage; Unbegrenzt hebt nur dieses Limit auf (Zeitlimit und Abbrechen gelten weiter) und kann mehr kosten und länger dauern.",
-                { de.frank.jarvis.data.Einstellungen.SCHRITTLIMITS.map { it.toString() to (if (it == 0) "Unbegrenzt" else "$it Schritte") } }, { e.schrittlimit.toString() }) { e.schrittlimit = it.toInt() },
+                { Einstellungen.SCHRITTLIMITS.map { it.toString() to Einstellungen.schrittlimitLabel(it) } }, { e.schrittlimit.toString() }) { e.schrittlimit = it.toInt() },
 
             // ---- Live-Gespräch ----
             // Alle Einstellungen aus derselben Liste wie der Einstellungs-Bildschirm, samt Preis in der Beschreibung.

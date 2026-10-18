@@ -674,6 +674,8 @@ private fun MedienAnsicht(datei: File, anhang: Anhang, eintrag: Eintrag, freigab
     val f = LocalFarben.current
     val video = anhang.art == Art.VIDEO
     var position by rememberSaveable(anhang.id) { mutableStateOf(0L) }
+    /** Lief die Wiedergabe? Damit sie nach dem Auf- oder Zuklappen an derselben Stelle weiterläuft. */
+    var spielt by rememberSaveable(anhang.id) { mutableStateOf(false) }
     var fehler by remember { mutableStateOf<String?>(null) }
     var vollbild by rememberSaveable(anhang.id) { mutableStateOf(false) }
     val player = remember(anhang.id) {
@@ -683,7 +685,14 @@ private fun MedienAnsicht(datei: File, anhang: Anhang, eintrag: Eintrag, freigab
             setMediaItem(MediaItem.fromUri(Uri.fromFile(datei)))
             prepare()
             seekTo(position)
+            playWhenReady = spielt
         }
+    }
+    // Stelle schon beim Pausieren der Activity festhalten: onSaveInstanceState kommt beim Neuaufbau vor dem onDispose unten,
+    // sonst begänne die Wiedergabe nach dem Auf- oder Zuklappen wieder von vorn.
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+        position = player.currentPosition
+        spielt = player.playWhenReady
     }
     DisposableEffect(player) {
         val hoerer = object : Player.Listener {

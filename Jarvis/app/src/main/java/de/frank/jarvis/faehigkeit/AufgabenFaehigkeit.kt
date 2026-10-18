@@ -5,7 +5,7 @@ import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -220,7 +220,8 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    /** Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe [AppBruecke]). */
+    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = runInterruptible(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
 
     private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
         AppBruecke.rufe(context, "Geniale Aufgaben", BRUECKE, methode, anfrage, lesend = methode in LESEND)

@@ -9,29 +9,36 @@ plugins {
 // Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
 // Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
 @Suppress("UNCHECKED_CAST")
-val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+val versionslogEintraege = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>)
+val versionslogAktuell = versionslogEintraege.last()
 
-// Adresse und Schlüssel des eigenen Servers (Jarvis-Relay) liegen nur in ~/SK/Jarvis/relay.properties, nie im Git.
-// Fehlt die Datei (z. B. beim Bau in der Cloud), bleibt beides leer und wird in der App unter Einstellungen eingetragen.
+// Ohne höheren versionCode erkennt UpdateStation das Update nicht. Geprüft werden nur die letzten zwei Einträge:
+// Alte Einträge bleiben unverändert, und in der Historie steht versionCode 60 doppelt.
+if (versionslogEintraege.size >= 2) {
+    val vorher = (versionslogEintraege[versionslogEintraege.size - 2]["versionCode"] as Number).toInt()
+    val jetzt = (versionslogAktuell["versionCode"] as Number).toInt()
+    check(jetzt > vorher) {
+        "versionslog.json: Der letzte versionCode ($jetzt) muss größer sein als der vorletzte ($vorher), sonst erkennt UpdateStation das Update nicht."
+    }
+}
+
+// Nur Adressen und öffentliche Kennungen kommen in die APK; Schlüssel und Tokens nie (wer die APK hat, könnte sie
+// auslesen). Die bringt werkzeuge/zugang-aufs-handy.ps1 aus ~/SK direkt in die App, oder man trägt sie unter
+// Einstellungen ein.
+
+// Adresse des eigenen Servers (Jarvis-Relay) aus ~/SK/Jarvis/relay.properties, nie im Git. Fehlt die Datei (z. B. beim
+// Bau in der Cloud), bleibt sie leer und wird in der App unter Einstellungen eingetragen.
 val relay = Properties().apply {
     File(System.getProperty("user.home"), "SK/Jarvis/relay.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
-// Suchschlüssel für die Internet-Recherche der Agenten (Tavily), ebenfalls nur aus ~/SK.
-val tavilyKey = File(System.getProperty("user.home"), "SK/Tavily/tavily-api-key.txt").takeIf { it.exists() }?.readText()?.trim().orEmpty()
-
-// Google-Maps-Schlüssel für die Fahrzeit-Abfrage (Routes API), ebenfalls nur aus ~/SK. Entropie Reductor nutzt
-// dasselbe Google-Projekt; gibt es keinen eigenen Schlüssel für Jarvis, gilt dessen Schlüssel.
-val mapsKey = listOf("SK/Jarvis/maps-api-key.txt", "SK/EntropieReductor/maps-api-key.txt")
-    .map { File(System.getProperty("user.home"), it) }.firstOrNull { it.exists() }?.readText()?.trim().orEmpty()
-
-// Google-Zugangsdaten für „Berechtigung erneuern“ (Nur-Lese-Zugang zum Tagebuch-Ordner), ebenfalls nur aus ~/SK.
+// Google-Client für „Berechtigung erneuern“ (Nur-Lese-Zugang zum Tagebuch-Ordner): nur die Client-ID, aus ~/SK.
 val driveClient = Properties().apply {
     File(System.getProperty("user.home"), "SK/rclone/google-oauth-client.txt").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
-// Auslöser der Claude-Code-Routine für das Werkzeug „programmieren“ (Adresse und Token aus dem API-Trigger der
-// Routine auf claude.ai/code/routines), ebenfalls nur aus ~/SK. Fehlt die Datei, trägt man beides in der App ein.
+// Adresse des Auslösers der Claude-Code-Routine für das Werkzeug „programmieren“ (aus dem API-Trigger der Routine auf
+// claude.ai/code/routines), aus ~/SK. Fehlt die Datei, trägt man sie in der App ein.
 val routine = Properties().apply {
     File(System.getProperty("user.home"), "SK/Jarvis/routine.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
@@ -48,13 +55,8 @@ android {
         versionName = versionslogAktuell["versionName"] as String
         buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
         buildConfigField("String", "RELAY_HOST", "\"${relay.getProperty("host", "")}\"")
-        buildConfigField("String", "RELAY_TOKEN", "\"${relay.getProperty("token", "")}\"")
-        buildConfigField("String", "TAVILY_KEY", "\"$tavilyKey\"")
-        buildConfigField("String", "MAPS_KEY", "\"$mapsKey\"")
         buildConfigField("String", "DRIVE_CLIENT_ID", "\"${driveClient.getProperty("client_id", "")}\"")
         buildConfigField("String", "ROUTINE_URL", "\"${routine.getProperty("url", "")}\"")
-        buildConfigField("String", "ROUTINE_TOKEN", "\"${routine.getProperty("token", "")}\"")
-        buildConfigField("String", "DRIVE_CLIENT_SECRET", "\"${driveClient.getProperty("client_secret", "")}\"")
 
         // „Hey Jarvis“ rechnet mit ONNX Runtime (native Bibliotheken); nur die Handy-Architekturen mitnehmen.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }

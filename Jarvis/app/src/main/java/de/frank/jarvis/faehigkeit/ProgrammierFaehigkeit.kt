@@ -158,12 +158,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"), a.optString("schritt").trim().take(400), a.optString("link").trim())
                 if (eintrag == null) Ergebnis("Unbekannte auftrag_id.", fehler = true)
                 else {
-                    verteile(eintrag, null)
                     // Die Cloud-Sitzung erreicht Jarvis nur über ihre eigenen Meldungen: Nachträge reisen mit der Antwort zurück.
                     // Am PC stellt der Hook zu (sonst käme ein Nachtrag doppelt an).
                     // Nicht bei frage (die Rückfrage bliebe sonst unsichtbar) und nicht bei fehler: dann bleibt er für die nächste Meldung liegen.
                     val nachtraege = if (eintrag.optString("ziel") == ZIEL_CLOUD && a.optString("stand") in listOf("laeuft", "fertig"))
                         Auftragsbuch.setzeNachtraege(app, id, null, setOf("angenommen"), "zugestellt") else emptyList()
+                    // Geht gerade ein Nachtrag an die Sitzung, arbeitet sie weiter: dann kein „Fertig programmiert“ als Benachrichtigung.
+                    verteile(eintrag, null, benachrichtigen = nachtraege.isEmpty())
                     if (nachtraege.isEmpty()) Ergebnis("Gemeldet.")
                     else {
                         Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(200) }, "")
@@ -275,6 +276,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             } catch (nichtDa: NichtDa) {
                 uebersprungen += nichtDa.message.orEmpty()
                 continue
+            } catch (_: java.net.SocketTimeoutException) {
+                // Keine Antwort mehr nach dem Senden: Der Auftrag kam womöglich an und läuft. Nicht als gescheitert melden (sonst
+                // startet ihn Frank ein zweites Mal), sondern als „unklar“ eintragen; meldet sich die Sitzung, wird daraus ein normaler Auftrag.
+                if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt) }.getOrDefault("") }
+                val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, "", "Unklar: ${ziel.name} hat den Start nicht rechtzeitig bestätigt (Zeitüberschreitung). " +
+                    "Womöglich läuft der Auftrag trotzdem.", gespraech, auftrag, stand = STAND_UNKLAR)
+                verteile(eintrag, null)
+                return Ergebnis("Unklar, ob der Auftrag für $appName (Nummer $nummer) gestartet ist: ${ziel.name} hat nach dem Senden nicht rechtzeitig geantwortet " +
+                    "(Zeitüberschreitung), er läuft womöglich trotzdem. Starte ihn NICHT neu: Prüfe erst mit programmierauftraege, ob sich die Sitzung meldet, und sag Frank das so.", fehler = true)
             } catch (fehler: Exception) {
                 return Ergebnis("Der Auftrag ist nicht gestartet (${ziel.name}): ${fehler.message ?: fehler.javaClass.simpleName}", fehler = true)
             }
@@ -366,7 +376,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             else -> franks.text + "\n" + worte
         }
         val imGespraech = if (gespraech.isEmpty()) emptyList() else Auftragsbuch.alleImGespraech(app, gespraech)
-        val ziel = NachtragsRegel.ziel(auftragId, pruefWorte, Auftragsbuch.alleIds(app), imGespraech.map { it.optString("id") })
+        val ziel = NachtragsRegel.ziel(auftragId, pruefWorte, Auftragsbuch.alleIds(app), imGespraech.map { it.optString("id") },
+            imGespraech.filter { it.optString("stand") in listOf("laeuft", "frage") }.map { it.optString("id") })
         if (ziel is NachtragsRegel.Ziel.Nachfrage) {
             Logbuch.system("programmier_nachtrag nicht gesendet", "${ziel.grund}, auftrag_id „$auftragId“")
             val auswahl = (if (imGespraech.isNotEmpty()) imGespraech.reversed() else emptyList()).joinToString("\n") { "- " + Auftragsbuch.kurzZeile(it) }
@@ -459,12 +470,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     fun aktivitaetLaden() = Auftragsbuch.juengste(app).forEach { aktivitaetMelden(it) }
 
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
-    private fun verteile(eintrag: JSONObject, frage: JSONObject?) {
+    private fun verteile(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean = true) {
         aktivitaetMelden(eintrag)
         // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
         // nur, wenn Frank gebraucht wird oder der Auftrag zu Ende ist: Rückfrage, fertig (App installiert) oder Problem.
         val letzter = eintrag.optString("letzterStand", eintrag.optString("stand"))
-        if (frage != null || letzter == "fertig" || letzter == "fehler") benachrichtige(eintrag)
+        if (benachrichtigen && (frage != null || letzter == "fertig" || letzter == "fehler")) benachrichtige(eintrag)
         val gespraech = eintrag.optString("gespraech")
         if (gespraech.isEmpty()) return
         val appName = eintrag.optString("app")
@@ -581,12 +592,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         @Synchronized
-        fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String, gespraech: String, auftrag: String): JSONObject {
+        fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String, gespraech: String, auftrag: String, stand: String = "laeuft"): JSONObject {
             val jetzt = System.currentTimeMillis()
             val eintrag = JSONObject().put("id", id).put("app", app).put("ziel", ziel).put("link", link).put("start", jetzt).put("gespraech", gespraech)
                 .put("auftrag", auftrag.take(1_500))
-                .put("stand", "laeuft").put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt).put("arbeitet", true)
-                .put("schritte", JSONArray().put(JSONObject().put("zeit", jetzt).put("stand", "laeuft").put("text", schritt)))
+                .put("stand", stand).put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt).put("arbeitet", stand == "laeuft")
+                .put("schritte", JSONArray().put(JSONObject().put("zeit", jetzt).put("stand", stand).put("text", schritt)))
             schreib(context, lies(context).put(eintrag))
             return eintrag
         }
@@ -699,7 +710,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         /** Der Stand eines Auftrags in Worten, für alle Übersichten gleich. */
-        fun standText(stand: String) = when (stand) { "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"; else -> "läuft" }
+        fun standText(stand: String) = when (stand) {
+            "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"
+            STAND_UNKLAR -> "unklar, ob gestartet (Zeitüberschreitung beim Start; nicht neu starten, erst abwarten, ob sich die Sitzung meldet)"
+            else -> "läuft"
+        }
 
         private fun alle(context: Context): List<JSONObject> = lies(context).let { l -> (0 until l.length()).map { l.getJSONObject(it) } }
 
@@ -925,6 +940,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Die Namen der Ziele, so stehen sie im Auftragsbuch (Feld „ziel“). */
         const val ZIEL_PC = "Claude Code auf deinem PC"
         const val ZIEL_CLOUD = "Claude Code in der Cloud"
+
+        /** Stand eines Auftrags, dessen Start nach dem Senden ins Zeitlimit lief: vielleicht gestartet. Die erste Meldung der Sitzung ersetzt ihn. */
+        const val STAND_UNKLAR = "unklar"
 
         /**
          * Der Text, den PC und Cloud gleichermaßen bekommen: Auftrag, dann die Fortschritts-Anweisung. Franks Programmierregeln

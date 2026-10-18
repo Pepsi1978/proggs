@@ -21,6 +21,8 @@ import org.json.JSONObject
  * - Zeitlimit: Der Aufruf läuft auf einem eigenen Faden (lesend 6 s, schreibend 25 s, bei `warte_ms` entsprechend länger).
  *   Hängt die Partner-App, kommt der Aufrufer trotzdem frei; der hängende Binder-Aufruf läuft im Hintergrund aus.
  *   Lesende Aufrufe werden danach einmal wiederholt (nicht mit `warte_ms`); schreibende tragen [ZEITLIMIT], weil sie womöglich doch ankamen.
+ * - Abbruch: Der Aufruf blockiert. Aufrufer nehmen deshalb `runInterruptible(Dispatchers.IO)`, dann beendet ein Abbruch der
+ *   Coroutine das Warten sofort (InterruptedException), statt bis zum Zeitlimit zu blockieren.
  */
 object AppBruecke {
     private const val NICHT_BEREIT = "App nicht bereit."
@@ -38,7 +40,10 @@ object AppBruecke {
         val grenze = maxOf(if (lesend) LESEND_MS else SCHREIBEND_MS, anfrage.optLong("warte_ms", 0L) + 5_000L)
         val beginn = System.currentTimeMillis()
         val erste = rufeEinmal(context, app, adressen, methode, anfrage, grenze, lesend)
-        val nochmal = erste.optString("fehler") == NICHT_BEREIT || (lesend && erste.optBoolean(VORUEBERGEHEND))
+        // Nicht bei warte_ms: Die Partner-App hat womöglich schon lange gearbeitet oder etwas angestoßen (etwa eine bezahlte
+        // Recherche bei epigenetik_lesen); ein zweiter Durchgang stieße es noch einmal an.
+        val nochmal = erste.optString("fehler") == NICHT_BEREIT ||
+            (lesend && anfrage.optLong("warte_ms", 0L) <= 0L && erste.optBoolean(VORUEBERGEHEND))
         if (!nochmal) return erste.apply { remove(VORUEBERGEHEND) }.also { gemessen(app, methode, beginn) }
         Thread.sleep(1_500)
         return rufeEinmal(context, app, adressen, methode, anfrage, grenze, lesend).apply { remove(VORUEBERGEHEND) }.also { gemessen(app, methode, beginn) }

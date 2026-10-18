@@ -39,7 +39,7 @@ object DriveFreigabe {
 
     /** Führt die Freigabe durch. Rückgabe: Meldung für den Benutzer; [erfolg] sagt, ob es geklappt hat. */
     suspend fun erneuere(context: Context): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (!eingerichtet(context)) return@withContext false to "Diese Fassung von Jarvis kennt die Google-Zugangsdaten nicht (Bau ohne ~/SK). Einmal am PC bauen, danach bleiben sie gespeichert."
+        if (!eingerichtet(context)) return@withContext false to "Jarvis kennt die Google-Zugangsdaten nicht. Am PC das Zugangs-Skript ausführen (legt zugang.json per adb ab), danach bleiben sie gespeichert."
         val e = Einstellungen.get(context)
         runCatching {
             ServerSocket(0, 8, InetAddress.getLoopbackAddress()).use { lauscher ->

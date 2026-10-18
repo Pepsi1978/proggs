@@ -2,7 +2,7 @@
 
 Der MCP-Server selbst laeuft auf dem Handy. Dieser Dienst ist nur die oeffentliche Gegenstelle:
   ChatGPT  --POST /j/<Geheimnis>/mcp-->  Relay  --WebSocket-->  Jarvis-App
-Die WebSocket baut das Handy von sich aus auf (/geraet/ws, Geraete-Token im Header) und nennt dabei
+Die WebSocket baut das Handy von sich aus auf (/geraet/ws, Handy-Token im Header; Rollen siehe HANDY_TOKEN) und nennt dabei
 sein Geheimnis. Nur fuer dieses Geheimnis nimmt der Relay danach Aufrufe an; alles andere ist 404.
 
 Zweite Aufgabe: Franks Tagebuch. Die Eintraege liegen als Markdown-Dateien in einem Google-Drive-Ordner.
@@ -39,7 +39,13 @@ from pathlib import Path
 
 from aiohttp import WSMsgType, web
 
+# Zwei Rollen (Befund Token im APK): Der bisherige Geraete-Token gilt fuer die PC-Bruecken (/pc/*) und fuer /geraet/signal
+# (apk-update, Cloud-Bau). Das Handy bekommt einen eigenen Token (JARVIS_HANDY_TOKEN) fuer seine /geraet/*-Routen.
+# Fehlt JARVIS_HANDY_TOKEN, gilt der alte Token ueberall wie bisher. Uebergang: JARVIS_ALT_TOKEN_HANDY=1 laesst an den
+# Handy-Routen zusaetzlich den alten Token zu (mit Logzeile), bis das Handy den neuen hat.
 TOKEN = os.environ["JARVIS_GERAET_TOKEN"]
+HANDY_TOKEN = os.environ.get("JARVIS_HANDY_TOKEN", "").strip()
+ALT_TOKEN_HANDY = os.environ.get("JARVIS_ALT_TOKEN_HANDY", "").strip() == "1"
 ZUSTAND = Path(os.environ.get("JARVIS_ZUSTAND", "/data/zustand.json"))
 WARTE_AUF_HANDY_S = 8      # kurze Funkloecher ueberbruecken, statt sofort einen Fehler zu melden
 NACH_TRENNUNG_S = 15       # so lange duerfen offene Aufrufe nach einer Trennung auf die neue Verbindung warten
@@ -67,12 +73,51 @@ def _im_hintergrund(koroutine) -> None:
     aufgabe.add_done_callback(_aufgaben.discard)
 
 
+def _gleich(wert: str, token: str) -> bool:
+    return bool(token) and hmac.compare_digest(wert.encode(), token.encode())
+
+
+def _token(request: web.Request) -> str:
+    return request.headers.get("X-Jarvis-Token", "")
+
+
+def darf_pc(request: web.Request) -> bool:
+    """Rolle „pc+signal“: der bisherige Geraete-Token."""
+    return _gleich(_token(request), TOKEN)
+
+
+_alt_gemeldet = {}  # Pfad -> monotonic der letzten Meldung „alter Token“
+
+
+def darf_handy(request: web.Request) -> bool:
+    """Rolle „handy“. Ohne JARVIS_HANDY_TOKEN wie bisher der alte Token; im Uebergang beide."""
+    wert = _token(request)
+    if not HANDY_TOKEN:
+        return _gleich(wert, TOKEN)
+    if _gleich(wert, HANDY_TOKEN):
+        return True
+    if ALT_TOKEN_HANDY and _gleich(wert, TOKEN):
+        jetzt = time.monotonic()
+        if jetzt - _alt_gemeldet.get(request.path, -1e9) >= 60:
+            _alt_gemeldet[request.path] = jetzt
+            log.info("alter Token an %s", request.path)
+        return True
+    return False
+
+
+def darf_signal(request: web.Request) -> bool:
+    """/geraet/signal: beide Rollen (apk-update und Cloud-Bau mit dem alten Token, das Handy mit seinem)."""
+    return darf_pc(request) or darf_handy(request)
+
+
 class Relay:
     def __init__(self):
         self.geheimnis = ""          # zuletzt vom Handy gemeldetes Geheimnis
         self.gemerkt = {}            # Methode -> result-Objekt
         self.ws = None
-        self.ausstehend = None       # Signal, das ohne verbundenes Handy kam: geht beim naechsten Verbinden raus
+        # Signale, die ohne verbundenes Handy kamen (hoechstens 20): gehen beim naechsten Verbinden raus. Eine Liste statt
+        # eines Platzes: Zwei apk-update-Laeufe im Funkloch verloren sonst das Signal des ersten.
+        self.ausstehend = []
         self.meldungen = []          # Programmier-Meldungen ohne verbundenes Handy (hoechstens 100, aelteste fallen weg)
         self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.da = asyncio.Event()
@@ -99,9 +144,8 @@ class Relay:
     # ---------------------------------------------------------------- Handy
 
     async def geraet(self, request: web.Request) -> web.StreamResponse:
-        token = request.headers.get("X-Jarvis-Token", "")
         geheimnis = request.headers.get("X-Jarvis-Geheimnis", "")
-        if not hmac.compare_digest(token.encode(), TOKEN.encode()) or len(geheimnis) < 32:
+        if not darf_handy(request) or len(geheimnis) < 32:
             return web.Response(status=404, text="Not found")
         ws = web.WebSocketResponse(heartbeat=20, max_msg_size=MAX_RUMPF * 2)
         await ws.prepare(request)
@@ -123,13 +167,14 @@ class Relay:
             except (ConnectionError, RuntimeError):
                 self.meldungen.insert(0, meldung)
                 break
-        if self.ausstehend is not None:
-            signal, self.ausstehend = self.ausstehend, None
+        while self.ausstehend:
+            signal = self.ausstehend.pop(0)
             try:
                 await ws.send_str(json.dumps(signal))
                 log.info("Ausstehendes Signal %s nachgereicht", signal.get("signal"))
             except (ConnectionError, RuntimeError):
-                self.ausstehend = signal
+                self.ausstehend.insert(0, signal)
+                break
         try:
             async for nachricht in ws:
                 if nachricht.type != WSMsgType.TEXT:
@@ -163,7 +208,7 @@ class Relay:
 
     async def signal(self, request: web.Request) -> web.Response:
         """Ein Signal von aussen (z. B. "update" vom apk-update-Skript am PC) sofort ans Handy weiterreichen."""
-        if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
+        if not darf_signal(request):
             return web.Response(status=404, text="Not found")
         try:
             daten = await request.json()
@@ -178,7 +223,8 @@ class Relay:
                 return web.json_response({"zugestellt": True})
             except (ConnectionError, RuntimeError):
                 pass
-        self.ausstehend = daten
+        self.ausstehend.append(daten)
+        del self.ausstehend[:-20]
         log.info("Signal %s gemerkt: Handy nicht verbunden", daten["signal"])
         return web.json_response({"zugestellt": False})
 
@@ -208,9 +254,14 @@ class Relay:
         try:
             anfrage = json.loads(rumpf)
         except ValueError:
+            request["rpc"] = "?"
             return self._json({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Ungueltiges JSON"}}, 400)
         einzeln = anfrage if isinstance(anfrage, dict) else None
         methode = einzeln.get("method", "") if einzeln else ""
+        # Fuer die Mitschrift: erst hier, nach der Pruefung des Geheimnisses (fremde Ruempfe werden nie geparst).
+        parameter = einzeln.get("params") if einzeln is not None else None
+        name = parameter.get("name", "") if isinstance(parameter, dict) else ""
+        request["rpc"] = (str(methode) + (":" + str(name) if methode == "tools/call" else "")) if einzeln is not None else "stapel"
 
         # Benachrichtigungen (ohne id, z. B. notifications/initialized) beantwortet das Handy nie: keine Rundreise dafuer.
         if einzeln is not None and einzeln.get("id") is None:
@@ -373,7 +424,7 @@ class Tagebuch:
 
     async def neuer_zugang(self, request: web.Request) -> web.Response:
         """Nimmt einen frisch erteilten Nur-Lese-Zugang vom Handy an und traegt ihn in die rclone-Konfiguration ein."""
-        if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
+        if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         try:
             zugang = (await request.json()).get("token")
@@ -397,7 +448,7 @@ class Tagebuch:
         log.info("Abgleich nach neuem Drive-Zugang fertig, Fehler: %r", self.fehler)
 
     async def antwort(self, request: web.Request) -> web.Response:
-        if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
+        if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         # Laeuft gerade ein Abgleich (bis 90 s), den lokalen Stand liefern statt danach womoeglich noch einen zu starten:
         # Zusammen laege das ueber Caddys 90 s, und das Handy bekaeme 502.
@@ -463,10 +514,6 @@ class PcBruecke:
         self.zugestellt = {}  # nachtrag_id -> asyncio.Event: der Hook hat quittiert
         self._lade_nachtraege()
 
-    @staticmethod
-    def _erlaubt(request: web.Request) -> bool:
-        return hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode())
-
     # ---------------------------------------------------------------- Nachtraege
 
     def _lade_nachtraege(self) -> None:
@@ -508,7 +555,7 @@ class PcBruecke:
 
     async def nachtrag_geben(self, request: web.Request) -> web.Response:
         """POST /geraet/nachtrag (Handy): {"auftrag_id", "nachtrag_id", "text"}. Antwort: angenommen, zugestellt, wartet, kontakt_vor_s, pc."""
-        if not self._erlaubt(request):
+        if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         try:
             daten = await request.json()
@@ -544,7 +591,7 @@ class PcBruecke:
 
     async def nachtrag_abholen(self, request: web.Request) -> web.Response:
         """GET /pc/nachtrag?auftrag_id=…&warten=… (Hook): 200 {"nachtraege": [...]}, 204 = keiner. Entfernt nichts (erst die Quittung)."""
-        if not self._erlaubt(request):
+        if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         auftrag_id = request.query.get("auftrag_id", "").strip().upper()
         if not auftrag_id:
@@ -597,7 +644,7 @@ class PcBruecke:
 
     async def abholen(self, request: web.Request) -> web.Response:
         """GET /pc/auftrag (Bruecke): wartet bis zu PC_WARTEN_S auf einen Auftrag, sonst 204."""
-        if not self._erlaubt(request):
+        if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         if not self.da():
             log.info("PC-Bruecke verbunden")
@@ -650,7 +697,7 @@ class PcBruecke:
 
     async def quittung(self, request: web.Request) -> web.Response:
         """POST /pc/quittung (Bruecke): {"id", "ok", "text"}."""
-        if not self._erlaubt(request):
+        if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         try:
             daten = await request.json()
@@ -663,7 +710,7 @@ class PcBruecke:
 
     async def auftrag(self, request: web.Request) -> web.Response:
         """POST /geraet/pc-auftrag (Handy): {"app", "auftrag", "review"}. 409 = kein PC da, 504 = keine Quittung."""
-        if not self._erlaubt(request):
+        if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         if not self.da():
             return web.json_response({"pc": False}, status=409)
@@ -695,7 +742,7 @@ class PcBruecke:
 
     async def meldung(self, request: web.Request) -> web.Response:
         """POST /pc/meldung (Hook am PC): {"auftrag_id", "stand", "schritt", "frage"?: {"frage_id", "fragen", "frei"}}."""
-        if not self._erlaubt(request):
+        if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         try:
             daten = await request.json()
@@ -715,7 +762,7 @@ class PcBruecke:
 
     async def antwort_abholen(self, request: web.Request) -> web.Response:
         """GET /pc/antwort?frage_id=… (Hook): 200 mit Antwort, 204 = noch keine, 404 = Frage unbekannt oder verfallen."""
-        if not self._erlaubt(request):
+        if not darf_pc(request):
             return web.Response(status=404, text="Not found")
         eintrag = self.fragen.get(request.query.get("frage_id", ""))
         if eintrag is None:
@@ -729,7 +776,7 @@ class PcBruecke:
 
     async def antwort_geben(self, request: web.Request) -> web.Response:
         """POST /geraet/antwort (Handy): {"frage_id", "antworten": {Frage: Antwort}, "text"?}."""
-        if not self._erlaubt(request):
+        if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         try:
             daten = await request.json()
@@ -744,7 +791,7 @@ class PcBruecke:
         return web.json_response({"angenommen": True})
 
     async def status(self, request: web.Request) -> web.Response:
-        if not self._erlaubt(request):
+        if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         jetzt = time.monotonic()
         vor = int(jetzt - self.zuletzt) if self.zuletzt else None
@@ -773,15 +820,6 @@ async def mitschrift(request: web.Request, handler):
     if len(teile) > 2 and teile[1] == "j":
         teile[2] = "<geheim>" if len(teile[2]) >= 32 else "<falsch>"
     pfad = "/".join(teile)[:120]
-    rpc = ""
-    if request.method == "POST" and request.can_read_body:
-        try:
-            daten = json.loads(await request.text())
-            rpc = daten.get("method", "") if isinstance(daten, dict) else "stapel"
-            if rpc == "tools/call":
-                rpc += ":" + str((daten.get("params") or {}).get("name", ""))
-        except Exception:
-            rpc = "?"
     start = asyncio.get_running_loop().time()
     status = 500
     try:
@@ -794,11 +832,17 @@ async def mitschrift(request: web.Request, handler):
     finally:
         if pfad != "/gesund":
             dauer = int((asyncio.get_running_loop().time() - start) * 1000)
+            # Die RPC-Methode setzt der MCP-Handler erst nach gelungener Pruefung des Geheimnisses (sonst leer).
+            rpc = request.get("rpc", "")
             log.info("%s %s %s -> %s (%s ms) ua=%s accept=%s", request.method, pfad, rpc, status, dauer,
                      request.headers.get("User-Agent", "")[:60], request.headers.get("Accept", "")[:60])
 
 
 def app() -> web.Application:
+    if not HANDY_TOKEN:
+        log.warning("JARVIS_HANDY_TOKEN fehlt: Der Geraete-Token gilt wie bisher fuer alle Routen (auch die des Handys).")
+    elif ALT_TOKEN_HANDY:
+        log.warning("Uebergang aktiv (JARVIS_ALT_TOKEN_HANDY=1): Die Handy-Routen nehmen auch den alten Geraete-Token an.")
     relay = Relay()
     anwendung = web.Application(client_max_size=MAX_RUMPF, middlewares=[mitschrift])
     anwendung.router.add_get("/geraet/ws", relay.geraet)

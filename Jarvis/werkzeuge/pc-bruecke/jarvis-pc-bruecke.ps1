@@ -48,6 +48,53 @@ function Finde-Claude {
     return $treffer
 }
 
+# Aufträge, Startskripte und Hook-Zustände bleiben sonst für immer liegen, samt dem vollen Auftragstext in %TEMP%.
+# 14 Tage: Kein Warter lebt länger als 12 h, und so alte Sitzungen laufen nicht mehr.
+function Raeume-Auf {
+    $grenze = (Get-Date).AddDays(-14)
+    $muster = @(
+        @{ Ordner = (Join-Path $env:TEMP 'JarvisPcBruecke'); Namen = @('auftrag-*.txt', 'start-*.ps1', 'settings-*.json') },
+        @{ Ordner = (Split-Path $protokoll); Namen = @('hook-*.json', 'hook-*.json.*.tmp', 'hook-*.sperre', 'hook-*.lock', 'puls-*.txt', 'warter-*.pid') }
+    )
+    foreach ($m in $muster) {
+        foreach ($name in $m.Namen) {
+            Get-ChildItem -LiteralPath $m.Ordner -Filter $name -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.LastWriteTime -lt $grenze } | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+# Der OpenLauncher-Ausgabeordner hängt am Zielframework (net8.0-windows…): suchen statt fest verdrahten, sonst landete
+# nach einem Framework-Wechsel jeder Auftrag im Notweg.
+function Finde-OpenLauncher {
+    $wurzel = Join-Path $proggs 'OpenLauncher\bin\Release'
+    Get-ChildItem -LiteralPath $wurzel -Filter 'OpenLauncher.exe' -File -Recurse -Depth 3 -ErrorAction SilentlyContinue |
+        Where-Object { $_.Directory.Name -eq 'win-x64' } | Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+
+# Dieselben Hooks wie OpenLauncherService.JarvisHooks(), nur für den Notweg: Ohne sie sähe Jarvis von der Sitzung nichts.
+function Jarvis-Hooks {
+    $skript = (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py').Replace('\', '/')
+    $befehl = "python `"$skript`""
+    function Eintrag($matcher, $art, $timeout, [bool]$hintergrund = $false) {
+        $hook = [ordered]@{ type = 'command'; command = "$befehl $art"; timeout = $timeout }
+        if ($hintergrund) { $hook.async = $true }
+        $e = [ordered]@{ hooks = @($hook) }
+        if ($null -ne $matcher) { $e.matcher = $matcher }
+        return $e
+    }
+    $warter = [ordered]@{ hooks = @([ordered]@{ type = 'command'; command = "$befehl warte"; timeout = 43200;
+                asyncRewake = $true; rewakeSummary = 'Nachtrag von Frank über Jarvis' }) }
+    return [ordered]@{
+        PostToolUse        = @(Eintrag '*' 'post' 15 $true)
+        PostToolUseFailure = @(Eintrag 'Bash|PowerShell' 'post' 15 $true)
+        PreToolUse         = @((Eintrag 'AskUserQuestion' 'frage' 660), (Eintrag '*' 'puls' 10 $true))
+        Stop               = @((Eintrag $null 'stop' 660), $warter)
+        SessionStart       = @($warter)
+    }
+}
+
 function Starte-Sitzung($auftrag) {
     $app = ($auftrag.app -replace '[^\p{L}\p{N} ._-]', '').Trim()
     if (-not $app) { $app = 'App' }
@@ -77,20 +124,23 @@ VORGEHEN
     $stempel = Get-Date -Format 'yyyyMMdd-HHmmss'
     $ordner = Join-Path $env:TEMP 'JarvisPcBruecke'
     New-Item -ItemType Directory -Force -Path $ordner | Out-Null
+    Raeume-Auf
     $auftragDatei = Join-Path $ordner "auftrag-$stempel.txt"
     Set-Content -Path $auftragDatei -Value $text -Encoding utf8
+    $nummer = "$($auftrag.nummer)"
+    $mitHooks = $nummer -match '^[A-Za-z0-9]{1,20}$'
 
     # Normalfall: über den OpenLauncher, genau wie der Startknopf (Profil Minimal, Schnellmodus, Opus 5.5, Effort High),
     # dazu Remote Control mit Namen und der Auftrag als erste Nachricht. Ab OpenLauncher 1.24.89 (--jarvis-auftrag).
-    $openLauncher = Join-Path $proggs 'OpenLauncher\bin\Release\net8.0-windows10.0.19041.0\win-x64\OpenLauncher.exe'
+    $openLauncher = Finde-OpenLauncher
     $kannJarvis = $false
-    if (Test-Path -LiteralPath $openLauncher) {
+    if ($openLauncher -and (Test-Path -LiteralPath $openLauncher)) {
         try { $kannJarvis = [version](Get-Item -LiteralPath $openLauncher).VersionInfo.ProductVersion.Split('+')[0] -ge [version]'1.24.89' } catch { }
     }
     if ($kannJarvis) {
         $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name`"", '--profil', $Profil, '--modus', $Modus, '--modell', "`"$Modell`"", '--effort', $Effort)
         # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.
-        if ("$($auftrag.nummer)" -match '^[A-Za-z0-9]{1,20}$') { $argumente += @('--auftrag-id', $auftrag.nummer) }
+        if ($mitHooks) { $argumente += @('--auftrag-id', $nummer) }
         $prozess = Start-Process -FilePath $openLauncher -ArgumentList $argumente -PassThru -WindowStyle Hidden
         # Spätestens nach 30 s quittieren: Der Relay wartet 45 s, danach wüsste das Handy nicht, ob die Sitzung läuft.
         # Kein Fehler melden, wenn der OpenLauncher nur langsam ist: Er startet die Sitzung womöglich noch. Mit ok=false
@@ -104,19 +154,26 @@ VORGEHEN
     }
 
     # Notlösung für einen älteren OpenLauncher: direkt starten (Profil-Ordner, Modell und Effort wie oben; die aktive
-    # CLAUDE.md und damit der Modus bleiben dann so, wie der OpenLauncher sie zuletzt geschrieben hat).
+    # CLAUDE.md und damit der Modus bleiben dann so, wie der OpenLauncher sie zuletzt geschrieben hat). Mit der Nummer
+    # bekommt auch diese Sitzung die Jarvis-Hooks und JARVIS_AUFTRAG_ID, wie am Mac.
     Schreib 'OpenLauncher ohne --jarvis-auftrag, starte direkt'
     $configDir = Join-Path $proggs "OpenLauncher\Profiles\ClaudeCode\$Profil"
     $claude = Finde-Claude
+    $einstellungen = Join-Path $ordner "settings-$stempel.json"
+    $daten = [ordered]@{ model = $Modell; effortLevel = $Effort }
+    if ($mitHooks) { $daten.hooks = Jarvis-Hooks }
+    [System.IO.File]::WriteAllText($einstellungen, ($daten | ConvertTo-Json -Depth 10 -Compress), [System.Text.UTF8Encoding]::new($false))
+    $auftragId = if ($mitHooks) { "`$env:JARVIS_AUFTRAG_ID = '$nummer'" } else { '' }
     $start = Join-Path $ordner "start-$stempel.ps1"
     @"
 `$Host.UI.RawUI.WindowTitle = '$($name -replace "'", "''")'
-Set-Location -LiteralPath '$proggs'
-`$env:CLAUDE_CONFIG_DIR = '$configDir'
+Set-Location -LiteralPath '$($proggs -replace "'", "''")'
+`$env:CLAUDE_CONFIG_DIR = '$($configDir -replace "'", "''")'
+$auftragId
 `$sync = Join-Path `$env:USERPROFILE 'proggs\OpenLauncher\Profiles\hooks\claude-login-sync.py'
 if (Test-Path `$sync) { try { `$null = python `$sync 2>`$null } catch { } }
-`$auftrag = Get-Content -Raw -Encoding utf8 -LiteralPath '$auftragDatei'
-& '$claude' --dangerously-skip-permissions --model '$Modell' --effort '$Effort' --remote-control '$($name -replace "'", "''")' `$auftrag
+`$auftrag = Get-Content -Raw -Encoding utf8 -LiteralPath '$($auftragDatei -replace "'", "''")'
+& '$($claude -replace "'", "''")' --dangerously-skip-permissions --settings '$($einstellungen -replace "'", "''")' --model '$Modell' --effort '$Effort' --remote-control '$($name -replace "'", "''")' `$auftrag
 "@ | Set-Content -Path $start -Encoding utf8
 
     $pwsh = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
@@ -137,9 +194,27 @@ $antwortDatei = Join-Path $env:TEMP 'JarvisPcBruecke\antwort.json'
 $quittungDatei = Join-Path $env:TEMP 'JarvisPcBruecke\quittung.json'
 New-Item -ItemType Directory -Force -Path (Split-Path $antwortDatei) | Out-Null
 
+# Der Token gehört nicht in die Befehlszeile von curl: Die sieht jede Prozessliste und eine Prozess-Überwachung
+# (Ereignis 4688). curl liest die Kopfzeilen darum aus einer Datei, die nur der eigene Benutzer lesen darf.
+$kopfDatei = Join-Path (Split-Path $protokoll) 'kopf.txt'
+$kopfToken = $null
+
+function Schreib-Kopf([string]$token) {
+    if ($script:kopfToken -eq $token -and (Test-Path -LiteralPath $kopfDatei)) { return }
+    if (-not (Test-Path -LiteralPath $kopfDatei)) {
+        # Zuerst leer anlegen und abschließen, erst dann den Token hineinschreiben.
+        [System.IO.File]::WriteAllText($kopfDatei, '', [System.Text.UTF8Encoding]::new($false))
+    }
+    & icacls.exe $kopfDatei /inheritance:r /grant:r "$($env:USERNAME):(R,W,D)" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Rechte der Kopfzeilen-Datei ließen sich nicht einschränken.' }
+    [System.IO.File]::WriteAllText($kopfDatei, "X-Jarvis-Token: $token`r`nX-Jarvis-Rechner: $env:COMPUTERNAME`r`n", [System.Text.UTF8Encoding]::new($false))
+    $script:kopfToken = $token
+}
+
 function Rufe([string]$adresse, [string]$token, [int]$sekunden, [string]$rumpfDatei) {
+    Schreib-Kopf $token
     $argumente = @('-4', '-s', '-S', '--max-time', $sekunden, '-o', $antwortDatei, '-w', '%{http_code}',
-        '-H', "X-Jarvis-Token: $token", '-H', "X-Jarvis-Rechner: $env:COMPUTERNAME")
+        '-H', "@$kopfDatei")
     if ($rumpfDatei) { $argumente += @('-X', 'POST', '-H', 'Content-Type: application/json; charset=utf-8', '--data-binary', "@$rumpfDatei") }
     Remove-Item -LiteralPath $antwortDatei -ErrorAction SilentlyContinue
     $code = & $curl @argumente $adresse 2>&1
@@ -148,6 +223,7 @@ function Rufe([string]$adresse, [string]$token, [int]$sekunden, [string]$rumpfDa
 }
 
 Schreib 'Brücke gestartet'
+Raeume-Auf
 $pause = 2
 while ($true) {
     try {

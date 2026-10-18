@@ -102,6 +102,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var zuletztSichtbar = 0L
     /** Bis wann die Sperre nach einem bewusst gestarteten Teilen, Öffnen oder „Speichern unter“ wartet (sonst ginge das Ergebnis verloren). */
     var sperrAufschubBis = 0L
+    /** Jarvis hat selbst eine andere App geöffnet, ohne über die Activity zu gehen (Anmeldeseite von ChatGPT); MainActivity verbraucht es in onStart. */
+    var eigenerAbsprung = false
     var entsperrenAnfragen: () -> Unit = {}
     /** Jarvis läuft per „Hey Jarvis“ über dem Sperrbildschirm; das Gespräch bleibt dabei verborgen. */
     var ueberSperre = false
@@ -266,8 +268,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
                 val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
-                agent.versuche(auftrag, verlauf, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true, beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty())
-                    ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText()).also { art = "fehler" }
+                // Franks Schrittlimit gilt hier; das Zeitlimit wächst mit (je Schritt 12 s, mindestens 2 Minuten; unbegrenzt = 15 Minuten).
+                val schritte = einstellungen.schrittlimit
+                val zeitlimit = if (schritte <= 0) 15 * 60_000L else maxOf(120_000L, schritte * 12_000L)
+                var grund: String? = null
+                agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true,
+                    beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it })
+                    ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText(grund)).also { art = "fehler" }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -321,17 +328,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * In neuem Chat fortsetzen: ein neues Gespräch mit den Nachrichten bis einschließlich [bis]. Anhänge werden kopiert,
-     * damit das Löschen des einen Gesprächs die Bilder des anderen nicht mitnimmt.
+     * damit das Löschen des einen Gesprächs die Bilder des anderen nicht mitnimmt. Der Verlauf gilt im Moment des Aufrufs;
+     * [danach] läuft, sobald das neue Gespräch offen ist (die Kopien entstehen im Hintergrund).
      */
-    fun abzweigen(bis: Int, meldenAls: String = "Neuer Chat ab dieser Stelle.") {
+    fun abzweigen(bis: Int, meldenAls: String = "Neuer Chat ab dieser Stelle.", danach: suspend () -> Unit = {}) {
         // bis = -1: ein leeres neues Gespräch.
         if (bis < -1 || bis >= gespraech.size) return
-        val kopie = gespraech.take(bis + 1).map { n -> n.copy(bewertung = 0, anhaenge = n.anhaenge.mapNotNull { anhangKopieren(it) }) }
-        neuesGespraech()
-        gespraech.addAll(kopie)
-        // Ein leeres Gespräch bekommt erst mit der ersten Frage eine Kennung und eine Datei.
-        if (kopie.isNotEmpty()) sitzungSichern()
-        meldung = meldenAls
+        val stand = gespraech.take(bis + 1)
+        viewModelScope.launch {
+            // Die Anhänge (oft mehrere MB große Fotos) abseits des Hauptfadens kopieren: Sonst stockt die Oberfläche.
+            val kopie = withContext(Dispatchers.IO) { stand.map { n -> n.copy(bewertung = 0, anhaenge = n.anhaenge.mapNotNull { anhangKopieren(it) }) } }
+            neuesGespraech()
+            gespraech.addAll(kopie)
+            // Ein leeres Gespräch bekommt erst mit der ersten Frage eine Kennung und eine Datei.
+            if (kopie.isNotEmpty()) sitzungSichern()
+            meldung = meldenAls
+            danach()
+        }
     }
 
     /**
@@ -344,18 +357,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Arbeitet Jarvis gerade an genau dieser Frage, liefe sie nach dem Abschicken doppelt. Nach der Stelle gefragt, nicht nach
         // „letzte Nachricht“: Statusmeldungen eines Programmierauftrags können während der Runde schon dahinter stehen.
         if (sitzungId?.let { laufende[it] }?.frage == i) { meldung = "Jarvis arbeitet noch an dieser Frage."; return }
-        val bilder = n.anhaenge.mapNotNull { anhangKopieren(it) }
-        val fehlen = n.anhaenge.size - bilder.size
         // Was eine abgebrochene Runde zu dieser Frage schon erledigt hat, geht beim Abschicken mit ans Modell (nicht doppelt ausführen).
         val erledigt = n.kontext.takeIf { it.contains("Bereits erledigt") }.orEmpty()
-        abzweigen(i - 1, "Neue Session: Deine Frage steht bereit" + (when (fehlen) { 0 -> "."; 1 -> ", 1 Anhang fehlt."; else -> ", $fehlen Anhänge fehlen." }) +
-            (if (erledigt.isNotEmpty()) " Teile davon waren schon erledigt, Jarvis weiß Bescheid." else ""))
-        // Ein noch nicht abgeschickter Entwurf weicht der Frage; seine Anhangdateien werden mit entfernt.
-        anhaenge.toList().forEach { anhangWeg(it) }
-        entwurfDiktiert = false
-        entwurf = if (n.anhaenge.isNotEmpty() && n.text == ANHANG_PLATZHALTER) "" else n.text
-        bilder.forEach { anhaenge.add(de.frank.jarvis.data.Anhang(it)) }
-        entwurfErledigt = if (erledigt.isEmpty()) null else EntwurfNotiz(sitzungId, entwurf.trim(), erledigt)
+        abzweigen(i - 1, "Neue Session: Deine Frage steht bereit.") {
+            // Kopieren abseits des Hauptfadens, wie in [abzweigen].
+            val bilder = withContext(Dispatchers.IO) { n.anhaenge.mapNotNull { anhangKopieren(it) } }
+            val fehlen = n.anhaenge.size - bilder.size
+            // Ein noch nicht abgeschickter Entwurf weicht der Frage; seine Anhangdateien werden mit entfernt.
+            anhaenge.toList().forEach { anhangWeg(it) }
+            entwurfDiktiert = false
+            entwurf = if (n.anhaenge.isNotEmpty() && n.text == ANHANG_PLATZHALTER) "" else n.text
+            bilder.forEach { anhaenge.add(de.frank.jarvis.data.Anhang(it)) }
+            entwurfErledigt = if (erledigt.isEmpty()) null else EntwurfNotiz(sitzungId, entwurf.trim(), erledigt)
+            meldung = "Neue Session: Deine Frage steht bereit" + (when (fehlen) { 0 -> "."; 1 -> ", 1 Anhang fehlt."; else -> ", $fehlen Anhänge fehlen." }) +
+                (if (erledigt.isNotEmpty()) " Teile davon waren schon erledigt, Jarvis weiß Bescheid." else "")
+        }
     }
 
     /** Erledigt-Notiz der Frage, die [mitFrageWeiterarbeiten] in die Eingabe gelegt hat. */
@@ -395,17 +411,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .joinToString(" ")
         val hinweis = "\n\n(Frank wollte eine neue Antwort auf diese Frage; die vorige wurde verworfen." +
             (if (erledigt.isNotEmpty()) " Schon erledigt und NICHT noch einmal ausführen: $erledigt" else "") + ")"
-        if (i != gespraech.lastIndex) {
-            abzweigen(frage, "Neuer Chat: Jarvis antwortet hier noch einmal neu.")
-        } else {
-            gespraech.removeAt(i)
-        }
         // Die Frage selbst, nicht „die letzte Nachricht“: Statusmeldungen eines Programmierauftrags können dazwischen stehen.
         // Nach dem Abzweigen endet das neue Gespräch genau mit ihr, sonst steht sie unverändert an ihrer Stelle.
-        val f = frage
-        val n = gespraech[f]
-        // Gespeichert wird die Entfernung erst mit der neuen Antwort (weniger Nachrichten überschreiben nie den Stand auf der Platte).
-        rundeStarten(n.text, n.anhaenge.map { de.frank.jarvis.data.Anhang(it) }, verlaufFuersModell(bis = f), f, vorlesen = false, hinweis = hinweis)
+        val neuStarten = {
+            val n = gespraech[frage]
+            rundeStarten(n.text, n.anhaenge.map { de.frank.jarvis.data.Anhang(it) }, verlaufFuersModell(bis = frage), frage, vorlesen = false, hinweis = hinweis)
+        }
+        if (i != gespraech.lastIndex) {
+            // Das Abzweigen kopiert die Anhänge im Hintergrund: Die neue Runde startet erst, wenn das neue Gespräch steht.
+            abzweigen(frage, "Neuer Chat: Jarvis antwortet hier noch einmal neu.") { neuStarten() }
+        } else {
+            gespraech.removeAt(i)
+            // Die Entfernung gleich speichern, ausdrücklich als Kürzung um diese eine Antwort: Sonst lehnte der Schutz gegen
+            // ältere Stände jedes Speichern bis zur neuen Antwort ab (Abbruch, Daumen), und die verworfene Antwort käme zurück.
+            sitzungSichern(kuerzenUm = 1)
+            neuStarten()
+        }
     }
 
     /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
@@ -418,25 +439,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val frageNotiz = if (art == "fehler") erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", runde.erledigt) else ""
         val neu = Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", runde.erledigt))
         if (runde.sitzung == sitzungId) {
-            val i = runde.frage
-            val n = gespraech.getOrNull(i)
-            if (frageNotiz.isNotEmpty() && n != null && n.vonMir) gespraech[i] = n.copy(kontext = frageNotiz)
-            gespraech += neu
-            sitzungSichern()
-            if (vorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
+            rundeInsOffene(runde, frageNotiz, neu, vorlesen)
             return
         }
         // Frank ist inzwischen in einem anderen Gespräch: Die Antwort kommt in die gespeicherte Datei und steht beim nächsten Öffnen da.
         viewModelScope.launch {
-            sicherung.withLock {
-                withContext(Dispatchers.IO) {
-                    if (frageNotiz.isNotEmpty()) de.frank.jarvis.data.Gespraeche.letzteFrageKontext(getApplication(), runde.sitzung, frageNotiz)
-                    de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), runde.sitzung, de.frank.jarvis.data.GespeicherteNachricht(false, neu.text, neu.art, neu.kontext))
+            val offen = sicherung.withLock {
+                // Unter der Sicherung erneut prüfen: Wurde genau dieses Gespräch inzwischen geöffnet (das Laden hält dieselbe
+                // Sicherung), gehört die Antwort in die Ansicht. In die Datei geschrieben, überschriebe sie das nächste Speichern.
+                if (runde.sitzung == sitzungId) true else {
+                    withContext(Dispatchers.IO) {
+                        if (frageNotiz.isNotEmpty()) de.frank.jarvis.data.Gespraeche.letzteFrageKontext(getApplication(), runde.sitzung, frageNotiz)
+                        de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), runde.sitzung, de.frank.jarvis.data.GespeicherteNachricht(false, neu.text, neu.art, neu.kontext))
+                    }
+                    false
                 }
             }
+            if (offen) { rundeInsOffene(runde, frageNotiz, neu, vorlesen); return@launch }
             sitzungenLaden()
             de.frank.jarvis.gedaechtnis.Lagebild.anstossen(getApplication(), listOf(de.frank.jarvis.gedaechtnis.Bereich.GESPRAECHE), "Gespräch mit Jarvis")
         }
+    }
+
+    /** Hängt die Antwort einer Runde an das gerade offene Gespräch (das ihre ist) und liest sie bei Bedarf vor. */
+    private fun rundeInsOffene(runde: Runde, frageNotiz: String, neu: Nachricht, vorlesen: Boolean) {
+        val i = runde.frage
+        val n = gespraech.getOrNull(i)
+        if (frageNotiz.isNotEmpty() && n != null && n.vonMir) gespraech[i] = n.copy(kontext = frageNotiz)
+        gespraech += neu
+        sitzungSichern()
+        if (vorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
     }
 
     private fun erledigtNotiz(kopf: String, erledigt: List<String>): String =
@@ -781,8 +813,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             aufraeumen?.join()
             de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
-            // Ein neuerer Start gehört das Mikrofon schon: nichts freigeben, nichts starten.
-            if (stand != liveStand) { liveUnverbucht.remove(stand); return@launch }
+            // Ein neuerer Start gehört das Mikrofon schon: nichts freigeben, nichts starten. Wurde das Gespräch dagegen beendet,
+            // während das Aufräumen noch lief (liveStand zählt auch das Ende), hält niemand mehr das Mikrofon: freigeben,
+            // sonst bliebe „Hey Jarvis“ taub.
+            if (stand != liveStand) { liveUnverbucht.remove(stand); if (!liveAktiv && !nimmtAuf && !holtMikro && weckwortLauf?.isActive != true) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
             if (!liveAktiv) { liveUnverbucht.remove(stand); de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return@launch }
             de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
             // Wie im Gesprächsmodus: Andere Apps bleiben leise, sonst hört das Mikrofon die Musik und das Live-Gespräch antwortet darauf.
@@ -842,8 +876,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val neu = !de.frank.jarvis.live.StimmProbe.vorhanden(getApplication(), art, stimme)
         if (neu) { stimmProbeLaedt = stimme; meldung = "Hörprobe für $stimme wird einmalig erzeugt …" }
         viewModelScope.launch {
-            val fehler = de.frank.jarvis.live.StimmProbe.abspielen(getApplication(), liveSchluessel().first, art, stimme, liveSchluessel().second)
-            stimmProbeLaedt = null
+            // Wirft das Abspielen (etwa AudioTrack nicht verfügbar), darf weder die App abstürzen noch die Sanduhr hängen bleiben.
+            val fehler = try {
+                de.frank.jarvis.live.StimmProbe.abspielen(getApplication(), liveSchluessel().first, art, stimme, liveSchluessel().second)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logbuch.fehler("Hörprobe", e)
+                "Die Hörprobe ließ sich nicht abspielen."
+            } finally {
+                stimmProbeLaedt = null
+            }
             if (fehler != null) meldung = fehler
         }
     }
@@ -928,8 +971,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val worte = aeusserung?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(it, streng = false) } ?: kotlin.coroutines.EmptyCoroutineContext
         viewModelScope.launch(kennung + worte) {
             val antwort = runCatching {
+                // Live (jarvis_fragen): fest 8 Schritte, unabhängig von Franks Chat-Schrittlimit; das Zeitlimit oben bleibt.
                 agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = zeitlimit,
-                    modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)
+                    maxSchritte = JarvisAgent.STANDARD_SCHRITTE, modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)
             }.getOrNull() ?: "Das konnte ich gerade nicht nachschlagen."
             // Nur an dieselbe Verbindung: Eine neue kennt diese Kennung nicht.
             if (live === sitzung) sitzung?.ergebnis(callId, antwort)
@@ -1380,27 +1424,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     @Volatile private var programmierGespraech: String? = null
 
+    /**
+     * Das Gespräch, das [sitzungLaden] gerade liest. Meldungen dafür übernimmt die App (statt sie selbst an die Datei zu hängen):
+     * Sie warten auf die Sicherung, die das Laden hält, und kommen danach in die Ansicht. Sonst sähe die Ansicht den Stand
+     * vor der Meldung, und das nächste Speichern überschriebe sie.
+     */
+    @Volatile private var ladeZiel: String? = null
+
     private val programmierEmpfaenger: (String, de.frank.jarvis.data.GespeicherteNachricht) -> Boolean = { id, n ->
-        if (id != sitzungId && id != programmierGespraech) false else {
+        if (id != sitzungId && id != programmierGespraech && id != ladeZiel) false else {
             viewModelScope.launch(Dispatchers.Main) {
-                if (id == sitzungId) {
-                    gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext)
-                    sitzungSichern()
-                } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), id, n) }
+                sicherung.withLock {
+                    if (id == sitzungId) {
+                        gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext)
+                        sitzungSichern()
+                    } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), id, n) }
+                }
             }
             true
         }
     }
 
     private val programmierBeantwortet: (String, String, String) -> Boolean = { id, frageId, antwort ->
-        if (id != sitzungId && id != programmierGespraech) false else {
+        if (id != sitzungId && id != programmierGespraech && id != ladeZiel) false else {
             viewModelScope.launch(Dispatchers.Main) {
-                val i = gespraech.indexOfLast { it.art == "rueckfrage" && it.kontext.contains(frageId) }
-                if (id == sitzungId && i >= 0) {
-                    val k = runCatching { org.json.JSONObject(gespraech[i].kontext) }.getOrNull() ?: return@launch
-                    gespraech[i] = gespraech[i].copy(kontext = k.put("beantwortet", true).put("antwort", antwort).toString())
-                    sitzungSichern()
-                } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageBeantwortet(getApplication(), id, frageId, antwort) }
+                sicherung.withLock {
+                    val i = gespraech.indexOfLast { it.art == "rueckfrage" && it.kontext.contains(frageId) }
+                    if (id == sitzungId && i >= 0) {
+                        val k = runCatching { org.json.JSONObject(gespraech[i].kontext) }.getOrNull() ?: return@launch
+                        gespraech[i] = gespraech[i].copy(kontext = k.put("beantwortet", true).put("antwort", antwort).toString())
+                        sitzungSichern()
+                    } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageBeantwortet(getApplication(), id, frageId, antwort) }
+                }
             }
             true
         }
@@ -1497,7 +1552,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun sitzungSichern() {
+    /** [kuerzenUm]: so viele Nachrichten hat Frank eben bewusst entfernt; sonst überschreibt ein kürzerer Stand die Datei nie. */
+    private fun sitzungSichern(kuerzenUm: Int = 0) {
         letzteAktivitaet = System.currentTimeMillis()
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
@@ -1505,7 +1561,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
-            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand) } }
+            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand, kuerzenUm) } }
             if (neu != null) sitzungen = listOf(neu) + sitzungen.filter { it.id != neu.id }
             if (neu != null) kiTitelBilden(id, stand)
             // Das Gespräch gehört sofort ins Kurzzeitgedächtnis (für das nächste Gespräch und für ChatGPT).
@@ -1644,7 +1700,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * oder eine Aufnahme bleibt, wo sie ist: Sonst landete die nächste gesprochene Frage mitten im Gespräch in einer neuen Session.
      */
     fun startbildschirmNeu() {
-        if (freihaendig || nimmtAuf || schreibtMit || holtMikro) return
+        // Auch während Jarvis im Gesprächsmodus nachdenkt oder vorliest und während eines Live-Gesprächs: Sonst endete die
+        // Sprachschleife mit dem leeren Gespräch, und die Antwort käme nur noch in die Datei, ohne vorgelesen zu werden.
+        if (freihaendig || nimmtAuf || schreibtMit || holtMikro || sprachmodusAktiv || weckwortLauf?.isActive == true || liveAktiv) return
         reiter = Reiter.JARVIS
         merkOffen = null
         diktatZiel = null
@@ -1674,14 +1732,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Lädt ein gespeichertes Gespräch in die Ansicht. false = ließ sich nicht öffnen. */
     private suspend fun sitzungLaden(id: String): Boolean {
         // Unter der Sicherung: Eine Antwort, die genau jetzt in diese Datei geschrieben wird, ist dann mit im geladenen Stand.
-        val geladen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } }
-        if (geladen == null) { meldung = "Dieses Gespräch ließ sich nicht öffnen."; sitzungenLaden(); return false }
-        vorleser.stopp()
-        sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
-        gespraech.clear()
-        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
-        sitzungId = id
-        sitzungErstellt = geladen.first.erstellt
+        // Die Ansicht wird noch unter der Sicherung umgestellt: Was hinter ihr wartet (Antwort einer Runde, Meldung eines
+        // Programmierauftrags), sieht danach das geöffnete Gespräch und kommt in die Ansicht statt nur in die Datei.
+        val geoeffnet = sicherung.withLock {
+            ladeZiel = id
+            try {
+                val geladen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } ?: return@withLock false
+                vorleser.stopp()
+                sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
+                gespraech.clear()
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
+                sitzungId = id
+                sitzungErstellt = geladen.first.erstellt
+                true
+            } finally {
+                if (ladeZiel == id) ladeZiel = null
+            }
+        }
+        if (!geoeffnet) { meldung = "Dieses Gespräch ließ sich nicht öffnen."; sitzungenLaden(); return false }
         // Wer ein altes Gespräch öffnet, will dort weitersprechen, auch mit „Hey Jarvis“.
         letzteAktivitaet = System.currentTimeMillis()
         offenesGespraechMerken(id, letzteAktivitaet)
@@ -1856,12 +1924,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- ChatGPT-Anmeldung ----
 
-    fun kiVerbinden(activity: ComponentActivity) {
+    fun kiVerbinden() {
         if (kiVerbindet) return
         kiVerbindet = true
         viewModelScope.launch {
             try {
-                auth.login(activity) { info -> geraeteCode = info }
+                // Mit dem Application-Context: Die Anmeldung wartet lange und darf keine Activity festhalten (Fold auf- oder zuklappen).
+                // Die Anmeldeseite öffnet Jarvis selbst: Die Rückkehr von dort ist kein neuer Start (wie startActivityForResult in MainActivity).
+                eigenerAbsprung = true
+                auth.login(getApplication(), { de.frank.jarvis.MainActivity.sichtbar }) { info -> geraeteCode = info }
                 kiVerbunden = true
                 kiKonto = auth.email.orEmpty()
                 meldung = "Mit ChatGPT verbunden."
@@ -1915,9 +1986,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val pluginAdresse: String
         get() = einstellungen.serverHost.takeIf { it.isNotEmpty() }?.let { "https://$it/j/${einstellungen.geheimnis}/mcp" }.orEmpty()
 
-    fun kopiere(text: String, was: String) {
+    /** [geheim]: Zugangsdaten wie die Plugin-Adresse; Android zeigt sie dann nicht in der Vorschau der Zwischenablage. */
+    fun kopiere(text: String, was: String, geheim: Boolean = false) {
         val app = getApplication<Application>()
-        app.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(was, text))
+        val clip = ClipData.newPlainText(was, text)
+        if (geheim) clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+        app.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
         meldung = "$was kopiert."
     }
 

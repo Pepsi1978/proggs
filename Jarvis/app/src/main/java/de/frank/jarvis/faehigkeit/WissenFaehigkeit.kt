@@ -74,12 +74,19 @@ class WissenFaehigkeit(private val context: Context) : Faehigkeit {
             }
             lade(WURZEL, neu, 0)
             check(anzahl > 0) { "Der Ordner ist leer." }
-            ordner.deleteRecursively()
-            neu.copyRecursively(ordner, overwrite = true)
+            // Erst vollständig neben den alten Bestand kopieren, dann per Umbenennen tauschen: Scheitert die Kopie (Speicher voll),
+            // bleibt der alte Stand lesbar, und ein gleichzeitiges Lesen sieht nie einen leeren oder halben Ordner.
+            val ziel = File(context.filesDir, "wissen")
+            val bereit = File(context.filesDir, "wissen_neu").apply { deleteRecursively() }
+            val alt = File(context.filesDir, "wissen_alt").apply { deleteRecursively() }
+            check(neu.copyRecursively(bereit, overwrite = true)) { "Kopie unvollständig." }
+            check(!ziel.exists() || ziel.renameTo(alt)) { "Alter Stand ließ sich nicht beiseitelegen." }
+            if (!bereit.renameTo(ziel)) { alt.renameTo(ziel); error("Neuer Stand ließ sich nicht einsetzen.") }
+            alt.deleteRecursively()
             zuletztErfolgreich = System.currentTimeMillis()
             letzteAnzahl = anzahl
             anzahl
-        }.onFailure { Log.w("JarvisWissen", "Synchronisierung fehlgeschlagen", it) }.getOrNull().also { neu.deleteRecursively() }
+        }.onFailure { Log.w("JarvisWissen", "Synchronisierung fehlgeschlagen", it) }.getOrNull().also { neu.deleteRecursively(); File(context.filesDir, "wissen_neu").deleteRecursively() }
         }
     }
 

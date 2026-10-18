@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -250,9 +251,30 @@ class McpServer(context: Context) {
             runCatching { werkzeug.ausfuehren(sauber) }
                 .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
         }
+        // Höchstens [JE_WERKZEUG] gleichzeitige Läufe je Werkzeug: Hängt eine Partner-App, bindet nicht jede Wiederholung einen weiteren Faden.
+        val platz = plaetze.getOrPut(name) { Semaphore(JE_WERKZEUG) }
+        if (!platz.tryAcquire()) {
+            Logbuch.system("Plugin: $name ausgelastet", "$JE_WERKZEUG Aufrufe laufen noch")
+            return inhalt("Das Werkzeug $name arbeitet noch an $JE_WERKZEUG früheren Aufrufen (eine Partner-App antwortet nicht). " +
+                "Bitte gleich noch einmal versuchen; schreibende Aufrufe zuerst mit dem passenden Lese-Werkzeug prüfen.", fehler = true)
+        }
         // Schreibende Aufrufe, die doppelt Schaden anrichten, laufen durch den Wiederholschutz (Wiederholung nach Verbindungsabbruch).
         // AusChatGpt: Werkzeuge erkennen daran den Weg (ein Programmierauftrag bekommt dann seine eigene Session).
-        val (r, wiederholt) = runCatching { runBlocking(ProgrammierChat.AusChatGpt()) { if (name in GESCHUETZT) schutz.fuehreAus(Wiederholschutz.schluessel(name, sauber), ausfuehren) else ausfuehren() to false } }
+        // Abgekoppelt mit Zeitlimit: Der Faden des Tunnels kommt spätestens nach [WERKZEUG_MS] frei, auch wenn das Werkzeug hängt;
+        // es läuft dann im Hintergrund weiter (eine Wiederholung wartet im Wiederholschutz auf genau diesen Lauf).
+        val lauf = nebenher.async(ProgrammierChat.AusChatGpt()) {
+            try { if (name in GESCHUETZT) schutz.fuehreAus(Wiederholschutz.schluessel(name, sauber), ausfuehren) else ausfuehren() to false }
+            finally { platz.release() }
+        }
+        val (r, wiederholt) = runCatching {
+            runBlocking {
+                withTimeoutOrNull(WERKZEUG_MS) { lauf.await() } ?: run {
+                    Logbuch.system("Plugin: $name Zeitlimit", "läuft nach ${WERKZEUG_MS / 1000} s im Hintergrund weiter")
+                    Ergebnis("Das Werkzeug $name ist nach ${WERKZEUG_MS / 1000} Sekunden noch nicht fertig und arbeitet im Hintergrund weiter. " +
+                        "Prüfe das Ergebnis gleich mit dem passenden Lese-Werkzeug; schreibende Aufrufe nicht blind wiederholen.", fehler = true) to false
+                }
+            }
+        }
             .getOrElse { Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) to false }
         Logbuch.dauer("Plugin: $name", System.currentTimeMillis() - beginn, (if (wiederholt) "Wiederholung, nicht erneut ausgeführt; " else "") + if (r.fehler) "Fehler: " + r.text.take(200) else "${r.text.length} Zeichen")
         if (wiederholt) return inhalt("WIEDERHOLUNG ERKANNT: Derselbe Aufruf wurde gerade schon ausgeführt, es ist nichts doppelt passiert. Ergebnis des ersten Aufrufs:\n" + r.text, r.fehler)
@@ -380,6 +402,11 @@ class McpServer(context: Context) {
             "stack_speichern", "mittel_speichern", "stack_mittel_setzen",
         )
         private val schutz = Wiederholschutz()
+        /** Längste Wartezeit des Tunnel-Fadens auf ein Werkzeug; großzügig über der längsten legitimen Dauer (der Relay gibt nach 75 s auf). */
+        private const val WERKZEUG_MS = 120_000L
+        /** So viele Läufe desselben Werkzeugs dürfen gleichzeitig offen sein. */
+        private const val JE_WERKZEUG = 4
+        private val plaetze = java.util.concurrent.ConcurrentHashMap<String, Semaphore>()
         /** Werkzeuge ohne „VORGANG FERTIG“: eigene Übersichten und die Werkzeuge der Programmier-Sitzungen. */
         private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen")
         /** Wann eine Vorgangsmeldung zuletzt an einem Ergebnis hing (Kennung → Zeit). */

@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.deviceCodeGroups
+import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.tunnel.TunnelStufe
 import de.frank.jarvis.tunnel.TunnelZustand
@@ -96,7 +97,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     }
                     vm.kiVerbindet -> Text("Anmeldung wird vorbereitet …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
                     vm.kiVerbunden -> Knopf("Abmelden", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = false) { vm.kiTrennen() }
-                    else -> Knopf("Mit ChatGPT verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.kiVerbinden(activity) }
+                    else -> Knopf("Mit ChatGPT verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.kiVerbinden() }
                 }
 
                 Unterzeile("Modell")
@@ -110,8 +111,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Text("Niedrig antwortet am schnellsten. Höhere Stufen denken gründlicher, brauchen aber länger.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 Unterzeile("Schrittlimit pro Anfrage")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    de.frank.jarvis.data.Einstellungen.SCHRITTLIMITS.forEach { n ->
-                        Chip(if (n == 0) "Unbegrenzt" else "$n", aktiv = e.schrittlimit == n) { vm.setzeSchrittlimit(n) }
+                    Einstellungen.SCHRITTLIMITS.forEach { n ->
+                        Chip(Einstellungen.schrittlimitLabel(n), aktiv = e.schrittlimit == n) { vm.setzeSchrittlimit(n) }
                     }
                 }
                 Text("Ein Schritt ist eine Bearbeitungsrunde: Jarvis denkt nach und ruft dabei bei Bedarf Werkzeuge auf. Ist das Limit erreicht, schreibt Jarvis einen Zwischenstand aus dem bisher Gesammelten." +
@@ -319,7 +320,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Unterzeile("Plugin-Adresse für ChatGPT")
                     Text(adresse, Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(14.dp), color = f.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
                     Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Knopf("Kopieren", Modifier.weight(1f), Icons.Rounded.ContentCopy) { vm.kopiere(adresse, "Plugin-Adresse") }
+                        Knopf("Kopieren", Modifier.weight(1f), Icons.Rounded.ContentCopy) { vm.kopiere(adresse, "Plugin-Adresse", geheim = true) }
                         Knopf("Teilen", Modifier.weight(1f), Icons.Rounded.Share, haupt = false) {
                             runCatching { activity.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, adresse), "Plugin-Adresse teilen")) }
                         }
@@ -520,8 +521,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 if (!vm.hinweiseAn) Text("Ohne Benachrichtigungen fehlt die Statuszeile, die Jarvis wach hält. Erlauben unter Einstellungen → Benachrichtigungen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
                 Unterzeile("App-Sperre mit Fingerabdruck")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Chip("An", aktiv = e.appSperre) { e.appSperre = true }
-                    Chip("Aus", aktiv = !e.appSperre) { e.appSperre = false }
+                    // Mit App-Sperre kein Bild in der Übersicht der letzten Apps (sofort, nicht erst beim nächsten Öffnen).
+                    Chip("An", aktiv = e.appSperre) { e.appSperre = true; if (android.os.Build.VERSION.SDK_INT >= 33) activity.setRecentsScreenshotEnabled(false) }
+                    Chip("Aus", aktiv = !e.appSperre) { e.appSperre = false; if (android.os.Build.VERSION.SDK_INT >= 33) activity.setRecentsScreenshotEnabled(true) }
                 }
                 Text("Gesperrt wird beim Öffnen und nach 30 Sekunden außerhalb der App. Für ChatGPT bleibt Jarvis trotzdem erreichbar.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Unterzeile("Darstellung")

@@ -190,11 +190,12 @@ object Agenten {
                 "Rufe dafür NICHT ablage_schreiben auf. Setze jedes gespeicherte Bild an passender Stelle als eigene Zeile ![Bildunterschrift](dateiname.png) in den Bericht, " +
                 "mit genau dem Dateinamen aus dem Werkzeug-Ergebnis; nicht eingebundene Bilder kommen ans Ende des PDFs."
             val denker = JarvisAgent(app)
+            var grund: String? = null
             val bericht = denker.versuche(
                 auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel, abschluss = true,
                 beiSchritt = { schritt -> _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = schritt) else it } }; beiSchritt(schritt) },
+                beiAbbruch = { grund = it },
             )
-            val grund = denker.abbruchGrund
             if (bericht.isNullOrBlank()) {
                 Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Kein Ergebnis (${grund ?: "leere Antwort"}) für: ${auftrag.take(120)}", ok = false)
                 return AgentenErgebnis(null, grund ?: "Das Modell hat keinen Bericht geliefert")

@@ -5,6 +5,7 @@ import de.frank.jarvis.data.Gespraeche
 import de.frank.jarvis.data.GespeicherteNachricht
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * Bringt Meldungen eines Programmierauftrags in das Jarvis-Gespräch, aus dem er gestartet wurde.
@@ -75,7 +76,8 @@ object ProgrammierChat {
 
     fun setze(gespraech: String, a: Aktivitaet) {
         if (gespraech.isEmpty()) return
-        _aktivitaet.value = _aktivitaet.value + (gespraech to a)
+        // Atomar: Puls vom Relay und Meldungen der Werkzeuge kommen auf verschiedenen Fäden.
+        _aktivitaet.update { it + (gespraech to a) }
     }
 
     /** Setzt die offene App: true = sie hat die Nachricht übernommen (Gespräch ist gerade offen). */

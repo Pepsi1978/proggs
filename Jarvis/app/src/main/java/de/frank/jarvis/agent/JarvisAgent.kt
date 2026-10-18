@@ -41,43 +41,24 @@ class JarvisAgent(context: Context) {
     val auth = CodexAuthManager(app)
     private val einstellungen = Einstellungen.get(app)
 
-    /**
-     * Beantwortet einen Auftrag. [verlauf] sind die bisherigen Wortwechsel des Gesprächs,
-     * [zeitlimitMs] begrenzt die Gesamtdauer (wichtig für Aufrufe aus dem Plugin).
-     */
-    suspend fun frage(
-        auftrag: String,
-        verlauf: List<ChatTurn> = emptyList(),
-        zeitlimitMs: Long = 120_000,
-        /** Höchstens so viele Bearbeitungsrunden; Vorgabe aus den Einstellungen („Schrittlimit pro Anfrage“), 0 = unbegrenzt. */
-        maxSchritte: Int = einstellungen.schrittlimit,
-        beiSchritt: (String) -> Unit = {},
-    ): String {
-        if (!auth.isConnected) return NICHT_VERBUNDEN
-        return versuche(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, lernen = true, abschluss = true) ?: ersatzText()
-    }
-
-    /** Der Satz, den Frank liest, wenn keine Antwort zustande kam (nach [versuche] mit null). */
-    fun ersatzText(): String =
-        "Ich bin nicht fertig geworden" + (abbruchGrund?.let { " ($it)" } ?: "") + ". Für große Aufgaben wie Recherchen oder Berichte sag mir, " +
+    /** Der Satz, den Frank liest, wenn keine Antwort zustande kam (nach [versuche] mit null); [grund] aus deren beiAbbruch. */
+    fun ersatzText(grund: String?): String =
+        "Ich bin nicht fertig geworden" + (grund?.let { " ($it)" } ?: "") + ". Für große Aufgaben wie Recherchen oder Berichte sag mir, " +
             "ich soll den Recherche-Agenten starten; der arbeitet im Hintergrund weiter. Was genau passiert ist, steht unter Aktivität."
 
     val verbunden: Boolean get() = auth.isConnected
 
-    /** Warum der letzte Lauf ohne fertige Antwort endete (Schritt- oder Zeitlimit, zuletzt laufendes Werkzeug); null, wenn er regulär fertig wurde. */
-    @Volatile var abbruchGrund: String? = null
-        private set
-
     /**
-     * Wie [frage], liefert aber null statt eines Entschuldigungssatzes, wenn keine Antwort zustande kommt
-     * (nicht verbunden, Zeitlimit, zu viele Schritte). Für Abläufe im Hintergrund, die dann selbst entscheiden.
+     * Beantwortet einen Auftrag und liefert null, wenn keine Antwort zustande kommt (nicht verbunden, Zeitlimit, zu viele
+     * Schritte); [beiAbbruch] bekommt dann den Grund. Der Grund geht bewusst nicht in ein Feld dieser Instanz: Chat und
+     * Live-Gespräch teilen sich eine, und ein paralleler Lauf überschriebe ihn.
      */
     suspend fun versuche(
         auftrag: String,
         verlauf: List<ChatTurn> = emptyList(),
         zeitlimitMs: Long = 120_000,
-        /** Höchstens so viele Bearbeitungsrunden; Vorgabe aus den Einstellungen („Schrittlimit pro Anfrage“), 0 = unbegrenzt. Das Zeitlimit gilt immer. */
-        maxSchritte: Int = einstellungen.schrittlimit,
+        /** Höchstens so viele Bearbeitungsrunden, 0 = unbegrenzt. Das Zeitlimit gilt immer. Der Chat übergibt Franks Einstellung („Schrittlimit pro Anfrage“). */
+        maxSchritte: Int = STANDARD_SCHRITTE,
         beiSchritt: (String) -> Unit = {},
         rolle: String? = null,
         mitInternet: Boolean = false,
@@ -94,11 +75,13 @@ class JarvisAgent(context: Context) {
         denkstufe: de.frank.jarvis.auth.ReasoningEffort? = null,
         /** true = Live-Gespräch „Jarvis direkt“: Gesamtbild so, wie es bereitliegt, ohne auf Nachlesen zu warten. */
         schnell: Boolean = false,
+        /** Warum der Lauf ohne fertige Antwort endete oder nur einen Zwischenstand schrieb (Schritt- oder Zeitlimit, Modellfehler, zuletzt laufendes Werkzeug). */
+        beiAbbruch: (String) -> Unit = {},
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
             versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, lernen, abschluss, beiAenderung, bilder,
-                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell)
+                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch)
         }
 
     private suspend fun versucheIntern(
@@ -117,9 +100,9 @@ class JarvisAgent(context: Context) {
         modell: de.frank.jarvis.auth.CodexModel,
         denkstufe: de.frank.jarvis.auth.ReasoningEffort,
         schnell: Boolean,
+        beiAbbruch: (String) -> Unit,
     ): String? {
-        abbruchGrund = null
-        if (!auth.isConnected) { abbruchGrund = "Jarvis ist nicht mit ChatGPT angemeldet"; return null }
+        if (!auth.isConnected) { beiAbbruch("Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
         val faehigkeiten = Register.alle(app).filter { (mitInternet || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "programmieren" && it.id != "sprachsession")) }
@@ -147,7 +130,11 @@ class JarvisAgent(context: Context) {
         var schritte = 0
         var alleSchritte = false
         var letztesWerkzeug = ""
+        var modellFehler: Exception? = null
+        // Wo in zuege die Werkzeugergebnisse stehen: Wird das Gesamtbudget überschritten, werden die älteren gekürzt.
+        val ergebnisZuege = mutableListOf<Int>()
         val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs - reserve) {
+          try {
             // 0 = unbegrenzt: Dann beendet nur die fertige Antwort, das Zeitlimit oder Franks Abbruch die Schleife.
             while (maxSchritte <= 0 || schritte < maxSchritte) {
                 schritte++
@@ -183,27 +170,67 @@ class JarvisAgent(context: Context) {
                         "(${i + 1}. ${aufrufe[i].optString("werkzeug")} $argumente):\n${ergebnisse[i].second}"
                     } + nichtAusgefuehrt)
                 }
+                ergebnisZuege += zuege.lastIndex
+                kuerzeAeltere(zuege, ergebnisZuege, ERGEBNIS_BUDGET)
             }
             alleSchritte = true
             null
+          } catch (e: CancellationException) {
+            throw e
+          } catch (e: Exception) {
+            // Ein Modellfehler (Kontingent, HTTP 400 etwa wegen der Kontextlänge) mitten in der Arbeit: Mit Abschluss wird das
+            // Gesammelte nicht verworfen, sondern unten zum Zwischenstand. Ohne Abschluss entscheidet der Aufrufer wie bisher.
+            if (!abschluss) throw e
+            Logbuch.fehler("Antwort: Modellschritt", e)
+            modellFehler = e
+            null
+          }
         }
         if (ergebnis != null) return ergebnis
-        val grund = (if (alleSchritte) "Schrittlimit von $maxSchritte Schritten erreicht" else "Zeitlimit von ${dauer(zeitlimitMs - reserve)} erreicht") +
-            (if (letztesWerkzeug.isEmpty()) "" else ", zuletzt: $letztesWerkzeug")
+        // Noch nichts gesammelt: Der Fehler geht wie bisher an den Aufrufer (er zeigt etwa „Kontingent ausgeschöpft“ oder „bitte anmelden“).
+        modellFehler?.let { if (ergebnisZuege.isEmpty()) throw it }
+        val grund = when {
+            modellFehler != null -> "Fehler beim Modell: ${modellFehler?.message ?: modellFehler?.javaClass?.simpleName}"
+            alleSchritte -> "Schrittlimit von $maxSchritte Schritten erreicht"
+            else -> "Zeitlimit von ${dauer(zeitlimitMs - reserve)} erreicht"
+        } + (if (letztesWerkzeug.isEmpty()) "" else ", zuletzt: $letztesWerkzeug")
         if (!abschluss || schritte == 0) {
-            abbruchGrund = grund
+            beiAbbruch(grund)
             Protokoll.melde(Quelle.JARVIS, "Abbruch", grund, ok = false)
             return null
         }
+        // Nach einem Modellfehler (oft die Kontextlänge) alle Ergebnisse knapp halten, damit der Zwischenstand überhaupt durchgeht.
+        if (modellFehler != null) kuerzeAeltere(zuege, ergebnisZuege + Int.MAX_VALUE, 0)
         zuege += ChatTurn("user", "ABSCHLUSS: $grund. Rufe KEIN Werkzeug mehr auf. Antworte jetzt sofort mit {\"antwort\": \"…\"} und schreibe das Ergebnis aus allem, " +
             "was du bisher hast. Sag am Anfang in einem Satz, dass es ein Zwischenstand ist und was noch fehlt. Nenne nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat.")
         val ende = withTimeoutOrNull(reserve) {
             runCatching { auth.streamChat(anweisungText, zuege, modell, denkstufe) }.getOrNull()
         }
         val antwort = ende?.let { roh -> lies(roh)?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim().takeIf { it.isNotEmpty() && !it.trimStart().startsWith("{") } }
-        abbruchGrund = if (antwort != null) "$grund; Zwischenstand geschrieben" else "$grund; auch der Zwischenstand kam nicht zustande"
-        Protokoll.melde(Quelle.JARVIS, "Abbruch", abbruchGrund.orEmpty(), ok = false)
+        val endgrund = if (antwort != null) "$grund; Zwischenstand geschrieben" else "$grund; auch der Zwischenstand kam nicht zustande"
+        beiAbbruch(endgrund)
+        Protokoll.melde(Quelle.JARVIS, "Abbruch", endgrund, ok = false)
         return antwort
+    }
+
+    /**
+     * Hält die Werkzeugergebnisse im Verlauf unter [budget] Zeichen: Von den ältesten an werden Ergebnisse auf
+     * [ALT_ZEICHEN] gekürzt, bis die Summe passt. Das jüngste Ergebnis (letzter Eintrag in [indizes]) bleibt immer
+     * vollständig; ein Index außerhalb von [zuege] als letzter Eintrag schließt deshalb alle in das Kürzen ein.
+     */
+    private fun kuerzeAeltere(zuege: MutableList<ChatTurn>, indizes: List<Int>, budget: Int) {
+        val gueltig = indizes.filter { it in zuege.indices }
+        var summe = gueltig.sumOf { zuege[it].text.length }
+        if (summe <= budget) return
+        for (i in indizes.dropLast(1)) {
+            if (summe <= budget) break
+            if (i !in zuege.indices) continue
+            val alt = zuege[i]
+            if (alt.text.length <= ALT_ZEICHEN) continue
+            val kurz = alt.text.take(ALT_ZEICHEN) + "\n… (älteres Werkzeugergebnis gekürzt, vorher ${alt.text.length} Zeichen; bei Bedarf das Werkzeug erneut aufrufen)"
+            summe -= alt.text.length - kurz.length
+            zuege[i] = alt.copy(text = kurz)
+        }
     }
 
     /**
@@ -256,7 +283,9 @@ class JarvisAgent(context: Context) {
             Lagebild.nachAktion(app, name, "Jarvis")
             beiAenderung(werkzeug.titel + ": " + r.text.lineSequence().firstOrNull().orEmpty().take(200))
         }
-        return titel to ((if (r.fehler) "FEHLER: " else "") + r.text)
+        // Ein einzelnes Ergebnis höchstens so lang wie die größten Werkzeuge ohnehin liefern (Ablage-Text); ältere kürzt kuerzeAeltere.
+        val text = if (r.text.length <= EIN_ERGEBNIS) r.text else r.text.take(EIN_ERGEBNIS) + "\n… (gekürzt, ${r.text.length} Zeichen)"
+        return titel to ((if (r.fehler) "FEHLER: " else "") + text)
     }
 
     /**
@@ -362,6 +391,14 @@ class JarvisAgent(context: Context) {
     }
 
     companion object {
+        /** Bearbeitungsrunden je Lauf, wenn der Aufrufer nichts anderes sagt (der Chat übergibt Franks Schrittlimit, das Live-Gespräch fest 8). */
+        const val STANDARD_SCHRITTE = 8
+        /** Längstes einzelnes Werkzeugergebnis im Verlauf (so viel liefert schon das größte Werkzeug, ablage_lesen). */
+        private const val EIN_ERGEBNIS = 60_000
+        /** Großzügiges Gesamtbudget aller Werkzeugergebnisse eines Laufs; darüber werden die älteren gekürzt. */
+        private const val ERGEBNIS_BUDGET = 300_000
+        /** Auf so viele Zeichen schrumpft ein älteres Ergebnis, wenn das Budget überschritten ist. */
+        private const val ALT_ZEICHEN = 2_000
         private const val VERLAUF_ZEICHEN = 24_000
         private const val VERLAUF_ZUEGE = 40
         /**

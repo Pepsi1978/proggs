@@ -122,6 +122,9 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
         val (auftrag, teilName) = synchronized(sperre) { auftraege[id] } ?: throw AblageFehler("Diese Übertragung gibt es nicht mehr.")
         val teil = File(speicher.teilOrdner, teilName)
         aktualisiere(id) { it.copy(zustand = UebertragungsZustand.LAEUFT, fehler = null, geladen = if (teil.isFile) teil.length() else 0) }
+        // Sofort sichern: Stirbt die App während der Wiederholung, gilt der Auftrag danach als „Unterbrochen“ und wird
+        // fortgesetzt, statt mit dem alten Fehler stehen zu bleiben.
+        synchronized(sperre) { sichern() }
         try {
             val (name, mime) = lade(auftrag, teil, id)
             val ergebnis = speicher.uebernimm(

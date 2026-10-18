@@ -18,6 +18,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +38,16 @@ import de.frank.jarvis.ui.theme.glas
 fun AktivitaetBildschirm(vm: AppViewModel) {
     val f = LocalFarben.current
     val eintraege by Protokoll.eintraege.collectAsState()
+    // Leeren ist endgültig: erst nach einer Rückfrage, damit ein versehentlicher Tipp nichts löscht.
+    var leerenFragen by remember { mutableStateOf(false) }
+    if (leerenFragen) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { leerenFragen = false },
+        containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+        title = { Text("Verlauf leeren?") },
+        text = { Text("Alle ${eintraege.size} Einträge der Aktivität werden endgültig gelöscht.") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { leerenFragen = false; vm.protokollLeeren() }) { Text("Leeren", color = f.gefahr) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { leerenFragen = false }) { Text("Abbrechen") } },
+    )
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -42,7 +55,7 @@ fun AktivitaetBildschirm(vm: AppViewModel) {
                 Text("Was Jarvis für dich erledigt hat", color = f.textLeise, fontSize = 14.sp)
             }
             if (eintraege.isNotEmpty()) {
-                Box(Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f).antippen { vm.protokollLeeren() }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f).antippen { leerenFragen = true }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.DeleteSweep, "Verlauf leeren", tint = f.textLeise, modifier = Modifier.size(20.dp))
                 }
             }

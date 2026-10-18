@@ -96,9 +96,13 @@ class MainActivity : FragmentActivity() {
         // War Jarvis nicht auf dem Bildschirm (andere App, Startbildschirm, Display aus), beginnt die Rückkehr neu. Nicht beim
         // Kaltstart (das regelt das ViewModel samt Neustart nach Update), nicht nach Auf- oder Zuklappen, nicht nach einem
         // Absprung, den Jarvis selbst geöffnet hat, und nicht über dem Sperrbildschirm.
-        rueckkehrNeu = vm.hintergrundSeit != 0L && !eigenerAbsprung && System.currentTimeMillis() > vm.sperrAufschubBis && !vm.ueberSperre
+        rueckkehrNeu = vm.hintergrundSeit != 0L && !eigenerAbsprung && !vm.eigenerAbsprung && System.currentTimeMillis() > vm.sperrAufschubBis && !vm.ueberSperre
         vm.hintergrundSeit = 0L
         eigenerAbsprung = false
+        vm.eigenerAbsprung = false
+        // Mit App-Sperre zeigt die Übersicht der letzten Apps kein Bild des Gesprächs (sonst läse man es dort ohne Fingerabdruck).
+        // Bewusst kein FLAG_SECURE: Screenshots und Bildschirmaufnahmen zum Testen bleiben möglich.
+        if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(!vm.einstellungen.appSperre)
         // Sperren beim Start und nach mehr als 30 Sekunden außerhalb der App. Ohne eingerichteten Fingerabdruck
         // und ohne Gerätesperre bleibt die App offen, sonst käme niemand mehr hinein.
         // Über dem Sperrbildschirm nicht nach dem Fingerabdruck fragen: Die Sperre bleibt, Jarvis hört und antwortet nur.
@@ -114,9 +118,14 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
-        sichtbar = false
-        // Läuft der Sprachmodus weiter, während Frank in eine andere App wechselt, erscheint die Sprachblase.
-        de.frank.jarvis.ui.SprachBlase.abgleichen(this)
+        // Beim Auf- oder Zuklappen bleibt Jarvis sichtbar: Die Sprachblase blitzte sonst kurz auf.
+        if (!isChangingConfigurations) {
+            sichtbar = false
+            // Läuft der Sprachmodus weiter, während Frank in eine andere App wechselt, erscheint die Sprachblase.
+            de.frank.jarvis.ui.SprachBlase.abgleichen(this)
+        }
+        // Die App-Sperre kann in den Einstellungen umgeschaltet worden sein: Das Bild für die Übersicht entsteht erst jetzt.
+        if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(!vm.einstellungen.appSperre)
         weckwortSeitStopp = false
         if (!isChangingConfigurations) {
             vm.sichtbarMerken(false)
@@ -259,5 +268,33 @@ class MainActivity : FragmentActivity() {
         vm.abfahrtLaden()
         // Hier ist Jarvis sichtbar: Nur dann darf Android den Mikrofon-Dienst starten.
         WeckwortDienst.abgleichen(this)
+    }
+
+    /**
+     * Endgültig geschlossen (etwa aus der Übersicht weggewischt), der Prozess läuft für den Dienst weiter: Das prozessweite
+     * ViewModel darf diese Activity nicht über ihre Anfrage-Funktionen festhalten. Beim Auf- oder Zuklappen ersetzt die neue
+     * Activity sie gleich selbst in onCreate.
+     */
+    override fun onDestroy() {
+        if (!isChangingConfigurations) {
+            val modell = vm
+            val app = applicationContext
+            val nachweisArt = nachweis
+            modell.hinweiseAnfragen = {}
+            modell.entsperrenAnfragen = {}
+            modell.mikrofonAnfragen = {}
+            modell.liveMikroAnfragen = {}
+            modell.kameraAnfragen = {}
+            modell.fotosAnfragen = {}
+            modell.dateienAnfragen = {}
+            modell.kalenderAnfragen = {}
+            modell.standortAnfragen = {}
+            modell.weckwortMikroAnfragen = {}
+            // Ohne Activity gibt es nichts mehr über der Sperre zu zeigen; die Sperre selbst wird wie bisher aufgehoben.
+            modell.ueberSperreBeenden = {
+                if (!modell.einstellungen.appSperre || BiometricManager.from(app).canAuthenticate(nachweisArt) != BiometricManager.BIOMETRIC_SUCCESS) modell.gesperrt = false
+            }
+        }
+        super.onDestroy()
     }
 }

@@ -5,7 +5,7 @@ import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -77,7 +77,8 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
             ),
             nurLesen = false,
         ) { a ->
-            val aendert = (a.has("id") && !a.isNull("id")) || a.optString("suche").isNotBlank()
+            // id 0 oder leer heißt bei vielen Modellen „nicht angegeben“: dann ein neuer Wecker.
+            val aendert = a.idGesetzt() || a.optString("suche").isNotBlank()
             if (!aendert) {
                 val schluessel = listOf(a.optString("name").trim().lowercase(), a.optString("uhrzeit"), a.optString("datum"), a.optString("wiederholung"), a.optJSONArray("wochentage")?.toString().orEmpty()).joinToString("|")
                 // Gesperrt, weil der Tunnel Aufrufe parallel abarbeitet: Ein wiederholter Aufruf wartet, bis der erste fertig ist.
@@ -86,7 +87,8 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
                         if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000)
                             return@Werkzeug if (antwort == UNKLAR) Ergebnis(antwort, fehler = true) else Ergebnis("$antwort (War bereits gestellt, nicht doppelt angelegt.)")
                     }
-                    val antwort = rufe("stellen", a)
+                    // Ohne die leere id (0, „“), sonst hielte die Wecker-App den neuen Wecker womöglich für eine Änderung.
+                    val antwort = rufe("stellen", JSONObject(a.toString()).apply { remove("id") })
                     // Zeitlimit: Der Wecker kam womöglich trotzdem an. Schlüssel merken, damit ein Wiederholungsversuch nicht doppelt stellt.
                     if (antwort.optBoolean(AppBruecke.ZEITLIMIT)) {
                         letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
@@ -130,7 +132,7 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
             antwort.optString("hinweis").takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
 
     private suspend fun mitWecker(a: JSONObject, dann: suspend (String) -> Ergebnis): Ergebnis {
-        a.optString("id").takeIf { it.isNotBlank() && !a.isNull("id") }?.let { return dann(it) }
+        if (a.idGesetzt()) return dann(a.optString("id").trim())
         val suche = a.optString("suche").trim().lowercase()
         if (suche.isEmpty()) return Ergebnis("Es fehlt die id oder ein Suchwort für den Wecker.", fehler = true)
         val alle = rufe("lesen", JSONObject())
@@ -162,7 +164,8 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
         return (if (mitJetzt) "Jetzt ist ${antwort.optString("jetzt").replace('T', ' ')}. " else "") + "${wecker.length()} Wecker:\n" + (0 until wecker.length()).joinToString("\n") { "- " + satz(wecker.getJSONObject(it)) }
     }
 
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    /** Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe [AppBruecke]). */
+    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = runInterruptible(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
 
     private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
         AppBruecke.rufe(context, "Genialer Wecker", BRUECKE, methode, anfrage, lesend = methode in LESEND)

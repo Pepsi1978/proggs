@@ -41,16 +41,21 @@ object Integration {
  *   Wiederholung auf sein Ergebnis, statt ihn ein zweites Mal zu starten.
  * - Ist er innerhalb von [fensterMs] erfolgreich gewesen, bekommt die Wiederholung dasselbe Ergebnis (die Antwort ging auf
  *   dem Rückweg verloren). Mehrere verschiedene Aufrufe desselben Werkzeugs (Aufgabe A und B) werden je für sich gemerkt.
- *   Ein erfolgreicher Aufruf eines ANDEREN Werkzeugs (anlegen, löschen, wieder anlegen) hebt das Gemerkte auf.
+ *   Ein erfolgreicher Aufruf eines ANDEREN Werkzeugs desselben Bereichs (aufgabe_anlegen, aufgabe_loeschen, wieder
+ *   aufgabe_anlegen) hebt das Gemerkte dieses Bereichs auf; fremde Bereiche (eine Mail neben einer Aufgabe) bleiben geschützt.
+ * Das Fenster ist länger als Zeitlimit des Relays (75 s) plus Wartezeit auf eine neue Verbindung (15 s): Sonst käme die
+ * Wiederholung eines langen Aufrufs (Mail mit großem Anhang) erst nach Ablauf an und liefe doppelt.
  * Fehler werden nicht gemerkt: Nach einem Fehler darf wiederholt werden. Grenze: Löscht Frank etwas in der App selbst und
  * lässt es binnen [fensterMs] mit genau denselben Angaben wieder anlegen, gilt das als Wiederholung (das Ergebnis sagt es dazu).
  */
-class Wiederholschutz(private val fensterMs: Long = 45_000L, private val uhr: () -> Long = System::currentTimeMillis) {
+class Wiederholschutz(private val fensterMs: Long = 180_000L, private val uhr: () -> Long = System::currentTimeMillis) {
     private val laufend = HashMap<String, CompletableDeferred<Ergebnis>>()
     /** Erfolgreiche Aufrufe der letzten [fensterMs]: Schlüssel → (Zeit, Ergebnis). */
     private val zuletzt = LinkedHashMap<String, Pair<Long, Ergebnis>>()
 
     private fun werkzeug(schluessel: String) = schluessel.substringBefore('|')
+    /** Der Bereich eines Werkzeugs: der Teil vor dem ersten Unterstrich (aufgabe_anlegen → aufgabe, mail_senden → mail). */
+    private fun bereich(schluessel: String) = werkzeug(schluessel).substringBefore('_')
 
     /** Rückgabe: Ergebnis und ob es von einem früheren, gleichen Aufruf stammt (true = nichts neu ausgeführt). */
     suspend fun fuehreAus(schluessel: String, arbeit: suspend () -> Ergebnis): Pair<Ergebnis, Boolean> {
@@ -74,7 +79,8 @@ class Wiederholschutz(private val fensterMs: Long = 45_000L, private val uhr: ()
             synchronized(this) {
                 if (!r.fehler) {
                     val name = werkzeug(schluessel)
-                    zuletzt.entries.removeAll { werkzeug(it.key) != name }
+                    val gebiet = bereich(schluessel)
+                    zuletzt.entries.removeAll { werkzeug(it.key) != name && bereich(it.key) == gebiet }
                     zuletzt[schluessel] = uhr() to r
                 }
             }

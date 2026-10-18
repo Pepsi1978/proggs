@@ -100,22 +100,44 @@ object Logbuch {
      */
     fun auszug(tage: Int = 2, art: String? = null, suche: String? = null, hoechstens: Int = 80): String {
         val grenze = LocalDate.now().minusDays((tage - 1).coerceAtLeast(0).toLong())
-        val zeilen = dateien().filter { runCatching { !LocalDate.parse(it.name.take(10)).isBefore(grenze) }.getOrDefault(false) }
-            .flatMap { f -> runCatching { f.readLines() }.getOrDefault(emptyList()).reversed() }
-            .mapNotNull { runCatching { JSONObject(it) }.getOrNull() }
-        if (zeilen.isEmpty()) return "Das Logbuch der letzten $tage Tage ist leer."
-        val gefiltert = zeilen.filter { j -> (art.isNullOrBlank() || j.optString("k") == art) && (suche.isNullOrBlank() || j.toString().contains(suche, ignoreCase = true)) }
+        // Speicherschonend gestreamt: Jede Zeile wird gelesen, gezählt und gleich wieder vergessen. Im Speicher bleiben nur
+        // die Zählungen und höchstens [hoechstens] passende Einträge, auch bei 14 Tagen zu je bis zu 6 MB.
+        var anzahl = 0
+        val jeArt = HashMap<String, Int>()
+        val fehlerZahl = HashMap<String, Int>()
+        val dauern = HashMap<String, LongArray>() // Summe, höchster Wert, Anzahl
+        val treffer = ArrayDeque<JSONObject>()
+        // Älteste Tage zuerst, damit am Ende die neuesten Treffer übrig bleiben.
+        dateien().filter { runCatching { !LocalDate.parse(it.name.take(10)).isBefore(grenze) }.getOrDefault(false) }.reversed().forEach { f ->
+            runCatching {
+                f.useLines { zeilen ->
+                    zeilen.forEach { roh ->
+                        val j = runCatching { JSONObject(roh) }.getOrNull() ?: return@forEach
+                        anzahl++
+                        val k = j.optString("k")
+                        val e = j.optString("e")
+                        jeArt[k] = (jeArt[k] ?: 0) + 1
+                        if (k == "fehler") fehlerZahl[e] = (fehlerZahl[e] ?: 0) + 1
+                        if (j.has("ms")) dauern.getOrPut(e) { LongArray(3) }.let { d -> val ms = j.optLong("ms"); d[0] += ms; if (ms > d[1]) d[1] = ms; d[2]++ }
+                        if (hoechstens > 0 && (art.isNullOrBlank() || k == art) && (suche.isNullOrBlank() || roh.contains(suche, ignoreCase = true))) {
+                            treffer.addLast(j)
+                            if (treffer.size > hoechstens) treffer.removeFirst()
+                        }
+                    }
+                }
+            }
+        }
+        if (anzahl == 0) return "Das Logbuch der letzten $tage Tage ist leer."
         return buildString {
-            append("LOGBUCH der letzten ").append(tage).append(" Tage: ").append(zeilen.size).append(" Einträge (")
-            append(zeilen.groupingBy { it.optString("k") }.eachCount().entries.sortedByDescending { it.value }.joinToString(", ") { "${it.key} ${it.value}" }).append(").\n")
-            val fehler = zeilen.filter { it.optString("k") == "fehler" }.groupingBy { it.optString("e") }.eachCount().entries.sortedByDescending { it.value }.take(8)
+            append("LOGBUCH der letzten ").append(tage).append(" Tage: ").append(anzahl).append(" Einträge (")
+            append(jeArt.entries.sortedByDescending { it.value }.joinToString(", ") { "${it.key} ${it.value}" }).append(").\n")
+            val fehler = fehlerZahl.entries.sortedByDescending { it.value }.take(8)
             if (fehler.isNotEmpty()) append("Häufigste Fehler: ").append(fehler.joinToString("; ") { "${it.key} (${it.value}×)" }).append(".\n")
-            val dauern = zeilen.filter { it.has("ms") }.groupBy { it.optString("e") }.mapValues { (_, l) -> l.map { it.optLong("ms") } }
-                .entries.sortedByDescending { it.value.average() }.take(10)
-            if (dauern.isNotEmpty()) append("Langsamste Abläufe (Schnitt / höchster Wert / Anzahl): ")
-                .append(dauern.joinToString("; ") { (e, l) -> "$e ${l.average().toLong()} ms / ${l.max()} ms / ${l.size}×" }).append(".\n")
+            val langsam = dauern.entries.sortedByDescending { it.value[0].toDouble() / it.value[2] }.take(10)
+            if (langsam.isNotEmpty()) append("Langsamste Abläufe (Schnitt / höchster Wert / Anzahl): ")
+                .append(langsam.joinToString("; ") { (e, d) -> "$e ${d[0] / d[2]} ms / ${d[1]} ms / ${d[2]}×" }).append(".\n")
             append("\nNeueste Einträge").append(if (!art.isNullOrBlank()) " der Art $art" else "").append(if (!suche.isNullOrBlank()) " mit „$suche“" else "").append(":\n")
-            gefiltert.take(hoechstens).forEach { j ->
+            treffer.reversed().forEach { j ->
                 append(j.optString("z")).append(" [").append(j.optString("k")).append("] ").append(j.optString("e"))
                 if (j.has("ms")) append(" (").append(j.optLong("ms")).append(" ms)")
                 j.optString("d").takeIf { it.isNotEmpty() }?.let { append(": ").append(it.replace('\n', ' ').take(300)) }

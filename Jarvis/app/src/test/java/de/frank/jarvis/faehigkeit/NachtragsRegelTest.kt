@@ -40,6 +40,23 @@ class NachtragsRegelTest {
         assertEquals(Ziel.Nachfrage(NachtragsRegel.WIDERSPRUCH), NachtragsRegel.ziel("K7M3Q", "Schick einen Nachtrag in die gleiche Session", bekannte, listOf("BD2XW")))
     }
 
+    @Test fun nummerNurVomModellWaehltImGespraechNieSelbstDieSitzung() {
+        val worte = "Sag dem Programmierer noch, der Knopf soll rot werden."
+        // Zwei Aufträge im Gespräch, Franks Worte nennen keinen: Die Wahl des Modells zählt nicht.
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.MEHRDEUTIG), NachtragsRegel.ziel("BD2XW", worte, bekannte, listOf("BD2XW", "K7M3Q")))
+        // Ein Auftrag aus einem anderen Gespräch: Widerspruch, auch ohne „gleiche Session“.
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.WIDERSPRUCH), NachtragsRegel.ziel("6U6M6", worte, bekannte, listOf("BD2XW")))
+        // Genau der einzige Auftrag des Gesprächs: zugestellt.
+        assertEquals(Ziel.Auftrag("BD2XW"), NachtragsRegel.ziel("BD2XW", worte, bekannte, listOf("BD2XW")))
+        // Mehrere Aufträge, aber nur einer läuft noch: Der ist eindeutig gemeint, ohne Nachfrage.
+        assertEquals(Ziel.Auftrag("K7M3Q"), NachtragsRegel.ziel("K7M3Q", worte, bekannte, listOf("BD2XW", "K7M3Q"), laufendImGespraech = listOf("K7M3Q")))
+        assertEquals(Ziel.Auftrag("K7M3Q"), NachtragsRegel.ziel("", worte, bekannte, listOf("BD2XW", "K7M3Q"), laufendImGespraech = listOf("K7M3Q")))
+        // Das Modell wählt den beendeten statt des einzigen laufenden: fragen.
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.MEHRDEUTIG), NachtragsRegel.ziel("BD2XW", worte, bekannte, listOf("BD2XW", "K7M3Q"), laufendImGespraech = listOf("K7M3Q")))
+        // Nennt Frank die Nummer selbst, gilt sie auch bei mehreren Aufträgen.
+        assertEquals(Ziel.Auftrag("K7M3Q"), NachtragsRegel.ziel("K7M3Q", "Nachtrag an K7M3Q: der Knopf soll rot werden", bekannte, listOf("BD2XW", "K7M3Q")))
+    }
+
     // 3. Bloß thematisch verwandter Wunsch ohne Nachtragserlaubnis
     @Test fun thematischVerwandterWunschIstKeinNachtrag() {
         val worte = "Programmiere in Jarvis noch einen Filter für die Live-Einstellungen."

@@ -94,6 +94,12 @@ object Waechter {
                 // Immer neu lesen: Das Entprellen bündelt die Signale schon, und eine gerade endende ältere Lesung darf die Änderung nicht verdecken.
                 val neu = runCatching { Lagebild.auffrischen(app, q.bereiche, "Änderung in ${q.name}") }.getOrDefault(false)
                 Logbuch.gedaechtnis("Änderungssignal ${q.name}", if (neu) "Gedächtnis aktualisiert" else "ohne inhaltliche Änderung", System.currentTimeMillis() - beginn)
+                // Dienstplan geändert: Abfahrtsprüfung und Auswertungslauf hängen an Schichten und Schlafzeiten, also neu planen.
+                // Sonst bliebe etwa ein nachts eingetragener Tagdienst ohne Losfahr-Meldung, weil im Schlaf kein Dienststart neu plant.
+                if (Bereich.RAHMEN in q.bereiche) {
+                    runCatching { de.frank.jarvis.fahrt.Abfahrt.stelle(app) }.onFailure { Logbuch.fehler("Wächter: Abfahrt neu planen", it) }
+                    runCatching { de.frank.jarvis.auswertung.Zeitplan.stelle(app) }.onFailure { Logbuch.fehler("Wächter: Zeitplan neu planen", it) }
+                }
             }
         }
     }

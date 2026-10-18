@@ -82,6 +82,12 @@ fun JSONObject.mit(vararg felder: Pair<String, JSONObject>, pflicht: List<String
 fun JSONObject.gesetzt(name: String): Boolean = has(name) && !isNull(name) && optString(name).isNotBlank()
 
 /**
+ * Hat die Eingabe in diesem Feld eine echte Kennung (id, nr)? Modelle schicken optionale Zahlen gern als 0 mit: Eine Zahl
+ * zählt nur über 0, ein Text (etwa die id eines Weckers) nur, wenn er nicht leer und nicht „0“ ist.
+ */
+fun JSONObject.idGesetzt(name: String = "id"): Boolean = gesetzt(name) && optString(name).trim().toLongOrNull()?.let { it > 0 } ?: true
+
+/**
  * Die Eingabe ohne Felder mit JSON-null (nur oberste Ebene). Modelle schicken optionale Felder gern als null mit;
  * Androids optString machte daraus den Text „null“ (als Ort, Suchwort, Kategorie …). Kein Werkzeug unterscheidet null
  * bewusst: Leeren heißt überall „ohne“. Vor jedem Werkzeugaufruf von außen (Jarvis-Modell, Plugin) angewandt.

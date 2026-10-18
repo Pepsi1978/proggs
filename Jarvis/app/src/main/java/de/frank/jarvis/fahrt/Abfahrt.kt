@@ -138,8 +138,9 @@ object Abfahrt {
         if (!e.abfahrtAn || e.mapsSchluessel.isBlank()) return
         val jetzt = ZonedDateTime.now()
         val f = naechste(app, jetzt)
-        // Ohne Dienst in Sicht (oder ohne Kalender) in ein paar Stunden wieder nachsehen.
-        val wann = if (f == null) jetzt.plusHours(6) else naechstePruefung(app, f, zustand(app, f.tag), jetzt)
+        // Ohne Dienst in Sicht (oder ohne lesbaren Kalender) in einer Stunde wieder nachsehen: Ein kurzfristig eingetragener
+        // Dienst darf nicht hinter einer langen Pause verschwinden (Vorprüfung beginnt 150 Minuten vor der Ankunft).
+        val wann = if (f == null) jetzt.plusHours(1) else naechstePruefung(app, f, zustand(app, f.tag), jetzt)
         runCatching {
             if (Build.VERSION.SDK_INT < 31 || wecker.canScheduleExactAlarms()) wecker.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, wann.toInstant().toEpochMilli(), absicht)
             else wecker.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, wann.toInstant().toEpochMilli(), absicht)
@@ -168,7 +169,6 @@ object Abfahrt {
             val von = standort?.let { Ort.Punkt(it.latitude, it.longitude) } ?: Ort.Adresse(e.adresseZuhause)
             val nach = Ort.Adresse(e.adresseArbeit)
             z.versuch = System.currentTimeMillis()
-            z.pruefungen += 1
             val ergebnis = runCatching {
                 if (z.gemeldet) Routen.berechne(app, von, nach).let { it to f.ankunft.minusSeconds(it.sekunden.toLong()) }
                 else Routen.fuerAnkunft(app, von, nach, f.ankunft, if (z.sekunden > 0) (z.sekunden + 59) / 60 else 55)
@@ -195,6 +195,8 @@ object Abfahrt {
                 }
             }
             ergebnis.onSuccess { (route, abfahrt) ->
+                // Nur gelungene Prüfungen zählen: Fehlversuche ohne Netz dürfen die Meldung nicht vorziehen.
+                z.pruefungen += 1
                 z.fehler = ""
                 z.geprueft = System.currentTimeMillis()
                 z.vomStandort = standort != null
@@ -203,9 +205,15 @@ object Abfahrt {
                     standort != null && route.meter in 1 until 1500 -> z.erledigt = true
                     z.gemeldet -> {
                         if (route.sekunden - z.gemeldetSekunden > 5 * 60) {
-                            val an = jetzt.plusSeconds(route.sekunden.toLong())
-                            sende(app, "Fahrzeit länger geworden", "Jetzt ${route.minuten} Minuten (+${(route.sekunden - z.gemeldetSekunden) / 60}). Fahre sofort los, Ankunft etwa ${an.format(UHR)} Uhr.",
-                                "Achtung Frank, die Fahrzeit ist auf ${route.minuten} Minuten gestiegen. Fahre jetzt los, dann bist du um ${gesprochen(an)} da.", navigation = true, tag = f.tag)
+                            val plus = (route.sekunden - z.gemeldetSekunden) / 60
+                            // Ankunft mit der Uhrzeit des Meldens: Wird die Meldung nach einem Gespräch nachgeholt, gilt die Zeit von dann.
+                            fun laenger(ab: ZonedDateTime) {
+                                val an = ab.plusSeconds(route.sekunden.toLong())
+                                sende(app, "Fahrzeit länger geworden", "Jetzt ${route.minuten} Minuten (+$plus). Fahre sofort los, Ankunft etwa ${an.format(UHR)} Uhr.",
+                                    "Achtung Frank, die Fahrzeit ist auf ${route.minuten} Minuten gestiegen. Fahre jetzt los, dann bist du um ${gesprochen(an)} da.", navigation = true, tag = f.tag,
+                                    nachholen = { laenger(ZonedDateTime.now()) })
+                            }
+                            laenger(jetzt)
                         }
                         z.erledigt = true
                     }
@@ -246,6 +254,9 @@ object Abfahrt {
         tag?.takeIf { t -> gespeicherterTag == null || !gespeicherterTag.isAfter(t) }
             ?.let { t -> zustand(app, t).also { it.erledigt = true; sichere(app, it) } }
         Logbuch.aktion("Abfahrt heute still", "Dienst ${tag ?: "unbekannt"}")
+        // Eine im Gespräch still gezeigte Meldung nicht mehr nach dem Gespräch wiederholen.
+        nachholer?.cancel()
+        nachholer = null
         app.getSystemService(NotificationManager::class.java).cancel(HINWEIS_ID)
         // Das Vorlesen gehört dem Hauptfaden; still() selbst läuft im Empfänger abseits davon (stelle() liest den Kalender).
         android.os.Handler(android.os.Looper.getMainLooper()).post { runCatching { Vorleser.aktuell()?.stopp() } }
@@ -263,6 +274,8 @@ object Abfahrt {
                 "Frank, fahre in $wann los, um ${gesprochen(abfahrt)}, damit du um ${gesprochen(f.ankunft)} auf Arbeit bist. Die Fahrt dauert heute ${route.minuten} Minuten. Jetzt ist es ${gesprochen(jetzt)}.",
                 navigation = true,
                 tag = f.tag,
+                // Nach einem Gespräch mit der Uhrzeit von dann neu gerechnet, sonst stimmte „in X Minuten“ nicht mehr.
+                nachholen = { melde(context, f, route, abfahrt, ZonedDateTime.now(), veraltet) },
             )
         } else {
             val an = jetzt.plusSeconds(route.sekunden.toLong())
@@ -273,6 +286,7 @@ object Abfahrt {
                 "Frank, fahre jetzt sofort los. Die Fahrt dauert ${route.minuten} Minuten, " + (if (spaet > 0) "Ankunft frühestens ${gesprochen(an)}, das sind $spaet Minuten zu spät." else "du bist um ${gesprochen(an)} da."),
                 navigation = true,
                 tag = f.tag,
+                nachholen = { melde(context, f, route, abfahrt, ZonedDateTime.now(), veraltet) },
             )
         }
     }
@@ -292,7 +306,34 @@ object Abfahrt {
     /** Uhrzeit so, wie eine Stimme sie natürlich spricht: „16 Uhr 10“, „17 Uhr“. */
     private fun gesprochen(t: ZonedDateTime): String = if (t.minute == 0) "${t.hour} Uhr" else "${t.hour} Uhr ${t.minute}"
 
-    private fun sende(context: Context, titel: String, text: String, sprechtext: String, navigation: Boolean = false, tag: LocalDate? = null, probe: Boolean = false) {
+    /** Die nach einem Gespräch nachzuholende Losfahr-Meldung; „Heute still“ und jede neuere Meldung brechen sie ab. */
+    @Volatile private var nachholer: kotlinx.coroutines.Job? = null
+
+    /**
+     * Läuft ein Gespräch, kommt die Meldung still und ohne Ansage (Live-Sprachmodus hat Vorrang). Damit die Warnung nicht
+     * verloren geht, wird sie nach dem Gesprächsende mit Ton und Ansage wiederholt: über [nachholen] neu gerechnet
+     * (Uhrzeiten von dann), sonst mit demselben Text. Gewartet wird ohne 15-Minuten-Grenze, höchstens drei Stunden.
+     */
+    private fun sende(context: Context, titel: String, text: String, sprechtext: String, navigation: Boolean = false, tag: LocalDate? = null, probe: Boolean = false, nachholen: (() -> Unit)? = null) {
+        val app = context.applicationContext
+        val imGespraech = !probe && de.frank.jarvis.speech.GespraechsFokus.stilleHinweise
+        if (!probe) nachholer?.cancel()
+        val gezeigt = sendeJetzt(app, titel, text, if (imGespraech) null else sprechtext, navigation, tag, probe)
+        if (!imGespraech || !gezeigt) return
+        Logbuch.aktion("Abfahrt-Meldung still im Gespräch", "wird nach dem Gespräch mit Ton und Ansage wiederholt")
+        nachholer = CoroutineScope(Dispatchers.Default).launch {
+            val frei = withTimeoutOrNull(3 * 3_600_000L) {
+                while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) kotlinx.coroutines.delay(2_000L)
+                true
+            }
+            // Abgebrochen („Heute still“ oder eine neuere Meldung) endet schon im Warten; nach drei Stunden ist die Fahrt vorbei.
+            if (frei != true) return@launch
+            nachholer = null
+            runCatching { nachholen?.invoke() ?: sende(app, titel, text, sprechtext, navigation, tag) }.onFailure { Log.w(TAG, "Nachholen der Meldung nicht möglich", it) }
+        }
+    }
+
+    private fun sendeJetzt(context: Context, titel: String, text: String, sprechtext: String?, navigation: Boolean, tag: LocalDate?, probe: Boolean): Boolean {
         val e = Einstellungen.get(context)
         val meldungen = context.getSystemService(NotificationManager::class.java)
         // Wichtigkeit hoch von Anfang an: Sie lässt sich später nicht mehr anheben.
@@ -307,7 +348,7 @@ object Abfahrt {
             bauer.addAction(R.drawable.ic_stat_jarvis, "Heute still", PendingIntent.getBroadcast(context, 82, Intent(context, AbfahrtEmpfaenger::class.java).setAction(AKTION_STILL).apply { tag?.let { putExtra(EXTRA_TAG, it.toString()) } }, unveraenderlich))
         }
         // Ton, Wecker, Vorlesen, Stimme und Lautstärke wie unter Einstellungen → Benachrichtigungen → Losfahren.
-        de.frank.jarvis.meldung.Meldungen.zeige(context, de.frank.jarvis.meldung.Meldungsarten.ABFAHRT, HINWEIS_ID, bauer, "Losfahren", sprechtext, probe = probe)
+        return de.frank.jarvis.meldung.Meldungen.zeige(context, de.frank.jarvis.meldung.Meldungsarten.ABFAHRT, HINWEIS_ID, bauer, "Losfahren", sprechtext, probe = probe)
     }
 
     /** Ein Satz zum Stand, für die Einstellungen und für die Werkzeuge. */

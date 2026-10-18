@@ -62,7 +62,7 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
             w("mail_lesen").als(
                 beschreibung = w("mail_lesen").beschreibung + " Mit nr kommt eine einzelne E-Mail vollständig.",
                 schema = w("mail_lesen").schema.mit("nr" to zahl("Nummer einer E-Mail aus der Liste: dann nur diese, vollständig.")),
-            ) { a -> (if (a.gesetzt("nr")) w("mail_details") else w("mail_lesen")).ausfuehren(a) },
+            ) { a -> (if (a.idGesetzt("nr")) w("mail_details") else w("mail_lesen")).ausfuehren(a) },
         )
     }
 

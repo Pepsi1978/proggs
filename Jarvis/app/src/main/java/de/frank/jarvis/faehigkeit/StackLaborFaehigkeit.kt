@@ -3,7 +3,7 @@ package de.frank.jarvis.faehigkeit
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONObject
 
 /**
@@ -166,7 +166,8 @@ class StackLaborFaehigkeit(private val context: Context) : Faehigkeit {
         return alsErgebnis(antwort)
     }
 
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    /** Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe [AppBruecke]). */
+    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = runInterruptible(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
 
     private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
         AppBruecke.rufe(context, "Stack-Labor", BRUECKE, methode, anfrage, lesend = lesend(methode))

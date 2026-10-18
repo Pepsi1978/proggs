@@ -5,7 +5,7 @@ import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -78,7 +78,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                 beschreibung = "Jarvis: liest Franks geniale Ideen aus der App Geniale Ideen. Nutze es für „Welche Ideen habe ich?“, „Was war meine Idee zu …?“, " +
                     "„Welche Ideen sind umgesetzt?“. In der Liste sind lange Texte gekürzt; mit id kommt eine einzelne Idee vollständig, samt dem bisherigen Gespräch dazu.",
                 schema = w("ideen_lesen").schema.mit("id" to zahl("id einer Idee aus der Liste: dann nur diese, im Volltext.")),
-            ) { a -> (if (a.gesetzt("id")) w("idee_lesen") else w("ideen_lesen")).ausfuehren(a) },
+            ) { a -> (if (a.idGesetzt()) w("idee_lesen") else w("ideen_lesen")).ausfuehren(a) },
             Werkzeug(
                 name = "idee_speichern",
                 titel = "Idee speichern oder ändern",
@@ -100,7 +100,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                 // Das ist eine Änderung, keine neue Idee: sonst entstünde ein Doppel oder der Fehler „braucht einen Text“.
                 val nurAenderung = a.gesetzt("status") || (!a.gesetzt("text") && (a.gesetzt("titel") || a.has("kategorie")))
                 when {
-                    a.gesetzt("id") || a.gesetzt("suche") -> w("idee_aendern").ausfuehren(a)
+                    a.idGesetzt() || a.gesetzt("suche") -> w("idee_aendern").ausfuehren(a)
                     nurAenderung -> {
                         val suche = a.optString("titel").trim().ifEmpty { a.optString("text").trim() }
                         if (suche.isEmpty()) Ergebnis("Zum Ändern fehlt die id oder ein Suchwort (suche) für die Idee. Hole die id mit ideen_lesen.", fehler = true)
@@ -208,7 +208,8 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
     )
 
     private suspend fun mitIdee(a: JSONObject, dann: suspend (Long) -> Ergebnis): Ergebnis {
-        if (a.has("id") && !a.isNull("id")) return dann(a.optLong("id"))
+        // id 0 heißt bei vielen Modellen „nicht angegeben“: dann gilt das Suchwort.
+        if (a.idGesetzt()) return dann(a.optLong("id"))
         val suche = a.optString("suche").trim()
         if (suche.isEmpty()) return Ergebnis("Es fehlt die id oder ein Suchwort für die Idee.", fehler = true)
         val treffer = rufe("lesen", JSONObject().put("status", "alle").put("suche", suche))
@@ -242,7 +243,8 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
         }.trim()
     }
 
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    /** Unterbrechbar: Ein Abbruch des Aufrufers beendet das Warten auf die Brücke sofort (siehe [AppBruecke]). */
+    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = runInterruptible(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
 
     private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
         AppBruecke.rufe(context, "Geniale Ideen", BRUECKE, methode, anfrage, lesend = methode in LESEND)

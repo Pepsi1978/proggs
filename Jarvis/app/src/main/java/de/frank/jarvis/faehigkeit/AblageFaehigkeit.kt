@@ -352,7 +352,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             }
         }
         if (dateien.isEmpty()) return Ergebnis("Es wurde keine Datei übergeben (chatgpt_dateien, url, inhalt_text oder inhalt_base64).", fehler = true)
-        if (a.gesetzt("text")) speicher.schreibeText(eintrag, a.optString("text"))
+        if (a.gesetzt("text")) begleittext(eintrag, a.optString("text"))
         val zeilen = mutableListOf<String>()
         var fehler = 0
         var laeuft = 0
@@ -411,7 +411,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             "din_a4_quer" -> AblageZentrale.Bildformat.DIN_A4_QUER
             else -> AblageZentrale.Bildformat.HOCH
         }
-        if (a.gesetzt("text")) speicher.schreibeText(titel, a.optString("text"))
+        if (a.gesetzt("text")) begleittext(titel, a.optString("text"))
         // Gleicher Auftrag noch einmal (etwa weil ChatGPT nach einer Zeitüberschreitung wiederholt) hängt sich an den laufenden an.
         val kennung = "bild-" + kurzHash(titel + "|" + beschreibung + "|" + format.name + "|" + a.optBoolean("auch_pdf"))
         return try {
@@ -423,6 +423,16 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
         } catch (e: Exception) {
             Ergebnis("Kein Bild gespeichert: " + AblageZentrale.fehlerText(e), fehler = true)
         }
+    }
+
+    /**
+     * Begleittext zu einer Datei: Hat der Eintrag schon einen Text (etwa einen Bericht), kommt er dahinter, statt ihn zu ersetzen.
+     * Derselbe Text noch einmal (Wiederholung mit denselben Angaben, solange „läuft noch“ kommt) wird nicht doppelt angehängt.
+     */
+    private fun begleittext(titel: String, text: String) {
+        val vorhanden = speicher.findeGenau(titel)?.takeIf { it.hatText }
+        if (vorhanden != null && text.trim() in speicher.text(vorhanden)) return
+        speicher.schreibeText(vorhanden?.titel ?: titel, text, anhaengen = vorhanden != null)
     }
 
     private suspend fun herkunft(): String = if (currentCoroutineContext()[AgentenKontext] != null) "Jarvis" else "ChatGPT"

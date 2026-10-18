@@ -266,7 +266,8 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             verticalArrangement = Arrangement.spacedBy(if (ansicht == Ansicht.LISTE) 6.dp else if (ansicht == Ansicht.KLEIN) 6.dp else 10.dp),
             horizontalArrangement = Arrangement.spacedBy(if (ansicht == Ansicht.KLEIN) 6.dp else 10.dp),
         ) {
-            items(laeufe, key = { "lauf" + it.seit }, span = ganz) { lauf ->
+            // Nach der Kennung, nicht nach der Startzeit: Zwei parallel gestartete Agenten können dieselbe Millisekunde haben.
+            items(laeufe, key = { "lauf" + it.id }, span = ganz) { lauf ->
                 ArbeitZeile("${lauf.agent} arbeitet", lauf.schritt.ifEmpty { lauf.auftrag }, null)
             }
             items(arbeiten, key = { "arbeit" + it.kennung }, span = ganz) { a ->

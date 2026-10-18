@@ -55,6 +55,9 @@ ZUSTAND = ORDNER / f"hook-{AUFTRAG or 'ohne'}.json"
 def schreib(text: str) -> None:
     try:
         ORDNER.mkdir(parents=True, exist_ok=True)
+        # Wie bruecke.log: ab 1 MB eine Generation zurück, sonst wächst das Protokoll mit jeder Meldung ohne Grenze.
+        if PROTOKOLL.exists() and PROTOKOLL.stat().st_size > 1024 * 1024:
+            os.replace(PROTOKOLL, PROTOKOLL.with_name("hook.log.alt"))
         with PROTOKOLL.open("a", encoding="utf-8") as f:
             f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} [{AUFTRAG}] {text}\n")
     except Exception:
@@ -127,32 +130,62 @@ def warte_auf_antwort(frage_id: str) -> dict | None:
 
 # ---------------------------------------------------------------- Zustand (Drosselung, gesehene Texte)
 
-SPERRE = ORDNER / f"hook-{AUFTRAG or 'ohne'}.sperre"
+# Neuer Name (.lock statt .sperre): Die frühere Sperrdatei-Logik noch laufender Warter kommt dieser nie in die Quere.
+SPERRE = ORDNER / f"hook-{AUFTRAG or 'ohne'}.lock"
+SPERRE_WARTEN_S = 10
+
+
+class SperreBelegt(Exception):
+    pass
 
 
 class Sperre:
-    """Async-Hooks laufen gleichzeitig: Zustand und Transkript-Stelle nur einer nach dem anderen."""
+    """
+    Async-Hooks laufen gleichzeitig: Zustand und Transkript-Stelle nur einer nach dem anderen. Eine echte Dateisperre des
+    Betriebssystems: Endet ein Hook, auch hart an seinem Zeitlimit, gibt das System sie frei, und nie löscht ein Hook die
+    Sperre eines anderen. Darin nur Zustand und Transkript lesen und schreiben, nie Netz; gesendet wird danach. Ist sie
+    nach SPERRE_WARTEN_S noch belegt, kommt SperreBelegt: lieber diesen Hook auslassen (der nächste holt die Texte nach)
+    als ohne Sperre doppelt melden oder einen Nachtrag zweimal übergeben.
+    """
 
     def __enter__(self):
         ORDNER.mkdir(parents=True, exist_ok=True)
-        for _ in range(100):
+        self.fd = os.open(SPERRE, os.O_RDWR | os.O_CREAT)
+        frist = time.monotonic() + SPERRE_WARTEN_S
+        while True:
             try:
-                os.close(os.open(SPERRE, os.O_CREAT | os.O_EXCL))
-                return self
-            except FileExistsError:
+                if os.name == "nt":
+                    import msvcrt
+                    os.lseek(self.fd, 0, os.SEEK_SET)
+                    msvcrt.locking(self.fd, msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                # Frisch halten: Das Aufräumen der Brücken löscht nur Sperrdateien, die 14 Tage niemand benutzt hat.
                 try:
-                    if time.time() - SPERRE.stat().st_mtime > 20:
-                        SPERRE.unlink()
-                except Exception:
+                    os.utime(SPERRE)
+                except OSError:
                     pass
-                time.sleep(0.1)
-        return self
+                return self
+            except OSError:
+                if time.monotonic() >= frist:
+                    os.close(self.fd)
+                    raise SperreBelegt(f"Sperre nach {SPERRE_WARTEN_S} s noch belegt")
+                time.sleep(0.05)
 
     def __exit__(self, *_):
         try:
-            SPERRE.unlink()
-        except Exception:
+            if os.name == "nt":
+                import msvcrt
+                os.lseek(self.fd, 0, os.SEEK_SET)
+                msvcrt.locking(self.fd, msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(self.fd, fcntl.LOCK_UN)
+        except OSError:
             pass
+        finally:
+            os.close(self.fd)
 
 
 def lies_zustand() -> dict:
@@ -186,22 +219,36 @@ def schreib_zustand(z: dict) -> None:
         pass
 
 
-def sammel_und_sende(z: dict, neu: str | None, sofort: bool = False, stand: str = "laeuft") -> None:
-    """Hängt [neu] an die offenen Punkte; gesendet wird, wenn DROSSEL_S um sind oder [sofort]."""
+def sammel(z: dict, neu: str | None, sofort: bool = False, stand: str = "laeuft") -> list[tuple[str, str]]:
+    """
+    Hängt [neu] an die offenen Punkte; fällig wird eine Meldung, wenn DROSSEL_S um sind oder [sofort]. Liefert die zu
+    sendenden Meldungen und vermerkt sie im Zustand schon als gesendet: Gesendet wird erst nach der Sperre (sende).
+    """
     if neu:
         z["offen"].append(neu)
     jetzt = time.time()
     if not (sofort or jetzt - z.get("zuletzt", 0) >= DROSSEL_S):
-        return
+        return []
     teile = []
     if z["dateien"]:
         namen = list(dict.fromkeys(z["dateien"]))
         teile.append("✏️ Geändert: " + ", ".join(namen[:6]) + (f" und {len(namen) - 6} weitere" if len(namen) > 6 else ""))
     teile += z["offen"]
     if not teile:
-        return
-    melde(stand, " · ".join(teile))
+        return []
     z.update({"zuletzt": jetzt, "dateien": [], "offen": []})
+    return [(stand, " · ".join(teile))]
+
+
+def sende(meldungen: list[tuple[str, str]]) -> None:
+    """Sendet außerhalb der Sperre. Höchstens einmal: Ist der Relay weg, fällt der Rest dieses Hooks aus, statt dass
+    später alles doppelt kommt."""
+    for stand, text in meldungen:
+        try:
+            melde(stand, text)
+        except Exception as fehler:
+            schreib(f"Meldung {stand} nicht gesendet, Rest ausgelassen: {fehler}")
+            return
 
 
 def lesbar(text: str) -> str:
@@ -255,7 +302,9 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
 
 # ---------------------------------------------------------------- Nachträge
 
-WARTER_MAX_S = 12 * 3600  # so lange wartet ein Warter höchstens (Hook-Zeitlimit im OpenLauncher: 43200 s)
+# So lange wartet ein Warter höchstens: zehn Minuten unter dem Hook-Zeitlimit (OpenLauncher und Notwege: 43200 s), damit er
+# selbst endet und seine pid-Datei aufräumt, statt am Zeitlimit hart beendet zu werden.
+WARTER_MAX_S = 12 * 3600 - 600
 WARTER = ORDNER / f"warter-{AUFTRAG or 'ohne'}.pid"
 
 
@@ -370,26 +419,42 @@ def claude_prozess() -> int | None:
     return None
 
 
-def lebt(pid: int, merkmal: str = "") -> bool:
-    """[merkmal]: Teil der Befehlszeile, den der Prozess tragen muss (POSIX vergibt PIDs neu, sonst gälte ein fremder
-    Prozess als alter Warter, und kein neuer Warter stellte Nachträge mehr zu)."""
+def startzeit(pid: int) -> str | None:
+    """Startzeit eines laufenden Prozesses als Text; None, wenn er nicht (mehr) läuft, "" wenn sie sich nicht ermitteln
+    lässt. Zusammen mit der PID kennzeichnet sie den Prozess eindeutig, denn beide Systeme vergeben PIDs neu."""
     if os.name != "nt":
         import subprocess
         try:
-            befehl = subprocess.run(["ps", "-o", "args=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout.strip()
+            aus = subprocess.run(["ps", "-o", "lstart=", "-p", str(pid)], capture_output=True, text=True, timeout=5).stdout.strip()
         except Exception:
-            return True
-        return bool(befehl) and (not merkmal or merkmal in befehl)
+            return ""
+        return aus or None
     import ctypes
+    from ctypes import wintypes
     k = ctypes.windll.kernel32
+    k.OpenProcess.restype = wintypes.HANDLE
     griff = k.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
     if not griff:
-        return False
+        return None
     try:
-        code = ctypes.c_ulong()
-        return bool(k.GetExitCodeProcess(griff, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
+        code = wintypes.DWORD()
+        if not k.GetExitCodeProcess(wintypes.HANDLE(griff), ctypes.byref(code)) or code.value != 259:  # STILL_ACTIVE
+            return None
+        zeiten = [wintypes.FILETIME() for _ in range(4)]
+        if not k.GetProcessTimes(wintypes.HANDLE(griff), *[ctypes.byref(z) for z in zeiten]):
+            return ""
+        return str((zeiten[0].dwHighDateTime << 32) | zeiten[0].dwLowDateTime)
     finally:
-        k.CloseHandle(griff)
+        k.CloseHandle(wintypes.HANDLE(griff))
+
+
+def lebt(pid: int, start: str = "") -> bool:
+    """Läuft der Prozess noch, und ist es noch derselbe ([start] wie von startzeit)? Ohne diesen Abgleich gälte ein
+    fremder Prozess mit wiederverwendeter PID als alter Warter, und kein neuer Warter stellte Nachträge mehr zu."""
+    jetzt = startzeit(pid)
+    if jetzt is None:
+        return False
+    return not start or not jetzt or jetzt == start
 
 
 def nachtraege_im_stop() -> bool:
@@ -408,19 +473,22 @@ def nachtraege_im_stop() -> bool:
 def warte(eingabe: dict) -> int:
     """asyncRewake: wartet auf Nachträge; Exit 2 mit dem Nachtrag weckt die Sitzung. Nur ein Warter je Auftrag."""
     ORDNER.mkdir(parents=True, exist_ok=True)
+    # Die pid-Datei trägt PID und Startzeit („1234 133…“); ältere Fassungen schrieben nur die PID.
     try:
-        alter = int(WARTER.read_text(encoding="utf-8").strip() or 0)
+        teile = WARTER.read_text(encoding="utf-8").split()
+        alter, alter_start = (int(teile[0]), teile[1] if len(teile) > 1 else "") if teile else (0, "")
     except Exception:
-        alter = 0
-    if alter and alter != os.getpid() and lebt(alter, "jarvis_hook.py"):
+        alter, alter_start = 0, ""
+    if alter and alter != os.getpid() and lebt(alter, alter_start):
         return 0
-    WARTER.write_text(str(os.getpid()), encoding="utf-8")
+    WARTER.write_text(f"{os.getpid()} {startzeit(os.getpid()) or ''}".strip(), encoding="utf-8")
     claude = claude_prozess()
+    claude_start = (startzeit(claude) or "") if claude else ""
     schreib(f"Warter gestartet ({eingabe.get('hook_event_name', '')}, Claude-Prozess {claude})")
     try:
         ende = time.monotonic() + WARTER_MAX_S
         while time.monotonic() < ende:
-            if claude and not lebt(claude, "claude"):
+            if claude and not lebt(claude, claude_start):
                 schreib("Warter: Claude-Sitzung beendet")
                 return 0
             try:
@@ -431,7 +499,13 @@ def warte(eingabe: dict) -> int:
                 continue
             if not liste:
                 continue
-            neu = beanspruche(liste)
+            try:
+                neu = beanspruche(liste)
+            except SperreBelegt as fehler:
+                # Nicht übernommen: Der Relay bietet sie gleich wieder an.
+                schreib(f"Warter: {fehler}")
+                time.sleep(3)
+                continue
             if not neu:
                 # Schon übergeben (Stop war schneller), Quittung noch unterwegs: nicht im Kreis fragen.
                 time.sleep(3)
@@ -442,7 +516,7 @@ def warte(eingabe: dict) -> int:
         return 0
     finally:
         try:
-            if WARTER.read_text(encoding="utf-8").strip() == str(os.getpid()):
+            if WARTER.read_text(encoding="utf-8").split()[:1] == [str(os.getpid())]:
                 WARTER.unlink()
         except Exception:
             pass
@@ -457,13 +531,12 @@ def post(eingabe: dict) -> None:
     with Sperre():
         z = lies_zustand()
         # Zuerst, was die KI seit dem letzten Werkzeug geschrieben hat: sofort, jeder Text als eigene Meldung.
-        for text in neue_texte(eingabe, z):
-            melde("laeuft", "💬 " + text)
+        raus = [("laeuft", "💬 " + text) for text in neue_texte(eingabe, z)]
         if werkzeug in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
             pfad = ein.get("file_path") or ein.get("notebook_path") or ""
             if pfad:
                 z["dateien"].append(Path(pfad).name)
-            sammel_und_sende(z, None)
+            raus += sammel(z, None)
         elif werkzeug in ("Bash", "PowerShell"):
             befehl = str(ein.get("command", ""))
             text = json.dumps(aus, ensure_ascii=False) if not isinstance(aus, str) else aus
@@ -472,20 +545,21 @@ def post(eingabe: dict) -> None:
                 bool(re.search(r"BUILD FAILED|INSTALL_FAILED|! \[rejected\]|APK_UPDATE_STATUS=fehler", text)) or \
                 (isinstance(aus, dict) and bool(aus.get("interrupted")))
             if re.search(r"gradlew(\.bat)?\b.*\b(assemble|install|build|bundle)", befehl):
-                sammel_und_sende(z, "🔴 Bau fehlgeschlagen" if fehlgeschlagen else "🔨 Bau erfolgreich", sofort=True)
+                raus += sammel(z, "🔴 Bau fehlgeschlagen" if fehlgeschlagen else "🔨 Bau erfolgreich", sofort=True)
             elif re.search(r"\bgit\b.*\bpush\b", befehl):
-                sammel_und_sende(z, "🔴 Push fehlgeschlagen" if fehlgeschlagen else "⬆️ Gepusht", sofort=True)
+                raus += sammel(z, "🔴 Push fehlgeschlagen" if fehlgeschlagen else "⬆️ Gepusht", sofort=True)
             elif re.search(r"\bgit\b.*\bcommit\b", befehl):
-                sammel_und_sende(z, "🔴 Commit fehlgeschlagen" if fehlgeschlagen else "📦 Committet", sofort=True)
+                raus += sammel(z, "🔴 Commit fehlgeschlagen" if fehlgeschlagen else "📦 Committet", sofort=True)
             elif re.search(r"\badb\b.*\binstall\b", befehl):
-                sammel_und_sende(z, "🔴 Installation fehlgeschlagen" if fehlgeschlagen else "📲 Auf dem Handy installiert", sofort=True)
+                raus += sammel(z, "🔴 Installation fehlgeschlagen" if fehlgeschlagen else "📲 Auf dem Handy installiert", sofort=True)
             elif re.search(r"apk-update", befehl):
-                sammel_und_sende(z, "🔴 APK-Update fehlgeschlagen" if fehlgeschlagen else "☁️ APK-Update für UpdateStation bereit", sofort=True)
+                raus += sammel(z, "🔴 APK-Update fehlgeschlagen" if fehlgeschlagen else "☁️ APK-Update für UpdateStation bereit", sofort=True)
             else:
-                sammel_und_sende(z, None)
+                raus += sammel(z, None)
         else:
-            sammel_und_sende(z, None)
+            raus += sammel(z, None)
         schreib_zustand(z)
+    sende(raus)
 
 
 def frage(eingabe: dict) -> None:
@@ -493,12 +567,17 @@ def frage(eingabe: dict) -> None:
     fragen = ein.get("questions") or []
     if not fragen:
         return
-    with Sperre():
-        z = lies_zustand()
-        for text in neue_texte(eingabe, z):
-            melde("laeuft", "💬 " + text)
-        sammel_und_sende(z, None, sofort=True)
-        schreib_zustand(z)
+    raus = []
+    try:
+        with Sperre():
+            z = lies_zustand()
+            raus = [("laeuft", "💬 " + text) for text in neue_texte(eingabe, z)]
+            raus += sammel(z, None, sofort=True)
+            schreib_zustand(z)
+    except SperreBelegt as fehler:
+        # Die Frage selbst ist wichtiger als die Zwischentexte: Die holt der nächste Hook nach.
+        schreib(f"frage: {fehler}")
+    sende(raus)
     frage_id = uuid.uuid4().hex[:12]
     kurz = " / ".join(str(f.get("question", "")) for f in fragen)
     melde("frage", "❓ " + kurz, {"frage_id": frage_id, "fragen": fragen})
@@ -523,18 +602,25 @@ def frage(eingabe: dict) -> None:
 
 def stop(eingabe: dict) -> None:
     letzte = lesbar(str(eingabe.get("last_assistant_message") or ""))
-    with Sperre():
+    raus = []
+    try:
+        with Sperre():
+            z = lies_zustand()
+            # Zwischentexte dieses Zuges, die noch kein Werkzeug-Hook gemeldet hat. Die letzte Nachricht steht oft schon im
+            # Transkript und wird dabei als gesehen markiert: Sie kommt trotzdem gleich gesondert (Fehler vom 15.10.2026).
+            texte = neue_texte(eingabe, z)
+            raus = [("laeuft", "💬 " + text) for text in texte if text != letzte]
+            raus += sammel(z, None, sofort=True)
+            neu = bool(letzte) and (letzte in texte or not schon_gesehen(z, letzte))
+            dauer = dauer_text(time.time() - z["beginn"])
+            schreib_zustand(z)
+    except SperreBelegt as fehler:
+        # Der Abschluss darf nie ausfallen: nur lesen, nichts vermerken (die Zwischentexte holt der nächste Hook nach).
+        schreib(f"stop: {fehler}")
         z = lies_zustand()
-        # Zwischentexte dieses Zuges, die noch kein Werkzeug-Hook gemeldet hat. Die letzte Nachricht steht oft schon im
-        # Transkript und wird dabei als gesehen markiert: Sie kommt trotzdem gleich gesondert (Fehler vom 15.10.2026).
-        texte = neue_texte(eingabe, z)
-        for text in texte:
-            if text != letzte:
-                melde("laeuft", "💬 " + text)
-        sammel_und_sende(z, None, sofort=True)
-        neu = bool(letzte) and (letzte in texte or not schon_gesehen(z, letzte))
+        neu = bool(letzte) and not schon_gesehen(dict(z, gesehen=list(z["gesehen"])), letzte)
         dauer = dauer_text(time.time() - z["beginn"])
-        schreib_zustand(z)
+    sende(raus)
     if not neu:
         nachtraege_im_stop()
         return
@@ -570,15 +656,15 @@ def puls(eingabe: dict) -> None:
     ein = eingabe.get("tool_input") or {}
     with Sperre():
         z = lies_zustand()
-        for text in neue_texte(eingabe, z):
-            melde("laeuft", "💬 " + text)
-        if werkzeug == "advisor":
-            melde("laeuft", "🧠 Advisor wird befragt …")
-        elif werkzeug == "Skill":
-            melde("laeuft", f"🧩 Skill {ein.get('skill', '')} geladen".replace("  ", " "))
-        elif werkzeug in ("Agent", "Task"):
-            melde("laeuft", "🤖 Agent: " + str(ein.get("description") or ein.get("subagent_type") or "gestartet"))
+        raus = [("laeuft", "💬 " + text) for text in neue_texte(eingabe, z)]
         schreib_zustand(z)
+    if werkzeug == "advisor":
+        raus.append(("laeuft", "🧠 Advisor wird befragt …"))
+    elif werkzeug == "Skill":
+        raus.append(("laeuft", f"🧩 Skill {ein.get('skill', '')} geladen".replace("  ", " ")))
+    elif werkzeug in ("Agent", "Task"):
+        raus.append(("laeuft", "🤖 Agent: " + str(ein.get("description") or ein.get("subagent_type") or "gestartet")))
+    sende(raus)
     datei = ORDNER / f"puls-{AUFTRAG}.txt"
     try:
         if time.time() - datei.stat().st_mtime < PULS_S:

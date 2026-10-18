@@ -191,8 +191,11 @@ object StimmProbe {
                         }, "jarvis-stimmprobe-stille").start()
                     }
                     "session.output_audio.delta", "response.output_audio.delta" -> {
-                        synchronized(audio) { audio.write(Base64.decode(e.optString("delta"), Base64.DEFAULT)) }
-                        letztesAudio.set(System.currentTimeMillis())
+                        val daten = Base64.decode(e.optString("delta"), Base64.DEFAULT)
+                        synchronized(audio) { audio.write(daten) }
+                        // GPT-Live schickt auch nach dem Satz durchgehend Stille: Nur hörbarer Ton zählt, sonst griffe die
+                        // 1,5-Sekunden-Regel nie und jede Probe liefe bis zum Zeitlimit (doppelte Kosten, 10 s Stille in der Datei).
+                        if (hoerbar(daten)) letztesAudio.set(System.currentTimeMillis())
                     }
                     "response.done" -> fertig.complete(null)
                     "error" -> {
@@ -229,5 +232,15 @@ object StimmProbe {
         if (!fertig.isCompleted) fertig.complete(null)
         val pcm = synchronized(audio) { audio.toByteArray() }
         return if (pcm.size > 4800) pcm.copyOf(pcm.size - pcm.size % 2) to null else null to (fehler ?: "Die Stimme hat nichts gesagt. Bitte nochmal versuchen.")
+    }
+
+    /** Echter Ton statt (fast) Stille: Effektivwert (PCM16) über derselben Schwelle wie im Live-Gespräch. */
+    private fun hoerbar(b: ByteArray): Boolean {
+        val n = b.size - b.size % 2
+        if (n < 2) return false
+        var summe = 0.0
+        var i = 0
+        while (i + 1 < n) { val s = (b[i].toInt() and 0xFF) or (b[i + 1].toInt() shl 8); summe += s.toDouble() * s; i += 2 }
+        return kotlin.math.sqrt(summe / (n / 2)) > 120.0
     }
 }

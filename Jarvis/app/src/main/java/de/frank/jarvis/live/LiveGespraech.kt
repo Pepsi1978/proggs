@@ -92,7 +92,7 @@ class LiveGespraech(
      * Ein Stück Ausgabe; [hoerbar] = echter Ton statt Stille. Nur hörbarer Ton hält Sprechanzeige und Echosperre.
      * [ganzStill] = digitale Stille ohne jeden Ansatz (Spitze unter [STILLE_SPITZE]): darf in Pausen entfallen.
      */
-    private class Stueck(val daten: ByteArray, val hoerbar: Boolean, val ganzStill: Boolean = false)
+    private class Stueck(val daten: ByteArray, val hoerbar: Boolean, val ganzStill: Boolean = false, val item: String = "")
     private val ausgabe = LinkedBlockingQueue<Stueck>()
     private var alterModus = AudioManager.MODE_NORMAL
     /** Medienweg (A2DP/Kopfhörer, Handy-Mikrofon, kein Telefonmodus) statt Freisprechen; fest ab Gesprächsbeginn. */
@@ -166,6 +166,7 @@ class LiveGespraech(
             offene.incrementAndGet()
         }
         status("Verbinde …")
+        anrufWaechterAn()
         if (gemini) { testEingabeAn(); geminiVerbinden(schluessel); stilleWaechter(); return }
         val url = if (live) "wss://api.openai.com/v1/live/sessions" else "wss://api.openai.com/v1/realtime?model=$modell"
         val anfrage = Request.Builder().url(url).header("Authorization", "Bearer $schluessel").build()
@@ -450,7 +451,8 @@ class LiveGespraech(
                     if (!verwerfenGemini) synchronized(jarvisTeile) { jarvisTeile.append(d) }
                 }
                 val teile = c.optJSONObject("modelTurn")?.optJSONArray("parts")
-                if (teile != null && !verwerfenGemini) for (i in 0 until teile.length()) {
+                // Telefonat: Jarvis spricht nicht in den Anruf hinein.
+                if (teile != null && !verwerfenGemini && !anrufAktiv) for (i in 0 until teile.length()) {
                     val p = teile.optJSONObject(i) ?: continue
                     if (p.optBoolean("thought")) continue
                     val daten = p.optJSONObject("inlineData")?.optString("data")?.takeIf { it.isNotEmpty() } ?: continue
@@ -513,7 +515,10 @@ class LiveGespraech(
             }
         }
         testEingabe = r
-        androidx.core.content.ContextCompat.registerReceiver(app, r, android.content.IntentFilter("de.frank.jarvis.LIVE_PRUEFSATZ"), androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
+        // Exportiert, damit adb senden kann, aber nur mit DUMP: Die hat die adb-Shell, keine installierte App. Sonst könnte
+        // jede App im Debug-Build (der Standard auf dem Handy) Text ins Gespräch schleusen und damit Werkzeuge auslösen.
+        androidx.core.content.ContextCompat.registerReceiver(app, r, android.content.IntentFilter("de.frank.jarvis.LIVE_PRUEFSATZ"),
+            android.Manifest.permission.DUMP, null, androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
     }
 
     /**
@@ -617,11 +622,15 @@ class LiveGespraech(
             }
             "session.output_audio.delta" -> {
                 val jetzt = System.currentTimeMillis()
-                letzteAktivitaet = jetzt
                 val daten = Base64.decode(e.optString("delta"), Base64.DEFAULT)
                 // GPT-Live sagt nicht, wann es spricht: Nur hörbarer Ton zählt als Sprechen, Stille hält nichts fest.
                 val hoerbar = hoerbar(daten)
+                // GPT-Live schickt auch in Pausen durchgehend Stille (§14.1): Nur hörbarer Ton zählt als Aktivität, sonst
+                // griffe das Stille-Ende nie und das Gespräch kostete im Leerlauf weiter.
+                if (hoerbar) letzteAktivitaet = jetzt
                 ausgabeStatistik(jetzt, daten.size, hoerbar)
+                // Telefonat: Jarvis spricht nicht in den Anruf hinein.
+                if (anrufAktiv) return
                 if (verwerfenLive) {
                     // Die abgebrochene Antwort läuft noch nach; erst nach 1,5 s ohne hörbaren Ton kommt wieder Neues, spätestens nach 10 s.
                     if (jetzt - verwerfenSeitMs < VERWERFEN_MAX_MS && (!hoerbar || jetzt - letzteVerworfenMs < 1_500)) {
@@ -827,16 +836,23 @@ class LiveGespraech(
                 letzteAktivitaet = System.currentTimeMillis()
                 val item = e.optString("item_id")
                 if (item.isNotEmpty() && item == verworfenItem) return
+                // Telefonat: Jarvis spricht nicht in den Anruf hinein.
+                if (anrufAktiv) return
                 if (item != antwortItem) { antwortItem = item; empfangenBytes = 0; abgespieltBytes = 0 }
                 val daten = Base64.decode(e.optString("delta"), Base64.DEFAULT)
                 empfangenBytes += daten.size
+                // Für den Mikrofon-Faden: Er setzt die Sprechanzeige zurück, sobald der Rest der Antwort verklungen ist.
+                letzteHoerbarEmpfangMs = letzteAktivitaet
                 if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
-                // Realtime grenzt seine Antworten selbst ab: Jedes Stück zählt wie bisher als Ton.
-                ausgabe.offer(Stueck(daten, true))
+                // Realtime grenzt seine Antworten selbst ab: Jedes Stück zählt wie bisher als Ton. Mit Kennung, damit
+                // [abgespieltBytes] nur die Stücke dieser Antwort zählt, nicht den Rest der vorigen.
+                ausgabe.offer(Stueck(daten, true, item = item))
             }
             "input_audio_buffer.speech_started" -> {
                 letzteAktivitaet = System.currentTimeMillis()
-                if (sprichtGerade && antwortItem.isNotEmpty() && st["unterbrechen"] == "an") {
+                // Auch nach response.done: Realtime liefert schneller als Echtzeit, der Schluss der Antwort läuft dann noch.
+                // Kürzen geht auch bei einer fertigen Antwort; ohne Kürzen glaubte das Modell, Frank habe alles gehört.
+                if (antwortItem.isNotEmpty() && st["unterbrechen"] == "an" && (sprichtGerade || echterTonOffen())) {
                     val ms = gehoertMs()
                     ws?.send(JSONObject().put("type", "conversation.item.truncate").put("item_id", antwortItem).put("content_index", 0).put("audio_end_ms", ms).toString())
                 }
@@ -859,12 +875,15 @@ class LiveGespraech(
                 if (satz.isNotEmpty()) jarvisSatz(satz)
             }
             "response.done" -> {
-                sprichtGerade = false
                 val resp = e.optJSONObject("response")
                 resp?.optJSONObject("usage")?.let { realtimeKosten(it) }
                 val out = resp?.optJSONArray("output")
                 val ruftWerkzeug = out != null && (0 until out.length()).any { out.optJSONObject(it)?.optString("type") == "function_call" }
-                if (laeuft && !ruftWerkzeug) status("Ich höre zu")
+                // Läuft der Schluss der Antwort noch, bleibt „Jarvis spricht“ stehen; zurück setzt dann der Mikrofon-Faden.
+                if (ruftWerkzeug || !echterTonOffen()) {
+                    sprichtGerade = false
+                    if (laeuft && !ruftWerkzeug) status("Ich höre zu")
+                }
             }
             "response.function_call_arguments.done" -> {
                 val name = e.optString("name")
@@ -937,6 +956,50 @@ class LiveGespraech(
         }
     }
 
+    // ---- Telefonat: Jarvis verstummt und hört nicht mit, danach geht das Gespräch weiter ----
+    /** Ein echter Telefonanruf klingelt oder läuft (Audiomodus); kurze Fokusverluste (Hinweiston, Navigation) zählen nicht. */
+    @Volatile private var anrufAktiv = false
+    private val anrufSperre = Any()
+    private var modusWaechter: Any? = null
+
+    /** Nur Telefonie-Modi; MODE_IN_COMMUNICATION nicht, den setzt das Freisprechen dieses Gesprächs selbst. */
+    private fun istAnruf(modus: Int) = modus == AudioManager.MODE_RINGTONE || modus == AudioManager.MODE_IN_CALL ||
+        (Build.VERSION.SDK_INT >= 30 && modus == AudioManager.MODE_CALL_SCREENING) ||
+        (Build.VERSION.SDK_INT >= 33 && modus == AudioManager.MODE_CALL_REDIRECT)
+
+    /** Ohne Laufzeitberechtigung: Der Audiomodus verrät Klingeln und Telefonat (READ_PHONE_STATE ist nicht nötig). */
+    private fun anrufWaechterAn() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            val l = AudioManager.OnModeChangedListener { m -> anrufPruefen(m) }
+            runCatching { audio.addOnModeChangedListener(app.mainExecutor, l) }.onSuccess { modusWaechter = l }
+        }
+        anrufPruefen(runCatching { audio.mode }.getOrDefault(AudioManager.MODE_NORMAL))
+    }
+
+    private fun anrufWaechterAus() {
+        if (Build.VERSION.SDK_INT >= 31) (modusWaechter as? AudioManager.OnModeChangedListener)?.let { runCatching { audio.removeOnModeChangedListener(it) } }
+        modusWaechter = null
+    }
+
+    private fun anrufPruefen(modus: Int) {
+        val anruf = istAnruf(modus)
+        synchronized(anrufSperre) {
+            if (anruf == anrufAktiv || !laeuft) return
+            anrufAktiv = anruf
+        }
+        if (anruf) {
+            Log.i(LiveRouting.TAG, "Telefonat (Modus $modus): Jarvis verstummt, Mikrofon schickt Stille")
+            // Wie das Antippen: laufende Antwort abbrechen bzw. kürzen und den Puffer leeren.
+            unterbrechen()
+            status("Telefonat · Jarvis wartet")
+        } else {
+            Log.i(LiveRouting.TAG, "Telefonat beendet: Gespräch geht weiter")
+            // Das Telefonat zählt nicht als Stille: Das Stille-Ende zählt ab jetzt.
+            letzteAktivitaet = System.currentTimeMillis()
+            if (laeuft) status("Ich höre zu")
+        }
+    }
+
     /** Beendet das Gespräch nach der eingestellten Stille; GPT-Live kostet sonst im Leerlauf weiter. */
     private fun stilleWaechter() {
         val minuten = st["stille_ende"].toIntOrNull() ?: 0
@@ -944,6 +1007,9 @@ class LiveGespraech(
             while (laeuft) {
                 runCatching { Thread.sleep(5_000) }
                 if (!laeuft) break
+                // Vor Android 12 meldet niemand einen Moduswechsel: hier nachsehen.
+                if (Build.VERSION.SDK_INT < 31) anrufPruefen(runCatching { audio.mode }.getOrDefault(AudioManager.MODE_NORMAL))
+                if (anrufAktiv) continue
                 if (minuten > 0 && System.currentTimeMillis() - letzteAktivitaet > minuten * 60_000L) {
                     beiFehler("Live-Gespräch nach $minuten Minuten Stille beendet.")
                     beenden()
@@ -1085,8 +1151,9 @@ class LiveGespraech(
                         "letzter Ton vor ${jetzt - letzteHoerbarMs} ms")
                 }
                 // GPT-Live meldet kein Ende der Rede: Ist kein hörbarer Ton mehr offen, hört Jarvis wieder zu. Hängt die
-                // Wiedergabe, gilt nach STATUS_MAX_MS ohne geschriebenen und empfangenen Ton dasselbe.
-                if ((live || gemini) && sprichtGerade) {
+                // Wiedergabe, gilt nach STATUS_MAX_MS ohne geschriebenen und empfangenen Ton dasselbe. Realtime ebenso, wenn
+                // response.done kam, während der Schluss der Antwort noch lief.
+                if (sprichtGerade) {
                     val seit = jetzt - maxOf(letzteHoerbarMs, letzteHoerbarEmpfangMs)
                     if ((!tonOffen && seit >= 300) || seit >= STATUS_MAX_MS) {
                         if (tonOffen) Log.w(LiveRouting.TAG, "Wiedergabe kommt nicht voran: Sprechanzeige zurückgesetzt, Warteschlange ${ausgabe.size}")
@@ -1094,7 +1161,8 @@ class LiveGespraech(
                         if (laeuft) status("Ich höre zu")
                     }
                 }
-                val stueck = if ((stumm && !live) || echoZu) ByteArray(n) else puffer.copyOf(n)
+                // Telefonat: Der Dienst bekommt Stille, damit er das Gespräch am Telefon nicht mithört.
+                val stueck = if ((stumm && !live) || echoZu || anrufAktiv) ByteArray(n) else puffer.copyOf(n)
                 // Gemini: nur an eine fertig aufgebaute Verbindung, beim Wechsel (goAway, Schlüssel) kurz nichts.
                 if (gemini) { if (bereit) ws?.send(geminiAudio(stueck)); continue }
                 ws?.send(JSONObject().put("type", anhaengen).put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
@@ -1123,9 +1191,17 @@ class LiveGespraech(
             var mUnterlauf = runCatching { track.underrunCount }.getOrDefault(0)
             fun schreiben(b: ByteArray, ab: Int, n: Int): Int {
                 if (n <= 0) return 0
+                val leerungVorher = leerungen.get()
                 val t0 = System.currentTimeMillis()
                 val r = runCatching { wiedergabe?.write(b, ab, n) }.getOrNull() ?: 0
                 mSchreiben = maxOf(mSchreiben, System.currentTimeMillis() - t0)
+                if (leerungen.get() != leerungVorher) {
+                    // Während write() wurde geleert (Antippen, Dazwischenreden): Was dieses write() danach noch in den
+                    // frischen Puffer geschoben hat, ist ein Rest der abgebrochenen Antwort. Ebenfalls verwerfen und nicht
+                    // zählen, sonst stünde [gepuffertFrames] bis zum nächsten Leeren zu hoch.
+                    wiedergabeLeeren()
+                    return 0
+                }
                 if (r > 0) geschriebeneFrames.addAndGet(r / 2L)
                 return r
             }
@@ -1171,7 +1247,8 @@ class LiveGespraech(
                     letzteAusgabeMs = System.currentTimeMillis()
                     if (stueck.hoerbar) letzteHoerbarMs = letzteAusgabeMs
                     vorherStill = stueck.ganzStill
-                    abgespieltBytes += stueck.daten.size
+                    // Nur Stücke der laufenden Antwort: Der Rest der vorigen verfälschte sonst [gehoertMs] (Realtime).
+                    if (stueck.item == antwortItem) abgespieltBytes += stueck.daten.size
                     // Erst nach dem Schreiben protokollieren: nichts zwischen Füllstandsmessung und write().
                     satz?.let { Log.i(LiveRouting.TAG, it) }
                 }
@@ -1192,15 +1269,30 @@ class LiveGespraech(
     /** Realtime: wirklich gehörte Millisekunden der Antwort, also geschrieben minus das, was noch im Puffer wartet. */
     private fun gehoertMs(): Int = (minOf(abgespieltBytes, empfangenBytes) / 48 - gepuffertFrames() / 24).coerceAtLeast(0).toInt()
 
+    /** Echter Ton wartet noch oder ist noch nicht abgespielt (Füll-Stille zählt nicht); wie `tonOffen` im Mikrofon-Faden. */
+    private fun echterTonOffen(): Boolean {
+        val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
+        return ausgabe.any { it.hoerbar } || kopf < echtBisFrame
+    }
+
     /** Frames, die noch auf den Lautsprecher warten (echter Ton wie Stille); 0, wenn die Wiedergabe leer ist. */
     private fun gepuffertFrames(): Long {
         val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
         return (geschriebeneFrames.get() - kopf).coerceAtLeast(0)
     }
 
+    /** Zählt jedes Leeren: Der Ton-Faden erkennt daran, dass sein laufendes write() einen Rest der alten Antwort geschrieben hat. */
+    private val leerungen = java.util.concurrent.atomic.AtomicInteger(0)
+
     private fun ausgabeLeeren() {
         ausgabe.clear()
         sprichtGerade = false
+        leerungen.incrementAndGet()
+        wiedergabeLeeren()
+    }
+
+    /** Leert nur den Wiedergabepuffer und stellt die Zählung darauf ein; die Warteschlange bleibt. */
+    private fun wiedergabeLeeren() {
         wiedergabe?.let { runCatching { it.pause(); it.flush(); it.play() } }
         // Nach dem Leeren ist nichts Echtes mehr unterwegs: Die Echosperre öffnet sofort (nach ihrem kurzen Nachlauf).
         geschriebeneFrames.set(0)
@@ -1359,7 +1451,11 @@ class LiveGespraech(
             w = ws
             ws = null
         }
+        // Gemini: Endet das Gespräch mitten im Verbindungswechsel, auch die abgelöste Verbindung schließen; sonst bliebe sie
+        // offen und lieferte noch Ton und Werkzeugaufrufe in ein beendetes Gespräch.
+        abgeloest?.let { a -> abgeloest = null; runCatching { a.close(1000, "Ende") } }
         tonAus()
+        anrufWaechterAus()
         testEingabe?.let { r -> testEingabe = null; runCatching { app.unregisterReceiver(r) } }
         nutzerFertig(); jarvisFertig()
         if (senden && live && w != null && bereit) {
@@ -1377,7 +1473,8 @@ class LiveGespraech(
         } else {
             runCatching { w?.close(1000, "Ende") }
             client.dispatcher.executorService.shutdown()
-            abrechnen()
+            // Das Kostenbuch schreibt synchron (commit): nicht auf dem Hauptfaden, wenn Frank per Knopf beendet.
+            Thread({ abrechnen() }, "jarvis-live-abrechnung").start()
         }
         beiEnde()
     }

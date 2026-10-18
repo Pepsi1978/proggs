@@ -54,7 +54,13 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
      * Holt die Einträge frisch vom Server. Bricht der Abruf ab, bleibt der bisherige Bestand lesbar.
      * Rückgabe: Anzahl der Einträge oder null bei Fehler.
      */
-    suspend fun synchronisiere(tage: Int = 4000): Int? = withContext(Dispatchers.IO) {
+    suspend fun synchronisiere(tage: Int = 4000): Int? = abrufSperre.withLock { synchronisiereGesperrt(tage) }
+
+    /**
+     * Der Abruf selbst, nur unter [abrufSperre]: Zwei gleichzeitige Abrufe (Wächter, Auswertung, Werkzeug) schrieben sonst dieselben
+     * Dateien, und der Vollabruf löschte einen Eintrag, den ein Teilabruf gerade neu geholt hat.
+     */
+    private suspend fun synchronisiereGesperrt(tage: Int): Int? = withContext(Dispatchers.IO) {
         runCatching {
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/tagebuch?tage=$tage").header("X-Jarvis-Token", e.serverToken).build()
             val antwort = CLIENT.newCall(anfrage).execute().use { a ->
@@ -87,7 +93,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /** Vor dem Lesen kurz nachholen, wenn der Bestand leer oder älter als 20 Minuten ist. */
-    private suspend fun frisch() = abrufSperre.withLock { if (eintraege().isEmpty() || System.currentTimeMillis() - zuletztGeholt > 20 * 60_000L) synchronisiere() }
+    private suspend fun frisch() = abrufSperre.withLock { if (eintraege().isEmpty() || System.currentTimeMillis() - zuletztGeholt > 20 * 60_000L) synchronisiereGesperrt(4000) }
 
     /** Die letzten Tage im Volltext (begrenzt), für Tagesdatenbank und Tagesauswertung. */
     fun rueckblick(tage: Int = 7, zeichenJeTag: Int = 2500): String {

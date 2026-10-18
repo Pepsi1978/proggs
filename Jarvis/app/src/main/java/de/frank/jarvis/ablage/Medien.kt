@@ -179,8 +179,10 @@ object Medien {
                 seite = doc.startPage(PdfDocument.PageInfo.Builder(A4_B, A4_H, nr).create())
                 y = rand
             }
-            fun setze(t: String, farbe: TextPaint, abstandNach: Float) {
-                val layout = statisch(t.ifEmpty { " " }, farbe, breite)
+            fun setze(roh: String, farbe: TextPaint, abstandNach: Float) {
+                // Layout und Zeichnen mit demselben Text: Eine Leerzeile wird als " " gesetzt, sonst liefe drawText über das Ende.
+                val t = roh.ifEmpty { " " }
+                val layout = statisch(t, farbe, breite)
                 var zeile = 0
                 while (zeile < layout.lineCount) {
                     if (seite == null || y + (layout.getLineBottom(zeile) - layout.getLineTop(zeile)) > A4_H - rand) neueSeite()

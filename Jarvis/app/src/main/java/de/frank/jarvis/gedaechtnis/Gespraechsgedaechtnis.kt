@@ -56,10 +56,27 @@ object Gespraechsgedaechtnis {
     // ---------------------------------------------------------------- Notizen
 
     @Synchronized
-    fun alleNotizen(context: Context): List<Gespraechsnotiz> = runCatching {
-        val a = JSONArray(notizDatei(context).readText())
-        (0 until a.length()).map { i -> a.getJSONObject(i).let { n -> Gespraechsnotiz(n.getInt("id"), n.getString("text"), n.optLong("erstellt"), n.optString("bis").takeIf { it.isNotBlank() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }) } }
-    }.getOrDefault(emptyList())
+    fun alleNotizen(context: Context): List<Gespraechsnotiz> {
+        val d = notizDatei(context)
+        if (!d.isFile) return emptyList()
+        return runCatching {
+            val a = JSONArray(d.readText())
+            (0 until a.length()).map { i -> a.getJSONObject(i).let { n -> Gespraechsnotiz(n.getInt("id"), n.getString("text"), n.optLong("erstellt"), n.optString("bis").takeIf { it.isNotBlank() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }) } }
+        }.getOrElse {
+            // Unlesbar: einmal beiseitelegen, bevor das nächste Merken die Datei mit nur einer Notiz überschreibt.
+            beiseitelegen(d)
+            emptyList()
+        }
+    }
+
+    /** Je Datei höchstens eine `.defekt-<Zeit>`-Kopie pro Prozess, sonst entstünde bei jedem Lesen eine neue. */
+    private val beiseitegelegt = HashSet<String>()
+
+    private fun beiseitelegen(d: File) {
+        if (d.length() == 0L || !synchronized(beiseitegelegt) { beiseitegelegt.add(d.name) }) return
+        runCatching { d.copyTo(File(d.path + ".defekt-" + System.currentTimeMillis()), overwrite = true) }
+        Logbuch.fehler("Gesprächsgedächtnis: ${d.name} unlesbar, beiseitegelegt")
+    }
 
     /** Die gültigen Notizen: nicht abgelaufen. */
     fun notizen(context: Context): List<Gespraechsnotiz> {
@@ -70,10 +87,8 @@ object Gespraechsgedaechtnis {
     @Synchronized
     private fun schreibeNotizen(context: Context, liste: List<Gespraechsnotiz>) {
         val inhalt = JSONArray(liste.map { JSONObject().put("id", it.id).put("text", it.text).put("erstellt", it.erstellt).put("bis", it.bis?.toString() ?: "") }).toString()
-        val d = notizDatei(context)
-        val neu = File(d.path + ".neu")
-        neu.writeText(inhalt)
-        if (!neu.renameTo(d)) { d.writeText(inhalt); neu.delete() }
+        // Atomar (Zwischendatei, fsync, umbenennen): Ein Abbruch hinterlässt nie eine halbe Notizdatei.
+        de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(notizDatei(context), inhalt.toByteArray())
     }
 
     @Synchronized
@@ -153,8 +168,14 @@ object Gespraechsgedaechtnis {
 
     // ---------------------------------------------------------------- Lernen aus Gesprächen
 
-    private fun ladeStand(context: Context): JSONObject = runCatching { JSONObject(standDatei(context).readText()) }.getOrDefault(JSONObject())
-    private fun speichereStand(context: Context, stand: JSONObject) = runCatching { standDatei(context).writeText(stand.toString()) }
+    private fun ladeStand(context: Context): JSONObject {
+        val d = standDatei(context)
+        if (!d.isFile) return JSONObject()
+        return runCatching { JSONObject(d.readText()) }.getOrElse { beiseitelegen(d); JSONObject() }
+    }
+    // Atomar: Ein halb geschriebener Stand ließe Jarvis die Gespräche der letzten drei Tage noch einmal lernen.
+    private fun speichereStand(context: Context, stand: JSONObject) =
+        runCatching { de.frank.jarvis.ablage.AblageSpeicher.schreibeAtomar(standDatei(context), stand.toString().toByteArray()) }
 
     /** Neue Wechsel aus Gesprächen, die seit mindestens zehn Minuten ruhen: (Gespräch, bisher gelernte Anzahl, alle Nachrichten). */
     private fun offen(context: Context, stand: JSONObject): List<Triple<de.frank.jarvis.data.Sitzung, Int, List<de.frank.jarvis.data.GespeicherteNachricht>>> {

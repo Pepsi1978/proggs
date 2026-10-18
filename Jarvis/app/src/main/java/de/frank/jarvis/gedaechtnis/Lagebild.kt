@@ -126,6 +126,8 @@ object Lagebild {
 
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sperren = Bereich.entries.associateWith { Mutex() }
+    /** Die laufende Lesung je Bereich (siehe [frische]); nur unter der Sperre des Bereichs gelesen und gesetzt. */
+    private val lesungen = java.util.concurrent.ConcurrentHashMap<Bereich, kotlinx.coroutines.Deferred<String>>()
     private val speicherSperre = Any()
     private val _stand = MutableStateFlow(LagebildStand())
     val stand: StateFlow<LagebildStand> = _stand.asStateFlow()
@@ -210,8 +212,20 @@ object Lagebild {
             // Der Stand ist der Beginn der Lesung, nicht ihr Ende: Eine Änderung während einer langen Lesung gilt sonst
             // als schon gelesen, und ein gleich danach eintreffendes Änderungssignal würde übersprungen.
             val beginn = System.currentTimeMillis()
-            val gelesen = withTimeoutOrNull(b.zeitlimitMs) { runCatching { lies(app, b) }.getOrElse { "NICHT VERFÜGBAR: ${it.message ?: it.javaClass.simpleName}" } }
-                ?: "NICHT VERFÜGBAR: keine Antwort innerhalb von ${b.zeitlimitMs / 1000} Sekunden"
+            // Die Lesung läuft für sich, begrenzt wird nur das Warten: Ein blockierender Leser (Abfrage einer fremden App,
+            // Socket) lässt sich nicht abbrechen, und withContext wartete sonst trotz Zeitlimit auf ihn. So hält ein hängender
+            // Bereich weder seine Sperre noch die ganze Wächter-Runde fest. Hängt die vorige Lesung noch, keine zweite daneben.
+            val vorige = lesungen[b]?.takeIf { it.isActive }
+            val lesung = vorige ?: bereich.async {
+                try { lies(app, b) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { "NICHT VERFÜGBAR: ${e.message ?: e.javaClass.simpleName}" }
+            }.also { lesungen[b] = it }
+            val gelesen = try {
+                withTimeoutOrNull(b.zeitlimitMs) { lesung.await() }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Abbruch von außen (Dienst beendet) weiterreichen, nicht als Störung des Bereichs werten.
+                lesung.cancel()
+                throw e
+            } ?: (if (vorige != null) "NICHT VERFÜGBAR: die vorige Lesung hängt noch" else "NICHT VERFÜGBAR: keine Antwort innerhalb von ${b.zeitlimitMs / 1000} Sekunden")
             val jetzt = System.currentTimeMillis()
             val fehler = gelesen.trim().startsWith("NICHT VERFÜGBAR")
             val altGut = alt != null && alt.text.isNotBlank() && !alt.text.startsWith("NICHT VERFÜGBAR")

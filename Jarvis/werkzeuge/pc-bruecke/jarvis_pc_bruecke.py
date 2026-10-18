@@ -176,6 +176,21 @@ def jarvis_hooks() -> dict:
     }
 
 
+def raeume_auf() -> None:
+    """Aufträge, Startskripte und Hook-Zustände blieben sonst für immer liegen, samt dem vollen Auftragstext in TMPDIR.
+    14 Tage: Kein Warter lebt länger als 12 h, und so alte Sitzungen laufen nicht mehr."""
+    grenze = time.time() - 14 * 86400
+    for ordner, muster in ((TEMP, ("auftrag-*.txt", "start-*.command", "settings-*.json")),
+                           (ORDNER, ("hook-*.json", "hook-*.json.*.tmp", "hook-*.sperre", "hook-*.lock", "puls-*.txt", "warter-*.pid"))):
+        for m in muster:
+            for datei in ordner.glob(m):
+                try:
+                    if datei.is_file() and datei.stat().st_mtime < grenze:
+                        datei.unlink()
+                except OSError:
+                    pass
+
+
 def starte_sitzung(auftrag: dict) -> str:
     app = re.sub(r"[^\w ._-]", "", str(auftrag.get("app", ""))).strip() or "App"
     name = f"Jarvis: {app}"
@@ -194,6 +209,7 @@ VORGEHEN
 """
     stempel = time.strftime("%Y%m%d-%H%M%S")
     TEMP.mkdir(parents=True, exist_ok=True)
+    raeume_auf()
     auftrag_datei = TEMP / f"auftrag-{stempel}.txt"
     auftrag_datei.write_text(text, encoding="utf-8")
     nummer = str(auftrag.get("nummer", ""))
@@ -265,6 +281,7 @@ def main() -> int:
     except OSError:
         return 0
     schreib(f"Brücke gestartet ({RECHNER}, Rang ersatz)")
+    raeume_auf()
     pause = 2
     while True:
         try:

@@ -8,8 +8,6 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.lifecycle.Lifecycle
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.io.BufferedReader
@@ -273,14 +271,19 @@ class CodexAuthManager(context: Context) {
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
+    /**
+     * [context] am besten der Application-Context: Die Anmeldung wartet bis zu einer Viertelstunde und überlebt so ein
+     * Auf- oder Zuklappen, ohne eine alte Activity festzuhalten. [imVordergrund] meldet, ob die App gerade sichtbar ist.
+     */
     suspend fun login(
-        activity: ComponentActivity,
+        context: Context,
+        imVordergrund: () -> Boolean,
         onDeviceCode: (DeviceAuthInfo) -> Unit,
     ): AuthResult = loginMutex.withLock {
         val loginJob = currentCoroutineContext().job
         activeLoginJob.set(loginJob)
         try {
-            withContext(Dispatchers.IO) { loginInternal(activity, onDeviceCode) }
+            withContext(Dispatchers.IO) { loginInternal(context, imVordergrund, onDeviceCode) }
         } catch (error: IOException) {
             throw networkException("Die OpenAI-Anmeldung ist wegen eines Netzwerkfehlers fehlgeschlagen.", error)
         } finally {
@@ -390,7 +393,8 @@ class CodexAuthManager(context: Context) {
     }
 
     private suspend fun loginInternal(
-        activity: ComponentActivity,
+        context: Context,
+        imVordergrund: () -> Boolean,
         onDeviceCode: (DeviceAuthInfo) -> Unit,
     ): AuthResult {
         val start = postJson(
@@ -409,13 +413,13 @@ class CodexAuthManager(context: Context) {
         withContext(Dispatchers.Main) {
             onDeviceCode(deviceInfo)
             // Erst kopieren, dann die Seite öffnen: Dort genügt dann Einfügen.
-            val clipboard = activity.getSystemService(android.content.ClipboardManager::class.java)
+            val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
             clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("OpenAI-Code", userCode))
         }
         // Kurz stehen lassen, damit der Code sichtbar ist, bevor der Browser übernimmt.
         delay(1_400)
         withContext(Dispatchers.Main) {
-            activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(deviceInfo.verificationUri)))
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(deviceInfo.verificationUri)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
 
         val expiresAt = System.currentTimeMillis() + DEVICE_CODE_LIFETIME_MS
@@ -456,7 +460,7 @@ class CodexAuthManager(context: Context) {
                             "OpenAI hat den Gerätecode bestätigt, aber keinen vollständigen Anmeldecode geliefert.",
                         )
                     }
-                    awaitForegroundAndNetwork(activity)
+                    awaitForegroundAndNetwork(imVordergrund)
                     return exchangeCode(code, verifier)
                 }
             }
@@ -734,9 +738,9 @@ class CodexAuthManager(context: Context) {
         })
     }
 
-    private suspend fun awaitForegroundAndNetwork(activity: ComponentActivity) {
+    private suspend fun awaitForegroundAndNetwork(imVordergrund: () -> Boolean) {
         val ready = withTimeoutOrNull(FOREGROUND_NETWORK_TIMEOUT_MS) {
-            while (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) || !hasValidatedNetwork()) {
+            while (!imVordergrund() || !hasValidatedNetwork()) {
                 delay(NETWORK_POLL_MS)
             }
             true

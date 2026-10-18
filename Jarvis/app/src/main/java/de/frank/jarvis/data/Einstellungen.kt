@@ -98,19 +98,49 @@ class Einstellungen private constructor(context: Context) {
             val weg = alt.map { it.first }.filter { it != "geheimnis" }
             if (weg.isNotEmpty()) roh.edit().apply { weg.forEach { remove(it) } }.apply()
         }
-        // Zugangsdaten, die ein Bau am PC aus ~/SK mitbringt, dauerhaft übernehmen. Ein späteres Update aus dem
-        // Cloud-Bau (ohne ~/SK) verliert sie dann nicht mehr; vorher lebten sie nur in der jeweiligen APK.
+        // Adressen, die ein Bau am PC aus ~/SK mitbringt, dauerhaft übernehmen. Ein späteres Update aus dem Cloud-Bau
+        // (ohne ~/SK) verliert sie dann nicht mehr. Schlüssel und Tokens kommen bewusst nicht mehr aus dem Bau: In der APK
+        // stünden sie im Klartext, und wer die APK hat, hätte den Server-Zugang (siehe zugang.json unten).
         val eingebaut = mapOf(
-            "server_host" to BuildConfig.RELAY_HOST, "server_token" to BuildConfig.RELAY_TOKEN, "such_schluessel" to BuildConfig.TAVILY_KEY,
-            "drive_client_id" to BuildConfig.DRIVE_CLIENT_ID, "drive_client_secret" to BuildConfig.DRIVE_CLIENT_SECRET, "maps_schluessel" to BuildConfig.MAPS_KEY,
-            "routine_url" to BuildConfig.ROUTINE_URL, "routine_token" to BuildConfig.ROUTINE_TOKEN,
+            "server_host" to BuildConfig.RELAY_HOST, "drive_client_id" to BuildConfig.DRIVE_CLIENT_ID, "routine_url" to BuildConfig.ROUTINE_URL,
         ).filter { (k, v) -> v.isNotBlank() && roh.getString(k, "").isNullOrEmpty() }
         // Gestört: nichts davon in den Klartext-Ersatz schreiben; die Getter greifen ohnehin auf die Werte aus dem Bau zurück.
         if (eingebaut.isNotEmpty() && !gestoert) roh.edit().apply { eingebaut.forEach { (k, v) -> putString(k, v) } }.apply()
-        // Bringt ein Bau einen anderen Maps-Schlüssel mit als der vorige (eigener Schlüssel für Jarvis statt des geliehenen),
-        // gilt der neue; die Planung der Losfahr-Meldung beginnt damit von vorn.
-        if (!gestoert && BuildConfig.MAPS_KEY.isNotBlank() && roh.getString("maps_schluessel_bau", "") != BuildConfig.MAPS_KEY) {
-            roh.edit().putString("maps_schluessel", BuildConfig.MAPS_KEY).putString("maps_schluessel_bau", BuildConfig.MAPS_KEY).remove("abfahrt_zustand").apply()
+        uebernimmZugang(context.applicationContext)
+    }
+
+    /**
+     * Neue Zugangsdaten kommen einmalig über `files/zugang.json`, die ein adb-Skript per run-as ablegt
+     * ({"server_token": …, "routine_token": …, "such_schluessel": …, "maps_schluessel": …, "drive_client_secret": …, "server_host"?: …}).
+     * Jeder nicht leere Wert ersetzt den gespeicherten (verschlüsselt; gestört nur für diese Sitzung). Danach wird die Datei
+     * gelöscht, auch wenn sie unlesbar war; protokolliert wird nie ein Wert.
+     */
+    private fun uebernimmZugang(app: Context) {
+        val datei = java.io.File(app.filesDir, "zugang.json")
+        if (!datei.exists()) return
+        try {
+            val j = org.json.JSONObject(datei.readText())
+            val uebernommen = ZUGANG.filter { k ->
+                val wert = j.optString(k).trim()
+                if (wert.isEmpty()) return@filter false
+                when (k) {
+                    "server_host" -> put { putString(k, wert.removePrefix("https://").removePrefix("wss://").trimEnd('/')) }
+                    else -> {
+                        // Ein anderer Maps-Schlüssel: Die Planung der Losfahr-Meldung beginnt damit von vorn (wie früher beim Bau-Schlüssel).
+                        if (k == "maps_schluessel" && wert != s(k, "")) put { remove("abfahrt_zustand") }
+                        putGeheim(k, wert)
+                    }
+                }
+                true
+            }
+            Log.i(TAG, "Zugangsdaten aus zugang.json übernommen: ${uebernommen.joinToString()}")
+            runCatching { Protokoll.melde(Quelle.SYSTEM, "Einstellungen", "Zugangsdaten übernommen: ${uebernommen.joinToString()}") }
+        } catch (e: Exception) {
+            // Nur die Art des Fehlers: Die Meldung einer JSONException enthielte Teile der Datei, also Schlüssel.
+            Log.w(TAG, "zugang.json unlesbar (${e.javaClass.simpleName})")
+            Logbuch.fehler("Einstellungen: zugang.json unlesbar", null, e.javaClass.simpleName)
+        } finally {
+            if (!datei.delete()) Log.w(TAG, "zugang.json ließ sich nicht löschen")
         }
     }
 
@@ -124,16 +154,20 @@ class Einstellungen private constructor(context: Context) {
     /** Höchstens so viele Bearbeitungsrunden (Modellschritt samt Werkzeugaufrufen) je Anfrage im Gespräch; 0 = unbegrenzt. */
     var schrittlimit: Int
         get() = prefs.getInt("schrittlimit", STANDARD_SCHRITTLIMIT).takeIf { it in SCHRITTLIMITS } ?: STANDARD_SCHRITTLIMIT
-        set(v) = put { putInt("schrittlimit", if (v in SCHRITTLIMITS) v else STANDARD_SCHRITTLIMIT) }
+        set(v) {
+            // Ein ungültiger Wert ist ein Fehler des Aufrufers (Oberfläche, Sprachbefehl): laut ablehnen statt still auf 10 zu setzen.
+            require(v in SCHRITTLIMITS) { "Ungültiges Schrittlimit $v; erlaubt: ${SCHRITTLIMITS.joinToString { schrittlimitLabel(it) }}" }
+            put { putInt("schrittlimit", v) }
+        }
 
     // ---- Plugin und Server ----
-    /** Adresse des eigenen Servers (Jarvis-Relay). Vorgabe aus dem Bau, hier nur zum Überschreiben. */
+    /** Adresse des eigenen Servers (Jarvis-Relay). Vorgabe aus dem Bau oder zugang.json, hier nur zum Überschreiben. */
     var serverHost: String
         get() = s("server_host", "").ifEmpty { BuildConfig.RELAY_HOST }.ifEmpty { STANDARD_SERVER }
         set(v) = put { putString("server_host", v.trim().removePrefix("https://").removePrefix("wss://").trimEnd('/')) }
-    /** Schlüssel, mit dem sich dieses Handy am Server ausweist. Vorgabe aus dem Bau (~/SK/Jarvis). */
+    /** Schlüssel, mit dem sich dieses Handy am Server ausweist (Rolle „Handy“). Kommt über zugang.json oder die Einstellungen, nie aus dem Bau. */
     var serverToken: String
-        get() = s("server_token", "").ifEmpty { BuildConfig.RELAY_TOKEN }
+        get() = s("server_token", "")
         set(v) = putGeheim("server_token", v.trim())
     /** Der Dienst läuft, sobald die App einmal geöffnet wurde; hier lässt er sich abschalten. */
     var dienstAn: Boolean get() = prefs.getBoolean("dienst_an", true); set(v) = put { putBoolean("dienst_an", v) }
@@ -144,7 +178,9 @@ class Einstellungen private constructor(context: Context) {
      */
     val geheimnis: String
         // Gestört: das schon gespeicherte Geheimnis aus dem Ersatzspeicher (siehe init), sonst eines nur für diese Sitzung.
-        get() = s("geheimnis", "").ifEmpty { neuesGeheimnis() }
+        // Gesperrt und unter der Sperre erneut gelesen: Lesen Dienst und Oberfläche beim allerersten Start gleichzeitig,
+        // entstünden sonst zwei Geheimnisse, und der Tunnel meldete ein anderes, als die App als Plugin-Adresse zeigt.
+        get() = s("geheimnis", "").ifEmpty { synchronized(this) { s("geheimnis", "").ifEmpty { neuesGeheimnis() } } }
 
     fun neuesGeheimnis(): String {
         val zeichen = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -162,7 +198,7 @@ class Einstellungen private constructor(context: Context) {
 
     // ---- Internet-Recherche der Agenten ----
     var suchSchluessel: String
-        get() = s("such_schluessel", "").ifEmpty { BuildConfig.TAVILY_KEY }
+        get() = s("such_schluessel", "")
         set(v) = putGeheim("such_schluessel", v.trim())
 
     // ---- Repo auf GitHub ----
@@ -173,15 +209,15 @@ class Einstellungen private constructor(context: Context) {
     // ---- Programmieren in der Cloud (Claude-Code-Routine mit API-Trigger) ----
     /** Auslöse-Adresse der Routine (…/routines/trig_…/fire). Vorgabe aus dem Bau (~/SK/Jarvis/routine.properties). */
     var routineUrl: String get() = s("routine_url", "").ifEmpty { BuildConfig.ROUTINE_URL }.ifEmpty { STANDARD_ROUTINE }; set(v) = put { putString("routine_url", v.trim()) }
-    /** Token des API-Triggers dieser Routine; claude.ai zeigt ihn nur einmal an. */
-    var routineToken: String get() = s("routine_token", "").ifEmpty { BuildConfig.ROUTINE_TOKEN }; set(v) = putGeheim("routine_token", v.trim())
+    /** Token des API-Triggers dieser Routine; claude.ai zeigt ihn nur einmal an. Kommt über zugang.json oder die Einstellungen, nie aus dem Bau. */
+    var routineToken: String get() = s("routine_token", ""); set(v) = putGeheim("routine_token", v.trim())
 
     // ---- Google-Zugang für „Berechtigung erneuern“ (Tagebuch) ----
     var driveClientId: String
         get() = s("drive_client_id", "").ifEmpty { BuildConfig.DRIVE_CLIENT_ID }
         set(v) = putGeheim("drive_client_id", v.trim())
     var driveClientSecret: String
-        get() = s("drive_client_secret", "").ifEmpty { BuildConfig.DRIVE_CLIENT_SECRET }
+        get() = s("drive_client_secret", "")
         set(v) = putGeheim("drive_client_secret", v.trim())
 
     // ---- Wetter ----
@@ -192,7 +228,7 @@ class Einstellungen private constructor(context: Context) {
 
     // ---- Pünktlich losfahren (Google Routes API) ----
     var mapsSchluessel: String
-        get() = s("maps_schluessel", "").ifEmpty { BuildConfig.MAPS_KEY }
+        get() = s("maps_schluessel", "")
         set(v) = putGeheim("maps_schluessel", v.trim())
     /** An Arbeitstagen rechtzeitig vor der nötigen Abfahrt melden. */
     var abfahrtAn: Boolean get() = prefs.getBoolean("abfahrt_an", true); set(v) = put { putBoolean("abfahrt_an", v) }
@@ -301,7 +337,11 @@ class Einstellungen private constructor(context: Context) {
         /** Wählbare Schrittlimits pro Anfrage; 0 = unbegrenzt. */
         val SCHRITTLIMITS = (10..100 step 10).toList() + 0
         const val STANDARD_SCHRITTLIMIT = 10
+        /** So heißt ein Schrittlimit in Oberfläche und Sprachantworten. */
+        fun schrittlimitLabel(n: Int): String = if (n == 0) "Unbegrenzt" else "$n Schritte"
         private const val TAG = "JarvisEinstellungen"
+        /** Die Schlüssel, die zugang.json setzen darf (siehe uebernimmZugang). */
+        private val ZUGANG = listOf("server_token", "routine_token", "such_schluessel", "maps_schluessel", "drive_client_secret", "server_host")
         /** Schlüssel, die nie unverschlüsselt abgelegt werden dürfen. */
         private val GEHEIM = listOf(
             "geheimnis", "server_token", "mail_passwort", "github_token", "such_schluessel", "drive_client_id", "drive_client_secret",

@@ -86,7 +86,7 @@ class WeckwortDienst : Service() {
     private var letzterFaden: Thread? = null
     /** Mikrofon-Fehler in Folge, damit ein dauerhaft belegtes Mikrofon das Logbuch nicht flutet. */
     @Volatile private var lauschFehler = 0
-    private var wach: PowerManager.WakeLock? = null
+    @Volatile private var wach: PowerManager.WakeLock? = null
     private var gestartet = false
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -186,10 +186,35 @@ class WeckwortDienst : Service() {
             if (!an.get()) return@Thread
             val m = modelleHolen(tokens, schwelle, varianten, stand, vorgaengerFertig)
             val erk = m.erk
-            if (erk == null || !an.get()) return@Thread
+            if (erk == null) {
+                // Ohne Modell bliebe der Dienst sonst für immer taub, mit Meldung und wachgehaltener CPU.
+                if (an.get()) modelleSpaeterNeu(an)
+                return@Thread
+            }
+            if (!an.get()) return@Thread
+            ladeFehler = 0
+            // Nach einem gescheiterten Laden freigegeben (siehe [modelleSpaeterNeu]): fürs Lauschen wieder wach halten.
+            runCatching { wach?.takeIf { !it.isHeld }?.acquire() }
             Weckwort.aktivesWort(if (m.phr != null) PhrasenTokens.normiert(phrase) else "Hey Jarvis")
             schleife(erk, m.phr, m.spr, m.vad, an)
         }, "Weckwort").also { letzterFaden = it; it.start() }
+    }
+
+    /** Gescheiterte Ladeversuche der Weckwort-Modelle in Folge, für den wachsenden Abstand bis zum nächsten. */
+    @Volatile private var ladeFehler = 0
+
+    /**
+     * Die Weckwort-Modelle ließen sich nicht laden: später erneut versuchen (1, 2, 4 … höchstens 30 Minuten) und die CPU
+     * bis dahin schlafen lassen, denn ohne Modell wird nicht gelauscht.
+     */
+    private fun modelleSpaeterNeu(an: AtomicBoolean) {
+        val warte = minOf(60_000L shl minOf(ladeFehler++, 5), 30 * 60_000L)
+        Log.w(TAG, "Weckwort-Modelle fehlen, neuer Versuch in ${warte / 1000} s")
+        runCatching { if (wach?.isHeld == true) wach?.release() }
+        bereich.launch {
+            delay(warte)
+            if (lauf === an) { faden = null; lauschen() }
+        }
     }
 
     private class Modelle(val erk: WeckwortErkenner?, val phr: PhrasenErkenner?, val spr: SprecherErkenner?, val vad: SileroVad?)

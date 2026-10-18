@@ -298,6 +298,7 @@ class JarvisDienst : Service() {
             kanalAnlegen(app)
             runCatching { app.getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, baueHinweis(app, letzterText)) }
         }
+
         /** Laufende Start-Aufträge: Bei ausgeschalteter Bereitschaft beendet sich der Dienst erst, wenn keiner mehr läuft. */
         private val offen = AtomicInteger(0)
         /** Wie viele Aufträge der Dienst gerade abarbeitet (für [abgleichen]). */

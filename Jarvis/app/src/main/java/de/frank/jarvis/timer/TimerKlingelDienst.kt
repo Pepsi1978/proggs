@@ -52,6 +52,12 @@ class TimerKlingelDienst : Service() {
         vordergrund(baueMeldung())
         if (Timer.klingelt.value.isEmpty()) { beenden(); return START_NOT_STICKY }
         if (spieler == null) klingeln()
+        else {
+            // Ein weiterer Timer ist abgelaufen: Er bekommt die volle Klingeldauer, nicht nur den Rest des ersten.
+            val max = Einstellungen.get(this).timerKlingelMax
+            handler.removeCallbacks(hoechstdauer)
+            if (max > 0) handler.postDelayed(hoechstdauer, max * 60_000L)
+        }
         return START_NOT_STICKY
     }
 
@@ -92,6 +98,7 @@ class TimerKlingelDienst : Service() {
             vibrator = v
         }.onFailure { Log.w(TAG, "Vibration nicht möglich", it) }
         val max = e.timerKlingelMax
+        handler.removeCallbacks(hoechstdauer)
         if (max > 0) handler.postDelayed(hoechstdauer, max * 60_000L)
     }
 

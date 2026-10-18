@@ -59,15 +59,16 @@ object Gespraeche {
     /**
      * Speichert das ganze Gespräch. Ein von Hand vergebener Titel bleibt erhalten. Liefert den neuen Eintrag für die
      * Seitenleiste (null = nichts geschrieben). Ein älterer Stand mit weniger Nachrichten überschreibt nie einen neueren.
+     * [kuerzenUm]: So viele Nachrichten hat Frank bewusst entfernt (etwa die verworfene Antwort bei „Erneut versuchen“).
      */
-    fun speichern(context: Context, id: String, erstellt: Long, nachrichten: List<GespeicherteNachricht>): Sitzung? {
+    fun speichern(context: Context, id: String, erstellt: Long, nachrichten: List<GespeicherteNachricht>, kuerzenUm: Int = 0): Sitzung? {
         if (nachrichten.isEmpty()) return null
         return synchronized(sperre) {
             runCatching {
                 val d = datei(context, id)
                 val alt = if (d.exists() || File(d.path + ".bak").exists()) runCatching { lies(d) }.getOrNull() else null
                 val bisher = alt?.optJSONArray("nachrichten")?.length() ?: 0
-                if (nachrichten.size < bisher) {
+                if (nachrichten.size + kuerzenUm < bisher) {
                     Log.w(TAG, "Älterer Stand von $id verworfen ($bisher > ${nachrichten.size})")
                     return@runCatching null
                 }

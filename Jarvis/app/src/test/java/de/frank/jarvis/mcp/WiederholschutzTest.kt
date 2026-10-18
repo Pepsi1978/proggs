@@ -53,11 +53,20 @@ class WiederholschutzTest {
 
     @Test fun andererAufrufDazwischenHebtDenSchutzAuf() = runBlocking {
         val laeufe = AtomicInteger()
-        schutz.fuehreAus("anlegen X") { laeufe.incrementAndGet(); Ergebnis("angelegt") }
-        schutz.fuehreAus("löschen X") { laeufe.incrementAndGet(); Ergebnis("gelöscht") }
-        val (_, wiederholt) = schutz.fuehreAus("anlegen X") { laeufe.incrementAndGet(); Ergebnis("angelegt") }
+        schutz.fuehreAus("aufgabe_anlegen|X") { laeufe.incrementAndGet(); Ergebnis("angelegt") }
+        schutz.fuehreAus("aufgabe_loeschen|X") { laeufe.incrementAndGet(); Ergebnis("gelöscht") }
+        val (_, wiederholt) = schutz.fuehreAus("aufgabe_anlegen|X") { laeufe.incrementAndGet(); Ergebnis("angelegt") }
         assertFalse(wiederholt)
         assertEquals(3, laeufe.get())
+    }
+
+    @Test fun aufrufAusAnderemBereichHebtDenSchutzNichtAuf() = runBlocking {
+        val laeufe = AtomicInteger()
+        schutz.fuehreAus("mail_senden|M") { laeufe.incrementAndGet(); Ergebnis("gesendet") }
+        schutz.fuehreAus("aufgabe_anlegen|A") { laeufe.incrementAndGet(); Ergebnis("angelegt") }
+        val (_, wiederholt) = schutz.fuehreAus("mail_senden|M") { laeufe.incrementAndGet(); Ergebnis("doppelt gesendet") }
+        assertTrue(wiederholt)
+        assertEquals(2, laeufe.get())
     }
 
     @Test fun zweiVerschiedeneAufrufeDesselbenWerkzeugsBleibenBeideGeschuetzt() = runBlocking {

@@ -65,7 +65,11 @@ open class Merkdatei(
             // Wurde die Datei nach einem Defekt weggeräumt, nie still die Vorgabe darüberlegen: Franks Fassung liegt in der
             // Sicherung, und die Warnung (neuBegonnen) soll bleiben, bis er selbst etwas schreibt.
             val gesichert = f.parentFile?.listFiles { d -> d.name.startsWith("$dateiname.defekt-") }?.isNotEmpty() == true
-            if (vorgabe.isEmpty() || gesichert) return Stand(emptyList(), 1)
+            // Nach einem Defekt zählen die ids hinter denen der Sicherung weiter: Eine alte id (etwa noch im Kontext von ChatGPT)
+            // träfe sonst einen neuen, fremden Eintrag.
+            // Zwischengespeichert wie bei der Vorgabe (fehlende Datei: Zeit und Länge 0), sonst läse jedes Lesen die Sicherungen neu.
+            if (gesichert) return Stand(emptyList(), naechsteAusSicherungen(f)).also { zwischen = Triple(0L, 0L, it) }
+            if (vorgabe.isEmpty()) return Stand(emptyList(), 1)
             // Erste Nutzung: mit der Vorgabe anlegen (ids 1 bis n in ihrer Reihenfolge). Klappt das Schreiben nicht, gilt sie für
             // diesen Lauf trotzdem, ohne es bei jedem Lesen erneut zu versuchen (fehlende Datei: Zeit und Länge 0).
             val eintraege = vorgabe.mapIndexed { i, t -> Regel(i + 1, saeubere(t), heute()) }
@@ -97,6 +101,18 @@ open class Merkdatei(
         return stand
     }
 
+    /**
+     * Die erste freie id nach allen gesicherten (defekten) Fassungen dieser Datei. Gelesen wird roh mit einem Muster, weil die
+     * Sicherungen ja gerade kein gültiges JSON sein müssen. Mindestens 1.
+     */
+    private fun naechsteAusSicherungen(f: File): Int {
+        val muster = Regex("\"(?:id|naechsteId)\"\\s*:\\s*(\\d{1,9})")
+        val hoechste = f.parentFile?.listFiles { d -> d.name.startsWith("$dateiname.defekt-") }.orEmpty().maxOfOrNull { s ->
+            runCatching { muster.findAll(s.readText()).maxOfOrNull { it.groupValues[1].toInt() } }.getOrNull() ?: 0
+        } ?: 0
+        return hoechste + 1
+    }
+
     private fun defekt(f: File, e: Exception): Stand {
         val kopie = File(f.path + ".defekt-" + f.lastModified())
         // Gesichert (oder schon da): die kaputte Datei wegräumen und leer neu beginnen; die Daten liegen in der Kopie.
@@ -106,7 +122,7 @@ open class Merkdatei(
             gesichert = 0L
             neuBegonnen = "$dateiname war beschädigt, gesichert als ${kopie.name}; neu begonnen."
             Logbuch.fehler("Merkdatei defekt", e, "$dateiname gesichert als ${kopie.name}; neu begonnen")
-            return Stand(emptyList(), 1)
+            return Stand(emptyList(), naechsteAusSicherungen(f))
         }
         if (gesichert != f.lastModified()) {
             runCatching { if (!kopie.exists()) f.copyTo(kopie) }.onFailure { Logbuch.fehler("Merkdatei sichern", it, dateiname) }
