@@ -330,7 +330,7 @@ class EinstellungsKatalog(context: Context) {
             zahl("auswertung_abstand", "Tagesauswertung", "Abstand", "Alle wie viele Stunden die Auswertung läuft.", 1, 12, "Stunden", { e.auswertungAbstand }) { e.auswertungAbstand = it; zeitplanNeu() },
             schalter("auswertung_schlafpause", "Tagesauswertung", "Schlafpause", "Ruht, solange Frank laut Dienstplan schläft.", { e.auswertungSchlafpause }) { e.auswertungSchlafpause = it; zeitplanNeu() },
             schalter("auswertung_deutung", "Tagesauswertung", "Deutung schreiben", "Das Modell schreibt eine Deutung; aus = nur Daten abgleichen.", { e.auswertungDeutung }) { e.auswertungDeutung = it },
-            schalter("auswertung_lernen", "Tagesauswertung", "Aus dem Tagebuch lernen", "Verdichtet alte Monate und notiert neue Tatsachen über Frank.", { e.auswertungLernen }) { e.auswertungLernen = it },
+            schalter("auswertung_lernen", "Tagesauswertung", "Aus Tagebuch und Gesprächen lernen", "Verdichtet alte Monate, notiert neue Tatsachen über Frank aus Tagebuch und Gesprächen und prüft und räumt das Gelernte etwa alle sechs Stunden auf (Bericht unter Live-Gedächtnis).", { e.auswertungLernen }) { e.auswertungLernen = it; de.frank.jarvis.gedaechtnis.Lernlauf.stelleWecker(context) },
 
             // ---- Timer ----
             schalter("timer_wecker", "Benachrichtigungen: Timer", "Timer klingelt wie ein Wecker", "An = klingelt bis zum Ausschalten, aus = kurze Meldung mit Ton.", { e.timerWecker }) { e.timerWecker = it },

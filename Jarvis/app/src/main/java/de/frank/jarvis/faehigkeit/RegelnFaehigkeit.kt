@@ -15,8 +15,14 @@ import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Ein Eintrag einer Merkdatei: eine Regel, ein Ziel oder eine Notiz über Frank. */
-data class Regel(val id: Int, val text: String, val stand: String)
+/**
+ * Ein Eintrag einer Merkdatei: eine Regel, ein Ziel oder eine Notiz über Frank. [quelle] = woher er kam: leer = von Frank
+ * selbst (Einstellungen, jarvis_merken) oder aus der Zeit vor der Herkunftskennung; „Gespräch“ oder „Tagebuch“ = von einem
+ * Lernlauf angelegt. Nur gelernte Einträge darf ein Lernlauf von sich aus wieder entfernen.
+ */
+data class Regel(val id: Int, val text: String, val stand: String, val quelle: String = "") {
+    val gelernt: Boolean get() = quelle.isNotEmpty()
+}
 
 /**
  * Eine Datei, die Jarvis selbst pflegt und jedem Modell als Kontext beilegt: dem Plugin (Anleitung und
@@ -91,7 +97,7 @@ open class Merkdatei(
             val liste = json.getJSONArray("regeln")
             // Ein einzelner kaputter Eintrag kostet nur sich selbst, nicht die ganze Datei.
             val eintraege = (0 until liste.length()).mapNotNull { i ->
-                liste.optJSONObject(i)?.let { r -> Regel(r.optInt("id", 0), r.optString("text").trim(), r.optString("stand")) }?.takeIf { it.id > 0 && it.text.isNotEmpty() }
+                liste.optJSONObject(i)?.let { r -> Regel(r.optInt("id", 0), r.optString("text").trim(), r.optString("stand"), r.optString("quelle")) }?.takeIf { it.id > 0 && it.text.isNotEmpty() }
             }
             Stand(eintraege, maxOf(json.optInt("naechsteId", 0), (eintraege.maxOfOrNull { it.id } ?: 0) + 1))
         } catch (e: Exception) {
@@ -146,7 +152,7 @@ open class Merkdatei(
         if (vorher.defekt != null) return false
         val naechste = maxOf(vorher.naechsteId, (eintraege.maxOfOrNull { it.id } ?: 0) + 1)
         val inhalt = JSONObject().put("format", 1).put("naechsteId", naechste)
-            .put("regeln", JSONArray(eintraege.map { JSONObject().put("id", it.id).put("text", it.text).put("stand", it.stand) })).toString(2)
+            .put("regeln", JSONArray(eintraege.map { JSONObject().put("id", it.id).put("text", it.text).put("stand", it.stand).apply { if (it.quelle.isNotEmpty()) put("quelle", it.quelle) } })).toString(2)
         val f = datei(context)
         val atomar = AtomicFile(f)
         val aus = try { atomar.startWrite() } catch (e: Exception) { Logbuch.fehler("Merkdatei schreiben", e, dateiname); return false }
@@ -180,10 +186,12 @@ open class Merkdatei(
 
     /**
      * Legt einen Eintrag an oder ersetzt mit [id] den Text eines vorhandenen. id 0 oder kleiner = neu anlegen.
+     * [quelle] = Lernlauf, der ihn anlegt („Gespräch“, „Tagebuch“); leer = Frank selbst. Ersetzt ein Lernlauf einen Eintrag
+     * von Frank, bleibt er Franks Eintrag; ersetzt Frank einen gelernten, gilt er als von Frank bestätigt.
      * null = diese id gibt es nicht, die Datei ist voll oder defekt (siehe [defekt]).
      */
     @Synchronized
-    fun speichere(context: Context, text: String, id: Int? = null): Regel? {
+    fun speichere(context: Context, text: String, id: Int? = null, quelle: String = ""): Regel? {
         val vorher = lies(context)
         if (vorher.defekt != null) return null
         val bisher = vorher.eintraege
@@ -191,11 +199,11 @@ open class Merkdatei(
         val sauber = saeubere(text)
         val nummer = id?.takeIf { it > 0 }
         val eintrag = if (nummer != null) {
-            if (bisher.none { it.id == nummer }) return null
-            Regel(nummer, sauber, heute())
+            val alt = bisher.firstOrNull { it.id == nummer } ?: return null
+            Regel(nummer, sauber, heute(), if (alt.gelernt) quelle else "")
         } else {
             if (bisher.size >= hoechstens) return null
-            Regel(vorher.naechsteId, sauber, heute())
+            Regel(vorher.naechsteId, sauber, heute(), quelle)
         }
         val neu = if (nummer != null) bisher.map { if (it.id == nummer) eintrag else it } else bisher + eintrag
         return if (schreibe(context, vorher, neu)) eintrag else null
@@ -211,7 +219,7 @@ open class Merkdatei(
         if (vorher.defekt != null) return null
         val alt = vorher.eintraege.firstOrNull { it.id == id } ?: return null
         if (alt.text != saeubere(erwartet)) return null
-        val eintrag = Regel(id, saeubere(neu), heute())
+        val eintrag = Regel(id, saeubere(neu), heute(), alt.quelle)
         return if (schreibe(context, vorher, vorher.eintraege.map { if (it.id == id) eintrag else it })) eintrag else null
     }
 
@@ -228,6 +236,15 @@ open class Merkdatei(
         if (!da && vorher.eintraege.size >= hoechstens) return null
         val neu = if (da) vorher.eintraege.map { if (it.id == regel.id) regel else it } else vorher.eintraege + regel
         return if (schreibe(context, vorher, neu)) regel else null
+    }
+
+    /** Setzt die Herkunft eines vorhandenen Eintrags (Nachtrag aus dem Aktivitätsprotokoll); Text und Stand bleiben. */
+    @Synchronized
+    fun setzeQuelle(context: Context, id: Int, quelle: String): Boolean {
+        val vorher = lies(context)
+        val alt = vorher.eintraege.firstOrNull { it.id == id } ?: return false
+        if (alt.quelle == quelle) return true
+        return schreibe(context, vorher, vorher.eintraege.map { if (it.id == id) it.copy(quelle = quelle) else it })
     }
 
     @Synchronized

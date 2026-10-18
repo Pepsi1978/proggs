@@ -550,6 +550,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Offene und zuletzt beendete Programmieraufträge als Zeilen für vorgaenge und den Startkontext. */
     fun vorgangsZeilen(alle: Boolean = false): List<String> = Auftragsbuch.vorgangsZeilen(app, alle)
 
+    /** Die letzten Programmieraufträge mit Stand, letztem Schritt und Auftragstext (für die Aktualitätsprüfung des Lernlaufs; nur lesen). */
+    fun auftragsUebersicht(anzahl: Int = 20): String = Auftragsbuch.uebersicht(app, anzahl)
+
     /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject) {
         runCatching {

@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -76,7 +75,6 @@ fun GedaechtnisBildschirm(modifier: Modifier = Modifier) {
     var notizen by remember { mutableStateOf(emptyList<Gespraechsnotiz>()) }
     var logbuch by remember { mutableStateOf("") }
     var meldung by remember { mutableStateOf("") }
-    var lernt by remember { mutableStateOf(false) }
     // Die Notizen nur, wenn sich die Gespräche inhaltlich geändert haben (nicht bei jeder Lesung ohne Änderung).
     LaunchedEffect(stand.abschnitte[Bereich.GESPRAECHE]?.geaendert) {
         notizen = withContext(Dispatchers.IO) { Gespraechsgedaechtnis.notizen(app) }
@@ -181,18 +179,7 @@ fun GedaechtnisBildschirm(modifier: Modifier = Modifier) {
                             }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Delete, "Notiz löschen", tint = f.textLeise, modifier = Modifier.size(20.dp)) }
                         }
                     }
-                    Knopf(if (lernt) "Jarvis lernt …" else "Jetzt aus den Gesprächen lernen", Modifier.padding(top = 8.dp).fillMaxWidth(), Icons.Rounded.Psychology, haupt = false) {
-                        if (lernt) return@Knopf
-                        // Lernt der Wächter gerade, liest ein zweiter Lauf dieselben Wechsel: nur Bescheid geben.
-                        if (Gespraechsgedaechtnis.lerntGerade) { meldung = "Jarvis lernt gerade schon aus den Gesprächen; das Ergebnis steht gleich unter Aktivität."; return@Knopf }
-                        lernt = true
-                        bereich.launch {
-                            val gelernt = withContext(Dispatchers.IO) { runCatching { Gespraechsgedaechtnis.lerne(app) }.getOrDefault(false) }
-                            meldung = if (gelernt) "Jarvis hat aus den Gesprächen gelernt; Einzelheiten unter Aktivität." else "Nichts Neues zu lernen (Gespräche werden nach zehn Minuten Ruhe gelesen)."
-                            notizen = withContext(Dispatchers.IO) { Gespraechsgedaechtnis.notizen(app) }
-                            lernt = false
-                        }
-                    }
+                    LernlaufBereich { bereich.launch { notizen = withContext(Dispatchers.IO) { Gespraechsgedaechtnis.notizen(app) } } }
                 }
             }
 

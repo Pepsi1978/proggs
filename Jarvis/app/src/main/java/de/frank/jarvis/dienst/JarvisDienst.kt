@@ -130,6 +130,7 @@ class JarvisDienst : Service() {
         val vorlesen = intent?.getBooleanExtra(EXTRA_VORLESEN, false) == true
         val vorgang = intent?.getStringExtra(EXTRA_VORGANG)
         val abfahrt = intent?.getBooleanExtra(EXTRA_ABFAHRT, false) == true
+        val lernen = intent?.getBooleanExtra(EXTRA_LERNEN, false) == true
         offen.incrementAndGet()
         // Alles Weitere liest Dateien und den Kalender: nicht auf dem Hauptfaden, sonst ruckelt jedes Öffnen der App.
         arbeit.launch {
@@ -138,6 +139,7 @@ class JarvisDienst : Service() {
                 val auftraege = mutableListOf<Job?>()
                 auftraege += when {
                     abfahrt -> pruefeAbfahrt()
+                    lernen -> lerneAutomatisch()
                     agent != null -> lasseArbeiten(agent, auftrag, perMail, vorlesen, vorgang)
                     anlass != null -> werteAus(anlass)
                     else -> null
@@ -146,6 +148,7 @@ class JarvisDienst : Service() {
                 // für etwas anderes (Abfahrt, Agent) gestartet wurde. Die Sperre in der Auswertung verhindert Doppelläufe.
                 if (anlass == null && verpasst()) auftraege += werteAus("nachgeholt, der geplante Lauf wurde verpasst")
                 Zeitplan.stelle(this@JarvisDienst)
+                runCatching { de.frank.jarvis.gedaechtnis.Lernlauf.stelleWecker(this@JarvisDienst) }
                 // Die Prüfung stellt ihren nächsten Wecker am Ende selbst.
                 if (!abfahrt) Abfahrt.stelle(this@JarvisDienst)
                 // Erst wenn die Arbeit fertig ist, darf sich der Dienst bei ausgeschalteter Bereitschaft beenden.
@@ -173,6 +176,13 @@ class JarvisDienst : Service() {
             } finally {
                 runCatching { if (wach.isHeld) wach.release() }
             }
+        }
+
+    /** Ein fälliger automatischer Lernlauf (Lern-Wecker, nach der Tagesauswertung); der Dienst wartet, bis er fertig ist. */
+    private fun lerneAutomatisch(): Job =
+        arbeit.launch {
+            runCatching { de.frank.jarvis.gedaechtnis.Lernlauf.automatisch(this@JarvisDienst) }
+                .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Lernlauf automatisch", it) }
         }
 
     private fun verpasst(): Boolean {
@@ -250,6 +260,8 @@ class JarvisDienst : Service() {
                 Logbuch.dauer("Tagesauswertung", System.currentTimeMillis() - beginn, "$anlass: " + when { fertig == null -> "lief schon oder scheiterte"; fertig.mitKi -> "mit Deutung"; else -> "nur Datenbericht" })
                 // Danach, ohne die Auswertung aufzuhalten: aus dem Tagebuch lernen (jeder Schritt hat sein eigenes Zeitlimit).
                 if (fertig?.mitKi == true) runCatching { de.frank.jarvis.agent.Lernen.laufe(this@JarvisDienst) }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Lernen aus dem Tagebuch", it) }
+                // Die Auswertung weckt den Dienst ohnehin regelmäßig: Ist ein Lernlauf fällig, läuft er gleich mit (auch ohne Bereitschaft).
+                runCatching { de.frank.jarvis.gedaechtnis.Lernlauf.automatisch(this@JarvisDienst) }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Lernlauf nach der Auswertung", it) }
             } finally {
                 runCatching { if (wach.isHeld) wach.release() }
                 Zeitplan.stelle(this@JarvisDienst)
@@ -318,6 +330,14 @@ class JarvisDienst : Service() {
         private const val EXTRA_VORGANG = "vorgang"
         private const val KANAL_ERGEBNIS = "jarvis_ergebnisse"
         private const val EXTRA_ABFAHRT = "abfahrt"
+        private const val EXTRA_LERNEN = "lernen"
+
+        /** Beauftragt den Dienst mit einem fälligen automatischen Lernlauf (vom Lern-Wecker). */
+        fun lernen(context: Context) {
+            val app = context.applicationContext
+            runCatching { ContextCompat.startForegroundService(app, Intent(app, JarvisDienst::class.java).putExtra(EXTRA_LERNEN, true)) }
+                .onFailure { Log.w("JarvisDienst", "Lernlauf ließ sich nicht starten", it); Logbuch.fehler("Lernlauf: Dienst ließ sich nicht starten", it) }
+        }
 
         /** Beauftragt den Dienst mit der Prüfung der Fahrzeit zur Arbeit (vom Wecker oder aus der App). */
         fun abfahrtPruefen(context: Context) {
@@ -398,6 +418,7 @@ class StartEmpfaenger : BroadcastReceiver() {
                         try {
                             runCatching { Zeitplan.stelle(app) }
                             runCatching { Abfahrt.stelle(app) }
+                            runCatching { de.frank.jarvis.gedaechtnis.Lernlauf.stelleWecker(app) }
                         } finally {
                             ergebnis.finish()
                         }

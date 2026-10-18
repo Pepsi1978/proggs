@@ -126,6 +126,7 @@
         </receiver>
 
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
+        <receiver android:name=".gedaechtnis.LernEmpfaenger" android:exported="false" />
         <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />
         <!-- Ansagen eigener Apps (UpdateStation): nur mit Franks Signatur. -->
         <receiver

@@ -18,7 +18,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 private const val AKTION_UPDATE_SIGNAL = "de.frank.updatestation.UPDATE_SIGNAL"
@@ -34,7 +33,8 @@ private const val PAKET_UPDATESTATION = "de.frank.updatestation"
  *   30 Minuten, Lokales alle 10 bis 15). Mehr braucht es nicht: Signale, eigene Schreibaktionen und jede Frage frischen
  *   die Bereiche ohnehin sofort auf. Er schaut jede Minute nach, liest aber nur Fälliges.
  * - **Neuer Tag:** Nach Mitternacht liest er alles neu (heute, morgen und die Rückblicke verschieben sich).
- * - **Lernen:** Ruht ein Gespräch zehn Minuten, lernt er daraus (siehe [Gespraechsgedaechtnis.lerne]).
+ * - **Lernen:** Ruht ein Gespräch zehn Minuten oder ist die Aktualitätsprüfung fällig (etwa alle sechs Stunden), stößt er
+ *   einen Lernlauf an ([Lernlauf.anstossen]). Der läuft in eigenem Rahmen weiter; die Minutenrunde wartet nie darauf.
  */
 object Waechter {
     private class Quelle(val name: String, val adresse: Uri, val bereiche: List<Bereich>)
@@ -137,7 +137,6 @@ object Waechter {
     private suspend fun laufe(app: Context) {
         var tag = LocalDate.now()
         var letzteAnmeldung = System.currentTimeMillis()
-        var letztesLernen = 0L
         // Kurz warten: Beim Start des Dienstes haben Verbindung und Auswertung Vorrang.
         delay(4_000)
         while (bereich.isActive) {
@@ -154,10 +153,7 @@ object Waechter {
                 if (ms > 5_000 || neuerTag) Logbuch.gedaechtnis("Wächter-Runde", faellig.joinToString(",") { it.kennung }, ms)
             }
             tag = LocalDate.now()
-            if (jetzt - letztesLernen >= 10 * 60_000L && Gespraechsgedaechtnis.lernenFaellig(app)) {
-                letztesLernen = jetzt
-                runCatching { withTimeoutOrNull(150_000L) { Gespraechsgedaechtnis.lerne(app) } }.onFailure { Logbuch.fehler("Gesprächs-Lernen", it) }
-            }
+            runCatching { Lernlauf.anstossen(app) }.onFailure { Logbuch.fehler("Lernlauf anstoßen", it) }
             // Ein fester Minutentakt: Die Runde selbst kostet nichts, wenn nichts fällig ist. Kürzer zu schlafen brächte nichts
             // (die Abstände sind lang) und ließe einen gestörten Bereich, dessen Stand stehen bleibt, im Sekundentakt neu lesen.
             delay(60_000L)

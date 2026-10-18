@@ -122,7 +122,14 @@ object Lernen {
      * Übernimmt die Zeilen einer Lern-Antwort. Ziele legt ein Lernlauf nur neu an, er ersetzt nie eines (Ziele setzt Frank).
      * Infos darf er ersetzen; die alte Fassung landet im Verlauf `merk_verlauf.jsonl`. Ist eine id ungültig, wird neu angelegt.
      */
-    fun uebernimm(app: Context, antwort: String, quelle: String, hoechstens: Int = 3): List<String> = antwort.lines()
+    fun uebernimm(app: Context, antwort: String, quelle: String, hoechstens: Int = 3): List<String> =
+        uebernimmEinzeln(app, antwort, quelle, hoechstens).map { g -> (if (g.alt != null) "[${g.id}] „${g.alt}“ → " else "") + g.neu }
+
+    /** Was ein Lernlauf übernommen hat: ins Ziel- oder Info-Gedächtnis, neu ([alt] null) oder als Ersatz von [alt]. */
+    data class Uebernommen(val ziel: Boolean, val id: Int, val alt: String?, val neu: String)
+
+    /** Wie [uebernimm], aber je Eintrag mit Art und alter Fassung (für den Lernbericht). Neue Einträge tragen [quelle] als Herkunft. */
+    fun uebernimmEinzeln(app: Context, antwort: String, quelle: String, hoechstens: Int = 3): List<Uebernommen> = antwort.lines()
         .map { it.trim().replace(Regex("^(?:[-*•–]\\s*|\\d+[.)]\\s*)"), "").replace("**", "").trim().trimStart('„', '"', '“', '»').trim() }
         .mapNotNull { ZEILE.find(it) }.take(hoechstens).mapNotNull { treffer ->
             val istZiel = treffer.groupValues[1].uppercase() == "ZIEL"
@@ -131,13 +138,13 @@ object Lernen {
             val id = treffer.groupValues[2].toIntOrNull()?.takeIf { it > 0 && !istZiel && datei.alle(app).any { r -> r.id == it } }
             if (satz.length !in 12..300 || !satz.startsWith("Frank") || datei.alle(app).any { normal(it.text) == normal(satz) }) return@mapNotNull null
             val alt = id?.let { i -> datei.alle(app).firstOrNull { it.id == i } }
-            val neu = datei.speichere(app, satz, id)
+            val neu = datei.speichere(app, satz, id, quelle)
             if (neu == null) { Protokoll.melde(Quelle.JARVIS, if (datei.defekt(app) != null) "Gedächtnis defekt" else "Gedächtnis voll", "Nicht gelernt ($quelle): $satz", ok = false); return@mapNotNull null }
             if (alt != null) runCatching {
                 File(app.filesDir, "merk_verlauf.jsonl").appendText(JSONObject().put("zeit", System.currentTimeMillis()).put("datei", if (istZiel) "ziele" else "ueber_frank")
                     .put("id", alt.id).put("alt", alt.text).put("neu", neu.text).put("quelle", quelle).toString() + "\n")
             }
-            (if (alt != null) "[${alt.id}] „${alt.text}“ → " else "") + neu.text
+            Uebernommen(istZiel, neu.id, alt?.text, neu.text)
         }
 
     private fun normal(text: String): String = text.lowercase().replace(Regex("[^\\p{L}\\p{N} ]"), "").replace(Regex("\\s+"), " ").trim()

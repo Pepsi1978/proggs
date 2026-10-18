@@ -394,12 +394,12 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 Text("Aus = Jarvis synchronisiert nur die Daten und speichert den reinen Datenbericht, ohne das oben gewählte Modell zu fragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 
-                Unterzeile("Aus dem Tagebuch lernen")
+                Unterzeile("Aus Tagebuch und Gesprächen lernen")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("An", aktiv = e.auswertungLernen) { e.auswertungLernen = true }
                     Chip("Aus", aktiv = !e.auswertungLernen) { e.auswertungLernen = false }
                 }
-                Text("Jarvis verdichtet ältere Monate des Tagebuchs zu Kurzfassungen und notiert einmal am Tag bis zu drei neue Dinge, die er daraus über dich erfährt. Du findest sie unter „Über Frank“ und kannst sie dort ändern oder löschen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                Text("Jarvis verdichtet ältere Monate des Tagebuchs zu Kurzfassungen, notiert neue Dinge über dich aus Tagebuch und Gesprächen und prüft das Gelernte etwa alle sechs Stunden im Hintergrund auf Aktualität: Erledigte Vorhaben und umgesetzte Programmierwünsche räumt er auf. Was er getan hat, steht mit Grund unter Live-Gedächtnis. Aus = kein Lernen und kein Aufräumen, auch nicht per Knopf.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 
                 Knopf("Jetzt synchronisieren", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
             }
