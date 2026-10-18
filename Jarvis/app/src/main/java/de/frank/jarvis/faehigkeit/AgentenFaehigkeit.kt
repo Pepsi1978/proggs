@@ -24,11 +24,14 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
     override val name = "Agenten und Protokoll"
     override val beschreibung = "Agenten für längere Arbeiten beauftragen und verwalten; das Aktivitäts-Protokoll von Jarvis lesen (auch Fehler)."
     override val hinweise =
-        "Für Recherchen, Ausarbeitungen, Berichte als PDF (auch mit Bildern) und alles, was Internet braucht oder länger als eine Minute dauert, startest du mit agent_starten " +
-            "einen Agenten (meist Recherche). Er arbeitet bis zu 25 Minuten im Hintergrund und meldet sich per Benachrichtigung; sein Bericht (mit Bildern und PDF) kommt ins Gespräch zurück, " +
-            "im Jarvis-Chat direkt, in ChatGPT über vorgaenge. In die Ablage legt er nur mit ablegen=true, und das nur, wenn Frank ausdrücklich die Ablage verlangt " +
-            "(„… und leg das in der Ablage ab“); Recherche, Agent oder PDF allein sind kein Speicherwunsch. Will Frank ein fertiges Ergebnis später behalten: in_ablage_uebernehmen mit vorgang. " +
-            "Gib ihm den vollständigen Auftrag mit, auch die gewünschte Form (zum Beispiel „als PDF mit Illustrationen“). Versuche so etwas nie selbst im Gespräch. " +
+        "Für Recherchen, Ausarbeitungen und alles, was Internet braucht oder länger als eine Minute dauert, startest du mit agent_starten " +
+            "einen Agenten (meist Recherche). Er arbeitet bis zu 25 Minuten im Hintergrund und meldet sich per Benachrichtigung; sein vollständiger Bericht kommt als schön formatierter Text ins Gespräch zurück, " +
+            "im Jarvis-Chat direkt, in ChatGPT über vorgaenge (gib ihn dort ausführlich als normale, gegliederte Antwort wieder, nicht nur als Zusammenfassung). " +
+            "Das ist die Vorgabe: Chattext, kein PDF, keine Datei. Ein PDF nur mit als_pdf=true, und das nur, wenn Frank ausdrücklich ein PDF verlangt; „kein PDF“, „nicht als PDF“, „nur Text“ heißt als_pdf weglassen. " +
+            "In die Ablage legt er nur mit ablegen=true, und das nur, wenn Frank ausdrücklich die Ablage verlangt " +
+            "(„… und leg das in der Ablage ab“); Recherche, Agent oder PDF allein sind kein Speicherwunsch. Format und Ablage sind unabhängig: „als Text in die Ablage“ = ablegen ohne als_pdf, „als PDF“ = als_pdf ohne ablegen. " +
+            "Will Frank ein fertiges Ergebnis später behalten: in_ablage_uebernehmen mit vorgang. " +
+            "Gib ihm den vollständigen Auftrag mit. Versuche so etwas nie selbst im Gespräch. " +
             "agent_starten liefert eine Vorgangskennung; angenommen heißt nicht fertig. Stand und Ergebnis über vorgaenge, nach dem Mitteilen mit aktion mitgeteilt bestätigen. " +
             "Fragt Frank, warum etwas nicht geklappt hat, oder meldet ein Werkzeug einen Fehler, lies mit protokoll_lesen nach, was Jarvis zuletzt getan hat und woran es scheiterte."
 
@@ -72,15 +75,17 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 name = "agent_starten",
                 titel = "Agenten beauftragen",
                 beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, zum Beispiel einer Internet-Recherche („Jarvis, recherchiere, wie man … am besten baut“), " +
-                    "einem Bericht als PDF mit Illustrationen, einer Machbarkeitsprüfung einer Idee, oder den Agenten Code-Analyse mit der Auswertung einer App in Franks Repo (er liest den Code und liefert den Stand samt fertigem Auftrag für ein Programmier-Werkzeug; er ändert nichts). " +
+                    "einem gestalteten PDF-Dokument mit Illustrationen (nur auf ausdrücklichen Wunsch), einer Machbarkeitsprüfung einer Idee, oder den Agenten Code-Analyse mit der Auswertung einer App in Franks Repo (er liest den Code und liefert den Stand samt fertigem Auftrag für ein Programmier-Werkzeug; er ändert nichts). " +
                     "Der Agent arbeitet bis zu 25 Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Bilderzeugung, Zugriff auf Ideen, " +
-                    "Aufgaben, Kalender, Biomarker), liefert Bericht, Bilder und auf Wunsch ein PDF als Ergebnis ins Gespräch (Jarvis-Chat direkt, ChatGPT über vorgaenge) und meldet sich per Benachrichtigung. " +
-                    "In die Ablage kommt das Ergebnis NUR mit ablegen=true. Dieser Aufruf kehrt sofort zurück " +
+                    "Aufgaben, Kalender, Biomarker), liefert seinen vollständigen Bericht als formatierten Text ins Gespräch (Jarvis-Chat direkt, ChatGPT über vorgaenge) und meldet sich per Benachrichtigung. " +
+                    "Ein PDF entsteht NUR mit als_pdf=true, in die Ablage kommt das Ergebnis NUR mit ablegen=true; beides unabhängig voneinander. Dieser Aufruf kehrt sofort zurück " +
                     "und liefert eine Vorgangskennung (zum Beispiel V7K2P): Der Auftrag ist dann ANGENOMMEN, nicht fertig. Sag Frank das kurz und rede normal weiter. " +
                     "Stand und Ergebnis holst du später mit vorgaenge (auch in einem neuen Gespräch); ein wiederholter Aufruf mit demselben Auftrag startet nichts doppelt. Mit per_mail wird der Bericht zusätzlich an Frank gemailt.",
                 schema = schema(
                     "agent" to text("Name des Agenten, zum Beispiel Recherche oder Machbarkeit (siehe agenten)."),
-                    "auftrag" to text("Der vollständige Auftrag mit allem Wissen aus dem Gespräch: Ziel, Rahmen, was Frank wichtig ist, gewünschte Form des Ergebnisses (zum Beispiel „als PDF mit Illustrationen“)."),
+                    "auftrag" to text("Der vollständige Auftrag mit allem Wissen aus dem Gespräch: Ziel, Rahmen, was Frank wichtig ist, gewünschte Form des Ergebnisses. Ob ein PDF entsteht, steuert allein als_pdf, nicht dieser Text."),
+                    "als_pdf" to schalter("true = zusätzlich ein professionell gestaltetes PDF-Dokument (mit Bildern und Infografiken) erzeugen. NUR wenn Frank ausdrücklich ein PDF verlangt („mach mir das als PDF“); " +
+                        "verneint („kein PDF“, „nicht als PDF“, „nur Text“) oder ohne Formatwunsch weglassen: Dann kommt der Bericht nur als Chattext. Ein PDF-Wunsch allein ist kein Ablagewunsch."),
                     "ablegen" to schalter("true = das Ergebnis dauerhaft in der Ablage speichern. NUR wenn Frank das ausdrücklich verlangt (zum Beispiel „und leg das in der Ablage ab“); sonst weglassen."),
                     "per_mail" to schalter("true = den fertigen Bericht zusätzlich per E-Mail an Frank schicken."),
                     "vorlesen" to schalter("true = Jarvis liest den fertigen Bericht auf dem Handy laut vor, sobald er da ist."),
@@ -96,7 +101,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                     !CodexAuthManager(app).isConnected -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
                     // Unter der Sperre des Vorgangsbuchs: erst nach Doppeln suchen, dann synchron reservieren. Der Lauf beginnt erst
                     // asynchron im Dienst; ein paralleler oder wiederholter Aufruf (Verbindungsabbruch) sähe sonst noch einen freien Platz.
-                    else -> when (val annahme = Vorgaenge.buch(app).annehmen(plan.name, auftrag, a.optBoolean("ablegen"), herkunftsGespraech()) { Agenten.reserviere(plan.name, auftrag) }) {
+                    else -> when (val annahme = Vorgaenge.buch(app).annehmen(plan.name, auftrag, a.optBoolean("ablegen"), herkunftsGespraech(), a.optBoolean("als_pdf")) { Agenten.reserviere(plan.name, auftrag) }) {
                         is Annahme.Doppelt -> Ergebnis("Dieser Auftrag ist schon angenommen, es wurde nichts doppelt gestartet: ${Vorgaenge.zeile(annahme.vorgang)}\n" +
                             "Sag Frank den Stand in einem Satz. Das Ergebnis holst du mit vorgaenge (aktion lesen, id ${annahme.vorgang.id}), sobald es fertig ist.")
                         Annahme.KeinPlatz -> Ergebnis("Nicht angenommen: Es arbeiten schon ${Agenten.HOECHSTENS} Agenten. Bitte warten, bis einer fertig ist (Stand mit vorgaenge).", fehler = true)
@@ -108,6 +113,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                                 Ergebnis("Nicht gestartet: Der Hintergrunddienst von Jarvis ließ sich nicht starten (Vorgang $id fehlgeschlagen). Frank soll Jarvis einmal öffnen.", fehler = true)
                             } else Ergebnis("ANGENOMMEN, noch nicht fertig: Vorgang $id, Agent ${plan.name}. Er arbeitet im Hintergrund, meist fünf bis zwanzig Minuten. " +
                                 (if (annahme.vorgang.gespraech.isNotEmpty()) "Das Ergebnis erscheint in diesem Jarvis-Gespräch" else "Das Ergebnis holst du mit vorgaenge") +
+                                (if (a.optBoolean("als_pdf")) " als Text und gestaltetes PDF" else " als formatierter Text (kein PDF)") +
                                 (if (a.optBoolean("ablegen")) " und wird in der Ablage gespeichert" else ", es wird NICHT in der Ablage gespeichert") +
                                 (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung. " +
                                 "Sag Frank in einem Satz, dass der Auftrag angenommen ist, und rede normal weiter. Später: vorgaenge (aktion lesen, id $id).")
@@ -236,7 +242,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
     private companion object {
         val ZEIT: DateTimeFormatter = DateTimeFormatter.ofPattern("d.M. HH:mm:ss", Locale.GERMAN)
         /** So viel vom Bericht kommt bei vorgaenge lesen mit; der Rest über ablage_lesen. */
-        const val BERICHT = 4_000
+        const val BERICHT = 20_000
     }
 }
 

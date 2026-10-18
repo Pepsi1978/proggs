@@ -89,7 +89,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                     "art" to text("Nur für die Liste: nach Dateiart filtern.", listOf("alle") + Kategorie.entries.map { it.name.lowercase(Locale.ROOT) }),
                 ),
             ) { a -> (if (a.gesetzt("titel")) w("ablage_lesen") else w("ablage_liste")).ausfuehren(a) },
-            w("ablage_zeigen"), w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"), w("in_ablage_uebernehmen"),
+            w("ablage_zeigen"), w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"), w("in_ablage_uebernehmen"), w("pdf_entwurf_pruefen"),
         )
     }
 
@@ -261,7 +261,8 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             if (AblageZentrale.agentOhneAblage()) return@Werkzeug Ergebnis(OHNE_ABLAGE, fehler = true)
             val (eintrag, datei) = speicher.schreibeText(a.optString("titel"), a.optString("inhalt"), a.optBoolean("anhaengen"))
             var text = "Abgelegt als „${datei.nameWithoutExtension}“ (${datei.length() / 1000 + 1} kB)."
-            if (a.optBoolean("als_pdf")) {
+            if (a.optBoolean("als_pdf") && !de.frank.jarvis.ablage.PdfWunsch.zulaessig()) text += " Kein PDF: Frank hat für diesen Auftrag kein PDF verlangt."
+            else if (a.optBoolean("als_pdf")) {
                 text += try {
                     " " + AblageZentrale.textAlsPdfAblegen(context, eintrag.titel, datei.readText())
                 } catch (e: Exception) {
@@ -269,6 +270,27 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                 }
             }
             Ergebnis(text)
+        },
+        Werkzeug(
+            name = "pdf_entwurf_pruefen",
+            titel = "PDF-Entwurf prüfen",
+            beschreibung = "Jarvis: setzt einen Bericht probeweise als gestaltetes PDF (nichts wird abgelegt) und meldet, wie es geworden ist: Seitenzahl, Titelbild, " +
+                "welche Abbildungen an ihrer Stelle stehen, Bildverweise ohne passende Datei, Bilder ohne Verweis und Layout-Hinweise (zu breite Tabellen, fehlende Kapitel). " +
+                "Für Agenten mit PDF-Auftrag vor der Antwort; danach gemeldete Probleme beheben.",
+            schema = schema(
+                "inhalt" to text("Der fertige Bericht in Markdown, genau wie er in die Antwort kommt."),
+                "titel" to text("Titel des Eintrags mit den Bildern; im Agenten weglassen (dann sein eigener Eintrag)."),
+                pflicht = listOf("inhalt"),
+            ),
+            nurLesen = true,
+        ) { a ->
+            if (!de.frank.jarvis.ablage.PdfWunsch.zulaessig()) return@Werkzeug Ergebnis("Frank hat für diesen Auftrag kein PDF verlangt; eine PDF-Prüfung ist nicht nötig.")
+            val titel = a.optString("titel").ifBlank { AblageZentrale.agentenEintrag().orEmpty() }
+            if (titel.isBlank()) return@Werkzeug Ergebnis("Es fehlt der Titel des Eintrags.", fehler = true)
+            val s = if (AblageZentrale.agentenEintrag() != null) AblageZentrale.agentenSpeicher(context)
+                else speicher.takeIf { it.findeGenau(titel) != null } ?: Vorlaeufig.speicher(context)
+            runCatching { AblageZentrale.pdfEntwurfPruefen(context, titel, a.optString("inhalt"), s).alsText() }
+                .fold({ Ergebnis(it) }, { Ergebnis("Der Entwurf ließ sich nicht setzen: ${AblageZentrale.fehlerText(it)}", fehler = true) })
         },
         Werkzeug(
             name = "ablage_datei_speichern",
@@ -481,11 +503,13 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
         // Gleicher Auftrag noch einmal (etwa weil ChatGPT nach einer Zeitüberschreitung wiederholt) hängt sich an den laufenden an.
         // auch_pdf gehört nicht dazu: „Dasselbe Bild jetzt auch als PDF“ ist dasselbe Motiv, das PDF wird nachgereicht.
         val kennung = "bild-" + kurzHash(titel + "|" + beschreibung + "|" + format.name)
+        // Im Agenten ohne PDF-Wunsch kein Bild-PDF, auch wenn das Modell auch_pdf setzt (etwa weil der Auftrag „kein PDF“ erwähnt).
+        val auchPdf = a.optBoolean("auch_pdf") && de.frank.jarvis.ablage.PdfWunsch.zulaessig()
         // Dasselbe Motiv liegt schon vorläufig vor und soll jetzt in die Ablage: übernehmen statt ein zweites Bild zu erzeugen.
         if (!vorlaeufig && !imAgenten) uebernimmVorlaeufigesBild(kennung)?.let { return it }
         return try {
             val r = AblageZentrale.imHintergrund(context, kennung, "Bild erzeugen", titel, AblageZentrale.wartezeit(), if (vorlaeufig) "Jarvis: Bild fertig" else "Jarvis: in der Ablage") {
-                AblageZentrale.erzeugeBild(context, beschreibung, titel, format, a.optBoolean("hohe_qualitaet"), a.optBoolean("auch_pdf"), kennung, s) { neu ->
+                AblageZentrale.erzeugeBild(context, beschreibung, titel, format, a.optBoolean("hohe_qualitaet"), auchPdf, kennung, s) { neu ->
                     // Direkt ins Jarvis-Gespräch, auch wenn das Bild erst nach dem Ende der Antwort fertig wird.
                     if (gespraech != null) ProgrammierChat.poste(context, gespraech, "🖼️ $titel", ProgrammierChat.ART_BILD,
                         if (vorlaeufig) "(Vorläufiges Bild „$titel“, NICHT in der Ablage. Behalten nur auf Franks Wunsch: in_ablage_uebernehmen mit titel „$titel“.)"

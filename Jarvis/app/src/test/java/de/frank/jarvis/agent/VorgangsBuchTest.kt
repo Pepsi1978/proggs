@@ -86,4 +86,39 @@ class VorgangsBuchTest {
         assertTrue(b.mitgeteilt(listOf(v.id, "VXXXX")).isEmpty())
         assertTrue(b.finde(v.id)!!.offen)
     }
+
+    // Ausgabeformat und Ablage (Auftrag 9FGNN): Ein PDF entsteht nur aus dem ausdrücklichen Schalter, nie aus einer Wortsuche im Auftrag.
+
+    @Test fun normaleRechercheOhneWunschIstTextOhneAblage() {
+        val v = (buch().annehmen("Recherche", "Recherchiere die besten Hochbeet-Erden") { true } as Annahme.Neu).vorgang
+        assertFalse(v.pdf)
+        assertFalse(v.ablage)
+    }
+
+    @Test fun verneintesPdfImAuftragErzeugtKeinPdf() {
+        listOf("Kein PDF erforderlich, nur Text.", "Bitte nicht als PDF", "Analysiere PDF_WUNSCH in Agenten.kt, nur Text").forEach { auftrag ->
+            val v = (buch().annehmen("Code-Analyse", auftrag) { true } as Annahme.Neu).vorgang
+            assertFalse(auftrag, v.pdf)
+        }
+    }
+
+    @Test fun pdfWunschOhneAblageUndAblageOhnePdfSindUnabhaengig() {
+        val b = buch()
+        val nurPdf = (b.annehmen("Recherche", "Thema als PDF", ablage = false, pdf = true) { true } as Annahme.Neu).vorgang
+        assertTrue(nurPdf.pdf); assertFalse(nurPdf.ablage)
+        val nurText = (b.annehmen("Recherche", "Recherchiere und lege das als Text in der Ablage ab", ablage = true, pdf = false) { true } as Annahme.Neu).vorgang
+        assertFalse(nurText.pdf); assertTrue(nurText.ablage)
+        val beides = (b.annehmen("Recherche", "Recherche als PDF in die Ablage", ablage = true, pdf = true) { true } as Annahme.Neu).vorgang
+        assertTrue(beides.pdf); assertTrue(beides.ablage)
+        // Nach einem Neustart (neu gelesen) bleiben die Wünsche erhalten.
+        val neu = VorgangsBuch(datei, uhr = { jetzt })
+        assertTrue(neu.finde(nurPdf.id)!!.pdf); assertFalse(neu.finde(nurPdf.id)!!.ablage)
+        assertFalse(neu.finde(nurText.id)!!.pdf); assertTrue(neu.finde(nurText.id)!!.ablage)
+        assertTrue(neu.finde(beides.id)!!.pdf); assertTrue(neu.finde(beides.id)!!.ablage)
+    }
+
+    @Test fun alterEintragOhnePdfFeldIstKeinPdf() {
+        val alt = org.json.JSONObject().put("id", "A1B2C").put("agent", "Recherche").put("auftrag", "als PDF").put("erstellt", 1L).put("stand", Vorgang.FERTIG)
+        assertFalse(Vorgang.aus(alt).pdf)
+    }
 }

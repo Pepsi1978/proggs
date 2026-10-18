@@ -6,15 +6,11 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.ParcelFileDescriptor
-import android.text.Layout
-import android.text.StaticLayout
-import android.text.TextPaint
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -149,97 +145,13 @@ object Medien {
     private val BILD_ZEILE = Regex("^\\s*!\\[(.*?)]\\((.+?)\\)\\s*$")
 
     /**
-     * Setzt einen Text als mehrseitiges DIN-A4-PDF (Rand 2 cm, Überschrift, Seitenzahlen). Einfache Markdown-Zeichen
-     * (#, **, -) werden in lesbare Form gebracht. Für „Recherche als PDF“.
-     * [bilder] (Dateiname klein geschrieben → Datei) sind die Bilder des Ablage-Eintrags: Eine Zeile `![Unterschrift](name.png)`
-     * setzt das Bild an genau diese Stelle, Bilder ohne solche Zeile kommen am Ende unter „Abbildungen“.
+     * Setzt einen Markdown-Text als gestaltetes DIN-A4-Dokument ([PdfGestaltung]: Titelseite, Inhaltsübersicht, Merkkästen,
+     * Tabellen, Abbildungen). [bilder] (Dateiname klein geschrieben → Datei) sind die Bilder des Ablage-Eintrags: Eine Zeile
+     * `![Unterschrift](name.png)` setzt das Bild an genau diese Stelle, `![Titelbild](name.png)` auf die Titelseite, Bilder ohne
+     * solche Zeile kommen am Ende unter „Abbildungen“.
      */
-    fun textAlsPdf(titel: String, text: String, ziel: File, bilder: Map<String, File> = emptyMap()) {
-        val doc = PdfDocument()
-        try {
-            val rand = 57f
-            val breite = (A4_B - 2 * rand).toInt()
-            val koerper = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 10.5f; color = Color.BLACK }
-            val kopf = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 17f; color = Color.BLACK; typeface = Typeface.DEFAULT_BOLD }
-            val fuss = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 8f; color = Color.GRAY }
-            val absaetze = text.replace("\r", "").lines().map { z ->
-                val t = z.trimEnd()
-                when {
-                    t.startsWith("#") -> "\u0001" + t.trimStart('#').trim()
-                    t.trimStart().startsWith("- ") || t.trimStart().startsWith("* ") -> "  • " + t.trimStart().drop(2)
-                    else -> t
-                }.replace("**", "").replace("__", "")
-            }
-            var nr = 0
-            var seite: PdfDocument.Page? = null
-            var y = 0f
-            fun neueSeite() {
-                seite?.let { s -> s.canvas.drawText("Seite $nr", A4_B - rand - fuss.measureText("Seite $nr"), A4_H - 30f, fuss); doc.finishPage(s) }
-                nr++
-                seite = doc.startPage(PdfDocument.PageInfo.Builder(A4_B, A4_H, nr).create())
-                y = rand
-            }
-            fun setze(roh: String, farbe: TextPaint, abstandNach: Float) {
-                // Layout und Zeichnen mit demselben Text: Eine Leerzeile wird als " " gesetzt, sonst liefe drawText über das Ende.
-                val t = roh.ifEmpty { " " }
-                val layout = statisch(t, farbe, breite)
-                var zeile = 0
-                while (zeile < layout.lineCount) {
-                    if (seite == null || y + (layout.getLineBottom(zeile) - layout.getLineTop(zeile)) > A4_H - rand) neueSeite()
-                    // Zeile für Zeile, damit lange Absätze sauber über Seitengrenzen laufen.
-                    val start = layout.getLineStart(zeile)
-                    val ende = layout.getLineEnd(zeile)
-                    seite!!.canvas.drawText(t, start, ende, rand, y - layout.getLineAscent(zeile), farbe)
-                    y += layout.getLineBottom(zeile) - layout.getLineTop(zeile)
-                    zeile++
-                }
-                y += abstandNach
-            }
-            val unterschrift = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 9f; color = Color.DKGRAY; typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC) }
-            val benutzt = mutableSetOf<String>()
-            // Bild auf Textbreite, höchstens 60 % der Seitenhöhe; passt es nicht mehr, beginnt eine neue Seite.
-            fun bild(datei: File, text: String) {
-                val bmp = bildVerkleinert(datei, 1600) ?: return
-                try {
-                    val f = minOf(breite.toFloat() / bmp.width, (A4_H - 2 * rand) * 0.6f / bmp.height)
-                    val w = bmp.width * f
-                    val h = bmp.height * f
-                    if (seite == null || y + h > A4_H - rand) neueSeite()
-                    y += 4f
-                    val links = rand + (breite - w) / 2
-                    seite!!.canvas.drawBitmap(bmp, Rect(0, 0, bmp.width, bmp.height), RectF(links, y, links + w, y + h), Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG))
-                    y += h + 4f
-                } finally {
-                    bmp.recycle()
-                }
-                if (text.isNotBlank()) setze(text, unterschrift, 8f) else y += 8f
-            }
-            neueSeite()
-            setze(titel, kopf, 12f)
-            absaetze.forEach { z ->
-                val treffer = BILD_ZEILE.find(z)
-                val name = treffer?.groupValues?.get(2)?.trim()?.substringAfterLast('/')?.lowercase()
-                when {
-                    treffer != null && name != null && bilder[name] != null -> { benutzt += name; bild(bilder.getValue(name), treffer.groupValues[1]) }
-                    // Verweis auf ein Bild, das es nicht gibt: nur die Unterschrift bleibt stehen.
-                    treffer != null -> if (treffer.groupValues[1].isNotBlank()) setze(treffer.groupValues[1], unterschrift, 3f)
-                    z.startsWith("\u0001") -> { y += 6f; setze(z.drop(1), kopf.apply { textSize = 13f }, 4f); kopf.textSize = 17f }
-                    else -> setze(z, koerper, 3f)
-                }
-            }
-            val uebrig = bilder.filterKeys { it !in benutzt }
-            if (uebrig.isNotEmpty()) {
-                y += 6f
-                setze("Abbildungen", kopf.apply { textSize = 13f }, 4f)
-                kopf.textSize = 17f
-                uebrig.values.forEach { bild(it, "") }
-            }
-            seite?.let { s -> s.canvas.drawText("Seite $nr", A4_B - rand - fuss.measureText("Seite $nr"), A4_H - 30f, fuss); doc.finishPage(s) }
-            FileOutputStream(ziel).use { doc.writeTo(it) }
-        } finally {
-            doc.close()
-        }
-    }
+    fun textAlsPdf(titel: String, text: String, ziel: File, bilder: Map<String, File> = emptyMap(), untertitel: String? = null): PdfPruefung =
+        PdfGestaltung.setze(titel, text, ziel, bilder, untertitel)
 
     /** Legt ein Bild (zum Beispiel eine Infografik) eingepasst auf eine DIN-A4-Seite, Hoch- oder Querformat nach dem Bild. */
     fun bildAlsA4Pdf(bild: File, ziel: File) {
@@ -266,6 +178,4 @@ object Medien {
         }
     }
 
-    private fun statisch(text: String, farbe: TextPaint, breite: Int): StaticLayout =
-        StaticLayout.Builder.obtain(text, 0, text.length, farbe, breite).setAlignment(Layout.Alignment.ALIGN_NORMAL).setLineSpacing(2f, 1.1f).build()
 }

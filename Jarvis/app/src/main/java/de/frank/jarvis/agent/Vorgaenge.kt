@@ -16,6 +16,7 @@ import org.json.JSONObject
  * [ergebnis] = Titel des Ablage-Eintrags, nur wenn Frank die Ablage verlangt hat ([ablage]) oder es später übernommen wurde;
  * sonst steht der Bericht vorläufig unter [vorlaeufig] (nicht in der Ablage, siehe [de.frank.jarvis.ablage.Vorlaeufig]).
  * [gespraech] = das Jarvis-Gespräch, aus dem der Auftrag kam; dorthin kommt das Ergebnis. Leer bei Aufträgen aus ChatGPT.
+ * [pdf] = Frank hat ausdrücklich ein PDF verlangt (agent_starten mit als_pdf). Unabhängig von [ablage]: Ein PDF-Wunsch allein legt nichts ab.
  * [abgerufen] = ein Werkzeug hat das Ergebnis ausgeliefert; [mitgeteilt] = ChatGPT hat bestätigt, es Frank gesagt zu haben.
  */
 data class Vorgang(
@@ -35,6 +36,7 @@ data class Vorgang(
     val ablage: Boolean = false,
     val gespraech: String = "",
     val vorlaeufig: String = "",
+    val pdf: Boolean = false,
 ) {
     val offen: Boolean get() = stand == ANGENOMMEN || stand == LAEUFT
     /** Fertig (oder gescheitert), aber Frank hat es laut ChatGPT noch nicht erfahren. */
@@ -43,7 +45,7 @@ data class Vorgang(
     fun alsJson(): JSONObject = JSONObject().put("id", id).put("agent", agent).put("auftrag", auftrag).put("erstellt", erstellt).put("stand", stand)
         .put("schritt", schritt).put("geaendert", geaendert).put("gestartet", gestartet).put("beendet", beendet).put("ergebnis", ergebnis)
         .put("grund", grund).put("abgerufen", abgerufen).put("mitgeteilt", mitgeteilt)
-        .put("ablage", ablage).put("gespraech", gespraech).put("vorlaeufig", vorlaeufig)
+        .put("ablage", ablage).put("gespraech", gespraech).put("vorlaeufig", vorlaeufig).put("pdf", pdf)
 
     companion object {
         const val ANGENOMMEN = "angenommen"
@@ -58,6 +60,8 @@ data class Vorgang(
             j.optString("grund"), j.optLong("abgerufen"), j.optLong("mitgeteilt"),
             // Alte Einträge (vor 1.8.179) legten immer in der Ablage ab.
             j.optBoolean("ablage", true), j.optString("gespraech"), j.optString("vorlaeufig"),
+            // Ohne Feld (vor 1.8.184) kein PDF: Ein PDF entsteht nur noch auf ausdrücklichen Wunsch, nie aus einer Wortsuche im Auftrag.
+            j.optBoolean("pdf", false),
         )
 
         fun standText(stand: String): String = when (stand) {
@@ -129,14 +133,14 @@ class VorgangsBuch(private val datei: File, private val uhr: () -> Long = System
      * [reserviere] wird nur für einen wirklich neuen Auftrag gerufen (unter derselben Sperre, also ohne Wettlauf).
      */
     @Synchronized
-    fun annehmen(agent: String, auftrag: String, ablage: Boolean = false, gespraech: String = "", reserviere: () -> Boolean): Annahme {
+    fun annehmen(agent: String, auftrag: String, ablage: Boolean = false, gespraech: String = "", pdf: Boolean = false, reserviere: () -> Boolean): Annahme {
         val l = aufgeraeumt()
         val jetzt = uhr()
         val schluessel = normal(agent) + "|" + normal(auftrag)
         l.lastOrNull { normal(it.agent) + "|" + normal(it.auftrag) == schluessel && (it.offen || (it.stand != Vorgang.FEHLGESCHLAGEN && it.stand != Vorgang.ABGEBROCHEN && jetzt - it.erstellt < DOPPELT_MS)) }
             ?.let { return Annahme.Doppelt(it) }
         if (!reserviere()) return Annahme.KeinPlatz
-        val v = Vorgang(neueId(l), agent, auftrag.trim(), jetzt, Vorgang.ANGENOMMEN, ablage = ablage, gespraech = gespraech)
+        val v = Vorgang(neueId(l), agent, auftrag.trim(), jetzt, Vorgang.ANGENOMMEN, ablage = ablage, gespraech = gespraech, pdf = pdf)
         l += v
         schreibe()
         melde("Vorgang ${v.id} angenommen", agent)

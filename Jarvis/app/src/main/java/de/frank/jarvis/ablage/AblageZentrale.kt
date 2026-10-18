@@ -42,6 +42,17 @@ class AgentenKontext(val eintragTitel: String?, val langeWarten: Boolean, val da
     companion object Key : CoroutineContext.Key<AgentenKontext>
 }
 
+/**
+ * Liegt um den Lauf eines Agenten: [erlaubt] = Frank hat für diesen Auftrag ausdrücklich ein PDF verlangt. Ohne diesen Wunsch
+ * erzeugen bild_erzeugen (auch_pdf) und ablage_schreiben (als_pdf) im Agenten kein PDF, auch wenn das Modell es versucht.
+ * Fehlt das Element (ChatGPT, Jarvis-Chat), entscheidet wie bisher der Aufruf selbst.
+ */
+class PdfWunsch(val erlaubt: Boolean) : AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<PdfWunsch> {
+        suspend fun zulaessig(): Boolean = currentCoroutineContext()[Key]?.erlaubt != false
+    }
+}
+
 /** Eine Arbeit, die gerade im Hintergrund für die Ablage läuft (Bilderzeugung). Downloads stehen in [Uebertragungen]. */
 data class Hintergrundarbeit(val kennung: String, val art: String, val eintragTitel: String, val seit: Long, val fehler: String? = null)
 
@@ -270,18 +281,34 @@ object AblageZentrale {
      * Legt [text] als DIN-A4-PDF in den Eintrag [eintragTitel] und bindet dessen Bilder ein (siehe [Medien.textAlsPdf]).
      * Rückgabe: die Meldung „Gespeichert …“; wirft bei Fehlern.
      */
-    fun textAlsPdfAblegen(context: Context, eintragTitel: String, text: String, s: AblageSpeicher = speicher(context)): String {
-        val bilder = s.findeGenau(eintragTitel)?.anhaenge.orEmpty().filter { it.art == Art.BILD }
-            .associate { it.originalName.lowercase() to s.datei(it) }.filterValues { it.isFile }
+    fun textAlsPdfAblegen(context: Context, eintragTitel: String, text: String, s: AblageSpeicher = speicher(context), untertitel: String? = null): String {
+        val bilder = bilderVon(s, eintragTitel)
         val teil = s.neueTeilDatei()
         try {
-            Medien.textAlsPdf(eintragTitel, text, teil, bilder)
+            Medien.textAlsPdf(eintragTitel, text, teil, bilder, untertitel)
             val u = s.uebernimm(eintragTitel, teil, AblageSpeicher.dateiname(eintragTitel) + ".pdf", "application/pdf",
                 if (bilder.isEmpty()) "Jarvis (PDF aus Text)" else "Jarvis (PDF aus Text mit ${bilder.size} Bild(ern))")
             nachDemSpeichern(context, u)
             return meldung(u, istVorlaeufig(context, s)) + if (bilder.isEmpty()) "" else " Darin ${bilder.size} Bild(er)."
         } finally {
             teil.delete()
+        }
+    }
+
+    /** Die Bilder eines Eintrags für das PDF: Dateiname klein geschrieben → Datei. */
+    fun bilderVon(s: AblageSpeicher, eintragTitel: String): Map<String, File> = s.findeGenau(eintragTitel)?.anhaenge.orEmpty().filter { it.art == Art.BILD }
+        .associate { it.originalName.lowercase() to s.datei(it) }.filterValues { it.isFile }
+
+    /**
+     * Setzt [text] probeweise als PDF (Zwischenspeicher, nichts wird abgelegt) mit den Bildern von [eintragTitel] und
+     * liefert die Prüfung: Seiten, gefundene und fehlende Abbildungen, Hinweise zum Layout.
+     */
+    fun pdfEntwurfPruefen(context: Context, eintragTitel: String, text: String, s: AblageSpeicher): PdfPruefung {
+        val probe = File(context.cacheDir, "pdf-entwurf-${System.nanoTime()}.pdf")
+        try {
+            return Medien.textAlsPdf(eintragTitel, text, probe, bilderVon(s, eintragTitel))
+        } finally {
+            probe.delete()
         }
     }
 

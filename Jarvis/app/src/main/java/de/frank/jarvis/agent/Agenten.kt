@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /** Ein Agent: ein Name und eine Rolle, also die Anweisung, wie er an Aufträge herangeht. */
@@ -130,7 +131,23 @@ object Agenten {
     /** Löscht einen selbst angelegten Agenten. Vorgaben bleiben. */
     fun loesche(context: Context, name: String): Boolean = datei(context, name).let { it.exists() && it.delete() }
 
-    private val PDF_WUNSCH = Regex("\\bpdf", RegexOption.IGNORE_CASE)
+    /**
+     * Nur bei ausdrücklichem PDF-Wunsch: Jarvis setzt aus dem Bericht ein gestaltetes Dokument (Titelseite, Inhaltsübersicht, Typografie,
+     * Merkkästen, Tabellen, eingebettete Abbildungen). Der Agent liefert dafür Gliederung und passende Bilder.
+     */
+    private const val PDF_ANWEISUNG =
+        "Frank hat ausdrücklich ein PDF verlangt. Jarvis setzt aus deinem Bericht ein professionell gestaltetes Dokument: Titelseite mit Titelbild und Inhaltsübersicht, " +
+            "klare Typografie, farbige Merkkästen, Tabellen und eingebettete Abbildungen. Rufe dafür NICHT ablage_schreiben auf und setze bei bild_erzeugen kein auch_pdf. So lieferst du zu:\n" +
+            "1. Beginne den Bericht mit einer Zeile „# Dokumenttitel“ (kurz, ohne Datum) und danach „## Kurzfassung“.\n" +
+            "2. Erzeuge mit bild_erzeugen (Titel wie oben, je Bild ein Aufruf; kommt „läuft noch“, rufe es mit denselben Angaben noch einmal auf) zwei bis vier Abbildungen, " +
+            "die den Inhalt verständlicher machen: ein Titelbild (format quer, ruhige, hochwertige Illustration zum Thema, ohne Text) und je nach Inhalt Infografiken, " +
+            "Diagramme, Ablauf- oder Vergleichsgrafiken mit deutscher Beschriftung. Zahlen und Aussagen in Grafiken müssen mit deinem Bericht übereinstimmen; nichts nur zur Dekoration. " +
+            "Beschreibe jede Grafik bei bild_erzeugen genau: Inhalt, Beschriftungen, Werte, Stil (sauber, modern, viel Weißraum, Farben Dunkelblau und Petrol).\n" +
+            "3. Binde das Titelbild als eigene Zeile ![Titelbild](dateiname.png) direkt nach dem Dokumenttitel ein und jede weitere Abbildung an der inhaltlich passenden Stelle " +
+            "als eigene Zeile ![Was die Abbildung zeigt](dateiname.png), mit genau dem Dateinamen aus dem Werkzeug-Ergebnis.\n" +
+            "4. Gestaltungsmittel: ## für Kapitel, ### für Unterkapitel, Stichpunkte und nummerierte Listen, Tabellen in Markdown für Vergleiche, " +
+            "Merkkästen als Zeilen mit „> “ davor (zum Beispiel „> **Empfehlung:** …“), **fett** für Schlüsselbegriffe.\n" +
+            "5. Prüfe vor deiner Antwort mit pdf_entwurf_pruefen (inhalt = dein fertiger Bericht), ob alle Abbildungen gefunden werden und das Layout stimmt; behebe gemeldete Probleme."
 
     /** Laufende Agenten je Vorgangskennung, damit vorgaenge (aktion abbrechen) einen Lauf beenden kann. */
     private val jobs = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
@@ -144,8 +161,9 @@ object Agenten {
     fun brichAb(vorgang: String): Boolean = jobs[vorgang]?.let { it.cancel(kotlinx.coroutines.CancellationException("von Frank abgebrochen")); true } ?: false
 
     /**
-     * Führt einen Auftrag aus (auf Wunsch auch als PDF mit den erzeugten Bildern). Das Ergebnis kommt nur in die Ablage, wenn der
-     * Vorgang es verlangt ([Vorgang.ablage]), sonst vorläufig. [vorgang] = Kennung im [Vorgaenge]-Buch; Start, Schritte und Ende
+     * Führt einen Auftrag aus. Der Bericht kommt als Text ins Gespräch; ein gestaltetes PDF nur, wenn der Vorgang es ausdrücklich
+     * verlangt ([Vorgang.pdf], nie aus einer Wortsuche im Auftrag). Das Ergebnis kommt nur in die Ablage, wenn der
+     * Vorgang es verlangt ([Vorgang.ablage]), sonst vorläufig. Beides ist unabhängig voneinander. [vorgang] = Kennung im [Vorgaenge]-Buch; Start, Schritte und Ende
      * werden dort festgehalten.
      */
     suspend fun fuehreAus(context: Context, plan: AgentenBauplan, auftrag: String, vorgang: String? = null): AgentenErgebnis {
@@ -165,8 +183,10 @@ object Agenten {
                 // Wurde der Vorgang abgebrochen, während der Dienst ihn startete, gar nicht erst anfangen.
                 if (buch?.gestartet(vorgang)?.offen == false) throw kotlinx.coroutines.CancellationException("vor dem Anlauf abgebrochen")
             }
-            val ablegen = vorgang?.let { buch?.finde(it)?.ablage } ?: false
-            val r = fuehreAusIntern(app, plan, auftrag, lauf, ablegen) { schritt -> if (vorgang != null) runCatching { buch?.schritt(vorgang, schritt) } }
+            val eintrag = vorgang?.let { buch?.finde(it) }
+            val ablegen = eintrag?.ablage ?: false
+            val pdf = eintrag?.pdf ?: false
+            val r = fuehreAusIntern(app, plan, auftrag, lauf, ablegen, pdf) { schritt -> if (vorgang != null) runCatching { buch?.schritt(vorgang, schritt) } }
             // Ein Abbruch während des Abschluss-Schritts wird dort verschluckt; dann zählt er trotzdem als Abbruch.
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             return r.also { ende = (if (r.titel == null) Vorgang.FEHLGESCHLAGEN else Vorgang.FERTIG) to r }
@@ -183,7 +203,7 @@ object Agenten {
         }
     }
 
-    private suspend fun fuehreAusIntern(app: Context, plan: AgentenBauplan, auftrag: String, lauf: AgentenLauf, ablegen: Boolean, beiSchritt: (String) -> Unit): AgentenErgebnis {
+    private suspend fun fuehreAusIntern(app: Context, plan: AgentenBauplan, auftrag: String, lauf: AgentenLauf, ablegen: Boolean, pdf: Boolean, beiSchritt: (String) -> Unit): AgentenErgebnis {
         // Der Titel steht vorab fest: Dateien, die der Agent unterwegs erzeugt (Bilder, PDFs, Downloads), landen im selben Eintrag wie sein Bericht.
         val titel = "${plan.name} – ${auftrag.replace(Regex("\\s+"), " ").take(50).trim()} – ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M. HH.mm"))}"
         // Ohne ausdrücklichen Ablage-Wunsch liegen Bericht, Bilder und PDF vorläufig: Sie kommen ins Gespräch, nicht in Franks Ablage.
@@ -191,31 +211,33 @@ object Agenten {
         try {
             val rolle = "DEINE ROLLE ALS AGENT „${plan.name}“: ${plan.rolle}\n" +
                 "Arbeite den Auftrag selbstständig ab, ohne Rückfragen. Dein letzter Schritt ist die Antwort mit dem vollständigen Bericht als Text; " +
-                "der Bericht geht an Frank ins Gespräch und kann länger sein. Schreibe ihn in gutem Deutsch mit Überschriften.\n" +
+                "der Bericht geht an Frank ins Gespräch und erscheint dort wie eine normale Chatantwort. Er darf und soll so ausführlich sein, wie der Auftrag es verlangt: " +
+                "alle Ergebnisse vollständig, keine knappe Zusammenfassung mit Verweis auf eine Datei. Schreibe ihn in gutem Deutsch, übersichtlich gegliedert mit " +
+                "Überschriften (##), kurzen Absätzen, Stichpunkten, **fett** für Schlüsselbegriffe und, wo es hilft, Tabellen in Markdown.\n" +
                 (if (ablegen) "Frank will das Ergebnis in der Ablage: Dein Ablage-Eintrag heißt „$titel“. Dateien (bild_erzeugen, ablage_datei_speichern) legst du mit genau diesem Titel ab, " +
                     "dann gehören sie zu deinem Bericht. Nenne im Bericht nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat.\n"
                 else "Frank hat KEINE Ablage verlangt: Lege nichts in die Ablage (ablage_schreiben und ablage_datei_speichern sind gesperrt) und schreib nicht, etwas liege in der Ablage. " +
                     "Dein Ergebnis heißt „$titel“; Bilder aus bild_erzeugen mit genau diesem Titel gehören zu deinem Bericht und erscheinen mit ihm im Gespräch. " +
                     "Nenne im Bericht nur Bilder, deren Erzeugung ein Werkzeug-Ergebnis bestätigt hat; Dateien aus dem Internet nennst du mit ihrer Adresse.\n") +
-                "Sollen Bilder oder Illustrationen dazu, erzeuge sie mit bild_erzeugen (je Bild ein Aufruf, Titel wie oben; kommt „läuft noch“, rufe es mit denselben Angaben noch einmal auf). " +
-                "Plane höchstens vier Bilder, damit Zeit für den Bericht bleibt. Verlangt der Auftrag genau ein Bild oder eine Infografik, erzeuge genau ein Motiv " +
-                "(Varianten nur, wenn der Auftrag sie ausdrücklich will). Soll dieses Bild selbst als PDF kommen, setze bei bild_erzeugen auch_pdf=true: " +
-                "Das ist das PDF, Jarvis baut dann kein zweites aus dem Bericht. Sonst baut Jarvis das PDF nach deinem Bericht selbst, wenn der Auftrag eines verlangt: " +
-                "Rufe dafür NICHT ablage_schreiben auf. Setze jedes gespeicherte Bild an passender Stelle als eigene Zeile ![Bildunterschrift](dateiname.png) in den Bericht, " +
-                "mit genau dem Dateinamen aus dem Werkzeug-Ergebnis; nicht eingebundene Bilder kommen ans Ende des PDFs."
+                (if (pdf) PDF_ANWEISUNG
+                else "Frank hat KEIN PDF verlangt: Das Ergebnis ist allein dein Bericht als Chattext. Erzeuge kein PDF und keine andere Datei (bei bild_erzeugen nie auch_pdf, " +
+                    "kein ablage_schreiben mit als_pdf) und schreib nicht, es gebe ein PDF. Steht im Auftrag „kein PDF“ oder „nur Text“, gilt das erst recht. " +
+                    "Bilder nur, wenn der Auftrag ausdrücklich Bilder oder Illustrationen will: dann mit bild_erzeugen (je Bild ein Aufruf, Titel wie oben; kommt „läuft noch“, " +
+                    "rufe es mit denselben Angaben noch einmal auf), höchstens vier, und setze jedes als eigene Zeile ![Bildunterschrift](dateiname.png) in den Bericht.")
             val denker = JarvisAgent(app)
             var grund: String? = null
-            val bericht = denker.versuche(
+            // Ohne PDF-Wunsch sperrt PdfWunsch jedes PDF in bild_erzeugen und ablage_schreiben, auch wenn das Modell es versucht.
+            val bericht = withContext(de.frank.jarvis.ablage.PdfWunsch(pdf)) { denker.versuche(
                 auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel, ablageDauerhaft = ablegen, abschluss = true,
                 beiSchritt = { schritt -> _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = schritt) else it } }; beiSchritt(schritt) },
                 beiAbbruch = { grund = it },
-            )
+            ) }
             if (bericht.isNullOrBlank()) {
                 Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Kein Ergebnis (${grund ?: "leere Antwort"}) für: ${auftrag.take(120)}", ok = false)
                 return AgentenErgebnis(null, grund ?: "Das Modell hat keinen Bericht geliefert")
             }
             val datei = speicher.schreibeText(titel, "# ${plan.name}: ${auftrag.trim()}\n\nErstellt am ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M.yyyy, HH:mm 'Uhr'"))} von Jarvis.\n\n$bericht").second
-            var pdf = ""
+            var pdfMeldung = ""
             var pdfFehler: String? = null
             // Hat jedes Bild des Eintrags schon sein eigenes PDF (bild_erzeugen mit auch_pdf), ist der PDF-Wunsch erfüllt:
             // Ein zweites PDF aus dem Bericht zeigte dasselbe Motiv noch einmal (doppelte Infografik). Bei mehreren Bildern,
@@ -225,14 +247,14 @@ object Agenten {
                 val bilder = anhaenge.filter { it.art == Art.BILD }
                 return bilder.isNotEmpty() && bilder.all { b -> b.kennung != null && anhaenge.any { it.kennung == "${b.kennung}-pdf" && it.herkunft == AblageZentrale.HERKUNFT_BILD_PDF } }
             }
-            if (PDF_WUNSCH.containsMatchIn(auftrag) && !bildPdfGenuegt()) {
-                pdf = runCatching { " " + AblageZentrale.textAlsPdfAblegen(app, titel, bericht, speicher) }
+            if (pdf && !bildPdfGenuegt()) {
+                pdfMeldung = runCatching { " " + AblageZentrale.textAlsPdfAblegen(app, titel, bericht, speicher, "${plan.name} · erstellt von Jarvis") }
                     .getOrElse { pdfFehler = "das PDF ließ sich nicht erzeugen: ${AblageZentrale.fehlerText(it)}"; " Das PDF fehlt ($pdfFehler)." }
             }
             // Fehlt das gewünschte PDF, gilt der Lauf nicht als fertig: Grund geht in Protokoll und Benachrichtigung.
             val gesamt = listOfNotNull(grund, pdfFehler).joinToString("; ").ifEmpty { null }
             Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", (if (gesamt == null) "Fertig" else "Nicht vollständig ($gesamt)") +
-                (if (ablegen) ", abgelegt als „${datei.nameWithoutExtension}“." else ", Ergebnis „${datei.nameWithoutExtension}“ vorläufig (keine Ablage gewünscht).") + pdf, ok = gesamt == null)
+                (if (ablegen) ", abgelegt als „${datei.nameWithoutExtension}“." else ", Ergebnis „${datei.nameWithoutExtension}“ vorläufig (keine Ablage gewünscht).") + pdfMeldung, ok = gesamt == null)
             val eintrag = speicher.findeGenau(titel)
             val dateien = eintrag?.anhaenge.orEmpty().filter { it.art == Art.BILD || it.art == Art.PDF }.map { speicher.datei(it).absolutePath }
             return AgentenErgebnis(eintrag?.titel ?: datei.nameWithoutExtension, gesamt, bericht, dateien, vorlaeufig = !ablegen)
