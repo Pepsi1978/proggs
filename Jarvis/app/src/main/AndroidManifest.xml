@@ -137,6 +137,8 @@
             </intent-filter>
         </receiver>
         <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />
+        <!-- Wegwischen einer Meldung, die wie ein Wecker klingelt: Jarvis beendet ihren Weckton. -->
+        <receiver android:name=".meldung.WeckerTonEmpfaenger" android:exported="false" />
 
         <!-- Lässt einen abgelaufenen Timer wie einen Wecker klingeln, bis Frank ausschaltet. -->
         <service

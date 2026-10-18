@@ -259,6 +259,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Jarvis ist offen: Frank hat die klingelnde Meldung gesehen (Antippen öffnet meist Jarvis), der Weckton darf aufhören.
+        de.frank.jarvis.meldung.WeckerTon.alleStopp()
         // Bewusste Wechsel innerhalb der sichtbaren App sind davon nie betroffen: Das greift nur nach einer Rückkehr von außen.
         if (rueckkehrNeu && !weckwortSeitStopp && !vm.ueberSperre) vm.startbildschirmNeu()
         rueckkehrNeu = false

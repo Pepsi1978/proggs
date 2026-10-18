@@ -86,7 +86,7 @@ class AnsageEmpfaenger : BroadcastReceiver() {
         if (!de.frank.jarvis.meldung.Meldungen.an(context, art)) return
         if (de.frank.jarvis.meldung.Meldungen.inRuhe(context, art)) return
         // Wie jede Meldung: Ein laufendes Live-Gespräch wartet sie ab (höchstens 15 Minuten), mit Stimme und Lautstärke der Ansagen.
-        de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(context, art, titel, text, schluessel = titel)
+        de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(context, art, titel, text, schluessel = "$titel:$text")
     }
 
     companion object {

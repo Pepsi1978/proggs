@@ -55,7 +55,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -332,12 +334,23 @@ private fun WecktonOptionen(p: MeldungsProfil, app: android.content.Context) {
     val f = LocalFarben.current
     var ton by remember(p.art.id) { mutableStateOf(p.weckton) }
     var sekunden by remember(p.art.id) { mutableIntStateOf(p.wecktonSekunden) }
-    val name = remember(ton) { de.frank.jarvis.meldung.WeckerTon.name(app, ton) }
+    // Den Namen holt Android aus der Mediendatenbank: abseits des Hauptfadens, damit der Bildschirm nicht hakt.
+    val name by produceState(if (ton.isBlank()) "Standard-Weckton" else "…", ton) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.meldung.WeckerTon.name(app, ton) }
+    }
+    // Den Bildschirm verlassen beendet eine laufende Probe.
+    DisposableEffect(Unit) { onDispose { de.frank.jarvis.meldung.WeckerTon.probeStopp() } }
     val waehler = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode != android.app.Activity.RESULT_OK) return@rememberLauncherForActivityResult
         @Suppress("DEPRECATION")
         val gewaehlt = r.data?.getParcelableExtra<android.net.Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-        ton = gewaehlt?.toString().orEmpty()
+        val neu = gewaehlt?.toString().orEmpty()
+        // Eigene Musik aus dem Speicher darf Jarvis oft nicht öffnen: dann nicht übernehmen, statt still den Standard zu spielen.
+        if (!de.frank.jarvis.meldung.WeckerTon.abspielbar(app, neu)) {
+            android.widget.Toast.makeText(app, "Diesen Ton darf Jarvis nicht abspielen. Bitte einen Weckton aus der Liste des Handys wählen.", android.widget.Toast.LENGTH_LONG).show()
+            return@rememberLauncherForActivityResult
+        }
+        ton = neu
         p.weckton = ton
     }
     Unterzeile("Weckton")
