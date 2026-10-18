@@ -182,6 +182,7 @@
     {"versionCode": 177, "versionName": "1.8.166", "stand": "18.10.2026, 07:22 Uhr", "notiz": "Der eigene Timer-Text wird im Wecker-Modus erst nach dem Klingeln vorgelesen, lässt sich per Sprache mit „standard“ zurücksetzen und erkennt {Name} auch großgeschrieben."},
     {"versionCode": 178, "versionName": "1.8.167", "stand": "18.10.2026, 07:23 Uhr", "notiz": "Im Wecker-Modus liest Jarvis den Timer-Text wieder sofort vor, damit „Aus“ die Ansage nicht verschluckt."},
     {"versionCode": 179, "versionName": "1.8.168", "stand": "18.10.2026, 07:23 Uhr", "notiz": "Der Pfeil im Kern dreht während der Tagesauswertung jetzt wirklich schneller, der Kern zeigt Denken und Verbinden wieder sichtbar an, und die Sprachausgabe sagt, ob die Auswertung gerade läuft."},
-    {"versionCode": 180, "versionName": "1.8.169", "stand": "18.10.2026, 07:24 Uhr", "notiz": "Schlummern verwirft die Timer-Ansage nicht mehr: Ist die Schlummerzeit um, meldet sich der Timer wieder mit Ton und Ansage; nur „Aus“ verwirft eine noch wartende Ansage."}
+    {"versionCode": 180, "versionName": "1.8.169", "stand": "18.10.2026, 07:24 Uhr", "notiz": "Schlummern verwirft die Timer-Ansage nicht mehr: Ist die Schlummerzeit um, meldet sich der Timer wieder mit Ton und Ansage; nur „Aus“ verwirft eine noch wartende Ansage."},
+    {"versionCode": 181, "versionName": "1.8.170", "stand": "18.10.2026, 07:33 Uhr", "notiz": "Während Jarvis vorliest, bleiben Hinweistöne anderer Apps stumm (etwa die Claude-App beim Start eines Programmierauftrags): Die Meldung erscheint trotzdem, das Vorlesen wird aber nicht mehr unterbrochen; lange Ablage-Texte ausgenommen."}
   ]
 }
