@@ -180,6 +180,8 @@ class EinstellungsKatalog(context: Context) {
 
     /** Nach einer Änderung an der Losfahr-Meldung neu planen, wie in der Oberfläche. */
     private fun abfahrtNeu() { e.abfahrtZustand = ""; de.frank.jarvis.fahrt.Abfahrt.stelle(app) }
+    /** Dieselben Folgeaktionen wie der An-Schalter der Meldung im Bildschirm (Abfahrt neu stellen, wartendes Vorlesen verwerfen). */
+    private fun meldungFolgen(art: de.frank.jarvis.meldung.Meldungsart) = de.frank.jarvis.meldung.Meldungen.folgen(app, art)
     private fun zeitplanNeu() = de.frank.jarvis.auswertung.Zeitplan.stelle(app)
 
     /**
@@ -219,7 +221,7 @@ class EinstellungsKatalog(context: Context) {
                 de.frank.jarvis.meldung.Meldungen.folgen(app, art)
             })
             if (art.ton) add(schalter(art.schluessel("ton"), b, "${art.titel} mit Ton", "Aus = die Meldung kommt lautlos.", { p.ton }) { p.ton = it })
-            if (art.wecker) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Klingelt mit dem Weckton, auch bei „Nicht stören“, bis die Meldung angetippt oder weggewischt wird.", { p.wecker }) { p.wecker = it })
+            if (art.wecker) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Klingelt mit dem Weckton, bis die Meldung angetippt oder weggewischt wird; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Wirkt nicht, solange die Meldung lautlos ist.", { p.wecker }) { p.wecker = it })
             if (art.vorlesen && neu("vorlesen")) add(schalter(art.schluessel("vorlesen"), b, "${art.titel} vorlesen", "Liest die Meldung zusätzlich vor; ein Live-Gespräch wartet sie ab.", { p.vorlesen }) { p.vorlesen = it })
             if ((art.vorlesen || art.sprichtImmer) && neu("stimme")) add(auswahl(art.schluessel("stimme"), b, "Stimme für ${art.titel}", "Eigene Vorlese-Stimme nur für diese Meldung.",
                 { listOf("" to "Wie Jarvis") + alleStimmen() }, { p.stimme }) { p.stimme = it })
@@ -243,7 +245,7 @@ class EinstellungsKatalog(context: Context) {
             schalter("ergebnisse_vorlesen", "Benachrichtigungen: Agent fertig", "Fertige Agenten-Ergebnisse vorlesen", "Liest eine kurze, vorlesetaugliche Zusammenfassung des Agenten-Ergebnisses von selbst vor, sobald er fertig ist; der ganze Bericht bleibt in der Ablage.", { e.ergebnisseVorlesen }) { e.ergebnisseVorlesen = it },
 
             // ---- Update-Ansagen ----
-            schalter("ansage_vorlesen", "Benachrichtigungen: Update-Ansagen", "Update-Ansagen vorlesen", "Sagt an, wenn in UpdateStation ein neues Update bereitliegt. Aus = nur die stille Benachrichtigung.", { e.ansageVorlesen }) { e.ansageVorlesen = it },
+            schalter("ansage_vorlesen", "Benachrichtigungen: Update-Ansagen", "Update-Ansagen vorlesen", "Sagt an, wenn in UpdateStation ein neues Update bereitliegt. Aus = nur die stille Benachrichtigung.", { e.ansageVorlesen }) { e.ansageVorlesen = it; meldungFolgen(de.frank.jarvis.meldung.Meldungsarten.ANSAGE) },
             auswahl("ansage_stimme", "Benachrichtigungen: Update-Ansagen", "Stimme der Ansagen", "Eigene Stimme nur für die Update-Ansagen.",
                 { listOf("" to "Wie Jarvis") + alleStimmen() }, { e.ansageStimme }) { e.ansageStimme = it },
             auswahl("ansage_tempo", "Benachrichtigungen: Update-Ansagen", "Tempo der Ansagen", "Sprechtempo nur für die Update-Ansagen.",
@@ -290,7 +292,7 @@ class EinstellungsKatalog(context: Context) {
                 "ein Ortsname, z. B. Potsdam", { e.wetterOrt }) { setzeWetterOrt(it) },
 
             // ---- Losfahr-Meldung ----
-            schalter("abfahrt_an", "Benachrichtigungen: Losfahren", "Losfahr-Meldung", "Meldet an Arbeitstagen rechtzeitig vor der nötigen Abfahrt.", { e.abfahrtAn }) { e.abfahrtAn = it; abfahrtNeu() },
+            schalter("abfahrt_an", "Benachrichtigungen: Losfahren", "Losfahr-Meldung", "Meldet an Arbeitstagen rechtzeitig vor der nötigen Abfahrt.", { e.abfahrtAn }) { e.abfahrtAn = it; meldungFolgen(de.frank.jarvis.meldung.Meldungsarten.ABFAHRT) },
             schalter("abfahrt_vorlesen", "Benachrichtigungen: Losfahren", "Losfahr-Meldung vorlesen", "Liest die Meldung zusätzlich vor.", { e.abfahrtVorlesen }) { e.abfahrtVorlesen = it },
             zahl("abfahrt_lautstaerke", "Benachrichtigungen: Losfahren", "Lautstärke der Losfahr-Meldung", "Lautstärke der vorgelesenen Meldung; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { e.abfahrtLautstaerke }) { e.abfahrtLautstaerke = it },
             zahl("abfahrt_vorlauf", "Benachrichtigungen: Losfahren", "Vorlauf", "So viele Minuten vor der nötigen Abfahrt kommt die Meldung.", 0, 60, "Minuten", { e.abfahrtVorlauf }) { e.abfahrtVorlauf = it; abfahrtNeu() },

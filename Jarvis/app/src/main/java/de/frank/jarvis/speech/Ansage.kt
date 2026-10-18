@@ -6,7 +6,6 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.PowerManager
 import android.util.Log
-import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
 import kotlin.math.roundToInt
@@ -34,7 +33,9 @@ object Ansage {
         val app = context.applicationContext
         CoroutineScope(Dispatchers.Main).launch {
             val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:$art-stimme")
-            runCatching { wach.acquire(120_000L) }
+            // Lange Texte (Agenten-Zusammenfassung) brauchen länger als zwei Minuten: Grenze nach der Textlänge, gut 12 Zeichen je Sekunde.
+            val hoechstens = (60_000L + text.length * 80L).coerceIn(110_000L, 10 * 60_000L)
+            runCatching { wach.acquire(hoechstens + 10_000L) }
             val ton = app.getSystemService(AudioManager::class.java)
             val hoechste = ton.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             val eigen = lautstaerke > 0
@@ -50,7 +51,7 @@ object Ansage {
                 val quelle = "$art:" + System.currentTimeMillis()
                 val vorleser = Vorleser.hole(app, SecureSettings(app))
                 vorleser.sprich(quelle, titel, text, wahl = wahl)
-                withTimeoutOrNull(110_000L) { vorleser.stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }
+                withTimeoutOrNull(hoechstens) { vorleser.stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }
             } catch (f: Exception) {
                 Log.w(TAG, "Vorlesen nicht möglich", f)
             } finally {
@@ -81,9 +82,11 @@ class AnsageEmpfaenger : BroadcastReceiver() {
         val text = intent.getStringExtra(EXTRA_TEXT)?.take(500)?.takeIf { it.isNotBlank() } ?: return
         val titel = intent.getStringExtra(EXTRA_TITEL)?.take(80) ?: "Jarvis"
         Logbuch.sprache("Ansage von $titel", text.take(120))
-        if (!Einstellungen.get(context).ansageVorlesen) return
-        if (de.frank.jarvis.meldung.Meldungen.inRuhe(context, de.frank.jarvis.meldung.Meldungsarten.ANSAGE)) return
-        Ansage.ansage(context, titel, text)
+        val art = de.frank.jarvis.meldung.Meldungsarten.ANSAGE
+        if (!de.frank.jarvis.meldung.Meldungen.an(context, art)) return
+        if (de.frank.jarvis.meldung.Meldungen.inRuhe(context, art)) return
+        // Wie jede Meldung: Ein laufendes Live-Gespräch wartet sie ab (höchstens 15 Minuten), mit Stimme und Lautstärke der Ansagen.
+        de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(context, art, titel, text, schluessel = titel)
     }
 
     companion object {

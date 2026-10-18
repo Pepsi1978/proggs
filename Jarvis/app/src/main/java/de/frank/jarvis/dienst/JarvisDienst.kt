@@ -106,9 +106,11 @@ class JarvisDienst : Service() {
             Tunnel.zustand.collect { zustand ->
                 if (zustand.stufe != vorher) { Logbuch.netz("Verbindung: ${zustand.stufe}", zustand.meldung); vorher = zustand.stufe }
                 val text = if (zustand.stufe == TunnelStufe.ONLINE) "Bereit für ChatGPT" else zustand.meldung
-                // Weggewischt soll weg bleiben: dann nur den Text merken, nicht bei jedem Netzwechsel neu zeigen.
-                if (de.frank.jarvis.meldung.Meldungen.profil(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.BEREITSCHAFT).minimiert) letzterText = text
-                else getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, hinweis(text))
+                // Weggewischt soll weg bleiben: dann nur den Text merken, nicht bei jedem Netzwechsel neu zeigen. Noch sichtbar wird sie aktualisiert.
+                val nm = getSystemService(NotificationManager::class.java)
+                val weggewischt = de.frank.jarvis.meldung.Meldungen.profil(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.BEREITSCHAFT).minimiert &&
+                    runCatching { nm.activeNotifications.none { it.id == HINWEIS_ID } }.getOrDefault(true)
+                if (weggewischt) letzterText = text else nm.notify(HINWEIS_ID, hinweis(text))
             }
         }
     }
@@ -225,8 +227,10 @@ class JarvisDienst : Service() {
                     de.frank.jarvis.faehigkeit.Ablage.finde(this@JarvisDienst, titel)?.let { datei ->
                         // Vorgelesen wird eine eigene kurze Zusammenfassung fürs Ohr, nicht Auftrag und Bericht; der Bericht bleibt unverändert.
                         val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, datei.readText(), lauf.grund)
-                        // Mit Stimme und Lautstärke aus Einstellungen → Benachrichtigungen → Agent fertig; ein laufendes Gespräch wartet sie ab.
-                        de.frank.jarvis.meldung.Meldungen.sprich(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT, plan.name, fassung)
+                        // Mit Stimme und Lautstärke aus Einstellungen → Benachrichtigungen → Agent fertig; ein laufendes Gespräch wartet sie ab,
+                        // und ein Abschalten der Meldung in der Zwischenzeit verwirft sie.
+                        de.frank.jarvis.meldung.Meldungen.vorlesenWartend(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT, plan.name, fassung,
+                            schluessel = titel, ausdruecklich = vorlesen)
                     }
                 }
             } finally {

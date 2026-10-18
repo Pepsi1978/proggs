@@ -87,9 +87,10 @@ fun BenachrichtigungenEinstellungen(vm: AppViewModel, activity: ComponentActivit
     val f = LocalFarben.current
     val e = vm.einstellungen
     val profile = Meldungsarten.alle.map { MeldungsProfil(e, it) }
-    val aktiv = profile.count { istAn(vm, it) }
+    // Aufnahme und Vorlesen erscheinen nur, während sie laufen: nicht als „eingeschaltet“ zählen.
+    val aktiv = profile.count { istAn(vm, it) && it.art != Meldungsarten.AUFNAHME && it.art != Meldungsarten.VORLESEN }
     val vorgelesen = profile.count { p -> istAn(vm, p) && ((p.art.vorlesen && p.vorlesen) || p.art.sprichtImmer) }
-    val wecker = profile.count { p -> istAn(vm, p) && p.art.wecker && p.wecker } + if (e.timerWecker) 1 else 0
+    val wecker = profile.count { p -> istAn(vm, p) && p.weckerWirksam } + if (e.timerWecker) 1 else 0
 
     // ---------------------------------------------------------------- Überblick
     Karte(toenung = if (vm.hinweiseAn) f.primaer else f.gefahr) {
@@ -110,7 +111,7 @@ fun BenachrichtigungenEinstellungen(vm: AppViewModel, activity: ComponentActivit
             Kennzahl("$vorgelesen", "vorgelesen", Icons.Rounded.RecordVoiceOver, Modifier.weight(1f))
             Kennzahl("$wecker", "als Wecker", Icons.Rounded.Alarm, Modifier.weight(1f))
         }
-        Text("Tippe auf eine Meldung: Ton, Vorlesen mit Stimme und Lautstärke, Wecker und Probe. Im Live-Gespräch bleibt alles lautlos und Vorlesen wartet, bis das Gespräch vorbei ist; nur Losfahren und Timer melden sich sofort.",
+        Text("Tippe auf eine Meldung: Ton, Vorlesen mit Stimme und Lautstärke, Wecker und Probe. Im Live-Gespräch bleibt alles lautlos und Vorlesen (auch Update-Ansagen) wartet, bis das Gespräch vorbei ist; nur Losfahren, Timer und Rückfragen beim Programmieren melden sich sofort.",
             color = f.textSchwach, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 14.dp))
     }
 
@@ -240,8 +241,11 @@ private fun MeldungsKarte(vm: AppViewModel, p: MeldungsProfil, activity: Compone
                         Chip("Normal", aktiv = !p.wecker) { p.wecker = false }
                         Chip("Wie ein Wecker", aktiv = p.wecker, icon = Icons.Rounded.Alarm) { p.wecker = true }
                     }
-                    Text(if (p.wecker) "Klingelt mit dem Weckton in der Wecker-Lautstärke, auch bei „Nicht stören“, bis du die Meldung antippst oder wegwischst."
-                        else "Ein kurzer Hinweiston, wie bei anderen Apps.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text(when {
+                        !p.wecker -> "Ein kurzer Hinweiston, wie bei anderen Apps."
+                        !p.weckerWirksam -> "Gerade ohne Wirkung: Die Meldung ist auf Lautlos gestellt, dann klingelt auch kein Wecker."
+                        else -> "Klingelt mit dem Weckton in der Wecker-Lautstärke, bis du die Meldung antippst oder wegwischst; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Vorgelesen wird danach."
+                    }, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 }
                 if (art == Meldungsarten.ABFAHRT) {
                     Unterzeile("Meldung vor der Abfahrt")
@@ -278,7 +282,7 @@ private fun merkmale(vm: AppViewModel, p: MeldungsProfil, an: Boolean): List<Pai
     return buildList {
         if (art.minimierbar && p.minimiert) add(Icons.Rounded.UnfoldLess to "Wegwischbar")
         if (art.ton) add(if (p.ton) Icons.Rounded.NotificationsActive to "Mit Ton" else Icons.Rounded.NotificationsOff to "Lautlos")
-        if ((art.wecker && p.wecker) || (art == Meldungsarten.TIMER && e.timerWecker)) add(Icons.Rounded.Alarm to "Wecker")
+        if (p.weckerWirksam || (art == Meldungsarten.TIMER && e.timerWecker)) add(Icons.Rounded.Alarm to "Wecker")
         if ((art.vorlesen && p.vorlesen) || art.sprichtImmer) add(Icons.Rounded.RecordVoiceOver to if (p.lautstaerke == 0) "Vorlesen" else "Vorlesen ${p.lautstaerke} %")
         if (art.ruhezeit && e.meldungRuheAn) add(Icons.Rounded.Bedtime to "Ruhezeit")
         if (isEmpty()) add(Icons.Rounded.Notifications to if (art.pflicht) "Android verlangt sie" else "An")
@@ -294,7 +298,7 @@ private fun pflichtText(art: Meldungsart) = when (art) {
 
 /** Der Android-Kanal, den „In Android“ öffnet; als Wecker der Wecker-Kanal. */
 private fun kanalVon(p: MeldungsProfil): String? = when {
-    p.art.wecker && p.wecker -> Meldungen.KANAL_WECKER
+    p.weckerWirksam -> Meldungen.KANAL_WECKER
     else -> p.art.kanal
 }
 

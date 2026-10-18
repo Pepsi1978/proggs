@@ -16,7 +16,9 @@ import de.frank.jarvis.speech.Ansage
 import de.frank.jarvis.speech.GespraechsFokus
 import de.frank.jarvis.speech.StimmWahl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -72,6 +74,9 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
     var minimiert: Boolean get() = e.wahr(art.schluessel("minimiert"), false); set(v) = e.setzeWahr(art.schluessel("minimiert"), v)
 
     val stimmWahl get() = StimmWahl(stimme.ifBlank { null }, tempo.takeIf { it > 0f })
+
+    /** Klingelt sie wirklich wie ein Wecker? „Lautlos“ schaltet den Wecker mit ab, auch wenn er noch gewählt ist. */
+    val weckerWirksam get() = art.wecker && wecker && !(art.ton && !ton)
 }
 
 object Meldungsarten {
@@ -107,7 +112,8 @@ object Meldungsarten {
     )
     val TIMER = Meldungsart(
         "timer", "Timer abgelaufen", "Klingelt, wenn ein Timer abgelaufen ist.",
-        "Wenn ein Timer abläuft.", ALLTAG, "jarvis-timer-wecker",
+        // Der hörbare Timer-Kanal („jarvis-timer“), nicht der stumme des Klingel-Dienstes.
+        "Wenn ein Timer abläuft.", ALLTAG, "jarvis-timer",
         schaltbar = false, vorlesen = true, dringend = true,
     )
     val STOPPUHR = Meldungsart(
@@ -202,7 +208,7 @@ object Meldungen {
         val gespraech = GespraechsFokus.stilleHinweise && !art.dringend
         // Lautlos gewählt heißt auch: kein Wecker, selbst wenn er noch eingeschaltet ist.
         val tonAus = art.ton && !p.ton
-        val klingeln = laut && art.wecker && p.wecker && !tonAus && !ruhe && !gespraech
+        val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech
         val still = !laut || ruhe || (gespraech && imGespraechStill) || tonAus
         if (klingeln) {
             weckerKanalAnlegen(app)
@@ -210,35 +216,61 @@ object Meldungen {
         }
         bauer.setSilent(still && !klingeln)
         // SECRET: auf dem Sperrbildschirm gar nicht, erst nach dem Entsperren (PRIVATE wäre der Standard und hülfe nicht).
-        if (e.meldungInhaltVerbergen) bauer.setVisibility(NotificationCompat.VISIBILITY_SECRET)
+        // Ein klingelnder Wecker muss sich aber gesperrt abstellen lassen: dann PRIVATE (sichtbar, Inhalt verborgen).
+        if (e.meldungInhaltVerbergen) bauer.setVisibility(if (klingeln) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_SECRET)
         val meldung = bauer.build()
         // Dauerton bis zum Antippen oder Wegwischen, wie bei einem Wecker.
         if (klingeln) meldung.flags = meldung.flags or Notification.FLAG_INSISTENT
         runCatching { app.getSystemService(NotificationManager::class.java).notify(nummer, meldung) }
-        if (laut && sprechtext != null && art.vorlesen && p.vorlesen && !ruhe) vorlesenSpaeter(app, art, titel, sprechtext)
+        // Klingelt sie, liest Jarvis erst vor, wenn die Meldung angetippt oder weggewischt ist: sonst ginge die Stimme im Weckton unter.
+        if (laut && sprechtext != null && art.vorlesen && p.vorlesen && !ruhe)
+            vorlesenSpaeter(app, art, titel, sprechtext, nummer.toString(), solange = if (klingeln) ({ sichtbar(app, nummer) }) else null)
         return true
     }
 
-    /** Wartendes Vorlesen je Art, damit „Heute still“ oder ein Abschalten es noch verhindern kann. */
+    private fun sichtbar(context: Context, nummer: Int) =
+        runCatching { context.getSystemService(NotificationManager::class.java).activeNotifications.any { it.id == nummer } }.getOrDefault(false)
+
+    /** Wartendes Vorlesen je Art und Meldung („art:schlüssel“), damit „Heute still“ oder ein Abschalten es noch verhindern kann. */
     private val wartend = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
 
-    /** Liest im Hintergrund vor, mit Stimme, Tempo und Lautstärke dieser Art; wartet ein laufendes Gespräch ab. */
-    fun vorlesenSpaeter(context: Context, art: Meldungsart, titel: String, text: String) {
+    /**
+     * Liest im Hintergrund vor, mit Stimme, Tempo und Lautstärke dieser Art; wartet ein laufendes Gespräch ab. Je [schluessel]
+     * gilt nur das neueste Vorlesen (eine aktualisierte Losfahr-Meldung ersetzt die alte), verschiedene Meldungen warten nebeneinander.
+     */
+    fun vorlesenSpaeter(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) {
         val app = context.applicationContext
-        wartend.put(art.id, nebenher.launch { sprich(app, art, titel, text) })?.cancel()
+        nebenher.launch { vorlesenWartend(app, art, titel, text, schluessel, solange, ausdruecklich) }
     }
 
-    /** Noch nicht gesprochenes Vorlesen dieser Art verwerfen (etwa nach „Heute still“). */
-    fun vorlesenAbbrechen(art: Meldungsart) { wartend.remove(art.id)?.cancel() }
+    /** Wie [vorlesenSpaeter], aber kehrt erst nach dem Start der Stimme (oder dem Verwerfen) zurück; bleibt dabei abbrechbar. */
+    suspend fun vorlesenWartend(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) = coroutineScope {
+        val name = "${art.id}:$schluessel"
+        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange, ausdruecklich) }
+        wartend.put(name, job)?.cancel()
+        job.invokeOnCompletion { wartend.remove(name, job) }
+        job.start()
+        job.join()
+    }
 
-    /** Wie [vorlesenSpaeter], aber wartend. Der Live-Sprachmodus hat Vorrang: höchstens 15 Minuten warten, dann verwerfen. */
-    suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String) {
+    /** Noch nicht gesprochenes Vorlesen dieser Art verwerfen (etwa nach „Heute still“); mit [schluessel] nur das einer Meldung. */
+    fun vorlesenAbbrechen(art: Meldungsart, schluessel: String? = null) {
+        wartend.keys.filter { if (schluessel == null) it.startsWith("${art.id}:") else it == "${art.id}:$schluessel" }.forEach { wartend.remove(it)?.cancel() }
+    }
+
+    /**
+     * Wartet ein Gespräch (und [solange], etwa einen klingelnden Wecker) ab und spricht dann. Der Live-Sprachmodus hat Vorrang:
+     * höchstens 15 Minuten warten (dringend 90 Sekunden), dann verwerfen. Danach gilt der Stand von dann: ausgeschaltet,
+     * Vorlesen abgewählt oder inzwischen Ruhezeit heißt still. [ausdruecklich] = Frank hat das Vorlesen eigens verlangt.
+     */
+    private suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean) {
         val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
-            while (GespraechsFokus.stilleHinweise) delay(2_000L)
+            while (GespraechsFokus.stilleHinweise || solange?.invoke() == true) delay(2_000L)
             true
         }
         if (frei != true) return
         val p = profil(context, art)
+        if (!ausdruecklich && (!an(context, art) || inRuhe(context, art) || (art.vorlesen && !p.vorlesen))) return
         Ansage.sprich(context, art.id, titel, text, p.lautstaerke, p.stimmWahl)
     }
 

@@ -98,7 +98,7 @@ class WeckwortDienst : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (gestartet) {
-            if (intent?.action == AKTION_NEU_LADEN) { hinweisErneuern(this); bereich.launch { neuLaden() } }
+            if (intent?.action == AKTION_NEU_LADEN) { hinweisErneuern(this, nurSichtbare = true); bereich.launch { neuLaden() } }
             return START_STICKY
         }
         val e = Einstellungen.get(this)
@@ -633,12 +633,18 @@ class WeckwortDienst : Service() {
                 .build()
         }
 
-        /** Nach „Minimiert“ oder neuem Weckwort: die laufende Meldung sofort erneuern. */
-        fun hinweisErneuern(context: Context) {
+        /**
+         * Nach „Minimiert“ oder neuem Weckwort: die laufende Meldung sofort erneuern. [nurSichtbare] = eine weggewischte
+         * (wegwischbare) Meldung nicht zurückholen, etwa beim bloßen Neuladen des Weckworts.
+         */
+        fun hinweisErneuern(context: Context, nurSichtbare: Boolean = false) {
             if (!laeuft) return
             val app = context.applicationContext
+            val nm = app.getSystemService(NotificationManager::class.java)
+            if (nurSichtbare && Meldungen.profil(app, Meldungsarten.WECKWORT_HOERT).minimiert &&
+                runCatching { nm.activeNotifications.none { it.id == HINWEIS_ID } }.getOrDefault(true)) return
             kanaeleAnlegen(app)
-            runCatching { app.getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, baueHinweis(app)) }
+            runCatching { nm.notify(HINWEIS_ID, baueHinweis(app)) }
         }
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
