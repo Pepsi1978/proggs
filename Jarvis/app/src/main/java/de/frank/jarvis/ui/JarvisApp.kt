@@ -98,7 +98,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             androidx.activity.compose.BackHandler(enabled = vm.reiter != Reiter.JARVIS && !vm.gesperrt) { vm.reiterZurueck() }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
-            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen
+            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen
             GespraecheSchublade(vm, schublade, wischen) {
             Box(Modifier.fillMaxSize()) {
             // Auf dem aufgeklappten Fold bleibt der Inhalt eine gut lesbare Spalte in der Mitte.
@@ -119,6 +119,11 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                         KlingelndeTimer(Modifier.padding(bottom = 18.dp))
                         Knopf("Entsperren") { vm.entsperrenAnfragen() }
                     }
+                    return@Column
+                }
+                if (FunktionenAnsicht.offen) {
+                    // Vollbild über allem: geöffnet aus dem Live-Gedächtnis oder den Einstellungen, zurück landet wieder dort.
+                    FunktionenBildschirm(Modifier.weight(1f))
                     return@Column
                 }
                 vm.merkOffen?.let { liste ->

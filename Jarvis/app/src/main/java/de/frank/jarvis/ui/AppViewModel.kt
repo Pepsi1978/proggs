@@ -1226,6 +1226,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         merkOffen = null
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
         GedaechtnisAnsicht.offen = false
+        FunktionenAnsicht.offen = false
         diktatZiel = null
         vorleser.stopp()
         // Kam „Hey Jarvis“ aus einer anderen App, aus dem Hintergrund oder per Kaltstart, beginnt ein neues Gespräch (beim
@@ -1820,6 +1821,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         merkOffen = null
         diktatZiel = null
         GedaechtnisAnsicht.offen = false
+        FunktionenAnsicht.offen = false
         einstellungsReiter = "jarvis"
         einstellungsVerlauf = emptyList()
         navigationsAuswahl = null

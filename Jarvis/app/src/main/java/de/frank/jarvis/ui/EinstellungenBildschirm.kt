@@ -158,6 +158,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     }
                     Knopf("$name ansehen und bearbeiten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.merkOeffnen(liste) }
                 }
+                Unterzeile("Funktionsübersicht")
+                Text("Was Jarvis in der installierten Version kann, knapp nach Bereichen. Jarvis liest sie nur bei Bedarf (auch in ChatGPT und ohne GitHub), nicht bei jeder Antwort, und pflegt sie nach jedem Update selbst.", color = f.textSchwach, fontSize = 13.sp)
+                Knopf("Funktionsübersicht ansehen und bearbeiten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { FunktionenAnsicht.offen = true }
             }
         }
 

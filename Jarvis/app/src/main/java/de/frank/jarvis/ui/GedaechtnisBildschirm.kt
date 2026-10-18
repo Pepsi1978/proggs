@@ -120,6 +120,18 @@ fun GedaechtnisBildschirm(modifier: Modifier = Modifier) {
                 }
             }
 
+            item(key = "funktionen") {
+                Karte(Modifier.antippen { FunktionenAnsicht.offen = true }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Funktionsübersicht", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Was Jarvis kann, nur bei Bedarf gelesen, nicht Teil des Live-Gedächtnisses. Ansehen und bearbeiten.", color = f.textLeise, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 2.dp))
+                        }
+                        Text("Öffnen", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
             val neu = stand.neuigkeiten.filter { System.currentTimeMillis() - it.zeit < 24 * 3_600_000L }.take(15)
             if (neu.isNotEmpty()) {
                 item(key = "neu-titel") { Abschnitt("Neu in den letzten 24 Stunden") }

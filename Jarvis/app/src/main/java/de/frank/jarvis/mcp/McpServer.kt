@@ -169,7 +169,8 @@ class McpServer(context: Context) {
             beschreibung = "Jarvis: sagt, ob Jarvis auf Franks Handy erreichbar ist, welche Apps angebunden sind, welches Datum und welche Uhrzeit dort gerade gelten " +
                 "und ob Franks Windows-PC und sein Mac an und für Programmieraufträge erreichbar sind (genauer: pc_status). " +
                 "Nutze es bei „Jarvis, bist du da?“ oder wenn du das heutige Datum auf dem Handy brauchst. Mit funktionen=true kommt zusätzlich die vollständige, tatsächliche " +
-                "Liste aller Werkzeuge von Jarvis (Grundlage zum Beispiel für eine Übersicht oder Infografik über Jarvis' Funktionen).",
+                "Liste aller Werkzeuge von Jarvis (Grundlage zum Beispiel für eine Übersicht oder Infografik über Jarvis' Funktionen). Für Fragen, was Jarvis kann oder was fehlt, " +
+                "ist funktionen_lesen die erste Quelle: die gepflegte Funktionsübersicht mit Grenzen und Versionsstand.",
             schema = schema("funktionen" to schalter("true = alle Werkzeuge mit Kurzbeschreibung auflisten.")),
             nurLesen = true,
         ) { it ->
@@ -410,7 +411,7 @@ class McpServer(context: Context) {
         private const val JE_WERKZEUG = 4
         private val plaetze = java.util.concurrent.ConcurrentHashMap<String, Semaphore>()
         /** Werkzeuge ohne „VORGANG FERTIG“: eigene Übersichten und die Werkzeuge der Programmier-Sitzungen. */
-        private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen")
+        private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen", "funktionen_lesen")
         /** Wann eine Vorgangsmeldung zuletzt an einem Ergebnis hing (Kennung → Zeit). */
         private val gezeigt = HashMap<String, Long>()
         /** Unterstützte Protokollstände, neuester zuerst. Wünscht der Client einen davon, bekommt er ihn. */

@@ -93,6 +93,8 @@ class JarvisDienst : Service() {
         // Das Live-Gedächtnis: Der Wächter lädt es aus dem Speicher und hält es danach rund um die Uhr aktuell.
         // Abseits des Hauptfadens: Das Laden liest und parst die ganze Gesamtbild-Datei.
         arbeit.launch { runCatching { Waechter.starte(this@JarvisDienst) }.onFailure { Logbuch.fehler("Dienst: Wächter starten", it) } }
+        // Nach einem Update: neu installierte Versionen in die Funktionsübersicht einarbeiten (wartet bei Live-Gespräch oder ohne Netz).
+        de.frank.jarvis.faehigkeit.Funktionen.anstossen(this, "nach dem Start")
         // Meldet der Server einen neuen Tagebucheintrag, liest Jarvis ihn sofort. Nur den App-Kontext festhalten, nicht den Dienst.
         val app = applicationContext
         Tunnel.beiSignal = { art -> Waechter.serverSignal(app, art) }
@@ -292,6 +294,8 @@ class JarvisDienst : Service() {
                 if (fertig?.mitKi == true) runCatching { de.frank.jarvis.agent.Lernen.laufe(this@JarvisDienst) }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Lernen aus dem Tagebuch", it) }
                 // Die Auswertung weckt den Dienst ohnehin regelmäßig: Ist ein Lernlauf fällig, läuft er gleich mit (auch ohne Bereitschaft).
                 runCatching { de.frank.jarvis.gedaechtnis.Lernlauf.automatisch(this@JarvisDienst) }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Lernlauf nach der Auswertung", it) }
+                // Verschobene Pflege der Funktionsübersicht (Live-Gespräch, kein Netz) holt die stündliche Auswertung nach.
+                de.frank.jarvis.faehigkeit.Funktionen.anstossen(this@JarvisDienst, "nach der Tagesauswertung")
             } finally {
                 runCatching { if (wach.isHeld) wach.release() }
                 Zeitplan.stelle(this@JarvisDienst)

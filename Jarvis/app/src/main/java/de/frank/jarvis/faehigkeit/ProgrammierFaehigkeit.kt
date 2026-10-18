@@ -57,6 +57,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "in die gleiche Session“, „sag dem Programmierer noch …“), und nur in genau die Sitzung, die er bezeichnet. Ordne einen Wunsch nie selbst als Nachtrag ein und " +
             "wähle nie selbst eine Sitzung: gleiche App, ähnliches Thema, ein gerade fertiger Auftrag oder eine vorhandene Sitzung sind kein Grund. Ist unklar, ob Frank einen " +
             "neuen Auftrag oder einen Nachtrag will oder welche Sitzung er meint, frag kurz und sende nichts. Ohne Nachtragswunsch ist ein Programmierwunsch ein neuer Auftrag. " +
+            "Bevor du für Jarvis selbst eine neue Funktion vorschlägst oder beauftragst, prüfe mit funktionen_lesen, ob es sie schon gibt. " +
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
             "Schreib den Auftrag vollständig aus, mit allem, was Frank im Gespräch gesagt hat: welche App, was genau anders werden soll, wie es aussehen und sich verhalten soll, " +
             "woran man erkennt, dass es fertig ist. Ist unklar, welche App gemeint ist, frag Frank kurz, bevor du startest. Programmiere nie selbst im Gespräch."
@@ -878,6 +879,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         fun finde(context: Context, id: String): JSONObject? = alle(context).lastOrNull { it.optString("id").equals(id, ignoreCase = true) }
 
+        /** Fertig gemeldete Aufträge an eine App seit [seit]: Auftrag und Abschlussmeldung, je eine Zeile (für die Funktionsübersicht). */
+        fun fertige(context: Context, app: String, seit: Long): List<String> = alle(context)
+            .filter { it.optString("stand") == "fertig" && it.optString("app").contains(app, ignoreCase = true) && zuletzt(it) >= seit }
+            .map { "- [${it.optString("id")}] Auftrag: " + it.optString("auftrag").replace('\n', ' ').take(300) + " → gemeldet: " + it.optString("schritt").replace('\n', ' ').take(300) }
+
         /** Alle Aufträge eines Jarvis-Gesprächs, neueste zuletzt, offene wie beendete: Frank bezeichnet mit „dieser Session“ das ganze Gespräch. */
         fun alleImGespraech(context: Context, gespraech: String): List<JSONObject> = alle(context).filter { it.optString("gespraech") == gespraech }
 
@@ -1088,6 +1094,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     companion object {
+        /** Fertig gemeldete Aufträge an eine App (nur Zusatzinfo: fertig gemeldet ist noch nicht installiert). */
+        fun fertigeAuftraege(context: Context, app: String, seit: Long): List<String> = Auftragsbuch.fertige(context.applicationContext, app, seit)
+
         /** So lang darf der ganze Text an ein Programmier-Ziel höchstens werden. */
         const val HOECHSTENS = 60_000
 
