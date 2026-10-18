@@ -108,9 +108,10 @@ object AblageZentrale {
                 val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:ablage")
                 runCatching { wach.acquire(30 * 60_000L) }
                 try {
-                    // Kein Protokolleintrag hier: Bekommt der Aufrufer das Ergebnis direkt, protokolliert es sein Werkzeug;
-                    // sonst der Nachmelde-Zweig unten. So steht ein Bild genau einmal in der Aktivität.
-                    arbeit().also { _arbeiten.update { l -> l.filter { it.kennung != kennung } } }
+                    arbeit().also { text ->
+                        _arbeiten.update { l -> l.filter { it.kennung != kennung } }
+                        Protokoll.melde(Quelle.JARVIS, art, text)
+                    }
                 } catch (e: Exception) {
                     val text = fehlerText(e)
                     _arbeiten.update { l -> l.map { if (it.kennung == kennung) it.copy(fehler = text) else it } }
@@ -132,11 +133,10 @@ object AblageZentrale {
             bereich.launch {
                 val r = runCatching { job.await() }
                 val text = r.fold({ it }, { "$art fehlgeschlagen („$eintragTitel“): " + fehlerText(it) })
-                val direkt = synchronized(fuerPlugin) {
+                synchronized(fuerPlugin) {
                     nachzumelden.remove(kennung)
-                    direktGeliefert.remove(kennung).also { if (!it && ausPlugin) fuerPlugin[kennung] = text }
+                    if (!direktGeliefert.remove(kennung) && ausPlugin) fuerPlugin[kennung] = text
                 }
-                if (!direkt) r.onSuccess { Protokoll.melde(Quelle.JARVIS, art, it) }
                 r.onSuccess { benachrichtige(app, "Jarvis: in der Ablage", it) }
                     .onFailure { benachrichtige(app, "Jarvis: $art fehlgeschlagen", fehlerText(it)) }
             }
@@ -192,22 +192,28 @@ object AblageZentrale {
      */
     suspend fun erzeugeBild(context: Context, beschreibung: String, eintragTitel: String, format: Bildformat, hohe: Boolean, auchPdf: Boolean, kennung: String): String {
         val app = context.applicationContext
+        val s = speicher(app)
+        val vorhanden = s.findeGenau(eintragTitel)
+        // Wiederholung nach dem Fertigwerden (der laufende Auftrag ist schon weg): kein zweites Motiv erzeugen, das gespeicherte melden
+        // und ein fehlendes PDF desselben Bildes nachreichen.
+        val schon = vorhanden?.anhaenge.orEmpty().filter { it.art == Art.BILD && it.kennung?.startsWith("$kennung-") == true }
+        if (schon.isNotEmpty()) {
+            val teile = mutableListOf("War schon gespeichert (kein zweites Bild erzeugt): " + schon.joinToString { "„${it.originalName}“" } + " im Ablage-Eintrag „${vorhanden!!.titel}“.")
+            if (auchPdf) schon.filter { b -> vorhanden.anhaenge.none { it.kennung == "${b.kennung}-pdf" } }.forEach { b ->
+                teile += bildPdfAblegen(app, s, eintragTitel, b, b.originalName.substringBeforeLast('.'), "${b.kennung}-pdf")
+            }
+            teile += "Für eine ausdrücklich gewünschte Variante die Beschreibung ändern."
+            return teile.joinToString(" ")
+        }
         val auth = CodexAuthManager(app)
         if (!auth.isConnected) throw AblageFehler("Jarvis ist nicht mit ChatGPT verbunden; ohne Anmeldung gibt es kein Bildwerkzeug. Bitte in Jarvis unter Einstellungen anmelden.")
-        // Wiederholung nach dem Fertigwerden (der laufende Auftrag ist schon weg): kein zweites Motiv erzeugen, das gespeicherte melden.
-        speicher(app).findeGenau(eintragTitel)?.let { e ->
-            val schon = e.anhaenge.filter { it.kennung?.startsWith("$kennung-") == true }
-            if (schon.isNotEmpty()) return "War schon gespeichert (kein zweites Bild erzeugt): " + schon.joinToString { "„${it.originalName}“" } +
-                " im Ablage-Eintrag „${e.titel}“. Für eine ausdrücklich gewünschte Variante die Beschreibung ändern."
-        }
         val prompt = beschreibung.trim() + "\n\n" + format.hinweis +
             " Alle Texte im Bild auf Deutsch mit korrekter Rechtschreibung und echten Umlauten, groß und klar lesbar. Keine Wasserzeichen."
         val bilder = auth.generateImages(prompt, Einstellungen.get(app).modell, format.groesse, if (hohe) "high" else null)
         if (bilder.isEmpty()) throw AblageFehler("Das Bildwerkzeug hat kein Bild geliefert. Es wurde nichts gespeichert.")
-        val s = speicher(app)
         val basis = AblageSpeicher.dateiname(eintragTitel).replace(' ', '-').take(60)
         // Jedes Bild eines Eintrags bekommt einen eigenen Namen, damit ein Bericht es mit ![…](name.png) eindeutig einbinden kann.
-        val vergeben = s.findeGenau(eintragTitel)?.anhaenge?.map { it.originalName.lowercase() }.orEmpty().toMutableSet()
+        val vergeben = vorhanden?.anhaenge?.map { it.originalName.lowercase() }.orEmpty().toMutableSet()
         val teile = mutableListOf<String>()
         bilder.forEachIndexed { i, bytes ->
             var n = 1
@@ -219,19 +225,22 @@ object AblageZentrale {
             teile += meldung(u)
             val masse = Medien.bildMasse(s.datei(u.anhang))
             masse?.let { (b, h) -> teile += "Bildgröße: $b × $h Pixel." }
-            if (auchPdf) {
-                val teil = s.neueTeilDatei()
-                try {
-                    Medien.bildAlsA4Pdf(s.datei(u.anhang), teil)
-                    val p = s.uebernimm(eintragTitel, teil, "$name.pdf", "application/pdf", HERKUNFT_BILD_PDF,"DIN-A4-PDF mit dem Bild", "$kennung-$i-pdf")
-                    nachDemSpeichern(app, p)
-                    teile += meldung(p)
-                } catch (e: Exception) {
-                    teile += "Das zusätzliche PDF ließ sich nicht erzeugen (${e.message}); das PNG ist gespeichert."
-                } finally { teil.delete() }
-            }
+            if (auchPdf) teile += bildPdfAblegen(app, s, eintragTitel, u.anhang, name, "$kennung-$i-pdf")
         }
         return teile.joinToString(" ")
+    }
+
+    /** Legt [bild] als einseitiges DIN-A4-PDF in den Eintrag. Rückgabe: Meldung; ein Fehler lässt das Bild unberührt. */
+    private fun bildPdfAblegen(app: Context, s: AblageSpeicher, eintragTitel: String, bild: Anhang, name: String, kennung: String): String {
+        val teil = s.neueTeilDatei()
+        return try {
+            Medien.bildAlsA4Pdf(s.datei(bild), teil)
+            val p = s.uebernimm(eintragTitel, teil, "$name.pdf", "application/pdf", HERKUNFT_BILD_PDF, "DIN-A4-PDF mit dem Bild", kennung)
+            nachDemSpeichern(app, p)
+            meldung(p)
+        } catch (e: Exception) {
+            "Das zusätzliche PDF ließ sich nicht erzeugen (${e.message}); das PNG ist gespeichert."
+        } finally { teil.delete() }
     }
 
     /**

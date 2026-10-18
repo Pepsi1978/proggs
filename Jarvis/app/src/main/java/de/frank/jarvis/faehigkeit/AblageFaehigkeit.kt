@@ -413,7 +413,8 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
         }
         if (a.gesetzt("text")) begleittext(titel, a.optString("text"))
         // Gleicher Auftrag noch einmal (etwa weil ChatGPT nach einer Zeitüberschreitung wiederholt) hängt sich an den laufenden an.
-        val kennung = "bild-" + kurzHash(titel + "|" + beschreibung + "|" + format.name + "|" + a.optBoolean("auch_pdf"))
+        // auch_pdf gehört nicht dazu: „Dasselbe Bild jetzt auch als PDF“ ist dasselbe Motiv, das PDF wird nachgereicht.
+        val kennung = "bild-" + kurzHash(titel + "|" + beschreibung + "|" + format.name)
         return try {
             val r = AblageZentrale.imHintergrund(context, kennung, "Bild erzeugen", titel, AblageZentrale.wartezeit()) {
                 AblageZentrale.erzeugeBild(context, beschreibung, titel, format, a.optBoolean("hohe_qualitaet"), a.optBoolean("auch_pdf"), kennung)

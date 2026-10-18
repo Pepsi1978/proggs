@@ -3,6 +3,7 @@ package de.frank.jarvis.agent
 import android.content.Context
 import android.util.Log
 import de.frank.jarvis.ablage.AblageZentrale
+import de.frank.jarvis.ablage.Art
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.Ablage
@@ -205,10 +206,15 @@ object Agenten {
             val datei = Ablage.schreibe(app, titel, "# ${plan.name}: ${auftrag.trim()}\n\nErstellt am ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M.yyyy, HH:mm 'Uhr'"))} von Jarvis.\n\n$bericht")
             var pdf = ""
             var pdfFehler: String? = null
-            // Liegt schon ein PDF aus einem Bild im Eintrag (bild_erzeugen mit auch_pdf), ist der PDF-Wunsch erfüllt:
-            // Ein zweites PDF aus dem Bericht zeigte dasselbe Motiv noch einmal (doppelte Infografik).
-            val bildPdf = AblageZentrale.speicher(app).findeGenau(titel)?.anhaenge.orEmpty().any { it.herkunft == AblageZentrale.HERKUNFT_BILD_PDF }
-            if (PDF_WUNSCH.containsMatchIn(auftrag) && !bildPdf) {
+            // Hat jedes Bild des Eintrags schon sein eigenes PDF (bild_erzeugen mit auch_pdf), ist der PDF-Wunsch erfüllt:
+            // Ein zweites PDF aus dem Bericht zeigte dasselbe Motiv noch einmal (doppelte Infografik). Bei mehreren Bildern,
+            // von denen nur manche ein eigenes PDF haben, ist das Bericht-PDF gemeint und kommt wie bisher.
+            fun bildPdfGenuegt(): Boolean {
+                val anhaenge = AblageZentrale.speicher(app).findeGenau(titel)?.anhaenge.orEmpty()
+                val bilder = anhaenge.filter { it.art == Art.BILD }
+                return bilder.isNotEmpty() && bilder.all { b -> b.kennung != null && anhaenge.any { it.kennung == "${b.kennung}-pdf" && it.herkunft == AblageZentrale.HERKUNFT_BILD_PDF } }
+            }
+            if (PDF_WUNSCH.containsMatchIn(auftrag) && !bildPdfGenuegt()) {
                 pdf = runCatching { " " + AblageZentrale.textAlsPdfAblegen(app, titel, bericht) }
                     .getOrElse { pdfFehler = "das PDF ließ sich nicht erzeugen: ${AblageZentrale.fehlerText(it)}"; " Das PDF fehlt ($pdfFehler)." }
             }
