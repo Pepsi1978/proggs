@@ -185,8 +185,7 @@ object AblageZentrale {
 
     fun meldung(u: Uebernahme, vorlaeufig: Boolean = false): String =
         if (vorlaeufig) (if (u.neu) "Erzeugt" else "War schon erzeugt (keine Kopie angelegt)") +
-            ": „${u.anhang.originalName}“ (${u.anhang.art.anzeige}, ${Dateityp.groesse(u.anhang.groesse)}), VORLÄUFIG zum Ergebnis „${u.eintrag.titel}“ – NICHT in der Ablage. " +
-            "Frank sieht es im Jarvis-Chat; dauerhaft nur auf seinen Wunsch (in_ablage_uebernehmen)."
+            ": „${u.anhang.originalName}“ (${u.anhang.art.anzeige}, ${Dateityp.groesse(u.anhang.groesse)}), VORLÄUFIG zum Ergebnis „${u.eintrag.titel}“ – NICHT in der Ablage."
         else (if (u.neu) "Gespeichert" else "War schon gespeichert (keine Kopie angelegt)") +
             ": „${u.anhang.originalName}“ (${u.anhang.art.anzeige}, ${Dateityp.groesse(u.anhang.groesse)}) im Ablage-Eintrag „${u.eintrag.titel}“."
 
