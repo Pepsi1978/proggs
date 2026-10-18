@@ -124,7 +124,11 @@ internal object PdfGestaltung {
             bloecke.forEach { b ->
                 when (b) {
                     is Block.Ueberschrift -> { inKurzfassung = b.stufe <= 2 && b.text.trim().startsWith("Kurzfassung", ignoreCase = true); ueberschrift(satz, b, vorher == null) }
-                    is Block.Absatz -> if (inKurzfassung) kasten(satz, b.text, TINT, NAVY) else absatz(satz, b.text)
+                    is Block.Absatz -> {
+                        // Nach einer Aufzählung etwas Luft, sonst klebt der Absatz an der Liste.
+                        if (vorher is Block.Punkt) satz.y += 6f
+                        if (inKurzfassung) kasten(satz, b.text, TINT, NAVY) else absatz(satz, b.text)
+                    }
                     is Block.Punkt -> punkt(satz, b, vorher !is Block.Punkt)
                     is Block.Kasten -> kasten(satz, b.text, KASTEN, PETROL)
                     is Block.Code -> code(satz, b.text)
