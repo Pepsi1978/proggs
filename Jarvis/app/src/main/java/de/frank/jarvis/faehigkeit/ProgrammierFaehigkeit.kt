@@ -49,7 +49,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         "Wechsel zwischen Gesprächen (Sessions) erledigt die App selbst: „Öffne eine neue Session“, „Gehe in die letzte Session zurück“, " +
             "„Gehe in die Whoop-Session zurück“, „Geh in die andere Programmier-Session“, „Ich möchte in die andere Programmier-Session“. Erreicht dich so ein Wunsch trotzdem, ist das nie ein Programmierauftrag: Starte nichts und bitte Frank, " +
             "den Wechsel genau so zu sagen. " +
-            "Fragt Frank, ob sein PC (Rechner, Computer) an oder erreichbar ist oder wohin ein Programmierauftrag gehen würde, rufe pc_status auf. " +
+            "Fragt Frank, ob sein PC, sein Mac (Rechner, Computer) an oder erreichbar ist oder wohin ein Programmierauftrag gehen würde, rufe pc_status auf. " +
             "Fragt er, wie weit ein Programmierauftrag ist, was die Cloud-Sitzung gerade macht oder ob sie fertig ist, rufe programmierauftraege auf. " +
             "Steht im Gespräch eine offene Rückfrage einer Programmier-Sitzung (❓ mit frage_id und Optionen) und Frank antwortet darauf, gib die Antwort mit " +
             "programmier_antwort weiter: ordne sie der passenden Option zu (genau deren label), sonst gib Franks Worte als Freitext weiter. " +
@@ -81,7 +81,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val daten = JSONObject(antwort.body?.string().orEmpty())
                 val rechner = daten.optString("rechner").ifEmpty { "Franks PC" }
                 val vor = if (daten.isNull("zuletzt_vor_s")) -1 else daten.optInt("zuletzt_vor_s", -1)
-                if (daten.optBoolean("pc")) "PC: $rechner ist an und erreichbar (letzte Meldung vor $vor Sekunden). Programmieraufträge gehen an den PC."
+                val alle = daten.optJSONArray("rechner_alle")
+                if (alle != null) rechnerZustand(alle, daten.optBoolean("pc"), rechner)
+                else if (daten.optBoolean("pc")) "PC: $rechner ist an und erreichbar (letzte Meldung vor $vor Sekunden). Programmieraufträge gehen an den PC."
                 else "PC: nicht erreichbar" + (if (vor >= 0) " (letzte Meldung von $rechner vor ${zeitspanne(vor)})" else "") +
                     ". Entweder ist der PC aus, im Standby oder die PC-Brücke läuft nicht. Programmieraufträge gehen in die Cloud."
             }
@@ -89,6 +91,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val cloud = if (e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()) "Cloud: eingerichtet (Claude-Code-Routine mit Token)."
             else "Cloud: nicht eingerichtet, der Token fehlt (Einstellungen → Konten → Programmieren in der Cloud)."
         "$pc $cloud"
+    }
+
+    /**
+     * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“. Ein Rechner, der sich
+     * seit dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
+     */
+    private fun rechnerZustand(alle: org.json.JSONArray, pcDa: Boolean, naechster: String): String {
+        val eintraege = (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }
+        fun zeile(rang: String, art: String): String {
+            val r = eintraege.firstOrNull { it.optString("rang") == rang }
+                ?: return "$art: hat sich seit dem letzten Serverstart nicht gemeldet (aus oder die Brücke läuft nicht)."
+            val name = r.optString("rechner").ifEmpty { art }
+            val vor = r.optInt("zuletzt_vor_s", -1)
+            return if (r.optBoolean("da")) "$art $name: an und erreichbar (letzte Meldung vor $vor Sekunden)."
+                else "$art $name: nicht erreichbar (letzte Meldung vor ${zeitspanne(vor)}); aus, im Standby oder die Brücke läuft nicht."
+        }
+        val wohin = if (pcDa) "Programmieraufträge gehen an $naechster (der Windows-PC hat Vorrang, der Mac springt ein, wenn er aus ist)."
+            else "Programmieraufträge gehen in die Cloud."
+        return "${zeile("haupt", "Windows-PC")} ${zeile("ersatz", "Mac")} $wohin"
     }
 
     private fun zeitspanne(sekunden: Int): String = when {
@@ -101,10 +122,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         listOf(
             Werkzeug(
                 name = "pc_status",
-                titel = "Ist Franks PC erreichbar?",
-                beschreibung = "Jarvis: prüft jetzt, ob Franks PC an und für Programmieraufträge erreichbar ist (die PC-Brücke meldet sich beim Jarvis-Server), " +
-                    "wann er sich zuletzt gemeldet hat, und ob der Cloud-Weg eingerichtet ist. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, " +
-                    "„Läuft die PC-Brücke?“ oder „Wohin geht ein Programmierauftrag gerade?“.",
+                titel = "Sind Franks Windows-PC und Mac erreichbar?",
+                beschreibung = "Jarvis: prüft jetzt einzeln, ob Franks Windows-PC und sein Mac an und für Programmieraufträge erreichbar sind (beide Brücken melden sich beim Jarvis-Server), " +
+                    "wann sich jeder zuletzt gemeldet hat, wohin der nächste Auftrag ginge und ob der Cloud-Weg eingerichtet ist. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, " +
+                    "„Ist mein Mac online?“, „Läuft die PC-Brücke?“ oder „Wohin geht ein Programmierauftrag gerade?“.",
                 schema = schema(),
                 nurLesen = true,
             ) { Ergebnis(zustand()) },
