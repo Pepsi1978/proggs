@@ -2,6 +2,9 @@ package de.frank.jarvis.ui
 
 import android.app.NotificationManager
 import android.content.Intent
+import android.media.RingtoneManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedVisibility
@@ -244,8 +247,9 @@ private fun MeldungsKarte(vm: AppViewModel, p: MeldungsProfil, activity: Compone
                     Text(when {
                         !p.wecker -> "Ein kurzer Hinweiston, wie bei anderen Apps."
                         !p.weckerWirksam -> "Gerade ohne Wirkung: Die Meldung ist auf Lautlos gestellt, dann klingelt auch kein Wecker."
-                        else -> "Klingelt mit dem Weckton in der Wecker-Lautstärke, bis du die Meldung antippst oder wegwischst; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Mit Vorlesen: erst etwa zehn Sekunden Weckton, dann verstummt er und Jarvis liest sofort vor."
+                        else -> "Klingelt mit dem gewählten Weckton in der Wecker-Lautstärke, bis die Dauer um ist oder du die Meldung antippst oder wegwischst; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind."
                     }, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                    if (p.wecker) WecktonOptionen(p, app)
                 }
                 if (art == Meldungsarten.ABFAHRT) {
                     Unterzeile("Meldung vor der Abfahrt")
@@ -318,6 +322,48 @@ private fun androidKanalOeffnen(activity: ComponentActivity, kanal: String) {
 private fun nachSchalten(vm: AppViewModel, art: Meldungsart) {
     Meldungen.folgen(vm.getApplication(), art)
     if (art == Meldungsarten.ABFAHRT) vm.abfahrtLaden()
+}
+
+/** Weckton (Android-Tonwähler, mit Anhören) und wie lange er klingelt, bevor Jarvis vorliest. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WecktonOptionen(p: MeldungsProfil, app: android.content.Context) {
+    val f = LocalFarben.current
+    var ton by remember(p.art.id) { mutableStateOf(p.weckton) }
+    var sekunden by remember(p.art.id) { mutableIntStateOf(p.wecktonSekunden) }
+    val name = remember(ton) { de.frank.jarvis.meldung.WeckerTon.name(app, ton) }
+    val waehler = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        if (r.resultCode != android.app.Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        @Suppress("DEPRECATION")
+        val gewaehlt = r.data?.getParcelableExtra<android.net.Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+        ton = gewaehlt?.toString().orEmpty()
+        p.weckton = ton
+    }
+    Unterzeile("Weckton")
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Knopf(name, Modifier.weight(1f), Icons.Rounded.Alarm, haupt = false) {
+            val absicht = Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+                .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Weckton für ${p.art.titel}")
+                .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                .putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
+                .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, if (ton.isBlank()) RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) else android.net.Uri.parse(ton))
+            runCatching { waehler.launch(absicht) }
+        }
+        Knopf("Anhören", Modifier.weight(1f), Icons.Rounded.PlayArrow, haupt = false) { de.frank.jarvis.meldung.WeckerTon.probe(app, ton) }
+    }
+    Unterzeile("So lange klingelt der Weckton")
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(5, 10, 15, 20, 30, 45, 60, 0).forEach { s ->
+            Chip(if (s == 0) "Bis Antippen" else "$s s", aktiv = sekunden == s) { sekunden = s; p.wecktonSekunden = s }
+        }
+    }
+    Text(when {
+        sekunden == 0 -> "Klingelt, bis du die Meldung antippst oder wegwischst (höchstens 10 Minuten); erst danach liest Jarvis vor."
+        p.art.vorlesen && p.vorlesen -> "Klingelt $sekunden Sekunden, dann verstummt der Weckton, die Meldung bleibt stehen und Jarvis liest sofort vor. Antippen oder Wegwischen beendet den Ton früher."
+        else -> "Klingelt $sekunden Sekunden, dann verstummt der Weckton; die Meldung bleibt stehen."
+    }, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 }
 
 /** Stimme, Tempo und Lautstärke einer Meldung; „Wie Jarvis“ übernimmt die Einstellungen unter Stimme → Vorlesen. */

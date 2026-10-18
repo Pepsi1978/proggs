@@ -221,7 +221,10 @@ class EinstellungsKatalog(context: Context) {
                 de.frank.jarvis.meldung.Meldungen.folgen(app, art)
             })
             if (art.ton) add(schalter(art.schluessel("ton"), b, "${art.titel} mit Ton", "Aus = die Meldung kommt lautlos.", { p.ton }) { p.ton = it })
-            if (art.wecker) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Klingelt mit dem Weckton, bis die Meldung angetippt oder weggewischt wird; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Wirkt nicht, solange die Meldung lautlos ist.", { p.wecker }) { p.wecker = it })
+            if (art.wecker) add(schalter(art.schluessel("wecker"), b, "${art.titel} wie ein Wecker", "Klingelt mit dem gewählten Weckton so lange wie eingestellt oder bis die Meldung angetippt oder weggewischt wird, danach liest Jarvis vor; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Wirkt nicht, solange die Meldung lautlos ist.", { p.wecker }) { p.wecker = it })
+            if (art.wecker) add(auswahl(art.schluessel("weckton"), b, "Weckton für ${art.titel}", "Der Ton, mit dem die Meldung wie ein Wecker klingelt.",
+                { listOf("" to "Standard-Weckton") + de.frank.jarvis.meldung.WeckerTon.toene(app) }, { p.weckton }) { p.weckton = it })
+            if (art.wecker) add(zahl(art.schluessel("weckton_sekunden"), b, "Dauer des Wecktons für ${art.titel}", "So viele Sekunden klingelt der Weckton, dann verstummt er und Jarvis liest vor; 0 = bis die Meldung angetippt oder weggewischt wird.", 0, 300, "Sekunden", { p.wecktonSekunden }) { p.wecktonSekunden = it })
             if (art.vorlesen && neu("vorlesen")) add(schalter(art.schluessel("vorlesen"), b, "${art.titel} vorlesen", "Liest die Meldung zusätzlich vor; ein Live-Gespräch wartet sie ab.", { p.vorlesen }) { p.vorlesen = it })
             if ((art.vorlesen || art.sprichtImmer) && neu("stimme")) add(auswahl(art.schluessel("stimme"), b, "Stimme für ${art.titel}", "Eigene Vorlese-Stimme nur für diese Meldung.",
                 { listOf("" to "Wie Jarvis") + alleStimmen() }, { p.stimme }) { p.stimme = it })

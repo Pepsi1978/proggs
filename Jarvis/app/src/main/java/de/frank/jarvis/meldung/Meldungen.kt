@@ -75,6 +75,11 @@ class MeldungsProfil(private val e: Einstellungen, val art: Meldungsart) {
 
     val stimmWahl get() = StimmWahl(stimme.ifBlank { null }, tempo.takeIf { it > 0f })
 
+    /** Weckton als Adresse aus dem Android-Tonwähler; leer = Standard-Weckton des Handys. */
+    var weckton: String get() = e.wort(art.schluessel("weckton"), ""); set(v) = e.setzeWort(art.schluessel("weckton"), v)
+    /** So viele Sekunden klingelt der Wecker, dann verstummt er und Jarvis liest vor; 0 = bis zum Antippen oder Wegwischen. */
+    var wecktonSekunden: Int get() = e.ganz(art.schluessel("weckton_sekunden"), 10).coerceIn(0, 300); set(v) = e.setzeGanz(art.schluessel("weckton_sekunden"), v.coerceIn(0, 300))
+
     /** Klingelt sie wirklich wie ein Wecker? „Lautlos“ schaltet den Wecker mit ab, auch wenn er noch gewählt ist. */
     val weckerWirksam get() = art.wecker && wecker && !(art.ton && !ton)
 }
@@ -163,7 +168,7 @@ object Meldungsarten {
 /** Zeigt Benachrichtigungen so, wie Frank sie unter Einstellungen → Benachrichtigungen eingestellt hat. */
 object Meldungen {
     /** Eigener Kanal für „Wie ein Wecker“: Weckton, auch bei „Nicht stören“; die Wichtigkeit lässt sich später nicht mehr anheben. */
-    const val KANAL_WECKER = "jarvis_meldung_wecker"
+    const val KANAL_WECKER = "jarvis_meldung_wecker_ton"
     private val nebenher = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun profil(context: Context, art: Meldungsart) = MeldungsProfil(Einstellungen.get(context), art)
@@ -218,32 +223,28 @@ object Meldungen {
         // SECRET: auf dem Sperrbildschirm gar nicht, erst nach dem Entsperren (PRIVATE wäre der Standard und hülfe nicht).
         // Ein klingelnder Wecker muss sich aber gesperrt abstellen lassen: dann PRIVATE (sichtbar, Inhalt verborgen).
         if (e.meldungInhaltVerbergen) bauer.setVisibility(if (klingeln) NotificationCompat.VISIBILITY_PRIVATE else NotificationCompat.VISIBILITY_SECRET)
-        val meldung = bauer.build()
-        // Dauerton bis zum Antippen oder Wegwischen, wie bei einem Wecker.
-        if (klingeln) meldung.flags = meldung.flags or Notification.FLAG_INSISTENT
-        runCatching { app.getSystemService(NotificationManager::class.java).notify(nummer, meldung) }
-        if (laut && sprechtext != null && art.vorlesen && p.vorlesen && !ruhe) {
-            // Klingelt sie: erst gut zehn Sekunden Weckton (früher, wenn Frank sie antippt oder wegwischt), dann verstummt der Ton,
-            // die Meldung bleibt mit ihren Knöpfen stehen, und Jarvis liest sofort vor. So geht die Stimme nicht im Weckton unter.
-            val tonBis = System.currentTimeMillis() + WECKTON_VOR_ANSAGE_MS
-            vorlesenSpaeter(app, art, titel, sprechtext, nummer.toString(),
-                solange = if (klingeln) ({ sichtbar(app, nummer) && System.currentTimeMillis() < tonBis }) else null,
-                vorDemSprechen = if (klingeln) ({ tonAus(app, nummer, bauer) }) else null)
-        }
+        runCatching { app.getSystemService(NotificationManager::class.java).notify(nummer, bauer.build()) }
+        // Den Weckton spielt Jarvis selbst (eigener Ton und eigene Dauer je Meldung, der Kanal ist stumm): Er läuft die gewählten
+        // Sekunden oder bis Frank die Meldung antippt oder wegwischt, dann verstummt er, die Meldung bleibt stehen, und Jarvis liest vor.
+        if (klingeln) klingle(app, nummer, p)
+        if (laut && sprechtext != null && art.vorlesen && p.vorlesen && !ruhe)
+            vorlesenSpaeter(app, art, titel, sprechtext, nummer.toString(), solange = if (klingeln) ({ WeckerTon.klingelt(nummer) }) else null)
         return true
     }
 
-    /** So lange klingelt der Wecker, bevor Jarvis die Meldung vorliest. */
-    private const val WECKTON_VOR_ANSAGE_MS = 10_000L
+    /** Ohne Dauer („bis zum Antippen“) klingelt der Wecker höchstens so lange. */
+    private const val WECKTON_HOECHSTENS_MS = 10 * 60_000L
 
-    /**
-     * Beendet den Dauerton und lässt die Meldung mit Text und Knöpfen stehen. Ein bloßes Aktualisieren hält den Ton nicht an
-     * (der Wecker-Kanal hat ihn weiter): erst zurückziehen, das beendet den Ton sicher, dann still neu zeigen.
-     */
-    private fun tonAus(context: Context, nummer: Int, bauer: NotificationCompat.Builder) {
-        if (!sichtbar(context, nummer)) return
-        val nm = context.getSystemService(NotificationManager::class.java)
-        runCatching { nm.cancel(nummer); nm.notify(nummer, bauer.setSilent(true).setOnlyAlertOnce(true).build()) }
+    private fun klingle(app: Context, nummer: Int, p: MeldungsProfil) {
+        if (!WeckerTon.starte(app, nummer, p.weckton)) return
+        val sekunden = p.wecktonSekunden
+        nebenher.launch {
+            val bis = System.currentTimeMillis() + if (sekunden > 0) sekunden * 1_000L else WECKTON_HOECHSTENS_MS
+            // Die Meldung braucht einen Moment, bis Android sie als sichtbar führt.
+            delay(1_500L)
+            while (WeckerTon.klingelt(nummer) && sichtbar(app, nummer) && System.currentTimeMillis() < bis) delay(500L)
+            WeckerTon.stopp(nummer)
+        }
     }
 
     private fun sichtbar(context: Context, nummer: Int) =
@@ -256,15 +257,15 @@ object Meldungen {
      * Liest im Hintergrund vor, mit Stimme, Tempo und Lautstärke dieser Art; wartet ein laufendes Gespräch ab. Je [schluessel]
      * gilt nur das neueste Vorlesen (eine aktualisierte Losfahr-Meldung ersetzt die alte), verschiedene Meldungen warten nebeneinander.
      */
-    fun vorlesenSpaeter(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false, vorDemSprechen: (() -> Unit)? = null) {
+    fun vorlesenSpaeter(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) {
         val app = context.applicationContext
-        nebenher.launch { vorlesenWartend(app, art, titel, text, schluessel, solange, ausdruecklich, vorDemSprechen) }
+        nebenher.launch { vorlesenWartend(app, art, titel, text, schluessel, solange, ausdruecklich) }
     }
 
     /** Wie [vorlesenSpaeter], aber kehrt erst nach dem Start der Stimme (oder dem Verwerfen) zurück; bleibt dabei abbrechbar. */
-    suspend fun vorlesenWartend(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false, vorDemSprechen: (() -> Unit)? = null) = coroutineScope {
+    suspend fun vorlesenWartend(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) = coroutineScope {
         val name = "${art.id}:$schluessel"
-        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange, ausdruecklich, vorDemSprechen) }
+        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange, ausdruecklich) }
         wartend.put(name, job)?.cancel()
         job.invokeOnCompletion { wartend.remove(name, job) }
         job.start()
@@ -281,15 +282,16 @@ object Meldungen {
      * höchstens 15 Minuten warten (dringend 90 Sekunden), dann verwerfen. Danach gilt der Stand von dann: ausgeschaltet,
      * Vorlesen abgewählt oder inzwischen Ruhezeit heißt still. [ausdruecklich] = Frank hat das Vorlesen eigens verlangt.
      */
-    private suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean, vorDemSprechen: (() -> Unit)? = null) {
+    private suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean) {
+        // Erst den Weckton zu Ende klingeln lassen (er endet selbst, spätestens nach seiner Höchstdauer), dann das Gespräch abwarten.
+        if (solange != null) withTimeoutOrNull(WECKTON_HOECHSTENS_MS + 5_000L) { while (solange()) delay(500L) }
         val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
-            while (GespraechsFokus.stilleHinweise || solange?.invoke() == true) delay(if (solange != null) 1_000L else 2_000L)
+            while (GespraechsFokus.stilleHinweise) delay(2_000L)
             true
         }
         if (frei != true) return
         val p = profil(context, art)
         if (!ausdruecklich && (!an(context, art) || inRuhe(context, art) || (art.vorlesen && !p.vorlesen))) return
-        vorDemSprechen?.invoke()
         Ansage.sprich(context, art.id, titel, text, p.lautstaerke, p.stimmWahl)
     }
 
@@ -327,15 +329,76 @@ object Meldungen {
     }
 
     fun weckerKanalAnlegen(context: Context) {
-        val ton = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+        val nm = context.getSystemService(NotificationManager::class.java)
+        // Der frühere Kanal spielte den Ton selbst (nicht wählbar, ein Kanalton lässt sich nachträglich nicht ändern).
+        runCatching { nm.deleteNotificationChannel(KANAL_WECKER_ALT) }
+        nm.createNotificationChannel(
             NotificationChannel(KANAL_WECKER, "Wie ein Wecker", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Für Meldungen, die wie ein Wecker klingeln sollen, bis du sie antippst oder wegwischst."
-                setSound(ton, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                description = "Für Meldungen, die wie ein Wecker klingeln. Den Weckton und wie lange er klingelt stellst du in Jarvis je Meldung ein."
+                setSound(null, null)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 700, 500, 700)
                 setBypassDnd(true)
             },
         )
     }
+    private const val KANAL_WECKER_ALT = "jarvis_meldung_wecker"
+}
+
+/**
+ * Spielt den Weckton einer Meldung selbst, als Wecker-Ton (USAGE_ALARM) in Schleife: so lässt sich der Ton je Meldung
+ * wählen und nach der eingestellten Dauer beenden, ohne die Meldung zurückzuziehen. Je Meldungsnummer höchstens ein Ton.
+ */
+object WeckerTon {
+    private const val PROBE = -4_711
+    private val spieler = java.util.concurrent.ConcurrentHashMap<Int, android.media.MediaPlayer>()
+    private val attribute = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
+
+    fun klingelt(nummer: Int) = spieler.containsKey(nummer)
+
+    /** [ton] leer = Standard-Weckton; ist der gewählte Ton nicht mehr da, der Standard. false = gar kein Ton abspielbar. */
+    fun starte(context: Context, nummer: Int, ton: String): Boolean {
+        stopp(nummer)
+        val app = context.applicationContext
+        val toene = listOfNotNull(
+            ton.takeIf { it.isNotBlank() }?.let { runCatching { android.net.Uri.parse(it) }.getOrNull() },
+            RingtoneManager.getActualDefaultRingtoneUri(app, RingtoneManager.TYPE_ALARM),
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+        )
+        for (uri in toene) {
+            val p = android.media.MediaPlayer()
+            val ok = runCatching {
+                p.setAudioAttributes(attribute)
+                p.setDataSource(app, uri)
+                p.isLooping = true
+                p.setWakeMode(app, android.os.PowerManager.PARTIAL_WAKE_LOCK)
+                p.prepare()
+                p.start()
+            }.isSuccess
+            if (ok) { spieler.put(nummer, p)?.let { alt -> runCatching { alt.release() } }; return true }
+            runCatching { p.release() }
+        }
+        return false
+    }
+
+    fun stopp(nummer: Int) {
+        spieler.remove(nummer)?.let { runCatching { it.stop() }; runCatching { it.release() } }
+    }
+
+    /** Zum Anhören in den Einstellungen: vier Sekunden. */
+    fun probe(context: Context, ton: String) {
+        if (starte(context, PROBE, ton)) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ stopp(PROBE) }, 4_000L)
+    }
+
+    fun name(context: Context, ton: String): String =
+        if (ton.isBlank()) "Standard-Weckton"
+        else runCatching { RingtoneManager.getRingtone(context, android.net.Uri.parse(ton))?.getTitle(context) }.getOrNull() ?: "Eigener Ton"
+
+    /** Die Wecktöne des Handys (Adresse, Name), für die Auswahl per Sprache. */
+    fun toene(context: Context): List<Pair<String, String>> = runCatching {
+        val m = RingtoneManager(context).apply { setType(RingtoneManager.TYPE_ALARM) }
+        val c = m.cursor
+        buildList { while (c.moveToNext()) add(m.getRingtoneUri(c.position).toString() to c.getString(RingtoneManager.TITLE_COLUMN_INDEX)) }
+    }.getOrDefault(emptyList())
 }
