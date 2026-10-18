@@ -186,7 +186,9 @@ object Agenten {
                 "Dein Ablage-Eintrag heißt „$titel“. Dateien (bild_erzeugen, ablage_datei_speichern) legst du mit genau diesem Titel ab, " +
                 "dann gehören sie zu deinem Bericht. Nenne im Bericht nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat.\n" +
                 "Sollen Bilder oder Illustrationen dazu, erzeuge sie mit bild_erzeugen (je Bild ein Aufruf, Titel wie oben; kommt „läuft noch“, rufe es mit denselben Angaben noch einmal auf). " +
-                "Plane höchstens vier Bilder, damit Zeit für den Bericht bleibt. Ein PDF baut Jarvis nach deinem Bericht selbst, wenn der Auftrag eines verlangt: " +
+                "Plane höchstens vier Bilder, damit Zeit für den Bericht bleibt. Verlangt der Auftrag genau ein Bild oder eine Infografik, erzeuge genau ein Motiv " +
+                "(Varianten nur, wenn der Auftrag sie ausdrücklich will). Soll dieses Bild selbst als PDF kommen, setze bei bild_erzeugen auch_pdf=true: " +
+                "Das ist das PDF, Jarvis baut dann kein zweites aus dem Bericht. Sonst baut Jarvis das PDF nach deinem Bericht selbst, wenn der Auftrag eines verlangt: " +
                 "Rufe dafür NICHT ablage_schreiben auf. Setze jedes gespeicherte Bild an passender Stelle als eigene Zeile ![Bildunterschrift](dateiname.png) in den Bericht, " +
                 "mit genau dem Dateinamen aus dem Werkzeug-Ergebnis; nicht eingebundene Bilder kommen ans Ende des PDFs."
             val denker = JarvisAgent(app)
@@ -203,7 +205,10 @@ object Agenten {
             val datei = Ablage.schreibe(app, titel, "# ${plan.name}: ${auftrag.trim()}\n\nErstellt am ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M.yyyy, HH:mm 'Uhr'"))} von Jarvis.\n\n$bericht")
             var pdf = ""
             var pdfFehler: String? = null
-            if (PDF_WUNSCH.containsMatchIn(auftrag)) {
+            // Liegt schon ein PDF aus einem Bild im Eintrag (bild_erzeugen mit auch_pdf), ist der PDF-Wunsch erfüllt:
+            // Ein zweites PDF aus dem Bericht zeigte dasselbe Motiv noch einmal (doppelte Infografik).
+            val bildPdf = AblageZentrale.speicher(app).findeGenau(titel)?.anhaenge.orEmpty().any { it.herkunft == AblageZentrale.HERKUNFT_BILD_PDF }
+            if (PDF_WUNSCH.containsMatchIn(auftrag) && !bildPdf) {
                 pdf = runCatching { " " + AblageZentrale.textAlsPdfAblegen(app, titel, bericht) }
                     .getOrElse { pdfFehler = "das PDF ließ sich nicht erzeugen: ${AblageZentrale.fehlerText(it)}"; " Das PDF fehlt ($pdfFehler)." }
             }

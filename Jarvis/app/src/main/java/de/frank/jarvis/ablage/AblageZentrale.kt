@@ -108,10 +108,9 @@ object AblageZentrale {
                 val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:ablage")
                 runCatching { wach.acquire(30 * 60_000L) }
                 try {
-                    arbeit().also { text ->
-                        _arbeiten.update { l -> l.filter { it.kennung != kennung } }
-                        Protokoll.melde(Quelle.JARVIS, art, text)
-                    }
+                    // Kein Protokolleintrag hier: Bekommt der Aufrufer das Ergebnis direkt, protokolliert es sein Werkzeug;
+                    // sonst der Nachmelde-Zweig unten. So steht ein Bild genau einmal in der Aktivität.
+                    arbeit().also { _arbeiten.update { l -> l.filter { it.kennung != kennung } } }
                 } catch (e: Exception) {
                     val text = fehlerText(e)
                     _arbeiten.update { l -> l.map { if (it.kennung == kennung) it.copy(fehler = text) else it } }
@@ -133,10 +132,11 @@ object AblageZentrale {
             bereich.launch {
                 val r = runCatching { job.await() }
                 val text = r.fold({ it }, { "$art fehlgeschlagen („$eintragTitel“): " + fehlerText(it) })
-                synchronized(fuerPlugin) {
+                val direkt = synchronized(fuerPlugin) {
                     nachzumelden.remove(kennung)
-                    if (!direktGeliefert.remove(kennung) && ausPlugin) fuerPlugin[kennung] = text
+                    direktGeliefert.remove(kennung).also { if (!it && ausPlugin) fuerPlugin[kennung] = text }
                 }
+                if (!direkt) r.onSuccess { Protokoll.melde(Quelle.JARVIS, art, it) }
                 r.onSuccess { benachrichtige(app, "Jarvis: in der Ablage", it) }
                     .onFailure { benachrichtige(app, "Jarvis: $art fehlgeschlagen", fehlerText(it)) }
             }
@@ -175,6 +175,9 @@ object AblageZentrale {
 
     // ---- Bilderzeugung ----
 
+    /** Herkunft des PDFs, das [erzeugeBild] aus einem Bild baut; daran erkennt der Agent, dass kein Bericht-PDF mehr nötig ist. */
+    const val HERKUNFT_BILD_PDF = "Jarvis (PDF aus Bild)"
+
     enum class Bildformat(val groesse: String?, val hinweis: String) {
         QUADRAT("1024x1024", "Quadratisches Format."),
         HOCH("1024x1536", "Hochformat."),
@@ -191,6 +194,12 @@ object AblageZentrale {
         val app = context.applicationContext
         val auth = CodexAuthManager(app)
         if (!auth.isConnected) throw AblageFehler("Jarvis ist nicht mit ChatGPT verbunden; ohne Anmeldung gibt es kein Bildwerkzeug. Bitte in Jarvis unter Einstellungen anmelden.")
+        // Wiederholung nach dem Fertigwerden (der laufende Auftrag ist schon weg): kein zweites Motiv erzeugen, das gespeicherte melden.
+        speicher(app).findeGenau(eintragTitel)?.let { e ->
+            val schon = e.anhaenge.filter { it.kennung?.startsWith("$kennung-") == true }
+            if (schon.isNotEmpty()) return "War schon gespeichert (kein zweites Bild erzeugt): " + schon.joinToString { "„${it.originalName}“" } +
+                " im Ablage-Eintrag „${e.titel}“. Für eine ausdrücklich gewünschte Variante die Beschreibung ändern."
+        }
         val prompt = beschreibung.trim() + "\n\n" + format.hinweis +
             " Alle Texte im Bild auf Deutsch mit korrekter Rechtschreibung und echten Umlauten, groß und klar lesbar. Keine Wasserzeichen."
         val bilder = auth.generateImages(prompt, Einstellungen.get(app).modell, format.groesse, if (hohe) "high" else null)
@@ -214,7 +223,7 @@ object AblageZentrale {
                 val teil = s.neueTeilDatei()
                 try {
                     Medien.bildAlsA4Pdf(s.datei(u.anhang), teil)
-                    val p = s.uebernimm(eintragTitel, teil, "$name.pdf", "application/pdf", "Jarvis (PDF aus Bild)", "DIN-A4-PDF mit dem Bild", "$kennung-$i-pdf")
+                    val p = s.uebernimm(eintragTitel, teil, "$name.pdf", "application/pdf", HERKUNFT_BILD_PDF,"DIN-A4-PDF mit dem Bild", "$kennung-$i-pdf")
                     nachDemSpeichern(app, p)
                     teile += meldung(p)
                 } catch (e: Exception) {
