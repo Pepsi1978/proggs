@@ -103,20 +103,17 @@ object Timer {
         speichere(app)
         kanalAnlegen(app)
         // Auf Wunsch zusätzlich vorgelesen (Einstellungen → Benachrichtigungen → Timer abgelaufen).
-        // Im Wecker-Modus erst nach dem Klingeln, damit der Text nicht im Weckton untergeht.
-        val vorlesen = !spaet && de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, de.frank.jarvis.meldung.Meldungsarten.TIMER)
-        fun lies(solange: (() -> Boolean)?) {
-            if (vorlesen) de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, de.frank.jarvis.meldung.Meldungsarten.TIMER, t.name,
-                de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungsarten.TIMER).sprechtext(t.name), schluessel = "${t.id}", solange = solange)
-        }
+        // Sofort, nicht erst nach dem Klingeln: „Aus“ (klingelnAus) verwirft ein noch wartendes Vorlesen absichtlich.
+        if (!spaet && de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, de.frank.jarvis.meldung.Meldungsarten.TIMER))
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, de.frank.jarvis.meldung.Meldungsarten.TIMER, t.name,
+                de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungsarten.TIMER).sprechtext(t.name), schluessel = "${t.id}")
         if (!spaet && de.frank.jarvis.data.Einstellungen.get(app).timerWecker) {
             _klingelt.value = (_klingelt.value.filterNot { it.id == id } + t)
             val gestartet = runCatching { androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, TimerKlingelDienst::class.java)) }
                 .onFailure { Log.w(TAG, "Klingel-Dienst ließ sich nicht starten", it) }.isSuccess
-            if (gestartet) { lies { _klingelt.value.any { it.id == id } }; return }
+            if (gestartet) return
             _klingelt.value = _klingelt.value.filterNot { it.id == id }
         }
-        lies(null)
         meldung(app, id, t, laut = true)
     }
 

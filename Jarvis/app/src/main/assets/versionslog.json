@@ -179,6 +179,7 @@
     {"versionCode": 174, "versionName": "1.8.163", "stand": "18.10.2026, 07:17 Uhr", "notiz": "Bei „Timer abgelaufen“ lässt sich unter Benachrichtigungen jetzt selbst eintragen, welchen Text Jarvis vorliest."},
     {"versionCode": 175, "versionName": "1.8.164", "stand": "18.10.2026, 07:17 Uhr", "notiz": "Der Aktualisierungspfeil im Kern ist jetzt weiß auf dunkler Scheibe deutlich sichtbar und dreht sich ständig, während der Tagesauswertung schneller."},
     {"versionCode": 176, "versionName": "1.8.165", "stand": "18.10.2026, 07:20 Uhr", "notiz": "Weckton nach Review: Eine aktualisierte Meldung beendet den alten Weckton, Wegwischen oder das Öffnen von Jarvis stoppt ihn sofort, ein Live-Gespräch lässt ihn verstummen, er vibriert wieder in Schleife, Meldungen ohne Vorlesen klingeln wie früher bis zum Antippen, nicht abspielbare Töne werden gar nicht erst übernommen und mehrere Update-Ansagen gehen nicht mehr verloren."},
-    {"versionCode": 177, "versionName": "1.8.166", "stand": "18.10.2026, 07:22 Uhr", "notiz": "Der eigene Timer-Text wird im Wecker-Modus erst nach dem Klingeln vorgelesen, lässt sich per Sprache mit „standard“ zurücksetzen und erkennt {Name} auch großgeschrieben."}
+    {"versionCode": 177, "versionName": "1.8.166", "stand": "18.10.2026, 07:22 Uhr", "notiz": "Der eigene Timer-Text wird im Wecker-Modus erst nach dem Klingeln vorgelesen, lässt sich per Sprache mit „standard“ zurücksetzen und erkennt {Name} auch großgeschrieben."},
+    {"versionCode": 178, "versionName": "1.8.167", "stand": "18.10.2026, 07:23 Uhr", "notiz": "Im Wecker-Modus liest Jarvis den Timer-Text wieder sofort vor, damit „Aus“ die Ansage nicht verschluckt."}
   ]
 }
