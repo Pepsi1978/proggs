@@ -22,6 +22,12 @@ object ProgrammierChat {
     /** Nachrichtenart des ausführlichen Abschlussberichts am Zugende (Stand „info“ vom Hook): volle Aktionsleiste. */
     const val ART_BERICHT = "programmierbericht"
 
+    /** Nachrichtenart eines Bildes, das Jarvis im Gespräch erzeugt hat: groß im Chat, mit „In Ablage verschieben“. */
+    const val ART_BILD = "bild"
+
+    /** Nachrichtenart des Ergebnisses eines Hintergrund-Agenten, das in sein Gespräch zurückkommt (Bericht samt Bildern). */
+    const val ART_AGENT = "agentenergebnis"
+
     @Volatile var aktivesGespraech: String? = null
 
     /**
@@ -83,8 +89,8 @@ object ProgrammierChat {
     /** Setzt die offene App: true = sie hat die Nachricht übernommen (Gespräch ist gerade offen). */
     @Volatile var empfaenger: ((gespraech: String, nachricht: GespeicherteNachricht) -> Boolean)? = null
 
-    fun poste(context: Context, gespraech: String, text: String, art: String, kontext: String = "") {
-        val nachricht = GespeicherteNachricht(false, text, art, kontext)
+    fun poste(context: Context, gespraech: String, text: String, art: String, kontext: String = "", anhaenge: List<String> = emptyList()) {
+        val nachricht = GespeicherteNachricht(false, text, art, kontext, anhaenge)
         if (runCatching { empfaenger?.invoke(gespraech, nachricht) }.getOrNull() == true) return
         Gespraeche.anhaengen(context, gespraech, nachricht)
     }

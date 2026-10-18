@@ -258,7 +258,7 @@ private fun KachelBildMitVollbild(datei: File, anpassen: Int, beschreibung: Stri
 }
 
 @Composable
-private fun KachelBild(
+internal fun KachelBild(
     datei: File, anpassen: Int, beschreibung: String, beiTipp: (() -> Unit)? = null, schwarz: Boolean = false,
     drehen: Int = 0, grad: Int = -1, setzeGrad: (Int) -> Unit = {}, beiFehler: () -> Unit,
 ) {

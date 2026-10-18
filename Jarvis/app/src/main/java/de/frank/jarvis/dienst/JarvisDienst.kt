@@ -194,7 +194,10 @@ class JarvisDienst : Service() {
         return (letzte == null || letzte.isBefore(faellig)) && faellig.isAfter(LocalDateTime.now().minusHours(6))
     }
 
-    /** Ein Agent arbeitet im Hintergrund, legt sein Ergebnis in die Ablage und meldet sich mit einer Benachrichtigung. */
+    /**
+     * Ein Agent arbeitet im Hintergrund und meldet sich mit einer Benachrichtigung. Sein Bericht kommt samt Bildern und PDF in das
+     * Jarvis-Gespräch, aus dem er beauftragt wurde (Aufträge aus ChatGPT holen ihn über vorgaenge); in die Ablage nur auf Wunsch.
+     */
     private fun lasseArbeiten(name: String, auftrag: String, perMail: Boolean, vorlesen: Boolean, vorgang: String?): Job? {
         // Agent inzwischen gelöscht: Den reservierten Platz sofort zurückgeben, statt ihn zwei Minuten zu blockieren.
         val plan = Agenten.finde(this, name) ?: run {
@@ -210,16 +213,35 @@ class JarvisDienst : Service() {
             try {
                 val lauf = Agenten.fuehreAus(this@JarvisDienst, plan, auftrag, vorgang)
                 val titel = lauf.titel
+                val v = vorgang?.let { Vorgaenge.buch(this@JarvisDienst).finde(it) }
                 var zusatz = ""
                 if (titel != null && perMail) {
                     val senden = Register.werkzeuge(this@JarvisDienst).firstOrNull { it.name == "mail_senden" }
                     val ergebnis = runCatching { senden?.ausfuehren(JSONObject().put("betreff", "Jarvis: $titel").put("ablage_datei", titel)) }.getOrNull()
                     zusatz = if (ergebnis != null && !ergebnis.fehler) " Per E-Mail verschickt." else " E-Mail nicht möglich: ${ergebnis?.text ?: "nicht eingerichtet"}"
                 }
+                val wo = when {
+                    !lauf.vorlaeufig -> "liegt in der Ablage"
+                    !v?.gespraech.isNullOrEmpty() -> "steht im Jarvis-Gespräch (nicht in der Ablage gespeichert)"
+                    else -> "ist fertig (nicht in der Ablage gespeichert; ChatGPT holt es mit vorgaenge)"
+                }
                 val text = when {
-                    titel != null && lauf.grund != null -> "„$titel“ liegt in der Ablage, aber nicht vollständig: ${lauf.grund}.$zusatz"
-                    titel != null -> "„$titel“ liegt in der Ablage.$zusatz"
+                    titel != null && lauf.grund != null -> "„$titel“ $wo, aber nicht vollständig: ${lauf.grund}.$zusatz"
+                    titel != null -> "„$titel“ $wo.$zusatz"
                     else -> "Der Agent ${plan.name} ist nicht fertig geworden: ${lauf.grund ?: "Grund unbekannt"}. Details unter Aktivität."
+                }
+                // Ins Gespräch, aus dem der Auftrag kam: Bericht mit Bildern und PDF, oder ehrlich der Grund, warum keiner kam.
+                v?.gespraech?.takeIf { it.isNotEmpty() }?.let { g ->
+                    val kopf = "**${plan.name} fertig** · Auftrag ${v.id}" + (if (lauf.vorlaeufig) "" else " · in der Ablage als „$titel“") + "\n\n"
+                    val inhalt = when {
+                        lauf.bericht != null -> kopf + lauf.bericht.trim() + (lauf.grund?.let { "\n\n_Nicht vollständig: ${it}._" } ?: "")
+                        else -> "**${plan.name} nicht fertig** · Auftrag ${v.id}\n\n${lauf.grund ?: "Grund unbekannt"}. Details unter Aktivität."
+                    }
+                    val notiz = if (lauf.bericht == null) "" else if (lauf.vorlaeufig)
+                        "(Ergebnis von Hintergrundauftrag ${v.id}, VORLÄUFIG, NICHT in der Ablage. Will Frank es behalten: in_ablage_uebernehmen mit vorgang ${v.id}.)"
+                    else "(Ergebnis von Hintergrundauftrag ${v.id}, in der Ablage als „$titel“.)"
+                    runCatching { de.frank.jarvis.faehigkeit.ProgrammierChat.poste(this@JarvisDienst, g, inhalt, de.frank.jarvis.faehigkeit.ProgrammierChat.ART_AGENT, notiz, lauf.dateien) }
+                        .onSuccess { Vorgaenge.buch(this@JarvisDienst).mitgeteilt(listOf(v.id)) }
                 }
                 val agentTitel = "Jarvis: ${plan.name} fertig" + (vorgang?.let { " (Vorgang $it)" } ?: "")
                 de.frank.jarvis.meldung.Meldungen.zeige(
@@ -234,9 +256,9 @@ class JarvisDienst : Service() {
                 )
                 // Nach der Benachrichtigung: Die Zusammenfassung braucht bis zu 75 Sekunden und soll die Meldung nicht aufhalten.
                 if (titel != null && (vorlesen || de.frank.jarvis.meldung.Meldungen.vorlesenAn(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT))) {
-                    de.frank.jarvis.faehigkeit.Ablage.finde(this@JarvisDienst, titel)?.let { datei ->
+                    lauf.bericht?.let { bericht ->
                         // Vorgelesen wird eine eigene kurze Zusammenfassung fürs Ohr, nicht Auftrag und Bericht; der Bericht bleibt unverändert.
-                        val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, datei.readText(), lauf.grund)
+                        val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, bericht, lauf.grund, inAblage = !lauf.vorlaeufig)
                         // Mit Stimme und Lautstärke aus Einstellungen → Benachrichtigungen → Agent fertig; ein laufendes Gespräch wartet sie ab,
                         // und ein Abschalten der Meldung in der Zwischenzeit verwirft sie.
                         de.frank.jarvis.meldung.Meldungen.vorlesenWartend(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT, plan.name, fassung,

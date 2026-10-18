@@ -38,7 +38,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Dort darf ein Werkzeug auf lange Arbeit warten; [eintragTitel] ist der Ablage-Eintrag des laufenden Agenten,
  * in den erzeugte Dateien ohne eigenen Titel gehören.
  */
-class AgentenKontext(val eintragTitel: String?, val langeWarten: Boolean) : AbstractCoroutineContextElement(Key) {
+class AgentenKontext(val eintragTitel: String?, val langeWarten: Boolean, val dauerhaft: Boolean = true) : AbstractCoroutineContextElement(Key) {
     companion object Key : CoroutineContext.Key<AgentenKontext>
 }
 
@@ -71,6 +71,18 @@ object AblageZentrale {
 
     fun speicher(context: Context): AblageSpeicher = AblageSpeicher.fuer(context.applicationContext.filesDir)
 
+    /**
+     * Wohin ein Agentenlauf seine Dateien legt: in die Ablage nur, wenn Frank sie ausdrücklich verlangt hat (agent_starten
+     * mit ablegen), sonst in den vorläufigen Speicher ([Vorlaeufig]). Außerhalb eines Agentenlaufs die Ablage.
+     */
+    suspend fun agentenSpeicher(context: Context): AblageSpeicher =
+        currentCoroutineContext()[AgentenKontext]?.takeIf { it.eintragTitel != null && !it.dauerhaft }?.let { Vorlaeufig.speicher(context) } ?: speicher(context)
+
+    /** Läuft gerade ein Agent, der NICHT in die Ablage speichern soll? */
+    suspend fun agentOhneAblage(): Boolean = currentCoroutineContext()[AgentenKontext]?.let { it.eintragTitel != null && !it.dauerhaft } == true
+
+    fun istVorlaeufig(context: Context, s: AblageSpeicher): Boolean = s === Vorlaeufig.speicher(context)
+
     fun uebertragungen(context: Context): Uebertragungen = uebertragungenInstanz ?: synchronized(this) {
         uebertragungenInstanz ?: Uebertragungen(speicher(context), File(context.applicationContext.filesDir, "ablage-uebertragungen.json")).also { uebertragungenInstanz = it }
     }
@@ -83,6 +95,8 @@ object AblageZentrale {
             runCatching { speicher(app).aufraeumen(u.offeneTeile()) }
             // Gerenderte PDF-Seiten nicht endlos sammeln (je Seite mehrere MB im Zwischenspeicher).
             runCatching { Medien.pdfSeitenAufraeumen(File(app.cacheDir, "pdf-seiten")) }
+            // Vorläufige Chat-Ergebnisse, die Frank nicht in die Ablage übernommen hat, nach 30 Tagen entfernen.
+            runCatching { Vorlaeufig.aufraeumen(app) }
             u.liste.value.filter { it.zustand == UebertragungsZustand.FEHLER && it.fehler?.startsWith("Unterbrochen") == true }.forEach { offen ->
                 runCatching { starteDownload(app, offen.id, offen.name, offen.eintragTitel) }
             }
@@ -100,7 +114,7 @@ object AblageZentrale {
      * [warteMs]. Rückgabe: der Fertigtext oder null, wenn sie noch läuft. Was danach fertig wird, meldet sich per
      * Benachrichtigung; Fehler werden geworfen bzw. gemeldet.
      */
-    suspend fun imHintergrund(context: Context, kennung: String, art: String, eintragTitel: String, warteMs: Long, arbeit: suspend () -> String): String? {
+    suspend fun imHintergrund(context: Context, kennung: String, art: String, eintragTitel: String, warteMs: Long, fertigTitel: String = "Jarvis: in der Ablage", arbeit: suspend () -> String): String? {
         val app = context.applicationContext
         val job = synchronized(laufend) {
             laufend[kennung] ?: bereich.async(start = CoroutineStart.LAZY) {
@@ -137,7 +151,7 @@ object AblageZentrale {
                     nachzumelden.remove(kennung)
                     if (!direktGeliefert.remove(kennung) && ausPlugin) fuerPlugin[kennung] = text
                 }
-                r.onSuccess { benachrichtige(app, "Jarvis: in der Ablage", it) }
+                r.onSuccess { benachrichtige(app, fertigTitel, it) }
                     .onFailure { benachrichtige(app, "Jarvis: $art fehlgeschlagen", fehlerText(it)) }
             }
         }
@@ -169,8 +183,11 @@ object AblageZentrale {
         }
     }
 
-    fun meldung(u: Uebernahme): String =
-        (if (u.neu) "Gespeichert" else "War schon gespeichert (keine Kopie angelegt)") +
+    fun meldung(u: Uebernahme, vorlaeufig: Boolean = false): String =
+        if (vorlaeufig) (if (u.neu) "Erzeugt" else "War schon erzeugt (keine Kopie angelegt)") +
+            ": „${u.anhang.originalName}“ (${u.anhang.art.anzeige}, ${Dateityp.groesse(u.anhang.groesse)}), VORLÄUFIG zum Ergebnis „${u.eintrag.titel}“ – NICHT in der Ablage. " +
+            "Frank sieht es im Jarvis-Chat; dauerhaft nur auf seinen Wunsch (in_ablage_uebernehmen)."
+        else (if (u.neu) "Gespeichert" else "War schon gespeichert (keine Kopie angelegt)") +
             ": „${u.anhang.originalName}“ (${u.anhang.art.anzeige}, ${Dateityp.groesse(u.anhang.groesse)}) im Ablage-Eintrag „${u.eintrag.titel}“."
 
     // ---- Bilderzeugung ----
@@ -190,15 +207,19 @@ object AblageZentrale {
      * Erzeugt ein Bild über das Bildwerkzeug von Codex (wie in News Kompass) und legt es als PNG ab, auf Wunsch
      * zusätzlich als DIN-A4-PDF. Wirft einen verständlichen Fehler, wenn kein Bild kam. Rückgabe: Fertigtext.
      */
-    suspend fun erzeugeBild(context: Context, beschreibung: String, eintragTitel: String, format: Bildformat, hohe: Boolean, auchPdf: Boolean, kennung: String): String {
+    suspend fun erzeugeBild(
+        context: Context, beschreibung: String, eintragTitel: String, format: Bildformat, hohe: Boolean, auchPdf: Boolean, kennung: String,
+        s: AblageSpeicher = speicher(context), neueBilder: (List<File>) -> Unit = {},
+    ): String {
         val app = context.applicationContext
-        val s = speicher(app)
+        val vorlaeufig = istVorlaeufig(app, s)
         val vorhanden = s.findeGenau(eintragTitel)
         // Wiederholung nach dem Fertigwerden (der laufende Auftrag ist schon weg): kein zweites Motiv erzeugen, das gespeicherte melden
         // und ein fehlendes PDF desselben Bildes nachreichen.
         val schon = vorhanden?.anhaenge.orEmpty().filter { it.art == Art.BILD && it.kennung?.startsWith("$kennung-") == true }
         if (schon.isNotEmpty()) {
-            val teile = mutableListOf("War schon gespeichert (kein zweites Bild erzeugt): " + schon.joinToString { "„${it.originalName}“" } + " im Ablage-Eintrag „${vorhanden!!.titel}“.")
+            val teile = mutableListOf((if (vorlaeufig) "War schon erzeugt (kein zweites Bild), vorläufig zu „${vorhanden!!.titel}“: " else "War schon gespeichert (kein zweites Bild erzeugt) im Ablage-Eintrag „${vorhanden!!.titel}“: ") +
+                schon.joinToString { "„${it.originalName}“" } + ".")
             if (auchPdf) schon.filter { b -> vorhanden.anhaenge.none { it.kennung == "${b.kennung}-pdf" } }.forEach { b ->
                 teile += bildPdfAblegen(app, s, eintragTitel, b, b.originalName.substringBeforeLast('.'), "${b.kennung}-pdf")
             }
@@ -215,6 +236,7 @@ object AblageZentrale {
         // Jedes Bild eines Eintrags bekommt einen eigenen Namen, damit ein Bericht es mit ![…](name.png) eindeutig einbinden kann.
         val vergeben = vorhanden?.anhaenge?.map { it.originalName.lowercase() }.orEmpty().toMutableSet()
         val teile = mutableListOf<String>()
+        val neu = mutableListOf<File>()
         bilder.forEachIndexed { i, bytes ->
             var n = 1
             var name = basis
@@ -222,11 +244,13 @@ object AblageZentrale {
             vergeben += "$name.png".lowercase()
             val u = s.uebernimmBytes(eintragTitel, bytes, "$name.png", "image/png", "Bildwerkzeug (Codex)", beschreibung.take(500), "$kennung-$i")
             nachDemSpeichern(app, u)
-            teile += meldung(u)
+            teile += meldung(u, vorlaeufig)
+            if (u.neu) neu += s.datei(u.anhang)
             val masse = Medien.bildMasse(s.datei(u.anhang))
             masse?.let { (b, h) -> teile += "Bildgröße: $b × $h Pixel." }
             if (auchPdf) teile += bildPdfAblegen(app, s, eintragTitel, u.anhang, name, "$kennung-$i-pdf")
         }
+        if (neu.isNotEmpty()) runCatching { neueBilder(neu) }
         return teile.joinToString(" ")
     }
 
@@ -237,7 +261,7 @@ object AblageZentrale {
             Medien.bildAlsA4Pdf(s.datei(bild), teil)
             val p = s.uebernimm(eintragTitel, teil, "$name.pdf", "application/pdf", HERKUNFT_BILD_PDF, "DIN-A4-PDF mit dem Bild", kennung)
             nachDemSpeichern(app, p)
-            meldung(p)
+            meldung(p, istVorlaeufig(app, s))
         } catch (e: Exception) {
             "Das zusätzliche PDF ließ sich nicht erzeugen (${e.message}); das PNG ist gespeichert."
         } finally { teil.delete() }
@@ -247,8 +271,7 @@ object AblageZentrale {
      * Legt [text] als DIN-A4-PDF in den Eintrag [eintragTitel] und bindet dessen Bilder ein (siehe [Medien.textAlsPdf]).
      * Rückgabe: die Meldung „Gespeichert …“; wirft bei Fehlern.
      */
-    fun textAlsPdfAblegen(context: Context, eintragTitel: String, text: String): String {
-        val s = speicher(context)
+    fun textAlsPdfAblegen(context: Context, eintragTitel: String, text: String, s: AblageSpeicher = speicher(context)): String {
         val bilder = s.findeGenau(eintragTitel)?.anhaenge.orEmpty().filter { it.art == Art.BILD }
             .associate { it.originalName.lowercase() to s.datei(it) }.filterValues { it.isFile }
         val teil = s.neueTeilDatei()
@@ -257,7 +280,7 @@ object AblageZentrale {
             val u = s.uebernimm(eintragTitel, teil, AblageSpeicher.dateiname(eintragTitel) + ".pdf", "application/pdf",
                 if (bilder.isEmpty()) "Jarvis (PDF aus Text)" else "Jarvis (PDF aus Text mit ${bilder.size} Bild(ern))")
             nachDemSpeichern(context, u)
-            return meldung(u) + if (bilder.isEmpty()) "" else " Darin ${bilder.size} Bild(er)."
+            return meldung(u, istVorlaeufig(context, s)) + if (bilder.isEmpty()) "" else " Darin ${bilder.size} Bild(er)."
         } finally {
             teil.delete()
         }

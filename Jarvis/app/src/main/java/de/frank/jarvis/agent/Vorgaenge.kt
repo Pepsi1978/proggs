@@ -12,7 +12,10 @@ import org.json.JSONObject
 
 /**
  * Ein Hintergrundauftrag an einen Agenten, mit stabiler Kennung. Überlebt Verbindungsabbruch, App-Neustart und ein
- * neues ChatGPT-Gespräch: Das Ergebnis (Titel des Ablage-Eintrags) bleibt dem ursprünglichen Auftrag zugeordnet.
+ * neues ChatGPT-Gespräch: Das Ergebnis bleibt dem ursprünglichen Auftrag zugeordnet.
+ * [ergebnis] = Titel des Ablage-Eintrags, nur wenn Frank die Ablage verlangt hat ([ablage]) oder es später übernommen wurde;
+ * sonst steht der Bericht vorläufig unter [vorlaeufig] (nicht in der Ablage, siehe [de.frank.jarvis.ablage.Vorlaeufig]).
+ * [gespraech] = das Jarvis-Gespräch, aus dem der Auftrag kam; dorthin kommt das Ergebnis. Leer bei Aufträgen aus ChatGPT.
  * [abgerufen] = ein Werkzeug hat das Ergebnis ausgeliefert; [mitgeteilt] = ChatGPT hat bestätigt, es Frank gesagt zu haben.
  */
 data class Vorgang(
@@ -29,6 +32,9 @@ data class Vorgang(
     val grund: String = "",
     val abgerufen: Long = 0L,
     val mitgeteilt: Long = 0L,
+    val ablage: Boolean = false,
+    val gespraech: String = "",
+    val vorlaeufig: String = "",
 ) {
     val offen: Boolean get() = stand == ANGENOMMEN || stand == LAEUFT
     /** Fertig (oder gescheitert), aber Frank hat es laut ChatGPT noch nicht erfahren. */
@@ -37,6 +43,7 @@ data class Vorgang(
     fun alsJson(): JSONObject = JSONObject().put("id", id).put("agent", agent).put("auftrag", auftrag).put("erstellt", erstellt).put("stand", stand)
         .put("schritt", schritt).put("geaendert", geaendert).put("gestartet", gestartet).put("beendet", beendet).put("ergebnis", ergebnis)
         .put("grund", grund).put("abgerufen", abgerufen).put("mitgeteilt", mitgeteilt)
+        .put("ablage", ablage).put("gespraech", gespraech).put("vorlaeufig", vorlaeufig)
 
     companion object {
         const val ANGENOMMEN = "angenommen"
@@ -49,6 +56,8 @@ data class Vorgang(
             j.optString("id"), j.optString("agent"), j.optString("auftrag"), j.optLong("erstellt"), j.optString("stand", FEHLGESCHLAGEN),
             j.optString("schritt"), j.optLong("geaendert"), j.optLong("gestartet"), j.optLong("beendet"), j.optString("ergebnis"),
             j.optString("grund"), j.optLong("abgerufen"), j.optLong("mitgeteilt"),
+            // Alte Einträge (vor 1.8.179) legten immer in der Ablage ab.
+            j.optBoolean("ablage", true), j.optString("gespraech"), j.optString("vorlaeufig"),
         )
 
         fun standText(stand: String): String = when (stand) {
@@ -120,14 +129,14 @@ class VorgangsBuch(private val datei: File, private val uhr: () -> Long = System
      * [reserviere] wird nur für einen wirklich neuen Auftrag gerufen (unter derselben Sperre, also ohne Wettlauf).
      */
     @Synchronized
-    fun annehmen(agent: String, auftrag: String, reserviere: () -> Boolean): Annahme {
+    fun annehmen(agent: String, auftrag: String, ablage: Boolean = false, gespraech: String = "", reserviere: () -> Boolean): Annahme {
         val l = aufgeraeumt()
         val jetzt = uhr()
         val schluessel = normal(agent) + "|" + normal(auftrag)
         l.lastOrNull { normal(it.agent) + "|" + normal(it.auftrag) == schluessel && (it.offen || (it.stand != Vorgang.FEHLGESCHLAGEN && it.stand != Vorgang.ABGEBROCHEN && jetzt - it.erstellt < DOPPELT_MS)) }
             ?.let { return Annahme.Doppelt(it) }
         if (!reserviere()) return Annahme.KeinPlatz
-        val v = Vorgang(neueId(l), agent, auftrag.trim(), jetzt, Vorgang.ANGENOMMEN)
+        val v = Vorgang(neueId(l), agent, auftrag.trim(), jetzt, Vorgang.ANGENOMMEN, ablage = ablage, gespraech = gespraech)
         l += v
         schreibe()
         melde("Vorgang ${v.id} angenommen", agent)
@@ -154,8 +163,8 @@ class VorgangsBuch(private val datei: File, private val uhr: () -> Long = System
 
     fun gestartet(id: String) = aendere(id) { it.copy(stand = Vorgang.LAEUFT, gestartet = uhr()) }
     fun schritt(id: String, text: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.LAEUFT, schritt = text.take(160)) else it }
-    fun beende(id: String, stand: String, ergebnis: String?, grund: String?) =
-        aendere(id) { if (it.offen) it.copy(stand = stand, ergebnis = ergebnis.orEmpty(), grund = grund.orEmpty(), beendet = uhr(), schritt = "") else it }
+    fun beende(id: String, stand: String, ergebnis: String?, grund: String?, vorlaeufig: String? = null) =
+        aendere(id) { if (it.offen) it.copy(stand = stand, ergebnis = ergebnis.orEmpty(), grund = grund.orEmpty(), beendet = uhr(), schritt = "", vorlaeufig = vorlaeufig.orEmpty()) else it }
 
     @Synchronized
     fun abgerufen(ids: Collection<String>) { val jetzt = uhr(); ids.forEach { id -> aendere(id) { if (!it.offen && it.abgerufen == 0L) it.copy(abgerufen = jetzt) else it } } }
@@ -221,6 +230,7 @@ object Vorgaenge {
         append(" · „").append(v.auftrag.replace(Regex("\\s+"), " ").take(90)).append("“ · angenommen ").append(VorgangsBuch.zeit(v.erstellt))
         if (v.beendet > 0) append(", beendet ").append(VorgangsBuch.zeit(v.beendet))
         if (v.ergebnis.isNotEmpty()) append(" · Ergebnis in der Ablage: „").append(v.ergebnis).append("“")
+        else if (v.vorlaeufig.isNotEmpty()) append(" · Ergebnis bereit (NICHT in der Ablage; Frank wollte keine Ablage").append(if (v.gespraech.isNotEmpty()) ", steht im Jarvis-Chat" else "").append(")")
         if (v.grund.isNotEmpty()) append(" · ").append(if (v.stand == Vorgang.FERTIG) "Hinweis: " else "Grund: ").append(v.grund.take(200))
         if (!v.offen) append(if (v.mitgeteilt > 0) " · Frank mitgeteilt" else if (v.abgerufen > 0) " · abgerufen, noch nicht als mitgeteilt bestätigt" else " · Frank noch nicht mitgeteilt")
     }

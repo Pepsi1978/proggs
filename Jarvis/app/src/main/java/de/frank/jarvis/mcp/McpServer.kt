@@ -366,9 +366,11 @@ class McpServer(context: Context) {
         append("Nenne Frank von dir aus, was sein Vorhaben beeinflusst (zum Beispiel „da schläfst du schon, morgen ist Tagdienst“ oder „um die Zeit soll es stark regnen“), kurz und nur wenn es wirklich zählt.\n")
         append("Welches Werkzeug wofür: Überblick und Hintergrund = jarvis_kontext. tagesauswertung_lesen nur, wenn Frank die Auswertung selbst hören oder neu erstellen lassen will. ")
         append("tagesdaten_lesen für einzelne Rohwerte der letzten Synchronisation. Die einzelnen Apps für Aktuelles, Details und Änderungen.\n")
-        append("Dateien: Melde eine Datei erst als gespeichert, wenn ablage_datei_speichern oder bild_erzeugen „Gespeichert“ zurückgibt. Bei „läuft noch“ ist sie noch nicht da: ")
-        append("Rufe dann dasselbe Werkzeug sofort mit denselben Angaben noch einmal auf (das wartet auf die laufende Arbeit, es entsteht nichts doppelt), wiederhole das bis „Gespeichert“ oder ein Fehler kommt, ")
-        append("und sag Frank von dir aus, dass es in der Ablage liegt. Er soll nicht nachfragen müssen. ")
+        append("Ablage nur auf ausdrücklichen Wunsch: Antworten und Recherchen gibst du im Gespräch; ablage_schreiben, agent_starten mit ablegen und bild_erzeugen mit ablegen nur, wenn Frank das Ablegen verlangt. ")
+        append("Ein späterer Wunsch („leg das doch ab“) geht mit in_ablage_uebernehmen. ")
+        append("Dateien: Melde eine Datei erst als gespeichert, wenn ablage_datei_speichern oder bild_erzeugen „Gespeichert“ zurückgibt; „Erzeugt … VORLÄUFIG“ heißt fertig, aber NICHT in der Ablage (zeigen mit ablage_zeigen). Bei „läuft noch“ ist sie noch nicht da: ")
+        append("Rufe dann dasselbe Werkzeug sofort mit denselben Angaben noch einmal auf (das wartet auf die laufende Arbeit, es entsteht nichts doppelt), wiederhole das bis „Gespeichert“, „Erzeugt“ oder ein Fehler kommt, ")
+        append("und sag Frank von dir aus, dass es fertig ist und ob es in der Ablage liegt. Er soll nicht nachfragen müssen. ")
         append("Dateien aus diesem Gespräch (hochgeladen oder von dir erzeugt) übergibst du in ablage_datei_speichern als chatgpt_dateien; Pfade wie sandbox: oder /mnt/data erreicht das Handy nicht. ")
         append("Geht keine Übergabe, sag ehrlich, dass die Datei nicht übertragen werden kann.\n")
     }
@@ -398,7 +400,7 @@ class McpServer(context: Context) {
          */
         private val GESCHUETZT = setOf(
             "aufgabe_anlegen", "aufgabe_aendern", "aufgabe_loeschen", "kalender_eintragen", "kalender_loeschen", "idee_speichern", "idee_loeschen",
-            "mail_senden", "agent_starten", "programmieren", "programmier_nachtrag", "ablage_schreiben", "jarvis_merken", "jarvis_vergessen", "wecker_stellen", "wecker_loeschen",
+            "mail_senden", "agent_starten", "programmieren", "programmier_nachtrag", "ablage_schreiben", "in_ablage_uebernehmen", "jarvis_merken", "jarvis_vergessen", "wecker_stellen", "wecker_loeschen",
             "stack_speichern", "mittel_speichern", "stack_mittel_setzen",
         )
         private val schutz = Wiederholschutz()

@@ -65,6 +65,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val app = context.applicationContext as de.frank.jarvis.JarvisApplication
             return androidx.lifecycle.ViewModelProvider(app, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(app))[AppViewModel::class.java]
         }
+
+        /** Zustand in [ablageUmzug]: Die Übernahme in die Ablage läuft gerade. */
+        const val UMZUG_LAEUFT = "läuft"
     }
 
     val einstellungen = Einstellungen.get(app)
@@ -295,7 +298,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraech[i] = n.copy(bewertung = urteil)
         sitzungSichern()
         // Der Abschlussbericht stammt von der Programmier-Sitzung, nicht von Jarvis: Er lehrt Jarvis keinen Stil.
-        if (urteil == 0 || n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT) return
+        if (urteil == 0 || n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT || n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_AGENT) return
         val frage = (i - 1 downTo 0).firstOrNull { gespraech[it].vonMir }?.let { gespraech[it].text }.orEmpty()
         val modell = einstellungen.modell
         val stufe = einstellungen.denkstufe
@@ -382,6 +385,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun anhangKopieren(pfad: String): String? = runCatching {
         val alt = java.io.File(pfad)
+        // Bilder und PDFs von Jarvis (vorläufig oder in der Ablage) gehören ihrem Speicher, nicht dem Gespräch: Verweis übernehmen.
+        // Eine Kopie daneben kennte der Speicher nicht, und sein Aufräumen löschte sie.
+        if (!alt.absolutePath.startsWith(de.frank.jarvis.data.Anhaenge.ordner(getApplication()).absolutePath)) return@runCatching pfad
         if (!alt.exists()) return@runCatching null
         // Freien Namen suchen: Viele Kopien in derselben Millisekunde dürfen nicht kollidieren (copyTo überschreibt nicht).
         val basis = System.currentTimeMillis()
@@ -403,6 +409,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // schickte die Frage erneut ab, die den Programmierauftrag gestartet hat, und startete ihn ein zweites Mal.
         if (alt.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT || alt.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_STATUS || alt.art == "rueckfrage") {
             meldung = "Das ist eine Meldung der Programmier-Sitzung, keine Antwort von Jarvis. Für einen neuen Auftrag frag Jarvis direkt."
+            return
+        }
+        // Ergebnis eines Hintergrundauftrags oder ein fertiges Bild: Ein neuer Versuch startete Auftrag bzw. Bild ein zweites Mal.
+        if (alt.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_AGENT || alt.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BILD) {
+            meldung = "Das ist ein fertiges Ergebnis, keine Antwort zum Wiederholen. Für etwas Neues frag Jarvis direkt."
             return
         }
         val frage = (i - 1 downTo 0).firstOrNull { gespraech[it].vonMir } ?: run { meldung = "Zu dieser Antwort gibt es keine Frage."; return }
@@ -1415,6 +1426,42 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (stand.quelle == quelle && stand.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) vorleser.stopp() else vorleser.sprich(quelle, titel, text)
     }
 
+    // ---- Bilder und PDFs im Chat: bewusst in die Ablage übernehmen ----
+
+    /** Laufende oder gescheiterte Übernahmen je Chat-Verweis: [UMZUG_LAEUFT] oder der Fehlertext. Erfolg entfernt den Eintrag. */
+    val ablageUmzug = androidx.compose.runtime.mutableStateMapOf<String, String>()
+
+    /**
+     * „In Ablage verschieben“ an einem Bild oder PDF im Chat: Datei und Zuordnung (Titel, Beschreibung, Kennung) kommen in die
+     * Ablage. Erst wenn sie dort liegt, zeigt der Chat den Erfolg und die Nachricht verweist auf die Datei in der Ablage; schlägt
+     * es fehl, bleibt die vorläufige Datei und der Fehler steht am Bild.
+     */
+    fun chatDateiInAblage(pfad: String) {
+        if (ablageUmzug[pfad] == UMZUG_LAEUFT) return
+        ablageUmzug[pfad] = UMZUG_LAEUFT
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) { runCatching { de.frank.jarvis.ablage.Vorlaeufig.dateiInAblage(getApplication(), pfad) } }
+            r.onSuccess { u ->
+                ablageUmzug.remove(pfad)
+                sicherung.withLock {
+                    var geaendert = false
+                    gespraech.indices.forEach { i ->
+                        val n = gespraech[i]
+                        if (pfad !in n.anhaenge) return@forEach
+                        val kontext = if (n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BILD) "(Dieses Bild liegt in der Ablage im Eintrag „${u.titel}“.)" else n.kontext
+                        gespraech[i] = n.copy(anhaenge = n.anhaenge.map { if (it == pfad) u.pfad else it }, kontext = kontext)
+                        geaendert = true
+                    }
+                    if (geaendert) sitzungSichern()
+                }
+                meldung = if (u.schonDa) "Lag schon in der Ablage: „${u.titel}“." else "In der Ablage gespeichert: „${u.titel}“."
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                ablageUmzug[pfad] = de.frank.jarvis.ablage.AblageZentrale.fehlerText(e)
+            }
+        }
+    }
+
     // ---- Programmieraufträge im Gespräch ----
 
     /**
@@ -1436,7 +1483,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch(Dispatchers.Main) {
                 sicherung.withLock {
                     if (id == sitzungId) {
-                        gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext)
+                        gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext, n.anhaenge)
                         sitzungSichern()
                     } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), id, n) }
                 }

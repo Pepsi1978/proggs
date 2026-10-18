@@ -87,9 +87,11 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
                 val an = a.optString("an").trim().ifEmpty { e.mailAdresse }
                 val erlaubt = (e.mailEmpfaenger.split(",", ";", " ", "\n") + e.mailAdresse).map { it.trim().lowercase(Locale.ROOT) }.filter { it.isNotEmpty() }
                 if (an.lowercase(Locale.ROOT) !in erlaubt) return@mitMail Ergebnis("An $an darf Jarvis nicht senden. Frank kann die Adresse in Jarvis unter Einstellungen → E-Mail freigeben.", fehler = true)
-                val speicher = Ablage.speicher(context)
+                // Auch ein vorläufiges Ergebnis (Agent ohne Ablage-Wunsch) lässt sich verschicken, ohne es dafür abzulegen.
+                var speicher = Ablage.speicher(context)
                 val eintrag = a.optString("ablage_datei").trim().takeIf { it.isNotEmpty() }?.let { titel ->
-                    speicher.finde(titel) ?: return@mitMail Ergebnis("Keine eindeutige Ablage-Datei für „$titel“.", fehler = true)
+                    speicher.finde(titel) ?: de.frank.jarvis.ablage.Vorlaeufig.speicher(context).let { v -> v.finde(titel)?.also { speicher = v } }
+                        ?: return@mitMail Ergebnis("Keine eindeutige Ablage-Datei für „$titel“.", fehler = true)
                 }
                 val datei = eintrag?.let { speicher.textDatei(it) }
                 // Dateien des Eintrags (Bilder, PDFs …) gehen als echte Anhänge mit; Gmail nimmt höchstens 25 MB.

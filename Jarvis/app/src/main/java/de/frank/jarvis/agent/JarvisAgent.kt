@@ -63,6 +63,8 @@ class JarvisAgent(context: Context) {
         rolle: String? = null,
         mitInternet: Boolean = false,
         ablageTitel: String? = null,
+        /** Nur mit [ablageTitel]: false = der Agent soll nichts dauerhaft ablegen (Frank hat keine Ablage verlangt). */
+        ablageDauerhaft: Boolean = true,
         lernen: Boolean = false,
         /** true = reichen Schritte oder Zeit nicht, schreibt das Modell zum Schluss eine Antwort aus dem bisher Gesammelten, statt alles zu verwerfen. */
         abschluss: Boolean = false,
@@ -80,7 +82,7 @@ class JarvisAgent(context: Context) {
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
-            versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, lernen, abschluss, beiAenderung, bilder,
+            versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, ablageDauerhaft, lernen, abschluss, beiAenderung, bilder,
                 modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch)
         }
 
@@ -93,6 +95,7 @@ class JarvisAgent(context: Context) {
         rolle: String?,
         mitInternet: Boolean,
         ablageTitel: String?,
+        ablageDauerhaft: Boolean,
         lernen: Boolean,
         abschluss: Boolean,
         beiAenderung: (String) -> Unit,
@@ -152,9 +155,9 @@ class JarvisAgent(context: Context) {
                 // Vor dem Start festhalten: Hängt ein Werkzeug bis zum Zeitlimit, nennt der Abbruchgrund genau dieses.
                 letztesWerkzeug = aufrufe.joinToString(", ") { c -> werkzeuge.firstOrNull { it.name == c.optString("werkzeug") }?.titel ?: c.optString("werkzeug") }
                 val ergebnisse = if (nurLesend) {
-                    coroutineScope { aufrufe.map { c -> async { fuehreAus(c, werkzeuge, ablageTitel, beiSchritt, beiAenderung) } }.awaitAll() }
+                    coroutineScope { aufrufe.map { c -> async { fuehreAus(c, werkzeuge, ablageTitel, ablageDauerhaft, beiSchritt, beiAenderung) } }.awaitAll() }
                 } else {
-                    aufrufe.map { c -> fuehreAus(c, werkzeuge, ablageTitel, beiSchritt, beiAenderung) }
+                    aufrufe.map { c -> fuehreAus(c, werkzeuge, ablageTitel, ablageDauerhaft, beiSchritt, beiAenderung) }
                 }
                 zuege += ChatTurn("assistant", schritt.toString())
                 // Nicht ausgeführte Aufrufe (mehr als MAX_AUFRUFE in einem Schritt) ausdrücklich melden, damit das Modell sie nachholt statt sie zu bestätigen.
@@ -253,6 +256,7 @@ class JarvisAgent(context: Context) {
         aufruf: JSONObject,
         werkzeuge: List<de.frank.jarvis.faehigkeit.Werkzeug>,
         ablageTitel: String?,
+        ablageDauerhaft: Boolean,
         beiSchritt: (String) -> Unit,
         beiAenderung: (String) -> Unit,
     ): Pair<String, String> {
@@ -267,7 +271,7 @@ class JarvisAgent(context: Context) {
         // Sie lesen Dateien und Kalender: deshalb auf IO, nie auf dem Hauptfaden.
         val werkzeugBeginn = System.currentTimeMillis()
         val r = try {
-            withContext(Dispatchers.IO + AgentenKontext(ablageTitel, langeWarten = ablageTitel != null)) { werkzeug.ausfuehren(argumente) }
+            withContext(Dispatchers.IO + AgentenKontext(ablageTitel, langeWarten = ablageTitel != null, dauerhaft = ablageDauerhaft)) { werkzeug.ausfuehren(argumente) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

@@ -368,7 +368,7 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
     if (n.art == "rueckfrage") { Rueckfrage(vm, n); return }
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (n.vonMir) Alignment.End else Alignment.Start) {
-        if (n.anhaenge.isNotEmpty()) FlowRow(Modifier.padding(start = 44.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (n.vonMir && n.anhaenge.isNotEmpty()) FlowRow(Modifier.padding(start = 44.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             n.anhaenge.forEach { AnhangKachel(de.frank.jarvis.data.Anhang(it), 96.dp) }
         }
         if (n.vonMir) {
@@ -391,6 +391,12 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
                 Text("•", color = if (f.dunkel) f.text else Color.Black, fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
                 Markierbar(hell = false) { ProgrammierText(n.text, Modifier.weight(1f), farbe = f.text) }
             }
+        } else if (n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BILD) {
+            // Ein Bild, das Jarvis im Gespräch erzeugt hat: groß im Chat, darunter „In Ablage verschieben“ (bzw. wo es schon liegt).
+            Column(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp)) {
+                Text(n.text, color = f.textLeise, fontSize = 14.sp)
+                JarvisDateien(vm, n.anhaenge)
+            }
         } else {
             // Jarvis' Antwort: Fließtext über die ganze Breite, ohne Blase, gut gegliedert.
             Markierbar(hell = false) {
@@ -401,6 +407,8 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
                     else -> AntwortText(n.text, form)
                 }
             }
+            // Bilder und PDFs zur Antwort (etwa vom Ergebnis eines Agenten) direkt darunter.
+            if (n.anhaenge.isNotEmpty()) Box(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp)) { JarvisDateien(vm, n.anhaenge) }
             AntwortLeiste(vm, nummer, n)
         }
     }

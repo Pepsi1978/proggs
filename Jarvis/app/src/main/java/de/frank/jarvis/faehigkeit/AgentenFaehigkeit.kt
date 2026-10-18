@@ -25,7 +25,9 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
     override val beschreibung = "Agenten für längere Arbeiten beauftragen und verwalten; das Aktivitäts-Protokoll von Jarvis lesen (auch Fehler)."
     override val hinweise =
         "Für Recherchen, Ausarbeitungen, Berichte als PDF (auch mit Bildern) und alles, was Internet braucht oder länger als eine Minute dauert, startest du mit agent_starten " +
-            "einen Agenten (meist Recherche). Er arbeitet bis zu 25 Minuten im Hintergrund, legt Bericht, Bilder und PDF in die Ablage und meldet sich per Benachrichtigung. " +
+            "einen Agenten (meist Recherche). Er arbeitet bis zu 25 Minuten im Hintergrund und meldet sich per Benachrichtigung; sein Bericht (mit Bildern und PDF) kommt ins Gespräch zurück, " +
+            "im Jarvis-Chat direkt, in ChatGPT über vorgaenge. In die Ablage legt er nur mit ablegen=true, und das nur, wenn Frank ausdrücklich die Ablage verlangt " +
+            "(„… und leg das in der Ablage ab“); Recherche, Agent oder PDF allein sind kein Speicherwunsch. Will Frank ein fertiges Ergebnis später behalten: in_ablage_uebernehmen mit vorgang. " +
             "Gib ihm den vollständigen Auftrag mit, auch die gewünschte Form (zum Beispiel „als PDF mit Illustrationen“). Versuche so etwas nie selbst im Gespräch. " +
             "agent_starten liefert eine Vorgangskennung; angenommen heißt nicht fertig. Stand und Ergebnis über vorgaenge, nach dem Mitteilen mit aktion mitgeteilt bestätigen. " +
             "Fragt Frank, warum etwas nicht geklappt hat, oder meldet ein Werkzeug einen Fehler, lies mit protokoll_lesen nach, was Jarvis zuletzt getan hat und woran es scheiterte."
@@ -72,12 +74,14 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, zum Beispiel einer Internet-Recherche („Jarvis, recherchiere, wie man … am besten baut“), " +
                     "einem Bericht als PDF mit Illustrationen, einer Machbarkeitsprüfung einer Idee, oder den Agenten Code-Analyse mit der Auswertung einer App in Franks Repo (er liest den Code und liefert den Stand samt fertigem Auftrag für ein Programmier-Werkzeug; er ändert nichts). " +
                     "Der Agent arbeitet bis zu 25 Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Bilderzeugung, Zugriff auf Ideen, " +
-                    "Aufgaben, Kalender, Biomarker), legt Bericht, Bilder und auf Wunsch ein PDF in die Ablage und meldet sich per Benachrichtigung. Dieser Aufruf kehrt sofort zurück " +
+                    "Aufgaben, Kalender, Biomarker), liefert Bericht, Bilder und auf Wunsch ein PDF als Ergebnis ins Gespräch (Jarvis-Chat direkt, ChatGPT über vorgaenge) und meldet sich per Benachrichtigung. " +
+                    "In die Ablage kommt das Ergebnis NUR mit ablegen=true. Dieser Aufruf kehrt sofort zurück " +
                     "und liefert eine Vorgangskennung (zum Beispiel V7K2P): Der Auftrag ist dann ANGENOMMEN, nicht fertig. Sag Frank das kurz und rede normal weiter. " +
                     "Stand und Ergebnis holst du später mit vorgaenge (auch in einem neuen Gespräch); ein wiederholter Aufruf mit demselben Auftrag startet nichts doppelt. Mit per_mail wird der Bericht zusätzlich an Frank gemailt.",
                 schema = schema(
                     "agent" to text("Name des Agenten, zum Beispiel Recherche oder Machbarkeit (siehe agenten)."),
                     "auftrag" to text("Der vollständige Auftrag mit allem Wissen aus dem Gespräch: Ziel, Rahmen, was Frank wichtig ist, gewünschte Form des Ergebnisses (zum Beispiel „als PDF mit Illustrationen“)."),
+                    "ablegen" to schalter("true = das Ergebnis dauerhaft in der Ablage speichern. NUR wenn Frank das ausdrücklich verlangt (zum Beispiel „und leg das in der Ablage ab“); sonst weglassen."),
                     "per_mail" to schalter("true = den fertigen Bericht zusätzlich per E-Mail an Frank schicken."),
                     "vorlesen" to schalter("true = Jarvis liest den fertigen Bericht auf dem Handy laut vor, sobald er da ist."),
                     pflicht = listOf("agent", "auftrag"),
@@ -92,7 +96,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                     !CodexAuthManager(app).isConnected -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
                     // Unter der Sperre des Vorgangsbuchs: erst nach Doppeln suchen, dann synchron reservieren. Der Lauf beginnt erst
                     // asynchron im Dienst; ein paralleler oder wiederholter Aufruf (Verbindungsabbruch) sähe sonst noch einen freien Platz.
-                    else -> when (val annahme = Vorgaenge.buch(app).annehmen(plan.name, auftrag) { Agenten.reserviere(plan.name, auftrag) }) {
+                    else -> when (val annahme = Vorgaenge.buch(app).annehmen(plan.name, auftrag, a.optBoolean("ablegen"), herkunftsGespraech()) { Agenten.reserviere(plan.name, auftrag) }) {
                         is Annahme.Doppelt -> Ergebnis("Dieser Auftrag ist schon angenommen, es wurde nichts doppelt gestartet: ${Vorgaenge.zeile(annahme.vorgang)}\n" +
                             "Sag Frank den Stand in einem Satz. Das Ergebnis holst du mit vorgaenge (aktion lesen, id ${annahme.vorgang.id}), sobald es fertig ist.")
                         Annahme.KeinPlatz -> Ergebnis("Nicht angenommen: Es arbeiten schon ${Agenten.HOECHSTENS} Agenten. Bitte warten, bis einer fertig ist (Stand mit vorgaenge).", fehler = true)
@@ -102,7 +106,9 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                                 Agenten.gibFrei(plan.name, auftrag)
                                 Vorgaenge.buch(app).beende(id, Vorgang.FEHLGESCHLAGEN, null, "Der Hintergrunddienst ließ sich nicht starten")
                                 Ergebnis("Nicht gestartet: Der Hintergrunddienst von Jarvis ließ sich nicht starten (Vorgang $id fehlgeschlagen). Frank soll Jarvis einmal öffnen.", fehler = true)
-                            } else Ergebnis("ANGENOMMEN, noch nicht fertig: Vorgang $id, Agent ${plan.name}. Er arbeitet im Hintergrund, meist fünf bis zwanzig Minuten. Das Ergebnis landet in der Ablage" +
+                            } else Ergebnis("ANGENOMMEN, noch nicht fertig: Vorgang $id, Agent ${plan.name}. Er arbeitet im Hintergrund, meist fünf bis zwanzig Minuten. " +
+                                (if (annahme.vorgang.gespraech.isNotEmpty()) "Das Ergebnis erscheint in diesem Jarvis-Gespräch" else "Das Ergebnis holst du mit vorgaenge") +
+                                (if (a.optBoolean("ablegen")) " und wird in der Ablage gespeichert" else ", es wird NICHT in der Ablage gespeichert") +
                                 (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung. " +
                                 "Sag Frank in einem Satz, dass der Auftrag angenommen ist, und rede normal weiter. Später: vorgaenge (aktion lesen, id $id).")
                         }
@@ -131,7 +137,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 name = "vorgang_abbrechen",
                 titel = "Hintergrundauftrag abbrechen",
                 beschreibung = "Jarvis: bricht einen laufenden oder noch nicht angelaufenen Agenten-Auftrag ab (Kennung aus agent_starten oder vorgaenge). Nur wenn Frank das ausdrücklich will. " +
-                    "Was der Agent bis dahin erzeugt hat, bleibt in der Ablage.",
+                    "Was der Agent bis dahin erzeugt hat, bleibt erhalten (in der Ablage nur, wenn Frank sie für diesen Auftrag verlangt hatte).",
                 schema = schema("id" to text("Die Vorgangskennung, zum Beispiel V7K2P."), pflicht = listOf("id")),
                 nurLesen = false,
                 loeschend = true,
@@ -166,15 +172,33 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
         )
     }
 
+    /** Das Jarvis-Gespräch, aus dem gerade beauftragt wird (wie bei Programmieraufträgen). Leer bei Aufrufen aus ChatGPT. */
+    private suspend fun herkunftsGespraech(): String {
+        val ctx = kotlinx.coroutines.currentCoroutineContext()
+        return ctx[ProgrammierChat.GespraechKennung]?.id ?: if (ctx[ProgrammierChat.AusChatGpt] != null) "" else ProgrammierChat.aktivesGespraech.orEmpty()
+    }
+
     private fun vorgaenge(a: org.json.JSONObject): Ergebnis {
         val buch = Vorgaenge.buch(app)
         return when (a.optString("aktion", "liste").lowercase()) {
             "lesen" -> {
                 val v = buch.finde(a.optString("id")) ?: return Ergebnis("Einen Vorgang „${a.optString("id")}“ gibt es nicht (oder er ist älter als ${VorgangsBuch.TAGE} Tage). Liste mit vorgaenge.", fehler = true)
                 if (!v.offen) buch.abgerufen(listOf(v.id))
-                val bericht = if (v.ergebnis.isEmpty()) "" else Ablage.finde(app, v.ergebnis)?.let { runCatching { it.readText() }.getOrNull() }?.let { text ->
-                    "\n\nERGEBNIS (Bericht aus der Ablage" + (if (text.length > BERICHT) ", gekürzt; vollständig mit ablage_lesen titel „${v.ergebnis}“" else "") + "):\n" + text.take(BERICHT)
-                } ?: "\n\nDer Ablage-Eintrag „${v.ergebnis}“ ist nicht mehr da."
+                val bericht = when {
+                    v.ergebnis.isNotEmpty() -> Ablage.finde(app, v.ergebnis)?.let { runCatching { it.readText() }.getOrNull() }?.let { text ->
+                        "\n\nERGEBNIS (Bericht aus der Ablage" + (if (text.length > BERICHT) ", gekürzt; vollständig mit ablage_lesen titel „${v.ergebnis}“" else "") + "):\n" + text.take(BERICHT)
+                    } ?: "\n\nDer Ablage-Eintrag „${v.ergebnis}“ ist nicht mehr da."
+                    v.vorlaeufig.isNotEmpty() -> {
+                        val vs = de.frank.jarvis.ablage.Vorlaeufig.speicher(app)
+                        vs.findeGenau(v.vorlaeufig)?.let { e ->
+                            val text = vs.text(e)
+                            "\n\nERGEBNIS (vorläufig, NICHT in der Ablage" + (if (text.length > BERICHT) ", gekürzt; vollständig mit ablage_lesen titel „${v.vorlaeufig}“" else "") + "):\n" + text.take(BERICHT) +
+                                (if (e.hatDateien) "\n\nDATEIEN dazu: " + e.anhaenge.joinToString { it.originalName } + " (zeigen mit ablage_zeigen titel „${v.vorlaeufig}“)." else "") +
+                                "\nIn die Ablage nur, wenn Frank es will: in_ablage_uebernehmen mit vorgang ${v.id}."
+                        } ?: "\n\nDas vorläufige Ergebnis ist nicht mehr da (vorläufige Ergebnisse bleiben ${de.frank.jarvis.ablage.Vorlaeufig.AUFBEWAHRUNG_TAGE} Tage)."
+                    }
+                    else -> ""
+                }
                 Ergebnis(Vorgaenge.zeile(buch.finde(v.id) ?: v) + bericht + when {
                     v.offen -> "\n\nNoch nicht fertig. Nicht wiederholt abfragen; der Stand kommt mit dem nächsten passenden Werkzeug-Ergebnis."
                     else -> "\n\nSobald du Frank das Ergebnis gesagt hast: vorgaenge mit aktion mitgeteilt und ids [${v.id}]."

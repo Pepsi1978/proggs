@@ -15,6 +15,8 @@ import de.frank.jarvis.ablage.Kategorie
 import de.frank.jarvis.ablage.Medien
 import de.frank.jarvis.ablage.Uebertragungen
 import de.frank.jarvis.ablage.UebertragungsZustand
+import de.frank.jarvis.ablage.Vorlaeufig
+import de.frank.jarvis.agent.Vorgang
 import java.io.File
 import java.security.MessageDigest
 import java.time.Instant
@@ -55,8 +57,12 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
     override val name = "Jarvis-Ablage"
     override val beschreibung = "Ablage von Jarvis für Texte und Dateien aller Art: Recherchen, Bilder, Infografiken, PDFs, Dokumente, Tabellen, Audio, Video, Code."
     override val hinweise =
-        "Die Ablage ist das Gedächtnis von Jarvis für Ergebnisse: Ein Eintrag hat einen Titel, optional einen lesbaren Text und beliebig viele Dateien (zum Beispiel Bericht + PDF + Bilder). " +
-            "Texte legst du mit ablage_schreiben ab (als_pdf ergänzt ein PDF). Dateien übernimmst du mit ablage_datei_speichern: Dateien aus dem ChatGPT-Gespräch als chatgpt_dateien, sonst als Text-Inhalt (für Markdown, CSV, JSON, SVG, HTML, Code), " +
+        "Die Ablage ist Franks dauerhaftes Archiv: Ein Eintrag hat einen Titel, optional einen lesbaren Text und beliebig viele Dateien (zum Beispiel Bericht + PDF + Bilder). " +
+            "SPEICHERN NUR AUF AUSDRÜCKLICHEN WUNSCH: Antworten, Recherchen und Berichte gibst du normal im Gespräch; in die Ablage kommt etwas nur, wenn Frank es ausdrücklich verlangt " +
+            "(„leg das in der Ablage ab“, „speicher das“, „mach eine Recherche und leg sie in der Ablage ab“). Das Wort Recherche, ein Hintergrundagent oder ein PDF-Wunsch allein sind KEIN Speicherwunsch. " +
+            "Bilder und Infografiken aus bild_erzeugen erscheinen ohne Ablage direkt im Jarvis-Chat; dort kann Frank sie mit „In Ablage verschieben“ behalten. " +
+            "Will Frank ein vorläufiges Ergebnis später doch behalten (Bericht eines Agenten, Bild, PDF), nimm in_ablage_uebernehmen – nie neu erzeugen. " +
+            "Texte legst du auf Wunsch mit ablage_schreiben ab (als_pdf ergänzt ein PDF). Dateien übernimmst du mit ablage_datei_speichern: Dateien aus dem ChatGPT-Gespräch als chatgpt_dateien, sonst als Text-Inhalt (für Markdown, CSV, JSON, SVG, HTML, Code), " +
             "als kleiner Base64-Inhalt (bis etwa 700 kB) oder über eine https-Adresse, die das Handy selbst laden kann. Ein Dateipfad auf einem anderen Rechner oder in deiner eigenen Umgebung " +
             "(zum Beispiel sandbox:/ oder /mnt/data) ist vom Handy aus NICHT erreichbar – nimm dafür chatgpt_dateien, und geht das nicht, sag ehrlich, dass die Datei nicht übertragen werden kann. " +
             "Bilder und Infografiken erzeugt bild_erzeugen über das Bildwerkzeug von Jarvis' Codex-Anmeldung. PDFs entstehen aus einem Text (ablage_schreiben mit als_pdf, " +
@@ -83,7 +89,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                     "art" to text("Nur für die Liste: nach Dateiart filtern.", listOf("alle") + Kategorie.entries.map { it.name.lowercase(Locale.ROOT) }),
                 ),
             ) { a -> (if (a.gesetzt("titel")) w("ablage_lesen") else w("ablage_liste")).ausfuehren(a) },
-            w("ablage_zeigen"), w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"),
+            w("ablage_zeigen"), w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"), w("in_ablage_uebernehmen"),
         )
     }
 
@@ -117,13 +123,17 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
      * Feld `_meta` (ChatGPT verwirft große Ergebnisse stillschweigend), Texte direkt. Anderes lässt sich dort nicht zeigen.
      */
     private suspend fun zeige(a: JSONObject): Ergebnis = withContext(Dispatchers.IO) {
-        val e = speicher.finde(a.optString("titel")) ?: return@withContext Ergebnis("Kein eindeutiger Eintrag für „${a.optString("titel")}“. Die Liste der Einträge liefert ablage_lesen ohne titel.", fehler = true)
+        // Auch vorläufige Ergebnisse (Bilder ohne Ablage-Wunsch) lassen sich so in ChatGPT zeigen, ohne sie zu speichern.
+        val echt = this@AblageFaehigkeit.speicher.finde(a.optString("titel"))
+        val speicher = if (echt != null) this@AblageFaehigkeit.speicher else Vorlaeufig.speicher(context)
+        val e = echt ?: speicher.finde(a.optString("titel")) ?: return@withContext Ergebnis("Kein eindeutiger Eintrag für „${a.optString("titel")}“. Die Liste der Einträge liefert ablage_lesen ohne titel.", fehler = true)
         val g = a.optString("datei").trim().lowercase(Locale.GERMAN)
         val an = if (g.isEmpty()) e.anhaenge.firstOrNull { it.art == Art.BILD } ?: e.anhaenge.firstOrNull { it.art == Art.PDF } ?: e.anhaenge.firstOrNull()
         else e.anhaenge.firstOrNull { it.originalName.lowercase(Locale.GERMAN) == g } ?: e.anhaenge.filter { g in it.originalName.lowercase(Locale.GERMAN) }.singleOrNull()
             ?: return@withContext Ergebnis("Keine eindeutige Datei „${a.optString("datei")}“ in „${e.titel}“. Vorhanden: " + e.anhaenge.joinToString { it.originalName }.ifEmpty { "nur Text" } + ".", fehler = true)
         val struktur = JSONObject().put("titel", e.titel)
-        val unsicher = " Ob die Karte zu sehen ist, hängt von der ChatGPT-Ansicht ab: Frag Frank, ob er sie sieht, statt es zu behaupten. Sonst findet er die Datei in Jarvis unter Ablage."
+        val unsicher = " Ob die Karte zu sehen ist, hängt von der ChatGPT-Ansicht ab: Frag Frank, ob er sie sieht, statt es zu behaupten. " +
+            if (echt != null) "Sonst findet er die Datei in Jarvis unter Ablage." else "Die Datei ist vorläufig und NICHT in der Ablage; behalten nur auf Franks Wunsch mit in_ablage_uebernehmen."
         if (an == null || an.art in setOf(Art.TEXT, Art.MARKDOWN, Art.CODE, Art.DATEN, Art.TABELLE_TEXT)) {
             val text = (if (an == null) speicher.text(e, 40_000) else runCatching { speicher.datei(an).inputStream().use { s -> String(s.readNBytes(40_000), Charsets.UTF_8) } }.getOrDefault("")).trim()
             if (text.isEmpty()) return@withContext Ergebnis("„${e.titel}“ enthält keinen lesbaren Text.", fehler = true)
@@ -196,6 +206,12 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                 }
                 if (liste.size > 80) append("… und ${liste.size - 80} weitere (mit suche eingrenzen).\n")
                 if (laufend.isNotEmpty()) append("\nÜbertragungen und Erzeugung:\n").append(laufend)
+                val vorlaeufig = Vorlaeufig.speicher(context).eintraege().take(15)
+                if (vorlaeufig.isNotEmpty() && kat == null && suche.isEmpty()) {
+                    append("\nVORLÄUFIG (NICHT in der Ablage; nur im Chat bzw. als Ergebnis eines Auftrags, ").append(Vorlaeufig.AUFBEWAHRUNG_TAGE)
+                        .append(" Tage aufbewahrt; dauerhaft nur auf Franks Wunsch mit in_ablage_uebernehmen):\n")
+                    vorlaeufig.forEach { e -> append("- ").append(e.titel).append(" (").append(Ablage.datum(e.geaendert)).append("; ").append(inhaltsArt(e)).append(")\n") }
+                }
             }.trim())
         },
         Werkzeug(
@@ -205,11 +221,13 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             schema = schema("titel" to text("Titel des Eintrags oder ein eindeutiger Teil davon."), pflicht = listOf("titel")),
             nurLesen = true,
         ) { a ->
-            val s = speicher
-            val e = s.finde(a.optString("titel"))
+            val echt = speicher.finde(a.optString("titel"))
+            val s = if (echt != null) speicher else Vorlaeufig.speicher(context)
+            val e = echt ?: s.finde(a.optString("titel"))
             if (e == null) Ergebnis("Kein eindeutiger Eintrag für „${a.optString("titel")}“. Ohne titel kommt die Liste.", fehler = true)
             else Ergebnis(buildString {
-                append("Eintrag „${e.titel}“ (Stand ${Ablage.datum(e.geaendert)}; ${inhaltsArt(e)}):\n\n")
+                append(if (echt == null) "VORLÄUFIGES Ergebnis „${e.titel}“, NICHT in der Ablage (dauerhaft nur auf Franks Wunsch mit in_ablage_uebernehmen)" else "Eintrag „${e.titel}“")
+                    .append(" (Stand ${Ablage.datum(e.geaendert)}; ${inhaltsArt(e)}):\n\n")
                 if (e.hatText) append(s.text(e, 240_000).take(60_000)).append('\n')
                 if (e.hatDateien) {
                     append("\nDATEIEN (in der Jarvis-App unter Ablage ansehen, herunterladen oder teilen):\n")
@@ -226,8 +244,8 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "ablage_schreiben",
             titel = "In die Ablage schreiben",
-            beschreibung = "Jarvis: legt einen Text in der Ablage von Jarvis an oder ersetzt ihn (mit anhaengen wird ergänzt). Für Ergebnisse, die Frank später wieder braucht: " +
-                "Recherchen, Ausarbeitungen, Pläne, Zusammenfassungen eines Gesprächs. Mit als_pdf kommt zusätzlich ein DIN-A4-PDF des Textes als Datei in denselben Eintrag. " +
+            beschreibung = "Jarvis: legt einen Text in der Ablage von Jarvis an oder ersetzt ihn (mit anhaengen wird ergänzt). NUR wenn Frank ausdrücklich verlangt, etwas dauerhaft " +
+                "in der Ablage zu speichern („leg das in der Ablage ab“, „speicher mir das“); normale Antworten und Recherchen gibst du im Gespräch, ohne sie abzulegen. Mit als_pdf kommt zusätzlich ein DIN-A4-PDF des Textes als Datei in denselben Eintrag. " +
                 "Bilder desselben Eintrags (zum Beispiel aus bild_erzeugen) kommen mit ins PDF: Eine eigene Zeile ![Bildunterschrift](dateiname.png) setzt ein Bild an diese Stelle, " +
                 "Bilder ohne solche Zeile stehen am Ende unter „Abbildungen“. Für ein PDF mit Illustrationen also erst die Bilder mit demselben Titel erzeugen, dann den Text mit als_pdf ablegen.",
             schema = schema(
@@ -240,6 +258,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = false,
         ) { a ->
             if (a.optString("inhalt").isBlank()) return@Werkzeug Ergebnis("Der Inhalt ist leer.", fehler = true)
+            if (AblageZentrale.agentOhneAblage()) return@Werkzeug Ergebnis(OHNE_ABLAGE, fehler = true)
             val (eintrag, datei) = speicher.schreibeText(a.optString("titel"), a.optString("inhalt"), a.optBoolean("anhaengen"))
             var text = "Abgelegt als „${datei.nameWithoutExtension}“ (${datei.length() / 1000 + 1} kB)."
             if (a.optBoolean("als_pdf")) {
@@ -255,6 +274,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             name = "ablage_datei_speichern",
             titel = "Datei in die Ablage übernehmen",
             beschreibung = "Jarvis: übernimmt eine oder mehrere Dateien dauerhaft in einen Ablage-Eintrag von Jarvis (gleicher Titel = gleicher Eintrag, so entstehen Einträge mit mehreren Dateien). " +
+                "Nur wenn Frank die Datei behalten oder ablegen will. " +
                 "Dateien aus dem ChatGPT-Gespräch (hochgeladen oder von ChatGPT erzeugt) übergibst du als chatgpt_dateien. Sonst kommt jede Datei als inhalt_text (Markdown, CSV, JSON, SVG, HTML, Code), als inhalt_base64 (höchstens etwa 700 kB) oder als url: eine https-Adresse, die das Handy selbst " +
                 "abrufen kann (auch kurzlebige Ergebnis-Links; Jarvis lädt sie sofort). Dateipfade fremder Rechner sind nicht erreichbar. Größere Downloads laufen im Hintergrund weiter: " +
                 "Dann meldet das Werkzeug „läuft noch“ und die Datei ist erst nach der Benachrichtigung da. Mit wiederholen=true werden fehlgeschlagene Übertragungen erneut versucht. " +
@@ -309,13 +329,15 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "bild_erzeugen",
             titel = "Bild oder Infografik erzeugen",
-            beschreibung = "Jarvis: erzeugt ein Bild oder eine Infografik über das Bildwerkzeug von Jarvis (Codex-Anmeldung von Frank) und speichert es als PNG in der Ablage, auf Wunsch " +
-                "zusätzlich als DIN-A4-PDF. Beschreibe Inhalt, Aufbau, Stil und ALLE Texte, die im Bild stehen sollen, vollständig auf Deutsch; Fakten (zum Beispiel Jarvis' Funktionen) " +
-                "vorher mit Werkzeugen lesen, nie erfinden. Das Erzeugen dauert meist 30 bis 120 Sekunden: Kommt „läuft noch“, ist das Bild noch NICHT gespeichert; Frank bekommt eine " +
+            beschreibung = "Jarvis: erzeugt ein Bild oder eine Infografik über das Bildwerkzeug von Jarvis (Codex-Anmeldung von Frank) als PNG, auf Wunsch zusätzlich als DIN-A4-PDF. " +
+                "Ohne ablegen erscheint es direkt im Jarvis-Chat (vorläufig, NICHT in der Ablage; Frank kann es dort mit „In Ablage verschieben“ behalten); im ChatGPT-Gespräch zeigst du es mit ablage_zeigen. " +
+                "ablegen=true nur, wenn Frank ausdrücklich will, dass das Bild dauerhaft in die Ablage kommt. Beschreibe Inhalt, Aufbau, Stil und ALLE Texte, die im Bild stehen sollen, vollständig auf Deutsch; Fakten (zum Beispiel Jarvis' Funktionen) " +
+                "vorher mit Werkzeugen lesen, nie erfinden. Das Erzeugen dauert meist 30 bis 120 Sekunden: Kommt „läuft noch“, ist das Bild noch NICHT fertig; Frank bekommt eine " +
                 "Benachrichtigung, prüfen mit ablage_lesen.",
             schema = schema(
                 "beschreibung" to text("Vollständige Bildbeschreibung mit allen Texten, die im Bild stehen sollen."),
-                "titel" to text("Titel des Ablage-Eintrags, zum Beispiel „Infografik Jarvis-Funktionen“."),
+                "titel" to text("Titel des Bildes bzw. Ablage-Eintrags, zum Beispiel „Infografik Jarvis-Funktionen“."),
+                "ablegen" to schalter("true = das Bild dauerhaft in der Ablage speichern. Nur auf Franks ausdrücklichen Wunsch; sonst weglassen (das Bild erscheint im Chat)."),
                 "format" to text("Format; Vorgabe hoch.", listOf("hoch", "quer", "quadrat", "din_a4", "din_a4_quer")),
                 "hohe_qualitaet" to schalter("true = höchste Qualität (dauert länger), empfohlen für Infografiken mit viel Text."),
                 "auch_pdf" to schalter("true = zusätzlich ein DIN-A4-PDF mit dem Bild ablegen."),
@@ -324,9 +346,44 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             ),
             nurLesen = false,
         ) { a -> erzeugeBild(a) },
+        Werkzeug(
+            name = "in_ablage_uebernehmen",
+            titel = "Vorläufiges Ergebnis in die Ablage übernehmen",
+            beschreibung = "Jarvis: übernimmt ein vorläufiges Ergebnis dauerhaft in die Ablage, wenn Frank es nachträglich behalten will („leg die Recherche jetzt doch ab“, „speicher das Bild“). " +
+                "Mit vorgang die Kennung eines Hintergrundauftrags (Bericht samt Bildern und PDF), sonst mit titel ein vorläufiges Ergebnis (zum Beispiel ein Bild aus bild_erzeugen; die Liste " +
+                "steht in ablage_lesen unter VORLÄUFIG). Nichts wird neu erzeugt; gemeldet wird erst, was tatsächlich in der Ablage liegt.",
+            schema = schema(
+                "vorgang" to text("Kennung des Hintergrundauftrags, zum Beispiel V7K2P."),
+                "titel" to text("Titel des vorläufigen Ergebnisses oder ein eindeutiger Teil davon."),
+                "neuer_titel" to text("Optional: Titel des Eintrags in der Ablage, wenn Frank einen anderen will."),
+            ),
+            nurLesen = false,
+        ) { a -> uebernehmen(a) },
     )
 
+    /** Franks späterer Speicherwunsch: ein vorläufiges Ergebnis (Auftrag oder Titel) dauerhaft in die Ablage. */
+    private fun uebernehmen(a: JSONObject): Ergebnis {
+        val buch = de.frank.jarvis.agent.Vorgaenge.buch(context)
+        val v = a.optString("vorgang").trim().takeIf { it.isNotEmpty() }?.let { id ->
+            buch.finde(id) ?: return Ergebnis("Einen Auftrag „$id“ gibt es nicht (mehr).", fehler = true)
+        }
+        if (v != null && v.offen) return Ergebnis("Der Auftrag ${v.id} läuft noch; übernehmen lässt er sich, sobald er fertig ist.", fehler = true)
+        if (v != null && v.vorlaeufig.isEmpty()) {
+            return if (v.ergebnis.isNotEmpty()) Ergebnis("Das Ergebnis von ${v.id} liegt schon in der Ablage: „${v.ergebnis}“.")
+            else Ergebnis("Der Auftrag ${v.id} hat kein Ergebnis, das sich übernehmen ließe (${v.grund.ifEmpty { Vorgang.standText(v.stand) }}).", fehler = true)
+        }
+        val titel = v?.vorlaeufig ?: a.optString("titel").trim().ifEmpty { return Ergebnis("Bitte vorgang oder titel angeben.", fehler = true) }
+        return try {
+            val (ziel, zeilen) = Vorlaeufig.eintragInAblage(context, titel, a.optString("neuer_titel"))
+            v?.let { buch.aendere(it.id) { alt -> alt.copy(ergebnis = ziel, vorlaeufig = "") } }
+            Ergebnis("In der Ablage gespeichert als „$ziel“:\n" + zeilen.joinToString("\n"))
+        } catch (e: Exception) {
+            Ergebnis("NICHT in die Ablage übernommen: " + AblageZentrale.fehlerText(e), fehler = true)
+        }
+    }
+
     private suspend fun speichereDateien(a: JSONObject): Ergebnis {
+        if (AblageZentrale.agentOhneAblage()) return Ergebnis(OHNE_ABLAGE, fehler = true)
         val warten = AblageZentrale.wartezeit()
         if (a.optBoolean("wiederholen")) {
             val offen = uebertragungen.liste.value.filter { it.zustand == UebertragungsZustand.FEHLER }
@@ -352,7 +409,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             }
         }
         if (dateien.isEmpty()) return Ergebnis("Es wurde keine Datei übergeben (chatgpt_dateien, url, inhalt_text oder inhalt_base64).", fehler = true)
-        if (a.gesetzt("text")) begleittext(eintrag, a.optString("text"))
+        if (a.gesetzt("text")) begleittext(speicher, eintrag, a.optString("text"))
         val zeilen = mutableListOf<String>()
         var fehler = 0
         var laeuft = 0
@@ -411,18 +468,56 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             "din_a4_quer" -> AblageZentrale.Bildformat.DIN_A4_QUER
             else -> AblageZentrale.Bildformat.HOCH
         }
-        if (a.gesetzt("text")) begleittext(titel, a.optString("text"))
+        val ctx = currentCoroutineContext()
+        val imAgenten = ctx[AgentenKontext]?.eintragTitel != null
+        // Ein Agent legt nach seinem Auftrag ab (agent_starten mit ablegen); sonst entscheidet Franks ausdrücklicher Wunsch (ablegen).
+        val s = if (imAgenten) AblageZentrale.agentenSpeicher(context) else if (a.optBoolean("ablegen")) speicher else Vorlaeufig.speicher(context)
+        val vorlaeufig = AblageZentrale.istVorlaeufig(context, s)
+        // Das Jarvis-Gespräch, in dem das Bild erscheinen soll (vor dem Hintergrundlauf festhalten: dort fehlt der Kontext).
+        // Agenten zeigen ihre Bilder mit dem Bericht; Aufrufe aus ChatGPT haben kein Jarvis-Gespräch.
+        val gespraech = if (imAgenten) null else ctx[ProgrammierChat.GespraechKennung]?.id
+            ?: ProgrammierChat.aktivesGespraech.takeIf { ctx[ProgrammierChat.AusChatGpt] == null }
+        if (a.gesetzt("text")) begleittext(s, titel, a.optString("text"))
         // Gleicher Auftrag noch einmal (etwa weil ChatGPT nach einer Zeitüberschreitung wiederholt) hängt sich an den laufenden an.
         // auch_pdf gehört nicht dazu: „Dasselbe Bild jetzt auch als PDF“ ist dasselbe Motiv, das PDF wird nachgereicht.
         val kennung = "bild-" + kurzHash(titel + "|" + beschreibung + "|" + format.name)
+        // Dasselbe Motiv liegt schon vorläufig vor und soll jetzt in die Ablage: übernehmen statt ein zweites Bild zu erzeugen.
+        if (!vorlaeufig && !imAgenten) uebernimmVorlaeufigesBild(kennung)?.let { return it }
         return try {
-            val r = AblageZentrale.imHintergrund(context, kennung, "Bild erzeugen", titel, AblageZentrale.wartezeit()) {
-                AblageZentrale.erzeugeBild(context, beschreibung, titel, format, a.optBoolean("hohe_qualitaet"), a.optBoolean("auch_pdf"), kennung)
+            val r = AblageZentrale.imHintergrund(context, kennung, "Bild erzeugen", titel, AblageZentrale.wartezeit(), if (vorlaeufig) "Jarvis: Bild fertig" else "Jarvis: in der Ablage") {
+                AblageZentrale.erzeugeBild(context, beschreibung, titel, format, a.optBoolean("hohe_qualitaet"), a.optBoolean("auch_pdf"), kennung, s) { neu ->
+                    // Direkt ins Jarvis-Gespräch, auch wenn das Bild erst nach dem Ende der Antwort fertig wird.
+                    if (gespraech != null) ProgrammierChat.poste(context, gespraech, "🖼️ $titel", ProgrammierChat.ART_BILD,
+                        if (vorlaeufig) "(Vorläufiges Bild „$titel“, NICHT in der Ablage. Behalten nur auf Franks Wunsch: in_ablage_uebernehmen mit titel „$titel“.)"
+                        else "(Dieses Bild liegt in der Ablage im Eintrag „$titel“.)",
+                        anhaenge = neu.map { it.absolutePath })
+                }
             }
-            Ergebnis(r ?: "Das Bild wird gerade erzeugt und ist noch NICHT gespeichert (meist ein bis zwei Minuten). Rufe bild_erzeugen jetzt sofort mit genau denselben Angaben noch einmal auf: " +
-                "Das wartet auf dieses Bild und erzeugt kein zweites. Wiederhole das, bis „Gespeichert“ kommt, und sag Frank dann von dir aus, dass es im Eintrag „$titel“ liegt.")
+            Ergebnis(r?.let { it + bildHinweis(vorlaeufig, gespraech != null, imAgenten, titel) }
+                ?: ("Das Bild wird gerade erzeugt und ist noch NICHT fertig (meist ein bis zwei Minuten). Rufe bild_erzeugen jetzt sofort mit genau denselben Angaben noch einmal auf: " +
+                    "Das wartet auf dieses Bild und erzeugt kein zweites. Wiederhole das, bis „Erzeugt“ oder „Gespeichert“ kommt, und sag Frank dann von dir aus, dass es fertig ist."))
         } catch (e: Exception) {
-            Ergebnis("Kein Bild gespeichert: " + AblageZentrale.fehlerText(e), fehler = true)
+            Ergebnis("Kein Bild erzeugt: " + AblageZentrale.fehlerText(e), fehler = true)
+        }
+    }
+
+    private fun bildHinweis(vorlaeufig: Boolean, imChat: Boolean, imAgenten: Boolean, titel: String): String = when {
+        imAgenten -> ""
+        !vorlaeufig -> if (imChat) " Es steht auch im Jarvis-Chat." else ""
+        imChat -> " Frank sieht es jetzt direkt im Jarvis-Chat; dort kann er es mit „In Ablage verschieben“ behalten. Sag NICHT, es liege in der Ablage."
+        else -> " Zeige es Frank mit ablage_zeigen (titel „$titel“). Sag NICHT, es liege in der Ablage; behalten nur auf seinen Wunsch mit in_ablage_uebernehmen."
+    }
+
+    /** Liegt ein Bild mit [kennung] vorläufig vor, wird es (mit seinem PDF) in die Ablage übernommen. null = keins da. */
+    private fun uebernimmVorlaeufigesBild(kennung: String): Ergebnis? {
+        val v = Vorlaeufig.speicher(context)
+        val dateien = v.eintraege().flatMap { e -> e.anhaenge.filter { it.kennung?.startsWith("$kennung-") == true }.map { v.datei(it).absolutePath } }
+        if (dateien.isEmpty()) return null
+        return try {
+            val r = dateien.map { Vorlaeufig.dateiInAblage(context, it) }
+            Ergebnis("Dieses Bild gab es schon vorläufig; es ist jetzt in die Ablage übernommen (kein neues erzeugt): " + r.joinToString(" ") { it.meldung })
+        } catch (e: Exception) {
+            Ergebnis("Das vorhandene Bild ließ sich nicht in die Ablage übernehmen: " + AblageZentrale.fehlerText(e), fehler = true)
         }
     }
 
@@ -430,16 +525,18 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
      * Begleittext zu einer Datei: Hat der Eintrag schon einen Text (etwa einen Bericht), kommt er dahinter, statt ihn zu ersetzen.
      * Derselbe Text noch einmal (Wiederholung mit denselben Angaben, solange „läuft noch“ kommt) wird nicht doppelt angehängt.
      */
-    private fun begleittext(titel: String, text: String) {
-        val vorhanden = speicher.findeGenau(titel)?.takeIf { it.hatText }
-        if (vorhanden != null && text.trim() in speicher.text(vorhanden)) return
-        speicher.schreibeText(vorhanden?.titel ?: titel, text, anhaengen = vorhanden != null)
+    private fun begleittext(s: AblageSpeicher, titel: String, text: String) {
+        val vorhanden = s.findeGenau(titel)?.takeIf { it.hatText }
+        if (vorhanden != null && text.trim() in s.text(vorhanden)) return
+        s.schreibeText(vorhanden?.titel ?: titel, text, anhaengen = vorhanden != null)
     }
 
     private suspend fun herkunft(): String = if (currentCoroutineContext()[AgentenKontext] != null) "Jarvis" else "ChatGPT"
 
     private companion object {
         const val CHATGPT_DATEIEN = "chatgpt_dateien"
+        const val OHNE_ABLAGE = "Nicht gespeichert: Frank hat für diesen Auftrag keine Ablage verlangt. Schreib alles in deinen Bericht (Adressen von Dateien als Link); " +
+            "der Bericht kommt ins Gespräch, und Frank kann ihn danach selbst in die Ablage übernehmen."
 
         /** Dateiobjekt nach der Plugin-Referenz: alle vier Felder deklariert, nur download_url und file_id Pflicht. */
         val DATEI_OBJEKT: JSONObject = JSONObject().put("type", "object").put("properties", JSONObject()
