@@ -244,7 +244,7 @@ private fun MeldungsKarte(vm: AppViewModel, p: MeldungsProfil, activity: Compone
                     Text(when {
                         !p.wecker -> "Ein kurzer Hinweiston, wie bei anderen Apps."
                         !p.weckerWirksam -> "Gerade ohne Wirkung: Die Meldung ist auf Lautlos gestellt, dann klingelt auch kein Wecker."
-                        else -> "Klingelt mit dem Weckton in der Wecker-Lautstärke, bis du die Meldung antippst oder wegwischst; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Vorgelesen wird danach."
+                        else -> "Klingelt mit dem Weckton in der Wecker-Lautstärke, bis du die Meldung antippst oder wegwischst; bei „Nicht stören“ nur, wenn dort Wecker erlaubt sind. Mit Vorlesen: erst etwa zehn Sekunden Weckton, dann verstummt er und Jarvis liest sofort vor."
                     }, color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 }
                 if (art == Meldungsarten.ABFAHRT) {

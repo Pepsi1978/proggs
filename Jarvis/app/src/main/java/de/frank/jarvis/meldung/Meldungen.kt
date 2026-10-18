@@ -222,10 +222,28 @@ object Meldungen {
         // Dauerton bis zum Antippen oder Wegwischen, wie bei einem Wecker.
         if (klingeln) meldung.flags = meldung.flags or Notification.FLAG_INSISTENT
         runCatching { app.getSystemService(NotificationManager::class.java).notify(nummer, meldung) }
-        // Klingelt sie, liest Jarvis erst vor, wenn die Meldung angetippt oder weggewischt ist: sonst ginge die Stimme im Weckton unter.
-        if (laut && sprechtext != null && art.vorlesen && p.vorlesen && !ruhe)
-            vorlesenSpaeter(app, art, titel, sprechtext, nummer.toString(), solange = if (klingeln) ({ sichtbar(app, nummer) }) else null)
+        if (laut && sprechtext != null && art.vorlesen && p.vorlesen && !ruhe) {
+            // Klingelt sie: erst gut zehn Sekunden Weckton (früher, wenn Frank sie antippt oder wegwischt), dann verstummt der Ton,
+            // die Meldung bleibt mit ihren Knöpfen stehen, und Jarvis liest sofort vor. So geht die Stimme nicht im Weckton unter.
+            val tonBis = System.currentTimeMillis() + WECKTON_VOR_ANSAGE_MS
+            vorlesenSpaeter(app, art, titel, sprechtext, nummer.toString(),
+                solange = if (klingeln) ({ sichtbar(app, nummer) && System.currentTimeMillis() < tonBis }) else null,
+                vorDemSprechen = if (klingeln) ({ tonAus(app, nummer, bauer) }) else null)
+        }
         return true
+    }
+
+    /** So lange klingelt der Wecker, bevor Jarvis die Meldung vorliest. */
+    private const val WECKTON_VOR_ANSAGE_MS = 10_000L
+
+    /**
+     * Beendet den Dauerton und lässt die Meldung mit Text und Knöpfen stehen. Ein bloßes Aktualisieren hält den Ton nicht an
+     * (der Wecker-Kanal hat ihn weiter): erst zurückziehen, das beendet den Ton sicher, dann still neu zeigen.
+     */
+    private fun tonAus(context: Context, nummer: Int, bauer: NotificationCompat.Builder) {
+        if (!sichtbar(context, nummer)) return
+        val nm = context.getSystemService(NotificationManager::class.java)
+        runCatching { nm.cancel(nummer); nm.notify(nummer, bauer.setSilent(true).setOnlyAlertOnce(true).build()) }
     }
 
     private fun sichtbar(context: Context, nummer: Int) =
@@ -238,15 +256,15 @@ object Meldungen {
      * Liest im Hintergrund vor, mit Stimme, Tempo und Lautstärke dieser Art; wartet ein laufendes Gespräch ab. Je [schluessel]
      * gilt nur das neueste Vorlesen (eine aktualisierte Losfahr-Meldung ersetzt die alte), verschiedene Meldungen warten nebeneinander.
      */
-    fun vorlesenSpaeter(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) {
+    fun vorlesenSpaeter(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false, vorDemSprechen: (() -> Unit)? = null) {
         val app = context.applicationContext
-        nebenher.launch { vorlesenWartend(app, art, titel, text, schluessel, solange, ausdruecklich) }
+        nebenher.launch { vorlesenWartend(app, art, titel, text, schluessel, solange, ausdruecklich, vorDemSprechen) }
     }
 
     /** Wie [vorlesenSpaeter], aber kehrt erst nach dem Start der Stimme (oder dem Verwerfen) zurück; bleibt dabei abbrechbar. */
-    suspend fun vorlesenWartend(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false) = coroutineScope {
+    suspend fun vorlesenWartend(context: Context, art: Meldungsart, titel: String, text: String, schluessel: String = "", solange: (() -> Boolean)? = null, ausdruecklich: Boolean = false, vorDemSprechen: (() -> Unit)? = null) = coroutineScope {
         val name = "${art.id}:$schluessel"
-        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange, ausdruecklich) }
+        val job = launch(start = CoroutineStart.LAZY) { sprich(context, art, titel, text, solange, ausdruecklich, vorDemSprechen) }
         wartend.put(name, job)?.cancel()
         job.invokeOnCompletion { wartend.remove(name, job) }
         job.start()
@@ -263,14 +281,15 @@ object Meldungen {
      * höchstens 15 Minuten warten (dringend 90 Sekunden), dann verwerfen. Danach gilt der Stand von dann: ausgeschaltet,
      * Vorlesen abgewählt oder inzwischen Ruhezeit heißt still. [ausdruecklich] = Frank hat das Vorlesen eigens verlangt.
      */
-    private suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean) {
+    private suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean, vorDemSprechen: (() -> Unit)? = null) {
         val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
-            while (GespraechsFokus.stilleHinweise || solange?.invoke() == true) delay(2_000L)
+            while (GespraechsFokus.stilleHinweise || solange?.invoke() == true) delay(if (solange != null) 1_000L else 2_000L)
             true
         }
         if (frei != true) return
         val p = profil(context, art)
         if (!ausdruecklich && (!an(context, art) || inRuhe(context, art) || (art.vorlesen && !p.vorlesen))) return
+        vorDemSprechen?.invoke()
         Ansage.sprich(context, art.id, titel, text, p.lautstaerke, p.stimmWahl)
     }
 
