@@ -384,7 +384,10 @@ private fun WecktonOptionen(p: MeldungsProfil, app: android.content.Context) {
 @Composable
 private fun VorleseText(p: MeldungsProfil) {
     val f = LocalFarben.current
-    var text by remember(p.art.id) { mutableStateOf(p.vorlesetext) }
+    // Neu gelesen, wenn Jarvis den Text per Sprache ändert (anders als das, was gerade im Feld steht).
+    val gespeichert = p.vorlesetext
+    var text by remember(p.art.id) { mutableStateOf(gespeichert) }
+    if (gespeichert != text.trim()) text = gespeichert
     Unterzeile("Text, den Jarvis vorliest")
     Eingabe(text, { text = it; p.vorlesetext = it.trim() }, p.art.eigenerTextStandard.orEmpty(), Modifier.fillMaxWidth(), einzeilig = false)
     Text("Leer = „${p.art.eigenerTextStandard}“. „{name}“ setzt den Namen ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))

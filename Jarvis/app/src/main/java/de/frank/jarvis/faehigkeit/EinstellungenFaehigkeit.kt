@@ -227,8 +227,10 @@ class EinstellungsKatalog(context: Context) {
             if (art.wecker) add(zahl(art.schluessel("weckton_sekunden"), b, "Dauer des Wecktons für ${art.titel}", "So viele Sekunden klingelt der Weckton, dann verstummt er und Jarvis liest vor; 0 = bis die Meldung angetippt oder weggewischt wird.", 0, 300, "Sekunden", { p.wecktonSekunden }) { p.wecktonSekunden = it })
             if (art.vorlesen && neu("vorlesen")) add(schalter(art.schluessel("vorlesen"), b, "${art.titel} vorlesen", "Liest die Meldung zusätzlich vor; ein Live-Gespräch wartet sie ab.", { p.vorlesen }) { p.vorlesen = it })
             art.eigenerTextStandard?.let { standard -> add(Eintrag(art.schluessel("vorlesetext"), b, "Vorgelesener Text für ${art.titel}",
-                "Was Jarvis bei dieser Meldung vorliest; „{name}“ setzt den Namen ein, leer = „$standard“.", "freier Text, leer = Standardsatz",
-                { p.vorlesetext.ifBlank { "Standard: $standard" } }) { p.vorlesetext = it.trim() }) }
+                "Was Jarvis bei dieser Meldung vorliest; „{name}“ setzt den Namen ein. „standard“ stellt den Standardsatz „$standard“ wieder her.",
+                "freier Text oder „standard“", { p.vorlesetext.ifBlank { "standard ($standard)" } }) {
+                p.vorlesetext = if (norm(it) in setOf("standard", "standardsatz", "leer", "zuruecksetzen", "zurücksetzen")) "" else it.trim()
+            }) }
             if ((art.vorlesen || art.sprichtImmer) && neu("stimme")) add(auswahl(art.schluessel("stimme"), b, "Stimme für ${art.titel}", "Eigene Vorlese-Stimme nur für diese Meldung.",
                 { listOf("" to "Wie Jarvis") + alleStimmen() }, { p.stimme }) { p.stimme = it })
             if ((art.vorlesen || art.sprichtImmer) && neu("tempo")) add(auswahl(art.schluessel("tempo"), b, "Tempo für ${art.titel}", "Sprechtempo nur für diese Meldung.",
