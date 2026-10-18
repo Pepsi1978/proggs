@@ -58,6 +58,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -234,10 +238,17 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
         Rundknopf(Icons.Rounded.Menu, "Gespräche", farbe = f.primaer) { leisteOeffnen() }
         Spacer(Modifier.width(6.dp))
         // Der Kern ist zugleich der Knopf „Tagesauswertung aktualisieren“: frische Daten aller Apps holen und alles neu auswerten.
+        // Sperre gegen Doppeltippen: „läuft“ springt erst um, wenn der Dienst wirklich angefangen hat.
+        var angestossen by remember { mutableStateOf(0L) }
         Kern(
             56.dp, if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer,
             aktiv = vm.denkt || wertetAus || tunnel.stufe == TunnelStufe.VERBINDET,
-            modifier = Modifier.antippen { if (!wertetAus) vm.auswertungJetzt() },
+            modifier = Modifier
+                .semantics { contentDescription = "Tagesauswertung aktualisieren"; role = Role.Button }
+                .antippen {
+                    if (wertetAus || System.currentTimeMillis() - angestossen < 15_000) vm.meldung = "Die Tagesauswertung läuft schon."
+                    else { angestossen = System.currentTimeMillis(); vm.auswertungJetzt() }
+                },
         )
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text("Jarvis", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
@@ -248,24 +259,29 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             Spacer(Modifier.width(8.dp))
         }
         // Aktuelles Gespräch löschen: verschwindet danach auch aus der Gesprächsleiste.
-        var loeschenFragen by remember { mutableStateOf(false) }
+        // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
+        var loeschenZiel by remember { mutableStateOf<String?>(null) }
         if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
-            Rundknopf(Icons.Rounded.Delete, "Gespräch löschen", farbe = f.primaer) { loeschenFragen = true }
+            Rundknopf(Icons.Rounded.Delete, "Gespräch löschen", farbe = f.primaer) { loeschenZiel = vm.sitzungId.orEmpty() }
             Spacer(Modifier.width(8.dp))
         }
-        if (loeschenFragen) androidx.compose.material3.AlertDialog(
-            onDismissRequest = { loeschenFragen = false },
+        loeschenZiel?.let { ziel -> androidx.compose.material3.AlertDialog(
+            onDismissRequest = { loeschenZiel = null },
             containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
             title = { Text("Gespräch löschen?") },
             text = { Text("Möchtest du dieses Gespräch wirklich löschen? Es wird endgültig entfernt und erscheint nicht mehr unter Gespräche.") },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
-                    vm.sitzungId?.let { vm.sitzungLoeschen(it) } ?: vm.neuesGespraech()
-                    loeschenFragen = false
+                    when {
+                        ziel != vm.sitzungId.orEmpty() -> vm.meldung = "Das Gespräch hat inzwischen gewechselt. Nichts gelöscht."
+                        ziel.isNotEmpty() -> vm.sitzungLoeschen(ziel)
+                        else -> { vm.neuesGespraech(); vm.meldung = "Gespräch gelöscht." }
+                    }
+                    loeschenZiel = null
                 }) { Text("Löschen", color = f.gefahr) }
             },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenFragen = false }) { Text("Abbrechen") } },
-        )
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenZiel = null }) { Text("Abbrechen") } },
+        ) }
         // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
         Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
             val ids = de.frank.jarvis.ui.theme.DESIGNS
