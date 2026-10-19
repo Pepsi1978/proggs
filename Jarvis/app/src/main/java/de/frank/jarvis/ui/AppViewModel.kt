@@ -1659,6 +1659,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Wann zuletzt etwas im Gespräch passiert ist, für „Hey Jarvis“: weiterführen oder neu anfangen. */
     private var letzteAktivitaet = 0L
     var sitzungen by mutableStateOf<List<de.frank.jarvis.data.Sitzung>>(emptyList()); private set
+    /** Projekte der Seitenleiste, das neueste zuerst. */
+    var projekte by mutableStateOf<List<de.frank.jarvis.data.Projekt>>(emptyList()); private set
+    /** Projekt des offenen Gesprächs; leer = normales Gespräch. Ein neues Gespräch im Projekt bekommt es beim ersten Speichern. */
+    var sitzungProjekt by mutableStateOf(""); private set
 
     /** Speichern, Umbenennen, Löschen und Neueinlesen der Gespräche der Reihe nach: Kein älterer Stand überholt einen neueren. */
     private val sicherung = Mutex()
@@ -1676,6 +1680,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun sitzungenLaden() {
         viewModelScope.launch {
             sitzungen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.alle(getApplication()) } }
+            projekte = withContext(Dispatchers.IO) { de.frank.jarvis.data.Projekte.alle(getApplication()) }
             // Ältere Gespräche ohne KI-Überschrift nachholen: die zehn neuesten, eins nach dem anderen.
             if (!kiVerbunden) return@launch
             sitzungen.take(10).forEach { s ->
@@ -1693,11 +1698,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         letzteAktivitaet = System.currentTimeMillis()
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
+        val projekt = sitzungProjekt
         val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) }
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
-            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand, kuerzenUm) } }
+            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand, kuerzenUm, projekt) } }
             if (neu != null) sitzungen = listOf(neu) + sitzungen.filter { it.id != neu.id }
             if (neu != null) kiTitelBilden(id, stand)
             // Das Gespräch gehört sofort ins Kurzzeitgedächtnis (für das nächste Gespräch und für ChatGPT).
@@ -1740,6 +1746,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraechLeeren()
     }
 
+    /** Neues, leeres Gespräch im Projekt [projektId]: Es landet mit der ersten Nachricht in dessen Bereich der Seitenleiste. */
+    fun neuesGespraechImProjekt(projektId: String) {
+        neuesGespraech()
+        sitzungProjekt = projektId
+        // Auch ein noch leeres Projektgespräch übersteht einen Neustart nach Update.
+        offenePrefs().edit().putString("projekt", projektId).apply()
+    }
+
+    /** Legt ein Projekt an; [fertig] bekommt es nach dem Speichern (nicht bei einem Fehler). */
+    fun projektAnlegen(name: String, fertig: (de.frank.jarvis.data.Projekt) -> Unit) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val neu = withContext(Dispatchers.IO) { de.frank.jarvis.data.Projekte.anlegen(getApplication(), name) }
+            if (neu == null) { meldung = "Das Projekt ließ sich nicht anlegen."; return@launch }
+            projekte = listOf(neu) + projekte.filter { it.id != neu.id }
+            fertig(neu)
+        }
+    }
+
     /** Leert die Ansicht ohne die Aufnahme anzufassen: für „Hey Jarvis“ und den Wechsel per Sprache, die im neuen Gespräch weiterhören. */
     private fun gespraechLeeren() {
         sitzungId?.let { vorherigeSitzung = it }
@@ -1748,6 +1773,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraech.clear()
         sitzungId = null
         sitzungErstellt = 0L
+        sitzungProjekt = ""
         offenesGespraechVergessen()
     }
 
@@ -1809,6 +1835,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Dieselbe Session: das zuletzt offene Gespräch (keins = Frank war in einem neuen, noch leeren Gespräch).
         val id = offenePrefs().getString("id", null)
+        if (id == null) sitzungProjekt = offenePrefs().getString("projekt", null).orEmpty()
         if (id != null) {
             // Vor dem Lesen setzen: Meldungen, die der Server genau jetzt nachliefert, gehen dann in das geladene Gespräch.
             programmierGespraech = id
@@ -1817,6 +1844,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
+                sitzungProjekt = geladen.first.projekt
                 letzteAktivitaet = System.currentTimeMillis()
             } else programmierGespraech = null
         }
@@ -1849,6 +1877,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         einstellungsReiter = "jarvis"
         einstellungsVerlauf = emptyList()
         navigationsAuswahl = null
+        sitzungProjekt = ""
         // Ohne vorleser.stopp(): Ein Vorlesen im Hintergrund (Tagesauswertung, Ablage) läuft weiter.
         if (gespraech.isNotEmpty() || sitzungId != null) {
             sitzungId?.let { vorherigeSitzung = it }
@@ -1883,6 +1912,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
+                sitzungProjekt = geladen.first.projekt
                 true
             } finally {
                 if (ladeZiel == id) ladeZiel = null
@@ -2047,7 +2077,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sitzungLoeschen(id: String) {
         rundeAbbrechen(id)
-        if (id == sitzungId) neuesGespraech()
+        // Im Projekt bleiben: Das nächste Gespräch gehört wieder zu ihm.
+        if (id == sitzungId) sitzungProjekt.let { p -> if (p.isEmpty()) neuesGespraech() else neuesGespraechImProjekt(p) }
         if (vorherigeSitzung == id) vorherigeSitzung = null
         if (navigationsAuswahl?.any { it.sitzung.id == id } == true) navigationsAuswahl = null
         viewModelScope.launch {

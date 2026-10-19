@@ -64,12 +64,14 @@ object ProgrammierChat {
     /**
      * Legt für einen Programmierauftrag ein eigenes Gespräch an: Franks Auftrag als erste Nachricht, fester Titel. Aus ChatGPT
      * immer, in der App für eine ausdrücklich neue Session oder wenn das Gespräch schon einen Auftrag hat ([ueberPlugin] false).
-     * Leer = ließ sich nicht anlegen (dann läuft der Auftrag ohne Gespräch, wie bisher).
+     * Leer = ließ sich nicht anlegen (dann läuft der Auftrag ohne Gespräch, wie bisher). [ausGespraech]: das Gespräch, aus dem
+     * der Auftrag kam; gehört es zu einem Projekt, kommt das neue Gespräch in dasselbe Projekt.
      */
-    fun neuesGespraech(context: Context, app: String, auftrag: String, ueberPlugin: Boolean = true): String {
+    fun neuesGespraech(context: Context, app: String, auftrag: String, ueberPlugin: Boolean = true, ausGespraech: String = ""): String {
         val id = Gespraeche.neueId()
         val erste = GespeicherteNachricht(true, (if (ueberPlugin) PLUGIN_VORSPANN else AUFTRAG_VORSPANN) + "$app):\n\n$auftrag")
-        Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste)) ?: return ""
+        val projekt = if (ausGespraech.isEmpty()) "" else Gespraeche.laden(context, ausGespraech)?.first?.projekt.orEmpty()
+        Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste), projekt = projekt) ?: return ""
         Gespraeche.umbenennen(context, id, "Programmieren: $app" + if (ueberPlugin) " (über ChatGPT/MCP)" else "")
         return id
     }

@@ -25,6 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.AddComment
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -80,10 +82,16 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
     val f = LocalFarben.current
     val raum = rememberCoroutineScope()
     BackHandler(enabled = schublade.isOpen) { raum.launch { schublade.close() } }
-    // Reiter oben: Gespräche oder Projekte. Beim Wechsel bleibt alles erhalten; geschlossen springt die Leiste zurück auf
-    // Gespräche, damit Wischen zum Gesprächswechsel immer die Liste zeigt.
+    // Reiter oben: Gespräche oder Projekte. Beim Wechsel bleibt alles erhalten; geschlossen springt die Leiste zurück auf die
+    // Liste, zu der das offene Gespräch gehört (Gespräche oder sein Projekt), damit Wischen zum Gesprächswechsel sie zeigt.
     var projekte by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(schublade.isOpen) { if (schublade.isOpen) vm.sitzungenLaden() else projekte = false }
+    // Das geöffnete Projekt im Reiter „Projekte“; null = Liste der Projekte.
+    var projektOffen by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(schublade.isOpen) { if (schublade.isOpen) vm.sitzungenLaden() }
+    // Auch mit sitzungProjekt als Schlüssel: Ein gewähltes Gespräch lädt erst nach dem Schließen fertig.
+    LaunchedEffect(schublade.isOpen, vm.sitzungProjekt) {
+        if (!schublade.isOpen) { projekte = vm.sitzungProjekt.isNotEmpty(); projektOffen = vm.sitzungProjekt.ifEmpty { null } }
+    }
     // Zurück in der App (etwa nach einem Gespräch über die Sprachblase): eine geschlossene Leiste, die mitten in ihrer
     // Animation angehalten wurde, ganz hinausschieben, damit kein Streifen am Rand stehen bleibt.
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
@@ -136,8 +144,9 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
         },
         drawerContent = {
             Leiste(
-                vm, projekte, { projekte = it },
+                vm, schublade.isOpen, projekte, { projekte = it }, projektOffen, { projektOffen = it },
                 aufNeu = { vm.neuesGespraech(); raum.launch { schublade.close() } },
+                aufNeuImProjekt = { vm.neuesGespraechImProjekt(it); raum.launch { schublade.close() } },
                 aufWahl = { vm.sitzungOeffnen(it); raum.launch { schublade.close() } },
             )
         },
@@ -147,19 +156,33 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Leiste(vm: AppViewModel, projekte: Boolean, projekteWaehlen: (Boolean) -> Unit, aufNeu: () -> Unit, aufWahl: (String) -> Unit) {
+private fun Leiste(
+    vm: AppViewModel, offen: Boolean, projekte: Boolean, projekteWaehlen: (Boolean) -> Unit, projektOffen: String?, projektOeffnen: (String?) -> Unit,
+    aufNeu: () -> Unit, aufNeuImProjekt: (String) -> Unit, aufWahl: (String) -> Unit,
+) {
     val f = LocalFarben.current
     var bearbeiten by remember { mutableStateOf<Sitzung?>(null) }
     var umbenennen by remember { mutableStateOf<Sitzung?>(null) }
     var loeschen by remember { mutableStateOf<Sitzung?>(null) }
-    val gruppen = remember(vm.sitzungen) { gruppiert(vm.sitzungen) }
+    var projektNeu by remember { mutableStateOf(false) }
+    // Gespräche eines Projekts stehen nur in dessen Bereich, nicht unter „Gespräche“; eines mit unbekanntem Projekt (Datei
+    // verloren) bleibt dort, damit es nirgends verschwindet.
+    val projektIds = remember(vm.projekte) { vm.projekte.map { it.id }.toSet() }
+    val normale = remember(vm.sitzungen, projektIds) { vm.sitzungen.filter { it.projekt.isEmpty() || it.projekt !in projektIds } }
+    val anzahlJe = remember(vm.sitzungen) { vm.sitzungen.groupingBy { it.projekt }.eachCount() }
+    val gruppen = remember(normale) { gruppiert(normale) }
+    val projekt = if (projekte) vm.projekte.firstOrNull { it.id == projektOffen } else null
+    val imProjekt = remember(vm.sitzungen, projekt?.id) { projekt?.let { p -> vm.sitzungen.filter { it.projekt == p.id } }.orEmpty() }
+    // Zurück aus einem Projekt führt zur Projektliste, erst danach schließt die Leiste.
+    BackHandler(enabled = offen && projekt != null) { projektOeffnen(null) }
     // Welche Gespräche gerade arbeiten: Programmier-Sitzungen (Claude Code) und Jarvis' eigene Antworten.
     val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
     val arbeitende = remember(programmiert) { programmiert.filterValues { it.arbeitet }.keys }
     // Ein Takt für alle Claude-Symbole in der Liste, nur solange eines zu sehen ist.
     var bild by remember { mutableStateOf(0) }
-    LaunchedEffect(!projekte && arbeitende.isNotEmpty()) {
-        while (!projekte && arbeitende.isNotEmpty()) {
+    val mitEintraegen = !projekte || projekt != null
+    LaunchedEffect(mitEintraegen && arbeitende.isNotEmpty()) {
+        while (mitEintraegen && arbeitende.isNotEmpty()) {
             kotlinx.coroutines.delay(120)
             bild = (bild + 1) % SPINNER.size
         }
@@ -182,16 +205,59 @@ private fun Leiste(vm: AppViewModel, projekte: Boolean, projekteWaehlen: (Boolea
                 Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = !projekte, Modifier.weight(1f)) { projekteWaehlen(false) }
                 Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, Modifier.weight(1f)) { projekteWaehlen(true) }
             }
-            if (projekte) {
-                // Eigener Bereich, getrennt von den Gesprächen. Projekte gibt es noch nicht, darum vorerst nur der leere Zustand.
-                Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Icon(Icons.Rounded.Folder, null, tint = f.primaer.copy(alpha = 0.7f), modifier = Modifier.size(48.dp))
-                    Text("Noch keine Projekte", Modifier.padding(top = 12.dp), color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Projekte bekommen hier ihren eigenen Bereich, getrennt von deinen Gesprächen.", Modifier.padding(top = 6.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center)
+            if (projekte && projekt != null) {
+                // Ein Projekt: seine eigenen Gespräche, getrennt von allen übrigen.
+                Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).antippen { projektOeffnen(null) }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück zu den Projekten", tint = f.text, modifier = Modifier.size(22.dp))
+                    }
+                    Icon(Icons.Rounded.Folder, null, tint = f.primaer, modifier = Modifier.padding(start = 4.dp).size(22.dp))
+                    Text(projekt.name, Modifier.weight(1f).padding(start = 8.dp), color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Knopf("Neues Gespräch im Projekt", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment) { aufNeuImProjekt(projekt.id) }
+                if (imProjekt.isEmpty()) {
+                    Text(
+                        "Noch keine Gespräche in diesem Projekt. Starte es mit „Neues Gespräch im Projekt“.",
+                        Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
+                    )
+                }
+                LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(imProjekt, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
+                }
+                if (imProjekt.isNotEmpty()) Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
+            } else if (projekte) {
+                // Eigener Bereich, getrennt von den Gesprächen: oben immer „Neues Projekt“, darunter die Projekte.
+                Knopf("Neues Projekt", Modifier.fillMaxWidth(), icon = Icons.Rounded.CreateNewFolder) { projektNeu = true }
+                if (vm.projekte.isEmpty()) {
+                    Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Icon(Icons.Rounded.Folder, null, tint = f.primaer.copy(alpha = 0.7f), modifier = Modifier.size(48.dp))
+                        Text("Noch keine Projekte", Modifier.padding(top = 12.dp), color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Leg mit „Neues Projekt“ eins an. Seine Gespräche bleiben hier, getrennt von deinen übrigen Gesprächen.", Modifier.padding(top = 6.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center)
+                    }
+                } else {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(vm.projekte, key = { it.id }) { p ->
+                            val anzahl = anzahlJe[p.id] ?: 0
+                            val aktiv = p.id == vm.sitzungProjekt
+                            Row(
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                    .then(if (aktiv) Modifier.glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer) else Modifier)
+                                    .antippen { projektOeffnen(p.id) }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Rounded.Folder, null, tint = f.primaer, modifier = Modifier.size(22.dp))
+                                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                    Text(p.name, color = if (aktiv) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (aktiv) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
+                                    Text(if (anzahl == 1) "1 Gespräch" else "$anzahl Gespräche", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                                }
+                            }
+                        }
+                    }
                 }
             } else {
                 Knopf("Neues Gespräch", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment, aktion = aufNeu)
-                if (vm.sitzungen.isEmpty()) {
+                if (normale.isEmpty()) {
                     Text(
                         "Noch keine gespeicherten Gespräche. Jedes Gespräch mit Jarvis landet von selbst hier, auch die mit „Hey Jarvis“.",
                         Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
@@ -202,35 +268,7 @@ private fun Leiste(vm: AppViewModel, projekte: Boolean, projekteWaehlen: (Boolea
                         item(key = "g:$gruppe") {
                             Text(gruppe.uppercase(), Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), color = f.textSchwach, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
                         }
-                        items(eintraege, key = { it.id }) { s ->
-                            val gewaehlt = s.id == vm.sitzungId
-                            Column(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                                    .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer) else Modifier)
-                                    .combinedClickable(onClick = { aufWahl(s.id) }, onLongClick = { bearbeiten = s }, onClickLabel = "Öffnen", onLongClickLabel = "Umbenennen oder löschen")
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                            ) {
-                                val codet = s.id in arbeitende
-                                val denkt = vm.laufende.containsKey(s.id)
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(s.titel.ifBlank { "Gespräch" }, Modifier.weight(1f), color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
-                                    // Jarvis antwortet oder recherchiert selbst: sein pulsierender Leuchtkern.
-                                    if (denkt) Kern(22.dp, f.primaer, aktiv = true, modifier = Modifier.padding(start = 8.dp))
-                                    // Eine Programmier-Sitzung (Claude Code) arbeitet: das laufende Claude-Symbol in Orange.
-                                    if (codet) Text(SPINNER[bild], Modifier.padding(start = 8.dp).width(24.dp), color = CLAUDE_ORANGE, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                                }
-                                Text(
-                                    when {
-                                        codet && denkt -> "Programmiert · Jarvis arbeitet …"
-                                        codet -> "Programmiert …" + (programmiert[s.id]?.app?.takeIf { it.isNotEmpty() }?.let { " ($it)" } ?: "")
-                                        denkt -> "Jarvis arbeitet …"
-                                        else -> zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten"
-                                    },
-                                    color = if (codet) CLAUDE_ORANGE else if (denkt) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
+                        items(eintraege, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
                     }
                 }
                 Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
@@ -259,6 +297,21 @@ private fun Leiste(vm: AppViewModel, projekte: Boolean, projekteWaehlen: (Boolea
         )
     }
 
+    if (projektNeu) {
+        var name by remember { mutableStateOf("") }
+        // Tastatur „Senden“ und „Anlegen“ im selben Augenblick legen nur ein Projekt an.
+        var gesendet by remember { mutableStateOf(false) }
+        val anlegen = { if (name.isNotBlank() && !gesendet) { gesendet = true; vm.projektAnlegen(name) { projekteWaehlen(true); projektOeffnen(it.id) }; projektNeu = false } }
+        AlertDialog(
+            onDismissRequest = { projektNeu = false },
+            containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+            title = { Text("Neues Projekt") },
+            text = { Eingabe(name, { name = it }, "Name des Projekts", Modifier.fillMaxWidth(), senden = anlegen) },
+            confirmButton = { TextButton(onClick = anlegen, enabled = name.isNotBlank()) { Text("Anlegen") } },
+            dismissButton = { TextButton(onClick = { projektNeu = false }) { Text("Abbrechen") } },
+        )
+    }
+
     umbenennen?.let { s ->
         var name by remember(s.id) { mutableStateOf(s.titel) }
         AlertDialog(
@@ -279,6 +332,43 @@ private fun Leiste(vm: AppViewModel, projekte: Boolean, projekteWaehlen: (Boolea
             text = { Text("„${s.titel.ifBlank { "Gespräch" }}“ wird endgültig gelöscht.") },
             confirmButton = { TextButton(onClick = { vm.sitzungLoeschen(s.id); loeschen = null }) { Text("Löschen", color = f.gefahr) } },
             dismissButton = { TextButton(onClick = { loeschen = null }) { Text("Abbrechen") } },
+        )
+    }
+}
+
+/** Ein Gespräch in der Leiste, unter „Gespräche“ wie in einem Projekt: Titel, Arbeitssymbole und Stand. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SitzungEintrag(
+    vm: AppViewModel, s: Sitzung, arbeitende: Set<String>, programmiert: Map<String, de.frank.jarvis.faehigkeit.ProgrammierChat.Aktivitaet>, zeichen: String,
+    aufWahl: () -> Unit, langDruck: () -> Unit,
+) {
+    val f = LocalFarben.current
+    val gewaehlt = s.id == vm.sitzungId
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer) else Modifier)
+            .combinedClickable(onClick = aufWahl, onLongClick = langDruck, onClickLabel = "Öffnen", onLongClickLabel = "Umbenennen oder löschen")
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        val codet = s.id in arbeitende
+        val denkt = vm.laufende.containsKey(s.id)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(s.titel.ifBlank { "Gespräch" }, Modifier.weight(1f), color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
+            // Jarvis antwortet oder recherchiert selbst: sein pulsierender Leuchtkern.
+            if (denkt) Kern(22.dp, f.primaer, aktiv = true, modifier = Modifier.padding(start = 8.dp))
+            // Eine Programmier-Sitzung (Claude Code) arbeitet: das laufende Claude-Symbol in Orange.
+            if (codet) Text(zeichen, Modifier.padding(start = 8.dp).width(24.dp), color = CLAUDE_ORANGE, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        }
+        Text(
+            when {
+                codet && denkt -> "Programmiert · Jarvis arbeitet …"
+                codet -> "Programmiert …" + (programmiert[s.id]?.app?.takeIf { it.isNotEmpty() }?.let { " ($it)" } ?: "")
+                denkt -> "Jarvis arbeitet …"
+                else -> zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten"
+            },
+            color = if (codet) CLAUDE_ORANGE else if (denkt) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
     }
 }

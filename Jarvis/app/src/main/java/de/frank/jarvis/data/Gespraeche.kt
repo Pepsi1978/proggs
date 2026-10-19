@@ -7,8 +7,8 @@ import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Ein gespeichertes Gespräch, wie es die Seitenleiste zeigt. */
-data class Sitzung(val id: String, val titel: String, val erstellt: Long, val geaendert: Long, val anzahl: Int)
+/** Ein gespeichertes Gespräch, wie es die Seitenleiste zeigt. [projekt]: id des Projekts, leer = normales Gespräch. */
+data class Sitzung(val id: String, val titel: String, val erstellt: Long, val geaendert: Long, val anzahl: Int, val projekt: String = "")
 
 /**
  * Eine Nachricht im Speicher: von Frank oder von Jarvis. [art]: „antwort“ (normal), „fehler“ (Fehlermeldung statt
@@ -40,7 +40,7 @@ object Gespraeche {
         ordner(context).listFiles { f -> f.name.endsWith(".json") }.orEmpty().mapNotNull { f ->
             runCatching {
                 val j = lies(f)
-                Sitzung(j.getString("id"), j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0)
+                Sitzung(j.getString("id"), j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"))
             }.onFailure { Log.w(TAG, "Gespräch ${f.name} nicht lesbar", it) }.getOrNull()
         }.sortedByDescending { it.geaendert }
 
@@ -53,15 +53,16 @@ object Gespraeche {
                 GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext"), anh, n.optInt("bewertung"))
             }
         }
-        Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), nachrichten.size) to nachrichten
+        Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), nachrichten.size, j.optString("projekt")) to nachrichten
     }.getOrNull()
 
     /**
      * Speichert das ganze Gespräch. Ein von Hand vergebener Titel bleibt erhalten. Liefert den neuen Eintrag für die
      * Seitenleiste (null = nichts geschrieben). Ein älterer Stand mit weniger Nachrichten überschreibt nie einen neueren.
      * [kuerzenUm]: So viele Nachrichten hat Frank bewusst entfernt (etwa die verworfene Antwort bei „Erneut versuchen“).
+     * [projekt]: gilt nur beim ersten Speichern; danach bleibt das Gespräch in seinem Projekt.
      */
-    fun speichern(context: Context, id: String, erstellt: Long, nachrichten: List<GespeicherteNachricht>, kuerzenUm: Int = 0): Sitzung? {
+    fun speichern(context: Context, id: String, erstellt: Long, nachrichten: List<GespeicherteNachricht>, kuerzenUm: Int = 0, projekt: String = ""): Sitzung? {
         if (nachrichten.isEmpty()) return null
         return synchronized(sperre) {
             runCatching {
@@ -76,6 +77,7 @@ object Gespraeche {
                 val kiTitel = alt?.optString("kiTitel").orEmpty()
                 val titel = if (eigenerTitel) alt!!.optString("titel") else kiTitel.ifBlank { titelAus(nachrichten) }
                 val jetzt = System.currentTimeMillis()
+                val zuProjekt = if (alt != null) alt.optString("projekt") else projekt
                 val json = JSONObject()
                     .put("id", id)
                     .put("titel", titel)
@@ -84,6 +86,7 @@ object Gespraeche {
                     .put("kiTitelBei", alt?.optInt("kiTitelBei") ?: 0)
                     .put("erstellt", erstellt)
                     .put("geaendert", jetzt)
+                    .apply { if (zuProjekt.isNotEmpty()) put("projekt", zuProjekt) }
                     .put("nachrichten", JSONArray().apply {
                         nachrichten.forEach { n ->
                             put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
@@ -96,7 +99,7 @@ object Gespraeche {
                         }
                     })
                 schreiben(d, json)
-                Sitzung(id, titel, erstellt, jetzt, nachrichten.size)
+                Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt)
             }.onFailure { Log.w(TAG, "Gespräch nicht gespeichert", it) }.getOrNull()
         }
     }
@@ -132,7 +135,7 @@ object Gespraeche {
             if (j.optBoolean("eigenerTitel")) return@runCatching null
             j.put("titel", titel).put("kiTitel", titel).put("kiTitelBei", bei)
             schreiben(d, j)
-            Sitzung(id, titel, j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0)
+            Sitzung(id, titel, j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"))
         }.onFailure { Log.w(TAG, "KI-Titel nicht gespeichert", it) }.getOrNull()
     }
 
@@ -234,7 +237,7 @@ object Gespraeche {
     }
 
     /** Atomar mit fsync: Nach Absturz oder leerem Akku bleibt der alte oder der neue Stand, nie eine leere Datei. */
-    private fun schreiben(d: File, json: JSONObject) {
+    internal fun schreiben(d: File, json: JSONObject) {
         val af = AtomicFile(d)
         val aus = af.startWrite()
         try {
