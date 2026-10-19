@@ -1,4 +1,4 @@
-<!-- stand: 197 1.8.186 -->
+<!-- stand: 200 1.8.189 -->
 Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks gelten für den eigenen Chat, die Agenten und ChatGPT (Plugin), soweit nicht anders vermerkt.
 
 ## Zugänge und Modelle
@@ -77,7 +77,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 ## Oberfläche
 
 - Reiter: Jarvis (Chat, Tagesauswertung, Live-Gedächtnis, Einrichtungs-Checkliste), Ablage, Aktivität (Protokoll), Einstellungen (Jarvis, Benachrichtigungen, Stimme, Alltag und Timer, Konten und Apps, System).
-- Gesprächsleiste mit gespeicherten Gesprächen; Wechsel per Sprache („neue Session“, „letzte Session“) ohne Modell.
+- Gesprächsleiste mit gespeicherten Gesprächen; Wechsel per Sprache („neue Session“, „letzte Session“) ohne Modell. Oben Reiter „Gespräche“ und „Projekte“; „Projekte“ ist ein eigener Bereich, bisher nur leerer Zustand (noch keine Projekte, kein Anlegen).
 - Unter jeder Antwort: Kopieren, Daumen hoch/runter (daraus lernt die Stil-Datei), Vorlesen, Teilen, in neuem Chat fortsetzen, erneut versuchen.
 - Eingabe: Text, Kamera, Fotos, Dateien, Diktat, Modellwahl, Live-Gespräch. Plus-Menü „Plugins“ ist noch leer.
 - Plus-Menü „Programmierer“: setzt „Übergib bitte folgende Aufgabe an den Programmierer:“ ins Feld (Cursor am Ende, sendet nichts); abgeschickt geht die Aufgabe als neuer Auftrag über `programmieren`, ohne Aufgabe startet nichts.
