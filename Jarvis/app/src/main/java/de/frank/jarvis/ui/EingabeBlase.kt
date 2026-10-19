@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.CallEnd
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Folder
@@ -48,6 +49,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -56,6 +58,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -65,11 +69,14 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -80,6 +87,7 @@ import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /** Das Orange der Live-Blase (wie in der ChatGPT-App). */
@@ -121,7 +129,23 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt.
+        // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
+        // im Plus-Menü fokussiert es. Eigener Feldzustand, damit der Cursor nach Vorspann und Diktat am Ende steht.
+        var feld by remember { mutableStateOf(TextFieldValue(vm.entwurf, TextRange(vm.entwurf.length))) }
+        // Von außen geändert (Vorspann, Diktat, nach dem Senden geleert): dann der neue Text mit dem Cursor am Ende.
+        val wert = if (feld.text == vm.entwurf) feld else TextFieldValue(vm.entwurf, TextRange(vm.entwurf.length))
+        LaunchedEffect(vm.entwurf) { if (feld.text != vm.entwurf) feld = TextFieldValue(vm.entwurf, TextRange(vm.entwurf.length)) }
+        val fokus = remember { FocusRequester() }
+        val tastatur = LocalSoftwareKeyboardController.current
+        LaunchedEffect(vm.entwurfFokus) {
+            if (!vm.entwurfFokus) return@LaunchedEffect
+            vm.entwurfFokus = false
+            // Das Plus-Menü schließt gerade und hält den Fokus noch: einige Male versuchen, die Tastatur erst nach Erfolg.
+            repeat(10) {
+                delay(80)
+                if (runCatching { fokus.requestFocus() }.isSuccess) { tastatur?.show(); return@LaunchedEffect }
+            }
+        }
         val platzhalter = when {
             vm.nimmtAuf -> "Ich höre zu …"
             vm.schreibtMit -> "Schreibe mit …"
@@ -130,8 +154,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp)) {
             if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
             BasicTextField(
-                vm.entwurf, { vm.entwurf = it },
-                Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp),
+                wert, { feld = it; vm.entwurf = it.text },
+                Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus),
                 textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
                 cursorBrush = SolidColor(LIVE_ORANGE),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -182,6 +206,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             MenueZeile(Icons.Rounded.PhotoCamera, "Kamera") { plusOffen = false; vm.kameraAnfragen() }
             MenueZeile(Icons.Rounded.PhotoLibrary, "Fotos") { plusOffen = false; vm.fotosAnfragen() }
             MenueZeile(Icons.Rounded.Folder, "Dateien") { plusOffen = false; vm.dateienAnfragen() }
+            MenueZeile(Icons.Rounded.Code, "Programmierer") { plusOffen = false; vm.programmiererEinsetzen() }
             MenueZeile(Icons.Rounded.Extension, "Plugins") { plusOffen = false; pluginsOffen = true }
         }
     }

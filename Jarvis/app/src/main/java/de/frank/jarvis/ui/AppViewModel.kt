@@ -24,6 +24,7 @@ import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.faehigkeit.Merkdatei
 import de.frank.jarvis.faehigkeit.Regel
+import de.frank.jarvis.faehigkeit.ProgrammiererVorlage
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.observability.Logbuch
 import kotlinx.coroutines.CancellationException
@@ -229,9 +230,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val antwortLaut = !liveAktiv && ((vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen))
         val text = eingabe.trim().ifEmpty { if (anhaenge.isNotEmpty()) ANHANG_PLATZHALTER else "" }
         if (text.isEmpty()) return false
+        // Nur der Vorspann aus dem Plus-Menü „Programmierer“, ohne Aufgabe dahinter und ohne Anhang: kein Auftrag, der Text bleibt in der Blase.
+        val programmierer = ProgrammiererVorlage.aufgabe(text) != null
+        if (anhaenge.isEmpty() && ProgrammiererVorlage.ohneAufgabe(text)) {
+            meldung = "Bitte die Aufgabe für den Programmierer hinter dem Doppelpunkt ergänzen."
+            return false
+        }
+        // Eine offene Session-Auswahl gilt nicht mehr, sonst nähme die nächste Nachricht sie als Antwort.
+        if (programmierer) navigationsAuswahl = null
         // Wechsel zwischen Gesprächen erledigt die App selbst, auch während Jarvis im offenen Gespräch noch arbeitet.
-        // Der Befehl geht nie ans Modell und kann deshalb keinen Programmierauftrag auslösen.
-        if (anhaenge.isEmpty() && navigieren(text, vorlesen)) return true
+        // Der Befehl geht nie ans Modell und kann deshalb keinen Programmierauftrag auslösen. Mit dem Programmierer-Vorspann
+        // ist es immer ein Auftrag („… öffne in Jarvis eine neue Session …“ ist dann Inhalt, kein Wechsel).
+        if (anhaenge.isEmpty() && !programmierer && navigieren(text, vorlesen)) return true
         // Die Antwort, die bei „Hey Jarvis“ lief, weicht jetzt der neuen Frage (nur genau sie und nur, wenn sie noch läuft).
         weichendeRunde?.let { w -> weichendeRunde = null; if (vorlesen && sitzungId?.let { laufende[it] } === w) abbrechen() }
         if (denkt) return false
@@ -246,8 +256,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entwurfErledigt = null
         gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad }, kontext = erledigt)
         sitzungSichern()
+        // Aus dem Plus-Menü „Programmierer“: zuverlässig als neuer Programmierauftrag übergeben. Nur beim ersten Senden; ein erneuter
+        // Versuch bekommt den Hinweis nicht, sonst startete er den schon übergebenen Auftrag ein zweites Mal.
         rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, antwortLaut,
-            if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
+            (if (programmierer && erledigt.isEmpty()) ProgrammiererVorlage.HINWEIS else "") +
+                if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
         return true
     }
 
@@ -710,6 +723,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun anhangWeg(a: de.frank.jarvis.data.Anhang) { anhaenge.remove(a); runCatching { a.datei.delete() } }
+
+    /** Nach „Programmierer“ gesetzt: Die Eingabeblase fokussiert das Feld einmal (Cursor am Ende) und setzt es zurück. */
+    var entwurfFokus by mutableStateOf(false)
+
+    /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */
+    fun programmiererEinsetzen() {
+        entwurf = ProgrammiererVorlage.einsetzen(entwurf)
+        entwurfFokus = true
+    }
 
     /** Senden aus der Eingabeblase: Text und Anhänge zusammen. */
     fun entwurfSenden() {

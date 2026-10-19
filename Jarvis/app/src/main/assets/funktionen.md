@@ -80,5 +80,6 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Gesprächsleiste mit gespeicherten Gesprächen; Wechsel per Sprache („neue Session“, „letzte Session“) ohne Modell.
 - Unter jeder Antwort: Kopieren, Daumen hoch/runter (daraus lernt die Stil-Datei), Vorlesen, Teilen, in neuem Chat fortsetzen, erneut versuchen.
 - Eingabe: Text, Kamera, Fotos, Dateien, Diktat, Modellwahl, Live-Gespräch. Plus-Menü „Plugins“ ist noch leer.
+- Plus-Menü „Programmierer“: setzt „Übergib bitte folgende Aufgabe an den Programmierer:“ ins Feld (Cursor am Ende, sendet nichts); abgeschickt geht die Aufgabe als neuer Auftrag über `programmieren`, ohne Aufgabe startet nichts.
 - Benachrichtigungen je Art einstellbar (Ton, wie ein Wecker, Vorlesen, Lautstärke), Ruhezeit; schwebende Sprachblase bei Hey Jarvis aus anderen Apps.
 - Fingerabdruck-Sperre, Hell/Dunkel. Kein Widget, keine Schnellkachel, kein Teilen an Jarvis aus anderen Apps.
