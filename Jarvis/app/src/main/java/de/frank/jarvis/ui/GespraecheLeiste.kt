@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.AddComment
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Folder
@@ -43,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,15 +85,17 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
     val f = LocalFarben.current
     val raum = rememberCoroutineScope()
     BackHandler(enabled = schublade.isOpen) { raum.launch { schublade.close() } }
-    // Reiter oben: Gespräche oder Projekte. Beim Wechsel bleibt alles erhalten; geschlossen springt die Leiste zurück auf die
-    // Liste, zu der das offene Gespräch gehört (Gespräche oder sein Projekt), damit Wischen zum Gesprächswechsel sie zeigt.
-    var projekte by rememberSaveable { mutableStateOf(false) }
+    // Reiter oben: Gespräche, Programmierung oder Projekte. Beim Wechsel bleibt alles erhalten; geschlossen springt die Leiste
+    // zurück auf die Liste, zu der das offene Gespräch gehört, damit Wischen zum Gesprächswechsel sie zeigt.
+    var reiter by rememberSaveable { mutableStateOf(LeistenReiter.GESPRAECHE) }
     // Das geöffnete Projekt im Reiter „Projekte“; null = Liste der Projekte.
     var projektOffen by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(schublade.isOpen) { if (schublade.isOpen) vm.sitzungenLaden() }
+    // Auch ein neues, noch ungespeichertes Gespräch aus „Neuer Programmierauftrag“: Die Leiste bleibt dann auf „Programmierung“.
+    val offenProgrammierung = vm.sitzungen.firstOrNull { it.id == vm.sitzungId }?.programmierung == true || (vm.sitzungId == null && vm.sitzungProgrammierung)
     // Auch mit sitzungProjekt als Schlüssel: Ein gewähltes Gespräch lädt erst nach dem Schließen fertig.
-    LaunchedEffect(schublade.isOpen, vm.sitzungProjekt) {
-        if (!schublade.isOpen) { projekte = vm.sitzungProjekt.isNotEmpty(); projektOffen = vm.sitzungProjekt.ifEmpty { null } }
+    LaunchedEffect(schublade.isOpen, vm.sitzungProjekt, offenProgrammierung) {
+        if (!schublade.isOpen) { reiter = reiterFuer(offenProgrammierung, vm.sitzungProjekt); projektOffen = vm.sitzungProjekt.ifEmpty { null } }
     }
     // Zurück in der App (etwa nach einem Gespräch über die Sprachblase): eine geschlossene Leiste, die mitten in ihrer
     // Animation angehalten wurde, ganz hinausschieben, damit kein Streifen am Rand stehen bleibt.
@@ -144,8 +149,9 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
         },
         drawerContent = {
             Leiste(
-                vm, schublade.isOpen, projekte, { projekte = it }, projektOffen, { projektOffen = it },
+                vm, schublade.isOpen, reiter, { reiter = it }, projektOffen, { projektOffen = it },
                 aufNeu = { vm.neuesGespraech(); raum.launch { schublade.close() } },
+                aufNeuerAuftrag = { vm.neuesGespraech(); vm.programmiererEinsetzen(); raum.launch { schublade.close() } },
                 aufNeuImProjekt = { vm.neuesGespraechImProjekt(it); raum.launch { schublade.close() } },
                 aufWahl = { vm.sitzungOeffnen(it); raum.launch { schublade.close() } },
             )
@@ -157,20 +163,21 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Leiste(
-    vm: AppViewModel, offen: Boolean, projekte: Boolean, projekteWaehlen: (Boolean) -> Unit, projektOffen: String?, projektOeffnen: (String?) -> Unit,
-    aufNeu: () -> Unit, aufNeuImProjekt: (String) -> Unit, aufWahl: (String) -> Unit,
+    vm: AppViewModel, offen: Boolean, reiter: LeistenReiter, reiterWaehlen: (LeistenReiter) -> Unit, projektOffen: String?, projektOeffnen: (String?) -> Unit,
+    aufNeu: () -> Unit, aufNeuerAuftrag: () -> Unit, aufNeuImProjekt: (String) -> Unit, aufWahl: (String) -> Unit,
 ) {
+    val projekte = reiter == LeistenReiter.PROJEKTE
     val f = LocalFarben.current
     var bearbeiten by remember { mutableStateOf<Sitzung?>(null) }
     var umbenennen by remember { mutableStateOf<Sitzung?>(null) }
     var loeschen by remember { mutableStateOf<Sitzung?>(null) }
     var projektNeu by remember { mutableStateOf(false) }
-    // Gespräche eines Projekts stehen nur in dessen Bereich, nicht unter „Gespräche“; eines mit unbekanntem Projekt (Datei
-    // verloren) bleibt dort, damit es nirgends verschwindet.
     val projektIds = remember(vm.projekte) { vm.projekte.map { it.id }.toSet() }
-    val normale = remember(vm.sitzungen, projektIds) { vm.sitzungen.filter { it.projekt.isEmpty() || it.projekt !in projektIds } }
+    val listen = remember(vm.sitzungen, projektIds) { aufteilen(vm.sitzungen, projektIds) }
+    val normale = listen.gespraeche
     val anzahlJe = remember(vm.sitzungen) { vm.sitzungen.groupingBy { it.projekt }.eachCount() }
     val gruppen = remember(normale) { gruppiert(normale) }
+    val programmierGruppen = remember(listen.programmierung) { gruppiert(listen.programmierung) }
     val projekt = if (projekte) vm.projekte.firstOrNull { it.id == projektOffen } else null
     val imProjekt = remember(vm.sitzungen, projekt?.id) { projekt?.let { p -> vm.sitzungen.filter { it.projekt == p.id } }.orEmpty() }
     // Zurück aus einem Projekt führt zur Projektliste, erst danach schließt die Leiste.
@@ -201,9 +208,14 @@ private fun Leiste(
                 .background(Brush.verticalGradient(listOf(lerp(f.hgOben, f.primaer, if (f.dunkel) 0.10f else 0.06f), f.hgUnten, lerp(f.hgUnten, f.primaer, if (f.dunkel) 0.06f else 0.04f))))
                 .statusBarsPadding().navigationBarsPadding().padding(horizontal = 14.dp),
         ) {
-            Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 12.dp).selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = !projekte, Modifier.weight(1f)) { projekteWaehlen(false) }
-                Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, Modifier.weight(1f)) { projekteWaehlen(true) }
+            // Drei Reiter: auf schmalen Bildschirmen (Fold zugeklappt) Symbol über dem Namen, damit „Programmierung“ ganz hineinpasst.
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 12.dp)) {
+                val schmal = maxWidth < 420.dp
+                Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f)) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
+                    Reiter("Programmierung", Icons.Rounded.Code, gewaehlt = reiter == LeistenReiter.PROGRAMMIERUNG, schmal, Modifier.weight(1.35f)) { reiterWaehlen(LeistenReiter.PROGRAMMIERUNG) }
+                    Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, schmal, Modifier.weight(1f)) { reiterWaehlen(LeistenReiter.PROJEKTE) }
+                }
             }
             if (projekte && projekt != null) {
                 // Ein Projekt: seine eigenen Gespräche, getrennt von allen übrigen.
@@ -256,22 +268,30 @@ private fun Leiste(
                     }
                 }
             } else {
-                Knopf("Neues Gespräch", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment, aktion = aufNeu)
-                if (normale.isEmpty()) {
+                // „Gespräche“ oder „Programmierung“: alle Programmieraufträge mit ihren Gesprächen, alte wie neue; sie stehen nicht unter „Gespräche“.
+                val auftraege = reiter == LeistenReiter.PROGRAMMIERUNG
+                val liste = if (auftraege) listen.programmierung else normale
+                if (auftraege) Knopf("Neuer Programmierauftrag", Modifier.fillMaxWidth(), icon = Icons.Rounded.Code, aktion = aufNeuerAuftrag)
+                else Knopf("Neues Gespräch", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment, aktion = aufNeu)
+                if (liste.isEmpty()) {
                     Text(
-                        "Noch keine gespeicherten Gespräche. Jedes Gespräch mit Jarvis landet von selbst hier, auch die mit „Hey Jarvis“.",
+                        if (auftraege) "Noch keine Programmieraufträge. Jeder Auftrag an den Programmierer landet mit seinem Gespräch von selbst hier."
+                        else "Noch keine gespeicherten Gespräche. Jedes Gespräch mit Jarvis landet von selbst hier, auch die mit „Hey Jarvis“.",
                         Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
                     )
                 }
-                LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    gruppen.forEach { (gruppe, eintraege) ->
-                        item(key = "g:$gruppe") {
-                            Text(gruppe.uppercase(), Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), color = f.textSchwach, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
+                // Je Reiter eine eigene Liste: Die Scrollposition des einen gilt nicht für den anderen.
+                key(reiter) {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        (if (auftraege) programmierGruppen else gruppen).forEach { (gruppe, eintraege) ->
+                            item(key = "g:$gruppe") {
+                                Text(gruppe.uppercase(), Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), color = f.textSchwach, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
+                            }
+                            items(eintraege, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
                         }
-                        items(eintraege, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
                     }
                 }
-                Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
+                if (!auftraege || liste.isNotEmpty()) Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
             }
         }
     }
@@ -301,7 +321,7 @@ private fun Leiste(
         var name by remember { mutableStateOf("") }
         // Tastatur „Senden“ und „Anlegen“ im selben Augenblick legen nur ein Projekt an.
         var gesendet by remember { mutableStateOf(false) }
-        val anlegen = { if (name.isNotBlank() && !gesendet) { gesendet = true; vm.projektAnlegen(name) { projekteWaehlen(true); projektOeffnen(it.id) }; projektNeu = false } }
+        val anlegen = { if (name.isNotBlank() && !gesendet) { gesendet = true; vm.projektAnlegen(name) { reiterWaehlen(LeistenReiter.PROJEKTE); projektOeffnen(it.id) }; projektNeu = false } }
         AlertDialog(
             onDismissRequest = { projektNeu = false },
             containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
@@ -373,22 +393,50 @@ private fun SitzungEintrag(
     }
 }
 
-/** Ein Reiter oben in der Leiste: der gewählte als getönte Glasfläche in der Akzentfarbe, der andere schlicht und leiser. */
+/** Ein Reiter oben in der Leiste: der gewählte als getönte Glasfläche in der Akzentfarbe, die anderen schlicht und leiser. [schmal]: Symbol über dem Namen. */
 @Composable
-private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, modifier: Modifier = Modifier, aktion: () -> Unit) {
+private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: Boolean, modifier: Modifier = Modifier, aktion: () -> Unit) {
     val f = LocalFarben.current
-    Row(
-        modifier.antippen(rolle = Role.Tab, aktion = aktion)
-            .semantics { selected = gewaehlt }
-            .clip(RoundedCornerShape(14.dp))
-            .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer) else Modifier)
-            .padding(horizontal = 8.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = if (gewaehlt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
-        Text(text, Modifier.padding(start = 6.dp), color = if (gewaehlt) f.text else f.textLeise, fontSize = 16.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    val flaeche = modifier.antippen(rolle = Role.Tab, aktion = aktion)
+        .semantics { selected = gewaehlt }
+        .clip(RoundedCornerShape(14.dp))
+        .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer) else Modifier)
+    val farbe = if (gewaehlt) f.text else f.textLeise
+    val gewicht = if (gewaehlt) FontWeight.Bold else FontWeight.Medium
+    if (schmal) {
+        Column(flaeche.padding(horizontal = 4.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, tint = if (gewaehlt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
+            Text(text, Modifier.padding(top = 2.dp), color = farbe, fontSize = 13.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    } else {
+        Row(flaeche.padding(horizontal = 8.dp, vertical = 10.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = if (gewaehlt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
+            Text(text, Modifier.padding(start = 6.dp), color = farbe, fontSize = 16.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
+
+/** Die drei Bereiche der Gesprächsleiste. */
+internal enum class LeistenReiter { GESPRAECHE, PROGRAMMIERUNG, PROJEKTE }
+
+/** Der Reiter, zu dem das offene Gespräch gehört: Programmiergespräche unter „Programmierung“, sonst sein Projekt oder „Gespräche“. */
+internal fun reiterFuer(programmierung: Boolean, projekt: String): LeistenReiter = when {
+    programmierung -> LeistenReiter.PROGRAMMIERUNG
+    projekt.isNotEmpty() -> LeistenReiter.PROJEKTE
+    else -> LeistenReiter.GESPRAECHE
+}
+
+internal data class LeistenListen(val gespraeche: List<Sitzung>, val programmierung: List<Sitzung>)
+
+/**
+ * Verteilt die Gespräche auf die Reiter, jedes in genau einen der beiden: Programmiergespräche nur unter „Programmierung“
+ * (auch die eines Projekts, die zusätzlich in ihrem Projekt stehen), alle übrigen unter „Gespräche“. Gespräche eines Projekts
+ * stehen nur in dessen Bereich; eines mit unbekanntem Projekt (Datei verloren) bleibt unter „Gespräche“, damit es nirgends verschwindet.
+ */
+internal fun aufteilen(sitzungen: List<Sitzung>, projektIds: Set<String>) = LeistenListen(
+    gespraeche = sitzungen.filter { !it.programmierung && (it.projekt.isEmpty() || it.projekt !in projektIds) },
+    programmierung = sitzungen.filter { it.programmierung },
+)
 
 /** Heute, Gestern, Letzte 7 Tage, Diesen Monat, Älter: so findet Frank ein Gespräch nach dem Gefühl für die Zeit. */
 private fun gruppiert(sitzungen: List<Sitzung>): List<Pair<String, List<Sitzung>>> {

@@ -729,6 +729,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */
     fun programmiererEinsetzen() {
+        // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
+        if (sitzungId == null) sitzungProgrammierung = true
         entwurf = ProgrammiererVorlage.einsetzen(entwurf)
         entwurfFokus = true
     }
@@ -1663,6 +1665,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var projekte by mutableStateOf<List<de.frank.jarvis.data.Projekt>>(emptyList()); private set
     /** Projekt des offenen Gesprächs; leer = normales Gespräch. Ein neues Gespräch im Projekt bekommt es beim ersten Speichern. */
     var sitzungProjekt by mutableStateOf(""); private set
+    /** Neues, noch ungespeichertes Gespräch über „Programmierer“ begonnen: gehört in den Reiter „Programmierung“. Gilt bis zum ersten Speichern. */
+    var sitzungProgrammierung by mutableStateOf(false); private set
 
     /** Speichern, Umbenennen, Löschen und Neueinlesen der Gespräche der Reihe nach: Kein älterer Stand überholt einen neueren. */
     private val sicherung = Mutex()
@@ -1677,9 +1681,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) { de.frank.jarvis.weckwort.Stimmprofil.laden(app) }
     }
 
+    /** Alle Gespräche; die mit Auftrag im Auftragsbuch kommen dauerhaft in den Reiter „Programmierung“ (auch der Bestand). */
+    private fun alleSitzungen(): List<de.frank.jarvis.data.Sitzung> {
+        val mitAuftrag = runCatching { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.gespraecheMitAuftrag(getApplication()) }.getOrDefault(emptySet())
+        return de.frank.jarvis.data.Gespraeche.alle(getApplication(), mitAuftrag)
+    }
+
     fun sitzungenLaden() {
         viewModelScope.launch {
-            sitzungen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.alle(getApplication()) } }
+            sitzungen = sicherung.withLock {
+                withContext(Dispatchers.IO) { alleSitzungen() }
+            }
             projekte = withContext(Dispatchers.IO) { de.frank.jarvis.data.Projekte.alle(getApplication()) }
             // Ältere Gespräche ohne KI-Überschrift nachholen: die zehn neuesten, eins nach dem anderen.
             if (!kiVerbunden) return@launch
@@ -1696,6 +1708,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** [kuerzenUm]: so viele Nachrichten hat Frank eben bewusst entfernt; sonst überschreibt ein kürzerer Stand die Datei nie. */
     private fun sitzungSichern(kuerzenUm: Int = 0) {
         letzteAktivitaet = System.currentTimeMillis()
+        val programmierung = sitzungProgrammierung && sitzungId == null
+        sitzungProgrammierung = false
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
         val projekt = sitzungProjekt
@@ -1703,7 +1717,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
-            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand, kuerzenUm, projekt) } }
+            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand, kuerzenUm, projekt, programmierung) } }
             if (neu != null) sitzungen = listOf(neu) + sitzungen.filter { it.id != neu.id }
             if (neu != null) kiTitelBilden(id, stand)
             // Das Gespräch gehört sofort ins Kurzzeitgedächtnis (für das nächste Gespräch und für ChatGPT).
@@ -1774,6 +1788,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         sitzungId = null
         sitzungErstellt = 0L
         sitzungProjekt = ""
+        sitzungProgrammierung = false
         offenesGespraechVergessen()
     }
 
@@ -1878,6 +1893,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         einstellungsVerlauf = emptyList()
         navigationsAuswahl = null
         sitzungProjekt = ""
+        sitzungProgrammierung = false
         // Ohne vorleser.stopp(): Ein Vorlesen im Hintergrund (Tagesauswertung, Ablage) läuft weiter.
         if (gespraech.isNotEmpty() || sitzungId != null) {
             sitzungId?.let { vorherigeSitzung = it }
@@ -2069,7 +2085,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             sitzungen = sicherung.withLock {
                 withContext(Dispatchers.IO) {
                     de.frank.jarvis.data.Gespraeche.umbenennen(getApplication(), id, titel)
-                    de.frank.jarvis.data.Gespraeche.alle(getApplication())
+                    alleSitzungen()
                 }
             }
         }
@@ -2085,7 +2101,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             sitzungen = sicherung.withLock {
                 withContext(Dispatchers.IO) {
                     de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), id)
-                    de.frank.jarvis.data.Gespraeche.alle(getApplication())
+                    alleSitzungen()
                 }
             }
             meldung = "Gespräch gelöscht."

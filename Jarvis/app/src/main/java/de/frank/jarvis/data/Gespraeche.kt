@@ -3,12 +3,16 @@ package de.frank.jarvis.data
 import android.content.Context
 import android.util.AtomicFile
 import android.util.Log
+import de.frank.jarvis.faehigkeit.ProgrammierChat
 import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Ein gespeichertes Gespräch, wie es die Seitenleiste zeigt. [projekt]: id des Projekts, leer = normales Gespräch. */
-data class Sitzung(val id: String, val titel: String, val erstellt: Long, val geaendert: Long, val anzahl: Int, val projekt: String = "")
+/**
+ * Ein gespeichertes Gespräch, wie es die Seitenleiste zeigt. [projekt]: id des Projekts, leer = normales Gespräch.
+ * [programmierung]: Gespräch eines Programmierauftrags; es steht im Reiter „Programmierung“, nicht unter „Gespräche“.
+ */
+data class Sitzung(val id: String, val titel: String, val erstellt: Long, val geaendert: Long, val anzahl: Int, val projekt: String = "", val programmierung: Boolean = false)
 
 /**
  * Eine Nachricht im Speicher: von Frank oder von Jarvis. [art]: „antwort“ (normal), „fehler“ (Fehlermeldung statt
@@ -35,14 +39,52 @@ object Gespraeche {
     /** Liest eine Gesprächsdatei; eine nach Absturz übrig gebliebene Sicherung (.bak) greift dabei von selbst. */
     private fun lies(d: File): JSONObject = JSONObject(String(AtomicFile(d).readFully(), Charsets.UTF_8))
 
-    /** Alle Gespräche, das zuletzt geführte zuerst. */
-    fun alle(context: Context): List<Sitzung> =
+    /** Nachrichtenarten, die nur ein Programmierauftrag ins Gespräch schreibt (Statusmeldung, Abschlussbericht, Rückfrage). */
+    private val PROGRAMMIER_ARTEN = setOf(ProgrammierChat.ART_STATUS, ProgrammierChat.ART_BERICHT, "rueckfrage")
+
+    /**
+     * Gehört das Gespräch zu einem Programmierauftrag? Die gespeicherte Markierung, sonst die Spuren eines Auftrags: der
+     * Auftrag als erste Nachricht (eigenes Auftrags-Gespräch) oder Meldungen der Sitzung. So werden auch alte Gespräche
+     * erkannt, deren Auftrag längst aus dem Auftragsbuch gefallen ist.
+     */
+    fun istProgrammierung(j: JSONObject): Boolean {
+        if (j.optBoolean("programmierung")) return true
+        val a = j.optJSONArray("nachrichten") ?: return false
+        val erste = a.optJSONObject(0)
+        if (erste != null && erste.optBoolean("mir") && ProgrammierChat.istAuftragsVorspann(erste.optString("text"))) return true
+        return (0 until a.length()).any { a.optJSONObject(it)?.optString("art") in PROGRAMMIER_ARTEN }
+    }
+
+    private fun sitzungAus(j: JSONObject, id: String = j.getString("id")) =
+        Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"), istProgrammierung(j))
+
+    /**
+     * Alle Gespräche, das zuletzt geführte zuerst. [mitAuftrag]: Gespräche, denen das Auftragsbuch einen Programmierauftrag
+     * zuordnet. Fehlt ihnen oder einem anders erkannten Programmiergespräch die Markierung, wird sie einmalig in die Datei
+     * geschrieben: Die Zuordnung bleibt dann auch, wenn der Auftrag später aus dem Auftragsbuch fällt.
+     */
+    fun alle(context: Context, mitAuftrag: Set<String> = emptySet()): List<Sitzung> =
         ordner(context).listFiles { f -> f.name.endsWith(".json") }.orEmpty().mapNotNull { f ->
             runCatching {
                 val j = lies(f)
-                Sitzung(j.getString("id"), j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"))
+                val s = sitzungAus(j)
+                if (!j.optBoolean("programmierung") && (s.programmierung || s.id in mitAuftrag)) markieren(context, s.id)
+                if (s.id in mitAuftrag) s.copy(programmierung = true) else s
             }.onFailure { Log.w(TAG, "Gespräch ${f.name} nicht lesbar", it) }.getOrNull()
         }.sortedByDescending { it.geaendert }
+
+    /** Markiert ein gespeichertes Gespräch dauerhaft als Programmiergespräch. Gibt es die Datei (noch) nicht, passiert nichts. */
+    fun markieren(context: Context, id: String) {
+        if (id.isEmpty()) return
+        synchronized(sperre) {
+            runCatching {
+                val d = datei(context, id)
+                if (!d.exists() && !File(d.path + ".bak").exists()) return@runCatching
+                val j = lies(d)
+                if (!j.optBoolean("programmierung")) schreiben(d, j.put("programmierung", true))
+            }.onFailure { Log.w(TAG, "Gespräch $id nicht als Programmierung markiert", it) }
+        }
+    }
 
     fun laden(context: Context, id: String): Pair<Sitzung, List<GespeicherteNachricht>>? = runCatching {
         val j = lies(datei(context, id))
@@ -53,16 +95,17 @@ object Gespraeche {
                 GespeicherteNachricht(n.optBoolean("mir"), n.optString("text"), n.optString("art", "antwort"), n.optString("kontext"), anh, n.optInt("bewertung"))
             }
         }
-        Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), nachrichten.size, j.optString("projekt")) to nachrichten
+        sitzungAus(j, id) to nachrichten
     }.getOrNull()
 
     /**
      * Speichert das ganze Gespräch. Ein von Hand vergebener Titel bleibt erhalten. Liefert den neuen Eintrag für die
      * Seitenleiste (null = nichts geschrieben). Ein älterer Stand mit weniger Nachrichten überschreibt nie einen neueren.
      * [kuerzenUm]: So viele Nachrichten hat Frank bewusst entfernt (etwa die verworfene Antwort bei „Erneut versuchen“).
-     * [projekt]: gilt nur beim ersten Speichern; danach bleibt das Gespräch in seinem Projekt.
+     * [projekt]: gilt nur beim ersten Speichern; danach bleibt das Gespräch in seinem Projekt. [programmierung]: Gespräch eines
+     * Programmierauftrags; einmal gesetzt (oder an den Meldungen erkannt), bleibt die Markierung bei jedem weiteren Speichern.
      */
-    fun speichern(context: Context, id: String, erstellt: Long, nachrichten: List<GespeicherteNachricht>, kuerzenUm: Int = 0, projekt: String = ""): Sitzung? {
+    fun speichern(context: Context, id: String, erstellt: Long, nachrichten: List<GespeicherteNachricht>, kuerzenUm: Int = 0, projekt: String = "", programmierung: Boolean = false): Sitzung? {
         if (nachrichten.isEmpty()) return null
         return synchronized(sperre) {
             runCatching {
@@ -87,6 +130,7 @@ object Gespraeche {
                     .put("erstellt", erstellt)
                     .put("geaendert", jetzt)
                     .apply { if (zuProjekt.isNotEmpty()) put("projekt", zuProjekt) }
+                    .apply { if (programmierung || alt?.optBoolean("programmierung") == true) put("programmierung", true) }
                     .put("nachrichten", JSONArray().apply {
                         nachrichten.forEach { n ->
                             put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
@@ -98,8 +142,9 @@ object Gespraeche {
                             })
                         }
                     })
+                if (!json.optBoolean("programmierung") && istProgrammierung(json)) json.put("programmierung", true)
                 schreiben(d, json)
-                Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt)
+                Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"))
             }.onFailure { Log.w(TAG, "Gespräch nicht gespeichert", it) }.getOrNull()
         }
     }
@@ -135,7 +180,7 @@ object Gespraeche {
             if (j.optBoolean("eigenerTitel")) return@runCatching null
             j.put("titel", titel).put("kiTitel", titel).put("kiTitelBei", bei)
             schreiben(d, j)
-            Sitzung(id, titel, j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"))
+            sitzungAus(j, id)
         }.onFailure { Log.w(TAG, "KI-Titel nicht gespeichert", it) }.getOrNull()
     }
 
@@ -158,6 +203,7 @@ object Gespraeche {
                     if (n.anhaenge.isNotEmpty()) put("anhaenge", JSONArray(n.anhaenge))
                 })
                 j.put("geaendert", System.currentTimeMillis())
+                if (n.art in PROGRAMMIER_ARTEN) j.put("programmierung", true)
                 schreiben(d, j)
             }.onFailure { Log.w(TAG, "Nachricht nicht angehängt", it) }
         }

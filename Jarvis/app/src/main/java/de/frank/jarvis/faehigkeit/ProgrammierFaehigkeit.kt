@@ -8,6 +8,7 @@ import android.net.Uri
 import androidx.core.app.NotificationCompat
 import de.frank.jarvis.R
 import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.data.Gespraeche
 import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.observability.Logbuch
 import java.util.concurrent.TimeUnit
@@ -739,7 +740,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 .put("stand", stand).put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt).put("arbeitet", stand == "laeuft")
                 .put("schritte", JSONArray().put(JSONObject().put("zeit", jetzt).put("stand", stand).put("text", schritt)))
             schreib(context, lies(context).put(eintrag))
+            // Auch ein normales Gespräch, aus dem der Auftrag kam, gehört ab jetzt in den Reiter „Programmierung“.
+            Gespraeche.markieren(context, gespraech)
             return eintrag
+        }
+
+        /** Alle Gespräche, denen ein Auftrag zugeordnet ist. */
+        fun gespraeche(context: Context): Set<String> {
+            val liste = lies(context)
+            return (0 until liste.length()).mapNotNullTo(mutableSetOf()) { liste.getJSONObject(it).optString("gespraech").ifEmpty { null } }
         }
 
         @Synchronized
@@ -1094,6 +1103,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     companion object {
+        /** Gespräche, denen das Auftragsbuch einen Programmierauftrag zuordnet (für den Reiter „Programmierung“). */
+        fun gespraecheMitAuftrag(context: Context): Set<String> = Auftragsbuch.gespraeche(context.applicationContext)
+
         /** Fertig gemeldete Aufträge an eine App (nur Zusatzinfo: fertig gemeldet ist noch nicht installiert). */
         fun fertigeAuftraege(context: Context, app: String, seit: Long): List<String> = Auftragsbuch.fertige(context.applicationContext, app, seit)
 

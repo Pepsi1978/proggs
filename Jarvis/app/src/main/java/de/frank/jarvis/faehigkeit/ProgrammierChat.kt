@@ -71,7 +71,7 @@ object ProgrammierChat {
         val id = Gespraeche.neueId()
         val erste = GespeicherteNachricht(true, (if (ueberPlugin) PLUGIN_VORSPANN else AUFTRAG_VORSPANN) + "$app):\n\n$auftrag")
         val projekt = if (ausGespraech.isEmpty()) "" else Gespraeche.laden(context, ausGespraech)?.first?.projekt.orEmpty()
-        Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste), projekt = projekt) ?: return ""
+        Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste), projekt = projekt, programmierung = true) ?: return ""
         Gespraeche.umbenennen(context, id, "Programmieren: $app" + if (ueberPlugin) " (über ChatGPT/MCP)" else "")
         return id
     }
