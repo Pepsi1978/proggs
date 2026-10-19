@@ -936,8 +936,8 @@ private fun MeldungsBereichRegler(
 ) {
     // Wie beim Nachrichtenalter: während des Schiebens lokal anzeigen, beim Loslassen speichern.
     var bereich by remember(min, max) { mutableStateOf(min.toFloat()..max.toFloat()) }
-    val neuMin = bereich.start.roundToInt()
-    val neuMax = bereich.endInclusive.roundToInt()
+    fun auswahl() = bereich.start.roundToInt() to bereich.endInclusive.roundToInt()
+    val (neuMin, neuMax) = auswahl()
     val farben = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -955,7 +955,12 @@ private fun MeldungsBereichRegler(
             RangeSlider(
                 value = bereich,
                 onValueChange = { bereich = it },
-                onValueChangeFinished = { if (neuMin != min || neuMax != max) aendere(neuMin, neuMax) },
+                onValueChangeFinished = {
+                    // Erst hier lesen und immer speichern: Letzte Bewegung und Loslassen können im selben Frame
+                    // ankommen, dann hielten beim Zeichnen berechnete Werte (auch min/max) noch den alten Stand.
+                    val (von, bis) = auswahl()
+                    aendere(von, bis)
+                },
                 valueRange = Thema.GRENZE_MIN.toFloat()..Thema.GRENZE_MAX.toFloat(),
                 steps = Thema.GRENZE_MAX - Thema.GRENZE_MIN - 1,
                 modifier = Modifier.fillMaxWidth().semantics {
@@ -1251,7 +1256,8 @@ private fun NachrichtenAlterRegler(
     modifier: Modifier = Modifier,
 ) {
     var wert by remember(tage) { mutableStateOf(tage.toFloat()) }
-    val gewaehlt = wert.roundToInt().coerceIn(Thema.ALTER_MIN_TAGE, Thema.ALTER_MAX_TAGE)
+    fun auswahl() = wert.roundToInt().coerceIn(Thema.ALTER_MIN_TAGE, Thema.ALTER_MAX_TAGE)
+    val gewaehlt = auswahl()
     val dauer = if (gewaehlt == 1) "1 Tag" else "$gewaehlt Tage"
     val farben = MaterialTheme.colorScheme
     Surface(
@@ -1270,7 +1276,8 @@ private fun NachrichtenAlterRegler(
             Slider(
                 value = wert,
                 onValueChange = { wert = it },
-                onValueChangeFinished = { if (gewaehlt != tage) aendere(gewaehlt) },
+                // Wie beim Meldungsbereich: den aktuellen Reglerwert lesen und immer speichern.
+                onValueChangeFinished = { aendere(auswahl()) },
                 valueRange = Thema.ALTER_MIN_TAGE.toFloat()..Thema.ALTER_MAX_TAGE.toFloat(),
                 steps = Thema.ALTER_MAX_TAGE - Thema.ALTER_MIN_TAGE - 1,
                 modifier = Modifier.fillMaxWidth().semantics {
@@ -1302,7 +1309,8 @@ private fun AusfuehrlichkeitRegler(
 ) {
     // Während der Geste nur diesen Regler aktualisieren, nicht die gesamte Themenliste speichern.
     var wert by remember(stufe) { mutableStateOf(stufe.maxAbsaetze.toFloat()) }
-    val gewaehlt = Ausfuehrlichkeit.fromAbsaetze(wert.roundToInt())
+    fun auswahl() = Ausfuehrlichkeit.fromAbsaetze(wert.roundToInt())
+    val gewaehlt = auswahl()
     val farben = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -1319,7 +1327,7 @@ private fun AusfuehrlichkeitRegler(
             Slider(
                 value = wert,
                 onValueChange = { wert = it },
-                onValueChangeFinished = { if (gewaehlt != stufe) aendere(gewaehlt) },
+                onValueChangeFinished = { aendere(auswahl()) },
                 valueRange = 2f..10f,
                 steps = 7,
                 modifier = Modifier.fillMaxWidth().semantics {
@@ -1373,7 +1381,7 @@ private fun BilderBereich(app: NewsApplication, stand: EinstellungenStand) {
                 Text("Höchstens ${stand.maxKiBilder} KI-Bilder pro Ausgabe", style = MaterialTheme.typography.titleMedium)
                 Slider(
                     value = stand.maxKiBilder.toFloat(),
-                    onValueChange = { app.einstellungen.setzeMaxKiBilder(it.toInt()) },
+                    onValueChange = { app.einstellungen.setzeMaxKiBilder(it.roundToInt()) },
                     valueRange = 0f..30f,
                     steps = 29,
                 )
@@ -1494,7 +1502,7 @@ private fun VorleseBereich(app: NewsApplication, stand: EinstellungenStand) {
             Text("Tempo ${"%.2f".format(Locale.GERMANY, stand.sprechtempo)}×", style = MaterialTheme.typography.titleMedium)
             Slider(
                 value = stand.sprechtempo,
-                onValueChange = { app.einstellungen.setzeTempo((it * 20).toInt() / 20f) },
+                onValueChange = { app.einstellungen.setzeTempo((it * 20).roundToInt() / 20f) },
                 valueRange = 0.6f..1.6f,
             )
         }
