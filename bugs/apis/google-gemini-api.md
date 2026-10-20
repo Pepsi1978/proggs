@@ -368,6 +368,11 @@ Modell nicht dokumentiert. Das Kontextfenster ist nicht der Engpass (25 Tokens/s
 - **Ursache:** Limits gelten pro Projekt und sind für Live nicht veröffentlicht; gleichzeitige Sitzungen nicht garantiert.
 - **Fix:** Zweiten Schlüssel aus einem Projekt mit Abrechnung hinterlegen und bei Kontingent-Abbruch wechseln (Jarvis: „Erst kostenlos, dann bezahlt“). Schlüssel nie ins Repo. Quelle: https://ai.google.dev/gemini-api/docs/rate-limits , Forum.
 
+### 46. ⭐ Gemini 3.8 Live lässt Beiträge unbeantwortet oder antwortet am Werkzeug vorbei
+- **Symptom:** Trotz Anweisung „jede Äußerung an jarvis_fragen“ beantwortet Gemini Smalltalk selbst oder reagiert auf beiläufige Aussagen gar nicht; im Modus „warten“ redet es weiter, während das Werkzeug läuft.
+- **Ursache:** Proactive Audio ist bei 3.8 fest an (Modell darf schweigen), Live-Setup hat kein `toolConfig` (kein Zwang zum Werkzeugaufruf), und Funktionen sind bei 3.8 ohne Angabe `NON_BLOCKING`.
+- **Fix:** Weiterleitung im Client statt im Prompt (Jarvis 1.8.192, `live/JarvisWeiche.kt`): jeder abgeschlossene Beitrag aus der Mitschrift an den Agenten, Tonsperre für eigene Modellantworten, `behavior: "BLOCKING"` ausdrücklich setzen. Quellen: https://ai.google.dev/gemini-api/docs/models/gemini-3.8-live , https://ai.google.dev/gemini-api/docs/live-api/best-practices , https://ai.google.dev/api/live
+
 ## Fix-Status (Stand 2026-06-08)
 
 | Frueherer Zustand | Status | Bezug |

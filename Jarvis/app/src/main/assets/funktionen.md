@@ -1,4 +1,4 @@
-<!-- stand: 202 1.8.191 -->
+<!-- stand: 203 1.8.192 -->
 Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks gelten für den eigenen Chat, die Agenten und ChatGPT (Plugin), soweit nicht anders vermerkt.
 
 ## Zugänge und Modelle
@@ -74,6 +74,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 - Gleichzeitig zuhören und sprechen über OpenAI GPT-Live, OpenAI Realtime oder Google Gemini Live (mit eigenen API-Schlüsseln, nicht über das ChatGPT-Abo); Fragen an Jarvis gehen über ein Werkzeug an den Jarvis-Agenten.
 - Schnellwahl-Profile, Stimmen mit Hörprobe, Kostenschätzung und Kostenbuch; Ton bevorzugt über Headset oder Auto; Medientasten werden währenddessen abgefangen.
+- Gemini „Jarvis direkt“ (Standard bei Gemini, Profil „Gemini 3.8 Live“): Die App selbst gibt jeden abgeschlossenen Beitrag mit Franks erkannten Worten (endgültige Eingabe-Mitschrift, auch Smalltalk und bloße Mitteilungen) genau einmal an den Jarvis-Agenten, auch wenn Gemini schweigt oder selbst antworten will; hörbar ist nur Jarvis' Antwort, Geminis eigene Antworten und Überbrückungen bleiben stumm. Spricht Frank weiter, bevor eine Antwort gesprochen ist, geht sie mit dem neuen Beitrag an Jarvis statt vorgelesen zu werden; Jarvis-Ausfall oder nicht vorgelesene Antworten werden gemeldet (Antwort dann im Chat). Bis Jarvis antwortet, ist es still. Keine Wortgarantie: Erkennungsfehler der Mitschrift möglich.
 
 ## Oberfläche
 

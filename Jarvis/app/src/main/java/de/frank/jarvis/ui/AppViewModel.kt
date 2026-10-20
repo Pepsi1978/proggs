@@ -867,7 +867,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 beiAudioweg = { a -> haupt { liveAudioweg = a } },
                 beiNutzerText = { t -> haupt { liveNachricht(Nachricht(true, t)) } },
                 beiJarvisText = { t -> haupt { liveNachricht(Nachricht(false, t)) } },
-                beiWerkzeug = { id, auftrag -> haupt { liveWerkzeug(id, auftrag) } },
+                beiWerkzeug = { id, auftrag, hinweis -> haupt { liveWerkzeug(id, auftrag, hinweis) } },
                 // Die abgerechnete Dauer kommt bei GPT-Live erst nach dem Ende: auch dann noch übernehmen.
                 beiKosten = { k -> viewModelScope.launch(Dispatchers.Main) {
                     if (stand == liveStand || !liveAktiv) liveKosten = k
@@ -975,8 +975,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vorleser.sprich("live-ende:" + System.currentTimeMillis(), "Jarvis", "Okay, Live-Gespräch beendet.")
     }
 
-    /** Das Live-Modell fragt Jarvis mit allen Werkzeugen; die Antwort geht als Werkzeug-Ergebnis zurück und wird gesprochen. */
-    private fun liveWerkzeug(callId: String, auftrag: String) {
+    /**
+     * Das Live-Modell fragt Jarvis mit allen Werkzeugen; die Antwort geht als Werkzeug-Ergebnis zurück und wird gesprochen.
+     * Gemini „Jarvis direkt“: [auftrag] sind Franks erkannte Worte (von der Weiche), [hinweis] die Begleitumstände für Jarvis.
+     */
+    private fun liveWerkzeug(callId: String, auftrag: String, hinweis: String = "") {
         val sitzung = live
         // Genau einmal verbrauchen: Eine alte Äußerung darf nie an einem späteren Werkzeugaufruf hängen.
         val aeusserung = liveAeusserung
@@ -991,9 +994,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Wie im Mikrofonpfad: Die Rückfrage „Welche Session meinst du?“ gilt nur für die nächste Äußerung.
         navigationsAuswahl = null
-        val verlauf = verlaufFuersModell()
         // „Jarvis direkt“: Modell und Denkstufe aus den Live-Einstellungen; hohe Stufen bekommen mehr Zeit.
         val optionen = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
+        val nurStimme = optionen.istGemini && optionen.jarvisDirekt
+        // Gemini „Jarvis direkt“: Franks Worte stehen schon im Auftrag. Im Verlauf stünden sie sonst ein zweites Mal, als
+        // „unbeantwortet, nur bei Bezug darauf eingehen“ markiert; frühere Beiträge ohne gehörte Antwort bleiben drin.
+        var bis = gespraech.size
+        if (nurStimme) while (bis > 0 && gespraech[bis - 1].vonMir && gespraech[bis - 1].text.isNotBlank() && auftrag.contains(gespraech[bis - 1].text.trim())) bis--
+        val verlauf = verlaufFuersModell(bis)
         val modell = de.frank.jarvis.live.LiveOptionen.jarvisModell(optionen)
         val denkstufe = de.frank.jarvis.live.LiveOptionen.jarvisDenkstufe(optionen)
         // Die Stufe, die wirklich ans Modell geht: „Wie im Chat“ zählt mit, und ein Modell ohne die Stufe fällt wie in der Anfrage zurück.
@@ -1007,9 +1015,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(kennung + worte) {
             val antwort = runCatching {
                 // Live (jarvis_fragen): fest 8 Schritte, unabhängig von Franks Chat-Schrittlimit; das Zeitlimit oben bleibt.
-                agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." }, verlauf, lernen = true, abschluss = true, zeitlimitMs = zeitlimit,
+                agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." } + (if (hinweis.isNotBlank()) "\n\n$hinweis" else ""), verlauf,
+                    lernen = true, abschluss = true, zeitlimitMs = zeitlimit,
                     maxSchritte = JarvisAgent.STANDARD_SCHRITTE, modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)
-            }.getOrNull() ?: "Das konnte ich gerade nicht nachschlagen."
+            }.getOrNull() ?: if (nurStimme) "Jarvis konnte gerade nicht antworten, wegen eines Fehlers oder weil es zu lange gedauert hat. Bitte frag gleich noch einmal."
+                else "Das konnte ich gerade nicht nachschlagen."
             // Nur an dieselbe Verbindung: Eine neue kennt diese Kennung nicht.
             if (live === sitzung) sitzung?.ergebnis(callId, antwort)
         }
@@ -1017,19 +1027,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Anweisung für das Sprachmodell. GPT-Live delegiert, Realtime und Gemini rufen das Werkzeug selbst.
-     * [nurStimme]: Gemini mit „Jarvis direkt“ gibt jede Äußerung an Jarvis weiter und spricht nur dessen Antwort.
+     * [nurStimme]: Gemini mit „Jarvis direkt“ ist nur die Stimme; die Weiche ([de.frank.jarvis.live.JarvisWeiche]) gibt jeden Beitrag an Jarvis.
      */
     private fun liveAnweisung(gptLive: Boolean, nurStimme: Boolean = false): String =
-        if (nurStimme) "# Rolle\nDu bist die Stimme von Jarvis, Franks persönlichem Assistenten auf seinem Handy, im Live-Sprachgespräch. Denken und Antworten übernimmt Jarvis.\n" +
-            "# Sprache\nSprich immer Deutsch. Natürlich, warm und knapp: kurze Sätze, keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
-            "# Weitergeben\nZu JEDER Äußerung von Frank, die eine Antwort braucht (Fragen, Bitten, Aufträge, Sessionwechsel, Gesprächsende, auch Smalltalk), rufst du sofort " +
-            "jarvis_fragen auf, mit seinem vollständigen Anliegen in seinen eigenen Worten und dem nötigen Zusammenhang aus dem Gespräch. Antworte nie selbst inhaltlich, " +
-            "auch nicht, wenn du die Antwort zu wissen glaubst. Sag beim Aufruf höchstens ein kurzes „Moment“.\n" +
-            "# Vorlesen\nKommt das Ergebnis von Jarvis, sprich es natürlich und sinngemäß vollständig vor. Füge nichts hinzu, lass nichts Wichtiges weg und bewerte es nicht. " +
-            "Ist das Ergebnis eine Rückfrage, stell sie Frank genau so.\n" +
-            "# Ausnahmen\nDie kurze Begrüßung zu Beginn und ein „Okay“ oder „Gern“ als Antwort auf ein bloßes Danke darfst du selbst sprechen.\n" +
-            "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf und gehst auf ihn ein.\n" +
-            "# Regeln\nErfinde nie Daten. Behaupte nie selbst, etwas erledigt, eine Session gewechselt oder das Gespräch beendet zu haben.\n" +
+        if (nurStimme) "# Rolle\nDu bist die Stimme von Jarvis, Franks persönlichem Assistenten auf seinem Handy, im Live-Sprachgespräch. " +
+            "Inhaltlich antwortet immer Jarvis: Die App gibt jeden Beitrag von Frank an Jarvis weiter, und nur Jarvis' Antworten sind hörbar.\n" +
+            "# Sprache\nSprich immer Deutsch. Natürlich, warm und flüssig: kurze Sätze, keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
+            "# Franks Beiträge\nAuf alles, was Frank sagt, auch Smalltalk, ein Danke oder eine bloße Mitteilung, rufst du sofort jarvis_fragen mit seinen Worten auf " +
+            "und sagst selbst nichts dazu, auch kein „Moment“. Antworte nie selbst inhaltlich, auch nicht, wenn du die Antwort zu wissen glaubst.\n" +
+            "# Antworten von Jarvis\nDas Ergebnis von jarvis_fragen und jede Nachricht, die mit „" + de.frank.jarvis.live.JarvisWeiche.MARKE.trim() + "“ beginnt, ist Jarvis' Antwort an Frank. " +
+            "Sprich sie sofort vor, natürlich und flüssig wie deine eigenen Worte, ohne die Markierung und ohne Einleitung wie „Jarvis sagt“. Behalte alle Fakten, Zahlen, Namen, Zeiten, " +
+            "Einschränkungen, Unsicherheiten, Rückfragen und Bestätigungen genau bei; füge nichts hinzu, lass nichts weg und bewerte nichts. " +
+            "Auf eine solche Nachricht rufst du nie jarvis_fragen auf.\n" +
+            "# Ausnahme\nNur die kurze Begrüßung zu Beginn sprichst du selbst.\n" +
+            "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf.\n" +
+            "# Regeln\nErfinde nie Daten. Behaupte nie selbst, etwas erledigt, eine Session gewechselt oder das Gespräch beendet zu haben; das sagt nur Jarvis.\n" +
             "Jetzt ist " + java.text.SimpleDateFormat("EEEE, d. MMMM yyyy, HH:mm", java.util.Locale.GERMAN).format(java.util.Date()) + " Uhr."
         else
         "# Rolle\nDu bist Jarvis, Franks persönlicher Assistent auf seinem Handy, im Live-Sprachgespräch.\n" +
