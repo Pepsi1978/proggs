@@ -400,10 +400,14 @@ class JarvisWeiche(
         const val SIGNAL_MAX_MS = 6_000L
 
         fun neutralesSignal(text: String): Boolean {
-            if (text.isBlank()) return false
-            val worte = text.lowercase(java.util.Locale.ROOT).replace("alles klar", " ").split(Regex("[^\\p{L}]+")).filter { it.isNotEmpty() }
-            return worte.size <= SIGNAL_MAX_WORTE && worte.all { it in SIGNAL_WORTE }
+            val t = text.lowercase(java.util.Locale.ROOT)
+            // Nur Buchstaben und Satzzeichen: Ziffern und Zeichen („42“, „14:30“, „5 %“) sind Inhalt und machen es stumm.
+            if (t.any { !it.isLetter() && !it.isWhitespace() && it !in SIGNAL_SATZZEICHEN }) return false
+            val worte = Regex("alles\\s+klar|\\p{L}+").findAll(t).map { it.value }.toList()
+            return worte.isNotEmpty() && worte.size <= SIGNAL_MAX_WORTE && worte.all { it in SIGNAL_WORTE || it.split(Regex("\\s+")) == listOf("alles", "klar") }
         }
+
+        private const val SIGNAL_SATZZEICHEN = ".,!?…-–—'’\"„“‚‘"
 
         private fun signalSchluessel(text: String) = text.lowercase(java.util.Locale.ROOT).filter { it.isLetter() }
     }

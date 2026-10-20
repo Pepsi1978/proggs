@@ -265,7 +265,7 @@ class JarvisWeicheTest {
         for (t in listOf("Mhm.", "Okay, einen kleinen Moment.", "Alles klar.", "Moment.", "Ich schau mal kurz nach.", "Lass mich kurz nachsehen."))
             assertTrue(t, JarvisWeiche.neutralesSignal(t))
         for (t in listOf("", "Klar.", "Ja.", "Nein.", "Genau.", "Gut.", "Erledigt.", "Okay, der Wecker ist gestellt.", "Mir geht's gut, danke!",
-                "Alles klar, ist gemacht.", "Moment, morgen sind es 22 Grad."))
+                "Alles klar, ist gemacht.", "Moment, morgen sind es 22 Grad.", "42", "Okay, 14:30", "Mhm, 5 %", "Alles", "…"))
             assertFalse(t, JarvisWeiche.neutralesSignal(t))
         for (s in JarvisWeiche.SIGNALE) assertTrue("Anweisung nennt nur erlaubte Signale: $s", JarvisWeiche.neutralesSignal(s))
     }
