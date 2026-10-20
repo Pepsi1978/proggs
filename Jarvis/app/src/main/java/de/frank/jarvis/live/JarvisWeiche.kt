@@ -12,7 +12,10 @@ package de.frank.jarvis.live
  * - Abschluss eines Beitrags: Werkzeugaufruf, eigene Ausgabe oder Zugende von Gemini, oder [ruheMs] ohne neue Mitschrift
  *   (Proactive Audio schweigt). Danach noch [NACHLAUF_MS], weil die Mitschrift dem Werkzeugaufruf hinterherlaufen kann.
  * - Tonsperre ([tonFrei]): Gemini-Ton und -Mitschrift zählen nur, solange Gemini eine Antwort von Jarvis spricht (und bei der
- *   Begrüßung). Eigene Antworten von Gemini, auch ein „Moment“, bleiben stumm.
+ *   Begrüßung). Jarvis' Antwort darf Gemini dabei natürlich ausformulieren (Anweisung), prüfbar ist das vor dem Abspielen nicht.
+ * - Neutrales Signal: Eine eigene Äußerung von Gemini bei gesperrtem Ton wird gepuffert und nur hörbar, wenn ihre Mitschrift
+ *   aus [SIGNAL_WORTE] besteht (etwa „Okay, Moment.“), Jarvis noch arbeitet oder gleich gefragt wird und Frank nicht weiterspricht.
+ *   Höchstens eins je Antwort, nie zweimal dasselbe hintereinander; ohne Mitschrift, zu lang oder inhaltlich bleibt es stumm.
  * - Immer nur eine Anfrage an Jarvis. Spricht Frank weiter, bevor die Antwort gesprochen ist, wird sie nicht mehr vorgelesen,
  *   sondern mit dem neuen Beitrag an Jarvis gegeben; so geht keine Bestätigung verloren und nichts Überholtes wird gesagt.
  * - Zurück an Gemini als Werkzeug-Ergebnis, sonst als markierte Eingabe ([MARKE]). Ruft Gemini daraufhin noch einmal
@@ -36,6 +39,8 @@ class JarvisWeiche(
         data class Einspielen(val text: String) : Aktion
         /** Nur in den Chat: Gemini hat Jarvis' Antwort nicht vorgelesen. */
         data class Anzeigen(val text: String) : Aktion
+        /** Geminis gepuffertes neutrales Signal ([text]) jetzt abspielen; nicht in den Chat. */
+        class Signal(val ton: List<ByteArray>, val text: String) : Aktion
         data class Fehler(val text: String) : Aktion
         data class Protokoll(val text: String) : Aktion
     }
@@ -74,6 +79,17 @@ class JarvisWeiche(
     private var abgabeMs = 0L
     private var wartetSeitMs = 0L
     private var tonSeitOffen = false
+    /** Eigene Äußerung von Gemini bei gesperrtem Ton; [endeMs] = Werkzeugaufruf oder Zugende, danach entscheidet [pruefen]. */
+    private class Gepuffert(val seitMs: Long) {
+        val ton = mutableListOf<ByteArray>()
+        var bytes = 0
+        val text = StringBuilder()
+        var endeMs = 0L
+    }
+    private var gepuffert: Gepuffert? = null
+    /** In diesem Antwortzyklus schon ein Signal gespielt oder verworfen: Mehr als eins wäre eine Warteschleife. */
+    private var signalGenutzt = false
+    private var letztesSignal = ""
     /** Übergaben nacheinander nur aus Geminis Fassung (keine Mitschrift): begrenzt, damit Gemini keine Schleife anstößt. */
     private var ohneMitschriftFolge = 0
     private var nr = 0
@@ -90,16 +106,51 @@ class JarvisWeiche(
         nutzerSeitAbgabe = true
         ohneMitschriftFolge = 0
         if (tor == Tor.BEGRUESSUNG) tor = Tor.ZU
+        val aus = signalVerwerfenWennNeu(jetzt)
         // Frank spricht weiter, bevor Jarvis' Antwort hörbar ist: Sie ist überholt, bleibt stumm und geht mit dem neuen Beitrag an Jarvis.
         if ((tor == Tor.OFFEN || tor == Tor.WARTET) && !tonSeitOffen) {
             tor = Tor.ZU
             ungehoert = ungehoert?.let { "$it\n$letzteAntwort" } ?: letzteAntwort
         }
-        return pruefen(jetzt)
+        return aus + pruefen(jetzt)
     }
 
     /** Vorläufige Mitschrift: Frank spricht noch. Kein Inhalt, kein Abschluss. */
-    @Synchronized fun nutzerSpricht(jetzt: Long) { letzteSpracheMs = jetzt }
+    @Synchronized fun nutzerSpricht(jetzt: Long): List<Aktion> { letzteSpracheMs = jetzt; return signalVerwerfenWennNeu(jetzt) }
+
+    /** Frank spricht neu (nicht bloß nachlaufende Mitschrift von vorher): Ein gepuffertes Signal ist überholt. */
+    private fun signalVerwerfenWennNeu(jetzt: Long): List<Aktion> {
+        val g = gepuffert ?: return emptyList()
+        if (jetzt - g.seitMs <= NACHLAUF_MS) return emptyList()
+        return signalVerwerfen("Frank spricht weiter", verbraucht = false)
+    }
+
+    /** [verbraucht]: Gemini hatte seine Gelegenheit (inhaltlich, zu lang, wiederholt); sonst darf später noch ein Signal kommen. */
+    private fun signalVerwerfen(grund: String, verbraucht: Boolean = true): List<Aktion> {
+        val g = gepuffert ?: return emptyList()
+        gepuffert = null
+        if (verbraucht) signalGenutzt = true
+        return listOf(Aktion.Protokoll("Weiche: eigene Äußerung von Gemini stumm ($grund): „${g.text.toString().trim().take(80)}“"))
+    }
+
+    /** Geminis eigener Ton bei gesperrtem Ton ([tonFrei] false): gepuffert, falls er ein neutrales Signal sein kann. */
+    @Synchronized fun eigenerTon(pcm: ByteArray, jetzt: Long) {
+        val g = puffer(jetzt) ?: return
+        if (g.endeMs > 0) return
+        g.bytes += pcm.size
+        // Zu lang für ein Signal: Der Inhalt bleibt stumm, egal was die Mitschrift sagt.
+        if (g.bytes > SIGNAL_MAX_BYTES) g.ton.clear() else g.ton += pcm
+    }
+
+    /** Geminis Ausgabe-Mitschrift bei gesperrtem Ton: entscheidet, ob der gepufferte Ton ein neutrales Signal ist. */
+    @Synchronized fun eigeneMitschrift(text: String, jetzt: Long) { puffer(jetzt)?.text?.append(text) }
+
+    private fun puffer(jetzt: Long): Gepuffert? {
+        gepuffert?.let { return it }
+        // Nur, wenn es etwas zu überbrücken gibt: Franks Beitrag ist da oder Jarvis arbeitet.
+        if (tor != Tor.ZU || signalGenutzt || (beitrag.isEmpty() && !arbeitet)) return null
+        return Gepuffert(jetzt).also { gepuffert = it }
+    }
 
     /**
      * Gemini gibt Ton oder Ausgabe-Mitschrift aus. Nur echter Ton ([ton]) zählt als „Antwort wird gesprochen“: Bei Googles
@@ -121,6 +172,8 @@ class JarvisWeiche(
         // Werkzeuge warten (BLOCKING): Gemini erzeugt nichts, bis das Ergebnis da ist.
         erzeugt = false
         val aus = mutableListOf<Aktion>()
+        // BLOCKING: Was Gemini vor dem Aufruf sagte („Moment“), ist abgeschlossen; Jarvis' Antwort folgt im selben Zug.
+        gepuffert?.let { if (it.endeMs == 0L) it.endeMs = jetzt }
         when {
             beitrag.isNotEmpty() -> { offeneAufrufe += id; abschlussFaellig = true; ersatzAuftrag = auftrag }
             // Derselbe Zug, den die Weiche schon übergeben hat (etwa nach der Ruhezeit): Antwort kommt über diesen Aufruf.
@@ -162,7 +215,10 @@ class JarvisWeiche(
             Tor.WARTET -> { tor = Tor.OFFEN; abgabeMs = jetzt }
             // Ohne Ton seit dem Öffnen ist es das Zugende von etwas Älterem; der Wächter in [pruefen] fängt Schweigen ab.
             Tor.OFFEN -> if (tonSeitOffen) { tor = Tor.ZU; aus += Aktion.Protokoll("Weiche: Jarvis' Antwort fertig gesprochen") }
-            Tor.ZU -> if (beitrag.isNotEmpty()) abschlussFaellig = true
+            Tor.ZU -> {
+                if (beitrag.isNotEmpty()) abschlussFaellig = true
+                gepuffert?.let { if (it.endeMs == 0L) it.endeMs = jetzt }
+            }
         }
         return aus + pruefen(jetzt)
     }
@@ -170,13 +226,14 @@ class JarvisWeiche(
     /** Gemini meldet `interrupted`: Frank redet dazwischen oder die eingespielte Antwort hat Geminis eigene abgelöst. */
     @Synchronized fun unterbrochen(jetzt: Long): List<Aktion> {
         erzeugt = false
+        val aus = signalVerwerfen("unterbrochen", verbraucht = false)
         when (tor) {
             Tor.BEGRUESSUNG -> tor = Tor.ZU
             Tor.WARTET -> { tor = Tor.OFFEN; abgabeMs = jetzt }
             Tor.OFFEN -> if (tonSeitOffen) { tor = Tor.ZU; unterbrochen = true }
             Tor.ZU -> {}
         }
-        return pruefen(jetzt)
+        return aus + pruefen(jetzt)
     }
 
     /** Frank tippt die Blase an, während Gemini Jarvis' Antwort spricht. */
@@ -249,13 +306,36 @@ class JarvisWeiche(
             wartend = null
             aus += uebergeben(w, jetzt)
         }
+        aus += signalPruefen(jetzt)
         return aus
+    }
+
+    /** Nach dem Ende der eigenen Äußerung (plus Nachlauf für die Mitschrift): abspielen, wenn sie ein neutrales Signal ist. */
+    private fun signalPruefen(jetzt: Long): List<Aktion> {
+        val g = gepuffert ?: return emptyList()
+        if (g.endeMs == 0L) return if (jetzt - g.seitMs >= SIGNAL_MAX_MS) signalVerwerfen("kein Ende") else emptyList()
+        if (jetzt - g.endeMs < SIGNAL_NACHLAUF_MS) return emptyList()
+        val text = g.text.toString().trim()
+        val grund = when {
+            g.bytes > SIGNAL_MAX_BYTES -> "zu lang"
+            !neutralesSignal(text) -> "kein neutrales Signal"
+            signalSchluessel(text) == letztesSignal -> "wiederholt"
+            g.ton.isEmpty() -> "kein Ton"
+            tor != Tor.ZU || (!arbeitet && beitrag.isEmpty()) -> "nichts zu überbrücken"
+            else -> null
+        }
+        if (grund != null) return signalVerwerfen(grund)
+        gepuffert = null
+        signalGenutzt = true
+        letztesSignal = signalSchluessel(text)
+        return listOf(Aktion.Signal(g.ton.toList(), text), Aktion.Protokoll("Weiche: neutrales Signal von Gemini hörbar: „$text“"))
     }
 
     private fun uebergeben(worte: String, jetzt: Long): Aktion {
         val kennung = "weiche-" + (++nr)
         val hinweis = buildString {
-            append("(Live-Gespräch: Franks Worte aus der automatischen Spracherkennung, Hörfehler möglich. Deine Antwort spricht Gemini vor.)")
+            append("(Live-Gespräch: Franks Worte aus der automatischen Spracherkennung, Hörfehler möglich. Gemini spricht deine Antwort " +
+                "und formuliert sie dabei natürlich aus: Liefere den Kern klar und sprechbar.)")
             if (unterbrochen) append("\n(Frank hat deine vorige gesprochene Antwort unterbrochen.)")
             ungehoert?.let { append("\n(Deine vorige Antwort hat Frank nicht gehört, weil er weitersprach: „$it“. Beziehe sie ein, soweit sie noch passt, vor allem Bestätigungen erledigter Aktionen.)") }
         }
@@ -266,6 +346,9 @@ class JarvisWeiche(
     }
 
     private fun abgeben(antwort: String, jetzt: Long): List<Aktion> {
+        // Die Antwort ist da: Ein noch nicht gespieltes Signal käme zu spät.
+        val aus = signalVerwerfen("Antwort von Jarvis ist da", verbraucht = false)
+        signalGenutzt = false
         letzteAntwort = antwort
         echos = 0
         nutzerSeitAbgabe = false
@@ -275,11 +358,11 @@ class JarvisWeiche(
             val ids = offeneAufrufe.toList()
             offeneAufrufe.clear()
             tor = Tor.OFFEN
-            return listOf(Aktion.Werkzeugantwort(ids, antwort))
+            return aus + Aktion.Werkzeugantwort(ids, antwort)
         }
         // Läuft noch eine (stumme) eigene Antwort von Gemini, bricht die Eingabe sie ab; erst danach wird der Ton frei.
         if (erzeugt) { tor = Tor.WARTET; wartetSeitMs = jetzt } else tor = Tor.OFFEN
-        return listOf(Aktion.Einspielen(MARKE + antwort))
+        return aus + Aktion.Einspielen(MARKE + antwort)
     }
 
     companion object {
@@ -298,5 +381,34 @@ class JarvisWeiche(
         const val JARVIS_MAX_MS = 150_000L
         const val ECHO_MAX = 2
         const val OHNE_MITSCHRIFT_MAX = 2
+
+        /** Neutrale Signale, die Gemini sagen darf, während Jarvis arbeitet; die Anweisung nennt genau diese. */
+        val SIGNALE = listOf("Mhm", "Okay", "Alles klar", "Moment", "Einen Moment", "Augenblick", "Ich schau nach", "Lass mich kurz nachsehen")
+        /**
+         * Wörter, aus denen ein hörbares Signal bestehen darf (Mitschrift kann abweichen: „Okay, einen kleinen Moment“).
+         * Bewusst ohne Antwortwörter wie „ja“, „nein“, „genau“, „stimmt“, „klar“, „gut“ und ohne „erledigt“, „gemacht“, „fertig“:
+         * Die beantworten eine Frage oder bestätigen eine Aktion. „Alles klar“ zählt nur als ganze Wendung.
+         */
+        val SIGNAL_WORTE = setOf("mhm", "mm", "hm", "hmm", "okay", "ok", "oke", "moment", "einen", "kleinen", "augenblick", "sekunde",
+            "ich", "schau", "schaue", "seh", "sehe", "mal", "kurz", "nach", "lass", "mich", "nachsehen", "nachschauen", "verstehe", "aha", "ah", "oh", "so")
+        const val SIGNAL_MAX_WORTE = 6
+        /** Etwa 3 s Ton (PCM16 mono, 24 kHz); länger ist kein Signal mehr. */
+        const val SIGNAL_MAX_BYTES = 144_000
+        /** Nach Werkzeugaufruf oder Zugende so lange auf die nachlaufende Ausgabe-Mitschrift warten. */
+        const val SIGNAL_NACHLAUF_MS = 400L
+        /** Endet eine eigene Äußerung so lange nicht, bleibt sie stumm. */
+        const val SIGNAL_MAX_MS = 6_000L
+
+        fun neutralesSignal(text: String): Boolean {
+            val t = text.lowercase(java.util.Locale.ROOT)
+            // Nur Buchstaben und Satzzeichen: Ziffern und Zeichen („42“, „14:30“, „5 %“) sind Inhalt und machen es stumm.
+            if (t.any { !it.isLetter() && !it.isWhitespace() && it !in SIGNAL_SATZZEICHEN }) return false
+            val worte = Regex("alles\\s+klar|\\p{L}+").findAll(t).map { it.value }.toList()
+            return worte.isNotEmpty() && worte.size <= SIGNAL_MAX_WORTE && worte.all { it in SIGNAL_WORTE || it.split(Regex("\\s+")) == listOf("alles", "klar") }
+        }
+
+        private const val SIGNAL_SATZZEICHEN = ".,!?…-–—'’\"„“‚‘"
+
+        private fun signalSchluessel(text: String) = text.lowercase(java.util.Locale.ROOT).filter { it.isLetter() }
     }
 }

@@ -270,8 +270,8 @@ object LiveOptionen {
             "jarvis", {
                 listOf(
                     Wahl("jarvis", "Jarvis direkt", "Gemini ist nur die Stimme: Die App gibt jeden deiner Beiträge mit deinen erkannten Worten an Jarvis, auch Smalltalk, " +
-                        "und lässt nur Jarvis' Antworten hörbar werden; eigene Antworten von Gemini bleiben stumm. Jarvis denkt mit dem Modell aus deinem ChatGPT-Abo (Modell und Denkstufe unten). " +
-                        "Bis Jarvis antwortet, ist es still. Am besten mit 3.8 Live. Empfehlung.",
+                        "Gemini spricht Jarvis' Antworten in natürlichen eigenen Worten; eigene Sachantworten von Gemini bleiben stumm. Jarvis denkt mit dem Modell aus deinem ChatGPT-Abo (Modell und Denkstufe unten). " +
+                        "Bis Jarvis antwortet, höchstens ein kurzes Signal wie „Moment“. Am besten mit 3.8 Live. Empfehlung.",
                         "Gemini-Preis wie oben, Jarvis über dein Abo"),
                     Wahl("gemini", "Gemini denkt selbst", "Gemini antwortet selbst und fragt Jarvis mit allen Werkzeugen nur für deine Daten. Am schnellsten, aber Gemini entscheidet, was es weitergibt."),
                 )
