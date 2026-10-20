@@ -199,6 +199,12 @@ Ein „Gemini 3 Flash Live“ gibt es nicht; gemeint ist 3.1 Flash Live. Proacti
 
 **Schlüssel und Gratis-Kontingent:** Ein normaler AI-Studio-Schlüssel reicht, kein eigener Live-Schlüssel. Alle Live-Modelle haben ein kostenloses Kontingent; dort Daten fürs Training (im EWR laut Terms Paid-Regeln, Preisseite widerspricht). Free/Paid hängt am **Projekt** (Billing, ≥ 5 $ Prepay), nicht am Schlüssel; Limits pro Projekt, für Live nicht veröffentlicht. Ausweichen vom kostenlosen auf den bezahlten Schlüssel bei Kontingent-Abbruch ist technisch möglich (Jarvis macht es automatisch). Verbrauch: AI Studio → Usage / Billing / Spend Caps.
 
+**Externer Agent als „Gehirn“, Gemini nur als Stimme (Stand 20.10.2026, umgesetzt in Jarvis 1.8.192, `live/JarvisWeiche.kt`; am Gerät noch nicht gemessen):**
+- Per Anweisung allein nicht verlässlich: `gemini-3.8-live` und `-extended-thinking` haben **Proactive Audio fest an** (das Modell darf auf Eingaben, die es für unwichtig hält, gar nicht reagieren), und `BidiGenerateContentSetup` hat **kein `toolConfig`** (kein erzwungener Werkzeugaufruf wie `mode: ANY`). Quellen: ai.google.dev/gemini-api/docs/models/gemini-3.8-live, /live-api/best-practices, ai.google.dev/api/live (abgerufen 20.10.2026).
+- Bewährter Aufbau: Der Client gibt jeden abgeschlossenen Beitrag selbst an den Agenten (Inhalt = endgültige `inputTranscription`, `interimInputTranscription` nur als „spricht noch“), Abschluss bei Werkzeugaufruf, eigener Ausgabe, `turnComplete` oder Ruhezeit (Pause + ~1,2 s); Mitschrift läuft dem `toolCall` hinterher (~350 ms Nachlauf). Modell-Ton nur hörbar, solange es das Agenten-Ergebnis spricht (Tonsperre); Ergebnis als `toolResponse`, sonst als markierte `clientContent`-Eingabe (`turnComplete: true` bricht eine laufende Erzeugung ab → erst nach `interrupted`/`turnComplete` den Ton freigeben). Erneute Werkzeugaufrufe ohne neue Mitschrift aus dem Speicher beantworten (keine doppelten Aktionen).
+- **Funktionsaufrufe bei 3.8 sind standardmäßig `NON_BLOCKING`:** Wer warten will, muss `behavior: "BLOCKING"` ausdrücklich setzen (bei Extended Thinking verboten, bei 3.1 Flash nicht dokumentiert, dort weglassen). `scheduling` (INTERRUPT/WHEN_IDLE/SILENT) steht laut Doku-Beispiel im `response`-Objekt der FunctionResponse.
+- Text mitten in der Sitzung: bei 3.8 `clientContent` (Rollen user/model, in Reihenfolge); `realtimeInput.text` ist schneller, aber ohne feste Reihenfolge; 3.1 Flash nur `realtimeInput.text`.
+
 **Stimmen:** 30 (Zephyr, Puck, Charon, Kore, Fenrir, Leda, Orus, Aoede, Callirrhoe, Autonoe, Enceladus, Iapetus, Umbriel, Algieba, Despina, Erinome, Algenib, Rasalgethi, Laomedeia, Achernar, Alnilam, Schedar, Gacrux, Pulcherrima, Achird, Zubenelgenubi, Vindemiatrix, Sadachbia, Sadaltager, Sulafat), gelten für alle Live-Modelle und sprechen jede Sprache. Standardstimme undokumentiert → `voiceName` immer setzen. Hörprobe: einmal je Stimme erzeugen und zwischenspeichern.
 
 ## 🔗 Bezug zum Bug-Almanach
@@ -215,4 +221,4 @@ Ein „Gemini 3 Flash Live“ gibt es nicht; gemeint ist 3.1 Flash Live. Proacti
 | 9 Embeddings (modell-abhängig) | J23, J24, J25 |
 | 11 Embedding-Modellwahl | `bugs/apis/local-openai-compatible.md` §22–§26 |
 | 12 Marktstand und multimodale Suche | L35, L36, L37, L38, L39 |
-| 13 Live-Sprachdialog | M40, M41, M42, M43, M44, M45 |
+| 13 Live-Sprachdialog | M40, M41, M42, M43, M44, M45, M46 |

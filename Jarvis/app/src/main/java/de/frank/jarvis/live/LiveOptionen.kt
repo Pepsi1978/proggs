@@ -266,13 +266,14 @@ object LiveOptionen {
                 )
             }, gilt = { it.istGemini }),
         Option("g_wer", "Live-Gespräch", "Wer denkt (Gemini)",
-            "Gemini antwortet selbst oder gibt jede Frage an Jarvis weiter.",
-            "gemini", {
+            "Jarvis antwortet auf alles und Gemini ist nur die Stimme, oder Gemini antwortet selbst.",
+            "jarvis", {
                 listOf(
-                    Wahl("gemini", "Gemini denkt selbst", "Gemini antwortet selbst und fragt Jarvis mit allen Werkzeugen nur für deine Daten. Am schnellsten. Empfehlung."),
-                    Wahl("jarvis", "Jarvis direkt (experimentell)", "Gemini ist nur die Stimme: Jede Frage geht an Jarvis, der mit dem Modell aus deinem ChatGPT-Abo denkt (Modell und Denkstufe unten). " +
-                        "Gemini Live kennt keine echte Weitergabe wie GPT-Live; das läuft über die Anweisung und kann gelegentlich danebengehen. Am besten mit 3.8 Live: Extended Thinking ruft Jarvis nur nebenbei auf und kann dabei selbst weiterreden.",
+                    Wahl("jarvis", "Jarvis direkt", "Gemini ist nur die Stimme: Die App gibt jeden deiner Beiträge mit deinen erkannten Worten an Jarvis, auch Smalltalk, " +
+                        "und lässt nur Jarvis' Antworten hörbar werden; eigene Antworten von Gemini bleiben stumm. Jarvis denkt mit dem Modell aus deinem ChatGPT-Abo (Modell und Denkstufe unten). " +
+                        "Bis Jarvis antwortet, ist es still. Am besten mit 3.8 Live. Empfehlung.",
                         "Gemini-Preis wie oben, Jarvis über dein Abo"),
+                    Wahl("gemini", "Gemini denkt selbst", "Gemini antwortet selbst und fragt Jarvis mit allen Werkzeugen nur für deine Daten. Am schnellsten, aber Gemini entscheidet, was es weitergibt."),
                 )
             }, gilt = { it.istGemini }),
         Option("j_modell", "Live-Gespräch", "Denk-Modell von Jarvis (Jarvis direkt)",
@@ -357,7 +358,8 @@ object LiveOptionen {
                 Wahl("4000", "4.000 Tokens", "etwa 2,5 Minuten Sprache"), Wahl("6000", "6.000 Tokens", "etwa 4 Minuten Sprache"),
                 Wahl("8000", "8.000 Tokens", "etwa 5 Minuten Sprache; mehr gibt Gemini Live je Antwort ohnehin nicht aus (8.192)."),
                 Wahl("0", "Ohne Grenze", "Empfehlung bei Denkstufen: Denk-Tokens zählen mit.")) },
-            gilt = { it.istGemini }),
+            // Jarvis direkt: kein Deckel, damit Jarvis' Antworten vollständig gesprochen werden.
+            gilt = { it.istGemini && !it.jarvisDirekt }),
 
         // ---- Nur GPT-Live ----
         Option("denken", "Live-Gespräch", "Wer denkt (GPT-Live)",
@@ -550,8 +552,8 @@ object LiveOptionen {
             mapOf("modell" to "gpt-live-1", "denken" to "openai", "backend" to "gpt-6.1-sol", "backend_effort" to "medium", "tarif" to "priority", "ausfuehrlich" to "low")),
         Profil("realtime", "Realtime 2.1", "Ein Modell macht alles selbst, mit eigener Denkstufe. Kosten wachsen mit der Gesprächslänge.",
             mapOf("modell" to "gpt-realtime-2.1", "rt_effort" to "low", "erkennung" to "semantic_auto", "kuerzen" to "0.8", "mitschrift" to "gpt-transcribe")),
-        Profil("gemini38", "Gemini 3.8 Live", "Google: hört und spricht gleichzeitig, mit kostenlosem Kontingent. Braucht einen Gemini-Schlüssel.",
-            mapOf("modell" to "gemini-3.8-live", "g_werkzeug" to "warten", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
+        Profil("gemini38", "Gemini 3.8 Live", "Google spricht, Jarvis antwortet auf alles (Jarvis direkt), mit kostenlosem Kontingent. Braucht einen Gemini-Schlüssel.",
+            mapOf("modell" to "gemini-3.8-live", "g_wer" to "jarvis", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
         Profil("gemini38x", "Gemini 3.8 Live Extended Thinking", "Google: denkt im Hintergrund gründlicher nach, Stufe Niedrig.",
             mapOf("modell" to "gemini-3.8-live-extended-thinking", "g_denken" to "low", "g_kuerzen" to "16000", "g_schluessel" to "auto")),
         Profil("gemini31", "Gemini 3.1 Flash Live", "Google Flash Live mit minimaler Denkstufe: am schnellsten. Vorschau, endet frühestens am 17.11.2026.",

@@ -35,7 +35,8 @@ import java.util.concurrent.TimeUnit
  *   selbst (Client-Delegation: Auftrag aus der Mitschrift, Antwort per `session.commentary.append`).
  * - **Realtime** (`gpt-realtime-*`, `wss://…/v1/realtime?model=`): ein Modell macht alles; `jarvis_fragen` als Funktion.
  * - **Gemini Live** (`gemini-*`, `BidiGenerateContent`): wie Realtime ein Modell mit `jarvis_fragen` als Funktion; Verbindungen
- *   enden nach etwa 10 Minuten (goAway) und werden mit der Fortsetzungskennung nahtlos erneuert.
+ *   enden nach etwa 10 Minuten (goAway) und werden mit der Fortsetzungskennung nahtlos erneuert. Mit „Jarvis direkt“ gibt die
+ *   [JarvisWeiche] jeden Beitrag selbst an Jarvis und lässt nur dessen Antworten hörbar werden.
  *
  * Die Einstellungen kommen aus [LiveOptionen]. Die Kosten laufen mit ([beiKosten], in USD) und stehen in der Live-Leiste.
  */
@@ -52,8 +53,11 @@ class LiveGespraech(
     private val beiAudioweg: (String) -> Unit,
     private val beiNutzerText: (String) -> Unit,
     private val beiJarvisText: (String) -> Unit,
-    /** Jarvis soll etwas nachschlagen oder erledigen; die Antwort kommt über [ergebnis] mit derselben Kennung zurück. */
-    private val beiWerkzeug: (kennung: String, auftrag: String) -> Unit,
+    /**
+     * Jarvis soll etwas nachschlagen oder erledigen; die Antwort kommt über [ergebnis] mit derselben Kennung zurück.
+     * [hinweis] = Begleitumstände nur für Jarvis' Antwort (Gemini „Jarvis direkt“), nicht für die Befehlserkennung.
+     */
+    private val beiWerkzeug: (kennung: String, auftrag: String, hinweis: String) -> Unit,
     private val beiKosten: (Double) -> Unit,
     /** Genau einmal je Gespräch, sobald die Kosten feststehen: für [LiveKostenBuch]. */
     private val beiAbrechnung: (LiveKostenBuch.Abrechnung) -> Unit,
@@ -70,6 +74,8 @@ class LiveGespraech(
     private val live = st.istLive
     private val gemini = st.istGemini
     private val modell = st.modell
+    /** Gemini „Jarvis direkt“: Die App gibt jeden Beitrag an Jarvis, Gemini spricht nur dessen Antworten (sonst null). */
+    private val weiche: JarvisWeiche? = if (gemini && st.jarvisDirekt) JarvisWeiche((st["g_stille"].toIntOrNull() ?: 800) + WEICHE_RUHE_ZUSATZ_MS) else null
     private var ws: WebSocket? = null
     /** Gemini: Schlüssel der laufenden Verbindung und der bezahlte Ersatz, falls das kostenlose Kontingent ausgeht. */
     @Volatile private var aktuellerSchluessel = schluessel
@@ -369,7 +375,8 @@ class LiveGespraech(
         g.put("speechConfig", sprache)
         LiveOptionen.geminiDenken(st)?.let { g.put("thinkingConfig", it) }
         st["g_temperatur"].toDoubleOrNull()?.let { g.put("temperature", it) }
-        st["g_max"].toIntOrNull()?.takeIf { it > 0 }?.let { g.put("maxOutputTokens", it) }
+        // Jarvis direkt: kein Deckel, sonst bräche Gemini lange Antworten von Jarvis mitten im Satz ab.
+        if (weiche == null) st["g_max"].toIntOrNull()?.takeIf { it > 0 }?.let { g.put("maxOutputTokens", it) }
         // Das bisherige Gespräch steht in der Anweisung: Das funktioniert bei allen Live-Modellen, auch ohne Verlaufs-Freigabe.
         val bisher = if (verlauf.isEmpty()) "" else verlauf.joinToString("\n", "\n# Bisheriges Gespräch (zum Anknüpfen)\n") { (mir, t) -> (if (mir) "Frank: " else "Jarvis: ") + t.take(1200) }
         val werkzeuge = JSONArray().put(JSONObject().put("functionDeclarations", JSONArray().put(JSONObject()
@@ -378,7 +385,8 @@ class LiveGespraech(
             .put("parameters", JSONObject().put("type", "OBJECT")
                 .put("properties", JSONObject().put("auftrag", JSONObject().put("type", "STRING").put("description", "Die vollständige Frage oder der Auftrag")))
                 .put("required", JSONArray().put("auftrag")))
-            .apply { if (LiveOptionen.geminiNebenbei(st)) put("behavior", "NON_BLOCKING") })))
+            // 3.8 Live arbeitet ohne Angabe nebenbei (NON_BLOCKING ist dort der Standard): „Warten“ muss es ausdrücklich bekommen.
+            .apply { if (LiveOptionen.geminiNebenbei(st)) put("behavior", "NON_BLOCKING") else if (modell == "gemini-3.8-live") put("behavior", "BLOCKING") })))
         // Jarvis direkt: Gemini sucht nicht selbst, sonst beantwortet es Wissensfragen an Jarvis vorbei.
         if (st["g_suche"] == "an" && !st.jarvisDirekt) werkzeuge.put(JSONObject().put("googleSearch", JSONObject()))
         val erkennung = JSONObject()
@@ -398,11 +406,12 @@ class LiveGespraech(
             .put("outputAudioTranscription", JSONObject())
             .put("contextWindowCompression", JSONObject().put("slidingWindow", JSONObject()).apply { LiveOptionen.geminiKuerzenAb(st)?.let { put("triggerTokens", it) } })
             .put("sessionResumption", JSONObject().apply { if (fortsetzKennung.isNotEmpty()) put("handle", fortsetzKennung) })
-        if (st["g_mitschrift"] != "aus") s.put("inputAudioTranscription", JSONObject())
+        // Jarvis direkt braucht Franks Mitschrift für die Übergabe; „Mitschrift aus“ blendet sie dann nur im Chat aus.
+        if (st["g_mitschrift"] != "aus" || weiche != null) s.put("inputAudioTranscription", JSONObject())
         // Diagnose ohne Schlüssel: Womit das Gespräch wirklich aufgebaut wird (Modell, Weg, Anweisung, Werkzeug).
         Log.i(LiveRouting.TAG, "Gemini-Setup: $modell über $apiVersion, jarvisDirekt=${st.jarvisDirekt}, nurStimme=${anweisung.startsWith("# Rolle\nDu bist die Stimme")}, " +
             "Anweisung ${anweisung.length} Zeichen, Verlauf ${verlauf.size}, Werkzeuge ${werkzeuge.length()}, nebenbei=${LiveOptionen.geminiNebenbei(st)}, " +
-            "denken=${g.optJSONObject("thinkingConfig")?.optString("thinkingLevel") ?: "-"}, max=${g.optInt("maxOutputTokens", 0)}, kuerzen=${LiveOptionen.geminiKuerzenAb(st) ?: "auto"}, gratis=$gratis")
+            "denken=${g.optJSONObject("thinkingConfig")?.optString("thinkingLevel") ?: "-"}, max=${g.optInt("maxOutputTokens", 0)}, kuerzen=${LiveOptionen.geminiKuerzenAb(st) ?: "auto"}, gratis=$gratis, weiche=${weiche != null}")
         return JSONObject().put("setup", s)
     }
 
@@ -421,6 +430,8 @@ class LiveGespraech(
                 gleicherVersuch = false
                 wechselMeldung?.let { (text, anlass) -> wechselMeldung = null; beiFehler(text); schluesselWechselMelden(text, anlass) }
                 abgeloest?.let { a -> abgeloest = null; Thread({ runCatching { Thread.sleep(1_500); a.close(1000, "Neue Verbindung") } }, "jarvis-gemini-alt").start() }
+                // Neue Verbindung: Offene Werkzeugaufrufe der alten beantwortet die Weiche ab jetzt als Eingabe.
+                if (begruesst) weiche?.verbindungNeu()
                 if (startMs == 0L) startMs = System.currentTimeMillis()
                 tonStarten()
                 if (!begruesst) {
@@ -432,11 +443,16 @@ class LiveGespraech(
             e.has("serverContent") -> {
                 val c = e.optJSONObject("serverContent") ?: return
                 letzteAktivitaet = System.currentTimeMillis()
+                // Vorläufige Mitschrift: nur das Zeichen, dass Frank noch spricht; Inhalt kommt aus der endgültigen.
+                if (!c.optJSONObject("interimInputTranscription")?.optString("text").isNullOrEmpty()) weiche?.nutzerSpricht(System.currentTimeMillis())
                 c.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d ->
                     // Frank spricht neu: Was danach kommt, ist die Antwort darauf und wird nie verworfen.
                     if (!geminiAntwortLaeuft) verwerfenGemini = false
-                    synchronized(nutzerTeile) { nutzerTeile.append(d) }
+                    if (weiche == null || st["g_mitschrift"] != "aus") synchronized(nutzerTeile) { nutzerTeile.append(d) }
+                    weiche?.let { weicheAusfuehren(it.nutzerText(d, System.currentTimeMillis())) }
                 }
+                // Jarvis direkt: Gemini ist nur hörbar, solange es eine Antwort von Jarvis spricht (Stand vor diesem Ereignis).
+                val frei = weiche?.tonFrei ?: true
                 if (c.optBoolean("interrupted")) {
                     // Frank redet dazwischen: Gemini hat die Antwort schon abgebrochen, der gepufferte Rest verstummt.
                     verwerfenGemini = false
@@ -444,19 +460,26 @@ class LiveGespraech(
                     geminiKosten()
                     ausgabeLeeren()
                     jarvisFertig()
-                    status("Ich höre zu")
+                    weiche?.let { weicheAusfuehren(it.unterbrochen(System.currentTimeMillis())) }
+                    status(if (weiche?.arbeitet == true) "Jarvis schaut nach …" else "Ich höre zu")
                 }
                 c.optJSONObject("outputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d ->
-                    nutzerFertig()
-                    if (!verwerfenGemini) synchronized(jarvisTeile) { jarvisTeile.append(d) }
+                    // Mit Weiche gibt sie Franks Mitschrift selbst in den Chat, gesammelt je Beitrag.
+                    if (weiche == null) nutzerFertig()
+                    if (!verwerfenGemini && frei) synchronized(jarvisTeile) { jarvisTeile.append(d) }
                 }
                 val teile = c.optJSONObject("modelTurn")?.optJSONArray("parts")
-                // Telefonat: Jarvis spricht nicht in den Anruf hinein.
-                if (teile != null && !verwerfenGemini && !anrufAktiv) for (i in 0 until teile.length()) {
+                val hatTon = teile != null && (0 until teile.length()).any { i -> teile.optJSONObject(i)?.let { !it.optBoolean("thought") && it.optJSONObject("inlineData") != null } == true }
+                if (weiche != null && (hatTon || c.has("outputTranscription"))) {
+                    weicheAusfuehren(weiche.modellAusgabe(System.currentTimeMillis()))
+                    if (!frei && hatTon) geminiStumm++
+                }
+                // Telefonat: Jarvis spricht nicht in den Anruf hinein. Jarvis direkt: Geminis eigene Antworten bleiben stumm.
+                if (teile != null && !verwerfenGemini && !anrufAktiv && frei) for (i in 0 until teile.length()) {
                     val p = teile.optJSONObject(i) ?: continue
                     if (p.optBoolean("thought")) continue
                     val daten = p.optJSONObject("inlineData")?.optString("data")?.takeIf { it.isNotEmpty() } ?: continue
-                    nutzerFertig()
+                    if (weiche == null) nutzerFertig()
                     geminiAntwortLaeuft = true
                     letzteHoerbarEmpfangMs = System.currentTimeMillis()
                     if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
@@ -465,10 +488,15 @@ class LiveGespraech(
                 if (c.optBoolean("turnComplete")) {
                     verwerfenGemini = false
                     geminiAntwortLaeuft = false
-                    nutzerFertig(); jarvisFertig()
+                    if (weiche == null) nutzerFertig()
+                    jarvisFertig()
                     geminiKosten()
+                    weiche?.let { w ->
+                        if (geminiStumm > 0) { Log.i(LiveRouting.TAG, "Weiche: $geminiStumm eigene Tonstücke von Gemini stumm verworfen"); geminiStumm = 0 }
+                        weicheAusfuehren(w.zugEnde(System.currentTimeMillis()))
+                    }
                     // Der Ton läuft noch aus dem Puffer: „Jarvis spricht“ setzt der Mikrofon-Faden zurück, wenn er verklungen ist.
-                    if (laeuft && kennungArt.isEmpty() && !sprichtGerade) status("Ich höre zu")
+                    if (laeuft && kennungArt.isEmpty() && weiche?.arbeitet != true && !sprichtGerade) status("Ich höre zu")
                 }
             }
             e.has("toolCall") -> {
@@ -477,12 +505,15 @@ class LiveGespraech(
                     val f = aufrufe.optJSONObject(i) ?: continue
                     if (f.optString("name") != "jarvis_fragen") continue
                     val id = f.optString("id")
-                    kennungArt[id] = "gemini"
                     aufrufVerbindung[id] = w
+                    val auftrag = f.optJSONObject("args")?.optString("auftrag").orEmpty()
+                    // Jarvis direkt: Die Weiche entscheidet; Geminis Fassung zählt nur, wenn Franks Mitschrift ausbleibt.
+                    if (weiche != null) { weicheAusfuehren(weiche.werkzeugAufruf(id, auftrag, System.currentTimeMillis())); continue }
+                    kennungArt[id] = "gemini"
                     nutzerFertig(); jarvisFertig()
                     bestaetigungVerschlucken = false
                     status("Jarvis schaut nach …")
-                    beiWerkzeug(id, f.optJSONObject("args")?.optString("auftrag").orEmpty())
+                    beiWerkzeug(id, auftrag, "")
                 }
             }
             e.has("toolCallCancellation") -> {
@@ -490,6 +521,8 @@ class LiveGespraech(
                 Log.w(LiveRouting.TAG, "Gemini bricht Werkzeugaufruf ab: $ids")
                 // Die Kennung bleibt als „verworfen“ stehen: Ein spätes Ergebnis darf nie als anderes Protokoll hinausgehen.
                 for (i in 0 until ids.length()) { kennungArt[ids.optString(i)] = "gemini_abgebrochen"; aufrufVerbindung.remove(ids.optString(i)) }
+                // Die Weiche gibt Jarvis' Antwort dann als Eingabe; Jarvis' Arbeit läuft weiter.
+                weiche?.werkzeugAbgebrochen((0 until ids.length()).map { ids.optString(it) })
             }
             e.has("sessionResumptionUpdate") -> {
                 val u = e.optJSONObject("sessionResumptionUpdate") ?: return
@@ -511,7 +544,10 @@ class LiveGespraech(
             override fun onReceive(c: Context, i: android.content.Intent) {
                 val text = i.getStringExtra("text")?.takeIf { it.isNotBlank() } ?: return
                 Log.i(LiveRouting.TAG, "Prüfsatz: $text")
-                if (bereit) ws?.send(JSONObject().put("realtimeInput", JSONObject().put("text", text)).toString())
+                if (!bereit) return
+                // Jarvis direkt: Der Prüfsatz zählt wie Franks Mitschrift, sonst hielte die Weiche ihn für Geminis eigene Rede.
+                weiche?.let { w -> synchronized(nutzerTeile) { nutzerTeile.append(text) }; weicheAusfuehren(w.nutzerText(text, System.currentTimeMillis())) }
+                ws?.send(JSONObject().put("realtimeInput", JSONObject().put("text", text)).toString())
             }
         }
         testEingabe = r
@@ -547,6 +583,48 @@ class LiveGespraech(
         if (gratis) { Log.i(LiveRouting.TAG, "Gemini-Antwort über das kostenlose Kontingent, Listenpreis wäre " + LiveOptionen.usdText(k)); return }
         tokenKosten += k
         kostenMelden()
+    }
+
+    /** Gemini-Tonstücke, die die Weiche seit dem letzten Zugende stumm verworfen hat (nur fürs Protokoll). */
+    @Volatile private var geminiStumm = 0
+
+    /** Führt die Aktionen der [weiche] aus, außerhalb ihrer Sperre; Senden und Rückrufe blockieren nicht. */
+    private fun weicheAusfuehren(aktionen: List<JarvisWeiche.Aktion>) {
+        for (a in aktionen) when (a) {
+            JarvisWeiche.Aktion.NutzerFertig -> nutzerFertig()
+            is JarvisWeiche.Aktion.AnJarvis -> {
+                jarvisFertig()
+                bestaetigungVerschlucken = false
+                status("Jarvis schaut nach …")
+                Log.i(LiveRouting.TAG, "Weiche: Beitrag an Jarvis (${a.kennung}): „${a.auftrag.take(120)}“")
+                beiWerkzeug(a.kennung, a.auftrag, a.hinweis)
+            }
+            is JarvisWeiche.Aktion.Werkzeugantwort -> {
+                val w = ws ?: continue
+                a.ids.forEachIndexed { i, id ->
+                    val r = JSONObject().put("result", if (i == 0) a.text else "Die Antwort von Jarvis steht im ersten Ergebnis.")
+                    // Nebenbei-Modelle (Extended Thinking) sollen Jarvis' Antwort sofort sprechen; laut Google steht scheduling in response.
+                    if (LiveOptionen.geminiNebenbei(st)) r.put("scheduling", "INTERRUPT")
+                    val ziel = aufrufVerbindung.remove(id)?.takeIf { it === w || it === abgeloest } ?: w
+                    ziel.send(JSONObject().put("toolResponse", JSONObject().put("functionResponses", JSONArray().put(
+                        JSONObject().put("id", id).put("name", "jarvis_fragen").put("response", r)))).toString())
+                }
+            }
+            is JarvisWeiche.Aktion.Einspielen -> {
+                val w = ws ?: continue
+                // 3.8: clientContent ist dort während der ganzen Sitzung erlaubt und kommt in Reihenfolge an; 3.1 nur realtimeInput.
+                w.send(if (modell.startsWith("gemini-3.8")) JSONObject().put("clientContent", JSONObject().put("turns", JSONArray().put(
+                        JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", a.text))))).put("turnComplete", true)).toString()
+                    else JSONObject().put("realtimeInput", JSONObject().put("text", a.text)).toString())
+            }
+            is JarvisWeiche.Aktion.Anzeigen -> {
+                jarvisFertig()
+                beiJarvisText(a.text)
+                if (laeuft && weiche?.arbeitet != true && !sprichtGerade) status("Ich höre zu")
+            }
+            is JarvisWeiche.Aktion.Fehler -> { Log.w(LiveRouting.TAG, "Weiche: ${a.text}"); beiFehler(a.text) }
+            is JarvisWeiche.Aktion.Protokoll -> Log.i(LiveRouting.TAG, a.text)
+        }
     }
 
     private fun geminiAudio(pcm: ByteArray): String = JSONObject().put("realtimeInput", JSONObject().put("audio", JSONObject()
@@ -677,7 +755,7 @@ class LiveGespraech(
                     nutzerFertig()
                     val auftrag = abholen(seitAuftrag).trim()
                     kennungArt[id] = "auftrag"
-                    beiWerkzeug(id, auftrag)
+                    beiWerkzeug(id, auftrag, "")
                 }
             }
             "response.event" -> {
@@ -692,7 +770,7 @@ class LiveGespraech(
                         jarvisFertig()
                         bestaetigungVerschlucken = false
                         status("Jarvis schaut nach …")
-                        beiWerkzeug(callId, auftrag)
+                        beiWerkzeug(callId, auftrag, "")
                     }
                     "response.completed", "response.done" -> {
                         val resp = inner.optJSONObject("response") ?: return
@@ -883,7 +961,7 @@ class LiveGespraech(
                 kennungArt[callId] = "realtime"
                 bestaetigungVerschlucken = false
                 status("Jarvis schaut nach …")
-                beiWerkzeug(callId, auftrag)
+                beiWerkzeug(callId, auftrag, "")
             }
             "error" -> {
                 val f = e.optJSONObject("error")
@@ -919,6 +997,7 @@ class LiveGespraech(
     fun ergebnis(kennung: String, text: String, navigation: Boolean = false) {
         val w = ws ?: return
         if (navigation) bestaetigungVerschlucken = true
+        weiche?.let { weicheAusfuehren(it.jarvisAntwort(kennung, text, System.currentTimeMillis())); return }
         when (kennungArt.remove(kennung)) {
             "gemini_abgebrochen" -> Log.i(LiveRouting.TAG, "Gemini hat den Werkzeugaufruf abgebrochen: Ergebnis verworfen")
             "gemini" -> {
@@ -1167,7 +1246,12 @@ class LiveGespraech(
                 // Telefonat: Der Dienst bekommt Stille, damit er das Gespräch am Telefon nicht mithört.
                 val stueck = if ((stumm && !live) || echoZu || anrufAktiv) ByteArray(n) else puffer.copyOf(n)
                 // Gemini: nur an eine fertig aufgebaute Verbindung, beim Wechsel (goAway, Schlüssel) kurz nichts.
-                if (gemini) { if (bereit) ws?.send(geminiAudio(stueck)); continue }
+                if (gemini) {
+                    if (bereit) ws?.send(geminiAudio(stueck))
+                    // Weiche: alle 100 ms Ruhezeit und Wächter prüfen (Beitrag ohne Reaktion von Gemini, Ausfall von Jarvis).
+                    weiche?.let { weicheAusfuehren(it.takt(jetzt)) }
+                    continue
+                }
                 ws?.send(JSONObject().put("type", anhaengen).put("audio", Base64.encodeToString(stueck, Base64.NO_WRAP)).toString())
             }
         }, "jarvis-live-mikro").start()
@@ -1323,6 +1407,7 @@ class LiveGespraech(
             // vollständig da (nur noch im Puffer), genügt das Leeren; sonst verschluckte das Verwerfen die nächste Antwort.
             if (geminiAntwortLaeuft) verwerfenGemini = true
             synchronized(jarvisTeile) { jarvisTeile.setLength(0) }
+            weiche?.angetippt()
         } else if (live) {
             verwerfenLive = true
             letzteVerworfenMs = System.currentTimeMillis()
@@ -1524,6 +1609,8 @@ class LiveGespraech(
         private const val ECHO_SPERRE_MAX_MS = 3_000L
         /** GPT-Live: so lange ohne hörbaren Ton (geschrieben und empfangen), dann gilt Jarvis als fertig. */
         private const val STATUS_MAX_MS = 4_000L
+        /** Weiche: Ruhezeit über Geminis Pausenerkennung hinaus, nach der ein Beitrag auch ohne Reaktion von Gemini an Jarvis geht. */
+        private const val WEICHE_RUHE_ZUSATZ_MS = 1_200L
         /** Nach dem Antippen wird die alte GPT-Live-Antwort höchstens so lange verworfen. */
         private const val VERWERFEN_MAX_MS = 10_000L
         /** Effektivwert (PCM16), ab dem ein Ausgabestück als hörbarer Ton zählt; Sprache liegt weit darüber. */

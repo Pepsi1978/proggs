@@ -1,0 +1,294 @@
+package de.frank.jarvis.live
+
+/**
+ * Gemini Live mit „Jarvis direkt“: Die App, nicht das Sprachmodell, sorgt dafür, dass jeder abgeschlossene Beitrag von
+ * Frank an Jarvis geht und Gemini nur Jarvis' Antworten spricht.
+ *
+ * Warum nicht per Anweisung allein: `gemini-3.8-live` hat Proactive Audio fest an (es darf Beiträge, die es für unwichtig
+ * hält, unbeantwortet lassen), und die Live-API kennt keinen erzwungenen Werkzeugaufruf (kein `toolConfig` im Setup).
+ *
+ * - Inhalt: Franks erkannte Worte aus der endgültigen Eingabe-Mitschrift (`inputTranscription`), der Reihe nach gesammelt,
+ *   nicht Geminis Umformulierung im Werkzeugaufruf. Vorläufige Mitschrift zählt nur als „Frank spricht noch“.
+ * - Abschluss eines Beitrags: Werkzeugaufruf, eigene Ausgabe oder Zugende von Gemini, oder [ruheMs] ohne neue Mitschrift
+ *   (Proactive Audio schweigt). Danach noch [NACHLAUF_MS], weil die Mitschrift dem Werkzeugaufruf hinterherlaufen kann.
+ * - Tonsperre ([tonFrei]): Gemini-Ton und -Mitschrift zählen nur, solange Gemini eine Antwort von Jarvis spricht (und bei der
+ *   Begrüßung). Eigene Antworten von Gemini, auch ein „Moment“, bleiben stumm.
+ * - Immer nur eine Anfrage an Jarvis. Spricht Frank weiter, bevor die Antwort gesprochen ist, wird sie nicht mehr vorgelesen,
+ *   sondern mit dem neuen Beitrag an Jarvis gegeben; so geht keine Bestätigung verloren und nichts Überholtes wird gesagt.
+ * - Zurück an Gemini als Werkzeug-Ergebnis, sonst als markierte Eingabe ([MARKE]). Ruft Gemini daraufhin noch einmal
+ *   jarvis_fragen auf, antwortet die Weiche aus dem Speicher, ohne Jarvis erneut zu fragen (keine doppelten Aktionen).
+ *
+ * Reine Logik ohne Android, damit sie ohne Gerät prüfbar ist. Alle Aufrufe laufen unter der Sperre dieses Objekts; die
+ * zurückgegebenen [Aktion]en führt [LiveGespraech] danach aus.
+ */
+class JarvisWeiche(
+    /** So lange ohne neue Mitschrift, dann gilt Franks Beitrag als abgeschlossen, auch wenn Gemini nicht reagiert. */
+    private val ruheMs: Long,
+) {
+    sealed interface Aktion {
+        /** Franks gesammelte Mitschrift jetzt in den Chat, vor der Übergabe. */
+        object NutzerFertig : Aktion
+        /** Übergabe an Jarvis: [auftrag] = Franks Worte, [hinweis] = Begleitumstände für Jarvis (nicht für Befehlserkennung). */
+        data class AnJarvis(val kennung: String, val auftrag: String, val hinweis: String) : Aktion
+        /** Werkzeug-Ergebnis an Gemini: der erste offene Aufruf bekommt [text], weitere nur einen Verweis darauf. */
+        data class Werkzeugantwort(val ids: List<String>, val text: String) : Aktion
+        /** Jarvis' Antwort als neue, markierte Eingabe an Gemini, weil kein Werkzeugaufruf mehr offen ist. */
+        data class Einspielen(val text: String) : Aktion
+        /** Nur in den Chat: Gemini hat Jarvis' Antwort nicht vorgelesen. */
+        data class Anzeigen(val text: String) : Aktion
+        data class Fehler(val text: String) : Aktion
+        data class Protokoll(val text: String) : Aktion
+    }
+
+    private enum class Tor { BEGRUESSUNG, ZU, WARTET, OFFEN }
+
+    /** BEGRUESSUNG und OFFEN: Gemini darf hörbar sprechen. WARTET: eine abgelöste eigene Antwort von Gemini läuft noch aus. */
+    @Volatile private var tor = Tor.BEGRUESSUNG
+    val tonFrei: Boolean get() = tor == Tor.BEGRUESSUNG || tor == Tor.OFFEN
+
+    private class Uebergabe(val kennung: String, val seitMs: Long)
+    /** Ein Werkzeugaufruf ohne Mitschrift: wartet kurz auf sie, sonst gilt Geminis Fassung. */
+    private class OhneMitschrift(val auftrag: String, val seitMs: Long, val begruessung: Boolean)
+
+    private val beitrag = StringBuilder()
+    private var letzteMitschriftMs = 0L
+    /** Frank spricht laut vorläufiger Mitschrift; verlängert die Ruhezeit, liefert aber keinen Inhalt. */
+    private var letzteSpracheMs = 0L
+    private var abschlussFaellig = false
+    /** Geminis Fassung, falls Franks Mitschrift ausbleibt (nur dann verwendet). */
+    private var ersatzAuftrag = ""
+    private var ohneMitschrift: OhneMitschrift? = null
+    /** Gemini erzeugt gerade (Ausgabe seit dem letzten Zugende). */
+    private var erzeugt = false
+    private val offeneAufrufe = mutableListOf<String>()
+    @Volatile private var laufend: Uebergabe? = null
+    /** Abgeschlossene Beiträge, die warten, bis Jarvis' laufende Antwort da ist (zusammengefasst). */
+    private var wartend: String? = null
+    /** Antworten von Jarvis, die Frank nicht gehört hat, weil er weitersprach. */
+    private var ungehoert: String? = null
+    private var unterbrochen = false
+    private var letzteAntwort = ""
+    private var echos = 0
+    /** Seit der letzten Antwort an Gemini kam Mitschrift von Frank. */
+    private var nutzerSeitAbgabe = false
+    private var abgabeMs = 0L
+    private var wartetSeitMs = 0L
+    private var tonSeitOffen = false
+    /** Übergaben nacheinander nur aus Geminis Fassung (keine Mitschrift): begrenzt, damit Gemini keine Schleife anstößt. */
+    private var ohneMitschriftFolge = 0
+    private var nr = 0
+
+    /** Jarvis arbeitet oder ein Beitrag wartet auf ihn: „Jarvis schaut nach …“ bleibt stehen. */
+    val arbeitet: Boolean get() = laufend != null || wartend != null
+
+    /** Ein Stück endgültiger Eingabe-Mitschrift. */
+    @Synchronized fun nutzerText(text: String, jetzt: Long): List<Aktion> {
+        if (text.isBlank()) return pruefen(jetzt)
+        beitrag.append(text)
+        letzteMitschriftMs = jetzt
+        letzteSpracheMs = jetzt
+        nutzerSeitAbgabe = true
+        ohneMitschriftFolge = 0
+        if (tor == Tor.BEGRUESSUNG) tor = Tor.ZU
+        return pruefen(jetzt)
+    }
+
+    /** Vorläufige Mitschrift: Frank spricht noch. Kein Inhalt, kein Abschluss. */
+    @Synchronized fun nutzerSpricht(jetzt: Long) { letzteSpracheMs = jetzt }
+
+    /** Gemini gibt Ton oder Ausgabe-Mitschrift aus. */
+    @Synchronized fun modellAusgabe(jetzt: Long): List<Aktion> {
+        erzeugt = true
+        val aus = mutableListOf<Aktion>()
+        if (tor == Tor.OFFEN && !tonSeitOffen) {
+            tonSeitOffen = true
+            aus += Aktion.Protokoll("Weiche: Gemini spricht Jarvis' Antwort, ${jetzt - abgabeMs} ms nach der Abgabe")
+        }
+        // Gemini antwortet selbst: Franks Zug ist zu Ende, sein Beitrag geht jetzt an Jarvis.
+        if (tor == Tor.ZU && beitrag.isNotEmpty()) abschlussFaellig = true
+        return aus + pruefen(jetzt)
+    }
+
+    @Synchronized fun werkzeugAufruf(id: String, auftrag: String, jetzt: Long): List<Aktion> {
+        // Werkzeuge warten (BLOCKING): Gemini erzeugt nichts, bis das Ergebnis da ist.
+        erzeugt = false
+        val aus = mutableListOf<Aktion>()
+        when {
+            beitrag.isNotEmpty() -> { offeneAufrufe += id; abschlussFaellig = true; ersatzAuftrag = auftrag }
+            // Derselbe Zug, den die Weiche schon übergeben hat (etwa nach der Ruhezeit): Antwort kommt über diesen Aufruf.
+            laufend != null || wartend != null -> offeneAufrufe += id
+            // Gemini gibt die eben eingespielte Antwort weiter: aus dem Speicher beantworten, Jarvis nicht noch einmal fragen.
+            (tor == Tor.OFFEN || tor == Tor.WARTET) && !nutzerSeitAbgabe && letzteAntwort.isNotEmpty() -> {
+                echos++
+                if (echos <= ECHO_MAX) {
+                    aus += Aktion.Protokoll("Weiche: Gemini fragt Jarvis erneut ohne neuen Beitrag ($echos), Antwort aus dem Speicher")
+                    aus += Aktion.Werkzeugantwort(listOf(id), letzteAntwort)
+                    tor = Tor.OFFEN
+                } else {
+                    aus += Aktion.Werkzeugantwort(listOf(id), "Das ist bereits Jarvis' Antwort. Sag jetzt nichts mehr.")
+                    aus += Aktion.Anzeigen(letzteAntwort)
+                    aus += Aktion.Fehler("Gemini hat Jarvis' Antwort nicht vorgelesen; sie steht im Chat.")
+                    tor = Tor.ZU
+                }
+            }
+            else -> {
+                // Die Mitschrift läuft dem Aufruf oft hinterher: kurz auf sie warten.
+                offeneAufrufe += id
+                ohneMitschrift = OhneMitschrift(auftrag, jetzt, tor == Tor.BEGRUESSUNG)
+            }
+        }
+        return aus + pruefen(jetzt)
+    }
+
+    @Synchronized fun werkzeugAbgebrochen(ids: Collection<String>) { offeneAufrufe.removeAll(ids.toSet()) }
+
+    /** Neue Verbindung (goAway, Schlüsselwechsel): Aufrufe der alten Verbindung kann niemand mehr beantworten. */
+    @Synchronized fun verbindungNeu() { offeneAufrufe.clear(); ohneMitschrift = null }
+
+    @Synchronized fun zugEnde(jetzt: Long): List<Aktion> {
+        erzeugt = false
+        val aus = mutableListOf<Aktion>()
+        when (tor) {
+            Tor.BEGRUESSUNG -> tor = Tor.ZU
+            // Die abgelöste eigene Antwort von Gemini ist zu Ende: Ab jetzt kommt Jarvis' Antwort.
+            Tor.WARTET -> { tor = Tor.OFFEN; abgabeMs = jetzt }
+            // Ohne Ton seit dem Öffnen ist es das Zugende von etwas Älterem; der Wächter in [pruefen] fängt Schweigen ab.
+            Tor.OFFEN -> if (tonSeitOffen) { tor = Tor.ZU; aus += Aktion.Protokoll("Weiche: Jarvis' Antwort fertig gesprochen") }
+            Tor.ZU -> if (beitrag.isNotEmpty()) abschlussFaellig = true
+        }
+        return aus + pruefen(jetzt)
+    }
+
+    /** Gemini meldet `interrupted`: Frank redet dazwischen oder die eingespielte Antwort hat Geminis eigene abgelöst. */
+    @Synchronized fun unterbrochen(jetzt: Long): List<Aktion> {
+        erzeugt = false
+        when (tor) {
+            Tor.BEGRUESSUNG -> tor = Tor.ZU
+            Tor.WARTET -> { tor = Tor.OFFEN; abgabeMs = jetzt }
+            Tor.OFFEN -> if (tonSeitOffen) { tor = Tor.ZU; unterbrochen = true }
+            Tor.ZU -> {}
+        }
+        return pruefen(jetzt)
+    }
+
+    /** Frank tippt die Blase an, während Gemini Jarvis' Antwort spricht. */
+    @Synchronized fun angetippt() { if (tor == Tor.OFFEN && tonSeitOffen) unterbrochen = true }
+
+    @Synchronized fun jarvisAntwort(kennung: String, text: String, jetzt: Long): List<Aktion> {
+        val l = laufend
+        if (l == null || l.kennung != kennung) return listOf(Aktion.Protokoll("Weiche: verspätete Antwort zu $kennung verworfen"))
+        laufend = null
+        val antwort = text.trim().ifEmpty { "Jarvis hat keine Antwort geliefert." }
+        val aus = mutableListOf<Aktion>(Aktion.Protokoll("Weiche: Antwort von Jarvis nach ${jetzt - l.seitMs} ms, ${antwort.length} Zeichen"))
+        if (wartend != null || beitrag.isNotEmpty()) {
+            // Frank hat inzwischen weitergesprochen: nicht vorlesen, sondern mit seinem neuen Beitrag an Jarvis geben.
+            ungehoert = ungehoert?.let { "$it\n$antwort" } ?: antwort
+            aus += Aktion.Protokoll("Weiche: Frank sprach weiter, Antwort geht mit dem nächsten Beitrag an Jarvis")
+        } else {
+            aus += abgeben(antwort, jetzt)
+        }
+        return aus + pruefen(jetzt)
+    }
+
+    /** Regelmäßig (alle 100 ms) und nach jedem Ereignis: Ruhezeit, Mitschrift-Warten und Wächter. */
+    @Synchronized fun takt(jetzt: Long): List<Aktion> = pruefen(jetzt)
+
+    private fun pruefen(jetzt: Long): List<Aktion> {
+        val aus = mutableListOf<Aktion>()
+        if (tor == Tor.WARTET && jetzt - wartetSeitMs >= WARTEN_MAX_MS) { tor = Tor.OFFEN; abgabeMs = jetzt }
+        if (tor == Tor.OFFEN && !tonSeitOffen && abgabeMs > 0 && letzteAntwort.isNotEmpty() && jetzt - abgabeMs >= STUMM_MAX_MS) {
+            aus += Aktion.Anzeigen(letzteAntwort)
+            aus += Aktion.Fehler("Gemini hat Jarvis' Antwort nicht vorgelesen; sie steht im Chat.")
+            tor = Tor.ZU
+        }
+        laufend?.let { l ->
+            if (jetzt - l.seitMs >= JARVIS_MAX_MS) aus += jarvisAntwort(l.kennung,
+                "Jarvis hat nicht rechtzeitig geantwortet. Ich kann dazu gerade nichts sagen; frag bitte gleich noch einmal.", jetzt)
+        }
+        ohneMitschrift?.let { o ->
+            if (beitrag.isNotEmpty()) { ohneMitschrift = null; abschlussFaellig = true }
+            else if (jetzt - o.seitMs >= MITSCHRIFT_WARTEN_MS) {
+                ohneMitschrift = null
+                if (o.begruessung || o.auftrag.isBlank() || ohneMitschriftFolge >= OHNE_MITSCHRIFT_MAX) {
+                    if (ohneMitschriftFolge >= OHNE_MITSCHRIFT_MAX && !o.begruessung)
+                        aus += Aktion.Fehler("Gemini liefert keine Mitschrift deiner Worte; bitte das Live-Gespräch neu starten.")
+                    aus += Aktion.Werkzeugantwort(offeneAufrufe.toList(), "Frank hat noch nichts gesagt. Sag nichts weiter.")
+                    offeneAufrufe.clear()
+                } else {
+                    ohneMitschriftFolge++
+                    // Keine Mitschrift von Frank: bestmöglich mit Geminis Fassung, deutlich gekennzeichnet.
+                    beitrag.append(o.auftrag)
+                    ersatzAuftrag = MITSCHRIFT_FEHLT
+                    abschlussFaellig = true
+                    letzteMitschriftMs = 0L
+                }
+            }
+        }
+        val ruhig = jetzt - maxOf(letzteMitschriftMs, letzteSpracheMs)
+        if (beitrag.isNotEmpty() && (abschlussFaellig || ruhig >= ruheMs) && jetzt - letzteMitschriftMs >= NACHLAUF_MS) {
+            val text = beitrag.toString().trim()
+            val ersatz = ersatzAuftrag
+            beitrag.setLength(0)
+            abschlussFaellig = false
+            ersatzAuftrag = ""
+            aus += Aktion.NutzerFertig
+            aus += Aktion.Protokoll("Weiche: Beitrag abgeschlossen (${text.length} Zeichen, ${jetzt - letzteMitschriftMs} ms nach dem letzten Wort)")
+            val worte = if (ersatz == MITSCHRIFT_FEHLT) "$MITSCHRIFT_FEHLT$text" else text
+            wartend = wartend?.let { "$it\n$worte" } ?: worte
+        }
+        val w = wartend
+        if (laufend == null && w != null) {
+            wartend = null
+            aus += uebergeben(w, jetzt)
+        }
+        return aus
+    }
+
+    private fun uebergeben(worte: String, jetzt: Long): Aktion {
+        val kennung = "weiche-" + (++nr)
+        val hinweis = buildString {
+            append("(Live-Gespräch: Franks Worte aus der automatischen Spracherkennung, Hörfehler möglich. Deine Antwort spricht Gemini vor.)")
+            if (unterbrochen) append("\n(Frank hat deine vorige gesprochene Antwort unterbrochen.)")
+            ungehoert?.let { append("\n(Deine vorige Antwort hat Frank nicht gehört, weil er weitersprach: „$it“. Beziehe sie ein, soweit sie noch passt, vor allem Bestätigungen erledigter Aktionen.)") }
+        }
+        unterbrochen = false
+        ungehoert = null
+        laufend = Uebergabe(kennung, jetzt)
+        return Aktion.AnJarvis(kennung, worte, hinweis)
+    }
+
+    private fun abgeben(antwort: String, jetzt: Long): List<Aktion> {
+        letzteAntwort = antwort
+        echos = 0
+        nutzerSeitAbgabe = false
+        tonSeitOffen = false
+        abgabeMs = jetzt
+        if (offeneAufrufe.isNotEmpty()) {
+            val ids = offeneAufrufe.toList()
+            offeneAufrufe.clear()
+            tor = Tor.OFFEN
+            return listOf(Aktion.Werkzeugantwort(ids, antwort))
+        }
+        // Läuft noch eine (stumme) eigene Antwort von Gemini, bricht die Eingabe sie ab; erst danach wird der Ton frei.
+        if (erzeugt) { tor = Tor.WARTET; wartetSeitMs = jetzt } else tor = Tor.OFFEN
+        return listOf(Aktion.Einspielen(MARKE + antwort))
+    }
+
+    companion object {
+        /** Kennzeichnet eine eingespielte Antwort von Jarvis; die Anweisung sagt Gemini, was damit zu tun ist. */
+        const val MARKE = "[JARVIS-ANTWORT] "
+        const val MITSCHRIFT_FEHLT = "(Keine Mitschrift von Franks Worten; sinngemäß vom Sprachmodell:) "
+        /** Mitschrift kommt nach dem Werkzeugaufruf oder nach Geminis erster Ausgabe noch so lange nach. */
+        const val NACHLAUF_MS = 350L
+        /** So lange wartet ein Werkzeugaufruf ohne Mitschrift auf sie. */
+        const val MITSCHRIFT_WARTEN_MS = 1_500L
+        /** Höchstens so lange läuft eine abgelöste eigene Antwort von Gemini aus, dann wird der Ton frei. */
+        const val WARTEN_MAX_MS = 1_500L
+        /** Kommt so lange nach der Abgabe kein Ton, hat Gemini Jarvis' Antwort nicht gesprochen. */
+        const val STUMM_MAX_MS = 10_000L
+        /** Über dem Zeitlimit des Agenten (60 bzw. 120 s): Danach meldet die Weiche den Ausfall selbst. */
+        const val JARVIS_MAX_MS = 150_000L
+        const val ECHO_MAX = 2
+        const val OHNE_MITSCHRIFT_MAX = 2
+    }
+}
