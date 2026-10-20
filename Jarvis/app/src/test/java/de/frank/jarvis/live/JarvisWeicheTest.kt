@@ -131,6 +131,22 @@ class JarvisWeicheTest {
         assertEquals(JarvisWeiche.MARKE + "Morgen in Hamburg 15 Grad.", e.single().text)
     }
 
+    @Test fun weitersprechenVorDemErstenTonHaeltAbgegebeneAntwortZurueck() {
+        begruesst()
+        mit(w.nutzerText("Wie wird das Wetter?", 1_000))
+        mit(w.werkzeugAufruf("c1", "Wetter", 1_100))
+        takt(1_100, 1_400)
+        mit(w.jarvisAntwort(anJarvis()[0].kennung, "Morgen Regen.", 3_000))
+        assertTrue(w.tonFrei)
+        mit(w.nutzerText("Ach, und übermorgen?", 3_200))
+        assertFalse("überholte Antwort wird nicht mehr hörbar", w.tonFrei)
+        mit(w.modellAusgabe(3_300))
+        assertFalse(w.tonFrei)
+        takt(3_300, 5_600)
+        assertEquals("Ach, und übermorgen?", anJarvis()[1].auftrag)
+        assertTrue(anJarvis()[1].hinweis.contains("Morgen Regen."))
+    }
+
     @Test fun unterbrechenSchliesstTonUndWirdJarvisGesagt() {
         begruesst()
         mit(w.nutzerText("Erzähl mir von meinem Schlaf.", 1_000))

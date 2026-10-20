@@ -90,6 +90,11 @@ class JarvisWeiche(
         nutzerSeitAbgabe = true
         ohneMitschriftFolge = 0
         if (tor == Tor.BEGRUESSUNG) tor = Tor.ZU
+        // Frank spricht weiter, bevor Jarvis' Antwort hörbar ist: Sie ist überholt, bleibt stumm und geht mit dem neuen Beitrag an Jarvis.
+        if ((tor == Tor.OFFEN || tor == Tor.WARTET) && !tonSeitOffen) {
+            tor = Tor.ZU
+            ungehoert = ungehoert?.let { "$it\n$letzteAntwort" } ?: letzteAntwort
+        }
         return pruefen(jetzt)
     }
 
