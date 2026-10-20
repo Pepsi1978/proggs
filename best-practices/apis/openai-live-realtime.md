@@ -337,8 +337,9 @@ Alle Werte in `Jarvis/app/src/main/java/de/frank/jarvis/live/LiveGespraech.kt` (
 | `KAPPEN_PAUSE_MS` / `KAPPEN_UEBER_MS` | 600 / 30 | Überschuss-Stille erst in längeren Pausen kappen | [Code] |
 | `STILLE_SPITZE` | 200 (etwa −44 dBFS) | „ganz still" = darf gekappt werden, Polster darf dahinter | [Code] |
 | `HOERBAR_EFFEKTIV` | 120 (Effektivwert PCM16) | hörbarer Ton vs. Stille | [Code] |
-| `ECHO_NACHLAUF_MS` | 400 | Mikrofon bleibt nach dem Kopf noch zu (Puffer, Bluetooth-Strecke) | [Code] |
-| `ECHO_SPERRE_MAX_MS` | 3000 | spätestens dann Mikrofon offen | [Code] |
+| `EchoSperre.NACHLAUF_MS` (bis 1.8.193 `ECHO_NACHLAUF_MS`) | 400 | Mikrofon bleibt nach dem Kopf noch zu (Puffer, Hall) | [Code] |
+| Bluetooth (ab 1.8.194, `live/EchoSperre.kt`) | + Ausgabelatenz (`getTimestamp`, mind. `BLUETOOTH_MIN_LATENZ_MS` 1000) + `BLOCK_MS` 100 | Kopf ≠ Lautsprecher: Funkstrecke und Autoradio-Puffer; Mikrofonblock ist bis 100 ms älter als die Entscheidung | [abgeleitet aus Phantomlänge, nicht gemessen], siehe `bugs/bug-cases/2026-10-20-jarvis-gemini-live-phantom-mitschrift.md` |
+| `EchoSperre.SPERRE_MAX_MS` | 3000 (Bluetooth + Latenz) | spätestens dann Mikrofon offen | [Code] |
 | `STATUS_MAX_MS` | 4000 | spätestens dann „Ich höre zu" | [Code] |
 | `VERWERFEN_MAX_MS` | 10000 | Rest einer abgebrochenen Antwort höchstens so lange verwerfen | [Code] |
 | OkHttp | `readTimeout(0)`, `pingInterval(20 s)` | Dauerverbindung | [Code] |
@@ -377,6 +378,10 @@ Bauregeln, die sich daraus ergeben:
   Routing-Meldungen. Bedeutung unklar, keine hörbare Wirkung bekannt.
 - **[offen]** Eine Empfangslücke von über 300 ms mitten in der Rede reicht weiterhin für kurze Füll-Stille (60 ms).
   Ein größeres Polster würde jede Antwort weiter verzögern; Abwägung Flüssigkeit gegen Reaktionszeit ist nicht gemessen.
+- **[Befund 20.10.2026]** Bluetooth/A2DP im Auto (Gemini 3.8 Live, Echosperre an): Die Sperre öffnete nach Kopf + 400 ms, das
+  hörbare Ende kam rund 0,9–1,2 s nach dem Kopf; die letzten Wörter jeder Antwort kamen als Franks Mitschrift zurück. Die
+  Geräte-AEC hat für Ton über Bluetooth keine Referenz. Ab 1.8.194 wartet die Sperre bei Bluetooth die Ausgabelatenz ab
+  (Bug-Fall `bugs/bug-cases/2026-10-20-jarvis-gemini-live-phantom-mitschrift.md`). Messung im Auto steht aus.
 - **[offen]** Bluetooth/A2DP, Freisprechen, Realtime und Mobilfunk sind ohne Messprotokoll; Franks positiver Eindruck
   gilt nur für den getesteten Weg (Handy-Lautsprecher, Medienweg).
 - **[offen]** Ob Hintergrundlast (Recherche, Synchronisation) die Wiedergabe je gestört hat, ist nicht gemessen. Zum

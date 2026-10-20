@@ -42,6 +42,9 @@ object LiveRouting {
     fun istBluetooth(typ: Int) = typ == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || typ == AudioDeviceInfo.TYPE_BLE_HEADSET ||
         typ == AudioDeviceInfo.TYPE_BLE_SPEAKER || typ == AudioDeviceInfo.TYPE_HEARING_AID
 
+    /** Ausgang über Funk, auch Bluetooth-Medien (A2DP, LE-Broadcast): Zwischen Kopfposition und Lautsprecher liegt die Funkstrecke. */
+    fun funkAusgang(typ: Int) = typ == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || typ == AudioDeviceInfo.TYPE_BLE_BROADCAST || istBluetooth(typ)
+
     fun name(typ: Int) = when (typ) {
         AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Lautsprecher"
         AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "Hörmuschel"
