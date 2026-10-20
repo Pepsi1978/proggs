@@ -248,4 +248,197 @@ class JarvisWeicheTest {
         assertTrue(a.none { it is Aktion.Werkzeugantwort })
         assertEquals(1, a.filterIsInstance<Aktion.Einspielen>().size)
     }
+
+    // ---- Neutrale Signale: Gemini darf überbrücken, aber nie selbst antworten ----
+
+    private fun signale() = alle.filterIsInstance<Aktion.Signal>()
+    private val ton = ByteArray(9_600)
+
+    /** Gemini sagt bei gesperrtem Ton etwas: Ton und Mitschrift wie aus [LiveGespraech]. */
+    private fun geminiSagt(text: String, jetzt: Long) {
+        mit(w.modellAusgabe(jetzt))
+        w.eigenerTon(ton, jetzt)
+        w.eigeneMitschrift(text, jetzt + 50)
+    }
+
+    @Test fun neutraleSignaleErkennen() {
+        for (t in listOf("Mhm.", "Okay, einen kleinen Moment.", "Alles klar.", "Moment.", "Ich schau mal kurz nach.", "Lass mich kurz nachsehen."))
+            assertTrue(t, JarvisWeiche.neutralesSignal(t))
+        for (t in listOf("", "Klar.", "Ja.", "Nein.", "Genau.", "Gut.", "Erledigt.", "Okay, der Wecker ist gestellt.", "Mir geht's gut, danke!",
+                "Alles klar, ist gemacht.", "Moment, morgen sind es 22 Grad."))
+            assertFalse(t, JarvisWeiche.neutralesSignal(t))
+        for (s in JarvisWeiche.SIGNALE) assertTrue("Anweisung nennt nur erlaubte Signale: $s", JarvisWeiche.neutralesSignal(s))
+    }
+
+    @Test fun smalltalkNeutralesSignalWirdHoerbarUndBeitragGehtUnveraendertAnJarvis() {
+        begruesst()
+        mit(w.nutzerText("Na, wie läuft's bei dir?", 1_000))
+        geminiSagt("Mhm.", 1_300)
+        mit(w.zugEnde(1_600))
+        takt(1_600, 2_100)
+        assertEquals("Na, wie läuft's bei dir?", anJarvis().single().auftrag)
+        assertEquals("Mhm.", signale().single().text)
+        assertEquals(1, signale().single().ton.size)
+        assertFalse("Signal öffnet den Ton nicht für Gemini", w.tonFrei)
+        mit(w.jarvisAntwort(anJarvis()[0].kennung, "Läuft gut, danke. Und bei dir?", 4_000))
+        assertTrue(w.tonFrei)
+    }
+
+    @Test fun smalltalkSachantwortVonGeminiBleibtTrotzPufferStumm() {
+        begruesst()
+        mit(w.nutzerText("Wie geht's dir?", 1_000))
+        geminiSagt("Mir geht's prima, danke der Nachfrage!", 1_300)
+        mit(w.zugEnde(2_500))
+        takt(2_500, 3_000)
+        assertTrue(signale().isEmpty())
+        assertTrue(alle.any { it is Aktion.Protokoll && it.text.contains("kein neutrales Signal") })
+        assertEquals("Wie geht's dir?", anJarvis().single().auftrag)
+    }
+
+    @Test fun persoenlicheDatenMomentVorDemWerkzeugaufrufWirdHoerbarAntwortKommtVonJarvis() {
+        begruesst()
+        mit(w.nutzerText("Wie habe ich heute geschlafen?", 1_000))
+        geminiSagt("Moment.", 1_200)
+        mit(w.werkzeugAufruf("c1", "Schlafdaten von heute", 1_400))
+        takt(1_400, 2_000)
+        assertEquals("Wie habe ich heute geschlafen?", anJarvis().single().auftrag)
+        assertEquals("Moment.", signale().single().text)
+        val r = mit(w.jarvisAntwort(anJarvis()[0].kennung, "Rund 6,7 Stunden, Erholung 30 Prozent.", 6_000)).filterIsInstance<Aktion.Werkzeugantwort>()
+        assertEquals("Rund 6,7 Stunden, Erholung 30 Prozent.", r.single().text)
+        assertTrue(w.tonFrei)
+    }
+
+    @Test fun appAktionUnbestaetigteErledigungVonGeminiBleibtStumm() {
+        begruesst()
+        mit(w.nutzerText("Stell mir einen Wecker auf sieben Uhr.", 1_000))
+        geminiSagt("Klar, dein Wecker ist gestellt.", 1_200)
+        mit(w.werkzeugAufruf("c1", "Wecker 7 Uhr", 1_500))
+        takt(1_500, 2_200)
+        assertTrue("Erledigung nur von Jarvis", signale().isEmpty())
+        assertEquals("Stell mir einen Wecker auf sieben Uhr.", anJarvis().single().auftrag)
+    }
+
+    @Test fun ohneMitschriftBleibtGepufferterTonStumm() {
+        begruesst()
+        mit(w.nutzerText("Was steht heute an?", 1_000))
+        mit(w.modellAusgabe(1_200))
+        w.eigenerTon(ton, 1_200)
+        mit(w.werkzeugAufruf("c1", "Termine heute", 1_400))
+        takt(1_400, 2_200)
+        assertTrue(signale().isEmpty())
+    }
+
+    @Test fun zuLangeEigeneAeusserungBleibtStumm() {
+        begruesst()
+        mit(w.nutzerText("Erzähl mal.", 1_000))
+        mit(w.modellAusgabe(1_200))
+        repeat(20) { w.eigenerTon(ton, 1_200L + it * 10) }
+        w.eigeneMitschrift("Okay.", 1_500)
+        mit(w.zugEnde(1_600))
+        takt(1_600, 2_200)
+        assertTrue(signale().isEmpty())
+    }
+
+    @Test fun unterbrechungVerwirftGepuffertesSignal() {
+        begruesst()
+        mit(w.nutzerText("Sag mal …", 1_000))
+        geminiSagt("Mhm.", 1_300)
+        mit(w.unterbrochen(1_500))
+        mit(w.zugEnde(1_600))
+        takt(1_600, 2_500)
+        assertTrue(signale().isEmpty())
+    }
+
+    @Test fun weitersprechenVerwirftSignalAberNichtDieNachlaufendeMitschrift() {
+        begruesst()
+        mit(w.nutzerText("Wie wird das Wetter", 1_000))
+        geminiSagt("Moment.", 1_100)
+        // Mitschrift von vorher läuft nach: gehört noch zum selben Beitrag, das Signal bleibt.
+        mit(w.nutzerText(" morgen?", 1_300))
+        mit(w.werkzeugAufruf("c1", "Wetter morgen", 1_400))
+        takt(1_400, 2_000)
+        assertEquals("Wie wird das Wetter morgen?", anJarvis().single().auftrag)
+        assertEquals(1, signale().size)
+        // Frank spricht neu, während Gemini eine eigene Äußerung beginnt: Sie ist überholt.
+        mit(w.zugEnde(2_100))
+        val vorher = signale().size
+        mit(w.jarvisAntwort(anJarvis()[0].kennung, "Morgen 18 Grad, Regen am Nachmittag.", 3_000))
+        mit(w.zugEnde(5_000))
+        mit(w.nutzerText("Und übermorgen?", 6_000))
+        geminiSagt("Okay.", 6_100)
+        mit(w.nutzerText(" Am Wochenende auch?", 6_800))
+        mit(w.zugEnde(6_900))
+        takt(6_900, 9_500)
+        assertEquals(vorher, signale().size)
+        assertEquals("Und übermorgen? Am Wochenende auch?", anJarvis()[1].auftrag)
+    }
+
+    @Test fun verzoegerteAntwortHoechstensEinSignalJeAntwortUndKeineWiederholung() {
+        begruesst()
+        mit(w.nutzerText("Recherchier mal was zu Magnesium.", 1_000))
+        geminiSagt("Okay, Moment.", 1_200)
+        mit(w.werkzeugAufruf("c1", "Magnesium", 1_400))
+        takt(1_400, 2_000)
+        assertEquals(1, signale().size)
+        // Jarvis braucht lange: keine Warteschleife, weitere eigene Äußerungen bleiben stumm.
+        mit(w.zugEnde(8_000))
+        geminiSagt("Mhm.", 12_000)
+        mit(w.zugEnde(12_400))
+        takt(12_400, 13_000)
+        assertEquals(1, signale().size)
+        mit(w.jarvisAntwort(anJarvis()[0].kennung, "Magnesium hilft beim Schlaf, die Studienlage ist gemischt.", 30_000))
+        mit(w.modellAusgabe(30_200))
+        mit(w.zugEnde(33_000))
+        // Nächste Antwort: wieder ein Signal erlaubt, aber nicht dasselbe wie zuletzt.
+        mit(w.nutzerText("Und Zink?", 35_000))
+        geminiSagt("Okay, Moment.", 35_200)
+        mit(w.werkzeugAufruf("c2", "Zink", 35_400))
+        takt(35_400, 36_000)
+        assertEquals(1, signale().size)
+        assertTrue(alle.any { it is Aktion.Protokoll && it.text.contains("wiederholt") })
+        mit(w.jarvisAntwort(anJarvis()[1].kennung, "Zink: eher kein Effekt.", 40_000))
+        mit(w.modellAusgabe(40_200))
+        mit(w.zugEnde(42_000))
+        mit(w.nutzerText("Und Eisen?", 44_000))
+        geminiSagt("Ich schau nach.", 44_200)
+        mit(w.werkzeugAufruf("c3", "Eisen", 44_400))
+        takt(44_400, 45_000)
+        assertEquals(2, signale().size)
+    }
+
+    @Test fun antwortVorDerSignalEntscheidungGewinnt() {
+        begruesst()
+        mit(w.nutzerText("Danke dir.", 1_000))
+        geminiSagt("Mhm.", 1_100)
+        mit(w.werkzeugAufruf("c1", "Danke", 1_300))
+        takt(1_300, 1_600)
+        val r = mit(w.jarvisAntwort(anJarvis().single().kennung, "Gern.", 1_650))
+        takt(1_700, 2_500)
+        assertTrue("Antwort kam vor dem Ende des Nachlaufs", signale().isEmpty())
+        assertEquals("Gern.", r.filterIsInstance<Aktion.Werkzeugantwort>().single().text)
+    }
+
+    @Test fun ueberholteAntwortWirdNachSignalNichtNachtraeglichGesprochen() {
+        begruesst()
+        mit(w.nutzerText("Was gibt's Neues?", 1_000))
+        geminiSagt("Moment.", 1_200)
+        mit(w.werkzeugAufruf("c1", "Neuigkeiten", 1_400))
+        takt(1_400, 2_000)
+        assertEquals(1, signale().size)
+        mit(w.jarvisAntwort(anJarvis()[0].kennung, "Drei neue Mails.", 4_000))
+        // Frank spricht weiter, bevor Gemini die Antwort hörbar spricht: Sie bleibt stumm und geht mit an Jarvis.
+        mit(w.nutzerText("Ach, lass mal, wie spät ist es?", 4_200))
+        assertFalse(w.tonFrei)
+        takt(4_200, 7_000)
+        assertTrue(anJarvis()[1].hinweis.contains("Drei neue Mails."))
+    }
+
+    @Test fun ohneBeitragKeinSignal() {
+        begruesst()
+        geminiSagt("Mhm.", 1_000)
+        mit(w.zugEnde(1_300))
+        takt(1_300, 2_000)
+        assertTrue(signale().isEmpty())
+        assertTrue(anJarvis().isEmpty())
+    }
 }

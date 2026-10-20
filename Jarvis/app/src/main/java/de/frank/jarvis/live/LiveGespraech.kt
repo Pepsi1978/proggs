@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit
  * - **Realtime** (`gpt-realtime-*`, `wss://…/v1/realtime?model=`): ein Modell macht alles; `jarvis_fragen` als Funktion.
  * - **Gemini Live** (`gemini-*`, `BidiGenerateContent`): wie Realtime ein Modell mit `jarvis_fragen` als Funktion; Verbindungen
  *   enden nach etwa 10 Minuten (goAway) und werden mit der Fortsetzungskennung nahtlos erneuert. Mit „Jarvis direkt“ gibt die
- *   [JarvisWeiche] jeden Beitrag selbst an Jarvis und lässt nur dessen Antworten hörbar werden.
+ *   [JarvisWeiche] jeden Beitrag selbst an Jarvis und lässt nur dessen Antworten und kurze neutrale Signale hörbar werden.
  *
  * Die Einstellungen kommen aus [LiveOptionen]. Die Kosten laufen mit ([beiKosten], in USD) und stehen in der Live-Leiste.
  */
@@ -444,7 +444,7 @@ class LiveGespraech(
                 val c = e.optJSONObject("serverContent") ?: return
                 letzteAktivitaet = System.currentTimeMillis()
                 // Vorläufige Mitschrift: nur das Zeichen, dass Frank noch spricht; Inhalt kommt aus der endgültigen.
-                if (!c.optJSONObject("interimInputTranscription")?.optString("text").isNullOrEmpty()) weiche?.nutzerSpricht(System.currentTimeMillis())
+                if (!c.optJSONObject("interimInputTranscription")?.optString("text").isNullOrEmpty()) weiche?.let { weicheAusfuehren(it.nutzerSpricht(System.currentTimeMillis())) }
                 c.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d ->
                     // Frank spricht neu: Was danach kommt, ist die Antwort darauf und wird nie verworfen.
                     if (!geminiAntwortLaeuft) verwerfenGemini = false
@@ -467,6 +467,8 @@ class LiveGespraech(
                     // Mit Weiche gibt sie Franks Mitschrift selbst in den Chat, gesammelt je Beitrag.
                     if (weiche == null) nutzerFertig()
                     if (!verwerfenGemini && frei) synchronized(jarvisTeile) { jarvisTeile.append(d) }
+                    // Gesperrt: Die Mitschrift entscheidet, ob Geminis eigene Äußerung ein neutrales Signal ist.
+                    else if (!frei) weiche?.eigeneMitschrift(d, System.currentTimeMillis())
                 }
                 val teile = c.optJSONObject("modelTurn")?.optJSONArray("parts")
                 val hatTon = teile != null && (0 until teile.length()).any { i -> teile.optJSONObject(i)?.let { !it.optBoolean("thought") && it.optJSONObject("inlineData") != null } == true }
@@ -484,6 +486,13 @@ class LiveGespraech(
                     letzteHoerbarEmpfangMs = System.currentTimeMillis()
                     if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
                     ausgabe.offer(Stueck(Base64.decode(daten, Base64.DEFAULT), true))
+                }
+                // Gesperrter eigener Ton von Gemini: gepuffert, hörbar wird er nur als neutrales Signal.
+                if (weiche != null && teile != null && !frei) for (i in 0 until teile.length()) {
+                    val p = teile.optJSONObject(i) ?: continue
+                    if (p.optBoolean("thought")) continue
+                    val daten = p.optJSONObject("inlineData")?.optString("data")?.takeIf { it.isNotEmpty() } ?: continue
+                    weiche.eigenerTon(Base64.decode(daten, Base64.DEFAULT), System.currentTimeMillis())
                 }
                 if (c.optBoolean("turnComplete")) {
                     verwerfenGemini = false
@@ -621,6 +630,13 @@ class LiveGespraech(
                 jarvisFertig()
                 beiJarvisText(a.text)
                 if (laeuft && weiche?.arbeitet != true && !sprichtGerade) status("Ich höre zu")
+            }
+            is JarvisWeiche.Aktion.Signal -> {
+                // Nur hörbar, nicht im Chat: Es überbrückt, bis Jarvis antwortet.
+                if (verwerfenGemini || anrufAktiv) continue
+                a.ton.forEach { ausgabe.offer(Stueck(it, true)) }
+                letzteHoerbarEmpfangMs = System.currentTimeMillis()
+                if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
             }
             is JarvisWeiche.Aktion.Fehler -> { Log.w(LiveRouting.TAG, "Weiche: ${a.text}"); beiFehler(a.text) }
             is JarvisWeiche.Aktion.Protokoll -> Log.i(LiveRouting.TAG, a.text)
@@ -1240,7 +1256,8 @@ class LiveGespraech(
                     if ((!tonOffen && seit >= 300) || seit >= STATUS_MAX_MS) {
                         if (tonOffen) Log.w(LiveRouting.TAG, "Wiedergabe kommt nicht voran: Sprechanzeige zurückgesetzt, Warteschlange ${ausgabe.size}")
                         sprichtGerade = false
-                        if (laeuft) status("Ich höre zu")
+                        // Nach einem Signal arbeitet Jarvis meist noch.
+                        if (laeuft) status(if (weiche?.arbeitet == true) "Jarvis schaut nach …" else "Ich höre zu")
                     }
                 }
                 // Telefonat: Der Dienst bekommt Stille, damit er das Gespräch am Telefon nicht mithört.
