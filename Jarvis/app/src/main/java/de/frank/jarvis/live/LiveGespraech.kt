@@ -113,8 +113,15 @@ class LiveGespraech(
     @Volatile private var echtBisFrame = 0L
     /** Kopfposition beim letzten Leeren, damit die Rechnung nach flush() stimmt, ob der Kopf zurückspringt oder nicht. */
     @Volatile private var kopfBasis = 0L
-    /** Echosperre: Mikrofon frühestens ab hier wieder offen. */
-    @Volatile private var echoFreiAb = 0L
+    /** Echosperre: wann das Mikrofon nach Jarvis' Ton wieder offen ist, bei Bluetooth samt Ausgabelatenz. */
+    private val sperre = EchoSperre()
+    /** Ton geht über Bluetooth (A2DP, LE): Zwischen Kopfposition und Lautsprecher liegt dann die Funkstrecke. */
+    @Volatile private var ausgangFunk = false
+    /** Zustand der Echosperre und wann sie zuletzt aufging, für die Diagnose der Mitschrift. */
+    @Volatile private var echoZuJetzt = false
+    @Volatile private var echoAufMs = 0L
+    /** Zeitpunkt des letzten Leerens: Zeitstempel kurz danach taugen nicht für die Latenzmessung. */
+    @Volatile private var geleertMs = 0L
     /** Nach Antippen: Reste der abgebrochenen Antwort nicht mehr abspielen. Realtime über die Kennung, GPT-Live über die Lücke. */
     @Volatile private var verworfenItem = ""
     @Volatile private var verwerfenLive = false
@@ -448,6 +455,7 @@ class LiveGespraech(
                 c.optJSONObject("inputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d ->
                     // Frank spricht neu: Was danach kommt, ist die Antwort darauf und wird nie verworfen.
                     if (!geminiAntwortLaeuft) verwerfenGemini = false
+                    mitschriftMerken(d)
                     if (weiche == null || st["g_mitschrift"] != "aus") synchronized(nutzerTeile) { nutzerTeile.append(d) }
                     weiche?.let { weicheAusfuehren(it.nutzerText(d, System.currentTimeMillis())) }
                 }
@@ -466,7 +474,7 @@ class LiveGespraech(
                 c.optJSONObject("outputTranscription")?.optString("text")?.takeIf { it.isNotEmpty() }?.let { d ->
                     // Mit Weiche gibt sie Franks Mitschrift selbst in den Chat, gesammelt je Beitrag.
                     if (weiche == null) nutzerFertig()
-                    if (!verwerfenGemini && frei) synchronized(jarvisTeile) { jarvisTeile.append(d) }
+                    if (!verwerfenGemini && frei) { synchronized(jarvisTeile) { jarvisTeile.append(d) }; eigeneWorteMerken(d) }
                     // Gesperrt: Die Mitschrift entscheidet, ob Geminis eigene Äußerung ein neutrales Signal ist.
                     if (!frei) weiche?.eigeneMitschrift(d, System.currentTimeMillis())
                 }
@@ -635,6 +643,7 @@ class LiveGespraech(
                 // Nur hörbar, nicht im Chat: Es überbrückt, bis Jarvis antwortet.
                 if (verwerfenGemini || anrufAktiv) continue
                 a.ton.forEach { ausgabe.offer(Stueck(it, true)) }
+                eigeneWorteMerken(a.text)
                 letzteHoerbarEmpfangMs = System.currentTimeMillis()
                 if (!sprichtGerade) { sprichtGerade = true; status(sprichtText()) }
             }
@@ -692,7 +701,50 @@ class LiveGespraech(
 
     /** Liest den Puffer und leert ihn in einem Schritt; der Rückruf läuft außerhalb der Sperre. */
     private fun abholen(teile: StringBuilder) = synchronized(teile) { teile.toString().also { teile.setLength(0) } }
-    private fun nutzerFertig() { abholen(nutzerTeile).trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText) }
+    private fun nutzerFertig() {
+        if (gemini) mitschriftProtokoll()
+        abholen(nutzerTeile).trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText)
+    }
+
+    // ---- Diagnose der Gemini-Mitschrift: Kam ein Beitrag, während Jarvis' Ton noch zu hören sein konnte? ----
+    /** Die zuletzt hörbar gesprochenen Worte (Mitschrift von Geminis Ton), höchstens [EIGENE_WORTE_ZEICHEN] Zeichen. */
+    private val eigeneWorte = StringBuilder()
+    /** Franks Mitschrift seit dem letzten Abschluss, nur für die Diagnose; [diagBeginn] = Zustand beim ersten Stück. */
+    private val diagMitschrift = StringBuilder()
+    private var diagBeginn = ""
+
+    private fun eigeneWorteMerken(text: String) = synchronized(eigeneWorte) {
+        eigeneWorte.append(text).append(' ')
+        if (eigeneWorte.length > EIGENE_WORTE_ZEICHEN) eigeneWorte.delete(0, eigeneWorte.length - EIGENE_WORTE_ZEICHEN)
+    }
+
+    private fun mitschriftMerken(text: String) = synchronized(diagMitschrift) {
+        if (diagMitschrift.isEmpty()) {
+            val jetzt = System.currentTimeMillis()
+            diagBeginn = (if (!echoSperre) "Echosperre aus" else if (echoZuJetzt) "Echosperre zu" else if (echoAufMs == 0L) "Echosperre noch nie zu"
+                else "Echosperre auf seit ${jetzt - echoAufMs} ms") +
+                ", letzter Ton geschrieben " + (if (letzteHoerbarMs == 0L) "noch nie" else "vor ${jetzt - letzteHoerbarMs} ms") +
+                ", Ausgang " + (if (ausgangFunk) "Bluetooth" else "kein Bluetooth") +
+                (if (ausgangFunk) ", Latenz gemessen ${sperre.latenzMs} ms" else "")
+        }
+        diagMitschrift.append(text)
+    }
+
+    /**
+     * Eine Zeile je Beitrag ins Logbuch, ohne Inhalt (nur Wortzahl und Echoverdacht): So lässt sich am Handy prüfen, ob
+     * Mitschrift während oder direkt nach Jarvis' Ton kam und ob sie aus Jarvis' eigenen letzten Worten besteht.
+     */
+    private fun mitschriftProtokoll() {
+        val (text, beginn) = synchronized(diagMitschrift) {
+            if (diagMitschrift.isEmpty()) return
+            (diagMitschrift.toString().trim() to diagBeginn).also { diagMitschrift.setLength(0) }
+        }
+        val verdacht = EchoSperre.echoVerdacht(text, synchronized(eigeneWorte) { eigeneWorte.toString() })
+        val worte = text.split(Regex("\\s+")).count { it.isNotBlank() }
+        val zeile = "$worte Wörter, beim ersten Stück: $beginn, Echoverdacht ${if (verdacht) "ja" else "nein"}"
+        Log.i(LiveRouting.TAG, "Mitschrift-Diagnose: $zeile")
+        de.frank.jarvis.observability.Logbuch.sprache("Live-Mitschrift (Gemini)", zeile)
+    }
     private fun jarvisFertig() { abholen(jarvisTeile).trim().takeIf { it.isNotEmpty() }?.let(::jarvisSatz) }
 
     /**
@@ -1132,6 +1184,8 @@ class LiveGespraech(
             val ausgaenge = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             medienweg = LiveRouting.medienweg(st["audioweg"], ausgaenge.map { it.type })
             echoSperre = medienweg && st["echo_sperre"] == "an"
+            // Medienton geht zu einem verbundenen Bluetooth-Medienausgang; genau prüft es das Routing, sobald der Ton läuft.
+            ausgangFunk = medienweg && ausgaenge.any { LiveRouting.funkAusgang(it.type) }
             Log.i(LiveRouting.TAG, "Gesprächsbeginn: Tonweg " + (if (medienweg) "Medien (kein Telefonmodus), Echosperre=$echoSperre" else "Freisprechen (Telefonmodus)") +
                 ", Wunsch ${st["audioweg"]}, Ausgänge " + ausgaenge.joinToString { "${LiveRouting.name(it.type)} „${it.productName}“" })
             if (!medienweg) {
@@ -1216,6 +1270,7 @@ class LiveGespraech(
             hauptFaden.post { audiowegMelden() }
             val anhaengen = if (live) "session.input_audio.append" else "input_audio_buffer.append"
             var warZu = false
+            var bloecke = 0
             while (laeuft) {
                 var n = 0
                 while (n < puffer.size && laeuft) {
@@ -1234,19 +1289,21 @@ class LiveGespraech(
                 // Zu, solange echter Ton wartet oder der Wiedergabekopf ihn noch nicht abgespielt hat; danach der Nachlauf für die
                 // Bluetooth-Strecke hinter dem Kopf. Die Füll-Stille zählt nicht, nur [echtBisFrame].
                 // Dieser Faden blockiert nie an der Wiedergabe: Hier werden Sperre und Sprechanzeige auch dann frei, wenn der
-                // Ton-Faden hängt oder die Kopfposition nicht stimmt. Spätestens ECHO_SPERRE_MAX_MS nach dem letzten hörbaren Ton
-                // ist das Mikrofon wieder offen.
+                // Ton-Faden hängt oder die Kopfposition nicht stimmt. Spätestens EchoSperre.SPERRE_MAX_MS nach dem letzten hörbaren
+                // Ton ist das Mikrofon wieder offen. Bei Bluetooth wartet sie zusätzlich die Ausgabelatenz ab ([EchoSperre]).
                 val jetzt = System.currentTimeMillis()
-                val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
+                val kopfRoh = runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL
+                val kopf = kopfRoh - kopfBasis
                 val tonOffen = ausgabe.any { it.hoerbar } || kopf < echtBisFrame
-                val echoZu = echoSperre && run {
-                    if (tonOffen) echoFreiAb = jetzt + ECHO_NACHLAUF_MS
-                    jetzt < echoFreiAb && jetzt - letzteHoerbarMs < ECHO_SPERRE_MAX_MS
-                }
+                // Alle 2 s die Latenz hinter dem Kopf messen, nur bei Bluetooth und laufender Wiedergabe; ein Aufruf, kein Warten.
+                if (echoSperre && ausgangFunk && ++bloecke % 20 == 0 && jetzt - geleertMs > 500) latenzMessen(kopfRoh, rate)
+                val echoZu = echoSperre && sperre.zu(jetzt, tonOffen, letzteHoerbarMs, ausgangFunk)
                 if (echoZu != warZu) {
                     warZu = echoZu
+                    echoZuJetzt = echoZu
+                    if (!echoZu) echoAufMs = jetzt
                     Log.i(LiveRouting.TAG, "Echosperre " + (if (echoZu) "zu" else "auf") + ": Kopf $kopf, Ton bis $echtBisFrame, Warteschlange ${ausgabe.size}, " +
-                        "letzter Ton vor ${jetzt - letzteHoerbarMs} ms")
+                        "letzter Ton vor ${jetzt - letzteHoerbarMs} ms" + (if (ausgangFunk) ", Bluetooth, Latenz gemessen ${sperre.latenzMs} ms, genutzt ${sperre.bluetoothLatenzMs()} ms" else ""))
                 }
                 // GPT-Live meldet kein Ende der Rede: Ist kein hörbarer Ton mehr offen, hört Jarvis wieder zu. Hängt die
                 // Wiedergabe, gilt nach STATUS_MAX_MS ohne geschriebenen und empfangenen Ton dasselbe. Realtime ebenso, wenn
@@ -1379,6 +1436,20 @@ class LiveGespraech(
         return ausgabe.any { it.hoerbar } || kopf < echtBisFrame
     }
 
+    /**
+     * Misst, wie weit der tatsächlich ausgegebene Frame (`getTimestamp`, auf jetzt hochgerechnet) hinter dem Kopf [kopfRoh]
+     * liegt. Beide Zählungen ohne [kopfBasis]: Verglichen wird nur ihr Abstand im selben Augenblick.
+     */
+    private val zeitstempel = android.media.AudioTimestamp()
+    private fun latenzMessen(kopfRoh: Long, rate: Int) {
+        val track = wiedergabe ?: return
+        if (runCatching { track.playState }.getOrNull() != AudioTrack.PLAYSTATE_PLAYING) return
+        if (runCatching { track.getTimestamp(zeitstempel) }.getOrDefault(false) != true) return
+        val alterNs = System.nanoTime() - zeitstempel.nanoTime
+        if (alterNs < 0 || alterNs > 5_000_000_000L) return
+        sperre.latenzMessen(kopfRoh, (zeitstempel.framePosition and 0xFFFFFFFFL) + alterNs * rate / 1_000_000_000L, rate)
+    }
+
     /** Frames, die noch auf den Lautsprecher warten (echter Ton wie Stille); 0, wenn die Wiedergabe leer ist. */
     private fun gepuffertFrames(): Long {
         val kopf = (runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL) - kopfBasis
@@ -1398,7 +1469,9 @@ class LiveGespraech(
     /** Leert nur den Wiedergabepuffer und stellt die Zählung darauf ein; die Warteschlange bleibt. */
     private fun wiedergabeLeeren() {
         wiedergabe?.let { runCatching { it.pause(); it.flush(); it.play() } }
-        // Nach dem Leeren ist nichts Echtes mehr unterwegs: Die Echosperre öffnet sofort (nach ihrem kurzen Nachlauf).
+        geleertMs = System.currentTimeMillis()
+        // Nach dem Leeren ist nichts Echtes mehr im Puffer: Die Echosperre öffnet nach ihrem Nachlauf, bei Bluetooth samt der
+        // Latenz, denn was schon auf der Funkstrecke ist, holt flush() nicht zurück.
         geschriebeneFrames.set(0)
         echtBisFrame = 0
         kopfBasis = runCatching { wiedergabe?.playbackHeadPosition ?: 0 }.getOrDefault(0).toLong() and 0xFFFFFFFFL
@@ -1445,6 +1518,8 @@ class LiveGespraech(
         val track = wiedergabe ?: return
         val raus = runCatching { track.routedDevice }.getOrNull()
         val rein = runCatching { aufnahme?.routedDevice }.getOrNull()
+        // Erst das tatsächliche Ausgabegerät sagt, ob der Ton über Bluetooth geht (Echosperre wartet dann die Latenz ab).
+        if (raus != null && medienweg) ausgangFunk = LiveRouting.funkAusgang(raus.type)
         fun geraet(d: AudioDeviceInfo?) = d?.let { LiveRouting.name(it.type) + (it.productName?.toString()?.takeIf { n -> n.isNotBlank() && !n.equals(android.os.Build.MODEL, true) }?.let { n -> " „$n“" } ?: "") } ?: "Systemwahl"
         val weg = if (medienweg) "Medienton" + (if (echoSperre) " · Echosperre" else "") else "Freisprechen (Telefonklang)"
         val text = "$weg · Ton: ${geraet(raus)} · Mikro: ${geraet(rein)}"
@@ -1618,12 +1693,10 @@ class LiveGespraech(
             return kotlin.math.sqrt(summe / (n / 2)) > HOERBAR_EFFEKTIV
         }
 
-        /** Echosperre bleibt so lange nach dem letzten Ton zu: Wiedergabepuffer plus Bluetooth-Verzögerung. */
         /** Größte Zahl, die OpenAI bei Realtime als max_output_tokens annimmt; darüber nur „inf“. */
         private const val REALTIME_MAX_ZAHL = 4096
-        private const val ECHO_NACHLAUF_MS = 400L
-        /** Höchstens so lange nach dem letzten hörbaren Ton bleibt die Echosperre zu, egal was die Wiedergabe meldet. */
-        private const val ECHO_SPERRE_MAX_MS = 3_000L
+        /** So viel der zuletzt gesprochenen Mitschrift behält die Diagnose für den Echoverdacht. */
+        private const val EIGENE_WORTE_ZEICHEN = 400
         /** GPT-Live: so lange ohne hörbaren Ton (geschrieben und empfangen), dann gilt Jarvis als fertig. */
         private const val STATUS_MAX_MS = 4_000L
         /** Weiche: Ruhezeit über Geminis Pausenerkennung hinaus, nach der ein Beitrag auch ohne Reaktion von Gemini an Jarvis geht. */

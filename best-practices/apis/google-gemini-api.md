@@ -193,7 +193,12 @@ Ein „Gemini 3 Flash Live“ gibt es nicht; gemeint ist 3.1 Flash Live. Proacti
 - `serverContent.interrupted` = Barge-in: Wiedergabepuffer sofort leeren. `toolCall.functionCalls[] {id,name,args}` → `{"toolResponse":{"functionResponses":[{id,name,response:{result},scheduling?}]}}`.
 - **Sprache:** Native-Audio-Modelle nehmen KEIN `languageCode` (1007-Abbruch). Deutsch per systemInstruction, Googles Formel: „RESPOND IN GERMAN. YOU MUST RESPOND UNMISTAKABLY IN GERMAN.“
 - **Sitzung:** Audio ohne Kompression 15 Min, Verbindung etwa 10 Min, vorher `goAway{timeLeft}`. Mit `sessionResumption` die Kennung aus `sessionResumptionUpdate.newHandle` merken (gültig 2 h) und auf neuer Verbindung weitermachen.
-- Keine serverseitige Echounterdrückung: am Lautsprecher eigene AEC + Echosperre.
+- Keine serverseitige Echounterdrückung: am Lautsprecher eigene AEC + Echosperre. Hört das Modell sich selbst, kommen seine
+  Worte als `inputTranscription` zurück, als hätte der Nutzer gesprochen (Forum, auch mit 3.8 am Smartphone, 21.09.2026:
+  discuss.ai.google.dev/t/…/144332); Proactive Audio verhindert nur die Antwort, nicht die Mitschrift. Die Sperre muss bis zum
+  **hörbaren** Ende halten: Bei Bluetooth liegt es weit hinter `playbackHeadPosition` (Jarvis 1.8.194, `live/EchoSperre.kt`,
+  Bug-Fall `bugs/bug-cases/2026-10-20-jarvis-gemini-live-phantom-mitschrift.md`). `prefixPaddingMs` ist in Guide und Referenz
+  verschieden beschrieben; Werte um 20 ms lassen kurze Geräusche als Sprachbeginn durch [Schluss].
 
 **Kosten (USD je 1 Mio. Tokens, alle drei 3.x-Live-Modelle gleich):** Audio 3,00 ein / 12,00 aus (≈ 0,005 $/Min hören, 0,018 $/Min sprechen), Text 0,75 / 4,50, Bild/Video 1,00 ein; Denk-Tokens wie Ausgabe. Kein Cache, kein Batch/Flex/Priority. **Jede Antwort rechnet den ganzen bisherigen Verlauf (auch altes Audio) neu als Eingabe** → Kosten wachsen quadratisch; `contextWindowCompression.triggerTokens` klein halten (Jarvis: 16.000). `usageMetadata` (Felder `promptTokenCount`, `responseTokenCount` statt `candidatesTokenCount`, `thoughtsTokenCount`, `promptTokensDetails`/`responseTokensDetails` je Modality) ist kumulativ je Antwort: je Antwort den größten Stand nehmen, über Antworten summieren.
 
