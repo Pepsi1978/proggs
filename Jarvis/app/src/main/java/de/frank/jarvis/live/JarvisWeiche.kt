@@ -96,11 +96,14 @@ class JarvisWeiche(
     /** Vorläufige Mitschrift: Frank spricht noch. Kein Inhalt, kein Abschluss. */
     @Synchronized fun nutzerSpricht(jetzt: Long) { letzteSpracheMs = jetzt }
 
-    /** Gemini gibt Ton oder Ausgabe-Mitschrift aus. */
-    @Synchronized fun modellAusgabe(jetzt: Long): List<Aktion> {
+    /**
+     * Gemini gibt Ton oder Ausgabe-Mitschrift aus. Nur echter Ton ([ton]) zählt als „Antwort wird gesprochen“: Bei Googles
+     * offenem Fehler (Mitschrift ohne Ton) soll der Wächter melden, dass nichts zu hören war.
+     */
+    @Synchronized fun modellAusgabe(jetzt: Long, ton: Boolean = true): List<Aktion> {
         erzeugt = true
         val aus = mutableListOf<Aktion>()
-        if (tor == Tor.OFFEN && !tonSeitOffen) {
+        if (ton && tor == Tor.OFFEN && !tonSeitOffen) {
             tonSeitOffen = true
             aus += Aktion.Protokoll("Weiche: Gemini spricht Jarvis' Antwort, ${jetzt - abgabeMs} ms nach der Abgabe")
         }

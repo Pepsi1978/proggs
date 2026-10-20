@@ -173,6 +173,16 @@ class JarvisWeicheTest {
         assertFalse(w.tonFrei)
     }
 
+    @Test fun mitschriftOhneTonGiltAlsNichtGesprochen() {
+        begruesst()
+        mit(w.nutzerText("Wie war mein Schlaf?", 1_000))
+        takt(1_000, 3_100)
+        mit(w.jarvisAntwort(anJarvis()[0].kennung, "Sieben Stunden, Erholung 60 Prozent.", 4_000))
+        mit(w.modellAusgabe(4_500, ton = false))
+        takt(4_500, 4_000 + JarvisWeiche.STUMM_MAX_MS + 100)
+        assertEquals("Sieben Stunden, Erholung 60 Prozent.", alle.filterIsInstance<Aktion.Anzeigen>().single().text)
+    }
+
     @Test fun mitschriftNachDemAufrufWirdAbgewartet() {
         begruesst()
         mit(w.werkzeugAufruf("c1", "Termine heute", 1_000))

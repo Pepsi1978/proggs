@@ -471,7 +471,7 @@ class LiveGespraech(
                 val teile = c.optJSONObject("modelTurn")?.optJSONArray("parts")
                 val hatTon = teile != null && (0 until teile.length()).any { i -> teile.optJSONObject(i)?.let { !it.optBoolean("thought") && it.optJSONObject("inlineData") != null } == true }
                 if (weiche != null && (hatTon || c.has("outputTranscription"))) {
-                    weicheAusfuehren(weiche.modellAusgabe(System.currentTimeMillis()))
+                    weicheAusfuehren(weiche.modellAusgabe(System.currentTimeMillis(), hatTon))
                     if (!frei && hatTon) geminiStumm++
                 }
                 // Telefonat: Jarvis spricht nicht in den Anruf hinein. Jarvis direkt: Geminis eigene Antworten bleiben stumm.
