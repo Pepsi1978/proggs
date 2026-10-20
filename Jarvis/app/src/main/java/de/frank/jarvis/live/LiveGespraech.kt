@@ -468,7 +468,7 @@ class LiveGespraech(
                     if (weiche == null) nutzerFertig()
                     if (!verwerfenGemini && frei) synchronized(jarvisTeile) { jarvisTeile.append(d) }
                     // Gesperrt: Die Mitschrift entscheidet, ob Geminis eigene Äußerung ein neutrales Signal ist.
-                    else if (!frei) weiche?.eigeneMitschrift(d, System.currentTimeMillis())
+                    if (!frei) weiche?.eigeneMitschrift(d, System.currentTimeMillis())
                 }
                 val teile = c.optJSONObject("modelTurn")?.optJSONArray("parts")
                 val hatTon = teile != null && (0 until teile.length()).any { i -> teile.optJSONObject(i)?.let { !it.optBoolean("thought") && it.optJSONObject("inlineData") != null } == true }
