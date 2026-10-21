@@ -108,7 +108,8 @@ class JarvisAgent(context: Context) {
         if (!auth.isConnected) { beiAbbruch("Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
-        val faehigkeiten = Register.alle(app).filter { (mitInternet || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "programmieren" && it.id != "sprachsession")) }
+        // Die Websuche haben Agenten mit Internet und jedes Gespräch mit Frank (aktuelle Fragen direkt beantworten statt einen Agenten zu starten), die Tagesauswertung nicht.
+        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "programmieren" && it.id != "sprachsession")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else it }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
@@ -372,6 +373,9 @@ class JarvisAgent(context: Context) {
                 append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n")
                 append("- Behaupte nie, eine Datei, ein Bild oder ein Dokument erzeugt oder gespeichert zu haben, wenn ein Werkzeug-Ergebnis das nicht mit „Gespeichert“ bestätigt. ")
                 append("Meldet ein Werkzeug „läuft noch“ oder einen Fehler, sag genau das.\n\n")
+                // Nur im Gespräch mit Frank (dort gibt es agent_starten): die feste Regel Websuche statt Agent, vor den App-Hinweisen.
+                // Agenten selbst bekommen sie nicht, ihre gründliche Recherche ist ja gerade beauftragt.
+                if (faehigkeiten.any { it.id == "agenten" }) append(de.frank.jarvis.faehigkeit.SuchRegel.REGEL).append("\n\n")
                 faehigkeiten.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
                 append("WERKZEUGE:\n")
                 faehigkeiten.flatMap { it.werkzeuge }.forEach { w ->

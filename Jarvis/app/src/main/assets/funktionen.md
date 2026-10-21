@@ -1,4 +1,4 @@
-<!-- stand: 205 1.8.194 -->
+<!-- stand: 206 1.8.195 -->
 Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks gelten für den eigenen Chat, die Agenten und ChatGPT (Plugin), soweit nicht anders vermerkt.
 
 ## Zugänge und Modelle
@@ -21,7 +21,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Wissens-Datenbank: `wissen_lesen` (Inhaltsverzeichnis, Datei, Suche).
 - Gmail: `mail_lesen` (mit nr vollständig), `mail_senden` (ohne Empfänger an Frank; nur erlaubte Empfänger).
 - GitHub-Repo, nur lesen: `repo_lesen` (Projekte, Dateien, Code-Suche, Verlauf). Jarvis ändert nie Code im Repo.
-- Web: `web_suche` (Kurzantwort und Treffer), `web_seite_lesen`.
+- Web: `web_suche` (Kurzantwort und Quellen), `web_seite_lesen`; auch im eigenen Chat, Sprachmodus und Live-Gespräch. Aktuelle Fragen beantwortet Jarvis damit sofort im Gespräch, kurz mit Quelle; im Gespräch zuerst die Websuche des ChatGPT-Modells (eine gezielte Suche, höchstens 20 s), sonst Tavily, in Agenten Tavily zuerst. Geht keine Suche, sagt er das, statt einen Agenten zu starten. Daten aus Franks Apps kommen weiter aus deren Werkzeugen.
 
 ## Alltag
 
@@ -52,7 +52,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 ## Agenten und Hintergrundaufträge
 
-- `agenten` (ansehen, anlegen, löschen), `agent_starten` (kehrt sofort mit Vorgangskennung zurück); vorgegeben: Recherche, Machbarkeit, Code-Analyse (nur lesend). Höchstens 2 gleichzeitig; Agenten starten keine Agenten und keine Programmieraufträge.
+- `agenten` (ansehen, anlegen, löschen), `agent_starten` (kehrt sofort mit Vorgangskennung zurück); vorgegeben: Recherche, Machbarkeit, Code-Analyse (nur lesend). Der Recherche-Agent startet nur, wenn Frank ausdrücklich eine Recherche verlangt oder einem Angebot zustimmt (im Chat und Live an seinen Worten geprüft). Höchstens 2 gleichzeitig; Agenten starten keine Agenten und keine Programmieraufträge.
 - `vorgaenge` (Liste, Ergebnis lesen, als mitgeteilt bestätigen), `vorgang_abbrechen`.
 
 ## Programmieren

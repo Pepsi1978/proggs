@@ -279,7 +279,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // ob er einen Nachtrag ausdrücklich verlangt hat. Die erste Nachricht eines Auftrags-Gesprächs ist der Auftrag selbst, nicht Franks Wort.
         val worte = gespraech.take(frage + 1).filter { it.vonMir && !de.frank.jarvis.faehigkeit.ProgrammierChat.istAuftragsVorspann(it.text) }
             .takeLast(2).joinToString("\n") { it.text }
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(worte, streng = true)) {
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(worte, streng = true, juengste = text)) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
@@ -1053,12 +1053,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "keine Aufzählungszeichen, keine Formatierung, keine Links und keine Kennungen vorlesen.\n" +
             "# Unterbrechen\nFrank kann dich jederzeit unterbrechen; dann hörst du sofort auf und gehst auf ihn ein. Lass ihm Denkpausen.\n" +
             (if (gptLive) "# Nachschlagen\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, " +
-                "Mails, Wetter, Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), delegierst du, bevor du antwortest. Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n" +
+                "Mails, Wetter, Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen) und für aktuelle Fragen aus dem Internet delegierst du, bevor du antwortest; Jarvis sucht dann direkt. Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n" +
                 "# Sessions\nWill Frank in eine andere Session (ein anderes Gespräch) wechseln, zurück in die letzte oder eine neue öffnen, etwa „Wechsle in die Whoop-Session“, " +
                 "delegierst du das ebenfalls mit seinen genauen Worten; auch seine Antwort, wenn Jarvis fragt, welche Session er meint. Sag dann nur kurz, was Jarvis zurückmeldet. " +
                 "Behaupte nie selbst, gewechselt zu haben.\n"
             else "# Werkzeug\nFür alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, " +
-                "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen), rufst du jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest. " +
+                "Fahrzeit, Gedächtnis, Programmieraufträge, Recherchen) und für aktuelle Fragen aus dem Internet rufst du jarvis_fragen mit dem vollständigen Auftrag auf, bevor du antwortest; " +
+                "Jarvis sucht dann direkt. " +
                 "Sag dabei genau einen kurzen Satz wie „Moment, ich schaue nach“.\n" +
                 "# Sessions\nWill Frank in eine andere Session (ein anderes Gespräch) wechseln, zurück in die letzte oder eine neue öffnen, etwa „Wechsle in die Whoop-Session“, " +
                 "rufst du jarvis_fragen mit seinen genauen Worten auf; auch mit seiner Antwort, wenn Jarvis fragt, welche Session er meint. Sag dann nur kurz, was Jarvis zurückmeldet. " +
