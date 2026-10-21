@@ -732,12 +732,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             return
         }
-        val zeichen = when (eintrag.optString("letzterStand")) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT -> "⚠️"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
+        val zeichen = when (letzter) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT, STAND_UNKLAR -> "⚠️"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
         // Stand „info“ schickt der Hook nur am Zugende mit der ganzen letzten Nachricht der Sitzung: der ausführliche
         // Abschlussbericht. Er bekommt eine eigene Art (volle Aktionsleiste) und bleibt ein Ganzes; alles andere ist Statusmeldung,
         // je Teil eine Zeile mit Symbol und Absender.
-        if (eintrag.optString("letzterStand") == "info") {
-            ProgrammierChat.poste(app, gespraech, "$zeichen $von · ${schritt.trim()}", ProgrammierChat.ART_BERICHT)
+        if (letzter == "info") {
+            ProgrammierChat.poste(app, gespraech, ProgrammierChat.zeile(von, schritt, zeichen), ProgrammierChat.ART_BERICHT)
             return
         }
         ProgrammierChat.zeilen(von, schritt, zeichen).forEach { ProgrammierChat.poste(app, gespraech, it, ProgrammierChat.ART_STATUS) }
