@@ -905,15 +905,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (ursprung != null) eintrag.put("sprache", ursprung.modus.kennung).put("sprachGespraech", ursprung.gespraech).put("sprachSeit", ursprung.seit)
             schreib(context, lies(context).put(eintrag))
             // Auch ein normales Gespräch, aus dem der Auftrag kam, gehört ab jetzt in den Reiter „Programmierung“.
-            Gespraeche.markieren(context, gespraech)
+            Gespraeche.markieren(context, gespraech, jetzt)
             return eintrag
         }
 
-        /** Alle Gespräche, denen ein Auftrag zugeordnet ist. */
-        fun gespraeche(context: Context): Set<String> {
-            val liste = lies(context)
-            return (0 until liste.length()).mapNotNullTo(mutableSetOf()) { liste.getJSONObject(it).optString("gespraech").ifEmpty { null } }
-        }
+        /** Gespräche mit Auftrag und wann ihr erster Auftrag abgeschickt wurde (0 = Eintrag ohne Start). */
+        fun gespraechStarts(context: Context): Map<String, Long> = Gespraeche.fruehesteStarts(alle(context).map { it.optString("gespraech") to it.optLong("start") })
 
         @Synchronized
         fun melde(context: Context, id: String, stand: String, schritt: String, link: String, frage: JSONObject? = null, sperrSeit: Long = 0L): JSONObject? {
@@ -1335,7 +1332,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     companion object {
         /** Gespräche, denen das Auftragsbuch einen Programmierauftrag zuordnet (für den Reiter „Programmierung“). */
-        fun gespraecheMitAuftrag(context: Context): Set<String> = Auftragsbuch.gespraeche(context.applicationContext)
+        fun gespraecheMitAuftrag(context: Context): Map<String, Long> = Auftragsbuch.gespraechStarts(context.applicationContext)
 
         /** Fertig gemeldete Aufträge an eine App (nur Zusatzinfo: fertig gemeldet ist noch nicht installiert). */
         fun fertigeAuftraege(context: Context, app: String, seit: Long): List<String> = Auftragsbuch.fertige(context.applicationContext, app, seit)

@@ -17,6 +17,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.util.Log
+import de.frank.jarvis.observability.Logbuch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -220,12 +221,18 @@ class LiveGespraech(
                     429 -> "Kein Guthaben oder zu viele Anfragen bei OpenAI."
                     else -> "Live-Verbindung getrennt: " + (t.message ?: "unbekannt")
                 }
+                liveFehlerProtokoll("HTTP ${response?.code ?: "-"} ${t.message ?: ""}".trim())
                 beiFehler(grund)
                 beenden(senden = false)
             }
 
             // Schließt der Dienst die Verbindung, meldet OkHttp nur onClosing; ohne das liefe das Mikrofon in eine tote Verbindung.
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden(senden = false) }
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (!laeuft) return
+                // Vom Dienst beendet: Code und Grund ins Logbuch, sonst ist so ein Abbruch später nicht mehr nachvollziehbar.
+                if (code != 1000) { Log.w(LiveRouting.TAG, "Live schließt: $code $reason"); liveFehlerProtokoll("$code $reason") }
+                beenden(senden = false)
+            }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { if (laeuft) beenden(senden = false) }
         })
         stilleWaechter()
@@ -264,7 +271,8 @@ class LiveGespraech(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                if (!laeuft || webSocket !== ws) return
+                // Ein Neuaufbau ist schon geplant: Der Abriss der ersetzten Verbindung löst keinen zweiten aus.
+                if (!laeuft || webSocket !== ws || wartetAufNeu) return
                 val code = response?.code
                 val anlass = "HTTP ${code ?: "-"} ${t.message ?: ""}".trim()
                 // Modell- und Einstellungsfehler (400, 404) träfen den bezahlten Schlüssel genauso.
@@ -281,15 +289,24 @@ class LiveGespraech(
                     429 -> "Gemini-Kontingent erschöpft oder zu viele Anfragen."
                     else -> "Gemini-Verbindung getrennt: " + (t.message ?: "unbekannt")
                 }
+                liveFehlerProtokoll(anlass)
                 beiFehler(grund)
                 beenden(senden = false)
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                if (!laeuft || webSocket !== ws) return
+                if (!laeuft || webSocket !== ws || wartetAufNeu) return
                 Log.w(LiveRouting.TAG, "Gemini schließt: $code $reason")
                 if (code != 1000) {
                     if ((GeminiFehler.kontingent(reason) || GeminiFehler.schluessel(reason)) && geminiErsatz("$code $reason")) return
+                    // Vor modell(): Google schließt auch diese Ablehnung mit 1008, sie ist aber nur ein Wettlauf beim Fortsetzen.
+                    if (GeminiFehler.schonVerbunden(reason)) {
+                        if (geminiSchonVerbunden("$code $reason")) return
+                        liveFehlerProtokoll("$code $reason")
+                        beiFehler("Gemini hat die Fortsetzung des Gesprächs nach einem Verbindungsabbruch mehrfach abgelehnt. Bitte neu starten.")
+                        beenden(senden = false)
+                        return
+                    }
                     if (GeminiFehler.modell(code, reason)) {
                         // Extended Thinking zeigt Google teils über v1alpha: lehnt v1beta das Modell ab, einmal dort versuchen.
                         if (!bereit && apiVersion == "v1beta" && modell.contains("extended")) {
@@ -299,6 +316,7 @@ class LiveGespraech(
                             return
                         }
                     } else if (geminiStoerung("$code $reason")) return
+                    liveFehlerProtokoll("$code $reason")
                     beiFehler(geminiGrund(code, reason))
                 }
                 beenden(senden = false)
@@ -339,12 +357,66 @@ class LiveGespraech(
         if (gleicherVersuch) return geminiErsatz(anlass)
         gleicherVersuch = true
         Log.w(LiveRouting.TAG, "Gemini: Störung ($anlass), verbinde mit demselben Schlüssel neu")
+        Logbuch.netz("Live: Gemini-Störung, verbinde neu", "$modell, ${anlass.take(160)}, Fortsetzung " + if (fortsetzKennung.isEmpty()) "nein" else "ja")
         geminiKosten()
-        status("Verbinde neu …")
-        wartetAufNeu = true
-        Thread({ runCatching { Thread.sleep(2_000) }; wartetAufNeu = false; if (laeuft) geminiVerbinden(aktuellerSchluessel) }, "jarvis-gemini-neu").start()
+        neuVerbinden(2_000, "Störung", frisch = false)
         return true
     }
+
+    /**
+     * Verbindet nach [warten] ms mit demselben Schlüssel neu, [frisch] = ohne Fortsetzungskennung. Bis dahin beenden Abriss
+     * oder Schließen der alten Verbindung das Gespräch nicht ([wartetAufNeu]).
+     */
+    private fun neuVerbinden(warten: Long, anlass: String, frisch: Boolean) {
+        neuAnlass = anlass
+        status("Verbinde neu …")
+        wartetAufNeu = true
+        Thread({
+            runCatching { Thread.sleep(warten) }
+            if (laeuft && frisch) ohneFortsetzung()
+            wartetAufNeu = false
+            if (laeuft) geminiVerbinden(aktuellerSchluessel)
+        }, "jarvis-gemini-neu").start()
+    }
+
+    /** Ablehnungen „already connected to an existing client“ seit der letzten stehenden Verbindung. */
+    @Volatile private var schonVerbundenVersuche = 0
+    /** Warum zuletzt neu verbunden wurde; fürs Logbuch, sobald die neue Verbindung steht. */
+    @Volatile private var neuAnlass: String? = null
+
+    /**
+     * Gemini lehnt die Fortsetzung ab (1008 „already connected to an existing client“), weil es die eben abgerissene
+     * Verbindung noch für offen hält (21.10.2026 nach „Connection reset“). Erst mit derselben Kennung etwas später erneut,
+     * zuletzt ohne Kennung als neue Sitzung, die das bisherige Gespräch in der Anweisung bekommt. false = aufgegeben.
+     */
+    private fun geminiSchonVerbunden(anlass: String): Boolean {
+        if (!laeuft) return false
+        val versuch = ++schonVerbundenVersuche
+        if (versuch > SCHON_VERBUNDEN_WIEDERHOLT + 1) return false
+        val frisch = versuch > SCHON_VERBUNDEN_WIEDERHOLT
+        val warten = if (frisch) 1_000L else SCHON_VERBUNDEN_WARTEN_MS * versuch
+        Log.w(LiveRouting.TAG, "Gemini: Fortsetzung abgelehnt ($anlass), Versuch $versuch in $warten ms " + if (frisch) "ohne Fortsetzung" else "mit derselben Kennung")
+        Logbuch.netz("Live: Gemini lehnt Fortsetzung ab", "$modell, ${anlass.take(160)}, Versuch $versuch, " + if (frisch) "neue Sitzung" else "gleiche Kennung")
+        // Das war kein neuer Netzfehler: Reißt der nächste Versuch ab, gilt das wieder als erste Störung, nicht gleich als Schlüsselwechsel.
+        gleicherVersuch = false
+        neuVerbinden(warten, "Fortsetzung abgelehnt", frisch)
+        return true
+    }
+
+    /**
+     * Die nächste Verbindung beginnt eine neue Sitzung: Sie kennt die offenen Werkzeugaufrufe der alten nicht, deren
+     * Ergebnis geht dann als Eingabe hinein ([ergebnis]).
+     */
+    private fun ohneFortsetzung() {
+        fortsetzKennung = ""
+        kennungArt.replaceAll { _, art -> if (art == "gemini") "gemini_neu" else art }
+        // Die Rückwege zu alten Verbindungen gelten in der neuen Sitzung nicht mehr.
+        aufrufVerbindung.clear()
+    }
+
+    /** Fehler, der das Gespräch beendet, ins Logbuch: nur Anbieter, Modell und Code/Grund, keine Gesprächsinhalte. */
+    private fun liveFehlerProtokoll(anlass: String) =
+        Logbuch.fehler("Live-Gespräch abgebrochen", details = "${if (gemini) "Gemini" else if (live) "GPT-Live" else "Realtime"} $modell: ${anlass.take(200)}")
 
     /** Kostenloser Schlüssel gestört (Kontingent aus, abgelehnt, nicht erreichbar): einmal auf den bezahlten wechseln, das Gespräch läuft weiter. */
     private fun geminiErsatz(anlass: String): Boolean {
@@ -358,7 +430,9 @@ class LiveGespraech(
         geminiKosten()
         gratis = false
         // Eine Fortsetzungskennung gehört zum Projekt des alten Schlüssels: frisch beginnen, ohne neue Begrüßung.
-        fortsetzKennung = ""
+        ohneFortsetzung()
+        neuAnlass = "Schlüsselwechsel"
+        Logbuch.netz("Live: Gemini wechselt auf den bezahlten Schlüssel", "$modell, ${anlass.take(160)}")
         geminiVerbinden(ersatz)
         return true
     }
@@ -387,7 +461,10 @@ class LiveGespraech(
         // Jarvis direkt: kein Deckel, sonst bräche Gemini lange Antworten von Jarvis mitten im Satz ab.
         if (weiche == null) st["g_max"].toIntOrNull()?.takeIf { it > 0 }?.let { g.put("maxOutputTokens", it) }
         // Das bisherige Gespräch steht in der Anweisung: Das funktioniert bei allen Live-Modellen, auch ohne Verlaufs-Freigabe.
-        val bisher = if (verlauf.isEmpty()) "" else verlauf.joinToString("\n", "\n# Bisheriges Gespräch (zum Anknüpfen)\n") { (mir, t) -> (if (mir) "Frank: " else "Jarvis: ") + t.take(1200) }
+        // Neue Sitzung mitten im Gespräch (Schlüsselwechsel, abgelehnte Fortsetzung): das bisher Gesagte dieses Gesprächs dazu.
+        val dieses = if (begruesst && fortsetzKennung.isEmpty()) synchronized(diesesGespraech) { diesesGespraech.toList() } else emptyList()
+        val alles = verlauf + dieses
+        val bisher = if (alles.isEmpty()) "" else alles.joinToString("\n", "\n# Bisheriges Gespräch (zum Anknüpfen)\n") { (mir, t) -> (if (mir) "Frank: " else "Jarvis: ") + t.take(1200) }
         val werkzeuge = JSONArray().put(JSONObject().put("functionDeclarations", JSONArray().put(JSONObject()
             .put("name", "jarvis_fragen")
             .put("description", jarvisWerkzeug().optString("description"))
@@ -419,7 +496,7 @@ class LiveGespraech(
         if (st["g_mitschrift"] != "aus" || weiche != null) s.put("inputAudioTranscription", JSONObject())
         // Diagnose ohne Schlüssel: Womit das Gespräch wirklich aufgebaut wird (Modell, Weg, Anweisung, Werkzeug).
         Log.i(LiveRouting.TAG, "Gemini-Setup: $modell über $apiVersion, jarvisDirekt=${st.jarvisDirekt}, nurStimme=${anweisung.startsWith("# Rolle\nDu bist die Stimme")}, " +
-            "Anweisung ${anweisung.length} Zeichen, Verlauf ${verlauf.size}, Werkzeuge ${werkzeuge.length()}, nebenbei=${LiveOptionen.geminiNebenbei(st)}, " +
+            "Anweisung ${anweisung.length} Zeichen, Verlauf ${verlauf.size}+${dieses.size}, Fortsetzung ${fortsetzKennung.isNotEmpty()}, Werkzeuge ${werkzeuge.length()}, nebenbei=${LiveOptionen.geminiNebenbei(st)}, " +
             "denken=${g.optJSONObject("thinkingConfig")?.optString("thinkingLevel") ?: "-"}, max=${g.optInt("maxOutputTokens", 0)}, kuerzen=${LiveOptionen.geminiKuerzenAb(st) ?: "auto"}, gratis=$gratis, weiche=${weiche != null}")
         return JSONObject().put("setup", s)
     }
@@ -437,6 +514,8 @@ class LiveGespraech(
             e.has("setupComplete") -> {
                 bereit = true
                 gleicherVersuch = false
+                schonVerbundenVersuche = 0
+                neuAnlass?.let { a -> neuAnlass = null; Logbuch.netz("Live: Gemini wieder verbunden", "nach $a, Fortsetzung " + if (fortsetzKennung.isEmpty()) "nein" else "ja") }
                 wechselMeldung?.let { (text, anlass) -> wechselMeldung = null; beiFehler(text); schluesselWechselMelden(text, anlass) }
                 abgeloest?.let { a -> abgeloest = null; Thread({ runCatching { Thread.sleep(1_500); a.close(1000, "Neue Verbindung") } }, "jarvis-gemini-alt").start() }
                 // Neue Verbindung: Offene Werkzeugaufrufe der alten beantwortet die Weiche ab jetzt als Eingabe.
@@ -638,6 +717,7 @@ class LiveGespraech(
             }
             is JarvisWeiche.Aktion.Anzeigen -> {
                 jarvisFertig()
+                gespraechMerken(false, a.text)
                 beiJarvisText(a.text)
                 if (laeuft && weiche?.arbeitet != true && !sprichtGerade) status("Ich höre zu")
             }
@@ -708,7 +788,14 @@ class LiveGespraech(
     private fun abholen(teile: StringBuilder) = synchronized(teile) { teile.toString().also { teile.setLength(0) } }
     private fun nutzerFertig() {
         if (gemini) mitschriftProtokoll()
-        abholen(nutzerTeile).trim().takeIf { it.isNotEmpty() }?.let(beiNutzerText)
+        abholen(nutzerTeile).trim().takeIf { it.isNotEmpty() }?.let { gespraechMerken(true, it); beiNutzerText(it) }
+    }
+
+    /** Gemini: das bisher Gesagte dieses Gesprächs, damit eine neue Sitzung ohne Fortsetzungskennung anknüpfen kann. */
+    private val diesesGespraech = ArrayDeque<Pair<Boolean, String>>()
+    private fun gespraechMerken(mir: Boolean, text: String) {
+        if (!gemini) return
+        synchronized(diesesGespraech) { diesesGespraech.addLast(mir to text); while (diesesGespraech.size > GESPRAECH_MERKEN) diesesGespraech.removeFirst() }
     }
 
     // ---- Diagnose der Gemini-Mitschrift: Kam ein Beitrag, während Jarvis' Ton noch zu hören sein konnte? ----
@@ -760,6 +847,7 @@ class LiveGespraech(
 
     private fun jarvisSatz(text: String) {
         if (bestaetigungVerschlucken) { bestaetigungVerschlucken = false; return }
+        gespraechMerken(false, text)
         beiJarvisText(text)
     }
 
@@ -1064,6 +1152,16 @@ class LiveGespraech(
     // ======================= Gemeinsam =======================
 
     /**
+     * Gemini: Die Verbindung wird gerade neu aufgebaut oder das Senden schlug fehl. false an den Aufrufer, der das Ergebnis
+     * dann über die Sprachzustellung bringt (Chat und Vorlesen); vorher ging es an die tote Verbindung und war verloren.
+     */
+    private fun nichtZugestellt(): Boolean {
+        Log.w(LiveRouting.TAG, "Gemini: Ergebnis nicht an die Verbindung (Neuaufbau), Sprachzustellung übernimmt")
+        Logbuch.netz("Live: Ergebnis während des Neuaufbaus", "geht an die Sprachzustellung")
+        return false
+    }
+
+    /**
      * Jarvis' Antwort auf einen Auftrag zurück: als Funktionsergebnis oder (Client-Delegation) als Kommentar zum Vorsprechen.
      * [navigation] = Bestätigung eines Sessionwechsels: wird gesprochen, aber nicht ins Gespräch geschrieben.
      * false = nicht angekommen (Verbindung weg, Aufruf von Gemini abgebrochen): Der Aufrufer stellt die Antwort anders zu.
@@ -1079,7 +1177,16 @@ class LiveGespraech(
                 if (LiveOptionen.geminiNebenbei(st) && modell == "gemini-3.8-live") r.put("scheduling", st["g_melden"])
                 // An die Verbindung, über die der Aufruf kam, solange sie noch offen ist (goAway-Wechsel).
                 val ziel = aufrufVerbindung.remove(kennung)?.takeIf { it === w || it === abgeloest } ?: w
-                ziel.send(JSONObject().put("toolResponse", JSONObject().put("functionResponses", JSONArray().put(r))).toString())
+                // Abgerissen oder noch im Aufbau: Die Sprachzustellung übernimmt.
+                if (wartetAufNeu || (ziel === w && !bereit) ||
+                    !ziel.send(JSONObject().put("toolResponse", JSONObject().put("functionResponses", JSONArray().put(r))).toString())) return nichtZugestellt()
+                if (kennungArt.isEmpty() && !sprichtGerade && laeuft) status("Ich höre zu")
+            }
+            "gemini_neu" -> {
+                // Die Sitzung ist ohne Fortsetzung neu und kennt den Aufruf nicht: Das Ergebnis geht als Eingabe hinein.
+                aufrufVerbindung.remove(kennung)
+                if (wartetAufNeu || !bereit || !w.send(JSONObject().put("realtimeInput", JSONObject().put("text",
+                        "Jarvis' Ergebnis zu Franks Frage von eben, gib es ihm jetzt wieder: $text")).toString())) return nichtZugestellt()
                 if (kennungArt.isEmpty() && !sprichtGerade && laeuft) status("Ich höre zu")
             }
             "auftrag" -> {
@@ -1424,14 +1531,15 @@ class LiveGespraech(
                     if (startPolster > 0 && stilleSeit > NEUER_SATZ_MS && gepuffert < nachfuellenUnter && (vorherStill || gepuffert == 0L)) {
                         val r = schreiben(polster, 0, ((startPolster - gepuffert) * 2).toInt())
                         if (r > 0) mPolster += r / 2
-                        if (stueck.hoerbar) satz = "Satzanfang mit Polster direkt davor: Puffer ${gepuffert / 24} ms, Stille davor $stilleSeit ms, ${r / 48} ms vorgelegt"
+                        if (stueck.hoerbar) satz = "Satzanfang mit Polster direkt davor: Puffer ${gepuffert / 24} ms, Stille davor " +
+                            (if (letzteHoerbarMs == 0L) "– (erster Ton)" else "$stilleSeit ms") + ", ${r / 48} ms vorgelegt"
                     } else if (startPolster > 0 && stueck.ganzStill && stilleSeit > KAPPEN_PAUSE_MS && gepuffert > kappenUeber) {
                         // Nach einem Empfangsschub läge sonst bis zur nächsten Antwort mehr Verzögerung als nötig im Puffer:
                         // nur den Überschuss aus digitaler Stille in einer längeren Pause schneiden.
                         ab = (minOf(gepuffert - kappenUeber, stueck.daten.size / 2L) * 2).toInt()
                         mGekappt += ab / 2
                     } else if (stueck.hoerbar && stilleSeit > NEUER_SATZ_MS) {
-                        satz = "Satzanfang: Puffer ${gepuffert / 24} ms, Stille davor $stilleSeit ms"
+                        satz = "Satzanfang: Puffer ${gepuffert / 24} ms, Stille davor " + if (letzteHoerbarMs == 0L) "– (erster Ton)" else "$stilleSeit ms"
                     }
                     // Vor und nach dem Schreiben: Ein großes Stück läuft schon hörbar an, während write() noch blockiert.
                     if (stueck.hoerbar) { letzteHoerbarMs = System.currentTimeMillis(); mTon = true }
@@ -1742,6 +1850,12 @@ class LiveGespraech(
         private const val WEICHE_RUHE_ZUSATZ_MS = 1_200L
         /** Nach dem Antippen wird die alte GPT-Live-Antwort höchstens so lange verworfen. */
         private const val VERWERFEN_MAX_MS = 10_000L
+        /** Gemini lehnt die Fortsetzung ab (already connected): so oft mit derselben Kennung erneut, dann als neue Sitzung. */
+        private const val SCHON_VERBUNDEN_WIEDERHOLT = 2
+        /** Wartezeit vor dem n-ten Versuch mit derselben Kennung: n mal dieser Wert. */
+        private const val SCHON_VERBUNDEN_WARTEN_MS = 3_000L
+        /** So viele Beiträge dieses Gesprächs bekommt eine neue Gemini-Sitzung ohne Fortsetzung mit. */
+        private const val GESPRAECH_MERKEN = 12
         /** Effektivwert (PCM16), ab dem ein Ausgabestück als hörbarer Ton zählt; Sprache liegt weit darüber. */
         private const val HOERBAR_EFFEKTIV = 120.0
         /** Länge eines Stilleblocks in Sprechpausen (Medienweg); hält den Bluetooth-Medienstrom wach. */
@@ -1783,6 +1897,8 @@ internal object GeminiFehler {
     fun kontingent(reason: String) = reason.contains("quota", true) || reason.contains("RESOURCE_EXHAUSTED", true) || reason.contains("rate limit", true)
     fun schluessel(reason: String) = reason.contains("API key", true) || reason.contains("PERMISSION_DENIED", true) ||
         reason.contains("UNAUTHENTICATED", true) || reason.contains("billing", true)
+    /** Fortsetzung abgelehnt, weil Google die alte Verbindung noch für offen hält (1008); kein Modellfehler. */
+    fun schonVerbunden(reason: String) = reason.contains("already connected", true) || reason.contains("existing client", true)
     /** Modell oder Einstellung abgelehnt: träfe den bezahlten Schlüssel genauso. 1007/1008 = ungültige Anfrage bzw. Richtlinie. */
     fun modell(code: Int, reason: String) = code == 1007 || code == 1008 || reason.contains("not found", true) ||
         reason.contains("not supported", true) || reason.contains("invalid argument", true) || reason.contains("INVALID_ARGUMENT", true)

@@ -380,16 +380,22 @@ private fun SitzungEintrag(
             // Eine Programmier-Sitzung (Claude Code) arbeitet: das laufende Claude-Symbol in Orange.
             if (codet) Text(zeichen, Modifier.padding(start = 8.dp).width(24.dp), color = CLAUDE_ORANGE, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
-        Text(
-            when {
-                codet && denkt -> "Programmiert · Jarvis arbeitet …"
-                codet -> "Programmiert …" + (programmiert[s.id]?.app?.takeIf { it.isNotEmpty() }?.let { " ($it)" } ?: "")
-                denkt -> "Jarvis arbeitet …"
-                else -> zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten"
-            },
-            color = if (codet) CLAUDE_ORANGE else if (denkt) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
+        // Programmieraufträge: vorn die feste Startzeit des ersten Auftrags, damit bei mehreren sofort klar ist, welcher zuerst kam.
+        val start = if (s.programmierung && s.auftragStart > 0) zeitKurz(s.auftragStart) + " · " else ""
+        Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (start.isNotEmpty()) Text(start, color = f.textLeise, fontSize = 12.sp, maxLines = 1)
+            Text(
+                when {
+                    codet && denkt -> "Programmiert · Jarvis arbeitet …"
+                    codet -> "Programmiert …" + (programmiert[s.id]?.app?.takeIf { it.isNotEmpty() }?.let { " ($it)" } ?: "")
+                    denkt -> "Jarvis arbeitet …"
+                    // Mit Startzeit davor: „zuletzt“ unterscheidet die letzte Änderung vom Start.
+                    else -> (if (start.isNotEmpty()) "zuletzt " else "") + zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten"
+                },
+                color = if (codet) CLAUDE_ORANGE else if (denkt) f.primaer else f.textLeise, fontSize = 12.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

@@ -12,7 +12,9 @@ import org.json.JSONObject
  * Ein gespeichertes Gespräch, wie es die Seitenleiste zeigt. [projekt]: id des Projekts, leer = normales Gespräch.
  * [programmierung]: Gespräch eines Programmierauftrags; es steht im Reiter „Programmierung“, nicht unter „Gespräche“.
  */
-data class Sitzung(val id: String, val titel: String, val erstellt: Long, val geaendert: Long, val anzahl: Int, val projekt: String = "", val programmierung: Boolean = false)
+/** [auftragStart]: wann der erste Programmierauftrag dieses Gesprächs abgeschickt wurde (0 = unbekannt); einmal gesetzt, bleibt er. */
+data class Sitzung(val id: String, val titel: String, val erstellt: Long, val geaendert: Long, val anzahl: Int, val projekt: String = "", val programmierung: Boolean = false,
+                   val auftragStart: Long = 0L)
 
 /**
  * Eine Nachricht im Speicher: von Frank oder von Jarvis. [art]: „antwort“ (normal), „fehler“ (Fehlermeldung statt
@@ -49,39 +51,69 @@ object Gespraeche {
      */
     fun istProgrammierung(j: JSONObject): Boolean {
         if (j.optBoolean("programmierung")) return true
+        if (istAuftragsgespraech(j)) return true
         val a = j.optJSONArray("nachrichten") ?: return false
-        val erste = a.optJSONObject(0)
-        if (erste != null && erste.optBoolean("mir") && ProgrammierChat.istAuftragsVorspann(erste.optString("text"))) return true
         return (0 until a.length()).any { a.optJSONObject(it)?.optString("art") in PROGRAMMIER_ARTEN }
     }
 
+    /** Eigenes Auftragsgespräch: Die erste Nachricht ist der Auftrag selbst, angelegt im Augenblick des Abschickens. */
+    private fun istAuftragsgespraech(j: JSONObject): Boolean =
+        j.optJSONArray("nachrichten")?.optJSONObject(0)?.let { it.optBoolean("mir") && ProgrammierChat.istAuftragsVorspann(it.optString("text")) } == true
+
+    /** Der früheste bekannte Auftragsstart (0 = keiner): Ein späterer Auftrag oder Nachtrag ersetzt nie einen früheren. */
+    internal fun fruehesterStart(vararg starts: Long): Long = starts.filter { it > 0 }.minOrNull() ?: 0L
+
+    /** Der Start, der statt [gespeichert] ins Gespräch gehört, oder null, wenn [gespeichert] schon der früheste ist. */
+    internal fun neuerStart(gespeichert: Long, bekannt: Long): Long? = fruehesterStart(gespeichert, bekannt).takeIf { it > 0 && it != gespeichert }
+
+    /** Je Gespräch der früheste Start aus (Gespräch, Start)-Paaren des Auftragsbuchs; 0 = nur Einträge ohne Start. */
+    internal fun fruehesteStarts(eintraege: List<Pair<String, Long>>): Map<String, Long> = HashMap<String, Long>().apply {
+        eintraege.forEach { (g, s) -> if (g.isNotEmpty()) merge(g, s) { a, b -> fruehesterStart(a, b) } }
+    }
+
     private fun sitzungAus(j: JSONObject, id: String = j.getString("id")) =
-        Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"), istProgrammierung(j))
+        Sitzung(id, j.optString("titel"), j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0, j.optString("projekt"), istProgrammierung(j),
+            j.optLong("auftragStart"))
 
     /**
      * Alle Gespräche, das zuletzt geführte zuerst. [mitAuftrag]: Gespräche, denen das Auftragsbuch einen Programmierauftrag
-     * zuordnet. Fehlt ihnen oder einem anders erkannten Programmiergespräch die Markierung, wird sie einmalig in die Datei
-     * geschrieben: Die Zuordnung bleibt dann auch, wenn der Auftrag später aus dem Auftragsbuch fällt.
+     * zuordnet, mit dem Start ihres ersten Auftrags (0 = unbekannt). Fehlt ihnen oder einem anders erkannten Programmiergespräch
+     * die Markierung oder der Start, wird beides einmalig in die Datei geschrieben: Es bleibt dann auch, wenn der Auftrag
+     * später aus dem Auftragsbuch fällt.
      */
-    fun alle(context: Context, mitAuftrag: Set<String> = emptySet()): List<Sitzung> =
+    fun alle(context: Context, mitAuftrag: Map<String, Long> = emptyMap()): List<Sitzung> =
         ordner(context).listFiles { f -> f.name.endsWith(".json") }.orEmpty().mapNotNull { f ->
             runCatching {
                 val j = lies(f)
                 val s = sitzungAus(j)
-                if (!j.optBoolean("programmierung") && (s.programmierung || s.id in mitAuftrag)) markieren(context, s.id)
-                if (s.id in mitAuftrag) s.copy(programmierung = true) else s
+                val buch = mitAuftrag[s.id]
+                // Noch ohne gespeicherten Start (ältere Aufträge): Ein eigenes Auftragsgespräch entstand beim Abschicken, das hilft,
+                // wenn der erste Auftrag schon aus dem Auftragsbuch gefallen ist. Sonst nur Starts aus dem Auftragsbuch, nie erfunden.
+                val start = if (buch == null) 0L else fruehesterStart(buch, if (s.auftragStart == 0L && istAuftragsgespraech(j)) s.erstellt else 0L)
+                val neu = neuerStart(s.auftragStart, start)
+                if ((!j.optBoolean("programmierung") && (s.programmierung || buch != null)) || neu != null) markieren(context, s.id, start)
+                val mitStart = if (neu != null) s.copy(auftragStart = neu) else s
+                if (buch != null) mitStart.copy(programmierung = true) else mitStart
             }.onFailure { Log.w(TAG, "Gespräch ${f.name} nicht lesbar", it) }.getOrNull()
         }.sortedByDescending { it.geaendert }
 
-    /** Markiert ein gespeichertes Gespräch dauerhaft als Programmiergespräch. Gibt es die Datei (noch) nicht, passiert nichts. */
-    fun markieren(context: Context, id: String) {
+    /**
+     * Markiert ein gespeichertes Gespräch dauerhaft als Programmiergespräch. Gibt es die Datei (noch) nicht, passiert nichts.
+     * [auftragStart]: Start eines Auftrags; übernommen nur, wenn er früher ist als der gespeicherte (der früheste bleibt).
+     */
+    fun markieren(context: Context, id: String, auftragStart: Long = 0L) {
         if (id.isEmpty()) return
         synchronized(sperre) {
             runCatching {
                 val d = datei(context, id)
                 if (!d.exists() && !File(d.path + ".bak").exists()) return@runCatching
                 val j = lies(d)
-                if (!j.optBoolean("programmierung")) schreiben(d, j.put("programmierung", true))
+                val start = neuerStart(j.optLong("auftragStart"), auftragStart)
+                if (!j.optBoolean("programmierung") || start != null) {
+                    j.put("programmierung", true)
+                    start?.let { j.put("auftragStart", it) }
+                    schreiben(d, j)
+                }
             }.onFailure { Log.w(TAG, "Gespräch $id nicht als Programmierung markiert", it) }
         }
     }
@@ -131,6 +163,8 @@ object Gespraeche {
                     .put("geaendert", jetzt)
                     .apply { if (zuProjekt.isNotEmpty()) put("projekt", zuProjekt) }
                     .apply { if (programmierung || alt?.optBoolean("programmierung") == true) put("programmierung", true) }
+                    // Der Start des ersten Auftrags bleibt bei jedem Speichern stehen.
+                    .apply { alt?.optLong("auftragStart")?.takeIf { it > 0 }?.let { put("auftragStart", it) } }
                     .put("nachrichten", JSONArray().apply {
                         nachrichten.forEach { n ->
                             put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
@@ -144,7 +178,7 @@ object Gespraeche {
                     })
                 if (!json.optBoolean("programmierung") && istProgrammierung(json)) json.put("programmierung", true)
                 schreiben(d, json)
-                Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"))
+                Sitzung(id, titel, erstellt, jetzt, nachrichten.size, zuProjekt, json.optBoolean("programmierung"), json.optLong("auftragStart"))
             }.onFailure { Log.w(TAG, "Gespräch nicht gespeichert", it) }.getOrNull()
         }
     }

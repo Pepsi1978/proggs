@@ -1958,7 +1958,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Alle Gespräche; die mit Auftrag im Auftragsbuch kommen dauerhaft in den Reiter „Programmierung“ (auch der Bestand). */
     private fun alleSitzungen(): List<de.frank.jarvis.data.Sitzung> {
-        val mitAuftrag = runCatching { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.gespraecheMitAuftrag(getApplication()) }.getOrDefault(emptySet())
+        val mitAuftrag = runCatching { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.gespraecheMitAuftrag(getApplication()) }.getOrDefault(emptyMap())
         return de.frank.jarvis.data.Gespraeche.alle(getApplication(), mitAuftrag)
     }
 
@@ -1992,12 +1992,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
-            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand, kuerzenUm, projekt, programmierung) } }
+            val neu = sicherung.withLock { withContext(Dispatchers.IO) {
+                de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand, kuerzenUm, projekt, programmierung)?.let { n -> auftragStartNachtragen(n) }
+            } }
             if (neu != null) sitzungen = listOf(neu) + sitzungen.filter { it.id != neu.id }
             if (neu != null) kiTitelBilden(id, stand)
             // Das Gespräch gehört sofort ins Kurzzeitgedächtnis (für das nächste Gespräch und für ChatGPT).
             de.frank.jarvis.gedaechtnis.Lagebild.anstossen(getApplication(), listOf(de.frank.jarvis.gedaechtnis.Bereich.GESPRAECHE), "Gespräch mit Jarvis")
         }
+    }
+
+    /**
+     * Ging der erste Auftrag ab, bevor das Gespräch eine Datei hatte, steht sein Start nur im Auftragsbuch: dann einmal
+     * übernehmen, damit die Leiste ihn sofort zeigt.
+     */
+    private fun auftragStartNachtragen(s: de.frank.jarvis.data.Sitzung): de.frank.jarvis.data.Sitzung {
+        if (!s.programmierung || s.auftragStart > 0) return s
+        val start = runCatching { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.gespraecheMitAuftrag(getApplication())[s.id] }.getOrNull() ?: 0L
+        if (start <= 0) return s
+        de.frank.jarvis.data.Gespraeche.markieren(getApplication(), s.id, start)
+        return s.copy(auftragStart = start)
     }
 
     /** Gespräche, für die gerade eine Überschrift entsteht: höchstens ein Auftrag je Gespräch gleichzeitig. */
