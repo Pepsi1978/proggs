@@ -51,5 +51,14 @@ for _ in 1 2 3 4 5; do
 done
 [ $GELADEN -eq 1 ] || { echo "FEHLER: launchctl bootstrap $PLIST ist fehlgeschlagen"; exit 1; }
 launchctl kickstart -k "gui/$(id -u)/$NAME"
+
+# Terminal.app nur mit überlagerten Rollbalken: Bei „Automatisch“ blendet macOS mit verbundener Maus einen festen Balken ein und
+# nimmt jedem Fenster 3 Spalten (180 → 177). Claude Code hat die erste Nachricht dann schon auf die alte Breite gepolstert,
+# und jede Zeile bricht mit einer farbigen Leerzeile um (21.10.2026). Wirkt erst nach einem Neustart von Terminal.app.
+if [ "$(defaults read com.apple.Terminal AppleShowScrollBars 2>/dev/null || true)" != "WhenScrolling" ]; then
+    defaults write com.apple.Terminal AppleShowScrollBars -string WhenScrolling \
+        && echo "Terminal.app: Rollbalken nur beim Scrollen. Wirkt nach dem nächsten Neustart von Terminal.app." \
+        || echo "ACHTUNG: Terminal-Rollbalken nicht umgestellt (defaults write fehlgeschlagen)."
+fi
 echo "$NAME eingerichtet und gestartet. Protokoll: $LOGS/bruecke.log"
 [ -f "$HOME/SK/Jarvis/relay.properties" ] || echo "ACHTUNG: ~/SK/Jarvis/relay.properties fehlt, die Brücke wartet, bis sie da ist."

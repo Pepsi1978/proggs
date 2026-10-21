@@ -235,22 +235,31 @@ def raeume_auf() -> None:
                     pass
 
 
-def starte_sitzung(auftrag: dict) -> str:
-    app = re.sub(r"[^\w ._-]", "", str(auftrag.get("app", ""))).strip() or "App"
-    name = f"Jarvis: {app}"
+def auftragstext(auftrag: dict) -> str:
+    """Die erste Nachricht der Sitzung. Der Auftrag geht zeilengenau hinein: keine Umbrüche ergänzen oder entfernen (Absätze,
+    Listen, Codeblöcke und „ ; “-Trenner bleiben, wie Jarvis sie geschickt hat; test_auftragstext.py). Nur CRLF/CR werden LF:
+    Ein nacktes CR setzt im Terminal den Cursor an den Zeilenanfang."""
     review = "ja: vor dem Abschluss die Änderung mit /code-review prüfen und Befunde beheben" if auftrag.get("review") else "nein"
-    text = f"""Programmierauftrag von Frank über Jarvis (seinen Sprachassistenten auf dem Handy). Frank verfolgt diese Sitzung per Remote Control in der Claude-App.
+    app = auftrag.get("app") or ""
+    text = (auftrag.get("auftrag") or "").replace("\r\n", "\n").replace("\r", "\n")
+    return f"""Programmierauftrag von Frank über Jarvis (seinen Sprachassistenten auf dem Handy). Frank verfolgt diese Sitzung per Remote Control in der Claude-App.
 
-APP: {auftrag.get('app', '')}
+APP: {app}
 REVIEW: {review}
 AUFTRAG:
-{auftrag.get('auftrag', '')}
+{text}
 
 VORGEHEN
 1. Finde die App im Repo anhand des Namens und des Auftrags (Ordnernamen, README.md, CLAUDE.md, settings.gradle.kts, app_name, applicationId). Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. Ist die Zuordnung nicht eindeutig, frag Frank mit AskUserQuestion und nenne die Kandidaten, statt zu raten.
 2. Setze den Auftrag vollständig um. Ist etwas Wesentliches unklar, frag Frank mit AskUserQuestion; Kleinigkeiten entscheidest du selbst.
 3. Schließe nach den Profilregeln vollständig ab: bauen, Version bumpen, committen, pushen, per WLAN aufs Handy installieren und bei Android-Apps den Skill apk-update ausführen. Abschlussmeldung auf Deutsch.
 """
+
+
+def starte_sitzung(auftrag: dict) -> str:
+    app = re.sub(r"[^\w ._-]", "", str(auftrag.get("app", ""))).strip() or "App"
+    name = f"Jarvis: {app}"
+    text = auftragstext(auftrag)
     stempel = time.strftime("%Y%m%d-%H%M%S")
     TEMP.mkdir(parents=True, exist_ok=True)
     raeume_auf()
