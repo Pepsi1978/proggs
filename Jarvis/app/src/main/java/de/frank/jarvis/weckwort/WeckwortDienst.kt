@@ -614,6 +614,12 @@ class WeckwortDienst : Service() {
         /** Läuft der Dienst im Vordergrund (für [hinweisErneuern]). */
         @Volatile private var laeuft = false
 
+        /**
+         * Der Dienst hält das Mikrofon im Vordergrund (Typ Mikrofon). Nur dann darf Jarvis aus dem Hintergrund oder bei gesperrtem
+         * Handy wieder zuhören (Android gibt das Mikrofon sonst nur der sichtbaren App), etwa nach einer Sprachzustellung.
+         */
+        val imVordergrund: Boolean get() = laeuft
+
         /** Mit dem gewählten Weckwort im Text; wegwischbar (Einstellungen → Benachrichtigungen) nicht fest. */
         private fun baueHinweis(context: Context): Notification {
             val e = Einstellungen.get(context)

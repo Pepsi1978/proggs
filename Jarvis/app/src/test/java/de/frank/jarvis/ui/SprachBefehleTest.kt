@@ -53,4 +53,15 @@ class SprachBefehleTest {
             assertFalse(satz, SprachBefehle.istSessionEnde(satz, imGespraechsmodus = false))
         }
     }
+
+    @Test fun hoeflicherAbschlussIstKeinVerzichtAufAusstehendeErgebnisse() {
+        listOf("Danke", "Okay, danke!", "Das war's", "Tschüss Jarvis", "Danke, das ist alles").forEach {
+            org.junit.Assert.assertTrue(it, SprachBefehle.istHoeflichesEnde(it))
+            org.junit.Assert.assertTrue(it, SprachBefehle.istSessionEnde(it, imGespraechsmodus = true))
+        }
+        // Ausdrücklich beenden bleibt ein bewusstes Ende: Ausstehende Ergebnisse werden dann nicht mehr vorgelesen.
+        listOf("Sprachsession beenden", "Hör auf", "Beenden", "Stopp", "Mikrofon aus").forEach {
+            org.junit.Assert.assertFalse(it, SprachBefehle.istHoeflichesEnde(it))
+        }
+    }
 }

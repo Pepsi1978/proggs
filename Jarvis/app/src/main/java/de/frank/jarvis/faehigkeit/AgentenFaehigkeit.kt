@@ -90,7 +90,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                         "verneint („kein PDF“, „nicht als PDF“, „nur Text“) oder ohne Formatwunsch weglassen: Dann kommt der Bericht nur als Chattext. Ein PDF-Wunsch allein ist kein Ablagewunsch."),
                     "ablegen" to schalter("true = das Ergebnis dauerhaft in der Ablage speichern. NUR wenn Frank das ausdrücklich verlangt (zum Beispiel „und leg das in der Ablage ab“); sonst weglassen."),
                     "per_mail" to schalter("true = den fertigen Bericht zusätzlich per E-Mail an Frank schicken."),
-                    "vorlesen" to schalter("true = Jarvis liest den fertigen Bericht auf dem Handy laut vor, sobald er da ist."),
+                    "vorlesen" to schalter("true = Jarvis liest eine Zusammenfassung des fertigen Berichts auf dem Handy laut vor, sobald er da ist. Im Sprachgespräch unnötig: Dort liest Jarvis das Ergebnis ohnehin vollständig vor."),
                     pflicht = listOf("agent", "auftrag"),
                 ),
                 nurLesen = false,
@@ -109,7 +109,9 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                     !CodexAuthManager(app).isConnected -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
                     // Unter der Sperre des Vorgangsbuchs: erst nach Doppeln suchen, dann synchron reservieren. Der Lauf beginnt erst
                     // asynchron im Dienst; ein paralleler oder wiederholter Aufruf (Verbindungsabbruch) sähe sonst noch einen freien Platz.
-                    else -> when (val annahme = Vorgaenge.buch(app).annehmen(plan.name, auftrag, a.optBoolean("ablegen"), herkunftsGespraech(), a.optBoolean("als_pdf")) { Agenten.reserviere(plan.name, auftrag) }) {
+                    // Im Sprachgespräch begonnen (Gesprächsmodus mit Vorlesen oder Live): Der Vorgang erbt das von selbst, unabhängig vom Parameter vorlesen.
+                    else -> when (val annahme = Vorgaenge.buch(app).annehmen(plan.name, auftrag, a.optBoolean("ablegen"), herkunftsGespraech(), a.optBoolean("als_pdf"),
+                        sprache = kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung]?.modus?.kennung.orEmpty()) { Agenten.reserviere(plan.name, auftrag) }) {
                         is Annahme.Doppelt -> Ergebnis("Dieser Auftrag ist schon angenommen, es wurde nichts doppelt gestartet: ${Vorgaenge.zeile(annahme.vorgang)}\n" +
                             "Sag Frank den Stand in einem Satz. Das Ergebnis holst du mit vorgaenge (aktion lesen, id ${annahme.vorgang.id}), sobald es fertig ist.")
                         Annahme.KeinPlatz -> Ergebnis("Nicht angenommen: Es arbeiten schon ${Agenten.HOECHSTENS} Agenten. Bitte warten, bis einer fertig ist (Stand mit vorgaenge).", fehler = true)
@@ -123,7 +125,8 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                                 (if (annahme.vorgang.gespraech.isNotEmpty()) "Das Ergebnis erscheint in diesem Jarvis-Gespräch" else "Das Ergebnis holst du mit vorgaenge") +
                                 (if (a.optBoolean("als_pdf")) " als Text und gestaltetes PDF" else " als formatierter Text (kein PDF)") +
                                 (if (a.optBoolean("ablegen")) " und wird in der Ablage gespeichert" else ", es wird NICHT in der Ablage gespeichert") +
-                                (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung. " +
+                                (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung" +
+                                (if (annahme.vorgang.sprache.isNotEmpty()) " und Jarvis liest das Ergebnis von selbst vollständig vor, sobald es da ist, auch wenn das Sprachgespräch bis dahin endet. " else ". ") +
                                 "Sag Frank in einem Satz, dass der Auftrag angenommen ist, und rede normal weiter. Später: vorgaenge (aktion lesen, id $id).")
                         }
                     }

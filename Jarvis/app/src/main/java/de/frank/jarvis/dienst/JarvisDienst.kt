@@ -264,8 +264,23 @@ class JarvisDienst : Service() {
                     // Vorgelesen wird unten die eigene Zusammenfassung, nicht der Meldungstext.
                     agentTitel, sprechtext = null,
                 )
+                // Im Sprachgespräch begonnen: Das Ergebnis kommt vollständig zu Gehör (auch nach Stille-Ende, aus dem Hintergrund, bei
+                // gesperrtem Handy), danach ist der passende Sprachdialog wieder offen. Dann keine zweite, kurze Fassung unten.
+                val sprachlich = v?.takeIf { it.gespraech.isNotEmpty() }?.let { de.frank.jarvis.speech.SprachModus.aus(it.sprache) }
+                // Vor der teuren Vorlesefassung entscheiden; bewusst beendet oder Vorlesen aus: der bisherige Weg (Meldungs-Einstellung, vorlesen=true).
+                val sprechen = sprachlich != null && de.frank.jarvis.speech.SprachZustellung.ausgang(this@JarvisDienst, sprachlich, v.erstellt, agent = true)
+                    .also { if (it != de.frank.jarvis.speech.SprachZustellung.Ausgang.SPRECHEN) Logbuch.sprache("Sprachzustellung", "vorgang:${v.id}: ${it.text}") } ==
+                    de.frank.jarvis.speech.SprachZustellung.Ausgang.SPRECHEN
+                if (v != null && sprachlich != null && sprechen) {
+                    val gesprochen = if (lauf.bericht != null)
+                        de.frank.jarvis.agent.Vorlesefassung.vollstaendig(this@JarvisDienst, plan.name, lauf.bericht, lauf.grund)
+                    else "Der Agent ${plan.name} ist leider nicht fertig geworden: ${lauf.grund ?: "Grund unbekannt"}. Details stehen im Chat."
+                    val ansage = if (lauf.bericht != null) "Frank, die Ergebnisse sind jetzt da." else "Frank, zu deinem Auftrag an den Agenten ${plan.name}:"
+                    de.frank.jarvis.ui.AppViewModel.zustellen(this@JarvisDienst,
+                        de.frank.jarvis.speech.Zustellung("vorgang:${v.id}", sprachlich, v.gespraech, v.erstellt, ansage, gesprochen))
+                }
                 // Nach der Benachrichtigung: Die Zusammenfassung braucht bis zu 75 Sekunden und soll die Meldung nicht aufhalten.
-                if (titel != null && (vorlesen || de.frank.jarvis.meldung.Meldungen.vorlesenAn(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT))) {
+                else if (titel != null && (vorlesen || de.frank.jarvis.meldung.Meldungen.vorlesenAn(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT))) {
                     lauf.bericht?.let { bericht ->
                         // Vorgelesen wird eine eigene kurze Zusammenfassung fürs Ohr, nicht Auftrag und Bericht; der Bericht bleibt unverändert.
                         val fassung = de.frank.jarvis.agent.Vorlesefassung.erstelle(this@JarvisDienst, plan.name, titel, bericht, lauf.grund, inAblage = !lauf.vorlaeufig)

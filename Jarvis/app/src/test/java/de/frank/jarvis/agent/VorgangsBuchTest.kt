@@ -28,6 +28,22 @@ class VorgangsBuchTest {
         assertEquals(1, reserviert)
     }
 
+    @Test fun sprachursprungUeberlebtNeustartUndFehltBeiAltenEintraegen() {
+        val b = buch()
+        val v = (b.annehmen("Recherche", "Gesprochen gefragt", gespraech = "g1", sprache = "live") { true } as Annahme.Neu).vorgang
+        b.gestartet(v.id)
+        b.beende(v.id, Vorgang.FERTIG, null, null, "Bericht")
+        // Neuer Prozess: Der Sprachursprung steht noch da, damit die Zustellung ihn kennt.
+        val neu = buch().finde(v.id)!!
+        assertEquals("live", neu.sprache)
+        assertEquals("g1", neu.gespraech)
+        assertTrue("im Sprachgespräch begonnen" in Vorgaenge.zeile(neu))
+        // Ein Eintrag aus einer Version vor dem Feld gilt als getippt: nie von selbst vorlesen.
+        val alt = Vorgang.aus(org.json.JSONObject().put("id", "VALT1").put("agent", "Recherche").put("auftrag", "x").put("stand", Vorgang.FERTIG))
+        assertEquals("", alt.sprache)
+        assertFalse("Sprachgespräch" in Vorgaenge.zeile(alt))
+    }
+
     @Test fun keinPlatzLegtNichtsAn() {
         val b = buch()
         assertTrue(b.annehmen("Recherche", "A") { false } is Annahme.KeinPlatz)

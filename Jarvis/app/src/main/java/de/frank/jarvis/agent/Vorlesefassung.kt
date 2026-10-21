@@ -36,7 +36,37 @@ object Vorlesefassung {
         return antwort?.takeIf { it.isNotBlank() } ?: ersatz
     }
 
+    /**
+     * Für eine im Sprachgespräch begonnene Anfrage: der ganze Bericht fürs Ohr umgeschrieben, ohne wichtige Inhalte wegzulassen
+     * (Ergebnisse, Zahlen, Empfehlungen, offene Punkte); nur Adressen, Tabellenformen und Quellenlisten fallen weg. Ohne Modell
+     * oder bei Zeitüberschreitung der Bericht selbst (der Vorleser entfernt Markdown und Adressen).
+     */
+    suspend fun vollstaendig(context: Context, agent: String, inhalt: String, grund: String?): String {
+        val ersatz = inhalt + (grund?.let { "\n\nHinweis: Der Lauf ist nicht vollständig: $it" } ?: "")
+        val auth = CodexAuthManager(context.applicationContext)
+        if (!auth.isConnected) return ersatz
+        val text = "AGENT: $agent\n" + (grund?.let { "HINWEIS: Der Lauf ist nicht vollständig: $it\n" } ?: "") + "\nBERICHT:\n" + inhalt.take(MAX_ZEICHEN)
+        val antwort = withTimeoutOrNull(120_000L) {
+            runCatching { auth.streamChat(ANWEISUNG_VOLL, listOf(ChatTurn("user", text)), Einstellungen.get(context).modell, ReasoningEffort.LOW).trim() }
+                .onFailure { if (it is CancellationException) throw it; Logbuch.fehler("Vorlesefassung (vollständig): Modell", it) }.getOrNull()
+        }
+        return antwort?.takeIf { it.length >= 80 } ?: ersatz
+    }
+
     private const val MAX_ZEICHEN = 60_000
+
+    private val ANWEISUNG_VOLL = """
+        Ein Hintergrund-Agent von Jarvis hat einen Auftrag erledigt, den Frank im Sprachgespräch gestellt hat. Frank hört das
+        Ergebnis jetzt, vielleicht in der Küche, ohne auf den Bildschirm zu schauen. Schreibe den Bericht so um, dass Jarvis ihn
+        vollständig vorlesen kann: alle Ergebnisse, Antworten, Zahlen, Preise, Namen, Empfehlungen und offenen Punkte, in der
+        Reihenfolge des Berichts; nichts Wichtiges weglassen. Beginne mit einem Satz, worum es ging und was die Kernaussage ist.
+        Tabellen und Aufzählungen in ganze Sätze fassen, Gliederung durch kurze Übergänge („Zum zweiten Punkt …“). Ist der Lauf
+        laut HINWEIS nicht vollständig, sage das. Letzter Satz: Der ausführliche Bericht mit Quellen steht im Chat.
+        Form: gesprochenes Deutsch, du sprichst Frank direkt an, Absätze durch Leerzeilen. Keine Überschriften, kein Markdown,
+        keine Links oder Adressen, keine Dateinamen, keine Emojis, keine Quellenklammern. Abkürzungen ausschreiben, Zahlen mit
+        Einheit so, wie man sie spricht. Keine Einleitung wie „Frank, die Ergebnisse sind da“ (die sagt Jarvis selbst davor).
+        Gib nur den Vorlesetext aus.
+    """.trimIndent()
 
     private val ANWEISUNG = """
         Ein Hintergrund-Agent von Jarvis hat einen Auftrag erledigt. Du bekommst seinen Bericht.

@@ -10,12 +10,17 @@ import java.util.Locale
 object SprachBefehle {
 
     /** „Ende“, „Stopp“, „Danke, das war's“ …: beendet den Gesprächsmodus. Nur wenn der ganze Satz ein solcher Befehl ist. */
-    fun istAusbefehl(text: String): Boolean {
-        val worte = text.lowercase(Locale.GERMAN).replace("’", "'").replace(Regex("[^a-zäöüß' ]"), " ")
-            .split(' ').filter { it.isNotBlank() && it !in FUELLWORTE }
-        val satz = worte.joinToString(" ").replace("'", "")
-        return satz in AUSBEFEHLE
-    }
+    fun istAusbefehl(text: String): Boolean = satz(text) in AUSBEFEHLE
+
+    /** Kleingeschrieben, ohne Satzzeichen und Füllwörter, als ein Satz (für [AUSBEFEHLE] und [HOEFLICH]). */
+    private fun satz(text: String): String = text.lowercase(Locale.GERMAN).replace("’", "'").replace(Regex("[^a-zäöüß' ]"), " ")
+        .split(' ').filter { it.isNotBlank() && it !in FUELLWORTE }.joinToString(" ").replace("'", "")
+
+    /**
+     * Ein höflicher Abschluss („Danke“, „Das war's“, „Tschüss“): beendet die Sprachschleife, ist aber kein Verzicht auf ein noch
+     * ausstehendes Ergebnis. Frank wartet danach oft genau darauf; nur ein ausdrückliches Beenden verwirft die Sprachzustellung.
+     */
+    fun istHoeflichesEnde(text: String): Boolean = satz(text) in HOEFLICH
 
     /**
      * Soll der Satz die Sprachsession beenden? [imGespraechsmodus] = die über das Weckwort gestartete Sprachschleife
@@ -113,11 +118,16 @@ object SprachBefehle {
         "live sitzung" to "livesession",
     )
 
+    /** Die höflichen unter den [AUSBEFEHLE]n: Sie schließen die Schleife, verzichten aber nicht auf ausstehende Ergebnisse. */
+    private val HOEFLICH = setOf(
+        "danke", "danke schön", "dankeschön", "vielen dank", "tschüss", "tschüs", "ciao", "fertig", "das wars", "danke das wars", "das wars danke",
+        "das ist alles", "danke das ist alles", "das reicht", "mehr nicht", "nichts mehr", "nichts weiter", "sonst nichts", "danke sonst nichts",
+    )
+
     /** Ganze Sätze, die den Gesprächsmodus beenden (nach Kleinschreibung, ohne Satzzeichen und Füllwörter). */
-    private val AUSBEFEHLE = setOf(
-        "ende", "stopp", "stop", "schluss", "aus", "fertig", "tschüss", "tschüs", "ciao", "danke", "danke schön", "dankeschön", "vielen dank",
-        "das wars", "danke das wars", "das wars danke", "das ist alles", "danke das ist alles", "das reicht", "mehr nicht", "nichts mehr",
+    private val AUSBEFEHLE = HOEFLICH + setOf(
+        "ende", "stopp", "stop", "schluss", "aus",
         "sprachsitzung beenden", "sprachsitzung beendet", "sitzung beenden", "gespräch beenden", "beenden", "beende", "aufhören", "hör auf",
-        "ende der sitzung", "session beenden", "schluss für jetzt", "erstmal nicht", "erst mal nicht", "nichts weiter", "sonst nichts", "danke sonst nichts",
+        "ende der sitzung", "session beenden", "schluss für jetzt", "erstmal nicht", "erst mal nicht",
     )
 }

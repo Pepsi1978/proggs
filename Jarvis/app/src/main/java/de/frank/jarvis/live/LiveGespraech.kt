@@ -67,6 +67,8 @@ class LiveGespraech(
     private val ersatzSchluessel: String = "",
     /** Nur Gemini: Der erste Schlüssel gehört zu einem Projekt ohne Abrechnung; seine Gespräche kosten nichts. */
     schluesselGratis: Boolean = false,
+    /** Auftakt an das Modell (GPT-Live, Gemini): Begrüßung, nach einer Sprachzustellung die Frage, ob Frank noch etwas wissen will. */
+    private val begruessung: String = BEGRUESSUNG,
 ) {
     private val app = context.applicationContext
     private val audio = app.getSystemService(AudioManager::class.java)
@@ -443,7 +445,7 @@ class LiveGespraech(
                 tonStarten()
                 if (!begruesst) {
                     begruesst = true
-                    w.send(JSONObject().put("realtimeInput", JSONObject().put("text", "Begrüße Frank kurz auf Deutsch, höchstens ein Satz, dann hör zu.")).toString())
+                    w.send(JSONObject().put("realtimeInput", JSONObject().put("text", begruessung)).toString())
                 }
                 if (laeuft) status("Ich höre zu")
             }
@@ -669,7 +671,7 @@ class LiveGespraech(
                 .put("content", JSONArray().put(JSONObject().put("type", if (mir) "input_text" else "output_text").put("text", text.take(1200)))))
         }
         eingabe.put(JSONObject().put("type", "message").put("role", "developer")
-            .put("content", JSONArray().put(JSONObject().put("type", "input_text").put("text", "Begrüße Frank kurz auf Deutsch, höchstens ein Satz, dann hör zu."))))
+            .put("content", JSONArray().put(JSONObject().put("type", "input_text").put("text", begruessung))))
         sitzung.put("input", eingabe)
         if (st.denktBeiOpenAi) {
             val r = JSONObject()
@@ -1064,13 +1066,14 @@ class LiveGespraech(
     /**
      * Jarvis' Antwort auf einen Auftrag zurück: als Funktionsergebnis oder (Client-Delegation) als Kommentar zum Vorsprechen.
      * [navigation] = Bestätigung eines Sessionwechsels: wird gesprochen, aber nicht ins Gespräch geschrieben.
+     * false = nicht angekommen (Verbindung weg, Aufruf von Gemini abgebrochen): Der Aufrufer stellt die Antwort anders zu.
      */
-    fun ergebnis(kennung: String, text: String, navigation: Boolean = false) {
-        val w = ws ?: return
+    fun ergebnis(kennung: String, text: String, navigation: Boolean = false): Boolean {
+        val w = ws ?: return false
         if (navigation) bestaetigungVerschlucken = true
-        weiche?.let { weicheAusfuehren(it.jarvisAntwort(kennung, text, System.currentTimeMillis())); return }
+        weiche?.let { weicheAusfuehren(it.jarvisAntwort(kennung, text, System.currentTimeMillis())); return true }
         when (kennungArt.remove(kennung)) {
-            "gemini_abgebrochen" -> Log.i(LiveRouting.TAG, "Gemini hat den Werkzeugaufruf abgebrochen: Ergebnis verworfen")
+            "gemini_abgebrochen" -> { Log.i(LiveRouting.TAG, "Gemini hat den Werkzeugaufruf abgebrochen: Ergebnis nicht an Gemini"); return false }
             "gemini" -> {
                 val r = JSONObject().put("id", kennung).put("name", "jarvis_fragen").put("response", JSONObject().put("result", text))
                 if (LiveOptionen.geminiNebenbei(st) && modell == "gemini-3.8-live") r.put("scheduling", st["g_melden"])
@@ -1088,12 +1091,24 @@ class LiveGespraech(
                 w.send(JSONObject().put("type", "response.create").toString())
             }
             else -> {
-                if (gemini) { Log.w(LiveRouting.TAG, "Gemini: Ergebnis zu unbekannter Kennung verworfen"); return }
+                if (gemini) { Log.w(LiveRouting.TAG, "Gemini: Ergebnis zu unbekannter Kennung verworfen"); return false }
                 w.send(JSONObject().put("type", "conversation.item.create").put("item", JSONObject()
                     .put("type", "function_call_output").put("call_id", kennung).put("output", text)).toString())
                 w.send(JSONObject().put("type", "response.create").toString())
             }
         }
+        return true
+    }
+
+    /**
+     * Ein spät vorgelesenes Ergebnis (Sprachzustellung) in den Verlauf des Modells, ohne dass es antwortet, damit Nachfragen
+     * dazu passen. Nur Realtime kennt dafür ein Ereignis; GPT-Live und Gemini sehen das Ergebnis über Jarvis' Verlauf.
+     */
+    fun kontextNachtragen(text: String) {
+        if (live || gemini) return
+        val w = ws ?: return
+        w.send(JSONObject().put("type", "conversation.item.create").put("item", JSONObject().put("type", "message").put("role", "assistant")
+            .put("content", JSONArray().put(JSONObject().put("type", "output_text").put("text", text.take(4000))))).toString())
     }
 
     // ---- Telefonat: Jarvis verstummt und hört nicht mit, danach geht das Gespräch weiter ----
@@ -1153,6 +1168,19 @@ class LiveGespraech(
         if (routingAktiv) routen("Nach dem Telefonat")
     }
 
+    /** Wartet das Gespräch gerade auf Jarvis (offener Werkzeugaufruf oder Beitrag bei der Weiche)? */
+    // Von Gemini abgebrochene Aufrufe bleiben als Merker stehen (bei der Weiche für immer): Sie warten auf nichts mehr.
+    private fun wartetAufJarvis(): Boolean = kennungArt.values.any { it != "gemini_abgebrochen" } || weiche?.arbeitet == true
+
+    /**
+     * Für die Sprachzustellung: Das Gespräch läuft, Jarvis spricht nicht, kein Aufruf ist offen, kein Telefonat, und seit [ms]
+     * hat niemand gesprochen. Nur dann wird ein spätes Ergebnis hineingelesen.
+     */
+    fun ruhig(ms: Long): Boolean = laeuft && bereit && !sprichtGerade && !anrufAktiv && !wartetAufJarvis() && System.currentTimeMillis() - letzteAktivitaet > ms
+
+    /** Jarvis liest gerade etwas vor (Sprachzustellung): Das zählt für das Stille-Ende als Gespräch. */
+    fun wachHalten() { letzteAktivitaet = System.currentTimeMillis() }
+
     /** Beendet das Gespräch nach der eingestellten Stille; GPT-Live kostet sonst im Leerlauf weiter. */
     private fun stilleWaechter() {
         val minuten = st["stille_ende"].toIntOrNull() ?: 0
@@ -1163,7 +1191,9 @@ class LiveGespraech(
                 // Vor Android 12 meldet niemand einen Moduswechsel: hier nachsehen.
                 if (Build.VERSION.SDK_INT < 31) anrufPruefen(runCatching { audio.mode }.getOrDefault(AudioManager.MODE_NORMAL))
                 if (anrufAktiv) continue
-                if (minuten > 0 && System.currentTimeMillis() - letzteAktivitaet > minuten * 60_000L) {
+                // Wartet Frank auf Jarvis' Antwort, ist das keine Stille: Die Uhr beginnt erst danach neu.
+                if (wartetAufJarvis()) { letzteAktivitaet = System.currentTimeMillis(); continue }
+                if (stilleAbgelaufen(minuten, letzteAktivitaet, System.currentTimeMillis())) {
                     beiFehler("Live-Gespräch nach $minuten Minuten Stille beendet.")
                     beenden()
                     break
@@ -1685,6 +1715,12 @@ class LiveGespraech(
         private val offene = java.util.concurrent.atomic.AtomicInteger(0)
         /** Ein Live-Gespräch läuft: Hintergrundarbeit meldet sich dann still, damit kein Hinweiston die Stimme absenkt. */
         val aktiv: Boolean get() = offene.get() > 0
+
+        const val BEGRUESSUNG = "Begrüße Frank kurz auf Deutsch, höchstens ein Satz, dann hör zu."
+
+        /** Stille-Ende fällig? [minuten] 0 = nie. Prüfbar ohne Gerät. */
+        internal fun stilleAbgelaufen(minuten: Int, letzteAktivitaet: Long, jetzt: Long): Boolean =
+            minuten > 0 && jetzt - letzteAktivitaet > minuten * 60_000L
 
         /** Echter Ton statt (fast) Stille: Effektivwert (PCM16) über der Schwelle. Auch für die Hörproben ([StimmProbe]). */
         internal fun hoerbar(b: ByteArray): Boolean {
