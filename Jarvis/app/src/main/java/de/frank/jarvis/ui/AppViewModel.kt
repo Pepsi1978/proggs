@@ -299,6 +299,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * Jarvis' letzte eigene Antwort vor Franks Nachricht, auf die sich ein „Ja“ bezieht. Nur echte Antworten zählen: Meldungen,
+     * Berichte und Rückfragen laufender Programmieraufträge, Agentenergebnisse und Ansagen kommen oft zwischen Jarvis' Frage und
+     * Franks Ja und verdeckten sie sonst (oder gälten selbst als Angebot).
+     */
+    private fun letzteRueckfrage(davor: List<Nachricht>): String? =
+        davor.lastOrNull { !it.vonMir && it.art == "antwort" && !it.text.startsWith("🔊") }?.text
+
+    /**
      * Startet die Antwort auf die Frage an Stelle [frage] im offenen Gespräch. [hinweis] geht zusätzlich ans Modell
      * (beim erneuten Versuch: was die verworfene Antwort schon erledigt hatte).
      */
@@ -316,7 +324,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val eigene = gespraech.take(frage + 1).filter { it.vonMir && !de.frank.jarvis.faehigkeit.ProgrammierChat.istAuftragsVorspann(it.text) }
             .takeLast(2).map { it.text }
         val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
-            aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = gespraech.take(frage).lastOrNull { !it.vonMir }?.text)
+            aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = letzteRueckfrage(gespraech.take(frage)))
         runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext)) {
             var art = "antwort"
             val antwort = try {
@@ -1068,7 +1076,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
         val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
         // Live: die Mitschrift von Franks Äußerung für die Nachtrags-Prüfung (unsicher, daher nicht streng).
-        val angebot = gespraech.lastOrNull { !it.vonMir }?.text
+        val angebot = letzteRueckfrage(gespraech)
         val worte = aeusserung?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(it, streng = false, angebot = angebot) } ?: kotlin.coroutines.EmptyCoroutineContext
         // Im Live-Gespräch gefragt: Antworten und Agenten dieser Frage tragen den Sprachursprung (Zustellung nach dem Gesprächsende).
         val herkunft = sitzungId.orEmpty()

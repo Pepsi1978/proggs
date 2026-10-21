@@ -104,4 +104,107 @@ class NachtragsRegelTest {
         assertTrue(NachtragsRegel.ausdruecklich("Gib das in die bestehende Programmier-Session"))
         assertTrue(NachtragsRegel.ausdruecklich("sag dem programmierer noch dass das menü kleiner sein soll"))
     }
+
+    // Regression 21.10.2026 (Auftrag 9ZHDP): Franks wörtliche Äußerungen aus dem Gespräch, die alle mit „kein_wunsch“ blockiert wurden.
+    private val fuenfteAufgabe = "bitte als nachtrag noch eine fünfte aufgabe hinzufügen und zwar auf meinem rechner selber habe ich mal reingeguckt wie " +
+        "das ganze aussieht diese programmierauftrag … Der zweite Auftrag, neuer ausdrücklich getrennter Auftrag auf Franks erreichbarem Rechner, aktuell " +
+        "Macbook Air und so weiter. … Kann das bitte überprüft werden und korrigiert werden?"
+    private val rueckfrage = "Die Übergabe wurde trotz deines ausdrücklichen Nachtragswunsches von Jarvis’ Prüfung blockiert; es wurde nichts gesendet. " +
+        "Bestätige bitte noch einmal: Soll die Leerzeilen-Prüfung als fünfte Aufgabe in die laufende Sitzung mit den vier Jarvis-Aufgaben?"
+    private val neueSession = "Dann startet diesen Programmierauftrag in einer neuen Programmier-Session."
+    private val inDieserNeuen = "Und gib gleichzeitig in dieser neuen Programmier-Session die Aufgabe weiter, dass Nachträge irgendwie nicht akzeptiert " +
+        "werden und geblockiert werden. Das soll nicht sein. Das bitte überprüfen, woran das liegt und fixen lassen."
+    private val alle = listOf("QBKWZ", "74XGF", "9ZHDP")
+
+    @Test fun ausdruecklicherNachtragGiltAuchWennDerTextEinenNeuenAuftragZitiert() {
+        // Früher: „neuer ausdrücklich getrennter Auftrag“ (zitierter Titel eines anderen Auftrags) blockierte das „als Nachtrag“ am Anfang.
+        assertTrue(NachtragsRegel.ausdruecklich(fuenfteAufgabe))
+        val worte = NachtragsRegel.pruefWorte(fuenfteAufgabe, null, null)
+        assertEquals(Ziel.Auftrag("QBKWZ"), NachtragsRegel.ziel("QBKWZ", worte, alle, listOf("QBKWZ"), listOf("QBKWZ")))
+    }
+
+    @Test fun bestaetigendesJaNachRueckfrageGiltAlsAusdruecklich() {
+        assertTrue(NachtragsRegel.istBestaetigung("Ja, bitte!"))
+        // Mit der Rückfrage, auf die Frank antwortet (auch ohne seine vorige Nachricht) und mit seiner vorigen Nachricht.
+        for (worte in listOf(NachtragsRegel.pruefWorte("Ja, bitte!", null, rueckfrage), NachtragsRegel.pruefWorte("Ja, bitte!", fuenfteAufgabe, rueckfrage)))
+            assertEquals(Ziel.Auftrag("QBKWZ"), NachtragsRegel.ziel("QBKWZ", worte, alle, listOf("QBKWZ"), listOf("QBKWZ")))
+        // Ein Ja auf eine Frage, die keinen Nachtrag anbietet, oder auf eine Entweder-oder-Frage, erlaubt keinen.
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.KEIN_WUNSCH), NachtragsRegel.ziel("QBKWZ",
+            NachtragsRegel.pruefWorte("Ja", "Programmiere in Jarvis noch einen Filter.", "Soll ich das als neuen Auftrag starten?"), alle, listOf("QBKWZ")))
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.KEIN_WUNSCH), NachtragsRegel.ziel("QBKWZ",
+            NachtragsRegel.pruefWorte("Ja", null, "Soll das ein neuer Auftrag werden oder ein Nachtrag in die laufende Sitzung?"), alle, listOf("QBKWZ")))
+        // „Bitte programmiere …“ ist kein Ja, sondern ein neuer Wunsch.
+        assertFalse(NachtragsRegel.istBestaetigung("Bitte programmiere noch einen Filter"))
+        assertFalse(NachtragsRegel.istBestaetigung("Ja, aber in einer neuen Session"))
+    }
+
+    @Test fun nachtragInDieseNeueSessionGehtAnDieZuletztAusDemGespraechGestartete() {
+        // Die vorige Nachricht („in einer neuen Programmier-Session“) zählt nicht mehr mit; „dieser neuen Session“ ist ein Verweis.
+        val worte = NachtragsRegel.pruefWorte(inDieserNeuen, neueSession, "Die Leerzeilen-Prüfung läuft jetzt als eigener Auftrag.")
+        assertTrue(NachtragsRegel.ausdruecklich(worte))
+        assertTrue(NachtragsRegel.verweistAufNeue(worte))
+        assertEquals(Ziel.Auftrag("74XGF"), NachtragsRegel.ziel("74XGF", worte, alle, listOf("QBKWZ"), listOf("QBKWZ"), gestartetAusGespraech = listOf("74XGF")))
+        assertEquals(Ziel.Auftrag("74XGF"), NachtragsRegel.ziel("", worte, alle, listOf("QBKWZ"), listOf("QBKWZ"), gestartetAusGespraech = listOf("74XGF")))
+        // Das Modell wählt die alte Sitzung des Gesprächs statt der neuen: fragen.
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.MEHRDEUTIG), NachtragsRegel.ziel("QBKWZ", worte, alle, listOf("QBKWZ"), listOf("QBKWZ"), gestartetAusGespraech = listOf("74XGF")))
+        // Ohne gemerkte Herkunft (vor dieser Version gestartet) bleibt die fremde Nummer ein Widerspruch: nichts senden.
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.WIDERSPRUCH), NachtragsRegel.ziel("74XGF", worte, alle, listOf("QBKWZ"), listOf("QBKWZ")))
+        // Ein neuer Auftrag ist weiterhin kein Nachtrag.
+        assertFalse(NachtragsRegel.ausdruecklich(neueSession))
+        assertFalse(NachtragsRegel.ausdruecklich("Dann übermittele auch das als neuen Programmierauftrag, dass irgendwie Nachträge blockiert werden."))
+    }
+
+    @Test fun mehrdeutigeZieleBeiMehrerenSitzungen() {
+        val worte = "Schick das als Nachtrag in die laufende Sitzung."
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.MEHRDEUTIG), NachtragsRegel.ziel("", worte, alle, listOf("QBKWZ", "9ZHDP"), listOf("QBKWZ", "9ZHDP")))
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.MEHRDEUTIG), NachtragsRegel.ziel("QBKWZ", worte, alle, listOf("QBKWZ", "9ZHDP"), listOf("QBKWZ", "9ZHDP")))
+        // Zwei aus dem Gespräch gestartete: „diese neue Session“ meint die zuletzt gestartete; wählt das Modell die ältere, fragen.
+        val neue = "Nachtrag in diese neue Session: der Knopf soll rot werden."
+        assertEquals(Ziel.Auftrag("9ZHDP"), NachtragsRegel.ziel("9ZHDP", neue, alle, listOf("QBKWZ"), gestartetAusGespraech = listOf("74XGF", "9ZHDP")))
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.MEHRDEUTIG), NachtragsRegel.ziel("74XGF", neue, alle, listOf("QBKWZ"), gestartetAusGespraech = listOf("74XGF", "9ZHDP")))
+    }
+
+    @Test fun fehlendeAutorisierungBleibtGesperrt() {
+        assertEquals(Ziel.Nachfrage(NachtragsRegel.KEIN_WUNSCH), NachtragsRegel.ziel("QBKWZ", NachtragsRegel.pruefWorte("Ja, bitte!", null, null), alle, listOf("QBKWZ")))
+        assertFalse(NachtragsRegel.ausdruecklich("Nicht in die laufende Sitzung, sondern als neuen Auftrag."))
+        assertFalse(NachtragsRegel.ausdruecklich("Bitte kein Nachtrag, mach das getrennt."))
+        // Ein früheres „Nachtrag“ erlaubt keinen neuen, bloß thematisch passenden Wunsch.
+        assertEquals("Programmiere in Jarvis noch einen Filter.", NachtragsRegel.pruefWorte("Programmiere in Jarvis noch einen Filter.", fuenfteAufgabe, rueckfrage))
+        assertFalse(NachtragsRegel.ausdruecklich(NachtragsRegel.pruefWorte("Programmiere in Jarvis noch einen Filter.", fuenfteAufgabe, rueckfrage)))
+    }
+
+    @Test fun nichtErreichbareSitzungUndDoppelteUebermittlung() {
+        assertFalse(NachtragsRegel.zustellbar(cloud = true, stand = "fertig"))
+        assertTrue(NachtragsRegel.zustellbar(cloud = false, stand = "laeuft"))
+        val jetzt = 1_000_000_000L
+        assertTrue(NachtragsRegel.doppelt("Der Knopf  soll ROT werden", jetzt - 60_000L, "der knopf soll rot werden", jetzt))
+        assertFalse(NachtragsRegel.doppelt("Der Knopf soll rot werden", jetzt - 31 * 60_000L, "Der Knopf soll rot werden", jetzt))
+        assertFalse(NachtragsRegel.doppelt("Der Knopf soll rot werden", jetzt - 60_000L, "Der Knopf soll blau werden", jetzt))
+    }
+
+    // Befunde des Code-Reviews: kein Weg für unaufgeforderte Nachträge.
+    @Test fun neuWunschIrgendwoSperrtAusserNachAusdruecklicherAnweisungAmAnfang() {
+        assertFalse(NachtragsRegel.ausdruecklich("Programmiere in Jarvis: Nachträge werden geblockt. Das bitte in einer neuen Session."))
+        assertFalse(NachtragsRegel.ausdruecklich("Nachtrag in die laufende Sitzung – nein, doch lieber eine neue Session"))
+        assertFalse(NachtragsRegel.ausdruecklich("Auf keinen Fall in die laufende Sitzung, sondern als neuen Auftrag"))
+        assertFalse(NachtragsRegel.ausdruecklich("Schick das bitte nicht einfach so als Nachtrag"))
+        assertFalse(NachtragsRegel.ausdruecklich("Keinesfalls als Nachtrag"))
+        assertFalse(NachtragsRegel.ausdruecklich("Mach das bitte in einer anderen Session"))
+        // „Die neue Session“ ohne „diese“ bleibt ein Neu-Wunsch.
+        assertFalse(NachtragsRegel.ausdruecklich("Schick das in die neue Sitzung"))
+        assertFalse(NachtragsRegel.verweistAufNeue("Schick das in die neue Sitzung"))
+    }
+
+    @Test fun jaZaehltNurZurLetztenEindeutigenNachtragsFrage() {
+        val ja = "Ja"
+        // Entweder-oder, oder die Frage bietet etwas anderes an: kein Nachtrag, auch nicht über Franks vorige Nachricht.
+        for (frage in listOf("Soll ich das als Nachtrag in die laufende Sitzung schicken oder als neuen Auftrag starten?",
+            "Der Nachtrag wurde blockiert. Soll ich stattdessen einen neuen Auftrag starten?",
+            "Der Nachtrag wurde blockiert. Soll ich das neu starten?",
+            "Fertig. Zusätzliches Code-Review?"))
+            assertFalse(frage, NachtragsRegel.ausdruecklich(NachtragsRegel.pruefWorte(ja, "Als Nachtrag: Filter einbauen", frage)))
+        assertFalse(NachtragsRegel.istBestaetigung("Danke"))
+        assertFalse(NachtragsRegel.ausdruecklich(NachtragsRegel.pruefWorte("Danke", null, "Soll das als Nachtrag in die laufende Sitzung?")))
+        assertTrue(NachtragsRegel.ausdruecklich(NachtragsRegel.pruefWorte(ja, null, "Alles klar. Soll das als Nachtrag in die laufende Sitzung?")))
+    }
 }

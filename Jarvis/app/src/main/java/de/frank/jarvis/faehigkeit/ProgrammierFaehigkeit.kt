@@ -354,6 +354,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt, ausGespraech = aufrufGespraech) }.getOrDefault("") }
                 val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, "", "Unklar: ${ziel.name} hat den Start nicht rechtzeitig bestätigt (Zeitüberschreitung). " +
                     "Womöglich läuft der Auftrag trotzdem.", gespraech, auftrag, stand = STAND_UNKLAR, ursprung = ursprung)
+                if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
                 verteile(eintrag, null)
                 return Ergebnis("Unklar, ob der Auftrag für $appName (Nummer $nummer) gestartet ist: ${ziel.name} hat nach dem Senden nicht rechtzeitig geantwortet " +
                     "(Zeitüberschreitung), er läuft womöglich trotzdem. Starte ihn NICHT neu: Prüfe erst mit programmierauftraege, ob sich die Sitzung meldet, und sag Frank das so.", fehler = true)
@@ -363,6 +364,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // Erst jetzt, nach dem gelungenen Start: Bei „nicht erreichbar“ bliebe sonst eine leere Session zurück.
             if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt, ausGespraech = aufrufGespraech) }.getOrDefault("") }
             val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech, auftrag, ursprung = ursprung)
+            // Bekommt der Auftrag ein eigenes Gespräch, merkt er sich das, aus dem er kam: Dort meint „in dieser neuen Session“ ihn.
+            if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
             verteile(eintrag, null)
             val titel = "Programmieren: $appName" + if (ausChatGpt) " (über ChatGPT/MCP)" else ""
             return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt als neuer, eigener Auftrag: ${ziel.name}. ${start.hinweis} " +
@@ -550,17 +553,20 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (text.length < 3) return Ergebnis("Der Nachtrag ist leer. Formuliere ihn vollständig aus.", fehler = true)
         // Im Standard-Chat zählen Franks eigene Worte (getippt oder eingesprochen), nicht die Deutung des Modells.
         val franks = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]
+        // Seine aktuelle Nachricht entscheidet; ein bloßes „Ja“ zählt mit der Rückfrage davor (NachtragsRegel.pruefWorte). Früher
+        // entschieden die letzten zwei Nachrichten zusammen: Ein darin zitiertes „neuer … Auftrag“ blockierte so jedes „Nachtrag“.
         val pruefWorte = when {
             franks == null -> worte
-            franks.streng -> franks.text
-            else -> franks.text + "\n" + worte
+            franks.streng -> NachtragsRegel.pruefWorte(franks.aktuell, franks.vorher, franks.angebot)
+            else -> NachtragsRegel.pruefWorte(franks.aktuell, null, franks.angebot) + "\n" + worte
         }
         val imGespraech = if (gespraech.isEmpty()) emptyList() else Auftragsbuch.alleImGespraech(app, gespraech)
+        val gestartet = if (gespraech.isEmpty()) emptyList() else Auftragsbuch.gestartetAus(app, gespraech)
         val ziel = NachtragsRegel.ziel(auftragId, pruefWorte, Auftragsbuch.alleIds(app), imGespraech.map { it.optString("id") },
-            imGespraech.filter { it.optString("stand") in listOf("laeuft", "frage") }.map { it.optString("id") })
+            imGespraech.filter { it.optString("stand") in listOf("laeuft", "frage") }.map { it.optString("id") }, gestartet.map { it.optString("id") })
         if (ziel is NachtragsRegel.Ziel.Nachfrage) {
             Logbuch.system("programmier_nachtrag nicht gesendet", "${ziel.grund}, auftrag_id „$auftragId“")
-            val auswahl = (if (imGespraech.isNotEmpty()) imGespraech.reversed() else emptyList()).joinToString("\n") { "- " + Auftragsbuch.kurzZeile(it) }
+            val auswahl = (imGespraech + gestartet).reversed().joinToString("\n") { "- " + Auftragsbuch.kurzZeile(it) }
                 .ifEmpty { Auftragsbuch.kandidatenText(app, "") }
             return Ergebnis("Nichts wurde gesendet. " + when (ziel.grund) {
                 NachtragsRegel.KEIN_WUNSCH -> "Frank hat keinen Nachtrag in eine bestehende Sitzung ausdrücklich verlangt. Ordne seinen Wunsch nicht selbst zu: Frag ihn kurz, " +
@@ -1080,6 +1086,21 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Alle Aufträge eines Jarvis-Gesprächs, neueste zuletzt, offene wie beendete: Frank bezeichnet mit „dieser Session“ das ganze Gespräch. */
         fun alleImGespraech(context: Context, gespraech: String): List<JSONObject> = alle(context).filter { it.optString("gespraech") == gespraech }
 
+        /** Aufträge, die aus [gespraech] gestartet wurden und ein eigenes Gespräch haben, älteste zuerst („in dieser neuen Session“). */
+        fun gestartetAus(context: Context, gespraech: String): List<JSONObject> =
+            alle(context).filter { it.optString("ausGespraech") == gespraech && it.optString("gespraech") != gespraech }.sortedBy { it.optLong("start") }
+
+        /** Merkt am Auftrag [id], aus welchem Gespräch er gestartet wurde (nur, wenn er ein eigenes bekam). */
+        @Synchronized
+        fun herkunftMerken(context: Context, id: String, gespraech: String) {
+            if (gespraech.isEmpty()) return
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return
+            if (eintrag.optString("gespraech") == gespraech) return
+            eintrag.put("ausGespraech", gespraech)
+            schreib(context, liste)
+        }
+
         /** Alle Auftragsnummern im Auftragsbuch: Nennt Frank eine davon, bezeichnet er genau diese Sitzung. */
         fun alleIds(context: Context): List<String> = alle(context).map { it.optString("id") }.filter { it.isNotEmpty() }
 
@@ -1105,8 +1126,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
         }
 
-        private fun normiert(text: String) = text.lowercase(Locale.GERMAN).replace(Regex("\\s+"), " ").trim()
-
         /**
          * Legt einen Nachtrag an (Stand angenommen). Derselbe Text an denselben Auftrag binnen 30 Minuten ist kein neuer:
          * dann der vorhandene und true. null = Auftrag unbekannt.
@@ -1119,7 +1138,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val jetzt = System.currentTimeMillis()
             for (i in nachtraege.length() - 1 downTo 0) {
                 val n = nachtraege.getJSONObject(i)
-                if (jetzt - n.optLong("zeit") < 30 * 60_000L && normiert(n.optString("text")) == normiert(text)) return n to true
+                if (NachtragsRegel.doppelt(n.optString("text"), n.optLong("zeit"), text, jetzt)) return n to true
             }
             val n = JSONObject().put("id", "N" + neueNummer()).put("text", text.take(4_000)).put("zeit", jetzt).put("quelle", quelle).put("stand", "angenommen")
             nachtraege.put(n)
