@@ -115,7 +115,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                         Chip(Einstellungen.schrittlimitLabel(n), aktiv = e.schrittlimit == n) { vm.setzeSchrittlimit(n) }
                     }
                 }
-                Text("Ein Schritt ist eine Bearbeitungsrunde: Jarvis denkt nach und ruft dabei bei Bedarf Werkzeuge auf. Ist das Limit erreicht, schreibt Jarvis einen Zwischenstand aus dem bisher Gesammelten." +
+                Text("Ein Schritt ist eine Bearbeitungsrunde: Jarvis denkt nach und ruft dabei bei Bedarf Werkzeuge auf. Ist das Limit erreicht, schreibt Jarvis einen Zwischenstand aus dem bisher Gesammelten. " +
+                    "Das Limit gilt für den Chat und alle Agenten; Agenten fragen nach je ${de.frank.jarvis.agent.Agenten.ZEITLIMIT_MINUTEN} Minuten, ob sie weiterarbeiten sollen." +
                     if (e.schrittlimit == 0) " Unbegrenzt hebt nur dieses Limit auf; Zeitlimit und Abbrechen gelten weiter. Lange Anfragen können mehr kosten und länger dauern." else "",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }

@@ -353,7 +353,7 @@ class EinstellungsKatalog(context: Context) {
             },
             auswahl("denkstufe", "Modell", "Denkstufe", "Wie gründlich das Modell nachdenkt.",
                 { e.modell.supportedEfforts.map { it.name to it.label } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
-            auswahl("schrittlimit", "Modell", "Schrittlimit pro Anfrage", "Höchstens so viele Bearbeitungsrunden samt Werkzeugaufrufen je Anfrage; Unbegrenzt hebt nur dieses Limit auf (Zeitlimit und Abbrechen gelten weiter) und kann mehr kosten und länger dauern.",
+            auswahl("schrittlimit", "Modell", "Schrittlimit pro Anfrage", "Höchstens so viele Bearbeitungsrunden samt Werkzeugaufrufen je Anfrage, im Chat und bei allen Agenten; Unbegrenzt hebt nur dieses Limit auf (Zeitlimit und Abbrechen gelten weiter) und kann mehr kosten und länger dauern.",
                 { Einstellungen.SCHRITTLIMITS.map { it.toString() to Einstellungen.schrittlimitLabel(it) } }, { e.schrittlimit.toString() }) { e.schrittlimit = it.toInt() },
 
             // ---- Live-Gespräch ----

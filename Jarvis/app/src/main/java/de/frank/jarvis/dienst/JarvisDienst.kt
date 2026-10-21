@@ -219,9 +219,20 @@ class JarvisDienst : Service() {
         if (vorgang != null && Vorgaenge.buch(this).finde(vorgang)?.offen == false) { Agenten.gibFrei(name, auftrag); return null }
         return arbeit.launch {
             val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:agent")
-            runCatching { wach.acquire((plan.minuten + 5) * 60_000L) }
+            // Je Zeitfenster gehalten; während der Lauf nach Zeitablauf auf Frank wartet, schläft das Gerät ruhig weiter.
+            val fensterMs = (Agenten.ZEITLIMIT_MINUTEN + 5) * 60_000L
+            runCatching { wach.acquire(fensterMs) }
             try {
-                val lauf = Agenten.fuehreAus(this@JarvisDienst, plan, auftrag, vorgang)
+                val lauf = Agenten.fuehreAus(this@JarvisDienst, plan, auftrag, vorgang,
+                    beiFrage = { kennung, bericht ->
+                        runCatching { if (wach.isHeld) wach.release() }
+                        frageNachZeitablauf(plan.name, kennung, vorgang, bericht)
+                    },
+                    nachEntscheidung = { kennung, weiter ->
+                        runCatching { getSystemService(NotificationManager::class.java).cancel(zeitablaufNummer(kennung)) }
+                        if (weiter) runCatching { wach.acquire(fensterMs) }
+                    },
+                )
                 val titel = lauf.titel
                 val v = vorgang?.let { Vorgaenge.buch(this@JarvisDienst).finde(it) }
                 var zusatz = ""
@@ -295,6 +306,36 @@ class JarvisDienst : Service() {
                 runCatching { if (wach.isHeld) wach.release() }
             }
         }.also { job -> vorgang?.let { Agenten.merkeJob(it, job) } }
+    }
+
+    /**
+     * Zeitlimit eines Agenten erreicht: Statusbericht und Frage „Abbrechen oder weiterarbeiten?“ ins Gespräch, aus dem der Auftrag kam,
+     * und als Benachrichtigung mit beiden Knöpfen. Im Gespräch still (Meldungen.zeige): Das Live-Gespräch hat Vorrang.
+     */
+    private fun frageNachZeitablauf(agent: String, kennung: String, vorgang: String?, bericht: String) {
+        val v = vorgang?.let { Vorgaenge.buch(this).finde(it) }
+        v?.gespraech?.takeIf { it.isNotEmpty() }?.let { g ->
+            runCatching {
+                de.frank.jarvis.faehigkeit.ProgrammierChat.poste(this, g, "**$agent: Zeitlimit erreicht** · Auftrag ${v.id}\n\n$bericht",
+                    de.frank.jarvis.faehigkeit.ProgrammierChat.ART_AGENT,
+                    "(Hintergrundauftrag ${v.id} pausiert nach Ablauf des internen Zeitlimits und wartet auf Franks Entscheidung. Will Frank weiterarbeiten oder weiterrecherchieren: " +
+                        "vorgang_fortsetzen mit id ${v.id}. Will er abbrechen: vorgang_abbrechen mit id ${v.id}, dann schreibt der Agent einen Zwischenstand.)")
+            }
+        }
+        val titel = "Jarvis: $agent – Zeitlimit erreicht" + (vorgang?.let { " (Vorgang $it)" } ?: "")
+        val kurz = "Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?"
+        fun knopf(aktion: String, code: Int) = PendingIntent.getBroadcast(this, zeitablaufNummer(kennung) * 2 + code,
+            Intent(this, AgentenEntscheidungEmpfaenger::class.java).setAction(aktion).putExtra(AgentenEntscheidungEmpfaenger.EXTRA_KENNUNG, kennung),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        de.frank.jarvis.meldung.Meldungen.zeige(
+            this, de.frank.jarvis.meldung.Meldungsarten.AGENT, zeitablaufNummer(kennung),
+            NotificationCompat.Builder(this, KANAL_ERGEBNIS).setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle(titel)
+                .setContentText(kurz).setStyle(NotificationCompat.BigTextStyle().bigText(bericht.replace("**", ""))).setAutoCancel(false)
+                .addAction(R.drawable.ic_stat_jarvis, "Weiterarbeiten", knopf(AgentenEntscheidungEmpfaenger.AKTION_WEITER, 0))
+                .addAction(R.drawable.ic_stat_jarvis, "Abbrechen", knopf(AgentenEntscheidungEmpfaenger.AKTION_ABBRECHEN, 1))
+                .setContentIntent(PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)),
+            titel, sprechtext = null,
+        )
     }
 
     private fun werteAus(anlass: String): Job =
@@ -492,5 +533,26 @@ class StartEmpfaenger : BroadcastReceiver() {
                 }.start()
             }
         }
+    }
+}
+
+/** Feste Nummer der Zeitablauf-Benachrichtigung je Kennung; eigener Bereich zwischen den Agenten-Ergebnissen (20 000–119 999) und der Ablage (ab 200 000). */
+internal fun zeitablaufNummer(kennung: String): Int = 140_000 + (kennung.uppercase(java.util.Locale.ROOT).hashCode() and 0xFFF)
+
+/** Die Knöpfe „Weiterarbeiten“ und „Abbrechen“ der Zeitablauf-Benachrichtigung eines Agenten. */
+class AgentenEntscheidungEmpfaenger : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val kennung = intent.getStringExtra(EXTRA_KENNUNG) ?: return
+        val weiter = intent.action == AKTION_WEITER
+        context.getSystemService(NotificationManager::class.java)?.cancel(zeitablaufNummer(kennung))
+        // Lief der Auftrag inzwischen nicht mehr (schon entschieden, Jarvis neu gestartet), ehrlich sagen statt still nichts zu tun.
+        if (!Agenten.entscheide(kennung, weiter))
+            android.widget.Toast.makeText(context, "Dieser Auftrag wartet nicht mehr auf eine Entscheidung (Stand unter Aktivität).", android.widget.Toast.LENGTH_LONG).show()
+    }
+
+    companion object {
+        const val AKTION_WEITER = "de.frank.jarvis.AGENT_WEITER"
+        const val AKTION_ABBRECHEN = "de.frank.jarvis.AGENT_ABBRECHEN"
+        const val EXTRA_KENNUNG = "kennung"
     }
 }

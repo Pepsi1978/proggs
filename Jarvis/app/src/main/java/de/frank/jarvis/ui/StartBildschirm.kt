@@ -677,7 +677,19 @@ private fun LaeuftGerade(vm: AppViewModel) {
                 Kern(22.dp, f.primaer, aktiv = true)
                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                     Text("Agent " + l.agent, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(l.schritt.ifEmpty { l.auftrag }, color = f.textLeise, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(l.schritt.ifEmpty { l.auftrag }, color = f.textLeise, fontSize = 13.sp, maxLines = if (l.wartet != null) 6 else 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            // Zeitlimit erreicht: Der Agent pausiert mit seinem Arbeitsstand, bis Frank entscheidet.
+            l.wartet?.let { kennung ->
+                Text("Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?", color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Knopf("Weiterarbeiten", Modifier.weight(1f)) {
+                        vm.meldung = if (de.frank.jarvis.agent.Agenten.entscheide(kennung, true)) "Agent ${l.agent} arbeitet ${de.frank.jarvis.agent.Agenten.ZEITLIMIT_MINUTEN} Minuten weiter" else "Der Agent wartet nicht mehr"
+                    }
+                    Knopf("Abbrechen", Modifier.weight(1f), haupt = false) {
+                        vm.meldung = if (de.frank.jarvis.agent.Agenten.entscheide(kennung, false)) "Agent ${l.agent} schreibt seinen Zwischenstand" else "Der Agent wartet nicht mehr"
+                    }
                 }
             }
         }

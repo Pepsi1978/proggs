@@ -18,18 +18,23 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-/** Ein Agent: ein Name und eine Rolle, also die Anweisung, wie er an Aufträge herangeht. */
-// Recherche mit Bildern und PDF braucht viele Schritte: Suchen, Seiten lesen, je Bild ein bis zwei Aufrufe. 14 Schritte und 12 Minuten reichten dafür nicht.
-data class AgentenBauplan(val name: String, val rolle: String, val vorgegeben: Boolean = false, val schritte: Int = 30, val minuten: Int = 25)
+/**
+ * Ein Agent: ein Name und eine Rolle, also die Anweisung, wie er an Aufträge herangeht. Kein eigenes Schrittlimit: Jeder Agent
+ * nutzt Franks Einstellung („Schrittlimit pro Anfrage“), das Zeitlimit ist [Agenten.ZEITLIMIT_MINUTEN] je Zeitfenster.
+ */
+data class AgentenBauplan(val name: String, val rolle: String, val vorgegeben: Boolean = false)
 
 /**
  * Ergebnis eines Agentenlaufs: der Titel seines Eintrags (in der Ablage oder, ohne Ablage-Wunsch, vorläufig) oder null, wenn kein
  * Bericht entstand, dazu der Grund, wenn er nicht (ganz) fertig wurde. [bericht] = der Berichtstext, [dateien] = absolute Pfade
  * der Bilder und PDFs zum Bericht (für die Anzeige im Gespräch).
  */
-data class AgentenErgebnis(val titel: String?, val grund: String?, val bericht: String? = null, val dateien: List<String> = emptyList(), val vorlaeufig: Boolean = false)
+data class AgentenErgebnis(val titel: String?, val grund: String?, val bericht: String? = null, val dateien: List<String> = emptyList(), val vorlaeufig: Boolean = false,
+    /** Nach Zeitablauf auf Franks Wunsch (oder ohne Antwort) beendet; [bericht] ist dann ein Zwischenstand. */
+    val abgebrochen: Boolean = false)
 
-data class AgentenLauf(val agent: String, val auftrag: String, val seit: Long, val schritt: String = "", val id: Long = 0L)
+/** [wartet] = Kennung, unter der der Lauf nach Zeitablauf auf Franks Entscheidung wartet ([Agenten.entscheide]); null = er arbeitet. */
+data class AgentenLauf(val agent: String, val auftrag: String, val seit: Long, val schritt: String = "", val id: Long = 0L, val wartet: String? = null)
 
 /**
  * Die Agenten von Jarvis. Ein Agent ist das eigene Modell von Jarvis mit einer festen Rolle; er arbeitet einen
@@ -46,8 +51,20 @@ object Agenten {
     /** Eindeutige Nummer je Lauf: Zwei Läufe aus derselben Millisekunde dürfen sich nicht gegenseitig austragen. */
     private val naechsteId = java.util.concurrent.atomic.AtomicLong()
 
-    /** So viele Agenten arbeiten höchstens gleichzeitig. */
+    /** So viele Agenten arbeiten höchstens gleichzeitig. Ein Lauf, der nach Zeitablauf auf Franks Entscheidung wartet, behält seinen Platz. */
     const val HOECHSTENS = 2
+    /** Internes Zeitlimit je Zeitfenster. Danach pausiert der Agent und fragt Frank: abbrechen oder weitere so viele Minuten? */
+    const val ZEITLIMIT_MINUTEN = 30
+    /** So lange wartet ein pausierter Agent auf Franks Antwort; danach schreibt er seinen Zwischenstand und gibt den Platz frei. */
+    const val ANTWORT_MS = 8 * 3_600_000L
+    /** Offene Zeitablauf-Fragen je Kennung (Vorgang oder Lauf): true = weiterarbeiten, false = abbrechen. */
+    private val entscheidungen = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.CompletableDeferred<Boolean>>()
+
+    /** Franks Antwort auf „Abbrechen oder weiterarbeiten?“. false = unter dieser Kennung wartet gerade kein Lauf. */
+    fun entscheide(kennung: String, weiter: Boolean): Boolean = entscheidungen[kennung.trim().uppercase(Locale.ROOT)]?.complete(weiter) ?: false
+
+    /** Wartet unter [kennung] gerade ein Lauf nach Zeitablauf auf Franks Entscheidung? */
+    fun wartet(kennung: String): Boolean = entscheidungen.containsKey(kennung.trim().uppercase(Locale.ROOT))
     /** Ein vorgemerkter Start: Agent, Auftrag und Zeitpunkt. */
     private class Vormerkung(val agent: String, val auftrag: String, val seit: Long)
     /** Gestartet, aber noch nicht in [laeufe]: Der Dienst beginnt den Lauf erst asynchron. Geschützt durch [platz]. */
@@ -157,16 +174,24 @@ object Agenten {
         job.invokeOnCompletion { jobs.remove(vorgang, job) }
     }
 
-    /** Bricht den Lauf zu [vorgang] ab. false = es läuft gerade keiner dazu. */
-    fun brichAb(vorgang: String): Boolean = jobs[vorgang]?.let { it.cancel(kotlinx.coroutines.CancellationException("von Frank abgebrochen")); true } ?: false
+    /**
+     * Bricht den Lauf zu [vorgang] ab. false = es läuft gerade keiner dazu. Wartet er nach Zeitablauf auf Franks Entscheidung,
+     * gilt das als „Abbrechen“: Er schreibt noch seinen Zwischenstand, statt alles zu verwerfen.
+     */
+    fun brichAb(vorgang: String): Boolean = entscheide(vorgang, weiter = false) ||
+        (jobs[vorgang]?.let { it.cancel(kotlinx.coroutines.CancellationException("von Frank abgebrochen")); true } ?: false)
 
     /**
      * Führt einen Auftrag aus. Der Bericht kommt als Text ins Gespräch; ein gestaltetes PDF nur, wenn der Vorgang es ausdrücklich
      * verlangt ([Vorgang.pdf], nie aus einer Wortsuche im Auftrag). Das Ergebnis kommt nur in die Ablage, wenn der
      * Vorgang es verlangt ([Vorgang.ablage]), sonst vorläufig. Beides ist unabhängig voneinander. [vorgang] = Kennung im [Vorgaenge]-Buch; Start, Schritte und Ende
-     * werden dort festgehalten.
+     * werden dort festgehalten. [beiFrage] meldet Frank nach Zeitablauf Kennung und Statusbericht (Benachrichtigung, Gespräch),
+     * [nachEntscheidung] bekommt seine Antwort (true = weiterarbeiten), bevor der Lauf weitergeht.
      */
-    suspend fun fuehreAus(context: Context, plan: AgentenBauplan, auftrag: String, vorgang: String? = null): AgentenErgebnis {
+    suspend fun fuehreAus(
+        context: Context, plan: AgentenBauplan, auftrag: String, vorgang: String? = null,
+        beiFrage: (kennung: String, bericht: String) -> Unit = { _, _ -> }, nachEntscheidung: (kennung: String, weiter: Boolean) -> Unit = { _, _ -> },
+    ): AgentenErgebnis {
         val app = context.applicationContext
         val lauf = AgentenLauf(plan.name, auftrag, System.currentTimeMillis(), id = naechsteId.incrementAndGet())
         val buch = vorgang?.let { Vorgaenge.buch(app) }
@@ -186,10 +211,12 @@ object Agenten {
             val eintrag = vorgang?.let { buch?.finde(it) }
             val ablegen = eintrag?.ablage ?: false
             val pdf = eintrag?.pdf ?: false
-            val r = fuehreAusIntern(app, plan, auftrag, lauf, ablegen, pdf) { schritt -> if (vorgang != null) runCatching { buch?.schritt(vorgang, schritt) } }
+            val kennung = (vorgang ?: "L${lauf.id}").uppercase(Locale.ROOT)
+            val beiZeitablauf: suspend (Zeitablauf) -> String? = { stand -> frageNachZeitablauf(plan, lauf, kennung, vorgang?.let { v -> buch?.let { v to it } }, stand, beiFrage, nachEntscheidung) }
+            val r = fuehreAusIntern(app, plan, auftrag, lauf, ablegen, pdf, beiZeitablauf) { schritt -> if (vorgang != null) runCatching { buch?.schritt(vorgang, schritt) } }
             // Ein Abbruch während des Abschluss-Schritts wird dort verschluckt; dann zählt er trotzdem als Abbruch.
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            return r.also { ende = (if (r.titel == null) Vorgang.FEHLGESCHLAGEN else Vorgang.FERTIG) to r }
+            return r.also { ende = (when { r.abgebrochen -> Vorgang.ABGEBROCHEN; r.titel == null -> Vorgang.FEHLGESCHLAGEN; else -> Vorgang.FERTIG }) to r }
         } catch (e: kotlinx.coroutines.CancellationException) {
             ende = Vorgang.ABGEBROCHEN to AgentenErgebnis(null, e.message ?: "abgebrochen")
             Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Abgebrochen: ${auftrag.take(120)}", ok = false)
@@ -203,7 +230,43 @@ object Agenten {
         }
     }
 
-    private suspend fun fuehreAusIntern(app: Context, plan: AgentenBauplan, auftrag: String, lauf: AgentenLauf, ablegen: Boolean, pdf: Boolean, beiSchritt: (String) -> Unit): AgentenErgebnis {
+    /**
+     * Zeitfenster abgelaufen: Zustand anzeigen (Startseite, Vorgangsbuch, über [beiFrage] Benachrichtigung und Gespräch) und auf Franks
+     * Entscheidung warten. null = weiterarbeiten, sonst der Grund fürs Ende (dann schreibt der Agent seinen Zwischenstand).
+     */
+    private suspend fun frageNachZeitablauf(
+        plan: AgentenBauplan, lauf: AgentenLauf, kennung: String, imBuch: Pair<String, VorgangsBuch>?, stand: Zeitablauf,
+        beiFrage: (String, String) -> Unit, nachEntscheidung: (String, Boolean) -> Unit,
+    ): String? {
+        val antwort = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        entscheidungen[kennung] = antwort
+        var weiter: Boolean? = null
+        try {
+            _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = stand.kurz(), wartet = kennung) else it } }
+            imBuch?.let { (v, buch) -> runCatching { buch.rueckfrage(v, stand.kurz()) } }
+            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Zeitlimit erreicht, wartet auf Franks Entscheidung: ${stand.kurz()}", ok = true)
+            runCatching { beiFrage(kennung, stand.bericht(plan.name)) }.onFailure { Log.w(TAG, "Zeitablauf-Frage nicht zugestellt", it) }
+            weiter = kotlinx.coroutines.withTimeoutOrNull(ANTWORT_MS) { antwort.await() }
+            runCatching { nachEntscheidung(kennung, weiter == true) }
+            return when (weiter) {
+                true -> {
+                    imBuch?.let { (v, buch) -> runCatching { buch.weiter(v) } }
+                    Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Frank: weiterarbeiten, weitere $ZEITLIMIT_MINUTEN Minuten", ok = true)
+                    null
+                }
+                false -> "Nach Ablauf des internen Zeitlimits (${stand.minuten} Minuten) von Frank abgebrochen"
+                null -> "Nach Ablauf des internen Zeitlimits (${stand.minuten} Minuten) kam ${ANTWORT_MS / 3_600_000} Stunden lang keine Entscheidung; beendet"
+            }
+        } finally {
+            entscheidungen.remove(kennung, antwort)
+            _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(wartet = null, schritt = if (weiter == true) "arbeitet weiter" else "schreibt den Zwischenstand") else it } }
+        }
+    }
+
+    private suspend fun fuehreAusIntern(
+        app: Context, plan: AgentenBauplan, auftrag: String, lauf: AgentenLauf, ablegen: Boolean, pdf: Boolean,
+        beiZeitablauf: suspend (Zeitablauf) -> String?, beiSchritt: (String) -> Unit,
+    ): AgentenErgebnis {
         // Der Titel steht vorab fest: Dateien, die der Agent unterwegs erzeugt (Bilder, PDFs, Downloads), landen im selben Eintrag wie sein Bericht.
         val titel = "${plan.name} – ${auftrag.replace(Regex("\\s+"), " ").take(50).trim()} – ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M. HH.mm"))}"
         // Ohne ausdrücklichen Ablage-Wunsch liegen Bericht, Bilder und PDF vorläufig: Sie kommen ins Gespräch, nicht in Franks Ablage.
@@ -226,15 +289,19 @@ object Agenten {
                     "rufe es mit denselben Angaben noch einmal auf), höchstens vier, und setze jedes als eigene Zeile ![Bildunterschrift](dateiname.png) in den Bericht.")
             val denker = JarvisAgent(app)
             var grund: String? = null
+            var nachZeitablaufBeendet = false
+            // Franks Schrittlimit (Einstellungen → Jarvis) gilt auch hier, 0 = unbegrenzt; kein eigenes festes Agenten-Limit.
+            val schrittlimit = de.frank.jarvis.data.Einstellungen.get(app).schrittlimit
             // Ohne PDF-Wunsch sperrt PdfWunsch jedes PDF in bild_erzeugen und ablage_schreiben, auch wenn das Modell es versucht.
             val bericht = withContext(de.frank.jarvis.ablage.PdfWunsch(pdf)) { denker.versuche(
-                auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel, ablageDauerhaft = ablegen, abschluss = true,
+                auftrag = auftrag, zeitlimitMs = ZEITLIMIT_MINUTEN * 60_000L, maxSchritte = schrittlimit, rolle = rolle, mitInternet = true, ablageTitel = titel, ablageDauerhaft = ablegen, abschluss = true,
                 beiSchritt = { schritt -> _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = schritt) else it } }; beiSchritt(schritt) },
                 beiAbbruch = { grund = it },
+                beiZeitablauf = { stand -> beiZeitablauf(stand).also { if (it != null) nachZeitablaufBeendet = true } },
             ) }
             if (bericht.isNullOrBlank()) {
                 Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Kein Ergebnis (${grund ?: "leere Antwort"}) für: ${auftrag.take(120)}", ok = false)
-                return AgentenErgebnis(null, grund ?: "Das Modell hat keinen Bericht geliefert")
+                return AgentenErgebnis(null, grund ?: "Das Modell hat keinen Bericht geliefert", abgebrochen = nachZeitablaufBeendet)
             }
             val datei = speicher.schreibeText(titel, "# ${plan.name}: ${auftrag.trim()}\n\nErstellt am ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M.yyyy, HH:mm 'Uhr'"))} von Jarvis.\n\n$bericht").second
             var pdfMeldung = ""
@@ -257,7 +324,7 @@ object Agenten {
                 (if (ablegen) ", abgelegt als „${datei.nameWithoutExtension}“." else ", Ergebnis „${datei.nameWithoutExtension}“ vorläufig (keine Ablage gewünscht).") + pdfMeldung, ok = gesamt == null)
             val eintrag = speicher.findeGenau(titel)
             val dateien = eintrag?.anhaenge.orEmpty().filter { it.art == Art.BILD || it.art == Art.PDF }.map { speicher.datei(it).absolutePath }
-            return AgentenErgebnis(eintrag?.titel ?: datei.nameWithoutExtension, gesamt, bericht, dateien, vorlaeufig = !ablegen)
+            return AgentenErgebnis(eintrag?.titel ?: datei.nameWithoutExtension, gesamt, bericht, dateien, vorlaeufig = !ablegen, abgebrochen = nachZeitablaufBeendet)
         } catch (e: Exception) {
             // Ein Abbruch ist kein Fehler des Agenten: weiterreichen, fuehreAus trägt ihn als abgebrochen ein.
             if (e is kotlinx.coroutines.CancellationException) throw e

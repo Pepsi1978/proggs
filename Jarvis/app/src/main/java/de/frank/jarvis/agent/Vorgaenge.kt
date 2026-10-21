@@ -41,7 +41,8 @@ data class Vorgang(
     val pdf: Boolean = false,
     val sprache: String = "",
 ) {
-    val offen: Boolean get() = stand == ANGENOMMEN || stand == LAEUFT
+    /** Auch [RUECKFRAGE] ist offen: Der Lauf lebt und wartet nach Zeitablauf auf Franks Entscheidung. */
+    val offen: Boolean get() = stand == ANGENOMMEN || stand == LAEUFT || stand == RUECKFRAGE
     /** Fertig (oder gescheitert), aber Frank hat es laut ChatGPT noch nicht erfahren. */
     val neu: Boolean get() = !offen && mitgeteilt == 0L
 
@@ -56,6 +57,8 @@ data class Vorgang(
         const val FERTIG = "fertig"
         const val FEHLGESCHLAGEN = "fehlgeschlagen"
         const val ABGEBROCHEN = "abgebrochen"
+        /** Internes Zeitlimit erreicht; der Lauf pausiert mit erhaltenem Arbeitsstand und wartet auf „abbrechen oder weiterarbeiten“. */
+        const val RUECKFRAGE = "rueckfrage"
 
         fun aus(j: JSONObject) = Vorgang(
             j.optString("id"), j.optString("agent"), j.optString("auftrag"), j.optLong("erstellt"), j.optString("stand", FEHLGESCHLAGEN),
@@ -75,6 +78,7 @@ data class Vorgang(
             FERTIG -> "fertig"
             FEHLGESCHLAGEN -> "fehlgeschlagen"
             ABGEBROCHEN -> "abgebrochen"
+            RUECKFRAGE -> "Zeitlimit erreicht, wartet auf Franks Entscheidung"
             else -> stand
         }
     }
@@ -106,7 +110,7 @@ class VorgangsBuch(private val datei: File, private val uhr: () -> Long = System
         val jetzt = uhr()
         var verwaist = 0
         gelesen.replaceAll { v ->
-            if (!v.offen) v else { verwaist++; v.copy(stand = Vorgang.ABGEBROCHEN, grund = "Jarvis wurde neu gestartet, während der Auftrag lief; er lässt sich mit agent_starten neu beauftragen", geaendert = jetzt, beendet = jetzt) }
+            if (!v.offen) v else { verwaist++; v.copy(stand = Vorgang.ABGEBROCHEN, grund = "Jarvis wurde neu gestartet, während der Auftrag lief; sein Arbeitsstand ist verloren, er lässt sich mit agent_starten neu beauftragen", geaendert = jetzt, beendet = jetzt) }
         }
         liste = gelesen
         if (verwaist > 0) { melde("Vorgänge nach Neustart abgebrochen", "$verwaist offene"); schreibe() }
@@ -172,6 +176,10 @@ class VorgangsBuch(private val datei: File, private val uhr: () -> Long = System
 
     fun gestartet(id: String) = aendere(id) { it.copy(stand = Vorgang.LAEUFT, gestartet = uhr()) }
     fun schritt(id: String, text: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.LAEUFT, schritt = text.take(160)) else it }
+    /** Zeitlimit erreicht: [zustand] = geprüfter Stand (was erledigt ist, ob es läuft, hängt oder gestört ist). */
+    fun rueckfrage(id: String, zustand: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.RUECKFRAGE, schritt = "Zeitlimit erreicht", grund = zustand.take(400)) else it }
+    /** Frank hat „weiterarbeiten“ gesagt: wieder laufend, der Zustandstext fällt weg. */
+    fun weiter(id: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.LAEUFT, schritt = "arbeitet nach Franks Entscheidung weiter", grund = "") else it }
     fun beende(id: String, stand: String, ergebnis: String?, grund: String?, vorlaeufig: String? = null) =
         aendere(id) { if (it.offen) it.copy(stand = stand, ergebnis = ergebnis.orEmpty(), grund = grund.orEmpty(), beendet = uhr(), schritt = "", vorlaeufig = vorlaeufig.orEmpty()) else it }
 
@@ -216,7 +224,10 @@ class VorgangsBuch(private val datei: File, private val uhr: () -> Long = System
         const val TAGE = 7L
         const val DOPPELT_MS = 10 * 60_000L
         const val START_MS = 3 * 60_000L
-        /** Ein Agent arbeitet höchstens 25 Minuten und meldet jeden Schritt; so lange Stille heißt: der Lauf ist tot. */
+        /**
+         * Ein Agent arbeitet je Zeitfenster höchstens 30 Minuten und meldet jeden Schritt; so lange Stille heißt: der Lauf ist tot.
+         * Gilt nur für LAEUFT: Eine RUECKFRAGE wartet bewusst still auf Frank.
+         */
         const val STILL_MS = 40 * 60_000L
         fun normal(text: String): String = text.lowercase(Locale.GERMAN).replace(Regex("\\s+"), " ").trim()
         private val ZEIT: DateTimeFormatter = DateTimeFormatter.ofPattern("d.M. HH:mm", Locale.GERMAN)
@@ -240,7 +251,9 @@ object Vorgaenge {
         if (v.beendet > 0) append(", beendet ").append(VorgangsBuch.zeit(v.beendet))
         if (v.ergebnis.isNotEmpty()) append(" · Ergebnis in der Ablage: „").append(v.ergebnis).append("“")
         else if (v.vorlaeufig.isNotEmpty()) append(" · Ergebnis bereit (NICHT in der Ablage; Frank wollte keine Ablage").append(if (v.gespraech.isNotEmpty()) ", steht im Jarvis-Chat" else "").append(")")
-        if (v.grund.isNotEmpty()) append(" · ").append(if (v.stand == Vorgang.FERTIG) "Hinweis: " else "Grund: ").append(v.grund.take(200))
+        if (v.stand == Vorgang.RUECKFRAGE) append(" · ZEITLIMIT ERREICHT, frag Frank: „Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?“ Stand: ").append(v.grund)
+            .append(" · Weiterarbeiten (weitere ${Agenten.ZEITLIMIT_MINUTEN} Minuten, gleicher Auftrag und Arbeitsstand) mit vorgang_fortsetzen, abbrechen mit Zwischenstand mit vorgang_abbrechen")
+        else if (v.grund.isNotEmpty()) append(" · ").append(if (v.stand == Vorgang.FERTIG) "Hinweis: " else "Grund: ").append(v.grund.take(200))
         if (v.sprache.isNotEmpty()) append(" · im Sprachgespräch begonnen, Ergebnis wird vorgelesen")
         if (!v.offen) append(if (v.mitgeteilt > 0) " · Frank mitgeteilt" else if (v.abgerufen > 0) " · abgerufen, noch nicht als mitgeteilt bestätigt" else " · Frank noch nicht mitgeteilt")
     }

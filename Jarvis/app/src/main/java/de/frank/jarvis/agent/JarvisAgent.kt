@@ -29,6 +29,62 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
+ * Der geprüfte Zustand eines Agentenlaufs, wenn sein Zeitfenster abgelaufen ist. Nur Fakten, die Jarvis wirklich kennt;
+ * was er nicht wissen kann (wie viel Arbeit noch fehlt), steht in [bericht] ausdrücklich als unbekannt.
+ * [unterbrochen] = was beim Zeitablauf gerade lief (null = zwischen zwei Schritten), [fehlerFolge] = zuletzt gescheiterte Werkzeugaufrufe in Folge.
+ */
+data class Zeitablauf(
+    val zeitfenster: Int,
+    val minuten: Long,
+    val schritte: Int,
+    val maxSchritte: Int,
+    val genutzt: Map<String, Int>,
+    val fehler: Int,
+    val fehlerFolge: Int,
+    val letzterFehler: String?,
+    val aenderungen: List<String>,
+    val unterbrochen: String?,
+    val unterbrochenSeitMs: Long,
+    val letzterSchrittVorMs: Long?,
+) {
+    /** Läuft die Arbeit normal, hängt sie oder ist sie gestört? Eine Zeile. */
+    val zustand: String get() = when {
+        fehlerFolge >= 3 -> "Gestört: Die letzten $fehlerFolge Werkzeugaufrufe sind gescheitert (zuletzt $letzterFehler). Mehr Zeit allein hilft hier vermutlich nicht."
+        unterbrochen != null && unterbrochenSeitMs >= HAENGT_MS ->
+            "Hängt vermutlich: „$unterbrochen“ lief seit ${unterbrochenSeitMs / 60_000} Minuten ohne Ergebnis und wurde unterbrochen. Ob es beim nächsten Versuch klappt, ist unbekannt."
+        schritte == 0 -> "Unklar: Es ist noch kein einziger Schritt fertig geworden."
+        else -> "Läuft und braucht nur mehr Zeit: Der letzte Schritt ist vor ${minutenText(letzterSchrittVorMs ?: 0L)} fertig geworden" +
+            (if (unterbrochen != null) ", gerade lief „$unterbrochen“ (wird beim Weiterarbeiten wiederholt)." else ".")
+    }
+
+    /** Kurzfassung für Vorgangsbuch und Startseite. */
+    fun kurz(): String = "Zeitlimit erreicht nach $minuten Minuten, $schritte " + (if (maxSchritte > 0) "von $maxSchritte " else "") + "Schritten. " + zustand
+
+    /** Der vollständige Statusbericht für Frank, mit der Frage am Ende. */
+    fun bericht(agent: String): String = buildString {
+        append("Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?\n\n")
+        append("**Zustand:** ").append(zustand).append("\n\n")
+        append("**Bisher erledigt** (").append(minuten).append(" Minuten, ").append(zeitfenster).append(if (zeitfenster == 1) ". Zeitfenster" else ". Zeitfenster in Folge").append("):\n")
+        append("- ").append(schritte).append(if (maxSchritte > 0) " von $maxSchritte Schritten genutzt" else " Schritte (Schrittlimit unbegrenzt)").append('\n')
+        if (genutzt.isEmpty()) append("- noch kein Werkzeug fertig benutzt\n")
+        else append("- Werkzeuge: ").append(genutzt.entries.joinToString { (t, n) -> if (n > 1) "$t ($n×)" else t }).append('\n')
+        if (aenderungen.isNotEmpty()) append("- Änderungen: ").append(aenderungen.joinToString("; ").take(600)).append('\n')
+        if (fehler > 0) append("- ").append(fehler).append(if (fehler == 1) " Werkzeugaufruf gescheitert" else " Werkzeugaufrufe gescheitert").append(letzterFehler?.let { ", zuletzt $it" }.orEmpty()).append('\n')
+        append("\n**Unbekannt:** wie viel Arbeit noch fehlt und ob weitere ${Agenten.ZEITLIMIT_MINUTEN} Minuten reichen.\n\n")
+        append("**Weiterarbeiten:** Der Agent $agent setzt denselben Auftrag mit seinem Arbeitsstand ${Agenten.ZEITLIMIT_MINUTEN} Minuten fort")
+        append(if (maxSchritte > 0) ", höchstens noch ${(maxSchritte - schritte).coerceAtLeast(0)} Schritte." else ".")
+        append(" **Abbrechen:** Er schreibt einen Zwischenstand aus dem bisher Gesammelten.")
+    }
+
+    private fun minutenText(ms: Long): String = if (ms < 60_000) "${ms / 1000} Sekunden" else "${ms / 60_000} Minuten"
+
+    companion object {
+        /** So lange ohne Ergebnis gilt ein einzelnes Werkzeug oder ein Modellschritt als vermutlich hängend. */
+        const val HAENGT_MS = 10 * 60_000L
+    }
+}
+
+/**
  * Das eigene Denken von Jarvis: ein Modell aus der ChatGPT-Anmeldung, das die Werkzeuge aller angebundenen
  * Apps selbst bedient. Die Schleife läuft auf dem Handy: Modell entscheidet → Werkzeug läuft → Ergebnis
  * geht zurück ans Modell, bis eine Antwort steht.
@@ -79,11 +135,17 @@ class JarvisAgent(context: Context) {
         schnell: Boolean = false,
         /** Warum der Lauf ohne fertige Antwort endete oder nur einen Zwischenstand schrieb (Schritt- oder Zeitlimit, Modellfehler, zuletzt laufendes Werkzeug). */
         beiAbbruch: (String) -> Unit = {},
+        /**
+         * Nur Agenten: Ist das Zeitfenster ([zeitlimitMs]) abgelaufen, endet der Lauf nicht, sondern pausiert mit erhaltenem Arbeitsstand
+         * und fragt hier nach. null = ein weiteres Zeitfenster gleicher Länge (Schritte zählen weiter, das Schrittlimit bleibt),
+         * ein Text = beenden mit Zwischenstand, der Text ist der Grund. Ohne Rückruf endet der Lauf beim Zeitlimit wie bisher.
+         */
+        beiZeitablauf: (suspend (Zeitablauf) -> String?)? = null,
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
             versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, ablageDauerhaft, lernen, abschluss, beiAenderung, bilder,
-                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch)
+                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf)
         }
 
     private suspend fun versucheIntern(
@@ -104,6 +166,7 @@ class JarvisAgent(context: Context) {
         denkstufe: de.frank.jarvis.auth.ReasoningEffort,
         schnell: Boolean,
         beiAbbruch: (String) -> Unit,
+        beiZeitablauf: (suspend (Zeitablauf) -> String?)?,
     ): String? {
         if (!auth.isConnected) { beiAbbruch("Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
@@ -135,14 +198,32 @@ class JarvisAgent(context: Context) {
         var alleSchritte = false
         var letztesWerkzeug = ""
         var modellFehler: Exception? = null
+        // Für die Zustandsprüfung beim Zeitablauf: was gerade läuft (null = zwischen zwei Schritten), seit wann, was schon erledigt ist.
+        var laeuftGerade: String? = null
+        var laeuftSeit = 0L
+        var letzterSchrittFertig = 0L
+        val genutzt = LinkedHashMap<String, Int>()
+        var fehlerZahl = 0
+        var fehlerFolge = 0
+        var letzterFehler: String? = null
+        val aenderungen = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val meldeAenderung: (String) -> Unit = { aenderungen += it; beiAenderung(it) }
+        var zeitfenster = 0
+        var endeVonAussen: String? = null
         // Wo in zuege die Werkzeugergebnisse stehen: Wird das Gesamtbudget überschritten, werden die älteren gekürzt.
         val ergebnisZuege = mutableListOf<Int>()
-        val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs - reserve) {
+        var ergebnis: String?
+        // Je Durchgang ein Zeitfenster. Ein Fortsetzen nach Zeitablauf behält zuege und schritte: derselbe Auftrag, derselbe Arbeitsstand, dasselbe Schrittbudget.
+        while (true) {
+            zeitfenster++
+            ergebnis = withTimeoutOrNull<String?>(zeitlimitMs - reserve) {
           try {
             // 0 = unbegrenzt: Dann beendet nur die fertige Antwort, das Zeitlimit oder Franks Abbruch die Schleife.
             while (maxSchritte <= 0 || schritte < maxSchritte) {
                 schritte++
                 val modellBeginn = System.currentTimeMillis()
+                laeuftGerade = MODELL_DENKT
+                laeuftSeit = modellBeginn
                 val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe)
                 Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen")
                 val schritt = lies(roh)
@@ -155,11 +236,19 @@ class JarvisAgent(context: Context) {
                 val nurLesend = aufrufe.size > 1 && aufrufe.all { c -> werkzeuge.firstOrNull { it.name == c.optString("werkzeug") }?.nurLesen == true }
                 // Vor dem Start festhalten: Hängt ein Werkzeug bis zum Zeitlimit, nennt der Abbruchgrund genau dieses.
                 letztesWerkzeug = aufrufe.joinToString(", ") { c -> werkzeuge.firstOrNull { it.name == c.optString("werkzeug") }?.titel ?: c.optString("werkzeug") }
+                laeuftGerade = letztesWerkzeug
+                laeuftSeit = System.currentTimeMillis()
                 val ergebnisse = if (nurLesend) {
-                    coroutineScope { aufrufe.map { c -> async { fuehreAus(c, werkzeuge, ablageTitel, ablageDauerhaft, beiSchritt, beiAenderung) } }.awaitAll() }
+                    coroutineScope { aufrufe.map { c -> async { fuehreAus(c, werkzeuge, ablageTitel, ablageDauerhaft, beiSchritt, meldeAenderung) } }.awaitAll() }
                 } else {
-                    aufrufe.map { c -> fuehreAus(c, werkzeuge, ablageTitel, ablageDauerhaft, beiSchritt, beiAenderung) }
+                    aufrufe.map { c -> fuehreAus(c, werkzeuge, ablageTitel, ablageDauerhaft, beiSchritt, meldeAenderung) }
                 }
+                ergebnisse.forEach { (titel, text) ->
+                    genutzt[titel] = (genutzt[titel] ?: 0) + 1
+                    if (text.startsWith("FEHLER: ")) { fehlerZahl++; fehlerFolge++; letzterFehler = "$titel: " + text.removePrefix("FEHLER: ").lineSequence().first().take(160) } else fehlerFolge = 0
+                }
+                laeuftGerade = null
+                letzterSchrittFertig = System.currentTimeMillis()
                 zuege += ChatTurn("assistant", schritt.toString())
                 // Nicht ausgeführte Aufrufe (mehr als MAX_AUFRUFE in einem Schritt) ausdrücklich melden, damit das Modell sie nachholt statt sie zu bestätigen.
                 val nichtAusgefuehrt = if (verworfen.isEmpty()) "" else
@@ -191,13 +280,39 @@ class JarvisAgent(context: Context) {
             modellFehler = e
             null
           }
+            }
+            // Fertig, Schrittlimit, Modellfehler oder ohne Rückfrage (Chat, Tagesauswertung): wie bisher weiter unten.
+            if (ergebnis != null || alleSchritte || modellFehler != null || beiZeitablauf == null) break
+            // Zeitfenster abgelaufen: Zustand festhalten und fragen, statt die Arbeit zu verwerfen.
+            val jetzt = System.currentTimeMillis()
+            val unterbrochen = laeuftGerade
+            // Mitten im Denken unterbrochen: Dieser Schritt hat nichts geliefert und zählt nicht gegen das Schrittlimit.
+            if (unterbrochen == MODELL_DENKT) schritte--
+            laeuftGerade = null
+            val stand = Zeitablauf(
+                zeitfenster = zeitfenster, minuten = (jetzt - beginn) / 60_000, schritte = schritte, maxSchritte = maxSchritte,
+                genutzt = genutzt.toMap(), fehler = fehlerZahl, fehlerFolge = fehlerFolge, letzterFehler = letzterFehler, aenderungen = aenderungen.toList(),
+                unterbrochen = unterbrochen, unterbrochenSeitMs = if (unterbrochen == null) 0L else jetzt - laeuftSeit,
+                letzterSchrittVorMs = if (letzterSchrittFertig == 0L) null else jetzt - letzterSchrittFertig,
+            )
+            endeVonAussen = beiZeitablauf(stand)
+            if (endeVonAussen != null) break
+            // Weiter: Das Modell erfährt, dass der letzte Schritt unterbrochen wurde und was schon erledigt ist (nichts doppelt ausführen).
+            val rest = if (maxSchritte <= 0) "unbegrenzt viele Schritte" else "noch ${maxSchritte - schritte} von $maxSchritte Schritten"
+            val notiz = "FORTSETZUNG: Das interne Zeitlimit war erreicht; Frank hat entschieden, dass du weiterarbeitest (weitere ${dauer(zeitlimitMs)}, $rest). " +
+                (if (unterbrochen != null) "Der unterbrochene Schritt („$unterbrochen“) hat kein Ergebnis geliefert; rufe Nötiges erneut auf. " else "") +
+                (if (aenderungen.isEmpty()) "" else "Bereits bestätigte Änderungen, NICHT noch einmal ausführen: ${aenderungen.joinToString("; ").take(1_500)}. ") +
+                "Mach dort weiter, wo du warst."
+            val letzter = zuege.lastIndex
+            zuege[letzter] = zuege[letzter].copy(text = zuege[letzter].text + "\n\n" + notiz)
         }
-        if (ergebnis != null) return ergebnis
+        ergebnis?.let { return it }
         // Noch nichts gesammelt: Der Fehler geht wie bisher an den Aufrufer (er zeigt etwa „Kontingent ausgeschöpft“ oder „bitte anmelden“).
         modellFehler?.let { if (ergebnisZuege.isEmpty()) throw it }
         val grund = when {
             modellFehler != null -> "Fehler beim Modell: ${modellFehler?.message ?: modellFehler?.javaClass?.simpleName}"
             alleSchritte -> "Schrittlimit von $maxSchritte Schritten erreicht"
+            endeVonAussen != null -> endeVonAussen.orEmpty()
             else -> "Zeitlimit von ${dauer(zeitlimitMs - reserve)} erreicht"
         } + (if (letztesWerkzeug.isEmpty()) "" else ", zuletzt: $letztesWerkzeug")
         if (!abschluss || schritte == 0) {
@@ -418,6 +533,8 @@ class JarvisAgent(context: Context) {
         private const val GESAMTBILD_MS = 15_000L
         /** Höchstens so viele Werkzeugaufrufe laufen in einem Schritt; der Rest geht als „NICHT AUSGEFÜHRT“ ans Modell zurück. */
         private const val MAX_AUFRUFE = 6
+        /** Was läuft, solange das Modell an einem Schritt denkt (für [Zeitablauf.unterbrochen]). */
+        const val MODELL_DENKT = "Das Modell denkt nach"
         const val NICHT_VERBUNDEN = "Ich bin noch nicht mit ChatGPT verbunden. Bitte in Jarvis unter Einstellungen anmelden."
         /** Abgekoppelter Raum für das Gesamtbild: Ein hängender Aufbau hält die Frage nicht fest. */
         private val HINTERGRUND = CoroutineScope(SupervisorJob() + Dispatchers.IO)

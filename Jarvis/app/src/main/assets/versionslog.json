@@ -221,6 +221,7 @@
     {"versionCode": 216, "versionName": "1.8.205", "stand": "21.10.2026, 13:47 Uhr", "notiz": "In Programmiergesprächen trägt jede Meldung ihren echten Absender: Änderungen, Fortschritt, Fehler und Rückfragen der Sitzung stehen unter Programmierer, nur Jarvis' eigene Schritte unter Jarvis, einheitlich als Punkt, Symbol, Absender und Inhalt."},
     {"versionCode": 217, "versionName": "1.8.206", "stand": "21.10.2026, 13:51 Uhr", "notiz": "Im Gespräch bleibt die Lesestelle stehen, wenn du nach oben gescrollt hast; neue Meldungen laufen unten weiter ein, und ganz unten folgt die Ansicht ihnen wieder automatisch."},
     {"versionCode": 218, "versionName": "1.8.207", "stand": "21.10.2026, 13:53 Uhr", "notiz": "Absender in Programmiergesprächen genauer: Texte der Sitzung werden nicht mehr an Emojis zerteilt, der Abschlussbericht zeigt nur ein Symbol, ein unklarer Start trägt ein Warnzeichen und auch Meldungen ohne Text erscheinen."},
-    {"versionCode": 219, "versionName": "1.8.208", "stand": "21.10.2026, 14:01 Uhr", "notiz": "Unter fertigen Recherchen im Chat gibt es den Knopf „Recherche in die Ablage kopieren“: Der vollständige Bericht kommt lesbar in die Ablage und bleibt im Chat."}
+    {"versionCode": 219, "versionName": "1.8.208", "stand": "21.10.2026, 14:01 Uhr", "notiz": "Unter fertigen Recherchen im Chat gibt es den Knopf „Recherche in die Ablage kopieren“: Der vollständige Bericht kommt lesbar in die Ablage und bleibt im Chat."},
+    {"versionCode": 220, "versionName": "1.8.209", "stand": "21.10.2026, 20:01 Uhr", "notiz": "Agenten nutzen jetzt dein eingestelltes Schrittlimit und fragen nach 30 Minuten mit einem Statusbericht, ob sie abbrechen oder weiterarbeiten sollen, statt einfach aufzuhören."}
   ]
 }

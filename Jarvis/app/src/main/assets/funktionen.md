@@ -3,7 +3,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 ## Zugänge und Modelle
 
-- Eigener Chat in der App mit Modellen aus der ChatGPT-Anmeldung (Codex-Gerätecode): GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna, GPT-5.6 Terra; Denkstufe wählbar; Schrittlimit je Anfrage 10–100 oder unbegrenzt.
+- Eigener Chat in der App mit Modellen aus der ChatGPT-Anmeldung (Codex-Gerätecode): GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna, GPT-5.6 Terra; Denkstufe wählbar; Schrittlimit je Anfrage 10–100 oder unbegrenzt (gilt auch für alle Agenten; Live-Antworten fest 8, Tagesauswertung 3).
 - ChatGPT-Plugin (MCP-Server auf dem Handy, über eigenen Relay-Server erreichbar): dieselben Werkzeuge; dazu nur im Plugin `jarvis_kontext` (Startkontext/Gesamtbild), `jarvis_status`, `tagesauswertung_lesen`, `tagesdaten_lesen`. Ist das Handy offline, antwortet das Plugin „Handy nicht erreichbar“.
 - Vordergrunddienst hält die Verbindung auch bei gesperrtem Handy, startet nach Neustart und Update von selbst.
 - Gemini gibt es nur im Live-Gespräch, nicht als Chat-Modell. Keine Jarvis-App für Windows, macOS oder iOS.
@@ -53,7 +53,8 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 ## Agenten und Hintergrundaufträge
 
 - `agenten` (ansehen, anlegen, löschen), `agent_starten` (kehrt sofort mit Vorgangskennung zurück); vorgegeben: Recherche, Machbarkeit, Code-Analyse (nur lesend). Agenten, allen voran Recherche, starten nur, wenn Frank ausdrücklich eine Recherche oder den Agenten verlangt oder einem Angebot dazu zustimmt (im Chat und Live an seinen Worten geprüft; über ChatGPT/MCP nur per Anweisung). Höchstens 2 gleichzeitig; Agenten starten keine Agenten und keine Programmieraufträge.
-- `vorgaenge` (Liste, Ergebnis lesen, als mitgeteilt bestätigen), `vorgang_abbrechen`.
+- `vorgaenge` (Liste, Ergebnis lesen, als mitgeteilt bestätigen), `vorgang_abbrechen`, `vorgang_fortsetzen`.
+- Agenten nutzen Franks Schrittlimit (kein eigenes festes Limit) und je Zeitfenster 30 Minuten. Danach pausieren sie mit erhaltenem Arbeitsstand (Vorgang-Stand „Rückfrage“) und fragen „Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?“ mit geprüftem Zustand (Minuten, Schritte von Limit, genutzte Werkzeuge, Änderungen, Fehler; läuft und braucht nur Zeit / hängt vermutlich / gestört; Unbekanntes benannt): im Ursprungs-Chat, als Benachrichtigung mit Knöpfen (im Gespräch lautlos) und auf der Startseite unter „Läuft gerade“. Weiterarbeiten (Knopf, `vorgang_fortsetzen`) = derselbe Auftrag weitere 30 Minuten, Schritte zählen weiter, bei erneutem Ablauf wieder die Frage; Abbrechen (Knopf, `vorgang_abbrechen`) oder 8 Stunden ohne Antwort = Zwischenstand als Ergebnis, Vorgang abgebrochen. Modellfehler bleiben Fehler. Ein Neustart von Jarvis verliert den Arbeitsstand.
 - Unter jedem fertigen Agenten-Bericht im Chat Knopf „Recherche in die Ablage kopieren“ (andere Agenten: „Bericht …“): legt den vollständigen Bericht samt Bildern/PDF als Texteintrag in die Ablage (Titel aus Überschrift oder Auftrag), ohne neue Recherche; der Bericht bleibt im Chat. Mehrfaches Tippen erzeugt keinen zweiten Eintrag, danach steht „In der Ablage: …“; Erfolg erst nach bestätigter Speicherung, Fehler darunter.
 - Im Sprachgespräch begonnene Agenten (Gesprächsmodus mit „Antworten vorlesen“ oder Live) erben den Sprachursprung von selbst (unabhängig vom Parameter `vorlesen`, im Vorgang vermerkt). Ihr Ergebnis kommt in den Ursprungs-Chat und wird danach vollständig vorgelesen (Ansage „Frank, die Ergebnisse sind jetzt da.“, Bericht fürs Ohr umgeschrieben ohne Inhalte wegzulassen), statt der Kurzfassung.
 

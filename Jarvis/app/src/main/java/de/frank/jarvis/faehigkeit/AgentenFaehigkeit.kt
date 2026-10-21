@@ -26,7 +26,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Verlangt Frank ausdrücklich eine Recherche, eine Ausarbeitung oder einen Agenten, startest du mit agent_starten " +
             "einen Agenten (meist Recherche). Normale Fragen nach Aktuellem beantwortest du dagegen selbst mit der direkten Websuche (siehe WEBSUCHE STATT AGENT); " +
-            "Internetbedarf, Unsicherheit oder längere Bearbeitung allein sind kein Grund für einen Agenten. Er arbeitet bis zu 25 Minuten im Hintergrund und meldet sich per Benachrichtigung; sein vollständiger Bericht kommt als schön formatierter Text ins Gespräch zurück, " +
+            "Internetbedarf, Unsicherheit oder längere Bearbeitung allein sind kein Grund für einen Agenten. Er arbeitet im Hintergrund mit Franks Schrittlimit (Einstellungen → Jarvis) und je 30 Minuten Zeitlimit; ist das erreicht, pausiert er und Frank wird gefragt: „Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?“ (Stand RUECKFRAGE; weiter mit vorgang_fortsetzen, beenden mit vorgang_abbrechen, beides nur auf Franks Wort). Er meldet sich per Benachrichtigung; sein vollständiger Bericht kommt als schön formatierter Text ins Gespräch zurück, " +
             "im Jarvis-Chat direkt, in ChatGPT über vorgaenge (gib ihn dort ausführlich als normale, gegliederte Antwort wieder, nicht nur als Zusammenfassung). " +
             "Das ist die Vorgabe: Chattext, kein PDF, keine Datei. Ein PDF nur mit als_pdf=true, und das nur, wenn Frank ausdrücklich ein PDF verlangt; „kein PDF“, „nicht als PDF“, „nur Text“ heißt als_pdf weglassen. " +
             "In die Ablage legt er nur mit ablegen=true, und das nur, wenn Frank ausdrücklich die Ablage verlangt " +
@@ -78,7 +78,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, NUR wenn Frank das ausdrücklich verlangt, zum Beispiel eine gründliche Recherche („Jarvis, recherchiere ausführlich, wie man … am besten baut“), " +
                     "einem gestalteten PDF-Dokument mit Illustrationen (nur auf ausdrücklichen Wunsch), einer Machbarkeitsprüfung einer Idee, oder den Agenten Code-Analyse mit der Auswertung einer App in Franks Repo (er liest den Code und liefert den Stand samt fertigem Auftrag für ein Programmier-Werkzeug; er ändert nichts). " +
                     "Nicht für normale Fragen nach Aktuellem (Verfügbarkeit, Preise, Neuigkeiten): die beantwortest du selbst mit web_suche. " +
-                    "Der Agent arbeitet bis zu 25 Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Bilderzeugung, Zugriff auf Ideen, " +
+                    "Der Agent arbeitet selbstständig im Hintergrund auf Franks Handy (Schrittlimit wie in Franks Einstellungen, je 30 Minuten Zeitlimit, danach Rückfrage an Frank) (eigenes Modell, Internet-Suche, Bilderzeugung, Zugriff auf Ideen, " +
                     "Aufgaben, Kalender, Biomarker), liefert seinen vollständigen Bericht als formatierten Text ins Gespräch (Jarvis-Chat direkt, ChatGPT über vorgaenge) und meldet sich per Benachrichtigung. " +
                     "Ein PDF entsteht NUR mit als_pdf=true, in die Ablage kommt das Ergebnis NUR mit ablegen=true; beides unabhängig voneinander. Dieser Aufruf kehrt sofort zurück " +
                     "und liefert eine Vorgangskennung (zum Beispiel V7K2P): Der Auftrag ist dann ANGENOMMEN, nicht fertig. Sag Frank das kurz und rede normal weiter. " +
@@ -137,7 +137,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 titel = "Hintergrundaufträge: Stand und Ergebnisse",
                 beschreibung = "Jarvis: Stand und Ergebnisse von Franks Hintergrundaufträgen (Agenten aus agent_starten und Programmieraufträge), auch aus früheren Gesprächen und nach einem Neustart. " +
                     "Ohne aktion (oder aktion=liste): kurze Liste der laufenden und der fertigen, die Frank noch nicht mitgeteilt wurden, je mit Kennung und Stand " +
-                    "(angenommen, läuft, Rückfrage, fertig, fehlgeschlagen, abgebrochen); mit alle=true auch schon Mitgeteiltes der letzten 7 Tage. " +
+                    "(angenommen, läuft, Rückfrage – auch Zeitlimit erreicht, wartet auf Franks Entscheidung –, fertig, fehlgeschlagen, abgebrochen); mit alle=true auch schon Mitgeteiltes der letzten 7 Tage. " +
                     "aktion=lesen mit id: Details und das Ergebnis (Bericht aus der Ablage, gekürzt). aktion=mitgeteilt mit ids: bestätigt, dass du Frank die Ergebnisse in diesem Gespräch gesagt hast; " +
                     "erst dann verschwinden sie aus der Liste. Rufe es, wenn der Startkontext offene oder fertige Vorgänge zeigt oder ein Werkzeug-Ergebnis „VORGANG FERTIG“ meldet. " +
                     "Ein Abruf startet und beendet nie etwas; abbrechen geht nur mit vorgang_abbrechen.",
@@ -154,11 +154,31 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 name = "vorgang_abbrechen",
                 titel = "Hintergrundauftrag abbrechen",
                 beschreibung = "Jarvis: bricht einen laufenden oder noch nicht angelaufenen Agenten-Auftrag ab (Kennung aus agent_starten oder vorgaenge). Nur wenn Frank das ausdrücklich will. " +
-                    "Was der Agent bis dahin erzeugt hat, bleibt erhalten (in der Ablage nur, wenn Frank sie für diesen Auftrag verlangt hatte).",
+                    "Was der Agent bis dahin erzeugt hat, bleibt erhalten (in der Ablage nur, wenn Frank sie für diesen Auftrag verlangt hatte). " +
+                    "Wartet er nach Zeitablauf auf Franks Entscheidung (Rückfrage) und Frank sagt abbrechen, beendet ihn dieses Werkzeug und er schreibt einen Zwischenstand aus dem bisher Erarbeiteten.",
                 schema = schema("id" to text("Die Vorgangskennung, zum Beispiel V7K2P."), pflicht = listOf("id")),
                 nurLesen = false,
                 loeschend = true,
             ) { a -> vorgaenge(a.put("aktion", "abbrechen")) },
+            Werkzeug(
+                name = "vorgang_fortsetzen",
+                titel = "Hintergrundauftrag fortsetzen",
+                beschreibung = "Jarvis: Hat ein Agent sein internes Zeitlimit (${Agenten.ZEITLIMIT_MINUTEN} Minuten) erreicht, pausiert er im Stand Rückfrage und Frank wird gefragt: " +
+                    "„Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?“. Sagt Frank weiterarbeiten oder weiterrecherchieren, setzt dieses Werkzeug denselben Auftrag " +
+                    "mit erhaltenem Arbeitsstand weitere ${Agenten.ZEITLIMIT_MINUTEN} Minuten fort; Franks Schrittlimit bleibt (ein begrenztes Budget wird dadurch nicht unbegrenzt). " +
+                    "Läuft die Zeit erneut ab, wird wieder gefragt. Nur auf Franks ausdrückliches Wort; abbrechen geht mit vorgang_abbrechen.",
+                schema = schema("id" to text("Die Vorgangskennung, zum Beispiel V7K2P."), pflicht = listOf("id")),
+                nurLesen = false,
+            ) { a ->
+                val v = Vorgaenge.buch(app).finde(a.optString("id"))
+                when {
+                    v == null -> Ergebnis("Einen Vorgang „${a.optString("id")}“ gibt es nicht. Liste mit vorgaenge.", fehler = true)
+                    Agenten.entscheide(v.id, weiter = true) -> Ergebnis("Vorgang ${v.id} arbeitet weiter: derselbe Auftrag mit seinem bisherigen Arbeitsstand, weitere ${Agenten.ZEITLIMIT_MINUTEN} Minuten. Sag Frank das in einem Satz.")
+                    v.offen -> Ergebnis("Vorgang ${v.id} wartet gerade nicht auf eine Entscheidung (Stand: ${Vorgang.standText(v.stand)}).", fehler = true)
+                    else -> Ergebnis("Vorgang ${v.id} ist schon beendet (${Vorgang.standText(v.stand)}" + (if (v.grund.isNotEmpty()) ": ${v.grund.take(200)}" else "") +
+                        "); fortsetzen geht nicht mehr. Ein neuer Lauf nur mit agent_starten, wenn Frank das will.", fehler = true)
+                }
+            },
             Werkzeug(
                 name = "protokoll_lesen",
                 titel = "Protokoll lesen",
@@ -234,6 +254,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 val v = buch.finde(a.optString("id")) ?: return Ergebnis("Einen Vorgang „${a.optString("id")}“ gibt es nicht.", fehler = true)
                 when {
                     !v.offen -> Ergebnis("Vorgang ${v.id} ist schon beendet: ${Vorgang.standText(v.stand)}.")
+                    Agenten.wartet(v.id) && Agenten.brichAb(v.id) -> Ergebnis("Vorgang ${v.id} wird beendet; der Agent schreibt jetzt einen Zwischenstand aus dem bisher Erarbeiteten, er kommt wie ein Ergebnis.")
                     Agenten.brichAb(v.id) -> Ergebnis("Vorgang ${v.id} wird abgebrochen.")
                     else -> {
                         // Noch nicht angelaufen: als abgebrochen eintragen. Der Dienst startet ihn dann nicht mehr, und ein Lauf,
