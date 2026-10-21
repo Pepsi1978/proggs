@@ -66,8 +66,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "neuen Auftrag oder einen Nachtrag will oder welche Sitzung er meint, frag kurz und sende nichts. Ohne Nachtragswunsch ist ein Programmierwunsch ein neuer Auftrag. " +
             "Bevor du für Jarvis selbst eine neue Funktion vorschlägst oder beauftragst, prüfe mit funktionen_lesen, ob es sie schon gibt. " +
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
-            "Schreib den Auftrag vollständig aus, mit allem, was Frank im Gespräch gesagt hat: welche App, was genau anders werden soll, wie es aussehen und sich verhalten soll, " +
-            "woran man erkennt, dass es fertig ist. Ist unklar, welche App gemeint ist, frag Frank kurz, bevor du startest. Programmiere nie selbst im Gespräch."
+            "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Ist unklar, welche App gemeint ist, frag Frank kurz, bevor du startest. Programmiere nie selbst im Gespräch."
 
     private val app = context.applicationContext
     private val e get() = Einstellungen.get(app)
@@ -283,8 +282,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 beschreibung = "Jarvis: programmiert etwas in einer von Franks Apps („Jarvis, programmiere in Geniale Aufgaben einen Filter für …“, „bau in den Wecker ein, dass …“, " +
                     "„ändere in Jarvis …“, „schicke bitte folgenden Auftrag an den Programmierer: …“, „schick das an den Programmierer“, „lass das programmieren“). " +
                     "Aus ChatGPT bekommt jeder Auftrag in Jarvis eine eigene Programmier-Session, in der Frank Schritte und Rückfragen sieht. Der Auftrag geht an Claude Code: an Franks PC, wenn er an ist (schnell, die App kommt per WLAN aufs Handy), sonst in die Cloud " +
-                    "(etwa zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version). Es findet die App in Franks Repo und programmiert die Änderung. Dieser Aufruf kehrt sofort zurück. Formuliere den Auftrag selbst vollständig aus, mit allem Wissen aus dem " +
-                    "Gespräch; die Cloud-Sitzung kennt nur diesen Text. Franks Programmierregeln sind nur für dich: Richte den Auftrag nach ihnen aus " +
+                    "(etwa zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version). Es findet die App in Franks Repo und programmiert die Änderung. Dieser Aufruf kehrt sofort zurück. Die Sitzung kennt nur den Auftragstext (Regeln am Feld auftrag). " +
+                    "Franks Programmierregeln sind nur für dich: Richte den Auftrag nach ihnen aus " +
                     "(im Plugin vorher mit jarvis_gemerktes_lesen lesen), schreibe ihren Text aber nicht hinein; Jarvis hängt sie nicht an. Ein fertiger Auftrag vom Agenten Code-Analyse oder aus repo_lesen kann unverändert hinein. " +
                     "Ist unklar, welche App gemeint ist, frag Frank vorher. Jeder Aufruf ist ein NEUER Auftrag mit eigener Sitzung, auch wenn zur selben App oder zum selben " +
                     "Thema schon einer läuft oder gerade fertig wurde; er hängt sich nie an einen alten. Hat das Gespräch schon einen Auftrag, bekommt der neue eine eigene, " +
@@ -295,7 +294,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "(eine Sitzung), im Auftrag durch „ ; “ getrennt; ein Trenner am Ende ist keine weitere Aufgabe.",
                 schema = schema(
                     "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt."),
-                    "auftrag" to text("Der vollständige Programmierauftrag: Ziel, was genau anders werden soll (Bildschirm, Knopf, Verhalten, Texte), Randbedingungen, was Frank wichtig ist, woran man erkennt, dass es fertig ist."),
+                    "auftrag" to text(AUFTRAGS_REGELN),
                     "review" to schalter("true = vor der Auslieferung ein Review laufen lassen (dauert länger). Vorgabe false."),
                     "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc oder cloud. Vorgabe automatisch (PC, wenn er an ist, sonst Cloud).", listOf("automatisch", "pc", "cloud")),
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
@@ -383,20 +382,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * dort nur Anfang und Ende. In der Cloud meldet sie alles selbst.
      */
     private fun fortschrittsAnweisung(nummer: String, pc: Boolean) = if (pc)
-        "FORTSCHRITT (AUFTRAG-ID: $nummer): Frank verfolgt diesen Auftrag in Jarvis. Zwischenschritte (geänderte Dateien, Bau, Commit, Push, Installation) " +
-            "und Rückfragen meldet diese Sitzung automatisch an Jarvis; stell Rückfragen also ganz normal mit AskUserQuestion, Frank beantwortet sie in Jarvis. " +
-            "Melde mit dem Werkzeug programmier_fortschritt des MCP-Servers Jarvis (auftrag_id=$nummer) nur, wenn die App gefunden ist (stand=laeuft), und am " +
-            "Ende stand=fertig, oder stand=fehler mit dem Grund. $ABSCHLUSS_MELDUNG " +
-            "NACHTRÄGE: Schickt Frank über Jarvis einen Nachtrag zu diesem Auftrag, kommt er in dieser Sitzung als Rückmeldung „Frank hat über Jarvis einen Nachtrag …“ " +
-            "an, auch nach dem Abschluss. Setze ihn hier um, schließe danach wieder vollständig ab und melde erneut stand=fertig."
+        "FORTSCHRITT (AUFTRAG-ID: $nummer): Zwischenschritte und Rückfragen meldet die Sitzung automatisch an Jarvis; frag normal mit AskUserQuestion, " +
+            "Frank antwortet in Jarvis. Selbst melden mit programmier_fortschritt (MCP-Server Jarvis, auftrag_id=$nummer): stand=laeuft, sobald die App gefunden ist, " +
+            "am Ende stand=fertig oder stand=fehler mit dem Grund. $ABSCHLUSS_MELDUNG " +
+            "NACHTRÄGE kommen hier als Rückmeldung „Frank hat über Jarvis einen Nachtrag …“ an, auch nach dem Abschluss: umsetzen, wieder vollständig abschließen, erneut stand=fertig."
     else
-        "FORTSCHRITT (AUFTRAG-ID: $nummer): Frank verfolgt diesen Auftrag am Handy. Melde jeden wichtigen Schritt mit dem Werkzeug programmier_fortschritt " +
-            "des MCP-Servers Jarvis (auftrag_id=$nummer, ein kurzer Satz auf Deutsch): sofort zu Beginn (stand=laeuft), wenn die App gefunden ist, wenn die " +
-            "Änderung programmiert ist, beim Commit oder Pull Request, beim Bau oder der Installation, und am Ende stand=fertig, oder stand=fehler mit dem Grund. " +
-            "$ABSCHLUSS_MELDUNG Bevor du Frank mit AskUserQuestion etwas fragst, melde stand=frage mit der Frage, damit er eine " +
-            "Benachrichtigung bekommt. Ist das Werkzeug nicht verfügbar, arbeite ohne Meldungen weiter. " +
-            "NACHTRÄGE: Antwortet programmier_fortschritt mit „NACHTRAG VON FRANK“, gehört er zu diesem Auftrag: Setze ihn in dieser Sitzung um und melde danach erneut. " +
-            "Melde unmittelbar vor stand=fertig noch einen Schritt mit stand=laeuft, damit ein später Nachtrag ankommt; kommt dabei einer, arbeite ihn ab statt fertig zu melden."
+        "FORTSCHRITT (AUFTRAG-ID: $nummer): Melde jeden wichtigen Schritt mit programmier_fortschritt (MCP-Server Jarvis, auftrag_id=$nummer, ein kurzer Satz): " +
+            "zu Beginn und wenn die App gefunden ist (stand=laeuft), bei Programmierung, Commit oder Pull Request und Bau, am Ende stand=fertig oder stand=fehler mit dem Grund. " +
+            "$ABSCHLUSS_MELDUNG Vor jeder Frage mit AskUserQuestion stand=frage mit der Frage melden. Ohne das Werkzeug ohne Meldungen weiterarbeiten. " +
+            "NACHTRÄGE: Antwortet programmier_fortschritt mit „NACHTRAG VON FRANK“, gehört er zu diesem Auftrag: umsetzen und erneut melden. " +
+            "Unmittelbar vor stand=fertig noch einmal stand=laeuft melden, damit ein später Nachtrag ankommt; kommt einer, ihn abarbeiten statt fertig zu melden."
 
     /**
      * Eine Meldung des Hooks vom PC (Signal „programmieren“ über den Relay): ins Auftragsbuch, als Benachrichtigung und in
@@ -1344,6 +1339,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         const val ABSCHLUSS_MELDUNG = "Die Fertig-Meldung: ein bis drei kurze, gut vorlesbare Sätze ohne Markdown, was jetzt neu ist, wie es funktioniert " +
             "und welche Version, danach genau „Committet: ja/nein · Gepusht: ja/nein · Installiert: ja (WLAN/Tunnel/Kabel)/nein · APK-Update: ja/nein“ " +
             "(fehlgeschlagen statt ja/nein, wenn es scheiterte; nur was wirklich gelaufen ist)."
+
+        /**
+         * Wie der Auftrag selbst aussieht (Beschreibung des Felds „auftrag“, für Jarvis' Modelle und ChatGPT über das Plugin).
+         * Die „ ; “-Bündelung muss bei jeder künftigen Änderung erhalten bleiben (DiktatTrenner.auftrag).
+         */
+        const val AUFTRAGS_REGELN = "Der Auftrag, so kurz wie möglich, so vollständig wie nötig: Ziel und gewünschtes Ergebnis; Franks Beobachtungen, " +
+            "Anforderungen und bestätigte Entscheidungen vollständig; woran man erkennt, dass es fertig ist. Will Frank erkennbar ein bestehendes Verhalten " +
+            "unbedingt behalten, nenne es knapp und konkret als Schutzanforderung („Unverändert lassen: …“). Keine Lösungswege, Umsetzungsschritte oder " +
+            "Dateipfade vorgeben, keine Wiederholungen, keine verworfenen Ideen. Vermutete Ursachen nur, wenn sie wirklich helfen, und als „Vermutung:“ markiert. " +
+            "Mehrere Aufgaben durch „ ; “ getrennt (siehe Beschreibung)."
 
         /** So lang darf der ganze Text an ein Programmier-Ziel höchstens werden. */
         const val HOECHSTENS = 60_000

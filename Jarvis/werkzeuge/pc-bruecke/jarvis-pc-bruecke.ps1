@@ -180,7 +180,7 @@ function Starte-Sitzung($auftrag) {
     $name = "Jarvis: $app"
     $review = if ($auftrag.review) { 'ja: vor dem Abschluss die Änderung mit /code-review prüfen und Befunde beheben' } else { 'nein' }
     $text = @"
-Programmierauftrag von Frank über Jarvis (seinen Sprachassistenten auf dem Handy). Frank verfolgt diese Sitzung per Remote Control in der Claude-App.
+Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control.
 
 APP: $($auftrag.app)
 REVIEW: $review
@@ -188,9 +188,9 @@ AUFTRAG:
 $($auftrag.auftrag)
 
 VORGEHEN
-1. Finde die App im Repo anhand des Namens und des Auftrags (Ordnernamen, README.md, CLAUDE.md, settings.gradle.kts, app_name, applicationId). Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. Ist die Zuordnung nicht eindeutig, frag Frank mit AskUserQuestion und nenne die Kandidaten, statt zu raten.
-2. Setze den Auftrag vollständig um. Ist etwas Wesentliches unklar, frag Frank mit AskUserQuestion; Kleinigkeiten entscheidest du selbst.
-3. Schließe nach den Profilregeln vollständig ab: bauen, Version bumpen, committen, pushen, per WLAN aufs Handy installieren und bei Android-Apps den Skill apk-update ausführen. Abschlussmeldung auf Deutsch.
+1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. Nicht eindeutig: Frank mit AskUserQuestion fragen und die Kandidaten nennen.
+2. Wesentliche Unklarheiten mit AskUserQuestion klären, Kleinigkeiten selbst entscheiden.
+3. Nach den Profilregeln vollständig abschließen: bauen, Version, Commit, Push, Installation per WLAN, bei Android-Apps Skill apk-update. Abschlussmeldung auf Deutsch.
 "@
     # Die Brücke läuft tagelang und behielte sonst die Umgebung von ihrem Start: Nach einem JDK-Update zeigte
     # JAVA_HOME in jeder neuen Sitzung auf den gelöschten Ordner, und gradlew brach ab. Darum vor jedem Auftrag
