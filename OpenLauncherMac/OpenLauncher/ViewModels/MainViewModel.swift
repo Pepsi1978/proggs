@@ -213,7 +213,7 @@ final class MainViewModel {
         // Die Startauswahl loest hier also weder Provider- noch Thinking-Ladevorgang aus - das holt
         // activateInitialSelection() nach, sobald das Fenster als Delegate haengt. (In WPF gibt es
         // das Problem nicht: dort feuert OnSelectedModelChanged auch aus dem Konstruktor heraus.)
-        selectedModel = modelGroups.flatMap(\.models).first { !$0.isHidden }
+        selectedModel = defaultStartModel()
 
         Task { await refreshOpenRouterFreeModels() }
         Task { await refreshLmStudioModels() }
@@ -249,6 +249,12 @@ final class MainViewModel {
     /// (Schluessel BuildTimestamp in der Info.plist), damit hier nie ein von Hand getippter - und
     /// damit moeglicherweise falscher - Zeitpunkt steht. Gegenstueck zum MSBuild-Target
     /// "SetBuildTimestamp" im Windows-Projekt.
+    /// Startauswahl fuer neue Sessions: Claude Opus 5.5, sonst das erste sichtbare Modell.
+    private func defaultStartModel() -> ModelEntry? {
+        let visible = modelGroups.flatMap(\.models).filter { !$0.isHidden }
+        return visible.first { $0.slug.hasPrefix("claude-opus-5-5") } ?? visible.first
+    }
+
     private static func buildVersionText() -> String {
         let info = Bundle.main.infoDictionary
         let number = (info?["CFBundleShortVersionString"] as? String) ?? "?"
@@ -585,7 +591,7 @@ final class MainViewModel {
         refreshHiddenModels()
         delegate?.modelGroupsChanged()
         if selectedModel != nil && findGroup(for: selectedModel) == nil {
-            selectedModel = modelGroups.flatMap(\.models).first { !$0.isHidden }
+            selectedModel = defaultStartModel()
         }
 
         statusText = updated.isEmpty
