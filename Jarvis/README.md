@@ -75,14 +75,14 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Ablage von Jarvis (Texte und Dateien); `ablage_lesen` ohne Titel liefert die Liste mit Dateitypen, laufenden und fehlgeschlagenen Übertragungen |
 | `ablage_datei_speichern` | Dateien in einen Ablage-Eintrag übernehmen: ChatGPT-Dateiverweise (`chatgpt_dateien`, `openai/fileParams`), https-Adresse, Text oder kleines Base64 |
 | `bild_erzeugen` | Bild oder Infografik über das Codex-Bildwerkzeug erzeugen und als PNG (auf Wunsch auch DIN-A4-PDF) ablegen |
-| `agenten`, `agent_starten` | Agenten ansehen, anlegen, löschen und beauftragen; `agent_starten` kehrt sofort mit einer Vorgangskennung zurück |
+| `agenten`, `agent_starten` | Agenten ansehen, anlegen, löschen und beauftragen; `agent_starten` kehrt sofort mit einer Vorgangskennung zurück. Der Recherche-Agent startet nur auf Franks ausdrücklichen Wunsch (`faehigkeit/SuchRegel.kt`) |
 | `vorgaenge`, `vorgang_abbrechen` | Hintergrundaufträge (Agenten und Programmieraufträge): Liste, `lesen` mit Ergebnis, `mitgeteilt`; Abbrechen nur über das eigene, schreibende Werkzeug |
 | `mail_senden`, `mail_lesen` | Gmail; `mail_lesen` mit `nr` liefert eine Mail vollständig |
 | `jarvis_status` | Erreichbarkeit, Datum, Dienst heute, angebundene Apps, Version und Integrationsversion |
 | `jarvis_kontext` | Startkontext (`kurz`, Vorgabe), einzelne Bereiche (`bereiche`), nur Geändertes (`seit`) oder das ganze Gesamtbild (`umfang=voll`) |
 | `gedaechtnis_suchen` | Gezielte Suche im ganzen Gedächtnis: Tagebuch, Gespräche, Notizen, Gemerktes, Ideen, Ablage, frühere Auswertungen |
 | `logbuch_lesen` | Logbuch der App: Fehler, Dauer, Aktionen, mit Zusammenfassung |
-| `web_suche`, `web_seite_lesen` | Jarvis' eigene Internet-Suche (seit 1.8.111 auch im Plugin) |
+| `web_suche`, `web_seite_lesen` | Jarvis' direkte Websuche (seit 1.8.111 auch im Plugin, seit 1.8.195 auch im eigenen Chat und Live-Gespräch): aktuelle Fragen sofort im Gespräch beantworten; im Gespräch zuerst die Websuche des ChatGPT-Modells, sonst Tavily |
 | `sprachsession_beenden` | Jarvis' eigenes Zuhören bzw. Live-Gespräch auf dem Handy beenden (seit 1.8.111 auch im Plugin) |
 
 Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nach; ruft es trotzdem auf, lehnt die

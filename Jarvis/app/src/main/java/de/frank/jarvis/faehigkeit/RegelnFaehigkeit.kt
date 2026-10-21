@@ -445,6 +445,17 @@ object Symbiose : Merkdatei("symbiose.json", 30, "", SYMBIOSE_VORGABE) {
 
     internal fun kopfTextFuerTest(eintraege: List<Regel>): String = kopfText(eintraege)
 
+    /** Überholte Vorgaben (alt → neu); ersetzt wird nur, was noch wörtlich so dasteht. Was Frank selbst umformuliert hat, bleibt. */
+    internal val ERSETZTE_VORGABEN = listOf(SYMBIOSE_LANGE_ARBEIT_ALT to SYMBIOSE_SUCHE)
+
+    /**
+     * Ersetzt einmal überholte, unverändert gebliebene Vorgaben (beim Start der App). Danach weicht die Fassung ab; ChatGPT sagt Frank
+     * dann nach Regel „Abgleich“ einmal, dass er den Text neu kopieren soll. Liefert die ersetzten Einträge.
+     */
+    fun aktualisiereVorgaben(context: Context): List<Regel> = ERSETZTE_VORGABEN.mapNotNull { (alt, neu) ->
+        alle(context).firstOrNull { it.text == alt }?.let { ersetzeWenn(context, it.id, alt, neu) }
+    }
+
     override fun kopfText(eintraege: List<Regel>): String =
         "SYMBIOSE CHATGPT LIVE ⇄ JARVIS · Stand ${stand(eintraege)} · Fassung ${fassung(eintraege)} (von Frank festgelegt, nach Wichtigkeit geordnet; dieselben Regeln stehen 1:1 bei ChatGPT unter " +
             "Einstellungen → Personalisierung → Benutzerdefinierte Anweisungen. „Du“ meint darin ChatGPT Live in der ChatGPT-App, „Jarvis“ die Jarvis-App mit ihren Werkzeugen. " +
@@ -452,7 +463,20 @@ object Symbiose : Merkdatei("symbiose.json", 30, "", SYMBIOSE_VORGABE) {
             "und Hintergrundarbeit gelten für dich sinngemäß, Werkzeuge, die du nicht hast, rufst du nicht auf. Die Regeln [S…] ändert nur Frank in der App, nie über jarvis_merken oder jarvis_vergessen; „Korrektur über die id“ darin meint die Einträge der anderen Dateien. Nicht ungefragt vorlesen):"
 }
 
-/** Die erste Fassung der Symbiose-Regeln (Stand 17.10.2026). Danach gilt, was Frank in der App daraus macht. */
+/**
+ * Regel 6 bis 20.10.2026: Sie gab Recherchen und alles über eine Minute pauschal an einen Agenten, auch normale Fragen nach Aktuellem.
+ * Steht sie bei Frank noch unverändert so da, ersetzt [Symbiose.aktualisiereVorgaben] sie einmal durch [SYMBIOSE_SUCHE].
+ */
+internal const val SYMBIOSE_LANGE_ARBEIT_ALT = "Lange Arbeit: Recherchen und alles über eine Minute gibst du mit agent_starten an einen Jarvis-Agenten und redest weiter. " +
+    "Fertiges holst du mit vorgaenge, sagst es mir an passender Stelle und bestätigst dann mit vorgaenge (aktion mitgeteilt); ebenso bei „VORGANG FERTIG“ an einem Ergebnis. " +
+    "Jarvis kann dich nicht von sich aus ansprechen."
+
+/** Regel 6 ab 21.10.2026 (Franks Vorgabe: Websuche statt Agent, siehe [SuchRegel]). */
+internal const val SYMBIOSE_SUCHE = "Websuche und Agenten: Aktuelles suchst du sofort selbst mit deiner Websuche, kurz mit Quelle. agent_starten nur, wenn ich " +
+    "ausdrücklich Recherche verlange. Fertiges holst du mit vorgaenge, sagst es mir passend und bestätigst mit vorgaenge (aktion mitgeteilt), auch bei „VORGANG FERTIG“. " +
+    "Jarvis kann dich nicht von sich aus ansprechen."
+
+/** Die erste Fassung der Symbiose-Regeln (Stand 17.10.2026, Regel 6 seit 21.10.2026). Danach gilt, was Frank in der App daraus macht. */
 internal val SYMBIOSE_VORGABE = listOf(
     "Rollen: Du bist ChatGPT Live, mein Gesprächspartner. Jarvis ist meine App auf dem Handy, angebunden als Konnektor „Jarvis“: mein dauerhaftes Gedächtnis, Zugang zu meinen Apps und Daten, " +
         "ausführende Stelle, Hintergrund-Agenten und Übergabe an den Programmierer. Du sprichst, denkst mit und formulierst; Jarvis weiß, speichert und führt aus.",
@@ -465,8 +489,7 @@ internal val SYMBIOSE_VORGABE = listOf(
     "Gedächtnis: Sage ich etwas Dauerhaftes, speichere es sofort mit jarvis_merken, auch ohne „merk dir“: info (Tatsache über mich), regel („ab jetzt“, „immer“, „nie“), ziel, entscheidung " +
         "(„ich habe entschieden“), stil (wie du antworten sollst). Korrektur: alten Eintrag über seine id ersetzen. Nur was ich sage oder bestätige: deine Vorschläge erst nach meinem Ja, " +
         "offene Gedanken mit idee_speichern, nie als Aufgabe.",
-    "Lange Arbeit: Recherchen und alles über eine Minute gibst du mit agent_starten an einen Jarvis-Agenten und redest weiter. Fertiges holst du mit vorgaenge, sagst es mir an passender Stelle " +
-        "und bestätigst dann mit vorgaenge (aktion mitgeteilt); ebenso bei „VORGANG FERTIG“ an einem Ergebnis. Jarvis kann dich nicht von sich aus ansprechen.",
+    SYMBIOSE_SUCHE,
     "Programmierer: „Schicke bitte folgenden Auftrag an den Programmierer“, „schick das an den Programmierer“ oder „lass das programmieren“ heißt: Auftrag mit programmieren an Claude Code; " +
         "Jarvis legt dafür eine eigene Programmier-Session an. Nenne die App und schreib den Auftrag vollständig aus dem Gespräch: Ziel, was sich ändern soll, woran man erkennt, dass es fertig ist. " +
         "Unklare App: kurz fragen. Rückfragen der Sitzung beantwortest du mit programmier_antwort, den Stand holst du mit vorgaenge.",

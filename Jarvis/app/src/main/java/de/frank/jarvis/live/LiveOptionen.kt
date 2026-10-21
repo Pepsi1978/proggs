@@ -345,7 +345,7 @@ object LiveOptionen {
                 )
             }, gilt = { it.istGemini }),
         Option("g_suche", "Live-Gespräch", "Google-Suche (Gemini)",
-            "Gemini darf selbst bei Google suchen. Jarvis kann über seine eigene Recherche ohnehin nachschlagen.",
+            "Gemini darf selbst bei Google suchen. Jarvis beantwortet aktuelle Fragen ohnehin mit seiner direkten Websuche.",
             "aus", { listOf(Wahl("aus", "Aus", "Empfehlung."), Wahl("an", "An", "", "Suchanfragen laut Google-Preisliste, im kostenlosen Kontingent begrenzt")) },
             gilt = { it.istGemini && !it.jarvisDirekt }),
         Option("g_temperatur", "Live-Gespräch", "Kreativität (Gemini)",
@@ -398,7 +398,7 @@ object LiveOptionen {
             "2048", { listOf(Wahl("512", "512 Tokens", "Sehr kurz; bei hoher Denkstufe kann die Antwort abbrechen."), Wahl("1024", "1.024 Tokens"), Wahl("2048", "2.048 Tokens", "Empfehlung."), Wahl("4096", "4.096 Tokens"), Wahl("6000", "6.000 Tokens"), Wahl("8000", "8.000 Tokens"), Wahl("0", "Ohne Grenze", "", "kein Kostendeckel")) },
             gilt = { it.denktBeiOpenAi }),
         Option("websuche", "Live-Gespräch", "Websuche des Denk-Modells",
-            "Das Denk-Modell darf selbst im Internet suchen. Jarvis kann das über seine eigene Recherche ohnehin.",
+            "Das Denk-Modell darf aktuelle Fragen selbst mit seiner Websuche beantworten. Aus: Es fragt Jarvis, der direkt mit seiner Websuche antwortet.",
             "aus", { listOf(Wahl("aus", "Aus", "Empfehlung."), Wahl("an", "An", "", "plus Websuche-Gebühr laut OpenAI-Preisliste")) },
             gilt = { it.denktBeiOpenAi }),
         Option("speichern", "Live-Gespräch", "Gespräch bei OpenAI speichern",

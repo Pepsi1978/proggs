@@ -24,14 +24,15 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
     override val name = "Agenten und Protokoll"
     override val beschreibung = "Agenten für längere Arbeiten beauftragen und verwalten; das Aktivitäts-Protokoll von Jarvis lesen (auch Fehler)."
     override val hinweise =
-        "Für Recherchen, Ausarbeitungen und alles, was Internet braucht oder länger als eine Minute dauert, startest du mit agent_starten " +
-            "einen Agenten (meist Recherche). Er arbeitet bis zu 25 Minuten im Hintergrund und meldet sich per Benachrichtigung; sein vollständiger Bericht kommt als schön formatierter Text ins Gespräch zurück, " +
+        "Verlangt Frank ausdrücklich eine Recherche, eine Ausarbeitung oder einen Agenten, startest du mit agent_starten " +
+            "einen Agenten (meist Recherche). Normale Fragen nach Aktuellem beantwortest du dagegen selbst mit der direkten Websuche (siehe WEBSUCHE STATT AGENT); " +
+            "Internetbedarf, Unsicherheit oder längere Bearbeitung allein sind kein Grund für einen Agenten. Er arbeitet bis zu 25 Minuten im Hintergrund und meldet sich per Benachrichtigung; sein vollständiger Bericht kommt als schön formatierter Text ins Gespräch zurück, " +
             "im Jarvis-Chat direkt, in ChatGPT über vorgaenge (gib ihn dort ausführlich als normale, gegliederte Antwort wieder, nicht nur als Zusammenfassung). " +
             "Das ist die Vorgabe: Chattext, kein PDF, keine Datei. Ein PDF nur mit als_pdf=true, und das nur, wenn Frank ausdrücklich ein PDF verlangt; „kein PDF“, „nicht als PDF“, „nur Text“ heißt als_pdf weglassen. " +
             "In die Ablage legt er nur mit ablegen=true, und das nur, wenn Frank ausdrücklich die Ablage verlangt " +
             "(„… und leg das in der Ablage ab“); Recherche, Agent oder PDF allein sind kein Speicherwunsch. Format und Ablage sind unabhängig: „als Text in die Ablage“ = ablegen ohne als_pdf, „als PDF“ = als_pdf ohne ablegen. " +
             "Will Frank ein fertiges Ergebnis später behalten: in_ablage_uebernehmen mit vorgang. " +
-            "Gib ihm den vollständigen Auftrag mit. Versuche so etwas nie selbst im Gespräch. " +
+            "Gib ihm den vollständigen Auftrag mit; eine beauftragte gründliche Recherche versuchst du nicht selbst im Gespräch. " +
             "agent_starten liefert eine Vorgangskennung; angenommen heißt nicht fertig. Stand und Ergebnis über vorgaenge, nach dem Mitteilen mit aktion mitgeteilt bestätigen. " +
             "Fragt Frank, warum etwas nicht geklappt hat, oder meldet ein Werkzeug einen Fehler, lies mit protokoll_lesen nach, was Jarvis zuletzt getan hat und woran es scheiterte."
 
@@ -74,8 +75,9 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
             Werkzeug(
                 name = "agent_starten",
                 titel = "Agenten beauftragen",
-                beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, zum Beispiel einer Internet-Recherche („Jarvis, recherchiere, wie man … am besten baut“), " +
+                beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, NUR wenn Frank das ausdrücklich verlangt, zum Beispiel eine gründliche Recherche („Jarvis, recherchiere ausführlich, wie man … am besten baut“), " +
                     "einem gestalteten PDF-Dokument mit Illustrationen (nur auf ausdrücklichen Wunsch), einer Machbarkeitsprüfung einer Idee, oder den Agenten Code-Analyse mit der Auswertung einer App in Franks Repo (er liest den Code und liefert den Stand samt fertigem Auftrag für ein Programmier-Werkzeug; er ändert nichts). " +
+                    "Nicht für normale Fragen nach Aktuellem (Verfügbarkeit, Preise, Neuigkeiten): die beantwortest du selbst mit web_suche. " +
                     "Der Agent arbeitet bis zu 25 Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Bilderzeugung, Zugriff auf Ideen, " +
                     "Aufgaben, Kalender, Biomarker), liefert seinen vollständigen Bericht als formatierten Text ins Gespräch (Jarvis-Chat direkt, ChatGPT über vorgaenge) und meldet sich per Benachrichtigung. " +
                     "Ein PDF entsteht NUR mit als_pdf=true, in die Ablage kommt das Ergebnis NUR mit ablegen=true; beides unabhängig voneinander. Dieser Aufruf kehrt sofort zurück " +
@@ -98,6 +100,12 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 when {
                     plan == null -> Ergebnis("Diesen Agenten gibt es nicht. Vorhanden: " + Agenten.alle(app).joinToString { it.name } + ". Mit agenten (aktion=anlegen) lässt sich ein neuer bauen.", fehler = true)
                     auftrag.isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
+                    // Franks Vorgabe: Der Recherche-Agent startet nur auf seinen ausdrücklichen Wunsch. Geprüft an seinen eigenen Worten,
+                    // nicht an der Deutung des Modells; ohne sie (ChatGPT über MCP, Live ohne Mitschrift) gilt die Regel nur über die Anweisungen.
+                    !SuchRegel.darfStarten(plan.name, kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]?.text) -> {
+                        de.frank.jarvis.observability.Logbuch.system("agent_starten abgelehnt", "Recherche ohne ausdrücklichen Wunsch")
+                        Ergebnis(SuchRegel.NICHT_GESTARTET, fehler = true)
+                    }
                     !CodexAuthManager(app).isConnected -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
                     // Unter der Sperre des Vorgangsbuchs: erst nach Doppeln suchen, dann synchron reservieren. Der Lauf beginnt erst
                     // asynchron im Dienst; ein paralleler oder wiederholter Aufruf (Verbindungsabbruch) sähe sonst noch einen freien Platz.

@@ -1,6 +1,7 @@
 package de.frank.jarvis.mcp
 
 import de.frank.jarvis.faehigkeit.Ergebnis
+import de.frank.jarvis.faehigkeit.SuchRegel
 import kotlinx.coroutines.CompletableDeferred
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,21 +13,23 @@ import org.json.JSONObject
  * Bei jeder inhaltlichen Änderung der Regeln [VERSION] erhöhen und [STAND] mitziehen.
  */
 object Integration {
-    const val VERSION = "3"
-    const val STAND = "17.10.2026"
+    const val VERSION = "4"
+    const val STAND = "21.10.2026"
 
     /** Die Kurzfassung für Werkzeugbeschreibungen (wenige Sätze). */
     const val KURZ = "Zu Beginn jedes Gesprächs einmal jarvis_kontext aufrufen (kurzer Startkontext mit den Symbiose-Regeln, Franks Regeln, Zielen, Entscheidungen, Neuem, Tageslage und offenen Hintergrundaufträgen); " +
-        "Details gezielt nachladen statt alles; neue dauerhafte Angaben und Entscheidungen von Frank mit jarvis_merken zurückgeben; lange Arbeit mit agent_starten, Ergebnisse mit vorgaenge."
+        "Details gezielt nachladen statt alles; neue dauerhafte Angaben und Entscheidungen von Frank mit jarvis_merken zurückgeben; aktuelle Fragen sofort selbst mit Websuche beantworten, " +
+        "agent_starten nur auf Franks ausdrücklichen Recherche-Wunsch, Ergebnisse mit vorgaenge."
 
     /**
      * Die technischen Ergänzungen. Die Regeln der Zusammenarbeit selbst stehen im Block SYMBIOSE (Merkdatei [de.frank.jarvis.faehigkeit.Symbiose],
      * von Frank in der App bearbeitet und 1:1 in ChatGPT eingetragen); hier nur, was dort aus Platzgründen fehlt.
      */
     val REGELN: String = """
-        JARVIS-INTEGRATION v$VERSION (Stand $STAND): Die Regeln der Zusammenarbeit stehen im Block SYMBIOSE CHATGPT LIVE ⇄ JARVIS (Franks benutzerdefinierte Anweisungen, nach Wichtigkeit geordnet); er geht allem hier vor. Fest, auch wenn dort etwas fehlt:
+        JARVIS-INTEGRATION v$VERSION (Stand $STAND): Die Regeln der Zusammenarbeit stehen im Block SYMBIOSE CHATGPT LIVE ⇄ JARVIS (Franks benutzerdefinierte Anweisungen, nach Wichtigkeit geordnet); er geht allem hier vor, außer der Regel WEBSUCHE STATT AGENT unten (Franks Vorgabe vom 21.10.2026; sie gilt auch gegen ältere Fassungen der Symbiose). Fest, auch wenn dort etwas fehlt:
         - Zu Beginn jedes Gesprächs einmal jarvis_kontext (Vorgabe kurz). Erledigt ist nur, was ein Werkzeug bestätigt; angenommen heißt nicht fertig. Nach jeder Aktion kurz sagen, was erledigt ist und was noch läuft.
-        - Neue dauerhafte Angaben und ausdrückliche Entscheidungen von Frank mit jarvis_merken zurückgeben; eigene Vorschläge erst nach seinem Ja. Lange Arbeit mit agent_starten.
+        - Neue dauerhafte Angaben und ausdrückliche Entscheidungen von Frank mit jarvis_merken zurückgeben; eigene Vorschläge erst nach seinem Ja. Hintergrund-Agenten (agent_starten) nur auf Franks ausdrücklichen Wunsch.
+        - ${SuchRegel.REGEL}
         Technisch dazu:
         - Datenstand: Jeder Bereich trägt [Stand …]. In längeren Gesprächen holt jarvis_kontext mit seit (die STAND-MARKE des letzten Abrufs) nur das Geänderte; umfang voll liefert alles, bereiche einzelne Bereiche vollständig.
         - Vorgänge: agent_starten liefert eine Kennung; vorgaenge (aktion lesen) holt das Ergebnis, aktion mitgeteilt bestätigt erst, wenn du es Frank gesagt hast. Abbrechen nur mit vorgang_abbrechen. Während etwas läuft, nicht wiederholt abfragen.

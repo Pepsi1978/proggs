@@ -23,6 +23,12 @@ class JarvisApplication : Application(), ViewModelStoreOwner {
         // Laufende Timer nach einem Neustart wieder scharf stellen.
         de.frank.jarvis.timer.Timer.starte(this)
         de.frank.jarvis.timer.Stoppuhr.starte(this)
+        // Überholte, unverändert gebliebene Symbiose-Vorgaben einmal ersetzen (Regel 6: Websuche statt Agent); Dateizugriff nicht auf dem Hauptfaden.
+        Thread {
+            runCatching { de.frank.jarvis.faehigkeit.Symbiose.aktualisiereVorgaben(this) }
+                .onSuccess { neu -> if (neu.isNotEmpty()) de.frank.jarvis.observability.Logbuch.gedaechtnis("Symbiose-Vorgabe ersetzt", neu.joinToString { "S${it.id}" }) }
+                .onFailure { de.frank.jarvis.observability.Logbuch.fehler("Symbiose-Vorgabe ersetzen", it) }
+        }.start()
         // Dienst bei jedem Prozessstart sicherstellen: Samsung überspringt MY_PACKAGE_REPLACED, wenn Jarvis
         // beim Update vorn war. Dann fehlten Tunnel und Update-Signale bis zum nächsten Öffnen.
         JarvisDienst.abgleichen(this)
