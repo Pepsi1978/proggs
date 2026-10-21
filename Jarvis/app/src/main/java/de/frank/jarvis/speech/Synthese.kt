@@ -35,6 +35,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Ein Fehler, der die ganze Sitzung betrifft — die Pipeline hält dann sofort an. */
@@ -76,7 +77,8 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * erst in eine Datei — so greift die Vorausschau auch beim Standardanbieter.
      */
     fun kannVorausschauen(wahl: StimmWahl? = null): Boolean = when (anbieter(wahl)) {
-        TtsProvider.GOOGLE_CLOUD.id, TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id, TtsProvider.EDGE.id -> true
+        TtsProvider.GOOGLE_CLOUD.id, TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id,
+        TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id, TtsProvider.EDGE.id -> true
         else -> false
     }
 
@@ -96,6 +98,8 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val tempo = wahl?.tempo ?: settings.ttsSpeechRate
         when (anbieter(wahl)) {
             TtsProvider.GOOGLE_CLOUD.id -> google(text, sonder, tempo)
+            TtsProvider.GEMINI_FLASH.id -> gemini(text, GEMINI_FLASH_MODELL, sonder ?: settings.geminiFlashTtsVoice, tempo)
+            TtsProvider.GEMINI_LITE.id -> gemini(text, GEMINI_LITE_MODELL, sonder ?: settings.geminiLiteTtsVoice, tempo)
             TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
             TtsProvider.QWEN.id -> qwen(text, geklont = false, sonder)
             TtsProvider.EDGE.id -> edge(text, sonder, tempo)
@@ -157,6 +161,102 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (audio.isBlank()) throw SyntheseFehler("Google hat kein Audio geliefert.")
         return schreibeDatei(Base64.decode(audio, Base64.DEFAULT), "mp3")
     }
+
+    /**
+     * Gemini 3.8 Flash bzw. Flash-Lite TTS. Reihenfolge laut [SecureSettings.geminiTtsSchluesselWahl]: erst der
+     * kostenlose, dann der bezahlte Schlüssel. Ist [SecureSettings.geminiTtsChirpRueckfall] an, geht es nach einem
+     * Fehler des kostenlosen Schlüssels nicht zum bezahlten, sondern mit derselben Stimme zu Chirp 3 HD.
+     * Netzfehler laufen unverändert durch — die wiederholt der Vorleser selbst.
+     */
+    private suspend fun gemini(text: String, modell: String, stimmeId: String, tempo: Float): File {
+        val wahl = settings.geminiTtsSchluesselWahl
+        val frei = settings.geminiTtsKeyFrei.filterNot(Char::isWhitespace)
+        val bezahlt = settings.geminiTtsKeyBezahlt.filterNot(Char::isWhitespace)
+        val chirp = settings.geminiTtsChirpRueckfall
+        var fehlerFrei: Exception? = null
+        if (wahl != SecureSettings.GEMINI_TTS_NUR_BEZAHLT) {
+            val gesperrt = System.currentTimeMillis() < freiGesperrtBis
+            if (frei.isNotBlank() && !gesperrt) {
+                // Mit Ausweichweg nicht erst bei 429 warten — der nächste Weg ist schneller als jede Wartezeit.
+                val ausweg = chirp || (wahl == SecureSettings.GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
+                try {
+                    return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg)
+                } catch (fehler: Exception) {
+                    if (fehler !is SyntheseAbbruch && fehler !is SyntheseFehler) throw fehler
+                    fehlerFrei = fehler
+                    if (ausweg) freiGesperrtBis = System.currentTimeMillis() + FREI_PAUSE_MS
+                    Logbuch.netz("Gemini-Stimme: kostenloser Schlüssel gescheitert", "modell=$modell ${fehler.message?.take(120)}")
+                }
+            }
+            if (chirp) {
+                Logbuch.sprache("Gemini-Stimme: Rückfall auf Chirp 3 HD", "stimme=${TtsCatalog.geminiName(stimmeId)} gesperrt=$gesperrt")
+                return google(text, TtsCatalog.chirpZu(stimmeId), tempo)
+            }
+            if (wahl == SecureSettings.GEMINI_TTS_NUR_FREI) {
+                throw fehlerFrei ?: SyntheseAbbruch(
+                    "Vorlesen fehlgeschlagen: Es ist kein kostenloser Gemini-Schlüssel für die Stimme hinterlegt. Trag ihn in den Einstellungen ein.",
+                )
+            }
+        }
+        if (bezahlt.isBlank()) {
+            throw fehlerFrei ?: SyntheseAbbruch(
+                "Vorlesen fehlgeschlagen: Es ist kein Gemini-Schlüssel für die Stimme hinterlegt. Trag ihn in den Einstellungen ein.",
+            )
+        }
+        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = true)
+    }
+
+    private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean): File {
+        val beginn = System.currentTimeMillis()
+        // Gemini liest den Text wörtlich vor; eine Anweisung im Text würde mitgesprochen.
+        val koerper = JSONObject()
+            .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", text)))))
+            .put(
+                "generationConfig",
+                JSONObject()
+                    .put("responseModalities", JSONArray().put("AUDIO"))
+                    .put(
+                        "speechConfig",
+                        JSONObject().put(
+                            "voiceConfig",
+                            JSONObject().put("prebuiltVoiceConfig", JSONObject().put("voiceName", TtsCatalog.geminiName(stimmeId))),
+                        ),
+                    ),
+            )
+        val anfrage = Request.Builder()
+            .url("$GEMINI_URL$modell:generateContent")
+            .addHeader("x-goog-api-key", schluessel)
+            .post(koerper.toString().toRequestBody(JSON_TYP))
+            .build()
+        val kandidat = JSONObject(fuehreAus(anfrage, warteBei429)).optJSONArray("candidates")?.optJSONObject(0)
+        val ende = kandidat?.optString("finishReason").orEmpty()
+        val teil = kandidat?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optJSONObject("inlineData")
+        val daten = teil?.optString("data").orEmpty()
+        if (daten.isBlank()) throw SyntheseFehler("Gemini hat kein Audio geliefert ($ende).")
+        if (ende.isNotBlank() && ende != "STOP") throw SyntheseFehler("Gemini hat die Stimme abgebrochen ($ende).")
+        val roh = Base64.decode(daten, Base64.DEFAULT)
+        val rate = Regex("rate=(\\d+)").find(teil?.optString("mimeType").orEmpty())?.groupValues?.get(1)?.toIntOrNull() ?: 24_000
+        val wav = if (roh.size > 44 && String(roh, 0, 4, Charsets.US_ASCII) == "RIFF") roh else mitWavKopf(roh, rate)
+        // Abgeschnittenes Audio meldet Gemini teils trotzdem als fertig: Unter 25 Zeichen je Sekunde spricht niemand.
+        val sekunden = (wav.size - 44) / (wavRate(wav) * 2.0)
+        if (text.length >= 60 && sekunden < text.length / 25.0) {
+            throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
+        }
+        Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length}", System.currentTimeMillis() - beginn)
+        return schreibeDatei(wav, "wav")
+    }
+
+    /** Rohes PCM (16 Bit, mono) bekommt einen WAV-Kopf, damit der MediaPlayer es abspielt. */
+    private fun mitWavKopf(pcm: ByteArray, rate: Int): ByteArray {
+        val kopf = java.nio.ByteBuffer.allocate(44).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            .put("RIFF".toByteArray()).putInt(36 + pcm.size).put("WAVE".toByteArray())
+            .put("fmt ".toByteArray()).putInt(16).putShort(1).putShort(1).putInt(rate).putInt(rate * 2).putShort(2).putShort(16)
+            .put("data".toByteArray()).putInt(pcm.size)
+        return kopf.array() + pcm
+    }
+
+    private fun wavRate(wav: ByteArray): Int =
+        java.nio.ByteBuffer.wrap(wav, 24, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).int.takeIf { it > 0 } ?: 24_000
 
     /**
      * @param geklont true für meine eigene Stimme (Voice-Clone-Modell), false für die fertigen
@@ -345,7 +445,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         }
     }
 
-    private suspend fun fuehreAus(anfrage: Request): String {
+    private suspend fun fuehreAus(anfrage: Request, warteBei429: Boolean = true): String {
         var versuch = 0
         while (true) {
             val antwort = client.newCall(anfrage).warte()
@@ -354,7 +454,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             when {
                 code in 200..299 -> return koerper
                 // 429: exponentiell warten und erneut versuchen (Baustein D 4.4).
-                code == 429 && versuch < WARTEZEITEN_MS.size -> {
+                code == 429 && warteBei429 && versuch < WARTEZEITEN_MS.size -> {
                     kotlinx.coroutines.delay(WARTEZEITEN_MS[versuch])
                     de.frank.jarvis.observability.IdeenLog.warn(
                         "Synthese",
@@ -412,6 +512,15 @@ class Synthese(context: Context, private val settings: SecureSettings) {
 
     private companion object {
         const val GOOGLE_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
+        const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
+        const val GEMINI_FLASH_MODELL = "gemini-3.8-flash-tts"
+        const val GEMINI_LITE_MODELL = "gemini-3.8-flash-lite-tts"
+
+        /** So lange bleibt der kostenlose Gemini-Schlüssel nach einem Fehler übersprungen, wenn es einen Ausweichweg gibt. */
+        const val FREI_PAUSE_MS = 10 * 60_000L
+
+        /** Gilt für alle Instanzen: Sonst probierte jeder neue Vorleser den gescheiterten Schlüssel erneut. */
+        @Volatile var freiGesperrtBis = 0L
         const val QWEN_URL =
             "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
         /** Die fertigen Standardstimmen. */

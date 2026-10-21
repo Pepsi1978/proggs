@@ -4,6 +4,8 @@ enum class TtsProvider(val id: String, val label: String, val kurz: String) {
     QWEN_CLONE("qwen_clone", "Meine Stimme", "Meine"),
     QWEN("qwen", "Alibaba", "Alibaba"),
     GOOGLE_CLOUD("google_cloud", "Google Chirp 3 HD", "Google"),
+    GEMINI_FLASH("gemini_flash", "Gemini 3.8 Flash TTS", "Gemini"),
+    GEMINI_LITE("gemini_lite", "Gemini 3.8 Flash-Lite TTS", "Gemini Lite"),
     EDGE("edge_tts", "Microsoft Edge", "Edge"),
 }
 
@@ -84,10 +86,30 @@ object TtsCatalog {
         TtsVoice("de-DE-Chirp3-HD-Zubenelgenubi", "Zubenelgenubi", VoiceGender.MALE),
     )
 
+    /**
+     * Gemini 3.8 TTS hat dieselben 30 Stimmnamen wie Chirp 3 HD. Die Kennung trägt den Anbieter vorn
+     * („gemini_flash:Leda“), damit [anbieterZu] Flash, Flash-Lite und Chirp auseinanderhält.
+     */
+    val geminiFlashVoices = geminiStimmen(TtsProvider.GEMINI_FLASH)
+    val geminiLiteVoices = geminiStimmen(TtsProvider.GEMINI_LITE)
+    val DEFAULT_GEMINI_FLASH_VOICE = "${TtsProvider.GEMINI_FLASH.id}:Leda"
+    val DEFAULT_GEMINI_LITE_VOICE = "${TtsProvider.GEMINI_LITE.id}:Leda"
+
+    private fun geminiStimmen(anbieter: TtsProvider) =
+        googleVoices.map { TtsVoice("${anbieter.id}:${it.name}", it.name, it.gender) }
+
+    /** Der Stimmname, den Gemini erwartet („Leda“). */
+    fun geminiName(stimmeId: String): String = stimmeId.substringAfter(':')
+
+    /** Dieselbe Stimme bei Chirp 3 HD — für den Rückfall, wenn der kostenlose Gemini-Schlüssel scheitert. */
+    fun chirpZu(stimmeId: String): String = "de-DE-Chirp3-HD-${geminiName(stimmeId)}"
+
     /** Findet den Anbieter zu einer Stimm-Kennung aus dem festen Katalog. */
     fun anbieterZu(stimmeId: String): TtsProvider? = when {
         edgeVoices.any { it.id == stimmeId } -> TtsProvider.EDGE
         googleVoices.any { it.id == stimmeId } -> TtsProvider.GOOGLE_CLOUD
+        geminiFlashVoices.any { it.id == stimmeId } -> TtsProvider.GEMINI_FLASH
+        geminiLiteVoices.any { it.id == stimmeId } -> TtsProvider.GEMINI_LITE
         qwenVoices.any { it.id == stimmeId } -> TtsProvider.QWEN
         else -> null
     }

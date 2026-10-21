@@ -403,11 +403,16 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     var stand by remember { mutableIntStateOf(0) }
     val googleFehlt = remember(stand) { s.googleTtsApiKey.isBlank() }
     val qwenFehlt = remember(stand) { s.qwenTtsApiKey.isBlank() }
+    val geminiFehlt = remember(stand) { s.geminiTtsKeyFrei.isBlank() && s.geminiTtsKeyBezahlt.isBlank() }
     var anbieter by remember(p.art.id) { mutableStateOf(TtsCatalog.anbieterZu(p.stimme)) }
     Unterzeile("Stimme")
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Chip("Wie Jarvis", aktiv = anbieter == null) { anbieter = null; p.stimme = "" }
-        listOf(TtsProvider.EDGE to TtsCatalog.DEFAULT_EDGE_VOICE, TtsProvider.GOOGLE_CLOUD to TtsCatalog.DEFAULT_GOOGLE_VOICE, TtsProvider.QWEN to TtsCatalog.DEFAULT_QWEN_VOICE).forEach { (anb, standard) ->
+        listOf(
+            TtsProvider.EDGE to TtsCatalog.DEFAULT_EDGE_VOICE, TtsProvider.GOOGLE_CLOUD to TtsCatalog.DEFAULT_GOOGLE_VOICE,
+            TtsProvider.GEMINI_FLASH to TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE, TtsProvider.GEMINI_LITE to TtsCatalog.DEFAULT_GEMINI_LITE_VOICE,
+            TtsProvider.QWEN to TtsCatalog.DEFAULT_QWEN_VOICE,
+        ).forEach { (anb, standard) ->
             Chip(anb.label, aktiv = anbieter == anb) {
                 anbieter = anb
                 if (TtsCatalog.anbieterZu(p.stimme) != anb) p.stimme = standard
@@ -417,6 +422,8 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     val stimmen = when (anbieter) {
         TtsProvider.EDGE -> TtsCatalog.edgeVoices
         TtsProvider.GOOGLE_CLOUD -> TtsCatalog.googleVoices
+        TtsProvider.GEMINI_FLASH -> TtsCatalog.geminiFlashVoices
+        TtsProvider.GEMINI_LITE -> TtsCatalog.geminiLiteVoices
         TtsProvider.QWEN -> TtsCatalog.qwenVoices
         else -> emptyList()
     }
@@ -428,6 +435,7 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     }
     if (anbieter == TtsProvider.GOOGLE_CLOUD && googleFehlt) Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { s.googleTtsApiKey = it; stand++ }
     if (anbieter == TtsProvider.QWEN && qwenFehlt) Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { s.qwenTtsApiKey = it; stand++ }
+    if ((anbieter == TtsProvider.GEMINI_FLASH || anbieter == TtsProvider.GEMINI_LITE) && geminiFehlt) Schluesselfeld(vm, "Gemini-Stimme: Schlüssel kostenlos", s.geminiTtsKeyFrei) { s.geminiTtsKeyFrei = it; stand++ }
     Unterzeile("Sprechtempo")
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(0f to "Wie Jarvis", 0.9f to "Ruhig", 1.0f to "Normal", 1.1f to "Zügig", 1.2f to "Schnell").forEach { (wert, name) ->

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.speech.VorleseZustand
 import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
@@ -216,6 +218,33 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TtsCatalog.googleVoices.forEach { v -> Chip(v.name, aktiv = s.googleTtsVoice == v.id) { geaendert { s.googleTtsVoice = v.id } } }
                 }
+            }
+            TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE -> {
+                val flash = anbieter == TtsProvider.GEMINI_FLASH
+                Schluesselfeld(vm, "Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)", s.geminiTtsKeyFrei) { geaendert { s.geminiTtsKeyFrei = it } }
+                Schluesselfeld(vm, "Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)", s.geminiTtsKeyBezahlt) { geaendert { s.geminiTtsKeyBezahlt = it } }
+                Unterzeile("Welcher Schlüssel")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
+                        Chip(name, aktiv = s.geminiTtsSchluesselWahl == id) { geaendert { s.geminiTtsSchluesselWahl = id } }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Chip("Rückfall auf Chirp 3 HD", aktiv = s.geminiTtsChirpRueckfall) { geaendert { s.geminiTtsChirpRueckfall = !s.geminiTtsChirpRueckfall } }
+                Text("Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest Jarvis mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                    color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                if (s.geminiTtsChirpRueckfall && s.googleTtsApiKey.isBlank()) {
+                    Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
+                }
+                Unterzeile("Stimme")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (if (flash) TtsCatalog.geminiFlashVoices else TtsCatalog.geminiLiteVoices).forEach { v ->
+                        val gewaehlt = if (flash) s.geminiFlashTtsVoice else s.geminiLiteTtsVoice
+                        Chip(v.name, aktiv = gewaehlt == v.id) { geaendert { if (flash) s.geminiFlashTtsVoice = v.id else s.geminiLiteTtsVoice = v.id } }
+                    }
+                }
+                Text("Gemini spricht im eigenen Tempo; das Sprechtempo unten gilt hier nicht.",
+                    color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
             TtsProvider.QWEN -> {
                 Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { geaendert { s.qwenTtsApiKey = it } }

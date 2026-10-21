@@ -8,6 +8,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.ReasoningEffort
+import de.frank.jarvis.tts.TtsCatalog
 import java.io.Closeable
 import java.util.WeakHashMap
 import javax.crypto.AEADBadTagException
@@ -86,6 +87,34 @@ class SecureSettings(context: Context) : Closeable {
     var googleTtsVoice: String
         get() = readString(Keys.GOOGLE_TTS_VOICE, Defaults.GOOGLE_TTS_VOICE)
         set(value) = writeString(Keys.GOOGLE_TTS_VOICE, value)
+
+    /** Gemini-3.8-Stimmen, Kennung „gemini_flash:Leda“ bzw. „gemini_lite:Leda“. */
+    var geminiFlashTtsVoice: String
+        get() = readString(Keys.GEMINI_FLASH_TTS_VOICE, TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE)
+        set(value) = writeString(Keys.GEMINI_FLASH_TTS_VOICE, value)
+
+    var geminiLiteTtsVoice: String
+        get() = readString(Keys.GEMINI_LITE_TTS_VOICE, TtsCatalog.DEFAULT_GEMINI_LITE_VOICE)
+        set(value) = writeString(Keys.GEMINI_LITE_TTS_VOICE, value)
+
+    /** Eigene Schlüssel nur für die Gemini-Stimme: AI-Studio-Projekt ohne bzw. mit Abrechnung. */
+    var geminiTtsKeyFrei: String
+        get() = readString(Keys.GEMINI_TTS_KEY_FREI, "")
+        set(value) = writeString(Keys.GEMINI_TTS_KEY_FREI, value)
+
+    var geminiTtsKeyBezahlt: String
+        get() = readString(Keys.GEMINI_TTS_KEY_BEZAHLT, "")
+        set(value) = writeString(Keys.GEMINI_TTS_KEY_BEZAHLT, value)
+
+    /** Welche Gemini-Stimmschlüssel genutzt werden: [GEMINI_TTS_FREI_DANN_BEZAHLT], [GEMINI_TTS_NUR_FREI] oder [GEMINI_TTS_NUR_BEZAHLT]. */
+    var geminiTtsSchluesselWahl: String
+        get() = readString(Keys.GEMINI_TTS_SCHLUESSEL_WAHL, GEMINI_TTS_FREI_DANN_BEZAHLT)
+        set(value) = writeString(Keys.GEMINI_TTS_SCHLUESSEL_WAHL, value)
+
+    /** Scheitert der kostenlose Gemini-Stimmschlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels. */
+    var geminiTtsChirpRueckfall: Boolean
+        get() = readFlag(Keys.GEMINI_TTS_CHIRP_RUECKFALL, false)
+        set(value) = writeFlag(Keys.GEMINI_TTS_CHIRP_RUECKFALL, value)
 
     var qwenTtsApiKey: String
         get() = readString(Keys.QWEN_TTS_API_KEY, "")
@@ -251,6 +280,12 @@ class SecureSettings(context: Context) : Closeable {
         const val EDGE_TTS_VOICE = "edge_tts_voice"
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
+        const val GEMINI_FLASH_TTS_VOICE = "gemini_flash_tts_voice"
+        const val GEMINI_LITE_TTS_VOICE = "gemini_lite_tts_voice"
+        const val GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
+        const val GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+        const val GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
+        const val GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
         const val QWEN_TTS_API_KEY = "qwen_tts_api_key"
         const val QWEN_TTS_VOICE_ID = "qwen_tts_voice_id"
         const val QWEN_STANDARD_VOICE = "qwen_standard_voice"
@@ -286,6 +321,14 @@ class SecureSettings(context: Context) : Closeable {
     }
 
     companion object {
+        const val GEMINI_TTS_FREI_DANN_BEZAHLT = "frei_dann_bezahlt"
+        const val GEMINI_TTS_NUR_FREI = "nur_frei"
+        const val GEMINI_TTS_NUR_BEZAHLT = "nur_bezahlt"
+        val GEMINI_TTS_SCHLUESSEL_WAHLEN = listOf(
+            GEMINI_TTS_FREI_DANN_BEZAHLT to "Erst kostenlos, dann bezahlt",
+            GEMINI_TTS_NUR_FREI to "Nur kostenlos",
+            GEMINI_TTS_NUR_BEZAHLT to "Nur bezahlt",
+        )
         const val STORE_NAME = "jarvis_sprache_prefs"
         private const val TAG = "SecureSettings"
 

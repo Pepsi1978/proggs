@@ -157,10 +157,14 @@ class EinstellungsKatalog(context: Context) {
     private fun alleStimmen(): List<Pair<String, String>> =
         TtsCatalog.edgeVoices.map { it.id to "${it.name} (${TtsProvider.EDGE.kurz})" } +
             TtsCatalog.googleVoices.map { it.id to "${it.name} (${TtsProvider.GOOGLE_CLOUD.kurz})" } +
+            TtsCatalog.geminiFlashVoices.map { it.id to "${it.name} (${TtsProvider.GEMINI_FLASH.kurz})" } +
+            TtsCatalog.geminiLiteVoices.map { it.id to "${it.name} (${TtsProvider.GEMINI_LITE.kurz})" } +
             TtsCatalog.qwenVoices.map { it.id to "${it.name} (${TtsProvider.QWEN.kurz})" }
 
     private fun jarvisStimme(): String = when (TtsCatalog.providers.firstOrNull { it.id == s.ttsProvider }) {
         TtsProvider.GOOGLE_CLOUD -> s.googleTtsVoice
+        TtsProvider.GEMINI_FLASH -> s.geminiFlashTtsVoice
+        TtsProvider.GEMINI_LITE -> s.geminiLiteTtsVoice
         TtsProvider.QWEN -> s.qwenStandardVoice
         TtsProvider.QWEN_CLONE -> "eigene"
         else -> s.edgeTtsVoice
@@ -170,6 +174,8 @@ class EinstellungsKatalog(context: Context) {
         when (TtsCatalog.anbieterZu(id)) {
             TtsProvider.EDGE -> { s.edgeTtsVoice = id; s.ttsProvider = TtsProvider.EDGE.id }
             TtsProvider.GOOGLE_CLOUD -> { s.googleTtsVoice = id; s.ttsProvider = TtsProvider.GOOGLE_CLOUD.id }
+            TtsProvider.GEMINI_FLASH -> { s.geminiFlashTtsVoice = id; s.ttsProvider = TtsProvider.GEMINI_FLASH.id }
+            TtsProvider.GEMINI_LITE -> { s.geminiLiteTtsVoice = id; s.ttsProvider = TtsProvider.GEMINI_LITE.id }
             TtsProvider.QWEN -> { s.qwenStandardVoice = id; s.ttsProvider = TtsProvider.QWEN.id }
             else -> throw IllegalArgumentException("Diese Stimme kenne ich nicht.")
         }
@@ -247,6 +253,10 @@ class EinstellungsKatalog(context: Context) {
             auswahl("vorlese_stimme", "Vorlesen", "Stimme", "Jarvis' Vorlese-Stimme; stellt den passenden Anbieter mit um.",
                 { alleStimmen() + ("eigene" to "Meine Stimme (geklont)") }, { jarvisStimme() }) { if (it == "eigene") s.ttsProvider = TtsProvider.QWEN_CLONE.id else setzeJarvisStimme(it) },
             auswahl("vorlese_tempo", "Vorlesen", "Sprechtempo", "Wie schnell Jarvis vorliest.", { tempi }, { tempoText(s.ttsSpeechRate) }) { s.ttsSpeechRate = it.toFloat() },
+            auswahl("gemini_tts_schluessel", "Vorlesen", "Gemini-Stimme: welcher Schlüssel", "Ob die Gemini-3.8-Stimme erst den kostenlosen und dann den bezahlten Schlüssel nutzt oder nur einen davon.",
+                { de.frank.jarvis.data.settings.SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN }, { s.geminiTtsSchluesselWahl }) { s.geminiTtsSchluesselWahl = it },
+            schalter("gemini_tts_chirp_rueckfall", "Vorlesen", "Gemini-Stimme: Rückfall auf Chirp 3 HD", "Scheitert der kostenlose Gemini-Schlüssel, liest Jarvis mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                { s.geminiTtsChirpRueckfall }) { s.geminiTtsChirpRueckfall = it },
             schalter("immer_deutsch", "Vorlesen", "Immer deutsch aussprechen", "Englisch aussehende Wörter trotzdem deutsch aussprechen.", { s.immerDeutschVorlesen }) { s.immerDeutschVorlesen = it },
             schalter("antworten_vorlesen", "Vorlesen", "Antworten auf Gesprochenes vorlesen", "Liest die Antwort vor, wenn die Frage gesprochen wurde.", { e.antwortenVorlesen }) { e.antwortenVorlesen = it },
             schalter("diktat_antwort_vorlesen", "Vorlesen", "Antwort nach Diktat vorlesen", "Liest die erste Antwort vor, wenn die Frage mit dem Mikrofon in der Eingabeblase eingesprochen und dann mit dem Pfeil gesendet wurde.", { e.diktatAntwortVorlesen }) { e.diktatAntwortVorlesen = it },
