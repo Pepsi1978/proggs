@@ -68,7 +68,7 @@ private fun anthropicBild(bild: String): JSONObject? {
     if (!kopf.endsWith(";base64")) return null
     val mime = kopf.removeSuffix(";base64").ifBlank { "image/jpeg" }
     return JSONObject().put("type", "image").put("source", JSONObject()
-        .put("type", "base64").put("media_type", mime).put("data", bild.substring(komma + 1).filterNot { it == '\n' || it == '\r' }))
+        .put("type", "base64").put("media_type", mime).put("data", bild.substring(komma + 1)))
 }
 
 /**
@@ -82,9 +82,12 @@ internal fun classifyAnthropicError(code: Int, body: String) {
         code == 401 || code == 403 -> CodexAuthException(AuthErrorKind.NETWORK, "Der Anthropic-API-Schlüssel ist ungültig oder nicht freigeschaltet. Bitte unter Einstellungen → Jarvis' Kopf prüfen. $message")
         code == 429 -> CodexAuthException(AuthErrorKind.NETWORK, "Anthropic bremst gerade (Ratenlimit oder Guthaben). $message", retryable = true)
         code == 408 || code == 529 || code in 500..599 -> CodexAuthException(AuthErrorKind.NETWORK, "Anthropic ist gerade überlastet oder nicht erreichbar (Fehler $code). Bitte kurz erneut versuchen.", retryable = true)
-        else -> CodexAuthException(AuthErrorKind.NETWORK, "Anthropic-Fehler $code: $message")
+        else -> CodexAuthException(AuthErrorKind.NETWORK, "$ANTHROPIC_FEHLER_PREFIX$code: $message")
     }
 }
+
+/** Anfang jeder abgelehnten Anfrage (4xx außer Schlüssel und Ratenlimit); bei 400 versucht Jarvis es einmal ohne Ersatzmodell-Beta. */
+internal const val ANTHROPIC_FEHLER_PREFIX = "Anthropic-Fehler "
 
 /** Sammelt den Text aus dem Anthropic-Stream (`content_block_delta` mit `text_delta`). */
 internal class AnthropicSseAccumulator {
@@ -115,7 +118,9 @@ internal class AnthropicSseAccumulator {
 
     fun result(): String {
         if (!isCompleted) throw CodexAuthException(AuthErrorKind.NETWORK, "Die Anthropic-Verbindung endete vor dem Abschluss der Antwort.")
-        if (stopReason == "refusal" && text.isBlank()) throw CodexAuthException(AuthErrorKind.NETWORK, "Claude hat die Anfrage aus Sicherheitsgründen abgelehnt.")
+        // Abgelehnt oder abgeschnitten ist keine fertige Antwort: Ein halber Werkzeugaufruf würde sonst als Antwort gedeutet.
+        if (stopReason == "refusal") throw CodexAuthException(AuthErrorKind.NETWORK, "Claude hat die Anfrage aus Sicherheitsgründen abgelehnt.")
+        if (stopReason == "max_tokens") throw CodexAuthException(AuthErrorKind.NETWORK, "Die Claude-Antwort war zu lang und wurde abgeschnitten.")
         return text.toString().takeIf(String::isNotBlank)
             ?: throw CodexAuthException(AuthErrorKind.NETWORK, "Anthropic hat keinen Antworttext geliefert.")
     }

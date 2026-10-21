@@ -102,7 +102,7 @@ class JarvisAgent(context: Context) {
         "Ich bin nicht fertig geworden" + (grund?.let { " ($it)" } ?: "") + ". Für große Aufgaben wie Recherchen oder Berichte sag mir, " +
             "ich soll den Recherche-Agenten starten; der arbeitet im Hintergrund weiter. Was genau passiert ist, steht unter Aktivität."
 
-    val verbunden: Boolean get() = auth.isConnected
+    val verbunden: Boolean get() = auth.kannDenken(einstellungen.modell)
 
     /**
      * Beantwortet einen Auftrag und liefert null, wenn keine Antwort zustande kommt (nicht verbunden, Zeitlimit, zu viele

@@ -106,7 +106,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                         de.frank.jarvis.observability.Logbuch.system("agent_starten abgelehnt", "Recherche ohne ausdrücklichen Wunsch")
                         Ergebnis(SuchRegel.NICHT_GESTARTET, fehler = true)
                     }
-                    !CodexAuthManager(app).isConnected -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
+                    !CodexAuthManager(app).kannDenken(de.frank.jarvis.data.Einstellungen.get(app).modell) -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden bzw. für Claude den Anthropic-Schlüssel eintragen.", fehler = true)
                     // Unter der Sperre des Vorgangsbuchs: erst nach Doppeln suchen, dann synchron reservieren. Der Lauf beginnt erst
                     // asynchron im Dienst; ein paralleler oder wiederholter Aufruf (Verbindungsabbruch) sähe sonst noch einen freien Platz.
                     // Im Sprachgespräch begonnen (Gesprächsmodus mit Vorlesen oder Live): Der Vorgang erbt das von selbst, unabhängig vom Parameter vorlesen.

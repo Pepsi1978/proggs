@@ -25,7 +25,7 @@ object Vorlesefassung {
         val ersatz = if (grund == null) "Der Agent $agent ist fertig. „$titel“ steht $wo."
         else "Der Agent $agent ist nicht vollständig fertig geworden. Was er geschafft hat, steht als „$titel“ $wo."
         val auth = CodexAuthManager(context.applicationContext)
-        if (!auth.isConnected) return ersatz
+        if (!auth.kannDenken(Einstellungen.get(context).modell)) return ersatz
         val text = "AGENT: $agent\n" + (grund?.let { "HINWEIS: Der Lauf ist nicht vollständig: $it\n" } ?: "") +
             "ORT: Der ausführliche Bericht steht $wo.\n" + "\nBERICHT:\n" + inhalt.take(MAX_ZEICHEN)
         // Niedrige Denkstufe wie bei den anderen kurzen Helfern: Mit Franks eingestellter (hoher) Stufe reißt ein langer Bericht das Zeitlimit.
@@ -44,7 +44,7 @@ object Vorlesefassung {
     suspend fun vollstaendig(context: Context, agent: String, inhalt: String, grund: String?): String {
         val ersatz = inhalt + (grund?.let { "\n\nHinweis: Der Lauf ist nicht vollständig: $it" } ?: "")
         val auth = CodexAuthManager(context.applicationContext)
-        if (!auth.isConnected) return ersatz
+        if (!auth.kannDenken(Einstellungen.get(context).modell)) return ersatz
         val text = "AGENT: $agent\n" + (grund?.let { "HINWEIS: Der Lauf ist nicht vollständig: $it\n" } ?: "") + "\nBERICHT:\n" + inhalt.take(MAX_ZEICHEN)
         val antwort = withTimeoutOrNull(120_000L) {
             runCatching { auth.streamChat(ANWEISUNG_VOLL, listOf(ChatTurn("user", text)), Einstellungen.get(context).modell, ReasoningEffort.LOW).trim() }

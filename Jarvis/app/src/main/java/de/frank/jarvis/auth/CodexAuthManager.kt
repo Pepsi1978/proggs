@@ -271,7 +271,7 @@ class CodexAuthManager(context: Context) {
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
-    private fun anthropicSchluessel(): String = de.frank.jarvis.data.settings.SecureSettings(appContext).anthropicApiKey.trim()
+    private fun anthropicSchluessel(): String = de.frank.jarvis.data.settings.SecureSettings.get(appContext).anthropicApiKey.trim()
     val hatAnthropicSchluessel: Boolean get() = anthropicSchluessel().isNotBlank()
 
     /** Kann Jarvis mit diesem Modell denken? OpenAI braucht das ChatGPT-Konto, Claude den Anthropic-Schlüssel. */
@@ -735,9 +735,9 @@ class CodexAuthManager(context: Context) {
                 throw cancelled
             } catch (error: Exception) {
                 currentCoroutineContext().ensureActive()
-                // Kennt das Konto das Ersatzmodell nicht (Beta), einmal ohne versuchen statt zu scheitern.
+                // Lehnt Anthropic die Anfrage mit 400 ab (etwa weil das Konto die Ersatzmodell-Beta nicht kennt), einmal ohne versuchen statt zu scheitern.
                 if (!deliveredText && mitFallback && model.mitFallback && error is CodexAuthException &&
-                    error.message.orEmpty().contains("fallback", ignoreCase = true)) { mitFallback = false; continue }
+                    error.message.orEmpty().startsWith(ANTHROPIC_FEHLER_PREFIX + "400")) { mitFallback = false; continue }
                 if (deliveredText || attempt >= TRANSIENT_RETRY_DELAYS_MS.size || !error.isTransient()) throw error
                 delay(TRANSIENT_RETRY_DELAYS_MS[attempt])
                 attempt++

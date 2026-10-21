@@ -286,7 +286,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Die Antwort, die bei „Hey Jarvis“ lief, weicht jetzt der neuen Frage (nur genau sie und nur, wenn sie noch läuft).
         weichendeRunde?.let { w -> weichendeRunde = null; if (vorlesen && sitzungId?.let { laufende[it] } === w) abbrechen() }
         if (denkt) return false
-        if (if (einstellungen.modell.istAnthropic) !anthropicVerbunden else !kiVerbunden) {
+        if (!modellBereit) {
             meldung = if (einstellungen.modell.istAnthropic) "Bitte zuerst den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst mit ChatGPT verbinden."
             reiter = Reiter.EINSTELLUNGEN
             return false
@@ -381,7 +381,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Leitet aus den Bewertungen Stilregeln ab (Gedächtnis → Stil). [still] = von selbst, dann nur bei Änderungen melden. */
     fun stilAuswerten(still: Boolean = false) {
         if (stilWertetAus) return
-        if (!kiVerbunden) { if (!still) meldung = "Für die Stil-Auswertung bitte zuerst mit ChatGPT verbinden."; return }
+        if (!modellBereit) { if (!still) meldung = "Für die Stil-Auswertung bitte zuerst ${zuerstVerbinden()}."; return }
         if (de.frank.jarvis.data.Stil.anzahl(getApplication()) < de.frank.jarvis.data.Stil.AB) {
             if (!still) meldung = "Noch keine Bewertungen: Tippe unter einer Antwort auf Daumen hoch oder runter."
             return
@@ -469,7 +469,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun erneutVersuchen(i: Int) {
         if (denkt) { meldung = "Jarvis arbeitet noch."; return }
-        if (!kiVerbunden) { meldung = "Bitte zuerst mit ChatGPT verbinden."; return }
+        if (!modellBereit) { meldung = "Bitte zuerst ${zuerstVerbinden()}."; return }
         val alt = gespraech.getOrNull(i) ?: return
         if (alt.vonMir) return
         // Der Abschlussbericht und Statusmeldungen einer Programmier-Sitzung sind keine Antwort von Jarvis: Ein neuer Versuch
@@ -685,7 +685,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         fun korrektur() {
             val eintrag = eintraege.firstOrNull { it.id == letzter } ?: return
             if (korrigiert) return
-            if (!kiVerbunden) { meldung = "Für die KI-Korrektur bitte zuerst mit ChatGPT verbinden."; return }
+            if (!modellBereit) { meldung = "Für die KI-Korrektur bitte zuerst ${zuerstVerbinden()}."; return }
             korrigiert = true
             viewModelScope.launch {
                 try {
@@ -1209,7 +1209,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             !de.frank.jarvis.MainActivity.sichtbar && !de.frank.jarvis.weckwort.WeckwortDienst.imVordergrund ->
                 "Wenn du weiterreden willst, öffne Jarvis. Ohne Hey Jarvis darf ich das Mikrofon im Hintergrund nicht von selbst öffnen."
             z.modus == SprachModus.LIVE && liveWiederTauglich() -> null
-            sprache.groqApiKey.isBlank() || !kiVerbunden -> "Zum Weiterreden öffne Jarvis."
+            sprache.groqApiKey.isBlank() || !modellBereit -> "Zum Weiterreden öffne Jarvis."
             else -> null
         }
     }
@@ -1511,7 +1511,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val grund = when {
             nimmtAuf || schreibtMit || holtMikro -> ""
             sprache.groqApiKey.isBlank() -> "Für „Hey Jarvis“ bitte zuerst den Groq-Schlüssel eintragen."
-            !kiVerbunden -> "Für „Hey Jarvis“ bitte zuerst mit ChatGPT verbinden."
+            !modellBereit -> "Für „Hey Jarvis“ bitte zuerst ${zuerstVerbinden()}."
             else -> null
         }
         if (grund != null) {
@@ -2010,7 +2010,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             projekte = withContext(Dispatchers.IO) { de.frank.jarvis.data.Projekte.alle(getApplication()) }
             // Ältere Gespräche ohne KI-Überschrift nachholen: die zehn neuesten, eins nach dem anderen.
-            if (!kiVerbunden) return@launch
+            if (!modellBereit) return@launch
             sitzungen.take(10).forEach { s ->
                 val stand = withContext(Dispatchers.IO) {
                     if (!de.frank.jarvis.data.Gespraeche.brauchtKiTitel(getApplication(), s.id, s.anzahl)) null
@@ -2063,7 +2063,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * (meist Franks erste Frage). Läuft still im Hintergrund; ohne Verbindung bleibt die erste Frage als Titel.
      */
     private fun kiTitelBilden(id: String, stand: List<de.frank.jarvis.data.GespeicherteNachricht>) {
-        if (!kiVerbunden || stand.size < 2 || !titelInArbeit.add(id)) return
+        if (!modellBereit || stand.size < 2 || !titelInArbeit.add(id)) return
         viewModelScope.launch {
             try {
                 val noetig = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.brauchtKiTitel(getApplication(), id, stand.size) }
@@ -2484,6 +2484,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Ein Anthropic-API-Schlüssel ist eingetragen. */
     var anthropicVerbunden by mutableStateOf(sprache.anthropicApiKey.isNotBlank()); private set
+
+    /** Das gewählte Modell ist erreichbar: OpenAI über das ChatGPT-Konto, Claude über den Anthropic-Schlüssel. */
+    val modellBereit: Boolean get() = if (einstellungen.modell.istAnthropic) anthropicVerbunden else kiVerbunden
+    private fun zuerstVerbinden() = if (einstellungen.modell.istAnthropic) "den Anthropic-API-Schlüssel eintragen" else "mit ChatGPT verbinden"
 
     fun anthropicSchluesselSpeichern(schluessel: String) {
         sprache.anthropicApiKey = schluessel.trim()

@@ -171,10 +171,17 @@ class Einstellungen private constructor(context: Context) {
     // ---- Das eigene Modell von Jarvis ----
     var modell: CodexModel
         get() = CodexModel.entries.firstOrNull { it.name == s("model", "") } ?: CodexModel.TERRA
-        set(v) = put { putString("model", v.name); putString(if (v.istAnthropic) "model_anthropic" else "model_openai", v.name) }
+        set(v) {
+            // Beim Anbieterwechsel das bisherige Modell festhalten (vor 1.8.212 stand es nur unter „model“).
+            val alt = modell
+            put {
+                if (alt.anbieter != v.anbieter) putString(if (alt.istAnthropic) "model_anthropic" else "model_openai", alt.name)
+                putString("model", v.name); putString(if (v.istAnthropic) "model_anthropic" else "model_openai", v.name)
+            }
+        }
     /** Zuletzt gewähltes OpenAI-Modell: Bildwerkzeug und Websuche laufen immer über das ChatGPT-Konto, auch wenn Jarvis mit Claude denkt. */
     val openAiModell: CodexModel
-        get() = modell.takeUnless { it.istAnthropic } ?: CodexModel.von(KiAnbieter.OPENAI).firstOrNull { it.name == s("model_openai", "") } ?: CodexModel.TERRA
+        get() = letztesModell(KiAnbieter.OPENAI)
     /** Zuletzt gewähltes Modell je Anbieter, für den Wechsel zwischen OpenAI und Anthropic. */
     fun letztesModell(anbieter: KiAnbieter): CodexModel =
         if (modell.anbieter == anbieter) modell
