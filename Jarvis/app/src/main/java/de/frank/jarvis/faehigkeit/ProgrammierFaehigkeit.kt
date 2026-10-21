@@ -270,7 +270,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     pflicht = listOf("text", "franks_worte"),
                 ),
                 nurLesen = false,
-            ) { a -> nachtrag(a.optString("auftrag_id").trim(), a.optString("text").trim(), a.optString("franks_worte").trim()) },
+            ) { a -> nachtrag(a.optString("auftrag_id").trim(), DiktatTrenner.auftrag(a.optString("text")), a.optString("franks_worte").trim()) },
             Werkzeug(
                 name = "programmieren",
                 titel = "Programmierauftrag starten",
@@ -283,7 +283,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "Ist unklar, welche App gemeint ist, frag Frank vorher. Jeder Aufruf ist ein NEUER Auftrag mit eigener Sitzung, auch wenn zur selben App oder zum selben " +
                     "Thema schon einer läuft oder gerade fertig wurde; er hängt sich nie an einen alten. Hat das Gespräch schon einen Auftrag, bekommt der neue eine eigene, " +
                     "getrennte Jarvis-Session. In eine bestehende Sitzung geht ein Wunsch nur, wenn Frank ausdrücklich einen Nachtrag dorthin verlangt (programmier_nachtrag); " +
-                    "ist unklar, ob er einen neuen Auftrag oder einen Nachtrag will, frag ihn kurz, bevor du etwas startest.",
+                    "ist unklar, ob er einen neuen Auftrag oder einen Nachtrag will, frag ihn kurz, bevor du etwas startest. " +
+                    "Zeilen mit nur „;“ (ebenso „ ; “) in Franks Nachrichten trennen seine einzelnen Spracheingaben und lösen allein nie einen Auftrag aus. " +
+                    "Verlangt Frank ausdrücklich die Übergabe solcher Abschnitte, ist jeder nicht leere Abschnitt eine Aufgabe: alle zusammen in EINEM Aufruf " +
+                    "(eine Sitzung), im Auftrag durch Leerzeile, „;“ auf eigener Zeile, Leerzeile getrennt; ein Trenner am Ende ist keine weitere Aufgabe.",
                 schema = schema(
                     "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt."),
                     "auftrag" to text("Der vollständige Programmierauftrag: Ziel, was genau anders werden soll (Bildschirm, Knopf, Verhalten, Texte), Randbedingungen, was Frank wichtig ist, woran man erkennt, dass es fertig ist."),
@@ -295,7 +298,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 nurLesen = false,
             ) { a ->
                 val appName = a.optString("app").trim()
-                val auftrag = a.optString("auftrag").trim()
+                // Mehrere Aufgaben einheitlich getrennt und ohne Trenner am Ende (siehe DiktatTrenner.auftrag).
+                val auftrag = DiktatTrenner.auftrag(a.optString("auftrag"))
                 // Früher lehnte Jarvis hier ab, sobald zum Gespräch oder zur App schon ein Auftrag lief, und schickte das Modell zu
                 // programmier_nachtrag: So landeten neue Wünsche ungefragt als Nachtrag in alten Sitzungen. Jetzt ist jeder Aufruf
                 // ein neuer Auftrag mit eigener Sitzung (siehe NachtragsRegel.eigenesGespraech).

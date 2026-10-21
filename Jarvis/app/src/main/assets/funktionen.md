@@ -1,4 +1,4 @@
-<!-- stand: 209 1.8.198 -->
+<!-- stand: 210 1.8.199 -->
 Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks gelten für den eigenen Chat, die Agenten und ChatGPT (Plugin), soweit nicht anders vermerkt.
 
 ## Zugänge und Modelle
@@ -66,7 +66,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 ## Sprache
 
-- Diktat und Spracheingabe über Groq Whisper (eigener Schlüssel nötig), mit Spracherkennung des Endes; kein Offline-Diktat.
+- Diktat und Spracheingabe über Groq Whisper (eigener Schlüssel nötig), mit Spracherkennung des Endes; kein Offline-Diktat. Diktat ins Eingabefeld (nicht Live): jeder erkannte, nicht leere Beitrag endet mit Leerzeile, „;“, Leerzeile, der nächste folgt dahinter; beim Absenden fällt der Trenner am Ende weg.
 - Vorlesen mit Microsoft Edge, Google Chirp 3 HD, Alibaba Qwen oder geklonter eigener Stimme; Tempo, Probe, Medien-Steuerung (Pause/Weiter/Stopp). Keine Android-Systemstimme.
 - „Hey Jarvis“ oder eigene englische Weckphrase, auch bei gesperrtem Handy; Empfindlichkeit; „Nur auf meine Stimme hören“ mit eingesprochenen Proben. Startet die klassische Schleife (Diktat → Modell → Vorlesen), nicht das Live-Gespräch.
 - `sprachsession_beenden`: beendet Sprachsession und Live-Gespräch.
@@ -87,6 +87,6 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Gesprächsleiste mit gespeicherten Gesprächen; Wechsel per Sprache („neue Session“, „letzte Session“) ohne Modell. Oben Reiter „Gespräche“, „Programmierung“ und „Projekte“. „Programmierung“: alle Programmiergespräche nach Zeit gruppiert, „Neuer Programmierauftrag“ öffnet ein neues Gespräch mit dem Programmierer-Vorspann im Feld; diese Gespräche stehen nicht unter „Gespräche“ (Projektgespräche mit Auftrag zusätzlich in ihrem Projekt). „Projekte“: „Neues Projekt“ legt ein benanntes Projekt an (dauerhaft gespeichert); Antippen öffnet seinen Bereich mit „Neues Gespräch im Projekt“ und nur dessen Gesprächen. Projektgespräche stehen nicht unter „Gespräche“. Projekte umbenennen oder löschen gibt es nicht.
 - Unter jeder Antwort: Kopieren, Daumen hoch/runter (daraus lernt die Stil-Datei), Vorlesen, Teilen, in neuem Chat fortsetzen, erneut versuchen.
 - Eingabe: Text, Kamera, Fotos, Dateien, Diktat, Modellwahl, Live-Gespräch. Plus-Menü „Plugins“ ist noch leer.
-- Plus-Menü „Programmierer“: setzt „Übergib bitte folgende Aufgabe an den Programmierer:“ ins Feld (Cursor am Ende, sendet nichts); abgeschickt geht die Aufgabe als neuer Auftrag über `programmieren`, ohne Aufgabe startet nichts.
+- Plus-Menü „Programmierer“: setzt „Übergib bitte folgende Aufgabe an den Programmierer:“ ins Feld (Cursor am Ende, sendet nichts); abgeschickt geht die Aufgabe als neuer Auftrag über `programmieren`, ohne Aufgabe startet nichts. Mehrere Beiträge/„ ; “ gelten im Gespräch nur als Trenner (kein Auftrag); bei ausdrücklicher Übergabe wird jeder nicht leere Abschnitt eine Aufgabe derselben Sitzung (ein `programmieren`-Aufruf, Jarvis vereinheitlicht die Trenner im CLI-Text und streicht einen Trenner am Ende).
 - Benachrichtigungen je Art einstellbar (Ton, wie ein Wecker, Vorlesen, Lautstärke), Ruhezeit; schwebende Sprachblase bei Hey Jarvis aus anderen Apps.
 - Fingerabdruck-Sperre, Hell/Dunkel. Kein Widget, keine Schnellkachel, kein Teilen an Jarvis aus anderen Apps.

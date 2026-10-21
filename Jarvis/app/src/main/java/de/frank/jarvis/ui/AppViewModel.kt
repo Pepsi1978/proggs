@@ -22,6 +22,7 @@ import de.frank.jarvis.auth.ReasoningEffort
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.dienst.JarvisDienst
+import de.frank.jarvis.faehigkeit.DiktatTrenner
 import de.frank.jarvis.faehigkeit.Merkdatei
 import de.frank.jarvis.faehigkeit.Regel
 import de.frank.jarvis.faehigkeit.ProgrammiererVorlage
@@ -292,6 +293,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Versuch bekommt den Hinweis nicht, sonst startete er den schon übergebenen Auftrag ein zweites Mal.
         rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, antwortLaut,
             (if (programmierer && erledigt.isEmpty()) ProgrammiererVorlage.HINWEIS else "") +
+                (if (DiktatTrenner.mehrteilig(text)) DiktatTrenner.HINWEIS else "") +
                 if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
         return true
     }
@@ -781,7 +783,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Senden aus der Eingabeblase: Text und Anhänge zusammen. */
     fun entwurfSenden() {
-        val text = entwurf
+        // Ein Trenner am Ende (nach jedem Diktat) ist kein Inhalt und geht nicht mit; scheitert das Senden, kommt der Entwurf unverändert zurück.
+        val roh = entwurf
+        val text = DiktatTrenner.ohneSchluss(roh)
         val anh = anhaenge.toList()
         if (text.isBlank() && anh.isEmpty()) return
         if (denkt) return
@@ -791,7 +795,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         anhaenge.clear()
         // Nicht angenommen (etwa nicht verbunden): Text und Anhänge bleiben in der Blase, statt verloren zu gehen.
         if (!sende(text, anh, diktiert)) {
-            if (entwurf.isEmpty()) entwurf = text
+            if (entwurf.isEmpty()) entwurf = roh
             anhaenge.addAll(0, anh)
         } else entwurfDiktiert = false
     }
@@ -801,7 +805,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Diktier-Mikrofon der Eingabeblase: Tippen startet die Aufnahme, nochmal Tippen schreibt den Text ins Feld.
-     * Jedes weitere Diktat kommt mit einem Leerzeichen hinter den vorhandenen Text; gesendet wird erst mit dem Pfeil.
+     * Jedes Diktat endet mit dem [DiktatTrenner] (Leerzeile, „;“, Leerzeile), das nächste folgt dahinter; gesendet wird erst mit dem Pfeil.
      */
     fun diktatTippen() {
         when {
@@ -809,7 +813,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             nimmtAuf -> aufnahmeBeenden()
             sprache.groqApiKey.isBlank() -> { meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel eintragen."; reiter = Reiter.EINSTELLUNGEN }
             else -> {
-                diktatZiel = { t -> entwurf = if (entwurf.isBlank()) t else entwurf.trimEnd() + " " + t; entwurfDiktiert = true }
+                diktatZiel = { t -> entwurf = DiktatTrenner.anhaengen(entwurf, t); entwurfDiktiert = true }
                 diktatInsFeld = true
                 mikrofonAnfragen()
             }
