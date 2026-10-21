@@ -139,10 +139,26 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     // Solange die Prüfung der angebundenen Apps läuft, zählen sie nicht als offen: sonst blitzt die Karte beim Start kurz auf.
     val offen = schritte.count { !it.fertig && (vm.aufgabenGeprueft || it.titel !in APP_SCHRITTE) }
 
+    // Mitlesen: Nur wer unten steht, folgt neuen Nachrichten. Hat Frank nach oben gescrollt, bleibt seine Lesestelle stehen,
+    // während unten weiter Meldungen einlaufen; scrollt er wieder ganz nach unten, folgt die Ansicht erneut. Früher sprang
+    // jede neue Programmiermeldung ans Ende, auch mitten im Lesen.
+    var folgen by remember(vm.sitzungId) { mutableStateOf(true) }
+    var automatisch by remember { mutableStateOf(false) }
+    LaunchedEffect(liste) {
+        androidx.compose.runtime.snapshotFlow { liste.isScrollInProgress to liste.canScrollForward }.collect { (scrollt, weiter) ->
+            // Nur Franks eigenes Scrollen entscheidet; der automatische Sprung ans Ende zählt nicht.
+            if (scrollt && !automatisch) folgen = !weiter
+        }
+    }
     LaunchedEffect(vm.gespraech.size, vm.denkt) {
+        // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
+        if (vm.gespraech.lastOrNull()?.vonMir == true) folgen = true
         // Nur im laufenden Gespräch ans Ende springen; beim Start bleibt die Einrichtung oben sichtbar.
         val letzter = liste.layoutInfo.totalItemsCount - 1
-        if (vm.gespraech.isNotEmpty() && letzter >= 0) liste.animateScrollToItem(letzter)
+        if (folgen && vm.gespraech.isNotEmpty() && letzter >= 0) {
+            automatisch = true
+            try { liste.animateScrollToItem(letzter) } finally { automatisch = false }
+        }
     }
 
     // Die Seitenleiste selbst liegt in JarvisApp: So reicht sie von ganz oben bis ganz unten, über die Reiter-Leiste.
