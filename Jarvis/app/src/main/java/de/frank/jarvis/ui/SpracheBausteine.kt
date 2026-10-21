@@ -237,6 +237,15 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 Text("Gemini spricht im eigenen Tempo; das Sprechtempo unten gilt hier nicht.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
+            TtsProvider.AZURE -> {
+                Schluesselfeld(vm, "Azure-Speech-Schlüssel (KEY 1)", s.azureTtsKey) { geaendert { s.azureTtsKey = it } }
+                Schluesselfeld(vm, "Azure-Region (z. B. westeurope)", s.azureTtsRegion, geheim = false) { geaendert { s.azureTtsRegion = it } }
+                Unterzeile("Stimme")
+                StimmChips(vm, anbieter, TtsCatalog.azureVoices, s.azureTtsVoice) { geaendert { s.azureTtsVoice = it } }
+                Text("Kostenlose Stufe F0: 500.000 Zeichen im Monat für alle normalen Neural-Stimmen. Die HD-Stimmen (Seraphina HD, Florian HD) " +
+                    "laufen nur mit der bezahlten Stufe S0 und sprechen in eigenem Tempo.",
+                    color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            }
             TtsProvider.QWEN -> {
                 Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { geaendert { s.qwenTtsApiKey = it } }
                 Unterzeile("Stimme")

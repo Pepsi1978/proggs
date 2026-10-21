@@ -78,7 +78,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      */
     fun kannVorausschauen(wahl: StimmWahl? = null): Boolean = when (anbieter(wahl)) {
         TtsProvider.GOOGLE_CLOUD.id, TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id,
-        TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id, TtsProvider.EDGE.id -> true
+        TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id, TtsProvider.EDGE.id, TtsProvider.AZURE.id -> true
         else -> false
     }
 
@@ -103,7 +103,60 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
             TtsProvider.QWEN.id -> qwen(text, geklont = false, sonder)
             TtsProvider.EDGE.id -> edge(text, sonder, tempo)
+            TtsProvider.AZURE.id -> azure(text, sonder ?: settings.azureTtsVoice, tempo)
             else -> throw SyntheseAbbruch("Diese Stimme kann nicht vorab erzeugt werden.")
+        }
+    }
+
+    /**
+     * Azure AI Speech über REST: Schlüssel und Region der eigenen Speech-Ressource (F0 kostenlos oder S0).
+     * HD-Stimmen (DragonHD) bekommen weder Tempo noch <lang>-Rahmen: Sie bestimmen Betonung und Tempo selbst.
+     */
+    private suspend fun azure(text: String, stimmeId: String, tempo: Float): File {
+        val schluessel = settings.azureTtsKey.filterNot(Char::isWhitespace)
+        if (schluessel.isBlank()) {
+            throw SyntheseAbbruch("Vorlesen fehlgeschlagen: Es ist kein Azure-Schlüssel hinterlegt. Trag ihn in den Einstellungen ein.")
+        }
+        val region = settings.azureTtsRegion.filterNot(Char::isWhitespace).lowercase().ifBlank { TtsCatalog.DEFAULT_AZURE_REGION }
+        val stimme = TtsCatalog.azureName(stimmeId)
+        val hd = TtsCatalog.istAzureHd(stimmeId)
+        val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        val inhalt = if (settings.immerDeutschVorlesen && !hd) "<lang xml:lang='de-DE'>$escaped</lang>" else escaped
+        val prozent = ((tempo.coerceIn(0.7f, 1.3f) - 1f) * 100).toInt()
+        val mitTempo = if (hd || prozent == 0) inhalt else "<prosody rate='${if (prozent > 0) "+" else ""}$prozent%'>$inhalt</prosody>"
+        val ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='de-DE'>" +
+            "<voice name='$stimme'>$mitTempo</voice></speak>"
+        val beginn = System.currentTimeMillis()
+        val anfrage = Request.Builder()
+            .url("https://$region.tts.speech.microsoft.com/cognitiveservices/v1")
+            .addHeader("Ocp-Apim-Subscription-Key", schluessel)
+            .addHeader("X-Microsoft-OutputFormat", "audio-24khz-96kbitrate-mono-mp3")
+            .addHeader("User-Agent", "Jarvis")
+            .post(ssml.toRequestBody(SSML_TYP))
+            .build()
+        val bytes = fuehreAusBytes(anfrage)
+        if (bytes.isEmpty()) throw SyntheseFehler("Azure hat kein Audio geliefert.")
+        Logbuch.sprache("Azure-Absatz erzeugt", "stimme=$stimme zeichen=${text.length}", System.currentTimeMillis() - beginn)
+        return schreibeDatei(bytes, "mp3")
+    }
+
+    /** Wie [fuehreAus], aber die Antwort ist Ton statt Text. */
+    private suspend fun fuehreAusBytes(anfrage: Request): ByteArray {
+        var versuch = 0
+        while (true) {
+            val (koerper, code) = client.newCall(anfrage).warte().use { (if (it.isSuccessful) it.body?.bytes() else null) to it.code }
+            when {
+                code in 200..299 -> return koerper ?: ByteArray(0)
+                code == 429 && versuch < WARTEZEITEN_MS.size -> { kotlinx.coroutines.delay(WARTEZEITEN_MS[versuch]); versuch++ }
+                code == 401 || code == 403 -> throw SyntheseAbbruch(
+                    "Vorlesen fehlgeschlagen: Azure hat Schlüssel oder Region abgelehnt (Fehler $code). Prüf beides in den Einstellungen.",
+                )
+                code == 429 -> throw SyntheseAbbruch("Vorlesen fehlgeschlagen: Das Azure-Kontingent ist erschöpft (Fehler 429).")
+                code == 400 -> throw SyntheseAbbruch(
+                    "Vorlesen fehlgeschlagen: Azure kennt diese Stimme in der Region nicht (Fehler 400). HD-Stimmen gibt es nur mit S0 und in ausgewählten Regionen, etwa westeurope.",
+                )
+                else -> throw SyntheseFehler("Azure antwortete mit Fehler $code.")
+            }
         }
     }
 
@@ -529,6 +582,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         /** Die geklonten Stimmen — dasselbe Modell wie beim Anlegen (Baustein E). */
         const val QWEN_KLON_MODELL = "qwen3-tts-vc-2026-01-22"
         val JSON_TYP = "application/json; charset=utf-8".toMediaType()
+        val SSML_TYP = "application/ssml+xml".toMediaType()
         val WARTEZEITEN_MS = longArrayOf(1_000L, 3_000L, 8_000L)
 
         /** So lange darf Edge für einen Absatz insgesamt brauchen, bevor er als gescheitert gilt. */

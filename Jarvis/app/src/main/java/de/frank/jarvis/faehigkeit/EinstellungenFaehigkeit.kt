@@ -159,7 +159,8 @@ class EinstellungsKatalog(context: Context) {
             TtsCatalog.googleVoices.map { it.id to "${it.name} (${TtsProvider.GOOGLE_CLOUD.kurz})" } +
             TtsCatalog.geminiFlashVoices.map { it.id to "${it.name} (${TtsProvider.GEMINI_FLASH.kurz})" } +
             TtsCatalog.geminiLiteVoices.map { it.id to "${it.name} (${TtsProvider.GEMINI_LITE.kurz})" } +
-            TtsCatalog.qwenVoices.map { it.id to "${it.name} (${TtsProvider.QWEN.kurz})" }
+            TtsCatalog.qwenVoices.map { it.id to "${it.name} (${TtsProvider.QWEN.kurz})" } +
+            TtsCatalog.azureVoices.map { it.id to "${it.name} (${TtsProvider.AZURE.kurz})" }
 
     private fun jarvisStimme(): String = when (TtsCatalog.providers.firstOrNull { it.id == s.ttsProvider }) {
         TtsProvider.GOOGLE_CLOUD -> s.googleTtsVoice
@@ -167,6 +168,7 @@ class EinstellungsKatalog(context: Context) {
         TtsProvider.GEMINI_LITE -> s.geminiLiteTtsVoice
         TtsProvider.QWEN -> s.qwenStandardVoice
         TtsProvider.QWEN_CLONE -> "eigene"
+        TtsProvider.AZURE -> s.azureTtsVoice
         else -> s.edgeTtsVoice
     }
 
@@ -177,6 +179,7 @@ class EinstellungsKatalog(context: Context) {
             TtsProvider.GEMINI_FLASH -> { s.geminiFlashTtsVoice = id; s.ttsProvider = TtsProvider.GEMINI_FLASH.id }
             TtsProvider.GEMINI_LITE -> { s.geminiLiteTtsVoice = id; s.ttsProvider = TtsProvider.GEMINI_LITE.id }
             TtsProvider.QWEN -> { s.qwenStandardVoice = id; s.ttsProvider = TtsProvider.QWEN.id }
+            TtsProvider.AZURE -> { s.azureTtsVoice = id; s.ttsProvider = TtsProvider.AZURE.id }
             else -> throw IllegalArgumentException("Diese Stimme kenne ich nicht.")
         }
     }

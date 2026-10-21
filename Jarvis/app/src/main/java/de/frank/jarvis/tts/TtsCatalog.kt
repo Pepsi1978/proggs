@@ -7,6 +7,7 @@ enum class TtsProvider(val id: String, val label: String, val kurz: String) {
     GEMINI_FLASH("gemini_flash", "Gemini 3.8 Flash TTS", "Gemini"),
     GEMINI_LITE("gemini_lite", "Gemini 3.8 Flash-Lite TTS", "Gemini Lite"),
     EDGE("edge_tts", "Microsoft Edge", "Edge"),
+    AZURE("azure_neural", "Azure Neural", "Azure"),
 }
 
 enum class VoiceGender {
@@ -104,9 +105,44 @@ object TtsCatalog {
     /** Dieselbe Stimme bei Chirp 3 HD — für den Rückfall, wenn der kostenlose Gemini-Schlüssel scheitert. */
     fun chirpZu(stimmeId: String): String = "de-DE-Chirp3-HD-${geminiName(stimmeId)}"
 
+    /**
+     * Azure AI Speech (eigenes Konto, Schlüssel + Region): dieselben Neural-Stimmen wie Edge, offiziell und
+     * mit allen deutschen Stimmen, dazu die HD-Stimmen (DragonHD). Die Kennung trägt „azure:“ vorn, damit
+     * [anbieterZu] sie von den gleichnamigen Edge-Stimmen unterscheidet. HD zählt nicht zum kostenlosen F0-Kontingent.
+     */
+    val azureVoices = listOf(
+        TtsVoice("azure:de-DE-Seraphina:DragonHDLatestNeural", "Seraphina HD", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-Florian:DragonHDLatestNeural", "Florian HD", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-SeraphinaMultilingualNeural", "Seraphina", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-KatjaNeural", "Katja", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-AmalaNeural", "Amala", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-ElkeNeural", "Elke", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-GiselaNeural", "Gisela (Kind)", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-KlarissaNeural", "Klarissa", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-LouisaNeural", "Louisa", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-MajaNeural", "Maja", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-TanjaNeural", "Tanja", VoiceGender.FEMALE),
+        TtsVoice("azure:de-DE-FlorianMultilingualNeural", "Florian", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-ConradNeural", "Conrad", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-KillianNeural", "Killian", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-BerndNeural", "Bernd", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-ChristophNeural", "Christoph", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-KasperNeural", "Kasper", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-KlausNeural", "Klaus", VoiceGender.MALE),
+        TtsVoice("azure:de-DE-RalfNeural", "Ralf", VoiceGender.MALE),
+    )
+    const val DEFAULT_AZURE_VOICE = "azure:de-DE-SeraphinaMultilingualNeural"
+    const val DEFAULT_AZURE_REGION = "westeurope"
+
+    /** Der Stimmname, den Azure erwartet („de-DE-KatjaNeural“). */
+    fun azureName(stimmeId: String): String = stimmeId.removePrefix("azure:")
+
+    fun istAzureHd(stimmeId: String): Boolean = stimmeId.contains("DragonHD")
+
     /** Findet den Anbieter zu einer Stimm-Kennung aus dem festen Katalog. */
     fun anbieterZu(stimmeId: String): TtsProvider? = when {
         edgeVoices.any { it.id == stimmeId } -> TtsProvider.EDGE
+        azureVoices.any { it.id == stimmeId } -> TtsProvider.AZURE
         googleVoices.any { it.id == stimmeId } -> TtsProvider.GOOGLE_CLOUD
         geminiFlashVoices.any { it.id == stimmeId } -> TtsProvider.GEMINI_FLASH
         geminiLiteVoices.any { it.id == stimmeId } -> TtsProvider.GEMINI_LITE

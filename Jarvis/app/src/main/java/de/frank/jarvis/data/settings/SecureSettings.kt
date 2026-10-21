@@ -88,6 +88,19 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.GOOGLE_TTS_VOICE, Defaults.GOOGLE_TTS_VOICE)
         set(value) = writeString(Keys.GOOGLE_TTS_VOICE, value)
 
+    /** Azure AI Speech: Schlüssel und Region der Speech-Ressource, Stimme mit Kennung „azure:de-DE-KatjaNeural“. */
+    var azureTtsKey: String
+        get() = readString(Keys.AZURE_TTS_KEY, "")
+        set(value) = writeString(Keys.AZURE_TTS_KEY, value)
+
+    var azureTtsRegion: String
+        get() = readString(Keys.AZURE_TTS_REGION, TtsCatalog.DEFAULT_AZURE_REGION)
+        set(value) = writeString(Keys.AZURE_TTS_REGION, value)
+
+    var azureTtsVoice: String
+        get() = readString(Keys.AZURE_TTS_VOICE, TtsCatalog.DEFAULT_AZURE_VOICE)
+        set(value) = writeString(Keys.AZURE_TTS_VOICE, value)
+
     /** Gemini-3.8-Stimmen, Kennung „gemini_flash:Leda“ bzw. „gemini_lite:Leda“. */
     var geminiFlashTtsVoice: String
         get() = readString(Keys.GEMINI_FLASH_TTS_VOICE, TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE)
@@ -286,6 +299,9 @@ class SecureSettings(context: Context) : Closeable {
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
         const val GEMINI_FLASH_TTS_VOICE = "gemini_flash_tts_voice"
+        const val AZURE_TTS_KEY = "azure_tts_key"
+        const val AZURE_TTS_REGION = "azure_tts_region"
+        const val AZURE_TTS_VOICE = "azure_tts_voice"
         const val GEMINI_LITE_TTS_VOICE = "gemini_lite_tts_voice"
         const val GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
         const val GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"

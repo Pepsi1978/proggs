@@ -403,6 +403,7 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     var stand by remember { mutableIntStateOf(0) }
     val googleFehlt = remember(stand) { s.googleTtsApiKey.isBlank() }
     val qwenFehlt = remember(stand) { s.qwenTtsApiKey.isBlank() }
+    val azureFehlt = remember(stand) { s.azureTtsKey.isBlank() }
     val geminiFehlt = remember(stand) { s.geminiTtsKeyFrei.isBlank() && s.geminiTtsKeyBezahlt.isBlank() }
     var anbieter by remember(p.art.id) { mutableStateOf(TtsCatalog.anbieterZu(p.stimme)) }
     Unterzeile("Stimme")
@@ -411,7 +412,7 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
         listOf(
             TtsProvider.EDGE to TtsCatalog.DEFAULT_EDGE_VOICE, TtsProvider.GOOGLE_CLOUD to TtsCatalog.DEFAULT_GOOGLE_VOICE,
             TtsProvider.GEMINI_FLASH to TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE, TtsProvider.GEMINI_LITE to TtsCatalog.DEFAULT_GEMINI_LITE_VOICE,
-            TtsProvider.QWEN to TtsCatalog.DEFAULT_QWEN_VOICE,
+            TtsProvider.QWEN to TtsCatalog.DEFAULT_QWEN_VOICE, TtsProvider.AZURE to TtsCatalog.DEFAULT_AZURE_VOICE,
         ).forEach { (anb, standard) ->
             Chip(anb.label, aktiv = anbieter == anb) {
                 anbieter = anb
@@ -425,6 +426,7 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
         TtsProvider.GEMINI_FLASH -> TtsCatalog.geminiFlashVoices
         TtsProvider.GEMINI_LITE -> TtsCatalog.geminiLiteVoices
         TtsProvider.QWEN -> TtsCatalog.qwenVoices
+        TtsProvider.AZURE -> TtsCatalog.azureVoices
         else -> emptyList()
     }
     if (stimmen.isNotEmpty()) {
@@ -432,6 +434,7 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
         StimmChips(vm, anbieter!!, stimmen, p.stimme) { p.stimme = it }
     }
     if (anbieter == TtsProvider.GOOGLE_CLOUD && googleFehlt) Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { s.googleTtsApiKey = it; stand++ }
+    if (anbieter == TtsProvider.AZURE && azureFehlt) Schluesselfeld(vm, "Azure-Speech-Schlüssel (KEY 1)", s.azureTtsKey) { s.azureTtsKey = it; stand++ }
     if (anbieter == TtsProvider.QWEN && qwenFehlt) Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { s.qwenTtsApiKey = it; stand++ }
     if ((anbieter == TtsProvider.GEMINI_FLASH || anbieter == TtsProvider.GEMINI_LITE) && geminiFehlt) Schluesselfeld(vm, "Gemini-Stimme: Schlüssel kostenlos", s.geminiTtsKeyFrei) { s.geminiTtsKeyFrei = it; stand++ }
     Unterzeile("Sprechtempo")
