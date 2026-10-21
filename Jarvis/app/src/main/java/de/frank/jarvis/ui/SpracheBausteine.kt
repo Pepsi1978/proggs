@@ -150,23 +150,22 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 val laedt = vm.stimmProbeLaedt == w.id
                 val favorit = de.frank.jarvis.live.StimmProbe.favoritSchluessel(probeArt, w.id) in vm.stimmFavoriten
                 val gewaehlt = w.id == st["stimme"]
-                androidx.compose.material3.DropdownMenuItem(
-                    text = {
-                        Text((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, color = if (gewaehlt) f.primaer else f.text,
-                            fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Normal)
-                    },
-                    onClick = { geaendert { st.setze("stimme", w.id) }; vm.stimmProbe(probeArt, w.id) },
-                    leadingIcon = {
-                        Box(Modifier.size(36.dp).antippen { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) }, contentAlignment = Alignment.Center) {
-                            Icon(if (favorit) Icons.Rounded.Star else Icons.Rounded.StarBorder, if (favorit) "Favorit entfernen" else "Als Favorit markieren",
-                                tint = if (favorit) androidx.compose.ui.graphics.Color(0xFFFFC107) else f.textLeise, modifier = Modifier.size(22.dp))
-                        }
-                    },
-                    trailingIcon = { if (gewaehlt) Icon(Icons.Rounded.Check, null, tint = f.primaer) },
-                )
+                // Eigene Zeile statt DropdownMenuItem: dessen Klick kennt kein langes Drücken.
+                Row(
+                    Modifier.fillMaxWidth().antippen(
+                        lange = { vm.stimmFavoritUmschalten(probeArt, w.id, w.titel) },
+                        langeText = if (favorit) "Favorit entfernen" else "Als Favorit markieren",
+                    ) { geaendert { st.setze("stimme", w.id) }; vm.stimmProbe(probeArt, w.id) }.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (favorit) Icon(Icons.Rounded.Star, "Favorit", tint = FavoritGelb, modifier = Modifier.padding(end = 8.dp).size(20.dp))
+                    Text((if (laedt) "⏳ " else if (gespeichert) "▶ " else "") + w.titel, color = if (gewaehlt) f.primaer else f.text,
+                        fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                    if (gewaehlt) Icon(Icons.Rounded.Check, null, tint = f.primaer)
+                }
             }
         }
-        Text("Tippen wählt und spielt eine Hörprobe (die erste einmalig unter 1 Cent, danach gespeichert: ▶). ★ = Favorit, steht oben. " +
+        Text("Tippen wählt und spielt eine Hörprobe (die erste einmalig unter 1 Cent, danach gespeichert: ▶). Langes Drücken: ★ Favorit an/aus, Favoriten stehen oben. " +
             (if (st.istGemini) "Alle Gemini-Stimmen sprechen Deutsch." else "Hör rein, welche am besten Deutsch spricht."),
             color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 
@@ -208,16 +207,12 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         when (anbieter) {
             TtsProvider.EDGE -> {
                 Unterzeile("Stimme (ohne Schlüssel nutzbar)")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TtsCatalog.edgeVoices.forEach { v -> Chip(v.name, aktiv = s.edgeTtsVoice == v.id) { geaendert { s.edgeTtsVoice = v.id } } }
-                }
+                StimmChips(vm, anbieter, TtsCatalog.edgeVoices, s.edgeTtsVoice) { geaendert { s.edgeTtsVoice = it } }
             }
             TtsProvider.GOOGLE_CLOUD -> {
                 Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
                 Unterzeile("Stimme")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TtsCatalog.googleVoices.forEach { v -> Chip(v.name, aktiv = s.googleTtsVoice == v.id) { geaendert { s.googleTtsVoice = v.id } } }
-                }
+                StimmChips(vm, anbieter, TtsCatalog.googleVoices, s.googleTtsVoice) { geaendert { s.googleTtsVoice = it } }
             }
             TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE -> {
                 val flash = anbieter == TtsProvider.GEMINI_FLASH
@@ -237,21 +232,15 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                     Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
                 }
                 Unterzeile("Stimme")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    (if (flash) TtsCatalog.geminiFlashVoices else TtsCatalog.geminiLiteVoices).forEach { v ->
-                        val gewaehlt = if (flash) s.geminiFlashTtsVoice else s.geminiLiteTtsVoice
-                        Chip(v.name, aktiv = gewaehlt == v.id) { geaendert { if (flash) s.geminiFlashTtsVoice = v.id else s.geminiLiteTtsVoice = v.id } }
-                    }
-                }
+                StimmChips(vm, anbieter, if (flash) TtsCatalog.geminiFlashVoices else TtsCatalog.geminiLiteVoices,
+                    if (flash) s.geminiFlashTtsVoice else s.geminiLiteTtsVoice) { id -> geaendert { if (flash) s.geminiFlashTtsVoice = id else s.geminiLiteTtsVoice = id } }
                 Text("Gemini spricht im eigenen Tempo; das Sprechtempo unten gilt hier nicht.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
             TtsProvider.QWEN -> {
                 Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { geaendert { s.qwenTtsApiKey = it } }
                 Unterzeile("Stimme")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TtsCatalog.qwenVoices.forEach { v -> Chip(v.name, aktiv = s.qwenStandardVoice == v.id) { geaendert { s.qwenStandardVoice = v.id } } }
-                }
+                StimmChips(vm, anbieter, TtsCatalog.qwenVoices, s.qwenStandardVoice) { geaendert { s.qwenStandardVoice = it } }
             }
             TtsProvider.QWEN_CLONE -> {
                 Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { geaendert { s.qwenTtsApiKey = it } }
@@ -273,6 +262,28 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         }
         Text("Meldungen vorlesen (Agenten, Losfahren, Timer, Update-Ansagen …) mit eigener Stimme und Lautstärke: Einstellungen → Benachrichtigungen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
     }
+}
+
+/** Gelb des Favoritensterns bei allen Stimmenauswahlen. */
+val FavoritGelb = androidx.compose.ui.graphics.Color(0xFFFFC107)
+
+/**
+ * Stimmen eines Vorlese-Anbieters als Chips. Tippen wählt, langes Drücken setzt oder entfernt den Favoriten;
+ * Favoriten tragen einen gelben Stern und stehen vorn. Vorlesen und Benachrichtigungen teilen dieselben Favoriten.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun StimmChips(vm: AppViewModel, anbieter: TtsProvider, stimmen: List<de.frank.jarvis.tts.TtsVoice>, gewaehlt: String, waehlen: (String) -> Unit) {
+    val art = "tts_" + anbieter.id
+    fun favorit(v: de.frank.jarvis.tts.TtsVoice) = de.frank.jarvis.live.StimmProbe.favoritSchluessel(art, v.id) in vm.stimmFavoriten
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        stimmen.sortedByDescending { favorit(it) }.forEach { v ->
+            val fav = favorit(v)
+            Chip(v.name, aktiv = gewaehlt == v.id, icon = if (fav) Icons.Rounded.Star else null, iconFarbe = FavoritGelb,
+                lange = { vm.stimmFavoritUmschalten(art, v.id, v.name) }, langeText = if (fav) "Favorit entfernen" else "Als Favorit markieren") { waehlen(v.id) }
+        }
+    }
+    Text("Langes Drücken: ★ Favorit an/aus, Favoriten stehen vorn.", color = LocalFarben.current.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
 }
 
 @Composable

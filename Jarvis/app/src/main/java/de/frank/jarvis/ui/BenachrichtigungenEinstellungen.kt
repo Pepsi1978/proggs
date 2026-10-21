@@ -429,9 +429,7 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
     }
     if (stimmen.isNotEmpty()) {
         Spacer(Modifier.height(10.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            stimmen.forEach { v -> Chip(v.name, aktiv = p.stimme == v.id) { p.stimme = v.id } }
-        }
+        StimmChips(vm, anbieter!!, stimmen, p.stimme) { p.stimme = it }
     }
     if (anbieter == TtsProvider.GOOGLE_CLOUD && googleFehlt) Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { s.googleTtsApiKey = it; stand++ }
     if (anbieter == TtsProvider.QWEN && qwenFehlt) Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { s.qwenTtsApiKey = it; stand++ }
