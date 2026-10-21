@@ -9,6 +9,8 @@ import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
 import de.frank.jarvis.tts.deutschesSsml
 import de.frank.jarvis.tts.chirpAussprachen
+import de.frank.jarvis.tts.ssmlEscape
+import kotlin.math.roundToInt
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -117,12 +119,16 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (schluessel.isBlank()) {
             throw SyntheseAbbruch("Vorlesen fehlgeschlagen: Es ist kein Azure-Schlüssel hinterlegt. Trag ihn in den Einstellungen ein.")
         }
-        val region = settings.azureTtsRegion.filterNot(Char::isWhitespace).lowercase().ifBlank { TtsCatalog.DEFAULT_AZURE_REGION }
+        val region = TtsCatalog.azureRegion(settings.azureTtsRegion) ?: throw SyntheseAbbruch(
+            "Vorlesen fehlgeschlagen: Die Azure-Region „${settings.azureTtsRegion.take(40)}“ verstehe ich nicht. Trag den Regionsnamen ein, etwa westeurope.",
+        )
         val stimme = TtsCatalog.azureName(stimmeId)
         val hd = TtsCatalog.istAzureHd(stimmeId)
-        val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        val inhalt = if (settings.immerDeutschVorlesen && !hd) "<lang xml:lang='de-DE'>$escaped</lang>" else escaped
-        val prozent = ((tempo.coerceIn(0.7f, 1.3f) - 1f) * 100).toInt()
+        // Steuerzeichen sind in XML verboten; Azure lehnte das ganze SSML sonst mit 400 ab.
+        val escaped = ssmlEscape(text.replace(Regex("[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]"), " "))
+        // <lang> kennt Azure nur bei den mehrsprachigen Stimmen; die übrigen sprechen ohnehin nur Deutsch.
+        val inhalt = if (settings.immerDeutschVorlesen && stimme.contains("Multilingual")) "<lang xml:lang='de-DE'>$escaped</lang>" else escaped
+        val prozent = ((tempo.coerceIn(0.7f, 1.3f) - 1f) * 100).roundToInt()
         val mitTempo = if (hd || prozent == 0) inhalt else "<prosody rate='${if (prozent > 0) "+" else ""}$prozent%'>$inhalt</prosody>"
         val ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='de-DE'>" +
             "<voice name='$stimme'>$mitTempo</voice></speak>"
@@ -134,28 +140,40 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             .addHeader("User-Agent", "Jarvis")
             .post(ssml.toRequestBody(SSML_TYP))
             .build()
-        val bytes = fuehreAusBytes(anfrage)
+        val bytes = azureAnfrage(anfrage, hd)
         if (bytes.isEmpty()) throw SyntheseFehler("Azure hat kein Audio geliefert.")
         Logbuch.sprache("Azure-Absatz erzeugt", "stimme=$stimme zeichen=${text.length}", System.currentTimeMillis() - beginn)
         return schreibeDatei(bytes, "mp3")
     }
 
-    /** Wie [fuehreAus], aber die Antwort ist Ton statt Text. */
-    private suspend fun fuehreAusBytes(anfrage: Request): ByteArray {
+    /**
+     * Schickt die Azure-Anfrage; die Antwort ist Ton statt Text. F0 erlaubt nur rund 20 Anfragen je Minute: Ein 429 ist
+     * meist dieses Ratenlimit, nicht das Monatskontingent — darum nach Retry-After (höchstens eine Minute) warten.
+     */
+    private suspend fun azureAnfrage(anfrage: Request, hd: Boolean): ByteArray {
         var versuch = 0
         while (true) {
-            val (koerper, code) = client.newCall(anfrage).warte().use { (if (it.isSuccessful) it.body?.bytes() else null) to it.code }
+            val antwort = client.newCall(anfrage).warte()
+            val warteSek = antwort.header("Retry-After")?.trim()?.toLongOrNull()
+            val (koerper, code) = antwort.use { (if (it.isSuccessful) it.body?.bytes() else it.body?.string()?.toByteArray()) to it.code }
             when {
                 code in 200..299 -> return koerper ?: ByteArray(0)
-                code == 429 && versuch < WARTEZEITEN_MS.size -> { kotlinx.coroutines.delay(WARTEZEITEN_MS[versuch]); versuch++ }
+                code == 429 && versuch < AZURE_WARTEZEITEN_MS.size -> {
+                    val ms = warteSek?.let { (it * 1000).coerceIn(1_000L, 60_000L) } ?: AZURE_WARTEZEITEN_MS[versuch]
+                    de.frank.jarvis.observability.IdeenLog.warn("Synthese", "azureAnfrage", "Rate-Limit, warte erneut", mapOf("ms" to ms, "versuch" to versuch))
+                    kotlinx.coroutines.delay(ms)
+                    versuch++
+                }
                 code == 401 || code == 403 -> throw SyntheseAbbruch(
                     "Vorlesen fehlgeschlagen: Azure hat Schlüssel oder Region abgelehnt (Fehler $code). Prüf beides in den Einstellungen.",
                 )
-                code == 429 -> throw SyntheseAbbruch("Vorlesen fehlgeschlagen: Das Azure-Kontingent ist erschöpft (Fehler 429).")
-                code == 400 -> throw SyntheseAbbruch(
-                    "Vorlesen fehlgeschlagen: Azure kennt diese Stimme in der Region nicht (Fehler 400). HD-Stimmen gibt es nur mit S0 und in ausgewählten Regionen, etwa westeurope.",
+                code == 429 -> throw SyntheseAbbruch(
+                    "Vorlesen fehlgeschlagen: Azure lässt gerade keine Anfragen zu (Fehler 429): Ratenlimit oder Monatskontingent erschöpft.",
                 )
-                else -> throw SyntheseFehler("Azure antwortete mit Fehler $code.")
+                code == 400 && hd -> throw SyntheseAbbruch(
+                    "Vorlesen fehlgeschlagen: Azure lehnt die HD-Stimme ab (Fehler 400). HD-Stimmen laufen nur mit der Stufe S0 und nicht in jeder Region.",
+                )
+                else -> throw SyntheseFehler("Azure antwortete mit Fehler $code: ${koerper?.toString(Charsets.UTF_8)?.take(200).orEmpty()}")
             }
         }
     }
@@ -584,6 +602,9 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val JSON_TYP = "application/json; charset=utf-8".toMediaType()
         val SSML_TYP = "application/ssml+xml".toMediaType()
         val WARTEZEITEN_MS = longArrayOf(1_000L, 3_000L, 8_000L)
+
+        /** Reicht zusammen über das Minutenfenster von F0. */
+        val AZURE_WARTEZEITEN_MS = longArrayOf(3_000L, 10_000L, 20_000L, 30_000L)
 
         /** So lange darf Edge für einen Absatz insgesamt brauchen, bevor er als gescheitert gilt. */
         const val EDGE_ZEITLIMIT_MS = 60_000L

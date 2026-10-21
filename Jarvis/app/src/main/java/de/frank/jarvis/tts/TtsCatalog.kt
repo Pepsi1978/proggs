@@ -139,6 +139,16 @@ object TtsCatalog {
 
     fun istAzureHd(stimmeId: String): Boolean = stimmeId.contains("DragonHD")
 
+    /**
+     * Der Regionsname für die Adresse („westeurope“). Nimmt auch den eingefügten Endpunkt aus dem Portal
+     * („https://westeurope.api.cognitive.microsoft.com/“); null, wenn nichts Brauchbares darin steht.
+     */
+    fun azureRegion(eingabe: String): String? {
+        val roh = eingabe.trim().lowercase().ifBlank { DEFAULT_AZURE_REGION }
+        val ausEndpunkt = Regex("^(?:https?://)?([a-z0-9]+)\\.(?:api\\.cognitive|tts\\.speech)\\.").find(roh)?.groupValues?.get(1)
+        return (ausEndpunkt ?: roh).takeIf { Regex("^[a-z0-9]{2,40}$").matches(it) }
+    }
+
     /** Findet den Anbieter zu einer Stimm-Kennung aus dem festen Katalog. */
     fun anbieterZu(stimmeId: String): TtsProvider? = when {
         edgeVoices.any { it.id == stimmeId } -> TtsProvider.EDGE

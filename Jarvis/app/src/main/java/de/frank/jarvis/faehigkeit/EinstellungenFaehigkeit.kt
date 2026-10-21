@@ -154,7 +154,16 @@ class EinstellungsKatalog(context: Context) {
     }
 
     // ---- Stimmen ----
-    private fun alleStimmen(): List<Pair<String, String>> =
+    /**
+     * Edge und Azure teilen Namen (Katja, Conrad …): Bei Azure als Jarvis-Anbieter stehen dessen Stimmen vorn,
+     * damit „Katja“ allein die Azure-Stimme meint; sonst gewinnt Edge.
+     */
+    private fun alleStimmen(): List<Pair<String, String>> {
+        val liste = alleStimmenRoh()
+        return if (s.ttsProvider == TtsProvider.AZURE.id) liste.sortedByDescending { it.first.startsWith("azure:") } else liste
+    }
+
+    private fun alleStimmenRoh(): List<Pair<String, String>> =
         TtsCatalog.edgeVoices.map { it.id to "${it.name} (${TtsProvider.EDGE.kurz})" } +
             TtsCatalog.googleVoices.map { it.id to "${it.name} (${TtsProvider.GOOGLE_CLOUD.kurz})" } +
             TtsCatalog.geminiFlashVoices.map { it.id to "${it.name} (${TtsProvider.GEMINI_FLASH.kurz})" } +

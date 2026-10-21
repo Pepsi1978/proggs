@@ -434,7 +434,10 @@ private fun StimmOptionen(vm: AppViewModel, p: MeldungsProfil) {
         StimmChips(vm, anbieter!!, stimmen, p.stimme) { p.stimme = it }
     }
     if (anbieter == TtsProvider.GOOGLE_CLOUD && googleFehlt) Schluesselfeld(vm, "Google-Cloud-Schlüssel", s.googleTtsApiKey) { s.googleTtsApiKey = it; stand++ }
-    if (anbieter == TtsProvider.AZURE && azureFehlt) Schluesselfeld(vm, "Azure-Speech-Schlüssel (KEY 1)", s.azureTtsKey) { s.azureTtsKey = it; stand++ }
+    if (anbieter == TtsProvider.AZURE && azureFehlt) {
+        Schluesselfeld(vm, "Azure-Speech-Schlüssel (KEY 1)", s.azureTtsKey) { s.azureTtsKey = it; stand++ }
+        Schluesselfeld(vm, "Azure-Region (z. B. westeurope)", s.azureTtsRegion, geheim = false) { s.azureTtsRegion = it; stand++ }
+    }
     if (anbieter == TtsProvider.QWEN && qwenFehlt) Schluesselfeld(vm, "Alibaba-Schlüssel (Qwen)", s.qwenTtsApiKey) { s.qwenTtsApiKey = it; stand++ }
     if ((anbieter == TtsProvider.GEMINI_FLASH || anbieter == TtsProvider.GEMINI_LITE) && geminiFehlt) Schluesselfeld(vm, "Gemini-Stimme: Schlüssel kostenlos", s.geminiTtsKeyFrei) { s.geminiTtsKeyFrei = it; stand++ }
     Unterzeile("Sprechtempo")
