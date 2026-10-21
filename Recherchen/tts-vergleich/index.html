@@ -69,7 +69,7 @@ ul{padding-left:20px}
   <ul>
     <li><b>Franks „großes Google-Freikontingent“</b> ist sehr wahrscheinlich das von <b>Chirp 3 HD</b>: dauerhaft <b>1 Mio. Zeichen pro Monat</b>, danach 30 $ je 1 Mio. Ein Abrechnungskonto ist Pflicht, eine echte Kostenkappung gibt es dafür nicht (Budgets warnen nur). Gemini-TTS hat in Cloud TTS <b>kein</b> Freikontingent; kostenlos ist es nur im Free Tier der Gemini API, mit unveröffentlichten Limits und Datennutzung.</li>
     <li><b>Qualität:</b> In der einzigen großen Blind-Rangliste (Artificial Analysis, <i>englisch</i>) liegt Chirp 3 HD auf Rang 60 von 98. <b>Gemini 3.8 Flash TTS</b> (seit 22.09.2026) liegt auf Rang 5, gut 200 Elo-Punkte darüber. Spitze: ElevenLabs v4 Turbo, Qwen-Audio 3.1, Cartesia Sonic 3.6. Eine belastbare <i>deutsche</i> Rangliste gibt es nicht.</li>
-    <li><b>Eigene Prüfung:</b> Aus 20 echten Hörproben mit einheitlichem deutschem Testtext und dreifachem maschinellem Ausspracheabgleich: Gemini 3.8 Flash und Flash-Lite, Gemini 2.5 und die Edge-Stimmen sprechen Zahlen, Datum, Uhrzeit, Euro und Abkürzungen am saubersten. Chirp 3 HD verschluckt teils das „Komma“ in Dezimalzahlen; Qwen und die lokalen Modelle haben deutlich mehr Fehler. Das ersetzt keinen Hörtest von Frank.</li>
+    <li><b>Eigene Prüfung:</b> Aus 20 echten Hörproben mit einheitlichem deutschem Testtext und dreifachem maschinellem Ausspracheabgleich: Gemini 3.8 Flash und Flash-Lite, Gemini 2.5 und die Edge-Stimmen sprechen Zahlen, Datum, Uhrzeit, Euro und Abkürzungen am saubersten. Chirp 3 HD verschluckt im Rohaufruf teils das „Komma“ in Dezimalzahlen (in Jarvis fängt <code>SprechText.kt</code> einen Teil davon ab); Qwen und die lokalen Modelle haben deutlich mehr Fehler. Das ersetzt keinen Hörtest von Frank.</li>
     <li><b>Kosten:</b> Bei 20 Minuten Vorlesen am Tag bleibt Chirp 3 HD kostenlos. Gemini 3.8 Flash kostet dabei etwa 8 $ im Monat (ab 2027 etwa 16 $), Flash-Lite etwa 5,40 $ (ab 2027 10,80 $).</li>
     <li><b>Ausgeschieden:</b> OpenAI-TTS (Abschaltung 06.01.2027), Hume Octave (Abschaltung 13.11.2026), Gemini 2.5/3.1 TTS (Abschaltung ab 17.11.2026).</li>
   </ul>
@@ -80,7 +80,7 @@ ul{padding-left:20px}
   <div class="empf">
     <b>1. Zuerst hören:</b> Chirp 3 HD Leda gegen <b>Gemini 3.8 Flash TTS Leda</b> im Abschnitt <a href="#proben">Hörproben</a> vergleichen. Gemini 3.8 Flash ist der einzige Kandidat, der zugleich in der Rangliste weit vorne liegt, im maschinellen Abgleich fehlerfrei war, dieselbe Stimme „Leda“ anbietet und eine harte Kostenbremse (Prepay plus Projektlimit) hat.<br><br>
     <b>2. Wenn Gemini 3.8 Flash besser klingt:</b> als <i>zusätzlichen</i> Anbieter in Jarvis aufnehmen, über den vorhandenen <b>bezahlten</b> Gemini-Schlüssel mit kleinem Prepay-Guthaben und Monatslimit, Chirp 3 HD als Rückfall behalten. Erwartete Kosten 2 bis 8 $ im Monat (2026), danach das Doppelte.<br><br>
-    <b>3. Unabhängig davon und kostenlos:</b> eine deutsche Textvorverarbeitung vor jeder Sprachausgabe (Dezimalkomma als „Komma“, Datum, Euro, Abkürzungen ausschreiben). Sie behebt die gefundene Chirp-Schwäche ohne Anbieterwechsel und hilft jedem Anbieter.
+    <b>3. Unabhängig davon und kostenlos:</b> Jarvis hat mit <code>speech/SprechText.kt</code> schon eine deutsche Vorverarbeitung (Datum, Uhrzeit, Kommazahlen mit Einheit, %, €, „z. B.“, „ca.“). Die Hörproben hier sind rohe API-Aufrufe <i>ohne</i> sie. Empfehlung: Testtext A einmal durch <code>SprechText.fuerStimme</code> schicken und verbleibende Lücken schließen (zu prüfen u. a. Tausenderpunkt mit Cent-Betrag „1.249,99 €“, „3. Nov.“, „ms“, „Dr.“, Kommazahl ohne Einheit). Das behebt die gefundene Chirp-Schwäche ohne Anbieterwechsel und hilft jedem Anbieter.
   </div>
   <h3>Warum nicht sofort umstellen</h3>
   <ul>
@@ -118,7 +118,7 @@ ul{padding-left:20px}
 
 <section id="proben">
   <h2>Hörproben (einheitlicher Testtext)</h2>
-  <p>Alle Proben sprechen denselben Testtext A. Erzeugt am 21.10.2026 nur mit vorhandenen Zugängen oder lokal; keine neuen Konten, keine Buchungen. <b>Ein menschlicher Hörtest fehlt</b>: Bitte selbst anhören, die Spalte „Abgleich“ ist nur ein maschineller Hinweis.</p>
+  <p>Alle Proben sprechen denselben Testtext A. Erzeugt am 21.10.2026 nur mit vorhandenen Zugängen oder lokal; keine neuen Konten, keine Buchungen. Es sind rohe API-Aufrufe <b>ohne</b> die Jarvis-Vorverarbeitung (<code>SprechText.kt</code>) und ohne Jarvis-Tempo; in Jarvis klingen Zahlen deshalb teils besser. <b>Ein menschlicher Hörtest fehlt</b>: Bitte selbst anhören, die Spalte „Abgleich“ ist nur ein maschineller Hinweis.</p>
   <details><summary>Testtext anzeigen</summary><div id="testtext" class="bericht"></div></details>
   <div class="raster" id="probenraster"></div>
   <p class="mt klein">Ohne Hörprobe: ElevenLabs, Cartesia, Inworld, Azure DragonHD, Polly, Deepgram, Voxtral, Murf, xAI, MiniMax, Fish (neues Konto nötig), qwen-audio-3.x (anderer Endpunkt, Deutsch nur mit Klonstimme), Qwen3-TTS lokal (CUDA-PyTorch fehlt).</p>
@@ -184,7 +184,7 @@ ul{padding-left:20px}
     <li><b>Gemini 3.8 Flash/Flash-Lite (Gemini API, unary):</b> liefert WAV mit Header (24 kHz), spielbar wie der Qwen-Weg. Nötig: Eintrag im <code>TtsCatalog</code>, Methode <code>gemini()</code>, Schlüsselwahl, drei UI-Stellen. Den vorhandenen <b>bezahlten</b> Gemini-Schlüssel nutzen, nicht den kostenlosen. Pflicht: Audiodauer gegen Textlänge prüfen (Abbrüche). Kein <code>speakingRate</code>, kein SSML; die Chirp-Ausspracheregeln (<code>chirpAussprachen</code>) entfallen.</li>
     <li><b>Streaming</b> lohnt derzeit nicht: Chirp-Streaming ist gRPC und Preview, Gemini-Streaming brach bei 3.1 nachweislich ab, und es würde die Datei-Pipeline umgehen.</li>
     <li><b>Live-Gespräche</b> laufen über eine eigene Wiedergabe und sind von der TTS-Wahl unabhängig.</li>
-    <li><b>Deutsche Vorverarbeitung</b> (für alle Anbieter): deterministisch in Kotlin vor der Synthese, mit Regeln für Dezimalkomma, Datum, Uhrzeit, Euro, Einheiten, Abkürzungen. Eine fertige Kotlin-Bibliothek gibt es nicht; num2words ist Python (LGPL), NeMo nur Linux.</li>
+    <li><b>Deutsche Vorverarbeitung</b> (für alle Anbieter): existiert bereits als <code>speech/SprechText.kt</code> (läuft im Vorleser vor jeder Synthese) plus Vorlese-Regeln im Systemprompt (<code>agent/Vorlesefassung.kt</code>). Ausbau statt Neubau: mit Testtext A gegen Lücken prüfen. Eine fertige Kotlin-Bibliothek gibt es nicht; num2words ist Python (LGPL), NeMo nur Linux.</li>
     <li><b>Möglicher Fehler, Edge:</b> Jarvis sendet laut Quelltext <code>Sec-MS-GEC-Version=1-…</code>; Microsoft verlangt seit etwa 10.10.2026 Token v2 (regional 403). Im Logbuch auf <code>code=403</code> prüfen.</li>
   </ul>
   <h3>Weitere eigene Apps</h3>
@@ -206,7 +206,8 @@ ul{padding-left:20px}
     <li>Die Free-Tier-Limits der Gemini API sind nicht öffentlich; sie stehen nur im AI-Studio-Dashboard des eigenen Schlüssels.</li>
     <li>Einige Google-Preisseiten liefern ihre Tabellen nur per JavaScript; Zahlen stammen dort aus Suchauszügen der offiziellen Seite (in R1 gekennzeichnet).</li>
     <li>Rechtsfragen (EWR-Klausel der Gemini-Bedingungen, Preview ohne Datenverarbeitungsvertrag, Edge-Nutzung) sind dargestellt, nicht rechtlich geprüft.</li>
-    <li>Die Gemini-3.8-Proben wurden ohne Stilanweisung erzeugt; die 2.5- und 3.1-Proben mit kurzer Anweisung im Text (so verlangten es diese Modelle).</li>
+    <li>Testtext A wurde bei Gemini 3.8 ohne Stilanweisung erzeugt, bei 2.5 und 3.1 mit kurzer Anweisung im Text. Alle Testtext-B-Proben tragen die Anweisung „Satzzeichen mitsprechen“ im Textfeld; bei 3.8 wird sie laut Doku wörtlich mitgelesen, die B-Proben zeigen also eher dieses Verhalten als eine echte Satzzeichen-Funktion.</li>
+    <li>Die Proben laufen nicht durch die Jarvis-Vorverarbeitung <code>SprechText.kt</code>; die Zahlenfehler von Chirp und Qwen sind daher der Rohzustand der Dienste, nicht unbedingt das, was Frank in Jarvis hört.</li>
   </ul>
 </section>
 
