@@ -735,6 +735,8 @@ final class OpenLauncherService {
         // Lebenszeichen für die drehende Anzeige in Jarvis, async und ohne Ausgabe.
         root["PreToolUse"] = .array([eintrag("AskUserQuestion", "frage", 660), eintrag("*", "puls", 10, imHintergrund: true)])
         root["Stop"] = .array([eintrag(nil, "stop", 660), warter()])
+        // Endet ein Zug an einem API-Fehler („Login expired“, Limit), kommt statt Stop dieser Hook: Jarvis zeigt den Auftrag gesperrt.
+        root["StopFailure"] = .array([eintrag(nil, "fehlschlag", 30)])
         root["SessionStart"] = .array([warter()])
         return root
     }

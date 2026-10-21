@@ -1441,6 +1441,8 @@ try {
             // Lebenszeichen für die drehende Anzeige in Jarvis, async und ohne Ausgabe.
             ["PreToolUse"] = new JsonArray(Eintrag("AskUserQuestion", "frage", 660)[0]!.DeepClone(), Eintrag("*", "puls", 10, imHintergrund: true)[0]!.DeepClone()),
             ["Stop"] = new JsonArray(Eintrag(null, "stop", 660)[0]!.DeepClone(), Warter()),
+            // Endet ein Zug an einem API-Fehler („Login expired“, Limit), kommt statt Stop dieser Hook: Jarvis zeigt den Auftrag gesperrt.
+            ["StopFailure"] = Eintrag(null, "fehlschlag", 30),
             ["SessionStart"] = new JsonArray(Warter()),
         };
     }
