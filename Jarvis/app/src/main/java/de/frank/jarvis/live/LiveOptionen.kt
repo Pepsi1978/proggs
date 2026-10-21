@@ -169,6 +169,9 @@ object LiveOptionen {
     )
 
     const val LIVE_PRO_MINUTE = 0.05
+
+    /** Option „Live nach einem Ergebnis automatisch neu verbinden“ (an/aus), siehe [de.frank.jarvis.speech.SprachZustellung.liveWeg]. */
+    const val NACH_ERGEBNIS = "nach_ergebnis"
     val MITSCHRIFT_PRO_MINUTE = mapOf("gpt-transcribe" to 0.0045, "gpt-live-transcribe" to 0.017, "gpt-4o-mini-transcribe" to 0.003, "aus" to 0.0)
     val TARIF_FAKTOR = mapOf("auto" to 1.0, "default" to 1.0, "flex" to 0.5, "priority" to 2.0, "ultrafast" to 6.0)
 
@@ -487,6 +490,11 @@ object LiveOptionen {
         Option("stille_ende", "Live-Gespräch", "Bei Stille beenden",
             "Beendet das Live-Gespräch, wenn so lange niemand spricht. GPT-Live kostet auch bei Stille weiter.",
             "5", { listOf(Wahl("2", "Nach 2 Minuten"), Wahl("5", "Nach 5 Minuten", "Empfehlung."), Wahl("10", "Nach 10 Minuten"), Wahl("0", "Nie", "", "kostet im Leerlauf weiter")) }),
+        Option(NACH_ERGEBNIS, "Live-Gespräch", "Live nach einem Ergebnis automatisch neu verbinden",
+            "Kommt ein spätes Ergebnis auf eine Live-Frage erst, nachdem das Gespräch durch Stille geendet hat, liest Jarvis es vor und " +
+                "verbindet Live danach von selbst neu. Aus: kein neues Live-Gespräch, Jarvis hört danach im normalen Sprachmodus zu. " +
+                "Nie nach einem bewusst beendeten Gespräch und nicht bei „Bei Stille beenden: Nie“; im Hintergrund nur mit Hey Jarvis.",
+            "an", { listOf(Wahl("an", "An"), Wahl("aus", "Aus")) }),
         Option("verlauf", "Live-Gespräch", "Bisheriges Gespräch mitgeben",
             "Wie viele Nachrichten aus dem offenen Chat das Live-Gespräch am Anfang kennt.",
             "6", { listOf(Wahl("0", "Keine"), Wahl("6", "Die letzten 6", "Empfehlung."), Wahl("12", "Die letzten 12", "", "etwas mehr Eingabe-Tokens")) }),

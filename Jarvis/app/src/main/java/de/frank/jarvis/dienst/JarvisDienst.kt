@@ -268,7 +268,7 @@ class JarvisDienst : Service() {
                 // gesperrtem Handy), danach ist der passende Sprachdialog wieder offen. Dann keine zweite, kurze Fassung unten.
                 val sprachlich = v?.takeIf { it.gespraech.isNotEmpty() }?.let { de.frank.jarvis.speech.SprachModus.aus(it.sprache) }
                 // Vor der teuren Vorlesefassung entscheiden; bewusst beendet oder Vorlesen aus: der bisherige Weg (Meldungs-Einstellung, vorlesen=true).
-                val sprechen = sprachlich != null && de.frank.jarvis.speech.SprachZustellung.ausgang(this@JarvisDienst, sprachlich, v.erstellt, agent = true)
+                val sprechen = sprachlich != null && de.frank.jarvis.speech.SprachZustellung.ausgang(this@JarvisDienst, sprachlich, v.erstellt, de.frank.jarvis.meldung.Meldungsarten.AGENT)
                     .also { if (it != de.frank.jarvis.speech.SprachZustellung.Ausgang.SPRECHEN) Logbuch.sprache("Sprachzustellung", "vorgang:${v.id}: ${it.text}") } ==
                     de.frank.jarvis.speech.SprachZustellung.Ausgang.SPRECHEN
                 if (v != null && sprachlich != null && sprechen) {
@@ -277,7 +277,8 @@ class JarvisDienst : Service() {
                     else "Der Agent ${plan.name} ist leider nicht fertig geworden: ${lauf.grund ?: "Grund unbekannt"}. Details stehen im Chat."
                     val ansage = if (lauf.bericht != null) "Frank, die Ergebnisse sind jetzt da." else "Frank, zu deinem Auftrag an den Agenten ${plan.name}:"
                     de.frank.jarvis.ui.AppViewModel.zustellen(this@JarvisDienst,
-                        de.frank.jarvis.speech.Zustellung("vorgang:${v.id}", sprachlich, v.gespraech, v.erstellt, ansage, gesprochen))
+                        de.frank.jarvis.speech.Zustellung("vorgang:${v.id}", sprachlich, v.gespraech, v.erstellt, ansage, gesprochen,
+                            ruhe = de.frank.jarvis.meldung.Meldungsarten.AGENT))
                 }
                 // Nach der Benachrichtigung: Die Zusammenfassung braucht bis zu 75 Sekunden und soll die Meldung nicht aufhalten.
                 else if (titel != null && (vorlesen || de.frank.jarvis.meldung.Meldungen.vorlesenAn(this@JarvisDienst, de.frank.jarvis.meldung.Meldungsarten.AGENT))) {

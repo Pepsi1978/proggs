@@ -46,4 +46,22 @@ class SprachZustellungTest {
         assertFalse(LiveGespraech.stilleAbgelaufen(5, t - 5 * 60_000L, t))
         assertTrue(LiveGespraech.stilleAbgelaufen(5, t - 5 * 60_000L - 1, t))
     }
+
+    @Test fun liveNachErgebnisMitSchalterAnVerbindetNeu() {
+        assertEquals(SprachZustellung.LiveWeg.NEU_VERBINDEN, SprachZustellung.liveWeg(schalterAn = true, schluesselDa = true, stilleMinuten = 5))
+        assertNull(SprachZustellung.LiveWeg.NEU_VERBINDEN.hinweis)
+    }
+
+    @Test fun liveNachErgebnisMitSchalterAusNieNeu() {
+        // Aus geht allem vor, auch mit Schlüssel und Stille-Ende; Jarvis sagt dann offen, dass es im Sprachmodus weitergeht.
+        val weg = SprachZustellung.liveWeg(schalterAn = false, schluesselDa = true, stilleMinuten = 5)
+        assertEquals(SprachZustellung.LiveWeg.SCHALTER_AUS, weg)
+        assertTrue(weg.hinweis!!.isNotBlank())
+    }
+
+    @Test fun liveNachErgebnisGrenzenBleibenMitSchalterAn() {
+        // „Bei Stille beenden: Nie“: Eine von Jarvis geöffnete, bezahlte Verbindung liefe unbegrenzt weiter.
+        assertEquals(SprachZustellung.LiveWeg.STILLE_NIE, SprachZustellung.liveWeg(schalterAn = true, schluesselDa = true, stilleMinuten = 0))
+        assertEquals(SprachZustellung.LiveWeg.KEIN_SCHLUESSEL, SprachZustellung.liveWeg(schalterAn = true, schluesselDa = false, stilleMinuten = 5))
+    }
 }

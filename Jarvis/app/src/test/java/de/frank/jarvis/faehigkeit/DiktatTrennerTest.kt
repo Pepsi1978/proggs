@@ -1,17 +1,22 @@
 package de.frank.jarvis.faehigkeit
 
 import de.frank.jarvis.faehigkeit.DiktatTrenner.TRENNER
+import de.frank.jarvis.faehigkeit.DiktatTrenner.TRENNER_ALT
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiktatTrennerTest {
-    @Test fun einDiktatBekommtGenauEinenTrenner() = assertEquals("Hallo Jarvis$TRENNER", DiktatTrenner.anhaengen("", " Hallo Jarvis "))
+    @Test fun einDiktatEndetDirektMitLeerzeichenSemikolonLeerzeichen() {
+        assertEquals("Hallo Jarvis ; ", DiktatTrenner.anhaengen("", " Hallo Jarvis \n"))
+        assertFalse(DiktatTrenner.anhaengen("", "Hallo Jarvis").contains('\n'))
+    }
 
-    @Test fun mehrereDiktateBleibenGetrennt() {
-        val zwei = DiktatTrenner.anhaengen(DiktatTrenner.anhaengen("", "Erstens"), "Zweitens")
-        assertEquals("Erstens${TRENNER}Zweitens$TRENNER", zwei)
+    @Test fun mehrereDiktateBleibenInlineGetrennt() {
+        val drei = DiktatTrenner.anhaengen(DiktatTrenner.anhaengen(DiktatTrenner.anhaengen("", "Erstens."), "Zweitens"), "Drittens")
+        assertEquals("Erstens. ; Zweitens ; Drittens ; ", drei)
+        assertFalse(drei.contains('\n'))
     }
 
     @Test fun leereBeitraegeAendernNichts() {
@@ -23,17 +28,31 @@ class DiktatTrennerTest {
 
     @Test fun getipptesBleibtUndKeinDoppelterTrenner() {
         val vorspann = ProgrammiererVorlage.einsetzen("")
-        assertEquals("${vorspann}Filter einbauen$TRENNER", DiktatTrenner.anhaengen(vorspann, "Filter einbauen"))
-        assertEquals("Text ;\n\nNeu$TRENNER", DiktatTrenner.anhaengen("Text ; ", "Neu"))
+        assertEquals("${vorspann.trimEnd()} Filter einbauen$TRENNER", DiktatTrenner.anhaengen(vorspann, "Filter einbauen"))
+        assertEquals("Text ; Neu ; ", DiktatTrenner.anhaengen("Text ; ", "Neu"))
+        assertEquals("Text ; Neu ; ", DiktatTrenner.anhaengen("Text ; ; ", "Neu"))
         // Ein Semikolon direkt am Wort ist kein Trenner: Der nächste Beitrag bekommt seinen eigenen.
-        assertEquals("val x = 1; Neu$TRENNER", DiktatTrenner.anhaengen("val x = 1;", "Neu"))
+        assertEquals("val x = 1; Neu ; ", DiktatTrenner.anhaengen("val x = 1;", "Neu"))
+    }
+
+    @Test fun alterMehrzeiligerTrennerWirdInlineFortgesetzt() {
+        assertEquals("Eins ; Zwei ; ", DiktatTrenner.anhaengen("Eins$TRENNER_ALT", "Zwei"))
+        assertEquals("Zwei ; ", DiktatTrenner.anhaengen(";\n\n", "Zwei"))
     }
 
     @Test fun abschliessenderTrennerGehtNichtMit() {
         assertEquals("Eins", DiktatTrenner.ohneSchluss("Eins$TRENNER"))
-        assertEquals("Eins${TRENNER}Zwei", DiktatTrenner.ohneSchluss("Eins${TRENNER}Zwei$TRENNER"))
+        assertEquals("Eins ; Zwei", DiktatTrenner.ohneSchluss("Eins${TRENNER}Zwei$TRENNER"))
+        assertEquals("Eins", DiktatTrenner.ohneSchluss("Eins$TRENNER_ALT"))
         assertEquals("for (;;) x", DiktatTrenner.ohneSchluss("for (;;) x"))
-        assertEquals("", DiktatTrenner.ohneSchluss(";\n\n"))
+        assertEquals("", DiktatTrenner.ohneSchluss(" ; "))
+    }
+
+    /** Was in der Blase steht, ist (ohne Schlusstrenner) genau das, was abgeschickt wird. */
+    @Test fun darstellungUndGesendeterTextStimmen() {
+        val entwurf = DiktatTrenner.anhaengen(DiktatTrenner.anhaengen("", "Knopf grün"), "Text größer")
+        assertEquals("Knopf grün ; Text größer ; ", entwurf)
+        assertEquals("Knopf grün ; Text größer", DiktatTrenner.ohneSchluss(entwurf))
     }
 
     @Test fun einzelneAufgabeMitSchlusstrennerBleibtEine() {
@@ -41,17 +60,27 @@ class DiktatTrennerTest {
         assertEquals("Knopf grün machen", DiktatTrenner.auftrag("Knopf grün machen$TRENNER"))
     }
 
-    @Test fun dreiAufgabenEinAuftragMitZeilentrennern() {
-        val roh = "Aufgabe eins\n;\nAufgabe zwei\n\n  ;  \n\nAufgabe drei$TRENNER;\n"
+    @Test fun dreiAufgabenEinAuftrag() {
+        val roh = "Aufgabe eins ; Aufgabe zwei ; Aufgabe drei ; "
         assertTrue(DiktatTrenner.mehrteilig(roh))
         assertEquals(listOf("Aufgabe eins", "Aufgabe zwei", "Aufgabe drei"), DiktatTrenner.abschnitte(roh))
-        assertEquals("Aufgabe eins${TRENNER}Aufgabe zwei${TRENNER}Aufgabe drei", DiktatTrenner.auftrag(roh))
+        assertEquals("Aufgabe eins ; Aufgabe zwei ; Aufgabe drei", DiktatTrenner.auftrag(roh))
     }
 
-    @Test fun tippformUndCodeBleibenUnangetastet() {
-        // „ ; “ erkennt die CLI selbst; Semikola in Code dürfen nicht zerlegt werden.
+    @Test fun alteZeilentrennerWerdenKompatibelErkannt() {
+        val roh = "Aufgabe eins\n;\nAufgabe zwei\n\n  ;  \n\nAufgabe drei$TRENNER_ALT;\n"
+        assertEquals(listOf("Aufgabe eins", "Aufgabe zwei", "Aufgabe drei"), DiktatTrenner.abschnitte(roh))
+        assertEquals("Aufgabe eins ; Aufgabe zwei ; Aufgabe drei", DiktatTrenner.auftrag(roh))
+        // Gemischt: alter Entwurf, danach neue Diktate.
+        assertEquals("Alt ; Neu", DiktatTrenner.auftrag("Alt${TRENNER_ALT}Neu ; "))
+    }
+
+    @Test fun codeMitSemikolaKommtUnveraendertWiederZusammen() {
         val text = "Aufgabe eins ; Aufgabe zwei mit for (i = 0 ; i < n ; i++)"
         assertEquals(text, DiktatTrenner.auftrag(text))
+        assertEquals("val x = 1; danach bauen", DiktatTrenner.auftrag("val x = 1; danach bauen"))
+        // Zeilen in Code bleiben erhalten (kein Zusammenziehen ohne alte Trenner oder leere Abschnitte).
+        assertEquals("SELECT a FROM t ;\n-- Kommentar", DiktatTrenner.auftrag("SELECT a FROM t ;\n-- Kommentar"))
     }
 
     @Test fun ohneTrennerUnveraendert() {
@@ -61,8 +90,9 @@ class DiktatTrennerTest {
     }
 
     @Test fun leereAbschnitteFallenWeg() {
-        assertEquals("Eins${TRENNER}Zwei", DiktatTrenner.auftrag(";\n\nEins$TRENNER;$TRENNER  \n;\nZwei"))
+        assertEquals("Eins ; Zwei", DiktatTrenner.auftrag(" ; Eins ;  ; Zwei ; "))
+        assertEquals("Eins ; Zwei", DiktatTrenner.auftrag(";\n\nEins$TRENNER_ALT;$TRENNER_ALT  \n;\nZwei"))
         assertEquals("Knopf grün", DiktatTrenner.auftrag(";\n\nKnopf grün\n;\n"))
-        assertEquals("Eins$TRENNER})", DiktatTrenner.auftrag("Eins\n;\n})"))
+        assertEquals("Eins ; })", DiktatTrenner.auftrag("Eins\n;\n})"))
     }
 }

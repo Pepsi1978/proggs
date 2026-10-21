@@ -13,6 +13,7 @@ import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.observability.Logbuch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -209,7 +210,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 nurLesen = false,
             ) { a ->
                 val id = a.optString("auftrag_id").trim()
-                val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"), a.optString("schritt").trim().take(400), a.optString("link").trim())
+                // Früher hart nach 400 Zeichen abgeschnitten (mitten im Satz); jetzt länger und sichtbar gekürzt.
+                val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"),
+                    ProgrammierAbschluss.kuerzen(a.optString("schritt").trim(), ProgrammierAbschluss.MAX_FORTSCHRITT), a.optString("link").trim())
                 if (eintrag == null) Ergebnis("Unbekannte auftrag_id.", fehler = true)
                 else {
                     // Die Cloud-Sitzung erreicht Jarvis nur über ihre eigenen Meldungen: Nachträge reisen mit der Antwort zurück.
@@ -219,6 +222,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         Auftragsbuch.setzeNachtraege(app, id, null, setOf("angenommen"), "zugestellt") else emptyList()
                     // Geht gerade ein Nachtrag an die Sitzung, arbeitet sie weiter: dann kein „Fertig programmiert“ als Benachrichtigung.
                     verteile(eintrag, null, benachrichtigen = nachtraege.isEmpty())
+                    // Wirklich zu Ende (kein Nachtrag unterwegs): im Sprachgespräch gestellt, dann die kurze Ansage. PC (Windows, Mac)
+                    // und Cloud melden das Ende gleichermaßen hier; der Aufruf wartet nicht auf das Vorlesen.
+                    if (nachtraege.isEmpty()) sprachAbschluss(eintrag)
                     if (nachtraege.isEmpty()) Ergebnis("Gemeldet.")
                     else {
                         Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(200) }, "")
@@ -284,9 +290,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "Thema schon einer läuft oder gerade fertig wurde; er hängt sich nie an einen alten. Hat das Gespräch schon einen Auftrag, bekommt der neue eine eigene, " +
                     "getrennte Jarvis-Session. In eine bestehende Sitzung geht ein Wunsch nur, wenn Frank ausdrücklich einen Nachtrag dorthin verlangt (programmier_nachtrag); " +
                     "ist unklar, ob er einen neuen Auftrag oder einen Nachtrag will, frag ihn kurz, bevor du etwas startest. " +
-                    "Zeilen mit nur „;“ (ebenso „ ; “) in Franks Nachrichten trennen seine einzelnen Spracheingaben und lösen allein nie einen Auftrag aus. " +
+                    "„ ; “ (Leerzeichen, Semikolon, Leerzeichen; früher auch „;“ auf eigener Zeile) in Franks Nachrichten trennt seine einzelnen Spracheingaben und löst allein nie einen Auftrag aus. " +
                     "Verlangt Frank ausdrücklich die Übergabe solcher Abschnitte, ist jeder nicht leere Abschnitt eine Aufgabe: alle zusammen in EINEM Aufruf " +
-                    "(eine Sitzung), im Auftrag durch Leerzeile, „;“ auf eigener Zeile, Leerzeile getrennt; ein Trenner am Ende ist keine weitere Aufgabe.",
+                    "(eine Sitzung), im Auftrag durch „ ; “ getrennt; ein Trenner am Ende ist keine weitere Aufgabe.",
                 schema = schema(
                     "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt."),
                     "auftrag" to text("Der vollständige Programmierauftrag: Ziel, was genau anders werden soll (Bildschirm, Knopf, Verhalten, Texte), Randbedingungen, was Frank wichtig ist, woran man erkennt, dass es fertig ist."),
@@ -322,6 +328,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean): Ergebnis {
         val uebersprungen = mutableListOf<String>()
         val (ausChatGpt, aufrufGespraech) = herkunft()
+        // Im Sprachgespräch gestellt (Hey Jarvis mit Vorlesen oder Live): dauerhaft im Auftragsbuch, damit der Abschluss später
+        // vorgelesen wird, auch nach Stille-Ende, App-Neustart oder aus dem Hintergrund. Aus ChatGPT nie.
+        val ursprung = if (ausChatGpt) null else kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung]
         // Aus ChatGPT nie das gerade offene App-Gespräch, in der App nie ein Gespräch, das schon einen Auftrag hat, und bei
         // ausdrücklich neuer Session immer: Der Auftrag bekommt nach dem Start sein eigenes (siehe unten).
         val eigenes = NachtragsRegel.eigenesGespraech(ausChatGpt, neu, if (aufrufGespraech.isEmpty()) 0 else Auftragsbuch.alleImGespraech(app, aufrufGespraech).size)
@@ -344,7 +353,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // startet ihn Frank ein zweites Mal), sondern als „unklar“ eintragen; meldet sich die Sitzung, wird daraus ein normaler Auftrag.
                 if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt, ausGespraech = aufrufGespraech) }.getOrDefault("") }
                 val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, "", "Unklar: ${ziel.name} hat den Start nicht rechtzeitig bestätigt (Zeitüberschreitung). " +
-                    "Womöglich läuft der Auftrag trotzdem.", gespraech, auftrag, stand = STAND_UNKLAR)
+                    "Womöglich läuft der Auftrag trotzdem.", gespraech, auftrag, stand = STAND_UNKLAR, ursprung = ursprung)
                 verteile(eintrag, null)
                 return Ergebnis("Unklar, ob der Auftrag für $appName (Nummer $nummer) gestartet ist: ${ziel.name} hat nach dem Senden nicht rechtzeitig geantwortet " +
                     "(Zeitüberschreitung), er läuft womöglich trotzdem. Starte ihn NICHT neu: Prüfe erst mit programmierauftraege, ob sich die Sitzung meldet, und sag Frank das so.", fehler = true)
@@ -353,7 +362,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             // Erst jetzt, nach dem gelungenen Start: Bei „nicht erreichbar“ bliebe sonst eine leere Session zurück.
             if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt, ausGespraech = aufrufGespraech) }.getOrDefault("") }
-            val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech, auftrag)
+            val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech, auftrag, ursprung = ursprung)
             verteile(eintrag, null)
             val titel = "Programmieren: $appName" + if (ausChatGpt) " (über ChatGPT/MCP)" else ""
             return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt als neuer, eigener Auftrag: ${ziel.name}. ${start.hinweis} " +
@@ -374,14 +383,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         "FORTSCHRITT (AUFTRAG-ID: $nummer): Frank verfolgt diesen Auftrag in Jarvis. Zwischenschritte (geänderte Dateien, Bau, Commit, Push, Installation) " +
             "und Rückfragen meldet diese Sitzung automatisch an Jarvis; stell Rückfragen also ganz normal mit AskUserQuestion, Frank beantwortet sie in Jarvis. " +
             "Melde mit dem Werkzeug programmier_fortschritt des MCP-Servers Jarvis (auftrag_id=$nummer) nur, wenn die App gefunden ist (stand=laeuft), und am " +
-            "Ende stand=fertig mit einem Satz, was jetzt neu ist und welche Version, oder stand=fehler mit dem Grund. " +
+            "Ende stand=fertig, oder stand=fehler mit dem Grund. $ABSCHLUSS_MELDUNG " +
             "NACHTRÄGE: Schickt Frank über Jarvis einen Nachtrag zu diesem Auftrag, kommt er in dieser Sitzung als Rückmeldung „Frank hat über Jarvis einen Nachtrag …“ " +
             "an, auch nach dem Abschluss. Setze ihn hier um, schließe danach wieder vollständig ab und melde erneut stand=fertig."
     else
         "FORTSCHRITT (AUFTRAG-ID: $nummer): Frank verfolgt diesen Auftrag am Handy. Melde jeden wichtigen Schritt mit dem Werkzeug programmier_fortschritt " +
             "des MCP-Servers Jarvis (auftrag_id=$nummer, ein kurzer Satz auf Deutsch): sofort zu Beginn (stand=laeuft), wenn die App gefunden ist, wenn die " +
-            "Änderung programmiert ist, beim Commit oder Pull Request, beim Bau oder der Installation, und am Ende stand=fertig mit einem Satz, was jetzt neu ist " +
-            "und welche Version, oder stand=fehler mit dem Grund. Bevor du Frank mit AskUserQuestion etwas fragst, melde stand=frage mit der Frage, damit er eine " +
+            "Änderung programmiert ist, beim Commit oder Pull Request, beim Bau oder der Installation, und am Ende stand=fertig, oder stand=fehler mit dem Grund. " +
+            "$ABSCHLUSS_MELDUNG Bevor du Frank mit AskUserQuestion etwas fragst, melde stand=frage mit der Frage, damit er eine " +
             "Benachrichtigung bekommt. Ist das Werkzeug nicht verfügbar, arbeite ohne Meldungen weiter. " +
             "NACHTRÄGE: Antwortet programmier_fortschritt mit „NACHTRAG VON FRANK“, gehört er zu diesem Auftrag: Setze ihn in dieser Sitzung um und melde danach erneut. " +
             "Melde unmittelbar vor stand=fertig noch einen Schritt mit stand=laeuft, damit ein später Nachtrag ankommt; kommt dabei einer, arbeite ihn ab statt fertig zu melden."
@@ -409,7 +418,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // „Anmeldung erforderlich“ wird still durch den neuen Stand ersetzt.
             // Ohne Sperre in Jarvis (deren Meldung kam nie an) gibt es nichts aufzuheben.
             if (Auftragsbuch.finde(app, auftragId)?.optString("stand") !in GESPERRT) return
-            Auftragsbuch.melde(app, auftragId, "laeuft", daten.optString("schritt").take(4000), "")?.let { verteile(it, null); benachrichtige(it) }
+            Auftragsbuch.melde(app, auftragId, "laeuft", ProgrammierAbschluss.kuerzen(daten.optString("schritt"), ProgrammierAbschluss.MAX_MELDUNG), "")?.let { verteile(it, null); benachrichtige(it) }
             return
         }
         if (daten.optString("stand") == "nachtrag") {
@@ -431,7 +440,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val stand = daten.optString("stand").let { neu ->
             if (bisher != null && bisher.optString("stand") in GESPERRT && neu !in GESPERRT && frage == null && !nachSperre(bisher, daten)) bisher.optString("stand") else neu
         }
-        val eintrag = Auftragsbuch.melde(app, auftragId, stand, daten.optString("schritt").take(4000), "", frage,
+        // Der Abschlussbericht am Zugende (info) kommt ganz an: Früher schnitt take(4000) ihn wie der Hook mitten im Wort ab.
+        val grenze = if (daten.optString("stand") == "info") ProgrammierAbschluss.MAX_BERICHT else ProgrammierAbschluss.MAX_MELDUNG
+        val eintrag = Auftragsbuch.melde(app, auftragId, stand, ProgrammierAbschluss.kuerzen(daten.optString("schritt"), grenze), "", frage,
             sperrSeit = if (daten.optString("stand") in GESPERRT) daten.optLong("seit", System.currentTimeMillis() / 1000) else 0L)
         if (eintrag == null) {
             // Unbekannter Auftrag: nie still verwerfen, sondern sichtbar im Logbuch (Grund für „Frage kam nicht an“).
@@ -499,7 +510,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     !daSchon && wartet && !Auftragsbuch.kenntFrage(app, frageId) -> {
                         Logbuch.system("Rückfrage nachgereicht", "Auftrag ${eintrag.optString("id")}: Meldung kam nicht über die Verbindung, Abgleich mit dem Server")
                         val frage = f.optJSONObject("frage") ?: continue
-                        Auftragsbuch.melde(app, eintrag.optString("id"), "frage", f.optString("schritt").take(4000), "", frage)?.let { verteile(it, frage) }
+                        Auftragsbuch.melde(app, eintrag.optString("id"), "frage", ProgrammierAbschluss.kuerzen(f.optString("schritt"), ProgrammierAbschluss.MAX_MELDUNG), "", frage)?.let { verteile(it, frage) }
                     }
                     daSchon && !wartet && jetzt - f.optLong("zeit") > 120 -> {
                         Auftragsbuch.frageErledigt(app, frageId)
@@ -526,7 +537,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler"), "zugestellt")
         if (neu.isEmpty()) return
         val text = schritt.ifBlank { "📨 Nachtrag in der Sitzung angekommen: " + neu.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(300) } }
-        Auftragsbuch.melde(app, auftragId, "laeuft", text.take(4000), "")?.let { verteile(it, null) }
+        Auftragsbuch.melde(app, auftragId, "laeuft", ProgrammierAbschluss.kuerzen(text, ProgrammierAbschluss.MAX_MELDUNG), "")?.let { verteile(it, null) }
     }
 
     /**
@@ -638,13 +649,73 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Beim Start der App: die drehende Anzeige für Aufträge, die noch arbeiten, aus dem Auftragsbuch herstellen. */
     fun aktivitaetLaden() = Auftragsbuch.juengste(app).forEach { aktivitaetMelden(it) }
 
+    /**
+     * Wird der Abschluss dieses Auftrags gleich vorgelesen? Liefert den Sprachweg, sonst null: nicht im Sprachgespräch gestellt,
+     * noch nicht fertig, für diesen Abschluss schon angesagt, ein Nachtrag wartet noch (die Sitzung arbeitet weiter) oder die
+     * Regeln der Sprachzustellung sprechen dagegen (bewusst beendet, Vorlesen aus, Ruhezeit „Programmieraufträge“).
+     */
+    private fun sprachAbschlussGeplant(eintrag: JSONObject): de.frank.jarvis.speech.SprachModus? {
+        val modus = de.frank.jarvis.speech.SprachModus.aus(eintrag.optString("sprache")) ?: return null
+        if (eintrag.optString("stand") !in listOf("fertig", "fehler")) return null
+        if (eintrag.optString("sprachAngesagt") == ansageSchluessel(eintrag)) return null
+        if (Auftragsbuch.nachtragOffen(eintrag)) return null
+        val ausgang = de.frank.jarvis.speech.SprachZustellung.ausgang(app, modus, eintrag.optLong("sprachSeit"), de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN)
+        if (ausgang != de.frank.jarvis.speech.SprachZustellung.Ausgang.SPRECHEN) {
+            Logbuch.sprache("Sprachzustellung", "auftrag:${eintrag.optString("id")}: ${ausgang.text}")
+            return null
+        }
+        return modus
+    }
+
+    /** Für diesen Abschluss schon angesagt (ein wiederholtes fertig): auch die Benachrichtigung bleibt dann stumm. */
+    private fun schonAngesagt(eintrag: JSONObject): Boolean = eintrag.optString("sprachAngesagt") == ansageSchluessel(eintrag)
+
+    /** Je Abschluss einmal: Ein wiederholtes fertig spricht nichts doppelt, ein Abschluss nach bearbeitetem Nachtrag bekommt seine eigene Ansage. */
+    private fun ansageSchluessel(eintrag: JSONObject): String {
+        val l = eintrag.optJSONArray("nachtraege")
+        val bearbeitet = (0 until (l?.length() ?: 0)).count { l!!.optJSONObject(it)?.optString("stand") == "bearbeitet" }
+        return "auftrag:${eintrag.optString("id")}:$bearbeitet:${eintrag.optString("stand")}"
+    }
+
+    /**
+     * Ein im Sprachgespräch gestellter Auftrag ist zu Ende: kurze Zusammenfassung (was eingebaut ist, Commit, Push, Installation
+     * mit Weg, APK bei UpdateStation, je nur aus Belegen) ins Gespräch, in dem Frank gesprochen hat, und über die Sprachzustellung
+     * vorlesen. Die Zustellung wartet auf einen freien Moment (keine zweite Stimme), danach geht es im Sprachweg des Auftrags weiter
+     * (Live nur, wenn „Live nach einem Ergebnis automatisch neu verbinden“ an ist). Der vollständige Bericht bleibt in der Sitzung.
+     */
+    private fun sprachAbschluss(eintrag: JSONObject) {
+        val modus = sprachAbschlussGeplant(eintrag) ?: return
+        val id = eintrag.optString("id")
+        val schluessel = ansageSchluessel(eintrag)
+        if (!Auftragsbuch.ansageVormerken(app, id, schluessel)) return
+        val fertig = eintrag.optString("stand") == "fertig"
+        val texte = eintrag.optJSONArray("schritte")?.let { l -> (0 until l.length()).map { l.optJSONObject(it)?.optString("text").orEmpty() } }.orEmpty() +
+            eintrag.optString("schritt")
+        val text = ProgrammierAbschluss.vorlesetext(eintrag.optString("schritt"), ProgrammierAbschluss.fakten(texte),
+            cloud = eintrag.optString("ziel") == ZIEL_CLOUD, fertig = fertig)
+        val appName = eintrag.optString("app")
+        val gespraech = eintrag.optString("sprachGespraech").ifEmpty { eintrag.optString("gespraech") }
+        // Im Auftragsgespräch steht der Abschluss schon (✅ und Bericht); nur ein anderes Sprachgespräch bekommt die Kurzfassung dazu.
+        if (gespraech.isNotEmpty() && gespraech != eintrag.optString("gespraech"))
+            ProgrammierChat.poste(app, gespraech, "🔊 Programmierauftrag $id ($appName), kurz:\n\n$text", "antwort")
+        Logbuch.sprache("Sprachzustellung", "auftrag:$id: Abschluss angenommen (${modus.anzeige}, ${text.length} Zeichen)")
+        ansagen.launch {
+            runCatching {
+                de.frank.jarvis.ui.AppViewModel.zustellen(app, de.frank.jarvis.speech.Zustellung(schluessel, modus, gespraech, eintrag.optLong("sprachSeit"),
+                    ProgrammierAbschluss.ansage(appName, fertig), text, ruhe = de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN))
+            }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Sprachzustellung Programmierauftrag", it) }
+        }
+    }
+
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
     private fun verteile(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean = true) {
         aktivitaetMelden(eintrag)
         // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
         // nur, wenn Frank gebraucht wird oder der Auftrag zu Ende ist: Rückfrage, fertig (App installiert) oder Problem.
         val letzter = eintrag.optString("letzterStand", eintrag.optString("stand"))
-        if (benachrichtigen && (frage != null || letzter == "fertig" || letzter == "fehler" || letzter in GESPERRT)) benachrichtige(eintrag)
+        // Spricht gleich die Sprachzustellung den Abschluss, liest die Benachrichtigung nichts vor (keine zweite, konkurrierende Stimme).
+        if (benachrichtigen && (frage != null || letzter == "fertig" || letzter == "fehler" || letzter in GESPERRT))
+            benachrichtige(eintrag, vorlesen = frage != null || (sprachAbschlussGeplant(eintrag) == null && !schonAngesagt(eintrag)))
         val gespraech = eintrag.optString("gespraech")
         if (gespraech.isEmpty()) return
         val appName = eintrag.optString("app")
@@ -747,7 +818,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     fun auftragsUebersicht(anzahl: Int = 20): String = Auftragsbuch.uebersicht(app, anzahl)
 
     /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
-    private fun benachrichtige(eintrag: JSONObject) {
+    private fun benachrichtige(eintrag: JSONObject, vorlesen: Boolean = true) {
         runCatching {
             JarvisDienst.kanalAnlegen(app)
             val link = eintrag.optString("link")
@@ -784,7 +855,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } },
                 // Zwischenschritte still; Rückfrage, Fertig und Problem nach Franks Einstellung (Ton, Wecker, Vorlesen).
                 // Eine Sperre stört kein Live-Gespräch (still, aber sichtbar); Rückfrage, Fertig und Problem wie bisher auch dort mit Ton.
-                titel, "$titel. $text", laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
+                titel, if (vorlesen) "$titel. $text" else null, laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
             )
         }
     }
@@ -817,12 +888,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         @Synchronized
-        fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String, gespraech: String, auftrag: String, stand: String = "laeuft"): JSONObject {
+        fun neu(context: Context, id: String, app: String, ziel: String, link: String, schritt: String, gespraech: String, auftrag: String, stand: String = "laeuft",
+                ursprung: de.frank.jarvis.speech.SprachUrsprung? = null): JSONObject {
             val jetzt = System.currentTimeMillis()
             val eintrag = JSONObject().put("id", id).put("app", app).put("ziel", ziel).put("link", link).put("start", jetzt).put("gespraech", gespraech)
                 .put("auftrag", auftrag.take(1_500))
                 .put("stand", stand).put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt).put("arbeitet", stand == "laeuft")
                 .put("schritte", JSONArray().put(JSONObject().put("zeit", jetzt).put("stand", stand).put("text", schritt)))
+            // Sprachursprung: Weg (weckwort/live), Gespräch, in dem Frank gesprochen hat, und Beginn der Anfrage (für ein bewusstes Ende).
+            if (ursprung != null) eintrag.put("sprache", ursprung.modus.kennung).put("sprachGespraech", ursprung.gespraech).put("sprachSeit", ursprung.seit)
             schreib(context, lies(context).put(eintrag))
             // Auch ein normales Gespräch, aus dem der Auftrag kam, gehört ab jetzt in den Reiter „Programmierung“.
             Gespraeche.markieren(context, gespraech)
@@ -845,7 +919,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (gueltig != "info") eintrag.put("stand", gueltig)
             // Seit wann gesperrt (Sekunden seit 1970, Zeit des Fehlers): nur was danach begann, hebt die Sperre auf.
             if (sperrSeit > 0) eintrag.put("gesperrtSeit", sperrSeit)
-            eintrag.put("letzterStand", gueltig).put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt)
+            // Gespeichert gekürzt (das Auftragsbuch wird bei jedem Lebenszeichen gelesen und geschrieben); der volle Text geht
+            // mit dem zurückgegebenen Eintrag ins Gespräch (verteile) und steht dort vollständig.
+            eintrag.put("letzterStand", gueltig).put("schritt", ProgrammierAbschluss.kuerzen(schritt, ProgrammierAbschluss.MAX_MELDUNG)).put("zeit", jetzt).put("aktiv", jetzt)
                 // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende und solange sie auf Frank wartet.
                 .put("arbeitet", gueltig == "laeuft")
             if (frage != null) {
@@ -861,10 +937,27 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             if (link.startsWith("https://") && eintrag.optString("link").isEmpty()) eintrag.put("link", link)
             val schritte = eintrag.optJSONArray("schritte") ?: JSONArray().also { eintrag.put("schritte", it) }
-            schritte.put(JSONObject().put("zeit", jetzt).put("stand", gueltig).put("text", schritt))
+            schritte.put(JSONObject().put("zeit", jetzt).put("stand", gueltig).put("text", ProgrammierAbschluss.kuerzen(schritt, ProgrammierAbschluss.MAX_MELDUNG)))
             while (schritte.length() > 30) schritte.remove(0)
             schreib(context, liste)
-            return eintrag
+            return eintrag.put("schritt", schritt)
+        }
+
+        /** Wartet ein Nachtrag noch auf die Sitzung (angenommen oder zugestellt, nicht bearbeitet)? Dann arbeitet sie gleich weiter. */
+        fun nachtragOffen(eintrag: JSONObject): Boolean {
+            val l = eintrag.optJSONArray("nachtraege") ?: return false
+            return (0 until l.length()).any { l.optJSONObject(it)?.optString("stand") in listOf("angenommen", "zugestellt") }
+        }
+
+        /** Merkt die Ansage dauerhaft vor (überlebt einen Neustart); false = für diesen Abschluss schon geschehen. */
+        @Synchronized
+        fun ansageVormerken(context: Context, id: String, schluessel: String): Boolean {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return false
+            if (eintrag.optString("sprachAngesagt") == schluessel) return false
+            eintrag.put("sprachAngesagt", schluessel)
+            schreib(context, liste)
+            return true
         }
 
         fun laufendesGespraech(context: Context): String? {
@@ -1228,6 +1321,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Fertig gemeldete Aufträge an eine App (nur Zusatzinfo: fertig gemeldet ist noch nicht installiert). */
         fun fertigeAuftraege(context: Context, app: String, seit: Long): List<String> = Auftragsbuch.fertige(context.applicationContext, app, seit)
 
+        /**
+         * Wie die Sitzung ihr Ende meldet: Jarvis liest diese Meldung nach einem im Sprachgespräch gestellten Auftrag kurz vor
+         * ([ProgrammierAbschluss.vorlesetext]); die Statusangaben am Schluss liest es aus, nicht vor.
+         */
+        const val ABSCHLUSS_MELDUNG = "Die Fertig-Meldung: ein bis drei kurze, gut vorlesbare Sätze ohne Markdown, was jetzt neu ist, wie es funktioniert " +
+            "und welche Version, danach genau „Committet: ja/nein · Gepusht: ja/nein · Installiert: ja (WLAN/Tunnel/Kabel)/nein · APK-Update: ja/nein“ " +
+            "(fehlgeschlagen statt ja/nein, wenn es scheiterte; nur was wirklich gelaufen ist)."
+
         /** So lang darf der ganze Text an ein Programmier-Ziel höchstens werden. */
         const val HOECHSTENS = 60_000
 
@@ -1264,6 +1365,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         private const val CLAUDE_APP = "com.anthropic.claude"
+
+        /** Für die Sprachzustellung fertiger Aufträge: läuft unabhängig vom Werkzeugaufruf, der sofort „Gemeldet.“ zurückgibt. */
+        private val ansagen = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Default)
 
         /** Extras der Benachrichtigung einer Rückfrage: welches Gespräch und welche Rückfrage die App öffnet. */
         const val EXTRA_GESPRAECH = "de.frank.jarvis.rueckfrage_gespraech"

@@ -58,7 +58,9 @@ ANMELDE_FEHLER = {"authentication_failed", "oauth_org_not_allowed", "account_on_
 DROSSEL_S = 20
 FRAGE_WARTEN_S = 300      # Franks Wahl vom 18.10.2026: höchstens fünf Minuten nur in Jarvis
 PULS_S = 10               # Lebenszeichen höchstens so oft
-MAX_TEXT = 4000           # so lang darf eine Meldung werden (die Schlusszusammenfassung kommt vollständig)
+MAX_TEXT = 4000           # so lang darf eine Zwischenmeldung werden (sichtbar gekürzt, siehe kuerze)
+MAX_BERICHT = 60000       # der Abschlussbericht am Zugende („info“); früher galt auch hier 4000 und er endete mitten im Wort
+GEKUERZT = "… [gekürzt, der vollständige Text steht in der Sitzung]"
 if os.environ.get("LOCALAPPDATA"):
     ORDNER = Path(os.environ["LOCALAPPDATA"]) / "JarvisPcBruecke"
 elif sys.platform == "darwin":
@@ -136,9 +138,53 @@ def _rechnername() -> str:
     return socket.gethostname()
 
 
+def kuerze(text: str, grenze: int) -> str:
+    """Höchstens [grenze] Zeichen, nie ein unmarkiertes Satzfragment: am letzten Zeilen-, Satz- oder Wortende, dahinter GEKUERZT.
+    Gleiche Regel wie ProgrammierAbschluss.kuerzen in der App."""
+    if len(text) <= grenze:
+        return text
+    platz = max(1, grenze - len(GEKUERZT) - 2)
+    kopf = text[:platz]
+    mindestens = platz * 6 // 10
+    satz = max((m.end() for m in re.finditer(r"[.!?](?=\s)", kopf)), default=-1)
+    schnitt = max(kopf.rfind("\n"), satz)
+    if schnitt < mindestens:
+        schnitt = kopf.rfind(" ")
+    if schnitt < mindestens:
+        schnitt = platz
+    return kopf[:schnitt].rstrip() + "\n" + GEKUERZT
+
+
+def installweg(befehl: str) -> str:
+    """Wie adb installiert: „ (Tunnel)“ über den WireGuard-Tunnel (10.8.0.0/24 oder die Adresse in ~/.adb-wlan-tunnel-ip, wie
+    Werkzeuge/adb-wlan), „ (WLAN)“ bei einer anderen privaten Adresse, „ (Kabel)“ bei einer Seriennummer; ohne -s (oder über
+    Variablen) oder bei einer unbekannten Adresse bleibt der Weg offen."""
+    # Nur das -s des adb-Aufrufs selbst (nicht etwa „gradlew … -s“ davor), bis zum nächsten &&, ; oder |.
+    m = re.search(r"\badb(?:\.exe)?[\"']?\s(?:[^&;|]*?\s)?-s\s+[\"']?([^\s\"']+)", befehl)
+    if not m or "$" in m.group(1) or "%" in m.group(1):
+        return ""
+    ziel = m.group(1)
+    if "._adb-tls-connect." in ziel:
+        return " (WLAN)"   # Drahtloses Debugging per mDNS
+    host = ziel.rsplit(":", 1)[0] if ":" in ziel else ""
+    if not host:
+        return " (Kabel)"
+    tunnel = ""
+    try:
+        tunnel = (Path.home() / ".adb-wlan-tunnel-ip").read_text(encoding="utf-8").strip()
+    except OSError:
+        pass
+    if host.startswith("10.8.0.") or (tunnel and host == tunnel):
+        return " (Tunnel)"
+    if re.match(r"^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)", host):
+        return " (WLAN)"
+    return ""
+
+
 def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: list[str] | None = None, extra: dict | None = None) -> int:
     # rechner und hook_beginn: Der Relay führt damit den Anmeldestand je Rechner (nur was nach einem Fehler begann, bestätigt ihn).
-    daten = {"auftrag_id": AUFTRAG, "stand": stand, "schritt": schritt[:MAX_TEXT], "rechner": rechner(), "hook_beginn": int(START), **(extra or {})}
+    daten = {"auftrag_id": AUFTRAG, "stand": stand, "schritt": kuerze(schritt, MAX_BERICHT if stand == "info" else MAX_TEXT),
+             "rechner": rechner(), "hook_beginn": int(START), **(extra or {})}
     if frage:
         daten["frage"] = frage
     if nachtrag_ids:
@@ -810,7 +856,7 @@ def post(eingabe: dict) -> None:
             elif re.search(r"\bgit\b.*\bcommit\b", befehl):
                 raus += sammel(z, "🔴 Commit fehlgeschlagen" if fehlgeschlagen else "📦 Committet", sofort=True)
             elif re.search(r"\badb\b.*\binstall\b", befehl):
-                raus += sammel(z, "🔴 Installation fehlgeschlagen" if fehlgeschlagen else "📲 Auf dem Handy installiert", sofort=True)
+                raus += sammel(z, "🔴 Installation fehlgeschlagen" if fehlgeschlagen else "📲 Auf dem Handy installiert" + installweg(befehl), sofort=True)
             elif re.search(r"apk-update", befehl):
                 raus += sammel(z, "🔴 APK-Update fehlgeschlagen" if fehlgeschlagen else "☁️ APK-Update für UpdateStation bereit", sofort=True)
             else:
@@ -961,7 +1007,9 @@ def stop(eingabe: dict) -> None:
         frage_id = uuid.uuid4().hex[:12]
         daten = {"frage_id": frage_id, "frei": True, "bis": int(time.time() + FRAGE_WARTEN_S),
                  "fragen": [{"question": letzte[-3000:], "options": optionen}]}
-        if not melde_sicher("frage", "❓ " + letzte[-MAX_TEXT:], daten):
+        # Bei sehr langer Nachricht zählt das Ende (dort steht die Frage); vorn sichtbar markiert statt still abgeschnitten.
+        # Platz für Zeichen und Hinweis lassen, sonst kürzte melde() hinten, wo die Frage steht.
+        if not melde_sicher("frage", "❓ " + (letzte if len(letzte) <= MAX_TEXT - 2 else "[… Anfang gekürzt] " + letzte[-(MAX_TEXT - 40):]), daten):
             schreib("Freie Rückfrage nicht an Jarvis zugestellt")
             nachtraege_im_stop()
             return

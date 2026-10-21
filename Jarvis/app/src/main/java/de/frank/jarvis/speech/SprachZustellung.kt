@@ -30,6 +30,7 @@ class SprachUrsprung(val modus: SprachModus, val gespraech: String, val seit: Lo
  * oder neben einem laufenden Gespräch ankommt. Sie steht schon im Chat ([gespraech]); hier geht es nur noch ums Hören.
  * [schluessel] ist je Ergebnis eindeutig (Vorgang, Live-Aufruf, Runde), damit nichts doppelt vorgelesen wird.
  * [ansage] kommt zuerst („Frank, die Ergebnisse sind jetzt da.“), dann [text] vollständig.
+ * [ruhe] = die Meldungsart, deren Ruhezeit gilt (Agentenergebnis, fertiger Programmierauftrag); null = Antwort im Gespräch, keine Ruhezeit.
  */
 data class Zustellung(
     val schluessel: String,
@@ -38,6 +39,7 @@ data class Zustellung(
     val begonnen: Long,
     val ansage: String,
     val text: String,
+    val ruhe: de.frank.jarvis.meldung.Meldungsart? = null,
 )
 
 /**
@@ -71,14 +73,36 @@ object SprachZustellung {
 
     /**
      * Die Entscheidung mit den Einstellungen von jetzt: Gesprächsmodus nur mit „Antworten vorlesen“ (Live spricht immer).
-     * Die Ruhezeit (Meldung „Agent fertig“) gilt nur für Agentenergebnisse ([agent]) außerhalb eines laufenden Live-Gesprächs:
-     * Eine Antwort, die Frank im Gespräch erwartet, ist keine unaufgeforderte Meldung.
+     * Die Ruhezeit gilt nur für Hintergrundergebnisse ([ruhe]: „Agent fertig“, „Programmieraufträge“) außerhalb eines laufenden
+     * Live-Gesprächs: Eine Antwort, die Frank im Gespräch erwartet, ist keine unaufgeforderte Meldung.
      */
-    fun ausgang(context: Context, modus: SprachModus, begonnen: Long, agent: Boolean): Ausgang {
+    fun ausgang(context: Context, modus: SprachModus, begonnen: Long, ruhe: de.frank.jarvis.meldung.Meldungsart?): Ausgang {
         val app = context.applicationContext
         return entscheide(begonnen, beendetUm(app),
             vorlesenAn = modus == SprachModus.LIVE || de.frank.jarvis.data.Einstellungen.get(app).antwortenVorlesen,
-            ruhe = agent && !de.frank.jarvis.live.LiveGespraech.aktiv && de.frank.jarvis.meldung.Meldungen.inRuhe(app, de.frank.jarvis.meldung.Meldungsarten.AGENT))
+            ruhe = ruhe != null && !de.frank.jarvis.live.LiveGespraech.aktiv && de.frank.jarvis.meldung.Meldungen.inRuhe(app, ruhe))
+    }
+
+    /**
+     * Wie es nach der Zustellung an eine Live-Anfrage weitergeht, deren Gespräch inzwischen beendet ist. [hinweis] sagt Jarvis
+     * nach dem Ergebnis, wenn Live nicht neu verbindet; es geht dann im normalen Sprachmodus weiter (sofern das Mikrofon darf).
+     */
+    enum class LiveWeg(val hinweis: String?) {
+        NEU_VERBINDEN(null),
+        SCHALTER_AUS("Live verbinde ich nach deiner Einstellung nicht von selbst neu."),
+        KEIN_SCHLUESSEL("Live kann ich nicht neu verbinden, der Schlüssel fehlt."),
+        STILLE_NIE("Live verbinde ich nicht von selbst neu, weil es bei „Bei Stille beenden: Nie“ unbegrenzt weiterliefe."),
+    }
+
+    /**
+     * Rein und prüfbar: [schalterAn] = „Live nach einem Ergebnis automatisch neu verbinden“, [stilleMinuten] = „Bei Stille beenden“
+     * (0 = Nie). Ein bewusst beendetes Gespräch öffnet nie wieder (das prüft der Aufrufer vorher, unabhängig vom Schalter).
+     */
+    fun liveWeg(schalterAn: Boolean, schluesselDa: Boolean, stilleMinuten: Int): LiveWeg = when {
+        !schalterAn -> LiveWeg.SCHALTER_AUS
+        !schluesselDa -> LiveWeg.KEIN_SCHLUESSEL
+        stilleMinuten <= 0 -> LiveWeg.STILLE_NIE
+        else -> LiveWeg.NEU_VERBINDEN
     }
 
     /** Frank hat das Sprachgespräch bewusst beendet: Was bis jetzt begonnen hat, wird später nicht mehr vorgelesen. */

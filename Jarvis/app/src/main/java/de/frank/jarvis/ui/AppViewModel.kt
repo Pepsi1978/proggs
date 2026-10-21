@@ -805,7 +805,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Diktier-Mikrofon der Eingabeblase: Tippen startet die Aufnahme, nochmal Tippen schreibt den Text ins Feld.
-     * Jedes Diktat endet mit dem [DiktatTrenner] (Leerzeile, „;“, Leerzeile), das nächste folgt dahinter; gesendet wird erst mit dem Pfeil.
+     * Jedes Diktat endet direkt mit dem [DiktatTrenner] „ ; “ (ohne Zeilenumbruch), das nächste folgt dahinter; gesendet wird erst mit dem Pfeil.
      */
     fun diktatTippen() {
         when {
@@ -1138,7 +1138,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun zustelle(z: Zustellung) {
         val app = getApplication<Application>()
-        fun ausgang() = SprachZustellung.ausgang(app, z.modus, z.begonnen, agent = z.schluessel.startsWith("vorgang:"))
+        fun ausgang() = SprachZustellung.ausgang(app, z.modus, z.begonnen, z.ruhe)
         ausgang().takeIf { it != SprachZustellung.Ausgang.SPRECHEN }?.let { Logbuch.sprache("Sprachzustellung", "${z.schluessel}: ${it.text}"); return }
         // Erst in einem freien Moment: Frank spricht nicht, Jarvis liest nichts anderes vor, kein Gesprächsmodus läuft,
         // ein Live-Gespräch ist gerade still. So überlappt nichts und mehrere Ergebnisse kommen der Reihe nach.
@@ -1156,8 +1156,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Wird gleich wieder zugehört, gehört der Bildschirm dem Gespräch der Anfrage (nur, wenn es ein anderes ist).
         if (hindernis == null && z.gespraech.isNotEmpty() && sitzungId != z.gespraech && !sitzungLaden(z.gespraech))
             Logbuch.sprache("Sprachzustellung", "${z.schluessel}: Gespräch ließ sich nicht öffnen")
-        Logbuch.sprache("Sprachzustellung", "${z.schluessel}: wird vorgelesen" + (hindernis?.let { ", danach kein Mikrofon: $it" } ?: ", danach ${z.modus.anzeige} wieder offen"))
-        val text = z.ansage + "\n\n" + z.text + (hindernis?.let { "\n\n$it" } ?: "")
+        // Live-Anfrage, aber Live verbindet nicht neu (Schalter aus, „Nie“, kein Schlüssel): offen sagen, dass es im Sprachmodus weitergeht.
+        val liveWeg = if (z.modus == SprachModus.LIVE) liveWeg() else null
+        val liveHinweis = liveWeg?.hinweis?.takeIf { hindernis == null && zustellungenOffen <= 1 }?.let { "$it Ich höre jetzt im normalen Sprachmodus zu." }
+        Logbuch.sprache("Sprachzustellung", "${z.schluessel}: wird vorgelesen" + (hindernis?.let { ", danach kein Mikrofon: $it" }
+            ?: if (liveHinweis != null) ", Live nicht neu verbunden (${liveWeg?.name}), danach Gesprächsmodus" else ", danach ${z.modus.anzeige} wieder offen"))
+        val text = z.ansage + "\n\n" + z.text + ((hindernis ?: liveHinweis)?.let { "\n\n$it" } ?: "")
         vorlesenUndWarten(ZUSTELL_QUELLE + System.currentTimeMillis(), text)?.let { grund ->
             // Gestoppt (Frank, ein anderes Vorlesen) ist kein Fehler, heißt aber: nicht von selbst wieder zuhören.
             Logbuch.sprache("Sprachzustellung", "${z.schluessel}: nicht zu Ende vorgelesen ($grund)")
@@ -1208,11 +1212,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Live darf von selbst neu verbinden, wenn ein Schlüssel da ist und das Gespräch bei Stille wieder endet: Mit „Nie“ liefe
-     * eine von Jarvis geöffnete, bezahlte Verbindung unbegrenzt weiter. Sonst geht es im Gesprächsmodus weiter.
+     * Live darf von selbst neu verbinden, wenn Frank das erlaubt („Live nach einem Ergebnis automatisch neu verbinden“), ein
+     * Schlüssel da ist und das Gespräch bei Stille wieder endet: Mit „Nie“ liefe eine von Jarvis geöffnete, bezahlte Verbindung
+     * unbegrenzt weiter. Sonst geht es im Gesprächsmodus weiter. Ein bewusstes Ende prüft [zustelle] vorher.
      */
-    private fun liveWiederTauglich(): Boolean =
-        liveSchluessel().first.isNotBlank() && (de.frank.jarvis.live.LiveOptionen.Stand(sprache)["stille_ende"].toIntOrNull() ?: 0) > 0
+    private fun liveWeg(): SprachZustellung.LiveWeg {
+        val st = de.frank.jarvis.live.LiveOptionen.Stand(sprache)
+        return SprachZustellung.liveWeg(st[de.frank.jarvis.live.LiveOptionen.NACH_ERGEBNIS] == "an", liveSchluessel().first.isNotBlank(),
+            st["stille_ende"].toIntOrNull() ?: 0)
+    }
+
+    private fun liveWiederTauglich(): Boolean = liveWeg() == SprachZustellung.LiveWeg.NEU_VERBINDEN
 
     /**
      * Mitten im Live-Gespräch (still, kein offener Aufruf): Live-Mikrofon kurz stumm, Jarvis liest mit seiner Stimme vor, danach hört
