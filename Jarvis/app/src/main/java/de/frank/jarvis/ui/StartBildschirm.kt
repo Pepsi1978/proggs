@@ -404,7 +404,12 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
             Markierbar(hell = false) {
                 val form = Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp)
                 when (n.art) {
-                    de.frank.jarvis.faehigkeit.ProgrammierChat.ART_STATUS, de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT -> ProgrammierText(n.text, form, farbe = f.text)
+                    // Der Abschlussbericht wie jede Programmiermeldung mit Punkt vorn (Punkt, Symbol, Absender, Inhalt).
+                    de.frank.jarvis.faehigkeit.ProgrammierChat.ART_BERICHT -> Row(form) {
+                        Text("•", color = if (f.dunkel) f.text else Color.Black, fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
+                        ProgrammierText(n.text, Modifier.weight(1f), farbe = f.text)
+                    }
+                    de.frank.jarvis.faehigkeit.ProgrammierChat.ART_STATUS -> ProgrammierText(n.text, form, farbe = f.text)
                     "fehler", "abgebrochen" -> Text(n.text, form, color = f.gefahr, fontSize = 15.sp, lineHeight = 21.sp)
                     else -> AntwortText(n.text, form)
                 }

@@ -28,6 +28,45 @@ object ProgrammierChat {
     /** Nachrichtenart des Ergebnisses eines Hintergrund-Agenten, das in sein Gespräch zurückkommt (Bericht samt Bildern). */
     const val ART_AGENT = "agentenergebnis"
 
+    /** Absender einer Meldung im Auftragsgespräch: was die Sitzung meldet oder tut, auch wenn Jarvis es nur weiterleitet. */
+    const val VON_PROGRAMMIERER = "Programmierer"
+
+    /** Absender für Jarvis' eigene Aussagen und Aktionen (Start, Nachtrag übergeben, Sitzung arbeitet wieder). */
+    const val VON_JARVIS = "Jarvis"
+
+    /** Absender einer Antwort von Frank, die die Sitzung zurückmeldet („Antwort von Frank: …“). */
+    const val VON_FRANK = "Frank"
+
+    private const val ANTWORT_VON_FRANK = "Antwort von Frank: "
+
+    /** Ein Symbol (Emoji) am Anfang eines Teils: kein Buchstabe, keine Ziffer, kein Satzzeichen. */
+    private fun istSymbol(c: Int) = Character.getType(c).toByte().let { it == Character.OTHER_SYMBOL || it == Character.SURROGATE }
+
+    /**
+     * Meldungen im Auftragsgespräch, je Teil eine: Symbol, Absender, Inhalt („✏️ Programmierer · Geändert: …“). Der Hook fasst
+     * mehrere Teile mit „ · “ zusammen, jeder mit eigenem Symbol; die werden getrennt. Ohne eigenes Symbol gilt [ersatz].
+     * Der Punkt davor kommt von der Darstellung. Früher stand hier der App-Name vorn, bei Jarvis-Aufträgen also „Jarvis“
+     * auch vor allem, was der Programmierer meldete.
+     */
+    fun zeilen(absender: String, text: String, ersatz: String): List<String> {
+        val teile = Regex(" · (?=\\S)").split(text.trim()).fold(mutableListOf<String>()) { liste, teil ->
+            // Nur an einem neuen Symbol trennen; ein „ · “ mitten im Inhalt bleibt stehen.
+            if (liste.isEmpty() || teil.isEmpty() || !istSymbol(teil.codePointAt(0))) {
+                if (liste.isEmpty()) liste += teil else liste[liste.lastIndex] = liste.last() + " · " + teil
+            } else liste += teil
+            liste
+        }.filter { it.isNotBlank() }
+        return teile.map { teil ->
+            val leer = teil.indexOf(' ')
+            val kopf = if (leer > 0) teil.substring(0, leer) else teil
+            val (symbol, inhalt) = if (kopf.codePoints().anyMatch { Character.isLetterOrDigit(it) } || !istSymbol(teil.codePointAt(0))) ersatz to teil
+                else kopf to (if (leer > 0) teil.substring(leer + 1).trim() else "")
+            val (von, rest) = if (absender == VON_PROGRAMMIERER && inhalt.startsWith(ANTWORT_VON_FRANK)) VON_FRANK to "Antwort: " + inhalt.removePrefix(ANTWORT_VON_FRANK)
+                else absender to inhalt
+            listOf(symbol, von).filter { it.isNotEmpty() }.joinToString(" ") + if (rest.isEmpty()) "" else " · $rest"
+        }
+    }
+
     @Volatile var aktivesGespraech: String? = null
 
     /**

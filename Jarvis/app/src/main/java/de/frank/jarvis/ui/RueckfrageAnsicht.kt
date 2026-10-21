@@ -160,7 +160,8 @@ fun RueckfrageKarte(vm: AppViewModel, n: Nachricht) {
     val f = LocalFarben.current
     val r = remember(n.kontext) { lies(n.kontext) }
     Column(Modifier.fillMaxWidth().widthIn(max = 560.dp).glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark, toenung = f.primaer).padding(horizontal = 16.dp, vertical = 14.dp)) {
-        Text("❓ Rückfrage" + (r?.app?.takeIf { it.isNotEmpty() }?.let { " · $it" } ?: ""), color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        // Absender vor dem Inhalt: Die Frage stellt der Programmierer, nicht die App (früher „Rückfrage · Jarvis“ bei Jarvis-Aufträgen).
+        Text("❓ ${de.frank.jarvis.faehigkeit.ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage" + (r?.app?.takeIf { it.isNotEmpty() }?.let { " zu $it" } ?: ""), color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         if (r == null) {
             ProgrammierText(n.text, Modifier.padding(top = 6.dp), farbe = f.text)
             return@Column

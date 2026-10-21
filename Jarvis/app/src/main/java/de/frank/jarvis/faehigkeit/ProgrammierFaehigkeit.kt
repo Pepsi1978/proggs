@@ -227,7 +227,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     if (nachtraege.isEmpty()) Ergebnis("Gemeldet.")
                     else {
                         Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(200) }, "")
-                            ?.let { verteile(it, null) }
+                            ?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS) }
                         Ergebnis("Gemeldet.\n\nNACHTRAG VON FRANK zu diesem Auftrag (AUFTRAG-ID ${eintrag.optString("id")}), über Jarvis. Er gehört zu genau diesem Auftrag: " +
                             "Setze ihn in dieser Sitzung um, schließe danach wieder vollständig ab und melde erneut stand=fertig.\n\n" +
                             nachtraege.joinToString("\n\n") { "NACHTRAG ${it.optString("id")}:\n${it.optString("text")}" })
@@ -354,7 +354,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, "", "Unklar: ${ziel.name} hat den Start nicht rechtzeitig bestätigt (Zeitüberschreitung). " +
                     "Womöglich läuft der Auftrag trotzdem.", gespraech, auftrag, stand = STAND_UNKLAR, ursprung = ursprung)
                 if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
-                verteile(eintrag, null)
+                verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
                 return Ergebnis("Unklar, ob der Auftrag für $appName (Nummer $nummer) gestartet ist: ${ziel.name} hat nach dem Senden nicht rechtzeitig geantwortet " +
                     "(Zeitüberschreitung), er läuft womöglich trotzdem. Starte ihn NICHT neu: Prüfe erst mit programmierauftraege, ob sich die Sitzung meldet, und sag Frank das so.", fehler = true)
             } catch (fehler: Exception) {
@@ -365,7 +365,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, start.link, "Gestartet: ${ziel.name}. ${start.hinweis}", gespraech, auftrag, ursprung = ursprung)
             // Bekommt der Auftrag ein eigenes Gespräch, merkt er sich das, aus dem er kam: Dort meint „in dieser neuen Session“ ihn.
             if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
-            verteile(eintrag, null)
+            verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
             val titel = "Programmieren: $appName" + if (ausChatGpt) " (über ChatGPT/MCP)" else ""
             return Ergebnis("Der Auftrag für $appName (Nummer $nummer) läuft jetzt als neuer, eigener Auftrag: ${ziel.name}. ${start.hinweis} " +
                 (if (!eigenes) "" else if (gespraech.isNotEmpty()) "In Jarvis steht er als eigene, getrennte Programmier-Session „$titel“. "
@@ -405,7 +405,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // stammt womöglich noch von vor dem Fehler); normalerweise meldet der Hook das selbst mit „anmeldung_ok“.
             val gesperrt = Auftragsbuch.finde(app, auftragId)?.takeIf { it.optString("stand") in GESPERRT }
             if (gesperrt != null && nachSperre(gesperrt, daten)) {
-                Auftragsbuch.melde(app, auftragId, "laeuft", "▶️ Die Sitzung arbeitet wieder.", "")?.let { verteile(it, null); benachrichtige(it) }
+                Auftragsbuch.melde(app, auftragId, "laeuft", "▶️ Die Sitzung arbeitet wieder.", "")?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS); benachrichtige(it) }
                 return
             }
             Auftragsbuch.puls(app, auftragId)?.let { aktivitaetMelden(it) }
@@ -535,7 +535,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val neu = Auftragsbuch.setzeNachtraege(app, auftragId, ids, setOf("angenommen", "fehler"), "zugestellt")
         if (neu.isEmpty()) return
         val text = schritt.ifBlank { "📨 Nachtrag in der Sitzung angekommen: " + neu.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(300) } }
-        Auftragsbuch.melde(app, auftragId, "laeuft", ProgrammierAbschluss.kuerzen(text, ProgrammierAbschluss.MAX_MELDUNG), "")?.let { verteile(it, null) }
+        // Den Satz des Hooks meldet der Programmierer; ohne ihn schreibt Jarvis selbst, dass der Nachtrag angekommen ist.
+        Auftragsbuch.melde(app, auftragId, "laeuft", ProgrammierAbschluss.kuerzen(text, ProgrammierAbschluss.MAX_MELDUNG), "")
+            ?.let { verteile(it, null, von = if (schritt.isBlank()) ProgrammierChat.VON_JARVIS else ProgrammierChat.VON_PROGRAMMIERER) }
     }
 
     /**
@@ -597,7 +599,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         val zielGespraech = eintrag.optString("gespraech")
         if (!doppelt && zielGespraech.isNotEmpty() && zielGespraech != gespraech) {
-            ProgrammierChat.poste(app, zielGespraech, "📝 Nachtrag ${if (ausChatGpt) "über ChatGPT/MCP" else "aus einem anderen Gespräch"}: $text", ProgrammierChat.ART_STATUS)
+            ProgrammierChat.poste(app, zielGespraech, "📝 ${ProgrammierChat.VON_JARVIS} · Nachtrag ${if (ausChatGpt) "über ChatGPT/MCP" else "aus einem anderen Gespräch"}: $text", ProgrammierChat.ART_STATUS)
         }
         if (cloud) {
             return Ergebnis("Angenommen: Nachtrag $nummer für Auftrag $id ($appName) liegt bereit. Die Cloud-Sitzung bekommt ihn mit ihrer nächsten Fortschrittsmeldung; " +
@@ -709,7 +711,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
-    private fun verteile(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean = true) {
+    private fun verteile(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean = true, von: String = ProgrammierChat.VON_PROGRAMMIERER) {
         aktivitaetMelden(eintrag)
         // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
         // nur, wenn Frank gebraucht wird oder der Auftrag zu Ende ist: Rückfrage, fertig (App installiert) oder Problem.
@@ -727,15 +729,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val kontext = JSONObject().put("frage_id", frage.optString("frage_id")).put("auftrag", eintrag.optString("id")).put("app", appName)
                 .put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
                 .put("status", RueckfrageStand.OFFEN).put("bis", frage.optLong("bis")).put("eingang", System.currentTimeMillis() / 1000)
-            ProgrammierChat.poste(app, gespraech, "❓ Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
+            ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             return
         }
-        val zeichen = when (eintrag.optString("letzterStand")) { "fertig" -> "✅"; "fehler" -> "❌"; "info", in GESPERRT -> ""; else -> "⚙️" }
-        val mitZeichen = if (zeichen.isEmpty() || schritt.firstOrNull()?.isLetterOrDigit() == false) schritt else "$zeichen $schritt"
+        val zeichen = when (eintrag.optString("letzterStand")) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT -> "⚠️"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
         // Stand „info“ schickt der Hook nur am Zugende mit der ganzen letzten Nachricht der Sitzung: der ausführliche
-        // Abschlussbericht. Er bekommt eine eigene Art (volle Aktionsleiste), alles andere bleibt Statusmeldung.
-        val art = if (eintrag.optString("letzterStand") == "info") ProgrammierChat.ART_BERICHT else ProgrammierChat.ART_STATUS
-        ProgrammierChat.poste(app, gespraech, "$appName · $mitZeichen", art)
+        // Abschlussbericht. Er bekommt eine eigene Art (volle Aktionsleiste) und bleibt ein Ganzes; alles andere ist Statusmeldung,
+        // je Teil eine Zeile mit Symbol und Absender.
+        if (eintrag.optString("letzterStand") == "info") {
+            ProgrammierChat.poste(app, gespraech, "$zeichen $von · ${schritt.trim()}", ProgrammierChat.ART_BERICHT)
+            return
+        }
+        ProgrammierChat.zeilen(von, schritt, zeichen).forEach { ProgrammierChat.poste(app, gespraech, it, ProgrammierChat.ART_STATUS) }
     }
 
     /**
