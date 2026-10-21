@@ -111,13 +111,14 @@ struct BrewAktualisierer: Aktualisierer {
 
     func aktualisieren(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
         let ergebnis = await aktualisierenOhneNacharbeit(eintrag, protokoll)
-        if ergebnis.zustand == .fertig { await jdkSchutz(protokoll) }
+        // Auch nach einem Fehler: `brew upgrade X` kann openjdk als Abhaengigkeit schon erneuert haben.
+        await jdkSchutz(protokoll)
         return ergebnis
     }
 
-    /// Ein JDK-Update loescht den alten Cellar-Ordner; Gradle- und Kotlin-Daemons, die darauf laufen,
-    /// brechen danach jeden Build ab („no class roots are found in the JDK path“). Das Skript beendet
-    /// sie und haelt das Gradle-Init-Skript aktuell, das dasselbe vor jedem Build prueft.
+    /// Ein JDK-Update loescht den alten Cellar-Ordner; ein Kotlin-Daemon, der darauf laeuft, bricht danach
+    /// jeden Build ab („no class roots are found in the JDK path“). Das Skript beendet nur solche Daemons
+    /// (laufende Java-Datei geloescht) und haelt Gradle-Init-Skript und launchd-Waechter aktuell.
     private func jdkSchutz(_ protokoll: Fortschritt) async {
         let skript = Pfade.repoWurzel + "/Werkzeuge/jvm-daemon-schutz/aufraeumen.sh"
         guard Pfade.existiert(skript) else {
