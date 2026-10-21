@@ -152,6 +152,26 @@
       "akzent": "#1783FF"
     },
     {
+      "id": "antigravity-cli",
+      "name": "Antigravity CLI",
+      "gruppe": "Kommandozeile",
+      "beschreibung": "Googles Gemini im Terminal (agy), Nachfolger der Gemini CLI. Nativer Installer unter %LOCALAPPDATA%/agy.",
+      "art": "cli",
+      "exePfad": "%LOCALAPPDATA%/agy/bin/agy.exe",
+      "versionsArgumente": "--version",
+      "updateArgumente": "update",
+      "versionsUrl": "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/windows_amd64.json",
+      "zeitlimitMinuten": 15,
+      "prozesse": [
+        "agy"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim nächsten Start.",
+      "akzent": "#4285F4"
+    },
+    {
       "id": "powershell",
       "cliRisiko": "Das Update ersetzt pwsh.exe; laufende PowerShell-Sitzungen (auch die von Claude Code und Codex) werden dabei beendet.",
       "name": "PowerShell 7",
@@ -217,7 +237,7 @@
     },
     {
       "id": "nodejs",
-      "cliRisiko": "Der Installer ersetzt node.exe; CLIs, die auf Node laufen (Codex, Gemini, OpenCode, npm-Werkzeuge), können dabei abbrechen.",
+      "cliRisiko": "Der Installer ersetzt node.exe; CLIs, die auf Node laufen (Codex, OpenCode, npm-Werkzeuge), können dabei abbrechen.",
       "name": "Node.js (LTS)",
       "gruppe": "Entwicklung: Sprachen & SDKs",
       "beschreibung": "Node.js mit npm – Grundlage aller npm-Werkzeuge und MCP-Server.",
@@ -611,26 +631,6 @@
       "ausblendenWennFehlt": true,
       "akzent": "#CB3837",
       "hinweis": "Sprünge auf eine neue Hauptversion nur bewusst – Node.js bringt ohnehin eine passende npm-Version mit."
-    },
-    {
-      "id": "npm-gemini",
-      "name": "Gemini CLI",
-      "gruppe": "Entwicklung: npm-Pakete",
-      "beschreibung": "Googles Gemini im Terminal.",
-      "art": "cli",
-      "exePfad": "%APPDATA%/npm/gemini.cmd",
-      "versionsArgumente": "--version",
-      "npmPaket": "@google/gemini-cli",
-      "updateExePfad": "%APPDATA%/npm/npm.cmd",
-      "updateArgumente": "install -g @google/gemini-cli@latest",
-      "zeitlimitMinuten": 15,
-      "prozesse": [],
-      "helferProzesse": [],
-      "beendenVorUpdate": false,
-      "neuStartenNachUpdate": false,
-      "ausblendenWennFehlt": true,
-      "akzent": "#CB3837",
-      "hinweis": "Laufende Gemini-Sitzungen vorher beenden, sonst sind Dateien gesperrt."
     },
     {
       "id": "npm-opencode",

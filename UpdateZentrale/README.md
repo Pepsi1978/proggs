@@ -2,7 +2,7 @@
 
 Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
 LM Studio (inklusive Engines und Runtimes), Claude Desktop, Codex Desktop, Claude Code CLI,
-Codex CLI, Kimi Code CLI, PowerShell 7, Stream Deck, die komplette Programmierumgebung (.NET, Node.js,
+Codex CLI, Kimi Code CLI, Antigravity CLI, PowerShell 7, Stream Deck, die komplette Programmierumgebung (.NET, Node.js,
 Java, Rust, Go, Python, Visual Studio, VS Code, Android Studio und SDK, Git, npm-Werkzeuge …) sowie
 die eigenen Werkzeuge OpenLauncher, TVO und CVO.
 
@@ -169,7 +169,7 @@ winget-Update mit „Neustart nötig“ (Dateien in Benutzung, MSI 3010), gilt e
 Die Gruppen „Entwicklung: …“ halten die Programmierumgebung aktuell: .NET SDK, Node.js, JDK 21, Rust
 (rustup), Go, Python, Visual Studio, Build Tools, VS Code, Android Studio, Android SDK (sdkmanager),
 Git, GitHub CLI, CMake, Bun, WSL, Windows-Terminal sowie globale npm-Pakete (Firebase CLI, TypeScript,
-tsx, Biome, npm, Gemini CLI, OpenCode CLI). Hauptversionssprünge (z. B. TypeScript 6 → 7, npm 11 → 12)
+tsx, Biome, npm, OpenCode CLI). Hauptversionssprünge (z. B. TypeScript 6 → 7, npm 11 → 12)
 zeigt die Karte an, ausgelöst werden sie nur bewusst per Klick. Das Windows-Terminal-Update schließt
 alle Terminalfenster samt laufender CLI-Sitzungen.
 

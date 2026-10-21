@@ -135,7 +135,7 @@ Ein Cask ohne `appPfad` (z. B. `dotnet-sdk`) liest die installierte Version aus 
 Die Gruppen „Entwicklung: …“ halten die Programmierumgebung aktuell – Gegenstück zur Windows-Fassung 1.3.25:
 .NET SDK, Node.js, OpenJDK 17/21, Rust (rustup), Go, Python 3.14, Kotlin, Gradle, VS Code, Android Studio,
 Android SDK (sdkmanager), Git, GitHub CLI, Bun, Biome, iTerm2, PowerShell 7 sowie globale npm-Pakete
-(TypeScript, tsx, npm, OpenCode CLI, Firebase und Gemini nur wenn installiert). Visual Studio, Build Tools,
+(TypeScript, tsx, npm, OpenCode CLI, Firebase nur wenn installiert). Visual Studio, Build Tools,
 CMake, WSL, Python Launcher und Windows-Terminal gibt es auf dem Mac nicht bzw. nicht installiert.
 Der Cask `android-commandlinetools` ist bewusst **kein** Eintrag: sein Ordner ist das SDK selbst
 (`ANDROID_HOME`), ein Cask-Upgrade würde die installierten SDK-Pakete mitreißen.
