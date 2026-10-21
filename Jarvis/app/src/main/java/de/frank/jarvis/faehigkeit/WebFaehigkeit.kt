@@ -71,24 +71,25 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
     )
 
     /**
-     * Sucht über die Wege aus [SuchRegel.wege], der Reihe nach, bis einer liefert. Im Gespräch wartet die Websuche des Modells
-     * höchstens [GESPRAECH_MS]: Das Live-Gespräch gibt jarvis_fragen 60 Sekunden, die Antwort muss noch hineinpassen.
+     * Sucht über die Wege aus [SuchRegel.wege], der Reihe nach, bis einer liefert. Im Gespräch sucht das Modell knapp (eine gezielte
+     * Suche) und höchstens [GESPRAECH_MS] lang: Im Live-Gespräch bleiben dem Jarvis-Agenten von den 60 Sekunden für jarvis_fragen
+     * nach der Abschluss-Reserve 35 Sekunden für Modellschritt, Suche und Antwort.
      */
     private suspend fun suche(anfrage: String, treffer: Int): Ergebnis {
         val imAgenten = currentCoroutineContext()[de.frank.jarvis.ablage.AgentenKontext]?.eintragTitel != null
         val wege = SuchRegel.wege(imAgenten, modell = codex.isConnected, tavily = schluessel.isNotBlank())
-        if (wege.isEmpty()) return Ergebnis(SuchRegel.KEINE_SUCHE, fehler = true)
+        if (wege.isEmpty()) return Ergebnis(SuchRegel.KEINE_SUCHE + " " + SuchRegel.EHRLICH, fehler = true)
         val fehler = mutableListOf<String>()
         for (weg in wege) {
             val r = when (weg) {
-                SuchRegel.Weg.MODELL -> if (imAgenten) codexSuche(anfrage)
-                    else withTimeoutOrNull(GESPRAECH_MS) { codexSuche(anfrage) } ?: Ergebnis("Die Websuche des Modells brauchte länger als ${GESPRAECH_MS / 1000} Sekunden.", fehler = true)
+                SuchRegel.Weg.MODELL -> if (imAgenten) codexSuche(anfrage, knapp = false)
+                    else withTimeoutOrNull(GESPRAECH_MS) { codexSuche(anfrage, knapp = true) } ?: Ergebnis("Die Websuche des Modells brauchte länger als ${GESPRAECH_MS / 1000} Sekunden.", fehler = true)
                 SuchRegel.Weg.TAVILY -> tavilySuche(anfrage, treffer)
             }
             if (!r.fehler) return r
             fehler += r.text
         }
-        return Ergebnis(fehler.joinToString(" ") + " Sag Frank ehrlich, dass die direkte Suche gerade nicht ging; starte dafür keinen Agenten.", fehler = true)
+        return Ergebnis(fehler.joinToString(" ") + " Die direkte Suche ging gerade nicht. " + SuchRegel.EHRLICH, fehler = true)
     }
 
     private suspend fun tavilySuche(anfrage: String, treffer: Int): Ergebnis =
@@ -118,10 +119,10 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    private suspend fun codexSuche(anfrage: String): Ergebnis {
-        if (!codex.isConnected) return Ergebnis(stoerung() ?: SuchRegel.KEINE_SUCHE, fehler = true)
+    private suspend fun codexSuche(anfrage: String, knapp: Boolean = false): Ergebnis {
+        if (!codex.isConnected) return Ergebnis((stoerung() ?: SuchRegel.KEINE_SUCHE) + " " + SuchRegel.EHRLICH, fehler = true)
         return try {
-            val (antwort, quellen) = codex.searchWeb(anfrage, Einstellungen.get(context).modell)
+            val (antwort, quellen) = codex.searchWeb(anfrage, Einstellungen.get(context).modell, knapp)
             Ergebnis(buildString {
                 append(antwort.trim())
                 if (quellen.isNotEmpty()) append("\n\nQuellen:\n").append(quellen.take(12).joinToString("\n") { "- $it" })
@@ -161,7 +162,7 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
             .lines().map { it.replace(Regex("[ \\t]+"), " ").trim() }.filter { it.isNotEmpty() }.joinToString("\n")
 
         /** So lange wartet die Websuche des Modells im Gespräch, bevor Tavily einspringt oder ehrlich ein Fehler kommt. */
-        private const val GESPRAECH_MS = 35_000L
+        private const val GESPRAECH_MS = 20_000L
 
         private val CLIENT = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
     }

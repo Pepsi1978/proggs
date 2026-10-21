@@ -368,13 +368,16 @@ class CodexAuthManager(context: Context) {
 
     /**
      * Sucht über das eingebaute Websuche-Werkzeug von Codex (`web_search`), derselbe Weg wie in News Kompass.
-     * Rückgabe: die Antwort des Modells und die benutzten Quellen.
+     * Rückgabe: die Antwort des Modells und die benutzten Quellen. [knapp] = Frage im laufenden Gespräch: eine gezielte Suche,
+     * kurze Antwort, damit sie in die Zeit einer Gesprächsantwort passt.
      */
-    suspend fun searchWeb(query: String, model: CodexModel): Pair<String, List<String>> = withContext(Dispatchers.IO) {
+    suspend fun searchWeb(query: String, model: CodexModel, knapp: Boolean = false): Pair<String, List<String>> = withContext(Dispatchers.IO) {
         if (query.isBlank()) throw CodexAuthException(AuthErrorKind.NETWORK, "Die Suchanfrage ist leer.")
         val payload = codexChatPayload(
-            "Du recherchierst im Internet für einen anderen Assistenten. Suche mit dem Websuche-Werkzeug, gern mehrfach. " +
-                "Antworte sachlich und knapp mit den gefundenen Fakten, je Aussage mit der Quelle (Titel und vollständige Adresse). " +
+            (if (knapp) "Du beantwortest für einen anderen Assistenten eine Frage im laufenden Gespräch. Suche mit dem Websuche-Werkzeug, meist genügt eine gezielte Suche. " +
+                "Antworte in höchstens drei Sätzen mit dem Ergebnis und der wichtigsten Quelle (Titel und Adresse). "
+            else "Du recherchierst im Internet für einen anderen Assistenten. Suche mit dem Websuche-Werkzeug, gern mehrfach. " +
+                "Antworte sachlich und knapp mit den gefundenen Fakten, je Aussage mit der Quelle (Titel und vollständige Adresse). ") +
                 "Trenne Belegtes von Unsicherem. Erfinde nichts.",
             listOf(ChatTurn("user", query)),
             model,

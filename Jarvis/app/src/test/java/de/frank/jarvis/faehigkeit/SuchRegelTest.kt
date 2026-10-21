@@ -39,7 +39,9 @@ class SuchRegelTest {
 
     @Test fun ohneDirekteSucheWirdEhrlichGemeldetStattEinesAgenten() {
         assertTrue(SuchRegel.wege(imAgenten = false, modell = false, tavily = false).isEmpty())
-        assertTrue(SuchRegel.KEINE_SUCHE.contains("keinen Agenten"))
+        assertTrue(SuchRegel.EHRLICH.contains("keinen Agenten"))
+        // Die Störungsanzeige der App bekommt nur den Satz für Frank, keine Anweisung ans Modell.
+        assertFalse(SuchRegel.KEINE_SUCHE.contains("Agent"))
         assertTrue(SuchRegel.NICHT_GESTARTET.contains("web_suche"))
     }
 
@@ -76,6 +78,12 @@ class SuchRegelTest {
             "Recherchieren brauchst du nicht, nur kurz im Netz schauen.",
             "Bitte nicht gleich recherchieren lassen.",
         ).forEach { assertFalse(it, SuchRegel.darfStarten("Recherche", it)) }
+    }
+
+    @Test fun neuerAusdruecklicherWunschGiltAuchNachEinerVerneintenFrage() {
+        // Im Chat stehen Franks letzte zwei Nachrichten in den Worten; das „keine Recherche“ von vorhin hebt den neuen Wunsch nicht auf.
+        assertTrue(SuchRegel.darfStarten("Recherche", "Keine Recherche, schau nur kurz, ob DMZ spielbar ist.\nOkay, jetzt recherchiere das bitte ausführlich."))
+        assertFalse(SuchRegel.darfStarten("Recherche", "Recherchiere bitte nicht.\nIst DMZ in Deutschland spielbar?"))
     }
 
     @Test fun andereAgentenUndUnbekannteWorteWerdenNichtGesperrt() {

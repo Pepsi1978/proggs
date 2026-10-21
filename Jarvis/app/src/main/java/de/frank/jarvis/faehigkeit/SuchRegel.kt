@@ -37,12 +37,14 @@ object SuchRegel {
     /** Bekommt ein Lauf von Jarvis die Websuche? Agenten mit Internet und jedes Gespräch mit Frank; die Tagesauswertung nicht. */
     fun mitWebsuche(mitInternet: Boolean, imGespraech: Boolean): Boolean = mitInternet || imGespraech
 
-    /** Die ehrliche Meldung, wenn keine direkte Suche geht. */
-    const val KEINE_SUCHE = "Keine direkte Websuche verfügbar: Jarvis ist nicht mit ChatGPT angemeldet und kein Tavily-Schlüssel hinterlegt. " +
-        "Sag Frank das ehrlich; starte dafür keinen Agenten."
+    /** Warum keine direkte Suche geht, für Frank (auch in der Störungsanzeige der App). */
+    const val KEINE_SUCHE = "Keine direkte Websuche verfügbar: Jarvis ist nicht mit ChatGPT angemeldet und kein Tavily-Schlüssel hinterlegt."
+
+    /** Hängt an jedem Suchfehler im Werkzeug-Ergebnis: ehrlich melden statt still auszuweichen. */
+    const val EHRLICH = "Sag Frank das ehrlich; starte dafür keinen Agenten."
 
     private val recherche = Regex("recherch|nachforsch|\\bagent")
-    private val ohneRecherche = Regex("\\b(kein|keine|keinen|nicht|ohne)\\s+(\\S+\\s+){0,2}?(recherch|nachforsch|agent)|(recherch|nachforsch)\\S*\\s+(brauchst du nicht|musst du nicht|ist nicht nötig|nicht nötig)")
+    private val ohneRecherche = Regex("\\b(kein|keine|keinen|nicht|ohne)\\s+(\\S+\\s+){0,2}?(recherch|nachforsch|agent)|(recherch|nachforsch)\\S*\\s+(bitte\\s+)?(nicht\\b|brauchst du nicht|musst du nicht|ist nicht nötig)")
     /** Wörter einer knappen Zustimmung; die erste muss eine Zustimmung sein, der Rest darf sie nur verstärken („Ja, mach das bitte“). */
     private val zustimmungAnfang = setOf("ja", "jo", "jep", "jawohl", "gern", "gerne", "okay", "ok", "klar", "bitte", "los", "genau", "mach", "machs", "starte", "leg", "super", "prima", "gut", "sehr")
     private val zustimmungRest = zustimmungAnfang + setOf("das", "mal", "ruhig", "ihn", "den", "agenten", "jarvis", "danke", "doch", "an")
@@ -72,8 +74,9 @@ object SuchRegel {
      */
     fun darfStarten(agent: String, worte: String?): Boolean {
         if (!agent.trim().equals("Recherche", ignoreCase = true) || worte == null) return true
+        // Zuerst die jüngste Zeile: Ein „keine Recherche“ aus der vorigen Frage hebt einen neuen ausdrücklichen Wunsch nicht auf.
         val letzte = worte.lines().lastOrNull { it.isNotBlank() }.orEmpty()
-        return ausdruecklich(worte) || zustimmung(letzte)
+        return ausdruecklich(letzte) || zustimmung(letzte) || ausdruecklich(worte)
     }
 
     /** Antwort von agent_starten, wenn Frank keine Recherche verlangt hat: nichts gestartet, stattdessen direkt suchen. */

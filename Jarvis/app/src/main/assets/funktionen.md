@@ -21,7 +21,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Wissens-Datenbank: `wissen_lesen` (Inhaltsverzeichnis, Datei, Suche).
 - Gmail: `mail_lesen` (mit nr vollständig), `mail_senden` (ohne Empfänger an Frank; nur erlaubte Empfänger).
 - GitHub-Repo, nur lesen: `repo_lesen` (Projekte, Dateien, Code-Suche, Verlauf). Jarvis ändert nie Code im Repo.
-- Web: `web_suche` (Kurzantwort und Quellen), `web_seite_lesen`; auch im eigenen Chat, Sprachmodus und Live-Gespräch. Aktuelle Fragen beantwortet Jarvis damit sofort im Gespräch, kurz mit Quelle; im Gespräch zuerst die Websuche des ChatGPT-Modells (höchstens 35 s), sonst Tavily, in Agenten Tavily zuerst. Geht keine Suche, sagt er das, statt einen Agenten zu starten. Daten aus Franks Apps kommen weiter aus deren Werkzeugen.
+- Web: `web_suche` (Kurzantwort und Quellen), `web_seite_lesen`; auch im eigenen Chat, Sprachmodus und Live-Gespräch. Aktuelle Fragen beantwortet Jarvis damit sofort im Gespräch, kurz mit Quelle; im Gespräch zuerst die Websuche des ChatGPT-Modells (eine gezielte Suche, höchstens 20 s), sonst Tavily, in Agenten Tavily zuerst. Geht keine Suche, sagt er das, statt einen Agenten zu starten. Daten aus Franks Apps kommen weiter aus deren Werkzeugen.
 
 ## Alltag
 
