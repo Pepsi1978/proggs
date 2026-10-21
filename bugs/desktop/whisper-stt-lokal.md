@@ -571,7 +571,7 @@
 - **Quelle:** https://github.com/huggingface/transformers/issues/37248 (extern)
 
 ### M9. NeMo Canary/Parakeet für Deutsch — Stärken UND Schwächen
-- **Symptom/Befund:** Canary-1B-v2 schlägt large-v3 auf MCV-DE (~5,77 % WER avg) und halluziniert weniger; ABER NeMo läuft praktisch nur auf NVIDIA-GPU (kein CPU/CoreML, kein whisper.cpp-Ökosystem), Canary deckt nur EN/ES/DE/FR ab.
+- **Symptom/Befund:** Canary-1B-v2 schlägt large-v3 auf MCV-DE (~5,77 % WER avg) und halluziniert weniger; ABER NeMo läuft praktisch nur auf NVIDIA-GPU (kein CPU/CoreML, kein whisper.cpp-Ökosystem). **Korrektur 21.10.2026:** Canary-1B-v2 deckt 25 europäische Sprachen ab (nicht nur EN/ES/DE/FR, https://huggingface.co/nvidia/canary-1b-v2); als int8 läuft es über onnx-asr auch auf der CPU, war im STT-Messplatz (`Recherchen/stt-vergleich`) aber das schwächste Modell.
 - **Ursache:** NeMo ist CUDA-zentriert und enger trainiert; Trade-off Genauigkeit-pro-Sprache vs. Breite/Portabilität.
 - **Versionen:** aktuell.
 - **FIX/Empfehlung:** Für reines Deutsch mit NVIDIA-GPU Canary-1B-v2 prüfen; wenn CPU/Apple-Silicon/Offline-Single-Binary nötig → bei Whisper (large-v2 oder primeline-German) bleiben.

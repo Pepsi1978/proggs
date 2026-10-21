@@ -1,0 +1,1 @@
+Jarvis, starte bitte eine neue OpenLauncher-Session und nutze dafür einen Sonnet-Schwarm. Groq Whisper macht bei Logcat, Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN aufs Galaxy Fold 8, und meine HRV lag heute bei 30 Millisekunden.

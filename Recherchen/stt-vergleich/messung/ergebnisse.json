@@ -1,0 +1,772 @@
+{
+ "groq-turbo": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 0.97,
+   "fehler": null
+  },
+  "edge-de-DE-FlorianMultilingualNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 0.7,
+   "fehler": null
+  },
+  "edge-de-DE-KatjaNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 0.78,
+   "fehler": null
+  },
+  "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang. Bei 14 Grad Celsius Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 0.74,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist circa 12,5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.03,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.17,
+   "fehler": null
+  },
+  "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1.249 Euro ist bis zum 3. November fällig. Die Strecke ist circa 12,5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.03,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 0.73,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. November fällig. Die Strecke ist circa 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 0.81,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Charon.mp3": {
+   "text": " Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026 um 18.47 Uhr lag deine HR-V bei 30 5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249 99 Euro ist bis zum Dritte. Noch fällig. Die Strecke ist ca. 12, 5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+   "sekunden": 0.92,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Kore.mp3": {
+   "text": " Guten Abend, Frank! Am Mittwoch, dem 21. Oktober 2026 um 18.47 Uhr lag deine HRV bei 30 5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum Dritte. Noch fällig. Die Strecke ist ca. 12-5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 0.74,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": " Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum Dritte, noch fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 0.87,
+   "fehler": null
+  },
+  "lokal-piper-de_DE-thorsten-high.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch im 21.10.2026 um 18.47 Uhr lag dein HRV bei 30,5 ms. Das sind 2,3% williger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. Nur fällig. Die Strecke ist K. 12,5 km lang bei 14 Grad C. DR Möller M4Z. W. Ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gekankelt? Ja, das war's.",
+   "sekunden": 0.87,
+   "fehler": null
+  },
+  "lokal-supertonic-3-M1.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.2026 um 18.47 lag deine HRV bei 30,5 Mess. Das sind 2,3% weniger als am Vortag. Die Rechnung über 1,299 für 2,99 ist bis zum 3.0. Fällig. Die Strecke ist K. 12,5 km lang bei 14.0 C. Dr. Müller empfiehlt CBN Updates der App per Wi-Lern, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 0.73,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Cherry.mp3": {
+   "text": " Guten Abend, Frank! Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30, 5 Menials. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1,249,99 Euro ist bis zum Treibenhof fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad. Dr. Müller empfiehlt Sons B, ein Updated-App per WLAN, nicht per USB? Hast du das Meeting im Office gecancelt? Ja, das war's!",
+   "sekunden": 0.84,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Ethan.mp3": {
+   "text": " Guten Abend Frank. Am Mittwoch, dem 21.2726, um 18.47 Uhr lag deine ARV bei 30.5. Müsges. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1.249.99 Euro ist bis zum 3.0 auffällig. Die Strecke ist ca. 12.5km lang. Bei 14 Grad C, an Update der App, per WLAN, nicht per USB, B. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 0.75,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Charon.mp3": {
+   "text": " Jarvis, starte bitte eine neue Open Launcher Session und nutze dafür einen Sonnetschwarm. Grog Whisper macht bei Lockhead Harness und dem Bug Alma nach immer noch Fehler. Danach kommt das APK Update über Update Station per WLAN aufs Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 0.63,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Leda.mp3": {
+   "text": " Jarvis, starte bitte eine neue Open Launcher Session und nutze dafür einen Sonnetschwarm. Grog Whisper macht bei Lockhead Harness und dem Bug Alma nach immer noch Fehler. Danach kommt das APK Update über Update Station per WLAN aufs Galaxy Fold 8. Und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 0.67,
+   "fehler": null
+  },
+  "rauschen-edge-de-DE-ConradNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 0.93,
+   "fehler": null
+  },
+  "rauschen-google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": " Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum Dritte noch fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 0.96,
+   "fehler": null
+  },
+  "stille-leises-rauschen.wav": {
+   "text": " ...",
+   "sekunden": 1.89,
+   "fehler": null
+  }
+ },
+ "groq-turbo+prompt": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 Grad Celsius, Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 2.29,
+   "fehler": null
+  },
+  "edge-de-DE-FlorianMultilingualNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update Das war's.",
+   "sekunden": 2.38,
+   "fehler": null
+  },
+  "edge-de-DE-KatjaNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 2.99,
+   "fehler": null
+  },
+  "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang. Bei 14 Grad Celsius Dr. Müller empfiehlt zum Beispiel ein Update der App, Per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.71,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026 um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 0.74,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.38,
+   "fehler": null
+  },
+  "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1.249 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.09,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.71,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.10.2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 Prozent weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 2.88,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Charon.mp3": {
+   "text": " Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026 um 18.47 Uhr lag deine HRV bei 30 5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum dritte. Noch fällig. Die Strecke ist circa 12,5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+   "sekunden": 3.05,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Kore.mp3": {
+   "text": " Guten Abend, Frank! Am Mittwoch, dem 21. Oktober 2026 um 18.47 Uhr lag deine HRV bei 30 5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum Dritte. Noch fällig. Die Strecke ist ca. 12-5 km lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's!",
+   "sekunden": 1.3,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": " Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum dritten, noch fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's!",
+   "sekunden": 0.93,
+   "fehler": null
+  },
+  "lokal-piper-de_DE-thorsten-high.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, im 21.10.2026, um 18.47 Uhr lag dein HRV bei 30,5 ms. Das sind 2,3% billiger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. Nur fällig. Die Strecke ist K. 12,5 km lang, bei 14 Grad C. DR. Möller M4Z. W. Ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gekankelt? Ja, das war's. ENDE",
+   "sekunden": 1.96,
+   "fehler": null
+  },
+  "lokal-supertonic-3-M1.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.2026 um 18.47 lag deine HRV bei 30,5 Mess. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1.299 für 2.99 ist bis zum 3.0. Fällig. Die Strecke ist K. 12,5 km lang bei 14.00 C. Dr. Müller empfiehlt, se BN-Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 2.42,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Cherry.mp3": {
+   "text": " Guten Abend, Frank! Am Mittwoch, dem 21.10.2026, um 18.47 Uhr lag deine HRV bei 30, 5 Menials. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1,24999 Euro ist bis zum Treibenhof fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad. Dr. Müller empfiehlt SonsBee ein Updated-App per WLAN, nicht per USB? Hast du das Meeting im Office gecancelt? Ja, das war's!",
+   "sekunden": 2.77,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Ethan.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21.2726, um 18.47 Uhr lag deine ARV bei 30.5. Müsges. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3.00 auffällig. Die Strecke ist ca. 12,5 Kilometer lang. Bei 14 Grad C, an update der App, per WLAN, nicht per USB, hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.92,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Charon.mp3": {
+   "text": " Jarvis, starte bitte eine neue OpenLauncher-Session und nutze dafür einen Sonnet-Schwarm. Grog, Whisper macht bei Lockcat, Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN aufs GALaxy Fold 8, und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 0.99,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Leda.mp3": {
+   "text": " Jarvis, starte bitte eine neue, OpenLauncher-Session und nutze dafür einen Sonnet-Schwarm. Grog, Whisper macht bei LockHat, Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN aufs Galaxy Fold 8, und meine HRV lag heute bei 30 ms.",
+   "sekunden": 0.57,
+   "fehler": null
+  },
+  "rauschen-edge-de-DE-ConradNeural.mp3": {
+   "text": " Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 1.09,
+   "fehler": null
+  },
+  "rauschen-google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": " Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026, um 18.47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum Dritte noch fällig. Die Strecke ist ca. 12-5km lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 2.06,
+   "fehler": null
+  },
+  "stille-leises-rauschen.wav": {
+   "text": " Fachbegriffe, WLAN, APK, HRV.",
+   "sekunden": 2.2,
+   "fehler": null
+  }
+ },
+ "groq-large-v3": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "",
+   "sekunden": 0.42,
+   "fehler": "HTTP 403: {\"error\":{\"message\":\"The model `whisper-large-v3` is blocked at the organization level. Please have the org admin enable this model in the org settings at https://console.groq.com/settings/limits\",\"type\":\"permissions_error\",\"code\":\"model_permission_blocked_org\"}}\n"
+  }
+ },
+ "groq-large-v3+prompt": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "",
+   "sekunden": 0.4,
+   "fehler": "HTTP 403: {\"error\":{\"message\":\"The model `whisper-large-v3` is blocked at the organization level. Please have the org admin enable this model in the org settings at https://console.groq.com/settings/limits\",\"type\":\"permissions_error\",\"code\":\"model_permission_blocked_org\"}}\n"
+  }
+ },
+ "gemini-3.5-transcribe": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.24,
+   "fehler": null
+  },
+  "edge-de-DE-FlorianMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 5.29,
+   "fehler": null
+  },
+  "edge-de-DE-KatjaNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. November fällig. Die Strecke ist circa 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.04,
+   "fehler": null
+  },
+  "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang. Bei 14 Grad Celsius, Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.14,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 5.76,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.91,
+   "fehler": null
+  },
+  "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 5.16,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 5.59,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.9,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Charon.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.13,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Kore.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2-3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. noch fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 5.44,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.54,
+   "fehler": null
+  },
+  "lokal-piper-de_DE-thorsten-high.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.10.2026 um 18:47 Uhr lag dein HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt Zwiebeln. Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gekankelt? Ja, das war's.",
+   "sekunden": 3.93,
+   "fehler": null
+  },
+  "lokal-supertonic-3-M1.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.06.2023 um 18:47 Uhr lag deine HFV bei 30,5 ms. Das sind 23 % weniger als am Vortag. Die Rechnung über 1299,99 € ist bis zum 03.09. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt, die Beine upzudaten per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.7,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Cherry.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2-3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad. Dr. Müller empfiehlt zum Spiel ein updated App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.92,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Ethan.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.10.2026 um 18:47 Uhr lag deine EARV bei 30,5 Müsli. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad Celsius. Ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.53,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Charon.mp3": {
+   "text": "Jarvis, starte bitte eine neue Open-Launcher-Session und nutze dafür einen Sonet-Schwarm. Grok-Whisper macht bei Logcat-Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über Updatestation per WLAN aufs Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 3.79,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Leda.mp3": {
+   "text": "Jarvis, starte bitte eine neue Open Launcher Session und nutze dafür einen Sonnich-Schwarm. Grock Whisper macht bei Lockhead Harness und dem Bug Almanac immer noch Fehler. Danach kommt das APK-Update über Update Station per WLAN aufs Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 3.67,
+   "fehler": null
+  },
+  "rauschen-edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 3.78,
+   "fehler": null
+  },
+  "rauschen-google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. noch fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.45,
+   "fehler": null
+  },
+  "stille-leises-rauschen.wav": {
+   "text": "",
+   "sekunden": 3.39,
+   "fehler": null
+  }
+ },
+ "gemini-3.5-transcribe+vokabular": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 6.02,
+   "fehler": null
+  },
+  "edge-de-DE-FlorianMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.91,
+   "fehler": null
+  },
+  "edge-de-DE-KatjaNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.78,
+   "fehler": null
+  },
+  "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang. Bei 14 Grad Celsius Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.75,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.83,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.53,
+   "fehler": null
+  },
+  "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr, lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.04,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.58,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.13,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Charon.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr, lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.52,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Kore.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. noch fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 3.58,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 23 % weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.14,
+   "fehler": null
+  },
+  "lokal-piper-de_DE-thorsten-high.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag dein HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt dir, wie ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.92,
+   "fehler": null
+  },
+  "lokal-supertonic-3-M1.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch dem 21.05.2027 um 18:47 Uhr lag deine HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1299,99 ist bis zum 3.06. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt, die Beine upzudaten per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.12,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Cherry.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 Grad. Dr. Müller empfiehlt uns B, ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.05,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Ethan.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.01.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.55,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Charon.mp3": {
+   "text": "Jarvis, starte bitte eine neue OpenLauncher Session und nutze dafür einen Sonnet-Schwarm. Groq Whisper macht bei Logcat Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK Update über UpdateStation per WLAN auf Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 3.24,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Leda.mp3": {
+   "text": "Jarvis, starte bitte eine neue OpenLauncher Session und nutze dafür einen Sonnet-Schwarm. Groq Whisper macht bei Logcat, Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK Update über UpdateStation per WLAN auf Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 3.36,
+   "fehler": null
+  },
+  "rauschen-edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.34,
+   "fehler": null
+  },
+  "rauschen-google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 Euro ist bis zum 3. noch fällig. Die Strecke ist ca. 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.02,
+   "fehler": null
+  },
+  "stille-leises-rauschen.wav": {
+   "text": "",
+   "sekunden": 3.36,
+   "fehler": null
+  }
+ },
+ "gemini-3.8-flash": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 Euro und 99 Cent ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 60.46,
+   "fehler": null
+  },
+  "edge-de-DE-FlorianMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249 Euro und 99 Cent ist bis zum 3. November fällig. Die Strecke ist circa 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 8.36,
+   "fehler": null
+  },
+  "edge-de-DE-KatjaNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 € und 99 Cent ist bis zum 3. November fällig. Die Strecke ist circa 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 40.17,
+   "fehler": null
+  },
+  "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank! Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr, lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist circa 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.96,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch den 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.13,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 61.65,
+   "fehler": null
+  },
+  "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+   "text": "Guten Abend Frank! Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 € ist bis zum 3. November fällig. Die Strecke ist circa 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.38,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 6.11,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+   "text": "Guten Abend, Frank! Am Mittwoch, dem 21.10.2026 um 18:47 Uhr, lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 3.42,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Charon.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 7.44,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Kore.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18 Uhr 47 lag deine HRV bei 30 5 Millisekunden. Das sind 2 3 Prozent weniger als am Vortag. Die Rechnung über 1249 99 Euro ist bis zum 3. Nov fällig. Die Strecke ist circa 12 5 Kilometer lang bei 14 Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 26.04,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+   "sekunden": 7.06,
+   "fehler": null
+  },
+  "lokal-piper-de_DE-thorsten-high.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag dein HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Möller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.38,
+   "fehler": null
+  },
+  "lokal-supertonic-3-M1.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21.10.2020 um 18:47 lag deine HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 77.64,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Cherry.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. Nov fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.73,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Ethan.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21.07.2026, um 18:47 Uhr lag deine HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 03.09. fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 26.13,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Charon.mp3": {
+   "text": "Jarvis, starte bitte eine neue OpenLauncher-Session und nutze dafür einen Sonnet-Schwarm. Grok Whisper macht bei Logcat-Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN aufs Galaxy Fold 8, und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 5.63,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Leda.mp3": {
+   "text": "Hey Jarvis, starte bitte eine neue OpenLauncher Session und nutze dafür einen Sonnet-Schwarm. Grok Whisper macht bei Lockhead Harness und dem Bug Almanac immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN aufs Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 3.05,
+   "fehler": null
+  },
+  "rauschen-edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249 Euro und 99 Cent ist bis zum 3. November fällig. Die Strecke ist circa 12,5 Kilometer lang, bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 10.69,
+   "fehler": null
+  },
+  "rauschen-google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. 11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 12.21,
+   "fehler": null
+  },
+  "stille-leises-rauschen.wav": {
+   "text": "Guten Tag, Herr Schneider. Ich wollte mich kurz bei Ihnen für das angenehme Vorstellungsgespräch gestern bedanken.",
+   "sekunden": 3.94,
+   "fehler": null
+  }
+ },
+ "gemini-3.8-flash+vokabular": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 € und 99 Cent ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 5.73,
+   "fehler": null
+  },
+  "edge-de-DE-FlorianMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 5.76,
+   "fehler": null
+  },
+  "edge-de-DE-KatjaNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 Euro und 99 Cent ist bis zum 3. November fällig. Die Strecke ist circa 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 7.58,
+   "fehler": null
+  },
+  "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 7.85,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 Euro ist bis zum 3. November fällig. Die Strecke ist circa 12,5 km lang bei 14 °C. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 11.42,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249 Euro und 99 Cent ist bis zum 3. November fällig. Die Strecke ist circa 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 10.98,
+   "fehler": null
+  },
+  "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 Euro ist bis zum 3. November fällig. Die Strecke ist circa 12,5 Kilometer lang bei 14 Grad Celsius. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 12.61,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist circa 12,5 km lang bei 14 °C. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 13.14,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 3.58,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Charon.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 6.87,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Kore.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026 um 18:47 lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 17.63,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. Nov fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+   "sekunden": 18.5,
+   "fehler": null
+  },
+  "lokal-piper-de_DE-thorsten-high.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026, um 18:47 lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 19.09,
+   "fehler": null
+  },
+  "lokal-supertonic-3-M1.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21.10.2020 um 18:47 lag deine HRV bei 30,5 ms, das sind 2-3 % weniger als am Vortag. Die Rechnung über 149,99 ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 9.98,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Cherry.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. Nov. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 18.32,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Ethan.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 03.09. fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 30.57,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Charon.mp3": {
+   "text": "Jarvis, starte bitte eine neue OpenLauncher-Session und nutze dafür einen Sonnet-Schwarm. Groq Whisper macht bei Logcat Harness und dem Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN aufs Galaxy Fold 8, und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 4.88,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Leda.mp3": {
+   "text": "Jarvis, starte bitte eine neue OpenLauncher-Session und nutze dafür einen Sonnet-Schwarm. Groq Whisper macht bei Logcat Harness und im Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN aufs Galaxy Fold 8, und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 3.88,
+   "fehler": null
+  },
+  "rauschen-edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden, das sind 2,3 % weniger als am Vortag. Die Rechnung über 1.249 Euro und 99 Cent ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 7.44,
+   "fehler": null
+  },
+  "rauschen-google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3.11. fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 10.54,
+   "fehler": null
+  },
+  "stille-leises-rauschen.wav": {
+   "text": "Komm, nimm das auch noch mit in den Bug-Almanach mit rein. Also dass man immer darauf achten muss, dass wenn ein neues Element hinzugefügt wird",
+   "sekunden": 9.64,
+   "fehler": null
+  }
+ },
+ "gemini-3.5-flash-lite": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14° C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 3.76,
+   "fehler": null
+  },
+  "edge-de-DE-FlorianMultilingualNeural.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14° C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 4.39,
+   "fehler": null
+  },
+  "edge-de-DE-KatjaNeural.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch den 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 Cent ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14° C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 2.74,
+   "fehler": null
+  },
+  "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 Cent ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang. Bei 14° C Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.74,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch den 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.57,
+   "fehler": null
+  },
+  "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+   "text": "Guten Abend, Frank! Am Mittwoch, dem 21.10.2026, um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z. B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.31,
+   "fehler": null
+  },
+  "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 4.65,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026, um 18:47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang, bei 14°C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.69,
+   "fehler": null
+  },
+  "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+   "text": "Guten Abend, Frank. Am Mittwoch dem 21.10.2026, um 18:47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2,3% weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 2.26,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Charon.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch den 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 35 ms. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1249,99€ ist bis zum 3. noch fällig. Die Strecke ist ca. 12,5 km lang bei 14°C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das wars.",
+   "sekunden": 3.73,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Kore.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr, lag deine HRV bei 30,5 Millisekunden. Das sind 2-3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. noch fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 3.64,
+   "fehler": null
+  },
+  "google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21. Oktober 2026, um 18:47 lag deine HRV bei 30,5 ms. Das sind 23 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 2.42,
+   "fehler": null
+  },
+  "lokal-piper-de_DE-thorsten-high.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21.10.2026, um 18:47 Uhr lag dein HAV bei 30,5 MS. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist K 12,5 km lang bei 14°C DR. Müller empfiehlt Z. Wie ein Update der per WLAN, nicht per USB? Hast du das Meeting im Office gekachelt? Ja, das war's.",
+   "sekunden": 2.63,
+   "fehler": null
+  },
+  "lokal-supertonic-3-M1.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.10.2020 um 18:47 Uhr lag dein HWR bei 3,5 Mess, das sind zwei 3% weniger als am Vortag. Die Rechnung über 129499 ist bis zum 3.11. fällig. Die Strecke ist K, 12,5 km lang bei 14:0C. Dr. Müller empfiehlt, Sie BN Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 27.36,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Cherry.mp3": {
+   "text": "Guten Abend Frank. Am Mittwoch dem 21.10.2026 um 18:47 Uhr lag deine HR-V bei 30,5 ms. Das sind 2-3% weniger als am Vortag. Die Rechnung über 1,249,99 Euro ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14°. Dr. Müller empfiehlt zur B ein Updated App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 3.17,
+   "fehler": null
+  },
+  "qwen-qwen3-tts-flash-Ethan.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21.10.2026 um 18:47 Uhr lag deine AOV bei 30,5 Müskes, das sind 2 3 % weniger als am Vortag. Die Rechnung über 1.249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang bei 14°. Ein Update der App per WLAN, nicht per USB? Hast du das Meeting im Office gecancelt? Ja, das war's.",
+   "sekunden": 1.82,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Charon.mp3": {
+   "text": "Javais, starte bitte eine neue OpenLauncher Session und nutze dafür einen Sonnenschwarm. Grock Whisper macht bei Lockhead Hannes und dem Bugmanach immer noch Fehler. Danach kommt das APK Update über Updatestation per WLAN auf Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 1.79,
+   "fehler": null
+  },
+  "eigennamen-chirp3-Leda.mp3": {
+   "text": "Javis, starte bitte eine neue OpenLauncher-Session und nutze dafür einen Sonett-Schwarm. Grock Whisper macht bei Locket, Hanes und dem Bug-Almanach immer noch Fehler. Danach kommt das APK-Update über UpdateStation per WLAN auf Galaxy Fold 8 und meine HRV lag heute bei 30 Millisekunden.",
+   "sekunden": 1.69,
+   "fehler": null
+  },
+  "rauschen-edge-de-DE-ConradNeural.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch dem 21. Oktober 2026 um 18:47 Uhr lag deine HRV bei 30,5 Millisekunden. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. November fällig. Die Strecke ist ca. 12,5 km lang. Bei 14 °C, Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 3.26,
+   "fehler": null
+  },
+  "rauschen-google-de-DE-Chirp3-HD-Leda.mp3": {
+   "text": "Guten Abend Frank, am Mittwoch, dem 21. Oktober 2026, um 18:47 Uhr, lag deine HRV bei 30,5 ms. Das sind 2,3 % weniger als am Vortag. Die Rechnung über 1249,99 € ist bis zum 3. noch fällig. Die Strecke ist ca. 12,5 km lang bei 14 °C. Dr. Müller empfiehlt z.B. ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+   "sekunden": 2.02,
+   "fehler": null
+  },
+  "stille-leises-rauschen.wav": {
+   "text": "",
+   "sekunden": 1.75,
+   "fehler": null
+  }
+ },
+ "google-cloud-latest_long": {
+  "edge-de-DE-ConradNeural.mp3": {
+   "text": "",
+   "sekunden": 2.52,
+   "fehler": "HTTP 403: {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Requests to this API speech.googleapis.com method google.cloud.speech.v1.Speech.Recognize are blocked.\",\n    \"status\": \"PERMISSION_DENIED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"API_KEY"
+  }
+ }
+}

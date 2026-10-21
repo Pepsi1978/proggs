@@ -102,7 +102,7 @@ Gegenstueck (Fehlermodi jeder Schicht): [`bugs/desktop/groq-transkription.md`](.
   |--------|--------:|----:|------:|---------|
   | `whisper-large-v3-turbo` | $0.04 | ~12 % | 216x | **Default Diktat**, nur Transkription (keine Translation) |
   | `whisper-large-v3` | $0.111 | ~10,3 % | 164x | max. Genauigkeit + Translation (→ EN) |
-  | `distil-whisper-large-v3-en` | guenstig | — | sehr schnell | **nur Englisch** (fuer DE ungeeignet) |
+  | `distil-whisper-large-v3-en` | — | — | — | **seit 23.08.2025 abgeschaltet** (war nur Englisch) |
   `offiziell`
 - **`temperature=0`** als Basis (verhindert Stille-Halluzination NICHT allein, aber sinnvoll). `offiziell`
 - **`language="de"`** (ISO-639-1, nicht `de-DE`/`german`) — bessere Accuracy UND Latenz (kein Auto-Detect-Overhead). `offiziell`
@@ -247,3 +247,8 @@ Best-Practices (diese Datei) ↔ Bug-Almanach [`~/proggs/bugs/desktop/groq-trans
 | BP 5 .NET-Resilienz | §4 Rate-Limits/Fehlercodes |
 | BP 7 Kosten | §4 Kosten |
 | BP 8 Integration | §4 Endpoint |
+
+## Nachtrag 21.10.2026 (STT-Vergleichsstudie)
+- Deutsch: Turbo steht im HF Open ASR Leaderboard (Deutsch, 19.10.2026) auf Platz 30/41 (FLEURS 3,67 / Common Voice 8,58); `whisper-large-v3` 3,20 / 4,79 bei gleichem Freikontingent. Details und Alternativen: `best-practices/apis/stt-provider.md`.
+- `whisper-large-v3` kann pro Groq-Organisation gesperrt sein (`model_permission_blocked_org`) → https://console.groq.com/settings/limits.
+- Groq-WER-Angaben 10,3/12 % sind Englisch-/Mischwerte, keine Deutsch-Basislinie.

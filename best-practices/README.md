@@ -34,7 +34,7 @@ best-practices/
 ├── android-build/    Gradle/AGP, R8, Play-Store-Release
 ├── desktop/          .NET/WPF (Windows), Swift/AppKit (macOS), Overlays, Whisper-STT, Text-Injection, 3D (Metal/.NET/Rust/Godot), Windows-Tastenkombinationen
 ├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/WebGPU), Webseitenbau/Webdesign/Effekte, Lottie/Rive/SVG-Animationen
-├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, OpenAI Live/Realtime, Anthropic, Gemini, Groq, OpenRouter, xAI, Mistral, DeepSeek, lokal, OAuth, TTS, …)
+├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, OpenAI Live/Realtime, Anthropic, Gemini, Groq, OpenRouter, xAI, Mistral, DeepSeek, lokal, OAuth, TTS, STT, …)
 ├── peripherie/       Elgato Stream-Deck-Plugin
 ├── gaming/           PC-Gaming-Tuning (NVIDIA DLSS Override, DLSS-5-Mod inoffiziell)
 ├── assets/           App-Icon-Building, 3D-Visuelle-Qualität (PBR/Licht/PostFX)
@@ -53,7 +53,7 @@ best-practices/
 | `android-build/` | 3 | Gradle/AGP, R8, Play-Store-Release | `bugs/android-build/` |
 | `desktop/` | 14 | .NET/WPF, Swift/AppKit, Overlays, STT, 3D nativ, Windows-Tastenkombinationen | `bugs/desktop/` |
 | `web/` | 5 | Chrome-Erweiterungen, TypeScript, 3D Web, Webseitenbau/Webdesign/Effekte, Lottie/Rive/SVG-Animationen | `bugs/web/` |
-| `apis/` | 16 | LLM-/HTTP-APIs + OAuth (15 gepaart + `multi-provider` ungepaart) | `bugs/apis/` |
+| `apis/` | 17 | LLM-/HTTP-APIs + OAuth (16 gepaart + `multi-provider` ungepaart; neu: `stt-provider`) | `bugs/apis/` |
 | `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
 | `gaming/` | 2 | NVIDIA DLSS Override (App/Profile Inspector, Anti-Cheat), DLSS-5-Mod inoffiziell (OptiScaler-DLSSNR) | `bugs/gaming/` |
 | `assets/` | 2 | Icon-Building, 3D-Optik | `bugs/assets/` |

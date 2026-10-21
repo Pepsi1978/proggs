@@ -1,0 +1,6 @@
+{
+ "gemini-3.8-flash": "HTTP 429: {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota ex",
+ "gemini-3.8-flash+vokabular": "HTTP 429: {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota ex",
+ "gemini-3.5-transcribe+vokabular": "HTTP 429: {\"error\":{\"message\":\"Rate limit exceeded for model gemini-3.5-transcribe (limit: 3 requests per minute on Free Tier). Please retry in 45s or upgrade your tier at https://ai.dev/rate-limit.\",\"code\":\"too_many_requests\"}}",
+ "gemini-3.5-transcribe": "HTTP 429: {\"error\":{\"message\":\"Rate limit exceeded for model gemini-3.5-transcribe (limit: 3 requests per minute on Free Tier). Please retry in 40s or upgrade your tier at https://ai.dev/rate-limit.\",\"code\":\"too_many_requests\"}}"
+}
