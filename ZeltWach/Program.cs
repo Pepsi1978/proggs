@@ -5,8 +5,8 @@ using Microsoft.Win32;
 
 namespace ZeltWach;
 
-// Hält den Bildschirm wach, solange das Display umgeklappt ist (Zelt/Tablet).
-// Im Laptop-Modus greift das Tool nicht ein: Bildschirm-Aus und Sperre laufen normal.
+// Hält den Rechner wach, solange das Display umgeklappt ist (Zelt/Tablet). Das Display selbst
+// geht weiter nach der Energieplan-Zeit aus. Im Laptop-Modus greift das Tool nicht ein.
 static class Program
 {
     [STAThread]
@@ -25,7 +25,6 @@ sealed class TrayKontext : ApplicationContext
     const int SM_CONVERTIBLESLATEMODE = 0x2003;
     const uint ES_CONTINUOUS = 0x80000000;
     const uint ES_SYSTEM_REQUIRED = 0x00000001;
-    const uint ES_DISPLAY_REQUIRED = 0x00000002;
 
     [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
     [DllImport("user32.dll")] static extern bool LockWorkStation();
@@ -87,7 +86,7 @@ sealed class TrayKontext : ApplicationContext
 
         if (jetztZelt)
         {
-            if (zeltGewechselt) SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED);
+            if (zeltGewechselt) SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
             icon.Icon = SystemIcons.Shield;
             string anmeldung = jetztFreigabe ? $"Fingerabdruck noch {jetztRest} min" : "PIN";
             icon.Text = Kurz($"ZeltWach {version}: Zelt – an, {anmeldung}{hinweis}");
