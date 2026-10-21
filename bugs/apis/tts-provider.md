@@ -960,3 +960,48 @@ Rohberichte: `Recherchen/tts-lokal-android/8-bugs-fallen.md` (22 Einträge), `5-
 - **Quellen:**
   - https://github.com/brenogonzaga/tauri-plugin-tts/issues/14
   - https://issuetracker.google.com/issues/138321382
+
+## V-Nachtrag) Deutsche Cloud-TTS: Aussprache, Abrechnung, Abschaltungen — Stand 21.10.2026 19:37 (TTS-Vergleichsstudie Jarvis, Engine C Sonnet-Schwarm; Details `Recherchen/tts-vergleich/`)
+
+### V1 — Chirp 3 HD verschluckt das „Komma“ in deutschen Dezimalzahlen ⭐
+- **Symptom:** „30,5 ms“ klingt wie „dreißig fünf Millisekunden“, „2,3 %“ wie „zwei drei Prozent“, „3. Nov.“ wie „dritte Nov“.
+- **Betroffen:** `de-DE-Chirp3-HD-Leda`, `-Kore`, `-Charon`, Text-Eingabe ohne SSML, 21.10.2026 (eigene Proben, drei maschinelle Abgleiche; nicht an jeder Stelle einheitlich).
+- **Ursache:** Keine dokumentierte deutsche Normalisierung für Chirp 3 HD.
+- **Fix:** Zahlen vor der Synthese ausschreiben („dreißig Komma fünf“), Monatsabkürzungen auflösen; alternativ SSML `say-as` (nur synchron, Preview).
+- **Quelle:** `Recherchen/tts-vergleich/aussprache-*.json`, https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd
+
+### V2 — Gemini-TTS spricht Regieanweisungen mit oder verweigert mit HTTP 400
+- **Symptom:** `gemini-3.8-flash-lite-tts` liest „Sprich den folgenden Text …“ laut vor. `gemini-2.5-flash-preview-tts` antwortet bei „Satzzeichen wörtlich mitsprechen“ mit 400 „Model tried to generate text, but it should only be used for TTS“.
+- **Ursache:** Bei 3.8 ist der Text ein wörtliches Transkript; Stil gehört in `speech_metadata.style`.
+- **Fix:** Nur den zu sprechenden Text senden; Stil getrennt; Satzzeichen im Client durch Wörter ersetzen.
+- **Quelle:** eigene Aufrufe 21.10.2026; https://ai.google.dev/gemini-api/docs/speech-generation
+
+### V3 — Gemini-TTS: Audio abgeschnitten trotz HTTP 200, trotzdem berechnet
+- **Symptom:** `finishReason: OTHER` oder sogar `STOP`, Audio endet zu früh; bei 3.1 Streaming genau 20 s.
+- **Betroffen:** `gemini-3.1-flash-tts-preview` (belegt), 2.5; für 3.8 ein Bericht über zu frühes Ende bei Flash-Lite.
+- **Fix:** Audiodauer gegen Textlänge prüfen, bei Abweichung kürzer teilen und begrenzt wiederholen; nicht nur `finishReason` prüfen.
+- **Quelle:** https://discuss.ai.google.dev/t/gemini-3-1-flash-tts-preview-audio-truncation-finishreason-other-is-time-varying-and-not-voice-specific-two-audits-of-all-30-voices-2h-apart/176215
+
+### V4 — Edge-TTS 403 seit etwa 10.10.2026: Token v2 Pflicht (W10 überholt)
+- **Symptom:** regional 403 beim Edge-WebSocket.
+- **Ursache:** Microsoft verlangt `Sec-MS-GEC-Version=2-…` und das neue Tokenformat; v1-Token werden abgewiesen. Eigenbauten mit `1-…` (Jarvis, PerfectMoment, vorlese-overlay-v2) sind betroffen.
+- **Fix:** Auf das v2-Verfahren aus edge-tts 7.3.1 (13.10.2026) umstellen.
+- **Quelle:** https://github.com/rany2/edge-tts (Releases, PR #492, Issue #490)
+
+### V5 — Alibaba berechnet mehr Zeichen als der Text hat
+- **Symptom:** `qwen3-tts-flash` meldet `usage.characters = 477` für 356 Zeichen deutschen Text (Faktor 1,34).
+- **Ursache:** ungeklärt; dokumentiert ist nur „Chinesisch zählt doppelt“.
+- **Fix:** Kosten mit dem gemessenen Faktor planen; `usage` mitprotokollieren.
+- **Quelle:** eigene Messung 21.10.2026; https://www.alibabacloud.com/help/en/model-studio/model-pricing
+
+### V6 — Geplante Abschaltungen und verschwundene Modelle
+- `gemini-2.5-*-preview-tts`, `gemini-3.1-flash-tts-preview`: frühestens 17.11.2026 (Ersatz 3.8). OpenAI `gpt-4o-mini-tts`, `tts-1`, `tts-1-hd`: 06.01.2027. Hume TTS-API: 13.11.2026. Cartesia `sonic-2`, `sonic-turbo`, `sonic-3-2025-10-27`: seit 20.10.2026 aus.
+- `qwen3-tts-vc-…` (Qwen-Stimmklon) steht nicht mehr in Alibabas Modellliste; `dashscope.aliyuncs.com` bekommt nach dem 30.09.2026 keine neuen Funktionen.
+- **Fix:** Modellnamen zentral halten, Fehler 404/„model not found“ als Anbieterausfall behandeln und auf einen Rückfall-Anbieter wechseln.
+- **Quellen:** https://ai.google.dev/gemini-api/docs/deprecations, https://dev.hume.ai/voice/changelog, `Recherchen/tts-vergleich/r5-openai-amazon-weitere.md`, `r6-qwen-asien-neue.md`
+
+### V7 — Kostenfalle: Cloud TTS hat keine harte Ausgabengrenze
+- **Symptom:** Budget-Alarm kommt Stunden später, Abrechnung läuft weiter.
+- **Ursache:** Spend-Cap-Budgets gelten für Gemini API, Vertex, Cloud Run, nicht für Cloud TTS; Quoten sind nur Minutenraten.
+- **Fix:** Zeichenzähler in der App; bei Gemini Prepay plus Projektlimit.
+- **Quelle:** https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps

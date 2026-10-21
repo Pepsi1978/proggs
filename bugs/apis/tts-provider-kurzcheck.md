@@ -49,3 +49,10 @@
 | 35 | Vorlesen stoppt im Hintergrund | `mediaPlayback`-FGS für die ganze Session | L16 |
 | 36 | CC-BY-Stimme ohne Nennung | NOTICE pro Stimme in der App | L17 |
 | 37 | TTS-Konstruktor `SecurityException` | `try/catch`, beide `onError`-Overloads | L18 |
+| 38 | Chirp 3 HD sagt „dreißig fünf“ statt „dreißig Komma fünf“ | Zahlen vorher ausschreiben oder SSML `say-as` (synchron, Preview) | V1 |
+| 39 | Gemini-TTS liest Anweisung vor / HTTP 400 „tried to generate text“ | Nur Transkript senden, Stil ins Stilfeld | V2 |
+| 40 | Gemini-TTS Audio zu kurz trotz 200/STOP | Dauer gegen Textlänge prüfen, kürzer teilen, begrenzt wiederholen | V3 |
+| 41 | Edge 403 ab 10.10.2026 | Token v2 (`Sec-MS-GEC-Version=2-…`, edge-tts 7.3.1); W10 überholt | V4 |
+| 42 | Qwen berechnet 1,34 × Zeichen | `usage` protokollieren, Faktor einplanen | V5 |
+| 43 | TTS-Modell plötzlich weg (Gemini 2.5/3.1, OpenAI, Hume, Qwen-VC) | Abschalttermine prüfen, Rückfall-Anbieter | V6 |
+| 44 | Cloud-TTS-Kosten laufen trotz Budget weiter | keine Kappung für Cloud TTS; App-Zähler bzw. Gemini-Prepay | V7 |

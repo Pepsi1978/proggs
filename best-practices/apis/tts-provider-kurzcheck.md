@@ -30,3 +30,7 @@
 | 20 | Kommerzielles On-Device-SDK | Azure Embedded (Limited-Access-Antrag), Picovoice Orca (Self-Service, 6.000 $/J), Acapela (% vom Verkaufspreis) | §15 |
 | 21 | Lizenzierte Cloud-Stimme DE | Spitze: Cartesia Sonic 3.6, Inworld TTS-2. Key nur im Broker, Audio cachen (Google/ElevenLabs erlaubt), KI-Stimme kennzeichnen (AI Act Art. 50) | §17 |
 | 22 | Lokale Synthese Deutsch | Textnormalisierung vorschalten (Zahlen/Datum/Euro/Abkürzungen), satzweise streamen, Warm-up, eigener RTF-Benchmark | §16 |
+| 23 | Anbieterwahl Deutsch / „großes Google-Freikontingent“ | Freikontingent 1 Mio./Monat gilt nur Chirp 3 HD (Billing Pflicht); Gemini-TTS in Cloud TTS hat keins, nur Gemini-API-Free-Tier (EWR-Klausel) | §18 |
+| 24 | Qualität vor Kosten, Google bleiben | `gemini-3.8-flash-tts` (Stable, AA-Rang 5, 0,0135 $/Min. bis 2026, dann doppelt) mit bezahltem Schlüssel + Prepay/Projektlimit; Chirp als Rückfall | §18 |
+| 25 | Deutsche Zahlen bei jeder Cloud-TTS | Normalisierung im Client vorschalten (Dezimalkomma, Datum, Euro, Abkürzungen); Satzzeichen-Wörter selbst einsetzen | §18 |
+| 26 | Gemini-TTS Stil/Anweisung | Nie in den Text (wird mitgesprochen), nur `speech_metadata.style`; Audiodauer gegen Textlänge prüfen | §18 |

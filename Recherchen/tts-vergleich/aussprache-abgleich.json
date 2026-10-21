@@ -1,0 +1,1538 @@
+{
+ "edge-de-DE-ConradNeural.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten Oktober zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig lag deine HRV bei dreißig Komma fünf Millisekunden, das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent ist bis zum dritten November fällig. Die Strecke ist circa zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Oktober zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-S-B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": ""
+ },
+ "edge-de-DE-FlorianMultilingualNeural.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten Oktober zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig lag deine HRV bei dreißig Komma fünf Millisekunden. Das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent ist bis zum dritten November fällig. Die Strecke ist circa zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Oktober zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-LAN",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-Es-Be",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": ""
+ },
+ "edge-de-DE-KatjaNeural.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten Oktober zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig lag deine HRV bei dreißig Komma fünf Millisekunden, das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent ist bis zum dritten November fällig. Die Strecke ist circa zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Oktober zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "H-R-V",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-LAN",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-S-B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": ""
+ },
+ "edge-de-DE-SeraphinaMultilingualNeural.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch dem einundzwanzigsten Oktober zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig lag deine Ha-Er-Vau bei dreißig Komma fünf Millisekunden, das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent ist bis zum dritten November fällig. Die Strecke ist zirka zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Oktober zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "zirka",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "Wlan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-Es-Be",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Fehlende Sprechpause am Satzende zwischen „Celsius“ und „Doktor Müller“."
+ },
+ "gemini-gemini-2.5-flash-preview-tts-Leda-a.mp3": {
+  "transkript": "Guten Abend Frank. Am Mittwoch, dem einundzwanzigsten zehnten zweitausendsechsundzwanzig um achtzehn Uhr siebenundvierzig lag deine HRV bei dreißig Komma fünf Millisekunden, das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro und neunundneunzig ist bis zum dritten November fällig. Die Strecke ist circa zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten zehnten zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro und neunundneunzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-Es-Be",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": ""
+ },
+ "gemini-gemini-2.5-pro-preview-tts-Leda-a.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten zehnten zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig, lag deine H-R-V bei dreißig Komma fünf Millisekunden, das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent ist bis zum dritten November fällig. Die Strecke ist circa zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten zehnten zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro und neunundneunzig Cent",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "H-R-V",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "WLAN",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-S-B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": ""
+ },
+ "gemini-gemini-3.1-flash-tts-preview-Leda-a.mp3": {
+  "transkript": "Guten Abend Frank. Am Mittwoch, dem einundzwanzigsten zehnten zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig lag deine HRV bei dreißig Komma fünf Millisekunden. Das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro ist bis zum dritten November fällig. Die Strecke ist circa zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten zehnten zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-Es-Be",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Bei '1.249,99 €' wurden die Nachkommastellen ausgelassen; es wurde lediglich 'eintausendzweihundertneunundvierzig Euro' gesprochen."
+ },
+ "google-de-DE-Chirp3-HD-Charon.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten Oktober zweitausendsechsundzwanzig um achtzehn Uhr siebenundvierzig, lag deine H R V bei dreißig fünf Millisekunden. Das sind zwei drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig neunundneunzig Euro ist bis zum dritte Nof fällig. Die Strecke ist circa zwölf fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Oktober zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig fünf Millisekunden",
+    "korrekt": false
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei drei Prozent",
+    "korrekt": false
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig neunundneunzig Euro",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritte Nof",
+    "korrekt": false
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf fünf Kilometer",
+    "korrekt": false
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "H R V",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "WLAN",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U S B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Dezimalkommas wurden bei allen Dezimalzahlen ausgelassen („dreißig fünf“, „zwei drei“, „zwölf fünf“); Geldbetrag ohne Komma und mit nachgestelltem „Euro“ gesprochen; „3. Nov.“ wurde fehlerhaft als „dritte Nof“ statt „dritten November“ vorgelesen."
+ },
+ "google-de-DE-Chirp3-HD-Kore.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten Oktober zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig, lag deine H-R-V bei dreißig fünf Millisekunden. Das sind zwei drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig neunundneunzig Euro ist bis zum dritte Nov fällig. Die Strecke ist circa zwölf fünf Kilometer lang bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Oktober zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig fünf Millisekunden",
+    "korrekt": false
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei drei Prozent",
+    "korrekt": false
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig neunundneunzig Euro",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritte Nov",
+    "korrekt": false
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf fünf Kilometer",
+    "korrekt": false
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "H-R-V",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "WLAN",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "USB",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Bei allen Dezimalzahlen (30,5, 2,3, 1.249,99, 12,5) wurde das Wort 'Komma' ausgelassen. '3. Nov.' wurde fehlerhaft als 'dritte Nov' statt 'dritten November' vorgelesen."
+ },
+ "google-de-DE-Chirp3-HD-Leda.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten Oktober zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig, lag deine HRV bei dreißig fünf Millisekunden. Das sind zwei drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig neunundneunzig Euro ist bis zum dritte Nof fällig. Die Strecke ist zirka zwölf fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Oktober zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig fünf Millisekunden",
+    "korrekt": false
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei drei Prozent",
+    "korrekt": false
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig neunundneunzig Euro",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritte Nof",
+    "korrekt": false
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "zirka",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf fünf Kilometer",
+    "korrekt": false
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-S-B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Bei allen Dezimalzahlen (30,5; 2,3; 12,5) wurde das Wort 'Komma' ausgelassen. '3. Nov.' wurde fehlerhaft als 'dritte Nof' statt 'dritten November' ausgesprochen. Beim Geldbetrag wurde 'Euro' erst hinter den Cent-Betrag gesetzt."
+ },
+ "qwen-qwen3-tts-flash-Cherry.mp3": {
+  "transkript": "Guten Abend Frank. Am Mittwoch, dem einundzwanzig zehn zweitausendsechsundzwanzig, um achtzehn siebenundvierzig Uhr, lag deine H R V bei dreißig fünf M N E S. Das sind zwei drei Prozent weniger als am Vortag. Die Rechnung über eins Punkt zweihundertneunundvierzig neunundneunzig Euro ist bis zum drei Nov fällig. Die Strecke ist circa zwölf fünf Kilometer lang, bei vierzehn Grade. Doktor Müller empfiehlt zett be ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja, das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzig zehn zweitausendsechsundzwanzig",
+    "korrekt": false
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn siebenundvierzig Uhr",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig fünf M N E S",
+    "korrekt": false
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei drei Prozent",
+    "korrekt": false
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eins Punkt zweihundertneunundvierzig neunundneunzig Euro",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "drei Nov",
+    "korrekt": false
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf fünf Kilometer",
+    "korrekt": false
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grade",
+    "korrekt": false
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zett be",
+    "korrekt": false
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "H R V",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-LAN",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U S B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Dezimaltrennzeichen 'Komma' wurde mehrfach weggelassen ('dreißig fünf', 'zwei drei', 'zwölf fünf'); 'ms' wurde fehlerhaft als Buchstabensalat ('M N E S') vorgelesen; '1.249,99 €' wurde mit wörtlichem 'Punkt' gesprochen; '3. Nov.' wurde unvollständig als 'drei Nov' statt 'dritten November' gesprochen; '14 °C' als 'vierzehn Grade' statt 'Grad Celsius'; Abkürzung 'z. B.' wurde buchstabiert ('zett be')."
+ },
+ "qwen-qwen3-tts-flash-Ethan.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzig Punkt zehn zwanzig sechsundzwanzig, um achtzehn siebenundvierzig Uhr lag deine Ha-Er-Vau bei dreißig fünf Müs-kes, das sind zwei drei Prozent weniger als am Vortag. Die Rechnung über eins Punkt zweihundertneunundvierzig neunundneunzig Euro ist bis zum Dreino fällig. Die Strecke ist zirka zwölf fünf Kilometer lang, bei vierzehn Grad C, ein Update der App per WLAN, nicht per USB, hast du das Meeting im Office gecancelt? Ja, das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzig Punkt zehn zwanzig sechsundzwanzig",
+    "korrekt": false
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn siebenundvierzig Uhr",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig fünf Müs-kes",
+    "korrekt": false
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei drei Prozent",
+    "korrekt": false
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eins Punkt zweihundertneunundvierzig neunundneunzig Euro",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "Dreino",
+    "korrekt": false
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "zirka",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf fünf Kilometer",
+    "korrekt": false
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad C",
+    "korrekt": false
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "nicht gesprochen (ausgelassen)",
+    "korrekt": false
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "nicht gesprochen (ausgelassen)",
+    "korrekt": false
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-LAN",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-S-B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Der gesamte Satzteil 'Dr. Müller empfiehlt z. B.' wurde komplett ausgelassen. Dezimalzahlen werden ohne 'Komma' gesprochen ('dreißig fünf', 'zwei drei', 'zwölf fünf'). Datumsangaben und Geldbeträge werden buchstäblich mit 'Punkt' bzw. als Abkürzungssalat ('Dreino') vorgelesen. 'ms' wird als Kunstwort 'Müs-kes' artikuliert und bei '14 °C' wird 'C' als Buchstabe statt 'Celsius' gesprochen."
+ },
+ "lokal-piper-de_DE-thorsten-high.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten zehnten zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig lag deine H R V bei dreißig Komma fünf m s – das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Komma neun neun Euro ist bis zum drei Nov fällig. Die Strecke ist k zwölf Komma fünf k m lang, bei vierzehn Grad C. D R Müller empfiehlt z b ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gekänkelt? Ja, das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten zehnten zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "H R V",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf m s",
+    "korrekt": false
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Komma neun neun Euro",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "drei Nov",
+    "korrekt": false
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "k",
+    "korrekt": false
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf k m",
+    "korrekt": false
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad C",
+    "korrekt": false
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "D R",
+    "korrekt": false
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "z b",
+    "korrekt": false
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U S B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gekänkelt",
+    "korrekt": false
+   }
+  ],
+  "auffaelligkeiten": "Zahlreiche Abkürzungen werden buchstabenweise oder fehlerhaft vorgelesen (ms als 'm s', 3. Nov. als 'drei Nov', ca. als 'k', km als 'k m', °C als 'Grad C', Dr. als 'D R', z. B. als 'z b'); Währungsbetrag unnatürlich als 'Komma neun neun Euro'; 'gecancelt' wird mit hartem k ('gekänkelt') ausgesprochen."
+ },
+ "lokal-supertonic-3-M1.mp3": {
+  "transkript": "Guten Abend, Frank. Am Mittwoch, dem einundzwanzigsten zehnten zweitausendsechsundzwanzig um achtzehn siebenundvierzig lag deine Ha Er Vau bei dreißig komma fünf mess, das sind zwei drei Prozent weniger als am Vortag. Die Rechnung über eins Punkt zwei neunundvierzig komma neunundneunzig ist bis zum drei Nov fällig. Die Strecke ist K A zwölf komma fünf Kilomer lang bei vierzehn C. Doktor Müller empfiehlt Z B ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten zehnten zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn siebenundvierzig",
+    "korrekt": false
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig komma fünf mess",
+    "korrekt": false
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei drei Prozent",
+    "korrekt": false
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eins Punkt zwei neunundvierzig komma neunundneunzig",
+    "korrekt": false
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "drei Nov",
+    "korrekt": false
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "K A",
+    "korrekt": false
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf komma fünf Kilomer",
+    "korrekt": false
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn C",
+    "korrekt": false
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "Z B",
+    "korrekt": false
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha Er Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U S B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": "Wort 'Uhr' fehlt; 'Komma' bei 2,3 fehlt; 'ms' falsch als 'mess' gelesen; Betrag 1.249,99 € komplett entstellt und Währung 'Euro' fehlt; '3. Nov.' wörtlich als 'drei Nov'; 'ca.' buchstabiert; 'km' als 'Kilomer' ausgesprochen; 'Grad' bei °C fehlt; 'z. B.' buchstabiert als 'Z B'."
+ },
+ "gemini-gemini-3.8-flash-lite-tts-Leda-a.mp3": {
+  "transkript": "Guten Abend Frank. Am Mittwoch, dem einundzwanzigsten Zehnten zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig lag deine HRV bei dreißig Komma fünf Millisekunden. Das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro neunundneunzig ist bis zum dritten November fällig. Die Strecke ist circa zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per WLAN, nicht per USB. Hast du das Meeting im Office gecancelt? Ja! Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten Zehnten zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro neunundneunzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "circa",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "H-R-V",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "W-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-S-B",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": ""
+ },
+ "gemini-gemini-3.8-flash-tts-Leda-a.mp3": {
+  "transkript": "Guten Abend Frank. Am Mittwoch, dem einundzwanzigsten zehnten zweitausendsechsundzwanzig, um achtzehn Uhr siebenundvierzig, lag deine Ha-Er-Vau bei dreißig Komma fünf Millisekunden. Das sind zwei Komma drei Prozent weniger als am Vortag. Die Rechnung über eintausendzweihundertneunundvierzig Euro neunundneunzig ist bis zum dritten November fällig. Die Strecke ist zirka zwölf Komma fünf Kilometer lang, bei vierzehn Grad Celsius. Doktor Müller empfiehlt zum Beispiel ein Update der App per We-Lan, nicht per U-Es-Be. Hast du das Meeting im Office gecancelt? Ja. Das war's.",
+  "pruefpunkte": [
+   {
+    "stelle": "21.10.2026",
+    "gesprochen": "einundzwanzigsten zehnten zweitausendsechsundzwanzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "18:47 Uhr",
+    "gesprochen": "achtzehn Uhr siebenundvierzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "30,5 ms",
+    "gesprochen": "dreißig Komma fünf Millisekunden",
+    "korrekt": true
+   },
+   {
+    "stelle": "2,3 %",
+    "gesprochen": "zwei Komma drei Prozent",
+    "korrekt": true
+   },
+   {
+    "stelle": "1.249,99 €",
+    "gesprochen": "eintausendzweihundertneunundvierzig Euro neunundneunzig",
+    "korrekt": true
+   },
+   {
+    "stelle": "3. Nov.",
+    "gesprochen": "dritten November",
+    "korrekt": true
+   },
+   {
+    "stelle": "ca.",
+    "gesprochen": "zirka",
+    "korrekt": true
+   },
+   {
+    "stelle": "12,5 km",
+    "gesprochen": "zwölf Komma fünf Kilometer",
+    "korrekt": true
+   },
+   {
+    "stelle": "14 °C",
+    "gesprochen": "vierzehn Grad Celsius",
+    "korrekt": true
+   },
+   {
+    "stelle": "Dr.",
+    "gesprochen": "Doktor",
+    "korrekt": true
+   },
+   {
+    "stelle": "z. B.",
+    "gesprochen": "zum Beispiel",
+    "korrekt": true
+   },
+   {
+    "stelle": "HRV",
+    "gesprochen": "Ha-Er-Vau",
+    "korrekt": true
+   },
+   {
+    "stelle": "WLAN",
+    "gesprochen": "We-Lan",
+    "korrekt": true
+   },
+   {
+    "stelle": "USB",
+    "gesprochen": "U-Es-Be",
+    "korrekt": true
+   },
+   {
+    "stelle": "Update",
+    "gesprochen": "Update",
+    "korrekt": true
+   },
+   {
+    "stelle": "Meeting",
+    "gesprochen": "Meeting",
+    "korrekt": true
+   },
+   {
+    "stelle": "Office",
+    "gesprochen": "Office",
+    "korrekt": true
+   },
+   {
+    "stelle": "gecancelt",
+    "gesprochen": "gecancelt",
+    "korrekt": true
+   }
+  ],
+  "auffaelligkeiten": ""
+ }
+}

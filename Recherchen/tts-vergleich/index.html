@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TTS-Vergleich Jarvis</title>
+<style>
+:root{--bg:#f7f7f5;--fl:#ffffff;--tx:#1d1f23;--mt:#5d6370;--ln:#dfe1e5;--ak:#2357d9;--ak2:#e8eefc;--gut:#1e7a46;--gutbg:#e6f4ec;--warn:#a05a00;--warnbg:#fdf1e1;--schl:#b3261e;--schlbg:#fbe9e7;--code:#f0f1f3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141518;--fl:#1c1e22;--tx:#e6e7ea;--mt:#9aa0ab;--ln:#30333a;--ak:#7ea2ff;--ak2:#22305a;--gut:#6fd39b;--gutbg:#173527;--warn:#f0b35c;--warnbg:#3a2a12;--schl:#ff8a80;--schlbg:#3d1c1a;--code:#25282d}}
+:root[data-theme="dark"]{--bg:#141518;--fl:#1c1e22;--tx:#e6e7ea;--mt:#9aa0ab;--ln:#30333a;--ak:#7ea2ff;--ak2:#22305a;--gut:#6fd39b;--gutbg:#173527;--warn:#f0b35c;--warnbg:#3a2a12;--schl:#ff8a80;--schlbg:#3d1c1a;--code:#25282d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--fl);border-bottom:1px solid var(--ln);padding:20px 16px}
+header h1{margin:0 0 4px;font-size:1.55rem}
+header p{margin:0;color:var(--mt)}
+nav{position:sticky;top:0;z-index:5;background:var(--fl);border-bottom:1px solid var(--ln);overflow-x:auto;white-space:nowrap;padding:0 8px}
+nav a{display:inline-block;padding:10px 10px;color:var(--mt);text-decoration:none;font-size:.92rem;border-bottom:2px solid transparent}
+nav a:hover,nav a.aktiv{color:var(--ak);border-bottom-color:var(--ak)}
+main{max-width:1180px;margin:0 auto;padding:16px}
+section{background:var(--fl);border:1px solid var(--ln);border-radius:10px;padding:18px 20px;margin:0 0 18px;scroll-margin-top:52px}
+h2{margin:0 0 12px;font-size:1.3rem}
+h3{margin:18px 0 8px;font-size:1.08rem}
+a{color:var(--ak)}
+.mt{color:var(--mt)}
+.klein{font-size:.88rem}
+.raster{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.karte{border:1px solid var(--ln);border-radius:9px;padding:14px;background:var(--bg)}
+.karte h4{margin:0 0 4px;font-size:1.02rem}
+.marke{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:99px;margin:2px 4px 2px 0;background:var(--code);color:var(--mt);white-space:nowrap}
+.m-gut{background:var(--gutbg);color:var(--gut)}.m-warn{background:var(--warnbg);color:var(--warn)}.m-schl{background:var(--schlbg);color:var(--schl)}.m-ak{background:var(--ak2);color:var(--ak)}
+.hinweis{border-left:4px solid var(--warn);background:var(--warnbg);padding:10px 14px;border-radius:6px;margin:12px 0}
+.empf{border-left:4px solid var(--gut);background:var(--gutbg);padding:12px 16px;border-radius:6px;margin:12px 0}
+.tabhuelle{overflow-x:auto;border:1px solid var(--ln);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;vertical-align:top;padding:7px 9px;border-bottom:1px solid var(--ln)}
+th{background:var(--code);position:sticky;top:0;font-weight:600}
+tr:last-child td{border-bottom:none}
+td.zahl,th.zahl{text-align:right;white-space:nowrap}
+.filter{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
+.filter label{font-size:.85rem;color:var(--mt);display:flex;flex-direction:column;gap:3px}
+select,input{font:inherit;padding:6px 8px;border:1px solid var(--ln);border-radius:6px;background:var(--fl);color:var(--tx)}
+audio{width:100%;height:36px;margin:6px 0}
+details{border:1px solid var(--ln);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--bg)}
+summary{cursor:pointer;font-weight:600}
+.bericht{max-height:70vh;overflow:auto;padding:4px 8px}
+.bericht table{font-size:.82rem}
+.bericht pre,.bericht code{background:var(--code);border-radius:4px}
+.bericht pre{padding:8px;overflow:auto;white-space:pre-wrap}
+.ampel{display:inline-block;min-width:22px;text-align:center;border-radius:4px;font-weight:600}
+ul{padding-left:20px}
+.themenwahl{position:absolute;right:16px;top:20px}
+.balken{height:8px;border-radius:4px;background:var(--ak)}
+@media (max-width:640px){section{padding:14px}header{padding-right:70px}}
+</style>
+</head>
+<body>
+<header style="position:relative">
+  <h1>Text-to-Speech für Jarvis: Vergleichsstudie</h1>
+  <p>Stand 21.10.2026 · Ausgangspunkt Google Chirp 3 HD, Stimme Leda · 10 Sonnet-Researcher, 20 echte Hörproben, maschineller Ausspracheabgleich</p>
+  <select class="themenwahl" id="thema" aria-label="Farbschema"><option value="">Auto</option><option value="light">Hell</option><option value="dark">Dunkel</option></select>
+</header>
+<nav id="nav">
+  <a href="#kurz">Kurzfassung</a><a href="#empfehlung">Empfehlung</a><a href="#vergleich">Vergleich</a><a href="#profile">Anbieter</a><a href="#proben">Hörproben</a><a href="#frei">Freikontingente</a><a href="#kosten">Kosten</a><a href="#aussprache">Aussprache</a><a href="#integration">Integration</a><a href="#grenzen">Grenzen</a><a href="#quellen">Methodik und Quellen</a>
+</nav>
+<main>
+
+<section id="kurz">
+  <h2>Kurzfassung</h2>
+  <ul>
+    <li><b>Franks „großes Google-Freikontingent“</b> ist sehr wahrscheinlich das von <b>Chirp 3 HD</b>: dauerhaft <b>1 Mio. Zeichen pro Monat</b>, danach 30 $ je 1 Mio. Ein Abrechnungskonto ist Pflicht, eine echte Kostenkappung gibt es dafür nicht (Budgets warnen nur). Gemini-TTS hat in Cloud TTS <b>kein</b> Freikontingent; kostenlos ist es nur im Free Tier der Gemini API, mit unveröffentlichten Limits und Datennutzung.</li>
+    <li><b>Qualität:</b> In der einzigen großen Blind-Rangliste (Artificial Analysis, <i>englisch</i>) liegt Chirp 3 HD auf Rang 60 von 98. <b>Gemini 3.8 Flash TTS</b> (seit 22.09.2026) liegt auf Rang 5, gut 200 Elo-Punkte darüber. Spitze: ElevenLabs v4 Turbo, Qwen-Audio 3.1, Cartesia Sonic 3.6. Eine belastbare <i>deutsche</i> Rangliste gibt es nicht.</li>
+    <li><b>Eigene Prüfung:</b> Aus 20 echten Hörproben mit einheitlichem deutschem Testtext und dreifachem maschinellem Ausspracheabgleich: Gemini 3.8 Flash und Flash-Lite, Gemini 2.5 und die Edge-Stimmen sprechen Zahlen, Datum, Uhrzeit, Euro und Abkürzungen am saubersten. Chirp 3 HD verschluckt teils das „Komma“ in Dezimalzahlen; Qwen und die lokalen Modelle haben deutlich mehr Fehler. Das ersetzt keinen Hörtest von Frank.</li>
+    <li><b>Kosten:</b> Bei 20 Minuten Vorlesen am Tag bleibt Chirp 3 HD kostenlos. Gemini 3.8 Flash kostet dabei etwa 8 $ im Monat (ab 2027 etwa 16 $), Flash-Lite etwa 5,40 $ (ab 2027 10,80 $).</li>
+    <li><b>Ausgeschieden:</b> OpenAI-TTS (Abschaltung 06.01.2027), Hume Octave (Abschaltung 13.11.2026), Gemini 2.5/3.1 TTS (Abschaltung ab 17.11.2026).</li>
+  </ul>
+</section>
+
+<section id="empfehlung">
+  <h2>Begründete Empfehlung gegenüber Chirp 3 HD</h2>
+  <div class="empf">
+    <b>1. Zuerst hören:</b> Chirp 3 HD Leda gegen <b>Gemini 3.8 Flash TTS Leda</b> im Abschnitt <a href="#proben">Hörproben</a> vergleichen. Gemini 3.8 Flash ist der einzige Kandidat, der zugleich in der Rangliste weit vorne liegt, im maschinellen Abgleich fehlerfrei war, dieselbe Stimme „Leda“ anbietet und eine harte Kostenbremse (Prepay plus Projektlimit) hat.<br><br>
+    <b>2. Wenn Gemini 3.8 Flash besser klingt:</b> als <i>zusätzlichen</i> Anbieter in Jarvis aufnehmen, über den vorhandenen <b>bezahlten</b> Gemini-Schlüssel mit kleinem Prepay-Guthaben und Monatslimit, Chirp 3 HD als Rückfall behalten. Erwartete Kosten 2 bis 8 $ im Monat (2026), danach das Doppelte.<br><br>
+    <b>3. Unabhängig davon und kostenlos:</b> eine deutsche Textvorverarbeitung vor jeder Sprachausgabe (Dezimalkomma als „Komma“, Datum, Euro, Abkürzungen ausschreiben). Sie behebt die gefundene Chirp-Schwäche ohne Anbieterwechsel und hilft jedem Anbieter.
+  </div>
+  <h3>Warum nicht sofort umstellen</h3>
+  <ul>
+    <li>Gemini 3.8 Flash erzeugte den ganzen Testtext in 11 bis 15 s, Chirp in etwa 5 s (je eine Messung am PC). Jarvis teilt zwar den ersten Satz ab, die Wartezeit bis zum ersten Ton muss aber auf dem Handy gemessen werden.</li>
+    <li>Für 3.8 gibt es noch keine Fehlerberichte, für den Vorgänger 3.1 aber dokumentierte Abbrüche. Eine Längenprüfung des Audios ist Pflicht.</li>
+    <li>Der kostenlose Free Tier der Gemini API ist für Jarvis heikel: Daten können zur Produktverbesserung genutzt werden, und die Bedingungen erlauben im EWR für Apps mit Nutzern nur bezahlte Dienste.</li>
+    <li>Chirp 3 HD ist bei normaler Nutzung kostenlos. Ein Wechsel kostet Geld, das nur ein hörbarer Gewinn rechtfertigt.</li>
+  </ul>
+  <h3>Für andere Prioritäten</h3>
+  <ul>
+    <li><b>Höchste Natürlichkeit, Geld zweitrangig:</b> ElevenLabs v4 Turbo, Cartesia Sonic 3.6 oder Inworld TTS-2. Für Cartesia und Inworld gibt es eine Zweitquelle zu Platz 1 und 2 auf Deutsch. Keine Hörprobe in dieser Studie, weil das neue Konten erfordert hätte.</li>
+    <li><b>Kostenlos und offiziell mit Zahlenkontrolle:</b> Chirp 3 HD mit Vorverarbeitung oder Azure F0 (0,5 Mio. Zeichen im Monat, umfangreichstes SSML; kommerzielle Rechte im F0 strittig).</li>
+    <li><b>Ganz ohne Cloud:</b> Heute nicht konkurrenzfähig. Piper und Supertonic machen bei Zahlen und Abkürzungen viele Fehler; Qwen3-TTS 0.6B gilt als bestes lokales Deutsch, braucht aber einen GPU-Server.</li>
+    <li><b>Eigene geklonte Stimme:</b> Das Modell <code>qwen3-tts-vc-2026-01-22</code> steht nicht mehr in Alibabas Modellliste. Das sollte Frank beobachten; Nachfolger könnten qwen-audio-3.x oder die Stimmenkopie von Gemini 3.8 sein.</li>
+  </ul>
+</section>
+
+<section id="vergleich">
+  <h2>Vergleichstabelle</h2>
+  <div class="filter">
+    <label>Freikontingent<select id="fFrei"><option value="">alle</option><option value="monatlich">dauerhaft monatlich (groß)</option><option value="freetier">Free Tier ohne feste Menge</option><option value="monatlich-klein">monatlich, klein, nicht kommerziell</option><option value="einmalig">nur einmalig</option><option value="keins">keins / unklar</option><option value="lokal">lokal kostenlos</option><option value="inoffiziell">inoffiziell kostenlos</option></select></label>
+    <label>Deutsch-Beleg<select id="fDeutsch"><option value="">alle</option><option value="probe">eigene Hörprobe vorhanden</option><option value="arena-de">Zweitquelle deutsche Rangliste</option><option value="ohne">nur Doku oder Einzeltest</option></select></label>
+    <label>Kosten nach Freikontingent<select id="fKosten"><option value="">alle</option><option value="0">0 $</option><option value="15">bis 15 $ je 1 Mio. Zeichen</option><option value="30">15 bis 30 $</option><option value="99">über 30 $</option></select></label>
+    <label>Art<select id="fArt"><option value="">alle</option><option value="cloud">Cloud</option><option value="lokal">lokal</option></select></label>
+  </div>
+  <div class="tabhuelle"><table id="vtab"><thead><tr><th>Anbieter / Modell</th><th>Freikontingent</th><th class="zahl">$ je 1 Mio. Zeichen*</th><th class="zahl">Elo (englisch)</th><th>Deutsch-Beleg</th><th>Aussprachekontrolle</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  <p class="mt klein">* Bei Minutenpreisen umgerechnet mit 900 Zeichen pro Sprechminute (Tagesschau-Tempo, R10). Elo: Artificial Analysis Provider Voice Arena, englische Stimmen, abgerufen 21.10.2026. Sie sagt nichts Belastbares über Deutsch.</p>
+</section>
+
+<section id="profile">
+  <h2>Anbieterprofile</h2>
+  <p class="mt">Gleich aufgebaut für jeden Anbieter. Die Profile folgen denselben Filtern wie die Tabelle.</p>
+  <div class="raster" id="profilraster"></div>
+</section>
+
+<section id="proben">
+  <h2>Hörproben (einheitlicher Testtext)</h2>
+  <p>Alle Proben sprechen denselben Testtext A. Erzeugt am 21.10.2026 nur mit vorhandenen Zugängen oder lokal; keine neuen Konten, keine Buchungen. <b>Ein menschlicher Hörtest fehlt</b>: Bitte selbst anhören, die Spalte „Abgleich“ ist nur ein maschineller Hinweis.</p>
+  <details><summary>Testtext anzeigen</summary><div id="testtext" class="bericht"></div></details>
+  <div class="raster" id="probenraster"></div>
+  <p class="mt klein">Ohne Hörprobe: ElevenLabs, Cartesia, Inworld, Azure DragonHD, Polly, Deepgram, Voxtral, Murf, xAI, MiniMax, Fish (neues Konto nötig), qwen-audio-3.x (anderer Endpunkt, Deutsch nur mit Klonstimme), Qwen3-TTS lokal (CUDA-PyTorch fehlt).</p>
+</section>
+
+<section id="frei">
+  <h2>Freikontingente sauber getrennt</h2>
+  <div class="tabhuelle"><table>
+  <thead><tr><th>Anbieter</th><th>Art</th><th>Menge</th><th>Abrechnungskonto</th><th>Kommerziell</th><th>Kostenbremse / Überziehung</th></tr></thead>
+  <tbody>
+  <tr><td>Google Chirp 3 HD</td><td><span class="marke m-gut">dauerhaft monatlich</span></td><td>1 Mio. Zeichen, verfällt am Monatsende; Umlaut = 1 Zeichen, SSML-Tags zählen mit</td><td>ja, Pflicht</td><td>ja (Cloud-Bedingungen)</td><td>danach automatisch 30 $/1 Mio.; nur Budget-Warnung, keine native Kappung</td></tr>
+  <tr><td>Google Standard / WaveNet / Neural2 / Studio</td><td><span class="marke m-gut">dauerhaft monatlich</span></td><td>4 Mio. / 4 Mio. (ein Screenshot zeigt 1 Mio.) / 1 Mio. / 1 Mio.</td><td>ja</td><td>ja</td><td>wie oben</td></tr>
+  <tr><td>Google Cloud Free Trial</td><td><span class="marke m-warn">einmalig</span></td><td>300 $ für 90 Tage, nur Neukunden; ob TTS gedeckt ist, nicht belegt</td><td>Zahlungsmittel nötig</td><td>–</td><td>–</td></tr>
+  <tr><td>Gemini API Free Tier (3.8 Flash / Flash-Lite TTS)</td><td><span class="marke m-ak">Free Tier</span></td><td>„Free of charge“; RPM/RPD nicht veröffentlicht (nur im AI-Studio-Dashboard)</td><td>nein</td><td>nur für Entwickler; im EWR für Apps mit Nutzern nur bezahlte Dienste</td><td>bei Limit HTTP 429</td></tr>
+  <tr><td>Gemini-TTS in Cloud TTS / Vertex</td><td><span class="marke m-schl">keins</span></td><td>„Not available“</td><td>ja</td><td>ja</td><td>Prepay plus Projektlimit (Gemini API) als harte Bremse</td></tr>
+  <tr><td>Google AI Pro / Ultra (Abo)</td><td><span class="marke m-ak">Abo-Guthaben</span></td><td>10 $ (Pro) bzw. 40–100 $ (Ultra) pro Monat Developer-Program-Guthaben, falls Abo vorhanden</td><td>ja</td><td>–</td><td>–</td></tr>
+  <tr><td>Microsoft Azure F0</td><td><span class="marke m-gut">dauerhaft monatlich</span></td><td>0,5 Mio. Neural-Zeichen; HD nicht belegt; 20 Anfragen je 60 s</td><td>Azure-Konto mit Karte</td><td>laut Moderatoren nein (zweite Hand)</td><td>F0 endet hart am Kontingent</td></tr>
+  <tr><td>Microsoft Azure Free Account</td><td><span class="marke m-warn">einmalig</span></td><td>200 $ für 30 Tage</td><td>Karte</td><td>–</td><td>Spending Limit nur bei Free-/Guthaben-Abos</td></tr>
+  <tr><td>Edge Vorlesen</td><td><span class="marke">inoffiziell</span></td><td>keine Menge, keine Zusage</td><td>nein</td><td>ungeklärt</td><td>–</td></tr>
+  <tr><td>ElevenLabs Free</td><td><span class="marke m-warn">monatlich, klein</span></td><td>10.000 Credits</td><td>nein</td><td>nein, Namensnennung Pflicht</td><td>PAYG vorausbezahlt, keine Überziehung</td></tr>
+  <tr><td>Cartesia Free</td><td><span class="marke m-warn">monatlich, klein</span></td><td>20.000 Credits</td><td>nicht belegt</td><td>laut AGB nein</td><td>Überziehung abschaltbar, dann gesperrt</td></tr>
+  <tr><td>Inworld</td><td><span class="marke">unklar</span></td><td>„bis zu 70 Minuten“, Wiederkehr nicht belegt</td><td>nicht belegt</td><td>On-Demand mit kommerzieller Lizenz</td><td>Guthaben, Verhalten bei 0 unbelegt</td></tr>
+  <tr><td>Amazon Polly</td><td><span class="marke m-warn">12 Monate</span></td><td>100.000 Zeichen/Monat (Generative) im ersten Jahr</td><td>AWS-Konto</td><td>ja</td><td>nur Selbstbau</td></tr>
+  <tr><td>Deepgram</td><td><span class="marke m-warn">einmalig</span></td><td>200 $ ohne Ablauf</td><td>nicht belegt</td><td>ja</td><td>Guthaben</td></tr>
+  <tr><td>Alibaba Model Studio</td><td><span class="marke m-warn">einmalig</span></td><td>110.000 Zeichen qwen3-tts-flash, 10.000 andere, 90 Tage, nur Singapur</td><td>ja</td><td>nicht belegt</td><td>„Free Quota Only“ nur vorher einschaltbar</td></tr>
+  <tr><td>Mistral, OpenAI, xAI, Murf, MiniMax</td><td><span class="marke m-schl">keins / unbelegt</span></td><td>–</td><td>ja</td><td>ja</td><td>Mistral und OpenAI: Prepaid plus hartes Limit</td></tr>
+  <tr><td>Lokale Modelle</td><td><span class="marke m-gut">lokal</span></td><td>unbegrenzt, nur Strom</td><td>nein</td><td>je Lizenz (Piper-Engine GPL, Supertonic OpenRAIL-M, Qwen3-TTS Apache-2.0)</td><td>–</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="kosten">
+  <h2>Kostenrechner (gleiche Sprechzeit für alle)</h2>
+  <p>Grundlage ist die <b>Sprechzeit</b>. Daraus werden für zeichenbasierte Anbieter Zeichen berechnet, für Gemini Audio-Tokens (25 je Sekunde, eigene Messung bestätigt: 1.033 Tokens für 41,4 s). Zeichen, Tokens und Minuten werden nicht gleichgesetzt, sondern jeweils aus der Sprechzeit abgeleitet.</p>
+  <div class="filter">
+    <label>Minuten Vorlesen pro Tag<input type="number" id="kMin" value="20" min="1" max="600"></label>
+    <label>Zeichen pro Sprechminute<input type="number" id="kZpm" value="900" min="300" max="1500"></label>
+    <label>Schnellwahl<select id="kProfil"><option value="5">Wenig (5 Min./Tag)</option><option value="20" selected>Mittel (20 Min./Tag)</option><option value="60">Intensiv (60 Min./Tag)</option></select></label>
+  </div>
+  <p id="kAnnahme" class="mt"></p>
+  <div class="tabhuelle"><table id="ktab"><thead><tr><th>Anbieter</th><th>Abrechnung</th><th class="zahl">pro Monat 2026</th><th class="zahl">ab 2027</th><th>Anmerkung</th></tr></thead><tbody></tbody></table></div>
+  <div class="tabhuelle" style="margin-top:12px"><table id="ktab3"><thead><tr><th>Profil (30 Tage)</th><th class="zahl">Zeichen</th><th class="zahl">Audiominuten</th><th class="zahl">Chirp 3 HD</th><th class="zahl">Gemini 3.8 Flash</th><th class="zahl">3.8 Flash-Lite</th><th class="zahl">ElevenLabs v4 Turbo</th><th class="zahl">Inworld TTS-2</th></tr></thead><tbody></tbody></table></div>
+  <div class="hinweis klein">Dichte Texte mit vielen Zahlen werden länger gesprochen als geschrieben: Testtext A hat 356 Zeichen, gesprochen aber 33 bis 42 Sekunden (520 bis 650 Zeichen je Minute). Für Jarvis-Briefings mit vielen Messwerten liegen die Gemini-Kosten je Zeichen darum höher als im Rechner, die zeichenbasierten Anbieter nicht.</div>
+</section>
+
+<section id="aussprache">
+  <h2>Deutsche Aussprache: was geprüft wurde</h2>
+  <p>Für jede Hörprobe drei maschinelle Durchgänge: <b>A</b> Gemini 3.8 Flash prüft 18 Stellen strukturiert, <b>B</b> Gemini 3.5 Flash und <b>C</b> Gemini 3.8 Flash schreiben wortgetreu mit. Die Matrix zeigt, wie viele der Mitschriften B und C die korrekte Sprechform enthalten. Die Prüfmodelle stammen selbst von Google; ein Hang zu Gemini-Ausgaben ist nicht auszuschließen, und Mitschriften können Zahlen „glätten“. Grün heißt also nur „sehr wahrscheinlich richtig“.</p>
+  <div class="tabhuelle"><table id="atab"><thead></thead><tbody></tbody></table></div>
+  <h3>Was die Dokumentation zu deutscher Normalisierung sagt</h3>
+  <ul>
+    <li><b>Steuerbar:</b> ElevenLabs (<code>apply_text_normalization</code> + <code>language_code</code>), Cartesia (<code>normalization</code>), Inworld (<code>applyTextNormalization</code>), Gemini nur über die Cloud-TTS-API (<code>enable_textnorm</code>).</li>
+    <li><b>Per SSML je Stelle:</b> Azure (am umfangreichsten), Polly, Chirp 3 HD (nur synchron, Preview).</li>
+    <li><b>Nicht dokumentiert:</b> Gemini API, Voxtral, Grok, Deepgram, Qwen, MiniMax.</li>
+    <li><b>Satzzeichen wörtlich sprechen</b> dokumentiert kein Anbieter. Zuverlässig ist nur, die Zeichen vorher im Text durch Wörter zu ersetzen. In der eigenen Probe (Testtext B) nahmen Gemini 2.5 Pro, 3.1 und 3.8 eine Stil-Anweisung an, 2.5 Flash lehnte sie ab; ob sie befolgt wurde, zeigen die B-Proben.</li>
+  </ul>
+</section>
+
+<section id="integration">
+  <h2>Integration: zuerst Jarvis, dann die anderen Apps</h2>
+  <h3>Jarvis (heute: Vorleser-Pipeline mit Dateien)</h3>
+  <ul>
+    <li><b>Einhängepunkt</b> ist <code>speech/Synthese.kt</code>: Jeder Anbieter liefert eine Datei, die Pipeline mit Vorausschau, Erst-Satz-Schnitt, Halbieren bei Fehlern und Lautstärke bleibt unverändert.</li>
+    <li><b>Gemini 3.8 Flash/Flash-Lite (Gemini API, unary):</b> liefert WAV mit Header (24 kHz), spielbar wie der Qwen-Weg. Nötig: Eintrag im <code>TtsCatalog</code>, Methode <code>gemini()</code>, Schlüsselwahl, drei UI-Stellen. Den vorhandenen <b>bezahlten</b> Gemini-Schlüssel nutzen, nicht den kostenlosen. Pflicht: Audiodauer gegen Textlänge prüfen (Abbrüche). Kein <code>speakingRate</code>, kein SSML; die Chirp-Ausspracheregeln (<code>chirpAussprachen</code>) entfallen.</li>
+    <li><b>Streaming</b> lohnt derzeit nicht: Chirp-Streaming ist gRPC und Preview, Gemini-Streaming brach bei 3.1 nachweislich ab, und es würde die Datei-Pipeline umgehen.</li>
+    <li><b>Live-Gespräche</b> laufen über eine eigene Wiedergabe und sind von der TTS-Wahl unabhängig.</li>
+    <li><b>Deutsche Vorverarbeitung</b> (für alle Anbieter): deterministisch in Kotlin vor der Synthese, mit Regeln für Dezimalkomma, Datum, Uhrzeit, Euro, Einheiten, Abkürzungen. Eine fertige Kotlin-Bibliothek gibt es nicht; num2words ist Python (LGPL), NeMo nur Linux.</li>
+    <li><b>Möglicher Fehler, Edge:</b> Jarvis sendet laut Quelltext <code>Sec-MS-GEC-Version=1-…</code>; Microsoft verlangt seit etwa 10.10.2026 Token v2 (regional 403). Im Logbuch auf <code>code=403</code> prüfen.</li>
+  </ul>
+  <h3>Weitere eigene Apps</h3>
+  <div class="tabhuelle"><table><thead><tr><th>App</th><th>Heute</th><th>Bewertung</th></tr></thead><tbody>
+    <tr><td>PerfectMoment</td><td>gleiches <code>tts</code>-Paket wie Jarvis (Edge, Google, Qwen)</td><td>Änderungen doppelt nötig; besser das Paket als Modul herauslösen. Gleiches Edge-Token-Risiko.</td></tr>
+    <tr><td>VoiceAgent (Windows)</td><td>Chirp 3 HD per API-Key, MP3</td><td>Gemini-Umstieg wäre ein reiner Austausch der Anfrage.</td></tr>
+    <tr><td>vorlese-overlay-v2 (Browser)</td><td>Edge-TTS und Google</td><td>Edge-Token v2 prüfen.</td></tr>
+    <tr><td>GenialerWeckerAndroid</td><td>Android-TextToSpeech auf dem Gerät</td><td>Für eine Verkaufs-App so lassen: offline, kein Schlüssel, keine Datenübertragung. Cloud-TTS bräuchte einen Token-Broker und einen AV-Vertrag.</td></tr>
+    <tr><td>TerminalVoiceOverlay / ClaudeVoiceOverlay</td><td>keine Sprachausgabe gefunden</td><td>keine Aussage</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="grenzen">
+  <h2>Grenzen dieser Studie</h2>
+  <ul>
+    <li><b>Kein menschlicher Hörtest.</b> Qualitätsurteile stützen sich auf die englische Artificial-Analysis-Rangliste, wenige Zweitquellen zu Deutsch und den maschinellen Abgleich. Ein Qualitätssieger für Deutsch ist damit <b>nicht</b> festgestellt.</li>
+    <li>Die deutsche Rangliste von Artificial Analysis war automatisch nicht abrufbar: <a href="https://artificialanalysis.ai/text-to-speech/leaderboard/controlled-voice" target="_blank" rel="noopener">im Browser öffnen und „German“ wählen</a>.</li>
+    <li>Latenzen sind Einzelmessungen am PC für den ganzen Text, nicht die Zeit bis zum ersten Ton auf dem Handy.</li>
+    <li>Die Free-Tier-Limits der Gemini API sind nicht öffentlich; sie stehen nur im AI-Studio-Dashboard des eigenen Schlüssels.</li>
+    <li>Einige Google-Preisseiten liefern ihre Tabellen nur per JavaScript; Zahlen stammen dort aus Suchauszügen der offiziellen Seite (in R1 gekennzeichnet).</li>
+    <li>Rechtsfragen (EWR-Klausel der Gemini-Bedingungen, Preview ohne Datenverarbeitungsvertrag, Edge-Nutzung) sind dargestellt, nicht rechtlich geprüft.</li>
+    <li>Die Gemini-3.8-Proben wurden ohne Stilanweisung erzeugt; die 2.5- und 3.1-Proben mit kurzer Anweisung im Text (so verlangten es diese Modelle).</li>
+  </ul>
+</section>
+
+<section id="quellen">
+  <h2>Methodik und Quellen</h2>
+  <p>Zehn Sonnet-5.5-Researcher mit getrennten Schwerpunkten (Engine C, von Frank ausdrücklich freigegeben), Abrufdatum aller Quellen 21.10.2026. Jede Aussage in den Berichten trägt ihren Link; Herstellerangaben, Zweitquellen und Unbelegtes sind markiert. Hörproben und Abgleich: eigene Aufrufe mit vorhandenen Schlüsseln (Google, Gemini, Alibaba), Edge ohne Konto, Piper und Supertonic lokal.</p>
+  <div id="berichtliste"></div>
+  <h3>Wichtigste Primärquellen</h3>
+  <ul class="klein">
+    <li><a href="https://cloud.google.com/text-to-speech/pricing" target="_blank" rel="noopener">Google Cloud TTS Preise</a> · <a href="https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd" target="_blank" rel="noopener">Chirp 3 HD</a> · <a href="https://docs.cloud.google.com/text-to-speech/quotas" target="_blank" rel="noopener">Quoten</a> · <a href="https://docs.cloud.google.com/text-to-speech/docs/gemini-tts" target="_blank" rel="noopener">Gemini-TTS in Cloud TTS</a></li>
+    <li><a href="https://ai.google.dev/gemini-api/docs/speech-generation" target="_blank" rel="noopener">Gemini API Sprachausgabe</a> · <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">Gemini API Preise</a> · <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Gemini API Bedingungen</a> · <a href="https://ai.google.dev/gemini-api/docs/deprecations" target="_blank" rel="noopener">Abschaltungen</a> · <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener">Abrechnung</a></li>
+    <li><a href="https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts" target="_blank" rel="noopener">Azure Stimmen</a> · <a href="https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation" target="_blank" rel="noopener">Azure SSML</a> · <a href="https://github.com/rany2/edge-tts" target="_blank" rel="noopener">edge-tts</a></li>
+    <li><a href="https://elevenlabs.io/pricing/api" target="_blank" rel="noopener">ElevenLabs API-Preise</a> · <a href="https://cartesia.ai/pricing" target="_blank" rel="noopener">Cartesia Preise</a> · <a href="https://docs.inworld.ai/docs/tts/best-practices/generating-speech" target="_blank" rel="noopener">Inworld</a> · <a href="https://dev.hume.ai/voice/changelog" target="_blank" rel="noopener">Hume Changelog</a></li>
+    <li><a href="https://aws.amazon.com/polly/pricing/" target="_blank" rel="noopener">Polly Preise</a> · <a href="https://developers.deepgram.com/docs/tts-models" target="_blank" rel="noopener">Deepgram Modelle</a> · <a href="https://developers.openai.com/api/docs/guides/text-to-speech" target="_blank" rel="noopener">OpenAI TTS</a></li>
+    <li><a href="https://www.alibabacloud.com/help/en/model-studio/tts-model" target="_blank" rel="noopener">Alibaba TTS-Modelle</a> · <a href="https://artificialanalysis.ai/text-to-speech/leaderboard" target="_blank" rel="noopener">Artificial Analysis Rangliste</a> · <a href="https://arxiv.org/html/2604.17958v1" target="_blank" rel="noopener">MINT-Bench</a></li>
+  </ul>
+  <p class="mt klein">Dateistand: Recherchen/tts-vergleich im Repo proggs. Seite neu bauen mit <code>python -I seite/bauen.py</code>.</p>
+</section>
+</main>
+
+<script src="seite/daten.js"></script>
+<script src="seite/berichte.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+(function(){
+  const S = window.STUDIE, P = window.PROBEN || [], B = window.BERICHTE || {};
+  const $ = s => document.querySelector(s);
+  const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const eur = v => v == null ? "–" : (v === 0 ? "0 $" : v.toLocaleString("de-DE", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " $");
+
+  // Farbschema
+  const thema = $("#thema");
+  try { const g = localStorage.getItem("tts-thema"); if (g) { thema.value = g; document.documentElement.dataset.theme = g; } } catch (e) {}
+  thema.onchange = () => { if (thema.value) document.documentElement.dataset.theme = thema.value; else delete document.documentElement.dataset.theme; try { localStorage.setItem("tts-thema", thema.value); } catch (e) {} };
+
+  const ZPM = () => Number($("#kZpm").value) || 900;
+  const proMioAequivalent = a => a.preis.art === "minute" ? a.preis.proMinute * 1e6 / 900 : a.preis.proMio;
+  const freiMarke = {monatlich:["dauerhaft monatlich","m-gut"], freetier:["Free Tier","m-ak"], "monatlich-klein":["monatlich, klein","m-warn"], einmalig:["einmalig","m-warn"], keins:["keins","m-schl"], unklar:["unklar","m-schl"], lokal:["lokal","m-gut"], inoffiziell:["inoffiziell",""]};
+  const deutschMarke = {probe:["eigene Hörprobe","m-gut"], "probe-edge":["Hörprobe über Edge-Stimmen","m-ak"], "arena-de":["dt. Rangliste (Zweitquelle)","m-ak"], unabhaengig:["ein unabh. Test","m-ak"], doku:["nur Doku",""]};
+  const marke = (m, d) => m ? `<span class="marke ${m[1]}">${esc(m[0])}</span>` : esc(d || "");
+
+  function passt(a){
+    const f = $("#fFrei").value, d = $("#fDeutsch").value, k = $("#fKosten").value, art = $("#fArt").value;
+    if (f && a.frei.typ !== f && !(f === "keins" && a.frei.typ === "unklar")) return false;
+    if (d === "probe" && !(a.probe && a.probe.length)) return false;
+    if (d === "arena-de" && a.deutschBeleg !== "arena-de") return false;
+    if (d === "ohne" && (a.probe && a.probe.length || a.deutschBeleg === "arena-de")) return false;
+    if (art && a.art !== art) return false;
+    const p = proMioAequivalent(a);
+    if (k === "0" && p !== 0 && !(a.frei.typ === "monatlich")) return false;
+    if (k === "15" && !(p != null && p > 0 && p <= 15)) return false;
+    if (k === "30" && !(p != null && p > 15 && p <= 30)) return false;
+    if (k === "99" && !(p != null && p > 30)) return false;
+    return true;
+  }
+
+  function tabelle(){
+    const rows = S.anbieter.filter(passt).map(a => {
+      const p = proMioAequivalent(a);
+      return `<tr><td><b>${esc(a.name)}</b>${a.heute ? ' <span class="marke m-ak">heute in Jarvis</span>' : ""}<br><span class="mt klein">${esc(a.modell)}</span></td>
+      <td>${marke(freiMarke[a.frei.typ])}<br><span class="klein">${esc(a.frei.text)}</span></td>
+      <td class="zahl">${p == null ? "–" : p.toLocaleString("de-DE",{maximumFractionDigits:1})}${a.preis.art === "minute" ? "<br><span class='mt klein'>aus " + a.preis.proMinute.toLocaleString("de-DE") + " $/Min.</span>" : ""}</td>
+      <td class="zahl">${a.elo.wert ?? "–"}<br><span class="mt klein">${esc(a.elo.rang)}</span></td>
+      <td>${marke(deutschMarke[a.deutschBeleg])}</td>
+      <td class="klein">${esc(a.aussprache)}</td>
+      <td class="klein">${esc(a.status)}</td></tr>`;
+    });
+    $("#vtab tbody").innerHTML = rows.join("") || `<tr><td colspan="7">Keine Treffer für diese Filter.</td></tr>`;
+    $("#profilraster").innerHTML = S.anbieter.filter(passt).map(a => `<div class="karte">
+      <h4>${esc(a.name)}</h4><div class="mt klein">${esc(a.modell)}</div>
+      <div>${marke(freiMarke[a.frei.typ])}${marke(deutschMarke[a.deutschBeleg])}${a.heute ? '<span class="marke m-ak">heute in Jarvis</span>' : ""}</div>
+      <table class="klein"><tbody>
+      <tr><th>Status</th><td>${esc(a.status)}</td></tr>
+      <tr><th>Freikontingent</th><td>${esc(a.frei.text)}</td></tr>
+      <tr><th>Preis</th><td>${esc(a.preis.text)}</td></tr>
+      <tr><th>Rangliste</th><td>${a.elo.wert ? "Elo " + a.elo.wert + ", " : ""}${esc(a.elo.text)}</td></tr>
+      <tr><th>Aussprache</th><td>${esc(a.aussprache)}</td></tr>
+      <tr><th>Streaming</th><td>${esc(a.streaming)}</td></tr>
+      <tr><th>Android</th><td>${esc(a.android)}</td></tr>
+      <tr><th>Datenschutz</th><td>${esc(a.datenschutz)}</td></tr>
+      <tr><th>Kostenbremse</th><td>${esc(a.bremse)}</td></tr>
+      <tr><th>Erzeugungszeit</th><td>${esc(a.latenz)}</td></tr>
+      </tbody></table>
+      ${a.pro.length ? "<div class='klein'><b>Für:</b> " + a.pro.map(esc).join(" · ") + "</div>" : ""}
+      ${a.contra.length ? "<div class='klein'><b>Gegen:</b> " + a.contra.map(esc).join(" · ") + "</div>" : ""}
+      <div class="mt klein">Belege: ${a.quellen.map(q => `<a href="#bericht-${q}">${q.toUpperCase()}</a>`).join(", ")}</div></div>`).join("");
+  }
+  ["#fFrei","#fDeutsch","#fKosten","#fArt"].forEach(s => $(s).onchange = tabelle);
+  tabelle();
+
+  // Hörproben
+  const titel = d => d.replace(/\.mp3$/, "").replace(/^gemini-gemini-/, "Gemini ").replace(/^google-de-DE-/, "Google ").replace(/^edge-de-DE-/, "Edge ").replace(/^qwen-/, "Alibaba ").replace(/^lokal-/, "Lokal: ").replace(/-Leda-a$/, " · Leda · Testtext A").replace(/-Leda-b$/, " · Leda · Testtext B (Satzzeichen)");
+  const reihenfolge = d => d.startsWith("google") ? 0 : d.includes("3.8-flash-tts") ? 1 : d.includes("3.8-flash-lite") ? 2 : d.startsWith("gemini") ? 3 : d.startsWith("edge") ? 4 : d.startsWith("qwen") ? 5 : 6;
+  const sortiert = [...P].sort((a, b) => reihenfolge(a.datei) - reihenfolge(b.datei) || a.datei.localeCompare(b.datei));
+  $("#probenraster").innerHTML = sortiert.map(p => {
+    const ok = p.stellen.filter(s => s.von && s.ok === s.von).length, mess = p.stellen.filter(s => s.von).length;
+    const abgleich = p.datei.endsWith("-b.mp3") ? '<span class="marke">Testtext B, kein Abgleich</span>'
+      : (mess ? `<span class="marke ${ok === mess ? "m-gut" : ok >= mess - 2 ? "m-warn" : "m-schl"}">Abgleich B+C: ${ok}/${mess} Stellen sicher richtig</span>` : "")
+      + (p.prueferA ? `<span class="marke">Prüfer A: ${p.prueferA.korrekt}/${p.prueferA.von}</span>` : "");
+    return `<div class="karte"><h4>${esc(titel(p.datei))}</h4><div class="mt klein">${p.dauer ? p.dauer.toLocaleString("de-DE") + " s" : ""}</div>
+      <audio controls preload="none" src="proben/${encodeURIComponent(p.datei)}"></audio>${abgleich}
+      ${p.transkriptB || p.transkriptC ? `<details><summary class="klein">Mitschriften</summary><p class="klein"><b>B:</b> ${esc(p.transkriptB)}</p><p class="klein"><b>C:</b> ${esc(p.transkriptC)}</p>${p.prueferA && p.prueferA.auffaelligkeiten ? `<p class="klein"><b>A:</b> ${esc(p.prueferA.auffaelligkeiten)}</p>` : ""}</details>` : ""}</div>`;
+  }).join("");
+
+  // Aussprache-Matrix
+  const mitA = sortiert.filter(p => !p.datei.endsWith("-b.mp3") && p.stellen.some(s => s.von));
+  if (mitA.length) {
+    const stellen = mitA[0].stellen.map(s => s.stelle);
+    $("#atab thead").innerHTML = "<tr><th>Probe</th>" + stellen.map(s => `<th class="zahl">${esc(s)}</th>`).join("") + "</tr>";
+    $("#atab tbody").innerHTML = mitA.map(p => "<tr><td class='klein'>" + esc(titel(p.datei)) + "</td>" + p.stellen.map(s => {
+      const c = !s.von ? "" : s.ok === s.von ? "m-gut" : s.ok ? "m-warn" : "m-schl";
+      return `<td class="zahl"><span class="ampel marke ${c}">${s.von ? (s.ok === s.von ? "✓" : s.ok ? "½" : "✗") : "–"}</span></td>`;
+    }).join("") + "</tr>").join("");
+  }
+
+  // Kostenrechner
+  const KOSTEN = [
+    ["Google Chirp 3 HD", "Zeichen, 1 Mio. frei", z => Math.max(0, z - 1e6) * 30 / 1e6, null, "frei bis 1 Mio. Zeichen"],
+    ["Gemini 3.8 Flash TTS", "Audio-Tokens", (z, m) => m * 0.0135, (z, m) => m * 0.027, "plus geringe Text-Eingabekosten; Free Tier 0 $, falls zulässig"],
+    ["Gemini 3.8 Flash-Lite TTS", "Audio-Tokens", (z, m) => m * 0.009, (z, m) => m * 0.018, "wie oben"],
+    ["Azure Neural (S0)", "Zeichen", z => z * 15 / 1e6, null, "F0 bis 0,5 Mio. Zeichen kostenlos (eigene Stufe)"],
+    ["Azure Neural HD", "Zeichen", z => z * 22 / 1e6, null, ""],
+    ["Edge (inoffiziell)", "–", () => 0, null, "ohne Zusage"],
+    ["Alibaba qwen3-tts-flash", "Zeichen", z => z * 1.34 * 10 / 1e6, null, "gemessen 1,34 berechnete Zeichen je Textzeichen"],
+    ["ElevenLabs v4 Turbo", "Zeichen", z => Math.max(0, z - 20000) * 40 / 1e6, null, "20.000 Zeichen frei, nicht kommerziell"],
+    ["ElevenLabs v4", "Zeichen", z => z * 80 / 1e6, null, ""],
+    ["Cartesia Sonic 3.6", "Credits = Zeichen", z => z * 50 / 1e6, null, "38–65 $ je Tarif, hier Mitte 50 $"],
+    ["Inworld TTS-2", "Zeichen", z => z * 25 / 1e6, null, "Flash: 15 $"],
+    ["Mistral Voxtral TTS 3", "Zeichen", z => z * 13 / 1e6, null, "Preview"],
+    ["Amazon Polly Generative", "Zeichen", z => z * 30 / 1e6, null, "erstes Jahr 100.000 Zeichen frei"],
+    ["Deepgram Aura-2", "Zeichen", z => z * 30 / 1e6, null, "200 $ Startguthaben einmalig"],
+    ["Lokal (Piper, Qwen3-TTS)", "–", () => 0, null, "Strom und Hardware"]
+  ];
+  function rechne(){
+    const min = Number($("#kMin").value) || 0, zpm = ZPM(), mMonat = min * 30, zMonat = mMonat * zpm;
+    $("#kAnnahme").textContent = `${min} Min./Tag × 30 Tage = ${mMonat.toLocaleString("de-DE")} Audiominuten = ${zMonat.toLocaleString("de-DE")} Zeichen = ${(mMonat * 1500).toLocaleString("de-DE")} Gemini-Audio-Tokens im Monat.`;
+    $("#ktab tbody").innerHTML = KOSTEN.map(k => `<tr><td>${k[0]}</td><td class="klein">${k[1]}</td><td class="zahl">${eur(k[2](zMonat, mMonat))}</td><td class="zahl">${k[3] ? eur(k[3](zMonat, mMonat)) : "wie 2026"}</td><td class="klein mt">${k[4]}</td></tr>`).join("");
+    $("#ktab3 tbody").innerHTML = S.rechner.profile.map(([n, m]) => { const mm = m * 30, zz = mm * zpm; const f = i => eur(KOSTEN[i][2](zz, mm));
+      return `<tr><td>${n} (${m} Min./Tag)</td><td class="zahl">${zz.toLocaleString("de-DE")}</td><td class="zahl">${mm.toLocaleString("de-DE")}</td><td class="zahl">${f(0)}</td><td class="zahl">${f(1)} <span class="mt klein">(2027: ${eur(KOSTEN[1][3](zz, mm))})</span></td><td class="zahl">${f(2)}</td><td class="zahl">${f(7)}</td><td class="zahl">${f(10)}</td></tr>`; }).join("");
+  }
+  $("#kProfil").onchange = () => { $("#kMin").value = $("#kProfil").value; rechne(); };
+  $("#kMin").oninput = rechne; $("#kZpm").oninput = rechne; rechne();
+
+  // Testtext und Berichte
+  const md = t => window.marked ? window.marked.parse(t) : "<pre>" + esc(t) + "</pre>";
+  $("#testtext").innerHTML = md(window.TESTTEXT || "");
+  $("#berichtliste").innerHTML = Object.entries(B).map(([k, b]) => `<details id="bericht-${k}"><summary>${k.toUpperCase()} · ${esc(b.titel)}</summary><p class="klein"><a href="${esc(b.datei)}">${esc(b.datei)}</a></p><div class="bericht" data-k="${k}"></div></details>`).join("");
+  document.querySelectorAll("#berichtliste details").forEach(d => d.addEventListener("toggle", () => { const div = d.querySelector(".bericht"); if (d.open && !div.dataset.fertig) { div.innerHTML = md(B[div.dataset.k].text); div.dataset.fertig = 1; div.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener"; }); } }));
+  document.querySelectorAll('a[href^="#bericht-"]').forEach(a => a.addEventListener("click", () => { const d = document.querySelector(a.getAttribute("href")); if (d) d.open = true; }));
+
+  // aktiver Navigationspunkt
+  const links = [...document.querySelectorAll("nav a")];
+  const beob = new IntersectionObserver(e => e.forEach(x => { if (x.isIntersecting) links.forEach(l => l.classList.toggle("aktiv", l.getAttribute("href") === "#" + x.target.id)); }), {rootMargin: "-40% 0px -55% 0px"});
+  document.querySelectorAll("main section").forEach(s => beob.observe(s));
+})();
+</script>
+</body>
+</html>

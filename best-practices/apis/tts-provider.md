@@ -435,3 +435,32 @@ Die Preise beziehen sich auf 1 Mio Zeichen, Stand 09/2026. Bei Entscheidungen er
   - Feste Texte beim Bau vorab rendern und als Asset ausliefern.
   - Dynamischen Text per Hash-Key cachen, lokal als Fallback.
 - **edge-tts 2026:** keine belegten Abmahnungen oder Play-Store-Entfernungen. Seit 2026 bricht aber eine Header-Restriktion (`Sec-WebSocket-Version`) die Nutzung im Browser; serverseitige Clients laufen noch. Es bleibt eine Grauzone und ist **kein** Weg für eine Verkaufs-App (siehe §13).
+
+## 18) Deutsche Cloud-TTS im Vergleich: Freikontingente, Qualität, Wahl gegenüber Chirp 3 HD — Stand 21.10.2026 19:37 (TTS-Vergleichsstudie Jarvis, Engine C Sonnet-Schwarm, 10 Researcher, 20 eigene Hörproben)
+
+Volltext, Hörproben, Kostenrechner: `Recherchen/tts-vergleich/index.html` (Berichte r1–r10 daneben). `offiziell` = Herstellerdoku, `extern` = Drittquelle, `gemessen` = eigene Aufrufe am 21.10.2026.
+
+**Freikontingente richtig lesen**
+- Das „große Google-Freikontingent“ ist das der klassischen Cloud-TTS-Stimmklassen: Chirp 3 HD **1 Mio. Zeichen/Monat**, Standard/WaveNet 4 Mio., Neural2/Studio 1 Mio. Es erneuert sich monatlich, braucht ein aktives Abrechnungskonto, Umlaut = 1 Zeichen, SSML-Tags zählen mit. `offiziell` https://cloud.google.com/text-to-speech/pricing
+- **Gemini-TTS in Cloud TTS hat kein Freikontingent** („Not available“) und rechnet je Token ab (25 Audio-Tokens/s = 1.500/min, `gemessen` bestätigt). Kostenlos nur im **Gemini API Free Tier** (3.8 Flash/Flash-Lite TTS), Limits unveröffentlicht, Datennutzung zur Produktverbesserung; die Bedingungen erlauben im EWR/CH/UK für Apps mit Nutzern nur bezahlte Dienste. `offiziell` https://ai.google.dev/gemini-api/docs/pricing, https://ai.google.dev/gemini-api/terms
+- Weitere: Azure F0 0,5 Mio. Neural-Zeichen/Monat dauerhaft (kommerzielle Rechte strittig); ElevenLabs 10.000 Credits/Monat (nicht kommerziell, Namensnennung); Cartesia 20.000 Credits/Monat; Polly 12 Monate; Deepgram 200 $ einmalig; Alibaba einmalig 90 Tage, nur Singapur.
+
+**Kostenbremse**
+- Cloud TTS (Chirp): **keine native Kappung**; Spend-Cap-Budgets decken Cloud TTS nicht ab. Harte Grenze nur per App-Zeichenzähler oder Billing-Abschaltung per Pub/Sub. `offiziell` https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps
+- Gemini API: **Prepay** (bei 0 HTTP 402) plus **Projekt-Monatslimit** = einzige belegte harte Bremse bei Google. `offiziell` https://ai.google.dev/gemini-api/docs/billing
+
+**Modelle (Stand 21.10.2026)**
+- `gemini-3.8-flash-tts` / `gemini-3.8-flash-lite-tts`: Gemini API „Stable“ seit 22.09.2026, Vertex/Cloud nur Preview (`global`). 0,0135 bzw. 0,009 $/Audiominute bis 31.12.2026, ab 2027 doppelt. Englische AA-Arena Rang 5 (1278) bzw. 8 (1251), Chirp 3 HD Rang 60 (1061). Unary-Antwort ist **WAV mit Header**, 24 kHz.
+- `gemini-2.5-*-preview-tts`, `gemini-3.1-flash-tts-preview`: Abschaltung frühestens 17.11.2026. OpenAI `gpt-4o-mini-tts`/`tts-1(-hd)`: Abschaltung 06.01.2027. Hume Octave: API endet 13.11.2026.
+- Spitze der englischen Arena: ElevenLabs v4 Turbo (1335), Qwen-Audio-3.1-TTS-Plus (1301), Cartesia Sonic 3.6 (1289), Inworld TTS-2 (1267). Deutsch: nur Zweitquelle (Sonic 3.6 vor Inworld, 22.09.2026). Die Arena ist englisch; nie als Deutsch-Beleg verwenden.
+
+**Aussprache Deutsch (gemessen, Testtext mit Datum, Uhrzeit, Dezimalkomma, Euro, Einheiten, Abkürzungen)**
+- Fehlerfrei in drei maschinellen Abgleichen: Gemini 3.8 Flash und Flash-Lite, Gemini 2.5 Flash/Pro, Edge-Stimmen (Seraphina, Florian, Katja, Conrad).
+- Chirp 3 HD (Leda, Kore, Charon): lässt das **„Komma“ in Dezimalzahlen** oft weg („dreißig fünf“), liest „3. Nov.“ als „dritte Nov“. qwen3-tts-flash, Piper, Supertonic: viele Fehler.
+- Regel: **Deutsche Normalisierung im Client vorschalten** (Dezimalkomma → „Komma“, Datum, Euro, Abkürzungen ausschreiben). Behebt die Chirp-Schwäche kostenlos und hilft jedem Anbieter. Satzzeichen „wörtlich sprechen“ dokumentiert kein Anbieter → im Client durch Wörter ersetzen.
+- Gemini 3.8: Text ist wörtliches Transkript. **Regieanweisungen nie in den Text** (Flash-Lite sprach sie mit); Stil gehört in `speech_metadata.style`. `offiziell` https://ai.google.dev/gemini-api/docs/speech-generation
+
+**Integration (Android, Datei-Pipeline wie in Jarvis)**
+- Neuer Anbieter = neue Methode in der Synthese-Schicht, die eine Datei liefert. Gemini 3.8 unary WAV passt ohne Header-Bau. Pflicht: **Audiodauer gegen Textlänge prüfen** (Abbrüche trotz HTTP 200 bei 3.1 belegt). Streaming bei Chirp (gRPC, Preview) und Gemini (Abbrüche) derzeit nicht lohnend.
+- Für Gemini-TTS den **bezahlten** Schlüssel nehmen (kein Training, 55 Tage Missbrauchsprotokoll), nicht den Free-Tier-Schlüssel.
+- Erzeugungszeit ganzer Testtext (356 Zeichen, PC, unary, je eine Messung): Chirp 3 HD 4,4–5,0 s, Gemini 3.8 Flash 11–15 s, 3.8 Flash-Lite 7–8 s, qwen3-tts-flash 7–8 s, 2.5 Pro 30 s. Antwortbeginn auf dem Handy selbst messen.
