@@ -64,22 +64,16 @@ class SuchRegelTest {
     }
 
     @Test fun zustimmungAufEinAngebotZaehltAlsWunsch() {
-        // Jarvis bot die Recherche an, Franks jüngste Äußerung ist die knappe Zustimmung.
-        assertTrue(SuchRegel.darfStarten("Recherche", "Ja, mach das bitte."))
-        assertTrue(SuchRegel.darfStarten("Recherche", "Gerne"))
+        // Im Chat stehen Franks vorige Frage und seine Antwort auf das Angebot zeilenweise in den Worten.
+        val angebot = "Laut Hersteller ja. Soll ich dazu eine ausführliche Recherche starten?"
+        assertTrue(SuchRegel.darfStarten("Recherche", "Ja, mach das bitte.", vorher = "Ist DMZ in Deutschland schon spielbar?", angebot = angebot))
+        assertTrue(SuchRegel.darfStarten("Recherche", "Gerne", angebot = angebot))
+        // Ein „Ja“ auf eine andere Frage oder ein „Super, danke“ ist keine Zustimmung zu einem Agenten.
+        assertFalse(SuchRegel.darfStarten("Recherche", "Ja", angebot = "Soll ich den Termin eintragen?"))
+        assertFalse(SuchRegel.darfStarten("Recherche", "Super, danke", angebot = angebot))
+        assertFalse(SuchRegel.darfStarten("Recherche", "Gerne"))
         assertFalse(SuchRegel.zustimmung("Ja, aber wann erscheint es?"))
-        assertFalse(SuchRegel.darfStarten("Recherche", "Und wann erscheint das nächste Update?"))
-    }
-
-    @Test fun blosseErwaehnungIstKeinWunsch() {
-        listOf(
-            "Was ist eine systematische Recherche?",
-            "Welche Agentur ist dafür geeignet?",
-            "Wie lange hat der Agent gestern gebraucht?",
-        ).forEach { assertFalse(it, SuchRegel.ausdruecklich(it)) }
-        assertTrue(SuchRegel.ausdruecklich("Kannst du das bitte recherchieren?"))
-        assertTrue(SuchRegel.ausdruecklich("Starte einen Agenten zu DMZ."))
-        assertTrue(SuchRegel.ausdruecklich("Ich hätte gern eine Recherche über Laufschuhe."))
+        assertFalse(SuchRegel.darfStarten("Recherche", "Und wann erscheint das nächste Update?", vorher = "Ja"))
     }
 
     @Test fun verneinteRechercheStartetKeinenAgenten() {
@@ -91,20 +85,57 @@ class SuchRegelTest {
         ).forEach { assertFalse(it, SuchRegel.darfStarten("Recherche", it)) }
     }
 
-    @Test fun nurDieJuengsteAeusserungZaehlt() {
-        // Der Wunsch von vorhin gilt nicht für die nächste normale Frage; ein neuer Wunsch gilt, auch wenn vorhin „keine Recherche“ fiel.
-        assertFalse(SuchRegel.darfStarten("Recherche", "Was kostet Diesel gerade?"))
-        assertTrue(SuchRegel.darfStarten("Recherche", "Okay, jetzt recherchiere das bitte ausführlich."))
-        assertFalse(SuchRegel.darfStarten("Recherche", "Recherchiere bitte nicht."))
-        // Der Chat übergibt seine aktuelle Nachricht als jüngste Äußerung, nicht die beiden letzten zusammen.
-        assertTrue(quellenText().contains("FranksWorte(worte, streng = true, juengste = text)"))
-        assertTrue(quellenText().contains("[ProgrammierChat.FranksWorte]?.juengste"))
+    @Test fun neuerAusdruecklicherWunschGiltAuchNachEinerVerneintenFrage() {
+        // Im Chat stehen Franks letzte zwei Nachrichten in den Worten; das „keine Recherche“ von vorhin hebt den neuen Wunsch nicht auf.
+        assertTrue(SuchRegel.darfStarten("Recherche", "Okay, jetzt recherchiere das bitte ausführlich.", vorher = "Keine Recherche, schau nur kurz, ob DMZ spielbar ist."))
+        assertFalse(SuchRegel.darfStarten("Recherche", "Ist DMZ in Deutschland spielbar?", vorher = "Recherchiere bitte nicht."))
     }
 
-    private fun quellenText() = quellen.values.joinToString("\n")
+    @Test fun einWunschVonVorhinGiltNichtFuerDieNaechsteFrage() {
+        // Codex-Befund: Nach „Recherchiere …“ ist die nächste normale Frage kein neuer Auftrag.
+        assertFalse(SuchRegel.darfStarten("Recherche", "Was kostet Diesel gerade?", vorher = "Recherchiere ausführlich die besten Laufschuhe."))
+        assertFalse(SuchRegel.darfStarten("Recherche", "wann öffnet der baumarkt heute", vorher = "Recherchiere ausführlich die besten Laufschuhe."))
+        // Eine kurze Ergänzung auf die Rückfrage zur verlangten Recherche gehört noch dazu.
+        assertTrue(SuchRegel.darfStarten("Recherche", "Für Deutschland.", vorher = "Recherchiere ausführlich die Rechtslage für Drohnen."))
+        // Eine kurze Absage oder eine eingesprochene Ja/Nein-Frage ohne Fragezeichen ist keine Ergänzung.
+        listOf("Nein, lass gut sein.", "Stopp", "Nicht nötig", "Vergiss es", "Danke, das reicht.", "ist der baumarkt heute offen").forEach {
+            assertFalse(it, SuchRegel.darfStarten("Recherche", it, vorher = "Recherchiere ausführlich die Rechtslage für Drohnen."))
+        }
+    }
 
-    @Test fun andereAgentenUndUnbekannteWorteWerdenNichtGesperrt() {
+    @Test fun eineBlosseErwaehnungIstKeinWunsch() {
+        // Codex-Befund: Nur die Erwähnung von Recherche oder ein Wort wie „Agentur“ reicht nicht.
+        listOf(
+            "Was ist eine systematische Recherche?",
+            "Welche Agentur ist dafür geeignet?",
+            "Wann hat die Arbeitsagentur heute offen?",
+            "Hast du das schon recherchiert?",
+            "Was macht die Recherche?",
+            "Brauche ich dafür eine Recherche?",
+            "Wie lange hat der Agent gestern gebraucht?",
+        ).forEach { assertFalse(it, SuchRegel.darfStarten("Recherche", it)) }
+        listOf(
+            "Kannst du recherchieren, welche Laufschuhe gut sind?",
+            "Starte eine Recherche zu Vitamin D.",
+            "Forsch mal nach, wer das Spiel entwickelt.",
+            "Kannst du das bitte recherchieren?",
+            "Starte einen Agenten zu DMZ.",
+            "Kannst du einen Agenten starten?",
+            "Ich hätte gern eine Recherche über Laufschuhe.",
+            // Eine Verneinung zählt nur direkt am Wort.
+            "Keine Ahnung, recherchiere das bitte.",
+            "Das weiß ich nicht genau, recherchiere bitte ausführlich.",
+            "Recherchiere nicht nur den Preis, sondern auch die Verfügbarkeit.",
+        ).forEach { assertTrue(it, SuchRegel.darfStarten("Recherche", it)) }
+    }
+
+    @Test fun andereAgentenNurAufWunschUnbekannteWorteNichtGesperrt() {
         assertTrue(SuchRegel.darfStarten("Machbarkeit", "Prüf mal, ob die Idee machbar ist."))
+        assertTrue(SuchRegel.darfStarten("Code-Analyse", "Analysiere den Code von Aufgaben."))
+        // Kein Ausweichen auf einen anderen oder neu angelegten Agenten bei einer normalen Frage.
+        val frage = "Ist das neueste Modern Warfare mit DMZ in Deutschland schon spielbar?"
+        assertFalse(SuchRegel.darfStarten("Machbarkeit", frage))
+        assertFalse(SuchRegel.darfStarten("Websuche-Agent", frage))
         // ChatGPT über MCP und Live ohne Mitschrift: Franks Worte fehlen, die Regel gilt dort über die Anweisungen.
         assertTrue(SuchRegel.darfStarten("Recherche", null))
     }

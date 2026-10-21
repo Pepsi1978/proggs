@@ -100,9 +100,9 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                 when {
                     plan == null -> Ergebnis("Diesen Agenten gibt es nicht. Vorhanden: " + Agenten.alle(app).joinToString { it.name } + ". Mit agenten (aktion=anlegen) lässt sich ein neuer bauen.", fehler = true)
                     auftrag.isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
-                    // Franks Vorgabe: Der Recherche-Agent startet nur auf seinen ausdrücklichen Wunsch. Geprüft an seinen eigenen Worten,
+                    // Franks Vorgabe: Ein Agent (allen voran Recherche) startet nur auf seinen ausdrücklichen Wunsch. Geprüft an seinen eigenen Worten,
                     // nicht an der Deutung des Modells; ohne sie (ChatGPT über MCP, Live ohne Mitschrift) gilt die Regel nur über die Anweisungen.
-                    !SuchRegel.darfStarten(plan.name, kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]?.juengste) -> {
+                    !kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte].let { SuchRegel.darfStarten(plan.name, it?.aktuell, it?.vorher, it?.angebot) } -> {
                         de.frank.jarvis.observability.Logbuch.system("agent_starten abgelehnt", "Recherche ohne ausdrücklichen Wunsch")
                         Ergebnis(SuchRegel.NICHT_GESTARTET, fehler = true)
                     }

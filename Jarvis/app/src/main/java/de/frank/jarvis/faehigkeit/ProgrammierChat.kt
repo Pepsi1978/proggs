@@ -50,9 +50,10 @@ object ProgrammierChat {
      * Franks eigene Worte der laufenden Runde im Koroutinen-Kontext: daran prüft programmier_nachtrag, ob Frank einen Nachtrag
      * wirklich ausdrücklich verlangt hat, statt der Deutung des Modells zu folgen. [streng] im Standard-Chat (getippt oder
      * eingesprochen): nur diese Worte zählen. Im Live-Modus ist die Mitschrift unsicher; dort zählen auch die Worte des Modells.
-     * [juengste] = nur Franks aktuelle Äußerung; daran prüft agent_starten den Recherche-Wunsch ([SuchRegel.darfStarten]).
+     * [aktuell] = nur Franks Nachricht dieser Runde, [vorher] = seine vorige, [angebot] = Jarvis' letzte Antwort davor
+     * (für die Agenten-Prüfung in agent_starten, [SuchRegel.darfStarten]).
      */
-    class FranksWorte(val text: String, val streng: Boolean, val juengste: String = text) : kotlin.coroutines.AbstractCoroutineContextElement(FranksWorte) {
+    class FranksWorte(val text: String, val streng: Boolean, val aktuell: String = text, val vorher: String? = null, val angebot: String? = null) : kotlin.coroutines.AbstractCoroutineContextElement(FranksWorte) {
         companion object Key : kotlin.coroutines.CoroutineContext.Key<FranksWorte>
     }
 

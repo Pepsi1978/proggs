@@ -277,9 +277,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // kommen dessen Meldungen in genau dieses Gespräch, auch wenn inzwischen andere Gespräche arbeiten.
         // Franks eigene Worte (diese Frage und seine vorige, getippt oder eingesprochen): Nur daran entscheidet programmier_nachtrag,
         // ob er einen Nachtrag ausdrücklich verlangt hat. Die erste Nachricht eines Auftrags-Gesprächs ist der Auftrag selbst, nicht Franks Wort.
-        val worte = gespraech.take(frage + 1).filter { it.vonMir && !de.frank.jarvis.faehigkeit.ProgrammierChat.istAuftragsVorspann(it.text) }
-            .takeLast(2).joinToString("\n") { it.text }
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(worte, streng = true, juengste = text)) {
+        val eigene = gespraech.take(frage + 1).filter { it.vonMir && !de.frank.jarvis.faehigkeit.ProgrammierChat.istAuftragsVorspann(it.text) }
+            .takeLast(2).map { it.text }
+        val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
+            aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = gespraech.take(frage).lastOrNull { !it.vonMir }?.text)
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
@@ -1011,7 +1013,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Wie in [sende]: Startet Jarvis hier einen Programmierauftrag, kommen dessen Meldungen in dieses Gespräch.
         val kennung = sitzungId?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(it) } ?: kotlin.coroutines.EmptyCoroutineContext
         // Live: die Mitschrift von Franks Äußerung für die Nachtrags-Prüfung (unsicher, daher nicht streng).
-        val worte = aeusserung?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(it, streng = false) } ?: kotlin.coroutines.EmptyCoroutineContext
+        val angebot = gespraech.lastOrNull { !it.vonMir }?.text
+        val worte = aeusserung?.let { de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(it, streng = false, angebot = angebot) } ?: kotlin.coroutines.EmptyCoroutineContext
         viewModelScope.launch(kennung + worte) {
             val antwort = runCatching {
                 // Live (jarvis_fragen): fest 8 Schritte, unabhängig von Franks Chat-Schrittlimit; das Zeitlimit oben bleibt.

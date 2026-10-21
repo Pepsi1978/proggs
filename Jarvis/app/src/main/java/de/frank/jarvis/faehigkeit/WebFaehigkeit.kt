@@ -72,11 +72,13 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
 
     /**
      * Sucht über die Wege aus [SuchRegel.wege], der Reihe nach, bis einer liefert. Im Gespräch sucht das Modell knapp (eine gezielte
-     * Suche) und höchstens [GESPRAECH_MS] lang: Im Live-Gespräch bleiben dem Jarvis-Agenten von den 60 Sekunden für jarvis_fragen
-     * nach der Abschluss-Reserve 35 Sekunden für Modellschritt, Suche und Antwort.
+     * Suche) und höchstens [GESPRAECH_MS] lang, Tavily dann höchstens [GESPRAECH_TAVILY_S] Sekunden: Im Live-Gespräch bleiben dem
+     * Jarvis-Agenten von den 60 Sekunden für jarvis_fragen nach der Abschluss-Reserve 35 Sekunden für Modellschritt, Suche und Antwort.
+     * Agenten und ChatGPT über MCP (das selbst gründlich recherchiert und die Treffer will) suchen wie bisher ausführlich.
      */
     private suspend fun suche(anfrage: String, treffer: Int): Ergebnis {
-        val imAgenten = currentCoroutineContext()[de.frank.jarvis.ablage.AgentenKontext]?.eintragTitel != null
+        val kontext = currentCoroutineContext()
+        val imAgenten = kontext[de.frank.jarvis.ablage.AgentenKontext]?.eintragTitel != null || kontext[ProgrammierChat.AusChatGpt] != null
         val wege = SuchRegel.wege(imAgenten, modell = codex.isConnected, tavily = schluessel.isNotBlank())
         if (wege.isEmpty()) return Ergebnis(SuchRegel.KEINE_SUCHE + " " + SuchRegel.EHRLICH, fehler = true)
         val fehler = mutableListOf<String>()
@@ -84,7 +86,7 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
             val r = when (weg) {
                 SuchRegel.Weg.MODELL -> if (imAgenten) codexSuche(anfrage, knapp = false)
                     else withTimeoutOrNull(GESPRAECH_MS) { codexSuche(anfrage, knapp = true) } ?: Ergebnis("Die Websuche des Modells brauchte länger als ${GESPRAECH_MS / 1000} Sekunden.", fehler = true)
-                SuchRegel.Weg.TAVILY -> tavilySuche(anfrage, treffer)
+                SuchRegel.Weg.TAVILY -> tavilySuche(anfrage, treffer, if (imAgenten) CLIENT else GESPRAECH_CLIENT)
             }
             if (!r.fehler) return r
             fehler += r.text
@@ -92,8 +94,8 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
         return Ergebnis(fehler.joinToString(" ") + " Die direkte Suche ging gerade nicht. " + SuchRegel.EHRLICH, fehler = true)
     }
 
-    private suspend fun tavilySuche(anfrage: String, treffer: Int): Ergebnis =
-        frage("https://api.tavily.com/search", JSONObject().put("query", anfrage).put("max_results", treffer).put("include_answer", true)) { antwort ->
+    private suspend fun tavilySuche(anfrage: String, treffer: Int, client: OkHttpClient): Ergebnis =
+        frage("https://api.tavily.com/search", JSONObject().put("query", anfrage).put("max_results", treffer).put("include_answer", true), client) { antwort ->
             buildString {
                 antwort.optString("answer").takeIf { it.isNotBlank() }?.let { append("Kurzantwort: ").append(it).append("\n\n") }
                 val liste = antwort.optJSONArray("results") ?: JSONArray()
@@ -105,13 +107,13 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
             }.trim()
         }
 
-    private suspend fun frage(adresse: String, rumpf: JSONObject, text: (JSONObject) -> String): Ergebnis {
+    private suspend fun frage(adresse: String, rumpf: JSONObject, client: OkHttpClient = CLIENT, text: (JSONObject) -> String): Ergebnis {
         stoerung()?.let { return Ergebnis(it, fehler = true) }
         return withContext(Dispatchers.IO) {
             runCatching {
                 val anfrage = Request.Builder().url(adresse).header("Authorization", "Bearer $schluessel")
                     .post(rumpf.toString().toRequestBody("application/json; charset=utf-8".toMediaType())).build()
-                CLIENT.newCall(anfrage).execute().use { antwort ->
+                client.newCall(anfrage).execute().use { antwort ->
                     val inhalt = antwort.body?.string().orEmpty()
                     if (!antwort.isSuccessful) Ergebnis("Die Suche antwortet mit Fehler ${antwort.code}.", fehler = true) else Ergebnis(text(JSONObject(inhalt)))
                 }
@@ -165,5 +167,9 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
         private const val GESPRAECH_MS = 20_000L
 
         private val CLIENT = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
+
+        /** Höchstdauer der Tavily-Suche im Gespräch (Ersatz nach der Modell-Suche, zusammen unter den 35 s des Live-Pfads). */
+        private const val GESPRAECH_TAVILY_S = 12L
+        private val GESPRAECH_CLIENT = CLIENT.newBuilder().callTimeout(GESPRAECH_TAVILY_S, TimeUnit.SECONDS).build()
     }
 }

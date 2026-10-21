@@ -450,10 +450,19 @@ object Symbiose : Merkdatei("symbiose.json", 30, "", SYMBIOSE_VORGABE) {
 
     /**
      * Ersetzt einmal überholte, unverändert gebliebene Vorgaben (beim Start der App). Danach weicht die Fassung ab; ChatGPT sagt Frank
-     * dann nach Regel „Abgleich“ einmal, dass er den Text neu kopieren soll. Liefert die ersetzten Einträge.
+     * dann nach Regel „Abgleich“ einmal, dass er den Text neu kopieren soll. Liefert die ersetzten Einträge. Jede Ersetzung wird nur
+     * einmal versucht: Stellt Frank die alte Fassung danach bewusst wieder her, bleibt sie.
      */
-    fun aktualisiereVorgaben(context: Context): List<Regel> = ERSETZTE_VORGABEN.mapNotNull { (alt, neu) ->
-        alle(context).firstOrNull { it.text == alt }?.let { ersetzeWenn(context, it.id, alt, neu) }
+    fun aktualisiereVorgaben(context: Context): List<Regel> {
+        val erledigt = context.getSharedPreferences("symbiose_ersetzt", Context.MODE_PRIVATE)
+        return ERSETZTE_VORGABEN.mapNotNull { (alt, neu) ->
+            val schluessel = "v" + alt.hashCode()
+            if (erledigt.getBoolean(schluessel, false)) return@mapNotNull null
+            val liste = alle(context).ifEmpty { return@mapNotNull null }
+            val ersetzt = liste.firstOrNull { it.text == alt }?.let { ersetzeWenn(context, it.id, alt, neu) }
+            erledigt.edit().putBoolean(schluessel, true).apply()
+            ersetzt
+        }
     }
 
     override fun kopfText(eintraege: List<Regel>): String =
