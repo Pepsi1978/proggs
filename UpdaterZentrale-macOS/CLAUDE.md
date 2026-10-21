@@ -38,8 +38,9 @@ open "/Applications/Updater-Zentrale macOS.app"
 
 2. **Autolayout und Beschriftungen.** In `Views/Controls.swift` unterscheidet
    `UI.beschriftung(…, einzeilig:)` zwei Sorten:
-   * `einzeilig: true` für Versionen, Zustände, Plaketten — sie dürfen **nicht** schrumpfen,
-     sonst bricht eine Versionsnummer zeichenweise als Ziffernsäule um.
+   * `einzeilig: true` für Versionen, Zustände, Plaketten — sie dürfen **nie umbrechen**
+     (sonst Ziffernsäule). Wird es eng, kürzen sie mit „…“ (Festigkeit 490, nie über 500,
+     siehe Punkt 3); der volle Text steht im Expansions-Tooltip.
    * `einzeilig: false` (Vorgabe) für Fließtext — er muss nachgeben, sonst macht eine lange
      Beschreibung das Fenster breiter als den Bildschirm.
 

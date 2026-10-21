@@ -281,7 +281,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         teiler.setHoldingPriority(.defaultHigh, forSubviewAt: 1)
         rechtesPanel.widthAnchor.constraint(greaterThanOrEqualToConstant: 300).isActive = true
 
-        // Startbreite wie unter Windows: rechte Spalte 400 pt.
+        // Startbreite: rechte Spalte rund 360 pt, hoechstens die halbe Fensterbreite.
         DispatchQueue.main.async { [weak self, weak teiler] in
             guard let teiler, teiler.frame.width > 0 else { return }
             self?.anBildschirmAnpassen()
@@ -319,7 +319,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         terminalFenster.schriftgroesse = 11
         terminalFenster.waagerechterRand = 9
         terminalFenster.senkrechterRand = 4
-        terminalFenster.setContentCompressionResistancePriority(UI.nieBreiterAlsFenster, for: .horizontal)
+        terminalFenster.setContentCompressionResistancePriority(UI.schalterFestigkeit, for: .horizontal)
         terminalFenster.target = self
         terminalFenster.action = #selector(terminalFensterGeklickt)
 
@@ -327,7 +327,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         terminalLeeren.schriftgroesse = 11
         terminalLeeren.waagerechterRand = 9
         terminalLeeren.senkrechterRand = 4
-        terminalLeeren.setContentCompressionResistancePriority(UI.nieBreiterAlsFenster, for: .horizontal)
+        terminalLeeren.setContentCompressionResistancePriority(UI.schalterFestigkeit, for: .horizontal)
         terminalLeeren.target = self
         terminalLeeren.action = #selector(terminalLeerenGeklickt)
 
@@ -344,7 +344,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         ausfuehrenSchalter.action = #selector(befehlAusfuehrenGeklickt)
         ausfuehrenSchalter.waagerechterRand = 13
         ausfuehrenSchalter.senkrechterRand = 7
-        ausfuehrenSchalter.setContentCompressionResistancePriority(UI.nieBreiterAlsFenster, for: .horizontal)
+        ausfuehrenSchalter.setContentCompressionResistancePriority(UI.schalterFestigkeit, for: .horizontal)
 
         let eingabeReihe = NSStackView(views: [befehlsZeile, ausfuehrenSchalter])
         eingabeReihe.orientation = .horizontal
@@ -450,9 +450,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     private func aktualisieren() {
         zusammenfassungPlakette.text = modell.updateZusammenfassung
         fussStatus.stringValue = modell.kopfStatus
-        fussStatus.toolTip = modell.kopfStatus
         versionsAnzeige.stringValue = modell.anwendungsVersion
-        versionsAnzeige.toolTip = modell.anwendungsVersion
 
         allePruefenSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
         alleUpdatesSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
@@ -474,7 +472,6 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         gewaehltesProgramm.stringValue = gewaehlt?.name ?? ""
         statusText.stringValue = gewaehlt?.statusText ?? ""
         statusVersion.stringValue = gewaehlt?.versionsText ?? ""
-        statusVersion.toolTip = statusVersion.stringValue
         protokollKonsole.text = gewaehlt?.protokoll ?? ""
 
         terminalKonsole.text = modell.terminalAusgabe
@@ -483,6 +480,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
         for karte in karten { karte.aktualisieren() }
         markierungAnwenden()
+        ueberlaufPruefenVormerken()
     }
 
     private func markierungAnwenden() {
@@ -511,11 +509,13 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     // MARK: - Fenster immer im sichtbaren Bereich
 
     /// Zweite Schicht neben `UI.nieBreiterAlsFenster`: Groessengrenzen am Bildschirm ausrichten,
-    /// auf dem das Fenster WIRKLICH steht (nicht `NSScreen.main`), und ein Fenster, das breiter
-    /// oder hoeher geworden ist als dessen sichtbarer Bereich, wieder hineinziehen -- auch nach
-    /// einem Monitorwechsel oder einer geaenderten Aufloesung. macOS selbst korrigiert nur die
-    /// Hoehe, nie die Breite.
+    /// auf dem das Fenster WIRKLICH steht (nicht `NSScreen.main`), und ein Fenster, das groesser
+    /// geworden ist als dessen sichtbarer Bereich, wieder hineinziehen -- nach einem Monitorwechsel
+    /// oder einer geaenderten Aufloesung. macOS selbst korrigiert nur die Hoehe, nie die Breite.
+    /// Die Position bleibt sonst unangetastet: ein bewusst ueber zwei Schirme gestelltes Fenster
+    /// springt nicht zurueck, und waehrend die Maus zieht, werden nur die Grenzen nachgezogen.
     private var passtGeradeAn = false
+    private var ueberlaufVorgemerkt = false
     private var breiteGemeldet = false
 
     private func anBildschirmAnpassen() {
@@ -526,35 +526,52 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
         fenster.maxSize = NSSize(width: sichtbar.width, height: sichtbar.height)
         fenster.minSize = NSSize(width: min(880, sichtbar.width), height: min(540, sichtbar.height))
+        guard NSEvent.pressedMouseButtons == 0, !fenster.inLiveResize else { return }
 
-        var rahmen = fenster.frame
-        let vorher = rahmen
+        let vorher = fenster.frame
+        guard vorher.width > sichtbar.width + 0.5 || vorher.height > sichtbar.height + 0.5 else { return }
+        var rahmen = vorher
         rahmen.size.width = min(rahmen.width, sichtbar.width)
         rahmen.size.height = min(rahmen.height, sichtbar.height)
         rahmen.origin.x = min(max(rahmen.minX, sichtbar.minX), sichtbar.maxX - rahmen.width)
         rahmen.origin.y = min(max(rahmen.minY, sichtbar.minY), sichtbar.maxY - rahmen.height)
-        if rahmen != vorher {
-            fenster.setFrame(rahmen, display: true)
-            Diagnose.ereignis(.warnung, "fenster", "an-bildschirm-angepasst",
-                              "Fenster ragte über den sichtbaren Bereich und wurde hineingezogen.",
-                              ["vorher": NSStringFromRect(vorher), "nachher": NSStringFromRect(rahmen)])
-        }
+        fenster.setFrame(rahmen, display: true)
+        Diagnose.ereignis(.warnung, "fenster", "an-bildschirm-angepasst",
+                          "Fenster war größer als der sichtbare Bereich und wurde hineingezogen.",
+                          ["vorher": NSStringFromRect(vorher), "nachher": NSStringFromRect(rahmen)])
+    }
 
-        // Fruehwarnung: verlangt der Inhalt doch mehr Breite als das Fenster hat, landet das in der
-        // Diagnose -- dann hat irgendwo eine Beschriftung wieder eine Festigkeit ueber 500.
-        if !breiteGemeldet, let inhalt = fenster.contentView,
-           inhalt.fittingSize.width > inhalt.frame.width + 1 {
-            breiteGemeldet = true
+    /// Fruehwarnung: ragt nach dem Layout ein Bereich ueber den Fensterinhalt hinaus, hat irgendwo
+    /// wieder etwas eine waagerechte Festigkeit ueber 500. Gemessen an den echten Rahmen, nicht an
+    /// `fittingSize` (das drueckt nur mit Prioritaet 50 und meldete deshalb fast immer).
+    private func ueberlaufPruefenVormerken() {
+        guard !breiteGemeldet, !ueberlaufVorgemerkt else { return }
+        ueberlaufVorgemerkt = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.ueberlaufVorgemerkt = false
+            guard !self.breiteGemeldet, let inhalt = self.window?.contentView else { return }
+            inhalt.layoutSubtreeIfNeeded()
+            let rechterRand = inhalt.subviews.filter { !$0.isHidden }.map(\.frame.maxX).max() ?? 0
+            guard rechterRand > inhalt.bounds.maxX + 1 else { return }
+            self.breiteGemeldet = true
             Diagnose.ereignis(.warnung, "fenster", "inhalt-zu-breit",
-                              "Inhalt verlangt mehr Breite als das Fenster bietet.",
-                              ["inhalt": inhalt.fittingSize.width, "fenster": inhalt.frame.width])
+                              "Inhalt ragt rechts aus dem Fenster.",
+                              ["inhalt": rechterRand, "fenster": inhalt.bounds.width])
         }
     }
 
     func windowDidChangeScreen(_ notification: Notification) { anBildschirmAnpassen() }
-    func windowDidResize(_ notification: Notification) { anBildschirmAnpassen() }
+    func windowDidEndLiveResize(_ notification: Notification) { ueberlaufPruefenVormerken() }
 
-    @objc private func bildschirmeGeaendert() { anBildschirmAnpassen() }
+    /// Erst im naechsten Durchlauf: macOS setzt das Fenster nach dem Abstecken eines Monitors
+    /// selbst um, danach stimmt `window.screen`.
+    @objc private func bildschirmeGeaendert() {
+        DispatchQueue.main.async { [weak self] in
+            self?.anBildschirmAnpassen()
+            self?.ueberlaufPruefenVormerken()
+        }
+    }
 
     // MARK: - Aktionen
 

@@ -119,6 +119,8 @@ enum UI {
             // kann trotzdem nicht entstehen -- einzeilig wird gekuerzt, nie umgebrochen.
             feld.setContentCompressionResistancePriority(nieBreiterAlsFenster, for: .horizontal)
             feld.setContentHuggingPriority(.required, for: .horizontal)
+            // Gekuerzt bleibt der volle Text lesbar: AppKit zeigt ihn beim Ueberfahren.
+            feld.allowsExpansionToolTips = true
         } else {
             feld.lineBreakMode = .byWordWrapping
             feld.maximumNumberOfLines = 0
