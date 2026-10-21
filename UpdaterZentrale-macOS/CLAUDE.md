@@ -48,6 +48,14 @@ open "/Applications/Updater-Zentrale macOS.app"
 3. **Fenstergröße.** Nicht die Windows-Maße (1340 × 880) übernehmen — dieses MacBook hat nur
    1280 × 832 Punkte. `HauptFensterController` rechnet aus `NSScreen.visibleFrame`.
 
+   **Schwelle 500:** AppKit hält die Fenstergröße mit Priorität 500. Jede waagerechte
+   Kompressionsfestigkeit über 500 (auch `.required` an Schaltern oder die 750 eines
+   NSTextField) spreizt den Inhalt über das Fenster hinaus — `maxSize` hilft dagegen nicht,
+   der Inhalt läuft dann rechts aus dem Fenster (Protokollspalte, Sammelschalter abgeschnitten).
+   Deshalb nur `UI.nieBreiterAlsFenster` (490) oder weniger verwenden. `anBildschirmAnpassen()`
+   im `HauptFensterController` zieht das Fenster zusätzlich bei Monitorwechseln in den sichtbaren
+   Bereich und schreibt `inhalt-zu-breit` in die Diagnose, falls wieder etwas über 500 liegt.
+
 4. **`main.swift` muss in `build.sh` zuletzt stehen.** Nur die Datei mit diesem Namen darf Code
    auf oberster Ebene haben.
 

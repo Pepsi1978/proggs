@@ -82,7 +82,8 @@ final class ProgrammKarteView: KartenView {
         plakettenReihe.translatesAutoresizingMaskIntoConstraints = false
         // Wird es in der Kopfzeile eng, kuerzt der Name -- die Plaketten daneben tragen jeweils
         // nur ein Wort und saehen abgeschnitten sinnlos aus.
-        nameBeschriftung.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        // Unter den Plaketten (490) und unter 500, damit der Name nie das Fenster aufspreizt.
+        nameBeschriftung.setContentCompressionResistancePriority(.init(rawValue: 470), for: .horizontal)
 
         // Zustands-Kennzeichen plus Versionszeile.
         zustandFlaeche.addSubview(zustandBeschriftung)

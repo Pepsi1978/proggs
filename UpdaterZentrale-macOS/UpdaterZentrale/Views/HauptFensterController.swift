@@ -99,6 +99,9 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
         NotificationCenter.default.addObserver(self, selector: #selector(designAnwenden),
                                                name: Darstellung.gewechselt, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(bildschirmeGeaendert),
+                                               name: NSApplication.didChangeScreenParametersNotification,
+                                               object: nil)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht verwendet") }
@@ -279,9 +282,11 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         rechtesPanel.widthAnchor.constraint(greaterThanOrEqualToConstant: 300).isActive = true
 
         // Startbreite wie unter Windows: rechte Spalte 400 pt.
-        DispatchQueue.main.async { [weak teiler] in
+        DispatchQueue.main.async { [weak self, weak teiler] in
             guard let teiler, teiler.frame.width > 0 else { return }
-            teiler.setPosition(teiler.frame.width - 360, ofDividerAt: 0)
+            self?.anBildschirmAnpassen()
+            teiler.layoutSubtreeIfNeeded()
+            teiler.setPosition(max(teiler.frame.width - 360, teiler.frame.width * 0.5), ofDividerAt: 0)
         }
 
         return teiler
@@ -300,6 +305,9 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         statusStapel.spacing = 5
         statusStapel.translatesAutoresizingMaskIntoConstraints = false
         statusFlaeche.addSubview(statusStapel)
+        // Ohne feste Breite bliebe der umbrechende Statustext auf der schmalen Breite seines
+        // ersten Layouts haengen ("Auf dem / neuesten / Stand").
+        statusText.widthAnchor.constraint(equalTo: statusStapel.widthAnchor).isActive = true
         NSLayoutConstraint.activate([
             statusStapel.leadingAnchor.constraint(equalTo: statusFlaeche.leadingAnchor, constant: 11),
             statusStapel.trailingAnchor.constraint(equalTo: statusFlaeche.trailingAnchor, constant: -11),
@@ -311,7 +319,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         terminalFenster.schriftgroesse = 11
         terminalFenster.waagerechterRand = 9
         terminalFenster.senkrechterRand = 4
-        terminalFenster.setContentCompressionResistancePriority(.required, for: .horizontal)
+        terminalFenster.setContentCompressionResistancePriority(UI.nieBreiterAlsFenster, for: .horizontal)
         terminalFenster.target = self
         terminalFenster.action = #selector(terminalFensterGeklickt)
 
@@ -319,7 +327,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         terminalLeeren.schriftgroesse = 11
         terminalLeeren.waagerechterRand = 9
         terminalLeeren.senkrechterRand = 4
-        terminalLeeren.setContentCompressionResistancePriority(.required, for: .horizontal)
+        terminalLeeren.setContentCompressionResistancePriority(UI.nieBreiterAlsFenster, for: .horizontal)
         terminalLeeren.target = self
         terminalLeeren.action = #selector(terminalLeerenGeklickt)
 
@@ -336,7 +344,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         ausfuehrenSchalter.action = #selector(befehlAusfuehrenGeklickt)
         ausfuehrenSchalter.waagerechterRand = 13
         ausfuehrenSchalter.senkrechterRand = 7
-        ausfuehrenSchalter.setContentCompressionResistancePriority(.required, for: .horizontal)
+        ausfuehrenSchalter.setContentCompressionResistancePriority(UI.nieBreiterAlsFenster, for: .horizontal)
 
         let eingabeReihe = NSStackView(views: [befehlsZeile, ausfuehrenSchalter])
         eingabeReihe.orientation = .horizontal
@@ -442,7 +450,9 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     private func aktualisieren() {
         zusammenfassungPlakette.text = modell.updateZusammenfassung
         fussStatus.stringValue = modell.kopfStatus
+        fussStatus.toolTip = modell.kopfStatus
         versionsAnzeige.stringValue = modell.anwendungsVersion
+        versionsAnzeige.toolTip = modell.anwendungsVersion
 
         allePruefenSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
         alleUpdatesSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
@@ -464,6 +474,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         gewaehltesProgramm.stringValue = gewaehlt?.name ?? ""
         statusText.stringValue = gewaehlt?.statusText ?? ""
         statusVersion.stringValue = gewaehlt?.versionsText ?? ""
+        statusVersion.toolTip = statusVersion.stringValue
         protokollKonsole.text = gewaehlt?.protokoll ?? ""
 
         terminalKonsole.text = modell.terminalAusgabe
@@ -496,6 +507,54 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         // Die Systemtitelleiste zieht mit -- Gegenstueck zu DwmSetWindowAttribute unter Windows.
         window?.appearance = NSAppearance(named: Darstellung.istHell ? .aqua : .darkAqua)
     }
+
+    // MARK: - Fenster immer im sichtbaren Bereich
+
+    /// Zweite Schicht neben `UI.nieBreiterAlsFenster`: Groessengrenzen am Bildschirm ausrichten,
+    /// auf dem das Fenster WIRKLICH steht (nicht `NSScreen.main`), und ein Fenster, das breiter
+    /// oder hoeher geworden ist als dessen sichtbarer Bereich, wieder hineinziehen -- auch nach
+    /// einem Monitorwechsel oder einer geaenderten Aufloesung. macOS selbst korrigiert nur die
+    /// Hoehe, nie die Breite.
+    private var passtGeradeAn = false
+    private var breiteGemeldet = false
+
+    private func anBildschirmAnpassen() {
+        guard !passtGeradeAn, let fenster = window,
+              let sichtbar = (fenster.screen ?? NSScreen.main)?.visibleFrame else { return }
+        passtGeradeAn = true
+        defer { passtGeradeAn = false }
+
+        fenster.maxSize = NSSize(width: sichtbar.width, height: sichtbar.height)
+        fenster.minSize = NSSize(width: min(880, sichtbar.width), height: min(540, sichtbar.height))
+
+        var rahmen = fenster.frame
+        let vorher = rahmen
+        rahmen.size.width = min(rahmen.width, sichtbar.width)
+        rahmen.size.height = min(rahmen.height, sichtbar.height)
+        rahmen.origin.x = min(max(rahmen.minX, sichtbar.minX), sichtbar.maxX - rahmen.width)
+        rahmen.origin.y = min(max(rahmen.minY, sichtbar.minY), sichtbar.maxY - rahmen.height)
+        if rahmen != vorher {
+            fenster.setFrame(rahmen, display: true)
+            Diagnose.ereignis(.warnung, "fenster", "an-bildschirm-angepasst",
+                              "Fenster ragte über den sichtbaren Bereich und wurde hineingezogen.",
+                              ["vorher": NSStringFromRect(vorher), "nachher": NSStringFromRect(rahmen)])
+        }
+
+        // Fruehwarnung: verlangt der Inhalt doch mehr Breite als das Fenster hat, landet das in der
+        // Diagnose -- dann hat irgendwo eine Beschriftung wieder eine Festigkeit ueber 500.
+        if !breiteGemeldet, let inhalt = fenster.contentView,
+           inhalt.fittingSize.width > inhalt.frame.width + 1 {
+            breiteGemeldet = true
+            Diagnose.ereignis(.warnung, "fenster", "inhalt-zu-breit",
+                              "Inhalt verlangt mehr Breite als das Fenster bietet.",
+                              ["inhalt": inhalt.fittingSize.width, "fenster": inhalt.frame.width])
+        }
+    }
+
+    func windowDidChangeScreen(_ notification: Notification) { anBildschirmAnpassen() }
+    func windowDidResize(_ notification: Notification) { anBildschirmAnpassen() }
+
+    @objc private func bildschirmeGeaendert() { anBildschirmAnpassen() }
 
     // MARK: - Aktionen
 

@@ -74,9 +74,21 @@ final class ThemedLabel: NSTextField {
 }
 
 enum UI {
+    /// Hoechste waagerechte Kompressionsfestigkeit, die irgendein Inhalt haben darf.
+    ///
+    /// AppKit haelt die Fenstergroesse mit Prioritaet 500 (`windowSizeStayPut`). Alles, was
+    /// waagerecht FESTER ist als 500, darf das Fenster aufspreizen -- auch ueber den Bildschirm
+    /// hinaus, `maxSize` hin oder her: Dann laeuft der Inhalt rechts aus dem Fenster, Protokoll-
+    /// und Terminalspalte und die Sammelschaltflaeche sind abgeschnitten. Genau das ist passiert.
+    /// Deshalb bleibt JEDE Kompressionsfestigkeit darunter; wird es eng, kuerzt ein Text mit "…".
+    static let nieBreiterAlsFenster = NSLayoutConstraint.Priority(rawValue: 490)
+    /// Schaltflaechen geben vor festen Angaben nach (Versionen, Zustaende bleiben lesbar).
+    static let schalterFestigkeit = NSLayoutConstraint.Priority(rawValue: 480)
+
     /// Beschriftung wie die TextBlock-Styles aus Theme.xaml.
     /// - Parameter einzeilig: `true` fuer kurze Angaben, die NIE umbrechen duerfen -- Versionen,
-    ///   Zustands-Kennzeichen, Plaketten. Sie behalten ihre volle Breite.
+    ///   Zustands-Kennzeichen, Plaketten. Sie behalten ihre volle Breite, solange das Fenster
+    ///   Platz hat -- reicht er nicht, kuerzen sie mit "…" (siehe `nieBreiterAlsFenster`).
     ///   `false` (Vorgabe) fuer Fliesstext: er bricht um, statt seinen Container aufzuspreizen.
     ///
     /// Die Unterscheidung ist wichtiger, als sie aussieht. Gibt man ALLEN Beschriftungen nach,
@@ -103,7 +115,9 @@ enum UI {
         if einzeilig {
             feld.lineBreakMode = .byTruncatingTail
             feld.maximumNumberOfLines = 1
-            feld.setContentCompressionResistancePriority(.required, for: .horizontal)
+            // Nicht `.required`: das spreizte das Fenster ueber den Bildschirm. Eine Ziffernsaeule
+            // kann trotzdem nicht entstehen -- einzeilig wird gekuerzt, nie umgebrochen.
+            feld.setContentCompressionResistancePriority(nieBreiterAlsFenster, for: .horizontal)
             feld.setContentHuggingPriority(.required, for: .horizontal)
         } else {
             feld.lineBreakMode = .byWordWrapping
@@ -354,8 +368,10 @@ final class Schalter: NSControl {
         setAccessibilityRole(.button)
         self.titel = titel
         // Waagerecht nachgeben: lieber eine Beschriftung mit Auslassungspunkten als ein Fenster,
-        // das breiter wird als der Bildschirm.
-        setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        // das breiter wird als der Bildschirm. Die innere Beschriftung muss mit nachgeben -- als
+        // NSTextField haette sie sonst 750 und spreizte ueber ihre festen Raender doch das Fenster.
+        beschriftung.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        setContentCompressionResistancePriority(UI.schalterFestigkeit, for: .horizontal)
         NotificationCenter.default.addObserver(self, selector: #selector(farbenAnwenden),
                                                name: Darstellung.gewechselt, object: nil)
         farbenAnwenden()
@@ -580,6 +596,8 @@ final class BefehlsZeile: NSTextField {
         translatesAutoresizingMaskIntoConstraints = false
         font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         placeholderString = "Befehl eingeben und mit der Eingabetaste ausführen"
+        // Der lange Platzhalter darf die Terminalspalte nicht aufspreizen (siehe nieBreiterAlsFenster).
+        setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         NotificationCenter.default.addObserver(self, selector: #selector(farbenAnwenden),
                                                name: Darstellung.gewechselt, object: nil)
         farbenAnwenden()
