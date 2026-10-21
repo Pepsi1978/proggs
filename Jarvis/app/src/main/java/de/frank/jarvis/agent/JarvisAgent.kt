@@ -168,7 +168,7 @@ class JarvisAgent(context: Context) {
         beiAbbruch: (String) -> Unit,
         beiZeitablauf: (suspend (Zeitablauf) -> String?)?,
     ): String? {
-        if (!auth.isConnected) { beiAbbruch("Jarvis ist nicht mit ChatGPT angemeldet"); return null }
+        if (!auth.kannDenken(modell)) { beiAbbruch(if (modell.istAnthropic) "Für ${modell.label} fehlt der Anthropic-API-Schlüssel" else "Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
         // Die Websuche haben Agenten mit Internet und jedes Gespräch mit Frank (aktuelle Fragen direkt beantworten statt einen Agenten zu starten), die Tagesauswertung nicht.

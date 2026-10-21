@@ -3,7 +3,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 ## Zugänge und Modelle
 
-- Eigener Chat in der App mit Modellen aus der ChatGPT-Anmeldung (Codex-Gerätecode): GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna, GPT-5.6 Terra; Denkstufe wählbar; Schrittlimit je Anfrage 10–100 oder unbegrenzt (gilt auch für alle Agenten; Live-Antworten fest 8, Tagesauswertung 3).
+- Eigener Chat in der App mit Modellen aus der ChatGPT-Anmeldung (Codex-Gerätecode): GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna, GPT-5.6 Terra; alternativ Anbieter Anthropic mit eigenem API-Schlüssel (Einstellungen → Jarvis' Kopf): Claude Opus 5.5, Fable 5.1, Sonnet 5.5, Haiku 5.5 (auch in der Modellwahl der Eingabeblase und bei „Jarvis direkt“); Bilder und Websuche laufen dann weiter über das ChatGPT-Konto; Denkstufe wählbar; Schrittlimit je Anfrage 10–100 oder unbegrenzt (gilt auch für alle Agenten; Live-Antworten fest 8, Tagesauswertung 3).
 - ChatGPT-Plugin (MCP-Server auf dem Handy, über eigenen Relay-Server erreichbar): dieselben Werkzeuge; dazu nur im Plugin `jarvis_kontext` (Startkontext/Gesamtbild), `jarvis_status`, `tagesauswertung_lesen`, `tagesdaten_lesen`. Ist das Handy offline, antwortet das Plugin „Handy nicht erreichbar“.
 - Vordergrunddienst hält die Verbindung auch bei gesperrtem Handy, startet nach Neustart und Update von selbst.
 - Gemini gibt es nur im Live-Gespräch, nicht als Chat-Modell. Keine Jarvis-App für Windows, macOS oder iOS.

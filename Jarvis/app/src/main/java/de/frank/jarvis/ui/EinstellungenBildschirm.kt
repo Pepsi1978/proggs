@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.auth.CodexModel
+import de.frank.jarvis.auth.KiAnbieter
 import de.frank.jarvis.auth.deviceCodeGroups
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.faehigkeit.Register
@@ -100,9 +101,23 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     else -> Knopf("Mit ChatGPT verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.kiVerbinden() }
                 }
 
+                Unterzeile("Anbieter")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    KiAnbieter.entries.forEach { a -> Chip(a.label, aktiv = e.modell.anbieter == a) { if (e.modell.anbieter != a) vm.setzeAnbieter(a) } }
+                }
+                Text(
+                    if (e.modell.istAnthropic) "Jarvis denkt mit Claude über deinen Anthropic-API-Schlüssel (eigene Abrechnung). Das ChatGPT-Konto bleibt verbunden: Bilder und Websuche laufen weiter darüber."
+                    else "Jarvis denkt mit OpenAI über dein ChatGPT-Konto.",
+                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp),
+                )
+                if (e.modell.istAnthropic) {
+                    Zeile("Anthropic-Schlüssel", if (vm.anthropicVerbunden) "Eingetragen" else "Fehlt", if (vm.anthropicVerbunden) f.erfolg else f.gefahr)
+                    Schluesselfeld(vm, "Anthropic-API-Schlüssel", vm.sprache.anthropicApiKey) { vm.anthropicSchluesselSpeichern(it) }
+                    Text("Schlüssel (sk-ant-…) von platform.claude.com unter API Keys.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                }
                 Unterzeile("Modell")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CodexModel.entries.forEach { m -> Chip(m.label, aktiv = e.modell == m) { vm.setzeModell(m) } }
+                    CodexModel.von(e.modell.anbieter).forEach { m -> Chip(m.label, aktiv = e.modell == m) { vm.setzeModell(m) } }
                 }
                 Unterzeile("Denkstufe")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -217,6 +217,10 @@ object LiveOptionen {
         "gpt-5.6-terra" to "Mittelklasse, gründlicher als Luna.",
         "gpt-6.1-sol" to "Kräftig für schwierige Fragen, längere Pausen.",
         "gpt-6-astra" to "Das stärkste Modell, die längsten Pausen.",
+        "claude-haiku-5-5" to "Anthropic, sehr schnell und sehr günstig. Braucht den Anthropic-Schlüssel.",
+        "claude-sonnet-5-5" to "Anthropic, schnell und stark. Braucht den Anthropic-Schlüssel.",
+        "claude-opus-5-5" to "Anthropic, gründlich für schwierige Fragen. Braucht den Anthropic-Schlüssel.",
+        "claude-fable-5-1" to "Anthropics stärkstes Modell, teuer, die längsten Pausen. Braucht den Anthropic-Schlüssel.",
     )
     private val JARVIS_STUFE_TEXT = mapOf(
         "low" to "Kurz nachdenken, kurze Pausen. Empfehlung fürs Gespräch.",

@@ -357,7 +357,11 @@ class EinstellungsKatalog(context: Context) {
             schalter("meldung_inhalt_verbergen", "Benachrichtigungen", "Auf dem Sperrbildschirm ausblenden", "Agenten, Ablage, Programmieraufträge und Losfahren erscheinen erst nach dem Entsperren.", { e.meldungInhaltVerbergen }) { e.meldungInhaltVerbergen = it },
 
             // ---- Modell ----
-            auswahl("modell", "Modell", "Modell", "Das Sprachmodell, mit dem Jarvis denkt.",
+            auswahl("anbieter", "Modell", "Anbieter", "OpenAI (über das ChatGPT-Konto) oder Anthropic (Claude, über den Anthropic-API-Schlüssel); nimmt dort das zuletzt gewählte Modell.",
+                { de.frank.jarvis.auth.KiAnbieter.entries.map { it.name to it.label } }, { e.modell.anbieter.name }) { w ->
+                val m = e.letztesModell(de.frank.jarvis.auth.KiAnbieter.valueOf(w)); e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe)
+            },
+            auswahl("modell", "Modell", "Modell", "Das Sprachmodell, mit dem Jarvis denkt: GPT-Modelle von OpenAI oder Claude-Modelle von Anthropic.",
                 { CodexModel.entries.map { it.name to it.label } }, { e.modell.name }) { w ->
                 val m = CodexModel.valueOf(w); e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe)
             },

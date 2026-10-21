@@ -9,6 +9,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.auth.CodexModel
+import de.frank.jarvis.auth.KiAnbieter
 import de.frank.jarvis.auth.ReasoningEffort
 import de.frank.jarvis.observability.Logbuch
 import java.security.SecureRandom
@@ -170,7 +171,15 @@ class Einstellungen private constructor(context: Context) {
     // ---- Das eigene Modell von Jarvis ----
     var modell: CodexModel
         get() = CodexModel.entries.firstOrNull { it.name == s("model", "") } ?: CodexModel.TERRA
-        set(v) = put { putString("model", v.name) }
+        set(v) = put { putString("model", v.name); putString(if (v.istAnthropic) "model_anthropic" else "model_openai", v.name) }
+    /** Zuletzt gewähltes OpenAI-Modell: Bildwerkzeug und Websuche laufen immer über das ChatGPT-Konto, auch wenn Jarvis mit Claude denkt. */
+    val openAiModell: CodexModel
+        get() = modell.takeUnless { it.istAnthropic } ?: CodexModel.von(KiAnbieter.OPENAI).firstOrNull { it.name == s("model_openai", "") } ?: CodexModel.TERRA
+    /** Zuletzt gewähltes Modell je Anbieter, für den Wechsel zwischen OpenAI und Anthropic. */
+    fun letztesModell(anbieter: KiAnbieter): CodexModel =
+        if (modell.anbieter == anbieter) modell
+        else CodexModel.von(anbieter).firstOrNull { it.name == s(if (anbieter == KiAnbieter.ANTHROPIC) "model_anthropic" else "model_openai", "") }
+            ?: if (anbieter == KiAnbieter.ANTHROPIC) CodexModel.OPUS else CodexModel.TERRA
     var denkstufe: ReasoningEffort
         get() = ReasoningEffort.entries.firstOrNull { it.name == s("reasoning", "") } ?: ReasoningEffort.LOW
         set(v) = put { putString("reasoning", v.name) }

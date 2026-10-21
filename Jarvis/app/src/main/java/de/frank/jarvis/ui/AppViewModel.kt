@@ -286,8 +286,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Die Antwort, die bei „Hey Jarvis“ lief, weicht jetzt der neuen Frage (nur genau sie und nur, wenn sie noch läuft).
         weichendeRunde?.let { w -> weichendeRunde = null; if (vorlesen && sitzungId?.let { laufende[it] } === w) abbrechen() }
         if (denkt) return false
-        if (!kiVerbunden) {
-            meldung = "Bitte zuerst mit ChatGPT verbinden."
+        if (if (einstellungen.modell.istAnthropic) !anthropicVerbunden else !kiVerbunden) {
+            meldung = if (einstellungen.modell.istAnthropic) "Bitte zuerst den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst mit ChatGPT verbinden."
             reiter = Reiter.EINSTELLUNGEN
             return false
         }
@@ -2476,6 +2476,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setzeModell(modell: CodexModel) {
         einstellungen.modell = modell
         einstellungen.denkstufe = modell.normalizeEffort(einstellungen.denkstufe)
+        if (modell.istAnthropic && !anthropicVerbunden) meldung = "Für ${modell.label} bitte unter Einstellungen → Jarvis' Kopf den Anthropic-API-Schlüssel eintragen."
+    }
+
+    /** Wechselt zwischen OpenAI und Anthropic und nimmt dort das zuletzt gewählte Modell. */
+    fun setzeAnbieter(anbieter: de.frank.jarvis.auth.KiAnbieter) = setzeModell(einstellungen.letztesModell(anbieter))
+
+    /** Ein Anthropic-API-Schlüssel ist eingetragen. */
+    var anthropicVerbunden by mutableStateOf(sprache.anthropicApiKey.isNotBlank()); private set
+
+    fun anthropicSchluesselSpeichern(schluessel: String) {
+        sprache.anthropicApiKey = schluessel.trim()
+        anthropicVerbunden = sprache.anthropicApiKey.isNotBlank()
+        meldung = if (anthropicVerbunden) "Anthropic-Schlüssel gespeichert." else "Anthropic-Schlüssel entfernt."
     }
 
     fun setzeDenkstufe(stufe: ReasoningEffort) { einstellungen.denkstufe = stufe }

@@ -271,6 +271,16 @@ class CodexAuthManager(context: Context) {
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
+    private fun anthropicSchluessel(): String = de.frank.jarvis.data.settings.SecureSettings(appContext).anthropicApiKey.trim()
+    val hatAnthropicSchluessel: Boolean get() = anthropicSchluessel().isNotBlank()
+
+    /** Kann Jarvis mit diesem Modell denken? OpenAI braucht das ChatGPT-Konto, Claude den Anthropic-Schlüssel. */
+    fun kannDenken(model: CodexModel): Boolean = if (model.istAnthropic) hatAnthropicSchluessel else isConnected
+
+    /** Bildwerkzeug und Websuche gibt es nur über das ChatGPT-Konto: Bei einem Claude-Modell nimmt Jarvis dafür das zuletzt gewählte OpenAI-Modell. */
+    private fun fuerOpenAi(model: CodexModel): CodexModel =
+        if (model.istAnthropic) de.frank.jarvis.data.Einstellungen.get(appContext).openAiModell else model
+
     /**
      * [context] am besten der Application-Context: Die Anmeldung wartet bis zu einer Viertelstunde und überlebt so ein
      * Auf- oder Zuklappen, ohne eine alte Activity festzuhalten. [imVordergrund] meldet, ob die App gerade sichtbar ist.
@@ -317,7 +327,8 @@ class CodexAuthManager(context: Context) {
             throw CodexAuthException(AuthErrorKind.NETWORK, "Für die Anfrage fehlt der Text.")
         }
         try {
-            requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+            if (model.istAnthropic) requestAnthropic(instructions, turns, model, reasoningEffort, onDelta)
+            else requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die Antwort konnte nicht vollständig empfangen werden.", error)
@@ -336,6 +347,7 @@ class CodexAuthManager(context: Context) {
         quality: String? = null,
     ): List<ByteArray> = withContext(Dispatchers.IO) {
         if (prompt.isBlank()) throw CodexAuthException(AuthErrorKind.NETWORK, "Für das Bild fehlt die Beschreibung.")
+        val model = fuerOpenAi(model)
         suspend fun attempt(withOptions: Boolean): List<ByteArray> {
             val tool = JSONObject().put("type", "image_generation").put("output_format", "png")
             if (withOptions) {
@@ -373,6 +385,7 @@ class CodexAuthManager(context: Context) {
      */
     suspend fun searchWeb(query: String, model: CodexModel, knapp: Boolean = false): Pair<String, List<String>> = withContext(Dispatchers.IO) {
         if (query.isBlank()) throw CodexAuthException(AuthErrorKind.NETWORK, "Die Suchanfrage ist leer.")
+        val model = fuerOpenAi(model)
         val payload = codexChatPayload(
             (if (knapp) "Du beantwortest für einen anderen Assistenten eine Frage im laufenden Gespräch. Suche mit dem Websuche-Werkzeug, meist genügt eine gezielte Suche. " +
                 "Antworte in höchstens drei Sätzen mit dem Ergebnis und der wichtigsten Quelle (Titel und Adresse). "
@@ -698,6 +711,91 @@ class CodexAuthManager(context: Context) {
         return accumulator
     }
 
+    /** Wie [requestCodexAccumulated], aber für ein Claude-Modell über die Anthropic Messages API. */
+    private suspend fun requestAnthropic(
+        instructions: String,
+        turns: List<ChatTurn>,
+        model: CodexModel,
+        reasoningEffort: ReasoningEffort,
+        onDelta: suspend (String) -> Unit,
+    ): String {
+        val key = anthropicSchluessel().ifBlank {
+            throw CodexAuthException(AuthErrorKind.NETWORK, "Für ${model.label} fehlt der Anthropic-API-Schlüssel. Bitte unter Einstellungen → Jarvis' Kopf eintragen.")
+        }
+        var attempt = 0
+        var mitFallback = true
+        while (true) {
+            var deliveredText = false
+            try {
+                return requestAnthropicOnce(anthropicChatPayload(instructions, turns, model, reasoningEffort, mitFallback), key, mitFallback && model.mitFallback) { delta ->
+                    deliveredText = true
+                    onDelta(delta)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                currentCoroutineContext().ensureActive()
+                // Kennt das Konto das Ersatzmodell nicht (Beta), einmal ohne versuchen statt zu scheitern.
+                if (!deliveredText && mitFallback && model.mitFallback && error is CodexAuthException &&
+                    error.message.orEmpty().contains("fallback", ignoreCase = true)) { mitFallback = false; continue }
+                if (deliveredText || attempt >= TRANSIENT_RETRY_DELAYS_MS.size || !error.isTransient()) throw error
+                delay(TRANSIENT_RETRY_DELAYS_MS[attempt])
+                attempt++
+            }
+        }
+    }
+
+    private suspend fun requestAnthropicOnce(
+        payload: JSONObject,
+        key: String,
+        mitFallback: Boolean,
+        onDelta: suspend (String) -> Unit,
+    ): String {
+        val builder = Request.Builder()
+            .url(ANTHROPIC_URL)
+            .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .header("Accept", "text/event-stream")
+            .header("x-api-key", key)
+            .header("anthropic-version", "2023-06-01")
+        if (mitFallback) builder.header("anthropic-beta", ANTHROPIC_FALLBACK_BETA)
+        val accumulator = AnthropicSseAccumulator()
+        val trackedResponse = executeQuestionRequest(builder.build())
+        coroutineScope {
+            val fertig = AtomicBoolean(false)
+            val waechter = launch(start = CoroutineStart.UNDISPATCHED) {
+                try {
+                    awaitCancellation()
+                } finally {
+                    if (!fertig.get()) trackedResponse.call.cancel()
+                }
+            }
+            try {
+                trackedResponse.response.use { response ->
+                    val responseBody = response.body
+                    if (!response.isSuccessful) classifyAnthropicError(response.code, responseBody?.string().orEmpty())
+                    val reader = responseBody?.charStream()?.buffered()
+                        ?: throw CodexAuthException(AuthErrorKind.NETWORK, "Anthropic hat keinen Antwortstream geliefert.")
+                    reader.use {
+                        readSseData(
+                            reader = it,
+                            onData = { data -> accumulator.accept(data)?.let { delta -> onDelta(delta) } },
+                            shouldStop = { accumulator.isCompleted },
+                        )
+                    }
+                }
+                fertig.set(true)
+            } catch (error: IOException) {
+                if (trackedResponse.call.isCanceled()) throw CancellationException("Die Anthropic-Anfrage wurde abgebrochen.")
+                throw error
+            } finally {
+                fertig.set(true)
+                waechter.cancel()
+                activeQuestionCall.clear(trackedResponse.call)
+            }
+        }
+        return accumulator.result()
+    }
+
     private suspend fun <T> withDnsRetry(block: suspend () -> T): T {
         var lastError: UnknownHostException? = null
         repeat(DNS_RETRY_DELAYS_MS.size + 1) { attempt ->
@@ -819,6 +917,7 @@ class CodexAuthManager(context: Context) {
         private const val DEVICE_VERIFICATION_URL = "https://auth.openai.com/codex/device"
         private const val DEVICE_REDIRECT_URI = "https://auth.openai.com/deviceauth/callback"
         private const val RESPONSES_URL = "https://chatgpt.com/backend-api/codex/responses"
+        private const val ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
         private const val STORE_NAME = "codex_oauth"
         private const val TAG = "CodexAuth"
         private const val CODEX_CLIENT_VERSION = "0.159.0"

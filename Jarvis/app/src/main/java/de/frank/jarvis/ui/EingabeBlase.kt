@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -229,14 +230,19 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 
     if (modellOffen) ModalBottomSheet(onDismissRequest = { modellOffen = false }, containerColor = menueFlaeche(f)) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
             Text("Modell", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            CodexModel.entries.forEach { m ->
+            // Je Anbieter eine Gruppe: OpenAI über das ChatGPT-Konto, Anthropic über den eigenen API-Schlüssel.
+            de.frank.jarvis.auth.KiAnbieter.entries.forEach { anbieter ->
+            Text(anbieter.label + if (anbieter == de.frank.jarvis.auth.KiAnbieter.ANTHROPIC && !vm.anthropicVerbunden) " · Schlüssel fehlt" else "",
+                color = f.textLeise, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp, start = 4.dp))
+            CodexModel.von(anbieter).forEach { m ->
                 val aktiv = m == vm.einstellungen.modell
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).antippen { vm.setzeModell(m) }.padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(m.label, color = f.text, fontSize = 17.sp, fontWeight = if (aktiv) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f))
                     if (aktiv) Icon(Icons.Rounded.Check, null, tint = f.primaer)
                 }
+            }
             }
             Text("Aufwand", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 14.dp))
             vm.einstellungen.modell.supportedEfforts.forEach { st ->
@@ -250,8 +256,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
-/** „GPT-6.1 Sol“ → „6.1 Sol“, wie in der ChatGPT-App. */
-private fun kurzName(m: CodexModel) = m.label.removePrefix("GPT-")
+/** „GPT-6.1 Sol“ → „6.1 Sol“, wie in der ChatGPT-App; „Claude Opus 5.5“ → „Opus 5.5“. */
+private fun kurzName(m: CodexModel) = m.label.removePrefix("GPT-").removePrefix("Claude ")
 
 @Composable
 private fun RundBlase(farbe: Color, icon: ImageVector, beschreibung: String, aufFarbe: Color, aktion: () -> Unit) {
