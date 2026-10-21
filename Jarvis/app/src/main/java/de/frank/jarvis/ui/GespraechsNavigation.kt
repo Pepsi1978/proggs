@@ -1,6 +1,7 @@
 package de.frank.jarvis.ui
 
 import de.frank.jarvis.data.Sitzung
+import de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit
 
 /** Ein Navigationsbefehl zwischen Gesprächen („Sessions“): Er bleibt in der App und geht nie ans Modell. */
 sealed class NaviBefehl {
@@ -41,7 +42,8 @@ data class SessionLage(
      */
     fun offen(jetzt: Long): Boolean = when (stand) {
         "laeuft" -> jetzt - aktiv < LAUF_FRIST
-        "frage" -> jetzt - aktiv < FRAGE_FRIST
+        // Wartet auf Frank wie eine Rückfrage: „Login expired“ (anmeldung) oder ein API-Fehler (stoerung).
+        "frage", ProgrammierFaehigkeit.STAND_ANMELDUNG, ProgrammierFaehigkeit.STAND_STOERUNG -> jetzt - aktiv < FRAGE_FRIST
         else -> false
     }
 
@@ -49,7 +51,12 @@ data class SessionLage(
     fun bezeichnung(): String {
         val titel = sitzung.titel.takeIf { it.isNotBlank() } ?: "ohne Titel"
         val mitApp = if (app.isNotBlank() && !titel.contains(app, ignoreCase = true)) "$app: „$titel“" else "„$titel“"
-        return if (stand == "frage") "$mitApp, wartet auf deine Antwort" else mitApp
+        return when (stand) {
+            "frage" -> "$mitApp, wartet auf deine Antwort"
+            ProgrammierFaehigkeit.STAND_ANMELDUNG -> "$mitApp, blockiert: Claude Code muss sich neu anmelden"
+            ProgrammierFaehigkeit.STAND_STOERUNG -> "$mitApp, angehalten nach einem API-Fehler"
+            else -> mitApp
+        }
     }
 
     companion object {

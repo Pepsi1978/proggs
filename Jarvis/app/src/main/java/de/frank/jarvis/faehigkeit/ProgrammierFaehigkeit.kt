@@ -38,6 +38,11 @@ import org.json.JSONObject
  * Jarvis hält alles im [Auftragsbuch], zeigt je Auftrag eine mitwachsende Benachrichtigung und schreibt jede Meldung in
  * das Jarvis-Gespräch, aus dem der Auftrag kam ([ProgrammierChat]). Rückfragen beantwortet Frank dort per Knopf oder
  * Sprache ([beantworte]); die Antwort geht über den Relay an den wartenden Hook zurück.
+ *
+ * Anmeldung: Rechner erreichbar (Brücke fragt ab), Claude Code angemeldet und Auftrag aktiv sind getrennte Zustände. Die
+ * Brücke meldet den lokalen Anmeldestand (`claude auth status`, nur „Anmeldedaten liegen vor“), die Sitzungen beweisen ihn:
+ * Ein „Login expired“ meldet der Hook als Stand [STAND_ANMELDUNG] (Auftrag gesperrt, Benachrichtigung), jede spätere Arbeit
+ * hebt die Sperre auf. Eine abgemeldete Brücke startet keine Sitzung; der Auftrag geht dann nicht ungefragt in die Cloud.
  */
 /** Was das Auftragsbuch über die Programmieraufträge eines Gesprächs weiß: App, Stand (laeuft, frage, fertig, fehler), letztes Lebenszeichen, Inhalt. */
 data class AuftragsLage(val app: String, val stand: String, val aktiv: Long, val inhalt: String)
@@ -77,8 +82,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun zustand(): String = withContext(Dispatchers.IO) {
         val pc = if (e.serverToken.isBlank()) "PC: unbekannt, Jarvis ist nicht mit seinem Server verbunden." else runCatching {
-            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc").header("X-Jarvis-Token", e.serverToken).build()
-            STATUS_HTTP.newCall(anfrage).execute().use { antwort ->
+            STATUS_HTTP.newCall(pcAnfrage()).execute().use { antwort ->
                 if (!antwort.isSuccessful) return@use "PC: unbekannt, der Jarvis-Server antwortet mit HTTP ${antwort.code}."
                 val daten = JSONObject(antwort.body?.string().orEmpty())
                 val rechner = daten.optString("rechner").ifEmpty { "Franks PC" }
@@ -104,12 +108,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val haupt = eintraege.firstOrNull { it.optString("rang") == "haupt" }
         val ersatz = eintraege.firstOrNull { it.optString("rang") == "ersatz" }
         fun zeile(r: JSONObject?, art: String): String {
-            if (r == null) return "$art: hat sich seit dem letzten Serverstart nicht gemeldet (aus oder die Brücke läuft nicht)."
+            if (r == null) return "$art: hat sich seit dem letzten Serverstart nicht gemeldet (aus oder die Brücke läuft nicht). Claude-Anmeldung: unbekannt."
             val name = r.optString("rechner").ifEmpty { art }
             val vor = if (r.isNull("zuletzt_vor_s")) -1 else r.optInt("zuletzt_vor_s", -1)
             val seit = if (vor >= 0) " (letzte Meldung vor ${zeitspanne(vor)})" else ""
-            return if (r.optBoolean("da")) "$art $name: an und erreichbar$seit."
-                else "$art $name: nicht erreichbar$seit; aus, im Standby oder die Brücke läuft nicht."
+            val da = r.optBoolean("da")
+            return (if (da) "$art $name: an und erreichbar$seit." else "$art $name: nicht erreichbar$seit; aus, im Standby oder die Brücke läuft nicht.") +
+                " " + anmeldungZeile(r, da)
         }
         // „rechner“ ist der Rechner, den der Relay für den nächsten Auftrag wählt (Hauptrechner nur mit frischer Abfrage).
         val wohin = when {
@@ -122,6 +127,38 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         return "${zeile(haupt, "Windows-PC")} ${zeile(ersatz, "Mac")} $wohin"
     }
 
+    /**
+     * Der Anmeldestand eines Rechners in einem Satz, mit Prüfzeit. Eine erreichbare Brücke ist kein Nachweis: „lokal“ heißt nur,
+     * dass Anmeldedaten vorliegen; gültig ist erst, was eine Sitzung bewiesen hat. Ohne Prüfung heißt es „unbekannt“.
+     */
+    private fun anmeldungZeile(r: JSONObject, da: Boolean): String {
+        val b = r.optJSONObject("anmeldung_bruecke")
+        val s = r.optJSONObject("anmeldung_sitzung")
+        val bStand = b?.optString("stand").orEmpty()
+        val bVor = if (b == null || b.isNull("geprueft_vor_s")) -1 else b.optInt("geprueft_vor_s", -1)
+        val sVor = s?.optInt("vor_s", -1) ?: -1
+        val geprueft = if (bVor >= 0) "geprüft vor ${zeitspanne(bVor)}" else "nie geprüft"
+        val veraltet = if (!da && bVor >= 0) " (Stand von vor ${zeitspanne(bVor)}, der Rechner ist gerade nicht erreichbar)" else ""
+        return "Claude-Anmeldung: " + when {
+            bStand == "abgemeldet" -> "NICHT angemeldet ($geprueft)$veraltet. Claude Code auf dem Rechner öffnen und /login ausführen."
+            s?.optString("stand") == "abgelaufen" -> "ABGELAUFEN, gemeldet von Auftrag ${s.optString("auftrag_id")} vor ${zeitspanne(sVor)} („Login expired“) " +
+                "und seitdem von keiner Sitzung wieder bestätigt" + (if (bStand == "lokal") "; Anmeldedaten liegen lokal vor ($geprueft), das allein beweist keine gültige Anmeldung" else "") +
+                ". Claude Code auf dem Rechner öffnen und /login ausführen."
+            s?.optString("stand") == "bestaetigt" -> "gültig, zuletzt bestätigt durch Auftrag ${s.optString("auftrag_id")} vor ${zeitspanne(sVor)}" +
+                (if (bStand == "lokal") ", Anmeldedaten lokal $geprueft" else "") + "$veraltet."
+            bStand == "lokal" -> "Anmeldedaten liegen vor ($geprueft)$veraltet; ob sie noch gelten, zeigt erst der nächste Auftrag, ein Ablauf wird dann sofort gemeldet."
+            else -> "unbekannt, nicht prüfbar (die Brücke meldet keinen Anmeldestand oder die Prüfung schlug fehl)$veraltet."
+        }
+    }
+
+    /** Lebenszeichen der PC-Sitzungen je Auftrag vom Jarvis-Server (kontakt = letzte Arbeit, warter = Sitzung lebt), oder null. */
+    private suspend fun sitzungsLage(): JSONObject? = withContext(Dispatchers.IO) {
+        if (e.serverToken.isBlank()) return@withContext null
+        runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONObject("sitzungen") } }.getOrNull()
+    }
+
+    private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc").header("X-Jarvis-Token", e.serverToken).build()
+
     private fun zeitspanne(sekunden: Int): String = when {
         sekunden < 120 -> "$sekunden Sekunden"
         sekunden < 7_200 -> "${sekunden / 60} Minuten"
@@ -132,23 +169,30 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         listOf(
             Werkzeug(
                 name = "pc_status",
-                titel = "Sind Franks Windows-PC und Mac erreichbar?",
+                titel = "Sind Franks Windows-PC und Mac erreichbar und bei Claude angemeldet?",
                 beschreibung = "Jarvis: prüft jetzt einzeln, ob Franks Windows-PC und sein Mac an und für Programmieraufträge erreichbar sind (beide Brücken melden sich beim Jarvis-Server), " +
-                    "wann sich jeder zuletzt gemeldet hat, wohin der nächste Auftrag ginge und ob der Cloud-Weg eingerichtet ist. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, " +
-                    "„Ist mein Mac online?“, „Läuft die PC-Brücke?“ oder „Wohin geht ein Programmierauftrag gerade?“.",
+                    "wann sich jeder zuletzt gemeldet hat, ob Claude Code dort angemeldet ist (getrennt: nicht angemeldet, abgelaufen, gültig bestätigt durch eine Sitzung, nur Anmeldedaten " +
+                    "vorhanden oder unbekannt, je mit Prüfzeit), wohin der nächste Auftrag ginge und ob der Cloud-Weg eingerichtet ist. Erreichbar heißt nicht angemeldet; sag Frank nie " +
+                    "„angemeldet“, wenn hier nur „Anmeldedaten liegen vor“ oder „unbekannt“ steht. Nutze es bei „Ist mein Rechner an?“, „Ist mein PC erreichbar?“, „Ist mein Mac online?“, " +
+                    "„Bin ich bei Claude angemeldet?“, „Läuft die PC-Brücke?“ oder „Wohin geht ein Programmierauftrag gerade?“.",
                 schema = schema(),
                 nurLesen = true,
             ) { Ergebnis(zustand()) },
             Werkzeug(
                 name = "programmierauftraege",
                 titel = "Programmieraufträge und ihr Fortschritt",
-                beschreibung = "Jarvis: zeigt die letzten Programmieraufträge, je mit auftrag_id, App, Ziel (PC oder Cloud), Stand (läuft, Rückfrage, fertig, Problem), " +
-                    "zuletzt gemeldetem Schritt, Kurzfassung des ursprünglichen Auftrags, einer offenen Rückfrage mit frage_id und Optionen, den Nachträgen mit ihrem Stand " +
+                beschreibung = "Jarvis: zeigt die letzten Programmieraufträge, je mit auftrag_id, App, Ziel (PC oder Cloud), Stand (läuft, Rückfrage, blockiert wegen Anmeldung, " +
+                    "angehalten, fertig, Problem), zuletzt gemeldetem Schritt, letzter echter Fortschrittsmeldung und letztem Lebenszeichen getrennt (am PC frisch vom Jarvis-Server: lebt die Sitzung noch?), " +
+                    "veraltete Stände gekennzeichnet, Kurzfassung des ursprünglichen Auftrags, einer offenen Rückfrage mit frage_id und Optionen, den Nachträgen mit ihrem Stand " +
                     "(angenommen, zugestellt, bearbeitet) und ob die Sitzung noch Nachträge annehmen kann. Grundlage, um Rückfragen selbst zu beantworten und Nachträge dem " +
                     "richtigen Auftrag zuzuordnen. Nutze es bei „Wie weit ist mein Programmierauftrag?“, „Was macht die Cloud-Sitzung?“, „Ist die App schon fertig?“ oder „Gib mir den Link zur Sitzung“.",
                 schema = schema("anzahl" to zahl("Wie viele Aufträge, neueste zuerst; Vorgabe 5.")),
                 nurLesen = true,
-            ) { a -> Ergebnis(Auftragsbuch.uebersicht(app, a.optInt("anzahl", 5).coerceIn(1, 20))) },
+            ) { a ->
+                val anzahl = a.optInt("anzahl", 5).coerceIn(1, 20)
+                // Den Server nur fragen, wenn ein PC-Auftrag offen ist (kurzes Zeitlimit; Live-Gespräch hat Vorrang).
+                Ergebnis(Auftragsbuch.uebersicht(app, anzahl, if (Auftragsbuch.offenAmPc(app, anzahl)) sitzungsLage() else null))
+            },
             Werkzeug(
                 name = "programmier_fortschritt",
                 titel = "Fortschritt eines Programmierauftrags melden",
@@ -343,9 +387,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * das Gespräch, aus dem der Auftrag kam. Mit „frage“ ist es eine Rückfrage, auf die der Hook wartet.
      */
     fun meldungVomServer(daten: JSONObject) {
+        val auftragId = daten.optString("auftrag_id")
         if (daten.optString("stand") == "puls") {
-            // Lebenszeichen: nur die drehende Anzeige auffrischen, keine Nachricht, keine Benachrichtigung.
-            Auftragsbuch.puls(app, daten.optString("auftrag_id"))?.let { aktivitaetMelden(it) }
+            // Lebenszeichen: nur die drehende Anzeige auffrischen, keine Nachricht, keine Benachrichtigung. Ein gesperrter Auftrag
+            // (Anmeldung, Störung) arbeitet nachweislich wieder, wenn der Puls eine Minute nach der Sperre kommt (ein früherer
+            // stammt womöglich noch von vor dem Fehler); normalerweise meldet der Hook das selbst mit „anmeldung_ok“.
+            val gesperrt = Auftragsbuch.finde(app, auftragId)?.takeIf { it.optString("stand") in GESPERRT }
+            if (gesperrt != null && nachSperre(gesperrt, daten)) {
+                Auftragsbuch.melde(app, auftragId, "laeuft", "▶️ Die Sitzung arbeitet wieder.", "")?.let { verteile(it, null); benachrichtige(it) }
+                return
+            }
+            Auftragsbuch.puls(app, auftragId)?.let { aktivitaetMelden(it) }
+            return
+        }
+        if (daten.optString("stand") in listOf("anmeldung_ok", "weiter")) {
+            // Die Sperre ist aufgehoben (wieder angemeldet bzw. weiter nach einer Störung): läuft, und die Benachrichtigung
+            // „Anmeldung erforderlich“ wird still durch den neuen Stand ersetzt.
+            // Ohne Sperre in Jarvis (deren Meldung kam nie an) gibt es nichts aufzuheben.
+            if (Auftragsbuch.finde(app, auftragId)?.optString("stand") !in GESPERRT) return
+            Auftragsbuch.melde(app, auftragId, "laeuft", daten.optString("schritt").take(4000), "")?.let { verteile(it, null); benachrichtige(it) }
             return
         }
         if (daten.optString("stand") == "nachtrag") {
@@ -362,13 +422,30 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val frage = daten.optJSONObject("frage")
         // Dieselbe Rückfrage zweimal (der Hook wiederholt, wenn die Antwort des Servers ausblieb): nur einmal zeigen und melden.
         if (frage != null && Auftragsbuch.kenntFrage(app, frage.optString("frage_id"))) return
-        val eintrag = Auftragsbuch.melde(app, daten.optString("auftrag_id"), daten.optString("stand"), daten.optString("schritt").take(4000), "", frage)
+        // Ein Hook, der vor dem Fehler begann (async, spät dran), hebt eine Sperre nicht auf: Text zeigen, Stand bleibt gesperrt.
+        val bisher = Auftragsbuch.finde(app, auftragId)
+        val stand = daten.optString("stand").let { neu ->
+            if (bisher != null && bisher.optString("stand") in GESPERRT && neu !in GESPERRT && frage == null && !nachSperre(bisher, daten)) bisher.optString("stand") else neu
+        }
+        val eintrag = Auftragsbuch.melde(app, auftragId, stand, daten.optString("schritt").take(4000), "", frage,
+            sperrSeit = if (daten.optString("stand") in GESPERRT) daten.optLong("seit", System.currentTimeMillis() / 1000) else 0L)
         if (eintrag == null) {
             // Unbekannter Auftrag: nie still verwerfen, sondern sichtbar im Logbuch (Grund für „Frage kam nicht an“).
             Logbuch.system("Meldung ohne Auftrag", "${daten.optString("stand")} für ${daten.optString("auftrag_id")}: ${daten.optString("schritt").take(120)}")
             return
         }
-        verteile(eintrag, frage)
+        // Wiederholte Sperre (gleicher Stand) oder alte Meldung während der Sperre: keine zweite Benachrichtigung.
+        verteile(eintrag, frage, benachrichtigen = bisher?.optString("stand") != eintrag.optString("stand") || stand !in GESPERRT)
+    }
+
+    /**
+     * Begann der Hook dieser Meldung nach dem Fehler, der den Auftrag gesperrt hat? Ältere Hooks schicken kein hook_beginn:
+     * dann gilt eine Minute Abstand zur Sperre (ein früherer Puls stammt womöglich noch von vor dem Fehler).
+     */
+    private fun nachSperre(eintrag: JSONObject, daten: JSONObject): Boolean {
+        val seit = eintrag.optLong("gesperrtSeit")
+        val beginn = daten.optLong("hook_beginn")
+        return if (seit > 0 && beginn > 0) beginn > seit else System.currentTimeMillis() - eintrag.optLong("zeit") >= 60_000L
     }
 
     /** Stand einer Rückfrage aus dem Wort des Servers bzw. des Hooks. */
@@ -563,7 +640,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
         // nur, wenn Frank gebraucht wird oder der Auftrag zu Ende ist: Rückfrage, fertig (App installiert) oder Problem.
         val letzter = eintrag.optString("letzterStand", eintrag.optString("stand"))
-        if (benachrichtigen && (frage != null || letzter == "fertig" || letzter == "fehler")) benachrichtige(eintrag)
+        if (benachrichtigen && (frage != null || letzter == "fertig" || letzter == "fehler" || letzter in GESPERRT)) benachrichtige(eintrag)
         val gespraech = eintrag.optString("gespraech")
         if (gespraech.isEmpty()) return
         val appName = eintrag.optString("app")
@@ -577,7 +654,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             ProgrammierChat.poste(app, gespraech, "❓ Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             return
         }
-        val zeichen = when (eintrag.optString("letzterStand")) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> ""; else -> "⚙️" }
+        val zeichen = when (eintrag.optString("letzterStand")) { "fertig" -> "✅"; "fehler" -> "❌"; "info", in GESPERRT -> ""; else -> "⚙️" }
         val mitZeichen = if (zeichen.isEmpty() || schritt.firstOrNull()?.isLetterOrDigit() == false) schritt else "$zeichen $schritt"
         // Stand „info“ schickt der Hook nur am Zugende mit der ganzen letzten Nachricht der Sitzung: der ausführliche
         // Abschlussbericht. Er bekommt eine eigene Art (volle Aktionsleiste), alles andere bleibt Statusmeldung.
@@ -683,6 +760,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "frage" -> "Rückfrage: $appName"
                 "fertig" -> "Fertig programmiert: $appName"
                 "fehler" -> "Problem beim Programmieren: $appName"
+                STAND_ANMELDUNG -> "Anmeldung erforderlich: $appName"
+                STAND_STOERUNG -> "Programmieren angehalten: $appName"
                 else -> "Jarvis programmiert: $appName"
             }
             // In der Benachrichtigung kein Markdown: Fettungen gibt es nur im Chat.
@@ -700,7 +779,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     .setAutoCancel(stand == "fertig")
                     .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } },
                 // Zwischenschritte still; Rückfrage, Fertig und Problem nach Franks Einstellung (Ton, Wecker, Vorlesen).
-                titel, "$titel. $text", laut = stand != "laeuft", imGespraechStill = false,
+                // Eine Sperre stört kein Live-Gespräch (still, aber sichtbar); Rückfrage, Fertig und Problem wie bisher auch dort mit Ton.
+                titel, "$titel. $text", laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
             )
         }
     }
@@ -752,13 +832,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         @Synchronized
-        fun melde(context: Context, id: String, stand: String, schritt: String, link: String, frage: JSONObject? = null): JSONObject? {
+        fun melde(context: Context, id: String, stand: String, schritt: String, link: String, frage: JSONObject? = null, sperrSeit: Long = 0L): JSONObject? {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
             val jetzt = System.currentTimeMillis()
-            val gueltig = if (stand in listOf("laeuft", "frage", "fertig", "fehler", "info")) stand else "laeuft"
+            val gueltig = if (stand in listOf("laeuft", "frage", "fertig", "fehler", "info", STAND_ANMELDUNG, STAND_STOERUNG)) stand else "laeuft"
             // „info“ (Zwischenstand am Zugende) ändert den Stand nicht: Ein fertiger Auftrag bleibt fertig.
             if (gueltig != "info") eintrag.put("stand", gueltig)
+            // Seit wann gesperrt (Sekunden seit 1970, Zeit des Fehlers): nur was danach begann, hebt die Sperre auf.
+            if (sperrSeit > 0) eintrag.put("gesperrtSeit", sperrSeit)
             eintrag.put("letzterStand", gueltig).put("schritt", schritt).put("zeit", jetzt).put("aktiv", jetzt)
                 // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende und solange sie auf Frank wartet.
                 .put("arbeitet", gueltig == "laeuft")
@@ -786,7 +868,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val grenze = System.currentTimeMillis() - 2 * 3_600_000L
             for (i in liste.length() - 1 downTo 0) {
                 val e = liste.getJSONObject(i)
-                if (e.optString("gespraech").isNotEmpty() && e.optString("stand") in listOf("laeuft", "frage") && e.optLong("zeit") >= grenze) return e.optString("gespraech")
+                if (e.optString("gespraech").isNotEmpty() && offen(e) && e.optLong("zeit") >= grenze) return e.optString("gespraech")
             }
             return null
         }
@@ -796,7 +878,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun puls(context: Context, id: String): JSONObject? {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
-            eintrag.put("aktiv", System.currentTimeMillis()).put("arbeitet", true)
+            eintrag.put("aktiv", System.currentTimeMillis()).put("arbeitet", eintrag.optString("stand") !in GESPERRT)
             schreib(context, liste)
             return eintrag
         }
@@ -817,7 +899,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return (0 until liste.length()).map { liste.getJSONObject(it) }.filter { it.optString("gespraech").isNotEmpty() }
                 .groupBy { it.optString("gespraech") }
                 .mapValues { (_, l) ->
-                    val massgeblich = l.lastOrNull { it.optString("stand") in listOf("laeuft", "frage") } ?: l.last()
+                    val massgeblich = l.lastOrNull { offen(it) } ?: l.last()
                     val inhalt = l.joinToString(" ") { e ->
                         val schritte = e.optJSONArray("schritte")
                         val letzte = if (schritte == null) "" else (maxOf(0, schritte.length() - 5) until schritte.length()).joinToString(" ") { schritte.getJSONObject(it).optString("text").take(300) }
@@ -876,15 +958,20 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Der Stand eines Auftrags in Worten, für alle Übersichten gleich. */
         fun standText(stand: String) = when (stand) {
             "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"
+            STAND_ANMELDUNG -> "BLOCKIERT, Anmeldung erforderlich: Claude Code auf dem Rechner öffnen und /login ausführen, danach arbeitet die Sitzung von selbst weiter"
+            STAND_STOERUNG -> "angehalten nach einem API-Fehler (etwa Nutzungslimit), arbeitet erst weiter, wenn die Sitzung wieder antwortet"
             STAND_UNKLAR -> "unklar, ob gestartet (Zeitüberschreitung beim Start; nicht neu starten, erst abwarten, ob sich die Sitzung meldet)"
             else -> "läuft"
         }
 
         private fun alle(context: Context): List<JSONObject> = lies(context).let { l -> (0 until l.length()).map { l.getJSONObject(it) } }
 
-        private fun offen(e: JSONObject) = e.optString("stand") in listOf("laeuft", "frage")
+        private fun offen(e: JSONObject) = e.optString("stand") in listOf("laeuft", "frage") + GESPERRT
 
         private fun zuletzt(e: JSONObject) = maxOf(e.optLong("zeit"), e.optLong("aktiv"))
+
+        /** Ist unter den [anzahl] neuesten Aufträgen einer am PC noch offen? */
+        fun offenAmPc(context: Context, anzahl: Int): Boolean = alle(context).takeLast(anzahl).any { offen(it) && it.optString("ziel") == ZIEL_PC }
 
         fun finde(context: Context, id: String): JSONObject? = alle(context).lastOrNull { it.optString("id").equals(id, ignoreCase = true) }
 
@@ -972,7 +1059,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 .map { e ->
                     val still = e.optString("stand") == "laeuft" && jetzt - maxOf(e.optLong("zeit"), e.optLong("aktiv")) >= 30 * 60_000L
                     "[" + e.optString("id") + "] Programmierauftrag " + e.optString("app") + ": " + standText(e.optString("stand")) +
-                        (if (still) " (seit über einer halben Stunde keine Meldung)" else "") + " · zuletzt " +
+                        (if (still) " (VERALTET: seit über einer halben Stunde weder Fortschritt noch Lebenszeichen; ob die Sitzung noch lebt, zeigt programmierauftraege)" else "") + " · zuletzt " +
                         ZEIT.format(Instant.ofEpochMilli(e.optLong("zeit")).atZone(ZoneId.systemDefault())) + ": " + e.optString("schritt").replace('\n', ' ').take(200) +
                         (e.optJSONObject("offeneFrage")?.optString("frage_id")?.takeIf { it.isNotEmpty() }?.let { " · frage_id $it (Antwort mit programmier_antwort)" } ?: "") +
                         (e.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).count { l.optJSONObject(it)?.optString("stand") in listOf("angenommen", "zugestellt", "fehler") } }
@@ -980,7 +1067,29 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 }
         }
 
-        fun uebersicht(context: Context, anzahl: Int): String {
+        /**
+         * Für einen laufenden PC-Auftrag: letzter echter Fortschritt (zeit), letztes Lebenszeichen (aktiv) und, frisch vom Server
+         * ([sitzungen]), ob die Sitzung noch lebt (ihr Warter fragt alle 25 s ab). Schweigen allein heißt weder Stillstand noch
+         * abgelaufene Anmeldung: Eine lebende Sitzung kann lange an einem Schritt arbeiten.
+         */
+        private fun lebenszeichen(e: JSONObject, sitzungen: JSONObject?, jetzt: Long): String {
+            if (e.optString("stand") !in listOf("laeuft", "frage") + GESPERRT) return ""
+            val fortschritt = (jetzt - e.optLong("zeit")) / 60_000
+            val puls = (jetzt - maxOf(e.optLong("zeit"), e.optLong("aktiv"))) / 60_000
+            val teile = mutableListOf("letzter Fortschritt vor $fortschritt min", "letztes Lebenszeichen vor $puls min")
+            val s = sitzungen?.optJSONObject(e.optString("id").uppercase(Locale.ROOT))
+            if (e.optString("ziel") == ZIEL_PC) teile += when {
+                sitzungen == null -> "ob die Sitzung lebt, ist gerade nicht prüfbar (Jarvis-Server nicht erreichbar)"
+                s == null -> "der Jarvis-Server kennt seit seinem letzten Neustart kein Lebenszeichen dieser Sitzung (vermutlich beendet)"
+                s.optBoolean("lebt") || (!s.isNull("kontakt_vor_s") && s.optInt("kontakt_vor_s") < 120) -> "die Sitzung lebt (frisch vom Server geprüft)"
+                else -> "die Sitzung meldet sich seit " + (if (s.isNull("warter_vor_s")) "dem Serverstart" else "${s.optInt("warter_vor_s") / 60} min") +
+                    " nicht mehr beim Server: beendet, Rechner im Ruhezustand oder aus"
+            }
+            val veraltet = e.optString("stand") == "laeuft" && fortschritt >= 30
+            return (if (veraltet) "\n  VERALTET: seit $fortschritt min keine Fortschrittsmeldung; " else "\n  Lebenszeichen: ") + teile.joinToString(", ") + "."
+        }
+
+        fun uebersicht(context: Context, anzahl: Int, sitzungen: JSONObject? = null): String {
             val liste = lies(context)
             if (liste.length() == 0) return "Es gibt noch keine Programmieraufträge."
             val jetzt = System.currentTimeMillis()
@@ -995,7 +1104,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         .append(if (e.optString("gespraech").isNotEmpty()) ", eigene Jarvis-Session" else "").append("): ")
                         .append(standText).append(". Zuletzt vor ").append(minuten).append(" Minuten: ").append(e.optString("schritt").take(600))
                     e.optString("link").takeIf { it.isNotEmpty() }?.let { append(" Link: ").append(it) }
-                    if (e.optString("stand") == "laeuft" && minuten >= 30) append(" (seit über einer halben Stunde keine Meldung; Sitzung über den Link prüfen)")
+                    append(lebenszeichen(e, sitzungen, jetzt))
                     e.optString("auftrag").takeIf { it.isNotEmpty() }?.let { append("\n  Ursprünglicher Auftrag (Kurzfassung): ").append(it.replace('\n', ' ').take(500)) }
                     e.optJSONObject("offeneFrage")?.let { f ->
                         append("\n  OFFENE RÜCKFRAGE (frage_id ").append(f.optString("frage_id")).append(", Antwort mit programmier_antwort): ").append(frageText(f))
@@ -1055,6 +1164,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
                 code == 504 -> throw IllegalStateException("Der PC hat den Start nicht bestätigt. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
                 code !in 200..299 -> throw IllegalStateException("HTTP $code vom Jarvis-Server")
+                // Nicht angemeldet: kein Start und bewusst keine Cloud (Frank soll sich anmelden, nicht unbemerkt woanders landen).
+                antwort.optBoolean("anmeldung_fehlt") -> {
+                    val text = antwort.optString("text").take(300).ifEmpty { "Claude Code auf dem Rechner ist nicht angemeldet. Claude Code dort öffnen und /login ausführen." }
+                    benachrichtige(JSONObject().put("id", nummer).put("app", app).put("stand", STAND_ANMELDUNG).put("ziel", ZIEL_PC).put("schritt", "🔐 Nicht gestartet: $text"))
+                    throw IllegalStateException("Nicht angemeldet: $text Der Auftrag ist NICHT gestartet und geht ohne Franks ausdrücklichen Wunsch auch nicht in die Cloud (mit ziel=cloud ginge er dorthin).")
+                }
                 // Sicher nicht gestartet (die Brücke hat es gemeldet): Dann übernimmt die Cloud, ohne doppelte Sitzung.
                 !antwort.optBoolean("ok") -> throw NichtDa("Der PC konnte die Sitzung nicht starten (${antwort.optString("text").take(160)}), deshalb die Cloud.")
             }
@@ -1119,6 +1234,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Stand eines Auftrags, dessen Start nach dem Senden ins Zeitlimit lief: vielleicht gestartet. Die erste Meldung der Sitzung ersetzt ihn. */
         const val STAND_UNKLAR = "unklar"
 
+        /** Gesperrt, bis die Sitzung wieder arbeitet: nicht angemeldet („Login expired“) bzw. ein anderer API-Fehler. */
+        const val STAND_ANMELDUNG = "anmeldung"
+        const val STAND_STOERUNG = "stoerung"
+        val GESPERRT = listOf(STAND_ANMELDUNG, STAND_STOERUNG)
+
         /**
          * Lief das Zeitlimit ab, bevor die Anfrage gesendet war? OkHttp meldet auch den Verbindungsaufbau („failed to connect … after“,
          * „connect timed out“) und den TLS-Handschlag als SocketTimeoutException; dann kam sicher nichts an. Nur ein Zeitlimit beim
@@ -1145,6 +1265,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         const val EXTRA_GESPRAECH = "de.frank.jarvis.rueckfrage_gespraech"
         const val EXTRA_RUECKFRAGE = "de.frank.jarvis.rueckfrage_id"
         private val STATUS_HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
+        /** Nur Zusatzinfo zur Auftragsübersicht: kurz, damit eine Sprachantwort nie lange darauf wartet. */
+        private val SITZUNGS_HTTP: OkHttpClient = STATUS_HTTP.newBuilder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(3, TimeUnit.SECONDS).callTimeout(4, TimeUnit.SECONDS).build()
         private val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
     }
 }

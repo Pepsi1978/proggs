@@ -7,6 +7,10 @@ er den Auftrag (Franks Wahl vom 17.10.2026, Lösung B); der Mac nur, wenn der PC
 die Cloud. Start: LaunchAgent de.frank.jarvis.pc-bruecke (einrichten.sh). Zugang aus ~/SK/Jarvis/relay.properties.
 
 Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows.
+Anmeldung: Mit jeder Abfrage meldet die Brücke den lokalen Anmeldestand von Claude Code (X-Jarvis-Anmeldung: lokal,
+abgemeldet oder unbekannt, dazu die Prüfzeit). Grundlage ist `claude auth status` im Profilordner, höchstens alle fünf
+Minuten und frisch vor jedem Start; gelesen wird nur „loggedIn“, nie Konto oder Token. „lokal“ heißt nur: Anmeldedaten
+liegen vor. Ob sie gelten, zeigt erst eine Sitzung (der Hook meldet „Login expired“ sofort). Abgemeldet startet keine Sitzung.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
 """
 from __future__ import annotations
@@ -37,6 +41,9 @@ TEMP = Path(os.environ.get("TMPDIR", "/tmp")) / "JarvisPcBruecke"
 OPENLAUNCHER = Path("/Applications/OpenLauncher.app")
 OPENLAUNCHER_AB = (1, 24, 39)  # erste Mac-Fassung mit --jarvis-auftrag
 HOOK = PROGGS / "Jarvis" / "werkzeuge" / "pc-bruecke" / "jarvis_hook.py"
+CONFIG_DIR = PROGGS / "OpenLauncher" / "Profiles" / "ClaudeCodeMac" / PROFIL
+LOGIN_SYNC = PROGGS / "OpenLauncher" / "Profiles" / "hooks" / "claude-login-sync.py"
+ANMELDUNG_ALLE_S = 300
 
 
 def schreib(text: str) -> None:
@@ -85,6 +92,7 @@ def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> 
     anfrage = urllib.request.Request(adresse, method="POST" if rumpf is not None else "GET",
                                      data=json.dumps(rumpf, ensure_ascii=False).encode("utf-8") if rumpf is not None else None,
                                      headers={"X-Jarvis-Token": token, "X-Jarvis-Rechner": RECHNER, "X-Jarvis-Rang": "ersatz",
+                                              "X-Jarvis-Anmeldung": ANMELDUNG["stand"], "X-Jarvis-Anmeldung-Zeit": str(int(ANMELDUNG["zeit"])),
                                               "Content-Type": "application/json; charset=utf-8"})
     try:
         with urllib.request.urlopen(anfrage, timeout=sekunden) as antwort:
@@ -143,6 +151,41 @@ def finde_claude(pfade: list[str]) -> str | None:
     return None
 
 
+ANMELDUNG = {"stand": "unbekannt", "zeit": 0.0}
+
+
+def _auth_status() -> str:
+    claude = finde_claude(os.environ.get("PATH", "").split(":") + ["/opt/homebrew/bin", "/usr/local/bin"])
+    if not claude:
+        return "unbekannt"
+    ergebnis = subprocess.run([claude, "auth", "status", "--json"], env=dict(os.environ, CLAUDE_CONFIG_DIR=str(CONFIG_DIR)),
+                              capture_output=True, text=True, timeout=10, stdin=subprocess.DEVNULL)
+    angemeldet = json.loads(ergebnis.stdout or "{}").get("loggedIn")
+    return "lokal" if angemeldet is True else "abgemeldet" if angemeldet is False else "unbekannt"
+
+
+def pruefe_anmeldung(frisch: bool = False) -> dict:
+    """
+    Lokaler Anmeldestand von Claude Code im Profilordner (siehe Kopf). Abgemeldet: erst der Login-Abgleich, den auch jeder
+    Start ausführt (holt einen gültigen Login aus einem anderen Profil), dann noch einmal prüfen. Jeder Fehler = unbekannt.
+    """
+    if not frisch and time.time() - ANMELDUNG["zeit"] < ANMELDUNG_ALLE_S:
+        return ANMELDUNG
+    try:
+        stand = _auth_status()
+        if stand == "abgemeldet" and LOGIN_SYNC.exists():
+            subprocess.run(["python3", str(LOGIN_SYNC), "--startup"], env=dict(os.environ, CLAUDE_CONFIG_DIR=str(CONFIG_DIR)),
+                           capture_output=True, timeout=15, stdin=subprocess.DEVNULL)
+            stand = _auth_status()
+    except Exception as fehler:
+        schreib(f"Anmeldung nicht prüfbar: {type(fehler).__name__}")
+        stand = "unbekannt"
+    if stand != ANMELDUNG["stand"]:
+        schreib(f"Anmeldung: {stand}")
+    ANMELDUNG.update(stand=stand, zeit=time.time())
+    return ANMELDUNG
+
+
 def openlauncher_kann_jarvis() -> bool:
     try:
         with (OPENLAUNCHER / "Contents" / "Info.plist").open("rb") as f:
@@ -172,6 +215,7 @@ def jarvis_hooks() -> dict:
         "PostToolUseFailure": [eintrag("Bash|PowerShell", "post", 15, True)],
         "PreToolUse": [eintrag("AskUserQuestion", "frage", 660), eintrag("*", "puls", 10, True)],
         "Stop": [eintrag(None, "stop", 660), warter],
+        "StopFailure": [eintrag(None, "fehlschlag", 30)],
         "SessionStart": [warter],
     }
 
@@ -272,6 +316,10 @@ exec /bin/zsh -l
 RECHNER = rechnername()
 
 
+class AnmeldungFehlt(Exception):
+    pass
+
+
 def main() -> int:
     ORDNER.mkdir(parents=True, exist_ok=True)
     # Nur eine Brücke je Benutzer: launchd startet bei KeepAlive neu, ein zweiter Start endet sofort.
@@ -286,6 +334,7 @@ def main() -> int:
     while True:
         try:
             zugang = lies_zugang()
+            pruefe_anmeldung()
             code, roh = rufe(f"https://{zugang['host']}/pc/auftrag", zugang["token"], 40)
             pause = 2
             if code == 204:
@@ -295,9 +344,17 @@ def main() -> int:
             auftrag = json.loads(roh.decode("utf-8"))
             schreib(f"Auftrag für {auftrag.get('app')}")
             try:
+                # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen. Das Handy weicht dann
+                # nicht in die Cloud aus (anmeldung_fehlt), sondern sagt Frank, was zu tun ist.
+                if pruefe_anmeldung(frisch=True)["stand"] == "abgemeldet":
+                    raise AnmeldungFehlt(f"Claude Code auf {RECHNER} ist nicht angemeldet. Claude Code auf dem Rechner öffnen und /login ausführen, "
+                                         f"danach den Auftrag neu senden.")
                 name = starte_sitzung(auftrag)
                 quittung = {"id": auftrag.get("id"), "ok": True, "text": f"Sitzung '{name}' gestartet"}
                 schreib(f"Sitzung '{name}' gestartet")
+            except AnmeldungFehlt as fehler:
+                quittung = {"id": auftrag.get("id"), "ok": False, "anmeldung_fehlt": True, "text": str(fehler)}
+                schreib("Nicht gestartet: nicht angemeldet")
             except Exception as fehler:
                 quittung = {"id": auftrag.get("id"), "ok": False, "text": f"Start fehlgeschlagen: {fehler}"}
                 schreib(quittung["text"])

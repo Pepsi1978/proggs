@@ -3,7 +3,7 @@
 Der OpenLauncher hängt diesen Hook nur an Jarvis-Sitzungen (über --settings) und setzt JARVIS_AUFTRAG_ID. Ohne die Variable
 endet der Hook sofort ohne Ausgabe: In normalen Sitzungen passiert nie etwas.
 
-Aufruf: python jarvis_hook.py <post|frage|stop> (macOS: python3), die Hook-Eingabe kommt als JSON auf stdin.
+Aufruf: python jarvis_hook.py <post|frage|stop|puls|warte|fehlschlag> (macOS: python3), die Hook-Eingabe kommt als JSON auf stdin.
 Eine Datei für Windows und macOS; der Mac-Start (OpenLauncherMac --jarvis-auftrag) setzt dieselben Hooks.
   post   PostToolUse (alle Werkzeuge) und PostToolUseFailure (Bash|PowerShell, nur dort stehen fehlgeschlagene Befehle).
          Läuft async. Neue Zwischentexte der KI (aus dem Transkript) gehen sofort als eigene Meldung raus, dazu Advisor,
@@ -19,10 +19,20 @@ Eine Datei für Windows und macOS; der Mac-Start (OpenLauncherMac --jarvis-auftr
   stop   Stop: meldet den Zwischenstand (letzte Nachricht). Endet sie mit einer Frage, wartet der Hook auf Franks Antwort und
          lässt Claude damit weiterarbeiten (decision block). Liegen Nachträge zu diesem Auftrag bereit, gehen sie danach
          ebenso als decision block in dieselbe Sitzung.
+  fehlschlag  StopFailure (Claude Code ab 2.1.x, Feld „error“): Der Zug endete an einem API-Fehler statt mit Stop. Ein
+         Anmeldefehler (ANMELDE_FEHLER, etwa „Login expired · Please run /login“) geht als stand „anmeldung“ an Jarvis, jeder
+         andere API-Fehler als „stoerung“. Ausgabe und Exit-Code ignoriert Claude Code.
   warte  SessionStart und Stop mit asyncRewake: wartet im Hintergrund am Relay auf Nachträge zu diesem Auftrag (höchstens
          einer je Auftrag, bis WARTER_MAX_S oder bis die Claude-Sitzung endet) und weckt die Sitzung mit Exit 2 und dem
          Nachtrag, auch wenn sie gerade nichts tut. Jeder Nachtrag geht genau einmal hinein (nachtrag_id im Zustand) und
          wird mit stand „nachtrag“ quittiert; erst dann nimmt der Relay ihn aus der Warteschlange.
+         Dazu prüft er bei jeder Runde (höchstens alle 25 s, nur eine Datei lesen) das Transkript auf API-Fehler: Steht die
+         Sitzung an einem Anmeldefehler, läuft weder ein Werkzeug- noch der Stop-Hook, nur noch er (Vorfall vom 21.10.2026:
+         „Login expired“ um 10:41, gemeldet erst nach Franks /login um 11:01).
+
+Anmeldung: Ein Anmeldefehler sperrt den Auftrag in Jarvis („Anmeldung erforderlich“), bis die Sitzung beweist, dass sie
+wieder arbeitet: „Login successful“ von /login im Transkript, ein Werkzeug oder ein Stop, das nach dem Fehler begann. Dann
+geht stand „anmeldung_ok“ (bzw. „weiter“ nach einer Störung) an Jarvis. Tokens und Zugangsdaten liest der Hook nie.
 
 Wege: Relay https://<host>/pc/meldung und /pc/antwort mit dem Geräte-Token aus ~/SK/Jarvis/relay.properties, nur IPv4
 (auf diesem Netz hängt IPv6 zeitweise, siehe bugs/desktop/dotnet-httpclient-ipv6-haenger.md).
@@ -42,6 +52,9 @@ import uuid
 from pathlib import Path
 
 AUFTRAG = os.environ.get("JARVIS_AUFTRAG_ID", "").strip()
+START = time.time()        # Beginn dieses Hooks: Nur was danach begann, beweist eine wieder gültige Anmeldung
+# Werte des Felds „error“ (Transkript und StopFailure, Claude Code 2.1.306), die heißen: hier ist niemand gültig angemeldet.
+ANMELDE_FEHLER = {"authentication_failed", "oauth_org_not_allowed", "account_on_hold", "verification_required"}
 DROSSEL_S = 20
 FRAGE_WARTEN_S = 300      # Franks Wahl vom 18.10.2026: höchstens fünf Minuten nur in Jarvis
 PULS_S = 10               # Lebenszeichen höchstens so oft
@@ -101,8 +114,31 @@ def rufe(pfad: str, daten: dict | None = None, zeitlimit: float = 5) -> tuple[in
         return fehler.code, {}
 
 
-def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: list[str] | None = None) -> int:
-    daten = {"auftrag_id": AUFTRAG, "stand": stand, "schritt": schritt[:MAX_TEXT]}
+_RECHNER = []
+
+
+def rechner() -> str:
+    """Derselbe Name, mit dem sich die Brücke beim Relay meldet (X-Jarvis-Rechner)."""
+    if not _RECHNER:
+        _RECHNER.append(_rechnername())
+    return _RECHNER[0]
+
+
+def _rechnername() -> str:
+    if os.name == "nt":
+        return os.environ.get("COMPUTERNAME") or socket.gethostname()
+    if sys.platform == "darwin":
+        import subprocess
+        try:
+            return subprocess.run(["scutil", "--get", "ComputerName"], capture_output=True, text=True, timeout=5).stdout.strip() or "Mac"
+        except Exception:
+            pass
+    return socket.gethostname()
+
+
+def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: list[str] | None = None, extra: dict | None = None) -> int:
+    # rechner und hook_beginn: Der Relay führt damit den Anmeldestand je Rechner (nur was nach einem Fehler begann, bestätigt ihn).
+    daten = {"auftrag_id": AUFTRAG, "stand": stand, "schritt": schritt[:MAX_TEXT], "rechner": rechner(), "hook_beginn": int(START), **(extra or {})}
     if frage:
         daten["frage"] = frage
     if nachtrag_ids:
@@ -314,7 +350,8 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
         except Exception:
             continue
         nachricht = eintrag.get("message") or {}
-        if eintrag.get("type") != "assistant" or nachricht.get("role") != "assistant":
+        # API-Fehler („Login expired · Please run /login“) sind kein Text der KI: Die meldet pruefe_transkript als Sperre.
+        if eintrag.get("type") != "assistant" or nachricht.get("role") != "assistant" or eintrag.get("isApiErrorMessage"):
             continue
         inhalt = nachricht.get("content")
         bloecke = [inhalt] if isinstance(inhalt, str) else [b.get("text", "") for b in inhalt or [] if isinstance(b, dict) and b.get("type") == "text"]
@@ -323,6 +360,141 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
             if text and not schon_gesehen(z, text):
                 texte.append(text)
     return texte
+
+
+# ---------------------------------------------------------------- Anmeldung und API-Fehler
+
+def _zeit(stempel) -> float:
+    """Zeitstempel des Transkripts („2026-10-21T08:41:46.210Z“, UTC) in Sekunden seit 1970; ohne lesbaren jetzt."""
+    from datetime import datetime, timezone
+    try:
+        return datetime.strptime(str(stempel)[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp()
+    except Exception:
+        return time.time()
+
+
+def sperre_melden(z: dict, fehler: str, text: str, seit: float) -> list[tuple[str, str, dict]]:
+    """
+    Ein API-Fehler hat den Zug beendet: Anmeldefehler als „anmeldung“, alle anderen als „stoerung“. Nur einmal je Sperre
+    (Claude Code wiederholt, und Transkript und StopFailure sehen denselben Fehler).
+    """
+    art = "anmeldung" if fehler in ANMELDE_FEHLER else "stoerung"
+    if (z.get("sperre") or {}).get("art") == art:
+        return []
+    z["sperre"] = {"art": art, "seit": seit, "fehler": fehler}
+    uhr = time.strftime("%H:%M", time.localtime(seit))
+    name = rechner()
+    extra = {"seit": int(seit), "fehler": fehler}
+    if art == "anmeldung":
+        return [("anmeldung", f"🔐 Anmeldung erforderlich: Claude Code auf {name} ist seit {uhr} Uhr nicht angemeldet "
+                              f"(„{text.strip()[:120] or fehler}“). Die Sitzung arbeitet nicht weiter. Claude Code auf dem Rechner öffnen und "
+                              f"/login ausführen; danach setzt sie den Auftrag erfahrungsgemäß von selbst fort (sonst dort „weiter“ schreiben).", extra)]
+    return [("stoerung", f"⚠️ Angehalten: Der Zug endete um {uhr} Uhr an einem API-Fehler ({fehler}): {text.strip()[:300]}", extra)]
+
+
+def sperre_aufheben(z: dict, beweis: str, zeit: float = START) -> list[tuple[str, str, dict]]:
+    """Die Sitzung arbeitet nachweislich wieder ([beweis] um [zeit], nach dem Fehler): Sperre aufheben und melden."""
+    sperre = z.get("sperre") or {}
+    if not sperre:
+        return []
+    z.pop("sperre", None)
+    # hook_beginn = Zeitpunkt des Beweises: Der Warter, der /login sieht, lief schon vor dem Fehler.
+    extra = {"seit": int(time.time()), "hook_beginn": int(zeit)}
+    if sperre.get("art") == "anmeldung":
+        return [("anmeldung_ok", f"🔓 Wieder angemeldet ({beweis}).", extra)]
+    return [("weiter", f"▶️ Die Sitzung arbeitet wieder ({beweis}).", extra)]
+
+
+def pruefe_transkript(eingabe: dict, z: dict) -> list[tuple[str, str, dict]]:
+    """
+    API-Fehler (isApiErrorMessage) und eine gelungene Anmeldung (/login → „Login successful“) seit der eigenen Stelle im
+    Transkript. Eigene Stelle („pruef_stelle“), nie die von neue_texte: Sonst fehlten dort Zwischentexte. Nur Zeilen mit
+    passendem Merkmal werden als JSON gelesen; das Transkript trägt große Anfrage-Blöcke.
+    """
+    pfad = eingabe.get("transcript_path")
+    if not pfad:
+        return []
+    try:
+        with open(pfad, "rb") as f:
+            groesse = os.fstat(f.fileno()).st_size
+            # Sitzungen, die ein älterer Hook schon gelesen hat: ab dessen Stelle, alte Fehler gelten als gemeldet.
+            stelle = z.get("pruef_stelle", z.get("stelle", 0))
+            if not 0 <= stelle <= groesse:
+                stelle = 0
+            # Erster Lauf in einer langen Sitzung (älterer Hook vorher): nur das Ende, nie das ganze Transkript.
+            if stelle == 0 and groesse > 2_000_000:
+                stelle = groesse - 2_000_000
+            f.seek(stelle)
+            roh = f.read()
+    except Exception:
+        return []
+    # Was beim letzten Mal nicht beim Relay ankam, zuerst (sonst bliebe eine Sperre für Jarvis unsichtbar).
+    raus = [tuple(m) for m in z.pop("sperr_offen", []) if isinstance(m, list) and len(m) == 3]
+    ende = roh.rfind(b"\n")
+    if ende < 0:
+        return raus
+    z["pruef_stelle"] = stelle + ende + 1
+    for zeile in roh[:ende].split(b"\n"):
+        if b"isApiErrorMessage" not in zeile and b"Login successful" not in zeile:
+            continue
+        try:
+            eintrag = json.loads(zeile)
+        except Exception:
+            continue
+        if eintrag.get("type") == "assistant" and eintrag.get("isApiErrorMessage") is True:
+            inhalt = (eintrag.get("message") or {}).get("content")
+            text = inhalt if isinstance(inhalt, str) else " ".join(b.get("text", "") for b in inhalt or [] if isinstance(b, dict))
+            raus += sperre_melden(z, str(eintrag.get("error") or "unknown"), text, _zeit(eintrag.get("timestamp")))
+        elif eintrag.get("type") == "system" and eintrag.get("subtype") == "local_command" and \
+                "<local-command-stdout>Login successful" in str(eintrag.get("content", "")):
+            angemeldet = _zeit(eintrag.get("timestamp"))
+            if (z.get("sperre") or {}).get("art") == "anmeldung" and angemeldet >= z["sperre"].get("seit", 0):
+                raus += sperre_aufheben(z, "/login am Rechner", angemeldet)
+    return raus
+
+
+def nach_fehler_begonnen(z: dict) -> bool:
+    """Begann dieser Hook nach dem Fehler, der die Sitzung gesperrt hat? Ein Werkzeug- oder Stop-Hook von vorher (async,
+    spät dran) beweist nichts."""
+    sperre = z.get("sperre") or {}
+    return bool(sperre) and START > float(sperre.get("seit", 0)) + 1
+
+
+def sende_sperre(meldungen: list[tuple[str, str, dict]]) -> None:
+    """Sendet Sperr-Meldungen (zwei Versuche). Was nicht ankommt, merkt sich der Zustand; die nächste Prüfung (spätestens der
+    Warter nach 25 s) schickt es erneut."""
+    offen = []
+    for stand, text, extra in meldungen:
+        for versuch in range(2):
+            try:
+                if melde(stand, text, extra=extra) == 200:
+                    break
+            except Exception as fehler:
+                schreib(f"Meldung {stand} Versuch {versuch + 1}: {fehler}")
+            time.sleep(1)
+        else:
+            offen.append([stand, text, extra])
+    if offen:
+        try:
+            with Sperre():
+                z = lies_zustand()
+                z["sperr_offen"] = (z.get("sperr_offen") or []) + offen
+                schreib_zustand(z)
+        except SperreBelegt as fehler:
+            schreib(f"Sperr-Meldung verloren: {fehler}")
+
+
+def fehlschlag(eingabe: dict) -> None:
+    """StopFailure: Der Zug endete an einem API-Fehler (Feld „error“). Nur melden, Ausgabe wird ignoriert."""
+    fehler = str(eingabe.get("error") or "unknown")
+    text = str(eingabe.get("last_assistant_message") or eingabe.get("error_details") or "")
+    with Sperre():
+        z = lies_zustand()
+        raus = pruefe_transkript(eingabe, z)
+        if not raus:
+            raus = sperre_melden(z, fehler, text, time.time())
+        schreib_zustand(z)
+    sende_sperre(raus)
 
 
 # ---------------------------------------------------------------- Freie Rückfragen am Zugende
@@ -559,6 +731,15 @@ def warte(eingabe: dict) -> int:
             if claude and not lebt(claude, claude_start):
                 schreib("Warter: Claude-Sitzung beendet")
                 return 0
+            # Steht die Sitzung an einem Anmeldefehler, ist der Warter der einzige Hook, der noch läuft.
+            try:
+                with Sperre():
+                    z = lies_zustand()
+                    sperr = pruefe_transkript(eingabe, z)
+                    schreib_zustand(z)
+                sende_sperre(sperr)
+            except SperreBelegt:
+                pass
             try:
                 liste = hole_nachtraege(25)
             except Exception as fehler:
@@ -599,6 +780,9 @@ def post(eingabe: dict) -> None:
     erledigt = []
     with Sperre():
         z = lies_zustand()
+        sperr = pruefe_transkript(eingabe, z)
+        if nach_fehler_begonnen(z):
+            sperr += sperre_aufheben(z, f"Werkzeug {werkzeug} lief")
         # Zuerst, was die KI seit dem letzten Werkzeug geschrieben hat: sofort, jeder Text als eigene Meldung.
         raus = [("laeuft", "💬 " + text) for text in neue_texte(eingabe, z)]
         # Eine Rückfrage, die am Rechner (Terminal, Claude-App) beantwortet wurde: AskUserQuestion ist gelaufen. Läuft danach
@@ -634,6 +818,7 @@ def post(eingabe: dict) -> None:
         else:
             raus += sammel(z, None)
         schreib_zustand(z)
+    sende_sperre(sperr)
     sende(raus)
     # post läuft async mit 15 s Zeitlimit: höchstens zwei Versuche (je bis 5 s). Ging der Ausgang nicht durch, bleibt die Frage
     # vorgemerkt, und das nächste Werkzeug oder der Stop meldet ihn erneut.
@@ -684,15 +869,20 @@ def frage(eingabe: dict) -> None:
     if not fragen:
         return
     raus = []
+    sperr = []
     try:
         with Sperre():
             z = lies_zustand()
+            sperr = pruefe_transkript(eingabe, z)
+            if nach_fehler_begonnen(z):
+                sperr += sperre_aufheben(z, "Rückfrage gestellt")
             raus = [("laeuft", "💬 " + text) for text in neue_texte(eingabe, z)]
             raus += sammel(z, None, sofort=True)
             schreib_zustand(z)
     except SperreBelegt as fehler:
         # Die Frage selbst ist wichtiger als die Zwischentexte: Die holt der nächste Hook nach.
         schreib(f"frage: {fehler}")
+    sende_sperre(sperr)
     sende(raus)
     tool_use_id = str(eingabe.get("tool_use_id") or "")
     frage_id = uuid.uuid4().hex[:12]
@@ -733,9 +923,14 @@ def stop(eingabe: dict) -> None:
     letzte = lesbar(str(eingabe.get("last_assistant_message") or ""))
     raus = []
     erledigt = []
+    sperr = []
     try:
         with Sperre():
             z = lies_zustand()
+            # Stop kommt nur nach einem gelungenen Zug (sonst StopFailure): Beweis, dass die Anmeldung wieder gilt.
+            sperr = pruefe_transkript(eingabe, z)
+            if nach_fehler_begonnen(z):
+                sperr += sperre_aufheben(z, "Zug beendet")
             erledigt = [(v["frage_id"], v.get("ausgang") or "erledigt", v.get("text", "")) for _, v in offene_am_pc(z)]
             # Zwischentexte dieses Zuges, die noch kein Werkzeug-Hook gemeldet hat. Die letzte Nachricht steht oft schon im
             # Transkript und wird dabei als gesehen markiert: Sie kommt trotzdem gleich gesondert (Fehler vom 15.10.2026).
@@ -751,6 +946,7 @@ def stop(eingabe: dict) -> None:
         z = lies_zustand()
         neu = bool(letzte) and not schon_gesehen(dict(z, gesehen=list(z["gesehen"])), letzte)
         dauer = dauer_text(time.time() - z["beginn"])
+    sende_sperre(sperr)
     sende(raus)
     for frage_id, ausgang, text in erledigt:
         frage_status(frage_id, ausgang, antwort=text)
@@ -799,8 +995,12 @@ def puls(eingabe: dict) -> None:
     ein = eingabe.get("tool_input") or {}
     with Sperre():
         z = lies_zustand()
+        sperr = pruefe_transkript(eingabe, z)
+        if nach_fehler_begonnen(z):
+            sperr += sperre_aufheben(z, f"Werkzeug {werkzeug} gestartet")
         raus = [("laeuft", "💬 " + text) for text in neue_texte(eingabe, z)]
         schreib_zustand(z)
+    sende_sperre(sperr)
     if werkzeug == "advisor":
         raus.append(("laeuft", "🧠 Advisor wird befragt …"))
     elif werkzeug == "Skill":
@@ -829,7 +1029,7 @@ def main() -> int:
         eingabe = {}
     try:
         # Nur warte liefert einen Exit-Code (2 = Sitzung wecken); alle anderen enden mit 0.
-        return {"post": post, "frage": frage, "stop": stop, "puls": puls, "warte": warte}.get(art, lambda _: None)(eingabe) or 0
+        return {"post": post, "frage": frage, "stop": stop, "puls": puls, "warte": warte, "fehlschlag": fehlschlag}.get(art, lambda _: None)(eingabe) or 0
     except Exception as fehler:
         schreib(f"{art}: {type(fehler).__name__}: {fehler}")
         return 0

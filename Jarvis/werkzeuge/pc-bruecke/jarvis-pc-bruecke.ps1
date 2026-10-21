@@ -6,6 +6,9 @@
 # Start: Aufgabenplanung „JarvisPcBruecke“ bei der Anmeldung (einrichten.ps1). Zugang aus ~/SK/Jarvis/relay.properties.
 #
 # Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High (Franks Vorgabe vom 15.10.2026), siehe unten.
+# Anmeldung: Jede Abfrage trägt den lokalen Anmeldestand von Claude Code (X-Jarvis-Anmeldung: lokal, abgemeldet, unbekannt,
+# dazu die Prüfzeit), wie die Mac-Brücke: `claude auth status` im Profilordner, höchstens alle fünf Minuten und frisch vor
+# jedem Start, nur „loggedIn“. Abgemeldet startet keine Sitzung (Quittung mit anmeldung_fehlt, das Handy nimmt nicht die Cloud).
 
 $ErrorActionPreference = 'Stop'
 $Profil = 'minimal'
@@ -91,8 +94,84 @@ function Jarvis-Hooks {
         PostToolUseFailure = @(Eintrag 'Bash|PowerShell' 'post' 15 $true)
         PreToolUse         = @((Eintrag 'AskUserQuestion' 'frage' 660), (Eintrag '*' 'puls' 10 $true))
         Stop               = @((Eintrag $null 'stop' 660), $warter)
+        StopFailure        = @(Eintrag $null 'fehlschlag' 30)
         SessionStart       = @($warter)
     }
+}
+
+$anmeldung = @{ stand = 'unbekannt'; zeit = 0 }
+$authProzess = $null
+$authDatei = Join-Path $env:TEMP 'JarvisPcBruecke\auth-status.json'
+
+# claude auth status als eigener Prozess mit Ausgabe in eine Datei: mit Zeitlimit, und Text auf stderr bricht unter
+# Windows PowerShell 5.1 nichts ab. Der Profilordner kommt über die geerbte Umgebung.
+function Starte-AuthStatus {
+    $claude = Finde-Claude
+    $alt = $env:CLAUDE_CONFIG_DIR
+    $env:CLAUDE_CONFIG_DIR = Join-Path $proggs "OpenLauncher\Profiles\ClaudeCode\$Profil"
+    try {
+        Remove-Item -LiteralPath $authDatei -ErrorAction SilentlyContinue
+        return Start-Process -FilePath $claude -ArgumentList @('auth', 'status', '--json') -RedirectStandardOutput $authDatei `
+            -RedirectStandardError "$authDatei.err" -WindowStyle Hidden -PassThru
+    } finally { $env:CLAUDE_CONFIG_DIR = $alt }
+}
+
+function Lies-AuthStatus {
+    try {
+        $angemeldet = (Get-Content -Raw -Encoding utf8 -LiteralPath $authDatei | ConvertFrom-Json).loggedIn
+        if ($angemeldet -eq $true) { return 'lokal' }
+        if ($angemeldet -eq $false) { return 'abgemeldet' }
+    } catch { }
+    return 'unbekannt'
+}
+
+function Setze-Anmeldung([string]$stand) {
+    if ($stand -ne $script:anmeldung.stand) { Schreib "Anmeldung: $stand" }
+    $script:anmeldung = @{ stand = $stand; zeit = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() }
+}
+
+function Beende-Leise($prozess) {
+    try { $prozess.Kill() } catch { }
+}
+
+# Regelmäßig (alle fünf Minuten) im Hintergrund: Die Abfrageschleife wartet nie darauf, sonst gäbe es eine Lücke ohne
+# offene Abfrage, in der der Mac einen Auftrag des Hauptrechners übernähme.
+function Pruefe-Anmeldung-Hintergrund {
+    try {
+        if ($script:authProzess) {
+            if ($script:authProzess.HasExited) { Setze-Anmeldung (Lies-AuthStatus); $script:authProzess = $null }
+            elseif (((Get-Date) - $script:authProzess.StartTime).TotalSeconds -gt 20) {
+                Beende-Leise $script:authProzess
+                $script:authProzess = $null; Setze-Anmeldung 'unbekannt'
+            }
+            return
+        }
+        if ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - $script:anmeldung.zeit -ge 300) { $script:authProzess = Starte-AuthStatus }
+    } catch { Schreib "Anmeldung nicht prüfbar: $($_.Exception.GetType().Name)"; Setze-Anmeldung 'unbekannt' }
+}
+
+# Frisch vor jedem Start, je Aufruf höchstens 10 s; abgemeldet: erst der Login-Abgleich (höchstens 15 s), dann noch einmal.
+function Pruefe-AuthEinmal {
+    if ($script:authProzess -and -not $script:authProzess.HasExited) { Beende-Leise $script:authProzess }
+    $script:authProzess = $null
+    $p = Starte-AuthStatus
+    if (-not $p.WaitForExit(10000)) { Beende-Leise $p; return 'unbekannt' }
+    return Lies-AuthStatus
+}
+
+function Pruefe-Anmeldung-Jetzt {
+    $stand = 'unbekannt'
+    try {
+        $stand = Pruefe-AuthEinmal
+        $sync = Join-Path $proggs 'OpenLauncher\Profiles\hooks\claude-login-sync.py'
+        if ($stand -eq 'abgemeldet' -and (Test-Path -LiteralPath $sync)) {
+            $py = Start-Process -FilePath 'python' -ArgumentList @("`"$sync`"") -WindowStyle Hidden -PassThru
+            if (-not $py.WaitForExit(15000)) { Beende-Leise $py }
+            $stand = Pruefe-AuthEinmal
+        }
+    } catch { Schreib "Anmeldung nicht prüfbar: $($_.Exception.GetType().Name)"; $stand = 'unbekannt' }
+    Setze-Anmeldung $stand
+    return $stand
 }
 
 function Starte-Sitzung($auftrag) {
@@ -214,7 +293,7 @@ function Schreib-Kopf([string]$token) {
 function Rufe([string]$adresse, [string]$token, [int]$sekunden, [string]$rumpfDatei) {
     Schreib-Kopf $token
     $argumente = @('-4', '-s', '-S', '--max-time', $sekunden, '-o', $antwortDatei, '-w', '%{http_code}',
-        '-H', "@$kopfDatei")
+        '-H', "@$kopfDatei", '-H', "X-Jarvis-Anmeldung: $($script:anmeldung.stand)", '-H', "X-Jarvis-Anmeldung-Zeit: $($script:anmeldung.zeit)")
     if ($rumpfDatei) { $argumente += @('-X', 'POST', '-H', 'Content-Type: application/json; charset=utf-8', '--data-binary', "@$rumpfDatei") }
     Remove-Item -LiteralPath $antwortDatei -ErrorAction SilentlyContinue
     $code = & $curl @argumente $adresse 2>&1
@@ -228,6 +307,7 @@ $pause = 2
 while ($true) {
     try {
         $zugang = Lies-Zugang
+        Pruefe-Anmeldung-Hintergrund
         $code = Rufe "https://$($zugang.host)/pc/auftrag" $zugang.token 40 $null
         $pause = 2
         if ($code -eq 204) { continue }
@@ -235,9 +315,16 @@ while ($true) {
         $auftrag = Get-Content -Raw -Encoding utf8 -LiteralPath $antwortDatei | ConvertFrom-Json
         Schreib "Auftrag für $($auftrag.app)"
         try {
-            $name = Starte-Sitzung $auftrag
-            $quittung = @{ id = $auftrag.id; ok = $true; text = "Sitzung '$name' gestartet" }
-            Schreib "Sitzung '$name' gestartet"
+            # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen.
+            if ((Pruefe-Anmeldung-Jetzt) -eq 'abgemeldet') {
+                $quittung = @{ id = $auftrag.id; ok = $false; anmeldung_fehlt = $true
+                    text = "Claude Code auf $env:COMPUTERNAME ist nicht angemeldet. Claude Code auf dem Rechner öffnen und /login ausführen, danach den Auftrag neu senden." }
+                Schreib 'Nicht gestartet: nicht angemeldet'
+            } else {
+                $name = Starte-Sitzung $auftrag
+                $quittung = @{ id = $auftrag.id; ok = $true; text = "Sitzung '$name' gestartet" }
+                Schreib "Sitzung '$name' gestartet"
+            }
         } catch {
             $quittung = @{ id = $auftrag.id; ok = $false; text = "Start fehlgeschlagen: $($_.Exception.Message)" }
             Schreib $quittung.text

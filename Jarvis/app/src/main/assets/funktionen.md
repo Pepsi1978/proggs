@@ -1,4 +1,4 @@
-<!-- stand: 207 1.8.196 -->
+<!-- stand: 208 1.8.197 -->
 Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks gelten für den eigenen Chat, die Agenten und ChatGPT (Plugin), soweit nicht anders vermerkt.
 
 ## Zugänge und Modelle
@@ -58,7 +58,8 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 ## Programmieren
 
 - `programmieren`: übergibt einen Auftrag an Claude Code, zuerst an die PC-Brücke (Windows-PC, sonst Mac als Ersatz), sonst an die Cloud-Routine; auf Wunsch mit Code-Review. Jarvis programmiert nie selbst.
-- `pc_status` (Windows-PC und Mac erreichbar?), `programmierauftraege` (Stand, Link), `programmier_antwort` (Rückfragen beantworten, auch per Knopf im Vollbild), `programmier_nachtrag` (nur auf ausdrücklichen Wunsch in die genannte Sitzung).
+- `pc_status` (Windows-PC und Mac erreichbar, Claude-Anmeldung je Rechner mit Prüfzeit: nicht angemeldet, abgelaufen, von einer Sitzung bestätigt, nur Anmeldedaten vorhanden oder unbekannt), `programmierauftraege` (Stand, Link, letzter Fortschritt, letztes Lebenszeichen, ob die PC-Sitzung noch lebt; ab 30 min ohne Fortschritt „veraltet“), `programmier_antwort` (Rückfragen beantworten, auch per Knopf im Vollbild), `programmier_nachtrag` (nur auf ausdrücklichen Wunsch in die genannte Sitzung).
+- Anmeldung am Rechner: Ein „Login expired“ einer PC-Sitzung meldet der Hook binnen etwa 25 s, auch wenn sie stillsteht; der Auftrag steht dann als „blockiert, Anmeldung erforderlich“ mit Rechner, Uhrzeit und „/login ausführen“, dazu eine Benachrichtigung (im Live-Gespräch still). Die erste Arbeit nach /login hebt die Sperre auf; andere API-Fehler zeigen „angehalten“. Ist die Brücke abgemeldet, startet keine Sitzung und der Auftrag geht nicht ungefragt in die Cloud.
 - Fortschritt der Sitzung erscheint im Ursprungsgespräch; Benachrichtigung bei Rückfrage, fertig und Fehler. Fertig gemeldet heißt nicht installiert.
 - Jedes Gespräch mit Programmierauftrag (eigenes Auftragsgespräch, ein mit „Neuer Programmierauftrag“ oder „Programmierer“ neu begonnenes Gespräch oder ein normales Gespräch, in dem der Auftrag selbst läuft) ist dauerhaft als Programmiergespräch markiert und steht nur im Leistenreiter „Programmierung“; der Bestand wird beim Laden an Auftragsbuch, Auftrags-Vorspann und Sitzungsmeldungen erkannt und nachmarkiert.
 

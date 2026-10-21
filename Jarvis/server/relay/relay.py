@@ -25,6 +25,12 @@ Fuenfte Aufgabe: Nachtraege zu einem laufenden Auftrag. Das Handy legt einen fre
 (POST /geraet/nachtrag, mit nachtrag_id gegen doppelte Zustellung). Der Hook dieser Sitzung holt ihn ab (GET /pc/nachtrag,
 Long-Polling) und quittiert die Zustellung mit einer Meldung (stand "nachtrag", nachtrag_ids); erst dann faellt er aus der
 Warteschlange. Die Warteschlange ueberlebt Neustarts (/data/nachtraege.json) und haelt hoechstens sieben Tage.
+
+Sechste Aufgabe: Anmeldestand von Claude Code je Rechner, getrennt von der Erreichbarkeit. Die Bruecke meldet bei jeder
+Abfrage den lokalen Stand (X-Jarvis-Anmeldung: lokal = Anmeldedaten liegen vor, abgemeldet, unbekannt; ohne Kopfzeile
+unbekannt) mit Pruefzeit. Ob die Anmeldung wirklich gilt, zeigen nur die Sitzungen: Meldet ein Hook „anmeldung“ (Login
+expired), ist sie abgelaufen; jede spaetere Arbeit einer Sitzung (Puls, Schritt, „anmeldung_ok“), die nach dem Fehler begann,
+bestaetigt sie wieder. /geraet/pc liefert beides je Rechner und je Auftrag die Lebenszeichen (kontakt, warter).
 """
 import asyncio
 import hmac
@@ -518,6 +524,9 @@ class PcBruecke:
         self.kontakt = {}     # AUFTRAG-ID -> monotonic der letzten Meldung der Sitzung (Schritt, Puls): Zeichen, dass sie arbeitet
         self.warter = {}      # AUFTRAG-ID -> monotonic der letzten Nachtrags-Abfrage des Warters
         self.neu_da = {}      # AUFTRAG-ID -> asyncio.Event: ein Nachtrag kam dazu
+        self.bruecke_anmeldung = {}  # Rechner -> {"stand": lokal|abgemeldet|unbekannt, "geprueft": Sekunden seit 1970 (0 = nie)}
+        # Rechner -> {"stand": abgelaufen|bestaetigt, "zeit": Sekunden seit 1970, "auftrag_id"}: was die Sitzungen zuletzt bewiesen
+        self.sitzung_anmeldung = {}
         self.zugestellt = {}  # nachtrag_id -> asyncio.Event: der Hook hat quittiert
         self._lade_nachtraege()
         self._lade_fragen()
@@ -725,7 +734,19 @@ class PcBruecke:
             return True
         return time.monotonic() - self.haupt_zuletzt < PC_HAUPT_LUECKE_S
 
-    def _melde_dich(self, ersatz: bool, rechner: str) -> None:
+    def _anmeldung_merken(self, rechner: str, request: web.Request) -> None:
+        stand = request.headers.get("X-Jarvis-Anmeldung", "").strip().lower()
+        try:
+            geprueft = int(request.headers.get("X-Jarvis-Anmeldung-Zeit", "0"))
+        except ValueError:
+            geprueft = 0
+        # Eine aeltere Bruecke ohne Kopfzeile: unbekannt, nie „angemeldet“ (erreichbar heisst nicht angemeldet).
+        self.bruecke_anmeldung[rechner] = {"stand": stand if stand in ("lokal", "abgemeldet") else "unbekannt",
+                                           "geprueft": geprueft if stand else 0}
+
+    def _melde_dich(self, ersatz: bool, rechner: str, request: web.Request | None = None) -> None:
+        if request is not None:
+            self._anmeldung_merken(rechner, request)
         jetzt = time.monotonic()
         self.zuletzt = jetzt
         if ersatz:
@@ -741,7 +762,7 @@ class PcBruecke:
             log.info("PC-Bruecke verbunden")
         ersatz = request.headers.get("X-Jarvis-Rang", "").strip().lower() == "ersatz"
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
-        self._melde_dich(ersatz, rechner)
+        self._melde_dich(ersatz, rechner, request)
         if not ersatz:
             self.haupt_abfragen[id(request)] = request
         try:
@@ -797,6 +818,11 @@ class PcBruecke:
             return web.Response(status=400, text="Quittung unlesbar")
         if wartend is not None and not wartend.done():
             wartend.set_result(daten)
+        # Die Quittung kommt nach der frischen Pruefung vor dem Start: nur den Anmeldestand merken (die Erreichbarkeit
+        # zaehlt allein ueber die Abfragen, sonst gaelte der Hauptrechner kurz als „holt gleich ab“).
+        rechner = request.headers.get("X-Jarvis-Rechner", "")[:60]
+        if rechner and request.headers.get("X-Jarvis-Anmeldung"):
+            self._anmeldung_merken(rechner, request)
         return web.json_response({"angenommen": wartend is not None})
 
     async def auftrag(self, request: web.Request) -> web.Response:
@@ -824,7 +850,8 @@ class PcBruecke:
         finally:
             self.quittungen.pop(nummer, None)
             rechner = self.zugestellt_an.pop(nummer, self.rechner)
-        return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner})
+        return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner,
+                                  "anmeldung_fehlt": bool(quittung.get("anmeldung_fehlt"))})
 
     async def meldung(self, request: web.Request) -> web.Response:
         """POST /pc/meldung (Hook am PC): {"auftrag_id", "stand", "schritt", "frage"?: {"frage_id", "fragen", "frei"}}."""
@@ -837,6 +864,7 @@ class PcBruecke:
             return web.Response(status=400, text="Meldung unlesbar")
         auftrag_id = daten["auftrag_id"].strip().upper()
         self.kontakt[auftrag_id] = time.monotonic()
+        self._anmeldung_aus_meldung(auftrag_id, daten)
         if daten.get("stand") == "nachtrag" and isinstance(daten.get("nachtrag_ids"), list):
             self._quittiert(auftrag_id, daten["nachtrag_ids"])
         frage = daten.get("frage")
@@ -844,6 +872,24 @@ class PcBruecke:
             self._frage_merken(auftrag_id, daten["stand"], daten["schritt"], frage)
         zugestellt = await self.relay.programmier_meldung({"signal": "programmieren", **daten})
         return web.json_response({"zugestellt": zugestellt})
+
+    # Diese Staende kommen nur, wenn die Sitzung nach einer Antwort des Modells arbeitet: Beweis einer gueltigen Anmeldung.
+    BEWEIS = ("puls", "laeuft", "info", "frage", "fertig", "anmeldung_ok", "weiter")
+
+    def _anmeldung_aus_meldung(self, auftrag_id: str, daten: dict) -> None:
+        rechner = str(daten.get("rechner") or "")[:60]
+        if not rechner:
+            return
+        stand = daten.get("stand")
+        bisher = self.sitzung_anmeldung.get(rechner) or {}
+        if stand == "anmeldung":
+            self.sitzung_anmeldung[rechner] = {"stand": "abgelaufen", "zeit": int(daten.get("seit") or time.time()), "auftrag_id": auftrag_id}
+        elif stand in self.BEWEIS:
+            # Ein Hook, der vor dem Fehler begann (async, spaet dran), beweist nichts.
+            beginn = int(daten.get("hook_beginn") or 0)
+            if bisher.get("stand") == "abgelaufen" and beginn <= bisher.get("zeit", 0):
+                return
+            self.sitzung_anmeldung[rechner] = {"stand": "bestaetigt", "zeit": int(time.time()), "auftrag_id": auftrag_id}
 
     async def antwort_abholen(self, request: web.Request) -> web.Response:
         """GET /pc/antwort?frage_id=… (Hook): 200 mit Antwort (oder {"freigeben": true}: Frank will am Rechner antworten),
@@ -930,7 +976,20 @@ class PcBruecke:
         # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
         ersatz_da = time.monotonic() - self.ersatz_zuletzt < PC_FRISCH_S
         aktiv = self.haupt_rechner if self._haupt_nimmt() or not ersatz_da else self.ersatz_rechner
-        return web.json_response({"pc": self.da(), "rechner": aktiv, "zuletzt_vor_s": vor, "rechner_alle": rechner})
+        jetzt_s = time.time()
+        for r in rechner:
+            b = self.bruecke_anmeldung.get(r["rechner"]) or {"stand": "unbekannt", "geprueft": 0}
+            r["anmeldung_bruecke"] = {"stand": b["stand"], "geprueft_vor_s": int(jetzt_s - b["geprueft"]) if b["geprueft"] else None}
+            s = self.sitzung_anmeldung.get(r["rechner"])
+            r["anmeldung_sitzung"] = {"stand": s["stand"], "vor_s": int(jetzt_s - s["zeit"]), "auftrag_id": s["auftrag_id"]} if s else None
+        # Je Auftrag (der letzten 24 h): letzte Meldung oder Puls (Arbeit) und letzte Nachtrags-Abfrage des Warters (Sitzung lebt).
+        sitzungen = {}
+        for auftrag_id in set(self.kontakt) | set(self.warter):
+            kontakt, warter = self.kontakt.get(auftrag_id), self.warter.get(auftrag_id)
+            if max(kontakt or 0, warter or 0) > jetzt - 86_400:
+                sitzungen[auftrag_id] = {"kontakt_vor_s": int(jetzt - kontakt) if kontakt else None,
+                                         "warter_vor_s": int(jetzt - warter) if warter else None, "lebt": self._wartet(auftrag_id)}
+        return web.json_response({"pc": self.da(), "rechner": aktiv, "zuletzt_vor_s": vor, "rechner_alle": rechner, "sitzungen": sitzungen})
 
 
 async def gesund(_: web.Request) -> web.Response:
