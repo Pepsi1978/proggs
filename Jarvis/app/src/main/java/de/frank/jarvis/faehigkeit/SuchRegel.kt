@@ -43,7 +43,17 @@ object SuchRegel {
     /** Hängt an jedem Suchfehler im Werkzeug-Ergebnis: ehrlich melden statt still auszuweichen. */
     const val EHRLICH = "Sag Frank das ehrlich; starte dafür keinen Agenten."
 
-    private val recherche = Regex("recherch|nachforsch|\\bagent")
+    /**
+     * Ein ausdrücklicher Wunsch, keine bloße Erwähnung: das Verb („recherchiere“, „kannst du das recherchieren“, „lass nachforschen“),
+     * die Recherche mit einem Wunschwort („mach eine Recherche“, „Recherche zu …“) oder ein Agent mit einem Startwort („starte einen
+     * Agenten“, „lass einen Agenten …“). „Was ist eine systematische Recherche?“ oder „Welche Agentur …“ sind keiner.
+     */
+    private val wunsch = listOf(
+        Regex("\\brecherchier(e|en|st|t)?\\b|\\bnachforsch(e|en)?\\b"),
+        Regex("\\b(mach|mache|macht|starte|start|starten|brauche|brauch|will|möchte|hätte gern|hätte gerne|bitte um|gib)\\b[^.?!]{0,40}\\brecherche"),
+        Regex("\\brecherche\\s+(zu|über|zum|zur|starten|machen|anstoßen)\\b|\\brecherche-?agent"),
+        Regex("\\b(starte|start|starten|schick|schicke|lass|beauftrag\\w*|gib|setz\\w*)\\b[^.?!]{0,40}\\bagent(en)?\\b|\\bagent(en)?\\b[^.?!]{0,30}\\b(starten|beauftragen|losschicken)\\b"),
+    )
     private val ohneRecherche = Regex("\\b(kein|keine|keinen|nicht|ohne)\\s+(\\S+\\s+){0,2}?(recherch|nachforsch|agent)|(recherch|nachforsch)\\S*\\s+(bitte\\s+)?(nicht\\b|brauchst du nicht|musst du nicht|ist nicht nötig)")
     /** Wörter einer knappen Zustimmung; die erste muss eine Zustimmung sein, der Rest darf sie nur verstärken („Ja, mach das bitte“). */
     private val zustimmungAnfang = setOf("ja", "jo", "jep", "jawohl", "gern", "gerne", "okay", "ok", "klar", "bitte", "los", "genau", "mach", "machs", "starte", "leg", "super", "prima", "gut", "sehr")
@@ -57,7 +67,7 @@ object SuchRegel {
      */
     fun ausdruecklich(worte: String): Boolean {
         val t = normiert(worte)
-        return t.isNotEmpty() && recherche.containsMatchIn(t) && !ohneRecherche.containsMatchIn(t)
+        return t.isNotEmpty() && wunsch.any { it.containsMatchIn(t) } && !ohneRecherche.containsMatchIn(t)
     }
 
     /** Ist [zeile] eine knappe Zustimmung („Ja“, „Ja, mach das“, „Gerne“), etwa auf ein Angebot, eine Recherche zu starten? */
@@ -67,16 +77,14 @@ object SuchRegel {
     }
 
     /**
-     * Darf agent_starten den Agenten [agent] starten? Nur der Recherche-Agent wird geprüft. [worte] = Franks eigene Worte der
-     * laufenden Runde (im Chat seine Frage und die vorige, Zeile für Zeile; im Live-Gespräch die Mitschrift), null = unbekannt
-     * (ChatGPT über MCP, Live ohne Mitschrift): Dann gilt die Regel nur über die Anweisungen. Erlaubt ist eine ausdrückliche
-     * Recherche oder, als letzte Zeile, eine knappe Zustimmung auf ein Angebot.
+     * Darf agent_starten den Agenten [agent] starten? Nur der Recherche-Agent wird geprüft. [juengste] = Franks jüngste eigene
+     * Äußerung (im Chat seine aktuelle Nachricht, im Live-Gespräch die Mitschrift), null = unbekannt (ChatGPT über MCP, Live ohne
+     * Mitschrift): Dann gilt die Regel nur über die Anweisungen. Erlaubt ist eine ausdrückliche Recherche oder eine knappe Zustimmung
+     * auf ein Angebot. Nur die jüngste Äußerung zählt: Ein Wunsch von vorhin gilt nicht für die nächste normale Frage.
      */
-    fun darfStarten(agent: String, worte: String?): Boolean {
-        if (!agent.trim().equals("Recherche", ignoreCase = true) || worte == null) return true
-        // Zuerst die jüngste Zeile: Ein „keine Recherche“ aus der vorigen Frage hebt einen neuen ausdrücklichen Wunsch nicht auf.
-        val letzte = worte.lines().lastOrNull { it.isNotBlank() }.orEmpty()
-        return ausdruecklich(letzte) || zustimmung(letzte) || ausdruecklich(worte)
+    fun darfStarten(agent: String, juengste: String?): Boolean {
+        if (!agent.trim().equals("Recherche", ignoreCase = true) || juengste == null) return true
+        return ausdruecklich(juengste) || zustimmung(juengste)
     }
 
     /** Antwort von agent_starten, wenn Frank keine Recherche verlangt hat: nichts gestartet, stattdessen direkt suchen. */

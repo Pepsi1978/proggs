@@ -64,11 +64,22 @@ class SuchRegelTest {
     }
 
     @Test fun zustimmungAufEinAngebotZaehltAlsWunsch() {
-        // Im Chat stehen Franks vorige Frage und seine Antwort auf das Angebot zeilenweise in den Worten.
-        assertTrue(SuchRegel.darfStarten("Recherche", "Ist DMZ in Deutschland schon spielbar?\nJa, mach das bitte."))
+        // Jarvis bot die Recherche an, Franks jüngste Äußerung ist die knappe Zustimmung.
+        assertTrue(SuchRegel.darfStarten("Recherche", "Ja, mach das bitte."))
         assertTrue(SuchRegel.darfStarten("Recherche", "Gerne"))
         assertFalse(SuchRegel.zustimmung("Ja, aber wann erscheint es?"))
-        assertFalse(SuchRegel.darfStarten("Recherche", "Ja\nUnd wann erscheint das nächste Update?"))
+        assertFalse(SuchRegel.darfStarten("Recherche", "Und wann erscheint das nächste Update?"))
+    }
+
+    @Test fun blosseErwaehnungIstKeinWunsch() {
+        listOf(
+            "Was ist eine systematische Recherche?",
+            "Welche Agentur ist dafür geeignet?",
+            "Wie lange hat der Agent gestern gebraucht?",
+        ).forEach { assertFalse(it, SuchRegel.ausdruecklich(it)) }
+        assertTrue(SuchRegel.ausdruecklich("Kannst du das bitte recherchieren?"))
+        assertTrue(SuchRegel.ausdruecklich("Starte einen Agenten zu DMZ."))
+        assertTrue(SuchRegel.ausdruecklich("Ich hätte gern eine Recherche über Laufschuhe."))
     }
 
     @Test fun verneinteRechercheStartetKeinenAgenten() {
@@ -80,11 +91,17 @@ class SuchRegelTest {
         ).forEach { assertFalse(it, SuchRegel.darfStarten("Recherche", it)) }
     }
 
-    @Test fun neuerAusdruecklicherWunschGiltAuchNachEinerVerneintenFrage() {
-        // Im Chat stehen Franks letzte zwei Nachrichten in den Worten; das „keine Recherche“ von vorhin hebt den neuen Wunsch nicht auf.
-        assertTrue(SuchRegel.darfStarten("Recherche", "Keine Recherche, schau nur kurz, ob DMZ spielbar ist.\nOkay, jetzt recherchiere das bitte ausführlich."))
-        assertFalse(SuchRegel.darfStarten("Recherche", "Recherchiere bitte nicht.\nIst DMZ in Deutschland spielbar?"))
+    @Test fun nurDieJuengsteAeusserungZaehlt() {
+        // Der Wunsch von vorhin gilt nicht für die nächste normale Frage; ein neuer Wunsch gilt, auch wenn vorhin „keine Recherche“ fiel.
+        assertFalse(SuchRegel.darfStarten("Recherche", "Was kostet Diesel gerade?"))
+        assertTrue(SuchRegel.darfStarten("Recherche", "Okay, jetzt recherchiere das bitte ausführlich."))
+        assertFalse(SuchRegel.darfStarten("Recherche", "Recherchiere bitte nicht."))
+        // Der Chat übergibt seine aktuelle Nachricht als jüngste Äußerung, nicht die beiden letzten zusammen.
+        assertTrue(quellenText().contains("FranksWorte(worte, streng = true, juengste = text)"))
+        assertTrue(quellenText().contains("[ProgrammierChat.FranksWorte]?.juengste"))
     }
+
+    private fun quellenText() = quellen.values.joinToString("\n")
 
     @Test fun andereAgentenUndUnbekannteWorteWerdenNichtGesperrt() {
         assertTrue(SuchRegel.darfStarten("Machbarkeit", "Prüf mal, ob die Idee machbar ist."))

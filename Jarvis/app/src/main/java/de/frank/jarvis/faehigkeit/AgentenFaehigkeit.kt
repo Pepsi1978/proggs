@@ -102,7 +102,7 @@ class AgentenFaehigkeit(private val context: Context) : Faehigkeit {
                     auftrag.isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
                     // Franks Vorgabe: Der Recherche-Agent startet nur auf seinen ausdrücklichen Wunsch. Geprüft an seinen eigenen Worten,
                     // nicht an der Deutung des Modells; ohne sie (ChatGPT über MCP, Live ohne Mitschrift) gilt die Regel nur über die Anweisungen.
-                    !SuchRegel.darfStarten(plan.name, kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]?.text) -> {
+                    !SuchRegel.darfStarten(plan.name, kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]?.juengste) -> {
                         de.frank.jarvis.observability.Logbuch.system("agent_starten abgelehnt", "Recherche ohne ausdrücklichen Wunsch")
                         Ergebnis(SuchRegel.NICHT_GESTARTET, fehler = true)
                     }

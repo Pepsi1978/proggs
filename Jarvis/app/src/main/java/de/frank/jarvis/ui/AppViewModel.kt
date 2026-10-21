@@ -279,7 +279,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // ob er einen Nachtrag ausdrücklich verlangt hat. Die erste Nachricht eines Auftrags-Gesprächs ist der Auftrag selbst, nicht Franks Wort.
         val worte = gespraech.take(frage + 1).filter { it.vonMir && !de.frank.jarvis.faehigkeit.ProgrammierChat.istAuftragsVorspann(it.text) }
             .takeLast(2).joinToString("\n") { it.text }
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(worte, streng = true)) {
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(worte, streng = true, juengste = text)) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
