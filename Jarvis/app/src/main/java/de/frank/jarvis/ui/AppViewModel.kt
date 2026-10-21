@@ -75,6 +75,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         /** Zustand in [ablageUmzug]: Die Übernahme in die Ablage läuft gerade. */
         const val UMZUG_LAEUFT = "läuft"
 
+        /** Kennung des Hintergrundauftrags hinter einem fertigen Agenten-Bericht im Chat; null = keine Nachricht mit Bericht. */
+        fun berichtVorgang(n: Nachricht): String? =
+            if (n.art != de.frank.jarvis.faehigkeit.ProgrammierChat.ART_AGENT || !n.text.contains(" fertig** · Auftrag")) null
+            else Regex("Hintergrundauftrag (\\S+?),").find(n.kontext)?.groupValues?.get(1)
+
+        /** Titel in der Ablage, wenn der Bericht dort schon liegt (gleich abgelegt oder kopiert). */
+        fun berichtAblageTitel(n: Nachricht): String? = Regex("in der Ablage als „(.+)“").find(n.kontext)?.groupValues?.get(1)
+
         /**
          * Stellt eine späte Antwort auf eine gesprochen begonnene Anfrage über das ViewModel des Prozesses zu (von jedem Faden)
          * und wartet, bis sie gesprochen oder begründet verworfen ist. Der Aufrufer (etwa der Dienst eines Agenten) bleibt so
@@ -1758,6 +1766,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 ablageUmzug[pfad] = de.frank.jarvis.ablage.AblageZentrale.fehlerText(e)
+            }
+        }
+    }
+
+    /**
+     * „Recherche in die Ablage kopieren“ unter einem Agenten-Bericht im Chat: Der vollständige Bericht kommt als lesbarer Eintrag
+     * in die Ablage, die Nachricht im Chat bleibt. Läuft schon eine Übernahme dafür, passiert nichts; Erfolg erst, wenn der Text
+     * in der Ablage liegt, danach trägt die Nachricht den Titel dort (kein zweiter Eintrag beim nächsten Tippen).
+     */
+    fun berichtInAblage(nummer: Int) {
+        val n = gespraech.getOrNull(nummer) ?: return
+        val id = berichtVorgang(n) ?: return
+        val schluessel = "bericht:$id"
+        if (ablageUmzug[schluessel] == UMZUG_LAEUFT) return
+        ablageUmzug[schluessel] = UMZUG_LAEUFT
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) { runCatching { de.frank.jarvis.ablage.Vorlaeufig.berichtInAblage(getApplication(), id, n.text) } }
+            r.onSuccess { k ->
+                ablageUmzug.remove(schluessel)
+                sicherung.withLock {
+                    var geaendert = false
+                    gespraech.indices.forEach { i ->
+                        val m = gespraech[i]
+                        if (m.art != de.frank.jarvis.faehigkeit.ProgrammierChat.ART_AGENT || berichtVorgang(m) != id) return@forEach
+                        gespraech[i] = m.copy(kontext = "(Ergebnis von Hintergrundauftrag $id, in der Ablage als „${k.titel}“.)")
+                        geaendert = true
+                    }
+                    if (geaendert) sitzungSichern()
+                }
+                meldung = if (k.schonDa) "Lag schon in der Ablage: „${k.titel}“." else "In der Ablage gespeichert: „${k.titel}“."
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                ablageUmzug[schluessel] = de.frank.jarvis.ablage.AblageZentrale.fehlerText(e)
             }
         }
     }

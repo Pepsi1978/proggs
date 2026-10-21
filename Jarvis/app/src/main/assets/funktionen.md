@@ -54,6 +54,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 - `agenten` (ansehen, anlegen, löschen), `agent_starten` (kehrt sofort mit Vorgangskennung zurück); vorgegeben: Recherche, Machbarkeit, Code-Analyse (nur lesend). Agenten, allen voran Recherche, starten nur, wenn Frank ausdrücklich eine Recherche oder den Agenten verlangt oder einem Angebot dazu zustimmt (im Chat und Live an seinen Worten geprüft; über ChatGPT/MCP nur per Anweisung). Höchstens 2 gleichzeitig; Agenten starten keine Agenten und keine Programmieraufträge.
 - `vorgaenge` (Liste, Ergebnis lesen, als mitgeteilt bestätigen), `vorgang_abbrechen`.
+- Unter jedem fertigen Agenten-Bericht im Chat Knopf „Recherche in die Ablage kopieren“ (andere Agenten: „Bericht …“): legt den vollständigen Bericht samt Bildern/PDF als Texteintrag in die Ablage (Titel aus Überschrift oder Auftrag), ohne neue Recherche; der Bericht bleibt im Chat. Mehrfaches Tippen erzeugt keinen zweiten Eintrag, danach steht „In der Ablage: …“; Erfolg erst nach bestätigter Speicherung, Fehler darunter.
 - Im Sprachgespräch begonnene Agenten (Gesprächsmodus mit „Antworten vorlesen“ oder Live) erben den Sprachursprung von selbst (unabhängig vom Parameter `vorlesen`, im Vorgang vermerkt). Ihr Ergebnis kommt in den Ursprungs-Chat und wird danach vollständig vorgelesen (Ansage „Frank, die Ergebnisse sind jetzt da.“, Bericht fürs Ohr umgeschrieben ohne Inhalte wegzulassen), statt der Kurzfassung.
 
 ## Programmieren

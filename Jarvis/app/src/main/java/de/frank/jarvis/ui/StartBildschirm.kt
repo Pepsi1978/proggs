@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ThumbDown
 import androidx.compose.material.icons.rounded.ThumbUp
@@ -52,6 +53,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -431,7 +433,37 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
             }
             // Bilder und PDFs zur Antwort (etwa vom Ergebnis eines Agenten) direkt darunter.
             if (n.anhaenge.isNotEmpty()) Box(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp)) { JarvisDateien(vm, n.anhaenge) }
+            AppViewModel.berichtVorgang(n)?.let { BerichtAblageKnopf(vm, nummer, n, it) }
             AntwortLeiste(vm, nummer, n)
+        }
+    }
+}
+
+/**
+ * Unter einem fertigen Agenten-Bericht (Recherche, Machbarkeit …): „Recherche in die Ablage kopieren“. Liegt der Bericht schon
+ * in der Ablage, steht dort nur, unter welchem Titel; ein Fehler steht offen darunter, der Knopf bleibt für einen neuen Versuch.
+ */
+@Composable
+private fun BerichtAblageKnopf(vm: AppViewModel, nummer: Int, n: Nachricht, vorgang: String) {
+    val f = LocalFarben.current
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val stand by remember { de.frank.jarvis.ablage.AblageZentrale.speicher(context).stand }.collectAsState()
+    val gemerkt = AppViewModel.berichtAblageTitel(n)
+    // Nur, was wirklich in der Ablage liegt: Hat Frank den Eintrag dort gelöscht, lässt sich der Bericht erneut kopieren.
+    val liegtDa by produceState<String?>(null, gemerkt, stand) {
+        value = gemerkt?.let { t -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.ablage.AblageZentrale.speicher(context).findeGenau(t)?.titel } }
+    }
+    val zustand = vm.ablageUmzug["bericht:$vorgang"]
+    val name = if (n.text.startsWith("**Recherche")) "Recherche" else "Bericht"
+    Column(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 8.dp)) {
+        val titel = liegtDa
+        if (titel != null) Text("✓ In der Ablage: „$titel“", color = f.erfolg, fontSize = 14.sp)
+        else Chip(
+            if (zustand == AppViewModel.UMZUG_LAEUFT) "Wird gespeichert …" else "$name in die Ablage kopieren",
+            aktiv = true, icon = androidx.compose.material.icons.Icons.Rounded.Inventory2,
+        ) { vm.berichtInAblage(nummer) }
+        zustand?.takeIf { it != AppViewModel.UMZUG_LAEUFT }?.let {
+            Text("Nicht gespeichert: $it", color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
