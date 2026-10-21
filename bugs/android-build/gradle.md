@@ -400,6 +400,12 @@ nicht-thread-safe Tasks ueber die Worker-API isolieren. Bei Instabilitaet `paral
 
 ---
 
+### 6.5 „no class roots are found in the JDK path: …/Cellar/openjdk@17/<alte Version>/…“ nach JDK-Update  ⭐⭐⭐ (euer Setup, 21.10.2026)
+**Symptom:** `compileDebugKotlin` bricht sofort ab, der genannte JDK-Pfad ist eine *alte* Homebrew-Version; `JAVA_HOME` und `java -version` stimmen.
+**Ursache:** Der Kotlin-Compile-Daemon lebt unabhängig vom Gradle-Daemon weiter (auch über `gradlew --stop` hinaus) und läuft auf dem JDK, mit dem er gestartet wurde. `brew upgrade openjdk@17` (Updater-Zentrale) löscht den alten Cellar-Ordner; neue Builds verwenden den Daemon trotzdem weiter. Ebenso bleiben alte Gradle-Daemons anderer Gradle-Versionen auf dem gelöschten JDK liegen.
+**FIX (eingebaut):** `Werkzeuge/jvm-daemon-schutz/`: Init-Skript `~/.gradle/init.d/veraltete-jvm-daemons.gradle` beendet vor jedem Build Gradle- und Kotlin-Daemons, deren `bin/java` oder `lib/modules` fehlt; `aufraeumen.sh` installiert es und räumt sofort auf; die Updater-Zentrale macOS (ab 1.0.12) ruft es nach jedem erfolgreichen Homebrew-Update auf.
+**Erkennen:** Fehlermeldung nennt einen Pfad, der nicht mehr existiert → `bash ~/proggs/Werkzeuge/jvm-daemon-schutz/aufraeumen.sh`, dann neu bauen.
+
 ## 7. R8 / ProGuard / Code- & Resource-Shrinking / D8-Dexing (Release-Build)
 
 > R8 laeuft NUR im Release-Build (`isMinifyEnabled=true`). Symptome treten daher nie im Debug auf,

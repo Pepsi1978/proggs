@@ -1,0 +1,27 @@
+// Beendet vor jedem Gradle-Build Gradle- und Kotlin-Daemons, deren JDK es nicht mehr gibt.
+//
+// Hintergrund (21.10.2026): Homebrew löscht bei einem JDK-Update den alten Ordner
+// (/opt/homebrew/Cellar/openjdk@17/17.0.20.1 → 17.0.21). Ein Kotlin-Compile-Daemon, der vorher
+// gestartet war, läuft weiter, wird von neuen Builds wiederverwendet und bricht dann mit
+// „no class roots are found in the JDK path: …/17.0.20.1/…“ ab. `gradlew --stop` beendet ihn nicht.
+//
+// Installiert von Werkzeuge/jvm-daemon-schutz/aufraeumen.sh nach ~/.gradle/init.d/. Darf einen
+// Build nie stören: jeder Fehler wird nur geloggt.
+try {
+    def selbst = ProcessHandle.current().pid()
+    ProcessHandle.allProcesses().each { p ->
+        if (p.pid() == selbst) return
+        def info = p.info()
+        def zeile = info.commandLine().orElse("")
+        if (!zeile.contains("KotlinCompileDaemon") && !zeile.contains("org.gradle.launcher.daemon.bootstrap.GradleDaemon")) return
+        def java = info.command().orElse("")
+        if (java.isEmpty()) return
+        def jdk = new File(java).parentFile?.parentFile
+        def weg = !new File(java).exists() || (jdk != null && !new File(jdk, "lib/modules").exists())
+        if (weg && p.destroy()) {
+            logger.warn("JDK-Schutz: veralteten Daemon ${p.pid()} beendet (sein JDK ${jdk} existiert nicht mehr).")
+        }
+    }
+} catch (Throwable fehler) {
+    logger.warn("JDK-Schutz: Prüfung der Daemons fehlgeschlagen: ${fehler}")
+}
