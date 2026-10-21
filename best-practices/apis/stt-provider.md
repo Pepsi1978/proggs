@@ -39,7 +39,7 @@ Quelle: r10, r5, r4, r3.
 - Allgemeine Modelle (`gemini-3.8-flash`, `-3.5-flash-lite`) per `generateContent` mit Audio: genau, aber LLM-Risiken (§6). 32 Audio-Tokens/s.
 
 ## §5 Vokabular / Eigennamen
-- Messplatz: Turbo ohne Prompt 11,6 % WER auf dem Eigennamen-Satz, mit Prompt („Fachbegriffe: …“) 4,7 % **[gemessen]**. „Groq“ erkannte nur Gemini mit Vokabelliste.
+- Messplatz: Turbo ohne Prompt 11,9 % WER auf dem Eigennamen-Satz, mit Prompt („Fachbegriffe: …“) 4,8 % **[gemessen]**. „Groq“ erkannte nur Gemini mit Vokabelliste.
 - Mechanismen: Whisper `prompt` (224 Tokens) · Gemini `custom_vocabulary` · OpenAI `gpt-transcribe` `keywords` + `prompt` · AssemblyAI `keyterms_prompt` (100 Sync/1.000 Async) · Deepgram `keyterm` (je Begriff ein Parameter, ≤ 500 Tokens) · ElevenLabs `keyterms` (1.000) · Voxtral `context_bias` (100, englisch optimiert) · Azure Phrase List.
 - Gemeinsame Quelle der Liste: `SK/VoiceOverlays/personal-vocabulary.txt`.
 
