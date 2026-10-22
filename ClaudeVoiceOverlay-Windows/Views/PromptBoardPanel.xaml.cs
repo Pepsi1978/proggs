@@ -2651,7 +2651,11 @@ public partial class PromptBoardPanel : Window
 
     // ──────────────── Settings ────────────────
 
-    private async Task ShowSettingsAsync()
+    private Task ShowSettingsAsync() => OpenSettingsAsync(this);
+
+    /// <summary>Opens the settings dialog. The owner must be a visible window - the gear
+    /// button on the overlay passes itself, because the board may still be hidden.</summary>
+    public async Task OpenSettingsAsync(Window owner)
     {
         AppSettings current;
         try
@@ -2666,7 +2670,7 @@ public partial class PromptBoardPanel : Window
             return;
         }
 
-        var result = SettingsDialog.Ask(this, current);
+        var result = SettingsDialog.Ask(owner, current);
         if (result is null) return;
 
         // Vokabular-Woerterbuch wurde im Dialog evtl. geaendert (in die SK-Datei

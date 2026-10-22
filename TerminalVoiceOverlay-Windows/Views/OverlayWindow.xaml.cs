@@ -50,7 +50,6 @@ namespace TerminalVoiceOverlay.Views
         private static readonly SolidColorBrush BtnMicIdle   = Brush("#F9A825");  // Yellow 800
         // Copy/Paste buttons (pair: same blue family so they read as a unit)
         private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");  // Light Blue 700
-        private static readonly SolidColorBrush BtnPaste     = Brush("#0277BD");  // Light Blue 800
         // Screenshot + Insert-Screenshot buttons (pair: same teal family)
         private static readonly SolidColorBrush BtnScreenshot       = Brush("#00796B");  // Teal 700
         private static readonly SolidColorBrush BtnInsertScreenshot = Brush("#00897B");  // Teal 600
@@ -624,8 +623,8 @@ namespace TerminalVoiceOverlay.Views
             BtwButton.Background  = BtnBtwIdle;      // light blue
             GButton.Background    = geminiEnabled ? ToggleOn : ToggleOff;  // green when Gemini on
             EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
-            CopyButton.Background  = BtnCopy;        // light blue
-            PasteButton.Background = BtnPaste;       // purple
+            SpareButton.Background    = BtnIdle;   // free placeholder bubble
+            SettingsButton.Background = BtnCopy;   // light blue
             ScreenshotButton.Background       = BtnScreenshot;       // teal
             InsertScreenshotButton.Background = BtnInsertScreenshot; // amber
             UltrathinkButton.Background = ToggleOff;  // dark (PromptBoard always-on prefix starts disabled)
@@ -661,8 +660,8 @@ namespace TerminalVoiceOverlay.Views
             AttachHover(GButton);
             AttachHover(UltrathinkButton);
             AttachHover(EnterButton);
-            AttachHover(CopyButton);
-            AttachHover(PasteButton);
+            AttachHover(SpareButton);
+            AttachHover(SettingsButton);
             AttachHover(ScreenshotButton);
             AttachHover(InsertScreenshotButton);
             AttachHover(SaveButton);
@@ -1167,9 +1166,9 @@ namespace TerminalVoiceOverlay.Views
             WButton, GButton,
             Profile4Button, Profile5Button,
             XButton, Profile6Button,
-            CopyButton, PasteButton,
-            Profile7Button, Profile8Button,
             ScreenshotButton, InsertScreenshotButton,
+            Profile7Button, Profile8Button,
+            SpareButton, SettingsButton,
             Profile9Button, Profile10Button,
             EnterButton, SaveButton,
         };
@@ -1299,9 +1298,9 @@ namespace TerminalVoiceOverlay.Views
             // beide in Standard-Rundgröße und vertikal mittig.
             HBar.Children.Add(MakeHStackGroup(UltrathinkButton, SaveButton, "#B31F1B15", new CornerRadius(34, 0, 0, 34)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15", new CornerRadius(0)));
+            HBar.Children.Add(MakeHGroup(new[] { SettingsButton, SpareButton }, new[] { Profile10Button, Profile9Button }, "#B3151B15", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
-            HBar.Children.Add(MakeHGroup(new[] { PasteButton, CopyButton }, new[] { Profile8Button, Profile7Button }, "#B3151B1D", new CornerRadius(0)));
+            HBar.Children.Add(MakeHGroup(new[] { InsertScreenshotButton, ScreenshotButton }, new[] { Profile8Button, Profile7Button }, "#B3151B1D", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
             HBar.Children.Add(MakeHGroup(new[] { XButton }, new[] { Profile6Button }, "#B31F1515", new CornerRadius(0)));
             HBar.Children.Add(MakeVDivider());
@@ -3169,7 +3168,7 @@ namespace TerminalVoiceOverlay.Views
             var allButtons = new System.Windows.Controls.Button[]
             {
                 MicButton, BtwButton, WButton, GButton, XButton,
-                CopyButton, PasteButton, ScreenshotButton, InsertScreenshotButton,
+                SpareButton, SettingsButton, ScreenshotButton, InsertScreenshotButton,
                 UltrathinkButton, EnterButton,
                 Profile1Button, Profile2Button, Profile3Button,
                 Profile4Button, Profile5Button, Profile6Button,
@@ -4580,61 +4579,12 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
-        /// <summary>C button — copy selected text via Ctrl+C.</summary>
-        private async void BtnCopy_Click(object sender, RoutedEventArgs e)
+        /// <summary>Gear button - opens the settings dialog directly instead of the
+        /// detour via star -> PromptBoard -> settings.</summary>
+        private async void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            var hwnd = _terminalWatcher.ActiveTerminalHwnd;
-
-            // Flash: gray for 2 s then back to blue
-            CopyButton.Background = BtnIdle;
-
-            // Async: BringToForeground macht Thread.Sleep(200) — UI war
-            // sonst pro Klick 200 ms eingefroren.
-            await TerminalController.CopySelectionAsync(hwnd);
-
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(2000);
-                Dispatcher.Invoke(() => CopyButton.Background = BtnCopy);
-            });
-
-            Console.WriteLine("Copy: Ctrl+C sent to terminal");
-        }
-
-        /// <summary>P button — paste clipboard content into command line via Ctrl+V.
-        /// If auto-enter is enabled, sends Enter after paste.</summary>
-        private async void BtnPaste_Click(object sender, RoutedEventArgs e)
-        {
-            var hwnd = _terminalWatcher.ActiveTerminalHwnd;
-
-            // Flash: gray for 2 s then back to purple
-            PasteButton.Background = BtnIdle;
-
-            // Async-Variante: gleicher 200-ms-Block wie CopySelection.
-            await TerminalController.PasteClipboardAsync(hwnd);
-            hasPastedText = true;
-
-            if (autoEnterEnabled)
-            {
-                // Small delay then send Enter
-                _ = Task.Run(() =>
-                {
-                    System.Threading.Thread.Sleep(300);
-                    TerminalController.PressReturn(hwnd);
-                });
-                hasPastedText = false;
-                Console.WriteLine("Paste+Enter: Ctrl+V → Return sent to terminal");
-            }
-            else
-            {
-                Console.WriteLine("Paste: Ctrl+V sent to terminal");
-            }
-
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(2000);
-                Dispatcher.Invoke(() => PasteButton.Background = BtnPaste);
-            });
+            EnsurePromptPanelInstance();
+            await _promptPanel!.OpenSettingsAsync(this);
         }
 
         /// <summary>
