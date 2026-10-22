@@ -19,14 +19,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import com.entropyjournal.data.remote.groq.GroqWhisperSettings
 
 /** Settings card content: Whisper model choice + personal vocabulary for Groq transcription. */
@@ -35,6 +39,25 @@ fun WhisperSettingsSection(prefs: SharedPreferences) {
     var model by remember { mutableStateOf(GroqWhisperSettings.storedModel(prefs)) }
     var vocabEnabled by remember { mutableStateOf(GroqWhisperSettings.isVocabularyEnabled(prefs)) }
     var vocabText by remember { mutableStateOf(GroqWhisperSettings.vocabularyText(prefs)) }
+    var savedVocabText by remember { mutableStateOf(vocabText) }
+    val latestVocabText by rememberUpdatedState(vocabText)
+
+    // Save the vocabulary 500 ms after the last keystroke (encrypted prefs, not per keystroke)
+    // and once more when the card leaves the screen, so no edit is lost.
+    LaunchedEffect(vocabText) {
+        if (vocabText != savedVocabText) {
+            delay(500)
+            GroqWhisperSettings.saveVocabularyText(prefs, vocabText)
+            savedVocabText = vocabText
+        }
+    }
+    DisposableEffect(prefs) {
+        onDispose {
+            if (latestVocabText != savedVocabText) {
+                GroqWhisperSettings.saveVocabularyText(prefs, latestVocabText)
+            }
+        }
+    }
 
     Column {
         Text(
@@ -121,10 +144,7 @@ fun WhisperSettingsSection(prefs: SharedPreferences) {
         Spacer(modifier = Modifier.height(10.dp))
         TextField(
             value = vocabText,
-            onValueChange = {
-                vocabText = it
-                GroqWhisperSettings.saveVocabularyText(prefs, it)
-            },
+            onValueChange = { vocabText = it },
             label = { Text("Begriffe (durch Komma oder Zeilenumbruch getrennt)") },
             minLines = 3,
             maxLines = 8,

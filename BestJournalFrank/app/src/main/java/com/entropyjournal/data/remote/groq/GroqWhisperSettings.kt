@@ -98,16 +98,20 @@ object GroqWhisperSettings {
         if (!isVocabularyEnabled(prefs)) null else buildPrompt(parseBegriffe(vocabularyText(prefs)))
 
     /**
-     * Whisper likes to output the prompt itself on silence/murmur. Echo = the text repeats the
-     * prompt from its beginning ("Begriffe: …"), fully or partly. Dictation consisting only of
-     * vocabulary words does not start with the marker and is kept.
+     * Whisper likes to output the prompt itself on silence/murmur, either from its beginning
+     * ("Begriffe: …") or only its end/middle ("Claude Code, OpenAI, Anthropic."). Echo = the text
+     * starts with the marker and the rest is part of the prompt, or the text (at least 12 letters/
+     * digits) is fully contained in the prompt. Dictation consisting only of vocabulary words in
+     * prompt order is therefore retried once without prompt, which is harmless.
      */
     fun isPromptEcho(text: String, prompt: String?): Boolean {
         if (prompt.isNullOrEmpty() || text.isBlank()) return false
         fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
         val t = norm(text)
         val p = norm(prompt)
+        if (t.isEmpty()) return false
         val marker = norm(ECHO_MARKER)
-        return t.startsWith(marker) && p.contains(t.substring(marker.length))
+        if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+        return t.length >= 12 && p.contains(t)
     }
 }
