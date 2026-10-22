@@ -1718,13 +1718,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Der Transkribierer zu den aktuellen Einstellungen; neu gebaut nur, wenn sich Schlüssel oder Filter geändert haben. */
     private fun transkribierer(): de.frank.module.transkriptionsmodul.GroqTranscriber {
-        val stand = listOf(sprache.groqApiKey, sprache.filterStilleVorabAn, sprache.filterSegmentmetrikenAn, sprache.filterZeitstempelAn, sprache.filterFloskelnAn).hashCode()
+        val stand = listOf(sprache.groqApiKey, sprache.filterStilleVorabAn, sprache.filterSegmentmetrikenAn, sprache.filterZeitstempelAn, sprache.filterFloskelnAn, sprache.whisperModell, sprache.woerterbuchAn, sprache.woerterbuchBegriffe).hashCode()
         groq?.takeIf { groqStand == stand }?.let { return it }
         groq?.shutdown()
         return de.frank.module.transkriptionsmodul.GroqTranscriber(
             apiKey = sprache.groqApiKey,
             filterStille = sprache.filterStilleVorabAn, filterMetriken = sprache.filterSegmentmetrikenAn,
             filterZeitstempel = sprache.filterZeitstempelAn, filterFloskeln = sprache.filterFloskelnAn,
+            model = sprache.whisperModell,
+            prompt = if (sprache.woerterbuchAn) de.frank.module.transkriptionsmodul.GroqTranscriber.run { woerterbuchPrompt(begriffe(sprache.woerterbuchBegriffe)) } else null,
         ).also { groq = it; groqStand = stand }
     }
 

@@ -207,6 +207,21 @@ class SecureSettings(context: Context) : Closeable {
         get() = readFlag(Keys.FILTER_PHRASES, true)
         set(value) = writeFlag(Keys.FILTER_PHRASES, value)
 
+    /** Whisper-Modell bei Groq: Turbo (schnell, Standard) oder large-v3 (genauer). */
+    var whisperModell: String
+        get() = readString(Keys.WHISPER_MODEL, de.frank.module.transkriptionsmodul.GroqTranscriber.MODELL_TURBO)
+        set(value) = writeString(Keys.WHISPER_MODEL, value)
+
+    /** Persönliches Wörterbuch als Whisper-Prompt mitsenden. */
+    var woerterbuchAn: Boolean
+        get() = readFlag(Keys.VOCABULARY_ENABLED, true)
+        set(value) = writeFlag(Keys.VOCABULARY_ENABLED, value)
+
+    /** Begriffe des Wörterbuchs, durch Komma oder Zeilenumbruch getrennt; nie gespeichert = Standardliste. */
+    var woerterbuchBegriffe: String
+        get() = readString(Keys.VOCABULARY_TERMS, de.frank.module.transkriptionsmodul.GroqTranscriber.STANDARD_WOERTERBUCH)
+        set(value) = writeString(Keys.VOCABULARY_TERMS, value)
+
     // ---- KI (Baustein O) ----
 
     /** Gemini-Schlüssel aus AI Studio, Projekt ohne Abrechnung (kostenloses Kontingent); für Gemini Live. */
@@ -320,6 +335,9 @@ class SecureSettings(context: Context) : Closeable {
         const val FILTER_SEGMENTS = "filter_segments"
         const val FILTER_TIMESTAMPS = "filter_timestamps"
         const val FILTER_PHRASES = "filter_phrases"
+        const val WHISPER_MODEL = "whisper_model"
+        const val VOCABULARY_ENABLED = "vocabulary_enabled"
+        const val VOCABULARY_TERMS = "vocabulary_terms"
         const val GEMINI_API_KEY = "gemini_api_key"
         const val GEMINI_API_KEY_BEZAHLT = "gemini_api_key_bezahlt"
         const val OPENAI_API_KEY = "openai_api_key"
