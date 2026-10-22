@@ -322,7 +322,11 @@ class Repository(
 
     // --- Transkription (F-03, F-04) --------------------------------------------------------
 
-    fun transkriber(): GroqTranscriber = GroqTranscriber(einstellungen.groqSchluessel)
+    fun transkriber(): GroqTranscriber = GroqTranscriber(
+        einstellungen.groqSchluessel,
+        model = einstellungen.whisperModell,
+        woerterbuchPrompt = einstellungen.woerterbuchPrompt,
+    )
 
     suspend fun wartendeNotizen(): List<Notiz> = db.notizen().wartende(HOECHSTVERSUCHE)
 

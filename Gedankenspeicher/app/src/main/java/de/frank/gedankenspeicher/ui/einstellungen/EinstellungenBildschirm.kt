@@ -93,6 +93,9 @@ fun EinstellungenBildschirm(
     websucheGrundhaltung: String,
     profile: List<Auswertungsprofil>,
     groqSchluessel: String,
+    whisperModell: String,
+    woerterbuchAn: Boolean,
+    woerterbuch: String,
     ttsAnbieter: String,
     ttsStimme: String,
     googleSchluessel: String,
@@ -117,6 +120,9 @@ fun EinstellungenBildschirm(
     beiProfilSpeichern: (Auswertungsprofil) -> Unit,
     beiProfile: () -> Unit,
     beiGroq: (String) -> Unit,
+    beiWhisperModell: (String) -> Unit,
+    beiWoerterbuchAn: (Boolean) -> Unit,
+    beiWoerterbuch: (String) -> Unit,
     beiAnbieter: (String) -> Unit,
     beiStimme: (String) -> Unit,
     beiGoogleSchluessel: (String) -> Unit,
@@ -371,6 +377,61 @@ fun EinstellungenBildschirm(
                     wert = qwenSchluessel,
                     beiAenderung = beiQwenSchluessel,
                 )
+            }
+
+            // 4b — Spracheingabe: Whisper-Modell und persönliches Wörterbuch
+            Gruppe("Spracheingabe") {
+                Beschriftung("Whisper-Modell")
+                Erklaerung("Gilt ab der nächsten Aufnahme. Large V3 muss bei Groq freigeschaltet sein, sonst nimmt die App automatisch Turbo.")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    WHISPER_MODELLE.forEach { (id, name) ->
+                        Wahlfeld(name, id == whisperModell) { beiWhisperModell(id) }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Persönliches Wörterbuch", style = schrift.einstellung, color = farben.textMittel)
+                        Text(
+                            "Hilft Whisper, Namen und Fachbegriffe richtig zu schreiben.",
+                            style = schrift.einstellungErklaerung,
+                            color = farben.textSchwach,
+                        )
+                    }
+                    Switch(
+                        checked = woerterbuchAn,
+                        onCheckedChange = beiWoerterbuchAn,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = farben.hintergrund,
+                            checkedTrackColor = farben.akzent,
+                            uncheckedThumbColor = farben.textSchwach,
+                            uncheckedTrackColor = farben.hintergrundErhoben,
+                            uncheckedBorderColor = farben.rand,
+                        ),
+                    )
+                }
+                if (woerterbuchAn) {
+                    Spacer(Modifier.height(12.dp))
+                    Beschriftung("Begriffe (durch Komma oder Zeilenumbruch getrennt)")
+                    // Local state: a multi-line field bound straight to the flow drops characters when typing fast.
+                    var begriffe by remember { mutableStateOf(woerterbuch) }
+                    Blase {
+                        BasicTextField(
+                            value = begriffe,
+                            onValueChange = {
+                                begriffe = it
+                                beiWoerterbuch(it)
+                            },
+                            textStyle = schrift.einstellungErklaerung.copy(color = farben.textStark),
+                            cursorBrush = SolidColor(farben.akzent),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
 
             // 5 — Stimme (F-18)
@@ -674,6 +735,12 @@ private fun Promptblase(
         }
     }
 }
+
+/** Die zwei Whisper-Modelle bei Groq; Turbo ist die Voreinstellung. */
+private val WHISPER_MODELLE = listOf(
+    de.frank.gedankenspeicher.audio.GroqTranscriber.TURBO to "Large V3 Turbo (schnell)",
+    de.frank.gedankenspeicher.audio.GroqTranscriber.LARGE_V3 to "Large V3 (genauer)",
+)
 
 /** Der umrandete Kasten, in dem ein Prompt oder ein Hinweis steht. */
 @Composable

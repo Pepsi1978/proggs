@@ -454,6 +454,9 @@ private fun Oberflaeche(
     val verbesserungPrompt by vm.verbesserungPrompt.collectAsStateWithLifecycle()
     val websuche by vm.websucheGrundhaltung.collectAsStateWithLifecycle()
     val groq by vm.groqSchluessel.collectAsStateWithLifecycle()
+    val whisperModell by vm.whisperModell.collectAsStateWithLifecycle()
+    val woerterbuchAn by vm.woerterbuchAn.collectAsStateWithLifecycle()
+    val woerterbuch by vm.woerterbuch.collectAsStateWithLifecycle()
     val ttsAnbieter by vm.ttsAnbieter.collectAsStateWithLifecycle()
     val ttsStimme by vm.ttsStimme.collectAsStateWithLifecycle()
     val googleSchluessel by vm.googleSchluessel.collectAsStateWithLifecycle()
@@ -745,6 +748,9 @@ private fun Oberflaeche(
                 websucheGrundhaltung = websuche,
                 profile = profile,
                 groqSchluessel = groq,
+                whisperModell = whisperModell,
+                woerterbuchAn = woerterbuchAn,
+                woerterbuch = woerterbuch,
                 ttsAnbieter = ttsAnbieter,
                 ttsStimme = ttsStimme,
                 googleSchluessel = googleSchluessel,
@@ -778,6 +784,9 @@ private fun Oberflaeche(
                 beiProfilSpeichern = vm::speichereProfil,
                 beiProfile = { ziel = Ziel.PROFILE },
                 beiGroq = vm::setzeGroqSchluessel,
+                beiWhisperModell = vm::setzeWhisperModell,
+                beiWoerterbuchAn = vm::setzeWoerterbuchAn,
+                beiWoerterbuch = vm::setzeWoerterbuch,
                 beiAnbieter = vm::setzeTtsAnbieter,
                 beiStimme = vm::setzeTtsStimme,
                 beiGoogleSchluessel = vm::setzeGoogleSchluessel,

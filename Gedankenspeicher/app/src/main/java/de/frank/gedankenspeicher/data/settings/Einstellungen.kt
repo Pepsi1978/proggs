@@ -139,6 +139,29 @@ class Einstellungen(ctx: Context) {
         get() = p.getString(GROQ, "")!!
         set(v) { p.edit().putString(GROQ, v).commit() }
 
+    // --- Spracheingabe: Whisper-Modell und persönliches Wörterbuch -----------------------
+    /** `whisper-large-v3-turbo` (Standard) oder `whisper-large-v3`. Wirkt ab der nächsten Aufnahme. */
+    var whisperModell: String
+        get() = de.frank.gedankenspeicher.audio.GroqTranscriber.normalisiereModell(
+            p.getString(WHISPER_MODELL, de.frank.gedankenspeicher.audio.GroqTranscriber.DEFAULT_MODEL),
+        )
+        set(v) {
+            p.edit().putString(WHISPER_MODELL, de.frank.gedankenspeicher.audio.GroqTranscriber.normalisiereModell(v)).commit()
+            de.frank.gedankenspeicher.audio.GroqTranscriber.sperreZuruecksetzen()
+        }
+
+    var woerterbuchAn: Boolean
+        get() = p.getBoolean(WOERTERBUCH_AN, true)
+        set(v) { p.edit().putBoolean(WOERTERBUCH_AN, v).commit() }
+
+    /** Noch nie gespeichert → die Vorbelegung; ein bewusst geleertes Feld bleibt leer. */
+    var woerterbuch: String
+        get() = p.getString(WOERTERBUCH, null) ?: de.frank.gedankenspeicher.audio.GroqTranscriber.STANDARD_WOERTERBUCH
+        set(v) { p.edit().putString(WOERTERBUCH, v).commit() }
+
+    val woerterbuchPrompt: String?
+        get() = de.frank.gedankenspeicher.audio.GroqTranscriber.woerterbuchPrompt(woerterbuchAn, woerterbuch)
+
     var googleTtsSchluessel: String
         get() = p.getString(GOOGLE_TTS, "")!!
         set(v) { p.edit().putString(GOOGLE_TTS, v).commit() }
@@ -252,6 +275,9 @@ class Einstellungen(ctx: Context) {
         const val GROQ = "groq_schluessel"
         const val GOOGLE_TTS = "google_tts_schluessel"
         const val QWEN = "qwen_schluessel"
+        const val WHISPER_MODELL = "whisper_modell"
+        const val WOERTERBUCH_AN = "woerterbuch_an"
+        const val WOERTERBUCH = "woerterbuch"
         const val OFFENE_SITZUNG = "offene_sitzung"
         const val FINGERABDRUCK = "fingerabdruck_an"
         const val DRIVE_AN = "drive_an"

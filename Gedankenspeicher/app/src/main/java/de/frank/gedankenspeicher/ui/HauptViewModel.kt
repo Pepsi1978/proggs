@@ -113,6 +113,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private val _groq = MutableStateFlow(einstellungen.groqSchluessel)
     val groqSchluessel: StateFlow<String> = _groq
 
+    private val _whisperModell = MutableStateFlow(einstellungen.whisperModell)
+    val whisperModell: StateFlow<String> = _whisperModell
+    private val _woerterbuchAn = MutableStateFlow(einstellungen.woerterbuchAn)
+    val woerterbuchAn: StateFlow<Boolean> = _woerterbuchAn
+    private val _woerterbuch = MutableStateFlow(einstellungen.woerterbuch)
+    val woerterbuch: StateFlow<String> = _woerterbuch
+
     // Diese drei fehlten als Fluss — der Einstellungs-Bildschirm las sie direkt aus den
     // Einstellungen. Ein gewöhnlicher Lesezugriff löst in Compose aber **keine** neue
     // Zeichnung aus: die Wahl wurde gespeichert und wirkte auch, aber die Oberfläche zeigte
@@ -1676,6 +1683,21 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _websucheGrundhaltung.value = id
     }
 
+    fun setzeWhisperModell(modell: String) {
+        einstellungen.whisperModell = modell
+        _whisperModell.value = einstellungen.whisperModell
+    }
+
+    fun setzeWoerterbuchAn(an: Boolean) {
+        einstellungen.woerterbuchAn = an
+        _woerterbuchAn.value = an
+    }
+
+    fun setzeWoerterbuch(text: String) {
+        einstellungen.woerterbuch = text
+        _woerterbuch.value = text
+    }
+
     fun setzeGroqSchluessel(wert: String) {
         einstellungen.groqSchluessel = wert.trim()
         _groq.value = wert.trim()
@@ -1972,6 +1994,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private fun sicherungswerteNeuLaden() {
         _erscheinung.value = einstellungen.erscheinung
         _groq.value = einstellungen.groqSchluessel
+        _whisperModell.value = einstellungen.whisperModell
+        _woerterbuchAn.value = einstellungen.woerterbuchAn
+        _woerterbuch.value = einstellungen.woerterbuch
         _google.value = einstellungen.googleTtsSchluessel
         _qwen.value = einstellungen.qwenSchluessel
         _codexModell.value = einstellungen.codexModell

@@ -5,6 +5,7 @@
     { "versionCode": 56, "versionName": "0.6.15", "stand": "12.09.2026, 21:48 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
     { "versionCode": 57, "versionName": "0.6.16", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
     {"versionCode": 58, "versionName": "0.6.17", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 59, "versionName": "0.6.18", "stand": "14.10.2026, 10:10 Uhr", "notiz": "Die Seitenleiste geht per Wisch jetzt in einem Zug ruckelfrei auf und zu (Sidebar-Modul M1.3 aus Geniale Ideen)"}
+    {"versionCode": 59, "versionName": "0.6.18", "stand": "14.10.2026, 10:10 Uhr", "notiz": "Die Seitenleiste geht per Wisch jetzt in einem Zug ruckelfrei auf und zu (Sidebar-Modul M1.3 aus Geniale Ideen)"},
+    {"versionCode": 60, "versionName": "0.6.19", "stand": "22.10.2026, 11:20 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter."}
   ]
 }
