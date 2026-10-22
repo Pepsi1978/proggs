@@ -140,6 +140,9 @@ class ChatViewModel : ViewModel() {
     private val mp3Player = de.frank.cortex.audio.Mp3Player(de.frank.cortex.CortexApp.appContext)
     private val edgeSynth = de.frank.cortex.audio.EdgeTtsSynthesizer()
     private val qwenSynth = de.frank.cortex.tts.QwenTtsSynthesizer()
+    private val cloudVoiceSynth = de.frank.cortex.tts.CloudVoiceSynthesizer()
+    // Sitzungsweiter Fehler der Gemini- oder Azure-Stimme (Schluessel fehlt/abgelehnt, Kontingent erschoepft).
+    @Volatile private var voiceErrorMessage: String? = null
     // speechGeneration/speakJob werden von Main (stopSpeaking/toggleTts) UND vom IO-Thread
     // (handleDelta -> startStreamingSpeech) mutiert: AtomicInteger + Lock statt plain Int,
     // sonst konnte ein verlorenes Inkrement den Abbruch-Vergleich aushebeln (gestopptes
@@ -1632,10 +1635,17 @@ class ChatViewModel : ViewModel() {
             val provider = SettingsStore.ttsProvider
             val isEdge = provider == SettingsStore.TTS_PROVIDER_EDGE
             val isQwen = provider == SettingsStore.TTS_PROVIDER_QWEN
-            val isFileAudio = isEdge || isQwen
+            val isGemini = provider == SettingsStore.TTS_PROVIDER_GEMINI_FLASH || provider == SettingsStore.TTS_PROVIDER_GEMINI_LITE
+            val isAzure = provider == SettingsStore.TTS_PROVIDER_AZURE
+            // Gemini liefert rohes PCM wie Chirp (AudioTrack), Azure fertiges MP3 wie Edge.
+            val isFileAudio = isEdge || isQwen || isAzure
+            voiceErrorMessage = null
             try {
                 val voice = when {
                     isQwen -> SettingsStore.qwenTtsVoiceId
+                    provider == SettingsStore.TTS_PROVIDER_GEMINI_FLASH -> SettingsStore.geminiFlashTtsVoice
+                    provider == SettingsStore.TTS_PROVIDER_GEMINI_LITE -> SettingsStore.geminiLiteTtsVoice
+                    isAzure -> SettingsStore.azureTtsVoice
                     isEdge -> SettingsStore.edgeTtsVoice
                     else -> SettingsStore.ttsVoice
                 }
@@ -1644,7 +1654,7 @@ class ChatViewModel : ViewModel() {
                 if (chunks.isEmpty()) return@launch
                 val ttsStartedAt = System.currentTimeMillis()
                 CortexLog.info("ChatVM", "speakResponse", "TTS Pipeline startet",
-                    mapOf("len" to spokenText.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate, "engine" to ttsEngineName(isEdge, isQwen)))
+                    mapOf("len" to spokenText.length, "chunks" to chunks.size, "voice" to voice, "rate" to rate, "engine" to provider))
 
                 coroutineScope {
                     val pending = mutableMapOf<Int, Deferred<ByteArray?>>()
@@ -1659,6 +1669,8 @@ class ChatViewModel : ViewModel() {
                                 val started = System.currentTimeMillis()
                                 val audio = when {
                                     isQwen -> synthesizeQwenChunk(chunks[index], voice, index)
+                                    isGemini -> synthesizeGeminiChunk(chunks[index], voice, provider, index)
+                                    isAzure -> synthesizeAzureChunk(chunks[index], voice, index)
                                     isEdge -> synthesizeEdgeChunk(chunks[index], voice, index)
                                     else -> synthesizeTtsChunk(chunks[index], voice, index)
                                 }
@@ -1698,6 +1710,14 @@ class ChatViewModel : ViewModel() {
                                 CortexLog.warn("ChatVM", "speakResponse", "Eigene Stimme gestoppt: $qwenReason",
                                     mapOf("index" to index))
                                 _uiState.update { it.copy(error = "Vorlesen mit deiner Stimme nicht möglich: $qwenReason") }
+                                cancelPending()
+                                return@coroutineScope
+                            }
+                            val voiceReason = voiceErrorMessage
+                            if (voiceReason != null) {
+                                // Schluessel-/Kontingentfehler von Gemini oder Azure gelten fuer die ganze Session.
+                                CortexLog.warn("ChatVM", "speakResponse", "Stimme gestoppt: $voiceReason", mapOf("index" to index))
+                                _uiState.update { it.copy(error = "Vorlesen nicht möglich: $voiceReason") }
                                 cancelPending()
                                 return@coroutineScope
                             }
@@ -1787,16 +1807,23 @@ class ChatViewModel : ViewModel() {
             val provider = SettingsStore.ttsProvider
             val isEdge = provider == SettingsStore.TTS_PROVIDER_EDGE
             val isQwen = provider == SettingsStore.TTS_PROVIDER_QWEN
-            val isFileAudio = isEdge || isQwen
+            val isGemini = provider == SettingsStore.TTS_PROVIDER_GEMINI_FLASH || provider == SettingsStore.TTS_PROVIDER_GEMINI_LITE
+            val isAzure = provider == SettingsStore.TTS_PROVIDER_AZURE
+            // Gemini liefert rohes PCM wie Chirp (AudioTrack), Azure fertiges MP3 wie Edge.
+            val isFileAudio = isEdge || isQwen || isAzure
+            voiceErrorMessage = null
             try {
                 val voice = when {
                     isQwen -> SettingsStore.qwenTtsVoiceId
+                    provider == SettingsStore.TTS_PROVIDER_GEMINI_FLASH -> SettingsStore.geminiFlashTtsVoice
+                    provider == SettingsStore.TTS_PROVIDER_GEMINI_LITE -> SettingsStore.geminiLiteTtsVoice
+                    isAzure -> SettingsStore.azureTtsVoice
                     isEdge -> SettingsStore.edgeTtsVoice
                     else -> SettingsStore.ttsVoice
                 }
                 val rate = SettingsStore.ttsRate
                 CortexLog.info("ChatVM", "streamSpeech", "Streaming-TTS-Pipeline startet",
-                    mapOf("voice" to voice, "rate" to rate, "engine" to ttsEngineName(isEdge, isQwen)))
+                    mapOf("voice" to voice, "rate" to rate, "engine" to provider))
                 coroutineScope {
                     val playerReady = if (isFileAudio) null else async(Dispatchers.IO) { pcmPlayer.start(rate) }
                     val audioChannel = Channel<ByteArray?>(TTS_PREFETCH_AHEAD)
@@ -1808,6 +1835,8 @@ class ChatViewModel : ViewModel() {
                                     val synthStarted = System.currentTimeMillis()
                                     val audio = when {
                                         isQwen -> synthesizeQwenChunk(chunk, voice, index)
+                                        isGemini -> synthesizeGeminiChunk(chunk, voice, provider, index)
+                                        isAzure -> synthesizeAzureChunk(chunk, voice, index)
                                         isEdge -> synthesizeEdgeChunk(chunk, voice, index)
                                         else -> synthesizeTtsChunk(chunk, voice, index)
                                     }
@@ -1834,6 +1863,11 @@ class ChatViewModel : ViewModel() {
                             val qwenReason = qwenErrorMessage
                             if (qwenReason != null) {
                                 _uiState.update { it.copy(error = "Vorlesen mit deiner Stimme nicht möglich: $qwenReason") }
+                                break
+                            }
+                            val voiceReason = voiceErrorMessage
+                            if (voiceReason != null) {
+                                _uiState.update { it.copy(error = "Vorlesen nicht möglich: $voiceReason") }
                                 break
                             }
                             if (ttsAccessDenied) {
@@ -2029,10 +2063,64 @@ class ChatViewModel : ViewModel() {
         return null
     }
 
-    private fun ttsEngineName(isEdge: Boolean, isQwen: Boolean): String = when {
-        isQwen -> "qwen"
-        isEdge -> "edge"
-        else -> "chirp"
+    /**
+     * Gemini 3.8 Flash / Flash-Lite TTS (PCM wie Chirp). Absatzfehler werden einmal wiederholt;
+     * Schluessel-/Kontingentfehler beenden die Session mit klarer Meldung.
+     */
+    private suspend fun synthesizeGeminiChunk(chunk: String, voice: String, provider: String, index: Int): ByteArray? {
+        val model = if (provider == SettingsStore.TTS_PROVIDER_GEMINI_LITE) {
+            de.frank.cortex.tts.CloudVoiceSynthesizer.GEMINI_LITE_MODEL
+        } else {
+            de.frank.cortex.tts.CloudVoiceSynthesizer.GEMINI_FLASH_MODEL
+        }
+        repeat(TTS_RETRY_ATTEMPTS) { attempt ->
+            try {
+                val pcm = ttsSemaphore.withPermit { cloudVoiceSynth.gemini(chunk, model, voice) }
+                if (pcm.isNotEmpty()) return pcm
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: de.frank.cortex.tts.CloudVoiceException) {
+                CortexLog.warn("ChatVM", "synthesizeGeminiChunk", "Gemini-Stimme fehlgeschlagen: ${e.message}",
+                    mapOf("index" to index, "attempt" to (attempt + 1), "fatal" to e.fatal))
+                if (e.fatal) {
+                    voiceErrorMessage = e.message ?: "Unbekannter Fehler der Gemini-Stimme."
+                    return null
+                }
+            } catch (e: GeminiTtsAccessException) {
+                // Rueckfall auf Chirp 3 HD: Cloud-TTS-API nicht freigeschaltet.
+                ttsAccessDenied = true
+                return null
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "synthesizeGeminiChunk", "Gemini-Chunk fehlgeschlagen: ${e.message}",
+                    mapOf("index" to index, "attempt" to (attempt + 1)))
+            }
+            if (attempt < TTS_RETRY_ATTEMPTS - 1) delay(300L * (attempt + 1))
+        }
+        return null
+    }
+
+    /** Azure Neural (MP3 wie Edge). */
+    private suspend fun synthesizeAzureChunk(chunk: String, voice: String, index: Int): ByteArray? {
+        repeat(TTS_RETRY_ATTEMPTS) { attempt ->
+            try {
+                val mp3 = cloudVoiceSynth.azure(chunk, voice)
+                if (mp3.isNotEmpty()) return mp3
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: de.frank.cortex.tts.CloudVoiceException) {
+                CortexLog.warn("ChatVM", "synthesizeAzureChunk", "Azure-Stimme fehlgeschlagen: ${e.message}",
+                    mapOf("index" to index, "attempt" to (attempt + 1), "fatal" to e.fatal))
+                if (e.fatal) {
+                    voiceErrorMessage = e.message ?: "Unbekannter Fehler der Azure-Stimme."
+                    return null
+                }
+            } catch (e: Exception) {
+                CortexLog.warn("ChatVM", "synthesizeAzureChunk", "Azure-Chunk fehlgeschlagen: ${e.message}",
+                    mapOf("index" to index, "attempt" to (attempt + 1)))
+            }
+            if (attempt < TTS_RETRY_ATTEMPTS - 1) delay(300L * (attempt + 1))
+        }
+        return null
     }
 
     private val whitespaceRunRegex = Regex("[ \t]+")

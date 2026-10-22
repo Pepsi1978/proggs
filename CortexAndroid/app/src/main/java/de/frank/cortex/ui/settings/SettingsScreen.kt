@@ -83,6 +83,15 @@ fun SettingsScreen(
     var edgeTtsVoice by remember { mutableStateOf(SettingsStore.edgeTtsVoice) }
     var qwenVoiceId by remember { mutableStateOf(SettingsStore.qwenTtsVoiceId) }
     var qwenVoiceNames by remember { mutableStateOf(SettingsStore.qwenVoiceNames) }
+    var geminiTtsKeyFrei by remember { mutableStateOf(SettingsStore.geminiTtsKeyFrei) }
+    var geminiTtsKeyBezahlt by remember { mutableStateOf(SettingsStore.geminiTtsKeyBezahlt) }
+    var geminiTtsSchluesselWahl by remember { mutableStateOf(SettingsStore.geminiTtsSchluesselWahl) }
+    var geminiTtsChirpRueckfall by remember { mutableStateOf(SettingsStore.geminiTtsChirpRueckfall) }
+    var geminiFlashTtsVoice by remember { mutableStateOf(SettingsStore.geminiFlashTtsVoice) }
+    var geminiLiteTtsVoice by remember { mutableStateOf(SettingsStore.geminiLiteTtsVoice) }
+    var azureTtsKey by remember { mutableStateOf(SettingsStore.azureTtsKey) }
+    var azureTtsRegion by remember { mutableStateOf(SettingsStore.azureTtsRegion) }
+    var azureTtsVoice by remember { mutableStateOf(SettingsStore.azureTtsVoice) }
     val ttsUsage by TtsUsageStore.usage.collectAsState()
     LaunchedEffect(Unit) { TtsUsageStore.refreshMonth() }
     var recordingToneEnabled by remember { mutableStateOf(SettingsStore.recordingToneEnabled) }
@@ -813,6 +822,10 @@ fun SettingsScreen(
                 // oder die eigene, bei Alibaba geklonte Stimme.
                 val isEdgeSel = ttsProvider == SettingsStore.TTS_PROVIDER_EDGE
                 val isQwenSel = ttsProvider == SettingsStore.TTS_PROVIDER_QWEN
+                val isGeminiLiteSel = ttsProvider == SettingsStore.TTS_PROVIDER_GEMINI_LITE
+                val isGeminiSel = ttsProvider == SettingsStore.TTS_PROVIDER_GEMINI_FLASH || isGeminiLiteSel
+                val isAzureSel = ttsProvider == SettingsStore.TTS_PROVIDER_AZURE
+                val geminiVoiceNow = if (isGeminiLiteSel) geminiLiteTtsVoice else geminiFlashTtsVoice
                 Column(
                     modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -827,7 +840,7 @@ fun SettingsScreen(
                         TtsEngineChip(
                             title = "Chirp 3: HD",
                             subtitle = "Google · viel gratis",
-                            selected = !isEdgeSel && !isQwenSel,
+                            selected = !isEdgeSel && !isQwenSel && !isGeminiSel && !isAzureSel,
                             isDark = isDark,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         ) {
@@ -859,8 +872,45 @@ fun SettingsScreen(
                             }
                         }
                     }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.height(IntrinsicSize.Max)
+                    ) {
+                        TtsEngineChip(
+                            title = "Gemini Flash",
+                            subtitle = "Gemini 3.8 Flash TTS",
+                            selected = ttsProvider == SettingsStore.TTS_PROVIDER_GEMINI_FLASH,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        ) {
+                            ttsProvider = SettingsStore.TTS_PROVIDER_GEMINI_FLASH
+                            SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_GEMINI_FLASH
+                        }
+                        TtsEngineChip(
+                            title = "Gemini Lite",
+                            subtitle = "Gemini 3.8 Flash-Lite TTS",
+                            selected = isGeminiLiteSel,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        ) {
+                            ttsProvider = SettingsStore.TTS_PROVIDER_GEMINI_LITE
+                            SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_GEMINI_LITE
+                        }
+                        TtsEngineChip(
+                            title = "Azure",
+                            subtitle = "Azure Neural",
+                            selected = isAzureSel,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        ) {
+                            ttsProvider = SettingsStore.TTS_PROVIDER_AZURE
+                            SettingsStore.ttsProvider = SettingsStore.TTS_PROVIDER_AZURE
+                        }
+                    }
                     Text(
                         when {
+                            isGeminiSel -> "Gemini 3.8 ${if (isGeminiLiteSel) "Flash-Lite" else "Flash"} TTS von Google — dieselben 30 Stimmen wie Chirp 3 HD, mit eigenem Schlüssel."
+                            isAzureSel -> "Azure Neural von Microsoft — offizielle deutsche Stimmen inkl. HD, mit eigenem Speech-Schlüssel."
                             isQwenSel -> "Qwen3-TTS von Alibaba — liest mit deiner eigenen geklonten Stimme vor."
                             isEdgeSel -> "Edge-TTS von Microsoft — kostenlos, natürliche Stimmen (Seraphina, Florian …)."
                             else -> "Chirp 3: HD von Google Cloud — beste Qualität, gratis bis 1 Mio. Zeichen/Monat."
@@ -869,6 +919,74 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TtsUsageIndicator(ttsUsage)
+                    if (isGeminiSel) {
+                        SecretRow("Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)", geminiTtsKeyFrei,
+                            { val v = it.filterNot(Char::isWhitespace); geminiTtsKeyFrei = v; SettingsStore.geminiTtsKeyFrei = v }, isDark,
+                            divider = true,
+                            onRevealRequest = ::requestSecretReveal)
+                        SecretRow("Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)", geminiTtsKeyBezahlt,
+                            { val v = it.filterNot(Char::isWhitespace); geminiTtsKeyBezahlt = v; SettingsStore.geminiTtsKeyBezahlt = v }, isDark,
+                            divider = true,
+                            onRevealRequest = ::requestSecretReveal)
+                        Text("Welcher Schlüssel", fontSize = 13.sp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.height(IntrinsicSize.Max)
+                        ) {
+                            SettingsStore.GEMINI_TTS_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
+                                TtsEngineChip(
+                                    title = name,
+                                    subtitle = "",
+                                    selected = geminiTtsSchluesselWahl == id,
+                                    isDark = isDark,
+                                    modifier = Modifier.weight(1f).fillMaxHeight()
+                                ) {
+                                    geminiTtsSchluesselWahl = id
+                                    SettingsStore.geminiTtsSchluesselWahl = id
+                                }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Rückfall auf Chirp 3 HD", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest Cortex mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(
+                                checked = geminiTtsChirpRueckfall,
+                                onCheckedChange = { geminiTtsChirpRueckfall = it; SettingsStore.geminiTtsChirpRueckfall = it },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Orange)
+                            )
+                        }
+                        val freiNoetig = geminiTtsSchluesselWahl != SettingsStore.GEMINI_TTS_NUR_BEZAHLT
+                        val bezahltNoetig = geminiTtsSchluesselWahl != SettingsStore.GEMINI_TTS_NUR_FREI
+                        val keinSchluessel = (!freiNoetig || geminiTtsKeyFrei.isBlank()) && (!bezahltNoetig || geminiTtsKeyBezahlt.isBlank())
+                        if (keinSchluessel) {
+                            Text("Hinweis: Für die Gemini-Stimme fehlt noch ein Schlüssel. Trag ihn oben ein.",
+                                fontSize = 11.5.sp, color = Orange)
+                        }
+                        if (geminiTtsChirpRueckfall && googleTtsApiKey.isBlank() && geminiApiKey.isBlank()) {
+                            Text("Hinweis: Für den Rückfall auf Chirp 3 HD fehlt der Google-TTS-Schlüssel (unter Schlüssel).",
+                                fontSize = 11.5.sp, color = Orange)
+                        }
+                    }
+                    if (isAzureSel) {
+                        SecretRow("Azure-Speech-Schlüssel (KEY 1)", azureTtsKey,
+                            { val v = it.filterNot(Char::isWhitespace); azureTtsKey = v; SettingsStore.azureTtsKey = v }, isDark,
+                            divider = true,
+                            onRevealRequest = ::requestSecretReveal)
+                        Text("Azure-Region (z. B. westeurope)", fontSize = 13.sp)
+                        SettingsTextField(
+                            value = azureTtsRegion,
+                            onValueChange = { azureTtsRegion = it; SettingsStore.azureTtsRegion = it.trim() },
+                            modifier = Modifier.fillMaxWidth(),
+                            hint = SettingsStore.DEFAULT_AZURE_REGION
+                        )
+                        if (azureTtsKey.isBlank()) {
+                            Text("Hinweis: Für Azure fehlt noch der Speech-Schlüssel. Trag ihn oben ein.",
+                                fontSize = 11.5.sp, color = Orange)
+                        }
+                    }
                 }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
@@ -885,6 +1003,8 @@ fun SettingsScreen(
                     Text(
                         when {
                             isQwenSel -> "Meine Stimme"
+                            isGeminiSel -> "Gemini-Stimme"
+                            isAzureSel -> "Azure-Stimme"
                             isEdgeSel -> "Edge-Stimme"
                             else -> "Chirp-Stimme"
                         },
@@ -893,6 +1013,8 @@ fun SettingsScreen(
                     var showVoiceDialog by remember { mutableStateOf(false) }
                     var showEdgeVoiceDialog by remember { mutableStateOf(false) }
                     var showMyVoicesDialog by remember { mutableStateOf(false) }
+                    var showAzureVoiceDialog by remember { mutableStateOf(false) }
+                    val cloudVoiceSynth = remember { de.frank.cortex.tts.CloudVoiceSynthesizer() }
                     val pcmPlayer = remember { PcmPlayer() }
                     val edgeSynth = remember { de.frank.cortex.audio.EdgeTtsSynthesizer() }
                     val edgeMp3Player = remember { de.frank.cortex.audio.Mp3Player(context) }
@@ -913,6 +1035,8 @@ fun SettingsScreen(
                                 } else {
                                     showMyVoicesDialog = true
                                 }
+                                isGeminiSel -> showVoiceDialog = true
+                                isAzureSel -> showAzureVoiceDialog = true
                                 isEdgeSel -> showEdgeVoiceDialog = true
                                 else -> showVoiceDialog = true
                             }
@@ -921,6 +1045,8 @@ fun SettingsScreen(
                         Text(
                             when {
                                 isQwenSel -> qwenVoiceLabelFor(qwenVoiceId, qwenVoiceNames)
+                                isGeminiSel -> voiceLabelFor(geminiVoiceNow)
+                                isAzureSel -> de.frank.cortex.tts.AzureVoices.labelFor(azureTtsVoice)
                                 isEdgeSel -> edgeVoiceLabelFor(edgeTtsVoice)
                                 else -> voiceLabelFor(ttsVoice)
                             },
@@ -954,10 +1080,17 @@ fun SettingsScreen(
                     }
                     if (showVoiceDialog) {
                         VoicePickerDialog(
-                            currentVoice = ttsVoice,
+                            currentVoice = if (isGeminiSel) geminiVoiceNow else ttsVoice,
+                            subtitle = if (isGeminiSel) "Gemini 3.8 ${if (isGeminiLiteSel) "Flash-Lite" else "Flash"} TTS · Google" else "Chirp 3: HD · Google Cloud TTS",
                             onSelect = { voice ->
-                                ttsVoice = voice
-                                SettingsStore.ttsVoice = voice.removePrefix("de-DE-Chirp3-HD-")
+                                when {
+                                    isGeminiLiteSel -> { geminiLiteTtsVoice = voice; SettingsStore.geminiLiteTtsVoice = voice }
+                                    isGeminiSel -> { geminiFlashTtsVoice = voice; SettingsStore.geminiFlashTtsVoice = voice }
+                                    else -> {
+                                        ttsVoice = voice
+                                        SettingsStore.ttsVoice = voice.removePrefix("de-DE-Chirp3-HD-")
+                                    }
+                                }
                                 showVoiceDialog = false
                             },
                             onDismiss = { showVoiceDialog = false },
@@ -967,10 +1100,17 @@ fun SettingsScreen(
                                     try {
                                         pcmPlayer.stop()
                                         val label = voiceLabelFor(voice)
-                                        val pcm = ApiClient.geminiTts(
-                                            "Hallo, ich bin $label. Willkommen bei Cortex, deinem zweiten Gehirn.",
-                                            voice
-                                        )
+                                        val probe = "Hallo, ich bin $label. Willkommen bei Cortex, deinem zweiten Gehirn."
+                                        val pcm = if (isGeminiSel) {
+                                            cloudVoiceSynth.gemini(
+                                                probe,
+                                                if (isGeminiLiteSel) de.frank.cortex.tts.CloudVoiceSynthesizer.GEMINI_LITE_MODEL
+                                                else de.frank.cortex.tts.CloudVoiceSynthesizer.GEMINI_FLASH_MODEL,
+                                                voice
+                                            )
+                                        } else {
+                                            ApiClient.geminiTts(probe, voice)
+                                        }
                                         pcmPlayer.playAndAwait(pcm, SettingsStore.ttsRate)
                                     } catch (e: CancellationException) {
                                         throw e
@@ -1006,6 +1146,39 @@ fun SettingsScreen(
                                         throw e
                                     } catch (e: Exception) {
                                         CortexLog.error("Settings", "testEdgeVoice", "Edge-TTS-Test fehlgeschlagen: ${e.message}")
+                                        Toast.makeText(context, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    if (showAzureVoiceDialog) {
+                        EdgeVoicePickerDialog(
+                            currentVoice = azureTtsVoice,
+                            voices = azureVoiceEntries,
+                            title = "Azure-Stimme wählen",
+                            subtitle = "Azure Neural · Microsoft (eigener Schlüssel)",
+                            onSelect = { voiceId ->
+                                azureTtsVoice = voiceId
+                                SettingsStore.azureTtsVoice = voiceId
+                                showAzureVoiceDialog = false
+                            },
+                            onDismiss = { showAzureVoiceDialog = false },
+                            onTestVoice = { voiceId ->
+                                voiceTestJob?.cancel()
+                                voiceTestJob = scope.launch {
+                                    try {
+                                        edgeMp3Player.stop()
+                                        val short = de.frank.cortex.tts.AzureVoices.labelFor(voiceId)
+                                        val mp3 = cloudVoiceSynth.azure(
+                                            "Hallo, ich bin $short. Willkommen bei Cortex, deinem zweiten Gehirn.",
+                                            voiceId
+                                        )
+                                        edgeMp3Player.playAndAwait(mp3, SettingsStore.ttsRate)
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (e: Exception) {
+                                        CortexLog.error("Settings", "testAzureVoice", "Azure-TTS-Test fehlgeschlagen: ${e.message}")
                                         Toast.makeText(context, "Fehler: ${e.message}", Toast.LENGTH_SHORT).show()
                                     }
                                 }
@@ -2406,6 +2579,10 @@ private val edgeVoices = listOf(
     EdgeVoiceEntry("de-DE-AmalaNeural", "Amala", Gender.FEMALE, "weiblich, jung"),
 )
 
+private val azureVoiceEntries = de.frank.cortex.tts.AzureVoices.all.map {
+    EdgeVoiceEntry(it.id, it.short, if (it.female) Gender.FEMALE else Gender.MALE, it.description)
+}
+
 private fun edgeVoiceLabelFor(id: String): String = edgeVoices.firstOrNull { it.id == id }?.short ?: id
 
 /** Was die Einstellungen-Zeile fuer die gewaehlte geklonte Stimme anzeigt. */
@@ -2470,6 +2647,9 @@ private fun TtsEngineChip(
 @Composable
 private fun EdgeVoicePickerDialog(
     currentVoice: String,
+    voices: List<EdgeVoiceEntry> = edgeVoices,
+    title: String = "Edge-Stimme wählen",
+    subtitle: String = "Edge TTS · Microsoft (kostenlos)",
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
     onTestVoice: (String) -> Unit
@@ -2478,12 +2658,12 @@ private fun EdgeVoicePickerDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Edge-Stimme wählen", fontFamily = SpaceGrotesk,
+            Text(title, fontFamily = SpaceGrotesk,
                 fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
         },
         text = {
             Column {
-                Text("Edge TTS · Microsoft (kostenlos)",
+                Text(subtitle,
                     fontFamily = JetBrainsMono, fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
@@ -2491,7 +2671,7 @@ private fun EdgeVoicePickerDialog(
                     modifier = Modifier.heightIn(min = 150.dp, max = 400.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(edgeVoices) { voice ->
+                    items(voices.sortedByDescending { VoiceFavorites.isFavorite(it.id) }) { voice ->
                         val accent = if (voice.gender == Gender.FEMALE) Color(0xFFF2698E) else Color(0xFF5AB0F2)
                         val isSelected = currentVoice == voice.id
                         Surface(
@@ -2508,12 +2688,13 @@ private fun EdgeVoicePickerDialog(
                                     Icon(Icons.Default.RecordVoiceOver, null, tint = accent,
                                         modifier = Modifier.size(22.dp).padding(4.dp))
                                 }
-                                Column(modifier = Modifier.weight(1f).clickable { onSelect(voice.id) }) {
+                                Column(modifier = Modifier.weight(1f).voiceClick(voice.id) { onSelect(voice.id) }) {
                                     Text(voice.short, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                         color = if (isSelected) accent else MaterialTheme.colorScheme.onSurface)
                                     Text(voice.description, fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                FavoriteStar(voice.id)
                                 IconButton(onClick = { onTestVoice(voice.id) }, modifier = Modifier.size(30.dp)) {
                                     Icon(Icons.AutoMirrored.Filled.VolumeUp, "Testen",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
@@ -2582,6 +2763,7 @@ private val chirpVoices = listOf(
 @Composable
 private fun VoicePickerDialog(
     currentVoice: String,
+    subtitle: String = "Chirp 3: HD · Google Cloud TTS",
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
     onTestVoice: (String) -> Unit
@@ -2596,7 +2778,7 @@ private fun VoicePickerDialog(
         },
         text = {
             Column {
-                Text("Chirp 3: HD · Google Cloud TTS",
+                Text(subtitle,
                     fontFamily = JetBrainsMono, fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
@@ -2605,8 +2787,27 @@ private fun VoicePickerDialog(
                     modifier = Modifier.heightIn(min = 200.dp, max = 400.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val femaleVoices = chirpVoices.filter { it.gender == Gender.FEMALE }
-                    val maleVoices = chirpVoices.filter { it.gender == Gender.MALE }
+                    val favoriteVoices = chirpVoices.filter { VoiceFavorites.isFavorite(it.name) }
+                    val femaleVoices = chirpVoices.filter { it.gender == Gender.FEMALE && it !in favoriteVoices }
+                    val maleVoices = chirpVoices.filter { it.gender == Gender.MALE && it !in favoriteVoices }
+
+                    if (favoriteVoices.isNotEmpty()) {
+                        item {
+                            Text("FAVORITEN", fontFamily = JetBrainsMono, fontSize = 9.5.sp,
+                                letterSpacing = 1.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp))
+                        }
+                        items(favoriteVoices) { voice ->
+                            VoiceRow(
+                                voice = voice,
+                                isSelected = currentVoice == voice.name,
+                                accentColor = if (voice.gender == Gender.FEMALE) Color(0xFFF2698E) else Color(0xFF5AB0F2),
+                                onSelect = { onSelect(voice.name) },
+                                onTest = { onTestVoice(voice.name) }
+                            )
+                        }
+                    }
 
                     item {
                         Text("WEIBLICH", fontFamily = JetBrainsMono, fontSize = 9.5.sp,
@@ -2690,7 +2891,7 @@ private fun VoiceRow(
 
             // Name — klickbar für Auswahl
             Column(
-                modifier = Modifier.weight(1f).clickable { onSelect() }
+                modifier = Modifier.weight(1f).voiceClick(voice.name) { onSelect() }
             ) {
                 Text(
                     voice.label,
@@ -2710,6 +2911,8 @@ private fun VoiceRow(
                 Icon(Icons.Default.CheckCircle, null,
                     tint = accentColor, modifier = Modifier.size(18.dp))
             }
+
+            FavoriteStar(voice.name)
 
             // Test button
             IconButton(

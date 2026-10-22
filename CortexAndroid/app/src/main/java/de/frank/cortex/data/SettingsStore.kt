@@ -61,7 +61,7 @@ object SettingsStore {
 
     private val SECRET_KEYS = listOf(
         "sb_api_key", "groq_api_key", "gemini_api_key", "google_tts_api_key",
-        "qwen_tts_api_key",
+        "qwen_tts_api_key", "gemini_tts_key_frei", "gemini_tts_key_bezahlt", "azure_tts_key",
         "wg_config", "codex_access_token", "codex_refresh_token"
     )
 
@@ -84,6 +84,21 @@ object SettingsStore {
     const val TTS_PROVIDER_EDGE = "edge"
     const val TTS_PROVIDER_QWEN = "qwen"
     const val DEFAULT_EDGE_VOICE = "de-DE-SeraphinaMultilingualNeural"
+    // Gemini 3.8 Flash / Flash-Lite TTS und Azure Neural (eigenes Konto).
+    const val TTS_PROVIDER_GEMINI_FLASH = "gemini_flash"
+    const val TTS_PROVIDER_GEMINI_LITE = "gemini_lite"
+    const val TTS_PROVIDER_AZURE = "azure_neural"
+    const val DEFAULT_GEMINI_VOICE = "Leda"
+    const val DEFAULT_AZURE_VOICE = "de-DE-SeraphinaMultilingualNeural"
+    const val DEFAULT_AZURE_REGION = "westeurope"
+    const val GEMINI_TTS_FREI_DANN_BEZAHLT = "frei_dann_bezahlt"
+    const val GEMINI_TTS_NUR_FREI = "nur_frei"
+    const val GEMINI_TTS_NUR_BEZAHLT = "nur_bezahlt"
+    val GEMINI_TTS_SCHLUESSEL_WAHLEN = listOf(
+        GEMINI_TTS_FREI_DANN_BEZAHLT to "Erst kostenlos, dann bezahlt",
+        GEMINI_TTS_NUR_FREI to "Nur kostenlos",
+        GEMINI_TTS_NUR_BEZAHLT to "Nur bezahlt",
+    )
 
     fun defaultContextPrompt(mode: String): String = when (mode) {
         CONTEXT_MODE_SMALLTALK -> """
@@ -335,6 +350,20 @@ object SettingsStore {
         get() = getSecret("qwen_tts_api_key")
         set(value) = setSecret("qwen_tts_api_key", value)
 
+    // Gemini-3.8-Stimme: eigene Schluessel fuer AI-Studio-Projekte ohne bzw. mit Abrechnung.
+    var geminiTtsKeyFrei: String
+        get() = getSecret("gemini_tts_key_frei")
+        set(value) = setSecret("gemini_tts_key_frei", value)
+
+    var geminiTtsKeyBezahlt: String
+        get() = getSecret("gemini_tts_key_bezahlt")
+        set(value) = setSecret("gemini_tts_key_bezahlt", value)
+
+    // Azure AI Speech: Schluessel (KEY 1) der Speech-Ressource.
+    var azureTtsKey: String
+        get() = getSecret("azure_tts_key")
+        set(value) = setSecret("azure_tts_key", value)
+
     var wgConfig: String
         get() = getSecret("wg_config")
         set(value) = setSecret("wg_config", value)
@@ -442,6 +471,39 @@ object SettingsStore {
         set(value) = plain.edit()
             .putString("qwen_voice_names", JSONObject(value.toMap<String, Any>()).toString())
             .apply()
+
+    /** Welche Gemini-Stimmschluessel genutzt werden: GEMINI_TTS_FREI_DANN_BEZAHLT, GEMINI_TTS_NUR_FREI oder GEMINI_TTS_NUR_BEZAHLT. */
+    var geminiTtsSchluesselWahl: String
+        get() = plain.getString("gemini_tts_schluessel_wahl", GEMINI_TTS_FREI_DANN_BEZAHLT) ?: GEMINI_TTS_FREI_DANN_BEZAHLT
+        set(value) = plain.edit().putString("gemini_tts_schluessel_wahl", value).apply()
+
+    /** Scheitert der kostenlose Gemini-Stimmschluessel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten. */
+    var geminiTtsChirpRueckfall: Boolean
+        get() = plain.getBoolean("gemini_tts_chirp_rueckfall", false)
+        set(value) = plain.edit().putBoolean("gemini_tts_chirp_rueckfall", value).apply()
+
+    // Gewaehlte Gemini-Stimme je Modell (blosser Name wie bei Chirp, z.B. "Leda").
+    var geminiFlashTtsVoice: String
+        get() = plain.getString("gemini_flash_tts_voice", DEFAULT_GEMINI_VOICE) ?: DEFAULT_GEMINI_VOICE
+        set(value) = plain.edit().putString("gemini_flash_tts_voice", value).apply()
+
+    var geminiLiteTtsVoice: String
+        get() = plain.getString("gemini_lite_tts_voice", DEFAULT_GEMINI_VOICE) ?: DEFAULT_GEMINI_VOICE
+        set(value) = plain.edit().putString("gemini_lite_tts_voice", value).apply()
+
+    var azureTtsRegion: String
+        get() = plain.getString("azure_tts_region", DEFAULT_AZURE_REGION) ?: DEFAULT_AZURE_REGION
+        set(value) = plain.edit().putString("azure_tts_region", value).apply()
+
+    // Gewaehlte Azure-Stimme (voller Azure-Name, z.B. de-DE-KatjaNeural).
+    var azureTtsVoice: String
+        get() = plain.getString("azure_tts_voice", DEFAULT_AZURE_VOICE) ?: DEFAULT_AZURE_VOICE
+        set(value) = plain.edit().putString("azure_tts_voice", value).apply()
+
+    /** Als Favorit markierte Stimmen aller Listen (Chirp/Gemini-Name, Edge-, Azure- oder Alibaba-Kennung). */
+    var voiceFavorites: Set<String>
+        get() = plain.getStringSet("voice_favorites", emptySet())?.toSet().orEmpty()
+        set(value) = plain.edit().putStringSet("voice_favorites", value.toSet()).apply()
 
     // Sprechtempo (Design: 0.7–1.4, Schritt 0.05, Standard 1.0). Wird auf die Wiedergabe angewandt.
     var ttsRate: Float

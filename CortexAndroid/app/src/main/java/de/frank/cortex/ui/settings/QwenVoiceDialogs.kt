@@ -170,7 +170,7 @@ fun MyVoicesDialog(
                         modifier = Modifier.heightIn(min = 100.dp, max = 380.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(voices, key = ClonedVoice::id) { voice ->
+                        items(voices.sortedByDescending { VoiceFavorites.isFavorite(it.id) }, key = ClonedVoice::id) { voice ->
                             val selected = currentVoiceId == voice.id
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
@@ -190,7 +190,7 @@ fun MyVoicesDialog(
                                             modifier = Modifier.size(22.dp).padding(4.dp))
                                     }
                                     Column(
-                                        modifier = Modifier.weight(1f).clickable { onVoiceSelected(voice.id) }
+                                        modifier = Modifier.weight(1f).voiceClick(voice.id) { onVoiceSelected(voice.id) }
                                     ) {
                                         Text(
                                             titleOf(voice), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
@@ -199,6 +199,7 @@ fun MyVoicesDialog(
                                         Text(voice.createdAt, fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
+                                    FavoriteStar(voice.id)
                                     IconButton(
                                         onClick = { renameTarget = voice },
                                         enabled = !busy,
