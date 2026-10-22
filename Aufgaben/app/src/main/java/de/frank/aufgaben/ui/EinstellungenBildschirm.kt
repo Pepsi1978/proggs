@@ -132,9 +132,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Schalter("Animierte Szene oben zeigen", e.szeneZeigen) { e.szeneZeigen = it }
                 }
                 // ---- Sprache ----
-                Block("Spracheingabe · Whisper Large V3 Turbo (Groq)") {
+                Block("Spracheingabe · Whisper (Groq)") {
                     Feld("Groq-API-Schlüssel", e.groqKey, geheim = true) { e.groqKey = it }
                     Schalter("Beim Plus sofort aufnehmen", e.autoMikro) { e.autoMikro = it }
+                    Text("Whisper-Modell", color = f.textLeise, fontSize = 13.sp)
+                    ChipReihe { de.frank.aufgaben.audio.GroqTranscriber.MODELLE.forEach { (id, name) -> Chip(name, e.whisperModell == id) { e.whisperModell = id } } }
+                    Schalter("Persönliches Wörterbuch", e.woerterbuchAn) { e.woerterbuchAn = it }
+                    Feld("Begriffe (durch Komma oder Zeilenumbruch getrennt)", e.woerterbuch, einzeilig = false) { e.woerterbuch = it }
                     Text("Filter gegen stille Halluzinationen", color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Schalter("1 · Stille vor dem Hochladen verwerfen", e.filterStille) { e.filterStille = it }
                     Schalter("2 · Unsichere Abschnitte (Metriken) verwerfen", e.filterMetriken) { e.filterMetriken = it }
@@ -333,7 +337,7 @@ fun Schalter(text: String, an: Boolean, aendern: (Boolean) -> Unit) {
 }
 
 @Composable
-fun Feld(titel: String, wert: String, geheim: Boolean = false, aendern: (String) -> Unit) {
+fun Feld(titel: String, wert: String, geheim: Boolean = false, einzeilig: Boolean = true, aendern: (String) -> Unit) {
     val f = LocalFarben.current
     var text by remember { mutableStateOf(wert) }
     var zeigen by remember { mutableStateOf(!geheim) }
@@ -341,7 +345,7 @@ fun Feld(titel: String, wert: String, geheim: Boolean = false, aendern: (String)
         Text(titel, color = f.textLeise, fontSize = 12.sp)
         Row(Modifier.fillMaxWidth().padding(top = 4.dp).glas(f, 12.dp, 0f, f.flaecheStark).padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(
-                text, { text = it; aendern(it) }, singleLine = true,
+                text, { text = it; aendern(it) }, singleLine = einzeilig,
                 textStyle = TextStyle(color = f.text, fontSize = 15.sp, fontFamily = FontFamily.Monospace),
                 cursorBrush = SolidColor(f.primaer),
                 visualTransformation = if (zeigen) VisualTransformation.None else PasswordVisualTransformation(),

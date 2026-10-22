@@ -39,6 +39,7 @@
     {"versionCode": 35, "versionName": "1.0.34", "stand": "14.10.2026, 23:06 Uhr", "notiz": "Orange-Design im Dunkelmodus: Das Zimmer oben hat jetzt dieselben hellen Farben wie im Hellmodus, nur leicht abgedunkelt – kein braunes Zimmer mehr."},
     {"versionCode": 36, "versionName": "1.0.35", "stand": "14.10.2026, 23:12 Uhr", "notiz": "Aurora, Garten und Kosmos im Dunkelmodus: Die Szene oben hat jetzt wie bei Orange dieselben hellen Farben wie im Hellmodus, nur leicht abgedunkelt."},
     {"versionCode": 37, "versionName": "1.0.36", "stand": "15.10.2026, 18:32 Uhr", "notiz": "Von Jarvis übergebene Uhrzeiten zwischen 20 und 23 Uhr werden jetzt richtig gespeichert statt als 02:00 Uhr."},
-    {"versionCode": 38, "versionName": "1.0.37", "stand": "17.10.2026, 10:41 Uhr", "notiz": "Neuer Vier-Wochen-Kalender in jedem Bereich (eine Woche zurück, drei Wochen voraus) mit Aufgabenzahl je Tag und Tagesübersicht; Vorlesen jetzt in allen Bereichen, Serie oben rechtsbündig, Fokus-Knopf größer."}
+    {"versionCode": 38, "versionName": "1.0.37", "stand": "17.10.2026, 10:41 Uhr", "notiz": "Neuer Vier-Wochen-Kalender in jedem Bereich (eine Woche zurück, drei Wochen voraus) mit Aufgabenzahl je Tag und Tagesübersicht; Vorlesen jetzt in allen Bereichen, Serie oben rechtsbündig, Fokus-Knopf größer."},
+    {"versionCode": 39, "versionName": "1.0.38", "stand": "22.10.2026, 11:21 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für bessere Schreibweisen beim Diktat."}
   ]
 }

@@ -344,6 +344,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         aufnahmeJob = viewModelScope.launch {
             val transcriber = GroqTranscriber(
                 apiKey = einstellungen.groqKey,
+                model = einstellungen.whisperModell,
+                woerterbuchPrompt = einstellungen.woerterbuchPrompt,
                 filterStille = einstellungen.filterStille,
                 filterMetriken = einstellungen.filterMetriken,
                 filterZeitstempel = einstellungen.filterZeitstempel,
