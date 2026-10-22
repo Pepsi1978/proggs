@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package de.frank.wecker
 
@@ -14,6 +14,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
@@ -73,6 +76,9 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         TtsProvider.QWEN.id -> settings.qwenStandardVoice
         TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId
         TtsProvider.MODELL.id -> settings.modellStimme
+        TtsProvider.GEMINI_FLASH.id -> settings.geminiFlashTtsVoice
+        TtsProvider.GEMINI_LITE.id -> settings.geminiLiteTtsVoice
+        TtsProvider.AZURE.id -> settings.azureTtsVoice
         else -> settings.edgeTtsVoice
     }) }
     var rate by remember(revision) { mutableFloatStateOf(settings.ttsSpeechRate) }
@@ -83,6 +89,10 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     var googleEntwurf by remember(settings.googleTtsApiKey) { mutableStateOf(settings.googleTtsApiKey) }
     var qwenEntwurf by remember(settings.qwenTtsApiKey) { mutableStateOf(settings.qwenTtsApiKey) }
     var groqEntwurf by remember(settings.groqApiKey) { mutableStateOf(settings.groqApiKey) }
+    var geminiFreiEntwurf by remember(settings.geminiTtsKeyFrei) { mutableStateOf(settings.geminiTtsKeyFrei) }
+    var geminiBezahltEntwurf by remember(settings.geminiTtsKeyBezahlt) { mutableStateOf(settings.geminiTtsKeyBezahlt) }
+    var azureEntwurf by remember(settings.azureTtsKey) { mutableStateOf(settings.azureTtsKey) }
+    var azureRegionEntwurf by remember(settings.azureTtsRegion) { mutableStateOf(settings.azureTtsRegion) }
     LaunchedEffect(Unit) { vm.loadVoices() }
     val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
         if (allowed) vm.startRecording(true) else vm.message.value = "Für deine Stimmprobe wird die Mikrofonberechtigung benötigt."
@@ -166,10 +176,13 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }
         Section("Vorlesen · Stimmen & Tempo", collapsible = true, summary = "${when (provider) {
             TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"
-            TtsProvider.MODELL.id -> "Supertonic · ${ModellKatalog.finde(settings.modellStimme)?.let(ModellKatalog::name) ?: "Sophie"}"; else -> "Edge"
+            TtsProvider.MODELL.id -> "Supertonic · ${ModellKatalog.finde(settings.modellStimme)?.let(ModellKatalog::name) ?: "Sophie"}"
+            TtsProvider.GEMINI_FLASH.id -> "Gemini 3.8 Flash"; TtsProvider.GEMINI_LITE.id -> "Gemini 3.8 Flash-Lite"
+            TtsProvider.AZURE.id -> "Azure Neural"; else -> "Edge"
         }} · Tempo ${"%.2f".format(rate)}× · gilt für alle Wecker ohne eigene Stimme") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(TtsProvider.QWEN_CLONE, TtsProvider.MODELL, TtsProvider.GOOGLE_CLOUD, TtsProvider.EDGE).forEach { item ->
+                listOf(TtsProvider.QWEN_CLONE, TtsProvider.MODELL, TtsProvider.GOOGLE_CLOUD, TtsProvider.GEMINI_FLASH,
+                    TtsProvider.GEMINI_LITE, TtsProvider.EDGE, TtsProvider.AZURE).forEach { item ->
                     Chip3D(provider == item.id, {
                         settings.ttsProvider = item.id; provider = item.id; vm.settingsChanged()
                     }, if (item == TtsProvider.QWEN_CLONE) "Meine Stimmen" else item.label)
@@ -179,11 +192,24 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 TtsProvider.GOOGLE_CLOUD.id -> Text("Google Cloud Text-to-Speech · Chirp 3 HD. Benötigt einen dafür freigeschalteten Google-Schlüssel; ein reiner Gemini-API-Schlüssel reicht nicht automatisch.", style = MaterialTheme.typography.bodySmall)
                 TtsProvider.MODELL.id -> { Text("Supertonic 3 rechnet direkt auf dem Handy – ohne Internet, ohne Schlüssel. Fünf Frauen- und fünf Männerstimmen wie in der Android-Verkaufs-App. Die Vorbereitung dauert länger als bei den Online-Stimmen, weil das Handy selbst rechnet.", style = MaterialTheme.typography.bodySmall)
                     SupertonicDownloadBereich() }
+                TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id -> {
+                    Text("Google Gemini 3.8 TTS mit denselben 30 Stimmen wie Chirp 3 HD. Braucht einen eigenen Gemini-Stimmschlüssel (aistudio.google.com) unter „Sprachschlüssel“.", style = MaterialTheme.typography.bodySmall)
+                    if (settings.geminiTtsKeyFrei.isBlank() && settings.geminiTtsKeyBezahlt.isBlank() && !(settings.geminiTtsChirpRueckfall && settings.googleTtsApiKey.isNotBlank()))
+                        Text("Es fehlt noch ein Gemini-Stimmschlüssel – trag ihn unten unter „Sprachschlüssel“ ein.", style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+                }
+                TtsProvider.AZURE.id -> {
+                    Text("Azure AI Speech · Neural- und HD-Stimmen (HD nur mit Stufe S0). Braucht Schlüssel und Region deiner Speech-Ressource unter „Sprachschlüssel“.", style = MaterialTheme.typography.bodySmall)
+                    if (settings.azureTtsKey.isBlank())
+                        Text("Es fehlt noch der Azure-Schlüssel – trag ihn unten unter „Sprachschlüssel“ ein.", style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+                }
                 TtsProvider.QWEN.id, TtsProvider.QWEN_CLONE.id -> Text("Alibaba Model Studio · DashScope International. Eigene Stimmen verwenden dasselbe Klonmodell wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
                 else -> Text("Microsoft Edge · kein eigener Schlüssel nötig. Für die Audio-Vorbereitung wird Internet benötigt.", style = MaterialTheme.typography.bodySmall)
             }
             val catalog = when (provider) {
                 TtsProvider.GOOGLE_CLOUD.id -> TtsCatalog.googleVoices
+                TtsProvider.GEMINI_FLASH.id -> TtsCatalog.geminiFlashVoices
+                TtsProvider.GEMINI_LITE.id -> TtsCatalog.geminiLiteVoices
+                TtsProvider.AZURE.id -> TtsCatalog.azureVoices
                 TtsProvider.QWEN_CLONE.id -> emptyList()
                 else -> TtsCatalog.edgeVoices
             }
@@ -199,7 +225,9 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             // Suchtext gilt für Filter, Meldung und Rücksetzknopf gleichermaßen – reine Leerzeichen filtern
             // dadurch gar nicht erst. Das Eingabefeld zeigt weiterhin die rohe Eingabe.
             val suchtext = search.trim()
+            // Favoriten stehen oben; die Reihenfolge darunter bleibt.
             val gefiltert = available.filter { (!onlyFavorites || it.first in settings.favoriteTtsVoices) && it.second.contains(suchtext, ignoreCase = true) }
+                .sortedByDescending { it.first in settings.favoriteTtsVoices }
             // Eine von vornherein leere Liste (eigene Stimmen noch nicht geladen) ist kein Filterproblem.
             // Dafür sprechen weiter unten die Lade-, Fehler- und „0 eigene Stimmen“-Zeilen, hier bleibt es still.
             if (available.isNotEmpty() && gefiltert.isEmpty()) {
@@ -222,12 +250,25 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     // Auswahlpunkt und Name sind eine gemeinsame Fläche von mindestens 48 dp; der Favoritenstern
                     // liegt bewusst daneben und wählt die Stimme deshalb nicht aus.
-                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(selected == id, interactionSource = null, indication = null, role = androidx.compose.ui.semantics.Role.RadioButton) {
+                    val favorit = id in settings.favoriteTtsVoices
+                    fun favoritUmschalten() {
+                        settings.favoriteTtsVoices = if (favorit) settings.favoriteTtsVoices - id else settings.favoriteTtsVoices + id
+                        vm.settingsRevision.value++
+                    }
+                    // Tippen wählt, langes Drücken markiert die Stimme als Favorit (oder nimmt sie heraus).
+                    val istGewaehlt = selected == id
+                    Row(Modifier.weight(1f).heightIn(min = 48.dp).semantics { this.selected = istGewaehlt }.combinedClickable(
+                        interactionSource = null, indication = null, role = androidx.compose.ui.semantics.Role.RadioButton,
+                        onLongClickLabel = if (favorit) "Favorit entfernen" else "Als Favorit markieren",
+                        onLongClick = { favoritUmschalten() }) {
                         selected = id
                         when (provider) {
                             TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = id
                             TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId = id
                             TtsProvider.MODELL.id -> settings.modellStimme = id
+                            TtsProvider.GEMINI_FLASH.id -> settings.geminiFlashTtsVoice = id
+                            TtsProvider.GEMINI_LITE.id -> settings.geminiLiteTtsVoice = id
+                            TtsProvider.AZURE.id -> settings.azureTtsVoice = id
                             else -> settings.edgeTtsVoice = id
                         }
                         vm.settingsChanged()
@@ -236,13 +277,12 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                         RadioButton(selected == id, null)
                         Text(label, Modifier.padding(start = 8.dp))
                     }
-                    val favorit = id in settings.favoriteTtsVoices
-                    StillerKnopf(if (favorit) "★" else "☆", {
-                        settings.favoriteTtsVoices = if (favorit) settings.favoriteTtsVoices - id else settings.favoriteTtsVoices + id
-                        vm.settingsRevision.value++
-                    }, Modifier.semantics {
+                    Box(Modifier.size(48.dp).clickable { favoritUmschalten() }.semantics {
                         contentDescription = if (favorit) "$label aus den Favoriten entfernen" else "$label zu den Favoriten hinzufügen"
-                    })
+                    }, contentAlignment = Alignment.Center) {
+                        Text(if (favorit) "★" else "☆", fontSize = 22.sp,
+                            color = if (favorit) FavoritGelb else LocalGold.current.textGedaempft)
+                    }
                 }
             }
             }
@@ -298,14 +338,39 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }
         // Die Zusammenfassung spricht ausschließlich über gespeicherte Schlüssel; ein Entwurf wird als offen
         // benannt und nie als vorhandener Schlüssel dargestellt.
-        val offeneSchluessel = googleEntwurf.trim() != settings.googleTtsApiKey.trim() ||
+        val offeneSchluessel = geminiFreiEntwurf.trim() != settings.geminiTtsKeyFrei.trim() ||
+            geminiBezahltEntwurf.trim() != settings.geminiTtsKeyBezahlt.trim() || azureEntwurf.trim() != settings.azureTtsKey.trim() ||
+            googleEntwurf.trim() != settings.googleTtsApiKey.trim() ||
             qwenEntwurf.trim() != settings.qwenTtsApiKey.trim() || groqEntwurf.trim() != settings.groqApiKey.trim()
-        Section("Sprachschlüssel", collapsible = true, summary = listOf("Google" to settings.googleTtsApiKey, "Alibaba" to settings.qwenTtsApiKey, "Groq" to settings.groqApiKey)
+        Section("Sprachschlüssel", collapsible = true, summary = listOf("Google" to settings.googleTtsApiKey, "Gemini" to (settings.geminiTtsKeyFrei + settings.geminiTtsKeyBezahlt),
+            "Azure" to settings.azureTtsKey, "Alibaba" to settings.qwenTtsApiKey, "Groq" to settings.groqApiKey)
             .joinToString(" · ") { (name, key) -> "$name ${if (key.isBlank()) "fehlt" else "✓"}" } +
             if (offeneSchluessel) " · ungespeicherte Änderung" else "") {
                 SecretField("Google / Chirp-3-HD-Schlüssel", settings.googleTtsApiKey, googleEntwurf, { googleEntwurf = it }) { settings.googleTtsApiKey = it; vm.settingsChanged() }
                 SecretField("Alibaba / DashScope-Schlüssel", settings.qwenTtsApiKey, qwenEntwurf, { qwenEntwurf = it }) { settings.qwenTtsApiKey = it; vm.settingsChanged() }
                 SecretField("Groq-Schlüssel", settings.groqApiKey, groqEntwurf, { groqEntwurf = it }) { settings.groqApiKey = it; vm.settingsChanged() }
+                HorizontalDivider(color = LocalGold.current.rahmen)
+                SecretField("Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)", settings.geminiTtsKeyFrei, geminiFreiEntwurf, { geminiFreiEntwurf = it }) {
+                    settings.geminiTtsKeyFrei = it.filterNot(Char::isWhitespace); vm.settingsChanged() }
+                SecretField("Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)", settings.geminiTtsKeyBezahlt, geminiBezahltEntwurf, { geminiBezahltEntwurf = it }) {
+                    settings.geminiTtsKeyBezahlt = it.filterNot(Char::isWhitespace); vm.settingsChanged() }
+                var geminiWahl by remember(revision) { mutableStateOf(settings.geminiTtsSchluesselWahl) }
+                Text("Welcher Gemini-Schlüssel", style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    de.frank.genialeideen.data.settings.SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
+                        Chip3D(geminiWahl == id, { geminiWahl = id; settings.geminiTtsSchluesselWahl = id; vm.settingsChanged() }, name)
+                    }
+                }
+                var chirpRueckfall by remember(revision) { mutableStateOf(settings.geminiTtsChirpRueckfall) }
+                Toggle("Rückfall auf Chirp 3 HD", chirpRueckfall) { chirpRueckfall = it; settings.geminiTtsChirpRueckfall = it; vm.settingsChanged() }
+                Text("Scheitert der kostenlose Schlüssel, liest Google Chirp 3 HD mit derselben Stimme weiter (Google-Schlüssel oben) statt des bezahlten Schlüssels.",
+                    style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider(color = LocalGold.current.rahmen)
+                SecretField("Azure-Speech-Schlüssel (KEY 1)", settings.azureTtsKey, azureEntwurf, { azureEntwurf = it }) {
+                    settings.azureTtsKey = it.filterNot(Char::isWhitespace); vm.settingsChanged() }
+                Eingabefeld(azureRegionEntwurf, { azureRegionEntwurf = it }, "Azure-Region (z. B. westeurope)", Modifier.fillMaxWidth())
+                if (azureRegionEntwurf.trim() != settings.azureTtsRegion.trim())
+                    GoldKnopf("Region speichern", { settings.azureTtsRegion = azureRegionEntwurf.trim(); vm.settingsChanged() })
             Text("Die Schlüssel werden mit Android Keystore verschlüsselt gespeichert.", style = MaterialTheme.typography.bodySmall)
         }
         Section("Meine Stimme aufnehmen", collapsible = true, summary = "Eigene Stimmen erstellen und verwalten") {
@@ -586,3 +651,6 @@ private fun AuswahlPunkte(titel: String, gewaehlt: String, optionen: List<Pair<S
         }
     }
 }
+
+/** Das Gelb der Favoritensterne. */
+val FavoritGelb = androidx.compose.ui.graphics.Color(0xFFFFC107)

@@ -46,6 +46,16 @@ class IdeasBridge(private val context: Context) {
         settings.qwenTtsApiKey = data.getString("qwenKey").orEmpty()
         settings.groqApiKey = data.getString("groqKey").orEmpty()
         settings.ttsSpeechRate = data.getFloat("rate", 1f)
+        // Ältere Geniale-Ideen-Versionen liefern die Gemini-/Azure-Felder noch nicht: dann bleibt alles, wie es ist.
+        data.getString("geminiFlashVoice")?.let { settings.geminiFlashTtsVoice = it }
+        data.getString("geminiLiteVoice")?.let { settings.geminiLiteTtsVoice = it }
+        data.getString("geminiKeyFrei")?.let { settings.geminiTtsKeyFrei = it }
+        data.getString("geminiKeyBezahlt")?.let { settings.geminiTtsKeyBezahlt = it }
+        data.getString("geminiSchluesselWahl")?.let { settings.geminiTtsSchluesselWahl = it }
+        if (data.containsKey("geminiChirpRueckfall")) settings.geminiTtsChirpRueckfall = data.getBoolean("geminiChirpRueckfall")
+        data.getString("azureKey")?.let { settings.azureTtsKey = it }
+        data.getString("azureRegion")?.let { settings.azureTtsRegion = it }
+        data.getString("azureVoice")?.let { settings.azureTtsVoice = it }
     }
     companion object { val URI: Uri = Uri.parse("content://de.frank.genialeideen.wecker/offen") }
 }

@@ -1,5 +1,6 @@
 package de.frank.genialeideen.data.settings
 
+import de.frank.genialeideen.tts.TtsCatalog
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -185,6 +186,49 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.MODELL_STIMME, Defaults.MODELL_STIMME)
         set(value) = writeString(Keys.MODELL_STIMME, value)
 
+    // ---- Gemini-3.8- und Azure-Stimmen (Port aus Jarvis) ----
+
+    /** Azure AI Speech: Schlüssel und Region der Speech-Ressource, Stimme mit Kennung „azure:de-DE-KatjaNeural“. */
+    var azureTtsKey: String
+        get() = readString(Keys.AZURE_TTS_KEY, "")
+        set(value) = writeString(Keys.AZURE_TTS_KEY, value)
+
+    var azureTtsRegion: String
+        get() = readString(Keys.AZURE_TTS_REGION, TtsCatalog.DEFAULT_AZURE_REGION)
+        set(value) = writeString(Keys.AZURE_TTS_REGION, value)
+
+    var azureTtsVoice: String
+        get() = readString(Keys.AZURE_TTS_VOICE, TtsCatalog.DEFAULT_AZURE_VOICE)
+        set(value) = writeString(Keys.AZURE_TTS_VOICE, value)
+
+    /** Gemini-3.8-Stimmen, Kennung „gemini_flash:Leda“ bzw. „gemini_lite:Leda“. */
+    var geminiFlashTtsVoice: String
+        get() = readString(Keys.GEMINI_FLASH_TTS_VOICE, TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE)
+        set(value) = writeString(Keys.GEMINI_FLASH_TTS_VOICE, value)
+
+    var geminiLiteTtsVoice: String
+        get() = readString(Keys.GEMINI_LITE_TTS_VOICE, TtsCatalog.DEFAULT_GEMINI_LITE_VOICE)
+        set(value) = writeString(Keys.GEMINI_LITE_TTS_VOICE, value)
+
+    /** Eigene Schlüssel nur für die Gemini-Stimme: AI-Studio-Projekt ohne bzw. mit Abrechnung. */
+    var geminiTtsKeyFrei: String
+        get() = readString(Keys.GEMINI_TTS_KEY_FREI, "")
+        set(value) = writeString(Keys.GEMINI_TTS_KEY_FREI, value)
+
+    var geminiTtsKeyBezahlt: String
+        get() = readString(Keys.GEMINI_TTS_KEY_BEZAHLT, "")
+        set(value) = writeString(Keys.GEMINI_TTS_KEY_BEZAHLT, value)
+
+    /** Welche Gemini-Stimmschlüssel genutzt werden: [GEMINI_TTS_FREI_DANN_BEZAHLT], [GEMINI_TTS_NUR_FREI] oder [GEMINI_TTS_NUR_BEZAHLT]. */
+    var geminiTtsSchluesselWahl: String
+        get() = readString(Keys.GEMINI_TTS_SCHLUESSEL_WAHL, GEMINI_TTS_FREI_DANN_BEZAHLT)
+        set(value) = writeString(Keys.GEMINI_TTS_SCHLUESSEL_WAHL, value)
+
+    /** Scheitert der kostenlose Gemini-Stimmschlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels. */
+    var geminiTtsChirpRueckfall: Boolean
+        get() = readFlag(Keys.GEMINI_TTS_CHIRP_RUECKFALL, false)
+        set(value) = writeFlag(Keys.GEMINI_TTS_CHIRP_RUECKFALL, value)
+
     // ---- Spracheingabe (Baustein F) ----
 
     /** Diktat über „groq“ (API-Schlüssel, Internet) oder „lokal“ (heruntergeladenes Whisper-Modell auf dem Handy). */
@@ -360,6 +404,15 @@ class SecureSettings(context: Context) : Closeable {
         const val TTS_SPEECH_RATE = "tts_speech_rate"
         const val IMMER_DEUTSCH = "immer_deutsch_vorlesen"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
+        const val GEMINI_FLASH_TTS_VOICE = "gemini_flash_tts_voice"
+        const val GEMINI_LITE_TTS_VOICE = "gemini_lite_tts_voice"
+        const val AZURE_TTS_KEY = "azure_tts_key"
+        const val AZURE_TTS_REGION = "azure_tts_region"
+        const val AZURE_TTS_VOICE = "azure_tts_voice"
+        const val GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
+        const val GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+        const val GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
+        const val GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
         const val GROQ_API_KEY = "groq_api_key"
         const val GROQ_MODELL = "groq_modell"
         const val WOERTERBUCH_AN = "woerterbuch_an"
@@ -412,5 +465,13 @@ class SecureSettings(context: Context) : Closeable {
         val ALLOWED_DESIGNS = setOf("schlicht", "morgenruhe", "traumraum", "orbit")
         const val MIN_TTS_SPEECH_RATE = 0.5f
         const val MAX_TTS_SPEECH_RATE = 2.0f
+        const val GEMINI_TTS_FREI_DANN_BEZAHLT = "frei_dann_bezahlt"
+        const val GEMINI_TTS_NUR_FREI = "nur_frei"
+        const val GEMINI_TTS_NUR_BEZAHLT = "nur_bezahlt"
+        val GEMINI_TTS_SCHLUESSEL_WAHLEN = listOf(
+            GEMINI_TTS_FREI_DANN_BEZAHLT to "Erst kostenlos, dann bezahlt",
+            GEMINI_TTS_NUR_FREI to "Nur kostenlos",
+            GEMINI_TTS_NUR_BEZAHLT to "Nur bezahlt",
+        )
     }
 }

@@ -30,7 +30,14 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
             else -> ""
         }).joinToString("|") +
         // Nur bei Supertonic angehängt: So bleibt schon vorbereitetes Audio der anderen Stimmen gültig.
-        if (voice.ttsProvider == TtsProvider.MODELL.id) "|${voice.modellStimme}|${ModellStimmen.SCHRITTE}" else ""
+        when (voice.ttsProvider) {
+            TtsProvider.MODELL.id -> "|${voice.modellStimme}|${ModellStimmen.SCHRITTE}"
+            // Nur bei den neuen Stimmen angehängt, damit vorhandenes Audio der übrigen gültig bleibt.
+            TtsProvider.GEMINI_FLASH.id -> "|${voice.geminiFlashTtsVoice}|${hash(voice.geminiTtsKeyFrei + voice.geminiTtsKeyBezahlt)}"
+            TtsProvider.GEMINI_LITE.id -> "|${voice.geminiLiteTtsVoice}|${hash(voice.geminiTtsKeyFrei + voice.geminiTtsKeyBezahlt)}"
+            TtsProvider.AZURE.id -> "|${voice.azureTtsVoice}|${voice.azureTtsRegion}|${hash(voice.azureTtsKey)}"
+            else -> ""
+        }
     val playbackSpeed: Float get() = voiceFactory().playbackSpeed
 
     suspend fun prepare(alarm: Alarm, progress: suspend (String) -> Unit = {}) = mutex.withLock {

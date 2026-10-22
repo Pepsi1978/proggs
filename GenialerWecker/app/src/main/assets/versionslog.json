@@ -28,6 +28,7 @@
     {"versionCode": 113, "versionName": "1.1.118", "stand": "15.10.2026, 15:46 Uhr", "notiz": "Morgenruhe zeigt das Schlafzimmer deutlich höher und gut erkennbar; Wecker-Status, Weckbereitschaft und die Knöpfe zum Anlegen und Öffnen stehen jetzt rechts neben Datum und Uhrzeit statt in einer eigenen Zeile darunter."},
     {"versionCode": 114, "versionName": "1.1.119", "stand": "15.10.2026, 23:24 Uhr", "notiz": "Morgenruhe: „Weckbereit“ steht jetzt oben links über dem Messingstrich, darunter Wochentag mit Datum und die Uhrzeit. Der Knopf „Öffnen“ ist aus der Kopfkarte entfernt (der Termin selbst bleibt antippbar), die Abstände sind knapper, die Kopfkarte ist dadurch niedriger."},
     {"versionCode": 115, "versionName": "1.1.120", "stand": "22.10.2026, 11:19 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe über Groq."},
-    {"versionCode": 116, "versionName": "1.1.121", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 sofort wieder nutzbar nach erneuter Auswahl."}
+    {"versionCode": 116, "versionName": "1.1.121", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 sofort wieder nutzbar nach erneuter Auswahl."},
+    {"versionCode": 117, "versionName": "1.1.122", "stand": "22.10.2026, 11:57 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural, auch für einzelne Wecker; Stimmen per langem Drücken oder Stern als Favorit oben anheften."}
   ]
 }

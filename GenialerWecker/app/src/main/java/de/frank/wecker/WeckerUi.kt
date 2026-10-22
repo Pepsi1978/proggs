@@ -2189,20 +2189,33 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val error by vm.voiceLoadError.collectAsStateWithLifecycle()
     val defaults = remember(revision) { de.frank.genialeideen.speech.SyntheseStimme(vm.settings) }
     val effective = alarm.resolveVoice(defaults)
-    val available = voices.map {
+    val availableRoh = voices.map {
         "${TtsProvider.QWEN_CLONE.id}|${it.id}" to "${vm.settings.qwenVoiceNames[it.id] ?: it.name} · Meine Stimmen"
     } + ModellKatalog.STIMMEN.map {
         "${TtsProvider.MODELL.id}|${it.id}" to "${ModellKatalog.anzeige(it)} · Supertonic (Handy)"
     } + TtsCatalog.googleVoices.map {
         "${TtsProvider.GOOGLE_CLOUD.id}|${it.id}" to "${it.name} · Google · ${geschlecht(it)}"
+    } + TtsCatalog.geminiFlashVoices.map {
+        "${TtsProvider.GEMINI_FLASH.id}|${it.id}" to "${it.name} · Gemini 3.8 Flash · ${geschlecht(it)}"
+    } + TtsCatalog.geminiLiteVoices.map {
+        "${TtsProvider.GEMINI_LITE.id}|${it.id}" to "${it.name} · Gemini 3.8 Flash-Lite · ${geschlecht(it)}"
     } + TtsCatalog.edgeVoices.map {
         "${TtsProvider.EDGE.id}|${it.id}" to "${it.name} · Edge · ${geschlecht(it)}"
+    } + TtsCatalog.azureVoices.map {
+        "${TtsProvider.AZURE.id}|${it.id}" to "${it.name} · Azure · ${geschlecht(it)}"
     }
+    // Favoriten (in den Einstellungen per Stern oder langem Drücken markiert) stehen oben, mit Stern.
+    val favoriten = vm.settings.favoriteTtsVoices
+    val available = availableRoh.sortedByDescending { it.first.substringAfter('|') in favoriten }
+        .map { (id, name) -> if (id.substringAfter('|') in favoriten) id to "★ $name" else id to name }
     val defaultId = when (defaults.ttsProvider) {
         TtsProvider.GOOGLE_CLOUD.id -> defaults.googleTtsVoice
         TtsProvider.QWEN_CLONE.id -> defaults.qwenTtsVoiceId
         TtsProvider.QWEN.id -> defaults.qwenStandardVoice
         TtsProvider.MODELL.id -> defaults.modellStimme
+        TtsProvider.GEMINI_FLASH.id -> defaults.geminiFlashTtsVoice
+        TtsProvider.GEMINI_LITE.id -> defaults.geminiLiteTtsVoice
+        TtsProvider.AZURE.id -> defaults.azureTtsVoice
         else -> defaults.edgeTtsVoice
     }
     val defaultLabel = available.find { it.first == "${defaults.ttsProvider}|$defaultId" }?.second
