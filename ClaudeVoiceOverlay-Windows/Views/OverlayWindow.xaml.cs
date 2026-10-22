@@ -4401,7 +4401,7 @@ namespace ClaudeVoiceOverlay.Views
             {
                 var sync = GetOrCreateVocabSync();
                 if (sync is null) return;
-                await sync.UploadAsync();
+                await sync.SyncAsync();
                 // Sync-Timestamp im Promptboard aktualisieren — sichtbare
                 // Bestaetigung, dass das Vokabular zu Drive hochgeladen wurde
                 // (gleicher Timestamp wie Slots/History; Frank-Wunsch).
@@ -4414,10 +4414,9 @@ namespace ClaudeVoiceOverlay.Views
         }
 
         /// <summary>
-        /// Holt das Cloud-Vokabular und VEREINIGT es mit dem lokalen Stand
-        /// (kein Wort geht verloren). Einmal beim Start. Aendert sich etwas,
-        /// wird der vereinte Stand zurueck in die Cloud geschrieben, damit alle
-        /// Geraete konvergieren. Erstes Geraet ohne Cloud-Stand saet den lokalen.
+        /// Three-way vocabulary sync with the cloud at startup (see
+        /// PromptVocabularyDriveSync.SyncAsync): new terms from every device are kept,
+        /// terms deleted or corrected on one device change everywhere.
         /// </summary>
         public async Task TryMergeVocabularyFromCloudAsync()
         {
@@ -4425,29 +4424,7 @@ namespace ClaudeVoiceOverlay.Views
             {
                 var sync = GetOrCreateVocabSync();
                 if (sync is null) return;
-
-                string? cloud = await sync.DownloadAsync();
-                var path = PromptVocabularyDriveSync.LocalPath;
-                string local = System.IO.File.Exists(path)
-                    ? await System.IO.File.ReadAllTextAsync(path)
-                    : string.Empty;
-
-                if (cloud is null)
-                {
-                    // Noch kein Cloud-Stand vorhanden: lokalen Stand als Saat hochladen.
-                    if (!string.IsNullOrWhiteSpace(local)) _ = TryUploadVocabularyAsync();
-                    return;
-                }
-
-                var merged = PromptVocabularyDriveSync.MergeVocabularies(local, cloud);
-                if (!string.Equals(merged.Trim(), local.Trim(), StringComparison.Ordinal))
-                {
-                    var dir = System.IO.Path.GetDirectoryName(path);
-                    if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
-                    await System.IO.File.WriteAllTextAsync(path, merged + "\n");
-                    // Vereinten Stand zurueck in die Cloud, damit alle Geraete konvergieren.
-                    _ = TryUploadVocabularyAsync();
-                }
+                await sync.SyncAsync();
             }
             catch (Exception ex)
             {
