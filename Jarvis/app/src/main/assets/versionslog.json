@@ -244,6 +244,7 @@
     {"versionCode": 239, "versionName": "1.8.228", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
     {"versionCode": 240, "versionName": "1.8.229", "stand": "22.10.2026, 23:07 Uhr", "notiz": "Bei Claude-Modellen steht die Modellanzeige wieder rechts in der Eingabeblase, davor das Guthaben grün in Klammern."},
     {"versionCode": 241, "versionName": "1.8.230", "stand": "22.10.2026, 23:14 Uhr", "notiz": "Das Guthaben vor dem Claude-Modellnamen ist jetzt etwas kleiner und fett."},
-    {"versionCode": 242, "versionName": "1.8.231", "stand": "22.10.2026, 23:29 Uhr", "notiz": "Das Guthaben vor dem Claude-Modell ist jetzt so groß wie der Name, durch einen Punkt getrennt und ab 5 $ rot."}
+    {"versionCode": 242, "versionName": "1.8.231", "stand": "22.10.2026, 23:29 Uhr", "notiz": "Das Guthaben vor dem Claude-Modell ist jetzt so groß wie der Name, durch einen Punkt getrennt und ab 5 $ rot."},
+    {"versionCode": 243, "versionName": "1.8.232", "stand": "22.10.2026, 23:41 Uhr", "notiz": "Das Guthaben vor dem Claude-Modell ist ab 5 € grün und darunter rot, umgerechnet mit dem EZB-Tageskurs."}
   ]
 }

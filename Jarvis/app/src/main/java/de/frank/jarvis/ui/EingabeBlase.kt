@@ -135,11 +135,14 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
     }
-    val guthabenUsd = if (modell.istAnthropic) vm.anthropicGuthaben?.takeIf { it.hinweis == null }?.restUsd else null
-    // Das Guthaben steht fett und gleich groß vor dem Modellnamen, getrennt durch „ · “: unter 5 $ grün, ab 5 $ rot.
+    val guthabenStand = if (modell.istAnthropic) vm.anthropicGuthaben?.takeIf { it.hinweis == null } else null
+    val guthabenUsd = guthabenStand?.restUsd
+    // Unter 5 € (EZB-Tageskurs aus der Guthaben-Abfrage) rot, sonst grün; ohne Kurs bleibt es grün.
+    val guthabenKnapp = guthabenUsd != null && guthabenStand?.kurs?.let { guthabenUsd * it < 5.0 } == true
+    // Das Guthaben steht fett und gleich groß vor dem Modellnamen, getrennt durch „ · “.
     fun mitGuthaben(name: String) = buildAnnotatedString {
         if (guthabenUsd != null) {
-            withStyle(SpanStyle(color = if (guthabenUsd < 5.0) f.erfolg else f.gefahr, fontWeight = FontWeight.Bold)) {
+            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Bold)) {
                 append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $)")
             }
             append(" · ")
