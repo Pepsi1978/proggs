@@ -139,14 +139,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Sperre ----
     /** true, solange die App auf den Fingerabdruck wartet. Der Dienst im Hintergrund läuft davon unberührt. */
     var gesperrt by mutableStateOf(false)
-    /** Seit wann die App nicht mehr auf dem Bildschirm ist; 0 = sichtbar oder eben erst gestartet. */
-    var hintergrundSeit = 0L
     /** Wann die App zuletzt sichtbar war; 0 = seit dem Start noch nie entsperrt. */
     var zuletztSichtbar = 0L
     /** Bis wann die Sperre nach einem bewusst gestarteten Teilen, Öffnen oder „Speichern unter“ wartet (sonst ginge das Ergebnis verloren). */
     var sperrAufschubBis = 0L
-    /** Jarvis hat selbst eine andere App geöffnet, ohne über die Activity zu gehen (Anmeldeseite von ChatGPT); MainActivity verbraucht es in onStart. */
-    var eigenerAbsprung = false
     var entsperrenAnfragen: () -> Unit = {}
     /** Jarvis läuft per „Hey Jarvis“ über dem Sperrbildschirm; das Gespräch bleibt dabei verborgen. */
     var ueberSperre = false
@@ -1924,6 +1920,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Knopf „Opus 5.5“ oder „Sol 6.1“ vor einem Programmierauftrag am Rechner: startet ihn mit diesem Modell. */
+    fun programmierModell(wahlId: String, modell: String) {
+        viewModelScope.launch {
+            val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
+            runCatching { faehigkeit?.modellGewaehlt(wahlId, modell) }.onFailure { meldung = it.message ?: "Der Auftrag ließ sich nicht starten." }
+        }
+    }
+
     /** Gleicht offene Rückfragen mit dem Jarvis-Server ab (verlorene Meldungen, Ausgang am Rechner). */
     fun rueckfragenAbgleichen() {
         viewModelScope.launch {
@@ -2207,35 +2211,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         Logbuch.gedaechtnis("Zustand nach Update wiederhergestellt", "Reiter ${r.anzeige}, ${gespraech.size} Nachrichten")
     }
 
-    /**
-     * Frank öffnet Jarvis wieder, nachdem es nicht auf dem Bildschirm war: Startbildschirm mit neuem, leerem Gespräch. Das bisherige
-     * bleibt gespeichert; laufende Antworten und Programmieraufträge arbeiten in ihrem Gespräch weiter. Ein laufender Gesprächsmodus
-     * oder eine Aufnahme bleibt, wo sie ist: Sonst landete die nächste gesprochene Frage mitten im Gespräch in einer neuen Session.
-     */
-    fun startbildschirmNeu() {
-        // Auch während Jarvis im Gesprächsmodus nachdenkt oder vorliest und während eines Live-Gesprächs: Sonst endete die
-        // Sprachschleife mit dem leeren Gespräch, und die Antwort käme nur noch in die Datei, ohne vorgelesen zu werden.
-        if (freihaendig || nimmtAuf || schreibtMit || holtMikro || sprachmodusAktiv || weckwortLauf?.isActive == true || liveAktiv) return
-        reiter = Reiter.JARVIS
-        merkOffen = null
-        diktatZiel = null
-        GedaechtnisAnsicht.offen = false
-        FunktionenAnsicht.offen = false
-        einstellungsReiter = "jarvis"
-        einstellungsVerlauf = emptyList()
-        navigationsAuswahl = null
-        sitzungProjekt = ""
-        sitzungProgrammierung = false
-        // Ohne vorleser.stopp(): Ein Vorlesen im Hintergrund (Tagesauswertung, Ablage) läuft weiter.
-        if (gespraech.isNotEmpty() || sitzungId != null) {
-            sitzungId?.let { vorherigeSitzung = it }
-            gespraech.clear()
-            sitzungId = null
-            sitzungErstellt = 0L
-            offenesGespraechVergessen()
-        }
-    }
-
 
     /** Ein altes Gespräch öffnen und dort weitermachen. Läuft im bisherigen Gespräch noch eine Antwort, arbeitet sie im Hintergrund weiter. */
     fun sitzungOeffnen(id: String) {
@@ -2448,9 +2423,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 // Mit dem Application-Context: Die Anmeldung wartet lange und darf keine Activity festhalten (Fold auf- oder zuklappen).
-                // Die Anmeldeseite öffnet Jarvis selbst: Die Rückkehr von dort ist kein neuer Start (wie startActivityForResult in MainActivity).
-                // Erst unmittelbar vor dem Öffnen gesetzt: Scheitert die Anmeldung vorher, schluckte es sonst die nächste echte Rückkehr.
-                auth.login(getApplication(), { de.frank.jarvis.MainActivity.sichtbar }, vorDemOeffnen = { eigenerAbsprung = true }) { info -> geraeteCode = info }
+                auth.login(getApplication(), { de.frank.jarvis.MainActivity.sichtbar }) { info -> geraeteCode = info }
                 kiVerbunden = true
                 kiKonto = auth.email.orEmpty()
                 meldung = "Mit ChatGPT verbunden."
@@ -2461,9 +2434,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 geraeteCode = null
                 kiVerbindet = false
-                // Ist Jarvis jetzt sichtbar, war Frank schon zurück (oder nie weg): Das Zeichen hat ausgedient, auch nach Fehler
-                // oder Abbruch. Ist er noch auf der Anmeldeseite, bleibt es für seine Rückkehr von dort stehen.
-                if (de.frank.jarvis.MainActivity.sichtbar) eigenerAbsprung = false
             }
         }
     }

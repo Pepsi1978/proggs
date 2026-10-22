@@ -407,7 +407,10 @@ $env:Path = $pathEntries -join ';'
     /// persoenliche ~/.codex-Umgebung -- globale AGENTS.md, Plugins, MCP-Server, Hooks,
     /// angepasste Statuszeile -- vollstaendig aus der Sitzung heraus.
     /// </summary>
-    public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel, string codexHome, bool useTmux = false)
+    /// <param name="initialPromptFile">Optional: Datei, deren Inhalt als erste Nachricht an Codex geht (Jarvis-Aufträge).</param>
+    /// <param name="jarvisAuftragId">Optional: Nummer des Jarvis-Auftrags (JARVIS_AUFTRAG_ID); die Sitzung meldet damit über jarvis_hook.py melde.</param>
+    public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel, string codexHome, bool useTmux = false,
+        string? initialPromptFile = null, string? jarvisAuftragId = null, string? title = null)
     {
         var log = Logger.Instance;
         FrischeUmgebung.Auffrischen();
@@ -419,11 +422,11 @@ $env:Path = $pathEntries -join ';'
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickCodexTerminalTabColor();
-            var innerScript = BuildCodexStartScript(slug, workDir, effort, serviceTier, codexHome);
+            var innerScript = BuildCodexStartScript(slug, workDir, effort, serviceTier, codexHome, initialPromptFile, jarvisAuftragId);
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
-            var title = BuildCodexTitle(tabColor.Name, effort);
+            title ??= BuildCodexTitle(tabColor.Name, effort);
 
             if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
             {
@@ -911,7 +914,8 @@ try {
     ///   --dangerously-bypass-approvals-and-sandbox  Gegenstueck zu Claudes
     ///                                 --dangerously-skip-permissions: kein Nachfragen pro Befehl.
     /// </summary>
-    private static string BuildCodexStartScript(string slug, string workDir, string? effort, string? serviceTier, string codexHome)
+    private static string BuildCodexStartScript(string slug, string workDir, string? effort, string? serviceTier, string codexHome,
+        string? initialPromptFile = null, string? jarvisAuftragId = null)
     {
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-codex-cli-{Guid.NewGuid():N}.ps1");
         var script = $$"""
@@ -949,6 +953,13 @@ try {
     # Eigenes Codex-Zuhause: keine globale AGENTS.md, keine Plugins, keine MCP-Server,
     # keine Hooks, keine fremde Statuszeile -- nur das Profil aus dem Arbeitsverzeichnis.
     $env:CODEX_HOME = {{PowerShellLiteral(codexHome)}}
+    # Jarvis-Auftrag: Er ist die erste Nachricht, die Sitzung meldet ihre Schritte mit dieser Nummer.
+    $jarvisAuftragId = {{PowerShellLiteral(jarvisAuftragId ?? string.Empty)}}
+    if ($jarvisAuftragId) { $env:JARVIS_AUFTRAG_ID = $jarvisAuftragId }
+    $initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
+    if ($initialPromptFile -and (Test-Path -LiteralPath $initialPromptFile)) {
+        $codexArgs += @(,(Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile))
+    }
 
     $agentsFile = Join-Path {{PowerShellLiteral(workDir)}} 'AGENTS.md'
     if (Test-Path -LiteralPath $agentsFile) {

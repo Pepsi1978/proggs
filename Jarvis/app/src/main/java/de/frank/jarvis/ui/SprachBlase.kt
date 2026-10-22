@@ -130,8 +130,6 @@ private class BlasenAnsicht(context: Context, private val vm: AppViewModel) : Vi
 
     private fun oeffnen() {
         performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-        // Kein Neustart des Bildschirms bei der Rückkehr: Frank will genau dieses Gespräch sehen.
-        vm.hintergrundSeit = 0L
         runCatching {
             context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
         }.onFailure { Logbuch.fehler("Sprachblase: Jarvis ließ sich nicht öffnen", it) }

@@ -353,6 +353,9 @@ def main() -> int:
             auftrag = json.loads(roh.decode("utf-8"))
             schreib(f"Auftrag für {auftrag.get('app')}")
             try:
+                # Sol 6.1 (Codex CLI) startet der OpenLauncherMac noch nicht über --jarvis-auftrag: klar ablehnen, nie still als Opus.
+                if auftrag.get("modell") == "sol":
+                    raise RuntimeError(f"Sol 6.1 geht bisher nur am Windows-PC, nicht auf {RECHNER}. Mit Opus 5.5 starten oder den Windows-PC einschalten.")
                 # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen. Das Handy weicht dann
                 # nicht in die Cloud aus (anmeldung_fehlt), sondern sagt Frank, was zu tun ist.
                 if pruefe_anmeldung(frisch=True)["stand"] == "abgemeldet":

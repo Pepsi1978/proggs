@@ -376,6 +376,34 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
 }
 
 /**
+ * Modellwahl vor einem Programmierauftrag am Rechner: „Opus 5.5“ (Claude Code wie bisher) oder „Sol 6.1“ (Codex CLI). Ein Tipp
+ * startet den Auftrag genau einmal; danach, nach einer Wahl per Sprache oder nach einem Neustart der App sind die Knöpfe aus.
+ */
+@Composable
+private fun ModellWahlKarte(vm: AppViewModel, n: Nachricht) {
+    val f = LocalFarben.current
+    val id = remember(n.kontext) { runCatching { org.json.JSONObject(n.kontext).optString("wahl_id") }.getOrDefault("") }
+    val stand by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand.collectAsState()
+    val s = stand[id]
+    Column(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp, bottom = 6.dp)) {
+        Text(n.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp)
+        if (s == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN) {
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Knopf("Opus 5.5", Modifier.height(44.dp)) { vm.programmierModell(id, de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS) }
+                Knopf("Sol 6.1", Modifier.height(44.dp), haupt = false) { vm.programmierModell(id, de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL) }
+            }
+        } else {
+            Text(when (s) {
+                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS -> "Gewählt: Opus 5.5"
+                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL -> "Gewählt: Sol 6.1"
+                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_ERLEDIGT -> "Per Sprache gewählt."
+                else -> "Diese Auswahl ist nicht mehr aktiv."
+            }, Modifier.padding(top = 4.dp), color = f.textLeise, fontSize = 13.sp)
+        }
+    }
+}
+
+/**
  * Nachrichtentypen für kurze Statusmeldungen, die ein fremder Dienst zustellt (Fortschritt, kurzer Fertig- und Fehlerstand
  * einer Programmier-Sitzung über den Relay). Der ausführliche Abschlussbericht ([ProgrammierChat.ART_BERICHT]) gehört nicht
  * dazu: Er bekommt die volle Aktionsleiste. Rückfragen („rueckfrage“) haben ihre eigene Karte.
@@ -386,6 +414,7 @@ private val EXTERNE_ARTEN = setOf(de.frank.jarvis.faehigkeit.ProgrammierChat.ART
 @Composable
 private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
     if (n.art == "rueckfrage") { RueckfrageKarte(vm, n); return }
+    if (n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL) { ModellWahlKarte(vm, n); return }
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (n.vonMir) Alignment.End else Alignment.Start) {
         if (n.vonMir && n.anhaenge.isNotEmpty()) FlowRow(Modifier.padding(start = 44.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {

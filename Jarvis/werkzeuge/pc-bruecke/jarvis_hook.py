@@ -4,6 +4,8 @@ Der OpenLauncher hängt diesen Hook nur an Jarvis-Sitzungen (über --settings) u
 endet der Hook sofort ohne Ausgabe: In normalen Sitzungen passiert nie etwas.
 
 Aufruf: python jarvis_hook.py <post|frage|stop|puls|warte|fehlschlag> (macOS: python3), die Hook-Eingabe kommt als JSON auf stdin.
+  melde  Kein Hook: python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>" meldet aus einer Sitzung ohne Hooks (Codex CLI
+         mit Sol 6.1, gestartet mit OpenLauncher --cli codex) einen Schritt an Jarvis.
 Eine Datei für Windows und macOS; der Mac-Start (OpenLauncherMac --jarvis-auftrag) setzt dieselben Hooks.
   post   PostToolUse (alle Werkzeuge) und PostToolUseFailure (Bash|PowerShell, nur dort stehen fehlgeschlagene Befehle).
          Läuft async. Neue Zwischentexte der KI (aus dem Transkript) gehen sofort als eigene Meldung raus, dazu Advisor,
@@ -1071,6 +1073,17 @@ def main() -> int:
     if not AUFTRAG:
         return 0
     art = sys.argv[1] if len(sys.argv) > 1 else ""
+    if art == "melde":
+        # Von Hand aus einer Sitzung ohne Hooks (Codex CLI, Sol 6.1): python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>".
+        # Ohne stdin: Die Sitzung ruft das als normalen Befehl auf.
+        stand = sys.argv[2] if len(sys.argv) > 2 else ""
+        schritt = " ".join(sys.argv[3:]).strip()
+        if stand not in ("laeuft", "fertig", "fehler") or not schritt:
+            print('Aufruf: python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>"')
+            return 1
+        ok = melde_sicher(stand, schritt, versuche=3)
+        print("Gemeldet." if ok else "Meldung an Jarvis fehlgeschlagen (siehe hook.log).")
+        return 0 if ok else 1
     try:
         eingabe = json.loads(sys.stdin.buffer.read().decode("utf-8") or "{}")
     except Exception:

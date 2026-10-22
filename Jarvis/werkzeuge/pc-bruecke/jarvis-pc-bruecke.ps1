@@ -14,6 +14,8 @@ $ErrorActionPreference = 'Stop'
 $Profil = 'minimal'
 $Modus = 'schnell'
 $Modell = 'claude-opus-5-5[1m]'
+# Wählt Frank beim Start „Sol 6.1“: Codex CLI über den OpenLauncher (Franks Vorgabe vom 22.10.2026), Profil, Modus und Effort wie oben.
+$ModellSol = 'gpt-6.1-sol'
 $Effort = 'high'
 $proggs = Join-Path $env:USERPROFILE 'proggs'
 $protokoll = Join-Path $env:LOCALAPPDATA 'JarvisPcBruecke\bruecke.log'
@@ -178,9 +180,17 @@ function Starte-Sitzung($auftrag) {
     $app = ($auftrag.app -replace '[^\p{L}\p{N} ._-]', '').Trim()
     if (-not $app) { $app = 'App' }
     $name = "Jarvis: $app"
+    # Franks Wahl beim Start: opus (Vorgabe, Claude Code wie bisher) oder sol (Codex CLI mit Sol 6.1, Minimal, Schnellmodus, Effort High).
+    $sol = "$($auftrag.modell)" -eq 'sol'
     $review = if ($auftrag.review) { 'ja: vor dem Abschluss die Änderung mit /code-review prüfen und Befunde beheben' } else { 'nein' }
+    $kopf = 'Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control.'
+    if ($sol) {
+        $hook = (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py').Replace('\', '/')
+        $kopf = "Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Schritte in Jarvis.`r`n" +
+            "MELDEN (statt programmier_fortschritt, das es hier nicht gibt): python `"$hook`" melde <laeuft|fertig|fehler> `"<ein Satz>`""
+    }
     $text = @"
-Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control.
+$kopf
 
 APP: $($auftrag.app)
 REVIEW: $review
@@ -213,11 +223,18 @@ VORGEHEN
     # dazu Remote Control mit Namen und der Auftrag als erste Nachricht. Ab OpenLauncher 1.24.89 (--jarvis-auftrag).
     $openLauncher = Finde-OpenLauncher
     $kannJarvis = $false
+    # Sol (Codex CLI) erst ab OpenLauncher 1.24.98 (--cli codex); einen Notweg ohne OpenLauncher gibt es dafür nicht.
+    $ab = if ($sol) { '1.24.98' } else { '1.24.89' }
     if ($openLauncher -and (Test-Path -LiteralPath $openLauncher)) {
-        try { $kannJarvis = [version](Get-Item -LiteralPath $openLauncher).VersionInfo.ProductVersion.Split('+')[0] -ge [version]'1.24.89' } catch { }
+        try { $kannJarvis = [version](Get-Item -LiteralPath $openLauncher).VersionInfo.ProductVersion.Split('+')[0] -ge [version]$ab } catch { }
     }
+    if ($sol -and -not $kannJarvis) { throw "Sol 6.1 braucht OpenLauncher ab $ab (Codex CLI); bitte den OpenLauncher aktualisieren." }
     if ($kannJarvis) {
         $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name`"", '--profil', $Profil, '--modus', $Modus, '--modell', "`"$Modell`"", '--effort', $Effort)
+        if ($sol) {
+            $argumente = @('--jarvis-auftrag', "`"$auftragDatei`"", '--name', "`"$name (Sol 6.1)`"", '--profil', $Profil, '--modus', $Modus,
+                '--cli', 'codex', '--modell', $ModellSol, '--effort', $Effort)
+        }
         # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.
         if ($mitHooks) { $argumente += @('--auftrag-id', $nummer) }
         $prozess = Start-Process -FilePath $openLauncher -ArgumentList $argumente -PassThru -WindowStyle Hidden
@@ -316,7 +333,8 @@ while ($true) {
         Schreib "Auftrag für $($auftrag.app)"
         try {
             # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen.
-            if ((Pruefe-Anmeldung-Jetzt) -eq 'abgemeldet') {
+            # Sol läuft im Codex CLI: Die Claude-Anmeldung zählt dort nicht.
+            if ("$($auftrag.modell)" -ne 'sol' -and (Pruefe-Anmeldung-Jetzt) -eq 'abgemeldet') {
                 $quittung = @{ id = $auftrag.id; ok = $false; anmeldung_fehlt = $true
                     text = "Claude Code auf $env:COMPUTERNAME ist nicht angemeldet. Claude Code auf dem Rechner öffnen und /login ausführen, danach den Auftrag neu senden." }
                 Schreib 'Nicht gestartet: nicht angemeldet'

@@ -13,6 +13,7 @@ import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.observability.Logbuch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -298,6 +299,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "review" to schalter("true = vor der Auslieferung ein Review laufen lassen (dauert länger). Vorgabe false."),
                     "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc oder cloud. Vorgabe automatisch (PC, wenn er an ist, sonst Cloud).", listOf("automatisch", "pc", "cloud")),
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
+                    "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.1 im Codex CLI, nur am Rechner). " +
+                        "Weglassen: Ist ein Rechner verbunden, fragt Jarvis Frank per Knopf.", listOf("opus", "sol")),
                     pflicht = listOf("app", "auftrag"),
                 ),
                 nurLesen = false,
@@ -305,26 +308,85 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val appName = a.optString("app").trim()
                 // Mehrere Aufgaben einheitlich getrennt und ohne Trenner am Ende (siehe DiktatTrenner.auftrag).
                 val auftrag = DiktatTrenner.auftrag(a.optString("auftrag"))
+                val modell = when (a.optString("modell").trim().lowercase()) { MODELL_SOL -> MODELL_SOL; MODELL_OPUS -> MODELL_OPUS; else -> "" }
+                val ziel = a.optString("ziel").lowercase()
                 // Früher lehnte Jarvis hier ab, sobald zum Gespräch oder zur App schon ein Auftrag lief, und schickte das Modell zu
                 // programmier_nachtrag: So landeten neue Wünsche ungefragt als Nachtrag in alten Sitzungen. Jetzt ist jeder Aufruf
                 // ein neuer Auftrag mit eigener Sitzung (siehe NachtragsRegel.eigenesGespraech).
-                val wahl = when (a.optString("ziel").lowercase()) {
-                    "pc" -> ziele.filterIsInstance<PcBruecke>()
-                    "cloud" -> ziele.filterIsInstance<CloudRoutine>()
-                    else -> ziele
-                }.filter { it.bereit() }
+                val wahl = zieleFuer(ziel, modell)
                 when {
                     appName.isEmpty() -> Ergebnis("Welche App ist gemeint? Bitte Frank fragen.", fehler = true)
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
+                    modell == MODELL_SOL && ziel == "cloud" -> Ergebnis("Sol 6.1 gibt es nur am Rechner (Codex CLI), nicht in der Cloud. Frag Frank, ob Opus 5.5 in der Cloud recht ist.", fehler = true)
                     wahl.isEmpty() -> Ergebnis(ziele.last().fehlt(), fehler = true)
-                    else -> starteErstes(wahl, appName, auftrag, a.optBoolean("review"), Auftragsbuch.neueNummer(), a.optBoolean("neu"))
+                    // Franks Wahl vom 22.10.2026: Ist ein Rechner verbunden, wählt er beim Start das Modell (Knöpfe im Chat).
+                    modell.isEmpty() && ziel != "cloud" && wahl.first() is PcBruecke && rechnerDa() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), a.optBoolean("neu"))
+                    else -> {
+                        // Per Sprache gewählt: Die Knöpfe im selben Gespräch haben ausgedient (sonst startete ein Tipp ein zweites Mal).
+                        herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
+                        starteErstes(wahl, appName, auftrag, a.optBoolean("review"), Auftragsbuch.neueNummer(), a.optBoolean("neu"), modell.ifEmpty { MODELL_OPUS })
+                    }
                 }
             },
         )
     }
 
+    /** Die bereiten Ziele für [ziel] (pc, cloud, sonst automatisch); Sol 6.1 läuft nur am Rechner, nie in der Cloud. */
+    private fun zieleFuer(ziel: String, modell: String): List<ProgrammierZiel> = when {
+        modell == MODELL_SOL || ziel == "pc" -> ziele.filterIsInstance<PcBruecke>()
+        ziel == "cloud" -> ziele.filterIsInstance<CloudRoutine>()
+        else -> ziele
+    }.filter { it.bereit() }
+
+    /** Fragt gerade eine Brücke (Windows-PC oder Mac) beim Relay ab? Kurz; im Zweifel nein, dann läuft alles wie bisher (Opus). */
+    private suspend fun rechnerDa(): Boolean = withContext(Dispatchers.IO) {
+        runCatching { STATUS_HTTP.newCall(pcAnfrage()).execute().use { a -> a.isSuccessful && JSONObject(a.body?.string().orEmpty()).optBoolean("pc") } }.getOrDefault(false)
+    }
+
+    /** Ein Start, der auf Franks Modellwahl per Knopf wartet. [ursprung]: im Sprachgespräch gestellt (dann wird das Ende vorgelesen). */
+    private data class OffeneWahl(val app: String, val auftrag: String, val review: Boolean, val neu: Boolean, val gespraech: String,
+                                  val ursprung: de.frank.jarvis.speech.SprachUrsprung?)
+
+    /**
+     * Rechner verbunden, Modell offen: In der App kommt eine Karte mit „Opus 5.5“ und „Sol 6.1“ ins Gespräch, der Start folgt
+     * auf den Tipp ([modellGewaehlt]). Aus ChatGPT gibt es keine Karte: Das Modell fragt Frank und ruft mit modell erneut auf.
+     */
+    private suspend fun modellWahlAnbieten(appName: String, auftrag: String, review: Boolean, neu: Boolean): Ergebnis {
+        val (ausChatGpt, gespraech) = herkunft()
+        if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Ein Programmierrechner ist verbunden, Frank wählt dafür das Modell. Frag ihn kurz: " +
+            "„Opus 5.5 oder Sol 6.1?“ und rufe programmieren danach mit demselben Auftrag und modell=opus bzw. modell=sol erneut auf.")
+        val id = java.util.UUID.randomUUID().toString()
+        offeneWahlen[id] = OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung])
+        wahlStand.update { it + (id to WAHL_OFFEN) }
+        ProgrammierChat.poste(app, gespraech, "Mit welchem Modell soll der Programmierer am Rechner arbeiten? ($appName)", ProgrammierChat.ART_MODELLWAHL,
+            JSONObject().put("wahl_id", id).put("app", appName).toString())
+        return Ergebnis("Noch nicht gestartet: Ein Programmierrechner ist verbunden, deshalb stehen im Chat die Knöpfe „Opus 5.5“ und „Sol 6.1“. Sag Frank in einem kurzen Satz, " +
+            "er soll eins antippen oder sagen. Sagt er es, rufe programmieren mit demselben Auftrag und modell=opus bzw. modell=sol auf; sonst starte nichts.")
+    }
+
+    /** Die offenen Modellwahl-Knöpfe eines Gesprächs gelten nicht mehr (Frank hat per Sprache gewählt). */
+    private fun wahlenSchliessen(gespraech: String) {
+        val weg = offeneWahlen.filterValues { it.gespraech == gespraech }.keys
+        weg.forEach { offeneWahlen.remove(it) }
+        if (weg.isNotEmpty()) wahlStand.update { stand -> stand + weg.associateWith { WAHL_ERLEDIGT } }
+    }
+
+    /** Tipp auf „Opus 5.5“ oder „Sol 6.1“: startet den gemerkten Auftrag genau einmal. Fehler stehen danach im Gespräch. */
+    suspend fun modellGewaehlt(wahlId: String, modell: String) {
+        val w = offeneWahlen.remove(wahlId) ?: return
+        wahlStand.update { it + (wahlId to modell) }
+        val umgebung = ProgrammierChat.GespraechKennung(w.gespraech) + (w.ursprung ?: kotlin.coroutines.EmptyCoroutineContext)
+        val ergebnis = withContext(umgebung) {
+            val wahl = zieleFuer("", modell)
+            if (wahl.isEmpty()) Ergebnis(ziele.last().fehlt(), fehler = true)
+            else starteErstes(wahl, w.app, w.auftrag, w.review, Auftragsbuch.neueNummer(), w.neu, modell)
+        }
+        if (ergebnis.fehler) ProgrammierChat.poste(app, w.gespraech, "⚠️ " + ergebnis.text, ProgrammierChat.ART_STATUS)
+    }
+
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
-    private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean): Ergebnis {
+    private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean,
+                                     modell: String = MODELL_OPUS): Ergebnis {
         val uebersprungen = mutableListOf<String>()
         val (ausChatGpt, aufrufGespraech) = herkunft()
         // Im Sprachgespräch gestellt (Hey Jarvis mit Vorlesen oder Live): dauerhaft im Auftragsbuch, damit der Abschluss später
@@ -336,9 +398,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         var gespraech = if (eigenes) "" else aufrufGespraech
         // Franks Programmierregeln gehen bewusst nicht mit: Sie sind reiner Jarvis-Kontext (wie Jarvis Aufträge steuert), keine Anweisung an die Sitzung.
         for (ziel in wahl) {
-            val mitFortschritt = auftragMitFortschritt(auftrag, fortschrittsAnweisung(nummer, pc = ziel is PcBruecke))
+            val mitFortschritt = auftragMitFortschritt(auftrag,
+                if (modell == MODELL_SOL) fortschrittSol(nummer) else fortschrittsAnweisung(nummer, pc = ziel is PcBruecke))
             val start = try {
-                ziel.starte(appName, mitFortschritt, review, nummer)
+                ziel.starte(appName, mitFortschritt, review, nummer, modell)
             } catch (nichtDa: NichtDa) {
                 uebersprungen += nichtDa.message.orEmpty()
                 continue
@@ -392,6 +455,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "$ABSCHLUSS_MELDUNG Vor jeder Frage mit AskUserQuestion stand=frage mit der Frage melden. Ohne das Werkzeug ohne Meldungen weiterarbeiten. " +
             "NACHTRÄGE: Antwortet programmier_fortschritt mit „NACHTRAG VON FRANK“, gehört er zu diesem Auftrag: umsetzen und erneut melden. " +
             "Unmittelbar vor stand=fertig noch einmal stand=laeuft melden, damit ein später Nachtrag ankommt; kommt einer, ihn abarbeiten statt fertig zu melden."
+
+    /**
+     * Sol 6.1 im Codex CLI: keine Hooks, kein Jarvis-MCP, keine Rückfragen und Nachträge. Die Sitzung meldet selbst mit dem
+     * MELDEN-Befehl, den die PC-Brücke über den Auftrag schreibt (jarvis_hook.py melde).
+     */
+    private fun fortschrittSol(nummer: String) =
+        "FORTSCHRITT (AUFTRAG-ID: $nummer): Melde mit dem MELDEN-Befehl oben: laeuft, sobald die App gefunden ist, und bei jedem wichtigen Schritt " +
+            "(Programmierung, Bau, Commit, Installation), am Ende fertig oder fehler mit dem Grund. $ABSCHLUSS_MELDUNG " +
+            "Rückfragen an Frank sind in dieser Sitzung nicht möglich: Kleinigkeiten selbst entscheiden; fehlt eine echte Entscheidung von ihm, " +
+            "melde sie mit laeuft als Frage und arbeite mit der sinnvollsten Annahme weiter."
 
     /**
      * Eine Meldung des Hooks vom PC (Signal „programmieren“ über den Relay): ins Auftragsbuch, als Benachrichtigung und in
@@ -1248,7 +1321,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun bereit(): Boolean
         /** Ein Satz, was fehlt, solange das Ziel nicht bereit ist. */
         fun fehlt(): String
-        suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String): Start
+        /** [modell]: [MODELL_OPUS] oder [MODELL_SOL]; die Cloud kennt nur Opus. */
+        suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String, modell: String = MODELL_OPUS): Start
     }
 
     /**
@@ -1260,8 +1334,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         override fun bereit() = e.serverToken.isNotBlank()
         override fun fehlt() = "Jarvis ist nicht mit seinem Server verbunden."
 
-        override suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String): Start = withContext(Dispatchers.IO) {
-            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer)
+        override suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String, modell: String): Start = withContext(Dispatchers.IO) {
+            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer).put("modell", modell)
+            val sol = modell == MODELL_SOL
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             val (code, roh) = try {
@@ -1274,6 +1349,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val antwort = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
             when {
+                // Sol gibt es nur am Rechner: nie still als Opus in die Cloud.
+                sol && code == 409 -> throw IllegalStateException("Kein Programmierrechner ist gerade an; Sol 6.1 läuft nur dort. Mit Opus 5.5 ginge der Auftrag in die Cloud.")
+                sol && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sol-Sitzung nicht starten." })
                 code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
                 code == 504 -> throw IllegalStateException("Der PC hat den Start nicht bestätigt. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
                 code !in 200..299 -> throw IllegalStateException("HTTP $code vom Jarvis-Server")
@@ -1286,7 +1364,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Sicher nicht gestartet (die Brücke hat es gemeldet): Dann übernimmt die Cloud, ohne doppelte Sitzung.
                 !antwort.optBoolean("ok") -> throw NichtDa("Der PC konnte die Sitzung nicht starten (${antwort.optString("text").take(160)}), deshalb die Cloud.")
             }
-            Start("", "Die Sitzung „Jarvis: $app“ läuft auf ${antwort.optString("rechner").ifEmpty { "dem PC" }} und ist in der Claude-App unter Code zu sehen. " +
+            val rechner = antwort.optString("rechner").ifEmpty { "dem PC" }
+            if (sol) Start("", "Die Sitzung „Jarvis: $app (Sol 6.1)“ läuft auf $rechner im Codex CLI mit Sol 6.1 (Minimalprofil, Schnellmodus, Effort High). " +
+                "Sie meldet ihre Schritte selbst; Rückfragen und Nachträge gehen dort nicht.")
+            else Start("", "Die Sitzung „Jarvis: $app“ läuft auf $rechner und ist in der Claude-App unter Code zu sehen. " +
                 "Meist dauert es wenige Minuten, dann wird die App per WLAN installiert.")
         }
     }
@@ -1301,7 +1382,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         override fun bereit() = e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()
         override fun fehlt() = "Die Claude-Code-Routine ist in Jarvis nicht eingerichtet: Auslöse-Adresse und Token unter Einstellungen → Konten → Programmieren in der Cloud eintragen."
 
-        override suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String): Start = withContext(Dispatchers.IO) {
+        override suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String, modell: String): Start = withContext(Dispatchers.IO) {
             val text = buildString {
                 append("APP: ").append(app).append('\n')
                 append("CODEX-REVIEW: ").append(if (review) "ja" else "nein").append('\n')
@@ -1361,6 +1442,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Die Namen der Ziele, so stehen sie im Auftragsbuch (Feld „ziel“). */
         const val ZIEL_PC = "Claude Code auf deinem PC"
         const val ZIEL_CLOUD = "Claude Code in der Cloud"
+
+        /** Modellwahl beim Start am Rechner: Claude Opus 5.5 (wie bisher) oder Sol 6.1 im Codex CLI. */
+        const val MODELL_OPUS = "opus"
+        const val MODELL_SOL = "sol"
+
+        /** Stand der Modellwahl-Karten je wahl_id: offen, erledigt (per Sprache gewählt) oder das gewählte Modell. Nur im Speicher. */
+        const val WAHL_OFFEN = "offen"
+        const val WAHL_ERLEDIGT = "erledigt"
+        val wahlStand = kotlinx.coroutines.flow.MutableStateFlow<Map<String, String>>(emptyMap())
+        private val offeneWahlen = java.util.concurrent.ConcurrentHashMap<String, OffeneWahl>()
 
         /** Stand eines Auftrags, dessen Start nach dem Senden ins Zeitlimit lief: vielleicht gestartet. Die erste Meldung der Sitzung ersetzt ihn. */
         const val STAND_UNKLAR = "unklar"
