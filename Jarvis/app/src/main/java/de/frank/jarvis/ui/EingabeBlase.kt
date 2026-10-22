@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -138,9 +139,9 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         vm.anthropicGuthaben?.takeIf { it.hinweis == null }?.restUsd
             ?.let { "(${AnthropicGuthabenFaehigkeit.betrag(it)} $) " }.orEmpty()
     } else ""
-    // Das Guthaben steht grün und in normaler Schrift vor dem Modellnamen, der Name selbst bleibt wie gehabt.
+    // Das Guthaben steht grün, fett und etwas kleiner vor dem Modellnamen, der Name selbst bleibt wie gehabt.
     fun mitGuthaben(name: String) = buildAnnotatedString {
-        if (guthabenVorspann.isNotEmpty()) withStyle(SpanStyle(color = f.erfolg, fontWeight = FontWeight.Normal)) { append(guthabenVorspann) }
+        if (guthabenVorspann.isNotEmpty()) withStyle(SpanStyle(color = f.erfolg, fontWeight = FontWeight.Bold, fontSize = 13.sp)) { append(guthabenVorspann) }
         append(name)
     }
 
@@ -200,10 +201,11 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
-            Spacer(Modifier.weight(1f))
-            Row(Modifier.clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Rechtsbündig im freien Platz, aber begrenzt: zu langer Text kürzt den Modellnamen, statt Mikrofon und Senden hinauszuschieben.
+            Row(Modifier.weight(1f).wrapContentWidth(Alignment.End).clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 Text(mitGuthaben(kurzName(modell)), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis)
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 Text(" " + vm.einstellungen.denkstufe.label, color = f.text, fontSize = 15.sp, maxLines = 1)
             }
             Spacer(Modifier.width(4.dp))
