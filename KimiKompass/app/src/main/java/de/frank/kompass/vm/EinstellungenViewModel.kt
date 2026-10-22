@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.kompass.KompassContainer
+import de.frank.kompass.audio.GroqTranskribierer
 import de.frank.kompass.data.model.Denktiefe
 import de.frank.kompass.data.model.KiModell
 import de.frank.kompass.data.model.SicherungsTeil
@@ -16,6 +17,7 @@ import de.frank.kompass.ui.theme.ThemeModus
 import java.util.Date
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -174,7 +176,10 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     )
 
     private fun frischLesen() {
-        _zustand.value = lieAlles().copy(
+        val neu = lieAlles()
+        _zustand.value = neu.copy(
+            // Noch nicht gespeicherter Wörterbuch-Text darf nicht vom alten Stand überschrieben werden.
+            woerterbuch = woerterbuchAusstehend ?: neu.woerterbuch,
             meldung = _zustand.value.meldung,
             fehler = _zustand.value.fehler,
             eigeneStimmen = _zustand.value.eigeneStimmen,
@@ -249,6 +254,8 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
 
     fun setzeGroqModell(wert: String) {
         store.groqModell = wert
+        // Neue (oder erneute) Wahl: eine frühere large-v3-Sperre gilt nicht mehr.
+        GroqTranskribierer.sperreAufheben()
         frischLesen()
     }
 
@@ -257,9 +264,28 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         frischLesen()
     }
 
+    /** Getippter, noch nicht gespeicherter Wörterbuch-Text (wird verzögert geschrieben). */
+    private var woerterbuchAusstehend: String? = null
+    private var woerterbuchJob: Job? = null
+
+    /**
+     * Pro Tastendruck nur den Zustand ändern; gespeichert wird erst nach einer kurzen
+     * Tipp-Pause. Sonst würde jeder Buchstabe alle Einstellungen samt Schlüsseln neu lesen.
+     */
     fun setzeWoerterbuch(wert: String) {
+        woerterbuchAusstehend = wert
+        _zustand.value = _zustand.value.copy(woerterbuch = wert)
+        woerterbuchJob?.cancel()
+        woerterbuchJob = viewModelScope.launch {
+            delay(WOERTERBUCH_VERZOEGERUNG_MS)
+            speichereWoerterbuch()
+        }
+    }
+
+    private fun speichereWoerterbuch() {
+        val wert = woerterbuchAusstehend ?: return
+        woerterbuchAusstehend = null
         store.woerterbuch = wert
-        frischLesen()
     }
 
     fun schalteFilterSchicht(schicht: Int, aktiv: Boolean) {
@@ -954,9 +980,12 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         const val SCHLUESSEL_GOOGLE = "google"
         const val SCHLUESSEL_ALIBABA = "alibaba"
         const val SCHLUESSEL_GROQ = "groq"
+        private const val WOERTERBUCH_VERZOEGERUNG_MS = 500L
     }
 
     override fun onCleared() {
+        woerterbuchJob?.cancel()
+        speichereWoerterbuch()
         container.mikrofon.gibFrei()
         container.vorlesen.stoppe()
         super.onCleared()
