@@ -23,6 +23,7 @@ import org.json.JSONObject
 class CodexResponsesClient(
     private val oauth: CodexOAuthClient,
     private val httpClient: OkHttpClient = defaultHttpClient(),
+    private val kontext: android.content.Context? = null,
 ) {
     suspend fun request(
         payload: JSONObject,
@@ -34,6 +35,14 @@ class CodexResponsesClient(
         val reasoning = payload.optJSONObject("reasoning") ?: JSONObject()
         payload.put("model", model.apiId)
             .put("reasoning", reasoning.put("effort", model.normalizeReasoning(reasoning.optString("effort")).apiValue))
+        // Claude-Modelle rechnen über die Anthropic Messages API mit eigenem Schlüssel (wie in Jarvis).
+        if (model.istAnthropic && kontext != null) {
+            return try {
+                AnthropicKlient.antwortAufCodexAnfrage(kontext, payload).text
+            } catch (fehler: AnthropicFehler) {
+                throw CodexException(CodexErrorKind.NETWORK, fehler.message.orEmpty(), fehler, fehler.wiederholbar)
+            }
+        }
         var attempt = 0
         while (true) {
             try {

@@ -196,6 +196,8 @@ data class StackLaborUiState(
     val qwenApiKeyValue: String = "",
     val qwenVoiceIdValue: String = "",
     val groqApiKeyValue: String = "",
+    val anthropicApiKeyValue: String = "",
+    val anthropicApiKeyLabel: String = "Nicht hinterlegt",
     val googleApiKeyLabel: String = "Nicht hinterlegt",
     val qwenApiKeyLabel: String = "Nicht hinterlegt",
     val qwenVoiceIdLabel: String = "Nicht hinterlegt",

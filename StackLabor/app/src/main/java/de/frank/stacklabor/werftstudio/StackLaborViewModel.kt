@@ -411,6 +411,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 qwenApiKeyValue = settings.qwenApiKey,
                 qwenVoiceIdValue = settings.qwenStimmenId,
                 groqApiKeyValue = settings.groqApiKey,
+                anthropicApiKeyValue = de.frank.stacklabor.werftstudio.service.codex.AnthropicKlient.schluessel(containerContext()),
+                anthropicApiKeyLabel = keyLabel(de.frank.stacklabor.werftstudio.service.codex.AnthropicKlient.schluessel(containerContext())),
                 googleApiKeyLabel = keyLabel(settings.googleApiKey),
                 qwenApiKeyLabel = keyLabel(settings.qwenApiKey),
                 qwenVoiceIdLabel = keyLabel(settings.qwenStimmenId),
@@ -426,7 +428,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     CodexAuthState.SignedOut -> "Nicht angemeldet"
                     is CodexAuthState.SignedIn -> auth.account.email ?: auth.account.accountId ?: "Angemeldet"
                 },
-                codexModelLabel = settings.codexModell.substringAfterLast('-').replaceFirstChar(Char::uppercase),
+                codexModelLabel = CodexModel.fromApiId(settings.codexModell).label,
                 codexReasoningLabel = settings.codexDenkstufe.reasoningLabel(),
             )
         }
@@ -1624,6 +1626,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             "azure-region" -> {
                 container.settings.setzeAzureTtsRegion(value)
                 message("Azure-Region gespeichert")
+            }
+            "anthropic-api-key" -> {
+                de.frank.stacklabor.werftstudio.service.codex.AnthropicKlient.schluesselSpeichern(containerContext(), value)
+                message(if (value.isBlank()) "Anthropic-Schlüssel gelöscht" else "Anthropic-Schlüssel gespeichert")
             }
             "groq-api-key" -> {
                 container.settings.setzeGroqApiKey(value)

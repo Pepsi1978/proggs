@@ -175,6 +175,8 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         SettingsDivider()
                         SettingsItem("Groq Whisper", state.groqApiKeyLabel) { keyEntryId = "groq-api-key" }
                         SettingsDivider()
+                        SettingsItem("Anthropic (Claude-Modelle)", state.anthropicApiKeyLabel) { keyEntryId = "anthropic-api-key" }
+                        SettingsDivider()
                         SettingsItem(
                             "Eigene Stimmen aus dem Konto laden",
                             if (state.clonedVoicesLoading) "Lädt …" else state.clonedVoicesHint,
@@ -480,6 +482,13 @@ private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when
         state.azureRegionValue,
         "Die Region deiner Speech-Ressource. Der Endpunkt aus dem Azure-Portal geht auch.",
         secret = false,
+    )
+    "anthropic-api-key" -> ApiKeyEntry(
+        id,
+        "Anthropic-API-Schlüssel",
+        state.anthropicApiKeyValue,
+        "Der Schlüssel (sk-ant-…) von platform.claude.com. Wählst du unter KI ein Claude-Modell, denkt StackLabor darüber " +
+            "(eigene Abrechnung) statt über ChatGPT. Er bleibt nur auf diesem Gerät gespeichert.",
     )
     "groq-api-key" -> ApiKeyEntry(
         id,

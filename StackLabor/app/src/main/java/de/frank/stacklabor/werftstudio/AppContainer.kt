@@ -73,7 +73,7 @@ class AppContainer(context: Context) {
     )
 
     val oauth = CodexOAuthClient(KeystoreCodexTokenStore(appContext))
-    private val codexResponsesClient = CodexResponsesClient(oauth)
+    private val codexResponsesClient = CodexResponsesClient(oauth, kontext = appContext)
     val evaluator = PersistedCodexEvaluator(
         repository = repository,
         settings = settings,

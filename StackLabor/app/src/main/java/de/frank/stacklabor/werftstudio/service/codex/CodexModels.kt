@@ -1,12 +1,18 @@
 package de.frank.stacklabor.werftstudio.service.codex
 
-enum class CodexModel(val apiId: String) {
+enum class CodexModel(val apiId: String, private val anzeige: String? = null) {
     ASTRA("gpt-6-astra"),
     SOL("gpt-5.6-sol"),
     TERRA("gpt-5.6-terra"),
-    LUNA("gpt-5.6-luna");
+    LUNA("gpt-5.6-luna"),
+    // Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel (wie in Jarvis).
+    OPUS("claude-opus-5-5", "Claude Opus 5.5"),
+    FABLE("claude-fable-5-1", "Claude Fable 5.1"),
+    SONNET("claude-sonnet-5-5", "Claude Sonnet 5.5"),
+    HAIKU("claude-haiku-5-5", "Claude Haiku 5.5");
 
-    val label: String get() = apiId.substringAfterLast('-').replaceFirstChar(Char::uppercase)
+    val istAnthropic: Boolean get() = anzeige != null
+    val label: String get() = anzeige ?: apiId.substringAfterLast('-').replaceFirstChar(Char::uppercase)
     val reasoningEfforts: List<ReasoningEffort>
         get() = if (this == ASTRA) ReasoningEffort.entries else ReasoningEffort.entries.filter { it != ReasoningEffort.ULTRA }
 
