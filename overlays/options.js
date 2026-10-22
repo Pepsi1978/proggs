@@ -127,15 +127,34 @@ async function loadCurrentPageToggle() {
 }
 
 async function load() {
-	const all = await chrome.storage.local.get(FIELDS);
+	const all = await chrome.storage.local.get([
+		...FIELDS,
+		"whisperModel",
+		"whisperVocabEnabled",
+		"whisperVocab",
+	]);
 	for (const id of FIELDS) {
 		document.getElementById(id).value = all[id] || "";
 	}
+	// Whisper-Modell (Standard Turbo) + persoenliches Woerterbuch (Standard an, TVO-Liste).
+	document.getElementById("whisperModel").value =
+		all.whisperModel === OV_WHISPER.MODEL_LARGE_V3
+			? OV_WHISPER.MODEL_LARGE_V3
+			: OV_WHISPER.MODEL_TURBO;
+	document.getElementById("whisperVocabEnabled").checked =
+		all.whisperVocabEnabled !== false;
+	document.getElementById("whisperVocab").value =
+		all.whisperVocab === undefined
+			? OV_WHISPER.STANDARD_WOERTERBUCH
+			: String(all.whisperVocab);
 }
 
 async function save() {
 	const data = {};
 	for (const id of FIELDS) data[id] = document.getElementById(id).value.trim();
+	data.whisperModel = document.getElementById("whisperModel").value;
+	data.whisperVocabEnabled = document.getElementById("whisperVocabEnabled").checked;
+	data.whisperVocab = document.getElementById("whisperVocab").value;
 	await chrome.storage.local.set(data);
 	const status = document.getElementById("status");
 	status.textContent = "✅ Gespeichert. Seite(n) neu laden zum Aktivieren.";

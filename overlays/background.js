@@ -8,6 +8,8 @@
 // schickt das Ergebnis zurueck.
 // ============================================================
 
+importScripts("src/whisper-defaults.js");
+
 const GROQ_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const REQUEST_TIMEOUT_MS = 120000;
 const CONTENT_SCRIPT_FILES = [
@@ -210,6 +212,118 @@ function filterTranscription(j) {
 // ── Groq Whisper Speech-to-Text ──
 // Audio kommt als data-URL (base64) vom Content-Script, damit es ueber
 // chrome.runtime.sendMessage serialisierbar ist.
+// ── Persoenliches Woerterbuch (1:1 wie TVO PersonalVocabulary + BuildVocabularyPrompt) ──
+const VOCAB_MAX_WORDS = 100;
+// Whisper nimmt max. 224 Prompt-Tokens; 350 Zeichen bleiben auch bei Komposita sicher darunter.
+const VOCAB_MAX_PROMPT_CHARS = 350;
+const ECHO_MARKER = "Begriffe";
+// Nach einem 403 "blocked" fuer large-v3 30 Min. direkt Turbo nehmen. Der Merker liegt
+// in chrome.storage, weil der MV3-Service-Worker nach ~30 s Leerlauf beendet wird.
+const BLOCKED_KEY = "groqLargeV3BlockedUntil";
+const BLOCKED_MS = 30 * 60 * 1000;
+
+function parseVocabulary(raw) {
+	const seen = new Set();
+	const words = [];
+	for (const part of String(raw || "").split(/[\n\r,;]/)) {
+		const w = part.trim();
+		if (!w || w.startsWith("#")) continue;
+		const k = w.toLowerCase();
+		if (seen.has(k)) continue;
+		seen.add(k);
+		words.push(w);
+		if (words.length >= VOCAB_MAX_WORDS) break;
+	}
+	return words;
+}
+
+function buildVocabularyPrompt(words) {
+	if (!words.length) return null;
+	let s = ECHO_MARKER + ": ";
+	let added = 0;
+	for (const w of words) {
+		// Zu lange Eintraege ueberspringen, nicht abbrechen: die uebrigen Begriffe zaehlen.
+		if (s.length + w.length + 2 > VOCAB_MAX_PROMPT_CHARS) continue;
+		if (added++ > 0) s += ", ";
+		s += w;
+	}
+	return added === 0 ? null : s + ".";
+}
+
+function normEcho(s) {
+	return String(s || "")
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+// Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus ("Begriffe: …").
+function isPromptEcho(text, prompt) {
+	if (!prompt || !String(text || "").trim()) return false;
+	const t = normEcho(text);
+	const p = normEcho(prompt);
+	const marker = normEcho(ECHO_MARKER);
+	return t.startsWith(marker) && p.includes(t.slice(marker.length));
+}
+
+function isBlockedError(raw) {
+	return (
+		raw.includes("model_permission_blocked_org") ||
+		raw.includes("blocked at the organization level")
+	);
+}
+
+async function loadVocabularyPrompt() {
+	const st = await chrome.storage.local.get(["whisperVocabEnabled", "whisperVocab"]);
+	if (st.whisperVocabEnabled === false) return null; // Standard: an
+	const raw =
+		st.whisperVocab === undefined ? OV_WHISPER.STANDARD_WOERTERBUCH : st.whisperVocab;
+	return buildVocabularyPrompt(parseVocabulary(raw));
+}
+
+async function postGroq(key, blob, model, lang, prompt) {
+	const form = new FormData();
+	form.append("file", blob, "recording.webm");
+	form.append("model", model);
+	form.append("language", lang || "de");
+	// prompt nur mit eingeschaltetem persoenlichem Woerterbuch (Schreibweisen von Eigennamen).
+	if (prompt) form.append("prompt", prompt);
+	// verbose_json liefert pro Segment no_speech_prob/avg_logprob/compression_ratio
+	// (bei Groq ohne Mehrkosten/-latenz vs. text) -> Confidence-Gate moeglich.
+	// temperature=0 als sinnvolle Basis. Siehe bugs/desktop/groq-transkription.md §2.3/§3.1.
+	form.append("response_format", "verbose_json");
+	form.append("temperature", "0");
+	const r = await withTimeout(
+		fetch(GROQ_URL, {
+			method: "POST",
+			headers: { Authorization: "Bearer " + key },
+			body: form,
+		}),
+		REQUEST_TIMEOUT_MS,
+		"Groq",
+	);
+	return { ok: r.ok, status: r.status, raw: await r.text() };
+}
+
+function groqErrorMessage(res) {
+	let msg = res.raw.slice(0, 400) || "HTTP " + res.status;
+	try {
+		const j = JSON.parse(res.raw);
+		if (j?.error?.message) msg = j.error.message;
+	} catch {}
+	return msg;
+}
+
+function parseGroqResult(raw) {
+	// Schicht 2: Stille-/Repetitions-Segmente herausfiltern (funktionserhaltend).
+	// segments (mit Zeitstempeln) gehen ans Content-Script fuer den Audio-Abgleich (Schicht 3).
+	try {
+		return filterTranscription(JSON.parse(raw));
+	} catch {
+		// Kein JSON (sollte bei verbose_json nicht passieren) -> roh durchreichen.
+		return { text: (raw || "").trim(), segments: [] };
+	}
+}
+
 async function groqTranscribe({ audioDataUrl, model, lang }) {
 	const key = await getKey("groqKey");
 	if (!key)
@@ -219,53 +333,44 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 
 	try {
 		const blob = await (await fetch(audioDataUrl)).blob();
-		const form = new FormData();
-		form.append("file", blob, "recording.webm");
-		form.append("model", model || "whisper-large-v3-turbo");
-		form.append("language", lang || "de");
-		// Stil-Prompt: Whisper (auch turbo) setzt Satzzeichen/Grossschreibung nicht
-		// zuverlaessig von selbst — jedes 30-s-Fenster richtet sich nach dem vorigen
-		// Text. Ein sauber interpunktierter deutscher Prompt gibt den Stil vor, sonst
-		// kippen ganze Passagen in "klein, ohne Punkt und Komma". Nur Stil/Vokabular,
-		// keine Befehle (Leakage), siehe bugs/desktop/groq-transkription.md §1.3/§3.2.
-		if ((lang || "de") === "de")
-			form.append(
-				"prompt",
-				"Das ist ein sauber geschriebenes Diktat auf Deutsch, mit korrekter Groß- und Kleinschreibung, Kommas und Punkten. Begriffe: Claude Code, Kotlin, Swift, C++, Prompt, Agent, Orchestrator, Groq.",
-			);
-		// verbose_json liefert pro Segment no_speech_prob/avg_logprob/compression_ratio
-		// (bei Groq ohne Mehrkosten/-latenz vs. text) -> Confidence-Gate moeglich.
-		// temperature=0 als sinnvolle Basis. Siehe bugs/desktop/groq-transkription.md §2.3/§3.1.
-		form.append("response_format", "verbose_json");
-		form.append("temperature", "0");
+		// Gespeicherte Wahl direkt lesen: wirkt ab der naechsten Aufnahme, ohne Seiten-Reload
+		// (der Cache im Content-Script kennt nur den Stand beim Laden der Seite).
+		const stored = await chrome.storage.local.get("whisperModel");
+		if (stored.whisperModel) model = stored.whisperModel;
+		let useModel =
+			model === OV_WHISPER.MODEL_LARGE_V3
+				? OV_WHISPER.MODEL_LARGE_V3
+				: OV_WHISPER.MODEL_TURBO;
+		if (useModel === OV_WHISPER.MODEL_LARGE_V3) {
+			const st = await chrome.storage.local.get(BLOCKED_KEY);
+			if (Number(st[BLOCKED_KEY] || 0) > Date.now()) useModel = OV_WHISPER.MODEL_TURBO;
+		}
+		const prompt = await loadVocabularyPrompt();
 
-		const r = await withTimeout(
-			fetch(GROQ_URL, {
-				method: "POST",
-				headers: { Authorization: "Bearer " + key },
-				body: form,
-			}),
-			REQUEST_TIMEOUT_MS,
-			"Groq",
-		);
-		const raw = await r.text();
-		if (!r.ok) {
-			let msg = raw.slice(0, 400) || "HTTP " + r.status;
-			try {
-				const j = JSON.parse(raw);
-				if (j?.error?.message) msg = j.error.message;
-			} catch {}
-			return { ok: false, error: msg };
+		let res = await postGroq(key, blob, useModel, lang, prompt);
+		if (
+			!res.ok &&
+			useModel === OV_WHISPER.MODEL_LARGE_V3 &&
+			isBlockedError(res.raw)
+		) {
+			// large-v3 ist fuer die Groq-Organisation nicht freigeschaltet: Diktat nicht
+			// verlieren, einmal mit Turbo wiederholen und 30 Min. direkt Turbo nehmen.
+			console.warn("[Overlays] Groq: large-v3 gesperrt -> Rueckfall auf Turbo (30 Min.)");
+			await chrome.storage.local.set({ [BLOCKED_KEY]: Date.now() + BLOCKED_MS });
+			useModel = OV_WHISPER.MODEL_TURBO;
+			res = await postGroq(key, blob, useModel, lang, prompt);
 		}
-		// Schicht 2: Stille-/Repetitions-Segmente herausfiltern (funktionserhaltend).
-		// segments (mit Zeitstempeln) gehen ans Content-Script fuer den Audio-Abgleich (Schicht 3).
-		try {
-			const r2 = filterTranscription(JSON.parse(raw));
-			return { ok: true, text: r2.text, segments: r2.segments };
-		} catch {
-			// Kein JSON (sollte bei verbose_json nicht passieren) -> roh durchreichen.
-			return { ok: true, text: (raw || "").trim(), segments: [] };
+		if (!res.ok) return { ok: false, error: groqErrorMessage(res) };
+
+		let r2 = parseGroqResult(res.raw);
+		if (isPromptEcho(r2.text, prompt)) {
+			// Dann einmal ohne Woerterbuch wiederholen statt das Diktat zu verlieren.
+			console.warn("[Overlays] Groq: Prompt-Echo erkannt -> erneut ohne Woerterbuch");
+			res = await postGroq(key, blob, useModel, lang, null);
+			if (!res.ok) return { ok: false, error: groqErrorMessage(res) };
+			r2 = parseGroqResult(res.raw);
 		}
+		return { ok: true, text: r2.text, segments: r2.segments };
 	} catch (e) {
 		return { ok: false, error: String(e?.message || e) };
 	}
