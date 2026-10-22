@@ -97,6 +97,8 @@ data class AppSettings(
     val model: String = "GPT 5.6 Terra",
     val reasoning: String = "Mittel",
     val cardsPerResearch: Int = 0,
+    /** Favorisierte Stimmen (Kennungen); sie stehen in der Stimmliste oben. */
+    val voiceFavorites: Set<String> = emptySet(),
 )
 
 data class AppUiState(
@@ -145,6 +147,14 @@ data class ApiKeys(
     val groqModel: String = de.frank.karteikartenlernen.transcription.GroqTranscriber.MODEL_TURBO,
     val vocabularyEnabled: Boolean = true,
     val vocabulary: String = de.frank.karteikartenlernen.transcription.GroqTranscriber.STANDARD_WOERTERBUCH,
+    /** Vorlesen: Google Chirp 3 HD (auch Rückfall der Gemini-Stimme), Gemini-3.8-Stimme und Azure Neural. */
+    val googleTtsKey: String = "",
+    val geminiTtsKeyFrei: String = "",
+    val geminiTtsKeyBezahlt: String = "",
+    val geminiTtsSchluesselWahl: String = de.frank.karteikartenlernen.audio.ZusatzStimmen.GEMINI_TTS_FREI_DANN_BEZAHLT,
+    val geminiTtsChirpRueckfall: Boolean = false,
+    val azureTtsKey: String = "",
+    val azureTtsRegion: String = de.frank.karteikartenlernen.audio.ZusatzStimmen.DEFAULT_AZURE_REGION,
 )
 
 val sampleCards = listOf(

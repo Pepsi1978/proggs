@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import de.frank.karteikartenlernen.audio.TtsVoiceRegistry
 import de.frank.karteikartenlernen.model.AppSettings
@@ -34,6 +35,7 @@ class SettingsStore(private val context: Context) {
         val model = stringPreferencesKey("model")
         val reasoning = stringPreferencesKey("reasoning")
         val cardsPerResearch = intPreferencesKey("cards_per_research")
+        val voiceFavorites = stringSetPreferencesKey("voice_favorites")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -54,6 +56,7 @@ class SettingsStore(private val context: Context) {
             model = normalizeModelName(p[Keys.model] ?: "GPT 5.6 Terra"),
             reasoning = normalizeReasoningLabel(p[Keys.model].orEmpty(), p[Keys.reasoning] ?: "Mittel"),
             cardsPerResearch = p[Keys.cardsPerResearch] ?: 0,
+            voiceFavorites = p[Keys.voiceFavorites] ?: emptySet(),
         )
     }
 
@@ -75,6 +78,7 @@ class SettingsStore(private val context: Context) {
             p[Keys.model] = value.model
             p[Keys.reasoning] = normalizeReasoningLabel(value.model, value.reasoning)
             p[Keys.cardsPerResearch] = value.cardsPerResearch
+            p[Keys.voiceFavorites] = value.voiceFavorites
         }
     }
 }

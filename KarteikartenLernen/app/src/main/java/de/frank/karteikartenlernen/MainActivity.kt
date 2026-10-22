@@ -33,6 +33,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         edgeTtsPlayer = EdgeTtsPlayer(this)
+        edgeTtsPlayer.zusatzWahl = { voice ->
+            val k = viewModel.uiState.value.apiKeys
+            de.frank.karteikartenlernen.audio.ZusatzStimmenWahl(
+                anbieter = de.frank.karteikartenlernen.audio.ZusatzStimmen.anbieterZu(voice).orEmpty(),
+                stimme = voice,
+                geminiKeyFrei = k.geminiTtsKeyFrei,
+                geminiKeyBezahlt = k.geminiTtsKeyBezahlt,
+                geminiSchluesselWahl = k.geminiTtsSchluesselWahl,
+                geminiChirpRueckfall = k.geminiTtsChirpRueckfall,
+                googleKey = k.googleTtsKey,
+                azureKey = k.azureTtsKey,
+                azureRegion = k.azureTtsRegion,
+            )
+        }
         setContent {
             val state by viewModel.uiState.collectAsState()
             KarteikartenApp(

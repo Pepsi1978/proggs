@@ -34,12 +34,14 @@ object TtsVoiceRegistry {
         "Killian" -> "de-DE-KillianNeural"
         "Conrad" -> "de-DE-ConradNeural"
         "Amala" -> "de-DE-AmalaNeural"
-        else -> voices.firstOrNull { it.id == value }?.id ?: DEFAULT_VOICE_ID
+        else -> voices.firstOrNull { it.id == value }?.id
+            ?: value.takeIf { ZusatzStimmen.anbieterZu(it) != null }
+            ?: DEFAULT_VOICE_ID
     }
 
     fun voice(value: String): Voice {
         val id = resolveVoiceId(value)
-        return voices.first { it.id == id }
+        return voices.firstOrNull { it.id == id } ?: voices.first()
     }
 
     fun extractLocale(voiceId: String): String {

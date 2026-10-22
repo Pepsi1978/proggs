@@ -19,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -68,6 +69,13 @@ class EdgeTtsPlayer(context: Context) {
     @Volatile private var currentOutputStream: FileOutputStream? = null
     @Volatile private var generation = 0L
     private var activeSession: PlaybackSession? = null
+
+    /** Gemini 3.8, Azure Neural und Chirp 3 HD: Erzeugung als Datei, gespielt wird über dieselbe Absatz-Pipeline. */
+    private val zusatz = ZusatzStimmenPlayer(context)
+    private var zusatzJob: Job? = null
+
+    /** Liefert Schlüssel und Optionen für eine Zusatz-Stimme (Kennung → Wahl); gesetzt von der Activity. */
+    var zusatzWahl: ((String) -> ZusatzStimmenWahl)? = null
 
     fun speak(
         text: String,
@@ -183,6 +191,24 @@ class EdgeTtsPlayer(context: Context) {
         if (!isActive(session) || index !in session.units.indices || session.preparingIndex != null) return
         session.preparingIndex = index
         val text = session.units[index].text
+        val anbieter = ZusatzStimmen.anbieterZu(session.voice)
+        if (anbieter != null) {
+            val wahl = zusatzWahl?.invoke(session.voice)?.copy(anbieter = anbieter, stimme = session.voice, tempo = session.speechRate)
+                ?: ZusatzStimmenWahl(anbieter = anbieter, stimme = session.voice, tempo = session.speechRate)
+            zusatzJob = scope.launch {
+                try {
+                    val datei = withContext(Dispatchers.IO) { zusatz.erzeuge(text, wahl) }
+                    session.files += datei
+                    prepared(session, PreparedAudio(index, datei))
+                } catch (abbruch: kotlinx.coroutines.CancellationException) {
+                    throw abbruch
+                } catch (error: Exception) {
+                    Log.e(TAG, "$anbieter preparation failed: ${error.message}")
+                    preparationFailed(session, index, File(appContext.cacheDir, "tts_none_${randomId()}"))
+                }
+            }
+            return
+        }
         val connectionId = randomId()
         val requestId = randomId()
         val terminal = AtomicBoolean(false)
@@ -364,6 +390,8 @@ class EdgeTtsPlayer(context: Context) {
 
     fun stop() {
         generation++
+        zusatzJob?.cancel()
+        zusatzJob = null
         cancelWatchdog()
         pauseJob?.cancel()
         pauseJob = null
@@ -380,6 +408,7 @@ class EdgeTtsPlayer(context: Context) {
 
     fun shutdown() {
         stop()
+        zusatz.shutdown()
         scope.cancel()
         client.dispatcher.executorService.shutdown()
         client.connectionPool.evictAll()

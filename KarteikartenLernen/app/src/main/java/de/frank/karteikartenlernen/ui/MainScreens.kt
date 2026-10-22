@@ -3,6 +3,9 @@ package de.frank.karteikartenlernen.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import de.frank.karteikartenlernen.audio.ZusatzStimmen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -121,6 +124,7 @@ private fun SessionCard(session: StudySession, onClick: (StudySession) -> Unit) 
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     state: AppUiState,
@@ -237,10 +241,64 @@ fun SettingsScreen(
             SoundSetting("Kartenübergang", SoundEffect.TRANSITION, s.soundTransition, onTestSound) { onSettings { it.copy(soundTransition = !it.soundTransition) } }
             SoundSetting("Rundenabschluss", SoundEffect.DONE, s.soundDone, onTestSound) { onSettings { it.copy(soundDone = !it.soundDone) } }
         }
-        SettingsSection("VORLESEN (EDGE TTS)") {
-            val selectedVoice = TtsVoiceRegistry.voice(s.voice)
-            SettingRow("Stimme", TtsVoiceRegistry.displayName(selectedVoice)) {
-                SmallPill(selectedVoice.name) { voiceMenuExpanded = true }
+        SettingsSection("VORLESEN") {
+            val anbieter = ZusatzStimmen.anbieterZu(s.voice) ?: "edge"
+            SettingRow("Dienst", ANBIETER_NAMEN[anbieter]) {
+                Column {
+                    ANBIETER_NAMEN.keys.chunked(3).forEach { reihe ->
+                        SegmentedControl(reihe.map { ANBIETER_KURZ.getValue(it) }, ANBIETER_KURZ.getValue(anbieter), onSelect = { kurz ->
+                            val neu = ANBIETER_KURZ.entries.first { it.value == kurz }.key
+                            if (neu != anbieter) onSettings { it.copy(voice = standardStimme(neu)) }
+                        })
+                    }
+                }
+            }
+            val stimmName = stimmenFuer(anbieter).firstOrNull { it.first == s.voice }?.second
+                ?: TtsVoiceRegistry.displayName(TtsVoiceRegistry.voice(s.voice))
+            SettingRow("Stimme", stimmName + if (s.voice in s.voiceFavorites) " ★" else "") {
+                SmallPill(stimmName.substringBefore(" —")) { voiceMenuExpanded = true }
+            }
+            val keys = state.apiKeys
+            if (anbieter == ZusatzStimmen.PROVIDER_GOOGLE || (anbieter.startsWith("gemini") && keys.geminiTtsChirpRueckfall)) {
+                SettingTextField(
+                    if (anbieter == ZusatzStimmen.PROVIDER_GOOGLE) "Google-TTS-Schlüssel" else "Google-TTS-Schlüssel (für den Rückfall auf Chirp 3 HD)",
+                    keys.googleTtsKey, "AIza…", secret = true,
+                ) { value -> onApiKeys { it.copy(googleTtsKey = value) } }
+            }
+            if (anbieter.startsWith("gemini")) {
+                if (keys.geminiTtsKeyFrei.isBlank() && keys.geminiTtsKeyBezahlt.isBlank()) {
+                    SettingRow("Gemini-Stimme", "Bitte mindestens einen Gemini-Schlüssel eintragen") { ConfiguredBadge(false) }
+                }
+                SettingTextField("Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)", keys.geminiTtsKeyFrei, "AIza…", secret = true) { value -> onApiKeys { it.copy(geminiTtsKeyFrei = value) } }
+                SettingTextField("Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)", keys.geminiTtsKeyBezahlt, "AIza…", secret = true) { value -> onApiKeys { it.copy(geminiTtsKeyBezahlt = value) } }
+                SettingRow("Welcher Schlüssel", ZusatzStimmen.GEMINI_TTS_SCHLUESSEL_WAHLEN.firstOrNull { it.first == keys.geminiTtsSchluesselWahl }?.second) {
+                    SegmentedControl(
+                        listOf("Erst frei", "Nur frei", "Nur bezahlt"),
+                        when (keys.geminiTtsSchluesselWahl) {
+                            ZusatzStimmen.GEMINI_TTS_NUR_FREI -> "Nur frei"
+                            ZusatzStimmen.GEMINI_TTS_NUR_BEZAHLT -> "Nur bezahlt"
+                            else -> "Erst frei"
+                        },
+                        onSelect = { auswahl ->
+                            val id = when (auswahl) {
+                                "Nur frei" -> ZusatzStimmen.GEMINI_TTS_NUR_FREI
+                                "Nur bezahlt" -> ZusatzStimmen.GEMINI_TTS_NUR_BEZAHLT
+                                else -> ZusatzStimmen.GEMINI_TTS_FREI_DANN_BEZAHLT
+                            }
+                            onApiKeys { it.copy(geminiTtsSchluesselWahl = id) }
+                        },
+                    )
+                }
+                SettingRow("Rückfall auf Chirp 3 HD", "Scheitert der kostenlose Schlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels") {
+                    Toggle(keys.geminiTtsChirpRueckfall) { onApiKeys { it.copy(geminiTtsChirpRueckfall = !it.geminiTtsChirpRueckfall) } }
+                }
+            }
+            if (anbieter == ZusatzStimmen.PROVIDER_AZURE) {
+                if (keys.azureTtsKey.isBlank()) {
+                    SettingRow("Azure Neural", "Bitte Azure-Speech-Schlüssel eintragen") { ConfiguredBadge(false) }
+                }
+                SettingTextField("Azure-Speech-Schlüssel (KEY 1)", keys.azureTtsKey, "", secret = true) { value -> onApiKeys { it.copy(azureTtsKey = value) } }
+                SettingTextField("Azure-Region (z. B. westeurope)", keys.azureTtsRegion, ZusatzStimmen.DEFAULT_AZURE_REGION, secret = false) { value -> onApiKeys { it.copy(azureTtsRegion = value) } }
             }
             SettingRow("") { GradientPill("Stimme testen", onSpeakTest) }
             SettingRow("Sprechgeschwindigkeit") {
@@ -273,36 +331,89 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 10.dp),
             )
+            Text(
+                "Langes Drücken oder Tippen auf den Stern: Favorit an/aus. Favoriten stehen oben.",
+                color = c.faint,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(bottom = 10.dp),
+            )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TtsVoiceRegistry.voices.forEach { voice ->
-                    val selected = voice.id == s.voice
+                val favoritUmschalten: (String) -> Unit = { id ->
+                    onSettings { it.copy(voiceFavorites = if (id in it.voiceFavorites) it.voiceFavorites - id else it.voiceFavorites + id) }
+                }
+                stimmenFuer(ZusatzStimmen.anbieterZu(s.voice) ?: "edge").sortedByDescending { it.first in s.voiceFavorites }.forEach { (voiceId, label) ->
+                    val selected = voiceId == s.voice
+                    val favorit = voiceId in s.voiceFavorites
                     Row(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .background(if (selected) c.chip else Color.Transparent)
                             .border(1.dp, if (selected) c.accent else c.border, RoundedCornerShape(14.dp))
-                            .clickable {
-                                onSettings { it.copy(voice = voice.id) }
-                                voiceMenuExpanded = false
-                            }
-                            .padding(horizontal = 16.dp, vertical = 13.dp),
+                            .combinedClickable(
+                                onLongClick = { favoritUmschalten(voiceId) },
+                                onClick = {
+                                    onSettings { it.copy(voice = voiceId) }
+                                    voiceMenuExpanded = false
+                                },
+                            )
+                            .padding(start = 16.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            TtsVoiceRegistry.displayName(voice),
+                            label,
                             color = c.text,
                             fontSize = 14.5.sp,
                             fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f).padding(vertical = 9.dp),
                         )
                         if (selected) Icon(Icons.Outlined.Check, null, tint = c.accent, modifier = Modifier.size(17.dp))
+                        Box(
+                            Modifier.size(40.dp).clip(CircleShape).clickable { favoritUmschalten(voiceId) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("★", color = if (favorit) Color(0xFFFFC107) else c.faint, fontSize = 18.sp)
+                        }
                     }
                 }
             }
             Spacer(Modifier.height(26.dp))
         }
     }
+}
+
+/** Die Vorlese-Dienste: Edge (ohne Schlüssel), Chirp 3 HD, Gemini 3.8 Flash/Flash-Lite und Azure Neural. */
+private val ANBIETER_NAMEN = linkedMapOf(
+    "edge" to "Microsoft Edge (ohne Schlüssel)",
+    ZusatzStimmen.PROVIDER_GOOGLE to "Google Chirp 3 HD",
+    ZusatzStimmen.PROVIDER_GEMINI_FLASH to "Gemini 3.8 Flash TTS",
+    ZusatzStimmen.PROVIDER_GEMINI_LITE to "Gemini 3.8 Flash-Lite TTS",
+    ZusatzStimmen.PROVIDER_AZURE to "Azure Neural",
+)
+private val ANBIETER_KURZ = mapOf(
+    "edge" to "Edge",
+    ZusatzStimmen.PROVIDER_GOOGLE to "Chirp 3 HD",
+    ZusatzStimmen.PROVIDER_GEMINI_FLASH to "Gemini",
+    ZusatzStimmen.PROVIDER_GEMINI_LITE to "Gemini Lite",
+    ZusatzStimmen.PROVIDER_AZURE to "Azure",
+)
+
+private fun standardStimme(anbieter: String): String = when (anbieter) {
+    ZusatzStimmen.PROVIDER_GOOGLE -> ZusatzStimmen.DEFAULT_GOOGLE_VOICE
+    ZusatzStimmen.PROVIDER_GEMINI_FLASH -> ZusatzStimmen.DEFAULT_GEMINI_FLASH_VOICE
+    ZusatzStimmen.PROVIDER_GEMINI_LITE -> ZusatzStimmen.DEFAULT_GEMINI_LITE_VOICE
+    ZusatzStimmen.PROVIDER_AZURE -> ZusatzStimmen.DEFAULT_AZURE_VOICE
+    else -> TtsVoiceRegistry.DEFAULT_VOICE_ID
+}
+
+/** Kennung und Anzeigename aller Stimmen eines Dienstes. */
+private fun stimmenFuer(anbieter: String): List<Pair<String, String>> = when (anbieter) {
+    ZusatzStimmen.PROVIDER_GOOGLE -> ZusatzStimmen.googleStimmen.map { it.id to it.name }
+    ZusatzStimmen.PROVIDER_GEMINI_FLASH -> ZusatzStimmen.geminiFlashStimmen.map { it.id to it.name }
+    ZusatzStimmen.PROVIDER_GEMINI_LITE -> ZusatzStimmen.geminiLiteStimmen.map { it.id to it.name }
+    ZusatzStimmen.PROVIDER_AZURE -> ZusatzStimmen.azureStimmen.map { it.id to it.name }
+    else -> TtsVoiceRegistry.voices.map { it.id to TtsVoiceRegistry.displayName(it) }
 }
 
 @Composable
