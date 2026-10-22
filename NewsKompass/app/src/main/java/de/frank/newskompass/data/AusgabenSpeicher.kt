@@ -157,6 +157,31 @@ class AusgabenSpeicher(context: Context) {
         neu
     }
 
+    /**
+     * Setzt die Blöcke einer einzelnen Aktualisierung in die neueste Ausgabe desselben Tages: Ein
+     * Block desselben Themas wird an seiner Stelle ausgetauscht, ein Thema ohne Block hängt sich
+     * unten an. So bleibt auf dem Hauptbildschirm alles stehen, was schon dastand. Ein frischer Block
+     * ohne Meldungen tauscht den bisherigen nicht aus — eine Aktualisierung ohne Neues soll ihn nicht
+     * leeren. Gibt es heute noch keine Ausgabe, wird [neu] selbst eine.
+     */
+    suspend fun aktualisiereBloecke(neu: Ausgabe): Ausgabe = sperre.withLock {
+        withContext(Dispatchers.IO) { pruefeIndex(erzwingen = false) }
+        val ziel = _index.value.firstOrNull()?.takeIf { it.tag == tagVon(neu.erstelltUm) }
+            ?.let { withContext(Dispatchers.IO) { leseDatei(it.id) } }
+        if (ziel == null) {
+            schreibe(neu)
+            return@withLock neu
+        }
+        val tauschbar = neu.bloecke.filter { it.meldungen.isNotEmpty() }
+        val gemischt = (
+            ziel.bloecke.map { alt -> tauschbar.firstOrNull { it.themaId == alt.themaId } ?: alt } +
+                tauschbar.filter { neuBlock -> ziel.bloecke.none { it.themaId == neuBlock.themaId } }
+            ).distinctBy { it.themaId }
+        val ersetzt = ziel.copy(bloecke = gemischt)
+        schreibe(ersetzt)
+        ersetzt
+    }
+
     /** Nimmt einen Frage-Block wieder heraus; bleibt die Ausgabe leer, verschwindet sie ganz. */
     suspend fun entferneBlock(ausgabeId: String, themaId: String) = sperre.withLock {
         val ausgabe = withContext(Dispatchers.IO) { leseDatei(ausgabeId) } ?: return@withLock

@@ -234,6 +234,8 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
     LaunchedEffect(Unit) { app.ueberschriften.pruefe() }
     val kontext = LocalContext.current
     val diktat by app.themenDiktat.zustand.collectAsStateWithLifecycle()
+    // Themen, deren von Hand angeforderte Aktualisierung noch aussteht: Der Knopf ihrer Karte dreht sich so lange.
+    val wartendeAktualisierung by app.einstellungen.manuellAusstehend.collectAsStateWithLifecycle()
     val mikrofonErlaubnis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erteilt ->
         app.themenDiktat.erlaubnisErhalten(erteilt)
     }
@@ -294,6 +296,8 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                         "Die KI gibt jedem Thema eine kurze Überschrift; tippe darauf, um Text und Einstellungen aufzuklappen. " +
                         "Mit dem Mikrofon sprichst du ein Thema ein, der Zauberstab lässt die KI den Text sauber formulieren, " +
                         "und „Zurück“ holt den vorherigen Text wieder. " +
+                        "Der Aktualisierungsknopf holt genau für dieses Thema sofort neue Nachrichten auf den Startbildschirm — " +
+                        "unabhängig von Uhrzeit, Rhythmus und Zeitplan. " +
                         "Halte den Griff gedrückt und schieb die Themen in die gewünschte Reihenfolge.",
                 )
             }
@@ -310,6 +314,7 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                         loeschbar = sortiert.size > 1,
                         app = app,
                         diktat = diktat,
+                        wartendeAktualisierung = thema.id in wartendeAktualisierung,
                         tippeMikrofon = { tippeMikrofon(thema.id) },
                         aendere = { text ->
                             app.einstellungen.setzeThemen(app.einstellungen.stand.value.themen.map { if (it.id == thema.id) it.copy(text = text) else it })
@@ -423,6 +428,7 @@ private fun ThemenKarte(
     loeschbar: Boolean,
     app: NewsApplication,
     diktat: DiktatZustand,
+    wartendeAktualisierung: Boolean,
     tippeMikrofon: () -> Unit,
     aendere: (String) -> Unit,
     aendereBereich: (Int, Int) -> Unit,
@@ -481,6 +487,20 @@ private fun ThemenKarte(
             }
         }
     }
+    val kontext = LocalContext.current
+    // Genau dieses Thema sofort neu recherchieren: Der Lauf im Hintergrund setzt seinen Block auf dem
+    // Startbildschirm neu, die Karte dreht sich, bis er durch ist.
+    val aktualisiere: () -> Unit = {
+        if (text.isBlank()) {
+            app.themenDiktat.melde(thema.id, "Schreibe oder sprich zuerst dein Thema.")
+        } else if (!app.codex.kannDenken) {
+            app.themenDiktat.melde(thema.id, "Bitte zuerst unten bei Codex anmelden.")
+        } else if (!wartendeAktualisierung) {
+            app.themenDiktat.loescheMeldung()
+            Zeitplan.starteThemenAktualisierung(kontext, listOf(thema.id))
+            Toast.makeText(kontext, "„${thema.kopfzeile()}“ wird aktualisiert", Toast.LENGTH_SHORT).show()
+        }
+    }
     // Zugeklappt zeigt die Karte nur die kurze Überschrift; neue und leere Themen stehen gleich offen.
     var offen by rememberSaveable(thema.id) { mutableStateOf(fokussieren || thema.text.isBlank()) }
     var loeschenFragen by remember { mutableStateOf(false) }
@@ -530,6 +550,18 @@ private fun ThemenKarte(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
+                    // Direkt an der Karte, damit das Aktualisieren eines einzelnen Themas kein Aufklappen braucht.
+                    IconButton(onClick = aktualisiere, enabled = !wartendeAktualisierung) {
+                        if (wartendeAktualisierung) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                Icons.Rounded.Refresh,
+                                "Genau dieses Thema jetzt aktualisieren",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                     Icon(
                         Icons.Rounded.ExpandMore,
                         null,
@@ -624,12 +656,13 @@ private fun ThemenKarte(
                             nimmtAuf -> "Ich höre zu … tippen zum Übernehmen"
                             versteht -> "Ich verstehe …"
                             verbessert -> "KI formuliert …"
+                            wartendeAktualisierung -> "Aktualisierung läuft — gleich ist der Block auf dem Startbildschirm neu"
                             diktat.meldungFuer == thema.id -> diktat.meldung
                             text.isBlank() -> "Tippe aufs Mikrofon und sprich dein Thema"
                             else -> ""
                         },
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (diktat.meldungFuer == thema.id && !nimmtAuf && !versteht && !verbessert) {
+                        color = if (diktat.meldungFuer == thema.id && !nimmtAuf && !versteht && !verbessert && !wartendeAktualisierung) {
                             MaterialTheme.colorScheme.error
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant

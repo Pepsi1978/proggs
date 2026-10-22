@@ -50,6 +50,9 @@ import org.json.JSONObject
 /** Zwischenstand eines Laufs für die Anzeige. */
 data class LaufFortschritt(val text: String, val anteil: Float)
 
+/** Was ein Lauf hervorgebracht hat: die Ausgabe, in der die Blöcke jetzt stehen, und die frisch recherchierten Blöcke. */
+data class LaufErgebnis(val ausgabe: Ausgabe, val frisch: List<Block>)
+
 /**
  * Ein Nachrichtenlauf: pro Thema eine Codex-Recherche mit Websuche, danach die Bilder.
  *
@@ -72,8 +75,19 @@ class NewsRecherche(
         .followRedirects(true)
         .build()
 
-    /** Recherchiert die Themen mit den IDs [nurThemen] — ohne Angabe alle. */
-    suspend fun laufe(nurThemen: Collection<String>? = null, beiFortschritt: suspend (LaufFortschritt) -> Unit): Ausgabe = withContext(Dispatchers.IO) {
+    /**
+     * Recherchiert die Themen mit den IDs [nurThemen] — ohne Angabe alle.
+     *
+     * [vonHand] heißt: Der Nutzer hat sein Thema in den Einstellungen ausdrücklich aktualisiert.
+     * Dann setzt sich der frische Block in die neueste Ausgabe desselben Tages, statt eine neue
+     * anzulegen — der Hauptbildschirm behält alles, was schon dastand, und nur dieser eine Block
+     * wird ausgetauscht.
+     */
+    suspend fun laufe(
+        nurThemen: Collection<String>? = null,
+        vonHand: Boolean = false,
+        beiFortschritt: suspend (LaufFortschritt) -> Unit,
+    ): LaufErgebnis = withContext(Dispatchers.IO) {
         val stand = einstellungen.stand.value
         val themen = stand.themen.filter { it.text.isNotBlank() && (nurThemen == null || it.id in nurThemen) }
         if (themen.isEmpty()) throw IllegalStateException("Es ist kein Nachrichtenthema eingetragen.")
@@ -98,7 +112,7 @@ class NewsRecherche(
             }
             beiFortschritt(LaufFortschritt("Recherchiere Thema ${nummer + 1} von ${themen.size}: $kurz", nummer.toFloat() / schritte))
             val block = try {
-                recherchiereThema(thema, stand.modellId, stand.denktiefe, thema.ausfuehrlichkeit, vorige, bloecke.flatMap { b -> b.meldungen.map { it.titel } }, jetzt)
+                recherchiereThema(thema, stand.modellId, stand.denktiefe, thema.ausfuehrlichkeit, vorige, bloecke.flatMap { b -> b.meldungen.map { it.titel } }, jetzt, vonHand)
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
@@ -124,17 +138,18 @@ class NewsRecherche(
         val bildStand = if (harterFehler != null) stand.copy(bilderUnterstuetzt = false) else stand
         val bebildert = bebildere(bloecke, bildStand, vorige) { text -> beiFortschritt(LaufFortschritt(text, themen.size.toFloat() / schritte)) }
         vergiss(bloecke)
-        val ausgabe = Ausgabe(
+        val neu = Ausgabe(
             id = "a$jetzt",
             erstelltUm = jetzt,
             slot = slotName(jetzt),
             bloecke = bebildert,
         )
-        speicher.speichere(ausgabe)
+        // Von Hand angestoßen: den Block in die Ausgabe des Tages einsetzen, sonst eine eigene Ausgabe.
+        val ausgabe = if (vonHand) speicher.aktualisiereBloecke(neu) else neu.also { speicher.speichere(it) }
         // Ein Abbruch in dieser letzten Meldung soll nicht zusätzlich stören; wird der Auftrag genau jetzt gestoppt,
         // bleiben die Termine vorgemerkt und der nächste Versuch läuft noch einmal.
         withContext(NonCancellable) { runCatching { beiFortschritt(LaufFortschritt("Fertig", 1f)) } }
-        ausgabe
+        LaufErgebnis(ausgabe, bebildert)
     }
 
     /**
@@ -195,15 +210,27 @@ class NewsRecherche(
         vorige: List<Ausgabe>,
         schonInDieserAusgabe: List<String>,
         jetzt: Long,
+        vonHand: Boolean = false,
     ): Block {
         val bekannt = vorige.flatMap { a -> a.bloecke.filter { it.themaId == thema.id }.flatMap { b -> b.meldungen.map { it.titel } } }.distinct()
+        // Von Hand aktualisiert wird der bisherige Block dieses Themas: Was dort steht, gilt nicht als
+        // wiederholt, sondern als Ausgangspunkt — sonst fiele die angeforderte Aktualisierung fast leer aus.
+        val bisher = if (vonHand) vorige.firstOrNull()?.bloecke?.firstOrNull { it.themaId == thema.id }?.meldungen.orEmpty().map { it.titel } else emptyList()
         val eingabe = buildString {
             appendLine("Thema, zu dem du die Nachrichten zusammenstellst:")
             appendLine(thema.text.trim())
-            if (bekannt.isNotEmpty()) {
+            if (bekannt.isNotEmpty() && !vonHand) {
                 appendLine()
                 appendLine("Diese Meldungen standen schon in früheren Ausgaben. Nimm sie nur wieder auf, wenn es ein konkretes neues Ereignis innerhalb der Altersgrenze gibt, und sag dann im Text, was neu ist:")
                 bekannt.forEach { appendLine("- $it") }
+            }
+            if (vonHand) {
+                appendLine()
+                appendLine("Der Nutzer hat diese Aktualisierung gerade selbst angefordert. Dein Block ersetzt den bisherigen zu diesem Thema, er ist also keine Wiederholung.")
+                if (bisher.isNotEmpty()) {
+                    appendLine("Das stand bisher in diesem Block: Behalte, was für das Thema weiter zählt, setze das Neueste nach oben und ergänze, was seither hinzugekommen ist; nichts doppelt, und lass weg, was nicht mehr aktuell ist:")
+                    bisher.forEach { appendLine("- $it") }
+                }
             }
             if (schonInDieserAusgabe.isNotEmpty()) {
                 appendLine()
@@ -212,7 +239,7 @@ class NewsRecherche(
             }
         }
         val antwort = codex.frage(
-            anweisung = anweisung(jetzt, thema.minMeldungen, thema.maxMeldungen, ausfuehrlichkeit, maxAlterTage = thema.maxAlterTage),
+            anweisung = anweisung(jetzt, thema.minMeldungen, thema.maxMeldungen, ausfuehrlichkeit, maxAlterTage = thema.maxAlterTage, vonHand = vonHand),
             eingabe = eingabe,
             modellId = modellId,
             denktiefe = denktiefe,
@@ -234,6 +261,7 @@ class NewsRecherche(
         ausfuehrlichkeit: Ausfuehrlichkeit,
         sprachFrage: Boolean = false,
         maxAlterTage: Int = Thema.STANDARD_ALTER_TAGE,
+        vonHand: Boolean = false,
     ): String {
         val deutscheZeit = java.util.TimeZone.getTimeZone("Europe/Berlin")
         val datum = SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.GERMANY).apply { timeZone = deutscheZeit }.format(Date(jetzt))
@@ -256,7 +284,13 @@ class NewsRecherche(
                 "Prüfe das tatsächliche Ereignisdatum anhand der Quellen, nicht das Abrufdatum oder das Datum eines späteren Wiederholungsartikels. " +
                 "Ein älteres Ereignis wird durch einen neuen Artikel nicht zu einer neuen Nachricht. " +
                 "Nur eine belegte neue Entwicklung innerhalb dieses Zeitfensters darf als Update erscheinen; datiere genau diese Entwicklung. " +
-                "Lass Meldungen mit unklarem Ereignisdatum weg; erfinde weder Datum noch Uhrzeit."
+                "Lass Meldungen mit unklarem Ereignisdatum weg; erfinde weder Datum noch Uhrzeit." +
+                if (vonHand) {
+                    " Der Nutzer hat diese Aktualisierung gerade selbst angefordert und will den Stand von jetzt: Suche zuerst nach dem, was sich bis $uhr getan hat, " +
+                        "und setze das Neueste nach oben. Die Altersgrenze gilt unverändert."
+                } else {
+                    ""
+                }
         }
         val anzahl = when {
             sprachFrage -> "Liefere $minMeldungen bis $maxMeldungen Meldungen, genau so viele, wie die Frage wirklich braucht; niemals mehr als $maxMeldungen."

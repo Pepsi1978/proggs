@@ -68,6 +68,19 @@ data class EinstellungenStand(
     val letzteSicherungText: String,
 )
 
+/** Was auf seinen Lauf wartet. */
+data class OffenerLauf(
+    /** Der Knopf „Jetzt aktualisieren“ — alle Themen auf einmal. */
+    val alle: Boolean,
+    /** Vorgemerkte Termine: je Themen-ID der Zeitpunkt des Termins, für den das Thema dran ist. */
+    val termine: Map<String, Long>,
+    /** Je Themen-ID der Zeitpunkt, zu dem der Nutzer die Aktualisierung von Hand angefordert hat. */
+    val manuell: Map<String, Long>,
+) {
+    /** Wartet irgendetwas davon? */
+    val wartet: Boolean get() = alle || termine.isNotEmpty() || manuell.isNotEmpty()
+}
+
 class EinstellungenStore(context: Context) {
 
     private val offen: SharedPreferences =
@@ -366,6 +379,11 @@ class EinstellungenStore(context: Context) {
 
     // --- Offene Läufe -------------------------------------------------------------------------
 
+    private val _manuellAusstehend = MutableStateFlow(leseZeiten(K_OFFEN_MANUELL).keys)
+
+    /** Die Themen, deren manuelle Aktualisierung noch aussteht — die Oberfläche zeigt daran „Aktualisierung läuft“. */
+    val manuellAusstehend: StateFlow<Set<String>> = _manuellAusstehend.asStateFlow()
+
     /**
      * Termine, die noch recherchiert werden müssen: je Themen-ID der Zeitpunkt des Termins, dazu
      * „alle“ für den Knopf Aktualisieren. Jeder Wecker trägt seine Themen hier ein, bevor er den
@@ -373,48 +391,69 @@ class EinstellungenStore(context: Context) {
      */
     @Synchronized
     fun merkeOffenenLauf(auftrag: Map<String, Long>?) {
-        val (alle, termine) = leseOffeneLaeufe()
-        val neu = termine.toMutableMap()
+        val offen = leseOffeneLaeufe()
+        val neu = offen.termine.toMutableMap()
         auftrag?.forEach { (id, um) -> neu[id] = maxOf(neu[id] ?: 0L, um) }
-        schreibeOffeneLaeufe(alle || auftrag == null, neu)
+        schreibeOffeneLaeufe(offen.alle || auftrag == null, neu, offen.manuell)
     }
 
     /**
-     * Die offenen Termine, ohne sie herauszunehmen; `null`, wenn keiner offen ist. Erst wenn sie erledigt
-     * sind, nimmt [entferneOffeneLaeufe] sie heraus — so überleben sie auch das Ende des Prozesses mitten im Lauf.
+     * Trägt ein, dass der Nutzer die Themen [ids] von Hand neu recherchiert haben will — ohne Termin,
+     * deshalb unabhängig von Uhrzeit, Rhythmus und ob der Zeitplan überhaupt eingeschaltet ist.
      */
     @Synchronized
-    fun offeneLaeufe(): Pair<Boolean, Map<String, Long>>? {
-        val offenJetzt = leseOffeneLaeufe()
-        return offenJetzt.takeIf { it.first || it.second.isNotEmpty() }
+    fun merkeManuellenLauf(ids: Collection<String>) {
+        val gewaehlt = ids.filter { it.isNotBlank() }
+        if (gewaehlt.isEmpty()) return
+        val offen = leseOffeneLaeufe()
+        val neu = offen.manuell.toMutableMap()
+        val jetzt = System.currentTimeMillis()
+        gewaehlt.forEach { id -> neu[id] = maxOf(neu[id] ?: 0L, jetzt) }
+        schreibeOffeneLaeufe(offen.alle, offen.termine, neu)
     }
 
-    /** Nimmt die erledigten Termine heraus; inzwischen neu vorgemerkte (späterer Zeitpunkt) bleiben stehen. */
+    /**
+     * Die offenen Termine und manuellen Anfragen, ohne sie herauszunehmen; `null`, wenn nichts offen
+     * ist. Erst wenn sie erledigt sind, nimmt [entferneOffeneLaeufe] sie heraus — so überleben sie
+     * auch das Ende des Prozesses mitten im Lauf.
+     */
     @Synchronized
-    fun entferneOffeneLaeufe(alle: Boolean, termine: Map<String, Long>) {
-        val (jetztAlle, jetzt) = leseOffeneLaeufe()
-        val rest = jetzt.filter { (id, um) -> termine[id]?.let { um > it } ?: true }
-        schreibeOffeneLaeufe(jetztAlle && !alle, rest)
+    fun offeneLaeufe(): OffenerLauf? = leseOffeneLaeufe().takeIf { it.wartet }
+
+    /**
+     * Nimmt die erledigten Termine und manuellen Anfragen heraus; inzwischen neu vorgemerkte
+     * (späterer Zeitpunkt) bleiben stehen — ein erneuter Tipp während des Laufs geht nicht verloren.
+     */
+    @Synchronized
+    fun entferneOffeneLaeufe(alle: Boolean, termine: Map<String, Long>, manuell: Map<String, Long> = emptyMap()) {
+        val jetzt = leseOffeneLaeufe()
+        val rest = jetzt.termine.filter { (id, um) -> termine[id]?.let { um > it } ?: true }
+        val restManuell = jetzt.manuell.filter { (id, um) -> manuell[id]?.let { um > it } ?: true }
+        schreibeOffeneLaeufe(jetzt.alle && !alle, rest, restManuell)
     }
 
     val hatOffeneLaeufe: Boolean
-        @Synchronized get() = leseOffeneLaeufe().let { it.first || it.second.isNotEmpty() }
+        @Synchronized get() = leseOffeneLaeufe().wartet
 
-    private fun leseOffeneLaeufe(): Pair<Boolean, Map<String, Long>> {
-        val alle = offen.getBoolean(K_OFFEN_ALLE, false)
-        val termine = runCatching {
-            val j = JSONObject(offen.getString(K_OFFENE_TERMINE, null) ?: "{}")
-            j.keys().asSequence().associateWith { j.getLong(it) }
-        }.getOrDefault(emptyMap())
-        return alle to termine
-    }
+    private fun leseOffeneLaeufe(): OffenerLauf = OffenerLauf(
+        alle = offen.getBoolean(K_OFFEN_ALLE, false),
+        termine = leseZeiten(K_OFFENE_TERMINE),
+        manuell = leseZeiten(K_OFFEN_MANUELL),
+    )
 
-    private fun schreibeOffeneLaeufe(alle: Boolean, termine: Map<String, Long>) {
+    private fun leseZeiten(schluessel: String): Map<String, Long> = runCatching {
+        val j = JSONObject(offen.getString(schluessel, null) ?: "{}")
+        j.keys().asSequence().associateWith { j.getLong(it) }
+    }.getOrDefault(emptyMap())
+
+    private fun schreibeOffeneLaeufe(alle: Boolean, termine: Map<String, Long>, manuell: Map<String, Long>) {
         // commit statt apply: Der Lauf kann gleich danach in einem anderen Thread starten.
         offen.edit()
             .putBoolean(K_OFFEN_ALLE, alle)
             .putString(K_OFFENE_TERMINE, JSONObject(termine as Map<*, *>).toString())
+            .putString(K_OFFEN_MANUELL, JSONObject(manuell as Map<*, *>).toString())
             .commit()
+        _manuellAusstehend.value = manuell.keys
     }
 
     @Synchronized
@@ -473,6 +512,7 @@ class EinstellungenStore(context: Context) {
         private const val K_HARTER_FEHLER = "harter_fehler_um"
         private const val K_OFFEN_ALLE = "offen_alle"
         private const val K_OFFENE_TERMINE = "offene_termine"
+        private const val K_OFFEN_MANUELL = "offen_manuell"
         private const val K_BILDER_OK = "bilder_unterstuetzt"
         private const val K_DESIGN = "design"
         private const val K_FARBDESIGN = "farbdesign"
