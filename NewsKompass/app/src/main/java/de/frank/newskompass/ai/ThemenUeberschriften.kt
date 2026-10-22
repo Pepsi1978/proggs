@@ -54,7 +54,7 @@ class ThemenUeberschriften(
     fun pruefe() {
         bereich.launch {
             sperre.withLock {
-                if (!codex.istVerbunden) return@withLock
+                if (!codex.kannDenken) return@withLock
                 val offen = einstellungen.stand.value.themen.filter { it.ueberschriftVeraltet && (it.id to it.text) !in gescheitert }
                 offen.forEach { alt ->
                     warteAufRuhe()

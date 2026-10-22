@@ -77,7 +77,7 @@ class NewsRecherche(
         val stand = einstellungen.stand.value
         val themen = stand.themen.filter { it.text.isNotBlank() && (nurThemen == null || it.id in nurThemen) }
         if (themen.isEmpty()) throw IllegalStateException("Es ist kein Nachrichtenthema eingetragen.")
-        if (!codex.istVerbunden) throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Bitte zuerst in den Einstellungen bei Codex anmelden.")
+        if (!codex.kannDenken) throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Bitte zuerst in den Einstellungen bei Codex anmelden.")
 
         val jetzt = System.currentTimeMillis()
         // Bereits berichtete Ereignisse über den gesamten wählbaren Zeitraum berücksichtigen.
@@ -147,7 +147,7 @@ class NewsRecherche(
     suspend fun beantworteFrage(frage: String, beiFortschritt: suspend (LaufFortschritt) -> Unit): Pair<Ausgabe, Block> = withContext(Dispatchers.IO) {
         val text = frage.trim()
         if (text.isEmpty()) throw IllegalStateException("Die Frage ist leer.")
-        if (!codex.istVerbunden) throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Bitte zuerst in den Einstellungen bei Codex anmelden.")
+        if (!codex.kannDenken) throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Bitte zuerst in den Einstellungen bei Codex anmelden.")
 
         val stand = einstellungen.stand.value
         val jetzt = System.currentTimeMillis()

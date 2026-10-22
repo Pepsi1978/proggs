@@ -62,7 +62,7 @@ class SprachFrage(private val app: NewsApplication) {
                     melde("Bitte zuerst in den Einstellungen einen Groq-Schlüssel hinterlegen.", zuEinstellungen = true)
                     return
                 }
-                if (!app.codex.istVerbunden) {
+                if (!app.codex.kannDenken) {
                     melde("Bitte zuerst in den Einstellungen bei Codex anmelden.", zuEinstellungen = true)
                     return
                 }

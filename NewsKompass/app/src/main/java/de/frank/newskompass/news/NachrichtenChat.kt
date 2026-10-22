@@ -87,7 +87,7 @@ class NachrichtenChat(private val app: NewsApplication) {
     fun sende(meldung: Meldung, text: String, vorlesen: Boolean = _zustand.value.autoVorlesen) {
         val frage = text.trim()
         if (frage.isBlank() || _zustand.value.antwortetFuer != null) return
-        if (!app.codex.istVerbunden) {
+        if (!app.codex.kannDenken) {
             melde("Bitte zuerst in den Einstellungen bei Codex anmelden.", zuEinstellungen = true)
             return
         }
@@ -183,7 +183,7 @@ class NachrichtenChat(private val app: NewsApplication) {
                     melde("Zum Einsprechen bitte in den Einstellungen einen Groq-Schlüssel hinterlegen.", zuEinstellungen = true)
                     return
                 }
-                if (!app.codex.istVerbunden) {
+                if (!app.codex.kannDenken) {
                     melde("Bitte zuerst in den Einstellungen bei Codex anmelden.", zuEinstellungen = true)
                     return
                 }

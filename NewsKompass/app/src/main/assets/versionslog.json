@@ -40,6 +40,7 @@
     {"versionCode": 36, "versionName": "1.10.25", "stand": "19.10.2026, 08:46 Uhr", "notiz": "Das maximale Nachrichtenalter (z. B. 3 Tage), die Meldungsanzahl und die Ausführlichkeit eines Themas werden jetzt zuverlässig gespeichert und springen nach dem Verstellen nicht mehr auf den alten Wert zurück."},
     {"versionCode": 37, "versionName": "1.10.26", "stand": "22.10.2026, 11:20 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter."},
     {"versionCode": 38, "versionName": "1.10.27", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, das Wörterbuch-Feld speichert ruckelfrei und zeigt nach einer Wiederherstellung den aktuellen Stand."},
-    {"versionCode": 39, "versionName": "1.10.28", "stand": "22.10.2026, 11:58 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per Stern oder langem Drücken als Favorit oben anheften."}
+    {"versionCode": 39, "versionName": "1.10.28", "stand": "22.10.2026, 11:58 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per Stern oder langem Drücken als Favorit oben anheften."},
+    {"versionCode": 40, "versionName": "1.10.29", "stand": "22.10.2026, 12:42 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe, Websuche und eigenem API-Schlüssel wie in Jarvis."}
   ]
 }

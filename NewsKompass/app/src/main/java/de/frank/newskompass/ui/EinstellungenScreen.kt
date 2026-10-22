@@ -1,5 +1,9 @@
 package de.frank.newskompass.ui
 
+import de.frank.newskompass.ai.CodexModell
+import de.frank.newskompass.ai.AnthropicKlient
+import de.frank.newskompass.ai.ClaudeModell
+import de.frank.newskompass.ai.KiAnbieter
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -450,7 +454,7 @@ private fun ThemenKarte(
         val quelle = kiOriginal ?: text
         if (quelle.isBlank()) {
             app.themenDiktat.melde(thema.id, "Sprich oder schreibe zuerst dein Thema.")
-        } else if (!app.codex.istVerbunden) {
+        } else if (!app.codex.kannDenken) {
             app.themenDiktat.melde(thema.id, "Bitte zuerst unten bei Codex anmelden.")
         } else if (!verbessert) {
             verbessert = true
@@ -1126,9 +1130,56 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
             Spacer(Modifier.height(18.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(14.dp))
+            // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen eigenen API-Schlüssel.
+            val claudeAktiv = ClaudeModell.istClaude(stand.modellId)
+            LaunchedEffect(claudeAktiv) {
+                AnthropicKlient.anbieterSetzen(kontext, if (claudeAktiv) KiAnbieter.ANTHROPIC else KiAnbieter.OPENAI)
+            }
+            var anthropicKey by remember { mutableStateOf(AnthropicKlient.schluessel(kontext)) }
+            Text("Anbieter", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                KiAnbieter.entries.forEach { a ->
+                    FilterChip(
+                        selected = claudeAktiv == (a == KiAnbieter.ANTHROPIC),
+                        onClick = {
+                            if (claudeAktiv != (a == KiAnbieter.ANTHROPIC)) {
+                                if (claudeAktiv) ClaudeModell.von(stand.modellId)?.let { AnthropicKlient.claudeModellMerken(kontext, it) }
+                                else AnthropicKlient.openAiModellMerken(kontext, stand.modellId)
+                                AnthropicKlient.anbieterSetzen(kontext, a)
+                                app.einstellungen.setzeModell(
+                                    if (a == KiAnbieter.ANTHROPIC) AnthropicKlient.letztesClaudeModell(kontext).apiId
+                                    else AnthropicKlient.letztesOpenAiModell(kontext, stand.modelle.firstOrNull()?.id ?: "gpt-5.6-terra"),
+                                )
+                            }
+                        },
+                        label = { Text(a.label) },
+                        shape = RoundedCornerShape(50),
+                    )
+                }
+            }
+            if (claudeAktiv) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = anthropicKey,
+                    onValueChange = { anthropicKey = it; AnthropicKlient.schluesselSpeichern(kontext, it) },
+                    label = { Text("Anthropic-API-Schlüssel (sk-ant-…)") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    if (anthropicKey.isBlank()) "Für Claude bitte deinen Anthropic-API-Schlüssel eintragen."
+                    else "Claude denkt über deinen Anthropic-API-Schlüssel (eigene Abrechnung) und sucht selbst im Netz. Illustrationen malt nur OpenAI.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            Spacer(Modifier.height(14.dp))
             Text("Modell", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
-            val modelle = stand.modelle
+            val modelle = if (claudeAktiv) ClaudeModell.entries.map { CodexModell(it.apiId, it.label, ClaudeModell.DENKSTUFEN, "medium") } else stand.modelle
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 modelle.filter { m -> stand.kiModelle.none { it.id == m.id } }.forEach { m ->
                     FilterChip(
@@ -1139,10 +1190,10 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
                     )
                 }
             }
-            if (stand.kiModelle.isNotEmpty()) {
+            if (stand.kiModelle.isNotEmpty() && !claudeAktiv) {
                 KiModelleBaustein(app, stand)
             }
-            if (verbunden) {
+            if (verbunden && !claudeAktiv) {
                 Spacer(Modifier.height(10.dp))
                 OutlinedButton(
                     onClick = ::sucheModelle,

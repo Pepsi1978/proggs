@@ -176,7 +176,7 @@ object Zeitplan {
     suspend fun holeNach(context: Context) {
         val app = context.applicationContext as NewsApplication
         app.speicher.bereit()
-        if (!app.codex.istVerbunden) return
+        if (!app.codex.kannDenken) return
         val stand = app.einstellungen.stand.value
         val auftrag = if (stand.zeitplanAktiv) {
             // Jüngster erfolgreicher Lauf je Thema; gesprochene Fragen und gescheiterte Blöcke zählen nicht.

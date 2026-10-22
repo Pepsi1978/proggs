@@ -433,7 +433,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                     }
                 }
                 item(key = "status", contentType = "status") {
-                    Spalte { LaufStatus(lauf, app.codex.istVerbunden, oeffneEinstellungen) }
+                    Spalte { LaufStatus(lauf, app.codex.kannDenken, oeffneEinstellungen) }
                 }
                 val fehlt = fehlendeFreigaben
                 if (zeigeBereitschaft) {
@@ -516,7 +516,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                     item(key = "leer", contentType = "leer") {
                         Spalte {
                             LeerZustand(
-                                angemeldet = app.codex.istVerbunden,
+                                angemeldet = app.codex.kannDenken,
                                 laeuft = lauf?.state == WorkInfo.State.RUNNING,
                                 laden = { Zeitplan.starteLauf(kontext, manuell = true) },
                                 oeffneEinstellungen = oeffneEinstellungen,

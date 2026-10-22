@@ -77,6 +77,9 @@ class CodexClient(context: Context) {
     val kontoId: String? get() = ablage.getString(SCHL_KONTO, null)
     val istVerbunden: Boolean get() = ablage.contains(SCHL_ZUGANG)
 
+    /** Kann die App gerade denken? Bei Anthropic zählt der API-Schlüssel, sonst das ChatGPT-Konto. */
+    val kannDenken: Boolean get() = AnthropicKlient.bereit(appContext, istVerbunden)
+
     // --- Anmeldung -------------------------------------------------------------------------
 
     suspend fun melde(
@@ -267,6 +270,16 @@ class CodexClient(context: Context) {
         werkzeuge: JSONArray? = null,
         beiTeilstueck: (suspend (String) -> Unit)? = null,
     ): CodexAntwort = withContext(Dispatchers.IO) {
+        // Claude-Modelle rechnen über die Anthropic Messages API mit eigenem Schlüssel (wie in Jarvis).
+        if (ClaudeModell.istClaude(modellId)) {
+            val claude = try {
+                AnthropicKlient.antwortMitQuellen(appContext, modellId, denktiefe, anweisung, listOf("user" to eingabe),
+                    websuche = werkzeuge != null, onDelta = { stueck -> beiTeilstueck?.invoke(stueck) })
+            } catch (fehler: AnthropicFehler) {
+                throw CodexFehler(CodexFehlerArt.NETZ, fehler.message.orEmpty(), fehler, fehler.wiederholbar)
+            }
+            return@withContext CodexAntwort(claude.text, claude.quellen, emptyList())
+        }
         var versuch = 0
         var neuAngemeldet = false
         while (true) {
