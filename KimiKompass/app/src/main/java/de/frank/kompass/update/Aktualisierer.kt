@@ -340,7 +340,7 @@ class Aktualisierer(
 
             // --- Schritt 5: fehlende Erklärungen nachziehen -------------------------------
             val offene = repository.ladeUnerklaerte()
-            if (offene.isEmpty() || !codex.istVerbunden) {
+            if (offene.isEmpty() || !codex.kannDenken) {
                 if (offene.isNotEmpty()) {
                     KompassLog.info(
                         "Aktualisierer",
@@ -426,7 +426,7 @@ class Aktualisierer(
         var stand = LaufFortschritt(laeuft = true, schritt = "Offene Erklärungen werden geholt")
         melde(stand)
         try {
-            if (!codex.istVerbunden) {
+            if (!codex.kannDenken) {
                 melde(
                     stand.copy(
                         laeuft = false,
@@ -620,7 +620,7 @@ class Aktualisierer(
             ersatz = "Zu diesem Eintrag ist kein Nachfolger bekannt.",
             zuletztGeaendert = System.currentTimeMillis(),
         )
-        if (!codex.istVerbunden) return grundfassung
+        if (!codex.kannDenken) return grundfassung
 
         return try {
             val antwort = codex.frage(
