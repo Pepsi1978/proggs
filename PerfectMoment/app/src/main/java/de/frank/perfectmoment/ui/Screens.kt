@@ -1577,7 +1577,9 @@ private fun formatSessionDate(timestamp: Long): String =
 
 internal fun formatSessionDuration(minutes: Int): String = if (minutes == 0) "Endlos" else "$minutes min"
 
-private fun voiceDisplayName(id: String): String = id.substringAfterLast('-').removeSuffix("Neural")
+private fun voiceDisplayName(id: String): String =
+    (TtsCatalog.geminiFlashVoices + TtsCatalog.geminiLiteVoices + TtsCatalog.azureVoices).firstOrNull { it.id == id }?.name
+        ?: id.substringAfterLast('-').removeSuffix("Neural")
 
 @Composable
 fun SettingsScreen(
@@ -1664,6 +1666,48 @@ fun SettingsScreen(
                     visible = viewModel.showGoogleKey,
                     onValueChange = viewModel::updateGoogleApiKey,
                     onToggleVisibility = viewModel::toggleGoogleKeyVisibility,
+                )
+                SecureKeyRow(
+                    label = "Gemini-Stimme: Schlüssel kostenlos",
+                    supporting = "Projekt ohne Abrechnung · Gemini 3.8 TTS",
+                    value = viewModel.geminiKeyFrei,
+                    visible = viewModel.showNeueKeys,
+                    onValueChange = viewModel::updateGeminiKeyFrei,
+                    onToggleVisibility = viewModel::toggleNeueKeysVisibility,
+                )
+                SecureKeyRow(
+                    label = "Gemini-Stimme: Schlüssel bezahlt",
+                    supporting = "Projekt mit Abrechnung · Gemini 3.8 TTS",
+                    value = viewModel.geminiKeyBezahlt,
+                    visible = viewModel.showNeueKeys,
+                    onValueChange = viewModel::updateGeminiKeyBezahlt,
+                    onToggleVisibility = viewModel::toggleNeueKeysVisibility,
+                )
+                SettingRow(
+                    "Welcher Gemini-Schlüssel",
+                    viewModel.geminiSchluesselWahlLabel,
+                    onClick = viewModel::cycleGeminiSchluesselWahl,
+                )
+                SettingRow(
+                    label = "Rückfall auf Chirp 3 HD",
+                    supporting = "Scheitert der kostenlose Schlüssel, liest Chirp 3 HD mit derselben Stimme weiter",
+                    trailing = { PmSwitch(viewModel.geminiChirpRueckfall, viewModel::updateGeminiChirpRueckfall) },
+                )
+                SecureKeyRow(
+                    label = "Azure-Speech-Schlüssel (KEY 1)",
+                    supporting = "Azure Neural · eigene Speech-Ressource",
+                    value = viewModel.azureKey,
+                    visible = viewModel.showNeueKeys,
+                    onValueChange = viewModel::updateAzureKey,
+                    onToggleVisibility = viewModel::toggleNeueKeysVisibility,
+                )
+                SecureKeyRow(
+                    label = "Azure-Region",
+                    supporting = "z. B. westeurope",
+                    value = viewModel.azureRegion,
+                    visible = true,
+                    onValueChange = viewModel::updateAzureRegion,
+                    onToggleVisibility = { },
                 )
                 SecureKeyRow(
                     label = "Groq-API",
@@ -2314,14 +2358,27 @@ fun SkillEditorScreen(viewModel: AppViewModel) {
 @Composable
 fun VoiceScreen(viewModel: AppViewModel) {
     val colors = LocalPmColors.current
-    val isGoogle = viewModel.voiceTab == TtsProvider.GOOGLE_CLOUD
-    val noKey = isGoogle && viewModel.googleApiKey.isBlank()
-    val voices = if (isGoogle) TtsCatalog.googleVoices else TtsCatalog.edgeVoices
+    val tab = viewModel.voiceTab
+    val isGoogle = tab == TtsProvider.GOOGLE_CLOUD
+    val noKey = viewModel.keyMissing(tab)
+    // Favoriten (langes Drücken) stehen oben, mit gelbem Stern.
+    val voices = when (tab) {
+        TtsProvider.GOOGLE_CLOUD -> TtsCatalog.googleVoices
+        TtsProvider.GEMINI_FLASH -> TtsCatalog.geminiFlashVoices
+        TtsProvider.GEMINI_LITE -> TtsCatalog.geminiLiteVoices
+        TtsProvider.AZURE -> TtsCatalog.azureVoices
+        else -> TtsCatalog.edgeVoices
+    }.sortedByDescending { it.id in viewModel.favoriteVoiceIds }
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Stimme", viewModel::back)
-        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Segment("Microsoft Edge", !isGoogle, { viewModel.updateVoiceTab(TtsProvider.EDGE) }, Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Segment("Microsoft Edge", tab == TtsProvider.EDGE, { viewModel.updateVoiceTab(TtsProvider.EDGE) }, Modifier.weight(1f))
             Segment("Google Chirp 3 HD", isGoogle, { viewModel.updateVoiceTab(TtsProvider.GOOGLE_CLOUD) }, Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Segment("Gemini", tab == TtsProvider.GEMINI_FLASH, { viewModel.updateVoiceTab(TtsProvider.GEMINI_FLASH) }, Modifier.weight(1f))
+            Segment("Gemini Lite", tab == TtsProvider.GEMINI_LITE, { viewModel.updateVoiceTab(TtsProvider.GEMINI_LITE) }, Modifier.weight(1f))
+            Segment("Azure", tab == TtsProvider.AZURE, { viewModel.updateVoiceTab(TtsProvider.AZURE) }, Modifier.weight(1f))
         }
         if (noKey) {
             PmCard(
@@ -2331,7 +2388,12 @@ fun VoiceScreen(viewModel: AppViewModel) {
                 color = colors.surface2,
             ) {
                 Text(
-                    "Bitte zuerst einen Google-API-Schlüssel hinterlegen. Zu den Einstellungen",
+                    when (tab) {
+                        TtsProvider.AZURE -> "Bitte zuerst den Azure-Speech-Schlüssel hinterlegen. Zu den Einstellungen"
+                        TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE ->
+                            "Bitte zuerst einen Gemini-Stimmschlüssel hinterlegen. Zu den Einstellungen"
+                        else -> "Bitte zuerst einen Google-API-Schlüssel hinterlegen. Zu den Einstellungen"
+                    },
                     color = colors.text2,
                     fontFamily = Inter,
                     fontSize = 14.sp,
@@ -2346,7 +2408,7 @@ fun VoiceScreen(viewModel: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(voices, key = { it.id }) { voice ->
-                val selected = if (isGoogle) viewModel.googleVoice == voice.id else viewModel.edgeVoice == voice.id
+                val selected = viewModel.voiceFor(tab) == voice.id
                 val starred = voice.name in setOf("Seraphina", "Florian") || voice.id in viewModel.favoriteVoiceIds
                 val shape = RoundedCornerShape(20.dp)
                 PmCard(
@@ -2373,7 +2435,7 @@ fun VoiceScreen(viewModel: AppViewModel) {
                 ) {
                     Row(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (starred) {
-                            Text("★", color = colors.gold, fontSize = 13.sp, modifier = Modifier.padding(end = 7.dp))
+                            Text("★", color = FavoritGelb, fontSize = 13.sp, modifier = Modifier.padding(end = 7.dp))
                         }
                         Text(voice.name, color = colors.text1, fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 15.sp)
                         Text(
@@ -2632,3 +2694,6 @@ private fun RawBlock(text: String) {
         Text(text, color = colors.text2, style = PmTextStyles.mono, modifier = Modifier.padding(16.dp))
     }
 }
+
+/** Das Gelb der Favoritensterne. */
+val FavoritGelb = androidx.compose.ui.graphics.Color(0xFFFFC107)

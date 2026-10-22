@@ -516,10 +516,12 @@ class SessionController(
     ): SessionEntity {
         val provider = TtsProvider.entries.firstOrNull { it.id == settings.ttsProvider }
             ?: TtsCatalog.DEFAULT_PROVIDER
-        val voice = if (provider == TtsProvider.EDGE) {
-            settings.edgeTtsVoice
-        } else {
-            settings.googleTtsVoice
+        val voice = when (provider) {
+            TtsProvider.EDGE -> settings.edgeTtsVoice
+            TtsProvider.GEMINI_FLASH -> settings.geminiFlashTtsVoice
+            TtsProvider.GEMINI_LITE -> settings.geminiLiteTtsVoice
+            TtsProvider.AZURE -> settings.azureTtsVoice
+            else -> settings.googleTtsVoice
         }
         return SessionEntity(
             topic = topic,

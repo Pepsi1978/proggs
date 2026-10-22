@@ -26,6 +26,7 @@ import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.auth.ReasoningEffort
 import de.frank.perfectmoment.auth.SessionPromptDecision
 import de.frank.perfectmoment.data.local.HookEntity
+import de.frank.perfectmoment.data.settings.SecureSettings
 import de.frank.perfectmoment.data.local.QuestionEntity
 import de.frank.perfectmoment.data.local.SessionEntity
 import de.frank.perfectmoment.data.local.SessionWithQuestions
@@ -226,6 +227,26 @@ class AppViewModel(
     var edgeVoice by mutableStateOf(settings.edgeTtsVoice)
         private set
     var googleVoice by mutableStateOf(settings.googleTtsVoice)
+        private set
+    var geminiFlashVoice by mutableStateOf(settings.geminiFlashTtsVoice)
+        private set
+    var geminiLiteVoice by mutableStateOf(settings.geminiLiteTtsVoice)
+        private set
+    var azureVoice by mutableStateOf(settings.azureTtsVoice)
+        private set
+    var geminiKeyFrei by mutableStateOf(settings.geminiTtsKeyFrei)
+        private set
+    var geminiKeyBezahlt by mutableStateOf(settings.geminiTtsKeyBezahlt)
+        private set
+    var geminiSchluesselWahl by mutableStateOf(settings.geminiTtsSchluesselWahl)
+        private set
+    var geminiChirpRueckfall by mutableStateOf(settings.geminiTtsChirpRueckfall)
+        private set
+    var azureKey by mutableStateOf(settings.azureTtsKey)
+        private set
+    var azureRegion by mutableStateOf(settings.azureTtsRegion)
+        private set
+    var showNeueKeys by mutableStateOf(false)
         private set
     var ttsSpeechRate by mutableStateOf(settings.ttsSpeechRate)
         private set
@@ -576,7 +597,25 @@ class AppViewModel(
     val activeSkill: SkillEntity?
         get() = skills.firstOrNull { it.id == activeSkillId } ?: skills.firstOrNull()
     val selectedVoice: String
-        get() = if (ttsProvider == TtsProvider.EDGE.id) edgeVoice else googleVoice
+        get() = voiceFor(TtsProvider.entries.firstOrNull { it.id == ttsProvider } ?: TtsProvider.EDGE)
+
+    /** Die gewählte Stimme eines Anbieters (für die Stimmen-Seite und neue Verläufe). */
+    fun voiceFor(provider: TtsProvider): String = when (provider) {
+        TtsProvider.EDGE -> edgeVoice
+        TtsProvider.GEMINI_FLASH -> geminiFlashVoice
+        TtsProvider.GEMINI_LITE -> geminiLiteVoice
+        TtsProvider.AZURE -> azureVoice
+        else -> googleVoice
+    }
+
+    /** Fehlt dem Anbieter ein Schlüssel? Gemini geht auch über den Chirp-Rückfall mit dem Google-Schlüssel. */
+    fun keyMissing(provider: TtsProvider): Boolean = when (provider) {
+        TtsProvider.GOOGLE_CLOUD -> googleApiKey.isBlank()
+        TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE -> geminiKeyFrei.isBlank() && geminiKeyBezahlt.isBlank() &&
+            !(geminiChirpRueckfall && googleApiKey.isNotBlank())
+        TtsProvider.AZURE -> azureKey.isBlank()
+        else -> false
+    }
     val sortedSessions: List<SessionEntity>
         get() = sortHistorySessions(sessions.filterNot(SessionEntity::custom), historySort)
 
@@ -873,6 +912,11 @@ class AppViewModel(
             message = "Bitte zuerst Alibaba-Schlüssel und Stimm-Kennung hinterlegen."
             return
         }
+        if (value in setOf(TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE, TtsProvider.AZURE) && keyMissing(value)) {
+            message = if (value == TtsProvider.AZURE) "Bitte zuerst den Azure-Schlüssel hinterlegen."
+            else "Bitte zuerst einen Gemini-Stimmschlüssel hinterlegen."
+            return
+        }
         ttsProvider = value.id
         settings.ttsProvider = value.id
         sheet = null
@@ -899,6 +943,46 @@ class AppViewModel(
             settings.ttsProvider = TtsProvider.EDGE.id
             message = "Google TTS wurde deaktiviert, weil kein API-Schlüssel hinterlegt ist."
         }
+    }
+
+    fun updateGeminiKeyFrei(value: String) {
+        geminiKeyFrei = value.filterNot(Char::isWhitespace)
+        settings.geminiTtsKeyFrei = geminiKeyFrei
+    }
+
+    fun updateGeminiKeyBezahlt(value: String) {
+        geminiKeyBezahlt = value.filterNot(Char::isWhitespace)
+        settings.geminiTtsKeyBezahlt = geminiKeyBezahlt
+    }
+
+    /** Schaltet reihum: erst kostenlos, dann bezahlt → nur kostenlos → nur bezahlt. */
+    fun cycleGeminiSchluesselWahl() {
+        val wahlen = SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN.map { it.first }
+        geminiSchluesselWahl = wahlen[(wahlen.indexOf(geminiSchluesselWahl) + 1).mod(wahlen.size)]
+        settings.geminiTtsSchluesselWahl = geminiSchluesselWahl
+    }
+
+    val geminiSchluesselWahlLabel: String
+        get() = SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN.firstOrNull { it.first == geminiSchluesselWahl }?.second
+            ?: SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN.first().second
+
+    fun updateGeminiChirpRueckfall(value: Boolean) {
+        geminiChirpRueckfall = value
+        settings.geminiTtsChirpRueckfall = value
+    }
+
+    fun updateAzureKey(value: String) {
+        azureKey = value.filterNot(Char::isWhitespace)
+        settings.azureTtsKey = azureKey
+    }
+
+    fun updateAzureRegion(value: String) {
+        azureRegion = value.trim()
+        settings.azureTtsRegion = azureRegion
+    }
+
+    fun toggleNeueKeysVisibility() {
+        showNeueKeys = !showNeueKeys
     }
 
     fun updateWhisperModel(value: String) {
@@ -1247,6 +1331,16 @@ class AppViewModel(
         if (voiceTab == TtsProvider.EDGE) {
             edgeVoice = voice.id
             settings.edgeTtsVoice = voice.id
+        } else if (voiceTab in setOf(TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE, TtsProvider.AZURE)) {
+            if (keyMissing(voiceTab)) return
+            when (voiceTab) {
+                TtsProvider.GEMINI_FLASH -> { geminiFlashVoice = voice.id; settings.geminiFlashTtsVoice = voice.id }
+                TtsProvider.GEMINI_LITE -> { geminiLiteVoice = voice.id; settings.geminiLiteTtsVoice = voice.id }
+                else -> { azureVoice = voice.id; settings.azureTtsVoice = voice.id }
+            }
+            // Wer hier eine Stimme wählt, will mit diesem Anbieter vorlesen.
+            ttsProvider = voiceTab.id
+            settings.ttsProvider = voiceTab.id
         } else if (googleApiKey.isNotBlank()) {
             googleVoice = voice.id
             settings.googleTtsVoice = voice.id
@@ -1263,7 +1357,7 @@ class AppViewModel(
     }
 
     fun previewVoice(voice: TtsVoice) {
-        if (voiceTab == TtsProvider.GOOGLE_CLOUD && googleApiKey.isBlank()) return
+        if (keyMissing(voiceTab)) return
         if (playingVoiceId == voice.id) {
             stopVoicePreview()
             return
@@ -1496,7 +1590,8 @@ class AppViewModel(
                 TtsProvider.QWEN_CLONE -> voiceNames[voiceId]
                     ?: qwenVoices.firstOrNull { it.id == voiceId }?.name
                     ?: voiceId
-                else -> (TtsCatalog.edgeVoices + TtsCatalog.googleVoices)
+                else -> (TtsCatalog.edgeVoices + TtsCatalog.googleVoices + TtsCatalog.geminiFlashVoices +
+                    TtsCatalog.geminiLiteVoices + TtsCatalog.azureVoices)
                     .firstOrNull { it.id == voiceId }?.name ?: voiceId
             }
             return "$name · ${provider.label}"
@@ -1514,7 +1609,7 @@ class AppViewModel(
                     topic = "",
                     startedAt = System.currentTimeMillis(),
                     durationMin = durationMinutes,
-                    voiceName = if (provider == TtsProvider.EDGE) edgeVoice else googleVoice,
+                    voiceName = voiceFor(provider),
                     providerId = provider.id,
                     pauseRep = pauseRep,
                     pauseNext = pauseNext,

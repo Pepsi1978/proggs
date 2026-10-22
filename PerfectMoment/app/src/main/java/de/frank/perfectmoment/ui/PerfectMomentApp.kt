@@ -451,6 +451,7 @@ private fun HistoryVoiceSheet(viewModel: AppViewModel) {
                 OptionRow(
                     "${viewModel.voiceTitle(voice)}  ·  Meine Stimme",
                     !follows && chosenProvider == TtsProvider.QWEN_CLONE.id && chosenVoice == voice.id,
+                    voiceId = voice.id,
                 ) { viewModel.selectHistoryVoice(TtsProvider.QWEN_CLONE, voice.id) },
             )
         }
@@ -459,6 +460,7 @@ private fun HistoryVoiceSheet(viewModel: AppViewModel) {
                 OptionRow(
                     "${voice.name}  ·  Microsoft Edge",
                     !follows && chosenProvider == TtsProvider.EDGE.id && chosenVoice == voice.id,
+                    voiceId = voice.id,
                 ) { viewModel.selectHistoryVoice(TtsProvider.EDGE, voice.id) },
             )
         }
@@ -467,17 +469,36 @@ private fun HistoryVoiceSheet(viewModel: AppViewModel) {
                 OptionRow(
                     "${voice.name}  ·  Google Chirp 3 HD",
                     !follows && chosenProvider == TtsProvider.GOOGLE_CLOUD.id && chosenVoice == voice.id,
+                    voiceId = voice.id,
                 ) { viewModel.selectHistoryVoice(TtsProvider.GOOGLE_CLOUD, voice.id) },
             )
         }
+        listOf(
+            TtsProvider.GEMINI_FLASH to TtsCatalog.geminiFlashVoices,
+            TtsProvider.GEMINI_LITE to TtsCatalog.geminiLiteVoices,
+            TtsProvider.AZURE to TtsCatalog.azureVoices,
+        ).forEach { (provider, voices) ->
+            voices.forEach { voice ->
+                add(
+                    OptionRow(
+                        "${voice.name}  ·  ${provider.label}",
+                        !follows && chosenProvider == provider.id && chosenVoice == voice.id,
+                        voiceId = voice.id,
+                    ) { viewModel.selectHistoryVoice(provider, voice.id) },
+                )
+            }
+        }
     }
     SectionLabel("Stimme für diesen Verlauf", Modifier.padding(start = 8.dp, bottom = 12.dp), decorated = true)
+    // Favoriten zuerst, mit Stern; „Wie in den Einstellungen“ bleibt ganz oben.
+    val favoriten = viewModel.favoriteVoiceIds
     Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-        OptionRows(rows)
+        OptionRows(rows.take(1) + rows.drop(1).sortedByDescending { it.voiceId in favoriten }
+            .map { if (it.voiceId in favoriten) it.copy(label = "★ ${it.label}") else it })
     }
 }
 
-private data class OptionRow(val label: String, val selected: Boolean, val onClick: () -> Unit)
+private data class OptionRow(val label: String, val selected: Boolean, val voiceId: String = "", val onClick: () -> Unit)
 
 @Composable
 private fun OptionSheet(title: String, rows: List<OptionRow>) {
