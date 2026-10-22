@@ -90,6 +90,7 @@ fun IdeenKopfleiste(
     /** Null lässt das Zahnrad weg — in den Einstellungen selbst hat es nichts zu suchen. */
     aufEinstellungen: (() -> Unit)? = null,
     voran: (@Composable () -> Unit)? = null,
+    untertitel: String? = null,
 ) {
     val gold = LocalGold.current
     Row(
@@ -101,15 +102,25 @@ fun IdeenKopfleiste(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         voran?.invoke()
-        Text(
-            text = titel,
-            modifier = Modifier.weight(1f).wanderndesGlanzlicht(),
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.SemiBold,
-            ),
-            color = gold.primaer,
-            maxLines = 1,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = titel,
+                modifier = Modifier.wanderndesGlanzlicht(),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                color = gold.primaer,
+                maxLines = 1,
+            )
+            if (untertitel != null) {
+                Text(
+                    text = untertitel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        }
         if (aufSuche != null) {
             KopfKnopf(beschreibung = "Alle Ideen durchsuchen", aufTipp = aufSuche) {
                 Icon(

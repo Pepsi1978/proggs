@@ -278,6 +278,7 @@ fun ListenScreen(
             aufThemeTipp = viewModel::themeWeiterschalten,
             aufSuche = { suchOffen = true },
             aufEinstellungen = aufEinstellungen,
+            untertitel = if (laedt) null else "${offene.size} offen",
         )
 
         BereichsWaehler(bereich, offene.size, entwuerfe.size, umgesetzte.size) {
