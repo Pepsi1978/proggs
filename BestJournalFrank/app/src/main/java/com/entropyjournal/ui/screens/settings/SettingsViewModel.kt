@@ -1268,6 +1268,10 @@ constructor(
     fun updateAiProvider(provider: String) {
         encryptedPrefs.edit().putString(Constants.PREF_AI_PROVIDER, provider).apply()
         _uiState.value = _uiState.value.copy(aiProvider = provider)
+        // Anthropic rechnet mit Claude-Modellen, ChatGPT mit GPT-Modellen: das Modell passend umstellen.
+        val claude = CodexModel.fromId(_uiState.value.codexModel).istAnthropic
+        if (provider == Constants.AI_PROVIDER_ANTHROPIC && !claude) updateCodexModel(CodexModel.OPUS.apiId)
+        if (provider == Constants.AI_PROVIDER_CODEX && claude) updateCodexModel(CodexModel.TERRA.apiId)
     }
 
     fun updateCodexModel(apiId: String) {

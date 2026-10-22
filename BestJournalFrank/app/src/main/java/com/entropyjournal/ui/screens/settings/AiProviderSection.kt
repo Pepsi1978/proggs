@@ -1,5 +1,6 @@
 package com.entropyjournal.ui.screens.settings
 
+import androidx.compose.material3.OutlinedTextField
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,7 +50,8 @@ import com.entropyjournal.util.Constants
 @Composable
 fun AiProviderSection(viewModel: SettingsViewModel, uiState: SettingsUiState) {
     val context = LocalContext.current
-    val usesCodex = uiState.aiProvider == Constants.AI_PROVIDER_CODEX
+    val usesAnthropic = uiState.aiProvider == Constants.AI_PROVIDER_ANTHROPIC
+    val usesCodex = uiState.aiProvider == Constants.AI_PROVIDER_CODEX || usesAnthropic
 
     Column {
         Text(
@@ -68,14 +70,19 @@ fun AiProviderSection(viewModel: SettingsViewModel, uiState: SettingsUiState) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ProviderChip(
                 label = "Gemini",
-                selected = !usesCodex,
+                selected = !usesCodex && !usesAnthropic,
                 modifier = Modifier.weight(1f),
             ) { viewModel.updateAiProvider(Constants.AI_PROVIDER_GEMINI) }
             ProviderChip(
                 label = "ChatGPT Codex",
-                selected = usesCodex,
+                selected = usesCodex && !usesAnthropic,
                 modifier = Modifier.weight(1f),
             ) { viewModel.updateAiProvider(Constants.AI_PROVIDER_CODEX) }
+            ProviderChip(
+                label = "Anthropic",
+                selected = usesAnthropic,
+                modifier = Modifier.weight(1f),
+            ) { viewModel.updateAiProvider(Constants.AI_PROVIDER_ANTHROPIC) }
         }
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -168,8 +175,26 @@ private fun CodexSettings(
     val selectedModel = CodexModel.fromId(uiState.codexModel)
     val selectedEffort = selectedModel.normalizeEffort(ReasoningEffort.fromValue(uiState.codexEffort))
 
-    // Anmeldung
-    if (uiState.codexConnected) {
+    // Anmeldung: Claude braucht nur den Anthropic-API-Schlüssel, GPT das ChatGPT-Konto.
+    val claudeAktiv = selectedModel.istAnthropic
+    var anthropicKey by remember { mutableStateOf(com.entropyjournal.data.remote.codex.AnthropicKlient.schluessel(context)) }
+    if (claudeAktiv) {
+        OutlinedTextField(
+            value = anthropicKey,
+            onValueChange = { anthropicKey = it; com.entropyjournal.data.remote.codex.AnthropicKlient.schluesselSpeichern(context, it) },
+            label = { Text("Anthropic-API-Schlüssel (sk-ant-…)") },
+            singleLine = true,
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            if (anthropicKey.isBlank()) "Für Claude bitte deinen Anthropic-API-Schlüssel eintragen."
+            else "Claude denkt über deinen Anthropic-API-Schlüssel (eigene Abrechnung).",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    } else if (uiState.codexConnected) {
         Text(
             "Angemeldet" + (uiState.codexEmail?.let { " als $it" } ?: ""),
             style = MaterialTheme.typography.bodyMedium,
@@ -251,7 +276,7 @@ private fun CodexSettings(
     )
     if (modelExpanded) {
         Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-            CodexModel.entries.forEach { model ->
+            CodexModel.entries.filter { it.istAnthropic == claudeAktiv }.forEach { model ->
                 Text(
                     model.label,
                     style = MaterialTheme.typography.bodyLarge,

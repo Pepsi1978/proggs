@@ -64,11 +64,14 @@ class AiGateway @Inject constructor(
 
     /** true, wenn der gewaehlte Anbieter einsatzbereit ist (Gemini-Schluessel bzw. ChatGPT-Anmeldung). */
     fun isConfigured(): Boolean =
-        if (useCodex()) codexAuthManager.isConnected else geminiKey().isNotBlank()
+        if (useCodex()) codexAuthManager.kannDenken(codexModel()) else geminiKey().isNotBlank()
 
     /** Die Meldung fuer den Nutzer, wenn [isConfigured] false ist. */
     fun configurationError(): String =
-        if (useCodex()) {
+        if (useCodex() && codexModel().istAnthropic) {
+            "Claude ist als KI ausgewählt, aber der Anthropic-API-Schlüssel fehlt. " +
+                "Bitte in den Einstellungen eintragen."
+        } else if (useCodex()) {
             "ChatGPT ist als KI ausgewählt, aber noch nicht angemeldet. " +
                 "Bitte in den Einstellungen bei ChatGPT anmelden."
         } else {
@@ -79,8 +82,8 @@ class AiGateway @Inject constructor(
         encryptedPrefs.getString(Constants.PREF_GEMINI_API_KEY, "") ?: ""
 
     private fun useCodex(): Boolean =
-        encryptedPrefs.getString(Constants.PREF_AI_PROVIDER, Constants.AI_PROVIDER_GEMINI) ==
-            Constants.AI_PROVIDER_CODEX
+        encryptedPrefs.getString(Constants.PREF_AI_PROVIDER, Constants.AI_PROVIDER_GEMINI) in
+            setOf(Constants.AI_PROVIDER_CODEX, Constants.AI_PROVIDER_ANTHROPIC)
 
     private fun codexModel(): CodexModel =
         CodexModel.fromId(encryptedPrefs.getString(Constants.PREF_CODEX_MODEL, null))

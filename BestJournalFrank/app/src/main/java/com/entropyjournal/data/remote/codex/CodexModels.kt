@@ -1,17 +1,23 @@
 package com.entropyjournal.data.remote.codex
 
 /** Die auswaehlbaren ChatGPT-/Codex-Modelle. */
-enum class CodexModel(val label: String, val apiId: String) {
+enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
     ASTRA("GPT-6 Astra", "gpt-6-astra"),
     SOL("GPT 5.6 Sol", "gpt-5.6-sol"),
     TERRA("GPT 5.6 Terra", "gpt-5.6-terra"),
     LUNA("GPT 5.6 Luna", "gpt-5.6-luna"),
+    OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
+    FABLE("Claude Fable 5.1", "claude-fable-5-1", KiAnbieter.ANTHROPIC),
+    SONNET("Claude Sonnet 5.5", "claude-sonnet-5-5", KiAnbieter.ANTHROPIC),
+    HAIKU("Claude Haiku 5.5", "claude-haiku-5-5", KiAnbieter.ANTHROPIC),
     ;
+
+    val istAnthropic: Boolean get() = anbieter == KiAnbieter.ANTHROPIC
 
     val supportedEfforts: List<ReasoningEffort>
         get() = when (this) {
             ASTRA, SOL, TERRA -> ReasoningEffort.entries
-            LUNA -> ReasoningEffort.entries.filter { it != ReasoningEffort.ULTRA }
+            LUNA, OPUS, FABLE, SONNET, HAIKU -> ReasoningEffort.entries.filter { it != ReasoningEffort.ULTRA }
         }
 
     fun normalizeEffort(effort: ReasoningEffort): ReasoningEffort =
@@ -24,6 +30,8 @@ enum class CodexModel(val label: String, val apiId: String) {
             it.apiId.equals(value?.trim(), ignoreCase = true) ||
                 it.label.equals(value?.trim(), ignoreCase = true)
         } ?: DEFAULT
+
+        fun von(anbieter: KiAnbieter): List<CodexModel> = entries.filter { it.anbieter == anbieter }
     }
 }
 

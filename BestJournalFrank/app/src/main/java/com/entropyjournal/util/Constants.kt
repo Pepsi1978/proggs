@@ -245,6 +245,8 @@ object Constants {
     const val PREF_AI_PROVIDER = "ai_provider"
     const val AI_PROVIDER_GEMINI = "gemini"
     const val AI_PROVIDER_CODEX = "codex"
+    /** Claude-Modelle über einen eigenen Anthropic-API-Schlüssel (wie in Jarvis). */
+    const val AI_PROVIDER_ANTHROPIC = "anthropic"
     const val PREF_CODEX_MODEL = "codex_model"
     const val PREF_CODEX_EFFORT = "codex_reasoning_effort"
 
