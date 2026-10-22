@@ -153,14 +153,17 @@ public sealed class PromptVocabularyDriveSync
     }
 
     /// <summary>
-    /// Reine VEREINIGUNG zweier Vokabular-Texte: alle nicht-leeren Zeilen aus
-    /// lokal UND cloud, dedupliziert (case-insensitiv, getrimmt), lokale
-    /// Reihenfolge zuerst. Verlustfrei — kein Wort wird je entfernt.
+    /// Union of two vocabulary texts PER TERM (split on newline, comma, semicolon),
+    /// deduplicated case-insensitively, local order first. Comment lines (#) stay as
+    /// their own lines; all terms come out as ONE comma-separated line. Merging per
+    /// line kept every edited version of the comma list as an extra line, so after a
+    /// few syncs every term showed up several times in the settings dialog.
     /// </summary>
     public static string MergeVocabularies(string? localText, string? cloudText)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var outLines = new List<string>();
+        var terms = new List<string>();
 
         void Add(string? text)
         {
@@ -169,12 +172,22 @@ public sealed class PromptVocabularyDriveSync
             {
                 var line = raw.Trim();
                 if (line.Length == 0) continue;
-                if (seen.Add(line.ToLowerInvariant())) outLines.Add(line);
+                if (line.StartsWith('#'))
+                {
+                    if (seen.Add(line)) outLines.Add(line);
+                    continue;
+                }
+                foreach (var part in line.Split(',', ';'))
+                {
+                    var term = part.Trim();
+                    if (term.Length > 0 && seen.Add(term)) terms.Add(term);
+                }
             }
         }
 
         Add(localText);
         Add(cloudText);
+        if (terms.Count > 0) outLines.Add(string.Join(", ", terms));
         return string.Join("\n", outLines);
     }
 

@@ -1113,19 +1113,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .appendingPathComponent("SK/VoiceOverlays/personal-vocabulary.txt")
     }
 
-    /// Reine VEREINIGUNG zweier Vokabular-Texte (kein Wort geht je verloren).
-    /// Dedupliziert case-insensitiv, lokale Reihenfolge zuerst.
+    /// Union of two vocabulary texts PER TERM (split on newline, comma, semicolon),
+    /// deduplicated case-insensitively, local order first. Comment lines (#) stay as
+    /// their own lines; all terms come out as ONE comma-separated line. Merging per
+    /// line kept every edited version of the comma list as an extra line, so after a
+    /// few syncs every term showed up several times in the settings dialog.
     private static func mergeVocabularies(_ localText: String, _ cloudText: String) -> String {
         var seen = Set<String>()
         var out: [String] = []
+        var terms: [String] = []
         for text in [localText, cloudText] {
             let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
             for rawLine in normalized.components(separatedBy: "\n") {
                 let line = rawLine.trimmingCharacters(in: .whitespaces)
                 if line.isEmpty { continue }
-                if seen.insert(line.lowercased()).inserted { out.append(line) }
+                if line.hasPrefix("#") {
+                    if seen.insert(line.lowercased()).inserted { out.append(line) }
+                    continue
+                }
+                for part in line.components(separatedBy: CharacterSet(charactersIn: ",;")) {
+                    let term = part.trimmingCharacters(in: .whitespaces)
+                    if !term.isEmpty && seen.insert(term.lowercased()).inserted { terms.append(term) }
+                }
             }
         }
+        if !terms.isEmpty { out.append(terms.joined(separator: ", ")) }
         return out.joined(separator: "\n")
     }
 
