@@ -251,6 +251,14 @@ class CodexZugang(context: Context) {
      * Standard-Tarif zurück, statt die Anfrage scheitern zu lassen.
      */
     private suspend fun mitWiederholung(anfrage: JSONObject): String {
+        // Claude-Modelle rechnen über die Anthropic Messages API mit eigenem Schlüssel (wie in Jarvis).
+        if (ClaudeModell.istClaude(anfrage.optString("model"))) {
+            return try {
+                AnthropicKlient.antwortAufCodexAnfrage(ctx, anfrage).text
+            } catch (fehler: AnthropicFehler) {
+                throw CodexFehler(FehlerArt.NETZ, fehler.message.orEmpty(), fehler, fehler.wiederholbar)
+            }
+        }
         var versuch = 0
         while (true) {
             try {

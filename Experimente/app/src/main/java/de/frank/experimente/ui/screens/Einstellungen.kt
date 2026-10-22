@@ -236,8 +236,21 @@ fun Einstellungen(modell: AppViewModel) {
                         }
                     }
                 }
+                // Zweiter Anbieter wie in Jarvis: Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel.
+                val kontext = androidx.compose.ui.platform.LocalContext.current
+                var anthropicKey by remember { mutableStateOf(de.frank.experimente.auth.AnthropicKlient.schluessel(kontext)) }
+                Gruppe("Anthropic (Claude-Modelle)", Modifier.padding(top = 18.dp)) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = anthropicKey,
+                        onValueChange = { anthropicKey = it; de.frank.experimente.auth.AnthropicKlient.schluesselSpeichern(kontext, it) },
+                        placeholder = { Text("API-Schlüssel sk-ant-…") },
+                        singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 Text(
-                    text = "Das Logbuch darf ein anderes Modell benutzen als die Experimente.",
+                    text = "Das Logbuch darf ein anderes Modell benutzen als die Experimente. Claude-Modelle laufen über den Anthropic-Schlüssel (eigene Abrechnung), GPT-Modelle über dein ChatGPT-Konto.",
                     style = schriften.fliesstextKlein,
                     color = farben.gedaempft,
                     modifier = Modifier.padding(top = 18.dp),
