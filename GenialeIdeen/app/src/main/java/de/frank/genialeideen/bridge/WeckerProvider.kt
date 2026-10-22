@@ -47,6 +47,10 @@ class WeckerProvider : ContentProvider() {
             putString("qwenVoice", settings.qwenTtsVoiceId); putString("qwenStandardVoice", settings.qwenStandardVoice)
             putString("qwenKey", settings.qwenTtsApiKey); putString("groqKey", settings.groqApiKey)
             putFloat("rate", settings.ttsSpeechRate)
+            putString("geminiFlashVoice", settings.geminiFlashTtsVoice); putString("geminiLiteVoice", settings.geminiLiteTtsVoice)
+            putString("geminiKeyFrei", settings.geminiTtsKeyFrei); putString("geminiKeyBezahlt", settings.geminiTtsKeyBezahlt)
+            putString("geminiSchluesselWahl", settings.geminiTtsSchluesselWahl); putBoolean("geminiChirpRueckfall", settings.geminiTtsChirpRueckfall)
+            putString("azureKey", settings.azureTtsKey); putString("azureRegion", settings.azureTtsRegion); putString("azureVoice", settings.azureTtsVoice)
         } }
     }
     override fun getType(uri: Uri) = "vnd.android.cursor.dir/vnd.frank.offene-ideen"

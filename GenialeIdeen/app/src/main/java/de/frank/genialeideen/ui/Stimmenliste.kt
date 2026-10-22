@@ -31,14 +31,17 @@ object Stimmenliste {
     const val GRUPPE_MEINE = "Meine Stimmen"
     const val GRUPPE_ALIBABA = "Alibaba-Stimmen"
     const val GRUPPE_GOOGLE = "Google Chirp 3 HD"
+    const val GRUPPE_GEMINI_FLASH = "Gemini 3.8 Flash TTS"
+    const val GRUPPE_GEMINI_LITE = "Gemini 3.8 Flash-Lite TTS"
     const val GRUPPE_EDGE = "Edge-Stimmen"
+    const val GRUPPE_AZURE = "Azure Neural"
 
     /** Der Platzhalter, wenn es noch keine eigene Stimme gibt — die Gruppe verschwindet nie. */
     const val ID_STIMME_AUFNEHMEN = "__aufnehmen__"
 
     /**
      * Baut die vollständige Liste in fester Reihenfolge:
-     * Favoriten → Meine Stimmen → Alibaba → Google → Edge.
+     * Favoriten → Meine Stimmen → Alibaba → Google → Gemini → Gemini Lite → Edge → Azure.
      *
      * @param eigeneFehler Grund, warum die eigenen Stimmen gerade nicht geladen werden konnten.
      */
@@ -48,6 +51,8 @@ object Stimmenliste {
         favoriten: Set<String>,
         alibabaSchluessel: Boolean,
         googleSchluessel: Boolean,
+        geminiSchluessel: Boolean = false,
+        azureSchluessel: Boolean = false,
         eigeneFehler: String? = null,
     ): List<StimmenEintrag> {
         val meine = eigene.map { stimme ->
@@ -101,6 +106,23 @@ object Stimmenliste {
             )
         }
 
+        fun katalog(stimmen: List<de.frank.genialeideen.tts.TtsVoice>, anbieter: TtsProvider, gruppe: String, nutzbar: Boolean, grund: String) =
+            stimmen.map { stimme ->
+                StimmenEintrag(
+                    id = stimme.id,
+                    name = stimme.name,
+                    anbieter = anbieter,
+                    gruppe = gruppe,
+                    herkunft = anbieter.kurz,
+                    geschlecht = stimme.gender,
+                    nutzbar = nutzbar,
+                    grund = if (nutzbar) "" else grund,
+                )
+            }
+        val geminiFlash = katalog(TtsCatalog.geminiFlashVoices, TtsProvider.GEMINI_FLASH, GRUPPE_GEMINI_FLASH, geminiSchluessel, "Gemini-Stimmschlüssel fehlt")
+        val geminiLite = katalog(TtsCatalog.geminiLiteVoices, TtsProvider.GEMINI_LITE, GRUPPE_GEMINI_LITE, geminiSchluessel, "Gemini-Stimmschlüssel fehlt")
+        val azure = katalog(TtsCatalog.azureVoices, TtsProvider.AZURE, GRUPPE_AZURE, azureSchluessel, "Azure-Schlüssel fehlt")
+
         // Edge braucht keinen Schlüssel und ist deshalb immer wählbar (Kapitel 4.6).
         val edge = TtsCatalog.edgeVoices.map { stimme ->
             StimmenEintrag(
@@ -114,7 +136,8 @@ object Stimmenliste {
         }
 
         val alle = meine + sortiereNachGeschlecht(alibaba) +
-            sortiereNachGeschlecht(google) + sortiereNachGeschlecht(edge)
+            sortiereNachGeschlecht(google) + sortiereNachGeschlecht(geminiFlash) +
+            sortiereNachGeschlecht(geminiLite) + sortiereNachGeschlecht(edge) + sortiereNachGeschlecht(azure)
 
         // Markierte Stimmen erscheinen zusätzlich ganz oben, noch vor „Meine Stimmen".
         val markierte = alle

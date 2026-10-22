@@ -169,6 +169,9 @@ class IdeenViewModel(
 
     private val _stimmenFehler = MutableStateFlow<String?>(null)
 
+    /** Zählt Schlüsseländerungen hoch — die Favoriten allein lösen sonst keinen Neubau aus. */
+    private val _schluesselStand = MutableStateFlow(0)
+
     private var stimmenJob: Job? = null
     private var suchJob: Job? = null
     private var kiJob: Job? = null
@@ -217,13 +220,15 @@ class IdeenViewModel(
      * sich die eigenen Stimmen, die Favoriten oder ein Schlüssel ändern.
      */
     val stimmenEintraege: StateFlow<List<StimmenEintrag>> =
-        combine(_eigeneStimmen, _favoriten, _stimmenFehler) { eigene, markierte, fehler ->
+        combine(_eigeneStimmen, _favoriten, _stimmenFehler, _schluesselStand) { eigene, markierte, fehler, _ ->
             Stimmenliste.baue(
                 eigene = eigene,
                 eigeneNamen = settings.qwenVoiceNames,
                 favoriten = markierte,
                 alibabaSchluessel = settings.qwenTtsApiKey.isNotBlank(),
                 googleSchluessel = settings.googleTtsApiKey.isNotBlank(),
+                geminiSchluessel = geminiStimmeNutzbar(),
+                azureSchluessel = settings.azureTtsKey.isNotBlank(),
                 eigeneFehler = fehler,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -939,6 +944,9 @@ class IdeenViewModel(
             TtsProvider.EDGE -> settings.edgeTtsVoice = eintrag.id
             TtsProvider.QWEN -> settings.qwenStandardVoice = eintrag.id
             TtsProvider.QWEN_CLONE -> settings.qwenTtsVoiceId = eintrag.id
+            TtsProvider.GEMINI_FLASH -> settings.geminiFlashTtsVoice = eintrag.id
+            TtsProvider.GEMINI_LITE -> settings.geminiLiteTtsVoice = eintrag.id
+            TtsProvider.AZURE -> settings.azureTtsVoice = eintrag.id
         }
         settings.ttsProvider = eintrag.anbieter.id
         _gewaehlteStimme.value = eintrag.id
@@ -970,7 +978,13 @@ class IdeenViewModel(
     /** Baut die Stimmenliste neu — nötig, sobald ein Schlüssel dazukommt oder wegfällt. */
     fun stimmenlisteAuffrischen() {
         _favoriten.value = settings.favoriteTtsVoices
+        _schluesselStand.value++
     }
+
+    /** Gemini-Stimmen gehen mit einem eigenen Stimmschlüssel oder über den Chirp-Rückfall mit dem Google-Schlüssel. */
+    private fun geminiStimmeNutzbar(): Boolean =
+        settings.geminiTtsKeyFrei.isNotBlank() || settings.geminiTtsKeyBezahlt.isNotBlank() ||
+            (settings.geminiTtsChirpRueckfall && settings.googleTtsApiKey.isNotBlank())
 
     /** Probe einer eigenen Stimme, aufgerufen aus dem Stimmen-Bildschirm. */
     fun probeEigeneStimme(id: String) {
@@ -1502,6 +1516,9 @@ class IdeenViewModel(
         TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice
         TtsProvider.QWEN.id -> settings.qwenStandardVoice
         TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId
+        TtsProvider.GEMINI_FLASH.id -> settings.geminiFlashTtsVoice
+        TtsProvider.GEMINI_LITE.id -> settings.geminiLiteTtsVoice
+        TtsProvider.AZURE.id -> settings.azureTtsVoice
         else -> settings.edgeTtsVoice
     }
 
@@ -1513,6 +1530,8 @@ class IdeenViewModel(
             TtsProvider.QWEN_CLONE.id -> _eigeneStimmen.value.any { it.id == id }
             TtsProvider.QWEN.id -> settings.qwenTtsApiKey.isNotBlank()
             TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsApiKey.isNotBlank()
+            TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id -> geminiStimmeNutzbar()
+            TtsProvider.AZURE.id -> settings.azureTtsKey.isNotBlank()
             else -> true
         }
         if (nochDa || id.isBlank() && anbieter == TtsProvider.EDGE.id) return

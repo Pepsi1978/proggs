@@ -1,5 +1,7 @@
 package de.frank.genialeideen.ui
 
+import de.frank.genialeideen.data.settings.SecureSettings
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -250,6 +252,94 @@ fun EinstellungenScreen(
                     },
                     aufPruefen = { viewModel.ladeEigeneStimmen(zeigeFehler = true) },
                 )
+
+                // ---- Gemini 3.8 Flash / Flash-Lite TTS und Azure Neural ----
+                var geminiFrei by remember { mutableStateOf(settings.geminiTtsKeyFrei) }
+                var geminiBezahlt by remember { mutableStateOf(settings.geminiTtsKeyBezahlt) }
+                var geminiWahl by remember { mutableStateOf(settings.geminiTtsSchluesselWahl) }
+                var chirpRueckfall by remember { mutableStateOf(settings.geminiTtsChirpRueckfall) }
+                var azureKey by remember { mutableStateOf(settings.azureTtsKey) }
+                var azureRegion by remember { mutableStateOf(settings.azureTtsRegion) }
+                SchluesselFeld(
+                    beschriftung = "Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)",
+                    wert = geminiFrei,
+                    aufWert = {
+                        geminiFrei = it
+                        settings.geminiTtsKeyFrei = it.filterNot(Char::isWhitespace)
+                        viewModel.stimmenlisteAuffrischen()
+                    },
+                )
+                SchluesselFeld(
+                    beschriftung = "Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)",
+                    wert = geminiBezahlt,
+                    aufWert = {
+                        geminiBezahlt = it
+                        settings.geminiTtsKeyBezahlt = it.filterNot(Char::isWhitespace)
+                        viewModel.stimmenlisteAuffrischen()
+                    },
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Welcher Gemini-Schlüssel",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = gold.textGedaempft,
+                )
+                Spacer(Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
+                        Auswahlchip(name, geminiWahl == id) {
+                            geminiWahl = id
+                            settings.geminiTtsSchluesselWahl = id
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                SchalterZeile("Rückfall auf Chirp 3 HD", chirpRueckfall) {
+                    chirpRueckfall = it
+                    settings.geminiTtsChirpRueckfall = it
+                    viewModel.stimmenlisteAuffrischen()
+                }
+                Text(
+                    "Scheitert der kostenlose Schlüssel, liest Google Chirp 3 HD mit derselben Stimme weiter " +
+                        "(Google-Schlüssel oben) statt des bezahlten Schlüssels.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = gold.textGedaempft,
+                )
+                if (geminiFrei.isBlank() && geminiBezahlt.isBlank()) {
+                    Text(
+                        "Für die Gemini-Stimmen fehlt noch ein Schlüssel (aistudio.google.com).",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.akzentWarm,
+                    )
+                }
+                SchluesselFeld(
+                    beschriftung = "Azure-Speech-Schlüssel (KEY 1)",
+                    wert = azureKey,
+                    aufWert = {
+                        azureKey = it
+                        settings.azureTtsKey = it.filterNot(Char::isWhitespace)
+                        viewModel.stimmenlisteAuffrischen()
+                    },
+                )
+                SchluesselFeld(
+                    beschriftung = "Azure-Region (z. B. westeurope)",
+                    wert = azureRegion,
+                    geheim = false,
+                    aufWert = {
+                        azureRegion = it
+                        settings.azureTtsRegion = it.trim()
+                    },
+                )
+                if (azureKey.isBlank()) {
+                    Text(
+                        "Für die Azure-Stimmen fehlt noch der Schlüssel deiner Speech-Ressource.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.akzentWarm,
+                    )
+                }
                 Spacer(Modifier.height(10.dp))
                 GoldKnopf(text = "Eigene Stimme aufnehmen", aufTipp = aufEigeneStimme)
             }
@@ -872,10 +962,11 @@ private fun SchluesselFeld(
     aufWert: (String) -> Unit,
     ergebnis: String? = null,
     aufPruefen: (() -> Unit)? = null,
+    geheim: Boolean = true,
 ) {
     val gold = LocalGold.current
     val zwischenablage = LocalClipboardManager.current
-    var sichtbar by remember { mutableStateOf(false) }
+    var sichtbar by remember { mutableStateOf(!geheim) }
     Column(Modifier.padding(top = 12.dp)) {
         Text(beschriftung, style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft)
         Spacer(Modifier.height(6.dp))

@@ -1,6 +1,8 @@
 package de.frank.genialeideen.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -92,7 +94,10 @@ fun StimmenDropdown(
     var stimmenOffen by remember { mutableStateOf(false) }
     var suche by remember { mutableStateOf("") }
 
-    val inGruppe = remember(eintraege, gruppe) { eintraege.filter { it.gruppe == gruppe } }
+    // Favoriten stehen in jeder Gruppe oben; die Reihenfolge darunter bleibt.
+    val inGruppe = remember(eintraege, gruppe, favoriten) {
+        eintraege.filter { it.gruppe == gruppe }.sortedByDescending { it.id in favoriten }
+    }
     val gefiltert = remember(inGruppe, suche) {
         if (suche.isBlank()) inGruppe
         else inGruppe.filter { it.name.contains(suche, ignoreCase = true) }
@@ -326,6 +331,7 @@ private fun KlappFeld(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StimmenZeile(
     eintrag: StimmenEintrag,
@@ -342,7 +348,12 @@ private fun StimmenZeile(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .druckEffekt(aufTipp)
+            // Langes Drücken markiert die Stimme als Favorit oder nimmt sie wieder heraus.
+            .combinedClickable(
+                onClick = aufTipp,
+                onLongClick = if (platzhalter) null else aufFavorit,
+                onLongClickLabel = if (istFavorit) "Favorit entfernen" else "Als Favorit markieren",
+            )
             .background(if (gewaehlt) gold.primaer.copy(alpha = 0.12f) else Color.Transparent)
             .padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -405,8 +416,8 @@ private fun StimmenZeile(
             ) {
                 Icon(
                     if (istFavorit) Icons.Default.Star else Icons.Default.StarBorder,
-                    contentDescription = "Als Favorit merken",
-                    tint = if (istFavorit) gold.primaer else gold.textGedaempft,
+                    contentDescription = if (istFavorit) "Favorit entfernen" else "Als Favorit merken",
+                    tint = if (istFavorit) FavoritGelb else gold.textGedaempft,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -444,3 +455,6 @@ private fun HerkunftsChip(text: String) {
         Text(text, style = MaterialTheme.typography.labelSmall, color = gold.primaerGedaempft)
     }
 }
+
+/** Das Gelb der Favoritensterne — überall gleich, unabhängig vom Gold-Thema. */
+val FavoritGelb = Color(0xFFFFC107)
