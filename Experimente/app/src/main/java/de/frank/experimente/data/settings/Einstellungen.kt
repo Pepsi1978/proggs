@@ -6,6 +6,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import de.frank.experimente.auth.CodexModell
 import de.frank.experimente.auth.Effort
+import de.frank.experimente.audio.GroqTranscriber
 import de.frank.experimente.tts.TtsProvider
 import org.json.JSONArray
 import org.json.JSONObject
@@ -103,6 +104,27 @@ class Einstellungen(ctx: Context) {
     var groqSchluessel: String
         get() = p.getString(GROQ_API_KEY, "")!!
         set(v) { p.edit().putString(GROQ_API_KEY, v).commit() }
+
+    // --- Spracheingabe: Whisper-Modell und persönliches Wörterbuch ------------------------
+    /** `whisper-large-v3-turbo` (Standard) oder `whisper-large-v3`. Wirkt ab der nächsten Aufnahme. */
+    var whisperModell: String
+        get() = GroqTranscriber.normalisiereModell(p.getString(WHISPER_MODEL, GroqTranscriber.DEFAULT_MODEL))
+        set(v) {
+            p.edit().putString(WHISPER_MODEL, GroqTranscriber.normalisiereModell(v)).commit()
+            GroqTranscriber.sperreZuruecksetzen()
+        }
+
+    var woerterbuchAn: Boolean
+        get() = p.getBoolean(VOCABULARY_ON, true)
+        set(v) { p.edit().putBoolean(VOCABULARY_ON, v).commit() }
+
+    /** Noch nie gespeichert → die Vorbelegung; ein bewusst geleertes Feld bleibt leer. */
+    var woerterbuch: String
+        get() = p.getString(VOCABULARY, null) ?: GroqTranscriber.STANDARD_WOERTERBUCH
+        set(v) { p.edit().putString(VOCABULARY, v).commit() }
+
+    val woerterbuchPrompt: String?
+        get() = GroqTranscriber.woerterbuchPrompt(woerterbuchAn, woerterbuch)
 
     var googleTtsSchluessel: String
         get() = p.getString(GOOGLE_TTS_API_KEY, "")!!
@@ -239,6 +261,9 @@ class Einstellungen(ctx: Context) {
         const val TTS_RATE = "tts_rate"
         const val GROQ_API_KEY = "groq_api_key"
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
+        const val WHISPER_MODEL = "whisper_model"
+        const val VOCABULARY_ON = "vocabulary_on"
+        const val VOCABULARY = "vocabulary"
         const val QWEN_API_KEY = "qwen_api_key"
         const val REMINDER_MORNING_ON = "reminder_morning_on"
         const val REMINDER_MORNING_TIME = "reminder_morning_time"

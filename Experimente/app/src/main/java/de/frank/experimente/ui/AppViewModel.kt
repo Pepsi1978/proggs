@@ -813,7 +813,11 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 }
             _wartet.value = "Ich höre zu …"
             try {
-                val schreiber = GroqTranscriber(einstellungen.groqSchluessel)
+                val schreiber = GroqTranscriber(
+                    einstellungen.groqSchluessel,
+                    model = einstellungen.whisperModell,
+                    woerterbuchPrompt = einstellungen.woerterbuchPrompt,
+                )
                 val text = schreiber.transcribe(wav)
                 schreiber.shutdown()
                 if (text.isBlank()) {

@@ -129,6 +129,8 @@ fun Einstellungen(modell: AppViewModel) {
     // weiter die alte Zeit, obwohl die neue längst gespeichert war.
     var morgensZeit by remember { mutableStateOf(einstellungen.erinnerungMorgensZeit) }
     var abendsZeit by remember { mutableStateOf(einstellungen.erinnerungAbendsZeit) }
+    var whisperModell by remember { mutableStateOf(einstellungen.whisperModell) }
+    var woerterbuchAn by remember { mutableStateOf(einstellungen.woerterbuchAn) }
     var backupOrdnerGewaehlt by remember { mutableStateOf(einstellungen.backupOrdnerUri.isNotBlank()) }
     var importKandidat by remember { mutableStateOf<Uri?>(null) }
     val ordnerwahl = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -337,6 +339,33 @@ fun Einstellungen(modell: AppViewModel) {
                 }
                 Schluessel("Alibaba", "eigene Stimme", einstellungen.qwenSchluessel) {
                     einstellungen.qwenSchluessel = it
+                }
+            }
+        }
+
+        // --- Spracheingabe: Whisper-Modell und persönliches Wörterbuch ----------------
+        item("kopf-spracheingabe") { Zwischenueberschrift("Spracheingabe", Modifier.padding(top = 16.dp)) }
+        item("spracheingabe") {
+            Abschnittskarte {
+                Auswahl("Whisper-Modell", WHISPER_MODELLE, whisperModell) {
+                    whisperModell = it
+                    einstellungen.whisperModell = it
+                }
+                Text(
+                    text = "Gilt ab der nächsten Aufnahme. Large V3 muss bei Groq freigeschaltet sein, " +
+                        "sonst nimmt die App automatisch Turbo.",
+                    style = schriften.erklaerung,
+                    color = farben.gedaempft,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+                Box(Modifier.padding(top = 14.dp)) {
+                    Schalterzeile("Persönliches Wörterbuch", woerterbuchAn) {
+                        woerterbuchAn = it
+                        einstellungen.woerterbuchAn = it
+                    }
+                }
+                if (woerterbuchAn) {
+                    Woerterbuchfeld(einstellungen.woerterbuch) { einstellungen.woerterbuch = it }
                 }
             }
         }
@@ -927,6 +956,81 @@ private fun Geraetecodekarte(code: de.frank.experimente.auth.Geraetecode, modell
             beiKlick = { modell.oeffneAnmeldeseite(code.adresse) },
             modifier = Modifier.padding(top = 4.dp),
         )
+    }
+}
+
+/** Die zwei Whisper-Modelle bei Groq; Turbo ist die Voreinstellung. */
+private val WHISPER_MODELLE = listOf(
+    de.frank.experimente.audio.GroqTranscriber.TURBO to "Large V3 Turbo (schnell)",
+    de.frank.experimente.audio.GroqTranscriber.LARGE_V3 to "Large V3 (genauer)",
+)
+
+/** Eine Zeile mit Schalter, im Stil der Erinnerungen (48 × 28 dp, Knopf 22 dp). */
+@Composable
+private fun Schalterzeile(name: String, an: Boolean, beiWechsel: (Boolean) -> Unit) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+    val stufe = LocalEffektstufe.current
+    val knopfLinks by animateDpAsState(
+        targetValue = if (an) 23.dp else 3.dp,
+        animationSpec = tween(dauer(Bewegung.MITTEL, stufe), easing = Bewegung.ruhig),
+        label = "schalter",
+    )
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(farben.erhoeht)
+            .border(1.dp, farben.rand, RoundedCornerShape(14.dp))
+            .clickable { beiWechsel(!an) }
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(name, style = schriften.fliesstext, color = farben.text, modifier = Modifier.weight(1f))
+        Box(
+            Modifier
+                .size(width = 48.dp, height = 28.dp)
+                .clip(RoundedCornerShape(percent = 50))
+                .background(if (an) farben.aktion else farben.rand),
+        ) {
+            Box(
+                Modifier
+                    .offset(x = knopfLinks, y = 3.dp)
+                    .size(22.dp)
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(Color.White),
+            )
+        }
+    }
+}
+
+/** Das mehrzeilige Wörterbuchfeld; jede Änderung wird sofort gespeichert. */
+@Composable
+private fun Woerterbuchfeld(wert: String, beiAenderung: (String) -> Unit) {
+    val farben = LocalFarben.current
+    val schriften = LocalSchriften.current
+    var text by remember { mutableStateOf(wert) }
+    Column(Modifier.fillMaxWidth().padding(top = 14.dp)) {
+        Beschriftung("Begriffe (durch Komma oder Zeilenumbruch getrennt)")
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(farben.erhoeht)
+                .border(1.dp, farben.rand, RoundedCornerShape(14.dp))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            BasicTextField(
+                value = text,
+                onValueChange = { text = it; beiAenderung(it) },
+                textStyle = schriften.fliesstext.copy(color = farben.text),
+                cursorBrush = SolidColor(farben.aktion),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
