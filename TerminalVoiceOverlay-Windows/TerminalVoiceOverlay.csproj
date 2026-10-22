@@ -21,7 +21,7 @@
     <!-- Sichtbare Version (Regel version-bump-visible-always): in den EXE-Datei-Eigenschaften
          (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen. -->
     <Version>1.11.28</Version>
-    <InformationalVersion>1.11.27 (22.10.2026, 11:11 Uhr)</InformationalVersion>
+    <InformationalVersion>1.11.28 (22.10.2026, 12:05 Uhr)</InformationalVersion>
     <AssemblyTitle>Spracheingabe - Terminal</AssemblyTitle>
     <Company>Voice Overlay</Company>
   </PropertyGroup>
