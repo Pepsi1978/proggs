@@ -16,6 +16,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.HttpException
 
 /**
  * Whisper-Transkription via Groq. Spec §8.2.
@@ -52,8 +53,13 @@ class TranscribeAudioUseCase @Inject constructor(
     suspend operator fun invoke(audioFile: File): Result<String> {
         val key = secrets.groqApiKey
             ?: return Result.failure(IllegalStateException("Kein Groq-Key hinterlegt"))
-        val model = settings.whisperModelFlow.first()
+        var model = resolveModel(settings.whisperModelFlow.first())
         val language = settings.transcriptionLanguageFlow.first()
+        val prompt = if (settings.whisperVocabularyEnabledFlow.first()) {
+            buildVocabularyPrompt(parseTerms(settings.whisperVocabularyFlow.first()))
+        } else {
+            null
+        }
 
         // Schicht 1: Sprachgehalt-Vorfilter. analysis == null (Decode-Fehler) ->
         // NICHT filtern, trotzdem senden (funktionserhaltend).
@@ -68,11 +74,11 @@ class TranscribeAudioUseCase @Inject constructor(
             return Result.success("")
         }
 
-        val result = runCatchingCancellable {
+        val plain = "text/plain".toMediaType()
+        suspend fun send(model: String, prompt: String?): TranscriptionResponse {
             val requestFile = audioFile.asRequestBody("audio/m4a".toMediaType())
             val filePart = MultipartBody.Part.createFormData("file", audioFile.name, requestFile)
-            val plain = "text/plain".toMediaType()
-            val response = api.transcribe(
+            return api.transcribe(
                 bearer = "Bearer $key",
                 file = filePart,
                 model = model.toRequestBody(plain),
@@ -81,7 +87,29 @@ class TranscribeAudioUseCase @Inject constructor(
                 // ohne Mehrlatenz/-kosten. temperature=0 als Basis (kein Schutz allein).
                 responseFormat = "verbose_json".toRequestBody(plain),
                 temperature = "0".toRequestBody(plain),
+                prompt = prompt?.toRequestBody(plain),
             )
+        }
+
+        val result = runCatchingCancellable {
+            var response = try {
+                send(model, prompt)
+            } catch (e: HttpException) {
+                val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull().orEmpty()
+                if (model != AppSettings.WHISPER_LARGE_V3 || !isModelBlocked(body)) throw e
+                // large-v3 ist fuer die Groq-Organisation nicht freigeschaltet: Aufnahme nicht
+                // verlieren, einmal mit Turbo wiederholen und 30 Minuten direkt Turbo nehmen.
+                diag.warn(DiagnosticArea.GROQ, "Modell $model gesperrt (${e.code()}) — Wiederholung mit Turbo")
+                blockedUntil = System.currentTimeMillis() + BLOCK_MS
+                model = AppSettings.DEFAULT_WHISPER
+                send(model, prompt)
+            }
+            if (prompt != null && isPromptEcho(response.text, prompt)) {
+                // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus: einmal ohne
+                // Woerterbuch wiederholen statt das Diktat zu verlieren.
+                diag.warn(DiagnosticArea.GROQ, "Woerterbuch-Echo erkannt — erneut ohne Woerterbuch")
+                response = send(model, null)
+            }
             filterTranscription(response, analysis)
         }
         // Spec §20: Audio nach erfolgreicher Transkription sofort löschen.
@@ -172,5 +200,55 @@ class TranscribeAudioUseCase @Inject constructor(
 
         /** Schicht 2: Mini-Noise — sehr kurze Segmente mit Stille-Verdacht. */
         private const val MINI_NOISE_MAX_SEC = 0.4
+
+        private const val MAX_TERMS = 100
+        private const val MAX_PROMPT_CHARS = 350
+        private const val ECHO_MARKER = "Begriffe"
+        private const val BLOCK_MS = 30 * 60 * 1000L
+
+        /** Nach einer 403-Sperre von large-v3 bis zu diesem Zeitpunkt direkt Turbo nehmen. */
+        @Volatile
+        private var blockedUntil = 0L
+
+        private fun resolveModel(chosen: String): String =
+            if (chosen == AppSettings.WHISPER_LARGE_V3 && System.currentTimeMillis() < blockedUntil) {
+                AppSettings.DEFAULT_WHISPER
+            } else {
+                chosen
+            }
+
+        private fun isModelBlocked(body: String): Boolean =
+            body.contains("model_permission_blocked_org") || body.contains("blocked at the organization level")
+
+        /** Begriffe trennen, trimmen, Kommentare und Doppelte entfernen, hoechstens 100. */
+        fun parseTerms(raw: String): List<String> =
+            raw.split('\n', '\r', ',', ';')
+                .map(String::trim)
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+                .distinctBy { it.lowercase() }
+                .take(MAX_TERMS)
+
+        /** Woerterbuch als natuerlicher Satz (wie TVO), hoechstens 350 Zeichen; zu lange Begriffe werden uebersprungen. */
+        fun buildVocabularyPrompt(terms: List<String>): String? {
+            if (terms.isEmpty()) return null
+            val sb = StringBuilder("$ECHO_MARKER: ")
+            var added = 0
+            for (term in terms) {
+                if (sb.length + term.length + 2 > MAX_PROMPT_CHARS) continue
+                if (added++ > 0) sb.append(", ")
+                sb.append(term)
+            }
+            return if (added == 0) null else sb.append('.').toString()
+        }
+
+        /** Echo = Whisper wiederholt den Prompt ab seinem Anfang ("Begriffe: …"), ganz oder teilweise. */
+        fun isPromptEcho(text: String, prompt: String?): Boolean {
+            if (prompt.isNullOrEmpty() || text.isBlank()) return false
+            fun norm(s: String) = s.lowercase().filter(Char::isLetterOrDigit)
+            val t = norm(text)
+            val p = norm(prompt)
+            val marker = norm(ECHO_MARKER)
+            return t.startsWith(marker) && p.contains(t.substring(marker.length))
+        }
     }
 }

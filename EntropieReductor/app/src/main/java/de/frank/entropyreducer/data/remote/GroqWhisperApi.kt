@@ -23,6 +23,8 @@ interface GroqWhisperApi {
         @Part("language") language: RequestBody,
         @Part("response_format") responseFormat: RequestBody,
         @Part("temperature") temperature: RequestBody,
+        // Persoenliches Woerterbuch; null = Feld wird nicht gesendet (Retrofit ueberspringt null-Parts).
+        @Part("prompt") prompt: RequestBody? = null,
     ): TranscriptionResponse
 
     /**

@@ -320,6 +320,8 @@ data class ModelsUiState(
     val ttsVoice: String = "",
 )
 
+data class VocabularyUiState(val enabled: Boolean, val text: String)
+
 @HiltViewModel
 class ModelsViewModel @Inject constructor(private val settings: AppSettings) : ViewModel() {
     val state: StateFlow<ModelsUiState> =
@@ -335,6 +337,18 @@ class ModelsViewModel @Inject constructor(private val settings: AppSettings) : V
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ModelsUiState())
 
     fun setWhisper(v: String) = viewModelScope.launch { settings.setWhisperModel(v) }
+
+    /** Woerterbuch-Zustand; null, bis der DataStore gelesen ist (das Textfeld startet erst dann). */
+    val vocabulary: StateFlow<VocabularyUiState?> =
+        kotlinx.coroutines.flow
+            .combine(settings.whisperVocabularyEnabledFlow, settings.whisperVocabularyFlow) { an, text ->
+                VocabularyUiState(an, text)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun setVocabularyEnabled(v: Boolean) = viewModelScope.launch { settings.setWhisperVocabularyEnabled(v) }
+
+    fun setVocabulary(v: String) = viewModelScope.launch { settings.setWhisperVocabulary(v) }
 
     fun setGemini(v: String) = viewModelScope.launch { settings.setGeminiModel(v) }
 

@@ -34,6 +34,12 @@ class AppSettings @Inject constructor(
     private val ds = context.dataStore
 
     val whisperModelFlow: Flow<String> = ds.data.map { it[KEY_WHISPER_MODEL] ?: DEFAULT_WHISPER }
+
+    /** Persoenliches Woerterbuch fuer Whisper an/aus. Standard: an. */
+    val whisperVocabularyEnabledFlow: Flow<Boolean> = ds.data.map { it[KEY_WHISPER_VOCABULARY_ENABLED] ?: true }
+
+    /** Begriffe des Woerterbuchs als Rohtext. Noch nie gespeichert: die Vorbelegung. */
+    val whisperVocabularyFlow: Flow<String> = ds.data.map { it[KEY_WHISPER_VOCABULARY] ?: STANDARD_WOERTERBUCH }
     val geminiModelFlow: Flow<String> = ds.data.map { it[KEY_GEMINI_MODEL] ?: DEFAULT_GEMINI }
     val transcriptionLanguageFlow: Flow<String> = ds.data.map { it[KEY_LANGUAGE] ?: "de" }
     val ttsVoiceFlow: Flow<String> = ds.data.map { it[KEY_TTS_VOICE] ?: "" }
@@ -210,6 +216,8 @@ class AppSettings @Inject constructor(
     }
 
     suspend fun setWhisperModel(value: String) = ds.edit { it[KEY_WHISPER_MODEL] = value }
+    suspend fun setWhisperVocabularyEnabled(value: Boolean) = ds.edit { it[KEY_WHISPER_VOCABULARY_ENABLED] = value }
+    suspend fun setWhisperVocabulary(value: String) = ds.edit { it[KEY_WHISPER_VOCABULARY] = value }
     suspend fun setGeminiModel(value: String) = ds.edit { it[KEY_GEMINI_MODEL] = value }
     suspend fun setTranscriptionLanguage(value: String) = ds.edit { it[KEY_LANGUAGE] = value }
     suspend fun setTtsVoice(value: String) = ds.edit { it[KEY_TTS_VOICE] = value }
@@ -561,6 +569,8 @@ class AppSettings @Inject constructor(
 
     companion object {
         private val KEY_WHISPER_MODEL = stringPreferencesKey("whisper_model")
+        private val KEY_WHISPER_VOCABULARY_ENABLED = booleanPreferencesKey("whisper_vocabulary_enabled")
+        private val KEY_WHISPER_VOCABULARY = stringPreferencesKey("whisper_vocabulary")
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
         private val KEY_LANGUAGE = stringPreferencesKey("transcription_lang")
         private val KEY_TTS_VOICE = stringPreferencesKey("tts_voice")
@@ -634,6 +644,12 @@ class AppSettings @Inject constructor(
             booleanPreferencesKey("notification_enabled_$notificationKey")
 
         const val DEFAULT_WHISPER = "whisper-large-v3-turbo"
+        const val WHISPER_LARGE_V3 = "whisper-large-v3"
+
+        /** Vorbelegung des persoenlichen Woerterbuchs (Stand TerminalVoiceOverlay). */
+        const val STANDARD_WOERTERBUCH = "Bug-Almanach, Sonnet-Schwarm, Groq, Whisper, APK-Update, " +
+            "UpdateStation, OpenLauncher, Jarvis, debugging, Logcat, Harness, Best Practices, VCO, CVO, " +
+            "ChatGPT, Claude, Claude Code, OpenAI, Anthropic, bug almanach, Anthrophic"
         const val DEFAULT_TTS_AUTO_STOP_MINUTES = 15
         // Frank-Wunsch 2026-05-09: Default-Modell ist Gemini 3.1 Flash-Lite. Greift
         // bei jeder Neuinstallation (frischer DataStore = Fallback auf diesen Wert)
