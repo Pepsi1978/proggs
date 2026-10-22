@@ -205,12 +205,43 @@ fun EinstellungenBildschirm(
                 }
 
                 Spacer(Modifier.height(16.dp))
+                // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen eigenen API-Schlüssel.
+                val kontext = androidx.compose.ui.platform.LocalContext.current
+                val anbieter = CodexModel.fromLabel(codexModell).anbieter
+                var anthropicKey by remember { mutableStateOf(de.frank.gedankenspeicher.auth.AnthropicKlient.schluessel(kontext)) }
+                Beschriftung("Anbieter")
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    de.frank.gedankenspeicher.auth.KiAnbieter.entries.forEach { a ->
+                        Wahlfeld(a.label, anbieter == a) {
+                            if (anbieter != a) {
+                                val alt = CodexModel.fromLabel(codexModell)
+                                if (alt.istAnthropic) de.frank.gedankenspeicher.auth.AnthropicKlient.claudeModellMerken(kontext, de.frank.gedankenspeicher.auth.ClaudeModell.von(alt.apiId) ?: de.frank.gedankenspeicher.auth.ClaudeModell.OPUS)
+                                else de.frank.gedankenspeicher.auth.AnthropicKlient.openAiModellMerken(kontext, alt.apiId)
+                                beiModell(if (a == de.frank.gedankenspeicher.auth.KiAnbieter.ANTHROPIC) de.frank.gedankenspeicher.auth.AnthropicKlient.letztesClaudeModell(kontext).apiId
+                                    else de.frank.gedankenspeicher.auth.AnthropicKlient.letztesOpenAiModell(kontext, CodexModel.TERRA.apiId))
+                            }
+                        }
+                    }
+                }
+                if (anbieter == de.frank.gedankenspeicher.auth.KiAnbieter.ANTHROPIC) {
+                    Spacer(Modifier.height(10.dp))
+                    Schluesselfeld(
+                        beschriftung = "Anthropic",
+                        zweck = "Claude über deinen API-Schlüssel (sk-ant-…)",
+                        wert = anthropicKey,
+                        beiAenderung = { anthropicKey = it; de.frank.gedankenspeicher.auth.AnthropicKlient.schluesselSpeichern(kontext, it) },
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
                 Beschriftung("Modell")
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    CodexModel.entries.forEach { m ->
+                    CodexModel.von(anbieter).forEach { m ->
                         Wahlfeld(m.label, m.apiId == codexModell) { beiModell(m.apiId) }
                     }
                 }

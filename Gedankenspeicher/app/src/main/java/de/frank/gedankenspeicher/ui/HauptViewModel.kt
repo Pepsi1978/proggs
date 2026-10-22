@@ -145,6 +145,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Ob Codex verbunden ist — als Fluss, damit B-04 den Wechsel sofort zeigt. */
     private val _codexVerbunden = MutableStateFlow(codex.isConnected)
+
+    /** Die gewählte KI kann antworten: OpenAI über das ChatGPT-Konto, Claude über den Anthropic-Schlüssel. */
+    private fun kiBereit(): Boolean = codex.kannDenken(de.frank.gedankenspeicher.auth.CodexModel.fromLabel(einstellungen.codexModell))
     val codexVerbunden: StateFlow<Boolean> = _codexVerbunden
 
     private val _codexKonto = MutableStateFlow(codex.email)
@@ -1196,7 +1199,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     /** F-05, Fehlerfall: was beim letzten Mal nicht klappte, wird beim Start nachgeholt. */
     private fun holeFehlendeUeberschriften() {
         viewModelScope.launch {
-            if (!codex.isConnected || !hatNetz()) return@launch
+            if (!kiBereit() || !hatNetz()) return@launch
             repo.notizenOhneUeberschrift().forEach { notiz ->
                 if (notiz.text.isBlank()) return@forEach
                 runCatching {
@@ -1381,7 +1384,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             websuche = grund == Websuche.IMMER,
             websucheKiEntscheidet = grund == Websuche.KI_ENTSCHEIDET,
             grundhaltungKi = grund == Websuche.KI_ENTSCHEIDET,
-            codexFehlt = !codex.isConnected,
+            codexFehlt = !kiBereit(),
         )
         frageJob = viewModelScope.launch {
             val profil = repo.holeAktivesProfil()
@@ -1428,7 +1431,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
         if (eintraege.isEmpty()) return
-        if (!codex.isConnected) {
+        if (!kiBereit()) {
             _kiBlatt.update { it.copy(codexFehlt = true, holtFrage = false) }
             return
         }

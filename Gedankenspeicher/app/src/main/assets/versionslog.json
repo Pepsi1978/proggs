@@ -8,6 +8,7 @@
     {"versionCode": 59, "versionName": "0.6.18", "stand": "14.10.2026, 10:10 Uhr", "notiz": "Die Seitenleiste geht per Wisch jetzt in einem Zug ruckelfrei auf und zu (Sidebar-Modul M1.3 aus Geniale Ideen)"},
     {"versionCode": 60, "versionName": "0.6.19", "stand": "22.10.2026, 11:20 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter."},
     {"versionCode": 61, "versionName": "0.6.20", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt."},
-    {"versionCode": 62, "versionName": "0.6.21", "stand": "22.10.2026, 11:53 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per langem Drücken als Favorit oben anheften."}
+    {"versionCode": 62, "versionName": "0.6.21", "stand": "22.10.2026, 11:53 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per langem Drücken als Favorit oben anheften."},
+    {"versionCode": 63, "versionName": "0.6.22", "stand": "22.10.2026, 12:47 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."}
   ]
 }
