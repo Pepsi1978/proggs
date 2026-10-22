@@ -197,6 +197,7 @@ class GroqTranscriber(
         private const val MAX_BEGRIFFE = 100
         private const val MAX_PROMPT_ZEICHEN = 350
         private const val ECHO_MARKER = "Begriffe"
+        private const val MIN_TEIL_ECHO_ZEICHEN = 12
         private const val SPERRE_MS = 30 * 60 * 1000L
 
         @Volatile
@@ -250,13 +251,16 @@ class GroqTranscriber(
 
         private fun normalisiere(s: String): String = s.lowercase().filter(Char::isLetterOrDigit)
 
-        /** Echo = Whisper wiederholt den Prompt ab seinem Anfang ("Begriffe: ..."), ganz oder teilweise. */
+        /** Echo = Whisper wiederholt den Prompt ganz oder teilweise (Anfang "Begriffe: ..." oder nur Ende/Mitte). */
         internal fun isPromptEcho(text: String, prompt: String?): Boolean {
             if (prompt.isNullOrEmpty() || text.isBlank()) return false
             val t = normalisiere(text)
             val p = normalisiere(prompt)
             val marker = normalisiere(ECHO_MARKER)
-            return t.startsWith(marker) && p.contains(t.substring(marker.length))
+            if (t.isEmpty()) return false
+            if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+            // Teil-Echo: bei Stille gibt Whisper oft nur das Ende des Prompts aus.
+            return t.length >= MIN_TEIL_ECHO_ZEICHEN && p.contains(t)
         }
 
         private val WAV_MEDIA_TYPE = "audio/wav".toMediaType()
