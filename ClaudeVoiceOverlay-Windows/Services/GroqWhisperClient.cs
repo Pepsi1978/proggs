@@ -24,8 +24,9 @@ namespace ClaudeVoiceOverlay.Services
         private string CurrentModel => _callModel.Value ?? _defaultModel;
         // Persoenliches Woerterbuch als Whisper-prompt (null = Schalter aus / leer).
         private readonly AsyncLocal<string?> _callPrompt = new();
-        // Whisper nimmt max. 224 Prompt-Tokens; ~500 Zeichen bleiben sicher darunter.
-        private const int MaxPromptChars = 500;
+        // Whisper nimmt max. 224 Prompt-Tokens; deutsche Komposita brauchen viele Tokens je Zeichen,
+        // 350 Zeichen bleiben auch dann sicher darunter.
+        private const int MaxPromptChars = 350;
         private readonly string _language;
         private readonly string _url;
         private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
@@ -150,7 +151,6 @@ namespace ClaudeVoiceOverlay.Services
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
             _callModel.Value = GroqModelSetting.Resolve(_defaultModel);
-            _callPrompt.Value = BuildVocabularyPrompt(PersonalVocabulary.Load());
             DiagLog.Write("Groq", "transcribe_start", ("model", CurrentModel), ("lang", _language));
             // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
             // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
@@ -158,6 +158,8 @@ namespace ClaudeVoiceOverlay.Services
             // Disk-I/O. Die Bytes werden im Aufruf nicht mutiert, also ist
             // Sharing zwischen Versuchen sicher.
             byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath).ConfigureAwait(false);
+            // Woerterbuch erst nach dem ersten await lesen: Datei-I/O nicht auf dem UI-Thread.
+            _callPrompt.Value = BuildVocabularyPrompt(PersonalVocabulary.Load());
             try
             {
                 // Schicht 1 (Sprachinhalt-Vorfilter): Aufnahme ohne erkennbaren Sprachinhalt gar nicht
@@ -202,23 +204,34 @@ namespace ClaudeVoiceOverlay.Services
                 ? await TranscribeInChunksAsync(fileBytes).ConfigureAwait(false)
                 : await TranscribeWithRetry(fileBytes, 0, voiced).ConfigureAwait(false);
             // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus (eigene Messung 21.10.2026).
+            // Dann einmal ohne Woerterbuch wiederholen statt das Diktat zu verlieren.
             if (IsPromptEcho(text, _callPrompt.Value))
-                throw new Exception("Groq hat nur die Woerterbuch-Liste zurueckgegeben (Prompt-Echo) — verworfen");
+            {
+                DiagLog.Write("Groq", "prompt_echo_retry_without_prompt", ("chars", text.Length));
+                _callPrompt.Value = null;
+                text = fileBytes.Length > MaxUploadBytes
+                    ? await TranscribeInChunksAsync(fileBytes).ConfigureAwait(false)
+                    : await TranscribeWithRetry(fileBytes, 0, voiced).ConfigureAwait(false);
+            }
             return text;
         }
+
+        private const string EchoMarker = "Begriffe";
 
         /// <summary>Woerterbuch als natuerlicher Satz; Whisper uebernimmt daraus Schreibweisen.</summary>
         private static string? BuildVocabularyPrompt(string[] words)
         {
             if (words.Length == 0) return null;
-            var sb = new StringBuilder("Begriffe: ");
+            var sb = new StringBuilder(EchoMarker + ": ");
+            int added = 0;
             foreach (var w in words)
             {
-                if (sb.Length + w.Length + 2 > MaxPromptChars) break;
-                if (sb.Length > 10) sb.Append(", ");
+                // Zu lange Eintraege ueberspringen, nicht abbrechen: die uebrigen Begriffe zaehlen.
+                if (sb.Length + w.Length + 2 > MaxPromptChars) continue;
+                if (added++ > 0) sb.Append(", ");
                 sb.Append(w);
             }
-            return sb.Append('.').ToString();
+            return added == 0 ? null : sb.Append('.').ToString();
         }
 
         private static bool IsPromptEcho(string text, string? prompt)
@@ -227,9 +240,11 @@ namespace ClaudeVoiceOverlay.Services
             static string Norm(string s) => new string(s.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
             var t = Norm(text);
             var p = Norm(prompt);
-            // Echo = Text steckt im Prompt und deckt einen grossen Teil davon ab; ein einzelnes
-            // diktiertes Woerterbuch-Wort ("Logcat") bleibt erhalten.
-            return t.Length > 0 && p.Contains(t) && t.Length >= p.Length / 2;
+            // Echo = Whisper wiederholt den Prompt ab seinem Anfang ("Begriffe: …"), ganz oder teilweise.
+            // Diktat, das nur Woerterbuch-Woerter enthaelt ("Codex Gemini"), beginnt nicht mit dem
+            // Marker und bleibt erhalten.
+            var marker = Norm(EchoMarker);
+            return t.StartsWith(marker, StringComparison.Ordinal) && p.Contains(t[marker.Length..]);
         }
 
         private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt, bool[]? voiced = null)
@@ -577,6 +592,8 @@ namespace ClaudeVoiceOverlay.Services
                 try
                 {
                     string part = await TranscribeWithRetry(chunk, 0).ConfigureAwait(false);
+                    // Stiller Teil kann die Woerterbuch-Liste ausgeben: nur diesen Teil verwerfen.
+                    if (IsPromptEcho(part, _callPrompt.Value)) part = string.Empty;
                     DiagLog.Write("Groq", "chunk_done",
                         ("index", i + 1), ("of", ranges.Count), ("bytes", chunk.Length),
                         ("chars", part.Length));
