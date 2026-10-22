@@ -414,7 +414,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 currentCoroutineContext().ensureActive()
                 val transcriber = GroqTranscriber(settings.groqApiKey, filterStille = settings.filterStilleVorabAn,
                     filterMetriken = settings.filterSegmentmetrikenAn, filterZeitstempel = settings.filterZeitstempelAn,
-                    filterFloskeln = settings.filterFloskelnAn)
+                    filterFloskeln = settings.filterFloskelnAn, model = settings.groqModell,
+                    prompt = GroqTranscriber.vokabularPrompt(settings.woerterbuchAn, settings.woerterbuch))
                 val result = try { Diktat(transcriber).transkribiere(bytes) } finally { transcriber.shutdown() }
                 // A late, non-cooperative network result of a cancelled or replaced job is dropped silently.
                 currentCoroutineContext().ensureActive()

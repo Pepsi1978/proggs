@@ -38,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import de.frank.genialeideen.BuildConfig
+import de.frank.genialeideen.audio.GroqTranscriber
 import de.frank.genialeideen.audio.VoiceSampleScript
 import de.frank.genialeideen.auth.CodexModel
 import de.frank.genialeideen.auth.ReasoningEffort
@@ -332,7 +333,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         var erkennungStand by remember { mutableIntStateOf(0) }
         val lokalesModell = remember(erkennungStand, erkennungOffen) { Erkennung.aktiv(activity) }
         Section("Spracheingabe", collapsible = true, summary = if (diktatWeg == "lokal")
-            "Auf dem Handy · ${lokalesModell?.modellName ?: "Modell noch nicht geladen"}" else "Groq · Whisper Large V3 Turbo (API-Schlüssel)") {
+            "Auf dem Handy · ${lokalesModell?.modellName ?: "Modell noch nicht geladen"}" else "Groq · Whisper ${GroqTranscriber.modellName(settings.groqModell)} (API-Schlüssel)") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip3D(diktatWeg == "groq", { diktatWeg = "groq"; settings.diktatWeg = "groq"; vm.settingsRevision.value++ }, "Groq · API-Schlüssel")
                 Chip3D(diktatWeg == "lokal", { diktatWeg = "lokal"; settings.diktatWeg = "lokal"; vm.settingsRevision.value++ }, "Auf dem Handy · Whisper")
@@ -346,8 +347,16 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                     color = if (lokalesModell != null) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
                 GoldKnopf("Modell wählen und herunterladen", { erkennungOffen = true }, Modifier.fillMaxWidth())
             } else {
-                Text("Groq · Whisper Large V3 Turbo")
                 key(revision) {
+                    var groqModell by remember { mutableStateOf(settings.groqModell) }
+                    Choice("Whisper-Modell", groqModell, GroqTranscriber.MODELLE) { groqModell = it; settings.groqModell = it; vm.settingsRevision.value++ }
+                    var woerterbuchAn by remember { mutableStateOf(settings.woerterbuchAn) }
+                    var woerterbuch by remember { mutableStateOf(settings.woerterbuch) }
+                    Toggle("Persönliches Wörterbuch", woerterbuchAn) { woerterbuchAn = it; settings.woerterbuchAn = it }
+                    Eingabefeld(woerterbuch, { woerterbuch = it; settings.woerterbuch = it },
+                        "Begriffe (durch Komma oder Zeilenumbruch getrennt)",
+                        Modifier.fillMaxWidth().heightIn(min = 120.dp), einzeilig = false, aktiviert = woerterbuchAn)
+                    Text("Whisper übernimmt daraus die Schreibweise von Namen und Fachbegriffen. Wirkt ab der nächsten Aufnahme.", style = MaterialTheme.typography.bodySmall)
                     SettingToggle("Stille vorab herausfiltern", settings.filterStilleVorabAn) { settings.filterStilleVorabAn = it }
                     SettingToggle("Segmentmetriken prüfen", settings.filterSegmentmetrikenAn) { settings.filterSegmentmetrikenAn = it }
                     SettingToggle("Zeitstempel prüfen", settings.filterZeitstempelAn) { settings.filterZeitstempelAn = it }

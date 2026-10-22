@@ -26,6 +26,8 @@ class GroqTranscriber(
     private val filterMetriken: Boolean = true,
     private val filterZeitstempel: Boolean = true,
     private val filterFloskeln: Boolean = true,
+    /** Wörterbuch-Prompt aus [vokabularPrompt]; null = ohne persönliches Wörterbuch. */
+    private val prompt: String? = null,
 ) {
     private val analyzer = SpeechAnalyzer()
     private val filter = WhisperHallucinationFilter()
@@ -52,31 +54,53 @@ class GroqTranscriber(
             return@withContext ""
         }
 
-        val multipart = MultipartBody.Builder()
+        // large-v3 ist nach einer Groq-Sperre 30 Minuten lang durch Turbo ersetzt.
+        var modell = if (model == MODEL_LARGE_V3 && System.currentTimeMillis() < turboErzwungenBis) MODEL_TURBO else model
+        var parsed = try {
+            sende(wav, modell, prompt)
+        } catch (gesperrt: ModellGesperrtException) {
+            // large-v3 ist für die Groq-Organisation nicht freigeschaltet: Diktat nicht verlieren, einmal mit Turbo.
+            logger.warning("model_blocked_fallback_turbo ($modell)")
+            turboErzwungenBis = System.currentTimeMillis() + SPERRE_MS
+            modell = MODEL_TURBO
+            sende(wav, modell, prompt)
+        }
+        // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus: dann einmal ohne Wörterbuch wiederholen.
+        if (istPromptEcho(parsed.text, prompt)) {
+            logger.warning("prompt_echo_retry_without_prompt (${parsed.text.length} chars)")
+            parsed = sende(wav, modell, null)
+        }
+        filter.filter(parsed, analysis, filterMetriken, filterZeitstempel, filterFloskeln)
+    }
+
+    private suspend fun sende(wav: ByteArray, modell: String, prompt: String?): GroqTranscriptionResponse {
+        val builder = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("file", "audio.wav", wav.toRequestBody(WAV_MEDIA_TYPE))
-            .addFormDataPart("model", model)
+            .addFormDataPart("model", modell)
             .addFormDataPart("language", "de")
             .addFormDataPart("response_format", "verbose_json")
             .addFormDataPart("temperature", "0")
-            .build()
+        if (prompt != null) builder.addFormDataPart("prompt", prompt)
         val request = Request.Builder()
             .url(TRANSCRIPTIONS_URL)
             .header("Authorization", "Bearer $apiKey")
-            .post(multipart)
+            .post(builder.build())
             .build()
 
-        client.newCall(request).await().use { response ->
+        return client.newCall(request).await().use { response ->
             val responseBody = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
+                if (modell == MODEL_LARGE_V3 && istModellGesperrt(responseBody)) throw ModellGesperrtException()
                 throw GroqTranscriptionException(httpError(response.code, responseBody))
             }
-            val parsed = runCatching { parseResponse(responseBody) }.getOrElse { error ->
+            runCatching { parseResponse(responseBody) }.getOrElse { error ->
                 throw GroqTranscriptionException("Groq hat eine ungueltige Antwort geliefert.", error)
             }
-            filter.filter(parsed, analysis, filterMetriken, filterZeitstempel, filterFloskeln)
         }
     }
+
+    private class ModellGesperrtException : Exception("model_permission_blocked_org")
 
     internal fun parseResponse(body: String): GroqTranscriptionResponse {
         val json = JSONObject(body)
@@ -145,7 +169,57 @@ class GroqTranscriber(
         internal const val TRANSCRIPTIONS_URL =
             "https://api.groq.com/openai/v1/audio/transcriptions"
         internal const val MAX_FILE_BYTES = 25 * 1024 * 1024
-        const val DEFAULT_MODEL = "whisper-large-v3-turbo"
+        const val MODEL_TURBO = "whisper-large-v3-turbo"
+        const val MODEL_LARGE_V3 = "whisper-large-v3"
+        const val DEFAULT_MODEL = MODEL_TURBO
+
+        /** Auswahl in den Einstellungen: Modell-ID zu Anzeige. */
+        val MODELLE = listOf(MODEL_TURBO to "Large V3 Turbo (schnell)", MODEL_LARGE_V3 to "Large V3 (genauer)")
+
+        fun modellName(modell: String): String = MODELLE.firstOrNull { it.first == modell }?.second ?: MODELLE.first().second
+
+        /** Voreinstellung des persönlichen Wörterbuchs (Stand TerminalVoiceOverlay). */
+        const val STANDARD_WOERTERBUCH = "Bug-Almanach, Sonnet-Schwarm, Groq, Whisper, APK-Update, UpdateStation, OpenLauncher, Jarvis, debugging, Logcat, Harness, Best Practices, VCO, CVO, ChatGPT, Claude, Claude Code, OpenAI, Anthropic, bug almanach, Anthrophic"
+
+        private const val ECHO_MARKER = "Begriffe"
+        private const val MAX_PROMPT_CHARS = 350
+        private const val MAX_BEGRIFFE = 100
+        private const val SPERRE_MS = 30 * 60 * 1000L
+
+        /** Nach einer Groq-Sperre für large-v3 bis hierhin direkt Turbo nehmen. */
+        @Volatile private var turboErzwungenBis = 0L
+
+        fun begriffe(text: String): List<String> = text
+            .split('\n', '\r', ',', ';')
+            .map(String::trim)
+            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .distinctBy { it.lowercase() }
+            .take(MAX_BEGRIFFE)
+
+        /** Wörterbuch als natürlicher Satz; Whisper übernimmt daraus Schreibweisen. Null bei Schalter aus oder ohne Begriffe. */
+        fun vokabularPrompt(an: Boolean, text: String): String? {
+            if (!an) return null
+            val sb = StringBuilder("$ECHO_MARKER: ")
+            var added = 0
+            for (w in begriffe(text)) {
+                // Zu lange Einträge überspringen, nicht abbrechen: die übrigen Begriffe zählen.
+                if (sb.length + w.length + 2 > MAX_PROMPT_CHARS) continue
+                if (added++ > 0) sb.append(", ")
+                sb.append(w)
+            }
+            return if (added == 0) null else sb.append('.').toString()
+        }
+
+        internal fun istPromptEcho(text: String, prompt: String?): Boolean {
+            if (prompt.isNullOrEmpty() || text.isBlank()) return false
+            fun norm(s: String) = s.lowercase().filter(Char::isLetterOrDigit)
+            val t = norm(text)
+            val marker = norm(ECHO_MARKER)
+            return t.startsWith(marker) && norm(prompt).contains(t.substring(marker.length))
+        }
+
+        internal fun istModellGesperrt(body: String): Boolean =
+            body.contains("model_permission_blocked_org") || body.contains("blocked at the organization level")
 
         private val WAV_MEDIA_TYPE = "audio/wav".toMediaType()
         private val logger = Logger.getLogger(GroqTranscriber::class.java.name)

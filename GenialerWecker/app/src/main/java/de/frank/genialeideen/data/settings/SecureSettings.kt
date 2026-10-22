@@ -196,6 +196,20 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.GROQ_API_KEY, "")
         set(value) = writeString(Keys.GROQ_API_KEY, value)
 
+    /** Groq-Whisper-Modell: „whisper-large-v3-turbo“ (Standard) oder „whisper-large-v3“. */
+    var groqModell: String
+        get() = readString(Keys.GROQ_MODELL, de.frank.genialeideen.audio.GroqTranscriber.DEFAULT_MODEL)
+        set(value) = writeString(Keys.GROQ_MODELL, value)
+
+    var woerterbuchAn: Boolean
+        get() = readFlag(Keys.WOERTERBUCH_AN, true)
+        set(value) = writeFlag(Keys.WOERTERBUCH_AN, value)
+
+    /** Begriffe des persönlichen Wörterbuchs; nie gespeichert = Voreinstellung. */
+    var woerterbuch: String
+        get() = readString(Keys.WOERTERBUCH, de.frank.genialeideen.audio.GroqTranscriber.STANDARD_WOERTERBUCH)
+        set(value) = writeString(Keys.WOERTERBUCH, value)
+
     var filterStilleVorabAn: Boolean
         get() = readFlag(Keys.FILTER_VAD, true)
         set(value) = writeFlag(Keys.FILTER_VAD, value)
@@ -347,6 +361,9 @@ class SecureSettings(context: Context) : Closeable {
         const val IMMER_DEUTSCH = "immer_deutsch_vorlesen"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"
+        const val GROQ_MODELL = "groq_modell"
+        const val WOERTERBUCH_AN = "woerterbuch_an"
+        const val WOERTERBUCH = "woerterbuch"
         const val FILTER_VAD = "filter_vad"
         const val FILTER_SEGMENTS = "filter_segments"
         const val FILTER_TIMESTAMPS = "filter_timestamps"
