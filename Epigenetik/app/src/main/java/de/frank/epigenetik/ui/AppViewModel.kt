@@ -100,7 +100,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun recherchiere(typ: Typ, namen: List<String>, kategorie: Kategorie? = null, neu: Boolean = false) {
-        if (!auth.isConnected) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); oeffne(Seite.Einstellungen); return }
+        if (!auth.kannDenken(einstellungen.modell)) { melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); oeffne(Seite.Einstellungen); return }
         hinweiseAnfragen()
         viewModelScope.launch {
             val ergebnisse = namen.map { n -> repo.anlegen(typ, n, kategorie ?: if (typ == Typ.MITTEL) Eingabe.rateKategorie(n) else null, neu = neu) }

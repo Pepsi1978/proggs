@@ -80,7 +80,7 @@ fun StartBildschirm(vm: AppViewModel) {
     val fragen = alle.filter { it.typEnum == Typ.FRAGE && it.fertig }.take(4)
 
     Seitenliste(vm, "Epigenetik", "Gene an- und abschalten") {
-        if (!vm.kiVerbunden) item(key = "ki") {
+        if (!vm.kiVerbunden && !vm.einstellungen.modell.istAnthropic) item(key = "ki") {
             Row(
                 Modifier.fillMaxWidth().einblenden().glas(f, toenung = f.primaer).antippen { vm.oeffne(Seite.Einstellungen) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,

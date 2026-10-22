@@ -1,5 +1,9 @@
 package de.frank.epigenetik.ui
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -115,8 +119,38 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                             vm.kiFehler?.let { Text(it, color = f.gefahr, fontSize = 12.sp) }
                         }
                     }
+                    // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen eigenen API-Schlüssel.
+                    val kontext = androidx.compose.ui.platform.LocalContext.current
+                    var anthropicKey by remember { mutableStateOf(de.frank.epigenetik.auth.AnthropicKlient.schluessel(kontext)) }
+                    Text("Anbieter", color = f.textLeise, fontSize = 13.sp)
+                    ChipReihe {
+                        de.frank.epigenetik.auth.KiAnbieter.entries.forEach { a ->
+                            Chip(a.label, e.modell.anbieter == a) {
+                                if (e.modell.anbieter != a) {
+                                    val alt = e.modell
+                                    if (alt.istAnthropic) de.frank.epigenetik.auth.AnthropicKlient.claudeModellMerken(kontext, de.frank.epigenetik.auth.ClaudeModell.von(alt.apiId) ?: de.frank.epigenetik.auth.ClaudeModell.OPUS)
+                                    else de.frank.epigenetik.auth.AnthropicKlient.openAiModellMerken(kontext, alt.apiId)
+                                    e.modell = CodexModel.fromLabel(
+                                        if (a == de.frank.epigenetik.auth.KiAnbieter.ANTHROPIC) de.frank.epigenetik.auth.AnthropicKlient.letztesClaudeModell(kontext).apiId
+                                        else de.frank.epigenetik.auth.AnthropicKlient.letztesOpenAiModell(kontext, CodexModel.ASTRA.apiId),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (e.modell.istAnthropic) {
+                        Text(if (anthropicKey.isBlank()) "Für Claude bitte deinen Anthropic-API-Schlüssel (sk-ant-…) eintragen." else "Claude recherchiert über deinen Anthropic-API-Schlüssel (eigene Abrechnung) mit eigener Websuche.", color = f.textLeise, fontSize = 13.sp)
+                        androidx.compose.material3.OutlinedTextField(
+                            value = anthropicKey,
+                            onValueChange = { anthropicKey = it; de.frank.epigenetik.auth.AnthropicKlient.schluesselSpeichern(kontext, it) },
+                            label = { Text("Anthropic-API-Schlüssel") },
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     Text("Modell", color = f.textLeise, fontSize = 13.sp)
-                    ChipReihe { CodexModel.entries.forEach { m -> Chip(m.label, e.modell == m) { e.modell = m } } }
+                    ChipReihe { CodexModel.von(e.modell.anbieter).forEach { m -> Chip(m.label, e.modell == m) { e.modell = m } } }
                     Text("Gründlichkeit", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { Tiefe.entries.forEach { t -> Chip(t.anzeige, e.tiefe == t) { e.tiefe = t } } }
                     Text(e.tiefe.beschreibung, color = f.textSchwach, fontSize = 11.sp)

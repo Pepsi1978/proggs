@@ -74,8 +74,8 @@ class Forscher(context: Context, params: WorkerParameters) : CoroutineWorker(con
         runCatching { setForeground(getForegroundInfo()) }
         val e = Einstellungen.get(applicationContext)
         val auth = CodexAuthManager(applicationContext)
-        if (!auth.isConnected) {
-            repo.dao.setzeStatus(id, Status.FEHLER.name, "KI nicht verbunden: In den Einstellungen mit ChatGPT verbinden.")
+        if (!auth.kannDenken(e.modell)) {
+            repo.dao.setzeStatus(id, Status.FEHLER.name, if (e.modell.istAnthropic) "KI nicht bereit: In den Einstellungen den Anthropic-API-Schlüssel eintragen." else "KI nicht verbunden: In den Einstellungen mit ChatGPT verbinden.")
             return Result.failure()
         }
         return grenze(e.parallel).withPermit {
