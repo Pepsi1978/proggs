@@ -56,9 +56,9 @@ class ChatStreamException(
 // Vom Server auswaehlbare Codex-Modelle (Modell-Picker in den Einstellungen).
 internal val CODEX_MODELS = listOf(
     "gpt-6-astra",
-    "gpt-5.6-sol", "gpt-5.6-sol-fast",
-    "gpt-5.6-terra", "gpt-5.6-terra-fast",
-    "gpt-5.6-luna", "gpt-5.6-luna-fast",
+    "gpt-6.1-sol",
+    "gpt-5.6-terra",
+    "gpt-6-luna",
 )
 
 private val CODEX_FAST_MODEL_ALIASES = mapOf(
@@ -73,16 +73,28 @@ internal fun codexModelRequestConfig(selectedModel: String): CodexModelRequestCo
     val selected = selectedModel.trim()
     val baseModel = CODEX_FAST_MODEL_ALIASES[selected.lowercase()]
     return CodexModelRequestConfig(
-        model = baseModel ?: selected,
+        model = currentCodexModel(baseModel ?: selected),
         serviceTier = if (baseModel != null) "priority" else null,
     )
+}
+
+internal fun currentCodexModel(value: String): String {
+    val id = value.trim().lowercase().removePrefix("openai-codex/").removePrefix("codex/")
+    return when {
+        !id.startsWith("gpt-") -> value
+        id in CODEX_MODELS -> id
+        "sol" in id -> "gpt-6.1-sol"
+        "luna" in id -> "gpt-6-luna"
+        "astra" in id -> "gpt-6-astra"
+        else -> "gpt-5.6-terra"
+    }
 }
 
 internal fun modelReasoningOptions(model: String, fallback: List<String>): List<String> {
     val slug = model.trim().lowercase().removePrefix("openai-codex/").removePrefix("codex/")
     return when (codexModelRequestConfig(slug).model) {
-        "gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra" -> listOf("low", "medium", "high", "xhigh", "max", "ultra")
-        "gpt-5.6-luna" -> listOf("low", "medium", "high", "xhigh", "max")
+        "gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra" -> listOf("low", "medium", "high", "xhigh", "max", "ultra")
+        "gpt-6-luna" -> listOf("low", "medium", "high", "xhigh", "max")
         else -> if (slug.startsWith("gpt-5")) listOf("none", "low", "medium", "high", "xhigh")
             else fallback.filterNot { it == "max" || it == "ultra" }
     }

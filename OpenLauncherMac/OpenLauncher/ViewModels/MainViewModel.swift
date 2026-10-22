@@ -322,9 +322,10 @@ final class MainViewModel {
         let isCodex = target.access == "codex"
         let cached = EffortStore.cached(target)
             ?? (isCodex ? nil : UserDefaults.standard.dictionary(forKey: "thinking-levels." + value.modelString))
-        let levels = (cached?["levels"] as? [String]
-                      ?? (isCodex ? EffortRefreshService.localCodex(target)?.levels : nil)
-                      ?? OpenCodeVariantCatalog.launcherLevels(for: value))
+        let currentCodex = value.providerId == "openai" && ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna"].contains(value.slug)
+        let levels = (currentCodex ? OpenCodeVariantCatalog.launcherLevels(for: value) : (cached?["levels"] as? [String]
+                       ?? (isCodex ? EffortRefreshService.localCodex(target)?.levels : nil)
+                       ?? OpenCodeVariantCatalog.launcherLevels(for: value)))
             .filter { EffortStore.allowed.contains($0) }
         thinkingOptions = levels.map(Self.toThinkingOption)
         let selected = pendingModelDefault?.thinkingValue ?? cached?["selected"] as? String

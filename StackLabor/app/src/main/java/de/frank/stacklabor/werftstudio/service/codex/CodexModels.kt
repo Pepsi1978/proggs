@@ -2,9 +2,9 @@ package de.frank.stacklabor.werftstudio.service.codex
 
 enum class CodexModel(val apiId: String, private val anzeige: String? = null) {
     ASTRA("gpt-6-astra"),
-    SOL("gpt-5.6-sol"),
+    SOL("gpt-6.1-sol"),
     TERRA("gpt-5.6-terra"),
-    LUNA("gpt-5.6-luna"),
+    LUNA("gpt-6-luna"),
     // Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel (wie in Jarvis).
     OPUS("claude-opus-5-5", "Claude Opus 5.5"),
     FABLE("claude-fable-5-1", "Claude Fable 5.1"),
@@ -12,16 +12,21 @@ enum class CodexModel(val apiId: String, private val anzeige: String? = null) {
     HAIKU("claude-haiku-5-5", "Claude Haiku 5.5");
 
     val istAnthropic: Boolean get() = anzeige != null
-    val label: String get() = anzeige ?: apiId.substringAfterLast('-').replaceFirstChar(Char::uppercase)
+    val label: String get() = anzeige ?: "GPT-${apiId.removePrefix("gpt-").substringBeforeLast('-')} ${apiId.substringAfterLast('-').replaceFirstChar(Char::uppercase)}"
     val reasoningEfforts: List<ReasoningEffort>
-        get() = if (this == ASTRA) ReasoningEffort.entries else ReasoningEffort.entries.filter { it != ReasoningEffort.ULTRA }
+        get() = if (this in listOf(ASTRA, SOL, TERRA)) ReasoningEffort.entries else ReasoningEffort.entries.filter { it != ReasoningEffort.ULTRA }
 
     fun normalizeReasoning(value: String?): ReasoningEffort =
         reasoningEfforts.firstOrNull { it.apiValue == value }
             ?: if (this == ASTRA) ReasoningEffort.MEDIUM else ReasoningEffort.HIGH
 
     companion object {
-        fun fromApiId(value: String?): CodexModel = entries.firstOrNull { it.apiId == value } ?: TERRA
+        fun fromApiId(value: String?): CodexModel = entries.firstOrNull { it.apiId == value } ?: when {
+            value?.contains("sol", ignoreCase = true) == true -> SOL
+            value?.contains("luna", ignoreCase = true) == true -> LUNA
+            value?.contains("astra", ignoreCase = true) == true -> ASTRA
+            else -> TERRA
+        }
     }
 }
 

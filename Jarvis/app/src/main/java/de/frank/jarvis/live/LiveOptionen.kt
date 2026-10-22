@@ -45,6 +45,7 @@ object LiveOptionen {
          * Alles bis 1024 wird 1.000, „Ohne Grenze“ wird 4.000; der neue Wert wird einmal gespeichert.
          */
         private fun migriert(id: String, w: String): String {
+            if (id == "backend" && w.isNotBlank()) return de.frank.jarvis.auth.CodexModel.fromLabel(w).apiId
             if (id != "rt_max" || w.isBlank() || ueber.containsKey(id)) return w
             val neu = when (val n = w.toIntOrNull()) {
                 null -> if (w == "inf") "4000" else w
@@ -72,24 +73,18 @@ object LiveOptionen {
     /** Denk-Modelle für GPT-Live (Responses-Delegation), Standard-Tarif. */
     val BACKENDS = linkedMapOf(
         "gpt-6-luna" to Preis(0.10, 0.01, 0.50),
-        "gpt-5.6-luna" to Preis(0.20, 0.02, 1.20),
-        "gpt-6-sol" to Preis(2.00, 0.20, 10.00),
         "gpt-6.1-sol" to Preis(2.00, 0.10, 10.00),
         "gpt-5.6-terra" to Preis(2.00, 0.20, 12.00),
-        "gpt-5.6-sol" to Preis(4.00, 0.40, 20.00),
         "gpt-6-astra" to Preis(10.00, 1.00, 50.00),
     )
     private val BACKEND_NAMEN = mapOf(
-        "gpt-6-luna" to "GPT-6 Luna", "gpt-5.6-luna" to "GPT-5.6 Luna", "gpt-6-sol" to "GPT-6 Sol", "gpt-6.1-sol" to "GPT-6.1 Sol",
-        "gpt-5.6-terra" to "GPT-5.6 Terra", "gpt-5.6-sol" to "GPT-5.6 Sol", "gpt-6-astra" to "GPT-6 Astra",
+        "gpt-6-luna" to "GPT-6 Luna", "gpt-6.1-sol" to "GPT-6.1 Sol",
+        "gpt-5.6-terra" to "GPT-5.6 Terra", "gpt-6-astra" to "GPT-6 Astra",
     )
     private val BACKEND_TEXT = mapOf(
         "gpt-6-luna" to "Schnell und sehr günstig, von OpenAI als Start empfohlen. Für Gespräche fast immer genug.",
-        "gpt-5.6-luna" to "Ältere kleine Variante, etwas teurer als 6 Luna.",
-        "gpt-6-sol" to "Kräftiger für schwierige Fragen, rund 20-mal teurer als Luna.",
         "gpt-6.1-sol" to "Neueste Sol-Fassung, kein Effort „none“, auch mit Ultrafast.",
         "gpt-5.6-terra" to "Mittelklasse der 5.6-Familie.",
-        "gpt-5.6-sol" to "Starkes 5.6-Modell, Aktionspreis bis mindestens 21.11.2026.",
         "gpt-6-astra" to "Das stärkste Modell, sehr teuer. Kein Effort „none“, auch mit Ultrafast.",
     )
 

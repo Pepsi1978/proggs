@@ -29,7 +29,12 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
     companion object {
         fun fromLabel(value: String): CodexModel = entries.firstOrNull {
             it.label.equals(value.trim(), ignoreCase = true) || it.apiId.equals(value.trim(), ignoreCase = true)
-        } ?: TERRA
+        } ?: when {
+            value.contains("sol", ignoreCase = true) -> SOL
+            value.contains("luna", ignoreCase = true) -> LUNA
+            value.contains("astra", ignoreCase = true) -> ASTRA
+            else -> TERRA
+        }
 
         fun von(anbieter: KiAnbieter): List<CodexModel> = entries.filter { it.anbieter == anbieter }
     }

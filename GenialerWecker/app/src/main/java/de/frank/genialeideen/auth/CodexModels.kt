@@ -2,9 +2,9 @@ package de.frank.genialeideen.auth
 
 enum class CodexModel(val label: String, val apiId: String) {
     ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT 5.6 Sol", "gpt-5.6-sol"),
-    TERRA("GPT 5.6 Terra", "gpt-5.6-terra"),
-    LUNA("GPT 5.6 Luna", "gpt-5.6-luna"),
+    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
+    LUNA("GPT-6 Luna", "gpt-6-luna"),
     ;
 
     val supportedEfforts: List<ReasoningEffort>
@@ -19,7 +19,12 @@ enum class CodexModel(val label: String, val apiId: String) {
     companion object {
         fun fromLabel(value: String): CodexModel = entries.firstOrNull {
             it.label.equals(value.trim(), ignoreCase = true) || it.apiId.equals(value.trim(), ignoreCase = true)
-        } ?: TERRA
+        } ?: when {
+            value.contains("sol", ignoreCase = true) -> SOL
+            value.contains("luna", ignoreCase = true) -> LUNA
+            value.contains("astra", ignoreCase = true) -> ASTRA
+            else -> TERRA
+        }
     }
 }
 

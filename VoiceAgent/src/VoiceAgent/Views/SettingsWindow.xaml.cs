@@ -82,12 +82,8 @@ namespace VoiceAgent.Views
                 PopulateRoleRow(IntentProviderBox, IntentModelBox, ModelRole.Intent);
 
                 // Codex: Effort-Auswahl (volle Stufen) + Anmeldestatus.
-                CodexEffortBox.Items.Clear();
-                CodexEffortBox.Items.Add("low");
-                CodexEffortBox.Items.Add("medium");
-                CodexEffortBox.Items.Add("high");
-                CodexEffortBox.SelectedItem = CodexProvider.NormalizeEffort(_settings.CodexEffort);
-                if (CodexEffortBox.SelectedItem == null) CodexEffortBox.SelectedItem = "medium";
+                RefreshCodexEfforts(_settings.CodexEffort);
+                ModelBox.SelectionChanged += (_, __) => RefreshCodexEfforts(CodexEffortBox.SelectedItem as string);
                 RefreshCodexStatus();
 
                 // Sprachausgabe: Anbieter + Stimme (Favoriten oben) + Schluessel der Zusatz-Anbieter.
@@ -593,6 +589,8 @@ namespace VoiceAgent.Views
             {
                 var provider = providerBox.SelectedItem as string ?? "gemini";
                 var current = (modelBox.Text ?? string.Empty).Trim();
+                if (provider == "codex") current = CodexProvider.NormalizeModel(current);
+                modelBox.IsEditable = provider != "codex";
                 var list = await ModelCatalog.GetModelsAsync(provider).ConfigureAwait(true);
                 modelBox.ItemsSource = list;
                 if (ListContains(list, current)) modelBox.Text = current;          // gueltig -> behalten
@@ -620,6 +618,8 @@ namespace VoiceAgent.Views
             {
                 var provider = (ProviderBox.SelectedItem as string) ?? "gemini";
                 var current = (ModelBox.Text ?? string.Empty).Trim();
+                if (provider == "codex") current = CodexProvider.NormalizeModel(current);
+                ModelBox.IsEditable = provider != "codex";
                 var list = await ModelCatalog.GetModelsAsync(provider).ConfigureAwait(true);
                 ModelBox.ItemsSource = list;
                 if (ListContains(list, current)) ModelBox.Text = current;          // gueltig -> behalten
@@ -627,6 +627,13 @@ namespace VoiceAgent.Views
                 else ModelBox.Text = current;                                      // Oeffnen -> eigenes behalten (editierbar)
             }
             catch (Exception ex) { Log.Error("Modell-Dropdown laden fehlgeschlagen", ex); }
+        }
+
+        private void RefreshCodexEfforts(string? effort)
+        {
+            var model = ModelBox.SelectedItem as string ?? ModelBox.Text;
+            CodexEffortBox.ItemsSource = CodexModels.Efforts(model);
+            CodexEffortBox.SelectedItem = CodexProvider.NormalizeEffort(effort, model);
         }
 
         private static bool ListContains(IReadOnlyList<string> list, string value)
@@ -671,7 +678,7 @@ namespace VoiceAgent.Views
                 await CodexAuth.PollForTokensAsync(info);
 
                 RefreshCodexStatus();
-                CodexStatusText.Text = "✓ Codex-Anmeldung erfolgreich. Anbieter „codex“ wählen und Modell (z. B. gpt-5.5) eintragen.";
+                CodexStatusText.Text = "✓ Codex-Anmeldung erfolgreich. Anbieter „codex“ wählen und ein aktuelles Modell auswählen.";
             }
             catch (Exception ex)
             {

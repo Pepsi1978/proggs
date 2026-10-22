@@ -41,8 +41,8 @@ namespace VoiceAgent.Services.Llm
             // Sonde: Wenn ein fremdes Modell auf den Default gemappt wurde, sichtbar machen.
             if (!string.Equals(_model, (model ?? "").Trim(), StringComparison.Ordinal))
                 Log.Warn($"Codex: '{model}' ist kein Codex-Modell — nutze '{_model}'. " +
-                         "(In den Einstellungen als Modell z. B. gpt-5.5 eintragen.)");
-            _effort = NormalizeEffort(effort);
+                         "(In den Einstellungen als Modell z. B. gpt-6.1-sol eintragen.)");
+            _effort = NormalizeEffort(effort, _model);
         }
 
         public string Name => "Codex";
@@ -56,26 +56,22 @@ namespace VoiceAgent.Services.Llm
         public static string NormalizeModel(string? model)
         {
             var m = (model ?? "").Trim();
-            if (m.Length == 0 || !m.StartsWith("gpt", StringComparison.OrdinalIgnoreCase))
-                return CodexModels.Default;
-            return m;
+            if (CodexModels.Fallback.Contains(m)) return m;
+            if (m.Contains("luna", StringComparison.OrdinalIgnoreCase)) return "gpt-6-luna";
+            if (m.Contains("astra", StringComparison.OrdinalIgnoreCase)) return "gpt-6-astra";
+            if (m.Contains("terra", StringComparison.OrdinalIgnoreCase)) return "gpt-5.6-terra";
+            return CodexModels.Default;
         }
 
         /// <summary>
         /// Codex-Backend akzeptiert low/medium/high; "minimal" wird (wie in Hermes) auf "low"
         /// geklemmt, leere/unbekannte Werte fallen auf "medium" zurueck.
         /// </summary>
-        public static string NormalizeEffort(string? effort)
+        public static string NormalizeEffort(string? effort, string? model = null)
         {
             var e = (effort ?? "").Trim().ToLowerInvariant();
-            return e switch
-            {
-                "minimal" => "low",
-                "low" => "low",
-                "medium" => "medium",
-                "high" => "high",
-                _ => "medium",
-            };
+            if (e == "minimal") e = "low";
+            return CodexModels.Efforts(model).Contains(e) ? e : "medium";
         }
 
         public async Task<string> ChatAsync(IReadOnlyList<LlmMessage> messages, CancellationToken ct = default)

@@ -346,7 +346,7 @@ class CodexClient(context: Context) {
         (0 until liste.length()).mapNotNull { index ->
             val modell = liste.optJSONObject(index) ?: return@mapNotNull null
             if (modell.optString("visibility") != "list") return@mapNotNull null
-            val slug = modell.optString("slug").takeIf(String::isNotBlank) ?: return@mapNotNull null
+            val slug = modell.optString("slug").takeIf { id -> de.frank.newskompass.data.model.Denkstufen.bekannteModelle.any { it.id == id } } ?: return@mapNotNull null
             val stufen = modell.optJSONArray("supported_reasoning_levels")
             CodexModell(
                 id = slug,

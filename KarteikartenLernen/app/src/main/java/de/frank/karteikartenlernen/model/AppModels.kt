@@ -5,16 +5,21 @@ enum class MicState { IDLE, RECORDING, TRANSCRIBING }
 enum class GenerationPhase { ANSWER, CARDS, DONE }
 enum class CardStatus { NEW, KNOWN, UNKNOWN }
 
-internal fun normalizeModelName(value: String): String =
-    if (value == "GPT 5.6 Soul") "GPT 5.6 Sol" else value
+internal fun normalizeModelName(value: String): String = when {
+    value.startsWith("Claude", ignoreCase = true) -> value
+    value.contains("sol", ignoreCase = true) || value.contains("soul", ignoreCase = true) -> "GPT 6.1 Sol"
+    value.contains("luna", ignoreCase = true) -> "GPT 6 Luna"
+    value.contains("astra", ignoreCase = true) -> "GPT 6 Astra"
+    else -> "GPT 5.6 Terra"
+}
 
 internal fun reasoningLevels(model: String): Map<String, String> = linkedMapOf(
     "Niedrig" to "low", "Mittel" to "medium", "Hoch" to "high",
 ).apply {
-    if (model == "GPT 6 Astra" || model == "gpt-6-astra") {
+    if (!model.startsWith("Claude", ignoreCase = true)) {
         put("Sehr hoch", "xhigh")
         put("Maximal", "max")
-        put("Ultra", "ultra")
+        if (!model.contains("luna", ignoreCase = true)) put("Ultra", "ultra")
     }
     // Claude kennt low bis max, aber kein Ultra.
     if (model.startsWith("Claude") || model.startsWith("claude-")) {

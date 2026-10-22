@@ -242,7 +242,7 @@ fun SettingsScreen(
     // fromCache: der Cache darf lokale PROMPTS nicht persistieren — er kann aelter sein als
     // eine offline getaetigte lokale Aenderung (die sonst still ueberschrieben wurde).
     fun applyServerConfig(config: de.frank.cortex.data.model.AgentConfigResponse, fromCache: Boolean = false) {
-        if (config.available.isNotEmpty()) agentModelOptions = config.available
+        if (config.available.isNotEmpty()) agentModelOptions = config.available.map { de.frank.cortex.network.currentCodexModel(it) }.distinct()
         if (config.reasoning_available.isNotEmpty()) reasoningOptions = config.reasoning_available
         modelPriceLabels = config.model_prices.mapValues { (_, p) ->
             if (p.input != null && p.output != null)
@@ -251,13 +251,13 @@ fun SettingsScreen(
         }
         val models = config.models
         val reasoning = config.reasoning
-        hauptModel = models["haupt"] ?: config.model ?: agentModelOptions.first()
-        speicherModel = models["speicher"] ?: config.model ?: hauptModel
-        abfrageModel = models["abfrage"] ?: config.model ?: hauptModel
+        hauptModel = de.frank.cortex.network.currentCodexModel(models["haupt"] ?: config.model ?: agentModelOptions.first())
+        speicherModel = de.frank.cortex.network.currentCodexModel(models["speicher"] ?: config.model ?: hauptModel)
+        abfrageModel = de.frank.cortex.network.currentCodexModel(models["abfrage"] ?: config.model ?: hauptModel)
         hauptReasoning = reasoning["haupt"] ?: "medium"
         speicherReasoning = reasoning["speicher"] ?: "medium"
         abfrageReasoning = reasoning["abfrage"] ?: "medium"
-        routerModel = config.router_model.ifBlank { ROUTER_AUTO }
+        routerModel = de.frank.cortex.network.currentCodexModel(config.router_model.ifBlank { ROUTER_AUTO })
         routerReasoning = config.router_reasoning.ifBlank { ROUTER_AUTO }
         normalizeReasoningSelections()
         tavilyEnabled = config.tavily_enabled
@@ -650,7 +650,7 @@ fun SettingsScreen(
                                             codexStatus = "Server verbunden — GPT/Codex-Modelle sind auswählbar"
                                             try {
                                                 val config = ApiClient.agentApi().getConfig()
-                                                if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                                if (config.available.isNotEmpty()) agentModelOptions = config.available.map { de.frank.cortex.network.currentCodexModel(it) }.distinct()
                                                 ApiClient.cacheAgentConfig(config)   // Cache bleibt synchron zum neuen Codex-Stand
                                             } catch (e: CancellationException) {
                                                 throw e
@@ -691,7 +691,7 @@ fun SettingsScreen(
                                         // waere falsch (und der Cache wird beim naechsten GET korrigiert).
                                         try {
                                             val config = ApiClient.agentApi().getConfig()
-                                            if (config.available.isNotEmpty()) agentModelOptions = config.available
+                                            if (config.available.isNotEmpty()) agentModelOptions = config.available.map { de.frank.cortex.network.currentCodexModel(it) }.distinct()
                                             ApiClient.cacheAgentConfig(config)   // Cache bleibt synchron zum getrennten Stand
                                         } catch (e: CancellationException) {
                                             throw e

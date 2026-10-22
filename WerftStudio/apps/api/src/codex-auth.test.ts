@@ -25,9 +25,9 @@ describe("Codex credential protection", () => {
     expect(tokenIdentity(jwt({ "https://api.openai.com/auth": { chatgpt_account_id: "acct_1" } }), jwt({ email: "frank@example.de" }))).toEqual({ accountId: "acct_1", email: "frank@example.de" });
   });
 
-  it("sends every GPT-5.6 effort exactly as selected without a priority tier", () => {
-    expect(codexEfforts).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
-    expect(codexRequestFields("gpt-5.6-terra", "none")).toEqual({ model: "gpt-5.6-terra", reasoning: { effort: "none", summary: "auto" }, include: ["reasoning.encrypted_content"] });
-    expect(codexRequestFields("gpt-5.6-luna", "max")).not.toHaveProperty("service_tier");
+  it("sends supported Codex efforts without a priority tier", () => {
+    expect(codexEfforts).toEqual(["low", "medium", "high", "xhigh", "max", "ultra"]);
+    expect(codexRequestFields("gpt-5.6-terra", "ultra")).toEqual({ model: "gpt-5.6-terra", reasoning: { effort: "ultra", summary: "auto" }, include: ["reasoning.encrypted_content"] });
+    expect(codexRequestFields("gpt-6-luna", "max")).not.toHaveProperty("service_tier");
   });
 });

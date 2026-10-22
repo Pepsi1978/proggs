@@ -132,6 +132,7 @@ public sealed class CodexResearchService
             if (model.TryGetProperty("visibility", out var visibility) && visibility.GetString() == "hide") continue;
             var id = model.GetProperty("slug").GetString();
             if (string.IsNullOrWhiteSpace(id)) continue;
+            if (id is not ("gpt-6-astra" or "gpt-6.1-sol" or "gpt-5.6-terra" or "gpt-6-luna")) continue;
             var efforts = new List<string>();
             if (model.TryGetProperty("supported_reasoning_levels", out var levels))
                 foreach (var level in levels.EnumerateArray())

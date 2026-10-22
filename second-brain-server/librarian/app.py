@@ -88,7 +88,13 @@ CONV_CATEGORY = os.getenv("LIB_CONV_CATEGORY", "Gespräche")
 # Laufzeit aus agent /config (siehe _all_models) — Frank waehlt im Dashboard; nachts darf es das
 # staerkste sein (sein Wunsch: GPT mit kraeftigem Thinking).
 AVAILABLE_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "minimax/minimax-m3"]
-REASONING_AVAILABLE = ["none", "low", "medium", "high", "xhigh"]
+REASONING_AVAILABLE = ["none", "low", "medium", "high", "xhigh", "max", "ultra"]
+
+
+def _model_efforts(model: str) -> list[str]:
+    if model.startswith("gpt-"):
+        return ["low", "medium", "high", "xhigh", "max"] + ([] if "luna" in model else ["ultra"])
+    return ["none", "low", "medium", "high", "xhigh"]
 REPORT_RETENTION_DAYS = int(os.getenv("LIB_REPORT_RETENTION_DAYS", "30"))
 DISMISS_RECHECK_DAYS = int(os.getenv("LIB_DISMISS_RECHECK_DAYS", "120"))   # abgelehnte Funde so lange nicht erneut vorschlagen
 
@@ -261,9 +267,12 @@ def load_config() -> dict:
             else:
                 merged[k] = v
     model = str(merged.get("model") or "")
+    if model.lower().startswith("gpt-"):
+        model = "gpt-6.1-sol" if "sol" in model else "gpt-6-luna" if "luna" in model else "gpt-6-astra" if "astra" in model else "gpt-5.6-terra"
+        merged["model"] = model
     if model not in AVAILABLE_MODELS and not model.lower().startswith("gpt-"):
         merged["model"] = DEFAULT_CONFIG["model"]
-    if str(merged.get("reasoning") or "") not in REASONING_AVAILABLE:
+    if str(merged.get("reasoning") or "") not in _model_efforts(merged["model"]):
         merged["reasoning"] = DEFAULT_CONFIG["reasoning"]
     return merged
 
@@ -2542,7 +2551,7 @@ class SettingsReq(BaseModel):
 def get_settings() -> dict:
     cfg = load_config()
     return {"ok": True, "settings": cfg, "models": _all_models(),
-            "reasoning_available": REASONING_AVAILABLE,
+            "reasoning_available": _model_efforts(cfg["model"]),
             "lernregeln": load_learned(),
             "standard_tasks": _standard_task_rows(cfg)}
 
@@ -2561,7 +2570,7 @@ def put_settings(req: SettingsReq) -> dict:
             cfg["model"] = req.model
         if req.reasoning:
             v = req.reasoning.strip().lower()
-            if v not in REASONING_AVAILABLE:
+            if v not in _model_efforts(cfg["model"]):
                 raise HTTPException(status_code=422, detail="Unbekannte Thinking-Stufe")
             cfg["reasoning"] = v
         if req.unlimited is not None:

@@ -3135,6 +3135,15 @@ button{font-family:inherit;cursor:pointer}
       // Router auf "auto" folgt dem Hauptagenten -> Reasoning-Box nach dessen Modell richten.
       if (mid==="modelRouter" && v==="auto") { const h=document.getElementById("modelHaupt"); if(h) v=h.value; }
       b.style.display = modelSupportsReasoning(v) ? "block" : "none";
+      const select=b.querySelector("select");
+      if(select && isCodexModel(v)) {
+        const previous=select.value;
+        const levels=["low","medium","high","xhigh","max",...(v.includes("luna")?[]:["ultra"])];
+        if(mid==="modelRouter") levels.unshift("auto");
+        select.innerHTML=levels.map(level=>`<option value="${level}">${level}</option>`).join("");
+        select.value=levels.includes(previous)?previous:"medium";
+        enhanceSelect(select);
+      }
     });
   }
 
@@ -5384,6 +5393,12 @@ button{font-family:inherit;cursor:pointer}
       (r.models||[]).forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m; if(m===s.model)o.selected=true; sel.appendChild(o); });
       const rs=document.getElementById("libReasoning"); rs.innerHTML="";
       (r.reasoning_available||["none","low","medium","high","xhigh"]).forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; if(v===(s.reasoning||"high"))o.selected=true; rs.appendChild(o); });
+      sel.onchange=()=>{
+        const previous=rs.value;
+        const levels=isCodexModel(sel.value)?["low","medium","high","xhigh","max",...(sel.value.includes("luna")?[]:["ultra"])]:["none","low","medium","high","xhigh"];
+        rs.innerHTML=levels.map(v=>`<option value="${v}">${v}</option>`).join("");
+        rs.value=levels.includes(previous)?previous:"high";
+      };
       document.getElementById("libMaxPer").value=s.max_per_task??8;
       document.getElementById("libBudget").value=s.llm_budget??250;
       syncLibLimits();

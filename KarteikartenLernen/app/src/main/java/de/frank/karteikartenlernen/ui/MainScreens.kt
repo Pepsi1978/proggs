@@ -172,7 +172,7 @@ fun SettingsScreen(
                 if (claudeAktiv) SegmentedControl(listOf("Opus", "Fable", "Sonnet", "Haiku"), state.model.removePrefix("Claude ").substringBefore(' '), onSelect = { kurz ->
                     onModel(de.frank.karteikartenlernen.auth.ClaudeModell.entries.first { it.label.startsWith("Claude $kurz") }.label)
                 })
-                else SegmentedControl(listOf("Astra", "Sol", "Terra", "Luna"), state.model.substringAfterLast(' '), onSelect = { onModel(if (it == "Astra") "GPT 6 Astra" else "GPT 5.6 $it") })
+                else SegmentedControl(listOf("Astra", "Sol", "Terra", "Luna"), state.model.substringAfterLast(' '), onSelect = { family -> onModel(de.frank.karteikartenlernen.auth.RESEARCH_MODELS.keys.first { it.endsWith(" $family") }) })
             }
             SettingRow("Reasoning-Stufe") {
                 reasoningLevels(state.model).keys.chunked(3).forEach { levels ->

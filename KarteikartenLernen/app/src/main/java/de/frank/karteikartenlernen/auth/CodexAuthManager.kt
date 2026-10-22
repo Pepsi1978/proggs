@@ -348,9 +348,9 @@ internal class ThrottledAnswerEmitter(
 
 internal val RESEARCH_MODELS = mapOf(
     "GPT 6 Astra" to "gpt-6-astra",
-    "GPT 5.6 Sol" to "gpt-5.6-sol",
+    "GPT 6.1 Sol" to "gpt-6.1-sol",
     "GPT 5.6 Terra" to "gpt-5.6-terra",
-    "GPT 5.6 Luna" to "gpt-5.6-luna",
+    "GPT 6 Luna" to "gpt-6-luna",
     // Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel (wie in Jarvis).
     "Claude Opus 5.5" to "claude-opus-5-5",
     "Claude Fable 5.1" to "claude-fable-5-1",
@@ -358,7 +358,7 @@ internal val RESEARCH_MODELS = mapOf(
     "Claude Haiku 5.5" to "claude-haiku-5-5",
 )
 
-internal fun codexModelId(label: String): String = RESEARCH_MODELS[label] ?: RESEARCH_MODELS.getValue("GPT 5.6 Terra")
+internal fun codexModelId(label: String): String = RESEARCH_MODELS[de.frank.karteikartenlernen.model.normalizeModelName(label)] ?: RESEARCH_MODELS.getValue("GPT 5.6 Terra")
 
 internal fun codexReasoningEffort(label: String, model: String = "gpt-5.6-terra"): String =
     de.frank.karteikartenlernen.model.reasoningLevels(model).getValue(

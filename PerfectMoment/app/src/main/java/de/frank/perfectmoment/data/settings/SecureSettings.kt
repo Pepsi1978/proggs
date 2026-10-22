@@ -260,7 +260,7 @@ class SecureSettings(context: Context) : Closeable {
         set(value) = writeString(Keys.QUESTION_PERSPECTIVE, value)
 
     var model: String
-        get() = readString(Keys.MODEL, Defaults.MODEL)
+        get() = CodexModel.fromLabel(readString(Keys.MODEL, Defaults.MODEL)).apiId
         set(value) {
             val selectedModel = CodexModel.fromLabel(value)
             val effort = selectedModel.normalizeEffort(ReasoningEffort.fromLabel(reasoning))

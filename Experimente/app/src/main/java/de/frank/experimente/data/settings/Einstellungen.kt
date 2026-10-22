@@ -34,7 +34,7 @@ class Einstellungen(ctx: Context) {
 
     // --- F-22: Modell und Effort, getrennt für Experimente und Logbuch ------------------
     var modellExperimente: String
-        get() = p.getString(MODEL_EXPERIMENTS, "gpt-5.6-terra")!!
+        get() = CodexModell.aus(p.getString(MODEL_EXPERIMENTS, "gpt-5.6-terra")!!).apiId
         set(v) {
             val effort = CodexModell.aus(v).normalisiereEffort(Effort.aus(effortExperimente), Effort.HOCH)
             p.edit().putString(MODEL_EXPERIMENTS, v).putString(EFFORT_EXPERIMENTS, effort.apiWert).commit()
@@ -48,7 +48,7 @@ class Einstellungen(ctx: Context) {
             CodexModell.aus(modellExperimente).normalisiereEffort(Effort.aus(v), Effort.HOCH).apiWert).commit() }
 
     var modellLogbuch: String
-        get() = p.getString(MODEL_LOGBOOK, "gpt-5.6-luna")!!
+        get() = CodexModell.aus(p.getString(MODEL_LOGBOOK, "gpt-6-luna")!!).apiId
         set(v) {
             val effort = CodexModell.aus(v).normalisiereEffort(Effort.aus(effortLogbuch))
             p.edit().putString(MODEL_LOGBOOK, v).putString(EFFORT_LOGBOOK, effort.apiWert).commit()

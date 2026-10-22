@@ -210,7 +210,7 @@ class EinstellungenStore(context: Context) {
     // --- KI-Modell ------------------------------------------------------------------------
 
     var modellId: String
-        get() = offen.getString(SCHL_MODELL, KiModell.standard.apiId) ?: KiModell.standard.apiId
+        get() = KiModell.aktuelleId(offen.getString(SCHL_MODELL, KiModell.standard.apiId) ?: KiModell.standard.apiId)
         set(wert) {
             val tiefe = Denktiefe.fromValue(denktiefe.apiValue, wert)
             offen.edit().putString(SCHL_MODELL, wert)
@@ -218,7 +218,7 @@ class EinstellungenStore(context: Context) {
         }
 
     var modellLabel: String
-        get() = offen.getString(SCHL_MODELL_LABEL, KiModell.standard.label) ?: KiModell.standard.label
+        get() = KiModell.bekannt.firstOrNull { it.apiId == modellId }?.label ?: (offen.getString(SCHL_MODELL_LABEL, KiModell.standard.label) ?: KiModell.standard.label)
         set(wert) = offen.edit().putString(SCHL_MODELL_LABEL, wert).apply()
 
     var denktiefe: Denktiefe
@@ -231,7 +231,7 @@ class EinstellungenStore(context: Context) {
 
     /** Zusätzlich eingetragene Modelle, damit spätere Modelle ohne App-Update nutzbar sind. */
     var eigeneModelle: Set<String>
-        get() = offen.getStringSet(SCHL_EIGENE_MODELLE, emptySet()).orEmpty()
+        get() = offen.getStringSet(SCHL_EIGENE_MODELLE, emptySet()).orEmpty().filter { id -> KiModell.bekannt.any { it.apiId == id } }.toSet()
         set(wert) = offen.edit().putStringSet(SCHL_EIGENE_MODELLE, wert).apply()
 
     // --- Sicherheit -----------------------------------------------------------------------

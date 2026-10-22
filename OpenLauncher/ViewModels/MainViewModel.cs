@@ -287,7 +287,8 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var cached = _thinkingCache.Find(key) ?? (access == "codex" ? null : _thinkingCache.Find(model.ModelString));
             var local = access == "codex" ? EffortRefreshService.ReadCodexCache(model) : null;
-            foreach (var level in cached?.Levels ?? local?.Levels ?? GetStaticThinkingLevels(model).ToList())
+            var currentCodex = model.ProviderId == "openai" && model.Slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-5.6-terra" or "gpt-6-luna";
+            foreach (var level in currentCodex ? GetStaticThinkingLevels(model).ToList() : cached?.Levels ?? local?.Levels ?? GetStaticThinkingLevels(model).ToList())
                 ThinkingOptions.Add(ToThinkingOption(level));
             var selected = _pendingModelDefault?.ThinkingValue ?? cached?.Selected;
             SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == selected);

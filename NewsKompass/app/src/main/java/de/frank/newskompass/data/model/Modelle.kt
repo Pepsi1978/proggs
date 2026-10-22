@@ -255,14 +255,20 @@ object Denkstufen {
     private val bisUltra = listOf("low", "medium", "high", "xhigh", "max", "ultra")
     private val bisMax = bisUltra.dropLast(1)
 
-    /** Startbestand aus dem Codex-Katalog vom 25.09.2026, falls der Live-Abruf scheitert. */
+    /** Neueste Version je Modellfamilie laut Codex-Katalog vom 22.10.2026. */
     val bekannteModelle = listOf(
         CodexModell("gpt-6-astra", "GPT-6 Astra", bisUltra, "medium"),
-        CodexModell("gpt-6-sol", "GPT-6 Sol", bisUltra, "medium"),
+        CodexModell("gpt-6.1-sol", "GPT-6.1 Sol", bisUltra, "low"),
         CodexModell("gpt-6-luna", "GPT-6 Luna", bisMax, "medium"),
-        CodexModell("gpt-5.6-sol", "GPT-5.6 Sol", bisUltra, "medium"),
         CodexModell("gpt-5.6-terra", "GPT-5.6 Terra", bisUltra, "medium"),
-        CodexModell("gpt-5.6-luna", "GPT-5.6 Luna", bisMax, "medium"),
-        CodexModell("gpt-5.5", "GPT-5.5", listOf("low", "medium", "high", "xhigh"), "medium"),
     )
+
+    fun aktuelleId(id: String): String = when {
+        id.startsWith("claude-", ignoreCase = true) -> id
+        id in bekannteModelle.map { it.id } -> id
+        id.contains("sol", ignoreCase = true) -> "gpt-6.1-sol"
+        id.contains("luna", ignoreCase = true) -> "gpt-6-luna"
+        id.contains("astra", ignoreCase = true) -> "gpt-6-astra"
+        else -> "gpt-5.6-terra"
+    }
 }

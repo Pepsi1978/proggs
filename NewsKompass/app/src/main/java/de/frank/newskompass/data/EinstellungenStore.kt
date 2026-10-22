@@ -154,14 +154,14 @@ class EinstellungenStore(context: Context) {
     // --- Lesen -------------------------------------------------------------------------------
 
     private fun lies(): EinstellungenStand {
-        val katalog = leseModelle()
-        val kiModelle = leseKiModelle().filter { ki -> katalog.none { it.id == ki.id } }
+        val katalog = Denkstufen.bekannteModelle
+        val kiModelle = emptyList<CodexModell>()
         val modelle = katalog + kiModelle
-        val modellId = offen.getString(K_MODELL, null) ?: STANDARD_MODELL
+        val modellId = Denkstufen.aktuelleId(offen.getString(K_MODELL, null) ?: STANDARD_MODELL)
         return EinstellungenStand(
             themen = leseThemen(),
             modellId = modellId,
-            denktiefe = offen.getString(K_DENKTIEFE, null) ?: "medium",
+            denktiefe = (offen.getString(K_DENKTIEFE, null) ?: "medium").let { wert -> katalog.firstOrNull { it.id == modellId }?.let { m -> wert.takeIf { it in m.stufen } ?: m.standardStufe } ?: wert },
             modelle = modelle,
             kiModelle = kiModelle,
             bildModus = BildModus.fromId(offen.getString(K_BILDMODUS, null)),
@@ -490,7 +490,7 @@ class EinstellungenStore(context: Context) {
     }
 
     companion object {
-        const val STANDARD_MODELL = "gpt-6-sol"
+        const val STANDARD_MODELL = "gpt-6.1-sol"
 
         /** Feste ID des vorbelegten KI-Themas, solange die Themenliste noch nie gespeichert wurde. */
         const val STANDARD_THEMA_ID = "standard-ki"

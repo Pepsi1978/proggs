@@ -41,12 +41,10 @@ final class ModelRegistry {
     }
 
     private static let gpt56Models: [(slug: String, displayName: String)] = [
-        (gpt56SolSlug, "GPT-5.6 Sol"),
-        (gpt56SolFastSlug, "GPT-5.6 Sol Fast"),
+        ("gpt-6-astra", "GPT-6 Astra"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
         (gpt56TerraSlug, "GPT-5.6 Terra"),
-        (gpt56TerraFastSlug, "GPT-5.6 Terra Fast"),
-        (gpt56LunaSlug, "GPT-5.6 Luna"),
-        (gpt56LunaFastSlug, "GPT-5.6 Luna Fast")
+        ("gpt-6-luna", "GPT-6 Luna")
     ]
 
     /// GPT-6-Modelle, die einmalig nachgetragen werden. Sie stehen (noch) nicht nativ im
@@ -452,6 +450,15 @@ final class ModelRegistry {
                     }
                     ModelRegistry.addUnique(&group.knownSyncedModelSlugs, definition.slug)
                 }
+
+                let current = Set(ModelRegistry.gpt56Models.map { $0.slug })
+                group.models.removeAll { !current.contains($0.slug) }
+                group.hiddenModelSlugs.removeAll { !current.contains($0) }
+                group.knownSyncedModelSlugs.removeAll { !current.contains($0) }
+                for model in group.models {
+                    model.displayName = ModelRegistry.gpt56Models.first { $0.slug == model.slug }!.displayName
+                    model.isUserDefined = true
+                }
             }
 
             if group.id.caseInsensitiveCompare(ModelRegistry.googleGroupId) == .orderedSame {
@@ -555,19 +562,10 @@ final class ModelRegistry {
                 model("north-mini-code-free", "North Mini Code Free", "opencode", "OpenCode Zen")
             ]),
             createGroup("openai", "OpenAI", "openai", "OpenAI", [
-                model("gpt-5.3-codex-spark", "GPT-5.3 Codex Spark", "openai", "OpenAI"),
-                model("gpt-5.4", "GPT-5.4", "openai", "OpenAI"),
-                model("gpt-5.4-fast", "GPT-5.4 Fast", "openai", "OpenAI"),
-                model("gpt-5.4-mini", "GPT-5.4 Mini", "openai", "OpenAI"),
-                model("gpt-5.4-mini-fast", "GPT-5.4 Mini Fast", "openai", "OpenAI"),
-                model("gpt-5.5", "GPT-5.5", "openai", "OpenAI"),
-                model("gpt-5.5-fast", "GPT-5.5 Fast", "openai", "OpenAI"),
-                model(gpt56SolSlug, "GPT-5.6 Sol", "openai", "OpenAI"),
-                model(gpt56SolFastSlug, "GPT-5.6 Sol Fast", "openai", "OpenAI"),
+                model("gpt-6-astra", "GPT-6 Astra", "openai", "OpenAI"),
+                model("gpt-6.1-sol", "GPT-6.1 Sol", "openai", "OpenAI"),
                 model(gpt56TerraSlug, "GPT-5.6 Terra", "openai", "OpenAI"),
-                model(gpt56TerraFastSlug, "GPT-5.6 Terra Fast", "openai", "OpenAI"),
-                model(gpt56LunaSlug, "GPT-5.6 Luna", "openai", "OpenAI"),
-                model(gpt56LunaFastSlug, "GPT-5.6 Luna Fast", "openai", "OpenAI")
+                model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI")
             ]),
             // Kimi-Code-Abo (kimi.ai), in OpenCode per /connect -> "Kimi For Coding" mit API-Schluessel
             // angemeldet. Die vier Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.

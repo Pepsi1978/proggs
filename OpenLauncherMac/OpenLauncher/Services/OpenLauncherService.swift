@@ -1473,7 +1473,7 @@ final class OpenLauncherService {
               let models = openAi["models"], models.isObject else { return false }
 
         var changed = false
-        for slug in [gpt56SolSlug, gpt56SolFastSlug, gpt56TerraSlug, gpt56TerraFastSlug,
+        for slug in [gpt56SolSlug, gpt56SolFastSlug, gpt56TerraFastSlug,
                      gpt56LunaSlug, gpt56LunaFastSlug] {
             if models.remove(slug) { changed = true }
         }

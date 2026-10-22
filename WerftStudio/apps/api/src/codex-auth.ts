@@ -10,11 +10,19 @@ export const codexAuth = {
   responsesUrl: "https://chatgpt.com/backend-api/codex/responses"
 } as const;
 
-export const codexModels = ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"] as const;
-export const codexEfforts = ["none", "low", "medium", "high", "xhigh", "max"] as const;
+export const codexModels = ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna"] as const;
+export const codexEfforts = ["low", "medium", "high", "xhigh", "max", "ultra"] as const;
+export const codexEffortsFor = (model: string) => codexEfforts.filter((effort) => model !== "gpt-6-luna" || effort !== "ultra");
+
+export function currentCodexSelection(settings: { model?: unknown; effort?: unknown }) {
+  const old = String(settings.model ?? "").toLowerCase();
+  const model = codexModels.find((id) => id === old) ?? (old.includes("luna") ? "gpt-6-luna" : old.includes("astra") ? "gpt-6-astra" : old.includes("terra") ? "gpt-5.6-terra" : "gpt-6.1-sol");
+  const effort = codexEffortsFor(model).find((value) => value === settings.effort) ?? "medium";
+  return { provider: "openai-codex" as const, model, effort };
+}
 
 export function codexRequestFields(model: typeof codexModels[number], effort: typeof codexEfforts[number]) {
-  return { model, reasoning: { effort, summary: "auto" as const }, include: ["reasoning.encrypted_content"] };
+  return { model, reasoning: { effort: codexEffortsFor(model).includes(effort) ? effort : "medium", summary: "auto" as const }, include: ["reasoning.encrypted_content"] };
 }
 
 export type CodexCredentials = { accessToken: string; refreshToken?: string; idToken?: string };

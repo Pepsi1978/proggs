@@ -55,12 +55,10 @@ public sealed class ModelRegistry
 
     private static readonly (string Slug, string DisplayName)[] Gpt56Models =
     [
-        (Gpt56SolSlug, "GPT-5.6 Sol"),
-        (Gpt56SolFastSlug, "GPT-5.6 Sol Fast"),
+        ("gpt-6-astra", "GPT-6 Astra"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
         (Gpt56TerraSlug, "GPT-5.6 Terra"),
-        (Gpt56TerraFastSlug, "GPT-5.6 Terra Fast"),
-        (Gpt56LunaSlug, "GPT-5.6 Luna"),
-        (Gpt56LunaFastSlug, "GPT-5.6 Luna Fast"),
+        ("gpt-6-luna", "GPT-6 Luna"),
     ];
 
     /// <summary>
@@ -555,6 +553,17 @@ public sealed class ModelRegistry
                     }
                     AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
                 }
+
+                // Auch ausgeblendete Altmodelle entfernen: sie dürfen nicht in Listen zurückkehren.
+                foreach (var model in group.Models.Where(m => !Gpt56Models.Any(d => d.Slug == m.Slug)).ToList())
+                    group.Models.Remove(model);
+                group.HiddenModelSlugs.RemoveAll(slug => !Gpt56Models.Any(d => d.Slug == slug));
+                group.KnownSyncedModelSlugs.RemoveAll(slug => !Gpt56Models.Any(d => d.Slug == slug));
+                foreach (var model in group.Models)
+                {
+                    model.DisplayName = Gpt56Models.First(d => d.Slug == model.Slug).DisplayName;
+                    model.IsUserDefined = true;
+                }
             }
 
             if (string.Equals(group.Id, GoogleGroupId, StringComparison.OrdinalIgnoreCase))
@@ -662,19 +671,10 @@ public sealed class ModelRegistry
         }),
         CreateGroup("openai", "OpenAI", "openai", "OpenAI", new[]
         {
-            Model("gpt-5.3-codex-spark", "GPT-5.3 Codex Spark", "openai", "OpenAI"),
-            Model("gpt-5.4", "GPT-5.4", "openai", "OpenAI"),
-            Model("gpt-5.4-fast", "GPT-5.4 Fast", "openai", "OpenAI"),
-            Model("gpt-5.4-mini", "GPT-5.4 Mini", "openai", "OpenAI"),
-            Model("gpt-5.4-mini-fast", "GPT-5.4 Mini Fast", "openai", "OpenAI"),
-            Model("gpt-5.5", "GPT-5.5", "openai", "OpenAI"),
-            Model("gpt-5.5-fast", "GPT-5.5 Fast", "openai", "OpenAI"),
-            Model(Gpt56SolSlug, "GPT-5.6 Sol", "openai", "OpenAI"),
-            Model(Gpt56SolFastSlug, "GPT-5.6 Sol Fast", "openai", "OpenAI"),
+            Model("gpt-6-astra", "GPT-6 Astra", "openai", "OpenAI"),
+            Model("gpt-6.1-sol", "GPT-6.1 Sol", "openai", "OpenAI"),
             Model(Gpt56TerraSlug, "GPT-5.6 Terra", "openai", "OpenAI"),
-            Model(Gpt56TerraFastSlug, "GPT-5.6 Terra Fast", "openai", "OpenAI"),
-            Model(Gpt56LunaSlug, "GPT-5.6 Luna", "openai", "OpenAI"),
-            Model(Gpt56LunaFastSlug, "GPT-5.6 Luna Fast", "openai", "OpenAI"),
+            Model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI"),
         }),
         // Kimi-Code-Abo (kimi.ai), in OpenCode per /connect -> "Kimi For Coding" mit API-Schluessel
         // angemeldet. Die vier Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.

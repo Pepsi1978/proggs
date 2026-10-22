@@ -1960,7 +1960,7 @@ if (-not $env:NVIDIA_API_KEY) {
         foreach (var slug in new[]
         {
             Gpt56SolSlug, Gpt56SolFastSlug,
-            Gpt56TerraSlug, Gpt56TerraFastSlug,
+            Gpt56TerraFastSlug,
             Gpt56LunaSlug, Gpt56LunaFastSlug
         })
         {

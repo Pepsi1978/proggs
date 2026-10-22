@@ -18,15 +18,19 @@ namespace VoiceAgent.Services.Llm
         /// <summary>Kuratierte Fallback-Liste (Hermes DEFAULT_CODEX_MODELS, Stand 2026).</summary>
         public static readonly IReadOnlyList<string> Fallback = new[]
         {
-            "gpt-5.5",
-            "gpt-5.4-mini",
-            "gpt-5.4",
-            "gpt-5.3-codex",
-            "gpt-5.3-codex-spark",
+            "gpt-6-astra",
+            "gpt-6.1-sol",
+            "gpt-5.6-terra",
+            "gpt-6-luna",
         };
 
         /// <summary>Standard-Modell, wenn nichts ausgewaehlt ist.</summary>
-        public const string Default = "gpt-5.5";
+        public const string Default = "gpt-6.1-sol";
+
+        public static IReadOnlyList<string> Efforts(string? model) =>
+            CodexProvider.NormalizeModel(model) == "gpt-6-luna"
+                ? new[] { "low", "medium", "high", "xhigh", "max" }
+                : new[] { "low", "medium", "high", "xhigh", "max", "ultra" };
 
         private static readonly HttpClient Http = new(new SocketsHttpHandler
         {
@@ -77,6 +81,7 @@ namespace VoiceAgent.Services.Llm
                 if (!item.TryGetProperty("slug", out var slugEl) || slugEl.ValueKind != JsonValueKind.String) continue;
                 var slug = slugEl.GetString()?.Trim();
                 if (string.IsNullOrEmpty(slug)) continue;
+                if (!System.Linq.Enumerable.Contains(Fallback, slug)) continue;
 
                 if (item.TryGetProperty("visibility", out var vis) && vis.ValueKind == JsonValueKind.String)
                 {

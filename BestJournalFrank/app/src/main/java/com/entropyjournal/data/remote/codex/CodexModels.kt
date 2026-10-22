@@ -3,9 +3,9 @@ package com.entropyjournal.data.remote.codex
 /** Die auswaehlbaren ChatGPT-/Codex-Modelle. */
 enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
     ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT 5.6 Sol", "gpt-5.6-sol"),
-    TERRA("GPT 5.6 Terra", "gpt-5.6-terra"),
-    LUNA("GPT 5.6 Luna", "gpt-5.6-luna"),
+    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
+    LUNA("GPT-6 Luna", "gpt-6-luna"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
     FABLE("Claude Fable 5.1", "claude-fable-5-1", KiAnbieter.ANTHROPIC),
     SONNET("Claude Sonnet 5.5", "claude-sonnet-5-5", KiAnbieter.ANTHROPIC),
@@ -29,7 +29,12 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
         fun fromId(value: String?): CodexModel = entries.firstOrNull {
             it.apiId.equals(value?.trim(), ignoreCase = true) ||
                 it.label.equals(value?.trim(), ignoreCase = true)
-        } ?: DEFAULT
+        } ?: when {
+            value?.contains("sol", ignoreCase = true) == true -> SOL
+            value?.contains("luna", ignoreCase = true) == true -> LUNA
+            value?.contains("astra", ignoreCase = true) == true -> ASTRA
+            else -> DEFAULT
+        }
 
         fun von(anbieter: KiAnbieter): List<CodexModel> = entries.filter { it.anbieter == anbieter }
     }

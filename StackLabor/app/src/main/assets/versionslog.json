@@ -11,6 +11,7 @@
     {"versionCode": 62, "versionName": "0.3.44", "stand": "22.10.2026, 11:22 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe."},
     {"versionCode": 63, "versionName": "0.3.45", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 sofort wieder nutzbar nach erneuter Auswahl."},
     {"versionCode": 64, "versionName": "0.3.46", "stand": "22.10.2026, 12:00 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per langem Drücken oder Stern als Favorit oben anheften."},
-    {"versionCode": 65, "versionName": "0.3.47", "stand": "22.10.2026, 12:53 Uhr", "notiz": "KI: Neben den GPT-Modellen lassen sich jetzt Claude-Modelle von Anthropic mit Denkstufe und eigenem API-Schlüssel wählen, wie in Jarvis."}
+    {"versionCode": 65, "versionName": "0.3.47", "stand": "22.10.2026, 12:53 Uhr", "notiz": "KI: Neben den GPT-Modellen lassen sich jetzt Claude-Modelle von Anthropic mit Denkstufe und eigenem API-Schlüssel wählen, wie in Jarvis."},
+    {"versionCode": 66, "versionName": "0.3.48", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."}
   ]
 }

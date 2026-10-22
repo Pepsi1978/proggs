@@ -45,7 +45,7 @@ class Einstellungen(ctx: Context) {
 
     // --- F-11: Codex ---------------------------------------------------------------------
     var codexModell: String
-        get() = p.getString(CODEX_MODELL, "gpt-5.6-luna")!!
+        get() = CodexModel.fromLabel(p.getString(CODEX_MODELL, "gpt-6-luna")!!).apiId
         set(v) {
             val model = CodexModel.fromLabel(v)
             val effort = model.normalizeEffort(ReasoningEffort.fromLabel(codexEffort))
@@ -68,7 +68,7 @@ class Einstellungen(ctx: Context) {
      * deshalb ist hier Luna vorbelegt, während die Auswertung beim grossen Modell bleiben darf.
      */
     var verbesserungModell: String
-        get() = p.getString(VERBESSERUNG_MODELL, "gpt-5.6-luna")!!
+        get() = CodexModel.fromLabel(p.getString(VERBESSERUNG_MODELL, "gpt-6-luna")!!).apiId
         set(v) {
             val model = CodexModel.fromLabel(v)
             val effort = model.normalizeEffort(ReasoningEffort.fromLabel(verbesserungEffort), ReasoningEffort.LOW)

@@ -17,7 +17,7 @@ import { Client as MinioClient } from "minio";
 import { designFileName, designVariantsOf, generatedDesignPathPattern, sameVariantPattern } from "./design-variants.js";
 import { v7 as uuidv7 } from "uuid";
 import { z } from "zod";
-import { codexAuth, codexEfforts, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
+import { codexAuth, codexEfforts, codexEffortsFor, currentCodexSelection, codexModels, codexRequestFields, decryptCredentials, encryptCredentials, tokenIdentity } from "./codex-auth.js";
 import { codexHttpError, isRetryableCodexError, parseCodexEventStream } from "./codex-stream.js";
 import { assertOpenRouterContext, normalizeOpenRouterModelDetails, openRouterApi, openRouterHttpError, openRouterRequest, parseOpenRouterEventStream, type OpenRouterEndpoint, type OpenRouterModel, type OpenRouterModelDetails, type OpenRouterStreamResult } from "./openrouter.js";
 import { assertZenContext, normalizeZenFreeModels, parseZenEventStream, withVerifiedZenReasoning, zenApi, zenHttpError, zenRequest, type ZenModel } from "./opencode-zen.js";
@@ -194,8 +194,8 @@ const openRouterEndpointSchema = z.object({
 const storedOpenRouterModelSchema = z.object({ provider: z.literal("openrouter"), id: openRouterModelIdSchema, name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), defaultEffort: z.string().min(1).max(20).optional(), endpoint: openRouterEndpointSchema }).strict();
 const storedZenModelSchema = z.object({ provider: z.literal("opencode-zen"), id: z.string().min(1).max(300), name: z.string().min(1).max(300), contextLength: z.number().int().positive().optional(), inputTokenLimit: z.number().int().positive().optional(), maxOutputTokens: z.number().int().positive().optional(), efforts: z.array(z.string().min(1).max(20)).max(20), reasoning: z.boolean(), reasoningControl: z.enum(["toggle", "effort"]).optional() }).strict();
 const openRouterEndpointSelectionSchema = z.object({ model: openRouterModelIdSchema, endpointId: z.string().max(400).optional(), providerTag: z.string().max(400).optional(), providerSlug: z.string().max(200).optional() }).strict().refine((value) => value.endpointId || value.providerTag || value.providerSlug, { message: "Wähle einen Provider für das Modell aus." });
-const codexModelNames: Record<typeof codexModels[number], string> = { "gpt-5.6-sol": "GPT-5.6 Sol", "gpt-5.6-terra": "GPT-5.6 Terra", "gpt-5.6-luna": "GPT-5.6 Luna" };
-const codexProviderModels = (): ProviderModel[] => codexModels.map((id) => ({ provider: "openai-codex", id, name: codexModelNames[id], efforts: [...codexEfforts], defaultEffort: "medium" }));
+const codexModelNames: Record<typeof codexModels[number], string> = { "gpt-6-astra": "GPT-6 Astra", "gpt-6.1-sol": "GPT-6.1 Sol", "gpt-5.6-terra": "GPT-5.6 Terra", "gpt-6-luna": "GPT-6 Luna" };
+const codexProviderModels = (): ProviderModel[] => codexModels.map((id) => ({ provider: "openai-codex", id, name: codexModelNames[id], efforts: codexEffortsFor(id), defaultEffort: "medium" }));
 
 function openRouterSettings(value: unknown): { model?: string; effort?: string; models: OpenRouterModel[] } {
   const raw = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -357,7 +357,7 @@ async function providerCatalog(organizationId: string) {
   const settings = selected?.settings && typeof selected.settings === "object" ? selected.settings : {};
   const selectedZenModel = selected?.provider === "opencode-zen" && typeof settings.model === "string" ? zenModels.find((model) => model.id === settings.model) : undefined;
   const selection = selected?.provider === "openai-codex"
-    ? { provider: "openai-codex" as const, model: codexModels.includes(settings.model as typeof codexModels[number]) ? settings.model! : "gpt-5.6-sol", effort: codexEfforts.includes(settings.effort as typeof codexEfforts[number]) ? settings.effort! : "medium" }
+    ? currentCodexSelection(settings)
     : selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.some((model) => model.id === settings.model) ? { provider: "openrouter" as const, model: settings.model, ...(typeof settings.effort === "string" ? { effort: settings.effort } : {}) }
       : selectedZenModel ? { provider: "opencode-zen" as const, model: selectedZenModel.id, ...(typeof settings.effort === "string" && selectedZenModel.efforts.includes(settings.effort) ? { effort: settings.effort } : {}) } : undefined;
   const selectionError = selected?.provider === "openrouter" && typeof settings.model === "string" && routerModels.length && !routerModels.some((model) => model.id === settings.model)
@@ -368,7 +368,7 @@ async function providerCatalog(organizationId: string) {
 async function resolveModelSelection(organizationId: string, requested?: ModelSelection): Promise<ModelSelection> {
   if (requested) {
     if (requested.provider === "openai-codex" && !codexModels.includes(requested.model as typeof codexModels[number])) fail("MODEL_INVALID", 400, "Dieses Codex-Modell wird nicht unterstützt.");
-    if (requested.provider === "openai-codex" && requested.effort && !codexEfforts.includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Dieser Effort wird nicht unterstützt.");
+    if (requested.provider === "openai-codex" && requested.effort && !codexEffortsFor(requested.model).includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Dieser Effort wird nicht unterstützt.");
     if (requested.provider === "openrouter") {
       const connection = await validOpenRouterConnection(organizationId);
       const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === requested.model);
@@ -389,7 +389,7 @@ async function resolveModelSelection(organizationId: string, requested?: ModelSe
   const row = rows.find((entry) => entry.isDefault) ?? rows.find((entry) => entry.provider === "openai-codex") ?? rows[0];
   if (!row) fail("PROVIDER_NOT_CONNECTED", 409, "Bitte zuerst einen Modellprovider verbinden.");
   const settings = row.settings && typeof row.settings === "object" ? row.settings : {};
-  if (row.provider === "openai-codex") return { provider: "openai-codex", model: codexModels.includes(settings.model as typeof codexModels[number]) ? settings.model! : "gpt-5.6-sol", effort: codexEfforts.includes(settings.effort as typeof codexEfforts[number]) ? settings.effort! : "medium" };
+  if (row.provider === "openai-codex") return currentCodexSelection(settings);
   if (row.provider === "openrouter" && typeof settings.model === "string") {
     const connection = await validOpenRouterConnection(organizationId);
     const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === settings.model);
@@ -587,7 +587,7 @@ app.get("/api/v1/providers/openai", async (request) => { const actor = requireAc
 app.patch("/api/v1/providers/openai/settings", async (request) => { const actor = requireActorPermission(request, "provider.manage"); const settings = z.object({ model: z.enum(codexModels), effort: z.enum(codexEfforts) }).strict().parse(request.body); const updated = await db.update(providerConnections).set({ settings, updatedAt: new Date() }).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.provider, "openai-codex"))).returning({ id: providerConnections.id }); if (!updated[0]) fail("OPENAI_NOT_CONNECTED", 409, "Bitte zuerst OpenAI verbinden."); return { settings }; });
 app.post("/api/v1/providers/openai/test", { config: { rateLimit: { max: 5, timeWindow: "5 minutes" } } }, async (request) => {
   const actor = requireActorPermission(request, "provider.use"), connection = await validCodexConnection(actor.organizationId);
-  const settings = z.object({ model: z.enum(codexModels).default("gpt-5.6-sol"), effort: z.enum(codexEfforts).default("medium") }).parse(connection.settings);
+  const settings = currentCodexSelection(connection.settings && typeof connection.settings === "object" ? connection.settings : {});
   const accountId = connection.accountId || tokenIdentity(connection.credentials.accessToken, connection.credentials.idToken).accountId;
   if (!accountId) fail("OPENAI_ACCOUNT_MISSING", 401, "Im OpenAI-Token fehlt die ChatGPT-Account-ID. Bitte erneut verbinden.");
   const body: Record<string, unknown> = { ...codexRequestFields(settings.model, settings.effort), instructions: "Antworte ausschließlich mit OK.", input: [{ role: "user", content: "Verbindungstest" }], store: false, stream: true };
@@ -629,7 +629,7 @@ app.post("/api/v1/providers/openai/auth/poll", { config: { rateLimit: { max: 120
   if (!tokens.access_token) fail("OPENAI_TOKEN_INVALID", 502, "OpenAI hat keinen Zugriffstoken geliefert.");
   const identity = tokenIdentity(tokens.access_token, tokens.id_token), expiresAt = new Date(Date.now() + (Number(tokens.expires_in) || 3600) * 1000);
   const credentials = encryptCredentials({ accessToken: tokens.access_token, ...(tokens.refresh_token ? { refreshToken: tokens.refresh_token } : {}), ...(tokens.id_token ? { idToken: tokens.id_token } : {}) }, env.SESSION_SECRET);
-  await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const hasDefault = (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.isDefault, true))).limit(1))[0]; await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "openai-codex", credentials, accountId: identity.accountId, email: identity.email, expiresAt, settings: { model: "gpt-5.6-sol", effort: "medium" }, isDefault: !hasDefault }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, accountId: identity.accountId, email: identity.email, expiresAt, status: "connected", updatedAt: new Date() } }); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.connected", targetType: "provider", result: "success", metadata: { provider: "openai-codex" }, correlationId: request.id }); });
+  await db.transaction(async (tx) => { await tx.execute(sql`select id from organizations where id = ${actor.organizationId} for update`); const hasDefault = (await tx.select({ id: providerConnections.id }).from(providerConnections).where(and(eq(providerConnections.organizationId, actor.organizationId), eq(providerConnections.isDefault, true))).limit(1))[0]; await tx.insert(providerConnections).values({ id: uuidv7(), organizationId: actor.organizationId, provider: "openai-codex", credentials, accountId: identity.accountId, email: identity.email, expiresAt, settings: { model: "gpt-6.1-sol", effort: "medium" }, isDefault: !hasDefault }).onConflictDoUpdate({ target: [providerConnections.organizationId, providerConnections.provider], set: { credentials, accountId: identity.accountId, email: identity.email, expiresAt, status: "connected", updatedAt: new Date() } }); await tx.insert(auditEvents).values({ id: uuidv7(), organizationId: actor.organizationId, actorId: actor.userId, action: "provider.openai.connected", targetType: "provider", result: "success", metadata: { provider: "openai-codex" }, correlationId: request.id }); });
   pendingCodexAuth.delete(authId);
   return { status: "connected", connected: true, email: identity.email, accountId: identity.accountId };
 });
@@ -753,7 +753,7 @@ app.patch("/api/v1/providers/default-model", async (request) => {
   let selection: ModelSelection;
   if (requested.provider === "openai-codex") {
     if (!codexModels.includes(requested.model as typeof codexModels[number])) fail("MODEL_INVALID", 400, "Dieses Codex-Modell wird nicht unterstützt.");
-    if (!requested.effort || !codexEfforts.includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Bitte einen gültigen Codex-Effort auswählen.");
+    if (!requested.effort || !codexEffortsFor(requested.model).includes(requested.effort as typeof codexEfforts[number])) fail("EFFORT_INVALID", 400, "Bitte einen gültigen Codex-Effort auswählen.");
     selection = { provider: "openai-codex", model: requested.model, effort: requested.effort };
   } else if (requested.provider === "openrouter") {
     const model = openRouterSettings(connection.settings).models.find((entry) => entry.id === requested.model);

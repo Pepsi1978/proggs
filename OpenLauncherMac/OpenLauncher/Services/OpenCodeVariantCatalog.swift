@@ -93,7 +93,8 @@ enum OpenCodeVariantCatalog {
     }
 
     private static func openAiLevels(_ slug: String) -> [String] {
-        if slug == "gpt-6-astra" { return ["low", "medium", "high", "xhigh", "max"] }
+        if ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra"].contains(slug) { return ["low", "medium", "high", "xhigh", "max", "ultra"] }
+        if slug == "gpt-6-luna" { return ["low", "medium", "high", "xhigh", "max"] }
         if slug.contains("-mini") || slug.contains("-nano") { return [] }
         if slug.contains("-chat") { return ["medium"] }
         if slug.contains("pro") {
@@ -113,7 +114,8 @@ enum OpenCodeVariantCatalog {
 
     private static func openAiCompatibleLevels(_ id: String) -> [String] {
         let local = id.hasPrefix("openai/") ? String(id.dropFirst("openai/".count)) : id
-        if local == "gpt-6-astra" { return ["low", "medium", "high", "xhigh", "max"] }
+        if ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra"].contains(local) { return ["low", "medium", "high", "xhigh", "max", "ultra"] }
+        if local == "gpt-6-luna" { return ["low", "medium", "high", "xhigh", "max"] }
         if local.contains("-chat") { return ["medium"] }
         if local.contains("pro") {
             return local.contains("gpt-5.") ? ["medium", "high", "xhigh"] : ["high"]

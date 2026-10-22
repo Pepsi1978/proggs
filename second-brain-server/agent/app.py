@@ -94,6 +94,8 @@ VERSION = "0.84.0 (19.07.2026, 14:47 Uhr)"  # 0.84.0: Jede Chat-Antwort meldet s
 VERSION = "0.85.0 (05.08.2026, 14:04 Uhr)"  # 0.85.0: SPEICHERMODUS formuliert statt zu zitieren (Frank-Bug 2026-08-05, Screenshot Galaxy Fold 8). Root Cause 1: der automatische Faktenwaechter (_memory_statement_is_safe) wertete das gross geschriebene ERSTE Wort eines Satzes als Entitaets-Anker — jede korrekte deutsche Umstellung ("Ab sofort benutze ich ...") galt als unsicher und wurde still verworfen. Root Cause 2: der regelbasierte Ersatzweg schnitt nur "Speichere bitte, dass" weg und liess die Nebensatzstellung stehen -> "Ich ab sofort als mein Haupthandy das Galaxy Fold 8 benutze." Fix (Frank-Entscheidung): Faktenwaechter KOMPLETT entfernt — freigegeben wird per Ja/Nein im Bestaetigungsdialog; Destillations-Prompt auf Absichtserkennung + vollstaendigen deutschen Hauptsatz geschaerft (mit Falsch/Richtig-Beispiel); zweiter Anlauf bei Provider-/JSON-Aussetzern; der Ersatzweg bringt verbletzte dass-Nebensaetze rein positionell in die Verbzweitstellung (_verb_second_position, ohne ein Wort zu aendern); der Vorschlag heisst nur bei echter 1:1-Uebernahme "Wortwoertlicher Text", sonst "Eintrag". Alt: 0.84.0.
 
 # ---------------------------------------------------------------------------
+VERSION = "0.85.1 (22.10.2026, 22:03 Uhr)"  # Aktuelle Codex-Modellfamilien mit passenden Denkstufen.
+
 # Konfiguration (alles aus Umgebungsvariablen — Secrets nie im Code)
 # ---------------------------------------------------------------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")
@@ -262,16 +264,29 @@ MODEL_PRICES = {
     "gpt-5.3-codex-spark":    {"input": 1.75, "output": 14.00},
 }
 CODEX_GPT56_MODELS = [
-    "gpt-5.6-sol", "gpt-5.6-sol-fast",
-    "gpt-5.6-terra", "gpt-5.6-terra-fast",
-    "gpt-5.6-luna", "gpt-5.6-luna-fast",
+    "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna",
 ]
 CODEX_FAST_MODEL_ALIASES = {
     "gpt-5.6-sol-fast": "gpt-5.6-sol",
     "gpt-5.6-terra-fast": "gpt-5.6-terra",
     "gpt-5.6-luna-fast": "gpt-5.6-luna",
 }
-CODEX_MODELS_FALLBACK = ["gpt-6-astra"] + CODEX_GPT56_MODELS + ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.3-codex-spark"]
+CODEX_MODELS_FALLBACK = ["gpt-6-astra"] + CODEX_GPT56_MODELS
+
+
+def _current_codex_model(model: str) -> str:
+    slug = (model or "").strip().lower().removeprefix("openai-codex/").removeprefix("codex/")
+    if not slug.startswith("gpt-"):
+        return model
+    if slug in CODEX_MODELS_FALLBACK:
+        return slug
+    if "sol" in slug:
+        return "gpt-6.1-sol"
+    if "luna" in slug:
+        return "gpt-6-luna"
+    if "astra" in slug:
+        return "gpt-6-astra"
+    return "gpt-5.6-terra"
 CODEX_OAUTH_CLIENT_ID = os.getenv("CODEX_OAUTH_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann")
 CODEX_AUTH_ISSUER = os.getenv("CODEX_AUTH_ISSUER", "https://auth.openai.com").rstrip("/")
 CODEX_TOKEN_URL = os.getenv("CODEX_TOKEN_URL", "https://auth.openai.com/oauth/token")
@@ -294,9 +309,9 @@ REASONING_AVAILABLE = ["none", "low", "medium", "high", "xhigh", "max", "ultra"]
 def _valid_reasoning_for_model(model: str) -> set[str]:
     slug = _codex_model_request_fields((model or "").strip().lower())["model"]
     # Lokaler Codex-Modellkatalog vom 07.09.2026; Fast-Aliase nutzen dieselben Efforts.
-    if slug in {"gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra"}:
+    if slug in {"gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra"}:
         return {"low", "medium", "high", "xhigh", "max", "ultra"}
-    if slug == "gpt-5.6-luna":
+    if slug == "gpt-6-luna":
         return {"low", "medium", "high", "xhigh", "max"}
     for prefix, allowed in _CODEX_REASONING_BY_PREFIX.items():
         if slug.startswith(prefix):
@@ -777,7 +792,7 @@ def _codex_model_request_fields(model: str) -> dict[str, str]:
     """Fast ist nur ein lokaler Auswahl-Alias; das Backend bekommt Basismodell + Priority-Tier."""
     slug = _codex_slug(model)
     base_model = CODEX_FAST_MODEL_ALIASES.get(slug.lower())
-    fields = {"model": base_model or slug}
+    fields = {"model": _current_codex_model(base_model or slug)}
     if base_model:
         fields["service_tier"] = "priority"
     return fields
@@ -941,7 +956,7 @@ def _codex_models_fetch() -> "list[str] | None":
                 for fallback in CODEX_MODELS_FALLBACK:
                     if fallback not in out:
                         out.append(fallback)
-                return out
+                return CODEX_MODELS_FALLBACK.copy()
     except Exception as e:
         _log(logging.INFO, "Codex-Modellliste nicht live abrufbar", err=str(e))
     return None
@@ -5172,11 +5187,12 @@ def require_auth(authorization: str = Header(default="")) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global ROLE_MODELS, ROLE_REASONING, TAVILY_ENABLED, ROUTER_MODEL, ROUTER_REASONING, MEMORY_WEB_INFLUENCE
-    ROLE_MODELS = load_models()   # gespeicherte Modell-Wahl JE ROLLE uebernehmen (sonst Env-Default)
+    ROLE_MODELS = {role: _current_codex_model(model) for role, model in load_models().items()}
     ROLE_REASONING = load_reasoning()
     TAVILY_ENABLED = load_tavily_enabled()
     MEMORY_WEB_INFLUENCE = load_memory_web_influence()
     ROUTER_MODEL, ROUTER_REASONING = load_router_config()
+    ROUTER_MODEL = _current_codex_model(ROUTER_MODEL)
     # Diagnose: nutzt EINE Rolle ein OpenCode-Modell (minimax), muss der OpenCode-Key da sein.
     if any(_is_opencode(m) for m in ROLE_MODELS.values()):
         probe(bool(OPENCODE_API_KEY), "OPENCODE_API_KEY fehlt, aber OpenCode-Modell aktiv", models=ROLE_MODELS)
@@ -6087,7 +6103,7 @@ def get_config() -> dict:
 
 
 def _get_config_locked() -> dict:
-    available = AVAILABLE_MODELS + [m for m in codex_models() if m not in AVAILABLE_MODELS]
+    available = list(dict.fromkeys(_current_codex_model(m) for m in AVAILABLE_MODELS + codex_models()))
     size_prompts, size_custom = load_size_prompts()
     context_prompts, context_custom = load_context_prompts()
     user_context_prompts, user_context_custom = load_user_context_prompts()
@@ -6123,12 +6139,12 @@ def _put_config_locked(req: ConfigReq) -> dict:
         v = (val or "").strip().lower()
         if v in VALID_REASONING_EFFORTS:
             new_reasoning[role] = v
-    ROLE_MODELS = new
+    ROLE_MODELS = {role: _current_codex_model(model) for role, model in new.items()}
     ROLE_REASONING = new_reasoning
     # Router (Schritt 1): ''/'auto' setzt zurueck auf 'wie Hauptagent'; sonst Franks explizite Wahl.
     if req.router_model is not None:
         rm = req.router_model.strip()
-        ROUTER_MODEL = "" if rm.lower() in {"", "auto"} else rm
+        ROUTER_MODEL = "" if rm.lower() in {"", "auto"} else _current_codex_model(rm)
     if req.router_reasoning is not None:
         rr = req.router_reasoning.strip().lower()
         if rr in {"", "auto"}:
