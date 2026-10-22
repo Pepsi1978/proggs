@@ -42,6 +42,7 @@
     {"versionCode": 38, "versionName": "1.0.37", "stand": "17.10.2026, 10:41 Uhr", "notiz": "Neuer Vier-Wochen-Kalender in jedem Bereich (eine Woche zurück, drei Wochen voraus) mit Aufgabenzahl je Tag und Tagesübersicht; Vorlesen jetzt in allen Bereichen, Serie oben rechtsbündig, Fokus-Knopf größer."},
     {"versionCode": 39, "versionName": "1.0.38", "stand": "22.10.2026, 11:21 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für bessere Schreibweisen beim Diktat."},
     {"versionCode": 40, "versionName": "1.0.39", "stand": "22.10.2026, 11:50 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar."},
-    {"versionCode": 41, "versionName": "1.0.40", "stand": "22.10.2026, 12:07 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural, auch für vorgelesene Erinnerungen; Stimmen per langem Drücken als Favorit oben anheften."}
+    {"versionCode": 41, "versionName": "1.0.40", "stand": "22.10.2026, 12:07 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural, auch für vorgelesene Erinnerungen; Stimmen per langem Drücken als Favorit oben anheften."},
+    {"versionCode": 42, "versionName": "1.0.41", "stand": "22.10.2026, 12:44 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."}
   ]
 }

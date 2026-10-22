@@ -155,7 +155,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                         color = if (vm.eTitel.length > TITEL_MAX) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp),
                     )
                     if (vm.eTitel.isBlank()) Text(
-                        if (vm.kiVerbunden) "✨ Ohne Überschrift erzeugt die KI einen passenden Titel." else "Ohne Überschrift werden die ersten Wörter zum Titel.",
+                        if (vm.kiBereit) "✨ Ohne Überschrift erzeugt die KI einen passenden Titel." else "Ohne Überschrift werden die ersten Wörter zum Titel.",
                         color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp),
                     )
                 }
@@ -265,7 +265,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                                     else "Vorgelesen wird: „${vorlesetext.take(160)}${if (vorlesetext.length > 160) " …" else ""}“",
                                     color = f.textLeise, fontSize = 12.sp,
                                 )
-                                if (vm.textVorKorrektur == null && vm.kiVerbunden && vorlesetext.isNotBlank()) Text(
+                                if (vm.textVorKorrektur == null && vm.kiBereit && vorlesetext.isNotBlank()) Text(
                                     "Tipp: Die KI-Korrektur macht daraus eine kurze Anweisung wie „Brenne die Solo-CD für Papa.“",
                                     color = f.textSchwach, fontSize = 12.sp,
                                 )

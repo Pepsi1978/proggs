@@ -111,6 +111,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- KI-Verbindung ----
     var kiVerbunden by mutableStateOf(auth.isConnected); private set
+    /** Die gewählte KI kann antworten: OpenAI über das ChatGPT-Konto, Claude über den Anthropic-Schlüssel. */
+    val kiBereit: Boolean get() = if (einstellungen.modell.istAnthropic) auth.kannDenken(einstellungen.modell) else kiVerbunden
     var geraeteCode by mutableStateOf<DeviceAuthInfo?>(null); private set
     var kiFehler by mutableStateOf<String?>(null); private set
     var kiVerbindet by mutableStateOf(false); private set
@@ -236,7 +238,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (korrigiert) return
         val quelle = textVorKorrektur ?: eText
         if (quelle.isBlank()) { melde("Sprich oder schreibe zuerst etwas."); return }
-        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
+        if (!kiBereit) { melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
         korrigiert = true
         viewModelScope.launch {
             try {
@@ -302,7 +304,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val id = if (editorQuelle == null) repo.neu(neu) else { repo.speichere(neu); neu.id }
             hervorgehoben = id
             melde(if (editorQuelle == null) "Aufgabe angelegt" else "Gespeichert")
-            if (kiTitel && kiVerbunden && einstellungen.kiTitel) titelErzeugen(id, text)
+            if (kiTitel && kiBereit && einstellungen.kiTitel) titelErzeugen(id, text)
         }
     }
 

@@ -196,8 +196,32 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                             vm.kiFehler?.let { Text(it, color = f.gefahr, fontSize = 12.sp) }
                         }
                     }
+                    // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen eigenen API-Schlüssel.
+                    val kontext = androidx.compose.ui.platform.LocalContext.current
+                    var anthropicKey by remember { mutableStateOf(de.frank.aufgaben.auth.AnthropicKlient.schluessel(kontext)) }
+                    Text("Anbieter", color = f.textLeise, fontSize = 13.sp)
+                    ChipReihe {
+                        de.frank.aufgaben.auth.KiAnbieter.entries.forEach { a ->
+                            Chip(a.label, e.modell.anbieter == a) {
+                                if (e.modell.anbieter != a) {
+                                    val alt = e.modell
+                                    if (alt.istAnthropic) de.frank.aufgaben.auth.AnthropicKlient.claudeModellMerken(kontext, de.frank.aufgaben.auth.ClaudeModell.von(alt.apiId) ?: de.frank.aufgaben.auth.ClaudeModell.OPUS)
+                                    else de.frank.aufgaben.auth.AnthropicKlient.openAiModellMerken(kontext, alt.apiId)
+                                    e.modell = CodexModel.fromLabel(
+                                        if (a == de.frank.aufgaben.auth.KiAnbieter.ANTHROPIC) de.frank.aufgaben.auth.AnthropicKlient.letztesClaudeModell(kontext).apiId
+                                        else de.frank.aufgaben.auth.AnthropicKlient.letztesOpenAiModell(kontext, CodexModel.TERRA.apiId),
+                                    )
+                                    e.denkstufe = e.modell.normalizeEffort(e.denkstufe)
+                                }
+                            }
+                        }
+                    }
+                    if (e.modell.istAnthropic) {
+                        Text(if (anthropicKey.isBlank()) "Für Claude bitte deinen Anthropic-API-Schlüssel (sk-ant-…) eintragen." else "Claude denkt über deinen Anthropic-API-Schlüssel (eigene Abrechnung).", color = f.textLeise, fontSize = 13.sp)
+                        Feld("Anthropic-API-Schlüssel", anthropicKey, geheim = true) { anthropicKey = it; de.frank.aufgaben.auth.AnthropicKlient.schluesselSpeichern(kontext, it) }
+                    }
                     Text("Modell", color = f.textLeise, fontSize = 13.sp)
-                    ChipReihe { CodexModel.entries.forEach { m -> Chip(m.label, e.modell == m) { e.modell = m } } }
+                    ChipReihe { CodexModel.von(e.modell.anbieter).forEach { m -> Chip(m.label, e.modell == m) { e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe) } } }
                     Text("Denkstufe", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { e.modell.supportedEfforts.forEach { r -> Chip(r.label, e.denkstufe == r) { e.denkstufe = r } } }
                     Schalter("Fehlende Überschrift per KI erzeugen", e.kiTitel) { e.kiTitel = it }

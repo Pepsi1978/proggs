@@ -201,7 +201,7 @@ class JarvisBruecke : ContentProvider() {
         nebenbei.launch {
             runCatching {
                 val auth = CodexAuthManager(ctx)
-                if (!auth.isConnected) return@launch
+                if (!auth.kannDenken(Einstellungen.get(ctx).modell)) return@launch
                 val titel = AufgabenKi(auth, Einstellungen.get(ctx)).titel(text)
                 val repo = AufgabenRepository.get(ctx)
                 if (titel.isNotBlank()) repo.eine(id)?.let { repo.speichere(it.copy(titel = kurzerTitel(titel), titelVonKi = true)) }
