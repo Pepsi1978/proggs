@@ -16,6 +16,11 @@ internal fun reasoningLevels(model: String): Map<String, String> = linkedMapOf(
         put("Maximal", "max")
         put("Ultra", "ultra")
     }
+    // Claude kennt low bis max, aber kein Ultra.
+    if (model.startsWith("Claude") || model.startsWith("claude-")) {
+        put("Sehr hoch", "xhigh")
+        put("Maximal", "max")
+    }
 }
 
 internal fun normalizeReasoningLabel(model: String, value: String): String =

@@ -262,7 +262,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun send() {
         val state = _uiState.value
         if (state.input.isBlank() || state.generationPhase != null || state.mic != MicState.IDLE || state.improving) return
-        if (!auth.isConnected) {
+        if (!auth.kannDenken(state.model)) {
+            if (state.model.startsWith("Claude")) { _uiState.update { it.copy(authError = "Für Claude bitte in den Einstellungen den Anthropic-API-Schlüssel eintragen.") }; return }
             _uiState.update { it.copy(showOAuth = true) }
             return
         }

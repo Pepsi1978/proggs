@@ -351,6 +351,11 @@ internal val RESEARCH_MODELS = mapOf(
     "GPT 5.6 Sol" to "gpt-5.6-sol",
     "GPT 5.6 Terra" to "gpt-5.6-terra",
     "GPT 5.6 Luna" to "gpt-5.6-luna",
+    // Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel (wie in Jarvis).
+    "Claude Opus 5.5" to "claude-opus-5-5",
+    "Claude Fable 5.1" to "claude-fable-5-1",
+    "Claude Sonnet 5.5" to "claude-sonnet-5-5",
+    "Claude Haiku 5.5" to "claude-haiku-5-5",
 )
 
 internal fun codexModelId(label: String): String = RESEARCH_MODELS[label] ?: RESEARCH_MODELS.getValue("GPT 5.6 Terra")
@@ -478,6 +483,10 @@ class CodexAuthManager(context: Context) {
     val email: String? get() = store.getString(KEY_EMAIL, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
+    /** Kann die App mit diesem Modell recherchieren? GPT braucht das ChatGPT-Konto, Claude den Anthropic-Schlüssel. */
+    fun kannDenken(modelLabel: String): Boolean =
+        if (ClaudeModell.istClaude(codexModelId(modelLabel))) AnthropicKlient.hatSchluessel(appContext) else isConnected
+
     suspend fun login(activity: ComponentActivity, onDeviceCode: (DeviceAuthInfo) -> Unit): AuthResult = withContext(Dispatchers.IO) {
         val startConnection = postJsonWithDnsRetry(
             DEVICE_USER_CODE_URL,
@@ -544,6 +553,17 @@ class CodexAuthManager(context: Context) {
     ): GeneratedResearch =
         withContext(Dispatchers.IO) {
             val startedAt = System.nanoTime()
+            val output = if (ClaudeModell.istClaude(model)) {
+                // Claude-Modelle rechnen über die Anthropic Messages API mit eigenem Schlüssel (wie in Jarvis).
+                val claudeEmitter = ThrottledAnswerEmitter(onDelta = onAnswerDelta, onComplete = onAnswerComplete)
+                val text = try {
+                    AnthropicKlient.antwortAufCodexAnfrage(appContext, codexResearchPayload(model, reasoning, question, sessions)) { claudeEmitter.accept(it) }.text
+                } catch (fehler: AnthropicFehler) {
+                    throw CodexAuthException(AuthErrorKind.NETWORK, fehler.message.orEmpty())
+                }
+                claudeEmitter.finish()
+                text.trim()
+            } else {
             val token = validAccessToken()
             val accountId = jwtClaim(token, "chatgpt_account_id")
                 ?: store.getString(KEY_ACCOUNT_ID, null)
@@ -577,7 +597,8 @@ class CodexAuthManager(context: Context) {
             Log.i(PERF_TAG, "request_start model=$model effort=${codexReasoningEffort(reasoning, model)} sessions=${sessions.size} payload_bytes=${payloadText.toByteArray().size}")
             RESEARCH_HTTP_CLIENT.newCall(request).consumeSse(startedAt, model, accumulator)
             answerEmitter.finish()
-            val output = accumulator.result().trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+            accumulator.result().trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+            }
             Log.i(PERF_TAG, "stream_complete model=$model elapsed_ms=${elapsedMs(startedAt)} output_chars=${output.length}")
             val result = runCatching { JSONObject(output) }.getOrElse {
                 throw CodexAuthException(AuthErrorKind.NETWORK, "Das gewählte GPT-Modell hat keine gültigen strukturierten Lerndaten geliefert.")

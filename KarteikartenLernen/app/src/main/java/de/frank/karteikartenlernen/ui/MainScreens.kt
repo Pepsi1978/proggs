@@ -143,8 +143,36 @@ fun SettingsScreen(
     ScreenTitle("Einstellungen")
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
         SettingsSection("GPT-MODELL") {
+            // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen eigenen API-Schlüssel.
+            val kontext = androidx.compose.ui.platform.LocalContext.current
+            val claudeAktiv = state.model.startsWith("Claude")
+            var anthropicKey by remember { mutableStateOf(de.frank.karteikartenlernen.auth.AnthropicKlient.schluessel(kontext)) }
+            SettingRow("Anbieter", if (claudeAktiv) "Anthropic · eigener API-Schlüssel" else "OpenAI · ChatGPT-Konto") {
+                SegmentedControl(listOf("OpenAI", "Anthropic"), if (claudeAktiv) "Anthropic" else "OpenAI", onSelect = { wahl ->
+                    if ((wahl == "Anthropic") != claudeAktiv) {
+                        if (claudeAktiv) de.frank.karteikartenlernen.auth.ClaudeModell.von(state.model)?.let { de.frank.karteikartenlernen.auth.AnthropicKlient.claudeModellMerken(kontext, it) }
+                        else de.frank.karteikartenlernen.auth.AnthropicKlient.openAiModellMerken(kontext, state.model)
+                        onModel(if (wahl == "Anthropic") de.frank.karteikartenlernen.auth.AnthropicKlient.letztesClaudeModell(kontext).label
+                            else de.frank.karteikartenlernen.auth.AnthropicKlient.letztesOpenAiModell(kontext, "GPT 5.6 Terra"))
+                    }
+                })
+            }
+            if (claudeAktiv) {
+                SettingRow("Anthropic-API-Schlüssel", if (anthropicKey.isBlank()) "Für Claude bitte eintragen (sk-ant-…)" else "Eingetragen · eigene Abrechnung") {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = anthropicKey,
+                        onValueChange = { anthropicKey = it; de.frank.karteikartenlernen.auth.AnthropicKlient.schluesselSpeichern(kontext, it) },
+                        singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
             SettingRow("Aktives Modell", "${state.model}") {
-                SegmentedControl(listOf("Astra", "Sol", "Terra", "Luna"), state.model.substringAfterLast(' '), onSelect = { onModel(if (it == "Astra") "GPT 6 Astra" else "GPT 5.6 $it") })
+                if (claudeAktiv) SegmentedControl(listOf("Opus", "Fable", "Sonnet", "Haiku"), state.model.removePrefix("Claude ").substringBefore(' '), onSelect = { kurz ->
+                    onModel(de.frank.karteikartenlernen.auth.ClaudeModell.entries.first { it.label.startsWith("Claude $kurz") }.label)
+                })
+                else SegmentedControl(listOf("Astra", "Sol", "Terra", "Luna"), state.model.substringAfterLast(' '), onSelect = { onModel(if (it == "Astra") "GPT 6 Astra" else "GPT 5.6 $it") })
             }
             SettingRow("Reasoning-Stufe") {
                 reasoningLevels(state.model).keys.chunked(3).forEach { levels ->
