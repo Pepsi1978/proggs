@@ -737,6 +737,7 @@ private fun Oberflaeche(
         // ---- Die überlagernden Bildschirme, jeweils mit dem gemessenen Übergang
         SchiebtVonRechts(sichtbar = ziel == Ziel.EINSTELLUNGEN) {
             EinstellungenBildschirm(
+                einstellungen = vm.einstellungen,
                 erscheinung = erscheinungId,
                 codexVerbunden = codexVerbunden,
                 codexKonto = codexKonto,

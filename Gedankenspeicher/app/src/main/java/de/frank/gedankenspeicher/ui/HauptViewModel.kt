@@ -1764,6 +1764,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         when (einstellungen.ttsAnbieter) {
             TtsProvider.GOOGLE_CLOUD.id -> einstellungen.stimmeGoogle = id
             TtsProvider.QWEN_CLONE.id -> einstellungen.stimmeQwen = id
+            TtsProvider.GEMINI_FLASH.id -> einstellungen.stimmeGeminiFlash = id
+            TtsProvider.GEMINI_LITE.id -> einstellungen.stimmeGeminiLite = id
+            TtsProvider.AZURE.id -> einstellungen.stimmeAzure = id
             else -> einstellungen.stimmeEdge = id
         }
         _ttsStimme.value = id
@@ -1772,6 +1775,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private fun stimmeZu(anbieter: String): String = when (anbieter) {
         TtsProvider.GOOGLE_CLOUD.id -> einstellungen.stimmeGoogle
         TtsProvider.QWEN_CLONE.id -> einstellungen.stimmeQwen
+        TtsProvider.GEMINI_FLASH.id -> einstellungen.stimmeGeminiFlash
+        TtsProvider.GEMINI_LITE.id -> einstellungen.stimmeGeminiLite
+        TtsProvider.AZURE.id -> einstellungen.stimmeAzure
         else -> einstellungen.stimmeEdge
     }
 

@@ -3,6 +3,8 @@ package de.frank.gedankenspeicher.ui.einstellungen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,14 +43,22 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -59,6 +70,7 @@ import de.frank.gedankenspeicher.auth.ReasoningEffort
 import de.frank.gedankenspeicher.auth.VERBESSERUNG_AUFTRAG
 import de.frank.gedankenspeicher.data.Auslieferungsprofile
 import de.frank.gedankenspeicher.data.Auswertungsprofil
+import de.frank.gedankenspeicher.data.settings.Einstellungen
 import de.frank.gedankenspeicher.data.settings.Websuche
 import de.frank.gedankenspeicher.tts.ClonedVoice
 import de.frank.gedankenspeicher.tts.TtsCatalog
@@ -82,6 +94,7 @@ import de.frank.gedankenspeicher.ui.theme.Schriften
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EinstellungenBildschirm(
+    einstellungen: Einstellungen,
     erscheinung: String,
     codexVerbunden: Boolean,
     codexKonto: String?,
@@ -418,13 +431,12 @@ fun EinstellungenBildschirm(
                     Spacer(Modifier.height(12.dp))
                     Beschriftung("Begriffe (durch Komma oder Zeilenumbruch getrennt)")
                     // Local state: a multi-line field bound straight to the flow drops characters when typing fast.
-                    var begriffe by remember { mutableStateOf(woerterbuch) }
+                    var begriffe by entprellterWoerterbuchText(woerterbuch, beiWoerterbuch)
                     Blase {
                         BasicTextField(
                             value = begriffe,
                             onValueChange = {
                                 begriffe = it
-                                beiWoerterbuch(it)
                             },
                             textStyle = schrift.einstellungErklaerung.copy(color = farben.textStark),
                             cursorBrush = SolidColor(farben.akzent),
@@ -435,6 +447,15 @@ fun EinstellungenBildschirm(
             }
 
             // 5 — Stimme (F-18)
+            var favoriten by remember { mutableStateOf(einstellungen.stimmFavoriten) }
+            val favoritHalter = remember(favoriten) {
+                StimmFavoriten(favoriten) { id ->
+                    val neu = if (id in favoriten) favoriten - id else favoriten + id
+                    einstellungen.stimmFavoriten = neu
+                    favoriten = neu
+                }
+            }
+            CompositionLocalProvider(LocalStimmFavoriten provides favoritHalter) {
             Gruppe("Stimme") {
                 Beschriftung("Dienst")
                 FlowRow(
@@ -490,6 +511,20 @@ fun EinstellungenBildschirm(
                     TtsProvider.GERAET -> Erklaerung(
                         "Es spricht, was Android mitbringt — ohne Netz, ohne Schlüssel.",
                     )
+
+                    TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE -> GeminiFelder(
+                        einstellungen = einstellungen,
+                        googleSchluessel = googleSchluessel,
+                        stimmen = if (gewaehlt == TtsProvider.GEMINI_FLASH) TtsCatalog.geminiFlashVoices else TtsCatalog.geminiLiteVoices,
+                        gewaehlt = ttsStimme,
+                        beiWahl = beiStimme,
+                    )
+
+                    TtsProvider.AZURE -> AzureFelder(
+                        einstellungen = einstellungen,
+                        gewaehlt = ttsStimme,
+                        beiWahl = beiStimme,
+                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -498,6 +533,7 @@ fun EinstellungenBildschirm(
                     beiDruck = beiProbe,
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
             }
 
             // 5b — Sicherheit: der Fingerabdruck für geschützte Notizen
@@ -612,7 +648,18 @@ private fun EigeneStimme(
     }
 }
 
-/** Eine Stimmliste als umbrechende Wahlfelder — sie kann dreissig Einträge lang werden. */
+/** Die favorisierten Stimmen und wie man eine an- oder abwählt — gilt für jede Stimmliste. */
+private class StimmFavoriten(val kennungen: Set<String>, val umschalten: (String) -> Unit)
+
+private val LocalStimmFavoriten = staticCompositionLocalOf { StimmFavoriten(emptySet()) {} }
+
+/** Der gelbe Stern der Favoriten. */
+private val FavoritGelb = Color(0xFFFFC107)
+
+/**
+ * Eine Stimmliste als umbrechende Wahlfelder — sie kann dreissig Einträge lang werden.
+ * Langes Drücken markiert eine Stimme als Favorit (gelber Stern); Favoriten stehen vorn.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun StimmListe(
@@ -620,14 +667,156 @@ private fun StimmListe(
     gewaehlt: String,
     beiWahl: (String) -> Unit,
 ) {
+    val favoriten = LocalStimmFavoriten.current
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        eintraege.forEach { (kennung, name) ->
-            Wahlfeld(name, kennung == gewaehlt) { beiWahl(kennung) }
+        eintraege.sortedByDescending { it.first in favoriten.kennungen }.forEach { (kennung, name) ->
+            FavoritWahlfeld(
+                beschriftung = name,
+                gewaehlt = kennung == gewaehlt,
+                favorit = kennung in favoriten.kennungen,
+                beiLangemDruck = { favoriten.umschalten(kennung) },
+            ) { beiWahl(kennung) }
         }
     }
+    Text(
+        "Langes Drücken: ★ Favorit an/aus — Favoriten stehen vorn.",
+        style = Schriften.einstellungErklaerung,
+        color = Farben.textSchwach,
+        modifier = Modifier.padding(top = 6.dp),
+    )
+}
+
+/** Wie [Wahlfeld], dazu langes Drücken für den Favoriten und der gelbe Stern davor. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FavoritWahlfeld(
+    beschriftung: String,
+    gewaehlt: Boolean,
+    favorit: Boolean,
+    beiLangemDruck: () -> Unit,
+    beiDruck: () -> Unit,
+) {
+    val farben = Farben
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (gewaehlt) farben.akzentGedeckt else Color.Transparent)
+            .border(if (gewaehlt) 1.5.dp else 1.dp, if (gewaehlt) farben.akzent else farben.rand, RoundedCornerShape(50))
+            .combinedClickable(onLongClick = beiLangemDruck, onClick = beiDruck)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (favorit) {
+            Icon(Icons.Filled.Star, "Favorit", Modifier.padding(end = 4.dp).size(14.dp), tint = FavoritGelb)
+        }
+        Text(
+            beschriftung,
+            style = Schriften.zeitstempel,
+            color = if (gewaehlt) farben.akzent else farben.textMittel,
+        )
+    }
+}
+
+/** Gemini 3.8 Flash / Flash-Lite: zwei Schlüssel, Schlüsselwahl, Chirp-Rückfall und die 30 Stimmen. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GeminiFelder(
+    einstellungen: Einstellungen,
+    googleSchluessel: String,
+    stimmen: List<de.frank.gedankenspeicher.tts.TtsVoice>,
+    gewaehlt: String,
+    beiWahl: (String) -> Unit,
+) {
+    var frei by remember { mutableStateOf(einstellungen.geminiTtsKeyFrei) }
+    var bezahlt by remember { mutableStateOf(einstellungen.geminiTtsKeyBezahlt) }
+    var wahl by remember { mutableStateOf(einstellungen.geminiTtsSchluesselWahl) }
+    var chirp by remember { mutableStateOf(einstellungen.geminiTtsChirpRueckfall) }
+    if (frei.isBlank() && bezahlt.isBlank()) {
+        Hinweis("Trag mindestens einen Gemini-Schlüssel ein (aistudio.google.com → API-Schlüssel).")
+    }
+    Schluesselfeld(
+        beschriftung = "Gemini-Stimme: Schlüssel kostenlos",
+        zweck = "Projekt ohne Abrechnung",
+        wert = frei,
+        beiAenderung = { frei = it.trim(); einstellungen.geminiTtsKeyFrei = frei },
+    )
+    Spacer(Modifier.height(10.dp))
+    Schluesselfeld(
+        beschriftung = "Gemini-Stimme: Schlüssel bezahlt",
+        zweck = "Projekt mit Abrechnung",
+        wert = bezahlt,
+        beiAenderung = { bezahlt = it.trim(); einstellungen.geminiTtsKeyBezahlt = bezahlt },
+    )
+    Spacer(Modifier.height(12.dp))
+    Beschriftung("Welcher Schlüssel")
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        TtsCatalog.GEMINI_TTS_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
+            Wahlfeld(name, id == wahl) { wahl = id; einstellungen.geminiTtsSchluesselWahl = id }
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Rückfall auf Chirp 3 HD", style = Schriften.einstellung, color = Farben.textMittel)
+            Text(
+                "Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest die App mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                style = Schriften.einstellungErklaerung,
+                color = Farben.textSchwach,
+            )
+        }
+        Switch(
+            checked = chirp,
+            onCheckedChange = { chirp = it; einstellungen.geminiTtsChirpRueckfall = it },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Farben.hintergrund,
+                checkedTrackColor = Farben.akzent,
+                uncheckedThumbColor = Farben.textSchwach,
+                uncheckedTrackColor = Farben.hintergrundErhoben,
+                uncheckedBorderColor = Farben.rand,
+            ),
+        )
+    }
+    if (chirp && googleSchluessel.isBlank()) {
+        Hinweis("Für den Rückfall braucht es den Google-Cloud-Schlüssel oben unter „Zugänge“.")
+    }
+    Spacer(Modifier.height(12.dp))
+    Beschriftung("Stimme")
+    Erklaerung("${stimmen.size} Stimmen, alle sprechen Deutsch.")
+    StimmListe(eintraege = stimmen.map { it.id to it.name }, gewaehlt = gewaehlt, beiWahl = beiWahl)
+}
+
+/** Azure Neural: Schlüssel, Region und die deutschen Neural- und HD-Stimmen. */
+@Composable
+private fun AzureFelder(
+    einstellungen: Einstellungen,
+    gewaehlt: String,
+    beiWahl: (String) -> Unit,
+) {
+    var schluessel by remember { mutableStateOf(einstellungen.azureTtsKey) }
+    var region by remember { mutableStateOf(einstellungen.azureTtsRegion) }
+    if (schluessel.isBlank()) {
+        Hinweis("Trag den Azure-Speech-Schlüssel ein (Azure-Portal → Speech-Ressource → Schlüssel und Endpunkt).")
+    }
+    Schluesselfeld(
+        beschriftung = "Azure-Speech-Schlüssel (KEY 1)",
+        zweck = "Azure Neural",
+        wert = schluessel,
+        beiAenderung = { schluessel = it.trim(); einstellungen.azureTtsKey = schluessel },
+    )
+    Spacer(Modifier.height(10.dp))
+    Schluesselfeld(
+        beschriftung = "Azure-Region (z. B. westeurope)",
+        zweck = "Region",
+        wert = region,
+        beiAenderung = { region = it.trim(); einstellungen.azureTtsRegion = region },
+    )
+    Spacer(Modifier.height(12.dp))
+    Beschriftung("Stimme")
+    Erklaerung("HD-Stimmen brauchen die Stufe S0 und laufen nicht in jeder Region.")
+    StimmListe(eintraege = TtsCatalog.azureVoices.map { it.id to it.name }, gewaehlt = gewaehlt, beiWahl = beiWahl)
 }
 
 @Composable
@@ -899,4 +1088,31 @@ private fun Erscheinungskachel(
             overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+/**
+ * Local text of the vocabulary field: takes over values loaded from outside (backup import,
+ * reload), saves ~500 ms after the last keystroke and once more when the field leaves the screen.
+ */
+@Composable
+private fun entprellterWoerterbuchText(wert: String, speichern: (String) -> Unit): MutableState<String> {
+    val text = remember { mutableStateOf(wert) }
+    val gespeichert = remember { mutableStateOf(wert) }
+    val aktuellSpeichern by rememberUpdatedState(speichern)
+    LaunchedEffect(wert) {
+        if (wert != gespeichert.value) {
+            gespeichert.value = wert
+            text.value = wert
+        }
+    }
+    LaunchedEffect(text.value) {
+        if (text.value == gespeichert.value) return@LaunchedEffect
+        delay(500)
+        gespeichert.value = text.value
+        aktuellSpeichern(text.value)
+    }
+    DisposableEffect(Unit) {
+        onDispose { if (text.value != gespeichert.value) aktuellSpeichern(text.value) }
+    }
+    return text
 }

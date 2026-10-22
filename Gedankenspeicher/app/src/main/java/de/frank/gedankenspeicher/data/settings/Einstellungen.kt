@@ -130,6 +130,52 @@ class Einstellungen(ctx: Context) {
         get() = p.getString(STIMME_QWEN, "")!!
         set(v) { p.edit().putString(STIMME_QWEN, v).commit() }
 
+    /** Gemini-3.8-Stimmen, Kennung „gemini_flash:Leda“ bzw. „gemini_lite:Leda“. */
+    var stimmeGeminiFlash: String
+        get() = p.getString(STIMME_GEMINI_FLASH, de.frank.gedankenspeicher.tts.TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE)!!
+        set(v) { p.edit().putString(STIMME_GEMINI_FLASH, v).commit() }
+
+    var stimmeGeminiLite: String
+        get() = p.getString(STIMME_GEMINI_LITE, de.frank.gedankenspeicher.tts.TtsCatalog.DEFAULT_GEMINI_LITE_VOICE)!!
+        set(v) { p.edit().putString(STIMME_GEMINI_LITE, v).commit() }
+
+    /** Azure-Stimme mit Kennung „azure:de-DE-KatjaNeural“. */
+    var stimmeAzure: String
+        get() = p.getString(STIMME_AZURE, de.frank.gedankenspeicher.tts.TtsCatalog.DEFAULT_AZURE_VOICE)!!
+        set(v) { p.edit().putString(STIMME_AZURE, v).commit() }
+
+    /** Eigene Schlüssel nur für die Gemini-Stimme: AI-Studio-Projekt ohne bzw. mit Abrechnung. */
+    var geminiTtsKeyFrei: String
+        get() = p.getString(GEMINI_TTS_FREI, "")!!
+        set(v) { p.edit().putString(GEMINI_TTS_FREI, v).commit() }
+
+    var geminiTtsKeyBezahlt: String
+        get() = p.getString(GEMINI_TTS_BEZAHLT, "")!!
+        set(v) { p.edit().putString(GEMINI_TTS_BEZAHLT, v).commit() }
+
+    /** `frei_dann_bezahlt` (Standard), `nur_frei` oder `nur_bezahlt`. */
+    var geminiTtsSchluesselWahl: String
+        get() = p.getString(GEMINI_TTS_WAHL, de.frank.gedankenspeicher.tts.TtsCatalog.GEMINI_TTS_FREI_DANN_BEZAHLT)!!
+        set(v) { p.edit().putString(GEMINI_TTS_WAHL, v).commit() }
+
+    /** Scheitert der kostenlose Gemini-Schlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels. */
+    var geminiTtsChirpRueckfall: Boolean
+        get() = p.getBoolean(GEMINI_TTS_CHIRP, false)
+        set(v) { p.edit().putBoolean(GEMINI_TTS_CHIRP, v).commit() }
+
+    var azureTtsKey: String
+        get() = p.getString(AZURE_TTS_KEY, "")!!
+        set(v) { p.edit().putString(AZURE_TTS_KEY, v).commit() }
+
+    var azureTtsRegion: String
+        get() = p.getString(AZURE_TTS_REGION, de.frank.gedankenspeicher.tts.TtsCatalog.DEFAULT_AZURE_REGION)!!
+        set(v) { p.edit().putString(AZURE_TTS_REGION, v).commit() }
+
+    /** Favorisierte Stimmen (Kennungen), als Text mit „|“ getrennt gespeichert — die Sicherung kennt nur einfache Typen. */
+    var stimmFavoriten: Set<String>
+        get() = p.getString(STIMM_FAVORITEN, "")!!.split('|').filter { it.isNotBlank() }.toSet()
+        set(v) { p.edit().putString(STIMM_FAVORITEN, v.joinToString("|")).commit() }
+
     var sprechtempo: Float
         get() = p.getFloat(SPRECHTEMPO, 1.0f)
         set(v) { p.edit().putFloat(SPRECHTEMPO, v).commit() }
@@ -157,7 +203,7 @@ class Einstellungen(ctx: Context) {
     /** Noch nie gespeichert → die Vorbelegung; ein bewusst geleertes Feld bleibt leer. */
     var woerterbuch: String
         get() = p.getString(WOERTERBUCH, null) ?: de.frank.gedankenspeicher.audio.GroqTranscriber.STANDARD_WOERTERBUCH
-        set(v) { p.edit().putString(WOERTERBUCH, v).commit() }
+        set(v) { p.edit().putString(WOERTERBUCH, v).apply() }
 
     val woerterbuchPrompt: String?
         get() = de.frank.gedankenspeicher.audio.GroqTranscriber.woerterbuchPrompt(woerterbuchAn, woerterbuch)
@@ -250,7 +296,7 @@ class Einstellungen(ctx: Context) {
         werte.forEach { (schluessel, wert) ->
             require(!schluessel.startsWith("__androidx_security_crypto_")) { "Die Sicherung enthält einen reservierten Einstellungsschlüssel." }
             val passt = when (schluessel) {
-                FINGERABDRUCK, DRIVE_AN -> wert is Boolean
+                FINGERABDRUCK, DRIVE_AN, WOERTERBUCH_AN, GEMINI_TTS_CHIRP -> wert is Boolean
                 OFFENE_SITZUNG, DRIVE_ZEIT, DRIVE_GROESSE -> wert is Long
                 SPRECHTEMPO -> wert is Float && wert.isFinite() && wert > 0f
                 else -> wert is String
@@ -272,6 +318,16 @@ class Einstellungen(ctx: Context) {
         const val STIMME_GOOGLE = "stimme_google"
         const val STIMME_QWEN = "stimme_qwen"
         const val SPRECHTEMPO = "sprechtempo"
+        const val STIMME_GEMINI_FLASH = "stimme_gemini_flash"
+        const val STIMME_GEMINI_LITE = "stimme_gemini_lite"
+        const val STIMME_AZURE = "stimme_azure"
+        const val GEMINI_TTS_FREI = "gemini_tts_key_frei"
+        const val GEMINI_TTS_BEZAHLT = "gemini_tts_key_bezahlt"
+        const val GEMINI_TTS_WAHL = "gemini_tts_schluessel_wahl"
+        const val GEMINI_TTS_CHIRP = "gemini_tts_chirp_rueckfall"
+        const val AZURE_TTS_KEY = "azure_tts_key"
+        const val AZURE_TTS_REGION = "azure_tts_region"
+        const val STIMM_FAVORITEN = "stimm_favoriten"
         const val GROQ = "groq_schluessel"
         const val GOOGLE_TTS = "google_tts_schluessel"
         const val QWEN = "qwen_schluessel"
