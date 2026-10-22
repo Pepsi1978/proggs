@@ -342,7 +342,9 @@ class NewsRecherche(
     }
 
     /** [maxMeldungen] ist hart: Liefert Codex mehr, fällt der Rest weg — die wichtigsten stehen oben. */
-    private fun zerlege(thema: Thema, text: String, suchQuellen: List<String>, maxMeldungen: Int, jetzt: Long? = null): Block {
+    private fun zerlege(thema: Thema, roh: String, suchQuellen: List<String>, maxMeldungen: Int, jetzt: Long? = null): Block {
+        // Claude setzt bei der Websuche <cite>-Tags in die Texte — vor dem Einlesen weg, auch aus Titeln und Moderation.
+        val text = QuellenFilter.ohneZitatTags(roh)
         val json = runCatching { JSONObject(schneideJson(text)) }.getOrNull()
         if (json == null) {
             // Ohne strukturiertes Ereignisdatum ist die Altersgrenze nicht überprüfbar.

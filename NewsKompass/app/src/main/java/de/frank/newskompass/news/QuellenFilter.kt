@@ -19,6 +19,18 @@ object QuellenFilter {
     private val privateZeichenRegex = Regex("[\\uE000-\\uF8FF]")
     private val eckigeZitatRegex = Regex("【[^】]*】")
 
+    /**
+     * Zitat-Tags der Claude-Websuche: „<cite index="61-5">…</cite>“, auch als „(cite index=…>“ oder
+     * HTML-maskiert. Nur die Tags gehen, der Text dazwischen bleibt.
+     */
+    private val citeTagRegex = Regex(
+        "<\\s*/?\\s*cite\\b[^<>\\n]*>|\\(\\s*/?\\s*cite\\b(?:\\s+index\\s*=[^<>()\\n]*)?>|&lt;\\s*/?\\s*cite\\b.*?&gt;",
+        RegexOption.IGNORE_CASE,
+    )
+
+    /** Entfernt nur die cite-Tags — sicher auch auf der rohen JSON-Antwort vor dem Einlesen. */
+    fun ohneZitatTags(text: String): String = text.replace(citeTagRegex, "")
+
     /** Eine Klammer, die nur Links enthält: „([spiegel.de](…), [zeit.de](…))“. */
     private val linkKlammerRegex = Regex("[ \\t]*\\(\\s*$LINK(?:\\s*[,;]\\s*$LINK)*\\s*\\)")
 
@@ -50,6 +62,7 @@ object QuellenFilter {
     fun entferne(text: String): String {
         if (text.isBlank()) return text
         return text
+            .replace(citeTagRegex, "")
             .replace(zitatMarkeRegex, "")
             .replace(privateZeichenRegex, "")
             .replace(eckigeZitatRegex, "")
