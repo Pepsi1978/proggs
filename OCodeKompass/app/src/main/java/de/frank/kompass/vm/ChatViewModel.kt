@@ -111,7 +111,7 @@ class ChatViewModel(private val container: KompassContainer) : ViewModel() {
     fun schicke() {
         val frage = _zustand.value.eingabe.trim()
         if (frage.isBlank() || _zustand.value.antwortet) return
-        if (!container.codex.istVerbunden) {
+        if (!container.codex.kannDenken) {
             _zustand.value = _zustand.value.copy(
                 fehler = "Zum Reden braucht es die Anmeldung bei Codex. Du findest sie in den " +
                     "Einstellungen.",
