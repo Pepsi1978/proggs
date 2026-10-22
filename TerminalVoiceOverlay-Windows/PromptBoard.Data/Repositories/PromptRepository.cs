@@ -65,6 +65,23 @@ public sealed class PromptRepository : IPromptRepository
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Targeted update: loads the given prompts fresh (tracked), applies
+    /// <paramref name="mutate"/> and saves everything in ONE SaveChanges.
+    /// EF change tracking only writes the columns the mutation really changed,
+    /// so values another process (TVO/CVO share promptboard.db) wrote in the
+    /// meantime are not overwritten by a stale cached copy.
+    /// </summary>
+    public async Task<int> PatchManyAsync(IEnumerable<Guid> ids, Action<Prompt> mutate, CancellationToken ct = default)
+    {
+        var idList = ids.Distinct().ToList();
+        if (idList.Count == 0) return 0;
+        var tracked = await _db.Prompts.Where(p => idList.Contains(p.Id)).ToListAsync(ct);
+        foreach (var p in tracked) mutate(p);
+        await _db.SaveChangesAsync(ct);
+        return tracked.Count;
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         Prompt? existing = await _db.Prompts.FindAsync([id], ct);

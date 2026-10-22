@@ -25,9 +25,15 @@ namespace ClaudeVoiceOverlay.Services
     /// wird).
     ///
     /// Thread-Modell: ein Listener-Thread schluckt eingehende Verbindungen
-    /// in einer while-Schleife. Pro Request wird die Antwort synchron im
-    /// selben Thread geschrieben — bei einem POST pro Tastendruck und
-    /// einem GET alle 500 ms ist das im Microsekunden-Bereich.
+    /// in einer while-Schleife. Each request is handled on its own pool task,
+    /// so a slow /log body or a blocked UI-thread callback cannot stall the
+    /// listener (status polls, SSE, deployment guard keep working).
+    ///
+    /// CSRF protection: state-changing POSTs (/autoenter/toggle,
+    /// /deployment/prepare, /deployment/release, /log) are rejected with 403
+    /// when the request carries a web Origin (http:// or https://) or a web
+    /// Referer. Native clients (PowerShell, curl) send no Origin; the Stream
+    /// Deck plugin page is loaded from file:// and sends "Origin: null".
     /// </summary>
     public sealed class AutoEnterStatusServer : IDisposable
     {
@@ -35,6 +41,18 @@ namespace ClaudeVoiceOverlay.Services
         // gleichzeitig laufen koennen und das Stream-Deck-Plugin sie getrennt
         // ansprechen kann, ohne Bind-Konflikt am selben Port.
         public const string ListenPrefix = "http://127.0.0.1:5724/";
+
+        /// <summary>Diagnostic log in %TEMP% (hotkeys, HTTP server, Stream Deck plugin lines).</summary>
+        // Own file so CVO lines do not mix into the TVO log.
+        public const string HotkeyLogFileName = "CVO-hotkey.log";
+
+        // POST /log body cap; plugin lines are a few hundred bytes.
+        private const int MaxLogBodyBytes = 8 * 1024;
+        // Hotkey log rotates to ".1" above this size (same scheme as DiagLog).
+        private const long MaxHotkeyLogBytes = 1024 * 1024;
+        // Upper bound for UI-thread callbacks (Dispatcher.Invoke in OverlayWindow).
+        private static readonly TimeSpan CallbackTimeout = TimeSpan.FromSeconds(5);
+        private static readonly object HotkeyLogLock = new object();
 
         private readonly Func<bool> _getCurrentState;
         private readonly Action _toggle;
@@ -88,6 +106,9 @@ namespace ClaudeVoiceOverlay.Services
                 _listener = new HttpListener();
                 _listener.Prefixes.Add(ListenPrefix);
                 _listener.Start();
+                // Bound slow request bodies (default is 2 minutes).
+                try { _listener.TimeoutManager.EntityBody = TimeSpan.FromSeconds(5); }
+                catch { /* not supported on this platform -> keep default */ }
             }
             catch (Exception ex)
             {
@@ -113,13 +134,31 @@ namespace ClaudeVoiceOverlay.Services
         private static void LogStartup(string msg)
         {
             Console.WriteLine($"AutoEnterStatusServer: {msg}");
+            AppendHotkeyLog("HTTP-SERVER", msg);
+        }
+
+        /// <summary>
+        /// Appends one line to %TEMP%\<see cref="HotkeyLogFileName"/> and rotates
+        /// the file to ".1" once it exceeds 1 MB. Never throws.
+        /// </summary>
+        public static void AppendHotkeyLog(string tag, string msg)
+        {
             try
             {
-                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
-                System.IO.File.AppendAllText(path,
-                    $"{DateTime.Now:HH:mm:ss.fff} HTTP-SERVER {msg}{Environment.NewLine}");
+                string path = Path.Combine(Path.GetTempPath(), HotkeyLogFileName);
+                lock (HotkeyLogLock)
+                {
+                    try
+                    {
+                        var fi = new FileInfo(path);
+                        if (fi.Exists && fi.Length > MaxHotkeyLogBytes)
+                            File.Move(path, path + ".1", overwrite: true);
+                    }
+                    catch { /* another writer holds the file -> rotate next time */ }
+                    File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {tag} {msg}{Environment.NewLine}");
+                }
             }
-            catch { /* never block startup */ }
+            catch { /* logging must never break the server */ }
         }
 
         private void Loop()
@@ -141,25 +180,72 @@ namespace ClaudeVoiceOverlay.Services
                     break;
                 }
 
-                try
-                {
-                    HandleRequest(ctx);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"AutoEnterStatusServer: Request-Fehler {ex.Message}");
-                    try { ctx.Response.StatusCode = 500; ctx.Response.Close(); }
-                    catch { /* ignore */ }
-                }
+                // One task per request: a slow body or a blocked callback must not
+                // stall the accept loop.
+                var request = ctx;
+                _ = Task.Run(() => HandleRequestSafe(request));
             }
+        }
+
+        private void HandleRequestSafe(HttpListenerContext ctx)
+        {
+            try
+            {
+                HandleRequest(ctx);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AutoEnterStatusServer: Request-Fehler {ex.Message}");
+                try { ctx.Response.StatusCode = 500; ctx.Response.Close(); }
+                catch { /* ignore */ }
+            }
+        }
+
+        private static bool IsMutatingRoute(string path) =>
+            path.Equals("/autoenter/toggle", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("/deployment/prepare", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("/deployment/release", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("/log", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsWebUrl(string? value) =>
+            !string.IsNullOrEmpty(value)
+            && (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// Runs a (possibly UI-thread-marshalled) callback with an upper time bound.
+        /// Returns false on timeout; the callback keeps running in the background
+        /// and its task is handed out so the caller can compensate.
+        /// </summary>
+        private static bool TryRunWithTimeout<T>(Func<T> callback, out T result, out Task<T> task)
+        {
+            task = Task.Run(callback);
+            bool completed;
+            try { completed = task.Wait(CallbackTimeout); }
+            catch (AggregateException ae) when (ae.InnerException != null)
+            {
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ae.InnerException).Throw();
+                throw;
+            }
+            result = completed ? task.Result : default!;
+            return completed;
         }
 
         private void HandleRequest(HttpListenerContext ctx)
         {
+            string path = ctx.Request.Url?.AbsolutePath ?? "/";
+            string? origin = ctx.Request.Headers["Origin"];
+            bool mutating = IsMutatingRoute(path);
+
             // CORS fuer das Stream Deck Plugin (laeuft im Stream-Deck-Software-
-            // Webview, der schickt manchmal Preflight). Localhost ist sicher,
-            // wir erlauben pauschal.
-            ctx.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            // Webview, der schickt manchmal Preflight). Read-only routes stay
+            // open ("*"). State-changing routes never get "*": web origins are
+            // rejected below, the plugin's "null"/file:// origin is echoed back
+            // so its fetch can read the response.
+            if (!mutating)
+                ctx.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            else if (!string.IsNullOrEmpty(origin) && !IsWebUrl(origin))
+                ctx.Response.Headers["Access-Control-Allow-Origin"] = origin;
             ctx.Response.Headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS";
             ctx.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type";
             // Cache-Buster: das Stream-Deck-Webview ist ein Chrome-Embed und
@@ -177,7 +263,21 @@ namespace ClaudeVoiceOverlay.Services
                 return;
             }
 
-            string path = ctx.Request.Url?.AbsolutePath ?? "/";
+            // CSRF guard: a web page (any http/https origin) must not toggle,
+            // reserve/release deployments or spam the log. Checked before any
+            // state change. Referer catches pages that suppress Origin.
+            if (mutating && ctx.Request.HttpMethod == "POST")
+            {
+                string? referer = ctx.Request.Headers["Referer"];
+                if (IsWebUrl(origin) || IsWebUrl(referer))
+                {
+                    string refLog = referer is { Length: > 120 } ? referer.Substring(0, 120) : referer ?? "-";
+                    LogStartup($"REJECTED {path} origin={origin ?? "-"} referer={refLog}");
+                    ctx.Response.StatusCode = 403;
+                    ctx.Response.Close();
+                    return;
+                }
+            }
 
             if (path.Equals("/autoenter/status", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "GET")
@@ -190,14 +290,35 @@ namespace ClaudeVoiceOverlay.Services
             if (path.Equals("/recording/status", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "GET")
             {
-                WriteBusyJson(ctx, _getBusyState?.Invoke() ?? false);
+                bool busy = false;
+                if (_getBusyState is { } getBusy && !TryRunWithTimeout(getBusy, out busy, out _))
+                {
+                    // Timeout -> report busy (the conservative answer for deploy scripts).
+                    busy = true;
+                    LogStartup("recording/status callback timeout -> busy=true");
+                }
+                WriteBusyJson(ctx, busy);
                 return;
             }
 
             if (path.Equals("/deployment/prepare", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "POST")
             {
-                bool ready = _tryBeginDeployment?.Invoke() ?? false;
+                bool ready = false;
+                if (_tryBeginDeployment is { } tryBegin && !TryRunWithTimeout(tryBegin, out ready, out var pending))
+                {
+                    // Answered "not ready"; if the late callback still reserved the
+                    // deployment, undo it so recording is not blocked forever.
+                    ready = false;
+                    LogStartup("deployment/prepare callback timeout -> ready=false");
+                    pending.ContinueWith(t =>
+                    {
+                        if (t.Status == TaskStatus.RanToCompletion && t.Result)
+                        {
+                            try { _endDeployment?.Invoke(); } catch { /* ignore */ }
+                        }
+                    }, TaskScheduler.Default);
+                }
                 WriteDeploymentJson(ctx, ready);
                 return;
             }
@@ -205,7 +326,8 @@ namespace ClaudeVoiceOverlay.Services
             if (path.Equals("/deployment/release", StringComparison.OrdinalIgnoreCase)
                 && ctx.Request.HttpMethod == "POST")
             {
-                _endDeployment?.Invoke();
+                if (_endDeployment is { } end && !TryRunWithTimeout(() => { end(); return true; }, out _, out _))
+                    LogStartup("deployment/release callback timeout (release continues in background)");
                 WriteDeploymentJson(ctx, true);
                 return;
             }
@@ -218,7 +340,13 @@ namespace ClaudeVoiceOverlay.Services
                 // sodass nach Rueckkehr aus _toggle() der neue State
                 // garantiert sichtbar ist. Kein Sleep mehr noetig.
                 bool before = _getCurrentState();
-                _toggle();
+                if (!TryRunWithTimeout(() => { _toggle(); return true; }, out _, out _))
+                {
+                    LogStartup($"TOGGLE timeout before={before} (UI thread busy)");
+                    ctx.Response.StatusCode = 503;
+                    ctx.Response.Close();
+                    return;
+                }
                 bool after = _getCurrentState();
                 LogStartup($"TOGGLE before={before} after={after} (changed={before != after})");
                 WriteJsonState(ctx, after);
@@ -237,19 +365,18 @@ namespace ClaudeVoiceOverlay.Services
             {
                 // Diagnose-Endpunkt fuer das Stream-Deck-Plugin (keine
                 // Filesystem-Rechte im Webview). Plugin POSTet eine Textzeile,
-                // wir haengen sie an TVO-hotkey.log an. Body wird einfach
-                // 1:1 uebernommen — kein JSON-Parsing.
-                string body;
-                using (var sr = new StreamReader(ctx.Request.InputStream, ctx.Request.ContentEncoding))
+                // wir haengen sie an die Hotkey-Logdatei an. Body wird einfach
+                // 1:1 uebernommen — kein JSON-Parsing. Capped at 8 KB.
+                string? body = ctx.Request.ContentLength64 > MaxLogBodyBytes
+                    ? null
+                    : ReadBodyCapped(ctx.Request, MaxLogBodyBytes);
+                if (body is null)
                 {
-                    body = sr.ReadToEnd();
+                    ctx.Response.StatusCode = 413;
+                    ctx.Response.Close();
+                    return;
                 }
-                try
-                {
-                    string logPath = Path.Combine(Path.GetTempPath(), "TVO-hotkey.log");
-                    File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} PLUGIN {body}{Environment.NewLine}");
-                }
-                catch { /* ignore */ }
+                AppendHotkeyLog("PLUGIN", body.Replace('\r', ' ').Replace('\n', ' '));
                 ctx.Response.StatusCode = 204;
                 ctx.Response.Close();
                 return;
@@ -257,6 +384,26 @@ namespace ClaudeVoiceOverlay.Services
 
             ctx.Response.StatusCode = 404;
             ctx.Response.Close();
+        }
+
+        /// <summary>
+        /// Reads at most <paramref name="maxBytes"/> of the request body; null if
+        /// the body is larger. Slow bodies are bounded by TimeoutManager.EntityBody.
+        /// </summary>
+        private static string? ReadBodyCapped(HttpListenerRequest request, int maxBytes)
+        {
+            var buffer = new byte[maxBytes + 1];
+            int total = 0;
+            var stream = request.InputStream;
+            while (total < buffer.Length)
+            {
+                int n = stream.Read(buffer, total, buffer.Length - total);
+                if (n <= 0) break;
+                total += n;
+            }
+            if (total > maxBytes) return null;
+            var encoding = request.ContentEncoding ?? Encoding.UTF8;
+            return encoding.GetString(buffer, 0, total);
         }
 
         private static void WriteJsonState(HttpListenerContext ctx, bool on)

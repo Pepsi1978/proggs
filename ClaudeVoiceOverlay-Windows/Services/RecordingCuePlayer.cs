@@ -15,23 +15,44 @@ namespace ClaudeVoiceOverlay.Services
         // Fehlerton: fallende Terz, deutlich tiefer als Start/Stop — auch fuer
         // Hotkey-/PTT-Nutzer, die den Button gar nicht sehen (03.09.2026).
         private readonly byte[] _errorPcm = CreatePcm((392, 110), (262, 260));
+        // The output device is opened only around cues and released after this
+        // idle tail. A permanently open WaveOut stream (ReadFully=true streams
+        // silence forever) kept Windows reporting an active audio stream, blocked
+        // sleep and kept Bluetooth headsets awake.
+        private const int IdleCloseMs = 4000;
         private WaveOutEvent? _output;
         private BufferedWaveProvider? _buffer;
         private bool _playbackHealthy;
         private bool _disposed;
+        private long _lastUseTicks;
+        private readonly System.Threading.Timer _idleTimer;
 
         public RecordingCuePlayer()
         {
-            lock (_lock)
+            // No device is opened here; see IdleCloseMs.
+            _idleTimer = new System.Threading.Timer(_ => OnIdleTimer(), null,
+                System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+        }
+
+        /// <summary>
+        /// Opens the output device ahead of a cue (e.g. when a recording is about
+        /// to start) so the following PlayStart has no device-open latency. The
+        /// device is released again after the idle tail.
+        /// </summary>
+        public void Prewarm()
+        {
+            try
             {
-                try
+                lock (_lock)
                 {
-                    InitializeOutput();
+                    if (_disposed) return;
+                    EnsureOutput();
+                    ArmIdleClose();
                 }
-                catch (Exception ex)
-                {
-                    DiagLog.Write("AudioCue", "output_init_failed", ("err", ex.Message), ("type", ex.GetType().Name));
-                }
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("AudioCue", "prewarm_failed", ("err", ex.Message), ("type", ex.GetType().Name));
             }
         }
 
@@ -49,14 +70,11 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     if (_disposed) return;
 
-                    if (!_playbackHealthy || _output?.PlaybackState != PlaybackState.Playing || _buffer == null)
-                    {
-                        DisposeOutput();
-                        InitializeOutput();
-                    }
+                    EnsureOutput();
 
                     _buffer!.ClearBuffer();
                     _buffer.AddSamples(pcm, 0, pcm.Length);
+                    ArmIdleClose();
                 }
 
                 DiagLog.Write("AudioCue", "pcm_queued", ("cue", cue), ("bytes", pcm.Length), ("latencyMs", DesiredLatencyMs));
@@ -69,6 +87,49 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     DiagLog.Write("AudioCue", "fallback_failed", ("cue", cue), ("err", fallbackEx.Message), ("type", fallbackEx.GetType().Name));
                 }
+            }
+        }
+
+        // Caller holds _lock.
+        private void EnsureOutput()
+        {
+            if (!_playbackHealthy || _output?.PlaybackState != PlaybackState.Playing || _buffer == null)
+            {
+                DisposeOutput();
+                InitializeOutput();
+            }
+        }
+
+        // Caller holds _lock. Restarts the idle tail after every use.
+        private void ArmIdleClose()
+        {
+            _lastUseTicks = Environment.TickCount64;
+            try { _idleTimer.Change(IdleCloseMs, System.Threading.Timeout.Infinite); }
+            catch (ObjectDisposedException) { /* disposing */ }
+        }
+
+        private void OnIdleTimer()
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    if (_disposed || _output == null) return;
+                    long idleMs = Environment.TickCount64 - _lastUseTicks;
+                    if (idleMs < IdleCloseMs)
+                    {
+                        // A newer cue arrived after the timer fired; wait for the rest of its tail.
+                        try { _idleTimer.Change(IdleCloseMs - idleMs, System.Threading.Timeout.Infinite); }
+                        catch (ObjectDisposedException) { }
+                        return;
+                    }
+                    DisposeOutput();
+                }
+                DiagLog.Write("AudioCue", "output_released", ("idleMs", IdleCloseMs));
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("AudioCue", "release_failed", ("err", ex.Message), ("type", ex.GetType().Name));
             }
         }
 
@@ -153,6 +214,7 @@ namespace ClaudeVoiceOverlay.Services
             lock (_lock)
             {
                 _disposed = true;
+                try { _idleTimer.Dispose(); } catch { /* ignore */ }
                 DisposeOutput();
             }
         }

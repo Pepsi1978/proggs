@@ -24,6 +24,14 @@ public interface IGoogleDriveBackupService
 
     Task UploadAsync(string json, CancellationToken ct = default);
 
+    /// <summary>
+    /// Merge-safe two-way sync of the local PromptBoard with the Drive backup (launch and
+    /// every upload): cloud changes made on other devices are merged into the local store
+    /// (never deleting a local row), then the merged state is uploaded. Returns true when
+    /// the local store was changed.
+    /// </summary>
+    Task<bool> SyncAsync(CancellationToken ct = default);
+
     Task<string?> DownloadLatestAsync(CancellationToken ct = default);
 
     /// <summary>

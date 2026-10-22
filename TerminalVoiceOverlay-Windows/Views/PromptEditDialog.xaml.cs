@@ -501,13 +501,33 @@ public partial class PromptEditDialog : Window
     private void AppendToPromptText(string newText)
     {
         if (string.IsNullOrWhiteSpace(newText)) return;
-        var current = OriginalTextBox.Text ?? string.Empty;
-        if (current.Length > 0 && !current.EndsWith(' ') && !current.EndsWith('\n'))
-            current += " ";
-        OriginalTextBox.Text = current + newText.Trim();
+        var full = OriginalTextBox.Text ?? string.Empty;
+        // Pre/Post wrapper present (new prompts start as Pre-Prompt: ""): dictation
+        // goes INSIDE the quotes, never behind the closing quote.
+        var match = WrapperRegex.Match(full);
+        if (match.Success)
+        {
+            var inner = match.Groups["inner"];
+            OriginalTextBox.Text = full.Substring(0, inner.Index)
+                                   + AppendWithSpace(inner.Value, newText)
+                                   + full.Substring(inner.Index + inner.Length);
+            // Caret right before the closing quote, so typing continues inside.
+            OriginalTextBox.CaretIndex = Math.Max(0, OriginalTextBox.Text.TrimEnd().Length - 1);
+            OriginalTextBox.ScrollToEnd();
+            return;
+        }
+        OriginalTextBox.Text = AppendWithSpace(full, newText);
         // Scroll caret into view at end so the user sees the new text land.
         OriginalTextBox.CaretIndex = OriginalTextBox.Text.Length;
         OriginalTextBox.ScrollToEnd();
+    }
+
+    private static string AppendWithSpace(string current, string newText)
+    {
+        current ??= string.Empty;
+        if (current.Length > 0 && !current.EndsWith(' ') && !current.EndsWith('\n'))
+            current += " ";
+        return current + newText.Trim();
     }
 
     private void StartPulse()
@@ -552,7 +572,11 @@ public partial class PromptEditDialog : Window
             ShowStatus("Gemini nicht verfuegbar (kein GEMINI_API_KEY in .env).");
             return;
         }
-        var current = OriginalTextBox.Text?.Trim();
+        // With a Pre/Post wrapper only the inner text goes to Gemini; the wrapper
+        // is put back around the result so the marking survives the improvement.
+        var fullText = OriginalTextBox.Text ?? string.Empty;
+        var wrap = WrapperRegex.Match(fullText);
+        var current = (wrap.Success ? wrap.Groups["inner"].Value : fullText).Trim();
         if (string.IsNullOrEmpty(current))
         {
             ShowStatus("Kein Text zum Verbessern.");
@@ -576,8 +600,18 @@ public partial class PromptEditDialog : Window
             }
             // Capture the user's original ONLY on the first improvement so
             // multiple back-to-back G clicks don't lose the very first text.
-            _originalBeforeImprove ??= current;
-            OriginalTextBox.Text = improved;
+            _originalBeforeImprove ??= fullText.Trim();
+            if (wrap.Success)
+            {
+                var inner = wrap.Groups["inner"];
+                OriginalTextBox.Text = fullText.Substring(0, inner.Index)
+                                       + improved.Trim()
+                                       + fullText.Substring(inner.Index + inner.Length);
+            }
+            else
+            {
+                OriginalTextBox.Text = improved;
+            }
             ShowImprovedFooter();
             ShowStatus($"Verbessert ({improved.Length} Zeichen). Original im Hintergrund erhalten.");
             // Re-title against the improved text — overwrites a previous
@@ -764,6 +798,19 @@ public partial class PromptEditDialog : Window
     {
         if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
         var match = WrapperRegex.Match(text);
-        return match.Success ? match.Groups["inner"].Value : text;
+        if (match.Success) return match.Groups["inner"].Value;
+        // Damaged wrapper (e.g. text typed behind the closing quote, or the closing
+        // quote deleted): drop the prefix and keep everything the user wrote, so a
+        // Pre/Post toggle never nests wrappers.
+        var loose = LooseWrapperRegex.Match(text);
+        return loose.Success
+            ? (loose.Groups["inner"].Value + loose.Groups["rest"].Value).Trim()
+            : text;
     }
+
+    /// <summary>Fallback for <see cref="WrapperRegex"/>: a wrapper prefix with an
+    /// optional (misplaced or missing) closing quote.</summary>
+    private static readonly Regex LooseWrapperRegex = new(
+        @"^\s*(?:Pre[-\s]?Prompt|Post[-\s]?Prompt)\s*:\s*[""„“](?<inner>[^""“”]*)[""“”]?(?<rest>[\s\S]*)$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 }

@@ -77,6 +77,9 @@ namespace TerminalVoiceOverlay.Services
 
         private static readonly object InputSequenceGate = new();
 
+        // Wait before restoring the previous clipboard: a busy terminal may read it late.
+        private const int ClipboardRestoreDelayMs = 1500;
+
         [DllImport("user32.dll")]
         private static extern uint GetClipboardSequenceNumber();
 
@@ -148,7 +151,9 @@ namespace TerminalVoiceOverlay.Services
                     clipboardSet = TryRunOnUiThread(() =>
                     {
                         previousClipboard = ClipboardSnapshot.Capture(out previousHadContent);
-                        Clipboard.SetText(text);
+                        // Same text formats as Clipboard.SetText, plus opt-out of
+                        // clipboard history (Win+V) and cloud sync.
+                        Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(text), true);
                         ownedClipboardSequence = GetClipboardSequenceNumber();
                     });
                     DiagLog.Perf("Paste", "clipboard_set", clipboardSw, ("ok", clipboardSet), ("chars", text.Length));
@@ -209,8 +214,13 @@ namespace TerminalVoiceOverlay.Services
                 {
                     if (clipboardSet)
                     {
-                        if (pasteSent)
-                            Thread.Sleep(500);
+                        // A busy Windows Terminal may read the clipboard late. Restoring
+                        // after a fixed 500 ms made it paste the OLD content (possibly a
+                        // password, auto-submitted with Enter). Wait longer; the sequence
+                        // check below still skips the restore if the clipboard changed.
+                        bool nothingToRestore = previousClipboard is null && previousHadContent;
+                        if (pasteSent && !nothingToRestore)
+                            Thread.Sleep(ClipboardRestoreDelayMs);
 
                         var restoreSw = Stopwatch.StartNew();
                         bool restoreSkipped = false;
@@ -509,24 +519,40 @@ namespace TerminalVoiceOverlay.Services
         /// Hotkeys den Ctrl-Modifier intentional gedrueckt halten und
         /// SendCtrlV gleich darauf Ctrl down nochmal sendet (idempotent
         /// im keybd_event-Modell).
+        /// Only keys that are actually down (GetAsyncKeyState) are released. A bare
+        /// Win/Alt KEYUP acts like a lone tap (Start menu / menu bar), so a mask key
+        /// (VK 0xE8, like AutoHotkey's MenuMaskKey) is tapped first.
         /// </summary>
         private static void ReleaseNonCtrlModifiers()
         {
-            void Up(ushort vk)
+            bool any = false;
+            bool maskSent = false;
+
+            void Up(ushort vk, bool isWinOrAlt)
             {
+                if ((Win32.GetAsyncKeyState(vk) & 0x8000) == 0) return;
+                if (isWinOrAlt && !maskSent)
+                {
+                    // VK-only (no scancode): 0xE8 has none.
+                    Win32.keybd_event((byte)Win32.VK_MASK_KEY, 0, 0, UIntPtr.Zero);
+                    Win32.keybd_event((byte)Win32.VK_MASK_KEY, 0, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    maskSent = true;
+                }
                 byte scan = (byte)Win32.MapVirtualKey(vk, Win32.MAPVK_VK_TO_VSC);
                 Win32.keybd_event((byte)vk, scan, Win32.KEYEVENTF_KEYUP, UIntPtr.Zero);
+                any = true;
             }
 
             // Beide Win-Tasten, beide Alt-Tasten, beide Shift-Tasten.
-            Up(0x5B); // VK_LWIN
-            Up(0x5C); // VK_RWIN
-            Up(0xA4); // VK_LMENU (linke Alt)
-            Up(0xA5); // VK_RMENU (rechte Alt / AltGr)
-            Up(0xA0); // VK_LSHIFT
-            Up(0xA1); // VK_RSHIFT
+            Up(0x5B, true);  // VK_LWIN
+            Up(0x5C, true);  // VK_RWIN
+            Up(0xA4, true);  // VK_LMENU (linke Alt)
+            Up(0xA5, true);  // VK_RMENU (rechte Alt / AltGr)
+            Up(0xA0, false); // VK_LSHIFT
+            Up(0xA1, false); // VK_RSHIFT
             // Kleine Pause damit Windows die Up-Events verarbeiten kann.
-            System.Threading.Thread.Sleep(20);
+            if (any)
+                System.Threading.Thread.Sleep(20);
         }
 
         private static bool SendKey(ushort vk)

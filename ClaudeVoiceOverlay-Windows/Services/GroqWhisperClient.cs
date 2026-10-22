@@ -52,8 +52,10 @@ namespace ClaudeVoiceOverlay.Services
             Timeout = TimeSpan.FromSeconds(TransportTimeoutSeconds)
         };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
-        private const int MaxRetries = 3;
-        private static readonly int[] DelaysMs = { 2000, 4000, 8000 };
+        // 1-2 retries with short backoff for 429/500/503 and connection failures
+        // (both transports). Timeouts are not retried: 75 s each would stack up.
+        private const int MaxRetries = 2;
+        private static readonly int[] DelaysMs = { 1500, 4000 };
 
         // ----- Confidence-Gate-Schwellen gegen Whisper-Stille-Halluzination -----
         // (Bug-Almanach bugs/desktop/groq-transkription.md §2.3). Bei einer laengeren Pause
@@ -112,7 +114,12 @@ namespace ClaudeVoiceOverlay.Services
         // (laute Zeit > Schwelle) erhalten.
         private const int    FloskelMaxWords          = 6;
         private const int    FloskelMaxChars          = 64;
-        private const double SilenceContextMaxVoicedMs = 600;  // Clip mit weniger lauter Zeit = Stille-Kontext
+        // Stille-Kontext: below the hard limit always; up to SilenceContextMaxVoicedMs only when the
+        // loud time is a small share of the clip (long press, almost nothing said). A short, deliberately
+        // spoken "Vielen Dank" fills a large share of its clip and is kept.
+        private const double SilenceContextHardMaxVoicedMs = 350;
+        private const double SilenceContextMaxVoicedMs = 600;
+        private const double SilenceContextMaxVoicedRatio = 0.15;
 
         // Normalisierte (lowercase, ohne Satzzeichen/Ziffern, Umlaute behalten) Whisper-Outro-Floskeln.
         // DE-Kern + EN-Kern aus dem HF-Dataset "whisper-hallucinations" (Almanach §2.4).
@@ -258,7 +265,15 @@ namespace ClaudeVoiceOverlay.Services
                     var text = FilterTranscription(json, voiced);
                     if (!string.IsNullOrEmpty(text))
                         return text;
-                    throw new Exception("Leere Antwort von Groq");
+                    throw new GroqEmptyResultException();
+                }
+                catch (GroqTransientException ex) when (attempt < MaxRetries)
+                {
+                    Console.WriteLine($"Groq (curl) voruebergehender Fehler - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
+                    DiagLog.Write("Groq", "retry_scheduled", ("transport", "curl"), ("attempt", attempt),
+                        ("delayMs", DelaysMs[attempt]), ("error", ex.Message.Length > 200 ? ex.Message.Substring(0, 200) : ex.Message));
+                    await Task.Delay(DelaysMs[attempt]).ConfigureAwait(false);
+                    return await TranscribeWithRetry(fileBytes, attempt + 1, voiced).ConfigureAwait(false);
                 }
                 catch (CurlStartException ex)
                 {
@@ -266,7 +281,44 @@ namespace ClaudeVoiceOverlay.Services
                 }
             }
 
-            return await TranscribeWithHttpClientAsync(fileBytes, attempt, voiced).ConfigureAwait(false);
+            try
+            {
+                return await TranscribeWithHttpClientAsync(fileBytes, attempt, voiced).ConfigureAwait(false);
+            }
+            // FirstSighting: a failure from a nested (already retried) attempt bubbles through
+            // the outer frames and must not trigger further retries there.
+            catch (HttpRequestException ex) when (FirstSighting(ex) && ex.StatusCode == null && attempt < MaxRetries)
+            {
+                // Connection-level failure (no HTTP status). Timeouts surface as
+                // TaskCanceledException and are deliberately not retried.
+                Console.WriteLine($"Groq Netzwerkfehler - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
+                DiagLog.Write("Groq", "retry_scheduled", ("transport", "dotnet"), ("attempt", attempt),
+                    ("delayMs", DelaysMs[attempt]), ("error", ex.Message));
+                await Task.Delay(DelaysMs[attempt]).ConfigureAwait(false);
+                return await TranscribeWithRetry(fileBytes, attempt + 1, voiced).ConfigureAwait(false);
+            }
+        }
+
+        private const string RetrySeenKey = "GroqRetrySeen";
+
+        private static bool FirstSighting(Exception ex)
+        {
+            if (ex.Data.Contains(RetrySeenKey)) return false;
+            ex.Data[RetrySeenKey] = true;
+            return true;
+        }
+
+        /// <summary>
+        /// curl exit codes worth another try: DNS/connect/TLS/empty reply/send/recv failures and
+        /// HTTP 429/500/502/503 (exit 22 under --fail-with-body). Timeout (28) is not retried.
+        /// </summary>
+        private static bool IsTransientCurlFailure(int exitCode, string stderr)
+        {
+            if (exitCode is 6 or 7 or 35 or 52 or 55 or 56) return true;
+            if (exitCode != 22 || string.IsNullOrEmpty(stderr)) return false;
+            foreach (int code in new[] { 429, 500, 502, 503 })
+                if (stderr.Contains("error: " + code, StringComparison.Ordinal)) return true;
+            return false;
         }
 
         private async Task<string> SendWithCurlAsync(byte[] fileBytes)
@@ -321,6 +373,8 @@ namespace ClaudeVoiceOverlay.Services
                         : $"{Truncate(stderr, 500)} Response: {Truncate(stdout, 500)}";
                     if (process.ExitCode == 2)
                         throw new CurlStartException($"curl.exe konnte seine Konfiguration nicht laden: {details}");
+                    if (IsTransientCurlFailure(process.ExitCode, stderr))
+                        throw new GroqTransientException($"curl.exe Groq request failed (exit {process.ExitCode}): {details}");
                     throw new Exception($"curl.exe Groq request failed (exit {process.ExitCode}): {details}");
                 }
                 if (string.IsNullOrWhiteSpace(stdout))
@@ -404,7 +458,7 @@ namespace ClaudeVoiceOverlay.Services
                 var text = FilterTranscription(responseBody, voiced);
                 if (!string.IsNullOrEmpty(text))
                     return text;
-                throw new Exception("Leere Antwort von Groq");
+                throw new GroqEmptyResultException();
             }
 
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
@@ -540,7 +594,11 @@ namespace ClaudeVoiceOverlay.Services
             // (3) Stille-Kontext: war der ganze Clip sprach-arm? Bewusst gesprochene Floskel hat mehr laute Zeit.
             double voicedMs = 0;
             foreach (bool v in voiced) if (v) voicedMs += FrameMs;
-            return voicedMs < SilenceContextMaxVoicedMs;
+            if (voicedMs < SilenceContextHardMaxVoicedMs) return true;
+            double clipMs = voiced.Length * (double)FrameMs;
+            return voicedMs < SilenceContextMaxVoicedMs
+                && clipMs > 0
+                && voicedMs / clipMs < SilenceContextMaxVoicedRatio;
         }
 
         /// <summary>lowercase, Satzzeichen/Ziffern entfernt (Umlaute bleiben), Whitespace kollabiert.</summary>
@@ -565,8 +623,10 @@ namespace ClaudeVoiceOverlay.Services
         /// Transkribiert eine Aufnahme, die ueber dem Groq-Upload-Limit liegt, in mehreren Teilen.
         /// Geschnitten wird bevorzugt in einer Sprechpause kurz vor der Ziel-Groesse, damit kein Wort
         /// zerrissen wird; findet sich keine Pause, wird hart geschnitten (funktionserhaltend: lieber
-        /// eine Wortgrenze riskieren als die ganze Aufnahme verlieren). Faellt ein einzelner Teil aus,
-        /// gehen NUR dessen Sekunden verloren — alle uebrigen Teile kommen trotzdem an.
+        /// eine Wortgrenze riskieren als die ganze Aufnahme verlieren). A failed part is retried once;
+        /// if it fails again the whole call throws, so a missing middle part never looks like a complete
+        /// transcript (the recording is archived as _fehler and can be re-transcribed). A part that the
+        /// hallucination filter empties (long pause) is a valid empty part, not a failure.
         /// </summary>
         private async Task<string> TranscribeInChunksAsync(byte[] wav)
         {
@@ -584,36 +644,48 @@ namespace ClaudeVoiceOverlay.Services
             Console.WriteLine($"Aufnahme zu gross fuer einen Upload ({wav.Length / (1024.0 * 1024.0):F1} MB) — wird in {ranges.Count} Teile transkribiert.");
 
             var parts = new List<string>(ranges.Count);
-            int failed = 0;
             for (int i = 0; i < ranges.Count; i++)
             {
                 var (start, length) = ranges[i];
                 byte[] chunk = BuildChunkWav(wav, fmt, start, length);
-                try
+                var chunkSw = Stopwatch.StartNew();
+                string? part = null;
+                for (int round = 1; part == null; round++)
                 {
-                    string part = await TranscribeWithRetry(chunk, 0).ConfigureAwait(false);
-                    // Stiller Teil kann die Woerterbuch-Liste ausgeben: nur diesen Teil verwerfen.
-                    if (IsPromptEcho(part, _callPrompt.Value)) part = string.Empty;
-                    DiagLog.Write("Groq", "chunk_done",
-                        ("index", i + 1), ("of", ranges.Count), ("bytes", chunk.Length),
-                        ("chars", part.Length));
-                    if (!string.IsNullOrWhiteSpace(part)) parts.Add(part.Trim());
+                    try
+                    {
+                        part = await TranscribeWithRetry(chunk, 0).ConfigureAwait(false);
+                    }
+                    catch (GroqEmptyResultException)
+                    {
+                        // Silent stretch emptied by the hallucination filter: valid, no text.
+                        part = string.Empty;
+                    }
+                    // Gesperrtes Modell betrifft alle Teile: nach oben reichen, dort greift der Turbo-Rueckfall.
+                    catch (Exception ex) when (!GroqModelSetting.IsBlockedError(ex))
+                    {
+                        DiagLog.Write("Groq", "chunk_failed",
+                            ("index", i + 1), ("of", ranges.Count), ("round", round), ("error", ex.Message));
+                        if (round >= 2)
+                            throw new Exception(
+                                $"Teilstueck {i + 1}/{ranges.Count} der langen Aufnahme ist zweimal fehlgeschlagen — "
+                                + $"Transkript waere unvollstaendig: {ex.Message}", ex);
+                        await Task.Delay(2000).ConfigureAwait(false);
+                    }
                 }
-                // Gesperrtes Modell betrifft alle Teile: nach oben reichen, dort greift der Turbo-Rueckfall.
-                catch (Exception ex) when (!GroqModelSetting.IsBlockedError(ex))
-                {
-                    // Funktionserhaltend: ein kaputter Teil darf die uebrigen Teile nicht mitreissen.
-                    failed++;
-                    DiagLog.Write("Groq", "chunk_failed",
-                        ("index", i + 1), ("of", ranges.Count), ("error", ex.Message));
-                }
+                // Stiller Teil kann die Woerterbuch-Liste ausgeben: nur diesen Teil verwerfen.
+                if (IsPromptEcho(part, _callPrompt.Value)) part = string.Empty;
+                DiagLog.Write("Groq", "chunk_done",
+                    ("index", i + 1), ("of", ranges.Count), ("bytes", chunk.Length),
+                    ("chars", part.Length));
+                if (!string.IsNullOrWhiteSpace(part)) parts.Add(part.Trim());
             }
 
             if (parts.Count == 0)
-                throw new Exception($"Alle {ranges.Count} Teilstuecke der langen Aufnahme sind fehlgeschlagen");
+                throw new GroqEmptyResultException();
 
             DiagLog.Write("Groq", "chunk_merged",
-                ("chunks", ranges.Count), ("ok", parts.Count), ("failed", failed));
+                ("chunks", ranges.Count), ("ok", parts.Count), ("empty", ranges.Count - parts.Count));
             return string.Join(" ", parts);
         }
 
@@ -872,6 +944,18 @@ namespace ClaudeVoiceOverlay.Services
     // self-contained publish). Groq liefert snake_case -> explizite [JsonPropertyName]. Unbekannte
     // Felder (id, seek, tokens, x_groq ...) ignoriert STJ automatisch. ----
     /// <summary>Gelesene Kopfdaten einer 16-bit-PCM-WAV (fuer das Chunking langer Aufnahmen).</summary>
+    /// <summary>Groq answered, but everything was filtered as silence/hallucination (nothing to type).</summary>
+    internal sealed class GroqEmptyResultException : Exception
+    {
+        public GroqEmptyResultException() : base("Leere Antwort von Groq") { }
+    }
+
+    /// <summary>Transient transport/server failure that is worth a retry.</summary>
+    internal sealed class GroqTransientException : Exception
+    {
+        public GroqTransientException(string message) : base(message) { }
+    }
+
     internal readonly record struct WavFormat(
         int SampleRate, int Channels, int BitsPerSample,
         int BlockAlign, int ByteRate, int DataOffset, int DataLength);

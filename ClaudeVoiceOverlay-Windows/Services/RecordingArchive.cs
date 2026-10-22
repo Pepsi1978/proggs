@@ -25,6 +25,16 @@ namespace ClaudeVoiceOverlay.Services
 
         private const string FilePrefix = "aufnahme_";
 
+        // Recordings shorter than this are accidental clicks/silence: not archived,
+        // so they can never push a real dictation out of the archive.
+        private const double MinArchiveSeconds = 2.0;
+
+        // A failed dictation longer than this is kept in addition to the newest
+        // KeepCount recordings (for FailedKeepDays), so later short or successful
+        // turns cannot evict the one recording that still needs re-transcription.
+        private const double ProtectFailedMinSeconds = 30.0;
+        private const int FailedKeepDays = 3;
+
         /// <summary>%LOCALAPPDATA%\ClaudeVoiceOverlay\aufnahmen — Ablage der letzten Diktate.</summary>
         public static string Directory
         {
@@ -50,6 +60,18 @@ namespace ClaudeVoiceOverlay.Services
             try
             {
                 if (string.IsNullOrEmpty(wavFile) || !File.Exists(wavFile)) return null;
+
+                double seconds = WavSeconds(wavFile);
+                if (seconds >= 0 && seconds < MinArchiveSeconds)
+                {
+                    // Too short to be a dictation worth re-transcribing; delete the
+                    // temp file instead of letting it orphan in %TEMP%.
+                    try { File.Delete(wavFile); } catch { /* temp folder, harmless */ }
+                    DiagLog.Write("Recording", "archive_skipped_short",
+                        ("seconds", seconds.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)),
+                        ("success", success));
+                    return null;
+                }
 
                 string dir = Directory;
                 string stamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
@@ -77,7 +99,8 @@ namespace ClaudeVoiceOverlay.Services
         }
 
         /// <summary>
-        /// Die aufbewahrten Aufnahmen, neueste zuerst (hoechstens <see cref="KeepCount"/>).
+        /// Die aufbewahrten Aufnahmen, neueste zuerst (<see cref="KeepCount"/> plus ggf. eine
+        /// geschuetzte laengere Fehl-Aufnahme, siehe <see cref="Prune"/>).
         /// </summary>
         public static IReadOnlyList<string> Recent()
         {
@@ -86,7 +109,6 @@ namespace ClaudeVoiceOverlay.Services
                 return System.IO.Directory
                     .EnumerateFiles(Directory, FilePrefix + "*.wav")
                     .OrderByDescending(File.GetLastWriteTimeUtc)
-                    .Take(KeepCount)
                     .ToList();
             }
             catch (Exception ex)
@@ -106,16 +128,27 @@ namespace ClaudeVoiceOverlay.Services
             return index >= 0 && index < all.Count ? all[index] : null;
         }
 
-        /// <summary>Loescht alles ausser den letzten <see cref="KeepCount"/> Aufnahmen.</summary>
+        /// <summary>
+        /// Loescht alles ausser den letzten <see cref="KeepCount"/> Aufnahmen. Additionally keeps
+        /// the newest failed recording longer than <see cref="ProtectFailedMinSeconds"/> that is
+        /// younger than <see cref="FailedKeepDays"/> days.
+        /// </summary>
         private static void Prune(string dir)
         {
             try
             {
-                var stale = System.IO.Directory
+                var all = System.IO.Directory
                     .EnumerateFiles(dir, FilePrefix + "*.wav")
                     .OrderByDescending(File.GetLastWriteTimeUtc)
-                    .Skip(KeepCount)
                     .ToList();
+                var stale = all.Skip(KeepCount).ToList();
+
+                DateTime cutoff = DateTime.UtcNow.AddDays(-FailedKeepDays);
+                string? protectedFailed = all.FirstOrDefault(f =>
+                    Path.GetFileName(f).Contains("_fehler", StringComparison.OrdinalIgnoreCase)
+                    && File.GetLastWriteTimeUtc(f) >= cutoff
+                    && WavSeconds(f) >= ProtectFailedMinSeconds);
+                if (protectedFailed != null) stale.Remove(protectedFailed);
 
                 foreach (var old in stale)
                 {
@@ -131,6 +164,28 @@ namespace ClaudeVoiceOverlay.Services
             {
                 DiagLog.Write("Recording", "archive_prune_failed",
                     ("err", ex.Message), ("type", ex.GetType().Name));
+            }
+        }
+
+        /// <summary>
+        /// Audio length in seconds from the WAV header (byte rate at offset 28, data size from the
+        /// file length). -1 if unknown; callers then treat the file as a normal recording.
+        /// </summary>
+        private static double WavSeconds(string path)
+        {
+            try
+            {
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                if (fs.Length < 44) return 0;
+                var header = new byte[32];
+                if (fs.Read(header, 0, header.Length) < header.Length) return -1;
+                int byteRate = BitConverter.ToInt32(header, 28);
+                if (byteRate <= 0) byteRate = 32000; // 16 kHz mono 16-bit
+                return (fs.Length - 44) / (double)byteRate;
+            }
+            catch
+            {
+                return -1;
             }
         }
     }

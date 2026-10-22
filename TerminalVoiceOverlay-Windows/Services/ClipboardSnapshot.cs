@@ -58,7 +58,43 @@ namespace TerminalVoiceOverlay.Services
                     Console.WriteLine($"ClipboardSnapshot: Format '{format}' nicht kopierbar: {ex.GetType().Name}");
                 }
             }
-            return copied > 0 ? copy : null;
+            if (copied == 0)
+                return null;
+            // The restore re-writes the user's content; keep that re-write out of
+            // clipboard history / cloud sync so it does not create a duplicate entry.
+            MarkExcludedFromHistory(copy);
+            return copy;
+        }
+
+        /// <summary>
+        /// Builds the clipboard payload for a dictation: Unicode text (Text is
+        /// synthesized via autoConvert, like Clipboard.SetText) plus the formats that
+        /// keep it out of clipboard history (Win+V), cloud clipboard and monitors.
+        /// </summary>
+        public static DataObject CreateTextData(string text)
+        {
+            var data = new DataObject();
+            data.SetData(DataFormats.UnicodeText, text, true);
+            MarkExcludedFromHistory(data);
+            return data;
+        }
+
+        /// <summary>
+        /// Adds the documented opt-out formats: ExcludeClipboardContentFromMonitorProcessing
+        /// (presence is enough), CanIncludeInClipboardHistory = 0, CanUploadToCloudClipboard = 0.
+        /// </summary>
+        public static void MarkExcludedFromHistory(DataObject data)
+        {
+            try
+            {
+                data.SetData("ExcludeClipboardContentFromMonitorProcessing", new MemoryStream(new byte[4]), false);
+                data.SetData("CanIncludeInClipboardHistory", new MemoryStream(new byte[4]), false);
+                data.SetData("CanUploadToCloudClipboard", new MemoryStream(new byte[4]), false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ClipboardSnapshot: Ausschluss-Formate nicht setzbar: {ex.GetType().Name}");
+            }
         }
     }
 }

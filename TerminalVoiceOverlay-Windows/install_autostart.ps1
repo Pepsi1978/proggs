@@ -35,6 +35,11 @@ $settings = New-ScheduledTaskSettingsSet `
     -AllowStartIfOnBatteries `
     -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit ([TimeSpan]::Zero)
+# RunLevel Highest is intentional (commit cf9bb6340): the app sets
+# ProcessPriorityClass.RealTime, which silently degrades to High without
+# elevation, and UIPI blocks SendInput / low-level hook input for elevated
+# target windows (e.g. an admin terminal) unless the overlay is elevated too.
+# rebuild-overlay.ps1 also expects this elevated task.
 Register-ScheduledTask `
     -TaskName "Spracheingabe - Terminal" `
     -Action $action `

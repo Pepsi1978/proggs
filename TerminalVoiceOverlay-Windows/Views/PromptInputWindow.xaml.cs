@@ -73,7 +73,7 @@ public partial class PromptInputWindow : Window
         InputBox.PreviewKeyDown += InputBox_PreviewKeyDown;
 
         // Noch nicht abgeschickten Eingabe-Text vom letzten Mal wiederherstellen —
-        // ueberlebt einen TVO-Neustart (Datenverlust-Schutz, siehe SaveDraft/RestoreDraft).
+        // ueberlebt einen Overlay-Neustart (Datenverlust-Schutz, siehe SaveDraft/RestoreDraft).
         RestoreDraft();
 
         // Rechtsklick auf das Window selbst startet einen Drag.
@@ -464,7 +464,10 @@ public partial class PromptInputWindow : Window
             return;
         }
 
-        var current = InputBox.Text?.Trim();
+        // Remember the exact text at request start: typing/dictation may continue
+        // while Gemini works, and that new text must not be lost.
+        var startText = InputBox.Text ?? string.Empty;
+        var current = startText.Trim();
         if (string.IsNullOrEmpty(current))
         {
             UpdatePreview("Kein Text zum Verbessern.");
@@ -482,10 +485,31 @@ public partial class PromptInputWindow : Window
                 UpdatePreview("Gemini lieferte leere Antwort.");
                 return;
             }
-            InputBox.Text = improved;
-            InputBox.CaretIndex = InputBox.Text.Length;
+            var now = InputBox.Text ?? string.Empty;
+            string replacement;
+            if (string.Equals(now, startText, StringComparison.Ordinal))
+            {
+                replacement = improved;
+            }
+            else if (now.StartsWith(startText, StringComparison.Ordinal))
+            {
+                // Text was appended during the request: improve the old part, keep the rest.
+                var added = now.Substring(startText.Length).Trim();
+                replacement = added.Length == 0 ? improved : improved.TrimEnd() + " " + added;
+            }
+            else
+            {
+                // The text was edited meanwhile — never overwrite the user's changes.
+                UpdatePreview("Text wurde waehrend der Gemini-Anfrage geaendert — Verbesserung nicht uebernommen.");
+                return;
+            }
+            // Undoable: Ctrl+Z brings back the text before the improvement.
+            ReplaceTextUndoable(replacement, "Mit Gemini verbessert");
             InputBox.ScrollToEnd();
-            UpdatePreview($"Verbessert ({improved.Length} Zeichen).");
+            if (_undoReplacedText is null)
+                UpdatePreview($"Verbessert ({improved.Length} Zeichen).");
+            else
+                UpdatePreview($"Verbessert ({improved.Length} Zeichen) — Strg+Z stellt den vorherigen Text wieder her.");
             // Fokus zurueck in die Box, damit der Benutzer direkt mit Enter
             // senden kann ohne erst hineinklicken zu muessen.
             Activate();
@@ -634,10 +658,11 @@ public partial class PromptInputWindow : Window
     {
         var text = InputBox.Text ?? string.Empty;
 
-        // Datenverlust-Schutz: jeden Stand sofort in den Draft spiegeln, damit ein
-        // TVO-Neustart den noch nicht abgeschickten Text nicht verliert. Beim Leeren
+        // Datenverlust-Schutz: jeden Stand in den Draft spiegeln, damit ein
+        // Overlay-Neustart den noch nicht abgeschickten Text nicht verliert. Beim Leeren
         // (nach dem Abschicken) wird hier "" gespeichert -> Draft leert sich automatisch mit.
-        SaveDraft(text);
+        // Debounced + written in the background (see ScheduleDraftSave).
+        ScheduleDraftSave();
 
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -657,15 +682,26 @@ public partial class PromptInputWindow : Window
         PreviewLabel.Text = $"[Pre] {snippet} [Post]";
     }
 
-    // ── Draft-Persistenz (Datenverlust-Schutz beim TVO-Neustart, 2026-06-22) ──
-    // Der noch nicht abgeschickte Eingabe-Text wird bei jeder Aenderung sofort in
-    // eine kleine Datei gespiegelt und beim Fenster-Start wiederhergestellt. So
+    // ── Draft-Persistenz (Datenverlust-Schutz beim Overlay-Neustart, 2026-06-22) ──
+    // Der noch nicht abgeschickte Eingabe-Text wird bei jeder Aenderung in eine
+    // kleine Datei gespiegelt und beim Fenster-Start wiederhergestellt. So
     // ueberlebt ein im Eingabefeld stehender Text einen Overlay-Neustart, auch wenn
-    // er nicht abgeschickt wurde. Best-Effort: Fehler nie auf den UI-Thread werfen.
+    // er nicht abgeschickt wurde. Writes are debounced (500 ms) and run in the
+    // background; closing/submitting flushes synchronously. Errors are logged,
+    // never thrown onto the UI thread.
     private static string DraftPath =>
         System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "PromptBoard", "input-draft.txt");
+
+    private static readonly TimeSpan DraftSaveDelay = TimeSpan.FromMilliseconds(500);
+    private System.Windows.Threading.DispatcherTimer? _draftSaveTimer;
+
+    /// <summary>Serialises draft writes (background + synchronous flush) and makes
+    /// sure an older background write can never overwrite a newer state.</summary>
+    private static readonly object DraftWriteLock = new();
+    private static long _draftVersionCounter;
+    private static long _draftWrittenVersion;
 
     /// <summary>Existiert ein nicht-leerer Draft? (Vom OverlayWindow beim Start genutzt,
     /// um das Eingabefenster automatisch zu oeffnen und den Text sichtbar zu machen.)</summary>
@@ -679,18 +715,78 @@ public partial class PromptInputWindow : Window
         catch { return false; }
     }
 
-    private void SaveDraft(string text)
+    /// <summary>Last write time (UTC) of the draft file, null if it does not exist.
+    /// Used by the PromptBoardPanel to decide whether the draft or its session
+    /// buffer is newer.</summary>
+    public static DateTime? GetDraftLastWriteUtc()
     {
         try
         {
-            string dir = System.IO.Path.GetDirectoryName(DraftPath)!;
-            System.IO.Directory.CreateDirectory(dir);
-            // Atomar: temp schreiben, dann ersetzen — nie eine halbe Datei hinterlassen.
-            string tmp = DraftPath + ".tmp";
-            System.IO.File.WriteAllText(tmp, text ?? string.Empty, System.Text.Encoding.UTF8);
-            System.IO.File.Move(tmp, DraftPath, overwrite: true);
+            return System.IO.File.Exists(DraftPath)
+                ? System.IO.File.GetLastWriteTimeUtc(DraftPath)
+                : null;
         }
-        catch { /* Best-Effort — Draft darf den UI-Thread nie blockieren/werfen */ }
+        catch { return null; }
+    }
+
+    /// <summary>Writes <paramref name="text"/> as draft immediately (synchronous).
+    /// Used when the window is closed and the panel changes the buffered text.</summary>
+    public static void WriteDraftNow(string text)
+        => WriteDraftCore(text ?? string.Empty, System.Threading.Interlocked.Increment(ref _draftVersionCounter));
+
+    private static void WriteDraftCore(string text, long version)
+    {
+        lock (DraftWriteLock)
+        {
+            if (version < _draftWrittenVersion) return; // a newer state already landed
+            try
+            {
+                string dir = System.IO.Path.GetDirectoryName(DraftPath)!;
+                System.IO.Directory.CreateDirectory(dir);
+                // Atomar: temp schreiben, dann ersetzen — nie eine halbe Datei hinterlassen.
+                string tmp = DraftPath + ".tmp";
+                System.IO.File.WriteAllText(tmp, text, System.Text.Encoding.UTF8);
+                System.IO.File.Move(tmp, DraftPath, overwrite: true);
+                _draftWrittenVersion = version;
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Error("InputDraft", "save_failed", ex);
+            }
+        }
+    }
+
+    /// <summary>Restarts the debounce timer; the tick writes the current text in
+    /// the background so typing never waits for disk I/O.</summary>
+    private void ScheduleDraftSave()
+    {
+        if (_draftSaveTimer is null)
+        {
+            _draftSaveTimer = new System.Windows.Threading.DispatcherTimer { Interval = DraftSaveDelay };
+            _draftSaveTimer.Tick += (_, _) =>
+            {
+                _draftSaveTimer!.Stop();
+                string text = InputBox.Text ?? string.Empty;
+                long version = System.Threading.Interlocked.Increment(ref _draftVersionCounter);
+                _ = Task.Run(() => WriteDraftCore(text, version));
+            };
+        }
+        _draftSaveTimer.Stop();
+        _draftSaveTimer.Start();
+    }
+
+    /// <summary>Writes the current text synchronously (close/submit) and cancels a
+    /// pending debounced write.</summary>
+    public void FlushDraft()
+    {
+        _draftSaveTimer?.Stop();
+        WriteDraftNow(InputBox.Text ?? string.Empty);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        FlushDraft();
+        base.OnClosed(e);
     }
 
     private void RestoreDraft()
@@ -705,13 +801,110 @@ public partial class PromptInputWindow : Window
                 InputBox.CaretIndex = InputBox.Text.Length;
             }
         }
-        catch { /* ignore */ }
+        catch (Exception ex)
+        {
+            DiagLog.Error("InputDraft", "restore_failed", ex);
+        }
+    }
+
+    // ── Undo buffer for programmatic replacements ──
+    // Loading a history entry, a slot or a Gemini result replaces the box text.
+    // The previous (typed, unsent) text is kept here; Ctrl+Z restores it as long
+    // as the replacement has not been edited further.
+    private string? _undoReplacedText;
+    private string? _undoReplacementText;
+
+    /// <summary>
+    /// Replaces the box text. A non-empty, different previous text is kept in an
+    /// undo buffer — Ctrl+Z brings it back — so a click never silently destroys
+    /// typed text. <paramref name="reason"/> is shown in the preview line.
+    /// </summary>
+    public void ReplaceTextUndoable(string text, string reason)
+    {
+        text ??= string.Empty;
+        var previous = InputBox.Text ?? string.Empty;
+        bool keepUndo = !string.IsNullOrWhiteSpace(previous)
+                        && !string.Equals(previous, text, StringComparison.Ordinal);
+        SetText(text);
+        if (keepUndo)
+        {
+            _undoReplacedText = previous;
+            _undoReplacementText = InputBox.Text;
+            UpdatePreview($"{reason} — vorheriger Text ersetzt, Strg+Z stellt ihn wieder her.");
+        }
+        else
+        {
+            _undoReplacedText = null;
+            _undoReplacementText = null;
+        }
+    }
+
+    /// <summary>Ctrl+Z after a programmatic replacement: restore the previous text.
+    /// Returns false when there is nothing to restore (normal TextBox undo runs).</summary>
+    private bool TryUndoReplacement()
+    {
+        if (_undoReplacedText is null) return false;
+        if (!string.Equals(InputBox.Text ?? string.Empty, _undoReplacementText, StringComparison.Ordinal))
+        {
+            // The replacement was edited meanwhile — normal undo takes over.
+            _undoReplacedText = null;
+            _undoReplacementText = null;
+            return false;
+        }
+        var restore = _undoReplacedText;
+        _undoReplacedText = null;
+        _undoReplacementText = null;
+        SetText(restore);
+        UpdatePreview("Vorheriger Text wiederhergestellt.");
+        return true;
+    }
+
+    /// <summary>
+    /// Returns <paramref name="current"/> without the part that was just sent:
+    /// identical → empty; sent text as prefix → the rest (text typed/dictated
+    /// during the submit stays); sent text elsewhere → that occurrence removed;
+    /// not found (user edited it meanwhile) → unchanged, nothing gets lost.
+    /// </summary>
+    public static string StripSentText(string current, string sent)
+    {
+        current ??= string.Empty;
+        if (string.IsNullOrEmpty(sent)) return current;
+        if (string.Equals(current, sent, StringComparison.Ordinal)) return string.Empty;
+        int idx = current.IndexOf(sent, StringComparison.Ordinal);
+        if (idx < 0) return current;
+        var rest = current.Remove(idx, sent.Length);
+        return string.IsNullOrWhiteSpace(rest) ? string.Empty : rest.Trim();
+    }
+
+    /// <summary>After a successful submit: remove exactly the sent text, keep the
+    /// rest, and persist the draft immediately.</summary>
+    public void RemoveSentText(string sent)
+    {
+        var current = InputBox.Text ?? string.Empty;
+        var remaining = StripSentText(current, sent);
+        if (!string.Equals(remaining, current, StringComparison.Ordinal))
+        {
+            _undoReplacedText = null;
+            _undoReplacementText = null;
+            if (remaining.Length == 0) ClearInput();
+            else SetText(remaining);
+        }
+        FlushDraft();
     }
 
     // ── Eingabe-Tasten ────────────────────────────────────────────────────
 
     private void InputBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // Ctrl+Z right after a programmatic replacement (history/slot/Gemini)
+        // restores the replaced text; otherwise the normal TextBox undo runs.
+        if (e.Key == Key.Z && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control
+            && TryUndoReplacement())
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key != Key.Return && e.Key != Key.Enter) return;
 
         bool shiftDown = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
@@ -953,11 +1146,12 @@ public partial class PromptInputWindow : Window
         for (int n = 1; n <= PromptSlotService.SlotCount; n++)
         {
             var btn = CreateSlotButton(n.ToString(), SlotGrey,
-                $"Slot {n} — Klick speichert/laedt. Belegten Slot auf eine andere Zahl ziehen: " +
+                $"Slot {n} — Klick waehlt/laedt, Doppelklick laedt auch ueber getippten Text. Belegten Slot auf eine andere Zahl ziehen: " +
                 "auf leere Zahl = verschieben, auf belegte Zahl = tauschen.");
             btn.Tag = n;
             btn.Margin = new Thickness(0, 0, 7, 0);
             btn.Click += OnSlotNumberClick;
+            btn.MouseDoubleClick += OnSlotNumberDoubleClick;
             // Drag&Drop: belegten Slot „greifen" und auf eine andere Zahl ziehen.
             btn.AllowDrop = true;
             btn.PreviewMouseLeftButtonDown += OnSlotPreviewMouseDown;
@@ -1240,8 +1434,19 @@ public partial class PromptInputWindow : Window
         _selectedSlot = n;
         if (_slotContents.TryGetValue(n, out var text) && !string.IsNullOrEmpty(text))
         {
-            // Belegter Slot → gespeicherten Prompt abrufen (bewusste Lade-Aktion).
-            SetText(text);
+            var typed = InputBox.Text ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(typed) || string.Equals(typed, text, StringComparison.Ordinal))
+            {
+                // Belegter Slot + leere Box → gespeicherten Prompt abrufen (bewusste Lade-Aktion).
+                SetText(text);
+            }
+            else
+            {
+                // Typed, unsent text is in the box: only SELECT the slot so the
+                // floppy can save the new text here (overwriting the slot is now
+                // possible). Loading happens on double click (undoable).
+                UpdatePreview($"Slot {n} gewaehlt — Diskette speichert den Text hier, Doppelklick laedt den gespeicherten Prompt.");
+            }
         }
         // Leerer Slot → das Eingabefeld NIE anfassen. Der frisch getippte Prompt
         // muss stehen bleiben, denn genau ihn will der Benutzer jetzt in diesem
@@ -1249,6 +1454,20 @@ public partial class PromptInputWindow : Window
         // den getippten Prompt im Moment des Zahl-Klicks, BEVOR die Diskette
         // gedrueckt werden konnte (Frank-Datenverlust 2026-06-06). NIEMALS leeren.
         UpdateSlotVisuals();
+    }
+
+    /// <summary>
+    /// Double click on an occupied slot: load its prompt even if the box holds
+    /// typed text. The typed text goes into the undo buffer (Ctrl+Z restores it).
+    /// </summary>
+    private void OnSlotNumberDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not int n) return;
+        if (!(_slotContents.TryGetValue(n, out var text) && !string.IsNullOrEmpty(text))) return;
+        _selectedSlot = n;
+        ReplaceTextUndoable(text, $"Slot {n} geladen");
+        UpdateSlotVisuals();
+        e.Handled = true;
     }
 
     /// <summary>
@@ -1357,11 +1576,18 @@ public partial class PromptInputWindow : Window
     private void OnSlotDeleteClick(object sender, RoutedEventArgs e)
     {
         if (_selectedSlot is not int n) return;
+        _slotContents.TryGetValue(n, out var deletedText);
         _slotContents.Remove(n);
         _slotTimestamps.Remove(n);
         _slotSummaries.Remove(n);
         _slotPriorities.Remove(n);
-        ClearInput();
+        // Only clear the box when it shows exactly the deleted slot's prompt —
+        // typed text that did not come from this slot must survive.
+        if (!string.IsNullOrEmpty(deletedText)
+            && string.Equals(InputBox.Text ?? string.Empty, deletedText, StringComparison.Ordinal))
+        {
+            ClearInput();
+        }
         UpdateSlotVisuals();
         UpdatePreview($"Slot {n} geloescht.");
         SlotDeleteRequested?.Invoke(n);

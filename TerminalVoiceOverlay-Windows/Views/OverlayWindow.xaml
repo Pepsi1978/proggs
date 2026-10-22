@@ -348,6 +348,7 @@
                             HorizontalAlignment="Center"
                             PreviewMouseLeftButtonDown="XButton_PreviewMouseLeftButtonDown"
                             PreviewMouseLeftButtonUp="XButton_PreviewMouseLeftButtonUp"
+                            LostMouseCapture="XButton_LostMouseCapture"
                             ToolTip="Zeile löschen — gedrückt halten löscht alle Zeilen hintereinander">
                         <TextBlock Text="X" FontWeight="Bold" FontSize="16" Foreground="White"/>
                     </Button>

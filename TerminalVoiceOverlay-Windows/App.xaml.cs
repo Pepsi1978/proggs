@@ -154,6 +154,29 @@ namespace TerminalVoiceOverlay
         /// Bewusst KEIN externes Logging-Framework — eine .txt-Datei
         /// genuegt fuer Frank und ist von Hand mit Notepad lesbar.
         /// </summary>
+        // Program tag + own crash file: TVO and CVO used to append to the SAME
+        // crash.log without saying which app crashed.
+        private const string CrashLogAppTag = "TVO";
+        private const string CrashLogFileName = "crash.log";
+
+        /// <summary>Exit code of the overlay for a configuration error: the watchdog
+        /// stops instead of restarting (before: endless restart loop, message box again
+        /// and again). The capture worker's own exit codes are irrelevant here, the
+        /// watchdog only ever watches the overlay process.</summary>
+        internal const int ConfigErrorExitCode = 3;
+
+        private static string AppVersionText()
+        {
+            try
+            {
+                var asm = typeof(App).Assembly;
+                var info = System.Reflection.CustomAttributeExtensions
+                    .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(asm)?.InformationalVersion;
+                return string.IsNullOrWhiteSpace(info) ? asm.GetName().Version?.ToString() ?? "?" : info;
+            }
+            catch { return "?"; }
+        }
+
         private static void LogCrash(string source, Exception? ex, string? extraNote = null)
         {
             try
@@ -162,7 +185,7 @@ namespace TerminalVoiceOverlay
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PromptBoard");
                 Directory.CreateDirectory(dir);
-                string path = Path.Combine(dir, "crash.log");
+                string path = Path.Combine(dir, CrashLogFileName);
                 string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
                 string body = ex is null
                     ? (extraNote ?? "(no exception, no note)")
@@ -170,7 +193,7 @@ namespace TerminalVoiceOverlay
                 if (!string.IsNullOrEmpty(extraNote))
                     body = extraNote + "\n" + body;
                 File.AppendAllText(path,
-                    $"\n=== {ts}  [{source}] ===\n{body}\n",
+                    $"\n=== {ts}  {CrashLogAppTag} {AppVersionText()}  [{source}] ===\n{body}\n",
                     System.Text.Encoding.UTF8);
             }
             catch
@@ -283,9 +306,12 @@ namespace TerminalVoiceOverlay
                     // ein bewusster Beenden-Klick im Tray ankam.
                     bool cleanRequested = cleanShutdown.WaitOne(0);
 
-                    if (exitCode == 0 || cleanRequested)
+                    if (exitCode == 0 || exitCode == ConfigErrorExitCode || cleanRequested)
                     {
-                        // Normal shutdown (user clicked "Beenden") — stop watchdog too
+                        // Normal shutdown (user clicked "Beenden") or configuration error
+                        // (restarting would only show the same error again) — stop the
+                        // watchdog too and tell watcher.vbs not to restart.
+                        WriteCleanShutdownMarker();
                         Console.WriteLine($"Watchdog: overlay exited cleanly (code={exitCode}, signaled={cleanRequested}), stopping.");
                         Dispatcher.Invoke(() => Shutdown());
                         GC.KeepAlive(mutex);
@@ -339,6 +365,22 @@ namespace TerminalVoiceOverlay
         private static string OverlayPidFile => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TerminalVoiceOverlay", "overlay.pid");
+
+        /// <summary>
+        /// Tells watcher.vbs that the app ended on purpose (tray "Beenden" or config error)
+        /// and must not be restarted. Same folder as overlay.pid; the watcher deletes it.
+        /// Never throws.
+        /// </summary>
+        private static void WriteCleanShutdownMarker()
+        {
+            try
+            {
+                string path = Path.Combine(Path.GetDirectoryName(OverlayPidFile)!, "clean-shutdown.marker");
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, DateTime.UtcNow.ToString("o"));
+            }
+            catch { /* best effort */ }
+        }
 
         private Process? FindOverlayProcess()
         {
@@ -451,7 +493,8 @@ namespace TerminalVoiceOverlay
                     "TerminalVoiceOverlay — Konfigurationsfehler",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
-                Environment.Exit(1);
+                WriteCleanShutdownMarker();
+                Environment.Exit(ConfigErrorExitCode);
                 return;
             }
 
@@ -639,6 +682,8 @@ namespace TerminalVoiceOverlay
         /// </summary>
         private void RequestCleanShutdown()
         {
+            // Before any shutdown path (also the Environment.Exit fallback below).
+            WriteCleanShutdownMarker();
             try
             {
                 // Watchdog-IPC-Signal: bestehendes named Event setzen
@@ -691,69 +736,37 @@ namespace TerminalVoiceOverlay
         private const string CleanShutdownEventName = "TerminalVoiceOverlay-CleanShutdown";
 
         /// <summary>
-        /// Pulls the newest Drive backup at launch and applies it if its
-        /// <c>ExportedAt</c> is newer than the local last-sync mark — typical
-        /// case: the user edited prompts on another machine. Silent on every
-        /// failure path (Drive not connected, network off, malformed JSON).
+        /// Launch-time PromptBoard sync with the Drive backup. Before: the remote backup
+        /// was applied with RestoreMode.Replace whenever its ExportedAt was newer than the
+        /// local sync mark — deleting every local row missing in it. Because TVO and CVO
+        /// share ONE local DB but sync two different backup files, that wiped the sibling
+        /// app's prompts, and a missing fingerprint mark disabled the safety check.
+        /// Now: <see cref="IGoogleDriveBackupService.SyncAsync"/> merges (never deletes a
+        /// local row, keeps rows edited meanwhile) and uploads the merged state. Silent on
+        /// every failure path (Drive not connected, network off, malformed JSON).
         /// </summary>
         private static async Task CheckForRemoteBackupOnLaunchAsync()
         {
             try
             {
-                var localBeforeDownload = await PromptBoardPanel.BuildBackupFingerprintAsync();
-                var lastSynced = PromptBoardPanel.ReadLastSyncFingerprint();
-                if (lastSynced is not null &&
-                    !string.Equals(localBeforeDownload, lastSynced, StringComparison.Ordinal))
-                {
-                    Console.WriteLine("[App] launch-restore skipped (local PromptBoard changes pending)");
-                    return;
-                }
-
                 using var scope = PromptBoardHost.Services.CreateScope();
                 var drive = scope.ServiceProvider.GetRequiredService<IGoogleDriveBackupService>();
                 if (!await drive.IsAuthenticatedAsync())
                 {
-                    Console.WriteLine("[App] launch-restore skipped (Drive not connected)");
+                    Console.WriteLine("[App] launch-sync skipped (Drive not connected)");
                     return;
                 }
 
-                var json = await drive.DownloadLatestAsync();
-                if (json is null)
-                {
-                    Console.WriteLine("[App] launch-restore: no backup on Drive yet");
-                    return;
-                }
-
-                var remote = PromptBoardPanel.BackupExportedAtUtc(json);
-                if (remote is null)
-                {
-                    Console.WriteLine("[App] launch-restore: no ExportedAt in backup");
-                    return;
-                }
-
-                var local = PromptBoardPanel.ReadLastSyncUtc() ?? DateTime.MinValue.ToUniversalTime();
-                // 2-second grace window so a backup we just uploaded ourselves
-                // doesn't trigger a self-restore race.
-                if (remote.Value > local.AddSeconds(2))
-                {
-                    var localAfterDownload = await PromptBoardPanel.BuildBackupFingerprintAsync();
-                    if (!string.Equals(localBeforeDownload, localAfterDownload, StringComparison.Ordinal))
-                    {
-                        Console.WriteLine("[App] launch-restore skipped (PromptBoard changed during download)");
-                        return;
-                    }
-                    await PromptBoardPanel.ApplyBackupJsonAsync(json);
-                    PromptBoardPanel.WriteLastSync(remote.Value, json);
-                    Console.WriteLine($"[App] launch-restore applied remote backup from {remote.Value:o}");
-                }
-                else
-                {
-                    Console.WriteLine($"[App] launch-restore: local up-to-date (remote={remote:o}, local={local:o})");
-                }
+                bool changed = await drive.SyncAsync();
+                // Keep the panel's "sync" badge current (badge only, no fingerprint).
+                PromptBoardPanel.WriteLastSync(DateTime.UtcNow);
+                Console.WriteLine(changed
+                    ? "[App] launch-sync merged cloud changes into the local PromptBoard"
+                    : "[App] launch-sync: local PromptBoard already up to date");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[App] launch-restore failed: {ex.Message}");
+                Console.WriteLine($"[App] launch-sync failed: {ex.Message}");
             }
         }
 

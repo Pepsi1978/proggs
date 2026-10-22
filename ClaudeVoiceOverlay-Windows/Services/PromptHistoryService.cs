@@ -59,7 +59,10 @@ public sealed class PromptHistoryService
     private readonly string _historyFilePath;
     private readonly string _archiveDir;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly Mutex _storeMutex = new(false, StoreMutexName);
+    // Created in the constructor (not as a field initializer) so a failure can be
+    // handled: an elevated creator used to give a non-elevated sibling an
+    // UnauthorizedAccessException in the constructor -> crash loop. Null = no lock.
+    private readonly Mutex? _storeMutex;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -80,6 +83,7 @@ public sealed class PromptHistoryService
         _archiveDir = Path.Combine(_baseDir, ArchiveFolderName);
         Directory.CreateDirectory(_baseDir);
         Directory.CreateDirectory(_archiveDir);
+        _storeMutex = CrossProcessLock.CreateSharedMutex(StoreMutexName);
     }
 
     /// <summary>Pfad zum lokalen JSON, fuer Diagnose und Cloud-Sync (Phase 5).</summary>
@@ -279,7 +283,8 @@ public sealed class PromptHistoryService
         try
         {
             ct.ThrowIfCancellationRequested();
-            using var stream = File.OpenRead(_historyFilePath);
+            using var stream = new FileStream(_historyFilePath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
             var list = JsonSerializer.Deserialize<List<PromptHistoryEntry>>(stream, JsonOptions);
             return list ?? throw new JsonException("PromptHistory JSON contained null.");
         }
@@ -303,10 +308,9 @@ public sealed class PromptHistoryService
             }
             ct.ThrowIfCancellationRequested();
 
-            if (File.Exists(_historyFilePath))
-                File.Replace(tmp, _historyFilePath, destinationBackupFileName: null);
-            else
-                File.Move(tmp, _historyFilePath);
+            // Short retry: the Drive upload path or the sibling overlay may hold the
+            // file open for a moment (File.Replace then fails with a sharing violation).
+            AtomicFile.ReplaceWithRetry(tmp, _historyFilePath);
         }
         finally
         {
@@ -319,6 +323,13 @@ public sealed class PromptHistoryService
         bool ownsMutex = false;
         try
         {
+            if (_storeMutex is null)
+            {
+                // Mutex unavailable (see constructor): run without the cross-process
+                // lock rather than crash; the SemaphoreSlim still serializes this process.
+                ct.ThrowIfCancellationRequested();
+                return action();
+            }
             try
             {
                 if (ct.CanBeCanceled)
@@ -342,7 +353,7 @@ public sealed class PromptHistoryService
         }
         finally
         {
-            if (ownsMutex) _storeMutex.ReleaseMutex();
+            if (ownsMutex) _storeMutex?.ReleaseMutex();
         }
     }
 
@@ -367,23 +378,57 @@ public sealed class PromptHistoryService
         }
     }
 
-    private void AppendToArchiveUnlocked(PromptHistoryEntry entry)
+    /// <summary>
+    /// Archive contents read ONCE per overflow pass (before: every archived entry re-read
+    /// every archive-*.md). Holds the ids already archived plus the raw contents for the
+    /// legacy (pre-id-marker) duplicate check; kept current while entries are appended.
+    /// </summary>
+    private sealed class ArchiveIndex
+    {
+        private const string IdPrefix = "<!-- prompt-history-id: ";
+        public HashSet<string> Ids { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> Contents { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public static ArchiveIndex Build(IEnumerable<string> files)
+        {
+            var index = new ArchiveIndex();
+            foreach (var path in files) index.Set(path, File.ReadAllText(path, Encoding.UTF8));
+            return index;
+        }
+
+        public void Set(string path, string content)
+        {
+            Contents[path] = content;
+            int at = 0;
+            while ((at = content.IndexOf(IdPrefix, at, StringComparison.Ordinal)) >= 0)
+            {
+                at += IdPrefix.Length;
+                int end = content.IndexOf(" -->", at, StringComparison.Ordinal);
+                if (end < 0) break;
+                Ids.Add(content[at..end].Trim());
+                at = end;
+            }
+        }
+
+        public bool ContainsLegacy(string block)
+        {
+            foreach (var c in Contents.Values)
+                if (c.Contains(block, StringComparison.Ordinal)) return true;
+            return false;
+        }
+    }
+
+    private void AppendToArchiveUnlocked(PromptHistoryEntry entry, ArchiveIndex index)
     {
         // Aktuellste Archiv-Datei bestimmen: hoechste Nummer ODER neue
         // anlegen wenn die letzte voll ist (>= 500 Eintraege).
         Directory.CreateDirectory(_archiveDir);
-        var existing = Directory.GetFiles(_archiveDir, "archive-*.md")
+        var existing = index.Contents.Keys
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        string idMarker = $"<!-- prompt-history-id: {entry.Id} -->";
-        string legacyBlock = FormatEntryAsMarkdown(entry, includeId: false);
-        if (existing.Any(path =>
-            {
-                string content = File.ReadAllText(path, Encoding.UTF8);
-                return content.Contains(idMarker, StringComparison.OrdinalIgnoreCase) ||
-                       content.Contains(legacyBlock, StringComparison.Ordinal);
-            }))
+        if (index.Ids.Contains(entry.Id) ||
+            index.ContainsLegacy(FormatEntryAsMarkdown(entry, includeId: false)))
         {
             return;
         }
@@ -396,7 +441,7 @@ public sealed class PromptHistoryService
         else
         {
             string latest = existing[^1];
-            int currentCount = CountEntriesInArchive(latest);
+            int currentCount = CountEntries(index.Contents[latest]);
             if (currentCount >= MaxEntriesPerArchive)
             {
                 int nextNum = ParseArchiveNumber(latest) + 1;
@@ -412,9 +457,9 @@ public sealed class PromptHistoryService
         // davor einfuegen, alles zurueckschreiben. Bei einer 500-Eintraege-
         // Datei sind das im Worst Case ein paar hundert KB — vernachlaessigbar.
         string newBlock = FormatEntryAsMarkdown(entry, includeId: true);
-        string oldContent = File.Exists(targetFile)
-            ? File.ReadAllText(targetFile, Encoding.UTF8)
-            : string.Empty;
+        string oldContent = index.Contents.TryGetValue(targetFile, out var cached)
+            ? cached
+            : File.Exists(targetFile) ? File.ReadAllText(targetFile, Encoding.UTF8) : string.Empty;
         string tmp = $"{targetFile}.{Guid.NewGuid():N}.tmp";
         try
         {
@@ -427,10 +472,8 @@ public sealed class PromptHistoryService
                 stream.Flush(flushToDisk: true);
             }
 
-            if (File.Exists(targetFile))
-                File.Replace(tmp, targetFile, destinationBackupFileName: null);
-            else
-                File.Move(tmp, targetFile);
+            AtomicFile.ReplaceWithRetry(tmp, targetFile);
+            index.Set(targetFile, newBlock + oldContent);
         }
         finally
         {
@@ -438,12 +481,11 @@ public sealed class PromptHistoryService
         }
     }
 
-    private static int CountEntriesInArchive(string path)
+    private static int CountEntries(string content)
     {
-        if (!File.Exists(path)) return 0;
         // Jeder Eintrag beginnt mit "## " an Zeilenanfang.
         int count = 0;
-        foreach (var line in File.ReadLines(path, Encoding.UTF8))
+        foreach (var line in content.Split('\n'))
         {
             if (line.StartsWith("## ", StringComparison.Ordinal)) count++;
         }
@@ -466,12 +508,17 @@ public sealed class PromptHistoryService
             .Skip(MaxActiveEntries)
             .ToList();
 
-        foreach (var entry in overflow)
+        if (overflow.Count > 0)
         {
-            var archivedAt = DateTime.UtcNow;
-            entry.ArchivedAt = archivedAt;
-            if (entry.UpdatedAt < archivedAt) entry.UpdatedAt = archivedAt;
-            AppendToArchiveUnlocked(entry);
+            Directory.CreateDirectory(_archiveDir);
+            var index = ArchiveIndex.Build(Directory.GetFiles(_archiveDir, "archive-*.md"));
+            foreach (var entry in overflow)
+            {
+                var archivedAt = DateTime.UtcNow;
+                entry.ArchivedAt = archivedAt;
+                if (entry.UpdatedAt < archivedAt) entry.UpdatedAt = archivedAt;
+                AppendToArchiveUnlocked(entry, index);
+            }
         }
 
         entries.Sort((a, b) => b.Timestamp.CompareTo(a.Timestamp));

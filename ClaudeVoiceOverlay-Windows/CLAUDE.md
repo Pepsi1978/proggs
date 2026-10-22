@@ -70,7 +70,7 @@ report to Frank. Never pass `-Force` unless Frank explicitly says so.
 - **Target apps**: Claude Desktop, Codex (process name/window title matching in AppWatcher.cs)
 - **Thread safety**: async/await with Dispatcher.Invoke for UI thread
 - **Retries**: Task.Delay (never Thread.Sleep on UI thread)
-- **Clipboard restore**: Save clipboard before paste, restore after 500ms Task.Delay
+- **Clipboard restore**: Save clipboard before paste, restore after 1500ms Task.Delay (only if the clipboard still holds our text)
 
 ## Debugging text insertion: read the probes FIRST (Observability-First)
 

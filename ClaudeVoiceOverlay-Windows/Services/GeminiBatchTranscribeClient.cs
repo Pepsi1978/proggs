@@ -137,6 +137,9 @@ namespace ClaudeVoiceOverlay.Services
                 throw new Exception($"Gemini-Transkription Fehler {status}: {body}");
             }
 
+            // ExtractText throws a plain Exception for an unexpected response shape
+            // (-> Groq fallback in SpeechToTextRouter). NoSpeech only when the
+            // structure is valid but carries no text.
             var text = ExtractText(body);
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -152,40 +155,92 @@ namespace ClaudeVoiceOverlay.Services
         /// Der Text steht in <c>steps[].content[].text</c>. Ein
         /// <c>output_text</c>-Feld gibt es nur in den SDKs, nicht in der
         /// REST-Antwort — dort muss der Baum selbst durchlaufen werden.
+        /// Tolerant also accepts an <c>outputs[]</c> array (older/alternative
+        /// Interactions response shape). Throws a plain Exception (technical
+        /// failure -> Groq fallback) when the interaction did not complete or
+        /// neither <c>steps</c> nor <c>outputs</c> is present; returns an empty
+        /// string only for a valid but text-less response (= no speech).
         /// </summary>
         private static string ExtractText(string responseJson)
         {
-            using var doc = JsonDocument.Parse(responseJson);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("error", out var error))
-                throw new Exception("Gemini-Transkription: " + error);
-
-            if (!root.TryGetProperty("steps", out var steps) || steps.ValueKind != JsonValueKind.Array)
-                return string.Empty;
-
-            var result = new StringBuilder();
-            foreach (var step in steps.EnumerateArray())
+            JsonDocument doc;
+            try { doc = JsonDocument.Parse(responseJson); }
+            catch (JsonException ex)
             {
-                if (!step.TryGetProperty("content", out var content) || content.ValueKind != JsonValueKind.Array)
-                    continue;
-
-                foreach (var part in content.EnumerateArray())
-                {
-                    if (part.TryGetProperty("type", out var type) &&
-                        type.ValueKind == JsonValueKind.String &&
-                        type.GetString() != "text")
-                        continue;
-
-                    if (part.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
-                    {
-                        if (result.Length > 0) result.Append(' ');
-                        result.Append(t.GetString());
-                    }
-                }
+                throw new Exception("Gemini-Transkription: Antwort ist kein gueltiges JSON — " + ex.Message);
             }
 
-            return result.ToString().Trim();
+            using (doc)
+            {
+                var root = doc.RootElement;
+                if (root.ValueKind != JsonValueKind.Object)
+                    throw new Exception("Gemini-Transkription: unerwartete Antwortstruktur (kein JSON-Objekt)");
+
+                if (root.TryGetProperty("error", out var error))
+                    throw new Exception("Gemini-Transkription: " + error);
+
+                if (root.TryGetProperty("status", out var status) &&
+                    status.ValueKind == JsonValueKind.String &&
+                    !string.Equals(status.GetString(), "completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    DiagLog.Warn("GeminiBatch", "unexpected_status", ("status", status.GetString() ?? ""));
+                    throw new Exception($"Gemini-Transkription nicht abgeschlossen (status: {status.GetString()})");
+                }
+
+                bool hasSteps = root.TryGetProperty("steps", out var steps) && steps.ValueKind == JsonValueKind.Array;
+                bool hasOutputs = root.TryGetProperty("outputs", out var outputs) && outputs.ValueKind == JsonValueKind.Array;
+                if (!hasSteps && !hasOutputs)
+                {
+                    DiagLog.Warn("GeminiBatch", "unexpected_structure",
+                        ("preview", responseJson.Length > 300 ? responseJson.Substring(0, 300) + "…" : responseJson));
+                    throw new Exception("Gemini-Transkription: unerwartete Antwortstruktur (weder steps noch outputs)");
+                }
+
+                var result = new StringBuilder();
+                if (hasSteps) AppendTexts(steps, result);
+                if (hasOutputs) AppendTexts(outputs, result);
+                return result.ToString().Trim();
+            }
+        }
+
+        /// <summary>
+        /// Collects text parts from <c>steps[]</c>/<c>outputs[]</c>: each element is
+        /// either a text part itself (<c>{type:"text", text}</c>) or carries a
+        /// <c>content[]</c> array of such parts. Non-text and thought parts are skipped.
+        /// </summary>
+        private static void AppendTexts(JsonElement items, StringBuilder result)
+        {
+            foreach (var item in items.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object) continue;
+
+                if (item.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var part in content.EnumerateArray())
+                        AppendPart(part, result);
+                }
+                else
+                {
+                    AppendPart(item, result);
+                }
+            }
+        }
+
+        private static void AppendPart(JsonElement part, StringBuilder result)
+        {
+            if (part.ValueKind != JsonValueKind.Object) return;
+            if (part.TryGetProperty("type", out var type) &&
+                type.ValueKind == JsonValueKind.String &&
+                type.GetString() != "text")
+                return;
+            if (part.TryGetProperty("thought", out var thought) && thought.ValueKind == JsonValueKind.True)
+                return;
+
+            if (part.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
+            {
+                if (result.Length > 0) result.Append(' ');
+                result.Append(t.GetString());
+            }
         }
     }
 }

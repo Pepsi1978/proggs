@@ -92,16 +92,111 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
         return Task.CompletedTask;
     }
 
-    public async Task UploadAsync(string json, CancellationToken ct = default)
-    {
-        var drive = await BuildDriveAsync(ct);
-        // Cleanup rule (ported from BestJournal): list ALL promptboard-backup.json
-        // files in the appDataFolder, keep the newest, delete every duplicate.
-        // Prevents the "95% stale data on restore" accumulation problem.
-        var existingIds = await FindAllFileIdsAsync(drive, ct);
-        using var content = new MemoryStream(Encoding.UTF8.GetBytes(json));
+    private const int MaxSyncAttempts = 3;
 
-        if (existingIds.Count == 0)
+    // One merge/upload at a time per process (the service itself is transient).
+    private static readonly SemaphoreSlim SyncGate = new(1, 1);
+
+    /// <summary>
+    /// Fired (background thread) after a sync merged cloud rows into the local store —
+    /// an open PromptBoard panel should reload its lists.
+    /// </summary>
+    public static event Action? LocalStoreMerged;
+
+    /// <summary>
+    /// Uploads the PromptBoard backup — merge-safe. The caller's <paramref name="json"/> is
+    /// only a trigger: the service takes its own fresh snapshot (same shape) right before
+    /// merging, reads the cloud first and, if another device changed it since our last
+    /// sync, merges those changes into the local store BEFORE uploading. Before, the local
+    /// DB was uploaded unchecked and silently overwrote other devices' changes.
+    /// </summary>
+    public Task UploadAsync(string json, CancellationToken ct = default) => SyncAsync(ct);
+
+    /// <inheritdoc />
+    public async Task<bool> SyncAsync(CancellationToken ct = default)
+    {
+        await SyncGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
+            bool localChanged = false;
+            for (int attempt = 1; attempt <= MaxSyncAttempts; attempt++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var listing = await DriveHttp.ListAppDataFilesAsync(drive, BackupFileName, ct).ConfigureAwait(false);
+                string? cloudJson = await DownloadCombinedAsync(drive, listing, ct).ConfigureAwait(false);
+                var (localJson, snapshotUtc) = await PromptBoardBackupSync.BuildLocalJsonAsync(ct).ConfigureAwait(false);
+                string? baseJson = PromptBoardBackupSync.ReadBase(BackupFileName);
+
+                var outcome = PromptBoardBackupSync.Merge(localJson, cloudJson, baseJson);
+                bool applyFailed = false;
+                if (outcome.LocalChanges is { } changes)
+                {
+                    try
+                    {
+                        await PromptBoardBackupSync.ApplyLocalAsync(changes, snapshotUtc, ct).ConfigureAwait(false);
+                        localChanged = true;
+                        _logger.LogInformation("Drive sync merged {C} categories / {P} prompts from the cloud.",
+                            changes.Categories.Count, changes.Prompts.Count);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        // One odd cloud row must not stop local edits from leaving this PC:
+                        // still upload the merged state (the cloud rows stay in it), but keep
+                        // the old base so the next run retries the local apply honestly.
+                        applyFailed = true;
+                        _logger.LogWarning(ex, "Drive sync could not apply cloud rows locally; uploading anyway.");
+                        DiagLog.Write("PromptBoardSync", "local apply failed, upload continues", ("err", ex.Message));
+                    }
+                }
+
+                if (outcome.NeedsUpload || listing.Count > 1)
+                {
+                    // Optimistic concurrency: only overwrite the cloud state we merged with.
+                    var current = await DriveHttp.ListAppDataFilesAsync(drive, BackupFileName, ct).ConfigureAwait(false);
+                    if (!string.Equals(DriveHttp.VersionOf(current), DriveHttp.VersionOf(listing), StringComparison.Ordinal))
+                    {
+                        _logger.LogInformation("Drive backup changed during merge, merging again (attempt {A}).", attempt);
+                        continue;
+                    }
+                    await UploadJsonAsync(drive, current, outcome.MergedJson, ct).ConfigureAwait(false);
+                }
+
+                if (!applyFailed) PromptBoardBackupSync.WriteBase(BackupFileName, outcome.MergedJson);
+                if (localChanged) LocalStoreMerged?.Invoke();
+                return localChanged;
+            }
+            _logger.LogWarning("Drive sync gave up after {N} concurrent cloud changes; next run retries.", MaxSyncAttempts);
+            if (localChanged) LocalStoreMerged?.Invoke();
+            return localChanged;
+        }
+        finally
+        {
+            SyncGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Cloud state = newest copy, combined with every duplicate (row-wise newer wins, nothing
+    /// dropped), so the duplicate cleanup after the upload never deletes rows unseen.
+    /// </summary>
+    private static async Task<string?> DownloadCombinedAsync(
+        DriveService drive, System.Collections.Generic.IReadOnlyList<DriveFile> listing, CancellationToken ct)
+    {
+        string? combined = null;
+        for (int i = 0; i < listing.Count && i < 10; i++)
+        {
+            var json = await DriveHttp.DownloadTextAsync(drive, listing[i].Id, ct).ConfigureAwait(false);
+            combined = combined is null ? json : PromptBoardBackupSync.Merge(combined, json, null).MergedJson;
+        }
+        return combined;
+    }
+
+    private static async Task UploadJsonAsync(
+        DriveService drive, System.Collections.Generic.IReadOnlyList<DriveFile> listing, string json, CancellationToken ct)
+    {
+        using var content = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        if (listing.Count == 0)
         {
             var metadata = new DriveFile
             {
@@ -110,35 +205,31 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
             };
             var create = drive.Files.Create(metadata, content, "application/json");
             create.Fields = "id";
-            EnsureUploadCompleted(await create.UploadAsync(ct));
+            EnsureUploadCompleted(await create.UploadAsync(ct).ConfigureAwait(false));
+            return;
         }
-        else
-        {
-            var keepId = existingIds[0];
-            var update = drive.Files.Update(new DriveFile(), keepId, content, "application/json");
-            update.Fields = "id";
-            EnsureUploadCompleted(await update.UploadAsync(ct));
 
-            // Fire-and-forget cleanup of duplicates. Errors are logged but
-            // don't fail the upload — losing a stale duplicate is not fatal.
-            for (int i = 1; i < existingIds.Count; i++)
+        var update = drive.Files.Update(new DriveFile(), listing[0].Id, content, "application/json");
+        update.Fields = "id";
+        EnsureUploadCompleted(await update.UploadAsync(ct).ConfigureAwait(false));
+
+        // Duplicates are merged into the uploaded JSON above — safe to remove now.
+        for (int i = 1; i < listing.Count; i++)
+        {
+            try
             {
-                var dupId = existingIds[i];
-                try
-                {
-                    await drive.Files.Delete(dupId).ExecuteAsync(ct);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Duplicate-cleanup delete failed for {Id}", dupId);
-                }
+                await drive.Files.Delete(listing[i].Id).ExecuteAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // Losing a stale duplicate is not fatal; it is merged again next time.
             }
         }
     }
 
     public async Task<string?> DownloadLatestAsync(CancellationToken ct = default)
     {
-        var drive = await BuildDriveAsync(ct);
+        using var drive = await BuildDriveAsync(ct);
         // Always grab the newest backup, skipping any stale duplicates.
         var ids = await FindAllFileIdsAsync(drive, ct);
         if (ids.Count == 0) return null;
@@ -169,13 +260,9 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
 
     // ── internals ─────────────────────────────────
 
+    // Token refresh over the hardened client with a 20 s timeout - see DriveHttp.CreateFlow.
     private static GoogleAuthorizationCodeFlow BuildFlow(string id, string secret) =>
-        new(new GoogleAuthorizationCodeFlow.Initializer
-        {
-            ClientSecrets = new ClientSecrets { ClientId = id, ClientSecret = secret },
-            Scopes = new[] { DriveService.Scope.DriveAppdata, "openid", "email" },
-            DataStore = new NullDataStore(),
-        });
+        DriveHttp.CreateFlow(id, secret, DriveService.Scope.DriveAppdata, "openid", "email");
 
     private async Task<DriveService> BuildDriveAsync(CancellationToken ct)
     {

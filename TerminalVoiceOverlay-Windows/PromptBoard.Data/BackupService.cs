@@ -249,6 +249,147 @@ public sealed class BackupService : IBackupService
             PromptsRemoved: 0);
     }
 
+    public async Task<RestoreResult> MergeChangedAsync(
+        BackupDocument changes, DateTime skipIfLocalChangedAfterUtc, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(changes);
+        if (changes.SchemaVersion > CurrentSchemaVersion)
+        {
+            throw new InvalidOperationException(
+                $"Backup-Schema {changes.SchemaVersion} ist neuer als diese App-Version kennt ({CurrentSchemaVersion}).");
+        }
+        ValidateDocument(changes, RestoreMode.Merge);
+        long guardTicks = skipIfLocalChangedAfterUtc.Ticks;
+        int catsAdded = 0, catsUpdated = 0, promptsAdded = 0, promptsUpdated = 0, skipped = 0;
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        Dictionary<Guid, Category> existingCategories = await _db.Categories.ToDictionaryAsync(c => c.Id, ct);
+        foreach (CategoryDto c in changes.Categories)
+        {
+            if (existingCategories.TryGetValue(c.Id, out Category? existing))
+            {
+                if (existing.UpdatedAt.Ticks > guardTicks) { skipped++; continue; }
+                existing.Name = c.Name;
+                existing.BackgroundColorHex = c.BackgroundColorHex;
+                existing.SortOrder = c.SortOrder;
+                existing.Type = c.Type;
+                existing.UpdatedAt = c.UpdatedAtUtc;
+                catsUpdated++;
+            }
+            else
+            {
+                var added = new Category
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    BackgroundColorHex = c.BackgroundColorHex,
+                    SortOrder = c.SortOrder,
+                    Type = c.Type,
+                    CreatedAt = c.CreatedAtUtc,
+                    UpdatedAt = c.UpdatedAtUtc,
+                };
+                _db.Categories.Add(added);
+                existingCategories[c.Id] = added;
+                catsAdded++;
+            }
+        }
+        await _db.SaveChangesPreservingTimestampsAsync(ct);
+
+        Dictionary<Guid, Prompt> existingPrompts = await _db.Prompts.ToDictionaryAsync(p => p.Id, ct);
+
+        // Decide first which prompt rows are applied, so the single-active AI prompt can
+        // be switched in a separate save (the filtered unique index would otherwise trip
+        // over the statement order).
+        var toApply = new List<PromptDto>();
+        foreach (PromptDto p in changes.Prompts)
+        {
+            if (!existingCategories.ContainsKey(p.CategoryId))
+            {
+                _logger.LogWarning("Drive merge: prompt {Id} skipped, category {Cat} missing.", p.Id, p.CategoryId);
+                skipped++;
+                continue;
+            }
+            if (existingPrompts.TryGetValue(p.Id, out Prompt? existing))
+            {
+                if (existing.UpdatedAt.Ticks > guardTicks) { skipped++; continue; }
+                if ((existing is AiImprovementPrompt) != p.IsAiImprovementPrompt)
+                {
+                    _logger.LogWarning("Drive merge: prompt {Id} skipped, type differs from local row.", p.Id);
+                    skipped++;
+                    continue;
+                }
+            }
+            toApply.Add(p);
+        }
+
+        Guid? incomingActiveId = toApply
+            .Where(p => p.IsAiImprovementPrompt && p.IsActiveForImprovement)
+            .Select(p => (Guid?)p.Id)
+            .FirstOrDefault();
+        if (incomingActiveId.HasValue)
+        {
+            bool anyDeactivated = false;
+            foreach (AiImprovementPrompt ai in existingPrompts.Values.OfType<AiImprovementPrompt>())
+            {
+                if (ai.Id != incomingActiveId.Value && ai.IsActiveForImprovement)
+                {
+                    ai.IsActiveForImprovement = false;
+                    anyDeactivated = true;
+                }
+            }
+            if (anyDeactivated) await _db.SaveChangesPreservingTimestampsAsync(ct);
+        }
+
+        foreach (PromptDto p in toApply)
+        {
+            if (existingPrompts.TryGetValue(p.Id, out Prompt? existing))
+            {
+                existing.CategoryId = p.CategoryId;
+                existing.ShortLabel = p.ShortLabel;
+                existing.OriginalText = p.OriginalText;
+                existing.ImprovedText = p.ImprovedText;
+                existing.ActiveVersion = p.ActiveVersion;
+                existing.IsAlwaysOn = p.IsAlwaysOn;
+                existing.IsPrePrompt = p.IsPrePrompt;
+                existing.IsPostPrompt = p.IsPostPrompt;
+                existing.SortOrder = p.SortOrder;
+                existing.ImprovedByAiPromptId = p.ImprovedByAiPromptId;
+                existing.HotkeyNumber = p.HotkeyNumber;
+                existing.HotkeyLetter = p.HotkeyLetter;
+                existing.UpdatedAt = p.UpdatedAtUtc;
+                if (existing is AiImprovementPrompt existingAi)
+                {
+                    existingAi.GeminiModel = p.GeminiModel ?? "gemini-3.1-flash-lite";
+                    existingAi.IsActiveForImprovement = p.IsActiveForImprovement;
+                }
+                promptsUpdated++;
+            }
+            else
+            {
+                _db.Prompts.Add(FromDto(p));
+                promptsAdded++;
+            }
+        }
+        await _db.SaveChangesPreservingTimestampsAsync(ct);
+
+        if (changes.SeparatorTemplate is not null)
+        {
+            AppSettings? settings = await _db.AppSettings.OrderBy(s => s.CreatedAt).FirstOrDefaultAsync(ct);
+            if (settings is null)
+                _db.AppSettings.Add(new AppSettings { SeparatorTemplate = changes.SeparatorTemplate });
+            else
+                settings.SeparatorTemplate = changes.SeparatorTemplate;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        await tx.CommitAsync(ct);
+        _logger.LogInformation(
+            "Drive merge done: cats +{CA}/~{CU}, prompts +{PA}/~{PU}, skipped {S} (nothing deleted).",
+            catsAdded, catsUpdated, promptsAdded, promptsUpdated, skipped);
+        return new RestoreResult(catsAdded, catsUpdated, 0, promptsAdded, promptsUpdated, 0);
+    }
+
     private static PromptDto ToDto(Prompt p)
     {
         bool isAi = p is AiImprovementPrompt;

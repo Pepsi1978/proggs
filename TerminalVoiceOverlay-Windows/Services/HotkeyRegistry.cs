@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace TerminalVoiceOverlay.Services;
 
@@ -19,7 +19,9 @@ namespace TerminalVoiceOverlay.Services;
 /// stay inert — that's the desired safe default.
 ///
 /// The hook callback runs on a low-priority hook thread, so lookups MUST
-/// be lock-free / cheap — we use ConcurrentDictionary.
+/// be lock-free / cheap. Each map is an immutable snapshot: a writer builds a
+/// complete new Dictionary and publishes it with one atomic reference swap
+/// (Volatile.Write), so a reader never sees a half-cleared/half-filled map.
 /// </summary>
 public static class HotkeyRegistry
 {
@@ -30,8 +32,10 @@ public static class HotkeyRegistry
     /// </summary>
     public readonly record struct Entry(Guid PromptId, string EffectiveText);
 
-    private static readonly ConcurrentDictionary<int, Entry> _numberMap = new();
-    private static readonly ConcurrentDictionary<char, Entry> _letterMap = new();
+    // Never mutated after publication; replaced as a whole. Not marked
+    // 'volatile' because the fields are passed by ref to Volatile.Read/Write.
+    private static Dictionary<int, Entry> _numberMap = new();
+    private static Dictionary<char, Entry> _letterMap = new();
 
     /// <summary>
     /// Replaces the whole number map (Ctrl+1..9) atomically. Called by
@@ -41,13 +45,16 @@ public static class HotkeyRegistry
     /// </summary>
     public static void Replace(IEnumerable<KeyValuePair<int, Entry>> entries)
     {
-        _numberMap.Clear();
-        if (entries is null) return;
-        foreach (var kv in entries)
+        var map = new Dictionary<int, Entry>();
+        if (entries is not null)
         {
-            if (kv.Key < 1 || kv.Key > 9) continue;
-            _numberMap[kv.Key] = kv.Value;
+            foreach (var kv in entries)
+            {
+                if (kv.Key < 1 || kv.Key > 9) continue;
+                map[kv.Key] = kv.Value; // indexer: later duplicates win (as before)
+            }
         }
+        Volatile.Write(ref _numberMap, map);
     }
 
     /// <summary>
@@ -57,14 +64,17 @@ public static class HotkeyRegistry
     /// </summary>
     public static void ReplaceLetters(IEnumerable<KeyValuePair<char, Entry>> entries)
     {
-        _letterMap.Clear();
-        if (entries is null) return;
-        foreach (var kv in entries)
+        var map = new Dictionary<char, Entry>();
+        if (entries is not null)
         {
-            char upper = char.ToUpperInvariant(kv.Key);
-            if (upper < 'A' || upper > 'Z') continue;
-            _letterMap[upper] = kv.Value;
+            foreach (var kv in entries)
+            {
+                char upper = char.ToUpperInvariant(kv.Key);
+                if (upper < 'A' || upper > 'Z') continue;
+                map[upper] = kv.Value; // indexer: later duplicates win (as before)
+            }
         }
+        Volatile.Write(ref _letterMap, map);
     }
 
     /// <summary>
@@ -76,7 +86,7 @@ public static class HotkeyRegistry
     public static Entry? Lookup(int number)
     {
         if (number < 1 || number > 9) return null;
-        return _numberMap.TryGetValue(number, out var entry) ? entry : null;
+        return Volatile.Read(ref _numberMap).TryGetValue(number, out var entry) ? entry : null;
     }
 
     /// <summary>
@@ -87,14 +97,14 @@ public static class HotkeyRegistry
     {
         char upper = char.ToUpperInvariant(letter);
         if (upper < 'A' || upper > 'Z') return null;
-        return _letterMap.TryGetValue(upper, out var entry) ? entry : null;
+        return Volatile.Read(ref _letterMap).TryGetValue(upper, out var entry) ? entry : null;
     }
 
     /// <summary>True if any number hotkey is currently bound. The hook can
     /// use this as a fast pre-check to skip its Ctrl+1..9 branch entirely
     /// when nothing is registered.</summary>
-    public static bool HasAny => !_numberMap.IsEmpty;
+    public static bool HasAny => Volatile.Read(ref _numberMap).Count > 0;
 
     /// <summary>Equivalent to <see cref="HasAny"/> but for the letter map.</summary>
-    public static bool HasAnyLetter => !_letterMap.IsEmpty;
+    public static bool HasAnyLetter => Volatile.Read(ref _letterMap).Count > 0;
 }

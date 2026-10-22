@@ -68,8 +68,10 @@ public sealed class PromptHistoryDriveSync
         await SyncGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (!File.Exists(localPath)) return;
-            var bytes = await File.ReadAllBytesAsync(localPath, ct).ConfigureAwait(false);
+            // Shared read with retry: the store may File.Replace the file at the same
+            // moment (own process or the sibling overlay) - that used to fail the upload.
+            var bytes = AtomicFile.ReadAllBytesShared(localPath);
+            if (bytes is null) return;
             var local = JsonSerializer.Deserialize<List<PromptHistoryEntry>>(bytes, HistoryJsonOptions)
                 ?? throw new InvalidDataException("Local history JSON is empty.");
 
@@ -78,11 +80,15 @@ public sealed class PromptHistoryDriveSync
 
             if (ids.Count > 0)
             {
-                using var cloudBuffer = new MemoryStream();
-                EnsureDownloadCompleted(
-                    await drive.Files.Get(ids[0]).DownloadAsync(cloudBuffer, ct).ConfigureAwait(false));
-                var cloudJson = Encoding.UTF8.GetString(cloudBuffer.ToArray());
-                bytes = JsonSerializer.SerializeToUtf8Bytes(MergeEntries(local, cloudJson), HistoryJsonOptions);
+                // Merge EVERY cloud copy (duplicates included) before the duplicates are
+                // deleted below - otherwise their entries vanished unseen.
+                IEnumerable<PromptHistoryEntry> merged = local;
+                foreach (var id in ids.Take(10))
+                {
+                    var cloudJson = await DriveHttp.DownloadTextAsync(drive, id, ct).ConfigureAwait(false);
+                    merged = MergeEntries(merged, cloudJson);
+                }
+                bytes = JsonSerializer.SerializeToUtf8Bytes(merged.ToList(), HistoryJsonOptions);
             }
 
             using var content = new MemoryStream(bytes);
@@ -133,11 +139,17 @@ public sealed class PromptHistoryDriveSync
             using var drive = await BuildDriveAsync(ct).ConfigureAwait(false);
             var ids = await FindAllAsync(drive, HistoryFileName, ct).ConfigureAwait(false);
             if (ids.Count == 0) return null;
+            if (ids.Count == 1) return await DriveHttp.DownloadTextAsync(drive, ids[0], ct).ConfigureAwait(false);
 
-            using var buffer = new MemoryStream();
-            EnsureDownloadCompleted(
-                await drive.Files.Get(ids[0]).DownloadAsync(buffer, ct).ConfigureAwait(false));
-            return Encoding.UTF8.GetString(buffer.ToArray());
+            // Duplicates: hand the caller the union of all copies, so nothing is lost when
+            // the next upload removes the extra files.
+            var union = new List<PromptHistoryEntry>();
+            foreach (var id in ids.Take(10))
+            {
+                var json = await DriveHttp.DownloadTextAsync(drive, id, ct).ConfigureAwait(false);
+                union = MergeEntries(union, json);
+            }
+            return JsonSerializer.Serialize(union, HistoryJsonOptions);
         }
         finally
         {
@@ -161,13 +173,10 @@ public sealed class PromptHistoryDriveSync
 
     // ── Drive-Hilfsfunktionen (eigenstaendig, kein Re-Use aus dem Backup-Service) ──
 
-    private GoogleAuthorizationCodeFlow BuildFlow(string id, string secret) =>
-        new(new GoogleAuthorizationCodeFlow.Initializer
-        {
-            ClientSecrets = new ClientSecrets { ClientId = id, ClientSecret = secret },
-            Scopes = new[] { DriveService.Scope.DriveAppdata },
-            DataStore = new NullDataStore(),
-        });
+    // Token refresh over the hardened client with a 20 s timeout (was: Google's default
+    // HttpClient, 100 s, no connect timeout) - see DriveHttp.CreateFlow.
+    private static GoogleAuthorizationCodeFlow BuildFlow(string id, string secret) =>
+        DriveHttp.CreateFlow(id, secret, DriveService.Scope.DriveAppdata);
 
     private async Task<DriveService> BuildDriveAsync(CancellationToken ct)
     {

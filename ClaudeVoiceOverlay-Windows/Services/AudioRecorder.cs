@@ -58,6 +58,11 @@ namespace ClaudeVoiceOverlay.Services
         // Kleinster sinnvoller WAV-Inhalt (44 Byte Header + etwas PCM). Darunter
         // gilt die Aufnahme als leer/unbrauchbar.
         private const long MinUsableWavBytes = 44 + 320;
+        // Temp recordings are named <prefix><guid>.wav in %TEMP%.
+        private const string TempFilePrefix = "cvo_recording_";
+        // Leftovers (crash, locked delete) older than this are removed once per process.
+        private static readonly TimeSpan StaleTempAge = TimeSpan.FromDays(1);
+        private static int _staleSweepDone;
 
         private readonly int _sampleRate;
         private readonly int _channels;
@@ -126,6 +131,38 @@ namespace ClaudeVoiceOverlay.Services
         {
             _sampleRate = sampleRate;
             _channels = channels;
+            if (Interlocked.Exchange(ref _staleSweepDone, 1) == 0)
+                _ = Task.Run(SweepStaleTempFiles);
+        }
+
+        /// <summary>
+        /// Removes old temp recordings that a failed start or a crash left behind.
+        /// Runs once per process in the background; only files older than
+        /// <see cref="StaleTempAge"/> are touched, so a running recording is never affected.
+        /// </summary>
+        private static void SweepStaleTempFiles()
+        {
+            try
+            {
+                DateTime cutoff = DateTime.UtcNow - StaleTempAge;
+                int removed = 0;
+                foreach (var file in Directory.EnumerateFiles(Path.GetTempPath(), TempFilePrefix + "*.wav"))
+                {
+                    try
+                    {
+                        if (File.GetLastWriteTimeUtc(file) >= cutoff) continue;
+                        File.Delete(file);
+                        removed++;
+                    }
+                    catch { /* locked -> next start */ }
+                }
+                if (removed > 0)
+                    DiagLog.Write("Audio", "stale_temp_removed", ("count", removed));
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("Audio", "stale_temp_sweep_failed", ("err", ex.Message));
+            }
         }
 
         public bool Start() => StartAsync().GetAwaiter().GetResult();
@@ -165,7 +202,7 @@ namespace ClaudeVoiceOverlay.Services
         private bool StartCore()
         {
             var setupSw = Stopwatch.StartNew();
-            string tempFile = Path.Combine(Path.GetTempPath(), $"cvo_recording_{Guid.NewGuid():N}.wav");
+            string tempFile = Path.Combine(Path.GetTempPath(), $"{TempFilePrefix}{Guid.NewGuid():N}.wav");
             Session session;
 
             lock (_stateLock)
@@ -263,8 +300,8 @@ namespace ClaudeVoiceOverlay.Services
                     tempFile);
                 var (failureKind, failureText) = ClassifyStartError(session.StartError, ready);
                 SetStartFailure(failureKind, failureText);
-                KillWorker(session);
-                TryDeleteTempFile(tempFile);
+                KillWorker(session, waitForExit: true);
+                TryDeleteTempFile(tempFile, retry: true);
                 return false;
             }
 
@@ -274,8 +311,8 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     // Dispose oder ein unerwarteter Parallelstart waehrend READY.
                     SetStartFailure(RecordingStartFailure.AlreadyRunning, "Eine Aufnahme läuft bereits.");
-                    KillWorker(session);
-                    TryDeleteTempFile(tempFile);
+                    KillWorker(session, waitForExit: true);
+                    TryDeleteTempFile(tempFile, retry: true);
                     return false;
                 }
                 _session = session;
@@ -491,11 +528,16 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Prozess-Hilfen ──
 
-        private static void KillWorker(Session session)
+        private static void KillWorker(Session session, bool waitForExit = false)
         {
             try
             {
-                if (session.Proc is { } p && !p.HasExited) p.Kill(entireProcessTree: true);
+                if (session.Proc is { } p && !p.HasExited)
+                {
+                    p.Kill(entireProcessTree: true);
+                    // Kill is asynchronous; the worker still holds the WAV open until it is gone.
+                    if (waitForExit) p.WaitForExit(1000);
+                }
             }
             catch (Exception ex)
             {
@@ -536,10 +578,28 @@ namespace ClaudeVoiceOverlay.Services
         private static long ParseLong(string s, long fallback) =>
             long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : fallback;
 
-        private static void TryDeleteTempFile(string tempFile)
+        private static void TryDeleteTempFile(string tempFile, bool retry = false)
         {
-            try { if (File.Exists(tempFile)) File.Delete(tempFile); }
-            catch (Exception ex) { DiagLog.Write("Audio", "recording_temp_delete_failed", ("err", ex.Message), ("path", tempFile)); }
+            // retry: only on background start paths, a just-killed worker may need a moment to
+            // release the file handle (sharing violation otherwise).
+            int attempts = retry ? 3 : 1;
+            for (int i = 1; i <= attempts; i++)
+            {
+                try
+                {
+                    if (File.Exists(tempFile)) File.Delete(tempFile);
+                    return;
+                }
+                catch (Exception ex) when (i < attempts && ex is IOException or UnauthorizedAccessException)
+                {
+                    Thread.Sleep(200);
+                }
+                catch (Exception ex)
+                {
+                    DiagLog.Write("Audio", "recording_temp_delete_failed", ("err", ex.Message), ("path", tempFile));
+                    return;
+                }
+            }
         }
 
         private void SetStartFailure(RecordingStartFailure kind, string text)

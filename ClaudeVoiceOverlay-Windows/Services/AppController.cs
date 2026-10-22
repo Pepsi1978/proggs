@@ -44,6 +44,9 @@ namespace ClaudeVoiceOverlay.Services
 
         private static readonly object InputSequenceGate = new();
 
+        // Wait before restoring the previous clipboard: a busy target may read it late.
+        private const int ClipboardRestoreDelayMs = 1500;
+
         // ── Oeffentliche API: Async-Wrapper (haelt Win32-Sleeps vom UI-Thread) ──
 
         public static Task<bool> PasteTextAsync(string text, IntPtr appHwnd, bool autoEnter = false)
@@ -103,6 +106,7 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     if (!FocusTarget(appHwnd)) return false;
                     Thread.Sleep(40);
+                    if (!IsTargetForeground(appHwnd, "vor Enter")) return false;
                     return SendKeyScancode(VK_RETURN);
                 });
         }
@@ -139,12 +143,15 @@ namespace ClaudeVoiceOverlay.Services
             //     oder noch auf Button/Seiten-Root (tatsaechlich)? CHECKPOINT 'erwartet vs. ist'
             //     -> ok:false bedeutet, Strg+V wird gleich verpuffen. Live mitlesbar:
             //     Get-Content "$env:LOCALAPPDATA\ClaudeVoiceOverlay\diag.log" -Wait -Tail 30
-                if (!VerifyFocusCheckpoint("Fokus nach FocusTarget (vor Strg+V)")) return false;
+                if (!VerifyFocusCheckpoint("Fokus nach FocusTarget (vor Strg+V)", appHwnd)) return false;
 
             // 3. Gehaltene Hotkey-Modifier neutralisieren, sonst kommt "Win+Alt+Ctrl+V" an
                 ReleaseHeldModifiers();
 
             // 4. Echtes Strg+V mit Hardware-Scancodes
+                // Re-check right before SendInput: the foreground may have moved to
+                // another app since FocusTarget (Ctrl+V must never land elsewhere).
+                if (!IsTargetForeground(appHwnd, "vor Strg+V")) return false;
                 bool pasted = SendCtrlVScancode();
                 DiagLog.Write("Paste", "Strg+V gesendet", ("sent", pasted), ("autoEnter", autoEnter));
                 if (!pasted) return false;
@@ -154,7 +161,8 @@ namespace ClaudeVoiceOverlay.Services
                 if (autoEnter)
                 {
                     Thread.Sleep(300);
-                    if (!FocusTarget(appHwnd) || !SendKeyScancode(VK_RETURN)) return false;
+                    if (!FocusTarget(appHwnd) || !IsTargetForeground(appHwnd, "vor Auto-Enter")
+                        || !SendKeyScancode(VK_RETURN)) return false;
                 }
 
                 return true;
@@ -162,7 +170,11 @@ namespace ClaudeVoiceOverlay.Services
             finally
             {
                 // Chromium muss den Clipboard-Inhalt vor der Wiederherstellung konsumieren.
-                if (pasteSent) Thread.Sleep(600);
+                // A busy target may read the clipboard late; restoring too early makes it
+                // paste the OLD content (possibly a password, auto-submitted with Enter).
+                // RestoreClipboard additionally skips when the clipboard is no longer ours.
+                bool nothingToRestore = previous == null && previousHadContent;
+                if (pasteSent && !nothingToRestore) Thread.Sleep(ClipboardRestoreDelayMs);
                 RestoreClipboard(previous, previousHadContent, ownedClipboardSequence);
             }
         }
@@ -171,18 +183,21 @@ namespace ClaudeVoiceOverlay.Services
         {
             if (!FocusTarget(appHwnd)) return false;
             ReleaseHeldModifiers();
+            if (!IsTargetForeground(appHwnd, "vor Strg+V (Zwischenablage)")) return false;
             if (!SendCtrlVScancode()) return false;
 
             if (!autoEnter) return true;
 
             Thread.Sleep(300);
-            return FocusTarget(appHwnd) && SendKeyScancode(VK_RETURN);
+            return FocusTarget(appHwnd) && IsTargetForeground(appHwnd, "vor Auto-Enter (Zwischenablage)")
+                && SendKeyScancode(VK_RETURN);
         }
 
         private static bool ClearInputCore(IntPtr appHwnd)
         {
             if (!FocusTarget(appHwnd)) return false;
             ReleaseHeldModifiers();
+            if (!IsTargetForeground(appHwnd, "vor Strg+A")) return false;
             if (!SendComboScancode(Win32.VK_CONTROL, VK_A)) return false; // alles markieren
             Thread.Sleep(40);
             return SendKeyScancode(VK_BACKSPACE);      // loeschen
@@ -246,6 +261,8 @@ namespace ClaudeVoiceOverlay.Services
         {
             try
             {
+                var target = GetTargetInfo(appHwnd);
+
                 // 1. Das bereits fokussierte Element (folgt dem Fokus automatisch).
                 //    Chromium meldet das contenteditable je nach ARIA-Rolle als Edit
                 //    (Chat/Cowork) ODER Group (Code-Tab 'Prompt') — daher ControlType-
@@ -254,7 +271,7 @@ namespace ClaudeVoiceOverlay.Services
                 AutomationElement? focused = null;
                 try { focused = AutomationElement.FocusedElement; }
                 catch (Exception ex) { DiagLog.Write("UIA", "FocusedElement warf", ("err", ex.GetType().Name)); }
-                bool focusedUsable = focused != null && IsUsableFocusTarget(focused);
+                bool focusedUsable = focused != null && IsUsableFocusTarget(focused, target);
                 DiagLog.Write("UIA", "Pfad1 FocusedElement", ("el", Describe(focused)), ("usable", focusedUsable));
                 if (focusedUsable)
                 {
@@ -279,7 +296,7 @@ namespace ClaudeVoiceOverlay.Services
                 var root = AutomationElement.FromHandle(appHwnd);
                 if (root != null)
                 {
-                    var field = FindProseMirrorField(root, TreeScope.Descendants);
+                    var field = FindProseMirrorField(root, TreeScope.Descendants, target.WindowRect);
                     DiagLog.Write("UIA", "Pfad2 FindProseMirrorField(Descendants)", ("found", Describe(field)));
                     if (field != null && TrySetFocus(field))
                     {
@@ -298,7 +315,7 @@ namespace ClaudeVoiceOverlay.Services
                 if (renderWidget != IntPtr.Zero)
                 {
                     var rwRoot = AutomationElement.FromHandle(renderWidget);
-                    var field2 = rwRoot != null ? FindProseMirrorField(rwRoot, TreeScope.Subtree) : null;
+                    var field2 = rwRoot != null ? FindProseMirrorField(rwRoot, TreeScope.Subtree, target.WindowRect) : null;
                     DiagLog.Write("UIA", "Pfad3 FindProseMirrorField(Subtree)", ("found", Describe(field2)));
                     if (field2 != null && TrySetFocus(field2))
                     {
@@ -322,14 +339,17 @@ namespace ClaudeVoiceOverlay.Services
         /// Document ODER Group (Claude Chat/Cowork = Edit, Code-Tab 'Prompt' = Group)
         /// — daher ControlType-tolerant. Ausgeschlossen wird nur die Seiten-Wurzel
         /// (RootWebArea, bildschirmfuellend), die KEIN Eingabefeld ist (Root-Guard).
+        /// The element must also belong to the target process: FocusedElement is
+        /// system-wide, so a focused field of another app must never be accepted.
         /// </summary>
-        private static bool IsUsableFocusTarget(AutomationElement el)
+        private static bool IsUsableFocusTarget(AutomationElement el, TargetInfo target)
         {
             try
             {
                 var c = el.Current;
+                if (target.Pid == 0 || c.ProcessId != (int)target.Pid) return false;
                 if (!c.IsKeyboardFocusable) return false;
-                if (IsPageRoot(el)) return false;
+                if (IsPageRoot(el, target.WindowRect)) return false;
                 var ct = c.ControlType;
                 return ct == ControlType.Edit || ct == ControlType.Document || ct == ControlType.Group;
             }
@@ -338,21 +358,81 @@ namespace ClaudeVoiceOverlay.Services
 
         /// <summary>
         /// Erkennt die Web-/contenteditable-Wurzel der ganzen Seite (KEIN echtes Feld):
-        /// Chromium gibt ihr stabil die AutomationId "RootWebArea"; als zusaetzliche
-        /// Absicherung gilt auch ein quasi bildschirmfuellendes Rechteck als Wurzel.
-        /// Verhindert, dass Pfad 2/3 faelschlich die ganze Render-Flaeche fokussieren
-        /// (Fokus weg vom echten Feld -> Strg+V verpufft).
+        /// Chromium gibt ihr stabil die AutomationId "RootWebArea"; der Code-Tab-Container
+        /// heisst "dframe-main". Als zusaetzliche Absicherung gilt ein Element als Wurzel,
+        /// wenn es >= 80 % der Flaeche des Ziel-Fensters bedeckt — RELATIV zum Fenster,
+        /// damit die Regel auch bei kleinen Fenstern / 1080p greift (frueher feste
+        /// 2400x1400 px -> 'dframe-main' galt dort faelschlich als Eingabefeld).
+        /// Verhindert, dass Pfad 1/2/3 und der CHECKPOINT die ganze Render-Flaeche als
+        /// Feld werten (Fokus weg vom echten Feld -> Strg+V verpufft).
         /// </summary>
-        private static bool IsPageRoot(AutomationElement el)
+        private static bool IsPageRoot(AutomationElement el, Rect windowRect)
         {
             try
             {
                 var c = el.Current;
                 if (string.Equals(c.AutomationId, "RootWebArea", StringComparison.Ordinal)) return true;
-                var r = c.BoundingRectangle;
-                return !r.IsEmpty && r.Width >= 2400 && r.Height >= 1400; // ganze Render-Flaeche
+                if (string.Equals(c.AutomationId, "dframe-main", StringComparison.Ordinal)) return true;
+                return CoversMostOfWindow(c.BoundingRectangle, windowRect);
             }
             catch { return false; }
+        }
+
+        private const double PageRootAreaRatio = 0.8;
+
+        /// <summary>True when <paramref name="elementRect"/> covers at least 80 % of the window area.</summary>
+        private static bool CoversMostOfWindow(Rect elementRect, Rect windowRect)
+        {
+            if (elementRect.IsEmpty || windowRect.IsEmpty) return false;
+            double windowArea = windowRect.Width * windowRect.Height;
+            if (windowArea <= 0) return false;
+            var overlap = Rect.Intersect(elementRect, windowRect);
+            if (overlap.IsEmpty) return false;
+            return overlap.Width * overlap.Height >= windowArea * PageRootAreaRatio;
+        }
+
+        /// <summary>Target process id plus the target window's UIA bounding rectangle.</summary>
+        private readonly record struct TargetInfo(uint Pid, Rect WindowRect);
+
+        /// <summary>
+        /// Resolves PID and window rectangle of the target. The rectangle comes from UIA
+        /// (not GetWindowRect) so it is in the same coordinate space as element rects,
+        /// independent of the overlay's DPI awareness.
+        /// </summary>
+        private static TargetInfo GetTargetInfo(IntPtr appHwnd)
+        {
+            uint pid = 0;
+            Rect rect = Rect.Empty;
+            try
+            {
+                if (appHwnd != IntPtr.Zero)
+                {
+                    Win32.GetWindowThreadProcessId(appHwnd, out pid);
+                    var win = AutomationElement.FromHandle(appHwnd);
+                    if (win != null) rect = win.Current.BoundingRectangle;
+                }
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("UIA", "GetTargetInfo warf", ("err", ex.GetType().Name));
+            }
+            return new TargetInfo(pid, rect);
+        }
+
+        /// <summary>
+        /// Last-moment guard right before SendInput: the foreground window must still
+        /// belong to the target process, otherwise keystrokes would hit another app.
+        /// </summary>
+        private static bool IsTargetForeground(IntPtr appHwnd, string step)
+        {
+            var fg = Win32.GetForegroundWindow();
+            bool ok = fg != IntPtr.Zero && IsOwnedByProcess(fg, appHwnd);
+            if (!ok)
+                DiagLog.Write("Paste", "ABBRUCH: Vordergrund gehoert nicht (mehr) zur Ziel-App",
+                    ("step", step),
+                    ("fg", "0x" + fg.ToInt64().ToString("X")),
+                    ("hwnd", "0x" + appHwnd.ToInt64().ToString("X")));
+            return ok;
         }
 
         /// <summary>
@@ -371,7 +451,7 @@ namespace ClaudeVoiceOverlay.Services
                 string type = c.ControlType?.ProgrammaticName?.Replace("ControlType.", "") ?? "?";
                 return $"type={type} name='{Trunc(c.Name, 40)}' autoId='{Trunc(c.AutomationId, 24)}' "
                      + $"class='{Trunc(c.ClassName, 24)}' kbFocus={c.IsKeyboardFocusable} "
-                     + $"offscreen={c.IsOffscreen} rect=[{(int)r.X},{(int)r.Y},{(int)r.Width}x{(int)r.Height}]";
+                     + $"offscreen={c.IsOffscreen} rect=[{(int)r.X},{(int)r.Y},{(int)r.Width}x{(int)r.Height}] pid={c.ProcessId}";
             }
             catch (Exception ex) { return "describe-failed:" + ex.GetType().Name; }
         }
@@ -389,14 +469,15 @@ namespace ClaudeVoiceOverlay.Services
         /// in den Diagnose-Kanal — getrennt vom Fehler-Log, damit der Logik-Strang live verfolgbar
         /// bleibt. ok:false heisst: das gleich folgende Strg+V landet im Leeren. Best-effort, werf-frei.
         /// </summary>
-        private static bool VerifyFocusCheckpoint(string step)
+        private static bool VerifyFocusCheckpoint(string step, IntPtr appHwnd)
         {
             try
             {
+                var target = GetTargetInfo(appHwnd);
                 AutomationElement? focused = AutomationElement.FocusedElement;
-                bool ok = focused != null && IsUsableFocusTarget(focused);
+                bool ok = focused != null && IsUsableFocusTarget(focused, target);
                 DiagLog.Write("CHECKPOINT", step,
-                    ("intent", "Tastaturfokus auf echtem Eingabefeld (Edit/Document/Group, kein RootWebArea)"),
+                    ("intent", "Tastaturfokus auf echtem Eingabefeld der Ziel-App (Edit/Document/Group, kein Seiten-Container)"),
                     ("expected", "usable input field"),
                     ("actual", Describe(focused)),
                     ("ok", ok));
@@ -423,7 +504,7 @@ namespace ClaudeVoiceOverlay.Services
         /// kein Root) und der Pfad laeuft nur als Fallback (wenn Pfad1 versagt) — der U6-Performance-
         /// Hinweis wird damit bewusst und begrenzt in Kauf genommen (Korrektheit > wenige ms).
         /// </summary>
-        private static AutomationElement? FindProseMirrorField(AutomationElement root, TreeScope scope)
+        private static AutomationElement? FindProseMirrorField(AutomationElement root, TreeScope scope, Rect windowRect)
         {
             try
             {
@@ -440,7 +521,7 @@ namespace ClaudeVoiceOverlay.Services
                 AutomationElement? fallback = null;
                 foreach (AutomationElement el in matches)
                 {
-                    if (IsPageRoot(el)) continue; // RootWebArea (Rect-Regel) / 'dframe-main' etc. ueberspringen
+                    if (IsPageRoot(el, windowRect)) continue; // RootWebArea / 'dframe-main' / fensterfuellende Container ueberspringen
                     string cls = SafeClassName(el);
                     if (cls.IndexOf("ProseMirror", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         cls.IndexOf("tiptap", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -526,6 +607,27 @@ namespace ClaudeVoiceOverlay.Services
             };
         }
 
+        /// <summary>
+        /// Virtual-key based INPUT (no scancode). Needed for VK_MASK_KEY (0xE8), which has
+        /// no scancode: MapVirtualKey returns 0 and a scancode-mode event would be a no-op.
+        /// </summary>
+        private static Win32.INPUT VkInput(ushort vk, bool keyUp)
+            => new Win32.INPUT
+            {
+                type = Win32.INPUT_KEYBOARD,
+                u = new Win32.INPUTUNION
+                {
+                    ki = new Win32.KEYBDINPUT
+                    {
+                        wVk = vk,
+                        wScan = 0,
+                        dwFlags = keyUp ? Win32.KEYEVENTF_KEYUP : 0,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
         private static bool SendInputs(params Win32.INPUT[] inputs)
         {
             uint sent = Win32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Win32.INPUT>());
@@ -558,15 +660,24 @@ namespace ClaudeVoiceOverlay.Services
         /// Laesst gehaltene Nicht-Ctrl-Modifier (Win/Alt/Shift, beide Seiten) per
         /// KEYUP los, bevor Strg+V geht — sonst saehe Windows "Win+Alt+Ctrl+V".
         /// Nur tatsaechlich gedrueckte Tasten (GetAsyncKeyState) loslassen.
+        /// A bare Win/Alt KEYUP acts like a lone tap (Start menu / Electron menu bar),
+        /// so a mask key (VK 0xE8, like AutoHotkey's MenuMaskKey) is tapped first.
         /// </summary>
         private static void ReleaseHeldModifiers()
         {
             ushort[] mods = { 0x5B, 0x5C, 0xA4, 0xA5, 0xA0, 0xA1 }; // LWin RWin LAlt RAlt LShift RShift
             bool any = false;
+            bool maskSent = false;
             foreach (var vk in mods)
             {
                 if ((Win32.GetAsyncKeyState(vk) & 0x8000) != 0)
                 {
+                    bool isWinOrAlt = vk == 0x5B || vk == 0x5C || vk == 0xA4 || vk == 0xA5;
+                    if (isWinOrAlt && !maskSent)
+                    {
+                        SendInputs(VkInput(Win32.VK_MASK_KEY, false), VkInput(Win32.VK_MASK_KEY, true));
+                        maskSent = true;
+                    }
                     SendInputs(KeyInput(vk, true)); // nur KEYUP
                     any = true;
                 }
@@ -586,8 +697,9 @@ namespace ClaudeVoiceOverlay.Services
                 try
                 {
                     previous = ClipboardSnapshot.Capture(out previousHadContent);
-                    // copy:true → OLE-Flush, Inhalt bleibt nach Tool-Ende erhalten
-                    Clipboard.SetDataObject(text, true);
+                    // copy:true → OLE-Flush, Inhalt bleibt nach Tool-Ende erhalten.
+                    // Marked as excluded from clipboard history (Win+V) and cloud sync.
+                    Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(text), true);
                     ownedSequence = Win32.GetClipboardSequenceNumber();
                     return true;
                 }

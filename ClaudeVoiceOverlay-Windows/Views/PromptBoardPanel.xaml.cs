@@ -22,6 +22,7 @@ using PromptBoard.Core.Enums;
 using PromptBoard.Core.Models;
 using PromptBoard.Core.Repositories;
 using PromptBoard.Core.Services;
+using PromptBoard.Data.Repositories;
 using ClaudeVoiceOverlay.NativeMethods;
 using ClaudeVoiceOverlay.Services;
 
@@ -236,6 +237,7 @@ public partial class PromptBoardPanel : Window
     public PromptBoardPanel()
     {
         InitializeComponent();
+        ClaudeVoiceOverlay.Services.GoogleDriveBackupService.LocalStoreMerged += OnLocalStoreMerged;
         BtnAddCategory.Click     += async (_, _) => await AddCategoryAsync();
         BtnAddPrompt.Click       += async (_, _) => await AddPromptAsync();
         BtnSettings.Click        += async (_, _) => await ShowSettingsAsync();
@@ -245,6 +247,21 @@ public partial class PromptBoardPanel : Window
         BtnFilterActiveOnly.Click += async (_, _) => await ToggleAlwaysOnFilterAsync();
         UpdateFilterButtonVisual();
         RefreshSyncLabel();
+
+        // Datenverlust-Schutz (2026-06-22, ported from TVO): Steht aus der letzten
+        // Sitzung noch ein nicht abgeschickter Eingabe-Text im Draft (CVO: own file
+        // input-draft-cvo.txt), oeffnen wir das Eingabefenster beim Start automatisch —
+        // sein Konstruktor stellt den Text dann wieder her, sodass er sichtbar bleibt.
+        // Greift nur bei vorhandenem Draft, sonst NoOp.
+        Loaded += (_, _) =>
+        {
+            try
+            {
+                if (PromptInputWindow.HasPendingDraft() && !_inputWindowVisible)
+                    OpenInputWindow();
+            }
+            catch (Exception ex) { Console.WriteLine($"Draft auto-open failed: {ex.Message}"); }
+        };
 
         // Bei jedem Sichtbarwerden des Panels (Stern-Klick im Voice-Overlay)
         // die aktive Kategorienauswahl resetten, damit der Benutzer immer
@@ -326,7 +343,7 @@ public partial class PromptBoardPanel : Window
         var hit = e.OriginalSource as DependencyObject;
         while (hit is not null && hit != this)
         {
-            if (hit is Border b && b.Tag is Prompt) return;     // prompt row
+            if (hit is Border b && b.Tag is Guid) return;       // prompt row (Tag = prompt.Id)
             if (hit is System.Windows.Controls.Button) return;  // any tab/button
             hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
         }
@@ -441,6 +458,24 @@ public partial class PromptBoardPanel : Window
     /// </summary>
     private async Task ClearAllAlwaysOnAsync()
     {
+        // Reentrancy guard: a double click must not start a second run (which
+        // captured the green feedback as "original" and left it stuck).
+        if (_clearAllAlwaysOnRunning) return;
+        _clearAllAlwaysOnRunning = true;
+        try
+        {
+            await ClearAllAlwaysOnCoreAsync();
+        }
+        finally
+        {
+            _clearAllAlwaysOnRunning = false;
+        }
+    }
+
+    private bool _clearAllAlwaysOnRunning;
+
+    private async Task ClearAllAlwaysOnCoreAsync()
+    {
         // Guard against an accidental click: this button clears ALL Always-On
         // checks across every category (except "Allgemein") and is not trivially
         // reversible. Require an explicit confirmation first.
@@ -458,52 +493,50 @@ public partial class PromptBoardPanel : Window
 
         try
         {
-            using var scope = PromptBoardHost.Services.CreateScope();
-            var categoryRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
-            var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-
-            // Nur Name wird gelesen — Summary-Variante ohne Prompts-JOIN.
-            var categories = await categoryRepo.GetAllSummaryAsync();
-            int cleared = 0;
-            foreach (var cat in categories)
+            try
             {
-                // Kategorie "Allgemein" wird ausgenommen — die Haekchen
-                // dort sollen vom Reset-Button NICHT angefasst werden.
-                // Case-insensitiv und mit Trim, damit kleine Variationen
-                // ("allgemein", " Allgemein ") trotzdem matchen.
-                if (string.Equals(cat.Name?.Trim(), "Allgemein",
-                        StringComparison.OrdinalIgnoreCase))
+                // Off the dispatcher (SQLite async still blocks) and as ONE
+                // SaveChanges via a targeted patch instead of N full-row updates.
+                int cleared = await Task.Run(async () =>
                 {
-                    continue;
-                }
+                    using var scope = PromptBoardHost.Services.CreateScope();
+                    var categoryRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+                    var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
 
-                var prompts = await promptRepo.GetByCategoryAsync(cat.Id);
-                foreach (var p in prompts)
-                {
-                    if (p.IsAlwaysOn)
-                    {
-                        p.IsAlwaysOn = false;
-                        await promptRepo.UpdateAsync(p);
-                        cleared++;
-                    }
-                }
+                    // Kategorie "Allgemein" wird ausgenommen — die Haekchen
+                    // dort sollen vom Reset-Button NICHT angefasst werden.
+                    // Case-insensitiv und mit Trim, damit kleine Variationen
+                    // ("allgemein", " Allgemein ") trotzdem matchen.
+                    var excluded = (await categoryRepo.GetAllSummaryAsync())
+                        .Where(c => string.Equals(c.Name?.Trim(), "Allgemein", StringComparison.OrdinalIgnoreCase))
+                        .Select(c => c.Id)
+                        .ToHashSet();
+                    var ids = (await promptRepo.GetAllAsync())
+                        .Where(p => p.IsAlwaysOn && !excluded.Contains(p.CategoryId))
+                        .Select(p => p.Id)
+                        .ToList();
+                    return await promptRepo.PatchManyAsync(ids, p => p.IsAlwaysOn = false);
+                });
+                Console.WriteLine($"ClearAllAlwaysOn: {cleared} prompts entmarkiert (Allgemein uebersprungen).");
+                ScheduleAutoBackup();
             }
-            Console.WriteLine($"ClearAllAlwaysOn: {cleared} prompts entmarkiert (Allgemein uebersprungen).");
-            ScheduleAutoBackup();
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ClearAllAlwaysOn failed: {ex.Message}");
+            }
+
+            // RefreshAsync (nicht RenderPromptsAsync) — die DB-Schreibvorgaenge oben
+            // haben _allPromptsCache veraltet, RenderPromptsAsync allein wuerde die
+            // alten IsAlwaysOn-Flags weiter zeigen. Frank-Bug-Pattern 2026-05-09.
+            await RefreshAsync();
+
+            // Eine Sekunde gruen halten, dann zurueck auf den Original-Hintergrund.
+            await Task.Delay(1000);
         }
-        catch (Exception ex)
+        finally
         {
-            Console.WriteLine($"ClearAllAlwaysOn failed: {ex.Message}");
+            BtnClearAllChecks.Background = originalBackground;
         }
-
-        // RefreshAsync (nicht RenderPromptsAsync) — die DB-Schreibvorgaenge oben
-        // haben _allPromptsCache veraltet, RenderPromptsAsync allein wuerde die
-        // alten IsAlwaysOn-Flags weiter zeigen. Frank-Bug-Pattern 2026-05-09.
-        await RefreshAsync();
-
-        // Eine Sekunde gruen halten, dann zurueck auf den Original-Hintergrund.
-        await Task.Delay(1000);
-        BtnClearAllChecks.Background = originalBackground;
     }
 
     /// <summary>
@@ -588,26 +621,7 @@ public partial class PromptBoardPanel : Window
         if (_inputWindow is null)
         {
             _inputWindow = new PromptInputWindow();
-            _inputWindow.SubmitRequested += async text =>
-            {
-                if (_inputSubmitInProgress) return;
-                _inputSubmitInProgress = true;
-                var sourceWindow = _inputWindow;
-                try
-                {
-                    var submit = InputSubmitRequested;
-                    if (submit is null || !await submit(text)) return;
-
-                    if (ReferenceEquals(_inputWindow, sourceWindow))
-                        sourceWindow?.ClearInput();
-                    _persistedInputText = string.Empty;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Input submit failed: {ex.Message}");
-                }
-                finally { _inputSubmitInProgress = false; }
-            };
+            _inputWindow.SubmitRequested += async text => await HandleInputSubmitAsync(text);
             // Rechtsklick-Drag im Eingabefenster verschiebt die GANZE Gruppe.
             _inputWindow.GroupDragDelta += OnChildGroupDrag;
             // Stern-Klick in der Eingabe-Toolbar: Event 1:1 ans OverlayWindow
@@ -672,17 +686,28 @@ public partial class PromptBoardPanel : Window
                 }
                 catch (Exception ex) { Console.WriteLine($"Slot priority save failed: {ex.Message}"); }
             };
+            PromptInputWindow createdWindow = _inputWindow;
             _inputWindow.Closed += (_, _) =>
             {
-                _inputWindow = null;
-                _inputWindowVisible = false;
+                // Closed by any path other than CloseInputWindow (e.g. owner/app
+                // shutdown): still capture the unsent text into the session buffer.
+                if (ReferenceEquals(_inputWindow, createdWindow))
+                {
+                    SetPersistedInputText(createdWindow.GetCurrentText());
+                    _inputWindow = null;
+                    _inputWindowVisible = false;
+                }
             };
             // Frischen Window-Aufbau: noch nicht abgeschickten Text aus dem
             // letzten Stern-Zyklus zurueckschreiben, damit dem Benutzer beim
-            // Toggle nichts verloren geht.
+            // Toggle nichts verloren geht. The constructor already restored the
+            // draft file; the session buffer only wins when it is NEWER than the
+            // draft file (otherwise a stale buffer would overwrite a newer draft).
             if (!string.IsNullOrEmpty(_persistedInputText))
             {
-                _inputWindow.SetText(_persistedInputText);
+                var draftUtc = PromptInputWindow.GetDraftLastWriteUtc();
+                if (draftUtc is null || draftUtc.Value < _persistedInputTextUtc)
+                    _inputWindow.SetText(_persistedInputText);
             }
         }
         _inputWindow.DockTo(this, force: true);
@@ -704,10 +729,85 @@ public partial class PromptBoardPanel : Window
         // Noch nicht abgeschickten Text in den Session-Puffer sichern, BEVOR
         // das Fenster zerstoert wird. Beim naechsten Oeffnen wird der Text
         // in die InputBox des frischen Fensters zurueckgeschrieben.
-        _persistedInputText = win.GetCurrentText();
+        SetPersistedInputText(win.GetCurrentText());
         _inputWindow = null;
         _inputWindowVisible = false;
         win.Close();
+    }
+
+    /// <summary>When the session buffer was last set (UTC) — compared with the
+    /// draft file's write time so the newer of both wins on reopen.</summary>
+    private static DateTime _persistedInputTextUtc = DateTime.MinValue;
+
+    private static void SetPersistedInputText(string text)
+    {
+        _persistedInputText = text ?? string.Empty;
+        _persistedInputTextUtc = DateTime.UtcNow;
+    }
+
+    // ── Submit queue ──
+    /// <summary>A submit was requested while another one was still running; it is
+    /// executed right after the running one instead of being dropped.</summary>
+    private bool _inputSubmitPending;
+
+    /// <summary>
+    /// Runs the submit for the input window. Each request leads to exactly one
+    /// <see cref="InputSubmitRequested"/> call; a request arriving while one is in
+    /// flight is queued (pending flag) and executed afterwards with the text that
+    /// is in the box at that point. After a successful submit only the text that
+    /// was actually sent is removed — anything typed or dictated meanwhile stays.
+    /// </summary>
+    private async Task HandleInputSubmitAsync(string text)
+    {
+        if (_inputSubmitInProgress)
+        {
+            _inputSubmitPending = true;
+            return;
+        }
+        _inputSubmitInProgress = true;
+        try
+        {
+            while (true)
+            {
+                _inputSubmitPending = false;
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    try
+                    {
+                        var submit = InputSubmitRequested;
+                        if (submit is not null && await submit(text))
+                            RemoveSentInputText(text);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Input submit failed: {ex.Message}");
+                    }
+                }
+                if (!_inputSubmitPending || _closed) break;
+                // Queued request: send what is in the box now (sent part already removed).
+                text = _inputWindow?.GetCurrentText() ?? _persistedInputText;
+            }
+        }
+        finally
+        {
+            _inputSubmitInProgress = false;
+            _inputSubmitPending = false;
+        }
+    }
+
+    /// <summary>Removes exactly the sent text from the input (window or, if the
+    /// window was closed meanwhile, the session buffer + draft file).</summary>
+    private void RemoveSentInputText(string sent)
+    {
+        if (_inputWindow is not null)
+        {
+            _inputWindow.RemoveSentText(sent);
+            return;
+        }
+        var remaining = PromptInputWindow.StripSentText(_persistedInputText, sent);
+        if (remaining == _persistedInputText) return;
+        SetPersistedInputText(remaining);
+        PromptInputWindow.WriteDraftNow(remaining);
     }
 
     /// <summary>
@@ -840,7 +940,9 @@ public partial class PromptBoardPanel : Window
                 // fenster oeffnen wenn es noch nicht offen ist (sonst
                 // wuerde der Klick ins Leere gehen).
                 if (!_inputWindowVisible) OpenInputWindow();
-                _inputWindow?.SetText(text);
+                // Undoable: a typed/restored draft is kept in an undo buffer
+                // (Ctrl+Z brings it back) instead of being silently overwritten.
+                _inputWindow?.ReplaceTextUndoable(text, "Historie-Eintrag geladen");
             };
             _historyWindow.EntryEditRequested += async entry =>
             {
@@ -1012,11 +1114,21 @@ public partial class PromptBoardPanel : Window
     /// Override wuerde das Eingabefenster im Solo-Modus offen bleiben,
     /// obwohl der Benutzer alles dichtmachen wollte.
     /// </summary>
+    // A Drive sync merged rows from another device into the local store: reload the lists.
+    private void OnLocalStoreMerged() =>
+        Dispatcher.BeginInvoke(new Action(async () =>
+        {
+            try { await RefreshAsync(); } catch { /* next refresh catches up */ }
+        }));
+
     protected override void OnClosed(EventArgs e)
     {
+        ClaudeVoiceOverlay.Services.GoogleDriveBackupService.LocalStoreMerged -= OnLocalStoreMerged;
         try
         {
-            _inputWindow?.Close();
+            // CloseInputWindow first stores the unsent text in the session buffer;
+            // closing the window directly would leave the buffer stale.
+            CloseInputWindow();
             _historyWindow?.Close();
         }
         catch (Exception ex)
@@ -1091,32 +1203,48 @@ public partial class PromptBoardPanel : Window
     private async Task RefreshCoreAsync()
     {
         _allPromptsCacheStaleDueToError = false;
-        try
+        // A transient error (e.g. "database is locked" while the twin app writes
+        // the shared promptboard.db) must not wipe the board: retry once shortly,
+        // and if it still fails keep the last good snapshot instead of clearing
+        // categories/cache (which also pruned the active tab selection).
+        const int maxAttempts = 2;
+        for (int attempt = 1; ; attempt++)
         {
-            // SQLite's async APIs still perform blocking work. Keep the entire
-            // DbContext lifetime off the Dispatcher and publish only complete snapshots.
-            var snapshot = await Task.Run(async () =>
+            try
             {
-                using var scope = PromptBoardHost.Services.CreateScope();
-                var categoryRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
-                var categories = (await categoryRepo.GetAllSummaryAsync())
-                    .OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToList();
-                await EnsureCategoryColorsPersistedAsync(categoryRepo, categories);
-                var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-                var prompts = (await promptRepo.GetAllAsync()).ToList();
-                return (categories, prompts);
-            });
-            if (_closed || _refreshRequested) return;
-            _categories = snapshot.categories;
-            _allPromptsCache = snapshot.prompts;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"PromptBoardPanel refresh failed: {ex.Message}");
-            if (_closed || _refreshRequested) return;
-            _categories = new List<Category>();
-            _allPromptsCache = new List<Prompt>();
-            _allPromptsCacheStaleDueToError = true;
+                // SQLite's async APIs still perform blocking work. Keep the entire
+                // DbContext lifetime off the Dispatcher and publish only complete snapshots.
+                var snapshot = await Task.Run(async () =>
+                {
+                    using var scope = PromptBoardHost.Services.CreateScope();
+                    var categoryRepo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
+                    var categories = (await categoryRepo.GetAllSummaryAsync())
+                        .OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToList();
+                    await EnsureCategoryColorsPersistedAsync(categoryRepo, categories);
+                    var promptRepo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
+                    var prompts = (await promptRepo.GetAllAsync()).ToList();
+                    return (categories, prompts);
+                });
+                if (_closed || _refreshRequested) return;
+                _categories = snapshot.categories;
+                _allPromptsCache = snapshot.prompts;
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PromptBoardPanel refresh failed (attempt {attempt}/{maxAttempts}): {ex.Message}");
+                DiagLog.Error("PromptBoardPanel", "refresh_failed", ex, ("attempt", attempt));
+                if (_closed || _refreshRequested) return;
+                if (attempt < maxAttempts)
+                {
+                    await Task.Delay(300);
+                    if (_closed || _refreshRequested) return;
+                    continue;
+                }
+                // Keep the previous _categories/_allPromptsCache ("better stale than empty").
+                _allPromptsCacheStaleDueToError = true;
+                break;
+            }
         }
 
         // Lookup-Tabellen aktualisieren — einmal pro Refresh, statt pro Row
@@ -1199,8 +1327,10 @@ public partial class PromptBoardPanel : Window
                 h => string.Equals(h, cat.BackgroundColorHex, StringComparison.OrdinalIgnoreCase)) >= 0;
             if (alreadyPalette) continue;
 
-            cat.BackgroundColorHex = CategoryPaletteHex[i % CategoryPaletteHex.Length];
-            await repo.UpdateAsync(cat);
+            var hex = CategoryPaletteHex[i % CategoryPaletteHex.Length];
+            cat.BackgroundColorHex = hex;
+            // Targeted: only the color column, never a stale name/sort order.
+            await repo.PatchAsync(cat.Id, c => c.BackgroundColorHex = hex);
         }
     }
 
@@ -1346,6 +1476,16 @@ public partial class PromptBoardPanel : Window
                 {
                     Console.WriteLine($"Category DoDragDrop failed: {ex.Message}");
                 }
+                finally
+                {
+                    // Reset with Background priority: runs AFTER a trailing click
+                    // (Input priority) but also when no click follows at all — so the
+                    // next real tab click is never swallowed (same pattern as the slots).
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (_categoryDragJustHappenedId == thisCatId) _categoryDragJustHappenedId = null;
+                    }), DispatcherPriority.Background);
+                }
             };
 
             CategoryTabs.Children.Add(btn);
@@ -1384,6 +1524,9 @@ public partial class PromptBoardPanel : Window
             // SWAP: SortOrder von Quelle und Ziel tauschen. Wenn beide
             // versehentlich denselben Wert haben (kann nach Imports passieren),
             // mit lueckenloser Renumberierung als Fallback aufraeumen.
+            // Only the SortOrder column is written (targeted patch, one SaveChanges)
+            // — a cached category must never overwrite a newer name/color.
+            var newOrders = new Dictionary<Guid, int>();
             int sourceOrder = source.SortOrder;
             int targetOrder = target.SortOrder;
             if (sourceOrder == targetOrder)
@@ -1396,7 +1539,7 @@ public partial class PromptBoardPanel : Window
                     if (ordered[i].SortOrder != i)
                     {
                         ordered[i].SortOrder = i;
-                        await repo.UpdateAsync(ordered[i]);
+                        newOrders[ordered[i].Id] = i;
                     }
                 }
                 sourceOrder = source.SortOrder;
@@ -1405,8 +1548,9 @@ public partial class PromptBoardPanel : Window
 
             source.SortOrder = targetOrder;
             target.SortOrder = sourceOrder;
-            await repo.UpdateAsync(source);
-            await repo.UpdateAsync(target);
+            newOrders[source.Id] = targetOrder;
+            newOrders[target.Id] = sourceOrder;
+            await repo.PatchManyAsync(newOrders.Keys, c => c.SortOrder = newOrders[c.Id]);
 
             ScheduleAutoBackup();
         }
@@ -1481,7 +1625,7 @@ public partial class PromptBoardPanel : Window
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
             prompt.CategoryId = targetCategoryId;
-            await repo.UpdateAsync(prompt);
+            await repo.PatchAsync(prompt.Id, p => p.CategoryId = targetCategoryId);
             ScheduleAutoBackup();
         }
         catch (Exception ex)
@@ -1928,6 +2072,13 @@ public partial class PromptBoardPanel : Window
             finally
             {
                 EndDragVisual();
+                // Same reset pattern as the category tabs / slots: never leave the
+                // flag set, otherwise the next real click on this row is swallowed.
+                var draggedId = prompt.Id;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (_dragJustHappenedForRowId == draggedId) _dragJustHappenedForRowId = null;
+                }), DispatcherPriority.Background);
             }
         };
 
@@ -2080,16 +2231,19 @@ public partial class PromptBoardPanel : Window
             // an der neuen Position einfuegen ohne CategoryId-Aenderung.
             prompts.Insert(insertIdx, sourcePrompt);
 
-            // Lueckenlos neu nummerieren (0, 1, 2, ...) und alles schreiben.
+            // Lueckenlos neu nummerieren (0, 1, 2, ...) und alles schreiben —
+            // only the SortOrder column, in one SaveChanges (targeted patch).
+            var newOrders = new Dictionary<Guid, int>();
             for (int i = 0; i < prompts.Count; i++)
             {
                 if (prompts[i].SortOrder != i ||
                     (prompts[i].Id == sourceId && prompts[i].CategoryId == targetCategoryId))
                 {
                     prompts[i].SortOrder = i;
-                    await repo.UpdateAsync(prompts[i]);
+                    newOrders[prompts[i].Id] = i;
                 }
             }
+            await repo.PatchManyAsync(newOrders.Keys, p => p.SortOrder = newOrders[p.Id]);
 
             ScheduleAutoBackup();
         }
@@ -2230,7 +2384,7 @@ public partial class PromptBoardPanel : Window
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
             cat.Name = newName;
-            await repo.UpdateAsync(cat);
+            await repo.PatchAsync(cat.Id, c => c.Name = newName);
             ScheduleAutoBackup();
         }
         catch (Exception ex)
@@ -2264,10 +2418,11 @@ public partial class PromptBoardPanel : Window
 
     private async Task AddPromptAsync()
     {
-        // New prompts land in the first active category. Fallback to the first
-        // overall category if nothing is active, refuse if there is none yet.
-        Guid? targetCatId = _activeCategoryIds.FirstOrDefault();
-        if (targetCatId == Guid.Empty) targetCatId = _categories.FirstOrDefault()?.Id;
+        // New prompts land in the first active category IN TAB ORDER (a HashSet has
+        // no stable order). Fallback to the first overall category if nothing is
+        // active, refuse if there is none yet.
+        Guid? targetCatId = _categories.FirstOrDefault(c => _activeCategoryIds.Contains(c.Id))?.Id
+                            ?? _categories.FirstOrDefault()?.Id;
         if (targetCatId is null || targetCatId == Guid.Empty)
         {
             MessageBox.Show("Lege zuerst eine Kategorie an.", "PromptBoard",
@@ -2309,6 +2464,17 @@ public partial class PromptBoardPanel : Window
             };
             await repo.AddAsync(prompt);
             ScheduleAutoBackup();
+
+            // Make the new prompt visible: the first-selection filter only shows
+            // Always-On prompts, so leave it (like a tab click) and show the target
+            // category; otherwise just make sure the target category is active.
+            if (_alwaysOnFilterMode && !prompt.IsAlwaysOn)
+            {
+                _alwaysOnFilterMode = false;
+                _activeCategoryIds.Clear();
+                UpdateFilterButtonVisual();
+            }
+            _activeCategoryIds.Add(targetCatId.Value);
         }
         catch (Exception ex)
         {
@@ -2342,13 +2508,21 @@ public partial class PromptBoardPanel : Window
                 await StripHotkeyFromOthersAsync(repo, newHk, exceptId: prompt.Id);
             }
 
-            prompt.ShortLabel = result.ShortLabel;
-            prompt.OriginalText = result.OriginalText;
-            prompt.IsAlwaysOn = result.IsAlwaysOn;
-            prompt.IsPrePrompt = result.IsPrePrompt;
-            prompt.IsPostPrompt = result.IsPostPrompt;
-            prompt.HotkeyNumber = result.HotkeyNumber;
-            await repo.UpdateAsync(prompt);
+            // Targeted patch: text/label/pre-post are owned by the dialog and always
+            // written; Always-On and the hotkey only when the user changed them in
+            // the dialog — otherwise a newer value written meanwhile (twin app,
+            // checkbox, context menu) would be overwritten by the cached copy.
+            bool alwaysOnChanged = result.IsAlwaysOn != prompt.IsAlwaysOn;
+            bool hotkeyChanged = result.HotkeyNumber != prompt.HotkeyNumber;
+            await repo.PatchAsync(prompt.Id, p =>
+            {
+                p.ShortLabel = result.ShortLabel;
+                p.OriginalText = result.OriginalText;
+                p.IsPrePrompt = result.IsPrePrompt;
+                p.IsPostPrompt = result.IsPostPrompt;
+                if (alwaysOnChanged) p.IsAlwaysOn = result.IsAlwaysOn;
+                if (hotkeyChanged) p.HotkeyNumber = result.HotkeyNumber;
+            });
             ScheduleAutoBackup();
         }
         catch (Exception ex)
@@ -2391,13 +2565,15 @@ public partial class PromptBoardPanel : Window
                 allPrompts.AddRange(await localRepo.GetByCategoryAsync(c.Id));
         }
 
-        foreach (var other in allPrompts)
+        var ids = allPrompts
+            .Where(o => o.HotkeyNumber == hotkey && o.Id != exceptId)
+            .Select(o => o.Id)
+            .ToList();
+        // Targeted patch (re-checked on the fresh row): only the hotkey column.
+        await repo.PatchManyAsync(ids, p =>
         {
-            if (other.HotkeyNumber != hotkey) continue;
-            if (other.Id == exceptId) continue;
-            other.HotkeyNumber = null;
-            await repo.UpdateAsync(other);
-        }
+            if (p.HotkeyNumber == hotkey) p.HotkeyNumber = null;
+        });
     }
 
     /// <summary>
@@ -2422,14 +2598,15 @@ public partial class PromptBoardPanel : Window
                 allPrompts.AddRange(await localRepo.GetByCategoryAsync(c.Id));
         }
 
-        foreach (var other in allPrompts)
+        var ids = allPrompts
+            .Where(o => o.HotkeyLetter is char ol && char.ToUpperInvariant(ol) == upper && o.Id != exceptId)
+            .Select(o => o.Id)
+            .ToList();
+        // Targeted patch (re-checked on the fresh row): only the letter column.
+        await repo.PatchManyAsync(ids, p =>
         {
-            if (other.HotkeyLetter is not char ol) continue;
-            if (char.ToUpperInvariant(ol) != upper) continue;
-            if (other.Id == exceptId) continue;
-            other.HotkeyLetter = null;
-            await repo.UpdateAsync(other);
-        }
+            if (p.HotkeyLetter is char pl && char.ToUpperInvariant(pl) == upper) p.HotkeyLetter = null;
+        });
     }
 
     /// <summary>
@@ -2458,7 +2635,7 @@ public partial class PromptBoardPanel : Window
             }
 
             prompt.HotkeyLetter = upper;
-            await repo.UpdateAsync(prompt);
+            await repo.PatchAsync(prompt.Id, p => p.HotkeyLetter = upper);
             ScheduleAutoBackup();
         }
         catch (Exception ex)
@@ -2635,11 +2812,13 @@ public partial class PromptBoardPanel : Window
     private async Task ToggleAlwaysOnAsync(Prompt prompt)
     {
         prompt.IsAlwaysOn = !prompt.IsAlwaysOn;
+        bool newValue = prompt.IsAlwaysOn;
         try
         {
             using var scope = PromptBoardHost.Services.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<IPromptRepository>();
-            await repo.UpdateAsync(prompt);
+            // Targeted patch: only IsAlwaysOn — never the rest of the cached row.
+            await repo.PatchAsync(prompt.Id, p => p.IsAlwaysOn = newValue);
             ScheduleAutoBackup();
         }
         catch (Exception ex)
@@ -3152,6 +3331,9 @@ public partial class PromptBoardPanel : Window
         {
             string json = await File.ReadAllTextAsync(dlg.FileName);
             await ApplyBackupJsonAsync(json);
+            // Push the imported state to Drive (auto-backup also writes the
+            // last-sync marker), like every other mutation path.
+            ScheduleAutoBackup();
             MessageBox.Show("Import abgeschlossen.", "PromptBoard",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             await RefreshAsync();

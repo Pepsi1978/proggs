@@ -65,6 +65,21 @@ public sealed class CategoryRepository : ICategoryRepository
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Targeted update: loads the given categories fresh (tracked), applies
+    /// <paramref name="mutate"/> and saves in ONE SaveChanges — only the
+    /// columns the mutation changed are written (no stale full-row overwrite).
+    /// </summary>
+    public async Task<int> PatchManyAsync(IEnumerable<Guid> ids, Action<Category> mutate, CancellationToken ct = default)
+    {
+        var idList = ids.Distinct().ToList();
+        if (idList.Count == 0) return 0;
+        var tracked = await _db.Categories.Where(c => idList.Contains(c.Id)).ToListAsync(ct);
+        foreach (var c in tracked) mutate(c);
+        await _db.SaveChangesAsync(ct);
+        return tracked.Count;
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         Category? existing = await _db.Categories.FindAsync([id], ct);

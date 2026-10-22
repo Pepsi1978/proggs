@@ -3,6 +3,15 @@
 '
 ' Crash-Loop-Schutz: Wenn die .exe 5x hintereinander binnen 30 Sekunden crasht
 ' (typisch fuer Config-Fehler), bricht der Watcher ab statt endlos neu zu starten.
+'
+' Sauberes Beenden: Schreibt die App beim bewussten Beenden (Tray "Beenden",
+' oder Konfigurationsfehler / Exit-Code 3) die Marker-Datei
+'   %LOCALAPPDATA%\TerminalVoiceOverlay\clean-shutdown.marker
+' dann startet der Watcher sie NICHT neu, sondern beendet sich selbst.
+' Exit-Codes sieht der Watcher nicht (Start per WshShell.Run ohne Warten; er sieht
+' ohnehin nur den internen Watchdog-Prozess), daher der Marker als einziges Signal.
+' Ein frisch gestarteter Watcher loescht einen alten Marker (z. B. nach
+' rebuild-overlay.ps1, das alle Prozesse per Stop-Process beendet und neu startet).
 
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
@@ -29,6 +38,11 @@ If watcherCount > 1 Then
     WScript.Quit 0
 End If
 
+' Marker fuer sauberes Beenden (wird von der App geschrieben, siehe Kopfkommentar).
+' Stale marker from an earlier session must not block this fresh start.
+markerPath = WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\TerminalVoiceOverlay\clean-shutdown.marker"
+DeleteMarker markerPath
+
 ' Pfad zur .exe (publish-Ordner relativ zum Script)
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 exePath = fso.BuildPath(scriptDir, "publish\TerminalVoiceOverlay.exe")
@@ -44,6 +58,13 @@ lastStartTime = 0
 ' Endlosschleife: pruefen ob Prozess laeuft, sonst starten
 Do While True
     If Not IsProcessRunningAtPath("TerminalVoiceOverlay.exe", exePath) Then
+        ' App was ended on purpose (tray exit / config error): do not restart.
+        If fso.FileExists(markerPath) Then
+            LogMsg logPath, "Sauberes Beenden erkannt (Marker vorhanden) - kein Neustart, Watcher beendet."
+            DeleteMarker markerPath
+            WScript.Quit 0
+        End If
+
         nowMs = NowMilliseconds()
 
         ' Wenn die App vorher gestartet wurde und schnell wieder weg ist = Crash
@@ -106,6 +127,13 @@ Function IsProcessRunningAtPath(processName, expectedPath)
     Next
     On Error GoTo 0
 End Function
+
+Sub DeleteMarker(path)
+    On Error Resume Next
+    If fso.FileExists(path) Then fso.DeleteFile path, True
+    Err.Clear
+    On Error GoTo 0
+End Sub
 
 Function NowMilliseconds()
     NowMilliseconds = CDbl(DateDiff("s", DateSerial(2000, 1, 1), Now)) * 1000

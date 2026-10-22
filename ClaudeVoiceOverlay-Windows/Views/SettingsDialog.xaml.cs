@@ -30,9 +30,15 @@ public partial class SettingsDialog : Window
         _settingsSnapshot = current;
         _secretStore = PromptBoardHost.Get<PromptBoardSecretStore>();
 
-        // Non-secret settings stay in the SQLite DB (they sync via Drive backup).
-        GroqKeyBox.Text = current.GroqApiKey ?? string.Empty;
-        GeminiKeyBox.Text = current.GeminiApiKey ?? string.Empty;
+        // API keys may still live exclusively in the central SK .env. Show the
+        // effective values instead of making a working configuration look empty.
+        // A value prefilled from .env is only a display hint: it is saved to the DB
+        // (which takes precedence) ONLY if the user changes it — otherwise a later
+        // key swap in the .env would silently stop working.
+        Config? fileConfig = null;
+        try { fileConfig = Config.Load(); } catch { }
+        _groqEnvPrefill = PrefillFromEnv(GroqKeyBox, current.GroqApiKey, fileConfig?.GroqApiKey);
+        _geminiEnvPrefill = PrefillFromEnv(GeminiKeyBox, current.GeminiApiKey, fileConfig?.GeminiApiKey);
         // Transkriptions-Modell: Groq (0), Gemini Transcribe (1), Gemini Live (2).
         // Lebt als SK-Datei, deshalb ausserhalb des SettingsEditResult.
         TranscriptionEngineBox.SelectedIndex = TranscriptionEngineSetting.Current switch
@@ -41,9 +47,7 @@ public partial class SettingsDialog : Window
             TranscriptionEngineSetting.GeminiLive => 2,
             _ => 0,
         };
-        string? envWhisperModel = null;
-        try { envWhisperModel = Config.Load().WhisperModel; } catch { }
-        var groqModelInitial = (GroqModelSetting.Current ?? envWhisperModel) == GroqModelSetting.LargeV3 ? 1 : 0;
+        var groqModelInitial = (GroqModelSetting.Current ?? fileConfig?.WhisperModel) == GroqModelSetting.LargeV3 ? 1 : 0;
         GroqModelBox.SelectedIndex = groqModelInitial;
         TranscriptionModeBox.SelectedIndex = TranscriptionModeSetting.UseSmart ? 1 : 0;
         VocabularyBox.Text = LoadPersonalVocabulary();
@@ -94,8 +98,8 @@ public partial class SettingsDialog : Window
             });
 
             Result = new SettingsEditResult(
-                NullIfBlank(GroqKeyBox.Text),
-                NullIfBlank(GeminiKeyBox.Text),
+                KeyToPersist(GroqKeyBox.Text, _groqEnvPrefill),
+                KeyToPersist(GeminiKeyBox.Text, _geminiEnvPrefill),
                 SeparatorBox.Text ?? " ; ",
                 AutoHideCheck.IsChecked == true,
                 HorizontalCheck.IsChecked == true ? "horizontal" : "vertical");
@@ -107,6 +111,44 @@ public partial class SettingsDialog : Window
 
     private static string? NullIfBlank(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>The .env value shown in a key box because the DB had none
+    /// (null when the box shows the DB value).</summary>
+    private readonly string? _groqEnvPrefill;
+    private readonly string? _geminiEnvPrefill;
+
+    /// <summary>
+    /// Fills <paramref name="box"/> with the DB key, or — when the DB has none —
+    /// with the .env key as a marked hint. Returns the .env value used as prefill.
+    /// </summary>
+    private static string? PrefillFromEnv(System.Windows.Controls.TextBox box, string? dbValue, string? envValue)
+    {
+        if (!string.IsNullOrWhiteSpace(dbValue))
+        {
+            box.Text = dbValue;
+            return null;
+        }
+        var env = NullIfBlank(envValue);
+        box.Text = env ?? string.Empty;
+        if (env is not null)
+        {
+            box.ToolTip = "Wert aus der .env (SK\\VoiceOverlays) — wird nur gespeichert, wenn du ihn aenderst. " +
+                          "Unveraendert gilt weiter die .env.";
+            var normalForeground = box.Foreground;
+            box.Foreground = new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
+            box.TextChanged += (_, _) => box.Foreground = normalForeground;
+        }
+        return env;
+    }
+
+    /// <summary>Unchanged .env prefill → null (DB stays empty, .env keeps winning).</summary>
+    private static string? KeyToPersist(string? boxText, string? envPrefill)
+    {
+        var value = NullIfBlank(boxText);
+        if (envPrefill is not null && string.Equals(value, envPrefill, StringComparison.Ordinal))
+            return null;
+        return value;
+    }
 
     // Persoenliches Vokabular fuer die Gemini-Korrektur lebt als Datei im
     // SK-Ordner (gleicher Ort wie die Korrektur-Prompts). Dieses Feld ist nur
@@ -133,7 +175,8 @@ public partial class SettingsDialog : Window
         {
             var path = PersonalVocabularyPath;
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, (text ?? string.Empty).Trim() + "\n");
+            using var _ = CrossProcessLock.Acquire(SharedLockNames.Vocabulary, TimeSpan.FromSeconds(5), throwOnTimeout: false);
+            AtomicFile.WriteAllText(path, (text ?? string.Empty).Trim() + "\n");
         }
         catch (Exception ex)
         {

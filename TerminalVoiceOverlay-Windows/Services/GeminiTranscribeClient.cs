@@ -74,10 +74,12 @@ namespace TerminalVoiceOverlay.Services
         // Bloecke, weil einzelne Riesen-Frames die Verbindung sonst blockieren.
         private const int ChunkBytes = 32 * 1024;
 
-        // Stille-Fenster nach dem letzten Transkript-Frame. Gemessen kamen die
-        // Frames im Abstand von deutlich unter einer Sekunde; 1,5 s laesst
-        // Denkpausen des Modells zu, ohne den Knopf lange orange stehen zu lassen.
-        private const int IdleMs = 1500;
+        // Stille-Fenster nach dem letzten Transkript-Frame. The regular end is the
+        // turnComplete/generationComplete signal; this idle limit is only the
+        // safety net when that signal never arrives. 1.5 s cut long dictations
+        // off after the first fragment (partial text returned as complete), so
+        // it is generous now.
+        private const int IdleMs = 8000;
 
         // Wartezeit auf das ERSTE Transkript-Frame. Die Live-API verarbeitet die
         // Aufnahme in ihrem eigenen Takt, der erste Text kann ein paar Sekunden
@@ -176,8 +178,12 @@ namespace TerminalVoiceOverlay.Services
             // 5) Fragmente einsammeln, bis das Schlusssignal kommt.
             var collector = new TranscriptCollector();
             var buffer = new byte[64 * 1024];
-            var frame = new StringBuilder();
+            // Raw bytes until EndOfMessage: decoding each fragment separately broke
+            // multi-byte UTF-8 characters (umlauts) split across fragment borders.
+            using var frame = new MemoryStream();
             bool done = false;
+            bool idleEnd = false;
+            bool closedEarly = false;
 
             try
             {
@@ -193,9 +199,10 @@ namespace TerminalVoiceOverlay.Services
                     }
                     catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                     {
-                        // Kein Schlusssignal von der API — Stille ist das Ende.
-                        DiagLog.Write("GeminiSTT", "idle_end",
+                        // Kein Schlusssignal von der API innerhalb des Leerlauf-Fensters.
+                        DiagLog.Warn("GeminiSTT", "idle_end_without_complete",
                             ("hasText", collector.HasText), ("ms", sw.ElapsedMilliseconds));
+                        idleEnd = true;
                         break;
                     }
 
@@ -204,14 +211,15 @@ namespace TerminalVoiceOverlay.Services
                         DiagLog.Warn("GeminiSTT", "server_closed",
                             ("status", result.CloseStatus?.ToString() ?? "?"),
                             ("reason", ws.CloseStatusDescription ?? ""));
+                        closedEarly = true;
                         break;
                     }
 
-                    frame.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                    frame.Write(buffer, 0, result.Count);
                     if (!result.EndOfMessage) continue;
 
-                    var payload = frame.ToString();
-                    frame.Clear();
+                    var payload = Encoding.UTF8.GetString(frame.GetBuffer(), 0, (int)frame.Length);
+                    frame.SetLength(0);
                     done = HandleServerMessage(payload, collector);
                 }
             }
@@ -242,6 +250,22 @@ namespace TerminalVoiceOverlay.Services
             }
 
             var text = collector.Result();
+
+            // Only a turn that ended with turnComplete/generationComplete is known to be
+            // complete. Everything else is a technical failure (-> Groq fallback in
+            // SpeechToTextRouter), never "no speech" and never a silently partial text.
+            if (!done)
+            {
+                if (closedEarly || !idleEnd)
+                    throw new Exception("Gemini-Transkription: Verbindung ohne Abschluss-Signal beendet"
+                        + (collector.HasText ? " (Teiltext verworfen)" : ""));
+                if (!collector.HasText)
+                    throw new Exception("Gemini-Transkription: keine Antwort und kein Abschluss-Signal");
+                // Idle safety net with text: the stream has been silent for IdleMs after
+                // the last fragment. Accept, but leave a clear trace in the log.
+                DiagLog.Warn("GeminiSTT", "accepted_without_complete", ("chars", text.Length));
+            }
+
             if (string.IsNullOrWhiteSpace(text))
             {
                 // Gleiches Verhalten wie der Groq-Stille-Schutz: werfen statt

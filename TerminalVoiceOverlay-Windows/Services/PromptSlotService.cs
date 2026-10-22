@@ -19,7 +19,10 @@ public sealed class PromptSlotEntry
 {
     public int Number { get; set; }
     public string Text { get; set; } = string.Empty;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    // Missing "updatedAt" in the JSON must mean "oldest", not "now" - otherwise an
+    // old entry without the field wins every merge. Unix epoch (not MinValue): the
+    // history merge already normalizes <=1970 to epoch, and macOS decodes it safely.
+    public DateTime UpdatedAt { get; set; } = DateTime.UnixEpoch;
 
     /// <summary>
     /// KI-generierte Kurz-Zusammenfassung (6-8 Woerter) WOFUER dieser Prompt
@@ -61,7 +64,10 @@ public sealed class PromptSlotService
     private readonly string _baseDir;
     private readonly string _slotsFilePath;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly Mutex _storeMutex = new(false, StoreMutexName);
+    // Created in the constructor (not as a field initializer) so a failure can be
+    // handled: an elevated creator used to give a non-elevated sibling an
+    // UnauthorizedAccessException in the constructor -> crash loop. Null = no lock.
+    private readonly Mutex? _storeMutex;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -78,6 +84,7 @@ public sealed class PromptSlotService
             "slots");
         _slotsFilePath = Path.Combine(_baseDir, "prompt-slots.json");
         Directory.CreateDirectory(_baseDir);
+        _storeMutex = CrossProcessLock.CreateSharedMutex(StoreMutexName);
     }
 
     /// <summary>Pfad zur lokalen JSON-Datei (Diagnose / Cloud-Sync).</summary>
@@ -408,7 +415,8 @@ public sealed class PromptSlotService
         try
         {
             ct.ThrowIfCancellationRequested();
-            using var stream = File.OpenRead(_slotsFilePath);
+            using var stream = new FileStream(_slotsFilePath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
             var list = JsonSerializer.Deserialize<List<PromptSlotEntry>>(stream, JsonOptions);
             return list ?? throw new JsonException("PromptSlot JSON contained null.");
         }
@@ -435,10 +443,9 @@ public sealed class PromptSlotService
             }
             ct.ThrowIfCancellationRequested();
 
-            if (File.Exists(_slotsFilePath))
-                File.Replace(tmp, _slotsFilePath, destinationBackupFileName: null);
-            else
-                File.Move(tmp, _slotsFilePath);
+            // Short retry: the Drive upload path or the sibling overlay may hold the
+            // file open for a moment (File.Replace then fails with a sharing violation).
+            AtomicFile.ReplaceWithRetry(tmp, _slotsFilePath);
         }
         finally
         {
@@ -451,6 +458,13 @@ public sealed class PromptSlotService
         bool ownsMutex = false;
         try
         {
+            if (_storeMutex is null)
+            {
+                // Mutex unavailable (see constructor): run without the cross-process
+                // lock rather than crash; the SemaphoreSlim still serializes this process.
+                ct.ThrowIfCancellationRequested();
+                return action();
+            }
             try
             {
                 if (ct.CanBeCanceled)
@@ -474,7 +488,7 @@ public sealed class PromptSlotService
         }
         finally
         {
-            if (ownsMutex) _storeMutex.ReleaseMutex();
+            if (ownsMutex) _storeMutex?.ReleaseMutex();
         }
     }
 

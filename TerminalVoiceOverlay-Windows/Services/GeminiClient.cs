@@ -24,11 +24,13 @@ namespace TerminalVoiceOverlay.Services
         private static readonly HttpClient SharedHttp = new HttpClient(
             ResilientHttp.CreateHandler(TimeSpan.FromMinutes(5)))
         {
-            Timeout = TimeSpan.FromSeconds(15)
+            // Hard ceiling only; the real per-call limit is the length-based
+            // CancellationToken in SendWithRetry (see AttemptTimeout).
+            Timeout = TimeSpan.FromSeconds(90)
         };
         private static readonly int[] RetryableStatusCodes = { 429, 500, 503 };
-        private const int MaxRetries = 0;
-        private static readonly int[] DelaysMs = { 2000, 4000, 8000, 16000, 32000 };
+        private const int MaxRetries = 1;
+        private static readonly int[] DelaysMs = { 1500 };
 
         private const string PromptTemplate = @"ROLLE:
 Du bist ein technischer Redakteur, spezialisiert auf die Aufbereitung von Spracheingaben für KI-Coding-Tools. Du verstehst Programmierkonzepte und bewahrst technische Präzision, während du gesprochene Sprache in klare schriftliche Anweisungen umwandelst.
@@ -601,10 +603,31 @@ Der zu verarbeitende Whisper-Text folgt nun:
             return cfg;
         }
 
-        private async Task<string> SendWithRetry(string prompt, int attempt)
+        // Per-attempt timeout grows with the prompt (long dictations need more
+        // output tokens / thinking): 20 s base + 1 s per 250 chars, max 60 s.
+        // At most one retry, and the whole call never exceeds TotalBudgetSeconds;
+        // after that the caller falls back to the raw transcript.
+        private const int BaseTimeoutSeconds = 20;
+        private const int MaxAttemptTimeoutSeconds = 60;
+        private const int CharsPerExtraSecond = 250;
+        private const int TotalBudgetSeconds = 75;
+        // A retry is only worth it with at least this much budget left.
+        private const int MinRetryBudgetSeconds = 10;
+
+        private static TimeSpan AttemptTimeout(int promptChars) =>
+            TimeSpan.FromSeconds(Math.Min(MaxAttemptTimeoutSeconds, BaseTimeoutSeconds + promptChars / CharsPerExtraSecond));
+
+        private async Task<string> SendWithRetry(string prompt, int attempt, Stopwatch? budget = null)
         {
+            budget ??= Stopwatch.StartNew();
             var totalSw = Stopwatch.StartNew();
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
+
+            var remaining = TimeSpan.FromSeconds(TotalBudgetSeconds) - budget.Elapsed;
+            var timeout = AttemptTimeout(prompt.Length);
+            if (remaining < timeout) timeout = remaining;
+            if (timeout <= TimeSpan.Zero)
+                throw new TimeoutException($"Gemini: Zeitbudget von {TotalBudgetSeconds} s erschoepft");
 
             var payload = new
             {
@@ -625,18 +648,36 @@ Der zu verarbeitende Whisper-Text folgt nun:
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
             request.Headers.Add("x-goog-api-key", _apiKey);
-            DiagLog.Write("Gemini", "http_start", ("model", _model), ("attempt", attempt), ("promptChars", prompt.Length), ("payloadBytes", Encoding.UTF8.GetByteCount(json)));
+            DiagLog.Write("Gemini", "http_start", ("model", _model), ("attempt", attempt), ("promptChars", prompt.Length),
+                ("payloadBytes", Encoding.UTF8.GetByteCount(json)), ("timeoutS", (int)timeout.TotalSeconds));
 
             int statusCode;
             bool isSuccessStatusCode;
             string body;
             string retryAfter;
-            using (var response = await SharedHttp.SendAsync(request).ConfigureAwait(false))
+            using var cts = new System.Threading.CancellationTokenSource(timeout);
+            try
             {
-                statusCode = (int)response.StatusCode;
-                isSuccessStatusCode = response.IsSuccessStatusCode;
-                retryAfter = response.Headers.RetryAfter?.ToString() ?? "";
-                body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                using (var response = await SharedHttp.SendAsync(request, cts.Token).ConfigureAwait(false))
+                {
+                    statusCode = (int)response.StatusCode;
+                    isSuccessStatusCode = response.IsSuccessStatusCode;
+                    retryAfter = response.Headers.RetryAfter?.ToString() ?? "";
+                    body = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException) when (cts.IsCancellationRequested)
+            {
+                DiagLog.Warn("Gemini", "timeout", ("attempt", attempt), ("timeoutS", (int)timeout.TotalSeconds),
+                    ("promptChars", prompt.Length));
+                throw new TimeoutException($"Gemini antwortete nicht innerhalb von {(int)timeout.TotalSeconds} s");
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == null && CanRetry(attempt, budget))
+            {
+                DiagLog.Warn("Gemini", "retry_scheduled", ("status", "network"), ("attempt", attempt),
+                    ("delayMs", DelaysMs[attempt]), ("error", ex.Message));
+                await Task.Delay(DelaysMs[attempt]).ConfigureAwait(false);
+                return await SendWithRetry(prompt, attempt + 1, budget).ConfigureAwait(false);
             }
             DiagLog.Perf("Gemini", "http_response", totalSw, ("status", statusCode), ("attempt", attempt), ("retryAfter", retryAfter));
 
@@ -647,17 +688,22 @@ Der zu verarbeitende Whisper-Text folgt nun:
                 return text;
             }
 
-            if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)
+            if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && CanRetry(attempt, budget))
             {
                 Console.WriteLine($"Gemini {statusCode} - Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms...");
                 DiagLog.Warn("Gemini", "retry_scheduled", ("status", statusCode), ("attempt", attempt), ("delayMs", DelaysMs[attempt]));
                 await Task.Delay(DelaysMs[attempt]).ConfigureAwait(false);
-                return await SendWithRetry(prompt, attempt + 1).ConfigureAwait(false);
+                return await SendWithRetry(prompt, attempt + 1, budget).ConfigureAwait(false);
             }
 
             DiagLog.Warn("Gemini", "http_error", ("status", statusCode), ("body", body.Length > 500 ? body.Substring(0, 500) + "…" : body));
             throw new Exception($"Gemini API Fehler {statusCode}: {body}");
         }
+
+        private static bool CanRetry(int attempt, Stopwatch budget) =>
+            attempt < MaxRetries
+            && TimeSpan.FromSeconds(TotalBudgetSeconds) - budget.Elapsed
+               - TimeSpan.FromMilliseconds(DelaysMs[attempt]) >= TimeSpan.FromSeconds(MinRetryBudgetSeconds);
 
         private static string ExtractText(string responseJson)
         {

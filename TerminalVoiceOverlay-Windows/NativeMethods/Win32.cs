@@ -149,6 +149,10 @@ namespace TerminalVoiceOverlay.NativeMethods
         // both left- and right-hand Win/Alt keys via VK_MENU/VK_LWIN/VK_RWIN.
         public const ushort VK_LWIN    = 0x5B;
         public const ushort VK_RWIN    = 0x5C;
+        // Unassigned virtual key used as "menu mask" (like AutoHotkey's MenuMaskKey):
+        // tapped before a synthetic Win/Alt KEYUP so Windows does not treat the release
+        // as a lone tap (Start menu / app menu bar). Must be sent as VK, it has no scancode.
+        public const ushort VK_MASK_KEY = 0xE8;
 
         // ── Low-Level Keyboard Hook (fuer Push-to-Talk) ──
         // RegisterHotKey kann nur KeyDown — fuer Push-to-Talk brauchen wir

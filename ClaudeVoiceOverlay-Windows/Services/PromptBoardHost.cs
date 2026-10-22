@@ -211,11 +211,11 @@ public static class PromptBoardHost
             // sehen ob der Bootstrap erfolgreich war.
             try
             {
-                string logPath = Path.Combine(Path.GetTempPath(), "TVO-hotkey.log");
-                File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} BOOTSTRAP {msg}{Environment.NewLine}");
+                // Shared rotating hotkey log (1 MB, per app: TVO-/CVO-hotkey.log).
+                AutoEnterStatusServer.AppendHotkeyLog("BOOTSTRAP", msg);
                 foreach (var kv in letterEntries)
                 {
-                    File.AppendAllText(logPath, $"{DateTime.Now:HH:mm:ss.fff} BOOTSTRAP letter='{kv.Key}' textLen={kv.Value.EffectiveText.Length}{Environment.NewLine}");
+                    AutoEnterStatusServer.AppendHotkeyLog("BOOTSTRAP", $"letter='{kv.Key}' textLen={kv.Value.EffectiveText.Length}");
                 }
             }
             catch { /* never block startup */ }

@@ -68,7 +68,7 @@ report to Frank. Never pass `-Force` unless Frank explicitly says so.
 - **Target apps**: Windows Terminal, PowerShell, CMD (window class/title matching in TerminalWatcher.cs)
 - **Thread safety**: async/await with Dispatcher.Invoke for UI thread
 - **Retries**: Task.Delay (never Thread.Sleep on UI thread)
-- **Clipboard restore**: Save clipboard before paste, restore after 500ms Task.Delay
+- **Clipboard restore**: Save clipboard before paste, restore after 1500ms Task.Delay (only if the clipboard still holds our text)
 
 ## Sister Project (CRITICAL)
 

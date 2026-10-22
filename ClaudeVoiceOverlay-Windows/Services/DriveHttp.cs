@@ -1,10 +1,19 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Download;
 using Google.Apis.Drive.v3;
 using Google.Apis.Http;
 using Google.Apis.Services;
+using Google.Apis.Util.Store;
+using DriveFile = Google.Apis.Drive.v3.Data.File;
 
 namespace ClaudeVoiceOverlay.Services
 {
@@ -41,6 +50,74 @@ namespace ClaudeVoiceOverlay.Services
             });
             service.HttpClient.Timeout = RequestTimeout;
             return service;
+        }
+
+        /// <summary>
+        /// Timeout for the OAuth token refresh. Before, the flow used Google's default
+        /// HttpClient (100 s, no connect timeout) even though Drive calls were hardened —
+        /// a dead network stalled every sync for 100 s at the refresh step.
+        /// </summary>
+        public static readonly TimeSpan TokenTimeout = TimeSpan.FromSeconds(20);
+
+        /// <summary>
+        /// OAuth flow for all five Drive services, with the same hardened handler as the
+        /// Drive calls (connect timeout + keepalive) and a 20 s total timeout.
+        /// </summary>
+        public static GoogleAuthorizationCodeFlow CreateFlow(string clientId, string clientSecret, params string[] scopes)
+        {
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = new ClientSecrets { ClientId = clientId, ClientSecret = clientSecret },
+                Scopes = scopes,
+                DataStore = new NullDataStore(),
+                HttpClientFactory = new ResilientDriveHttpClientFactory(),
+            });
+            flow.HttpClient.Timeout = TokenTimeout;
+            return flow;
+        }
+
+        /// <summary>
+        /// Every non-trashed file with this name in the appDataFolder, newest first, with
+        /// the metadata needed for a "did the cloud change since I read it?" check.
+        /// </summary>
+        public static async Task<List<DriveFile>> ListAppDataFilesAsync(
+            DriveService drive, string fileName, CancellationToken ct)
+        {
+            var list = drive.Files.List();
+            list.Spaces = "appDataFolder";
+            list.Q = $"name = '{fileName}' and trashed = false";
+            list.Fields = "files(id, modifiedTime, md5Checksum, headRevisionId)";
+            list.OrderBy = "modifiedTime desc";
+            list.PageSize = 100;
+            var result = await list.ExecuteAsync(ct).ConfigureAwait(false);
+            var files = new List<DriveFile>();
+            if (result.Files != null)
+            {
+                foreach (var f in result.Files)
+                    if (!string.IsNullOrEmpty(f.Id)) files.Add(f);
+            }
+            return files;
+        }
+
+        /// <summary>Compact version token of a listing (ids + modification + checksum).</summary>
+        public static string VersionOf(IReadOnlyList<DriveFile> files)
+        {
+            var sb = new StringBuilder();
+            foreach (var f in files)
+                sb.Append(f.Id).Append('@').Append(f.ModifiedTimeRaw).Append('#')
+                  .Append(f.Md5Checksum).Append('#').Append(f.HeadRevisionId).Append(';');
+            return sb.ToString();
+        }
+
+        /// <summary>Downloads one appDataFolder file as UTF-8 text.</summary>
+        public static async Task<string> DownloadTextAsync(DriveService drive, string fileId, CancellationToken ct)
+        {
+            using var buffer = new MemoryStream();
+            var progress = await drive.Files.Get(fileId).DownloadAsync(buffer, ct).ConfigureAwait(false);
+            progress.ThrowOnFailure();
+            if (progress.Status != DownloadStatus.Completed)
+                throw new IOException($"Google Drive download did not complete: {progress.Status}");
+            return Encoding.UTF8.GetString(buffer.ToArray());
         }
 
         /// <summary>

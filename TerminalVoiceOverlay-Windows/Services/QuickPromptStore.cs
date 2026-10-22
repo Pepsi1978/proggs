@@ -46,15 +46,24 @@ public static class QuickPromptStore
         try
         {
             var p = Path.Combine(Dir, FileName(slot));
-            return File.Exists(p) ? File.ReadAllText(p) : string.Empty;
+            return AtomicFile.ReadAllTextShared(p) ?? string.Empty;
         }
         catch { return string.Empty; }
     }
 
-    public static void Save(int slot, string text)
+    public static void Save(int slot, string text) =>
+        WriteFile(FileName(slot), text ?? string.Empty);
+
+    /// <summary>
+    /// Atomic write (temp file + replace) under the shared prompt-files lock, so a crash
+    /// or a parallel Drive apply in the sibling overlay never leaves a truncated or empty
+    /// prompt file that the next bundle upload would publish as the "new" state.
+    /// </summary>
+    private static void WriteFile(string name, string content)
     {
-        Directory.CreateDirectory(Dir);
-        File.WriteAllText(Path.Combine(Dir, FileName(slot)), text ?? string.Empty);
+        using var held = CrossProcessLock.Acquire(SharedLockNames.GeminiPromptFiles,
+            TimeSpan.FromSeconds(2), throwOnTimeout: false);
+        AtomicFile.WriteAllText(Path.Combine(Dir, name), content);
     }
 
     /// <summary>FNV-1a 64 ueber den normalisierten Text — identisch zu macOS.</summary>
@@ -78,8 +87,9 @@ public static class QuickPromptStore
     private static string[]? ReadSummaryParts(int slot)
     {
         var p = Path.Combine(Dir, SummaryFileName(slot));
-        if (!File.Exists(p)) return null;
-        var parts = File.ReadAllText(p).Replace("\r\n", "\n").Split('\n', 2);
+        var content = AtomicFile.ReadAllTextShared(p);
+        if (content is null) return null;
+        var parts = content.Replace("\r\n", "\n").Split('\n', 2);
         return parts.Length == 2 ? parts : null;
     }
 
@@ -110,16 +120,14 @@ public static class QuickPromptStore
     /// <summary>KI-Ueberschrift speichern (an den Prompt-Text gebunden).</summary>
     public static void SaveSummary(int slot, string sourceText, string summary)
     {
-        Directory.CreateDirectory(Dir);
-        File.WriteAllText(Path.Combine(Dir, SummaryFileName(slot)),
+        WriteFile(SummaryFileName(slot),
             Fingerprint(sourceText) + "\n" + (summary ?? string.Empty).Trim());
     }
 
     /// <summary>Eigene Ueberschrift speichern — bleibt, bis der Benutzer sie aendert oder leert.</summary>
     public static void SaveManualTitle(int slot, string title)
     {
-        Directory.CreateDirectory(Dir);
-        File.WriteAllText(Path.Combine(Dir, SummaryFileName(slot)),
+        WriteFile(SummaryFileName(slot),
             ManualMarker + "\n" + (title ?? string.Empty).Trim());
     }
 
@@ -127,8 +135,7 @@ public static class QuickPromptStore
     /// Leere Datei statt Loeschen, damit das Drive-Bundle den Stand mitnimmt.</summary>
     public static void ClearSummary(int slot)
     {
-        Directory.CreateDirectory(Dir);
-        File.WriteAllText(Path.Combine(Dir, SummaryFileName(slot)), string.Empty);
+        WriteFile(SummaryFileName(slot), string.Empty);
     }
 
     /// <summary>Tooltip, solange keine Ueberschrift da ist.</summary>

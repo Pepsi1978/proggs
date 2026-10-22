@@ -107,6 +107,11 @@ namespace ClaudeVoiceOverlay.Views
         // damit ein Klick darauf den Text aus der Prompt-Eingabe nicht nur
         // einfuegt, sondern auch sofort an die KI abschickt.
         private bool _forceReturnOnNextSubmit = false;
+        // When the Enter button armed _forceReturnOnNextSubmit. The flag is
+        // only honoured for ForceReturnValidMs, so a submit that never ran
+        // (ignored, failed) cannot send a much later prompt with Enter.
+        private DateTime _forceReturnSetAtUtc = DateTime.MinValue;
+        private const int ForceReturnValidMs = 5000;
         // Reines UI-Flag: spiegelt wider, ob das Promtboard-Panel geoeffnet
         // ist (Stern goldgelb). Steuert NICHT die AlwaysOn-Pipeline — die
         // AlwaysOn-Prompts (IsAlwaysOn=true in der DB) werden bei JEDEM
@@ -239,6 +244,38 @@ namespace ClaudeVoiceOverlay.Views
         /// Titel manchmal nicht von Gemini kommen — wir loggen pro Submit
         /// einmal mit Fallback-Titel und einmal mit dem AI-Ergebnis.
         /// </summary>
+        /// <summary>
+        /// Hotkey/state log (CVO-hotkey.log, rotated by AutoEnterStatusServer;
+        /// it used to write into TVO-hotkey.log). Always asynchronous: callers
+        /// include the low-level keyboard hook, where synchronous file IO
+        /// risks the hook timeout.
+        /// </summary>
+        private static void AppendHotkeyLogAsync(string tag, string msg)
+        {
+            _ = Task.Run(() => AutoEnterStatusServer.AppendHotkeyLog(tag, msg));
+        }
+
+        /// <summary>
+        /// Fire-and-forget append for diagnostic logs (ported from TVO). Keeps
+        /// the existing log files but moves file IO out of UI and keyboard-hook
+        /// paths — a synchronous File.AppendAllText inside the low-level hook
+        /// could exceed LowLevelHooksTimeout.
+        /// </summary>
+        private static void AppendDiagnosticLine(string path, string line)
+        {
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    var dir = System.IO.Path.GetDirectoryName(path);
+                    if (!string.IsNullOrWhiteSpace(dir))
+                        System.IO.Directory.CreateDirectory(dir);
+                    System.IO.File.AppendAllText(path, line, System.Text.Encoding.UTF8);
+                }
+                catch { /* Diagnostics must never break the main flow. */ }
+            });
+        }
+
         private static void LogToHistoryDebug(string line)
         {
             try
@@ -246,11 +283,9 @@ namespace ClaudeVoiceOverlay.Views
                 string dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PromptBoard", "history");
-                System.IO.Directory.CreateDirectory(dir);
                 string path = System.IO.Path.Combine(dir, "title-debug.log");
                 string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
-                    System.Text.Encoding.UTF8);
+                AppendDiagnosticLine(path, $"{ts}  {line}\n");
             }
             catch { /* Diagnostics must never break the main flow. */ }
         }
@@ -270,11 +305,9 @@ namespace ClaudeVoiceOverlay.Views
                 string dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PromptBoard", "screenshot-debug");
-                System.IO.Directory.CreateDirectory(dir);
                 string path = System.IO.Path.Combine(dir, "screenshot.log");
                 string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
-                    System.Text.Encoding.UTF8);
+                AppendDiagnosticLine(path, $"{ts}  {line}\n");
             }
             catch { /* Diagnostics must never break the main flow. */ }
         }
@@ -307,6 +340,19 @@ namespace ClaudeVoiceOverlay.Views
         private bool _pttRecording   = false;  // wir haben aktuell eine Aufnahme via PTT laufen
         private bool _pttToggleMode  = false;  // im Toggle-Modus (durch Tap aktiviert) — wartet auf naechsten Tap zum Stoppen
         private DateTime _pttKeyDownAt = DateTime.MinValue;  // Zeitpunkt des letzten DOWN-Events
+        // Set when a PTT press was consumed without starting a session (start
+        // rejected, toggle-stop tap): auto-repeat DOWNs of the same press must
+        // not start a recording; cleared on the next UP.
+        private bool _pttSuppressUntilKeyUp = false;
+
+        /// <summary>True when the main recording runs or is just starting.</summary>
+        private bool IsMainRecordingActiveOrStarting() =>
+            _mainStartInProgress || _micState == RecordingState.Recording;
+
+        /// <summary>Mirrors the start rejections of BtnMic_Click (deployment lock is checked there).</summary>
+        private bool CanMainRecordingStartNow() =>
+            !_mainStartInProgress && !isBtwRecording && !_btwStartInProgress
+            && !_isProcessing && !_mainStopInProgress && _micState != RecordingState.Recording;
         // Hybrid-Modus: kurzer Tap (<500ms) startet Toggle-Modus (Walkie-Talkie:
         // 1x tippen start, 1x tippen stop). Langes Halten (>=500ms) ist klassisches
         // PTT — Loslassen stoppt. Dadurch funktionieren beide Workflows:
@@ -382,6 +428,9 @@ namespace ClaudeVoiceOverlay.Views
         // DragThresholdPx bewegt wurde. Sonst wird er auf 0 zurueckgesetzt
         // und das Pillar verschoben sich wie gehabt.
         private int _pendingProfileTileClick;
+        // Right button went down on the MicButton; becomes a re-transcribe
+        // click on RBUTTONUP unless the drag threshold was exceeded.
+        private bool _pendingMicRightClick;
         private const int DragThresholdPx = 4;
         private bool _manuallyPositioned;
         // ── Gespeicherte Overlay-Position pro Orientierung (nur in dieser
@@ -523,6 +572,11 @@ namespace ClaudeVoiceOverlay.Views
             _hideDelayTimer.Tick += (_, _) =>
             {
                 _hideDelayTimer.Stop();
+                // Never hide in the middle of a recording or while a turn is
+                // processing. The post-turn foreground check
+                // (HideIfTargetNoLongerForeground) hides the overlay once the
+                // turn is over and the target is no longer in front.
+                if (IsVoiceTurnActive()) return;
                 // Nicht verstecken, solange der Benutzer noch in unserer UI
                 // arbeitet: Cursor ueber einem unserer Fenster/Popups (z.B.
                 // offenes Kontextmenue "Hotkey zuweisen" mit A..Z-Untermenue)
@@ -644,6 +698,8 @@ namespace ClaudeVoiceOverlay.Views
             // Implementiert ueber Low-Level-Keyboard-Hook (WH_KEYBOARD_LL),
             // weil RegisterHotKey nur KeyDown liefert, nicht KeyUp.
             InstallPushToTalkHook();
+            // Re-installs the hook after UI-thread stalls (Windows drops it silently).
+            StartHookHealthCheck();
 
             // Resolve the PromptBoard prefix service if the DI host is up.
             // Silent fallback when PromptBoard is unavailable — the star
@@ -2077,7 +2133,7 @@ namespace ClaudeVoiceOverlay.Views
                     {
                         // Dispatcher.Invoke selbst kann werfen wenn das
                         // Fenster gerade geschlossen wird. Wir loggen das
-                        // sichtbar in die TVO-hotkey.log, damit kuenftige
+                        // sichtbar in die CVO-hotkey.log, damit kuenftige
                         // Probleme nicht mehr still verschluckt werden.
                         LogAutoEnterToggleError("OUTER", outerEx);
                     }
@@ -2107,9 +2163,7 @@ namespace ClaudeVoiceOverlay.Views
             Console.WriteLine(msg);
             try
             {
-                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
-                System.IO.File.AppendAllText(path,
-                    $"{DateTime.Now:HH:mm:ss.fff} TOGGLE-ERROR {msg}{Environment.NewLine}");
+                AppendHotkeyLogAsync("TOGGLE-ERROR", msg);
             }
             catch { /* never block hotkey path */ }
         }
@@ -2144,6 +2198,11 @@ namespace ClaudeVoiceOverlay.Views
                         _dragDpiY = src?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
                         Win32.SetCapture(hwnd);
                         _pendingProfileTileClick = HitTestProfileTile();
+                        // Right-click on the mic without real movement =
+                        // re-transcribe the archived recording (the XAML
+                        // MouseRightButtonUp never arrives because this
+                        // WndProc handles the right button for dragging).
+                        _pendingMicRightClick = _pendingProfileTileClick == 0 && HitTestMicButton();
                     }
                     handled = true;
                     break;
@@ -2154,7 +2213,7 @@ namespace ClaudeVoiceOverlay.Views
                         // Pending Profile-Tile-Click? Erst pruefen ob Maus
                         // mehr als die Drag-Schwelle bewegt wurde — solange
                         // sie es nicht ist, Pillar in Ruhe lassen.
-                        if (_pendingProfileTileClick > 0)
+                        if (_pendingProfileTileClick > 0 || _pendingMicRightClick)
                         {
                             int dx = Math.Abs(movePt.X - _dragStartCursorX);
                             int dy = Math.Abs(movePt.Y - _dragStartCursorY);
@@ -2164,6 +2223,7 @@ namespace ClaudeVoiceOverlay.Views
                             }
                             // Drag-Schwelle ueberschritten — ab jetzt echtes Drag
                             _pendingProfileTileClick = 0;
+                            _pendingMicRightClick = false;
                         }
                         Left = _dragStartLeft + (movePt.X - _dragStartCursorX) / _dragDpiX;
                         Top  = _dragStartTop  + (movePt.Y - _dragStartCursorY) / _dragDpiY;
@@ -2202,6 +2262,18 @@ namespace ClaudeVoiceOverlay.Views
                             int p = _pendingProfileTileClick;
                             _pendingProfileTileClick = 0;
                             Dispatcher.BeginInvoke(new Action(() => ShowQuickPromptMenu(p)));
+                        }
+                        else if (_pendingMicRightClick)
+                        {
+                            // Short right-click on the mic (no drag): re-transcribe
+                            // the last archived recording, with Shift the one before.
+                            _pendingMicRightClick = false;
+                            bool takePrevious = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+                            Dispatcher.BeginInvoke(new Action(async () =>
+                            {
+                                try { await RetranscribeArchivedRecordingAsync(takePrevious ? 1 : 0); }
+                                catch (Exception ex) { Console.WriteLine($"Mic right-click retranscribe failed: {ex.Message}"); }
+                            }));
                         }
                         else
                         {
@@ -2409,6 +2481,37 @@ namespace ClaudeVoiceOverlay.Views
                 | NativeMethods.Win32.SWP_NOACTIVATE);
         }
 
+        /// <summary>True while a recording runs or a voice turn is being processed.</summary>
+        private bool IsVoiceTurnActive() =>
+            _micState == RecordingState.Recording || _isProcessing || isBtwRecording
+            || _mainStartInProgress || _btwStartInProgress;
+
+        /// <summary>
+        /// Called at the end of every voice turn (success, error, abort).
+        /// OnAppDeactivated returns early while a turn runs, so without this
+        /// check the overlay would stay on top of foreign apps after the user
+        /// switched away during recording/processing.
+        /// </summary>
+        private void HideIfTargetNoLongerForeground()
+        {
+            try
+            {
+                if (IsVoiceTurnActive() || !IsVisible) return;
+                if (_appWatcher.GetForegroundTargetAppHwnd() != IntPtr.Zero) return;
+                // Our own windows (prompt input, history, dialogs) count as
+                // "still here" — the watcher skips own-process events as well.
+                IntPtr fg = Win32.GetForegroundWindow();
+                if (fg == IntPtr.Zero) return;
+                Win32.GetWindowThreadProcessId(fg, out uint fgPid);
+                if (fgPid == (uint)Environment.ProcessId) return;
+                OnAppDeactivated();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Post-turn foreground check failed: {ex.Message}");
+            }
+        }
+
         private void OnAppDeactivated()
         {
             if (_micState == RecordingState.Recording || _isProcessing || isBtwRecording)
@@ -2500,7 +2603,7 @@ namespace ClaudeVoiceOverlay.Views
             // Cursor waehrend des Druecks aus dem Button rausrutscht. Ohne Capture
             // kann der Loop schon nach einer Zeile abbrechen, wenn die Maus sich
             // minimal bewegt und WPF den Hover-State verliert.
-            XButton.CaptureMouse();
+            bool captured = XButton.CaptureMouse();
 
             // Vorherige Schleife sauber abbrechen, alte CTS disposen,
             // neue erstellen — alles unter einem Lock damit zwei rasche
@@ -2518,10 +2621,17 @@ namespace ClaudeVoiceOverlay.Views
             }
             var hwnd = _appWatcher.ActiveAppHwnd;
             hasPastedText = false;
+            InvalidateRawReplace();
 
             // Background-Loop: sequentiell ClearLine + 10ms warten, solange Token aktiv ist
             _ = Task.Run(async () =>
             {
+                // Safety net against an endless loop: the loop normally ends via
+                // PreviewMouseLeftButtonUp or LostMouseCapture. Additionally
+                // verify every ~100 ms that the button still holds the capture
+                // and stop after a hard maximum duration.
+                var loopSw = System.Diagnostics.Stopwatch.StartNew();
+                long nextCaptureCheckMs = 100;
                 try
                 {
                     while (!token.IsCancellationRequested)
@@ -2529,10 +2639,28 @@ namespace ClaudeVoiceOverlay.Views
                         AppController.ClearLine(hwnd);
                         if (token.IsCancellationRequested) break;
                         await Task.Delay(10, token).ConfigureAwait(false);
+
+                        if (loopSw.ElapsedMilliseconds > XRepeatMaxMs)
+                        {
+                            Console.WriteLine("X-repeat: max duration reached, stopping");
+                            _ = Dispatcher.BeginInvoke(new Action(() => StopXRepeatIfCurrent(token)));
+                            break;
+                        }
+                        if (captured && loopSw.ElapsedMilliseconds >= nextCaptureCheckMs)
+                        {
+                            nextCaptureCheckMs = loopSw.ElapsedMilliseconds + 100;
+                            bool stillHeld = await Dispatcher.InvokeAsync(() => XButton.IsMouseCaptured);
+                            if (!stillHeld)
+                            {
+                                _ = Dispatcher.BeginInvoke(new Action(() => StopXRepeatIfCurrent(token)));
+                                break;
+                            }
+                        }
                     }
                 }
                 catch (TaskCanceledException) { /* erwartet beim Loslassen */ }
                 catch (OperationCanceledException) { /* erwartet beim Loslassen */ }
+                catch (Exception ex) { Console.WriteLine($"X-repeat loop stopped: {ex.Message}"); }
             });
 
             // Verhindert dass der Button selbst auf das Event reagiert (kein Doppel-Click)
@@ -2549,6 +2677,32 @@ namespace ClaudeVoiceOverlay.Views
         // MouseLeave-Handler bewusst NICHT vorhanden — solange die linke Maustaste
         // gedrueckt ist, soll der Loop weiterlaufen, auch wenn der Cursor den Button
         // verlaesst. Erst MouseUp stoppt die Schleife.
+
+        // Hard upper bound for one press-and-hold delete loop.
+        private const int XRepeatMaxMs = 60_000;
+
+        /// <summary>
+        /// Capture lost without a MouseUp (focus change, window hidden, another
+        /// element took the capture): the repeat loop must stop, otherwise it
+        /// would keep clearing the field forever.
+        /// </summary>
+        private void XButton_LostMouseCapture(object sender, MouseEventArgs e)
+        {
+            StopXRepeat();
+        }
+
+        /// <summary>Stops the loop only if it is still the one that owns <paramref name="token"/>.</summary>
+        private void StopXRepeatIfCurrent(System.Threading.CancellationToken token)
+        {
+            bool isCurrent;
+            lock (_xRepeatLock)
+            {
+                isCurrent = _xRepeatCts is { } cts && cts.Token == token;
+            }
+            if (!isCurrent) return;
+            if (XButton.IsMouseCaptured) XButton.ReleaseMouseCapture();
+            StopXRepeat();
+        }
 
         private void StopXRepeat()
         {
@@ -2636,6 +2790,8 @@ namespace ClaudeVoiceOverlay.Views
                         var transcript = await _stt.TranscribeAsync(wavFile);
                     Console.WriteLine($"Transcript: {SafeLogPreview(transcript)}");
                     lastRawTranscript = transcript;
+                    // Not replaceable until the paste below actually landed unsent.
+                    InvalidateRawReplace();
                     // Re-Correct-Cache: Roh-Whisper-Text + Zeitstempel merken,
                     // damit der Benutzer per Profil-Klick im Nachhinein eine
                     // andere Korrektur-Brille aufsetzen kann.
@@ -2710,6 +2866,10 @@ namespace ClaudeVoiceOverlay.Views
                         hasPastedText = !autoEnterEnabled;
                         if (autoEnterEnabled)
                             hasPastedText = false;
+                        // The W button may only swap in the raw text while this
+                        // paste is still sitting unsent in the input field.
+                        if (!autoEnterEnabled)
+                            _rawReplaceEligibleUntilUtc = DateTime.UtcNow.AddMilliseconds(RawReplaceWindowMs);
                     }
                     }
                     catch (Exception ex)
@@ -2733,6 +2893,7 @@ namespace ClaudeVoiceOverlay.Views
                 finally
                 {
                     _mainStopInProgress = false;
+                    HideIfTargetNoLongerForeground();
                 }
             }
             else
@@ -2750,6 +2911,7 @@ namespace ClaudeVoiceOverlay.Views
                 var targetHwnd = _appWatcher.ActiveAppHwnd;
                 try
                 {
+                    _recordingCuePlayer.Prewarm(); // cue device opens on demand now
                     started = await _audioRecorder.StartAsync();
                     if (!started)
                     {
@@ -2760,12 +2922,16 @@ namespace ClaudeVoiceOverlay.Views
                     }
                     _mainRecordingTargetHwnd = targetHwnd;
                     SetMicState(RecordingState.Recording);
+                    // A pending hide must never fire in the middle of the recording.
+                    _hideDelayTimer.Stop();
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("Recording started");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Microphone error: {ex.Message}");
+                    _pttRecording = false;
+                    _pttToggleMode = false;
                     SetMicState(RecordingState.Error);
                     ScheduleReset();
                 }
@@ -2861,6 +3027,8 @@ namespace ClaudeVoiceOverlay.Views
                         throw new InvalidOperationException("Das Ziel-Fenster der BTW-Aufnahme ist nicht mehr verfügbar.");
                     SetBtwMicState(RecordingState.Success);
                     Console.WriteLine("BTW text inserted");
+                    // The input field now holds more than the last raw dictation.
+                    InvalidateRawReplace();
 
                     hasPastedText = !autoEnterEnabled;
                     if (autoEnterEnabled)
@@ -2877,20 +3045,22 @@ namespace ClaudeVoiceOverlay.Views
                         _isProcessing = false;
                         _btwRecordingTargetHwnd = IntPtr.Zero;
 
-                        // Reset BTW button to idle after 3 s
-                        await Task.Delay(3000);
-                        if (!isBtwRecording)
-                            SetBtwMicState(RecordingState.Idle);
-
                         // Aufnahme NIE loeschen (Vorfall 29.08.2026): sie wandert ins Archiv,
                         // wo die letzten zwei Diktate liegen bleiben und per Rechtsklick auf das
                         // Mikrofon erneut transkribiert werden koennen.
+                        // Archive immediately (no delay) so a process exit right
+                        // after the turn cannot leave the WAV behind in %TEMP%.
                         RecordingArchive.Archive(wavFile, success: true);
+
+                        // Only the visual feedback is delayed; the stop flag is
+                        // released right away so BTW clicks are not dropped.
+                        _ = ResetBtwVisualAfterTurnAsync();
                     }
                 }
                 finally
                 {
                     _btwStopInProgress = false;
+                    HideIfTargetNoLongerForeground();
                 }
             }
             else
@@ -2902,6 +3072,7 @@ namespace ClaudeVoiceOverlay.Views
                 var targetHwnd = _appWatcher.ActiveAppHwnd;
                 try
                 {
+                    _recordingCuePlayer.Prewarm(); // cue device opens on demand now
                     started = await _audioRecorder.StartAsync();
                     if (!started)
                     {
@@ -2911,6 +3082,8 @@ namespace ClaudeVoiceOverlay.Views
                     isBtwRecording = true;
                     _btwRecordingTargetHwnd = targetHwnd;
                     SetBtwMicState(RecordingState.Recording);
+                    // A pending hide must never fire in the middle of the recording.
+                    _hideDelayTimer.Stop();
                     _recordingCuePlayer.PlayStart();
                     Console.WriteLine("BTW recording started");
                 }
@@ -2945,30 +3118,84 @@ namespace ClaudeVoiceOverlay.Views
         // zweiter Klick beim if-Check oben rausfaellt.
         private bool _whisperUndoBusy;
 
+        // Until when the last voice paste counts as "fresh": pasted into the
+        // input field WITHOUT Enter and nothing else was inserted/submitted
+        // since. Only then may the W button clear the WHOLE field and swap in
+        // the raw transcript; otherwise it would wipe unrelated text long
+        // after the dictation was sent.
+        private DateTime _rawReplaceEligibleUntilUtc = DateTime.MinValue;
+        private const int RawReplaceWindowMs = 60_000;
+
+        private void InvalidateRawReplace() => _rawReplaceEligibleUntilUtc = DateTime.MinValue;
+
         /// <summary>W button — undo Gemini correction, paste raw Whisper text.</summary>
         private async void BtnWhisperUndo_Click(object sender, RoutedEventArgs e)
         {
             if (_whisperUndoBusy) return;
             if (lastRawTranscript == null) return;
+            if (DateTime.UtcNow > _rawReplaceEligibleUntilUtc)
+            {
+                // Stale or already submitted: never clear the field.
+                Console.WriteLine("W-Button: last paste no longer fresh, raw replace skipped.");
+                return;
+            }
 
             string textToPaste = lastRawTranscript;
-            lastRawTranscript = null;
             _whisperUndoBusy = true;
             try
             {
                 // Async-Pfad: ClearLine + PasteText laufen auf Background-Thread,
                 // UI bleibt reaktiv waehrend der Win32-Sleeps. Reentrancy-Guard
                 // _whisperUndoBusy verhindert Doppel-Klick.
-                if (!await AppController.ClearLineAsync(_appWatcher.ActiveAppHwnd)) return;
+                var hwnd = _appWatcher.ActiveAppHwnd;
+                if (!await AppController.ClearLineAsync(hwnd))
+                {
+                    // Nothing was cleared: keep the raw text for a retry.
+                    Console.WriteLine("W-Button: ClearLine failed, raw text kept.");
+                    DiagLog.Warn("WhisperUndo", "clear_failed");
+                    FlashWButtonError();
+                    return;
+                }
                 await Task.Delay(100);
-                if (!await AppController.PasteTextAsync(textToPaste, _appWatcher.ActiveAppHwnd)) return;
+                if (!await AppController.PasteTextAsync(textToPaste, hwnd))
+                {
+                    Console.WriteLine("W-Button: paste failed, raw text kept.");
+                    DiagLog.Warn("WhisperUndo", "paste_failed", ("chars", textToPaste.Length));
+                    FlashWButtonError();
+                    return;
+                }
+                // Only consume the raw text after it really landed.
+                if (ReferenceEquals(lastRawTranscript, textToPaste)) lastRawTranscript = null;
+                InvalidateRawReplace();
                 hasPastedText = true;
                 Console.WriteLine($"Whisper raw text inserted: {SafeLogPreview(textToPaste)}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"W-Button raw insert failed: {ex.Message}");
+                DiagLog.Error("WhisperUndo", "failed", ex);
+                FlashWButtonError();
             }
             finally
             {
                 _whisperUndoBusy = false;
             }
+        }
+
+        /// <summary>Red W button for 3 s, then back to its mode colour.</summary>
+        private void FlashWButtonError()
+        {
+            WButton.Background = BtnX;
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                try
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                        WButton.Background = geminiEnabled ? ToggleOff : ToggleOn);
+                }
+                catch { /* window closed */ }
+            });
         }
 
         /// <summary>G button — toggle Gemini on/off.
@@ -3287,6 +3514,30 @@ namespace ClaudeVoiceOverlay.Views
                 System.Text.RegularExpressions.RegexOptions.Compiled
                 | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
+        /// <summary>True when the cursor is over the main MicButton (same hit test as the profile tiles).</summary>
+        private bool HitTestMicButton()
+        {
+            if (!Win32.GetCursorPos(out var screenPt)) return false;
+            System.Windows.Point relativePos;
+            try
+            {
+                relativePos = PointFromScreen(new System.Windows.Point(screenPt.X, screenPt.Y));
+            }
+            catch
+            {
+                return false;
+            }
+
+            var hit = System.Windows.Media.VisualTreeHelper.HitTest(this, relativePos);
+            DependencyObject? current = hit?.VisualHit;
+            while (current != null)
+            {
+                if (ReferenceEquals(current, MicButton)) return true;
+                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+            }
+            return false;
+        }
+
         private int HitTestProfileTile()
         {
             if (!Win32.GetCursorPos(out var screenPt)) return 0;
@@ -3597,9 +3848,11 @@ namespace ClaudeVoiceOverlay.Views
             // als "Send"-Aktion interpretiert: Text einfuegen + Return druecken,
             // unabhaengig vom Toggle-Zustand. Erst wenn keine Eingabe da ist,
             // greift die alte Toggle-Logik.
+            InvalidateRawReplace();
             if (_promptPanel != null)
             {
                 _forceReturnOnNextSubmit = true;
+                _forceReturnSetAtUtc = DateTime.UtcNow;
                 if (_promptPanel.TrySubmitInputText())
                 {
                     Console.WriteLine("Enter-Button: Prompt-Eingabe wurde gesendet (force Return).");
@@ -3640,7 +3893,7 @@ namespace ClaudeVoiceOverlay.Views
         private void ToggleAutoEnterFromHotkey()
         {
             // Geht jetzt ueber SetAutoEnter, damit JEDE State-Aenderung
-            // mit Quelle + vorher/nachher in TVO-hotkey.log landet —
+            // mit Quelle + vorher/nachher in CVO-hotkey.log landet —
             // dann ist Drift-Debugging in 30 Sekunden moeglich.
             SetAutoEnter(!autoEnterEnabled, "StreamDeckHTTP");
         }
@@ -3651,7 +3904,7 @@ namespace ClaudeVoiceOverlay.Views
         /// UI-Klick (<see cref="BtnAutoEnter_Click"/>) und HTTP-Toggle
         /// vom Stream-Deck-Plugin — gehen hier durch.
         ///
-        /// Loggt vorher+nachher+Quelle in TVO-hotkey.log. So sieht jeder
+        /// Loggt vorher+nachher+Quelle in CVO-hotkey.log. So sieht jeder
         /// Drift sofort in der Datei aus wer wann was umgeschaltet hat.
         ///
         /// MUSS am UI-Thread aufgerufen werden (Background-Setter auf
@@ -3667,9 +3920,7 @@ namespace ClaudeVoiceOverlay.Views
             Console.WriteLine($"Auto-enter {(newValue ? "ON" : "OFF")} (source={source})");
             try
             {
-                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
-                System.IO.File.AppendAllText(path,
-                    $"{DateTime.Now:HH:mm:ss.fff} STATE-CHANGE source={source} from={oldValue} to={newValue}{Environment.NewLine}");
+                AppendHotkeyLogAsync("STATE-CHANGE", $"source={source} from={oldValue} to={newValue}");
             }
             catch { /* never block UI for diagnostics */ }
 
@@ -3992,9 +4243,11 @@ namespace ClaudeVoiceOverlay.Views
                 // Async-Variante: blockiert UI nicht waehrend Win32-Foreground-
                 // Sleeps. Alle Folgeschritte (Console-Log) sind nach await
                 // garantiert sequentiell.
+                InvalidateRawReplace();
                 if (!await AppController.PasteTextAsync(text, _appWatcher.ActiveAppHwnd, autoEnterEnabled))
                 {
                     Console.WriteLine("Panel insert failed: target focus or input injection failed.");
+                    DiagLog.Warn("PromptPanel", "insert_paste_failed", ("chars", text.Length));
                     return;
                 }
                 Console.WriteLine($"Panel prompt inserted: {text.Length} chars.");
@@ -4016,6 +4269,14 @@ namespace ClaudeVoiceOverlay.Views
         /// </summary>
         private async Task<bool> OnInputSubmit(string middleText)
         {
+            // Consume the force-return flag on EVERY submit attempt (success,
+            // failure, empty, exception) and honour it only while it is fresh.
+            // Otherwise a submit that never pasted would leave it armed and a
+            // much later prompt would go out with Enter unintentionally.
+            bool forceReturn = _forceReturnOnNextSubmit
+                && (DateTime.UtcNow - _forceReturnSetAtUtc).TotalMilliseconds <= ForceReturnValidMs;
+            _forceReturnOnNextSubmit = false;
+            InvalidateRawReplace();
             try
             {
                 var targetHwnd = _appWatcher.ActiveAppHwnd;
@@ -4040,10 +4301,9 @@ namespace ClaudeVoiceOverlay.Views
                 string final = string.Join(" ; ", parts);
                 // Force-Return uebersteuert das autoEnter-Toggle wenn der
                 // Submit aus einem expliziten Enter-Button-Klick kommt.
-                bool effectiveAutoEnter = autoEnterEnabled || _forceReturnOnNextSubmit;
+                bool effectiveAutoEnter = autoEnterEnabled || forceReturn;
                 if (!await AppController.PasteTextAsync(final, targetHwnd, effectiveAutoEnter))
                     return false;
-                _forceReturnOnNextSubmit = false;
                 Console.WriteLine($"Input submit: {final.Length} chars (autoEnter={effectiveAutoEnter}).");
                 hasPastedText = !effectiveAutoEnter;
 
@@ -4086,12 +4346,12 @@ namespace ClaudeVoiceOverlay.Views
                 // Sofortiges Re-Render des offenen Historie-Fensters, damit
                 // der neue Eintrag direkt sichtbar ist — ohne dass der
                 // Benutzer das Fenster zu- und wieder aufklappen muss.
-                if (_promptPanel is not null)
+                // Local copy + Unwrap: the inner reload task is awaited (its
+                // exceptions land in the catch below) and a panel that gets
+                // closed meanwhile cannot cause a NullReferenceException.
+                if (_promptPanel is { } panelForReload)
                 {
-                    await Dispatcher.InvokeAsync(async () =>
-                    {
-                        await _promptPanel.ReloadHistoryAsync();
-                    });
+                    await Dispatcher.InvokeAsync(() => panelForReload.ReloadHistoryAsync()).Task.Unwrap();
                 }
 
                 // Cloud-Sync: prompt-history.json nach Drive hochladen.
@@ -4123,12 +4383,9 @@ namespace ClaudeVoiceOverlay.Views
                         _ = TryUploadHistoryAsync();
                         // Nochmal re-rendern — der KI-Titel hat den
                         // Fallback-Titel ueberschrieben (oder ihn bestaetigt).
-                        if (_promptPanel is not null)
+                        if (_promptPanel is { } panelForTitleReload)
                         {
-                            await Dispatcher.InvokeAsync(async () =>
-                            {
-                                await _promptPanel.ReloadHistoryAsync();
-                            });
+                            await Dispatcher.InvokeAsync(() => panelForTitleReload.ReloadHistoryAsync()).Task.Unwrap();
                         }
                     }
                 }
@@ -4236,11 +4493,9 @@ namespace ClaudeVoiceOverlay.Views
                 string dir = System.IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PromptBoard", "history");
-                System.IO.Directory.CreateDirectory(dir);
                 string path = System.IO.Path.Combine(dir, "history-sync-debug.log");
                 string ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                System.IO.File.AppendAllText(path, $"{ts}  {line}\n",
-                    System.Text.Encoding.UTF8);
+                AppendDiagnosticLine(path, $"{ts}  {line}\n");
             }
             catch { /* Diagnostics never break the main flow. */ }
         }
@@ -4323,7 +4578,7 @@ namespace ClaudeVoiceOverlay.Views
         /// jedem Speichern UND jedem Loeschen eines Slots aufgerufen (Frank-
         /// Wunsch: direkt nach Speichern und Loeschen syncen). Fire-and-forget.
         /// </summary>
-        private Task TryUploadSlotsAsync() => TrySyncSlotsWithCloudAsync();
+        private Task TryUploadSlotsAsync() => TrySyncSlotsWithCloudAsync(fromUser: true);
 
         /// <summary>
         /// Beim Start einmal abgleichen und danach alle 30 s — sonst kamen
@@ -4334,23 +4589,34 @@ namespace ClaudeVoiceOverlay.Views
             if (_slotSyncTimer is null)
             {
                 _slotSyncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
-                _slotSyncTimer.Tick += (_, _) => _ = TrySyncSlotsWithCloudAsync();
+                _slotSyncTimer.Tick += (_, _) => _ = TrySyncSlotsWithCloudAsync(fromUser: false);
                 _slotSyncTimer.Start();
             }
-            return TrySyncSlotsWithCloudAsync();
+            return TrySyncSlotsWithCloudAsync(fromUser: false);
         }
 
         private DispatcherTimer? _slotSyncTimer;
         private readonly SemaphoreSlim _slotSyncGate = new(1, 1);
+        // Set when a user save/delete arrives while a sync is running: instead
+        // of queueing on the gate (which piles up behind a hanging Drive call),
+        // the running sync runs exactly one more pass when it is done.
+        private bool _slotSyncRerunRequested;
 
         /// <summary>
         /// Zwei-Wege-Sync der 30 Slots: Cloud holen -> atomar in den lokalen Stand
         /// mergen (pro Slot gewinnt der juengste UpdatedAt, auch Tombstones) ->
         /// nur hochladen, wenn die Cloud danach aelter ist als der gemergte Stand.
         /// </summary>
-        private async Task TrySyncSlotsWithCloudAsync()
+        private async Task TrySyncSlotsWithCloudAsync(bool fromUser)
         {
-            await _slotSyncGate.WaitAsync();
+            // Never wait on the gate: timer ticks skip while a sync runs, user
+            // saves mark a rerun that the running sync picks up afterwards.
+            if (!await _slotSyncGate.WaitAsync(0))
+            {
+                if (fromUser) _slotSyncRerunRequested = true;
+                return;
+            }
+            bool rerun = false;
             try
             {
                 var sync = GetOrCreateSlotSync();
@@ -4363,16 +4629,39 @@ namespace ClaudeVoiceOverlay.Views
                 {
                     await sync.UploadSlotsAsync(_slotService.SlotsFilePath);
                     _promptPanel?.MarkSyncedNow();
+                    LogHistorySync("OK: prompt-slots.json uploaded to Drive.");
                 }
+                _driveSyncWarningShown = false;
             }
             catch (Exception ex)
             {
+                // Console.WriteLine alone is invisible in the WPF app (TVO
+                // incident 21.09.2026: slots silently stopped syncing for days).
                 Console.WriteLine($"Slot cloud sync failed: {ex.Message}");
+                LogHistorySync($"FAIL slots: {ex.GetType().Name}: {ex.Message}");
+                if (!_driveSyncWarningShown && IsDriveAuthFailure(ex))
+                {
+                    _driveSyncWarningShown = true;
+                    try
+                    {
+                        App.ShowTrayBalloon(
+                            "Drive-Sync nicht moeglich",
+                            "Google Drive ist nicht verbunden oder der Token ist abgelaufen. Prompt-Slots und Historie werden NICHT mit dem Mac synchronisiert. Bitte im PromptBoard (Stern-Button -> Einstellungen) neu verbinden.",
+                            System.Windows.Forms.ToolTipIcon.Warning);
+                    }
+                    catch (Exception notifyEx)
+                    {
+                        LogHistorySync($"FAIL: Tray-balloon failed: {notifyEx.Message}");
+                    }
+                }
             }
             finally
             {
+                rerun = _slotSyncRerunRequested;
+                _slotSyncRerunRequested = false;
                 _slotSyncGate.Release();
             }
+            if (rerun) await TrySyncSlotsWithCloudAsync(fromUser: false);
         }
 
         private PromptSlotDriveSync? GetOrCreateSlotSync()
@@ -4529,9 +4818,31 @@ namespace ClaudeVoiceOverlay.Views
         ///  • Insert-Tooltip wird live aktualisiert, so dass der Benutzer beim
         ///    Hovern sieht WELCHE Datei beim naechsten Insert eingefuegt wird.
         /// </summary>
-        private void BtnScreenshot_Click(object sender, RoutedEventArgs e)
+        private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
+        {
+            await CaptureScreenshotAsync();
+        }
+
+        // Re-entrancy guard: a second capture while one is still encoding is skipped.
+        private bool _screenshotBusy;
+
+        /// <summary>
+        /// Captures the virtual screen and saves it as PNG. Capture, encoding
+        /// and file IO run on a worker thread: the low-level keyboard hook is
+        /// serviced by the UI thread, and a synchronous multi-monitor capture
+        /// + PNG encode exceeded LowLevelHooksTimeout, so Windows silently
+        /// removed the hook and every hotkey was dead until restart.
+        /// Returns true when a NEW screenshot was saved (_lastScreenshotPath updated).
+        /// </summary>
+        private async Task<bool> CaptureScreenshotAsync()
         {
             LogScreenshot("ScreenshotButton.Click handler ENTERED");
+            if (_screenshotBusy)
+            {
+                LogScreenshot("Screenshot skipped: previous capture still running");
+                return false;
+            }
+            _screenshotBusy = true;
 
             // Flash: gray waehrend Capture laeuft; nach Abschluss faerbt
             // sich der Button gruen (Erfolg) oder rot (Fehler).
@@ -4549,53 +4860,58 @@ namespace ClaudeVoiceOverlay.Views
                 var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
                 LogScreenshot($"VirtualScreen bounds: {bounds.Left},{bounds.Top} {bounds.Width}x{bounds.Height}");
 
-                using var bitmap = new System.Drawing.Bitmap(
-                    bounds.Width, bounds.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                using (var g = System.Drawing.Graphics.FromImage(bitmap))
+                long savedBytes;
+                (fullPath, filename, savedBytes) = await Task.Run(() =>
                 {
-                    g.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size,
-                        System.Drawing.CopyPixelOperation.SourceCopy);
-                }
+                    using var bitmap = new System.Drawing.Bitmap(
+                        bounds.Width, bounds.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                    using (var g = System.Drawing.Graphics.FromImage(bitmap))
+                    {
+                        g.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size,
+                            System.Drawing.CopyPixelOperation.SourceCopy);
+                    }
 
-                // Zielordner: Pictures\Screenshots — der Windows-Standard fuer
-                // Win+Druck. Wir landen also dort wo der Benutzer Screenshots
-                // erwartet. Falls die Locale "Bildschirmfotos" nutzt, schreiben
-                // wir trotzdem in "Screenshots" — Pfad wird falls noetig erstellt.
-                string picsDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-                string shotsDir = System.IO.Path.Combine(picsDir, "Screenshots");
-                System.IO.Directory.CreateDirectory(shotsDir);
+                    // Zielordner: Pictures\Screenshots — der Windows-Standard fuer
+                    // Win+Druck. Wir landen also dort wo der Benutzer Screenshots
+                    // erwartet. Falls die Locale "Bildschirmfotos" nutzt, schreiben
+                    // wir trotzdem in "Screenshots" — Pfad wird falls noetig erstellt.
+                    string picsDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                    string shotsDir = System.IO.Path.Combine(picsDir, "Screenshots");
+                    System.IO.Directory.CreateDirectory(shotsDir);
 
-                // Eindeutigkeit: yyyy-MM-dd_HH-mm-ss-fff hat Millisekunden-
-                // Praezision — bei Klicks im Sub-Sekunden-Takt entstehen
-                // bereits unterschiedliche Namen. Defensiver GUID-Fallback
-                // fuer den theoretisch unmoeglichen Fall einer Kollision in
-                // derselben Millisekunde (oder wenn die Systemuhr zurueckspringt).
-                filename = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}.png";
-                fullPath = System.IO.Path.Combine(shotsDir, filename);
-                int collisionGuard = 0;
-                while (System.IO.File.Exists(fullPath) && collisionGuard++ < 10)
-                {
-                    string suffix = Guid.NewGuid().ToString("N").Substring(0, 6);
-                    filename = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}_{suffix}.png";
-                    fullPath = System.IO.Path.Combine(shotsDir, filename);
-                    LogScreenshot($"Filename collision; retry with suffix: {filename}");
-                }
+                    // Eindeutigkeit: yyyy-MM-dd_HH-mm-ss-fff hat Millisekunden-
+                    // Praezision — bei Klicks im Sub-Sekunden-Takt entstehen
+                    // bereits unterschiedliche Namen. Defensiver GUID-Fallback
+                    // fuer den theoretisch unmoeglichen Fall einer Kollision in
+                    // derselben Millisekunde (oder wenn die Systemuhr zurueckspringt).
+                    string name = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}.png";
+                    string path = System.IO.Path.Combine(shotsDir, name);
+                    int collisionGuard = 0;
+                    while (System.IO.File.Exists(path) && collisionGuard++ < 10)
+                    {
+                        string suffix = Guid.NewGuid().ToString("N").Substring(0, 6);
+                        name = $"screenshot_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}_{suffix}.png";
+                        path = System.IO.Path.Combine(shotsDir, name);
+                        LogScreenshot($"Filename collision; retry with suffix: {name}");
+                    }
 
-                bitmap.Save(fullPath, System.Drawing.Imaging.ImageFormat.Png);
+                    bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
 
-                // Verifikation: die Datei MUSS jetzt da sein und Bytes haben.
-                // Ohne diesen Check wuerden ein leerer/fehlgeschlagener Save
-                // still durchgehen und _lastScreenshotPath aktualisiert —
-                // beim spaeteren Insert merkt der Benutzer dann nichts vom Fehler.
-                var fi = new System.IO.FileInfo(fullPath);
-                if (!fi.Exists || fi.Length == 0)
-                {
-                    throw new System.IO.IOException(
-                        $"Screenshot wurde nicht oder leer gespeichert: {fullPath} (exists={fi.Exists}, size={(fi.Exists ? fi.Length : -1)})");
-                }
+                    // Verifikation: die Datei MUSS jetzt da sein und Bytes haben.
+                    // Ohne diesen Check wuerden ein leerer/fehlgeschlagener Save
+                    // still durchgehen und _lastScreenshotPath aktualisiert —
+                    // beim spaeteren Insert merkt der Benutzer dann nichts vom Fehler.
+                    var fi = new System.IO.FileInfo(path);
+                    if (!fi.Exists || fi.Length == 0)
+                    {
+                        throw new System.IO.IOException(
+                            $"Screenshot wurde nicht oder leer gespeichert: {path} (exists={fi.Exists}, size={(fi.Exists ? fi.Length : -1)})");
+                    }
+                    return (path, name, fi.Length);
+                });
 
                 _lastScreenshotPath = fullPath;
-                LogScreenshot($"Screenshot saved OK: {fullPath} ({fi.Length:N0} bytes)");
+                LogScreenshot($"Screenshot saved OK: {fullPath} ({savedBytes:N0} bytes)");
 
                 // Insert-Tooltip live aktualisieren: der Benutzer kann mit der
                 // Maus drueberfahren und sieht WELCHE Datei beim Insert eingefuegt
@@ -4627,6 +4943,7 @@ namespace ClaudeVoiceOverlay.Views
                     await Task.Delay(1500);
                     Dispatcher.Invoke(() => ScreenshotButton.Background = BtnScreenshot);
                 });
+                return true;
             }
             catch (Exception ex)
             {
@@ -4641,6 +4958,11 @@ namespace ClaudeVoiceOverlay.Views
                     await Task.Delay(3000); // 3 s — deutlich laenger als Erfolg, damit auffaellig
                     Dispatcher.Invoke(() => ScreenshotButton.Background = BtnScreenshot);
                 });
+                return false;
+            }
+            finally
+            {
+                _screenshotBusy = false;
             }
         }
 
@@ -4698,10 +5020,17 @@ namespace ClaudeVoiceOverlay.Views
             var hwnd = _appWatcher.ActiveAppHwnd;
             // Async-Variante: blockiert UI nicht waehrend Win32-Foreground-
             // Sleeps. Folgender Erfolgs-Flash und Logging laufen nach await.
+            InvalidateRawReplace();
             if (!await AppController.PasteTextAsync(toPaste, hwnd, autoEnter: false))
             {
-                LogScreenshot($"InsertScreenshot: PasteText FAILED for '{toPaste}'");
+                LogScreenshot($"InsertScreenshot: PasteText FAILED for '{toPaste}' (hwnd={hwnd})");
                 InsertScreenshotButton.Background = BtnX;
+                // Back to amber after 3 s like the other error paths (it used to stay red).
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    Dispatcher.Invoke(() => InsertScreenshotButton.Background = BtnInsertScreenshot);
+                });
                 return;
             }
 
@@ -4760,6 +5089,28 @@ namespace ClaudeVoiceOverlay.Views
             }
 
             if (btw) _ = ResetBtwAfterDelayAsync(); else ScheduleReset();
+        }
+
+        // Sequence for the delayed BTW success/error reset: only the latest
+        // finished turn may reset the button, an older pending reset must not
+        // touch the state of a newer turn.
+        private long _btwVisualResetSeq;
+
+        /// <summary>Resets the BTW button to idle 3 s after a finished turn (visual only).</summary>
+        private async Task ResetBtwVisualAfterTurnAsync()
+        {
+            long seq = ++_btwVisualResetSeq;
+            try
+            {
+                await Task.Delay(3000);
+                if (seq != _btwVisualResetSeq) return;
+                if (isBtwRecording || _btwStartInProgress || _btwStopInProgress) return;
+                SetBtwMicState(RecordingState.Idle);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"BTW visual reset failed: {ex.Message}");
+            }
         }
 
         private async Task ResetBtwAfterDelayAsync()
@@ -5015,6 +5366,7 @@ namespace ClaudeVoiceOverlay.Views
 
             _isProcessing = true;
             SetMicState(RecordingState.Processing);
+            InvalidateRawReplace();
             try
             {
                 var transcript = await _stt.TranscribeAsync(wav);
@@ -5050,6 +5402,7 @@ namespace ClaudeVoiceOverlay.Views
                 // Die Datei bleibt im Archiv liegen — eine Wiederholung darf beliebig oft laufen.
                 _isProcessing = false;
                 ScheduleReset();
+                HideIfTargetNoLongerForeground();
             }
         }
 
@@ -5254,6 +5607,147 @@ namespace ClaudeVoiceOverlay.Views
             }
         }
 
+        // ── Hotkey arbitration with the sister app (TerminalVoiceOverlay) ──
+        //
+        // Both overlays install a WH_KEYBOARD_LL hook for the same global
+        // hotkeys and swallow them. With both running, the hook installed last
+        // got everything and the dictation landed in the wrong app. Rule:
+        // if THIS app has no own voice session AND the sister app is running
+        // AND the foreground window is a terminal (the sister app's target),
+        // pass the key on instead of swallowing it. Every other case (unclear
+        // foreground, sister not running, own session active) behaves exactly
+        // as before, so PTT from anywhere keeps working.
+        // Detection mirrors TVO's TerminalWatcher (process names, default
+        // TERMINAL_PROCESS_NAMES) plus the well-known terminal window classes.
+        private const string SisterOverlayMutexName = "TerminalVoiceOverlay-Overlay";
+        private static readonly string[] SisterTargetProcessNames =
+            { "WindowsTerminal", "pwsh", "powershell", "cmd", "mintty", "conhost", "OpenConsole" };
+        private static readonly string[] SisterTargetWindowClasses =
+            { "CASCADIA_HOSTING_WINDOW_CLASS", "ConsoleWindowClass" };
+        private IntPtr _sisterFgCacheHwnd = IntPtr.Zero;
+        private bool _sisterFgCacheResult;
+        private long _sisterFgCacheExpiry;
+        private bool _sisterRunningCache;
+        private long _sisterRunningCacheExpiry;
+
+        /// <summary>True while this app owns a voice session the hotkeys must keep controlling.</summary>
+        private bool HasOwnHotkeySession() =>
+            _pttRecording || _pttToggleMode || _micState == RecordingState.Recording
+            || _mainStartInProgress || isBtwRecording || _btwStartInProgress;
+
+        /// <summary>
+        /// Hook-path helper: true = do not swallow this hotkey, the sister
+        /// overlay owns the foreground target. Cheap: only evaluated once a
+        /// hotkey combo matched, results cached for one second.
+        /// </summary>
+        private bool ShouldYieldHotkeyToSisterApp()
+        {
+            try
+            {
+                if (HasOwnHotkeySession()) return false;
+                long now = Environment.TickCount64;
+                if (now >= _sisterRunningCacheExpiry)
+                {
+                    bool running = false;
+                    if (System.Threading.Mutex.TryOpenExisting(SisterOverlayMutexName, out var m))
+                    {
+                        running = true;
+                        m.Dispose();
+                    }
+                    _sisterRunningCache = running;
+                    _sisterRunningCacheExpiry = now + 2000;
+                }
+                if (!_sisterRunningCache) return false;
+
+                IntPtr fg = NativeMethods.Win32.GetForegroundWindow();
+                if (fg == IntPtr.Zero) return false;
+                if (fg == _sisterFgCacheHwnd && now < _sisterFgCacheExpiry) return _sisterFgCacheResult;
+
+                bool isSisterTarget = false;
+                var cls = new System.Text.StringBuilder(256);
+                if (NativeMethods.Win32.GetClassName(fg, cls, cls.Capacity) > 0)
+                {
+                    string className = cls.ToString();
+                    foreach (var c in SisterTargetWindowClasses)
+                    {
+                        if (className.Equals(c, StringComparison.Ordinal)) { isSisterTarget = true; break; }
+                    }
+                }
+                NativeMethods.Win32.GetWindowThreadProcessId(fg, out uint pid);
+                if (!isSisterTarget && pid != 0 && pid != (uint)Environment.ProcessId)
+                {
+                    try
+                    {
+                        using var proc = System.Diagnostics.Process.GetProcessById((int)pid);
+                        string name = proc.ProcessName;
+                        foreach (var target in SisterTargetProcessNames)
+                        {
+                            if (name.Equals(target, StringComparison.OrdinalIgnoreCase)) { isSisterTarget = true; break; }
+                        }
+                    }
+                    catch { /* process gone: unclear case, behave as before */ }
+                }
+                _sisterFgCacheHwnd = fg;
+                _sisterFgCacheResult = isSisterTarget;
+                _sisterFgCacheExpiry = now + 1000;
+                if (isSisterTarget) LogHotkeyEvent($"YIELD to sister overlay (fg pid={pid})");
+                return isSisterTarget;
+            }
+            catch
+            {
+                return false; // unclear case: behave as before
+            }
+        }
+
+        // ── Hook health check ──
+        //
+        // The hook callback is serviced by the UI thread. If the UI thread is
+        // blocked longer than LowLevelHooksTimeout, Windows silently removes
+        // the hook and all hotkeys stay dead until restart. A cheap 1 s
+        // DispatcherTimer measures its own tick gap; a gap well above the
+        // interval means the UI thread stalled, and the hook is re-installed.
+        private DispatcherTimer? _hookHealthTimer;
+        private long _hookHealthLastTick;
+        private const int HookHealthIntervalMs = 1000;
+        private const int HookStallThresholdMs = 2500;
+
+        private void StartHookHealthCheck()
+        {
+            _hookHealthLastTick = Environment.TickCount64;
+            // Normal priority: a Background timer could be delayed by input/render
+            // bursts and report a false stall.
+            _hookHealthTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(HookHealthIntervalMs) };
+            _hookHealthTimer.Tick += (_, _) =>
+            {
+                long now = Environment.TickCount64;
+                long gap = now - _hookHealthLastTick;
+                _hookHealthLastTick = now;
+                if (gap > HookStallThresholdMs)
+                {
+                    LogHotkeyEvent($"HOOK re-install (ui stall {gap} ms, handle={_pttHookHandle})");
+                    ReinstallPushToTalkHook();
+                }
+            };
+            _hookHealthTimer.Start();
+        }
+
+        private void ReinstallPushToTalkHook()
+        {
+            try
+            {
+                if (_pttHookHandle != IntPtr.Zero)
+                {
+                    NativeMethods.Win32.UnhookWindowsHookEx(_pttHookHandle);
+                    _pttHookHandle = IntPtr.Zero;
+                }
+                InstallPushToTalkHook();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PTT: hook re-install failed: {ex.Message}");
+            }
+        }
+
         private IntPtr OnLowLevelKey(int nCode, IntPtr wParam, IntPtr lParam)
         {
             // KRITISCHER Hot-Path: dieser Callback wird systemweit auf
@@ -5341,6 +5835,11 @@ namespace ClaudeVoiceOverlay.Views
                 bool isDownF12 = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
                 bool isUpF12   = (msg == NativeMethods.Win32.WM_KEYUP   || msg == NativeMethods.Win32.WM_SYSKEYUP);
 
+                // Sister overlay owns the foreground target and we have no own
+                // session: let the key through (no latch, no swallow).
+                if (isDownF12 && altF12 && !_altF12KeyDown && ShouldYieldHotkeyToSisterApp())
+                    return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
+
                 if (isDownF12 && altF12 && !_altF12KeyDown)
                 {
                     _altF12KeyDown = true;
@@ -5407,36 +5906,96 @@ namespace ClaudeVoiceOverlay.Views
 
                 if (isDown && modsOk)
                 {
+                    // Toggle mode, but the recording it belongs to is gone
+                    // (stopped by mouse, start failed, recording lost): this
+                    // tap is a fresh start, not a stop.
+                    if (_pttToggleMode && !IsMainRecordingActiveOrStarting())
+                    {
+                        _pttToggleMode = false;
+                        _pttRecording  = false;
+                    }
+
                     if (_pttToggleMode)
                     {
                         // Wir laufen schon im Toggle-Modus (durch frueheren Tap
                         // gestartet). Dieser Tap stoppt die Aufnahme.
                         _pttToggleMode = false;
                         _pttRecording  = false;
+                        _pttSuppressUntilKeyUp = true; // auto-repeat of this tap must not restart
                         Console.WriteLine("PTT: toggle stop tap — stop and transcribe");
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
-                            try { BtnMic_Click(this, new RoutedEventArgs()); }
+                            try
+                            {
+                                // Only stop what is really running — otherwise
+                                // this "stop" would start a new recording.
+                                if (IsMainRecordingActiveOrStarting())
+                                    BtnMic_Click(this, new RoutedEventArgs());
+                            }
                             catch (Exception ex) { Console.WriteLine($"PTT toggle-stop error: {ex.Message}"); }
                         }));
                     }
-                    else if (!_pttRecording)
+                    else if (!_pttRecording && !_pttSuppressUntilKeyUp)
                     {
+                        // Sister overlay owns the foreground target: pass the
+                        // key on (only for a fresh start, never for a stop).
+                        if (ShouldYieldHotkeyToSisterApp())
+                            return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
+
                         // Frische DOWN-Flanke: Aufnahme starten. Wir merken
                         // uns den Zeitpunkt — beim UP entscheidet die Dauer
                         // ob HOLD-Modus (laenger als Schwelle) oder TOGGLE
                         // (kuerzer, also G-Tasten-Macro). Auto-repeat der
                         // Tastatur landet im else-Zweig (kein zweiter Start).
+                        // _pttRecording is the auto-repeat latch; it is reset
+                        // below if BtnMic_Click rejects the start, so a later
+                        // release/tap can never toggle a recording on.
                         _pttRecording  = true;
                         _pttKeyDownAt  = DateTime.UtcNow;
                         Console.WriteLine("PTT: keydown — start recording");
+                        uint pttVk = vk;
                         Dispatcher.BeginInvoke(new Action(() =>
                         {
+                            // Rejected start: clear the PTT session. Suppress
+                            // auto-repeat only while the key is still held —
+                            // after a fast tap the UP was already processed and
+                            // a stuck flag would swallow the next tap.
+                            void RejectPttStart()
+                            {
+                                _pttRecording  = false;
+                                _pttToggleMode = false;
+                                _pttSuppressUntilKeyUp =
+                                    (NativeMethods.Win32.GetAsyncKeyState((int)pttVk) & 0x8000) != 0;
+                            }
                             try
                             {
+                                if (_micState == RecordingState.Recording && !_mainStopInProgress && !_isProcessing)
+                                {
+                                    // Recording started elsewhere (mouse, Alt+F12):
+                                    // this press stops it as before, but it is not
+                                    // a PTT session, so release/next tap do nothing.
+                                    Console.WriteLine("PTT: keydown during foreign recording — stop it");
+                                    RejectPttStart();
+                                    BtnMic_Click(this, new RoutedEventArgs());
+                                    return;
+                                }
+                                if (!CanMainRecordingStartNow())
+                                {
+                                    Console.WriteLine("PTT: start rejected (busy/BTW/stop)");
+                                    RejectPttStart();
+                                    return;
+                                }
                                 BtnMic_Click(this, new RoutedEventArgs());
+                                // BtnMic_Click may also reject synchronously
+                                // (deployment lock) — then nothing is starting.
+                                if (!IsMainRecordingActiveOrStarting())
+                                    RejectPttStart();
                             }
-                            catch (Exception ex) { Console.WriteLine($"PTT start error: {ex.Message}"); }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"PTT start error: {ex.Message}");
+                                RejectPttStart();
+                            }
                         }));
                     }
                     // else: auto-repeat DOWN waehrend HOLD-Modus — schlucken
@@ -5445,6 +6004,9 @@ namespace ClaudeVoiceOverlay.Views
 
                 if (isUp)
                 {
+                    bool wasSuppressed = _pttSuppressUntilKeyUp;
+                    _pttSuppressUntilKeyUp = false;
+
                     // UP: nur reagieren wenn wir tatsaechlich aufnehmen UND
                     // nicht schon im Toggle-Modus sind (im Toggle-Modus
                     // ignorieren wir UP — gestoppt wird per naechstem Tap).
@@ -5465,19 +6027,28 @@ namespace ClaudeVoiceOverlay.Views
                             Console.WriteLine($"PTT: hold release ({heldMs:F0} ms) — stop and transcribe");
                             Dispatcher.BeginInvoke(new Action(() =>
                             {
-                                try { BtnMic_Click(this, new RoutedEventArgs()); }
+                                try
+                                {
+                                    // Only stop a recording this PTT session
+                                    // really started — never start one here.
+                                    if (IsMainRecordingActiveOrStarting())
+                                        BtnMic_Click(this, new RoutedEventArgs());
+                                }
                                 catch (Exception ex) { Console.WriteLine($"PTT stop error: {ex.Message}"); }
                             }));
                         }
                         return new IntPtr(1);
                     }
+                    // Release of a tap we swallowed on DOWN (rejected start or
+                    // toggle-stop): swallow the matching UP as well.
+                    if (wasSuppressed) return new IntPtr(1);
                 }
             }
 
             // OneShot-Hotkey: Strg+Alt+P = Screenshot UND sofort einfuegen.
-            // BtnScreenshot_Click laeuft synchron auf dem UI-Thread, danach
-            // ist _lastScreenshotPath aktualisiert (wenn der Save klappte)
-            // und wir koennen direkt BtnInsertScreenshot_Click anhaengen.
+            // CaptureScreenshotAsync is awaited (capture/encode on a worker
+            // thread); afterwards _lastScreenshotPath is updated (if the save
+            // worked) and BtnInsertScreenshot_Click is chained.
             // Erfolgs-Check ueber Vorher/Nachher-Vergleich von _lastScreenshotPath:
             // bei Capture-Fehler bleibt der alte Pfad — und wir wuerden sonst
             // ungewollt den alten Screenshot einfuegen.
@@ -5486,21 +6057,26 @@ namespace ClaudeVoiceOverlay.Views
                 bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                if (isDown && ctrl && alt && ShouldYieldHotkeyToSisterApp())
+                    return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
                 if (isDown && ctrl && alt)
                 {
                     if (DateTime.UtcNow < _screenshotCooldownUntil) return new IntPtr(1);
                     _screenshotCooldownUntil = DateTime.UtcNow.AddMilliseconds(ScreenshotCooldownMs);
                     Console.WriteLine("Hotkey: Strg+Alt+P — Screenshot + Insert (one-shot)");
-                    Dispatcher.BeginInvoke(new Action(() =>
+                    // Decoupled from the hook callback; the capture itself runs
+                    // on a worker thread (CaptureScreenshotAsync) so the UI
+                    // thread that services this hook is never blocked.
+                    Dispatcher.BeginInvoke(new Action(async () =>
                     {
                         try
                         {
                             string? before = _lastScreenshotPath;
-                            BtnScreenshot_Click(this, new RoutedEventArgs());
+                            bool saved = await CaptureScreenshotAsync();
                             // Wenn der Pfad sich geaendert hat, war der Save
                             // erfolgreich — direkt einfuegen. Sonst ueberspringen
                             // damit kein alter Screenshot versehentlich gepaste wird.
-                            if (!string.IsNullOrEmpty(_lastScreenshotPath) && _lastScreenshotPath != before)
+                            if (saved && !string.IsNullOrEmpty(_lastScreenshotPath) && _lastScreenshotPath != before)
                             {
                                 BtnInsertScreenshot_Click(this, new RoutedEventArgs());
                             }
@@ -5522,6 +6098,8 @@ namespace ClaudeVoiceOverlay.Views
                 bool ctrl = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_CONTROL) & 0x8000) != 0;
                 bool alt  = (NativeMethods.Win32.GetAsyncKeyState(NativeMethods.Win32.VK_MENU)    & 0x8000) != 0;
                 bool isDown = (msg == NativeMethods.Win32.WM_KEYDOWN || msg == NativeMethods.Win32.WM_SYSKEYDOWN);
+                if (isDown && ctrl && alt && ShouldYieldHotkeyToSisterApp())
+                    return NativeMethods.Win32.CallNextHookEx(_pttHookHandle, nCode, wParam, lParam);
                 if (isDown && ctrl && alt)
                 {
                     if (DateTime.UtcNow < _insertCooldownUntil) return new IntPtr(1);
@@ -5586,6 +6164,7 @@ namespace ClaudeVoiceOverlay.Views
                                 {
                                     try
                                     {
+                                        InvalidateRawReplace();
                                         await AppController.PasteTextAsync(
                                             e.EffectiveText,
                                             _appWatcher.ActiveAppHwnd,
@@ -5634,7 +6213,7 @@ namespace ClaudeVoiceOverlay.Views
             // unberuehrt.
             //
             // Datei-Logging: jeder DOWN-Event und jeder FIRE wird in
-            // %TEMP%\TVO-hotkey.log gestempelt. So koennen wir nachvollziehen
+            // %TEMP%\CVO-hotkey.log gestempelt. So koennen wir nachvollziehen
             // ob der Hook gefeuert hat und ob terminalIsForeground wahr war
             // — ohne dass Frank ein Debugger braucht.
             if (vk >= 0x41 && vk <= 0x5A)
@@ -5676,6 +6255,7 @@ namespace ClaudeVoiceOverlay.Views
                                 {
                                     try
                                     {
+                                        InvalidateRawReplace();
                                         await AppController.PasteTextAsync(
                                             e.EffectiveText,
                                             _appWatcher.ActiveAppHwnd,
@@ -5720,7 +6300,7 @@ namespace ClaudeVoiceOverlay.Views
 
         /// <summary>
         /// Append-only Diagnose-Log fuer Letter-Hotkey-Events. Schreibt
-        /// nach %TEMP%\TVO-hotkey.log. Wird vom Low-Level-Keyboard-Hook-
+        /// nach %TEMP%\CVO-hotkey.log. Wird vom Low-Level-Keyboard-Hook-
         /// Thread aufgerufen — Datei-IO darf den Hook NICHT blockieren oder
         /// werfen, daher try/catch um alles. Sehr kurze Zeile, keine
         /// Buffer-Flushes (default trailing flush ist OK).
@@ -5729,8 +6309,9 @@ namespace ClaudeVoiceOverlay.Views
         {
             try
             {
-                string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TVO-hotkey.log");
-                System.IO.File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
+                // Async append: this runs inside the low-level keyboard hook,
+                // synchronous file IO there risks the hook timeout.
+                AppendHotkeyLogAsync("HOOK", message);
             }
             catch
             {
@@ -5913,6 +6494,7 @@ namespace ClaudeVoiceOverlay.Views
             _hideDelayTimer.Stop();
             _topmostAssertTimer.Stop();
             _foregroundReclaimTimer.Stop();
+            _hookHealthTimer?.Stop();
             _tooltipHoverTimer?.Stop();
 
             // X-Repeat-Loop sauber stoppen falls er noch laeuft (z.B.
