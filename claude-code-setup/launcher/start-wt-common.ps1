@@ -50,6 +50,15 @@ function Start-WtCliRobust {
         [int]$MaxWtAttempts = 3
     )
 
+    # Start-Process -ArgumentList verbindet ein Array nur mit Leerzeichen, OHNE Elemente mit
+    # Leerzeichen zu quoten. Ein Titel wie "Jarvis (Sol 6.1, OpenCode)" zerfiel dadurch, wt
+    # startete den Titel als Befehl (0x80070002) und alle Versuche plus Fallback liefen an.
+    function _JoinArgs([string[]]$items) {
+        ($items | ForEach-Object {
+            if ($_ -match '[\s"]') { '"' + ($_ -replace '(\\*)"', '$1$1\"' -replace '(\\+)$', '$1$1') + '"' } else { $_ }
+        }) -join ' '
+    }
+
     function _Log([string]$msg) {
         $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
         Add-Content -Path $LogFile -Value "[$stamp] [robust] $msg" -ErrorAction SilentlyContinue
@@ -101,7 +110,7 @@ function Start-WtCliRobust {
 
         $since = Get-Date
         try {
-            Start-Process -FilePath $WtPath -ArgumentList ($windowTarget + $TabArgs) -ErrorAction Stop
+            Start-Process -FilePath $WtPath -ArgumentList (_JoinArgs ($windowTarget + $TabArgs)) -ErrorAction Stop
         } catch {
             _Log "ERROR beim wt-Start (Versuch $attempt): $_"
             continue
@@ -123,7 +132,7 @@ function Start-WtCliRobust {
     try {
         $pwshExe = Join-Path $PSHOME 'pwsh.exe'
         if (-not (Test-Path $pwshExe)) { $pwshExe = 'pwsh.exe' }
-        Start-Process -FilePath $pwshExe -ArgumentList $FallbackPwshArgs -WorkingDirectory $FallbackWorkDir -ErrorAction Stop
+        Start-Process -FilePath $pwshExe -ArgumentList (_JoinArgs $FallbackPwshArgs) -WorkingDirectory $FallbackWorkDir -ErrorAction Stop
         $alivePid = _WaitInnerAlive $since
         if ($alivePid) {
             _Log "FALLBACK ERFOLG: CLI laeuft im klassischen Konsolenfenster (PID $alivePid)"
