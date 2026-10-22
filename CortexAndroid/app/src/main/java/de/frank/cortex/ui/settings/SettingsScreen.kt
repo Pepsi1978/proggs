@@ -1,5 +1,5 @@
 package de.frank.cortex.ui.settings
-
+
 import de.frank.cortex.audio.WhisperWoerterbuch
 import android.content.Intent
 import android.net.Uri
@@ -731,6 +731,7 @@ fun SettingsScreen(
                         ) {
                             whisperModel = WhisperWoerterbuch.MODELL_TURBO
                             SettingsStore.whisperModel = WhisperWoerterbuch.MODELL_TURBO
+                            WhisperWoerterbuch.sperreAufheben()
                         }
                         TtsEngineChip(
                             title = "Large V3",
@@ -741,6 +742,8 @@ fun SettingsScreen(
                         ) {
                             whisperModel = WhisperWoerterbuch.MODELL_LARGE_V3
                             SettingsStore.whisperModel = WhisperWoerterbuch.MODELL_LARGE_V3
+                            // Erneute Wahl hebt die 30-Minuten-Sperre nach einer Groq-Ablehnung auf.
+                            WhisperWoerterbuch.sperreAufheben()
                         }
                     }
                     Text(
@@ -1329,6 +1332,8 @@ fun SettingsScreen(
                                         // Oeffnen-Vorgang (bzw. offline dauerhaft) die ALTEN Modelle.
                                         try {
                                             ApiClient.cacheAgentConfig(ApiClient.agentApi().getConfig())
+                                        } catch (ce: CancellationException) {
+                                            throw ce
                                         } catch (inner: Exception) {
                                             CortexLog.warn("Settings", "saveAgentModels", "Cache-Refresh nach Speichern fehlgeschlagen: ${inner.message}")
                                         }
@@ -1388,6 +1393,8 @@ fun SettingsScreen(
                             // sonst erst beim naechsten Cache-Refresh (422er bis dahin).
                             try {
                                 ApiClient.cacheAgentConfig(ApiClient.agentApi().getConfig())
+                            } catch (ce: CancellationException) {
+                                throw ce
                             } catch (inner: Exception) {
                                 CortexLog.warn("Settings", "saveLimits", "Cache-Refresh nach Speichern fehlgeschlagen: ${inner.message}")
                             }
@@ -1561,6 +1568,8 @@ fun SettingsScreen(
                                                 // wieder den ALTEN Einfluss-Wert aus dem Zwischenspeicher.
                                                 try {
                                                     ApiClient.cacheAgentConfig(ApiClient.agentApi().getConfig())
+                                                } catch (ce: CancellationException) {
+                                                    throw ce
                                                 } catch (inner: Exception) {
                                                     CortexLog.warn("Settings", "saveMemoryWebInfluence", "Cache-Refresh nach Speichern fehlgeschlagen: ${inner.message}")
                                                 }

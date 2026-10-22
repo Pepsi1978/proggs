@@ -31,6 +31,11 @@ object WhisperWoerterbuch {
         gesperrtBisMs = System.currentTimeMillis() + SPERRE_MS
     }
 
+    /** Hebt die large-v3-Sperre auf; aufrufen, wenn der Nutzer das Modell in den Einstellungen (erneut) wählt. */
+    fun sperreAufheben() {
+        gesperrtBisMs = 0L
+    }
+
     /** Groq-Antwort „Modell für die Organisation gesperrt“. */
     fun istModellGesperrt(body: String): Boolean =
         body.contains("model_permission_blocked_org") || body.contains("blocked at the organization level")
@@ -57,14 +62,22 @@ object WhisperWoerterbuch {
     }
 
     /**
-     * Echo = Whisper wiederholt den Prompt ab seinem Anfang („Begriffe: …“), ganz oder teilweise.
-     * Ein Diktat, das nur Wörterbuch-Wörter enthält, beginnt nicht mit dem Marker und bleibt erhalten.
+     * Echo = Whisper wiederholt den Prompt ab seinem Anfang („Begriffe: …“), ganz oder teilweise,
+     * oder bei Stille nur ein Stück aus Ende/Mitte („Claude Code, OpenAI, Anthropic.“, ab [MIN_TEIL_ECHO] Zeichen).
+     * Ein echtes Diktat, das zufällig nur aus Begriffen in Prompt-Reihenfolge besteht, wird dadurch
+     * einmal ohne Prompt wiederholt — harmlos.
      */
     fun istPromptEcho(text: String, prompt: String?): Boolean {
         if (prompt.isNullOrEmpty() || text.isBlank()) return false
         fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
         val t = norm(text)
+        val p = norm(prompt)
         val marker = norm(ECHO_MARKER)
-        return t.startsWith(marker) && norm(prompt).contains(t.substring(marker.length))
+        if (t.isEmpty()) return false
+        if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+        return t.length >= MIN_TEIL_ECHO && p.contains(t)
     }
+
+    /** Mindestlänge (normalisiert) eines Teil-Echos ohne Marker. */
+    private const val MIN_TEIL_ECHO = 12
 }
