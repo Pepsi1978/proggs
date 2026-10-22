@@ -1,6 +1,7 @@
 package de.frank.kompass.data
 
 import de.frank.kompass.AppProfil
+import de.frank.kompass.audio.GroqTranskribierer
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -114,6 +115,16 @@ class EinstellungenStore(context: Context) {
     var groqModell: String
         get() = offen.getString(SCHL_GROQ_MODELL, STANDARD_GROQ_MODELL) ?: STANDARD_GROQ_MODELL
         set(wert) = offen.edit().putString(SCHL_GROQ_MODELL, wert).apply()
+
+    /** Persönliches Wörterbuch für Whisper an/aus. Voreinstellung: an. */
+    var woerterbuchAn: Boolean
+        get() = offen.getBoolean(SCHL_WOERTERBUCH_AN, true)
+        set(wert) = offen.edit().putBoolean(SCHL_WOERTERBUCH_AN, wert).apply()
+
+    /** Begriffe des Wörterbuchs als Rohtext. Noch nie gespeichert: die Vorbelegung. */
+    var woerterbuch: String
+        get() = offen.getString(SCHL_WOERTERBUCH, null) ?: GroqTranskribierer.STANDARD_WOERTERBUCH
+        set(wert) = offen.edit().putString(SCHL_WOERTERBUCH, wert).apply()
 
     /** Die vier Halluzinations-Schichten sind einzeln abschaltbar; Voreinstellung: alle an. */
     /**
@@ -275,6 +286,8 @@ class EinstellungenStore(context: Context) {
         private const val SCHL_TEMPO = "tts_tempo"
         private const val SCHL_LIEBLINGSSTIMMEN = "tts_lieblingsstimmen"
         private const val SCHL_GROQ_MODELL = "groq_modell"
+        private const val SCHL_WOERTERBUCH_AN = "groq_woerterbuch_an"
+        private const val SCHL_WOERTERBUCH = "groq_woerterbuch"
         private const val SCHL_MODELL = "ki_modell"
         private const val SCHL_MODELL_LABEL = "ki_modell_label"
         private const val SCHL_DENKTIEFE = "ki_denktiefe"

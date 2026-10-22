@@ -425,7 +425,7 @@ fun EinstellungenScreen(
                     punkte = GroqTranskribierer.MODELLE.map {
                         AuswahlPunkt(
                             wert = it,
-                            text = it,
+                            text = GroqTranskribierer.modellName(it),
                             zusatz = if (it.endsWith("turbo")) {
                                 "schneller, empfohlen"
                             } else {
@@ -436,6 +436,20 @@ fun EinstellungenScreen(
                     gewaehlt = zustand.groqModell,
                     beiWahl = viewModel::setzeGroqModell,
                 )
+
+                Spacer(Modifier.height(Mass.abstandKlein))
+                Schalterzeile(
+                    titel = "Pers\u00f6nliches W\u00f6rterbuch",
+                    erklaerung = "Whisper schreibt diese Begriffe so, wie sie hier stehen.",
+                    an = zustand.woerterbuchAn,
+                    beiWechsel = viewModel::schalteWoerterbuch,
+                )
+                WoerterbuchFeld(
+                    wert = zustand.woerterbuch,
+                    aktiv = zustand.woerterbuchAn,
+                    beiWert = viewModel::setzeWoerterbuch,
+                )
+                Spacer(Modifier.height(Mass.abstandKlein))
 
                 Mehrfachauswahl(
                     beschriftung = "Schutz vor erfundenen S\u00e4tzen",
@@ -1073,6 +1087,48 @@ private fun AnmeldeCode(code: String, beiAbbrechen: () -> Unit) {
         )
         Spacer(Modifier.height(Mass.abstandKlein))
         Aktionsknopf("Anmeldung abbrechen", zurueckhaltend = true, beiKlick = beiAbbrechen)
+    }
+}
+
+/** Mehrzeiliges Feld für die Begriffe des persönlichen Wörterbuchs. */
+@Composable
+private fun WoerterbuchFeld(wert: String, aktiv: Boolean, beiWert: (String) -> Unit) {
+    val farben = LocalKompassFarben.current
+    // Lokal gehalten, damit der Cursor beim Tippen nicht springt; jede Änderung wird sofort gespeichert.
+    var eingabe by rememberSaveable { mutableStateOf(wert) }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Text(
+            text = "Begriffe (durch Komma oder Zeilenumbruch getrennt)",
+            style = MaterialTheme.typography.labelMedium,
+            color = farben.textGedaempft,
+        )
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 88.dp)
+                .background(farben.eingabefeld, RoundedCornerShape(Mass.radiusKlein))
+                .border(1.dp, farben.rahmen, RoundedCornerShape(Mass.radiusKlein))
+                .padding(horizontal = Mass.abstandKlein, vertical = 12.dp),
+        ) {
+            BasicTextField(
+                value = eingabe,
+                onValueChange = {
+                    eingabe = it
+                    beiWert(it)
+                },
+                enabled = aktiv,
+                minLines = 3,
+                textStyle = TextStyle(
+                    color = if (aktiv) MaterialTheme.colorScheme.onSurface else farben.textGedaempft,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(
+                    MaterialTheme.colorScheme.primary,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
