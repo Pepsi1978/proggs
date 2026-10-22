@@ -118,12 +118,14 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -188,6 +190,7 @@ import java.util.UUID
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -1560,12 +1563,11 @@ private fun SpracheingabeBereich(app: NewsApplication, stand: EinstellungenStand
             }
             if (stand.woerterbuchAn) {
                 Spacer(Modifier.height(12.dp))
-                var begriffe by remember { mutableStateOf(stand.woerterbuch) }
+                var begriffe by entprellterWoerterbuchText(stand.woerterbuch) { app.einstellungen.setzeWoerterbuch(it) }
                 OutlinedTextField(
                     value = begriffe,
                     onValueChange = {
                         begriffe = it
-                        app.einstellungen.setzeWoerterbuch(it)
                     },
                     label = { Text("Begriffe (durch Komma oder Zeilenumbruch getrennt)") },
                     minLines = 3,
@@ -2074,4 +2076,31 @@ private fun DesignKarte(design: FarbDesign, gewaehlt: Boolean, dunkel: Boolean, 
             }
         }
     }
+}
+
+/**
+ * Local text of the vocabulary field: takes over values loaded from outside (backup import,
+ * reload), saves ~500 ms after the last keystroke and once more when the field leaves the screen.
+ */
+@Composable
+private fun entprellterWoerterbuchText(wert: String, speichern: (String) -> Unit): MutableState<String> {
+    val text = remember { mutableStateOf(wert) }
+    val gespeichert = remember { mutableStateOf(wert) }
+    val aktuellSpeichern by rememberUpdatedState(speichern)
+    LaunchedEffect(wert) {
+        if (wert != gespeichert.value) {
+            gespeichert.value = wert
+            text.value = wert
+        }
+    }
+    LaunchedEffect(text.value) {
+        if (text.value == gespeichert.value) return@LaunchedEffect
+        delay(500)
+        gespeichert.value = text.value
+        aktuellSpeichern(text.value)
+    }
+    DisposableEffect(Unit) {
+        onDispose { if (text.value != gespeichert.value) aktuellSpeichern(text.value) }
+    }
+    return text
 }

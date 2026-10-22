@@ -38,6 +38,7 @@
     {"versionCode": 34, "versionName": "1.10.23", "stand": "06.10.2026, 14:39 Uhr", "notiz": "Meldungen in diesem Block lassen sich direkt im aufgeklappten Thema mit einem Schieberegler von 1 bis 15 einstellen: linker Griff für die Mindestzahl, rechter für die Höchstzahl. Gleicher Kartenstil wie das Nachrichtenalter, Werte werden beim Loslassen gespeichert."},
     {"versionCode": 35, "versionName": "1.10.24", "stand": "07.10.2026, 13:32 Uhr", "notiz": "Vorlesen läuft im Hintergrund weiter: Auch wenn du die App verlässt, in eine andere App wechselst oder den Bildschirm ausschaltest, liest NewsKompass den ganzen Nachrichtenblock zu Ende. Eine stille Benachrichtigung zeigt den Stand mit Pause/Weiter und Stopp; Schließen der App beendet das Vorlesen nicht mehr."},
     {"versionCode": 36, "versionName": "1.10.25", "stand": "19.10.2026, 08:46 Uhr", "notiz": "Das maximale Nachrichtenalter (z. B. 3 Tage), die Meldungsanzahl und die Ausführlichkeit eines Themas werden jetzt zuverlässig gespeichert und springen nach dem Verstellen nicht mehr auf den alten Wert zurück."},
-    {"versionCode": 37, "versionName": "1.10.26", "stand": "22.10.2026, 11:20 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter."}
+    {"versionCode": 37, "versionName": "1.10.26", "stand": "22.10.2026, 11:20 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter."},
+    {"versionCode": 38, "versionName": "1.10.27", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, das Wörterbuch-Feld speichert ruckelfrei und zeigt nach einer Wiederherstellung den aktuellen Stand."}
   ]
 }
