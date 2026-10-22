@@ -72,6 +72,20 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_TTS, null)
         set(value) { prefs.edit().putString(KEY_TTS, value).apply() }
 
+    /** Gemini-3.8-Stimme: AI-Studio-Projekt ohne Abrechnung (kostenlos) bzw. mit Abrechnung (bezahlt). */
+    var geminiTtsKeyFree: String?
+        get() = prefs.getString(KEY_GEMINI_TTS_FREE, null)
+        set(value) { prefs.edit().putString(KEY_GEMINI_TTS_FREE, value).apply() }
+
+    var geminiTtsKeyPaid: String?
+        get() = prefs.getString(KEY_GEMINI_TTS_PAID, null)
+        set(value) { prefs.edit().putString(KEY_GEMINI_TTS_PAID, value).apply() }
+
+    /** Azure AI Speech: KEY 1 der Speech-Ressource. */
+    var azureTtsKey: String?
+        get() = prefs.getString(KEY_AZURE_TTS, null)
+        set(value) { prefs.edit().putString(KEY_AZURE_TTS, value).apply() }
+
     /** Bearer-Key fuer den privaten Second-Brain-Server (Ideen-Connector). */
     var secondBrainApiKey: String?
         get() = prefs.getString(KEY_SECOND_BRAIN, null)
@@ -237,6 +251,9 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_GROQ = "groq_api_key"
         private const val KEY_GEMINI = "gemini_api_key"
         private const val KEY_TTS = "google_tts_api_key"
+        private const val KEY_GEMINI_TTS_FREE = "gemini_tts_key_frei"
+        private const val KEY_GEMINI_TTS_PAID = "gemini_tts_key_bezahlt"
+        private const val KEY_AZURE_TTS = "azure_tts_key"
         private const val KEY_SECOND_BRAIN = "second_brain_api_key"
         private const val KEY_SECOND_BRAIN_WG = "second_brain_wireguard_config"
         private const val KEY_WHOOP_CLIENT_ID = "whoop_client_id"

@@ -4,6 +4,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -167,8 +170,10 @@ fun ApiKeysScreen(
                     onSelectVoice = vm::setTtsVoice,
                     onTestSpeak = vm::testSpeak,
                     onStop = vm::stopTtsPreview,
+                    onToggleFavorite = vm::toggleTtsVoiceFavorite,
                 )
             }
+            item { CloudVoicesCard(state, vm) }
             item { PolarOAuthCard(oauthVm, oauthState) }
             item { WhoopOAuthCard(oauthVm, oauthState) }
             item { OuraApiCard(ouraVm, ouraState) }
@@ -612,11 +617,15 @@ private fun TtsVoiceCard(
     onSelectVoice: (String) -> Unit,
     onTestSpeak: () -> Unit,
     onStop: () -> Unit,
+    onToggleFavorite: (String) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     var showPicker by remember { mutableStateOf(false) }
     val current = state.ttsVoices.firstOrNull { it.name == state.ttsVoiceName }
-    val displayName = current?.displayName ?: state.ttsVoiceName
+    val displayName = current?.let { "${it.provider}: ${it.displayName}" } ?: state.ttsVoiceName
+    // Gemini und Azure bringen eigene Schluessel mit — die Auswahl ist auch ohne Google-TTS-Schluessel offen.
+    val anyKey = state.ttsSaved || state.geminiTtsKeyFree.isNotBlank() || state.geminiTtsKeyPaid.isNotBlank() ||
+        state.azureTtsKey.isNotBlank()
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -636,7 +645,8 @@ private fun TtsVoiceCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Wähle eine Chirp-3-HD-Stimme. Sie liest Tagesbriefings, Wochenrückblicke und Genie-Antworten.",
+                "Wähle eine Stimme (Chirp 3 HD, Gemini 3.8 Flash/Flash-Lite TTS oder Azure Neural). Sie liest Tagesbriefings, " +
+                    "Wochenrückblicke, Mental- und Gewohnheits-Texte und Genie-Antworten. Langes Drücken oder Stern: Favorit, Favoriten stehen oben.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cosmos.textSecondary,
             )
@@ -650,20 +660,20 @@ private fun TtsVoiceCard(
                         color = cosmos.glassBorder.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(12.dp),
                     )
-                    .clickable(enabled = state.ttsSaved) { showPicker = true }
+                    .clickable(enabled = anyKey) { showPicker = true }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (state.ttsSaved) displayName else "Erst API-Schlüssel speichern",
+                        text = if (anyKey) displayName else "Erst API-Schlüssel speichern",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (state.ttsSaved) cosmos.textPrimary else cosmos.textSecondary,
+                        color = if (anyKey) cosmos.textPrimary else cosmos.textSecondary,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
                         text = "Ändern",
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (state.ttsSaved) LocalCosmos.current.accent else cosmos.textSecondary,
+                        color = if (anyKey) LocalCosmos.current.accent else cosmos.textSecondary,
                     )
                 }
             }
@@ -676,7 +686,7 @@ private fun TtsVoiceCard(
                     OutlinedButton(
                         onClick = onTestSpeak,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = state.ttsSaved,
+                        enabled = anyKey,
                     ) {
                         Icon(Icons.Outlined.PlayArrow, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(6.dp))
@@ -743,10 +753,12 @@ private fun TtsVoiceCard(
         VoicePickerDialog(
             voices = state.ttsVoices,
             selected = state.ttsVoiceName,
+            favorites = state.ttsVoiceFavorites,
             onSelect = { name ->
                 onSelectVoice(name)
                 showPicker = false
             },
+            onToggleFavorite = onToggleFavorite,
             onDismiss = { showPicker = false },
         )
     }
@@ -756,7 +768,9 @@ private fun TtsVoiceCard(
 private fun VoicePickerDialog(
     voices: List<GoogleTtsVoice>,
     selected: String,
+    favorites: Set<String>,
     onSelect: (String) -> Unit,
+    onToggleFavorite: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
@@ -766,19 +780,35 @@ private fun VoicePickerDialog(
             OutlinedButton(onClick = onDismiss) { Text("Abbrechen") }
         },
         title = {
-            Text("Chirp-3-HD-Stimme wählen", color = cosmos.textPrimary)
+            Text("Stimme wählen", color = cosmos.textPrimary)
         },
         text = {
             LazyColumn(
                 modifier = Modifier.heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                items(voices, key = { it.name }) { voice ->
-                    VoiceRow(
-                        voice = voice,
-                        isSelected = voice.name == selected,
-                        onClick = { onSelect(voice.name) },
-                    )
+                // Favoriten oben, danach je Anbieter eine Gruppe.
+                val favoriteVoices = voices.filter { it.name in favorites }
+                val groups = (if (favoriteVoices.isEmpty()) emptyList() else listOf("★ Favoriten" to favoriteVoices)) +
+                    voices.filterNot { it.name in favorites }.groupBy { it.provider }.toList()
+                groups.forEach { (title, groupVoices) ->
+                    item(key = "header-$title") {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = cosmos.textSecondary,
+                            modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(groupVoices, key = { it.name }) { voice ->
+                        VoiceRow(
+                            voice = voice,
+                            isSelected = voice.name == selected,
+                            isFavorite = voice.name in favorites,
+                            onClick = { onSelect(voice.name) },
+                            onToggleFavorite = { onToggleFavorite(voice.name) },
+                        )
+                    }
                 }
             }
         },
@@ -786,10 +816,13 @@ private fun VoicePickerDialog(
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun VoiceRow(
     voice: GoogleTtsVoice,
     isSelected: Boolean,
+    isFavorite: Boolean,
     onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
 ) {
     val cosmos = LocalCosmos.current
     val accent = when (voice.gender) {
@@ -799,7 +832,7 @@ private fun VoiceRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onToggleFavorite, onLongClickLabel = "Favorit an/aus")
             .background(
                 color = if (isSelected) accent.copy(alpha = 0.18f) else Color.Transparent,
                 shape = RoundedCornerShape(10.dp),
@@ -820,6 +853,14 @@ private fun VoiceRow(
             color = cosmos.textPrimary,
             modifier = Modifier.weight(1f),
         )
+        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
+            Icon(
+                if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                if (isFavorite) "Favorit entfernen" else "Als Favorit markieren",
+                tint = if (isFavorite) Color(0xFFFFC107) else cosmos.textSecondary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
         if (isSelected) {
             Icon(
                 Icons.Outlined.CheckCircle,
@@ -829,6 +870,109 @@ private fun VoiceRow(
             )
         }
     }
+}
+
+/* ----------------- Gemini-3.8-Stimme + Azure Neural ----------------- */
+
+@Composable
+private fun CloudVoicesCard(state: ApiKeysUiState, vm: ApiKeysViewModel) {
+    val cosmos = LocalCosmos.current
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text("Gemini- und Azure-Stimmen", style = MaterialTheme.typography.titleMedium, color = LocalCosmos.current.accent)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Gemini 3.8 Flash TTS und Flash-Lite TTS (dieselben 30 Stimmen wie Chirp 3 HD) sowie Azure Neural " +
+                    "mit eigenem Speech-Schlüssel. Die Stimme wählst du oben unter „Stimme“.",
+                style = MaterialTheme.typography.bodySmall,
+                color = cosmos.textSecondary,
+            )
+            Spacer(Modifier.height(12.dp))
+            SecretField("Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)", state.geminiTtsKeyFree, vm::setGeminiTtsKeyFree)
+            Spacer(Modifier.height(8.dp))
+            SecretField("Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)", state.geminiTtsKeyPaid, vm::setGeminiTtsKeyPaid)
+            Spacer(Modifier.height(10.dp))
+            Text("Welcher Schlüssel", style = MaterialTheme.typography.labelMedium, color = cosmos.textSecondary)
+            Spacer(Modifier.height(4.dp))
+            de.frank.entropyreducer.domain.tts.CloudVoiceSynth.KEY_CHOICES.forEach { (id, label) ->
+                val active = state.geminiTtsKeyChoice == id
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { vm.setGeminiTtsKeyChoice(id) }
+                        .background(
+                            color = if (active) LocalCosmos.current.accent.copy(alpha = 0.18f) else Color.Transparent,
+                            shape = RoundedCornerShape(10.dp),
+                        )
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(label, style = MaterialTheme.typography.bodyMedium, color = cosmos.textPrimary, modifier = Modifier.weight(1f))
+                    if (active) Icon(Icons.Outlined.CheckCircle, null, tint = LocalCosmos.current.accent, modifier = Modifier.size(18.dp))
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Rückfall auf Chirp 3 HD", style = MaterialTheme.typography.bodyMedium, color = cosmos.textPrimary)
+                    Text(
+                        "Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest die App mit " +
+                            "derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
+                Switch(checked = state.geminiTtsChirpFallback, onCheckedChange = vm::setGeminiTtsChirpFallback)
+            }
+            val freiNoetig = state.geminiTtsKeyChoice != de.frank.entropyreducer.domain.tts.CloudVoiceSynth.NUR_BEZAHLT
+            val bezahltNoetig = state.geminiTtsKeyChoice != de.frank.entropyreducer.domain.tts.CloudVoiceSynth.NUR_FREI
+            val geminiGewaehlt = de.frank.entropyreducer.data.remote.tts.GoogleTtsVoices.isGemini(state.ttsVoiceName)
+            if (geminiGewaehlt && (!freiNoetig || state.geminiTtsKeyFree.isBlank()) && (!bezahltNoetig || state.geminiTtsKeyPaid.isBlank())) {
+                Spacer(Modifier.height(6.dp))
+                Text("Hinweis: Für die gewählte Gemini-Stimme fehlt noch ein Schlüssel.", style = MaterialTheme.typography.bodySmall, color = LocalCosmos.current.crit)
+            }
+            if (state.geminiTtsChirpFallback && !state.ttsSaved) {
+                Spacer(Modifier.height(6.dp))
+                Text("Hinweis: Für den Rückfall auf Chirp 3 HD fehlt der Google-Cloud-TTS-Schlüssel (oben).", style = MaterialTheme.typography.bodySmall, color = LocalCosmos.current.crit)
+            }
+            Spacer(Modifier.height(14.dp))
+            SecretField("Azure-Speech-Schlüssel (KEY 1)", state.azureTtsKey, vm::setAzureTtsKey)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = state.azureTtsRegion,
+                onValueChange = vm::setAzureTtsRegion,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Azure-Region (z. B. westeurope)") },
+                singleLine = true,
+            )
+            if (de.frank.entropyreducer.data.remote.tts.GoogleTtsVoices.isAzure(state.ttsVoiceName) && state.azureTtsKey.isBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text("Hinweis: Für die gewählte Azure-Stimme fehlt noch der Speech-Schlüssel.", style = MaterialTheme.typography.bodySmall, color = LocalCosmos.current.crit)
+            }
+        }
+    }
+}
+
+/** Verdecktes Schluesselfeld mit Augen-Schalter; speichert bei jeder Aenderung. */
+@Composable
+private fun SecretField(label: String, value: String, onChange: (String) -> Unit) {
+    var hidden by remember { mutableStateOf(true) }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        visualTransformation = if (hidden) PasswordVisualTransformation() else VisualTransformation.None,
+        singleLine = true,
+        trailingIcon = {
+            IconButton(onClick = { hidden = !hidden }) {
+                Icon(
+                    if (hidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
+                    if (hidden) "Schlüssel anzeigen" else "Schlüssel verbergen",
+                )
+            }
+        },
+    )
 }
 
 private fun formatRelativeTime(epochMs: Long): String {

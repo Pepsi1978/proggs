@@ -55,7 +55,16 @@ data class ApiKeysUiState(
     val geminiStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
     val ttsStatus: ConnectionStatus = ConnectionStatus.UNKNOWN,
     val ttsVoiceName: String = GoogleTtsVoices.DEFAULT_VOICE_NAME,
-    val ttsVoices: List<GoogleTtsVoice> = GoogleTtsVoices.ALL,
+    val ttsVoices: List<GoogleTtsVoice> = GoogleTtsVoices.ALL_PROVIDERS,
+    /** Gemini-3.8-Stimme und Azure Neural. */
+    val geminiTtsKeyFree: String = "",
+    val geminiTtsKeyPaid: String = "",
+    val geminiTtsKeyChoice: String = "frei_dann_bezahlt",
+    val geminiTtsChirpFallback: Boolean = false,
+    val azureTtsKey: String = "",
+    val azureTtsRegion: String = "westeurope",
+    /** Als Favorit markierte Stimmen; sie stehen in der Auswahl oben. */
+    val ttsVoiceFavorites: Set<String> = emptySet(),
     val ttsSpeakState: TtsSpeakState = TtsSpeakState.IDLE,
     val ttsLastError: String? = null,
     val secondBrainKey: String = "",
@@ -99,6 +108,9 @@ constructor(
                 groqKey = secrets.groqApiKey.orEmpty(),
                 geminiKey = secrets.geminiApiKey.orEmpty(),
                 ttsKey = secrets.googleTtsApiKey.orEmpty(),
+                geminiTtsKeyFree = secrets.geminiTtsKeyFree.orEmpty(),
+                geminiTtsKeyPaid = secrets.geminiTtsKeyPaid.orEmpty(),
+                azureTtsKey = secrets.azureTtsKey.orEmpty(),
                 secondBrainKey = secrets.secondBrainApiKey.orEmpty(),
                 secondBrainWireGuardConfig = secrets.secondBrainWireGuardConfig.orEmpty(),
                 groqSaved = !secrets.groqApiKey.isNullOrBlank(),
@@ -117,6 +129,18 @@ constructor(
                 val effective = stored.ifBlank { GoogleTtsVoices.DEFAULT_VOICE_NAME }
                 _state.update { it.copy(ttsVoiceName = effective) }
             }
+        }
+        viewModelScope.launch {
+            settings.geminiTtsKeyChoiceFlow.collect { v -> _state.update { it.copy(geminiTtsKeyChoice = v) } }
+        }
+        viewModelScope.launch {
+            settings.geminiTtsChirpFallbackFlow.collect { v -> _state.update { it.copy(geminiTtsChirpFallback = v) } }
+        }
+        viewModelScope.launch {
+            settings.azureTtsRegionFlow.collect { v -> _state.update { it.copy(azureTtsRegion = v) } }
+        }
+        viewModelScope.launch {
+            settings.ttsVoiceFavoritesFlow.collect { v -> _state.update { it.copy(ttsVoiceFavorites = v) } }
         }
         viewModelScope.launch {
             settings.secondBrainIdeasConnectorEnabledFlow.collect { enabled ->
@@ -251,7 +275,44 @@ constructor(
         secondBrainIdeaConnector.syncAllNow(viewModelScope)
     }
 
-    /** Speichert die ausgewaehlte Chirp-3-HD-Stimme und aktualisiert das UI sofort. */
+    /** Gemini-/Azure-Schluessel werden sofort verschluesselt gespeichert (Leerzeichen fliegen raus). */
+    fun setGeminiTtsKeyFree(value: String) {
+        val v = value.filterNot(Char::isWhitespace)
+        _state.update { it.copy(geminiTtsKeyFree = v) }
+        secrets.geminiTtsKeyFree = v.ifBlank { null }
+    }
+
+    fun setGeminiTtsKeyPaid(value: String) {
+        val v = value.filterNot(Char::isWhitespace)
+        _state.update { it.copy(geminiTtsKeyPaid = v) }
+        secrets.geminiTtsKeyPaid = v.ifBlank { null }
+    }
+
+    fun setAzureTtsKey(value: String) {
+        val v = value.filterNot(Char::isWhitespace)
+        _state.update { it.copy(azureTtsKey = v) }
+        secrets.azureTtsKey = v.ifBlank { null }
+    }
+
+    fun setAzureTtsRegion(value: String) {
+        _state.update { it.copy(azureTtsRegion = value) }
+        viewModelScope.launch { settings.setAzureTtsRegion(value) }
+    }
+
+    fun setGeminiTtsKeyChoice(value: String) {
+        viewModelScope.launch { settings.setGeminiTtsKeyChoice(value) }
+    }
+
+    fun setGeminiTtsChirpFallback(value: Boolean) {
+        viewModelScope.launch { settings.setGeminiTtsChirpFallback(value) }
+    }
+
+    /** Langes Druecken oder Stern: Stimme als Favorit an/aus. */
+    fun toggleTtsVoiceFavorite(voiceName: String) {
+        viewModelScope.launch { settings.toggleTtsVoiceFavorite(voiceName) }
+    }
+
+    /** Speichert die ausgewaehlte Stimme und aktualisiert das UI sofort. */
     fun setTtsVoice(voiceName: String) {
         _state.update { it.copy(ttsVoiceName = voiceName) }
         viewModelScope.launch { settings.setTtsVoice(voiceName) }

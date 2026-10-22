@@ -57,6 +57,9 @@ class TtsPlayer @Inject constructor(
         const val SEQUENCE_PREFIX = "mental_seq_"
     }
 
+    /** Gemini-3.8- und Azure-Stimmen. */
+    private val cloud = CloudVoiceSynth()
+
     @Volatile private var mediaPlayer: MediaPlayer? = null
     @Volatile private var preparedPlayer: MediaPlayer? = null
     @Volatile private var pauseRequested = false
@@ -79,12 +82,13 @@ class TtsPlayer @Inject constructor(
     ): TtsResult {
         if (text.isBlank()) return TtsResult.Error("Text ist leer")
 
-        val apiKey = secrets.googleTtsApiKey?.takeIf { it.isNotBlank() }
-            ?: return TtsResult.Error("Kein TTS-API-Schlüssel hinterlegt")
-
         val voiceName = voiceNameOverride
             ?: settings.ttsVoiceFlow.first().takeIf { it.isNotBlank() }
             ?: GoogleTtsVoices.DEFAULT_VOICE_NAME
+
+        // Gemini- und Azure-Stimmen bringen eigene Schluessel mit; nur Chirp braucht den Google-TTS-Schluessel.
+        val apiKey = secrets.googleTtsApiKey?.takeIf { it.isNotBlank() }
+            ?: if (isCloudVoice(voiceName)) "" else return TtsResult.Error("Kein TTS-API-Schlüssel hinterlegt")
 
         return try {
             val audioFile = withContext(Dispatchers.IO) { synthesize(text, apiKey, voiceName) }
@@ -154,6 +158,45 @@ class TtsPlayer @Inject constructor(
         targetFile: File = File(context.cacheDir, CACHE_FILE),
     ): File {
         Diag.d(DiagnosticArea.GOOGLE_TTS, TAG, "Synthesize ${text.length} chars, voice=$voiceName")
+        val audioBytes = when {
+            GoogleTtsVoices.isGemini(voiceName) -> cloud.gemini(
+                text,
+                voiceName,
+                GeminiTtsConfig(
+                    freeKey = secrets.geminiTtsKeyFree.orEmpty(),
+                    paidKey = secrets.geminiTtsKeyPaid.orEmpty(),
+                    keyChoice = settings.geminiTtsKeyChoiceFlow.first(),
+                    chirpFallback = settings.geminiTtsChirpFallbackFlow.first(),
+                ),
+            ) { chirpVoice ->
+                if (apiKey.isBlank()) throw IllegalStateException("Kein TTS-API-Schlüssel für den Rückfall auf Chirp 3 HD hinterlegt")
+                chirpBytes(text, apiKey, chirpVoice)
+            }
+            GoogleTtsVoices.isAzure(voiceName) -> cloud.azure(
+                text,
+                voiceName,
+                secrets.azureTtsKey.orEmpty(),
+                settings.azureTtsRegionFlow.first(),
+            )
+            else -> chirpBytes(text, apiKey, voiceName)
+        }
+        // Bugfix 2026-07-03 (TTS-Almanach AC9): atomar ueber .part-Datei + rename schreiben —
+        // eine halb geschriebene MP3 (Prozess-Tod/Abbruch mitten im write) wuerde sonst vom
+        // Cache-Check (exists && length > 0) dauerhaft als gueltiger Treffer akzeptiert.
+        val partFile = File(targetFile.parentFile, targetFile.name + ".part")
+        partFile.writeBytes(audioBytes)
+        if (!partFile.renameTo(targetFile)) {
+            partFile.copyTo(targetFile, overwrite = true)
+            partFile.delete()
+        }
+        return targetFile
+    }
+
+    private fun isCloudVoice(voiceName: String): Boolean =
+        GoogleTtsVoices.isGemini(voiceName) || GoogleTtsVoices.isAzure(voiceName)
+
+    /** Google Cloud TTS (Chirp 3 HD): MP3-Bytes, Zeichen werden fuers Monats-Kontingent verbucht. */
+    private suspend fun chirpBytes(text: String, apiKey: String, voiceName: String): ByteArray {
         val response = ttsApi.synthesize(
             apiKey = apiKey,
             request = SynthesizeRequest(
@@ -172,17 +215,7 @@ class TtsPlayer @Inject constructor(
         // Meldet add() eine neue 50k-Schwelle, wird der Stand fire-and-forget ins Drive gesichert
         // (Frank-Wunsch 2026-07-03) — nicht bei jedem Zeichen, sonst liefe das Backup dauernd.
         if (usageStore.add(text.length)) usageBackup.backupNow()
-        val audioBytes = Base64.decode(response.audioContentBase64, Base64.DEFAULT)
-        // Bugfix 2026-07-03 (TTS-Almanach AC9): atomar ueber .part-Datei + rename schreiben —
-        // eine halb geschriebene MP3 (Prozess-Tod/Abbruch mitten im write) wuerde sonst vom
-        // Cache-Check (exists && length > 0) dauerhaft als gueltiger Treffer akzeptiert.
-        val partFile = File(targetFile.parentFile, targetFile.name + ".part")
-        partFile.writeBytes(audioBytes)
-        if (!partFile.renameTo(targetFile)) {
-            partFile.copyTo(targetFile, overwrite = true)
-            partFile.delete()
-        }
-        return targetFile
+        return Base64.decode(response.audioContentBase64, Base64.DEFAULT)
     }
 
     /* ============================ Mental-Vorlese-Sequenz ============================ */
@@ -211,12 +244,12 @@ class TtsPlayer @Inject constructor(
         val clean = text.trim()
         require(clean.isNotEmpty()) { "Text ist leer" }
 
-        val apiKey = secrets.googleTtsApiKey?.takeIf { it.isNotBlank() }
-            ?: throw IllegalStateException("Kein TTS-API-Schlüssel hinterlegt")
-
         val voiceName = voiceNameOverride
             ?: settings.ttsVoiceFlow.first().takeIf { it.isNotBlank() }
             ?: GoogleTtsVoices.DEFAULT_VOICE_NAME
+
+        val apiKey = secrets.googleTtsApiKey?.takeIf { it.isNotBlank() }
+            ?: if (isCloudVoice(voiceName)) "" else throw IllegalStateException("Kein TTS-API-Schlüssel hinterlegt")
 
         // Stabiler, dateinamen-sicherer Schluessel aus Stimme + Text (+ Laenge als
         // zusaetzliche Kollisions-Absicherung). hashCode() ist in ART deterministisch.

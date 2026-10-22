@@ -43,6 +43,16 @@ class AppSettings @Inject constructor(
     val geminiModelFlow: Flow<String> = ds.data.map { it[KEY_GEMINI_MODEL] ?: DEFAULT_GEMINI }
     val transcriptionLanguageFlow: Flow<String> = ds.data.map { it[KEY_LANGUAGE] ?: "de" }
     val ttsVoiceFlow: Flow<String> = ds.data.map { it[KEY_TTS_VOICE] ?: "" }
+
+    /** Gemini-3.8-Stimme: welche Schluessel (frei_dann_bezahlt, nur_frei, nur_bezahlt) und Rueckfall auf Chirp 3 HD. */
+    val geminiTtsKeyChoiceFlow: Flow<String> = ds.data.map { it[KEY_GEMINI_TTS_KEY_CHOICE] ?: "frei_dann_bezahlt" }
+    val geminiTtsChirpFallbackFlow: Flow<Boolean> = ds.data.map { it[KEY_GEMINI_TTS_CHIRP_FALLBACK] ?: false }
+
+    /** Azure-Region der Speech-Ressource (Standard westeurope). */
+    val azureTtsRegionFlow: Flow<String> = ds.data.map { it[KEY_AZURE_TTS_REGION] ?: "westeurope" }
+
+    /** Als Favorit markierte Stimmen (Kennungen); sie stehen in der Stimmliste oben. */
+    val ttsVoiceFavoritesFlow: Flow<Set<String>> = ds.data.map { it[KEY_TTS_VOICE_FAVORITES].orEmpty() }
     val ttsAutoStopMinutesFlow: Flow<Int> = ds.data
         .map { (it[KEY_TTS_AUTO_STOP_MINUTES] ?: DEFAULT_TTS_AUTO_STOP_MINUTES).coerceIn(15, 120) }
         .distinctUntilChanged()
@@ -221,6 +231,13 @@ class AppSettings @Inject constructor(
     suspend fun setGeminiModel(value: String) = ds.edit { it[KEY_GEMINI_MODEL] = value }
     suspend fun setTranscriptionLanguage(value: String) = ds.edit { it[KEY_LANGUAGE] = value }
     suspend fun setTtsVoice(value: String) = ds.edit { it[KEY_TTS_VOICE] = value }
+    suspend fun setGeminiTtsKeyChoice(value: String) = ds.edit { it[KEY_GEMINI_TTS_KEY_CHOICE] = value }
+    suspend fun setGeminiTtsChirpFallback(value: Boolean) = ds.edit { it[KEY_GEMINI_TTS_CHIRP_FALLBACK] = value }
+    suspend fun setAzureTtsRegion(value: String) = ds.edit { it[KEY_AZURE_TTS_REGION] = value.trim() }
+    suspend fun toggleTtsVoiceFavorite(voiceId: String) = ds.edit {
+        val now = it[KEY_TTS_VOICE_FAVORITES].orEmpty()
+        it[KEY_TTS_VOICE_FAVORITES] = if (voiceId in now) now - voiceId else now + voiceId
+    }
     suspend fun setTtsAutoStopMinutes(value: Int) = ds.edit {
         it[KEY_TTS_AUTO_STOP_MINUTES] = value.coerceIn(15, 120)
     }
@@ -574,6 +591,10 @@ class AppSettings @Inject constructor(
         private val KEY_GEMINI_MODEL = stringPreferencesKey("gemini_model")
         private val KEY_LANGUAGE = stringPreferencesKey("transcription_lang")
         private val KEY_TTS_VOICE = stringPreferencesKey("tts_voice")
+        private val KEY_GEMINI_TTS_KEY_CHOICE = stringPreferencesKey("gemini_tts_schluessel_wahl")
+        private val KEY_GEMINI_TTS_CHIRP_FALLBACK = booleanPreferencesKey("gemini_tts_chirp_rueckfall")
+        private val KEY_AZURE_TTS_REGION = stringPreferencesKey("azure_tts_region")
+        private val KEY_TTS_VOICE_FAVORITES = stringSetPreferencesKey("tts_voice_favorites")
         private val KEY_TTS_AUTO_STOP_MINUTES = intPreferencesKey("tts_auto_stop_minutes")
         private val KEY_PROFILE_TEXT = stringPreferencesKey("profile_text")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
