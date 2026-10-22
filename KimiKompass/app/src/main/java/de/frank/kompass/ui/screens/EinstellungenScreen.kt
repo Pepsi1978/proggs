@@ -67,6 +67,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.kompass.AppProfil
 import de.frank.kompass.ai.geraeteCodeGruppen
 import de.frank.kompass.audio.GroqTranskribierer
+import de.frank.kompass.data.EinstellungenStore
 import de.frank.kompass.data.model.Denktiefe
 import de.frank.kompass.data.model.Geschlecht
 import de.frank.kompass.data.model.KiModell
@@ -178,6 +179,60 @@ fun EinstellungenScreen(
                     ergebnis = zustand.pruefungen[EinstellungenViewModel.SCHLUESSEL_ALIBABA],
                     beiPruefen = viewModel::pruefeAlibaba,
                 )
+                if (zustand.ttsAnbieter == TtsAnbieter.GEMINI_FLASH || zustand.ttsAnbieter == TtsAnbieter.GEMINI_LITE) {
+                    SchluesselFeld(
+                        beschriftung = "Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)",
+                        wert = zustand.geminiSchluesselFrei,
+                        beiWert = viewModel::setzeGeminiSchluesselFrei,
+                    )
+                    SchluesselFeld(
+                        beschriftung = "Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)",
+                        wert = zustand.geminiSchluesselBezahlt,
+                        beiWert = viewModel::setzeGeminiSchluesselBezahlt,
+                    )
+                    if (zustand.geminiSchluesselFrei.isBlank() && zustand.geminiSchluesselBezahlt.isBlank()) {
+                        Zeilentext(
+                            "Noch kein Gemini-Schlüssel hinterlegt. Den Schlüssel bekommst du unter " +
+                                "aistudio.google.com.",
+                        )
+                    }
+                    Klappauswahl(
+                        beschriftung = "Welcher Schlüssel",
+                        punkte = EinstellungenStore.GEMINI_SCHLUESSEL_WAHLEN.map { (id, name) -> AuswahlPunkt(id, name) },
+                        gewaehlt = zustand.geminiSchluesselWahl,
+                        beiWahl = viewModel::setzeGeminiSchluesselWahl,
+                    )
+                    Schalterzeile(
+                        titel = "Rückfall auf Chirp 3 HD",
+                        erklaerung = "Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein " +
+                            "HTTP-Fehler), liest die App mit derselben Stimme über Google Chirp 3 HD weiter " +
+                            "statt mit dem bezahlten Schlüssel.",
+                        an = zustand.geminiChirpRueckfall,
+                        beiWechsel = viewModel::schalteGeminiChirpRueckfall,
+                    )
+                    if (zustand.geminiChirpRueckfall && zustand.googleSchluessel.isBlank()) {
+                        Zeilentext("Für den Rückfall braucht es oben den Google-Schlüssel (Chirp 3 HD).")
+                    }
+                }
+                if (zustand.ttsAnbieter == TtsAnbieter.AZURE) {
+                    SchluesselFeld(
+                        beschriftung = "Azure-Speech-Schlüssel (KEY 1)",
+                        wert = zustand.azureSchluessel,
+                        beiWert = viewModel::setzeAzureSchluessel,
+                    )
+                    if (zustand.azureSchluessel.isBlank()) {
+                        Zeilentext(
+                            "Noch kein Azure-Schlüssel hinterlegt. Ihn gibt es im Azure-Portal bei der " +
+                                "Speech-Ressource unter „Schlüssel und Endpunkt“.",
+                        )
+                    }
+                    SchluesselFeld(
+                        beschriftung = "Azure-Region (z. B. westeurope)",
+                        wert = zustand.azureRegion,
+                        beiWert = viewModel::setzeAzureRegion,
+                        verdeckt = false,
+                    )
+                }
             }
         }
 
@@ -187,21 +242,21 @@ fun EinstellungenScreen(
                 vorlesen.stufe != VorleseStufe.AUS
 
             when (zustand.ttsAnbieter) {
-                TtsAnbieter.GOOGLE, TtsAnbieter.EDGE -> {
-                    val stimmen = if (zustand.ttsAnbieter == TtsAnbieter.GOOGLE) {
-                        TtsCatalog.googleStimmen
-                    } else {
-                        TtsCatalog.edgeStimmen
-                    }
-                    val gewaehlte = if (zustand.ttsAnbieter == TtsAnbieter.GOOGLE) {
-                        zustand.googleStimme
-                    } else {
-                        zustand.edgeStimme
+                TtsAnbieter.GOOGLE, TtsAnbieter.EDGE, TtsAnbieter.GEMINI_FLASH,
+                TtsAnbieter.GEMINI_LITE, TtsAnbieter.AZURE -> {
+                    val stimmen = TtsCatalog.stimmenZu(zustand.ttsAnbieter)
+                    val gewaehlte = when (zustand.ttsAnbieter) {
+                        TtsAnbieter.GOOGLE -> zustand.googleStimme
+                        TtsAnbieter.GEMINI_FLASH -> zustand.geminiFlashStimme
+                        TtsAnbieter.GEMINI_LITE -> zustand.geminiLiteStimme
+                        TtsAnbieter.AZURE -> zustand.azureStimme
+                        else -> zustand.edgeStimme
                     }
                     Block("Stimme — ${zustand.ttsAnbieter.label}") {
                         Zeilentext(
                             "Wähl eine Stimme aus und tipp auf den Abspielknopf, um sie zu " +
-                                "hören. Lieblinge stehen in der Liste oben.",
+                                "hören. Stern antippen oder lange drücken: Favorit an/aus, " +
+                                "Favoriten stehen in der Liste oben.",
                         )
                         Klappauswahl(
                             beschriftung = "Stimme",
@@ -216,8 +271,7 @@ fun EinstellungenScreen(
                                 .map { stimme ->
                                     AuswahlPunkt(
                                         wert = stimme.id,
-                                        text = stimme.name +
-                                            if (stimme.id in zustand.lieblingsStimmen) "  ★" else "",
+                                        text = stimme.name,
                                         zusatz = if (stimme.geschlecht == Geschlecht.WEIBLICH) {
                                             "weiblich"
                                         } else {
@@ -230,7 +284,19 @@ fun EinstellungenScreen(
                             beiProbe = { viewModel.probeAbspielen(zustand.ttsAnbieter, gewaehlte) },
                             probeLaeuft = probeLaeuft,
                             beiProbeStopp = viewModel::stoppeProbe,
+                            istFavorit = { it in zustand.lieblingsStimmen },
+                            beiFavorit = viewModel::schalteLieblingsStimme,
                         )
+                        if (zustand.ttsAnbieter == TtsAnbieter.GEMINI_FLASH || zustand.ttsAnbieter == TtsAnbieter.GEMINI_LITE) {
+                            Zeilentext("Gemini spricht im eigenen Tempo; das Sprechtempo oben gilt hier nicht.")
+                        }
+                        if (zustand.ttsAnbieter == TtsAnbieter.AZURE) {
+                            Zeilentext(
+                                "Kostenlose Stufe F0: 500.000 Zeichen im Monat für alle normalen Neural-Stimmen. " +
+                                    "Die HD-Stimmen (Seraphina HD, Florian HD) laufen nur mit der bezahlten Stufe S0 " +
+                                    "und sprechen in eigenem Tempo.",
+                            )
+                        }
                         Aktionsknopf(
                             text = if (gewaehlte in zustand.lieblingsStimmen) {
                                 "Aus den Lieblingen nehmen"
@@ -748,6 +814,9 @@ private fun anbieterHinweis(anbieter: TtsAnbieter): String = when (anbieter) {
     TtsAnbieter.GOOGLE -> "beste Qualit\u00e4t, braucht den Google-Schl\u00fcssel"
     TtsAnbieter.EDGE -> "kostenlos, braucht keinen Schl\u00fcssel"
     TtsAnbieter.QWEN -> "deine eigene Stimme, braucht den Alibaba-Schl\u00fcssel"
+    TtsAnbieter.GEMINI_FLASH -> "Google-KI-Stimme, braucht einen Gemini-Schlüssel"
+    TtsAnbieter.GEMINI_LITE -> "günstigere Gemini-Stimme, braucht einen Gemini-Schlüssel"
+    TtsAnbieter.AZURE -> "Microsoft-Neural-Stimmen, braucht Azure-Schlüssel und Region"
 }
 
 private fun denktiefeHinweis(tiefe: Denktiefe): String = when (tiefe) {
@@ -911,8 +980,10 @@ private fun SchluesselFeld(
     beschriftung: String,
     wert: String,
     beiWert: (String) -> Unit,
-    ergebnis: PruefErgebnis?,
-    beiPruefen: () -> Unit,
+    ergebnis: PruefErgebnis? = null,
+    beiPruefen: (() -> Unit)? = null,
+    /** false für Angaben, die kein Geheimnis sind (z. B. die Azure-Region): Klartext, kein Augenknopf nötig. */
+    verdeckt: Boolean = true,
 ) {
     val farben = LocalKompassFarben.current
     val zwischenablage = LocalClipboardManager.current
@@ -936,7 +1007,7 @@ private fun SchluesselFeld(
             ) {
                 if (wert.isEmpty()) {
                     Text(
-                        text = "Noch kein Schl\u00fcssel hinterlegt",
+                        text = if (verdeckt) "Noch kein Schl\u00fcssel hinterlegt" else "Noch nichts eingetragen",
                         style = MaterialTheme.typography.bodySmall,
                         color = farben.textGedaempft,
                     )
@@ -945,7 +1016,7 @@ private fun SchluesselFeld(
                     value = wert,
                     onValueChange = { beiWert(it.filterNot(Char::isWhitespace)) },
                     singleLine = true,
-                    visualTransformation = if (sichtbar) {
+                    visualTransformation = if (sichtbar || !verdeckt) {
                         VisualTransformation.None
                     } else {
                         PasswordVisualTransformation()
@@ -982,6 +1053,7 @@ private fun SchluesselFeld(
                     .padding(13.dp),
             )
         }
+        if (beiPruefen != null) {
         Spacer(Modifier.height(5.dp))
         Aktionsknopf(
             text = if (ergebnis?.laeuft == true) "Wird gepr\u00fcft \u2026" else "Schl\u00fcssel pr\u00fcfen",
@@ -989,6 +1061,7 @@ private fun SchluesselFeld(
             laedt = ergebnis?.laeuft == true,
             beiKlick = beiPruefen,
         )
+        }
 
         // Das Ergebnis steht direkt unter dem Knopf, der es ausgel\u00f6st hat. Am Kopf des
         // Bildschirms w\u00e4re es zwar auch sichtbar \u2014 nur steht der beim Tippen l\u00e4ngst
