@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import de.frank.perfectmoment.audio.GroqTranscriber
 import de.frank.perfectmoment.auth.CodexModel
 import de.frank.perfectmoment.auth.ReasoningEffort
 import java.io.Closeable
@@ -144,6 +145,28 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.GROQ_API_KEY, Defaults.GROQ_API_KEY)
         set(value) = writeString(Keys.GROQ_API_KEY, value)
 
+    /** `whisper-large-v3-turbo` (Standard) oder `whisper-large-v3`. Wirkt ab der nächsten Aufnahme. */
+    var whisperModel: String
+        get() = GroqTranscriber.normalisiereModell(readString(Keys.WHISPER_MODEL, GroqTranscriber.DEFAULT_MODEL))
+        set(value) {
+            writeString(Keys.WHISPER_MODEL, GroqTranscriber.normalisiereModell(value))
+            GroqTranscriber.sperreZuruecksetzen()
+        }
+
+    var vocabularyEnabled: Boolean
+        get() = preferences?.getBoolean(Keys.VOCABULARY_ENABLED, true) ?: true
+        set(value) {
+            preferences?.edit()?.putBoolean(Keys.VOCABULARY_ENABLED, value)?.apply()
+        }
+
+    /** Noch nie gespeichert → die Vorbelegung; ein bewusst geleertes Feld bleibt leer. */
+    var vocabulary: String
+        get() = preferences?.getString(Keys.VOCABULARY, null) ?: GroqTranscriber.STANDARD_WOERTERBUCH
+        set(value) = writeString(Keys.VOCABULARY, value)
+
+    val vocabularyPrompt: String?
+        get() = GroqTranscriber.woerterbuchPrompt(vocabularyEnabled, vocabulary)
+
     var pauseRepSeconds: Int
         get() = preferences?.getInt(Keys.PAUSE_REP_SECONDS, Defaults.PAUSE_REP_SECONDS)
             ?.let(::normalizePauseSeconds) ?: Defaults.PAUSE_REP_SECONDS
@@ -274,6 +297,9 @@ class SecureSettings(context: Context) : Closeable {
         const val TTS_SPEECH_RATE = "tts_speech_rate"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"
+        const val WHISPER_MODEL = "whisper_model"
+        const val VOCABULARY_ENABLED = "vocabulary_enabled"
+        const val VOCABULARY = "vocabulary"
         const val PAUSE_REP_SECONDS = "pause_rep_seconds"
         const val PAUSE_NEXT_SECONDS = "pause_next_seconds"
         const val REPS_PER_QUESTION = "reps_per_question"

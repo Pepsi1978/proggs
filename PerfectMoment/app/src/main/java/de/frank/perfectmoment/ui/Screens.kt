@@ -139,6 +139,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.frank.perfectmoment.audio.GroqTranscriber
 import de.frank.perfectmoment.auth.QuestionPerspective
 import de.frank.perfectmoment.auth.deviceCodeGroups
 import de.frank.perfectmoment.data.local.HookEntity
@@ -1666,7 +1667,7 @@ fun SettingsScreen(
                 )
                 SecureKeyRow(
                     label = "Groq-API",
-                    supporting = "Whisper Large v3 · Spracheingabe",
+                    supporting = "Whisper · Spracheingabe",
                     value = viewModel.groqApiKey,
                     visible = viewModel.showGroqKey,
                     onValueChange = viewModel::updateGroqApiKey,
@@ -1689,6 +1690,18 @@ fun SettingsScreen(
                     onToggleVisibility = viewModel::toggleQwenKeyVisibility,
                     divider = false,
                 )
+            }
+            SettingsSection("Spracheingabe") {
+                WhisperModelSetting(viewModel)
+                SettingRow(
+                    label = "Persönliches Wörterbuch",
+                    supporting = "Hilft Whisper, Namen und Fachbegriffe richtig zu schreiben",
+                    trailing = { PmSwitch(viewModel.vocabularyEnabled, viewModel::updateVocabularyEnabled) },
+                    divider = viewModel.vocabularyEnabled,
+                )
+                if (viewModel.vocabularyEnabled) {
+                    VocabularyField(viewModel.vocabulary, viewModel::updateVocabulary)
+                }
             }
             SettingsSection("KI-Verbindung") {
                 SettingRow(
@@ -1769,6 +1782,60 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun WhisperModelSetting(viewModel: AppViewModel) {
+    val colors = LocalPmColors.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Text("Whisper-Modell", color = colors.text1, fontFamily = Inter, fontSize = 15.sp)
+        Text(
+            "Gilt ab der nächsten Aufnahme. Large V3 muss bei Groq freigeschaltet sein, sonst nimmt die App automatisch Turbo.",
+            color = colors.text3,
+            fontFamily = Inter,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Segment(
+                "Large V3 Turbo (schnell)",
+                viewModel.whisperModel == GroqTranscriber.TURBO,
+                { viewModel.updateWhisperModel(GroqTranscriber.TURBO) },
+                Modifier.weight(1f),
+            )
+            Segment(
+                "Large V3 (genauer)",
+                viewModel.whisperModel == GroqTranscriber.LARGE_V3,
+                { viewModel.updateWhisperModel(GroqTranscriber.LARGE_V3) },
+                Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun VocabularyField(value: String, onValueChange: (String) -> Unit) {
+    val colors = LocalPmColors.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Text(
+            "Begriffe (durch Komma oder Zeilenumbruch getrennt)",
+            color = colors.text3,
+            fontFamily = Inter,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            cursorBrush = SolidColor(colors.gold),
+            textStyle = TextStyle(color = colors.text2, fontFamily = Inter, fontSize = 14.sp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 96.dp)
+                .border(1.dp, colors.surface2, RoundedCornerShape(12.dp))
+                .padding(12.dp),
+        )
     }
 }
 

@@ -239,6 +239,12 @@ class AppViewModel(
         private set
     var groqApiKey by mutableStateOf(settings.groqApiKey)
         private set
+    var whisperModel by mutableStateOf(settings.whisperModel)
+        private set
+    var vocabularyEnabled by mutableStateOf(settings.vocabularyEnabled)
+        private set
+    var vocabulary by mutableStateOf(settings.vocabulary)
+        private set
     var qwenApiKey by mutableStateOf(settings.qwenTtsApiKey)
         private set
     var qwenVoiceId by mutableStateOf(settings.qwenTtsVoiceId)
@@ -893,6 +899,21 @@ class AppViewModel(
             settings.ttsProvider = TtsProvider.EDGE.id
             message = "Google TTS wurde deaktiviert, weil kein API-Schlüssel hinterlegt ist."
         }
+    }
+
+    fun updateWhisperModel(value: String) {
+        settings.whisperModel = value
+        whisperModel = settings.whisperModel
+    }
+
+    fun updateVocabularyEnabled(value: Boolean) {
+        vocabularyEnabled = value
+        settings.vocabularyEnabled = value
+    }
+
+    fun updateVocabulary(value: String) {
+        vocabulary = value
+        settings.vocabulary = value
     }
 
     fun updateGroqApiKey(value: String) {
@@ -2035,7 +2056,11 @@ class AppViewModel(
                     recordingMessage = "Ich habe nichts verstanden."
                     return@launch
                 }
-                transcriber = GroqTranscriber(settings.groqApiKey)
+                transcriber = GroqTranscriber(
+                    settings.groqApiKey,
+                    model = settings.whisperModel,
+                    woerterbuchPrompt = settings.vocabularyPrompt,
+                )
                 activeTranscriber = transcriber
                 val transcript = transcriber.transcribe(wav)
                 if (generation != recordingGeneration) return@launch
