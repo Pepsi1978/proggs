@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,6 +22,10 @@ namespace TerminalVoiceOverlay.Services
         // diesen Client und duerfen sich das Modell nicht gegenseitig umstellen.
         private readonly AsyncLocal<string?> _callModel = new();
         private string CurrentModel => _callModel.Value ?? _defaultModel;
+        // Persoenliches Woerterbuch als Whisper-prompt (null = Schalter aus / leer).
+        private readonly AsyncLocal<string?> _callPrompt = new();
+        // Whisper nimmt max. 224 Prompt-Tokens; ~500 Zeichen bleiben sicher darunter.
+        private const int MaxPromptChars = 500;
         private readonly string _language;
         private readonly string _url;
         private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
@@ -150,6 +155,7 @@ namespace TerminalVoiceOverlay.Services
         {
             var totalSw = Stopwatch.StartNew();
             _callModel.Value = GroqModelSetting.Resolve(_defaultModel);
+            _callPrompt.Value = BuildVocabularyPrompt(PersonalVocabulary.Load());
             DiagLog.Write("Groq", "transcribe_start", ("file", wavFilePath), ("model", CurrentModel), ("lang", _language));
             // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
             // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
@@ -199,10 +205,41 @@ namespace TerminalVoiceOverlay.Services
 
         // Lange Aufnahmen wuerden am Groq-Upload-Limit mit 413 scheitern (siehe
         // MaxUploadBytes) — sie werden in Teile geschnitten und einzeln gesendet.
-        private Task<string> TranscribeOnceAsync(byte[] fileBytes, bool[] voiced) =>
-            fileBytes.Length > MaxUploadBytes
-                ? TranscribeInChunksAsync(fileBytes)
-                : TranscribeWithRetry(fileBytes, 0, voiced);
+        private async Task<string> TranscribeOnceAsync(byte[] fileBytes, bool[] voiced)
+        {
+            var text = fileBytes.Length > MaxUploadBytes
+                ? await TranscribeInChunksAsync(fileBytes).ConfigureAwait(false)
+                : await TranscribeWithRetry(fileBytes, 0, voiced).ConfigureAwait(false);
+            // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus (eigene Messung 21.10.2026).
+            if (IsPromptEcho(text, _callPrompt.Value))
+                throw new Exception("Groq hat nur die Woerterbuch-Liste zurueckgegeben (Prompt-Echo) — verworfen");
+            return text;
+        }
+
+        /// <summary>Woerterbuch als natuerlicher Satz; Whisper uebernimmt daraus Schreibweisen.</summary>
+        private static string? BuildVocabularyPrompt(string[] words)
+        {
+            if (words.Length == 0) return null;
+            var sb = new StringBuilder("Begriffe: ");
+            foreach (var w in words)
+            {
+                if (sb.Length + w.Length + 2 > MaxPromptChars) break;
+                if (sb.Length > 10) sb.Append(", ");
+                sb.Append(w);
+            }
+            return sb.Append('.').ToString();
+        }
+
+        private static bool IsPromptEcho(string text, string? prompt)
+        {
+            if (string.IsNullOrEmpty(prompt) || string.IsNullOrWhiteSpace(text)) return false;
+            static string Norm(string s) => new string(s.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+            var t = Norm(text);
+            var p = Norm(prompt);
+            // Echo = Text steckt im Prompt und deckt einen grossen Teil davon ab; ein einzelnes
+            // diktiertes Woerterbuch-Wort ("Logcat") bleibt erhalten.
+            return t.Length > 0 && p.Contains(t) && t.Length >= p.Length / 2;
+        }
 
         private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt, bool[]? voiced = null)
         {
@@ -309,6 +346,8 @@ namespace TerminalVoiceOverlay.Services
             sb.Append("form = ").Append(CurlQuote("file=@" + wavPath + ";type=audio/wav")).Append('\n');
             sb.Append("form = ").Append(CurlQuote("model=" + CurrentModel)).Append('\n');
             sb.Append("form = ").Append(CurlQuote("language=" + _language)).Append('\n');
+            if (_callPrompt.Value is { } prompt)
+                sb.Append("form = ").Append(CurlQuote("prompt=" + prompt)).Append('\n');
             sb.Append("form = \"response_format=verbose_json\"\n");
             sb.Append("form = \"temperature=0\"\n");
             sb.Append("silent\n");
@@ -340,11 +379,13 @@ namespace TerminalVoiceOverlay.Services
         {
             using var content = new MultipartFormDataContent();
 
-            // Add fields. Kein prompt-Parameter mehr — der Original-Whisper-Output
-            // wird unveraendert weitergegeben (z. B. an Gemini), wo themenspezifische
-            // Profile die Nachbearbeitung uebernehmen.
+            // Add fields. prompt nur mit eingeschaltetem persoenlichem Woerterbuch
+            // (Schreibweisen von Eigennamen); sonst geht der Original-Whisper-Output
+            // unveraendert weiter (z. B. an Gemini).
             content.Add(new StringContent(CurrentModel), "model");
             content.Add(new StringContent(_language), "language");
+            if (_callPrompt.Value is { } prompt)
+                content.Add(new StringContent(prompt), "prompt");
             // verbose_json statt text: liefert die Confidence-Felder fuers Halluzinations-Gate,
             // bei Groq ohne Mehrlatenz/-kosten (nur word-Timestamps kosten extra — die fordern wir NICHT an).
             content.Add(new StringContent("verbose_json"), "response_format");

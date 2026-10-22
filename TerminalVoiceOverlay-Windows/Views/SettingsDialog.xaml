@@ -145,7 +145,7 @@
                                      VerticalScrollBarVisibility="Auto"
                                      MinHeight="84" MaxHeight="150" Margin="0,0,0,6"/>
                             <TextBlock Style="{StaticResource Hint}"
-                                       Text="Wörter und Eigennamen, die du oft sprichst und die falsch transkribiert werden — eines pro Zeile oder per Komma getrennt (z.B. Backend, Subagent, Codex, Playwright). Beim Gemini-Transkriptions-Modell gehen die ersten 100 Einträge direkt als customVocabulary in die Erkennung, werden also schon beim Zuhören richtig geschrieben. Zusätzlich schreibt Gemini sie bei der Korrektur kontextabhängig korrekt; es ersetzt nicht stur. Gilt für alle Profile und wird auf diesem Rechner mit dem zweiten Overlay geteilt."/>
+                                       Text="Wörter und Eigennamen, die du oft sprichst und die falsch transkribiert werden — eines pro Zeile oder per Komma getrennt (z.B. Backend, Subagent, Codex, Playwright). Beim Gemini-Transkriptions-Modell gehen die ersten 100 Einträge direkt als customVocabulary in die Erkennung, werden also schon beim Zuhören richtig geschrieben. Zusätzlich schreibt Gemini sie bei der Korrektur kontextabhängig korrekt; es ersetzt nicht stur. Bei Groq Whisper gehen die Begriffe als Schreib-Hinweis direkt in die Erkennung. Gilt für alle Profile und wird auf diesem Rechner mit dem zweiten Overlay geteilt."/>
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4"
                                        Text="Einleitungstext an Gemini (steht vor der Wortliste — erklärt Gemini, was es mit dem Wörterbuch tun soll)"/>
                             <TextBox x:Name="PreambleBox" Style="{StaticResource DarkBox}"
