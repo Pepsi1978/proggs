@@ -1,343 +1,511 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>STT-Vergleich Deutsch</title>
+<title>Spracherkennung für Deutsch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-:root{--bg:#f7f7f5;--fl:#ffffff;--tx:#1d1f23;--mt:#5d6370;--ln:#dfe1e5;--ak:#2357d9;--ak2:#e8eefc;--gut:#1e7a46;--gutbg:#e6f4ec;--warn:#a05a00;--warnbg:#fdf1e1;--schl:#b3261e;--schlbg:#fbe9e7;--code:#f0f1f3}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141518;--fl:#1c1e22;--tx:#e6e7ea;--mt:#9aa0ab;--ln:#30333a;--ak:#7ea2ff;--ak2:#22305a;--gut:#6fd39b;--gutbg:#173527;--warn:#f0b35c;--warnbg:#3a2a12;--schl:#ff8a80;--schlbg:#3d1c1a;--code:#25282d}}
-:root[data-theme="dark"]{--bg:#141518;--fl:#1c1e22;--tx:#e6e7ea;--mt:#9aa0ab;--ln:#30333a;--ak:#7ea2ff;--ak2:#22305a;--gut:#6fd39b;--gutbg:#173527;--warn:#f0b35c;--warnbg:#3a2a12;--schl:#ff8a80;--schlbg:#3d1c1a;--code:#25282d}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{background:var(--fl);border-bottom:1px solid var(--ln);padding:20px 16px}
-header h1{margin:0 0 4px;font-size:1.55rem}
-header p{margin:0;color:var(--mt)}
-nav{position:sticky;top:0;z-index:5;background:var(--fl);border-bottom:1px solid var(--ln);overflow-x:auto;white-space:nowrap;padding:0 8px}
-nav a{display:inline-block;padding:10px 10px;color:var(--mt);text-decoration:none;font-size:.92rem;border-bottom:2px solid transparent}
-nav a:hover,nav a.aktiv{color:var(--ak);border-bottom-color:var(--ak)}
-main{max-width:1180px;margin:0 auto;padding:16px}
-section{background:var(--fl);border:1px solid var(--ln);border-radius:10px;padding:18px 20px;margin:0 0 18px;scroll-margin-top:52px}
-h2{margin:0 0 12px;font-size:1.3rem}
-h3{margin:18px 0 8px;font-size:1.08rem}
-a{color:var(--ak)}
-.mt{color:var(--mt)}
-.klein{font-size:.88rem}
-.raster{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-.karte{border:1px solid var(--ln);border-radius:9px;padding:14px;background:var(--bg)}
-.karte h4{margin:0 0 4px;font-size:1.02rem}
-.marke{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:99px;margin:2px 4px 2px 0;background:var(--code);color:var(--mt);white-space:nowrap}
-.m-gut{background:var(--gutbg);color:var(--gut)}.m-warn{background:var(--warnbg);color:var(--warn)}.m-schl{background:var(--schlbg);color:var(--schl)}.m-ak{background:var(--ak2);color:var(--ak)}
-.hinweis{border-left:4px solid var(--warn);background:var(--warnbg);padding:10px 14px;border-radius:6px;margin:12px 0}
-.empf{border-left:4px solid var(--gut);background:var(--gutbg);padding:12px 16px;border-radius:6px;margin:12px 0}
-.tabhuelle{overflow-x:auto;border:1px solid var(--ln);border-radius:8px}
-table{border-collapse:collapse;width:100%;font-size:.9rem}
-th,td{text-align:left;vertical-align:top;padding:7px 9px;border-bottom:1px solid var(--ln)}
-th{background:var(--code);position:sticky;top:0;font-weight:600}
-tr:last-child td{border-bottom:none}
-td.zahl,th.zahl{text-align:right;white-space:nowrap}
-tr.basis td{background:var(--ak2)}
-.filter{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
-.filter label{font-size:.85rem;color:var(--mt);display:flex;flex-direction:column;gap:3px}
-select,input{font:inherit;padding:6px 8px;border:1px solid var(--ln);border-radius:6px;background:var(--fl);color:var(--tx)}
-audio{width:100%;height:36px;margin:6px 0}
-details{border:1px solid var(--ln);border-radius:8px;padding:8px 12px;margin:8px 0;background:var(--bg)}
-summary{cursor:pointer;font-weight:600}
-.bericht{max-height:70vh;overflow:auto;padding:4px 8px}
-.bericht table{font-size:.82rem}
-.bericht pre,.bericht code{background:var(--code);border-radius:4px}
-.bericht pre{padding:8px;overflow:auto;white-space:pre-wrap}
-.ampel{display:inline-block;min-width:22px;text-align:center;border-radius:4px;font-weight:600}
-ul{padding-left:20px}
-.themenwahl{position:absolute;right:16px;top:20px}
-.zeile{display:grid;grid-template-columns:minmax(150px,260px) 1fr;gap:8px;align-items:center;margin:3px 0;font-size:.86rem}
-.spur{position:relative;height:18px;background:var(--code);border-radius:4px}
-.spur span{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
-.spur .fl{background:var(--ak);opacity:.55;height:9px}
-.spur .mcv{background:var(--ak);top:9px;height:9px}
-.spur b{position:absolute;right:4px;top:0;font-size:.75rem;font-weight:500;line-height:18px;color:var(--mt)}
-.zeile.basis .spur .fl,.zeile.basis .spur .mcv{background:var(--warn)}
-.zeile.basis{font-weight:600}
-.transkript{font-size:.85rem;margin:4px 0 8px;padding:6px 8px;border-radius:6px;background:var(--fl);border:1px solid var(--ln)}
-.transkript .kopf{font-size:.78rem;color:var(--mt);margin-bottom:2px}
-@media (max-width:640px){section{padding:14px}header{padding-right:70px}.zeile{grid-template-columns:1fr}}
+/* Layout: ein ruhiger Leseweg – Empfehlungen oben, darunter eine filterbare Kartenliste, eine Karte je Modell, Details nur zum Aufklappen. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #5b6878;
+  --line: #dde3ea;
+  --accent: #2343c9;
+  --accent-soft: #e6ebfb;
+  --good: #1d8a52;
+  --good-soft: #e1f3e9;
+  --warn: #b26a00;
+  --warn-soft: #fbefdc;
+  --bad: #c0392b;
+  --bad-soft: #f9e3e0;
+  --track: #e9edf2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151c; --surface: #18202a; --ink: #e8edf3; --muted: #9aa7b6; --line: #2a3542;
+    --accent: #8ea6ff; --accent-soft: #1f2a4a; --good: #52c98a; --good-soft: #15301f;
+    --warn: #f0b04a; --warn-soft: #33270f; --bad: #ff7f6e; --bad-soft: #3a1b17; --track: #253040;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151c; --surface: #18202a; --ink: #e8edf3; --muted: #9aa7b6; --line: #2a3542;
+  --accent: #8ea6ff; --accent-soft: #1f2a4a; --good: #52c98a; --good-soft: #15301f;
+  --warn: #f0b04a; --warn-soft: #33270f; --bad: #ff7f6e; --bad-soft: #3a1b17; --track: #253040;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.55rem; font-weight: 800; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Kopf */
+header { display: grid; gap: 14px; }
+.eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.lead { font-size: 1.15rem; max-width: 62ch; }
+.wave { display: flex; align-items: center; gap: 3px; height: 34px; }
+.wave i { display: block; width: 4px; border-radius: 2px; background: var(--accent); opacity: .85; }
+
+/* Legende: so liest du eine Karte */
+.legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.legend div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 4px; }
+.legend b { font-size: .95rem; }
+.legend span { font-size: .9rem; color: var(--muted); }
+@media (max-width: 820px) { .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 440px) { .legend { grid-template-columns: 1fr; } }
+
+/* Empfehlungen */
+.picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 720px) { .picks { grid-template-columns: 1fr; } }
+.pick { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 8px; align-content: start; }
+.pick .tag { justify-self: start; font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.pick h3 { font-size: 1.25rem; }
+.pick .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; color: var(--muted); }
+.pick .facts b { color: var(--ink); font-family: var(--font-data); font-weight: 600; }
+
+.note { background: var(--warn-soft); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; }
+.note b { color: var(--warn); }
+
+/* Steuerleiste */
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: end; }
+.group { display: grid; gap: 6px; }
+.group > span { font-size: .8rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: .9rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 99px; padding: 6px 13px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip:hover { border-color: var(--accent); }
+.count { font-size: .9rem; color: var(--muted); margin-left: auto; }
+
+/* Modellkarten */
+.list { display: grid; gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 12px; }
+.card.today { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
+.top { display: grid; grid-template-columns: minmax(0, 1.25fr) repeat(4, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .top { grid-template-columns: repeat(2, minmax(0, 1fr)); } .who { grid-column: 1 / -1; } }
+.who { display: grid; gap: 4px; min-width: 0; }
+.who h3 { font-size: 1.08rem; }
+.who .prov { font-size: .88rem; color: var(--muted); }
+.badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.badge { font-size: .74rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--track); color: var(--muted); }
+.badge.neu { background: var(--accent-soft); color: var(--accent); }
+.badge.heute { background: var(--accent); color: var(--surface); }
+.badge.rt { background: var(--good-soft); color: var(--good); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.m { display: grid; gap: 5px; min-width: 0; }
+.m .lbl { font-size: .75rem; font-weight: 700; color: var(--muted); letter-spacing: .03em; }
+.m .val { font-family: var(--font-data); font-weight: 600; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.m .val small { font-family: var(--font-body); font-weight: 400; font-size: .8rem; color: var(--muted); }
+.m .sub { font-size: .8rem; color: var(--muted); line-height: 1.35; }
+.bar { height: 7px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 4px; }
+.g { color: var(--good); } .w { color: var(--warn); } .b { color: var(--bad); }
+.bg-g { background: var(--good); } .bg-w { background: var(--warn); } .bg-b { background: var(--bad); } .bg-n { background: var(--muted); }
+.free-pill { justify-self: start; font-size: .8rem; font-weight: 700; padding: 3px 9px; border-radius: 8px; }
+.free-dauerhaft, .free-lokal { background: var(--good-soft); color: var(--good); }
+.free-einmalig { background: var(--accent-soft); color: var(--accent); }
+.free-klein { background: var(--warn-soft); color: var(--warn); }
+.free-keins { background: var(--track); color: var(--muted); }
+details.more summary { cursor: pointer; font-size: .9rem; color: var(--accent); font-weight: 700; list-style: none; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::before { content: "＋ "; }
+details.more[open] summary::before { content: "－ "; }
+.more dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 10px 0 0; font-size: .92rem; }
+.more dt { font-weight: 700; color: var(--muted); }
+.more dd { margin: 0; }
+@media (max-width: 560px) { .more dl { grid-template-columns: 1fr; } .more dd { margin-bottom: 6px; } }
+
+/* Rangliste Artificial Analysis */
+.rank { display: grid; gap: 4px; }
+.rrow { display: grid; grid-template-columns: 2rem minmax(0, 13rem) minmax(0, 1fr) 3.4rem; gap: 10px; align-items: center; font-size: .9rem; }
+.rrow .pos { color: var(--muted); font-family: var(--font-data); text-align: right; }
+.rrow .nm { overflow-wrap: anywhere; }
+.rrow .nm small { color: var(--muted); }
+.rrow .val { font-family: var(--font-data); text-align: right; font-variant-numeric: tabular-nums; }
+.rrow .bar { height: 10px; }
+.rrow.mark .nm { font-weight: 700; }
+@media (max-width: 560px) { .rrow { grid-template-columns: 1.6rem minmax(0, 1fr) 3rem; } .rrow .bar { grid-column: 2 / 4; grid-row: 2; } }
+
+/* Eigene Messung */
+.mess { display: grid; gap: 8px; }
+.mrow { display: grid; grid-template-columns: minmax(0, 15rem) repeat(4, minmax(0, 1fr)); gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: .92rem; }
+.mrow.head { background: transparent; border: 0; padding-block: 0; font-size: .75rem; font-weight: 700; color: var(--muted); }
+.mrow .num { font-weight: 600; }
+@media (max-width: 640px) { .mrow { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mrow > :first-child { grid-column: 1 / -1; font-weight: 700; } .mrow.head { display: none; } .mrow .num::before { content: attr(data-l) " "; font-family: var(--font-body); font-weight: 400; color: var(--muted); font-size: .8rem; } }
+
+section { display: grid; gap: 16px; }
+.intro { max-width: 70ch; }
+details.box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+details.box summary { cursor: pointer; font-weight: 700; }
+details.box ul { margin: 10px 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+footer { font-size: .85rem; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .bar i { transition: width .4s ease; } }
 </style>
-</head>
-<body>
-<header style="position:relative">
-  <h1>Speech-to-Text auf Deutsch: Vergleichsstudie</h1>
-  <p>Stand 21.10.2026 · Ausgangspunkt Groq Whisper large-v3 Turbo · 10 Sonnet-Researcher, eigener Messplatz mit 9 Modellen und 21 Aufnahmen, unabhängige Deutsch-Rangliste</p>
-  <select class="themenwahl" id="thema" aria-label="Farbschema"><option value="">Auto</option><option value="light">Hell</option><option value="dark">Dunkel</option></select>
-</header>
-<nav id="nav">
-  <a href="#kurz">Kurzfassung</a><a href="#empfehlung">Empfehlung</a><a href="#messung">Eigene Messung</a><a href="#rangliste">Deutsch-Rangliste</a><a href="#vergleich">Vergleich</a><a href="#profile">Anbieter</a><a href="#frei">Freikontingente</a><a href="#kosten">Kosten</a><a href="#integration">Integration</a><a href="#grenzen">Grenzen</a><a href="#quellen">Methodik und Quellen</a>
-</nav>
-<main>
 
-<section id="kurz">
-  <h2>Kurzfassung</h2>
-  <ul>
-    <li><b>Turbo ist auf Deutsch schwächer als gedacht.</b> In der einzigen unabhängigen Deutsch-Rangliste (Hugging Face Open ASR Leaderboard, 19.10.2026) steht <code>whisper-large-v3-turbo</code> auf <b>Platz 30 von 41</b>. Auf Common Voice, das kurzen Diktatsätzen mit normalem Mikrofon am nächsten kommt, macht Turbo <b>8,6 %</b> Wortfehler, das volle <code>whisper-large-v3</code> nur <b>4,8 %</b>.</li>
-    <li><b>Kein Anbieter ist zugleich klar besser und so großzügig wie Groq.</b> Groq gibt dauerhaft 8 Stunden Audio pro Tag frei. Alle klar besseren Modelle (ElevenLabs Scribe v2, AssemblyAI Universal-3.5 Pro, gpt-transcribe, Voxtral, Gemini 3.5 Transcribe) haben nur ein einmaliges Startguthaben, ein winziges Free Tier oder gar keins.</li>
-    <li><b>Der beste Gratis-Schritt liegt schon in deinem Groq-Konto:</b> <code>whisper-large-v3</code> mit demselben Freikontingent. Es ist in deiner Groq-Organisation aber <b>gesperrt</b> („blocked at the organization level“) und muss in der Konsole einmal freigeschaltet werden.</li>
-    <li><b>Eigene Messung</b> (21 Aufnahmen mit bekanntem Text): Am wenigsten Fehler machen <b>Gemini 3.5 Transcribe mit Vokabelliste</b> und <b>Gemini 3.8 Flash mit Vokabelliste</b>, mit 3,3 bis 3,5 % Wortfehlerrate gegen 10 % bei Turbo. Eine Vokabelliste allein drückt bei Turbo die Eigennamen-Fehler von 11,9 auf 4,8 %. „Groq“ hat aber außer den Gemini-Modellen mit Vokabelliste <i>kein</i> Modell richtig erkannt.</li>
-    <li><b>Warnung:</b> Gemini 3.8 Flash als Audio-Prompt <b>erfindet bei Stille ganze Sätze</b>. Turbo mit Prompt gibt bei Stille den Prompt selbst aus. Gemini 3.5 Transcribe, Flash-Lite, Parakeet und Canary blieben bei Stille leer.</li>
-    <li><b>Gemini 3.5 Transcribe gratis taugt nicht als Dauerlösung:</b> Das Free Tier erlaubt nur <b>3 Anfragen pro Minute und 25 pro Tag</b> (429-Meldung im Test). Bezahlt kostet es etwa 0,30 $ je Stunde, bei 30 Diktatminuten am Tag rund 4,50 $ im Monat.</li>
-  </ul>
-</section>
+<div class="wrap">
+  <header>
+    <div class="wave" aria-hidden="true" id="wave"></div>
+    <span class="eyebrow">Diktat · Jarvis · Voice-Overlays · Stand 22.10.2026</span>
+    <h1>Spracherkennung für Deutsch</h1>
+    <p class="lead">Welches Modell schreibt am genauesten mit, wie lange wartest du nach einem Satz, und was kostet es? Eine Karte pro Modell, Details zum Aufklappen.</p>
+  </header>
 
-<section id="empfehlung">
-  <h2>Begründete Empfehlung gegenüber Groq Turbo</h2>
-  <div class="empf">
-    <b>1. Sofort und kostenlos: auf Groq <code>whisper-large-v3</code> wechseln.</b> In der <a href="https://console.groq.com/settings/limits" target="_blank" rel="noopener">Groq-Konsole unter Settings › Limits</a> das Modell für die Organisation freischalten, danach in Jarvis und den Overlays nur den Modellnamen tauschen. Gleiches Freikontingent (8 h/Tag), gleiche API, gleicher Halluzinationsfilter. Unabhängig belegt besser auf Deutsch (HF: 3,20/4,79 statt 3,67/8,58; handy.computer und primeLine bestätigen). Turbo als Rückfall behalten, falls das Tageslimit von large-v3 enger ist (nicht belegt).<br><br>
-    <b>2. Ebenfalls kostenlos: eine Vokabelliste mitschicken.</b> Im Test senkte ein Prompt mit Fachbegriffen die Eigennamen-Fehler bei Turbo von 11,9 auf 4,8 %. Bedingung: Der Prompt darf bei Stille nicht als Text durchrutschen. Turbo gab bei Stille „Fachbegriffe, WLAN, APK, HRV.“ aus. Der vorhandene VAD und der <code>WhisperHallucinationFilter</code> müssen das abfangen; vor dem Einbau prüfen.<br><br>
-    <b>3. Wenn dir die Genauigkeit ein paar Euro wert ist: Gemini 3.5 Transcribe bezahlt.</b> Der Overlay-Weg existiert schon (<code>GeminiBatchTranscribeClient</code>). Mit Vokabelliste war es im Test fast fehlerfrei und blieb bei Stille leer. Kosten etwa 0,30 $/h, bei 30 Min./Tag rund 4,50 $/Monat. Der bisherige <b>kostenlose</b> Transcribe-Schlüssel reicht nur für 25 Diktate am Tag; danach fällt das Overlay still auf Groq zurück.<br><br>
-    <b>4. Zum Ausprobieren ohne Kosten:</b> Deepgram schenkt einmalig 200 $ (rund 680 h), AssemblyAI 50 $ (rund 111 h). AssemblyAI Universal-3.5 Pro ist unabhängig belegt deutlich besser und hat dieselbe Aufrufform wie Groq. Ein Test mit 30 bis 50 echten Diktaten entscheidet, nicht die Ranglisten.
-  </div>
-  <h3>Was nicht empfohlen wird</h3>
-  <ul>
-    <li><b>Gemini 3.8 Flash als STT:</b> beste Eigennamen im Test, aber erfundener Text bei Stille. Nur hinter einer harten Stille-Sperre denkbar.</li>
-    <li><b>Lokal Parakeet v3 / Canary v2:</b> im Test nicht besser als Turbo, Zahlen schwach, bei Rauschen deutlich schlechter. Parakeet bleibt als Offline-Notnagel interessant (unbegrenzt, privat).</li>
-    <li><b>Azure F0 (5 h/Monat gratis):</b> gratis nur das Echtzeit-Standardmodell; die guten Azure-Modelle kosten. Beim Mischen Deutsch-Englisch das schwächste System.</li>
-    <li><b>Google Cloud Chirp 3, Amazon Transcribe, Gladia:</b> teuer oder schwach auf Deutsch.</li>
-    <li><b>gpt-4o-mini-transcribe in Jarvis Live:</b> wird am 26.02.2027 abgeschaltet; Ersatz ist das bereits gewählte <code>gpt-transcribe</code>.</li>
-  </ul>
-</section>
+  <section aria-label="So liest du die Karten">
+    <div class="legend">
+      <div><b>Fehler</b><span>Wie viele von 100 Wörtern falsch ankommen. Kleiner ist besser. Unter 3 ist sehr gut.</span></div>
+      <div><b>30 Wörter</b><span>Wartezeit nach einem langen Satz (≈ 12 s Sprechen), bis der Text da ist.</span></div>
+      <div><b>Preis</b><span>Pro Stunde Audio. Eine Stunde sind etwa 8.000 bis 9.000 gesprochene Wörter.</span></div>
+      <div><b>Gratis</b><span>Grün = dauerhaft frei. Blau = einmaliges Startguthaben. Gelb = sehr wenig.</span></div>
+    </div>
+  </section>
 
-<section id="messung">
-  <h2>Eigene Messung: 9 Modelle, 21 Aufnahmen</h2>
-  <p>Gemessen am 21.10.2026 mit vorhandenen Schlüsseln (Groq, zwei Gemini-Schlüssel) und lokal auf dem Laptop (onnx-asr, CPU). Aufnahmen: <b>16× Testtext A</b> (alle Hörproben aus der TTS-Studie, 16 verschiedene Stimmen), <b>2× Eigennamen-Satz</b> (Chirp 3 HD Leda und Charon), <b>2× Testtext mit rosa Rauschen</b>, <b>1× 12 s leises Rauschen ohne Sprache</b>. Die Wortfehlerrate (WER) zählt nach einheitlicher Normalisierung: „18:47 Uhr“ und „achtzehn Uhr siebenundvierzig“ zählen gleich, „OpenLauncher“ und „Open Launcher“ auch. Gezählt werden also Hörfehler, keine Schreibweisen.</p>
-  <div class="hinweis klein"><b>Lesart:</b> Die Sprache ist synthetisch und sauber. Das prüft Zahlen, Abkürzungen und Eigennamen, nicht echtes Diktat mit Pausen, Dialekt und Raumhall. Wo eine TTS-Stimme schon falsch sprach (z. B. „3. Nov.“), haben alle Modelle denselben Nachteil. Nicht gemessen: OpenAI (PC-Schlüssel ungültig), Azure (Schlüssel nur auf dem Handy), Groq large-v3 (in der Organisation gesperrt), Google Cloud STT (Schlüssel für die Speech-API gesperrt), alle Anbieter ohne Konto.</div>
-  <div class="tabhuelle"><table id="mtab"><thead><tr><th>Modell</th><th class="zahl">WER Testtext (16)</th><th class="zahl">WER Eigennamen (2)</th><th class="zahl">WER mit Rauschen (2)</th><th>Stille</th><th class="zahl">Zeit (Median)</th></tr></thead><tbody></tbody></table></div>
-  <p class="mt klein">Zeit = Dauer eines Aufrufs für etwa 30 bis 45 s Audio am PC (Cloud inklusive Netz, lokal auf der Laptop-CPU). Bei Ratenlimits wurde gewartet; gezählt ist nur der erfolgreiche Aufruf.</p>
-  <h3>Prüfstellen: wie oft richtig erkannt</h3>
-  <div class="tabhuelle"><table id="stab"><thead></thead><tbody></tbody></table></div>
-  <h3>Aufnahmen und Mitschriften</h3>
-  <details><summary>Referenztexte anzeigen</summary><p class="klein"><b>Testtext A:</b> <span id="refA"></span></p><p class="klein"><b>Eigennamen:</b> <span id="refE"></span></p></details>
-  <div class="raster" id="probenraster"></div>
-</section>
+  <section>
+    <h2>Kurz gesagt</h2>
+    <div class="picks">
+      <article class="pick">
+        <span class="tag">Heute im Einsatz</span>
+        <h3>Groq Whisper Turbo</h3>
+        <p>Blitzschnell und dauerhaft gratis. Auf Deutsch aber nur Mittelfeld, Eigennamen gehen oft daneben.</p>
+        <div class="facts"><span>Fehler <b>3,7</b></span><span>30 Wörter <b>0,5 s</b></span><span>Gratis <b>8 h/Tag</b></span></div>
+      </article>
+      <article class="pick">
+        <span class="tag">Gratis besser werden</span>
+        <h3>Groq Whisper large-v3</h3>
+        <p>Gleicher Anbieter, gleiches Gratiskontingent, auf Deutsch spürbar genauer. Muss in der Groq-Konsole nur freigeschaltet werden.</p>
+        <div class="facts"><span>Fehler <b>3,2</b></span><span>30 Wörter <b>≈ 0,7 s</b></span><span>Gratis <b>8 h/Tag</b></span></div>
+      </article>
+      <article class="pick">
+        <span class="tag">Am genauesten auf Deutsch</span>
+        <h3>ElevenLabs Scribe v2 · AssemblyAI Universal-3.5</h3>
+        <p>Beide unabhängig gemessen unter den Besten für Deutsch. AssemblyAI schenkt 50 $ Startguthaben, das reicht für rund 240 Stunden.</p>
+        <div class="facts"><span>Fehler <b>2,2–2,3</b></span><span>30 Wörter <b>≈ 1–2 s</b></span><span>Preis <b>0,21–0,22 $/h</b></span></div>
+      </article>
+      <article class="pick">
+        <span class="tag">Neu und vielversprechend</span>
+        <h3>MAI-Transcribe-2 · Voxtral Transcribe 3</h3>
+        <p>Platz 2 und 3 der englischen Rangliste. Deutsch ist offiziell dabei, aber noch nicht unabhängig gemessen. Ausprobieren lohnt.</p>
+        <div class="facts"><span>Englisch <b>2,0–2,1</b></span><span>30 Wörter <b>≈ 1 s</b></span><span>Preis <b>0,10–0,24 $/h</b></span></div>
+      </article>
+    </div>
+    <div class="note">
+      <b>„Gemini 3.8 Flash Lite Transcribe“ gibt es nicht.</b>
+      <p>Google führt 3.8 Flash-Lite nur als Vorlese-Stimme (Text zu Sprache). Das Transkriptionsmodell heißt Gemini 3.5 Transcribe. Zum Vergleich stehen unten Gemini 3.5 Transcribe, Gemini 3.8 Flash und Gemini 3.5 Flash-Lite, alle drei selbst gemessen.</p>
+    </div>
+  </section>
 
-<section id="rangliste">
-  <h2>Unabhängige Deutsch-Rangliste</h2>
-  <p>Hugging Face Open ASR Leaderboard, Deutsch-Daten vom 19.10.2026, von Hugging Face selbst gemessen (nicht von den Herstellern). Obere Spur FLEURS (vorgelesene Wikipedia-Sätze), untere Spur Common Voice (Crowd-Sätze mit einfachen Mikrofonen). Kürzer ist besser. Achtung: Der Normalisierer ignoriert Umlaute und Satzzeichen und kennt keine deutschen Zahlen.</p>
-  <div id="hfbalken"></div>
-  <p class="mt klein">Nicht in der Rangliste: Deepgram, Google (Chirp 3, Gemini), Gladia, gpt-4o-transcribe und die Groq-gehostete Variante. Vollständige 41 Zeilen in <a href="#bericht-r8">R8</a>.</p>
-</section>
+  <section>
+    <h2>Alle Modelle</h2>
+    <div class="controls">
+      <div class="group"><span>ZEIGEN</span>
+        <div class="chips" id="filter">
+          <button class="chip" data-f="alle" aria-pressed="true">Alle</button>
+          <button class="chip" data-f="deutsch" aria-pressed="false">Deutsch belegt</button>
+          <button class="chip" data-f="gratis" aria-pressed="false">Gratis nutzbar</button>
+          <button class="chip" data-f="echtzeit" aria-pressed="false">Echtzeit</button>
+          <button class="chip" data-f="lokal" aria-pressed="false">Lokal</button>
+        </div>
+      </div>
+      <div class="group"><span>SORTIEREN NACH</span>
+        <div class="chips" id="sort">
+          <button class="chip" data-s="fehler" aria-pressed="true">Genauigkeit</button>
+          <button class="chip" data-s="tempo" aria-pressed="false">Tempo</button>
+          <button class="chip" data-s="preis" aria-pressed="false">Preis</button>
+        </div>
+      </div>
+      <div class="group"><span>ICH DIKTIERE AM TAG</span>
+        <div class="chips" id="minuten">
+          <button class="chip" data-m="10" aria-pressed="false">10 Min.</button>
+          <button class="chip" data-m="30" aria-pressed="true">30 Min.</button>
+          <button class="chip" data-m="120" aria-pressed="false">2 Std.</button>
+        </div>
+      </div>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
 
-<section id="vergleich">
-  <h2>Vergleichstabelle</h2>
-  <div class="filter">
-    <label>Freikontingent<select id="fFrei"><option value="">alle</option><option value="dauerhaft">dauerhaft (täglich/monatlich)</option><option value="freetier">Free Tier ohne feste Menge</option><option value="klein">dauerhaft, aber sehr klein</option><option value="einmalig">nur einmaliges Startguthaben</option><option value="keins">keins</option><option value="lokal">lokal kostenlos</option></select></label>
-    <label>Deutsch gegenüber Turbo<select id="fUrteil"><option value="">alle</option><option value="besser">belastbar besser (Rangliste)</option><option value="besser-gemessen">besser in eigener Messung</option><option value="unklar">unklar</option><option value="nein">nicht besser / schwächer</option></select></label>
-    <label>Preis nach Freikontingent<select id="fPreis"><option value="">alle</option><option value="0.1">bis 0,10 $/h</option><option value="0.3">bis 0,30 $/h</option><option value="99">über 0,30 $/h</option></select></label>
-    <label>Art<select id="fArt"><option value="">alle</option><option value="cloud">Cloud</option><option value="lokal">lokal</option></select></label>
-  </div>
-  <div class="tabhuelle"><table id="vtab"><thead><tr><th>Anbieter / Modell</th><th>Freikontingent</th><th class="zahl">$ je Std.</th><th class="zahl">HF Deutsch FLEURS / CV</th><th>Deutsch gegenüber Turbo</th><th>Eigene Messung</th><th>Vokabular</th></tr></thead><tbody></tbody></table></div>
-</section>
+  <section>
+    <h2>Englisch-Rangliste von Artificial Analysis</h2>
+    <p class="intro muted">Die bekannteste unabhängige Rangliste, 62 Modelle. Sie misst nur englische Aufnahmen. Für Deutsch kann die Reihenfolge anders aussehen, Fun-ASR Realtime auf Platz 1 kann laut Doku zum Beispiel gar kein Deutsch. Gezeigt sind die besten 25 und das heutige Modell.</p>
+    <div class="rank" id="rank"></div>
+  </section>
 
-<section id="profile">
-  <h2>Anbieterprofile</h2>
-  <p class="mt">Gleich aufgebaut für jeden Anbieter. Die Profile folgen denselben Filtern wie die Tabelle.</p>
-  <div class="raster" id="profilraster"></div>
-</section>
+  <section>
+    <h2>Eigener Test am 21.10.2026</h2>
+    <p class="intro muted">Derselbe deutsche Testtext mit Datum, Uhrzeit, Beträgen und Abkürzungen, gesprochen von 7 Stimmen. Dazu ein Satz voller Eigennamen (Jarvis, OpenLauncher, Logcat …) und eine Aufnahme mit Rauschen. Die Zeit gilt für etwa 70 Wörter.</p>
+    <div class="mess" id="mess"></div>
+  </section>
 
-<section id="frei">
-  <h2>Freikontingente, umgerechnet in Audiostunden</h2>
-  <div class="tabhuelle"><table id="ftab"><thead><tr><th>Anbieter</th><th>Art</th><th class="zahl">Stunden</th><th>Bedingungen</th></tr></thead><tbody></tbody></table></div>
-  <p class="mt klein">Dauerhafte Kontingente in Stunden pro Monat, einmalige Startguthaben als Gesamtstunden zum Listenpreis. Mehr Details, Abrechnungseigenheiten und Kostenbremsen in <a href="#bericht-r10">R10</a>.</p>
-</section>
+  <section>
+    <details class="box">
+      <summary>Was bedeuten die Begriffe?</summary>
+      <ul>
+        <li><b>Fehlerquote (WER):</b> Anteil falsch, fehlend oder zusätzlich erkannter Wörter. 3 % heißt: Von 100 Wörtern sind 3 falsch.</li>
+        <li><b>„Deutsch, unabhängig“:</b> Hugging Face Open ASR Leaderboard, deutscher Vorlesetext (FLEURS). Neutral gemessen, alle Modelle gleich.</li>
+        <li><b>„Deutsch, Hersteller“:</b> Zahl aus einer Tabelle des Anbieters selbst oder eines Konkurrenten. Mit Vorsicht vergleichen.</li>
+        <li><b>Echtzeit:</b> Der Text erscheint schon beim Sprechen und ist kurz nach dem letzten Wort fertig.</li>
+        <li><b>„gemessen“ / „geschätzt“:</b> Gemessen heißt im eigenen Test von hier aus. Geschätzt heißt aus dem Tempo laut Artificial Analysis plus üblicher Netzlaufzeit.</li>
+        <li><b>Startguthaben:</b> Einmaliges Geld vom Anbieter. Ist es aufgebraucht, wird bezahlt.</li>
+      </ul>
+    </details>
+    <details class="box">
+      <summary>Quellen</summary>
+      <ul>
+        <li>Artificial Analysis, Speech-to-Text-Rangliste: <a href="https://artificialanalysis.ai/speech-to-text" target="_blank" rel="noopener">artificialanalysis.ai/speech-to-text</a> (abgerufen 22.10.2026)</li>
+        <li>Hugging Face Open ASR Leaderboard, Deutsch (Stand 19.10.2026): <a href="https://huggingface.co/spaces/hf-audio/open_asr_leaderboard" target="_blank" rel="noopener">huggingface.co/spaces/hf-audio/open_asr_leaderboard</a></li>
+        <li>Preisseiten der Anbieter, Stand 21. und 22.10.2026. Die ausführlichen Berichte liegen im Repo unter Recherchen/stt-vergleich (r1–r10 und recherche-2/r1–r7).</li>
+      </ul>
+    </details>
+  </section>
 
-<section id="kosten">
-  <h2>Kostenrechner (Diktatminuten pro Tag)</h2>
-  <div class="filter">
-    <label>Diktatminuten pro Tag<input type="number" id="kMin" value="30" min="1" max="600"></label>
-    <label>Schnellwahl<select id="kProfil"><option value="10">Wenig (10 Min./Tag)</option><option value="30" selected>Mittel (30 Min./Tag)</option><option value="120">Intensiv (120 Min./Tag)</option></select></label>
-  </div>
-  <p id="kAnnahme" class="mt"></p>
-  <div class="tabhuelle"><table id="ktab"><thead><tr><th>Anbieter</th><th class="zahl">pro Monat</th><th>Anmerkung</th></tr></thead><tbody></tbody></table></div>
-  <div class="hinweis klein">Dauerhafte Freikontingente werden abgezogen, einmalige Startguthaben nicht. Groq rechnet je Anfrage mindestens 10 s ab; viele kurze Diktate kosten oberhalb des Freikontingents also mehr als ihre Länge.</div>
-</section>
+  <footer>Stand 22.10.2026, 10:01 Uhr. Preise in US-Dollar. Alle Zeiten ohne die Pause, die eine App nach dem Sprechen abwartet.</footer>
+</div>
 
-<section id="integration">
-  <h2>Integration in Jarvis und die Overlays</h2>
-  <div id="integrationstext"></div>
-</section>
-
-<section id="grenzen">
-  <h2>Grenzen dieser Studie</h2>
-  <ul>
-    <li><b>Synthetische Sprache.</b> Der Messplatz nutzt TTS-Aufnahmen mit bekanntem Text. Er zeigt Unterschiede bei Zahlen, Abkürzungen und Eigennamen, aber nicht die echte Diktatgenauigkeit mit Franks Stimme, Pausen und Raumklang. Ein Test mit 30 bis 50 eigenen Diktaten wäre der nächste Schritt.</li>
-    <li><b>Kleine Stichprobe</b> bei Eigennamen (2 Aufnahmen) und Rauschen (2 Aufnahmen); Einzelwerte schwanken.</li>
-    <li><b>Ranglisten messen Vorlesesprache.</b> Eigennamen, Zahlenformate, Anglizismen und Satzzeichen auf Deutsch misst keine Rangliste unabhängig.</li>
-    <li>Die Free-Tier-Limits der Gemini API stehen nur im AI-Studio-Dashboard; die Werte hier stammen aus 429-Meldungen und Drittberichten.</li>
-    <li>Herstellerzahlen sind als solche markiert; derselbe Datensatz liefert je nach Normalisierung bis zu 2,7 Prozentpunkte Unterschied.</li>
-    <li>Rechtsfragen (EWR-Klausel der Gemini-Bedingungen, Training im Free Mode bei Mistral) sind dargestellt, nicht rechtlich geprüft.</li>
-  </ul>
-</section>
-
-<section id="quellen">
-  <h2>Methodik und Quellen</h2>
-  <p>Zehn Sonnet-5.5-Researcher mit getrennten Schwerpunkten (Engine C, von Frank freigegeben), Abrufdatum aller Quellen 21.10.2026. Jede Aussage in den Berichten trägt ihren Link; Herstellerangaben, Zweitquellen und Unbelegtes sind markiert. Messplatz: <code>messung/messen.py</code> (Cloud) und <code>messung/lokal.py</code> (onnx-asr), Auswertung <code>seite/bauen.py</code>.</p>
-  <div id="berichtliste"></div>
-  <h3>Wichtigste Primärquellen</h3>
-  <ul class="klein">
-    <li><a href="https://huggingface.co/datasets/hf-audio/multilingual_evals/blob/main/multilingual_de.csv" target="_blank" rel="noopener">HF Open ASR Leaderboard, Deutsch-Rohdaten</a> · <a href="https://arxiv.org/html/2510.06961v4" target="_blank" rel="noopener">Leaderboard-Paper</a> · <a href="https://artificialanalysis.ai/speech-to-text" target="_blank" rel="noopener">Artificial Analysis STT</a></li>
-    <li><a href="https://console.groq.com/docs/speech-to-text" target="_blank" rel="noopener">Groq STT</a> · <a href="https://console.groq.com/docs/rate-limits" target="_blank" rel="noopener">Groq Limits</a> · <a href="https://developers.cloudflare.com/workers-ai/platform/pricing/" target="_blank" rel="noopener">Cloudflare Workers AI Preise</a></li>
-    <li><a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">Gemini API Preise</a> · <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Gemini API Bedingungen</a> · <a href="https://cloud.google.com/speech-to-text/pricing" target="_blank" rel="noopener">Cloud STT Preise</a></li>
-    <li><a href="https://developers.openai.com/api/docs/guides/speech-to-text" target="_blank" rel="noopener">OpenAI STT</a> · <a href="https://learn.microsoft.com/en-us/azure/ai-services/speech-service/mai-transcribe" target="_blank" rel="noopener">Azure MAI-Transcribe</a> · <a href="https://aws.amazon.com/transcribe/pricing/" target="_blank" rel="noopener">Amazon Transcribe Preise</a></li>
-    <li><a href="https://deepgram.com/pricing" target="_blank" rel="noopener">Deepgram</a> · <a href="https://www.assemblyai.com/pricing" target="_blank" rel="noopener">AssemblyAI</a> · <a href="https://elevenlabs.io/pricing/api" target="_blank" rel="noopener">ElevenLabs</a> · <a href="https://docs.mistral.ai/capabilities/audio/" target="_blank" rel="noopener">Mistral Audio</a> · <a href="https://soniox.com/docs/stt/models" target="_blank" rel="noopener">Soniox</a></li>
-    <li><a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3" target="_blank" rel="noopener">Parakeet v3</a> · <a href="https://github.com/istupakov/onnx-asr" target="_blank" rel="noopener">onnx-asr</a> · <a href="https://huggingface.co/primeline/whisper-large-v3-turbo-german" target="_blank" rel="noopener">primeline Turbo German</a></li>
-  </ul>
-  <p class="mt klein">Dateistand: Recherchen/stt-vergleich im Repo proggs. Seite neu bauen mit <code>python -I seite/bauen.py</code>.</p>
-</section>
-</main>
-
-<script src="seite/daten.js"></script>
-<script src="seite/berichte.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script>
-(function(){
-  const S = window.STUDIE, M = window.MESSUNG || {modelle: []}, B = window.BERICHTE || {};
-  const $ = s => document.querySelector(s);
-  const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const usd = v => v == null ? "–" : (v === 0 ? "0 $" : v.toLocaleString("de-DE", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " $");
-  const pz = v => v == null ? "–" : (v * 100).toLocaleString("de-DE", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " %";
+// de: deutsche Fehlerquote in %, deQ: Herkunft, aa: Artificial Analysis (Englisch), t30: Sekunden für 30 Wörter,
+// tq: gemessen|geschätzt, rt: Echtzeit-Variante vorhanden, preis: $/h, frei: {art, h: Stunden/Monat, guthaben: Stunden einmalig}
+const MODELLE = [
+  { id: "groq-turbo", name: "Whisper large-v3 Turbo", prov: "Groq", heute: true,
+    de: 3.67, deQ: "Deutsch, unabhängig", deSub: "eigener Test: 10,1", aa: 4.6,
+    t30: 0.5, tq: "gemessen", rt: false, preis: 0.04,
+    frei: { art: "dauerhaft", h: 240, kurz: "8 h Audio pro Tag" },
+    mehr: { Deutsch: "Platz 30 von 41 auf Deutsch. Auf Common Voice (Alltagssätze) 8,6 % Fehler, fast doppelt so viel wie large-v3.", Gratis: "Dauerhaft: 20 Anfragen pro Minute, 2.000 pro Tag, 8 Stunden Audio pro Tag. Kein Training mit deinen Daten.", Haken: "Eigennamen ohne Vokabelliste schwach (Groq → „Grog“). Bei Stille wird die Vokabelliste als Text ausgegeben.", Einsatz: "Läuft heute in Jarvis und den Voice-Overlays." } },
+  { id: "groq-v3", name: "Whisper large-v3", prov: "Groq",
+    de: 3.20, deQ: "Deutsch, unabhängig", aa: 4.1,
+    t30: 0.7, tq: "geschätzt", rt: false, preis: 0.111,
+    frei: { art: "dauerhaft", h: 240, kurz: "8 h Audio pro Tag" },
+    mehr: { Deutsch: "Auf Common Voice 4,8 % statt 8,6 % beim Turbo. Mehrere Tests sehen es übereinstimmend vorn.", Gratis: "Wie Turbo, eigenes Limit.", Haken: "In deiner Groq-Organisation gesperrt, in der Konsole mit einem Klick freischaltbar.", Umstieg: "In Jarvis und den Overlays nur den Modellnamen ändern, kein Umbau." } },
+  { id: "cf", name: "Whisper Turbo (Workers AI)", prov: "Cloudflare",
+    de: 3.67, deQ: "Deutsch, unabhängig", aa: 4.6,
+    t30: 1.0, tq: "geschätzt", rt: false, preis: 0.03,
+    frei: { art: "dauerhaft", h: 107, kurz: "≈ 3,5 h pro Tag" },
+    mehr: { Deutsch: "Dasselbe Modell wie bei Groq, also gleiche Qualität.", Gratis: "10.000 Neurons pro Tag, das sind etwa 214 Minuten Audio. Ohne Zahlungsmittel.", Nutzen: "Taugt als zweiter Gratis-Rückfall hinter Groq." } },
+  { id: "scribe", name: "Scribe v2", prov: "ElevenLabs",
+    de: 2.30, deQ: "Deutsch, unabhängig", aa: 2.2,
+    t30: 0.8, tq: "geschätzt", rt: true, preis: 0.22,
+    frei: { art: "klein", h: 0.5, kurz: "≈ 30 Min. pro Monat" },
+    mehr: { Deutsch: "Platz 3 auf Deutsch, auf Alltagssätzen sogar 2,2 %. Bestes Modell beim Mischen von Deutsch und Englisch.", Echtzeit: "Scribe v2 Realtime: Text etwa 0,15 s nach dem Sprechende, 0,39 $/h.", Vokabeln: "Bis 1.000 Begriffe (Realtime: 50), +0,05 $/h.", Gratis: "Free-Plan mit 10.000 Credits im Monat, das sind etwa 30 Minuten." } },
+  { id: "assembly", name: "Universal-3.5 Pro", prov: "AssemblyAI",
+    de: 2.17, deQ: "Deutsch, unabhängig", aa: 3.0,
+    t30: 2.0, tq: "geschätzt", rt: true, preis: 0.21,
+    frei: { art: "einmalig", guthaben: 240, kurz: "50 $ Startguthaben" },
+    mehr: { Deutsch: "Platz 4 auf Deutsch, dazu bestes von sechs Modellen in einem Medizin-Test.", Tempo: "Datei hochladen und auf das Ergebnis warten dauert in der Praxis oft 1 bis 3 Sekunden.", Echtzeit: "Universal-3.6 Pro Realtime: 5,0 % auf Deutsch (Herstellerangabe), 0,45 $/h.", Gratis: "50 $ ohne Kreditkarte, reicht für rund 240 Stunden Datei-Transkription.", Vokabeln: "Bis 1.000 Begriffe." } },
+  { id: "gpt", name: "gpt-transcribe", prov: "OpenAI",
+    de: 2.34, deQ: "Deutsch, unabhängig", aa: 3.3,
+    t30: 1.2, tq: "geschätzt", rt: true, preis: 0.27,
+    frei: { art: "keins", kurz: "kein Gratisteil" },
+    mehr: { Deutsch: "Platz 11 auf Deutsch, deutlich vor Whisper.", Echtzeit: "gpt-live-transcribe kostet 1,02 $/h.", Haken: "Mindestens 5 $ Vorkasse. Die Vorgänger (whisper-1, gpt-4o-transcribe) werden am 26.02.2027 abgeschaltet." } },
+  { id: "soniox", name: "Soniox v5", prov: "Soniox",
+    de: 2.66, deQ: "Deutsch, unabhängig", aa: 3.8,
+    t30: 0.4, tq: "geschätzt", rt: true, preis: 0.10,
+    frei: { art: "keins", kurz: "unklar" },
+    mehr: { Deutsch: "Platz 16 auf Deutsch, auf Alltagssätzen 4,6 %.", Echtzeit: "Streaming etwa 0,3 bis 0,45 s nach dem Sprechende, 0,12 $/h.", Gratis: "Widersprüchlich: Laut Blog seit 27.10.2025 kein Startguthaben, die Preisseite nennt 200 $." } },
+  { id: "speechmatics", name: "Enhanced", prov: "Speechmatics",
+    de: 3.56, deQ: "Deutsch, unabhängig", aa: 4.0,
+    t30: 3.0, tq: "geschätzt", rt: true, preis: 0.75,
+    frei: { art: "einmalig", guthaben: 133, kurz: "100 $ Startguthaben" },
+    mehr: { Deutsch: "Auf Vorlesetext Mittelfeld, auf Alltagssätzen mit 2,0 % sehr stark.", Gratis: "100 $ für Neukunden, 12 Monate gültig.", Haken: "Teuer, Datei-Weg langsam (2 bis 5 s)." } },
+  { id: "mai2", name: "MAI-Transcribe-2", prov: "Microsoft (Azure Speech)", neu: true,
+    de: null, deText: "noch nicht gemessen", aa: 2.0,
+    t30: 1.0, tq: "geschätzt", rt: true, preis: 0.10,
+    frei: { art: "keins", kurz: "kein Gratisteil" },
+    mehr: { Deutsch: "Offiziell unterstützt. Microsoft nennt nur einen Mittelwert über 60 Sprachen (5,2 %), keine Deutsch-Zahl.", Preis: "0,10 $/h nur als Aktion bis 31.12.2026. Version 1.5 kostet 0,36 $/h.", Echtzeit: "MAI-Transcribe-2-Streaming seit 01.10.2026: Endtext etwa 0,13 s nach dem Sprechende, 0,54 $/h.", Gratis: "Die 5 Freistunden von Azure (F0) gelten nicht für MAI.", Region: "Für Deutschland am nächsten: northeurope.", Vokabeln: "Phrasenliste möglich." } },
+  { id: "voxtral3", name: "Voxtral Transcribe 3", prov: "Mistral", neu: true,
+    de: null, deText: "noch nicht gemessen", aa: 2.1,
+    t30: 1.0, tq: "geschätzt", rt: true, preis: 0.24,
+    frei: { art: "klein", h: 0, kurz: "unklar (Experiment-Plan)" },
+    mehr: { Neu: "Seit 20.10.2026 als Vorschau. Small 2,1 %, Mini 2,2 % auf Englisch.", Deutsch: "Vorgänger Mini Transcribe 2: 3,5 % auf Deutsch (Herstellerangabe), Voxtral Small 2,6 % (unabhängig).", Preis: "Small 0,24 $/h, Mini 0,21 $/h, Vorgänger 0,18 $/h.", Echtzeit: "Voxtral Realtime 3: unter 0,5 s, 0,48 $/h.", Gratis: "Gratis-Plan ohne Karte. Ob Audio drin ist, sagt Mistral nicht. Im Gratis-Plan darf Mistral mit deinen Daten trainieren." } },
+  { id: "grok", name: "Grok Voice Transcribe 2.0", prov: "xAI", neu: true,
+    de: null, deText: "noch nicht gemessen", aa: 2.3,
+    t30: 0.5, tq: "geschätzt", rt: true, preis: 0.10,
+    frei: { art: "keins", kurz: "kein Gratisteil" },
+    mehr: { Englisch: "Platz 6 der Rangliste.", Echtzeit: "Streaming 0,20 $/h, Text 0,4 bis 0,6 s nach dem Sprechende.", Deutsch: "Keine belegte Deutsch-Zahl." } },
+  { id: "qwen", name: "Qwen3-ASR-Flash", prov: "Alibaba",
+    de: 3.03, deQ: "Deutsch, Hersteller", aa: null,
+    t30: 1.2, tq: "geschätzt", rt: true, preis: 0.126,
+    frei: { art: "einmalig", guthaben: 10, kurz: "10 h für 90 Tage" },
+    mehr: { Deutsch: "Laut Alibaba 3,0 % auf Vorlesetext und 3,5 % auf Alltagssätzen. Die offene Variante steht unabhängig auf Platz 18.", Gratis: "10 Stunden je Modell für Neukunden, 90 Tage, nur über den Server in Singapur, nur Echtzeit-Aufrufe.", Echtzeit: "qwen3-asr-flash-realtime: 0,32 $/h.", Zugang: "OpenAI-kompatible Schnittstelle." } },
+  { id: "fun", name: "Fun-ASR Realtime", prov: "Alibaba", neu: true,
+    de: null, deText: "Deutsch fraglich", aa: 1.7,
+    t30: 0.6, tq: "geschätzt", rt: true, preis: 0.324,
+    frei: { art: "einmalig", guthaben: 10, kurz: "10 h für 90 Tage" },
+    mehr: { Englisch: "Platz 1 der Rangliste mit 1,7 %.", Deutsch: "Die belegte Version kann nur Chinesisch, Englisch und Japanisch. Das allgemeine Fun-ASR kann Deutsch, ist aber nicht gemessen.", Gratis: "10 Stunden für Neukunden in Singapur, 90 Tage." } },
+  { id: "qwenomni", name: "Qwen3.5 Omni Plus", prov: "Alibaba",
+    de: null, deText: "nicht gemessen", aa: 3.5,
+    t30: 1.0, tq: "geschätzt", rt: false, preis: null, preisText: "nach Tokens",
+    frei: { art: "keins", kurz: "–" },
+    mehr: { Was: "Allround-KI, die auch Audio versteht. Kein reines Diktatmodell.", Preis: "11 $ je 1 Million Audio-Token.", Hinweis: "Die kleine Omni Flash liegt bei 13,5 %." } },
+  { id: "gemini-t", name: "Gemini 3.5 Transcribe", prov: "Google",
+    de: 3.48, deQ: "eigener Test mit Vokabeln", aa: 2.6,
+    t30: 2.4, tq: "gemessen", rt: true, preis: 0.30,
+    frei: { art: "klein", h: 2.5, kurz: "25 Anfragen pro Tag" },
+    mehr: { Deutsch: "Im eigenen Test sehr gut, Eigennamen fast alle richtig. Erfindet bei Stille nichts.", Gratis: "Nur 3 Anfragen pro Minute und 25 pro Tag. Danach fallen die Overlays still auf Groq zurück.", Echtzeit: "gemini-3.5-transcribe-live: 4,0 % Englisch, 0,54 $/h, ungenauer als die Datei-Version.", Einsatz: "In den Voice-Overlays schon eingebaut." } },
+  { id: "gemini-38", name: "Gemini 3.8 Flash (Audio)", prov: "Google",
+    de: 3.28, deQ: "eigener Test mit Vokabeln", aa: null,
+    t30: 4.2, tq: "gemessen", rt: false, preis: null, preisText: "nach Tokens",
+    frei: { art: "klein", h: 0, kurz: "nach wenigen Aufrufen leer" },
+    mehr: { Haken: "Erfindet bei Stille ganze Sätze. Nur mit Sprach-Erkennung davor nutzbar.", Tempo: "Langsamstes Cloud-Modell im Test: 7 s für 70 Wörter." } },
+  { id: "gemini-lite", name: "Gemini 3.5 Flash-Lite (Audio)", prov: "Google",
+    de: 6.76, deQ: "eigener Test", aa: null,
+    t30: 2.0, tq: "gemessen", rt: false, preis: 0.065,
+    frei: { art: "klein", h: 50, kurz: "≈ 500 Anfragen pro Tag (unbestätigt)" },
+    mehr: { Deutsch: "Besser als Turbo auf sauberem Text, schwächer bei Eigennamen (16,7 %).", Gratis: "Laut Drittquelle etwa 15 Anfragen pro Minute und 500 pro Tag." } },
+  { id: "chirp", name: "Chirp 3 (Cloud Speech)", prov: "Google",
+    de: null, deText: "nicht gemessen", aa: 4.3,
+    t30: 1.3, tq: "geschätzt", rt: true, preis: 0.96,
+    frei: { art: "keins", kurz: "kein Gratisteil" },
+    mehr: { Haken: "Teuer, Echtzeit nur per gRPC. Die 60 Freiminuten gelten nur für die alte v1." } },
+  { id: "azure", name: "Azure Speech Echtzeit", prov: "Microsoft",
+    de: null, deText: "1,8 oder 9,1 – widersprüchlich", aa: null,
+    t30: 0.5, tq: "geschätzt", rt: true, preis: 1.00,
+    frei: { art: "dauerhaft", h: 5, kurz: "5 h pro Monat" },
+    mehr: { Deutsch: "Unabhängig auf Platz 1 (1,8 %), aber welcher Modus gemessen wurde, ist offen. Ein Konkurrent misst 9,1 % für das Standard-Echtzeitmodell.", Gratis: "Dauerhaft 5 Stunden pro Monat, nur Echtzeit, eine Anfrage gleichzeitig." } },
+  { id: "deepgram", name: "Nova-3", prov: "Deepgram",
+    de: 13.3, deQ: "Deutsch, Konkurrenzmessung", aa: 5.2,
+    t30: 0.3, tq: "geschätzt", rt: true, preis: 0.26,
+    frei: { art: "einmalig", guthaben: 680, kurz: "200 $ Startguthaben" },
+    mehr: { Deutsch: "Schwach. Auch das neue Flux Multilingual liegt bei 10,2 %. Beide Zahlen stammen von AssemblyAI.", Gratis: "200 $ ohne Karte und ohne Ablauf, das sind etwa 680 Stunden.", Datenschutz: "Trainiert standardmäßig mit deinen Daten, mip_opt_out=true setzen.", Vokabeln: "+0,08 $/h, im Stream begrenzte Zahl Begriffe." } },
+  { id: "gladia", name: "Solaria-3", prov: "Gladia",
+    de: 10.9, deQ: "Deutsch, Konkurrenzmessung", aa: 3.2,
+    t30: 1.0, tq: "geschätzt", rt: true, preis: 0.20,
+    frei: { art: "einmalig", guthaben: 250, kurz: "50 € Startguthaben" },
+    mehr: { Gratis: "50 € für ein Jahr.", Deutsch: "Deutlich hinter dem Feld." } },
+  { id: "aws", name: "Amazon Transcribe", prov: "Amazon",
+    de: 8.0, deQ: "Deutsch, Konkurrenzmessung", aa: 4.1,
+    t30: 2.0, tq: "geschätzt", rt: true, preis: 0.36,
+    frei: { art: "klein", h: 1, kurz: "1 h pro Monat (12 Monate)" },
+    mehr: { Preis: "Datei 0,36 $/h, Echtzeit 0,60 $/h (Frankfurt).", Gratis: "Nur für ältere Konten, neue Konten bekommen Guthaben." } },
+  { id: "parakeet", name: "Parakeet TDT 0.6B v3", prov: "NVIDIA · läuft lokal", lokal: true,
+    de: 4.16, deQ: "Deutsch, unabhängig", deSub: "eigener Test: 13,2", aa: 4.5,
+    t30: 7.0, tq: "gemessen", rt: false, preis: 0,
+    frei: { art: "lokal", kurz: "unbegrenzt, nur Strom" },
+    mehr: { Tempo: "Auf diesem PC ohne Grafikkarten-Beschleunigung 11,8 s für 70 Wörter.", Haken: "Zahlen schwach („30 5 Millisekunden“), bei Rauschen 45 % Fehler." } },
+  { id: "canary", name: "Canary-1B-v2", prov: "NVIDIA · läuft lokal", lokal: true,
+    de: 3.43, deQ: "Deutsch, unabhängig", deSub: "eigener Test: 17,8", aa: null,
+    t30: 10.0, tq: "gemessen", rt: false, preis: 0,
+    frei: { art: "lokal", kurz: "unbegrenzt, nur Strom" },
+    mehr: { Haken: "Im eigenen Test das schwächste Modell, 17 s für 70 Wörter." } }
+];
 
-  // Farbschema
-  const thema = $("#thema");
-  try { const g = localStorage.getItem("stt-thema"); if (g) { thema.value = g; document.documentElement.dataset.theme = g; } } catch (e) {}
-  thema.onchange = () => { if (thema.value) document.documentElement.dataset.theme = thema.value; else delete document.documentElement.dataset.theme; try { localStorage.setItem("stt-thema", thema.value); } catch (e) {} };
+const MESSUNG = [
+  ["Gemini 3.8 Flash + Vokabeln", 3.3, 1.2, 6.6, 10.0],
+  ["Gemini 3.5 Transcribe + Vokabeln", 3.5, 2.4, 1.6, 4.1],
+  ["Gemini 3.5 Transcribe", 4.5, 10.7, 1.6, 4.0],
+  ["Gemini 3.8 Flash", 4.9, 7.1, 6.6, 7.1],
+  ["Gemini 3.5 Flash-Lite", 6.8, 16.7, 1.6, 3.3],
+  ["Groq Whisper Turbo + Vokabeln", 10.1, 4.8, 4.9, 2.0],
+  ["Groq Whisper Turbo", 10.1, 11.9, 3.3, 0.8],
+  ["Lokal Parakeet v3", 13.2, 7.1, 45.1, 11.8],
+  ["Lokal Canary-1B-v2", 17.8, 14.3, 24.6, 17.0]
+];
 
-  const NAMEN = {"groq-turbo": "Groq Turbo", "groq-turbo+prompt": "Groq Turbo + Vokabel-Prompt", "gemini-3.5-transcribe": "Gemini 3.5 Transcribe", "gemini-3.5-transcribe+vokabular": "Gemini 3.5 Transcribe + Vokabular",
-    "gemini-3.8-flash": "Gemini 3.8 Flash (Prompt)", "gemini-3.8-flash+vokabular": "Gemini 3.8 Flash + Vokabular", "gemini-3.5-flash-lite": "Gemini 3.5 Flash-Lite (Prompt)",
-    "lokal-parakeet-tdt-0.6b-v3": "Lokal: Parakeet TDT 0.6B v3", "lokal-canary-1b-v2": "Lokal: Canary-1B-v2"};
-  const gemessen = M.modelle.filter(m => NAMEN[m.modell] && m.proben.some(p => !p.fehler));
-  const farbeWer = (v, basis) => v == null ? "" : v <= basis * 0.6 ? "m-gut" : v <= basis * 1.05 ? "m-warn" : "m-schl";
-  const basis = gemessen.find(m => m.modell === "groq-turbo")?.werMittel || {};
+const RANG = [
+  [1,"Fun-Realtime-ASR (Vorschau)","Alibaba",1.7],[2,"MAI-Transcribe-2","Microsoft",2.0],[3,"Voxtral Small Transcribe 3","Mistral",2.1],
+  [4,"Scribe v2","ElevenLabs",2.2],[5,"Voxtral Mini Transcribe 3","Mistral",2.2],[6,"Grok Voice Transcribe 2.0","xAI",2.3],
+  [7,"MAI-Transcribe-1.5","Microsoft",2.4],[8,"StepAudio 3 ASR","StepFun",2.5],[9,"Gemini 3.5 Transcribe","Google",2.6],
+  [10,"Gemini 3.1 Pro (High)","Google",2.8],[11,"Voxtral Small","Mistral",2.8],[12,"Zoom Scribe V2 Pro","Zoom",2.8],
+  [13,"Gemini 2.5 Pro","Google",2.9],[14,"Gemini 3 Flash (High)","Google",2.9],[15,"Universal-3.5 Pro","AssemblyAI",3.0],
+  [16,"Universal-3 Pro","AssemblyAI",3.1],[17,"Solaria-3","Gladia",3.2],[18,"GPT Transcribe","OpenAI",3.3],
+  [19,"Pulse","Smallest.ai",3.3],[20,"Gemini 3.1 Flash-Lite","Google",3.4],[21,"Resonant-1","Reson8",3.4],
+  [22,"Pulse Pro","Smallest.ai",3.4],[23,"Qwen3.5 Omni Plus","Alibaba",3.5],[24,"Gemini 3.1 Pro (Low)","Google",3.6],
+  [25,"Voxtral Mini Transcribe 2","Mistral",3.6],[42,"Whisper large-v3 Turbo (heute)","Groq",4.6]
+];
 
-  // Messtabelle
-  $("#mtab tbody").innerHTML = gemessen.map(m => {
-    const still = m.proben.find(p => p.art === "stille");
-    const st = !still ? "–" : still.halluziniert ? `<span class="marke m-schl">erfindet Text</span><div class="klein mt">„${esc(still.text.slice(0, 90))}${still.text.length > 90 ? "…" : ""}“</div>` : '<span class="marke m-gut">leer</span>';
-    const zelle = a => `<td class="zahl"><span class="marke ${m.modell === "groq-turbo" ? "" : farbeWer(m.werMittel[a], basis[a])}">${pz(m.werMittel[a])}</span></td>`;
-    return `<tr class="${m.modell === "groq-turbo" ? "basis" : ""}"><td><b>${esc(NAMEN[m.modell])}</b>${m.modell === "groq-turbo" ? ' <span class="marke m-ak">heute</span>' : ""}</td>${zelle("sauber")}${zelle("eigennamen")}${zelle("rauschen")}<td>${st}</td><td class="zahl">${m.sekundenMedian == null ? "–" : m.sekundenMedian.toLocaleString("de-DE") + " s"}</td></tr>`;
-  }).join("");
+const fmt = (n, d = 1) => n.toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fehlerKlasse = v => v == null ? "n" : v < 3 ? "g" : v < 5 ? "w" : "b";
+const tempoKlasse = t => t <= 1 ? "g" : t <= 3 ? "w" : "b";
+const tempoWort = t => t <= 0.6 ? "sofort" : t <= 1.5 ? "schnell" : t <= 3 ? "kurz warten" : "spürbar";
 
-  // Prüfstellen-Matrix
-  const stellenTab = art => {
-    const zeilen = gemessen.map(m => { const z = {}; m.proben.filter(p => p.art === art && p.stellen).forEach(p => p.stellen.forEach(s => { z[s.stelle] = z[s.stelle] || [0, 0]; z[s.stelle][0] += s.ok ? 1 : 0; z[s.stelle][1]++; })); return [m, z]; });
-    return zeilen;
-  };
-  const sa = stellenTab("sauber"), se = stellenTab("eigennamen");
-  if (sa.length) {
-    const kA = Object.keys(sa[0][1]), kE = Object.keys(se[0][1]);
-    const zelle = v => { if (!v) return "<td>–</td>"; const q = v[0] / v[1]; const c = q === 1 ? "m-gut" : q >= .75 ? "m-warn" : "m-schl"; return `<td class="zahl"><span class="ampel marke ${c}">${v[0]}/${v[1]}</span></td>`; };
-    $("#stab thead").innerHTML = "<tr><th>Modell</th>" + kA.map(s => `<th class="zahl">${esc(s)}</th>`).join("") + kE.map(s => `<th class="zahl">${esc(s)}</th>`).join("") + "</tr>";
-    $("#stab tbody").innerHTML = sa.map(([m, z], i) => `<tr><td class="klein"><b>${esc(NAMEN[m.modell])}</b></td>` + kA.map(k => zelle(z[k])).join("") + kE.map(k => zelle(se[i][1][k])).join("") + "</tr>").join("");
+let state = { f: "alle", s: "fehler", m: 30 };
+try { const s = JSON.parse(localStorage.getItem("stt-ansicht")); if (s) state = { ...state, ...s }; } catch (e) {}
+
+function kosten(mod) {
+  const hMonat = state.m * 30 / 60;
+  if (mod.frei.art === "lokal") return { txt: "0 $", sub: "nur Strom" };
+  if (mod.preis == null) return { txt: "–", sub: mod.preisText || "" };
+  if (mod.frei.art === "einmalig") {
+    const monate = mod.frei.guthaben / hMonat;
+    return { txt: fmt(hMonat * mod.preis, 2) + " $", sub: "Guthaben reicht ≈ " + (monate >= 24 ? Math.round(monate / 12) + " Jahre" : monate >= 1 ? Math.round(monate) + " Monate" : Math.max(1, Math.round(monate * 30)) + " Tage") };
   }
+  const frei = mod.frei.h || 0;
+  const zahl = Math.max(0, hMonat - frei) * mod.preis;
+  return { txt: zahl === 0 ? "0 $" : fmt(zahl, 2) + " $", sub: zahl === 0 ? "deckt das Gratiskontingent" : frei > 0 ? "nach Abzug des Gratisteils" : "" };
+}
 
-  // Aufnahmen mit Mitschriften
-  $("#refA").textContent = M.testtextA || ""; $("#refE").textContent = M.eigennamen || "";
-  const dateien = gemessen.length ? gemessen[0].proben.map(p => p) : [];
-  const pfad = d => /^(eigennamen|rauschen|stille)/.test(d) ? "messung/audio/" + encodeURIComponent(d) : "../tts-vergleich/proben/" + encodeURIComponent(d);
-  const titel = d => d.replace(/\.(mp3|wav)$/, "").replace(/^gemini-gemini-/, "TTS Gemini ").replace(/^google-de-DE-/, "TTS Google ").replace(/^edge-de-DE-/, "TTS Edge ").replace(/^qwen-/, "TTS Alibaba ").replace(/^lokal-/, "TTS lokal: ").replace(/-Leda-a$/, " · Leda").replace(/^eigennamen-chirp3-/, "Eigennamen · Chirp 3 HD ").replace(/^rauschen-/, "Mit Rauschen · ").replace(/^stille-leises-rauschen/, "Stille (leises Rauschen, 12 s)");
-  const reihen = d => d.startsWith("eigennamen") ? 0 : d.startsWith("stille") ? 1 : d.startsWith("rauschen") ? 2 : 3;
-  $("#probenraster").innerHTML = [...dateien].sort((a, b) => reihen(a.datei) - reihen(b.datei) || a.datei.localeCompare(b.datei)).map(p => {
-    const mitschriften = gemessen.map(m => { const q = m.proben.find(x => x.datei === p.datei); if (!q) return ""; const w = q.wer != null ? ` · WER ${pz(q.wer)}` : q.halluziniert ? " · erfindet Text" : q.art === "stille" ? " · leer" : "";
-      return `<div class="transkript"><div class="kopf">${esc(NAMEN[m.modell])}${w}</div>${esc(q.text || (q.fehler ? "Fehler: " + q.fehler.slice(0, 120) : "(leer)"))}</div>`; }).join("");
-    return `<div class="karte"><h4>${esc(titel(p.datei))}</h4><audio controls preload="none" src="${pfad(p.datei)}"></audio><details><summary class="klein">Mitschriften aller Modelle</summary>${mitschriften}</details></div>`;
-  }).join("");
+function karte(mod) {
+  const fk = fehlerKlasse(mod.de);
+  const tk = tempoKlasse(mod.t30);
+  const k = kosten(mod);
+  const badges = [
+    mod.heute ? '<span class="badge heute">heute im Einsatz</span>' : "",
+    mod.neu ? '<span class="badge neu">neu</span>' : "",
+    mod.rt ? '<span class="badge rt">Echtzeit möglich</span>' : "",
+    mod.lokal ? '<span class="badge">lokal</span>' : ""
+  ].join("");
+  const fehlerVal = mod.de != null
+    ? `<span class="val ${fk}">${fmt(mod.de)} <small>von 100</small></span><div class="bar"><i class="bg-${fk}" style="width:${Math.min(100, mod.de / 14 * 100)}%"></i></div><span class="sub">${esc(mod.deQ)}${mod.deSub ? " · " + esc(mod.deSub) : ""}</span>`
+    : `<span class="val" style="font-size:.95rem">${esc(mod.deText)}</span><div class="bar"><i class="bg-n" style="width:0"></i></div><span class="sub">${mod.aa != null ? "Englisch: " + fmt(mod.aa) + " von 100" : ""}</span>`;
+  const aaZeile = mod.de != null && mod.aa != null ? ` · Englisch ${fmt(mod.aa)}` : "";
+  const preis = mod.preis == null ? (mod.preisText || "–") : mod.preis === 0 ? "0 $" : fmt(mod.preis, mod.preis < 0.1 ? 3 : 2) + " $";
+  const dl = Object.entries(mod.mehr).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+  return `<article class="card${mod.heute ? " today" : ""}">
+    <div class="top">
+      <div class="who"><h3>${esc(mod.name)}</h3><span class="prov">${esc(mod.prov)}</span><div class="badges">${badges}</div></div>
+      <div class="m"><span class="lbl">FEHLER DEUTSCH</span>${fehlerVal}${aaZeile ? `<span class="sub">${aaZeile.slice(3)}</span>` : ""}</div>
+      <div class="m"><span class="lbl">30 WÖRTER</span><span class="val ${tk}">${mod.t30 < 1 ? fmt(mod.t30) : "≈ " + fmt(mod.t30)} s</span><div class="bar"><i class="bg-${tk}" style="width:${Math.min(100, mod.t30 / 10 * 100)}%"></i></div><span class="sub">${tempoWort(mod.t30)} · ${mod.tq}${mod.rt ? " · live ≈ 0,2–0,5 s" : ""}</span></div>
+      <div class="m"><span class="lbl">PREIS</span><span class="val">${preis} <small>${mod.preis ? "pro Std." : ""}</small></span><span class="sub">bei dir ≈ <b>${k.txt}</b> im Monat${k.sub ? "<br>" + k.sub : ""}</span></div>
+      <div class="m"><span class="lbl">GRATIS</span><span class="free-pill free-${mod.frei.art}">${esc(mod.frei.kurz)}</span></div>
+    </div>
+    <details class="more"><summary>Details</summary><dl>${dl}</dl></details>
+  </article>`;
+}
 
-  // HF-Rangliste
-  const HF = [["Azure Speech 07-2026", 1.83, 2.01], ["ElevenLabs Scribe v2", 2.30, 2.19], ["AssemblyAI Universal-3.5 Pro", 2.17, 2.69], ["Speechmatics Enhanced", 3.56, 1.99], ["OpenAI gpt-transcribe", 2.34, 3.34], ["Mistral Voxtral Small 24B", 2.61, 3.19], ["Cohere Transcribe (offen)", 3.33, 2.87], ["Soniox v5", 2.66, 4.62], ["Qwen3-ASR 1.7B (offen)", 3.35, 4.60], ["Whisper large-v3", 3.20, 4.79], ["Canary-1B-v2 (offen)", 3.43, 4.69], ["Parakeet TDT 0.6B v3 (offen)", 4.16, 4.07], ["Voxtral Mini 3B", 3.64, 5.29], ["Whisper large-v3 Turbo (heute)", 3.67, 8.58], ["Voxtral Mini 4B Realtime", 4.87, 7.81], ["Nemotron 3.5 Streaming", 8.46, 9.46]];
-  const maxW = 10;
-  $("#hfbalken").innerHTML = HF.map(([n, fl, mcv]) => `<div class="zeile ${n.includes("Turbo") ? "basis" : ""}"><div>${esc(n)}</div><div class="spur" title="FLEURS ${fl} · Common Voice ${mcv}"><span class="fl" style="width:${fl / maxW * 100}%"></span><span class="mcv" style="width:${mcv / maxW * 100}%"></span><b>${fl.toLocaleString("de-DE")} / ${mcv.toLocaleString("de-DE")} %</b></div></div>`).join("");
+function render() {
+  let l = MODELLE.filter(m =>
+    state.f === "alle" ? true :
+    state.f === "deutsch" ? m.de != null :
+    state.f === "gratis" ? ["dauerhaft", "einmalig", "lokal"].includes(m.frei.art) || (m.frei.art === "klein" && m.frei.h > 0) :
+    state.f === "echtzeit" ? m.rt : m.lokal);
+  const key = { fehler: m => m.de ?? (m.aa != null ? 50 + m.aa : 99), tempo: m => m.t30, preis: m => m.preis ?? 99 }[state.s];
+  l.sort((a, b) => key(a) - key(b));
+  document.getElementById("list").innerHTML = l.map(karte).join("");
+  document.getElementById("count").textContent = l.length + " von " + MODELLE.length + " Modellen";
+  for (const [id, k, attr] of [["filter", "f", "f"], ["sort", "s", "s"], ["minuten", "m", "m"]])
+    document.querySelectorAll(`#${id} .chip`).forEach(b => b.setAttribute("aria-pressed", String(b.dataset[attr] === String(state[k]))));
+  try { localStorage.setItem("stt-ansicht", JSON.stringify(state)); } catch (e) {}
+}
 
-  // Vergleichstabelle und Profile
-  const freiMarke = {dauerhaft: ["dauerhaft", "m-gut"], freetier: ["Free Tier", "m-ak"], klein: ["dauerhaft, sehr klein", "m-warn"], einmalig: ["einmalig", "m-warn"], keins: ["keins", "m-schl"], lokal: ["lokal", "m-gut"]};
-  const urteilMarke = {basis: ["Basislinie", "m-ak"], besser: ["belastbar besser", "m-gut"], "besser-gemessen": ["besser in eigener Messung", "m-gut"], gleich: ["etwa gleich", ""], unklar: ["unklar", "m-warn"], riskant: ["genau, aber halluziniert", "m-schl"], nein: ["nicht besser", "m-schl"]};
-  const marke = m => m ? `<span class="marke ${m[1]}">${esc(m[0])}</span>` : "";
-  const messKurz = a => a.messung.length ? a.messung.map(k => { const m = M.modelle.find(x => x.modell === k); return m && m.werMittel.sauber != null ? `${esc(NAMEN[k] || k)}: ${pz(m.werMittel.sauber)} / ${pz(m.werMittel.eigennamen)}` : ""; }).filter(Boolean).join("<br>") : '<span class="mt">nicht gemessen</span>';
-  function passt(a){
-    const f = $("#fFrei").value, u = $("#fUrteil").value, p = $("#fPreis").value, art = $("#fArt").value;
-    if (f && a.frei.typ !== f) return false;
-    if (u === "besser" && a.urteil !== "besser") return false;
-    if (u === "besser-gemessen" && a.urteil !== "besser-gemessen") return false;
-    if (u === "unklar" && a.urteil !== "unklar") return false;
-    if (u === "nein" && !["nein", "gleich", "riskant"].includes(a.urteil)) return false;
-    if (art && a.art !== art) return false;
-    const h = a.preis.proStunde;
-    if (p === "0.1" && !(h != null && h <= 0.1)) return false;
-    if (p === "0.3" && !(h != null && h <= 0.3)) return false;
-    if (p === "99" && !(h != null && h > 0.3)) return false;
-    return true;
-  }
-  function tabelle(){
-    const liste = S.anbieter.filter(passt);
-    $("#vtab tbody").innerHTML = liste.map(a => `<tr class="${a.heute ? "basis" : ""}"><td><b>${esc(a.name)}</b>${a.heute ? ' <span class="marke m-ak">heute</span>' : ""}<br><span class="mt klein">${esc(a.modell)}</span></td>
-      <td>${marke(freiMarke[a.frei.typ])}<br><span class="klein">${esc(a.frei.text)}</span></td>
-      <td class="zahl">${a.preis.proStunde == null ? "–" : usd(a.preis.proStunde)}</td>
-      <td class="zahl">${a.hf ? a.hf.fl.toLocaleString("de-DE") + " / " + a.hf.mcv.toLocaleString("de-DE") + "<br><span class='mt klein'>Platz " + esc(a.hf.rang) + "</span>" : "–"}</td>
-      <td>${marke(urteilMarke[a.urteil])}</td>
-      <td class="klein">${messKurz(a)}</td>
-      <td class="klein">${esc(a.vokabular)}</td></tr>`).join("") || `<tr><td colspan="7">Keine Treffer für diese Filter.</td></tr>`;
-    $("#profilraster").innerHTML = liste.map(a => `<div class="karte">
-      <h4>${esc(a.name)}</h4><div class="mt klein">${esc(a.modell)}</div>
-      <div>${marke(freiMarke[a.frei.typ])}${marke(urteilMarke[a.urteil])}${a.heute ? '<span class="marke m-ak">heute</span>' : ""}</div>
-      <table class="klein"><tbody>
-      <tr><th>Status</th><td>${esc(a.status)}</td></tr>
-      <tr><th>Freikontingent</th><td>${esc(a.frei.text)}</td></tr>
-      <tr><th>Preis</th><td>${esc(a.preis.text)}</td></tr>
-      <tr><th>Deutsch</th><td>${esc(a.deutsch)}</td></tr>
-      <tr><th>Eigene Messung</th><td>${messKurz(a)}</td></tr>
-      <tr><th>Vokabular</th><td>${esc(a.vokabular)}</td></tr>
-      <tr><th>Streaming</th><td>${esc(a.streaming)}</td></tr>
-      <tr><th>Halluzination</th><td>${esc(a.halluzination)}</td></tr>
-      <tr><th>Datenschutz</th><td>${esc(a.datenschutz)}</td></tr>
-      <tr><th>Einbau</th><td>${esc(a.android)}</td></tr>
-      </tbody></table>
-      ${a.pro.length ? "<div class='klein'><b>Für:</b> " + a.pro.map(esc).join(" · ") + "</div>" : ""}
-      ${a.contra.length ? "<div class='klein'><b>Gegen:</b> " + a.contra.map(esc).join(" · ") + "</div>" : ""}
-      <div class="mt klein">Belege: ${a.quellen.map(q => `<a href="#bericht-${q}">${q.toUpperCase()}</a>`).join(", ")}</div></div>`).join("");
-  }
-  ["#fFrei", "#fUrteil", "#fPreis", "#fArt"].forEach(s => $(s).onchange = tabelle);
-  tabelle();
+document.getElementById("filter").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) { state.f = b.dataset.f; render(); } });
+document.getElementById("sort").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) { state.s = b.dataset.s; render(); } });
+document.getElementById("minuten").addEventListener("click", e => { const b = e.target.closest(".chip"); if (b) { state.m = +b.dataset.m; render(); } });
 
-  // Freikontingente
-  const fOrd = {dauerhaft: 0, lokal: 1, freetier: 2, klein: 3, einmalig: 4, keins: 5};
-  $("#ftab tbody").innerHTML = [...S.anbieter].sort((a, b) => fOrd[a.frei.typ] - fOrd[b.frei.typ] || (b.frei.stundenMonat || b.frei.einmaligStunden || 0) - (a.frei.stundenMonat || a.frei.einmaligStunden || 0)).map(a => {
-    const h = a.frei.typ === "lokal" ? "unbegrenzt" : a.frei.einmaligStunden ? "≈ " + a.frei.einmaligStunden.toLocaleString("de-DE") + " h einmalig" : a.frei.stundenMonat != null ? (a.frei.stundenMonat < 1 ? "≈ " + Math.round(a.frei.stundenMonat * 60) + " Min." : "≈ " + a.frei.stundenMonat.toLocaleString("de-DE") + " h") + " / Monat" : "unbelegt";
-    return `<tr class="${a.heute ? "basis" : ""}"><td>${esc(a.name)}</td><td>${marke(freiMarke[a.frei.typ])}</td><td class="zahl">${h}</td><td class="klein">${esc(a.frei.text)}</td></tr>`;
-  }).join("");
+document.getElementById("rank").innerHTML = RANG.map(([p, n, a, v]) => {
+  const k = fehlerKlasse(v);
+  return `<div class="rrow${p === 42 ? " mark" : ""}"><span class="pos">${p}</span><span class="nm">${esc(n)} <small>${esc(a)}</small></span><div class="bar"><i class="bg-${k}" style="width:${v / 5 * 100}%"></i></div><span class="val ${k}">${fmt(v)}</span></div>`;
+}).join("");
 
-  // Kostenrechner
-  function rechne(){
-    const min = Number($("#kMin").value) || 0, h = min * 30 / 60;
-    $("#kAnnahme").textContent = `${min} Min./Tag × 30 Tage = ${h.toLocaleString("de-DE", {maximumFractionDigits: 1})} Audiostunden im Monat.`;
-    $("#ktab tbody").innerHTML = S.anbieter.filter(a => a.preis.proStunde != null).map(a => {
-      const frei = a.frei.typ === "dauerhaft" ? (a.frei.stundenMonat || 0) : a.frei.typ === "klein" && a.frei.stundenMonat ? a.frei.stundenMonat : 0;
-      const kosten = a.art === "lokal" ? 0 : Math.max(0, h - frei) * a.preis.proStunde;
-      const notiz = a.art === "lokal" ? "nur Strom und Hardware" : frei ? `${frei.toLocaleString("de-DE")} h/Monat frei abgezogen` : a.frei.einmaligStunden ? `zuerst ≈ ${a.frei.einmaligStunden} h aus dem Startguthaben (reicht ${Math.max(1, Math.round(a.frei.einmaligStunden / Math.max(h, 0.01)))} Monate)` : a.frei.typ === "freetier" ? "Free Tier ohne feste Menge nicht abgezogen" : "";
-      return [kosten, `<tr class="${a.heute ? "basis" : ""}"><td>${esc(a.name)}</td><td class="zahl">${usd(kosten)}</td><td class="klein mt">${esc(a.preis.text)}${notiz ? " · " + esc(notiz) : ""}</td></tr>`];
-    }).sort((x, y) => x[0] - y[0]).map(x => x[1]).join("");
-  }
-  $("#kProfil").onchange = () => { $("#kMin").value = $("#kProfil").value; rechne(); };
-  $("#kMin").oninput = rechne; rechne();
+document.getElementById("mess").innerHTML =
+  `<div class="mrow head"><span>Modell</span><span>Fehler Testtext</span><span>Fehler Eigennamen</span><span>Fehler Rauschen</span><span>Zeit für 70 Wörter</span></div>` +
+  MESSUNG.map(([n, a, e, r, t]) => `<div class="mrow"><span>${esc(n)}</span><span class="num ${fehlerKlasse(a)}" data-l="Testtext">${fmt(a)}</span><span class="num ${fehlerKlasse(e)}" data-l="Eigennamen">${fmt(e)}</span><span class="num ${fehlerKlasse(r)}" data-l="Rauschen">${fmt(r)}</span><span class="num ${tempoKlasse(t / 2)}" data-l="Zeit">${fmt(t)} s</span></div>`).join("");
 
-  // Integration (aus daten.js)
-  $("#integrationstext").innerHTML = S.integration || "";
-
-  // Berichte
-  const md = t => window.marked ? window.marked.parse(t) : "<pre>" + esc(t) + "</pre>";
-  $("#berichtliste").innerHTML = Object.entries(B).map(([k, b]) => `<details id="bericht-${k}"><summary>${k.toUpperCase()} · ${esc(b.titel)}</summary><p class="klein"><a href="${esc(b.datei)}">${esc(b.datei)}</a></p><div class="bericht" data-k="${k}"></div></details>`).join("");
-  document.querySelectorAll("#berichtliste details").forEach(d => d.addEventListener("toggle", () => { const div = d.querySelector(".bericht"); if (d.open && !div.dataset.fertig) { div.innerHTML = md(B[div.dataset.k].text); div.dataset.fertig = 1; div.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener"; }); } }));
-  document.querySelectorAll('a[href^="#bericht-"]').forEach(a => a.addEventListener("click", () => { const d = document.querySelector(a.getAttribute("href")); if (d) d.open = true; }));
-
-  // aktiver Navigationspunkt
-  const links = [...document.querySelectorAll("nav a")];
-  const beob = new IntersectionObserver(e => e.forEach(x => { if (x.isIntersecting) links.forEach(l => l.classList.toggle("aktiv", l.getAttribute("href") === "#" + x.target.id)); }), {rootMargin: "-40% 0px -55% 0px"});
-  document.querySelectorAll("main section").forEach(s => beob.observe(s));
-})();
+document.getElementById("wave").innerHTML = [6,14,22,30,18,26,34,20,12,28,16,8,24,32,14,22,10,18,6,12].map(h => `<i style="height:${h}px"></i>`).join("");
+render();
 </script>
-</body>
-</html>

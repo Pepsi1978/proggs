@@ -4,7 +4,7 @@
 > diesem Bereich ein Fehler auf — dann lies den ENTSCHEIDENDEN Abschnitt im VOLLTEXT (gleicher
 > Titel ohne "Kurzcheck"), nicht nur diese Kurzfassung.
 
-Stand: 21.10.2026 · Quelle: Studie `Recherchen/stt-vergleich` (10 Berichte + eigener Messplatz)
+Stand: 21.10.2026, ergänzt 22.10.2026 10:01 · Quelle: Studie `Recherchen/stt-vergleich` (10 Berichte + eigener Messplatz)
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -21,3 +21,7 @@ Stand: 21.10.2026 · Quelle: Studie `Recherchen/stt-vergleich` (10 Berichte + ei
 | 9 | Messung eigener Kandidaten | Messplatz `Recherchen/stt-vergleich/messung/messen.py` + `seite/bauen.py` (WER mit deutscher Zahlen-/Abkürzungs-Normalisierung) | §8 |
 | 10 | Datenschutz | Deepgram `mip_opt_out=true`; Gemini Free Tier: Apps für Dritte nur Paid; Mistral Free Mode trainiert | §9 |
 | 11 | Lokal / offline | Parakeet v3 (sherpa-onnx/onnx-asr) ist auf Deutsch nur etwa Turbo-Niveau, bei Zahlen und Rauschen schwächer | §10 |
+| 12 | Artificial-Analysis-Rangliste als Deutsch-Beleg | AA misst NUR Englisch; Deutsch nur HF/eigene Messung (Stand 22.10.2026) | §11 |
+| 13 | Neue Kandidaten MAI-Transcribe-2 / Voxtral 3 / Grok Voice 2.0 | Englisch Top 6, Deutsch unbelegt → erst selbst messen; MAI-Preis 0,10 $/h nur bis 31.12.2026 | §11 |
+| 14 | Wartezeit für ein Diktat abschätzen | AA-Speed-Factor ist nur Untergrenze; Netz dominiert → selbst messen (Groq ≈ 0,5 s, Gemini 2–4 s je 30 Wörter) | §11 |
+| 15 | Startguthaben statt Dauer-Gratis | Deepgram 200 $, Speechmatics 100 $, AssemblyAI 50 $, Gladia 50 €, Alibaba 10 h/90 Tage (nur Singapur, nur Echtzeit) | §11 |

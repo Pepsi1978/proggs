@@ -4,7 +4,7 @@
 > diesem Bereich ein Fehler auf — dann lies den ENTSCHEIDENDEN Abschnitt im VOLLTEXT (gleicher
 > Titel ohne "Kurzcheck"), nicht nur diese Kurzfassung.
 
-Stand: 21.10.2026
+Stand: 21.10.2026, ergänzt 22.10.2026 10:01
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -21,3 +21,7 @@ Stand: 21.10.2026
 | 9 | Google Cloud STT 403 „API_KEY … blocked“ / v2 ohne API-Key | v2 braucht OAuth; Key-Einschränkung prüfen | S9 |
 | 10 | OpenAI whisper-1 / gpt-4o-(mini-)transcribe | Abschaltung 26.02.2027 → gpt-transcribe | S10 |
 | 11 | WER-Vergleich Turbo vs. andere „passt nicht“ | Normalisierung (Umlaute, Zahlen) je Quelle verschieden; nur innerhalb einer Quelle vergleichen | S11 |
+| 12 | Fun-ASR Realtime liefert bei Deutsch Unsinn | Snapshot kann nur zh/en/ja → qwen3-asr-flash oder Basis-fun-asr | S12 |
+| 13 | Azure MAI-Transcribe kostet trotz F0 / F0-Fehler | F0 gilt nur für Echtzeit; MAI braucht S0 in einer der 6 Regionen | S13 |
+| 14 | Alibaba rechnet trotz Gratis-Stunden ab | Nur Singapur, nur Echtzeit, Modell einzeln freischalten, 90 Tage | S14 |
+| 15 | Modell „gemini-3.8-flash-lite-transcribe“ nicht gefunden | Gibt es nicht (nur TTS) → gemini-3.5-transcribe | S15 |

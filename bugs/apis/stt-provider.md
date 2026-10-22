@@ -1,6 +1,6 @@
 # STT-Provider (Speech-to-Text, Deutsch) — Bug-Almanach
 
-Stand: 21.10.2026 (Systemzeit 22:20) · Quelle: Studie `Recherchen/stt-vergleich` (Berichte r1–r10, Messplatz `messung/`).
+Stand: 21.10.2026, ergänzt 22.10.2026 10:01 (Systemzeit 22:20) · Quelle: Studie `Recherchen/stt-vergleich` (Berichte r1–r10, Messplatz `messung/`).
 Verwandt: `bugs/desktop/groq-transkription.md`, `bugs/desktop/whisper-stt-lokal.md`, `best-practices/apis/stt-provider.md`.
 
 ## S1 — Gemini 3.5 Transcribe: Free Tier nur 25 Anfragen/Tag
@@ -59,3 +59,27 @@ Verwandt: `bugs/desktop/groq-transkription.md`, `bugs/desktop/whisper-stt-lokal.
 - HF-Normalizer entfernt Umlaute und kennt keine deutschen Zahlen; dasselbe Modell streut je Quelle bis 2,7 Punkte; Hoster-Abweichung beim selben Modell bis ~6 Punkte.
 - **Fix:** nur innerhalb einer Quelle vergleichen; eigene Messung mit eigener Normalisierung.
 - **Quelle:** r8.
+
+## S12 — Fun-ASR Realtime (Platz 1 bei AA) kann evtl. kein Deutsch
+- **Symptom:** Bestes AA-Modell liefert für Deutsch Unsinn oder Fehler.
+- **Ursache:** Snapshot `fun-asr-realtime-2026-02-28` unterstützt nur zh/en/ja; welche ID hinter „preview“ steckt, ist unbelegt. AA misst nur Englisch.
+- **Fix:** Basis-`fun-asr-realtime` oder `qwen3-asr-flash` (Deutsch belegt) nehmen; vor Einbau selbst messen.
+- **Quelle:** `Recherchen/stt-vergleich/recherche-2/r4-alibaba.md` (22.10.2026).
+
+## S13 — Azure F0-Freistunden decken MAI-Transcribe nicht
+- **Symptom:** Kosten trotz Free-Tier-Ressource bzw. Fehler mit F0.
+- **Ursache:** F0 (5 h/Monat) gilt nur für Echtzeit-STT; Fast Transcription/MAI ist nur in S0 und nur in 6 Regionen.
+- **Fix:** S0-Ressource in `northeurope` o. ä.; Aktionspreis 0,10 $/h endet 31.12.2026 → Budget-Limit setzen.
+- **Quelle:** `recherche-2/r2-microsoft-mai.md`.
+
+## S14 — Alibaba-Gratiskontingent greift nicht
+- **Symptom:** Abrechnung trotz „10 h gratis“.
+- **Ursache:** Freikontingent nur Region Singapur, nur Echtzeit-Aufrufe (Batch ausgeschlossen), je Modell einzeln freizuschalten, 90 Tage.
+- **Fix:** Singapur-Endpunkt mit Workspace-ID, Modell aktivieren, Echtzeit-API nutzen.
+- **Quelle:** `recherche-2/r4-alibaba.md`.
+
+## S15 — „Gemini 3.8 Flash-Lite Transcribe“ existiert nicht
+- **Symptom:** 404 / unbekanntes Modell.
+- **Ursache:** 3.8 Flash-Lite gibt es nur als TTS (`gemini-3.8-flash-lite-tts`).
+- **Fix:** `gemini-3.5-transcribe` bzw. `gemini-3.5-flash-lite` mit Audio-Prompt.
+- **Quelle:** `recherche-2/r6-google.md` (Modellliste 21.10.2026).

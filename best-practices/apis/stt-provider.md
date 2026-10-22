@@ -1,6 +1,6 @@
 # STT-Provider (Speech-to-Text, Deutsch)
 
-Stand: 21.10.2026 (Systemzeit 22:20) · Versions-Anker: Groq `whisper-large-v3-turbo`/`whisper-large-v3`, Gemini `gemini-3.5-transcribe`, `gemini-3.8-flash`, `gemini-3.5-flash-lite`, OpenAI `gpt-transcribe` (29.07.2026), AssemblyAI Universal-3.5 Pro, ElevenLabs Scribe v2, Mistral Voxtral (3 seit 20.10.2026), Parakeet TDT 0.6B v3, Canary-1B-v2.
+Stand: 21.10.2026, ergänzt 22.10.2026 10:01 (Systemzeit 22:20) · Versions-Anker: Groq `whisper-large-v3-turbo`/`whisper-large-v3`, Gemini `gemini-3.5-transcribe`, `gemini-3.8-flash`, `gemini-3.5-flash-lite`, OpenAI `gpt-transcribe` (29.07.2026), AssemblyAI Universal-3.5 Pro, ElevenLabs Scribe v2, Mistral Voxtral (3 seit 20.10.2026), Parakeet TDT 0.6B v3, Canary-1B-v2.
 Herkunft: Studie `Recherchen/stt-vergleich` (Berichte r1–r10 mit Quelle je Aussage, Seite `index.html`, Messplatz `messung/`). Markierung: **[offiziell]** Herstellerdoku, **[extern]** Dritte, **[gemessen]** eigener Messplatz.
 
 Verwandt: `best-practices/desktop/groq-transkription.md`, `best-practices/desktop/whisper-stt-lokal.md`, `best-practices/apis/tts-provider.md`, `bugs/apis/stt-provider.md`.
@@ -64,3 +64,14 @@ Quelle: r10, r5, r4, r3.
 - Parakeet TDT 0.6B v3 int8: onnx-asr (Windows), sherpa-onnx (Android), FluidAudio (Mac). Messplatz: Testtext 13,2 % (Turbo 10,1 %), Rauschen 45 %, Zahlen wie „30 5 Millisekunden“; Laptop-CPU ≈ 12 s für 40 s Audio **[gemessen]**.
 - Canary-1B-v2 deckt 25 Sprachen ab, im Messplatz schwächstes Modell.
 - Deutsch-Finetunes (primeline Turbo German −28 %, parakeet-primeline −19 %) nur Eigenangaben, keine gehostete API.
+
+## §11 Neue Spitzenmodelle und Artificial Analysis (Nachrecherche 22.10.2026)
+Quelle: `Recherchen/stt-vergleich/recherche-2/r1–r7` (Sonnet-Schwarm, URL je Aussage).
+- **Artificial Analysis misst nur Englisch** (Methodikseite) **[offiziell]** https://artificialanalysis.ai/speech-to-text — für Deutsch nie als Rangliste nehmen. Top 22.10.2026: Fun-Realtime-ASR-preview 1,7 · MAI-Transcribe-2 2,0 · Voxtral Small Transcribe 3 2,1 · Scribe v2 2,2 · Voxtral Mini Transcribe 3 2,2 · Grok Voice Transcribe 2.0 2,3 · MAI-Transcribe-1.5 2,4 · Gemini 3.5 Transcribe 2,6 · Groq Turbo 4,6 (Platz 42/62).
+- **Speed Factor von AA** gilt für 10-Min.-Clips → für ein 12-s-Diktat (≈ 30 Wörter) nur Untergrenze; real dominiert Netz/Upload. Eigene Messung: Groq Turbo 0,84 s, Gemini 3.5 Transcribe 4,0 s, 3.8 Flash 7,1 s für ~70 Wörter **[gemessen]**.
+- **MAI-Transcribe-2** (Azure Speech Fast Transcription, `api-version=2025-10-15`, `enhancedMode.model`): Deutsch offiziell, aber keine Deutsch-WER; 0,10 $/h nur bis 31.12.2026 (1.5: 0,36 $/h), Streaming-Variante 0,54 $/h; F0-Freistunden gelten NICHT für MAI; Batch nur in 6 Regionen (DE: `northeurope`) **[offiziell]**.
+- **Voxtral Transcribe 3** (20.10.2026, Preview, keine offenen Gewichte): Small 0,24 $/h, Mini 0,21 $/h, Realtime 3 0,48 $/h (< 500 ms); Deutsch-Zahl nur für Vorgänger Mini Transcribe 2 (FLEURS-de 3,54 %) **[offiziell]**.
+- **Alibaba:** Qwen3-ASR-Flash Deutsch 3,03 (FLEURS) / 3,53 (CV) laut Hersteller, 0,126 $/h; Realtime-Varianten 0,324 $/h; Neukunden 10 h je Modell, 90 Tage, nur Region Singapur und nur Echtzeit-Aufrufe **[offiziell]**.
+- **Gratis-Startguthaben (bestätigt):** Deepgram 200 $, Speechmatics 100 $ (12 Monate), AssemblyAI 50 $ ohne Karte, Gladia 50 € (1 Jahr), Alibaba 10 h/Modell; ElevenLabs Free ≈ 30 Min./Monat; kein STT-Gratisteil bei OpenAI, xAI, MAI.
+- **Google:** Es gibt kein „Gemini 3.8 Flash-Lite Transcribe“; 3.8 Flash-Lite existiert nur als TTS (`gemini-3.8-flash-lite-tts`). Transkription: `gemini-3.5-transcribe` (0,30 $/h) bzw. `-live` (0,54 $/h, 10 Min./Sitzung).
+- Vergleichsseite (Karten, 30-Wörter-Zeit, Kosten je Diktatmenge): `Recherchen/stt-vergleich/index.html`, Artefakt https://claude.ai/artifact/UjX4TdLRuSkLMxwNLGW9QF.
