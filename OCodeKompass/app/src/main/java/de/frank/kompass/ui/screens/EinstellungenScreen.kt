@@ -1094,8 +1094,10 @@ private fun AnmeldeCode(code: String, beiAbbrechen: () -> Unit) {
 @Composable
 private fun WoerterbuchFeld(wert: String, aktiv: Boolean, beiWert: (String) -> Unit) {
     val farben = LocalKompassFarben.current
-    // Lokal gehalten, damit der Cursor beim Tippen nicht springt; jede Änderung wird sofort gespeichert.
-    var eingabe by rememberSaveable { mutableStateOf(wert) }
+    // Lokal gehalten, damit der Cursor beim Tippen nicht springt. An `wert` gebunden, damit ein
+    // neu geladener Stand (z. B. nach dem Zurückholen einer Sicherung) sofort angezeigt wird.
+    // Gespeichert wird verzögert im ViewModel.
+    var eingabe by remember(wert) { mutableStateOf(wert) }
     Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Text(
             text = "Begriffe (durch Komma oder Zeilenumbruch getrennt)",
