@@ -26,6 +26,8 @@ class GroqTranscriber(
     private val filterMetriken: Boolean = true,
     private val filterZeitstempel: Boolean = true,
     private val filterFloskeln: Boolean = true,
+    /** Personal vocabulary prompt ([Woerterbuch.prompt]); null = send no prompt. */
+    private val woerterbuchPrompt: String? = null,
 ) {
     private val analyzer = SpeechAnalyzer()
     private val filter = WhisperHallucinationFilter()
@@ -52,31 +54,63 @@ class GroqTranscriber(
             return@withContext ""
         }
 
-        val multipart = MultipartBody.Builder()
+        val gewaehlt = modellFuerAufnahme(model)
+        try {
+            transcribeOnce(wav, analysis, gewaehlt)
+        } catch (e: ModelBlockedException) {
+            // large-v3 is not enabled for this Groq organization: keep the dictation, retry once
+            // with Turbo and use Turbo directly for the next 30 minutes.
+            logger.warning("Groq: $gewaehlt blocked for this organization, falling back to $MODELL_TURBO")
+            blockedUntilMs = System.currentTimeMillis() + BLOCKED_PAUSE_MS
+            transcribeOnce(wav, analysis, MODELL_TURBO)
+        }
+    }
+
+    private suspend fun transcribeOnce(wav: ByteArray, analysis: SpeechAnalysis?, model: String): String {
+        val (roh, text) = request(wav, analysis, model, woerterbuchPrompt)
+        if (Woerterbuch.istPromptEcho(roh, woerterbuchPrompt) || Woerterbuch.istPromptEcho(text, woerterbuchPrompt)) {
+            // Whisper repeated the vocabulary prompt instead of transcribing: once more without it.
+            logger.warning("Groq: prompt echo detected, retrying without vocabulary prompt")
+            return request(wav, analysis, model, null).second
+        }
+        return text
+    }
+
+    /** Returns raw Whisper text and the filtered text. */
+    private suspend fun request(
+        wav: ByteArray,
+        analysis: SpeechAnalysis?,
+        model: String,
+        prompt: String?,
+    ): Pair<String, String> {
+        val builder = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("file", "audio.wav", wav.toRequestBody(WAV_MEDIA_TYPE))
             .addFormDataPart("model", model)
             .addFormDataPart("language", "de")
             .addFormDataPart("response_format", "verbose_json")
             .addFormDataPart("temperature", "0")
-            .build()
+        if (prompt != null) builder.addFormDataPart("prompt", prompt)
         val request = Request.Builder()
             .url(TRANSCRIPTIONS_URL)
             .header("Authorization", "Bearer $apiKey")
-            .post(multipart)
+            .post(builder.build())
             .build()
 
-        client.newCall(request).await().use { response ->
+        return client.newCall(request).await().use { response ->
             val responseBody = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
+                if (model == MODELL_LARGE_V3 && istModellGesperrt(responseBody)) throw ModelBlockedException()
                 throw GroqTranscriptionException(httpError(response.code, responseBody))
             }
             val parsed = runCatching { parseResponse(responseBody) }.getOrElse { error ->
                 throw GroqTranscriptionException("Groq hat eine ungueltige Antwort geliefert.", error)
             }
-            filter.filter(parsed, analysis, filterMetriken, filterZeitstempel, filterFloskeln)
+            parsed.text to filter.filter(parsed, analysis, filterMetriken, filterZeitstempel, filterFloskeln)
         }
     }
+
+    private class ModelBlockedException : Exception("model blocked for organization")
 
     internal fun parseResponse(body: String): GroqTranscriptionResponse {
         val json = JSONObject(body)
@@ -145,7 +179,29 @@ class GroqTranscriber(
         internal const val TRANSCRIPTIONS_URL =
             "https://api.groq.com/openai/v1/audio/transcriptions"
         internal const val MAX_FILE_BYTES = 25 * 1024 * 1024
-        const val DEFAULT_MODEL = "whisper-large-v3-turbo"
+        const val MODELL_TURBO = "whisper-large-v3-turbo"
+        const val MODELL_LARGE_V3 = "whisper-large-v3"
+        const val DEFAULT_MODEL = MODELL_TURBO
+
+        /** Selectable Whisper models: id to display name. */
+        val MODELLE = listOf(
+            MODELL_TURBO to "Large V3 Turbo (schnell)",
+            MODELL_LARGE_V3 to "Large V3 (genauer)",
+        )
+
+        /** Unknown values fall back to Turbo. */
+        fun gueltigesModell(id: String?): String = if (id == MODELL_LARGE_V3) MODELL_LARGE_V3 else MODELL_TURBO
+
+        private const val BLOCKED_PAUSE_MS = 30 * 60 * 1000L
+
+        // After a "blocked at the organization level" answer use Turbo directly for 30 minutes.
+        @Volatile private var blockedUntilMs = 0L
+
+        private fun modellFuerAufnahme(model: String): String =
+            if (model == MODELL_LARGE_V3 && System.currentTimeMillis() < blockedUntilMs) MODELL_TURBO else model
+
+        private fun istModellGesperrt(body: String): Boolean =
+            body.contains("model_permission_blocked_org") || body.contains("blocked at the organization level")
 
         private val WAV_MEDIA_TYPE = "audio/wav".toMediaType()
         private val logger = Logger.getLogger(GroqTranscriber::class.java.name)

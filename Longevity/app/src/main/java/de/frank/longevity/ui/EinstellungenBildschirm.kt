@@ -110,9 +110,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Schalter("Animierte Szene oben zeigen", e.szeneZeigen) { e.szeneZeigen = it }
                 }
                 // ---- Sprache ----
-                Block("Spracheingabe · Whisper Large V3 Turbo (Groq)") {
+                Block("Spracheingabe · Whisper (Groq)") {
                     Feld("Groq-API-Schlüssel", e.groqKey, geheim = true) { e.groqKey = it }
                     Schalter("Beim Plus sofort aufnehmen", e.autoMikro) { e.autoMikro = it }
+                    Text("Whisper-Modell", color = f.textLeise, fontSize = 13.sp)
+                    ChipReihe { de.frank.longevity.audio.GroqTranscriber.MODELLE.forEach { (id, name) -> Chip(name, e.whisperModell == id) { e.whisperModell = id } } }
+                    Schalter("Persönliches Wörterbuch", e.woerterbuchAn) { e.woerterbuchAn = it }
+                    Feld("Begriffe (durch Komma oder Zeilenumbruch getrennt)", e.woerterbuch, einzeilig = false) { e.woerterbuch = it }
                     Text("Filter gegen stille Halluzinationen", color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Schalter("1 · Stille vor dem Hochladen verwerfen", e.filterStille) { e.filterStille = it }
                     Schalter("2 · Unsichere Abschnitte (Metriken) verwerfen", e.filterMetriken) { e.filterMetriken = it }
