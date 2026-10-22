@@ -24,6 +24,8 @@
 	let current = null;
 	let lastEdgeVoices = [];
 	let lastGoogleVoices = [];
+	let lastGeminiVoices = [];
+	let lastAzureVoices = [];
 	let currentPageHost = "";
 
 	function send(msg) {
@@ -34,11 +36,11 @@
 		}
 	}
 
-	function requestVoices(engine, apiKey) {
+	function requestVoices(engine, apiKey, model) {
 		return new Promise((resolve) => {
 			try {
 				chrome.runtime.sendMessage(
-					{ type: MSG.GET_VOICES, engine, apiKey },
+					{ type: MSG.GET_VOICES, engine, apiKey, model },
 					(res) => {
 						if (chrome.runtime.lastError || !res) {
 							resolve({ voices: [] });
@@ -185,7 +187,14 @@
 		if (pos >= 0) current.favoriteVoices.splice(pos, 1);
 		else current.favoriteVoices.push(id);
 		await persist();
-		const voices = engineKey === "google" ? lastGoogleVoices : lastEdgeVoices;
+		const voices =
+			engineKey === "google"
+				? lastGoogleVoices
+				: engineKey === "gemini"
+					? lastGeminiVoices
+					: engineKey === "azure"
+						? lastAzureVoices
+						: lastEdgeVoices;
 		if (voices && voices.length) fillVoiceSelect(sel, voices, id);
 		updateStar(starEl, sel);
 	}
@@ -277,6 +286,77 @@
 		updateStar($("google-star"), sel);
 	}
 
+	function geminiModelOf(voiceId) {
+		return String(voiceId || "").startsWith("gemini_lite:") ? "lite" : "flash";
+	}
+
+	function geminiNameOf(voiceId) {
+		const s = String(voiceId || "");
+		const i = s.indexOf(":");
+		return i >= 0 ? s.slice(i + 1) : "Leda";
+	}
+
+	async function loadGeminiVoices() {
+		const sel = $("gemini-voice");
+		const model = geminiModelOf(current.gemini.voice);
+		$("gemini-model").value = model;
+		const res = await requestVoices("gemini", undefined, model);
+		const voices = (res && res.voices) || [];
+		if (!voices.length) {
+			sel.innerHTML = "<option>Keine Stimmen gefunden</option>";
+			return;
+		}
+		lastGeminiVoices = voices;
+		fillVoiceSelect(sel, voices, current.gemini.voice);
+		if (!voices.some((v) => v.id === current.gemini.voice)) {
+			current.gemini.voice = sel.value;
+			await persist();
+		}
+		updateStar($("gemini-star"), sel);
+		updateGeminiHint();
+	}
+
+	async function loadAzureVoices() {
+		const sel = $("azure-voice");
+		const res = await requestVoices("azure");
+		const voices = (res && res.voices) || [];
+		if (!voices.length) {
+			sel.innerHTML = "<option>Keine Stimmen gefunden</option>";
+			return;
+		}
+		lastAzureVoices = voices;
+		fillVoiceSelect(sel, voices, current.azure.voice);
+		if (!voices.some((v) => v.id === current.azure.voice)) {
+			current.azure.voice = sel.value;
+			await persist();
+		}
+		updateStar($("azure-star"), sel);
+		updateAzureHint();
+	}
+
+	// Hinweis, wenn fuer die gewaehlte Schluesselwahl ein Schluessel fehlt.
+	function updateGeminiHint() {
+		const g = current.gemini;
+		const free = !!(g.keyFree || "").trim();
+		const paid = !!(g.keyPaid || "").trim();
+		let hint = "";
+		if (g.keyChoice === "nur_frei" && !free)
+			hint = "Es fehlt der kostenlose Gemini-Schlüssel für die Stimme.";
+		else if (g.keyChoice === "nur_bezahlt" && !paid)
+			hint = "Es fehlt der bezahlte Gemini-Schlüssel für die Stimme.";
+		else if (!free && !paid)
+			hint = "Es ist kein Gemini-Schlüssel für die Stimme hinterlegt.";
+		if (g.chirpFallback && !(current.google.apiKey || "").trim())
+			hint = (hint + " Für den Rückfall auf Chirp 3 HD fehlt der Google-Cloud-Key.").trim();
+		$("gemini-hint").textContent = hint;
+	}
+
+	function updateAzureHint() {
+		$("azure-hint").textContent = (current.azure.key || "").trim()
+			? ""
+			: "Es fehlt der Azure-Speech-Schlüssel.";
+	}
+
 	// ----- Verdrahtung --------------------------------------------------------
 	function wire() {
 		document.querySelectorAll(".sp-engine-opt").forEach((o) =>
@@ -347,6 +427,7 @@
 		$("google-key").addEventListener("change", async (e) => {
 			current.google.apiKey = e.target.value.trim();
 			await persist();
+			updateGeminiHint();
 			await loadGoogleVoices();
 		});
 		$("google-voice").addEventListener("change", async (e) => {
@@ -385,6 +466,94 @@
 				apiKey: key,
 			});
 			setTimeout(() => showStatus($("google-status"), "", ""), 4000);
+		});
+
+		// Gemini 3.8 TTS
+		$("gemini-model").addEventListener("change", async (e) => {
+			const prov = e.target.value === "lite" ? "gemini_lite" : "gemini_flash";
+			current.gemini.voice = prov + ":" + geminiNameOf(current.gemini.voice);
+			await persist();
+			await loadGeminiVoices();
+		});
+		$("gemini-voice").addEventListener("change", async (e) => {
+			current.gemini.voice = e.target.value;
+			await persist();
+			updateStar($("gemini-star"), $("gemini-voice"));
+		});
+		$("gemini-star").addEventListener("click", () =>
+			toggleFavorite($("gemini-voice"), $("gemini-star"), "gemini"),
+		);
+		$("gemini-key-free").addEventListener("change", async (e) => {
+			current.gemini.keyFree = e.target.value.trim();
+			await persist();
+			updateGeminiHint();
+		});
+		$("gemini-key-paid").addEventListener("change", async (e) => {
+			current.gemini.keyPaid = e.target.value.trim();
+			await persist();
+			updateGeminiHint();
+		});
+		$("gemini-key-choice").addEventListener("change", async (e) => {
+			current.gemini.keyChoice = e.target.value;
+			await persist();
+			updateGeminiHint();
+		});
+		$("gemini-chirp").addEventListener("change", async (e) => {
+			current.gemini.chirpFallback = !!e.target.checked;
+			await persist();
+			updateGeminiHint();
+		});
+		$("gemini-test").addEventListener("click", () => {
+			showStatus($("gemini-status"), "Wird vorgelesen…", "");
+			send({
+				type: MSG.TEST,
+				engine: "gemini",
+				text: SAMPLE_TEXT,
+				voice: $("gemini-voice").value,
+				rate: current.gemini.rate,
+			});
+			setTimeout(() => showStatus($("gemini-status"), "", ""), 4000);
+		});
+
+		// Azure Neural
+		$("azure-key").addEventListener("change", async (e) => {
+			current.azure.key = e.target.value.trim();
+			await persist();
+			updateAzureHint();
+		});
+		$("azure-region").addEventListener("change", async (e) => {
+			current.azure.region = e.target.value.trim() || "westeurope";
+			await persist();
+		});
+		$("azure-voice").addEventListener("change", async (e) => {
+			current.azure.voice = e.target.value;
+			await persist();
+			updateStar($("azure-star"), $("azure-voice"));
+		});
+		$("azure-star").addEventListener("click", () =>
+			toggleFavorite($("azure-voice"), $("azure-star"), "azure"),
+		);
+		$("azure-rate").addEventListener("input", (e) => {
+			$("azure-rate-val").textContent = Number(e.target.value).toFixed(1) + "×";
+		});
+		$("azure-rate").addEventListener("change", async (e) => {
+			current.azure.rate = window.VOSettings.clampRate(e.target.value);
+			await persist();
+		});
+		$("azure-test").addEventListener("click", () => {
+			if (!(current.azure.key || "").trim()) {
+				showStatus($("azure-status"), "Bitte zuerst den Azure-Schlüssel eintragen.", "err");
+				return;
+			}
+			showStatus($("azure-status"), "Wird vorgelesen…", "");
+			send({
+				type: MSG.TEST,
+				engine: "azure",
+				text: SAMPLE_TEXT,
+				voice: $("azure-voice").value,
+				rate: window.VOSettings.clampRate($("azure-rate").value),
+			});
+			setTimeout(() => showStatus($("azure-status"), "", ""), 4000);
 		});
 
 		// Overlay verschiebbar
@@ -435,11 +604,20 @@
 		setRateUI($("google-rate"), $("google-rate-val"), current.google.rate);
 		$("google-key").value = current.google.apiKey || "";
 		$("draggable").checked = !!current.draggable;
+		$("gemini-key-free").value = current.gemini.keyFree || "";
+		$("gemini-key-paid").value = current.gemini.keyPaid || "";
+		$("gemini-key-choice").value = current.gemini.keyChoice || "frei_dann_bezahlt";
+		$("gemini-chirp").checked = !!current.gemini.chirpFallback;
+		$("azure-key").value = current.azure.key || "";
+		$("azure-region").value = current.azure.region || "westeurope";
+		setRateUI($("azure-rate"), $("azure-rate-val"), current.azure.rate);
 
 		wire();
 
 		await loadEdgeVoices();
 		await loadGoogleVoices();
+		await loadGeminiVoices();
+		await loadAzureVoices();
 	}
 
 	init();

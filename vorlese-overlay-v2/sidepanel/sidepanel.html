@@ -35,6 +35,8 @@
         <div class="sp-engine-switch">
           <button class="sp-engine-opt" type="button" data-engine="edge">Edge TTS</button>
           <button class="sp-engine-opt" type="button" data-engine="google">Google Chirp 3 HD</button>
+          <button class="sp-engine-opt" type="button" data-engine="gemini">Gemini 3.8 TTS</button>
+          <button class="sp-engine-opt" type="button" data-engine="azure">Azure Neural</button>
         </div>
       </section>
 
@@ -42,6 +44,8 @@
       <div class="sp-tabs">
         <button class="sp-tab" type="button" data-tab="edge">Edge TTS</button>
         <button class="sp-tab" type="button" data-tab="google">Google Chirp 3 HD</button>
+        <button class="sp-tab" type="button" data-tab="gemini">Gemini 3.8 TTS</button>
+        <button class="sp-tab" type="button" data-tab="azure">Azure Neural</button>
       </div>
 
       <!-- Edge-Seite -->
@@ -97,6 +101,83 @@
         </section>
         <button class="sp-test" type="button" id="google-test">Test — Beispielsatz vorlesen</button>
         <div class="sp-status" id="google-status"></div>
+      </div>
+
+      <!-- Gemini-Seite -->
+      <div class="sp-tabpage" data-page="gemini">
+        <section class="sp-section">
+          <span class="sp-label">Modell</span>
+          <select class="sp-select" id="gemini-model">
+            <option value="flash">Gemini 3.8 Flash TTS</option>
+            <option value="lite">Gemini 3.8 Flash-Lite TTS</option>
+          </select>
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Stimme</span>
+          <div class="sp-row">
+            <select class="sp-select" id="gemini-voice"></select>
+            <button class="sp-star" type="button" id="gemini-star" title="Diese Stimme mit Stern markieren">☆</button>
+          </div>
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)</span>
+          <input class="sp-input" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…" id="gemini-key-free" />
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)</span>
+          <input class="sp-input" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…" id="gemini-key-paid" />
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Schlüsselwahl</span>
+          <select class="sp-select" id="gemini-key-choice">
+            <option value="frei_dann_bezahlt">Erst kostenlos, dann bezahlt</option>
+            <option value="nur_frei">Nur kostenlos</option>
+            <option value="nur_bezahlt">Nur bezahlt</option>
+          </select>
+        </section>
+        <section class="sp-section">
+          <label class="sp-check-row">
+            <input type="checkbox" class="sp-check" id="gemini-chirp" />
+            <span>Rückfall auf Chirp 3 HD</span>
+          </label>
+          <p class="sp-help">
+            Scheitert der kostenlose Schlüssel, liest die Erweiterung mit derselben Stimme über
+            Google Chirp 3 HD weiter (Google-Cloud-Key im Reiter „Google Chirp 3 HD“) statt bezahlt.
+          </p>
+        </section>
+        <p class="sp-help sp-err" id="gemini-hint"></p>
+        <button class="sp-test" type="button" id="gemini-test">Test — Beispielsatz vorlesen</button>
+        <div class="sp-status" id="gemini-status"></div>
+      </div>
+
+      <!-- Azure-Seite -->
+      <div class="sp-tabpage" data-page="azure">
+        <section class="sp-section">
+          <span class="sp-label">Azure-Speech-Schlüssel (KEY 1)</span>
+          <input class="sp-input" type="password" autocomplete="off" spellcheck="false" id="azure-key" />
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Azure-Region (z. B. westeurope)</span>
+          <input class="sp-input" type="text" autocomplete="off" spellcheck="false" placeholder="westeurope" id="azure-region" />
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Stimme</span>
+          <div class="sp-row">
+            <select class="sp-select" id="azure-voice"></select>
+            <button class="sp-star" type="button" id="azure-star" title="Diese Stimme mit Stern markieren">☆</button>
+          </div>
+          <p class="sp-help">HD-Stimmen laufen nur mit der Stufe S0 und zählen nicht zum kostenlosen F0-Kontingent.</p>
+        </section>
+        <section class="sp-section">
+          <span class="sp-label">Vorlese-Tempo</span>
+          <div class="sp-row">
+            <input class="sp-range" type="range" min="0.5" max="2" step="0.1" id="azure-rate" />
+            <span class="sp-range-val" id="azure-rate-val"></span>
+          </div>
+        </section>
+        <p class="sp-help sp-err" id="azure-hint"></p>
+        <button class="sp-test" type="button" id="azure-test">Test — Beispielsatz vorlesen</button>
+        <div class="sp-status" id="azure-status"></div>
       </div>
 
       <!-- Overlay verschiebbar -->

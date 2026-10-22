@@ -20,6 +20,8 @@
 
 import * as edge from "../engines/edge-tts.js";
 import * as google from "../engines/google-tts.js";
+import * as gemini from "../engines/gemini-tts.js";
+import * as azure from "../engines/azure-tts.js";
 import { splitIntoChunks } from "../engines/chunker.js";
 import { diag } from "../diag/diag.js";
 import { analyze } from "../diag/insights.js";
@@ -114,7 +116,40 @@ let playStartTs = 0;
 let isPaused = false;
 
 function getEngine(name) {
-	return name === "google" ? google : edge;
+	if (name === "google") return google;
+	if (name === "gemini") return gemini;
+	if (name === "azure") return azure;
+	return edge;
+}
+
+// Gemini/Azure: Schluessel, Schluesselwahl, Region und Chirp-Rueckfall frisch aus dem
+// Speicher lesen (das Overlay schickt nur Engine/Stimme/Tempo mit).
+function loadStoredSettings() {
+	return new Promise((resolve) => {
+		try {
+			chrome.storage.local.get(["vo_settings"], (res) => {
+				resolve((res && res.vo_settings) || {});
+			});
+		} catch (e) {
+			resolve({});
+		}
+	});
+}
+
+// Ein Textstueck ueber eine REST-Engine (Google, Gemini, Azure) -> { bytes, mime }.
+async function synthRest(msg, part, stored) {
+	if (msg.engine === "gemini") {
+		const cfg = stored.gemini || {};
+		const googleKey = msg.apiKey || (stored.google && stored.google.apiKey) || "";
+		return await gemini.synthesize(part, msg.voice || cfg.voice, msg.rate, cfg, googleKey);
+	}
+	if (msg.engine === "azure") {
+		const cfg = stored.azure || {};
+		const bytes = await azure.synthesize(part, msg.voice || cfg.voice, msg.rate, cfg);
+		return { bytes, mime: "audio/mpeg" };
+	}
+	const bytes = await google.synthesize(part, msg.voice, msg.rate, msg.apiKey);
+	return { bytes, mime: "audio/mpeg" };
 }
 
 // ----- Offscreen-Dokument sicherstellen (Audio-Wiedergabe) ------------------
@@ -355,6 +390,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 async function handleGetVoices(msg) {
 	const eng = getEngine(msg.engine);
+	if (msg.engine === "gemini") return eng.listGermanVoices(msg.model);
 	return await eng.listGermanVoices(msg.apiKey);
 }
 
@@ -388,10 +424,17 @@ async function handleSpeak(msg, tabId) {
 		await ensureOffscreen();
 		sendToOffscreen({ type: "STOP" }); // evtl. laufende Wiedergabe beenden
 
-		if (msg.engine === "google") {
+		if (
+			msg.engine === "google" ||
+			msg.engine === "gemini" ||
+			msg.engine === "azure"
+		) {
+			const stored =
+				msg.engine === "google" ? {} : await loadStoredSettings();
 			// Google: REST-fetch läuft hier im Worker (DNR greift für fetch).
 			// Langen Text an Satzgrenzen teilen; das erste Stück ist schnell hörbar.
-			const chunks = splitIntoChunks(text, 2500);
+			// Gemini liefert bei langen Stuecken gern abgeschnittenes Audio -> kleinere Stuecke.
+			const chunks = splitIntoChunks(text, msg.engine === "gemini" ? 1200 : 2500);
 			const totalChunks = chunks.length;
 			let enqueuedAny = false;
 			for (let i = 0; i < chunks.length; i++) {
@@ -413,15 +456,10 @@ async function handleSpeak(msg, tabId) {
 					totalChunks,
 				});
 
-				const bytes = await google.synthesize(
-					part,
-					msg.voice,
-					msg.rate,
-					msg.apiKey,
-				);
+				const { bytes, mime } = await synthRest(msg, part, stored);
 				if (gen !== currentGen) return; // zwischenzeitlich gestoppt/ersetzt
 				if (bytes && bytes.length > 0) {
-					sendToOffscreen({ type: "ENQUEUE", url: bytesToDataUrl(bytes) });
+					sendToOffscreen({ type: "ENQUEUE", url: bytesToDataUrl(bytes, mime) });
 					enqueuedAny = true;
 				}
 			}
@@ -542,13 +580,13 @@ function handleOffscreenFeedback(msg) {
 }
 
 // ----- MP3-Bytes -> Data-URL (im Worker gibt es kein URL.createObjectURL) ---
-function bytesToDataUrl(bytes) {
+function bytesToDataUrl(bytes, mime) {
 	let binary = "";
 	const step = 0x8000; // in Blöcken, sonst sprengt String.fromCharCode den Stack
 	for (let i = 0; i < bytes.length; i += step) {
 		binary += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
 	}
-	return "data:audio/mpeg;base64," + btoa(binary);
+	return "data:" + (mime || "audio/mpeg") + ";base64," + btoa(binary);
 }
 
 // ----- Fehlertexte in verständliches Deutsch übersetzen --------------------

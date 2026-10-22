@@ -1,8 +1,8 @@
 {
 	"manifest_version": 3,
 	"name": "Vorlese-Overlay",
-	"version": "0.11.6",
-	"version_name": "0.11.6 (04.10.2026, 23:48 Uhr)",
+	"version": "0.11.7",
+	"version_name": "0.11.7 (22.10.2026, 11:55 Uhr)",
 	"description": "Markierten Text auf jeder Webseite vorlesen — Edge TTS (kostenlos) oder Google Chirp 3 HD.",
 	"default_locale": "de",
 	"action": {
@@ -34,6 +34,8 @@
 	},
 	"host_permissions": [
 		"https://texttospeech.googleapis.com/*",
+		"https://generativelanguage.googleapis.com/*",
+		"https://*.tts.speech.microsoft.com/*",
 		"https://speech.platform.bing.com/*",
 		"wss://speech.platform.bing.com/*"
 	],

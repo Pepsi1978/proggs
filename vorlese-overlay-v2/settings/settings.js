@@ -24,7 +24,7 @@
 	const PANEL_POS_KEY = "vo_panel_position";
 
 	const DEFAULTS = Object.freeze({
-		activeEngine: "edge", // "edge" | "google"
+		activeEngine: "edge", // "edge" | "google" | "gemini" | "azure"
 		edge: {
 			voice: "de-DE-KatjaNeural", // sinnvolle Standard-Stimme bis die Liste geladen ist
 			rate: 1.0,
@@ -33,6 +33,22 @@
 		google: {
 			apiKey: "",
 			voice: "", // wird nach Key-Eingabe dynamisch befüllt
+			rate: 1.0,
+		},
+		// Gemini 3.8 TTS (Flash/Flash-Lite steckt in der Kennung "gemini_flash:Leda").
+		gemini: {
+			voice: "gemini_flash:Leda",
+			rate: 1.0,
+			keyFree: "", // Schluessel kostenlos (Projekt ohne Abrechnung)
+			keyPaid: "", // Schluessel bezahlt (Projekt mit Abrechnung)
+			keyChoice: "frei_dann_bezahlt", // | "nur_frei" | "nur_bezahlt"
+			chirpFallback: false, // Rueckfall auf Chirp 3 HD statt bezahlt
+		},
+		// Azure Neural (eigene Speech-Ressource)
+		azure: {
+			key: "",
+			region: "westeurope",
+			voice: "azure:de-DE-SeraphinaMultilingualNeural",
 			rate: 1.0,
 		},
 		autoSpeak: false, // Haekchen: markierten Text automatisch vorlesen
@@ -47,7 +63,9 @@
 	function mergeDefaults(stored) {
 		const s = stored && typeof stored === "object" ? stored : {};
 		return {
-			activeEngine: s.activeEngine === "google" ? "google" : "edge",
+			activeEngine: ["google", "gemini", "azure"].includes(s.activeEngine)
+				? s.activeEngine
+				: "edge",
 			edge: {
 				voice: (s.edge && s.edge.voice) || DEFAULTS.edge.voice,
 				rate: clampRate((s.edge && s.edge.rate) ?? DEFAULTS.edge.rate),
@@ -57,6 +75,27 @@
 				apiKey: (s.google && s.google.apiKey) || "",
 				voice: (s.google && s.google.voice) || "",
 				rate: clampRate((s.google && s.google.rate) ?? DEFAULTS.google.rate),
+			},
+			gemini: {
+				voice:
+					s.gemini && /^gemini_(flash|lite):\w+$/.test(s.gemini.voice || "")
+						? s.gemini.voice
+						: DEFAULTS.gemini.voice,
+				rate: clampRate((s.gemini && s.gemini.rate) ?? DEFAULTS.gemini.rate),
+				keyFree: (s.gemini && s.gemini.keyFree) || "",
+				keyPaid: (s.gemini && s.gemini.keyPaid) || "",
+				keyChoice: ["frei_dann_bezahlt", "nur_frei", "nur_bezahlt"].includes(
+					s.gemini && s.gemini.keyChoice,
+				)
+					? s.gemini.keyChoice
+					: DEFAULTS.gemini.keyChoice,
+				chirpFallback: !!(s.gemini && s.gemini.chirpFallback),
+			},
+			azure: {
+				key: (s.azure && s.azure.key) || "",
+				region: (s.azure && s.azure.region) || DEFAULTS.azure.region,
+				voice: (s.azure && s.azure.voice) || DEFAULTS.azure.voice,
+				rate: clampRate((s.azure && s.azure.rate) ?? DEFAULTS.azure.rate),
 			},
 			autoSpeak:
 				typeof s.autoSpeak === "boolean" ? s.autoSpeak : DEFAULTS.autoSpeak,

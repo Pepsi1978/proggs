@@ -87,6 +87,7 @@ body {
 /* Aktive-Engine-Umschalter */
 .sp-engine-switch {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 6px;
 }
 
@@ -116,6 +117,7 @@ body {
 /* Reiter */
 .sp-tabs {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 4px;
 	border-bottom: 1px solid var(--sp-border);
 	margin-bottom: 14px;
@@ -283,4 +285,13 @@ body {
 .sp-reload:disabled {
 	opacity: 0.6;
 	cursor: default;
+}
+
+/* Favoriten-Stern gelb */
+.sp-star.sp-star-on {
+	color: #f5b700;
+}
+
+.sp-help.sp-err {
+	color: var(--sp-err);
 }
