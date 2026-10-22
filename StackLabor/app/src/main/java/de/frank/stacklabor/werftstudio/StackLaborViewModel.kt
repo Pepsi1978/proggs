@@ -1499,10 +1499,13 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             "tts-timeout" -> container.settings.setzeAbschaltzeitMinuten(value.substringBefore(' ').toInt())
             "codex-model" -> container.settings.setzeCodexModell(CodexModel.entries.first { it.label == value }.apiId)
             "codex-reasoning" -> container.settings.setzeCodexDenkstufe(ReasoningEffort.entries.first { it.label == value }.apiValue)
-            "whisper-model" -> container.settings.setzeGroqModell(
-                de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.MODELLE.firstOrNull { it.second == value }?.first
-                    ?: de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.MODEL_TURBO,
-            )
+            "whisper-model" -> {
+                de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.sperreAufheben()
+                container.settings.setzeGroqModell(
+                    de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.MODELLE.firstOrNull { it.second == value }?.first
+                        ?: de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.MODEL_TURBO,
+                )
+            }
         }
     }
 
