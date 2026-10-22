@@ -1,7 +1,7 @@
 # UpdateZentrale
 
 Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
-LM Studio (inklusive Engines und Runtimes), Claude Desktop, Codex Desktop, Claude Code CLI,
+LM Studio (inklusive Engines und Runtimes), Claude Code CLI,
 Codex CLI, Kimi Code CLI, Antigravity CLI, PowerShell 7, Stream Deck, die komplette Programmierumgebung (.NET, Node.js,
 Java, Rust, Go, Python, Visual Studio, VS Code, Android Studio und SDK, Git, npm-Werkzeuge …) sowie
 die eigenen Werkzeuge OpenLauncher, TVO und CVO.

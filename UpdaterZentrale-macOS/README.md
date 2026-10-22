@@ -1,7 +1,7 @@
 # Updater-Zentrale macOS
 
 Ein Mac-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
-LM Studio (inklusive Engines und Runtimes), Claude Desktop, Codex Desktop, Claude Code CLI,
+LM Studio (inklusive Engines und Runtimes), Claude Code CLI,
 Codex CLI, Stream Deck sowie die eigenen Werkzeuge OpenLauncher, TVO und CVO.
 
 macOS-Fassung von `~/proggs/UpdateZentrale` (Windows). Was gleich blieb und was sich zwangsläufig
