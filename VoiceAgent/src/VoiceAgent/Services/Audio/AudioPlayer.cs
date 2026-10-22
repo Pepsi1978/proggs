@@ -27,7 +27,9 @@ namespace VoiceAgent.Services.Audio
                 StopInternal();
 
                 using var ms = new MemoryStream(mp3Audio);
-                using var reader = new StreamMediaFoundationReader(ms);
+                // Gemini-TTS liefert WAV (RIFF): direkt per WaveFileReader, sonst MP3 ueber Media Foundation.
+                bool isWav = mp3Audio.Length > 12 && mp3Audio[0] == (byte)'R' && mp3Audio[1] == (byte)'I' && mp3Audio[2] == (byte)'F' && mp3Audio[3] == (byte)'F';
+                using WaveStream reader = isWav ? new WaveFileReader(ms) : new StreamMediaFoundationReader(ms);
                 using var output = new WaveOutEvent();
 
                 var tcs = new TaskCompletionSource();
