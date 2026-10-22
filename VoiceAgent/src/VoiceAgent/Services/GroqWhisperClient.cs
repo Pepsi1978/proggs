@@ -118,13 +118,14 @@ namespace VoiceAgent.Services
 
         private async Task<string> TranscribeOnceAsync(byte[] fileBytes, string model, string? prompt, CancellationToken ct)
         {
-            var text = await TranscribeWithRetry(fileBytes, 0, model, prompt, ct).ConfigureAwait(false);
+            var (text, raw) = await TranscribeWithRetry(fileBytes, 0, model, prompt, ct).ConfigureAwait(false);
             // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus (TVO-Messung 21.10.2026).
-            // Dann einmal ohne Woerterbuch wiederholen statt die Aussage zu verlieren.
-            if (IsPromptEcho(text, prompt))
+            // Dann einmal ohne Woerterbuch wiederholen statt die Aussage zu verlieren. Geprueft wird
+            // auf dem ROHTEXT (vor dem Halluzinationsfilter), zusaetzlich auf dem gefilterten Text.
+            if (IsPromptEcho(raw, prompt) || IsPromptEcho(text, prompt))
             {
-                Log.Warn("Groq: Prompt-Echo erkannt — erneut ohne Woerterbuch", ctx: new { chars = text.Length });
-                text = await TranscribeWithRetry(fileBytes, 0, model, null, ct).ConfigureAwait(false);
+                Log.Warn("Groq: Prompt-Echo erkannt — erneut ohne Woerterbuch", ctx: new { chars = raw.Length });
+                (text, _) = await TranscribeWithRetry(fileBytes, 0, model, null, ct).ConfigureAwait(false);
             }
             return text;
         }
@@ -137,6 +138,9 @@ namespace VoiceAgent.Services
         }
 
         /// <summary>Groq-Antwort "Modell fuer die Organisation gesperrt".</summary>
+        /// <summary>Hebt die 30-Minuten-Turbo-Sperre auf (Modell in den Einstellungen neu gewaehlt).</summary>
+        public static void ResetBlock() => _blockedUntilUtc = DateTime.MinValue;
+
         private static bool IsBlockedError(Exception ex) =>
             ex.Message.Contains("model_permission_blocked_org", StringComparison.Ordinal)
             || ex.Message.Contains("blocked at the organization level", StringComparison.Ordinal);
@@ -188,12 +192,17 @@ namespace VoiceAgent.Services
             static string Norm(string s) => new string(s.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
             var t = Norm(text);
             var p = Norm(prompt);
+            if (t.Length == 0) return false;
             // Echo = Whisper wiederholt den Prompt ab seinem Anfang ("Begriffe: ..."), ganz oder teilweise.
             var marker = Norm(EchoMarker);
-            return t.StartsWith(marker, StringComparison.Ordinal) && p.Contains(t[marker.Length..]);
+            if (t.StartsWith(marker, StringComparison.Ordinal) && p.Contains(t[marker.Length..], StringComparison.Ordinal)) return true;
+            // Teil-Echo: nur Ende/Mitte des Prompts ("Claude Code, OpenAI, Anthropic."). Ein echtes Diktat
+            // nur aus Woerterbuch-Begriffen in Prompt-Reihenfolge wird so einmal ohne Prompt wiederholt — harmlos.
+            return t.Length >= 12 && p.Contains(t, StringComparison.Ordinal);
         }
 
-        private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt, string model, string? prompt, CancellationToken ct)
+        /// <summary>Liefert den gefilterten Text und den ungefilterten top-level-Text (fuer die Echo-Erkennung).</summary>
+        private async Task<(string Text, string Raw)> TranscribeWithRetry(byte[] fileBytes, int attempt, string model, string? prompt, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("Kein Groq-API-Schluessel hinterlegt (Einstellungen → API-Schluessel).");
@@ -228,7 +237,7 @@ namespace VoiceAgent.Services
                 bool[]? voiced = BuildVoicedTimeline(fileBytes);
                 // Confidence-Gate + Audio-Abgleich anwenden. Ergebnis kann leer sein (alles halluziniert/
                 // Stille) — im Always-On-Betrieb NORMAL und KEIN Fehler (Almanach §4.4): leerer String.
-                return FilterTranscription(json, voiced, FrameMs);
+                return (FilterTranscription(json, voiced, FrameMs), ExtractFallbackText(json));
             }
 
             if (Array.IndexOf(RetryableStatusCodes, statusCode) >= 0 && attempt < MaxRetries)

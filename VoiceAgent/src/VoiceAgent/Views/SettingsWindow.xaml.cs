@@ -279,6 +279,7 @@ namespace VoiceAgent.Views
                 _settings.FavoriteVoices = _favorites.ToList();
 
                 _settings.SttModel = (SttModelBox.SelectedItem as ComboBoxItem)?.Tag as string ?? GroqWhisperClient.ModelTurbo;
+                GroqWhisperClient.ResetBlock();   // Modell neu gewaehlt -> large-v3 sofort wieder versuchen
                 _settings.PersonalVocabularyEnabled = PersonalVocabularyBox.IsChecked == true;
                 _settings.SemanticEndpointing = SemanticEndpointBox.IsChecked == true;
                 _settings.IntentDetection = IntentDetectionBox.IsChecked == true;
