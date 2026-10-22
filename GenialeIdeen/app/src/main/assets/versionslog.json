@@ -18,6 +18,7 @@
     {"versionCode": 55, "versionName": "1.7.24", "stand": "22.10.2026, 12:20 Uhr", "notiz": "Spracheingabe: Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, das Wörterbuch-Feld zeigt nach einer Wiederherstellung den aktuellen Stand."},
     {"versionCode": 56, "versionName": "1.7.25", "stand": "22.10.2026, 12:38 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."},
     {"versionCode": 57, "versionName": "1.7.26", "stand": "22.10.2026, 18:42 Uhr", "notiz": "Unter der Überschrift der Ideenliste steht jetzt die Anzahl offener Ideen, die sich bei Änderungen automatisch aktualisiert."},
-    {"versionCode": 58, "versionName": "1.7.27", "stand": "22.10.2026, 18:47 Uhr", "notiz": "Die zusätzliche Anzahl offener Ideen unter der Überschrift wurde entfernt; die bisherige Anzeige darunter bleibt unverändert."}
+    {"versionCode": 58, "versionName": "1.7.27", "stand": "22.10.2026, 18:47 Uhr", "notiz": "Die zusätzliche Anzahl offener Ideen unter der Überschrift wurde entfernt; die bisherige Anzeige darunter bleibt unverändert."},
+    {"versionCode": 59, "versionName": "1.7.28", "stand": "22.10.2026, 21:10 Uhr", "notiz": "OpenAI-Modellwahl aktualisiert: GPT-6.1 Sol, GPT-6 Luna, GPT-5.6 Terra und GPT-6 Astra mit passenden Denkstufen. Alte Sol- und Luna-Auswahlen werden automatisch übernommen; Codex-Client-Kennung für Sol 6.1 aktualisiert."}
   ]
 }

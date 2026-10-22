@@ -2,9 +2,9 @@ package de.frank.genialeideen.auth
 
 enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
     ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT 5.6 Sol", "gpt-5.6-sol"),
-    TERRA("GPT 5.6 Terra", "gpt-5.6-terra"),
-    LUNA("GPT 5.6 Luna", "gpt-5.6-luna"),
+    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
+    LUNA("GPT-6 Luna", "gpt-6-luna"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
     FABLE("Claude Fable 5.1", "claude-fable-5-1", KiAnbieter.ANTHROPIC),
     SONNET("Claude Sonnet 5.5", "claude-sonnet-5-5", KiAnbieter.ANTHROPIC),
@@ -13,7 +13,7 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
 
     val istAnthropic: Boolean get() = anbieter == KiAnbieter.ANTHROPIC
 
-    /** Anthropic kennt die Stufen low bis max, aber kein Ultra. */
+    /** Sol 6.1, Astra 6 und Terra 5.6: low bis ultra; Luna 6 und Claude: low bis max. */
     val supportedEfforts: List<ReasoningEffort>
         get() = when (this) {
             ASTRA, SOL, TERRA -> ReasoningEffort.entries.toList()
@@ -26,7 +26,13 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
     companion object {
         fun fromLabel(value: String): CodexModel = entries.firstOrNull {
             it.label.equals(value.trim(), ignoreCase = true) || it.apiId.equals(value.trim(), ignoreCase = true)
-        } ?: TERRA
+        } ?: when (value.trim().lowercase()) {
+            // Alte gespeicherte Auswahlen bleiben in derselben Modellfamilie.
+            "gpt-5.6-sol", "gpt 5.6 sol", "gpt-5.6 sol",
+            "gpt-6-sol", "gpt 6 sol", "gpt-6 sol" -> SOL
+            "gpt-5.6-luna", "gpt 5.6 luna", "gpt-5.6 luna" -> LUNA
+            else -> TERRA
+        }
 
         fun von(anbieter: KiAnbieter): List<CodexModel> = entries.filter { it.anbieter == anbieter }
     }

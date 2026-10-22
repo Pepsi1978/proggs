@@ -235,10 +235,11 @@ class SecureSettings(context: Context) : Closeable {
         set(value) = writeString(Keys.GEMINI_API_KEY, value)
 
     var model: String
-        get() = readString(Keys.MODEL, Defaults.MODEL)
+        get() = CodexModel.fromLabel(readString(Keys.MODEL, Defaults.MODEL)).apiId
         set(value) {
-            val effort = CodexModel.fromLabel(value).normalizeEffort(ReasoningEffort.fromLabel(reasoning))
-            preferences?.edit()?.putString(Keys.MODEL, value)?.putString(Keys.REASONING, effort.apiValue)?.apply()
+            val model = CodexModel.fromLabel(value)
+            val effort = model.normalizeEffort(ReasoningEffort.fromLabel(reasoning))
+            preferences?.edit()?.putString(Keys.MODEL, model.apiId)?.putString(Keys.REASONING, effort.apiValue)?.apply()
         }
 
     var reasoning: String

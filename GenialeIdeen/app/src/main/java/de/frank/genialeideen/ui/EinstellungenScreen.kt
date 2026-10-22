@@ -542,8 +542,8 @@ fun EinstellungenScreen(
                                 else AnthropicKlient.openAiModellMerken(kontext, alt.apiId)
                                 val neu = if (a == KiAnbieter.ANTHROPIC) AnthropicKlient.letztesClaudeModell(kontext).apiId
                                 else AnthropicKlient.letztesOpenAiModell(kontext, CodexModel.TERRA.apiId)
-                                modell = neu
                                 settings.model = neu
+                                modell = settings.model
                                 denktiefe = settings.reasoning
                             }
                         }
