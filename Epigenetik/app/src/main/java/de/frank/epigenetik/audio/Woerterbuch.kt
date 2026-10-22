@@ -13,6 +13,7 @@ object Woerterbuch {
     private const val MAX_BEGRIFFE = 100
     private const val MAX_PROMPT_ZEICHEN = 350
     private const val ECHO_MARKER = "Begriffe"
+    private const val MIN_TEIL_ECHO = 12
 
     /** Splits at newline, comma and semicolon; drops empty and '#' entries and case-insensitive duplicates. */
     fun begriffe(text: String): List<String> {
@@ -41,16 +42,19 @@ object Woerterbuch {
     fun prompt(an: Boolean, text: String): String? = if (an) prompt(begriffe(text)) else null
 
     /**
-     * Whisper likes to output the prompt itself on silence/murmur. Echo = the text starts with the
-     * marker ("Begriffe …") and the rest is contained in the prompt. Dictation that only contains
-     * vocabulary words does not start with the marker and is kept.
+     * Whisper likes to output the prompt itself on silence/murmur, often only its end
+     * ("Claude Code, OpenAI, Anthropic, ..."). Echo = the text starts with the marker ("Begriffe ...")
+     * and the rest is contained in the prompt, or the text (at least 12 chars) is a part of the prompt.
+     * A real dictation that only repeats vocabulary words in prompt order is just retried once without prompt.
      */
     fun istPromptEcho(text: String, prompt: String?): Boolean {
         if (prompt.isNullOrEmpty() || text.isBlank()) return false
         fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
         val t = norm(text)
         val p = norm(prompt)
+        if (t.isEmpty()) return false
         val marker = norm(ECHO_MARKER)
-        return t.startsWith(marker) && p.contains(t.substring(marker.length))
+        if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+        return t.length >= MIN_TEIL_ECHO && p.contains(t)
     }
 }

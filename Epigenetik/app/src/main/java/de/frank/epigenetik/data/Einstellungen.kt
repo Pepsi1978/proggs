@@ -51,7 +51,7 @@ class Einstellungen private constructor(context: Context) {
     /** Whisper-Modell bei Groq: Turbo (schnell, Standard) oder Large V3 (genauer). */
     var whisperModell: String
         get() = de.frank.epigenetik.audio.GroqTranscriber.gueltigesModell(prefs.getString("whisper_model", null))
-        set(v) = put { putString("whisper_model", de.frank.epigenetik.audio.GroqTranscriber.gueltigesModell(v)) }
+        set(v) { de.frank.epigenetik.audio.GroqTranscriber.sperreAufheben(); put { putString("whisper_model", de.frank.epigenetik.audio.GroqTranscriber.gueltigesModell(v)) } }
     /** Persönliches Wörterbuch: Begriffe gehen als Prompt an Whisper. */
     var woerterbuchAn: Boolean get() = prefs.getBoolean("woerterbuch_an", true); set(v) = put { putBoolean("woerterbuch_an", v) }
     var woerterbuch: String get() = s("woerterbuch", de.frank.epigenetik.audio.Woerterbuch.STANDARD_WOERTERBUCH); set(v) = put { putString("woerterbuch", v) }
