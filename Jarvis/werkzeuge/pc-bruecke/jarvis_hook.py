@@ -7,6 +7,9 @@ Aufruf: python jarvis_hook.py <post|frage|stop|puls|warte|fehlschlag> (macOS: py
   melde  Kein Hook: python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>" meldet aus einer Sitzung ohne Hooks (Codex CLI
          mit Sol 6.1, gestartet mit OpenLauncher --cli codex) einen Schritt an Jarvis.
 Eine Datei für Windows und macOS; der Mac-Start (OpenLauncherMac --jarvis-auftrag) setzt dieselben Hooks.
+OpenCode (Sol 6.1, OpenLauncher --cli opencode) hat keine Claude-Hooks: Das Plugin opencode-setup/plugins/jarvis-auftrag.js ruft
+post, puls, frage, stop und warte mit derselben Eingabe auf (Werkzeugnamen wie bei Claude, statt transcript_path die Liste
+„texte“ mit den Zwischentexten der KI) und setzt JARVIS_CLI=opencode und JARVIS_ELTERN_PID (der OpenCode-Prozess für den Warter).
   post   PostToolUse (alle Werkzeuge) und PostToolUseFailure (Bash|PowerShell, nur dort stehen fehlgeschlagene Befehle).
          Läuft async. Neue Zwischentexte der KI (aus dem Transkript) gehen sofort als eigene Meldung raus, dazu Advisor,
          Skills und Agenten; geänderte Dateien, Bau, Commit/Push und adb install werden gedrosselt:
@@ -54,6 +57,8 @@ import uuid
 from pathlib import Path
 
 AUFTRAG = os.environ.get("JARVIS_AUFTRAG_ID", "").strip()
+# Gesetzt vom OpenCode-Plugin: Diese Sitzung ist kein Claude Code und beweist nichts über die Claude-Anmeldung des Rechners.
+FREMDE_CLI = os.environ.get("JARVIS_CLI", "").strip()
 START = time.time()        # Beginn dieses Hooks: Nur was danach begann, beweist eine wieder gültige Anmeldung
 # Werte des Felds „error“ (Transkript und StopFailure, Claude Code 2.1.306), die heißen: hier ist niemand gültig angemeldet.
 ANMELDE_FEHLER = {"authentication_failed", "oauth_org_not_allowed", "account_on_hold", "verification_required"}
@@ -186,7 +191,7 @@ def installweg(befehl: str) -> str:
 def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: list[str] | None = None, extra: dict | None = None) -> int:
     # rechner und hook_beginn: Der Relay führt damit den Anmeldestand je Rechner (nur was nach einem Fehler begann, bestätigt ihn).
     daten = {"auftrag_id": AUFTRAG, "stand": stand, "schritt": kuerze(schritt, MAX_BERICHT if stand == "info" else MAX_TEXT),
-             "rechner": rechner(), "hook_beginn": int(START), **(extra or {})}
+             "rechner": "" if FREMDE_CLI else rechner(), "hook_beginn": int(START), **(extra or {})}
     if frage:
         daten["frage"] = frage
     if nachtrag_ids:
@@ -378,7 +383,13 @@ def neue_texte(eingabe: dict, z: dict) -> list[str]:
     """Zwischentexte der KI, die seit dem letzten Lesen im Transkript dazugekommen sind (nur vollständige Zeilen)."""
     pfad = eingabe.get("transcript_path")
     if not pfad:
-        return []
+        # OpenCode: Das Plugin liefert die fertigen Texte seit dem letzten Aufruf selbst mit.
+        texte = []
+        for text in eingabe.get("texte") or []:
+            text = lesbar(str(text))
+            if text and not schon_gesehen(z, text):
+                texte.append(text)
+        return texte
     texte = []
     try:
         with open(pfad, "rb") as f:
@@ -640,7 +651,7 @@ def uebergib(neu: list[dict]) -> str:
     return (f"Frank hat über Jarvis {'einen Nachtrag' if len(neu) == 1 else str(len(neu)) + ' Nachträge'} zu diesem Programmierauftrag "
             f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "
             f"Auftrags, und schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde "
-            f"stand=fertig mit programmier_fortschritt. Ist er unklar, frag mit AskUserQuestion.\n\n{teile}")
+            f"stand=fertig mit programmier_fortschritt. Ist er unklar, frag mit {'dem Werkzeug question' if FREMDE_CLI else 'AskUserQuestion'}.\n\n{teile}")
 
 
 def _windows_prozesse() -> dict[int, tuple[int, str]]:
@@ -770,7 +781,8 @@ def warte(eingabe: dict) -> int:
     if alter and alter != os.getpid() and lebt(alter, alter_start):
         return 0
     WARTER.write_text(f"{os.getpid()} {startzeit(os.getpid()) or ''}".strip(), encoding="utf-8")
-    claude = claude_prozess()
+    # OpenCode: Das Plugin nennt seinen Prozess, einen claude*-Vorfahren gibt es dort nicht.
+    claude = int(os.environ.get("JARVIS_ELTERN_PID") or 0) or claude_prozess()
     claude_start = (startzeit(claude) or "") if claude else ""
     schreib(f"Warter gestartet ({eingabe.get('hook_event_name', '')}, Claude-Prozess {claude})")
     try:

@@ -5,8 +5,9 @@ namespace OpenLauncher.Services;
 /// <summary>
 /// Startbefehl ohne Fenster für Programmieraufträge von Jarvis (Franks Sprachassistent):
 /// <c>OpenLauncher.exe --jarvis-auftrag &lt;auftrag.txt&gt; [--name "Jarvis: App"] [--profil minimal] [--modus schnell]
-/// [--modell claude-opus-5-5[1m]] [--effort high] [--ordner C:\Users\…\proggs] [--auftrag-id NUMMER] [--cli claude|codex]</c>.
-/// Mit --cli codex (etwa --modell gpt-6.1-sol) startet stattdessen das Codex CLI wie der Startknopf, ohne Remote Control.
+/// [--modell claude-opus-5-5[1m]] [--effort high] [--ordner C:\Users\…\proggs] [--auftrag-id NUMMER] [--cli claude|codex|opencode]</c>.
+/// Mit --cli codex (etwa --modell gpt-6.1-sol) startet stattdessen das Codex CLI wie der Startknopf, ohne Remote Control;
+/// mit --cli opencode OpenCode mit openai/&lt;modell&gt; (ab 1.24.99).
 /// Mit --auftrag-id bekommt die Sitzung die Jarvis-Hooks (Fortschritt und Rückfragen in den Jarvis-Chat).
 /// Startet genau wie der Startknopf eine Claude-Code-Sitzung (Profil-Ordner, aktive CLAUDE.md mit Modus, Modell,
 /// Effort, Terminal-Farbe), dazu Remote Control mit Namen und den Auftrag als erste Nachricht. Aufrufer ist die
@@ -53,6 +54,19 @@ public static class JarvisAuftrag
                 profile.ActivateCodexProjectAgents(profil, modus, ordner);
                 var codexHome = profile.PrepareCodexHome(profil);
                 new OpenLauncherService().LaunchCodexCli(new Models.ModelEntry { Slug = modell }, ordner, effort, codexHome, useTmux: false,
+                    initialPromptFile: datei, jarvisAuftragId: auftragId.Length > 0 ? auftragId : null, title: name);
+            }
+            else if (cli == "opencode")
+            {
+                // Wie der Startknopf mit OpenCode (OpenAI-Anmeldung per ChatGPT-Abo): Profil-AGENTS.md, Sitzungs-Konfig, Effort
+                // als Start-Variante, Modus über das work-mode-Plugin. Fortschritt meldet die Sitzung über den Jarvis-MCP,
+                // Rückfragen und Nachträge laufen über das Plugin jarvis-auftrag.js (aktiv nur mit JARVIS_AUFTRAG_ID).
+                profile.ActivateProjectAgents(profil, ordner);
+                var sitzung = profile.PrepareOpenCodeSession(profil, ordner, isLmStudio: false);
+                var launcher = new OpenLauncherService();
+                var eintrag = new Models.ModelEntry { ProviderId = "openai", ProviderName = "OpenAI", Slug = modell, DisplayName = modell, IsUserDefined = true };
+                var modelString = launcher.ConfigureProvider(eintrag, new Models.ProviderEntry(), Array.Empty<Models.ProviderEntry>(), effort);
+                launcher.Launch(modelString, ordner, effort, sitzung.ConfigPath, modus, useTmux: false,
                     initialPromptFile: datei, jarvisAuftragId: auftragId.Length > 0 ? auftragId : null, title: name);
             }
             else

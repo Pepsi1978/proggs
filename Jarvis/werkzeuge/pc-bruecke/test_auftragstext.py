@@ -18,8 +18,7 @@ def teil(text: str) -> str:
 class AuftragstextTest(unittest.TestCase):
     def test_metadaten_kompakt(self):
         text = auftragstext({"app": "Jarvis", "review": True, "auftrag": "Kurz."})
-        self.assertIn("\n\nAPP: Jarvis\nREVIEW: ja: vor dem Abschluss", text)
-        self.assertIn("beheben\nAUFTRAG:\nKurz.\n\nVORGEHEN\n1. ", text)
+        self.assertIn("\n\nAPP: Jarvis\nAUFTRAG:\nKurz.\n\nVORGEHEN\n1. ", text)
         self.assertNotIn("\n\n\n", text)
         self.assertNotIn("\r", text)
 
@@ -35,8 +34,9 @@ class AuftragstextTest(unittest.TestCase):
                 self.assertEqual("Zeile eins\nZeile zwei\n\nAbsatz", teil(text))
                 self.assertNotIn("\r", text)
 
-    def test_review_nein(self):
-        self.assertIn("REVIEW: nein\nAUFTRAG:", auftragstext({"app": "X", "auftrag": "a"}))
+    def test_ohne_review_zeile(self):
+        # Claude Code fragt am Ende selbst nach dem Review: Der Kopf nennt es nie, auch nicht mit review=true.
+        self.assertNotIn("REVIEW", auftragstext({"app": "X", "review": True, "auftrag": "a"}))
 
     def test_null_wird_nicht_zu_none(self):
         text = auftragstext({"app": None, "auftrag": None})

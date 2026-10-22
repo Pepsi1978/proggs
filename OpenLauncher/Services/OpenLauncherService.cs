@@ -241,7 +241,11 @@ $env:Path = $pathEntries -join ';'
     }
 
     /// <summary>Startet opencode in einem neuen Windows-Terminal-Fenster.</summary>
-    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode, bool useTmux = false)
+    /// <param name="initialPromptFile">Optional: Datei, deren Inhalt als erste Nachricht an OpenCode geht (Jarvis-Aufträge, --prompt).</param>
+    /// <param name="jarvisAuftragId">Optional: Nummer des Jarvis-Auftrags (JARVIS_AUFTRAG_ID); damit wird das Plugin jarvis-auftrag.js aktiv.</param>
+    /// <param name="title">Optional: Titel des Terminal-Tabs (sonst OpenCode-Farbe-Effort).</param>
+    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode, bool useTmux = false,
+        string? initialPromptFile = null, string? jarvisAuftragId = null, string? title = null)
     {
         var log = Logger.Instance;
         FrischeUmgebung.Auffrischen();
@@ -262,14 +266,14 @@ $env:Path = $pathEntries -join ';'
             // Fehler-Fenster (Teil danach), bis der Konsolen-Fallback ohne wt greift. Ein
             // -File-Script hat kein ';' in der wt-Argumentliste und ist immun (gleiche Technik
             // wie der bereits funktionierende Claude-Code-Weg).
-            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath, workMode);
+            var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath, workMode, initialPromptFile, jarvisAuftragId);
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
             if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
             {
-                var robustProcess = LaunchOpenCodeViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, modelString, thinkingLevel, tabColor, log);
+                var robustProcess = LaunchOpenCodeViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, modelString, thinkingLevel, tabColor, log, title);
                 log.Info("OpenLauncherService", "Launch", $"robuster Windows-Terminal-Launcher gestartet (PID {robustProcess?.Id})", new { modelString, workDir, thinkingLevel, tabColor = tabColor.Name });
                 return;
             }
@@ -291,7 +295,7 @@ $env:Path = $pathEntries -join ';'
                 psi.ArgumentList.Add("--tabColor");
                 psi.ArgumentList.Add(tabColor.Hex);
                 psi.ArgumentList.Add("--title");
-                psi.ArgumentList.Add(string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}");
+                psi.ArgumentList.Add(title ?? (string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}"));
                 psi.ArgumentList.Add("--startingDirectory");
                 psi.ArgumentList.Add(workDir);
                 psi.ArgumentList.Add(shell.Path);
@@ -1171,9 +1175,10 @@ if ($innerPid) {
         string modelString,
         string? thinkingLevel,
         TerminalTabColor tabColor,
-        Logger log)
+        Logger log,
+        string? title = null)
     {
-        var title = string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}";
+        title ??= string.IsNullOrWhiteSpace(thinkingLevel) ? $"OpenCode-{tabColor.Name}" : $"OpenCode-{tabColor.Name}-{thinkingLevel}";
         var tabArgs = new[]
         {
             "new-tab",
@@ -1593,7 +1598,8 @@ if (Test-Path -LiteralPath $lms) {
 """;
     }
 
-    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode)
+    private static string BuildOpenCodeStartScript(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode,
+        string? initialPromptFile = null, string? jarvisAuftragId = null)
     {
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
         var executable = ResolveOpenCodeExecutable();
@@ -1643,6 +1649,18 @@ $env:OPENCODE_DISABLE_AUTOUPDATE = '1'
 $env:OPENLAUNCHER_SERVICE_TIER = {{PowerShellLiteral(launcherServiceTier)}}
 $env:OPENLAUNCHER_WORK_MODE = {{PowerShellLiteral(workMode)}}
 {{minimalEnv}}
+# Jarvis-Auftrag: Mit der Nummer wird das Plugin jarvis-auftrag.js aktiv (Rückfragen, Abschluss, Nachträge ans Handy).
+$jarvisAuftragId = {{PowerShellLiteral(jarvisAuftragId ?? string.Empty)}}
+if ($jarvisAuftragId) { $env:JARVIS_AUFTRAG_ID = $jarvisAuftragId } else { Remove-Item Env:JARVIS_AUFTRAG_ID -ErrorAction SilentlyContinue }
+$opencodeArgs = @('-m', {{PowerShellLiteral(modelString)}})
+$initialPromptFile = {{PowerShellLiteral(initialPromptFile ?? string.Empty)}}
+if ($initialPromptFile -and (Test-Path -LiteralPath $initialPromptFile)) {
+    # Der Auftrag als erste Nachricht (--prompt). Start-Process setzt die Argumente nur mit Leerzeichen zusammen: den
+    # mehrzeiligen Text mit Anführungszeichen deshalb selbst nach den Windows-Regeln (CommandLineToArgvW) einpacken.
+    $prompt = Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile
+    $prompt = '"' + (($prompt -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1') + '"'
+    $opencodeArgs = '-m ' + {{PowerShellLiteral(modelString)}} + ' --prompt ' + $prompt
+}
 $stderrDir = Join-Path $env:USERPROFILE '.local\share\opencode\log\stderr'
 try {
     New-Item -ItemType Directory -Force -Path $stderrDir | Out-Null
@@ -1664,7 +1682,7 @@ $stderrLog = Join-Path $stderrDir ('opencode-stderr-{0:yyyyMMdd-HHmmss}-{1}.log'
 $opencodeProcess = $null
 try {
     $opencodeProcess = Start-Process -FilePath {{PowerShellLiteral(executable)}} `
-        -ArgumentList @('-m', {{PowerShellLiteral(modelString)}}) `
+        -ArgumentList $opencodeArgs `
         -NoNewWindow -RedirectStandardError $stderrLog -PassThru
     Set-ProgrammerProcessPriority $opencodeProcess 'OpenCode'
     $opencodeProcess.WaitForExit()

@@ -239,13 +239,12 @@ def auftragstext(auftrag: dict) -> str:
     """Die erste Nachricht der Sitzung. Der Auftrag geht zeilengenau hinein: keine Umbrüche ergänzen oder entfernen (Absätze,
     Listen, Codeblöcke und „ ; “-Trenner bleiben, wie Jarvis sie geschickt hat; test_auftragstext.py). Nur CRLF/CR werden LF:
     Ein nacktes CR setzt im Terminal den Cursor an den Zeilenanfang."""
-    review = "ja: vor dem Abschluss die Änderung mit /code-review prüfen und Befunde beheben" if auftrag.get("review") else "nein"
+    # Ohne REVIEW-Zeile (Franks Wahl vom 22.10.2026): Claude Code fragt am Ende selbst, ob ein Review laufen soll.
     app = auftrag.get("app") or ""
     text = (auftrag.get("auftrag") or "").replace("\r\n", "\n").replace("\r", "\n")
     return f"""Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control.
 
 APP: {app}
-REVIEW: {review}
 AUFTRAG:
 {text}
 

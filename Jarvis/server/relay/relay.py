@@ -831,7 +831,7 @@ class PcBruecke:
         return web.json_response({"angenommen": wartend is not None})
 
     async def auftrag(self, request: web.Request) -> web.Response:
-        """POST /geraet/pc-auftrag (Handy): {"app", "auftrag", "review", "modell"?}. 409 = kein PC da, 504 = keine Quittung."""
+        """POST /geraet/pc-auftrag (Handy): {"app", "auftrag", "review", "modell"?, "cli"?}. 409 = kein PC da, 504 = keine Quittung."""
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         if not self.da():
@@ -848,9 +848,11 @@ class PcBruecke:
         wartend = asyncio.get_running_loop().create_future()
         self.quittungen[nummer] = wartend
         try:
-            # modell: Franks Wahl beim Start (opus = Claude Code wie bisher, sol = Codex CLI mit Sol 6.1); alles andere gilt als opus.
+            # modell: Franks Wahl beim Start (opus = Claude Code wie bisher, sol = Sol 6.1); alles andere gilt als opus.
+            # cli: womit Sol laeuft (codex = Codex CLI wie bisher, opencode = OpenCode CLI); alles andere gilt als codex.
             await self.auftraege.put({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
-                                      "nummer": str(daten.get("nummer", ""))[:20], "modell": "sol" if daten.get("modell") == "sol" else "opus"})
+                                      "nummer": str(daten.get("nummer", ""))[:20], "modell": "sol" if daten.get("modell") == "sol" else "opus",
+                                      "cli": "opencode" if daten.get("cli") == "opencode" else "codex"})
             log.info("Programmierauftrag an den PC: %s", daten["app"][:40])
             quittung = await asyncio.wait_for(wartend, PC_QUITTUNG_S)
         except asyncio.TimeoutError:
