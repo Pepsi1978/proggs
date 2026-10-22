@@ -121,7 +121,7 @@ class Einstellungen(ctx: Context) {
     /** Noch nie gespeichert → die Vorbelegung; ein bewusst geleertes Feld bleibt leer. */
     var woerterbuch: String
         get() = p.getString(VOCABULARY, null) ?: GroqTranscriber.STANDARD_WOERTERBUCH
-        set(v) { p.edit().putString(VOCABULARY, v).commit() }
+        set(v) { p.edit().putString(VOCABULARY, v).apply() }
 
     val woerterbuchPrompt: String?
         get() = GroqTranscriber.woerterbuchPrompt(woerterbuchAn, woerterbuch)

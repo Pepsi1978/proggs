@@ -35,9 +35,13 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +52,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.experimente.auth.CodexModell
 import de.frank.experimente.tts.TtsCatalog
@@ -1011,7 +1016,7 @@ private fun Schalterzeile(name: String, an: Boolean, beiWechsel: (Boolean) -> Un
 private fun Woerterbuchfeld(wert: String, beiAenderung: (String) -> Unit) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
-    var text by remember { mutableStateOf(wert) }
+    var text by entprellterWoerterbuchText(wert, beiAenderung)
     Column(Modifier.fillMaxWidth().padding(top = 14.dp)) {
         Beschriftung("Begriffe (durch Komma oder Zeilenumbruch getrennt)")
         Box(
@@ -1025,7 +1030,7 @@ private fun Woerterbuchfeld(wert: String, beiAenderung: (String) -> Unit) {
         ) {
             BasicTextField(
                 value = text,
-                onValueChange = { text = it; beiAenderung(it) },
+                onValueChange = { text = it },
                 textStyle = schriften.fliesstext.copy(color = farben.text),
                 cursorBrush = SolidColor(farben.aktion),
                 modifier = Modifier.fillMaxWidth(),
@@ -1251,4 +1256,31 @@ private fun Uhrzeitwahl(
             }
         },
     )
+}
+
+/**
+ * Local text of the vocabulary field: takes over values loaded from outside (backup import,
+ * reload), saves ~500 ms after the last keystroke and once more when the field leaves the screen.
+ */
+@Composable
+private fun entprellterWoerterbuchText(wert: String, speichern: (String) -> Unit): MutableState<String> {
+    val text = remember { mutableStateOf(wert) }
+    val gespeichert = remember { mutableStateOf(wert) }
+    val aktuellSpeichern by rememberUpdatedState(speichern)
+    LaunchedEffect(wert) {
+        if (wert != gespeichert.value) {
+            gespeichert.value = wert
+            text.value = wert
+        }
+    }
+    LaunchedEffect(text.value) {
+        if (text.value == gespeichert.value) return@LaunchedEffect
+        delay(500)
+        gespeichert.value = text.value
+        aktuellSpeichern(text.value)
+    }
+    DisposableEffect(Unit) {
+        onDispose { if (text.value != gespeichert.value) aktuellSpeichern(text.value) }
+    }
+    return text
 }
