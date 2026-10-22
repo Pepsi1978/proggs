@@ -99,7 +99,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }.getOrElse { "PC: unbekannt, der Jarvis-Server ist nicht erreichbar (${it.message ?: it.javaClass.simpleName})." }
         val cloud = if (e.routineUrl.startsWith("https://") && e.routineToken.isNotBlank()) "Cloud: eingerichtet (Claude-Code-Routine mit Token)."
             else "Cloud: nicht eingerichtet, der Token fehlt (Einstellungen → Konten → Programmieren in der Cloud)."
-        val sol = if (codex.bereit()) "Sol 6.1 ohne Windows-PC: Codex Cloud über das ChatGPT-Konto (Umgebung für ${e.repoName} auf chatgpt.com/codex nötig)."
+        val sol = if (codex.bereit()) "Sol 6.1 ohne Windows-PC: Codex Cloud über das ChatGPT-Konto (Umgebung „${e.repoName.substringAfterLast('/')}“ aus der Codex-App)."
             else "Sol 6.1 ohne Windows-PC: nicht möglich, Jarvis ist nicht mit dem ChatGPT-Konto verbunden."
         "$pc $cloud $sol"
     }
@@ -1543,8 +1543,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Sol 6.1 in Codex Cloud über Franks ChatGPT-Konto, wie `codex cloud exec`: Die Umgebung zum Repo sucht Jarvis selbst
-     * (Frank legt sie auf chatgpt.com/codex an), dann POST /wham/tasks. Kein automatischer Neuversuch (jeder Erfolg ist ein Task).
+     * Sol 6.1 in Codex Cloud über Franks ChatGPT-Konto, wie in der Codex-App: Die Umgebung kommt aus `environment/config/list`
+     * (Name wie das Repo, sonst die einzige bereite), dann `thread/start` mit gpt-6.1-sol und `turn/start` mit dem Auftrag.
+     * Der Zug läuft in der Cloud weiter, wenn Jarvis die Verbindung schließt. Kein automatischer Neuversuch (jeder Start ist ein Thread).
      */
     private inner class CodexCloud : ProgrammierZiel {
         private val auth by lazy { de.frank.jarvis.auth.CodexAuthManager(app) }
@@ -1553,33 +1554,35 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         override fun fehlt() = "Sol 6.1 geht ohne Windows-PC nur in Codex Cloud, und dafür muss Jarvis mit dem ChatGPT-Konto verbunden sein (Einstellungen → Konten)."
 
         override suspend fun starte(app: String, auftrag: String, review: Boolean, nummer: String, modell: String): Start {
-            val repo = e.repoName
-            val (envCode, envRoh) = auth.codexCloud("/environments/by-repo/github/$repo")
-            if (envCode == 401 || envCode == 403) throw IllegalStateException("ChatGPT lehnt den Zugriff auf Codex Cloud ab (HTTP $envCode). Bitte in Jarvis neu bei ChatGPT anmelden.")
-            if (envCode !in 200..299) throw IllegalStateException("Codex Cloud antwortet mit HTTP $envCode: ${envRoh.take(200)}")
-            val umgebung = runCatching { JSONArray(envRoh) }.getOrNull()?.let { l -> (0 until l.length()).mapNotNull { l.optJSONObject(it) } }.orEmpty()
-                .maxByOrNull { if (it.optBoolean("is_pinned")) 1 else 0 }?.optString("id").orEmpty()
-            if (umgebung.isEmpty()) throw IllegalStateException("In Codex Cloud gibt es keine Umgebung für $repo. Frank legt sie auf chatgpt.com/codex unter Einstellungen → Umgebungen an.")
+            val repo = e.repoName.substringAfterLast('/')
             val text = buildString {
                 append("APP: ").append(app).append('\n')
                 append("CODEX-REVIEW: nein\n")
                 append("AUFTRAG:\n").append(auftrag)
             }.take(HOECHSTENS)
-            val rumpf = JSONObject()
-                .put("new_task", JSONObject().put("environment_id", umgebung).put("branch", "main").put("run_environment_in_qa_mode", false))
-                .put("input_items", JSONArray().put(JSONObject().put("type", "message").put("role", "user")
-                    .put("content", JSONArray().put(JSONObject().put("content_type", "text").put("text", text)))))
-            val (code, roh) = auth.codexCloud("/tasks", rumpf.toString())
-            if (code !in 200..299) throw IllegalStateException(when (code) {
-                401, 403 -> "ChatGPT lehnt den Start in Codex Cloud ab (HTTP $code). Bitte in Jarvis neu bei ChatGPT anmelden."
-                404 -> "Codex Cloud kennt die Umgebung nicht (HTTP 404). Bitte auf chatgpt.com/codex prüfen."
-                429 -> "Codex Cloud: zu viele Aufträge oder das Kontingent ist aufgebraucht (HTTP 429)."
-                else -> "Codex Cloud antwortet mit HTTP $code: ${roh.take(200)}"
-            })
-            val taskId = runCatching { JSONObject(roh).let { it.optJSONObject("task")?.optString("id") ?: it.optString("id") } }.getOrNull().orEmpty()
-            return Start(if (taskId.isNotEmpty()) "https://chatgpt.com/codex/tasks/$taskId" else "",
-                "Sol 6.1 arbeitet jetzt in Codex Cloud und meldet seine Schritte selbst; Rückfragen gehen dort nicht. " +
-                    "Meist dauert es zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version.")
+            val thread = auth.codexCloudRpc { rpc ->
+                val liste = rpc("environment/config/list", JSONObject()).optJSONArray("data") ?: JSONArray()
+                val umgebungen = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }
+                val umgebung = (umgebungen.firstOrNull { it.optString("name").equals(repo, ignoreCase = true) }
+                    ?: umgebungen.singleOrNull { it.optString("status") == "ready" })?.optString("id").orEmpty()
+                if (umgebung.isEmpty()) throw IllegalStateException("In Codex Cloud gibt es keine Umgebung „$repo“. Frank legt sie in der Codex-App unter Cloud → Umgebung erstellen an.")
+                val start = rpc("thread/start", JSONObject()
+                    .put("model", SOL_CLOUD_MODELL)
+                    .put("approvalPolicy", "never")
+                    .put("serviceName", "codex_cloud")
+                    .put("environments", JSONArray().put(JSONObject().put("environmentConfigId", umgebung)))
+                    .put("deferredEnvironment", true)
+                    .put("config", JSONObject().put("model_reasoning_effort", "high")))
+                val id = start.optJSONObject("thread")?.optString("id").orEmpty()
+                if (id.isEmpty()) throw IllegalStateException("Codex Cloud hat keinen Thread angelegt.")
+                rpc("turn/start", JSONObject().put("threadId", id)
+                    .put("input", JSONArray().put(JSONObject().put("type", "text").put("text", text))))
+                runCatching { rpc("thread/name/set", JSONObject().put("threadId", id).put("name", "Jarvis: $app")) }
+                id
+            }
+            return Start("https://chatgpt.com/local/$thread",
+                "Sol 6.1 arbeitet jetzt in Codex Cloud (Thread „Jarvis: $app“ in der Codex-App unter Cloud) und meldet seine Schritte selbst; " +
+                    "Rückfragen gehen dort nicht. Meist dauert es zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version.")
         }
     }
 
@@ -1615,6 +1618,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         const val ZIEL_PC = "Claude Code auf deinem PC"
         const val ZIEL_CLOUD = "Claude Code in der Cloud"
         const val ZIEL_CODEX = "Sol 6.1 in Codex Cloud"
+        /** Modell der Codex-Cloud-Threads (wie Sol am Windows-PC). */
+        private const val SOL_CLOUD_MODELL = "gpt-6.1-sol"
 
         /** Läuft der Auftrag in einer Cloud-Sitzung (Claude Code oder Codex)? Sie meldet selbst, Nachträge reisen mit der Antwort. */
         fun inDerCloud(ziel: String) = ziel == ZIEL_CLOUD || ziel == ZIEL_CODEX

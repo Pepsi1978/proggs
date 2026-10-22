@@ -646,24 +646,61 @@ class CodexAuthManager(context: Context) {
     }
 
     /**
-     * Codex Cloud mit dem ChatGPT-Konto, dieselbe Schnittstelle wie `codex cloud exec` (chatgpt.com/backend-api/wham):
-     * [pfad] z. B. „/environments“ oder „/tasks“, mit [json] als POST, sonst GET. Liefert HTTP-Code und Antworttext.
+     * Codex Cloud wie in der Codex-App (neue Umgebungen, die `codex cloud exec` und /wham nicht sehen): JSON-RPC des
+     * App-Servers über wss://codex-cloud-backend.chatgpt.com mit dem ChatGPT-Konto. [block] bekommt `rpc(methode, params)`,
+     * das auf die Antwort wartet (Fehler als Ausnahme); `initialize` ist schon erledigt. Danach wird die Verbindung geschlossen,
+     * ein gestarteter Zug läuft in der Cloud weiter.
      */
-    suspend fun codexCloud(pfad: String, json: String? = null): Pair<Int, String> = withContext(Dispatchers.IO) {
+    suspend fun <T> codexCloudRpc(block: suspend (rpc: suspend (String, JSONObject) -> JSONObject) -> T): T = withContext(Dispatchers.IO) {
         val token = validAccessToken()
         val konto = jwtAccountId(token) ?: accountId
             ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
-        val anfrage = Request.Builder().url("https://chatgpt.com/backend-api/wham$pfad")
-            .header("Accept", "application/json")
+        val offen = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val warten = java.util.concurrent.ConcurrentHashMap<Int, kotlinx.coroutines.CompletableDeferred<JSONObject>>()
+        fun alleScheitern(fehler: Throwable) {
+            offen.completeExceptionally(fehler)
+            warten.values.forEach { it.completeExceptionally(fehler) }
+        }
+        val anfrage = Request.Builder().url(CODEX_CLOUD_URL)
             .header("Authorization", "Bearer $token")
-            .header("originator", "codex_cli_rs")
-            .header("version", CODEX_CLIENT_VERSION)
-            .header("User-Agent", "codex_cli_rs/$CODEX_CLIENT_VERSION (Aufgaben)")
             .header("ChatGPT-Account-Id", konto)
-            .apply { if (json != null) post(json.toRequestBody(JSON_MEDIA_TYPE)) }
+            .header("Origin", "https://chatgpt.com")
+            // Ohne Client-Kennung lehnt der Server die Verbindung mit 403 ab.
+            .header("User-Agent", "codex_cli_rs/$CODEX_CLIENT_VERSION (Aufgaben)")
             .build()
-        val ergebnis = executeForText(AUTH_HTTP_CLIENT, anfrage)
-        ergebnis.code to ergebnis.body
+        val socket = CODEX_CLOUD_HTTP_CLIENT.newWebSocket(anfrage, object : okhttp3.WebSocketListener() {
+            override fun onOpen(webSocket: okhttp3.WebSocket, response: Response) { offen.complete(Unit) }
+            override fun onMessage(webSocket: okhttp3.WebSocket, text: String) {
+                val j = runCatching { JSONObject(text) }.getOrNull() ?: return
+                if (!j.has("id") || j.has("method")) return
+                val ziel = warten.remove(j.optInt("id")) ?: return
+                val fehler = j.optJSONObject("error")
+                if (fehler != null) ziel.completeExceptionally(IOException("Codex Cloud: ${fehler.optString("message").take(300)}"))
+                else ziel.complete(j.optJSONObject("result") ?: JSONObject())
+            }
+            override fun onFailure(webSocket: okhttp3.WebSocket, t: Throwable, response: Response?) {
+                alleScheitern(when (response?.code) {
+                    401, 403 -> CodexAuthException(AuthErrorKind.REAUTH, "Codex Cloud lehnt die Anmeldung ab (HTTP ${response.code}). Bitte in Jarvis neu bei ChatGPT anmelden.")
+                    else -> IOException("Codex Cloud nicht erreichbar: ${t.message ?: t.javaClass.simpleName}", t)
+                })
+            }
+            override fun onClosed(webSocket: okhttp3.WebSocket, code: Int, reason: String) { alleScheitern(IOException("Codex Cloud hat die Verbindung beendet ($code).")) }
+        })
+        var naechste = 1
+        val rpc: suspend (String, JSONObject) -> JSONObject = { methode, params ->
+            val id = naechste++
+            val antwort = kotlinx.coroutines.CompletableDeferred<JSONObject>()
+            warten[id] = antwort
+            socket.send(JSONObject().put("id", id).put("method", methode).put("params", params).toString())
+            withTimeoutOrNull(CODEX_CLOUD_TIMEOUT_MS) { antwort.await() } ?: throw IOException("Codex Cloud antwortet nicht auf $methode.")
+        }
+        try {
+            withTimeoutOrNull(CODEX_CLOUD_TIMEOUT_MS) { offen.await() } ?: throw IOException("Codex Cloud: Verbindungsaufbau dauerte zu lange.")
+            rpc("initialize", JSONObject().put("clientInfo", JSONObject().put("name", "jarvis").put("title", "Jarvis").put("version", CODEX_CLIENT_VERSION)))
+            block(rpc)
+        } finally {
+            socket.close(1000, null)
+        }
     }
 
     private suspend fun requestCodexResponseOnce(
@@ -947,6 +984,12 @@ class CodexAuthManager(context: Context) {
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .callTimeout(25, TimeUnit.SECONDS)
+            .build()
+        private const val CODEX_CLOUD_URL = "wss://codex-cloud-backend.chatgpt.com/"
+        private const val CODEX_CLOUD_TIMEOUT_MS = 30_000L
+        private val CODEX_CLOUD_HTTP_CLIENT = OkHttpClient.Builder()
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .pingInterval(15, TimeUnit.SECONDS)
             .build()
         private val RESPONSES_HTTP_CLIENT = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
