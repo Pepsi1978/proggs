@@ -86,7 +86,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val sounds = ProceduralSoundPlayer()
     private val audioRecorder = WavAudioRecorder(application)
     private val apiKeyStore = ApiKeyStore(application)
-    private val groqTranscriber = GroqTranscriber({ apiKeyStore.current.groqApiKey }, BuildConfig.GROQ_TRANSCRIPTION_MODEL)
+    private val groqTranscriber = GroqTranscriber(
+        { apiKeyStore.current.groqApiKey },
+        BuildConfig.GROQ_TRANSCRIPTION_MODEL,
+        modelProvider = { apiKeyStore.current.groqModel },
+        promptProvider = { apiKeyStore.current.let { GroqTranscriber.vokabularPrompt(it.vocabularyEnabled, it.vocabulary) } },
+    )
     private val textImprover = GeminiTextImprover({ apiKeyStore.current.geminiApiKey }, { apiKeyStore.current.geminiModel })
     private val _uiState = MutableStateFlow(
         AppUiState(connectedEmail = auth.email, apiKeys = apiKeyStore.current),

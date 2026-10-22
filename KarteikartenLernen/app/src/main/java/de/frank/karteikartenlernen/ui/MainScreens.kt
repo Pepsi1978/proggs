@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,6 +53,7 @@ import de.frank.karteikartenlernen.model.DEFAULT_GEMINI_MODEL
 import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.reasoningLevels
 import de.frank.karteikartenlernen.model.StudySession
+import de.frank.karteikartenlernen.transcription.GroqTranscriber
 import de.frank.karteikartenlernen.ui.theme.LocalAppPalette
 import de.frank.karteikartenlernen.ui.theme.Newsreader
 import de.frank.karteikartenlernen.ui.theme.SchibstedGrotesk
@@ -162,9 +164,25 @@ fun SettingsScreen(
             val groqConfigured = keys.groqApiKey.isNotBlank()
             SettingRow(
                 "Groq Whisper",
-                if (groqConfigured) "${BuildConfig.GROQ_TRANSCRIPTION_MODEL} · eigener API-Schlüssel" else "Bitte Groq-API-Schlüssel eintragen",
+                if (groqConfigured) "${GroqTranscriber.modellName(keys.groqModel)} · eigener API-Schlüssel" else "Bitte Groq-API-Schlüssel eintragen",
             ) { ConfiguredBadge(groqConfigured) }
             SettingTextField("Groq-API-Schlüssel", keys.groqApiKey, "gsk_…", secret = true) { value -> onApiKeys { it.copy(groqApiKey = value) } }
+            SettingRow("Whisper-Modell", GroqTranscriber.modellName(keys.groqModel)) {
+                SegmentedControl(
+                    listOf("Turbo", "Large V3"),
+                    if (keys.groqModel == GroqTranscriber.MODEL_LARGE_V3) "Large V3" else "Turbo",
+                    onSelect = { selected ->
+                        val model = if (selected == "Large V3") GroqTranscriber.MODEL_LARGE_V3 else GroqTranscriber.MODEL_TURBO
+                        onApiKeys { it.copy(groqModel = model) }
+                    },
+                )
+            }
+            SettingRow("Persönliches Wörterbuch", "Schreibweisen von Namen und Fachbegriffen") {
+                Toggle(keys.vocabularyEnabled) { onApiKeys { it.copy(vocabularyEnabled = !it.vocabularyEnabled) } }
+            }
+            SettingMultilineField("Begriffe (durch Komma oder Zeilenumbruch getrennt)", keys.vocabulary, enabled = keys.vocabularyEnabled) { value ->
+                onApiKeys { it.copy(vocabulary = value) }
+            }
             val geminiConfigured = keys.geminiApiKey.isNotBlank() && keys.geminiModel.isNotBlank()
             SettingRow(
                 "Gemini Textverbesserung",
@@ -351,6 +369,25 @@ private fun SettingTextField(label: String, value: String, placeholder: String, 
                 SmallPill(if (visible) "Verbergen" else "Zeigen") { visible = !visible }
             }
         }
+    }
+}
+
+/** Mehrzeiliges Eingabefeld im Stil von [SettingTextField], ohne Trimmen (Zeilenumbrüche trennen Begriffe). */
+@Composable
+private fun SettingMultilineField(label: String, value: String, enabled: Boolean, onChange: (String) -> Unit) {
+    val c = LocalAppPalette.current
+    Column(Modifier.fillMaxWidth().border(0.5.dp, c.border).padding(horizontal = 16.dp, vertical = 11.dp)) {
+        Text(label, color = c.muted, fontSize = 12.5.sp, fontWeight = FontWeight.Medium)
+        BasicTextField(
+            value = value,
+            onValueChange = onChange,
+            enabled = enabled,
+            textStyle = TextStyle(if (enabled) c.text else c.faint, 13.5.sp, fontFamily = SchibstedGrotesk),
+            cursorBrush = SolidColor(c.accent),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 96.dp)
+                .clip(RoundedCornerShape(10.dp)).background(c.field).border(1.dp, c.border, RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 9.dp),
+        )
     }
 }
 

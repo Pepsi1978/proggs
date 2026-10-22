@@ -141,6 +141,10 @@ data class ApiKeys(
     val groqApiKey: String = "",
     val geminiApiKey: String = "",
     val geminiModel: String = DEFAULT_GEMINI_MODEL,
+    /** Groq-Whisper-Modell (Standard Turbo) und persönliches Wörterbuch für die Spracheingabe. */
+    val groqModel: String = de.frank.karteikartenlernen.transcription.GroqTranscriber.MODEL_TURBO,
+    val vocabularyEnabled: Boolean = true,
+    val vocabulary: String = de.frank.karteikartenlernen.transcription.GroqTranscriber.STANDARD_WOERTERBUCH,
 )
 
 val sampleCards = listOf(
