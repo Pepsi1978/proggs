@@ -256,13 +256,18 @@ function normEcho(s) {
 		.replace(/[^\p{L}\p{N}]/gu, "");
 }
 
-// Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus ("Begriffe: …").
+// Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus: ab dem Anfang ("Begriffe: …")
+// oder nur dessen Ende/Mitte ("Claude Code, OpenAI, Anthropic.") bzw. den Stilsatz.
+// Ein echtes Diktat, das zufaellig nur aus Prompt-Teilen besteht, wird einmal ohne
+// Prompt wiederholt — harmlos.
 function isPromptEcho(text, prompt) {
 	if (!prompt || !String(text || "").trim()) return false;
 	const t = normEcho(text);
 	const p = normEcho(prompt);
+	if (!t) return false;
 	const marker = normEcho(ECHO_MARKER);
-	return t.startsWith(marker) && p.includes(t.slice(marker.length));
+	if (t.startsWith(marker) && p.includes(t.slice(marker.length))) return true;
+	return t.length >= 12 && p.includes(t); // Teil-Echo (Ende/Mitte des Prompts)
 }
 
 function isBlockedError(raw) {
@@ -270,6 +275,23 @@ function isBlockedError(raw) {
 		raw.includes("model_permission_blocked_org") ||
 		raw.includes("blocked at the organization level")
 	);
+}
+
+// Stil-Prompt: Whisper (auch turbo) setzt Satzzeichen/Grossschreibung nicht
+// zuverlaessig von selbst — jedes 30-s-Fenster richtet sich nach dem vorigen
+// Text. Ein sauber interpunktierter deutscher Prompt gibt den Stil vor, sonst
+// kippen ganze Passagen in "klein, ohne Punkt und Komma". Nur Stil/Vokabular,
+// keine Befehle (Leakage), siehe bugs/desktop/groq-transkription.md §1.3/§3.2.
+const STYLE_PROMPT_DE =
+	"Das ist ein sauber geschriebenes Diktat auf Deutsch, mit korrekter Groß- und Kleinschreibung, Kommas und Punkten.";
+
+// Prompt = Stilsatz (nur Deutsch) + " Begriffe: …" (nur mit eingeschaltetem Woerterbuch).
+// Stilsatz ~115 + Begriffe max. 350 Zeichen: bleibt unter dem 224-Token-Limit von Whisper.
+async function buildWhisperPrompt(lang) {
+	const style = (lang || "de") === "de" ? STYLE_PROMPT_DE : null;
+	const vocab = await loadVocabularyPrompt();
+	if (style && vocab) return style + " " + vocab;
+	return style || vocab || null;
 }
 
 async function loadVocabularyPrompt() {
@@ -285,7 +307,7 @@ async function postGroq(key, blob, model, lang, prompt) {
 	form.append("file", blob, "recording.webm");
 	form.append("model", model);
 	form.append("language", lang || "de");
-	// prompt nur mit eingeschaltetem persoenlichem Woerterbuch (Schreibweisen von Eigennamen).
+	// prompt = deutscher Stilsatz und/oder persoenliches Woerterbuch (siehe buildWhisperPrompt).
 	if (prompt) form.append("prompt", prompt);
 	// verbose_json liefert pro Segment no_speech_prob/avg_logprob/compression_ratio
 	// (bei Groq ohne Mehrkosten/-latenz vs. text) -> Confidence-Gate moeglich.
@@ -311,6 +333,16 @@ function groqErrorMessage(res) {
 		if (j?.error?.message) msg = j.error.message;
 	} catch {}
 	return msg;
+}
+
+// Ungefilterter top-level-Text der Groq-Antwort: die Echo-Erkennung prueft VOR dem
+// Halluzinationsfilter, sonst entfernt der Filter das Echo nur teilweise.
+function rawGroqText(raw) {
+	try {
+		return String(JSON.parse(raw)?.text || "");
+	} catch {
+		return String(raw || "");
+	}
 }
 
 function parseGroqResult(raw) {
@@ -345,7 +377,7 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 			const st = await chrome.storage.local.get(BLOCKED_KEY);
 			if (Number(st[BLOCKED_KEY] || 0) > Date.now()) useModel = OV_WHISPER.MODEL_TURBO;
 		}
-		const prompt = await loadVocabularyPrompt();
+		const prompt = await buildWhisperPrompt(lang);
 
 		let res = await postGroq(key, blob, useModel, lang, prompt);
 		if (
@@ -363,9 +395,9 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 		if (!res.ok) return { ok: false, error: groqErrorMessage(res) };
 
 		let r2 = parseGroqResult(res.raw);
-		if (isPromptEcho(r2.text, prompt)) {
-			// Dann einmal ohne Woerterbuch wiederholen statt das Diktat zu verlieren.
-			console.warn("[Overlays] Groq: Prompt-Echo erkannt -> erneut ohne Woerterbuch");
+		if (isPromptEcho(rawGroqText(res.raw), prompt) || isPromptEcho(r2.text, prompt)) {
+			// Dann einmal ohne Prompt wiederholen statt das Diktat zu verlieren.
+			console.warn("[Overlays] Groq: Prompt-Echo erkannt -> erneut ohne Prompt");
 			res = await postGroq(key, blob, useModel, lang, null);
 			if (!res.ok) return { ok: false, error: groqErrorMessage(res) };
 			r2 = parseGroqResult(res.raw);

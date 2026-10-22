@@ -153,6 +153,9 @@ async function save() {
 	const data = {};
 	for (const id of FIELDS) data[id] = document.getElementById(id).value.trim();
 	data.whisperModel = document.getElementById("whisperModel").value;
+	// Modell (neu) gewaehlt: 30-Min.-Turbo-Sperre nach "large-v3 blocked" aufheben,
+	// damit large-v3 nach dem Freischalten sofort wieder versucht wird (Schluessel wie background.js).
+	data.groqLargeV3BlockedUntil = 0;
 	data.whisperVocabEnabled = document.getElementById("whisperVocabEnabled").checked;
 	data.whisperVocab = document.getElementById("whisperVocab").value;
 	await chrome.storage.local.set(data);
