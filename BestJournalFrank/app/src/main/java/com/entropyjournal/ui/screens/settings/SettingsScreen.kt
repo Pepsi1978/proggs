@@ -153,6 +153,7 @@ import com.entropyjournal.ui.theme.WarmCopper
 import com.entropyjournal.ui.theme.bodyFontFamily
 import com.entropyjournal.ui.theme.headingFontFamily
 import com.entropyjournal.util.Constants
+import com.entropyjournal.util.ZusatzStimmen
 import com.entropyjournal.util.DateTimeFormatter
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -1633,7 +1634,7 @@ fun SettingsScreen(
                                 }
                                 if (voiceExpanded) {
                                     Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                                        voices.forEach { voice ->
+                                        voices.sortedByDescending { it.id in favorites }.forEach { voice ->
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier.fillMaxWidth().combinedClickable(
@@ -1705,7 +1706,7 @@ fun SettingsScreen(
                                 }
                                 if (googleVoiceExpanded) {
                                     Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                                        googleVoices.forEach { voice ->
+                                        googleVoices.sortedByDescending { it.id in favorites }.forEach { voice ->
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier.fillMaxWidth().combinedClickable(
@@ -1773,7 +1774,7 @@ fun SettingsScreen(
                             }
                             if (edgeVoiceExpanded) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                                    edgeVoices.forEach { voice ->
+                                    edgeVoices.sortedByDescending { it.id in favorites }.forEach { voice ->
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             modifier = Modifier.fillMaxWidth().combinedClickable(
@@ -1799,6 +1800,17 @@ fun SettingsScreen(
                                 }
                             }
                             } // end Edge Column
+
+                            // ── Gemini 3.8 Flash / Flash-Lite TTS und Azure Neural ──
+                            ZusatzStimmenAbschnitt(
+                                prefs = soundsPrefs,
+                                currentProvider = currentProvider,
+                                googleKeyFehlt = uiState.googleTtsApiKey.isBlank(),
+                                favorites = favorites,
+                                dropdownColors = dropdownColors,
+                                onProvider = { viewModel.updateTtsProvider(it) },
+                                onFavorit = { id, name -> favDialogVoiceId = id; favDialogVoiceName = name; showFavDialog = true },
+                            )
 
                             // ── Meine Stimme (Alibaba Voice Cloning) ──
                             Spacer(modifier = Modifier.height(8.dp))
@@ -3559,6 +3571,223 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS und Azure Neural — im selben Aufbau wie die
+ * übrigen Anbieter: Tippen auf die Auswahl macht den Anbieter aktiv, langes Drücken auf eine
+ * Stimme markiert sie als Favorit, Favoriten stehen oben.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
+private fun ZusatzStimmenAbschnitt(
+    prefs: android.content.SharedPreferences,
+    currentProvider: String,
+    googleKeyFehlt: Boolean,
+    favorites: Set<String>,
+    dropdownColors: androidx.compose.material3.TextFieldColors,
+    onProvider: (String) -> Unit,
+    onFavorit: (String, String) -> Unit,
+) {
+    fun lies(key: String, standard: String = "") = prefs.getString(key, standard) ?: standard
+    fun schreib(key: String, wert: String) { prefs.edit().putString(key, wert).apply() }
+
+    var flashStimme by remember { mutableStateOf(lies(Constants.PREF_GEMINI_FLASH_TTS_VOICE, ZusatzStimmen.DEFAULT_GEMINI_FLASH_VOICE)) }
+    var liteStimme by remember { mutableStateOf(lies(Constants.PREF_GEMINI_LITE_TTS_VOICE, ZusatzStimmen.DEFAULT_GEMINI_LITE_VOICE)) }
+    var azureStimme by remember { mutableStateOf(lies(Constants.PREF_AZURE_TTS_VOICE, ZusatzStimmen.DEFAULT_AZURE_VOICE)) }
+    var keyFrei by remember { mutableStateOf(lies(Constants.PREF_GEMINI_TTS_KEY_FREI)) }
+    var keyBezahlt by remember { mutableStateOf(lies(Constants.PREF_GEMINI_TTS_KEY_BEZAHLT)) }
+    var wahl by remember { mutableStateOf(lies(Constants.PREF_GEMINI_TTS_SCHLUESSEL_WAHL, ZusatzStimmen.GEMINI_TTS_FREI_DANN_BEZAHLT)) }
+    var chirp by remember { mutableStateOf(prefs.getBoolean(Constants.PREF_GEMINI_TTS_CHIRP_RUECKFALL, false)) }
+    var azureKey by remember { mutableStateOf(lies(Constants.PREF_AZURE_TTS_KEY)) }
+    var azureRegion by remember { mutableStateOf(lies(Constants.PREF_AZURE_TTS_REGION, ZusatzStimmen.DEFAULT_AZURE_REGION)) }
+    val geminiFehlt = keyFrei.isBlank() && keyBezahlt.isBlank()
+
+    ZusatzAnbieterBlock(
+        titel = "Gemini 3.8 Flash TTS",
+        untertitel = if (geminiFehlt) "Gemini-Schlüssel erforderlich (unten)" else "Sehr natürlich • 30 Stimmen • Deutsch",
+        aktiv = currentProvider == Constants.TTS_PROVIDER_GEMINI_FLASH,
+        stimmen = ZusatzStimmen.geminiFlashStimmen,
+        gewaehlt = flashStimme,
+        favorites = favorites,
+        dropdownColors = dropdownColors,
+        onAktiv = { onProvider(Constants.TTS_PROVIDER_GEMINI_FLASH) },
+        onWaehle = { flashStimme = it; schreib(Constants.PREF_GEMINI_FLASH_TTS_VOICE, it); onProvider(Constants.TTS_PROVIDER_GEMINI_FLASH) },
+        onFavorit = onFavorit,
+    )
+    ZusatzAnbieterBlock(
+        titel = "Gemini 3.8 Flash-Lite TTS",
+        untertitel = if (geminiFehlt) "Gemini-Schlüssel erforderlich (unten)" else "Schneller und günstiger • 30 Stimmen",
+        aktiv = currentProvider == Constants.TTS_PROVIDER_GEMINI_LITE,
+        stimmen = ZusatzStimmen.geminiLiteStimmen,
+        gewaehlt = liteStimme,
+        favorites = favorites,
+        dropdownColors = dropdownColors,
+        onAktiv = { onProvider(Constants.TTS_PROVIDER_GEMINI_LITE) },
+        onWaehle = { liteStimme = it; schreib(Constants.PREF_GEMINI_LITE_TTS_VOICE, it); onProvider(Constants.TTS_PROVIDER_GEMINI_LITE) },
+        onFavorit = onFavorit,
+    )
+
+    // Schlüssel und Schlüsselwahl gelten für beide Gemini-Stimmen.
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp)) {
+        if (geminiFehlt) {
+            Text(
+                "Trag mindestens einen Gemini-Schlüssel ein (aistudio.google.com → API-Schlüssel).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+        ApiKeyField(
+            label = "Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)",
+            value = keyFrei,
+            onValueChange = { keyFrei = it.trim(); schreib(Constants.PREF_GEMINI_TTS_KEY_FREI, keyFrei) },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        ApiKeyField(
+            label = "Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)",
+            value = keyBezahlt,
+            onValueChange = { keyBezahlt = it.trim(); schreib(Constants.PREF_GEMINI_TTS_KEY_BEZAHLT, keyBezahlt) },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Welcher Schlüssel", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ZusatzStimmen.GEMINI_TTS_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
+                androidx.compose.material3.FilterChip(
+                    selected = wahl == id,
+                    onClick = { wahl = id; schreib(Constants.PREF_GEMINI_TTS_SCHLUESSEL_WAHL, id) },
+                    label = { Text(name) },
+                )
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Rückfall auf Chirp 3 HD", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest die App mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = chirp,
+                onCheckedChange = { chirp = it; prefs.edit().putBoolean(Constants.PREF_GEMINI_TTS_CHIRP_RUECKFALL, it).apply() },
+                colors = goldenSwitchColors(),
+            )
+        }
+        if (chirp && googleKeyFehlt) {
+            Text(
+                "Für den Rückfall braucht es den Google Cloud TTS API-Key (unter „API-Schlüssel“).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+
+    ZusatzAnbieterBlock(
+        titel = "Azure Neural",
+        untertitel = if (azureKey.isBlank()) "Azure-Speech-Schlüssel erforderlich" else "Offizielle Microsoft-Stimmen • inkl. HD",
+        aktiv = currentProvider == Constants.TTS_PROVIDER_AZURE,
+        stimmen = ZusatzStimmen.azureStimmen,
+        gewaehlt = azureStimme,
+        favorites = favorites,
+        dropdownColors = dropdownColors,
+        onAktiv = { onProvider(Constants.TTS_PROVIDER_AZURE) },
+        onWaehle = { azureStimme = it; schreib(Constants.PREF_AZURE_TTS_VOICE, it); onProvider(Constants.TTS_PROVIDER_AZURE) },
+        onFavorit = onFavorit,
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+        ApiKeyField(
+            label = "Azure-Speech-Schlüssel (KEY 1)",
+            value = azureKey,
+            onValueChange = { azureKey = it.trim(); schreib(Constants.PREF_AZURE_TTS_KEY, azureKey) },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = azureRegion,
+            onValueChange = { azureRegion = it.trim(); schreib(Constants.PREF_AZURE_TTS_REGION, azureRegion) },
+            label = { Text("Azure-Region (z. B. westeurope)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            "HD-Stimmen brauchen die Stufe S0 und laufen nicht in jeder Region.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Ein Anbieter-Block mit aufklappbarer Stimmliste (Favoriten oben, langes Drücken = Favorit). */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+private fun ZusatzAnbieterBlock(
+    titel: String,
+    untertitel: String,
+    aktiv: Boolean,
+    stimmen: List<ZusatzStimmen.Stimme>,
+    gewaehlt: String,
+    favorites: Set<String>,
+    dropdownColors: androidx.compose.material3.TextFieldColors,
+    onAktiv: () -> Unit,
+    onWaehle: (String) -> Unit,
+    onFavorit: (String, String) -> Unit,
+    extra: @Composable () -> Unit = {},
+) {
+    Spacer(modifier = Modifier.height(8.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (aktiv) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    ) {
+        Column(modifier = Modifier.alpha(if (aktiv) 1f else 0.4f)) {
+            Text(
+                if (aktiv) "◉ $titel" else "○ $titel",
+                style = MaterialTheme.typography.titleSmall,
+                color = if (aktiv) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(untertitel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            val auswahl = stimmen.find { it.id == gewaehlt } ?: stimmen.first()
+            var offen by remember { mutableStateOf(false) }
+            Box(modifier = Modifier.fillMaxWidth().clickable { offen = !offen; onAktiv() }) {
+                TextField(
+                    value = auswahl.name + (if (auswahl.id in favorites) " ★" else ""),
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    trailingIcon = { Icon(if (offen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = dropdownColors,
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                )
+            }
+            if (offen) {
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    stimmen.sortedByDescending { it.id in favorites }.forEach { stimme ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().combinedClickable(
+                                onLongClick = { onFavorit(stimme.id, stimme.name) },
+                                onClick = { onWaehle(stimme.id); offen = false },
+                            ).padding(horizontal = 16.dp, vertical = 12.dp),
+                        ) {
+                            Text(
+                                stimme.name,
+                                color = if (stimme.id == gewaehlt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (stimme.id in favorites) { Text("★", color = Color(0xFFFFB300), fontSize = 16.sp) }
+                        }
+                    }
+                }
+            }
+        }
+        extra()
     }
 }
 

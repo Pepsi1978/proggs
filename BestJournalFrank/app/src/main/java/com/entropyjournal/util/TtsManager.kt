@@ -15,6 +15,7 @@ class TtsManager(private val context: Context) {
     private val elevenLabsPlayer = ElevenLabsTtsPlayer(context)
     private val googleCloudTtsPlayer = GoogleCloudTtsPlayer(context)
     private val qwenTtsPlayer = QwenTtsPlayer(context)
+    private val zusatzPlayer = ZusatzStimmenPlayer(context)
 
     companion object {
         private const val TAG = "TtsManager"
@@ -71,6 +72,28 @@ class TtsManager(private val context: Context) {
 
     private fun getQwenVoiceId(): String =
         prefs?.getString(Constants.PREF_QWEN_VOICE_ID, "") ?: ""
+
+    /** Gemini 3.8 Flash/Flash-Lite oder Azure Neural: alles, was der Zusatz-Player zum Sprechen braucht. */
+    private fun zusatzWahl(provider: String): ZusatzStimmenWahl {
+        val p = prefs
+        fun s(key: String, standard: String = "") = p?.getString(key, standard) ?: standard
+        val stimme = when (provider) {
+            Constants.TTS_PROVIDER_GEMINI_FLASH -> s(Constants.PREF_GEMINI_FLASH_TTS_VOICE, ZusatzStimmen.DEFAULT_GEMINI_FLASH_VOICE)
+            Constants.TTS_PROVIDER_GEMINI_LITE -> s(Constants.PREF_GEMINI_LITE_TTS_VOICE, ZusatzStimmen.DEFAULT_GEMINI_LITE_VOICE)
+            else -> s(Constants.PREF_AZURE_TTS_VOICE, ZusatzStimmen.DEFAULT_AZURE_VOICE)
+        }
+        return ZusatzStimmenWahl(
+            anbieter = provider,
+            stimme = stimme,
+            geminiKeyFrei = s(Constants.PREF_GEMINI_TTS_KEY_FREI),
+            geminiKeyBezahlt = s(Constants.PREF_GEMINI_TTS_KEY_BEZAHLT),
+            geminiSchluesselWahl = s(Constants.PREF_GEMINI_TTS_SCHLUESSEL_WAHL, ZusatzStimmen.GEMINI_TTS_FREI_DANN_BEZAHLT),
+            geminiChirpRueckfall = p?.getBoolean(Constants.PREF_GEMINI_TTS_CHIRP_RUECKFALL, false) ?: false,
+            googleKey = getGoogleTtsKey(),
+            azureKey = s(Constants.PREF_AZURE_TTS_KEY),
+            azureRegion = s(Constants.PREF_AZURE_TTS_REGION, ZusatzStimmen.DEFAULT_AZURE_REGION),
+        )
+    }
 
     private fun isTtsEnabled(): Boolean =
         prefs?.getBoolean(Constants.PREF_TTS_ENABLED, false) ?: false
@@ -187,7 +210,20 @@ class TtsManager(private val context: Context) {
         onPlaybackStart: (() -> Unit)?,
         onComplete: () -> Unit,
     ) {
-        when (getSelectedProvider()) {
+        when (val provider = getSelectedProvider()) {
+            Constants.TTS_PROVIDER_GEMINI_FLASH, Constants.TTS_PROVIDER_GEMINI_LITE, Constants.TTS_PROVIDER_AZURE -> {
+                Log.d(TAG, "Using $provider TTS")
+                zusatzPlayer.speak(
+                    text = text,
+                    wahl = zusatzWahl(provider),
+                    onPlaybackStart = onPlaybackStart,
+                    onComplete = onComplete,
+                    onError = { e ->
+                        Log.e(TAG, "$provider TTS error: ${e.message}")
+                        onComplete()
+                    },
+                )
+            }
             Constants.TTS_PROVIDER_ELEVENLABS -> {
                 val key = getElevenLabsKey()
                 val voiceId = getElevenLabsVoiceId()
@@ -273,6 +309,7 @@ class TtsManager(private val context: Context) {
         edgeTtsPlayer.stop()
         googleCloudTtsPlayer.stop()
         qwenTtsPlayer.stop()
+        zusatzPlayer.stop()
     }
 
     fun shutdown() {
@@ -280,5 +317,6 @@ class TtsManager(private val context: Context) {
         edgeTtsPlayer.shutdown()
         googleCloudTtsPlayer.shutdown()
         qwenTtsPlayer.shutdown()
+        zusatzPlayer.shutdown()
     }
 }

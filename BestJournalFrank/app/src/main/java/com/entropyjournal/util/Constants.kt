@@ -82,6 +82,20 @@ object Constants {
     const val TTS_PROVIDER_ELEVENLABS = "elevenlabs"
     const val TTS_PROVIDER_GOOGLE = "google_cloud"
     const val TTS_PROVIDER_QWEN = "qwen_clone"
+    const val TTS_PROVIDER_GEMINI_FLASH = ZusatzStimmen.PROVIDER_GEMINI_FLASH
+    const val TTS_PROVIDER_GEMINI_LITE = ZusatzStimmen.PROVIDER_GEMINI_LITE
+    const val TTS_PROVIDER_AZURE = ZusatzStimmen.PROVIDER_AZURE
+
+    // Gemini 3.8 TTS (eigene Schlüssel nur für die Stimme) und Azure Neural
+    const val PREF_GEMINI_FLASH_TTS_VOICE = "gemini_flash_tts_voice"
+    const val PREF_GEMINI_LITE_TTS_VOICE = "gemini_lite_tts_voice"
+    const val PREF_GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
+    const val PREF_GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+    const val PREF_GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
+    const val PREF_GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
+    const val PREF_AZURE_TTS_KEY = "azure_tts_key"
+    const val PREF_AZURE_TTS_REGION = "azure_tts_region"
+    const val PREF_AZURE_TTS_VOICE = "azure_tts_voice"
 
     // Eigene Stimme (Alibaba Model Studio, Qwen3-TTS Voice Cloning)
     const val PREF_QWEN_API_KEY = "qwen_tts_api_key"
