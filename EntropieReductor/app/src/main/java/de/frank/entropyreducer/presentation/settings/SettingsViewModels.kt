@@ -27,6 +27,12 @@ import de.frank.entropyreducer.util.runCatchingCancellable
 import de.frank.entropyreducer.domain.usecase.TestApiKeyUseCase
 import java.util.UUID
 import javax.inject.Inject
+import de.frank.entropyreducer.domain.usecase.TranscribeAudioUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -336,19 +342,52 @@ class ModelsViewModel @Inject constructor(private val settings: AppSettings) : V
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ModelsUiState())
 
-    fun setWhisper(v: String) = viewModelScope.launch { settings.setWhisperModel(v) }
+    fun setWhisper(v: String) = viewModelScope.launch {
+        // Neue (oder erneute) Wahl: eine fruehere large-v3-Sperre gilt nicht mehr.
+        TranscribeAudioUseCase.clearModelBlock()
+        settings.setWhisperModel(v)
+    }
+
+    /** Getippter, noch nicht gespeicherter Woerterbuch-Text; hat Vorrang vor dem gespeicherten Stand. */
+    private val vocabularyPending = MutableStateFlow<String?>(null)
+    private var vocabularyJob: Job? = null
 
     /** Woerterbuch-Zustand; null, bis der DataStore gelesen ist (das Textfeld startet erst dann). */
     val vocabulary: StateFlow<VocabularyUiState?> =
         kotlinx.coroutines.flow
-            .combine(settings.whisperVocabularyEnabledFlow, settings.whisperVocabularyFlow) { an, text ->
-                VocabularyUiState(an, text)
+            .combine(
+                settings.whisperVocabularyEnabledFlow,
+                settings.whisperVocabularyFlow,
+                vocabularyPending,
+            ) { an, text, pending ->
+                VocabularyUiState(an, pending ?: text)
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun setVocabularyEnabled(v: Boolean) = viewModelScope.launch { settings.setWhisperVocabularyEnabled(v) }
 
-    fun setVocabulary(v: String) = viewModelScope.launch { settings.setWhisperVocabulary(v) }
+    /** Speichert erst nach einer kurzen Tipp-Pause statt bei jedem Tastendruck. */
+    fun setVocabulary(v: String) {
+        vocabularyPending.value = v
+        vocabularyJob?.cancel()
+        vocabularyJob = viewModelScope.launch {
+            delay(VOCABULARY_DEBOUNCE_MS)
+            settings.setWhisperVocabulary(v)
+            vocabularyPending.compareAndSet(v, null)
+        }
+    }
+
+    override fun onCleared() {
+        // Noch ausstehenden Text nicht verlieren, wenn der Bildschirm vor der Tipp-Pause verlassen wird.
+        vocabularyPending.value?.let { v ->
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { settings.setWhisperVocabulary(v) }
+        }
+        super.onCleared()
+    }
+
+    private companion object {
+        const val VOCABULARY_DEBOUNCE_MS = 500L
+    }
 
     fun setGemini(v: String) = viewModelScope.launch { settings.setGeminiModel(v) }
 

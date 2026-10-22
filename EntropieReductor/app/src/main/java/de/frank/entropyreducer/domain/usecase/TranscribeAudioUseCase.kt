@@ -241,14 +241,26 @@ class TranscribeAudioUseCase @Inject constructor(
             return if (added == 0) null else sb.append('.').toString()
         }
 
-        /** Echo = Whisper wiederholt den Prompt ab seinem Anfang ("Begriffe: …"), ganz oder teilweise. */
+        /** Hebt die 30-Minuten-Sperre auf, z. B. wenn das Whisper-Modell neu gewaehlt wird. */
+        fun clearModelBlock() {
+            blockedUntil = 0L
+        }
+
+        /**
+         * Echo = Whisper wiederholt den Prompt ganz oder teilweise: ab dem Anfang ("Begriffe: …")
+         * oder nur ein Stueck aus Mitte/Ende (z. B. "Claude Code, OpenAI, Anthropic.").
+         */
         fun isPromptEcho(text: String, prompt: String?): Boolean {
             if (prompt.isNullOrEmpty() || text.isBlank()) return false
             fun norm(s: String) = s.lowercase().filter(Char::isLetterOrDigit)
             val t = norm(text)
             val p = norm(prompt)
             val marker = norm(ECHO_MARKER)
-            return t.startsWith(marker) && p.contains(t.substring(marker.length))
+            if (t.isEmpty()) return false
+            if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+            return t.length >= MIN_PARTIAL_ECHO && p.contains(t)
         }
+
+        private const val MIN_PARTIAL_ECHO = 12
     }
 }

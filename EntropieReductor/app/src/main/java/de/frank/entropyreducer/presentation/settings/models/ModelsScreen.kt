@@ -25,7 +25,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
@@ -135,8 +135,9 @@ private fun VocabularyCard(
     onText: (String) -> Unit,
 ) {
     val cosmos = LocalCosmos.current
-    // Lokal gehalten, damit der Cursor beim Tippen nicht springt; jede Aenderung wird sofort gespeichert.
-    var text by rememberSaveable { mutableStateOf(state.text) }
+    // Lokal gehalten, damit der Cursor beim Tippen nicht springt. An state.text gebunden, damit ein
+    // neu geladener Stand (z. B. nach Sicherungs-Import) sofort erscheint; gespeichert wird verzoegert im ViewModel.
+    var text by remember(state.text) { mutableStateOf(state.text) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

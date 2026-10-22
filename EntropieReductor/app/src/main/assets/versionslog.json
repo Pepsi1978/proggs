@@ -17,6 +17,7 @@
     {"versionCode": 353, "versionName": "0.29.18", "stand": "15.10.2026, 13:11 Uhr", "notiz": "Second Brain nutzt jetzt einen bereits laufenden WireGuard-Tunnel (z. B. die WireGuard-App) mit, statt einen eigenen aufzubauen und ihn damit zu trennen"},
     {"versionCode": 354, "versionName": "0.29.19", "stand": "15.10.2026, 16:17 Uhr", "notiz": "Whoop wird nur noch abgefragt, wenn ein neuer Schlaf fertig sein kann oder der letzte noch nicht berechnet ist; ein begonnener Anmelde-Tausch läuft jetzt sicher zu Ende, und Jarvis liest nur noch den gespeicherten Stand"},
     {"versionCode": 355, "versionName": "0.29.20", "stand": "15.10.2026, 16:35 Uhr", "notiz": "Nach einer neuen Whoop-Anmeldung verschwindet die Meldung „Anmeldung abgelaufen“ sofort aus Fußzeile und Jarvis, statt bis zum nächsten Hintergrund-Abgleich stehen zu bleiben"},
-    {"versionCode": 356, "versionName": "0.29.21", "stand": "22.10.2026, 11:23 Uhr", "notiz": "Einstellungen unter KI-Modell-Auswahl: Whisper-Modell mit klaren Namen (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter; ist Large V3 bei Groq gesperrt, nimmt die App still Turbo."}
+    {"versionCode": 356, "versionName": "0.29.21", "stand": "22.10.2026, 11:23 Uhr", "notiz": "Einstellungen unter KI-Modell-Auswahl: Whisper-Modell mit klaren Namen (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter; ist Large V3 bei Groq gesperrt, nimmt die App still Turbo."},
+    {"versionCode": 357, "versionName": "0.29.22", "stand": "22.10.2026, 11:51 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, und das Wörterbuch-Feld speichert ohne Ruckeln."}
   ]
 }
