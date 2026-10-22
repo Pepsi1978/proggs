@@ -555,14 +555,22 @@ public sealed class ModelRegistry
                 }
 
                 // Auch ausgeblendete Altmodelle entfernen: sie dürfen nicht in Listen zurückkehren.
-                foreach (var model in group.Models.Where(m => !Gpt56Models.Any(d => d.Slug == m.Slug)).ToList())
+                foreach (var model in group.Models.Where(m => !Gpt56Models.Any(d => d.Slug.Equals(m.Slug, StringComparison.OrdinalIgnoreCase))).ToList())
                     group.Models.Remove(model);
-                group.HiddenModelSlugs.RemoveAll(slug => !Gpt56Models.Any(d => d.Slug == slug));
-                group.KnownSyncedModelSlugs.RemoveAll(slug => !Gpt56Models.Any(d => d.Slug == slug));
-                foreach (var model in group.Models)
+                group.HiddenModelSlugs.Clear();
+                group.KnownSyncedModelSlugs = Gpt56Models.Select(d => d.Slug).ToList();
+                foreach (var definition in Gpt56Models)
                 {
-                    model.DisplayName = Gpt56Models.First(d => d.Slug == model.Slug).DisplayName;
+                    var model = group.Models.FirstOrDefault(m => definition.Slug.Equals(m.Slug, StringComparison.OrdinalIgnoreCase));
+                    if (model == null)
+                    {
+                        model = Model(definition.Slug, definition.DisplayName, "openai", "OpenAI");
+                        group.Models.Add(model);
+                    }
+                    model.Slug = definition.Slug;
+                    model.DisplayName = definition.DisplayName;
                     model.IsUserDefined = true;
+                    model.IsHidden = false;
                 }
             }
 

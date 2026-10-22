@@ -3136,9 +3136,9 @@ button{font-family:inherit;cursor:pointer}
       if (mid==="modelRouter" && v==="auto") { const h=document.getElementById("modelHaupt"); if(h) v=h.value; }
       b.style.display = modelSupportsReasoning(v) ? "block" : "none";
       const select=b.querySelector("select");
-      if(select && isCodexModel(v)) {
+      if(select) {
         const previous=select.value;
-        const levels=["low","medium","high","xhigh","max",...(v.includes("luna")?[]:["ultra"])];
+        const levels=isCodexModel(v)?["low","medium","high","xhigh","max",...(v.includes("luna")?[]:["ultra"])]:["none","low","medium","high","xhigh","max","ultra"];
         if(mid==="modelRouter") levels.unshift("auto");
         select.innerHTML=levels.map(level=>`<option value="${level}">${level}</option>`).join("");
         select.value=levels.includes(previous)?previous:"medium";

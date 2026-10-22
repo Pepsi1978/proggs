@@ -452,12 +452,21 @@ final class ModelRegistry {
                 }
 
                 let current = Set(ModelRegistry.gpt56Models.map { $0.slug })
-                group.models.removeAll { !current.contains($0.slug) }
-                group.hiddenModelSlugs.removeAll { !current.contains($0) }
-                group.knownSyncedModelSlugs.removeAll { !current.contains($0) }
-                for model in group.models {
-                    model.displayName = ModelRegistry.gpt56Models.first { $0.slug == model.slug }!.displayName
+                group.models.removeAll { !current.contains($0.slug.lowercased()) }
+                group.hiddenModelSlugs = []
+                group.knownSyncedModelSlugs = ModelRegistry.gpt56Models.map { $0.slug }
+                for definition in ModelRegistry.gpt56Models {
+                    let model: ModelEntry
+                    if let existing = group.models.first(where: { $0.slug.caseInsensitiveCompare(definition.slug) == .orderedSame }) {
+                        model = existing
+                    } else {
+                        model = ModelRegistry.model(definition.slug, definition.displayName, "openai", "OpenAI")
+                        group.models.append(model)
+                    }
+                    model.slug = definition.slug
+                    model.displayName = definition.displayName
                     model.isUserDefined = true
+                    model.isHidden = false
                 }
             }
 

@@ -452,6 +452,10 @@ final class MainViewModel {
         // Only explicit live catalog enumerations may remove levels; AI evidence is additive.
         if snapshot.canRemove { levels = snapshot.levels }
         for level in snapshot.levels where !levels.contains(level) { levels.append(level) }
+        if target.provider == "openai", ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna"].contains(target.model) {
+            let model = ModelEntry(slug: target.model, displayName: target.model, providerId: "openai", providerName: "OpenAI")
+            levels = OpenCodeVariantCatalog.launcherLevels(for: model)
+        }
         var selected = visible ? selectedThinkingOption?.value : saved?["selected"] as? String
         if visible {
             thinkingOptions.removeAll { !levels.contains($0.value) }

@@ -337,6 +337,8 @@ public sealed partial class MainViewModel : ObservableObject
         var saved = _thinkingCache.Find(key);
         var existing = visible ? ThinkingOptions.Select(x => x.Value).ToList() : saved?.Levels ?? [];
         var levels = snapshot.CanRemove ? snapshot.Levels.Distinct().ToList() : existing.Union(snapshot.Levels).ToList();
+        if (model.ProviderId == "openai" && model.Slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-5.6-terra" or "gpt-6-luna")
+            levels = GetStaticThinkingLevels(model).ToList();
         var selected = visible ? SelectedThinkingOption?.Value : saved?.Selected;
         if (visible)
         {

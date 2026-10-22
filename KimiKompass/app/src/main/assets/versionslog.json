@@ -9,6 +9,7 @@
     {"versionCode": 5, "versionName": "0.1.4", "stand": "22.10.2026, 11:51 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, und das Wörterbuch-Feld speichert ohne Ruckeln."},
     {"versionCode": 6, "versionName": "0.1.5", "stand": "22.10.2026, 12:04 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per Stern oder langem Drücken als Favorit oben anheften."},
     {"versionCode": 7, "versionName": "0.1.6", "stand": "22.10.2026, 12:58 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."},
-    {"versionCode": 8, "versionName": "0.1.7", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."}
+    {"versionCode": 8, "versionName": "0.1.7", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
+    {"versionCode": 9, "versionName": "0.1.8", "stand": "22.10.2026, 22:52 Uhr", "notiz": "Review: Bereits bekannte eigene Modelle erscheinen nicht doppelt in der Modellauswahl."}
   ]
 }

@@ -600,7 +600,7 @@ fun EinstellungenScreen(
                     beschriftung = "Modell",
                     punkte = if (claudeAktiv) de.frank.kompass.ai.ClaudeModell.entries.map { AuswahlPunkt(it.apiId, it.label, it.apiId) } else
                         KiModell.bekannt.map { AuswahlPunkt(it.apiId, it.label, it.apiId) } +
-                        zustand.eigeneModelle.map { AuswahlPunkt(it, it, "selbst erg\u00e4nzt") },
+                         zustand.eigeneModelle.filter { id -> KiModell.bekannt.none { it.apiId == id } }.map { AuswahlPunkt(it, it, "selbst erg\u00e4nzt") },
                     gewaehlt = zustand.modellId,
                     beiWahl = { gewaehlt ->
                         val bekannt = KiModell.bekannt.firstOrNull { it.apiId == gewaehlt }
