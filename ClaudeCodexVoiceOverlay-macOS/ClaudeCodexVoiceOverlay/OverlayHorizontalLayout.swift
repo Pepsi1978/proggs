@@ -224,13 +224,13 @@ extension OverlayPanel {
         // abgerundeten Enden durchgeht (sonst zeigt der transparente
         // contentView dort durch — analog zur HBar-Korrektur).
         // Reihenfolge 1:1 wie Windows-XAML, von OBEN gelesen: S1 Enter+Orientierung,
-        // S2 Mic+BTW, S3 W+G, S4 X, S5 Copy+Paste, S6 Screenshot+Insert, S7 Stern+
+        // S2 Mic+BTW, S3 W+G, S4 X, S5 Screenshot+Insert, S6 Frei+Einstellungen, S7 Stern+
         // Diskette. Die Liste laeuft von unten (AppKit-Y). Enter und Stern lagen
         // frueher vertauscht (Fix 2026-08-27).
         let sections: [(hex: String, y: CGFloat, h: CGFloat)] = [
             ("#B31F1B15", 0,   65),   // S7 Stern + Diskette (unten, +2 px bis zur Pillenkante)
-            ("#B3151B15", 66,  100),  // S6 Screenshot+Insert
-            ("#B3151B1D", 167, 100),  // S5 Copy+Paste
+            ("#B3151B15", 66,  100),  // S6 Frei+Einstellungen
+            ("#B3151B1D", 167, 100),  // S5 Screenshot+Insert
             ("#B31F1515", 268, 52),   // S4 X
             ("#B319151F", 321, 100),  // S3 W+G
             ("#B31F1C15", 422, 124),  // S2 Mic+BTW
@@ -264,10 +264,10 @@ extension OverlayPanel {
         wButton.frame                = NSRect(x: actionButtonX,   y: 375, width: btnSize, height: btnSize)
         gButton.frame                = NSRect(x: actionButtonX,   y: 327, width: btnSize, height: btnSize)
         xButton.frame                = NSRect(x: actionButtonX,   y: 274, width: btnSize, height: btnSize)
-        copyButton.frame             = NSRect(x: actionButtonX,   y: 221, width: btnSize, height: btnSize)
-        pasteButton.frame            = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
-        screenshotButton.frame       = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
-        insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
+        screenshotButton.frame       = NSRect(x: actionButtonX,   y: 221, width: btnSize, height: btnSize)
+        insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
+        freeButton.frame             = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
+        settingsButton.frame         = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
         enterButton.frame            = NSRect(x: 12, y: 556, width: 34, height: 34)
 
         // Profile-Tiles — gleiche Positionen wie computeProfilePositions().
@@ -416,11 +416,11 @@ extension OverlayPanel {
         // Sektion. Vorher: 92 fuer 86-Content → nur 3 px Polster, Buttons
         // 5 px ueber die Trennlinie. Jetzt 104 → echtes 9 px Polster.
         let s6 = HBarSection(
-            backgroundHex: "#B3151B15",  // S6 (Shot+Insert)
+            backgroundHex: "#B3151B15",  // S6 (Frei+Einstellungen)
             width: 104,
             upperButtons: [
-                .action(\.insertScreenshotButton, HBarLayout.actionButtonSize),
-                .action(\.screenshotButton,       HBarLayout.actionButtonSize),
+                .action(\.settingsButton, HBarLayout.actionButtonSize),
+                .action(\.freeButton,     HBarLayout.actionButtonSize),
             ],
             lowerButtons: [
                 .profile(10, HBarLayout.profileTileSize),
@@ -429,11 +429,11 @@ extension OverlayPanel {
             cornerMode: .middle)
 
         let s5 = HBarSection(
-            backgroundHex: "#B3151B1D",  // S5 (Copy+Paste)
+            backgroundHex: "#B3151B1D",  // S5 (Shot+Insert)
             width: 104,
             upperButtons: [
-                .action(\.pasteButton, HBarLayout.actionButtonSize),
-                .action(\.copyButton,  HBarLayout.actionButtonSize),
+                .action(\.insertScreenshotButton, HBarLayout.actionButtonSize),
+                .action(\.screenshotButton,       HBarLayout.actionButtonSize),
             ],
             lowerButtons: [
                 .profile(8, HBarLayout.profileTileSize),

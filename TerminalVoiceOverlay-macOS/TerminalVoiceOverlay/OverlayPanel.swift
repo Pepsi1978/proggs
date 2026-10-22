@@ -3,7 +3,7 @@ import AppKit
 // MARK: - Colors
 // Tuned to match the Windows TerminalVoiceOverlay 1:1 after commits
 // #1953..#1964: Material 700/800 dark-theme tones, yellow Mic family,
-// teal Screenshot/Insert pair, blue Copy/Paste pair, profile tiles in
+// teal Screenshot/Insert pair, free placeholder + settings gear, profile tiles in
 // goldenrod (active) / dark (inactive), and the 7-section dark panel
 // with black dividers and a black 2px outer ring.
 // Sichtbarkeit: bewusst INTERN (nicht fileprivate). Die Palette wird auch von
@@ -27,9 +27,9 @@ extension NSColor {
     // Special
     static let btnX        = NSColor(hex: "#C62828")
     static let btnXPressed = NSColor(hex: "#E53935")
-    // Copy/Paste
-    static let btnCopy  = NSColor(hex: "#0288D1")
-    static let btnPaste = NSColor(hex: "#0277BD")
+    // Freier Platzhalter + Einstellungen (ersetzen seit 2026-10-22 Copy/Paste)
+    static let btnFree     = NSColor(hex: "#2D2D2D")
+    static let btnSettings = NSColor(hex: "#455A64")
     // Screenshot/Insert
     static let btnScreenshot       = NSColor(hex: "#00796B")
     static let btnInsertScreenshot = NSColor(hex: "#00897B")
@@ -376,10 +376,12 @@ final class OverlayPanel: NSPanel {
     let wButton: RoundButton
     let gButton: RoundButton
     let enterButton: RoundButton
-    let copyButton: RoundButton
-    let pasteButton: RoundButton
     let screenshotButton: RoundButton
     let insertScreenshotButton: RoundButton
+    /// Leere Blase neben Profil 9 — Platzhalter fuer spaetere Funktionen.
+    let freeButton: RoundButton
+    /// Zahnrad neben Profil 10 — oeffnet direkt das Einstellungsfenster.
+    let settingsButton: RoundButton
 
     /// Profile tiles 1-10. Index 0 = Profil 1.
     let profileButtons: [RoundButton]
@@ -414,10 +416,10 @@ final class OverlayPanel: NSPanel {
     var onWClicked: (() -> Void)?
     var onGClicked: (() -> Void)?
     var onEnterClicked: (() -> Void)?
-    var onCopyClicked: (() -> Void)?
-    var onPasteClicked: (() -> Void)?
     var onScreenshotClicked: (() -> Void)?
     var onInsertScreenshotClicked: (() -> Void)?
+    /// Klick auf das Zahnrad: der AppDelegate oeffnet das Einstellungsfenster.
+    var onSettingsClicked: (() -> Void)?
     /// Linksklick auf eines der zehn Profil-Tiles. Index 1...10.
     /// Der AppDelegate fuegt damit den Schnell-Prompt ein.
     var onProfileClicked: ((Int) -> Void)?
@@ -492,16 +494,6 @@ final class OverlayPanel: NSPanel {
         // Windows-XAML CircleButton-Viewbox: 18 in 40 = 0.45
         let actionSymbolScale: CGFloat = 18.0 / 40.0
 
-        copyButton = RoundButton(label: "", color: .btnCopy)
-        copyButton.symbolImage = IconPaths.renderImage(
-            path: IconPaths.copy(), size: NSSize(width: 18, height: 18), fill: .white)
-        copyButton.symbolScaleFactor = actionSymbolScale
-
-        pasteButton = RoundButton(label: "", color: .btnPaste)
-        pasteButton.symbolImage = IconPaths.renderImage(
-            path: IconPaths.paste(), size: NSSize(width: 18, height: 18), fill: .white)
-        pasteButton.symbolScaleFactor = actionSymbolScale
-
         screenshotButton = RoundButton(label: "", color: .btnScreenshot)
         screenshotButton.symbolImage = IconPaths.renderImage(
             path: IconPaths.screenshot(), size: NSSize(width: 18, height: 18), fill: .white)
@@ -512,6 +504,17 @@ final class OverlayPanel: NSPanel {
         insertScreenshotButton.symbolImage = IconPaths.renderImage(
             path: IconPaths.attach(), size: NSSize(width: 18, height: 18), fill: .white)
         insertScreenshotButton.symbolScaleFactor = actionSymbolScale
+
+        // Leere Blase: gleicher Rundknopf, kein Symbol, keine Funktion.
+        freeButton = RoundButton(label: "", color: .btnFree)
+
+        // Zahnrad (SF Symbol "gearshape"); Fallback auf das Unicode-Zahnrad.
+        settingsButton = RoundButton(label: "\u{2699}\u{FE0E}", color: .btnSettings)
+        if let gear = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Einstellungen")?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)) {
+            settingsButton.symbolImage = gear
+            settingsButton.symbolScaleFactor = actionSymbolScale
+        }
 
         // Profile-Tiles 1...10. Alle 24x32 mit cornerRadius 6.
         var tiles: [RoundButton] = []
@@ -572,16 +575,18 @@ final class OverlayPanel: NSPanel {
 
         // ── 7 colour sections + 6 black 1 px dividers ──
         // Reihenfolge 1:1 wie Windows-XAML (OverlayWindow.xaml), von OBEN gelesen:
-        //   S1 Enter + Orientierung, S2 Mic+BTW, S3 W+G, S4 X, S5 Copy+Paste,
-        //   S6 Screenshot+Insert, S7 Stern + Diskette.
+        //   S1 Enter + Orientierung, S2 Mic+BTW, S3 W+G, S4 X, S5 Screenshot+Insert,
+        //   S6 Frei+Einstellungen, S7 Stern + Diskette.
+        // Seit 2026-10-22: Copy/Paste entfernt, Screenshot+Insert eine Sektion hoch,
+        // darunter leere Blase + Zahnrad.
         // AppKit rechnet von UNTEN, die Liste hier laeuft also rueckwaerts.
         // Frueher lagen Enter und Stern vertauscht — der Auto-Enter sass unten
         // statt ueber dem Mikrofon (Frank 2026-08-27).
         addSection(hex: "#1F1B15", y: 2,   height: 63, width: panelWidth)  // S7 Stern + Diskette
         addDivider(y: 65, width: panelWidth)
-        addSection(hex: "#151B15", y: 66,  height: 100, width: panelWidth) // S6 Screenshot+Insert
+        addSection(hex: "#151B15", y: 66,  height: 100, width: panelWidth) // S6 Frei+Einstellungen
         addDivider(y: 166, width: panelWidth)
-        addSection(hex: "#151B1D", y: 167, height: 100, width: panelWidth) // S5 Copy+Paste
+        addSection(hex: "#151B1D", y: 167, height: 100, width: panelWidth) // S5 Screenshot+Insert
         addDivider(y: 267, width: panelWidth)
         addSection(hex: "#1F1515", y: 268, height: 52,  width: panelWidth) // S4 X
         addDivider(y: 320, width: panelWidth)
@@ -603,10 +608,10 @@ final class OverlayPanel: NSPanel {
         wButton.frame                = NSRect(x: actionButtonX,   y: 375, width: btnSize, height: btnSize)
         gButton.frame                = NSRect(x: actionButtonX,   y: 327, width: btnSize, height: btnSize)
         xButton.frame                = NSRect(x: actionButtonX,   y: 274, width: btnSize, height: btnSize)
-        copyButton.frame             = NSRect(x: actionButtonX,   y: 221, width: btnSize, height: btnSize)
-        pasteButton.frame            = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
-        screenshotButton.frame       = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
-        insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
+        screenshotButton.frame       = NSRect(x: actionButtonX,   y: 221, width: btnSize, height: btnSize)
+        insertScreenshotButton.frame = NSRect(x: actionButtonX,   y: 173, width: btnSize, height: btnSize)
+        freeButton.frame             = NSRect(x: actionButtonX,   y: 120, width: btnSize, height: btnSize)
+        settingsButton.frame         = NSRect(x: actionButtonX,   y: 72,  width: btnSize, height: btnSize)
         enterButton.frame            = NSRect(x: sideButtonX, y: 556, width: sideButtonSize, height: sideButtonSize)
 
         // ── Position der Profile-Tiles (rechte Spalte) ──
@@ -614,8 +619,8 @@ final class OverlayPanel: NSPanel {
         //   S2 (Mic+BTW): Profil 1, 2, 3
         //   S3 (W+G):     Profil 4, 5
         //   S4 (X):       Profil 6
-        //   S5 (Copy+P):  Profil 7, 8
-        //   S6 (Shot+In): Profil 9, 10
+        //   S5 (Shot+In): Profil 7, 8
+        //   S6 (Frei+Einst.): Profil 9, 10
         // Tile-Hoehe 32 px, Spacing 8 px, ergeben Stack-Hoehen die gut
         // in die jeweilige Sektion passen und vertikal mittig zentriert
         // sind (gleiche Optik wie Windows).
@@ -629,8 +634,8 @@ final class OverlayPanel: NSPanel {
         let allButtons: [NSView] = [
             ultrathinkButton, micButton, btwButton,
             wButton, gButton, xButton,
-            copyButton, pasteButton,
             screenshotButton, insertScreenshotButton,
+            freeButton, settingsButton,
             enterButton
         ]
         for btn in allButtons { self.contentView?.addSubview(btn) }
@@ -648,10 +653,10 @@ final class OverlayPanel: NSPanel {
         wButton.onClick                = { [weak self] in self?.onWClicked?() }
         gButton.onClick                = { [weak self] in self?.onGClicked?() }
         enterButton.onClick            = { [weak self] in self?.onEnterClicked?() }
-        copyButton.onClick             = { [weak self] in self?.onCopyClicked?() }
-        pasteButton.onClick            = { [weak self] in self?.onPasteClicked?() }
         screenshotButton.onClick       = { [weak self] in self?.onScreenshotClicked?() }
         insertScreenshotButton.onClick = { [weak self] in self?.onInsertScreenshotClicked?() }
+        settingsButton.onClick         = { [weak self] in self?.onSettingsClicked?() }
+        // freeButton: bewusst ohne onClick (Platzhalter).
         for n in 1...10 {
             profileButtons[n - 1].onClick = { [weak self] in self?.onProfileClicked?(n) }
         }
@@ -666,14 +671,14 @@ final class OverlayPanel: NSPanel {
         // S2 (Mic+BTW): y=422, h=124  → Tile-Stack 32+8+32+8+32 = 112 → centered: padding 6 oben+unten → y=428,468,508
         // S3 (W+G):     y=321, h=100  → Stack 32+8+32 = 72 → centered: padding 14 → y=335,375
         // S4 (X):       y=268, h=52   → Stack 32 → centered: padding 10 → y=278
-        // S5 (Copy+P):  y=167, h=100  → Stack 72 → y=181,221
-        // S6 (Shot+In): y=66,  h=100  → Stack 72 → y=80,120
+        // S5 (Shot+In): y=167, h=100  → Stack 72 → y=181,221
+        // S6 (Frei+E.): y=66,  h=100  → Stack 72 → y=80,120
         return [
             (1, 508), (2, 468), (3, 428),    // S2 Mic+BTW (von oben nach unten)
             (4, 375), (5, 335),               // S3 W+G
             (6, 278),                          // S4 X
-            (7, 221), (8, 181),                // S5 Copy+P
-            (9, 120), (10, 80)                 // S6 Shot+Insert
+            (7, 221), (8, 181),                // S5 Shot+Insert
+            (9, 120), (10, 80)                 // S6 Frei+Einstellungen
         ]
     }
 
@@ -708,10 +713,10 @@ final class OverlayPanel: NSPanel {
         mgr.register(wButton,          text: "Whisper")
         mgr.register(gButton,          text: "Gemini")
         mgr.register(xButton,          text: "Zeile löschen")
-        mgr.register(copyButton,       text: "Text kopieren")
-        mgr.register(pasteButton,      text: "Text einfügen")
         mgr.register(screenshotButton, text: "Screenshot")
         mgr.register(insertScreenshotButton, text: "Screenshots einfügen")
+        mgr.register(freeButton,       text: "Frei")
+        mgr.register(settingsButton,   text: "Einstellungen")
         mgr.register(enterButton,      text: "Auto-Enter")
 
         // Zahlen 1-10 = Schnell-Prompts; der AppDelegate setzt die Kurzbeschreibungen.
@@ -873,26 +878,6 @@ final class OverlayPanel: NSPanel {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
                 self?.xButton.buttonColor = .btnX
             }
-        }
-    }
-
-    func flashCopyButton() {
-        copyButton.buttonColor = .btnIdle
-        copyButton.needsDisplay = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self else { return }
-            self.copyButton.buttonColor = .btnCopy
-            self.copyButton.needsDisplay = true
-        }
-    }
-
-    func flashPasteButton() {
-        pasteButton.buttonColor = .btnIdle
-        pasteButton.needsDisplay = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self else { return }
-            self.pasteButton.buttonColor = .btnPaste
-            self.pasteButton.needsDisplay = true
         }
     }
 

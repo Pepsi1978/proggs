@@ -388,23 +388,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onBtwClicked = { [weak self] in self?.toggleBtwRecording() }
         panel.onEnterClicked = { [weak self] in self?.handleEnterClick() }
 
-        panel.onCopyClicked = { [weak self] in
-            TerminalController.copySelection()
-            self?.panel.flashCopyButton()
-        }
-
-        panel.onPasteClicked = { [weak self] in
-            guard let self = self else { return }
-            TerminalController.pasteClipboard()
-            self.panel.flashPasteButton()
-            self.hasPastedText = true
-            if self.autoEnterEnabled {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                    guard let self = self else { return }
-                    TerminalController.pressReturn()
-                    self.hasPastedText = false
-                }
-            }
+        // Zahnrad: oeffnet direkt dasselbe Einstellungsfenster wie Stern → Einstellungen
+        // (bzw. Cmd+Shift+,) — auch ohne offenes Promptboard. Asynchron, weil
+        // RoundButton onClick schon im mouseDown feuert und der Dialog modal laeuft.
+        panel.onSettingsClicked = { [weak self] in
+            DispatchQueue.main.async { self?.openSettingsDialog() }
         }
 
         panel.onScreenshotClicked = { [weak self] in self?.takeScreenshot() }

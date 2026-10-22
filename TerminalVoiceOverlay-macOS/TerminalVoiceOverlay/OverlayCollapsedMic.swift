@@ -109,8 +109,8 @@ extension OverlayPanel {
         let otherButtons: [RoundButton] = [
             ultrathinkButton, btwButton,
             wButton, gButton, xButton,
-            copyButton, pasteButton,
             screenshotButton, insertScreenshotButton,
+            freeButton, settingsButton,
             enterButton
         ]
         for b in otherButtons { b.frame = offscreen }
