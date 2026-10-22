@@ -5,7 +5,7 @@ Sprachaktivitätserkennung (Silero VAD) für das Aufnahmeende und die Sprachzeit
 gegen stille Whisper-Halluzinationen. Fahr- und Lüftergeräusch halten das Mikrofon nicht offen, reine
 Geräuschaufnahmen gehen gar nicht erst an Groq, angehängte Floskeln fallen, kurze echte Äußerungen bleiben.
 
-- **Stand:** v4
+- **Stand:** v5
 - **Plattform:** Android (Kotlin, ohne Compose)
 - **Angelegt:** 15.10.2026 20:02
 - **Ordner:** `Module/Android/M1.4-Transkriptionsmodul/`
@@ -90,7 +90,7 @@ Vier Nabelschnüre wurden durchgeschnitten, alle als Parameter bzw. Anschluss:
 
 ## Gespeicherter Zustand
 
-Keiner. Filterschalter, Schlüssel, Whisper-Modell und Wörterbuch liegen in den Einstellungen der App; Aufnahmen sind flüchtig. Einzig die 30-Minuten-Sperre für large-v3 nach einer Groq-Ablehnung lebt im Speicher (companion object).
+Keiner. Filterschalter, Schlüssel, Whisper-Modell und Wörterbuch liegen in den Einstellungen der App; Aufnahmen sind flüchtig. Einzig die 30-Minuten-Sperre für large-v3 nach einer Groq-Ablehnung lebt im Speicher (companion object); `sperreAufheben()` setzt sie zurück (Aufruf bei Modellwahl in den Einstellungen), `largeV3Gesperrt()` fragt sie ab.
 
 - —
 
@@ -109,7 +109,7 @@ Keiner. Filterschalter, Schlüssel, Whisper-Modell und Wörterbuch liegen in den
 
 | App | Stand | Pfad der Kopie |
 |---|---|---|
-| Jarvis | v4 | `Jarvis/app/src/main/java/de/frank/module/transkriptionsmodul/` (Tests: `Jarvis/app/src/test/java/de/frank/module/transkriptionsmodul/`) |
+| Jarvis | v5 | `Jarvis/app/src/main/java/de/frank/module/transkriptionsmodul/` (Tests: `Jarvis/app/src/test/java/de/frank/module/transkriptionsmodul/`) |
 
 ## Abnahme
 
@@ -138,3 +138,4 @@ AudioRecord). Die Testdaten sind TTS-Sprache mit synthetischem Geräusch, keine 
 | v2 | 18.10.2026 | `MicRecorder`: Die Leseschleife wartet nicht mehr auf das Laden von Silero (beim Kaltstart lief sonst der Aufnahmepuffer über, die ersten Silben fehlten); ein spät geladenes Modell bekommt das schon Aufgenommene (bis 10 s) nachgereicht, damit die Zeitachse zur WAV passt. `release()` schließt die ONNX-Sitzung (nach dem Ende des Lese-Jobs), die nächste Aufnahme lädt sie neu. | nein | — |
 | v3 | 18.10.2026 | `MicRecorder`: Den Rückstand eines spät geladenen Silero-Modells rechnet die Leseschleife nicht mehr am Stück (bis zu 10 s ließen den Aufnahmepuffer überlaufen), sondern je Durchlauf höchstens zwei Rahmen zusätzlich. Bis die Zeitachse die Gegenwart erreicht hat, bleibt `sprachRahmen` null und das Aufnahmeende läuft über den Pegel. | nein | — |
 | v4 | 22.10.2026 | `GroqTranscriber`: Whisper-Modell wählbar (`MODELL_TURBO`/`MODELL_LARGE_V3`, 403-Sperre → einmal Turbo, 30 Min. Merker), persönliches Wörterbuch als Prompt (`prompt`, `begriffe`, `woerterbuchPrompt`, `STANDARD_WOERTERBUCH`, max. 100 Begriffe/350 Zeichen) mit Prompt-Echo-Schutz (einmal ohne Prompt wiederholen). Neue Parameter haben Standardwerte. | nein | — |
+| v5 | 22.10.2026 | `GroqTranscriber`: Prompt-Echo erkennt auch Teil-Echos ohne „Begriffe“ (Ende/Mitte des Prompts, ab 12 Zeichen normalisiert), geprüft auf dem Rohtext vor dem Filter. Neu `sperreAufheben()` (App ruft es bei Modellwahl, large-v3 sofort wieder nutzbar) und `largeV3Gesperrt()`. | nein | — |
