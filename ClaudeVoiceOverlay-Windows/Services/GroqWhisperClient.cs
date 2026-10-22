@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,7 +17,10 @@ namespace ClaudeVoiceOverlay.Services
         private readonly string _apiKey;
         private readonly string _defaultModel;
         // Pro Aufnahme aus GroqModelSetting gesetzt (Einstellungen), sonst WHISPER_MODEL.
-        private string _model;
+        // AsyncLocal statt Feld: parallele Aufnahmen (Overlay + Prompt-Editor) teilen sich
+        // diesen Client und duerfen sich das Modell nicht gegenseitig umstellen.
+        private readonly AsyncLocal<string?> _callModel = new();
+        private string CurrentModel => _callModel.Value ?? _defaultModel;
         private readonly string _language;
         private readonly string _url;
         private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
@@ -134,15 +138,14 @@ namespace ClaudeVoiceOverlay.Services
         {
             _apiKey = apiKey;
             _defaultModel = model;
-            _model = model;
             _language = language;
             _url = url;
         }
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
-            _model = GroqModelSetting.Current ?? _defaultModel;
-            DiagLog.Write("Groq", "transcribe_start", ("model", _model), ("lang", _language));
+            _callModel.Value = GroqModelSetting.Resolve(_defaultModel);
+            DiagLog.Write("Groq", "transcribe_start", ("model", CurrentModel), ("lang", _language));
             // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
             // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
             // Disk — bei 3 Retries und ~1 MB Audio entstehen 3 MB unnoetige
@@ -166,15 +169,16 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     text = await TranscribeOnceAsync(fileBytes, voiced).ConfigureAwait(false);
                 }
-                catch (Exception ex) when (_model != GroqModelSetting.Turbo && GroqModelSetting.IsBlockedError(ex))
+                catch (Exception ex) when (CurrentModel != GroqModelSetting.Turbo && GroqModelSetting.IsBlockedError(ex))
                 {
                     // large-v3 ist fuer die Groq-Organisation noch nicht freigeschaltet:
                     // Diktat nicht verlieren, einmal mit Turbo wiederholen.
-                    DiagLog.Write("Groq", "model_blocked_fallback_turbo", ("model", _model));
-                    _model = GroqModelSetting.Turbo;
+                    DiagLog.Write("Groq", "model_blocked_fallback_turbo", ("model", CurrentModel));
+                    GroqModelSetting.MarkBlocked();
+                    _callModel.Value = GroqModelSetting.Turbo;
                     text = await TranscribeOnceAsync(fileBytes, voiced).ConfigureAwait(false);
                 }
-                DiagLog.Write("Groq", "transcribe_done", ("chars", text.Length), ("model", _model));
+                DiagLog.Write("Groq", "transcribe_done", ("chars", text.Length), ("model", CurrentModel));
                 return text;
             }
             catch (Exception ex)
@@ -287,7 +291,7 @@ namespace ClaudeVoiceOverlay.Services
             sb.Append("header = \"Expect:\"\n");
             sb.Append("header = ").Append(CurlQuote("Authorization: Bearer " + _apiKey)).Append('\n');
             sb.Append("form = ").Append(CurlQuote("file=@" + wavPath + ";type=audio/wav")).Append('\n');
-            sb.Append("form = ").Append(CurlQuote("model=" + _model)).Append('\n');
+            sb.Append("form = ").Append(CurlQuote("model=" + CurrentModel)).Append('\n');
             sb.Append("form = ").Append(CurlQuote("language=" + _language)).Append('\n');
             sb.Append("form = \"response_format=verbose_json\"\n");
             sb.Append("form = \"temperature=0\"\n");
@@ -306,7 +310,7 @@ namespace ClaudeVoiceOverlay.Services
             // Add fields. Kein prompt-Parameter mehr — der Original-Whisper-Output
             // wird unveraendert weitergegeben (z. B. an Gemini), wo themenspezifische
             // Profile die Nachbearbeitung uebernehmen.
-            content.Add(new StringContent(_model), "model");
+            content.Add(new StringContent(CurrentModel), "model");
             content.Add(new StringContent(_language), "language");
             // verbose_json statt text: liefert die Confidence-Felder fuers Halluzinations-Gate,
             // bei Groq ohne Mehrlatenz/-kosten (nur word-Timestamps kosten extra — die fordern wir NICHT an).
@@ -537,7 +541,8 @@ namespace ClaudeVoiceOverlay.Services
                         ("chars", part.Length));
                     if (!string.IsNullOrWhiteSpace(part)) parts.Add(part.Trim());
                 }
-                catch (Exception ex)
+                // Gesperrtes Modell betrifft alle Teile: nach oben reichen, dort greift der Turbo-Rueckfall.
+                catch (Exception ex) when (!GroqModelSetting.IsBlockedError(ex))
                 {
                     // Funktionserhaltend: ein kaputter Teil darf die uebrigen Teile nicht mitreissen.
                     failed++;

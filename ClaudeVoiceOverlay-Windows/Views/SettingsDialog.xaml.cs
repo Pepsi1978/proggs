@@ -41,7 +41,10 @@ public partial class SettingsDialog : Window
             TranscriptionEngineSetting.GeminiLive => 2,
             _ => 0,
         };
-        GroqModelBox.SelectedIndex = GroqModelSetting.Current == GroqModelSetting.LargeV3 ? 1 : 0;
+        string? envWhisperModel = null;
+        try { envWhisperModel = Config.Load().WhisperModel; } catch { }
+        var groqModelInitial = (GroqModelSetting.Current ?? envWhisperModel) == GroqModelSetting.LargeV3 ? 1 : 0;
+        GroqModelBox.SelectedIndex = groqModelInitial;
         TranscriptionModeBox.SelectedIndex = TranscriptionModeSetting.UseSmart ? 1 : 0;
         VocabularyBox.Text = LoadPersonalVocabulary();
         UseVocabularyCheck.IsChecked = LoadVocabularyEnabled();
@@ -69,9 +72,11 @@ public partial class SettingsDialog : Window
                 2 => TranscriptionEngineSetting.GeminiLive,
                 _ => TranscriptionEngineSetting.Groq,
             });
-            GroqModelSetting.Save(GroqModelBox.SelectedIndex == 1
-                ? GroqModelSetting.LargeV3
-                : GroqModelSetting.Turbo);
+            // Nur bei echter Aenderung schreiben, sonst ueberstimmt die Datei ein WHISPER_MODEL aus der .env.
+            if (GroqModelBox.SelectedIndex != groqModelInitial)
+                GroqModelSetting.Save(GroqModelBox.SelectedIndex == 1
+                    ? GroqModelSetting.LargeV3
+                    : GroqModelSetting.Turbo);
             TranscriptionModeSetting.Save(TranscriptionModeBox.SelectedIndex == 1
                 ? TranscriptionModeSetting.Smart
                 : TranscriptionModeSetting.Verbatim);

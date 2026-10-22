@@ -25,6 +25,8 @@ namespace ClaudeVoiceOverlay.Services
         private static string? _cached;
         private static DateTime _cachedStamp = DateTime.MinValue;
         private static readonly object _lock = new();
+        // Nach einem 403 "blocked" 30 Min. direkt Turbo nehmen statt jedes Diktat doppelt hochzuladen.
+        private static DateTime _blockedUntilUtc = DateTime.MinValue;
 
         public static string? Current
         {
@@ -51,7 +53,8 @@ namespace ClaudeVoiceOverlay.Services
                         return _cached;
                     }
                 }
-                catch { return null; }
+                // Lesefehler (z. B. das andere Overlay schreibt gerade): letzte bekannte Wahl behalten.
+                catch { return _cached; }
             }
         }
 
@@ -63,9 +66,19 @@ namespace ClaudeVoiceOverlay.Services
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
                 File.WriteAllText(path, (model == LargeV3 ? LargeV3 : Turbo) + "\n");
                 lock (_lock) { _cachedStamp = DateTime.MinValue; }
+                _blockedUntilUtc = DateTime.MinValue;
             }
             catch { /* best-effort: der Schalter darf das Speichern nicht blockieren */ }
         }
+
+        /// <summary>Gewaehltes Modell fuer diese Aufnahme; large-v3 wird nach einer Sperre voruebergehend durch Turbo ersetzt.</summary>
+        public static string Resolve(string fallback)
+        {
+            var model = Current ?? fallback;
+            return model == LargeV3 && DateTime.UtcNow < _blockedUntilUtc ? Turbo : model;
+        }
+
+        public static void MarkBlocked() => _blockedUntilUtc = DateTime.UtcNow.AddMinutes(30);
 
         /// <summary>Groq-Antwort "Modell fuer die Organisation gesperrt".</summary>
         public static bool IsBlockedError(Exception ex) =>
