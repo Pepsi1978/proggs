@@ -241,6 +241,7 @@
     {"versionCode": 236, "versionName": "1.8.225", "stand": "22.10.2026, 19:53 Uhr", "notiz": "Die Anmeldung bei der Claude Console klappt jetzt auch mit Google (kein weißer Bildschirm mehr); das Anthropic-Guthaben zählt nur noch gültige Credits, erkennt eine abgelaufene Console-Anmeldung und bietet dann wieder das Anmelden an."},
     {"versionCode": 237, "versionName": "1.8.226", "stand": "22.10.2026, 20:00 Uhr", "notiz": "Bei gewähltem Claude-Modell steht das verfügbare Anthropic-Restguthaben in Dollar direkt vor dem Modellnamen; ohne abrufbares Guthaben bleibt der Modellname sichtbar."},
     {"versionCode": 238, "versionName": "1.8.227", "stand": "22.10.2026, 20:27 Uhr", "notiz": "Sol 6.1 ohne Rechner läuft jetzt wirklich in deiner Codex Cloud (Umgebung proggs, wie in der Codex-App): Nach der Wahl Sol kommt keine CLI-Frage, der Auftrag geht direkt in die Cloud."},
-    {"versionCode": 239, "versionName": "1.8.228", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."}
+    {"versionCode": 239, "versionName": "1.8.228", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
+    {"versionCode": 240, "versionName": "1.8.229", "stand": "22.10.2026, 23:07 Uhr", "notiz": "Bei Claude-Modellen steht die Modellanzeige wieder rechts in der Eingabeblase, davor das Guthaben grün in Klammern."}
   ]
 }

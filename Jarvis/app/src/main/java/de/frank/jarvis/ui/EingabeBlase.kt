@@ -73,7 +73,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -132,8 +136,13 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
     val guthabenVorspann = if (modell.istAnthropic) {
         vm.anthropicGuthaben?.takeIf { it.hinweis == null }?.restUsd
-            ?.let { "${AnthropicGuthabenFaehigkeit.betrag(it)} $ · " }.orEmpty()
+            ?.let { "(${AnthropicGuthabenFaehigkeit.betrag(it)} $) " }.orEmpty()
     } else ""
+    // Das Guthaben steht grün und in normaler Schrift vor dem Modellnamen, der Name selbst bleibt wie gehabt.
+    fun mitGuthaben(name: String) = buildAnnotatedString {
+        if (guthabenVorspann.isNotEmpty()) withStyle(SpanStyle(color = f.erfolg, fontWeight = FontWeight.Normal)) { append(guthabenVorspann) }
+        append(name)
+    }
 
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, 28.dp, erhoeht = 0.8f, fuellung = f.flaecheStark)) {
         if (vm.liveAktiv) { LiveLeiste(vm); return@Column }
@@ -191,10 +200,10 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
-            if (!modell.istAnthropic) Spacer(Modifier.weight(1f))
-            Row(Modifier.then(if (modell.istAnthropic) Modifier.weight(1f) else Modifier).clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(guthabenVorspann + kurzName(modell), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, modifier = if (modell.istAnthropic) Modifier.weight(1f, fill = false) else Modifier)
+            Spacer(Modifier.weight(1f))
+            Row(Modifier.clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(mitGuthaben(kurzName(modell)), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis)
                 Text(" " + vm.einstellungen.denkstufe.label, color = f.text, fontSize = 15.sp, maxLines = 1)
             }
             Spacer(Modifier.width(4.dp))
@@ -260,7 +269,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             CodexModel.von(anbieter).forEach { m ->
                 val aktiv = m == vm.einstellungen.modell
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).antippen { vm.setzeModell(m) }.padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text((if (aktiv) guthabenVorspann else "") + m.label, color = f.text, fontSize = 17.sp, fontWeight = if (aktiv) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                    Text(if (aktiv) mitGuthaben(m.label) else AnnotatedString(m.label), color = f.text, fontSize = 17.sp, fontWeight = if (aktiv) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f))
                     if (aktiv) Icon(Icons.Rounded.Check, null, tint = f.primaer)
                 }
             }
