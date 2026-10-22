@@ -7,6 +7,7 @@ import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
+import de.frank.module.transkriptionsmodul.GroqTranscriber
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -214,7 +215,7 @@ class EinstellungsKatalog(context: Context) {
                 if (!a.isSuccessful) throw IllegalStateException("Open-Meteo antwortet mit ${a.code}")
                 org.json.JSONObject(a.body?.string().orEmpty()).optJSONArray("results")?.optJSONObject(0)
             }
-        } catch (f: Exception) {
+        } catch (f: Exception) { // no-cancellation-rethrow
             throw IllegalArgumentException("Die Ortssuche geht gerade nicht (${f.message ?: f.javaClass.simpleName}); der alte Ort bleibt.")
         }) ?: throw IllegalArgumentException("Den Ort „${name.trim()}“ habe ich nicht gefunden.")
         e.wetterBreite = gefunden.optDouble("latitude")
@@ -287,6 +288,13 @@ class EinstellungsKatalog(context: Context) {
             schalter("filter_segmente", "Spracheingabe", "Filter: Segment-Werte", "Verwirft Textstücke, die das Erkennungsmodell selbst für unsicher hält.", { s.filterSegmentmetrikenAn }) { s.filterSegmentmetrikenAn = it },
             schalter("filter_zeitstempel", "Spracheingabe", "Filter: Zeitstempel", "Verwirft Text, der außerhalb der gesprochenen Zeit liegt.", { s.filterZeitstempelAn }) { s.filterZeitstempelAn = it },
             schalter("filter_floskeln", "Spracheingabe", "Filter: Floskeln", "Entfernt typische erfundene Floskeln wie „Untertitel von …“.", { s.filterFloskelnAn }) { s.filterFloskelnAn = it },
+            // Wie die Modell-Chips in der Oberfläche: Wahl hebt die large-v3-Sperre auf; bei aktiver Sperre nennt der Wert den Turbo-Rückfall.
+            auswahl("whisper_modell", "Spracheingabe", "Whisper-Modell", "Welches Groq-Modell die Spracheingabe umschreibt: Turbo ist schneller, Large V3 genauer.",
+                { listOf(GroqTranscriber.MODELL_TURBO to "Large V3 Turbo (schnell)", GroqTranscriber.MODELL_LARGE_V3 to "Large V3 (genauer)") },
+                { val m = s.whisperModell; if (m == GroqTranscriber.MODELL_LARGE_V3 && GroqTranscriber.largeV3Gesperrt()) "Large V3 (genauer), derzeit Turbo (Large V3 gesperrt)" else m }) { s.whisperModell = it; GroqTranscriber.sperreAufheben() },
+            schalter("woerterbuch_an", "Spracheingabe", "Persönliches Wörterbuch mitsenden", "Schickt die Wörterbuch-Begriffe mit, damit Eigennamen und Fachwörter richtig geschrieben werden.", { s.woerterbuchAn }) { s.woerterbuchAn = it },
+            freitext("woerterbuch_begriffe", "Spracheingabe", "Wörterbuch-Begriffe", "Die Begriffe des persönlichen Wörterbuchs; ersetzt die ganze Liste.",
+                "Begriffe, durch Komma getrennt", { s.woerterbuchBegriffe }) { s.woerterbuchBegriffe = it },
 
             // ---- Hey Jarvis ----
             schalter("weckwort_an", "Hey Jarvis", "Auf „Hey Jarvis“ lauschen", "Dauerhaft auf das Weckwort hören, auch bei gesperrtem Handy.", { e.weckwortAn }) {
@@ -308,7 +316,7 @@ class EinstellungsKatalog(context: Context) {
                 if (phrase.split(' ').size < 2) throw IllegalArgumentException("Bitte mindestens zwei Wörter, besser drei.")
                 val zerlegt = try {
                     de.frank.jarvis.weckwort.PhrasenTokens.zerlege(app, phrase)
-                } catch (f: Exception) {
+                } catch (f: Exception) { // no-cancellation-rethrow
                     throw IllegalArgumentException("Das Phrasen-Modell ließ sich nicht laden (${f.message ?: f.javaClass.simpleName}); die alte Phrase bleibt.")
                 }
                 if (zerlegt == null) throw IllegalArgumentException("Das Modell kennt nur englische Buchstaben A bis Z, ohne Umlaute und Ziffern.")
@@ -437,7 +445,7 @@ class EinstellungsKatalog(context: Context) {
             true to "${eintrag.titel}: jetzt ${eintrag.lesen()}."
         } catch (f: IllegalArgumentException) {
             false to "${eintrag.titel}: ${f.message}"
-        } catch (f: Exception) {
+        } catch (f: Exception) { // no-cancellation-rethrow
             // Wert geprüft und gespeichert, aber die Folgeaktion (Dienst, Zeitplan, Weckwort …) scheiterte: das melden,
             // statt die Änderung als fehlgeschlagen auszugeben und die weiteren Änderungen abzubrechen.
             de.frank.jarvis.observability.Logbuch.fehler("Einstellung $k", f)

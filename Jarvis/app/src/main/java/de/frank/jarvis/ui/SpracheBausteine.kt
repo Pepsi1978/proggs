@@ -85,7 +85,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
     Bereich("Spracheingabe") {
         val eingerichtet = s.groqApiKey.isNotBlank()
         Zeile("Mikrofon", if (eingerichtet) "Eingerichtet" else "Groq-Schlüssel fehlt", if (eingerichtet) f.erfolg else f.textLeise)
-        Text("Das Mikrofon in der Eingabeblase schreibt mit Groq (${s.whisperModell}) mit und setzt den Text ins Feld. Jedes weitere Diktat kommt hinten dran; gesendet wird mit dem Pfeil. „Hey Jarvis“ sendet weiter direkt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        Text("Das Mikrofon in der Eingabeblase schreibt mit Groq (${s.whisperModell}${if (s.whisperModell == de.frank.module.transkriptionsmodul.GroqTranscriber.MODELL_LARGE_V3 && de.frank.module.transkriptionsmodul.GroqTranscriber.largeV3Gesperrt()) ", derzeit Turbo – Large V3 gesperrt" else ""}) mit und setzt den Text ins Feld. Jedes weitere Diktat kommt hinten dran; gesendet wird mit dem Pfeil. „Hey Jarvis“ sendet weiter direkt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         var groq by rememberSaveable { mutableStateOf(s.groqApiKey) }
         Unterzeile("Groq-Schlüssel")
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -104,14 +104,15 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         val gt = de.frank.module.transkriptionsmodul.GroqTranscriber
         Unterzeile("Whisper-Modell")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("Large V3 Turbo (schnell)", aktiv = s.whisperModell != gt.MODELL_LARGE_V3) { geaendert { s.whisperModell = gt.MODELL_TURBO } }
-            Chip("Large V3 (genauer)", aktiv = s.whisperModell == gt.MODELL_LARGE_V3) { geaendert { s.whisperModell = gt.MODELL_LARGE_V3 } }
+            // Erneute Wahl hebt die 30-Minuten-Sperre nach einer Groq-Ablehnung auf: large-v3 wird sofort wieder versucht.
+            Chip("Large V3 Turbo (schnell)", aktiv = s.whisperModell != gt.MODELL_LARGE_V3) { geaendert { s.whisperModell = gt.MODELL_TURBO; gt.sperreAufheben() } }
+            Chip("Large V3 (genauer)", aktiv = s.whisperModell == gt.MODELL_LARGE_V3) { geaendert { s.whisperModell = gt.MODELL_LARGE_V3; gt.sperreAufheben() } }
         }
         Text("Large V3 muss in der Groq-Konsole für deine Organisation freigeschaltet sein; sonst nimmt Jarvis still Turbo.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         Unterzeile("Persönliches Wörterbuch")
         Chip("Wörterbuch mitsenden", aktiv = s.woerterbuchAn) { geaendert { s.woerterbuchAn = !s.woerterbuchAn } }
         if (s.woerterbuchAn) {
-            var begriffe by rememberSaveable { mutableStateOf(s.woerterbuchBegriffe) }
+            var begriffe by rememberSaveable(s.woerterbuchBegriffe) { mutableStateOf(s.woerterbuchBegriffe) }
             Text("Begriffe (durch Komma oder Zeilenumbruch getrennt)", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp, bottom = 6.dp))
             Eingabe(begriffe, { begriffe = it }, "Begriffe", Modifier.fillMaxWidth(), einzeilig = false)
             if (begriffe != s.woerterbuchBegriffe) Knopf("Begriffe speichern", Modifier.padding(top = 10.dp).fillMaxWidth()) { geaendert { s.woerterbuchBegriffe = begriffe }; vm.meldung = "Wörterbuch gespeichert." }
