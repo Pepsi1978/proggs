@@ -581,6 +581,8 @@ class IdeenViewModel(
                 val diktat = Diktat(
                     GroqTranscriber(
                         schluessel,
+                        model = settings.whisperModell,
+                        woerterbuchPrompt = settings.woerterbuchPrompt,
                         filterStille = settings.filterStilleVorabAn,
                         filterMetriken = settings.filterSegmentmetrikenAn,
                         filterZeitstempel = settings.filterZeitstempelAn,
@@ -902,7 +904,7 @@ class IdeenViewModel(
             }
             // Eine winzige Stille-Aufnahme reicht als echter Aufruf.
             val ergebnis = runCatching {
-                GroqTranscriber(schluessel).transcribe(stilleWav())
+                GroqTranscriber(schluessel, model = settings.whisperModell).transcribe(stilleWav())
             }
             fertig(
                 ergebnis.fold(

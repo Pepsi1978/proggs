@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import de.frank.genialeideen.audio.GroqTranscriber
+import de.frank.genialeideen.audio.Woerterbuch
 import de.frank.genialeideen.auth.CodexModel
 import de.frank.genialeideen.auth.ReasoningEffort
 import java.io.Closeable
@@ -156,6 +158,24 @@ class SecureSettings(context: Context) : Closeable {
         get() = readFlag(Keys.FILTER_PHRASES, true)
         set(value) = writeFlag(Keys.FILTER_PHRASES, value)
 
+    /** Whisper-Modell bei Groq: Turbo (schnell, Standard) oder Large V3 (genauer). */
+    var whisperModell: String
+        get() = GroqTranscriber.gueltigesModell(readString(Keys.WHISPER_MODEL, GroqTranscriber.DEFAULT_MODEL))
+        set(value) = writeString(Keys.WHISPER_MODEL, GroqTranscriber.gueltigesModell(value))
+
+    /** Persönliches Wörterbuch: Begriffe gehen als Prompt an Whisper. */
+    var woerterbuchAn: Boolean
+        get() = readFlag(Keys.WOERTERBUCH_AN, true)
+        set(value) = writeFlag(Keys.WOERTERBUCH_AN, value)
+
+    var woerterbuch: String
+        get() = readString(Keys.WOERTERBUCH, Woerterbuch.STANDARD_WOERTERBUCH)
+        set(value) = writeString(Keys.WOERTERBUCH, value)
+
+    /** Prompt für die nächste Aufnahme, oder null (Schalter aus / keine Begriffe). */
+    val woerterbuchPrompt: String?
+        get() = Woerterbuch.prompt(woerterbuchAn, woerterbuch)
+
     // ---- KI (Baustein O) ----
 
     /** `abo` (Anmeldung über das ChatGPT-Abo) oder `schluessel` (eigener API-Schlüssel). */
@@ -284,6 +304,9 @@ class SecureSettings(context: Context) : Closeable {
         const val FILTER_SEGMENTS = "filter_segments"
         const val FILTER_TIMESTAMPS = "filter_timestamps"
         const val FILTER_PHRASES = "filter_phrases"
+        const val WHISPER_MODEL = "whisper_model"
+        const val WOERTERBUCH_AN = "woerterbuch_an"
+        const val WOERTERBUCH = "woerterbuch"
         const val KI_ZUGANG = "ki_zugang"
         const val GEMINI_API_KEY = "gemini_api_key"
         const val MODEL = "model"

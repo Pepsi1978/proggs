@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.BuildConfig
+import de.frank.genialeideen.audio.GroqTranscriber
 import de.frank.genialeideen.auth.CodexModel
 import de.frank.genialeideen.auth.ReasoningEffort
 import de.frank.genialeideen.tts.TtsCatalog
@@ -271,10 +272,29 @@ fun EinstellungenScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Modell: whisper-large-v3-turbo",
+                    "Whisper-Modell",
                     style = MaterialTheme.typography.labelSmall,
                     color = gold.textGedaempft,
                 )
+                Spacer(Modifier.height(6.dp))
+                var whisperModell by remember { mutableStateOf(settings.whisperModell) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GroqTranscriber.MODELLE.forEach { (id, name) ->
+                        Auswahlchip(name, whisperModell == id) {
+                            whisperModell = id
+                            settings.whisperModell = id
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                SchalterZeile("Persönliches Wörterbuch", settings.woerterbuchAn) {
+                    settings.woerterbuchAn = it
+                }
+                var woerterbuch by remember { mutableStateOf(settings.woerterbuch) }
+                WoerterbuchFeld(woerterbuch) {
+                    woerterbuch = it
+                    settings.woerterbuch = it
+                }
                 Spacer(Modifier.height(12.dp))
                 Text(
                     "Filter gegen erfundene Sätze bei Stille",
@@ -809,6 +829,39 @@ private fun SchalterZeile(text: String, wert: Boolean, aufWert: (Boolean) -> Uni
                 uncheckedTrackColor = gold.flaecheErhoeht,
             ),
         )
+    }
+}
+
+@Composable
+private fun WoerterbuchFeld(wert: String, aufWert: (String) -> Unit) {
+    val gold = LocalGold.current
+    Column(Modifier.padding(top = 6.dp)) {
+        Text(
+            "Begriffe (durch Komma oder Zeilenumbruch getrennt)",
+            style = MaterialTheme.typography.labelSmall,
+            color = gold.textGedaempft,
+        )
+        Spacer(Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 88.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(gold.eingabefeld)
+                .border(1.dp, gold.rahmen, RoundedCornerShape(14.dp))
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+        ) {
+            if (wert.isEmpty()) {
+                Text("noch leer", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+            }
+            BasicTextField(
+                value = wert,
+                onValueChange = aufWert,
+                textStyle = MaterialTheme.typography.bodySmall.copy(color = gold.textPrimaer),
+                cursorBrush = SolidColor(gold.primaer),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
