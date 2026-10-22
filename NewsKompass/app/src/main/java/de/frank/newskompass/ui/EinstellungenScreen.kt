@@ -1516,7 +1516,7 @@ private fun SpracheingabeBereich(app: NewsApplication, stand: EinstellungenStand
     Column {
         Abschnitt(
             "Spracheingabe",
-            "Der Mikrofon-Knopf unten rechts: tippen, Frage sprechen, noch einmal tippen. Erkannt wird mit Groq Whisper Large V3 Turbo, " +
+            "Der Mikrofon-Knopf unten rechts: tippen, Frage sprechen, noch einmal tippen. Erkannt wird mit Groq Whisper (Modell unten wählbar), " +
                 "geschützt durch vier Schichten gegen Wörter, die Whisper in die Stille hineindichtet. Die Frage wirkt wie ein Thema nur für diesen Moment: " +
                 "Die Antwort erscheint als eigener Block unten in der aktuellen Ausgabe und wird vorgelesen. Deine Themenliste bleibt unverändert.",
         )
@@ -1529,8 +1529,59 @@ private fun SpracheingabeBereich(app: NewsApplication, stand: EinstellungenStand
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.height(12.dp))
+        Kachel {
+            Text("Whisper-Modell", style = MaterialTheme.typography.titleMedium)
+            WHISPER_MODELLE.forEach { (id, name) ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { app.einstellungen.setzeWhisperModell(id) }.padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = stand.whisperModell == id, onClick = { app.einstellungen.setzeWhisperModell(id) })
+                    Text(name, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            Text(
+                "Gilt ab der nächsten Aufnahme. Large V3 muss bei Groq freigeschaltet sein, sonst nimmt die App automatisch Turbo.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Persönliches Wörterbuch", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Hilft Whisper, Namen und Fachbegriffe richtig zu schreiben.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = stand.woerterbuchAn, onCheckedChange = { app.einstellungen.setzeWoerterbuchAn(it) })
+            }
+            if (stand.woerterbuchAn) {
+                Spacer(Modifier.height(12.dp))
+                var begriffe by remember { mutableStateOf(stand.woerterbuch) }
+                OutlinedTextField(
+                    value = begriffe,
+                    onValueChange = {
+                        begriffe = it
+                        app.einstellungen.setzeWoerterbuch(it)
+                    },
+                    label = { Text("Begriffe (durch Komma oder Zeilenumbruch getrennt)") },
+                    minLines = 3,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
+
+/** Die zwei Whisper-Modelle bei Groq; Turbo ist die Voreinstellung. */
+private val WHISPER_MODELLE = listOf(
+    de.frank.newskompass.audio.GroqTranscriber.TURBO to "Large V3 Turbo (schnell)",
+    de.frank.newskompass.audio.GroqTranscriber.LARGE_V3 to "Large V3 (genauer)",
+)
 
 @Composable
 private fun SchluesselFeld(titel: String, vorhanden: Boolean, speichere: (String) -> Unit) {

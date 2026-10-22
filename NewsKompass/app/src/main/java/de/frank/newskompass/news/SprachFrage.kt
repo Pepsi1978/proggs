@@ -102,7 +102,7 @@ class SprachFrage(private val app: NewsApplication) {
                     melde("Ich habe nichts verstanden.")
                     return@launch
                 }
-                transkribierer = GroqTranscriber(app.einstellungen.groqSchluessel)
+                transkribierer = app.einstellungen.neuerTranskribierer()
                 laufenderTranskribierer = transkribierer
                 val frage = transkribierer.transcribe(wav).trim()
                 if (meineGeneration != generation) return@launch

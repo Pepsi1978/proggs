@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import de.frank.newskompass.ai.CodexModell
+import de.frank.newskompass.audio.GroqTranscriber
 import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
@@ -47,6 +48,10 @@ data class EinstellungenStand(
     val hatGoogleSchluessel: Boolean,
     val hatAlibabaSchluessel: Boolean,
     val hatGroqSchluessel: Boolean,
+    /** `whisper-large-v3-turbo` (Standard) oder `whisper-large-v3`. */
+    val whisperModell: String,
+    val woerterbuchAn: Boolean,
+    val woerterbuch: String,
     val zeitplanAktiv: Boolean,
     /** Letzte vollständig geprüfte Archivsicherung (0 = noch keine) und ihre Kurzbeschreibung. */
     val letzteSicherungUm: Long,
@@ -93,6 +98,17 @@ class EinstellungenStore(context: Context) {
     val googleSchluessel: String get() = geheim.getString(K_GOOGLE_KEY, null).orEmpty()
     val alibabaSchluessel: String get() = geheim.getString(K_ALIBABA_KEY, null).orEmpty()
     val groqSchluessel: String get() = geheim.getString(K_GROQ_KEY, null).orEmpty()
+    val whisperModell: String
+        get() = GroqTranscriber.normalisiereModell(offen.getString(K_WHISPER_MODELL, null) ?: GroqTranscriber.DEFAULT_MODEL)
+    val woerterbuchAn: Boolean get() = offen.getBoolean(K_WOERTERBUCH_AN, true)
+
+    /** Noch nie gespeichert → die Vorbelegung; ein bewusst geleertes Feld bleibt leer. */
+    val woerterbuch: String get() = offen.getString(K_WOERTERBUCH, null) ?: GroqTranscriber.STANDARD_WOERTERBUCH
+    val woerterbuchPrompt: String? get() = GroqTranscriber.woerterbuchPrompt(woerterbuchAn, woerterbuch)
+
+    /** Ein Transkribierer mit Schlüssel, gewähltem Whisper-Modell und Wörterbuch. */
+    fun neuerTranskribierer(): GroqTranscriber =
+        GroqTranscriber(groqSchluessel, model = whisperModell, woerterbuchPrompt = woerterbuchPrompt)
 
     // --- Lesen -------------------------------------------------------------------------------
 
@@ -122,6 +138,9 @@ class EinstellungenStore(context: Context) {
             hatGoogleSchluessel = runCatching { googleSchluessel.isNotBlank() }.getOrDefault(false),
             hatAlibabaSchluessel = runCatching { alibabaSchluessel.isNotBlank() }.getOrDefault(false),
             hatGroqSchluessel = runCatching { groqSchluessel.isNotBlank() }.getOrDefault(false),
+            whisperModell = whisperModell,
+            woerterbuchAn = woerterbuchAn,
+            woerterbuch = woerterbuch,
             zeitplanAktiv = offen.getBoolean(K_ZEITPLAN, true),
             letzteSicherungUm = offen.getLong(K_SICHERUNG_UM, 0L),
             letzteSicherungText = offen.getString(K_SICHERUNG_TEXT, null).orEmpty(),
@@ -280,6 +299,12 @@ class EinstellungenStore(context: Context) {
     fun setzeQwenStimme(id: String) = schreibe { putString(K_QWEN_STIMME, id) }
     fun setzeTempo(tempo: Float) = schreibe { putFloat(K_TEMPO, tempo.coerceIn(0.6f, 1.6f)) }
     fun setzeZeitplan(aktiv: Boolean) = schreibe { putBoolean(K_ZEITPLAN, aktiv) }
+    fun setzeWhisperModell(modell: String) {
+        schreibe { putString(K_WHISPER_MODELL, GroqTranscriber.normalisiereModell(modell)) }
+        GroqTranscriber.sperreZuruecksetzen()
+    }
+    fun setzeWoerterbuchAn(an: Boolean) = schreibe { putBoolean(K_WOERTERBUCH_AN, an) }
+    fun setzeWoerterbuch(text: String) = schreibe { putString(K_WOERTERBUCH, text) }
     fun merkeSicherung(zeit: Long, text: String) = schreibe {
         putLong(K_SICHERUNG_UM, zeit)
         putString(K_SICHERUNG_TEXT, text)
@@ -394,6 +419,9 @@ class EinstellungenStore(context: Context) {
         private const val K_DESIGN = "design"
         private const val K_FARBDESIGN = "farbdesign"
         private const val K_TTS = "tts_anbieter"
+        private const val K_WHISPER_MODELL = "whisper_modell"
+        private const val K_WOERTERBUCH_AN = "woerterbuch_an"
+        private const val K_WOERTERBUCH = "woerterbuch"
         private const val K_GOOGLE_STIMME = "google_stimme"
         private const val K_EDGE_STIMME = "edge_stimme"
         private const val K_QWEN_STIMME = "qwen_stimme"
