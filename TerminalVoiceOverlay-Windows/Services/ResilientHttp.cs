@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TerminalVoiceOverlay.Services
@@ -67,21 +70,48 @@ namespace TerminalVoiceOverlay.Services
             };
         }
 
+        /// <summary>Frist pro Adresse, damit nach einer toten IPv6-Adresse noch IPv4 drankommt.</summary>
+        private static readonly TimeSpan PerAddressTimeout = TimeSpan.FromSeconds(4);
+
+        /// <summary>
+        /// IPv4 zuerst, jede Adresse mit eigener Frist (Vorfall 22.10.2026): In Franks Netz
+        /// bekommt Windows IPv6-Adressen, IPv6 wird aber nicht weitergeleitet. Der
+        /// Verbindungsaufbau ueber den DnsEndPoint versuchte IPv6 zuerst und hing bis zum
+        /// ConnectTimeout -- jeder Drive-Sync (Woerterbuch, Prompts, Restore) scheiterte still
+        /// mit "The operation was canceled". Muster aus UpdateZentrale/Services/Netzdienst.cs.
+        /// </summary>
         private static async ValueTask<Stream> ConnectWithKeepAliveAsync(
-            SocketsHttpConnectionContext context, System.Threading.CancellationToken ct)
+            SocketsHttpConnectionContext context, CancellationToken ct)
         {
-            var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
-            ApplyKeepAlive(socket);
-            try
+            var addresses = (await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, ct).ConfigureAwait(false))
+                .OrderBy(a => a.AddressFamily == AddressFamily.InterNetwork ? 0 : 1)
+                .Take(6)
+                .ToList();
+
+            Exception? last = null;
+            foreach (var address in addresses)
             {
-                await socket.ConnectAsync(context.DnsEndPoint, ct).ConfigureAwait(false);
-                return new NetworkStream(socket, ownsSocket: true);
+                var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+                ApplyKeepAlive(socket);
+                try
+                {
+                    using var perAddress = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    perAddress.CancelAfter(PerAddressTimeout);
+                    await socket.ConnectAsync(new IPEndPoint(address, context.DnsEndPoint.Port), perAddress.Token).ConfigureAwait(false);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch (Exception ex) when (!ct.IsCancellationRequested)
+                {
+                    socket.Dispose();
+                    last = ex;
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
             }
-            catch
-            {
-                socket.Dispose();
-                throw;
-            }
+            throw last ?? new SocketException((int)SocketError.HostNotFound);
         }
 
         /// <summary>
