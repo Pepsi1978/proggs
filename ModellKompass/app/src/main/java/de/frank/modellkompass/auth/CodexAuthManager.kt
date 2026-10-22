@@ -250,6 +250,9 @@ class CodexAuthManager(context: Context) {
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
+    /** Kann die App mit diesem Modell denken? OpenAI braucht das ChatGPT-Konto, Claude den Anthropic-Schlüssel. */
+    fun kannDenken(model: CodexModel): Boolean = if (model.istAnthropic) AnthropicKlient.hatSchluessel(appContext) else isConnected
+
     suspend fun login(
         activity: ComponentActivity,
         onDeviceCode: (DeviceAuthInfo) -> Unit,
@@ -523,6 +526,14 @@ class CodexAuthManager(context: Context) {
         onSuche: (String) -> Unit = {},
         onDelta: suspend (String) -> Unit = {},
     ): String {
+        // Claude-Modelle rechnen über die Anthropic Messages API mit eigenem Schlüssel (wie in Jarvis).
+        if (ClaudeModell.istClaude(payload.optString("model"))) {
+            return try {
+                AnthropicKlient.antwortAufCodexAnfrage(appContext, payload, onDelta).text
+            } catch (fehler: AnthropicFehler) {
+                throw CodexAuthException(AuthErrorKind.NETWORK, fehler.message.orEmpty(), fehler, fehler.wiederholbar)
+            }
+        }
         var attempt = 0
         while (true) {
             var deliveredText = false

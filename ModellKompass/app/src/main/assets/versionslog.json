@@ -4,6 +4,7 @@
   "eintraege": [
     { "versionCode": 1, "versionName": "1.0.0", "stand": "08.10.2026, 15:33 Uhr", "notiz": "Erste Fassung: findet per ChatGPT-Websuche für 18 Bereiche die besten lokalen KI-Modelle für die RTX 3090, mit genauem Namen und Herausgeber für LM Studio." },
     { "versionCode": 2, "versionName": "1.0.1", "stand": "08.10.2026, 15:42 Uhr", "notiz": "Die Recherche sucht jetzt für die RTX 5090 mit 32 GB Grafikspeicher statt für die RTX 3090; auch der Grafikspeicher-Balken rechnet mit 32 GB." },
-    { "versionCode": 3, "versionName": "1.0.2", "stand": "15.10.2026, 14:34 Uhr", "notiz": "Die Bereichskarten zeigen statt der Symbole in orangen Kästchen große, dezente Hintergrundzeichnungen, und das Punktmuster im Hintergrund ist verschwunden." }
+    { "versionCode": 3, "versionName": "1.0.2", "stand": "15.10.2026, 14:34 Uhr", "notiz": "Die Bereichskarten zeigen statt der Symbole in orangen Kästchen große, dezente Hintergrundzeichnungen, und das Punktmuster im Hintergrund ist verschwunden." },
+    {"versionCode": 4, "versionName": "1.0.3", "stand": "22.10.2026, 13:00 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe, Websuche und eigenem API-Schlüssel wie in Jarvis."}
   ]
 }

@@ -95,8 +95,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Ohne Anmeldung führt der Weg in die Einstellungen statt in eine Fehlermeldung. */
     private fun verbunden(): Boolean {
         kiVerbunden = auth.isConnected
-        if (kiVerbunden) return true
-        melde("Bitte zuerst mit ChatGPT verbinden")
+        if (auth.kannDenken(einstellungen.modell)) return true
+        melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst den Anthropic-API-Schlüssel eintragen" else "Bitte zuerst mit ChatGPT verbinden")
         bildschirm = Bildschirm.Einstellungen
         return false
     }
