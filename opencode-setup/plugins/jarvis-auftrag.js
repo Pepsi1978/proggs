@@ -1,4 +1,4 @@
-// Jarvis-Auftrag v1.0.0 - 22.10.2026
+// Jarvis-Auftrag v1.0.1 - 22.10.2026, 20:08 Uhr
 //
 // Bringt OpenCode-Sitzungen, die Jarvis (Franks Sprachassistent) über den OpenLauncher gestartet hat
 // (--jarvis-auftrag --cli opencode, Sol 6.1), dieselbe Anbindung wie Claude-Code-Sitzungen mit den Jarvis-Hooks:
@@ -82,16 +82,28 @@ export const JarvisAuftragPlugin = async ({ client }) => {
 
   const log = (level, message) => Promise.resolve(client.app?.log?.({ body: { service: "jarvis-auftrag", level, message } })).catch(() => undefined)
 
-  async function istHaupt(sessionID) {
-    if (!sessionID) return false
-    if (hauptSitzung) return sessionID === hauptSitzung
+  /** Gehört [sessionID] zum Auftrag? Ereignisse legen die Sitzung nie fest, nur merkeHaupt. */
+  function istHaupt(sessionID) {
+    return Boolean(sessionID) && sessionID === hauptSitzung
+  }
+
+  /**
+   * Legt die Auftragssitzung fest: die erste Sitzung ohne Elternsitzung, die eine echte Nachricht bekommt (der Auftrag per
+   * --prompt) oder ein Werkzeug ausführt. Früher reichte das erste Ereignis; das kam am 22.10.2026 von OpenCodes eigener
+   * Hilfssitzung für den Titel, und alle Werkzeuge, Rückfragen und das Zugende der echten Sitzung galten danach als fremd.
+   */
+  async function merkeHaupt(sessionID, agent) {
+    if (!sessionID || hauptSitzung) return istHaupt(sessionID)
+    if (agent && ["title", "summary", "compaction"].includes(agent)) return false
     try {
       const antwort = await client.session.get({ path: { id: sessionID } })
-      if (antwort?.data?.parentID) return false
+      if (!antwort?.data || antwort.data.parentID) return false
     } catch {
       return false
     }
+    if (hauptSitzung) return istHaupt(sessionID)
     hauptSitzung = sessionID
+    await log("info", `Jarvis-Auftrag ${AUFTRAG}: Auftragssitzung ${sessionID}`)
     starteWarter()
     return true
   }
@@ -131,7 +143,7 @@ export const JarvisAuftragPlugin = async ({ client }) => {
   }
 
   async function frage(info) {
-    if (!info?.id || fragen.has(info.id) || !(await istHaupt(info.sessionID))) return
+    if (!info?.id || fragen.has(info.id) || !(istHaupt(info.sessionID))) return
     fragen.set(info.id, null)
     const liste = claudeFragen(info.questions)
     const { aus } = await hook("frage", {
@@ -179,7 +191,7 @@ export const JarvisAuftragPlugin = async ({ client }) => {
   }
 
   async function zugende(sessionID) {
-    if (!(await istHaupt(sessionID))) return
+    if (!(istHaupt(sessionID))) return
     if (selbstGeweckt) {
       // Das Idle direkt nach einem eigenen Prompt kann vor dessen Start kommen: einmal auslassen, sonst doppelt.
       selbstGeweckt = false
@@ -201,7 +213,7 @@ export const JarvisAuftragPlugin = async ({ client }) => {
         case "message.part.updated": {
           const teil = p.part
           if (teil?.type === "text" && !teil.synthetic && teil.time?.end && teil.text?.trim() && !gemeldet.has(teil.id)) {
-            if (await istHaupt(teil.sessionID)) texte.set(teil.id, teil.text)
+            if (istHaupt(teil.sessionID)) texte.set(teil.id, teil.text)
           }
           break
         }
@@ -224,13 +236,17 @@ export const JarvisAuftragPlugin = async ({ client }) => {
           break
       }
     },
+    // Die Nachricht mit dem Auftrag (--prompt) legt die Auftragssitzung fest.
+    "chat.message": async (input) => {
+      await merkeHaupt(input?.sessionID, input?.agent)
+    },
     "tool.execute.before": async (input, output) => {
-      if (!(await istHaupt(input.sessionID))) return
+      if (!(await merkeHaupt(input.sessionID))) return
       const werkzeug = WERKZEUGE[input.tool] ?? input.tool
       void hook("puls", { tool_name: werkzeug, tool_input: werkzeugEingabe(werkzeug, output?.args), texte: abholen() })
     },
     "tool.execute.after": async (input, output) => {
-      if (!(await istHaupt(input.sessionID))) return
+      if (!(istHaupt(input.sessionID))) return
       const werkzeug = WERKZEUGE[input.tool] ?? input.tool
       const args = input.args ?? output?.metadata?.input ?? {}
       void hook("post", {
