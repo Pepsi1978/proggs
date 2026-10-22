@@ -545,7 +545,7 @@ final class GoogleDriveBackupService {
     private static let vocabularyFileName = "personal-vocabulary.txt"
 
     /// Laedt das persoenliche Vokabular-Woerterbuch zu Drive hoch und raeumt
-    /// Duplikate weg. Wird nach jedem Speichern im Settings-Dialog aufgerufen.
+    /// Duplikate weg. Called by the three-way sync (PersonalVocabularyDriveSync).
     func uploadVocabulary(text: String, completion: @escaping (Result<Void, Error>) -> Void) {
         freshAccessToken { tokenResult in
             switch tokenResult {
@@ -572,9 +572,12 @@ final class GoogleDriveBackupService {
         }
     }
 
-    /// Holt das aktuellste Vokabular-Woerterbuch aus Drive. Liefert nil wenn
-    /// noch keins existiert.
-    func downloadVocabulary(completion: @escaping (Result<String?, Error>) -> Void) {
+    /// Downloads the newest vocabulary copy from Drive. `text` is nil only when no
+    /// copy exists yet; `fileCount` > 1 means duplicates exist (uploadVocabulary
+    /// removes them). Fails on any non-2xx response or non-UTF-8 content, so an
+    /// error body is never merged as vocabulary (the three-way merge would treat
+    /// every real term as "deleted in the cloud").
+    func downloadVocabulary(completion: @escaping (Result<(text: String?, fileCount: Int), Error>) -> Void) {
         freshAccessToken { tokenResult in
             switch tokenResult {
             case .failure(let e): completion(.failure(e))
@@ -583,8 +586,26 @@ final class GoogleDriveBackupService {
                     switch result {
                     case .failure(let e): completion(.failure(e))
                     case .success(let ids):
-                        guard let id = ids.first else { completion(.success(nil)); return }
-                        self.downloadContent(id: id, token: token, completion: completion)
+                        guard let id = ids.first else {
+                            completion(.success((text: nil, fileCount: 0)))
+                            return
+                        }
+                        var comps = URLComponents(string: "https://www.googleapis.com/drive/v3/files/\(id)")!
+                        comps.queryItems = [URLQueryItem(name: "alt", value: "media")]
+                        var req = URLRequest(url: comps.url!)
+                        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                        Self.driveSession.dataTask(with: req) { data, resp, err in
+                            if let err = err { completion(.failure(err)); return }
+                            if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                                completion(.failure(self.errorString("Vocabulary download failed: HTTP \(http.statusCode)")))
+                                return
+                            }
+                            guard let data = data, let text = String(data: data, encoding: .utf8) else {
+                                completion(.failure(self.errorString("Vocabulary download returned no UTF-8 text")))
+                                return
+                            }
+                            completion(.success((text: text, fileCount: ids.count)))
+                        }.resume()
                     }
                 }
             }
@@ -656,8 +677,14 @@ final class GoogleDriveBackupService {
         ]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        Self.driveSession.dataTask(with: req) { data, _, err in
+        Self.driveSession.dataTask(with: req) { data, resp, err in
             if let err = err { completion(.failure(err)); return }
+            // A failed listing (401/403/5xx) must not look like "no file yet":
+            // callers would then create a duplicate or seed over the real cloud copy.
+            if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                completion(.failure(self.errorString("Drive file listing failed: HTTP \(http.statusCode)")))
+                return
+            }
             guard let data = data,
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let files = dict["files"] as? [[String: Any]] else {
@@ -723,7 +750,7 @@ fileprivate extension Array {
 /// Woerterbuch-Schalter + Praeambel als EINE Drive-Datei (gemini-prompts-bundle.json),
 /// LWW per savedAt-Timestamp (lokaler Marker .gemini-prompts-synced; sekundengenaues
 /// ISO-8601-UTC, IDENTISCH zum Windows-Format). personal-vocabulary.txt ist NICHT
-/// dabei (eigener Vereinigungs-Sync). Nutzt die Drive-Mechanik von GoogleDriveBackupService.
+/// dabei (eigener Drei-Wege-Abgleich, PersonalVocabularyDriveSync). Nutzt die Drive-Mechanik von GoogleDriveBackupService.
 enum GeminiPromptSync {
     private static let markerName = ".gemini-prompts-synced"
 
@@ -911,5 +938,211 @@ enum GeminiPromptSync {
             }
             if missing { _ = uploadBlocking() }
         }
+    }
+}
+
+// MARK: - Personal vocabulary three-way sync (port of Windows PromptVocabularyDriveSync)
+
+/// Syncs the personal vocabulary (`personal-vocabulary.txt` in the SK folder)
+/// through Google Drive between all devices and both overlays. Own file in the
+/// `appDataFolder`, same OAuth mechanics as the slots (GoogleDriveBackupService).
+///
+/// THREE-WAY MERGE (Frank's decision 2026-10-22, replaces the former pure union):
+/// every machine remembers the state it last agreed on with the cloud (`baseURL`).
+/// New terms from any device are kept; a term deleted on ONE side since that last
+/// sync disappears everywhere, and a changed spelling (github -> GitHub) wins over
+/// the old one. Without a remembered state (first run) it is a plain union, so
+/// nothing is lost that was not explicitly deleted.
+enum PersonalVocabularyDriveSync {
+    /// Local path of the vocabulary file -- same SK folder as the Gemini correction
+    /// prompts, so TVO and CVO on ONE machine share the same file.
+    static var localURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("SK/VoiceOverlays/personal-vocabulary.txt")
+    }
+
+    /// The state this machine last agreed on with the cloud (base of the three-way
+    /// merge). Machine-local on purpose: shared by TVO and CVO, never synced.
+    static var baseURL: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
+        return support.appendingPathComponent("VoiceOverlays/personal-vocabulary.synced.txt")
+    }
+
+    /// Serializes all runs (launch + every settings save) so they never overlap.
+    private static let syncQueue = DispatchQueue(label: "PersonalVocabularyDriveSync.queue")
+
+    /// Three-way sync with Drive: merges base, local and cloud, rewrites the local file
+    /// only if its terms changed (keeps the user's layout otherwise), uploads only if the
+    /// cloud's terms differ, then remembers the result as the new base. Runs at startup
+    /// and after every save in the settings dialog. Fire-and-forget; `completion` runs
+    /// on the main thread with true when the run succeeded AND uploaded to the cloud.
+    static func sync(completion: ((_ uploaded: Bool) -> Void)? = nil) {
+        syncQueue.async {
+            let uploaded = runBlocking()
+            if let completion = completion {
+                DispatchQueue.main.async { completion(uploaded) }
+            }
+        }
+    }
+
+    /// One sync run. Only call on syncQueue (blocks on the Drive calls).
+    /// Returns true only if the run completed and uploaded a new cloud copy.
+    private static func runBlocking() -> Bool {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[VocabSync] skipped: drive not connected")
+            return false
+        }
+        let localText = (try? String(contentsOf: localURL, encoding: .utf8)) ?? ""
+        let baseText = try? String(contentsOf: baseURL, encoding: .utf8)
+
+        let downloadDone = DispatchSemaphore(value: 0)
+        var downloaded: Result<(text: String?, fileCount: Int), Error>?
+        GoogleDriveBackupService.shared.downloadVocabulary { result in
+            downloaded = result
+            downloadDone.signal()
+        }
+        _ = downloadDone.wait(timeout: .now() + 90)
+        let cloudText: String?
+        let fileCount: Int
+        switch downloaded {
+        case .none:
+            tvoDebug("[VocabSync] download timed out")
+            return false
+        case .some(.failure(let e)):
+            tvoDebug("[VocabSync] download failed: \(e.localizedDescription)")
+            return false
+        case .some(.success(let value)):
+            cloudText = value.text
+            fileCount = value.fileCount
+        }
+
+        let mergedTerms = mergeTerms(base: baseText, local: localText, cloud: cloudText)
+        let merged = render(local: localText, terms: mergedTerms)
+
+        if terms(localText) != mergedTerms {
+            // Saved in the settings dialog while we were downloading? Do not overwrite
+            // that edit -- the run queued by the save merges it next.
+            let current = (try? String(contentsOf: localURL, encoding: .utf8)) ?? ""
+            if current != localText {
+                tvoDebug("[VocabSync] local file changed during sync, deferring to next run")
+                return false
+            }
+            do {
+                try FileManager.default.createDirectory(
+                    at: localURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try (merged + "\n").write(to: localURL, atomically: true, encoding: .utf8)
+                tvoDebug("[VocabSync] local vocabulary updated")
+            } catch {
+                tvoDebug("[VocabSync] local write failed: \(error.localizedDescription)")
+                return false
+            }
+        }
+
+        let cloudDiffers = cloudText == nil
+            ? !mergedTerms.isEmpty
+            : Set(terms(cloudText)) != Set(mergedTerms)
+        var didUpload = false
+        if cloudDiffers || fileCount > 1 {
+            let uploadDone = DispatchSemaphore(value: 0)
+            var uploaded = false
+            GoogleDriveBackupService.shared.uploadVocabulary(text: merged) { result in
+                switch result {
+                case .success:
+                    uploaded = true
+                case .failure(let e):
+                    tvoDebug("[VocabSync] upload failed: \(e.localizedDescription)")
+                }
+                uploadDone.signal()
+            }
+            _ = uploadDone.wait(timeout: .now() + 90)
+            guard uploaded else { return false }
+            didUpload = true
+            tvoDebug("[VocabSync] vocabulary uploaded to cloud")
+        }
+
+        do {
+            try FileManager.default.createDirectory(
+                at: baseURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try (merged + "\n").write(to: baseURL, atomically: true, encoding: .utf8)
+        } catch {
+            tvoDebug("[VocabSync] base write failed: \(error.localizedDescription)")
+            return false
+        }
+        return didUpload
+    }
+
+    /// The terms of a vocabulary text: split on line breaks, comma and semicolon,
+    /// trimmed, comment lines (#) skipped, deduplicated case-insensitively.
+    static func terms(_ text: String?) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        guard let text = text, !text.isEmpty else { return result }
+        for raw in text.replacingOccurrences(of: "\r", with: "\n").components(separatedBy: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty || line.hasPrefix("#") { continue }
+            for part in line.components(separatedBy: CharacterSet(charactersIn: ",;")) {
+                let term = part.trimmingCharacters(in: .whitespaces)
+                if !term.isEmpty && seen.insert(term.lowercased()).inserted { result.append(term) }
+            }
+        }
+        return result
+    }
+
+    /// Three-way merge of the term lists, local order first. A term in the base that is
+    /// missing on one side was deleted there since the last sync and is dropped. A term
+    /// not in the base is new and kept. The spelling that changed since the base wins.
+    /// No cloud copy yet: local is the truth (seeds the cloud). No base: plain union.
+    static func mergeTerms(base: String?, local: String?, cloud: String?) -> [String] {
+        let localTerms = terms(local)
+        guard let cloud = cloud else { return localTerms }
+        let cloudTerms = terms(cloud)
+        let baseMap = toMap(terms(base))
+        let localMap = toMap(localTerms)
+        let cloudMap = toMap(cloudTerms)
+
+        var result: [String] = []
+        var done = Set<String>()
+        for term in localTerms + cloudTerms {
+            let key = term.lowercased()
+            if !done.insert(key).inserted { continue }
+            let b = baseMap[key]
+            let l = localMap[key]
+            let c = cloudMap[key]
+            if b != nil && (l == nil || c == nil) { continue }
+            let spelling: String
+            if let l = l, b == nil || l != b {
+                spelling = l
+            } else if let c = c, b == nil || c != b {
+                spelling = c
+            } else {
+                spelling = l ?? c ?? term
+            }
+            result.append(spelling)
+        }
+        return result
+    }
+
+    /// Case-insensitive lookup (lowercased key -> spelling), first occurrence wins.
+    private static func toMap(_ terms: [String]) -> [String: String] {
+        var map: [String: String] = [:]
+        for t in terms {
+            let key = t.lowercased()
+            if map[key] == nil { map[key] = t }
+        }
+        return map
+    }
+
+    /// Comment lines of the local file first, then all terms as one comma line.
+    private static func render(local: String?, terms: [String]) -> String {
+        var lines: [String] = []
+        if let local = local, !local.isEmpty {
+            for raw in local.replacingOccurrences(of: "\r", with: "\n").components(separatedBy: "\n") {
+                let line = raw.trimmingCharacters(in: .whitespaces)
+                if line.hasPrefix("#") { lines.append(line) }
+            }
+        }
+        if !terms.isEmpty { lines.append(terms.joined(separator: ", ")) }
+        return lines.joined(separator: "\n")
     }
 }
