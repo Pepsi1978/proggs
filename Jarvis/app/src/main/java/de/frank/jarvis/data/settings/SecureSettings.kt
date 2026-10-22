@@ -239,11 +239,6 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.ANTHROPIC_API_KEY, "")
         set(value) = writeString(Keys.ANTHROPIC_API_KEY, value)
 
-    /** Anthropic-Admin-Schlüssel (sk-ant-admin…) aus der Konsole; nur für den Kostenbericht (Verbrauch im laufenden Monat). */
-    var anthropicAdminKey: String
-        get() = readString(Keys.ANTHROPIC_ADMIN_KEY, "")
-        set(value) = writeString(Keys.ANTHROPIC_ADMIN_KEY, value)
-
     // ---- Live-Gespräch (OpenAI Realtime) ----
 
     /** Eigener OpenAI-Plattform-Schlüssel (sk-…) für das Live-Gespräch; das ChatGPT-Abo reicht dafür nicht. */
@@ -347,7 +342,6 @@ class SecureSettings(context: Context) : Closeable {
         const val GEMINI_API_KEY_BEZAHLT = "gemini_api_key_bezahlt"
         const val OPENAI_API_KEY = "openai_api_key"
         const val ANTHROPIC_API_KEY = "anthropic_api_key"
-        const val ANTHROPIC_ADMIN_KEY = "anthropic_admin_key"
         const val MODEL = "model"
         const val REASONING = "reasoning"
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"

@@ -234,6 +234,7 @@
     {"versionCode": 229, "versionName": "1.8.218", "stand": "22.10.2026, 15:29 Uhr", "notiz": "Bei Anbieter Anthropic zeigen die Einstellungen den API-Verbrauch des Monats gegen deinen Freibetrag samt Rest (mit Admin-Schlüssel), und Jarvis nennt ihn auf Nachfrage im Gespräch."},
     {"versionCode": 230, "versionName": "1.8.219", "stand": "22.10.2026, 17:00 Uhr", "notiz": "Nach dem Minimieren öffnet Jarvis wieder genau den verlassenen Bildschirm samt Gespräch (Hey Jarvis aus dem Hintergrund startet neu), und bei verbundenem Rechner wählst du beim Programmierauftrag per Knopf Opus 5.5 oder Sol 6.1 (Codex CLI)."},
     {"versionCode": 231, "versionName": "1.8.220", "stand": "22.10.2026, 17:00 Uhr", "notiz": "Jarvis nennt nach Websuchen keine Quellen und Webadressen mehr, weder im Text noch beim Vorlesen, außer du fragst ausdrücklich danach; die Symbiose-Regel dazu ist angepasst, kopier den Symbiose-Text einmal neu in ChatGPT."},
-    {"versionCode": 232, "versionName": "1.8.221", "stand": "22.10.2026, 17:17 Uhr", "notiz": "Die Knöpfe Opus 5.5 und Sol 6.1 erscheinen nur, wenn der Windows-PC verbunden ist, und sind nach einem Fehlstart wieder wählbar; Sol-Sitzungen fragen nicht mehr ins Leere."}
+    {"versionCode": 232, "versionName": "1.8.221", "stand": "22.10.2026, 17:17 Uhr", "notiz": "Die Knöpfe Opus 5.5 und Sol 6.1 erscheinen nur, wenn der Windows-PC verbunden ist, und sind nach einem Fehlstart wieder wählbar; Sol-Sitzungen fragen nicht mehr ins Leere."},
+    {"versionCode": 233, "versionName": "1.8.222", "stand": "22.10.2026, 19:44 Uhr", "notiz": "Das Anthropic-Guthaben kommt jetzt direkt aus der Claude Console (übrig, gewährt, Verfallsdatum); dafür einmal in den Einstellungen bei der Console anmelden, kein Admin-Schlüssel mehr nötig."}
   ]
 }

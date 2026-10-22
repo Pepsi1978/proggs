@@ -339,8 +339,6 @@ class Einstellungen private constructor(context: Context) {
 
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
-    /** Monatlicher Freibetrag für die Anthropic-API in Euro; dagegen zeigt Einstellungen → Jarvis den Verbrauch des Monats. */
-    var anthropicFreibetrag: Int get() = prefs.getInt("anthropic_freibetrag", 100).coerceIn(0, 10_000); set(v) = put { putInt("anthropic_freibetrag", v.coerceIn(0, 10_000)) }
     // ---- Timer ----
     /** true = ein abgelaufener Timer klingelt wie ein Wecker, bis Frank ihn ausschaltet; false = kurze Meldung mit Ton. */
     var timerWecker: Boolean get() = prefs.getBoolean("timer_wecker", true); set(v) = put { putBoolean("timer_wecker", v) }

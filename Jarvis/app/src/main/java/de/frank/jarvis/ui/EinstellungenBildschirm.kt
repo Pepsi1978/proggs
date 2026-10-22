@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -564,34 +565,63 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
     }
 }
 
-/** Verbrauch der Anthropic-API im laufenden Monat, Freibetrag und Rest; dazu Admin-Schlüssel und Freibetrag zum Eintragen. */
+/** Restguthaben der Anthropic-API (Organisationscredits der Claude Console); dazu An- und Abmelden bei der Console. */
 @Composable
 private fun AnthropicGuthaben(vm: AppViewModel) {
     val f = LocalFarben.current
     androidx.compose.runtime.LaunchedEffect(Unit) { vm.anthropicGuthabenAbfragen() }
     val g = vm.anthropicGuthaben
-    Unterzeile("Guthaben diesen Monat")
+    var anmelden by rememberSaveable { mutableStateOf(false) }
+    Unterzeile("Guthaben (Claude Console)")
     Text(
         if (g == null) (if (vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.") else g.zeile(),
-        color = when { g?.verbrauchtUsd == null -> f.textLeise; (g?.restEur ?: 0.0) < 0 -> f.gefahr; else -> f.text },
-        fontSize = 15.sp, fontWeight = if (g?.verbrauchtUsd != null) FontWeight.SemiBold else FontWeight.Normal,
+        color = if (g?.restUsd == null) f.textLeise else f.text,
+        fontSize = 15.sp, fontWeight = if (g?.restUsd != null) FontWeight.SemiBold else FontWeight.Normal,
     )
-    if (g?.verbrauchtUsd != null) Text(
-        g.standText() + " · laut Anthropic " + de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.betrag(g.verbrauchtUsd) + " $" +
-            (g.kurs?.let { ", Kurs EZB " + g.kursDatum } ?: "") + (g.hinweis?.let { "\n$it" } ?: ""),
+    if (g?.restUsd != null) Text(
+        g.details() + (g.kurs?.let { " · Kurs EZB " + g.kursDatum } ?: "") + (g.hinweis?.let { "\n$it" } ?: ""),
         color = if (g.hinweis != null) f.gefahr else f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
     )
     Knopf(if (vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Jetzt abfragen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.anthropicGuthabenAbfragen(erzwingen = true) }
-    Schluesselfeld(vm, "Anthropic-Admin-Schlüssel", vm.sprache.anthropicAdminKey) { vm.anthropicAdminSchluesselSpeichern(it) }
-    Text("Eigener Admin-Schlüssel (sk-ant-admin…) aus der Anthropic-Konsole unter Einstellungen → Admin-Schlüssel, nicht der normale API-Schlüssel. " +
-        "Anthropic nennt das Restguthaben nicht; Jarvis liest den Kostenbericht seit Monatsanfang (UTC) und rechnet mit dem EZB-Kurs in Euro um.",
+    if (vm.anthropicConsoleAngemeldet) Knopf("Bei der Claude Console abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.anthropicConsoleAbmelden() }
+    else Knopf("Bei der Claude Console anmelden", Modifier.padding(top = 8.dp).fillMaxWidth()) { anmelden = true }
+    Text("Jarvis liest das Guthaben so, wie es die Claude Console oben rechts zeigt. Dafür einmal anmelden, am besten per E-Mail-Code " +
+        "(die Google-Anmeldung lässt Google in eingebetteten Browsern nicht zu).",
         color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-    var freibetrag by rememberSaveable { mutableStateOf(vm.einstellungen.anthropicFreibetrag.toString()) }
-    Unterzeile("Freibetrag im Monat (Euro)")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Eingabe(freibetrag, { freibetrag = it.filter(Char::isDigit).take(5) }, "100", Modifier.weight(1f), senden = { freibetrag.toIntOrNull()?.let(vm::anthropicFreibetragSetzen) })
-        Spacer(Modifier.width(8.dp))
-        Knopf("Übernehmen", haupt = freibetrag.toIntOrNull()?.let { it != vm.einstellungen.anthropicFreibetrag } == true) { freibetrag.toIntOrNull()?.let(vm::anthropicFreibetragSetzen) }
+    if (anmelden) ConsoleAnmeldung(onFertig = { anmelden = false; vm.anthropicConsoleAnmeldungPruefen() })
+}
+
+/** Eingebetteter Browser mit der Anmeldeseite der Claude Console; schließt sich, sobald die Sitzung steht. */
+@Composable
+private fun ConsoleAnmeldung(onFertig: () -> Unit) {
+    val f = LocalFarben.current
+    androidx.compose.ui.window.Dialog(onDismissRequest = onFertig, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(f.hgOben)) {
+            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Claude Console anmelden", Modifier.weight(1f), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Knopf("Schließen", haupt = false) { onFertig() }
+            }
+            androidx.compose.ui.viewinterop.AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { ctx ->
+                    android.webkit.CookieManager.getInstance().setAcceptCookie(true)
+                    android.webkit.WebView(ctx).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                        webViewClient = object : android.webkit.WebViewClient() {
+                            override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                                android.webkit.CookieManager.getInstance().flush()
+                                val u = url.orEmpty()
+                                if (de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() && u.startsWith("https://platform.claude.com") && !u.contains("/login")) onFertig()
+                            }
+                        }
+                        loadUrl(de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.LOGIN_URL)
+                    }
+                },
+                onRelease = { it.destroy() },
+            )
+        }
     }
 }
 

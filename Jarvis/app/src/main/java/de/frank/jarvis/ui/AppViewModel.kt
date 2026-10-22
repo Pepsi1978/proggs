@@ -2483,16 +2483,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun anthropicAdminSchluesselSpeichern(schluessel: String) {
-        sprache.anthropicAdminKey = schluessel.trim()
-        anthropicGuthaben = null
-        anthropicGuthabenAbfragen(erzwingen = true)
+    /** true, wenn Jarvis bei der Claude Console angemeldet ist (für das Guthaben). */
+    var anthropicConsoleAngemeldet by mutableStateOf(de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet()); private set
+
+    /** Nach dem eingebetteten Anmelde-Browser: Sitzung prüfen und das Guthaben frisch holen. */
+    fun anthropicConsoleAnmeldungPruefen() {
+        anthropicConsoleAngemeldet = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet()
+        meldung = if (anthropicConsoleAngemeldet) "Bei der Claude Console angemeldet." else "Nicht angemeldet."
+        if (anthropicConsoleAngemeldet) { anthropicGuthaben = null; anthropicGuthabenAbfragen(erzwingen = true) }
     }
 
-    fun anthropicFreibetragSetzen(euro: Int) {
-        einstellungen.anthropicFreibetrag = euro
+    fun anthropicConsoleAbmelden() {
+        de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.abmelden(getApplication())
+        anthropicConsoleAngemeldet = false
         anthropicGuthaben = null
-        anthropicGuthabenAbfragen()
+        meldung = "Bei der Claude Console abgemeldet."
     }
 
     fun setzeDenkstufe(stufe: ReasoningEffort) { einstellungen.denkstufe = stufe }
