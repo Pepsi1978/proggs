@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace VoiceAgent.Services
 {
     /// <summary>
@@ -49,6 +51,21 @@ namespace VoiceAgent.Services
         // ----- Sprachausgabe (TTS) -----
         public string TtsVoiceName { get; set; } = DefaultTtsVoice;
         public string TtsLanguageCode { get; set; } = DefaultTtsLanguage;
+        // Anbieter-Erweiterung (Port aus Jarvis): TtsVoiceName bleibt die aktive Stimme; ihr Praefix
+        // ("gemini_flash:", "gemini_lite:", "azure:") waehlt den Anbieter. Pro Anbieter merkt sich die
+        // App die zuletzt gewaehlte Stimme. Schluessel liegen in keys.json (gemini_tts_frei,
+        // gemini_tts_bezahlt, azure_tts).
+        public string ChirpTtsVoice { get; set; } = DefaultTtsVoice;
+        public string GeminiFlashTtsVoice { get; set; } = GoogleTtsVoices.DefaultGeminiFlashVoice;
+        public string GeminiLiteTtsVoice { get; set; } = GoogleTtsVoices.DefaultGeminiLiteVoice;
+        public string AzureTtsVoice { get; set; } = GoogleTtsVoices.DefaultAzureVoice;
+        // "frei_dann_bezahlt" (Standard) | "nur_frei" | "nur_bezahlt"
+        public string GeminiTtsKeyChoice { get; set; } = TtsOptions.KeyFreeThenPaid;
+        // Scheitert der kostenlose Gemini-Schluessel: mit derselben Stimme ueber Chirp 3 HD weiter statt bezahlt.
+        public bool GeminiTtsChirpFallback { get; set; } = false;
+        public string AzureTtsRegion { get; set; } = GoogleTtsVoices.DefaultAzureRegion;
+        // Favoriten-Stimmen (Kennungen) — stehen in der Stimmliste oben mit gelbem Stern.
+        public List<string> FavoriteVoices { get; set; } = new();
 
         // ----- Spracheingabe (STT) -----
         public string SttModel { get; set; } = DefaultSttModel;

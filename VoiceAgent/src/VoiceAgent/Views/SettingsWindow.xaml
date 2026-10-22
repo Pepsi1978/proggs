@@ -370,8 +370,55 @@
                         <TextBlock Text="Wie der Agent klingt und wie empfindlich er dir zuhört." Style="{StaticResource PageSubtitle}"/>
 
                         <TextBlock Text="Sprachausgabe (Stimme)" Style="{StaticResource SectionFirst}"/>
-                        <TextBlock Text="Eine der 30 deutschen Chirp-3-HD-Stimmen" Style="{StaticResource Label}"/>
-                        <ComboBox x:Name="VoiceBox" MaxWidth="420" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Anbieter" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="TtsProviderBox" MaxWidth="420" HorizontalAlignment="Left"
+                                  SelectionChanged="TtsProviderBox_SelectionChanged"/>
+                        <TextBlock Text="Stimme" Style="{StaticResource Label}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="VoiceBox" Width="380" HorizontalAlignment="Left"
+                                      SelectionChanged="VoiceBox_SelectionChanged">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Star}" Foreground="#F5B700" Width="18"/>
+                                            <TextBlock Text="{Binding Label}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                        <EventSetter Event="MouseRightButtonUp" Handler="VoiceItem_RightClick"/>
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
+                            </ComboBox>
+                            <Button x:Name="FavoriteButton" Content="☆" Margin="8,0,0,0" Padding="10,2"
+                                    FontSize="16" Foreground="#F5B700" Click="FavoriteButton_Click"
+                                    ToolTip="Stimme als Favorit markieren/entfernen"/>
+                        </StackPanel>
+                        <TextBlock Text="Rechtsklick auf eine Stimme oder ☆ markiert sie als Favorit — Favoriten stehen oben."
+                                   Style="{StaticResource Label}"/>
+
+                        <StackPanel x:Name="GeminiTtsPanel">
+                            <TextBlock Text="Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)" Style="{StaticResource Label}"/>
+                            <TextBox x:Name="GeminiTtsKeyFreeBox"/>
+                            <TextBlock Text="Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)" Style="{StaticResource Label}"/>
+                            <TextBox x:Name="GeminiTtsKeyPaidBox"/>
+                            <TextBlock Text="Schlüsselwahl" Style="{StaticResource Label}"/>
+                            <ComboBox x:Name="GeminiTtsKeyChoiceBox" MaxWidth="420" HorizontalAlignment="Left"/>
+                            <CheckBox x:Name="GeminiTtsChirpFallbackBox" Margin="0,8,0,2"
+                                      Content="Rückfall auf Chirp 3 HD"/>
+                            <TextBlock Text="Scheitert der kostenlose Schlüssel, liest die App mit derselben Stimme über Google Chirp 3 HD weiter statt bezahlt."
+                                       Style="{StaticResource Label}"/>
+                        </StackPanel>
+
+                        <StackPanel x:Name="AzureTtsPanel">
+                            <TextBlock Text="Azure-Speech-Schlüssel (KEY 1)" Style="{StaticResource Label}"/>
+                            <TextBox x:Name="AzureTtsKeyBox"/>
+                            <TextBlock Text="Azure-Region (z. B. westeurope)" Style="{StaticResource Label}"/>
+                            <TextBox x:Name="AzureTtsRegionBox"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="TtsKeyHint" Foreground="#D9534F" TextWrapping="Wrap" Margin="0,6,0,0"/>
                         <Button x:Name="PreviewButton" Content="Probehören" HorizontalAlignment="Left"
                                 Margin="0,8,0,0" Padding="14,6" Click="Preview_Click"/>
 

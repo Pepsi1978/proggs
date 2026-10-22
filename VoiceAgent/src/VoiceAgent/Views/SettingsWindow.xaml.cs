@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using VoiceAgent.Core;
@@ -89,11 +90,38 @@ namespace VoiceAgent.Views
                 if (CodexEffortBox.SelectedItem == null) CodexEffortBox.SelectedItem = "medium";
                 RefreshCodexStatus();
 
-                VoiceBox.ItemsSource = GoogleTtsVoices.All;
-                VoiceBox.DisplayMemberPath = nameof(GoogleTtsVoice.DisplayName);
-                VoiceBox.SelectedValuePath = nameof(GoogleTtsVoice.Name);
-                VoiceBox.SelectedValue = _settings.TtsVoiceName;
-                if (VoiceBox.SelectedValue == null) VoiceBox.SelectedValue = GoogleTtsVoices.DefaultVoiceName;
+                // Sprachausgabe: Anbieter + Stimme (Favoriten oben) + Schluessel der Zusatz-Anbieter.
+                _favorites = new HashSet<string>(_settings.FavoriteVoices ?? new List<string>());
+                _voicePerProvider[GoogleTtsVoices.ProviderGoogle] = _settings.ChirpTtsVoice;
+                _voicePerProvider[GoogleTtsVoices.ProviderGeminiFlash] = _settings.GeminiFlashTtsVoice;
+                _voicePerProvider[GoogleTtsVoices.ProviderGeminiLite] = _settings.GeminiLiteTtsVoice;
+                _voicePerProvider[GoogleTtsVoices.ProviderAzure] = _settings.AzureTtsVoice;
+                var activeProvider = GoogleTtsVoices.ProviderOf(_settings.TtsVoiceName);
+                if (!string.IsNullOrWhiteSpace(_settings.TtsVoiceName)) _voicePerProvider[activeProvider] = _settings.TtsVoiceName;
+                GeminiTtsKeyFreeBox.Text = Config.ReadApiKey("gemini_tts_frei");
+                GeminiTtsKeyPaidBox.Text = Config.ReadApiKey("gemini_tts_bezahlt");
+                AzureTtsKeyBox.Text = Config.ReadApiKey("azure_tts");
+                AzureTtsRegionBox.Text = string.IsNullOrWhiteSpace(_settings.AzureTtsRegion) ? GoogleTtsVoices.DefaultAzureRegion : _settings.AzureTtsRegion;
+                GeminiTtsKeyChoiceBox.Items.Clear();
+                foreach (var (id, label) in TtsOptions.KeyChoices)
+                    GeminiTtsKeyChoiceBox.Items.Add(new ComboBoxItem { Content = label, Tag = id });
+                foreach (ComboBoxItem it in GeminiTtsKeyChoiceBox.Items)
+                    if ((string)it.Tag! == _settings.GeminiTtsKeyChoice) { GeminiTtsKeyChoiceBox.SelectedItem = it; break; }
+                if (GeminiTtsKeyChoiceBox.SelectedItem == null) GeminiTtsKeyChoiceBox.SelectedIndex = 0;
+                GeminiTtsChirpFallbackBox.IsChecked = _settings.GeminiTtsChirpFallback;
+                GeminiTtsKeyFreeBox.TextChanged += (_, __) => UpdateTtsHint();
+                GeminiTtsKeyPaidBox.TextChanged += (_, __) => UpdateTtsHint();
+                AzureTtsKeyBox.TextChanged += (_, __) => UpdateTtsHint();
+                GoogleKeyBox.TextChanged += (_, __) => UpdateTtsHint();
+                GeminiTtsChirpFallbackBox.Click += (_, __) => UpdateTtsHint();
+                GeminiTtsKeyChoiceBox.SelectionChanged += (_, __) => UpdateTtsHint();
+                TtsProviderBox.Items.Clear();
+                foreach (var p in GoogleTtsVoices.Providers)
+                    TtsProviderBox.Items.Add(new ComboBoxItem { Content = p.Label, Tag = p.Id });
+                foreach (ComboBoxItem it in TtsProviderBox.Items)
+                    if ((string)it.Tag! == activeProvider) { TtsProviderBox.SelectedItem = it; break; }
+                if (TtsProviderBox.SelectedItem == null) TtsProviderBox.SelectedIndex = 0;
+                RefreshVoiceList();
 
                 SttModelBox.Items.Add(new ComboBoxItem { Content = "Large V3 Turbo (schnell)", Tag = GroqWhisperClient.ModelTurbo });
                 SttModelBox.Items.Add(new ComboBoxItem { Content = "Large V3 (genauer)", Tag = GroqWhisperClient.ModelLargeV3 });
@@ -239,7 +267,16 @@ namespace VoiceAgent.Views
                     deepUnderstanding = _settings.DeepUnderstanding,
                     ok = true
                 });
-                _settings.TtsVoiceName = VoiceBox.SelectedValue as string ?? GoogleTtsVoices.DefaultVoiceName;
+                RememberSelectedVoice();
+                _settings.TtsVoiceName = SelectedVoiceId();
+                _settings.ChirpTtsVoice = _voicePerProvider.GetValueOrDefault(GoogleTtsVoices.ProviderGoogle) ?? GoogleTtsVoices.DefaultVoiceName;
+                _settings.GeminiFlashTtsVoice = _voicePerProvider.GetValueOrDefault(GoogleTtsVoices.ProviderGeminiFlash) ?? GoogleTtsVoices.DefaultGeminiFlashVoice;
+                _settings.GeminiLiteTtsVoice = _voicePerProvider.GetValueOrDefault(GoogleTtsVoices.ProviderGeminiLite) ?? GoogleTtsVoices.DefaultGeminiLiteVoice;
+                _settings.AzureTtsVoice = _voicePerProvider.GetValueOrDefault(GoogleTtsVoices.ProviderAzure) ?? GoogleTtsVoices.DefaultAzureVoice;
+                _settings.GeminiTtsKeyChoice = (GeminiTtsKeyChoiceBox.SelectedItem as ComboBoxItem)?.Tag as string ?? TtsOptions.KeyFreeThenPaid;
+                _settings.GeminiTtsChirpFallback = GeminiTtsChirpFallbackBox.IsChecked == true;
+                _settings.AzureTtsRegion = string.IsNullOrWhiteSpace(AzureTtsRegionBox.Text) ? GoogleTtsVoices.DefaultAzureRegion : AzureTtsRegionBox.Text.Trim();
+                _settings.FavoriteVoices = _favorites.ToList();
 
                 _settings.SttModel = (SttModelBox.SelectedItem as ComboBoxItem)?.Tag as string ?? GroqWhisperClient.ModelTurbo;
                 _settings.PersonalVocabularyEnabled = PersonalVocabularyBox.IsChecked == true;
@@ -275,6 +312,9 @@ namespace VoiceAgent.Views
                 Config.SaveApiKey("gemini", GeminiKeyBox.Text?.Trim() ?? "");
                 Config.SaveApiKey("claude", ClaudeKeyBox.Text?.Trim() ?? "");
                 Config.SaveApiKey("openai", OpenAiKeyBox.Text?.Trim() ?? "");
+                Config.SaveApiKey("gemini_tts_frei", GeminiTtsKeyFreeBox.Text?.Trim() ?? "");
+                Config.SaveApiKey("gemini_tts_bezahlt", GeminiTtsKeyPaidBox.Text?.Trim() ?? "");
+                Config.SaveApiKey("azure_tts", AzureTtsKeyBox.Text?.Trim() ?? "");
 
                 Log.Info("SettingsWindow: Einstellungen gespeichert");
                 DialogResult = true;
@@ -327,15 +367,135 @@ namespace VoiceAgent.Views
             WakeTimeoutLabel.Text = $"Wachfenster nach dem Wecken: {WakeTimeoutSlider.Value / 1000:F0} s";
         }
 
+        // ---------- Sprachausgabe: Anbieter, Stimmen, Favoriten ----------
+
+        /// <summary>Ein Eintrag der Stimmliste (Stern fuer Favoriten).</summary>
+        private sealed record VoiceItem(string Name, string Label, string Star);
+
+        private HashSet<string> _favorites = new();
+        private readonly Dictionary<string, string> _voicePerProvider = new();
+        private bool _refreshingVoices;
+
+        private string SelectedProvider() =>
+            (TtsProviderBox.SelectedItem as ComboBoxItem)?.Tag as string ?? GoogleTtsVoices.ProviderGoogle;
+
+        private string SelectedVoiceId() =>
+            (VoiceBox.SelectedItem as VoiceItem)?.Name ?? GoogleTtsVoices.DefaultVoiceFor(SelectedProvider());
+
+        private void RememberSelectedVoice()
+        {
+            if (VoiceBox.SelectedItem is VoiceItem v) _voicePerProvider[GoogleTtsVoices.ProviderOf(v.Name)] = v.Name;
+        }
+
+        /// <summary>Baut die Stimmliste des gewaehlten Anbieters neu — Favoriten oben (stabil sortiert).</summary>
+        private void RefreshVoiceList(string? select = null)
+        {
+            var provider = SelectedProvider();
+            var wanted = select ?? _voicePerProvider.GetValueOrDefault(provider) ?? GoogleTtsVoices.DefaultVoiceFor(provider);
+            var items = GoogleTtsVoices.VoicesFor(provider)
+                .OrderByDescending(v => _favorites.Contains(v.Name))
+                .Select(v => new VoiceItem(v.Name, v.DisplayName, _favorites.Contains(v.Name) ? "★" : ""))
+                .ToList();
+            _refreshingVoices = true;
+            try
+            {
+                VoiceBox.ItemsSource = items;
+                VoiceBox.SelectedItem = items.FirstOrDefault(i => i.Name == wanted)
+                    ?? items.FirstOrDefault(i => i.Name == GoogleTtsVoices.DefaultVoiceFor(provider))
+                    ?? items.FirstOrDefault();
+            }
+            finally { _refreshingVoices = false; }
+            GeminiTtsPanel.Visibility = provider is GoogleTtsVoices.ProviderGeminiFlash or GoogleTtsVoices.ProviderGeminiLite
+                ? Visibility.Visible : Visibility.Collapsed;
+            AzureTtsPanel.Visibility = provider == GoogleTtsVoices.ProviderAzure ? Visibility.Visible : Visibility.Collapsed;
+            UpdateFavoriteButton();
+            UpdateTtsHint();
+        }
+
+        private void UpdateFavoriteButton() =>
+            FavoriteButton.Content = _favorites.Contains(SelectedVoiceId()) ? "★" : "☆";
+
+        /// <summary>Hinweis, wenn der gewaehlte Anbieter keinen Schluessel hat.</summary>
+        private void UpdateTtsHint()
+        {
+            if (TtsKeyHint == null) return;
+            var provider = SelectedProvider();
+            string hint = "";
+            if (provider == GoogleTtsVoices.ProviderGoogle && string.IsNullOrWhiteSpace(GoogleKeyBox.Text))
+                hint = "Es fehlt der Google-Cloud-Schlüssel (Reiter API-Schlüssel).";
+            else if (provider is GoogleTtsVoices.ProviderGeminiFlash or GoogleTtsVoices.ProviderGeminiLite)
+            {
+                var choice = (GeminiTtsKeyChoiceBox.SelectedItem as ComboBoxItem)?.Tag as string ?? TtsOptions.KeyFreeThenPaid;
+                bool free = !string.IsNullOrWhiteSpace(GeminiTtsKeyFreeBox.Text);
+                bool paid = !string.IsNullOrWhiteSpace(GeminiTtsKeyPaidBox.Text);
+                if (choice == TtsOptions.KeyOnlyFree && !free) hint = "Es fehlt der kostenlose Gemini-Schlüssel für die Stimme.";
+                else if (choice == TtsOptions.KeyOnlyPaid && !paid) hint = "Es fehlt der bezahlte Gemini-Schlüssel für die Stimme.";
+                else if (!free && !paid) hint = "Es ist kein Gemini-Schlüssel für die Stimme hinterlegt.";
+                if (GeminiTtsChirpFallbackBox.IsChecked == true && string.IsNullOrWhiteSpace(GoogleKeyBox.Text))
+                    hint = (hint + " Für den Rückfall auf Chirp 3 HD fehlt der Google-Cloud-Schlüssel.").Trim();
+            }
+            else if (provider == GoogleTtsVoices.ProviderAzure && string.IsNullOrWhiteSpace(AzureTtsKeyBox.Text))
+                hint = "Es fehlt der Azure-Speech-Schlüssel.";
+            TtsKeyHint.Text = hint;
+            TtsKeyHint.Visibility = hint.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private TtsOptions CurrentTtsOptions() => new(
+            GeminiTtsKeyFreeBox.Text?.Trim() ?? "",
+            GeminiTtsKeyPaidBox.Text?.Trim() ?? "",
+            (GeminiTtsKeyChoiceBox.SelectedItem as ComboBoxItem)?.Tag as string ?? TtsOptions.KeyFreeThenPaid,
+            GeminiTtsChirpFallbackBox.IsChecked == true,
+            AzureTtsKeyBox.Text?.Trim() ?? "",
+            string.IsNullOrWhiteSpace(AzureTtsRegionBox.Text) ? GoogleTtsVoices.DefaultAzureRegion : AzureTtsRegionBox.Text.Trim());
+
+        private void ToggleFavorite(string voiceId)
+        {
+            if (!_favorites.Remove(voiceId)) _favorites.Add(voiceId);
+            RefreshVoiceList(SelectedVoiceId());
+        }
+
+        private void TtsProviderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try { if (VoiceBox != null && GeminiTtsPanel != null && FavoriteButton != null) RefreshVoiceList(); }
+            catch (Exception ex) { Log.Error("SettingsWindow: Anbieterwechsel fehlgeschlagen", ex); }
+        }
+
+        private void VoiceBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_refreshingVoices || FavoriteButton == null) return;
+            try { RememberSelectedVoice(); UpdateFavoriteButton(); }
+            catch (Exception ex) { Log.Error("SettingsWindow: Stimmwahl fehlgeschlagen", ex); }
+        }
+
+        private void FavoriteButton_Click(object sender, RoutedEventArgs e)
+        {
+            try { ToggleFavorite(SelectedVoiceId()); }
+            catch (Exception ex) { Log.Error("SettingsWindow: Favorit umschalten fehlgeschlagen", ex); }
+        }
+
+        // Rechtsklick auf eine Stimme in der aufgeklappten Liste: Favorit an/aus.
+        private void VoiceItem_RightClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            try
+            {
+                if ((sender as ComboBoxItem)?.DataContext is not VoiceItem v) return;
+                e.Handled = true;
+                var keep = SelectedVoiceId();
+                if (!_favorites.Remove(v.Name)) _favorites.Add(v.Name);
+                RefreshVoiceList(keep);
+            }
+            catch (Exception ex) { Log.Error("SettingsWindow: Favorit per Rechtsklick fehlgeschlagen", ex); }
+        }
+
         // Event-Handler: async void ist hier ok, Body komplett in try/catch (Almanach §7.2).
         private async void Preview_Click(object sender, RoutedEventArgs e)
         {
-            var voice = VoiceBox.SelectedValue as string ?? GoogleTtsVoices.DefaultVoiceName;
+            var voice = SelectedVoiceId();
             var key = GoogleKeyBox.Text?.Trim() ?? string.Empty;
             try
             {
                 PreviewButton.IsEnabled = false;
-                var tts = new GoogleTtsClient(key);
+                var tts = new GoogleTtsClient(key, CurrentTtsOptions());
                 var audio = await tts.SynthesizeAsync("Hallo, so klinge ich.", _settings.TtsLanguageCode, voice);
                 await _previewPlayer.PlayAsync(audio);
             }

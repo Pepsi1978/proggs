@@ -380,7 +380,7 @@ namespace VoiceAgent
             _understanding = _settings.DeepUnderstanding
                 ? new UnderstandingDetector(LlmProviderFactory.CreateForRole(_settings, ModelRole.Brain), _settings.TimeZoneId)
                 : null;
-            _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
+            _tts = new GoogleTtsClient(Config.ReadApiKey("google"), TtsOptions.FromConfig(_settings));
             _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage,
                                          url: null, voicedRmsThreshold: _settings.SilenceThreshold,
                                          useVocabulary: _settings.PersonalVocabularyEnabled);
