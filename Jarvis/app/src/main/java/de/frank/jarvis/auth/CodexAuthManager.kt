@@ -645,6 +645,27 @@ class CodexAuthManager(context: Context) {
         else -> false
     }
 
+    /**
+     * Codex Cloud mit dem ChatGPT-Konto, dieselbe Schnittstelle wie `codex cloud exec` (chatgpt.com/backend-api/wham):
+     * [pfad] z. B. „/environments“ oder „/tasks“, mit [json] als POST, sonst GET. Liefert HTTP-Code und Antworttext.
+     */
+    suspend fun codexCloud(pfad: String, json: String? = null): Pair<Int, String> = withContext(Dispatchers.IO) {
+        val token = validAccessToken()
+        val konto = jwtAccountId(token) ?: accountId
+            ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Im Codex-Token fehlt die ChatGPT-Account-ID.")
+        val anfrage = Request.Builder().url("https://chatgpt.com/backend-api/wham$pfad")
+            .header("Accept", "application/json")
+            .header("Authorization", "Bearer $token")
+            .header("originator", "codex_cli_rs")
+            .header("version", CODEX_CLIENT_VERSION)
+            .header("User-Agent", "codex_cli_rs/$CODEX_CLIENT_VERSION (Aufgaben)")
+            .header("ChatGPT-Account-Id", konto)
+            .apply { if (json != null) post(json.toRequestBody(JSON_MEDIA_TYPE)) }
+            .build()
+        val ergebnis = executeForText(AUTH_HTTP_CLIENT, anfrage)
+        ergebnis.code to ergebnis.body
+    }
+
     private suspend fun requestCodexResponseOnce(
         payload: JSONObject,
         onDelta: suspend (String) -> Unit,

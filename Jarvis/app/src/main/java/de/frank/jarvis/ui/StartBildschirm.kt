@@ -376,28 +376,36 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
 }
 
 /**
- * Modellwahl vor einem Programmierauftrag am Rechner: „Opus 5.5“ (Claude Code wie bisher) oder „Sol 6.1“ (Codex CLI). Ein Tipp
- * startet den Auftrag genau einmal; danach, nach einer Wahl per Sprache oder nach einem Neustart der App sind die Knöpfe aus.
+ * Auswahl vor einem Programmierauftrag: Modell („Opus 5.5“ oder „Sol 6.1“), bei Sol das CLI („Codex CLI“ oder „OpenCode CLI“),
+ * bei Codex das Review („Ja“/„Nein“). Ein Tipp gilt genau einmal; danach, nach einer Wahl per Sprache oder nach einem Neustart
+ * der App sind die Knöpfe aus.
  */
 @Composable
 private fun ModellWahlKarte(vm: AppViewModel, n: Nachricht) {
     val f = LocalFarben.current
     val id = remember(n.kontext) { runCatching { org.json.JSONObject(n.kontext).optString("wahl_id") }.getOrDefault("") }
+    // Knöpfe aus dem Kontext (Modell, danach bei Sol „Codex CLI“/„OpenCode CLI“, bei Codex „Ja“/„Nein“ zum Review);
+    // ältere Karten ohne „optionen“ sind die Modellwahl.
+    val optionen = remember(n.kontext) {
+        val liste = runCatching { org.json.JSONObject(n.kontext).optJSONArray("optionen") }.getOrNull()
+        if (liste == null || liste.length() == 0) listOf(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS to "Opus 5.5", de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL to "Sol 6.1")
+        else (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.map { it.optString("wert") to it.optString("label") }
+    }
     val stand by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand.collectAsState()
     val s = stand[id]
     Column(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp, bottom = 6.dp)) {
         Text(n.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp)
         if (s == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN) {
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Knopf("Opus 5.5", Modifier.height(44.dp)) { vm.programmierModell(id, de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS) }
-                Knopf("Sol 6.1", Modifier.height(44.dp), haupt = false) { vm.programmierModell(id, de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL) }
+                optionen.forEachIndexed { i, (wert, label) ->
+                    Knopf(label, Modifier.height(44.dp), haupt = i == 0) { vm.programmierModell(id, wert) }
+                }
             }
         } else {
             Text(when (s) {
-                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS -> "Gewählt: Opus 5.5"
-                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL -> "Gewählt: Sol 6.1"
                 de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_ERLEDIGT -> "Per Sprache gewählt."
-                else -> "Diese Auswahl ist nicht mehr aktiv."
+                null -> "Diese Auswahl ist nicht mehr aktiv."
+                else -> optionen.firstOrNull { it.first == s }?.let { "Gewählt: ${it.second}" } ?: "Diese Auswahl ist nicht mehr aktiv."
             }, Modifier.padding(top = 4.dp), color = f.textLeise, fontSize = 13.sp)
         }
     }
