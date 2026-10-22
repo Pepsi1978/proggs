@@ -297,7 +297,7 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
 
     fun vertiefe(eintrag: EintragEntity) {
         if (eintrag.id in arbeitetAn.value) return
-        if (!container.codex.istVerbunden) {
+        if (!container.codex.kannDenken) {
             fehler.value = "Für eine ausführlichere Erklärung braucht es die Anmeldung bei " +
                 "Codex. Du findest sie in den Einstellungen."
             return
@@ -382,7 +382,7 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
     fun stelleFrage(eintrag: EintragEntity, frage: String) {
         val text = frage.trim()
         if (text.isBlank()) return
-        if (!container.codex.istVerbunden) {
+        if (!container.codex.kannDenken) {
             fehler.value = "Zum Fragen braucht es die Anmeldung bei Codex. Du findest sie in " +
                 "den Einstellungen."
             return

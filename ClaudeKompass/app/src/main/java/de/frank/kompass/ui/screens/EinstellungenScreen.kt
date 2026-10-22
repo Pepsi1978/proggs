@@ -559,14 +559,52 @@ fun EinstellungenScreen(
                 }
 
                 Spacer(Modifier.height(Mass.abstand))
+                // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen eigenen API-Schlüssel.
+                val claudeAktiv = de.frank.kompass.ai.ClaudeModell.istClaude(zustand.modellId)
+                LaunchedEffect(claudeAktiv) {
+                    de.frank.kompass.ai.AnthropicKlient.anbieterSetzen(kontext, if (claudeAktiv) de.frank.kompass.ai.KiAnbieter.ANTHROPIC else de.frank.kompass.ai.KiAnbieter.OPENAI)
+                }
+                var anthropicKey by remember { mutableStateOf(de.frank.kompass.ai.AnthropicKlient.schluessel(kontext)) }
+                Klappauswahl(
+                    beschriftung = "Anbieter",
+                    punkte = de.frank.kompass.ai.KiAnbieter.entries.map {
+                        AuswahlPunkt(it, it.label, if (it == de.frank.kompass.ai.KiAnbieter.ANTHROPIC) "Claude über deinen API-Schlüssel" else "über dein ChatGPT-Konto")
+                    },
+                    gewaehlt = if (claudeAktiv) de.frank.kompass.ai.KiAnbieter.ANTHROPIC else de.frank.kompass.ai.KiAnbieter.OPENAI,
+                    beiWahl = { a ->
+                        if (claudeAktiv != (a == de.frank.kompass.ai.KiAnbieter.ANTHROPIC)) {
+                            if (claudeAktiv) de.frank.kompass.ai.ClaudeModell.von(zustand.modellId)?.let { de.frank.kompass.ai.AnthropicKlient.claudeModellMerken(kontext, it) }
+                            else de.frank.kompass.ai.AnthropicKlient.openAiModellMerken(kontext, zustand.modellId)
+                            de.frank.kompass.ai.AnthropicKlient.anbieterSetzen(kontext, a)
+                            val neu = if (a == de.frank.kompass.ai.KiAnbieter.ANTHROPIC) de.frank.kompass.ai.AnthropicKlient.letztesClaudeModell(kontext).apiId
+                            else de.frank.kompass.ai.AnthropicKlient.letztesOpenAiModell(kontext, KiModell.standard.apiId)
+                            val label = de.frank.kompass.ai.ClaudeModell.von(neu)?.label ?: KiModell.bekannt.firstOrNull { it.apiId == neu }?.label ?: neu
+                            viewModel.setzeModell(label, neu)
+                        }
+                    },
+                )
+                if (claudeAktiv) {
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    androidx.compose.material3.OutlinedTextField(
+                        value = anthropicKey,
+                        onValueChange = { anthropicKey = it; de.frank.kompass.ai.AnthropicKlient.schluesselSpeichern(kontext, it) },
+                        label = { androidx.compose.material3.Text("Anthropic-API-Schlüssel (sk-ant-…)") },
+                        singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Zeilentext(if (anthropicKey.isBlank()) "Für Claude bitte deinen Anthropic-API-Schlüssel eintragen." else "Claude denkt über deinen Anthropic-API-Schlüssel (eigene Abrechnung).")
+                }
+                Spacer(Modifier.height(Mass.abstandKlein))
                 Klappauswahl(
                     beschriftung = "Modell",
-                    punkte = KiModell.bekannt.map { AuswahlPunkt(it.apiId, it.label, it.apiId) } +
+                    punkte = if (claudeAktiv) de.frank.kompass.ai.ClaudeModell.entries.map { AuswahlPunkt(it.apiId, it.label, it.apiId) } else
+                        KiModell.bekannt.map { AuswahlPunkt(it.apiId, it.label, it.apiId) } +
                         zustand.eigeneModelle.map { AuswahlPunkt(it, it, "selbst erg\u00e4nzt") },
                     gewaehlt = zustand.modellId,
                     beiWahl = { gewaehlt ->
                         val bekannt = KiModell.bekannt.firstOrNull { it.apiId == gewaehlt }
-                        viewModel.setzeModell(bekannt?.label ?: gewaehlt, gewaehlt)
+                        viewModel.setzeModell(bekannt?.label ?: de.frank.kompass.ai.ClaudeModell.von(gewaehlt)?.label ?: gewaehlt, gewaehlt)
                     },
                 )
                 if (zustand.modellId in zustand.eigeneModelle) {
@@ -578,7 +616,7 @@ fun EinstellungenScreen(
                         viewModel.entferneModell(zustand.modellId)
                     }
                 }
-                NeuesModellFeld { viewModel.ergaenzeModell(it) }
+                if (!claudeAktiv) NeuesModellFeld { viewModel.ergaenzeModell(it) }
 
                 Spacer(Modifier.height(Mass.abstandKlein))
                 Klappauswahl(
