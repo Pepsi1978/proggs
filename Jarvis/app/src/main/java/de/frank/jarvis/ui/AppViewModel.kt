@@ -2497,6 +2497,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         meldung = if (anthropicVerbunden) "Anthropic-Schlüssel gespeichert." else "Anthropic-Schlüssel entfernt."
     }
 
+    /** Verbrauch der Anthropic-API im laufenden Monat gegen den Freibetrag (Einstellungen → Jarvis); null = noch nicht abgefragt. */
+    var anthropicGuthaben by mutableStateOf<de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.Stand?>(null); private set
+    var anthropicGuthabenLaedt by mutableStateOf(false); private set
+
+    /** Zeigt sofort den gespeicherten Stand und fragt frisch nach, wenn er älter als 15 Minuten ist oder [erzwingen]. */
+    fun anthropicGuthabenAbfragen(erzwingen: Boolean = false) {
+        if (anthropicGuthabenLaedt) return
+        val app = getApplication<Application>()
+        anthropicGuthabenLaedt = true
+        viewModelScope.launch {
+            if (anthropicGuthaben == null) anthropicGuthaben = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.gespeichert(app) }
+            anthropicGuthaben = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen)
+            anthropicGuthabenLaedt = false
+        }
+    }
+
+    fun anthropicAdminSchluesselSpeichern(schluessel: String) {
+        sprache.anthropicAdminKey = schluessel.trim()
+        anthropicGuthaben = null
+        anthropicGuthabenAbfragen(erzwingen = true)
+    }
+
+    fun anthropicFreibetragSetzen(euro: Int) {
+        einstellungen.anthropicFreibetrag = euro
+        anthropicGuthaben = null
+        anthropicGuthabenAbfragen()
+    }
+
     fun setzeDenkstufe(stufe: ReasoningEffort) { einstellungen.denkstufe = stufe }
     fun setzeSchrittlimit(limit: Int) { einstellungen.schrittlimit = limit }
 

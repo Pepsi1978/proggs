@@ -230,6 +230,7 @@
     {"versionCode": 225, "versionName": "1.8.214", "stand": "21.10.2026, 21:32 Uhr", "notiz": "Neuer Vorlese-Anbieter Azure Neural: mit eigenem Azure-Speech-Schlüssel und Region alle deutschen Microsoft-Neural-Stimmen und die HD-Stimmen Seraphina und Florian, auch für Meldungen und per Sprache wählbar."},
     {"versionCode": 226, "versionName": "1.8.215", "stand": "21.10.2026, 21:37 Uhr", "notiz": "Azure-Stimmen robuster: wartet beim Ratenlimit der kostenlosen Stufe statt abzubrechen, versteht auch den eingefügten Portal-Endpunkt als Region, ein fehlerhafter Absatz stoppt nicht mehr das ganze Vorlesen, Region auch bei den Meldungen einstellbar."},
     {"versionCode": 227, "versionName": "1.8.216", "stand": "22.10.2026, 11:21 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe."},
-    {"versionCode": 228, "versionName": "1.8.217", "stand": "22.10.2026, 11:53 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 sofort wieder nutzbar nach erneuter Auswahl. Whisper-Modell und Wörterbuch lassen sich auch per Sprache abfragen und umstellen."}
+    {"versionCode": 228, "versionName": "1.8.217", "stand": "22.10.2026, 11:53 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 sofort wieder nutzbar nach erneuter Auswahl. Whisper-Modell und Wörterbuch lassen sich auch per Sprache abfragen und umstellen."},
+    {"versionCode": 229, "versionName": "1.8.218", "stand": "22.10.2026, 15:29 Uhr", "notiz": "Bei Anbieter Anthropic zeigen die Einstellungen den API-Verbrauch des Monats gegen deinen Freibetrag samt Rest (mit Admin-Schlüssel), und Jarvis nennt ihn auf Nachfrage im Gespräch."}
   ]
 }

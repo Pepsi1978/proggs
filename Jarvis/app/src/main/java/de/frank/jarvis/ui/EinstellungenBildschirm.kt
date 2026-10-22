@@ -114,6 +114,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Zeile("Anthropic-Schlüssel", if (vm.anthropicVerbunden) "Eingetragen" else "Fehlt", if (vm.anthropicVerbunden) f.erfolg else f.gefahr)
                     Schluesselfeld(vm, "Anthropic-API-Schlüssel", vm.sprache.anthropicApiKey) { vm.anthropicSchluesselSpeichern(it) }
                     Text("Schlüssel (sk-ant-…) von platform.claude.com unter API Keys.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    AnthropicGuthaben(vm)
                 }
                 Unterzeile("Modell")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -560,6 +561,37 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp), color = f.textSchwach, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+/** Verbrauch der Anthropic-API im laufenden Monat, Freibetrag und Rest; dazu Admin-Schlüssel und Freibetrag zum Eintragen. */
+@Composable
+private fun AnthropicGuthaben(vm: AppViewModel) {
+    val f = LocalFarben.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { vm.anthropicGuthabenAbfragen() }
+    val g = vm.anthropicGuthaben
+    Unterzeile("Guthaben diesen Monat")
+    Text(
+        if (g == null) (if (vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.") else g.zeile(),
+        color = when { g?.verbrauchtUsd == null -> f.textLeise; (g?.restEur ?: 0.0) < 0 -> f.gefahr; else -> f.text },
+        fontSize = 15.sp, fontWeight = if (g?.verbrauchtUsd != null) FontWeight.SemiBold else FontWeight.Normal,
+    )
+    if (g?.verbrauchtUsd != null) Text(
+        g.standText() + " · laut Anthropic " + de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.betrag(g.verbrauchtUsd) + " $" +
+            (g.kurs?.let { ", Kurs EZB " + g.kursDatum } ?: "") + (g.hinweis?.let { "\n$it" } ?: ""),
+        color = if (g.hinweis != null) f.gefahr else f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
+    )
+    Knopf(if (vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Jetzt abfragen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.anthropicGuthabenAbfragen(erzwingen = true) }
+    Schluesselfeld(vm, "Anthropic-Admin-Schlüssel", vm.sprache.anthropicAdminKey) { vm.anthropicAdminSchluesselSpeichern(it) }
+    Text("Eigener Admin-Schlüssel (sk-ant-admin…) aus der Anthropic-Konsole unter Einstellungen → Admin-Schlüssel, nicht der normale API-Schlüssel. " +
+        "Anthropic nennt das Restguthaben nicht; Jarvis liest den Kostenbericht seit Monatsanfang (UTC) und rechnet mit dem EZB-Kurs in Euro um.",
+        color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+    var freibetrag by rememberSaveable { mutableStateOf(vm.einstellungen.anthropicFreibetrag.toString()) }
+    Unterzeile("Freibetrag im Monat (Euro)")
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Eingabe(freibetrag, { freibetrag = it.filter(Char::isDigit).take(5) }, "100", Modifier.weight(1f), senden = { freibetrag.toIntOrNull()?.let(vm::anthropicFreibetragSetzen) })
+        Spacer(Modifier.width(8.dp))
+        Knopf("Übernehmen", haupt = freibetrag.toIntOrNull()?.let { it != vm.einstellungen.anthropicFreibetrag } == true) { freibetrag.toIntOrNull()?.let(vm::anthropicFreibetragSetzen) }
     }
 }
 
