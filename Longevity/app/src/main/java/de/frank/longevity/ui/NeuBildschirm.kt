@@ -99,9 +99,9 @@ fun NeuBildschirm(vm: AppViewModel) {
                 }
             }
             Mikrofon(vm)
-            HauptKnopf(Icons.Rounded.AutoAwesome, if (vm.kiVerbunden) "Auswerten & einordnen" else "Speichern") { vm.auswerten() }
+            HauptKnopf(Icons.Rounded.AutoAwesome, if (vm.kiBereit) "Auswerten & einordnen" else "Speichern") { vm.auswerten() }
             Text(
-                if (vm.kiVerbunden) "Mit ${vm.einstellungen.modell.label} · ${vm.einstellungen.denkstufe.label}. Die Auswertung läuft im Hintergrund weiter – du siehst den Fortschritt in der Liste."
+                if (vm.kiBereit) "Mit ${vm.einstellungen.modell.label} · ${vm.einstellungen.denkstufe.label}. Die Auswertung läuft im Hintergrund weiter – du siehst den Fortschritt in der Liste."
                 else "Ohne ChatGPT-Verbindung wird die Idee unten angehängt. Verbinden kannst du in den Einstellungen.",
                 color = f.textSchwach, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 6.dp),
             )

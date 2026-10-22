@@ -174,8 +174,32 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                             vm.kiFehler?.let { Text(it, color = f.gefahr, fontSize = 12.sp) }
                         }
                     }
+                    // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen eigenen API-Schlüssel.
+                    val kontext = androidx.compose.ui.platform.LocalContext.current
+                    var anthropicKey by remember { mutableStateOf(de.frank.longevity.auth.AnthropicKlient.schluessel(kontext)) }
+                    Text("Anbieter", color = f.textLeise, fontSize = 13.sp)
+                    ChipReihe {
+                        de.frank.longevity.auth.KiAnbieter.entries.forEach { a ->
+                            Chip(a.label, e.modell.anbieter == a) {
+                                if (e.modell.anbieter != a) {
+                                    val alt = e.modell
+                                    if (alt.istAnthropic) de.frank.longevity.auth.AnthropicKlient.claudeModellMerken(kontext, de.frank.longevity.auth.ClaudeModell.von(alt.apiId) ?: de.frank.longevity.auth.ClaudeModell.OPUS)
+                                    else de.frank.longevity.auth.AnthropicKlient.openAiModellMerken(kontext, alt.apiId)
+                                    e.modell = CodexModel.fromLabel(
+                                        if (a == de.frank.longevity.auth.KiAnbieter.ANTHROPIC) de.frank.longevity.auth.AnthropicKlient.letztesClaudeModell(kontext).apiId
+                                        else de.frank.longevity.auth.AnthropicKlient.letztesOpenAiModell(kontext, CodexModel.ASTRA.apiId),
+                                    )
+                                    e.denkstufe = e.modell.normalizeEffort(e.denkstufe)
+                                }
+                            }
+                        }
+                    }
+                    if (e.modell.istAnthropic) {
+                        Text(if (anthropicKey.isBlank()) "Für Claude bitte deinen Anthropic-API-Schlüssel (sk-ant-…) eintragen." else "Claude denkt über deinen Anthropic-API-Schlüssel (eigene Abrechnung) und sucht selbst im Netz.", color = f.textLeise, fontSize = 13.sp)
+                        Feld("Anthropic-API-Schlüssel", anthropicKey, geheim = true) { anthropicKey = it; de.frank.longevity.auth.AnthropicKlient.schluesselSpeichern(kontext, it) }
+                    }
                     Text("Modell für Auswertung, Vertiefung und Aktualisierung", color = f.textLeise, fontSize = 13.sp)
-                    ChipReihe { CodexModel.entries.forEach { m -> Chip(m.label, e.modell == m) { e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe) } } }
+                    ChipReihe { CodexModel.von(e.modell.anbieter).forEach { m -> Chip(m.label, e.modell == m) { e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe) } } }
                     Text("Effort (Denkstufe)", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { e.modell.supportedEfforts.forEach { r -> Chip(r.label, e.denkstufe == r) { e.denkstufe = r } } }
                     Text("Höherer Effort = gründlicher, dauert länger. Empfohlen: GPT-6 Astra · Hoch.", color = f.textSchwach, fontSize = 11.sp)

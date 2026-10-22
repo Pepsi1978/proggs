@@ -84,6 +84,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- KI-Verbindung ----
     var kiVerbunden by mutableStateOf(auth.isConnected); private set
+    /** Die gewählte KI kann antworten: OpenAI über das ChatGPT-Konto, Claude über den Anthropic-Schlüssel. */
+    val kiBereit: Boolean get() = if (einstellungen.modell.istAnthropic) auth.kannDenken(einstellungen.modell) else kiVerbunden
     var geraeteCode by mutableStateOf<DeviceAuthInfo?>(null); private set
     var kiFehler by mutableStateOf<String?>(null); private set
     var kiVerbindet by mutableStateOf(false); private set
@@ -161,7 +163,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (korrigiert) return
         val quelle = textVorKorrektur ?: eText
         if (quelle.isBlank()) { melde("Sprich oder schreibe zuerst etwas."); return }
-        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
+        if (!kiBereit) { melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
         korrigiert = true
         viewModelScope.launch {
             try {
@@ -191,7 +193,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (erstNachAufnahme(::auswerten)) return
         val idee = eText.trim()
         if (idee.isBlank()) { melde("Sprich oder schreibe zuerst deine Idee."); return }
-        if (!kiVerbunden) {
+        if (!kiBereit) {
             viewModelScope.launch {
                 val titel = idee.split(Regex("\\s+")).take(8).joinToString(" ").trimEnd('.', ',')
                 val id = repo.einfuegen(
@@ -238,7 +240,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Knopf „Aktualisieren“: läuft schon etwas, zur Diskussion; sonst erst nachfragen – der Lauf ist groß. */
     fun aktualisierenAnfragen() {
-        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
+        if (!kiBereit) { melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
         if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
         fortsetzInfo = ki.speicher.beschreibung(aktuelleIds())
         aktualisierenFrage = true
@@ -253,7 +255,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun aktualisieren(neuBeginnen: Boolean = false) {
         aktualisierenFrage = false
-        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
+        if (!kiBereit) { melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
         if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
         hinweiseAnfragen()
         if (neuBeginnen) ki.speicher.loeschen()
@@ -281,7 +283,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (erstNachAufnahme(::einwandSenden)) return
         val text = eText.trim()
         if (text.isBlank()) { melde("Sprich oder schreibe zuerst deinen Beitrag."); return }
-        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
+        if (!kiBereit) { melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
         if (KiArbeit.laeuft) { melde("Die KI arbeitet gerade noch – bitte kurz warten."); return }
         hinweiseAnfragen()
         val bisher = KiArbeit.protokoll.toList()
@@ -360,7 +362,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun vertiefen(f: Faktor) {
-        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
+        if (!kiBereit) { melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
         if (KiArbeit.laeuft) { melde("Die KI arbeitet gerade noch – bitte kurz warten."); return }
         hinweiseAnfragen()
         KiArbeit.starte(getApplication(), Art.VERTIEFEN, f.titel, f.id) { fortschritt ->
