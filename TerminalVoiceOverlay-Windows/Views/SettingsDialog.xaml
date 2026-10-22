@@ -109,6 +109,16 @@
                                 <ComboBoxItem Content="Gemini Transcribe — genauer, kostenlos (empfohlen)"/>
                                 <ComboBoxItem Content="Gemini Transcribe Live — Streaming-Variante"/>
                             </ComboBox>
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="Welches Whisper-Modell bei Groq?"/>
+                            <ComboBox x:Name="GroqModelBox"
+                                      Background="#FF1B1B1B" Foreground="Black"
+                                      BorderBrush="#FF454545" BorderThickness="1"
+                                      Padding="8,6" FontSize="13" Margin="0,0,0,8">
+                                <ComboBoxItem Content="Whisper large-v3 Turbo — am schnellsten"/>
+                                <ComboBoxItem Content="Whisper large-v3 — genauer auf Deutsch"/>
+                            </ComboBox>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                                       Text="large-v3 macht auf Deutsch deutlich weniger Fehler (Alltagssätze 4,8 % statt 8,6 %), ist etwas langsamer und kostet im Gratis-Kontingent nichts extra. Groq sperrt es aber zunächst: einmalig unter console.groq.com/settings/limits für deine Organisation freischalten. Solange es gesperrt ist, nimmt das Overlay automatisch Turbo, kein Diktat geht verloren. Gilt auch als Rückfall, wenn Gemini ausfällt."/>
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="Wie wörtlich soll Gemini transkribieren?"/>
                             <ComboBox x:Name="TranscriptionModeBox"
                                       Background="#FF1B1B1B" Foreground="Black"

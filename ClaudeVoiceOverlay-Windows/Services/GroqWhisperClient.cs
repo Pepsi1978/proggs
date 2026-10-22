@@ -14,7 +14,9 @@ namespace ClaudeVoiceOverlay.Services
     public sealed class GroqWhisperClient
     {
         private readonly string _apiKey;
-        private readonly string _model;
+        private readonly string _defaultModel;
+        // Pro Aufnahme aus GroqModelSetting gesetzt (Einstellungen), sonst WHISPER_MODEL.
+        private string _model;
         private readonly string _language;
         private readonly string _url;
         private static readonly bool PreferCurlTransport = OperatingSystem.IsWindows();
@@ -131,6 +133,7 @@ namespace ClaudeVoiceOverlay.Services
         public GroqWhisperClient(string apiKey, string model, string language, string url)
         {
             _apiKey = apiKey;
+            _defaultModel = model;
             _model = model;
             _language = language;
             _url = url;
@@ -138,6 +141,7 @@ namespace ClaudeVoiceOverlay.Services
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
+            _model = GroqModelSetting.Current ?? _defaultModel;
             DiagLog.Write("Groq", "transcribe_start", ("model", _model), ("lang", _language));
             // Datei einmal in den Speicher laden und ueber alle Retry-Versuche
             // wiederverwenden. Vorher las jeder Retry die WAV-Datei neu von
@@ -157,12 +161,20 @@ namespace ClaudeVoiceOverlay.Services
                     DiagLog.Write("Groq", "prefilter_rejected", ("bytes", fileBytes.Length));
                     throw new Exception("Aufnahme ohne erkennbaren Sprachinhalt — nicht an Groq gesendet (Stille-Schutz)");
                 }
-                // Lange Aufnahmen wuerden am Groq-Upload-Limit mit 413 scheitern (siehe
-                // MaxUploadBytes) — sie werden in Teile geschnitten und einzeln gesendet.
-                var text = fileBytes.Length > MaxUploadBytes
-                    ? await TranscribeInChunksAsync(fileBytes).ConfigureAwait(false)
-                    : await TranscribeWithRetry(fileBytes, 0, voiced).ConfigureAwait(false);
-                DiagLog.Write("Groq", "transcribe_done", ("chars", text.Length));
+                string text;
+                try
+                {
+                    text = await TranscribeOnceAsync(fileBytes, voiced).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (_model != GroqModelSetting.Turbo && GroqModelSetting.IsBlockedError(ex))
+                {
+                    // large-v3 ist fuer die Groq-Organisation noch nicht freigeschaltet:
+                    // Diktat nicht verlieren, einmal mit Turbo wiederholen.
+                    DiagLog.Write("Groq", "model_blocked_fallback_turbo", ("model", _model));
+                    _model = GroqModelSetting.Turbo;
+                    text = await TranscribeOnceAsync(fileBytes, voiced).ConfigureAwait(false);
+                }
+                DiagLog.Write("Groq", "transcribe_done", ("chars", text.Length), ("model", _model));
                 return text;
             }
             catch (Exception ex)
@@ -171,6 +183,13 @@ namespace ClaudeVoiceOverlay.Services
                 throw;
             }
         }
+
+        // Lange Aufnahmen wuerden am Groq-Upload-Limit mit 413 scheitern (siehe
+        // MaxUploadBytes) — sie werden in Teile geschnitten und einzeln gesendet.
+        private Task<string> TranscribeOnceAsync(byte[] fileBytes, bool[] voiced) =>
+            fileBytes.Length > MaxUploadBytes
+                ? TranscribeInChunksAsync(fileBytes)
+                : TranscribeWithRetry(fileBytes, 0, voiced);
 
         private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt, bool[]? voiced = null)
         {
