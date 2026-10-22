@@ -197,6 +197,11 @@ class GroqTranscriber(
         // After a "blocked at the organization level" answer use Turbo directly for 30 minutes.
         @Volatile private var blockedUntilMs = 0L
 
+        /** Clears the 30-minute block, e.g. when the user picks a model again in the settings. */
+        fun sperreAufheben() {
+            blockedUntilMs = 0L
+        }
+
         private fun modellFuerAufnahme(model: String): String =
             if (model == MODELL_LARGE_V3 && System.currentTimeMillis() < blockedUntilMs) MODELL_TURBO else model
 
