@@ -189,6 +189,9 @@ class GroqTranscriber(
         /** Nach einer Groq-Sperre für large-v3 bis hierhin direkt Turbo nehmen. */
         @Volatile private var turboErzwungenBis = 0L
 
+        /** Neue Modellwahl in den Einstellungen hebt die 30-Minuten-Sperre sofort auf. */
+        fun sperreAufheben() { turboErzwungenBis = 0L }
+
         fun begriffe(text: String): List<String> = text
             .split('\n', '\r', ',', ';')
             .map(String::trim)
@@ -215,7 +218,10 @@ class GroqTranscriber(
             fun norm(s: String) = s.lowercase().filter(Char::isLetterOrDigit)
             val t = norm(text)
             val marker = norm(ECHO_MARKER)
-            return t.startsWith(marker) && norm(prompt).contains(t.substring(marker.length))
+            val p = norm(prompt)
+            if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+            // Teil-Echo: bei Stille gibt Whisper oft nur Ende oder Mitte des Prompts aus.
+            return t.length >= 12 && p.contains(t)
         }
 
         internal fun istModellGesperrt(body: String): Boolean =

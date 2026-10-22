@@ -349,7 +349,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             } else {
                 key(revision) {
                     var groqModell by remember { mutableStateOf(settings.groqModell) }
-                    Choice("Whisper-Modell", groqModell, GroqTranscriber.MODELLE) { groqModell = it; settings.groqModell = it; vm.settingsRevision.value++ }
+                    Choice("Whisper-Modell", groqModell, GroqTranscriber.MODELLE) { groqModell = it; settings.groqModell = it; GroqTranscriber.sperreAufheben(); vm.settingsRevision.value++ }
                     var woerterbuchAn by remember { mutableStateOf(settings.woerterbuchAn) }
                     var woerterbuch by remember { mutableStateOf(settings.woerterbuch) }
                     Toggle("Persönliches Wörterbuch", woerterbuchAn) { woerterbuchAn = it; settings.woerterbuchAn = it }
