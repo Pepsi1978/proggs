@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.4 — Transkriptionsmodul · Stand v3
+// Modul M1.4 — Transkriptionsmodul · Stand v4
 // Quelle: Module/Android/M1.4-Transkriptionsmodul/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -31,6 +31,11 @@ class GroqTranscriber(
     private val filterMetriken: Boolean = true,
     private val filterZeitstempel: Boolean = true,
     private val filterFloskeln: Boolean = true,
+    /**
+     * Persönliches Wörterbuch als Whisper-Prompt (aus [woerterbuchPrompt]); null = ohne Prompt.
+     * Whisper übernimmt daraus Schreibweisen von Eigennamen und Fachbegriffen.
+     */
+    private val prompt: String? = null,
 ) {
     private val analyzer = SpeechAnalyzer()
     private val filter = WhisperHallucinationFilter()
@@ -74,35 +79,67 @@ class GroqTranscriber(
             analyzer.analyze(hochladen, stimmhaft?.let { it.copyOfRange(ab.coerceAtMost(it.size), it.size) })
         }
 
+        // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus („Begriffe: …“).
+        // Dann einmal ohne Wörterbuch wiederholen, statt das Diktat zu verlieren.
+        val mitPrompt = einmal(hochladen, wav.size, prompt)
+        val parsed = if (prompt != null && istPromptEcho(mitPrompt.text, prompt)) {
+            Protokoll.aktiv.warn("Transkription", "transcribe", "Prompt-Echo erkannt, erneut ohne Wörterbuch", mapOf("zeichen" to mitPrompt.text.length))
+            einmal(hochladen, wav.size, null)
+        } else {
+            mitPrompt
+        }
+        filter.filter(parsed, analysis, filterMetriken, filterZeitstempel, filterFloskeln)
+    }
+
+    /**
+     * Ein Upload mit dem gewählten Modell. Ist large-v3 für die Groq-Organisation gesperrt
+     * (403 model_permission_blocked_org), wird dieselbe Aufnahme sofort mit Turbo wiederholt
+     * und large-v3 für [SPERRE_MS] übersprungen — der Nutzer sieht keinen Fehler.
+     */
+    private suspend fun einmal(hochladen: ByteArray, rohBytes: Int, prompt: String?): GroqTranscriptionResponse {
+        var modell = if (model == MODELL_LARGE_V3 && System.currentTimeMillis() < gesperrtBisMs) MODELL_TURBO else model
+        var (code, body) = sende(hochladen, rohBytes, modell, prompt)
+        if (code !in 200..299 && modell == MODELL_LARGE_V3 && istModellGesperrt(body)) {
+            Protokoll.aktiv.warn("Transkription", "transcribe", "large-v3 für die Organisation gesperrt, Rückfall auf Turbo", mapOf("code" to code))
+            gesperrtBisMs = System.currentTimeMillis() + SPERRE_MS
+            modell = MODELL_TURBO
+            val zweiter = sende(hochladen, rohBytes, modell, prompt)
+            code = zweiter.first
+            body = zweiter.second
+        }
+        if (code !in 200..299) {
+            throw GroqTranscriptionException(httpError(code, body))
+        }
+        return runCatching { parseResponse(body) }.getOrElse { error ->
+            throw GroqTranscriptionException("Groq hat eine ungueltige Antwort geliefert.", error)
+        }
+    }
+
+    /** Ein einzelner Upload; liefert HTTP-Code und Antworttext. */
+    private suspend fun sende(hochladen: ByteArray, rohBytes: Int, modell: String, prompt: String?): Pair<Int, String> {
         val beginn = System.currentTimeMillis()
-        val multipart = MultipartBody.Builder()
+        val builder = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("file", "audio.wav", hochladen.toRequestBody(WAV_MEDIA_TYPE))
-            .addFormDataPart("model", model)
+            .addFormDataPart("model", modell)
             .addFormDataPart("language", "de")
             .addFormDataPart("response_format", "verbose_json")
             .addFormDataPart("temperature", "0")
-            .build()
+        if (prompt != null) builder.addFormDataPart("prompt", prompt)
         val request = Request.Builder()
             .url(TRANSCRIPTIONS_URL)
             .header("Authorization", "Bearer $apiKey")
-            .post(multipart)
+            .post(builder.build())
             .build()
 
-        client.newCall(request).await().use { response ->
+        return client.newCall(request).await().use { response ->
             val responseBody = response.body?.string().orEmpty()
             Protokoll.aktiv.sprache(
                 "Groq-Mitschrift",
-                "code=${response.code} bytes=${hochladen.size} roh=${wav.size}",
+                "code=${response.code} bytes=${hochladen.size} roh=$rohBytes modell=$modell prompt=${prompt != null}",
                 System.currentTimeMillis() - beginn,
             )
-            if (!response.isSuccessful) {
-                throw GroqTranscriptionException(httpError(response.code, responseBody))
-            }
-            val parsed = runCatching { parseResponse(responseBody) }.getOrElse { error ->
-                throw GroqTranscriptionException("Groq hat eine ungueltige Antwort geliefert.", error)
-            }
-            filter.filter(parsed, analysis, filterMetriken, filterZeitstempel, filterFloskeln)
+            response.code to responseBody
         }
     }
 
@@ -221,7 +258,61 @@ class GroqTranscriber(
         internal const val TRANSCRIPTIONS_URL =
             "https://api.groq.com/openai/v1/audio/transcriptions"
         internal const val MAX_FILE_BYTES = 25 * 1024 * 1024
-        const val DEFAULT_MODEL = "whisper-large-v3-turbo"
+        const val MODELL_TURBO = "whisper-large-v3-turbo"
+        const val MODELL_LARGE_V3 = "whisper-large-v3"
+        const val DEFAULT_MODEL = MODELL_TURBO
+
+        /** Vorbelegung des persönlichen Wörterbuchs (Stand TerminalVoiceOverlay). */
+        const val STANDARD_WOERTERBUCH =
+            "Bug-Almanach, Sonnet-Schwarm, Groq, Whisper, APK-Update, UpdateStation, OpenLauncher, Jarvis, debugging, Logcat, Harness, Best Practices, VCO, CVO, ChatGPT, Claude, Claude Code, OpenAI, Anthropic, bug almanach, Anthrophic"
+
+        /** Groq empfiehlt kurze Prompts; wie im TerminalVoiceOverlay höchstens 350 Zeichen. */
+        private const val MAX_PROMPT_ZEICHEN = 350
+        private const val MAX_BEGRIFFE = 100
+        private const val ECHO_MARKER = "Begriffe"
+
+        /** Nach einer large-v3-Sperre so lange direkt Turbo nehmen, statt jedes Diktat doppelt hochzuladen. */
+        private const val SPERRE_MS = 30 * 60 * 1000L
+
+        @Volatile
+        private var gesperrtBisMs = 0L
+
+        /** Begriffe aus dem Wörterbuch-Text: getrennt an Zeilenumbruch, Komma, Semikolon; ohne Leeres, #-Kommentare und Duplikate. */
+        fun begriffe(text: String): List<String> =
+            text.split('\n', '\r', ',', ';')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+                .distinctBy { it.lowercase() }
+                .take(MAX_BEGRIFFE)
+
+        /** Wörterbuch als natürlicher Satz („Begriffe: A, B.“); ein zu langer Begriff wird übersprungen. Keine Begriffe → null. */
+        fun woerterbuchPrompt(begriffe: List<String>): String? {
+            if (begriffe.isEmpty()) return null
+            val sb = StringBuilder("$ECHO_MARKER: ")
+            var hinzu = 0
+            for (w in begriffe) {
+                if (sb.length + w.length + 2 > MAX_PROMPT_ZEICHEN) continue
+                if (hinzu++ > 0) sb.append(", ")
+                sb.append(w)
+            }
+            return if (hinzu == 0) null else sb.append('.').toString()
+        }
+
+        /**
+         * Echo = Whisper wiederholt den Prompt ab seinem Anfang („Begriffe: …“), ganz oder teilweise.
+         * Ein Diktat, das nur Wörterbuch-Wörter enthält, beginnt nicht mit dem Marker und bleibt erhalten.
+         */
+        fun istPromptEcho(text: String, prompt: String?): Boolean {
+            if (prompt.isNullOrEmpty() || text.isBlank()) return false
+            fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+            val t = norm(text)
+            val marker = norm(ECHO_MARKER)
+            return t.startsWith(marker) && norm(prompt).contains(t.substring(marker.length))
+        }
+
+        /** Groq-Antwort „Modell für die Organisation gesperrt“. */
+        internal fun istModellGesperrt(body: String): Boolean =
+            body.contains("model_permission_blocked_org") || body.contains("blocked at the organization level")
 
         private val WAV_MEDIA_TYPE = "audio/wav".toMediaType()
 
