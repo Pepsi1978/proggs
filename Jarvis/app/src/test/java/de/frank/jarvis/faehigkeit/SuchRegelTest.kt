@@ -164,7 +164,7 @@ class SuchRegelTest {
     }
 
     @Test fun unveraenderteAlteSymbioseRegelWirdErsetztFranksFassungNicht() {
-        val (alt, neu) = Symbiose.ERSETZTE_VORGABEN.single()
+        val (alt, neu) = Symbiose.ERSETZTE_VORGABEN.first()
         assertEquals(SYMBIOSE_LANGE_ARBEIT_ALT, alt)
         assertEquals(SYMBIOSE_SUCHE, neu)
         assertTrue(SYMBIOSE_VORGABE.contains(SYMBIOSE_SUCHE))

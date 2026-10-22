@@ -446,7 +446,7 @@ object Symbiose : Merkdatei("symbiose.json", 30, "", SYMBIOSE_VORGABE) {
     internal fun kopfTextFuerTest(eintraege: List<Regel>): String = kopfText(eintraege)
 
     /** Überholte Vorgaben (alt → neu); ersetzt wird nur, was noch wörtlich so dasteht. Was Frank selbst umformuliert hat, bleibt. */
-    internal val ERSETZTE_VORGABEN = listOf(SYMBIOSE_LANGE_ARBEIT_ALT to SYMBIOSE_SUCHE)
+    internal val ERSETZTE_VORGABEN = listOf(SYMBIOSE_LANGE_ARBEIT_ALT to SYMBIOSE_SUCHE, SYMBIOSE_SUCHE_MIT_QUELLE_ALT to SYMBIOSE_SUCHE)
 
     /**
      * Ersetzt einmal überholte, unverändert gebliebene Vorgaben (beim Start der App). Danach weicht die Fassung ab; ChatGPT sagt Frank
@@ -480,8 +480,13 @@ internal const val SYMBIOSE_LANGE_ARBEIT_ALT = "Lange Arbeit: Recherchen und all
     "Fertiges holst du mit vorgaenge, sagst es mir an passender Stelle und bestätigst dann mit vorgaenge (aktion mitgeteilt); ebenso bei „VORGANG FERTIG“ an einem Ergebnis. " +
     "Jarvis kann dich nicht von sich aus ansprechen."
 
-/** Regel 6 ab 21.10.2026 (Franks Vorgabe: Websuche statt Agent, siehe [SuchRegel]). */
-internal const val SYMBIOSE_SUCHE = "Websuche und Agenten: Aktuelles suchst du sofort selbst mit deiner Websuche, kurz mit Quelle. agent_starten nur, wenn ich " +
+/** Regel 6 vom 21.10.2026: verlangte noch „kurz mit Quelle“; wird wie [SYMBIOSE_LANGE_ARBEIT_ALT] einmal durch [SYMBIOSE_SUCHE] ersetzt. */
+internal const val SYMBIOSE_SUCHE_MIT_QUELLE_ALT = "Websuche und Agenten: Aktuelles suchst du sofort selbst mit deiner Websuche, kurz mit Quelle. agent_starten nur, wenn ich " +
+    "ausdrücklich Recherche verlange. Fertiges holst du mit vorgaenge, sagst es mir passend und bestätigst mit vorgaenge (aktion mitgeteilt), auch bei „VORGANG FERTIG“. " +
+    "Jarvis kann dich nicht von sich aus ansprechen."
+
+/** Regel 6 ab 22.10.2026 (Franks Vorgaben: Websuche statt Agent, siehe [SuchRegel]; keine Quellen ohne ausdrückliche Nachfrage). */
+internal const val SYMBIOSE_SUCHE = "Websuche und Agenten: Aktuelles suchst du sofort selbst mit deiner Websuche, kurz und ohne Quellen oder Webadressen, außer ich frage ausdrücklich danach. agent_starten nur, wenn ich " +
     "ausdrücklich Recherche verlange. Fertiges holst du mit vorgaenge, sagst es mir passend und bestätigst mit vorgaenge (aktion mitgeteilt), auch bei „VORGANG FERTIG“. " +
     "Jarvis kann dich nicht von sich aus ansprechen."
 

@@ -759,7 +759,7 @@ class LiveGespraech(
                 .put("instructions", "Du bist das Denk-Backend von Jarvis, Franks persönlichem Assistenten. Antworte auf Deutsch, knapp und zum Vorlesen geeignet, ohne Aufzählungen und Links. " +
                     "Für alles, was Franks Daten, Apps oder Aktionen betrifft (Termine, Dienstplan, Aufgaben, Wecker, Timer, Biodaten, Schlaf, Ideen, Tagebuch, Mails, Wetter, Fahrzeit, " +
                     "Gedächtnis, Programmieraufträge, Recherchen), für aktuelle Fragen aus dem Internet" +
-                    (if (st["websuche"] == "an") " (außer du beantwortest sie selbst mit deiner Websuche, kurz mit Quelle)" else "") +
+                    (if (st["websuche"] == "an") " (außer du beantwortest sie selbst mit deiner Websuche, kurz und ohne Quellen oder Adressen, außer Frank fragt ausdrücklich danach)" else "") +
                     " und für jeden Wechsel zwischen Sessions (etwa „Wechsle in die Whoop-Session“, „Geh zurück in die letzte Session“, " +
                     "„Öffne eine neue Session“, auch Franks Antwort auf „Welche Session meinst du?“), rufe die Funktion jarvis_fragen mit dem vollständigen Auftrag auf, " +
                     "Sessionbefehle wörtlich in Franks Worten. Jarvis beantwortet aktuelle Fragen direkt mit seiner Websuche; einen Recherche-Agenten startet er nur, wenn Frank " +

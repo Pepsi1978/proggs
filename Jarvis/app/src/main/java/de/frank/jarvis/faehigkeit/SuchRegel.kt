@@ -17,7 +17,8 @@ object SuchRegel {
         "Zuerst Franks Apps: Wetter, Fahrzeit, Termine, Dienst, Aufgaben, Biodaten, Epigenetik, Stacks und Ablage kommen aus ihren eigenen Werkzeugen, nie aus der Websuche. " +
         "Braucht eine normale Frage aktuelle Informationen aus dem Internet (Verfügbarkeit, Erscheinen, Preise, Öffnungszeiten, Neuigkeiten), beantwortest du sie sofort " +
         "selbst in dieser Antwort mit einer direkten Websuche: hast du eine eigene eingebaute Websuche, nimm sie, sonst web_suche (bei Bedarf web_seite_lesen). " +
-        "Antworte kurz und belegt: das Ergebnis in ein bis drei Sätzen, dazu die Quelle mit Namen, höchstens eine Adresse. " +
+        "Antworte kurz: das Ergebnis in ein bis drei Sätzen, OHNE Quellen, Quellennamen, Quellenangaben und Webadressen, auch bei deiner eingebauten Websuche. " +
+        "Nur wenn Frank ausdrücklich nach den Quellen fragt („nenne mir die Quellen dazu“), nennst du sie, notfalls nach einer erneuten Suche. " +
         "Einen Agenten (agent_starten, etwa Recherche) startest du nur, wenn Frank ausdrücklich eine Recherche oder einen Agenten verlangt („recherchiere …“, " +
         "„mach eine Recherche“, „lass einen Agenten …“) oder einem Angebot von dir ausdrücklich zustimmt. Internetbedarf, Unsicherheit oder eine längere Bearbeitung " +
         "sind allein kein Grund für einen Agenten. Ist keine direkte Suche verfügbar oder schlägt sie fehl, sag Frank das ehrlich; weiche nicht still auf einen Agenten aus."
@@ -116,6 +117,9 @@ object SuchRegel {
 
     /** Antwort von agent_starten, wenn Frank keine Recherche verlangt hat: nichts gestartet, stattdessen direkt suchen. */
     const val NICHT_GESTARTET = "Nicht gestartet: Frank hat keine Recherche und keinen Agenten ausdrücklich verlangt. Beantworte seine Frage jetzt selbst in dieser Antwort: " +
-        "Daten aus Franks Apps mit deren Werkzeugen, Aktuelles aus dem Internet mit web_suche (bei Bedarf web_seite_lesen), kurz und mit Quelle. " +
+        "Daten aus Franks Apps mit deren Werkzeugen, Aktuelles aus dem Internet mit web_suche (bei Bedarf web_seite_lesen), kurz und ohne Quellen oder Webadressen. " +
         "Einen Recherche-Agenten nur, wenn Frank ihn ausdrücklich will; anbieten darfst du ihn in einem Satz."
+
+    /** Hängt im Gespräch an jedem Suchergebnis: Die Quellen sind für Jarvis, nicht für die Antwort (Franks Vorgabe vom 22.10.2026). */
+    const val OHNE_QUELLEN = "(Nur für dich: Nenne Frank in deiner Antwort keine Quellen, Quellennamen oder Webadressen, außer er fragt ausdrücklich nach den Quellen.)"
 }
