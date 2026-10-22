@@ -794,6 +794,11 @@ class PcBruecke:
             if ersatz and self._haupt_nimmt():
                 self.auftraege.put_nowait(auftrag)
                 continue
+            # Sol 6.1 (Codex CLI) kann nur der Windows-PC: Der Mac legt ihn zurueck, bis der PC ihn holt oder das Handy aufgibt.
+            if ersatz and auftrag.get("modell") == "sol":
+                self.auftraege.put_nowait(auftrag)
+                await asyncio.sleep(min(rest, 1))
+                continue
             # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
             wartend = self.quittungen.get(auftrag["id"])
             if wartend is None or wartend.done():
@@ -836,6 +841,9 @@ class PcBruecke:
             assert isinstance(daten.get("app"), str) and isinstance(daten.get("auftrag"), str) and daten["auftrag"].strip()
         except Exception:
             return web.Response(status=400, text="Auftrag unlesbar")
+        # Sol nur mit dem Windows-PC (Hauptrechner); fragt nur der Mac ab, ist fuer Sol kein Rechner da.
+        if daten.get("modell") == "sol" and not self._haupt_da():
+            return web.json_response({"pc": False}, status=409)
         nummer = uuid.uuid4().hex
         wartend = asyncio.get_running_loop().create_future()
         self.quittungen[nummer] = wartend

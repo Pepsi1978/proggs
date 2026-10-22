@@ -318,7 +318,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     appName.isEmpty() -> Ergebnis("Welche App ist gemeint? Bitte Frank fragen.", fehler = true)
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     modell == MODELL_SOL && ziel == "cloud" -> Ergebnis("Sol 6.1 gibt es nur am Rechner (Codex CLI), nicht in der Cloud. Frag Frank, ob Opus 5.5 in der Cloud recht ist.", fehler = true)
-                    wahl.isEmpty() -> Ergebnis(ziele.last().fehlt(), fehler = true)
+                    wahl.isEmpty() -> Ergebnis(fehltFuer(modell), fehler = true)
                     // Franks Wahl vom 22.10.2026: Ist ein Rechner verbunden, wählt er beim Start das Modell (Knöpfe im Chat).
                     modell.isEmpty() && ziel != "cloud" && wahl.first() is PcBruecke && rechnerDa() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), a.optBoolean("neu"))
                     else -> {
@@ -338,10 +338,22 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         else -> ziele
     }.filter { it.bereit() }
 
-    /** Fragt gerade eine Brücke (Windows-PC oder Mac) beim Relay ab? Kurz; im Zweifel nein, dann läuft alles wie bisher (Opus). */
+    /**
+     * Fragt gerade der Windows-PC (Rang „haupt“) beim Relay ab? Nur dort läuft Sol; ist nur der Mac da, startet Opus wie bisher
+     * ohne Rückfrage. Kurz (höchstens 4 s); im Zweifel nein.
+     */
     private suspend fun rechnerDa(): Boolean = withContext(Dispatchers.IO) {
-        runCatching { STATUS_HTTP.newCall(pcAnfrage()).execute().use { a -> a.isSuccessful && JSONObject(a.body?.string().orEmpty()).optBoolean("pc") } }.getOrDefault(false)
+        runCatching {
+            SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a ->
+                if (!a.isSuccessful) return@use false
+                val alle = JSONObject(a.body?.string().orEmpty()).optJSONArray("rechner_alle") ?: return@use false
+                (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }.any { it.optString("rang") == "haupt" && it.optBoolean("da") }
+            }
+        }.getOrDefault(false)
     }
+
+    /** Was fehlt, wenn keins der Ziele für [modell] bereit ist. */
+    private fun fehltFuer(modell: String) = if (modell == MODELL_SOL) ziele.filterIsInstance<PcBruecke>().first().fehlt() else ziele.last().fehlt()
 
     /** Ein Start, der auf Franks Modellwahl per Knopf wartet. [ursprung]: im Sprachgespräch gestellt (dann wird das Ende vorgelesen). */
     private data class OffeneWahl(val app: String, val auftrag: String, val review: Boolean, val neu: Boolean, val gespraech: String,
@@ -371,17 +383,26 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (weg.isNotEmpty()) wahlStand.update { stand -> stand + weg.associateWith { WAHL_ERLEDIGT } }
     }
 
-    /** Tipp auf „Opus 5.5“ oder „Sol 6.1“: startet den gemerkten Auftrag genau einmal. Fehler stehen danach im Gespräch. */
+    /**
+     * Tipp auf „Opus 5.5“ oder „Sol 6.1“: startet den gemerkten Auftrag genau einmal. Scheitert der Start, steht der Grund im
+     * Gespräch und die Knöpfe sind wieder offen (Frank kann das andere Modell nehmen, ohne den Auftrag neu zu sagen).
+     * Ein unklarer Start (Zeitüberschreitung) bleibt gewählt: Er läuft womöglich.
+     */
     suspend fun modellGewaehlt(wahlId: String, modell: String) {
         val w = offeneWahlen.remove(wahlId) ?: return
         wahlStand.update { it + (wahlId to modell) }
         val umgebung = ProgrammierChat.GespraechKennung(w.gespraech) + (w.ursprung ?: kotlin.coroutines.EmptyCoroutineContext)
         val ergebnis = withContext(umgebung) {
             val wahl = zieleFuer("", modell)
-            if (wahl.isEmpty()) Ergebnis(ziele.last().fehlt(), fehler = true)
+            if (wahl.isEmpty()) Ergebnis(fehltFuer(modell), fehler = true)
             else starteErstes(wahl, w.app, w.auftrag, w.review, Auftragsbuch.neueNummer(), w.neu, modell)
         }
-        if (ergebnis.fehler) ProgrammierChat.poste(app, w.gespraech, "⚠️ " + ergebnis.text, ProgrammierChat.ART_STATUS)
+        if (!ergebnis.fehler) return
+        ProgrammierChat.poste(app, w.gespraech, "⚠️ " + ergebnis.text, ProgrammierChat.ART_STATUS)
+        if (!ergebnis.text.startsWith("Unklar")) {
+            offeneWahlen[wahlId] = w
+            wahlStand.update { it + (wahlId to WAHL_OFFEN) }
+        }
     }
 
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
@@ -1350,7 +1371,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val antwort = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
             when {
                 // Sol gibt es nur am Rechner: nie still als Opus in die Cloud.
-                sol && code == 409 -> throw IllegalStateException("Kein Programmierrechner ist gerade an; Sol 6.1 läuft nur dort. Mit Opus 5.5 ginge der Auftrag in die Cloud.")
+                sol && code == 409 -> throw IllegalStateException("Der Windows-PC fragt gerade nicht ab; Sol 6.1 läuft nur dort. Mit Opus 5.5 übernimmt der Mac oder die Cloud.")
+                sol && code == 504 -> throw IllegalStateException("Der Windows-PC hat den Sol-Start nicht bestätigt. Bitte am PC nachsehen; Sol läuft nie in der Cloud.")
                 sol && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sol-Sitzung nicht starten." })
                 code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
                 code == 504 -> throw IllegalStateException("Der PC hat den Start nicht bestätigt. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")

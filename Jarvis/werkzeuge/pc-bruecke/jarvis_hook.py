@@ -1081,7 +1081,16 @@ def main() -> int:
         if stand not in ("laeuft", "fertig", "fehler") or not schritt:
             print('Aufruf: python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>"')
             return 1
-        ok = melde_sicher(stand, schritt, versuche=3)
+        # Ohne rechner: Eine Codex-Sitzung beweist nichts über die Claude-Anmeldung des Rechners (der Relay wertet sie dann nicht aus).
+        ok = False
+        for versuch in range(3):
+            try:
+                if melde(stand, schritt, extra={"rechner": ""}) == 200:
+                    ok = True
+                    break
+            except Exception as fehler:
+                schreib(f"melde {stand} Versuch {versuch + 1}: {fehler}")
+            time.sleep(1 + 2 * versuch)
         print("Gemeldet." if ok else "Meldung an Jarvis fehlgeschlagen (siehe hook.log).")
         return 0 if ok else 1
     try:

@@ -184,7 +184,13 @@ function Starte-Sitzung($auftrag) {
     $sol = "$($auftrag.modell)" -eq 'sol'
     $review = if ($auftrag.review) { 'ja: vor dem Abschluss die Änderung mit /code-review prüfen und Befunde beheben' } else { 'nein' }
     $kopf = 'Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control.'
+    $unklar1 = 'Nicht eindeutig: Frank mit AskUserQuestion fragen und die Kandidaten nennen.'
+    $unklar2 = '2. Wesentliche Unklarheiten mit AskUserQuestion klären, Kleinigkeiten selbst entscheiden.'
     if ($sol) {
+        # Codex CLI: keine AskUserQuestion und kein /code-review, und niemand antwortet im Terminal.
+        $unklar1 = 'Nicht eindeutig: die wahrscheinlichste App nehmen und das in der ersten Meldung nennen.'
+        $unklar2 = '2. Niemand antwortet in dieser Sitzung: Unklarheiten selbst sinnvoll entscheiden und in der Meldung nennen, nie auf eine Antwort warten.'
+        if ($auftrag.review) { $review = 'ja: vor dem Abschluss den gesamten Diff gründlich selbst auf Fehler prüfen und Befunde beheben' }
         $hook = (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_hook.py').Replace('\', '/')
         $kopf = "Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Schritte in Jarvis.`r`n" +
             "MELDEN (statt programmier_fortschritt, das es hier nicht gibt): python `"$hook`" melde <laeuft|fertig|fehler> `"<ein Satz>`""
@@ -198,8 +204,8 @@ AUFTRAG:
 $($auftrag.auftrag)
 
 VORGEHEN
-1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. Nicht eindeutig: Frank mit AskUserQuestion fragen und die Kandidaten nennen.
-2. Wesentliche Unklarheiten mit AskUserQuestion klären, Kleinigkeiten selbst entscheiden.
+1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. $unklar1
+$unklar2
 3. Nach den Profilregeln vollständig abschließen: bauen, Version, Commit, Push, Installation per WLAN, bei Android-Apps Skill apk-update. Abschlussmeldung auf Deutsch.
 "@
     # Die Brücke läuft tagelang und behielte sonst die Umgebung von ihrem Start: Nach einem JDK-Update zeigte
