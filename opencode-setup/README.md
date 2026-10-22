@@ -1,6 +1,6 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
-> Stand: v1.0.6 - 05.09.2026, 11:46 Uhr
+> Stand: v1.0.7 - 22.10.2026, 12:45 Uhr
 
 > Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
 > Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
@@ -114,6 +114,13 @@ Der Installer zeigt am Ende eine `OK`/`FEHLT`-Liste. Diese Dinge sind manuell zu
   - `~/SK/OpenCode/go-api-key.txt` (OpenCode-Go / MiniMax)
   - `~/SK/ClaudeCodeOpenRouter/openrouter.key` (Engine B)
 - **`OPENROUTER_API_KEY`** als User-Umgebungsvariable (fuer den Owl/OpenRouter-Provider).
+- **Jarvis-MCP:** `~/SK/Jarvis/plugin-url.txt` enthält ausschließlich die aktuelle vollständige
+  Plugin-Adresse aus Jarvis (`https://<Server>/j/<Geheimnis>/mcp`, ohne Anführungszeichen).
+  Die globale Konfiguration und die Installer-Vorlage lesen sie über `{file:~/SK/Jarvis/plugin-url.txt}`;
+  die geheime Adresse gehört nie ins Repo. Die Datei vor der Installation auf einem neuen Rechner
+  bereitstellen: Ohne sie kann OpenCode die Konfiguration nicht laden. Nach „Plugin-Adresse erneuern“
+  die Datei aktualisieren und OpenCode vollständig neu starten. Jarvis nutzt HTTPS ohne OAuth und
+  benötigt keinen WireGuard-Tunnel. Das Handy muss für Werkzeugaufrufe erreichbar sein.
 - **WireGuard-Tunnel aktiv** — der `second-brain`-MCP laeuft auf `http://10.8.0.1:8001/mcp` und ist
   NUR ueber den Tunnel erreichbar. Ohne ihn werden die Gehirn-Regeln nicht geladen. Einrichtung:
   Almanach `bugs/server/wireguard.md`.

@@ -81,6 +81,17 @@
   //  Spart zudem das MCP-Tool-Schema (~15-25k Tok/Prompt, Almanach §8). Keys in
   //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.
   "mcp": {
+    // Jarvis auf dem Handy, über den öffentlichen HTTPS-Relay (kein WireGuard nötig).
+    // Die gesamte Adresse ist ein Zugangsschlüssel und bleibt ausschließlich in SK.
+    // Nach einer Adresserneuerung nur plugin-url.txt aktualisieren und OpenCode neu starten.
+    "jarvis": {
+      "type": "remote",
+      "url": "{file:~/SK/Jarvis/plugin-url.txt}",
+      "enabled": true,
+      "oauth": false,
+      "timeout": 120000
+    },
+
     // Standard fuer Cloud-Modelle: eigener persistenter Chrome ohne Benutzerfreigabe.
     // OpenLauncher setzt enabled nur fuer LM-Studio-Sitzungen prozesslokal auf false, damit lokale
     // Modelle das Schema nicht prefillen muessen, ohne OpenAI/Anthropic/OpenRouter zu beschneiden.
