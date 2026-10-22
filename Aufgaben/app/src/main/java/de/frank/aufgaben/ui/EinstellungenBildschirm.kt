@@ -204,18 +204,20 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 }
                 // ---- Vorlesen ----
                 Block("Vorlesen") {
-                    val anbieter = listOf(TtsProvider.EDGE, TtsProvider.GOOGLE_CLOUD, TtsProvider.QWEN_CLONE)
+                    val anbieter = listOf(TtsProvider.EDGE, TtsProvider.GOOGLE_CLOUD, TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE,
+                        TtsProvider.AZURE, TtsProvider.QWEN_CLONE)
                     ChipReihe { anbieter.forEach { p -> Chip(p.kurz, e.ttsAnbieter == p.id) { e.ttsAnbieter = p.id } } }
                     when (e.ttsAnbieter) {
                         TtsProvider.GOOGLE_CLOUD.id -> {
                             Feld("Google-Cloud-API-Schlüssel", e.googleKey, geheim = true) { e.googleKey = it }
-                            ChipReihe { TtsCatalog.googleVoices.forEach { v -> Chip(v.name, e.googleStimme == v.id) { e.googleStimme = v.id } } }
+                            StimmenReihe(TtsCatalog.googleVoices, e.googleStimme, e) { e.googleStimme = it }
                         }
                         TtsProvider.QWEN_CLONE.id -> {
                             Feld("Alibaba-API-Schlüssel (DashScope)", e.qwenKey, geheim = true) { e.qwenKey = it }
                             Feld("Stimm-ID der eigenen Stimme", e.qwenStimme) { e.qwenStimme = it }
                         }
-                        else -> ChipReihe { TtsCatalog.edgeVoices.forEach { v -> Chip(v.name, e.edgeStimme == v.id) { e.edgeStimme = v.id } } }
+                        TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> NeueStimmenBereich(e)
+                        else -> StimmenReihe(TtsCatalog.edgeVoices, e.edgeStimme, e) { e.edgeStimme = it }
                     }
                     Text("Tempo ${"%.2f".format(e.sprechtempo)}×", color = f.textLeise, fontSize = 13.sp)
                     Slider(e.sprechtempo, { e.sprechtempo = it }, valueRange = 0.7f..1.3f, colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer))

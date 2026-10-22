@@ -9,6 +9,7 @@ import de.frank.aufgaben.data.Einstellungen
 import de.frank.aufgaben.data.Tage
 import de.frank.aufgaben.tts.EdgeTtsPlayer
 import de.frank.aufgaben.tts.GoogleCloudTtsPlayer
+import de.frank.aufgaben.tts.NeueStimmenPlayer
 import de.frank.aufgaben.tts.QwenTtsPlayer
 import de.frank.aufgaben.tts.TtsProvider
 import java.io.File
@@ -66,6 +67,9 @@ object Ansage {
         TtsProvider.GOOGLE_CLOUD.id -> Stimme(TtsProvider.GOOGLE_CLOUD.id, e.googleStimme, e.sprechtempo, e.immerDeutsch)
         // Die eigene Stimme kennt kein Tempo; jede Synthese betont von selbst etwas anders.
         TtsProvider.QWEN_CLONE.id -> Stimme(TtsProvider.QWEN_CLONE.id, e.qwenStimme, 1f, true)
+        TtsProvider.GEMINI_FLASH.id -> Stimme(TtsProvider.GEMINI_FLASH.id, e.geminiFlashStimme, e.sprechtempo, e.immerDeutsch)
+        TtsProvider.GEMINI_LITE.id -> Stimme(TtsProvider.GEMINI_LITE.id, e.geminiLiteStimme, e.sprechtempo, e.immerDeutsch)
+        TtsProvider.AZURE.id -> Stimme(TtsProvider.AZURE.id, e.azureStimme, e.sprechtempo, e.immerDeutsch)
         else -> edge(e)
     }
 
@@ -73,7 +77,8 @@ object Ansage {
     private fun edge(e: Einstellungen) = Stimme(TtsProvider.EDGE.id, e.edgeStimme, e.sprechtempo, e.immerDeutsch)
 
     private fun datei(context: Context, s: Stimme, variante: Int, text: String): File {
-        val endung = if (s.anbieter == TtsProvider.QWEN_CLONE.id) "wav" else "mp3"
+        val endung = if (s.anbieter == TtsProvider.QWEN_CLONE.id || s.anbieter == TtsProvider.GEMINI_FLASH.id ||
+            s.anbieter == TtsProvider.GEMINI_LITE.id) "wav" else "mp3"
         return File(ordner(context), "a_${hash("$FORMAT|${s.anbieter}|${s.id}|${s.tempo}|${s.deutsch}|$variante|$text")}.$endung")
     }
 
@@ -189,6 +194,22 @@ object Ansage {
                                 warte { fertig, fehler ->
                                     player.speak(
                                         text = text, rawApiKey = e.qwenKey, rawVoiceId = s.id,
+                                        onPlaybackStart = {}, onComplete = fertig, onError = fehler,
+                                        onAudioReady = { it.copyTo(tmp, overwrite = true) },
+                                    )
+                                }
+                            } finally {
+                                player.shutdown()
+                            }
+                        }
+                        // Gemini 3.8 Flash / Flash-Lite und Azure Neural: nur erzeugen, die Datei übernimmt die Ansage.
+                        TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> {
+                            val player = NeueStimmenPlayer(app)
+                            try {
+                                warte { fertig, fehler ->
+                                    player.speak(
+                                        text = text, provider = TtsProvider.entries.first { it.id == s.anbieter }, voiceId = s.id,
+                                        speechRate = tempo, zugang = e.neueStimmenZugang(),
                                         onPlaybackStart = {}, onComplete = fertig, onError = fehler,
                                         onAudioReady = { it.copyTo(tmp, overwrite = true) },
                                     )
