@@ -173,6 +173,7 @@ fun SettingsScreen(
                     if (keys.groqModel == GroqTranscriber.MODEL_LARGE_V3) "Large V3" else "Turbo",
                     onSelect = { selected ->
                         val model = if (selected == "Large V3") GroqTranscriber.MODEL_LARGE_V3 else GroqTranscriber.MODEL_TURBO
+                        GroqTranscriber.sperreAufheben()
                         onApiKeys { it.copy(groqModel = model) }
                     },
                 )

@@ -6,6 +6,7 @@
     { "versionCode": 43, "versionName": "0.1.42", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
     { "versionCode": 44, "versionName": "0.1.43", "stand": "26.09.2026, 21:18 Uhr", "notiz": "API-Schlüssel für Groq und Gemini sowie das Gemini-Modell werden jetzt in den Einstellungen eingetragen und verschlüsselt gespeichert." },
     {"versionCode": 45, "versionName": "0.1.44", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 46, "versionName": "0.1.45", "stand": "22.10.2026, 11:33 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe."}
+    {"versionCode": 46, "versionName": "0.1.45", "stand": "22.10.2026, 11:33 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe."},
+    {"versionCode": 47, "versionName": "0.1.46", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 sofort wieder nutzbar nach erneuter Auswahl."}
   ]
 }
