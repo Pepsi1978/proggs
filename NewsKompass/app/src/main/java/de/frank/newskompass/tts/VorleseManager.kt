@@ -73,6 +73,13 @@ class VorleseManager(
     private val google = GoogleTtsSynthesizer { einstellungen.googleSchluessel }
     private val edge = EdgeTtsSynthesizer()
     private val qwen = QwenTtsSynthesizer { einstellungen.alibabaSchluessel }
+    private val geminiFlash = GeminiTtsSynthesizer(
+        TtsAnbieter.GEMINI_FLASH.id, GeminiTtsSynthesizer.FLASH_MODELL, einstellungen, google,
+    )
+    private val geminiLite = GeminiTtsSynthesizer(
+        TtsAnbieter.GEMINI_LITE.id, GeminiTtsSynthesizer.LITE_MODELL, einstellungen, google,
+    )
+    private val azure = AzureTtsSynthesizer(einstellungen)
 
     private val _zustand = MutableStateFlow(VorleseZustand())
     val zustand: StateFlow<VorleseZustand> = _zustand.asStateFlow()
@@ -368,11 +375,15 @@ class VorleseManager(
         if (stuecke.isEmpty()) return null
         // MP3-Rahmen lassen sich hintereinanderhängen; bei WAV ginge das nicht, deshalb wird
         // in dem Fall nur das erste Stück genommen — lieber ein halber Absatz als gar keiner.
-        return if (stuecke.first().endung == "mp3") {
+        return if (stuecke.all { it.endung == "mp3" }) {
             SyntheseErgebnis(
                 audio = stuecke.fold(ByteArray(0)) { gesammelt, teil -> gesammelt + teil.audio },
                 endung = "mp3",
             )
+        } else if (stuecke.all { it.endung == "wav" }) {
+            // Gemini-WAV: die PCM-Daten hintereinander, mit einem neuen Kopf.
+            GeminiTtsSynthesizer.verbindeWav(stuecke.map { it.audio })
+                ?.let { SyntheseErgebnis(it, "wav") } ?: stuecke.first()
         } else {
             stuecke.first()
         }
@@ -382,12 +393,18 @@ class VorleseManager(
         TtsAnbieter.GOOGLE -> google
         TtsAnbieter.EDGE -> edge
         TtsAnbieter.QWEN -> qwen
+        TtsAnbieter.GEMINI_FLASH -> geminiFlash
+        TtsAnbieter.GEMINI_LITE -> geminiLite
+        TtsAnbieter.AZURE -> azure
     }
 
     private fun waehleStimme(anbieter: TtsAnbieter): String = when (anbieter) {
         TtsAnbieter.GOOGLE -> einstellungen.googleStimme
         TtsAnbieter.EDGE -> einstellungen.edgeStimme
         TtsAnbieter.QWEN -> einstellungen.qwenStimmeId
+        TtsAnbieter.GEMINI_FLASH -> einstellungen.geminiFlashStimme
+        TtsAnbieter.GEMINI_LITE -> einstellungen.geminiLiteStimme
+        TtsAnbieter.AZURE -> einstellungen.azureStimme
     }
 
     /** Einzelnen Satz sofort sprechen — für den Probe-Knopf in den Einstellungen. */
@@ -436,6 +453,9 @@ class VorleseManager(
         google.beende()
         edge.beende()
         qwen.beende()
+        geminiFlash.beende()
+        geminiLite.beende()
+        azure.beende()
     }
 
     companion object {

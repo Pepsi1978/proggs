@@ -37,6 +37,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -160,6 +162,7 @@ import de.frank.newskompass.NewsApplication
 import de.frank.newskompass.ai.GeraeteAnmeldung
 import de.frank.newskompass.ai.geraeteCodeGruppen
 import de.frank.newskompass.data.EinstellungenStand
+import de.frank.newskompass.data.EinstellungenStore
 import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
@@ -1403,6 +1406,7 @@ private fun BilderBereich(app: NewsApplication, stand: EinstellungenStand) {
 
 // --- Vorlesen ----------------------------------------------------------------------------
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun VorleseBereich(app: NewsApplication, stand: EinstellungenStand) {
     val bereich = rememberCoroutineScope()
@@ -1435,22 +1439,26 @@ private fun VorleseBereich(app: NewsApplication, stand: EinstellungenStand) {
     Column {
         Abschnitt("Vorlesen", "Jede Meldung hat einen Lautsprecher. Gelesen wird Absatz für Absatz; der nächste wird schon vorbereitet, während der aktuelle läuft.")
         Kachel {
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                TtsAnbieter.entries.forEachIndexed { i, a ->
-                    SegmentedButton(
+            // Sechs Anbieter passen nicht mehr in eine Segmentleiste — Chips brechen auf dem Cover-Display um.
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                TtsAnbieter.entries.forEach { a ->
+                    FilterChip(
                         selected = stand.ttsAnbieter == a,
                         onClick = { app.einstellungen.setzeTtsAnbieter(a) },
-                        shape = SegmentedButtonDefaults.itemShape(i, TtsAnbieter.entries.size),
-                    ) {
-                        Text(
-                            when (a) {
-                                TtsAnbieter.GOOGLE -> "Google HD"
-                                TtsAnbieter.EDGE -> "Edge"
-                                TtsAnbieter.QWEN -> "Alibaba"
-                            },
-                            maxLines = 1,
-                        )
-                    }
+                        label = {
+                            Text(
+                                when (a) {
+                                    TtsAnbieter.GOOGLE -> "Google HD"
+                                    TtsAnbieter.EDGE -> "Edge"
+                                    TtsAnbieter.QWEN -> "Alibaba"
+                                    TtsAnbieter.GEMINI_FLASH -> "Gemini Flash"
+                                    TtsAnbieter.GEMINI_LITE -> "Gemini Lite"
+                                    TtsAnbieter.AZURE -> "Azure"
+                                },
+                                maxLines = 1,
+                            )
+                        },
+                    )
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -1474,6 +1482,107 @@ private fun VorleseBereich(app: NewsApplication, stand: EinstellungenStand) {
                     ) {
                         probe(TtsAnbieter.EDGE, it)
                     }
+                }
+                TtsAnbieter.GEMINI_FLASH, TtsAnbieter.GEMINI_LITE -> {
+                    val flash = stand.ttsAnbieter == TtsAnbieter.GEMINI_FLASH
+                    SchluesselFeld("Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)", stand.hatGeminiSchluesselFrei) {
+                        app.einstellungen.setzeGeminiSchluesselFrei(it)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    SchluesselFeld("Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)", stand.hatGeminiSchluesselBezahlt) {
+                        app.einstellungen.setzeGeminiSchluesselBezahlt(it)
+                    }
+                    if (!stand.hatGeminiSchluesselFrei && !stand.hatGeminiSchluesselBezahlt) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Noch kein Gemini-Schlüssel hinterlegt. Den Schlüssel bekommst du unter aistudio.google.com.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text("Welcher Schlüssel", style = MaterialTheme.typography.titleMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        EinstellungenStore.GEMINI_SCHLUESSEL_WAHLEN.forEach { (id, name) ->
+                            FilterChip(
+                                selected = stand.geminiSchluesselWahl == id,
+                                onClick = { app.einstellungen.setzeGeminiSchluesselWahl(id) },
+                                label = { Text(name) },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Rückfall auf Chirp 3 HD", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest die App mit " +
+                                    "derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = stand.geminiChirpRueckfall, onCheckedChange = { app.einstellungen.setzeGeminiChirpRueckfall(it) })
+                    }
+                    if (stand.geminiChirpRueckfall && !stand.hatGoogleSchluessel) {
+                        Spacer(Modifier.height(8.dp))
+                        SchluesselFeld("Google-Cloud-Schlüssel (für den Rückfall)", stand.hatGoogleSchluessel) { app.einstellungen.setzeGoogleSchluessel(it) }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    StimmenWahl(
+                        if (flash) TtsCatalog.geminiFlashStimmen else TtsCatalog.geminiLiteStimmen,
+                        if (flash) stand.geminiFlashStimme else stand.geminiLiteStimme,
+                        stand.favoritenStimmen,
+                        stand.ttsAnbieter.label,
+                        { if (flash) app.einstellungen.setzeGeminiFlashStimme(it) else app.einstellungen.setzeGeminiLiteStimme(it) },
+                        { app.einstellungen.schalteFavoritStimme(it) },
+                    ) {
+                        probe(stand.ttsAnbieter, it)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Gemini spricht im eigenen Tempo; das Tempo unten gilt hier nicht.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TtsAnbieter.AZURE -> {
+                    SchluesselFeld("Azure-Speech-Schlüssel (KEY 1)", stand.hatAzureSchluessel) { app.einstellungen.setzeAzureSchluessel(it) }
+                    if (!stand.hatAzureSchluessel) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Noch kein Azure-Schlüssel hinterlegt. Ihn gibt es im Azure-Portal bei der Speech-Ressource unter „Schlüssel und Endpunkt“.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    var region by remember { mutableStateOf(stand.azureRegion) }
+                    OutlinedTextField(
+                        value = region,
+                        onValueChange = {
+                            region = it
+                            app.einstellungen.setzeAzureRegion(it)
+                        },
+                        label = { Text("Azure-Region (z. B. westeurope)") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    StimmenWahl(
+                        TtsCatalog.azureStimmen, stand.azureStimme, stand.favoritenStimmen, "Azure Neural",
+                        { app.einstellungen.setzeAzureStimme(it) }, { app.einstellungen.schalteFavoritStimme(it) },
+                    ) {
+                        probe(TtsAnbieter.AZURE, it)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Kostenlose Stufe F0: 500.000 Zeichen im Monat für alle normalen Neural-Stimmen. Die HD-Stimmen (Seraphina HD, Florian HD) " +
+                            "laufen nur mit der bezahlten Stufe S0 und sprechen in eigenem Tempo.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 TtsAnbieter.QWEN -> {
                     SchluesselFeld("Alibaba-Model-Studio-Schlüssel", stand.hatAlibabaSchluessel) { app.einstellungen.setzeAlibabaSchluessel(it) }
@@ -1682,7 +1791,7 @@ private fun StimmenWahl(
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Text("Stimme wählen", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "$herkunft · ${stimmen.size} Stimmen. Mit dem Stern heftest du eine Stimme oben an.",
+                    "$herkunft · ${stimmen.size} Stimmen. Mit dem Stern oder langem Drücken heftest du eine Stimme oben an.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1748,6 +1857,7 @@ private fun StimmenAvatar(stimme: Stimme) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun StimmenZeile(
     stimme: Stimme,
@@ -1758,12 +1868,19 @@ private fun StimmenZeile(
     probe: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Eigene Klickfläche statt Surface(onClick): Die kennt kein langes Drücken (langes Drücken = Favorit an/aus).
     Surface(
-        onClick = waehle,
         shape = RoundedCornerShape(18.dp),
         color = if (gewaehlt) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
         border = if (gewaehlt) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .combinedClickable(
+                onClick = waehle,
+                onLongClick = schalteFavorit,
+                onLongClickLabel = if (favorit) "Favorit entfernen" else "Als Favorit markieren",
+            ),
     ) {
         Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             StimmenAvatar(stimme)

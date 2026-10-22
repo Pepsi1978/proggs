@@ -44,6 +44,16 @@ data class EinstellungenStand(
     /** Mit Stern markierte Stimmen (Google und Edge gemeinsam, die IDs sind eindeutig). */
     val favoritenStimmen: Set<String>,
     val qwenStimmeId: String,
+    val geminiFlashStimme: String,
+    val geminiLiteStimme: String,
+    /** [EinstellungenStore.GEMINI_FREI_DANN_BEZAHLT], [EinstellungenStore.GEMINI_NUR_FREI] oder [EinstellungenStore.GEMINI_NUR_BEZAHLT]. */
+    val geminiSchluesselWahl: String,
+    val geminiChirpRueckfall: Boolean,
+    val azureRegion: String,
+    val azureStimme: String,
+    val hatGeminiSchluesselFrei: Boolean,
+    val hatGeminiSchluesselBezahlt: Boolean,
+    val hatAzureSchluessel: Boolean,
     val sprechtempo: Float,
     val hatGoogleSchluessel: Boolean,
     val hatAlibabaSchluessel: Boolean,
@@ -98,6 +108,24 @@ class EinstellungenStore(context: Context) {
     val googleSchluessel: String get() = geheim.getString(K_GOOGLE_KEY, null).orEmpty()
     val alibabaSchluessel: String get() = geheim.getString(K_ALIBABA_KEY, null).orEmpty()
     val groqSchluessel: String get() = geheim.getString(K_GROQ_KEY, null).orEmpty()
+
+    /** Gemini-3.8-Stimmen, Kennung „gemini_flash:Leda“ bzw. „gemini_lite:Leda“. */
+    val geminiFlashStimme: String get() = offen.getString(K_GEMINI_FLASH_STIMME, null) ?: TtsCatalog.STANDARD_GEMINI_FLASH_STIMME
+    val geminiLiteStimme: String get() = offen.getString(K_GEMINI_LITE_STIMME, null) ?: TtsCatalog.STANDARD_GEMINI_LITE_STIMME
+    val geminiSchluesselWahl: String get() = offen.getString(K_GEMINI_WAHL, null) ?: GEMINI_FREI_DANN_BEZAHLT
+
+    /** Scheitert der kostenlose Gemini-Stimmschlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels. */
+    val geminiChirpRueckfall: Boolean get() = offen.getBoolean(K_GEMINI_CHIRP_RUECKFALL, false)
+
+    /** Eigene Schlüssel nur für die Gemini-Stimme: AI-Studio-Projekt ohne bzw. mit Abrechnung. */
+    val geminiSchluesselFrei: String get() = geheim.getString(K_GEMINI_KEY_FREI, null).orEmpty()
+    val geminiSchluesselBezahlt: String get() = geheim.getString(K_GEMINI_KEY_BEZAHLT, null).orEmpty()
+
+    /** Azure AI Speech: Schlüssel (verschlüsselt), Region der Speech-Ressource und Stimme („azure:de-DE-KatjaNeural“). */
+    val azureSchluessel: String get() = geheim.getString(K_AZURE_KEY, null).orEmpty()
+    val azureRegion: String get() = offen.getString(K_AZURE_REGION, null) ?: TtsCatalog.STANDARD_AZURE_REGION
+    val azureStimme: String get() = offen.getString(K_AZURE_STIMME, null) ?: TtsCatalog.STANDARD_AZURE_STIMME
+
     val whisperModell: String
         get() = GroqTranscriber.normalisiereModell(offen.getString(K_WHISPER_MODELL, null) ?: GroqTranscriber.DEFAULT_MODEL)
     val woerterbuchAn: Boolean get() = offen.getBoolean(K_WOERTERBUCH_AN, true)
@@ -134,6 +162,15 @@ class EinstellungenStore(context: Context) {
             edgeStimme = edgeStimme,
             favoritenStimmen = offen.getStringSet(K_FAVORITEN_STIMMEN, null)?.toSet().orEmpty(),
             qwenStimmeId = qwenStimmeId,
+            geminiFlashStimme = geminiFlashStimme,
+            geminiLiteStimme = geminiLiteStimme,
+            geminiSchluesselWahl = geminiSchluesselWahl,
+            geminiChirpRueckfall = geminiChirpRueckfall,
+            azureRegion = azureRegion,
+            azureStimme = azureStimme,
+            hatGeminiSchluesselFrei = runCatching { geminiSchluesselFrei.isNotBlank() }.getOrDefault(false),
+            hatGeminiSchluesselBezahlt = runCatching { geminiSchluesselBezahlt.isNotBlank() }.getOrDefault(false),
+            hatAzureSchluessel = runCatching { azureSchluessel.isNotBlank() }.getOrDefault(false),
             sprechtempo = sprechtempo,
             hatGoogleSchluessel = runCatching { googleSchluessel.isNotBlank() }.getOrDefault(false),
             hatAlibabaSchluessel = runCatching { alibabaSchluessel.isNotBlank() }.getOrDefault(false),
@@ -297,6 +334,12 @@ class EinstellungenStore(context: Context) {
         schreibe { putStringSet(K_FAVORITEN_STIMMEN, neu) }
     }
     fun setzeQwenStimme(id: String) = schreibe { putString(K_QWEN_STIMME, id) }
+    fun setzeGeminiFlashStimme(id: String) = schreibe { putString(K_GEMINI_FLASH_STIMME, id) }
+    fun setzeGeminiLiteStimme(id: String) = schreibe { putString(K_GEMINI_LITE_STIMME, id) }
+    fun setzeGeminiSchluesselWahl(wahl: String) = schreibe { putString(K_GEMINI_WAHL, wahl) }
+    fun setzeGeminiChirpRueckfall(an: Boolean) = schreibe { putBoolean(K_GEMINI_CHIRP_RUECKFALL, an) }
+    fun setzeAzureRegion(region: String) = schreibe { putString(K_AZURE_REGION, region.trim()) }
+    fun setzeAzureStimme(id: String) = schreibe { putString(K_AZURE_STIMME, id) }
     fun setzeTempo(tempo: Float) = schreibe { putFloat(K_TEMPO, tempo.coerceIn(0.6f, 1.6f)) }
     fun setzeZeitplan(aktiv: Boolean) = schreibe { putBoolean(K_ZEITPLAN, aktiv) }
     fun setzeWhisperModell(modell: String) {
@@ -387,6 +430,21 @@ class EinstellungenStore(context: Context) {
     }
 
     @Synchronized
+    fun setzeGeminiSchluesselFrei(wert: String) {
+        geheim.edit().putString(K_GEMINI_KEY_FREI, wert.trim()).apply()
+        _stand.value = lies()
+    }
+
+    fun setzeGeminiSchluesselBezahlt(wert: String) {
+        geheim.edit().putString(K_GEMINI_KEY_BEZAHLT, wert.trim()).apply()
+        _stand.value = lies()
+    }
+
+    fun setzeAzureSchluessel(wert: String) {
+        geheim.edit().putString(K_AZURE_KEY, wert.trim()).apply()
+        _stand.value = lies()
+    }
+
     fun setzeGroqSchluessel(wert: String) {
         geheim.edit().putString(K_GROQ_KEY, wert.trim()).apply()
         _stand.value = lies()
@@ -433,5 +491,23 @@ class EinstellungenStore(context: Context) {
         private const val K_GOOGLE_KEY = "google_key"
         private const val K_ALIBABA_KEY = "alibaba_key"
         private const val K_GROQ_KEY = "groq_key"
+        private const val K_GEMINI_KEY_FREI = "gemini_tts_key_frei"
+        private const val K_GEMINI_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+        private const val K_AZURE_KEY = "azure_tts_key"
+        private const val K_GEMINI_FLASH_STIMME = "gemini_flash_stimme"
+        private const val K_GEMINI_LITE_STIMME = "gemini_lite_stimme"
+        private const val K_GEMINI_WAHL = "gemini_tts_schluessel_wahl"
+        private const val K_GEMINI_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
+        private const val K_AZURE_REGION = "azure_tts_region"
+        private const val K_AZURE_STIMME = "azure_stimme"
+
+        const val GEMINI_FREI_DANN_BEZAHLT = "frei_dann_bezahlt"
+        const val GEMINI_NUR_FREI = "nur_frei"
+        const val GEMINI_NUR_BEZAHLT = "nur_bezahlt"
+        val GEMINI_SCHLUESSEL_WAHLEN = listOf(
+            GEMINI_FREI_DANN_BEZAHLT to "Erst kostenlos, dann bezahlt",
+            GEMINI_NUR_FREI to "Nur kostenlos",
+            GEMINI_NUR_BEZAHLT to "Nur bezahlt",
+        )
     }
 }
