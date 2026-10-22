@@ -51,3 +51,16 @@ Lokale CLI-Konfigurationsbeispiele sind kein Nachweis für Cloud-Orchestrierung.
   — neue Aufgaben aus der veröffentlichten Einrichtung; Einrichtung im Web/Desktop.
 - [OpenAI: Custom instructions with AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
   — Dateisuche relativ zur Arbeitswurzel, getrennt von der Cloud-Einrichtung.
+
+## Aufträge von außen starten (Stand 22.10.2026)
+
+- Die neuen Umgebungen der Codex-App (z. B. `proggs`) erscheinen **nicht** in `/backend-api/wham/environments`;
+  `codex cloud exec` (CLI 0.163) meldet „no cloud environments“, `POST /wham/tasks` mit der alten ID 404.
+- Die Codex-App spricht JSON-RPC des App-Servers über `wss://codex-cloud-backend.chatgpt.com/`. Anmeldung mit dem
+  Codex-OAuth-Token (Header `Authorization`, `ChatGPT-Account-Id`, `Origin: https://chatgpt.com`); ohne
+  `User-Agent` (z. B. `codex_cli_rs/…`) gibt es HTTP 403.
+- Ablauf: `initialize` → `environment/config/list` (liefert `id`, `name`, `status`) → `thread/start`
+  (`model`, `approvalPolicy: never`, `serviceName: codex_cloud`, `environments: [{environmentConfigId}]`,
+  `deferredEnvironment: true`) → `turn/start` (`threadId`, `input: [{type: text, text}]`). Der Zug läuft nach dem
+  Trennen weiter (`thread/turns/list` zeigt später `completed`). Thread-Link: `https://chatgpt.com/local/<threadId>`.
+- Nicht dokumentiert: kann sich ändern. Jarvis nutzt es in `CodexAuthManager.codexCloudRpc`.
