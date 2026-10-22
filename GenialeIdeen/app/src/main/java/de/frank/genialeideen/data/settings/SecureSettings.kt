@@ -33,7 +33,7 @@ class SecureSettings(context: Context) : Closeable {
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
             )
-        } catch (_: Exception) {
+        } catch (_: Exception) { // no-cancellation-rethrow
             null
         }
     }
@@ -205,7 +205,10 @@ class SecureSettings(context: Context) : Closeable {
     /** Whisper-Modell bei Groq: Turbo (schnell, Standard) oder Large V3 (genauer). */
     var whisperModell: String
         get() = GroqTranscriber.gueltigesModell(readString(Keys.WHISPER_MODEL, GroqTranscriber.DEFAULT_MODEL))
-        set(value) = writeString(Keys.WHISPER_MODEL, GroqTranscriber.gueltigesModell(value))
+        set(value) {
+            GroqTranscriber.sperreAufheben()
+            writeString(Keys.WHISPER_MODEL, GroqTranscriber.gueltigesModell(value))
+        }
 
     /** Persönliches Wörterbuch: Begriffe gehen als Prompt an Whisper. */
     var woerterbuchAn: Boolean

@@ -380,7 +380,9 @@ fun EinstellungenScreen(
                 SchalterZeile("Persönliches Wörterbuch", settings.woerterbuchAn) {
                     settings.woerterbuchAn = it
                 }
-                var woerterbuch by remember { mutableStateOf(settings.woerterbuch) }
+                // Keyed on the stored value so a restored backup shows up instead of a stale draft.
+                val gespeichertesWoerterbuch = settings.woerterbuch
+                var woerterbuch by remember(gespeichertesWoerterbuch) { mutableStateOf(gespeichertesWoerterbuch) }
                 WoerterbuchFeld(woerterbuch) {
                     woerterbuch = it
                     settings.woerterbuch = it
