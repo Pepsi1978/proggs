@@ -138,12 +138,16 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 Block("Spracheingabe") {
                     Text(
                         if (e.groqKey.isBlank()) "Ohne Schlüssel nutzt die App die Spracheingabe des Handys. Mit Groq-Schlüssel: Whisper, sehr genau bei Fachbegriffen."
-                        else "Groq Whisper (whisper-large-v3-turbo) mit vier Filtern gegen erfundenen Text in Stille.",
+                        else "Groq Whisper mit vier Filtern gegen erfundenen Text in Stille.",
                         color = f.textLeise, fontSize = 12.sp,
                     )
                     Feld("Groq-API-Schlüssel (optional)", e.groqKey, geheim = true) { e.groqKey = it }
                     Schalter("Nach dem Einsprechen sofort recherchieren", e.sofortNachDiktat) { e.sofortNachDiktat = it }
                     if (e.groqKey.isNotBlank()) {
+                        Text("Whisper-Modell", color = f.textLeise, fontSize = 13.sp)
+                        ChipReihe { de.frank.epigenetik.audio.GroqTranscriber.MODELLE.forEach { (id, name) -> Chip(name, e.whisperModell == id) { e.whisperModell = id } } }
+                        Schalter("Persönliches Wörterbuch", e.woerterbuchAn) { e.woerterbuchAn = it }
+                        Feld("Begriffe (durch Komma oder Zeilenumbruch getrennt)", e.woerterbuch, einzeilig = false) { e.woerterbuch = it }
                         Schalter("Stille erkennen und verwerfen", e.filterStille) { e.filterStille = it }
                         Schalter("Unsichere Abschnitte verwerfen", e.filterMetriken) { e.filterMetriken = it }
                         Schalter("Text ohne Ton verwerfen", e.filterZeitstempel) { e.filterZeitstempel = it }

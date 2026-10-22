@@ -48,6 +48,15 @@ class Einstellungen private constructor(context: Context) {
     var filterFloskeln: Boolean get() = prefs.getBoolean("filter_phrases", true); set(v) = put { putBoolean("filter_phrases", v) }
     /** Nach dem Einsprechen sofort recherchieren, ohne erst auf den Knopf zu tippen. */
     var sofortNachDiktat: Boolean get() = prefs.getBoolean("sofort_nach_diktat", false); set(v) = put { putBoolean("sofort_nach_diktat", v) }
+    /** Whisper-Modell bei Groq: Turbo (schnell, Standard) oder Large V3 (genauer). */
+    var whisperModell: String
+        get() = de.frank.epigenetik.audio.GroqTranscriber.gueltigesModell(prefs.getString("whisper_model", null))
+        set(v) = put { putString("whisper_model", de.frank.epigenetik.audio.GroqTranscriber.gueltigesModell(v)) }
+    /** Persönliches Wörterbuch: Begriffe gehen als Prompt an Whisper. */
+    var woerterbuchAn: Boolean get() = prefs.getBoolean("woerterbuch_an", true); set(v) = put { putBoolean("woerterbuch_an", v) }
+    var woerterbuch: String get() = s("woerterbuch", de.frank.epigenetik.audio.Woerterbuch.STANDARD_WOERTERBUCH); set(v) = put { putString("woerterbuch", v) }
+    /** Prompt für die nächste Aufnahme, oder null (Schalter aus / keine Begriffe). */
+    val woerterbuchPrompt: String? get() = de.frank.epigenetik.audio.Woerterbuch.prompt(woerterbuchAn, woerterbuch)
 
     // ---- KI ----
     var modell: CodexModel
