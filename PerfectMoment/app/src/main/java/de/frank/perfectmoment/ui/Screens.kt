@@ -409,7 +409,7 @@ fun StartScreen(
                 Spacer(Modifier.weight(1f))
             }
         }
-        val connected = viewModel.chatGptState == ChatGptState.CONNECTED
+        val connected = viewModel.kiBereit
         val unlocked = viewModel.topic.isNotBlank() && connected
         Column(
             Modifier.fillMaxWidth().align(Alignment.BottomCenter)
@@ -2483,6 +2483,24 @@ fun ChatGptScreen(
     val colors = LocalPmColors.current
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Mit ChatGPT verbinden", viewModel::back, titleSize = 24)
+        // Zweiter Anbieter wie in Jarvis: Claude-Modelle laufen über einen eigenen Anthropic-API-Schlüssel.
+        val kontext = androidx.compose.ui.platform.LocalContext.current
+        var anthropicKey by remember { mutableStateOf(de.frank.perfectmoment.auth.AnthropicKlient.schluessel(kontext)) }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+            Text("Anthropic (Claude-Modelle)", color = colors.text2, fontFamily = Inter, fontSize = 13.sp)
+            androidx.compose.material3.OutlinedTextField(
+                value = anthropicKey,
+                onValueChange = { anthropicKey = it; de.frank.perfectmoment.auth.AnthropicKlient.schluesselSpeichern(kontext, it) },
+                placeholder = { Text("API-Schlüssel sk-ant-…") },
+                singleLine = true,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                "Wähle unter Modell ein Claude-Modell, dann denkt die App über diesen Schlüssel (eigene Abrechnung) statt über ChatGPT.",
+                color = colors.text3, fontFamily = Inter, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
+            )
+        }
         when (viewModel.chatGptState) {
             ChatGptState.DISCONNECTED -> Column(
                 Modifier.fillMaxSize().padding(horizontal = 48.dp),

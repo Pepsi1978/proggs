@@ -317,6 +317,8 @@ class AppViewModel(
         if (authManager.isConnected) ChatGptState.CONNECTED else ChatGptState.DISCONNECTED,
     )
         private set
+    /** Die gewählte KI kann antworten: OpenAI über das ChatGPT-Konto, Claude über den Anthropic-Schlüssel. */
+    val kiBereit: Boolean get() = if (model.istAnthropic) authManager.kannDenken(model) else chatGptState == ChatGptState.CONNECTED
     var deviceAuthInfo by mutableStateOf<DeviceAuthInfo?>(null)
         private set
     var chatGptError by mutableStateOf<String?>(null)
@@ -717,7 +719,7 @@ class AppViewModel(
      */
     private fun backfillSummaries() {
         if (summaryJob?.isActive == true) return
-        if (chatGptState != ChatGptState.CONNECTED) return
+        if (!kiBereit) return
         val missing = sessions.filter {
             !it.custom && it.summary.isBlank() && !it.summaryManual && it.topic.isNotBlank()
         }
@@ -826,7 +828,7 @@ class AppViewModel(
             message = "Sprich oder schreibe zuerst deinen Wunsch."
             return
         }
-        if (chatGptState != ChatGptState.CONNECTED) {
+        if (!kiBereit) {
             message = "Bitte zuerst mit ChatGPT verbinden."
             return
         }
@@ -1198,7 +1200,7 @@ class AppViewModel(
      */
     private fun loadVoiceSampleQuestions() {
         voiceRecorderQuestions = VoiceSampleScript.fallback
-        voiceRecorderQuestionsLoading = chatGptState == ChatGptState.CONNECTED
+        voiceRecorderQuestionsLoading = kiBereit
         if (!voiceRecorderQuestionsLoading) return
         viewModelScope.launch {
             val generated = try {
@@ -1386,7 +1388,7 @@ class AppViewModel(
     }
 
     fun startSessionIntro() {
-        if (topic.isBlank() || !authManager.isConnected) return
+        if (topic.isBlank() || !kiBereit) return
         cancelVoiceInput()
         lastSessionStart = SessionStart.New
         pendingSessionTopic = topic.trim()
@@ -1796,7 +1798,7 @@ class AppViewModel(
     }
 
     private fun assignQuestionEmoji(sessionId: Long, questionId: Long, text: String) {
-        if (chatGptState != ChatGptState.CONNECTED) return
+        if (!kiBereit) return
         viewModelScope.launch {
             val emoji = try {
                 authManager.chooseQuestionEmoji(text, model, reasoning)

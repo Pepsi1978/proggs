@@ -300,7 +300,7 @@ private fun AppBottomSheet(
                     )
                     AppSheet.MODEL -> OptionSheet(
                         "Modell",
-                        CodexModel.entries.map { value ->
+                        CodexModel.entries.sortedBy { it.anbieter }.map { value ->
                             OptionRow(value.label, viewModel.model == value) { viewModel.updateModel(value) }
                         },
                     )
