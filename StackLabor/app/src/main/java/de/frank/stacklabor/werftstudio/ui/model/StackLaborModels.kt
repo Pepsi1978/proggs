@@ -200,6 +200,21 @@ data class StackLaborUiState(
     val qwenApiKeyLabel: String = "Nicht hinterlegt",
     val qwenVoiceIdLabel: String = "Nicht hinterlegt",
     val groqApiKeyLabel: String = "Nicht hinterlegt",
+    /** Gemini-3.8-Stimme und Azure Neural. */
+    val geminiFreeKeyValue: String = "",
+    val geminiPaidKeyValue: String = "",
+    val geminiFreeKeyLabel: String = "Nicht hinterlegt",
+    val geminiPaidKeyLabel: String = "Nicht hinterlegt",
+    val geminiKeyChoiceLabel: String = "Erst kostenlos, dann bezahlt",
+    val geminiChirpFallback: Boolean = false,
+    val azureKeyValue: String = "",
+    val azureKeyLabel: String = "Nicht hinterlegt",
+    val azureRegionValue: String = "westeurope",
+    val ttsProviderIsGemini: Boolean = false,
+    /** Hinweis, wenn dem gewählten Anbieter ein Schlüssel fehlt; leer = alles da. */
+    val ttsKeyHint: String = "",
+    /** Beschriftungen der Stimmen, die als Favorit markiert sind. */
+    val ttsFavoriteVoiceOptions: Set<String> = emptySet(),
     val whisperModelLabel: String = "Large V3 Turbo (schnell)",
     val vocabularyEnabled: Boolean = true,
     val vocabularyText: String = "",

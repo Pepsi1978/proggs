@@ -6,6 +6,9 @@ enum class TtsProviderId {
     EDGE,
     GOOGLE_CLOUD,
     QWEN,
+    GEMINI_FLASH,
+    GEMINI_LITE,
+    AZURE,
 }
 
 data class TtsConfiguration(
@@ -49,6 +52,31 @@ interface TtsCredentials {
     fun googleApiKey(): String?
     fun qwenApiKey(): String?
     fun qwenVoiceId(): String?
+
+    /** Gemini 3.8 TTS: key of the AI Studio project without billing (free) and with billing (paid). */
+    fun geminiFreeKey(): String? = null
+    fun geminiPaidKey(): String? = null
+
+    /** One of [GeminiKeyChoice.FREE_THEN_PAID], [GeminiKeyChoice.FREE_ONLY], [GeminiKeyChoice.PAID_ONLY]. */
+    fun geminiKeyChoice(): String = GeminiKeyChoice.FREE_THEN_PAID
+
+    /** If the free Gemini key fails, read on with the same voice via Google Chirp 3 HD instead of the paid key. */
+    fun geminiChirpFallback(): Boolean = false
+    fun azureKey(): String? = null
+    fun azureRegion(): String = TtsVoices.DEFAULT_AZURE_REGION
+}
+
+object GeminiKeyChoice {
+    const val FREE_THEN_PAID = "frei_dann_bezahlt"
+    const val FREE_ONLY = "nur_frei"
+    const val PAID_ONLY = "nur_bezahlt"
+    val CHOICES = listOf(
+        FREE_THEN_PAID to "Erst kostenlos, dann bezahlt",
+        FREE_ONLY to "Nur kostenlos",
+        PAID_ONLY to "Nur bezahlt",
+    )
+
+    fun label(id: String): String = CHOICES.firstOrNull { it.first == id }?.second ?: CHOICES.first().second
 }
 
 open class TtsException(message: String, cause: Throwable? = null) : Exception(message, cause)

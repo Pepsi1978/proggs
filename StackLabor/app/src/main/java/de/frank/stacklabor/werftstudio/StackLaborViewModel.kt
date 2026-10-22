@@ -46,6 +46,7 @@ import de.frank.stacklabor.werftstudio.service.codex.CodexException
 import de.frank.stacklabor.werftstudio.service.codex.CodexStreamEvent
 import de.frank.stacklabor.werftstudio.service.speech.MicRecorder
 import de.frank.stacklabor.werftstudio.service.tts.ClonedVoice
+import de.frank.stacklabor.werftstudio.service.tts.GeminiKeyChoice
 import de.frank.stacklabor.werftstudio.service.tts.TtsConfiguration
 import de.frank.stacklabor.werftstudio.service.tts.TtsVoices
 import de.frank.stacklabor.werftstudio.service.tts.TtsPlaybackState
@@ -394,6 +395,18 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 ttsProviderLabel = settings.ttsAnbieter.label(),
                 ttsVoiceLabel = voiceLabel(settings.ttsStimme, settings.ttsAnbieter),
                 ttsVoiceOptions = voiceOptions(settings.ttsAnbieter),
+                ttsFavoriteVoiceOptions = favoriteVoiceOptions(settings.ttsAnbieter),
+                geminiFreeKeyValue = settings.geminiTtsKeyFrei,
+                geminiPaidKeyValue = settings.geminiTtsKeyBezahlt,
+                geminiFreeKeyLabel = keyLabel(settings.geminiTtsKeyFrei),
+                geminiPaidKeyLabel = keyLabel(settings.geminiTtsKeyBezahlt),
+                geminiKeyChoiceLabel = GeminiKeyChoice.label(settings.geminiTtsSchluesselWahl),
+                geminiChirpFallback = settings.geminiTtsChirpRueckfall,
+                azureKeyValue = settings.azureTtsKey,
+                azureKeyLabel = keyLabel(settings.azureTtsKey),
+                azureRegionValue = settings.azureTtsRegion,
+                ttsProviderIsGemini = settings.ttsAnbieter == TtsAnbieter.GEMINI_FLASH || settings.ttsAnbieter == TtsAnbieter.GEMINI_LITE,
+                ttsKeyHint = ttsKeyHint(settings),
                 googleApiKeyValue = settings.googleApiKey,
                 qwenApiKeyValue = settings.qwenApiKey,
                 qwenVoiceIdValue = settings.qwenStimmenId,
@@ -1457,6 +1470,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             }
             "reduced-motion" -> container.settings.setzeBewegungReduziert(!settings.bewegungReduziert)
             "vocabulary-enabled" -> container.settings.setzeWoerterbuchAn(!settings.woerterbuchAn)
+            "gemini-chirp-fallback" -> container.settings.setzeGeminiTtsChirpRueckfall(!settings.geminiTtsChirpRueckfall)
         }
     }
 
@@ -1470,12 +1484,23 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 container.settings.setzeTtsStimme(
                     when {
                         catalogue.any { it.id == settings.ttsStimme } -> settings.ttsStimme
+                        provider == TtsAnbieter.GEMINI_FLASH -> settings.geminiFlashStimme
+                        provider == TtsAnbieter.GEMINI_LITE -> settings.geminiLiteStimme
+                        provider == TtsAnbieter.AZURE -> settings.azureStimme
                         catalogue.isNotEmpty() -> catalogue.first().id
                         else -> container.qwenStimmeAktiv()
                     },
                 )
                 if (provider == TtsAnbieter.GOOGLE_CLOUD && container.googleSchluesselAktiv().isBlank()) {
                     message("Bitte in den Einstellungen den Google-API-Schlüssel eintragen.")
+                }
+                if ((provider == TtsAnbieter.GEMINI_FLASH || provider == TtsAnbieter.GEMINI_LITE) &&
+                    settings.geminiTtsKeyFrei.isBlank() && settings.geminiTtsKeyBezahlt.isBlank()
+                ) {
+                    message("Bitte in den Einstellungen einen Gemini-Schlüssel für die Stimme eintragen.")
+                }
+                if (provider == TtsAnbieter.AZURE && settings.azureTtsKey.isBlank()) {
+                    message("Bitte in den Einstellungen den Azure-Speech-Schlüssel eintragen.")
                 }
                 if (provider == TtsAnbieter.QWEN_CLONE) {
                     if (container.qwenSchluesselAktiv().isBlank()) message("Bitte in den Einstellungen den Alibaba-Schlüssel (DashScope) eintragen.")
@@ -1485,11 +1510,27 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             "tts-voice" -> {
                 val voiceId = TtsVoices.of(settings.ttsAnbieter.toProviderId()).firstOrNull { it.label == value }?.id
                     ?: clonedVoices.firstOrNull { it.voiceLabel() == value }?.id
-                if (voiceId != null) container.settings.setzeTtsStimme(voiceId)
+                if (voiceId != null) {
+                    container.settings.setzeTtsStimme(voiceId)
+                    when (settings.ttsAnbieter) {
+                        TtsAnbieter.GEMINI_FLASH -> container.settings.setzeGeminiFlashStimme(voiceId)
+                        TtsAnbieter.GEMINI_LITE -> container.settings.setzeGeminiLiteStimme(voiceId)
+                        TtsAnbieter.AZURE -> container.settings.setzeAzureStimme(voiceId)
+                        else -> Unit
+                    }
+                }
                 if (settings.ttsAnbieter == TtsAnbieter.QWEN_CLONE && voiceId != null) {
                     container.settings.setzeQwenStimmenId(voiceId)
                 }
             }
+            "tts-voice-favorite" -> {
+                val voiceId = TtsVoices.of(settings.ttsAnbieter.toProviderId()).firstOrNull { it.label == value }?.id
+                    ?: clonedVoices.firstOrNull { it.voiceLabel() == value }?.id
+                if (voiceId != null) container.settings.schalteStimmFavorit(voiceId)
+            }
+            "gemini-key-choice" -> container.settings.setzeGeminiTtsSchluesselWahl(
+                GeminiKeyChoice.CHOICES.firstOrNull { it.second == value }?.first ?: GeminiKeyChoice.FREE_THEN_PAID,
+            )
             "tts-speed" -> container.settings.setzeTtsTempo(value.removeSuffix("×").replace(',', '.').toFloat())
             "tts-pause" -> container.settings.setzeAbsatzpause(when (value) {
                 "Mittel" -> Absatzpause.MITTEL
@@ -1568,6 +1609,22 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 message(if (value.isBlank()) "Stimmen-ID gelöscht" else "Stimmen-ID gespeichert")
             }
+            "gemini-key-free" -> {
+                container.settings.setzeGeminiTtsKeyFrei(value)
+                message(if (value.isBlank()) "Kostenloser Gemini-Schlüssel gelöscht" else "Kostenloser Gemini-Schlüssel gespeichert")
+            }
+            "gemini-key-paid" -> {
+                container.settings.setzeGeminiTtsKeyBezahlt(value)
+                message(if (value.isBlank()) "Bezahlter Gemini-Schlüssel gelöscht" else "Bezahlter Gemini-Schlüssel gespeichert")
+            }
+            "azure-key" -> {
+                container.settings.setzeAzureTtsKey(value)
+                message(if (value.isBlank()) "Azure-Schlüssel gelöscht" else "Azure-Schlüssel gespeichert")
+            }
+            "azure-region" -> {
+                container.settings.setzeAzureTtsRegion(value)
+                message("Azure-Region gespeichert")
+            }
             "groq-api-key" -> {
                 container.settings.setzeGroqApiKey(value)
                 message(if (value.isBlank()) "Groq-Schlüssel gelöscht" else "Groq-Schlüssel gespeichert")
@@ -1615,9 +1672,33 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    private fun voiceOptions(provider: TtsAnbieter): List<String> = when (provider) {
-        TtsAnbieter.QWEN_CLONE -> clonedVoices.map { it.voiceLabel() }
-        else -> TtsVoices.of(provider.toProviderId()).map { it.label }
+    /** Alle Stimmen des Anbieters als (Kennung, Beschriftung) — Favoriten oben. */
+    private fun voiceEntries(provider: TtsAnbieter): List<Pair<String, String>> = when (provider) {
+        TtsAnbieter.QWEN_CLONE -> clonedVoices.map { it.id to it.voiceLabel() }
+        else -> TtsVoices.of(provider.toProviderId()).map { it.id to it.label }
+    }.sortedByDescending { it.first in settings.stimmFavoriten }
+
+    private fun voiceOptions(provider: TtsAnbieter): List<String> = voiceEntries(provider).map { it.second }
+
+    private fun favoriteVoiceOptions(provider: TtsAnbieter): Set<String> =
+        voiceEntries(provider).filter { it.first in settings.stimmFavoriten }.map { it.second }.toSet()
+
+    /** Was dem gewählten Anbieter noch fehlt — leer, wenn alles da ist. */
+    private fun ttsKeyHint(current: AppEinstellungen): String = when (current.ttsAnbieter) {
+        TtsAnbieter.GEMINI_FLASH, TtsAnbieter.GEMINI_LITE -> {
+            val freiNoetig = current.geminiTtsSchluesselWahl != GeminiKeyChoice.PAID_ONLY
+            val bezahltNoetig = current.geminiTtsSchluesselWahl != GeminiKeyChoice.FREE_ONLY
+            when {
+                (!freiNoetig || current.geminiTtsKeyFrei.isBlank()) && (!bezahltNoetig || current.geminiTtsKeyBezahlt.isBlank()) ->
+                    "Für die Gemini-Stimme fehlt noch ein Schlüssel — bitte unter „API-Schlüssel“ eintragen."
+                current.geminiTtsChirpRueckfall && current.googleApiKey.isBlank() ->
+                    "Für den Rückfall auf Chirp 3 HD fehlt der Google-Schlüssel — bitte unter „API-Schlüssel“ eintragen."
+                else -> ""
+            }
+        }
+        TtsAnbieter.AZURE -> if (current.azureTtsKey.isBlank()) "Für Azure fehlt noch der Speech-Schlüssel — bitte unter „API-Schlüssel“ eintragen." else ""
+        TtsAnbieter.GOOGLE_CLOUD -> if (current.googleApiKey.isBlank()) "Für Chirp 3 HD fehlt noch der Google-Schlüssel." else ""
+        else -> ""
     }
 
     private fun voiceLabel(voiceId: String, provider: TtsAnbieter): String = when (provider) {
@@ -1635,11 +1716,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         val text = mutableState.value.evaluationParagraphs.joinToString("\n\n").trim()
         if (text.isBlank()) return message("Es gibt noch keine Auswertung zum Vorlesen")
         val configuration = TtsConfiguration(
-            provider = when (settings.ttsAnbieter) {
-                TtsAnbieter.EDGE -> TtsProviderId.EDGE
-                TtsAnbieter.GOOGLE_CLOUD -> TtsProviderId.GOOGLE_CLOUD
-                TtsAnbieter.QWEN_CLONE -> TtsProviderId.QWEN
-            },
+            provider = settings.ttsAnbieter.toProviderId(),
             voiceId = settings.ttsStimme,
             speechRate = settings.ttsTempo.coerceIn(0.7f, 1.3f),
             paragraphPauseMillis = when (settings.absatzpause) { Absatzpause.KURZ -> 350L; Absatzpause.MITTEL -> 700L; Absatzpause.LANG -> 1_200L },
@@ -1913,6 +1990,9 @@ private fun TtsAnbieter.toProviderId(): TtsProviderId = when (this) {
     TtsAnbieter.EDGE -> TtsProviderId.EDGE
     TtsAnbieter.GOOGLE_CLOUD -> TtsProviderId.GOOGLE_CLOUD
     TtsAnbieter.QWEN_CLONE -> TtsProviderId.QWEN
+    TtsAnbieter.GEMINI_FLASH -> TtsProviderId.GEMINI_FLASH
+    TtsAnbieter.GEMINI_LITE -> TtsProviderId.GEMINI_LITE
+    TtsAnbieter.AZURE -> TtsProviderId.AZURE
 }
 
 /** Tempo in 0,05er-Schritten zwischen 0,70 und 1,20. */
@@ -1942,6 +2022,9 @@ fun TtsAnbieter.label(): String = when (this) {
     TtsAnbieter.EDGE -> "Microsoft Edge"
     TtsAnbieter.GOOGLE_CLOUD -> "Google Chirp 3 HD"
     TtsAnbieter.QWEN_CLONE -> "Meine Stimme (Alibaba)"
+    TtsAnbieter.GEMINI_FLASH -> "Gemini 3.8 Flash TTS"
+    TtsAnbieter.GEMINI_LITE -> "Gemini 3.8 Flash-Lite TTS"
+    TtsAnbieter.AZURE -> "Azure Neural"
 }
 private fun TtsAnbieter.next(): TtsAnbieter = TtsAnbieter.entries[(ordinal + 1) % TtsAnbieter.entries.size]
 private fun Absatzpause.next(): Absatzpause = Absatzpause.entries[(ordinal + 1) % Absatzpause.entries.size]

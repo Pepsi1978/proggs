@@ -5,7 +5,7 @@ class TtsEngine(providers: List<TtsProvider>) {
 
     init {
         require(providersById.keys.containsAll(TtsProviderId.entries)) {
-            "Für Edge, Google Cloud und Qwen muss jeweils ein TTS-Anbieter registriert sein."
+            "Für Edge, Google Cloud, Qwen, Gemini und Azure muss jeweils ein TTS-Anbieter registriert sein."
         }
     }
 
@@ -20,6 +20,9 @@ class TtsEngine(providers: List<TtsProvider>) {
             TtsProviderId.QWEN -> configuredVoice.takeUnless {
                 it == TtsConfiguration.DEFAULT_EDGE_VOICE || it == TtsConfiguration.DEFAULT_GOOGLE_VOICE
             }.orEmpty()
+            TtsProviderId.GEMINI_FLASH, TtsProviderId.GEMINI_LITE, TtsProviderId.AZURE ->
+                configuredVoice.takeIf { id -> TtsVoices.of(configuration.provider).any { it.id == id } }
+                    ?: TtsVoices.defaultFor(configuration.provider)
         }
         return provider.synthesize(
             TtsSynthesisRequest(text = text, voiceId = voice, speechRate = configuration.speechRate),

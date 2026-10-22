@@ -19,7 +19,12 @@ import de.frank.stacklabor.werftstudio.service.codex.CodexResponsesClient
 import de.frank.stacklabor.werftstudio.service.codex.CodexSolubilityClassifier
 import de.frank.stacklabor.werftstudio.service.codex.PersistedCodexEvaluator
 import de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber
+import de.frank.stacklabor.werftstudio.service.tts.AzureTtsProvider
 import de.frank.stacklabor.werftstudio.service.tts.EdgeTtsProvider
+import de.frank.stacklabor.werftstudio.service.tts.GeminiKeyChoice
+import de.frank.stacklabor.werftstudio.service.tts.GeminiTtsProvider
+import de.frank.stacklabor.werftstudio.service.tts.TtsProviderId
+import de.frank.stacklabor.werftstudio.service.tts.TtsVoices
 import de.frank.stacklabor.werftstudio.service.tts.GoogleCloudTtsProvider
 import de.frank.stacklabor.werftstudio.service.tts.QwenTtsProvider
 import de.frank.stacklabor.werftstudio.service.tts.QwenVoiceDirectory
@@ -39,6 +44,12 @@ data class TtsSchluessel(
     val qwen: String = "",
     val qwenStimme: String = "",
     val groq: String = "",
+    val geminiFrei: String = "",
+    val geminiBezahlt: String = "",
+    val geminiWahl: String = GeminiKeyChoice.FREE_THEN_PAID,
+    val geminiChirpRueckfall: Boolean = false,
+    val azure: String = "",
+    val azureRegion: String = TtsVoices.DEFAULT_AZURE_REGION,
 )
 
 class AppContainer(context: Context) {
@@ -123,6 +134,12 @@ class AppContainer(context: Context) {
                     qwen = gespeichert.qwenApiKey,
                     qwenStimme = gespeichert.qwenStimmenId,
                     groq = gespeichert.groqApiKey,
+                    geminiFrei = gespeichert.geminiTtsKeyFrei,
+                    geminiBezahlt = gespeichert.geminiTtsKeyBezahlt,
+                    geminiWahl = gespeichert.geminiTtsSchluesselWahl,
+                    geminiChirpRueckfall = gespeichert.geminiTtsChirpRueckfall,
+                    azure = gespeichert.azureTtsKey,
+                    azureRegion = gespeichert.azureTtsRegion,
                 )
             }
         }
@@ -130,13 +147,23 @@ class AppContainer(context: Context) {
             override fun googleApiKey(): String? = googleSchluesselAktiv().takeIf(String::isNotBlank)
             override fun qwenApiKey(): String? = qwenSchluesselAktiv().takeIf(String::isNotBlank)
             override fun qwenVoiceId(): String? = qwenStimmeAktiv().takeIf(String::isNotBlank)
+            override fun geminiFreeKey(): String? = eigeneSchluessel.geminiFrei.takeIf(String::isNotBlank)
+            override fun geminiPaidKey(): String? = eigeneSchluessel.geminiBezahlt.takeIf(String::isNotBlank)
+            override fun geminiKeyChoice(): String = eigeneSchluessel.geminiWahl
+            override fun geminiChirpFallback(): Boolean = eigeneSchluessel.geminiChirpRueckfall
+            override fun azureKey(): String? = eigeneSchluessel.azure.takeIf(String::isNotBlank)
+            override fun azureRegion(): String = eigeneSchluessel.azureRegion
         }
         val cache = TtsAudioCache(appContext)
+        val google = GoogleCloudTtsProvider(credentials, cache, ttsUsage)
         ttsEngine = TtsEngine(
             listOf(
                 EdgeTtsProvider(cache, ttsUsage),
-                GoogleCloudTtsProvider(credentials, cache, ttsUsage),
+                google,
                 QwenTtsProvider(credentials, cache, ttsUsage),
+                GeminiTtsProvider(TtsProviderId.GEMINI_FLASH, GeminiTtsProvider.FLASH_MODEL, credentials, cache, ttsUsage, google),
+                GeminiTtsProvider(TtsProviderId.GEMINI_LITE, GeminiTtsProvider.LITE_MODEL, credentials, cache, ttsUsage, google),
+                AzureTtsProvider(credentials, cache, ttsUsage),
             ),
         )
     }

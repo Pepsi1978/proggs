@@ -6,6 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,7 +99,7 @@ import de.frank.stacklabor.werftstudio.ui.theme.lightenBy
 import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 import androidx.compose.ui.graphics.Brush
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
     var seedWarning by rememberSaveable { mutableStateOf(false) }
@@ -117,6 +121,33 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         SettingsDivider()
                         SettingsItem("Stimme", state.ttsVoiceLabel) { selectionId = "tts-voice" }
                         SettingsDivider()
+                        if (state.ttsProviderIsGemini) {
+                            SettingsItem("Welcher Schlüssel", state.geminiKeyChoiceLabel) { selectionId = "gemini-key-choice" }
+                            SettingsDivider()
+                            SettingsItem(
+                                "Rückfall auf Chirp 3 HD",
+                                if (state.geminiChirpFallback) "Eingeschaltet" else "Ausgeschaltet",
+                                trailing = { SettingsToggle(state.geminiChirpFallback) },
+                                onClick = { callbacks.onEvent(StackLaborEvent.SelectSetting("gemini-chirp-fallback")) },
+                            )
+                            Text(
+                                "Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest StackLabor " +
+                                    "mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                                Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = StackLaborTheme.colors.textMuted,
+                            )
+                            SettingsDivider()
+                        }
+                        if (state.ttsKeyHint.isNotEmpty()) {
+                            Text(
+                                state.ttsKeyHint,
+                                Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = StackLaborTheme.colors.red,
+                            )
+                            SettingsDivider()
+                        }
                         SettingsItem("Tempo", state.ttsSpeedLabel) { selectionId = "tts-speed" }
                         SettingsDivider()
                         SettingsItem("Pause zwischen Absätzen", state.ttsPauseLabel) { selectionId = "tts-pause" }
@@ -133,6 +164,14 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         SettingsItem("Alibaba-Stimmen-ID", state.qwenVoiceIdLabel) { keyEntryId = "qwen-voice-id" }
                         SettingsDivider()
                         SettingsItem("Google Chirp 3 HD", state.googleApiKeyLabel) { keyEntryId = "google-api-key" }
+                        SettingsDivider()
+                        SettingsItem("Gemini-Stimme: kostenlos", state.geminiFreeKeyLabel) { keyEntryId = "gemini-key-free" }
+                        SettingsDivider()
+                        SettingsItem("Gemini-Stimme: bezahlt", state.geminiPaidKeyLabel) { keyEntryId = "gemini-key-paid" }
+                        SettingsDivider()
+                        SettingsItem("Azure-Speech (KEY 1)", state.azureKeyLabel) { keyEntryId = "azure-key" }
+                        SettingsDivider()
+                        SettingsItem("Azure-Region", state.azureRegionValue) { keyEntryId = "azure-region" }
                         SettingsDivider()
                         SettingsItem("Groq Whisper", state.groqApiKeyLabel) { keyEntryId = "groq-api-key" }
                         SettingsDivider()
@@ -312,12 +351,34 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                                             },
                                         )
                                         .border(1.dp, if (selected) metalRim(1f) else metalRim(0.4f), RoundedCornerShape(16.dp))
-                                        .clickable {
-                                            callbacks.onEvent(StackLaborEvent.SelectSettingValue(selection.id, option))
-                                            selectionId = null
-                                        }.padding(horizontal = 14.dp),
+                                        .combinedClickable(
+                                            onClick = {
+                                                callbacks.onEvent(StackLaborEvent.SelectSettingValue(selection.id, option))
+                                                selectionId = null
+                                            },
+                                            onLongClick = if (selection.favorites != null) {
+                                                { callbacks.onEvent(StackLaborEvent.SelectSettingValue("tts-voice-favorite", option)) }
+                                            } else {
+                                                null
+                                            },
+                                            onLongClickLabel = if (selection.favorites != null) "Favorit an/aus" else null,
+                                        ).padding(horizontal = 14.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
+                                    val favorite = selection.favorites?.contains(option) == true
+                                    if (selection.favorites != null) {
+                                        IconButton(
+                                            onClick = { callbacks.onEvent(StackLaborEvent.SelectSettingValue("tts-voice-favorite", option)) },
+                                            modifier = Modifier.size(36.dp),
+                                        ) {
+                                            Icon(
+                                                if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                                if (favorite) "Favorit entfernen" else "Als Favorit markieren",
+                                                Modifier.size(20.dp),
+                                                tint = if (favorite) Color(0xFFFFC107) else StackLaborTheme.colors.textMuted,
+                                            )
+                                        }
+                                    }
                                     Text(
                                         option,
                                         Modifier.weight(1f),
@@ -368,6 +429,8 @@ private data class ApiKeyEntry(
     val title: String,
     val current: String,
     val hint: String,
+    /** false = kein Geheimnis (etwa die Region): Feld von Anfang an sichtbar. */
+    val secret: Boolean = true,
 )
 
 private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when (id) {
@@ -392,6 +455,32 @@ private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when
         "Der Google-Cloud-Schlüssel mit freigeschalteter Text-to-Speech-API (Chirp 3 HD). " +
             "Er bleibt nur auf diesem Gerät gespeichert.",
     )
+    "gemini-key-free" -> ApiKeyEntry(
+        id,
+        "Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)",
+        state.geminiFreeKeyValue,
+        "Der Schlüssel eines AI-Studio-Projekts ohne Abrechnung für Gemini 3.8 Flash TTS und Flash-Lite TTS. " +
+            "Er bleibt nur auf diesem Gerät gespeichert.",
+    )
+    "gemini-key-paid" -> ApiKeyEntry(
+        id,
+        "Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)",
+        state.geminiPaidKeyValue,
+        "Der Schlüssel eines AI-Studio-Projekts mit Abrechnung. Wird je nach Schlüsselwahl genutzt, wenn der kostenlose scheitert.",
+    )
+    "azure-key" -> ApiKeyEntry(
+        id,
+        "Azure-Speech-Schlüssel (KEY 1)",
+        state.azureKeyValue,
+        "KEY 1 deiner Azure-Speech-Ressource (Stufe F0 kostenlos oder S0; HD-Stimmen nur mit S0).",
+    )
+    "azure-region" -> ApiKeyEntry(
+        id,
+        "Azure-Region (z. B. westeurope)",
+        state.azureRegionValue,
+        "Die Region deiner Speech-Ressource. Der Endpunkt aus dem Azure-Portal geht auch.",
+        secret = false,
+    )
     "groq-api-key" -> ApiKeyEntry(
         id,
         "Groq-API-Schlüssel",
@@ -405,7 +494,7 @@ private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when
 @Composable
 private fun ApiKeyDialog(entry: ApiKeyEntry, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var value by rememberSaveable(entry.id) { mutableStateOf(entry.current) }
-    var visible by rememberSaveable(entry.id) { mutableStateOf(false) }
+    var visible by rememberSaveable(entry.id) { mutableStateOf(!entry.secret) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             Modifier.fillMaxWidth().depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f),
@@ -438,7 +527,7 @@ private fun ApiKeyDialog(entry: ApiKeyEntry, onDismiss: () -> Unit, onSave: (Str
                             Box {
                                 if (value.isEmpty()) {
                                     Text(
-                                        "Schlüssel einfügen",
+                                        if (entry.secret) "Schlüssel einfügen" else "westeurope",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = StackLaborTheme.colors.textMuted,
                                     )
@@ -513,6 +602,8 @@ private data class SettingSelection(
     val value: String,
     val options: List<String>,
     val hint: String = "",
+    /** Nicht null = Stimmliste: Favoriten bekommen einen gelben Stern, langes Drücken schaltet sie um. */
+    val favorites: Set<String>? = null,
 )
 
 private fun settingSelection(state: StackLaborUiState, id: String?): SettingSelection? = when (id) {
@@ -522,7 +613,15 @@ private fun settingSelection(state: StackLaborUiState, id: String?): SettingSele
         "Stimme",
         state.ttsVoiceLabel,
         state.ttsVoiceOptions,
-        hint = if (state.ttsProviderLabel.startsWith("Meine Stimme")) state.clonedVoicesHint else "",
+        hint = (if (state.ttsProviderLabel.startsWith("Meine Stimme")) state.clonedVoicesHint + "\n" else "") +
+            "Langes Drücken oder Stern: Favorit an/aus — Favoriten stehen oben.",
+        favorites = state.ttsFavoriteVoiceOptions,
+    )
+    "gemini-key-choice" -> SettingSelection(
+        id,
+        "Welcher Schlüssel",
+        state.geminiKeyChoiceLabel,
+        de.frank.stacklabor.werftstudio.service.tts.GeminiKeyChoice.CHOICES.map { it.second },
     )
     "tts-speed" -> SettingSelection(
         id,

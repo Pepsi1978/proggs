@@ -9,11 +9,14 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import de.frank.stacklabor.werftstudio.domain.model.DosisVariante
 import de.frank.stacklabor.werftstudio.service.codex.CodexModel
 import de.frank.stacklabor.werftstudio.service.codex.ReasoningEffort
 import de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber
+import de.frank.stacklabor.werftstudio.service.tts.GeminiKeyChoice
+import de.frank.stacklabor.werftstudio.service.tts.TtsVoices
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -24,7 +27,7 @@ val Context.stackLaborEinstellungenDataStore: DataStore<Preferences> by preferen
 )
 
 enum class Erscheinung(val code: Int) { HELL(0), DUNKEL(1) }
-enum class TtsAnbieter(val code: Int) { EDGE(0), GOOGLE_CLOUD(1), QWEN_CLONE(2) }
+enum class TtsAnbieter(val code: Int) { EDGE(0), GOOGLE_CLOUD(1), QWEN_CLONE(2), GEMINI_FLASH(3), GEMINI_LITE(4), AZURE(5) }
 enum class Absatzpause(val code: Int) { KURZ(0), MITTEL(1), LANG(2) }
 
 data class AppEinstellungen(
@@ -43,6 +46,19 @@ data class AppEinstellungen(
     val googleApiKey: String = "",
     val qwenApiKey: String = "",
     val qwenStimmenId: String = "",
+    /** Gemini-3.8-Stimme: Schlüssel ohne bzw. mit Abrechnung, Schlüsselwahl und Rückfall auf Chirp 3 HD. */
+    val geminiTtsKeyFrei: String = "",
+    val geminiTtsKeyBezahlt: String = "",
+    val geminiTtsSchluesselWahl: String = GeminiKeyChoice.FREE_THEN_PAID,
+    val geminiTtsChirpRueckfall: Boolean = false,
+    /** Je Gemini-Anbieter und für Azure die zuletzt gewählte Stimme. */
+    val geminiFlashStimme: String = TtsVoices.DEFAULT_GEMINI_FLASH_VOICE,
+    val geminiLiteStimme: String = TtsVoices.DEFAULT_GEMINI_LITE_VOICE,
+    val azureTtsKey: String = "",
+    val azureTtsRegion: String = TtsVoices.DEFAULT_AZURE_REGION,
+    val azureStimme: String = TtsVoices.DEFAULT_AZURE_VOICE,
+    /** Als Favorit markierte Stimmen (Kennungen aller Anbieter); sie stehen in der Stimmliste oben. */
+    val stimmFavoriten: Set<String> = emptySet(),
     val groqApiKey: String = "",
     /** Groq-Whisper-Modell (Standard Turbo) und persönliches Wörterbuch für die Spracheingabe. */
     val groqModell: String = GroqTranscriber.MODEL_TURBO,
@@ -93,6 +109,23 @@ class EinstellungenStore(
     suspend fun setzeGoogleApiKey(value: String): Unit = schreibe(GOOGLE_API_KEY, value.trim())
     suspend fun setzeQwenApiKey(value: String): Unit = schreibe(QWEN_API_KEY, value.filterNot(Char::isWhitespace))
     suspend fun setzeQwenStimmenId(value: String): Unit = schreibe(QWEN_STIMMEN_ID, value.filterNot(Char::isWhitespace))
+    suspend fun setzeGeminiTtsKeyFrei(value: String): Unit = schreibe(GEMINI_TTS_KEY_FREI, value.filterNot(Char::isWhitespace))
+    suspend fun setzeGeminiTtsKeyBezahlt(value: String): Unit = schreibe(GEMINI_TTS_KEY_BEZAHLT, value.filterNot(Char::isWhitespace))
+    suspend fun setzeGeminiTtsSchluesselWahl(value: String): Unit = schreibe(GEMINI_TTS_SCHLUESSEL_WAHL, value)
+    suspend fun setzeGeminiTtsChirpRueckfall(value: Boolean): Unit = schreibe(GEMINI_TTS_CHIRP_RUECKFALL, value)
+    suspend fun setzeGeminiFlashStimme(value: String): Unit = schreibe(GEMINI_FLASH_STIMME, value)
+    suspend fun setzeGeminiLiteStimme(value: String): Unit = schreibe(GEMINI_LITE_STIMME, value)
+    suspend fun setzeAzureTtsKey(value: String): Unit = schreibe(AZURE_TTS_KEY, value.filterNot(Char::isWhitespace))
+    suspend fun setzeAzureTtsRegion(value: String): Unit = schreibe(AZURE_TTS_REGION, value.trim())
+    suspend fun setzeAzureStimme(value: String): Unit = schreibe(AZURE_STIMME, value)
+
+    /** Schaltet eine Stimme als Favorit an oder aus. */
+    suspend fun schalteStimmFavorit(stimmeId: String) {
+        dataStore.edit { preferences ->
+            val aktuell = preferences[STIMM_FAVORITEN].orEmpty()
+            preferences[STIMM_FAVORITEN] = if (stimmeId in aktuell) aktuell - stimmeId else aktuell + stimmeId
+        }
+    }
     suspend fun setzeGroqApiKey(value: String): Unit = schreibe(GROQ_API_KEY, value.filterNot(Char::isWhitespace))
     suspend fun setzeGroqModell(value: String): Unit =
         schreibe(GROQ_MODELL, if (value == GroqTranscriber.MODEL_LARGE_V3) value else GroqTranscriber.MODEL_TURBO)
@@ -129,6 +162,16 @@ class EinstellungenStore(
         googleApiKey = preferences[GOOGLE_API_KEY].orEmpty(),
         qwenApiKey = preferences[QWEN_API_KEY].orEmpty(),
         qwenStimmenId = preferences[QWEN_STIMMEN_ID].orEmpty(),
+        geminiTtsKeyFrei = preferences[GEMINI_TTS_KEY_FREI].orEmpty(),
+        geminiTtsKeyBezahlt = preferences[GEMINI_TTS_KEY_BEZAHLT].orEmpty(),
+        geminiTtsSchluesselWahl = preferences[GEMINI_TTS_SCHLUESSEL_WAHL] ?: GeminiKeyChoice.FREE_THEN_PAID,
+        geminiTtsChirpRueckfall = preferences[GEMINI_TTS_CHIRP_RUECKFALL] ?: false,
+        geminiFlashStimme = preferences[GEMINI_FLASH_STIMME] ?: TtsVoices.DEFAULT_GEMINI_FLASH_VOICE,
+        geminiLiteStimme = preferences[GEMINI_LITE_STIMME] ?: TtsVoices.DEFAULT_GEMINI_LITE_VOICE,
+        azureTtsKey = preferences[AZURE_TTS_KEY].orEmpty(),
+        azureTtsRegion = preferences[AZURE_TTS_REGION] ?: TtsVoices.DEFAULT_AZURE_REGION,
+        azureStimme = preferences[AZURE_STIMME] ?: TtsVoices.DEFAULT_AZURE_VOICE,
+        stimmFavoriten = preferences[STIMM_FAVORITEN].orEmpty(),
         groqApiKey = preferences[GROQ_API_KEY].orEmpty(),
         groqModell = preferences[GROQ_MODELL] ?: GroqTranscriber.MODEL_TURBO,
         woerterbuchAn = preferences[WOERTERBUCH_AN] ?: true,
@@ -161,6 +204,16 @@ class EinstellungenStore(
         val GOOGLE_API_KEY = stringPreferencesKey("google_api_key")
         val QWEN_API_KEY = stringPreferencesKey("qwen_api_key")
         val QWEN_STIMMEN_ID = stringPreferencesKey("qwen_stimmen_id")
+        val GEMINI_TTS_KEY_FREI = stringPreferencesKey("gemini_tts_key_frei")
+        val GEMINI_TTS_KEY_BEZAHLT = stringPreferencesKey("gemini_tts_key_bezahlt")
+        val GEMINI_TTS_SCHLUESSEL_WAHL = stringPreferencesKey("gemini_tts_schluessel_wahl")
+        val GEMINI_TTS_CHIRP_RUECKFALL = booleanPreferencesKey("gemini_tts_chirp_rueckfall")
+        val GEMINI_FLASH_STIMME = stringPreferencesKey("gemini_flash_stimme")
+        val GEMINI_LITE_STIMME = stringPreferencesKey("gemini_lite_stimme")
+        val AZURE_TTS_KEY = stringPreferencesKey("azure_tts_key")
+        val AZURE_TTS_REGION = stringPreferencesKey("azure_tts_region")
+        val AZURE_STIMME = stringPreferencesKey("azure_stimme")
+        val STIMM_FAVORITEN = stringSetPreferencesKey("stimm_favoriten")
         val GROQ_API_KEY = stringPreferencesKey("groq_api_key")
         val GROQ_MODELL = stringPreferencesKey("groq_modell")
         val WOERTERBUCH_AN = booleanPreferencesKey("woerterbuch_an")
