@@ -1505,4 +1505,19 @@
     <string name="settings_vocabulary">Persönliches Wörterbuch</string>
     <string name="settings_vocabulary_desc">Hilft bei der Schreibweise von Namen und Fachbegriffen</string>
     <string name="settings_vocabulary_terms">Begriffe (durch Komma oder Zeilenumbruch getrennt)</string>
+    <string name="tts_provider_label">Dienst</string>
+    <string name="tts_fav_hint">Stern antippen: Favorit an/aus. Favoriten stehen oben.</string>
+    <string name="tts_gemini_key_free">Gemini-Stimme: Schlüssel kostenlos (Projekt ohne Abrechnung)</string>
+    <string name="tts_gemini_key_paid">Gemini-Stimme: Schlüssel bezahlt (Projekt mit Abrechnung)</string>
+    <string name="tts_gemini_key_choice">Welcher Schlüssel</string>
+    <string name="tts_gemini_choice_free_then_paid">Erst kostenlos, dann bezahlt</string>
+    <string name="tts_gemini_choice_free">Nur kostenlos</string>
+    <string name="tts_gemini_choice_paid">Nur bezahlt</string>
+    <string name="tts_chirp_fallback">Rückfall auf Chirp 3 HD</string>
+    <string name="tts_chirp_fallback_desc">Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest die App mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.</string>
+    <string name="tts_google_key">Google-TTS-Schlüssel</string>
+    <string name="tts_azure_key">Azure-Speech-Schlüssel (KEY 1)</string>
+    <string name="tts_azure_region">Azure-Region (z. B. westeurope)</string>
+    <string name="tts_key_missing">Für diese Stimme fehlt noch ein Schlüssel.</string>
+    <string name="tts_google_consent_needed">Google-Stimmen brauchen die Einwilligung für Gemini (Datenschutz). Bis dahin liest Edge vor.</string>
 </resources>

@@ -33,7 +33,9 @@ object TtsVoiceRegistry {
 
     /** Get the locale code from a voice ID: "de-DE-KatjaNeural" -> "de-DE" */
     fun extractLocale(voiceId: String): String {
-        val parts = voiceId.split("-")
+        // Gemini-Stimmen tragen keine Sprache; Azure-Stimmen das Präfix „azure:“.
+        if (voiceId.startsWith("gemini_")) return getLocaleVoices().localeCode
+        val parts = voiceId.removePrefix("azure:").split("-")
         return if (parts.size >= 2) "${parts[0]}-${parts[1]}" else "en-US"
     }
 

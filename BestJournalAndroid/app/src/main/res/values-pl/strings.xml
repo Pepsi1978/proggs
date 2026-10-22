@@ -1445,4 +1445,19 @@ Co chcesz zrobić?</string>
     <string name="settings_vocabulary">Słownik osobisty</string>
     <string name="settings_vocabulary_desc">Pomaga w pisowni imion i terminów fachowych</string>
     <string name="settings_vocabulary_terms">Terminy (oddzielone przecinkiem lub nową linią)</string>
+    <string name="tts_provider_label">Service</string>
+    <string name="tts_fav_hint">Tap the star to add or remove a favorite. Favorites are listed first.</string>
+    <string name="tts_gemini_key_free">Gemini voice: free key (project without billing)</string>
+    <string name="tts_gemini_key_paid">Gemini voice: paid key (project with billing)</string>
+    <string name="tts_gemini_key_choice">Which key</string>
+    <string name="tts_gemini_choice_free_then_paid">Free first, then paid</string>
+    <string name="tts_gemini_choice_free">Free only</string>
+    <string name="tts_gemini_choice_paid">Paid only</string>
+    <string name="tts_chirp_fallback">Fall back to Chirp 3 HD</string>
+    <string name="tts_chirp_fallback_desc">If the free key fails (e.g. quota exhausted or an HTTP error), the app keeps reading with the same voice via Google Chirp 3 HD instead of using the paid key.</string>
+    <string name="tts_google_key">Google TTS key</string>
+    <string name="tts_azure_key">Azure Speech key (KEY 1)</string>
+    <string name="tts_azure_region">Azure region (e.g. westeurope)</string>
+    <string name="tts_key_missing">A key is still missing for this voice.</string>
+    <string name="tts_google_consent_needed">Google voices need the Gemini consent (privacy). Until then, Edge reads aloud.</string>
 </resources>

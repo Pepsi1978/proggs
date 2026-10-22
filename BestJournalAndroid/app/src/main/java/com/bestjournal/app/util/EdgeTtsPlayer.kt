@@ -33,6 +33,10 @@ class EdgeTtsPlayer(private val context: Context) {
     private var watchdogJob: Job? = null
     private var currentVoice: String = ""
 
+    /** Gemini 3.8 TTS, Azure Neural und Google Chirp 3 HD — gewählt über dieselbe Stimm-Einstellung. */
+    private val zusatz by lazy { ZusatzStimmenPlayer(context) }
+    private var zusatzBenutzt = false
+
     // Single owned scope — cancelled in shutdown(). stop() only cancels the current watchdog job,
     // not the scope itself, since stop() is called frequently (e.g. on each new speak() call).
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -86,9 +90,29 @@ class EdgeTtsPlayer(private val context: Context) {
             return
         }
 
+        val anbieter = ZusatzStimmen.anbieterZu(voice)
+        // Google-Stimmen (Gemini, Chirp) nur mit der Einwilligung für Google; sonst spricht Edge.
+        val googleOhneEinwilligung = anbieter != null && anbieter != ZusatzStimmen.PROVIDER_AZURE &&
+            !PrivacyGateHelper.hasConsented(context, PrivacyGateHelper.CloudService.Gemini)
+        if (anbieter != null && !googleOhneEinwilligung) {
+            zusatzBenutzt = true
+            zusatz.speak(
+                text = text,
+                wahl = zusatzWahl(anbieter, voice),
+                onPlaybackStart = onPlaybackStart,
+                onComplete = onComplete,
+                onError = { e ->
+                    android.util.Log.e("EdgeTtsPlayer", "$anbieter TTS error: ${e.message}")
+                    onComplete()
+                },
+            )
+            return
+        }
+        val stimme = if (anbieter != null) TtsVoiceRegistry.getLocaleVoices().defaultVoiceId else voice
+
         onDone = onComplete
         onPlayStart = onPlaybackStart
-        currentVoice = voice
+        currentVoice = stimme
 
         val connectionId = UUID.randomUUID().toString().replace("-", "")
         val requestId = UUID.randomUUID().toString().replace("-", "")
@@ -119,7 +143,7 @@ class EdgeTtsPlayer(private val context: Context) {
         val audioFile = File(context.cacheDir, "tts_audio.mp3")
         try {
             currentOutputStream?.close()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {} // no-cancellation-rethrow
         // Assign directly to the field BEFORE opening the WebSocket so stop()'s
         // cleanup path (which closes currentOutputStream) also covers the case
         // where client.newWebSocket() itself throws — previously the stream
@@ -196,16 +220,16 @@ class EdgeTtsPlayer(private val context: Context) {
                             logTtsFailure(currentVoice, t.message ?: "unknown")
                             try {
                                 outputStream.close()
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {} // no-cancellation-rethrow
                             scope.launch { onDone?.invoke() }
                         }
                     },
                 )
-        } catch (e: Exception) {
+        } catch (e: Exception) { // no-cancellation-rethrow
             android.util.Log.e("EdgeTTS", "newWebSocket failed — releasing file stream", e)
             try {
                 currentOutputStream?.close()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {} // no-cancellation-rethrow
             currentOutputStream = null
             logTtsFailure(currentVoice, "websocket-ctor: ${e.message ?: e.javaClass.simpleName}")
             scope.launch { onDone?.invoke() }
@@ -234,7 +258,7 @@ class EdgeTtsPlayer(private val context: Context) {
             ws.cancel()
             try {
                 currentOutputStream?.close()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {} // no-cancellation-rethrow
             onDone?.invoke()
         }
     }
@@ -255,7 +279,7 @@ class EdgeTtsPlayer(private val context: Context) {
                     putString("reason", reason.take(20))
                 },
             )
-        } catch (e: Exception) {
+        } catch (e: Exception) { // no-cancellation-rethrow
             android.util.Log.w("EdgeTTS", "Failed to log watchdog event: ${e.message}")
         }
     }
@@ -275,7 +299,7 @@ class EdgeTtsPlayer(private val context: Context) {
                     putString("error", error.take(100))
                 },
             )
-        } catch (e: Exception) {
+        } catch (e: Exception) { // no-cancellation-rethrow
             android.util.Log.w("EdgeTTS", "Failed to log failure event: ${e.message}")
         }
     }
@@ -300,14 +324,33 @@ class EdgeTtsPlayer(private val context: Context) {
             }
     }
 
+    /** Schlüssel und Optionen der Zusatz-Stimme aus den verschlüsselten Einstellungen. */
+    private fun zusatzWahl(anbieter: String, voice: String): ZusatzStimmenWahl {
+        val p = runCatching { EncryptedPrefsProvider.get(context) }.getOrNull()
+        fun s(key: String, standard: String = "") = p?.getString(key, standard) ?: standard
+        return ZusatzStimmenWahl(
+            anbieter = anbieter,
+            stimme = voice,
+            geminiKeyFrei = s(Constants.PREF_GEMINI_TTS_KEY_FREI),
+            geminiKeyBezahlt = s(Constants.PREF_GEMINI_TTS_KEY_BEZAHLT),
+            geminiSchluesselWahl = s(Constants.PREF_GEMINI_TTS_SCHLUESSEL_WAHL, ZusatzStimmen.GEMINI_TTS_FREI_DANN_BEZAHLT),
+            geminiChirpRueckfall = p?.getBoolean(Constants.PREF_GEMINI_TTS_CHIRP_RUECKFALL, false) ?: false,
+            googleKey = s(Constants.PREF_GOOGLE_TTS_API_KEY),
+            azureKey = s(Constants.PREF_AZURE_TTS_KEY),
+            azureRegion = s(Constants.PREF_AZURE_TTS_REGION, ZusatzStimmen.DEFAULT_AZURE_REGION),
+            locale = TtsVoiceRegistry.getLocaleVoices().localeCode,
+        )
+    }
+
     fun stop() {
+        if (zusatzBenutzt) zusatz.stop()
         watchdogJob?.cancel()
         watchdogJob = null
         webSocket?.cancel()
         webSocket = null
         try {
             currentOutputStream?.close()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {} // no-cancellation-rethrow
         currentOutputStream = null
         try {
             mediaPlayer?.stop()
@@ -318,6 +361,7 @@ class EdgeTtsPlayer(private val context: Context) {
 
     fun shutdown() {
         stop()
+        if (zusatzBenutzt) zusatz.shutdown()
         scope.cancel()
     }
 }

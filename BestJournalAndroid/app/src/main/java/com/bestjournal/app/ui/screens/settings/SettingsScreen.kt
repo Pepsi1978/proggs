@@ -1019,7 +1019,9 @@ fun SettingsScreen(
                             // If saved voice doesn't match current locale, reset to default and
                             // persist
                             val effectiveVoiceId =
-                                if (voices.any { it.id == selectedVoiceId }) {
+                                if (voices.any { it.id == selectedVoiceId } ||
+                                    com.bestjournal.app.util.ZusatzStimmen.anbieterZu(selectedVoiceId) != null
+                                ) {
                                     selectedVoiceId
                                 } else {
                                     val fallback = localeVoices.defaultVoiceId
@@ -1033,6 +1035,37 @@ fun SettingsScreen(
                             val selectedVoice =
                                 voices.find { it.id == effectiveVoiceId } ?: voices.firstOrNull()
                             var voiceExpanded by remember { mutableStateOf(false) }
+                            val anbieter =
+                                com.bestjournal.app.util.ZusatzStimmen.anbieterZu(effectiveVoiceId) ?: "edge"
+                            var favoriten by remember {
+                                mutableStateOf(
+                                    (soundsPrefs.getString(Constants.PREF_TTS_FAVORITES, "") ?: "")
+                                        .split(",").filter { it.isNotBlank() }.toSet()
+                                )
+                            }
+                            val favoritUmschalten: (String) -> Unit = { id ->
+                                favoriten = if (id in favoriten) favoriten - id else favoriten + id
+                                soundsPrefs.edit().putString(Constants.PREF_TTS_FAVORITES, favoriten.joinToString(",")).apply()
+                            }
+                            val stimmEintraege: List<Pair<String, String>> =
+                                zusatzStimmEintraege(anbieter, localeVoices)
+                            val gewaehltLabel =
+                                stimmEintraege.firstOrNull { it.first == effectiveVoiceId }?.second
+                                    ?: selectedVoice?.let {
+                                        com.bestjournal.app.util.TtsVoiceRegistry.displayName(it, localeVoices.localeCode)
+                                    }.orEmpty()
+
+                            ZusatzStimmenEinstellungen(
+                                prefs = soundsPrefs,
+                                anbieter = anbieter,
+                                onAnbieter = { neu ->
+                                    if (neu != anbieter) {
+                                        val id = zusatzStandardStimme(neu, localeVoices)
+                                        selectedVoiceId = id
+                                        soundsPrefs.edit().putString(Constants.PREF_EDGE_TTS_VOICE, id).commit()
+                                    }
+                                },
+                            )
 
                             if (selectedVoice != null) {
                                 Text(
@@ -1047,11 +1080,7 @@ fun SettingsScreen(
                                     onExpandedChange = { voiceExpanded = it },
                                 ) {
                                     TextField(
-                                        value =
-                                            com.bestjournal.app.util.TtsVoiceRegistry.displayName(
-                                                selectedVoice,
-                                                localeVoices.localeCode,
-                                            ),
+                                        value = gewaehltLabel + if (effectiveVoiceId in favoriten) " \u2605" else "",
                                         onValueChange = {},
                                         readOnly = true,
                                         trailingIcon = {
@@ -1085,14 +1114,11 @@ fun SettingsScreen(
                                         onDismissRequest = { voiceExpanded = false },
                                         containerColor = MaterialTheme.colorScheme.surface,
                                     ) {
-                                        voices.forEach { voice ->
-                                            val label =
-                                                com.bestjournal.app.util.TtsVoiceRegistry
-                                                    .displayName(voice, localeVoices.localeCode)
+                                        stimmEintraege.sortedByDescending { it.first in favoriten }.forEach { (voiceId, label) ->
                                             DropdownMenuItem(
                                                 text = {
                                                     val textColor =
-                                                        if (voice.id == effectiveVoiceId)
+                                                        if (voiceId == effectiveVoiceId)
                                                             MaterialTheme.colorScheme.primary
                                                         else MaterialTheme.colorScheme.onSurface
                                                     if (label.startsWith("\u2605")) {
@@ -1123,13 +1149,24 @@ fun SettingsScreen(
                                                         Text(label, color = textColor)
                                                     }
                                                 },
+                                                trailingIcon = {
+                                                    Text(
+                                                        "\u2605",
+                                                        color = if (voiceId in favoriten) Color(0xFFFFB300)
+                                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                                        fontSize = 18.sp,
+                                                        modifier = Modifier.clip(RoundedCornerShape(50))
+                                                            .clickable { favoritUmschalten(voiceId) }
+                                                            .padding(8.dp),
+                                                    )
+                                                },
                                                 onClick = {
-                                                    selectedVoiceId = voice.id
+                                                    selectedVoiceId = voiceId
                                                     soundsPrefs
                                                         .edit()
                                                         .putString(
                                                             Constants.PREF_EDGE_TTS_VOICE,
-                                                            voice.id,
+                                                            voiceId,
                                                         )
                                                         .commit()
                                                     voiceExpanded = false
@@ -5159,4 +5196,184 @@ private fun formatPremiumExpiryDateTime(iso: String?): String? {
             null
         }
     }
+}
+
+/** Die Vorlese-Dienste: Edge (ohne Schlüssel), Google Chirp 3 HD, Gemini 3.8 Flash/Flash-Lite TTS und Azure Neural. */
+private val ZUSATZ_ANBIETER = listOf(
+    "edge" to "Microsoft Edge",
+    com.bestjournal.app.util.ZusatzStimmen.PROVIDER_GOOGLE to "Google Chirp 3 HD",
+    com.bestjournal.app.util.ZusatzStimmen.PROVIDER_GEMINI_FLASH to "Gemini 3.8 Flash TTS",
+    com.bestjournal.app.util.ZusatzStimmen.PROVIDER_GEMINI_LITE to "Gemini 3.8 Flash-Lite TTS",
+    com.bestjournal.app.util.ZusatzStimmen.PROVIDER_AZURE to "Azure Neural",
+)
+
+/** Kennung und Anzeigename aller Stimmen eines Dienstes in der Sprache des Geräts. */
+private fun zusatzStimmEintraege(
+    anbieter: String,
+    localeVoices: com.bestjournal.app.util.TtsVoiceRegistry.LocaleVoices,
+): List<Pair<String, String>> {
+    val z = com.bestjournal.app.util.ZusatzStimmen
+    val edge = localeVoices.voices.map {
+        it.id to com.bestjournal.app.util.TtsVoiceRegistry.displayName(it, localeVoices.localeCode)
+    }
+    return when (anbieter) {
+        z.PROVIDER_GOOGLE -> z.googleStimmenFuer(localeVoices.localeCode).map { it.id to it.name }
+        z.PROVIDER_GEMINI_FLASH -> z.geminiFlashStimmen.map { it.id to it.name }
+        z.PROVIDER_GEMINI_LITE -> z.geminiLiteStimmen.map { it.id to it.name }
+        // Azure Neural: dieselben Stimmen wie Edge, offiziell; auf Deutsch zusätzlich die HD-Stimmen.
+        z.PROVIDER_AZURE -> if (localeVoices.localeCode == "de-DE") {
+            z.azureStimmen.map { it.id to it.name }
+        } else {
+            edge.map { (id, name) -> "azure:$id" to name }
+        }
+        else -> edge
+    }
+}
+
+private fun zusatzStandardStimme(
+    anbieter: String,
+    localeVoices: com.bestjournal.app.util.TtsVoiceRegistry.LocaleVoices,
+): String = zusatzStimmEintraege(anbieter, localeVoices).let { liste ->
+    val z = com.bestjournal.app.util.ZusatzStimmen
+    when (anbieter) {
+        z.PROVIDER_GEMINI_FLASH -> z.DEFAULT_GEMINI_FLASH_VOICE
+        z.PROVIDER_GEMINI_LITE -> z.DEFAULT_GEMINI_LITE_VOICE
+        z.PROVIDER_GOOGLE -> liste.firstOrNull { it.first.endsWith("-Kore") }?.first ?: liste.first().first
+        z.PROVIDER_AZURE -> "azure:${localeVoices.defaultVoiceId}"
+        else -> localeVoices.defaultVoiceId
+    }
+}
+
+/** Dienstwahl und die Schlüssel der Zusatz-Stimmen (verschlüsselt in denselben Einstellungen). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ZusatzStimmenEinstellungen(
+    prefs: android.content.SharedPreferences,
+    anbieter: String,
+    onAnbieter: (String) -> Unit,
+) {
+    val z = com.bestjournal.app.util.ZusatzStimmen
+    val context = androidx.compose.ui.platform.LocalContext.current
+    fun lies(key: String, standard: String = "") = prefs.getString(key, standard) ?: standard
+    fun schreib(key: String, wert: String) { prefs.edit().putString(key, wert).apply() }
+    var googleKey by remember { mutableStateOf(lies(Constants.PREF_GOOGLE_TTS_API_KEY)) }
+    var keyFrei by remember { mutableStateOf(lies(Constants.PREF_GEMINI_TTS_KEY_FREI)) }
+    var keyBezahlt by remember { mutableStateOf(lies(Constants.PREF_GEMINI_TTS_KEY_BEZAHLT)) }
+    var wahl by remember { mutableStateOf(lies(Constants.PREF_GEMINI_TTS_SCHLUESSEL_WAHL, z.GEMINI_TTS_FREI_DANN_BEZAHLT)) }
+    var chirp by remember { mutableStateOf(prefs.getBoolean(Constants.PREF_GEMINI_TTS_CHIRP_RUECKFALL, false)) }
+    var azureKey by remember { mutableStateOf(lies(Constants.PREF_AZURE_TTS_KEY)) }
+    var azureRegion by remember { mutableStateOf(lies(Constants.PREF_AZURE_TTS_REGION, z.DEFAULT_AZURE_REGION)) }
+    val gemini = anbieter == z.PROVIDER_GEMINI_FLASH || anbieter == z.PROVIDER_GEMINI_LITE
+
+    Text(
+        stringResource(R.string.tts_provider_label),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ZUSATZ_ANBIETER.forEach { (id, name) ->
+            androidx.compose.material3.FilterChip(
+                selected = anbieter == id,
+                onClick = { onAnbieter(id) },
+                label = { Text(name) },
+            )
+        }
+    }
+
+    @Composable
+    fun schluesselFeld(label: String, wert: String, geheim: Boolean = true, onWert: (String) -> Unit) {
+        androidx.compose.material3.OutlinedTextField(
+            value = wert,
+            onValueChange = { onWert(it.trim()) },
+            label = { Text(label) },
+            singleLine = true,
+            visualTransformation = if (geheim) {
+                androidx.compose.ui.text.input.PasswordVisualTransformation()
+            } else {
+                androidx.compose.ui.text.input.VisualTransformation.None
+            },
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+    }
+
+    val fehlt = when {
+        anbieter == z.PROVIDER_GOOGLE -> googleKey.isBlank()
+        gemini -> keyFrei.isBlank() && keyBezahlt.isBlank()
+        anbieter == z.PROVIDER_AZURE -> azureKey.isBlank()
+        else -> false
+    }
+    if (fehlt) {
+        Text(
+            stringResource(R.string.tts_key_missing),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+    }
+    if ((anbieter == z.PROVIDER_GOOGLE || gemini) &&
+        !com.bestjournal.app.util.PrivacyGateHelper.hasConsented(
+            context,
+            com.bestjournal.app.util.PrivacyGateHelper.CloudService.Gemini,
+        )
+    ) {
+        Text(
+            stringResource(R.string.tts_google_consent_needed),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+    }
+    if (gemini) {
+        schluesselFeld(stringResource(R.string.tts_gemini_key_free), keyFrei) { keyFrei = it; schreib(Constants.PREF_GEMINI_TTS_KEY_FREI, it) }
+        schluesselFeld(stringResource(R.string.tts_gemini_key_paid), keyBezahlt) { keyBezahlt = it; schreib(Constants.PREF_GEMINI_TTS_KEY_BEZAHLT, it) }
+        Text(
+            stringResource(R.string.tts_gemini_key_choice),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(
+                z.GEMINI_TTS_FREI_DANN_BEZAHLT to R.string.tts_gemini_choice_free_then_paid,
+                z.GEMINI_TTS_NUR_FREI to R.string.tts_gemini_choice_free,
+                z.GEMINI_TTS_NUR_BEZAHLT to R.string.tts_gemini_choice_paid,
+            ).forEach { (id, text) ->
+                androidx.compose.material3.FilterChip(
+                    selected = wahl == id,
+                    onClick = { wahl = id; schreib(Constants.PREF_GEMINI_TTS_SCHLUESSEL_WAHL, id) },
+                    label = { Text(stringResource(text)) },
+                )
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.tts_chirp_fallback), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.tts_chirp_fallback_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = chirp,
+                onCheckedChange = { chirp = it; prefs.edit().putBoolean(Constants.PREF_GEMINI_TTS_CHIRP_RUECKFALL, it).apply() },
+                colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
+            )
+        }
+    }
+    if (anbieter == z.PROVIDER_GOOGLE || (gemini && chirp)) {
+        schluesselFeld(stringResource(R.string.tts_google_key), googleKey) { googleKey = it; schreib(Constants.PREF_GOOGLE_TTS_API_KEY, it) }
+    }
+    if (anbieter == z.PROVIDER_AZURE) {
+        schluesselFeld(stringResource(R.string.tts_azure_key), azureKey) { azureKey = it; schreib(Constants.PREF_AZURE_TTS_KEY, it) }
+        schluesselFeld(stringResource(R.string.tts_azure_region), azureRegion, geheim = false) { azureRegion = it; schreib(Constants.PREF_AZURE_TTS_REGION, it) }
+    }
+    Text(
+        stringResource(R.string.tts_fav_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 8.dp, bottom = 6.dp),
+    )
 }

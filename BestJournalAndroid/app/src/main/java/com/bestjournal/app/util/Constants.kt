@@ -55,6 +55,16 @@ object Constants {
     // TTS (Text-to-Speech) — voices are in TtsVoiceRegistry.kt
     const val PREF_TTS_ENABLED = "tts_enabled"
     const val PREF_EDGE_TTS_VOICE = "edge_tts_voice"
+    // Zusatz-Stimmen (Gemini 3.8 TTS, Azure Neural, Google Chirp 3 HD): die gewählte Stimme steht
+    // ebenfalls in PREF_EDGE_TTS_VOICE (Kennung „gemini_flash:Leda“, „azure:…“, „…-Chirp3-HD-…“).
+    const val PREF_TTS_FAVORITES = "tts_favorite_voices"
+    const val PREF_GOOGLE_TTS_API_KEY = "google_tts_api_key"
+    const val PREF_GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
+    const val PREF_GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+    const val PREF_GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
+    const val PREF_GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
+    const val PREF_AZURE_TTS_KEY = "azure_tts_key"
+    const val PREF_AZURE_TTS_REGION = "azure_tts_region"
 
     // Dashboard-Szenario
     const val PREF_DASHBOARD_SCENARIO = "dashboard_scenario"

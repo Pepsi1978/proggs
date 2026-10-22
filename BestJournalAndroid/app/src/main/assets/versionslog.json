@@ -5,6 +5,7 @@
     { "versionCode": 298, "versionName": "0.21.18", "stand": "", "notiz": "Stand vor Einführung des Versionslogs" },
     { "versionCode": 299, "versionName": "0.21.19", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
     { "versionCode": 300, "versionName": "0.21.20", "stand": "22.10.2026, 11:22 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter." },
-    { "versionCode": 301, "versionName": "0.21.21", "stand": "22.10.2026, 11:52 Uhr", "notiz": "Spracheingabe: persönliches Wörterbuch standardmäßig aus und leer, nur bei deutscher Sprache aktiv, Wörterbuch-Echo wird zuverlässiger erkannt." }
+    { "versionCode": 301, "versionName": "0.21.21", "stand": "22.10.2026, 11:52 Uhr", "notiz": "Spracheingabe: persönliches Wörterbuch standardmäßig aus und leer, nur bei deutscher Sprache aktiv, Wörterbuch-Echo wird zuverlässiger erkannt." },
+    {"versionCode": 302, "versionName": "0.21.22", "stand": "22.10.2026, 12:11 Uhr", "notiz": "Neue Vorlese-Stimmen: Google Chirp 3 HD, Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per Stern als Favorit oben anheften."}
   ]
 }
