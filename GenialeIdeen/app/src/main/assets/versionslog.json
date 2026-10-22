@@ -15,6 +15,7 @@
     {"versionCode": 52, "versionName": "1.7.21", "stand": "22.10.2026, 11:21 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für bessere Schreibweisen beim Diktat."},
     {"versionCode": 53, "versionName": "1.7.22", "stand": "22.10.2026, 11:50 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt."},
     {"versionCode": 54, "versionName": "1.7.23", "stand": "22.10.2026, 12:09 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per Stern oder langem Drücken als Favorit, Favoriten stehen oben mit gelbem Stern."},
-    {"versionCode": 55, "versionName": "1.7.24", "stand": "22.10.2026, 12:20 Uhr", "notiz": "Spracheingabe: Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, das Wörterbuch-Feld zeigt nach einer Wiederherstellung den aktuellen Stand."}
+    {"versionCode": 55, "versionName": "1.7.24", "stand": "22.10.2026, 12:20 Uhr", "notiz": "Spracheingabe: Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, das Wörterbuch-Feld zeigt nach einer Wiederherstellung den aktuellen Stand."},
+    {"versionCode": 56, "versionName": "1.7.25", "stand": "22.10.2026, 12:38 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."}
   ]
 }

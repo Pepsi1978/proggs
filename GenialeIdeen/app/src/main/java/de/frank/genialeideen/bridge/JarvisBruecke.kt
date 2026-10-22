@@ -87,7 +87,7 @@ class JarvisBruecke : ContentProvider() {
                 val id = repo.lege(titel = titelEingabe.ifEmpty { JarvisGlaettung.ersatzTitel(roh) }, text = roh, kategorieId = kategorieId)
                 if (a.optBoolean("verbessern", true)) JarvisGlaettung.starte(c, requireNotNull(context), id, roh, titelFehlt = titelEingabe.isEmpty())
                 JSONObject().put("idee", alsJson(repo.lade(id) ?: return fehler("Speichern fehlgeschlagen."), repo.alleKategorien().first(), Int.MAX_VALUE))
-                    .put("hinweis", if (a.optBoolean("verbessern", true) && c.codexAuthManager.isConnected) "Text und Titel werden gerade von der KI geglättet." else "Gespeichert wie gesprochen.")
+                    .put("hinweis", if (a.optBoolean("verbessern", true) && c.codexAuthManager.kannDenken(de.frank.genialeideen.auth.CodexModel.fromLabel(c.settings.model))) "Text und Titel werden gerade von der KI geglättet." else "Gespeichert wie gesprochen.")
             }
 
             "aendern" -> {

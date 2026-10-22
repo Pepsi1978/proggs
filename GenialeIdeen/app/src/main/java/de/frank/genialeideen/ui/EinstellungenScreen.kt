@@ -64,7 +64,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.BuildConfig
 import de.frank.genialeideen.audio.GroqTranscriber
+import de.frank.genialeideen.auth.AnthropicKlient
+import de.frank.genialeideen.auth.ClaudeModell
 import de.frank.genialeideen.auth.CodexModel
+import de.frank.genialeideen.auth.KiAnbieter
 import de.frank.genialeideen.auth.ReasoningEffort
 import de.frank.genialeideen.tts.TtsCatalog
 import de.frank.genialeideen.tts.TtsProvider
@@ -523,11 +526,53 @@ fun EinstellungenScreen(
                 }
                 Spacer(Modifier.height(16.dp))
 
+                // Anbieter wie in Jarvis: OpenAI über das ChatGPT-Konto oder Anthropic über einen
+                // eigenen API-Schlüssel. Beim Wechsel kommt das dort zuletzt gewählte Modell zurück.
+                val kontext = androidx.compose.ui.platform.LocalContext.current
+                val anbieter = CodexModel.fromLabel(modell).anbieter
+                var anthropicKey by remember { mutableStateOf(AnthropicKlient.schluessel(kontext)) }
+                Text("Anbieter", style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    KiAnbieter.entries.forEach { a ->
+                        Auswahlchip(a.label, anbieter == a) {
+                            if (anbieter != a) {
+                                val alt = CodexModel.fromLabel(modell)
+                                if (alt.istAnthropic) AnthropicKlient.claudeModellMerken(kontext, ClaudeModell.von(alt.apiId) ?: ClaudeModell.OPUS)
+                                else AnthropicKlient.openAiModellMerken(kontext, alt.apiId)
+                                val neu = if (a == KiAnbieter.ANTHROPIC) AnthropicKlient.letztesClaudeModell(kontext).apiId
+                                else AnthropicKlient.letztesOpenAiModell(kontext, CodexModel.TERRA.apiId)
+                                modell = neu
+                                settings.model = neu
+                                denktiefe = settings.reasoning
+                            }
+                        }
+                    }
+                }
+                if (anbieter == KiAnbieter.ANTHROPIC) {
+                    Text(
+                        if (anthropicKey.isNotBlank()) "Claude denkt über deinen Anthropic-API-Schlüssel (eigene Abrechnung)."
+                        else "Für Claude bitte deinen Anthropic-API-Schlüssel (sk-ant-…) eintragen.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.textGedaempft,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    SchluesselFeld(
+                        beschriftung = "Anthropic-API-Schlüssel",
+                        wert = anthropicKey,
+                        aufWert = {
+                            anthropicKey = it
+                            AnthropicKlient.schluesselSpeichern(kontext, it)
+                        },
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+
                 // Modell und Denktiefe gehören zusammen: Beides entscheidet, wie gründlich und
                 // wie schnell die Antwort zur Idee kommt.
                 Klappmenue(
                     beschriftung = "Modell",
-                    eintraege = CodexModel.entries.map { eintrag ->
+                    eintraege = CodexModel.von(anbieter).map { eintrag ->
                         KlappEintrag(
                             id = eintrag.apiId,
                             name = eintrag.label,
@@ -536,6 +581,10 @@ fun EinstellungenScreen(
                                 CodexModel.SOL -> "gründlich"
                                 CodexModel.TERRA -> "ausgewogen"
                                 CodexModel.LUNA -> "schnell"
+                                CodexModel.OPUS -> "das stärkste Claude-Modell"
+                                CodexModel.FABLE -> "kreativ und gründlich"
+                                CodexModel.SONNET -> "ausgewogen"
+                                CodexModel.HAIKU -> "schnell und günstig"
                             },
                         )
                     },

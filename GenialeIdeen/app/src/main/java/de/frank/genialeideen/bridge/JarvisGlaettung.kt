@@ -30,14 +30,14 @@ object JarvisGlaettung {
     private val laufend = mutableSetOf<Long>()
 
     fun starte(c: AppContainer, context: Context, id: Long, roh: String, titelFehlt: Boolean) {
-        if (!c.codexAuthManager.isConnected) return
+        if (!c.codexAuthManager.kannDenken(de.frank.genialeideen.auth.CodexModel.fromLabel(c.settings.model))) return
         aendere(context) { it.put(JSONObject().put("id", id).put("roh", roh).put("titelFehlt", titelFehlt).put("versuche", 0)) }
         fuehreAus(c, context, id, roh, titelFehlt)
     }
 
     /** Beim App-Start: liegen gebliebene Glättungen erneut anstoßen. */
     fun nachholen(c: AppContainer, context: Context) {
-        if (!c.codexAuthManager.isConnected) return
+        if (!c.codexAuthManager.kannDenken(de.frank.genialeideen.auth.CodexModel.fromLabel(c.settings.model))) return
         val offen = lies(context)
         for (n in 0 until offen.length()) {
             val a = offen.getJSONObject(n)

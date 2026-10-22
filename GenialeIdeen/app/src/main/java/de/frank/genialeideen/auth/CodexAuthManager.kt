@@ -235,6 +235,9 @@ class CodexAuthManager(context: Context) {
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
     val isConnected: Boolean get() = store.contains(KEY_ACCESS_TOKEN)
 
+    /** Kann die App mit diesem Modell denken? OpenAI braucht das ChatGPT-Konto, Claude den Anthropic-Schlüssel. */
+    fun kannDenken(model: CodexModel): Boolean = if (model.istAnthropic) AnthropicKlient.hatSchluessel(appContext) else isConnected
+
     suspend fun login(
         activity: ComponentActivity,
         onDeviceCode: (DeviceAuthInfo) -> Unit,
@@ -274,7 +277,16 @@ class CodexAuthManager(context: Context) {
             throw CodexAuthException(AuthErrorKind.NETWORK, "Für die Anfrage fehlt der Text.")
         }
         try {
-            requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+            if (model.istAnthropic) {
+                try {
+                    AnthropicKlient.antwort(appContext, model.apiId, model.normalizeEffort(reasoningEffort).apiValue,
+                        instructions, turns.map { it.role to it.text }, onDelta = onDelta)
+                } catch (fehler: AnthropicFehler) {
+                    throw CodexAuthException(AuthErrorKind.NETWORK, fehler.message.orEmpty(), fehler, fehler.wiederholbar)
+                }
+            } else {
+                requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+            }
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die Antwort konnte nicht vollständig empfangen werden.", error)
