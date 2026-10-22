@@ -200,6 +200,9 @@ data class StackLaborUiState(
     val qwenApiKeyLabel: String = "Nicht hinterlegt",
     val qwenVoiceIdLabel: String = "Nicht hinterlegt",
     val groqApiKeyLabel: String = "Nicht hinterlegt",
+    val whisperModelLabel: String = "Large V3 Turbo (schnell)",
+    val vocabularyEnabled: Boolean = true,
+    val vocabularyText: String = "",
     val ttsSpeedLabel: String = "1,00×",
     val ttsPauseLabel: String = "Kurz",
     val ttsTimeoutLabel: String = "30 Min.",
@@ -273,6 +276,8 @@ sealed interface StackLaborEvent {
     data class SelectSettingValue(val settingId: String, val value: String) : StackLaborEvent
     /** Speichert einen selbst hinterlegten Schlüssel; leerer Wert löscht ihn. */
     data class SaveApiKey(val keyId: String, val value: String) : StackLaborEvent
+    /** Speichert die Begriffe des persönlichen Wörterbuchs für die Spracheingabe. */
+    data class SaveVocabulary(val value: String) : StackLaborEvent
     /** Holt die geklonten Alibaba-Stimmen frisch aus dem Konto. */
     data object LoadClonedVoices : StackLaborEvent
     data class RemoveQuestion(val questionId: String) : StackLaborEvent

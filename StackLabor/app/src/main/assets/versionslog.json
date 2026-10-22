@@ -7,6 +7,7 @@
     { "versionCode": 58, "versionName": "0.3.40", "stand": "25.09.2026, 19:31 Uhr", "notiz": "Neues, modernes Design: ruhige Farben mit Indigo-Akzent, weiche Karten, klarere Schrift und übersichtlichere Startseite." },
     { "versionCode": 59, "versionName": "0.3.41", "stand": "26.09.2026, 21:17 Uhr", "notiz": "API-Schlüssel für Google und Alibaba sowie die Alibaba-Stimmen-ID werden jetzt nur noch in den Einstellungen eingetragen und nicht mehr beim Bauen eingebaut." },
     {"versionCode": 60, "versionName": "0.3.42", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 61, "versionName": "0.3.43", "stand": "15.10.2026, 12:17 Uhr", "notiz": "Jarvis-Brücke: Jarvis kann Stacks und Mittel lesen und bearbeiten (mit Rückfragen bei Unklarheit, ohne Doppel, gesperrte Stacks bleiben unangetastet); jede Änderung meldet die App sofort an Jarvis"}
+    {"versionCode": 61, "versionName": "0.3.43", "stand": "15.10.2026, 12:17 Uhr", "notiz": "Jarvis-Brücke: Jarvis kann Stacks und Mittel lesen und bearbeiten (mit Rückfragen bei Unklarheit, ohne Doppel, gesperrte Stacks bleiben unangetastet); jede Änderung meldet die App sofort an Jarvis"},
+    {"versionCode": 62, "versionName": "0.3.44", "stand": "22.10.2026, 11:22 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe."}
   ]
 }

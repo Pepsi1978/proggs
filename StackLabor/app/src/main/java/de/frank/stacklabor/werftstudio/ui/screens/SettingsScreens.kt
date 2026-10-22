@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Mic
+import de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -99,6 +101,7 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
     var seedWarning by rememberSaveable { mutableStateOf(false) }
     var selectionId by rememberSaveable { mutableStateOf<String?>(null) }
     var keyEntryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var vocabularyOpen by rememberSaveable { mutableStateOf(false) }
     val colors = StackLaborTheme.colors
     WerftScreen {
         Column(Modifier.fillMaxSize()) {
@@ -137,6 +140,31 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                             "Eigene Stimmen aus dem Konto laden",
                             if (state.clonedVoicesLoading) "Lädt …" else state.clonedVoicesHint,
                         ) { callbacks.onEvent(StackLaborEvent.LoadClonedVoices) }
+                    }
+                }
+                item {
+                    SettingsGroup("Spracheingabe", Icons.Default.Mic) {
+                        SettingsItem("Whisper-Modell", state.whisperModelLabel) { selectionId = "whisper-model" }
+                        SettingsDivider()
+                        SettingsItem(
+                            "Persönliches Wörterbuch",
+                            if (state.vocabularyEnabled) "Eingeschaltet" else "Ausgeschaltet",
+                            trailing = { SettingsToggle(state.vocabularyEnabled) },
+                            onClick = { callbacks.onEvent(StackLaborEvent.SelectSetting("vocabulary-enabled")) },
+                        )
+                        SettingsDivider()
+                        SettingsItem(
+                            "Begriffe",
+                            "${GroqTranscriber.begriffe(state.vocabularyText).size} Begriffe",
+                        ) { vocabularyOpen = true }
+                        SettingsDivider()
+                        Text(
+                            "Whisper übernimmt aus dem Wörterbuch die Schreibweise von Namen und Fachbegriffen. " +
+                                "Large V3 ist genauer, muss bei Groq aber freigeschaltet sein — sonst nimmt die App automatisch Turbo.",
+                            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = StackLaborTheme.colors.textMuted,
+                        )
                     }
                 }
                 item {
@@ -312,6 +340,16 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                 }
             }
         }
+        if (vocabularyOpen) {
+            VocabularyDialog(
+                current = state.vocabularyText,
+                onDismiss = { vocabularyOpen = false },
+                onSave = { value ->
+                    callbacks.onEvent(StackLaborEvent.SaveVocabulary(value))
+                    vocabularyOpen = false
+                },
+            )
+        }
         keyEntry(state, keyEntryId)?.let { entry ->
             ApiKeyDialog(
                 entry = entry,
@@ -358,7 +396,7 @@ private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when
         id,
         "Groq-API-Schlüssel",
         state.groqApiKeyValue,
-        "Der Groq-Schlüssel für die deutsche Spracheingabe mit Whisper Large v3 Turbo.",
+        "Der Groq-Schlüssel für die deutsche Spracheingabe mit Whisper (Modell unter „Spracheingabe“ wählbar).",
     )
     else -> null
 }
@@ -428,6 +466,47 @@ private fun ApiKeyDialog(entry: ApiKeyEntry, onDismiss: () -> Unit, onSave: (Str
     }
 }
 
+/** Mehrzeiliges Feld für die Begriffe des persönlichen Wörterbuchs. */
+@Composable
+private fun VocabularyDialog(current: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var value by rememberSaveable { mutableStateOf(current) }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            Modifier.fillMaxWidth().depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f),
+            shape = RoundedCornerShape(18.dp),
+            color = StackLaborTheme.colors.surface,
+            border = BorderStroke(1.dp, metalRim(0.9f)),
+        ) {
+            Column(Modifier.padding(20.dp)) {
+                Text("Persönliches Wörterbuch", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Begriffe (durch Komma oder Zeilenumbruch getrennt)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = StackLaborTheme.colors.textMuted,
+                )
+                Spacer(Modifier.height(14.dp))
+                BasicTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp, max = 320.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(StackLaborTheme.colors.background)
+                        .border(1.dp, metalRim(0.6f), RoundedCornerShape(16.dp))
+                        .padding(14.dp),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong),
+                    cursorBrush = SolidColor(StackLaborTheme.colors.accent),
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Abbrechen") }
+                    PrimaryAction("Speichern", { onSave(value) }, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
 private data class SettingSelection(
     val id: String,
     val title: String,
@@ -454,6 +533,13 @@ private fun settingSelection(state: StackLaborUiState, id: String?): SettingSele
     "tts-pause" -> SettingSelection(id, "Pause zwischen Absätzen", state.ttsPauseLabel, listOf("Kurz", "Mittel", "Lang"))
     "tts-timeout" -> SettingSelection(id, "Automatische Abschaltung", state.ttsTimeoutLabel, listOf("15 Min.", "30 Min.", "60 Min."))
     "codex-model" -> SettingSelection(id, "Modell", state.codexModelLabel, CodexModel.entries.map { it.label })
+    "whisper-model" -> SettingSelection(
+        id,
+        "Whisper-Modell",
+        state.whisperModelLabel,
+        GroqTranscriber.MODELLE.map { it.second },
+        hint = "Gilt ab der nächsten Aufnahme.",
+    )
     "codex-reasoning" -> SettingSelection(id, "Denkstufe", state.codexReasoningLabel,
         (CodexModel.entries.firstOrNull { it.label == state.codexModelLabel } ?: CodexModel.TERRA)
             .reasoningEfforts.map { it.label })

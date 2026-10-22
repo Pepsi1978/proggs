@@ -227,6 +227,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             is StackLaborEvent.SelectSetting -> selectSetting(event.settingId)
             is StackLaborEvent.SelectSettingValue -> selectSettingValue(event.settingId, event.value)
             is StackLaborEvent.SaveApiKey -> saveApiKey(event.keyId, event.value)
+            is StackLaborEvent.SaveVocabulary -> launchAction {
+                container.settings.setzeWoerterbuch(event.value)
+                message("Wörterbuch gespeichert")
+            }
             StackLaborEvent.LoadClonedVoices -> loadClonedVoices()
             is StackLaborEvent.RemoveQuestion -> removeQuestion(event.questionId)
             is StackLaborEvent.SaveStack -> if (!gesperrtGemeldet(event.stackId)) saveStack(event.stackId)
@@ -398,6 +402,9 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 qwenApiKeyLabel = keyLabel(settings.qwenApiKey),
                 qwenVoiceIdLabel = keyLabel(settings.qwenStimmenId),
                 groqApiKeyLabel = keyLabel(settings.groqApiKey),
+                whisperModelLabel = de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.modellName(settings.groqModell),
+                vocabularyEnabled = settings.woerterbuchAn,
+                vocabularyText = settings.woerterbuch,
                 ttsSpeedLabel = speedLabel(settings.ttsTempo),
                 ttsPauseLabel = settings.absatzpause.name.lowercase().replaceFirstChar(Char::uppercase),
                 ttsTimeoutLabel = "${settings.abschaltzeitMinuten} Min.",
@@ -652,6 +659,14 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    /** Groq-Whisper mit gewähltem Modell und, falls eingeschaltet, dem persönlichen Wörterbuch. */
+    private suspend fun transcribeGroq(wav: ByteArray): String = container.groqTranscriber.transcribe(
+        container.groqSchluesselAktiv(),
+        wav,
+        settings.groqModell,
+        de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.vokabularPrompt(settings.woerterbuchAn, settings.woerterbuch),
+    )
+
     private fun stopAndTranscribeGoal() {
         if (goalInputJob?.isActive == true) return
         goalInputJob = viewModelScope.launch {
@@ -662,7 +677,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     message("Ich habe nichts verstanden.")
                     return@launch
                 }
-                val transcript = container.groqTranscriber.transcribe(container.groqSchluesselAktiv(), wav).trim()
+                val transcript = transcribeGroq(wav).trim()
                 if (transcript.isBlank()) {
                     message("Ich habe nichts verstanden.")
                 } else if (mutableState.value.goalDraftActive) {
@@ -803,7 +818,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     message("Ich habe nichts verstanden.")
                     return@launch
                 }
-                val transcript = container.groqTranscriber.transcribe(container.groqSchluesselAktiv(), wav).trim()
+                val transcript = transcribeGroq(wav).trim()
                 if (transcript.isBlank()) {
                     message("Ich habe nichts verstanden.")
                 } else if (mutableState.value.allStacksSetupOpen) {
@@ -1441,6 +1456,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 container.settings.setzeCodexDenkstufe(levels[(current + 1) % levels.size].apiValue)
             }
             "reduced-motion" -> container.settings.setzeBewegungReduziert(!settings.bewegungReduziert)
+            "vocabulary-enabled" -> container.settings.setzeWoerterbuchAn(!settings.woerterbuchAn)
         }
     }
 
@@ -1483,6 +1499,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             "tts-timeout" -> container.settings.setzeAbschaltzeitMinuten(value.substringBefore(' ').toInt())
             "codex-model" -> container.settings.setzeCodexModell(CodexModel.entries.first { it.label == value }.apiId)
             "codex-reasoning" -> container.settings.setzeCodexDenkstufe(ReasoningEffort.entries.first { it.label == value }.apiValue)
+            "whisper-model" -> container.settings.setzeGroqModell(
+                de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.MODELLE.firstOrNull { it.second == value }?.first
+                    ?: de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.MODEL_TURBO,
+            )
         }
     }
 

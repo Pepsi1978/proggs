@@ -13,6 +13,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import de.frank.stacklabor.werftstudio.domain.model.DosisVariante
 import de.frank.stacklabor.werftstudio.service.codex.CodexModel
 import de.frank.stacklabor.werftstudio.service.codex.ReasoningEffort
+import de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -43,6 +44,10 @@ data class AppEinstellungen(
     val qwenApiKey: String = "",
     val qwenStimmenId: String = "",
     val groqApiKey: String = "",
+    /** Groq-Whisper-Modell (Standard Turbo) und persönliches Wörterbuch für die Spracheingabe. */
+    val groqModell: String = GroqTranscriber.MODEL_TURBO,
+    val woerterbuchAn: Boolean = true,
+    val woerterbuch: String = GroqTranscriber.STANDARD_WOERTERBUCH,
     /** Löslichkeits-Ansicht: fettlösliche zuerst (Standard) oder wasserlösliche zuerst. */
     val loeslichkeitFettZuerst: Boolean = true,
     val codexModell: String = "gpt-5.6-terra",
@@ -89,6 +94,10 @@ class EinstellungenStore(
     suspend fun setzeQwenApiKey(value: String): Unit = schreibe(QWEN_API_KEY, value.filterNot(Char::isWhitespace))
     suspend fun setzeQwenStimmenId(value: String): Unit = schreibe(QWEN_STIMMEN_ID, value.filterNot(Char::isWhitespace))
     suspend fun setzeGroqApiKey(value: String): Unit = schreibe(GROQ_API_KEY, value.filterNot(Char::isWhitespace))
+    suspend fun setzeGroqModell(value: String): Unit =
+        schreibe(GROQ_MODELL, if (value == GroqTranscriber.MODEL_LARGE_V3) value else GroqTranscriber.MODEL_TURBO)
+    suspend fun setzeWoerterbuchAn(value: Boolean): Unit = schreibe(WOERTERBUCH_AN, value)
+    suspend fun setzeWoerterbuch(value: String): Unit = schreibe(WOERTERBUCH, value)
 
     suspend fun setzeCodexModell(value: String) {
         require(value in CODEX_MODELLE) { "Unbekanntes Codex-Modell: $value" }
@@ -121,6 +130,9 @@ class EinstellungenStore(
         qwenApiKey = preferences[QWEN_API_KEY].orEmpty(),
         qwenStimmenId = preferences[QWEN_STIMMEN_ID].orEmpty(),
         groqApiKey = preferences[GROQ_API_KEY].orEmpty(),
+        groqModell = preferences[GROQ_MODELL] ?: GroqTranscriber.MODEL_TURBO,
+        woerterbuchAn = preferences[WOERTERBUCH_AN] ?: true,
+        woerterbuch = preferences[WOERTERBUCH] ?: GroqTranscriber.STANDARD_WOERTERBUCH,
         loeslichkeitFettZuerst = preferences[LOESLICHKEIT_FETT_ZUERST] ?: true,
         codexModell = CodexModel.fromApiId(preferences[CODEX_MODELL]).apiId,
         codexDenkstufe = CodexModel.fromApiId(preferences[CODEX_MODELL])
@@ -150,6 +162,9 @@ class EinstellungenStore(
         val QWEN_API_KEY = stringPreferencesKey("qwen_api_key")
         val QWEN_STIMMEN_ID = stringPreferencesKey("qwen_stimmen_id")
         val GROQ_API_KEY = stringPreferencesKey("groq_api_key")
+        val GROQ_MODELL = stringPreferencesKey("groq_modell")
+        val WOERTERBUCH_AN = booleanPreferencesKey("woerterbuch_an")
+        val WOERTERBUCH = stringPreferencesKey("woerterbuch")
         val LOESLICHKEIT_FETT_ZUERST = booleanPreferencesKey("loeslichkeit_fett_zuerst")
         val CODEX_MODELL = stringPreferencesKey("codex_modell")
         val CODEX_DENKSTUFE = stringPreferencesKey("codex_denkstufe")
