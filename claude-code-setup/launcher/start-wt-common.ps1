@@ -53,9 +53,13 @@ function Start-WtCliRobust {
     # Start-Process -ArgumentList verbindet ein Array nur mit Leerzeichen, OHNE Elemente mit
     # Leerzeichen zu quoten. Ein Titel wie "Jarvis (Sol 6.1, OpenCode)" zerfiel dadurch, wt
     # startete den Titel als Befehl (0x80070002) und alle Versuche plus Fallback liefen an.
-    function _JoinArgs([string[]]$items) {
+    # -Wt: wt trennt Unterbefehle an jedem ';', auch in Anfuehrungszeichen; nur '\;' bleibt Text.
+    function _JoinArgs([string[]]$items, [switch]$Wt) {
         ($items | ForEach-Object {
-            if ($_ -match '[\s"]') { '"' + ($_ -replace '(\\*)"', '$1$1\"' -replace '(\\+)$', '$1$1') + '"' } else { $_ }
+            $a = if ($_ -eq '') { '""' }
+                 elseif ($_ -match '[\s"]') { '"' + ($_ -replace '(\\*)"', '$1$1\"' -replace '(\\+)$', '$1$1') + '"' }
+                 else { $_ }
+            if ($Wt) { $a -replace ';', '\;' } else { $a }
         }) -join ' '
     }
 
@@ -108,9 +112,11 @@ function Start-WtCliRobust {
         $windowTarget = if ($useAttach) { @('-w', '0') } else { @('-w', 'new') }
         _Log "Versuch $attempt/${MaxWtAttempts}: gesunde WT-Fenster=$($healthy.Count) -> $(if ($useAttach) { '-w 0 (andocken)' } else { '-w new (frisches Fenster)' })"
 
+        $wtArgs = _JoinArgs ($windowTarget + $TabArgs) -Wt
+        _Log "wt-Argumente: $wtArgs"
         $since = Get-Date
         try {
-            Start-Process -FilePath $WtPath -ArgumentList (_JoinArgs ($windowTarget + $TabArgs)) -ErrorAction Stop
+            Start-Process -FilePath $WtPath -ArgumentList $wtArgs -ErrorAction Stop
         } catch {
             _Log "ERROR beim wt-Start (Versuch $attempt): $_"
             continue
