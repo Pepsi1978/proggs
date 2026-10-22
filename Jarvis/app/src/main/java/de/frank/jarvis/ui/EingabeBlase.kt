@@ -135,13 +135,15 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
     }
-    val guthabenVorspann = if (modell.istAnthropic) {
-        vm.anthropicGuthaben?.takeIf { it.hinweis == null }?.restUsd
-            ?.let { "(${AnthropicGuthabenFaehigkeit.betrag(it)} $) " }.orEmpty()
-    } else ""
-    // Das Guthaben steht grün, fett und etwas kleiner vor dem Modellnamen, der Name selbst bleibt wie gehabt.
+    val guthabenUsd = if (modell.istAnthropic) vm.anthropicGuthaben?.takeIf { it.hinweis == null }?.restUsd else null
+    // Das Guthaben steht fett und gleich groß vor dem Modellnamen, getrennt durch „ · “: unter 5 $ grün, ab 5 $ rot.
     fun mitGuthaben(name: String) = buildAnnotatedString {
-        if (guthabenVorspann.isNotEmpty()) withStyle(SpanStyle(color = f.erfolg, fontWeight = FontWeight.Bold, fontSize = 13.sp)) { append(guthabenVorspann) }
+        if (guthabenUsd != null) {
+            withStyle(SpanStyle(color = if (guthabenUsd < 5.0) f.erfolg else f.gefahr, fontWeight = FontWeight.Bold)) {
+                append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $)")
+            }
+            append(" · ")
+        }
         append(name)
     }
 
