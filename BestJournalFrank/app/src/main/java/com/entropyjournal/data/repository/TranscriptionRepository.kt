@@ -8,7 +8,9 @@ import com.entropyjournal.data.local.whisper.LocalWhisperTranscriber
 import com.entropyjournal.data.remote.groq.GroqApi
 import com.entropyjournal.data.remote.groq.GroqTranscriptionRequest
 import com.entropyjournal.data.remote.groq.GroqTranscriptionResponse
+import com.entropyjournal.data.remote.groq.GroqWhisperSettings
 import com.entropyjournal.util.Constants
+import retrofit2.HttpException
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -56,13 +58,7 @@ class TranscriptionRepository @Inject constructor(
         var groqFailureReason: String? = null
         if (groqKey.isNotBlank()) {
             try {
-                val response = groqApi.transcribe(
-                    file = GroqTranscriptionRequest.createFilePart(audioFile),
-                    model = GroqTranscriptionRequest.createModelPart(),
-                    language = GroqTranscriptionRequest.createLanguagePart(),
-                    responseFormat = GroqTranscriptionRequest.createResponseFormatPart(),
-                    temperature = GroqTranscriptionRequest.createTemperaturePart()
-                )
+                val response = transcribeWithGroq(audioFile)
                 // Hatte Groq ueberhaupt Text? Leere Rohantwort -> Groq hat nichts erkannt ->
                 // auf lokales Whisper zuruckfallen (wie bisher). Hatte Groq Text, greifen
                 // Schicht 2+3; ein danach leeres Ergebnis IST das Resultat (Stille/Halluzination
@@ -89,6 +85,50 @@ class TranscriptionRepository @Inject constructor(
                 groqError = groqFailureReason,
             )
         }
+    }
+
+    /**
+     * One Groq transcription with the chosen Whisper model and the personal vocabulary.
+     * - large-v3 blocked for the organization -> same recording once more with Turbo,
+     *   Turbo directly for the next 30 minutes (no "key rejected" error for the user).
+     * - Whisper echoes the vocabulary prompt -> same recording once more without prompt.
+     */
+    private suspend fun transcribeWithGroq(audioFile: File): GroqTranscriptionResponse {
+        var model = GroqWhisperSettings.resolveModel(encryptedPrefs)
+        var prompt = GroqWhisperSettings.promptFor(encryptedPrefs)
+
+        suspend fun once(): GroqTranscriptionResponse =
+            groqApi.transcribe(
+                file = GroqTranscriptionRequest.createFilePart(audioFile),
+                model = GroqTranscriptionRequest.createModelPart(model),
+                language = GroqTranscriptionRequest.createLanguagePart(),
+                responseFormat = GroqTranscriptionRequest.createResponseFormatPart(),
+                temperature = GroqTranscriptionRequest.createTemperaturePart(),
+                prompt = prompt?.let { GroqTranscriptionRequest.createPromptPart(it) }
+            )
+
+        suspend fun withModelFallback(): GroqTranscriptionResponse =
+            try {
+                once()
+            } catch (e: HttpException) {
+                val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull()
+                if (model == GroqWhisperSettings.MODEL_LARGE_V3 && GroqWhisperSettings.isBlockedError(body)) {
+                    Log.w(TAG, "whisper-large-v3 blocked for the Groq organization (HTTP ${e.code()}) — retrying with Turbo")
+                    GroqWhisperSettings.markBlocked()
+                    model = GroqWhisperSettings.MODEL_TURBO
+                    once()
+                } else {
+                    throw e
+                }
+            }
+
+        var response = withModelFallback()
+        if (GroqWhisperSettings.isPromptEcho(response.text, prompt)) {
+            Log.w(TAG, "Whisper echoed the vocabulary prompt — retrying without prompt")
+            prompt = null
+            response = withModelFallback()
+        }
+        return response
     }
 
     /**

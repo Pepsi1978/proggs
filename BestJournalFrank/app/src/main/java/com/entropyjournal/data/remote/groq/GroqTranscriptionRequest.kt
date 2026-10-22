@@ -14,8 +14,11 @@ object GroqTranscriptionRequest {
         return MultipartBody.Part.createFormData("file", audioFile.name, requestBody)
     }
 
-    fun createModelPart() =
-        Constants.GROQ_TRANSCRIPTION_MODEL.toRequestBody("text/plain".toMediaType())
+    fun createModelPart(model: String = Constants.GROQ_TRANSCRIPTION_MODEL) =
+        model.toRequestBody("text/plain".toMediaType())
+
+    fun createPromptPart(prompt: String) =
+        prompt.toRequestBody("text/plain".toMediaType())
 
     fun createLanguagePart() =
         Constants.GROQ_LANGUAGE.toRequestBody("text/plain".toMediaType())

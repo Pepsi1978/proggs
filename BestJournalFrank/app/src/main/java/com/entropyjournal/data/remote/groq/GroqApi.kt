@@ -15,6 +15,8 @@ interface GroqApi {
         @Part("model") model: RequestBody,
         @Part("language") language: RequestBody,
         @Part("response_format") responseFormat: RequestBody,
-        @Part("temperature") temperature: RequestBody
+        @Part("temperature") temperature: RequestBody,
+        // Personal vocabulary; Retrofit omits the part when null.
+        @Part("prompt") prompt: RequestBody? = null
     ): GroqTranscriptionResponse
 }

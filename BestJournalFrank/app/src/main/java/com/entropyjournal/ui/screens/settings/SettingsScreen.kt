@@ -3350,6 +3350,11 @@ fun SettingsScreen(
                     }
                 }
 
+                // Spracherkennung: Whisper-Modell + persoenliches Woerterbuch
+                GlassCard {
+                    WhisperSettingsSection(prefs = viewModel.whisperPrefs)
+                }
+
                 // KI-Modell (Gemini oder ChatGPT/Codex)
                 GlassCard {
                     AiProviderSection(viewModel = viewModel, uiState = uiState)

@@ -151,6 +151,10 @@ constructor(
     private var promptAudioFile: java.io.File? = null
     private var promptRecordingJob: kotlinx.coroutines.Job? = null
 
+    /** Same encrypted prefs the TranscriptionRepository reads (Whisper model + vocabulary). */
+    val whisperPrefs: SharedPreferences
+        get() = encryptedPrefs
+
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState
 
