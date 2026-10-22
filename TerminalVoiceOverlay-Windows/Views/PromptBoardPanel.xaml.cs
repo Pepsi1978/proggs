@@ -944,6 +944,9 @@ public partial class PromptBoardPanel : Window
     /// personal-vocabulary.txt an, damit der Stand auf alle Geraete kommt.
     /// </summary>
     public event Action? VocabularySyncRequested;
+    /// <summary>Raised after the settings dialog saved, so the overlay can apply auto-hide
+    /// and orientation right away.</summary>
+    public event Action<SettingsEditResult>? SettingsSaved;
 
     /// <summary>
     /// Laedt die belegten Slots aus dem Store und faerbt die Zahlen-Leiste im
@@ -2672,6 +2675,18 @@ public partial class PromptBoardPanel : Window
     /// button on the overlay passes itself, because the board may still be hidden.</summary>
     public async Task OpenSettingsAsync(Window owner)
     {
+        // The overlay gear and the board gear can both open the dialog; two open dialogs
+        // would overwrite each other's values on save.
+        if (_settingsDialogOpen) return;
+        _settingsDialogOpen = true;
+        try { await OpenSettingsCoreAsync(owner); }
+        finally { _settingsDialogOpen = false; }
+    }
+
+    private static bool _settingsDialogOpen;
+
+    private async Task OpenSettingsCoreAsync(Window owner)
+    {
         AppSettings current;
         try
         {
@@ -2706,6 +2721,7 @@ public partial class PromptBoardPanel : Window
             latest.AutoHide = result.AutoHide;
             latest.Orientation = result.Orientation;
             await repo.UpdateAsync(latest);
+            SettingsSaved?.Invoke(result);
         }
         catch (Exception ex)
         {

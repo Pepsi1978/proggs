@@ -51,8 +51,8 @@ namespace ClaudeVoiceOverlay.Views
         // selbst nutzen BtnMicIdlePurple (CVO-Erkennung, lila statt gelb).
         private static readonly SolidColorBrush BtnMicIdle       = Brush("#F9A825");  // Yellow 800 (Profil-Tiles)
         private static readonly SolidColorBrush BtnMicIdlePurple = Brush("#AB47BC");  // Purple 400 (Mikrofone CVO)
-        // Copy/Paste buttons (pair: same blue family so they read as a unit)
-        private static readonly SolidColorBrush BtnCopy      = Brush("#0288D1");  // Light Blue 700
+        // Settings gear (same blue grey as the macOS gear)
+        private static readonly SolidColorBrush BtnSettings      = Brush("#455A64");  // Blue Grey 700
         // Screenshot + Insert-Screenshot buttons (pair: same teal family)
         private static readonly SolidColorBrush BtnScreenshot       = Brush("#00796B");  // Teal 700
         private static readonly SolidColorBrush BtnInsertScreenshot = Brush("#00897B");  // Teal 600
@@ -589,7 +589,7 @@ namespace ClaudeVoiceOverlay.Views
             GButton.Background    = geminiEnabled ? ToggleOn : ToggleOff;  // green when Gemini on
             EnterButton.Background = BtnProcessing;  // orange (autoEnter starts true)
             SpareButton.Background    = BtnIdle;   // free placeholder bubble
-            SettingsButton.Background = BtnCopy;   // light blue
+            SettingsButton.Background = BtnSettings;
             ScreenshotButton.Background       = BtnScreenshot;       // teal
             InsertScreenshotButton.Background = BtnInsertScreenshot; // amber
             UltrathinkButton.Background = ToggleOff;  // dark (PromptBoard always-on prefix starts disabled)
@@ -625,7 +625,6 @@ namespace ClaudeVoiceOverlay.Views
             AttachHover(GButton);
             AttachHover(UltrathinkButton);
             AttachHover(EnterButton);
-            AttachHover(SpareButton);
             AttachHover(SettingsButton);
             AttachHover(ScreenshotButton);
             AttachHover(InsertScreenshotButton);
@@ -3741,6 +3740,8 @@ namespace ClaudeVoiceOverlay.Views
             _promptPanel.SlotsSyncRequested    += () => _ = TryUploadSlotsAsync();
             // Vokabular-Woerterbuch: nach Speichern im Settings-Dialog hochladen.
             _promptPanel.VocabularySyncRequested += () => _ = TryUploadVocabularyAsync();
+            // Settings saved (overlay gear or board gear): apply auto-hide + orientation now.
+            _promptPanel.SettingsSaved += s => Dispatcher.BeginInvoke(new Action(() => ApplySavedSettings(s.AutoHide, s.Orientation)));
             // Gemini-Prompt-Backup: nach erfolgreichem Upload den sichtbaren Sync-
             // Zeitstempel setzen (wie beim Vokabular). Event feuert vom Background-
             // Thread -> auf den UI-Thread marshallen. Singleton-Window, kein Unsubscribe noetig.
@@ -4499,8 +4500,32 @@ namespace ClaudeVoiceOverlay.Views
         /// detour via star -> PromptBoard -> settings.</summary>
         private async void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
+            var target = _appWatcher.ActiveAppHwnd;
             EnsurePromptPanelInstance();
             await _promptPanel!.OpenSettingsAsync(this);
+            // The dialog's owner is the overlay; WPF re-activates the owner on close, which
+            // would take keyboard focus away from the target window.
+            if (target != IntPtr.Zero)
+                _ = Dispatcher.BeginInvoke(DispatcherPriority.Background,
+                    new Action(() => NativeMethods.Win32.SetForegroundWindow(target)));
+        }
+
+        /// <summary>Applies auto-hide and orientation from the saved settings dialog right away
+        /// instead of only on the next start.</summary>
+        private void ApplySavedSettings(bool autoHide, string orientation)
+        {
+            _autoHideEnabled = autoHide;
+            if (!autoHide)
+            {
+                _collapseTimer?.Stop();
+                if (_isCollapsed) Expand();
+            }
+            bool horizontal = string.Equals(orientation, "horizontal", StringComparison.OrdinalIgnoreCase);
+            if (horizontal != _isHorizontal && !_orientationTransitioning && !_isCollapsed)
+            {
+                CloseAttachedPanelsForOrientationSwitch();
+                BeamToOrientation(horizontal);
+            }
         }
 
         /// <summary>
