@@ -1,6 +1,7 @@
 package com.bestjournal.app.data.remote.groq
 
 import android.content.SharedPreferences
+import com.bestjournal.app.util.DeviceLocale
 
 /**
  * Whisper model choice + personal vocabulary for every Groq transcription.
@@ -15,10 +16,8 @@ object GroqWhisperSettings {
     const val PREF_VOCABULARY_ENABLED = "groq_vocabulary_enabled"
     const val PREF_VOCABULARY = "groq_vocabulary"
 
-    const val STANDARD_WOERTERBUCH =
-        "Bug-Almanach, Sonnet-Schwarm, Groq, Whisper, APK-Update, UpdateStation, OpenLauncher, " +
-            "Jarvis, debugging, Logcat, Harness, Best Practices, VCO, CVO, ChatGPT, Claude, " +
-            "Claude Code, OpenAI, Anthropic, bug almanach, Anthrophic"
+    // Public Play app: no developer terms for other users, the user fills the list himself.
+    const val STANDARD_WOERTERBUCH = ""
 
     private const val MAX_WORDS = 100
     private const val MAX_PROMPT_CHARS = 350
@@ -57,7 +56,7 @@ object GroqWhisperSettings {
                 body.contains("blocked at the organization level"))
 
     fun isVocabularyEnabled(prefs: SharedPreferences): Boolean =
-        prefs.getBoolean(PREF_VOCABULARY_ENABLED, true)
+        prefs.getBoolean(PREF_VOCABULARY_ENABLED, false)
 
     fun setVocabularyEnabled(prefs: SharedPreferences, enabled: Boolean) {
         prefs.edit().putBoolean(PREF_VOCABULARY_ENABLED, enabled).apply()
@@ -93,21 +92,32 @@ object GroqWhisperSettings {
         return if (added == 0) null else sb.append('.').toString()
     }
 
-    /** Prompt for this recording, or null when the vocabulary is switched off or empty. */
-    fun promptFor(prefs: SharedPreferences): String? =
-        if (!isVocabularyEnabled(prefs)) null else buildPrompt(parseBegriffe(vocabularyText(prefs)))
+    /** The prompt marker "Begriffe" is German, so the vocabulary is only used for German transcription. */
+    fun isVocabularyAvailable(): Boolean = DeviceLocale.languageCode == "de"
 
     /**
-     * Whisper likes to output the prompt itself on silence/murmur. Echo = the text repeats the
-     * prompt from its beginning ("Begriffe: …"), fully or partly. Dictation consisting only of
-     * vocabulary words does not start with the marker and is kept.
+     * Prompt for this recording, or null when the vocabulary is switched off, empty or the
+     * transcription language (same DeviceLocale value the request sends) is not German.
+     */
+    fun promptFor(prefs: SharedPreferences): String? =
+        if (!isVocabularyEnabled(prefs) || !isVocabularyAvailable()) null
+        else buildPrompt(parseBegriffe(vocabularyText(prefs)))
+
+    /**
+     * Whisper likes to output the prompt itself on silence/murmur, either from its beginning
+     * ("Begriffe: …") or only its end/middle ("Claude Code, OpenAI, Anthropic."). Echo = the text
+     * starts with the marker and the rest is part of the prompt, or the text (at least 12 letters/
+     * digits) is fully contained in the prompt. Dictation consisting only of vocabulary words in
+     * prompt order is therefore retried once without prompt, which is harmless.
      */
     fun isPromptEcho(text: String, prompt: String?): Boolean {
         if (prompt.isNullOrEmpty() || text.isBlank()) return false
         fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
         val t = norm(text)
         val p = norm(prompt)
+        if (t.isEmpty()) return false
         val marker = norm(ECHO_MARKER)
-        return t.startsWith(marker) && p.contains(t.substring(marker.length))
+        if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+        return t.length >= 12 && p.contains(t)
     }
 }

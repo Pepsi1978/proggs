@@ -22,9 +22,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import com.bestjournal.app.R
 import com.bestjournal.app.data.remote.groq.GroqWhisperSettings
 import com.bestjournal.app.ui.components.GlassCard
@@ -45,6 +49,25 @@ fun WhisperSettingsCard() {
     var model by remember { mutableStateOf(GroqWhisperSettings.storedModel(prefs)) }
     var vocabEnabled by remember { mutableStateOf(GroqWhisperSettings.isVocabularyEnabled(prefs)) }
     var vocabText by remember { mutableStateOf(GroqWhisperSettings.vocabularyText(prefs)) }
+    var savedVocabText by remember { mutableStateOf(vocabText) }
+    val latestVocabText by rememberUpdatedState(vocabText)
+
+    // Save the vocabulary 500 ms after the last keystroke (encrypted prefs, not per keystroke)
+    // and once more when the card leaves the screen, so no edit is lost.
+    LaunchedEffect(vocabText) {
+        if (vocabText != savedVocabText) {
+            delay(500)
+            GroqWhisperSettings.saveVocabularyText(prefs, vocabText)
+            savedVocabText = vocabText
+        }
+    }
+    DisposableEffect(prefs) {
+        onDispose {
+            if (latestVocabText != savedVocabText) {
+                GroqWhisperSettings.saveVocabularyText(prefs, latestVocabText)
+            }
+        }
+    }
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -111,56 +134,56 @@ fun WhisperSettingsCard() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.settings_vocabulary),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        stringResource(R.string.settings_vocabulary_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // The vocabulary prompt is German ("Begriffe: …") and only sent for German transcription.
+            if (GroqWhisperSettings.isVocabularyAvailable()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.settings_vocabulary),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            stringResource(R.string.settings_vocabulary_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = vocabEnabled,
+                        onCheckedChange = {
+                            vocabEnabled = it
+                            GroqWhisperSettings.setVocabularyEnabled(prefs, it)
+                        },
+                        colors =
+                            SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
                     )
                 }
-                Switch(
-                    checked = vocabEnabled,
-                    onCheckedChange = {
-                        vocabEnabled = it
-                        GroqWhisperSettings.setVocabularyEnabled(prefs, it)
-                    },
+                Spacer(modifier = Modifier.height(10.dp))
+                TextField(
+                    value = vocabText,
+                    onValueChange = { vocabText = it },
+                    label = { Text(stringResource(R.string.settings_vocabulary_terms)) },
+                    minLines = 3,
+                    maxLines = 8,
+                    modifier = Modifier.fillMaxWidth(),
                     colors =
-                        SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
+                        TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            TextField(
-                value = vocabText,
-                onValueChange = {
-                    vocabText = it
-                    GroqWhisperSettings.saveVocabularyText(prefs, it)
-                },
-                label = { Text(stringResource(R.string.settings_vocabulary_terms)) },
-                minLines = 3,
-                maxLines = 8,
-                modifier = Modifier.fillMaxWidth(),
-                colors =
-                    TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        unfocusedIndicatorColor = Color.Transparent,
-                    ),
-                shape = RoundedCornerShape(12.dp),
-            )
         }
     }
 }
