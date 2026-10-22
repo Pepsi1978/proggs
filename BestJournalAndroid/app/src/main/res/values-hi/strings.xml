@@ -1425,4 +1425,13 @@ Premium के साथ: प्रतिदिन 150 तक।</string>
     <string name="settings_theme">थीम</string>
     <string name="settings_themes_manager">थीम्स मैनेजर</string>
     <string name="paywall_monthly_note">उसके बाद %1$s प्रति माह, स्वतः नवीनीकृत होता है\nकभी भी रद्द किया जा सकता है</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">वाक् पहचान</string>
+    <string name="settings_whisper_model">Whisper मॉडल</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (तेज़)</string>
+    <string name="settings_whisper_model_large">Large V3 (अधिक सटीक)</string>
+    <string name="settings_whisper_model_hint">क्लाउड ट्रांसक्रिप्शन पर लागू होता है।</string>
+    <string name="settings_vocabulary">निजी शब्दकोश</string>
+    <string name="settings_vocabulary_desc">नामों और तकनीकी शब्दों की वर्तनी में मदद करता है</string>
+    <string name="settings_vocabulary_terms">शब्द (कॉमा या नई पंक्ति से अलग करें)</string>
 </resources>

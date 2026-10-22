@@ -1379,4 +1379,13 @@ Premium સાથે: દરરોજ 150 સુધી.</string>
     <string name="settings_theme">થીમ</string>
     <string name="settings_themes_manager">થીમ્સ મેનેજર</string>
     <string name="paywall_monthly_note">ત્યાર બાદ %1$s પ્રતિ માસ, આપમેળે રિન્યૂ થાય છે\nગમે ત્યારે રદ કરી શકાય</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">વાણી ઓળખ</string>
+    <string name="settings_whisper_model">Whisper મોડેલ</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (ઝડપી)</string>
+    <string name="settings_whisper_model_large">Large V3 (વધુ સચોટ)</string>
+    <string name="settings_whisper_model_hint">ક્લાઉડ ટ્રાન્સક્રિપ્શન પર લાગુ થાય છે.</string>
+    <string name="settings_vocabulary">વ્યક્તિગત શબ્દકોશ</string>
+    <string name="settings_vocabulary_desc">નામો અને તકનીકી શબ્દોની જોડણીમાં મદદ કરે છે</string>
+    <string name="settings_vocabulary_terms">શબ્દો (અલ્પવિરામ અથવા નવી લાઇનથી અલગ)</string>
 </resources>

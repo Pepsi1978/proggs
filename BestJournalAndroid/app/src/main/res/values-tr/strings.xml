@@ -1445,4 +1445,13 @@ Ne yapmak istersin?</string>
     <string name="settings_theme">Tema</string>
     <string name="settings_themes_manager">Tema Yöneticisi</string>
     <string name="paywall_monthly_note">Sonrasında ayda %1$s, otomatik yenilenir\nİstediğin zaman iptal edilebilir</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">Konuşma tanıma</string>
+    <string name="settings_whisper_model">Whisper modeli</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (hızlı)</string>
+    <string name="settings_whisper_model_large">Large V3 (daha doğru)</string>
+    <string name="settings_whisper_model_hint">Bulut transkripsiyonu için geçerlidir.</string>
+    <string name="settings_vocabulary">Kişisel sözlük</string>
+    <string name="settings_vocabulary_desc">İsimlerin ve teknik terimlerin yazımına yardımcı olur</string>
+    <string name="settings_vocabulary_terms">Terimler (virgül veya satır sonu ile ayrılmış)</string>
 </resources>

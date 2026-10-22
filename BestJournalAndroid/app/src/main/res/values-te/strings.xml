@@ -1379,4 +1379,13 @@ Premium తో: రోజుకు 150 వరకు.</string>
     <string name="settings_theme">థీమ్</string>
     <string name="settings_themes_manager">థీమ్స్ మేనేజర్</string>
     <string name="paywall_monthly_note">ఆ తర్వాత నెలకు %1$s, స్వయంచాలకంగా పునరుద్ధరించబడుతుంది\nఎప్పుడైనా రద్దు చేయవచ్చు</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">మాట గుర్తింపు</string>
+    <string name="settings_whisper_model">Whisper మోడల్</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (వేగం)</string>
+    <string name="settings_whisper_model_large">Large V3 (మరింత ఖచ్చితం)</string>
+    <string name="settings_whisper_model_hint">క్లౌడ్ ట్రాన్స్‌క్రిప్షన్‌కు వర్తిస్తుంది.</string>
+    <string name="settings_vocabulary">వ్యక్తిగత నిఘంటువు</string>
+    <string name="settings_vocabulary_desc">పేర్లు, సాంకేతిక పదాల స్పెల్లింగ్‌కు సహాయపడుతుంది</string>
+    <string name="settings_vocabulary_terms">పదాలు (కామా లేదా కొత్త లైన్‌తో వేరు చేయండి)</string>
 </resources>

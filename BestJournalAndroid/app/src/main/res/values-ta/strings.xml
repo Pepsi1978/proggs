@@ -1459,4 +1459,13 @@ Premium-உடன்: நாளொன்றுக்கு 150 வரை.</strin
     <string name="settings_theme">தீம்</string>
     <string name="settings_themes_manager">தீம்ஸ் மேனேஜர்</string>
     <string name="paywall_monthly_note">அதன் பிறகு மாதம் %1$s, தானாக நீட்டிக்கப்படும்\nஎப்போது வேண்டுமானாலும் ரத்து செய்யலாம்</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">பேச்சு அறிதல்</string>
+    <string name="settings_whisper_model">Whisper மாதிரி</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (வேகம்)</string>
+    <string name="settings_whisper_model_large">Large V3 (அதிக துல்லியம்)</string>
+    <string name="settings_whisper_model_hint">மேகக் கணினி படியெடுத்தலுக்குப் பொருந்தும்.</string>
+    <string name="settings_vocabulary">தனிப்பட்ட அகராதி</string>
+    <string name="settings_vocabulary_desc">பெயர்கள் மற்றும் தொழில்நுட்பச் சொற்களின் எழுத்துக்கூட்டலுக்கு உதவுகிறது</string>
+    <string name="settings_vocabulary_terms">சொற்கள் (காற்புள்ளி அல்லது புதிய வரியால் பிரிக்கவும்)</string>
 </resources>

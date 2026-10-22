@@ -1466,4 +1466,13 @@ Wat wil je doen?</string>
     <string name="settings_theme">Thema</string>
     <string name="settings_themes_manager">Themabeheer</string>
     <string name="paywall_monthly_note">Daarna %1$s per maand, wordt automatisch verlengd\nOp elk moment opzegbaar</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">Spraakherkenning</string>
+    <string name="settings_whisper_model">Whisper-model</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (snel)</string>
+    <string name="settings_whisper_model_large">Large V3 (nauwkeuriger)</string>
+    <string name="settings_whisper_model_hint">Geldt voor transcriptie in de cloud.</string>
+    <string name="settings_vocabulary">Persoonlijk woordenboek</string>
+    <string name="settings_vocabulary_desc">Helpt bij de spelling van namen en vaktermen</string>
+    <string name="settings_vocabulary_terms">Termen (gescheiden door komma of nieuwe regel)</string>
 </resources>

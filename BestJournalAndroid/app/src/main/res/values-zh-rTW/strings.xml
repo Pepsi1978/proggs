@@ -1430,4 +1430,13 @@
     <string name="settings_theme">主題</string>
     <string name="settings_themes_manager">主題管理員</string>
     <string name="paywall_monthly_note">之後每月 %1$s，自動續訂\n隨時可取消</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">語音辨識</string>
+    <string name="settings_whisper_model">Whisper 模型</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo（快速）</string>
+    <string name="settings_whisper_model_large">Large V3（更準確）</string>
+    <string name="settings_whisper_model_hint">適用於雲端轉錄。</string>
+    <string name="settings_vocabulary">個人字典</string>
+    <string name="settings_vocabulary_desc">幫助正確拼寫人名和專業術語</string>
+    <string name="settings_vocabulary_terms">詞語（以逗號或換行分隔）</string>
 </resources>

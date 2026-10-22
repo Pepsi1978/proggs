@@ -1376,4 +1376,13 @@ Premium-ൽ: ദിനംപ്രതി 150 വരെ.</string>
     <string name="settings_theme">തീം</string>
     <string name="settings_themes_manager">തീംസ് മാനേജർ</string>
     <string name="paywall_monthly_note">"അതിനുശേഷം മാസത്തിന് %1$s, സ്വയമേവ പുതുക്കുന്നു\nഎപ്പോൾ വേണമെങ്കിലും റദ്ദാക്കാം"</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">സംഭാഷണ തിരിച്ചറിയൽ</string>
+    <string name="settings_whisper_model">Whisper മോഡൽ</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (വേഗം)</string>
+    <string name="settings_whisper_model_large">Large V3 (കൂടുതൽ കൃത്യം)</string>
+    <string name="settings_whisper_model_hint">ക്ലൗഡ് ട്രാൻസ്ക്രിപ്ഷന് ബാധകം.</string>
+    <string name="settings_vocabulary">വ്യക്തിഗത നിഘണ്ടു</string>
+    <string name="settings_vocabulary_desc">പേരുകളുടെയും സാങ്കേതിക പദങ്ങളുടെയും അക്ഷരവിന്യാസത്തിന് സഹായിക്കുന്നു</string>
+    <string name="settings_vocabulary_terms">പദങ്ങൾ (കോമ അല്ലെങ്കിൽ പുതിയ വരി കൊണ്ട് വേർതിരിക്കുക)</string>
 </resources>

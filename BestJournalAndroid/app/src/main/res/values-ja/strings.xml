@@ -1460,4 +1460,13 @@ Premiumでは：1日最大150件。</string>
     <string name="settings_theme">テーマ</string>
     <string name="settings_themes_manager">テーママネージャー</string>
     <string name="paywall_monthly_note">その後は月額%1$s、自動更新されます\nいつでも解約可能</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">音声認識</string>
+    <string name="settings_whisper_model">Whisperモデル</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo（高速）</string>
+    <string name="settings_whisper_model_large">Large V3（高精度）</string>
+    <string name="settings_whisper_model_hint">クラウド文字起こしに適用されます。</string>
+    <string name="settings_vocabulary">個人辞書</string>
+    <string name="settings_vocabulary_desc">名前や専門用語の表記を助けます</string>
+    <string name="settings_vocabulary_terms">用語（カンマまたは改行で区切る）</string>
 </resources>

@@ -13,8 +13,11 @@ import com.bestjournal.app.data.remote.ai.AiPhase
 import com.bestjournal.app.data.remote.ai.AiUsageTracker
 import com.bestjournal.app.data.remote.groq.GroqApi
 import com.bestjournal.app.data.remote.groq.GroqTranscriptionResponse
+import com.bestjournal.app.data.remote.groq.GroqWhisperSettings
 import com.bestjournal.app.util.Constants
 import com.bestjournal.app.util.DeviceLocale
+import com.bestjournal.app.util.EncryptedPrefsProvider
+import retrofit2.HttpException
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.tasks.await
@@ -87,20 +90,7 @@ class TranscriptionRepository @Inject constructor(
                         else -> "debug build"
                     }
                     Log.d("Transcription", "Using Groq API for $userType (${String.format("%.1f", fileSizeMb)} MB)")
-                    val filePart = MultipartBody.Part.createFormData(
-                        "file", audioFile.name,
-                        audioFile.asRequestBody("audio/wav".toMediaType())
-                    )
-                    val response = groqApi.transcribe(
-                        authorization = "Bearer $groqKey",
-                        file = filePart,
-                        model = Constants.GROQ_TRANSCRIPTION_MODEL.toRequestBody("text/plain".toMediaType()),
-                        language = DeviceLocale.languageCode.toRequestBody("text/plain".toMediaType()),
-                        // Schicht 2: verbose_json liefert die Confidence-Felder — bei Groq
-                        // ohne Mehrlatenz/-kosten. temperature=0 als Basis (kein Schutz allein).
-                        responseFormat = "verbose_json".toRequestBody("text/plain".toMediaType()),
-                        temperature = "0".toRequestBody("text/plain".toMediaType())
-                    )
+                    val response = transcribeWithGroq(audioFile, groqKey)
                     // Hatte Groq ueberhaupt Text? Wenn die Rohantwort leer ist, hat Groq nichts
                     // erkannt -> auf lokales Whisper zuruckfallen (wie bisher). Hatte Groq Text,
                     // greifen Schicht 2+3; ein danach leeres Ergebnis IST das Resultat (Stille/
@@ -113,6 +103,8 @@ class TranscriptionRepository @Inject constructor(
                         )
                     }
                 }
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("Transcription", "Groq failed, falling back to local Whisper: ${e.message}")
             }
@@ -123,6 +115,59 @@ class TranscriptionRepository @Inject constructor(
         return localWhisper.transcribe(audioFile).map {
             TranscriptionResult(it, context.getString(R.string.transcription_model_local))
         }
+    }
+
+    /**
+     * One Groq transcription with the chosen Whisper model and the personal vocabulary.
+     * - large-v3 blocked for the organization -> same recording once more with Turbo,
+     *   Turbo directly for the next 30 minutes (no error for the user).
+     * - Whisper echoes the vocabulary prompt -> same recording once more without prompt.
+     */
+    private suspend fun transcribeWithGroq(audioFile: File, groqKey: String): GroqTranscriptionResponse {
+        val prefs = EncryptedPrefsProvider.get(context)
+        var model = GroqWhisperSettings.resolveModel(prefs)
+        var prompt = GroqWhisperSettings.promptFor(prefs)
+
+        suspend fun once(): GroqTranscriptionResponse {
+            val filePart = MultipartBody.Part.createFormData(
+                "file", audioFile.name,
+                audioFile.asRequestBody("audio/wav".toMediaType())
+            )
+            return groqApi.transcribe(
+                authorization = "Bearer $groqKey",
+                file = filePart,
+                model = model.toRequestBody("text/plain".toMediaType()),
+                language = DeviceLocale.languageCode.toRequestBody("text/plain".toMediaType()),
+                // Schicht 2: verbose_json liefert die Confidence-Felder — bei Groq
+                // ohne Mehrlatenz/-kosten. temperature=0 als Basis (kein Schutz allein).
+                responseFormat = "verbose_json".toRequestBody("text/plain".toMediaType()),
+                temperature = "0".toRequestBody("text/plain".toMediaType()),
+                prompt = prompt?.toRequestBody("text/plain".toMediaType())
+            )
+        }
+
+        suspend fun withModelFallback(): GroqTranscriptionResponse =
+            try {
+                once()
+            } catch (e: HttpException) {
+                val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull()
+                if (model == GroqWhisperSettings.MODEL_LARGE_V3 && GroqWhisperSettings.isBlockedError(body)) {
+                    Log.w("Transcription", "whisper-large-v3 blocked for the Groq organization (HTTP ${e.code()}) — retrying with Turbo")
+                    GroqWhisperSettings.markBlocked()
+                    model = GroqWhisperSettings.MODEL_TURBO
+                    once()
+                } else {
+                    throw e
+                }
+            }
+
+        var response = withModelFallback()
+        if (GroqWhisperSettings.isPromptEcho(response.text, prompt)) {
+            Log.w("Transcription", "Whisper echoed the vocabulary prompt — retrying without prompt")
+            prompt = null
+            response = withModelFallback()
+        }
+        return response
     }
 
     /**

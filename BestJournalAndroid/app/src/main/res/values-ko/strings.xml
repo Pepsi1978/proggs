@@ -1452,4 +1452,13 @@ Premium: 하루 최대 150회.</string>
     <string name="settings_theme">테마</string>
     <string name="settings_themes_manager">테마 관리자</string>
     <string name="paywall_monthly_note">이후 월 %1$s, 자동으로 갱신돼요\n언제든 해지할 수 있어요</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">음성 인식</string>
+    <string name="settings_whisper_model">Whisper 모델</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (빠름)</string>
+    <string name="settings_whisper_model_large">Large V3 (더 정확함)</string>
+    <string name="settings_whisper_model_hint">클라우드 받아쓰기에 적용돼요.</string>
+    <string name="settings_vocabulary">개인 사전</string>
+    <string name="settings_vocabulary_desc">이름과 전문 용어의 표기를 도와줘요</string>
+    <string name="settings_vocabulary_terms">용어 (쉼표 또는 줄바꿈으로 구분)</string>
 </resources>

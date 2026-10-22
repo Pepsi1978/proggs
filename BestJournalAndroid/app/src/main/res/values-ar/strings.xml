@@ -1454,4 +1454,13 @@
     <string name="settings_theme">مظهر</string>
     <string name="settings_themes_manager">مدير المظاهر</string>
     <string name="paywall_monthly_note">بعد ذلك %1$s في الشهر، ويتجدّد تلقائياً\nقابل للإلغاء في أيّ وقت</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">التعرّف على الكلام</string>
+    <string name="settings_whisper_model">نموذج Whisper</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (سريع)</string>
+    <string name="settings_whisper_model_large">Large V3 (أدق)</string>
+    <string name="settings_whisper_model_hint">ينطبق على النسخ السحابي.</string>
+    <string name="settings_vocabulary">قاموس شخصي</string>
+    <string name="settings_vocabulary_desc">يساعد في كتابة الأسماء والمصطلحات بشكل صحيح</string>
+    <string name="settings_vocabulary_terms">المصطلحات (مفصولة بفاصلة أو سطر جديد)</string>
 </resources>

@@ -1449,4 +1449,13 @@
     <string name="settings_theme">ธีม</string>
     <string name="settings_themes_manager">ตัวจัดการธีม</string>
     <string name="paywall_monthly_note">หลังจากนั้น %1$s ต่อเดือน ต่ออายุอัตโนมัติ\nยกเลิกได้ทุกเมื่อ</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">การรู้จำเสียงพูด</string>
+    <string name="settings_whisper_model">โมเดล Whisper</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (เร็ว)</string>
+    <string name="settings_whisper_model_large">Large V3 (แม่นยำกว่า)</string>
+    <string name="settings_whisper_model_hint">ใช้กับการถอดเสียงบนคลาวด์</string>
+    <string name="settings_vocabulary">พจนานุกรมส่วนตัว</string>
+    <string name="settings_vocabulary_desc">ช่วยสะกดชื่อและคำศัพท์เฉพาะให้ถูกต้อง</string>
+    <string name="settings_vocabulary_terms">คำศัพท์ (คั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่)</string>
 </resources>

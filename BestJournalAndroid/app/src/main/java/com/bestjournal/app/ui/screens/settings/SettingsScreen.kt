@@ -212,7 +212,7 @@ fun SettingsScreen(
                         }
                     )
                     t.play()
-                } catch (e: Exception) {
+                } catch (e: Exception) { // no-cancellation-rethrow
                     android.util.Log.w("SettingsScreen", "playClick failed: ${e.message}")
                 }
             }
@@ -860,7 +860,7 @@ fun SettingsScreen(
                                                 }
                                             )
                                             t.play()
-                                        } catch (_: Exception) {}
+                                        } catch (_: Exception) {} // no-cancellation-rethrow
                                     }
                                 },
                                 colors =
@@ -1142,6 +1142,9 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                // Spracherkennung: Whisper-Modell + persoenliches Woerterbuch
+                WhisperSettingsCard()
 
                 // Erinnerung
                 var pendingPermissionAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -3443,12 +3446,12 @@ fun SettingsScreen(
                                     val backupIntent: Intent = Intent("android.settings.BACKUP_SETTINGS")
                                     backupIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     context.startActivity(backupIntent)
-                                } catch (e: Exception) {
+                                } catch (e: Exception) { // no-cancellation-rethrow
                                     try {
                                         val privacyIntent: Intent = Intent(android.provider.Settings.ACTION_PRIVACY_SETTINGS)
                                         privacyIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                         context.startActivity(privacyIntent)
-                                    } catch (e2: Exception) {
+                                    } catch (e2: Exception) { // no-cancellation-rethrow
                                         Toast.makeText(
                                             context,
                                             R.string.error_no_backup_settings_available,
@@ -3697,7 +3700,7 @@ fun SettingsScreen(
                                                     showRevokeDialog = false
                                                     try {
                                                         context.startActivity(e.consentIntent)
-                                                    } catch (_: Exception) {}
+                                                    } catch (_: Exception) {} // no-cancellation-rethrow
                                                     revokeError =
                                                         context.getString(
                                                             R.string.settings_feedback_allow_gmail
@@ -3889,7 +3892,7 @@ fun SettingsScreen(
                                     .putString(Constants.PREF_EDGE_TTS_VOICE, defaultVoice)
                                     .apply()
                             }
-                        } catch (_: Exception) {
+                        } catch (_: Exception) { // no-cancellation-rethrow
                             // Silent fallback — user can still flip the Sounds switch later.
                         }
                     },
@@ -4603,7 +4606,7 @@ private fun FeedbackDialog(
                                 isSending = false
                                 try {
                                     context.startActivity(e.consentIntent)
-                                } catch (_: Exception) {}
+                                } catch (_: Exception) {} // no-cancellation-rethrow
                                 errorMessage =
                                     context.getString(R.string.settings_feedback_allow_gmail)
                             }
@@ -4743,7 +4746,7 @@ private fun ReportAiDialog(
                                 isSending = false
                                 try {
                                     context.startActivity(e.consentIntent)
-                                } catch (_: Exception) {}
+                                } catch (_: Exception) {} // no-cancellation-rethrow
                                 errorMessage =
                                     context.getString(R.string.settings_feedback_allow_gmail)
                             }
@@ -5144,7 +5147,7 @@ private fun formatPremiumExpiryDateTime(iso: String?): String? {
         val formatter = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault())
         formatter.timeZone = java.util.TimeZone.getDefault()
         formatter.format(date)
-    } catch (_: Exception) {
+    } catch (_: Exception) { // no-cancellation-rethrow
         try {
             val fallback = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
             fallback.timeZone = java.util.TimeZone.getTimeZone("UTC")
@@ -5152,7 +5155,7 @@ private fun formatPremiumExpiryDateTime(iso: String?): String? {
             val formatter = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault())
             formatter.timeZone = java.util.TimeZone.getDefault()
             formatter.format(date)
-        } catch (_: Exception) {
+        } catch (_: Exception) { // no-cancellation-rethrow
             null
         }
     }

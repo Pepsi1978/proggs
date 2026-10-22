@@ -1419,4 +1419,13 @@ Apa yang ingin kamu lakukan?</string>
     <string name="settings_theme">Tema</string>
     <string name="settings_themes_manager">Pengelola Tema</string>
     <string name="paywall_monthly_note">Setelah itu %1$s per bulan, diperpanjang otomatis\nDapat dibatalkan kapan saja</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">Pengenalan suara</string>
+    <string name="settings_whisper_model">Model Whisper</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (cepat)</string>
+    <string name="settings_whisper_model_large">Large V3 (lebih akurat)</string>
+    <string name="settings_whisper_model_hint">Berlaku untuk transkripsi cloud.</string>
+    <string name="settings_vocabulary">Kamus pribadi</string>
+    <string name="settings_vocabulary_desc">Membantu ejaan nama dan istilah teknis</string>
+    <string name="settings_vocabulary_terms">Istilah (dipisahkan koma atau baris baru)</string>
 </resources>

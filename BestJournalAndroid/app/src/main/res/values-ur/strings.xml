@@ -1426,4 +1426,13 @@ Premium کے ساتھ: روزانہ 150 تک۔</string>
     <string name="settings_theme">تھیم</string>
     <string name="settings_themes_manager">تھیمز مینیجر</string>
     <string name="paywall_monthly_note">اس کے بعد %1$s فی ماہ، خودکار طور پر تجدید ہوتا ہے\nکسی بھی وقت منسوخ کیا جا سکتا ہے</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">آواز کی شناخت</string>
+    <string name="settings_whisper_model">Whisper ماڈل</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (تیز)</string>
+    <string name="settings_whisper_model_large">Large V3 (زیادہ درست)</string>
+    <string name="settings_whisper_model_hint">کلاؤڈ ٹرانسکرپشن پر لاگو ہوتا ہے۔</string>
+    <string name="settings_vocabulary">ذاتی لغت</string>
+    <string name="settings_vocabulary_desc">ناموں اور تکنیکی اصطلاحات کے ہجے میں مدد کرتا ہے</string>
+    <string name="settings_vocabulary_terms">اصطلاحات (کوما یا نئی لائن سے الگ کریں)</string>
 </resources>

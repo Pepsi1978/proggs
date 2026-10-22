@@ -3,6 +3,7 @@
   "app": "BestJournalAndroid",
   "eintraege": [
     { "versionCode": 298, "versionName": "0.21.18", "stand": "", "notiz": "Stand vor Einführung des Versionslogs" },
-    { "versionCode": 299, "versionName": "0.21.19", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+    { "versionCode": 299, "versionName": "0.21.19", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
+    { "versionCode": 300, "versionName": "0.21.20", "stand": "22.10.2026, 11:22 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter." }
   ]
 }

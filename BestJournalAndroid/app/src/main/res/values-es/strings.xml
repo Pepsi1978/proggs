@@ -1424,4 +1424,13 @@ Sin una eliminación completa, el mensaje «eliminado definitivamente» no serí
     <string name="settings_theme">Tema</string>
     <string name="settings_themes_manager">Gestor de temas</string>
     <string name="paywall_monthly_note">Después %1$s al mes, se renueva automáticamente\nCancelable en cualquier momento</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">Reconocimiento de voz</string>
+    <string name="settings_whisper_model">Modelo Whisper</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (rápido)</string>
+    <string name="settings_whisper_model_large">Large V3 (más preciso)</string>
+    <string name="settings_whisper_model_hint">Se aplica a la transcripción en la nube.</string>
+    <string name="settings_vocabulary">Diccionario personal</string>
+    <string name="settings_vocabulary_desc">Ayuda a escribir correctamente nombres y términos técnicos</string>
+    <string name="settings_vocabulary_terms">Términos (separados por coma o salto de línea)</string>
 </resources>

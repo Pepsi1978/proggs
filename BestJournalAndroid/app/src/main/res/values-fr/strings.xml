@@ -1451,4 +1451,13 @@ Que veux-tu faire ?</string>
     <string name="settings_theme">Thème</string>
     <string name="settings_themes_manager">Gestionnaire de thèmes</string>
     <string name="paywall_monthly_note">Ensuite %1$s par mois, renouvellement automatique\nRésiliable à tout moment</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">Reconnaissance vocale</string>
+    <string name="settings_whisper_model">Modèle Whisper</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (rapide)</string>
+    <string name="settings_whisper_model_large">Large V3 (plus précis)</string>
+    <string name="settings_whisper_model_hint">S\'applique à la transcription dans le cloud.</string>
+    <string name="settings_vocabulary">Dictionnaire personnel</string>
+    <string name="settings_vocabulary_desc">Aide à orthographier les noms et termes techniques</string>
+    <string name="settings_vocabulary_terms">Termes (séparés par une virgule ou un saut de ligne)</string>
 </resources>

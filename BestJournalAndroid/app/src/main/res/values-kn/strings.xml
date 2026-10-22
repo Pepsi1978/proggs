@@ -1425,4 +1425,13 @@ Premium ಜೊತೆ: ದಿನಕ್ಕೆ 150 ರವರೆಗೆ.</string>
     <string name="settings_theme">ಥೀಮ್</string>
     <string name="settings_themes_manager">ಥೀಮ್ಸ್ ಮ್ಯಾನೇಜರ್</string>
     <string name="paywall_monthly_note">ನಂತರ ತಿಂಗಳಿಗೆ %1$s, ಸ್ವಯಂಚಾಲಿತವಾಗಿ ನವೀಕರಣಗೊಳ್ಳುತ್ತದೆ\nಯಾವಾಗ ಬೇಕಾದರೂ ರದ್ದುಗೊಳಿಸಬಹುದು</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">ಧ್ವನಿ ಗುರುತಿಸುವಿಕೆ</string>
+    <string name="settings_whisper_model">Whisper ಮಾದರಿ</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (ವೇಗ)</string>
+    <string name="settings_whisper_model_large">Large V3 (ಹೆಚ್ಚು ನಿಖರ)</string>
+    <string name="settings_whisper_model_hint">ಕ್ಲೌಡ್ ಲಿಪ್ಯಂತರಕ್ಕೆ ಅನ್ವಯಿಸುತ್ತದೆ.</string>
+    <string name="settings_vocabulary">ವೈಯಕ್ತಿಕ ನಿಘಂಟು</string>
+    <string name="settings_vocabulary_desc">ಹೆಸರುಗಳು ಮತ್ತು ತಾಂತ್ರಿಕ ಪದಗಳ ಕಾಗುಣಿತಕ್ಕೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ</string>
+    <string name="settings_vocabulary_terms">ಪದಗಳು (ಅಲ್ಪವಿರಾಮ ಅಥವಾ ಹೊಸ ಸಾಲಿನಿಂದ ಬೇರ್ಪಡಿಸಿ)</string>
 </resources>

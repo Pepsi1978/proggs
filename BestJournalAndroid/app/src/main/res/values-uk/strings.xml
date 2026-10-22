@@ -1462,4 +1462,13 @@
     <string name="settings_theme">Тема</string>
     <string name="settings_themes_manager">Менеджер тем</string>
     <string name="paywall_monthly_note">Потім %1$s на місяць, продовжується автоматично\nМожна скасувати будь-коли</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">Розпізнавання мовлення</string>
+    <string name="settings_whisper_model">Модель Whisper</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (швидка)</string>
+    <string name="settings_whisper_model_large">Large V3 (точніша)</string>
+    <string name="settings_whisper_model_hint">Діє для хмарної транскрипції.</string>
+    <string name="settings_vocabulary">Особистий словник</string>
+    <string name="settings_vocabulary_desc">Допомагає правильно писати імена та терміни</string>
+    <string name="settings_vocabulary_terms">Терміни (через кому або з нового рядка)</string>
 </resources>

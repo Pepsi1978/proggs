@@ -1496,4 +1496,13 @@
 
     <!-- Auto-renewal note for monthly plan (D1) -->
     <string name="paywall_monthly_note">Danach %1$s pro Monat, verlängert sich automatisch\nJederzeit kündbar</string>
+    <!-- Spracherkennung: Whisper-Modell + persoenliches Woerterbuch -->
+    <string name="settings_transcription_section">Spracherkennung</string>
+    <string name="settings_whisper_model">Whisper-Modell</string>
+    <string name="settings_whisper_model_turbo">Large V3 Turbo (schnell)</string>
+    <string name="settings_whisper_model_large">Large V3 (genauer)</string>
+    <string name="settings_whisper_model_hint">Gilt für die Cloud-Transkription.</string>
+    <string name="settings_vocabulary">Persönliches Wörterbuch</string>
+    <string name="settings_vocabulary_desc">Hilft bei der Schreibweise von Namen und Fachbegriffen</string>
+    <string name="settings_vocabulary_terms">Begriffe (durch Komma oder Zeilenumbruch getrennt)</string>
 </resources>
