@@ -14,6 +14,7 @@ class TtsManager(context: Context) {
     private val edgePlayer = EdgeTtsPlayer(appContext)
     private val googlePlayer = GoogleCloudTtsPlayer(appContext)
     private val qwenPlayer = QwenTtsPlayer(appContext)
+    private val neuePlayer = NeueStimmenPlayer(appContext)
     private val generation = AtomicLong(0)
     private var activeProviderId: String? = null
     private var variationStep = 0
@@ -137,6 +138,38 @@ class TtsManager(context: Context) {
                 onComplete = guardedComplete,
                 onError = guardedError,
             )
+            // Gemini 3.8 Flash / Flash-Lite und Azure Neural: erst als Datei erzeugt, dann abgespielt.
+            TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> {
+                val provider = TtsProvider.entries.first { it.id == providerId }
+                val (katalog, gespeichert) = when (provider) {
+                    TtsProvider.GEMINI_FLASH -> TtsCatalog.geminiFlashVoices to
+                        (preferences?.getString(PREF_GEMINI_FLASH_VOICE, null) ?: TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE)
+                    TtsProvider.GEMINI_LITE -> TtsCatalog.geminiLiteVoices to
+                        (preferences?.getString(PREF_GEMINI_LITE_VOICE, null) ?: TtsCatalog.DEFAULT_GEMINI_LITE_VOICE)
+                    else -> TtsCatalog.azureVoices to
+                        (preferences?.getString(PREF_AZURE_VOICE, null) ?: TtsCatalog.DEFAULT_AZURE_VOICE)
+                }
+                neuePlayer.speak(
+                    text = spokenText,
+                    provider = provider,
+                    voiceId = voiceOverride ?: rotatedVoice(katalog, step, varied) ?: gespeichert,
+                    speechRate = speechRate,
+                    zugang = NeueStimmenPlayer.Zugang(
+                        geminiKeyFrei = preferences?.getString(PREF_GEMINI_TTS_KEY_FREI, "").orEmpty(),
+                        geminiKeyBezahlt = preferences?.getString(PREF_GEMINI_TTS_KEY_BEZAHLT, "").orEmpty(),
+                        schluesselWahl = preferences?.getString(PREF_GEMINI_TTS_SCHLUESSEL_WAHL, null)
+                            ?: NeueStimmenPlayer.GEMINI_TTS_FREI_DANN_BEZAHLT,
+                        chirpRueckfall = preferences?.getBoolean(PREF_GEMINI_TTS_CHIRP_RUECKFALL, false) ?: false,
+                        googleKey = preferences?.getString(PREF_GOOGLE_API_KEY, "").orEmpty(),
+                        azureKey = preferences?.getString(PREF_AZURE_TTS_KEY, "").orEmpty(),
+                        azureRegion = preferences?.getString(PREF_AZURE_TTS_REGION, null) ?: TtsCatalog.DEFAULT_AZURE_REGION,
+                        erzwingeDeutsch = preferences?.getBoolean("immer_deutsch_vorlesen", true) ?: true,
+                    ),
+                    onPlaybackStart = guardedStart,
+                    onComplete = guardedComplete,
+                    onError = guardedError,
+                )
+            }
             else -> guardedError(IllegalStateException("Unbekannter TTS-Anbieter."))
         }
     }
@@ -160,12 +193,14 @@ class TtsManager(context: Context) {
         edgePlayer.stop()
         googlePlayer.stop()
         qwenPlayer.stop()
+        neuePlayer.stop()
     }
 
     fun pause(): Boolean = when (activeProviderId) {
         TtsProvider.EDGE.id -> edgePlayer.pause()
         TtsProvider.GOOGLE_CLOUD.id -> googlePlayer.pause()
         TtsProvider.QWEN_CLONE.id -> qwenPlayer.pause()
+        TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> neuePlayer.pause()
         else -> false
     }
 
@@ -173,6 +208,7 @@ class TtsManager(context: Context) {
         TtsProvider.EDGE.id -> edgePlayer.resume()
         TtsProvider.GOOGLE_CLOUD.id -> googlePlayer.resume()
         TtsProvider.QWEN_CLONE.id -> qwenPlayer.resume()
+        TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> neuePlayer.resume()
         else -> false
     }
 
@@ -181,6 +217,7 @@ class TtsManager(context: Context) {
         edgePlayer.shutdown()
         googlePlayer.shutdown()
         qwenPlayer.shutdown()
+        neuePlayer.shutdown()
     }
 
     private fun removeEmojis(text: String): String {
@@ -251,6 +288,15 @@ class TtsManager(context: Context) {
         const val PREF_IMMER_DEUTSCH = "immer_deutsch_vorlesen"
         const val PREF_SPEECH_RATE = "tts_speech_rate"
         const val PREF_FAVORITE_VOICES = "favorite_tts_voices"
+        const val PREF_GEMINI_FLASH_VOICE = "gemini_flash_tts_voice"
+        const val PREF_GEMINI_LITE_VOICE = "gemini_lite_tts_voice"
+        const val PREF_AZURE_VOICE = "azure_tts_voice"
+        const val PREF_AZURE_TTS_KEY = "azure_tts_key"
+        const val PREF_AZURE_TTS_REGION = "azure_tts_region"
+        const val PREF_GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
+        const val PREF_GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+        const val PREF_GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
+        const val PREF_GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
         const val PREF_VARY_VOICE = "vary_voice_per_repetition"
         const val PREF_VARY_SPEECH_RATE = "vary_speech_rate"
         const val PREF_VARY_PITCH = "vary_pitch"

@@ -159,15 +159,20 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             item {
                 Block("Vorlesen") {
                     ChipReihe {
-                        listOf(TtsProvider.EDGE, TtsProvider.GOOGLE_CLOUD).forEach { p -> Chip(p.label, e.ttsAnbieter == p.id) { e.ttsAnbieter = p.id } }
+                        listOf(TtsProvider.EDGE, TtsProvider.GOOGLE_CLOUD, TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE, TtsProvider.AZURE)
+                            .forEach { p -> Chip(p.label, e.ttsAnbieter == p.id) { e.ttsAnbieter = p.id } }
                     }
-                    if (e.ttsAnbieter == TtsProvider.GOOGLE_CLOUD.id) {
-                        Feld("Google-Cloud-Schlüssel", e.googleKey, geheim = true) { e.googleKey = it }
-                        Text("Stimme", color = f.textLeise, fontSize = 13.sp)
-                        ChipReihe { TtsCatalog.googleVoices.forEach { v -> Chip(v.name, e.googleStimme == v.id) { e.googleStimme = v.id } } }
-                    } else {
-                        Text("Stimme (Microsoft Edge, ohne Schlüssel)", color = f.textLeise, fontSize = 13.sp)
-                        ChipReihe { TtsCatalog.edgeVoices.forEach { v -> Chip(v.name, e.edgeStimme == v.id) { e.edgeStimme = v.id } } }
+                    when (e.ttsAnbieter) {
+                        TtsProvider.GOOGLE_CLOUD.id -> {
+                            Feld("Google-Cloud-Schlüssel", e.googleKey, geheim = true) { e.googleKey = it }
+                            Text("Stimme (langes Drücken: ★ Favorit)", color = f.textLeise, fontSize = 13.sp)
+                            StimmenReihe(TtsCatalog.googleVoices, e.googleStimme, e) { e.googleStimme = it }
+                        }
+                        TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> NeueStimmenBereich(e)
+                        else -> {
+                            Text("Stimme (Microsoft Edge, ohne Schlüssel; langes Drücken: ★ Favorit)", color = f.textLeise, fontSize = 13.sp)
+                            StimmenReihe(TtsCatalog.edgeVoices, e.edgeStimme, e) { e.edgeStimme = it }
+                        }
                     }
                     Text("Tempo: ${"%.2f".format(e.tempo)}×", color = f.textLeise, fontSize = 13.sp)
                     Slider(e.tempo, { e.tempo = it }, valueRange = 0.7f..1.3f, steps = 11, colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer))
