@@ -9,6 +9,7 @@
     {"versionCode": 35, "versionName": "0.6.16", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
     {"versionCode": 36, "versionName": "0.6.17", "stand": "14.10.2026, 08:33 Uhr", "notiz": "Doppelt in eine aufgeklappte Erklärung tippen klappt sie wieder zu"},
     {"versionCode": 37, "versionName": "0.6.18", "stand": "22.10.2026, 11:21 Uhr", "notiz": "Einstellungen: Whisper-Modell mit klaren Namen (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter; ist Large V3 bei Groq gesperrt, nimmt die App still Turbo."},
-    {"versionCode": 38, "versionName": "0.6.19", "stand": "22.10.2026, 11:51 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, und das Wörterbuch-Feld speichert ohne Ruckeln."}
+    {"versionCode": 38, "versionName": "0.6.19", "stand": "22.10.2026, 11:51 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, und das Wörterbuch-Feld speichert ohne Ruckeln."},
+    {"versionCode": 39, "versionName": "0.6.20", "stand": "22.10.2026, 12:03 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per Stern oder langem Drücken als Favorit oben anheften."}
   ]
 }

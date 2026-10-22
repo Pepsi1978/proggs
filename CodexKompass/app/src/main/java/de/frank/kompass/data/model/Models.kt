@@ -59,6 +59,9 @@ enum class TtsAnbieter(val id: String, val label: String) {
     GOOGLE("google", "Google Chirp 3 HD"),
     EDGE("edge", "Microsoft Edge"),
     QWEN("qwen", "Alibaba (eigene Stimme)"),
+    GEMINI_FLASH("gemini_flash", "Gemini 3.8 Flash TTS"),
+    GEMINI_LITE("gemini_lite", "Gemini 3.8 Flash-Lite TTS"),
+    AZURE("azure_neural", "Azure Neural"),
     ;
 
     companion object {

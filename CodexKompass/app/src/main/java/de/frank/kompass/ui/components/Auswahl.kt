@@ -2,7 +2,9 @@ package de.frank.kompass.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -53,6 +57,7 @@ data class AuswahlPunkt<T>(
  * [beiProbe] blendet neben dem Feld einen Abspielknopf ein. Er ist dort richtig aufgehoben:
  * Man wählt eine Stimme und will sie sofort hören, ohne die Liste erneut zu öffnen.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun <T> Klappauswahl(
     beschriftung: String,
@@ -64,6 +69,9 @@ fun <T> Klappauswahl(
     beiProbe: (() -> Unit)? = null,
     probeLaeuft: Boolean = false,
     beiProbeStopp: (() -> Unit)? = null,
+    /** Mit [beiFavorit] bekommt jede Zeile einen Stern; langes Drücken schaltet ebenfalls um. */
+    istFavorit: ((T) -> Boolean)? = null,
+    beiFavorit: ((T) -> Unit)? = null,
 ) {
     val farben = LocalKompassFarben.current
     var offen by remember { mutableStateOf(false) }
@@ -95,6 +103,14 @@ fun <T> Klappauswahl(
                         .padding(horizontal = Mass.abstand, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (aktueller != null && istFavorit?.invoke(aktueller.wert) == true) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Favorit",
+                            tint = FavoritGelb,
+                            modifier = Modifier.padding(end = 8.dp).size(18.dp),
+                        )
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = aktueller?.text ?: platzhalter,
@@ -143,10 +159,19 @@ fun <T> Klappauswahl(
                                         androidx.compose.ui.graphics.Color.Transparent
                                     },
                                 )
-                                .clickable {
-                                    beiWahl(punkt.wert)
-                                    offen = false
-                                }
+                                .combinedClickable(
+                                    onClick = {
+                                        beiWahl(punkt.wert)
+                                        offen = false
+                                    },
+                                    // Langes Drücken: Favorit an/aus, das Menü bleibt offen.
+                                    onLongClick = if (beiFavorit != null) {
+                                        { beiFavorit(punkt.wert) }
+                                    } else {
+                                        null
+                                    },
+                                    onLongClickLabel = if (beiFavorit != null) "Favorit an oder aus" else null,
+                                )
                                 .padding(horizontal = Mass.abstand, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -172,6 +197,18 @@ fun <T> Klappauswahl(
                                         color = farben.textGedaempft,
                                     )
                                 }
+                            }
+                            if (beiFavorit != null) {
+                                val favorit = istFavorit?.invoke(punkt.wert) == true
+                                Icon(
+                                    imageVector = if (favorit) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = if (favorit) "Favorit entfernen" else "Als Favorit markieren",
+                                    tint = if (favorit) FavoritGelb else farben.textGedaempft,
+                                    modifier = Modifier
+                                        .size(Mass.tippflaeche)
+                                        .clickable { beiFavorit(punkt.wert) }
+                                        .padding(12.dp),
+                                )
                             }
                             if (istGewaehlt) {
                                 Icon(
@@ -376,3 +413,6 @@ fun Mehrfachauswahl(
         }
     }
 }
+
+/** Gelb wie in Jarvis: Favoriten sind auf einen Blick zu erkennen. */
+private val FavoritGelb = androidx.compose.ui.graphics.Color(0xFFFFC107)
