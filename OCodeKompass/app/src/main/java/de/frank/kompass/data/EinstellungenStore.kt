@@ -110,6 +110,34 @@ class EinstellungenStore(context: Context) {
         get() = offen.getStringSet(SCHL_LIEBLINGSSTIMMEN, emptySet()).orEmpty()
         set(wert) = offen.edit().putStringSet(SCHL_LIEBLINGSSTIMMEN, wert).apply()
 
+    /** Gemini-3.8-Stimmen, Kennung „gemini_flash:Leda“ bzw. „gemini_lite:Leda“. */
+    var geminiFlashStimme: String
+        get() = offen.getString(SCHL_GEMINI_FLASH_STIMME, null) ?: TtsCatalog.STANDARD_GEMINI_FLASH_STIMME
+        set(wert) = offen.edit().putString(SCHL_GEMINI_FLASH_STIMME, wert).apply()
+
+    var geminiLiteStimme: String
+        get() = offen.getString(SCHL_GEMINI_LITE_STIMME, null) ?: TtsCatalog.STANDARD_GEMINI_LITE_STIMME
+        set(wert) = offen.edit().putString(SCHL_GEMINI_LITE_STIMME, wert).apply()
+
+    /** Welche Gemini-Stimmschlüssel genutzt werden: [GEMINI_FREI_DANN_BEZAHLT], [GEMINI_NUR_FREI] oder [GEMINI_NUR_BEZAHLT]. */
+    var geminiSchluesselWahl: String
+        get() = offen.getString(SCHL_GEMINI_WAHL, null) ?: GEMINI_FREI_DANN_BEZAHLT
+        set(wert) = offen.edit().putString(SCHL_GEMINI_WAHL, wert).apply()
+
+    /** Scheitert der kostenlose Gemini-Stimmschlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels. */
+    var geminiChirpRueckfall: Boolean
+        get() = offen.getBoolean(SCHL_GEMINI_CHIRP_RUECKFALL, false)
+        set(wert) = offen.edit().putBoolean(SCHL_GEMINI_CHIRP_RUECKFALL, wert).apply()
+
+    /** Azure AI Speech: Region der Speech-Ressource (kein Geheimnis) und Stimme mit Kennung „azure:de-DE-KatjaNeural“. */
+    var azureRegion: String
+        get() = offen.getString(SCHL_AZURE_REGION, null) ?: TtsCatalog.STANDARD_AZURE_REGION
+        set(wert) = offen.edit().putString(SCHL_AZURE_REGION, wert.trim()).apply()
+
+    var azureStimme: String
+        get() = offen.getString(SCHL_AZURE_STIMME, null) ?: TtsCatalog.STANDARD_AZURE_STIMME
+        set(wert) = offen.edit().putString(SCHL_AZURE_STIMME, wert).apply()
+
     // --- Spracheingabe --------------------------------------------------------------------
 
     var groqModell: String
@@ -249,6 +277,19 @@ class EinstellungenStore(context: Context) {
         get() = leseGeheim(SCHL_GROQ_KEY)
         set(wert) = schreibeGeheim(SCHL_GROQ_KEY, wert)
 
+    /** Eigene Schlüssel nur für die Gemini-Stimme: AI-Studio-Projekt ohne bzw. mit Abrechnung. */
+    var geminiSchluesselFrei: String
+        get() = leseGeheim(SCHL_GEMINI_KEY_FREI)
+        set(wert) = schreibeGeheim(SCHL_GEMINI_KEY_FREI, wert)
+
+    var geminiSchluesselBezahlt: String
+        get() = leseGeheim(SCHL_GEMINI_KEY_BEZAHLT)
+        set(wert) = schreibeGeheim(SCHL_GEMINI_KEY_BEZAHLT, wert)
+
+    var azureSchluessel: String
+        get() = leseGeheim(SCHL_AZURE_KEY)
+        set(wert) = schreibeGeheim(SCHL_AZURE_KEY, wert)
+
     private fun leseGeheim(schluessel: String): String =
         geheim?.getString(schluessel, "").orEmpty()
 
@@ -298,5 +339,23 @@ class EinstellungenStore(context: Context) {
         private const val SCHL_GOOGLE_KEY = "google_api_key"
         private const val SCHL_ALIBABA_KEY = "alibaba_api_key"
         private const val SCHL_GROQ_KEY = "groq_api_key"
+        private const val SCHL_GEMINI_KEY_FREI = "gemini_tts_key_frei"
+        private const val SCHL_GEMINI_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+        private const val SCHL_AZURE_KEY = "azure_tts_key"
+        private const val SCHL_GEMINI_FLASH_STIMME = "tts_gemini_flash_stimme"
+        private const val SCHL_GEMINI_LITE_STIMME = "tts_gemini_lite_stimme"
+        private const val SCHL_GEMINI_WAHL = "gemini_tts_schluessel_wahl"
+        private const val SCHL_GEMINI_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
+        private const val SCHL_AZURE_REGION = "azure_tts_region"
+        private const val SCHL_AZURE_STIMME = "tts_azure_stimme"
+
+        const val GEMINI_FREI_DANN_BEZAHLT = "frei_dann_bezahlt"
+        const val GEMINI_NUR_FREI = "nur_frei"
+        const val GEMINI_NUR_BEZAHLT = "nur_bezahlt"
+        val GEMINI_SCHLUESSEL_WAHLEN = listOf(
+            GEMINI_FREI_DANN_BEZAHLT to "Erst kostenlos, dann bezahlt",
+            GEMINI_NUR_FREI to "Nur kostenlos",
+            GEMINI_NUR_BEZAHLT to "Nur bezahlt",
+        )
     }
 }
