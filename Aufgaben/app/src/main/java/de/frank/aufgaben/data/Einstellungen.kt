@@ -24,7 +24,7 @@ class Einstellungen private constructor(context: Context) {
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
         )
-    } catch (_: Exception) {
+    } catch (_: Exception) { // no-cancellation-rethrow
         context.applicationContext.getSharedPreferences("aufgaben_prefs_fallback", Context.MODE_PRIVATE)
     }
 
@@ -54,7 +54,7 @@ class Einstellungen private constructor(context: Context) {
     /** Whisper-Modell bei Groq: Turbo (schnell, Standard) oder Large V3 (genauer). */
     var whisperModell: String
         get() = de.frank.aufgaben.audio.GroqTranscriber.gueltigesModell(prefs.getString("whisper_model", null))
-        set(v) = put { putString("whisper_model", de.frank.aufgaben.audio.GroqTranscriber.gueltigesModell(v)) }
+        set(v) { de.frank.aufgaben.audio.GroqTranscriber.sperreAufheben(); put { putString("whisper_model", de.frank.aufgaben.audio.GroqTranscriber.gueltigesModell(v)) } }
     /** Persönliches Wörterbuch: Begriffe gehen als Prompt an Whisper. */
     var woerterbuchAn: Boolean get() = prefs.getBoolean("woerterbuch_an", true); set(v) = put { putBoolean("woerterbuch_an", v) }
     var woerterbuch: String get() = s("woerterbuch", de.frank.aufgaben.audio.Woerterbuch.STANDARD_WOERTERBUCH); set(v) = put { putString("woerterbuch", v) }
