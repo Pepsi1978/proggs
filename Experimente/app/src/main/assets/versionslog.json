@@ -6,6 +6,7 @@
     { "versionCode": 41, "versionName": "0.17.12", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
     {"versionCode": 42, "versionName": "0.17.13", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
     {"versionCode": 43, "versionName": "0.17.14", "stand": "22.10.2026, 11:20 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter."},
-    {"versionCode": 44, "versionName": "0.17.15", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, das Wörterbuch-Feld speichert ruckelfrei und zeigt nach einer Wiederherstellung den aktuellen Stand."}
+    {"versionCode": 44, "versionName": "0.17.15", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, das Wörterbuch-Feld speichert ruckelfrei und zeigt nach einer Wiederherstellung den aktuellen Stand."},
+    {"versionCode": 45, "versionName": "0.17.16", "stand": "22.10.2026, 11:56 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per langem Drücken oder Stern als Favorit oben anheften."}
   ]
 }

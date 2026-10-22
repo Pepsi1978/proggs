@@ -41,6 +41,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
     private val google = GoogleCloudTtsPlayer(context)
     private val edge = EdgeTtsPlayer(context)
     private val qwen = QwenTtsPlayer(context)
+    private val zusatz = GeminiAzureTts(context)
 
     /**
      * Die Rückfallebene. Sie wird erst beim ersten Bedarf eingerichtet — Androids
@@ -121,6 +122,17 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
                         "Ich lese mit der Stimme des Geräts vor."
                 } else null
 
+            TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE ->
+                if (einstellungen.geminiTtsKeyFrei.isBlank() && einstellungen.geminiTtsKeyBezahlt.isBlank()) {
+                    "Für die Gemini-Stimme fehlt der Schlüssel (Einstellungen → Stimme). " +
+                        "Ich lese mit der Stimme des Geräts vor."
+                } else null
+
+            TtsProvider.AZURE -> if (einstellungen.azureTtsKey.isBlank()) {
+                "Für die Azure-Stimme fehlt der Schlüssel (Einstellungen → Stimme). " +
+                    "Ich lese mit der Stimme des Geräts vor."
+            } else null
+
             else -> null
         }
 
@@ -141,6 +153,35 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
                     text = absatz,
                     rawApiKey = einstellungen.qwenSchluessel,
                     rawVoiceId = einstellungen.stimmeQwen,
+                )
+            }
+
+            weg == TtsProvider.GEMINI_FLASH || weg == TtsProvider.GEMINI_LITE -> { absatz ->
+                zusatz.gemini(
+                    text = absatz,
+                    lite = weg == TtsProvider.GEMINI_LITE,
+                    stimmeId = stimmeVon(weg),
+                    freiRoh = einstellungen.geminiTtsKeyFrei,
+                    bezahltRoh = einstellungen.geminiTtsKeyBezahlt,
+                    wahl = einstellungen.geminiTtsSchluesselWahl,
+                    chirpRueckfall = einstellungen.geminiTtsChirpRueckfall,
+                ) { chirpStimme ->
+                    google.synthetisiere(
+                        text = absatz,
+                        apiKey = einstellungen.googleTtsSchluessel,
+                        voiceName = chirpStimme,
+                        speechRate = tempo,
+                    )
+                }
+            }
+
+            weg == TtsProvider.AZURE -> { absatz ->
+                zusatz.azure(
+                    text = absatz,
+                    stimmeId = einstellungen.stimmeAzure,
+                    tempo = tempo,
+                    schluesselRoh = einstellungen.azureTtsKey,
+                    regionRoh = einstellungen.azureTtsRegion,
                 )
             }
 
@@ -268,6 +309,9 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         TtsProvider.GOOGLE_CLOUD -> einstellungen.stimmeGoogle
         TtsProvider.QWEN_CLONE -> einstellungen.stimmeQwen
         TtsProvider.EDGE -> einstellungen.stimmeEdge
+        TtsProvider.GEMINI_FLASH -> einstellungen.stimmeGeminiFlash
+        TtsProvider.GEMINI_LITE -> einstellungen.stimmeGeminiLite
+        TtsProvider.AZURE -> einstellungen.stimmeAzure
         TtsProvider.GERAET -> "Stimme des Geräts"
     }
 
@@ -347,6 +391,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         google.shutdown()
         edge.shutdown()
         qwen.shutdown()
+        zusatz.shutdown()
         if (geraetEingerichtet) geraet.shutdown()
     }
 }

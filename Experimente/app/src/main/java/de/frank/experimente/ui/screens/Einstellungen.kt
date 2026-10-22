@@ -9,6 +9,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,8 +95,14 @@ private val MODELLE = CodexModell.entries.map { it.apiId to it.bezeichnung }
 private fun stimmenVon(anbieter: String): List<Pair<String, String>> = when (anbieter) {
     TtsProvider.GOOGLE_CLOUD.id -> TtsCatalog.googleVoices.map { it.id to it.id }
     TtsProvider.EDGE.id -> TtsCatalog.edgeVoices.map { it.id to it.id }
+    TtsProvider.GEMINI_FLASH.id -> TtsCatalog.geminiFlashVoices.map { it.id to it.name }
+    TtsProvider.GEMINI_LITE.id -> TtsCatalog.geminiLiteVoices.map { it.id to it.name }
+    TtsProvider.AZURE.id -> TtsCatalog.azureVoices.map { it.id to it.name }
     else -> emptyList()
 }
+
+/** Der gelbe Stern der Favoriten. */
+private val FavoritGelb = Color(0xFFFFC107)
 
 /**
  * **B-08 — Einstellungen.** Sieben Abschnitte in der Reihenfolge des Entwurfs:
@@ -128,6 +136,18 @@ fun Einstellungen(modell: AppViewModel) {
     var effortLog by remember { mutableStateOf(einstellungen.effortLogbuch) }
     var stimmeGoogle by remember { mutableStateOf(einstellungen.stimmeGoogle) }
     var stimmeEdge by remember { mutableStateOf(einstellungen.stimmeEdge) }
+    var stimmeGeminiFlash by remember { mutableStateOf(einstellungen.stimmeGeminiFlash) }
+    var stimmeGeminiLite by remember { mutableStateOf(einstellungen.stimmeGeminiLite) }
+    var stimmeAzure by remember { mutableStateOf(einstellungen.stimmeAzure) }
+    var geminiWahl by remember { mutableStateOf(einstellungen.geminiTtsSchluesselWahl) }
+    var geminiChirp by remember { mutableStateOf(einstellungen.geminiTtsChirpRueckfall) }
+    var geminiFehlt by remember { mutableStateOf(einstellungen.geminiTtsKeyFrei.isBlank() && einstellungen.geminiTtsKeyBezahlt.isBlank()) }
+    var azureFehlt by remember { mutableStateOf(einstellungen.azureTtsKey.isBlank()) }
+    var favoriten by remember { mutableStateOf(einstellungen.stimmFavoriten) }
+    val favoritUmschalten: (String) -> Unit = { id ->
+        favoriten = if (id in favoriten) favoriten - id else favoriten + id
+        einstellungen.stimmFavoriten = favoriten
+    }
     var morgensAn by remember { mutableStateOf(einstellungen.erinnerungMorgensAn) }
     var abendsAn by remember { mutableStateOf(einstellungen.erinnerungAbendsAn) }
     // Auch die Uhrzeiten liegen im Zustand — sonst zeigte die Zeile nach dem Einstellen
@@ -242,6 +262,8 @@ fun Einstellungen(modell: AppViewModel) {
                         gewaehlt = stimmeGoogle,
                         mono = true,
                         modifier = Modifier.padding(top = 16.dp),
+                        favoriten = favoriten,
+                        beiFavorit = favoritUmschalten,
                     ) { stimmeGoogle = it; einstellungen.stimmeGoogle = it }
 
                     TtsProvider.EDGE.id -> Auswahl(
@@ -250,9 +272,97 @@ fun Einstellungen(modell: AppViewModel) {
                         gewaehlt = stimmeEdge,
                         mono = true,
                         modifier = Modifier.padding(top = 16.dp),
+                        favoriten = favoriten,
+                        beiFavorit = favoritUmschalten,
                     ) { stimmeEdge = it; einstellungen.stimmeEdge = it }
 
-                    else -> EigeneStimmen(modell)
+                    TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id -> Column {
+                        val flash = anbieter == TtsProvider.GEMINI_FLASH.id
+                        if (geminiFehlt) {
+                            Text(
+                                "Trag mindestens einen Gemini-Schlüssel ein (aistudio.google.com → API-Schlüssel).",
+                                style = schriften.erklaerung,
+                                color = farben.warnung,
+                                modifier = Modifier.padding(top = 14.dp),
+                            )
+                        }
+                        Schluessel("Gemini-Stimme: Schlüssel kostenlos", "Projekt ohne Abrechnung", einstellungen.geminiTtsKeyFrei) {
+                            einstellungen.geminiTtsKeyFrei = it.trim()
+                            geminiFehlt = einstellungen.geminiTtsKeyFrei.isBlank() && einstellungen.geminiTtsKeyBezahlt.isBlank()
+                        }
+                        Schluessel("Gemini-Stimme: Schlüssel bezahlt", "Projekt mit Abrechnung", einstellungen.geminiTtsKeyBezahlt) {
+                            einstellungen.geminiTtsKeyBezahlt = it.trim()
+                            geminiFehlt = einstellungen.geminiTtsKeyFrei.isBlank() && einstellungen.geminiTtsKeyBezahlt.isBlank()
+                        }
+                        Auswahl(
+                            beschriftung = "Welcher Schlüssel",
+                            eintraege = TtsCatalog.GEMINI_TTS_SCHLUESSEL_WAHLEN,
+                            gewaehlt = geminiWahl,
+                            modifier = Modifier.padding(top = 16.dp),
+                        ) { geminiWahl = it; einstellungen.geminiTtsSchluesselWahl = it }
+                        Column(Modifier.padding(top = 14.dp)) {
+                            Schalterzeile("Rückfall auf Chirp 3 HD", geminiChirp) {
+                                geminiChirp = it
+                                einstellungen.geminiTtsChirpRueckfall = it
+                            }
+                        }
+                        Text(
+                            "Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest die App mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel." +
+                                if (geminiChirp && einstellungen.googleTtsSchluessel.isBlank()) " Dafür braucht es den Google-Cloud-Schlüssel unter „Zugänge“." else "",
+                            style = schriften.erklaerung,
+                            color = farben.gedaempft,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                        Auswahl(
+                            beschriftung = "Stimme",
+                            eintraege = stimmenVon(anbieter),
+                            gewaehlt = if (flash) stimmeGeminiFlash else stimmeGeminiLite,
+                            modifier = Modifier.padding(top = 16.dp),
+                            favoriten = favoriten,
+                            beiFavorit = favoritUmschalten,
+                        ) {
+                            if (flash) {
+                                stimmeGeminiFlash = it; einstellungen.stimmeGeminiFlash = it
+                            } else {
+                                stimmeGeminiLite = it; einstellungen.stimmeGeminiLite = it
+                            }
+                        }
+                    }
+
+                    TtsProvider.AZURE.id -> Column {
+                        if (azureFehlt) {
+                            Text(
+                                "Trag den Azure-Speech-Schlüssel ein (Azure-Portal → Speech-Ressource → Schlüssel und Endpunkt).",
+                                style = schriften.erklaerung,
+                                color = farben.warnung,
+                                modifier = Modifier.padding(top = 14.dp),
+                            )
+                        }
+                        Schluessel("Azure-Speech-Schlüssel (KEY 1)", "Azure Neural", einstellungen.azureTtsKey) {
+                            einstellungen.azureTtsKey = it.trim()
+                            azureFehlt = einstellungen.azureTtsKey.isBlank()
+                        }
+                        Schluessel("Azure-Region (z. B. westeurope)", "Region", einstellungen.azureTtsRegion) {
+                            einstellungen.azureTtsRegion = it.trim()
+                        }
+                        Auswahl(
+                            beschriftung = "Stimme",
+                            eintraege = stimmenVon(anbieter),
+                            gewaehlt = stimmeAzure,
+                            modifier = Modifier.padding(top = 16.dp),
+                            favoriten = favoriten,
+                            beiFavorit = favoritUmschalten,
+                        ) { stimmeAzure = it; einstellungen.stimmeAzure = it }
+                        Text(
+                            "HD-Stimmen brauchen die Stufe S0 und laufen nicht in jeder Region.",
+                            style = schriften.erklaerung,
+                            color = farben.gedaempft,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
+
+
+                    else -> EigeneStimmen(modell, favoriten, favoritUmschalten)
                 }
 
                 // Sprechgeschwindigkeit 0,70 bis 1,30 in Schritten von 0,05.
@@ -715,6 +825,8 @@ private fun Auswahl(
     modifier: Modifier = Modifier,
     platzhalter: String = "—",
     mono: Boolean = false,
+    favoriten: Set<String>? = null,
+    beiFavorit: (String) -> Unit = {},
     beiWahl: (String) -> Unit,
 ) {
     val farben = LocalFarben.current
@@ -776,7 +888,21 @@ private fun Auswahl(
                 border = androidx.compose.foundation.BorderStroke(1.dp, farben.rand),
                 modifier = Modifier.heightIn(max = 360.dp),
             ) {
-                eintraege.forEach { (wert, anzeige) ->
+                // Favoriten stehen oben; langes Drücken oder der Stern markiert/entfernt sie.
+                if (favoriten != null) {
+                    eintraege.sortedByDescending { it.first in favoriten }.forEach { (wert, anzeige) ->
+                        FavoritEintrag(
+                            anzeige = anzeige,
+                            stil = stil,
+                            aktiv = wert == gewaehlt,
+                            favorit = wert in favoriten,
+                            beiFavorit = { beiFavorit(wert) },
+                        ) {
+                            offen = false
+                            beiWahl(wert)
+                        }
+                    }
+                } else eintraege.forEach { (wert, anzeige) ->
                     val aktiv = wert == gewaehlt
                     DropdownMenuItem(
                         text = {
@@ -809,6 +935,46 @@ private fun Auswahl(
     }
 }
 
+/** Ein Listeneintrag mit Stern: Tippen wählt, langes Drücken oder Tippen auf den Stern schaltet den Favoriten. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FavoritEintrag(
+    anzeige: String,
+    stil: androidx.compose.ui.text.TextStyle,
+    aktiv: Boolean,
+    favorit: Boolean,
+    beiFavorit: () -> Unit,
+    beiWahl: () -> Unit,
+) {
+    val farben = LocalFarben.current
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .combinedClickable(onLongClick = beiFavorit, onClick = beiWahl)
+            .padding(start = 12.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (aktiv) {
+            Icon(Symbole.KastenVoll, contentDescription = "gewählt", tint = farben.aktion, modifier = Modifier.size(20.dp))
+        } else {
+            Box(Modifier.size(20.dp))
+        }
+        Text(
+            text = anzeige,
+            style = stil,
+            color = if (aktiv) farben.aktion else farben.text,
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
+        )
+        Box(
+            Modifier.size(44.dp).clip(RoundedCornerShape(percent = 50)).clickable(onClick = beiFavorit),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("★", style = stil, color = if (favorit) FavoritGelb else farben.blass)
+        }
+    }
+}
+
 /**
  * **F-23 Schritt 3 — „Meine Stimme".**
  *
@@ -820,7 +986,7 @@ private fun Auswahl(
  * registrierte Stimme steht damit sofort zur Wahl.
  */
 @Composable
-private fun EigeneStimmen(modell: AppViewModel) {
+private fun EigeneStimmen(modell: AppViewModel, favoriten: Set<String>, beiFavorit: (String) -> Unit) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
 
@@ -841,6 +1007,8 @@ private fun EigeneStimmen(modell: AppViewModel) {
                 stimmen.isEmpty() -> "noch keine Stimme aufgenommen"
                 else -> "keine gewählt"
             },
+            favoriten = favoriten,
+            beiFavorit = beiFavorit,
             beiWahl = modell::waehleStimme,
         )
 

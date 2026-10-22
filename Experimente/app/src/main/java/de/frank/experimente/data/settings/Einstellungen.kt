@@ -96,6 +96,52 @@ class Einstellungen(ctx: Context) {
         get() = p.getString(TTS_VOICE_QWEN, "")!!
         set(v) { p.edit().putString(TTS_VOICE_QWEN, v).commit() }
 
+    /** Gemini-3.8-Stimmen, Kennung „gemini_flash:Leda“ bzw. „gemini_lite:Leda“. */
+    var stimmeGeminiFlash: String
+        get() = p.getString(TTS_VOICE_GEMINI_FLASH, de.frank.experimente.tts.TtsCatalog.DEFAULT_GEMINI_FLASH_VOICE)!!
+        set(v) { p.edit().putString(TTS_VOICE_GEMINI_FLASH, v).commit() }
+
+    var stimmeGeminiLite: String
+        get() = p.getString(TTS_VOICE_GEMINI_LITE, de.frank.experimente.tts.TtsCatalog.DEFAULT_GEMINI_LITE_VOICE)!!
+        set(v) { p.edit().putString(TTS_VOICE_GEMINI_LITE, v).commit() }
+
+    /** Azure-Stimme mit Kennung „azure:de-DE-KatjaNeural“. */
+    var stimmeAzure: String
+        get() = p.getString(TTS_VOICE_AZURE, de.frank.experimente.tts.TtsCatalog.DEFAULT_AZURE_VOICE)!!
+        set(v) { p.edit().putString(TTS_VOICE_AZURE, v).commit() }
+
+    /** Eigene Schlüssel nur für die Gemini-Stimme: AI-Studio-Projekt ohne bzw. mit Abrechnung. */
+    var geminiTtsKeyFrei: String
+        get() = p.getString(GEMINI_TTS_KEY_FREI, "")!!
+        set(v) { p.edit().putString(GEMINI_TTS_KEY_FREI, v).commit() }
+
+    var geminiTtsKeyBezahlt: String
+        get() = p.getString(GEMINI_TTS_KEY_BEZAHLT, "")!!
+        set(v) { p.edit().putString(GEMINI_TTS_KEY_BEZAHLT, v).commit() }
+
+    /** `frei_dann_bezahlt` (Standard), `nur_frei` oder `nur_bezahlt`. */
+    var geminiTtsSchluesselWahl: String
+        get() = p.getString(GEMINI_TTS_WAHL, de.frank.experimente.tts.TtsCatalog.GEMINI_TTS_FREI_DANN_BEZAHLT)!!
+        set(v) { p.edit().putString(GEMINI_TTS_WAHL, v).commit() }
+
+    /** Scheitert der kostenlose Gemini-Schlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels. */
+    var geminiTtsChirpRueckfall: Boolean
+        get() = p.getBoolean(GEMINI_TTS_CHIRP, false)
+        set(v) { p.edit().putBoolean(GEMINI_TTS_CHIRP, v).commit() }
+
+    var azureTtsKey: String
+        get() = p.getString(AZURE_TTS_KEY, "")!!
+        set(v) { p.edit().putString(AZURE_TTS_KEY, v).commit() }
+
+    var azureTtsRegion: String
+        get() = p.getString(AZURE_TTS_REGION, de.frank.experimente.tts.TtsCatalog.DEFAULT_AZURE_REGION)!!
+        set(v) { p.edit().putString(AZURE_TTS_REGION, v).commit() }
+
+    /** Favorisierte Stimmen (Kennungen); sie stehen in jeder Stimmliste oben. */
+    var stimmFavoriten: Set<String>
+        get() = p.getStringSet(STIMM_FAVORITEN, emptySet())!!.toSet()
+        set(v) { p.edit().putStringSet(STIMM_FAVORITEN, v).commit() }
+
     var sprechtempo: Float
         get() = p.getFloat(TTS_RATE, 1.0f)
         set(v) { p.edit().putFloat(TTS_RATE, v).commit() }
@@ -259,6 +305,16 @@ class Einstellungen(ctx: Context) {
         const val TTS_VOICE_EDGE = "tts_voice_edge"
         const val TTS_VOICE_QWEN = "tts_voice_qwen"
         const val TTS_RATE = "tts_rate"
+        const val TTS_VOICE_GEMINI_FLASH = "tts_voice_gemini_flash"
+        const val TTS_VOICE_GEMINI_LITE = "tts_voice_gemini_lite"
+        const val TTS_VOICE_AZURE = "tts_voice_azure"
+        const val GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
+        const val GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
+        const val GEMINI_TTS_WAHL = "gemini_tts_schluessel_wahl"
+        const val GEMINI_TTS_CHIRP = "gemini_tts_chirp_rueckfall"
+        const val AZURE_TTS_KEY = "azure_tts_key"
+        const val AZURE_TTS_REGION = "azure_tts_region"
+        const val STIMM_FAVORITEN = "stimm_favoriten"
         const val GROQ_API_KEY = "groq_api_key"
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
         const val WHISPER_MODEL = "whisper_model"
