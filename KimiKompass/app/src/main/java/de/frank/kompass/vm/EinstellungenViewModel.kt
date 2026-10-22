@@ -51,6 +51,8 @@ data class EinstellungenZustand(
     val alibabaSchluessel: String = "",
     val groqSchluessel: String = "",
     val groqModell: String = "",
+    val woerterbuchAn: Boolean = true,
+    val woerterbuch: String = "",
     val filterSchichten: List<Boolean> = listOf(true, true, true, true),
     val modellId: String = KiModell.standard.apiId,
     val modellLabel: String = KiModell.standard.label,
@@ -145,6 +147,8 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         alibabaSchluessel = store.alibabaSchluessel,
         groqSchluessel = store.groqSchluessel,
         groqModell = store.groqModell,
+        woerterbuchAn = store.woerterbuchAn,
+        woerterbuch = store.woerterbuch,
         filterSchichten = (1..4).map { store.filterSchichtAktiv(it) },
         modellId = store.modellId,
         modellLabel = store.modellLabel,
@@ -245,6 +249,16 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
 
     fun setzeGroqModell(wert: String) {
         store.groqModell = wert
+        frischLesen()
+    }
+
+    fun schalteWoerterbuch(an: Boolean) {
+        store.woerterbuchAn = an
+        frischLesen()
+    }
+
+    fun setzeWoerterbuch(wert: String) {
+        store.woerterbuch = wert
         frischLesen()
     }
 
