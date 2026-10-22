@@ -7,6 +7,7 @@ import android.webkit.WebSettings
 import de.frank.jarvis.observability.Logbuch
 import java.io.File
 import java.time.Instant
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -41,7 +42,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             name = "anthropic_guthaben",
             titel = "Anthropic-Guthaben lesen",
             beschreibung = "Jarvis: Franks Restguthaben der Anthropic-API (Claude Console, Organisationscredits): übrig, gewährt, verbraucht und Verfallsdatum, mit Stand der Abfrage. " +
-                "Für „Wie viel Anthropic-Guthaben habe ich noch?“, „Was hat Claude diesen Monat gekostet?“. Holt höchstens alle 15 Minuten frisch.",
+                "Für „Wie viel Anthropic-Guthaben habe ich noch?“, „Wie viel von meinen Claude-Credits ist verbraucht?“. Holt höchstens alle 15 Minuten frisch.",
             schema = schema("frisch" to schalter("true = jetzt neu bei Anthropic abfragen statt des Stands der letzten 15 Minuten.")),
             nurLesen = true,
         ) { a ->
@@ -68,7 +69,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         private fun eur(usd: Double): String = kurs?.let { " (≈ ${betrag(usd * it)} €)" } ?: ""
 
         private fun verfallText(): String = runCatching {
-            DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN).format(Instant.parse(verfaellt).atZone(ZoneId.systemDefault()))
+            DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN).format(OffsetDateTime.parse(verfaellt).atZoneSameInstant(ZoneId.systemDefault()))
         }.getOrDefault("")
 
         /** Die Zeile für die Einstellungen, z. B. „Übrig: 74,00 $ (≈ 63,50 €) von 100,00 $“. */
@@ -116,12 +117,26 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         /** true, wenn Frank in Jarvis bei der Claude Console angemeldet ist (Sitzungs-Cookie vorhanden). */
         fun angemeldet(): Boolean = cookies().contains("sessionKey=")
 
-        /** Meldet Jarvis bei der Console ab: alle Cookies weg, gespeicherter Stand weg. */
-        fun abmelden(context: Context) {
+        /** Meldet Jarvis bei der Console ab: alle Cookies weg, gespeicherter Stand weg. Wartet eine laufende Abfrage ab. */
+        suspend fun abmelden(context: Context) = withContext(Dispatchers.IO) { sperre.withLock { abmeldenOhneSperre(context.applicationContext) } }
+
+        private fun abmeldenOhneSperre(context: Context) {
             CookieManager.getInstance().removeAllCookies(null)
             CookieManager.getInstance().flush()
             datei(context).delete()
         }
+
+        /** Sitzung bei der Console abgelaufen: Cookies löschen, damit die Einstellungen wieder „Anmelden“ anbieten. */
+        private class SitzungAbgelaufen(meldung: String) : IllegalStateException(meldung)
+
+        /** ISO-Zeitpunkt mit „Z“ oder Versatz (auch mit Mikrosekunden) als Instant; null, wenn unlesbar. */
+        private fun zeitpunkt(text: String): Instant? =
+            runCatching { OffsetDateTime.parse(text).toInstant() }.getOrNull() ?: runCatching { Instant.parse(text) }.getOrNull()
+
+        /** Betrag aus einem Objekt `{credits: {amount_minor, exponent}}`, sonst aus dem Cent-Feld [cent]. */
+        private fun betragAus(o: JSONObject?, cent: Long): Double =
+            o?.optJSONObject("credits")?.takeIf { it.has("amount_minor") }?.let { it.getLong("amount_minor") / Math.pow(10.0, it.optInt("exponent", 2).toDouble()) }
+                ?: (cent / 100.0)
 
         /** Der zuletzt gespeicherte Stand, ohne Netz; null, wenn es keinen gibt. */
         fun gespeichert(context: Context): Stand? = runCatching {
@@ -146,19 +161,25 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     val ua = runCatching { WebSettings.getDefaultUserAgent(app) }.getOrDefault("Mozilla/5.0")
                     val org = organisation(app, ua)
                     val c = holen("$CONSOLE/api/organizations/$org/prepaid/credits", ua) as JSONObject
-                    val rest = c.optJSONObject("balance")?.optJSONObject("credits")?.let { it.getLong("amount_minor") / Math.pow(10.0, it.optInt("exponent", 2).toDouble()) }
-                        ?: (c.getLong("amount") / 100.0)
+                    val rest = betragAus(c.optJSONObject("balance"), c.getLong("amount"))
+                    // Nur gültige Tranchen mit Rest zählen; abgelaufene oder aufgebrauchte Vormonate verfälschen sonst
+                    // „gewährt“, „verbraucht“ und das Verfallsdatum.
+                    val jetztI = Instant.now()
                     var gewaehrt = 0.0
-                    var verfaellt = ""
+                    var verfaelltI: Instant? = null
                     listOf("tranches", "promo_tranches").forEach { feld ->
                         val t = c.optJSONArray(feld) ?: return@forEach
                         for (i in 0 until t.length()) {
                             val p = t.getJSONObject(i)
-                            gewaehrt += p.optLong("granted_amount_minor_units") / 100.0
-                            val ende = p.optString("expires_at").takeIf { it.isNotBlank() && it != "null" } ?: continue
-                            if (verfaellt.isEmpty() || ende < verfaellt) verfaellt = ende
+                            val ende = p.optString("expires_at").takeIf { it.isNotBlank() && it != "null" }?.let(::zeitpunkt)
+                            if (ende != null && ende <= jetztI) continue
+                            if (betragAus(p.optJSONObject("remaining"), p.optLong("remaining_amount_minor_units")) <= 0.0) continue
+                            gewaehrt += betragAus(p.optJSONObject("granted"), p.optLong("granted_amount_minor_units"))
+                            if (ende != null && (verfaelltI == null || ende < verfaelltI)) verfaelltI = ende
                         }
                     }
+                    val verfaellt = verfaelltI?.toString().orEmpty()
+                    if (!angemeldet()) throw SitzungAbgelaufen("Inzwischen abgemeldet.")
                     val (kurs, kursDatum) = kurs(app)
                     val jetzt = System.currentTimeMillis()
                     val j = JSONObject().put("org", org).put("rest", rest).put("verfaellt", verfaellt).put("geholt", jetzt).put("kursDatum", kursDatum)
@@ -166,6 +187,9 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     kurs?.let { j.put("kurs", it) }
                     datei(app).writeText(j.toString())
                     Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt)
+                } catch (f: SitzungAbgelaufen) {
+                    abmeldenOhneSperre(app)
+                    Stand(null, null, "", null, "", 0, f.message)
                 } catch (f: Exception) { // no-cancellation-rethrow
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Anthropic-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
@@ -194,8 +218,13 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     .header("Accept", "application/json").header("Referer", "$CONSOLE/dashboard").build(),
             ).execute().use { a ->
                 val text = a.body?.string().orEmpty()
+                val json = text.trimStart().let { it.startsWith("{") || it.startsWith("[") }
+                // 401 oder ein 403 mit JSON-Antwort kommt von der Console selbst: Sitzung weg. Ein 403 als HTML-Seite ist die
+                // Bot-Abwehr (Cloudflare) vor der Console; neu anmelden hilft dort nicht.
+                if (a.code == 401 || (a.code == 403 && json)) throw SitzungAbgelaufen(
+                    "Die Anmeldung bei der Claude Console ist abgelaufen (${a.code}). Bitte unter Einstellungen → Jarvis neu anmelden.")
                 if (!a.isSuccessful) throw IllegalStateException(when (a.code) {
-                    401, 403 -> "Die Anmeldung bei der Claude Console ist abgelaufen (${a.code}). Bitte unter Einstellungen → Jarvis neu anmelden."
+                    403 -> "Die Bot-Abwehr der Claude Console lässt die Abfrage vom Handy gerade nicht durch (403); neu anmelden hilft hier nicht."
                     429 -> "Anthropic bremst gerade (429); bitte gleich noch einmal versuchen."
                     else -> "Die Claude Console antwortet mit Fehler ${a.code}."
                 })

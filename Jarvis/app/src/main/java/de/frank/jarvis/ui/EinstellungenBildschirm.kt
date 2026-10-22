@@ -605,21 +605,45 @@ private fun ConsoleAnmeldung(onFertig: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     android.webkit.CookieManager.getInstance().setAcceptCookie(true)
-                    android.webkit.WebView(ctx).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-                        webViewClient = object : android.webkit.WebViewClient() {
-                            override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
-                                android.webkit.CookieManager.getInstance().flush()
-                                val u = url.orEmpty()
-                                if (de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() && u.startsWith("https://platform.claude.com") && !u.contains("/login")) onFertig()
+                    var fertig = false
+                    val rahmen = android.widget.FrameLayout(ctx)
+                    fun pruefen(u: String) {
+                        android.webkit.CookieManager.getInstance().flush()
+                        if (!fertig && de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() && u.startsWith("https://platform.claude.com") && !u.contains("/login")) { fertig = true; onFertig() }
+                    }
+                    fun einrichten(w: android.webkit.WebView) {
+                        w.settings.javaScriptEnabled = true
+                        w.settings.domStorageEnabled = true
+                        // Die Google-Anmeldung öffnet ein Popup und meldet das Ergebnis per postMessage an die Console zurück;
+                        // ohne eigenes Fenster lädt sie im selben WebView und bleibt dort weiß stehen.
+                        w.settings.setSupportMultipleWindows(true)
+                        w.settings.javaScriptCanOpenWindowsAutomatically = true
+                        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(w, true)
+                        w.webViewClient = object : android.webkit.WebViewClient() {
+                            override fun onPageFinished(view: android.webkit.WebView?, url: String?) = pruefen(url.orEmpty())
+                            // Die Console wechselt nach der Anmeldung per Client-Navigation, ohne neue Seite.
+                            override fun doUpdateVisitedHistory(view: android.webkit.WebView?, url: String?, isReload: Boolean) = pruefen(url.orEmpty())
+                        }
+                        w.webChromeClient = object : android.webkit.WebChromeClient() {
+                            override fun onCreateWindow(view: android.webkit.WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
+                                val popup = android.webkit.WebView(ctx).also(::einrichten)
+                                rahmen.addView(popup, android.widget.FrameLayout.LayoutParams(-1, -1))
+                                (resultMsg?.obj as? android.webkit.WebView.WebViewTransport)?.webView = popup
+                                resultMsg?.sendToTarget()
+                                return true
+                            }
+                            override fun onCloseWindow(window: android.webkit.WebView?) {
+                                window?.let { rahmen.removeView(it); it.destroy() }
+                                (rahmen.getChildAt(0) as? android.webkit.WebView)?.url?.let(::pruefen)
                             }
                         }
-                        loadUrl(de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.LOGIN_URL)
                     }
+                    val haupt = android.webkit.WebView(ctx).also(::einrichten)
+                    rahmen.addView(haupt, android.widget.FrameLayout.LayoutParams(-1, -1))
+                    haupt.loadUrl(de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.LOGIN_URL)
+                    rahmen
                 },
-                onRelease = { it.destroy() },
+                onRelease = { r -> (0 until r.childCount).mapNotNull { r.getChildAt(it) as? android.webkit.WebView }.forEach { it.destroy() }; r.removeAllViews() },
             )
         }
     }

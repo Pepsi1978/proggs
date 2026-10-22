@@ -96,6 +96,8 @@ class Einstellungen private constructor(context: Context) {
     }
 
     init {
+        // Freibetrag der früheren Guthaben-Abfrage (bis 1.8.221); den gewährten Betrag nennt jetzt Anthropic selbst.
+        if (roh.contains("anthropic_freibetrag")) roh.edit().remove("anthropic_freibetrag").apply()
         // Gestört: Zugangsdaten, die eine ältere Fassung im Klartext-Ersatz abgelegt hat, für diese Sitzung übernehmen und
         // dort entfernen. Das Plugin-Geheimnis bleibt liegen und gilt weiter, damit die eingetragene Adresse nicht wechselt.
         if (gestoert) {

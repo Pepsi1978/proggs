@@ -2480,25 +2480,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             if (anthropicGuthaben == null) anthropicGuthaben = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.gespeichert(app) }
             anthropicGuthaben = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen)
+            // Erst hier (nicht beim Aufbau) gelesen: CookieManager lädt den WebView-Unterbau.
+            anthropicConsoleAngemeldet = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() }
             anthropicGuthabenLaedt = false
         }
     }
 
     /** true, wenn Jarvis bei der Claude Console angemeldet ist (für das Guthaben). */
-    var anthropicConsoleAngemeldet by mutableStateOf(de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet()); private set
+    var anthropicConsoleAngemeldet by mutableStateOf(false); private set
 
     /** Nach dem eingebetteten Anmelde-Browser: Sitzung prüfen und das Guthaben frisch holen. */
     fun anthropicConsoleAnmeldungPruefen() {
-        anthropicConsoleAngemeldet = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet()
-        meldung = if (anthropicConsoleAngemeldet) "Bei der Claude Console angemeldet." else "Nicht angemeldet."
-        if (anthropicConsoleAngemeldet) { anthropicGuthaben = null; anthropicGuthabenAbfragen(erzwingen = true) }
+        if (!de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet()) return
+        anthropicConsoleAngemeldet = true
+        meldung = "Bei der Claude Console angemeldet."
+        anthropicGuthaben = null
+        anthropicGuthabenAbfragen(erzwingen = true)
     }
 
     fun anthropicConsoleAbmelden() {
-        de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.abmelden(getApplication())
-        anthropicConsoleAngemeldet = false
-        anthropicGuthaben = null
-        meldung = "Bei der Claude Console abgemeldet."
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.abmelden(app)
+            anthropicConsoleAngemeldet = false
+            anthropicGuthaben = null
+            meldung = "Bei der Claude Console abgemeldet."
+        }
     }
 
     fun setzeDenkstufe(stufe: ReasoningEffort) { einstellungen.denkstufe = stufe }

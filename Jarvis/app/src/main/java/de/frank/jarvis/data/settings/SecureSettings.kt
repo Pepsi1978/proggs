@@ -55,6 +55,8 @@ class SecureSettings(context: Context) : Closeable {
         // Schwach gehalten: Instanzen ohne close() (etwa je Vorlesen) bleiben so nicht ewig am Speicher hängen.
         aufgebaut = true
         if (preferences != null) anmelden(spaet = false)
+        // Admin-Schlüssel der früheren Guthaben-Abfrage (bis 1.8.221) nicht weiter auf dem Gerät lassen.
+        if (preferences?.contains("anthropic_admin_key") == true) preferences?.edit()?.remove("anthropic_admin_key")?.apply()
     }
 
     /**
