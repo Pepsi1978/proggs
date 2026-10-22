@@ -382,7 +382,8 @@ namespace VoiceAgent
                 : null;
             _tts = new GoogleTtsClient(Config.ReadApiKey("google"));
             _stt = new GroqWhisperClient(Config.ReadApiKey("groq"), _settings.SttModel, _settings.SttLanguage,
-                                         url: null, voicedRmsThreshold: _settings.SilenceThreshold);
+                                         url: null, voicedRmsThreshold: _settings.SilenceThreshold,
+                                         useVocabulary: _settings.PersonalVocabularyEnabled);
         }
 
         /// <summary>

@@ -375,6 +375,15 @@
                         <Button x:Name="PreviewButton" Content="Probehören" HorizontalAlignment="Left"
                                 Margin="0,8,0,0" Padding="14,6" Click="Preview_Click"/>
 
+                        <TextBlock Text="Spracherkennung (Groq Whisper)" Style="{StaticResource Section}"/>
+                        <TextBlock Text="Whisper-Modell" Style="{StaticResource Label}"/>
+                        <ComboBox x:Name="SttModelBox" MaxWidth="420" HorizontalAlignment="Left"/>
+                        <TextBlock Text="Large V3 ist genauer, muss aber bei Groq für deine Organisation freigeschaltet sein — sonst nimmt die App automatisch Turbo."
+                                   Style="{StaticResource Label}"/>
+                        <CheckBox x:Name="PersonalVocabularyBox" Margin="0,8,0,2"
+                                  Content="Persönliches Wörterbuch"/>
+                        <TextBlock x:Name="PersonalVocabularyHint" Style="{StaticResource Label}"/>
+
                         <TextBlock Text="Spracherkennung (Empfindlichkeit)" Style="{StaticResource Section}"/>
                         <CheckBox x:Name="SemanticEndpointBox" Margin="0,4,0,2"
                                   Content="Gedankenpausen abwarten (semantischer Endpunkt-Check)"/>

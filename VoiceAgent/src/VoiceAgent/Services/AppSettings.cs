@@ -53,6 +53,10 @@ namespace VoiceAgent.Services
         // ----- Spracheingabe (STT) -----
         public string SttModel { get; set; } = DefaultSttModel;
         public string SttLanguage { get; set; } = DefaultSttLanguage;
+        // Persoenliches Woerterbuch als Whisper-prompt. Liest die TVO-Datei
+        // ~/SK/VoiceOverlays/personal-vocabulary.txt (fehlt sie: kein Prompt). Eigener Schalter,
+        // unabhaengig von TVOs vocabulary-enabled.txt.
+        public bool PersonalVocabularyEnabled { get; set; } = true;
 
         // ----- Mikrofon / Voice-Loop -----
         public bool MicEnabled { get; set; } = true;

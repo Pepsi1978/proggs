@@ -95,6 +95,16 @@ namespace VoiceAgent.Views
                 VoiceBox.SelectedValue = _settings.TtsVoiceName;
                 if (VoiceBox.SelectedValue == null) VoiceBox.SelectedValue = GoogleTtsVoices.DefaultVoiceName;
 
+                SttModelBox.Items.Add(new ComboBoxItem { Content = "Large V3 Turbo (schnell)", Tag = GroqWhisperClient.ModelTurbo });
+                SttModelBox.Items.Add(new ComboBoxItem { Content = "Large V3 (genauer)", Tag = GroqWhisperClient.ModelLargeV3 });
+                string curStt = GroqWhisperClient.NormalizeModel(_settings.SttModel);
+                foreach (ComboBoxItem it in SttModelBox.Items)
+                    if ((string)it.Tag == curStt) { SttModelBox.SelectedItem = it; break; }
+                PersonalVocabularyBox.IsChecked = _settings.PersonalVocabularyEnabled;
+                PersonalVocabularyHint.Text = System.IO.File.Exists(GroqWhisperClient.VocabularyPath)
+                    ? $"Begriffe aus {GroqWhisperClient.VocabularyPath} (dieselbe Liste wie im Voice-Overlay)."
+                    : $"Datei {GroqWhisperClient.VocabularyPath} fehlt — ohne sie wird kein Wörterbuch gesendet.";
+
                 SemanticEndpointBox.IsChecked = _settings.SemanticEndpointing;
                 IntentDetectionBox.IsChecked = _settings.IntentDetection;
                 SilenceThresholdSlider.Value = _settings.SilenceThreshold;
@@ -231,6 +241,8 @@ namespace VoiceAgent.Views
                 });
                 _settings.TtsVoiceName = VoiceBox.SelectedValue as string ?? GoogleTtsVoices.DefaultVoiceName;
 
+                _settings.SttModel = (SttModelBox.SelectedItem as ComboBoxItem)?.Tag as string ?? GroqWhisperClient.ModelTurbo;
+                _settings.PersonalVocabularyEnabled = PersonalVocabularyBox.IsChecked == true;
                 _settings.SemanticEndpointing = SemanticEndpointBox.IsChecked == true;
                 _settings.IntentDetection = IntentDetectionBox.IsChecked == true;
                 _settings.SilenceThreshold = Math.Round(SilenceThresholdSlider.Value, 3);

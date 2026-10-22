@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -50,6 +51,26 @@ namespace VoiceAgent.Services
         private readonly string _language;
         private readonly string _url;
         private readonly double _voicedRmsThreshold;   // gleiche Schwelle wie die Stille-Erkennung (Schicht 1)
+        private readonly bool _useVocabulary;          // persoenliches Woerterbuch als Whisper-prompt
+
+        // ----- Whisper-Modellwahl (Vorbild TVO GroqModelSetting) -----
+        public const string ModelTurbo = "whisper-large-v3-turbo";
+        public const string ModelLargeV3 = "whisper-large-v3";
+        // large-v3 muss bei Groq pro Organisation freigeschaltet sein. Nach einem 403 "blocked"
+        // 30 Min. direkt Turbo nehmen statt jede Aussage doppelt hochzuladen (statisch: ueberlebt
+        // das Neubauen des Clients nach dem Speichern der Einstellungen).
+        private static DateTime _blockedUntilUtc = DateTime.MinValue;
+
+        // ----- Persoenliches Woerterbuch (Vorbild TVO PersonalVocabulary + BuildVocabularyPrompt) -----
+        // Gleiche Datei wie TVO/CVO auf diesem PC; der TVO-Schalter vocabulary-enabled.txt gilt hier
+        // bewusst NICHT — VoiceAgent hat einen eigenen Schalter in den Einstellungen.
+        public static string VocabularyPath => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "SK", "VoiceOverlays", "personal-vocabulary.txt");
+        private const int MaxVocabularyWords = 100;
+        // Whisper nimmt max. 224 Prompt-Tokens; 350 Zeichen bleiben auch bei Komposita sicher darunter.
+        private const int MaxPromptChars = 350;
+        private const string EchoMarker = "Begriffe";
 
         private static readonly HttpClient SharedHttp = new(new SocketsHttpHandler
         {
@@ -62,10 +83,11 @@ namespace VoiceAgent.Services
         private static readonly int[] DelaysMs = { 2000, 4000, 8000 };
 
         public GroqWhisperClient(string apiKey, string model, string language, string? url = null,
-                                 double voicedRmsThreshold = 0.015)
+                                 double voicedRmsThreshold = 0.015, bool useVocabulary = true)
         {
             _apiKey = apiKey;
-            _model = model;
+            _model = NormalizeModel(model);
+            _useVocabulary = useVocabulary;
             _language = language;
             _url = string.IsNullOrWhiteSpace(url) ? DefaultUrl : url!;
             _voicedRmsThreshold = voicedRmsThreshold > 0 ? voicedRmsThreshold : 0.015;
@@ -77,23 +99,117 @@ namespace VoiceAgent.Services
             byte[] fileBytes = await File.ReadAllBytesAsync(wavFilePath, ct).ConfigureAwait(false);
             // Sanity: ein gueltiges WAV ist groesser als der 44-Byte-Header — sonst kam kein Audio an.
             Probe.That(fileBytes.Length > 44, "Whisper: WAV verdaechtig klein (evtl. kein Audio aufgenommen)", new { bytes = fileBytes.Length });
-            return await TranscribeWithRetry(fileBytes, 0, ct).ConfigureAwait(false);
+
+            string model = _model == ModelLargeV3 && DateTime.UtcNow < _blockedUntilUtc ? ModelTurbo : _model;
+            string? prompt = _useVocabulary ? BuildVocabularyPrompt(LoadVocabulary()) : null;
+            try
+            {
+                return await TranscribeOnceAsync(fileBytes, model, prompt, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (model != ModelTurbo && IsBlockedError(ex))
+            {
+                // large-v3 ist fuer die Groq-Organisation nicht freigeschaltet: Aussage nicht
+                // verlieren, einmal mit Turbo wiederholen und 30 Min. direkt Turbo nehmen.
+                Log.Warn("Groq: Modell fuer die Organisation gesperrt — Rueckfall auf Turbo", ctx: new { model });
+                _blockedUntilUtc = DateTime.UtcNow.AddMinutes(30);
+                return await TranscribeOnceAsync(fileBytes, ModelTurbo, prompt, ct).ConfigureAwait(false);
+            }
         }
 
-        private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt, CancellationToken ct)
+        private async Task<string> TranscribeOnceAsync(byte[] fileBytes, string model, string? prompt, CancellationToken ct)
+        {
+            var text = await TranscribeWithRetry(fileBytes, 0, model, prompt, ct).ConfigureAwait(false);
+            // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus (TVO-Messung 21.10.2026).
+            // Dann einmal ohne Woerterbuch wiederholen statt die Aussage zu verlieren.
+            if (IsPromptEcho(text, prompt))
+            {
+                Log.Warn("Groq: Prompt-Echo erkannt — erneut ohne Woerterbuch", ctx: new { chars = text.Length });
+                text = await TranscribeWithRetry(fileBytes, 0, model, null, ct).ConfigureAwait(false);
+            }
+            return text;
+        }
+
+        /// <summary>Nur die beiden unterstuetzten Modelle; alles andere faellt auf Turbo zurueck.</summary>
+        public static string NormalizeModel(string? model)
+        {
+            var m = (model ?? string.Empty).Trim().ToLowerInvariant();
+            return m == ModelLargeV3 ? ModelLargeV3 : ModelTurbo;
+        }
+
+        /// <summary>Groq-Antwort "Modell fuer die Organisation gesperrt".</summary>
+        private static bool IsBlockedError(Exception ex) =>
+            ex.Message.Contains("model_permission_blocked_org", StringComparison.Ordinal)
+            || ex.Message.Contains("blocked at the organization level", StringComparison.Ordinal);
+
+        /// <summary>
+        /// Begriffe aus der TVO-Woerterbuchdatei (Parsing 1:1 wie TVO PersonalVocabulary, ohne dessen
+        /// Schalterdatei). Fehlt die Datei oder geht etwas schief: leer — nie die Aussage gefaehrden.
+        /// </summary>
+        private static string[] LoadVocabulary()
+        {
+            try
+            {
+                var path = VocabularyPath;
+                if (!File.Exists(path)) return Array.Empty<string>();
+                return File.ReadAllText(path)
+                    .Split(new[] { '\n', '\r', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(w => w.Trim())
+                    .Where(w => w.Length > 0 && !w.StartsWith('#'))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Take(MaxVocabularyWords)
+                    .ToArray();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Groq: Woerterbuch nicht lesbar — ohne Woerterbuch weiter", ctx: new { error = ex.Message });
+                return Array.Empty<string>();
+            }
+        }
+
+        /// <summary>Woerterbuch als natuerlicher Satz; Whisper uebernimmt daraus Schreibweisen.</summary>
+        private static string? BuildVocabularyPrompt(string[] words)
+        {
+            if (words.Length == 0) return null;
+            var sb = new StringBuilder(EchoMarker + ": ");
+            int added = 0;
+            foreach (var w in words)
+            {
+                // Zu lange Eintraege ueberspringen, nicht abbrechen: die uebrigen Begriffe zaehlen.
+                if (sb.Length + w.Length + 2 > MaxPromptChars) continue;
+                if (added++ > 0) sb.Append(", ");
+                sb.Append(w);
+            }
+            return added == 0 ? null : sb.Append('.').ToString();
+        }
+
+        private static bool IsPromptEcho(string text, string? prompt)
+        {
+            if (string.IsNullOrEmpty(prompt) || string.IsNullOrWhiteSpace(text)) return false;
+            static string Norm(string s) => new string(s.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
+            var t = Norm(text);
+            var p = Norm(prompt);
+            // Echo = Whisper wiederholt den Prompt ab seinem Anfang ("Begriffe: ..."), ganz oder teilweise.
+            var marker = Norm(EchoMarker);
+            return t.StartsWith(marker, StringComparison.Ordinal) && p.Contains(t[marker.Length..]);
+        }
+
+        private async Task<string> TranscribeWithRetry(byte[] fileBytes, int attempt, string model, string? prompt, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
                 throw new InvalidOperationException("Kein Groq-API-Schluessel hinterlegt (Einstellungen → API-Schluessel).");
 
             using var content = new MultipartFormDataContent
             {
-                { new StringContent(_model), "model" },
+                { new StringContent(model), "model" },
                 { new StringContent(_language), "language" },
                 // verbose_json statt text: liefert die Confidence-Felder fuers Gate, bei Groq ohne
                 // Mehrlatenz/-kosten (nur word-Timestamps kosten extra — die fordern wir NICHT an).
                 { new StringContent("verbose_json"), "response_format" },
                 { new StringContent("0"), "temperature" }
             };
+            // prompt nur mit eingeschaltetem persoenlichem Woerterbuch (Schreibweisen von Eigennamen).
+            if (prompt != null)
+                content.Add(new StringContent(prompt), "prompt");
             var fileContent = new ByteArrayContent(fileBytes);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
             content.Add(fileContent, "file", "recording.wav");
@@ -119,7 +235,7 @@ namespace VoiceAgent.Services
             {
                 Log.Warn($"Groq {statusCode} — Versuch {attempt + 1}/{MaxRetries}, warte {DelaysMs[attempt]}ms");
                 await Task.Delay(DelaysMs[attempt], ct).ConfigureAwait(false);
-                return await TranscribeWithRetry(fileBytes, attempt + 1, ct).ConfigureAwait(false);
+                return await TranscribeWithRetry(fileBytes, attempt + 1, model, prompt, ct).ConfigureAwait(false);
             }
 
             var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
