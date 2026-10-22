@@ -1,5 +1,6 @@
 package de.frank.cortex.ui.settings
-
+
+import de.frank.cortex.audio.WhisperWoerterbuch
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -85,6 +86,9 @@ fun SettingsScreen(
     val ttsUsage by TtsUsageStore.usage.collectAsState()
     LaunchedEffect(Unit) { TtsUsageStore.refreshMonth() }
     var recordingToneEnabled by remember { mutableStateOf(SettingsStore.recordingToneEnabled) }
+    var whisperModel by remember { mutableStateOf(SettingsStore.whisperModel) }
+    var vocabularyEnabled by remember { mutableStateOf(SettingsStore.personalVocabularyEnabled) }
+    var vocabulary by remember { mutableStateOf(SettingsStore.personalVocabulary) }
     var recordingToneVolume by remember { mutableStateOf(SettingsStore.recordingToneVolume) }
     var biometricLockEnabled by remember { mutableStateOf(SettingsStore.biometricLockEnabled) }
     var wgConfig by remember { mutableStateOf(SettingsStore.wgConfig) }
@@ -708,6 +712,96 @@ fun SettingsScreen(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Column {
+                // Spracheingabe (Groq Whisper): Modellwahl und persönliches Wörterbuch.
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Whisper-Modell (Spracheingabe)", fontSize = 14.sp)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.height(IntrinsicSize.Max)
+                    ) {
+                        TtsEngineChip(
+                            title = "Large V3 Turbo",
+                            subtitle = "schnell",
+                            selected = whisperModel != WhisperWoerterbuch.MODELL_LARGE_V3,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        ) {
+                            whisperModel = WhisperWoerterbuch.MODELL_TURBO
+                            SettingsStore.whisperModel = WhisperWoerterbuch.MODELL_TURBO
+                        }
+                        TtsEngineChip(
+                            title = "Large V3",
+                            subtitle = "genauer",
+                            selected = whisperModel == WhisperWoerterbuch.MODELL_LARGE_V3,
+                            isDark = isDark,
+                            modifier = Modifier.weight(1f).fillMaxHeight()
+                        ) {
+                            whisperModel = WhisperWoerterbuch.MODELL_LARGE_V3
+                            SettingsStore.whisperModel = WhisperWoerterbuch.MODELL_LARGE_V3
+                        }
+                    }
+                    Text(
+                        "Large V3 muss in der Groq-Konsole für deine Organisation freigeschaltet sein; sonst nimmt Cortex still Turbo.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
+
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Persönliches Wörterbuch", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Schreibweisen für Eigennamen und Fachbegriffe an Whisper mitgeben", fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = if (vocabularyEnabled) Orange else if (isDark) DarkFieldBorder else LightFieldBorder,
+                        modifier = Modifier
+                            .width(46.dp)
+                            .height(27.dp)
+                            .clickable {
+                                vocabularyEnabled = !vocabularyEnabled
+                                SettingsStore.personalVocabularyEnabled = vocabularyEnabled
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().padding(3.dp),
+                            contentAlignment = if (vocabularyEnabled) Alignment.CenterEnd else Alignment.CenterStart
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(21.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(MaterialTheme.colorScheme.background)
+                            )
+                        }
+                    }
+                }
+                if (vocabularyEnabled) {
+                    Column(
+                        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Begriffe (durch Komma oder Zeilenumbruch getrennt)", fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        SettingsTextField(vocabulary, {
+                            vocabulary = it
+                            SettingsStore.personalVocabulary = it
+                        }, Modifier.fillMaxWidth(), singleLine = false)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
+
                 // Der fruehere "Antworten vorlesen"-Schalter wurde bewusst ENTFERNT (Frank-Wunsch
                 // 2026-07-02): Das Vorlesen wird ausschliesslich ueber den Lautsprecher-Knopf im
                 // Gespraech gesteuert (an = immer vorlesen, aus = nie) — EIN Schalter statt zwei.
@@ -2190,7 +2284,8 @@ private fun SettingsTextField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     center: Boolean = false,
-    hint: String = ""
+    hint: String = "",
+    singleLine: Boolean = true
 ) {
     val isDark = MaterialTheme.colorScheme.background == DarkBg
     Surface(
@@ -2208,7 +2303,8 @@ private fun SettingsTextField(
                 fontSize = 12.5.sp,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            singleLine = true,
+            singleLine = singleLine,
+            maxLines = if (singleLine) 1 else 8,
             decorationBox = { inner ->
                 if (value.isEmpty() && hint.isNotEmpty()) {
                     Text(hint, fontFamily = JetBrainsMono, fontSize = 12.5.sp,

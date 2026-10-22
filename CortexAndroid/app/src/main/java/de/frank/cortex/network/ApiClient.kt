@@ -454,31 +454,60 @@ object ApiClient {
     // Main-Thread (Jank/ANR-Risiko nach jedem Aufnahme-Stopp).
     suspend fun groqTranscribe(wavBytes: ByteArray): GroqTranscriptionResponse = withContext(Dispatchers.IO) {
         val key = SettingsStore.groqApiKey
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file", "audio.wav",
-                wavBytes.toRequestBody("audio/wav".toMediaType())
-            )
-            .addFormDataPart("model", "whisper-large-v3-turbo")
-            .addFormDataPart("language", "de")
-            .addFormDataPart("response_format", "verbose_json")
-            // temperature=0 als Basis der Anti-Halluzinations-Kette (Almanach §1.2 — reicht allein
-            // NICHT gegen Stille-Halluzination, aber Grundlage; die 4 Schichten liegen im ViewModel/Filter).
-            .addFormDataPart("temperature", "0")
-            .build()
+        val woerterbuch = de.frank.cortex.audio.WhisperWoerterbuch
+        val prompt = if (SettingsStore.personalVocabularyEnabled)
+            woerterbuch.prompt(woerterbuch.begriffe(SettingsStore.personalVocabulary)) else null
 
-        val request = Request.Builder()
-            .url("https://api.groq.com/openai/v1/audio/transcriptions")
-            .header("Authorization", "Bearer $key")
-            .post(body)
-            .build()
+        suspend fun sende(modell: String, mitPrompt: String?): Pair<Int, String> {
+            val builder = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "file", "audio.wav",
+                    wavBytes.toRequestBody("audio/wav".toMediaType())
+                )
+                .addFormDataPart("model", modell)
+                .addFormDataPart("language", "de")
+                .addFormDataPart("response_format", "verbose_json")
+                // temperature=0 als Basis der Anti-Halluzinations-Kette (Almanach §1.2 — reicht allein
+                // NICHT gegen Stille-Halluzination, aber Grundlage; die 4 Schichten liegen im ViewModel/Filter).
+                .addFormDataPart("temperature", "0")
+            // prompt nur mit eingeschaltetem persönlichem Wörterbuch (Schreibweisen von Eigennamen).
+            if (mitPrompt != null) builder.addFormDataPart("prompt", mitPrompt)
 
-        val (code, responseBody) = executeForString(externalClient, request)
-        if (responseBody.isEmpty()) throw Exception("Leere Groq-Antwort")
+            val request = Request.Builder()
+                .url("https://api.groq.com/openai/v1/audio/transcriptions")
+                .header("Authorization", "Bearer $key")
+                .post(builder.build())
+                .build()
+            return executeForString(externalClient, request)
+        }
 
-        if (code !in 200..299) {
-            throw Exception("Groq-Fehler $code: $responseBody")
+        // Ein Upload mit dem gewählten Modell. large-v3 muss bei Groq pro Organisation freigeschaltet
+        // sein; antwortet Groq mit "blocked", dieselbe Aufnahme sofort mit Turbo wiederholen.
+        suspend fun einmal(mitPrompt: String?): String {
+            var modell = woerterbuch.aufloesen(SettingsStore.whisperModel)
+            var (code, responseBody) = sende(modell, mitPrompt)
+            if (code !in 200..299 && modell == woerterbuch.MODELL_LARGE_V3 && woerterbuch.istModellGesperrt(responseBody)) {
+                CortexLog.warn("Groq", "transcribe", "large-v3 für die Organisation gesperrt, Rückfall auf Turbo", mapOf("code" to code))
+                woerterbuch.sperreLargeV3()
+                modell = woerterbuch.MODELL_TURBO
+                val zweiter = sende(modell, mitPrompt)
+                code = zweiter.first
+                responseBody = zweiter.second
+            }
+            if (responseBody.isEmpty()) throw Exception("Leere Groq-Antwort")
+            if (code !in 200..299) {
+                throw Exception("Groq-Fehler $code: $responseBody")
+            }
+            return responseBody
+        }
+
+        var responseBody = einmal(prompt)
+        // Whisper gibt bei Stille/Gemurmel gern den Prompt selbst aus ("Begriffe: …").
+        // Dann einmal ohne Wörterbuch wiederholen, statt das Diktat zu verlieren.
+        if (prompt != null && woerterbuch.istPromptEcho(JSONObject(responseBody).optString("text"), prompt)) {
+            CortexLog.warn("Groq", "transcribe", "Prompt-Echo erkannt, erneut ohne Wörterbuch")
+            responseBody = einmal(null)
         }
 
         val json = JSONObject(responseBody)

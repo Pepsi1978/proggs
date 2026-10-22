@@ -5,6 +5,7 @@
     { "versionCode": 119, "versionName": "0.10.14", "stand": "10.09.2026, 13:49 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
     { "versionCode": 120, "versionName": "0.10.15", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
     {"versionCode": 121, "versionName": "0.10.16", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 122, "versionName": "0.10.17", "stand": "15.10.2026, 13:11 Uhr", "notiz": "Läuft die WireGuard-App bereits und erreicht den Server, nutzt Cortex diesen Tunnel mit, statt ein eigenes VPN aufzubauen und die WireGuard-App zu verdrängen."}
+    {"versionCode": 122, "versionName": "0.10.17", "stand": "15.10.2026, 13:11 Uhr", "notiz": "Läuft die WireGuard-App bereits und erreicht den Server, nutzt Cortex diesen Tunnel mit, statt ein eigenes VPN aufzubauen und die WireGuard-App zu verdrängen."},
+    {"versionCode": 123, "versionName": "0.10.18", "stand": "22.10.2026, 11:22 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe."}
   ]
 }

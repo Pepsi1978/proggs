@@ -1,6 +1,7 @@
 package de.frank.cortex.data
 
 import android.content.Context
+import de.frank.cortex.audio.WhisperWoerterbuch
 import android.content.SharedPreferences
 import android.util.Base64
 import androidx.datastore.core.DataStore
@@ -473,6 +474,21 @@ object SettingsStore {
             .apply()
         return next
     }
+
+    /** Whisper-Modell bei Groq: Turbo (schnell, Standard) oder large-v3 (genauer). */
+    var whisperModel: String
+        get() = plain.getString("whisper_model", WhisperWoerterbuch.MODELL_TURBO) ?: WhisperWoerterbuch.MODELL_TURBO
+        set(value) = plain.edit().putString("whisper_model", value).apply()
+
+    /** Persönliches Wörterbuch als Whisper-Prompt mitsenden. */
+    var personalVocabularyEnabled: Boolean
+        get() = plain.getBoolean("vocabulary_enabled", true)
+        set(value) = plain.edit().putBoolean("vocabulary_enabled", value).apply()
+
+    /** Begriffe des Wörterbuchs, durch Komma oder Zeilenumbruch getrennt; nie gespeichert = Standardliste. */
+    var personalVocabulary: String
+        get() = plain.getString("vocabulary_terms", WhisperWoerterbuch.STANDARD_WOERTERBUCH) ?: WhisperWoerterbuch.STANDARD_WOERTERBUCH
+        set(value) = plain.edit().putString("vocabulary_terms", value).apply()
 
     var recordingToneEnabled: Boolean
         get() = plain.getBoolean("recording_tone_enabled", true)
