@@ -60,6 +60,7 @@ class KompassContainer(context: Context) {
     val transkribierer = GroqTranskribierer(
         schluesselGeber = { einstellungen.groqSchluessel },
         modellGeber = { einstellungen.groqModell },
+        woerterbuchGeber = { if (einstellungen.woerterbuchAn) einstellungen.woerterbuch else null },
         schalterGeber = {
             FilterSchalter(
                 schicht1Stille = einstellungen.filterSchichtAktiv(1),
