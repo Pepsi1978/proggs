@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.kompass.KompassContainer
 import de.frank.kompass.audio.GroqTranskribierer
+import de.frank.kompass.data.EinstellungenStore
 import de.frank.kompass.data.model.Denktiefe
 import de.frank.kompass.data.model.KiModell
 import de.frank.kompass.data.model.SicherungsTeil
@@ -51,6 +52,15 @@ data class EinstellungenZustand(
     val lieblingsStimmen: Set<String> = emptySet(),
     val googleSchluessel: String = "",
     val alibabaSchluessel: String = "",
+    val geminiFlashStimme: String = TtsCatalog.STANDARD_GEMINI_FLASH_STIMME,
+    val geminiLiteStimme: String = TtsCatalog.STANDARD_GEMINI_LITE_STIMME,
+    val geminiSchluesselFrei: String = "",
+    val geminiSchluesselBezahlt: String = "",
+    val geminiSchluesselWahl: String = EinstellungenStore.GEMINI_FREI_DANN_BEZAHLT,
+    val geminiChirpRueckfall: Boolean = false,
+    val azureSchluessel: String = "",
+    val azureRegion: String = TtsCatalog.STANDARD_AZURE_REGION,
+    val azureStimme: String = TtsCatalog.STANDARD_AZURE_STIMME,
     val groqSchluessel: String = "",
     val groqModell: String = "",
     val woerterbuchAn: Boolean = true,
@@ -147,6 +157,15 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         lieblingsStimmen = store.lieblingsStimmen,
         googleSchluessel = store.googleSchluessel,
         alibabaSchluessel = store.alibabaSchluessel,
+        geminiFlashStimme = store.geminiFlashStimme,
+        geminiLiteStimme = store.geminiLiteStimme,
+        geminiSchluesselFrei = store.geminiSchluesselFrei,
+        geminiSchluesselBezahlt = store.geminiSchluesselBezahlt,
+        geminiSchluesselWahl = store.geminiSchluesselWahl,
+        geminiChirpRueckfall = store.geminiChirpRueckfall,
+        azureSchluessel = store.azureSchluessel,
+        azureRegion = store.azureRegion,
+        azureStimme = store.azureStimme,
         groqSchluessel = store.groqSchluessel,
         groqModell = store.groqModell,
         woerterbuchAn = store.woerterbuchAn,
@@ -209,7 +228,40 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
             TtsAnbieter.GOOGLE -> store.googleStimme = stimme
             TtsAnbieter.EDGE -> store.edgeStimme = stimme
             TtsAnbieter.QWEN -> store.qwenStimmeId = stimme
+            TtsAnbieter.GEMINI_FLASH -> store.geminiFlashStimme = stimme
+            TtsAnbieter.GEMINI_LITE -> store.geminiLiteStimme = stimme
+            TtsAnbieter.AZURE -> store.azureStimme = stimme
         }
+        frischLesen()
+    }
+
+    fun setzeGeminiSchluesselFrei(wert: String) {
+        store.geminiSchluesselFrei = wert
+        frischLesen()
+    }
+
+    fun setzeGeminiSchluesselBezahlt(wert: String) {
+        store.geminiSchluesselBezahlt = wert
+        frischLesen()
+    }
+
+    fun setzeGeminiSchluesselWahl(wert: String) {
+        store.geminiSchluesselWahl = wert
+        frischLesen()
+    }
+
+    fun schalteGeminiChirpRueckfall(an: Boolean) {
+        store.geminiChirpRueckfall = an
+        frischLesen()
+    }
+
+    fun setzeAzureSchluessel(wert: String) {
+        store.azureSchluessel = wert
+        frischLesen()
+    }
+
+    fun setzeAzureRegion(wert: String) {
+        store.azureRegion = wert
         frischLesen()
     }
 
