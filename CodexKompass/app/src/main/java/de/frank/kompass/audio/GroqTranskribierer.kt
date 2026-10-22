@@ -4,6 +4,7 @@ import de.frank.kompass.network.awaitAntwort
 import de.frank.kompass.network.beendeSanft
 import de.frank.kompass.observability.KompassLog
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -104,6 +105,8 @@ class GroqTranskribierer(
                 }
                 val gefiltert = HalluzinationsFilter(schalter).filtere(roh, analyse)
                 if (gefiltert.isNotBlank()) ergebnisse += gefiltert
+            } catch (abbruch: CancellationException) {
+                throw abbruch
             } catch (fehler: Exception) {
                 // Ein ausgefallener Teil kostet nur seine Sekunden. Der Rest wird weiter
                 // verarbeitet, statt das ganze Diktat wegzuwerfen.
@@ -267,14 +270,26 @@ class GroqTranskribierer(
             return if (hinzu == 0) null else sb.append('.').toString()
         }
 
-        /** Whisper wiederholt den Prompt ab seinem Anfang ("Begriffe: …"), ganz oder teilweise. */
+        /** Hebt die 30-Minuten-Sperre auf, z. B. wenn das Modell in den Einstellungen neu gewählt wird. */
+        fun sperreAufheben() {
+            gesperrtBis = 0L
+        }
+
+        /**
+         * Whisper wiederholt den Prompt ganz oder teilweise: ab dem Anfang ("Begriffe: …")
+         * oder nur ein Stück aus Mitte/Ende (z. B. "Claude Code, OpenAI, Anthropic.").
+         */
         fun istPromptEcho(text: String, prompt: String?): Boolean {
             if (prompt.isNullOrEmpty() || text.isBlank()) return false
             fun norm(s: String) = s.lowercase().filter(Char::isLetterOrDigit)
             val t = norm(text)
             val p = norm(prompt)
             val marker = norm(ECHO_MARKER)
-            return t.startsWith(marker) && p.contains(t.substring(marker.length))
+            if (t.isEmpty()) return false
+            if (t.startsWith(marker) && p.contains(t.substring(marker.length))) return true
+            return t.length >= MIN_TEIL_ECHO && p.contains(t)
         }
+
+        private const val MIN_TEIL_ECHO = 12
     }
 }
