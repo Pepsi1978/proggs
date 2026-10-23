@@ -82,12 +82,12 @@ fun RueckfallKette(e: Einstellungen) {
         color = f.textLeise, fontSize = 12.sp)
     kette.forEachIndexed { i, id ->
         val stufe = TtsCatalog.rueckfallStufe(id) ?: return@forEachIndexed
-        val gleich = stufe.anbieter.id == anbieter && stufe.schluessel == null
+        val gleich = e.stufeWieHaupt(stufe, anbieter)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Column(Modifier.weight(1f)) {
                 Text("${i + 1}. ${stufe.titel}", color = f.text, fontSize = 14.sp)
                 if (gleich || !e.rueckfallBereit(stufe)) {
-                    Text(if (gleich) "Ist die Stimme oben, wird übersprungen" else "Nicht eingerichtet, wird übersprungen", color = f.textLeise, fontSize = 11.sp)
+                    Text(if (gleich) "Versucht die Stimme oben schon, wird übersprungen" else "Nicht eingerichtet, wird übersprungen", color = f.textLeise, fontSize = 11.sp)
                 }
             }
             if (i > 0) Chip("↑", false) { e.rueckfallKette = kette.toMutableList().apply { add(i - 1, removeAt(i)) } }
@@ -100,10 +100,11 @@ fun RueckfallKette(e: Einstellungen) {
         Text("Hinzufügen:", color = f.textLeise, fontSize = 12.sp)
         ChipReihe { uebrig.forEach { st -> Chip("+ ${st.titel}", false) { e.rueckfallKette = kette + st.id } } }
     }
-    if (TtsProvider.GOOGLE_CLOUD.id in kette && anbieter != TtsProvider.GOOGLE_CLOUD.id && e.googleKey.isBlank()) {
+    // Bewusst ohne isBlank-Bedingung: Sonst verschwände das Feld nach dem ersten getippten Zeichen.
+    if (TtsProvider.GOOGLE_CLOUD.id in kette && anbieter != TtsProvider.GOOGLE_CLOUD.id) {
         Feld("Google-Cloud-Schlüssel (für den Rückfall)", e.googleKey, geheim = true) { e.googleKey = it }
     }
-    if (TtsProvider.AZURE.id in kette && anbieter != TtsProvider.AZURE.id && e.azureKey.isBlank()) {
+    if (TtsProvider.AZURE.id in kette && anbieter != TtsProvider.AZURE.id) {
         Feld("Azure-Speech-Schlüssel (für den Rückfall)", e.azureKey, geheim = true) { e.azureKey = it }
     }
 }

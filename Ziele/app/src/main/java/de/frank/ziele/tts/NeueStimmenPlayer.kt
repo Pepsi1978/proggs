@@ -32,8 +32,8 @@ import org.json.JSONObject
  * Gemini 3.8 Flash / Flash-Lite TTS und Azure Neural (Port aus Jarvis, speech/Synthese.kt).
  *
  * Erst wird der ganze Text in eine Datei gesprochen, dann spielt der MediaPlayer sie ab — wie beim
- * Google-Player. Gemini nimmt erst den kostenlosen, dann den bezahlten Schlüssel; ist der Chirp-Rückfall
- * an, liest nach einem Fehler des kostenlosen Schlüssels Google Chirp 3 HD mit derselben Stimme weiter.
+ * Google-Player. Gemini nimmt erst den kostenlosen, dann den bezahlten Schlüssel; was danach liest, regelt die
+ * Rückfallkette im [TtsManager].
  */
 class NeueStimmenPlayer(context: Context) {
     /** Schlüssel und Wahl aus den Einstellungen, als Schnappschuss für genau eine Ansage. */
@@ -41,8 +41,6 @@ class NeueStimmenPlayer(context: Context) {
         val geminiKeyFrei: String,
         val geminiKeyBezahlt: String,
         val schluesselWahl: String,
-        val chirpRueckfall: Boolean,
-        val googleKey: String,
         val azureKey: String,
         val azureRegion: String,
         val erzwingeDeutsch: Boolean,
@@ -91,14 +89,13 @@ class NeueStimmenPlayer(context: Context) {
         val job = scope.launch(Dispatchers.IO) {
             try {
                 val (bytes, endung) = when (provider) {
-                    // Gemini kennt kein Sprechtempo: Der fertige Ton wird hier gestreckt (ein Chirp-Rückfall als MP3 bleibt, wie er ist).
+                    // Gemini kennt kein Sprechtempo: Der fertige Ton wird hier gestreckt.
                     TtsProvider.GEMINI_FLASH -> mitTempo(gemini(text, GEMINI_FLASH_MODELL, voiceId, speechRate, zugang, mitAusweg), speechRate) to "wav"
                     TtsProvider.GEMINI_LITE -> mitTempo(gemini(text, GEMINI_LITE_MODELL, voiceId, speechRate, zugang, mitAusweg), speechRate) to "wav"
                     TtsProvider.AZURE -> azure(text, voiceId, speechRate, zugang, mitAusweg) to "mp3"
                     else -> throw Abbruch("Dieser Anbieter wird hier nicht unterstützt.")
                 }
                 if (requestGeneration != generation.get()) return@launch
-                // Rückfall auf Chirp liefert MP3 — die Endung ist dem MediaPlayer egal, er erkennt den Inhalt.
                 val file = File(appContext.cacheDir, "neue_stimme_${requestGeneration}_${UUID.randomUUID()}.$endung")
                 file.writeBytes(bytes)
                 synchronized(lock) {
@@ -211,15 +208,15 @@ class NeueStimmenPlayer(context: Context) {
         val wahl = z.schluesselWahl
         val frei = z.geminiKeyFrei.filterNot(Char::isWhitespace)
         val bezahlt = z.geminiKeyBezahlt.filterNot(Char::isWhitespace)
-        val chirp = z.chirpRueckfall
         var fehlerFrei: Exception? = null
         if (wahl != GEMINI_TTS_NUR_BEZAHLT) {
-            val gesperrt = System.currentTimeMillis() < freiGesperrtBis
-            // Ein anderer Gemini-Weg (Chirp oder bezahlter Schlüssel): Nur dann lohnt es, den kostenlosen Schlüssel zu pausieren.
-            val andererWeg = chirp || (wahl == GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
+            val gesperrtBis = freiGesperrtBis[modell] ?: 0L
+            val gesperrt = System.currentTimeMillis() < gesperrtBis
+            // Ein anderer Gemini-Weg (bezahlter Schlüssel): Nur dann lohnt es, den kostenlosen Schlüssel zu pausieren.
+            val andererWeg = wahl == GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank()
             if (frei.isNotBlank() && gesperrt) {
                 fehlerFrei = Abbruch("Der kostenlose Gemini-Schlüssel pausiert nach einem 429 noch bis ${
-                    java.text.SimpleDateFormat("HH:mm", java.util.Locale.GERMANY).format(java.util.Date(freiGesperrtBis))} Uhr.")
+                    java.text.SimpleDateFormat("HH:mm", java.util.Locale.GERMANY).format(java.util.Date(gesperrtBis))} Uhr.")
             }
             if (frei.isNotBlank() && !gesperrt) {
                 // Mit Ausweichweg nicht erst bei 429 warten — der nächste Weg ist schneller als jede Wartezeit.
@@ -229,13 +226,10 @@ class NeueStimmenPlayer(context: Context) {
                 } catch (fehler: Exception) {
                     if (fehler !is Abbruch && fehler !is Fehler) throw fehler
                     fehlerFrei = fehler
-                    if (ausweg || mitAusweg) freiGesperrtBis = System.currentTimeMillis() + FREI_PAUSE_MS
+                    // Folgt nur noch eine Stufe der Rückfallkette, pausiert der Schlüssel bloß nach einer Absage (429, Schlüssel), nicht nach einem einzelnen Aussetzer.
+                    if (ausweg || (mitAusweg && fehler is Abbruch)) freiGesperrtBis[modell] = System.currentTimeMillis() + FREI_PAUSE_MS
                     Log.w(TAG, "Gemini-Stimme: kostenloser Schlüssel gescheitert ($modell): ${fehler.message?.take(120)}")
                 }
-            }
-            if (chirp) {
-                Log.i(TAG, "Gemini-Stimme: Rückfall auf Chirp 3 HD (${TtsCatalog.geminiName(stimmeId)})")
-                return chirp(text, TtsCatalog.chirpZu(stimmeId), tempo, z.googleKey)
             }
             if (wahl == GEMINI_TTS_NUR_FREI) {
                 throw fehlerFrei ?: Abbruch(
@@ -410,23 +404,6 @@ class NeueStimmenPlayer(context: Context) {
         return mitWavKopf(pcm.array(), rate)
     }
 
-    /** Google Chirp 3 HD — der Rückfall für die Gemini-Stimmen, mit dem vorhandenen Google-TTS-Schlüssel. */
-    private suspend fun chirp(text: String, stimme: String, tempo: Float, googleKey: String): ByteArray {
-        val schluessel = googleKey.trim()
-        if (schluessel.isBlank()) {
-            throw Abbruch("Vorlesen fehlgeschlagen: Für den Rückfall auf Chirp 3 HD fehlt der Google-Schlüssel. Trag ihn in den Einstellungen ein.")
-        }
-        val koerper = JSONObject()
-            .put("input", JSONObject().put("text", text))
-            .put("voice", JSONObject().put("languageCode", "de-DE").put("name", stimme))
-            .put("audioConfig", JSONObject().put("audioEncoding", "MP3").put("speakingRate", tempo.coerceIn(0.25f, 4f).toDouble()))
-        val adresse = GOOGLE_URL.toHttpUrl().newBuilder().addQueryParameter("key", schluessel).build()
-        val anfrage = Request.Builder().url(adresse).post(koerper.toString().toRequestBody(JSON_TYP)).build()
-        val audio = JSONObject(fuehreAus(anfrage)).optString("audioContent")
-        if (audio.isBlank()) throw Fehler("Google hat kein Audio geliefert.")
-        return Base64.decode(audio, Base64.DEFAULT)
-    }
-
     // ---- Azure Neural ----
 
     /** HD-Stimmen (DragonHD) bekommen weder Tempo noch <lang>-Rahmen: Sie bestimmen Betonung und Tempo selbst. */
@@ -541,7 +518,6 @@ class NeueStimmenPlayer(context: Context) {
 
     companion object {
         private const val TAG = "NeueStimmen"
-        private const val GOOGLE_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
         private const val GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/"
         private const val GEMINI_FLASH_MODELL = "gemini-3.8-flash-tts"
         private const val GEMINI_LITE_MODELL = "gemini-3.8-flash-lite-tts"
@@ -558,8 +534,8 @@ class NeueStimmenPlayer(context: Context) {
         /** So lange bleibt der kostenlose Gemini-Schlüssel nach einem Fehler übersprungen, wenn es einen Ausweichweg gibt. */
         private const val FREI_PAUSE_MS = 10 * 60_000L
 
-        /** Gilt für alle Instanzen: Sonst probierte jeder neue Player den gescheiterten Schlüssel erneut. */
-        @Volatile private var freiGesperrtBis = 0L
+        /** Je Modell (das Kontingent gilt je Modell); gilt für alle Instanzen, sonst probierte jeder neue Player den gescheiterten Schlüssel erneut. */
+        private val freiGesperrtBis = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
         private val JSON_TYP = "application/json; charset=utf-8".toMediaType()
         private val SSML_TYP = "application/ssml+xml".toMediaType()

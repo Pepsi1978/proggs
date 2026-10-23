@@ -14,6 +14,7 @@
     { "versionCode": 10, "versionName": "1.0.9", "stand": "23.10.2026, 18:03 Uhr", "notiz": "Die schwarzen Vierecke an den unteren runden Ecken der Zielkarten und der Karten in der Detailansicht sind weg." },
     { "versionCode": 11, "versionName": "1.0.10", "stand": "23.10.2026, 18:06 Uhr", "notiz": "In den Einstellungen gibt es jetzt den Bereich Kontext: persönlichen Kontext ein- oder ausschalten (aus = allgemeine Aufgaben für jeden), Jarvis' Live-Gedächtnis mit Anbindungsprüfung und die Kontextdatei zum Tippen und Einfügen." },
     { "versionCode": 12, "versionName": "1.0.11", "stand": "23.10.2026, 18:13 Uhr", "notiz": "Vorlesen hat jetzt die einstellbare Rückfall-Reihenfolge wie Jarvis: Scheitert die Stimme, lesen Gemini (kostenlos/bezahlt), Google, Azure, Edge oder die eigene Stimme der Reihe nach weiter, jede mit ihrer eingestellten Stimme." },
+    { "versionCode": 13, "versionName": "1.0.12", "stand": "23.10.2026, 18:22 Uhr", "notiz": "Rückfall-Reihenfolge verbessert: Gemini Flash und Flash-Lite pausieren ihren kostenlosen Schlüssel getrennt, doppelte Stufen werden übersprungen, der Hinweis nennt die gerade gescheiterte Stimme und die Schlüsselfelder lassen sich wieder ganz eintippen." },
     { "versionCode": 13, "versionName": "1.0.12", "stand": "23.10.2026, 18:15 Uhr", "notiz": "Speichern wartet, bis die KI-Korrektur fertig ist, damit kein unkorrigierter Text gespeichert wird." }
   ]
 }

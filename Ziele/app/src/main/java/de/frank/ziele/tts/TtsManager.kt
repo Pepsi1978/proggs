@@ -15,6 +15,8 @@ class TtsManager(context: Context) {
     private val googlePlayer = GoogleCloudTtsPlayer(appContext)
     private val qwenPlayer = QwenTtsPlayer(appContext)
     private val neuePlayer = NeueStimmenPlayer(appContext)
+    /** Rückfallkette und ihre Prüfungen kommen aus den Einstellungen, damit Oberfläche und Vorlesen dieselbe Logik nutzen. */
+    private val einstellungen = de.frank.ziele.data.Einstellungen.get(appContext)
     private val generation = AtomicLong(0)
     private var activeProviderId: String? = null
     private var variationStep = 0
@@ -101,14 +103,8 @@ class TtsManager(context: Context) {
         // aussehende Woerter englisch aus.
         val erzwingeDeutsch = preferences?.getBoolean(PREF_IMMER_DEUTSCH, true) ?: true
         val ansage = Ansage(spokenText, step, varied, speechRate, pitchPercent, erzwingeDeutsch)
-        // Wie in Jarvis: Eine Stufe ohne eigenen Schlüssel ist dieselbe Stimme wie die Hauptstimme und brächte nichts;
-        // Stufen ohne Schlüssel laufen gar nicht erst.
-        val kette = TtsCatalog.rueckfallKette(
-            preferences?.getString(PREF_TTS_RUECKFALL_KETTE, null),
-            chirpAlt = preferences?.getBoolean(PREF_GEMINI_TTS_CHIRP_RUECKFALL, false) ?: false,
-        ).mapNotNull(TtsCatalog::rueckfallStufe)
-            .filterNot { it.anbieter.id == providerId && it.schluessel == null }
-            .filter(::rueckfallBereit)
+        // Wie in Jarvis: Stufen, die nur wiederholten, was die Hauptstimme schon versucht hat, und Stufen ohne Schlüssel laufen gar nicht erst.
+        val kette = einstellungen.aktiveRueckfallStufen(providerId)
         val hauptName = TtsProvider.entries.firstOrNull { it.id == providerId }?.kurz ?: providerId
         var hauptFehler: Exception? = null
 
@@ -130,10 +126,10 @@ class TtsManager(context: Context) {
                     if (requestGeneration == generation.get() && !terminal.get() && !started.get() && i < kette.lastIndex) {
                         val naechste = kette[i + 1]
                         logger.warning("${stufe?.id ?: providerId} gescheitert, Rückfall auf ${naechste.id}: ${fehler.message}")
-                        // Der volle Grund steht im Hinweis: Auch ein Einrichtungsfehler (Schlüssel, Region) bleibt so sichtbar.
-                        val grund = erster.message?.removePrefix("Vorlesen fehlgeschlagen: ")?.takeIf { it.isNotBlank() }
-                            ?: erster.javaClass.simpleName
-                        onRueckfall?.invoke("$hauptName liest gerade nicht, darum liest ${naechste.titel}. Grund: $grund")
+                        // Der volle Grund der gerade gescheiterten Stimme steht im Hinweis: Auch ein Einrichtungsfehler (Schlüssel, Region) bleibt so sichtbar.
+                        val grund = fehler.message?.removePrefix("Vorlesen fehlgeschlagen: ")?.takeIf { it.isNotBlank() }
+                            ?: fehler.javaClass.simpleName
+                        onRueckfall?.invoke("${stufe?.titel ?: hauptName} liest gerade nicht, darum liest ${naechste.titel}. Grund: $grund")
                         versuche(i + 1)
                     } else if (stufe == null) {
                         guardedError(fehler)
@@ -155,18 +151,6 @@ class TtsManager(context: Context) {
         val pitchPercent: Int,
         val erzwingeDeutsch: Boolean,
     )
-
-    /** Ob eine Rückfallstufe überhaupt laufen kann: Schlüssel (und bei der eigenen Stimme die Kennung) sind hinterlegt. */
-    private fun rueckfallBereit(stufe: RueckfallStufe): Boolean = when (stufe.anbieter) {
-        TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE ->
-            pref(if (stufe.schluessel == RueckfallStufe.FREI) PREF_GEMINI_TTS_KEY_FREI else PREF_GEMINI_TTS_KEY_BEZAHLT).isNotBlank()
-        TtsProvider.GOOGLE_CLOUD -> pref(PREF_GOOGLE_API_KEY).isNotBlank()
-        TtsProvider.AZURE -> pref(PREF_AZURE_TTS_KEY).isNotBlank()
-        TtsProvider.QWEN, TtsProvider.QWEN_CLONE -> pref(PREF_QWEN_API_KEY).isNotBlank() && pref(PREF_QWEN_VOICE_ID).isNotBlank()
-        TtsProvider.EDGE -> true
-    }
-
-    private fun pref(key: String): String = preferences?.getString(key, "").orEmpty().trim()
 
     /** Startet genau eine Stimme; [schluessel] nur bei Gemini-Stufen der Kette: nur der kostenlose bzw. nur der bezahlte Schlüssel. */
     private fun starte(
@@ -246,9 +230,6 @@ class TtsManager(context: Context) {
                             else -> preferences?.getString(PREF_GEMINI_TTS_SCHLUESSEL_WAHL, null)
                                 ?: NeueStimmenPlayer.GEMINI_TTS_FREI_DANN_BEZAHLT
                         },
-                        // Den Chirp-Rückfall übernimmt jetzt die Kette (Stufe Google Chirp 3 HD).
-                        chirpRueckfall = false,
-                        googleKey = preferences?.getString(PREF_GOOGLE_API_KEY, "").orEmpty(),
                         azureKey = preferences?.getString(PREF_AZURE_TTS_KEY, "").orEmpty(),
                         azureRegion = preferences?.getString(PREF_AZURE_TTS_REGION, null) ?: TtsCatalog.DEFAULT_AZURE_REGION,
                         erzwingeDeutsch = ansage.erzwingeDeutsch,
@@ -385,8 +366,6 @@ class TtsManager(context: Context) {
         const val PREF_GEMINI_TTS_KEY_FREI = "gemini_tts_key_frei"
         const val PREF_GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
         const val PREF_GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
-        const val PREF_GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
-        const val PREF_TTS_RUECKFALL_KETTE = "tts_rueckfall_kette"
         const val PREF_VARY_VOICE = "vary_voice_per_repetition"
         const val PREF_VARY_SPEECH_RATE = "vary_speech_rate"
         const val PREF_VARY_PITCH = "vary_pitch"
