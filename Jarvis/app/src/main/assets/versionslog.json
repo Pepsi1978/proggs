@@ -254,6 +254,8 @@
     {"versionCode": 249, "versionName": "1.8.238", "stand": "23.10.2026, 12:48 Uhr", "notiz": "Das Sprechtempo lässt sich für die Hauptstimme und jede Rückfallstufe einzeln einstellen, auch wenn die Hauptstimme Gemini ist."},
     {"versionCode": 250, "versionName": "1.8.239", "stand": "23.10.2026, 12:58 Uhr", "notiz": "Jarvis merkt sich die Denkstufe je Modell und stellt sie beim Wechsel zurück auf ein Modell automatisch wieder ein."},
     {"versionCode": 251, "versionName": "1.8.240", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Das Anthropic-Guthaben wird nicht mehr im Leerlauf abgefragt, sondern beim Start und Ende einer Aufgabe; dahinter steht, was die letzte Aufgabe gekostet hat."},
-    {"versionCode": 252, "versionName": "1.8.241", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Die Aufwandsstufen der Claude-Modelle heißen jetzt wie in der Claude-App: Niedrig, Mittel, Hoch, Extra hoch und Maximal."}
+    {"versionCode": 252, "versionName": "1.8.241", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Die Aufwandsstufen der Claude-Modelle heißen jetzt wie in der Claude-App: Niedrig, Mittel, Hoch, Extra hoch und Maximal."},
+    {"versionCode": 253, "versionName": "1.8.242", "stand": "23.10.2026, 13:11 Uhr", "notiz": "Die Kostenanzeige je Aufgabe misst genauer: nur Claude-Aufgaben zählen, kein veralteter Ausgangswert, weniger Abfragen bei der Claude Console."},
+    {"versionCode": 254, "versionName": "1.8.243", "stand": "23.10.2026, 13:12 Uhr", "notiz": "Denkstufen: „Sehr hoch“ und „Extra hoch“ werden per Sprache bei jedem Modell erkannt, und das Live-Gespräch zeigt bei „Wie im Chat“ die Namen und Stufen des Chat-Modells."}
   ]
 }

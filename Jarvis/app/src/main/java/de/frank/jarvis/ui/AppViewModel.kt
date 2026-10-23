@@ -352,7 +352,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         if (einstellungen.modell.istAnthropic) {
             anthropicKostenStart()
-            runde.job?.invokeOnCompletion { viewModelScope.launch { anthropicKostenEnde() } }
+            // Ohne Job (sofort beendet) trotzdem abschließen, sonst bliebe der Zähler hängen.
+            runde.job?.invokeOnCompletion { viewModelScope.launch { anthropicKostenEnde() } } ?: anthropicKostenEnde()
         }
     }
 
@@ -2482,7 +2483,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         anthropicGuthabenLaedt = true
         viewModelScope.launch {
-            if (anthropicGuthaben == null) anthropicGuthaben = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.gespeichert(app) }
+            if (anthropicGuthaben == null) gespeichertesGuthabenLaden()
             anthropicGuthaben = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen)
             // Erst hier (nicht beim Aufbau) gelesen: CookieManager lädt den WebView-Unterbau.
             anthropicConsoleAngemeldet = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() }
@@ -2492,53 +2493,60 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Nur den gespeicherten Stand zeigen, ohne Netz: Frisch abgefragt wird erst rund um eine Aufgabe. */
     fun anthropicGuthabenZeigen() {
-        if (anthropicGuthaben != null) return
+        if (anthropicGuthaben == null) viewModelScope.launch { gespeichertesGuthabenLaden() }
+    }
+
+    private suspend fun gespeichertesGuthabenLaden() {
         val app = getApplication<Application>()
-        viewModelScope.launch {
-            val s = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.gespeichert(app) }
-            if (anthropicGuthaben == null) anthropicGuthaben = s
-        }
+        val s = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.gespeichert(app) }
+        if (anthropicGuthaben == null) anthropicGuthaben = s
     }
 
     /** Was die letzte Aufgabe mit einem Anthropic-Modell gekostet hat (Guthaben vorher minus nachher), in Dollar; null = noch keine. */
     var anthropicKosten by mutableStateOf<Double?>(null); private set
-    private var kostenVorher: Double? = null
-    private var kostenAktiv = false
-    private var kostenNachlauf: kotlinx.coroutines.Job? = null
+    /** Laufende Aufgaben mit einem Anthropic-Modell (nur auf dem Haupt-Faden geändert). */
+    private var kostenRunden = 0
+    /** Ausgangswert der laufenden Messung; null darin = kein frischer Wert, dann keine Kostenanzeige. */
+    private var kostenMessung: kotlinx.coroutines.Deferred<Double?>? = null
 
-    /** Beim Start einer Aufgabe: Guthaben frisch holen und als Ausgangswert merken (laufen mehrere, zählt der erste Start). */
+    /**
+     * Beim Start einer Anthropic-Aufgabe: Ausgangswert holen (laufen mehrere, zählt der erste Start). Ein Stand der letzten
+     * zwei Minuten genügt, ältere gespeicherte Stände nie, sonst zählte der Verbrauch von Tagen als Kosten dieser Aufgabe.
+     */
     private fun anthropicKostenStart() {
-        // Startet eine neue Aufgabe im Nachlauf der vorigen, misst sie ab jetzt neu.
-        if (kostenNachlauf?.isActive == true) { kostenNachlauf?.cancel(); kostenAktiv = false }
-        kostenNachlauf = null
-        if (kostenAktiv) return
-        kostenAktiv = true
-        kostenVorher = anthropicGuthaben?.restUsd
+        if (kostenRunden++ > 0) return
+        anthropicKosten = null
         val app = getApplication<Application>()
-        viewModelScope.launch {
+        val alt = anthropicGuthaben
+        kostenMessung = viewModelScope.async {
+            if (alt?.restUsd != null && alt.hinweis == null && System.currentTimeMillis() - alt.geholt < 2 * 60_000L) return@async alt.restUsd
             val s = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen = true)
-            if (s.hinweis == null && s.restUsd != null) { anthropicGuthaben = s; kostenVorher = s.restUsd }
+            if (s.hinweis == null && s.restUsd != null) { anthropicGuthaben = s; s.restUsd } else null
         }
     }
 
     /**
-     * Nach dem Ende der letzten laufenden Aufgabe: Guthaben sofort und noch einmal nach einer Minute frisch holen (die Console
-     * bucht den Verbrauch mit Verzögerung) und die Differenz zum Ausgangswert als Kosten zeigen.
+     * Nach dem Ende der letzten laufenden Anthropic-Aufgabe: Guthaben sofort und noch einmal nach einer Minute frisch holen
+     * (die Console bucht den Verbrauch mit Verzögerung) und die Differenz zum Ausgangswert als Kosten zeigen. Jede Messung
+     * behält ihren eigenen Ausgangswert; eine neue Aufgabe im Nachlauf bricht sie nicht ab.
      */
     private fun anthropicKostenEnde() {
-        if (!kostenAktiv || laufende.values.any { it.job?.isActive == true }) return
+        kostenRunden = (kostenRunden - 1).coerceAtLeast(0)
+        if (kostenRunden > 0) return
+        val messung = kostenMessung ?: return
+        kostenMessung = null
         val app = getApplication<Application>()
-        kostenNachlauf = viewModelScope.launch {
+        viewModelScope.launch {
+            val vorher = messung.await()
             repeat(2) { i ->
                 if (i > 0) kotlinx.coroutines.delay(60_000L)
                 val s = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen = true)
                 if (s.hinweis == null && s.restUsd != null) {
                     anthropicGuthaben = s
-                    kostenVorher?.let { anthropicKosten = (it - s.restUsd).coerceAtLeast(0.0) }
+                    // Läuft inzwischen schon die nächste Aufgabe, gehört die Anzeige ihr.
+                    if (vorher != null && kostenRunden == 0) anthropicKosten = (vorher - s.restUsd).coerceAtLeast(0.0)
                 }
             }
-            kostenAktiv = false
-            kostenVorher = null
         }
     }
 

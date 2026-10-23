@@ -180,7 +180,9 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     }
                     val verfaellt = verfaelltI?.toString().orEmpty()
                     if (!angemeldet()) throw SitzungAbgelaufen("Inzwischen abgemeldet.")
-                    val (kurs, kursDatum) = kurs(app)
+                    // Der EZB-Kurs ändert sich nur einmal am Tag: ein höchstens sechs Stunden alter genügt.
+                    val (kurs, kursDatum) = alt?.kurs?.takeIf { System.currentTimeMillis() - alt.geholt < 6 * 3_600_000L }
+                        ?.let { it to alt.kursDatum } ?: kurs(app)
                     val jetzt = System.currentTimeMillis()
                     val j = JSONObject().put("org", org).put("rest", rest).put("verfaellt", verfaellt).put("geholt", jetzt).put("kursDatum", kursDatum)
                     if (gewaehrt > 0) j.put("gewaehrt", gewaehrt)

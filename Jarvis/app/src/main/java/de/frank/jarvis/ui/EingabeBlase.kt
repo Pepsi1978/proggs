@@ -87,9 +87,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.data.Anhang
 import de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit
@@ -98,7 +95,6 @@ import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 /** Das Orange der Live-Blase (wie in der ChatGPT-App). */
@@ -124,7 +120,6 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     var pluginsOffen by remember { mutableStateOf(false) }
     var modellOffen by remember { mutableStateOf(false) }
     val modell = vm.einstellungen.modell
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
     // Kein Abfragen im Leerlauf: Hier nur der gespeicherte Stand; frisch geholt wird beim Start und Ende einer Aufgabe.
     LaunchedEffect(vm, modell.istAnthropic) {
         if (modell.istAnthropic) vm.anthropicGuthabenZeigen()
