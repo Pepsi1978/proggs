@@ -125,7 +125,8 @@ object Auswertung {
             append("RECHERCHE-BERICHT:\n").append(bericht.take(30_000)).append("\n\n")
             append(ueberFrank)
             if (behalten.isNotEmpty()) {
-                append("SCHON VORHANDEN (nicht noch einmal vorschlagen; du darfst sie als Voraussetzung über ihren Schlüssel nennen):\n")
+                append("SCHON VORHANDEN (nicht noch einmal vorschlagen; du darfst sie als Voraussetzung über ihren Schlüssel nennen; ")
+                append("ihr Wortlaut kann sprachlich missglückt sein, nimm ihn nicht als Stilvorbild):\n")
                 behalten.forEach { v ->
                     append("- [").append(v.schluessel).append("] ").append(v.titel)
                     append(when { v.verworfen -> " (von Frank verworfen, nichts Ähnliches mehr vorschlagen)"; v.erledigt -> " (erledigt)"; else -> " (übernommen, in Arbeit)" })
@@ -147,7 +148,7 @@ object Auswertung {
         schritt(zielId, "Speichere die Vorschläge …")
         val belegt = behalten.map { it.schluessel }.toMutableSet()
         val roh = plan.optJSONArray("vorschlaege") ?: JSONArray()
-        val objekte = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { it.optString("titel").isNotBlank() }
+        val objekte = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { titelAus(it.optString("titel")).isNotEmpty() }
         // Vergibt die KI einen schon belegten Schlüssel neu, wird er umbenannt; Voraussetzungen unter den neuen Vorschlägen
         // meinen dann den neuen Vorschlag und ziehen mit (der erste Vorschlag mit diesem Schlüssel gewinnt).
         val umbenannt = mutableMapOf<String, String>()
@@ -160,8 +161,7 @@ object Auswertung {
             schluessel
         }
         val neu = objekte.mapIndexed { i, o ->
-            // Sicherheitsnetz: „Kläre du deinen …“ → „Kläre deinen …“ (Imperativ mit überflüssigem „du“).
-            val titel = o.optString("titel").trim().trim('„', '“', '"').replace(DU_NACH_VERB, "$1 ").trimEnd('.')
+            val titel = titelAus(o.optString("titel"))
             val schluessel = schluesselJe[i]
             val vor = o.optJSONArray("voraussetzungen")?.let { a -> (0 until a.length()).map { a.optString(it).trim() }.filter { it.isNotEmpty() } }.orEmpty()
                 .map { umbenannt[it] ?: it }.filter { it != schluessel }
@@ -213,7 +213,23 @@ object Auswertung {
         return runCatching { JSONObject(ohneZaun.substring(anfang, ende + 1)) }.getOrNull()
     }
 
-    private val DU_NACH_VERB = Regex("^(\\p{L}+)\\s+du\\s+", RegexOption.IGNORE_CASE)
+    /**
+     * Säubert einen KI-Titel: Anführungszeichen und einen einzelnen Schlusspunkt weg (Auslassungspunkte bleiben).
+     * Sicherheitsnetz: „Kläre du deinen …“ → „Kläre deinen …“ — nur wenn das erste Wort kein Bindewort ist
+     * („Wenn du …“, „Bevor du …“ brauchen das „du“).
+     */
+    internal fun titelAus(roh: String): String {
+        var t = roh.trim().trim('„', '“', '"').trim()
+        DU_NACH_VERB.find(t)?.let { m -> if (m.groupValues[1].lowercase(Locale.GERMAN) !in BINDEWOERTER) t = m.groupValues[1] + " " + t.substring(m.range.last + 1) }
+        if (t.endsWith('.') && !t.endsWith("..")) t = t.dropLast(1)
+        return t.trim()
+    }
+
+    private val DU_NACH_VERB = Regex("^(\\p{L}+)\\s+du\\s+")
+    private val BINDEWOERTER = setOf(
+        "wenn", "bevor", "sobald", "falls", "ob", "als", "damit", "während", "nachdem", "weil", "dass", "wie", "was", "wo",
+        "bis", "solange", "sodass", "obwohl", "indem", "sofern", "seit", "seitdem", "wann", "warum", "womit", "wodurch",
+    )
 
     private const val RECHERCHE_ANWEISUNG =
         "Du bist ein erstklassiger Coach und Rechercheur. Frank hat ein persönliches Ziel. Finde gründlich heraus, wie man genau dieses Ziel " +
@@ -246,9 +262,10 @@ object Auswertung {
             "- Titel: eine klare, erledigbare Handlung als Aufforderung in der Du-Form, aber OHNE das Wort „du“ (Imperativ: „Kläre“, „Übe“, „Lies“, „Melde dich“). " +
             "Etwa drei bis acht Wörter, höchstens 60 Zeichen, ohne Punkt am Ende; lieber ein Wort mehr als unverständlich. " +
             "Der Titel muss für sich allein verständlich sein: Was genau ist zu tun?\n" +
-            "  Gut: „Melde dich beim Lauftreff Köpenick an“, „Lies täglich zehn Minuten laut vor“, „Lass beim Hausarzt eine Logopädie verordnen“, „Nimm dich einmal pro Woche beim Erzählen auf“.\n" +
-            "  Falsch: „Kläre du deinen Sprachverlauf“ (überflüssiges „du“, unklar), „Übe du acht Minuten klar sprechen“ (falsche Wortstellung), " +
-            "„Ziehe du etwas Sprachbilanzen“ (kein Deutsch), „Kläre den logopädischen Bedarf“ (Amtsdeutsch, unklar, was zu tun ist).\n" +
+            "  Gut (nur Stilbeispiele, nicht übernehmen): „Melde dich beim Lauftreff Köpenick an“, „Lege jeden Monat 100 Euro zurück“, " +
+            "„Lass beim Hausarzt dein Blutbild prüfen“, „Schreib abends drei schöne Momente auf“.\n" +
+            "  Falsch: „Kläre du deinen Trainingsstand“ (überflüssiges „du“, unklar), „Übe du zehn Minuten ruhig atmen“ (falsche Wortstellung), " +
+            "„Ziehe du etwas Wochenbilanzen“ (kein Deutsch), „Kläre den finanziellen Bedarf“ (Amtsdeutsch, unklar, was zu tun ist).\n" +
             "- text, begruendung und erfolg: ganze, vollständige Sätze in der Du-Form, gut vorlesbar.\n" +
             "Prüfe jeden Titel und Satz vor der Ausgabe: Würde ein Deutschlehrer ihn so stehen lassen? Wenn nicht, formuliere ihn neu.\n\n" +
             "Wiederkehrende Gewohnheiten (z. B. „Laufe dreimal pro Woche 30 Minuten“) sind erlaubt und als wiederkehrend markiert.\n\n" +
@@ -259,7 +276,7 @@ object Auswertung {
             "  \"vorschlaege\": [\n" +
             "    {\n" +
             "      \"schluessel\": \"v1\",\n" +
-            "      \"titel\": \"Lies täglich zehn Minuten laut vor\",\n" +
+            "      \"titel\": \"kurze, verständliche Aufforderung ohne das Wort du, passend zu diesem Ziel\",\n" +
             "      \"text\": \"ein bis drei Sätze: was genau zu tun ist, konkret\",\n" +
             "      \"begruendung\": \"ein Satz: warum das auf das Ziel einzahlt\",\n" +
             "      \"kategorie\": \"NOTWENDIG oder UNTERSTUETZEND\",\n" +
