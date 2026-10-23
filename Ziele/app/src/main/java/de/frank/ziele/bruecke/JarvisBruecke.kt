@@ -179,7 +179,7 @@ class JarvisBruecke : ContentProvider() {
                 val z = repo.ziel(a.optLong("id", -1)) ?: return fehler("Kein Ziel mit dieser id.")
                 val gestartet = Auswertung.starte(ctx, z.id, a.optString("wunsch"), Auswertung.Modus.NACHFUELLEN)
                 JSONObject().put("gestartet", gestartet)
-                    .put("hinweis", if (gestartet) "Ergänzende Recherche und neue Vorschläge für die freien Plätze laufen im Hintergrund. Danach mit lesen und id abrufen."
+                    .put("hinweis", if (gestartet) "Ergänzende Recherche und neue Vorschläge für die freien Plätze laufen im Hintergrund, dazu Aufgaben zu noch nicht umgesetzten Rückmeldungen. Danach mit lesen und id abrufen."
                     else "Für dieses Ziel läuft schon eine Auswertung.")
             }
 

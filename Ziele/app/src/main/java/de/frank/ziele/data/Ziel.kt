@@ -142,4 +142,6 @@ data class Rueckmeldung(
     val vonFrank: Boolean,
     val text: String,
     val erstellt: Long = System.currentTimeMillis(),
+    /** Eine Auswertung hat Franks Anregungen daraus schon in Aufgaben umgesetzt (oder bewusst nicht). */
+    val verarbeitet: Boolean = false,
 )

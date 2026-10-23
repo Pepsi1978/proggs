@@ -376,7 +376,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (gestartet) melde("Auswertung läuft – du kannst die App ruhig verlassen.")
     }
 
-    /** „Neue Aufgaben“: ergänzende Recherche und neue Vorschläge für die freien Plätze, ohne die bestehenden anzutasten. */
+    /**
+     * „Neue Aufgaben“: ergänzende Recherche und neue Vorschläge für die freien Plätze, ohne die bestehenden anzutasten;
+     * noch nicht umgesetzte Rückmeldungen bekommen zusätzlich eigene Vorschläge.
+     */
     fun nachfuellen(id: Long) {
         if (!kiPruefen()) return
         val gestartet = Auswertung.starte(getApplication(), id, modus = Auswertung.Modus.NACHFUELLEN) { fehler, erfolg ->

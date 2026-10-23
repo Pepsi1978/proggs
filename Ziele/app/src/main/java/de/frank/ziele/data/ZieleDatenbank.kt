@@ -107,9 +107,12 @@ interface ZieleDao {
 
     @Query("DELETE FROM rueckmeldungen WHERE zielId = :zielId")
     suspend fun rueckmeldungenLoeschen(zielId: Long)
+
+    @Query("UPDATE rueckmeldungen SET verarbeitet = 1 WHERE id IN (:ids)")
+    suspend fun rueckmeldungenVerarbeitet(ids: List<Long>)
 }
 
-@Database(entities = [Ziel::class, Vorschlag::class, Abgelehnt::class, Rueckmeldung::class], version = 2, exportSchema = false)
+@Database(entities = [Ziel::class, Vorschlag::class, Abgelehnt::class, Rueckmeldung::class], version = 3, exportSchema = false)
 abstract class ZieleDatenbank : RoomDatabase() {
     abstract fun dao(): ZieleDao
 }
@@ -124,9 +127,17 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** Version 3: Rückmeldungen merken, ob ihre Anregungen schon in Aufgaben umgesetzt sind. Bisherige gelten als verarbeitet. */
+private val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `rueckmeldungen` ADD COLUMN `verarbeitet` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("UPDATE `rueckmeldungen` SET `verarbeitet` = 1")
+    }
+}
+
 /** Einziger Zugang zu den Daten. Jede Änderung meldet Jarvis und dem Wecker ein Signal, damit sie frisch lesen. */
 class ZieleRepository private constructor(private val app: Context) {
-    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").addMigrations(MIGRATION_1_2).build().dao()
+    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().dao()
 
     val ziele: Flow<List<Ziel>> = dao.alleZiele()
     val vorschlaege: Flow<List<Vorschlag>> = dao.alleVorschlaege()
@@ -156,6 +167,8 @@ class ZieleRepository private constructor(private val app: Context) {
     suspend fun neueVorschlaege(v: List<Vorschlag>) { dao.neueVorschlaege(v); signal() }
 
     suspend fun neueRueckmeldung(r: Rueckmeldung) { dao.neueRueckmeldungen(listOf(r)); signal() }
+
+    suspend fun rueckmeldungenVerarbeitet(ids: List<Long>) { if (ids.isNotEmpty()) dao.rueckmeldungenVerarbeitet(ids) }
 
     suspend fun neu(z: Ziel): Long {
         val rang = (dao.alleZieleEinmal().minOfOrNull { it.rang } ?: 1) - 1

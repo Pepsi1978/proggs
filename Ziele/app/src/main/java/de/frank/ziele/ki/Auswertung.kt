@@ -116,9 +116,11 @@ object Auswertung {
         val gespraech = repo.rueckmeldungen(zielId)
         // Freie Plätze: Zielgröße minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
         val frei = zielGroesse(e.vorschlagMenge) - bisher.count { !it.verworfen && !it.erledigt }
-        // Franks Rückmeldungen dürfen beim Nachfüllen auch über die freien Plätze hinaus Aufgaben anstoßen.
-        val mitRueckmeldung = gespraech.any { it.vonFrank }
-        if (modus == Modus.NACHFUELLEN && frei <= 0 && !mitRueckmeldung) {
+        // Noch nicht umgesetzte Rückmeldungen dürfen beim Nachfüllen auch über die freien Plätze hinaus Aufgaben anstoßen.
+        val offeneRueckmeldungen = gespraech.filter { it.vonFrank && !it.verarbeitet }.map { it.id }
+        // Kein Platz frei, aber neue Rückmeldungen: nur deren Aufgaben, ohne neue Websuche.
+        val nurRueckmeldung = modus == Modus.NACHFUELLEN && frei <= 0
+        if (nurRueckmeldung && offeneRueckmeldungen.isEmpty()) {
             return "Gerade ist kein Platz frei. Lehne Vorschläge ab oder blende sie aus, dann füllt „Neue Aufgaben“ die Lücken."
         }
 
@@ -156,7 +158,7 @@ object Auswertung {
                     websuche = e.recherche,
                 ).trim().also { if (it.isBlank()) throw IllegalStateException("Die Recherche hat keinen Bericht geliefert.") }
             }
-            Modus.NACHFUELLEN -> {
+            Modus.NACHFUELLEN -> if (nurRueckmeldung) ziel.bericht else {
                 schritt(zielId, if (e.recherche) "Recherchiere weiter im Internet, aus anderer Richtung …" else "Denke über weitere Wege zum Ziel nach …")
                 val alt = Quellen.teilen(ziel.bericht).text
                 val ergaenzung = auth.streamChat(
@@ -182,7 +184,7 @@ object Auswertung {
         schritt(zielId, if (modus == Modus.RUECKMELDUNG) "Denke über deine Rückmeldung nach …" else "Leite die wichtigsten Aufgaben ab …")
         val anzahl = when (modus) {
             Modus.VOLL -> "etwa " + when (e.vorschlagMenge) { "knapp" -> "5 bis 8"; "ausfuehrlich" -> "14 bis 22"; else -> "8 bis 14" }
-            Modus.NACHFUELLEN -> "genau " + frei.coerceIn(0, 12)
+            Modus.NACHFUELLEN -> "genau " + frei.coerceAtMost(12)
             Modus.RUECKMELDUNG -> ""
         }
         val planAnfrage = buildString {
@@ -208,14 +210,16 @@ object Auswertung {
             when (modus) {
                 Modus.VOLL -> append("Liefere $anzahl neue Vorschläge.")
                 Modus.NACHFUELLEN -> {
-                    if (frei > 0) append(
-                        "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze. Liefere $anzahl neue Vorschläge, " +
+                    if (!nurRueckmeldung) append(
+                        "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze mit $anzahl neuen Vorschlägen, " +
                             "vor allem aus den neuen Erkenntnissen der Ergänzung: andere Wege zum Ziel, die bisher fehlen. " +
+                            "Greife dabei auch sinnvolle Anregungen aus FRANKS RÜCKMELDUNGEN (oben) auf, für die es noch keine Aufgabe gibt. " +
                             "Nichts, was einer abgelehnten oder vorhandenen Aufgabe gleicht oder ähnelt.",
-                    ) else append("Alle Plätze sind belegt; liefere nur Aufgaben zu Franks Rückmeldungen (siehe unten), sonst eine leere Liste.")
-                    if (mitRueckmeldung) append(" ").append(RUECKMELDUNG_NACHFUELLEN)
+                    ) else append("Alle Plätze sind belegt; für die freien Plätze lieferst du nichts.")
+                    if (offeneRueckmeldungen.isNotEmpty()) append(" ").append(RUECKMELDUNG_NACHFUELLEN)
+                    else if (nurRueckmeldung) append(" Liefere eine leere Liste.")
                 }
-                Modus.RUECKMELDUNG -> append("Antworte auf Franks letzte Rückmeldung im Gespräch oben und setze ihre sinnvollen Anregungen in Aufgaben um.")
+                Modus.RUECKMELDUNG -> append("Antworte auf Franks neue Rückmeldung im Gespräch oben und setze ihre sinnvollen Anregungen in Aufgaben um.")
             }
         }
         val antwort = auth.streamChat(
@@ -270,7 +274,7 @@ object Auswertung {
             )
         }
 
-        return when (modus) {
+        val ergebnis = when (modus) {
             Modus.VOLL -> {
                 if (neu.isEmpty()) throw IllegalStateException("Die KI hat keine Aufgaben vorgeschlagen. Bitte noch einmal auswerten.")
                 // Unter der Sperre des Übernehmens; ist das Ziel inzwischen gelöscht, nichts schreiben (sonst verwaiste Vorschläge).
@@ -294,7 +298,11 @@ object Auswertung {
                 } ?: return "Das Ziel gibt es nicht mehr."
                 // Die Ergänzung bleibt in der Recherche, auch wenn alle Kandidaten durchs Raster fielen.
                 repo.speichere(frisch.copy(bericht = bericht))
-                when (neu.size) {
+                if (nurRueckmeldung) when (neu.size) {
+                    0 -> "Alle Plätze sind belegt, und aus deinen neuen Rückmeldungen kam keine weitere Aufgabe."
+                    1 -> "Eine neue Aufgabe zu deiner Rückmeldung vorgeschlagen ✨"
+                    else -> "${neu.size} neue Aufgaben zu deinen Rückmeldungen vorgeschlagen ✨"
+                } else when (neu.size) {
                     0 -> "Die Recherche ist ergänzt, aber es kam keine neue Aufgabe durch, die nicht schon da oder abgelehnt ist."
                     1 -> "Eine neue Aufgabe vorgeschlagen, die Recherche ist ergänzt ✨"
                     else -> "${neu.size} neue Aufgaben vorgeschlagen, die Recherche ist ergänzt ✨"
@@ -312,6 +320,9 @@ object Auswertung {
                 if (neu.isEmpty()) "Antwort ist da" else "Antwort ist da, ${if (neu.size == 1) "ein neuer Vorschlag" else "${neu.size} neue Vorschläge"} ✨"
             }
         }
+        // Die Anregungen dieser Rückmeldungen sind jetzt bedacht: Sie heben das Platzlimit nicht mehr auf und werden nicht erneut umgesetzt.
+        repo.rueckmeldungenVerarbeitet(offeneRueckmeldungen)
+        return ergebnis
     }
 
     /** So viele sichtbare Vorschläge soll ein Ziel ungefähr haben; was darunter liegt, füllt „Neue Aufgaben“ auf. */
@@ -325,14 +336,16 @@ object Auswertung {
     }
 
     private fun gespraechBlock(gespraech: List<Rueckmeldung>): String = if (gespraech.isEmpty()) "" else buildString {
-        append("FRANKS RÜCKMELDUNGEN ZUR AUSWERTUNG (Gespräch, ältestes zuerst; jede Rückmeldung von Frank zählt: seine Anregungen, Wünsche und Einwände):\n")
-        // Franks eigene Beiträge kommen immer alle mit; die Antworten des Agenten nur gekürzt und nur die neuesten, wenn das Gespräch lang wird.
-        var platz = 6_000
-        val agent = gespraech.filter { !it.vonFrank }.asReversed().takeWhile { platz -= it.text.length.coerceAtMost(600); platz > 0 }.map { it.id }.toSet()
-        gespraech.forEach { r ->
-            if (r.vonFrank) append("Frank: ").append(r.text.trim().take(3_000)).append('\n')
-            else if (r.id in agent) append("Agent: ").append(r.text.trim().take(600)).append('\n')
+        append("FRANKS RÜCKMELDUNGEN ZUR AUSWERTUNG (Gespräch, ältestes zuerst; jede Rückmeldung von Frank zählt: seine Anregungen, Wünsche und Einwände; ")
+        append("NEU = Anregungen daraus sind noch nicht in Aufgaben umgesetzt):\n")
+        // Franks Beiträge ausführlich, die Antworten des Agenten gekürzt (sie erklären, was schon abgelehnt oder umgesetzt ist);
+        // wird das Gespräch lang, nur das Neueste, damit die Anfrage begrenzt bleibt.
+        val zeilen = gespraech.map {
+            if (it.vonFrank) (if (it.verarbeitet) "Frank: " else "Frank (NEU): ") + it.text.trim().take(2_000) else "Agent: " + it.text.trim().take(500)
         }
+        var laenge = 0
+        val neueste = zeilen.asReversed().takeWhile { laenge += it.length; laenge < 14_000 }.ifEmpty { listOf(zeilen.last()) }
+        neueste.asReversed().forEach { append(it).append('\n') }
         append('\n')
     }
 
@@ -465,9 +478,9 @@ object Auswertung {
             "Erfinde nichts. Trenne Belegtes von Erfahrungswissen. Bleib konkret und praktisch; keine Floskeln."
 
     private const val RUECKMELDUNG_ZUSATZ =
-        "\n\nSONDERFALL GESPRÄCH: Frank hat auf die Auswertung oder die Aufgaben reagiert (unter FRANKS RÜCKMELDUNGEN, die letzte Zeile von Frank zählt). " +
+        "\n\nSONDERFALL GESPRÄCH: Frank hat auf die Auswertung oder die Aufgaben reagiert (unter FRANKS RÜCKMELDUNGEN; es zählen seine als NEU markierten Beiträge, die älteren sind Hintergrund). " +
             "Nimm seine Rückmeldung ernst. Hat er recht, gib ihm recht und passe den Weg an; hast du gute Gründe dagegen, erkläre sie kurz und freundlich. " +
-            "Gehe jede Anregung und jeden neuen Punkt seiner letzten Rückmeldung einzeln durch: Ist er für das Ziel sinnvoll und gibt es dafür noch keine " +
+            "Gehe jede Anregung und jeden neuen Punkt seiner als NEU markierten Rückmeldungen einzeln durch: Ist er für das Ziel sinnvoll und gibt es dafür noch keine " +
             "vorhandene Aufgabe, mache daraus eine oder mehrere konkrete, erledigbare Aufgaben (NOTWENDIG oder UNTERSTUETZEND, mit ehrlicher Wichtigkeit) " +
             "und sag in \"begruendung\" kurz, dass sie seine Rückmeldung aufgreift. Spricht er einen neuen Punkt an, gehört dazu in aller Regel mindestens eine Aufgabe. " +
             "Nicht sinnvolle Anregungen (bringen das Ziel nicht voran, schaden eher, gleichen Abgelehntem) setzt du nicht um und erklärst in der Antwort kurz, warum. " +
@@ -477,9 +490,10 @@ object Auswertung {
             "\"strategie\" füllst du nur, wenn sich der beste Weg durch die Rückmeldung ändert, sonst leer; \"symbol\" bleibt leer."
 
     private const val RUECKMELDUNG_NACHFUELLEN =
-        "Zusätzlich: Gehe alle Anregungen aus FRANKS RÜCKMELDUNGEN durch. Ist eine für das Ziel sinnvoll und greift sie noch keine vorhandene Aufgabe auf, " +
-            "liefere dafür zusätzlich zu den freien Plätzen bis zu drei weitere Vorschläge, die sie konkret aufgreifen, und sag in \"begruendung\" kurz, " +
-            "dass sie seine Rückmeldung aufgreifen. Nicht sinnvolle Anregungen setzt du nicht um."
+        "Zusätzlich zu den freien Plätzen: Unter FRANKS RÜCKMELDUNGEN (oben) sind Beiträge als NEU markiert, deren Anregungen noch nicht umgesetzt sind. " +
+            "Ist eine davon für das Ziel sinnvoll und greift sie noch keine vorhandene Aufgabe auf, liefere dafür bis zu drei weitere Vorschläge, " +
+            "die sie konkret aufgreifen, und sag in \"begruendung\" kurz, dass sie seine Rückmeldung aufgreifen. " +
+            "Nicht sinnvolle Anregungen setzt du nicht um; was der Agent im Gespräch schon begründet abgelehnt hat, ebenfalls nicht."
 
     private const val RICHTER_ANWEISUNG =
         "Du prüfst neue Aufgabenvorschläge (KANDIDATEN) gegen zwei Listen. Streiche jeden Kandidaten, der einer ABGELEHNTEN Aufgabe gleicht oder ähnelt: " +
