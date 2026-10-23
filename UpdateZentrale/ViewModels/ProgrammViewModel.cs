@@ -706,6 +706,13 @@ public sealed partial class ProgrammViewModel : ObservableObject
             fortschritt.Report(AbschlussZeile(bericht) + "  (Dauer " + Protokollierung.DauerText(uhr.Elapsed.TotalSeconds) + ")");
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
+            if (bericht.Ergebnis == LaufErgebnis.Ausstehend && Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase))
+            {
+                // Report and history are written: the script's helper may close this app now.
+                Selbstupdate.Bereit();
+                fortschritt.Report("Protokoll geschrieben – die UpdateZentrale schließt sich jetzt und startet in der neuen Fassung neu.");
+                urteil = urteil with { FuerKarte = urteil.FuerKarte with { Meldung = "Schließt sich jetzt und startet in der neuen Fassung neu …" } };
+            }
             if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend && Protokollierung.Messwert(bericht) is { } messwert)
                 DauernSetzen(_dauern.Append(messwert));
 

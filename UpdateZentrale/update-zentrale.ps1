@@ -4,7 +4,8 @@
 #   1. Ja/Nein-Fenster (240 s, ohne Klick gilt "Nein") -- ohne Ja passiert nichts,
 #   2. in einen Zwischenordner bauen: die laufende UpdateZentrale.exe ist gesperrt, ein Build in
 #      bin\Release wuerde am Kopieren scheitern,
-#   3. einen abgekoppelten Helfer starten, der 20 s wartet (die App schreibt so noch Protokollfuss und Verlauf), der die laufende UpdateZentrale sauber schliesst, den
+#   3. einen abgekoppelten Helfer starten, der die laufende UpdateZentrale sauber schliesst (sobald sie ihr Protokoll
+#      geschrieben hat, siehe Marker unten), den
 #      Zwischenstand nach bin\Release kopiert und die neue Fassung startet. Abgekoppelt, weil die
 #      App nicht auf ein Skript warten kann, das sie selbst beendet.
 #
@@ -27,15 +28,40 @@ if (Test-Path $zwischen) { Remove-Item $zwischen -Recurse -Force }
 dotnet build (Join-Path $projektDir 'UpdateZentrale.csproj') -c Release -o $zwischen
 if ($LASTEXITCODE -ne 0) { Write-Error "Build fehlgeschlagen (Exit $LASTEXITCODE)."; exit 1 }
 
+# Marker zwischen App und Helfer (Ordner der App-Daten): "laeuft" legt die App an, bevor sie dieses
+# Skript startet; "bereit", sobald ihr Protokollfuss und verlauf.jsonl geschrieben sind. Nur wenn die
+# App selbst das Update ausgeloest hat, wartet der Helfer auf "bereit" (hoechstens 30 s) -- sonst
+# schliesst er nach einer Sekunde. Frueher waren es fest 20 s ohne jede Rueckmeldung.
+$datenDir   = Join-Path $env:LOCALAPPDATA 'UpdateZentrale'
+$laeuft     = Join-Path $datenDir 'selbstupdate-laeuft'
+$bereit     = Join-Path $datenDir 'selbstupdate-bereit'
+$helferLog  = Join-Path $datenDir 'logs\selbstupdate.log'
+New-Item -ItemType Directory -Path (Split-Path $helferLog) -Force | Out-Null
+
 $helfer = @"
-Start-Sleep -Seconds 20
-Get-Process UpdateZentrale -ErrorAction SilentlyContinue | ForEach-Object { `$null = `$_.CloseMainWindow() }
+`$log = '$helferLog'
+function L([string]`$t) { Add-Content -LiteralPath `$log -Value ((Get-Date -Format 'dd.MM.yyyy HH:mm:ss') + '  ' + `$t) -Encoding utf8 }
+L 'Helfer gestartet (PID ' + `$PID + ').'
+`$start = Get-Date
+if ((Test-Path '$laeuft') -and ((Get-Date) - (Get-Item '$laeuft').LastWriteTime).TotalMinutes -lt 15) {
+    L 'Update kam aus der App: warte, bis sie ihr Protokoll geschrieben hat (hoechstens 30 s).'
+    while (-not (Test-Path '$bereit') -and ((Get-Date) - `$start).TotalSeconds -lt 30) { Start-Sleep -Milliseconds 250 }
+    L ('Bereit nach ' + [int]((Get-Date) - `$start).TotalSeconds + ' s' + `$(if (Test-Path '$bereit') { '' } else { ' (Zeitlimit, ohne Rueckmeldung)' }) + '.')
+} else {
+    Start-Sleep -Seconds 1
+}
+Remove-Item '$laeuft', '$bereit' -Force -ErrorAction SilentlyContinue
+`$laufend = @(Get-Process UpdateZentrale -ErrorAction SilentlyContinue)
+L ('Schliesse ' + `$laufend.Count + ' laufende UpdateZentrale.')
+`$laufend | ForEach-Object { `$null = `$_.CloseMainWindow() }
 for (`$i = 0; `$i -lt 60 -and (Get-Process UpdateZentrale -ErrorAction SilentlyContinue); `$i++) { Start-Sleep -Milliseconds 500 }
-Get-Process UpdateZentrale -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 1
+if (Get-Process UpdateZentrale -ErrorAction SilentlyContinue) { L 'Nach 30 s noch offen - wird beendet.'; Get-Process UpdateZentrale -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1 }
 robocopy '$zwischen' '$zielDir' /E /NFL /NDL /NJH /NJS | Out-Null
+L ('Kopiert (robocopy Code ' + `$LASTEXITCODE + '; unter 8 = erfolgreich).')
 Start-Process '$exe'
+L ('Neue Fassung gestartet: ' + (Get-Item '$exe').VersionInfo.FileVersion)
 "@
+Remove-Item $bereit -Force -ErrorAction SilentlyContinue
 $shell = (Get-Process -Id $PID).Path
 $helferArgs = @{ FilePath = $shell; WindowStyle = 'Hidden'; ArgumentList = @('-NoProfile', '-Command', $helfer) }
 
@@ -49,5 +75,5 @@ if ($laeuftErhoeht -and -not $istAdmin) { $helferArgs.Verb = 'RunAs' }
 
 Start-Process @helferArgs
 
-Write-Output 'Die UpdateZentrale startet sich in wenigen Sekunden neu.'
+Write-Output ('Die UpdateZentrale schliesst sich gleich und startet in der neuen Fassung neu (Protokoll: ' + $helferLog + ').')
 Write-Output 'UPDATEZENTRALE_UPDATE_STATUS=started'

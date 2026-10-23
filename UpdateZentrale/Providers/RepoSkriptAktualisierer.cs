@@ -105,13 +105,21 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
 
         // The scripts wait up to 240 s for the click, so the timeout must sit clearly above that.
         var zeitlimit = TimeSpan.FromSeconds(Math.Max(eintrag.DialogWartezeitSekunden, 300) + eintrag.ZeitlimitMinuten * 60);
+        var selbst = eintrag.Id.Equals("updatezentrale", StringComparison.OrdinalIgnoreCase);
+        // Tells the script's helper that this app started the update: it then waits for
+        // Selbstupdate.Bereit() instead of closing the app after a fixed pause.
+        if (selbst) Selbstupdate.LaeuftMelden();
+
         var exeVorher = await FingerabdruckAsync(eintrag, abbruch);
         var lauf = await Kommandozeile.AusfuehrenAsync(PwshPfad(), args, zeitlimit, Pfade.RepoWurzel, abbruch);
         protokoll.Report(lauf.Ausgabe);
         var exeNachher = await FingerabdruckAsync(eintrag, abbruch);
 
-        return Auswerten(lauf, eintrag.StatusPraefix, !string.IsNullOrWhiteSpace(exeVorher) && exeVorher == exeNachher,
-            selbst: eintrag.Id.Equals("updatezentrale", StringComparison.OrdinalIgnoreCase));
+        var ergebnis = Auswerten(lauf, eintrag.StatusPraefix, !string.IsNullOrWhiteSpace(exeVorher) && exeVorher == exeNachher, selbst);
+        // No restart coming (no, no answer, failure): a stale marker would make the next update
+        // from outside wait 30 s for an answer that never comes.
+        if (selbst && !ergebnis.ErstNachNeustart) Selbstupdate.Aufraeumen();
+        return ergebnis;
     }
 
     /// <summary>
