@@ -86,6 +86,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.data.Anhang
@@ -128,17 +129,18 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     val guthabenUsd = guthabenStand?.restUsd
     // Unter 5 € (EZB-Tageskurs aus der Guthaben-Abfrage) rot, sonst grün; ohne Kurs bleibt es grün.
     val guthabenKnapp = guthabenUsd != null && guthabenStand?.kurs?.let { guthabenUsd * it < 5.0 } == true
-    // Das Guthaben steht fett und gleich groß vor dem Modellnamen, getrennt durch „ · “.
+    // Das Guthaben steht eine Schriftstufe kleiner und nicht fett vor dem Modellnamen, getrennt durch „ · “.
     fun mitGuthaben(name: String) = buildAnnotatedString {
         if (guthabenUsd != null) {
-            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Bold)) {
+            val klein = 0.87.em
+            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Normal, fontSize = klein)) {
                 append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $")
             }
-            // Was die letzte Aufgabe gekostet hat, als Differenz direkt hinter dem Guthaben.
+            // Was die letzte Aufgabe gekostet hat, als roter Abzug direkt hinter dem Guthaben.
             vm.anthropicKosten?.let { k ->
-                withStyle(SpanStyle(color = f.textLeise, fontWeight = FontWeight.Bold)) { append(" −${AnthropicGuthabenFaehigkeit.betrag(k)} $") }
+                withStyle(SpanStyle(color = f.gefahr, fontWeight = FontWeight.Normal, fontSize = klein)) { append(" −${AnthropicGuthabenFaehigkeit.betrag(k)} $") }
             }
-            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Bold)) { append(")") }
+            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Normal, fontSize = klein)) { append(")") }
             append(" · ")
         }
         append(name)
