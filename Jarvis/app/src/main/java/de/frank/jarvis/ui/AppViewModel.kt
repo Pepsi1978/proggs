@@ -379,7 +379,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 art = "fehler"
                 e.message ?: "Das hat nicht geklappt."
             }
-            rundeFertig(runde, antwort, art, vorlesen)
+            val karte = if (art == "fehler") null else de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(id, runde.beginn)
+            rundeFertig(runde, antwort, art, vorlesen, karte)
         }
         if (einstellungen.modell.istAnthropic) {
             anthropicKostenStart()
@@ -540,17 +541,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Die Antwort einer Runde ins Gespräch: sichtbar, wenn es gerade offen ist, sonst in seine gespeicherte Datei. */
-    private fun rundeFertig(runde: Runde, antwort: String, art: String, vorlesen: Boolean) {
+    // [karte]: Ansage einer Auswahlkarte, die diese Runde gestellt hat (siehe ProgrammierFaehigkeit.wahlInRunde).
+    private fun rundeFertig(runde: Runde, antwort: String, art: String, vorlesen: Boolean, karte: String? = null) {
         // Schon abgebrochen (oder das Gespräch gelöscht): nichts mehr anhängen.
         if (laufende[runde.sitzung] !== runde) return
         laufende.remove(runde.sitzung)
-        // Hat die Runde eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), ist die Karte die Antwort: keine freie Rückfrage des
-        // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut, oder nach einem schnellen Tipp „Übernommen: …“.
-        if (art != "fehler") de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(runde.sitzung, runde.beginn)?.let { ansage ->
+        // Hat die Runde nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), ist die Karte die Antwort: keine freie Rückfrage des
+        // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut, oder nach einem schnellen Tipp „Übernommen: …“. Hat die Runde
+        // daneben noch etwas anderes erledigt (Timer, Aufgabe …), bleibt die Antwort des Modells stehen.
+        val nurAuftrag = synchronized(runde.erledigt) { runde.erledigt.all { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
+        if (karte != null && nurAuftrag) {
             if (runde.sitzung != sitzungId) sitzungenLaden()
             if (!vorlesen) return
-            if (runde.ursprung != null && (runde.sitzung != sitzungId || weckwortLauf?.isActive != true)) sprachZustellen(rundenZustellung(runde, ansage))
-            else if (runde.sitzung == sitzungId) vorleser.sprich(WAHL_QUELLE + runde.beginn, "Jarvis", ansage)
+            if (runde.ursprung != null && (runde.sitzung != sitzungId || weckwortLauf?.isActive != true)) sprachZustellen(rundenZustellung(runde, karte))
+            else if (runde.sitzung == sitzungId) vorleser.sprich(WAHL_QUELLE + runde.sitzung + ":" + runde.beginn, "Jarvis", karte)
             return
         }
         // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
@@ -1169,18 +1173,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 else "Das konnte ich gerade nicht nachschlagen."
             // Die Arbeit selbst darf länger dauern als die Geduld des Live-Modells: Sie läuft weiter, das Modell bekommt nach dem
             // Zeitlimit einen Zwischenstand, und die echte Antwort wird später zugestellt (Chat und Stimme), nie verworfen.
+            // Hat die Antwort nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), gilt nur deren fester Wortlaut, nach einem
+            // schnellen Tipp „Übernommen: …“ (wie im Chat, siehe rundeFertig).
+            val erledigt = java.util.Collections.synchronizedList(mutableListOf<String>())
+            var karte: String? = null
             val arbeit = async {
                 runCatching {
                     // Live (jarvis_fragen): fest 8 Schritte, unabhängig von Franks Chat-Schrittlimit.
                     agent.versuche(auftrag.ifBlank { "Antworte auf Franks letzte Äußerung im Gespräch." } + (if (hinweis.isNotBlank()) "\n\n$hinweis" else ""), verlauf,
-                        lernen = true, abschluss = true, zeitlimitMs = LIVE_NACHREICHEN_MS,
+                        lernen = true, abschluss = true, zeitlimitMs = LIVE_NACHREICHEN_MS, beiAenderung = { erledigt += it },
                         maxSchritte = JarvisAgent.STANDARD_SCHRITTE, modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)
                 }.onFailure { if (it is CancellationException) throw it; Logbuch.fehler("Live: Antwort von Jarvis", it) }.getOrNull()
+                    ?.also { a ->
+                        val nurAuftrag = synchronized(erledigt) { erledigt.all { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
+                        if (nurAuftrag) karte = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(herkunft, beginn)
+                    }
             }
-            // Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.): Das Live-Modell sagt nur ihren festen Wortlaut, nach einem schnellen Tipp „Übernommen: …“.
             val rechtzeitig = kotlinx.coroutines.withTimeoutOrNull(zeitlimit) { arbeit.await() ?: ersatz }?.let { a ->
-                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(herkunft, beginn)
-                    ?.let { "Die Auswahl steht als Karte im Chat. Sag Frank genau diesen Satz und sonst nichts, ohne eigene Rückfrage: „$it“" } ?: a
+                karte?.let { "Die Auswahl steht als Karte im Chat. Sag Frank genau diesen Satz und sonst nichts, ohne eigene Rückfrage: „$it“" } ?: a
             }
             // Nur an dieselbe, noch laufende Verbindung: Eine neue kennt diese Kennung nicht.
             // Kommt sie dort nicht an (Gemini hat den Aufruf abgebrochen, Verbindung weg), wird sie unten zugestellt.
@@ -1189,10 +1199,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Logbuch.sprache("Live: Antwort dauert", "nach ${zeitlimit / 1000} s Zwischenstand an das Live-Modell, die Antwort wird nachgereicht")
                 if (live === sitzung) sitzung?.ergebnis(callId, LIVE_DAUERT)
             }
-            val antwort = rechtzeitig ?: arbeit.await() ?: "Die Antwort auf deine Frage ist leider nicht zustande gekommen. Details unter Aktivität."
+            val roh = rechtzeitig ?: arbeit.await()
+            // Die Karte steht schon im Chat: nachgereicht wird dann nur ihr Wortlaut, ohne zweite Blase.
+            val antwort = karte ?: roh ?: "Die Antwort auf deine Frage ist leider nicht zustande gekommen. Details unter Aktivität."
             // Zu spät für das Live-Modell (Gespräch beendet, gewechselt oder Zwischenstand gegeben): in den Chat und hörbar zustellen.
             Logbuch.sprache("Live: Antwort nachgereicht", "${antwort.length} Zeichen, Gespräch ${if (live === sitzung) "läuft noch" else "beendet"}")
-            if (herkunft.isNotEmpty()) de.frank.jarvis.faehigkeit.ProgrammierChat.poste(getApplication(), herkunft, antwort, "antwort")
+            if (herkunft.isNotEmpty() && karte == null) de.frank.jarvis.faehigkeit.ProgrammierChat.poste(getApplication(), herkunft, antwort, "antwort")
             sprachZustellen(Zustellung("live:$callId:${ursprung.seit}", SprachModus.LIVE, herkunft, ursprung.seit, "Frank, die Antwort auf deine Frage ist jetzt da.", antwort))
         }
     }
@@ -2007,7 +2019,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // Auch „Codex CLI“/„OpenCode CLI“ und „Ja“/„Nein“ zum Review: [modell] ist der Wert des getippten Knopfs.
     fun programmierModell(wahlId: String, modell: String) {
         // Liest Jarvis gerade die Frage dieser Auswahl vor, ist sie mit dem Tipp beantwortet.
-        if (vorleser.stand.value.quelle?.startsWith(WAHL_QUELLE) == true) vorleser.stopp()
+        val karteIn = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.gespraechDerKarte(wahlId)
+        if (karteIn.isNotEmpty() && vorleser.stand.value.quelle?.startsWith("$WAHL_QUELLE$karteIn:") == true) vorleser.stopp()
         viewModelScope.launch {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
             runCatching { faehigkeit?.modellGewaehlt(wahlId, modell) }.onFailure { meldung = it.message ?: "Der Auftrag ließ sich nicht starten." }

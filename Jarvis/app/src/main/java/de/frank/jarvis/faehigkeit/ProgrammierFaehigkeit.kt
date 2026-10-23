@@ -283,7 +283,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             ) { a -> nachtrag(a.optString("auftrag_id").trim(), DiktatTrenner.auftrag(a.optString("text")), a.optString("franks_worte").trim()) },
             Werkzeug(
                 name = "programmieren",
-                titel = "Programmierauftrag starten",
+                titel = WERKZEUG_TITEL,
                 beschreibung = "Jarvis: programmiert etwas in einer von Franks Apps („Jarvis, programmiere in Geniale Aufgaben einen Filter für …“, „bau in den Wecker ein, dass …“, " +
                     "„ändere in Jarvis …“, „schicke bitte folgenden Auftrag an den Programmierer: …“, „schick das an den Programmierer“, „lass das programmieren“). " +
                     "Aus ChatGPT bekommt jeder Auftrag in Jarvis eine eigene Programmier-Session, in der Frank Schritte und Rückfragen sieht. Der Auftrag geht an Claude Code: an Franks PC, wenn er an ist (schnell, die App kommt per WLAN aufs Handy), sonst in die Cloud " +
@@ -427,9 +427,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Steht im Gespräch schon eine frische Karte, keine zweite: Sie übernimmt den neu gefassten Auftrag, und ein schon
         // per Knopf gewähltes Sol wird nicht noch einmal erfragt.
         offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS }?.let { (id, alt) ->
-            offeneWahlen[id] = alt.copy(app = appName, auftrag = auftrag)
+            val neuGefasst = alt.copy(app = appName, auftrag = auftrag)
+            offeneWahlen[id] = neuGefasst
             // Gilt als Karte dieser Runde: Am Ende fragt sie (bzw. „Übernommen: …“) statt einer freien Antwort des Modells.
-            karten[id]?.let { karten[id] = Karte(it.gespraech, it.frage, it.optionen, System.currentTimeMillis()) }
+            karten[id]?.let { karten[id] = it.copy(frage = frageUndKnoepfe(neuGefasst).first, zeit = System.currentTimeMillis(), ausRunde = true) }
             return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
                 STUFE_CLI -> "Frank hat schon Sol 6.1 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
                 STUFE_REVIEW -> "Frank hat schon Sol 6.1 im Codex CLI gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
@@ -466,21 +467,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Stellt die Karte zu [w] ins Gespräch: Frage und Knöpfe je nach Stufe. Die Karte ist der einzige Weg der Frage (fester
      * Wortlaut, siehe [wahlInRunde]): Sie steht sofort antippbar im Chat, noch bevor das Modell seine Runde beendet.
      */
-    private suspend fun karte(w: OffeneWahl) {
+    // [vorgaenger]: die Karte, deren Tipp diese Folgekarte gestellt hat (dann gehört sie zu keiner Runde des Modells).
+    private suspend fun karte(w: OffeneWahl, vorgaenger: String? = null) {
         val id = java.util.UUID.randomUUID().toString()
-        val (frage, optionen) = when (w.stufe) {
-            STUFE_CLI -> "Programmierauftrag für ${w.app}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
-            STUFE_REVIEW -> "Programmierauftrag für ${w.app}: Soll Codex ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
-            else -> "Programmierauftrag für ${w.app}: Opus 5.5 oder Sol 6.1?" to listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
-        }
+        val (frage, optionen) = frageUndKnoepfe(w)
         val jetzt = System.currentTimeMillis()
         karten.entries.removeIf { jetzt - it.value.zeit > KARTEN_HALTEN_MS }
-        karten[id] = Karte(w.gespraech, frage, optionen, jetzt)
+        karten[id] = Karte(w.gespraech, frage, optionen, jetzt, ausRunde = vorgaenger == null, vorgaenger = vorgaenger)
         offeneWahlen[id] = w
         wahlStand.update { it + (id to WAHL_OFFEN) }
         val knoepfe = JSONArray().apply { optionen.forEach { (wert, label) -> put(JSONObject().put("wert", wert).put("label", label)) } }
         ProgrammierChat.poste(app, w.gespraech, frage, ProgrammierChat.ART_MODELLWAHL,
             JSONObject().put("wahl_id", id).put("app", w.app).put("optionen", knoepfe).toString())
+    }
+
+    /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
+    private fun frageUndKnoepfe(w: OffeneWahl): Pair<String, List<Pair<String, String>>> = when (w.stufe) {
+        STUFE_CLI -> "Programmierauftrag für ${w.app}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
+        STUFE_REVIEW -> "Programmierauftrag für ${w.app}: Soll Codex ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
+        else -> "Programmierauftrag für ${w.app}: Opus 5.5 oder Sol 6.1?" to listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
     }
 
     /** Die offenen Modellwahl-Knöpfe eines Gesprächs gelten nicht mehr (Frank hat per Sprache gewählt). */
@@ -498,6 +503,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     suspend fun modellGewaehlt(wahlId: String, wert: String) {
         val w = offeneWahlen.remove(wahlId) ?: return
         wahlStand.update { it + (wahlId to wert) }
+        // Bis Folgekarte bzw. Start feststehen, wartet [wahlInRunde] mit seiner Ansage.
+        tippInArbeit += wahlId
+        try { tippVerarbeiten(wahlId, w, wert) } finally { tippInArbeit -= wahlId }
+    }
+
+    private suspend fun tippVerarbeiten(wahlId: String, w: OffeneWahl, wert: String) {
         val umgebung = ProgrammierChat.GespraechKennung(w.gespraech) + (w.ursprung ?: kotlin.coroutines.EmptyCoroutineContext)
         // Folgefragen: Sol am Windows-PC → CLI, Codex CLI → Review. Ist der PC aus, geht Sol wie bisher ohne Frage weiter.
         val naechste = when {
@@ -506,7 +517,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             else -> null
         }
         if (naechste != null) {
-            karte(naechste)
+            karte(naechste, vorgaenger = wahlId)
             return
         }
         val modell = if (w.stufe == STUFE_MODELL) wert else w.modell
@@ -1697,24 +1708,45 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Was das Modell nach einer Auswahlkarte tun soll: nichts selbst fragen, die Karte fragt (siehe [wahlInRunde]). */
         private const val KARTE_FRAGT = "Jarvis zeigt und sagt die Frage selbst mit festem Wortlaut; stell KEINE eigene Rückfrage dazu und beende deine Antwort knapp."
 
-        /** Jede Auswahlkarte mit Gespräch, festem Fragetext, Knöpfen und Zeitpunkt; nur im Speicher, einen Tag lang. */
-        private class Karte(val gespraech: String, val frage: String, val optionen: List<Pair<String, String>>, val zeit: Long)
+        /** Titel des Werkzeugs programmieren (so steht es in den Änderungen einer Runde). */
+        const val WERKZEUG_TITEL = "Programmierauftrag starten"
+
+        /**
+         * Jede Auswahlkarte mit Gespräch, festem Fragetext, Knöpfen und Zeitpunkt; nur im Speicher, einen Tag lang. [ausRunde]: vom
+         * Werkzeug in einer Runde des Modells gestellt; Folgekarten nach einem Tipp tragen ihren [vorgaenger].
+         */
+        private data class Karte(val gespraech: String, val frage: String, val optionen: List<Pair<String, String>>, val zeit: Long,
+                                 val ausRunde: Boolean = true, val vorgaenger: String? = null)
         private val karten = java.util.concurrent.ConcurrentHashMap<String, Karte>()
         private const val KARTEN_HALTEN_MS = 24 * 60 * 60_000L
+        /** Karten, deren Tipp gerade verarbeitet wird (Rechner prüfen, Folgekarte, Start), und wie lange die Ansage darauf wartet. */
+        private val tippInArbeit: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+        private const val TIPP_WARTEN_MS = 8_000L
+
+        /** Das Gespräch, in dem die Karte [wahlId] steht (leer, wenn unbekannt). */
+        fun gespraechDerKarte(wahlId: String): String = karten[wahlId]?.gespraech.orEmpty()
 
         /**
          * Hat die Runde in [gespraech] (begonnen [seit]) eine Auswahlkarte gestellt, ersetzt das hier die Antwort des Modells, damit
-         * die Frage nur einen festen Weg hat: Ist die neueste Karte noch offen, ihr Fragetext; hat Frank schon getippt (auch schneller,
-         * als das Modell antworten konnte), „Übernommen: …“ ohne weitere Rückfrage. null = keine Karte in der Runde oder per Sprache gewählt.
+         * die Frage nur einen festen Weg hat: Ist die Karte noch offen, ihr Fragetext; hat Frank schon getippt (auch schneller,
+         * als das Modell antworten konnte), „Übernommen: …“ ohne weitere Rückfrage, bei einer Folgekarte samt deren Frage.
+         * null = keine Karte in der Runde oder per Sprache gewählt.
          */
-        fun wahlInRunde(gespraech: String, seit: Long): String? {
+        suspend fun wahlInRunde(gespraech: String, seit: Long): String? {
             if (gespraech.isEmpty()) return null
-            val (id, k) = karten.entries.filter { it.value.gespraech == gespraech && it.value.zeit >= seit }
+            val (id, k) = karten.entries.filter { it.value.ausRunde && it.value.gespraech == gespraech && it.value.zeit >= seit }
                 .maxByOrNull { it.value.zeit }?.toPair() ?: return null
+            return ansage(id, k)
+        }
+
+        private suspend fun ansage(id: String, k: Karte): String? {
+            kotlinx.coroutines.withTimeoutOrNull(TIPP_WARTEN_MS) { while (id in tippInArbeit) kotlinx.coroutines.delay(100) }
             return when (val s = wahlStand.value[id]) {
                 null, WAHL_ERLEDIGT -> null
+                // Offen, auch nach einem Fehlstart (der Grund steht dann schon im Gespräch).
                 WAHL_OFFEN -> k.frage
-                else -> "Übernommen: " + (k.optionen.firstOrNull { it.first == s }?.second ?: s) + "."
+                else -> "Übernommen: " + (k.optionen.firstOrNull { it.first == s }?.second ?: s) + "." +
+                    (karten.entries.firstOrNull { it.value.vorgaenger == id }?.let { (fid, f) -> ansage(fid, f)?.let { " $it" } }.orEmpty())
             }
         }
 
