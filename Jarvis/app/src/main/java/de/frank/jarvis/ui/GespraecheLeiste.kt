@@ -178,7 +178,7 @@ private fun Leiste(
     val normale = listen.gespraeche
     val anzahlJe = remember(vm.sitzungen) { vm.sitzungen.groupingBy { it.projekt }.eachCount() }
     val gruppen = remember(normale) { gruppiert(normale) }
-    val programmierGruppen = remember(listen.programmierung) { gruppiert(listen.programmierung) }
+    val programmierGruppen = remember(listen.programmierung) { gruppiert(listen.programmierung, ::startzeit) }
     val projekt = if (projekte) vm.projekte.firstOrNull { it.id == projektOffen } else null
     val imProjekt = remember(vm.sitzungen, projekt?.id) { projekt?.let { p -> vm.sitzungen.filter { it.projekt == p.id } }.orEmpty() }
     // Zurück aus einem Projekt führt zur Projektliste, erst danach schließt die Leiste.
@@ -442,18 +442,22 @@ internal data class LeistenListen(val gespraeche: List<Sitzung>, val programmier
  * Verteilt die Gespräche auf die Reiter, jedes in genau einen der beiden: Programmiergespräche nur unter „Programmierung“
  * (auch die eines Projekts, die zusätzlich in ihrem Projekt stehen), alle übrigen unter „Gespräche“. Gespräche eines Projekts
  * stehen nur in dessen Bereich; eines mit unbekanntem Projekt (Datei verloren) bleibt unter „Gespräche“, damit es nirgends verschwindet.
+ * Programmiergespräche stehen fest nach Startzeit, die zuletzt gestartete oben: Neue Meldungen in einer Session verschieben nichts.
  */
 internal fun aufteilen(sitzungen: List<Sitzung>, projektIds: Set<String>) = LeistenListen(
     gespraeche = sitzungen.filter { !it.programmierung && (it.projekt.isEmpty() || it.projekt !in projektIds) },
-    programmierung = sitzungen.filter { it.programmierung },
+    programmierung = sitzungen.filter { it.programmierung }.sortedByDescending(::startzeit),
 )
 
-/** Heute, Gestern, Letzte 7 Tage, Diesen Monat, Älter: so findet Frank ein Gespräch nach dem Gefühl für die Zeit. */
-private fun gruppiert(sitzungen: List<Sitzung>): List<Pair<String, List<Sitzung>>> {
+/** Start einer Programmier-Session: der erste Auftrag, sonst die Anlage des Gesprächs. Ändert sich nicht mehr. */
+internal fun startzeit(s: Sitzung): Long = s.auftragStart.takeIf { it > 0 } ?: s.erstellt
+
+/** Heute, Gestern, Letzte 7 Tage, Diesen Monat, Älter: so findet Frank ein Gespräch nach dem Gefühl für die Zeit. [zeit]: wonach eingeordnet wird. */
+private fun gruppiert(sitzungen: List<Sitzung>, zeit: (Sitzung) -> Long = { it.geaendert }): List<Pair<String, List<Sitzung>>> {
     val heute = java.time.LocalDate.now()
     val zone = java.time.ZoneId.systemDefault()
     return sitzungen.groupBy { s ->
-        val tag = java.time.Instant.ofEpochMilli(s.geaendert).atZone(zone).toLocalDate()
+        val tag = java.time.Instant.ofEpochMilli(zeit(s)).atZone(zone).toLocalDate()
         when {
             tag == heute -> "Heute"
             tag == heute.minusDays(1) -> "Gestern"
