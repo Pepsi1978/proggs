@@ -49,10 +49,13 @@ enum class ReasoningEffort(val label: String, val apiValue: String) {
     ULTRA("Ultra", "ultra"),
     ;
 
+    /** Anzeigename je Modell: Anthropic nennt die Stufen wie in der Claude-App (Niedrig, Mittel, Hoch, Extra hoch, Maximal). */
+    fun titel(modell: CodexModel?): String = if (this == XHIGH && modell?.istAnthropic == true) "Extra hoch" else label
+
     companion object {
         fun fromLabel(value: String): ReasoningEffort = entries.firstOrNull {
             it.label.equals(value.trim(), ignoreCase = true) || it.apiValue.equals(value.trim(), ignoreCase = true)
-        } ?: MEDIUM
+        } ?: if (value.trim().equals("Extra hoch", ignoreCase = true)) XHIGH else MEDIUM
     }
 }
 

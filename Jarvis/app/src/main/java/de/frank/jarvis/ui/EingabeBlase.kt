@@ -210,7 +210,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 Text(mitGuthaben(kurzName(modell)), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                Text(" " + vm.einstellungen.denkstufe.label, color = f.text, fontSize = 15.sp, maxLines = 1)
+                Text(" " + vm.einstellungen.denkstufe.titel(vm.einstellungen.modell), color = f.text, fontSize = 15.sp, maxLines = 1)
             }
             Spacer(Modifier.width(4.dp))
             // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld.
@@ -284,7 +284,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             vm.einstellungen.modell.supportedEfforts.forEach { st ->
                 val aktiv = st == vm.einstellungen.denkstufe
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).antippen { vm.setzeDenkstufe(st); modellOffen = false }.padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(st.label, color = f.text, fontSize = 17.sp, fontWeight = if (aktiv) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                    Text(st.titel(vm.einstellungen.modell), color = f.text, fontSize = 17.sp, fontWeight = if (aktiv) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f))
                     if (aktiv) Icon(Icons.Rounded.Check, null, tint = f.primaer)
                 }
             }

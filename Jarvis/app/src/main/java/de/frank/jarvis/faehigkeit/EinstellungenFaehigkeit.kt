@@ -399,7 +399,7 @@ class EinstellungsKatalog(context: Context) {
                 val m = CodexModel.valueOf(w); e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe)
             },
             auswahl("denkstufe", "Modell", "Denkstufe", "Wie gründlich das Modell nachdenkt.",
-                { e.modell.supportedEfforts.map { it.name to it.label } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
+                { e.modell.supportedEfforts.map { it.name to it.titel(e.modell) } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
             auswahl("schrittlimit", "Modell", "Schrittlimit pro Anfrage", "Höchstens so viele Bearbeitungsrunden samt Werkzeugaufrufen je Anfrage, im Chat und bei allen Agenten; Unbegrenzt hebt nur dieses Limit auf (Zeitlimit und Abbrechen gelten weiter) und kann mehr kosten und länger dauern.",
                 { Einstellungen.SCHRITTLIMITS.map { it.toString() to Einstellungen.schrittlimitLabel(it) } }, { e.schrittlimit.toString() }) { e.schrittlimit = it.toInt() },
 

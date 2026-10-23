@@ -123,7 +123,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 Unterzeile("Denkstufe")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    e.modell.supportedEfforts.forEach { s -> Chip(s.label, aktiv = e.denkstufe == s) { vm.setzeDenkstufe(s) } }
+                    e.modell.supportedEfforts.forEach { s -> Chip(s.titel(e.modell), aktiv = e.denkstufe == s) { vm.setzeDenkstufe(s) } }
                 }
                 Text("Niedrig antwortet am schnellsten. Höhere Stufen denken gründlicher, brauchen aber länger.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 Unterzeile("Schrittlimit pro Anfrage")

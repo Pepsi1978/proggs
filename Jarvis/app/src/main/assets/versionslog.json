@@ -253,6 +253,7 @@
     {"versionCode": 248, "versionName": "1.8.237", "stand": "23.10.2026, 12:47 Uhr", "notiz": "Der kurze Ausblick der Tagesauswertung nennt wieder Termine, Aufgaben von morgen und Dienstwechsel, Wiederholungen zwischen den Teilen entfallen."},
     {"versionCode": 249, "versionName": "1.8.238", "stand": "23.10.2026, 12:48 Uhr", "notiz": "Das Sprechtempo lässt sich für die Hauptstimme und jede Rückfallstufe einzeln einstellen, auch wenn die Hauptstimme Gemini ist."},
     {"versionCode": 250, "versionName": "1.8.239", "stand": "23.10.2026, 12:58 Uhr", "notiz": "Jarvis merkt sich die Denkstufe je Modell und stellt sie beim Wechsel zurück auf ein Modell automatisch wieder ein."},
-    {"versionCode": 251, "versionName": "1.8.240", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Das Anthropic-Guthaben wird nicht mehr im Leerlauf abgefragt, sondern beim Start und Ende einer Aufgabe; dahinter steht, was die letzte Aufgabe gekostet hat."}
+    {"versionCode": 251, "versionName": "1.8.240", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Das Anthropic-Guthaben wird nicht mehr im Leerlauf abgefragt, sondern beim Start und Ende einer Aufgabe; dahinter steht, was die letzte Aufgabe gekostet hat."},
+    {"versionCode": 252, "versionName": "1.8.241", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Die Aufwandsstufen der Claude-Modelle heißen jetzt wie in der Claude-App: Niedrig, Mittel, Hoch, Extra hoch und Maximal."}
   ]
 }
