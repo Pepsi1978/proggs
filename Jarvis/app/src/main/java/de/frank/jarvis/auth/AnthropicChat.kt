@@ -53,7 +53,8 @@ internal fun anthropicChatPayload(
 internal val CodexModel.mitFallback: Boolean get() = istAnthropic && this != CodexModel.HAIKU
 
 internal const val ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01"
-private const val ANTHROPIC_MAX_TOKENS = 64_000
+/** Höchstwert aller vier Claude-Modelle. Bei Effort „Maximal“ verbraucht schon das Denken mehr als 64 000 Token. */
+private const val ANTHROPIC_MAX_TOKENS = 128_000
 
 private fun textBlock(text: String) = JSONObject().put("type", "text").put("text", text)
 

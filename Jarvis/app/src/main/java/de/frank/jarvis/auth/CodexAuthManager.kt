@@ -994,7 +994,8 @@ class CodexAuthManager(context: Context) {
         private val RESPONSES_HTTP_CLIENT = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(5, TimeUnit.MINUTES)
-            .callTimeout(8, TimeUnit.MINUTES)
+            // Ein Modellzug mit Effort „Maximal“ und 128 000 Token kann länger als 8 Minuten streamen.
+            .callTimeout(15, TimeUnit.MINUTES)
             .build()
         private const val REFRESH_SKEW_MS = 120_000L
         private const val FOREGROUND_NETWORK_TIMEOUT_MS = 5 * 60_000L

@@ -256,6 +256,7 @@
     {"versionCode": 251, "versionName": "1.8.240", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Das Anthropic-Guthaben wird nicht mehr im Leerlauf abgefragt, sondern beim Start und Ende einer Aufgabe; dahinter steht, was die letzte Aufgabe gekostet hat."},
     {"versionCode": 252, "versionName": "1.8.241", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Die Aufwandsstufen der Claude-Modelle heißen jetzt wie in der Claude-App: Niedrig, Mittel, Hoch, Extra hoch und Maximal."},
     {"versionCode": 253, "versionName": "1.8.242", "stand": "23.10.2026, 13:11 Uhr", "notiz": "Die Kostenanzeige je Aufgabe misst genauer: nur Claude-Aufgaben zählen, kein veralteter Ausgangswert, weniger Abfragen bei der Claude Console."},
-    {"versionCode": 254, "versionName": "1.8.243", "stand": "23.10.2026, 13:12 Uhr", "notiz": "Denkstufen: „Sehr hoch“ und „Extra hoch“ werden per Sprache bei jedem Modell erkannt, und das Live-Gespräch zeigt bei „Wie im Chat“ die Namen und Stufen des Chat-Modells."}
+    {"versionCode": 254, "versionName": "1.8.243", "stand": "23.10.2026, 13:12 Uhr", "notiz": "Denkstufen: „Sehr hoch“ und „Extra hoch“ werden per Sprache bei jedem Modell erkannt, und das Live-Gespräch zeigt bei „Wie im Chat“ die Namen und Stufen des Chat-Modells."},
+    {"versionCode": 255, "versionName": "1.8.244", "stand": "23.10.2026, 13:15 Uhr", "notiz": "Die Tagesauswertung mit Claude und Denkstufe „Maximal“ wird nicht mehr abgeschnitten: Claude darf jetzt bis zu 128 000 Token schreiben und bekommt dafür bis zu 12 Minuten Zeit."}
   ]
 }
