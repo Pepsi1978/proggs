@@ -845,22 +845,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entwurfFokus = true
     }
 
-    /** Ist das offene Gespräch ein Programmiergespräch? Dann zeigt die Eingabeblase neben dem Plus den Knopf „Nachtrag“. */
+    /** Ist das offene Gespräch ein Programmiergespräch? Dann zeigt das Plus-Menü neben „Programmierer“ den Knopf „+ Nachtrag“. */
     val nachtragMoeglich: Boolean get() = sitzungId?.let { id -> sitzungen.any { it.id == id && it.programmierung } } == true
 
-    /**
-     * Knopf „Nachtrag“: Mit Text geht der Entwurf (ohne den Vorspann) direkt als Nachtrag in die Sitzung dieses Gesprächs,
-     * ohne Modell. Ohne Text setzt er „Nachtrag:“ vor das Feld; was danach diktiert oder getippt wird, geht mit Pfeil oder Knopf ab.
-     */
-    fun nachtragTippen() {
+    /** Plus-Menü „+ Nachtrag“: „Nachtrag:“ vor den Entwurf, Getipptes bleibt dahinter; der Pfeil schickt ihn in die Sitzung. */
+    fun nachtragEinsetzen() {
+        if (!entwurf.startsWith(NACHTRAG_VORSPANN)) entwurf = "$NACHTRAG_VORSPANN " + entwurf.trimStart()
+        entwurfFokus = true
+    }
+
+    /** Senden mit „Nachtrag:“ vorn: Der Text (ohne den Vorspann) geht direkt als Nachtrag in die Sitzung dieses Gesprächs, ohne Modell. */
+    private fun nachtragSenden() {
         val id = sitzungId ?: return
         if (nimmtAuf || schreibtMit) return
         val text = DiktatTrenner.ohneSchluss(entwurf).removePrefix(NACHTRAG_VORSPANN).trim()
-        if (text.isEmpty()) {
-            if (!entwurf.startsWith(NACHTRAG_VORSPANN)) entwurf = "$NACHTRAG_VORSPANN " + entwurf.trimStart()
-            entwurfFokus = true
-            return
-        }
+        if (text.isEmpty()) { meldung = "Bitte den Nachtrag hinter dem Doppelpunkt ergänzen."; return }
         val roh = entwurf
         entwurf = ""
         entwurfDiktiert = false
@@ -913,8 +912,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val text = DiktatTrenner.ohneSchluss(roh)
         val anh = anhaenge.toList()
         if (text.isBlank() && anh.isEmpty()) return
-        // Mit „Nachtrag:“ vorn im Programmiergespräch: direkt als Nachtrag in die Sitzung, wie der Knopf.
-        if (anh.isEmpty() && nachtragMoeglich && text.startsWith(NACHTRAG_VORSPANN)) { nachtragTippen(); return }
+        // Mit „Nachtrag:“ vorn (Plus-Menü „+ Nachtrag“) im Programmiergespräch: direkt als Nachtrag in die Sitzung.
+        if (anh.isEmpty() && nachtragMoeglich && text.startsWith(NACHTRAG_VORSPANN)) { nachtragSenden(); return }
         if (denkt) return
         // Kam Text ins Feld über das Diktier-Mikrofon, wird die erste Antwort darauf vorgelesen (Einstellung).
         val diktiert = entwurfDiktiert
