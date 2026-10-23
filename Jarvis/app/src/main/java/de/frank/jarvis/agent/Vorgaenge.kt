@@ -78,7 +78,7 @@ data class Vorgang(
             FERTIG -> "fertig"
             FEHLGESCHLAGEN -> "fehlgeschlagen"
             ABGEBROCHEN -> "abgebrochen"
-            RUECKFRAGE -> "Zeitlimit erreicht, wartet auf Franks Entscheidung"
+            RUECKFRAGE -> "Zeit- oder Tokenlimit erreicht, wartet auf Franks Entscheidung"
             else -> stand
         }
     }
@@ -177,7 +177,7 @@ class VorgangsBuch(private val datei: File, private val uhr: () -> Long = System
     fun gestartet(id: String) = aendere(id) { it.copy(stand = Vorgang.LAEUFT, gestartet = uhr()) }
     fun schritt(id: String, text: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.LAEUFT, schritt = text.take(160)) else it }
     /** Zeitlimit erreicht: [zustand] = geprüfter Stand (was erledigt ist, ob es läuft, hängt oder gestört ist). */
-    fun rueckfrage(id: String, zustand: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.RUECKFRAGE, schritt = "Zeitlimit erreicht", grund = zustand.take(400)) else it }
+    fun rueckfrage(id: String, zustand: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.RUECKFRAGE, schritt = "${Zeitablauf.grenze(zustand)} erreicht", grund = zustand.take(400)) else it }
     /** Frank hat „weiterarbeiten“ gesagt: wieder laufend, der Zustandstext fällt weg. */
     fun weiter(id: String) = aendere(id) { if (it.offen) it.copy(stand = Vorgang.LAEUFT, schritt = "arbeitet nach Franks Entscheidung weiter", grund = "") else it }
     fun beende(id: String, stand: String, ergebnis: String?, grund: String?, vorlaeufig: String? = null) =
@@ -251,8 +251,9 @@ object Vorgaenge {
         if (v.beendet > 0) append(", beendet ").append(VorgangsBuch.zeit(v.beendet))
         if (v.ergebnis.isNotEmpty()) append(" · Ergebnis in der Ablage: „").append(v.ergebnis).append("“")
         else if (v.vorlaeufig.isNotEmpty()) append(" · Ergebnis bereit (NICHT in der Ablage; Frank wollte keine Ablage").append(if (v.gespraech.isNotEmpty()) ", steht im Jarvis-Chat" else "").append(")")
-        if (v.stand == Vorgang.RUECKFRAGE) append(" · ZEITLIMIT ERREICHT, frag Frank: „Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?“ Stand: ").append(v.grund)
-            .append(" · Weiterarbeiten (weitere ${Agenten.ZEITLIMIT_MINUTEN} Minuten, gleicher Auftrag und Arbeitsstand) mit vorgang_fortsetzen, abbrechen mit Zwischenstand mit vorgang_abbrechen")
+        if (v.stand == Vorgang.RUECKFRAGE) append(" · ${Zeitablauf.grenze(v.grund).uppercase()} ERREICHT, frag Frank: „${Zeitablauf.frage(v.grund)}“ Stand: ").append(v.grund)
+            .append(" · Weiterarbeiten (" + (if (Zeitablauf.istTokenlimit(v.grund)) "noch einmal so viele Token" else "weitere ${Agenten.ZEITLIMIT_MINUTEN} Minuten") +
+                ", gleicher Auftrag und Arbeitsstand) mit vorgang_fortsetzen, abbrechen mit Zwischenstand mit vorgang_abbrechen")
         else if (v.grund.isNotEmpty()) append(" · ").append(if (v.stand == Vorgang.FERTIG) "Hinweis: " else "Grund: ").append(v.grund.take(200))
         if (v.sprache.isNotEmpty()) append(" · im Sprachgespräch begonnen, Ergebnis wird vorgelesen")
         if (!v.offen) append(if (v.mitgeteilt > 0) " · Frank mitgeteilt" else if (v.abgerufen > 0) " · abgerufen, noch nicht als mitgeteilt bestätigt" else " · Frank noch nicht mitgeteilt")

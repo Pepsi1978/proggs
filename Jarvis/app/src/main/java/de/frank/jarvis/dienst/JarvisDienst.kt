@@ -316,14 +316,14 @@ class JarvisDienst : Service() {
         val v = vorgang?.let { Vorgaenge.buch(this).finde(it) }
         v?.gespraech?.takeIf { it.isNotEmpty() }?.let { g ->
             runCatching {
-                de.frank.jarvis.faehigkeit.ProgrammierChat.poste(this, g, "**$agent: Zeitlimit erreicht** · Auftrag ${v.id}\n\n$bericht",
+                de.frank.jarvis.faehigkeit.ProgrammierChat.poste(this, g, "**$agent: ${de.frank.jarvis.agent.Zeitablauf.grenze(bericht)} erreicht** · Auftrag ${v.id}\n\n$bericht",
                     de.frank.jarvis.faehigkeit.ProgrammierChat.ART_AGENT,
-                    "(Hintergrundauftrag ${v.id} pausiert nach Ablauf des internen Zeitlimits und wartet auf Franks Entscheidung. Will Frank weiterarbeiten oder weiterrecherchieren: " +
+                    "(Hintergrundauftrag ${v.id} pausiert nach Erreichen des " + (if (de.frank.jarvis.agent.Zeitablauf.istTokenlimit(bericht)) "Tokenlimits" else "internen Zeitlimits") + " und wartet auf Franks Entscheidung. Will Frank weiterarbeiten oder weiterrecherchieren: " +
                         "vorgang_fortsetzen mit id ${v.id}. Will er abbrechen: vorgang_abbrechen mit id ${v.id}, dann schreibt der Agent einen Zwischenstand.)")
             }
         }
-        val titel = "Jarvis: $agent – Zeitlimit erreicht" + (vorgang?.let { " (Vorgang $it)" } ?: "")
-        val kurz = "Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?"
+        val titel = "Jarvis: $agent – ${de.frank.jarvis.agent.Zeitablauf.grenze(bericht)} erreicht" + (vorgang?.let { " (Vorgang $it)" } ?: "")
+        val kurz = de.frank.jarvis.agent.Zeitablauf.frage(bericht)
         fun knopf(aktion: String, code: Int) = PendingIntent.getBroadcast(this, zeitablaufNummer(kennung) * 2 + code,
             Intent(this, AgentenEntscheidungEmpfaenger::class.java).setAction(aktion).putExtra(AgentenEntscheidungEmpfaenger.EXTRA_KENNUNG, kennung),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

@@ -398,7 +398,9 @@ class Einstellungen private constructor(context: Context) {
         val TOKENLIMITS = (50_000..500_000 step 50_000).toList()
         const val STANDARD_TOKENLIMIT = 150_000
         /** So heißt ein Tokenlimit in Oberfläche und Sprachantworten. */
-        fun tokenlimitLabel(n: Int): String = "${n / 1000} 000 Token"
+        fun tokenlimitLabel(n: Int): String = tokenText(n) + " Token"
+        /** Eine Tokenzahl mit deutschem Tausenderpunkt; überall dieselbe Schreibweise. */
+        fun tokenText(n: Int): String = String.format(java.util.Locale.GERMANY, "%,d", n)
         private const val TAG = "JarvisEinstellungen"
         /** Die Schlüssel, die zugang.json setzen darf (siehe zugangPruefen). */
         private val ZUGANG = listOf("server_token", "routine_token", "such_schluessel", "maps_schluessel", "drive_client_secret", "server_host")

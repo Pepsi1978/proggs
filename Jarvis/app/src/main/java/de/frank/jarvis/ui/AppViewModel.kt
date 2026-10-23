@@ -182,16 +182,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     class TokenlimitFrage(val text: String, val antwort: kotlinx.coroutines.CompletableDeferred<Boolean>)
     var tokenlimitFrage by mutableStateOf<TokenlimitFrage?>(null)
         private set
+    private val TOKENLIMIT_ANTWORT_MINUTEN = 10
     /** Mehrere Gespräche können gleichzeitig ans Limit kommen: Sie fragen nacheinander. */
     private val tokenlimitSperre = kotlinx.coroutines.sync.Mutex()
 
     /** Fragt Frank im Fenster, ob die Runde mit einem neuen Kontingent weiterarbeiten soll; true = weiter. */
     private suspend fun tokenlimitFragen(stand: de.frank.jarvis.agent.Zeitablauf): Boolean = tokenlimitSperre.withLock {
-        val frage = TokenlimitFrage("Das Tokenlimit ist erreicht: ${String.format(java.util.Locale.GERMANY, "%,d", stand.tokenVerbraucht)} von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} verbraucht, " +
-            "${stand.schritte} Schritte erledigt. Weiter gibt der Aufgabe noch einmal ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)}; Abbrechen schreibt einen Zwischenstand.",
+        val frage = TokenlimitFrage("Das Tokenlimit ist erreicht: ${Einstellungen.tokenText(stand.tokenVerbraucht)} von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} verbraucht, " +
+            "${stand.schritte} Schritte erledigt. Weiter gibt der Aufgabe noch einmal ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)}; Abbrechen schreibt einen Zwischenstand. " +
+            "Ohne Antwort in ${TOKENLIMIT_ANTWORT_MINUTEN} Minuten gilt Abbrechen.",
             kotlinx.coroutines.CompletableDeferred())
         withContext(Dispatchers.Main) { tokenlimitFrage = frage }
-        try { frage.antwort.await() } finally { withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) { if (tokenlimitFrage === frage) tokenlimitFrage = null } }
+        // Ohne Antwort (Handy gesperrt, Frage per Sprache gestellt) nicht ewig warten: Sonst blieben diese Runde und alle späteren Rückfragen hängen.
+        try { kotlinx.coroutines.withTimeoutOrNull(TOKENLIMIT_ANTWORT_MINUTEN * 60_000L) { frage.antwort.await() } ?: false } finally { withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) { if (tokenlimitFrage === frage) tokenlimitFrage = null } }
     }
 
     fun tokenlimitEntscheiden(weiter: Boolean) {
@@ -359,7 +362,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val auftrag = text + beilage?.text.orEmpty() + (if (plugins.isEmpty()) "" else "\n\n(Gewählte Plugins: " + plugins.joinToString(", ") + ")") + hinweis
                 // Franks Schrittlimit gilt hier; das Zeitlimit wächst mit (je Schritt 12 s, mindestens 2 Minuten; unbegrenzt = 30 Minuten, also mehr als die 20 Minuten bei 100 Schritten).
                 val schritte = einstellungen.schrittlimit
-                val zeitlimit = if (schritte <= 0) 30 * 60_000L else maxOf(120_000L, schritte * 12_000L)
+                val zeitlimit = (if (schritte <= 0) 30 * 60_000L else maxOf(120_000L, schritte * 12_000L))
+                    // „Maximal“ denkt mehrere Minuten pro Schritt; sonst endete schon der erste Schritt im Zeitlimit.
+                    .let { if (einstellungen.denkstufe == ReasoningEffort.MAX) maxOf(it, 15 * 60_000L) else it }
                 var grund: String? = null
                 agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true,
                     beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it },

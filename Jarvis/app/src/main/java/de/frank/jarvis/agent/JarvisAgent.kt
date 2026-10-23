@@ -94,11 +94,17 @@ data class Zeitablauf(
     }
 
     private fun minutenText(ms: Long): String = if (ms < 60_000) "${ms / 1000} Sekunden" else "${ms / 60_000} Minuten"
-    private fun tokenText(n: Int): String = String.format(java.util.Locale.GERMANY, "%,d", n)
+    private fun tokenText(n: Int): String = Einstellungen.tokenText(n)
 
     companion object {
         /** So lange ohne Ergebnis gilt ein einzelnes Werkzeug oder ein Modellschritt als vermutlich hängend. */
         const val HAENGT_MS = 10 * 60_000L
+        /** Ob ein Text aus [kurz] oder [bericht] zum Tokenlimit gehört; für Stellen, die nur diesen Text sehen (Benachrichtigung, Vorgangsbuch). */
+        fun istTokenlimit(text: String): Boolean = text.startsWith("Tokenlimit erreicht") || text.startsWith("Das Tokenlimit")
+        /** „Tokenlimit“ oder „Zeitlimit“, passend zu [text]. */
+        fun grenze(text: String): String = if (istTokenlimit(text)) "Tokenlimit" else "Zeitlimit"
+        /** Die Frage an Frank, passend zu [text]. */
+        fun frage(text: String): String = if (istTokenlimit(text)) "Das Tokenlimit ist erreicht. Abbrechen oder weiterarbeiten?" else "Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?"
     }
 }
 
@@ -324,6 +330,8 @@ class JarvisAgent(context: Context) {
                 endeVonAussen = beiTokenlimit(stand)
                 if (endeVonAussen != null) break
                 verbraucht = 0
+                // Kein abgelaufenes Zeitfenster: Der nächste Durchgang zählt nicht als weiteres Fenster in Folge.
+                zeitfenster--
                 val letzter = zuege.lastIndex
                 zuege[letzter] = zuege[letzter].copy(text = zuege[letzter].text + "\n\nFORTSETZUNG: Das Tokenlimit war erreicht; Frank hat entschieden, dass du weiterarbeitest " +
                     "(weitere ${Einstellungen.tokenlimitLabel(tokenGrenze)}). Mach dort weiter, wo du warst.")

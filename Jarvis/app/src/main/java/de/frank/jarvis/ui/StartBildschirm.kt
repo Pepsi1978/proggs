@@ -726,7 +726,7 @@ private fun LaeuftGerade(vm: AppViewModel) {
             }
             // Zeitlimit erreicht: Der Agent pausiert mit seinem Arbeitsstand, bis Frank entscheidet.
             l.wartet?.let { kennung ->
-                Text("Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?", color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                Text(de.frank.jarvis.agent.Zeitablauf.frage(l.schritt), color = f.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Knopf("Weiterarbeiten", Modifier.weight(1f)) {
                         vm.meldung = if (de.frank.jarvis.agent.Agenten.entscheide(kennung, true)) "Agent ${l.agent} arbeitet ${de.frank.jarvis.agent.Agenten.ZEITLIMIT_MINUTEN} Minuten weiter" else "Der Agent wartet nicht mehr"
