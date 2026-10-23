@@ -41,7 +41,7 @@ New-Item -ItemType Directory -Path (Split-Path $helferLog) -Force | Out-Null
 $helfer = @"
 `$log = '$helferLog'
 function L([string]`$t) { Add-Content -LiteralPath `$log -Value ((Get-Date -Format 'dd.MM.yyyy HH:mm:ss') + '  ' + `$t) -Encoding utf8 }
-L 'Helfer gestartet (PID ' + `$PID + ').'
+L ('Helfer gestartet (PID ' + `$PID + ').')
 `$start = Get-Date
 if ((Test-Path '$laeuft') -and ((Get-Date) - (Get-Item '$laeuft').LastWriteTime).TotalMinutes -lt 15) {
     L 'Update kam aus der App: warte, bis sie ihr Protokoll geschrieben hat (hoechstens 30 s).'
