@@ -421,3 +421,8 @@ Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft e
 - [openrouter-api](openrouter-api.md)
 - [other-llm-apis](other-llm-apis.md)
 - [xai-grok-api](xai-grok-api.md)
+
+## TTS: WAV-Antwort trägt einen C2PA-Anhang hinter dem data-Chunk (gefunden 23.10.2026, gemini-3.8-flash-tts / flash-lite-tts)
+- Symptom: Wer die Antwort (`inlineData`, mimeType `audio/wav`) selbst weiterverarbeitet (Tempo, Schnitt, Verketten) und alles ab Byte 44 als PCM liest, hört am Ende rund 125 ms lautes Fernsehrauschen. Direkt im MediaPlayer abgespielt fällt nichts auf, weil er die data-Länge beachtet.
+- Ursache: Hinter dem `data`-Chunk folgt ein Chunk `C2PA` (Content Credentials, JUMBF, rund 6 KB).
+- Fix: Nur so viele Bytes als Ton lesen, wie der `data`-Chunk angibt (Länge bei Byte 40), nie `size - 44`. Umgesetzt in Jarvis `speech/Synthese.kt` (`tonBytes`, 1.8.253).
