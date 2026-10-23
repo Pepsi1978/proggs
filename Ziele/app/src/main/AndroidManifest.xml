@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Ziele lesen und schreiben. -->
+    <permission
+        android:name="de.frank.ziele.permission.JARVIS"
+        android:protectionLevel="signature" />
+
+    <!-- Vorschläge in Geniale Aufgaben übernehmen: deren Jarvis-Brücke. Auch hier deklariert, damit die
+         Installationsreihenfolge keine Rolle spielt (gleicher Signierschlüssel vorausgesetzt). -->
+    <permission
+        android:name="de.frank.aufgaben.permission.JARVIS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.aufgaben.permission.JARVIS" />
+
+    <!-- Jarvis' Live-Gedächtnis als Kontext: Jarvis' allgemeine Brücken-Erlaubnis. -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+
+    <queries>
+        <package android:name="de.frank.aufgaben" />
+        <package android:name="de.frank.jarvis" />
+        <provider android:authorities="de.frank.aufgaben.jarvis" />
+        <provider android:authorities="de.frank.jarvis.ziele" />
+    </queries>
+
+    <application
+        android:name=".ZieleApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
+        android:theme="@style/Theme.Ziele">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Brücke zum Genialen Wecker: liest die aktiven Ziele (nur lesend, ohne Erlaubnis, eigener Signierschlüssel des Weckers). -->
+        <provider
+            android:name=".bruecke.WeckerBruecke"
+            android:authorities="de.frank.ziele.wecker"
+            android:exported="true" />
+
+        <!-- Brücke zu Jarvis: lesen, schreiben und steuern, durch die Signatur-Erlaubnis geschützt. -->
+        <provider
+            android:name=".bruecke.JarvisBruecke"
+            android:authorities="de.frank.ziele.jarvis"
+            android:exported="true"
+            android:permission="de.frank.ziele.permission.JARVIS" />
+    </application>
+</manifest>
