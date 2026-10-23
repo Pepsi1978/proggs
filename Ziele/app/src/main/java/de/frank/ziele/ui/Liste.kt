@@ -134,8 +134,8 @@ private fun ZielKarte(vm: AppViewModel, z: Ziel, vorschlaege: List<Vorschlag>, s
     val anteil = if (notwendig.isEmpty()) 0f else notwendig.count { it.erledigt } / notwendig.size.toFloat()
     val gedimmt = z.zustand != ZielStatus.AKTIV
     Column(
-        Modifier.padding(horizontal = 16.dp).fillMaxWidth().animateContentSize()
-            .glas(f, erhoeht = if (gedimmt) 0.5f else 1.2f, toenung = if (z.zustand == ZielStatus.ERREICHT) f.erfolg else f.primaer)
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+            .glas(f, erhoeht = if (gedimmt) 0.5f else 1.2f, toenung = if (z.zustand == ZielStatus.ERREICHT) f.erfolg else f.primaer).animateContentSize()
             .antippen { vm.zeige(Bildschirm.Detail(z.id)) }.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

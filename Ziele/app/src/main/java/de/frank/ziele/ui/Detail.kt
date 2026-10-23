@@ -222,7 +222,7 @@ private fun AuswertenKnopf(vm: AppViewModel, z: Ziel, schritt: String?, fehler: 
 private fun Bericht(vm: AppViewModel, z: Ziel) {
     val f = LocalFarben.current
     var offen by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().animateContentSize().glas(f, erhoeht = 0.8f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.8f).animateContentSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().antippen(haptik = false) { offen = !offen }, verticalAlignment = Alignment.CenterVertically) {
             Text("RECHERCHE", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
             Icon(if (vm.sprichtId == "bericht_${z.id}") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Recherche vorlesen", tint = f.primaer,
@@ -274,8 +274,8 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
     var offen by rememberSaveable(v.id) { mutableStateOf(false) }
     val farbe = if (v.gruppe == Kategorie.NOTWENDIG) f.primaer else f.leise
     Column(
-        Modifier.fillMaxWidth().animateContentSize()
-            .glas(f, 18.dp, if (v.erledigt) 0.3f else 0.9f, toenung = if (v.erledigt) f.erfolg else farbe)
+        Modifier.fillMaxWidth()
+            .glas(f, 18.dp, if (v.erledigt) 0.3f else 0.9f, toenung = if (v.erledigt) f.erfolg else farbe).animateContentSize()
             .antippen(haptik = false) { offen = !offen }.padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
