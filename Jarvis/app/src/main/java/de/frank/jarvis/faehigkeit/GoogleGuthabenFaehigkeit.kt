@@ -68,8 +68,17 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         val letzterBetrag: Double?,
         val geholt: Long,
         val hinweis: String? = null,
+        /** Eingezahltes echtes Geld (Vorauszahlung, Google Payments); null = nicht lesbar. */
+        val vorauszahlung: Double? = null,
+        /** Seit wann (Millisekunden) die Vorauszahlung diesen Betrag hat; 0 = unbekannt. */
+        val vorauszahlungSeit: Long = 0,
+        /** Der Betrag davor, falls er sich geändert hat; null = seit der ersten Abfrage gleich. */
+        val vorauszahlungVorher: Double? = null,
     ) {
-        val restEur: Double? get() = if (hinweis != null && gutschriften.isEmpty()) null else gutschriften.sumOf { it.rest }
+        val restEur: Double? get() = if (geholt <= 0) null else gutschriften.sumOf { it.rest }
+
+        /** true, wenn die Vorauszahlung seit der letzten Änderung kleiner geworden ist: Dann zahlt echtes Geld. */
+        val vorauszahlungGesunken: Boolean get() = vorauszahlung != null && vorauszahlungVorher != null && vorauszahlung < vorauszahlungVorher - 0.004
         val gewaehrt: Double get() = gutschriften.sumOf { it.betrag }
         val verbraucht: Double get() = gutschriften.sumOf { it.verbraucht }
 
@@ -95,7 +104,12 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             naechste?.let { append(" Nächstes Guthaben voraussichtlich am ${DATUM.format(it)} (${tageText(ChronoUnit.DAYS.between(LocalDate.now(), it))})") }
             letzterBetrag?.let { append(", etwa ${betrag(it)} $waehrung") }
             if (naechste != null) append('.')
-            append(" Die Vorauszahlung (echtes Geld) wird erst belastet, wenn das Guthaben aufgebraucht ist. ").append(standText()).append('.')
+            if (vorauszahlung != null) {
+                append(" Eingezahltes echtes Geld (Vorauszahlung): ${betrag(vorauszahlung)} $waehrung")
+                if (vorauszahlungGesunken) append(", gesunken von ${betrag(vorauszahlungVorher!!)} $waehrung am ${datum(vorauszahlungSeit / 1000)}.")
+                else append(if (vorauszahlungSeit > 0) ", unverändert seit ${datum(vorauszahlungSeit / 1000)}." else ".")
+            }
+            append(" Die Vorauszahlung wird erst belastet, wenn das Guthaben aufgebraucht ist. ").append(standText()).append('.')
             hinweis?.let { append(" ").append(it) }
         }
     }
@@ -136,9 +150,12 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             sperre.withLock {
                 val cm = CookieManager.getInstance()
                 listOf("https://google.com", "https://accounts.google.com", STUDIO).forEach { u ->
+                    // Mit Secure, sonst lehnt Chromium das Überschreiben der __Secure-/__Host-Cookies ab.
                     cookies(u).split(';').map { it.substringBefore('=').trim() }.filter { it.isNotEmpty() }.forEach { name ->
-                        cm.setCookie(u, "$name=; Max-Age=0; Path=/; Domain=.google.com")
-                        cm.setCookie(u, "$name=; Max-Age=0; Path=/")
+                        listOf("; Domain=.google.com", "").forEach { d ->
+                            cm.setCookie(u, "$name=; Max-Age=0; Path=/; Secure$d")
+                            cm.setCookie(u, "$name=; Max-Age=0; Path=/$d")
+                        }
                     }
                 }
                 cm.flush()
@@ -156,9 +173,15 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
 
         private fun lies(j: JSONObject): Stand {
             val g = j.getJSONArray("gutschriften")
+            val jetzt = System.currentTimeMillis() / 1000
             return Stand(
-                (0 until g.length()).map { g.getJSONObject(it).let { o -> Gutschrift(o.getDouble("betrag"), o.getDouble("verbraucht"), o.getDouble("rest"), o.getLong("ende")) } },
+                // Seit der letzten Abfrage verfallene Gutschriften zählen nicht mehr mit.
+                (0 until g.length()).map { g.getJSONObject(it).let { o -> Gutschrift(o.getDouble("betrag"), o.getDouble("verbraucht"), o.getDouble("rest"), o.getLong("ende")) } }
+                    .filterNot { it.ende in 1 until jetzt },
                 j.optString("waehrung", "€"), j.optLong("letzteGewaehrung"), if (j.has("letzterBetrag")) j.getDouble("letzterBetrag") else null, j.optLong("geholt"),
+                vorauszahlung = if (j.has("vorauszahlung")) j.getDouble("vorauszahlung") else null,
+                vorauszahlungSeit = j.optLong("vorauszahlungSeit"),
+                vorauszahlungVorher = if (j.has("vorauszahlungVorher")) j.getDouble("vorauszahlungVorher") else null,
             )
         }
 
@@ -166,9 +189,36 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             val g = JSONArray()
             s.gutschriften.forEach { g.put(JSONObject().put("betrag", it.betrag).put("verbraucht", it.verbraucht).put("rest", it.rest).put("ende", it.ende)) }
             val j = JSONObject().put("gutschriften", g).put("waehrung", s.waehrung).put("letzteGewaehrung", s.letzteGewaehrung).put("geholt", s.geholt)
+                .put("vorauszahlungSeit", s.vorauszahlungSeit)
             s.letzterBetrag?.let { j.put("letzterBetrag", it) }
+            s.vorauszahlung?.let { j.put("vorauszahlung", it) }
+            s.vorauszahlungVorher?.let { j.put("vorauszahlungVorher", it) }
             datei(context).writeText(j.toString())
         }
+
+        /**
+         * Die Vorauszahlung steht nur auf der Zahlungsseite von Google Payments, die AI Studio einbettet. Deren Schlüssel
+         * (ebp) liefert AI Studio; die Seite kommt fertig vom Server, der Betrag steht im Feld „b3-balance-card-headline“.
+         */
+        private fun vorauszahlung(kontoName: String, ua: String): Double {
+            val ebp = rpc("GetEmbeddedPortalParameters", JSONArray().put(kontoName).put(1).toString(), ua).optString(0)
+                .takeIf { it.isNotBlank() } ?: throw IllegalStateException("AI Studio nennt keinen Zugang zur Zahlungsseite.")
+            val url = "https://payments.google.com/payments/u/0/embedded_landing_page?hl=de&ebp=" + java.net.URLEncoder.encode(ebp, "UTF-8")
+            val anfrage = Request.Builder().url(url).header("Cookie", cookies("https://payments.google.com"))
+                .header("User-Agent", ua).header("Referer", "$STUDIO/").build()
+            val html = CLIENT.newCall(anfrage).execute().use { a ->
+                if (!a.isSuccessful) throw IllegalStateException("Die Zahlungsseite von Google antwortet mit Fehler ${a.code}.")
+                a.body?.string().orEmpty()
+            }
+            val text = Regex("class=\"b3-balance-card-headline\"[^>]*>([^<]+)<").find(html)?.groupValues?.get(1)
+                ?: throw IllegalStateException("Auf der Zahlungsseite steht keine Vorauszahlung (Seite geändert?).")
+            return zahl(android.text.Html.fromHtml(text, android.text.Html.FROM_HTML_MODE_LEGACY).toString())
+        }
+
+        /** „1.234,56 €“ → 1234.56. */
+        private fun zahl(text: String): Double =
+            text.filter { it.isDigit() || it == ',' || it == '.' || it == '-' }.replace(".", "").replace(',', '.').toDoubleOrNull()
+                ?: throw IllegalStateException("Die Vorauszahlung „${text.take(30)}“ ist nicht lesbar.")
 
         /** Wie bei Anthropic: der gespeicherte Stand, wenn jünger als 15 Minuten (außer [erzwingen]), sonst frisch. */
         suspend fun stand(context: Context, erzwingen: Boolean = false): Stand = withContext(Dispatchers.IO) {
@@ -203,12 +253,26 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                             if (beginn > letzte) { letzte = beginn; letzterBetrag = geld(b.optJSONArray(3)) }
                         }
                     }.onFailure { Log.w(TAG, "Gewährungen nicht lesbar", it) }
-                    Stand(gutschriften, waehrung, letzte, letzterBetrag, System.currentTimeMillis()).also { schreib(app, it); _frisch.value = it }
+                    // Die Vorauszahlung: Scheitert nur sie, bleibt der letzte Betrag mit Hinweis, das Guthaben zählt trotzdem.
+                    val jetztMs = System.currentTimeMillis()
+                    var hinweis: String? = null
+                    val neu = runCatching { vorauszahlung(kontoName, ua) }
+                        .onFailure { Log.w(TAG, "Vorauszahlung nicht lesbar", it); hinweis = "Vorauszahlung gerade nicht lesbar, das ist der letzte Betrag: ${it.message}" }
+                        .getOrNull()
+                    val betragAlt = alt?.vorauszahlung
+                    val (vz, seit, vorher) = when {
+                        neu == null -> Triple(betragAlt, alt?.vorauszahlungSeit ?: 0L, alt?.vorauszahlungVorher)
+                        betragAlt == null -> Triple(neu, jetztMs, null)
+                        kotlin.math.abs(neu - betragAlt) < 0.004 -> Triple(neu, alt!!.vorauszahlungSeit.takeIf { it > 0 } ?: jetztMs, alt.vorauszahlungVorher)
+                        else -> Triple(neu, jetztMs, betragAlt)
+                    }
+                    Stand(gutschriften, waehrung, letzte, letzterBetrag, jetztMs, hinweis, vz, seit, vorher).also { schreib(app, it); _frisch.value = it }
                 } catch (f: Exception) { // no-cancellation-rethrow
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Google-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
                     val grund = f.message ?: "Abfrage gerade nicht möglich (${f.javaClass.simpleName})."
-                    if (alt != null) Stand(alt.gutschriften, alt.waehrung, alt.letzteGewaehrung, alt.letzterBetrag, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund")
+                    if (alt != null) Stand(alt.gutschriften, alt.waehrung, alt.letzteGewaehrung, alt.letzterBetrag, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund",
+                        alt.vorauszahlung, alt.vorauszahlungSeit, alt.vorauszahlungVorher)
                     else Stand(emptyList(), "€", 0, null, 0, grund)
                 }
             }

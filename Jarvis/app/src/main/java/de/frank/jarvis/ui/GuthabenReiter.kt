@@ -60,7 +60,8 @@ private fun ClaudeKarte(vm: AppViewModel) {
         val rest = g?.restUsd
         if (rest == null) {
             NichtDa(g?.hinweis, vm.anthropicGuthabenLaedt, vm.anthropicConsoleAngemeldet, "Claude Console",
-                "Jarvis liest das Guthaben aus der Claude Console. Dafür einmal anmelden, am besten per E-Mail-Code.") { anmelden = true }
+                "Jarvis liest das Guthaben aus der Claude Console. Dafür einmal anmelden, am besten per E-Mail-Code.",
+                aktualisieren = { vm.anthropicGuthabenAbfragen(erzwingen = true) }, abmelden = { vm.anthropicConsoleAbmelden() }) { anmelden = true }
         } else {
             val usd = AnthropicGuthabenFaehigkeit::betrag
             val eur = g.kurs?.let { k -> { v: Double -> "≈ ${usd(v * k)} €" } }
@@ -68,12 +69,15 @@ private fun ClaudeKarte(vm: AppViewModel) {
             g.gewaehrtUsd?.takeIf { it > 0 }?.let { Balken(((it - rest) / it).toFloat()) }
             g.verbrauchtUsd?.let { Wert("Verbraucht", "${usd(it)} $" + (eur?.let { e -> " (${e(it)})" } ?: "")) }
             g.verfallDatum?.let { Wert("Verfällt", bis(it)) }
-            g.naechstes?.let { Wert("Nächstes Guthaben", "voraussichtlich " + bis(it) + (g.gewaehrtUsd?.let { b -> " · etwa ${usd(b)} $" } ?: "")) }
+            g.naechstes?.let { Wert("Nächstes Guthaben", "voraussichtlich " + bis(it) + (g.abobetragUsd?.let { b -> " · etwa ${usd(b)} $" } ?: "")) }
             val eigenes = g.eigenesUsd
             EigenesGeld(
-                if (eigenes == null || eigenes < 0.005) "Kein eigenes Geld hinterlegt: Es wird nichts abgebucht."
-                else "Eigenes gekauftes Guthaben: ${usd(eigenes)} $ hinterlegt.",
-                ok = true,
+                when {
+                    eigenes == null -> "Ob eigenes Geld hinterlegt ist, zeigt die nächste Abfrage."
+                    eigenes < 0.005 -> "Kein eigenes Geld hinterlegt: Es wird nichts abgebucht."
+                    else -> "Eigenes gekauftes Guthaben: ${usd(eigenes)} $ hinterlegt."
+                },
+                ok = rest > 0.004,
             )
             Fuss(g.standText(), g.hinweis, vm.anthropicGuthabenLaedt) { vm.anthropicGuthabenAbfragen(erzwingen = true) }
             Knopf("Bei der Claude Console abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.anthropicConsoleAbmelden() }
@@ -92,7 +96,8 @@ private fun GoogleKarte(vm: AppViewModel) {
         val rest = g?.restEur
         if (rest == null) {
             NichtDa(g?.hinweis, vm.googleGuthabenLaedt, vm.googleAngemeldet, "Google",
-                "Jarvis liest das Guthaben aus AI Studio. Dafür einmal mit deinem Google-Konto anmelden.") { anmelden = true }
+                "Jarvis liest das Guthaben aus AI Studio. Dafür einmal mit deinem Google-Konto anmelden.",
+                aktualisieren = { vm.googleGuthabenAbfragen(erzwingen = true) }, abmelden = { vm.googleAbmelden() }) { anmelden = true }
         } else {
             val w = g.waehrung
             val b = GoogleGuthabenFaehigkeit::betrag
@@ -101,8 +106,21 @@ private fun GoogleKarte(vm: AppViewModel) {
             Wert("Verbraucht", "${b(g.verbraucht)} $w")
             g.offen.firstOrNull()?.let { Wert("Verfällt als Nächstes", "${b(it.rest)} $w am " + bis(java.time.Instant.ofEpochSecond(it.ende).atZone(java.time.ZoneId.systemDefault()).toLocalDate())) }
             g.naechste?.let { Wert("Nächstes Guthaben", "voraussichtlich " + bis(it) + (g.letzterBetrag?.let { x -> " · etwa ${b(x)} $w" } ?: "")) }
-            EigenesGeld(
-                if (rest > 0.004) "Deine Vorauszahlung (echtes Geld) wird erst belastet, wenn dieses Guthaben aufgebraucht ist. Zurzeit wird nichts abgebucht."
+            val vz = g.vorauszahlung
+            if (vz != null) {
+                Unterzeile("Eingezahltes Geld (Vorauszahlung)")
+                Text("${b(vz)} $w", color = f.text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                val seit = g.vorauszahlungSeit.takeIf { it > 0 }?.let { GoogleGuthabenFaehigkeit.datum(it / 1000) }
+                EigenesGeld(
+                    when {
+                        g.vorauszahlungGesunken -> "Gesunken: am ${seit ?: "?"} von ${b(g.vorauszahlungVorher!!)} $w auf ${b(vz)} $w. Hier wurde echtes Geld abgebucht."
+                        rest > 0.004 -> "Unverändert" + (seit?.let { " seit $it" } ?: "") + ". Die Gemini-Stimmen laufen über das Guthaben, dein Geld bleibt unangetastet."
+                        else -> "Das Guthaben ist aufgebraucht: Ab jetzt zahlt deine Vorauszahlung das Vorlesen."
+                    },
+                    ok = !g.vorauszahlungGesunken && rest > 0.004,
+                )
+            } else EigenesGeld(
+                if (rest > 0.004) "Deine Vorauszahlung (echtes Geld) wird erst belastet, wenn dieses Guthaben aufgebraucht ist."
                 else "Das Guthaben ist aufgebraucht: Jetzt zahlt deine Vorauszahlung das Vorlesen.",
                 ok = rest > 0.004,
             )
@@ -126,7 +144,8 @@ private fun GoogleKarte(vm: AppViewModel) {
 
 /** Noch keine Zahl: entweder anmelden oder der Grund, warum die Abfrage scheiterte. */
 @Composable
-private fun NichtDa(hinweis: String?, laedt: Boolean, angemeldet: Boolean, dienst: String, warum: String, anmelden: () -> Unit) {
+private fun NichtDa(hinweis: String?, laedt: Boolean, angemeldet: Boolean, dienst: String, warum: String,
+                    aktualisieren: () -> Unit, abmelden: () -> Unit, anmelden: () -> Unit) {
     val f = LocalFarben.current
     Text(
         when { laedt -> "Wird abgefragt …"; !angemeldet -> "Noch nicht angemeldet."; else -> hinweis ?: "Noch nicht abgefragt." },
@@ -135,6 +154,11 @@ private fun NichtDa(hinweis: String?, laedt: Boolean, angemeldet: Boolean, diens
     if (!angemeldet) {
         Text(warum, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         Knopf("Bei $dienst anmelden", Modifier.padding(top = 10.dp).fillMaxWidth()) { anmelden() }
+    } else if (!laedt) {
+        // Angemeldet, aber keine Zahl (Sitzung abgelaufen, Netz weg): nie ohne Ausweg stehen lassen.
+        Knopf("Erneut abfragen", Modifier.padding(top = 10.dp).fillMaxWidth()) { aktualisieren() }
+        Knopf("Neu bei $dienst anmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { anmelden() }
+        Knopf("Bei $dienst abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { abmelden() }
     }
 }
 
