@@ -524,7 +524,8 @@
       ],
       "beendenVorUpdate": true,
       "neuStartenNachUpdate": true,
-      "akzent": "#F2A13B"
+      "akzent": "#F2A13B",
+      "cliRisiko": "Beendet LM Studio samt lokalem Server: CLI-Sitzungen mit lokalem Modell (OpenCode über LM Studio) verlieren ihr Modell."
     },
     {
       "id": "lmstudio-runtimes",
@@ -542,7 +543,8 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "hinweis": "Lädt teils mehrere Gigabyte herunter. LM Studio darf dabei laufen.",
-      "akzent": "#F2A13B"
+      "akzent": "#F2A13B",
+      "cliRisiko": "Tauscht die Inferenz-Engines aus; geladene Modelle können entladen werden – eine CLI-Sitzung mit lokalem Modell bricht dann ab."
     },
     {
       "id": "bionic",
@@ -642,7 +644,8 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "hinweis": "Laufende Gradle-Daemons vorher mit „gradlew --stop“ beenden. Das Update wechselt den Installationsordner (jdk-21.0.x.y-hotspot): JAVA_HOME darf nur systemweit vom Installer gesetzt sein, nicht zusätzlich von Hand pro Benutzer.Für Programme unter „Program Files“ fragt Windows nach Administratorrechten, außer die UpdateZentrale läuft schon als Administrator.",
-      "akzent": "#F89820"
+      "akzent": "#F89820",
+      "cliRisiko": "Das Update tauscht den JDK-Ordner aus: laufende Gradle-Daemons und Android-Builds in CLI-Sitzungen brechen ab, und ein von Hand gesetztes JAVA_HOME zeigt danach ins Leere."
     },
     {
       "id": "rust",
@@ -799,7 +802,8 @@
       "neuStartenNachUpdate": true,
       "ausblendenWennFehlt": true,
       "hinweis": "Wird für das Update geschlossen (mit Rückfrage) und danach wieder gestartet.",
-      "akzent": "#007ACC"
+      "akzent": "#007ACC",
+      "cliRisiko": "VS Code wird für das Update geschlossen: CLI-Sitzungen im integrierten Terminal von VS Code enden."
     },
     {
       "id": "vs2026",
@@ -874,7 +878,8 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "hinweis": "Beendet vorher den adb-Server (die WLAN-Verbindung baut sich danach selbst neu auf). Ein laufender Emulator muss vorher geschlossen sein.",
-      "akzent": "#3DDC84"
+      "akzent": "#3DDC84",
+      "cliRisiko": "Beendet den adb-Server und tauscht platform-tools/Emulator aus: Installationen, Logcat und Screenshots aufs Handy aus laufenden CLI-Sitzungen brechen ab."
     },
     {
       "id": "git",
@@ -1096,7 +1101,8 @@
       "neuStartenNachUpdate": false,
       "akzent": "#0F2C49",
       "hinweis": "Die VPN-Verbindung bricht während des Updates kurz ab.",
-      "ausblendenWennFehlt": true
+      "ausblendenWennFehlt": true,
+      "cliRisiko": "Die VPN-Verbindung bricht während des Updates ab: laufende API-Anfragen der CLI-Sitzungen (Claude, Codex) können dabei abreißen."
     },
     {
       "id": "streamdeck",

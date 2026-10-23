@@ -222,34 +222,16 @@ public sealed partial class HauptViewModel : ObservableObject
 
     public bool HatUpdates => AnzahlUpdates > 0;
 
-    /// <summary>
-    /// Label of the batch button: it only invites a click while updates are open, and says how
-    /// many of them are CLI-critical (they run first) and how many wait for a deliberate click.
-    /// </summary>
-    public string SammelText
-    {
-        get
-        {
-            var plan = Sammelplan.Planen(Programme.Where(p => p.HatUpdate));
-            var nurKlick = Programme.Count(p => p.HatUpdate && p.IstHauptversionsSprung);
-            var zusatz = nurKlick > 0 ? $"  ·  {nurKlick} nur per Klick" : "";
-            if (plan.Count == 0)
-                return nurKlick > 0 ? $"{nurKlick} Hauptversion{(nurKlick == 1 ? "" : "en")} nur per Klick auf der Karte"
-                    : AllesAktuell ? "✔ Alles aktuell" : "Keine Updates offen";
-            var cli = plan.Count(s => s.Phase == Sammelplan.PhaseCli);
-            var text = plan.Count == 1 ? "1 Update installieren" : $"Alle {plan.Count} Updates installieren";
-            var eigene = plan.Count(s => s.Phase == Sammelplan.PhaseEigene);
-            return text + (cli > 0 ? $"  ·  {cli} CLI-kritische {(eigene > 0 ? "nach den eigenen Werkzeugen" : "zuerst")}" : "") + zusatz;
-        }
-    }
-
     private void SammelAnzeigeMelden()
     {
         OnPropertyChanged(nameof(AnzahlUpdates));
         OnPropertyChanged(nameof(UpdateZusammenfassung));
         OnPropertyChanged(nameof(AllesAktuell));
         OnPropertyChanged(nameof(HatUpdates));
-        OnPropertyChanged(nameof(SammelText));
+        OnPropertyChanged(nameof(SicherText));
+        OnPropertyChanged(nameof(CliText));
+        OnPropertyChanged(nameof(HatSichereUpdates));
+        OnPropertyChanged(nameof(HatCliUpdates));
     }
 
     public string UpdateZusammenfassung => AnzahlUpdates switch
@@ -607,42 +589,86 @@ public sealed partial class HauptViewModel : ObservableObject
                      + (repoHinweis is null ? "" : "  ·  " + repoHinweis);
     }
 
+    /// <summary>Open updates that cannot end a CLI session, in batch order (own tools first).</summary>
+    private List<Sammelplan.Schritt> SichererPlan
+        => Sammelplan.Planen(Programme.Where(p => p.HatUpdate)).Where(s => s.Phase != Sammelplan.PhaseCli).ToList();
+
+    /// <summary>Open updates that can end a running CLI session.</summary>
+    private List<Sammelplan.Schritt> CliPlan
+        => Sammelplan.Planen(Programme.Where(p => p.HatUpdate)).Where(s => s.Phase == Sammelplan.PhaseCli).ToList();
+
+    /// <summary>Label of the button for everything that is not CLI-critical.</summary>
+    public string SicherText
+    {
+        get
+        {
+            var n = SichererPlan.Count;
+            if (n == 0) return AllesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates";
+            var nurKlick = Programme.Count(p => p.HatUpdate && p.IstHauptversionsSprung);
+            return (n == 1 ? "1 Update installieren" : $"{n} Updates installieren") + "  ·  nicht CLI-kritisch"
+                   + (nurKlick > 0 ? $"  ·  {nurKlick} nur per Klick" : "");
+        }
+    }
+
+    /// <summary>Label of the button for the CLI-critical updates.</summary>
+    public string CliText
+    {
+        get
+        {
+            var n = CliPlan.Count;
+            return n == 0 ? "Keine CLI-kritischen Updates" : (n == 1 ? "1 CLI-kritisches Update" : $"{n} CLI-kritische Updates") + " installieren";
+        }
+    }
+
+    public bool HatSichereUpdates => SichererPlan.Count > 0;
+    public bool HatCliUpdates => CliPlan.Count > 0;
+
+    /// <summary>
+    /// Two independent buttons: everything that cannot touch a CLI session, and the CLI-critical
+    /// updates. Either may go first -- neither waits for the other.
+    /// </summary>
     [RelayCommand]
-    private async Task AlleAktualisierenAsync()
+    private Task SichereAktualisierenAsync() => SammelStartenAsync(cli: false);
+
+    [RelayCommand]
+    private Task CliAktualisierenAsync() => SammelStartenAsync(cli: true);
+
+    private async Task SammelStartenAsync(bool cli)
     {
         if (_koordination.Belegt)
         {
-            KopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist.";
+            KopfStatus = "Updates gehen erst, wenn der laufende Vorgang fertig ist.";
             SammelAbgewiesen("sammelupdate");
             return;
         }
 
-        var plan = Sammelplan.Planen(Programme.Where(p => p.HatUpdate));
+        var plan = cli ? CliPlan : SichererPlan;
         if (plan.Count == 0)
         {
-            Dialoge.Hinweis("Es ist kein Update offen, das gesammelt installiert werden kann. Prüfe zuerst, oder "
-                            + "aktualisiere einzelne Programme gezielt (Hauptversionssprünge nur per Klick auf der Karte).");
+            Dialoge.Hinweis(cli
+                ? "Es ist kein CLI-kritisches Update offen."
+                : "Es ist kein unkritisches Update offen, das gesammelt installiert werden kann. Prüfe zuerst, oder "
+                  + "aktualisiere einzelne Programme gezielt (Hauptversionssprünge nur per Klick auf der Karte).");
             return;
         }
 
-        var cli = plan.Where(s => s.Phase == Sammelplan.PhaseCli).ToList();
         var nurKlick = Programme.Where(p => p.HatUpdate && p.IstHauptversionsSprung).ToList();
-        var frage = "Reihenfolge der Updates:\n\n"
-                    + string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name}  ({Sammelplan.PhasenName(s.Phase)}, "
-                                                              + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden) + ")"))
-                    + (cli.Count > 0
-                        ? "\n\nDie CLI-kritischen Updates können laufende CLI-Sitzungen beenden:\n"
-                          + string.Join("\n", cli.Select(s => "  • " + s.Programm.Name + " – " + s.Programm.Eintrag.CliRisiko))
-                          + "\nDirekt vor ihnen hält der Lauf an und fragt noch einmal: dann Claude Code, Codex und alle "
-                          + "Terminalfenster schließen. Sobald sie durch sind, meldet die Fußzeile, dass im CLI weitergearbeitet werden kann."
-                        : "")
-                    + (nurKlick.Count > 0
-                        ? "\n\nNur per Klick auf der Karte (Hauptversion): " + string.Join(", ", nurKlick.Select(p => p.Name))
-                        : "")
-                    + "\n\nBei laufenden Programmen wird vorher nachgefragt.";
-        if (!Dialoge.Fragen(frage, "Alle Updates installieren?")) return;
+        var liste = string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name}  ({Sammelplan.PhasenName(s.Phase)}, "
+                                                           + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden) + ")"));
+        var frage = cli
+            ? "Diese Updates können laufende CLI-Sitzungen beenden:\n\n"
+              + string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name} – {s.Programm.Eintrag.CliRisiko}"))
+              + "\n\nSchließe vorher Claude Code, Codex, OpenCode und alle Terminalfenster, dann „Ja“."
+              + "\n\nBei laufenden Programmen wird vorher nachgefragt."
+            : "Reihenfolge der Updates (keines davon ist CLI-kritisch):\n\n" + liste
+              + (nurKlick.Count > 0
+                  ? "\n\nNur per Klick auf der Karte (Hauptversion): " + string.Join(", ", nurKlick.Select(p => p.Name))
+                  : "")
+              + "\n\nBei laufenden Programmen wird vorher nachgefragt.";
+        if (!Dialoge.Fragen(frage, cli ? "CLI-kritische Updates installieren?" : "Unkritische Updates installieren?")) return;
 
-        await SammelAusfuehrenAsync(plan, "sammel-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+        // The CLI button's question already was "close the CLIs now" -- no second one inside the run.
+        await SammelAusfuehrenAsync(plan, "sammel-" + (cli ? "cli-" : "") + DateTime.Now.ToString("yyyyMMdd-HHmmss"), cliBestaetigt: cli);
     }
 
     /// <summary>
@@ -654,7 +680,9 @@ public sealed partial class HauptViewModel : ObservableObject
     /// </summary>
     /// <param name="versatz">Steps already done before a restart: positions continue the original plan.</param>
     /// <param name="planGroesse">Size of the original plan (0 = this plan).</param>
-    private async Task SammelAusfuehrenAsync(List<Sammelplan.Schritt> plan, string sammelId, int versatz = 0, int planGroesse = 0)
+    /// <param name="cliBestaetigt">The user just confirmed the CLI-critical updates -- the phase does not ask again.</param>
+    private async Task SammelAusfuehrenAsync(List<Sammelplan.Schritt> plan, string sammelId, int versatz = 0, int planGroesse = 0,
+                                             bool cliBestaetigt = false)
     {
         // Acquired only now: the question before is modal, and whatever started meanwhile wins.
         using var besitz = _koordination.SammelBeginnen();
@@ -768,7 +796,7 @@ public sealed partial class HauptViewModel : ObservableObject
 
                 // The one moment the CLIs have to be closed: right before the updates that can end
                 // their sessions. "No" leaves them open for a later click; the rest goes on.
-                if (phase.Key == Sammelplan.PhaseCli)
+                if (phase.Key == Sammelplan.PhaseCli && !cliBestaetigt)
                 {
                     LaufDetail = "";
                     var frage = "Jetzt kommen die CLI-kritischen Updates:\n\n"

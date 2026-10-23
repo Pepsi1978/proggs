@@ -20,7 +20,7 @@ Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmen
 | **Repo-Abgleich** | Vor der Prüfung der eigenen Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) wird `~/proggs` einmal mit GitHub abgeglichen: `git fetch` und Vorspulen (`--ff-only`), nie ein Merge. Erst dadurch ist bekannt, welche Version im Repo wartet. Lässt sich das Repo nicht vorspulen (lokale Änderungen im Weg), steht das in der Fußzeile, und die Karten zählen weiter die wartenden Commits. |
 | **Prüfung beim Windows-Start** | Schalter in der Fußzeile, standardmäßig an. 45 Sekunden nach der Anmeldung startet die UpdateZentrale unsichtbar (`--hintergrund`), gleicht das Repo ab, prüft alles und beendet sich wieder. Wird sie währenddessen von Hand geöffnet, erscheint das Fenster mit dem laufenden Fortschritt. Eingerichtet wird das als geplante Aufgabe „UpdateZentrale - Hintergrund" (dafür muss die App einmal mit Administratorrechten laufen), ohne den Schalter „Immer als Administrator" als normaler Autostart-Eintrag. |
 | **Aktualisieren** | Läuft für jedes Programm still durch, ohne dass eine fremde Oberfläche aufgeht. Die Schaltfläche lädt nur dann zum Klick ein, wenn wirklich eine neuere Version vorliegt; ist alles aktuell, steht dort „Aktuell" und sie ist abgeschaltet. |
-| **Alle Updates installieren** | Ein Klick, eine Rückfrage mit der geplanten Reihenfolge, dann in Phasen (siehe „Reihenfolge"). Unabhängige Selbst-Updater laufen in der letzten Phase parallel neben der seriellen Bahn. |
+| **Sammelknöpfe** | Zwei unabhängige Knöpfe: „⚠ CLI-kritische Updates installieren“ und „Updates installieren · nicht CLI-kritisch“. Je eine Rückfrage mit der geplanten Reihenfolge, dann in Phasen (siehe „Zwei Sammelknöpfe“). Unabhängige Selbst-Updater laufen parallel neben der seriellen Bahn. |
 | **Dauer und Sortierung** | Jede Karte zeigt, wie lange ihr Update zuletzt gedauert hat (Median der letzten drei echten Updates) oder eine Schätzung. Der Schalter „⏱ nach Dauer" sortiert innerhalb jeder Gruppe die kürzesten nach oben; die Gruppen bleiben zusammen. |
 | **Laufende Programme** | Wird pfadgenau erkannt (inklusive Helferprogramme). Muss ein Programm für das Update beendet werden, fragt die App vorher und startet es danach wieder, wenn es vorher lief. |
 | **Autostart** | Wird pro Programm angezeigt und lässt sich auf eine geplante Aufgabe mit Administratorrechten umstellen. |
@@ -29,16 +29,26 @@ Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmen
 | **Protokoll** | Rechts oben steht die vollständige Ausgabe des jeweiligen Update-Werkzeugs. |
 | **Terminal** | Rechts unten eine eingebaute PowerShell-Zeile mit den Rechten der UpdateZentrale, dazu eine Schaltfläche für ein echtes Terminalfenster. |
 
-### Reihenfolge von „Alle Updates installieren"
+### Zwei Sammelknöpfe und ihre Reihenfolge
+
+Oben stehen zwei voneinander unabhängige Knöpfe; welcher zuerst läuft, entscheidest du:
+
+* **⚠ CLI-kritische Updates installieren** – nur die Einträge mit `cliRisiko`. Die Rückfrage davor ist zugleich die
+  Aufforderung, Claude Code, Codex, OpenCode und alle Terminalfenster zu schließen; danach fragt der Lauf nicht noch einmal.
+  Eingeordnet sind (Stand 1.3.36): PowerShell 7 und Git (die Hooks und Werkzeuge der Sitzungen laufen über `pwsh` und Git Bash),
+  Node.js (MCP-Server und npm-CLIs), Windows-Terminal, WSL, Go, Bun, JDK 21 (Gradle-Daemons, Android-Builds), Android SDK
+  (adb-Server), LM Studio und seine Runtimes (Sitzungen mit lokalem Modell), VS Code (integriertes Terminal), Windscribe
+  (VPN-Abbruch). Nicht kritisch sind die CLI-Selbst-Updates (Claude Code, Codex, Kimi, Antigravity: laufende Sitzungen
+  behalten ihre Version) und die kleinen Kommandozeilen-Werkzeuge.
+* **Updates installieren · nicht CLI-kritisch** – alles andere, in dieser Reihenfolge:
 
 1. **Repo-Abgleich** (`git fetch` und Vorspulen) schon bei der Prüfung – erst danach ist bekannt, welche eigenen Werkzeuge neu gebaut werden müssen.
 2. **UpdateZentrale zuerst und allein.** Ihr Skript baut neu und startet die App neu. Der Rest des Sammellaufs wird vorher in
    `settings.json` (`sammelFortsetzen`) gesichert; die neue Fassung setzt ihn nach ihrer Startprüfung ohne zweite Rückfrage fort
    (nur innerhalb von 30 Minuten, nie beim versteckten Start bei der Anmeldung).
 3. **Phase 1 – Eigene Werkzeuge** (OpenLauncher, TVO, CVO): Sie fragen Ja/Nein, und direkt nach dem Klick sitzt man noch davor.
-4. **Phase 2 – CLI-kritisch** (`cliRisiko`: PowerShell, Node.js, Git, Windows-Terminal, WSL, Go, Bun). Direkt davor hält der
-   Lauf an und fragt: jetzt die CLIs schließen und „Ja“, oder „Nein“ – dann bleiben sie offen und der Rest läuft weiter.
-   Sobald sie durch sind, meldet die Fußzeile, dass im CLI weitergearbeitet werden kann.
+4. **Phase 2 – CLI-kritisch** gehört zum anderen Knopf. Enthält ein Plan sie doch einmal (etwa nach einer Fortsetzung), hält
+   der Lauf davor an und fragt: CLIs schließen und „Ja“, oder „Nein“ – dann bleiben sie offen und der Rest läuft weiter.
 5. **Phase 3 – der Rest.** Seriell: winget/MSI/Store (ein Installer zur Zeit), npm (ein gemeinsamer Baum), die Hilfsskripte
    (sie schreiben den PATH), sdkmanager (braucht das JDK) und die LM-Studio-Runtimes (LM Studio wird daneben ersetzt).
    Parallel daneben (höchstens drei): nur Einträge mit `parallel` – Claude Code, Codex, Antigravity, rustup und der Start
@@ -184,7 +194,7 @@ Weitere optionale Felder:
 | `zeitlimitMinuten` | Zeitlimit des Update-Laufs (Standard 20) |
 | `dialogWartezeitSekunden` | Nur `reposkript`: wie lange auf den Ja/Nein-Klick gewartet wird |
 | `hinweis` | Kursive Zeile auf der Karte |
-| `cliRisiko` | Grund, warum dieses Update laufende CLI-Sitzungen (Claude Code, Codex, Terminalfenster) beenden kann. Die Karte zeigt ein Warndreieck ⚠ neben dem Namen (Grund im Tooltip), der Einzelknopf fragt nach, und „Alle Updates installieren“ läuft in zwei Schritten: Schritt 1 installiert alles Ungefährliche, Schritt 2 (nach dem Schließen der CLIs) die CLI-kritischen. |
+| `cliRisiko` | Grund, warum dieses Update laufende CLI-Sitzungen (Claude Code, Codex, Terminalfenster) beenden kann. Die Karte zeigt ein Warndreieck ⚠ neben dem Namen (Grund im Tooltip), der Einzelknopf fragt nach, und die Updates laufen nur über den eigenen Knopf „⚠ CLI-kritische Updates installieren“, nie mit den unkritischen. |
 | `pfeilZaehlen` | Dokumentiert, dass die Prüfausgabe ihre Updates als `alt → neu` auflistet |
 | `wingetName` | Nur `winget`: Paket per Anzeigename statt per Kennung auswählen (`--name` statt `--id … --exact`), bei Prüfung **und** Update. Nötig für Programme, die nicht über winget installiert wurden: winget ordnet sie nur über den Namen zu (PowerShell als MSI meldet bei `--id` „kein installiertes Paket“). Die Tabellenzeile wird weiter über `wingetId` gefunden, ein loser Name greift also nie ein fremdes Paket. |
 | `wingetUpdatePerInstall` | Nur `winget`: Update mit `winget install --id … --exact` statt `upgrade`. `upgrade` findet nicht zugeordnete Pakete auch mit `--name` nicht (PowerShell-MSI); das neuere MSI ersetzt die alte Fassung beim Installieren selbst. |
