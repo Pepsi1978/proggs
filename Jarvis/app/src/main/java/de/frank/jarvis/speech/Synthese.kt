@@ -347,10 +347,13 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (ende.isNotBlank() && ende != "STOP") throw SyntheseFehler("Gemini hat die Stimme abgebrochen ($ende).")
         val roh = Base64.decode(daten, Base64.DEFAULT)
         val rate = Regex("rate=(\\d+)").find(teil?.optString("mimeType").orEmpty())?.groupValues?.get(1)?.toIntOrNull() ?: 24_000
-        val wav = if (roh.size > 44 && String(roh, 0, 4, Charsets.US_ASCII) == "RIFF") roh else mitWavKopf(roh, rate)
+        val riff = roh.size >= 12 && String(roh, 0, 4, Charsets.US_ASCII) == "RIFF"
+        // Aus einer WAV-Antwort nur den Ton behalten (ohne C2PA-Anhang); ein unbekanntes Format bleibt, wie es kam.
+        val ton = if (riff) pcmAusWav(roh) else roh to rate
+        val wav = ton?.let { mitWavKopf(it.first, it.second) } ?: roh
         // Abgeschnittenes Audio meldet Gemini teils trotzdem als fertig: Unter 25 Zeichen je Sekunde spricht niemand.
-        val sekunden = tonBytes(wav) / (wavRate(wav) * 2.0)
-        if (text.length >= 60 && sekunden < text.length / 25.0) {
+        val sekunden = (ton?.first?.size ?: 0) / ((ton?.second ?: rate) * 2.0)
+        if (ton != null && text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
         val fertig = mitTempo(wav, tempo)
@@ -375,7 +378,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     private suspend fun mitTempo(wav: ByteArray, tempo: Float): ByteArray {
         if (kotlin.math.abs(tempo - 1f) < 0.02f || wav.size < 44 + 4_000 || !schlichtesWav(wav)) return wav
         val rate = wavRate(wav)
-        val ein = ShortArray(tonBytes(wav) / 2)
+        val ein = ShortArray((wav.size - 44) / 2)
         java.nio.ByteBuffer.wrap(wav, 44, ein.size * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(ein)
         val w = rate * 30 / 1000
         val hs = w / 2
@@ -436,14 +439,38 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     }
 
     /**
-     * Länge des Tons laut data-Chunk. Gemini hängt dahinter einen C2PA-Herkunftsnachweis (rund 6 KB) an;
-     * als Ton gelesen klänge er am Ende wie Fernsehrauschen.
+     * Liest aus einer WAV-Antwort Ton (PCM) und Abtastrate, Chunk für Chunk. Gemini hängt hinter den data-Chunk
+     * einen C2PA-Herkunftsnachweis (rund 6 KB) an; als Ton gelesen klänge er am Ende wie Fernsehrauschen.
+     * null, wenn es kein PCM 16 Bit mono ist.
      */
-    private fun tonBytes(wav: ByteArray): Int {
-        val rest = wav.size - 44
-        if (rest <= 0) return 0
-        val angabe = java.nio.ByteBuffer.wrap(wav, 40, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).int
-        return if (String(wav, 36, 4, Charsets.US_ASCII) == "data" && angabe in 1..rest) angabe else rest
+    private fun pcmAusWav(wav: ByteArray): Pair<ByteArray, Int>? {
+        val b = java.nio.ByteBuffer.wrap(wav).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        fun kennung(ab: Int) = String(wav, ab, 4, Charsets.US_ASCII)
+        if (wav.size < 12 || kennung(8) != "WAVE") return null
+        var rate = 0
+        var pcmMono16 = false
+        var pos = 12
+        while (pos + 8 <= wav.size) {
+            val groesse = b.getInt(pos + 4).toLong() and 0xFFFFFFFFL
+            val inhalt = pos + 8
+            when (kennung(pos)) {
+                "fmt " -> if (groesse >= 16 && inhalt + 16 <= wav.size) {
+                    pcmMono16 = b.getShort(inhalt).toInt() == 1 && b.getShort(inhalt + 2).toInt() == 1 && b.getShort(inhalt + 14).toInt() == 16
+                    rate = b.getInt(inhalt + 4)
+                }
+                "data" -> {
+                    if (!pcmMono16 || rate <= 0) return null
+                    // Platzhalter-Länge (0 oder 0xFFFFFFFF bei gestreamten WAVs): bis zum C2PA-Anhang oder zum Ende.
+                    val ende = if (groesse in 1..(wav.size - inhalt).toLong()) inhalt + groesse.toInt()
+                    else (inhalt until wav.size - 3 step 2).firstOrNull { kennung(it) == "C2PA" } ?: wav.size
+                    val laenge = (ende - inhalt) and 1.inv()
+                    return wav.copyOfRange(inhalt, inhalt + laenge) to rate
+                }
+            }
+            if (groesse > wav.size) return null
+            pos = inhalt + groesse.toInt() + (groesse.toInt() and 1)
+        }
+        return null
     }
 
     private fun wavRate(wav: ByteArray): Int =
