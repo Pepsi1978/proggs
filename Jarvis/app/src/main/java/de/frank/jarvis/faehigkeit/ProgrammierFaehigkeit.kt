@@ -323,9 +323,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // ein neuer Auftrag mit eigener Sitzung (siehe NachtragsRegel.eigenesGespraech).
                 val wahl = zieleFuer(ziel, modell, cli)
                 val neu = a.optBoolean("neu")
+                val knopf = if (neu) null else knopfStartIn(herkunft().second)
                 when {
                     appName.isEmpty() -> Ergebnis("Welche App ist gemeint? Bitte Frank fragen.", fehler = true)
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
+                    // Frank hat eben per Knopf gewählt und der Auftrag läuft; schiebt er gleich danach etwas nach, ruft das Modell
+                    // programmieren oft noch einmal auf: dann weder die Modellfrage ein zweites Mal noch ein doppelter Auftrag.
+                    knopf != null -> schonPerKnopfGestartet(knopf)
                     wahl.isEmpty() -> Ergebnis(fehltFuer(modell), fehler = true)
                     // Franks Wahl vom 22.10.2026: Er wählt beim Start das Modell (Knöpfe im Chat), wenn Sol möglich ist: am Windows-PC
                     // oder, ist der aus, in Codex Cloud (ChatGPT-Konto verbunden).
@@ -394,7 +398,23 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     private data class OffeneWahl(val app: String, val auftrag: String, val review: Boolean, val neu: Boolean, val gespraech: String,
                                   val ursprung: de.frank.jarvis.speech.SprachUrsprung?, val ziel: String = "",
-                                  val modell: String = "", val cli: String = "", val stufe: String = STUFE_MODELL)
+                                  val modell: String = "", val cli: String = "", val stufe: String = STUFE_MODELL,
+                                  val seit: Long = System.currentTimeMillis())
+
+    /** Ein per Knopf gestarteter Auftrag, gemerkt je Gespräch für [KNOPF_FRIST_MS] (siehe [knopfStartIn]). */
+    private class KnopfStart(val nummer: String, val app: String, val modell: String, val cli: String, val zeit: Long = System.currentTimeMillis())
+
+    /** Der Auftrag, den Frank in [gespraech] vor höchstens [KNOPF_FRIST_MS] per Knopf gestartet hat. */
+    private fun knopfStartIn(gespraech: String): KnopfStart? =
+        gespraech.takeIf { it.isNotEmpty() }?.let { knopfStarts[it] }?.takeIf { System.currentTimeMillis() - it.zeit < KNOPF_FRIST_MS }
+
+    private fun modellName(modell: String, cli: String) =
+        if (modell == MODELL_SOL) "Sol 6.1 (" + (if (cli == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI") + ")" else "Opus 5.5"
+
+    private fun schonPerKnopfGestartet(k: KnopfStart) = Ergebnis("Schon gestartet: Frank hat eben per Knopf „${modellName(k.modell, k.cli)}“ gewählt, " +
+        "der Auftrag für ${k.app} (Nummer ${k.nummer}) läuft damit bereits. Frag NICHT noch einmal nach dem Modell und starte nichts neu; sag Frank " +
+        "in einem kurzen Satz, dass der Auftrag mit ${modellName(k.modell, k.cli)} läuft. Bringt seine Nachricht etwas Neues für diesen Auftrag, " +
+        "biete an, es mit programmier_nachtrag an Nummer ${k.nummer} zu geben. Will er ausdrücklich einen weiteren, eigenen Auftrag, rufe programmieren mit neu=true auf.")
 
     /**
      * Sol möglich, Modell offen: In der App kommt eine Karte mit „Opus 5.5“ und „Sol 6.1“ ins Gespräch, der Start folgt
@@ -404,6 +424,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val (ausChatGpt, gespraech) = herkunft()
         if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.1 läuft am Windows-PC oder, ist der aus, in Codex Cloud). Frag ihn kurz: " +
             "„Opus 5.5 oder Sol 6.1?“ und rufe programmieren danach mit demselben Auftrag und modell=opus bzw. modell=sol erneut auf.")
+        // Steht im Gespräch schon eine frische Karte, keine zweite: Sie übernimmt den neu gefassten Auftrag, und ein schon
+        // per Knopf gewähltes Sol wird nicht noch einmal erfragt.
+        offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS }?.let { (id, alt) ->
+            offeneWahlen[id] = alt.copy(app = appName, auftrag = auftrag)
+            return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
+                STUFE_CLI -> "Frank hat schon Sol 6.1 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
+                STUFE_REVIEW -> "Frank hat schon Sol 6.1 im Codex CLI gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
+                else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“ und „Sol 6.1“."
+            } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. Sag Frank nur kurz, er soll eins antippen.")
+        }
         karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel))
         return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“ und „Sol 6.1“. Sag Frank in einem kurzen Satz, " +
             "er soll eins antippen oder sagen. Sagt er es, rufe programmieren mit demselben Auftrag und modell=opus bzw. modell=sol auf; sonst starte nichts.")
@@ -474,11 +504,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val modell = if (w.stufe == STUFE_MODELL) wert else w.modell
         val cli = when (w.stufe) { STUFE_CLI -> wert; STUFE_REVIEW -> CLI_CODEX; else -> CLI_CODEX }
         val review = if (w.stufe == STUFE_REVIEW) wert == REVIEW_JA else w.review && cli != CLI_OPENCODE
+        val nummer = Auftragsbuch.neueNummer()
         val ergebnis = withContext(umgebung) {
             val wahl = zieleFuer(w.ziel, modell, cli)
             if (wahl.isEmpty()) Ergebnis(fehltFuer(modell), fehler = true)
-            else starteErstes(wahl, w.app, w.auftrag, review, Auftragsbuch.neueNummer(), w.neu, modell, cli)
+            else starteErstes(wahl, w.app, w.auftrag, review, nummer, w.neu, modell, cli)
         }
+        // Gestartet (oder unklar, läuft womöglich): Ein erneuter Aufruf aus diesem Gespräch fragt nicht noch einmal (siehe knopfStartIn).
+        if (!ergebnis.fehler || ergebnis.text.startsWith("Unklar")) knopfStarts[w.gespraech] = KnopfStart(nummer, w.app, modell, cli)
         if (!ergebnis.fehler) return
         ProgrammierChat.poste(app, w.gespraech, "⚠️ " + ergebnis.text, ProgrammierChat.ART_STATUS)
         if (!ergebnis.text.startsWith("Unklar")) {
@@ -1649,6 +1682,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         const val WAHL_ERLEDIGT = "erledigt"
         val wahlStand = kotlinx.coroutines.flow.MutableStateFlow<Map<String, String>>(emptyMap())
         private val offeneWahlen = java.util.concurrent.ConcurrentHashMap<String, OffeneWahl>()
+        /** Per Knopf gestartete Aufträge je Gespräch (nur im Speicher) und wie lange ein erneuter Aufruf als derselbe Auftrag gilt. */
+        private val knopfStarts = java.util.concurrent.ConcurrentHashMap<String, KnopfStart>()
+        private const val KNOPF_FRIST_MS = 5 * 60_000L
 
         /** Stand eines Auftrags, dessen Start nach dem Senden ins Zeitlimit lief: vielleicht gestartet. Die erste Meldung der Sitzung ersetzt ihn. */
         const val STAND_UNKLAR = "unklar"
