@@ -1150,6 +1150,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Zwischenschritte still; Rückfrage, Fertig und Problem nach Franks Einstellung (Ton, Wecker, Vorlesen).
                 // Eine Sperre stört kein Live-Gespräch (still, aber sichtbar); Rückfrage, Fertig und Problem wie bisher auch dort mit Ton.
                 titel, if (vorlesen) "$titel. $text" else null, laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
+                // Eine Rückfrage kommt immer, auch wenn Frank die Meldungen der Programmieraufträge abgeschaltet hat (sonst
+                // erschien sie bei gesperrtem Handy weder in der Leiste noch wurde sie angesagt).
+                trotzAus = stand == "frage" && frageId.isNotEmpty(),
             )
         }
     }
@@ -1185,14 +1188,22 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val frageText = if (frage.optBoolean("frei")) kurz.lines().map { it.trim() }.filter { it.isNotEmpty() }.takeLast(2).joinToString(" ").takeLast(300)
             else kurz.take(300)
         val review = Regex("(?i)code[- ]?review").containsMatchIn(frageText) && !Regex("(?i)befund|beheb|fix").containsMatchIn(frageText)
-        val satz = if (review) "Eine Code-Review-Frage vom Programmierer zu $appName wartet auf deine Antwort."
-            else "Eine Rückfrage vom Programmierer zu $appName wartet auf deine Antwort: $frageText"
         val aus = !(app.getSystemService(android.os.PowerManager::class.java)?.isInteractive ?: true) ||
             (app.getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked ?: false)
+        // Gesperrt: ein kurzer fester Satz, gleich beim Eintreffen (= Beginn des Countdowns); die Frage steht nach dem Entsperren im Vollbild.
+        val satz = when {
+            aus && review -> "Eine Code-Review-Frage vom Programmierer zu $appName muss beantwortet werden."
+            aus -> "Eine Frage vom Programmierer zu $appName muss beantwortet werden."
+            review -> "Eine Code-Review-Frage vom Programmierer zu $appName wartet auf deine Antwort."
+            else -> "Eine Rückfrage vom Programmierer zu $appName wartet auf deine Antwort: $frageText"
+        }
         val art = de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN
-        // Bei ausgeschaltetem Handy immer, auch in der Ruhezeit und ohne Vorlese-Wahl; nur nie, wenn Frank die Art ganz abgeschaltet hat.
-        if ((aus && de.frank.jarvis.meldung.Meldungen.an(app, art)) || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art))
+        // Bei ausgeschaltetem oder gesperrtem Handy immer: auch in der Ruhezeit, ohne Vorlese-Wahl und bei abgeschalteten
+        // Programmier-Meldungen (Franks Vorgabe vom 23.10.2026: Rückfragen haben Vorrang). Entsperrt nur nach seiner Vorlese-Wahl.
+        if (aus || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
+            Logbuch.system("Rückfrage angesagt", "${if (aus) "gesperrt" else "entsperrt"}, Auftrag ${eintrag.optString("id")}")
             de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId", ausdruecklich = aus)
+        }
     }
 
     /** Eine erledigte Rückfrage (beantwortet, abgelaufen, am Rechner) wird nicht mehr nachträglich angesagt. */

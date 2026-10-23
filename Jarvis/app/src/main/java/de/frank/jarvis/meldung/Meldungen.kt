@@ -104,7 +104,7 @@ object Meldungsarten {
         ton = true, vorlesen = true, wecker = true, ruhezeit = true, alt = mapOf("vorlesen" to "ergebnisse_vorlesen"),
     )
     val PROGRAMMIEREN = Meldungsart(
-        "programmieren", "Programmieraufträge", "Meldet Rückfragen, fertige Aufträge und Probleme beim Programmieren.",
+        "programmieren", "Programmieraufträge", "Meldet fertige Aufträge und Probleme beim Programmieren. Rückfragen kommen immer, auch wenn das hier aus ist.",
         "Bei Rückfrage, Fertig oder Problem eines Programmierauftrags.", ERGEBNISSE, "jarvis_ergebnisse",
         ton = true, vorlesen = true, wecker = true, ruhezeit = true,
     )
@@ -212,11 +212,13 @@ object Meldungen {
         titel: String, sprechtext: String?, laut: Boolean = true, probe: Boolean = false,
         /** false = auch im Gespräch mit Ton (Rückfragen beim Programmieren sollen nicht liegen bleiben). */
         imGespraechStill: Boolean = true,
+        /** true = auch bei abgeschalteter Art zeigen (Rückfragen beim Programmieren haben Vorrang vor dem Schalter). */
+        trotzAus: Boolean = false,
     ): Boolean {
         val app = context.applicationContext
         val e = Einstellungen.get(app)
         val p = profil(app, art)
-        if (!probe && !an(app, art)) return false
+        if (!probe && !trotzAus && !an(app, art)) return false
         val ruhe = !probe && inRuhe(app, art)
         val gespraech = GespraechsFokus.stilleHinweise && !art.dringend
         // Lautlos gewählt heißt auch: kein Wecker, selbst wenn er noch eingeschaltet ist.
