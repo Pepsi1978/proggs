@@ -125,15 +125,9 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     var modellOffen by remember { mutableStateOf(false) }
     val modell = vm.einstellungen.modell
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(vm, lifecycle, modell.istAnthropic, vm.liveAktiv) {
-        if (modell.istAnthropic && !vm.liveAktiv) {
-            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                while (isActive) {
-                    vm.anthropicGuthabenAbfragen()
-                    delay(15 * 60_000L)
-                }
-            }
-        }
+    // Kein Abfragen im Leerlauf: Hier nur der gespeicherte Stand; frisch geholt wird beim Start und Ende einer Aufgabe.
+    LaunchedEffect(vm, modell.istAnthropic) {
+        if (modell.istAnthropic) vm.anthropicGuthabenZeigen()
     }
     val guthabenStand = if (modell.istAnthropic) vm.anthropicGuthaben?.takeIf { it.hinweis == null } else null
     val guthabenUsd = guthabenStand?.restUsd
@@ -143,8 +137,13 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     fun mitGuthaben(name: String) = buildAnnotatedString {
         if (guthabenUsd != null) {
             withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Bold)) {
-                append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $)")
+                append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $")
             }
+            // Was die letzte Aufgabe gekostet hat, als Differenz direkt hinter dem Guthaben.
+            vm.anthropicKosten?.let { k ->
+                withStyle(SpanStyle(color = f.textLeise, fontWeight = FontWeight.Bold)) { append(" −${AnthropicGuthabenFaehigkeit.betrag(k)} $") }
+            }
+            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Bold)) { append(")") }
             append(" · ")
         }
         append(name)

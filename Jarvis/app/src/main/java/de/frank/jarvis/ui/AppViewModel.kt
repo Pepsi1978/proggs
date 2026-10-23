@@ -350,6 +350,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             rundeFertig(runde, antwort, art, vorlesen)
         }
+        if (einstellungen.modell.istAnthropic) {
+            anthropicKostenStart()
+            runde.job?.invokeOnCompletion { viewModelScope.launch { anthropicKostenEnde() } }
+        }
     }
 
     // ---- Aktionen unter einer Antwort ----
@@ -2483,6 +2487,58 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Erst hier (nicht beim Aufbau) gelesen: CookieManager lädt den WebView-Unterbau.
             anthropicConsoleAngemeldet = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() }
             anthropicGuthabenLaedt = false
+        }
+    }
+
+    /** Nur den gespeicherten Stand zeigen, ohne Netz: Frisch abgefragt wird erst rund um eine Aufgabe. */
+    fun anthropicGuthabenZeigen() {
+        if (anthropicGuthaben != null) return
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val s = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.gespeichert(app) }
+            if (anthropicGuthaben == null) anthropicGuthaben = s
+        }
+    }
+
+    /** Was die letzte Aufgabe mit einem Anthropic-Modell gekostet hat (Guthaben vorher minus nachher), in Dollar; null = noch keine. */
+    var anthropicKosten by mutableStateOf<Double?>(null); private set
+    private var kostenVorher: Double? = null
+    private var kostenAktiv = false
+    private var kostenNachlauf: kotlinx.coroutines.Job? = null
+
+    /** Beim Start einer Aufgabe: Guthaben frisch holen und als Ausgangswert merken (laufen mehrere, zählt der erste Start). */
+    private fun anthropicKostenStart() {
+        // Startet eine neue Aufgabe im Nachlauf der vorigen, misst sie ab jetzt neu.
+        if (kostenNachlauf?.isActive == true) { kostenNachlauf?.cancel(); kostenAktiv = false }
+        kostenNachlauf = null
+        if (kostenAktiv) return
+        kostenAktiv = true
+        kostenVorher = anthropicGuthaben?.restUsd
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            val s = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen = true)
+            if (s.hinweis == null && s.restUsd != null) { anthropicGuthaben = s; kostenVorher = s.restUsd }
+        }
+    }
+
+    /**
+     * Nach dem Ende der letzten laufenden Aufgabe: Guthaben sofort und noch einmal nach einer Minute frisch holen (die Console
+     * bucht den Verbrauch mit Verzögerung) und die Differenz zum Ausgangswert als Kosten zeigen.
+     */
+    private fun anthropicKostenEnde() {
+        if (!kostenAktiv || laufende.values.any { it.job?.isActive == true }) return
+        val app = getApplication<Application>()
+        kostenNachlauf = viewModelScope.launch {
+            repeat(2) { i ->
+                if (i > 0) kotlinx.coroutines.delay(60_000L)
+                val s = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen = true)
+                if (s.hinweis == null && s.restUsd != null) {
+                    anthropicGuthaben = s
+                    kostenVorher?.let { anthropicKosten = (it - s.restUsd).coerceAtLeast(0.0) }
+                }
+            }
+            kostenAktiv = false
+            kostenVorher = null
         }
     }
 
