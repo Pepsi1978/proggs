@@ -10,8 +10,10 @@ enum class TtsProvider(val id: String, val label: String, val kurz: String) {
     AZURE("azure_neural", "Azure Neural", "Azure"),
     ;
 
-    /** Nur diese Anbieter werten das Sprechtempo aus; Gemini und Alibaba sprechen im eigenen Tempo. */
-    val kenntTempo: Boolean get() = this == GOOGLE_CLOUD || this == EDGE || this == AZURE
+    /** Nur diese Anbieter werten das Sprechtempo aus (Gemini über das Strecken des fertigen Tons); Alibaba spricht im eigenen Tempo. */
+    val kenntTempo: Boolean get() = this == GOOGLE_CLOUD || this == EDGE || this == AZURE || istGemini
+
+    val istGemini: Boolean get() = this == GEMINI_FLASH || this == GEMINI_LITE
 }
 
 enum class VoiceGender {

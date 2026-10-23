@@ -270,7 +270,7 @@ class EinstellungsKatalog(context: Context) {
                 { alleStimmen() + ("eigene" to "Meine Stimme (geklont)") }, { jarvisStimme() }) { if (it == "eigene") s.ttsProvider = TtsProvider.QWEN_CLONE.id else setzeJarvisStimme(it) },
             *TtsProvider.entries.filter { it.kenntTempo }.map { p ->
                 auswahl("vorlese_tempo_${p.id}", "Vorlesen", "Sprechtempo ${p.label}",
-                    "Wie schnell ${p.label} vorliest, als Hauptstimme und als Rückfallstufe. Gemini und Alibaba sprechen im eigenen Tempo.",
+                    "Wie schnell ${p.label} vorliest, als Hauptstimme und als Rückfallstufe. Alibaba spricht im eigenen Tempo.",
                     { tempi }, { tempoText(s.ttsTempo(p.id)) }) { s.setzeTtsTempo(p.id, it.toFloat()) }
             }.toTypedArray(),
             auswahl("gemini_tts_schluessel", "Vorlesen", "Gemini-Stimme: welcher Schlüssel", "Ob die Gemini-3.8-Stimme erst den kostenlosen und dann den bezahlten Schlüssel nutzt oder nur einen davon.",

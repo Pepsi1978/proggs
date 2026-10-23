@@ -204,10 +204,12 @@ class SecureSettings(context: Context) : Closeable {
 
     /**
      * Sprechtempo je Anbieter: Jede Stimme behält ihr eigenes Tempo, auch wenn sie als Rückfallstufe einspringt.
-     * Noch nie gesetzt = das bisherige gemeinsame Tempo ([ttsSpeechRate]).
+     * Noch nie gesetzt = das bisherige gemeinsame Tempo ([ttsSpeechRate]); Gemini sprach bisher immer normal und bleibt dabei.
      */
-    fun ttsTempo(anbieter: String): Float =
-        preferences?.getFloat(tempoSchluessel(anbieter), ttsSpeechRate)?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: ttsSpeechRate
+    fun ttsTempo(anbieter: String): Float {
+        val vorgabe = if (TtsProvider.entries.firstOrNull { it.id == anbieter }?.istGemini == true) 1.0f else ttsSpeechRate
+        return preferences?.getFloat(tempoSchluessel(anbieter), vorgabe)?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: vorgabe
+    }
 
     fun setzeTtsTempo(anbieter: String, wert: Float) {
         preferences?.edit()?.putFloat(tempoSchluessel(anbieter), wert.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE))?.apply()

@@ -245,8 +245,6 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 Unterzeile("Stimme")
                 StimmChips(vm, anbieter, if (flash) TtsCatalog.geminiFlashVoices else TtsCatalog.geminiLiteVoices,
                     if (flash) s.geminiFlashTtsVoice else s.geminiLiteTtsVoice) { id -> geaendert { if (flash) s.geminiFlashTtsVoice = id else s.geminiLiteTtsVoice = id } }
-                Text("Gemini spricht im eigenen Tempo; das Sprechtempo unten gilt nur für die Rückfallstufen.",
-                    color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
             TtsProvider.AZURE -> {
                 Schluesselfeld(vm, "Azure-Speech-Schlüssel (KEY 1)", s.azureTtsKey) { geaendert { s.azureTtsKey = it } }

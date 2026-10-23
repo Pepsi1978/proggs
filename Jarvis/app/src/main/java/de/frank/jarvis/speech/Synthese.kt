@@ -139,8 +139,8 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     private suspend fun erzeuge(anbieter: String, text: String, sonder: String?, tempo: Float, schluessel: String?, mitAusweg: Boolean): File =
         when (anbieter) {
             TtsProvider.GOOGLE_CLOUD.id -> google(text, sonder, tempo)
-            TtsProvider.GEMINI_FLASH.id -> gemini(text, GEMINI_FLASH_MODELL, sonder ?: settings.geminiFlashTtsVoice, schluessel, mitAusweg)
-            TtsProvider.GEMINI_LITE.id -> gemini(text, GEMINI_LITE_MODELL, sonder ?: settings.geminiLiteTtsVoice, schluessel, mitAusweg)
+            TtsProvider.GEMINI_FLASH.id -> gemini(text, GEMINI_FLASH_MODELL, sonder ?: settings.geminiFlashTtsVoice, schluessel, mitAusweg, tempo)
+            TtsProvider.GEMINI_LITE.id -> gemini(text, GEMINI_LITE_MODELL, sonder ?: settings.geminiLiteTtsVoice, schluessel, mitAusweg, tempo)
             TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
             TtsProvider.QWEN.id -> qwen(text, geklont = false, sonder)
             TtsProvider.EDGE.id -> edge(text, sonder, tempo)
@@ -277,7 +277,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * [mitAusweg]: Danach kommt noch eine Rückfallstufe — dann wird bei 429 nicht gewartet und der kostenlose Schlüssel
      * dieses Modells nach einem Fehler eine Weile übersprungen. Das Kontingent gilt je Modell, darum die Sperre auch.
      */
-    private suspend fun gemini(text: String, modell: String, stimmeId: String, nurSchluessel: String?, mitAusweg: Boolean): File {
+    private suspend fun gemini(text: String, modell: String, stimmeId: String, nurSchluessel: String?, mitAusweg: Boolean, tempo: Float): File {
         val wahl = when (nurSchluessel) {
             RueckfallStufe.FREI -> SecureSettings.GEMINI_TTS_NUR_FREI
             RueckfallStufe.BEZAHLT -> SecureSettings.GEMINI_TTS_NUR_BEZAHLT
@@ -292,7 +292,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             val ausweg = mitAusweg || (wahl == SecureSettings.GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
             if (frei.isNotBlank() && !gesperrt) {
                 try {
-                    return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg)
+                    return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg, tempo)
                 } catch (fehler: Exception) {
                     if (fehler !is SyntheseAbbruch && fehler !is SyntheseFehler) throw fehler
                     fehlerFrei = fehler
@@ -313,10 +313,10 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                 "Vorlesen fehlgeschlagen: Es ist kein Gemini-Schlüssel für die Stimme hinterlegt. Trag ihn in den Einstellungen ein.",
             )
         }
-        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = true)
+        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = true, tempo)
     }
 
-    private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean): File {
+    private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean, tempo: Float): File {
         val beginn = System.currentTimeMillis()
         // Gemini liest den Text wörtlich vor; eine Anweisung im Text würde mitgesprochen.
         val koerper = JSONObject()
@@ -352,8 +352,56 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
-        Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length}", System.currentTimeMillis() - beginn)
-        return schreibeDatei(wav, "wav")
+        Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length} tempo=$tempo", System.currentTimeMillis() - beginn)
+        return schreibeDatei(mitTempo(wav, tempo), "wav")
+    }
+
+    /**
+     * Gemini kennt kein Sprechtempo, und eine Anweisung im Text würde mitgesprochen: Darum wird der fertige Ton
+     * (16 Bit mono) per WSOLA gestreckt oder gestaucht. Die Tonhöhe bleibt dabei gleich.
+     */
+    private fun mitTempo(wav: ByteArray, tempo: Float): ByteArray {
+        if (kotlin.math.abs(tempo - 1f) < 0.02f || wav.size < 44 + 4_000) return wav
+        val rate = wavRate(wav)
+        val ein = ShortArray((wav.size - 44) / 2)
+        java.nio.ByteBuffer.wrap(wav, 44, ein.size * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(ein)
+        val w = rate * 30 / 1000
+        val hs = w / 2
+        val such = rate * 10 / 1000
+        // Hann-Fenster: Bei halber Überlappung ergänzen sich die Fenster genau zu 1.
+        val fenster = FloatArray(w) { (0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * it / w)).toFloat() }
+        val aus = FloatArray((ein.size / tempo).toInt() + 2 * w)
+        var vorher = 0
+        var k = 0
+        while (true) {
+            val ziel = (k * hs * tempo).roundToInt()
+            val o = k * hs
+            if (ziel + w + such >= ein.size || o + w > aus.size) break
+            var pos = ziel
+            val natuerlich = vorher + hs
+            // Den Ausschnitt um das Ziel suchen, der am besten an den vorigen anschließt (grob gerastert, reicht für Sprache).
+            if (k > 0 && natuerlich + w < ein.size) {
+                var bester = Double.NEGATIVE_INFINITY
+                var d = -such
+                while (d <= such) {
+                    val c = ziel + d
+                    if (c >= 0) {
+                        var summe = 0.0
+                        var i = 0
+                        while (i < w) { summe += ein[natuerlich + i].toDouble() * ein[c + i]; i += 4 }
+                        if (summe > bester) { bester = summe; pos = c }
+                    }
+                    d += 2
+                }
+            }
+            for (i in 0 until w) aus[o + i] += ein[pos + i] * fenster[i]
+            vorher = pos
+            k++
+        }
+        val laenge = k * hs + hs
+        val pcm = java.nio.ByteBuffer.allocate(laenge * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until laenge) pcm.putShort(aus[i].roundToInt().coerceIn(-32768, 32767).toShort())
+        return mitWavKopf(pcm.array(), rate)
     }
 
     /** Rohes PCM (16 Bit, mono) bekommt einen WAV-Kopf, damit der MediaPlayer es abspielt. */

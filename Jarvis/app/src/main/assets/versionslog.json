@@ -262,6 +262,7 @@
     {"versionCode": 257, "versionName": "1.8.246", "stand": "23.10.2026, 13:26 Uhr", "notiz": "Das Tokenlimit gilt jetzt pro Aufgabe und für alle Modelle: Ist es im Chat oder bei einem Agenten erreicht, fragt Jarvis, ob er weitermachen soll, und gibt bei Weiter noch einmal so viele Token."},
     {"versionCode": 258, "versionName": "1.8.247", "stand": "23.10.2026, 13:36 Uhr", "notiz": "Agenten nennen jetzt richtig, ob das Zeit- oder das Tokenlimit erreicht ist, die Rückfrage im Chat gilt nach 10 Minuten ohne Antwort als Abbrechen, und Chat-Antworten mit Denkstufe „Maximal“ bekommen bis zu 15 Minuten Zeit."},
     {"versionCode": 259, "versionName": "1.8.248", "stand": "23.10.2026, 13:46 Uhr", "notiz": "Nach einer Tagesauswertung mit einem Claude-Modell zeigt Jarvis unten den neuen Guthabenstand und die Kosten der Auswertung."},
-    {"versionCode": 260, "versionName": "1.8.249", "stand": "23.10.2026, 13:50 Uhr", "notiz": "Das Guthaben nach einer Tagesauswertung mit Claude wird jetzt auch aktualisiert, wenn die Auswertung automatisch im Hintergrund läuft."}
+    {"versionCode": 260, "versionName": "1.8.249", "stand": "23.10.2026, 13:50 Uhr", "notiz": "Das Guthaben nach einer Tagesauswertung mit Claude wird jetzt auch aktualisiert, wenn die Auswertung automatisch im Hintergrund läuft."},
+    {"versionCode": 261, "versionName": "1.8.250", "stand": "23.10.2026, 13:56 Uhr", "notiz": "Gemini 3.8 Flash TTS und Flash-Lite TTS haben jetzt ein eigenes Sprechtempo, das auch gilt, wenn sie als Rückfallstufe einspringen."}
   ]
 }
