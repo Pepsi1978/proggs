@@ -83,6 +83,49 @@ namespace TerminalVoiceOverlay.Services
         [DllImport("user32.dll")]
         private static extern uint GetClipboardSequenceNumber();
 
+        // Claude Code CLI collapses a single paste over 800 chars or with more than
+        // 2 line breaks into "[Pasted text #1]" (no setting to turn it off). Long
+        // dictations are therefore pasted in smaller pieces so the full text stays visible.
+        private const int MaxPasteChunkChars = 700;
+        private const int MaxPasteChunkLineBreaks = 2;
+        private const int ChunkPasteDelayMs = 250;
+
+        /// <summary>
+        /// Splits text into pieces Claude Code shows inline. Cuts after a space or
+        /// line break where possible; joining the pieces yields the original text.
+        /// </summary>
+        private static System.Collections.Generic.List<string> SplitIntoPasteChunks(string text)
+        {
+            var chunks = new System.Collections.Generic.List<string>();
+            int start = 0;
+            while (start < text.Length)
+            {
+                int end = start;
+                int lineBreaks = 0;
+                int lastSpaceCut = -1;
+                while (end < text.Length && end - start < MaxPasteChunkChars)
+                {
+                    char c = text[end];
+                    // A line break starts at '\r' or at a '\n' not preceded by '\r'.
+                    if (c == '\r' || (c == '\n' && (end == 0 || text[end - 1] != '\r')))
+                    {
+                        if (lineBreaks == MaxPasteChunkLineBreaks) break;
+                        lineBreaks++;
+                    }
+                    end++;
+                    if (c == ' ' || c == '\t') lastSpaceCut = end;
+                }
+                if (end < text.Length && text[end] == '\n' && text[end - 1] == '\r')
+                    end++; // never split CRLF
+                else if (end < text.Length && lastSpaceCut > start && text[end] != '\n' && text[end] != '\r')
+                    end = lastSpaceCut;
+                chunks.Add(text.Substring(start, end - start));
+                start = end;
+            }
+            if (chunks.Count == 0) chunks.Add(text);
+            return chunks;
+        }
+
         /// <summary>
         /// Versucht eine Clipboard-Operation auf dem UI-Thread bis zu
         /// <paramref name="maxAttempts"/> mal mit kurzem Backoff. WPFs
@@ -153,7 +196,7 @@ namespace TerminalVoiceOverlay.Services
                         previousClipboard = ClipboardSnapshot.Capture(out previousHadContent);
                         // Same text formats as Clipboard.SetText, plus opt-out of
                         // clipboard history (Win+V) and cloud sync.
-                        Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(text), true);
+                        Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(SplitIntoPasteChunks(text)[0]), true);
                         ownedClipboardSequence = GetClipboardSequenceNumber();
                     });
                     DiagLog.Perf("Paste", "clipboard_set", clipboardSw, ("ok", clipboardSet), ("chars", text.Length));
@@ -178,7 +221,22 @@ namespace TerminalVoiceOverlay.Services
                             ReleaseNonCtrlModifiers();
 
                             var sendSw = Stopwatch.StartNew();
+                            var chunks = SplitIntoPasteChunks(text);
                             pasteSent = SendCtrlV();
+                            for (int i = 1; pasteSent && i < chunks.Count; i++)
+                            {
+                                // Give the terminal time to read the previous chunk before
+                                // the clipboard changes, otherwise it pastes the next one twice.
+                                Thread.Sleep(ChunkPasteDelayMs);
+                                var chunk = chunks[i];
+                                pasteSent = TryRunOnUiThread(() =>
+                                {
+                                    Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(chunk), true);
+                                    ownedClipboardSequence = GetClipboardSequenceNumber();
+                                }) && BringToForeground(terminalHwnd) && SendCtrlV();
+                            }
+                            if (chunks.Count > 1)
+                                DiagLog.Write("Paste", "chunked", ("chunks", chunks.Count), ("ok", pasteSent));
                             succeeded = pasteSent;
                             DiagLog.Perf("Paste", "ctrl_v", sendSw, ("ok", pasteSent));
                             if (!pasteSent)
