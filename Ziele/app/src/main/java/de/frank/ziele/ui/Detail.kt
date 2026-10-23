@@ -238,19 +238,17 @@ private fun Bericht(vm: AppViewModel, z: Ziel) {
         val zeilen = recherche.text.lines()
         val gezeigt = if (offen) zeilen else zeilen.filter { it.isNotBlank() }.take(4)
         gezeigt.forEachIndexed { i, zeile ->
-            // Markdown-Reste aufräumen: Rauten, Sternchen und Spiegelstriche sieht man nicht.
-            val t = zeile.trim().replace("**", "").replace("__", "")
-            val raute = t.startsWith("#")
-            val inhalt = t.trimStart('#', ' ')
-            val ueberschrift = raute || (inhalt.isNotEmpty() && inhalt.length < 60 && inhalt == inhalt.uppercase() && inhalt.any { it.isLetter() })
-            val punkt = Regex("""^[-*•]\s+""").find(inhalt)
+            // Markdown räumt Quellen.teilen schon ab; Spiegelstriche werden hier zu Punkten.
+            val inhalt = zeile.trim()
+            val punkt = SPIEGELSTRICH.find(inhalt)
+            val ueberschrift = punkt == null && inhalt.isNotEmpty() && inhalt.length < 60 && inhalt == inhalt.uppercase() && inhalt.any { it.isLetter() }
             when {
                 inhalt.isEmpty() -> if (i > 0 && gezeigt[i - 1].isNotBlank()) Spacer(Modifier.height(2.dp))
-                ueberschrift -> Text(inhalt.trimEnd(':'), color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, modifier = Modifier.padding(top = 8.dp))
                 punkt != null -> Row(Modifier.padding(start = 4.dp)) {
                     Text("•", color = f.primaer, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(14.dp))
                     Text(inhalt.substring(punkt.range.last + 1), color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
                 }
+                ueberschrift -> Text(inhalt.trimEnd(':'), color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, modifier = Modifier.padding(top = 8.dp))
                 else -> Text(inhalt, color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
             }
         }
@@ -258,6 +256,8 @@ private fun Bericht(vm: AppViewModel, z: Ziel) {
         if (offen && recherche.quellen.isNotEmpty()) QuellenAbschnitt(recherche.quellen)
     }
 }
+
+private val SPIEGELSTRICH = Regex("""^[-*•]\s+""")
 
 /** Die Belege der Recherche unter einem Strich: kurzer Titel, darunter der Seitenname, antippen öffnet die Seite. */
 @Composable
@@ -269,14 +269,14 @@ private fun QuellenAbschnitt(quellen: List<Quellen.Quelle>) {
     Text("QUELLEN", color = f.textLeise, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 4.dp))
     quellen.forEach { q ->
         Row(
-            Modifier.fillMaxWidth().antippen(haptik = false) { runCatching { uri.openUri(q.url) } }.padding(vertical = 3.dp),
+            Modifier.fillMaxWidth().then(if (q.url.isEmpty()) Modifier else Modifier.antippen(haptik = false) { runCatching { uri.openUri(q.url) } }).padding(vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(q.titel, color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(q.titel, color = if (q.url.isEmpty()) f.textLeise else f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (q.seite != q.titel) Text(q.seite, color = f.textSchwach, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Icon(Icons.AutoMirrored.Rounded.OpenInNew, "Quelle öffnen", tint = f.textSchwach, modifier = Modifier.padding(start = 8.dp).size(16.dp))
+            if (q.url.isNotEmpty()) Icon(Icons.AutoMirrored.Rounded.OpenInNew, "Quelle öffnen", tint = f.textSchwach, modifier = Modifier.padding(start = 8.dp).size(16.dp))
         }
     }
 }
