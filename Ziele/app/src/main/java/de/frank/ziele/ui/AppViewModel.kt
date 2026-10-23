@@ -147,13 +147,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val titel = eTitel.trim()
         if (titel.isEmpty()) { melde("Gib dem Ziel einen Titel – oder sprich es einfach ein."); return }
         val alt = editorQuelle
-        val neu = (alt ?: Ziel(titel = titel)).copy(
-            titel = titel, beschreibung = eBeschreibung.trim(), warum = eWarum.trim(), frist = eFrist,
-            symbol = eSymbol.ifBlank { "🎯" }, status = eStatus.name,
-            erreichtAm = if (eStatus == ZielStatus.ERREICHT) (alt?.erreichtAm ?: System.currentTimeMillis()) else null,
-        )
         val auswerten = eAuswerten
+        val beschreibung = eBeschreibung.trim(); val warum = eWarum.trim(); val frist = eFrist; val symbol = eSymbol.ifBlank { "🎯" }; val status = eStatus
         viewModelScope.launch {
+            // Frisch aus der Datenbank: Eine Auswertung kann während des Bearbeitens Bericht und Strategie geschrieben haben.
+            val basis = alt?.let { repo.ziel(it.id) } ?: alt ?: Ziel(titel = titel)
+            val neu = basis.copy(
+                titel = titel, beschreibung = beschreibung, warum = warum, frist = frist, symbol = symbol, status = status.name,
+                erreichtAm = if (status == ZielStatus.ERREICHT) (basis.erreichtAm ?: System.currentTimeMillis()) else null,
+            )
             val id = if (alt == null) repo.neu(neu) else { repo.speichere(neu); neu.id }
             bildschirm = Bildschirm.Detail(id)
             if (alt == null && auswerten) auswerten(id) else melde(if (alt == null) "Ziel angelegt" else "Gespeichert")
@@ -170,6 +172,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun loeschen(z: Ziel) {
         viewModelScope.launch {
+            Auswertung.abbrechen(z.id)
             val v = repo.vorschlaege(z.id)
             repo.loesche(z)
             bildschirm = Bildschirm.Liste
@@ -286,7 +289,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ================= Kontextdatei =================
 
-    fun kontextSpeichern(text: String) { Kontext.schreibe(getApplication(), text) }
+    fun kontextSpeichern(basis: String, text: String) { Kontext.schreibeGetippt(getApplication(), basis, text) }
 
     fun kontextVorlesen() {
         val text = Kontext.lies(getApplication()).trim()

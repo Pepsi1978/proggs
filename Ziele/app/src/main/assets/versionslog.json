@@ -2,6 +2,7 @@
   "format": 1,
   "app": "Ziele",
   "eintraege": [
-    { "versionCode": 1, "versionName": "1.0.0", "stand": "23.10.2026, 16:10 Uhr", "notiz": "Erste Version: Ziele einsprechen, per KI-Recherche auswerten, notwendige und unterstützende Aufgaben mit Plus nach Geniale Aufgaben, Sortierungen, Kontextdatei, Gold hell und dunkel." }
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "23.10.2026, 16:10 Uhr", "notiz": "Erste Version: Ziele einsprechen, per KI-Recherche auswerten, notwendige und unterstützende Aufgaben mit Plus nach Geniale Aufgaben, Sortierungen, Kontextdatei, Gold hell und dunkel." },
+    { "versionCode": 2, "versionName": "1.0.1", "stand": "23.10.2026, 16:27 Uhr", "notiz": "Übernommene Aufgaben bleiben auch bei vielen Aufgaben verknüpft, Bearbeiten während einer Auswertung verliert keinen Bericht mehr, die Kontextdatei speichert auch beim schnellen Verlassen und verliert keine Ergänzungen." }
   ]
 }

@@ -23,7 +23,9 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,10 +49,16 @@ fun KontextBildschirm(vm: AppViewModel) {
     val gespeichert by vm.kontext.collectAsState()
     var text by remember { mutableStateOf(gespeichert.orEmpty()) }
     var getippt by remember { mutableStateOf(false) }
+    // Stand der Datei, auf dem das Tippen begann: Kommt währenddessen etwas hinten dazu, bleibt es beim Speichern erhalten.
+    var basis by remember { mutableStateOf(gespeichert.orEmpty()) }
+    fun speichern() { vm.kontextSpeichern(basis, text); getippt = false }
     // Neues aus dem Diktat oder von Jarvis übernehmen, solange gerade nicht getippt wird.
-    LaunchedEffect(gespeichert) { if (!getippt) text = gespeichert.orEmpty() }
-    // Getipptes nach einer kurzen Pause speichern.
-    LaunchedEffect(text, getippt) { if (getippt) { delay(700); vm.kontextSpeichern(text); getippt = false } }
+    LaunchedEffect(gespeichert) { if (!getippt) { text = gespeichert.orEmpty(); basis = text } }
+    // Getipptes nach einer kurzen Pause speichern, beim Verlassen sofort.
+    LaunchedEffect(text, getippt) { if (getippt) { delay(700); speichern() } }
+    val aktuell by rememberUpdatedState(::speichern)
+    val offen by rememberUpdatedState(getippt)
+    DisposableEffect(Unit) { onDispose { if (offen) aktuell() } }
 
     Column(Modifier.fillMaxSize().imePadding()) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))

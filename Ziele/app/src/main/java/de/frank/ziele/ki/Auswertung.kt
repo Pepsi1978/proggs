@@ -143,13 +143,23 @@ object Auswertung {
         schritt(zielId, "Speichere die Vorschläge …")
         val belegt = behalten.map { it.schluessel }.toMutableSet()
         val roh = plan.optJSONArray("vorschlaege") ?: JSONArray()
-        val neu = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.mapNotNull { o ->
-            val titel = o.optString("titel").trim().trim('„', '“', '"')
-            if (titel.isEmpty()) return@mapNotNull null
-            var schluessel = o.optString("schluessel").trim().ifEmpty { "v${belegt.size + 1}" }
+        val objekte = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { it.optString("titel").isNotBlank() }
+        // Vergibt die KI einen schon belegten Schlüssel neu, wird er umbenannt; Voraussetzungen unter den neuen Vorschlägen
+        // meinen dann den neuen Vorschlag und ziehen mit (der erste Vorschlag mit diesem Schlüssel gewinnt).
+        val umbenannt = mutableMapOf<String, String>()
+        val schluesselJe = objekte.map { o ->
+            val gewuenscht = o.optString("schluessel").trim().ifEmpty { "v${belegt.size + 1}" }
+            var schluessel = gewuenscht
             while (schluessel in belegt) schluessel += "b"
             belegt += schluessel
+            if (schluessel != gewuenscht) umbenannt.putIfAbsent(gewuenscht, schluessel)
+            schluessel
+        }
+        val neu = objekte.mapIndexed { i, o ->
+            val titel = o.optString("titel").trim().trim('„', '“', '"')
+            val schluessel = schluesselJe[i]
             val vor = o.optJSONArray("voraussetzungen")?.let { a -> (0 until a.length()).map { a.optString(it).trim() }.filter { it.isNotEmpty() } }.orEmpty()
+                .map { umbenannt[it] ?: it }.filter { it != schluessel }
             Vorschlag(
                 zielId = zielId,
                 schluessel = schluessel,
@@ -167,8 +177,10 @@ object Auswertung {
             )
         }
         if (neu.isEmpty()) throw IllegalStateException("Die KI hat keine Aufgaben vorgeschlagen. Bitte noch einmal auswerten.")
-        repo.vorschlaegeErsetzen(zielId, neu)
-        val frisch = repo.ziel(zielId) ?: return
+        // Unter der Sperre des Übernehmens; ist das Ziel inzwischen gelöscht, nichts schreiben (sonst verwaiste Vorschläge).
+        val frisch = Abgleich.gesperrt {
+            repo.ziel(zielId)?.also { repo.vorschlaegeErsetzen(zielId, neu) }
+        } ?: return
         repo.speichere(
             frisch.copy(
                 bericht = bericht,

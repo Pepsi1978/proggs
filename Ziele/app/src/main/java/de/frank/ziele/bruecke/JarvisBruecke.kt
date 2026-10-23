@@ -130,6 +130,7 @@ class JarvisBruecke : ContentProvider() {
 
             "loeschen" -> {
                 val alt = repo.ziel(a.optLong("id", -1)) ?: return fehler("Kein Ziel mit dieser id.")
+                Auswertung.abbrechen(alt.id)
                 repo.loesche(alt)
                 JSONObject().put("geloescht", JSONObject().put("id", alt.id).put("titel", alt.titel))
             }
@@ -147,7 +148,7 @@ class JarvisBruecke : ContentProvider() {
                 JSONObject()
                     .put("laeuft", Auswertung.stand.value[id] != null)
                     .put("schritt", Auswertung.stand.value[id] ?: JSONObject.NULL)
-                    .put("fehler", Auswertung.fehler.value[id] ?: JSONObject.NULL)
+                    .put("letzter_fehler", Auswertung.fehler.value[id] ?: JSONObject.NULL)
                     .put("ausgewertet_am", repo.ziel(id)?.ausgewertetAm ?: JSONObject.NULL)
             }
 
@@ -176,8 +177,19 @@ class JarvisBruecke : ContentProvider() {
             }
 
             "einstellungen" -> {
-                if (a.has("modell")) e.modell = CodexModel.fromLabel(a.optString("modell")).also { m -> e.denkstufe = m.normalizeEffort(e.denkstufe) }
-                if (a.has("denkstufe")) e.denkstufe = e.modell.normalizeEffort(ReasoningEffort.fromLabel(a.optString("denkstufe")))
+                // Unbekannte Namen nie still auf ein Ersatzmodell legen: lieber mit der Liste der gültigen Werte zurückmelden.
+                if (a.has("modell")) {
+                    val m = modellAus(a.optString("modell")) ?: return fehler("Modell nicht erkannt: ${a.optString("modell")}. Möglich: ${CodexModel.entries.joinToString { it.label }}.")
+                    e.modell = m
+                    e.denkstufe = m.normalizeEffort(e.denkstufe)
+                }
+                if (a.has("denkstufe")) {
+                    val wert = a.optString("denkstufe").trim()
+                    val d = ReasoningEffort.entries.firstOrNull { it.label.equals(wert, true) || it.anthropicLabel.equals(wert, true) || it.apiValue.equals(wert, true) || it.name.equals(wert, true) }
+                        ?.takeIf { it in e.modell.supportedEfforts }
+                        ?: return fehler("Denkstufe nicht erkannt oder für ${e.modell.label} nicht möglich: $wert. Möglich: ${e.modell.supportedEfforts.joinToString { it.titel(e.modell) }}.")
+                    e.denkstufe = d
+                }
                 if (a.has("recherche")) e.recherche = a.optBoolean("recherche")
                 if (a.has("jarvis_kontext")) e.jarvisKontext = a.optBoolean("jarvis_kontext")
                 if (a.has("sortierung")) e.sortierung = sortierungAus(a, e)
@@ -253,6 +265,14 @@ class JarvisBruecke : ContentProvider() {
         .put("verworfen", v.verworfen)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
+
+    /** Genauer Name, API-Kennung oder eindeutiger Teil („Opus“, „Sol“, „Claude Sonnet“); sonst null. */
+    private fun modellAus(wert: String): CodexModel? {
+        val w = wert.trim()
+        CodexModel.entries.firstOrNull { it.label.equals(w, true) || it.apiId.equals(w, true) || it.name.equals(w, true) }?.let { return it }
+        val woerter = w.lowercase(Locale.GERMAN).split(Regex("[\\s\\-_.]+")).filter { it.length >= 3 && it !in setOf("claude", "gpt") }
+        return CodexModel.entries.filter { m -> woerter.isNotEmpty() && woerter.all { it in m.label.lowercase(Locale.GERMAN) || it in m.apiId } }.singleOrNull()
+    }
 
     private fun ohne(wert: String): Boolean = wert.trim().lowercase(Locale.GERMAN) in setOf("", "ohne", "kein", "keine", "null", "none")
 

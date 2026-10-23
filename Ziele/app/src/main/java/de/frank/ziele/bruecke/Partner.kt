@@ -34,12 +34,26 @@ object GenialeAufgaben {
         return antwort.optJSONObject("aufgabe")?.optLong("id", -1)?.takeIf { it >= 0 } ?: throw Fehler("Geniale Aufgaben hat keine Aufgabe zurückgemeldet.")
     }
 
-    /** Stand aller Aufgaben: id → erledigt. Fehlt eine id, wurde die Aufgabe dort gelöscht. null = nicht erreichbar. */
-    suspend fun stand(context: Context): Map<Long, Boolean>? {
-        val antwort = AppBruecke.rufe(context, "Geniale Aufgaben", ADRESSE, "lesen", JSONObject().put("bereich", "alle").put("limit", 200), lesend = true)
-        if (antwort.has("fehler")) return null
-        val liste = antwort.optJSONArray("aufgaben") ?: JSONArray()
-        return (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.associate { it.optLong("id") to it.optBoolean("erledigt") }
+    /**
+     * Stand der Aufgaben: id → erledigt, und ob die Liste vollständig ist. Die Brücke liefert je Bereich höchstens 200;
+     * reicht „alle“ nicht, kommen „offen“ und „erledigt“ getrennt. Nur bei [Stand.vollstaendig] heißt eine fehlende id
+     * „dort gelöscht“. null = nicht erreichbar.
+     */
+    class Stand(val erledigt: Map<Long, Boolean>, val vollstaendig: Boolean)
+
+    suspend fun stand(context: Context): Stand? {
+        suspend fun lies(bereich: String): Pair<Map<Long, Boolean>, Boolean>? {
+            val antwort = AppBruecke.rufe(context, "Geniale Aufgaben", ADRESSE, "lesen", JSONObject().put("bereich", bereich).put("limit", 200), lesend = true)
+            if (antwort.has("fehler")) return null
+            val liste = antwort.optJSONArray("aufgaben") ?: JSONArray()
+            val werte = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.associate { it.optLong("id") to it.optBoolean("erledigt") }
+            return werte to (antwort.optInt("anzahl", werte.size) <= werte.size)
+        }
+        val alle = lies("alle") ?: return null
+        if (alle.second) return Stand(alle.first, true)
+        val offen = lies("offen") ?: return Stand(alle.first, false)
+        val erledigt = lies("erledigt") ?: return Stand(alle.first + offen.first, false)
+        return Stand(alle.first + offen.first + erledigt.first, offen.second && erledigt.second)
     }
 }
 

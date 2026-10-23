@@ -22,6 +22,17 @@ object Kontext {
     @Synchronized
     fun lies(context: Context): String = runCatching { datei(context).takeIf { it.exists() }?.readText(Charsets.UTF_8) }.getOrNull().orEmpty()
 
+    /**
+     * Speichert Getipptes, das auf dem Stand [basis] begonnen wurde. Kam inzwischen etwas hinten dazu (Diktat, Jarvis),
+     * bleibt es erhalten und wird angehängt, statt überschrieben zu werden.
+     */
+    @Synchronized
+    fun schreibeGetippt(context: Context, basis: String, text: String) {
+        val jetzt = lies(context)
+        val dazu = if (jetzt != basis && jetzt.startsWith(basis)) jetzt.substring(basis.length) else ""
+        schreibe(context, if (dazu.isEmpty()) text else text.trimEnd() + dazu)
+    }
+
     @Synchronized
     fun schreibe(context: Context, text: String) {
         val d = datei(context)
@@ -31,7 +42,8 @@ object Kontext {
         _text.value = text
     }
 
-    /** Hängt einen neuen Absatz mit Datum an, so bleibt nachvollziehbar, wann etwas dazukam. */
+    /** Hängt einen neuen Absatz mit Datum an, so bleibt nachvollziehbar, wann etwas dazukam. Als Ganzes gesperrt: Diktat und Jarvis gleichzeitig verlieren nichts. */
+    @Synchronized
     fun ergaenze(context: Context, absatz: String): String {
         val sauber = absatz.trim()
         if (sauber.isEmpty()) return lies(context)
