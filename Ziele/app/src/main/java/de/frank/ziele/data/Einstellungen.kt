@@ -87,6 +87,14 @@ class Einstellungen private constructor(context: Context) {
         get() = prefs.getFloat("tts_speech_rate", 1f)
         set(v) = put { putFloat("tts_speech_rate", v.coerceIn(0.7f, 1.3f)) }
 
+    /**
+     * Sprechtempo je Anbieter (wie in Jarvis): Jede Stimme behält ihr eigenes Tempo, auch wenn sie als Rückfallstufe einspringt.
+     * Ohne eigenen Wert gilt das bisherige gemeinsame Tempo, so klingt nach dem Update jede Stimme wie vorher.
+     */
+    fun ttsTempo(anbieter: String): Float = prefs.getFloat("tts_speech_rate_$anbieter", sprechtempo).coerceIn(0.7f, 1.3f)
+
+    fun setzeTtsTempo(anbieter: String, wert: Float) = put { putFloat("tts_speech_rate_$anbieter", wert.coerceIn(0.7f, 1.3f)) }
+
     // ---- Gemini 3.8 Flash / Flash-Lite TTS und Azure Neural (Schlüssel wie im TtsManager) ----
     /** Favoriten aller Stimmlisten (langes Drücken), stehen oben. */
     var favoriten: Set<String>

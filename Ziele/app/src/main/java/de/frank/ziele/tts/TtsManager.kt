@@ -83,17 +83,11 @@ class TtsManager(context: Context) {
                 TtsCatalog.DEFAULT_PROVIDER.id,
             ) ?: TtsCatalog.DEFAULT_PROVIDER.id
         activeProviderId = providerId
-        val baseRate = preferences?.getFloat(PREF_SPEECH_RATE, DEFAULT_SPEECH_RATE)
-            ?.coerceIn(MIN_SPEECH_RATE, MAX_SPEECH_RATE) ?: DEFAULT_SPEECH_RATE
         // Every repetition is synthesised anew, so a little variation keeps it from sounding
         // like a replay of the exact same recording.
         val step = if (varied) ++variationStep else 0
-        val speechRate = if (varied && readFlag(PREF_VARY_SPEECH_RATE)) {
-            (baseRate * (1f + RATE_STEPS[step % RATE_STEPS.size] / 100f))
-                .coerceIn(MIN_SPEECH_RATE, MAX_SPEECH_RATE)
-        } else {
-            baseRate
-        }
+        // Das Grundtempo kommt erst je Stimme dazu (wie in Jarvis): Jede Stufe der Rückfallkette liest in ihrem eigenen Tempo.
+        val rateFaktor = if (varied && readFlag(PREF_VARY_SPEECH_RATE)) 1f + RATE_STEPS[step % RATE_STEPS.size] / 100f else 1f
         val pitchPercent = if (varied && readFlag(PREF_VARY_PITCH)) {
             PITCH_STEPS[step % PITCH_STEPS.size]
         } else {
@@ -102,7 +96,7 @@ class TtsManager(context: Context) {
         // Standardmaessig an: Ohne diese Bindung sprechen mehrsprachige Stimmen englisch
         // aussehende Woerter englisch aus.
         val erzwingeDeutsch = preferences?.getBoolean(PREF_IMMER_DEUTSCH, true) ?: true
-        val ansage = Ansage(spokenText, step, varied, speechRate, pitchPercent, erzwingeDeutsch)
+        val ansage = Ansage(spokenText, step, varied, rateFaktor, pitchPercent, erzwingeDeutsch)
         // Wie in Jarvis: Stufen, die nur wiederholten, was die Hauptstimme schon versucht hat, und Stufen ohne Schlüssel laufen gar nicht erst.
         val kette = einstellungen.aktiveRueckfallStufen(providerId)
         val hauptName = TtsProvider.entries.firstOrNull { it.id == providerId }?.kurz ?: providerId
@@ -147,7 +141,8 @@ class TtsManager(context: Context) {
         val text: String,
         val step: Int,
         val varied: Boolean,
-        val speechRate: Float,
+        /** Abwandlung je Wiederholung; das Tempo selbst ist je Stimme eingestellt. */
+        val rateFaktor: Float,
         val pitchPercent: Int,
         val erzwingeDeutsch: Boolean,
     )
@@ -165,6 +160,7 @@ class TtsManager(context: Context) {
     ) {
         val step = ansage.step
         val varied = ansage.varied
+        val speechRate = (einstellungen.ttsTempo(providerId) * ansage.rateFaktor).coerceIn(MIN_SPEECH_RATE, MAX_SPEECH_RATE)
         when (providerId) {
             TtsProvider.EDGE.id -> edgePlayer.speak(
                 text = ansage.text,
@@ -172,7 +168,7 @@ class TtsManager(context: Context) {
                     ?: rotatedVoice(TtsCatalog.edgeVoices, step, varied)
                     ?: preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
                     ?: TtsCatalog.DEFAULT_EDGE_VOICE,
-                speechRate = ansage.speechRate,
+                speechRate = speechRate,
                 pitchPercent = ansage.pitchPercent,
                 erzwingeDeutsch = ansage.erzwingeDeutsch,
                 onPlaybackStart = onStart,
@@ -188,7 +184,7 @@ class TtsManager(context: Context) {
                         PREF_GOOGLE_VOICE,
                         TtsCatalog.DEFAULT_GOOGLE_VOICE,
                     ) ?: TtsCatalog.DEFAULT_GOOGLE_VOICE,
-                speechRate = ansage.speechRate,
+                speechRate = speechRate,
                 pitchSemitones = toSemitones(ansage.pitchPercent),
                 erzwingeDeutsch = ansage.erzwingeDeutsch,
                 onPlaybackStart = onStart,
@@ -220,7 +216,7 @@ class TtsManager(context: Context) {
                     text = ansage.text,
                     provider = provider,
                     voiceId = voiceOverride ?: rotatedVoice(katalog, step, varied) ?: gespeichert,
-                    speechRate = ansage.speechRate,
+                    speechRate = speechRate,
                     zugang = NeueStimmenPlayer.Zugang(
                         geminiKeyFrei = preferences?.getString(PREF_GEMINI_TTS_KEY_FREI, "").orEmpty(),
                         geminiKeyBezahlt = preferences?.getString(PREF_GEMINI_TTS_KEY_BEZAHLT, "").orEmpty(),

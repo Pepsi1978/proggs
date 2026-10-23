@@ -16,6 +16,7 @@
     { "versionCode": 12, "versionName": "1.0.11", "stand": "23.10.2026, 18:13 Uhr", "notiz": "Vorlesen hat jetzt die einstellbare Rückfall-Reihenfolge wie Jarvis: Scheitert die Stimme, lesen Gemini (kostenlos/bezahlt), Google, Azure, Edge oder die eigene Stimme der Reihe nach weiter, jede mit ihrer eingestellten Stimme." },
     { "versionCode": 13, "versionName": "1.0.12", "stand": "23.10.2026, 18:22 Uhr", "notiz": "Rückfall-Reihenfolge verbessert: Gemini Flash und Flash-Lite pausieren ihren kostenlosen Schlüssel getrennt, doppelte Stufen werden übersprungen, der Hinweis nennt die gerade gescheiterte Stimme und die Schlüsselfelder lassen sich wieder ganz eintippen." },
     { "versionCode": 13, "versionName": "1.0.12", "stand": "23.10.2026, 18:15 Uhr", "notiz": "Speichern wartet, bis die KI-Korrektur fertig ist, damit kein unkorrigierter Text gespeichert wird." },
-    { "versionCode": 14, "versionName": "1.0.13", "stand": "23.10.2026, 18:23 Uhr", "notiz": "Update bereitgestellt" }
+    { "versionCode": 14, "versionName": "1.0.13", "stand": "23.10.2026, 18:23 Uhr", "notiz": "Update bereitgestellt" },
+    { "versionCode": 15, "versionName": "1.0.14", "stand": "23.10.2026, 18:41 Uhr", "notiz": "Sprechtempo je Stimme wie in Jarvis: Hauptstimme und jede Rückfallstufe haben einen eigenen Tempo-Regler und lesen auch als Rückfall in ihrem eigenen Tempo." }
   ]
 }

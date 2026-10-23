@@ -257,8 +257,18 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                         else -> StimmenReihe(TtsCatalog.edgeVoices, e.edgeStimme, e) { e.edgeStimme = it }
                     }
                     RueckfallKette(e)
-                    Text("Tempo ${"%.2f".format(e.sprechtempo)}×", color = f.textLeise, fontSize = 13.sp)
-                    Slider(e.sprechtempo, { e.sprechtempo = it }, valueRange = 0.7f..1.3f, colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer))
+                    // Ein Tempo je Stimme, die es auswertet: die Hauptstimme und jede Rückfallstufe, jeweils nur einmal (wie in Jarvis).
+                    val haupt = TtsProvider.entries.firstOrNull { it.id == e.ttsAnbieter }
+                    val mitTempo = (listOfNotNull(haupt) + e.rueckfallKette.mapNotNull { TtsCatalog.rueckfallStufe(it)?.anbieter })
+                        .distinct().filter { it.kenntTempo }
+                    Text("Sprechtempo", color = f.textLeise, fontSize = 13.sp)
+                    if (mitTempo.isEmpty()) Text("Die gewählten Stimmen sprechen alle im eigenen Tempo.", color = f.textLeise, fontSize = 12.sp)
+                    mitTempo.forEach { p ->
+                        val tempo = e.ttsTempo(p.id)
+                        Text("${p.label}${if (p == haupt) "" else " (Rückfall)"}: ${"%.2f".format(tempo)}×", color = f.text, fontSize = 13.sp)
+                        Slider(tempo, { e.setzeTtsTempo(p.id, it) }, valueRange = 0.7f..1.3f, colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer))
+                    }
+                    if (mitTempo.isNotEmpty()) Text("Jede Stimme behält ihr eigenes Tempo, auch wenn sie als Rückfallstufe einspringt.", color = f.textLeise, fontSize = 12.sp)
                     Chip("Probe hören", false, icon = Icons.Rounded.PlayArrow) { vm.vorlesen("probe", "Hallo Frank! So klingen deine Ziele. Heute bist du deinem Ziel wieder ein Stück näher.") }
                 }
                 Block("Zusammenspiel") {
