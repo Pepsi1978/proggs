@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.6.0 - 21.09.2026, 11:37 Uhr
+# Version 1.7.0 - 23.10.2026, 11:40 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -314,20 +314,26 @@ $targets = if ($Target -eq 'Both') { @('CVO', 'TVO') } else { @($Target) }
 $failed = @()
 
 # Ohne Freigabe per Klick passiert nichts: kein Beenden, kein Build, kein Start.
-{
-    $names = @($targets | ForEach-Object { "$($Overlays[$_].Name) ($_, $($Overlays[$_].Label))" })
-    switch (Show-UpdateDialog -Names $names) {
-        'yes' { Write-Host 'OVERLAY_UPDATE_INFO=Update per Klick freigegeben.' }
-        'timeout' {
-            Write-Host "OVERLAY_UPDATE_STATUS=no-answer (kein Klick innerhalb von $DialogTimeoutSeconds Sekunden -- nichts geaendert)"
-            exit 0
-        }
-        default {
-            Write-Host 'OVERLAY_UPDATE_STATUS=cancelled (nichts geaendert)'
-            exit 0
-        }
+# VORFALL 22.10.2026: Dieser Block stand in geschweiften Klammern ohne Aufruf -- PowerShell legt
+# dann nur einen Skriptblock an und gibt seinen Text aus, statt ihn auszufuehren. Der Dialog kam
+# nie, das Update lief sofort, und die mit ausgegebenen Statuszeilen lasen sich wie "no-answer".
+# Darum hier bewusst KEIN { }-Block.
+$names = @($targets | ForEach-Object { "$($Overlays[$_].Name) ($_, $($Overlays[$_].Label))" })
+switch (Show-UpdateDialog -Names $names) {
+    'yes' { Write-Host 'OVERLAY_UPDATE_INFO=Update per Klick freigegeben.' }
+    'timeout' {
+        Write-Host "OVERLAY_UPDATE_STATUS=no-answer (kein Klick innerhalb von $DialogTimeoutSeconds Sekunden -- nichts geaendert)"
+        exit 0
+    }
+    default {
+        Write-Host 'OVERLAY_UPDATE_STATUS=cancelled (nichts geaendert)'
+        exit 0
     }
 }
+
+# Freigabe fuer publish.ps1, update.ps1 und das Publish-Ziel im csproj: Nur mit diesem Marker
+# bauen sie ueber eine vorhandene publish\.exe. Er gilt nur fuer diesen Prozess und seine Kinder.
+$env:OVERLAY_REBUILD_FREIGABE = [Guid]::NewGuid().ToString('N')
 
 foreach ($t in $targets) {
     $O = $Overlays[$t]
@@ -462,9 +468,11 @@ foreach ($t in $targets) {
 Write-Host ''
 if ($failed.Count -eq 0) {
     Write-Host "Fertig — alle Ziele ($($targets -join ', ')) erfolgreich." -ForegroundColor Cyan
+    Write-Host 'OVERLAY_UPDATE_STATUS=started'
     exit 0
 }
 else {
     Write-Host "Fertig mit Problemen bei: $($failed -join ', ')" -ForegroundColor Red
+    Write-Host "OVERLAY_UPDATE_STATUS=failed ($($failed -join ', '))"
     exit 1
 }

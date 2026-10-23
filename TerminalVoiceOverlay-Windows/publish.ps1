@@ -12,6 +12,14 @@ $reservationHeld = $false
 $exitCode = 0
 . (Join-Path $PSScriptRoot '..\voice-overlay-deploy-guard.ps1')
 
+# Ein Update ueber eine vorhandene publish\.exe gibt es nur nach dem Klick auf "Ja" in
+# rebuild-overlay.ps1 -- das setzt diesen Marker. Nur der allererste Build darf ohne ihn laufen.
+if ((Test-Path -LiteralPath $exePath) -and -not $env:OVERLAY_REBUILD_FREIGABE) {
+    Write-Host "Kein direktes Publish: Updates nur ueber 'pwsh -File ..\rebuild-overlay.ps1 TVO' (Ja/Nein-Fenster)." -ForegroundColor Red
+    Write-Host 'OVERLAY_UPDATE_STATUS=refused (nicht ueber rebuild-overlay.ps1 freigegeben)'
+    exit 3
+}
+
 try {
     try {
         $mutexHeld = $deploymentMutex.WaitOne([TimeSpan]::FromMinutes(30))

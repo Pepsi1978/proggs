@@ -12,8 +12,11 @@ dotnet run
 ```
 
 ### Release (single .exe)
+**Never run `publish.ps1`, `update.ps1` or `dotnet publish -o publish` directly** — they refuse to
+build over an existing `publish\*.exe` without the approval marker that only `rebuild-overlay.ps1` sets
+after Frank clicks Yes. The only update path:
 ```powershell
-pwsh -File publish.ps1
+pwsh -File ~/proggs/rebuild-overlay.ps1 CVO
 ```
 Creates a self-contained `ClaudeVoiceOverlay.exe` in `./publish/`.
 Place a `.env` file next to the .exe with your API keys.
