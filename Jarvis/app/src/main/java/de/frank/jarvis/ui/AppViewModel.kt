@@ -101,6 +101,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private const val ABGEBROCHEN = "abgebrochen"
         /** Quelle beim Vorleser: „gespraech:“ davor gibt kurze Pausen und exklusiven Tonfokus wie bei Gesprächsantworten. */
         private const val ZUSTELL_QUELLE = "gespraech:zustellung:"
+        /** Vorlesen der festen Frage einer Auswahlkarte; ein Tipp auf die Karte hält es an. */
+        private const val WAHL_QUELLE = "gespraech:auswahl:"
         /** Im Live-Gespräch wird erst vorgelesen, wenn so lange niemand gesprochen hat. */
         private const val LIVE_RUHIG_MS = 4_000L
         private const val LIVE_DAUERT =
@@ -542,6 +544,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Schon abgebrochen (oder das Gespräch gelöscht): nichts mehr anhängen.
         if (laufende[runde.sitzung] !== runde) return
         laufende.remove(runde.sitzung)
+        // Hat die Runde eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), ist die Karte die Antwort: keine freie Rückfrage des
+        // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut, oder nach einem schnellen Tipp „Übernommen: …“.
+        if (art != "fehler") de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(runde.sitzung, runde.beginn)?.let { ansage ->
+            if (runde.sitzung != sitzungId) sitzungenLaden()
+            if (!vorlesen) return
+            if (runde.ursprung != null && (runde.sitzung != sitzungId || weckwortLauf?.isActive != true)) sprachZustellen(rundenZustellung(runde, ansage))
+            else if (runde.sitzung == sitzungId) vorleser.sprich(WAHL_QUELLE + runde.beginn, "Jarvis", ansage)
+            return
+        }
         // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
         // (wie bei einem Abbruch), sonst führte „versuch es nochmal“ alles ein zweites Mal aus.
         val frageNotiz = if (art == "fehler") erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", runde.erledigt) else ""
@@ -1125,6 +1136,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Im Live-Gespräch gefragt: Antworten und Agenten dieser Frage tragen den Sprachursprung (Zustellung nach dem Gesprächsende).
         val herkunft = sitzungId.orEmpty()
         val ursprung = SprachUrsprung(SprachModus.LIVE, herkunft)
+        val beginn = System.currentTimeMillis()
         viewModelScope.launch(kennung + worte + ursprung) {
             val ersatz = if (nurStimme) "Jarvis konnte gerade nicht antworten, wegen eines Fehlers. Bitte frag gleich noch einmal."
                 else "Das konnte ich gerade nicht nachschlagen."
@@ -1138,7 +1150,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         maxSchritte = JarvisAgent.STANDARD_SCHRITTE, modell = modell, denkstufe = denkstufe, schnell = optionen.jarvisDirekt)
                 }.onFailure { if (it is CancellationException) throw it; Logbuch.fehler("Live: Antwort von Jarvis", it) }.getOrNull()
             }
-            val rechtzeitig = kotlinx.coroutines.withTimeoutOrNull(zeitlimit) { arbeit.await() ?: ersatz }
+            // Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.): Das Live-Modell sagt nur ihren festen Wortlaut, nach einem schnellen Tipp „Übernommen: …“.
+            val rechtzeitig = kotlinx.coroutines.withTimeoutOrNull(zeitlimit) { arbeit.await() ?: ersatz }?.let { a ->
+                de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(herkunft, beginn)
+                    ?.let { "Die Auswahl steht als Karte im Chat. Sag Frank genau diesen Satz und sonst nichts, ohne eigene Rückfrage: „$it“" } ?: a
+            }
             // Nur an dieselbe, noch laufende Verbindung: Eine neue kennt diese Kennung nicht.
             // Kommt sie dort nicht an (Gemini hat den Aufruf abgebrochen, Verbindung weg), wird sie unten zugestellt.
             if (rechtzeitig != null && live === sitzung && sitzung != null && sitzung.ergebnis(callId, rechtzeitig)) return@launch
@@ -1963,6 +1979,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Knopf „Opus 5.5“ oder „Sol 6.1“ vor einem Programmierauftrag am Rechner: startet ihn mit diesem Modell. */
     // Auch „Codex CLI“/„OpenCode CLI“ und „Ja“/„Nein“ zum Review: [modell] ist der Wert des getippten Knopfs.
     fun programmierModell(wahlId: String, modell: String) {
+        // Liest Jarvis gerade die Frage dieser Auswahl vor, ist sie mit dem Tipp beantwortet.
+        if (vorleser.stand.value.quelle?.startsWith(WAHL_QUELLE) == true) vorleser.stopp()
         viewModelScope.launch {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
             runCatching { faehigkeit?.modellGewaehlt(wahlId, modell) }.onFailure { meldung = it.message ?: "Der Auftrag ließ sich nicht starten." }

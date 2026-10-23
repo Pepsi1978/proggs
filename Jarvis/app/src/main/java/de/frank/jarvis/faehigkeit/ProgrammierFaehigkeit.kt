@@ -428,15 +428,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // per Knopf gewähltes Sol wird nicht noch einmal erfragt.
         offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS }?.let { (id, alt) ->
             offeneWahlen[id] = alt.copy(app = appName, auftrag = auftrag)
+            // Gilt als Karte dieser Runde: Am Ende fragt sie (bzw. „Übernommen: …“) statt einer freien Antwort des Modells.
+            karten[id]?.let { karten[id] = Karte(it.gespraech, it.frage, it.optionen, System.currentTimeMillis()) }
             return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
                 STUFE_CLI -> "Frank hat schon Sol 6.1 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
                 STUFE_REVIEW -> "Frank hat schon Sol 6.1 im Codex CLI gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
                 else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“ und „Sol 6.1“."
-            } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. Sag Frank nur kurz, er soll eins antippen.")
+            } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. $KARTE_FRAGT")
         }
         karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel))
-        return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“ und „Sol 6.1“. Sag Frank in einem kurzen Satz, " +
-            "er soll eins antippen oder sagen. Sagt er es, rufe programmieren mit demselben Auftrag und modell=opus bzw. modell=sol auf; sonst starte nichts.")
+        return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“ und „Sol 6.1“. $KARTE_FRAGT " +
+            "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus bzw. modell=sol auf; sonst starte nichts.")
     }
 
     /**
@@ -454,22 +456,28 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         else "Noch nichts gestartet: Sol 6.1 läuft am Windows-PC im Codex CLI oder im OpenCode CLI. Frag Frank kurz: „Codex CLI oder OpenCode CLI?“ und rufe " +
             "programmieren danach mit demselben Auftrag, modell=sol und cli=codex bzw. cli=opencode erneut auf.")
         karte(w.copy(gespraech = gespraech, ursprung = kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung]))
-        return Ergebnis(if (review) "Noch nicht gestartet: Im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review. Sag Frank in einem kurzen Satz, er soll eins antippen oder sagen. " +
-            "Sagt er es, rufe programmieren mit demselben Auftrag, modell=sol, cli=codex und review=true bzw. review=false auf; sonst starte nichts."
-        else "Noch nicht gestartet: Im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“. Sag Frank in einem kurzen Satz, er soll eins antippen oder sagen. " +
-            "Sagt er es, rufe programmieren mit demselben Auftrag, modell=sol und cli=codex bzw. cli=opencode auf; sonst starte nichts.")
+        return Ergebnis(if (review) "Noch nicht gestartet: Im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review. $KARTE_FRAGT " +
+            "Sagt Frank es später, rufe programmieren mit demselben Auftrag, modell=sol, cli=codex und review=true bzw. review=false auf; sonst starte nichts."
+        else "Noch nicht gestartet: Im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“. $KARTE_FRAGT " +
+            "Sagt Frank es später, rufe programmieren mit demselben Auftrag, modell=sol und cli=codex bzw. cli=opencode auf; sonst starte nichts.")
     }
 
-    /** Stellt die Karte zu [w] ins Gespräch: Frage und Knöpfe je nach Stufe. */
+    /**
+     * Stellt die Karte zu [w] ins Gespräch: Frage und Knöpfe je nach Stufe. Die Karte ist der einzige Weg der Frage (fester
+     * Wortlaut, siehe [wahlInRunde]): Sie steht sofort antippbar im Chat, noch bevor das Modell seine Runde beendet.
+     */
     private suspend fun karte(w: OffeneWahl) {
         val id = java.util.UUID.randomUUID().toString()
+        val (frage, optionen) = when (w.stufe) {
+            STUFE_CLI -> "Programmierauftrag für ${w.app}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
+            STUFE_REVIEW -> "Programmierauftrag für ${w.app}: Soll Codex ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
+            else -> "Programmierauftrag für ${w.app}: Opus 5.5 oder Sol 6.1?" to listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
+        }
+        val jetzt = System.currentTimeMillis()
+        karten.entries.removeIf { jetzt - it.value.zeit > KARTEN_HALTEN_MS }
+        karten[id] = Karte(w.gespraech, frage, optionen, jetzt)
         offeneWahlen[id] = w
         wahlStand.update { it + (id to WAHL_OFFEN) }
-        val (frage, optionen) = when (w.stufe) {
-            STUFE_CLI -> "Sol 6.1: Codex CLI oder OpenCode CLI? (${w.app})" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
-            STUFE_REVIEW -> "Codex CLI: Soll ein Review laufen, wenn die App oder das APK-Update fertig programmiert ist? (${w.app})" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
-            else -> "Mit welchem Modell soll der Programmierer arbeiten? (${w.app})" to listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
-        }
         val knoepfe = JSONArray().apply { optionen.forEach { (wert, label) -> put(JSONObject().put("wert", wert).put("label", label)) } }
         ProgrammierChat.poste(app, w.gespraech, frage, ProgrammierChat.ART_MODELLWAHL,
             JSONObject().put("wahl_id", id).put("app", w.app).put("optionen", knoepfe).toString())
@@ -1685,6 +1693,30 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Per Knopf gestartete Aufträge je Gespräch (nur im Speicher) und wie lange ein erneuter Aufruf als derselbe Auftrag gilt. */
         private val knopfStarts = java.util.concurrent.ConcurrentHashMap<String, KnopfStart>()
         private const val KNOPF_FRIST_MS = 5 * 60_000L
+
+        /** Was das Modell nach einer Auswahlkarte tun soll: nichts selbst fragen, die Karte fragt (siehe [wahlInRunde]). */
+        private const val KARTE_FRAGT = "Jarvis zeigt und sagt die Frage selbst mit festem Wortlaut; stell KEINE eigene Rückfrage dazu und beende deine Antwort knapp."
+
+        /** Jede Auswahlkarte mit Gespräch, festem Fragetext, Knöpfen und Zeitpunkt; nur im Speicher, einen Tag lang. */
+        private class Karte(val gespraech: String, val frage: String, val optionen: List<Pair<String, String>>, val zeit: Long)
+        private val karten = java.util.concurrent.ConcurrentHashMap<String, Karte>()
+        private const val KARTEN_HALTEN_MS = 24 * 60 * 60_000L
+
+        /**
+         * Hat die Runde in [gespraech] (begonnen [seit]) eine Auswahlkarte gestellt, ersetzt das hier die Antwort des Modells, damit
+         * die Frage nur einen festen Weg hat: Ist die neueste Karte noch offen, ihr Fragetext; hat Frank schon getippt (auch schneller,
+         * als das Modell antworten konnte), „Übernommen: …“ ohne weitere Rückfrage. null = keine Karte in der Runde oder per Sprache gewählt.
+         */
+        fun wahlInRunde(gespraech: String, seit: Long): String? {
+            if (gespraech.isEmpty()) return null
+            val (id, k) = karten.entries.filter { it.value.gespraech == gespraech && it.value.zeit >= seit }
+                .maxByOrNull { it.value.zeit }?.toPair() ?: return null
+            return when (val s = wahlStand.value[id]) {
+                null, WAHL_ERLEDIGT -> null
+                WAHL_OFFEN -> k.frage
+                else -> "Übernommen: " + (k.optionen.firstOrNull { it.first == s }?.second ?: s) + "."
+            }
+        }
 
         /** Stand eines Auftrags, dessen Start nach dem Senden ins Zeitlimit lief: vielleicht gestartet. Die erste Meldung der Sitzung ersetzt ihn. */
         const val STAND_UNKLAR = "unklar"
