@@ -91,6 +91,7 @@ private class Frage(val kopf: String, val text: String, val mehrfach: Boolean, v
 private class Rueckfrage(val k: JSONObject) {
     val id: String = k.optString("frage_id")
     val app: String = k.optString("app")
+    val aufgabe: String = aufgabeKurz(k.optString("aufgabe"))
     val frei: Boolean = k.optBoolean("frei")
     val stand: String = RueckfrageStand.von(k)
     val antwort: String = k.optString("antwort")
@@ -107,6 +108,18 @@ private class Rueckfrage(val k: JSONObject) {
             )
         }
     }
+}
+
+/**
+ * Die Aufgabe der Sitzung in wenigen Sätzen (angezeigt in höchstens vier Zeilen): Bei mehreren gleichzeitigen Aufträgen sieht
+ * Frank so, zu welchem die Frage gehört. Aus dem ursprünglichen Auftragstext: ohne „Ziel:“ davor, ganze Sätze bis etwa 260 Zeichen.
+ */
+private fun aufgabeKurz(auftrag: String): String {
+    val text = auftrag.replace(Regex("\\s+"), " ").trim().removePrefix("Ziel:").trim()
+    if (text.length <= 260) return text
+    var ende = -1
+    for (m in Regex("[.!?](?=\\s)").findAll(text)) { if (m.range.last >= 260) break; ende = m.range.last }
+    return if (ende >= 80) text.substring(0, ende + 1) else text.take(260).substringBeforeLast(' ') + " …"
 }
 
 private fun lies(kontext: String): Rueckfrage? = runCatching { Rueckfrage(JSONObject(kontext)) }.getOrNull()?.takeIf { it.id.isNotEmpty() }
@@ -166,6 +179,7 @@ fun RueckfrageKarte(vm: AppViewModel, n: Nachricht) {
             ProgrammierText(n.text, Modifier.padding(top = 6.dp), farbe = f.text)
             return@Column
         }
+        if (r.aufgabe.isNotEmpty()) Text(r.aufgabe, Modifier.padding(top = 4.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
         if (r.frei) ProgrammierText(r.fragen.firstOrNull()?.text.orEmpty().let { if (it.length > 500) "…" + it.takeLast(500) else it }, Modifier.padding(top = 6.dp), farbe = f.text)
         else r.fragen.forEach { q ->
             Text(q.text, Modifier.padding(top = 6.dp), color = f.text, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 6, overflow = TextOverflow.Ellipsis)
@@ -285,6 +299,7 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
                 Column(Modifier.weight(1f)) {
                     Text("Rückfrage der Programmier-Sitzung", color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Text(r.app.ifEmpty { "Programmieren" }, Modifier.semantics { heading() }, color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
+                    if (r.aufgabe.isNotEmpty()) Text(r.aufgabe, Modifier.padding(top = 4.dp), color = f.textLeise, fontSize = 15.sp, lineHeight = 20.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
                 }
                 Rundknopf(Icons.Rounded.Close, "Schließen, später im Chat weiter beantworten") { sichern(); vm.rueckfrageSchliessen() }
             }

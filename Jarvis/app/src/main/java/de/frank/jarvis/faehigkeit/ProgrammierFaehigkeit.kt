@@ -974,8 +974,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (frage != null) {
             val fragen = frage.optJSONArray("fragen") ?: JSONArray()
             val kurz = (0 until fragen.length()).joinToString(" / ") { fragen.optJSONObject(it)?.optString("question").orEmpty() }.trim()
+            // „aufgabe“: der ursprüngliche Auftragstext, damit Karte und Vollbild zeigen, welcher von mehreren Aufträgen fragt.
             val kontext = JSONObject().put("frage_id", frage.optString("frage_id")).put("auftrag", eintrag.optString("id")).put("app", appName)
-                .put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
+                .put("aufgabe", eintrag.optString("auftrag")).put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
                 .put("status", RueckfrageStand.OFFEN).put("bis", frage.optLong("bis")).put("eingang", System.currentTimeMillis() / 1000)
             ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             return
