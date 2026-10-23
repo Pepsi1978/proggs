@@ -376,6 +376,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             onStart = { vorleseLaedt = false },
             onComplete = { vorleseLaedt = false; if (sprichtId == schluessel) sprichtId = null },
             onError = { e -> vorleseLaedt = false; sprichtId = null; melde(e.message ?: "Vorlesen fehlgeschlagen.") },
+            onRueckfall = { melde(it) },
         )
     }
 

@@ -76,6 +76,8 @@ class NeueStimmenPlayer(context: Context) {
         onError: (Exception) -> Unit,
         /** Nur erzeugen: fertiges Audio abholen, ohne es jetzt abzuspielen (vorbereitete Ansagen). */
         onAudioReady: ((File) -> Unit)? = null,
+        /** Danach liest noch eine Rückfallstimme: Bei 429 nicht warten, sondern sofort scheitern. */
+        mitAusweg: Boolean = false,
     ) {
         stop()
         val requestGeneration = generation.incrementAndGet()
@@ -90,9 +92,9 @@ class NeueStimmenPlayer(context: Context) {
             try {
                 val (bytes, endung) = when (provider) {
                     // Gemini kennt kein Sprechtempo: Der fertige Ton wird hier gestreckt (ein Chirp-Rückfall als MP3 bleibt, wie er ist).
-                    TtsProvider.GEMINI_FLASH -> mitTempo(gemini(text, GEMINI_FLASH_MODELL, voiceId, speechRate, zugang), speechRate) to "wav"
-                    TtsProvider.GEMINI_LITE -> mitTempo(gemini(text, GEMINI_LITE_MODELL, voiceId, speechRate, zugang), speechRate) to "wav"
-                    TtsProvider.AZURE -> azure(text, voiceId, speechRate, zugang) to "mp3"
+                    TtsProvider.GEMINI_FLASH -> mitTempo(gemini(text, GEMINI_FLASH_MODELL, voiceId, speechRate, zugang, mitAusweg), speechRate) to "wav"
+                    TtsProvider.GEMINI_LITE -> mitTempo(gemini(text, GEMINI_LITE_MODELL, voiceId, speechRate, zugang, mitAusweg), speechRate) to "wav"
+                    TtsProvider.AZURE -> azure(text, voiceId, speechRate, zugang, mitAusweg) to "mp3"
                     else -> throw Abbruch("Dieser Anbieter wird hier nicht unterstützt.")
                 }
                 if (requestGeneration != generation.get()) return@launch
@@ -202,7 +204,7 @@ class NeueStimmenPlayer(context: Context) {
 
     // ---- Gemini 3.8 Flash / Flash-Lite TTS ----
 
-    private suspend fun gemini(text: String, modell: String, stimmeId: String, tempo: Float, z: Zugang): ByteArray {
+    private suspend fun gemini(text: String, modell: String, stimmeId: String, tempo: Float, z: Zugang, mitAusweg: Boolean): ByteArray {
         val wahl = z.schluesselWahl
         val frei = z.geminiKeyFrei.filterNot(Char::isWhitespace)
         val bezahlt = z.geminiKeyBezahlt.filterNot(Char::isWhitespace)
@@ -212,7 +214,7 @@ class NeueStimmenPlayer(context: Context) {
             val gesperrt = System.currentTimeMillis() < freiGesperrtBis
             if (frei.isNotBlank() && !gesperrt) {
                 // Mit Ausweichweg nicht erst bei 429 warten — der nächste Weg ist schneller als jede Wartezeit.
-                val ausweg = chirp || (wahl == GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
+                val ausweg = mitAusweg || chirp || (wahl == GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
                 try {
                     return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg)
                 } catch (fehler: Exception) {
@@ -237,7 +239,7 @@ class NeueStimmenPlayer(context: Context) {
                 "Vorlesen fehlgeschlagen: Es ist kein Gemini-Schlüssel für die Stimme hinterlegt. Trag ihn in den Einstellungen ein.",
             )
         }
-        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = true)
+        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = !mitAusweg)
     }
 
     private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean): ByteArray {
@@ -382,7 +384,7 @@ class NeueStimmenPlayer(context: Context) {
     // ---- Azure Neural ----
 
     /** HD-Stimmen (DragonHD) bekommen weder Tempo noch <lang>-Rahmen: Sie bestimmen Betonung und Tempo selbst. */
-    private suspend fun azure(text: String, stimmeId: String, tempo: Float, z: Zugang): ByteArray {
+    private suspend fun azure(text: String, stimmeId: String, tempo: Float, z: Zugang, mitAusweg: Boolean): ByteArray {
         val schluessel = z.azureKey.filterNot(Char::isWhitespace)
         if (schluessel.isBlank()) {
             throw Abbruch("Vorlesen fehlgeschlagen: Es ist kein Azure-Schlüssel hinterlegt. Trag ihn in den Einstellungen ein.")
@@ -407,7 +409,7 @@ class NeueStimmenPlayer(context: Context) {
             .addHeader("User-Agent", "Ziele")
             .post(ssml.toRequestBody(SSML_TYP))
             .build()
-        val bytes = azureAnfrage(anfrage, hd)
+        val bytes = azureAnfrage(anfrage, hd, warteBei429 = !mitAusweg)
         if (bytes.isEmpty()) throw Fehler("Azure hat kein Audio geliefert.")
         Log.i(TAG, "Azure-Ansage erzeugt: stimme=$stimme zeichen=${text.length}")
         return bytes
@@ -417,7 +419,7 @@ class NeueStimmenPlayer(context: Context) {
      * F0 erlaubt nur rund 20 Anfragen je Minute: Ein 429 ist meist dieses Ratenlimit, nicht das Monatskontingent —
      * darum nach Retry-After (höchstens eine Minute) warten.
      */
-    private suspend fun azureAnfrage(anfrage: Request, hd: Boolean): ByteArray {
+    private suspend fun azureAnfrage(anfrage: Request, hd: Boolean, warteBei429: Boolean): ByteArray {
         var versuch = 0
         while (true) {
             val (koerper, code, warteSek) = client.newCall(anfrage).execute().use {
@@ -425,7 +427,7 @@ class NeueStimmenPlayer(context: Context) {
             }
             when {
                 code in 200..299 -> return koerper ?: ByteArray(0)
-                code == 429 && versuch < AZURE_WARTEZEITEN_MS.size -> {
+                code == 429 && warteBei429 && versuch < AZURE_WARTEZEITEN_MS.size -> {
                     val ms = warteSek?.let { (it * 1000).coerceIn(1_000L, 60_000L) } ?: AZURE_WARTEZEITEN_MS[versuch]
                     Log.w(TAG, "Azure-Ratenlimit, warte $ms ms (Versuch $versuch)")
                     delay(ms)

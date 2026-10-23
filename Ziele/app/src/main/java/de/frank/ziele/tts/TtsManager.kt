@@ -43,6 +43,8 @@ class TtsManager(context: Context) {
         providerOverride: TtsProvider? = null,
         voiceOverride: String? = null,
         varied: Boolean = false,
+        /** Meldet, dass statt der gewählten Gemini- oder Azure-Stimme die Edge-Stimme liest. */
+        onRueckfall: ((String) -> Unit)? = null,
     ) {
         stop()
         val requestGeneration = generation.incrementAndGet()
@@ -167,7 +169,28 @@ class TtsManager(context: Context) {
                     ),
                     onPlaybackStart = guardedStart,
                     onComplete = guardedComplete,
-                    onError = guardedError,
+                    // Wie die Rückfallkette in Jarvis: Scheitert die Stimme (meist 429, Kontingent oder Ratenlimit),
+                    // liest die Edge-Stimme mit demselben Tempo, statt stumm zu bleiben.
+                    onError = { fehler ->
+                        if (requestGeneration == generation.get() && !terminal.get() && !started.get()) {
+                            logger.warning("${provider.id} gescheitert, Rückfall auf Edge: ${fehler.message}")
+                            activeProviderId = TtsProvider.EDGE.id
+                            onRueckfall?.invoke("${provider.kurz} gerade nicht verfügbar – liest mit Edge. (${fehler.message?.take(90)})")
+                            edgePlayer.speak(
+                                text = spokenText,
+                                voice = preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
+                                    ?: TtsCatalog.DEFAULT_EDGE_VOICE,
+                                speechRate = speechRate,
+                                erzwingeDeutsch = erzwingeDeutsch,
+                                onPlaybackStart = guardedStart,
+                                onComplete = guardedComplete,
+                                onError = { edgeFehler -> guardedError(IllegalStateException("${fehler.message} Auch die Edge-Stimme scheiterte: ${edgeFehler.message}")) },
+                            )
+                        } else {
+                            guardedError(fehler)
+                        }
+                    },
+                    mitAusweg = true,
                 )
             }
             else -> guardedError(IllegalStateException("Unbekannter TTS-Anbieter."))
