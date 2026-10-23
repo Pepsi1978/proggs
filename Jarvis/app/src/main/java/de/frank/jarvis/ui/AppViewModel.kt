@@ -2580,13 +2580,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
-        // Die Tagesauswertung läuft im Dienst, nicht über eine Gesprächsrunde: Mit einem Anthropic-Modell dort genauso
-        // messen, damit das Guthaben unten danach den neuen Stand zeigt.
+        // Frisch geholte Stände von anderswo (Tagesauswertung im Dienst) sofort unten zeigen, ältere nie über neuere legen.
         viewModelScope.launch {
-            var gemessen = false
-            de.frank.jarvis.auswertung.Tagesauswertung.stand.collect { st ->
-                if (st.laeuft && !gemessen && einstellungen.modell.istAnthropic) { gemessen = true; anthropicKostenStart() }
-                else if (!st.laeuft && gemessen) { gemessen = false; anthropicKostenEnde() }
+            de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.frisch.collect { s ->
+                if (s != null && s.geholt > (anthropicGuthaben?.geholt ?: 0L)) anthropicGuthaben = s
             }
         }
     }

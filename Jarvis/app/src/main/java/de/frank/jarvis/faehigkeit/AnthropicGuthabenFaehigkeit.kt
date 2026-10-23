@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -107,6 +108,23 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         const val LOGIN_URL = "$CONSOLE/login"
         private val CLIENT = OkHttpClient.Builder().connectTimeout(12, TimeUnit.SECONDS).readTimeout(25, TimeUnit.SECONDS).build()
         private val sperre = Mutex()
+        private val hintergrund = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+        private val _frisch = kotlinx.coroutines.flow.MutableStateFlow<Stand?>(null)
+        /** Jeder frisch geholte Stand, auch aus dem Dienst (Tagesauswertung): Die Anzeige unten übernimmt ihn sofort. */
+        val frisch: kotlinx.coroutines.flow.StateFlow<Stand?> = _frisch
+
+        /**
+         * Nach einer Hintergrund-Aufgabe mit einem Anthropic-Modell (Tagesauswertung): Guthaben sofort und nach einer Minute
+         * noch einmal holen (die Console bucht verzögert), ohne die Aufgabe aufzuhalten.
+         */
+        fun nachAufgabeHolen(context: Context) {
+            val app = context.applicationContext
+            hintergrund.launch {
+                stand(app, erzwingen = true)
+                kotlinx.coroutines.delay(60_000L)
+                stand(app, erzwingen = true)
+            }
+        }
 
         private fun datei(context: Context) = File(context.filesDir, "anthropic_guthaben.json")
 
@@ -188,7 +206,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     if (gewaehrt > 0) j.put("gewaehrt", gewaehrt)
                     kurs?.let { j.put("kurs", it) }
                     datei(app).writeText(j.toString())
-                    Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt)
+                    Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt).also { _frisch.value = it }
                 } catch (f: SitzungAbgelaufen) {
                     abmeldenOhneSperre(app)
                     Stand(null, null, "", null, "", 0, f.message)

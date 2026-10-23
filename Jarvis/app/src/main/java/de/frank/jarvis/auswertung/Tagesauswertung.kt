@@ -277,6 +277,8 @@ object Tagesauswertung {
             currentCoroutineContext().ensureActive()
             speichere(app, fertig)
             _stand.value = AuswertungsStand(laeuft = false, neueste = fertig)
+            // Hat ein Claude-Modell geschrieben, zeigt die Anzeige unten danach den neuen Guthabenstand.
+            if (text != null && einstellungen.modell.istAnthropic) de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.nachAufgabeHolen(app)
             // Modell ausgefallen: höchstens zweimal nach 15 Minuten neu versuchen; nach einer gelungenen Deutung ist das erledigt.
             if (deuten) runCatching { if (text != null) Zeitplan.deutungGelungen(app) else Zeitplan.nachModellausfall(app, anlass) }
             // Das Live-Gedächtnis übernimmt die neue Deutung und die frisch geholten Daten sofort.
