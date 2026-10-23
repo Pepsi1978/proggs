@@ -21,6 +21,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.CircularProgressIndicator
@@ -89,9 +91,34 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                     }
                 }
             }
-            Eingabe("Ziel", vm.eTitel, "z. B. Halbmarathon unter 2 Stunden laufen", einzeilig = true) { vm.eTitel = it }
-            Eingabe("Genauer (möglichst messbar)", vm.eBeschreibung, "Was genau soll am Ende anders sein?") { vm.eBeschreibung = it }
-            Eingabe("Warum ist dir das wichtig?", vm.eWarum, "Dein Antrieb – hilft dir und schärft die Vorschläge") { vm.eWarum = it }
+            Eingabe("Ziel", vm.eTitel, "z. B. Halbmarathon unter 2 Stunden laufen", einzeilig = true) { vm.korrekturVergessen(); vm.eTitel = it }
+            Eingabe("Genauer (möglichst messbar)", vm.eBeschreibung, "Was genau soll am Ende anders sein?") { vm.korrekturVergessen(); vm.eBeschreibung = it }
+            Eingabe("Warum ist dir das wichtig?", vm.eWarum, "Dein Antrieb – hilft dir und schärft die Vorschläge") { vm.korrekturVergessen(); vm.eWarum = it }
+            // Aus dem Korrektur-Knopf wird nach der Korrektur der Rückgängig-Knopf (wie in Geniale Ideen).
+            if (neu) {
+                val zurueck = vm.korrektur != null
+                Row(
+                    Modifier.fillMaxWidth()
+                        .then(if (zurueck) Modifier.knopf3d(f.primaer, f.tertiaer, 16.dp, f.dunkel) else Modifier.glas(f, 16.dp, 0.6f, f.flaecheStark))
+                        .antippen { if (zurueck) vm.korrekturZuruecknehmen() else vm.korrigieren() }
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val farbe = if (zurueck) f.aufPrimaer else f.primaer
+                    if (vm.korrekturLaeuft) CircularProgressIndicator(color = f.primaer, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+                    else Icon(if (zurueck) Icons.AutoMirrored.Rounded.Undo else Icons.Rounded.AutoAwesome, null, tint = farbe, modifier = Modifier.size(22.dp))
+                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(
+                            when { vm.korrekturLaeuft -> "Korrigiere …"; zurueck -> "Korrektur rückgängig"; else -> "KI-Korrektur" },
+                            color = if (zurueck) f.aufPrimaer else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            if (zurueck) "In gutes Deutsch gebracht – tippen holt deinen Originaltext zurück." else "Bringt Ziel, Beschreibung und Warum sprachlich in Form, ohne den Inhalt zu ändern.",
+                            color = if (zurueck) f.aufPrimaer else f.textLeise, fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
 
             Block("Bis wann?") {
                 val heute = LocalDate.now()

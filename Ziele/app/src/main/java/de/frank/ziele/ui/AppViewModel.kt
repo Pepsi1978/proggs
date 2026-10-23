@@ -28,6 +28,7 @@ import de.frank.ziele.data.ZieleRepository
 import de.frank.ziele.data.sortiert
 import de.frank.ziele.ki.Abgleich
 import de.frank.ziele.ki.Auswertung
+import de.frank.ziele.text.UmlautKorrektur
 import de.frank.ziele.tts.TtsManager
 import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
@@ -49,6 +50,9 @@ enum class Aufnahme { AUS, LAEUFT, VERARBEITET }
 
 /** Wohin der gesprochene Text geht. */
 enum class DiktatZiel { ZIEL, KONTEXT }
+
+/** Die drei Textfelder vor (original) und nach (korrigiert) der KI-Korrektur. */
+data class KorrekturStand(val original: List<String>, val korrigiert: List<String>)
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = ZieleRepository.get(app)
@@ -78,6 +82,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var eStatus by mutableStateOf(ZielStatus.AKTIV)
     var eAuswerten by mutableStateOf(true)
     var ordnet by mutableStateOf(false); private set
+    var korrekturLaeuft by mutableStateOf(false); private set
+    /** Was vor der KI-Korrektur dastand — solange es gesetzt ist, wird der Korrektur-Knopf zum Rückgängig-Knopf. */
+    var korrektur by mutableStateOf<KorrekturStand?>(null); private set
     private var editorQuelle: Ziel? = null
 
     // ---- Aufnahme ----
@@ -132,6 +139,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         editorQuelle = null
         eId = null; eTitel = ""; eBeschreibung = ""; eWarum = ""; eFrist = null; eSymbol = "🎯"; eStatus = ZielStatus.AKTIV
         eAuswerten = true
+        korrektur = null
         bildschirm = Bildschirm.Bearbeiten(null)
         if (mitMikro) mikroTippen(DiktatZiel.ZIEL)
     }
@@ -193,6 +201,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         ordnet = true
+        korrektur = null
         viewModelScope.launch {
             try {
                 val bisher = buildString {
@@ -228,6 +237,60 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /**
+     * Bringt Titel, Beschreibung und Warum in gutes Deutsch (wie der Korrektur-Knopf in Geniale Ideen).
+     * Das Original bleibt in [korrektur], bis es zurückgeholt oder von Hand weiter geändert wird.
+     */
+    fun korrigieren() {
+        val roh = listOf(eTitel, eBeschreibung, eWarum)
+        if (korrekturLaeuft || ordnet || roh.all { it.isBlank() }) return
+        if (!kiBereit) { melde("Für die KI-Korrektur zuerst die KI in den Einstellungen verbinden."); return }
+        korrekturLaeuft = true
+        viewModelScope.launch {
+            try {
+                val antwort = auth.streamChat(
+                    instructions = "Du bekommst die Felder eines persönlichen Ziels, oft diktiert. Erkenne, was gemeint ist, und gib jedes Feld in " +
+                        "grammatikalisch und orthografisch einwandfreiem Deutsch zurück: richtige Zeichensetzung, saubere Satzstellung, " +
+                        "Füllwörter und Versprecher raus.\n\nStrenge Regeln:\n" +
+                        "- Lass keine Information weg und füge keine hinzu, erfinde nichts, deute nichts aus.\n" +
+                        "- Kürzen darfst du ausschließlich echte Wiederholungen.\n" +
+                        "- Behalte Ton und Sichtweise bei. Ein leeres Feld bleibt leer. Der Titel bleibt kurz.\n" +
+                        "- Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß).\n" +
+                        "Antworte NUR mit JSON: {\"titel\": \"…\", \"beschreibung\": \"…\", \"warum\": \"…\"}",
+                    turns = listOf(ChatTurn("user", "Titel: ${roh[0]}\nBeschreibung: ${roh[1]}\nWarum: ${roh[2]}")),
+                    model = einstellungen.modell,
+                    reasoningEffort = de.frank.ziele.auth.ReasoningEffort.LOW,
+                )
+                val o = Auswertung.jsonAus(antwort) ?: throw IllegalStateException("Es kam keine korrigierte Fassung zurück.")
+                // Hat Frank währenddessen weitergetippt, gewinnt seine Eingabe.
+                if (listOf(eTitel, eBeschreibung, eWarum) != roh) return@launch
+                val neu = listOf("titel", "beschreibung", "warum").mapIndexed { i, k ->
+                    if (roh[i].isBlank()) roh[i] else UmlautKorrektur.korrigiere(o.optString(k).trim()).ifBlank { roh[i] }
+                }
+                if (neu == roh) { melde("Der Text war schon sauber."); return@launch }
+                eTitel = neu[0]; eBeschreibung = neu[1]; eWarum = neu[2]
+                korrektur = KorrekturStand(original = roh, korrigiert = neu)
+            } catch (c: CancellationException) {
+                throw c
+            } catch (e: Throwable) {
+                melde(e.message ?: "Die KI-Korrektur hat nicht geklappt.")
+            } finally {
+                korrekturLaeuft = false
+            }
+        }
+    }
+
+    /** Holt den Text von vor der Korrektur zurück. */
+    fun korrekturZuruecknehmen() {
+        val stand = korrektur ?: return
+        korrektur = null
+        eTitel = stand.original[0]; eBeschreibung = stand.original[1]; eWarum = stand.original[2]
+        melde("Dein Originaltext ist wieder da.")
+    }
+
+    /** Von Hand geändert heißt: Die Korrektur ist nicht mehr rücknehmbar. */
+    fun korrekturVergessen() { korrektur = null }
 
     // ================= Auswertung =================
 
