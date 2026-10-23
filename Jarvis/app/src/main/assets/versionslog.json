@@ -265,6 +265,7 @@
     {"versionCode": 260, "versionName": "1.8.249", "stand": "23.10.2026, 13:50 Uhr", "notiz": "Das Guthaben nach einer Tagesauswertung mit Claude wird jetzt auch aktualisiert, wenn die Auswertung automatisch im Hintergrund läuft."},
     {"versionCode": 261, "versionName": "1.8.250", "stand": "23.10.2026, 13:56 Uhr", "notiz": "Gemini 3.8 Flash TTS und Flash-Lite TTS haben jetzt ein eigenes Sprechtempo, das auch gilt, wenn sie als Rückfallstufe einspringen."},
     {"versionCode": 262, "versionName": "1.8.251", "stand": "23.10.2026, 14:00 Uhr", "notiz": "Beim Gemini-Sprechtempo bleiben Anfang und Ende jedes Absatzes vollständig erhalten, und die Übergänge klingen sauberer."},
-    {"versionCode": 263, "versionName": "1.8.252", "stand": "23.10.2026, 14:24 Uhr", "notiz": "Neuer Einstellungs-Reiter „Guthaben“: zeigt das Claude- und das Google-Guthaben für die Gemini-Stimmen mit Verbrauch, Verfall und nächstem Guthaben; Jarvis kann das Google-Guthaben auch per Sprache nennen."}
+    {"versionCode": 263, "versionName": "1.8.252", "stand": "23.10.2026, 14:24 Uhr", "notiz": "Neuer Einstellungs-Reiter „Guthaben“: zeigt das Claude- und das Google-Guthaben für die Gemini-Stimmen mit Verbrauch, Verfall und nächstem Guthaben; Jarvis kann das Google-Guthaben auch per Sprache nennen."},
+    {"versionCode": 264, "versionName": "1.8.253", "stand": "23.10.2026, 14:25 Uhr", "notiz": "Gemini-Stimmen mit eigenem Sprechtempo enden nicht mehr mit einem kurzen Rauschen."}
   ]
 }

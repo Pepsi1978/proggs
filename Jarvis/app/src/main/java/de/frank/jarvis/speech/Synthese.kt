@@ -349,7 +349,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val rate = Regex("rate=(\\d+)").find(teil?.optString("mimeType").orEmpty())?.groupValues?.get(1)?.toIntOrNull() ?: 24_000
         val wav = if (roh.size > 44 && String(roh, 0, 4, Charsets.US_ASCII) == "RIFF") roh else mitWavKopf(roh, rate)
         // Abgeschnittenes Audio meldet Gemini teils trotzdem als fertig: Unter 25 Zeichen je Sekunde spricht niemand.
-        val sekunden = (wav.size - 44) / (wavRate(wav) * 2.0)
+        val sekunden = tonBytes(wav) / (wavRate(wav) * 2.0)
         if (text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
@@ -375,7 +375,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     private suspend fun mitTempo(wav: ByteArray, tempo: Float): ByteArray {
         if (kotlin.math.abs(tempo - 1f) < 0.02f || wav.size < 44 + 4_000 || !schlichtesWav(wav)) return wav
         val rate = wavRate(wav)
-        val ein = ShortArray((wav.size - 44) / 2)
+        val ein = ShortArray(tonBytes(wav) / 2)
         java.nio.ByteBuffer.wrap(wav, 44, ein.size * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(ein)
         val w = rate * 30 / 1000
         val hs = w / 2
@@ -433,6 +433,17 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             .put("fmt ".toByteArray()).putInt(16).putShort(1).putShort(1).putInt(rate).putInt(rate * 2).putShort(2).putShort(16)
             .put("data".toByteArray()).putInt(pcm.size)
         return kopf.array() + pcm
+    }
+
+    /**
+     * Länge des Tons laut data-Chunk. Gemini hängt dahinter einen C2PA-Herkunftsnachweis (rund 6 KB) an;
+     * als Ton gelesen klänge er am Ende wie Fernsehrauschen.
+     */
+    private fun tonBytes(wav: ByteArray): Int {
+        val rest = wav.size - 44
+        if (rest <= 0) return 0
+        val angabe = java.nio.ByteBuffer.wrap(wav, 40, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).int
+        return if (String(wav, 36, 4, Charsets.US_ASCII) == "data" && angabe in 1..rest) angabe else rest
     }
 
     private fun wavRate(wav: ByteArray): Int =
