@@ -179,6 +179,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun speichern() {
         if (ordnet) { melde("Einen Moment, die KI bildet gerade den Titel."); return }
+        if (korrekturLaeuft) { melde("Einen Moment, die KI-Korrektur läuft noch."); return }
         if (eTitel.isBlank()) {
             if (eBeschreibung.isBlank()) { melde("Beschreib dein Ziel – oder sprich es einfach ein."); return }
             // Ohne Titel bildet die KI ihn aus der Beschreibung, danach wird gespeichert.
@@ -308,6 +309,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 val o = Auswertung.jsonAus(antwort) ?: throw IllegalStateException("Es kam keine korrigierte Fassung zurück.")
                 // Hat Frank währenddessen weitergetippt, gewinnt seine Eingabe.
+                // Editor inzwischen verlassen: nichts in fremde Felder schreiben.
+                if (bildschirm != Bildschirm.Bearbeiten(null)) return@launch
                 if (listOf(eTitel, eBeschreibung, eWarum) != roh) return@launch
                 val neu = listOf("titel", "beschreibung", "warum").mapIndexed { i, k ->
                     if (roh[i].isBlank()) roh[i] else UmlautKorrektur.korrigiere(o.optString(k).trim()).ifBlank { roh[i] }
