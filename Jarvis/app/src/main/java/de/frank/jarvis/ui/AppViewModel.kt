@@ -2005,7 +2005,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
             val ergebnis = runCatching { faehigkeit?.beantworte(frageId, antworten, text, freigeben) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
-            meldung = ergebnis.getOrElse { it.message ?: "Die Antwort ging nicht raus." }
+            // Angekommen braucht keine Blase oben (sie verdeckte die Reiter): Der Stand steht schon an der Rückfrage im Chat.
+            ergebnis.onFailure { meldung = it.message ?: "Die Antwort ging nicht raus." }
             // Angekommen: weiter zur nächsten offenen Rückfrage dieses Gesprächs. Bei einem Fehler bleibt das Fenster offen
             // und zeigt den Grund samt „Erneut senden“.
             if (ergebnis.isSuccess) {

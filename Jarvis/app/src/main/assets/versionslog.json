@@ -283,6 +283,7 @@
     {"versionCode": 277, "versionName": "1.8.266", "stand": "23.10.2026, 16:39 Uhr", "notiz": "Im Chat bleibt die Lesestelle stehen, wenn du hochgescrollt hast und neue Meldungen kommen, auch wenn du mitten in einen Sprung ans Ende greifst; nur ganz unten scrollt der Chat mit."},
     {"versionCode": 278, "versionName": "1.8.267", "stand": "23.10.2026, 16:43 Uhr", "notiz": "Programmier-Sessions mit gleichem Start bleiben in der Seitenleiste ebenfalls fest in ihrer Reihenfolge."},
     {"versionCode": 279, "versionName": "1.8.268", "stand": "23.10.2026, 16:44 Uhr", "notiz": "Rückfragen einer Programmier-Session zeigen oben die Aufgabe der Session in bis zu vier Zeilen, damit die Review-Frage eindeutig zuzuordnen ist."},
-    {"versionCode": 280, "versionName": "1.8.269", "stand": "23.10.2026, 16:46 Uhr", "notiz": "Die stehende Lesestelle im Chat greift jetzt auch nach dem Wechsel in ein neues Gespräch, Wischen in Codeblöcken zählt nicht mehr als Hochscrollen, und ganz unten erscheint auch eine sehr lange letzte Nachricht vollständig."}
+    {"versionCode": 280, "versionName": "1.8.269", "stand": "23.10.2026, 16:46 Uhr", "notiz": "Die stehende Lesestelle im Chat greift jetzt auch nach dem Wechsel in ein neues Gespräch, Wischen in Codeblöcken zählt nicht mehr als Hochscrollen, und ganz unten erscheint auch eine sehr lange letzte Nachricht vollständig."},
+    {"versionCode": 281, "versionName": "1.8.270", "stand": "23.10.2026, 16:53 Uhr", "notiz": "Nach dem Abschicken einer Rückfrage-Antwort, etwa zum Review, erscheint oben keine Bestätigungsblase mehr; die Reiter bleiben frei und der Stand steht weiter im Chat."}
   ]
 }
