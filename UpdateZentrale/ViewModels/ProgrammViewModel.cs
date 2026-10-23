@@ -240,6 +240,11 @@ public sealed partial class ProgrammViewModel : ObservableObject
           + "weiterhin die alte Version.";
 
     /// <summary>"Start and take over" only where there is something to start (not for the OpenCode session).</summary>
+    /// <summary>This card is the app itself and its script just answered "started": the helper waits for the app to end.</summary>
+    public bool IstSelbstupdateNeustart => Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase)
+                                           && LetzterBericht is { Ergebnis: LaufErgebnis.Ausstehend } b
+                                           && DateTime.Now - b.Zeit < TimeSpan.FromMinutes(5);
+
     public bool UebernahmeStartbar => KannStarten && !Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase);
 
     partial void OnLetzterBerichtChanged(UpdateBericht? value)
@@ -600,6 +605,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         if (_aktualisierer is null) return;
         if (IstBeschaeftigt) { Doppelt("update"); return; }
         if (!Erwerben(sammel, out var eigen, "update")) return;
+        var berichtVorher = LetzterBericht;
         try
         {
             await AktualisierenMitBesitzAsync();
@@ -608,6 +614,12 @@ public sealed partial class ProgrammViewModel : ObservableObject
         {
             eigen?.Dispose();
         }
+
+        // A single click on the own card: the run is fully written now (report, card state), so
+        // the app ends itself and the script's helper copies the new build in. Inside a batch the
+        // batch does this after its own log line.
+        if (sammel is null && !ReferenceEquals(LetzterBericht, berichtVorher) && IstSelbstupdateNeustart)
+            await Selbstupdate.AppBeendenAsync();
     }
 
     /// <summary>Test seam: replaces the settle pauses of the update chain (never used by the app).</summary>
@@ -706,13 +718,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
             fortschritt.Report(AbschlussZeile(bericht) + "  (Dauer " + Protokollierung.DauerText(uhr.Elapsed.TotalSeconds) + ")");
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
-            if (bericht.Ergebnis == LaufErgebnis.Ausstehend && Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase))
-            {
-                // Report and history are written: the script's helper may close this app now.
-                Selbstupdate.Bereit();
-                fortschritt.Report("Protokoll geschrieben – die UpdateZentrale schließt sich jetzt und startet in der neuen Fassung neu.");
-                urteil = urteil with { FuerKarte = urteil.FuerKarte with { Meldung = "Schließt sich jetzt und startet in der neuen Fassung neu …" } };
-            }
             if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend && Protokollierung.Messwert(bericht) is { } messwert)
                 DauernSetzen(_dauern.Append(messwert));
 

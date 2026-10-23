@@ -814,6 +814,9 @@ public sealed partial class HauptViewModel : ObservableObject
                         ? "Die UpdateZentrale startet in der neuen Fassung neu …"
                         : "Die UpdateZentrale startet neu und setzt die übrigen " + rest.Count + " Updates danach fort …";
                     LaufDetail = "";
+                    // Everything of this run is written (report, restart line): end the app, the
+                    // script's helper is waiting for exactly this process to go.
+                    await Selbstupdate.AppBeendenAsync();
                     await Task.Delay(TimeSpan.FromSeconds(90));
                     // Still alive: the restart did not happen -- this instance carries on itself.
                     ende = "abgeschlossen";

@@ -252,12 +252,13 @@ alle Terminalfenster samt laufender CLI-Sitzungen.
   Standalone-Build unter `~/.codex/packages`. Deshalb zwei Karten mit unterschiedlichen Wegen.
 * **Claude Code CLI** – laufende Sessions werden nie beendet; das Update greift beim nächsten Start.
 * **Stream Deck** – die Helferdienste werden beim Update mitbeendet, sonst hängt der Installer.
-* **UpdateZentrale selbst** – nach „Ja“ baut `update-zentrale.ps1` in einen Zwischenordner und startet einen Helfer, der die
-  App schließt, die neue Fassung kopiert und startet. Kam das Update aus der App (Marker `selbstupdate-laeuft`), wartet er,
-  bis sie ihr Protokoll geschrieben hat (`selbstupdate-bereit`, höchstens 30 s) – in der Regel schließt sie sich ein bis zwei
-  Sekunden nach dem Build. Kam es von außen, schließt er nach einer Sekunde. Jeder Schritt steht in
-  `%LOCALAPPDATA%\UpdateZentrale\logs\selbstupdate.log`. Wer die App vorher von Hand schließt, schadet nichts: der Helfer
-  kopiert und startet trotzdem.
+* **UpdateZentrale selbst** – nach „Ja“ baut `update-zentrale.ps1` in einen Zwischenordner und startet
+  `werkzeuge/selbstupdate-helfer.ps1`. Kam das Update aus der App, übergibt sie ihre Prozessnummer (`-AppPid`): sie schreibt
+  Protokoll und Verlauf fertig und beendet sich danach selbst (etwa eine Sekunde nach dem Build); der Helfer wartet nur auf
+  das Ende genau dieses Prozesses (höchstens 60 s), kopiert die neue Fassung (`robocopy /R:5 /W:1`) und startet sie. Kam es
+  von außen, schließt er die App nach einer Sekunde. Schlägt das Kopieren fehl, startet er die bisherige Fassung wieder und
+  sagt das. Jeder Schritt steht in `%LOCALAPPDATA%\UpdateZentrale\logs\selbstupdate.log`. Wer die App vorher von Hand
+  schließt, schadet nichts: der Helfer kopiert und startet trotzdem.
 * **Gradle, Kotlin, uv** – ohne winget-Paket und ohne Selbst-Update. `werkzeuge/zip-werkzeug.ps1 -Werkzeug …` lädt die
   neueste Fassung beim Hersteller, entpackt sie nach `%LOCALAPPDATA%\Programs\<Werkzeug>\<Version>` und lässt die Junction
   `current` darauf zeigen; der Benutzer-PATH zeigt danach nur noch auf `current` (beim ersten Lauf umgestellt). Die vorige
