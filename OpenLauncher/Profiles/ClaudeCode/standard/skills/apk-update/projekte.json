@@ -52,7 +52,7 @@
       "gradleTask": "assembleDebug",
       "apkOrdner": "debug",
       "paket": "de.frank.jarvis",
-      "notiz": "Fester Eintrag seit 23.10.2026: Gradle-Task und Paket festgeschrieben, statt nur über die Standards zu laufen. Am Handy ist de.frank.jarvis (Debug, ohne Suffix) installiert."
+      "notiz": "Bewusste Ausnahme von der Regel 'nur Abweichungen eintragen' (Franks Auftrag vom 23.10.2026): Jarvis soll nicht von den Standardwerten abhängen, daher stehen Task, Ordner und Paket fest, auch wenn sie heute dem Standard entsprechen. Nicht entfernen; ändert sich der Standard oder die applicationId, hier mitziehen. Am Handy ist de.frank.jarvis (Debug, ohne Suffix) installiert."
     },
     "KarteikartenLernen": {
       "paket": "de.frank.karteikartenlernen"
