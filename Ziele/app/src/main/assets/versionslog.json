@@ -12,6 +12,7 @@
     { "versionCode": 8, "versionName": "1.0.7", "stand": "23.10.2026, 17:52 Uhr", "notiz": "Ein eingesprochenes Ziel steht jetzt vollständig und wörtlich in der Beschreibung, auch bei langen Texten; die KI ergänzt nur Titel, Frist und Symbol, verdichten macht allein der KI-Knopf." },
     { "versionCode": 9, "versionName": "1.0.8", "stand": "23.10.2026, 17:58 Uhr", "notiz": "Das Eingesprochene ist die Zielbeschreibung; den Zieltitel aus drei bis fünf Wörtern bildet die KI automatisch daraus, auch beim Speichern einer getippten Beschreibung ohne Titel." },
     { "versionCode": 10, "versionName": "1.0.9", "stand": "23.10.2026, 18:03 Uhr", "notiz": "Die schwarzen Vierecke an den unteren runden Ecken der Zielkarten und der Karten in der Detailansicht sind weg." },
-    { "versionCode": 11, "versionName": "1.0.10", "stand": "23.10.2026, 18:06 Uhr", "notiz": "In den Einstellungen gibt es jetzt den Bereich Kontext: persönlichen Kontext ein- oder ausschalten (aus = allgemeine Aufgaben für jeden), Jarvis' Live-Gedächtnis mit Anbindungsprüfung und die Kontextdatei zum Tippen und Einfügen." }
+    { "versionCode": 11, "versionName": "1.0.10", "stand": "23.10.2026, 18:06 Uhr", "notiz": "In den Einstellungen gibt es jetzt den Bereich Kontext: persönlichen Kontext ein- oder ausschalten (aus = allgemeine Aufgaben für jeden), Jarvis' Live-Gedächtnis mit Anbindungsprüfung und die Kontextdatei zum Tippen und Einfügen." },
+    { "versionCode": 12, "versionName": "1.0.11", "stand": "23.10.2026, 18:13 Uhr", "notiz": "Vorlesen hat jetzt die einstellbare Rückfall-Reihenfolge wie Jarvis: Scheitert die Stimme, lesen Gemini (kostenlos/bezahlt), Google, Azure, Edge oder die eigene Stimme der Reihe nach weiter, jede mit ihrer eingestellten Stimme." }
   ]
 }

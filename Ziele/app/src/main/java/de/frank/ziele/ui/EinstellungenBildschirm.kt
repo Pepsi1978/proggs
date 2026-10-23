@@ -256,6 +256,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                         TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> NeueStimmenBereich(e)
                         else -> StimmenReihe(TtsCatalog.edgeVoices, e.edgeStimme, e) { e.edgeStimme = it }
                     }
+                    RueckfallKette(e)
                     Text("Tempo ${"%.2f".format(e.sprechtempo)}×", color = f.textLeise, fontSize = 13.sp)
                     Slider(e.sprechtempo, { e.sprechtempo = it }, valueRange = 0.7f..1.3f, colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer))
                     Chip("Probe hören", false, icon = Icons.Rounded.PlayArrow) { vm.vorlesen("probe", "Hallo Frank! So klingen deine Ziele. Heute bist du deinem Ziel wieder ein Stück näher.") }

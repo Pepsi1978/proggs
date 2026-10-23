@@ -103,6 +103,38 @@ class Einstellungen private constructor(context: Context) {
         set(v) = put { putString("gemini_tts_schluessel_wahl", v) }
     /** Scheitert der kostenlose Gemini-Schlüssel, liest Chirp 3 HD mit derselben Stimme weiter statt des bezahlten. */
     var geminiChirpRueckfall: Boolean get() = prefs.getBoolean("gemini_tts_chirp_rueckfall", false); set(v) = put { putBoolean("gemini_tts_chirp_rueckfall", v) }
+    /**
+     * Rückfallkette des Vorlesens (wie in Jarvis): Kennungen aus [de.frank.ziele.tts.TtsCatalog.rueckfallStufen] in ihrer
+     * Reihenfolge. Scheitert die gewählte Stimme, versucht Ziele die Stufen nacheinander. Leer = kein Rückfall.
+     */
+    var rueckfallKette: List<String>
+        get() {
+            val gespeichert = prefs.getString("tts_rueckfall_kette", null)
+            if (gespeichert == null && geminiChirpRueckfall) {
+                // Einmaliger Umzug vom alten Chirp-Schalter: Der übersprang den bezahlten Schlüssel, also bleibt es bei „nur kostenlos“.
+                val kette = de.frank.ziele.tts.TtsCatalog.rueckfallKette(null, chirpAlt = true)
+                put {
+                    if (geminiSchluesselWahl == de.frank.ziele.tts.NeueStimmenPlayer.GEMINI_TTS_FREI_DANN_BEZAHLT) {
+                        putString("gemini_tts_schluessel_wahl", de.frank.ziele.tts.NeueStimmenPlayer.GEMINI_TTS_NUR_FREI)
+                    }
+                    putBoolean("gemini_tts_chirp_rueckfall", false)
+                    putString("tts_rueckfall_kette", kette.joinToString(","))
+                }
+                return kette
+            }
+            return de.frank.ziele.tts.TtsCatalog.rueckfallKette(gespeichert, chirpAlt = false)
+        }
+        set(v) = put { putString("tts_rueckfall_kette", v.distinct().joinToString(",")) }
+
+    /** Ob eine Rückfallstufe überhaupt laufen kann: Schlüssel (und bei der eigenen Stimme die Kennung) sind hinterlegt. */
+    fun rueckfallBereit(stufe: de.frank.ziele.tts.RueckfallStufe): Boolean = when (stufe.anbieter) {
+        de.frank.ziele.tts.TtsProvider.GEMINI_FLASH, de.frank.ziele.tts.TtsProvider.GEMINI_LITE ->
+            (if (stufe.schluessel == de.frank.ziele.tts.RueckfallStufe.FREI) geminiKeyFrei else geminiKeyBezahlt).isNotBlank()
+        de.frank.ziele.tts.TtsProvider.GOOGLE_CLOUD -> googleKey.isNotBlank()
+        de.frank.ziele.tts.TtsProvider.AZURE -> azureKey.isNotBlank()
+        de.frank.ziele.tts.TtsProvider.QWEN, de.frank.ziele.tts.TtsProvider.QWEN_CLONE -> qwenKey.isNotBlank() && qwenStimme.isNotBlank()
+        de.frank.ziele.tts.TtsProvider.EDGE -> true
+    }
     var azureKey: String get() = s("azure_tts_key", ""); set(v) = put { putString("azure_tts_key", v.filterNot(Char::isWhitespace)) }
     var azureRegion: String get() = s("azure_tts_region", de.frank.ziele.tts.TtsCatalog.DEFAULT_AZURE_REGION); set(v) = put { putString("azure_tts_region", v.trim()) }
 

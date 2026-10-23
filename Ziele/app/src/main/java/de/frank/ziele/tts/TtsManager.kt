@@ -43,7 +43,7 @@ class TtsManager(context: Context) {
         providerOverride: TtsProvider? = null,
         voiceOverride: String? = null,
         varied: Boolean = false,
-        /** Meldet, dass statt der gewählten Gemini- oder Azure-Stimme die Edge-Stimme liest. */
+        /** Meldet, dass statt der gewählten Stimme eine Stufe der Rückfallkette liest. */
         onRueckfall: ((String) -> Unit)? = null,
     ) {
         stop()
@@ -100,22 +100,103 @@ class TtsManager(context: Context) {
         // Standardmaessig an: Ohne diese Bindung sprechen mehrsprachige Stimmen englisch
         // aussehende Woerter englisch aus.
         val erzwingeDeutsch = preferences?.getBoolean(PREF_IMMER_DEUTSCH, true) ?: true
+        val ansage = Ansage(spokenText, step, varied, speechRate, pitchPercent, erzwingeDeutsch)
+        // Wie in Jarvis: Eine Stufe ohne eigenen Schlüssel ist dieselbe Stimme wie die Hauptstimme und brächte nichts;
+        // Stufen ohne Schlüssel laufen gar nicht erst.
+        val kette = TtsCatalog.rueckfallKette(
+            preferences?.getString(PREF_TTS_RUECKFALL_KETTE, null),
+            chirpAlt = preferences?.getBoolean(PREF_GEMINI_TTS_CHIRP_RUECKFALL, false) ?: false,
+        ).mapNotNull(TtsCatalog::rueckfallStufe)
+            .filterNot { it.anbieter.id == providerId && it.schluessel == null }
+            .filter(::rueckfallBereit)
+        val hauptName = TtsProvider.entries.firstOrNull { it.id == providerId }?.kurz ?: providerId
+        var hauptFehler: Exception? = null
+
+        /** [i] = -1 ist die gewählte Stimme, danach die Stufen der Kette der Reihe nach. */
+        fun versuche(i: Int) {
+            val stufe = kette.getOrNull(i)
+            val id = stufe?.anbieter?.id ?: providerId
+            activeProviderId = id
+            starte(
+                ansage = ansage,
+                providerId = id,
+                schluessel = stufe?.schluessel,
+                voiceOverride = if (stufe == null) voiceOverride else null,
+                mitAusweg = i < kette.lastIndex,
+                onStart = guardedStart,
+                onComplete = guardedComplete,
+                onError = { fehler ->
+                    val erster = hauptFehler ?: fehler.also { hauptFehler = it }
+                    if (requestGeneration == generation.get() && !terminal.get() && !started.get() && i < kette.lastIndex) {
+                        val naechste = kette[i + 1]
+                        logger.warning("${stufe?.id ?: providerId} gescheitert, Rückfall auf ${naechste.id}: ${fehler.message}")
+                        // Der volle Grund steht im Hinweis: Auch ein Einrichtungsfehler (Schlüssel, Region) bleibt so sichtbar.
+                        val grund = erster.message?.removePrefix("Vorlesen fehlgeschlagen: ")?.takeIf { it.isNotBlank() }
+                            ?: erster.javaClass.simpleName
+                        onRueckfall?.invoke("$hauptName liest gerade nicht, darum liest ${naechste.titel}. Grund: $grund")
+                        versuche(i + 1)
+                    } else if (stufe == null) {
+                        guardedError(fehler)
+                    } else {
+                        guardedError(IllegalStateException("${erster.message} Auch die Rückfallstimmen scheiterten, zuletzt ${stufe.titel}: ${fehler.message}"))
+                    }
+                },
+            )
+        }
+        versuche(-1)
+    }
+
+    /** Alles, was jede Stufe der Kette für dieselbe Ansage braucht. */
+    private class Ansage(
+        val text: String,
+        val step: Int,
+        val varied: Boolean,
+        val speechRate: Float,
+        val pitchPercent: Int,
+        val erzwingeDeutsch: Boolean,
+    )
+
+    /** Ob eine Rückfallstufe überhaupt laufen kann: Schlüssel (und bei der eigenen Stimme die Kennung) sind hinterlegt. */
+    private fun rueckfallBereit(stufe: RueckfallStufe): Boolean = when (stufe.anbieter) {
+        TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE ->
+            pref(if (stufe.schluessel == RueckfallStufe.FREI) PREF_GEMINI_TTS_KEY_FREI else PREF_GEMINI_TTS_KEY_BEZAHLT).isNotBlank()
+        TtsProvider.GOOGLE_CLOUD -> pref(PREF_GOOGLE_API_KEY).isNotBlank()
+        TtsProvider.AZURE -> pref(PREF_AZURE_TTS_KEY).isNotBlank()
+        TtsProvider.QWEN, TtsProvider.QWEN_CLONE -> pref(PREF_QWEN_API_KEY).isNotBlank() && pref(PREF_QWEN_VOICE_ID).isNotBlank()
+        TtsProvider.EDGE -> true
+    }
+
+    private fun pref(key: String): String = preferences?.getString(key, "").orEmpty().trim()
+
+    /** Startet genau eine Stimme; [schluessel] nur bei Gemini-Stufen der Kette: nur der kostenlose bzw. nur der bezahlte Schlüssel. */
+    private fun starte(
+        ansage: Ansage,
+        providerId: String,
+        schluessel: String?,
+        voiceOverride: String?,
+        mitAusweg: Boolean,
+        onStart: () -> Unit,
+        onComplete: () -> Unit,
+        onError: (Exception) -> Unit,
+    ) {
+        val step = ansage.step
+        val varied = ansage.varied
         when (providerId) {
             TtsProvider.EDGE.id -> edgePlayer.speak(
-                text = spokenText,
+                text = ansage.text,
                 voice = voiceOverride
                     ?: rotatedVoice(TtsCatalog.edgeVoices, step, varied)
                     ?: preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
                     ?: TtsCatalog.DEFAULT_EDGE_VOICE,
-                speechRate = speechRate,
-                pitchPercent = pitchPercent,
-                erzwingeDeutsch = erzwingeDeutsch,
-                onPlaybackStart = guardedStart,
-                onComplete = guardedComplete,
-                onError = guardedError,
+                speechRate = ansage.speechRate,
+                pitchPercent = ansage.pitchPercent,
+                erzwingeDeutsch = ansage.erzwingeDeutsch,
+                onPlaybackStart = onStart,
+                onComplete = onComplete,
+                onError = onError,
             )
             TtsProvider.GOOGLE_CLOUD.id -> googlePlayer.speak(
-                text = spokenText,
+                text = ansage.text,
                 apiKey = preferences?.getString(PREF_GOOGLE_API_KEY, "").orEmpty(),
                 voiceName = voiceOverride
                     ?: rotatedVoice(TtsCatalog.googleVoices, step, varied)
@@ -123,22 +204,22 @@ class TtsManager(context: Context) {
                         PREF_GOOGLE_VOICE,
                         TtsCatalog.DEFAULT_GOOGLE_VOICE,
                     ) ?: TtsCatalog.DEFAULT_GOOGLE_VOICE,
-                speechRate = speechRate,
-                pitchSemitones = toSemitones(pitchPercent),
-                erzwingeDeutsch = erzwingeDeutsch,
-                onPlaybackStart = guardedStart,
-                onComplete = guardedComplete,
-                onError = guardedError,
+                speechRate = ansage.speechRate,
+                pitchSemitones = toSemitones(ansage.pitchPercent),
+                erzwingeDeutsch = ansage.erzwingeDeutsch,
+                onPlaybackStart = onStart,
+                onComplete = onComplete,
+                onError = onError,
             )
             // The cloned voice varies its own emphasis, so rate and pitch stay untouched here.
             TtsProvider.QWEN_CLONE.id -> qwenPlayer.speak(
-                text = spokenText,
+                text = ansage.text,
                 rawApiKey = preferences?.getString(PREF_QWEN_API_KEY, "").orEmpty(),
                 rawVoiceId = voiceOverride
                     ?: preferences?.getString(PREF_QWEN_VOICE_ID, "").orEmpty(),
-                onPlaybackStart = guardedStart,
-                onComplete = guardedComplete,
-                onError = guardedError,
+                onPlaybackStart = onStart,
+                onComplete = onComplete,
+                onError = onError,
             )
             // Gemini 3.8 Flash / Flash-Lite und Azure Neural: erst als Datei erzeugt, dann abgespielt.
             TtsProvider.GEMINI_FLASH.id, TtsProvider.GEMINI_LITE.id, TtsProvider.AZURE.id -> {
@@ -152,53 +233,33 @@ class TtsManager(context: Context) {
                         (preferences?.getString(PREF_AZURE_VOICE, null) ?: TtsCatalog.DEFAULT_AZURE_VOICE)
                 }
                 neuePlayer.speak(
-                    text = spokenText,
+                    text = ansage.text,
                     provider = provider,
                     voiceId = voiceOverride ?: rotatedVoice(katalog, step, varied) ?: gespeichert,
-                    speechRate = speechRate,
+                    speechRate = ansage.speechRate,
                     zugang = NeueStimmenPlayer.Zugang(
                         geminiKeyFrei = preferences?.getString(PREF_GEMINI_TTS_KEY_FREI, "").orEmpty(),
                         geminiKeyBezahlt = preferences?.getString(PREF_GEMINI_TTS_KEY_BEZAHLT, "").orEmpty(),
-                        schluesselWahl = preferences?.getString(PREF_GEMINI_TTS_SCHLUESSEL_WAHL, null)
-                            ?: NeueStimmenPlayer.GEMINI_TTS_FREI_DANN_BEZAHLT,
-                        chirpRueckfall = preferences?.getBoolean(PREF_GEMINI_TTS_CHIRP_RUECKFALL, false) ?: false,
+                        schluesselWahl = when (schluessel) {
+                            RueckfallStufe.FREI -> NeueStimmenPlayer.GEMINI_TTS_NUR_FREI
+                            RueckfallStufe.BEZAHLT -> NeueStimmenPlayer.GEMINI_TTS_NUR_BEZAHLT
+                            else -> preferences?.getString(PREF_GEMINI_TTS_SCHLUESSEL_WAHL, null)
+                                ?: NeueStimmenPlayer.GEMINI_TTS_FREI_DANN_BEZAHLT
+                        },
+                        // Den Chirp-Rückfall übernimmt jetzt die Kette (Stufe Google Chirp 3 HD).
+                        chirpRueckfall = false,
                         googleKey = preferences?.getString(PREF_GOOGLE_API_KEY, "").orEmpty(),
                         azureKey = preferences?.getString(PREF_AZURE_TTS_KEY, "").orEmpty(),
                         azureRegion = preferences?.getString(PREF_AZURE_TTS_REGION, null) ?: TtsCatalog.DEFAULT_AZURE_REGION,
-                        erzwingeDeutsch = preferences?.getBoolean("immer_deutsch_vorlesen", true) ?: true,
+                        erzwingeDeutsch = ansage.erzwingeDeutsch,
                     ),
-                    onPlaybackStart = guardedStart,
-                    onComplete = guardedComplete,
-                    // Wie die Rückfallkette in Jarvis: Scheitert die Stimme (meist 429, Kontingent oder Ratenlimit),
-                    // liest die Edge-Stimme mit demselben Tempo, statt stumm zu bleiben.
-                    onError = { fehler ->
-                        if (requestGeneration == generation.get() && !terminal.get() && !started.get()) {
-                            logger.warning("${provider.id} gescheitert, Rückfall auf Edge: ${fehler.message}")
-                            activeProviderId = TtsProvider.EDGE.id
-                            // Der volle Grund steht im Hinweis: Auch ein Einrichtungsfehler (Schlüssel, Region) bleibt so sichtbar.
-                            val grund = fehler.message?.removePrefix("Vorlesen fehlgeschlagen: ")?.takeIf { it.isNotBlank() }
-                                ?: fehler.javaClass.simpleName
-                            onRueckfall?.invoke("${provider.kurz} liest gerade nicht, darum liest Edge. Grund: $grund")
-                            edgePlayer.speak(
-                                text = spokenText,
-                                voice = rotatedVoice(TtsCatalog.edgeVoices, step, varied)
-                                    ?: preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
-                                    ?: TtsCatalog.DEFAULT_EDGE_VOICE,
-                                speechRate = speechRate,
-                                pitchPercent = pitchPercent,
-                                erzwingeDeutsch = erzwingeDeutsch,
-                                onPlaybackStart = guardedStart,
-                                onComplete = guardedComplete,
-                                onError = { edgeFehler -> guardedError(IllegalStateException("${fehler.message} Auch die Edge-Stimme scheiterte: ${edgeFehler.message}")) },
-                            )
-                        } else {
-                            guardedError(fehler)
-                        }
-                    },
-                    mitAusweg = true,
+                    onPlaybackStart = onStart,
+                    onComplete = onComplete,
+                    onError = onError,
+                    mitAusweg = mitAusweg,
                 )
             }
-            else -> guardedError(IllegalStateException("Unbekannter TTS-Anbieter."))
+            else -> onError(IllegalStateException("Unbekannter TTS-Anbieter."))
         }
     }
 
@@ -325,6 +386,7 @@ class TtsManager(context: Context) {
         const val PREF_GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
         const val PREF_GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
         const val PREF_GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
+        const val PREF_TTS_RUECKFALL_KETTE = "tts_rueckfall_kette"
         const val PREF_VARY_VOICE = "vary_voice_per_repetition"
         const val PREF_VARY_SPEECH_RATE = "vary_speech_rate"
         const val PREF_VARY_PITCH = "vary_pitch"

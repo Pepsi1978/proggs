@@ -21,7 +21,40 @@ data class TtsVoice(
     val gender: VoiceGender,
 )
 
+/** Eine Stufe der Vorlese-Rückfallkette (wie in Jarvis); [schluessel] nur bei Gemini: [FREI] oder [BEZAHLT]. */
+data class RueckfallStufe(val id: String, val anbieter: TtsProvider, val schluessel: String?, val titel: String) {
+    companion object {
+        const val FREI = "frei"
+        const val BEZAHLT = "bezahlt"
+    }
+}
+
 object TtsCatalog {
+    /**
+     * Die Stufen der Vorlese-Rückfallkette. Jede Stufe liest mit der Stimme, die bei ihrem Anbieter eingestellt ist;
+     * [RueckfallStufe.schluessel] trennt bei Gemini kostenlosen und bezahlten Schlüssel.
+     */
+    val rueckfallStufen = listOf(
+        RueckfallStufe("gemini_flash:frei", TtsProvider.GEMINI_FLASH, RueckfallStufe.FREI, "Gemini 3.8 Flash TTS (kostenlos)"),
+        RueckfallStufe("gemini_flash:bezahlt", TtsProvider.GEMINI_FLASH, RueckfallStufe.BEZAHLT, "Gemini 3.8 Flash TTS (bezahlt)"),
+        RueckfallStufe("gemini_lite:frei", TtsProvider.GEMINI_LITE, RueckfallStufe.FREI, "Gemini 3.8 Flash-Lite TTS (kostenlos)"),
+        RueckfallStufe("gemini_lite:bezahlt", TtsProvider.GEMINI_LITE, RueckfallStufe.BEZAHLT, "Gemini 3.8 Flash-Lite TTS (bezahlt)"),
+        RueckfallStufe(TtsProvider.GOOGLE_CLOUD.id, TtsProvider.GOOGLE_CLOUD, null, TtsProvider.GOOGLE_CLOUD.label),
+        RueckfallStufe(TtsProvider.AZURE.id, TtsProvider.AZURE, null, TtsProvider.AZURE.label),
+        RueckfallStufe(TtsProvider.EDGE.id, TtsProvider.EDGE, null, TtsProvider.EDGE.label),
+        RueckfallStufe(TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN_CLONE, null, TtsProvider.QWEN_CLONE.label),
+    )
+
+    fun rueckfallStufe(id: String): RueckfallStufe? = rueckfallStufen.firstOrNull { it.id == id }
+
+    /**
+     * Die gespeicherte Kette als Liste. Ohne gespeicherte Kette gilt das bisherige Verhalten: Edge liest immer als letzte
+     * Stufe, bei eingeschaltetem altem Chirp-Schalter vorher Google Chirp 3 HD.
+     */
+    fun rueckfallKette(gespeichert: String?, chirpAlt: Boolean): List<String> =
+        gespeichert?.split(',')?.map(String::trim)?.filter { rueckfallStufe(it) != null }?.distinct()
+            ?: if (chirpAlt) listOf(TtsProvider.GOOGLE_CLOUD.id, TtsProvider.EDGE.id) else listOf(TtsProvider.EDGE.id)
+
     const val DEFAULT_EDGE_VOICE = "de-DE-SeraphinaMultilingualNeural"
     const val DEFAULT_GOOGLE_VOICE = "de-DE-Chirp3-HD-Kore"
     const val DEFAULT_QWEN_VOICE = "Cherry"

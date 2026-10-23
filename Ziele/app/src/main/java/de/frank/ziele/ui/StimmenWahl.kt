@@ -3,7 +3,9 @@ package de.frank.ziele.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -65,6 +67,47 @@ private fun StimmChip(text: String, aktiv: Boolean, favorit: Boolean, lang: () -
     }
 }
 
+/**
+ * Die Rückfall-Reihenfolge des Vorlesens (wie in Jarvis): nummerierte Stufen mit ↑ ↓ ✕, darunter alle übrigen Stufen
+ * zum Hinzufügen. Jede Stufe liest mit der Stimme, die bei ihrem Anbieter eingestellt ist.
+ */
+@Composable
+fun RueckfallKette(e: Einstellungen) {
+    val f = LocalFarben.current
+    val kette = e.rueckfallKette
+    val anbieter = e.ttsAnbieter
+    Text("Rückfall-Reihenfolge", color = f.textLeise, fontSize = 13.sp)
+    Text("Scheitert die Stimme oben (etwa Kontingent erschöpft), probiert Ziele diese Stufen der Reihe nach, jede mit der dort eingestellten Stimme. " +
+        "Eine Stufe ohne Schlüssel wird übersprungen. Leer = kein Rückfall.",
+        color = f.textLeise, fontSize = 12.sp)
+    kette.forEachIndexed { i, id ->
+        val stufe = TtsCatalog.rueckfallStufe(id) ?: return@forEachIndexed
+        val gleich = stufe.anbieter.id == anbieter && stufe.schluessel == null
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("${i + 1}. ${stufe.titel}", color = f.text, fontSize = 14.sp)
+                if (gleich || !e.rueckfallBereit(stufe)) {
+                    Text(if (gleich) "Ist die Stimme oben, wird übersprungen" else "Nicht eingerichtet, wird übersprungen", color = f.textLeise, fontSize = 11.sp)
+                }
+            }
+            if (i > 0) Chip("↑", false) { e.rueckfallKette = kette.toMutableList().apply { add(i - 1, removeAt(i)) } }
+            if (i < kette.lastIndex) Chip("↓", false) { e.rueckfallKette = kette.toMutableList().apply { add(i + 1, removeAt(i)) } }
+            Chip("✕", false) { e.rueckfallKette = kette - id }
+        }
+    }
+    val uebrig = TtsCatalog.rueckfallStufen.filter { it.id !in kette }
+    if (uebrig.isNotEmpty()) {
+        Text("Hinzufügen:", color = f.textLeise, fontSize = 12.sp)
+        ChipReihe { uebrig.forEach { st -> Chip("+ ${st.titel}", false) { e.rueckfallKette = kette + st.id } } }
+    }
+    if (TtsProvider.GOOGLE_CLOUD.id in kette && anbieter != TtsProvider.GOOGLE_CLOUD.id && e.googleKey.isBlank()) {
+        Feld("Google-Cloud-Schlüssel (für den Rückfall)", e.googleKey, geheim = true) { e.googleKey = it }
+    }
+    if (TtsProvider.AZURE.id in kette && anbieter != TtsProvider.AZURE.id && e.azureKey.isBlank()) {
+        Feld("Azure-Speech-Schlüssel (für den Rückfall)", e.azureKey, geheim = true) { e.azureKey = it }
+    }
+}
+
 /** Schlüssel und Stimmen für Gemini 3.8 Flash / Flash-Lite TTS und Azure Neural (wie in Jarvis). */
 @Composable
 fun NeueStimmenBereich(e: Einstellungen) {
@@ -80,10 +123,8 @@ fun NeueStimmenBereich(e: Einstellungen) {
                     Chip(name, e.geminiSchluesselWahl == id) { e.geminiSchluesselWahl = id }
                 }
             }
-            Schalter("Rückfall auf Chirp 3 HD", e.geminiChirpRueckfall) { e.geminiChirpRueckfall = it }
-            Text("Scheitert der kostenlose Schlüssel, liest Google Chirp 3 HD mit derselben Stimme weiter statt des bezahlten Schlüssels.",
+            Text("Was danach kommt, wenn der Schlüssel scheitert, legst du unten in der Rückfall-Reihenfolge fest.",
                 color = f.textLeise, fontSize = 12.sp)
-            if (e.geminiChirpRueckfall) Feld("Google-TTS-Schlüssel (für den Chirp-Rückfall)", e.googleKey, geheim = true) { e.googleKey = it }
             if (e.geminiKeyFrei.isBlank() && e.geminiKeyBezahlt.isBlank()) {
                 Text("Für die Gemini-Stimmen fehlt noch ein Schlüssel (aistudio.google.com).", color = f.gefahr, fontSize = 12.sp)
             }

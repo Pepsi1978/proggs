@@ -229,7 +229,7 @@ class NeueStimmenPlayer(context: Context) {
                 } catch (fehler: Exception) {
                     if (fehler !is Abbruch && fehler !is Fehler) throw fehler
                     fehlerFrei = fehler
-                    if (ausweg) freiGesperrtBis = System.currentTimeMillis() + FREI_PAUSE_MS
+                    if (ausweg || mitAusweg) freiGesperrtBis = System.currentTimeMillis() + FREI_PAUSE_MS
                     Log.w(TAG, "Gemini-Stimme: kostenloser Schlüssel gescheitert ($modell): ${fehler.message?.take(120)}")
                 }
             }
