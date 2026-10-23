@@ -57,7 +57,13 @@ public sealed class WingetAktualisierer : IAktualisierer
     /// in the named source after all, the slow query over all sources decides -- the fast path
     /// must never turn an installed program into "not installed".
     /// </summary>
-    private static async Task<BefehlErgebnis> ListeAsync(ProgrammEintrag eintrag, IProgress<string>? protokoll, CancellationToken abbruch)
+    /// <param name="sammelNutzen">
+    /// False for the fingerprint: the settle loop after an install polls it several times to wait
+    /// for an installer child that is still working -- a cached list would answer all polls with
+    /// the same snapshot and turn a late-finishing update into "not verified".
+    /// </param>
+    private static async Task<BefehlErgebnis> ListeAsync(ProgrammEintrag eintrag, IProgress<string>? protokoll, CancellationToken abbruch,
+                                                        bool sammelNutzen = true)
     {
         var basis = $"list {Auswahl(eintrag)} --disable-interactivity --accept-source-agreements";
         var quelle = QuellArgument(eintrag);
@@ -66,7 +72,7 @@ public sealed class WingetAktualisierer : IAktualisierer
         try
         {
             // Fast path: one shared "winget list --source winget" answers every card of a pass.
-            if (await AusSammelabfrageAsync(eintrag, protokoll, abbruch) is { } schnell) return schnell;
+            if (sammelNutzen && await AusSammelabfrageAsync(eintrag, protokoll, abbruch) is { } schnell) return schnell;
 
             protokoll?.Report("winget " + basis + quelle);
             var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, basis + quelle, TimeSpan.FromMinutes(2), abbruch: abbruch);
@@ -369,7 +375,10 @@ public sealed class WingetAktualisierer : IAktualisierer
 
         if (!File.Exists(Pfade.Winget)) return "";
 
-        var lauf = await ListeAsync(eintrag, null, abbruch);
+        // A fingerprint marks a moment of an update chain (before, settle polls): the check that
+        // follows it must see that same moment too, not a shared list from before.
+        SammelVerwerfen();
+        var lauf = await ListeAsync(eintrag, null, abbruch, sammelNutzen: false);
         var (wert, problem) = ListenFingerabdruck(lauf, eintrag.WingetId ?? "");
         if (problem is not null) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + problem);
         return wert;
