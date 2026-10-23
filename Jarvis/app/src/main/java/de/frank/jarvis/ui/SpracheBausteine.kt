@@ -272,12 +272,15 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         if (TtsProvider.GOOGLE_CLOUD.id in rueckfall &&anbieter != TtsProvider.GOOGLE_CLOUD && s.googleTtsApiKey.isBlank()) {
             Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
         }
-        Unterzeile("Sprechtempo")
+        Unterzeile("Sprechtempo (${anbieter.label})")
+        val tempo = s.ttsTempo(anbieter.id)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0.9f to "Ruhig", 1.0f to "Normal", 1.1f to "Zügig", 1.2f to "Schnell").forEach { (wert, name) ->
-                Chip(name, aktiv = kotlin.math.abs(s.ttsSpeechRate - wert) < 0.04f) { geaendert { s.ttsSpeechRate = wert } }
+                Chip(name, aktiv = kotlin.math.abs(tempo - wert) < 0.04f) { geaendert { s.setzeTtsTempo(anbieter.id, wert) } }
             }
         }
+        Text("Gilt nur für diesen Anbieter und bleibt auch, wenn er als Rückfallstufe einspringt.",
+            color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         Knopf("Probe hören", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.lies("probe", "Probe", "Hallo Frank. So klinge ich, wenn ich dir etwas vorlese.") }
 
         Unterzeile("Von selbst vorlesen")

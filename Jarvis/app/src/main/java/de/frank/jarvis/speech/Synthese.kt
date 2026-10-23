@@ -90,7 +90,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * würde die Prüfung über [synthetisiere] laufen und bei einer Edge- oder Alibaba-Stimme
      * mit "kann nicht vorab erzeugt werden" abbrechen, obwohl der Schlüssel in Ordnung ist.
      */
-    suspend fun pruefeGoogle(text: String = "Probe."): File = gleichzeitig.withPermit { google(text, null, settings.ttsSpeechRate) }
+    suspend fun pruefeGoogle(text: String = "Probe."): File = gleichzeitig.withPermit { google(text, null, settings.ttsTempo(TtsProvider.GOOGLE_CLOUD.id)) }
 
     /** Anbieter der [wahl], sonst der in Jarvis eingestellte. */
     private fun anbieter(wahl: StimmWahl?): String =
@@ -103,14 +103,15 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      */
     suspend fun synthetisiere(text: String, wahl: StimmWahl? = null): File = gleichzeitig.withPermit {
         val sonder = wahl?.stimme?.takeIf { TtsCatalog.anbieterZu(it) != null }
-        val tempo = wahl?.tempo ?: settings.ttsSpeechRate
+        // Jede Stimme mit ihrem eigenen Tempo, auch als Rückfallstufe; ein Sondertempo der Meldung gilt für alle.
+        fun tempo(anbieter: String) = wahl?.tempo ?: settings.ttsTempo(anbieter)
         val haupt = anbieter(wahl)
         // Eine Stufe ohne eigenen Schlüssel ist dieselbe Stimme wie die Hauptstimme und brächte nichts; Stufen ohne Schlüssel laufen gar nicht erst.
         val kette = settings.ttsRueckfallKette.mapNotNull(TtsCatalog::rueckfallStufe)
             .filterNot { it.anbieter.id == haupt && it.schluessel == null }
             .filter(settings::rueckfallBereit)
         val hauptFehler = try {
-            return@withPermit erzeuge(haupt, text, sonder, tempo, null, mitAusweg = kette.isNotEmpty())
+            return@withPermit erzeuge(haupt, text, sonder, tempo(haupt), null, mitAusweg = kette.isNotEmpty())
         } catch (fehler: Exception) {
             if (!rueckfallFaehig(fehler)) throw fehler
             fehler
@@ -118,7 +119,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         var zeitlimit: SyntheseZeitlimit? = null
         kette.forEachIndexed { i, stufe ->
             try {
-                val datei = erzeuge(stufe.anbieter.id, text, null, tempo, stufe.schluessel, mitAusweg = i < kette.lastIndex)
+                val datei = erzeuge(stufe.anbieter.id, text, null, tempo(stufe.anbieter.id), stufe.schluessel, mitAusweg = i < kette.lastIndex)
                 Logbuch.sprache("Vorlese-Rückfall", "stufe=${stufe.id} haupt=$haupt grund=${hauptFehler.message?.take(80)}")
                 return@withPermit datei
             } catch (fehler: Exception) {

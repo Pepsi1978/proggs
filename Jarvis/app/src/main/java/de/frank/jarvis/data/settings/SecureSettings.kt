@@ -203,6 +203,20 @@ class SecureSettings(context: Context) : Closeable {
         }
 
     /**
+     * Sprechtempo je Anbieter: Jede Stimme behält ihr eigenes Tempo, auch wenn sie als Rückfallstufe einspringt.
+     * Noch nie gesetzt = das bisherige gemeinsame Tempo ([ttsSpeechRate]).
+     */
+    fun ttsTempo(anbieter: String): Float {
+        val schluessel = Keys.TTS_SPEECH_RATE + "_" + anbieter
+        val p = preferences ?: return ttsSpeechRate
+        return if (p.contains(schluessel)) p.getFloat(schluessel, Defaults.TTS_SPEECH_RATE).coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) else ttsSpeechRate
+    }
+
+    fun setzeTtsTempo(anbieter: String, wert: Float) {
+        preferences?.edit()?.putFloat(Keys.TTS_SPEECH_RATE + "_" + anbieter, wert.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE))?.apply()
+    }
+
+    /**
      * Erzwingt die deutsche Aussprache, auch wenn der Text englisch aussehende Wörter enthält.
      * Mehrsprachige Stimmen (Edge-„Multilingual", Google Chirp 3) schalten sonst mitten im Satz
      * auf Englisch um, was gerade bei Ideentiteln stört.
