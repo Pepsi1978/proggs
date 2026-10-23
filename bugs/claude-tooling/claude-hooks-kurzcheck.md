@@ -38,3 +38,4 @@
 | 24 | Hook schreibt Diagnose ins Whiteboard | NIE konstanten Fehlertext — echte Fehlerart auswerten, sonst falsche Erinnerungen | §13.13 |
 | 25 | Hook mit `updatedInput` für AskUserQuestion | Matcher exakt `AskUserQuestion`, nie Wildcard (#29530) | §16.9 |
 | 26 | Rückfrage in Remote Control unsichtbar | #33625: Frage per Hook nach außen schicken | §16.9 |
+| 27 | „Running PreToolUse hooks 1 of 2“ hängt bei AskUserQuestion | Wartender Rückfragen-Hook: nach Ablauf selbst antworten (`updatedInput.answers`), nie in den offenen Dialog fallen | §16.9 |

@@ -15,9 +15,11 @@ post, puls, frage, stop und warte mit derselben Eingabe auf (Werkzeugnamen wie b
          Skills und Agenten; geänderte Dateien, Bau, Commit/Push und adb install werden gedrosselt:
          höchstens eine Meldung je DROSSEL_S, Fehler sofort. Lesen und Suchen meldet niemand (anderer Matcher).
   frage  PreToolUse (AskUserQuestion): schickt Fragen und Optionen an Jarvis, wartet bis FRAGE_WARTEN_S auf Franks Antwort
-         und gibt sie an Claude zurück. Ohne Antwort (oder wenn Frank in Jarvis „In der Claude-App beantworten“ tippt) gibt
-         der Hook frei, und der normale Dialog erscheint (auch per Remote Control). Solange der Hook wartet, zeigt die
-         Claude-App die Frage zwar an, nimmt aber keine Antwort an: Claude Code öffnet seinen Dialog erst nach dem Hook.
+         und gibt sie an Claude zurück. Tippt Frank in Jarvis „In der Claude-App beantworten“, gibt der Hook frei, und der
+         normale Dialog erscheint (auch per Remote Control). Kommt bis zum Ablauf keine Antwort oder ist Jarvis nicht
+         erreichbar, antwortet der Hook selbst (ohne_antwort: Review = Nein, sonst selbst entscheiden), denn ein offener
+         Dialog ließe die Sitzung stehen (Franks Vorgabe vom 23.10.2026: nie). Solange der Hook wartet, zeigt die
+         Claude-App „Running PreToolUse hooks 1 of 2“ und nimmt keine Antwort an: Claude Code öffnet seinen Dialog erst nach dem Hook.
          Jeder Ausgang geht als stand „frage_status“ an Jarvis (beantwortet, am_pc, erledigt), damit die Frage dort
          überall als erledigt gilt, auch wenn sie am Rechner beantwortet wurde (post erkennt das am AskUserQuestion-Ergebnis).
   puls   PreToolUse (alle Werkzeuge, async): Lebenszeichen für die drehende Anzeige im Jarvis-Chat, höchstens alle PULS_S.
@@ -923,6 +925,32 @@ def offene_am_pc(z: dict, tool_use_id: str | None = None) -> list[tuple[str, dic
     return treffer
 
 
+def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
+    """
+    Antwort an Franks Stelle, wenn keine kam: Die Sitzung darf nie an einem offenen Dialog stehen bleiben (Vorgabe vom
+    23.10.2026). Eine Review-Frage gilt als „Nein“, jede andere bekommt die Anweisung, selbst zu entscheiden und weiterzuarbeiten.
+    Als updatedInput, damit es auch das OpenCode-Plugin übernimmt (das wertet nur answers aus).
+    """
+    antworten = {}
+    for f in fragen:
+        frage_text = str(f.get("question", ""))
+        labels = [str(o.get("label", "")) for o in f.get("options") or [] if isinstance(o, dict)]
+        nein = next((l for l in labels if l.strip().lower().startswith("nein")), "")
+        if "review" in frage_text.lower():
+            antworten[frage_text] = nein or "Nein"
+        else:
+            empfohlen = next((l for l in labels if re.search(r"(?i)recommended|empfohlen", l)), "")
+            antworten[frage_text] = (f"Keine Antwort von Frank ({grund}). Nicht erneut fragen und nicht warten: Entscheide selbst"
+                                     + (f" (empfohlen war „{empfohlen}“)" if empfohlen else "")
+                                     + ", wähle die sicherste sinnvolle Variante, arbeite weiter und nenne die Annahme in der Abschlussmeldung.")
+    return {"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "allow",
+        "permissionDecisionReason": grund + ".",
+        "updatedInput": {**ein, "answers": antworten},
+    }}
+
+
 def frage(eingabe: dict) -> None:
     ein = eingabe.get("tool_input") or {}
     fragen = ein.get("questions") or []
@@ -950,15 +978,28 @@ def frage(eingabe: dict) -> None:
     # Mit Frist (Sekunden seit 1970): Jarvis zeigt, wie lange die Frage dort noch beantwortbar ist.
     daten = {"frage_id": frage_id, "fragen": fragen, "bis": int(time.time() + FRAGE_WARTEN_S), "tool_use_id": tool_use_id}
     if not melde_sicher("frage", "❓ " + kurz, daten):
-        schreib("Rückfrage nicht an Jarvis zugestellt: normaler Dialog")
+        # Ohne Jarvis wartete der Dialog am Rechner ohne Ende, und die Sitzung stünde (Franks Vorgabe vom 23.10.2026: nie).
+        schreib("Rückfrage nicht an Jarvis zugestellt: Sitzung entscheidet selbst")
+        sys.stdout.write(json.dumps(ohne_antwort(ein, fragen, "Jarvis war nicht erreichbar")))
         return
     merke_frage(tool_use_id, frage_id, "jarvis")
     antwort = warte_auf_antwort(frage_id)
-    if not antwort or antwort.get("freigeben"):
-        grund = "freigegeben" if antwort else "abgelaufen"
-        schreib(f"Keine Antwort über Jarvis ({grund}): normaler Dialog")
+    if antwort and antwort.get("freigeben"):
+        # Frank hat in Jarvis „In der Claude-App beantworten“ getippt: Er sitzt dran, der normale Dialog erscheint.
+        schreib("Keine Antwort über Jarvis (freigegeben): normaler Dialog")
         merke_frage(tool_use_id, frage_id, "am_pc")
-        frage_status(frage_id, "am_pc", grund=grund)
+        frage_status(frage_id, "am_pc", grund="freigegeben")
+        return
+    if not antwort:
+        # Abgelaufen: Früher öffnete jetzt der Dialog am Rechner und die Sitzung stand, bis jemand dort antwortete
+        # (Vorfälle 22./23.10.2026). Jetzt gilt: kein Review, sonst selbst entscheiden und weiterarbeiten.
+        schreib("Keine Antwort über Jarvis (abgelaufen): Sitzung entscheidet selbst und arbeitet weiter")
+        ausgabe = ohne_antwort(ein, fragen, f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht geantwortet")
+        text = "; ".join(ausgabe["hookSpecificOutput"]["updatedInput"]["answers"].values())
+        merke_frage(tool_use_id, frage_id, "beantwortet")
+        frage_status(frage_id, "erledigt", antwort=text, grund="abgelaufen")
+        melde("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung arbeitet weiter: " + text)
+        sys.stdout.write(json.dumps(ausgabe))
         return
     antworten = {str(k): str(v) for k, v in (antwort.get("antworten") or {}).items()}
     zusatz = str(antwort.get("text", "")).strip()
@@ -1034,10 +1075,22 @@ def stop(eingabe: dict) -> None:
             melde("laeuft", "💬 Antwort von Frank: " + inhalt)
             sys.stdout.write(json.dumps({"decision": "block", "reason": f"Frank hat über Jarvis geantwortet: {inhalt}"}, ensure_ascii=False))
             return
-        # Ohne Antwort endet der Zug: Frank antwortet dann am Rechner oder in der Claude-App wie auf jede Nachricht.
-        frage_status(frage_id, "am_pc", grund="freigegeben" if antwort else "abgelaufen")
-        schreib("Freie Rückfrage ohne Antwort über Jarvis")
-        nachtraege_im_stop()
+        if antwort:
+            # Freigegeben: Frank antwortet am Rechner oder in der Claude-App wie auf jede Nachricht.
+            frage_status(frage_id, "am_pc", grund="freigegeben")
+            schreib("Freie Rückfrage ohne Antwort über Jarvis (freigegeben)")
+            nachtraege_im_stop()
+            return
+        # Abgelaufen: nie stehen bleiben (Vorgabe vom 23.10.2026). Einmal weiterarbeiten lassen; stop_hook_active verhindert
+        # beim nächsten Stop eine zweite Runde.
+        frage_status(frage_id, "erledigt", antwort="keine Antwort, Sitzung entscheidet selbst", grund="abgelaufen")
+        schreib("Freie Rückfrage ohne Antwort über Jarvis (abgelaufen): Sitzung arbeitet weiter")
+        melde("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung entscheidet selbst und arbeitet weiter.")
+        sys.stdout.write(json.dumps({"decision": "block", "reason": (
+            f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht auf deine Frage geantwortet. Nicht erneut fragen: Geht es um ein Review, "
+            "gilt Nein. Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende den Zug mit einem "
+            "Satz. Sonst entscheide selbst die sicherste sinnvolle Variante, arbeite weiter und nenne die Annahme in der Abschlussmeldung.")},
+            ensure_ascii=False))
         return
     # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung), dazu die Dauer
     # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal). Der Stand „info“ ist das Merkmal des ausführlichen

@@ -1121,12 +1121,34 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     // Zwischenschritte still aktualisieren; Rückfrage, Fertig und Problem melden sich hörbar.
                     .setOnlyAlertOnce(stand == "laeuft")
                     .setAutoCancel(stand == "fertig")
-                    .apply { oeffnen?.let { setContentIntent(PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)) } },
+                    .apply {
+                        oeffnen?.let {
+                            val tippen = PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                            setContentIntent(tippen)
+                            // Rückfrage bei gesperrtem Bildschirm: als Vollbild, nicht nur als Zeile in der Leiste.
+                            if (stand == "frage" && frageId.isNotEmpty()) setPriority(NotificationCompat.PRIORITY_HIGH).setFullScreenIntent(tippen, true)
+                        }
+                    },
                 // Zwischenschritte still; Rückfrage, Fertig und Problem nach Franks Einstellung (Ton, Wecker, Vorlesen).
                 // Eine Sperre stört kein Live-Gespräch (still, aber sichtbar); Rückfrage, Fertig und Problem wie bisher auch dort mit Ton.
                 titel, if (vorlesen) "$titel. $text" else null, laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
             )
+            if (stand == "frage" && frageId.isNotEmpty() && oeffnen?.component != null) rueckfrageNachVorn(oeffnen)
         }
+    }
+
+    /**
+     * Franks Vorgabe vom 23.10.2026: Eine Rückfrage geht sofort im Vordergrund auf und hat Vorrang, statt als Benachrichtigung
+     * unterzugehen (die Sitzung wartet höchstens fünf Minuten, danach entscheidet sie selbst). Aus dem Hintergrund darf Jarvis
+     * eine Ansicht nur mit „Über anderen Apps einblenden“ öffnen (wie beim Weckwort); ohne bleibt die Benachrichtigung mit Vollbild.
+     */
+    private fun rueckfrageNachVorn(absicht: Intent) {
+        val darf = android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app) || de.frank.jarvis.MainActivity.sichtbar
+        if (!darf) {
+            Logbuch.system("Rückfrage nur als Benachrichtigung", "„Über anderen Apps einblenden“ ist für Jarvis nicht erlaubt")
+            return
+        }
+        runCatching { app.startActivity(absicht) }.onFailure { Logbuch.fehler("Rückfrage ließ sich nicht nach vorn holen", it) }
     }
 
     /** Die letzten Programmieraufträge mit ihren Schritten, dauerhaft in den App-Einstellungen (höchstens 20). */

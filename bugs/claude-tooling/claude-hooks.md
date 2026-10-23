@@ -942,6 +942,15 @@ Diese kamen mit v2.1.152–v2.1.177 und gehoeren zum aktuellen Wissensstand (Det
 - **60-s-Auto-Skip von AskUserQuestion** (#73125, ab 2.1.198, laut Maintainer behoben): bei Rückfragen-Hooks im Blick behalten.
 - **Stop-Hook hält die Eingabe 1–2 Minuten auf** (#51515, 2.1.116, Nutzerbericht): Ein wartender Stop-Hook kann Eingaben im Terminal blockieren; Wartezeit begrenzen.
 - **PostToolUse sieht keine Fehlschläge:** Exit ≠ 0 kommt nur als PostToolUseFailure (kein Bug, aber eine Falle für Melde-Hooks).
+- **„Running PreToolUse hooks 1 of 2“ minutenlang bei AskUserQuestion = wartender Rückfragen-Hook, kein Absturz** (eigener Vorfall
+  22./23.10.2026, CLI 2.1.30x, `Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py frage`): Claude Code öffnet den AskUserQuestion-Dialog
+  erst nach allen synchronen PreToolUse-Hooks. Solange der Hook auf eine Antwort von außen wartet (hier 300 s), zeigt Terminal bzw.
+  Remote Control nur die Hook-Zeile und nimmt keine Antwort an; danach stand die Sitzung am offenen Dialog, bis jemand am Rechner
+  antwortete. Diagnose: `%LOCALAPPDATA%\JarvisPcBruecke\hook.log` → `Meldung frage` und genau 5 min später `abgelaufen`.
+  Regel: Ein Rückfragen-Hook darf nach Ablauf **nie** in den Dialog fallen, wenn niemand am Rechner sitzt. Er gibt selbst eine
+  Antwort per `updatedInput.answers` zurück (Review = Nein, sonst „selbst entscheiden und weiterarbeiten“); den Dialog öffnet nur
+  eine ausdrückliche Freigabe. Gleiches gilt für einen Stop-Hook, der auf eine freie Rückfrage wartet (`decision: block` mit
+  Weiterarbeits-Anweisung, `stop_hook_active` verhindert die Schleife).
 
 ## 15. Fix-Status — was auf v2.1.177 schon behoben ist
 
