@@ -279,6 +279,9 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * dieses Modells nach einem Fehler eine Weile übersprungen. Das Kontingent gilt je Modell, darum die Sperre auch.
      */
     private suspend fun gemini(text: String, modell: String, stimmeId: String, nurSchluessel: String?, mitAusweg: Boolean, tempo: Float): File {
+        // Das Tempo entsteht erst auf dem Handy: Kurze Texte (etwa die Probe nach jeder Tempoänderung) kommen ungestreckt
+        // aus dem Vorrat, statt Gemini erneut zu fragen und ins Ratenlimit (429) zu laufen — auch bei gesperrtem Schlüssel.
+        synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] }?.let { return schreibeDatei(mitTempo(it, tempo), "wav") }
         val wahl = when (nurSchluessel) {
             RueckfallStufe.FREI -> SecureSettings.GEMINI_TTS_NUR_FREI
             RueckfallStufe.BEZAHLT -> SecureSettings.GEMINI_TTS_NUR_BEZAHLT
@@ -319,10 +322,6 @@ class Synthese(context: Context, private val settings: SecureSettings) {
 
     private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean, tempo: Float): File {
         val beginn = System.currentTimeMillis()
-        // Das Tempo entsteht erst hier auf dem Handy: Kurze Texte (etwa die Probe nach jeder Tempoänderung) kommen
-        // ungestreckt aus dem Vorrat, statt Gemini erneut zu fragen und ins Ratenlimit (429) zu laufen.
-        val vorratSchluessel = "$modell|$stimmeId|$text"
-        synchronized(tonVorrat) { tonVorrat[vorratSchluessel] }?.let { return schreibeDatei(mitTempo(it, tempo), "wav") }
         // Gemini liest den Text wörtlich vor; eine Anweisung im Text würde mitgesprochen.
         val koerper = JSONObject()
             .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", text)))))
@@ -343,7 +342,8 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             .addHeader("x-goog-api-key", schluessel)
             .post(koerper.toString().toRequestBody(JSON_TYP))
             .build()
-        val kandidat = JSONObject(fuehreAus(anfrage, warteBei429)).optJSONArray("candidates")?.optJSONObject(0)
+        // Nur eine Gemini-Anfrage zugleich: Parallele Absätze verbrauchten das Minutenlimit doppelt (zwei 429 im selben Augenblick).
+        val kandidat = JSONObject(geminiEinzeln.withPermit { fuehreAus(anfrage, warteBei429) }).optJSONArray("candidates")?.optJSONObject(0)
         val ende = kandidat?.optString("finishReason").orEmpty()
         val teil = kandidat?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optJSONObject("inlineData")
         val daten = teil?.optString("data").orEmpty()
@@ -360,7 +360,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (ton != null && text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
-        if (text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel] = wav }
+        if (text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel(modell, stimmeId, text)] = wav }
         val fertig = mitTempo(wav, tempo)
         Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length} tempo=$tempo", System.currentTimeMillis() - beginn)
         return schreibeDatei(fertig, "wav")
@@ -669,39 +669,51 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     }
 
     private suspend fun fuehreAus(anfrage: Request, warteBei429: Boolean = true): String {
+        // Die Sperre gilt je Modell (Pfad) und Schlüssel: Ein anderer Schlüssel gehört zu einem anderen Projekt mit eigener Quote.
+        val ziel = anfrage.url.encodedPath + "|" + (anfrage.header("x-goog-api-key") ?: anfrage.url.queryParameter("key")).hashCode()
         var versuch = 0
         while (true) {
+            // Solange Google dieses Ziel gesperrt hat, verlängert jede weitere Anfrage das Fenster nur: erst abwarten.
+            val sperre = (gesperrtBis[ziel] ?: 0L) - System.currentTimeMillis()
+            if (sperre > 0) {
+                if (!warteBei429 || sperre > RETRY_HOECHSTENS_MS) throw SyntheseAbbruch(kontingentText(sperre))
+                kotlinx.coroutines.delay(sperre)
+            }
             val antwort = client.newCall(anfrage).warte()
             val text = antwort.use { it.body?.string().orEmpty() to it.code }
             val (koerper, code) = text
             when {
                 code in 200..299 -> return koerper
-                // 429: exponentiell warten und erneut versuchen (Baustein D 4.4).
-                code == 429 && warteBei429 && versuch < WARTEZEITEN_MS.size -> {
-                    // Google nennt im 429 meist die Wartezeit bis zum nächsten Minutenfenster („retryDelay": "17s");
-                    // die festen 1/3/8 s reichten dafür nicht, die Probe scheiterte dann.
-                    val vorgabe = Regex("\"retryDelay\"\\s*:\\s*\"(\\d+(?:\\.\\d+)?)s\"").find(koerper)?.groupValues?.get(1)?.toDoubleOrNull()
-                    val ms = maxOf(WARTEZEITEN_MS[versuch], ((vorgabe ?: 0.0) * 1000).toLong().coerceAtMost(RETRY_HOECHSTENS_MS))
-                    kotlinx.coroutines.delay(ms)
+                code == 429 -> {
+                    // Google nennt im 429 die Quote und die Wartezeit („retryDelay": "17s"). Die festen 1/3/8 s lagen oft noch
+                    // im gesperrten Fenster: Proben und Vorlesen scheiterten dann mit jedem Versuch.
+                    val vorgabeMs = RETRY_DELAY.find(koerper)?.groupValues?.get(1)?.toDoubleOrNull()?.let { (it * 1000).toLong() }
+                    val quote = QUOTA_ID.find(koerper)?.groupValues?.get(1).orEmpty()
+                    if (vorgabeMs != null) gesperrtBis[ziel] = System.currentTimeMillis() + vorgabeMs
+                    val ms = maxOf(WARTEZEITEN_MS.getOrElse(versuch) { 0L }, (vorgabeMs ?: 0L) + 500L)
                     de.frank.jarvis.observability.IdeenLog.warn(
                         "Synthese",
                         "fuehreAus",
-                        "Rate-Limit, warte erneut",
-                        mapOf("ms" to ms, "versuch" to versuch),
+                        "Rate-Limit von Google",
+                        mapOf("quote" to quote.ifBlank { "unbekannt" }, "retryDelayMs" to (vorgabeMs ?: -1L), "warte" to ms, "versuch" to versuch),
                     )
+                    // Verlangt Google länger als die Höchstwartezeit (etwa ein Tageskontingent), sofort aufgeben statt sinnlos zu fragen.
+                    if (!warteBei429 || versuch >= WARTEZEITEN_MS.size || ms > RETRY_HOECHSTENS_MS) throw SyntheseAbbruch(kontingentText(vorgabeMs ?: 0L))
+                    kotlinx.coroutines.delay(ms)
                     versuch++
                 }
                 code == 401 || code == 403 -> throw SyntheseAbbruch(
                     "Vorlesen fehlgeschlagen: Der Schlüssel wurde abgelehnt (Fehler $code). " +
                         "Prüf ihn in den Einstellungen.",
                 )
-                code == 429 -> throw SyntheseAbbruch(
-                    "Vorlesen fehlgeschlagen: Das Kontingent der Stimme ist erschöpft (Fehler 429).",
-                )
                 else -> throw SyntheseFehler("Die Stimme antwortete mit Fehler $code: ${koerper.take(200)}")
             }
         }
     }
+
+    private fun kontingentText(restMs: Long): String =
+        "Vorlesen fehlgeschlagen: Google lässt die Stimme gerade nicht zu (Fehler 429, Ratenlimit oder Kontingent)" +
+            (if (restMs >= 1_000L) ", wieder in etwa ${(restMs + 999) / 1000} s." else ".")
 
     private suspend fun ladeHerunter(adresse: String): ByteArray {
         val antwort = client.newCall(Request.Builder().url(adresse).build()).warte()
@@ -759,16 +771,26 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val SSML_TYP = "application/ssml+xml".toMediaType()
         val WARTEZEITEN_MS = longArrayOf(1_000L, 3_000L, 8_000L)
 
-        /** Längste Wartezeit je Versuch, die ein 429 mit retryDelay erzwingen darf. */
-        const val RETRY_HOECHSTENS_MS = 20_000L
+        /** Längste Wartezeit je Versuch, die ein 429 mit retryDelay erzwingen darf; länger = sofort aufgeben. */
+        const val RETRY_HOECHSTENS_MS = 65_000L
+        val RETRY_DELAY = Regex("\"retryDelay\"\\s*:\\s*\"(\\d+(?:\\.\\d+)?)s\"")
+        val QUOTA_ID = Regex("\"quotaId\"\\s*:\\s*\"([^\"]+)\"")
 
-        /** Bis zu dieser Länge bleibt der ungestreckte Gemini-Ton im Vorrat (Proben, kurze Ansagen). */
-        const val VORRAT_ZEICHEN = 300
+        /** Bis wann Google ein Ziel (Modell + Schlüssel) nach einem 429 gesperrt hat. */
+        val gesperrtBis = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
-        /** Ungestreckter Gemini-Ton je Modell, Stimme und Text; die ältesten fallen nach 16 Einträgen heraus. */
-        val tonVorrat = object : LinkedHashMap<String, ByteArray>(16, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ByteArray>) = size > 16
+        /** Gemini-Stimmen fragen nacheinander, nie parallel (gemeinsames Minutenlimit). */
+        val geminiEinzeln = Semaphore(1)
+
+        /** Bis zu dieser Länge bleibt der ungestreckte Gemini-Ton im Vorrat (Proben, kurze Ansagen); rund 8 s Ton. */
+        const val VORRAT_ZEICHEN = 120
+
+        /** Ungestreckter Gemini-Ton je Modell, Stimme und Text; die ältesten fallen nach 8 Einträgen heraus. */
+        private val tonVorrat = object : LinkedHashMap<String, ByteArray>(8, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ByteArray>) = size > 8
         }
+
+        fun vorratSchluessel(modell: String, stimmeId: String, text: String) = "$modell|$stimmeId|$text"
 
         /** Reicht zusammen über das Minutenfenster von F0. */
         val AZURE_WARTEZEITEN_MS = longArrayOf(3_000L, 10_000L, 20_000L, 30_000L)
