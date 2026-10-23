@@ -119,6 +119,8 @@ namespace TerminalVoiceOverlay.Services
                     end++; // never split CRLF
                 else if (end < text.Length && lastSpaceCut > start && text[end] != '\n' && text[end] != '\r')
                     end = lastSpaceCut;
+                if (end < text.Length && end - start > 1 && char.IsLowSurrogate(text[end]))
+                    end--; // never split a surrogate pair (emoji)
                 chunks.Add(text.Substring(start, end - start));
                 start = end;
             }
@@ -190,13 +192,14 @@ namespace TerminalVoiceOverlay.Services
                 try
                 {
                     // Preserve every clipboard format, not only text.
+                    var chunks = SplitIntoPasteChunks(text);
                     var clipboardSw = Stopwatch.StartNew();
                     clipboardSet = TryRunOnUiThread(() =>
                     {
                         previousClipboard = ClipboardSnapshot.Capture(out previousHadContent);
                         // Same text formats as Clipboard.SetText, plus opt-out of
                         // clipboard history (Win+V) and cloud sync.
-                        Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(SplitIntoPasteChunks(text)[0]), true);
+                        Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(chunks[0]), true);
                         ownedClipboardSequence = GetClipboardSequenceNumber();
                     });
                     DiagLog.Perf("Paste", "clipboard_set", clipboardSw, ("ok", clipboardSet), ("chars", text.Length));
@@ -221,22 +224,53 @@ namespace TerminalVoiceOverlay.Services
                             ReleaseNonCtrlModifiers();
 
                             var sendSw = Stopwatch.StartNew();
-                            var chunks = SplitIntoPasteChunks(text);
                             pasteSent = SendCtrlV();
-                            for (int i = 1; pasteSent && i < chunks.Count; i++)
+                            bool allChunksSent = pasteSent;
+                            int chunksSent = pasteSent ? 1 : 0;
+                            for (int i = 1; allChunksSent && i < chunks.Count; i++)
                             {
                                 // Give the terminal time to read the previous chunk before
                                 // the clipboard changes, otherwise it pastes the next one twice.
                                 Thread.Sleep(ChunkPasteDelayMs);
                                 var chunk = chunks[i];
-                                pasteSent = TryRunOnUiThread(() =>
+                                bool changedExternally = false;
+                                bool chunkSet = TryRunOnUiThread(() =>
                                 {
+                                    // Whatever was copied meanwhile belongs to the user — never overwrite it.
+                                    if (GetClipboardSequenceNumber() != ownedClipboardSequence)
+                                    {
+                                        changedExternally = true;
+                                        return;
+                                    }
                                     Clipboard.SetDataObject(ClipboardSnapshot.CreateTextData(chunk), true);
                                     ownedClipboardSequence = GetClipboardSequenceNumber();
-                                }) && BringToForeground(terminalHwnd) && SendCtrlV();
+                                });
+
+                                string? failedStep = null;
+                                if (changedExternally) failedStep = "clipboard_changed_externally";
+                                else if (!chunkSet) failedStep = "clipboard_set";
+                                else
+                                {
+                                    ReleaseNonCtrlModifiers();
+                                    if (!BringToForeground(terminalHwnd)) failedStep = "foreground";
+                                    else
+                                    {
+                                        ReleaseNonCtrlModifiers();
+                                        if (!SendCtrlV()) failedStep = "ctrl_v";
+                                    }
+                                }
+
+                                if (failedStep is null) chunksSent++;
+                                else
+                                {
+                                    allChunksSent = false;
+                                    DiagLog.Warn("Paste", "chunk_failed", ("chunk", i + 1), ("of", chunks.Count), ("step", failedStep));
+                                }
                             }
                             if (chunks.Count > 1)
-                                DiagLog.Write("Paste", "chunked", ("chunks", chunks.Count), ("ok", pasteSent));
+                                DiagLog.Write("Paste", "chunked", ("chunks", chunks.Count), ("sent", chunksSent));
+                            // A partly pasted text is already in the terminal: report success so
+                            // callers don't paste it a second time, but never auto-submit it.
                             succeeded = pasteSent;
                             DiagLog.Perf("Paste", "ctrl_v", sendSw, ("ok", pasteSent));
                             if (!pasteSent)
@@ -245,7 +279,9 @@ namespace TerminalVoiceOverlay.Services
                                     ("error", Marshal.GetLastWin32Error()));
                             }
 
-                            if (pasteSent && autoEnter)
+                            if (pasteSent && autoEnter && !allChunksSent)
+                                DiagLog.Warn("Paste", "auto_enter_skipped_partial_paste");
+                            else if (pasteSent && autoEnter)
                             {
                                 Thread.Sleep(300);
                                 if (!BringToForeground(terminalHwnd))
