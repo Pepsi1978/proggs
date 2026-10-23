@@ -23,6 +23,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Semaphore
@@ -352,16 +353,27 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
+        val fertig = mitTempo(wav, tempo)
         Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length} tempo=$tempo", System.currentTimeMillis() - beginn)
-        return schreibeDatei(mitTempo(wav, tempo), "wav")
+        return schreibeDatei(fertig, "wav")
+    }
+
+    /** true bei einem schlichten WAV-Kopf (44 Byte, PCM 16 Bit mono); nur den kann [mitTempo] strecken. */
+    private fun schlichtesWav(wav: ByteArray): Boolean {
+        if (wav.size < 44) return false
+        val b = java.nio.ByteBuffer.wrap(wav).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        fun kennung(ab: Int) = String(wav, ab, 4, Charsets.US_ASCII)
+        return kennung(0) == "RIFF" && kennung(8) == "WAVE" && kennung(12) == "fmt " && b.getShort(20).toInt() == 1 &&
+            b.getShort(22).toInt() == 1 && b.getShort(34).toInt() == 16 && kennung(36) == "data"
     }
 
     /**
      * Gemini kennt kein Sprechtempo, und eine Anweisung im Text würde mitgesprochen: Darum wird der fertige Ton
-     * (16 Bit mono) per WSOLA gestreckt oder gestaucht. Die Tonhöhe bleibt dabei gleich.
+     * (16 Bit mono) per WSOLA gestreckt oder gestaucht. Die Tonhöhe bleibt dabei gleich. Anfang und Ende bleiben
+     * ungeblendet erhalten; ein unbekannter WAV-Kopf bleibt ungestreckt.
      */
-    private fun mitTempo(wav: ByteArray, tempo: Float): ByteArray {
-        if (kotlin.math.abs(tempo - 1f) < 0.02f || wav.size < 44 + 4_000) return wav
+    private suspend fun mitTempo(wav: ByteArray, tempo: Float): ByteArray {
+        if (kotlin.math.abs(tempo - 1f) < 0.02f || wav.size < 44 + 4_000 || !schlichtesWav(wav)) return wav
         val rate = wavRate(wav)
         val ein = ShortArray((wav.size - 44) / 2)
         java.nio.ByteBuffer.wrap(wav, 44, ein.size * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(ein)
@@ -370,16 +382,18 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val such = rate * 10 / 1000
         // Hann-Fenster: Bei halber Überlappung ergänzen sich die Fenster genau zu 1.
         val fenster = FloatArray(w) { (0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * it / w)).toFloat() }
-        val aus = FloatArray((ein.size / tempo).toInt() + 2 * w)
+        val aus = FloatArray((maxOf(ein.size.toFloat(), ein.size / tempo)).toInt() + 4 * w + 2 * such)
         var vorher = 0
         var k = 0
         while (true) {
             val ziel = (k * hs * tempo).roundToInt()
             val o = k * hs
             if (ziel + w + such >= ein.size || o + w > aus.size) break
+            if (k % 200 == 199) kotlinx.coroutines.currentCoroutineContext().ensureActive()
             var pos = ziel
             val natuerlich = vorher + hs
-            // Den Ausschnitt um das Ziel suchen, der am besten an den vorigen anschließt (grob gerastert, reicht für Sprache).
+            // Den Ausschnitt um das Ziel suchen, der am besten an den vorigen anschließt (grob gerastert, reicht für Sprache);
+            // nach Energie normiert, sonst gewönne ein lauter, schlecht passender Ausschnitt.
             if (k > 0 && natuerlich + w < ein.size) {
                 var bester = Double.NEGATIVE_INFINITY
                 var d = -such
@@ -387,18 +401,26 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                     val c = ziel + d
                     if (c >= 0) {
                         var summe = 0.0
+                        var energie = 0.0
                         var i = 0
-                        while (i < w) { summe += ein[natuerlich + i].toDouble() * ein[c + i]; i += 4 }
-                        if (summe > bester) { bester = summe; pos = c }
+                        while (i < w) { val x = ein[c + i].toDouble(); summe += ein[natuerlich + i] * x; energie += x * x; i += 4 }
+                        val guete = summe / kotlin.math.sqrt(energie + 1.0)
+                        if (guete > bester) { bester = guete; pos = c }
                     }
                     d += 2
                 }
             }
-            for (i in 0 until w) aus[o + i] += ein[pos + i] * fenster[i]
+            // Der erste Ausschnitt hat keinen Vorgänger: seine erste Hälfte ungeblendet, sonst finge jeder Absatz mit einer Blende an.
+            for (i in 0 until w) aus[o + i] += ein[pos + i] * (if (k == 0 && i < hs) 1f else fenster[i])
             vorher = pos
             k++
         }
-        val laenge = k * hs + hs
+        if (k == 0) return wav
+        // Ab der Mitte des letzten Ausschnitts den restlichen Ton unverändert anhängen: So fehlt am Ende nichts.
+        val start = (k - 1) * hs + hs
+        val rest = ein.size - (vorher + hs)
+        for (i in 0 until rest) aus[start + i] = ein[vorher + hs + i].toFloat()
+        val laenge = start + rest
         val pcm = java.nio.ByteBuffer.allocate(laenge * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN)
         for (i in 0 until laenge) pcm.putShort(aus[i].roundToInt().coerceIn(-32768, 32767).toShort())
         return mitWavKopf(pcm.array(), rate)
