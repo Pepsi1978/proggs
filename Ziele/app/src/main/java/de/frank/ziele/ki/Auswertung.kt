@@ -160,7 +160,8 @@ object Auswertung {
             schluessel
         }
         val neu = objekte.mapIndexed { i, o ->
-            val titel = o.optString("titel").trim().trim('„', '“', '"')
+            // Sicherheitsnetz: „Kläre du deinen …“ → „Kläre deinen …“ (Imperativ mit überflüssigem „du“).
+            val titel = o.optString("titel").trim().trim('„', '“', '"').replace(DU_NACH_VERB, "$1 ").trimEnd('.')
             val schluessel = schluesselJe[i]
             val vor = o.optJSONArray("voraussetzungen")?.let { a -> (0 until a.length()).map { a.optString(it).trim() }.filter { it.isNotEmpty() } }.orEmpty()
                 .map { umbenannt[it] ?: it }.filter { it != schluessel }
@@ -212,6 +213,8 @@ object Auswertung {
         return runCatching { JSONObject(ohneZaun.substring(anfang, ende + 1)) }.getOrNull()
     }
 
+    private val DU_NACH_VERB = Regex("^(\\p{L}+)\\s+du\\s+", RegexOption.IGNORE_CASE)
+
     private const val RECHERCHE_ANWEISUNG =
         "Du bist ein erstklassiger Coach und Rechercheur. Frank hat ein persönliches Ziel. Finde gründlich heraus, wie man genau dieses Ziel " +
             "am besten erreicht, und schneide alles auf Frank zu (Kontext unten: sein Alltag, seine Arbeit im Schichtdienst, seine Gesundheit, " +
@@ -238,8 +241,17 @@ object Auswertung {
             "Zwei Gruppen:\n" +
             "- NOTWENDIG: wirklich wichtig, ohne diese Aufgaben wird das Ziel nicht erreicht.\n" +
             "- UNTERSTUETZEND: nicht unbedingt nötig, aber hilfreich (leichter, schneller, sicherer, angenehmer).\n\n" +
-            "Jede Aufgabe ist eine klare, erledigbare Handlung in Befehlsform mit „du“ (z. B. „Melde dich beim Lauftreff Köpenick an“), " +
-            "Titel höchstens 35 Zeichen, ohne Punkt am Ende. Wiederkehrende Gewohnheiten (z. B. „Laufe dreimal pro Woche 30 Minuten“) sind erlaubt und als wiederkehrend markiert.\n\n" +
+            "SPRACHE (sehr wichtig, Frank liest und hört jeden Vorschlag): einwandfreies, natürliches Deutsch, wie es ein guter Muttersprachler schreibt, " +
+            "grammatisch korrekt und auf Anhieb verständlich, ohne Fachjargon und ohne Wortneuschöpfungen.\n" +
+            "- Titel: eine klare, erledigbare Handlung als Aufforderung in der Du-Form, aber OHNE das Wort „du“ (Imperativ: „Kläre“, „Übe“, „Lies“, „Melde dich“). " +
+            "Etwa drei bis acht Wörter, höchstens 60 Zeichen, ohne Punkt am Ende; lieber ein Wort mehr als unverständlich. " +
+            "Der Titel muss für sich allein verständlich sein: Was genau ist zu tun?\n" +
+            "  Gut: „Melde dich beim Lauftreff Köpenick an“, „Lies täglich zehn Minuten laut vor“, „Lass beim Hausarzt eine Logopädie verordnen“, „Nimm dich einmal pro Woche beim Erzählen auf“.\n" +
+            "  Falsch: „Kläre du deinen Sprachverlauf“ (überflüssiges „du“, unklar), „Übe du acht Minuten klar sprechen“ (falsche Wortstellung), " +
+            "„Ziehe du etwas Sprachbilanzen“ (kein Deutsch), „Kläre den logopädischen Bedarf“ (Amtsdeutsch, unklar, was zu tun ist).\n" +
+            "- text, begruendung und erfolg: ganze, vollständige Sätze in der Du-Form, gut vorlesbar.\n" +
+            "Prüfe jeden Titel und Satz vor der Ausgabe: Würde ein Deutschlehrer ihn so stehen lassen? Wenn nicht, formuliere ihn neu.\n\n" +
+            "Wiederkehrende Gewohnheiten (z. B. „Laufe dreimal pro Woche 30 Minuten“) sind erlaubt und als wiederkehrend markiert.\n\n" +
             "Antworte NUR mit einem JSON-Objekt, ohne Text davor oder danach, genau in dieser Form:\n" +
             "{\n" +
             "  \"symbol\": \"ein passendes Emoji für das Ziel\",\n" +
@@ -247,7 +259,7 @@ object Auswertung {
             "  \"vorschlaege\": [\n" +
             "    {\n" +
             "      \"schluessel\": \"v1\",\n" +
-            "      \"titel\": \"kurzer Titel in Befehlsform\",\n" +
+            "      \"titel\": \"Lies täglich zehn Minuten laut vor\",\n" +
             "      \"text\": \"ein bis drei Sätze: was genau zu tun ist, konkret\",\n" +
             "      \"begruendung\": \"ein Satz: warum das auf das Ziel einzahlt\",\n" +
             "      \"kategorie\": \"NOTWENDIG oder UNTERSTUETZEND\",\n" +
