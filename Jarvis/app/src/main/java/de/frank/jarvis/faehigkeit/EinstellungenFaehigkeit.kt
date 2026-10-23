@@ -120,10 +120,13 @@ class EinstellungsKatalog(context: Context) {
      * genau („5“ ist nicht „50 Schritte“, „1“ nicht „10“); passt er nicht eindeutig, wird er abgelehnt statt geraten.
      * Die möglichen Werte stehen immer zum aktuellen Stand da (die Denkstufen etwa hängen vom gewählten Modell ab).
      */
-    private fun auswahl(kennung: String, bereich: String, titel: String, beschreibung: String, optionen: () -> List<Pair<String, String>>, lies: () -> String, setze: (String) -> Unit) =
+    private fun auswahl(kennung: String, bereich: String, titel: String, beschreibung: String, optionen: () -> List<Pair<String, String>>, lies: () -> String,
+                        zweitnamen: () -> List<Pair<String, String>> = { emptyList() }, setze: (String) -> Unit) =
         Eintrag(kennung, bereich, titel, beschreibung, "", { val w = lies(); optionen().firstOrNull { it.first == w }?.second ?: w },
             { "eine von: " + optionen().joinToString(", ") { it.second } }) { w ->
-            val o = optionen()
+            val sichtbar = optionen()
+            // Zweitnamen (z. B. „Sehr hoch“ neben „Extra hoch“) werden erkannt, aber nicht als Möglichkeit genannt.
+            val o = sichtbar + zweitnamen().filter { z -> sichtbar.any { it.first == z.first } }
             val nw = norm(w)
             // Anfang des Namens („Gemini 3.8“ → „Gemini 3.8 Live“), aber eine Zahl nie als Anfang einer längeren Zahl („5“ → „50 Schritte“).
             fun anfang(name: String) = name.startsWith(nw) && (!nw.last().isDigit() || name.length == nw.length || name[nw.length].isWhitespace() || name[nw.length] == '(')
@@ -132,7 +135,7 @@ class EinstellungsKatalog(context: Context) {
                 // Sonst nur genau dieselbe Zahl wie eine rein numerische Kennung („Schrittlimit 50“ → 50), und nur wenn eindeutig.
                 ?: if (z == null) null else o.filter { norm(it.first).all { c -> c.isDigit() || c == '.' } && zahlIn(norm(it.first)) == z }.singleOrNull()
             val treffer = o.firstOrNull { norm(it.first) == nw || norm(it.second) == nw } ?: ungefaehr
-                ?: throw IllegalArgumentException("„$w“ gibt es hier nicht eindeutig. Möglich: ${o.joinToString(", ") { it.second }}.")
+                ?: throw IllegalArgumentException("„$w“ gibt es hier nicht eindeutig. Möglich: ${sichtbar.joinToString(", ") { it.second }}.")
             setze(treffer.first)
         }
 
@@ -399,7 +402,8 @@ class EinstellungsKatalog(context: Context) {
                 val m = CodexModel.valueOf(w); e.modell = m; e.denkstufe = m.normalizeEffort(e.denkstufe)
             },
             auswahl("denkstufe", "Modell", "Denkstufe", "Wie gründlich das Modell nachdenkt.",
-                { e.modell.supportedEfforts.map { it.name to it.titel(e.modell) } }, { e.denkstufe.name }) { e.denkstufe = ReasoningEffort.valueOf(it) },
+                { e.modell.supportedEfforts.map { it.name to it.titel(e.modell) } }, { e.denkstufe.name },
+                { ReasoningEffort.entries.flatMap { st -> listOf(st.name to st.label, st.name to st.anthropicLabel) } }) { e.denkstufe = ReasoningEffort.valueOf(it) },
             auswahl("schrittlimit", "Modell", "Schrittlimit pro Anfrage", "Höchstens so viele Bearbeitungsrunden samt Werkzeugaufrufen je Anfrage, im Chat und bei allen Agenten; Unbegrenzt hebt nur dieses Limit auf (Zeitlimit und Abbrechen gelten weiter) und kann mehr kosten und länger dauern.",
                 { Einstellungen.SCHRITTLIMITS.map { it.toString() to Einstellungen.schrittlimitLabel(it) } }, { e.schrittlimit.toString() }) { e.schrittlimit = it.toInt() },
 

@@ -40,22 +40,24 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
     }
 }
 
-enum class ReasoningEffort(val label: String, val apiValue: String) {
+/** [label] ist der OpenAI-Name; [anthropicLabel] der Name in der Claude-App (Niedrig, Mittel, Hoch, Extra hoch, Maximal). Anzeigen über [titel]. */
+enum class ReasoningEffort(val label: String, val apiValue: String, val anthropicLabel: String = label) {
     LOW("Niedrig", "low"),
     MEDIUM("Mittel", "medium"),
     HIGH("Hoch", "high"),
-    XHIGH("Sehr hoch", "xhigh"),
+    XHIGH("Sehr hoch", "xhigh", "Extra hoch"),
     MAX("Maximal", "max"),
     ULTRA("Ultra", "ultra"),
     ;
 
-    /** Anzeigename je Modell: Anthropic nennt die Stufen wie in der Claude-App (Niedrig, Mittel, Hoch, Extra hoch, Maximal). */
-    fun titel(modell: CodexModel?): String = if (this == XHIGH && modell?.istAnthropic == true) "Extra hoch" else label
+    /** Anzeigename je Modell; ohne Modell der OpenAI-Name. */
+    fun titel(modell: CodexModel?): String = if (modell?.istAnthropic == true) anthropicLabel else label
 
     companion object {
         fun fromLabel(value: String): ReasoningEffort = entries.firstOrNull {
-            it.label.equals(value.trim(), ignoreCase = true) || it.apiValue.equals(value.trim(), ignoreCase = true)
-        } ?: if (value.trim().equals("Extra hoch", ignoreCase = true)) XHIGH else MEDIUM
+            it.label.equals(value.trim(), ignoreCase = true) || it.anthropicLabel.equals(value.trim(), ignoreCase = true) ||
+                it.apiValue.equals(value.trim(), ignoreCase = true)
+        } ?: MEDIUM
     }
 }
 

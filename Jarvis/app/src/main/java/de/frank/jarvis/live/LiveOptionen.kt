@@ -176,7 +176,7 @@ object LiveOptionen {
         "low" to Wahl("low", "Niedrig", "Kurz nachdenken, gut für Werkzeuge mit Fokus auf Tempo. Empfehlung für Jarvis."),
         "medium" to Wahl("medium", "Mittel", "Standard der Modelle, merklich langsamer im Gespräch."),
         "high" to Wahl("high", "Hoch", "Für schwere Fragen; deutlich längere Pausen und mehr Kosten."),
-        "xhigh" to Wahl("xhigh", "Sehr hoch", "Nur wenn es wirklich nötig ist; lange Denkpausen."),
+        "xhigh" to Wahl("xhigh", de.frank.jarvis.auth.ReasoningEffort.XHIGH.label,"Nur wenn es wirklich nötig ist; lange Denkpausen."),
         "max" to Wahl("max", "Maximal", "Das Gründlichste. Neu, wird eventuell noch abgelehnt."),
     )
     private fun backendEfforts(modell: String): List<String> = when (modell) {
@@ -231,12 +231,14 @@ object LiveOptionen {
     /** Das unter „Denk-Modell von Jarvis“ gewählte Modell; null = wie im Chat. */
     private fun gewaehltesModell(st: Stand): de.frank.jarvis.auth.CodexModel? =
         st["j_modell"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.CodexModel.fromLabel(it) }
+    /** Das Modell, mit dem Jarvis direkt tatsächlich denkt: das gewählte, sonst das des Chats (für Stufenauswahl und -namen). */
+    private fun denkModell(st: Stand): de.frank.jarvis.auth.CodexModel? = gewaehltesModell(st) ?: de.frank.jarvis.data.Einstellungen.vorhanden()?.modell
     fun jarvisDenkstufe(st: Stand): de.frank.jarvis.auth.ReasoningEffort? =
         if (!st.jarvisDirekt) null else st["j_denken"].takeIf { it != "standard" }?.let { de.frank.jarvis.auth.ReasoningEffort.fromLabel(it) }
 
     /** Ein kurzer Text, womit Jarvis direkt denkt, für die Übersicht. */
     private fun jarvisDenktText(st: Stand): String =
-        "Jarvis denkt selbst (" + (jarvisModell(st)?.label ?: "Modell wie im Chat") + ", " + (jarvisDenkstufe(st)?.titel(jarvisModell(st)) ?: "Stufe wie im Chat") + ")"
+        "Jarvis denkt selbst (" + (jarvisModell(st)?.label ?: "Modell wie im Chat") + ", " + (jarvisDenkstufe(st)?.titel(denkModell(st)) ?: "Stufe wie im Chat") + ")"
     private const val GEMINI_PREIS_TEXT = "Audio 3 / 12 $, Text 0,75 / 4,50 $ je 1 Mio. Tokens (ein / aus), etwa 0,005 $ je Minute hören und 0,018 $ je Minute sprechen; mit kostenlosem Schlüssel 0 $"
 
     val alle: List<Option> = listOf(
@@ -288,7 +290,7 @@ object LiveOptionen {
             "Höher = gründlicher, aber längere Pausen. Zählt gegen dein Abo-Kontingent.",
             "standard", { st ->
                 listOf(Wahl("standard", "Wie im Chat", "Dieselbe Denkstufe wie im normalen Jarvis-Chat.")) +
-                    (gewaehltesModell(st)?.supportedEfforts ?: de.frank.jarvis.auth.ReasoningEffort.entries.toList()).map { Wahl(it.apiValue, it.titel(gewaehltesModell(st)), JARVIS_STUFE_TEXT[it.apiValue].orEmpty()) }
+                    denkModell(st).let { m -> (m?.supportedEfforts ?: de.frank.jarvis.auth.ReasoningEffort.entries.toList()).map { Wahl(it.apiValue, it.titel(m), JARVIS_STUFE_TEXT[it.apiValue].orEmpty()) } }
             }, gilt = { it.jarvisDirekt }),
         Option("g_denken", "Live-Gespräch", "Denkstufe (Gemini)",
             "Mehr Denken = längere Pausen und mehr Tokens.",
