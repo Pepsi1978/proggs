@@ -5,6 +5,7 @@
     { "versionCode": 1, "versionName": "1.0.0", "stand": "23.10.2026, 16:10 Uhr", "notiz": "Erste Version: Ziele einsprechen, per KI-Recherche auswerten, notwendige und unterstützende Aufgaben mit Plus nach Geniale Aufgaben, Sortierungen, Kontextdatei, Gold hell und dunkel." },
     { "versionCode": 2, "versionName": "1.0.1", "stand": "23.10.2026, 16:27 Uhr", "notiz": "Übernommene Aufgaben bleiben auch bei vielen Aufgaben verknüpft, Bearbeiten während einer Auswertung verliert keinen Bericht mehr, die Kontextdatei speichert auch beim schnellen Verlassen und verliert keine Ergänzungen." },
     { "versionCode": 3, "versionName": "1.0.2", "stand": "23.10.2026, 17:17 Uhr", "notiz": "Das Tempo wirkt jetzt auch bei den Gemini-Stimmen, die Probe klingt nach jeder Tempoänderung zuverlässig und die Stimmen heißen Gemini 3.8 und Gemini 3.8 Lite." },
-    { "versionCode": 4, "versionName": "1.0.3", "stand": "23.10.2026, 17:29 Uhr", "notiz": "Ist eine Gemini- oder Azure-Stimme gerade ausgeschöpft (Fehler 429), liest die Probe sofort mit der Edge-Stimme im eingestellten Tempo und ein Hinweis nennt den Grund, statt stumm zu bleiben." }
+    { "versionCode": 4, "versionName": "1.0.3", "stand": "23.10.2026, 17:29 Uhr", "notiz": "Ist eine Gemini- oder Azure-Stimme gerade ausgeschöpft (Fehler 429), liest die Probe sofort mit der Edge-Stimme im eingestellten Tempo und ein Hinweis nennt den Grund, statt stumm zu bleiben." },
+    { "versionCode": 5, "versionName": "1.0.4", "stand": "23.10.2026, 17:32 Uhr", "notiz": "Gestreckte Gemini-Proben enden ohne Rauschen, die Probe kommt auch bei pausiertem Schlüssel aus dem Vorrat, ein zweiter Tipp während des Ladens startet sie neu und Google-Sperren werden abgewartet statt sinnlos wiederholt." }
   ]
 }

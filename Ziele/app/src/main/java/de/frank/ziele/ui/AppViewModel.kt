@@ -364,11 +364,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ================= Vorlesen =================
 
     /** Die Stimme wird gerade erzeugt (noch kein Ton): Ein zweiter Tipp auf die Probe bricht sie dann nicht ab. */
-    private var vorleseLaedt = false
+    @Volatile private var vorleseLaedt = false
 
     fun vorlesen(schluessel: String, text: String) {
-        if (sprichtId == schluessel && schluessel == "probe" && vorleseLaedt) { melde("Die Probe wird noch erzeugt …"); return }
-        if (sprichtId == schluessel) { tts.stop(); sprichtId = null; return }
+        // Ein zweiter Tipp auf die Probe, solange sie noch erzeugt wird, startet sie neu (mit dem jetzt eingestellten Tempo);
+        // läuft sie schon hörbar, hält er sie an.
+        val neuStart = sprichtId == schluessel && schluessel == "probe" && vorleseLaedt
+        if (sprichtId == schluessel && !neuStart) { tts.stop(); sprichtId = null; vorleseLaedt = false; return }
         sprichtId = schluessel
         vorleseLaedt = true
         tts.speak(
