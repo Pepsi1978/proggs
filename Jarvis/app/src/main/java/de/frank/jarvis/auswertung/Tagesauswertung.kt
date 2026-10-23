@@ -374,7 +374,7 @@ object Tagesauswertung {
     private fun auftrag(daten: String): String = """
 Schreibe Franks Tagesauswertung. Sie wird gespeichert und ihm später vorgelesen: ganze, gut sprechbare Sätze, du-Anrede, keine Tabellen, kein Markdown.
 
-Dein Ziel: Frank weiß danach, wie es ihm geht, was für ein Tag heute ist und was jetzt sinnvoll ist. Schreibe ausführlich und verbinde die Daten miteinander, statt sie nacheinander aufzuzählen.
+Dein Ziel: Frank weiß danach, wie es ihm geht, was für ein Tag heute ist und was jetzt sinnvoll ist. Der Schwerpunkt liegt auf dem heutigen Tag: AKTUELL ist der ausführliche Hauptteil und macht etwa zwei Drittel der Auswertung aus. RÜCKBLICK und AUSBLICK sind kurz und dienen nur dazu, das Heute einzuordnen: woher der heutige Zustand kommt und worauf er hinausläuft. Verbinde die Daten miteinander, statt sie nacheinander aufzuzählen.
 
 So gehst du vor:
 1. Lies zuerst den RAHMEN. Er legt verbindlich fest, ob ein Tag Arbeitstag oder frei ist, welcher Dienst ansteht, wann Frank schläft und wann er Zeit hat. Rechne das nicht neu.
@@ -391,11 +391,11 @@ Feste Regeln:
 
 Aufbau: Beginne mit einem Satz Fazit. Danach folgen genau diese drei Teile, jeder mit seiner Überschrift in Großbuchstaben auf eigener Zeile.
 
-RÜCKBLICK: Die letzten Tage. Welche Dienste und freien Tage hinter Frank liegen, wie sich Schlaf und Erholung dazu entwickelt haben (Tagschlaf nach Nachtdiensten gesondert betrachten), welche Trainings es gab und was er laut Tagebuch gemacht und erlebt hat.
+RÜCKBLICK: Kurz, höchstens ein Absatz mit drei bis fünf Sätzen. Nur was den heutigen Zustand erklärt: welche Dienste oder freien Tage direkt hinter Frank liegen, die wichtigste Entwicklung bei Schlaf, Erholung und Training (Tagschlaf nach Nachtdiensten gesondert betrachten) und höchstens ein Tagebuch-Thema, das ihn noch beschäftigt. Keine Tag-für-Tag-Aufzählung, keine Wiederholung einzelner Werte, die in AKTUELL ohnehin vorkommen.
 
-AKTUELL: Der heutige Tag. Was für ein Tag es ist (Dienst oder frei, Abfahrt, Schlaf- und freie Zeitfenster) und welche Termine anstehen. Wie es Frank heute geht: der letzte Schlaf mit Dauer, Tiefschlaf, REM und Wachzeit, dazu Erholung, HRV und Ruhepuls, eingeordnet gegen 7 Tage, den letzten Monat und alle bisherigen Tage und bezogen auf die Art des Tages. Körperwerte nur, wenn sie neu oder auffällig sind. Das Wetter jetzt und über den Tag. Welche Aufgaben heute anliegen oder überfällig sind und welche in die freien Zeitfenster passen. Dann eine klare Einschätzung, wie belastbar Frank heute ist, und zwei bis vier konkrete Empfehlungen, was als Nächstes sinnvoll ist. Passt eine der genialen Ideen zu Zeit und Kraft von heute, nenne sie; zähle die Ideen nicht auf.
+AKTUELL: Der heutige Tag, der ausführliche Hauptteil. Stelle hier den Zusammenhang zur Vergangenheit her (warum die Werte heute so sind) und zum Ausblick (was das Heute für die nächsten Tage bedeutet). Was für ein Tag es ist (Dienst oder frei, Abfahrt, Schlaf- und freie Zeitfenster) und welche Termine anstehen. Wie es Frank heute geht: der letzte Schlaf mit Dauer, Tiefschlaf, REM und Wachzeit, dazu Erholung, HRV und Ruhepuls, eingeordnet gegen 7 Tage, den letzten Monat und alle bisherigen Tage und bezogen auf die Art des Tages. Körperwerte nur, wenn sie neu oder auffällig sind. Das Wetter jetzt und über den Tag. Welche Aufgaben heute anliegen oder überfällig sind und welche in die freien Zeitfenster passen. Dann eine klare Einschätzung, wie belastbar Frank heute ist, und zwei bis vier konkrete Empfehlungen, was als Nächstes sinnvoll ist. Passt eine der genialen Ideen zu Zeit und Kraft von heute, nenne sie; zähle die Ideen nicht auf.
 
-AUSBLICK: Die nächsten Tage. Kommende Dienste und freie Tage, Termine, die Aufgaben von morgen, das Wetter für morgen und übermorgen und das beste Zeitfenster für einen Lauf oder ein Vorhaben draußen. Woran Frank rechtzeitig denken sollte (zum Beispiel Vorschlafen vor einem Nachtdienst-Block, früh schlafen vor einem Tagdienst, ein Wecker, der zum Dienst fehlt, Abholung der Tonnen). Und welche Idee oder größere Aufgabe sich für den nächsten freien Tag anbietet.
+AUSBLICK: Kurz, höchstens ein Absatz mit drei bis fünf Sätzen. Nur das Wichtigste der nächsten Tage: der nächste Dienst oder freie Tag, ein wichtiger Termin, das beste Zeitfenster draußen für morgen und woran Frank rechtzeitig denken muss (zum Beispiel Vorschlafen vor einem Nachtdienst-Block, früh schlafen vor einem Tagdienst, ein Wecker, der zum Dienst fehlt, Abholung der Tonnen). Keine Tag-für-Tag-Beschreibung des ganzen Dienstblocks; eine Idee für den nächsten freien Tag nur, wenn sie wirklich passt.
 
 DATEN:
 $daten
