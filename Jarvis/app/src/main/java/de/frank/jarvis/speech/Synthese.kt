@@ -5,6 +5,7 @@ import android.util.Base64
 import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.tts.EdgeTtsPlayer
+import de.frank.jarvis.tts.RueckfallStufe
 import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
 import de.frank.jarvis.tts.deutschesSsml
@@ -95,20 +96,51 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     private fun anbieter(wahl: StimmWahl?): String =
         wahl?.stimme?.let { TtsCatalog.anbieterZu(it)?.id } ?: settings.ttsProvider
 
+    /**
+     * Erzeugt den Absatz mit der gewählten Stimme. Scheitert sie, geht es die Rückfallkette
+     * ([SecureSettings.ttsRueckfallKette]) der Reihe nach durch, jede Stufe mit ihrer eigenen eingestellten Stimme.
+     * Netzfehler laufen unverändert durch — die wiederholt der Vorleser selbst. Scheitern alle, zählt der Fehler der Hauptstimme.
+     */
     suspend fun synthetisiere(text: String, wahl: StimmWahl? = null): File = gleichzeitig.withPermit {
         val sonder = wahl?.stimme?.takeIf { TtsCatalog.anbieterZu(it) != null }
         val tempo = wahl?.tempo ?: settings.ttsSpeechRate
-        when (anbieter(wahl)) {
+        val haupt = anbieter(wahl)
+        // Eine Stufe ohne eigenen Schlüssel ist dieselbe Stimme wie die Hauptstimme und brächte nichts.
+        val kette = settings.ttsRueckfallKette.mapNotNull(TtsCatalog::rueckfallStufe)
+            .filterNot { it.anbieter.id == haupt && it.schluessel == null }
+        val hauptFehler = try {
+            return@withPermit erzeuge(haupt, text, sonder, tempo, null, mitAusweg = kette.isNotEmpty())
+        } catch (fehler: Exception) {
+            if (!rueckfallFaehig(fehler)) throw fehler
+            fehler
+        }
+        kette.forEachIndexed { i, stufe ->
+            try {
+                val datei = erzeuge(stufe.anbieter.id, text, null, tempo, stufe.schluessel, mitAusweg = i < kette.lastIndex)
+                Logbuch.sprache("Vorlese-Rückfall", "stufe=${stufe.id} haupt=$haupt grund=${hauptFehler.message?.take(80)}")
+                return@withPermit datei
+            } catch (fehler: Exception) {
+                if (!rueckfallFaehig(fehler)) throw fehler
+                Logbuch.netz("Vorlese-Rückfall: Stufe gescheitert", "stufe=${stufe.id} ${fehler.message?.take(120)}")
+            }
+        }
+        throw hauptFehler
+    }
+
+    private fun rueckfallFaehig(fehler: Exception) = fehler is SyntheseAbbruch || fehler is SyntheseFehler || fehler is SyntheseZeitlimit
+
+    /** [schluessel] nur für Gemini-Stufen der Rückfallkette: nur der kostenlose bzw. nur der bezahlte Schlüssel. */
+    private suspend fun erzeuge(anbieter: String, text: String, sonder: String?, tempo: Float, schluessel: String?, mitAusweg: Boolean): File =
+        when (anbieter) {
             TtsProvider.GOOGLE_CLOUD.id -> google(text, sonder, tempo)
-            TtsProvider.GEMINI_FLASH.id -> gemini(text, GEMINI_FLASH_MODELL, sonder ?: settings.geminiFlashTtsVoice, tempo)
-            TtsProvider.GEMINI_LITE.id -> gemini(text, GEMINI_LITE_MODELL, sonder ?: settings.geminiLiteTtsVoice, tempo)
+            TtsProvider.GEMINI_FLASH.id -> gemini(text, GEMINI_FLASH_MODELL, sonder ?: settings.geminiFlashTtsVoice, schluessel, mitAusweg)
+            TtsProvider.GEMINI_LITE.id -> gemini(text, GEMINI_LITE_MODELL, sonder ?: settings.geminiLiteTtsVoice, schluessel, mitAusweg)
             TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
             TtsProvider.QWEN.id -> qwen(text, geklont = false, sonder)
             TtsProvider.EDGE.id -> edge(text, sonder, tempo)
             TtsProvider.AZURE.id -> azure(text, sonder ?: settings.azureTtsVoice, tempo)
             else -> throw SyntheseAbbruch("Diese Stimme kann nicht vorab erzeugt werden.")
         }
-    }
 
     /**
      * Azure AI Speech über REST: Schlüssel und Region der eigenen Speech-Ressource (F0 kostenlos oder S0).
@@ -234,34 +266,35 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     }
 
     /**
-     * Gemini 3.8 Flash bzw. Flash-Lite TTS. Reihenfolge laut [SecureSettings.geminiTtsSchluesselWahl]: erst der
-     * kostenlose, dann der bezahlte Schlüssel. Ist [SecureSettings.geminiTtsChirpRueckfall] an, geht es nach einem
-     * Fehler des kostenlosen Schlüssels nicht zum bezahlten, sondern mit derselben Stimme zu Chirp 3 HD.
-     * Netzfehler laufen unverändert durch — die wiederholt der Vorleser selbst.
+     * Gemini 3.8 Flash bzw. Flash-Lite TTS. Als Hauptstimme gilt die Reihenfolge laut [SecureSettings.geminiTtsSchluesselWahl]:
+     * erst der kostenlose, dann der bezahlte Schlüssel. Als Stufe der Rückfallkette nimmt [nurSchluessel] genau einen davon.
+     * [mitAusweg]: Danach kommt noch eine Rückfallstufe — dann wird bei 429 nicht gewartet und der kostenlose Schlüssel
+     * dieses Modells nach einem Fehler eine Weile übersprungen. Das Kontingent gilt je Modell, darum die Sperre auch.
      */
-    private suspend fun gemini(text: String, modell: String, stimmeId: String, tempo: Float): File {
-        val wahl = settings.geminiTtsSchluesselWahl
+    private suspend fun gemini(text: String, modell: String, stimmeId: String, nurSchluessel: String?, mitAusweg: Boolean): File {
+        val wahl = when (nurSchluessel) {
+            RueckfallStufe.FREI -> SecureSettings.GEMINI_TTS_NUR_FREI
+            RueckfallStufe.BEZAHLT -> SecureSettings.GEMINI_TTS_NUR_BEZAHLT
+            else -> settings.geminiTtsSchluesselWahl
+        }
         val frei = settings.geminiTtsKeyFrei.filterNot(Char::isWhitespace)
         val bezahlt = settings.geminiTtsKeyBezahlt.filterNot(Char::isWhitespace)
-        val chirp = settings.geminiTtsChirpRueckfall
         var fehlerFrei: Exception? = null
         if (wahl != SecureSettings.GEMINI_TTS_NUR_BEZAHLT) {
-            val gesperrt = System.currentTimeMillis() < freiGesperrtBis
+            val gesperrt = System.currentTimeMillis() < (freiGesperrtBis[modell] ?: 0L)
+            // Mit Ausweichweg nicht erst bei 429 warten — der nächste Weg ist schneller als jede Wartezeit.
+            val ausweg = mitAusweg || (wahl == SecureSettings.GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
             if (frei.isNotBlank() && !gesperrt) {
-                // Mit Ausweichweg nicht erst bei 429 warten — der nächste Weg ist schneller als jede Wartezeit.
-                val ausweg = chirp || (wahl == SecureSettings.GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
                 try {
                     return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg)
                 } catch (fehler: Exception) {
                     if (fehler !is SyntheseAbbruch && fehler !is SyntheseFehler) throw fehler
                     fehlerFrei = fehler
-                    if (ausweg) freiGesperrtBis = System.currentTimeMillis() + FREI_PAUSE_MS
+                    if (ausweg) freiGesperrtBis[modell] = System.currentTimeMillis() + FREI_PAUSE_MS
                     Logbuch.netz("Gemini-Stimme: kostenloser Schlüssel gescheitert", "modell=$modell ${fehler.message?.take(120)}")
                 }
-            }
-            if (chirp) {
-                Logbuch.sprache("Gemini-Stimme: Rückfall auf Chirp 3 HD", "stimme=${TtsCatalog.geminiName(stimmeId)} gesperrt=$gesperrt")
-                return google(text, TtsCatalog.chirpZu(stimmeId), tempo)
+            } else if (gesperrt && wahl == SecureSettings.GEMINI_TTS_NUR_FREI) {
+                fehlerFrei = SyntheseAbbruch("Vorlesen fehlgeschlagen: Der kostenlose Gemini-Schlüssel pausiert nach einem Fehler.")
             }
             if (wahl == SecureSettings.GEMINI_TTS_NUR_FREI) {
                 throw fehlerFrei ?: SyntheseAbbruch(
@@ -591,7 +624,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         const val FREI_PAUSE_MS = 10 * 60_000L
 
         /** Gilt für alle Instanzen: Sonst probierte jeder neue Vorleser den gescheiterten Schlüssel erneut. */
-        @Volatile var freiGesperrtBis = 0L
+        val freiGesperrtBis = java.util.concurrent.ConcurrentHashMap<String, Long>()
         const val QWEN_URL =
             "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
         /** Die fertigen Standardstimmen. */

@@ -268,8 +268,17 @@ class EinstellungsKatalog(context: Context) {
             auswahl("vorlese_tempo", "Vorlesen", "Sprechtempo", "Wie schnell Jarvis vorliest.", { tempi }, { tempoText(s.ttsSpeechRate) }) { s.ttsSpeechRate = it.toFloat() },
             auswahl("gemini_tts_schluessel", "Vorlesen", "Gemini-Stimme: welcher Schlüssel", "Ob die Gemini-3.8-Stimme erst den kostenlosen und dann den bezahlten Schlüssel nutzt oder nur einen davon.",
                 { de.frank.jarvis.data.settings.SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN }, { s.geminiTtsSchluesselWahl }) { s.geminiTtsSchluesselWahl = it },
-            schalter("gemini_tts_chirp_rueckfall", "Vorlesen", "Gemini-Stimme: Rückfall auf Chirp 3 HD", "Scheitert der kostenlose Gemini-Schlüssel, liest Jarvis mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
-                { s.geminiTtsChirpRueckfall }) { s.geminiTtsChirpRueckfall = it },
+            Eintrag("vorlese_rueckfall", "Vorlesen", "Rückfall-Reihenfolge der Stimme",
+                "Scheitert die Vorlese-Stimme, probiert Jarvis diese Stufen der Reihe nach, jede mit der bei ihrem Anbieter eingestellten Stimme; ersetzt die ganze Reihenfolge.",
+                "Stufen mit Komma getrennt aus: " + TtsCatalog.rueckfallStufen.joinToString(", ") { it.titel } + "; oder „keine“",
+                { s.ttsRueckfallKette.mapNotNull { TtsCatalog.rueckfallStufe(it)?.titel }.joinToString(", ").ifEmpty { "keine" } }) { w ->
+                if (norm(w) in setOf("keine", "kein", "aus", "leer")) { s.ttsRueckfallKette = emptyList(); return@Eintrag }
+                s.ttsRueckfallKette = w.split(',', ';').map(::norm).filter(String::isNotEmpty).map { teil ->
+                    TtsCatalog.rueckfallStufen.firstOrNull { norm(it.titel) == teil || norm(it.id) == teil }?.id
+                        ?: TtsCatalog.rueckfallStufen.filter { norm(it.titel).startsWith(teil) }.singleOrNull()?.id
+                        ?: throw IllegalArgumentException("„$teil“ gibt es als Stufe nicht eindeutig. Möglich: ${TtsCatalog.rueckfallStufen.joinToString(", ") { it.titel }}.")
+                }
+            },
             schalter("immer_deutsch", "Vorlesen", "Immer deutsch aussprechen", "Englisch aussehende Wörter trotzdem deutsch aussprechen.", { s.immerDeutschVorlesen }) { s.immerDeutschVorlesen = it },
             schalter("antworten_vorlesen", "Vorlesen", "Antworten auf Gesprochenes vorlesen", "Liest die Antwort vor, wenn die Frage gesprochen wurde.", { e.antwortenVorlesen }) { e.antwortenVorlesen = it },
             schalter("diktat_antwort_vorlesen", "Vorlesen", "Antwort nach Diktat vorlesen", "Liest die erste Antwort vor, wenn die Frage mit dem Mikrofon in der Eingabeblase eingesprochen und dann mit dem Pfeil gesendet wurde.", { e.diktatAntwortVorlesen }) { e.diktatAntwortVorlesen = it },

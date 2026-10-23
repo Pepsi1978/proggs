@@ -21,6 +21,14 @@ data class TtsVoice(
     val gender: VoiceGender,
 )
 
+/** Eine Stufe der Vorlese-Rückfallkette; [schluessel] nur bei Gemini: [FREI] oder [BEZAHLT]. */
+data class RueckfallStufe(val id: String, val anbieter: TtsProvider, val schluessel: String?, val titel: String) {
+    companion object {
+        const val FREI = "frei"
+        const val BEZAHLT = "bezahlt"
+    }
+}
+
 object TtsCatalog {
     const val DEFAULT_EDGE_VOICE = "de-DE-SeraphinaMultilingualNeural"
     const val DEFAULT_GOOGLE_VOICE = "de-DE-Chirp3-HD-Kore"
@@ -148,6 +156,24 @@ object TtsCatalog {
         val ausEndpunkt = Regex("^(?:https?://)?([a-z0-9]+)\\.(?:api\\.cognitive|tts\\.speech)\\.").find(roh)?.groupValues?.get(1)
         return (ausEndpunkt ?: roh).takeIf { Regex("^[a-z0-9]{2,40}$").matches(it) }
     }
+
+    /**
+     * Die Stufen der Vorlese-Rückfallkette. Jede Stufe liest mit der Stimme und den Einstellungen, die bei ihrem
+     * Anbieter eingestellt sind; [RueckfallStufe.schluessel] trennt bei Gemini kostenlosen und bezahlten Schlüssel.
+     */
+    val rueckfallStufen = listOf(
+        RueckfallStufe("gemini_flash:frei", TtsProvider.GEMINI_FLASH, RueckfallStufe.FREI, "Gemini 3.8 Flash TTS (kostenlos)"),
+        RueckfallStufe("gemini_flash:bezahlt", TtsProvider.GEMINI_FLASH, RueckfallStufe.BEZAHLT, "Gemini 3.8 Flash TTS (bezahlt)"),
+        RueckfallStufe("gemini_lite:frei", TtsProvider.GEMINI_LITE, RueckfallStufe.FREI, "Gemini 3.8 Flash-Lite TTS (kostenlos)"),
+        RueckfallStufe("gemini_lite:bezahlt", TtsProvider.GEMINI_LITE, RueckfallStufe.BEZAHLT, "Gemini 3.8 Flash-Lite TTS (bezahlt)"),
+        RueckfallStufe(TtsProvider.GOOGLE_CLOUD.id, TtsProvider.GOOGLE_CLOUD, null, TtsProvider.GOOGLE_CLOUD.label),
+        RueckfallStufe(TtsProvider.AZURE.id, TtsProvider.AZURE, null, TtsProvider.AZURE.label),
+        RueckfallStufe(TtsProvider.EDGE.id, TtsProvider.EDGE, null, TtsProvider.EDGE.label),
+        RueckfallStufe(TtsProvider.QWEN.id, TtsProvider.QWEN, null, TtsProvider.QWEN.label),
+        RueckfallStufe(TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN_CLONE, null, TtsProvider.QWEN_CLONE.label),
+    )
+
+    fun rueckfallStufe(id: String): RueckfallStufe? = rueckfallStufen.firstOrNull { it.id == id }
 
     /** Findet den Anbieter zu einer Stimm-Kennung aus dem festen Katalog. */
     fun anbieterZu(stimmeId: String): TtsProvider? = when {

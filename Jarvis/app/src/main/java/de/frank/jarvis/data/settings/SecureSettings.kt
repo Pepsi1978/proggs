@@ -9,6 +9,7 @@ import androidx.security.crypto.MasterKeys
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.ReasoningEffort
 import de.frank.jarvis.tts.TtsCatalog
+import de.frank.jarvis.tts.TtsProvider
 import java.io.Closeable
 import java.util.WeakHashMap
 import javax.crypto.AEADBadTagException
@@ -130,6 +131,16 @@ class SecureSettings(context: Context) : Closeable {
     var geminiTtsChirpRueckfall: Boolean
         get() = readFlag(Keys.GEMINI_TTS_CHIRP_RUECKFALL, false)
         set(value) = writeFlag(Keys.GEMINI_TTS_CHIRP_RUECKFALL, value)
+
+    /**
+     * Rückfallkette des Vorlesens: Kennungen aus [TtsCatalog.rueckfallStufen] in ihrer Reihenfolge. Scheitert die gewählte
+     * Stimme, versucht Jarvis die Stufen nacheinander. Ohne gespeicherte Kette gilt der alte Chirp-Schalter weiter.
+     */
+    var ttsRueckfallKette: List<String>
+        get() = (preferences?.getString(Keys.TTS_RUECKFALL_KETTE, null)
+            ?: if (geminiTtsChirpRueckfall) TtsProvider.GOOGLE_CLOUD.id else "")
+            .split(',').map(String::trim).filter { TtsCatalog.rueckfallStufe(it) != null }.distinct()
+        set(value) = writeString(Keys.TTS_RUECKFALL_KETTE, value.distinct().joinToString(","))
 
     var qwenTtsApiKey: String
         get() = readString(Keys.QWEN_TTS_API_KEY, "")
@@ -324,6 +335,7 @@ class SecureSettings(context: Context) : Closeable {
         const val GEMINI_TTS_KEY_BEZAHLT = "gemini_tts_key_bezahlt"
         const val GEMINI_TTS_SCHLUESSEL_WAHL = "gemini_tts_schluessel_wahl"
         const val GEMINI_TTS_CHIRP_RUECKFALL = "gemini_tts_chirp_rueckfall"
+        const val TTS_RUECKFALL_KETTE = "tts_rueckfall_kette"
         const val QWEN_TTS_API_KEY = "qwen_tts_api_key"
         const val QWEN_TTS_VOICE_ID = "qwen_tts_voice_id"
         const val QWEN_STANDARD_VOICE = "qwen_standard_voice"

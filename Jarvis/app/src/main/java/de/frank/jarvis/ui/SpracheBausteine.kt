@@ -240,13 +240,8 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                         Chip(name, aktiv = s.geminiTtsSchluesselWahl == id) { geaendert { s.geminiTtsSchluesselWahl = id } }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                Chip("Rückfall auf Chirp 3 HD", aktiv = s.geminiTtsChirpRueckfall) { geaendert { s.geminiTtsChirpRueckfall = !s.geminiTtsChirpRueckfall } }
-                Text("Scheitert der kostenlose Schlüssel (etwa Kontingent erschöpft oder ein HTTP-Fehler), liest Jarvis mit derselben Stimme über Google Chirp 3 HD weiter statt mit dem bezahlten Schlüssel.",
+                Text("Was danach kommt, wenn der Schlüssel scheitert, legst du unten in der Rückfall-Reihenfolge fest.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                if (s.geminiTtsChirpRueckfall && s.googleTtsApiKey.isBlank()) {
-                    Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
-                }
                 Unterzeile("Stimme")
                 StimmChips(vm, anbieter, if (flash) TtsCatalog.geminiFlashVoices else TtsCatalog.geminiLiteVoices,
                     if (flash) s.geminiFlashTtsVoice else s.geminiLiteTtsVoice) { id -> geaendert { if (flash) s.geminiFlashTtsVoice = id else s.geminiLiteTtsVoice = id } }
@@ -272,6 +267,10 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 Schluesselfeld(vm, "Kennung deiner eigenen Stimme", s.qwenTtsVoiceId, geheim = false) { geaendert { s.qwenTtsVoiceId = it } }
             }
         }
+        RueckfallKette(vm, s.ttsRueckfallKette, anbieter) { neu -> geaendert { s.ttsRueckfallKette = neu } }
+        if (TtsProvider.GOOGLE_CLOUD.id in s.ttsRueckfallKette && anbieter != TtsProvider.GOOGLE_CLOUD && s.googleTtsApiKey.isBlank()) {
+            Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
+        }
         Unterzeile("Sprechtempo")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0.9f to "Ruhig", 1.0f to "Normal", 1.1f to "Zügig", 1.2f to "Schnell").forEach { (wert, name) ->
@@ -286,6 +285,51 @@ fun SpracheEinstellungen(vm: AppViewModel) {
             Chip("Antwort nach Diktat (Mikrofon + Pfeil)", aktiv = e.diktatAntwortVorlesen) { geaendert { e.diktatAntwortVorlesen = !e.diktatAntwortVorlesen } }
         }
         Text("Meldungen vorlesen (Agenten, Losfahren, Timer, Update-Ansagen …) mit eigener Stimme und Lautstärke: Einstellungen → Benachrichtigungen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+/**
+ * Die Rückfall-Reihenfolge des Vorlesens: nummerierte Stufen mit ↑ ↓ ✕, darunter alle übrigen Stufen zum Hinzufügen.
+ * Jede Stufe liest mit der Stimme, die bei ihrem Anbieter eingestellt ist.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RueckfallKette(vm: AppViewModel, kette: List<String>, anbieter: TtsProvider, setze: (List<String>) -> Unit) {
+    val f = LocalFarben.current
+    val s = vm.sprache
+    Unterzeile("Rückfall-Reihenfolge")
+    Text("Scheitert die Stimme oben (etwa Kontingent erschöpft), probiert Jarvis diese Stufen der Reihe nach, jede mit der dort eingestellten Stimme. " +
+        "Eine Stufe ohne Schlüssel wird übersprungen. Leer = kein Rückfall.",
+        color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+    kette.forEachIndexed { i, id ->
+        val stufe = TtsCatalog.rueckfallStufe(id) ?: return@forEachIndexed
+        val schluesselFehlt = when (stufe.anbieter) {
+            TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE ->
+                (if (stufe.schluessel == de.frank.jarvis.tts.RueckfallStufe.FREI) s.geminiTtsKeyFrei else s.geminiTtsKeyBezahlt).isBlank()
+            TtsProvider.GOOGLE_CLOUD -> s.googleTtsApiKey.isBlank()
+            TtsProvider.AZURE -> s.azureTtsKey.isBlank()
+            TtsProvider.QWEN, TtsProvider.QWEN_CLONE -> s.qwenTtsApiKey.isBlank()
+            TtsProvider.EDGE -> false
+        }
+        val gleich = stufe.anbieter == anbieter && stufe.schluessel == null
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("${i + 1}. ${stufe.titel}", color = f.text, fontSize = 14.sp)
+                if (schluesselFehlt || gleich) {
+                    Text(if (gleich) "Ist die Stimme oben, wird übersprungen" else "Kein Schlüssel, wird übersprungen", color = f.textSchwach, fontSize = 11.sp)
+                }
+            }
+            if (i > 0) Chip("↑", aktiv = false, modifier = Modifier.padding(start = 6.dp)) { setze(kette.toMutableList().apply { add(i - 1, removeAt(i)) }) }
+            if (i < kette.lastIndex) Chip("↓", aktiv = false, modifier = Modifier.padding(start = 6.dp)) { setze(kette.toMutableList().apply { add(i + 1, removeAt(i)) }) }
+            Chip("✕", aktiv = false, modifier = Modifier.padding(start = 6.dp)) { setze(kette - id) }
+        }
+    }
+    val uebrig = TtsCatalog.rueckfallStufen.filter { it.id !in kette }
+    if (uebrig.isNotEmpty()) {
+        Text("Hinzufügen:", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            uebrig.forEach { st -> Chip("+ ${st.titel}", aktiv = false) { setze(kette + st.id) } }
+        }
     }
 }
 
