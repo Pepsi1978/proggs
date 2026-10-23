@@ -24,14 +24,17 @@
         <Border Grid.RowSpan="3" IsHitTestVisible="False" Background="{DynamicResource PinselSchein}" />
 
         <!-- ================= Kopfzeile ================= -->
+        <!-- Zwei Zeilen statt zwei Spalten: Titel oben, Bedienleiste darunter. Nebeneinander drückte die
+             breite Bedienleiste (langer Sammeltext) den Titelblock auf wenige Pixel zusammen. Beide Zeilen
+             umbrechen bei schmalen Fenstern, statt abzuschneiden. -->
         <Grid Grid.Row="0" Margin="28,24,28,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
             <StackPanel>
-                <StackPanel Orientation="Horizontal">
+                <WrapPanel Orientation="Horizontal">
                     <Border Width="34" Height="34" CornerRadius="10"
                             Background="{DynamicResource PinselAkzentVerlauf}" Margin="0,0,12,0">
                         <TextBlock Text="&#x2191;" FontSize="19" FontWeight="Bold"
@@ -45,8 +48,8 @@
                         <TextBlock Text="{Binding UpdateZusammenfassung}" FontSize="12" FontWeight="SemiBold"
                                    Foreground="{DynamicResource PinselTextLeise}" />
                     </Border>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="46,5,0,0">
+                </WrapPanel>
+                <WrapPanel Orientation="Horizontal" Margin="46,5,0,0">
                     <TextBlock Text="Alle Werkzeuge an einem Ort prüfen und aktualisieren."
                                Style="{StaticResource TextLeise}" VerticalAlignment="Center" />
 
@@ -63,10 +66,10 @@
                             Command="{Binding AlsAdminNeuStartenCommand}"
                             Visibility="{Binding NichtErhoeht, Converter={StaticResource BoolSichtbar}}"
                             ToolTip="Startet die UpdateZentrale erhöht neu, damit jede Installation durchläuft." />
-                </StackPanel>
+                </WrapPanel>
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
 
                 <!-- Hell/Dunkel -->
                 <Border Padding="11,6" CornerRadius="9" Margin="0,0,10,0"
@@ -131,7 +134,7 @@
                         </Style>
                     </Button.Style>
                 </Button>
-            </StackPanel>
+            </WrapPanel>
         </Grid>
 
         <!-- Hinweisband, wenn der Katalog nicht gelesen werden konnte -->
@@ -553,23 +556,28 @@
                 Background="{DynamicResource PinselFlaecheTief}"
                 BorderBrush="{DynamicResource PinselRand}" BorderThickness="1"
                 Effect="{DynamicResource KartenSchatten}">
+            <!-- Drei Zeilen: der Status vollständig (umbrechend statt abgeschnitten), darunter während eines
+                 Sammellaufs, was gerade läuft und an welcher Position, darunter die Schalter. -->
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <DockPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                    <!-- Wie weit die Sammelprüfung ist: x von n Programmen fertig. -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <DockPanel VerticalAlignment="Center">
+                    <!-- Wie weit die Sammelprüfung bzw. der Sammellauf ist: x von n Programmen fertig. -->
                     <ProgressBar DockPanel.Dock="Left" Width="110" Height="5" Margin="0,0,10,0" VerticalAlignment="Center"
                                  Minimum="0" Maximum="{Binding PruefGesamt}" Value="{Binding PruefFertig}"
                                  Background="{DynamicResource PinselRand}" BorderThickness="0"
                                  Foreground="{DynamicResource PinselAkzent}"
                                  Visibility="{Binding LaeuftSammelvorgang, Converter={StaticResource BoolSichtbar}}" />
                     <TextBlock Text="{Binding KopfStatus}" Style="{StaticResource TextLeise}" VerticalAlignment="Center"
-                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding KopfStatus}" />
+                               TextWrapping="Wrap" />
                 </DockPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Grid.Row="1" Text="{Binding LaufDetail}" Style="{StaticResource TextLeise}" TextWrapping="Wrap"
+                           Margin="0,5,0,0" FontFamily="{StaticResource SchriftMono}" FontSize="11.5"
+                           Visibility="{Binding LaufDetail, Converter={StaticResource TextSichtbar}}" />
+                <WrapPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                     <TextBlock Text="Beim Windows-Start prüfen" Style="{StaticResource TextLeise}"
                                VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ToggleButton Style="{StaticResource Schiebeschalter}" VerticalAlignment="Center"
@@ -593,7 +601,7 @@
                             Command="{Binding ZustaendeAuffrischenCommand}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding AnwendungsVersion}" Style="{StaticResource TextLeise}"
                                VerticalAlignment="Center" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
         </Border>
     </Grid>

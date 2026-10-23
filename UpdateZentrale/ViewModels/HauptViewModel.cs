@@ -65,6 +65,9 @@ public sealed partial class HauptViewModel : ObservableObject
 
     [ObservableProperty] private ProgrammViewModel? _ausgewaehltesProgramm;
     [ObservableProperty] private string _kopfStatus = "Bereit.";
+
+    /// <summary>Second footer line during "install all": what runs right now, at which position, since when.</summary>
+    [ObservableProperty] private string _laufDetail = "";
     [ObservableProperty] private bool _laeuftSammelvorgang;
     [ObservableProperty] private string? _katalogFehler;
 
@@ -657,8 +660,11 @@ public sealed partial class HauptViewModel : ObservableObject
         var gesamt = System.Diagnostics.Stopwatch.StartNew();
         var start = DateTime.Now;
         var laeufe = new List<SammelLauf>();
-        var laufend = new List<string>();
+        var laufend = new List<(string Name, string Zeile)>();
         var fertig = 0;
+        var cliHinweis = "";
+        PruefGesamt = Math.Max(plan.Count, 1);
+        PruefFertig = 0;
         using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, "Alle Updates: " + string.Join(", ", plan.Select(s => s.Programm.Eintrag.Id)));
         Protokollierung.SammellaufSchreiben(new
         {
@@ -667,13 +673,22 @@ public sealed partial class HauptViewModel : ObservableObject
                                                erwartetSekunden = Math.Round(s.Programm.ErwarteteDauerSekunden), gemessen = s.Programm.DauerGemessen })
         });
 
-        void Anzeigen() => KopfStatus = "Aktualisiert " + (laufend.Count == 0 ? "…" : string.Join(", ", laufend))
-                                         + " (" + fertig + " von " + plan.Count + " fertig)";
+        void Anzeigen()
+        {
+            PruefFertig = fertig;
+            KopfStatus = "Alle Updates: " + fertig + " von " + plan.Count + " fertig, " + laufend.Count + " laufen gerade"
+                         + " – seit " + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + "." + cliHinweis;
+            LaufDetail = string.Join("\n", laufend.Select(l => l.Zeile));
+        }
 
         async Task EinerAsync(Sammelplan.Schritt s)
         {
             var position = plan.IndexOf(s) + 1;
-            lock (laufend) laufend.Add(s.Programm.Name);
+            lock (laufend)
+                laufend.Add((s.Programm.Name, "▶ " + s.Programm.Name + "  ·  Position " + position + " von " + plan.Count
+                                              + "  ·  " + Sammelplan.PhasenName(s.Phase) + (s.Parallel ? " (parallel)" : "")
+                                              + "  ·  gestartet " + DateTime.Now.ToString("HH:mm:ss")
+                                              + "  ·  erwartet ≈ " + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden)));
             Anzeigen();
             var uhr = System.Diagnostics.Stopwatch.StartNew();
             var beginn = DateTime.Now;
@@ -684,7 +699,7 @@ public sealed partial class HauptViewModel : ObservableObject
             }
             finally
             {
-                lock (laufend) { laufend.Remove(s.Programm.Name); fertig++; }
+                lock (laufend) { laufend.RemoveAll(l => l.Name == s.Programm.Name); fertig++; }
                 Anzeigen();
                 lock (laeufe)
                     laeufe.Add(new SammelLauf(position, s.Programm.Eintrag.Id, s.Phase, s.Parallel, beginn, DateTime.Now,
@@ -751,7 +766,8 @@ public sealed partial class HauptViewModel : ObservableObject
 
                 if (phase.Key == Sammelplan.PhaseCli && rest.Any(s => s.Phase > Sammelplan.PhaseCli))
                 {
-                    KopfStatus = "CLI-kritische Updates sind durch – du kannst im CLI weiterarbeiten. Der Rest läuft weiter …";
+                    cliHinweis = "  ✔ CLI-kritische Updates sind durch – du kannst im CLI weiterarbeiten.";
+                    Anzeigen();
                     Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.cli_fertig", KopfStatus, sammelId);
                 }
             }
@@ -769,6 +785,7 @@ public sealed partial class HauptViewModel : ObservableObject
                 laeufe = laeufe.ToList()
             });
             LaeuftSammelvorgang = false;
+            LaufDetail = "";
             SortierungAnwenden();
         }
     }
