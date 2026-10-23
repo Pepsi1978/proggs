@@ -260,6 +260,7 @@
     {"versionCode": 255, "versionName": "1.8.244", "stand": "23.10.2026, 13:15 Uhr", "notiz": "Die Tagesauswertung mit Claude und Denkstufe „Maximal“ wird nicht mehr abgeschnitten: Claude darf jetzt bis zu 128 000 Token schreiben und bekommt dafür bis zu 12 Minuten Zeit."},
     {"versionCode": 256, "versionName": "1.8.245", "stand": "23.10.2026, 13:18 Uhr", "notiz": "Neu unter Jarvis' Kopf: Tokenlimit pro Antwort in 50 000er-Stufen bis 500 000 Token, auch per Sprache einstellbar; Claude nimmt davon höchstens 128 000."},
     {"versionCode": 257, "versionName": "1.8.246", "stand": "23.10.2026, 13:26 Uhr", "notiz": "Das Tokenlimit gilt jetzt pro Aufgabe und für alle Modelle: Ist es im Chat oder bei einem Agenten erreicht, fragt Jarvis, ob er weitermachen soll, und gibt bei Weiter noch einmal so viele Token."},
-    {"versionCode": 258, "versionName": "1.8.247", "stand": "23.10.2026, 13:36 Uhr", "notiz": "Agenten nennen jetzt richtig, ob das Zeit- oder das Tokenlimit erreicht ist, die Rückfrage im Chat gilt nach 10 Minuten ohne Antwort als Abbrechen, und Chat-Antworten mit Denkstufe „Maximal“ bekommen bis zu 15 Minuten Zeit."}
+    {"versionCode": 258, "versionName": "1.8.247", "stand": "23.10.2026, 13:36 Uhr", "notiz": "Agenten nennen jetzt richtig, ob das Zeit- oder das Tokenlimit erreicht ist, die Rückfrage im Chat gilt nach 10 Minuten ohne Antwort als Abbrechen, und Chat-Antworten mit Denkstufe „Maximal“ bekommen bis zu 15 Minuten Zeit."},
+    {"versionCode": 259, "versionName": "1.8.248", "stand": "23.10.2026, 13:46 Uhr", "notiz": "Nach einer Tagesauswertung mit einem Claude-Modell zeigt Jarvis unten den neuen Guthabenstand und die Kosten der Auswertung."}
   ]
 }

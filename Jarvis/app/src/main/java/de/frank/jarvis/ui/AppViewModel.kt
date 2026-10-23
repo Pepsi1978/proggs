@@ -2579,6 +2579,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    init {
+        // Die Tagesauswertung läuft im Dienst, nicht über eine Gesprächsrunde: Mit einem Anthropic-Modell dort genauso
+        // messen, damit das Guthaben unten danach den neuen Stand zeigt.
+        viewModelScope.launch {
+            var gemessen = false
+            de.frank.jarvis.auswertung.Tagesauswertung.stand.collect { st ->
+                if (st.laeuft && !gemessen && einstellungen.modell.istAnthropic) { gemessen = true; anthropicKostenStart() }
+                else if (!st.laeuft && gemessen) { gemessen = false; anthropicKostenEnde() }
+            }
+        }
+    }
+
     /** true, wenn Jarvis bei der Claude Console angemeldet ist (für das Guthaben). */
     var anthropicConsoleAngemeldet by mutableStateOf(false); private set
 
