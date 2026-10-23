@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.CallEnd
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Folder
@@ -182,11 +183,17 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             vm.schreibtMit -> "Schreibe mit …"
             else -> "Mit Jarvis arbeiten"
         }
-        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp)) {
+        // Mit Text: oben rechts der Papierkorb, er leert die ganze Blase; das Feld lässt ihm rechts Platz.
+        val mitText = vm.entwurf.isNotEmpty()
+        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = if (mitText) 6.dp else 20.dp, top = if (mitText) 6.dp else 16.dp, bottom = 4.dp)) {
             if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
+            if (mitText) Box(Modifier.align(Alignment.TopEnd).size(40.dp).clip(CircleShape).antippen { vm.entwurfLeeren() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Delete, "Text löschen", tint = f.textLeise, modifier = Modifier.size(22.dp))
+            }
             BasicTextField(
                 wert, { feld = it; vm.entwurf = it.text },
-                Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus),
+                Modifier.fillMaxWidth().padding(top = if (mitText) 10.dp else 0.dp, end = if (mitText) 42.dp else 0.dp)
+                    .heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus),
                 textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
                 cursorBrush = SolidColor(LIVE_ORANGE),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),

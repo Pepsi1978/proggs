@@ -827,6 +827,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entwurfFokus = true
     }
 
+    /** Papierkorb oben rechts in der Eingabeblase: leert den ganzen Text, Anhänge bleiben. */
+    fun entwurfLeeren() {
+        entwurf = ""
+        entwurfDiktiert = false
+    }
+
     /** Senden aus der Eingabeblase: Text und Anhänge zusammen. */
     fun entwurfSenden() {
         // Ein Trenner am Ende (nach jedem Diktat) ist kein Inhalt und geht nicht mit; scheitert das Senden, kommt der Entwurf unverändert zurück.
