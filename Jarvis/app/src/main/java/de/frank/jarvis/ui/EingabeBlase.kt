@@ -131,10 +131,10 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     val guthabenUsd = guthabenStand?.restUsd
     // Unter 5 € (EZB-Tageskurs aus der Guthaben-Abfrage) rot, sonst grün; ohne Kurs bleibt es grün.
     val guthabenKnapp = guthabenUsd != null && guthabenStand?.kurs?.let { guthabenUsd * it < 5.0 } == true
-    // Das Guthaben steht eine Schriftstufe kleiner und nicht fett vor dem Modellnamen, getrennt durch „ · “.
+    // Das Guthaben steht eine Schriftstufe kleiner und fett vor dem Modellnamen, getrennt durch „ · “.
     fun mitGuthaben(name: String) = buildAnnotatedString {
         if (guthabenUsd != null) {
-            val stil = SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Normal, fontSize = 0.87.em)
+            val stil = SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Bold, fontSize = 0.87.em)
             withStyle(stil) { append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $") }
             // Was die letzte Aufgabe gekostet hat, als roter Abzug direkt hinter dem Guthaben; ohne Abzug kein „−0,00 $“.
             vm.anthropicKosten?.takeIf { it > 0.0 }?.let { k ->
