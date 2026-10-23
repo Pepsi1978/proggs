@@ -206,15 +206,14 @@ class SecureSettings(context: Context) : Closeable {
      * Sprechtempo je Anbieter: Jede Stimme behält ihr eigenes Tempo, auch wenn sie als Rückfallstufe einspringt.
      * Noch nie gesetzt = das bisherige gemeinsame Tempo ([ttsSpeechRate]).
      */
-    fun ttsTempo(anbieter: String): Float {
-        val schluessel = Keys.TTS_SPEECH_RATE + "_" + anbieter
-        val p = preferences ?: return ttsSpeechRate
-        return if (p.contains(schluessel)) p.getFloat(schluessel, Defaults.TTS_SPEECH_RATE).coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) else ttsSpeechRate
-    }
+    fun ttsTempo(anbieter: String): Float =
+        preferences?.getFloat(tempoSchluessel(anbieter), ttsSpeechRate)?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: ttsSpeechRate
 
     fun setzeTtsTempo(anbieter: String, wert: Float) {
-        preferences?.edit()?.putFloat(Keys.TTS_SPEECH_RATE + "_" + anbieter, wert.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE))?.apply()
+        preferences?.edit()?.putFloat(tempoSchluessel(anbieter), wert.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE))?.apply()
     }
+
+    private fun tempoSchluessel(anbieter: String) = Keys.TTS_SPEECH_RATE + "_" + anbieter
 
     /**
      * Erzwingt die deutsche Aussprache, auch wenn der Text englisch aussehende Wörter enthält.

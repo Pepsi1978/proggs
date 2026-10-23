@@ -250,6 +250,7 @@
     {"versionCode": 245, "versionName": "1.8.234", "stand": "23.10.2026, 12:03 Uhr", "notiz": "Die Rückfall-Reihenfolge überspringt nicht eingerichtete Stimmen sofort, übersteht Netzaussetzer einer Stufe und übernimmt den alten Chirp-Rückfall ohne bezahlten Schlüssel."},
     {"versionCode": 246, "versionName": "1.8.235", "stand": "23.10.2026, 12:42 Uhr", "notiz": "Jeder Vorlese-Anbieter hat sein eigenes Sprechtempo, das auch gilt, wenn er als Rückfallstufe einspringt."},
     {"versionCode": 247, "versionName": "1.8.236", "stand": "23.10.2026, 12:43 Uhr", "notiz": "Die Tagesauswertung konzentriert sich auf den heutigen Tag, Rückblick und Ausblick sind nur noch kurz und auf das Heute bezogen."},
-    {"versionCode": 248, "versionName": "1.8.237", "stand": "23.10.2026, 12:47 Uhr", "notiz": "Der kurze Ausblick der Tagesauswertung nennt wieder Termine, Aufgaben von morgen und Dienstwechsel, Wiederholungen zwischen den Teilen entfallen."}
+    {"versionCode": 248, "versionName": "1.8.237", "stand": "23.10.2026, 12:47 Uhr", "notiz": "Der kurze Ausblick der Tagesauswertung nennt wieder Termine, Aufgaben von morgen und Dienstwechsel, Wiederholungen zwischen den Teilen entfallen."},
+    {"versionCode": 249, "versionName": "1.8.238", "stand": "23.10.2026, 12:48 Uhr", "notiz": "Das Sprechtempo lässt sich für die Hauptstimme und jede Rückfallstufe einzeln einstellen, auch wenn die Hauptstimme Gemini ist."}
   ]
 }

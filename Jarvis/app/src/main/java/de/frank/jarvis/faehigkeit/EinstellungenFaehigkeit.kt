@@ -265,8 +265,11 @@ class EinstellungsKatalog(context: Context) {
                 { TtsCatalog.providers.map { it.id to it.label } }, { s.ttsProvider }) { s.ttsProvider = it },
             auswahl("vorlese_stimme", "Vorlesen", "Stimme", "Jarvis' Vorlese-Stimme; stellt den passenden Anbieter mit um.",
                 { alleStimmen() + ("eigene" to "Meine Stimme (geklont)") }, { jarvisStimme() }) { if (it == "eigene") s.ttsProvider = TtsProvider.QWEN_CLONE.id else setzeJarvisStimme(it) },
-            auswahl("vorlese_tempo", "Vorlesen", "Sprechtempo", "Wie schnell die gewählte Stimme vorliest; jeder Anbieter hat sein eigenes Tempo, auch als Rückfallstufe.",
-                { tempi }, { tempoText(s.ttsTempo(s.ttsProvider)) }) { s.setzeTtsTempo(s.ttsProvider, it.toFloat()) },
+            *TtsProvider.entries.filter { it.kenntTempo }.map { p ->
+                auswahl("vorlese_tempo_${p.id}", "Vorlesen", "Sprechtempo ${p.label}",
+                    "Wie schnell ${p.label} vorliest, als Hauptstimme und als Rückfallstufe. Gemini und Alibaba sprechen im eigenen Tempo.",
+                    { tempi }, { tempoText(s.ttsTempo(p.id)) }) { s.setzeTtsTempo(p.id, it.toFloat()) }
+            }.toTypedArray(),
             auswahl("gemini_tts_schluessel", "Vorlesen", "Gemini-Stimme: welcher Schlüssel", "Ob die Gemini-3.8-Stimme erst den kostenlosen und dann den bezahlten Schlüssel nutzt oder nur einen davon.",
                 { de.frank.jarvis.data.settings.SecureSettings.GEMINI_TTS_SCHLUESSEL_WAHLEN }, { s.geminiTtsSchluesselWahl }) { s.geminiTtsSchluesselWahl = it },
             Eintrag("vorlese_rueckfall", "Vorlesen", "Rückfall-Reihenfolge der Stimme",

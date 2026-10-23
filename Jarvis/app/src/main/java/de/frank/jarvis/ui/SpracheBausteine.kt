@@ -245,7 +245,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 Unterzeile("Stimme")
                 StimmChips(vm, anbieter, if (flash) TtsCatalog.geminiFlashVoices else TtsCatalog.geminiLiteVoices,
                     if (flash) s.geminiFlashTtsVoice else s.geminiLiteTtsVoice) { id -> geaendert { if (flash) s.geminiFlashTtsVoice = id else s.geminiLiteTtsVoice = id } }
-                Text("Gemini spricht im eigenen Tempo; das Sprechtempo unten gilt hier nicht.",
+                Text("Gemini spricht im eigenen Tempo; das Sprechtempo unten gilt nur für die Rückfallstufen.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
             TtsProvider.AZURE -> {
@@ -272,15 +272,25 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         if (TtsProvider.GOOGLE_CLOUD.id in rueckfall &&anbieter != TtsProvider.GOOGLE_CLOUD && s.googleTtsApiKey.isBlank()) {
             Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
         }
-        Unterzeile("Sprechtempo (${anbieter.label})")
-        val tempo = s.ttsTempo(anbieter.id)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(0.9f to "Ruhig", 1.0f to "Normal", 1.1f to "Zügig", 1.2f to "Schnell").forEach { (wert, name) ->
-                Chip(name, aktiv = kotlin.math.abs(tempo - wert) < 0.04f) { geaendert { s.setzeTtsTempo(anbieter.id, wert) } }
+        // Ein Tempo je Stimme, die es auswertet: die Hauptstimme und jede Rückfallstufe, jeweils nur einmal.
+        val mitTempo = (listOf(anbieter) + rueckfall.mapNotNull { TtsCatalog.rueckfallStufe(it)?.anbieter }).distinct().filter { it.kenntTempo }
+        Unterzeile("Sprechtempo")
+        if (mitTempo.isEmpty()) {
+            Text("Die gewählten Stimmen sprechen alle im eigenen Tempo.", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+        }
+        mitTempo.forEach { p ->
+            val tempo = s.ttsTempo(p.id)
+            Text(p.label + if (p == anbieter) "" else " (Rückfall)", color = f.text, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0.9f to "Ruhig", 1.0f to "Normal", 1.1f to "Zügig", 1.2f to "Schnell").forEach { (wert, name) ->
+                    Chip(name, aktiv = kotlin.math.abs(tempo - wert) < 0.04f) { geaendert { s.setzeTtsTempo(p.id, wert) } }
+                }
             }
         }
-        Text("Gilt nur für diesen Anbieter und bleibt auch, wenn er als Rückfallstufe einspringt.",
-            color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        if (mitTempo.isNotEmpty()) {
+            Text("Jede Stimme behält ihr eigenes Tempo, auch wenn sie als Rückfallstufe einspringt.",
+                color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        }
         Knopf("Probe hören", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.lies("probe", "Probe", "Hallo Frank. So klinge ich, wenn ich dir etwas vorlese.") }
 
         Unterzeile("Von selbst vorlesen")

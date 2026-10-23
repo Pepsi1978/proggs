@@ -8,6 +8,10 @@ enum class TtsProvider(val id: String, val label: String, val kurz: String) {
     GEMINI_LITE("gemini_lite", "Gemini 3.8 Flash-Lite TTS", "Gemini Lite"),
     EDGE("edge_tts", "Microsoft Edge", "Edge"),
     AZURE("azure_neural", "Azure Neural", "Azure"),
+    ;
+
+    /** Nur diese Anbieter werten das Sprechtempo aus; Gemini und Alibaba sprechen im eigenen Tempo. */
+    val kenntTempo: Boolean get() = this == GOOGLE_CLOUD || this == EDGE || this == AZURE
 }
 
 enum class VoiceGender {
