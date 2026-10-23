@@ -73,7 +73,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
             Text(if (neu) "Neues Ziel" else "Ziel bearbeiten", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp).weight(1f))
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            // Einsprechen ist der schnellste Weg: frei reden, die KI ordnet in Titel, Beschreibung, Warum und Frist.
+            // Einsprechen ist der schnellste Weg: Das Gesprochene wird die Zielbeschreibung, die KI bildet daraus den Titel.
             Row(Modifier.fillMaxWidth().glas(f, erhoeht = 1.2f, toenung = f.primaer).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 MikroKnopf(vm.aufnahme, 60.dp) { vm.mikroTippen(DiktatZiel.ZIEL) }
                 Column(Modifier.weight(1f).padding(start = 14.dp)) {
@@ -82,17 +82,17 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                         vm.aufnahme == Aufnahme.VERARBEITET -> Text("Verstehe …", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         vm.ordnet -> Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(color = f.primaer, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-                            Text("Ordne dein Ziel …", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
+                            Text("Finde den Titel …", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
                         }
                         else -> {
-                            Text(if (neu) "Sprich dein Ziel ein" else "Ergänzen per Sprache", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Text("Was willst du erreichen, bis wann und warum? Die KI füllt die Felder für dich.", color = f.textLeise, fontSize = 13.sp, lineHeight = 18.sp)
+                            Text(if (neu) "Sprich deine Zielbeschreibung ein" else "Beschreibung per Sprache ergänzen", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text("Was willst du erreichen, bis wann und warum? Alles kommt vollständig in die Beschreibung, den Titel bildet die KI daraus.", color = f.textLeise, fontSize = 13.sp, lineHeight = 18.sp)
                         }
                     }
                 }
             }
-            Eingabe("Ziel", vm.eTitel, "z. B. Halbmarathon unter 2 Stunden laufen", einzeilig = true) { vm.korrekturVergessen(); vm.eTitel = it }
-            Eingabe("Genauer (möglichst messbar)", vm.eBeschreibung, "Was genau soll am Ende anders sein?") { vm.korrekturVergessen(); vm.eBeschreibung = it }
+            Eingabe("Zieltitel", vm.eTitel, "Bildet die KI aus der Beschreibung", einzeilig = true) { vm.korrekturVergessen(); vm.eTitel = it }
+            Eingabe("Zielbeschreibung", vm.eBeschreibung, "Was willst du erreichen? Was genau soll am Ende anders sein?") { vm.korrekturVergessen(); vm.eBeschreibung = it }
             Eingabe("Warum ist dir das wichtig?", vm.eWarum, "Dein Antrieb – hilft dir und schärft die Vorschläge") { vm.korrekturVergessen(); vm.eWarum = it }
             // Aus dem Korrektur-Knopf wird nach der Korrektur der Rückgängig-Knopf (wie in Geniale Ideen).
             if (neu) {

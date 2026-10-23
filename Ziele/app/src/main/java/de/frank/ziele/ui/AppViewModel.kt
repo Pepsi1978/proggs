@@ -152,8 +152,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun speichern() {
+        if (ordnet) { melde("Einen Moment, die KI bildet gerade den Titel."); return }
+        if (eTitel.isBlank()) {
+            if (eBeschreibung.isBlank()) { melde("Beschreib dein Ziel – oder sprich es einfach ein."); return }
+            // Ohne Titel bildet die KI ihn aus der Beschreibung, danach wird gespeichert.
+            titelBilden(danach = { if (eTitel.isNotBlank()) speichern() })
+            return
+        }
         val titel = eTitel.trim()
-        if (titel.isEmpty()) { melde("Gib dem Ziel einen Titel – oder sprich es einfach ein."); return }
         val alt = editorQuelle
         val auswerten = eAuswerten
         val beschreibung = eBeschreibung.trim(); val warum = eWarum.trim(); val frist = eFrist; val symbol = eSymbol.ifBlank { "🎯" }; val status = eStatus
@@ -191,42 +197,62 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun reihenfolge(ids: List<Long>) { viewModelScope.launch { repo.reihenfolge(ids) } }
 
     /**
-     * Übernimmt frei Gesprochenes vollständig und wörtlich in die Beschreibung; die KI ergänzt nur Titel, Frist und Symbol.
-     * Verdichten und Umformulieren macht ausschließlich der KI-Knopf danach. Ohne KI werden die ersten Wörter zum Titel.
+     * Das Eingesprochene ist die Zielbeschreibung: Es kommt vollständig und wörtlich dorthin, verdichtet wird nichts.
+     * Den Titel bildet die KI danach aus der ganzen Beschreibung (Sprachkorrektur macht allein der KI-Knopf).
      */
     private fun zielOrdnen(gesprochen: String) {
         eBeschreibung = (eBeschreibung.trim() + " " + gesprochen).trim()
+        titelBilden()
+    }
+
+    /** Erste Wörter als Titel, wenn die KI fehlt oder scheitert. */
+    private fun titelOhneKi(text: String): String =
+        text.split(Regex("(?<=[.!?])\\s")).first().trim().split(Regex("\\s+")).take(5).joinToString(" ").trimEnd('.', '!', '?', ',')
+
+    /**
+     * Bildet aus der Zielbeschreibung einen Titel aus drei bis fünf Wörtern, dazu Frist und Symbol, wenn sie sich ergeben.
+     * Beim Bearbeiten eines bestehenden Ziels bleibt dessen Titel, solange die Beschreibung ihm nicht widerspricht.
+     */
+    private fun titelBilden(danach: () -> Unit = {}) {
+        val beschreibung = eBeschreibung.trim()
+        if (beschreibung.isEmpty()) return
         if (!kiBereit) {
-            if (eTitel.isBlank()) eTitel = gesprochen.split(Regex("(?<=[.!?])\\s")).first().take(60).trimEnd('.', '!', '?')
+            if (eTitel.isBlank()) eTitel = titelOhneKi(beschreibung)
+            danach()
             return
         }
         ordnet = true
         korrektur = null
         viewModelScope.launch {
+            val bisherTitel = eTitel
+            var fertig = false
             try {
-                val bisherTitel = eTitel
+                val behalten = if (eId != null && bisherTitel.isNotBlank()) "Bisheriger Titel: $bisherTitel\n" else ""
                 val antwort = auth.streamChat(
-                    instructions = "Frank hat ein persönliches Ziel frei eingesprochen (Spracherkennung, daher unsauber). Erfinde nichts. " +
-                        "Heute ist ${LocalDate.now()}. Antworte NUR mit JSON: {\"titel\": \"kurz und klar, höchstens 50 Zeichen, als Ziel formuliert (z. B. „10 kg abnehmen“)\", " +
+                    instructions = "Frank hat die Beschreibung eines persönlichen Ziels geschrieben oder eingesprochen (Spracherkennung, daher evtl. unsauber). " +
+                        "Benenne daraus das Ziel als Titel, ohne etwas zu erfinden. Heute ist ${LocalDate.now()}. " +
+                        "Antworte NUR mit JSON: {\"titel\": \"drei bis fünf Wörter, als Ziel formuliert (z. B. „10 kg abnehmen“, „Halbmarathon unter zwei Stunden laufen“)\", " +
                         "\"frist\": \"JJJJ-MM-TT, nur wenn er ein Datum oder einen Zeitraum genannt hat, sonst leer\", \"symbol\": \"ein passendes Emoji\"}. " +
-                        "Gibt es schon einen Titel, behalte ihn, solange das Neue ihm nicht widerspricht.",
-                    turns = listOf(ChatTurn("user", (if (bisherTitel.isNotBlank()) "Bisheriger Titel: $bisherTitel\n" else "") + "Gesprochen: " + eBeschreibung)),
+                        "Ist ein bisheriger Titel angegeben, behalte ihn, solange die Beschreibung ihm nicht widerspricht.",
+                    turns = listOf(ChatTurn("user", behalten + "Zielbeschreibung: " + beschreibung)),
                     model = einstellungen.modell,
                     reasoningEffort = de.frank.ziele.auth.ReasoningEffort.LOW,
                 )
                 val o = Auswertung.jsonAus(antwort) ?: throw IllegalStateException("Die KI hat keinen Titel finden können.")
                 // Hat Frank den Titel währenddessen selbst getippt, gewinnt seine Eingabe.
-                if (eTitel == bisherTitel) o.optString("titel").trim().takeIf { it.isNotEmpty() }?.let { eTitel = it }
-                o.optString("frist").trim().takeIf { it.length >= 10 }?.let { f -> runCatching { LocalDate.parse(f.take(10)).toEpochDay() }.getOrNull()?.let { eFrist = it } }
+                if (eTitel == bisherTitel) o.optString("titel").trim().trimEnd('.').takeIf { it.isNotEmpty() }?.let { eTitel = it }
+                o.optString("frist").trim().takeIf { it.length >= 10 && eFrist == null }?.let { f -> runCatching { LocalDate.parse(f.take(10)).toEpochDay() }.getOrNull()?.let { eFrist = it } }
                 o.optString("symbol").trim().takeIf { it.isNotEmpty() && it.length <= 8 && eSymbol == "🎯" }?.let { eSymbol = it }
+                fertig = true
             } catch (c: CancellationException) {
                 throw c
             } catch (e: Throwable) {
-                if (eTitel.isBlank()) eTitel = gesprochen.take(50)
-                melde(e.message ?: "Die KI hat keinen Titel finden können; der Text steht vollständig in der Beschreibung.")
+                if (eTitel.isBlank()) eTitel = titelOhneKi(beschreibung)
+                melde(e.message ?: "Die KI hat keinen Titel finden können; die Beschreibung steht vollständig da.")
             } finally {
                 ordnet = false
             }
+            if (fertig) danach()
         }
     }
 
