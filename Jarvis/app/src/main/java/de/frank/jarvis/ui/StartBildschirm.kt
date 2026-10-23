@@ -59,7 +59,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.gestures.scrollBy
+import kotlinx.coroutines.isActive
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -145,21 +150,23 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     // Mitlesen: Nur wer unten steht, folgt neuen Nachrichten. Hat Frank nach oben gescrollt, bleibt seine Lesestelle stehen,
     // während unten weiter Meldungen einlaufen; scrollt er wieder ganz nach unten, folgt die Ansicht erneut. Früher sprang
     // jede neue Programmiermeldung ans Ende, auch mitten im Lesen.
-    // Saveable: Nach einem Reiterwechsel bleibt die Lesestelle, statt beim Zurückkommen ans Ende zu springen.
-    var folgen by rememberSaveable(vm.sitzungId) { mutableStateOf(true) }
+    // Als State-Objekt: Verbindung und Sammler unten hängen am selben Objekt und wechseln mit dem Gespräch mit.
+    val folgenZustand = remember(vm.sitzungId) { mutableStateOf(true) }
+    var folgen by folgenZustand
     // Nur Franks Finger laufen über nestedScroll, der automatische Sprung ans Ende nicht. So zählt ein Griff nach oben auch
-    // dann, wenn er mitten in einen laufenden Sprung fällt (das ließ der alte Merker „automatisch“ durch).
-    val nachOben = remember {
-        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
-                if (available.y > 0f) folgen = false
-                return androidx.compose.ui.geometry.Offset.Zero
+    // dann, wenn er mitten in einen laufenden Sprung fällt (das ließ der alte Merker „automatisch“ durch). Maßgeblich ist,
+    // was die Liste selbst nach oben verschoben hat: Wischen in einem Codeblock oder in einem kurzen Chat zählt nicht.
+    val nachOben = remember(folgenZustand) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (consumed.y > 0f) folgenZustand.value = false
+                return Offset.Zero
             }
         }
     }
     // Ganz unten angekommen, egal wie: wieder mitlesen.
-    LaunchedEffect(liste) {
-        androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgen = true }
+    LaunchedEffect(liste, folgenZustand) {
+        androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgenZustand.value = true }
     }
     LaunchedEffect(vm.gespraech.size, vm.denkt) {
         // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
@@ -167,9 +174,11 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // Nur im laufenden Gespräch ans Ende springen; beim Start bleibt die Einrichtung oben sichtbar.
         val letzter = liste.layoutInfo.totalItemsCount - 1
         if (folgen && vm.gespraech.isNotEmpty() && letzter >= 0) {
-            runCatching { liste.animateScrollToItem(letzter) }
-            // Die neue Zeile war beim Lesen der Anzahl evtl. noch nicht vermessen: den Rest ohne Animation nachholen.
-            if (folgen && liste.canScrollForward) runCatching { liste.scrollToItem(liste.layoutInfo.totalItemsCount - 1) }
+            // Greift Frank in den Sprung, bricht er ab; das Abbrechen des ganzen Effekts (neue Nachricht) geht weiter durch.
+            try { liste.animateScrollToItem(letzter) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
+            // Rest bis ganz unten ohne Animation: die neue Zeile war beim Lesen der Anzahl evtl. noch nicht vermessen,
+            // oder die letzte Blase ist höher als der Bildschirm (dann steht nach dem Sprung nur ihr Anfang oben).
+            if (folgen && liste.canScrollForward) liste.scrollBy(100_000f)
         }
     }
 
