@@ -4,7 +4,7 @@
 #   1. Ja/Nein-Fenster (240 s, ohne Klick gilt "Nein") -- ohne Ja passiert nichts,
 #   2. in einen Zwischenordner bauen: die laufende UpdateZentrale.exe ist gesperrt, ein Build in
 #      bin\Release wuerde am Kopieren scheitern,
-#   3. einen abgekoppelten Helfer starten, der die laufende UpdateZentrale sauber schliesst, den
+#   3. einen abgekoppelten Helfer starten, der 20 s wartet (die App schreibt so noch Protokollfuss und Verlauf), der die laufende UpdateZentrale sauber schliesst, den
 #      Zwischenstand nach bin\Release kopiert und die neue Fassung startet. Abgekoppelt, weil die
 #      App nicht auf ein Skript warten kann, das sie selbst beendet.
 #
@@ -28,7 +28,7 @@ dotnet build (Join-Path $projektDir 'UpdateZentrale.csproj') -c Release -o $zwis
 if ($LASTEXITCODE -ne 0) { Write-Error "Build fehlgeschlagen (Exit $LASTEXITCODE)."; exit 1 }
 
 $helfer = @"
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 20
 Get-Process UpdateZentrale -ErrorAction SilentlyContinue | ForEach-Object { `$null = `$_.CloseMainWindow() }
 for (`$i = 0; `$i -lt 60 -and (Get-Process UpdateZentrale -ErrorAction SilentlyContinue); `$i++) { Start-Sleep -Milliseconds 500 }
 Get-Process UpdateZentrale -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue

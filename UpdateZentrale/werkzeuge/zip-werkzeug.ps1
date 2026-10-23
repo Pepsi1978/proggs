@@ -41,30 +41,46 @@ function Neueste {
 }
 
 # Pro Werkzeug: Wurzel, Ordnername einer Version, bin-Ordner darin, Programmdatei, Versionsabfrage.
+# Muster: Gruppe 1 ist die Version -- "gradle --version" nennt auch Kotlin und Groovy, und Gradle selbst
+# hat oft nur zwei Stellen ("9.7"). Ordnermuster: nur solche Ordner räumt das Skript je auf.
 $cfg = switch ($Werkzeug) {
-    'gradle' { @{ Wurzel = Join-Path $programme 'Gradle'; Ordner = { param($v) "gradle-$v" }; Bin = 'bin'; Exe = 'gradle.bat'; Args = @('--version') } }
-    'kotlin' { @{ Wurzel = Join-Path $programme 'Kotlin'; Ordner = { param($v) "kotlinc-$v" }; Bin = 'kotlinc\bin'; Exe = 'kotlinc.bat'; Args = @('-version') } }
-    'uv'     { @{ Wurzel = Join-Path $programme 'uv'; Ordner = { param($v) "$v" }; Bin = '.'; Exe = 'uv.exe'; Args = @('--version') } }
+    'gradle' { @{ Wurzel = Join-Path $programme 'Gradle'; Ordner = { param($v) "gradle-$v" }; Bin = 'bin'; Exe = 'gradle.bat'; Args = @('--version')
+                  Muster = '(?m)^Gradle (\d+\.\d+(?:\.\d+)?)'; OrdnerMuster = '^gradle-\d+\.\d+(\.\d+)?$' } }
+    'kotlin' { @{ Wurzel = Join-Path $programme 'Kotlin'; Ordner = { param($v) "kotlinc-$v" }; Bin = 'kotlinc\bin'; Exe = 'kotlinc.bat'; Args = @('-version')
+                  Muster = 'kotlinc-jvm (\d+\.\d+\.\d+)'; OrdnerMuster = '^kotlinc-\d+\.\d+\.\d+$' } }
+    'uv'     { @{ Wurzel = Join-Path $programme 'uv'; Ordner = { param($v) "$v" }; Bin = '.'; Exe = 'uv.exe'; Args = @('--version')
+                  Muster = '^uv (\d+\.\d+\.\d+)'; OrdnerMuster = '^\d+\.\d+\.\d+$' } }
 }
 
 function VersionVon([string]$binOrdner) {
     $exe = Join-Path $binOrdner $cfg.Exe
     if (-not (Test-Path -LiteralPath $exe)) { return '' }
-    $text = (& $exe @($cfg.Args) 2>&1 | Out-String)
-    if ($text -match '\d+\.\d+\.\d+') { return $Matches[0] }
+    $text = (& $exe @($cfg.Args) 2>&1 | Out-String).Trim()
+    if ($text -match $cfg.Muster) { return $Matches[1] }
     return ''
 }
 
+# Den Benutzer-PATH roh aus der Registry lesen und als REG_EXPAND_SZ zurückschreiben: über
+# [Environment]::SetEnvironmentVariable würden alle %VAR%-Einträge fest aufgelöst und der Typ zu REG_SZ.
 function PfadAufCurrent {
     $ziel = [IO.Path]::GetFullPath((Join-Path (Join-Path $cfg.Wurzel 'current') $cfg.Bin)).TrimEnd('\')
     $wurzel = [IO.Path]::GetFullPath($cfg.Wurzel).TrimEnd('\') + '\'
-    $alt = @([Environment]::GetEnvironmentVariable('Path', 'User') -split ';' | Where-Object { $_ })
-    $neu = @($alt | Where-Object { -not $_.TrimEnd('\').StartsWith($wurzel, [StringComparison]::OrdinalIgnoreCase) -or $_.TrimEnd('\') -ieq $ziel })
-    if (-not ($neu | Where-Object { $_.TrimEnd('\') -ieq $ziel })) { $neu += $ziel }
-    if (($neu -join ';') -ne ($alt -join ';')) {
-        [Environment]::SetEnvironmentVariable('Path', ($neu -join ';'), 'User')
-        Write-Output "Benutzer-PATH: $ziel (versionierte Einträge unter $wurzel entfernt)."
+    $schluessel = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
+    try {
+        $roh = [string]$schluessel.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        $alt = @($roh -split ';' | Where-Object { $_ })
+        $aufgeloest = { param($e) [Environment]::ExpandEnvironmentVariables($e).TrimEnd('\') }
+        $neu = @($alt | Where-Object { $e = & $aufgeloest $_; -not $e.StartsWith($wurzel, [StringComparison]::OrdinalIgnoreCase) -or $e -ieq $ziel })
+        if (-not ($neu | Where-Object { (& $aufgeloest $_) -ieq $ziel })) { $neu += $ziel }
+        if (($neu -join ';') -ne ($alt -join ';')) {
+            $schluessel.SetValue('Path', ($neu -join ';'), [Microsoft.Win32.RegistryValueKind]::ExpandString)
+            # Neue Fenster sollen den PATH sofort sehen: eine (leere) Benutzervariable löschen
+            # verschickt WM_SETTINGCHANGE an alle Fenster.
+            [Environment]::SetEnvironmentVariable('UPDATEZENTRALE_PATH_SIGNAL', $null, 'User')
+            Write-Output "Benutzer-PATH: $ziel (versionierte Einträge unter $wurzel entfernt, %VAR%-Einträge unverändert)."
+        }
     }
+    finally { $schluessel.Dispose() }
 }
 
 try {
@@ -107,11 +123,23 @@ try {
 
         # Aufräumen: die eben aktive und die vorige Fassung bleiben, ältere gehen. Beim ersten Umstieg
         # (noch kein current) bleibt alles liegen -- die bisher genutzte Fassung ist der Rückweg.
+        # Nur Ordner mit der Namensform einer Fassung werden angefasst, und erst umbenannt: klappt das
+        # nicht (eine Shell oder ein Gradle-Daemon nutzt die Fassung noch), bleibt sie ganz stehen
+        # statt halb gelöscht zu werden.
         if ($vorher) {
             $behalten = @([IO.Path]::GetFullPath($zielOrdner).TrimEnd('\'), [IO.Path]::GetFullPath($vorher).TrimEnd('\'))
             Get-ChildItem -LiteralPath $cfg.Wurzel -Directory |
-                Where-Object { $_.Name -ne 'current' -and ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0 -and $behalten -notcontains $_.FullName.TrimEnd('\') } |
-                ForEach-Object { Write-Output "Entferne alte Fassung $($_.Name)"; Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+                Where-Object { $_.Name -match $cfg.OrdnerMuster -and ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0 -and $behalten -notcontains $_.FullName.TrimEnd('\') } |
+                ForEach-Object {
+                    $alt = $_
+                    $weg = "$($alt.FullName).weg-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
+                    try {
+                        Rename-Item -LiteralPath $alt.FullName -NewName (Split-Path -Leaf $weg) -ErrorAction Stop
+                        Remove-Item -LiteralPath $weg -Recurse -Force -ErrorAction Stop
+                        Write-Output "Alte Fassung $($alt.Name) entfernt."
+                    }
+                    catch { Write-Output "Alte Fassung $($alt.Name) bleibt (in Benutzung oder nicht löschbar): $($_.Exception.Message)" }
+                }
         }
     }
 

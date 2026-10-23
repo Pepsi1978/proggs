@@ -107,12 +107,15 @@ public static class Protokollierung
 
         var fuss = new StringBuilder()
             .AppendLine(new string('-', 78))
+            // Parallel runs interleave in the daily file: the footer names its program itself.
+            .AppendLine("Programm:      " + bericht.Name + "  (" + bericht.ProgrammId + ")")
             .AppendLine("Ergebnis:      " + bericht.ErgebnisText)
             .AppendLine("Begründung:    " + bericht.Meldung)
             .AppendLine("Stand vorher:  " + bericht.VersionVorher)
             .AppendLine("Stand nachher: " + bericht.VersionNachher)
             .AppendLine("Exit-Code:     " + bericht.ExitCode)
-            .AppendLine("Dauer:         " + (bericht.DauerSekunden is { } s ? DauerText(s) + " (" + s.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s)" : "(nicht gemessen)"))
+            .AppendLine("Dauer:         " + (bericht.DauerSekunden is { } s ? DauerText(s) + " (" + s.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s)" : "(nicht gemessen)")
+                        + (bericht.ArbeitSekunden is { } a ? ", davon Update-Aufrufe " + DauerText(a) + " (" + bericht.UpdateAufrufe + " Aufruf(e))" : ""))
             .AppendLine("Sammellauf:    " + (bericht.SammelId is null ? "–" : bericht.SammelId + ", Phase " + bericht.SammelPhase + ", Position " + bericht.SammelPosition))
             .AppendLine(new string('=', 78))
             .AppendLine()
@@ -134,13 +137,22 @@ public static class Protokollierung
     }
 
     /// <summary>Latest report per program id, used to show "last run" on each card.</summary>
-    public static Dictionary<string, UpdateBericht> LetzteBerichte()
+    public static Dictionary<string, UpdateBericht> LetzteBerichte() => VerlaufLesen().Berichte;
+
+    /// <summary>
+    /// One pass over verlauf.jsonl for the start: the latest report per program AND the measured
+    /// update durations (oldest first). Only runs that really installed something count as a
+    /// duration (success or staged): "already current" and failures say nothing about how long
+    /// the update takes.
+    /// </summary>
+    public static (Dictionary<string, UpdateBericht> Berichte, Dictionary<string, List<double>> Dauern) VerlaufLesen()
     {
         var ergebnis = new Dictionary<string, UpdateBericht>(StringComparer.OrdinalIgnoreCase);
+        var dauern = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
         var kaputt = 0;
         try
         {
-            if (!File.Exists(VerlaufsDatei)) return ergebnis;
+            if (!File.Exists(VerlaufsDatei)) return (ergebnis, dauern);
 
             foreach (var zeile in LiesAlleZeilen(VerlaufsDatei))
             {
@@ -152,6 +164,12 @@ public static class Protokollierung
 
                     // The file is append-only and chronological, so the last entry wins.
                     ergebnis[bericht.ProgrammId] = bericht;
+
+                    if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend && Messwert(bericht) is { } s)
+                    {
+                        if (!dauern.TryGetValue(bericht.ProgrammId, out var liste)) dauern[bericht.ProgrammId] = liste = new List<double>();
+                        liste.Add(s);
+                    }
                 }
                 catch
                 {
@@ -167,7 +185,7 @@ public static class Protokollierung
         {
             Diagnose.Ausnahme(ex, "protokoll", "Verlauf lesen", Schwere.Warnung);
         }
-        return ergebnis;
+        return (ergebnis, dauern);
     }
 
     /// <summary>"0:42 min" / "1:05:10 h" -- the same notation on the card and in the log.</summary>
@@ -177,40 +195,9 @@ public static class Protokollierung
         return t.TotalHours >= 1 ? ((int)t.TotalHours) + t.ToString(@"\:mm\:ss") + " h" : ((int)t.TotalMinutes) + t.ToString(@"\:ss") + " min";
     }
 
-    /// <summary>
-    /// Measured update durations per program, oldest first. Only runs that really installed
-    /// something count (success or staged): "already current" and failures say nothing about how
-    /// long the update takes.
-    /// </summary>
-    public static Dictionary<string, List<double>> UpdateDauern()
-    {
-        var ergebnis = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
-        try
-        {
-            if (!File.Exists(VerlaufsDatei)) return ergebnis;
-            foreach (var zeile in LiesAlleZeilen(VerlaufsDatei))
-            {
-                if (string.IsNullOrWhiteSpace(zeile)) continue;
-                try
-                {
-                    var b = JsonSerializer.Deserialize<UpdateBericht>(zeile, Optionen);
-                    if (b?.DauerSekunden is not { } s || s <= 0 || string.IsNullOrWhiteSpace(b.ProgrammId)) continue;
-                    if (b.Ergebnis is not (LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend)) continue;
-                    if (!ergebnis.TryGetValue(b.ProgrammId, out var liste)) ergebnis[b.ProgrammId] = liste = new List<double>();
-                    liste.Add(s);
-                }
-                catch
-                {
-                    // counted by LetzteBerichte; one broken line costs one sample, nothing more
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Diagnose.Ausnahme(ex, "protokoll", "Update-Dauern lesen", Schwere.Warnung);
-        }
-        return ergebnis;
-    }
+    /// <summary>The duration sample of a report: provider time when measured, else the whole click.</summary>
+    public static double? Messwert(UpdateBericht bericht)
+        => bericht.ArbeitSekunden is > 0 ? bericht.ArbeitSekunden : bericht.DauerSekunden is > 0 ? bericht.DauerSekunden : null;
 
     public static string SammelDatei => Path.Combine(Ordner, "sammellaeufe.jsonl");
 

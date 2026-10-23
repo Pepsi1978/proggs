@@ -30,6 +30,11 @@ public sealed class SammelFortsetzung
     public string SammelId { get; set; } = "";
     public DateTime Zeit { get; set; }
     public List<string> ProgrammIds { get; set; } = new();
+
+    /// <summary>Steps of the original plan already done -- positions continue from there.</summary>
+    public int Versatz { get; set; }
+
+    public int PlanGroesse { get; set; }
 }
 
 /// <summary>

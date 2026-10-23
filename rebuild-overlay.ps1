@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.7.0 - 23.10.2026, 11:40 Uhr
+# Version 1.7.1 - 23.10.2026, 12:14 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -331,9 +331,15 @@ switch (Show-UpdateDialog -Names $names) {
     }
 }
 
-# Freigabe fuer publish.ps1, update.ps1 und das Publish-Ziel im csproj: Nur mit diesem Marker
-# bauen sie ueber eine vorhandene publish\.exe. Er gilt nur fuer diesen Prozess und seine Kinder.
-$env:OVERLAY_REBUILD_FREIGABE = [Guid]::NewGuid().ToString('N')
+# Freigabe fuer publish.ps1 und das Publish-Ziel im csproj: eine Kennung in der Umgebung PLUS eine
+# Datei mit genau dieser Kennung. Beides gilt nur, solange dieses Skript laeuft -- am Ende werden
+# Datei und Variable entfernt. Eine geerbte oder in einer Sitzung liegengebliebene Variable ist ohne
+# die Datei wertlos, ein selbst gesetzter Wert ebenso.
+$freigabe = [Guid]::NewGuid().ToString('N')
+$freigabeDatei = Join-Path ([IO.Path]::GetTempPath()) "overlay-freigabe-$freigabe"
+Set-Content -LiteralPath $freigabeDatei -Value (Get-Date -Format o) -Encoding utf8
+$env:OVERLAY_REBUILD_FREIGABE = $freigabe
+try {
 
 foreach ($t in $targets) {
     $O = $Overlays[$t]
@@ -365,14 +371,21 @@ foreach ($t in $targets) {
     # Schritt 2: bauen
     Write-Step 'Schritt 2/3: publish bauen (dauert ~1-3 Min)...'
     if (-not (Invoke-Publish -O $O)) {
-        Write-Err "Build FEHLGESCHLAGEN fuer $t — Neustart uebersprungen."
+        Write-Err "Build FEHLGESCHLAGEN fuer $t."
         $failed += $t
+        # Das Overlay ist schon beendet; die bisherige publish\.exe funktioniert weiter -- also
+        # wieder starten, damit die Spracheingabe nicht bis zum naechsten Handgriff fehlt.
+        if (-not $NoStart -and (Test-Path -LiteralPath (Join-Path $O.Folder "publish\$($O.Exe)"))) {
+            Write-Step 'Starte die bisherige Version wieder.'
+            try { Start-Overlay -O $O } catch { Write-Err "Neustart der bisherigen Version fehlgeschlagen: $($_.Exception.Message)" }
+        }
         continue
     }
     $artifact = Test-BuiltArtifact -O $O
     if (-not $artifact.Ok) {
         Write-Err "Build-Artefakt passt nicht zum Projekt: erwartet $($artifact.Expected), gefunden $($artifact.Actual)."
         $failed += $t
+        if (-not $NoStart) { try { Start-Overlay -O $O } catch { Write-Err "Neustart fehlgeschlagen: $($_.Exception.Message)" } }
         continue
     }
     Write-Ok 'Build erfolgreich.'
@@ -465,10 +478,17 @@ foreach ($t in $targets) {
     }
 }
 
+}
+finally {
+    Remove-Item -LiteralPath $freigabeDatei -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:\OVERLAY_REBUILD_FREIGABE -ErrorAction SilentlyContinue
+}
+
 Write-Host ''
 if ($failed.Count -eq 0) {
     Write-Host "Fertig — alle Ziele ($($targets -join ', ')) erfolgreich." -ForegroundColor Cyan
-    Write-Host 'OVERLAY_UPDATE_STATUS=started'
+    # -NoStart baut nur: dann ist "started" falsch, der Aufrufer bekommt "built".
+    Write-Host $(if ($NoStart) { 'OVERLAY_UPDATE_STATUS=built (nicht gestartet, -NoStart)' } else { 'OVERLAY_UPDATE_STATUS=started' })
     exit 0
 }
 else {

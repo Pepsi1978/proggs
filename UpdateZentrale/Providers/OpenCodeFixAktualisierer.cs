@@ -78,7 +78,7 @@ public sealed class OpenCodeFixAktualisierer : IAktualisierer
 
         var grund = zustand is { Status: "failed" } ? zustand.Value.Nachricht : "Das Bauskript endete mit Code " + lauf.ExitCode + ".";
         if (IstPatchKonflikt(grund))
-            grund += " Der Windows-Fix muss an die neue Version angepasst werden – das Update in OpenCode selbst beauftragen. Die bisherige Version bleibt aktiv.";
+            grund += " Der Windows-Fix muss an die neue Version angepasst werden – „Aktualisieren“ auf der OpenCode-Karte startet dafür eine OpenLauncher-Sitzung. Die bisherige Version bleibt aktiv.";
         return new PruefErgebnis(UpdateZustand.Fehler, Meldung: grund, Protokoll: lauf.Ausgabe);
     }
 

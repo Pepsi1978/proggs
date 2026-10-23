@@ -61,7 +61,7 @@
   <!-- Updates über eine vorhandene publish\.exe nur über rebuild-overlay.ps1 (Ja/Nein-Fenster): es setzt
        OVERLAY_REBUILD_FREIGABE erst nach dem Klick auf "Ja". Ein direktes "dotnet publish -o publish" bricht ab. -->
   <Target Name="OverlayUpdateFreigabePruefen" BeforeTargets="PrepareForPublish"
-          Condition="'$(OVERLAY_REBUILD_FREIGABE)' == '' and Exists('$(MSBuildProjectDirectory)\publish\$(AssemblyName).exe') and '$([MSBuild]::NormalizeDirectory($(MSBuildProjectDirectory), $(PublishDir)))' == '$([MSBuild]::NormalizeDirectory($(MSBuildProjectDirectory), publish))'">
+          Condition="('$(OVERLAY_REBUILD_FREIGABE)' == '' or !Exists('$([System.IO.Path]::GetTempPath())overlay-freigabe-$(OVERLAY_REBUILD_FREIGABE)')) and Exists('$(MSBuildProjectDirectory)\publish\$(AssemblyName).exe') and '$([MSBuild]::NormalizeDirectory($(MSBuildProjectDirectory), $(PublishDir)))' == '$([MSBuild]::NormalizeDirectory($(MSBuildProjectDirectory), publish))'">
     <Error Text="Kein direktes Publish in den publish-Ordner: Updates nur über 'pwsh -File ..\rebuild-overlay.ps1' (Ja/Nein-Fenster)." />
   </Target>
 </Project>

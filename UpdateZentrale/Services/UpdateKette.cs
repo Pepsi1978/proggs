@@ -14,7 +14,8 @@ public sealed record KettenUrteil(
     int UpdateAufrufe,
     bool UpdateLiefDurch,
     string? AusstehendeVersion = null,
-    IReadOnlyList<string>? Uebergaenge = null);
+    IReadOnlyList<string>? Uebergaenge = null,
+    double ArbeitSekunden = 0);
 
 /// <summary>
 /// Drives one "Aktualisieren" click to its REAL end state instead of trusting one exit code.
@@ -90,6 +91,7 @@ public sealed class UpdateKette
         var liefDurch = false;
         var letztePruefung = vor;
         var standNach = fingerabdruckStart;
+        var arbeitSekunden = 0.0;   // time inside the provider's update calls only
 
         for (var durchlauf = 1; durchlauf <= MaxDurchlaeufe; durchlauf++)
         {
@@ -109,7 +111,9 @@ public sealed class UpdateKette
             aufrufe++;
             Diagnose.Ereignis(Schwere.Info, "kette", "kette.durchlauf", "Durchlauf " + durchlauf + " von " + MaxDurchlaeufe, "durchlauf",
                 new Dictionary<string, object?> { ["durchlauf"] = durchlauf, ["angebot"] = angebot, ["standVor"] = standVor });
+            var arbeit = System.Diagnostics.Stopwatch.StartNew();
             var ergebnis = await _aktualisierer.AktualisierenAsync(_eintrag, _protokoll, abbruch);
+            arbeitSekunden += arbeit.Elapsed.TotalSeconds;
 
             if (ergebnis.Zustand == UpdateZustand.Abgebrochen)
                 return Ende(LaufErgebnis.Abgebrochen, Text(ergebnis.Meldung, "Abgebrochen."), ergebnis with { Zustand = UpdateZustand.Abgebrochen });
@@ -226,7 +230,7 @@ public sealed class UpdateKette
                 "kette", "kette.urteil", meldung, "urteil",
                 new Dictionary<string, object?> { ["ergebnis"] = urteil.ToString(), ["aufrufe"] = aufrufe, ["standVorher"] = fingerabdruckStart, ["standNachher"] = standNach });
             return new(urteil, meldung, fingerabdruckStart, standNach,
-                karte with { Meldung = meldung }, aufrufe, liefDurch, ausstehend, uebergaenge);
+                karte with { Meldung = meldung }, aufrufe, liefDurch, ausstehend, uebergaenge, Math.Round(arbeitSekunden, 1));
         }
     }
 

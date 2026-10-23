@@ -58,6 +58,16 @@ public sealed class UpdateBericht
     /// </summary>
     public double? DauerSekunden { get; set; }
 
+    /// <summary>
+    /// Time inside the provider's update calls only -- without the pre-check, the "close the
+    /// program?" question and the settle checks. Drives the expected duration. For repo scripts it
+    /// still holds their own yes/no wait, which runs inside the script.
+    /// </summary>
+    public double? ArbeitSekunden { get; set; }
+
+    /// <summary>How many update calls the chain made; 0 = nothing was installed (already current, refused).</summary>
+    public int? UpdateAufrufe { get; set; }
+
     /// <summary>Set when the run was part of "install all": that batch's id (see sammellaeufe.jsonl).</summary>
     public string? SammelId { get; set; }
 

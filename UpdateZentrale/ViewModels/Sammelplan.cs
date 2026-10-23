@@ -24,10 +24,13 @@ public static class Sammelplan
 
     public sealed record Schritt(ProgrammViewModel Programm, int Phase, bool Parallel);
 
+    /// <summary>Entries marked "zuletzt" run after every phase -- their own step at the very end.</summary>
+    public const int PhaseZuletzt = 4;
+
     public static List<Schritt> Planen(IEnumerable<ProgrammViewModel> offen)
         => offen
             .Where(p => !p.IstHauptversionsSprung)
-            .Select(p => new Schritt(p, PhaseVon(p), DarfParallel(p)))
+            .Select(p => new Schritt(p, p.Eintrag.Zuletzt ? PhaseZuletzt : PhaseVon(p), DarfParallel(p) && !p.Eintrag.Zuletzt))
             .OrderBy(s => s.Programm.Eintrag.Zuletzt ? 1 : 0)
             .ThenBy(s => s.Phase)
             .ThenBy(s => s.Programm.Eintrag.Id.Equals(SelbstId, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
@@ -41,27 +44,21 @@ public static class Sammelplan
             : PhaseRest;
 
     /// <summary>
-    /// Independent self-updaters may run beside the serial lane: they touch only their own
-    /// folder. Serial stays everything that shares a lock or a tree -- winget/MSI/Store (one
-    /// installer at a time), npm (one global node_modules), the PowerShell helper scripts (they
-    /// rewrite the user PATH) and anything that asks yes/no or can end a CLI session.
+    /// Only entries the catalog marks "parallel" run beside the serial lane (see
+    /// <see cref="Models.ProgrammEintrag.Parallel"/>). Serial stays everything that shares a lock, a
+    /// tree or a runtime -- winget/MSI/Store, npm, the helper scripts -- and anything that asks
+    /// yes/no or can end a CLI session, whatever the catalog says.
     /// </summary>
     public static bool DarfParallel(ProgrammViewModel p)
-    {
-        var e = p.Eintrag;
-        if (p.KannCliBeenden) return false;
-        if (e.Art.Equals("opencodesitzung", StringComparison.OrdinalIgnoreCase)) return true;
-        if (!e.Art.Equals("cli", StringComparison.OrdinalIgnoreCase)) return false;
-        var befehl = (e.UpdateExePfad ?? "") + " " + (e.UpdateArgumente ?? "");
-        return !befehl.Contains("npm", StringComparison.OrdinalIgnoreCase)
-               && !befehl.Contains("pwsh", StringComparison.OrdinalIgnoreCase)
-               && !befehl.Contains("powershell", StringComparison.OrdinalIgnoreCase);
-    }
+        => p.Eintrag.Parallel && !p.KannCliBeenden
+           && (p.Eintrag.Art.Equals("cli", StringComparison.OrdinalIgnoreCase)
+               || p.Eintrag.Art.Equals("opencodesitzung", StringComparison.OrdinalIgnoreCase));
 
     public static string PhasenName(int phase) => phase switch
     {
         PhaseEigene => "Eigene Werkzeuge",
         PhaseCli => "CLI-kritisch",
+        PhaseZuletzt => "Zum Schluss",
         _ => "Übrige"
     };
 }

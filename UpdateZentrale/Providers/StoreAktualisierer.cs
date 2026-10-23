@@ -101,8 +101,16 @@ public sealed class StoreAktualisierer : IAktualisierer
                  + " --accept-source-agreements --accept-package-agreements";
         protokoll.Report("winget " + args);
 
-        var lauf = await Kommandozeile.AusfuehrenAsync(
-            Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+        BefehlErgebnis lauf;
+        try
+        {
+            lauf = await Kommandozeile.AusfuehrenAsync(
+                Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+        }
+        finally
+        {
+            WingetAktualisierer.SammelVerwerfen();   // also after: a list taken during the install is stale
+        }
         protokoll.Report(lauf.Ausgabe);
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;

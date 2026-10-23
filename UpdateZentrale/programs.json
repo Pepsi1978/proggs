@@ -23,7 +23,8 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim nächsten Start.",
-      "akzent": "#D97757"
+      "akzent": "#D97757",
+      "parallel": true
     },
     {
       "id": "codex-cli",
@@ -48,7 +49,8 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "hinweis": "Getrennt von Codex Desktop – eigener Release-Kanal unter ~/.codex/packages.",
-      "akzent": "#8E8EA0"
+      "akzent": "#8E8EA0",
+      "parallel": true
     },
     {
       "id": "kimi-cli",
@@ -92,7 +94,8 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim nächsten Start.",
-      "akzent": "#4285F4"
+      "akzent": "#4285F4",
+      "parallel": true
     },
     {
       "id": "npm-opencode",
@@ -112,7 +115,8 @@
       "akzent": "#CB3837",
       "hinweis": "Ein offenes Update startet eine OpenLauncher-Sitzung (Opus 5.5, minimal, Schnellmodus, high), die die neue Version mit dem Windows-Fix verschmilzt und baut. Die Karte bestätigt es, sobald die neue Version aktiv ist.",
       "uebernahmeText": "Eine OpenLauncher-Sitzung baut die neue Version mit dem Windows-Fix. Sobald sie aktiv ist, bestätigt die nächste Prüfung das Update – laufende OpenCode-Sitzungen behalten bis dahin die alte Version.",
-      "dauerSchaetzungSekunden": 30
+      "dauerSchaetzungSekunden": 30,
+      "parallel": true
     },
     {
       "id": "github-cli",
@@ -408,7 +412,9 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "hinweis": "Ohne Selbst-Update installiert: werkzeuge/zip-werkzeug.ps1 entpackt die neue Fassung und schaltet …\\uv\\current um. Beim ersten Lauf wird der PATH auf current umgestellt.",
-      "akzent": "#DE5FE9"
+      "akzent": "#DE5FE9",
+      "versionsMuster": "uv (\\d+\\.\\d+\\.\\d+)",
+      "versionsUrlMuster": "\"tag_name\"\\s*:\\s*\"v?(\\d+\\.\\d+\\.\\d+)\""
     },
     {
       "id": "updatezentrale",
@@ -430,7 +436,8 @@
       "neuStartenNachUpdate": false,
       "dialogWartezeitSekunden": 360,
       "hinweis": "Das Skript zeigt zuerst ein Ja/Nein-Fenster. Nach dem Neubau schließt sich die UpdateZentrale selbst und startet nach wenigen Sekunden in der neuen Fassung.",
-      "akzent": "#0EA5E9"
+      "akzent": "#0EA5E9",
+      "uebernahmeText": "Neu gebaut – die UpdateZentrale schließt sich gleich und startet in der neuen Fassung, die das Update dann selbst bestätigt."
     },
     {
       "id": "openlauncher",
@@ -674,7 +681,8 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "hinweis": "Laufende cargo- oder rust-analyzer-Prozesse können das Update blockieren.",
-      "akzent": "#CE422B"
+      "akzent": "#CE422B",
+      "parallel": true
     },
     {
       "id": "go",
@@ -759,7 +767,9 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "hinweis": "Kein winget-Paket: werkzeuge/zip-werkzeug.ps1 lädt die neue Fassung von gradle.org und schaltet …\\Gradle\\current um. Projekte mit gradlew bleiben unberührt.",
-      "akzent": "#02303A"
+      "akzent": "#02303A",
+      "versionsMuster": "(?m)^Gradle (\\d+\\.\\d+(?:\\.\\d+)?)",
+      "versionsUrlMuster": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+(?:\\.\\d+)?)\""
     },
     {
       "id": "kotlin",
@@ -782,7 +792,9 @@
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
       "hinweis": "Kein winget-Paket: werkzeuge/zip-werkzeug.ps1 lädt die neue Fassung von GitHub und schaltet …\\Kotlin\\current um.",
-      "akzent": "#7F52FF"
+      "akzent": "#7F52FF",
+      "versionsMuster": "kotlinc-jvm (\\d+\\.\\d+\\.\\d+)",
+      "versionsUrlMuster": "\"tag_name\"\\s*:\\s*\"v?(\\d+\\.\\d+\\.\\d+)\""
     },
     {
       "id": "vscode",

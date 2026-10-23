@@ -138,7 +138,12 @@ public sealed class WingetAktualisierer : IAktualisierer
         }
 
         var zeilen = SammelZeilen(_sammel.Ausgabe, eintrag.WingetId);
-        if (zeilen.Length == 0) return null;
+        if (zeilen.Length == 0)
+        {
+            // Counted in the log, so a later look can tell whether the fast path really carries.
+            Protokollierung.Schreiben("winget", "Sammelabfrage ohne Zeile für " + eintrag.WingetId + " – Einzelabfrage.");
+            return null;
+        }
         protokoll?.Report("winget list (Sammelabfrage) " + eintrag.WingetId + ":\n" + zeilen);
         return new BefehlErgebnis(0, zeilen, false);
     }
@@ -445,13 +450,16 @@ public sealed class WingetAktualisierer : IAktualisierer
     private static (string Installiert, string Verfuegbar)? ZeileLesen(string zeile, string id)
     {
         {
-            var stelle = zeile.IndexOf(id, StringComparison.OrdinalIgnoreCase);
-            if (stelle < 0) return null;
             if (zeile.TrimStart().StartsWith("Name", StringComparison.OrdinalIgnoreCase)) return null;
 
-            // The id must stand alone: "Microsoft.PowerShell" also occurs in "Microsoft.PowerShell.Preview".
-            var ende = stelle + id.Length;
-            if (ende < zeile.Length && !char.IsWhiteSpace(zeile[ende])) return null;
+            // The id must stand alone on both sides: "Microsoft.PowerShell" also occurs in
+            // "Microsoft.PowerShell.Preview", and in the shared table of all packages "Foo.Bar" also
+            // ends "Vendor.Foo.Bar" -- a single "--id --exact" query never showed such a row.
+            var treffer = System.Text.RegularExpressions.Regex.Match(zeile,
+                @"(?<!\S)" + System.Text.RegularExpressions.Regex.Escape(id) + @"(?!\S)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (!treffer.Success) return null;
+            var ende = treffer.Index + treffer.Length;
 
             var rest = zeile[ende..]
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries)

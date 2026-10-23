@@ -53,12 +53,16 @@ public sealed class OpenCodeSitzungAktualisierer : IAktualisierer
         if (aktiv is { } a && CliAktualisierer.Vergleiche(npm.Version, a.Upstream) <= 0)
             return new PruefErgebnis(UpdateZustand.Aktuell, a.Custom, npm.Version, "Bereits aktuell (mit Windows-Fix).");
 
-        if (LetzterStart() is { } frueher && frueher.Version == npm.Version && DateTime.Now - frueher.Zeit < Sperrzeit)
+        // One session at a time, whatever version it was started for: a newer release published
+        // while the first session still merges the fix must not start a second one on the same
+        // patches. The lock ends when the started version is active, or after the lock time.
+        if (LetzterStart() is { } frueher && DateTime.Now - frueher.Zeit < Sperrzeit
+            && !(aktiv is { } fertig && CliAktualisierer.Vergleiche(fertig.Upstream, frueher.Version) >= 0))
         {
-            protokoll.Report("Für " + npm.Version + " läuft schon eine Sitzung seit " + frueher.Zeit.ToString("HH:mm") + " Uhr – keine zweite.");
+            protokoll.Report("Für " + frueher.Version + " läuft schon eine Sitzung seit " + frueher.Zeit.ToString("HH:mm") + " Uhr – keine zweite.");
             return new PruefErgebnis(UpdateZustand.Fertig,
-                Meldung: "Die OpenLauncher-Sitzung für " + npm.Version + " läuft seit " + frueher.Zeit.ToString("HH:mm")
-                         + " Uhr. Die Karte bestätigt das Update, sobald die neue Version aktiv ist.",
+                Meldung: "Die OpenLauncher-Sitzung für " + frueher.Version + " läuft seit " + frueher.Zeit.ToString("HH:mm")
+                         + " Uhr – keine zweite. Die Karte bestätigt das Update, sobald die neue Version aktiv ist.",
                 ErstNachNeustart: true);
         }
 
@@ -72,31 +76,13 @@ public sealed class OpenCodeSitzungAktualisierer : IAktualisierer
         var args = Argumente(datei);
         protokoll.Report("OpenLauncher.exe " + args);
 
-        // Shell start, no redirected pipes: the launcher opens a terminal that would inherit them,
-        // and the wait would then last until that session ends (see memory "erbt Agenten-Pipe").
-        using var prozess = Process.Start(new ProcessStartInfo(LauncherExe, args)
-        {
-            UseShellExecute = true,
-            WorkingDirectory = Path.GetDirectoryName(LauncherExe)!
-        });
-        if (prozess is null)
-            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Der OpenLauncher ließ sich nicht starten.");
-
-        using var zeit = CancellationTokenSource.CreateLinkedTokenSource(abbruch);
-        zeit.CancelAfter(TimeSpan.FromMinutes(2));
-        try
-        {
-            await prozess.WaitForExitAsync(zeit.Token);
-        }
-        catch (OperationCanceledException) when (!abbruch.IsCancellationRequested)
-        {
+        var code = await LauncherStartenAsync(args, ordner, protokoll, abbruch);
+        if (code is null)
             return new PruefErgebnis(UpdateZustand.Fehler,
                 Meldung: "Der OpenLauncher hat sich nach zwei Minuten nicht zurückgemeldet – ob die Sitzung läuft, ist unklar.");
-        }
-
-        if (prozess.ExitCode != 0)
+        if (code != 0)
             return new PruefErgebnis(UpdateZustand.Fehler,
-                Meldung: "Der OpenLauncher konnte die Sitzung nicht starten (Code " + prozess.ExitCode + ") – Einzelheiten im OpenLauncher-Log.");
+                Meldung: "Der OpenLauncher konnte die Sitzung nicht starten (Code " + code + ") – Einzelheiten im OpenLauncher-Log.");
 
         StartMerken(npm.Version);
         protokoll.Report("Sitzung gestartet, Auftrag: " + datei);
@@ -104,6 +90,57 @@ public sealed class OpenCodeSitzungAktualisierer : IAktualisierer
             Meldung: "OpenLauncher-Sitzung gestartet (Opus 5.5, minimal, Schnellmodus, high): sie baut " + npm.Version
                      + " mit dem Windows-Fix. Die Karte bestätigt das Update, sobald die neue Version aktiv ist.",
             ErstNachNeustart: true);
+    }
+
+    /// <summary>
+    /// Starts the launcher and returns its exit code (null = no answer within two minutes).
+    /// The UpdateZentrale usually runs elevated; started directly, the whole unattended CLI session
+    /// would inherit that token. So an elevated app starts it through explorer.exe, which runs it as
+    /// the ordinary desktop user: a small .cmd starts the launcher and writes its exit code to a
+    /// file. No redirected pipes in either way -- the launcher opens a terminal that would inherit
+    /// them, and the wait would last until that session ends (memory "erbt Agenten-Pipe").
+    /// </summary>
+    private static async Task<int?> LauncherStartenAsync(string args, string ordner, IProgress<string> protokoll, CancellationToken abbruch)
+    {
+        using var zeit = CancellationTokenSource.CreateLinkedTokenSource(abbruch);
+        zeit.CancelAfter(TimeSpan.FromMinutes(2));
+
+        if (!Rechte.IstErhoeht)
+        {
+            using var prozess = Process.Start(new ProcessStartInfo(LauncherExe, args)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(LauncherExe)!
+            });
+            if (prozess is null) return -1;
+            try { await prozess.WaitForExitAsync(zeit.Token); }
+            catch (OperationCanceledException) when (!abbruch.IsCancellationRequested) { return null; }
+            return prozess.ExitCode;
+        }
+
+        var kennung = Guid.NewGuid().ToString("N");
+        var ergebnis = Path.Combine(ordner, "start-" + kennung + ".code");
+        var skript = Path.Combine(ordner, "start-" + kennung + ".cmd");
+        await File.WriteAllTextAsync(skript,
+            "@echo off\r\ncd /d \"" + Path.GetDirectoryName(LauncherExe) + "\"\r\n\"" + LauncherExe + "\" " + args.Replace("%", "%%")
+            + "\r\n>\"" + ergebnis + "\" echo %ERRORLEVEL%\r\n", abbruch);
+        protokoll.Report("Läuft als Administrator – Start ohne erhöhte Rechte über explorer.exe.");
+        using (Process.Start(new ProcessStartInfo("explorer.exe", "\"" + skript + "\"") { UseShellExecute = true })) { }
+
+        try
+        {
+            while (!File.Exists(ergebnis)) await Task.Delay(500, zeit.Token);
+            await Task.Delay(200, zeit.Token);   // the echo may still be writing
+            return int.TryParse((await File.ReadAllTextAsync(ergebnis, zeit.Token)).Trim(), out var code) ? code : -1;
+        }
+        catch (OperationCanceledException) when (!abbruch.IsCancellationRequested)
+        {
+            return null;
+        }
+        finally
+        {
+            try { File.Delete(skript); File.Delete(ergebnis); } catch { /* leftovers in the task folder are harmless */ }
+        }
     }
 
     internal static string Argumente(string auftragsDatei)

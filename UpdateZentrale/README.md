@@ -36,11 +36,17 @@ Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmen
    `settings.json` (`sammelFortsetzen`) gesichert; die neue Fassung setzt ihn nach ihrer Startprüfung ohne zweite Rückfrage fort
    (nur innerhalb von 30 Minuten, nie beim versteckten Start bei der Anmeldung).
 3. **Phase 1 – Eigene Werkzeuge** (OpenLauncher, TVO, CVO): Sie fragen Ja/Nein, und direkt nach dem Klick sitzt man noch davor.
-4. **Phase 2 – CLI-kritisch** (`cliRisiko`: PowerShell, Node.js, Git, Windows-Terminal, WSL, Go, Bun). Sobald sie durch sind,
-   meldet die Kopfzeile, dass im CLI weitergearbeitet werden kann.
+4. **Phase 2 – CLI-kritisch** (`cliRisiko`: PowerShell, Node.js, Git, Windows-Terminal, WSL, Go, Bun). Direkt davor hält der
+   Lauf an und fragt: jetzt die CLIs schließen und „Ja“, oder „Nein“ – dann bleiben sie offen und der Rest läuft weiter.
+   Sobald sie durch sind, meldet die Fußzeile, dass im CLI weitergearbeitet werden kann.
 5. **Phase 3 – der Rest.** Seriell: winget/MSI/Store (ein Installer zur Zeit), npm (ein gemeinsamer Baum), die Hilfsskripte
-   (sie schreiben den PATH). Parallel daneben (höchstens drei): Selbst-Updater wie Claude Code, Codex, Antigravity, rustup,
-   sdkmanager, die LM-Studio-Runtimes und der Start der OpenCode-Sitzung.
+   (sie schreiben den PATH), sdkmanager (braucht das JDK) und die LM-Studio-Runtimes (LM Studio wird daneben ersetzt).
+   Parallel daneben (höchstens drei): nur Einträge mit `parallel` – Claude Code, Codex, Antigravity, rustup und der Start
+   der OpenCode-Sitzung.
+6. **Zum Schluss** alles mit `zuletzt` (App Installer).
+
+Die Fußzeile zeigt den Gesamtstand vollständig und darunter je laufendem Update eine Zeile mit Position, Phase, Startzeit und
+erwarteter Dauer.
 
 Innerhalb jeder Phase geht das kürzeste erwartete Update zuerst, die großen Installer (Visual Studio, Android Studio, Docker)
 also ans Ende. `zuletzt` (App Installer = winget selbst) steht immer ganz hinten; `hauptversionNurPerKlick` (TypeScript, npm,
@@ -189,7 +195,9 @@ Weitere optionale Felder:
 | `uebernahmeText` | Text des Bandes „wird übernommen" statt des Standards „nach dem Neustart des Programms" (OpenCode-Sitzung). |
 | `hauptversionNurPerKlick` | Ein Sprung der ersten Versionsstelle bleibt aus „Alle Updates installieren" draußen und läuft nur per Klick. |
 | `dauerSchaetzungSekunden` | Erwartete Update-Dauer, bis echte Messungen vorliegen (sonst ein Viertel von `zeitlimitMinuten`). |
-| `zuletzt` | Immer das letzte Update eines Sammellaufs (App Installer: ersetzt winget). |
+| `zuletzt` | Immer das letzte Update eines Sammellaufs, nach allen Phasen (App Installer: ersetzt winget). |
+| `parallel` | Darf im Sammellauf in der parallelen Bahn laufen. Nur für Selbst-Updater, die nichts mit einem anderen Eintrag teilen (Claude Code, Codex, Antigravity, rustup, OpenCode-Sitzung); bewusst kein Raten aus der Befehlszeile. |
+| `versionsMuster` / `versionsUrlMuster` | Regulärer Ausdruck, dessen Gruppe 1 die Version in der Versionsausgabe bzw. in der Antwort von `versionsUrl` ist (Gradle „9.7“ hat nur zwei Stellen, `gradle --version` nennt auch Kotlin). |
 | `updateExePfad` | Nur `cli`: anderes Programm für den Update-Lauf als für die Versionsabfrage (npm-Pakete: Version über `firebase.cmd --version`, Update über `npm.cmd install -g …`). Läuft im eigenen Ordner, damit npm seine Module findet. |
 
 Nicht über winget installierte Programme, deren Datei unter `exePfad` existiert, erscheinen nie mehr als

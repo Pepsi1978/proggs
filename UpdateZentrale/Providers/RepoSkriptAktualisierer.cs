@@ -110,7 +110,8 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         protokoll.Report(lauf.Ausgabe);
         var exeNachher = await FingerabdruckAsync(eintrag, abbruch);
 
-        return Auswerten(lauf, eintrag.StatusPraefix, !string.IsNullOrWhiteSpace(exeVorher) && exeVorher == exeNachher);
+        return Auswerten(lauf, eintrag.StatusPraefix, !string.IsNullOrWhiteSpace(exeVorher) && exeVorher == exeNachher,
+            selbst: eintrag.Id.Equals("updatezentrale", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -166,7 +167,12 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
     /// launched the existing exe. Reported as a finished update, the unchanged fingerprint then
     /// turned it into "not verified", the card offered the same update again -- the endless loop.
     /// </summary>
-    internal static PruefErgebnis Auswerten(BefehlErgebnis lauf, string? statusPraefix, bool buildUnveraendert)
+    /// <param name="selbst">
+    /// The UpdateZentrale itself: its script builds into a side folder and copies the new build in
+    /// only after this process has ended. "started" is therefore a pending update, confirmed by the
+    /// new instance at its start -- never "the build was already current".
+    /// </param>
+    internal static PruefErgebnis Auswerten(BefehlErgebnis lauf, string? statusPraefix, bool buildUnveraendert, bool selbst = false)
     {
         // How the process ended outranks what it printed: a "started" written before a timeout,
         // a cancel or a tree that could not be ended fully is never a finished update.
@@ -185,6 +191,12 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
                 Protokoll: lauf.Ausgabe);
         if (status == "already-current")
             return new PruefErgebnis(UpdateZustand.Aktuell, Meldung: "War bereits aktuell.", Protokoll: lauf.Ausgabe);
+        if (status == "started" && selbst)
+            return new PruefErgebnis(UpdateZustand.Fertig,
+                Meldung: "Neu gebaut – die UpdateZentrale startet in der neuen Fassung neu und bestätigt das Update dann selbst.",
+                Protokoll: lauf.Ausgabe, ErstNachNeustart: true);
+        if (status == "built")
+            return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Neu gebaut, aber nicht gestartet (-NoStart).", Protokoll: lauf.Ausgabe);
         if (status == "started")
             return buildUnveraendert
                 ? new PruefErgebnis(UpdateZustand.Aktuell,

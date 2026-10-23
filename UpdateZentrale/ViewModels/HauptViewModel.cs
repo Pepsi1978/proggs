@@ -38,6 +38,12 @@ public sealed partial class HauptViewModel : ObservableObject
     {
         Programme = new ObservableCollection<ProgrammViewModel>();
         Ansicht = CollectionViewSource.GetDefaultView(Programme);
+        // A card whose measured duration changes moves at once while "⏱ nach Dauer" is on.
+        if (Ansicht is ICollectionViewLiveShaping live && live.CanChangeLiveSorting)
+        {
+            live.LiveSortingProperties.Add(nameof(ProgrammViewModel.ErwarteteDauerSekunden));
+            live.IsLiveSorting = true;
+        }
         Ansicht.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ProgrammViewModel.Gruppe)));
 
         _hellModus = _einstellungen.HellModus;
@@ -232,7 +238,8 @@ public sealed partial class HauptViewModel : ObservableObject
                     : AllesAktuell ? "✔ Alles aktuell" : "Keine Updates offen";
             var cli = plan.Count(s => s.Phase == Sammelplan.PhaseCli);
             var text = plan.Count == 1 ? "1 Update installieren" : $"Alle {plan.Count} Updates installieren";
-            return text + (cli > 0 ? $"  ·  zuerst {cli} CLI-kritische" : "") + zusatz;
+            var eigene = plan.Count(s => s.Phase == Sammelplan.PhaseEigene);
+            return text + (cli > 0 ? $"  ·  {cli} CLI-kritische {(eigene > 0 ? "nach den eigenen Werkzeugen" : "zuerst")}" : "") + zusatz;
         }
     }
 
@@ -271,8 +278,7 @@ public sealed partial class HauptViewModel : ObservableObject
                 ["programme"] = string.Join(",", katalog.Programme.Select(p => p.Id + ":" + p.Art)),
                 ["ohneProvider"] = string.Join(",", katalog.Programme.Where(p => !_aktualisierer.ContainsKey(p.Art)).Select(p => p.Id))
             });
-        var berichte = Protokollierung.LetzteBerichte();
-        var dauern = Protokollierung.UpdateDauern();
+        var (berichte, dauern) = Protokollierung.VerlaufLesen();
         var gruppen = katalog.Programme.Select(p => p.Gruppe).Distinct(StringComparer.Ordinal).ToList();
         var index = 0;
 
@@ -627,8 +633,8 @@ public sealed partial class HauptViewModel : ObservableObject
                     + (cli.Count > 0
                         ? "\n\nDie CLI-kritischen Updates können laufende CLI-Sitzungen beenden:\n"
                           + string.Join("\n", cli.Select(s => "  • " + s.Programm.Name + " – " + s.Programm.Eintrag.CliRisiko))
-                          + "\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Sobald sie durch sind, "
-                          + "meldet die Kopfzeile, dass im CLI weitergearbeitet werden kann."
+                          + "\nDirekt vor ihnen hält der Lauf an und fragt noch einmal: dann Claude Code, Codex und alle "
+                          + "Terminalfenster schließen. Sobald sie durch sind, meldet die Fußzeile, dass im CLI weitergearbeitet werden kann."
                         : "")
                     + (nurKlick.Count > 0
                         ? "\n\nNur per Klick auf der Karte (Hauptversion): " + string.Join(", ", nurKlick.Select(p => p.Name))
@@ -642,10 +648,13 @@ public sealed partial class HauptViewModel : ObservableObject
     /// <summary>
     /// Runs a batch plan inside one exclusive ownership. The UpdateZentrale itself goes first and
     /// alone: its script restarts the app, so the rest is stored and continued by the new instance.
-    /// The phases run one after the other; within the last one, independent self-updaters run in a
-    /// parallel lane beside the serial one (winget, npm, scripts).
+    /// Before the CLI-critical phase the batch stops once and asks -- the one moment the CLIs must
+    /// be closed. The phases run one after the other; within a phase, entries marked "parallel"
+    /// run in a second lane beside the serial one (winget, npm, scripts).
     /// </summary>
-    private async Task SammelAusfuehrenAsync(List<Sammelplan.Schritt> plan, string sammelId)
+    /// <param name="versatz">Steps already done before a restart: positions continue the original plan.</param>
+    /// <param name="planGroesse">Size of the original plan (0 = this plan).</param>
+    private async Task SammelAusfuehrenAsync(List<Sammelplan.Schritt> plan, string sammelId, int versatz = 0, int planGroesse = 0)
     {
         // Acquired only now: the question before is modal, and whatever started meanwhile wins.
         using var besitz = _koordination.SammelBeginnen();
@@ -656,10 +665,11 @@ public sealed partial class HauptViewModel : ObservableObject
             return;
         }
 
+        var gesamtZahl = Math.Max(planGroesse, plan.Count + versatz);
         LaeuftSammelvorgang = true;
         var gesamt = System.Diagnostics.Stopwatch.StartNew();
-        var start = DateTime.Now;
         var laeufe = new List<SammelLauf>();
+        // All continuations run on the UI thread (WPF context), so these lists need no locks.
         var laufend = new List<(string Name, string Zeile)>();
         var fertig = 0;
         var cliHinweis = "";
@@ -668,27 +678,31 @@ public sealed partial class HauptViewModel : ObservableObject
         using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, "Alle Updates: " + string.Join(", ", plan.Select(s => s.Programm.Eintrag.Id)));
         Protokollierung.SammellaufSchreiben(new
         {
-            sammelId, ereignis = "plan", zeit = start,
-            plan = plan.Select((s, i) => new { position = i + 1, id = s.Programm.Eintrag.Id, phase = s.Phase, parallel = s.Parallel,
+            sammelId, ereignis = versatz == 0 ? "plan" : "fortsetzung", zeit = DateTime.Now, versatz, planGroesse = gesamtZahl,
+            plan = plan.Select((s, i) => new { position = versatz + i + 1, id = s.Programm.Eintrag.Id, phase = s.Phase, parallel = s.Parallel,
                                                erwartetSekunden = Math.Round(s.Programm.ErwarteteDauerSekunden), gemessen = s.Programm.DauerGemessen })
         });
 
         void Anzeigen()
         {
             PruefFertig = fertig;
-            KopfStatus = "Alle Updates: " + fertig + " von " + plan.Count + " fertig, " + laufend.Count + " laufen gerade"
+            KopfStatus = "Alle Updates: " + (versatz + fertig) + " von " + gesamtZahl + " fertig, " + laufend.Count + " laufen gerade"
                          + " – seit " + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + "." + cliHinweis;
             LaufDetail = string.Join("\n", laufend.Select(l => l.Zeile));
         }
 
-        async Task EinerAsync(Sammelplan.Schritt s)
+        void Abschluss(string ereignis) => Protokollierung.SammellaufSchreiben(new
         {
-            var position = plan.IndexOf(s) + 1;
-            lock (laufend)
-                laufend.Add((s.Programm.Name, "▶ " + s.Programm.Name + "  ·  Position " + position + " von " + plan.Count
-                                              + "  ·  " + Sammelplan.PhasenName(s.Phase) + (s.Parallel ? " (parallel)" : "")
-                                              + "  ·  gestartet " + DateTime.Now.ToString("HH:mm:ss")
-                                              + "  ·  erwartet ≈ " + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden)));
+            sammelId, ereignis, zeit = DateTime.Now, gesamtSekunden = Math.Round(gesamt.Elapsed.TotalSeconds, 1), laeufe = laeufe.ToList()
+        });
+
+        async Task<UpdateBericht?> EinerAsync(Sammelplan.Schritt s)
+        {
+            var position = versatz + plan.IndexOf(s) + 1;
+            laufend.Add((s.Programm.Name, "▶ " + s.Programm.Name + "  ·  Position " + position + " von " + gesamtZahl
+                                          + "  ·  " + Sammelplan.PhasenName(s.Phase) + (s.Parallel ? " (parallel)" : "")
+                                          + "  ·  gestartet " + DateTime.Now.ToString("HH:mm:ss")
+                                          + "  ·  erwartet ≈ " + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden)));
             Anzeigen();
             var uhr = System.Diagnostics.Stopwatch.StartNew();
             var beginn = DateTime.Now;
@@ -696,15 +710,16 @@ public sealed partial class HauptViewModel : ObservableObject
             try
             {
                 bericht = await s.Programm.AktualisierenImSammelAsync(besitz, new SammelKontext(sammelId, s.Phase, position));
+                return bericht;
             }
             finally
             {
-                lock (laufend) { laufend.RemoveAll(l => l.Name == s.Programm.Name); fertig++; }
+                laufend.RemoveAll(l => l.Name == s.Programm.Name);
+                fertig++;
                 Anzeigen();
-                lock (laeufe)
-                    laeufe.Add(new SammelLauf(position, s.Programm.Eintrag.Id, s.Phase, s.Parallel, beginn, DateTime.Now,
-                                              Math.Round(uhr.Elapsed.TotalSeconds, 1), bericht?.ErgebnisText ?? "ohne Bericht",
-                                              Math.Round(s.Programm.ErwarteteDauerSekunden)));
+                laeufe.Add(new SammelLauf(position, s.Programm.Eintrag.Id, s.Phase, s.Parallel, beginn, DateTime.Now,
+                                          Math.Round(uhr.Elapsed.TotalSeconds, 1), bericht?.ErgebnisText ?? "ohne Bericht",
+                                          Math.Round(s.Programm.ErwarteteDauerSekunden)));
             }
         }
 
@@ -716,22 +731,32 @@ public sealed partial class HauptViewModel : ObservableObject
             if (selbst is not null)
             {
                 rest = plan.Where(s => s != selbst).ToList();
-                // Stored BEFORE the run: the script's helper may end this process any second after it.
+                // Stored BEFORE the run: the script's helper ends this process shortly after "started".
                 _einstellungen.SammelFortsetzen = rest.Count == 0 ? null
-                    : new SammelFortsetzung { SammelId = sammelId, Zeit = DateTime.Now, ProgrammIds = rest.Select(s => s.Programm.Eintrag.Id).ToList() };
+                    : new SammelFortsetzung
+                    {
+                        SammelId = sammelId, Zeit = DateTime.Now, Versatz = versatz + 1, PlanGroesse = gesamtZahl,
+                        ProgrammIds = rest.Select(s => s.Programm.Eintrag.Id).ToList()
+                    };
                 _einstellungen.Speichern();
                 AusgewaehltesProgramm = selbst.Programm;
-                await EinerAsync(selbst);
+                var bericht = await EinerAsync(selbst);
 
-                if (selbst.Programm.LetzterBericht?.Ergebnis is not (LaufErgebnis.Abgebrochen or LaufErgebnis.Fehlgeschlagen))
+                // Only a real "started" restarts the app: the self-update is reported as pending
+                // (the new build is copied in after this process ends). Anything else -- no, no
+                // answer, failure, nothing to do -- carries on here at once.
+                if (bericht is { Ergebnis: LaufErgebnis.Ausstehend })
                 {
-                    // The script answered "started": the helper closes this app within seconds and
-                    // starts the new build, which continues the batch. Should the app outlive the
-                    // wait, the restart did not happen -- then this instance carries on itself.
-                    KopfStatus = "Die UpdateZentrale startet neu und setzt die übrigen " + rest.Count + " Updates danach fort …";
                     ende = "selbstupdate";
+                    Abschluss("selbstupdate-neustart");   // written now: this process will not reach the finally
+                    KopfStatus = rest.Count == 0
+                        ? "Die UpdateZentrale startet in der neuen Fassung neu …"
+                        : "Die UpdateZentrale startet neu und setzt die übrigen " + rest.Count + " Updates danach fort …";
+                    LaufDetail = "";
                     await Task.Delay(TimeSpan.FromSeconds(90));
+                    // Still alive: the restart did not happen -- this instance carries on itself.
                     ende = "abgeschlossen";
+                    Diagnose.Ereignis(Schwere.Warnung, "sammel", "sammel.kein_neustart", "Kein Neustart nach dem Selbst-Update – der Sammellauf geht hier weiter.", sammelId);
                 }
                 _einstellungen.SammelFortsetzen = null;
                 _einstellungen.Speichern();
@@ -739,8 +764,30 @@ public sealed partial class HauptViewModel : ObservableObject
 
             foreach (var phase in rest.GroupBy(s => s.Phase).OrderBy(g => g.Key))
             {
-                var seriell = phase.Where(s => !s.Parallel).ToList();
-                var parallel = phase.Where(s => s.Parallel).ToList();
+                var schritte = phase.ToList();
+
+                // The one moment the CLIs have to be closed: right before the updates that can end
+                // their sessions. "No" leaves them open for a later click; the rest goes on.
+                if (phase.Key == Sammelplan.PhaseCli)
+                {
+                    LaufDetail = "";
+                    var frage = "Jetzt kommen die CLI-kritischen Updates:\n\n"
+                                + string.Join("\n", schritte.Select(s => "  • " + s.Programm.Name + " – " + s.Programm.Eintrag.CliRisiko))
+                                + "\n\nSchließe jetzt Claude Code, Codex, OpenCode und alle Terminalfenster und klicke dann auf „Ja“."
+                                + "\n„Nein“ überspringt sie (sie bleiben offen); die übrigen Updates laufen weiter.";
+                    if (!Dialoge.Fragen(frage, "CLI-kritische Updates jetzt installieren?"))
+                    {
+                        Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.cli_uebersprungen", schritte.Count + " CLI-kritische Updates übersprungen.", sammelId);
+                        Protokollierung.SammellaufSchreiben(new { sammelId, ereignis = "cli-uebersprungen", zeit = DateTime.Now, ids = schritte.Select(s => s.Programm.Eintrag.Id) });
+                        fertig += schritte.Count;
+                        cliHinweis = "  ·  CLI-kritische Updates übersprungen – sie bleiben offen.";
+                        Anzeigen();
+                        continue;
+                    }
+                }
+
+                var seriell = schritte.Where(s => !s.Parallel).ToList();
+                var parallel = schritte.Where(s => s.Parallel).ToList();
 
                 async Task SeriellAsync()
                 {
@@ -774,16 +821,13 @@ public sealed partial class HauptViewModel : ObservableObject
 
             var fehler = laeufe.Count(l => l.Ergebnis is "Fehlgeschlagen" or "Nicht verifiziert" or "ohne Bericht");
             KopfStatus = "Alle Updates sind durchgelaufen (" + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + ")"
-                         + (fehler > 0 ? " – " + fehler + " mit Problemen, siehe rote Karten." : ".");
+                         + (fehler > 0 ? " – " + fehler + " mit Problemen, siehe rote Karten." : ".")
+                         + (cliHinweis.Contains("übersprungen") ? cliHinweis : "");
             vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         finally
         {
-            Protokollierung.SammellaufSchreiben(new
-            {
-                sammelId, ereignis = ende, zeit = DateTime.Now, gesamtSekunden = Math.Round(gesamt.Elapsed.TotalSeconds, 1),
-                laeufe = laeufe.ToList()
-            });
+            Abschluss(ende);
             LaeuftSammelvorgang = false;
             LaufDetail = "";
             SortierungAnwenden();
@@ -792,7 +836,8 @@ public sealed partial class HauptViewModel : ObservableObject
 
     /// <summary>
     /// After the UpdateZentrale updated itself inside "install all", the new instance continues
-    /// the stored rest -- once, and only if it is fresh. The user agreed to the whole batch already.
+    /// the stored rest -- once, and only if it is fresh. The user agreed to the whole batch already;
+    /// the CLI-critical phase still asks its own question.
     /// </summary>
     private async Task SammelFortsetzenAsync()
     {
@@ -805,7 +850,7 @@ public sealed partial class HauptViewModel : ObservableObject
         var plan = Sammelplan.Planen(Programme.Where(p => p.HatUpdate && offen.ProgrammIds.Contains(p.Eintrag.Id, StringComparer.OrdinalIgnoreCase)
                                                           && !p.Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase)));
         Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.fortsetzung", plan.Count + " Updates nach dem Selbst-Update fortgesetzt.", offen.SammelId);
-        if (plan.Count > 0) await SammelAusfuehrenAsync(plan, offen.SammelId);
+        if (plan.Count > 0) await SammelAusfuehrenAsync(plan, offen.SammelId, offen.Versatz, offen.PlanGroesse);
     }
 
     /// <summary>Batch buttons and "reload" are only usable while nothing at all is running.</summary>

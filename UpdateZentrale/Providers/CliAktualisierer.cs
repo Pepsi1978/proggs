@@ -31,7 +31,7 @@ public sealed class CliAktualisierer : IAktualisierer
 
             // Without a readable installed version any comparison is meaningless: "" against the
             // registry version used to announce an update that nobody could verify.
-            var (version, problem) = FingerabdruckAus(lauf, null);
+            var (version, problem) = FingerabdruckAus(lauf, null, eintrag);
             if (problem is not null)
             {
                 protokoll.Report("Versionsabfrage fehlgeschlagen: " + problem);
@@ -89,7 +89,7 @@ public sealed class CliAktualisierer : IAktualisierer
         // Path 3: a plain-text URL that names the newest version (Kimi Code's CDN "latest").
         if (!string.IsNullOrWhiteSpace(eintrag.VersionsUrl))
         {
-            var url = await UrlVersionAsync(Netz, eintrag.VersionsUrl, protokoll, abbruch);
+            var url = await UrlVersionAsync(Netz, eintrag.VersionsUrl, protokoll, abbruch, eintrag.VersionsUrlMuster);
             if (!url.Erfolg)
                 return new PruefErgebnis(UpdateZustand.Fehler, installiert, "", url.Problem ?? "Versionsabfrage fehlgeschlagen.");
 
@@ -183,7 +183,7 @@ public sealed class CliAktualisierer : IAktualisierer
         {
             if (versionsLauf.Abgelaufen) return ("", "Versionsabfrage hat das Zeitlimit überschritten.");
             if (versionsLauf.ExitCode != 0) return ("", "Versionsabfrage endete mit Code " + versionsLauf.ExitCode + ".");
-            var version = VersionsMuster.Match(versionsLauf.Ausgabe).Value;
+            var version = VersionAus(versionsLauf.Ausgabe, eintrag?.VersionsMuster);
             return string.IsNullOrWhiteSpace(version)
                 ? ("", "Versionsabfrage lieferte keine Versionsnummer.")
                 : (version, null);
@@ -289,7 +289,7 @@ public sealed class CliAktualisierer : IAktualisierer
 
     /// <summary>Reads the first version number from a plain-text URL; redirects are followed.</summary>
     internal static async Task<NpmAbfrage> UrlVersionAsync(HttpClient netz, string adresse, IProgress<string> protokoll,
-                                                           CancellationToken abbruch)
+                                                           CancellationToken abbruch, string? muster = null)
     {
         NpmAbfrage ergebnis;
         try
@@ -302,7 +302,7 @@ public sealed class CliAktualisierer : IAktualisierer
             }
             else
             {
-                var version = VersionsMuster.Match(await antwort.Content.ReadAsStringAsync(abbruch)).Value;
+                var version = VersionAus(await antwort.Content.ReadAsStringAsync(abbruch), muster);
                 ergebnis = string.IsNullOrWhiteSpace(version)
                     ? new NpmAbfrage(false, "", "Die Versionsadresse lieferte keine Versionsnummer.")
                     : new NpmAbfrage(true, version, null);
@@ -319,6 +319,25 @@ public sealed class CliAktualisierer : IAktualisierer
 
         protokoll.Report($"{adresse} -> " + (ergebnis.Erfolg ? ergebnis.Version : ergebnis.Problem));
         return ergebnis;
+    }
+
+    /// <summary>
+    /// The version in a text: group 1 of the catalog pattern when one is set (two-part versions
+    /// like Gradle's "9.7"), otherwise the first "x.y.z". An invalid pattern yields "" (unknown).
+    /// </summary>
+    internal static string VersionAus(string text, string? muster)
+    {
+        if (string.IsNullOrWhiteSpace(muster)) return VersionsMuster.Match(text).Value;
+        try
+        {
+            var treffer = Regex.Match(text, muster, RegexOptions.None, TimeSpan.FromSeconds(1));
+            return treffer.Success ? (treffer.Groups.Count > 1 ? treffer.Groups[1].Value : treffer.Value) : "";
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "provider", Schwere.Warnung);
+            return "";
+        }
     }
 
     /// <summary>Pure evaluation of the registry body: only a readable version number counts.</summary>

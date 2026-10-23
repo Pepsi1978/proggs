@@ -207,6 +207,24 @@ public sealed class ProgrammEintrag
     public bool Zuletzt { get; set; }
 
     /// <summary>
+    /// May run in the parallel lane of "install all": a self-updater that touches only its own
+    /// folder and shares no lock, tree or runtime with another entry. Explicit on purpose -- guessed
+    /// from the command line it put the Android SDK (needs the JDK being replaced) and the LM Studio
+    /// runtimes (LM Studio itself is replaced beside them) into the parallel lane.
+    /// </summary>
+    public bool Parallel { get; set; }
+
+    /// <summary>
+    /// Regex whose group 1 is the installed version in the output of <see cref="VersionsArgumente"/>.
+    /// Without it the first "x.y.z" wins -- for "gradle --version" that is Kotlin's version as soon
+    /// as Gradle itself has only two parts ("9.7").
+    /// </summary>
+    public string? VersionsMuster { get; set; }
+
+    /// <summary>Same for the body of <see cref="VersionsUrl"/> (Gradle's JSON names "version": "9.7").</summary>
+    public string? VersionsUrlMuster { get; set; }
+
+    /// <summary>
     /// Why this update can end a running CLI session (Claude Code, Codex, a terminal window).
     /// Set = the card is marked, and "install all" holds it back for a second step that runs
     /// only once the CLIs are closed.

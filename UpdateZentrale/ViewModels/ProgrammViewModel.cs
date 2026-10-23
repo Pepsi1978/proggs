@@ -240,7 +240,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
           + "weiterhin die alte Version.";
 
     /// <summary>"Start and take over" only where there is something to start (not for the OpenCode session).</summary>
-    public bool UebernahmeStartbar => KannStarten;
+    public bool UebernahmeStartbar => KannStarten && !Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase);
 
     partial void OnLetzterBerichtChanged(UpdateBericht? value)
     {
@@ -280,7 +280,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// launch of the UpdateZentrale this confirms it retroactively -- or flags that it never
     /// arrived, which is exactly the case that would otherwise go unnoticed.
     /// </summary>
-    public async Task AusstehendesPruefenAsync()
+    /// <param name="pruefung">A check that just ran -- reused instead of asking the provider again.</param>
+    public async Task AusstehendesPruefenAsync(PruefErgebnis? pruefung = null)
     {
         if (_aktualisierer is null || LetzterBericht is not { Ergebnis: LaufErgebnis.Ausstehend } offen) return;
 
@@ -289,7 +290,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         using var vorgang = Diagnose.VorgangBeginnen("nachpruefung-ausstehend", Eintrag,
             "Ausstehendes Update vom " + offen.Zeit.ToString("dd.MM.yyyy") + " prüfen");
         var jetzt = await _aktualisierer.FingerabdruckAsync(Eintrag, CancellationToken.None);
-        var pruefung = await _aktualisierer.PruefenAsync(Eintrag, new Progress<string>(_ => { }), CancellationToken.None);
+        pruefung ??= await _aktualisierer.PruefenAsync(Eintrag, new Progress<string>(_ => { }), CancellationToken.None);
         if (UpdateKette.StagedUrteil(offen, jetzt, pruefung, DateTime.Now) is not { } urteil)
         {
             vorgang.Beenden("weiter-ausstehend", "Ziel noch nicht nachweislich übernommen.");
@@ -489,7 +490,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             // A pending update (staged installer, the OpenCode session) is confirmed by the very
             // check that sees it arrive -- not only at the next start of the app.
-            if (UebernahmeOffen && Zustand == UpdateZustand.Aktuell) await AusstehendesPruefenAsync();
+            if (UebernahmeOffen && _letztePruefung is { Zustand: UpdateZustand.Aktuell } frisch)
+                await AusstehendesPruefenAsync(frisch);
         }
         finally
         {
@@ -515,10 +517,13 @@ public sealed partial class ProgrammViewModel : ObservableObject
     internal async Task<UpdateBericht?> AktualisierenImSammelAsync(Laufbesitz sammel, SammelKontext? kontext = null)
     {
         _sammelKontext = kontext;
+        var vorher = LetzterBericht;
         try
         {
             await AktualisierenKernAsync(sammel);
-            return kontext is null ? null : LetzterBericht;
+            // Only a report THIS run wrote: a refused start or an exception before the report
+            // leaves yesterday's verdict in place, and that must not count as this batch's result.
+            return ReferenceEquals(LetzterBericht, vorher) ? null : LetzterBericht;
         }
         finally
         {
@@ -527,6 +532,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     private SammelKontext? _sammelKontext;
+
+    /// <summary>The answer of the check that just ran (null after an update or an exception).</summary>
+    private PruefErgebnis? _letztePruefung;
 
     // ---------------- Dauer und Reihenfolge ----------------
 
@@ -688,6 +696,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 Erhoeht = Rechte.IstErhoeht,
                 ExitCode = urteil.Ergebnis is LaufErgebnis.Fehlgeschlagen or LaufErgebnis.NichtVerifiziert ? 1 : 0,
                 DauerSekunden = Math.Round(uhr.Elapsed.TotalSeconds, 1),
+                ArbeitSekunden = urteil.ArbeitSekunden,
+                UpdateAufrufe = urteil.UpdateAufrufe,
                 SammelId = kontext?.Id,
                 SammelPhase = kontext?.Phase,
                 SammelPosition = kontext?.Position
@@ -696,8 +706,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
             fortschritt.Report(AbschlussZeile(bericht) + "  (Dauer " + Protokollierung.DauerText(uhr.Elapsed.TotalSeconds) + ")");
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
-            if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend)
-                DauernSetzen(_dauern.Append(bericht.DauerSekunden.Value));
+            if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend && Protokollierung.Messwert(bericht) is { } messwert)
+                DauernSetzen(_dauern.Append(messwert));
 
             return urteil.FuerKarte;
         });
@@ -827,7 +837,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
         try
         {
+            _letztePruefung = null;
             var ergebnis = await arbeit(fortschritt, CancellationToken.None);
+            if (art == "pruefung") _letztePruefung = ergebnis;
             Zustand = ergebnis.Zustand;
             if (!string.IsNullOrWhiteSpace(ergebnis.InstallierteVersion)) InstallierteVersion = ergebnis.InstallierteVersion;
             VerfuegbareVersion = ergebnis.VerfuegbareVersion;
