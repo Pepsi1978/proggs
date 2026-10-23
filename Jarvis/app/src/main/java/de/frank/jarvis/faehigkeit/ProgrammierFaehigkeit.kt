@@ -980,19 +980,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val letzter = eintrag.optString("letzterStand", eintrag.optString("stand"))
         // Spricht gleich die Sprachzustellung den Abschluss, liest die Benachrichtigung nichts vor (keine zweite, konkurrierende Stimme).
         if (benachrichtigen && (frage != null || letzter == "fertig" || letzter == "fehler" || letzter in GESPERRT))
-            benachrichtige(eintrag, vorlesen = frage != null || (sprachAbschlussGeplant(eintrag) == null && !schonAngesagt(eintrag)))
+            // Eine Rückfrage liest rueckfrageVorn vor (auch bei ausgeschaltetem Handy), nicht die Benachrichtigung.
+            benachrichtige(eintrag, vorlesen = frage == null && sprachAbschlussGeplant(eintrag) == null && !schonAngesagt(eintrag))
         val gespraech = eintrag.optString("gespraech")
-        if (gespraech.isEmpty()) return
+        val fragen = frage?.optJSONArray("fragen") ?: JSONArray()
+        val kurz = (0 until fragen.length()).joinToString(" / ") { fragen.optJSONObject(it)?.optString("question").orEmpty() }.trim()
+        if (gespraech.isEmpty()) {
+            // Ohne Gespräch kein Vollbild, aber die Rückfrage wird trotzdem angesagt.
+            if (frage != null && benachrichtigen) rueckfrageVorn(eintrag, frage, kurz)
+            return
+        }
         val appName = eintrag.optString("app")
         val schritt = eintrag.optString("schritt")
         if (frage != null) {
-            val fragen = frage.optJSONArray("fragen") ?: JSONArray()
-            val kurz = (0 until fragen.length()).joinToString(" / ") { fragen.optJSONObject(it)?.optString("question").orEmpty() }.trim()
             // „aufgabe“: die Aufgabe der Sitzung, kurz, damit Karte und Vollbild zeigen, welcher von mehreren Aufträgen fragt.
             val kontext = JSONObject().put("frage_id", frage.optString("frage_id")).put("auftrag", eintrag.optString("id")).put("app", appName)
                 .put("aufgabe", RueckfrageAufgabe.aus(eintrag)).put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
                 .put("status", RueckfrageStand.OFFEN).put("bis", frage.optLong("bis")).put("eingang", System.currentTimeMillis() / 1000)
             ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
+            if (benachrichtigen) rueckfrageVorn(eintrag, frage, kurz)
             return
         }
         val zeichen = when (letzter) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT, STAND_UNKLAR -> "⚠️"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
@@ -1133,22 +1139,38 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Eine Sperre stört kein Live-Gespräch (still, aber sichtbar); Rückfrage, Fertig und Problem wie bisher auch dort mit Ton.
                 titel, if (vorlesen) "$titel. $text" else null, laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
             )
-            if (stand == "frage" && frageId.isNotEmpty() && oeffnen?.component != null) rueckfrageNachVorn(oeffnen)
         }
     }
 
     /**
-     * Franks Vorgabe vom 23.10.2026: Eine Rückfrage geht sofort im Vordergrund auf und hat Vorrang, statt als Benachrichtigung
-     * unterzugehen (die Sitzung wartet höchstens fünf Minuten, danach entscheidet sie selbst). Aus dem Hintergrund darf Jarvis
-     * eine Ansicht nur mit „Über anderen Apps einblenden“ öffnen (wie beim Weckwort); ohne bleibt die Benachrichtigung mit Vollbild.
+     * Franks Vorgabe vom 23.10.2026: Eine Rückfrage hat Vorrang vor allem. Sie geht sofort als Vollbild auf, egal ob Frank in
+     * einem anderen Gespräch, in den Einstellungen oder in einer anderen App ist (aus dem Hintergrund darf Jarvis das mit
+     * „Über anderen Apps einblenden“, wie beim Weckwort). Ist der Bildschirm aus oder gesperrt, liest Jarvis vor, dass eine
+     * Antwort fehlt, unabhängig von Vorlese-Einstellung und Ruhezeit; nach dem Entsperren steht das Vollbild schon vorn.
+     * Erst nach dem Posten ins Gespräch aufrufen: Das Vollbild sucht die Frage dort.
      */
-    private fun rueckfrageNachVorn(absicht: Intent) {
-        val darf = android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app) || de.frank.jarvis.MainActivity.sichtbar
-        if (!darf) {
-            Logbuch.system("Rückfrage nur als Benachrichtigung", "„Über anderen Apps einblenden“ ist für Jarvis nicht erlaubt")
-            return
+    private fun rueckfrageVorn(eintrag: JSONObject, frage: JSONObject, kurz: String) {
+        val appName = eintrag.optString("app")
+        val gespraech = eintrag.optString("gespraech")
+        val frageId = frage.optString("frage_id")
+        if (gespraech.isNotEmpty() && frageId.isNotEmpty()) {
+            val darf = android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app) || de.frank.jarvis.MainActivity.sichtbar
+            if (darf) {
+                val absicht = Intent(app, de.frank.jarvis.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .putExtra(EXTRA_GESPRAECH, gespraech).putExtra(EXTRA_RUECKFRAGE, frageId)
+                runCatching { app.startActivity(absicht) }.onFailure { Logbuch.fehler("Rückfrage ließ sich nicht nach vorn holen", it) }
+            } else {
+                Logbuch.system("Rückfrage nur als Benachrichtigung", "„Über anderen Apps einblenden“ ist für Jarvis nicht erlaubt")
+            }
         }
-        runCatching { app.startActivity(absicht) }.onFailure { Logbuch.fehler("Rückfrage ließ sich nicht nach vorn holen", it) }
+        val review = kurz.contains("review", ignoreCase = true)
+        val satz = if (review) "Eine Code-Review-Frage vom Programmierer zu $appName wartet auf deine Antwort."
+            else "Eine Rückfrage vom Programmierer zu $appName wartet auf deine Antwort: ${kurz.take(300)}"
+        val aus = !(app.getSystemService(android.os.PowerManager::class.java)?.isInteractive ?: true) ||
+            (app.getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked ?: false)
+        val art = de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN
+        if (aus || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art))
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId", ausdruecklich = aus)
     }
 
     /** Die letzten Programmieraufträge mit ihren Schritten, dauerhaft in den App-Einstellungen (höchstens 20). */

@@ -203,6 +203,14 @@ def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: lis
     return code
 
 
+def melde_still(stand: str, schritt: str) -> None:
+    """Melden, wenn die eigentliche Ausgabe schon steht: Ein Netzfehler wird nur protokolliert und bricht nichts ab."""
+    try:
+        melde(stand, schritt)
+    except Exception as fehler:
+        schreib(f"Meldung {stand} nicht gesendet: {fehler}")
+
+
 def melde_sicher(stand: str, schritt: str, frage: dict | None = None, versuche: int = 5) -> bool:
     """Für Rückfragen und ihren Ausgang: mehrmals versuchen (Relay-Neustart, Funkloch). Doppelt schadet nicht, Jarvis und
     der Relay erkennen dieselbe frage_id wieder."""
@@ -996,10 +1004,12 @@ def frage(eingabe: dict) -> None:
         schreib("Keine Antwort über Jarvis (abgelaufen): Sitzung entscheidet selbst und arbeitet weiter")
         ausgabe = ohne_antwort(ein, fragen, f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht geantwortet")
         text = "; ".join(ausgabe["hookSpecificOutput"]["updatedInput"]["answers"].values())
+        # Zuerst die Antwort: Ist der Relay weg (ein Grund für das Ausbleiben), darf keine Meldung sie verhindern.
+        sys.stdout.write(json.dumps(ausgabe))
+        sys.stdout.flush()
         merke_frage(tool_use_id, frage_id, "beantwortet")
         frage_status(frage_id, "erledigt", antwort=text, grund="abgelaufen")
-        melde("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung arbeitet weiter: " + text)
-        sys.stdout.write(json.dumps(ausgabe))
+        melde_still("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung arbeitet weiter: " + text)
         return
     antworten = {str(k): str(v) for k, v in (antwort.get("antworten") or {}).items()}
     zusatz = str(antwort.get("text", "")).strip()
@@ -1008,16 +1018,18 @@ def frage(eingabe: dict) -> None:
         antworten = {str(f.get("question", "")): zusatz for f in fragen}
     text = "; ".join(f"{v}" for v in antworten.values())
     # Angekommen: Jarvis zeigt die Frage überall als beantwortet (auch auf einem zweiten Weg, etwa per ChatGPT).
-    merke_frage(tool_use_id, frage_id, "beantwortet")
-    frage_status(frage_id, "beantwortet", antwort=text)
-    melde("laeuft", "💬 Antwort von Frank: " + text)
     ausgabe = {"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "permissionDecision": "allow",
         "permissionDecisionReason": "Frank hat über Jarvis geantwortet.",
         "updatedInput": {**ein, "answers": antworten},
     }}
+    # Zuerst die Antwort: Ein Netzfehler beim Melden ließ sie sonst verloren gehen, und der Dialog stünde offen.
     sys.stdout.write(json.dumps(ausgabe))
+    sys.stdout.flush()
+    merke_frage(tool_use_id, frage_id, "beantwortet")
+    frage_status(frage_id, "beantwortet", antwort=text)
+    melde_still("laeuft", "💬 Antwort von Frank: " + text)
 
 
 def stop(eingabe: dict) -> None:
@@ -1083,14 +1095,15 @@ def stop(eingabe: dict) -> None:
             return
         # Abgelaufen: nie stehen bleiben (Vorgabe vom 23.10.2026). Einmal weiterarbeiten lassen; stop_hook_active verhindert
         # beim nächsten Stop eine zweite Runde.
-        frage_status(frage_id, "erledigt", antwort="keine Antwort, Sitzung entscheidet selbst", grund="abgelaufen")
         schreib("Freie Rückfrage ohne Antwort über Jarvis (abgelaufen): Sitzung arbeitet weiter")
-        melde("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung entscheidet selbst und arbeitet weiter.")
         sys.stdout.write(json.dumps({"decision": "block", "reason": (
             f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht auf deine Frage geantwortet. Nicht erneut fragen: Geht es um ein Review, "
             "gilt Nein. Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende den Zug mit einem "
             "Satz. Sonst entscheide selbst die sicherste sinnvolle Variante, arbeite weiter und nenne die Annahme in der Abschlussmeldung.")},
             ensure_ascii=False))
+        sys.stdout.flush()
+        frage_status(frage_id, "erledigt", antwort="keine Antwort, Sitzung entscheidet selbst", grund="abgelaufen")
+        melde_still("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung entscheidet selbst und arbeitet weiter.")
         return
     # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung), dazu die Dauer
     # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal). Der Stand „info“ ist das Merkmal des ausführlichen
