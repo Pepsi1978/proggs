@@ -136,6 +136,17 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     "Das Limit gilt für den Chat und alle Agenten; Agenten fragen nach je ${de.frank.jarvis.agent.Agenten.ZEITLIMIT_MINUTEN} Minuten, ob sie weiterarbeiten sollen." +
                     if (e.schrittlimit == 0) " Unbegrenzt hebt nur dieses Limit auf; Zeitlimit und Abbrechen gelten weiter. Lange Anfragen können mehr kosten und länger dauern." else "",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                Unterzeile("Tokenlimit pro Antwort")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Einstellungen.TOKENLIMITS.forEach { n ->
+                        Chip(Einstellungen.tokenlimitLabel(n), aktiv = e.tokenlimit == n) { vm.setzeTokenlimit(n) }
+                    }
+                }
+                Text("So viele Token darf das Modell je Antwort verbrauchen, Denken samt Text. Bei Denkstufe „Maximal“ braucht schon das Denken oft über 64 000. " +
+                    if (e.modell.istAnthropic) "Claude nimmt höchstens ${de.frank.jarvis.auth.ANTHROPIC_MAX_TOKENS / 1000} 000; höhere Stufen wirken wie dieses Maximum." +
+                        (if (e.tokenlimit > de.frank.jarvis.auth.ANTHROPIC_MAX_TOKENS) " Gerade gilt also ${de.frank.jarvis.auth.ANTHROPIC_MAX_TOKENS / 1000} 000." else "")
+                    else "Die GPT-Modelle über das ChatGPT-Konto haben keine einstellbare Grenze und nutzen immer ihr Maximum; die Stufe gilt, sobald du zu Claude wechselst.",
+                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
 

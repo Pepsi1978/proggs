@@ -257,6 +257,7 @@
     {"versionCode": 252, "versionName": "1.8.241", "stand": "23.10.2026, 13:07 Uhr", "notiz": "Die Aufwandsstufen der Claude-Modelle heißen jetzt wie in der Claude-App: Niedrig, Mittel, Hoch, Extra hoch und Maximal."},
     {"versionCode": 253, "versionName": "1.8.242", "stand": "23.10.2026, 13:11 Uhr", "notiz": "Die Kostenanzeige je Aufgabe misst genauer: nur Claude-Aufgaben zählen, kein veralteter Ausgangswert, weniger Abfragen bei der Claude Console."},
     {"versionCode": 254, "versionName": "1.8.243", "stand": "23.10.2026, 13:12 Uhr", "notiz": "Denkstufen: „Sehr hoch“ und „Extra hoch“ werden per Sprache bei jedem Modell erkannt, und das Live-Gespräch zeigt bei „Wie im Chat“ die Namen und Stufen des Chat-Modells."},
-    {"versionCode": 255, "versionName": "1.8.244", "stand": "23.10.2026, 13:15 Uhr", "notiz": "Die Tagesauswertung mit Claude und Denkstufe „Maximal“ wird nicht mehr abgeschnitten: Claude darf jetzt bis zu 128 000 Token schreiben und bekommt dafür bis zu 12 Minuten Zeit."}
+    {"versionCode": 255, "versionName": "1.8.244", "stand": "23.10.2026, 13:15 Uhr", "notiz": "Die Tagesauswertung mit Claude und Denkstufe „Maximal“ wird nicht mehr abgeschnitten: Claude darf jetzt bis zu 128 000 Token schreiben und bekommt dafür bis zu 12 Minuten Zeit."},
+    {"versionCode": 256, "versionName": "1.8.245", "stand": "23.10.2026, 13:18 Uhr", "notiz": "Neu unter Jarvis' Kopf: Tokenlimit pro Antwort in 50 000er-Stufen bis 500 000 Token, auch per Sprache einstellbar; Claude nimmt davon höchstens 128 000."}
   ]
 }

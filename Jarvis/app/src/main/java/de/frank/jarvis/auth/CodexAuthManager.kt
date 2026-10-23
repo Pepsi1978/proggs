@@ -785,7 +785,7 @@ class CodexAuthManager(context: Context) {
         while (true) {
             var deliveredText = false
             try {
-                return requestAnthropicOnce(anthropicChatPayload(instructions, turns, model, reasoningEffort, mitFallback), key, mitFallback && model.mitFallback) { delta ->
+                return requestAnthropicOnce(anthropicChatPayload(instructions, turns, model, reasoningEffort, mitFallback, de.frank.jarvis.data.Einstellungen.get(appContext).tokenlimit), key, mitFallback && model.mitFallback) { delta ->
                     deliveredText = true
                     onDelta(delta)
                 }

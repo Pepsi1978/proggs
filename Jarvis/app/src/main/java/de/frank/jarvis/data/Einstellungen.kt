@@ -208,6 +208,13 @@ class Einstellungen private constructor(context: Context) {
             require(v in SCHRITTLIMITS) { "Ungültiges Schrittlimit $v; erlaubt: ${SCHRITTLIMITS.joinToString { schrittlimitLabel(it) }}" }
             put { putInt("schrittlimit", v) }
         }
+    /** Höchstens so viele Token darf das Modell je Antwort verbrauchen (Denken samt Text); Claude nimmt davon höchstens 128 000. */
+    var tokenlimit: Int
+        get() = prefs.getInt("tokenlimit", STANDARD_TOKENLIMIT).takeIf { it in TOKENLIMITS } ?: STANDARD_TOKENLIMIT
+        set(v) {
+            require(v in TOKENLIMITS) { "Ungültiges Tokenlimit $v; erlaubt: ${TOKENLIMITS.joinToString { tokenlimitLabel(it) }}" }
+            put { putInt("tokenlimit", v) }
+        }
 
     // ---- Plugin und Server ----
     /** Adresse des eigenen Servers (Jarvis-Relay). Vorgabe aus dem Bau oder zugang.json, hier nur zum Überschreiben. */
@@ -388,6 +395,10 @@ class Einstellungen private constructor(context: Context) {
         const val STANDARD_SCHRITTLIMIT = 10
         /** So heißt ein Schrittlimit in Oberfläche und Sprachantworten. */
         fun schrittlimitLabel(n: Int): String = if (n == 0) "Unbegrenzt" else "$n Schritte"
+        val TOKENLIMITS = (50_000..500_000 step 50_000).toList()
+        const val STANDARD_TOKENLIMIT = 150_000
+        /** So heißt ein Tokenlimit in Oberfläche und Sprachantworten. */
+        fun tokenlimitLabel(n: Int): String = "${n / 1000} 000 Token"
         private const val TAG = "JarvisEinstellungen"
         /** Die Schlüssel, die zugang.json setzen darf (siehe zugangPruefen). */
         private val ZUGANG = listOf("server_token", "routine_token", "such_schluessel", "maps_schluessel", "drive_client_secret", "server_host")

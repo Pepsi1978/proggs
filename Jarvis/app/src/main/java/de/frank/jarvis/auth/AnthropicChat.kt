@@ -14,6 +14,7 @@ internal fun anthropicChatPayload(
     model: CodexModel,
     reasoningEffort: ReasoningEffort,
     mitFallback: Boolean,
+    maxTokens: Int = ANTHROPIC_MAX_TOKENS,
 ): JSONObject {
     val messages = JSONArray()
     var rolle: String? = null
@@ -37,7 +38,8 @@ internal fun anthropicChatPayload(
     abschliessen()
     val payload = JSONObject()
         .put("model", model.apiId)
-        .put("max_tokens", ANTHROPIC_MAX_TOKENS)
+        // Die Grenze aus den Einstellungen, gedeckelt auf das, was die API annimmt (darüber käme ein Fehler 400).
+        .put("max_tokens", maxTokens.coerceIn(1_024, ANTHROPIC_MAX_TOKENS))
         .put("stream", true)
         // Die große Anweisung bleibt über alle Schritte einer Antwort gleich: zwischenspeichern spart Kosten und Wartezeit.
         .put("system", JSONArray().put(textBlock(instructions.trim() + "\n\n" + UMLAUT_HINWEIS).put("cache_control", JSONObject().put("type", "ephemeral"))))
@@ -54,7 +56,7 @@ internal val CodexModel.mitFallback: Boolean get() = istAnthropic && this != Cod
 
 internal const val ANTHROPIC_FALLBACK_BETA = "server-side-fallback-2026-07-01"
 /** Höchstwert aller vier Claude-Modelle. Bei Effort „Maximal“ verbraucht schon das Denken mehr als 64 000 Token. */
-private const val ANTHROPIC_MAX_TOKENS = 128_000
+internal const val ANTHROPIC_MAX_TOKENS = 128_000
 
 private fun textBlock(text: String) = JSONObject().put("type", "text").put("text", text)
 
