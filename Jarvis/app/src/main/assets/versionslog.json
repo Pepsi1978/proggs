@@ -273,6 +273,7 @@
     {"versionCode": 268, "versionName": "1.8.257", "stand": "23.10.2026, 16:08 Uhr", "notiz": "Ein Abzug von null Dollar wird nicht mehr rot angezeigt."},
     {"versionCode": 269, "versionName": "1.8.258", "stand": "23.10.2026, 16:13 Uhr", "notiz": "Jarvis kennt die neue App Ziele: Ziele lesen, anlegen, ändern, auswerten lassen und Vorschläge in Geniale Aufgaben übernehmen; alle Ziele stehen im Live-Gedächtnis."},
     {"versionCode": 270, "versionName": "1.8.259", "stand": "23.10.2026, 16:23 Uhr", "notiz": "Tippst du beim Programmierauftrag schnell auf Opus oder Sol und sagst gleich danach noch etwas, fragt Jarvis nicht noch einmal nach dem Modell: Der Auftrag läuft mit deiner Wahl weiter, ohne doppelt zu starten."},
-    {"versionCode": 271, "versionName": "1.8.260", "stand": "23.10.2026, 16:25 Uhr", "notiz": "In der Eingabeblase leert ein Papierkorb oben rechts den ganzen diktierten oder getippten Text, und in der Seitenleiste ist die offene Session mit kräftiger Tönung und farbigem Rahmen deutlich hervorgehoben."}
+    {"versionCode": 271, "versionName": "1.8.260", "stand": "23.10.2026, 16:25 Uhr", "notiz": "In der Eingabeblase leert ein Papierkorb oben rechts den ganzen diktierten oder getippten Text, und in der Seitenleiste ist die offene Session mit kräftiger Tönung und farbigem Rahmen deutlich hervorgehoben."},
+    {"versionCode": 272, "versionName": "1.8.261", "stand": "23.10.2026, 16:27 Uhr", "notiz": "Fragt Jarvis nach dem Stand einer Ziel-Auswertung, meldet er jetzt richtig, ob sie noch läuft oder fertig ist."}
   ]
 }

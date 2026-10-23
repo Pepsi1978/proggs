@@ -110,7 +110,7 @@ class ZieleFaehigkeit(private val context: Context) : Faehigkeit {
                     if (a.optBoolean("nur_stand")) rufe("auswertung_stand", JSONObject().put("id", id)).fehlerOder { s ->
                         when {
                             s.optBoolean("laeuft") -> "Die Auswertung läuft noch: ${s.optString("schritt")}"
-                            !s.isNull("fehler") -> "Die letzte Auswertung ist gescheitert: ${s.optString("fehler")}"
+                            !s.isNull("letzter_fehler") -> "Die letzte Auswertung ist gescheitert: ${s.optString("letzter_fehler")}"
                             s.isNull("ausgewertet_am") -> "Dieses Ziel wurde noch nicht ausgewertet."
                             else -> "Die Auswertung ist fertig. Die Vorschläge liefert ziele_lesen mit id $id."
                         }
