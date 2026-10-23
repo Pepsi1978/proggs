@@ -446,13 +446,17 @@ internal data class LeistenListen(val gespraeche: List<Sitzung>, val programmier
  */
 internal fun aufteilen(sitzungen: List<Sitzung>, projektIds: Set<String>) = LeistenListen(
     gespraeche = sitzungen.filter { !it.programmierung && (it.projekt.isEmpty() || it.projekt !in projektIds) },
-    programmierung = sitzungen.filter { it.programmierung }.sortedByDescending(::startzeit),
+    // Gleicher Start (alte Dateien ohne Zeitpunkte): nach Anlage und id, nie nach der letzten Änderung.
+    programmierung = sitzungen.filter { it.programmierung }.sortedWith(compareByDescending(::startzeit).thenByDescending { it.erstellt }.thenByDescending { it.id }),
 )
 
-/** Start einer Programmier-Session: der erste Auftrag, sonst die Anlage des Gesprächs. Ändert sich nicht mehr. */
+/** Start einer Programmier-Session: der erste Auftrag, sonst die Anlage des Gesprächs. Neue Meldungen ändern ihn nicht. */
 internal fun startzeit(s: Sitzung): Long = s.auftragStart.takeIf { it > 0 } ?: s.erstellt
 
-/** Heute, Gestern, Letzte 7 Tage, Diesen Monat, Älter: so findet Frank ein Gespräch nach dem Gefühl für die Zeit. [zeit]: wonach eingeordnet wird. */
+/**
+ * Heute, Gestern, Letzte 7 Tage, Letzte 30 Tage, Älter: so findet Frank ein Gespräch nach dem Gefühl für die Zeit. [zeit]: wonach
+ * eingeordnet wird; die Liste muss schon absteigend danach sortiert sein, sonst stehen die Gruppen in falscher Reihenfolge.
+ */
 private fun gruppiert(sitzungen: List<Sitzung>, zeit: (Sitzung) -> Long = { it.geaendert }): List<Pair<String, List<Sitzung>>> {
     val heute = java.time.LocalDate.now()
     val zone = java.time.ZoneId.systemDefault()

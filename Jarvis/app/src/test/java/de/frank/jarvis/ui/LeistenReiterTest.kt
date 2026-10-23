@@ -13,9 +13,18 @@ class LeistenReiterTest {
         val alle = listOf(s("chat"), s("code", programmierung = true), s("projektchat", "p1"), s("projektcode", "p1", true), s("verwaist", "weg"))
         val l = aufteilen(alle, setOf("p1"))
         assertEquals(listOf("chat", "verwaist"), l.gespraeche.map { it.id })
-        assertEquals(listOf("code", "projektcode"), l.programmierung.map { it.id })
+        assertEquals(setOf("code", "projektcode"), l.programmierung.map { it.id }.toSet())
         // Keine Duplikate zwischen „Gespräche“ und „Programmierung“.
         assertTrue(l.gespraeche.intersect(l.programmierung.toSet()).isEmpty())
+    }
+
+    @Test fun programmierungFestNachStartzeit() {
+        // Die älteste Session hat die jüngste Änderung: Sie bleibt trotzdem unten.
+        val alt = Sitzung("alt", "alt", 100L, 9_000L, 5, programmierung = true, auftragStart = 110L)
+        val mitte = Sitzung("mitte", "mitte", 200L, 300L, 5, programmierung = true)
+        val neu = Sitzung("neu", "neu", 250L, 400L, 5, programmierung = true, auftragStart = 500L)
+        val l = aufteilen(listOf(alt, mitte, neu), emptySet())
+        assertEquals(listOf("neu", "mitte", "alt"), l.programmierung.map { it.id })
     }
 
     @Test fun reiterDesOffenenGespraechs() {
