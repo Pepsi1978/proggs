@@ -319,6 +319,10 @@ class Synthese(context: Context, private val settings: SecureSettings) {
 
     private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean, tempo: Float): File {
         val beginn = System.currentTimeMillis()
+        // Das Tempo entsteht erst hier auf dem Handy: Kurze Texte (etwa die Probe nach jeder Tempoänderung) kommen
+        // ungestreckt aus dem Vorrat, statt Gemini erneut zu fragen und ins Ratenlimit (429) zu laufen.
+        val vorratSchluessel = "$modell|$stimmeId|$text"
+        synchronized(tonVorrat) { tonVorrat[vorratSchluessel] }?.let { return schreibeDatei(mitTempo(it, tempo), "wav") }
         // Gemini liest den Text wörtlich vor; eine Anweisung im Text würde mitgesprochen.
         val koerper = JSONObject()
             .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", text)))))
@@ -356,6 +360,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         if (ton != null && text.length >= 60 && sekunden < text.length / 25.0) {
             throw SyntheseFehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
+        if (text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel] = wav }
         val fertig = mitTempo(wav, tempo)
         Logbuch.sprache("Gemini-Absatz erzeugt", "modell=$modell schluessel=$art zeichen=${text.length} tempo=$tempo", System.currentTimeMillis() - beginn)
         return schreibeDatei(fertig, "wav")
@@ -673,12 +678,16 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                 code in 200..299 -> return koerper
                 // 429: exponentiell warten und erneut versuchen (Baustein D 4.4).
                 code == 429 && warteBei429 && versuch < WARTEZEITEN_MS.size -> {
-                    kotlinx.coroutines.delay(WARTEZEITEN_MS[versuch])
+                    // Google nennt im 429 meist die Wartezeit bis zum nächsten Minutenfenster („retryDelay": "17s");
+                    // die festen 1/3/8 s reichten dafür nicht, die Probe scheiterte dann.
+                    val vorgabe = Regex("\"retryDelay\"\\s*:\\s*\"(\\d+(?:\\.\\d+)?)s\"").find(koerper)?.groupValues?.get(1)?.toDoubleOrNull()
+                    val ms = maxOf(WARTEZEITEN_MS[versuch], ((vorgabe ?: 0.0) * 1000).toLong().coerceAtMost(RETRY_HOECHSTENS_MS))
+                    kotlinx.coroutines.delay(ms)
                     de.frank.jarvis.observability.IdeenLog.warn(
                         "Synthese",
                         "fuehreAus",
                         "Rate-Limit, warte erneut",
-                        mapOf("ms" to WARTEZEITEN_MS[versuch], "versuch" to versuch),
+                        mapOf("ms" to ms, "versuch" to versuch),
                     )
                     versuch++
                 }
@@ -749,6 +758,17 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val JSON_TYP = "application/json; charset=utf-8".toMediaType()
         val SSML_TYP = "application/ssml+xml".toMediaType()
         val WARTEZEITEN_MS = longArrayOf(1_000L, 3_000L, 8_000L)
+
+        /** Längste Wartezeit je Versuch, die ein 429 mit retryDelay erzwingen darf. */
+        const val RETRY_HOECHSTENS_MS = 20_000L
+
+        /** Bis zu dieser Länge bleibt der ungestreckte Gemini-Ton im Vorrat (Proben, kurze Ansagen). */
+        const val VORRAT_ZEICHEN = 300
+
+        /** Ungestreckter Gemini-Ton je Modell, Stimme und Text; die ältesten fallen nach 16 Einträgen heraus. */
+        val tonVorrat = object : LinkedHashMap<String, ByteArray>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ByteArray>) = size > 16
+        }
 
         /** Reicht zusammen über das Minutenfenster von F0. */
         val AZURE_WARTEZEITEN_MS = longArrayOf(3_000L, 10_000L, 20_000L, 30_000L)

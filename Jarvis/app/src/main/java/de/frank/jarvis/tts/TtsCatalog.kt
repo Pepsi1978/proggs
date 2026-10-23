@@ -4,8 +4,8 @@ enum class TtsProvider(val id: String, val label: String, val kurz: String) {
     QWEN_CLONE("qwen_clone", "Meine Stimme", "Meine"),
     QWEN("qwen", "Alibaba", "Alibaba"),
     GOOGLE_CLOUD("google_cloud", "Google Chirp 3 HD", "Google"),
-    GEMINI_FLASH("gemini_flash", "Gemini 3.8 Flash TTS", "Gemini"),
-    GEMINI_LITE("gemini_lite", "Gemini 3.8 Flash-Lite TTS", "Gemini Lite"),
+    GEMINI_FLASH("gemini_flash", "Gemini 3.8 Flash TTS", "Gemini 3.8"),
+    GEMINI_LITE("gemini_lite", "Gemini 3.8 Flash-Lite TTS", "Gemini 3.8 Lite"),
     EDGE("edge_tts", "Microsoft Edge", "Edge"),
     AZURE("azure_neural", "Azure Neural", "Azure"),
     ;

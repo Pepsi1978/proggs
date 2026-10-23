@@ -285,6 +285,7 @@
     {"versionCode": 279, "versionName": "1.8.268", "stand": "23.10.2026, 16:44 Uhr", "notiz": "Rückfragen einer Programmier-Session zeigen oben die Aufgabe der Session in bis zu vier Zeilen, damit die Review-Frage eindeutig zuzuordnen ist."},
     {"versionCode": 280, "versionName": "1.8.269", "stand": "23.10.2026, 16:46 Uhr", "notiz": "Die stehende Lesestelle im Chat greift jetzt auch nach dem Wechsel in ein neues Gespräch, Wischen in Codeblöcken zählt nicht mehr als Hochscrollen, und ganz unten erscheint auch eine sehr lange letzte Nachricht vollständig."},
     {"versionCode": 281, "versionName": "1.8.270", "stand": "23.10.2026, 16:53 Uhr", "notiz": "Nach dem Abschicken einer Rückfrage-Antwort, etwa zum Review, erscheint oben keine Bestätigungsblase mehr; die Reiter bleiben frei und der Stand steht weiter im Chat."},
-    {"versionCode": 282, "versionName": "1.8.271", "stand": "23.10.2026, 16:54 Uhr", "notiz": "Die Aufgabe über einer Rückfrage berücksichtigt Nachträge und mehrere Aufgaben, kürzt sauber mit Auslassungszeichen und steht im Vollbild im scrollenden Bereich."}
+    {"versionCode": 282, "versionName": "1.8.271", "stand": "23.10.2026, 16:54 Uhr", "notiz": "Die Aufgabe über einer Rückfrage berücksichtigt Nachträge und mehrere Aufgaben, kürzt sauber mit Auslassungszeichen und steht im Vollbild im scrollenden Bereich."},
+    {"versionCode": 283, "versionName": "1.8.272", "stand": "23.10.2026, 17:17 Uhr", "notiz": "Die Probe der Gemini-Stimme klingt nach jeder Tempoänderung zuverlässig, weil der Ton nur einmal geholt und auf dem Handy neu gestreckt wird; die Gemini-Stimmen heißen Gemini 3.8 und Gemini 3.8 Lite."}
   ]
 }

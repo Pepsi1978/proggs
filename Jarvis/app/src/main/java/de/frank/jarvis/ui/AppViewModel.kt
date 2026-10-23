@@ -1824,6 +1824,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Lautsprecher-Knopf: vorlesen, oder anhalten, wenn genau das schon läuft. */
     fun lies(quelle: String, titel: String, text: String) {
         val stand = vorleser.stand.value
+        // Ein zweiter Tipp auf „Probe hören“, während die Stimme noch erzeugt wird (oder nach einem 429 wartet),
+        // brach die Probe bisher stumm ab; sie läuft jetzt weiter.
+        if (quelle == "probe" && stand.quelle == quelle && stand.zustand == de.frank.jarvis.speech.VorleseZustand.LAEDT) {
+            meldung = "Die Probe wird noch erzeugt …"
+            return
+        }
         if (stand.quelle == quelle && stand.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) vorleser.stopp() else vorleser.sprich(quelle, titel, text)
     }
 

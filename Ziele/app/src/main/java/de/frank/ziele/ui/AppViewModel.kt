@@ -363,14 +363,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ================= Vorlesen =================
 
+    /** Die Stimme wird gerade erzeugt (noch kein Ton): Ein zweiter Tipp auf die Probe bricht sie dann nicht ab. */
+    private var vorleseLaedt = false
+
     fun vorlesen(schluessel: String, text: String) {
+        if (sprichtId == schluessel && schluessel == "probe" && vorleseLaedt) { melde("Die Probe wird noch erzeugt …"); return }
         if (sprichtId == schluessel) { tts.stop(); sprichtId = null; return }
         sprichtId = schluessel
+        vorleseLaedt = true
         tts.speak(
             text = text,
-            onStart = {},
-            onComplete = { if (sprichtId == schluessel) sprichtId = null },
-            onError = { e -> sprichtId = null; melde(e.message ?: "Vorlesen fehlgeschlagen.") },
+            onStart = { vorleseLaedt = false },
+            onComplete = { vorleseLaedt = false; if (sprichtId == schluessel) sprichtId = null },
+            onError = { e -> vorleseLaedt = false; sprichtId = null; melde(e.message ?: "Vorlesen fehlgeschlagen.") },
         )
     }
 

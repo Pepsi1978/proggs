@@ -18,6 +18,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -88,8 +89,9 @@ class NeueStimmenPlayer(context: Context) {
         val job = scope.launch(Dispatchers.IO) {
             try {
                 val (bytes, endung) = when (provider) {
-                    TtsProvider.GEMINI_FLASH -> gemini(text, GEMINI_FLASH_MODELL, voiceId, speechRate, zugang) to "wav"
-                    TtsProvider.GEMINI_LITE -> gemini(text, GEMINI_LITE_MODELL, voiceId, speechRate, zugang) to "wav"
+                    // Gemini kennt kein Sprechtempo: Der fertige Ton wird hier gestreckt (ein Chirp-Rückfall als MP3 bleibt, wie er ist).
+                    TtsProvider.GEMINI_FLASH -> mitTempo(gemini(text, GEMINI_FLASH_MODELL, voiceId, speechRate, zugang), speechRate) to "wav"
+                    TtsProvider.GEMINI_LITE -> mitTempo(gemini(text, GEMINI_LITE_MODELL, voiceId, speechRate, zugang), speechRate) to "wav"
                     TtsProvider.AZURE -> azure(text, voiceId, speechRate, zugang) to "mp3"
                     else -> throw Abbruch("Dieser Anbieter wird hier nicht unterstützt.")
                 }
@@ -239,6 +241,10 @@ class NeueStimmenPlayer(context: Context) {
     }
 
     private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean): ByteArray {
+        // Kurze Texte (etwa die Probe nach jeder Tempoänderung) kommen ungestreckt aus dem Vorrat, statt Gemini erneut
+        // zu fragen und ins Ratenlimit (429) zu laufen; das Tempo entsteht erst danach auf dem Handy.
+        val vorratSchluessel = "$modell|$stimmeId|$text"
+        synchronized(tonVorrat) { tonVorrat[vorratSchluessel] }?.let { return it }
         // Gemini liest den Text wörtlich vor; eine Anweisung im Text würde mitgesprochen.
         val koerper = JSONObject()
             .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", text)))))
@@ -274,6 +280,7 @@ class NeueStimmenPlayer(context: Context) {
             throw Fehler("Gemini-Audio zu kurz (${"%.1f".format(sekunden)} s für ${text.length} Zeichen).")
         }
         Log.i(TAG, "Gemini-Ansage erzeugt: modell=$modell schluessel=$art zeichen=${text.length}")
+        if (text.length <= VORRAT_ZEICHEN) synchronized(tonVorrat) { tonVorrat[vorratSchluessel] = wav }
         return wav
     }
 
@@ -288,6 +295,72 @@ class NeueStimmenPlayer(context: Context) {
 
     private fun wavRate(wav: ByteArray): Int =
         java.nio.ByteBuffer.wrap(wav, 24, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).int.takeIf { it > 0 } ?: 24_000
+
+    /** true bei einem schlichten WAV-Kopf (44 Byte, PCM 16 Bit mono); nur den kann [mitTempo] strecken. */
+    private fun schlichtesWav(wav: ByteArray): Boolean {
+        if (wav.size < 44) return false
+        val b = java.nio.ByteBuffer.wrap(wav).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        fun kennung(ab: Int) = String(wav, ab, 4, Charsets.US_ASCII)
+        return kennung(0) == "RIFF" && kennung(8) == "WAVE" && kennung(12) == "fmt " && b.getShort(20).toInt() == 1 &&
+            b.getShort(22).toInt() == 1 && b.getShort(34).toInt() == 16 && kennung(36) == "data"
+    }
+
+    /**
+     * Streckt oder staucht den fertigen Gemini-Ton (16 Bit mono) per WSOLA, die Tonhöhe bleibt gleich (Port aus Jarvis,
+     * speech/Synthese.kt). Anfang und Ende bleiben ungeblendet erhalten; ein unbekanntes Format bleibt ungestreckt.
+     */
+    private suspend fun mitTempo(wav: ByteArray, tempo: Float): ByteArray {
+        if (kotlin.math.abs(tempo - 1f) < 0.02f || wav.size < 44 + 4_000 || !schlichtesWav(wav)) return wav
+        val rate = wavRate(wav)
+        val ein = ShortArray((wav.size - 44) / 2)
+        java.nio.ByteBuffer.wrap(wav, 44, ein.size * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(ein)
+        val w = rate * 30 / 1000
+        val hs = w / 2
+        val such = rate * 10 / 1000
+        // Hann-Fenster: Bei halber Überlappung ergänzen sich die Fenster genau zu 1.
+        val fenster = FloatArray(w) { (0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * it / w)).toFloat() }
+        val aus = FloatArray((maxOf(ein.size.toFloat(), ein.size / tempo)).toInt() + 4 * w + 2 * such)
+        var vorher = 0
+        var k = 0
+        while (true) {
+            val ziel = (k * hs * tempo).roundToInt()
+            val o = k * hs
+            if (ziel + w + such >= ein.size || o + w > aus.size) break
+            if (k % 200 == 199) kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            var pos = ziel
+            val natuerlich = vorher + hs
+            // Den Ausschnitt um das Ziel suchen, der am besten an den vorigen anschließt, nach Energie normiert.
+            if (k > 0 && natuerlich + w < ein.size) {
+                var bester = Double.NEGATIVE_INFINITY
+                var d = -such
+                while (d <= such) {
+                    val c = ziel + d
+                    if (c >= 0) {
+                        var summe = 0.0
+                        var energie = 0.0
+                        var i = 0
+                        while (i < w) { val x = ein[c + i].toDouble(); summe += ein[natuerlich + i] * x; energie += x * x; i += 4 }
+                        val guete = summe / kotlin.math.sqrt(energie + 1.0)
+                        if (guete > bester) { bester = guete; pos = c }
+                    }
+                    d += 2
+                }
+            }
+            // Der erste Ausschnitt hat keinen Vorgänger: seine erste Hälfte ungeblendet.
+            for (i in 0 until w) aus[o + i] += ein[pos + i] * (if (k == 0 && i < hs) 1f else fenster[i])
+            vorher = pos
+            k++
+        }
+        if (k == 0) return wav
+        // Ab der Mitte des letzten Ausschnitts den restlichen Ton unverändert anhängen: So fehlt am Ende nichts.
+        val start = (k - 1) * hs + hs
+        val rest = ein.size - (vorher + hs)
+        for (i in 0 until rest) aus[start + i] = ein[vorher + hs + i].toFloat()
+        val laenge = start + rest
+        val pcm = java.nio.ByteBuffer.allocate(laenge * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until laenge) pcm.putShort(aus[i].roundToInt().coerceIn(-32768, 32767).toShort())
+        return mitWavKopf(pcm.array(), rate)
+    }
 
     /** Google Chirp 3 HD — der Rückfall für die Gemini-Stimmen, mit dem vorhandenen Google-TTS-Schlüssel. */
     private suspend fun chirp(text: String, stimme: String, tempo: Float, googleKey: String): ByteArray {
@@ -379,7 +452,9 @@ class NeueStimmenPlayer(context: Context) {
             when {
                 code in 200..299 -> return koerper
                 code == 429 && warteBei429 && versuch < WARTEZEITEN_MS.size -> {
-                    delay(WARTEZEITEN_MS[versuch])
+                    // Google nennt im 429 meist die Wartezeit bis zum nächsten Minutenfenster („retryDelay": "17s").
+                    val vorgabe = Regex("\"retryDelay\"\\s*:\\s*\"(\\d+(?:\\.\\d+)?)s\"").find(koerper)?.groupValues?.get(1)?.toDoubleOrNull()
+                    delay(maxOf(WARTEZEITEN_MS[versuch], ((vorgabe ?: 0.0) * 1000).toLong().coerceAtMost(RETRY_HOECHSTENS_MS)))
                     versuch++
                 }
                 code == 401 || code == 403 -> throw Abbruch(
@@ -421,6 +496,17 @@ class NeueStimmenPlayer(context: Context) {
         private val JSON_TYP = "application/json; charset=utf-8".toMediaType()
         private val SSML_TYP = "application/ssml+xml".toMediaType()
         private val WARTEZEITEN_MS = longArrayOf(1_000L, 3_000L, 8_000L)
+
+        /** Längste Wartezeit je Versuch, die ein 429 mit retryDelay erzwingen darf. */
+        private const val RETRY_HOECHSTENS_MS = 20_000L
+
+        /** Bis zu dieser Länge bleibt der ungestreckte Gemini-Ton im Vorrat (Proben, kurze Ansagen). */
+        private const val VORRAT_ZEICHEN = 300
+
+        /** Ungestreckter Gemini-Ton je Modell, Stimme und Text; die ältesten fallen nach 16 Einträgen heraus. */
+        private val tonVorrat = object : LinkedHashMap<String, ByteArray>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ByteArray>) = size > 16
+        }
 
         /** Reicht zusammen über das Minutenfenster von F0. */
         private val AZURE_WARTEZEITEN_MS = longArrayOf(3_000L, 10_000L, 20_000L, 30_000L)
