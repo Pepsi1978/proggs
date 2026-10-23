@@ -207,6 +207,7 @@ Weitere optionale Felder:
 | `dauerSchaetzungSekunden` | Erwartete Update-Dauer, bis echte Messungen vorliegen (sonst ein Viertel von `zeitlimitMinuten`). |
 | `zuletzt` | Immer das letzte Update eines Sammellaufs, nach allen Phasen (App Installer: ersetzt winget). |
 | `parallel` | Darf im Sammellauf in der parallelen Bahn laufen. Nur für Selbst-Updater, die nichts mit einem anderen Eintrag teilen (Claude Code, Codex, Antigravity, rustup, OpenCode-Sitzung); bewusst kein Raten aus der Befehlszeile. |
+| `nach` | Ids, die im selben Lauf vorher drankommen müssen (Android SDK und Gradle/Kotlin nach dem JDK, die LM-Studio-Runtimes nach LM Studio, die npm-Werkzeuge nach Node.js). Steht die Voraussetzung im anderen Knopf noch offen, nennt die Rückfrage das. |
 | `versionsMuster` / `versionsUrlMuster` | Regulärer Ausdruck, dessen Gruppe 1 die Version in der Versionsausgabe bzw. in der Antwort von `versionsUrl` ist (Gradle „9.7“ hat nur zwei Stellen, `gradle --version` nennt auch Kotlin). |
 | `updateExePfad` | Nur `cli`: anderes Programm für den Update-Lauf als für die Versionsabfrage (npm-Pakete: Version über `firebase.cmd --version`, Update über `npm.cmd install -g …`). Läuft im eigenen Ordner, damit npm seine Module findet. |
 

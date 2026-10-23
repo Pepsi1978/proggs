@@ -1,16 +1,18 @@
 namespace UpdateZentrale.ViewModels;
 
 /// <summary>
-/// The order of "install all", decided in one place:
+/// The order of a batch run, decided in one place. The UI has two independent buttons -- the
+/// CLI-critical updates and everything else -- and each runs its part of this order:
 /// <list type="number">
 /// <item>Own tools (repo scripts): the UpdateZentrale itself first -- it restarts the app and the
-/// new instance continues the batch -- then OpenLauncher, TVO, CVO. They ask yes/no, and right
-/// after the click on "install all" the user is still at the screen.</item>
-/// <item>CLI-critical updates (PowerShell, Node, Git, Windows Terminal …): they can end running CLI
-/// sessions, so they come early -- once they are through, work in the CLI can go on undisturbed.</item>
+/// new instance continues the run -- then OpenLauncher, TVO, CVO. They ask yes/no, and right
+/// after the click the user is still at the screen.</item>
+/// <item>CLI-critical updates (PowerShell, Node, Git, Windows Terminal, JDK …): they can end
+/// running CLI sessions; they belong to the CLI button.</item>
 /// <item>Everything else.</item>
 /// </list>
-/// Within a phase the shortest expected update goes first, so the long installers (Visual Studio,
+/// Within a phase an entry whose prerequisites ("nach") are in the same run goes after them;
+/// otherwise the shortest expected update goes first, so the long installers (Visual Studio,
 /// Android Studio, Docker) do not hold the quick ones back. Major version jumps marked
 /// "hauptversionNurPerKlick" are left out entirely.
 /// </summary>
@@ -28,15 +30,22 @@ public static class Sammelplan
     public const int PhaseZuletzt = 4;
 
     public static List<Schritt> Planen(IEnumerable<ProgrammViewModel> offen)
-        => offen
-            .Where(p => !p.IstHauptversionsSprung)
-            .Select(p => new Schritt(p, p.Eintrag.Zuletzt ? PhaseZuletzt : PhaseVon(p), DarfParallel(p) && !p.Eintrag.Zuletzt))
-            .OrderBy(s => s.Programm.Eintrag.Zuletzt ? 1 : 0)
-            .ThenBy(s => s.Phase)
+    {
+        var liste = offen.Where(p => !p.IstHauptversionsSprung).ToList();
+        var ids = new HashSet<string>(liste.Select(p => p.Eintrag.Id), StringComparer.OrdinalIgnoreCase);
+        // One level is enough for the catalog's chains (JDK → SDK, LM Studio → runtimes, Node → npm tools).
+        bool Wartet(ProgrammViewModel p) => p.Eintrag.Nach.Any(ids.Contains);
+
+        return liste
+            // A step that waits for another one in the run never runs beside it in the parallel lane.
+            .Select(p => new Schritt(p, p.Eintrag.Zuletzt ? PhaseZuletzt : PhaseVon(p), DarfParallel(p) && !p.Eintrag.Zuletzt && !Wartet(p)))
+            .OrderBy(s => s.Phase)
             .ThenBy(s => s.Programm.Eintrag.Id.Equals(SelbstId, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(s => Wartet(s.Programm) ? 1 : 0)
             .ThenBy(s => s.Programm.ErwarteteDauerSekunden)
             .ThenBy(s => s.Programm.KatalogIndex)
             .ToList();
+    }
 
     public static int PhaseVon(ProgrammViewModel p)
         => p.Eintrag.Art.Equals("reposkript", StringComparison.OrdinalIgnoreCase) ? PhaseEigene

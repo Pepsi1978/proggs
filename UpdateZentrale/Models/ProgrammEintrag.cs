@@ -215,6 +215,13 @@ public sealed class ProgrammEintrag
     public bool Parallel { get; set; }
 
     /// <summary>
+    /// Ids that must be updated before this one when both are in the same run: sdkmanager needs
+    /// the new JDK, the LM Studio runtimes belong to the new LM Studio build, the npm tools to
+    /// the new Node. Only orders a run; it never pulls an update into one.
+    /// </summary>
+    public List<string> Nach { get; set; } = new();
+
+    /// <summary>
     /// Regex whose group 1 is the installed version in the output of <see cref="VersionsArgumente"/>.
     /// Without it the first "x.y.z" wins -- for "gradle --version" that is Kotlin's version as soon
     /// as Gradle itself has only two parts ("9.7").

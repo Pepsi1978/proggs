@@ -74,7 +74,10 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim nächsten Start.",
-      "akzent": "#1783FF"
+      "akzent": "#1783FF",
+      "nach": [
+        "nodejs"
+      ]
     },
     {
       "id": "antigravity-cli",
@@ -150,7 +153,10 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
-      "akzent": "#CB3837"
+      "akzent": "#CB3837",
+      "nach": [
+        "nodejs"
+      ]
     },
     {
       "id": "powershell",
@@ -544,7 +550,10 @@
       "neuStartenNachUpdate": false,
       "hinweis": "Lädt teils mehrere Gigabyte herunter. LM Studio darf dabei laufen.",
       "akzent": "#F2A13B",
-      "cliRisiko": "Tauscht die Inferenz-Engines aus; geladene Modelle können entladen werden – eine CLI-Sitzung mit lokalem Modell bricht dann ab."
+      "cliRisiko": "Tauscht die Inferenz-Engines aus; geladene Modelle können entladen werden – eine CLI-Sitzung mit lokalem Modell bricht dann ab.",
+      "nach": [
+        "lmstudio"
+      ]
     },
     {
       "id": "bionic",
@@ -756,7 +765,10 @@
       "hinweis": "Kein winget-Paket: werkzeuge/zip-werkzeug.ps1 lädt die neue Fassung von gradle.org und schaltet …\\Gradle\\current um. Projekte mit gradlew bleiben unberührt.",
       "akzent": "#02303A",
       "versionsMuster": "(?m)^Gradle (\\d+\\.\\d+(?:\\.\\d+)?)",
-      "versionsUrlMuster": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+(?:\\.\\d+)?)\""
+      "versionsUrlMuster": "\"version\"\\s*:\\s*\"(\\d+\\.\\d+(?:\\.\\d+)?)\"",
+      "nach": [
+        "jdk21"
+      ]
     },
     {
       "id": "kotlin",
@@ -781,7 +793,10 @@
       "hinweis": "Kein winget-Paket: werkzeuge/zip-werkzeug.ps1 lädt die neue Fassung von GitHub und schaltet …\\Kotlin\\current um.",
       "akzent": "#7F52FF",
       "versionsMuster": "kotlinc-jvm (\\d+\\.\\d+\\.\\d+)",
-      "versionsUrlMuster": "\"tag_name\"\\s*:\\s*\"v?(\\d+\\.\\d+\\.\\d+)\""
+      "versionsUrlMuster": "\"tag_name\"\\s*:\\s*\"v?(\\d+\\.\\d+\\.\\d+)\"",
+      "nach": [
+        "jdk21"
+      ]
     },
     {
       "id": "vscode",
@@ -879,7 +894,10 @@
       "ausblendenWennFehlt": true,
       "hinweis": "Beendet vorher den adb-Server (die WLAN-Verbindung baut sich danach selbst neu auf). Ein laufender Emulator muss vorher geschlossen sein.",
       "akzent": "#3DDC84",
-      "cliRisiko": "Beendet den adb-Server und tauscht platform-tools/Emulator aus: Installationen, Logcat und Screenshots aufs Handy aus laufenden CLI-Sitzungen brechen ab."
+      "cliRisiko": "Beendet den adb-Server und tauscht platform-tools/Emulator aus: Installationen, Logcat und Screenshots aufs Handy aus laufenden CLI-Sitzungen brechen ab.",
+      "nach": [
+        "jdk21"
+      ]
     },
     {
       "id": "git",
@@ -1004,7 +1022,10 @@
       "ausblendenWennFehlt": true,
       "akzent": "#CB3837",
       "hinweis": "Projekte nutzen ihre eigene TypeScript-Version. Sprünge auf eine neue Hauptversion nur bewusst.",
-      "hauptversionNurPerKlick": true
+      "hauptversionNurPerKlick": true,
+      "nach": [
+        "nodejs"
+      ]
     },
     {
       "id": "npm-tsx",
@@ -1023,7 +1044,10 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
-      "akzent": "#CB3837"
+      "akzent": "#CB3837",
+      "nach": [
+        "nodejs"
+      ]
     },
     {
       "id": "npm-biome",
@@ -1042,7 +1066,10 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "ausblendenWennFehlt": true,
-      "akzent": "#CB3837"
+      "akzent": "#CB3837",
+      "nach": [
+        "nodejs"
+      ]
     },
     {
       "id": "npm-npm",
@@ -1063,7 +1090,10 @@
       "ausblendenWennFehlt": true,
       "akzent": "#CB3837",
       "hinweis": "Sprünge auf eine neue Hauptversion nur bewusst – Node.js bringt ohnehin eine passende npm-Version mit.",
-      "hauptversionNurPerKlick": true
+      "hauptversionNurPerKlick": true,
+      "nach": [
+        "nodejs"
+      ]
     },
     {
       "id": "wireguard",

@@ -72,7 +72,7 @@ public sealed partial class HauptViewModel : ObservableObject
     [ObservableProperty] private ProgrammViewModel? _ausgewaehltesProgramm;
     [ObservableProperty] private string _kopfStatus = "Bereit.";
 
-    /// <summary>Second footer line during "install all": what runs right now, at which position, since when.</summary>
+    /// <summary>Second footer line during a batch run: what runs right now, at which position, since when.</summary>
     [ObservableProperty] private string _laufDetail = "";
     [ObservableProperty] private bool _laeuftSammelvorgang;
     [ObservableProperty] private string? _katalogFehler;
@@ -224,6 +224,7 @@ public sealed partial class HauptViewModel : ObservableObject
 
     private void SammelAnzeigeMelden()
     {
+        _plaene = PlaeneBerechnen();
         OnPropertyChanged(nameof(AnzahlUpdates));
         OnPropertyChanged(nameof(UpdateZusammenfassung));
         OnPropertyChanged(nameof(AllesAktuell));
@@ -589,13 +590,22 @@ public sealed partial class HauptViewModel : ObservableObject
                      + (repoHinweis is null ? "" : "  ·  " + repoHinweis);
     }
 
-    /// <summary>Open updates that cannot end a CLI session, in batch order (own tools first).</summary>
-    private List<Sammelplan.Schritt> SichererPlan
-        => Sammelplan.Planen(Programme.Where(p => p.HatUpdate)).Where(s => s.Phase != Sammelplan.PhaseCli).ToList();
+    /// <summary>
+    /// Both partial plans from ONE plan, split by the card's own CLI risk -- not by phase: a
+    /// repo script or a "zuletzt" entry with cliRisiko has another phase, yet belongs to the CLI
+    /// button just the same.
+    /// </summary>
+    private (List<Sammelplan.Schritt> Sicher, List<Sammelplan.Schritt> Cli) PlaeneBerechnen()
+    {
+        var alles = Sammelplan.Planen(Programme.Where(p => p.HatUpdate));
+        return (alles.Where(s => !s.Programm.KannCliBeenden).ToList(), alles.Where(s => s.Programm.KannCliBeenden).ToList());
+    }
 
-    /// <summary>Open updates that can end a running CLI session.</summary>
-    private List<Sammelplan.Schritt> CliPlan
-        => Sammelplan.Planen(Programme.Where(p => p.HatUpdate)).Where(s => s.Phase == Sammelplan.PhaseCli).ToList();
+    /// <summary>Kept for the labels: refreshed once per state change instead of once per property.</summary>
+    private (List<Sammelplan.Schritt> Sicher, List<Sammelplan.Schritt> Cli) _plaene = (new(), new());
+
+    private List<Sammelplan.Schritt> SichererPlan => _plaene.Sicher;
+    private List<Sammelplan.Schritt> CliPlan => _plaene.Cli;
 
     /// <summary>Label of the button for everything that is not CLI-critical.</summary>
     public string SicherText
@@ -603,8 +613,10 @@ public sealed partial class HauptViewModel : ObservableObject
         get
         {
             var n = SichererPlan.Count;
-            if (n == 0) return AllesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates";
-            var nurKlick = Programme.Count(p => p.HatUpdate && p.IstHauptversionsSprung);
+            var nurKlick = Programme.Count(p => p.HatUpdate && p.IstHauptversionsSprung && !p.KannCliBeenden);
+            if (n == 0)
+                return nurKlick > 0 ? $"{nurKlick} Hauptversion{(nurKlick == 1 ? "" : "en")} nur per Klick auf der Karte"
+                    : AllesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates";
             return (n == 1 ? "1 Update installieren" : $"{n} Updates installieren") + "  ·  nicht CLI-kritisch"
                    + (nurKlick > 0 ? $"  ·  {nurKlick} nur per Klick" : "");
         }
@@ -642,7 +654,8 @@ public sealed partial class HauptViewModel : ObservableObject
             return;
         }
 
-        var plan = cli ? CliPlan : SichererPlan;
+        var plaene = PlaeneBerechnen();   // fresh: the labels' cache may be a moment old
+        var plan = cli ? plaene.Cli : plaene.Sicher;
         if (plan.Count == 0)
         {
             Dialoge.Hinweis(cli
@@ -661,6 +674,7 @@ public sealed partial class HauptViewModel : ObservableObject
               + "\n\nSchließe vorher Claude Code, Codex, OpenCode und alle Terminalfenster, dann „Ja“."
               + "\n\nBei laufenden Programmen wird vorher nachgefragt."
             : "Reihenfolge der Updates (keines davon ist CLI-kritisch):\n\n" + liste
+              + Abhaengigkeiten(plan, plaene.Cli)
               + (nurKlick.Count > 0
                   ? "\n\nNur per Klick auf der Karte (Hauptversion): " + string.Join(", ", nurKlick.Select(p => p.Name))
                   : "")
@@ -672,10 +686,28 @@ public sealed partial class HauptViewModel : ObservableObject
     }
 
     /// <summary>
+    /// With two buttons the order is the user's -- but some unkritische updates build on a
+    /// CLI-critical one (npm tools on Node, Gradle/Kotlin on the JDK). Named in the question, so
+    /// the choice is an informed one.
+    /// </summary>
+    private static string Abhaengigkeiten(List<Sammelplan.Schritt> plan, List<Sammelplan.Schritt> cliOffen)
+    {
+        var offen = cliOffen.ToDictionary(s => s.Programm.Eintrag.Id, s => s.Programm.Name, StringComparer.OrdinalIgnoreCase);
+        var paare = plan
+            .SelectMany(s => s.Programm.Eintrag.Nach.Where(offen.ContainsKey).Select(v => (Vorher: offen[v], Danach: s.Programm.Name)))
+            .GroupBy(p => p.Vorher)
+            .Select(g => "  • " + g.Key + " vor " + string.Join(", ", g.Select(p => p.Danach)))
+            .ToList();
+        return paare.Count == 0 ? ""
+            : "\n\nHinweis: Diese Updates bauen auf CLI-kritischen auf, die noch offen sind. Am besten zuerst den Knopf "
+              + "„⚠ CLI-kritische Updates“:\n" + string.Join("\n", paare);
+    }
+
+    /// <summary>
     /// Runs a batch plan inside one exclusive ownership. The UpdateZentrale itself goes first and
     /// alone: its script restarts the app, so the rest is stored and continued by the new instance.
-    /// Before the CLI-critical phase the batch stops once and asks -- the one moment the CLIs must
-    /// be closed. The phases run one after the other; within a phase, entries marked "parallel"
+    /// A plan from the CLI button was confirmed with its question; any other plan that still holds
+    /// CLI-critical steps stops before them once and asks. The phases run one after the other; within a phase, entries marked "parallel"
     /// run in a second lane beside the serial one (winget, npm, scripts).
     /// </summary>
     /// <param name="versatz">Steps already done before a restart: positions continue the original plan.</param>
@@ -688,12 +720,13 @@ public sealed partial class HauptViewModel : ObservableObject
         using var besitz = _koordination.SammelBeginnen();
         if (besitz is null)
         {
-            KopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist.";
+            KopfStatus = "Updates gehen erst, wenn der laufende Vorgang fertig ist.";
             SammelAbgewiesen("sammelupdate");
             return;
         }
 
         var gesamtZahl = Math.Max(planGroesse, plan.Count + versatz);
+        var laufName = cliBestaetigt ? "CLI-kritische Updates" : "Updates";
         LaeuftSammelvorgang = true;
         var gesamt = System.Diagnostics.Stopwatch.StartNew();
         var laeufe = new List<SammelLauf>();
@@ -703,7 +736,7 @@ public sealed partial class HauptViewModel : ObservableObject
         var cliHinweis = "";
         PruefGesamt = Math.Max(plan.Count, 1);
         PruefFertig = 0;
-        using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, "Alle Updates: " + string.Join(", ", plan.Select(s => s.Programm.Eintrag.Id)));
+        using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, laufName + ": " + string.Join(", ", plan.Select(s => s.Programm.Eintrag.Id)));
         Protokollierung.SammellaufSchreiben(new
         {
             sammelId, ereignis = versatz == 0 ? "plan" : "fortsetzung", zeit = DateTime.Now, versatz, planGroesse = gesamtZahl,
@@ -714,7 +747,7 @@ public sealed partial class HauptViewModel : ObservableObject
         void Anzeigen()
         {
             PruefFertig = fertig;
-            KopfStatus = "Alle Updates: " + (versatz + fertig) + " von " + gesamtZahl + " fertig, " + laufend.Count + " laufen gerade"
+            KopfStatus = laufName + ": " + (versatz + fertig) + " von " + gesamtZahl + " fertig, " + laufend.Count + " laufen gerade"
                          + " – seit " + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + "." + cliHinweis;
             LaufDetail = string.Join("\n", laufend.Select(l => l.Zeile));
         }
@@ -848,9 +881,10 @@ public sealed partial class HauptViewModel : ObservableObject
             }
 
             var fehler = laeufe.Count(l => l.Ergebnis is "Fehlgeschlagen" or "Nicht verifiziert" or "ohne Bericht");
-            KopfStatus = "Alle Updates sind durchgelaufen (" + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + ")"
+            KopfStatus = laufName + " sind durchgelaufen (" + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + ")"
                          + (fehler > 0 ? " – " + fehler + " mit Problemen, siehe rote Karten." : ".")
-                         + (cliHinweis.Contains("übersprungen") ? cliHinweis : "");
+                         + (cliHinweis.Contains("übersprungen") ? cliHinweis : "")
+                         + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "");
             vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         finally
@@ -863,7 +897,7 @@ public sealed partial class HauptViewModel : ObservableObject
     }
 
     /// <summary>
-    /// After the UpdateZentrale updated itself inside "install all", the new instance continues
+    /// After the UpdateZentrale updated itself inside a batch run, the new instance continues
     /// the stored rest -- once, and only if it is fresh. The user agreed to the whole batch already;
     /// the CLI-critical phase still asks its own question.
     /// </summary>

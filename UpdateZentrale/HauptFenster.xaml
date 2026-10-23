@@ -112,7 +112,7 @@
                         Command="{Binding AllePruefenCommand}" Margin="0,0,8,0"
                         IsEnabled="{Binding SammelMoeglich}" />
                 <!-- Zwei unabhängige Sammelknöpfe: die Reihenfolge wählt der Nutzer selbst. -->
-                <Button Command="{Binding CliAktualisierenCommand}" Margin="0,0,8,0"
+                <Button Command="{Binding CliAktualisierenCommand}" Margin="0,0,8,0" Style="{StaticResource SchalterZweit}"
                         IsEnabled="{Binding SammelMoeglich}"
                         Visibility="{Binding HatCliUpdates, Converter={StaticResource BoolSichtbar}}"
                         ToolTip="Updates, die laufende CLI-Sitzungen (Claude Code, Codex, Terminals) beenden können. Vorher die CLIs schließen.">
@@ -120,9 +120,6 @@
                         <TextBlock Text="⚠" Margin="0,0,7,0" Foreground="{DynamicResource PinselWarnText}" />
                         <TextBlock Text="{Binding CliText}" />
                     </StackPanel>
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource SchalterZweit}" />
-                    </Button.Style>
                 </Button>
                 <Button Content="{Binding SicherText}"
                         Command="{Binding SichereAktualisierenCommand}"
