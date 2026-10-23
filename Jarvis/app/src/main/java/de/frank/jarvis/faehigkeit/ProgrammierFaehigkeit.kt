@@ -1186,13 +1186,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             else kurz.take(300)
         val review = Regex("(?i)code[- ]?review").containsMatchIn(frageText) && !Regex("(?i)befund|beheb|fix").containsMatchIn(frageText)
         // Ein kurzer fester Satz gleich beim Eintreffen (= Beginn des Countdowns), nach dem kurzen Ton der Benachrichtigung;
-        // die Frage selbst steht im Vollbild.
-        val satz = if (review) "Eine Code-Review-Frage vom Programmierer zu $appName muss beantwortet werden."
+        // die Frage selbst steht im Vollbild. Franks Vorgabe vom 23.10.2026: Die Code-Review-Frage nur allgemein ansagen,
+        // ohne Projekt, App, Ziel oder Inhalt der Frage.
+        val satz = if (review) "Eine Code-Review-Frage liegt vor, der Programmierer wartet auf deine Antwort."
             else "Eine Rückfrage vom Programmierer zu $appName muss beantwortet werden."
         val art = de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE
         if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
             Logbuch.system("Rückfrage-Ansage eingereiht", "Auftrag ${eintrag.optString("id")}")
-            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId")
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, if (review) "Code-Review-Frage" else "Rückfrage: $appName", satz, "rueckfrage-$frageId")
         }
     }
 
