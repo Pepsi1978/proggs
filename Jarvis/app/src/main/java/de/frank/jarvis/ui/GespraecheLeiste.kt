@@ -39,7 +39,6 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
@@ -370,9 +369,9 @@ private fun SitzungEintrag(
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
             // Die offene Session sticht deutlich heraus: kräftig getönte Fläche mit Rahmen in der Akzentfarbe.
-            .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer)
-                .background(f.primaer.copy(alpha = 0.22f), RoundedCornerShape(14.dp))
+            .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, fuellung = f.primaer.copy(alpha = 0.22f), rand = false, toenung = f.primaer)
                 .border(2.dp, f.primaer, RoundedCornerShape(14.dp)) else Modifier)
+            .semantics { selected = gewaehlt }
             .combinedClickable(onClick = aufWahl, onLongClick = langDruck, onClickLabel = "Öffnen", onLongClickLabel = "Umbenennen oder löschen")
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {

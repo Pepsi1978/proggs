@@ -803,8 +803,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Eingabeblase: Entwurf, Anhänge, Diktat ----
 
-    /** Der Text in der Eingabeblase. Im ViewModel, damit jedes Diktat ihn hinten ergänzen kann. */
-    var entwurf by mutableStateOf("")
+    /** Der Text in der Eingabeblase. Im ViewModel, damit jedes Diktat ihn hinten ergänzen kann. Neuer Text verwirft das Rückgängig des Papierkorbs. */
+    var entwurf: String
+        get() = entwurfText
+        set(v) { entwurfText = v; if (v.isNotEmpty()) geleert = null }
+    private var entwurfText by mutableStateOf("")
     /** Fotos und Dateien, die mit der nächsten Frage an Jarvis gehen. */
     val anhaenge = mutableStateListOf<de.frank.jarvis.data.Anhang>()
     var kameraAnfragen: () -> Unit = {}
@@ -838,10 +841,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entwurfFokus = true
     }
 
-    /** Papierkorb oben rechts in der Eingabeblase: leert den ganzen Text, Anhänge bleiben. */
+    /** Was der Papierkorb zuletzt geleert hat, für „Rückgängig“; null, sobald neuer Text kommt oder die Session wechselt. */
+    private class Geleert(val text: String, val diktiert: Boolean, val erledigt: EntwurfNotiz?, val programmierung: Boolean)
+    private var geleert by mutableStateOf<Geleert?>(null)
+    val leerenRueckgaengig: Boolean get() = geleert != null
+
+    /**
+     * Papierkorb oben rechts in der Eingabeblase: leert den ganzen Text samt Erledigt-Notiz und Programmierer-Wahl
+     * des neuen Gesprächs, Anhänge bleiben. Nicht während Aufnahme oder Mitschrift, sonst käme das Diktat gleich zurück.
+     */
     fun entwurfLeeren() {
+        if (nimmtAuf || schreibtMit || entwurf.isEmpty()) return
+        val neu = sitzungId == null
+        val sicherung = Geleert(entwurf, entwurfDiktiert, entwurfErledigt, neu && sitzungProgrammierung)
         entwurf = ""
         entwurfDiktiert = false
+        entwurfErledigt = null
+        if (neu) sitzungProgrammierung = false
+        geleert = sicherung
+    }
+
+    /** Holt den zuletzt geleerten Text zurück, solange das Feld leer geblieben ist. */
+    fun entwurfZurueck() {
+        val g = geleert ?: return
+        if (entwurf.isNotEmpty()) { geleert = null; return }
+        entwurf = g.text
+        entwurfDiktiert = g.diktiert
+        entwurfErledigt = g.erledigt
+        if (g.programmierung && sitzungId == null) sitzungProgrammierung = true
     }
 
     /** Senden aus der Eingabeblase: Text und Anhänge zusammen. */
@@ -2179,6 +2206,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         sitzungId?.let { vorherigeSitzung = it }
         vorleser.stopp()
         entwurfErledigt = null
+        geleert = null
         gespraech.clear()
         sitzungId = null
         sitzungErstellt = 0L

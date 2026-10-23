@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Folder
@@ -183,22 +184,31 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             vm.schreibtMit -> "Schreibe mit …"
             else -> "Mit Jarvis arbeiten"
         }
-        // Mit Text: oben rechts der Papierkorb, er leert die ganze Blase; das Feld lässt ihm rechts Platz.
-        val mitText = vm.entwurf.isNotEmpty()
-        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = if (mitText) 6.dp else 20.dp, top = if (mitText) 6.dp else 16.dp, bottom = 4.dp)) {
-            if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
-            if (mitText) Box(Modifier.align(Alignment.TopEnd).size(40.dp).clip(CircleShape).antippen { vm.entwurfLeeren() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Delete, "Text löschen", tint = f.textLeise, modifier = Modifier.size(22.dp))
+        // Rechts oben ein fester Platz: mit Text der Papierkorb (leert die ganze Blase), gleich danach „Rückgängig“.
+        // Immer gleich breit und hoch, damit die Blase beim ersten Zeichen und beim Leeren nicht springt.
+        val leerbar = vm.entwurf.isNotBlank() && !vm.nimmtAuf && !vm.schreibtMit
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
+            Box(Modifier.weight(1f).padding(top = 10.dp)) {
+                if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
+                BasicTextField(
+                    wert, { feld = it; vm.entwurf = it.text },
+                    Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus),
+                    textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
+                    cursorBrush = SolidColor(LIVE_ORANGE),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    maxLines = 6,
+                )
             }
-            BasicTextField(
-                wert, { feld = it; vm.entwurf = it.text },
-                Modifier.fillMaxWidth().padding(top = if (mitText) 10.dp else 0.dp, end = if (mitText) 42.dp else 0.dp)
-                    .heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus),
-                textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
-                cursorBrush = SolidColor(LIVE_ORANGE),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                maxLines = 6,
-            )
+            Box(Modifier.padding(start = 4.dp).size(36.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
+                when {
+                    leerbar -> Box(Modifier.size(36.dp).antippen { vm.entwurfLeeren() }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Delete, "Text löschen", tint = f.textLeise, modifier = Modifier.size(22.dp))
+                    }
+                    vm.entwurf.isEmpty() && vm.leerenRueckgaengig -> Box(Modifier.size(36.dp).antippen { vm.entwurfZurueck() }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.AutoMirrored.Rounded.Undo, "Gelöschten Text zurückholen", tint = f.primaer, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
         }
 
         // Unten: Plus links, rechts Modell, Mikrofon und die Live- bzw. Senden-Blase.
