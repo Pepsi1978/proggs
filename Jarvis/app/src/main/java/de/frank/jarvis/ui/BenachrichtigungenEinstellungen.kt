@@ -164,6 +164,7 @@ private fun istAn(vm: AppViewModel, p: MeldungsProfil): Boolean = when (p.art) {
 private fun symbol(art: Meldungsart): ImageVector = when (art) {
     Meldungsarten.AGENT -> Icons.Rounded.SmartToy
     Meldungsarten.PROGRAMMIEREN -> Icons.Rounded.Code
+    Meldungsarten.RUECKFRAGE -> Icons.Rounded.NotificationsActive
     Meldungsarten.ABLAGE -> Icons.Rounded.Folder
     Meldungsarten.GEMINI -> Icons.Rounded.Key
     Meldungsarten.ABFAHRT -> Icons.Rounded.DirectionsCar

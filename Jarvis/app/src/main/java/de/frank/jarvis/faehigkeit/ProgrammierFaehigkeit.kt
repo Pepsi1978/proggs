@@ -1121,8 +1121,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // In der Benachrichtigung kein Markdown: Fettungen gibt es nur im Chat.
             val text = eintrag.optString("schritt").replace("**", "")
             val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
+            // Rückfragen sind eine eigene Meldung mit eigenem Schalter (Franks Wunsch vom 23.10.2026), getrennt von Fertig und Problem.
+            val rueckfrage = stand == "frage"
+            val art = if (rueckfrage) de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE else de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN
+            // Ist die Folgemeldung abgeschaltet, bliebe sonst die alte Rückfrage-Benachrichtigung stehen.
+            if (!rueckfrage && !de.frank.jarvis.meldung.Meldungen.an(app, art))
+                app.getSystemService(android.app.NotificationManager::class.java).cancel(nummer)
             de.frank.jarvis.meldung.Meldungen.zeige(
-                app, de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN,
+                app, art,
                 nummer,
                 NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis)
                     .setContentTitle(titel)
@@ -1138,8 +1144,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                             // Rückfrage bei gesperrtem Bildschirm: als Vollbild, nicht nur als Zeile in der Leiste. Android löst das
                             // nur auf einem Kanal mit hoher Wichtigkeit aus (jarvis_ergebnisse ist DEFAULT), daher ein eigener Kanal.
                             if (stand == "frage" && frageId.isNotEmpty()) {
-                                rueckfrageKanalAnlegen()
-                                setChannelId(KANAL_RUECKFRAGE).setCategory(NotificationCompat.CATEGORY_CALL)
+                                de.frank.jarvis.meldung.Meldungen.rueckfrageKanalAnlegen(app)
+                                setChannelId(de.frank.jarvis.meldung.Meldungen.KANAL_RUECKFRAGE).setCategory(NotificationCompat.CATEGORY_CALL)
                                     .setPriority(NotificationCompat.PRIORITY_HIGH).setFullScreenIntent(tippen, true)
                                 if (android.os.Build.VERSION.SDK_INT >= 34 &&
                                     !app.getSystemService(android.app.NotificationManager::class.java).canUseFullScreenIntent())
@@ -1150,9 +1156,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Zwischenschritte still; Rückfrage, Fertig und Problem nach Franks Einstellung (Ton, Wecker, Vorlesen).
                 // Eine Sperre stört kein Live-Gespräch (still, aber sichtbar); Rückfrage, Fertig und Problem wie bisher auch dort mit Ton.
                 titel, if (vorlesen) "$titel. $text" else null, laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
-                // Eine Rückfrage kommt immer, auch wenn Frank die Meldungen der Programmieraufträge abgeschaltet hat (sonst
-                // erschien sie bei gesperrtem Handy weder in der Leiste noch wurde sie angesagt).
-                trotzAus = stand == "frage",
             )
         }
     }
@@ -1160,16 +1163,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /**
      * Franks Vorgabe vom 23.10.2026: Eine Rückfrage hat Vorrang vor allem. Sie geht sofort als Vollbild auf, egal ob Frank in
      * einem anderen Gespräch, in den Einstellungen oder in einer anderen App ist (aus dem Hintergrund darf Jarvis das mit
-     * „Über anderen Apps einblenden“, wie beim Weckwort). Ist der Bildschirm aus oder gesperrt, liest Jarvis vor, dass eine
-     * Antwort fehlt, unabhängig von Vorlese-Einstellung und Ruhezeit; nach dem Entsperren steht das Vollbild schon vorn.
+     * „Über anderen Apps einblenden“, wie beim Weckwort); nach dem Entsperren steht das Vollbild schon vorn. Ansage und
+     * Benachrichtigung folgen der eigenen Meldung „Rückfragen vom Programmierer“ (an: kurzer Ton, dann vorgelesen).
      * Erst nach dem Posten ins Gespräch aufrufen: Das Vollbild sucht die Frage dort.
      */
-    private fun rueckfrageKanalAnlegen() {
-        app.getSystemService(android.app.NotificationManager::class.java).createNotificationChannel(
-            android.app.NotificationChannel(KANAL_RUECKFRAGE, "Rückfragen beim Programmieren", android.app.NotificationManager.IMPORTANCE_HIGH)
-                .apply { description = "Eine Programmier-Sitzung wartet auf deine Antwort: erscheint sofort im Vollbild." })
-    }
-
     private fun rueckfrageVorn(eintrag: JSONObject, frage: JSONObject, kurz: String) {
         val appName = eintrag.optString("app")
         val gespraech = eintrag.optString("gespraech")
@@ -1188,30 +1185,20 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val frageText = if (frage.optBoolean("frei")) kurz.lines().map { it.trim() }.filter { it.isNotEmpty() }.takeLast(2).joinToString(" ").takeLast(300)
             else kurz.take(300)
         val review = Regex("(?i)code[- ]?review").containsMatchIn(frageText) && !Regex("(?i)befund|beheb|fix").containsMatchIn(frageText)
-        val aus = !(app.getSystemService(android.os.PowerManager::class.java)?.isInteractive ?: true) ||
-            (app.getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked ?: false)
-        // Gesperrt: ein kurzer fester Satz, gleich beim Eintreffen (= Beginn des Countdowns); die Frage steht nach dem Entsperren im Vollbild.
-        val satz = when {
-            aus && review -> "Eine Code-Review-Frage vom Programmierer zu $appName muss beantwortet werden."
-            aus -> "Eine Frage vom Programmierer zu $appName muss beantwortet werden."
-            review -> "Eine Code-Review-Frage vom Programmierer zu $appName wartet auf deine Antwort."
-            else -> "Eine Rückfrage vom Programmierer zu $appName wartet auf deine Antwort: $frageText"
-        }
-        val art = de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN
-        // Bei ausgeschaltetem oder gesperrtem Handy immer: auch in der Ruhezeit, ohne Vorlese-Wahl und bei abgeschalteten
-        // Programmier-Meldungen (Franks Vorgabe vom 23.10.2026: Rückfragen haben Vorrang). Entsperrt nur nach seiner Vorlese-Wahl.
-        if (aus || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
-            Logbuch.system("Rückfrage-Ansage eingereiht", "${if (aus) "gesperrt" else "entsperrt"}, Auftrag ${eintrag.optString("id")}")
-            // Klingelt die Benachrichtigung derselben Rückfrage wie ein Wecker, erst danach sprechen (nicht über den Weckton).
-            val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
-            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId",
-                solange = { de.frank.jarvis.meldung.WeckerTon.klingelt(nummer) }, ausdruecklich = aus)
+        // Ein kurzer fester Satz gleich beim Eintreffen (= Beginn des Countdowns), nach dem kurzen Ton der Benachrichtigung;
+        // die Frage selbst steht im Vollbild.
+        val satz = if (review) "Eine Code-Review-Frage vom Programmierer zu $appName muss beantwortet werden."
+            else "Eine Rückfrage vom Programmierer zu $appName muss beantwortet werden."
+        val art = de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE
+        if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
+            Logbuch.system("Rückfrage-Ansage eingereiht", "Auftrag ${eintrag.optString("id")}")
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId")
         }
     }
 
     /** Eine erledigte Rückfrage (beantwortet, abgelaufen, am Rechner) wird nicht mehr nachträglich angesagt. */
     private fun rueckfrageAnsageAbbrechen(frageId: String) =
-        de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN, "rueckfrage-$frageId")
+        de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE, "rueckfrage-$frageId")
 
     /** Die letzten Programmieraufträge mit ihren Schritten, dauerhaft in den App-Einstellungen (höchstens 20). */
     private object Auftragsbuch {
@@ -1885,7 +1872,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Extras der Benachrichtigung einer Rückfrage: welches Gespräch und welche Rückfrage die App öffnet. */
         const val EXTRA_GESPRAECH = "de.frank.jarvis.rueckfrage_gespraech"
         const val EXTRA_RUECKFRAGE = "de.frank.jarvis.rueckfrage_id"
-        private const val KANAL_RUECKFRAGE = "jarvis_rueckfrage"
         private val STATUS_HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
         /** Nur Zusatzinfo zur Auftragsübersicht: kurz, damit eine Sprachantwort nie lange darauf wartet. */
         private val SITZUNGS_HTTP: OkHttpClient = STATUS_HTTP.newBuilder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(3, TimeUnit.SECONDS).callTimeout(4, TimeUnit.SECONDS).build()

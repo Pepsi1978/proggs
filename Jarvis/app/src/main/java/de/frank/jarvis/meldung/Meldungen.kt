@@ -104,9 +104,19 @@ object Meldungsarten {
         ton = true, vorlesen = true, wecker = true, ruhezeit = true, alt = mapOf("vorlesen" to "ergebnisse_vorlesen"),
     )
     val PROGRAMMIEREN = Meldungsart(
-        "programmieren", "Programmieraufträge", "Meldet fertige Aufträge und Probleme beim Programmieren. Rückfragen kommen immer, auch wenn das hier aus ist.",
-        "Bei Fertig oder Problem eines Programmierauftrags; Rückfragen immer.", ERGEBNISSE, "jarvis_ergebnisse",
+        "programmieren", "Programmieraufträge", "Meldet fertige Aufträge und Probleme beim Programmieren. Rückfragen haben ihre eigene Meldung.",
+        "Bei Fertig oder Problem eines Programmierauftrags.", ERGEBNISSE, "jarvis_ergebnisse",
         ton = true, vorlesen = true, wecker = true, ruhezeit = true,
+    )
+    /**
+     * Franks Wunsch vom 23.10.2026: Rückfragen getrennt von den Programmieraufträgen an- und abschalten. An = kurzer Ton,
+     * dann liest Jarvis vor, dass eine Frage beantwortet werden muss, auch bei gesperrtem Handy. Das Vollbild der Rückfrage
+     * in der App kommt immer, unabhängig von diesem Schalter.
+     */
+    val RUECKFRAGE = Meldungsart(
+        "rueckfrage", "Rückfragen vom Programmierer", "Meldet jede Rückfrage einer Programmier-Sitzung, auch die Code-Review-Frage, mit kurzem Ton und liest vor, dass eine Frage beantwortet werden muss.",
+        "Sobald eine Programmier-Sitzung dich etwas fragt, auch bei gesperrtem Handy.", ERGEBNISSE, Meldungen.KANAL_RUECKFRAGE,
+        ton = true, vorlesen = true, vorlesenStandard = true,
     )
     val ABLAGE = Meldungsart(
         "ablage", "Ablage", "Meldet, wenn ein Bild, ein PDF oder ein Download in der Ablage fertig ist oder scheitert.",
@@ -169,7 +179,7 @@ object Meldungsarten {
         pflicht = true, schaltbar = false,
     )
 
-    val alle = listOf(AGENT, PROGRAMMIEREN, ABLAGE, GEMINI, ABFAHRT, TIMER, STOPPUHR, ANSAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
+    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, ABFAHRT, TIMER, STOPPUHR, ANSAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
     val gruppen = listOf(ERGEBNISSE, ALLTAG, WECKWORT, DAUER)
 }
 
@@ -177,6 +187,14 @@ object Meldungsarten {
 object Meldungen {
     /** Eigener Kanal für „Wie ein Wecker“: Weckton, auch bei „Nicht stören“; die Wichtigkeit lässt sich später nicht mehr anheben. */
     const val KANAL_WECKER = "jarvis_meldung_wecker_ton"
+    /** Rückfragen: hohe Wichtigkeit (kurzer Ton, Vollbild bei gesperrtem Handy; jarvis_ergebnisse ist nur DEFAULT). */
+    const val KANAL_RUECKFRAGE = "jarvis_rueckfrage"
+
+    fun rueckfrageKanalAnlegen(context: Context) {
+        context.applicationContext.getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(KANAL_RUECKFRAGE, "Rückfragen beim Programmieren", NotificationManager.IMPORTANCE_HIGH)
+                .apply { description = "Eine Programmier-Sitzung wartet auf deine Antwort: erscheint sofort im Vollbild." })
+    }
     private val nebenher = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun profil(context: Context, art: Meldungsart) = MeldungsProfil(Einstellungen.get(context), art)
@@ -212,19 +230,16 @@ object Meldungen {
         titel: String, sprechtext: String?, laut: Boolean = true, probe: Boolean = false,
         /** false = auch im Gespräch mit Ton (Rückfragen beim Programmieren sollen nicht liegen bleiben). */
         imGespraechStill: Boolean = true,
-        /** true = auch bei abgeschalteter Art zeigen (Rückfragen beim Programmieren haben Vorrang vor dem Schalter). */
-        trotzAus: Boolean = false,
     ): Boolean {
         val app = context.applicationContext
         val e = Einstellungen.get(app)
         val p = profil(app, art)
-        if (!probe && !trotzAus && !an(app, art)) return false
+        if (!probe && !an(app, art)) return false
         val ruhe = !probe && inRuhe(app, art)
         val gespraech = GespraechsFokus.stilleHinweise && !art.dringend
         // Lautlos gewählt heißt auch: kein Wecker, selbst wenn er noch eingeschaltet ist.
         val tonAus = art.ton && !p.ton
-        // Eine abgeschaltete Art, die nur trotzAus erscheint, klingelt nie wie ein Wecker: normaler Ton auf dem Kanal der Aufrufstelle.
-        val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech && (probe || an(app, art))
+        val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech
         val still = !laut || ruhe || (gespraech && imGespraechStill) || tonAus
         if (klingeln) {
             weckerKanalAnlegen(app)
@@ -325,6 +340,7 @@ object Meldungen {
             else -> {
                 de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
                 de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(app)
+                if (art == Meldungsarten.RUECKFRAGE) rueckfrageKanalAnlegen(app)
                 val text = "So sieht die Meldung „${art.titel}“ aus. ${art.wozu}"
                 val bauer = NotificationCompat.Builder(app, art.kanal ?: "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis)
                     .setContentTitle("Probe: ${art.titel}").setContentText(text)
@@ -345,11 +361,7 @@ object Meldungen {
             Meldungsarten.ABFAHRT -> { Einstellungen.get(app).abfahrtZustand = ""; de.frank.jarvis.fahrt.Abfahrt.stelle(app) }
             else -> {}
         }
-        // Rückfrage-Ansagen („rueckfrage-…“) bleiben: Sie kommen auch bei abgeschalteter Art.
-        if (art.schaltbar && !profil(app, art).an) {
-            wartend.keys.filter { it.startsWith("${art.id}:") && !it.startsWith("${art.id}:rueckfrage-") }.forEach { wartend.remove(it)?.cancel() }
-            WeckerTon.stoppArt(art.id)
-        }
+        if (art.schaltbar && !profil(app, art).an) { vorlesenAbbrechen(art); WeckerTon.stoppArt(art.id) }
     }
 
     fun weckerKanalAnlegen(context: Context) {
