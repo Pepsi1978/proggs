@@ -47,7 +47,15 @@
         android:protectionLevel="signature" />
     <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
 
+    <!-- Brücke zur App Ziele: Ziele lesen, schreiben und steuern. Beide Apps erklären die Erlaubnis (Installationsreihenfolge egal). -->
+    <permission
+        android:name="de.frank.ziele.permission.JARVIS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.ziele.permission.JARVIS" />
+
     <queries>
+        <package android:name="de.frank.ziele" />
+        <provider android:authorities="de.frank.ziele.jarvis" />
         <package android:name="de.frank.aufgaben" />
         <!-- Update-Signal vom Server an UpdateStation weiterreichen. -->
         <package android:name="de.frank.updatestation" />
@@ -148,6 +156,12 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <!-- App Ziele liest hier das Live-Gedächtnis als Kontext und übernimmt die Schlüssel; nur mit Franks Signatur. -->
+        <provider
+            android:name=".faehigkeit.ZieleBruecke"
+            android:authorities="de.frank.jarvis.ziele"
+            android:exported="true"
+            android:permission="de.frank.jarvis.permission.BRUECKE" />
         <!-- Ablage: Dateien zum Teilen und „Mit anderer App öffnen“ als Inhalts-Adresse mit befristeter Leseberechtigung. -->
         <provider
             android:name="androidx.core.content.FileProvider"

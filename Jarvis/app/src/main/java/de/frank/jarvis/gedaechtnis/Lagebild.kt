@@ -7,6 +7,7 @@ import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.faehigkeit.BiomarkerFaehigkeit
 import de.frank.jarvis.faehigkeit.Faehigkeit
 import de.frank.jarvis.faehigkeit.IdeenFaehigkeit
+import de.frank.jarvis.faehigkeit.ZieleFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.MailFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
@@ -74,6 +75,7 @@ enum class Bereich(
     BIODATEN("biodaten", "Biodaten", "BIODATEN LIVE (Entropie Reductor: Whoop, Oura, Waage; der zuletzt abgeglichene Stand, ohne neuen Abruf gelesen)", 10 * 60_000L, false, false, 20_000L),
     AUSWERTUNG("auswertung", "Tagesauswertung", "TAGESAUSWERTUNG (Jarvis' Deutung des Tages; die Live-Bereiche sind neuer, wo sie sich unterscheiden)", 10 * 60_000L, true, false, 3_000L),
     IDEEN("ideen", "Geniale Ideen", "GENIALE IDEEN (alle offenen; die neuesten mit Text, ältere mit Titel; Volltext mit ideen_lesen und id)", 30 * 60_000L, true, true, 5_000L),
+    ZIELE("ziele", "Ziele", "ZIELE (App Ziele: Franks ausgearbeitete Ziele mit Frist, Weg und Fortschritt der notwendigen Aufgaben; Vorschläge und Recherche mit ziele_lesen und id)", 30 * 60_000L, true, true, 5_000L),
     TRAININGS("trainings", "Trainings", "TRAININGS DER LETZTEN 14 TAGE", 15 * 60_000L, false, true, 15_000L),
     WETTER("wetter", "Wetter", "WETTER HEUTE, MORGEN, ÜBERMORGEN", 30 * 60_000L, false, false, 40_000L),
     RUECKBLICK("rueckblick", "Die letzten 10 Tage", "RÜCKBLICK DER LETZTEN 10 TAGE (Dienste und Termine je Tag, dazu das Fazit der jeweiligen Tagesauswertung)", 30 * 60_000L, false, false, 8_000L, Regex("^\\s*$-")),
@@ -336,6 +338,7 @@ object Lagebild {
     private fun betroffen(f: Faehigkeit?, werkzeug: String): List<Bereich> = when (f?.id) {
         "aufgaben" -> listOf(Bereich.AUFGABEN)
         "ideen" -> listOf(Bereich.IDEEN)
+        "ziele" -> listOf(Bereich.ZIELE)
         "wecker" -> listOf(Bereich.WECKER)
         "stacklabor" -> listOf(Bereich.STACKS)
         "kalender" -> listOf(Bereich.TERMINE, Bereich.RAHMEN)
@@ -387,6 +390,7 @@ object Lagebild {
                     (if (a.mitKi) a.text else Tagesauswertung.abschnitte(a.daten, ohne = setOf("TAGEBUCH", "OFFENE AUFGABEN", "GENIALE IDEEN", "WISSENS-DATENBANK")).take(12_000))
             } ?: "Es liegt noch keine Tagesauswertung vor."
             Bereich.IDEEN -> alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
+            Bereich.ZIELE -> alle.filterIsInstance<ZieleFaehigkeit>().firstOrNull()?.gedaechtnis() ?: "NICHT VERFÜGBAR"
             Bereich.TRAININGS -> alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()?.trainingsLive(14) ?: "NICHT VERFÜGBAR"
             Bereich.WETTER -> alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.aktuell(3) ?: "NICHT VERFÜGBAR"
             Bereich.RUECKBLICK -> rueckblick(app, rufe("kalender_lesen", JSONObject().put("von", heute.minusDays(10).toString()).put("bis", heute.minusDays(1).toString())))
@@ -631,11 +635,11 @@ object Lagebild {
     private const val MONATE_MINDESTENS = 3_000
     /** Die Bereiche im kurzen Startkontext mit ihrer Höchstlänge, in dieser Reihenfolge. */
     private val KURZ = linkedMapOf(
-        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.TERMINE to 1_800, Bereich.WECKER to 700,
+        Bereich.RAHMEN to 1_800, Bereich.AUFGABEN to 2_500, Bereich.ZIELE to 1_500, Bereich.TERMINE to 1_800, Bereich.WECKER to 700,
         Bereich.AUSWERTUNG to 1_400, Bereich.BIODATEN to 1_400, Bereich.WETTER to 900,
     )
     /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */
     private const val SEIT_DECKEL = 5_000
     /** Reicht das Budget nicht, werden diese großen Live-Bereiche gedeckelt (vollständig über ihre Werkzeuge). */
-    private val DECKEL = mapOf(Bereich.AUSWERTUNG to 8_000, Bereich.IDEEN to 6_000, Bereich.GESPRAECHE to 6_000, Bereich.AUFGABEN to 10_000, Bereich.RUECKBLICK to 6_000, Bereich.STACKS to 12_000)
+    private val DECKEL = mapOf(Bereich.AUSWERTUNG to 8_000, Bereich.IDEEN to 6_000, Bereich.ZIELE to 5_000, Bereich.GESPRAECHE to 6_000, Bereich.AUFGABEN to 10_000, Bereich.RUECKBLICK to 6_000, Bereich.STACKS to 12_000)
 }

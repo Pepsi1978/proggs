@@ -42,6 +42,7 @@ object Waechter {
     private val QUELLEN = listOf(
         Quelle("Geniale Aufgaben", Uri.parse("content://de.frank.aufgaben.jarvis"), listOf(Bereich.AUFGABEN)),
         Quelle("Geniale Ideen", Uri.parse("content://de.frank.genialeideen.jarvis"), listOf(Bereich.IDEEN)),
+        Quelle("Ziele", Uri.parse("content://de.frank.ziele.jarvis"), listOf(Bereich.ZIELE)),
         Quelle("Genialer Wecker", Uri.parse("content://de.frank.genialerwecker.jarvis"), listOf(Bereich.WECKER)),
         Quelle("Stack-Labor", Uri.parse("content://de.frank.stacklabor.werftstudio.jarvis"), listOf(Bereich.STACKS)),
         Quelle("Entropie Reductor", Uri.parse("content://de.frank.entropyreducer.jarvis"), listOf(Bereich.BIODATEN, Bereich.TRAININGS)),
