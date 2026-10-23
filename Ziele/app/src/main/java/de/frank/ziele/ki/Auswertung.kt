@@ -116,7 +116,9 @@ object Auswertung {
         val gespraech = repo.rueckmeldungen(zielId)
         // Freie Plätze: Zielgröße minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
         val frei = zielGroesse(e.vorschlagMenge) - bisher.count { !it.verworfen && !it.erledigt }
-        if (modus == Modus.NACHFUELLEN && frei <= 0) {
+        // Franks Rückmeldungen dürfen beim Nachfüllen auch über die freien Plätze hinaus Aufgaben anstoßen.
+        val mitRueckmeldung = gespraech.any { it.vonFrank }
+        if (modus == Modus.NACHFUELLEN && frei <= 0 && !mitRueckmeldung) {
             return "Gerade ist kein Platz frei. Lehne Vorschläge ab oder blende sie aus, dann füllt „Neue Aufgaben“ die Lücken."
         }
 
@@ -180,7 +182,7 @@ object Auswertung {
         schritt(zielId, if (modus == Modus.RUECKMELDUNG) "Denke über deine Rückmeldung nach …" else "Leite die wichtigsten Aufgaben ab …")
         val anzahl = when (modus) {
             Modus.VOLL -> "etwa " + when (e.vorschlagMenge) { "knapp" -> "5 bis 8"; "ausfuehrlich" -> "14 bis 22"; else -> "8 bis 14" }
-            Modus.NACHFUELLEN -> "genau " + frei.coerceAtMost(12)
+            Modus.NACHFUELLEN -> "genau " + frei.coerceIn(0, 12)
             Modus.RUECKMELDUNG -> ""
         }
         val planAnfrage = buildString {
@@ -205,12 +207,15 @@ object Auswertung {
             if (wunsch.isNotBlank()) append("BESONDERER WUNSCH: ").append(wunsch).append("\n\n")
             when (modus) {
                 Modus.VOLL -> append("Liefere $anzahl neue Vorschläge.")
-                Modus.NACHFUELLEN -> append(
-                    "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze. Liefere $anzahl neue Vorschläge, " +
-                        "vor allem aus den neuen Erkenntnissen der Ergänzung: andere Wege zum Ziel, die bisher fehlen. " +
-                        "Nichts, was einer abgelehnten oder vorhandenen Aufgabe gleicht oder ähnelt.",
-                )
-                Modus.RUECKMELDUNG -> append("Antworte auf Franks letzte Rückmeldung im Gespräch oben.")
+                Modus.NACHFUELLEN -> {
+                    if (frei > 0) append(
+                        "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze. Liefere $anzahl neue Vorschläge, " +
+                            "vor allem aus den neuen Erkenntnissen der Ergänzung: andere Wege zum Ziel, die bisher fehlen. " +
+                            "Nichts, was einer abgelehnten oder vorhandenen Aufgabe gleicht oder ähnelt.",
+                    ) else append("Alle Plätze sind belegt; liefere nur Aufgaben zu Franks Rückmeldungen (siehe unten), sonst eine leere Liste.")
+                    if (mitRueckmeldung) append(" ").append(RUECKMELDUNG_NACHFUELLEN)
+                }
+                Modus.RUECKMELDUNG -> append("Antworte auf Franks letzte Rückmeldung im Gespräch oben und setze ihre sinnvollen Anregungen in Aufgaben um.")
             }
         }
         val antwort = auth.streamChat(
@@ -320,12 +325,14 @@ object Auswertung {
     }
 
     private fun gespraechBlock(gespraech: List<Rueckmeldung>): String = if (gespraech.isEmpty()) "" else buildString {
-        append("FRANKS RÜCKMELDUNGEN ZUR AUSWERTUNG (Gespräch, ältestes zuerst; berücksichtige seine Wünsche und Einwände):\n")
-        val zeilen = gespraech.map { (if (it.vonFrank) "Frank: " else "Agent: ") + it.text.trim() }
-        // Nur das Neueste, wenn das Gespräch lang wird.
-        var laenge = 0
-        val neueste = zeilen.asReversed().takeWhile { laenge += it.length; laenge < 8_000 }.ifEmpty { listOf(zeilen.last().take(8_000)) }
-        neueste.asReversed().forEach { append(it).append('\n') }
+        append("FRANKS RÜCKMELDUNGEN ZUR AUSWERTUNG (Gespräch, ältestes zuerst; jede Rückmeldung von Frank zählt: seine Anregungen, Wünsche und Einwände):\n")
+        // Franks eigene Beiträge kommen immer alle mit; die Antworten des Agenten nur gekürzt und nur die neuesten, wenn das Gespräch lang wird.
+        var platz = 6_000
+        val agent = gespraech.filter { !it.vonFrank }.asReversed().takeWhile { platz -= it.text.length.coerceAtMost(600); platz > 0 }.map { it.id }.toSet()
+        gespraech.forEach { r ->
+            if (r.vonFrank) append("Frank: ").append(r.text.trim().take(3_000)).append('\n')
+            else if (r.id in agent) append("Agent: ").append(r.text.trim().take(600)).append('\n')
+        }
         append('\n')
     }
 
@@ -448,7 +455,7 @@ object Auswertung {
             "Deine Aufgabe ist eine Ergänzung: Stelle dir weitere Fragen, die die bisherige Recherche nicht beantwortet, und betrachte das Ziel " +
             "aus anderen Richtungen. Wie kann man es sonst noch erreichen? Welche anderen Methoden, Hilfsmittel, Angebote, Menschen oder " +
             "Gewohnheiten führen ebenfalls dorthin? Was fehlt bisher? Beziehe das Vorhandene ein und baue darauf auf, wiederhole es aber nicht. " +
-            "Franks Rückmeldungen zählen; Richtungen, die er abgelehnt hat, verfolgst du nicht weiter. " +
+            "Franks Rückmeldungen zählen: Gehe seinen sinnvollen Anregungen gezielt nach; Richtungen, die er abgelehnt hat, verfolgst du nicht weiter. " +
             "Schneide alles auf Frank zu. Schreibe auf Deutsch, du sprichst Frank mit „du“ an.\n\n" +
             "Gliedere die Ergänzung so (Überschriften als eigene Zeile, keine Markdown-Zeichen wie # oder **):\n" +
             "WEITERE FRAGEN: die Fragen, denen du nachgegangen bist, je mit der kurzen Antwort.\n" +
@@ -460,10 +467,19 @@ object Auswertung {
     private const val RUECKMELDUNG_ZUSATZ =
         "\n\nSONDERFALL GESPRÄCH: Frank hat auf die Auswertung oder die Aufgaben reagiert (unter FRANKS RÜCKMELDUNGEN, die letzte Zeile von Frank zählt). " +
             "Nimm seine Rückmeldung ernst. Hat er recht, gib ihm recht und passe den Weg an; hast du gute Gründe dagegen, erkläre sie kurz und freundlich. " +
-            "Schlage neue Aufgaben vor, wenn seine Rückmeldung welche nahelegt, gern auch über das Bisherige hinaus; sonst bleibt die Liste leer. " +
+            "Gehe jede Anregung und jeden neuen Punkt seiner letzten Rückmeldung einzeln durch: Ist er für das Ziel sinnvoll und gibt es dafür noch keine " +
+            "vorhandene Aufgabe, mache daraus eine oder mehrere konkrete, erledigbare Aufgaben (NOTWENDIG oder UNTERSTUETZEND, mit ehrlicher Wichtigkeit) " +
+            "und sag in \"begruendung\" kurz, dass sie seine Rückmeldung aufgreift. Spricht er einen neuen Punkt an, gehört dazu in aller Regel mindestens eine Aufgabe. " +
+            "Nicht sinnvolle Anregungen (bringen das Ziel nicht voran, schaden eher, gleichen Abgelehntem) setzt du nicht um und erklärst in der Antwort kurz, warum. " +
+            "Ist die Rückmeldung nur Zustimmung, Dank oder eine Frage ohne neuen Punkt, bleibt die Liste leer. " +
             "Gefällt ihm eine vorhandene Aufgabe nicht, schlage, wenn es passt, eine bessere Alternative vor und sag ihm, dass er die alte mit Ablehnen herausnehmen kann. " +
-            "Ergänze das JSON um das Feld \"antwort\": zwei bis fünf Sätze an Frank in der Du-Form, gut vorlesbar, ohne Aufzählungszeichen. " +
+            "Ergänze das JSON um das Feld \"antwort\": zwei bis fünf Sätze an Frank in der Du-Form, gut vorlesbar, ohne Aufzählungszeichen; nenne darin, welche neuen Aufgaben du vorschlägst. " +
             "\"strategie\" füllst du nur, wenn sich der beste Weg durch die Rückmeldung ändert, sonst leer; \"symbol\" bleibt leer."
+
+    private const val RUECKMELDUNG_NACHFUELLEN =
+        "Zusätzlich: Gehe alle Anregungen aus FRANKS RÜCKMELDUNGEN durch. Ist eine für das Ziel sinnvoll und greift sie noch keine vorhandene Aufgabe auf, " +
+            "liefere dafür zusätzlich zu den freien Plätzen bis zu drei weitere Vorschläge, die sie konkret aufgreifen, und sag in \"begruendung\" kurz, " +
+            "dass sie seine Rückmeldung aufgreifen. Nicht sinnvolle Anregungen setzt du nicht um."
 
     private const val RICHTER_ANWEISUNG =
         "Du prüfst neue Aufgabenvorschläge (KANDIDATEN) gegen zwei Listen. Streiche jeden Kandidaten, der einer ABGELEHNTEN Aufgabe gleicht oder ähnelt: " +
