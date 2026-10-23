@@ -170,8 +170,8 @@ class JarvisBruecke : ContentProvider() {
 
             "ablehnen" -> {
                 val v = repo.vorschlag(a.optLong("vorschlag_id", -1)) ?: return fehler("Kein Vorschlag mit dieser id.")
-                if (v.aufgabeId != null) return fehler("Dieser Vorschlag steht schon in Geniale Aufgaben und kann nicht abgelehnt werden.")
-                Abgleich.gesperrt { repo.ablehnen(v) }
+                val abgelehnt = Abgleich.gesperrt { repo.vorschlag(v.id)?.takeIf { it.aufgabeId == null }?.also { repo.ablehnen(it) } }
+                    ?: return fehler("Dieser Vorschlag steht schon in Geniale Aufgaben und kann nicht abgelehnt werden.")
                 JSONObject().put("abgelehnt", JSONObject().put("id", v.id).put("titel", v.titel))
             }
 

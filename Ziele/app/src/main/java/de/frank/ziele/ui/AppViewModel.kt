@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -106,8 +107,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var kiVerbindet by mutableStateOf(false); private set
 
     // ---- Gespräch zur Auswertung ----
-    /** Noch nicht gesendete Rückmeldung (getippt oder diktiert). */
-    var rueckmeldungEntwurf by mutableStateOf("")
+    /** Noch nicht gesendete Rückmeldungen je Ziel (getippt oder diktiert). */
+    val rueckmeldungEntwurf = mutableStateMapOf<Long, String>()
+    /** Ziel, in dessen Rückmeldung das laufende Diktat geht. */
+    var diktatZielId by mutableStateOf<Long?>(null); private set
+    val auswertungModus = Auswertung.modus
+
+    fun rueckmeldungDiktieren(zielId: Long) {
+        if (aufnahme == Aufnahme.AUS) diktatZielId = zielId
+        else if (diktatZielId != zielId) return
+        mikroTippen(DiktatZiel.RUECKMELDUNG)
+    }
 
     // ---- Vorlesen ----
     var sprichtId by mutableStateOf<String?>(null); private set
@@ -377,10 +387,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Franks Rückmeldung zur Auswertung: wird gespeichert, der Agent antwortet und ergänzt bei Bedarf Vorschläge. */
     fun rueckmeldungSenden(zielId: Long) {
-        val text = rueckmeldungEntwurf.trim()
+        val text = rueckmeldungEntwurf[zielId].orEmpty().trim()
         if (text.isEmpty()) return
         if (!kiPruefen()) return
-        rueckmeldungEntwurf = ""
+        rueckmeldungEntwurf.remove(zielId)
         viewModelScope.launch {
             repo.neueRueckmeldung(Rueckmeldung(zielId = zielId, vonFrank = true, text = text))
             val gestartet = Auswertung.starte(getApplication(), zielId, modus = Auswertung.Modus.RUECKMELDUNG) { fehler, erfolg ->
@@ -436,8 +446,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun ablehnen(v: Vorschlag) {
         if (v.aufgabeId != null) return
         viewModelScope.launch {
-            Abgleich.gesperrt { repo.ablehnen(v) }
-            melde("Abgelehnt – kommt nicht wieder") { viewModelScope.launch { Abgleich.gesperrt { repo.ablehnenZuruecknehmen(v) } } }
+            val frisch = Abgleich.gesperrt { repo.vorschlag(v.id)?.takeIf { it.aufgabeId == null }?.also { repo.ablehnen(it) } }
+            if (frisch == null) { melde("Der Vorschlag steht schon in Geniale Aufgaben und bleibt."); return@launch }
+            melde("Abgelehnt – kommt nicht wieder") { viewModelScope.launch { Abgleich.gesperrt { repo.ablehnenZuruecknehmen(frisch) } } }
         }
     }
 
@@ -511,7 +522,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 when {
                     text.isBlank() -> melde("Keine Sprache erkannt.")
                     wohin == DiktatZiel.KONTEXT -> { Kontext.ergaenze(getApplication(), text); melde("In die Kontextdatei übernommen ✓") }
-                    wohin == DiktatZiel.RUECKMELDUNG -> rueckmeldungEntwurf = (rueckmeldungEntwurf.trim() + " " + text).trim()
+                    wohin == DiktatZiel.RUECKMELDUNG -> diktatZielId?.let { id -> rueckmeldungEntwurf[id] = (rueckmeldungEntwurf[id].orEmpty().trim() + " " + text).trim() }
                     else -> zielOrdnen(text)
                 }
             } catch (c: CancellationException) {

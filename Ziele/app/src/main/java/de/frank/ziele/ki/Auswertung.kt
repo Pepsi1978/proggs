@@ -52,6 +52,10 @@ object Auswertung {
     private val _fehler = MutableStateFlow<Map<Long, String>>(emptyMap())
     val fehler: StateFlow<Map<Long, String>> = _fehler.asStateFlow()
 
+    /** Ziel-id → Art des laufenden Laufs (das Gespräch zeigt „denkt nach“ nur bei einer Rückmeldung). */
+    private val _modus = MutableStateFlow<Map<Long, Modus>>(emptyMap())
+    val modus: StateFlow<Map<Long, Modus>> = _modus.asStateFlow()
+
     fun laeuft(zielId: Long): Boolean = _stand.value.containsKey(zielId)
 
     /**
@@ -72,6 +76,7 @@ object Auswertung {
         val app = context.applicationContext
         _fehler.update { it - zielId }
         schritt(zielId, "Bereite vor …")
+        _modus.update { it + (zielId to modus) }
         laeufe[zielId] = bereich.launch {
             var erfolg = ""
             val ergebnis = try {
@@ -84,6 +89,7 @@ object Auswertung {
                 (e.message ?: e.javaClass.simpleName).also { m -> _fehler.update { it + (zielId to m) } }
             } finally {
                 _stand.update { it - zielId }
+                _modus.update { it - zielId }
                 synchronized(this@Auswertung) { laeufe.remove(zielId) }
             }
             fertig(ergebnis, erfolg)
@@ -108,6 +114,11 @@ object Auswertung {
         val bisher = repo.vorschlaege(zielId)
         val abgelehnt = repo.abgelehnt(zielId)
         val gespraech = repo.rueckmeldungen(zielId)
+        // Freie Plätze: Zielgröße minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
+        val frei = zielGroesse(e.vorschlagMenge) - bisher.count { !it.verworfen && !it.erledigt }
+        if (modus == Modus.NACHFUELLEN && frei <= 0) {
+            return "Gerade ist kein Platz frei. Lehne Vorschläge ab oder blende sie aus, dann füllt „Neue Aufgaben“ die Lücken."
+        }
 
         val persoenlich = e.kontextNutzen
         if (persoenlich) schritt(zielId, if (e.jarvisKontext) "Lese deinen Kontext und Jarvis' Live-Gedächtnis …" else "Lese deinen Kontext …")
@@ -167,15 +178,16 @@ object Auswertung {
 
         // ---- Schritt 2: Aufgaben ableiten ----
         schritt(zielId, if (modus == Modus.RUECKMELDUNG) "Denke über deine Rückmeldung nach …" else "Leite die wichtigsten Aufgaben ab …")
-        val sichtbar = bisher.count { !it.verworfen }
         val anzahl = when (modus) {
             Modus.VOLL -> "etwa " + when (e.vorschlagMenge) { "knapp" -> "5 bis 8"; "ausfuehrlich" -> "14 bis 22"; else -> "8 bis 14" }
-            Modus.NACHFUELLEN -> "genau " + (zielGroesse(e.vorschlagMenge) - sichtbar).coerceIn(3, 12)
+            Modus.NACHFUELLEN -> "genau " + frei.coerceAtMost(12)
             Modus.RUECKMELDUNG -> ""
         }
         val planAnfrage = buildString {
             append(zielText).append("\n\n")
-            if (bericht.isNotBlank()) append("RECHERCHE-BERICHT:\n").append(Quellen.teilen(bericht).text.takeLast(30_000)).append("\n\n")
+            if (bericht.isNotBlank()) Quellen.teilen(bericht).text.let { t ->
+                append("RECHERCHE-BERICHT:\n").append(if (modus == Modus.VOLL) t.take(30_000) else t.takeLast(30_000)).append("\n\n")
+            }
             if (modus == Modus.RUECKMELDUNG && ziel.strategie.isNotBlank()) append("BISHERIGER WEG: ").append(ziel.strategie).append("\n\n")
             append(ueberFrank)
             if (behalten.isNotEmpty()) {
@@ -212,7 +224,10 @@ object Auswertung {
         val roh = plan.optJSONArray("vorschlaege") ?: JSONArray()
         val kandidaten = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { titelAus(it.optString("titel")).isNotEmpty() }
         if (kandidaten.isNotEmpty()) schritt(zielId, "Prüfe gegen Abgelehntes und Vorhandenes …")
-        val objekte = aussieben(auth, modell, kandidaten, abgelehnt, behalten)
+        var objekte = aussieben(auth, modell, kandidaten, abgelehnt, if (modus == Modus.VOLL && abgelehnt.isEmpty()) emptyList() else behalten)
+        // Während des Laufs (mehrere Minuten) kann Frank weitere Vorschläge abgelehnt haben: auch die gelten.
+        val spaeter = repo.abgelehnt(zielId).filter { n -> abgelehnt.none { it.id == n.id } }
+        if (spaeter.isNotEmpty() && objekte.isNotEmpty()) objekte = aussieben(auth, modell, objekte, spaeter, emptyList())
 
         schritt(zielId, "Speichere die Vorschläge …")
         // Schlüssel abgelehnter Vorschläge bleiben belegt: Alte Voraussetzungen sollen nicht auf einen neuen Vorschlag zeigen.
@@ -255,7 +270,7 @@ object Auswertung {
                 if (neu.isEmpty()) throw IllegalStateException("Die KI hat keine Aufgaben vorgeschlagen. Bitte noch einmal auswerten.")
                 // Unter der Sperre des Übernehmens; ist das Ziel inzwischen gelöscht, nichts schreiben (sonst verwaiste Vorschläge).
                 val frisch = Abgleich.gesperrt {
-                    repo.ziel(zielId)?.also { repo.vorschlaegeErsetzen(zielId, neu) }
+                    repo.ziel(zielId)?.also { repo.vorschlaegeErsetzen(zielId, ohneAbgelehnte(repo, zielId, neu)) }
                 } ?: return "Das Ziel gibt es nicht mehr."
                 repo.speichere(
                     frisch.copy(
@@ -270,7 +285,7 @@ object Auswertung {
             }
             Modus.NACHFUELLEN -> {
                 val frisch = Abgleich.gesperrt {
-                    repo.ziel(zielId)?.also { if (neu.isNotEmpty()) repo.neueVorschlaege(neu) }
+                    repo.ziel(zielId)?.also { if (neu.isNotEmpty()) repo.neueVorschlaege(ohneAbgelehnte(repo, zielId, neu)) }
                 } ?: return "Das Ziel gibt es nicht mehr."
                 // Die Ergänzung bleibt in der Recherche, auch wenn alle Kandidaten durchs Raster fielen.
                 repo.speichere(frisch.copy(bericht = bericht))
@@ -282,11 +297,13 @@ object Auswertung {
             }
             Modus.RUECKMELDUNG -> {
                 val text = plan.optString("antwort").trim().ifEmpty { if (neu.isEmpty()) "Verstanden, ich habe es mir gemerkt." else "Dazu habe ich dir neue Vorschläge ergänzt." }
-                val frisch = Abgleich.gesperrt {
-                    repo.ziel(zielId)?.also { if (neu.isNotEmpty()) repo.neueVorschlaege(neu) }
+                Abgleich.gesperrt {
+                    repo.ziel(zielId)?.also { frisch ->
+                        if (neu.isNotEmpty()) repo.neueVorschlaege(ohneAbgelehnte(repo, zielId, neu))
+                        repo.neueRueckmeldung(Rueckmeldung(zielId = zielId, vonFrank = false, text = text))
+                        plan.optString("strategie").trim().takeIf { it.isNotEmpty() && it != frisch.strategie }?.let { repo.speichere(frisch.copy(strategie = it)) }
+                    }
                 } ?: return "Das Ziel gibt es nicht mehr."
-                repo.neueRueckmeldung(Rueckmeldung(zielId = zielId, vonFrank = false, text = text))
-                plan.optString("strategie").trim().takeIf { it.isNotEmpty() && it != frisch.strategie }?.let { repo.speichere(frisch.copy(strategie = it)) }
                 if (neu.isEmpty()) "Antwort ist da" else "Antwort ist da, ${if (neu.size == 1) "ein neuer Vorschlag" else "${neu.size} neue Vorschläge"} ✨"
             }
         }
@@ -307,7 +324,8 @@ object Auswertung {
         val zeilen = gespraech.map { (if (it.vonFrank) "Frank: " else "Agent: ") + it.text.trim() }
         // Nur das Neueste, wenn das Gespräch lang wird.
         var laenge = 0
-        zeilen.asReversed().takeWhile { laenge += it.length; laenge < 8_000 }.asReversed().forEach { append(it).append('\n') }
+        val neueste = zeilen.asReversed().takeWhile { laenge += it.length; laenge < 8_000 }.ifEmpty { listOf(zeilen.last().take(8_000)) }
+        neueste.asReversed().forEach { append(it).append('\n') }
         append('\n')
     }
 
@@ -347,7 +365,14 @@ object Auswertung {
         return vorgefiltert.filterIndexed { i, _ -> i !in streichen }
     }
 
-    private fun normTitel(t: String) = t.lowercase(Locale.GERMAN).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+    private val NICHT_WORT = Regex("[^\\p{L}\\p{N}]+")
+    private fun normTitel(t: String) = t.lowercase(Locale.GERMAN).replace(NICHT_WORT, " ").trim()
+
+    /** Letztes Sieb unter der Sperre: nichts speichern, dessen Titel inzwischen abgelehnt ist. */
+    private suspend fun ohneAbgelehnte(repo: ZieleRepository, zielId: Long, neu: List<Vorschlag>): List<Vorschlag> {
+        val gesperrt = repo.abgelehnt(zielId).map { normTitel(it.titel) }.toSet()
+        return neu.filter { normTitel(it.titel) !in gesperrt }
+    }
 
     /**
      * Hängt eine Ergänzungsrecherche an den bisherigen Bericht: beide Texte hintereinander, darunter ein einziger

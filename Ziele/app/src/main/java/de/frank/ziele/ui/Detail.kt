@@ -90,6 +90,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     val alleRueckmeldungen by vm.rueckmeldungen.collectAsState()
     val stand by vm.auswertungStand.collectAsState()
     val fehler by vm.auswertungFehler.collectAsState()
+    val laufModus by vm.auswertungModus.collectAsState()
     val z = ziele.firstOrNull { it.id == id } ?: run { Box(Modifier.fillMaxSize()); return }
     val vorschlaege = alle.filter { it.zielId == id }
     val sichtbar = vorschlaege.filter { !it.verworfen }
@@ -125,7 +126,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             }
         }
         if (z.bericht.isNotBlank()) item { Bericht(vm, z) }
-        if (z.ausgewertetAm != null) item { Gespraech(vm, z, gespraech, schritt != null) }
+        if (z.ausgewertetAm != null) item { Gespraech(vm, z, gespraech, laufModus[id] == de.frank.ziele.ki.Auswertung.Modus.RUECKMELDUNG) }
         if (sichtbar.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -329,7 +330,8 @@ private fun QuellenAbschnitt(quellen: List<Quellen.Quelle>) {
 private fun Gespraech(vm: AppViewModel, z: Ziel, gespraech: List<Rueckmeldung>, laeuft: Boolean) {
     val f = LocalFarben.current
     var offen by rememberSaveable { mutableStateOf(false) }
-    val diktiertHier = vm.diktatZiel == DiktatZiel.RUECKMELDUNG
+    val diktiertHier = vm.diktatZiel == DiktatZiel.RUECKMELDUNG && vm.diktatZielId == z.id
+    val entwurf = vm.rueckmeldungEntwurf[z.id].orEmpty()
     Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.8f).animateContentSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().antippen(haptik = false) { offen = !offen }, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -364,7 +366,7 @@ private fun Gespraech(vm: AppViewModel, z: Ziel, gespraech: List<Rueckmeldung>, 
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f).heightIn(min = 48.dp).glas(f, 14.dp, 0.6f, f.flaecheStark).padding(horizontal = 12.dp, vertical = 10.dp)) {
-                    if (vm.rueckmeldungEntwurf.isEmpty()) Text(
+                    if (entwurf.isEmpty()) Text(
                         when {
                             diktiertHier && vm.aufnahme == Aufnahme.LAEUFT -> "Ich höre zu …"
                             diktiertHier && vm.aufnahme == Aufnahme.VERARBEITET -> "Schreibe mit …"
@@ -373,14 +375,14 @@ private fun Gespraech(vm: AppViewModel, z: Ziel, gespraech: List<Rueckmeldung>, 
                         color = f.textSchwach, fontSize = 14.sp,
                     )
                     BasicTextField(
-                        vm.rueckmeldungEntwurf, { vm.rueckmeldungEntwurf = it },
+                        entwurf, { vm.rueckmeldungEntwurf[z.id] = it },
                         textStyle = TextStyle(color = f.text, fontSize = 14.sp, lineHeight = 20.sp),
                         cursorBrush = SolidColor(f.primaer),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                MikroKnopf(if (diktiertHier) vm.aufnahme else Aufnahme.AUS, 44.dp) { vm.mikroTippen(DiktatZiel.RUECKMELDUNG) }
+                MikroKnopf(if (diktiertHier) vm.aufnahme else Aufnahme.AUS, 44.dp) { vm.rueckmeldungDiktieren(z.id) }
                 Spacer(Modifier.width(6.dp))
                 Box(
                     Modifier.size(44.dp).knopf3d(f.primaer, f.tertiaer, 99.dp, f.dunkel).antippen { vm.rueckmeldungSenden(z.id) },
