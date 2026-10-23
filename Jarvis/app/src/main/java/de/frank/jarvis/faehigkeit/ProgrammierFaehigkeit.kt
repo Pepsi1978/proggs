@@ -789,6 +789,20 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
+     * Knopf „Nachtrag“ der Eingabeblase im Programmiergespräch [gespraech]: [text] geht ohne Modell als Nachtrag in die Sitzung
+     * dieses Gesprächs. Der Knopf ist Franks ausdrücklicher Wunsch; Ziel ist der noch laufende Auftrag, sonst der jüngste.
+     */
+    suspend fun nachtragPerKnopf(gespraech: String, text: String): Ergebnis {
+        val auftraege = Auftragsbuch.alleImGespraech(app, gespraech)
+        val id = (auftraege.lastOrNull { it.optString("stand") in listOf("laeuft", "frage") } ?: auftraege.lastOrNull())?.optString("id")
+            ?: return Ergebnis("In diesem Gespräch läuft keine Programmier-Sitzung, der Nachtrag wurde nicht gesendet.", fehler = true)
+        val worte = "Nachtrag in die gleiche Session $id"
+        return withContext(ProgrammierChat.GespraechKennung(gespraech) + ProgrammierChat.FranksWorte(worte, streng = true)) {
+            nachtrag(id, DiktatTrenner.auftrag(text), worte)
+        }
+    }
+
+    /**
      * Ein Nachtrag an einen bestehenden Auftrag: nur, wenn Frank ihn ausdrücklich verlangt, und nur in die Sitzung, die er
      * bezeichnet ([NachtragsRegel.ziel]); sonst wird nichts gesendet und das Modell fragt Frank. Nie ein neuer Auftrag, nie eine
      * andere Sitzung. Am PC über den Relay an den Hook genau dieser Sitzung, in der Cloud mit der nächsten Fortschrittsmeldung.

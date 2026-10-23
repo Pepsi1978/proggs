@@ -216,6 +216,15 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             Box(Modifier.size(44.dp).clip(CircleShape).antippen { plusOffen = true }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
+            // Nur im Programmiergespräch: „+ Nachtrag“ schickt den Text in dieselbe Sitzung (etwa einen Zentimeter neben dem Plus).
+            if (vm.nachtragMoeglich) {
+                Spacer(Modifier.width(28.dp))
+                Row(Modifier.clip(RoundedCornerShape(18.dp)).background(f.flaeche).antippen { vm.nachtragTippen() }.padding(start = 8.dp, end = 12.dp, top = 7.dp, bottom = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Add, null, tint = f.primaer, modifier = Modifier.size(20.dp))
+                    Text("Nachtrag", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 2.dp))
+                }
+            }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
             // Rechtsbündig im freien Platz, aber begrenzt: zu langer Text kürzt den Modellnamen, statt Mikrofon und Senden hinauszuschieben.
             Row(Modifier.weight(1f).wrapContentWidth(Alignment.End).clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp),
