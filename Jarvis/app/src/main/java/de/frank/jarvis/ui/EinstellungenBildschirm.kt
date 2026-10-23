@@ -71,12 +71,14 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             verlauf = if (reiter == "jarvis") emptyList() else verlauf.dropLast(1)
         }
         FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("jarvis" to "Jarvis", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und Apps", "system" to "System").forEach { (id, name) ->
+            listOf("jarvis" to "Jarvis", "meldungen" to "Benachrichtigungen", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und Apps", "guthaben" to "Guthaben", "system" to "System").forEach { (id, name) ->
                 Chip(name, aktiv = reiter == id) {
                     if (id != reiter) { verlauf = if (id == "jarvis") emptyList() else (verlauf - id) + reiter; reiter = id }
                 }
             }
         }
+
+        if (reiter == "guthaben") GuthabenReiter(vm)
 
         if (reiter == "jarvis") {
             // ---------------------------------------------------------------- Kopf
@@ -603,27 +605,47 @@ private fun AnthropicGuthaben(vm: AppViewModel) {
 
 /** Eingebetteter Browser mit der Anmeldeseite der Claude Console; schließt sich, sobald die Sitzung steht. */
 @Composable
-private fun ConsoleAnmeldung(onFertig: () -> Unit) {
+internal fun ConsoleAnmeldung(onFertig: () -> Unit) = AnmeldeBrowser(
+    "Claude Console anmelden", de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.LOGIN_URL, googleTauglich = false,
+    fertig = { u -> de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() && u.startsWith("https://platform.claude.com") && !u.contains("/login") },
+    onFertig = onFertig,
+)
+
+/** Eingebetteter Browser mit der Google-Anmeldung; schließt sich, sobald AI Studio erreicht ist. */
+@Composable
+internal fun GoogleAnmeldung(onFertig: () -> Unit) = AnmeldeBrowser(
+    "Bei Google anmelden", de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.LOGIN_URL, googleTauglich = true,
+    fertig = { u -> de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.angemeldet() && u.startsWith("https://aistudio.google.com") },
+    onFertig = onFertig,
+)
+
+/**
+ * [googleTauglich]: Google lehnt die Anmeldung in eingebetteten Browsern ab, die sich als WebView ausweisen („; wv“);
+ * mit dem Kennzeichen des normalen Chrome lässt sie sie zu.
+ */
+@Composable
+private fun AnmeldeBrowser(titel: String, url: String, googleTauglich: Boolean, fertig: (String) -> Boolean, onFertig: () -> Unit) {
     val f = LocalFarben.current
     androidx.compose.ui.window.Dialog(onDismissRequest = onFertig, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(f.hgOben)) {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Claude Console anmelden", Modifier.weight(1f), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(titel, Modifier.weight(1f), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Knopf("Schließen", haupt = false) { onFertig() }
             }
             androidx.compose.ui.viewinterop.AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
                     android.webkit.CookieManager.getInstance().setAcceptCookie(true)
-                    var fertig = false
+                    var erledigt = false
                     val rahmen = android.widget.FrameLayout(ctx)
                     fun pruefen(u: String) {
                         android.webkit.CookieManager.getInstance().flush()
-                        if (!fertig && de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() && u.startsWith("https://platform.claude.com") && !u.contains("/login")) { fertig = true; onFertig() }
+                        if (!erledigt && fertig(u)) { erledigt = true; onFertig() }
                     }
                     fun einrichten(w: android.webkit.WebView) {
                         w.settings.javaScriptEnabled = true
                         w.settings.domStorageEnabled = true
+                        if (googleTauglich) w.settings.userAgentString = w.settings.userAgentString.replace("; wv", "").replace(Regex("Version/\\d+(\\.\\d+)* "), "")
                         // Die Google-Anmeldung öffnet ein Popup und meldet das Ergebnis per postMessage an die Console zurück;
                         // ohne eigenes Fenster lädt sie im selben WebView und bleibt dort weiß stehen.
                         w.settings.setSupportMultipleWindows(true)
@@ -650,7 +672,7 @@ private fun ConsoleAnmeldung(onFertig: () -> Unit) {
                     }
                     val haupt = android.webkit.WebView(ctx).also(::einrichten)
                     rahmen.addView(haupt, android.widget.FrameLayout.LayoutParams(-1, -1))
-                    haupt.loadUrl(de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.LOGIN_URL)
+                    haupt.loadUrl(url)
                     rahmen
                 },
                 onRelease = { r -> (0 until r.childCount).mapNotNull { r.getChildAt(it) as? android.webkit.WebView }.forEach { it.destroy() }; r.removeAllViews() },

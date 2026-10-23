@@ -64,7 +64,22 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         val kursDatum: String,
         val geholt: Long,
         val hinweis: String? = null,
+        /** Wann das jüngste Abo-Guthaben gewährt wurde, ISO; leer = unbekannt. */
+        val gewaehrtAm: String = "",
+        /** Selbst gekauftes Guthaben (echtes Geld) in Dollar; null = unbekannt. */
+        val eigenesUsd: Double? = null,
     ) {
+        /** Voraussichtlich nächstes Abo-Guthaben: einen Monat nach der letzten Gewährung. */
+        val naechstes: java.time.LocalDate? get() = runCatching {
+            var d = OffsetDateTime.parse(gewaehrtAm).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate().plusMonths(1)
+            while (d.isBefore(java.time.LocalDate.now())) d = d.plusMonths(1)
+            d
+        }.getOrNull()
+
+        /** Frühestes Verfallsdatum als Datum; null = keins bekannt. */
+        val verfallDatum: java.time.LocalDate? get() = runCatching { OffsetDateTime.parse(verfaellt).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate() }
+            .recoverCatching { Instant.parse(verfaellt).atZone(ZoneId.systemDefault()).toLocalDate() }.getOrNull()
+
         val verbrauchtUsd: Double? get() = gewaehrtUsd?.let { g -> restUsd?.let { (g - it).coerceAtLeast(0.0) } }
 
         private fun eur(usd: Double): String = kurs?.let { " (≈ ${betrag(usd * it)} €)" } ?: ""
@@ -139,7 +154,13 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         suspend fun abmelden(context: Context) = withContext(Dispatchers.IO) { sperre.withLock { abmeldenOhneSperre(context.applicationContext) } }
 
         private fun abmeldenOhneSperre(context: Context) {
-            CookieManager.getInstance().removeAllCookies(null)
+            // Nur die Cookies der Console löschen: Die Google-Anmeldung für das Google-Guthaben bleibt bestehen.
+            val cm = CookieManager.getInstance()
+            cookies().split(';').map { it.substringBefore('=').trim() }.filter { it.isNotEmpty() }.forEach { name ->
+                cm.setCookie(CONSOLE, "$name=; Max-Age=0; Path=/")
+                cm.setCookie(CONSOLE, "$name=; Max-Age=0; Path=/; Domain=.claude.com")
+                cm.setCookie(CONSOLE, "$name=; Max-Age=0; Path=/; Domain=platform.claude.com")
+            }
             CookieManager.getInstance().flush()
             datei(context).delete()
         }
@@ -161,7 +182,8 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             val j = JSONObject(datei(context).readText())
             if (!j.has("rest")) return null
             Stand(j.getDouble("rest"), if (j.has("gewaehrt")) j.getDouble("gewaehrt") else null, j.optString("verfaellt"),
-                if (j.has("kurs")) j.getDouble("kurs") else null, j.optString("kursDatum"), j.optLong("geholt"))
+                if (j.has("kurs")) j.getDouble("kurs") else null, j.optString("kursDatum"), j.optLong("geholt"),
+                gewaehrtAm = j.optString("gewaehrtAm"), eigenesUsd = if (j.has("eigenes")) j.getDouble("eigenes") else null)
         }.getOrNull()
 
         /**
@@ -185,6 +207,10 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     val jetztI = Instant.now()
                     var gewaehrt = 0.0
                     var verfaelltI: Instant? = null
+                    var gewaehrtAmI: Instant? = null
+                    // Selbst gekaufte Credits stehen in „tranches“, das Abo-Guthaben in „promo_tranches“.
+                    var eigenes = 0.0
+                    c.optJSONArray("tranches")?.let { t -> for (i in 0 until t.length()) eigenes += betragAus(t.getJSONObject(i).optJSONObject("remaining"), t.getJSONObject(i).optLong("remaining_amount_minor_units")) }
                     listOf("tranches", "promo_tranches").forEach { feld ->
                         val t = c.optJSONArray(feld) ?: return@forEach
                         for (i in 0 until t.length()) {
@@ -194,6 +220,8 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                             if (betragAus(p.optJSONObject("remaining"), p.optLong("remaining_amount_minor_units")) <= 0.0) continue
                             gewaehrt += betragAus(p.optJSONObject("granted"), p.optLong("granted_amount_minor_units"))
                             if (ende != null && (verfaelltI == null || ende < verfaelltI)) verfaelltI = ende
+                            val am = p.optString("granted_at").takeIf { it.isNotBlank() && it != "null" }?.let(::zeitpunkt)
+                            if (feld == "promo_tranches" && am != null && (gewaehrtAmI == null || am > gewaehrtAmI)) gewaehrtAmI = am
                         }
                     }
                     val verfaellt = verfaelltI?.toString().orEmpty()
@@ -205,8 +233,10 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     val j = JSONObject().put("org", org).put("rest", rest).put("verfaellt", verfaellt).put("geholt", jetzt).put("kursDatum", kursDatum)
                     if (gewaehrt > 0) j.put("gewaehrt", gewaehrt)
                     kurs?.let { j.put("kurs", it) }
+                    val gewaehrtAm = gewaehrtAmI?.toString().orEmpty()
+                    j.put("gewaehrtAm", gewaehrtAm).put("eigenes", eigenes)
                     datei(app).writeText(j.toString())
-                    Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt).also { _frisch.value = it }
+                    Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt, gewaehrtAm = gewaehrtAm, eigenesUsd = eigenes).also { _frisch.value = it }
                 } catch (f: SitzungAbgelaufen) {
                     abmeldenOhneSperre(app)
                     Stand(null, null, "", null, "", 0, f.message)
@@ -214,7 +244,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Anthropic-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
                     val grund = f.message ?: "Abfrage gerade nicht möglich (${f.javaClass.simpleName})."
-                    if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund")
+                    if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund", alt.gewaehrtAm, alt.eigenesUsd)
                     else Stand(null, null, "", null, "", 0, grund)
                 }
             }

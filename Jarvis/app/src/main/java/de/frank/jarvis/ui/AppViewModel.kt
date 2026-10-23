@@ -2588,6 +2588,52 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Google-Guthaben (Gemini-Stimmen) ----
+
+    var googleGuthaben by mutableStateOf<de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.Stand?>(null); private set
+    var googleGuthabenLaedt by mutableStateOf(false); private set
+    var googleAngemeldet by mutableStateOf(false); private set
+
+    init {
+        viewModelScope.launch {
+            de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.frisch.collect { s ->
+                if (s != null && s.geholt > (googleGuthaben?.geholt ?: 0L)) googleGuthaben = s
+            }
+        }
+    }
+
+    /** Zeigt sofort den gespeicherten Stand und fragt frisch nach, wenn er älter als 15 Minuten ist oder [erzwingen]. */
+    fun googleGuthabenAbfragen(erzwingen: Boolean = false) {
+        if (googleGuthabenLaedt) return
+        val app = getApplication<Application>()
+        googleGuthabenLaedt = true
+        viewModelScope.launch {
+            if (googleGuthaben == null) googleGuthaben = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.gespeichert(app) }
+            googleAngemeldet = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.angemeldet() }
+            googleGuthaben = de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.stand(app, erzwingen)
+            googleGuthabenLaedt = false
+        }
+    }
+
+    /** Nach dem eingebetteten Anmelde-Browser: Sitzung prüfen und das Guthaben frisch holen. */
+    fun googleAnmeldungPruefen() {
+        if (!de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.angemeldet()) return
+        googleAngemeldet = true
+        meldung = "Bei Google angemeldet."
+        googleGuthaben = null
+        googleGuthabenAbfragen(erzwingen = true)
+    }
+
+    fun googleAbmelden() {
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit.abmelden(app)
+            googleAngemeldet = false
+            googleGuthaben = null
+            meldung = "Bei Google abgemeldet."
+        }
+    }
+
     /** true, wenn Jarvis bei der Claude Console angemeldet ist (für das Guthaben). */
     var anthropicConsoleAngemeldet by mutableStateOf(false); private set
 
