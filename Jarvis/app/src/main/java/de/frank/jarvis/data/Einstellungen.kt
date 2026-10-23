@@ -176,9 +176,17 @@ class Einstellungen private constructor(context: Context) {
         set(v) {
             // Beim Anbieterwechsel das bisherige Modell festhalten (vor 1.8.212 stand es nur unter „model“).
             val alt = modell
+            // Denkstufe je Modell merken: beim Wechsel die zuletzt für das neue Modell gewählte Stufe wieder einstellen.
+            val altStufe = denkstufe
+            val neueStufe = if (alt == v) null
+                else v.normalizeEffort(ReasoningEffort.entries.firstOrNull { it.name == s("reasoning_${v.name}", "") } ?: altStufe)
             put {
                 if (alt.anbieter != v.anbieter) putString(if (alt.istAnthropic) "model_anthropic" else "model_openai", alt.name)
                 putString("model", v.name); putString(if (v.istAnthropic) "model_anthropic" else "model_openai", v.name)
+                if (neueStufe != null) {
+                    putString("reasoning_${alt.name}", altStufe.name)
+                    putString("reasoning", neueStufe.name)
+                }
             }
         }
     /** Zuletzt gewähltes OpenAI-Modell: Bildwerkzeug und Websuche laufen immer über das ChatGPT-Konto, auch wenn Jarvis mit Claude denkt. */
@@ -191,7 +199,7 @@ class Einstellungen private constructor(context: Context) {
             ?: if (anbieter == KiAnbieter.ANTHROPIC) CodexModel.OPUS else CodexModel.TERRA
     var denkstufe: ReasoningEffort
         get() = ReasoningEffort.entries.firstOrNull { it.name == s("reasoning", "") } ?: ReasoningEffort.LOW
-        set(v) = put { putString("reasoning", v.name) }
+        set(v) = put { putString("reasoning", v.name); putString("reasoning_${modell.name}", v.name) }
     /** Höchstens so viele Bearbeitungsrunden (Modellschritt samt Werkzeugaufrufen) je Anfrage im Gespräch; 0 = unbegrenzt. */
     var schrittlimit: Int
         get() = prefs.getInt("schrittlimit", STANDARD_SCHRITTLIMIT).takeIf { it in SCHRITTLIMITS } ?: STANDARD_SCHRITTLIMIT
