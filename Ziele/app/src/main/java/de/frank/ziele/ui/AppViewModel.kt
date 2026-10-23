@@ -516,7 +516,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vorlesen("plan_${z.id}", text)
     }
 
-    fun berichtVorlesen(z: Ziel) = vorlesen("bericht_${z.id}", z.bericht.ifBlank { "Für dieses Ziel gibt es noch keine Auswertung." })
+    fun berichtVorlesen(z: Ziel) = vorlesen("bericht_${z.id}", de.frank.ziele.text.Quellen.teilen(z.bericht).text.ifBlank { "Für dieses Ziel gibt es noch keine Auswertung." })
 
     fun alleZieleVorlesen() {
         val aktiv = ziele.value.filter { it.zustand == ZielStatus.AKTIV }

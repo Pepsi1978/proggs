@@ -237,7 +237,10 @@ class JarvisBruecke : ContentProvider() {
             .put("notwendig_erledigt", "${notwendig.count { it.erledigt }} von ${notwendig.size}")
             .put("auswertung_laeuft", Auswertung.stand.value[z.id] ?: JSONObject.NULL)
         if (voll) {
-            o.put("bericht", z.bericht)
+            // Belege getrennt vom Text: Jarvis liest den Bericht vor, Adressen gehören nicht hinein.
+            val recherche = de.frank.ziele.text.Quellen.teilen(z.bericht)
+            o.put("bericht", recherche.text)
+            o.put("quellen", JSONArray(recherche.quellen.map { JSONObject().put("titel", it.titel).put("seite", it.seite).put("url", it.url) }))
             o.put("sortierung", sortierung.name.lowercase())
             Kategorie.entries.forEach { k ->
                 o.put(k.name.lowercase(), JSONArray(aktiv.filter { it.gruppe == k }.sortiert(sortierung).map(::vorschlagJson)))

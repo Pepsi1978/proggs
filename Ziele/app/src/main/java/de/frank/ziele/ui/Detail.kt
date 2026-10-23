@@ -2,6 +2,7 @@ package de.frank.ziele.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,10 +51,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.ziele.data.Kategorie
+import de.frank.ziele.text.Quellen
 import de.frank.ziele.data.Sortierung
 import de.frank.ziele.data.Vorschlag
 import de.frank.ziele.data.Ziel
@@ -230,18 +234,50 @@ private fun Bericht(vm: AppViewModel, z: Ziel) {
             Spacer(Modifier.width(12.dp))
             Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise)
         }
-        val zeilen = z.bericht.lines()
+        val recherche = remember(z.bericht) { Quellen.teilen(z.bericht) }
+        val zeilen = recherche.text.lines()
         val gezeigt = if (offen) zeilen else zeilen.filter { it.isNotBlank() }.take(4)
-        gezeigt.forEach { zeile ->
-            val t = zeile.trim()
-            val ueberschrift = t.isNotEmpty() && t.length < 60 && t == t.uppercase() && t.any { it.isLetter() }
+        gezeigt.forEachIndexed { i, zeile ->
+            // Markdown-Reste aufräumen: Rauten, Sternchen und Spiegelstriche sieht man nicht.
+            val t = zeile.trim().replace("**", "").replace("__", "")
+            val raute = t.startsWith("#")
+            val inhalt = t.trimStart('#', ' ')
+            val ueberschrift = raute || (inhalt.isNotEmpty() && inhalt.length < 60 && inhalt == inhalt.uppercase() && inhalt.any { it.isLetter() })
+            val punkt = Regex("""^[-*•]\s+""").find(inhalt)
             when {
-                t.isEmpty() -> Spacer(Modifier.height(2.dp))
-                ueberschrift -> Text(t.trimEnd(':'), color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
-                else -> Text(t.removePrefix("**").removeSuffix("**"), color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
+                inhalt.isEmpty() -> if (i > 0 && gezeigt[i - 1].isNotBlank()) Spacer(Modifier.height(2.dp))
+                ueberschrift -> Text(inhalt.trimEnd(':'), color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, modifier = Modifier.padding(top = 8.dp))
+                punkt != null -> Row(Modifier.padding(start = 4.dp)) {
+                    Text("•", color = f.primaer, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(14.dp))
+                    Text(inhalt.substring(punkt.range.last + 1), color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
+                }
+                else -> Text(inhalt, color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
             }
         }
         if (!offen) Text("Ganze Recherche lesen", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { offen = true })
+        if (offen && recherche.quellen.isNotEmpty()) QuellenAbschnitt(recherche.quellen)
+    }
+}
+
+/** Die Belege der Recherche unter einem Strich: kurzer Titel, darunter der Seitenname, antippen öffnet die Seite. */
+@Composable
+private fun QuellenAbschnitt(quellen: List<Quellen.Quelle>) {
+    val f = LocalFarben.current
+    val uri = LocalUriHandler.current
+    Spacer(Modifier.height(6.dp))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(f.rand))
+    Text("QUELLEN", color = f.textLeise, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 4.dp))
+    quellen.forEach { q ->
+        Row(
+            Modifier.fillMaxWidth().antippen(haptik = false) { runCatching { uri.openUri(q.url) } }.padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(q.titel, color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, lineHeight = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (q.seite != q.titel) Text(q.seite, color = f.textSchwach, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.AutoMirrored.Rounded.OpenInNew, "Quelle öffnen", tint = f.textSchwach, modifier = Modifier.padding(start = 8.dp).size(16.dp))
+        }
     }
 }
 

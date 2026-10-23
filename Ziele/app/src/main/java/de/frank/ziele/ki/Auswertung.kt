@@ -1,5 +1,6 @@
 package de.frank.ziele.ki
 
+import de.frank.ziele.text.Quellen
 import android.content.Context
 import android.util.Log
 import de.frank.ziele.auth.ChatTurn
@@ -122,7 +123,7 @@ object Auswertung {
         val menge = when (e.vorschlagMenge) { "knapp" -> "5 bis 8"; "ausfuehrlich" -> "14 bis 22"; else -> "8 bis 14" }
         val planAnfrage = buildString {
             append(zielText).append("\n\n")
-            append("RECHERCHE-BERICHT:\n").append(bericht.take(30_000)).append("\n\n")
+            append("RECHERCHE-BERICHT:\n").append(Quellen.teilen(bericht).text.take(30_000)).append("\n\n")
             append(ueberFrank)
             if (behalten.isNotEmpty()) {
                 append("SCHON VORHANDEN (nicht noch einmal vorschlagen; du darfst sie als Voraussetzung über ihren Schlüssel nennen; ")
@@ -246,7 +247,8 @@ object Auswertung {
 
     private const val RECHERCHE_MIT_WEB =
         "\n\nRecherchiere mit der Websuche, gern mehrfach und aus verschiedenen Blickwinkeln, bevor du schreibst. " +
-            "Nenne die wichtigsten Quellen am Ende unter QUELLEN (Titel und Adresse, höchstens acht)."
+            "Im Text selbst stehen keine Quellenangaben: keine Links, keine Webadressen, keine Seitennamen in Klammern. " +
+            "Nenne die wichtigsten Quellen ausschließlich ganz am Ende unter der Zeile QUELLEN, je Zeile „Kurzer Titel – Adresse“, höchstens acht."
 
     private const val RECHERCHE_OHNE_WEB = "\n\nStütze dich auf dein Fachwissen; eine Websuche steht dafür nicht zur Verfügung."
 
