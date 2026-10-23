@@ -88,7 +88,7 @@ namespace TerminalVoiceOverlay.Services
         // dictations are therefore pasted in smaller pieces so the full text stays visible.
         private const int MaxPasteChunkChars = 700;
         private const int MaxPasteChunkLineBreaks = 2;
-        private const int ChunkPasteDelayMs = 250;
+        private const int ChunkPasteDelayMs = 500;
 
         /// <summary>
         /// Splits text into pieces Claude Code shows inline. Cuts after a space or
