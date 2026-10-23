@@ -17,9 +17,11 @@ import de.frank.ziele.auth.CodexAuthManager
 import de.frank.ziele.auth.DeviceAuthInfo
 import de.frank.ziele.bruecke.GenialeAufgaben
 import de.frank.ziele.bruecke.Jarvis
+import de.frank.ziele.data.Abgelehnt
 import de.frank.ziele.data.Einstellungen
 import de.frank.ziele.data.Kategorie
 import de.frank.ziele.data.Kontext
+import de.frank.ziele.data.Rueckmeldung
 import de.frank.ziele.data.Sortierung
 import de.frank.ziele.data.Vorschlag
 import de.frank.ziele.data.Ziel
@@ -49,7 +51,7 @@ sealed interface Bildschirm {
 enum class Aufnahme { AUS, LAEUFT, VERARBEITET }
 
 /** Wohin der gesprochene Text geht. */
-enum class DiktatZiel { ZIEL, KONTEXT }
+enum class DiktatZiel { ZIEL, KONTEXT, RUECKMELDUNG }
 
 /** Die drei Textfelder vor (original) und nach (korrigiert) der KI-Korrektur. */
 data class KorrekturStand(val original: List<String>, val korrigiert: List<String>)
@@ -63,6 +65,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val ziele: StateFlow<List<Ziel>> = repo.ziele.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val vorschlaege: StateFlow<List<Vorschlag>> = repo.vorschlaege.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val abgelehnt: StateFlow<List<Abgelehnt>> = repo.abgelehnt.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val rueckmeldungen: StateFlow<List<Rueckmeldung>> = repo.rueckmeldungen.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val auswertungStand = Auswertung.stand
     val auswertungFehler = Auswertung.fehler
     val kontext = Kontext.fluss(app)
@@ -100,6 +104,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var geraeteCode by mutableStateOf<DeviceAuthInfo?>(null); private set
     var kiFehler by mutableStateOf<String?>(null); private set
     var kiVerbindet by mutableStateOf(false); private set
+
+    // ---- Gespräch zur Auswertung ----
+    /** Noch nicht gesendete Rückmeldung (getippt oder diktiert). */
+    var rueckmeldungEntwurf by mutableStateOf("")
 
     // ---- Vorlesen ----
     var sprichtId by mutableStateOf<String?>(null); private set
@@ -215,9 +223,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             Auswertung.abbrechen(z.id)
             val v = repo.vorschlaege(z.id)
+            val a = repo.abgelehnt(z.id)
+            val r = repo.rueckmeldungen(z.id)
             repo.loesche(z)
             bildschirm = Bildschirm.Liste
-            melde("„${z.titel}“ gelöscht") { viewModelScope.launch { repo.wiederherstellen(z, v) } }
+            melde("„${z.titel}“ gelöscht") { viewModelScope.launch { repo.wiederherstellen(z, v, a, r) } }
         }
     }
 
@@ -341,16 +351,43 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ================= Auswertung =================
 
+    private fun kiPruefen(): Boolean {
+        if (kiBereit) return true
+        melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden.")
+        bildschirm = Bildschirm.Einstellungen
+        return false
+    }
+
     fun auswerten(id: Long, wunsch: String = "") {
-        if (!kiBereit) {
-            melde(if (einstellungen.modell.istAnthropic) "Bitte zuerst in den Einstellungen den Anthropic-API-Schlüssel eintragen." else "Bitte zuerst in den Einstellungen mit ChatGPT verbinden.")
-            bildschirm = Bildschirm.Einstellungen
-            return
-        }
-        val gestartet = Auswertung.starte(getApplication(), id, wunsch) { fehler ->
-            melde(fehler?.let { "Auswertung: $it" } ?: "Auswertung fertig ✨")
+        if (!kiPruefen()) return
+        val gestartet = Auswertung.starte(getApplication(), id, wunsch) { fehler, erfolg ->
+            melde(fehler?.let { "Auswertung: $it" } ?: erfolg)
         }
         if (gestartet) melde("Auswertung läuft – du kannst die App ruhig verlassen.")
+    }
+
+    /** „Neue Aufgaben“: ergänzende Recherche und neue Vorschläge für die freien Plätze, ohne die bestehenden anzutasten. */
+    fun nachfuellen(id: Long) {
+        if (!kiPruefen()) return
+        val gestartet = Auswertung.starte(getApplication(), id, modus = Auswertung.Modus.NACHFUELLEN) { fehler, erfolg ->
+            melde(fehler?.let { "Neue Aufgaben: $it" } ?: erfolg)
+        }
+        melde(if (gestartet) "Suche neue Aufgaben – du kannst die App ruhig verlassen." else "Für dieses Ziel läuft gerade schon eine Auswertung.")
+    }
+
+    /** Franks Rückmeldung zur Auswertung: wird gespeichert, der Agent antwortet und ergänzt bei Bedarf Vorschläge. */
+    fun rueckmeldungSenden(zielId: Long) {
+        val text = rueckmeldungEntwurf.trim()
+        if (text.isEmpty()) return
+        if (!kiPruefen()) return
+        rueckmeldungEntwurf = ""
+        viewModelScope.launch {
+            repo.neueRueckmeldung(Rueckmeldung(zielId = zielId, vonFrank = true, text = text))
+            val gestartet = Auswertung.starte(getApplication(), zielId, modus = Auswertung.Modus.RUECKMELDUNG) { fehler, erfolg ->
+                melde(fehler?.let { "Rückmeldung: $it" } ?: erfolg)
+            }
+            if (!gestartet) melde("Gespeichert. Gerade läuft schon eine Auswertung; deine Rückmeldung fließt in die nächste ein.")
+        }
     }
 
     fun auswertungAbbrechen(id: Long) = Auswertung.abbrechen(id)
@@ -392,6 +429,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.speichere(v.copy(verworfen = verworfen))
             if (verworfen) melde("Vorschlag ausgeblendet") { viewModelScope.launch { repo.speichere(v.copy(verworfen = false)) } }
+        }
+    }
+
+    /** Ablehnen: endgültig weg und gemerkt, damit nichts Ähnliches wiederkommt. Rückgängig holt ihn zurück. */
+    fun ablehnen(v: Vorschlag) {
+        if (v.aufgabeId != null) return
+        viewModelScope.launch {
+            Abgleich.gesperrt { repo.ablehnen(v) }
+            melde("Abgelehnt – kommt nicht wieder") { viewModelScope.launch { Abgleich.gesperrt { repo.ablehnenZuruecknehmen(v) } } }
+        }
+    }
+
+    fun ablehnungAufheben(a: Abgelehnt) {
+        viewModelScope.launch {
+            repo.ablehnungAufheben(a)
+            melde("„${a.titel}“ darf wieder vorgeschlagen werden")
         }
     }
 
@@ -458,6 +511,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 when {
                     text.isBlank() -> melde("Keine Sprache erkannt.")
                     wohin == DiktatZiel.KONTEXT -> { Kontext.ergaenze(getApplication(), text); melde("In die Kontextdatei übernommen ✓") }
+                    wohin == DiktatZiel.RUECKMELDUNG -> rueckmeldungEntwurf = (rueckmeldungEntwurf.trim() + " " + text).trim()
                     else -> zielOrdnen(text)
                 }
             } catch (c: CancellationException) {

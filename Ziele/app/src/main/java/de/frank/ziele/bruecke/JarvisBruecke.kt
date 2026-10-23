@@ -10,6 +10,7 @@ import de.frank.ziele.auth.ReasoningEffort
 import de.frank.ziele.data.Einstellungen
 import de.frank.ziele.data.Kategorie
 import de.frank.ziele.data.Kontext
+import de.frank.ziele.data.Rueckmeldung
 import de.frank.ziele.data.Sortierung
 import de.frank.ziele.data.Vorschlag
 import de.frank.ziele.data.Ziel
@@ -70,7 +71,10 @@ class JarvisBruecke : ContentProvider() {
                 val id = a.optLong("id", -1)
                 if (id >= 0) {
                     val z = repo.ziel(id) ?: return fehler("Kein Ziel mit dieser id.")
-                    return JSONObject().put("ziel", zielJson(z, alleV[z.id].orEmpty(), voll = true, sortierung = sortierungAus(a, e)))
+                    val zj = zielJson(z, alleV[z.id].orEmpty(), voll = true, sortierung = sortierungAus(a, e))
+                        .put("abgelehnt", JSONArray(repo.abgelehnt(z.id).map { JSONObject().put("titel", it.titel) }))
+                        .put("gespraech", JSONArray(repo.rueckmeldungen(z.id).takeLast(20).map { JSONObject().put("von", if (it.vonFrank) "frank" else "agent").put("text", it.text) }))
+                    return JSONObject().put("ziel", zj)
                 }
                 val status = a.optString("status", "aktiv").lowercase(Locale.GERMAN)
                 val suche = a.optString("suche").trim().lowercase(Locale.GERMAN)
@@ -162,6 +166,32 @@ class JarvisBruecke : ContentProvider() {
                 val neu = v.copy(verworfen = a.optBoolean("verworfen", true))
                 repo.speichere(neu)
                 JSONObject().put("vorschlag", vorschlagJson(neu))
+            }
+
+            "ablehnen" -> {
+                val v = repo.vorschlag(a.optLong("vorschlag_id", -1)) ?: return fehler("Kein Vorschlag mit dieser id.")
+                if (v.aufgabeId != null) return fehler("Dieser Vorschlag steht schon in Geniale Aufgaben und kann nicht abgelehnt werden.")
+                Abgleich.gesperrt { repo.ablehnen(v) }
+                JSONObject().put("abgelehnt", JSONObject().put("id", v.id).put("titel", v.titel))
+            }
+
+            "neue_aufgaben" -> {
+                val z = repo.ziel(a.optLong("id", -1)) ?: return fehler("Kein Ziel mit dieser id.")
+                val gestartet = Auswertung.starte(ctx, z.id, a.optString("wunsch"), Auswertung.Modus.NACHFUELLEN)
+                JSONObject().put("gestartet", gestartet)
+                    .put("hinweis", if (gestartet) "Ergänzende Recherche und neue Vorschläge für die freien Plätze laufen im Hintergrund. Danach mit lesen und id abrufen."
+                    else "Für dieses Ziel läuft schon eine Auswertung.")
+            }
+
+            "rueckmeldung" -> {
+                val z = repo.ziel(a.optLong("id", -1)) ?: return fehler("Kein Ziel mit dieser id.")
+                val text = a.optString("text").trim()
+                if (text.isEmpty()) return fehler("Es fehlt der Text der Rückmeldung.")
+                repo.neueRueckmeldung(Rueckmeldung(zielId = z.id, vonFrank = true, text = text))
+                val gestartet = Auswertung.starte(ctx, z.id, modus = Auswertung.Modus.RUECKMELDUNG)
+                JSONObject().put("gestartet", gestartet)
+                    .put("hinweis", if (gestartet) "Der Aufgaben-Agent antwortet im Hintergrund; die Antwort steht danach unter gespraech (lesen mit id)."
+                    else "Gespeichert; gerade läuft schon eine Auswertung, die Rückmeldung fließt in die nächste ein.")
             }
 
             "kontext_lesen" -> JSONObject().put("kontext", Kontext.lies(ctx))

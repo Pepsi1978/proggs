@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.CircularProgressIndicator
@@ -170,9 +171,21 @@ private fun ZielKarte(vm: AppViewModel, z: Ziel, vorschlaege: List<Vorschlag>, s
                     Spacer(Modifier.width(6.dp))
                     Text(if (z.ausgewertetAm == null) "Auswerten" else "Neu auswerten", color = f.aufPrimaer, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
+                // Füllt freie Plätze (abgelehnt oder ausgeblendet) mit neuen Vorschlägen, ohne eine ganze neue Auswertung.
+                if (z.ausgewertetAm != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Row(
+                        Modifier.height(36.dp).glas(f, 99.dp, 0.8f, f.flaecheStark).antippen { vm.nachfuellen(z.id) }.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, null, tint = f.primaer, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Neue Aufgaben", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
                 Spacer(Modifier.weight(1f))
                 val offen = aktiv.count { it.aufgabeId == null }
-                if (aktiv.isNotEmpty()) Text(if (offen > 0) "$offen Vorschläge offen" else "alles übernommen", color = f.textSchwach, fontSize = 12.sp)
+                if (aktiv.isNotEmpty()) Text(if (offen > 0) "$offen offen" else "alles übernommen", color = f.textSchwach, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
             }
         }
     }

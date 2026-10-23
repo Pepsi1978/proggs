@@ -118,3 +118,28 @@ data class Vorschlag(
         fun liste(werte: List<String>): String = if (werte.isEmpty()) "" else JSONArray(werte).toString()
     }
 }
+
+/**
+ * Ein Vorschlag, den Frank abgelehnt hat (anders als Ausblenden: endgültig). Er verschwindet aus der Liste,
+ * bleibt hier aber gemerkt, damit keine Auswertung und kein Nachfüllen ihn je wieder vorschlägt, auch nicht umformuliert.
+ */
+@Entity(tableName = "abgelehnt", indices = [Index("zielId")])
+data class Abgelehnt(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val zielId: Long,
+    /** Schlüssel des früheren Vorschlags: wird nicht neu vergeben, damit alte Voraussetzungen nicht umgedeutet werden. */
+    val schluessel: String,
+    val titel: String,
+    val text: String = "",
+    val erstellt: Long = System.currentTimeMillis(),
+)
+
+/** Ein Beitrag im Gespräch zur Auswertung: Franks Rückmeldung oder die Antwort des Aufgaben-Agenten. */
+@Entity(tableName = "rueckmeldungen", indices = [Index("zielId")])
+data class Rueckmeldung(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val zielId: Long,
+    val vonFrank: Boolean,
+    val text: String,
+    val erstellt: Long = System.currentTimeMillis(),
+)

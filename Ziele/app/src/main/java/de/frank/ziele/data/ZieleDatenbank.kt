@@ -11,6 +11,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -66,25 +68,94 @@ interface ZieleDao {
         offeneVorschlaegeLoeschen(zielId)
         neueVorschlaege(neu)
     }
+
+    @Query("DELETE FROM vorschlaege WHERE id = :id")
+    suspend fun vorschlagLoeschen(id: Long)
+
+    // ---- Abgelehnt ----
+    @Query("SELECT * FROM abgelehnt ORDER BY zielId, id")
+    fun alleAbgelehnt(): Flow<List<Abgelehnt>>
+
+    @Query("SELECT * FROM abgelehnt WHERE zielId = :zielId ORDER BY id")
+    suspend fun abgelehnt(zielId: Long): List<Abgelehnt>
+
+    @Insert
+    suspend fun neuAbgelehnt(a: List<Abgelehnt>)
+
+    @Query("DELETE FROM abgelehnt WHERE id = :id")
+    suspend fun abgelehntLoeschen(id: Long)
+
+    @Query("DELETE FROM abgelehnt WHERE zielId = :zielId")
+    suspend fun abgelehnteLoeschen(zielId: Long)
+
+    /** Ablehnen: der Vorschlag wandert in die Sperrliste. */
+    @Transaction
+    suspend fun ablehnen(v: Vorschlag) {
+        neuAbgelehnt(listOf(Abgelehnt(zielId = v.zielId, schluessel = v.schluessel, titel = v.titel, text = v.text)))
+        vorschlagLoeschen(v.id)
+    }
+
+    // ---- Gespräch zur Auswertung ----
+    @Query("SELECT * FROM rueckmeldungen ORDER BY zielId, id")
+    fun alleRueckmeldungen(): Flow<List<Rueckmeldung>>
+
+    @Query("SELECT * FROM rueckmeldungen WHERE zielId = :zielId ORDER BY id")
+    suspend fun rueckmeldungen(zielId: Long): List<Rueckmeldung>
+
+    @Insert
+    suspend fun neueRueckmeldungen(r: List<Rueckmeldung>)
+
+    @Query("DELETE FROM rueckmeldungen WHERE zielId = :zielId")
+    suspend fun rueckmeldungenLoeschen(zielId: Long)
 }
 
-@Database(entities = [Ziel::class, Vorschlag::class], version = 1, exportSchema = false)
+@Database(entities = [Ziel::class, Vorschlag::class, Abgelehnt::class, Rueckmeldung::class], version = 2, exportSchema = false)
 abstract class ZieleDatenbank : RoomDatabase() {
     abstract fun dao(): ZieleDao
 }
 
+/** Version 2: Sperrliste der abgelehnten Vorschläge und das Gespräch zur Auswertung. Bestehende Tabellen bleiben unberührt. */
+private val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `abgelehnt` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `zielId` INTEGER NOT NULL, `schluessel` TEXT NOT NULL, `titel` TEXT NOT NULL, `text` TEXT NOT NULL, `erstellt` INTEGER NOT NULL)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_abgelehnt_zielId` ON `abgelehnt` (`zielId`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `rueckmeldungen` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `zielId` INTEGER NOT NULL, `vonFrank` INTEGER NOT NULL, `text` TEXT NOT NULL, `erstellt` INTEGER NOT NULL)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_rueckmeldungen_zielId` ON `rueckmeldungen` (`zielId`)")
+    }
+}
+
 /** Einziger Zugang zu den Daten. Jede Änderung meldet Jarvis und dem Wecker ein Signal, damit sie frisch lesen. */
 class ZieleRepository private constructor(private val app: Context) {
-    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").build().dao()
+    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").addMigrations(MIGRATION_1_2).build().dao()
 
     val ziele: Flow<List<Ziel>> = dao.alleZiele()
     val vorschlaege: Flow<List<Vorschlag>> = dao.alleVorschlaege()
+    val abgelehnt: Flow<List<Abgelehnt>> = dao.alleAbgelehnt()
+    val rueckmeldungen: Flow<List<Rueckmeldung>> = dao.alleRueckmeldungen()
 
     suspend fun zieleEinmal() = dao.alleZieleEinmal()
     suspend fun ziel(id: Long) = dao.ziel(id)
     suspend fun vorschlaege(zielId: Long) = dao.vorschlaege(zielId)
     suspend fun alleVorschlaegeEinmal() = dao.alleVorschlaegeEinmal()
     suspend fun vorschlag(id: Long) = dao.vorschlag(id)
+    suspend fun abgelehnt(zielId: Long) = dao.abgelehnt(zielId)
+    suspend fun rueckmeldungen(zielId: Long) = dao.rueckmeldungen(zielId)
+
+    suspend fun ablehnen(v: Vorschlag) { dao.ablehnen(v); signal() }
+
+    /** Rückgängig nach dem Ablehnen: Sperreintrag weg, der Vorschlag kommt wie er war zurück. */
+    suspend fun ablehnenZuruecknehmen(v: Vorschlag) {
+        dao.abgelehnt(v.zielId).lastOrNull { it.schluessel == v.schluessel && it.titel == v.titel }?.let { dao.abgelehntLoeschen(it.id) }
+        if (dao.ziel(v.zielId) != null && dao.vorschlag(v.id) == null) dao.neuerVorschlag(v)
+        signal()
+    }
+
+    /** Hebt eine Ablehnung auf: Das Thema darf wieder vorgeschlagen werden. */
+    suspend fun ablehnungAufheben(a: Abgelehnt) { dao.abgelehntLoeschen(a.id); signal() }
+
+    suspend fun neueVorschlaege(v: List<Vorschlag>) { dao.neueVorschlaege(v); signal() }
+
+    suspend fun neueRueckmeldung(r: Rueckmeldung) { dao.neueRueckmeldungen(listOf(r)); signal() }
 
     suspend fun neu(z: Ziel): Long {
         val rang = (dao.alleZieleEinmal().minOfOrNull { it.rang } ?: 1) - 1
@@ -93,9 +164,13 @@ class ZieleRepository private constructor(private val app: Context) {
 
     suspend fun speichere(z: Ziel) { dao.speichere(z.copy(geaendert = System.currentTimeMillis())); signal() }
 
-    suspend fun loesche(z: Ziel) { dao.vorschlaegeLoeschen(z.id); dao.loesche(z); signal() }
+    suspend fun loesche(z: Ziel) {
+        dao.vorschlaegeLoeschen(z.id); dao.abgelehnteLoeschen(z.id); dao.rueckmeldungenLoeschen(z.id); dao.loesche(z); signal()
+    }
 
-    suspend fun wiederherstellen(z: Ziel, v: List<Vorschlag>) { dao.neu(z); dao.neueVorschlaege(v); signal() }
+    suspend fun wiederherstellen(z: Ziel, v: List<Vorschlag>, abgelehnt: List<Abgelehnt> = emptyList(), gespraech: List<Rueckmeldung> = emptyList()) {
+        dao.neu(z); dao.neueVorschlaege(v); dao.neuAbgelehnt(abgelehnt); dao.neueRueckmeldungen(gespraech); signal()
+    }
 
     suspend fun speichere(v: Vorschlag) { dao.speichere(v); signal() }
 

@@ -35,6 +35,15 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.TaskAlt
+import androidx.compose.material.icons.rounded.ThumbDown
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDecoration
+import de.frank.ziele.data.Rueckmeldung
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,6 +86,8 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     val f = LocalFarben.current
     val ziele by vm.ziele.collectAsState()
     val alle by vm.vorschlaege.collectAsState()
+    val alleAbgelehnt by vm.abgelehnt.collectAsState()
+    val alleRueckmeldungen by vm.rueckmeldungen.collectAsState()
     val stand by vm.auswertungStand.collectAsState()
     val fehler by vm.auswertungFehler.collectAsState()
     val z = ziele.firstOrNull { it.id == id } ?: run { Box(Modifier.fillMaxSize()); return }
@@ -86,10 +97,13 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     val notwendig = sichtbar.filter { it.gruppe == Kategorie.NOTWENDIG }.sortiert(sortierung)
     val hilfe = sichtbar.filter { it.gruppe == Kategorie.UNTERSTUETZEND }.sortiert(sortierung)
     val verworfen = vorschlaege.filter { it.verworfen }
+    val abgelehnt = alleAbgelehnt.filter { it.zielId == id }
+    val gespraech = alleRueckmeldungen.filter { it.zielId == id }
     val schluesselTitel = vorschlaege.associate { it.schluessel to it.titel }
     val schritt = stand[id]
     var loeschenFragen by remember { mutableStateOf(false) }
     var verworfeneZeigen by rememberSaveable { mutableStateOf(false) }
+    var abgelehnteZeigen by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -111,6 +125,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             }
         }
         if (z.bericht.isNotBlank()) item { Bericht(vm, z) }
+        if (z.ausgewertetAm != null) item { Gespraech(vm, z, gespraech, schritt != null) }
         if (sichtbar.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -134,8 +149,24 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             if (verworfeneZeigen) items(verworfen, key = { it.id }) { v ->
                 Row(Modifier.fillMaxWidth().glas(f, 14.dp, 0.3f).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(v.titel, color = f.textSchwach, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    if (v.aufgabeId == null) {
+                        Icon(Icons.Rounded.ThumbDown, "Ablehnen", tint = f.gefahr, modifier = Modifier.size(20.dp).antippen { vm.ablehnen(v) })
+                        Spacer(Modifier.width(16.dp))
+                    }
                     Icon(Icons.AutoMirrored.Rounded.Undo, "Wieder einblenden", tint = f.primaer, modifier = Modifier.size(22.dp).antippen { vm.verwerfen(v, false) })
                 }
+            }
+        }
+        if (abgelehnt.isNotEmpty()) item {
+            Row(Modifier.fillMaxWidth().antippen(haptik = false) { abgelehnteZeigen = !abgelehnteZeigen }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Abgelehnt (${abgelehnt.size}) · kommt nicht wieder", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Icon(if (abgelehnteZeigen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = f.textSchwach)
+            }
+        }
+        if (abgelehnteZeigen) items(abgelehnt, key = { "a${it.id}" }) { a ->
+            Row(Modifier.fillMaxWidth().glas(f, 14.dp, 0.3f).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(a.titel, color = f.textSchwach, fontSize = 14.sp, textDecoration = TextDecoration.LineThrough, modifier = Modifier.weight(1f))
+                Icon(Icons.AutoMirrored.Rounded.Undo, "Ablehnung aufheben", tint = f.primaer, modifier = Modifier.size(22.dp).antippen { vm.ablehnungAufheben(a) })
             }
         }
         item {
@@ -209,11 +240,20 @@ private fun AuswertenKnopf(vm: AppViewModel, z: Ziel, schritt: String?, fehler: 
                 Spacer(Modifier.width(10.dp))
                 Text(if (z.ausgewertetAm == null) "Auswerten: Weg und Aufgaben finden" else "Neu auswerten", color = f.aufPrimaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
+            if (z.ausgewertetAm != null) Row(
+                Modifier.fillMaxWidth().height(48.dp).glas(f, 18.dp, 0.9f, f.flaecheStark).antippen { vm.nachfuellen(z.id) },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+            ) {
+                Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, null, tint = f.primaer)
+                Spacer(Modifier.width(10.dp))
+                Text("Neue Aufgaben: freie Plätze füllen", color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
             z.ausgewertetAm?.let {
                 Text(
                     "Zuletzt ausgewertet am " + SimpleDateFormat("d. MMMM yyyy, HH:mm", Locale.GERMAN).format(Date(it)) + " Uhr" +
                         (if (z.auswertungModell.isNotBlank()) " · ${z.auswertungModell}" else "") +
-                        ". Übernommene und ausgeblendete Vorschläge bleiben beim Neu-Auswerten erhalten.",
+                        ". Übernommene und ausgeblendete Vorschläge bleiben beim Neu-Auswerten erhalten, abgelehnte kommen nie wieder. " +
+                        "Neue Aufgaben recherchiert weiter im Internet und füllt nur die freien Plätze.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
@@ -281,6 +321,76 @@ private fun QuellenAbschnitt(quellen: List<Quellen.Quelle>) {
     }
 }
 
+/**
+ * Gespräch zur Auswertung: Frank sagt, was ihm nicht gefällt oder was sinnvoller wäre. Der Aufgaben-Agent antwortet,
+ * ergänzt bei Bedarf Vorschläge, und jede künftige Auswertung und jedes Nachfüllen liest das Gespräch mit.
+ */
+@Composable
+private fun Gespraech(vm: AppViewModel, z: Ziel, gespraech: List<Rueckmeldung>, laeuft: Boolean) {
+    val f = LocalFarben.current
+    var offen by rememberSaveable { mutableStateOf(false) }
+    val diktiertHier = vm.diktatZiel == DiktatZiel.RUECKMELDUNG
+    Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.8f).animateContentSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().antippen(haptik = false) { offen = !offen }, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("RÜCKMELDUNG ZUR AUSWERTUNG", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                if (!offen) Text(
+                    if (gespraech.isEmpty()) "Sag, was dir nicht gefällt oder was sinnvoller wäre." else "${gespraech.size} Beiträge · fließen in jede Auswertung ein",
+                    color = f.textLeise, fontSize = 12.sp,
+                )
+            }
+            Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise)
+        }
+        if (offen) {
+            gespraech.takeLast(30).forEach { r ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (r.vonFrank) Arrangement.End else Arrangement.Start) {
+                    Column(
+                        Modifier.fillMaxWidth(0.88f).glas(f, 14.dp, 0.5f, if (r.vonFrank) f.primaer.copy(alpha = 0.16f) else f.flaecheStark).padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (r.vonFrank) "Du" else "Aufgaben-Agent", color = f.primaer, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            if (!r.vonFrank) Icon(
+                                if (vm.sprichtId == "r_${r.id}") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Vorlesen", tint = f.primaer,
+                                modifier = Modifier.size(18.dp).antippen { vm.vorlesen("r_${r.id}", r.text) },
+                            )
+                        }
+                        Text(r.text, color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
+                    }
+                }
+            }
+            if (laeuft && gespraech.lastOrNull()?.vonFrank == true) Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(color = f.primaer, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                Text("Der Agent denkt nach …", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f).heightIn(min = 48.dp).glas(f, 14.dp, 0.6f, f.flaecheStark).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                    if (vm.rueckmeldungEntwurf.isEmpty()) Text(
+                        when {
+                            diktiertHier && vm.aufnahme == Aufnahme.LAEUFT -> "Ich höre zu …"
+                            diktiertHier && vm.aufnahme == Aufnahme.VERARBEITET -> "Schreibe mit …"
+                            else -> "z. B. „Ist es nicht sinnvoller, …?“"
+                        },
+                        color = f.textSchwach, fontSize = 14.sp,
+                    )
+                    BasicTextField(
+                        vm.rueckmeldungEntwurf, { vm.rueckmeldungEntwurf = it },
+                        textStyle = TextStyle(color = f.text, fontSize = 14.sp, lineHeight = 20.sp),
+                        cursorBrush = SolidColor(f.primaer),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                MikroKnopf(if (diktiertHier) vm.aufnahme else Aufnahme.AUS, 44.dp) { vm.mikroTippen(DiktatZiel.RUECKMELDUNG) }
+                Spacer(Modifier.width(6.dp))
+                Box(
+                    Modifier.size(44.dp).knopf3d(f.primaer, f.tertiaer, 99.dp, f.dunkel).antippen { vm.rueckmeldungSenden(z.id) },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(20.dp)) }
+            }
+        }
+    }
+}
+
 @Composable
 private fun GruppenKopf(vm: AppViewModel, z: Ziel, k: Kategorie, liste: List<Vorschlag>) {
     val f = LocalFarben.current
@@ -338,6 +448,7 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
                 if (vor.isNotEmpty()) Zeile("Vorher", vor.joinToString(" · "))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 4.dp)) {
                     if (v.aufgabeId == null) Text("Ausblenden", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.antippen { vm.verwerfen(v) })
+                    if (v.aufgabeId == null) Text("Ablehnen", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { vm.ablehnen(v) })
                     Text(if (vm.sprichtId == "v_${v.id}") "Stopp" else "Vorlesen", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.antippen { vm.vorlesen("v_${v.id}", listOf(v.titel + ".", v.text, v.begruendung).filter { it.isNotBlank() }.joinToString(" ")) })
                 }

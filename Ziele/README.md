@@ -13,6 +13,15 @@ Gemini 3.8 Flash/Flash-Lite, Azure, eigene Stimme) und Diktat (Groq Whisper) sin
   (Websuche des Modells), wie das Ziel am besten erreicht wird, und leitet daraus Aufgaben ab, getrennt in **Notwendig**
   und **Unterstützend**. Er läuft im Prozess weiter, auch wenn man den Bildschirm verlässt. Neu auswerten behält
   übernommene und ausgeblendete Vorschläge und schlägt nichts Doppeltes vor.
+- **Ablehnen** (aufgeklappter Vorschlag oder in der Ausgeblendet-Liste): endgültig weg und gemerkt (Tabelle `abgelehnt`).
+  Jede Auswertung, jedes Nachfüllen und jede Rückmeldung bekommt die Sperrliste, danach siebt ein Prüfpass der KI
+  Umformuliertes und Ähnliches aus. „Abgelehnt (n)“ unten zeigt sie; Rückgängig hebt eine Ablehnung auf.
+  Ausblenden bleibt wie bisher (ausgegraut, wieder einblendbar).
+- **Neue Aufgaben** (Ziel-Karte und Detailseite): keine komplette Auswertung, sondern eine Ergänzungsrecherche mit
+  Websuche aus anderer Richtung (weitere Fragen, andere Wege), angehängt an die bestehende Recherche („ERGÄNZUNG VOM …“,
+  Quellen zusammengeführt), dann neue Vorschläge für die freien Plätze (Zielgröße nach „Wie viele Vorschläge“ minus sichtbare).
+- **Rückmeldung zur Auswertung** (Detailseite, tippen oder einsprechen): der Aufgaben-Agent antwortet, ergänzt bei Bedarf
+  Vorschläge und passt den Weg an. Das Gespräch (Tabelle `rueckmeldungen`) fließt in jede künftige Auswertung ein.
 - **Plus** an jedem Vorschlag legt ihn in Geniale Aufgaben an (Priorität: notwendig mit Wichtigkeit ≥ 4 = Hoch, sonst Mittel;
   unterstützend = Gering). „Alle“ übernimmt alle notwendigen in Reihenfolge der Voraussetzungen.
   Der Erledigt-Stand kommt beim Öffnen zurück (Haken grün, Fortschrittsring).
@@ -26,7 +35,7 @@ Gemini 3.8 Flash/Flash-Lite, Azure, eigene Stimme) und Diktat (Groq Whisper) sin
 
 | Richtung | Adresse | Schutz | Methoden |
 |---|---|---|---|
-| Jarvis → Ziele | `content://de.frank.ziele.jarvis` (`call`) | `de.frank.ziele.permission.JARVIS` (Signatur) | info, lesen, anlegen, aendern, loeschen, auswerten, auswertung_stand, uebernehmen, verwerfen, kontext_lesen, kontext_ergaenzen, kontext_ersetzen, einstellungen |
+| Jarvis → Ziele | `content://de.frank.ziele.jarvis` (`call`) | `de.frank.ziele.permission.JARVIS` (Signatur) | info, lesen, anlegen, aendern, loeschen, auswerten, neue_aufgaben, rueckmeldung, auswertung_stand, uebernehmen, verwerfen, ablehnen, kontext_lesen, kontext_ergaenzen, kontext_ersetzen, einstellungen |
 | Ziele → Geniale Aufgaben | `content://de.frank.aufgaben.jarvis` (`call`) | `de.frank.aufgaben.permission.JARVIS` (Signatur) | anlegen, lesen |
 | Ziele → Jarvis | `content://de.frank.jarvis.ziele` (`call`) | `de.frank.jarvis.permission.BRUECKE` (Signatur) | kontext (Live-Gedächtnis kurz), zugang (Schlüssel) |
 | Wecker → Ziele | `content://de.frank.ziele.wecker/aktuell` bzw. `/vorlesen` (`query`) | keiner (Wecker hat eigenen Signierschlüssel) | nur lesen |

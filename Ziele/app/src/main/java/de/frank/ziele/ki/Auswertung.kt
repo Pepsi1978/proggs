@@ -5,11 +5,15 @@ import android.content.Context
 import android.util.Log
 import de.frank.ziele.auth.ChatTurn
 import de.frank.ziele.auth.CodexAuthManager
+import de.frank.ziele.auth.CodexModel
+import de.frank.ziele.auth.ReasoningEffort
 import de.frank.ziele.bruecke.Jarvis
+import de.frank.ziele.data.Abgelehnt
 import de.frank.ziele.data.Aufwand
 import de.frank.ziele.data.Einstellungen
 import de.frank.ziele.data.Kategorie
 import de.frank.ziele.data.Kontext
+import de.frank.ziele.data.Rueckmeldung
 import de.frank.ziele.data.Vorschlag
 import de.frank.ziele.data.Ziel
 import de.frank.ziele.data.ZieleRepository
@@ -50,27 +54,39 @@ object Auswertung {
 
     fun laeuft(zielId: Long): Boolean = _stand.value.containsKey(zielId)
 
-    /** Startet die Auswertung; läuft schon eine für dieses Ziel, passiert nichts. [fertig] meldet Erfolg oder Fehlertext. */
+    /**
+     * VOLL = komplette neue Auswertung (offene Vorschläge werden ersetzt).
+     * NACHFUELLEN = ergänzende Recherche aus anderer Richtung, angehängt an die bestehende, füllt die freien Plätze.
+     * RUECKMELDUNG = antwortet auf Franks Rückmeldung im Gespräch und ergänzt bei Bedarf Vorschläge.
+     * Nachfüllen und Rückmeldung fügen nur hinzu, sie ersetzen nichts.
+     */
+    enum class Modus { VOLL, NACHFUELLEN, RUECKMELDUNG }
+
+    /**
+     * Startet die Auswertung; läuft schon eine für dieses Ziel, passiert nichts.
+     * [fertig] bekommt den Fehlertext (null = Erfolg) und eine Erfolgsmeldung.
+     */
     @Synchronized
-    fun starte(context: Context, zielId: Long, wunsch: String = "", fertig: (String?) -> Unit = {}): Boolean {
+    fun starte(context: Context, zielId: Long, wunsch: String = "", modus: Modus = Modus.VOLL, fertig: (String?, String) -> Unit = { _, _ -> }): Boolean {
         if (laeufe[zielId]?.isActive == true) return false
         val app = context.applicationContext
         _fehler.update { it - zielId }
         schritt(zielId, "Bereite vor …")
         laeufe[zielId] = bereich.launch {
+            var erfolg = ""
             val ergebnis = try {
-                rechne(app, zielId, wunsch)
+                erfolg = rechne(app, zielId, wunsch, modus)
                 null
             } catch (c: CancellationException) {
                 "Abgebrochen."
             } catch (e: Throwable) {
-                Log.w("ZieleAuswertung", "Auswertung $zielId", e)
+                Log.w("ZieleAuswertung", "Auswertung $zielId ($modus)", e)
                 (e.message ?: e.javaClass.simpleName).also { m -> _fehler.update { it + (zielId to m) } }
             } finally {
                 _stand.update { it - zielId }
                 synchronized(this@Auswertung) { laeufe.remove(zielId) }
             }
-            fertig(ergebnis)
+            fertig(ergebnis, erfolg)
         }
         return true
     }
@@ -79,7 +95,8 @@ object Auswertung {
 
     private fun schritt(zielId: Long, text: String) = _stand.update { it + (zielId to text) }
 
-    private suspend fun rechne(app: Context, zielId: Long, wunsch: String) {
+    /** Rechnet einen Lauf im gewählten [modus] und liefert die Erfolgsmeldung für Frank. */
+    private suspend fun rechne(app: Context, zielId: Long, wunsch: String, modus: Modus): String {
         val repo = ZieleRepository.get(app)
         val e = Einstellungen.get(app)
         val auth = CodexAuthManager(app)
@@ -89,6 +106,8 @@ object Auswertung {
         }
         val ziel = repo.ziel(zielId) ?: throw IllegalStateException("Das Ziel gibt es nicht mehr.")
         val bisher = repo.vorschlaege(zielId)
+        val abgelehnt = repo.abgelehnt(zielId)
+        val gespraech = repo.rueckmeldungen(zielId)
 
         val persoenlich = e.kontextNutzen
         if (persoenlich) schritt(zielId, if (e.jarvisKontext) "Lese deinen Kontext und Jarvis' Live-Gedächtnis …" else "Lese deinen Kontext …")
@@ -105,51 +124,99 @@ object Auswertung {
             if (persoenlich && kontextDatei.isEmpty() && gedaechtnis == null) append("(Kein weiterer Kontext über Frank vorhanden.)\n\n")
         }
         val zielText = zielBeschreibung(ziel)
+        val sperre = sperrBlock(abgelehnt)
+        val rueckmeldungen = gespraechBlock(gespraech)
 
-        // ---- Schritt 1: Recherche ----
-        schritt(zielId, if (e.recherche) "Recherchiere, wie man das Ziel am besten erreicht …" else "Denke über den besten Weg nach …")
-        val bericht = auth.streamChat(
-            instructions = RECHERCHE_ANWEISUNG + if (e.recherche) RECHERCHE_MIT_WEB else RECHERCHE_OHNE_WEB,
-            turns = listOf(ChatTurn("user", "$zielText\n\n$ueberFrank" + if (wunsch.isNotBlank()) "BESONDERER WUNSCH FÜR DIESE AUSWERTUNG: $wunsch\n" else "")),
-            model = modell,
-            reasoningEffort = e.denkstufe,
-            websuche = e.recherche,
-        ).trim()
-        if (bericht.isBlank()) throw IllegalStateException("Die Recherche hat keinen Bericht geliefert.")
+        // Bei der vollen Auswertung bleiben nur übernommene und ausgeblendete Vorschläge, die übrigen werden ersetzt;
+        // Nachfüllen und Rückmeldung behalten alles und ergänzen nur.
+        val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen } else bisher
+
+        // ---- Schritt 1: Recherche (voll) bzw. Ergänzungsrecherche (nachfüllen); die Rückmeldung baut auf der vorhandenen auf ----
+        val bericht = when (modus) {
+            Modus.VOLL -> {
+                schritt(zielId, if (e.recherche) "Recherchiere, wie man das Ziel am besten erreicht …" else "Denke über den besten Weg nach …")
+                auth.streamChat(
+                    instructions = RECHERCHE_ANWEISUNG + if (e.recherche) RECHERCHE_MIT_WEB else RECHERCHE_OHNE_WEB,
+                    turns = listOf(ChatTurn("user", "$zielText\n\n$ueberFrank$rueckmeldungen" + if (wunsch.isNotBlank()) "BESONDERER WUNSCH FÜR DIESE AUSWERTUNG: $wunsch\n" else "")),
+                    model = modell,
+                    reasoningEffort = e.denkstufe,
+                    websuche = e.recherche,
+                ).trim().also { if (it.isBlank()) throw IllegalStateException("Die Recherche hat keinen Bericht geliefert.") }
+            }
+            Modus.NACHFUELLEN -> {
+                schritt(zielId, if (e.recherche) "Recherchiere weiter im Internet, aus anderer Richtung …" else "Denke über weitere Wege zum Ziel nach …")
+                val alt = Quellen.teilen(ziel.bericht).text
+                val ergaenzung = auth.streamChat(
+                    instructions = ERGAENZUNG_ANWEISUNG + if (e.recherche) RECHERCHE_MIT_WEB else RECHERCHE_OHNE_WEB,
+                    turns = listOf(ChatTurn("user", buildString {
+                        append(zielText).append("\n\n")
+                        append("BISHERIGE RECHERCHE (bitte nicht wiederholen, sondern ergänzen):\n").append(alt.ifBlank { "(noch keine)" }.takeLast(20_000)).append("\n\n")
+                        append(ueberFrank).append(rueckmeldungen).append(sperre)
+                        if (behalten.isNotEmpty()) append("SCHON VORHANDENE AUFGABEN:\n").append(behalten.joinToString("\n") { "- " + it.titel }).append("\n\n")
+                        if (wunsch.isNotBlank()) append("BESONDERER WUNSCH: ").append(wunsch).append('\n')
+                    })),
+                    model = modell,
+                    reasoningEffort = e.denkstufe,
+                    websuche = e.recherche,
+                ).trim()
+                if (ergaenzung.isBlank()) throw IllegalStateException("Die ergänzende Recherche hat nichts geliefert.")
+                berichtAnfuegen(ziel.bericht, ergaenzung)
+            }
+            Modus.RUECKMELDUNG -> ziel.bericht
+        }
 
         // ---- Schritt 2: Aufgaben ableiten ----
-        schritt(zielId, "Leite die wichtigsten Aufgaben ab …")
-        val behalten = bisher.filter { it.aufgabeId != null || it.verworfen }
-        val menge = when (e.vorschlagMenge) { "knapp" -> "5 bis 8"; "ausfuehrlich" -> "14 bis 22"; else -> "8 bis 14" }
+        schritt(zielId, if (modus == Modus.RUECKMELDUNG) "Denke über deine Rückmeldung nach …" else "Leite die wichtigsten Aufgaben ab …")
+        val sichtbar = bisher.count { !it.verworfen }
+        val anzahl = when (modus) {
+            Modus.VOLL -> "etwa " + when (e.vorschlagMenge) { "knapp" -> "5 bis 8"; "ausfuehrlich" -> "14 bis 22"; else -> "8 bis 14" }
+            Modus.NACHFUELLEN -> "genau " + (zielGroesse(e.vorschlagMenge) - sichtbar).coerceIn(3, 12)
+            Modus.RUECKMELDUNG -> ""
+        }
         val planAnfrage = buildString {
             append(zielText).append("\n\n")
-            append("RECHERCHE-BERICHT:\n").append(Quellen.teilen(bericht).text.take(30_000)).append("\n\n")
+            if (bericht.isNotBlank()) append("RECHERCHE-BERICHT:\n").append(Quellen.teilen(bericht).text.takeLast(30_000)).append("\n\n")
+            if (modus == Modus.RUECKMELDUNG && ziel.strategie.isNotBlank()) append("BISHERIGER WEG: ").append(ziel.strategie).append("\n\n")
             append(ueberFrank)
             if (behalten.isNotEmpty()) {
                 append("SCHON VORHANDEN (nicht noch einmal vorschlagen; du darfst sie als Voraussetzung über ihren Schlüssel nennen; ")
                 append("ihr Wortlaut kann sprachlich missglückt sein, nimm ihn nicht als Stilvorbild):\n")
                 behalten.forEach { v ->
                     append("- [").append(v.schluessel).append("] ").append(v.titel)
-                    append(when { v.verworfen -> " (von Frank verworfen, nichts Ähnliches mehr vorschlagen)"; v.erledigt -> " (erledigt)"; else -> " (übernommen, in Arbeit)" })
+                    append(when { v.verworfen -> " (von Frank verworfen, nichts Ähnliches mehr vorschlagen)"; v.erledigt -> " (erledigt)"; v.aufgabeId != null -> " (übernommen, in Arbeit)"; else -> " (offener Vorschlag)" })
                     append('\n')
                 }
                 append('\n')
             }
+            append(sperre)
+            append(rueckmeldungen)
             if (wunsch.isNotBlank()) append("BESONDERER WUNSCH: ").append(wunsch).append("\n\n")
-            append("Liefere etwa $menge neue Vorschläge.")
+            when (modus) {
+                Modus.VOLL -> append("Liefere $anzahl neue Vorschläge.")
+                Modus.NACHFUELLEN -> append(
+                    "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze. Liefere $anzahl neue Vorschläge, " +
+                        "vor allem aus den neuen Erkenntnissen der Ergänzung: andere Wege zum Ziel, die bisher fehlen. " +
+                        "Nichts, was einer abgelehnten oder vorhandenen Aufgabe gleicht oder ähnelt.",
+                )
+                Modus.RUECKMELDUNG -> append("Antworte auf Franks letzte Rückmeldung im Gespräch oben.")
+            }
         }
         val antwort = auth.streamChat(
-            instructions = PLAN_ANWEISUNG,
+            instructions = if (modus == Modus.RUECKMELDUNG) PLAN_ANWEISUNG + RUECKMELDUNG_ZUSATZ else PLAN_ANWEISUNG,
             turns = listOf(ChatTurn("user", planAnfrage)),
             model = modell,
             reasoningEffort = e.denkstufe,
         )
-        val plan = jsonAus(antwort) ?: throw IllegalStateException("Die KI hat keinen lesbaren Aufgabenplan geliefert. Bitte noch einmal auswerten.")
+        val plan = jsonAus(antwort) ?: throw IllegalStateException("Die KI hat keinen lesbaren Aufgabenplan geliefert. Bitte noch einmal versuchen.")
+
+        val roh = plan.optJSONArray("vorschlaege") ?: JSONArray()
+        val kandidaten = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { titelAus(it.optString("titel")).isNotEmpty() }
+        if (kandidaten.isNotEmpty()) schritt(zielId, "Prüfe gegen Abgelehntes und Vorhandenes …")
+        val objekte = aussieben(auth, modell, kandidaten, abgelehnt, behalten)
 
         schritt(zielId, "Speichere die Vorschläge …")
-        val belegt = behalten.map { it.schluessel }.toMutableSet()
-        val roh = plan.optJSONArray("vorschlaege") ?: JSONArray()
-        val objekte = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { titelAus(it.optString("titel")).isNotEmpty() }
+        // Schlüssel abgelehnter Vorschläge bleiben belegt: Alte Voraussetzungen sollen nicht auf einen neuen Vorschlag zeigen.
+        val belegt = (behalten.map { it.schluessel } + abgelehnt.map { it.schluessel }).toMutableSet()
         // Vergibt die KI einen schon belegten Schlüssel neu, wird er umbenannt; Voraussetzungen unter den neuen Vorschlägen
         // meinen dann den neuen Vorschlag und ziehen mit (der erste Vorschlag mit diesem Schlüssel gewinnt).
         val umbenannt = mutableMapOf<String, String>()
@@ -182,20 +249,119 @@ object Auswertung {
                 wiederkehrend = o.optBoolean("wiederkehrend", false),
             )
         }
-        if (neu.isEmpty()) throw IllegalStateException("Die KI hat keine Aufgaben vorgeschlagen. Bitte noch einmal auswerten.")
-        // Unter der Sperre des Übernehmens; ist das Ziel inzwischen gelöscht, nichts schreiben (sonst verwaiste Vorschläge).
-        val frisch = Abgleich.gesperrt {
-            repo.ziel(zielId)?.also { repo.vorschlaegeErsetzen(zielId, neu) }
-        } ?: return
-        repo.speichere(
-            frisch.copy(
-                bericht = bericht,
-                strategie = plan.optString("strategie").trim().ifEmpty { frisch.strategie },
-                symbol = plan.optString("symbol").trim().takeIf { it.isNotEmpty() && it.length <= 8 && frisch.symbol == "🎯" } ?: frisch.symbol,
-                ausgewertetAm = System.currentTimeMillis(),
-                auswertungModell = modell.label,
-            ),
-        )
+
+        return when (modus) {
+            Modus.VOLL -> {
+                if (neu.isEmpty()) throw IllegalStateException("Die KI hat keine Aufgaben vorgeschlagen. Bitte noch einmal auswerten.")
+                // Unter der Sperre des Übernehmens; ist das Ziel inzwischen gelöscht, nichts schreiben (sonst verwaiste Vorschläge).
+                val frisch = Abgleich.gesperrt {
+                    repo.ziel(zielId)?.also { repo.vorschlaegeErsetzen(zielId, neu) }
+                } ?: return "Das Ziel gibt es nicht mehr."
+                repo.speichere(
+                    frisch.copy(
+                        bericht = bericht,
+                        strategie = plan.optString("strategie").trim().ifEmpty { frisch.strategie },
+                        symbol = plan.optString("symbol").trim().takeIf { it.isNotEmpty() && it.length <= 8 && frisch.symbol == "🎯" } ?: frisch.symbol,
+                        ausgewertetAm = System.currentTimeMillis(),
+                        auswertungModell = modell.label,
+                    ),
+                )
+                "Auswertung fertig ✨"
+            }
+            Modus.NACHFUELLEN -> {
+                val frisch = Abgleich.gesperrt {
+                    repo.ziel(zielId)?.also { if (neu.isNotEmpty()) repo.neueVorschlaege(neu) }
+                } ?: return "Das Ziel gibt es nicht mehr."
+                // Die Ergänzung bleibt in der Recherche, auch wenn alle Kandidaten durchs Raster fielen.
+                repo.speichere(frisch.copy(bericht = bericht))
+                when (neu.size) {
+                    0 -> "Die Recherche ist ergänzt, aber es kam keine neue Aufgabe durch, die nicht schon da oder abgelehnt ist."
+                    1 -> "Eine neue Aufgabe vorgeschlagen, die Recherche ist ergänzt ✨"
+                    else -> "${neu.size} neue Aufgaben vorgeschlagen, die Recherche ist ergänzt ✨"
+                }
+            }
+            Modus.RUECKMELDUNG -> {
+                val text = plan.optString("antwort").trim().ifEmpty { if (neu.isEmpty()) "Verstanden, ich habe es mir gemerkt." else "Dazu habe ich dir neue Vorschläge ergänzt." }
+                val frisch = Abgleich.gesperrt {
+                    repo.ziel(zielId)?.also { if (neu.isNotEmpty()) repo.neueVorschlaege(neu) }
+                } ?: return "Das Ziel gibt es nicht mehr."
+                repo.neueRueckmeldung(Rueckmeldung(zielId = zielId, vonFrank = false, text = text))
+                plan.optString("strategie").trim().takeIf { it.isNotEmpty() && it != frisch.strategie }?.let { repo.speichere(frisch.copy(strategie = it)) }
+                if (neu.isEmpty()) "Antwort ist da" else "Antwort ist da, ${if (neu.size == 1) "ein neuer Vorschlag" else "${neu.size} neue Vorschläge"} ✨"
+            }
+        }
+    }
+
+    /** So viele sichtbare Vorschläge soll ein Ziel ungefähr haben; was darunter liegt, füllt „Neue Aufgaben“ auf. */
+    private fun zielGroesse(menge: String) = when (menge) { "knapp" -> 6; "ausfuehrlich" -> 18; else -> 11 }
+
+    private fun sperrBlock(abgelehnt: List<Abgelehnt>): String = if (abgelehnt.isEmpty()) "" else buildString {
+        append("VON FRANK ABGELEHNT (diese Aufgaben will er nicht. Schlage sie nie wieder vor, auch nicht umformuliert, ")
+        append("in Teilen, mit anderer Zahl, anderem Ort oder anderer Häufigkeit, und auch nichts sinngleich Ähnliches):\n")
+        abgelehnt.forEach { a -> append("- ").append(a.titel); if (a.text.isNotBlank()) append(": ").append(a.text.take(200)); append('\n') }
+        append('\n')
+    }
+
+    private fun gespraechBlock(gespraech: List<Rueckmeldung>): String = if (gespraech.isEmpty()) "" else buildString {
+        append("FRANKS RÜCKMELDUNGEN ZUR AUSWERTUNG (Gespräch, ältestes zuerst; berücksichtige seine Wünsche und Einwände):\n")
+        val zeilen = gespraech.map { (if (it.vonFrank) "Frank: " else "Agent: ") + it.text.trim() }
+        // Nur das Neueste, wenn das Gespräch lang wird.
+        var laenge = 0
+        zeilen.asReversed().takeWhile { laenge += it.length; laenge < 8_000 }.asReversed().forEach { append(it).append('\n') }
+        append('\n')
+    }
+
+    /**
+     * Siebt Kandidaten aus, die abgelehnten oder vorhandenen Aufgaben gleichen oder ähneln: erst ohne KI über den
+     * bereinigten Titel, dann ein kurzer Prüfpass der KI, der auch Umformulierungen erkennt. Scheitert der Prüfpass,
+     * bleibt es beim ersten Sieb, statt den ganzen Lauf zu verlieren.
+     */
+    private suspend fun aussieben(auth: CodexAuthManager, modell: CodexModel, kandidaten: List<JSONObject>, abgelehnt: List<Abgelehnt>, vorhanden: List<Vorschlag>): List<JSONObject> {
+        val gesehen = (abgelehnt.map { normTitel(it.titel) } + vorhanden.map { normTitel(it.titel) }).toMutableSet()
+        val vorgefiltert = kandidaten.filter { gesehen.add(normTitel(titelAus(it.optString("titel")))) }
+        if (vorgefiltert.isEmpty() || (abgelehnt.isEmpty() && vorhanden.isEmpty())) return vorgefiltert
+        val anfrage = buildString {
+            if (abgelehnt.isNotEmpty()) {
+                append("ABGELEHNT:\n")
+                abgelehnt.forEach { a -> append("- ").append(a.titel); if (a.text.isNotBlank()) append(": ").append(a.text.take(200)); append('\n') }
+                append('\n')
+            }
+            if (vorhanden.isNotEmpty()) {
+                append("VORHANDEN:\n")
+                vorhanden.forEach { v -> append("- ").append(v.titel); if (v.text.isNotBlank()) append(": ").append(v.text.take(160)); append('\n') }
+                append('\n')
+            }
+            append("KANDIDATEN:\n")
+            vorgefiltert.forEachIndexed { i, o -> append(i + 1).append(". ").append(titelAus(o.optString("titel"))).append(": ").append(o.optString("text").trim().take(240)).append('\n') }
+        }
+        val streichen = runCatching {
+            val o = jsonAus(auth.streamChat(
+                instructions = RICHTER_ANWEISUNG,
+                turns = listOf(ChatTurn("user", anfrage)),
+                model = modell,
+                reasoningEffort = ReasoningEffort.LOW,
+            )) ?: return@runCatching emptySet()
+            val a = o.optJSONArray("streichen") ?: JSONArray()
+            (0 until a.length()).map { a.optInt(it, -1) - 1 }.toSet()
+        }.onFailure { if (it is CancellationException) throw it; Log.w("ZieleAuswertung", "Prüfpass", it) }.getOrDefault(emptySet())
+        return vorgefiltert.filterIndexed { i, _ -> i !in streichen }
+    }
+
+    private fun normTitel(t: String) = t.lowercase(Locale.GERMAN).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+
+    /**
+     * Hängt eine Ergänzungsrecherche an den bisherigen Bericht: beide Texte hintereinander, darunter ein einziger
+     * Abschnitt QUELLEN mit den Quellen beider (doppelte nur einmal), damit [Quellen.teilen] beides sauber trennt.
+     */
+    internal fun berichtAnfuegen(alt: String, ergaenzung: String): String {
+        val a = Quellen.teilen(alt)
+        val b = Quellen.teilen(ergaenzung)
+        val datum = LocalDate.now().format(DateTimeFormatter.ofPattern("d. MMMM yyyy", Locale.GERMAN))
+        val kopf = "ERGÄNZUNG VOM ${datum.uppercase(Locale.GERMAN)}"
+        val text = if (a.text.isBlank()) b.text else a.text + "\n\n" + kopf + "\n" + b.text
+        val quellen = (a.quellen + b.quellen).distinctBy { it.url.ifEmpty { "ohne:" + it.titel.lowercase(Locale.GERMAN) } }
+        if (quellen.isEmpty()) return text
+        return text + "\n\nQUELLEN\n" + quellen.joinToString("\n") { if (it.url.isEmpty()) it.titel else "${it.titel} – ${it.url}" }
     }
 
     fun zielBeschreibung(z: Ziel): String = buildString {
@@ -251,6 +417,35 @@ object Auswertung {
             "Nenne die wichtigsten Quellen ausschließlich ganz am Ende unter der Zeile QUELLEN, je Zeile „Kurzer Titel – Adresse“, höchstens acht."
 
     private const val RECHERCHE_OHNE_WEB = "\n\nStütze dich auf dein Fachwissen; eine Websuche steht dafür nicht zur Verfügung."
+
+    private const val ERGAENZUNG_ANWEISUNG =
+        "Du bist ein erstklassiger Coach und Rechercheur. Zu Franks persönlichem Ziel gibt es schon eine Recherche (unten). " +
+            "Deine Aufgabe ist eine Ergänzung: Stelle dir weitere Fragen, die die bisherige Recherche nicht beantwortet, und betrachte das Ziel " +
+            "aus anderen Richtungen. Wie kann man es sonst noch erreichen? Welche anderen Methoden, Hilfsmittel, Angebote, Menschen oder " +
+            "Gewohnheiten führen ebenfalls dorthin? Was fehlt bisher? Beziehe das Vorhandene ein und baue darauf auf, wiederhole es aber nicht. " +
+            "Franks Rückmeldungen zählen; Richtungen, die er abgelehnt hat, verfolgst du nicht weiter. " +
+            "Schneide alles auf Frank zu. Schreibe auf Deutsch, du sprichst Frank mit „du“ an.\n\n" +
+            "Gliedere die Ergänzung so (Überschriften als eigene Zeile, keine Markdown-Zeichen wie # oder **):\n" +
+            "WEITERE FRAGEN: die Fragen, denen du nachgegangen bist, je mit der kurzen Antwort.\n" +
+            "ANDERE WEGE ZUM ZIEL: alternative Ansätze, je mit einem Satz, warum und für wen sie wirken.\n" +
+            "NEUE ERKENNTNISSE: was die bisherige Recherche ergänzt oder korrigiert.\n" +
+            "FÜR DICH ZUGESCHNITTEN: was davon in Franks Lage besonders passt.\n\n" +
+            "Erfinde nichts. Trenne Belegtes von Erfahrungswissen. Bleib konkret und praktisch; keine Floskeln."
+
+    private const val RUECKMELDUNG_ZUSATZ =
+        "\n\nSONDERFALL GESPRÄCH: Frank hat auf die Auswertung oder die Aufgaben reagiert (unter FRANKS RÜCKMELDUNGEN, die letzte Zeile von Frank zählt). " +
+            "Nimm seine Rückmeldung ernst. Hat er recht, gib ihm recht und passe den Weg an; hast du gute Gründe dagegen, erkläre sie kurz und freundlich. " +
+            "Schlage neue Aufgaben vor, wenn seine Rückmeldung welche nahelegt, gern auch über das Bisherige hinaus; sonst bleibt die Liste leer. " +
+            "Gefällt ihm eine vorhandene Aufgabe nicht, schlage, wenn es passt, eine bessere Alternative vor und sag ihm, dass er die alte mit Ablehnen herausnehmen kann. " +
+            "Ergänze das JSON um das Feld \"antwort\": zwei bis fünf Sätze an Frank in der Du-Form, gut vorlesbar, ohne Aufzählungszeichen. " +
+            "\"strategie\" füllst du nur, wenn sich der beste Weg durch die Rückmeldung ändert, sonst leer; \"symbol\" bleibt leer."
+
+    private const val RICHTER_ANWEISUNG =
+        "Du prüfst neue Aufgabenvorschläge (KANDIDATEN) gegen zwei Listen. Streiche jeden Kandidaten, der einer ABGELEHNTEN Aufgabe gleicht oder ähnelt: " +
+            "dieselbe Handlung oder Absicht, nur anders formuliert, ein Teil davon, eine Variante mit anderer Zahl, anderem Ort, anderer Häufigkeit " +
+            "oder anderem Anbieter. Streiche auch jeden Kandidaten, der eine VORHANDENE Aufgabe im Kern wiederholt. " +
+            "Behalte alles, was wirklich etwas anderes ist. Im Zweifel bei ABGELEHNT: streichen. " +
+            "Antworte NUR mit JSON: {\"streichen\": [Nummern der zu streichenden Kandidaten]}"
 
     private const val PLAN_ANWEISUNG =
         "Du bist Franks Aufgaben-Agent. Aus dem Recherche-Bericht und dem Kontext über Frank leitest du konkrete Aufgaben ab, " +
