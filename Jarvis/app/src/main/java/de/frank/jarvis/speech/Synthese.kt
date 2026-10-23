@@ -105,26 +105,31 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         val sonder = wahl?.stimme?.takeIf { TtsCatalog.anbieterZu(it) != null }
         val tempo = wahl?.tempo ?: settings.ttsSpeechRate
         val haupt = anbieter(wahl)
-        // Eine Stufe ohne eigenen Schlüssel ist dieselbe Stimme wie die Hauptstimme und brächte nichts.
+        // Eine Stufe ohne eigenen Schlüssel ist dieselbe Stimme wie die Hauptstimme und brächte nichts; Stufen ohne Schlüssel laufen gar nicht erst.
         val kette = settings.ttsRueckfallKette.mapNotNull(TtsCatalog::rueckfallStufe)
             .filterNot { it.anbieter.id == haupt && it.schluessel == null }
+            .filter(settings::rueckfallBereit)
         val hauptFehler = try {
             return@withPermit erzeuge(haupt, text, sonder, tempo, null, mitAusweg = kette.isNotEmpty())
         } catch (fehler: Exception) {
             if (!rueckfallFaehig(fehler)) throw fehler
             fehler
         }
+        var zeitlimit: SyntheseZeitlimit? = null
         kette.forEachIndexed { i, stufe ->
             try {
                 val datei = erzeuge(stufe.anbieter.id, text, null, tempo, stufe.schluessel, mitAusweg = i < kette.lastIndex)
                 Logbuch.sprache("Vorlese-Rückfall", "stufe=${stufe.id} haupt=$haupt grund=${hauptFehler.message?.take(80)}")
                 return@withPermit datei
             } catch (fehler: Exception) {
-                if (!rueckfallFaehig(fehler)) throw fehler
+                // Auch Netzfehler einer Stufe führen zur nächsten: Sonst wiederholte der Vorleser die ganze Kette samt Hauptstimme.
+                if (!rueckfallFaehig(fehler) && fehler !is IOException) throw fehler
+                if (fehler is SyntheseZeitlimit) zeitlimit = fehler
                 Logbuch.netz("Vorlese-Rückfall: Stufe gescheitert", "stufe=${stufe.id} ${fehler.message?.take(120)}")
             }
         }
-        throw hauptFehler
+        // Hat eine Stufe schon ihre Frist abgewartet, wird der Teil übersprungen statt halbiert und die Kette erneut abgewartet.
+        throw if (hauptFehler is SyntheseFehler) zeitlimit ?: hauptFehler else hauptFehler
     }
 
     private fun rueckfallFaehig(fehler: Exception) = fehler is SyntheseAbbruch || fehler is SyntheseFehler || fehler is SyntheseZeitlimit
@@ -293,7 +298,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                     if (ausweg) freiGesperrtBis[modell] = System.currentTimeMillis() + FREI_PAUSE_MS
                     Logbuch.netz("Gemini-Stimme: kostenloser Schlüssel gescheitert", "modell=$modell ${fehler.message?.take(120)}")
                 }
-            } else if (gesperrt && wahl == SecureSettings.GEMINI_TTS_NUR_FREI) {
+            } else if (frei.isNotBlank() && wahl == SecureSettings.GEMINI_TTS_NUR_FREI) {
                 fehlerFrei = SyntheseAbbruch("Vorlesen fehlgeschlagen: Der kostenlose Gemini-Schlüssel pausiert nach einem Fehler.")
             }
             if (wahl == SecureSettings.GEMINI_TTS_NUR_FREI) {

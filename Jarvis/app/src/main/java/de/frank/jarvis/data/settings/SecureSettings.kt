@@ -10,6 +10,7 @@ import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.ReasoningEffort
 import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
+import de.frank.jarvis.tts.RueckfallStufe
 import java.io.Closeable
 import java.util.WeakHashMap
 import javax.crypto.AEADBadTagException
@@ -137,10 +138,28 @@ class SecureSettings(context: Context) : Closeable {
      * Stimme, versucht Jarvis die Stufen nacheinander. Ohne gespeicherte Kette gilt der alte Chirp-Schalter weiter.
      */
     var ttsRueckfallKette: List<String>
-        get() = (preferences?.getString(Keys.TTS_RUECKFALL_KETTE, null)
-            ?: if (geminiTtsChirpRueckfall) TtsProvider.GOOGLE_CLOUD.id else "")
-            .split(',').map(String::trim).filter { TtsCatalog.rueckfallStufe(it) != null }.distinct()
+        get() {
+            val gespeichert = preferences?.getString(Keys.TTS_RUECKFALL_KETTE, null) ?: run {
+                // Einmaliger Umzug vom alten Chirp-Schalter: Der übersprang den bezahlten Schlüssel, also bleibt es bei „nur kostenlos“.
+                if (!geminiTtsChirpRueckfall) return emptyList()
+                if (geminiTtsSchluesselWahl == GEMINI_TTS_FREI_DANN_BEZAHLT) geminiTtsSchluesselWahl = GEMINI_TTS_NUR_FREI
+                geminiTtsChirpRueckfall = false
+                TtsProvider.GOOGLE_CLOUD.id.also { writeString(Keys.TTS_RUECKFALL_KETTE, it) }
+            }
+            return gespeichert.split(',').map(String::trim).filter { TtsCatalog.rueckfallStufe(it) != null }.distinct()
+        }
         set(value) = writeString(Keys.TTS_RUECKFALL_KETTE, value.distinct().joinToString(","))
+
+    /** Ob eine Rückfallstufe überhaupt laufen kann: Schlüssel (und bei der eigenen Stimme die Kennung) sind hinterlegt. */
+    fun rueckfallBereit(stufe: RueckfallStufe): Boolean = when (stufe.anbieter) {
+        TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE ->
+            (if (stufe.schluessel == RueckfallStufe.FREI) geminiTtsKeyFrei else geminiTtsKeyBezahlt).isNotBlank()
+        TtsProvider.GOOGLE_CLOUD -> googleTtsApiKey.isNotBlank()
+        TtsProvider.AZURE -> azureTtsKey.isNotBlank()
+        TtsProvider.QWEN -> qwenTtsApiKey.isNotBlank()
+        TtsProvider.QWEN_CLONE -> qwenTtsApiKey.isNotBlank() && qwenTtsVoiceId.isNotBlank()
+        TtsProvider.EDGE -> true
+    }
 
     var qwenTtsApiKey: String
         get() = readString(Keys.QWEN_TTS_API_KEY, "")

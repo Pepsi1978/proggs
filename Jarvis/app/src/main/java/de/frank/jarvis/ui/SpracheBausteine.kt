@@ -267,8 +267,9 @@ fun SpracheEinstellungen(vm: AppViewModel) {
                 Schluesselfeld(vm, "Kennung deiner eigenen Stimme", s.qwenTtsVoiceId, geheim = false) { geaendert { s.qwenTtsVoiceId = it } }
             }
         }
-        RueckfallKette(vm, s.ttsRueckfallKette, anbieter) { neu -> geaendert { s.ttsRueckfallKette = neu } }
-        if (TtsProvider.GOOGLE_CLOUD.id in s.ttsRueckfallKette && anbieter != TtsProvider.GOOGLE_CLOUD && s.googleTtsApiKey.isBlank()) {
+        val rueckfall = s.ttsRueckfallKette
+        RueckfallKette(vm, rueckfall, anbieter) { neu -> geaendert { s.ttsRueckfallKette = neu } }
+        if (TtsProvider.GOOGLE_CLOUD.id in rueckfall &&anbieter != TtsProvider.GOOGLE_CLOUD && s.googleTtsApiKey.isBlank()) {
             Schluesselfeld(vm, "Google-Cloud-Schlüssel (für den Rückfall)", s.googleTtsApiKey) { geaendert { s.googleTtsApiKey = it } }
         }
         Unterzeile("Sprechtempo")
@@ -303,20 +304,13 @@ private fun RueckfallKette(vm: AppViewModel, kette: List<String>, anbieter: TtsP
         color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
     kette.forEachIndexed { i, id ->
         val stufe = TtsCatalog.rueckfallStufe(id) ?: return@forEachIndexed
-        val schluesselFehlt = when (stufe.anbieter) {
-            TtsProvider.GEMINI_FLASH, TtsProvider.GEMINI_LITE ->
-                (if (stufe.schluessel == de.frank.jarvis.tts.RueckfallStufe.FREI) s.geminiTtsKeyFrei else s.geminiTtsKeyBezahlt).isBlank()
-            TtsProvider.GOOGLE_CLOUD -> s.googleTtsApiKey.isBlank()
-            TtsProvider.AZURE -> s.azureTtsKey.isBlank()
-            TtsProvider.QWEN, TtsProvider.QWEN_CLONE -> s.qwenTtsApiKey.isBlank()
-            TtsProvider.EDGE -> false
-        }
+        val schluesselFehlt = !s.rueckfallBereit(stufe)
         val gleich = stufe.anbieter == anbieter && stufe.schluessel == null
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("${i + 1}. ${stufe.titel}", color = f.text, fontSize = 14.sp)
                 if (schluesselFehlt || gleich) {
-                    Text(if (gleich) "Ist die Stimme oben, wird übersprungen" else "Kein Schlüssel, wird übersprungen", color = f.textSchwach, fontSize = 11.sp)
+                    Text(if (gleich) "Ist die Stimme oben, wird übersprungen" else "Nicht eingerichtet, wird übersprungen", color = f.textSchwach, fontSize = 11.sp)
                 }
             }
             if (i > 0) Chip("↑", aktiv = false, modifier = Modifier.padding(start = 6.dp)) { setze(kette.toMutableList().apply { add(i - 1, removeAt(i)) }) }

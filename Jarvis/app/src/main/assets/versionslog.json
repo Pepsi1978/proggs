@@ -246,6 +246,7 @@
     {"versionCode": 241, "versionName": "1.8.230", "stand": "22.10.2026, 23:14 Uhr", "notiz": "Das Guthaben vor dem Claude-Modellnamen ist jetzt etwas kleiner und fett."},
     {"versionCode": 242, "versionName": "1.8.231", "stand": "22.10.2026, 23:29 Uhr", "notiz": "Das Guthaben vor dem Claude-Modell ist jetzt so groß wie der Name, durch einen Punkt getrennt und ab 5 $ rot."},
     {"versionCode": 243, "versionName": "1.8.232", "stand": "22.10.2026, 23:41 Uhr", "notiz": "Das Guthaben vor dem Claude-Modell ist ab 5 € grün und darunter rot, umgerechnet mit dem EZB-Tageskurs."},
-    {"versionCode": 244, "versionName": "1.8.233", "stand": "23.10.2026, 11:50 Uhr", "notiz": "Beim Vorlesen lässt sich eine Rückfall-Reihenfolge aus allen Stimmen anlegen (etwa Gemini Flash kostenlos, dann Flash-Lite kostenlos, dann Chirp 3 HD), jede mit ihrer eingestellten Stimme."}
+    {"versionCode": 244, "versionName": "1.8.233", "stand": "23.10.2026, 11:50 Uhr", "notiz": "Beim Vorlesen lässt sich eine Rückfall-Reihenfolge aus allen Stimmen anlegen (etwa Gemini Flash kostenlos, dann Flash-Lite kostenlos, dann Chirp 3 HD), jede mit ihrer eingestellten Stimme."},
+    {"versionCode": 245, "versionName": "1.8.234", "stand": "23.10.2026, 12:03 Uhr", "notiz": "Die Rückfall-Reihenfolge überspringt nicht eingerichtete Stimmen sofort, übersteht Netzaussetzer einer Stufe und übernimmt den alten Chirp-Rückfall ohne bezahlten Schlüssel."}
   ]
 }
