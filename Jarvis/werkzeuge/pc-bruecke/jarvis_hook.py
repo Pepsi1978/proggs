@@ -948,9 +948,10 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
             antworten[frage_text] = nein or "Nein"
         else:
             empfohlen = next((l for l in labels if re.search(r"(?i)recommended|empfohlen", l)), "")
-            antworten[frage_text] = (f"Keine Antwort von Frank ({grund}). Nicht erneut fragen und nicht warten: Entscheide selbst"
+            antworten[frage_text] = (f"Keine Antwort von Frank ({grund}). Halte fest, dass er nicht geantwortet hat. Nicht erneut fragen "
+                                     "und nicht warten: Überlege selbst die bestmögliche Lösung"
                                      + (f" (empfohlen war „{empfohlen}“)" if empfohlen else "")
-                                     + ", wähle die sicherste sinnvolle Variante, arbeite weiter und nenne die Annahme in der Abschlussmeldung.")
+                                     + ", baue sie ein, arbeite weiter und nenne die Entscheidung in der Abschlussmeldung.")
     return {"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "permissionDecision": "allow",
