@@ -187,6 +187,36 @@ object ProgrammierChat {
 }
 
 /**
+ * Die Aufgabe der Sitzung über einer Rückfrage (Kontext „aufgabe“): Bei mehreren gleichzeitigen Aufträgen sieht Frank so, zu
+ * welchem die Frage gehört. Schon beim Eintreffen gekürzt, denn der Kontext geht mit dem Verlauf an das Modell.
+ */
+object RueckfrageAufgabe {
+    private const val GRENZE = 240
+    private val LEER = Regex("\\s+")
+    private val ZIEL = Regex("^[*_\\s]*ziel(?: und ergebnis)?\\s*:[*_\\s]*", RegexOption.IGNORE_CASE)
+    // Satzende: mindestens drei Buchstaben davor (kein „z.“, „u.“, „1.8.“), danach ein Großbuchstabe.
+    private val SATZENDE = Regex("(?<=[\\p{L}]{3})[.!?](?=\\s+[\\p{Lu}])")
+    private val ABKUERZUNGEN = setOf("bzw", "usw", "etc", "ggf", "evtl", "inkl", "vgl", "bspw", "zzgl", "max", "min", "ca")
+
+    /** Aus dem Auftrag des Auftragsbuchs; ist schon ein Nachtrag in der Sitzung (zugestellt oder bearbeitet), der jüngste davon. */
+    fun aus(eintrag: org.json.JSONObject): String {
+        val l = eintrag.optJSONArray("nachtraege")
+        val nachtrag = l?.let { (l.length() - 1 downTo 0).mapNotNull { l.optJSONObject(it) }.firstOrNull { it.optString("stand") in setOf("zugestellt", "bearbeitet") } }
+        return nachtrag?.let { "Nachtrag: " + kurz(it.optString("text")) } ?: kurz(eintrag.optString("auftrag"))
+    }
+
+    /** Ganze Sätze bis etwa [GRENZE] Zeichen, ohne „Ziel:“ davor; mehrere Aufgaben („ ; “) als „1) … 2) …“; gekürzt mit „ …“. */
+    fun kurz(auftrag: String): String {
+        val teile = auftrag.split(" ; ").map { it.replace(LEER, " ").trim().replace(ZIEL, "") }.filter { it.isNotEmpty() }
+        val text = if (teile.size > 1) teile.mapIndexed { i, t -> "${i + 1}) $t" }.joinToString(" ") else teile.firstOrNull().orEmpty()
+        if (text.length <= GRENZE) return text
+        val ende = SATZENDE.findAll(text).map { it.range.last }
+            .filter { it < GRENZE && text.substring(0, it).substringAfterLast(' ').lowercase() !in ABKUERZUNGEN }.lastOrNull() ?: -1
+        return (if (ende >= 80) text.substring(0, ende + 1) else text.take(GRENZE).substringBeforeLast(' ')) + " …"
+    }
+}
+
+/**
  * Stände einer Rückfrage im Gespräch (Kontext „status“). Offen: in Jarvis beantwortbar. Sendet/Fehler: Franks Antwort ist
  * unterwegs bzw. nicht angekommen. Angenommen: der Server hat sie, die Sitzung holt sie ab. Beantwortet: in der Sitzung
  * angekommen (über Jarvis), beantwortet_am_pc: am Rechner oder in der Claude-App. am_pc: Jarvis gab die Frage an den Rechner

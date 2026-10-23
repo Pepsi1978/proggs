@@ -91,7 +91,7 @@ private class Frage(val kopf: String, val text: String, val mehrfach: Boolean, v
 private class Rueckfrage(val k: JSONObject) {
     val id: String = k.optString("frage_id")
     val app: String = k.optString("app")
-    val aufgabe: String = aufgabeKurz(k.optString("aufgabe"))
+    val aufgabe: String = k.optString("aufgabe")
     val frei: Boolean = k.optBoolean("frei")
     val stand: String = RueckfrageStand.von(k)
     val antwort: String = k.optString("antwort")
@@ -108,18 +108,6 @@ private class Rueckfrage(val k: JSONObject) {
             )
         }
     }
-}
-
-/**
- * Die Aufgabe der Sitzung in wenigen Sätzen (angezeigt in höchstens vier Zeilen): Bei mehreren gleichzeitigen Aufträgen sieht
- * Frank so, zu welchem die Frage gehört. Aus dem ursprünglichen Auftragstext: ohne „Ziel:“ davor, ganze Sätze bis etwa 260 Zeichen.
- */
-private fun aufgabeKurz(auftrag: String): String {
-    val text = auftrag.replace(Regex("\\s+"), " ").trim().removePrefix("Ziel:").trim()
-    if (text.length <= 260) return text
-    var ende = -1
-    for (m in Regex("[.!?](?=\\s)").findAll(text)) { if (m.range.last >= 260) break; ende = m.range.last }
-    return if (ende >= 80) text.substring(0, ende + 1) else text.take(260).substringBeforeLast(' ') + " …"
 }
 
 private fun lies(kontext: String): Rueckfrage? = runCatching { Rueckfrage(JSONObject(kontext)) }.getOrNull()?.takeIf { it.id.isNotEmpty() }
@@ -299,13 +287,14 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
                 Column(Modifier.weight(1f)) {
                     Text("Rückfrage der Programmier-Sitzung", color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Text(r.app.ifEmpty { "Programmieren" }, Modifier.semantics { heading() }, color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 28.sp)
-                    if (r.aufgabe.isNotEmpty()) Text(r.aufgabe, Modifier.padding(top = 4.dp), color = f.textLeise, fontSize = 15.sp, lineHeight = 20.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
                 }
                 Rundknopf(Icons.Rounded.Close, "Schließen, später im Chat weiter beantworten") { sichern(); vm.rueckfrageSchliessen() }
             }
             Standzeile(r, Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
             val scroll = rememberScrollState()
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(horizontal = 16.dp)) {
+                // Die Aufgabe oben im scrollenden Teil, nicht im festen Kopf: Mit offener Tastatur bleibt der Antwortbereich groß.
+                if (r.aufgabe.isNotEmpty()) Text(r.aufgabe, Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp), color = f.textLeise, fontSize = 15.sp, lineHeight = 20.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
                 r.fragen.forEachIndexed { i, q ->
                     FrageBlock(
                         i, r, q, wahl[i].orEmpty(), eigen[i] == true, texte[i].orEmpty(), i in fehlend, aktiv = beantwortbar && !sendet,
