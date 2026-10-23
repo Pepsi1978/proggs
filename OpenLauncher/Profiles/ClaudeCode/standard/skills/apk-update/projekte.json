@@ -48,6 +48,12 @@
       "paket": "de.frank.genialerwecker.app",
       "notiz": "Verkaufs-App mit eigenem Schlüssel (~/SK/GenialerWeckerAndroid, SHA-256 96:9A:C0:94…). Der Build signiert Debug und Release selbst; die APK wird NICHT mit dem gemeinsamen Debug-Key umsigniert. Läuft parallel zur privaten App de.frank.genialerwecker. Am Handy seit 30.09.2026 Debug."
     },
+    "Jarvis": {
+      "gradleTask": "assembleDebug",
+      "apkOrdner": "debug",
+      "paket": "de.frank.jarvis",
+      "notiz": "Fester Eintrag seit 23.10.2026: Gradle-Task und Paket festgeschrieben, statt nur über die Standards zu laufen. Am Handy ist de.frank.jarvis (Debug, ohne Suffix) installiert."
+    },
     "KarteikartenLernen": {
       "paket": "de.frank.karteikartenlernen"
     },
