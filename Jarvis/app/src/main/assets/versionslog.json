@@ -279,6 +279,7 @@
     {"versionCode": 274, "versionName": "1.8.263", "stand": "23.10.2026, 16:36 Uhr", "notiz": "Die schnelle Modellwahl ist robuster: Nach dem Tipp sagt Jarvis erst dann Übernommen, wenn die Folgefrage oder der Start feststeht, andere Antworten derselben Runde bleiben erhalten, und im Live-Gespräch wird nichts doppelt gefragt."},
     {"versionCode": 274, "versionName": "1.8.263", "stand": "23.10.2026, 16:34 Uhr", "notiz": "Nach dem Papierkorb holt ein Rückgängig-Pfeil den gelöschten Text zurück, die Eingabeblase springt nicht mehr beim ersten Zeichen, und die offene Session in der Seitenleiste ist auch für TalkBack als ausgewählt erkennbar."},
     {"versionCode": 275, "versionName": "1.8.264", "stand": "23.10.2026, 16:37 Uhr", "notiz": "Enthält den Papierkorb mit Rückgängig in der Eingabeblase und die robustere schnelle Modellwahl zusammen in einem Update."},
-    {"versionCode": 276, "versionName": "1.8.265", "stand": "23.10.2026, 16:38 Uhr", "notiz": "Programmier-Sessions stehen in der Seitenleiste fest nach Startzeit, die zuletzt gestartete oben; neue Meldungen verschieben die Reihenfolge nicht mehr."}
+    {"versionCode": 276, "versionName": "1.8.265", "stand": "23.10.2026, 16:38 Uhr", "notiz": "Programmier-Sessions stehen in der Seitenleiste fest nach Startzeit, die zuletzt gestartete oben; neue Meldungen verschieben die Reihenfolge nicht mehr."},
+    {"versionCode": 277, "versionName": "1.8.266", "stand": "23.10.2026, 16:39 Uhr", "notiz": "Im Chat bleibt die Lesestelle stehen, wenn du hochgescrollt hast und neue Meldungen kommen, auch wenn du mitten in einen Sprung ans Ende greifst; nur ganz unten scrollt der Chat mit."}
   ]
 }

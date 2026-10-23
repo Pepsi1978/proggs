@@ -59,6 +59,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -144,13 +145,21 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     // Mitlesen: Nur wer unten steht, folgt neuen Nachrichten. Hat Frank nach oben gescrollt, bleibt seine Lesestelle stehen,
     // während unten weiter Meldungen einlaufen; scrollt er wieder ganz nach unten, folgt die Ansicht erneut. Früher sprang
     // jede neue Programmiermeldung ans Ende, auch mitten im Lesen.
-    var folgen by remember(vm.sitzungId) { mutableStateOf(true) }
-    var automatisch by remember { mutableStateOf(false) }
-    LaunchedEffect(liste) {
-        androidx.compose.runtime.snapshotFlow { liste.isScrollInProgress to liste.canScrollForward }.collect { (scrollt, weiter) ->
-            // Nur Franks eigenes Scrollen entscheidet; der automatische Sprung ans Ende zählt nicht.
-            if (scrollt && !automatisch) folgen = !weiter
+    // Saveable: Nach einem Reiterwechsel bleibt die Lesestelle, statt beim Zurückkommen ans Ende zu springen.
+    var folgen by rememberSaveable(vm.sitzungId) { mutableStateOf(true) }
+    // Nur Franks Finger laufen über nestedScroll, der automatische Sprung ans Ende nicht. So zählt ein Griff nach oben auch
+    // dann, wenn er mitten in einen laufenden Sprung fällt (das ließ der alte Merker „automatisch“ durch).
+    val nachOben = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (available.y > 0f) folgen = false
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
         }
+    }
+    // Ganz unten angekommen, egal wie: wieder mitlesen.
+    LaunchedEffect(liste) {
+        androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgen = true }
     }
     LaunchedEffect(vm.gespraech.size, vm.denkt) {
         // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
@@ -158,8 +167,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // Nur im laufenden Gespräch ans Ende springen; beim Start bleibt die Einrichtung oben sichtbar.
         val letzter = liste.layoutInfo.totalItemsCount - 1
         if (folgen && vm.gespraech.isNotEmpty() && letzter >= 0) {
-            automatisch = true
-            try { liste.animateScrollToItem(letzter) } finally { automatisch = false }
+            runCatching { liste.animateScrollToItem(letzter) }
+            // Die neue Zeile war beim Lesen der Anzahl evtl. noch nicht vermessen: den Rest ohne Animation nachholen.
+            if (folgen && liste.canScrollForward) runCatching { liste.scrollToItem(liste.layoutInfo.totalItemsCount - 1) }
         }
     }
 
@@ -171,7 +181,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // Die Stoppuhr erscheint nur, wenn Frank sie über Jarvis startet, und bleibt bis zum Zurücksetzen.
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         LazyColumn(
-            Modifier.weight(1f).fillMaxWidth(), state = liste,
+            Modifier.weight(1f).fillMaxWidth().nestedScroll(nachOben), state = liste,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
