@@ -295,6 +295,7 @@
     { "versionCode": 289, "versionName": "1.8.278", "stand": "23.10.2026, 18:08 Uhr", "notiz": "unbeantwortete rückfrage – sitzung hält es fest, überlegt die bestmögliche lösung selbst und baut sie ein (1.8.278)" },
     { "versionCode": 290, "versionName": "1.8.279", "stand": "23.10.2026, 18:15 Uhr", "notiz": "Rückfragen haben einen eigenen Benachrichtigungskanal, damit das Vollbild auch bei gesperrtem Handy erscheint; beantwortete Rückfragen werden nicht mehr nachträglich angesagt." },
     { "versionCode": 291, "versionName": "1.8.280", "stand": "23.10.2026, 20:13 Uhr", "notiz": "Das Guthaben und der zuletzt verbrauchte Betrag unten in der Eingabeleiste stehen jetzt in Fettschrift." },
-    { "versionCode": 292, "versionName": "1.8.281", "stand": "23.10.2026, 21:02 Uhr", "notiz": "Rückfragen beim Programmieren melden sich jetzt immer, auch wenn die Programmier-Meldungen aus sind, und bei gesperrtem Handy sagt Jarvis sofort an, dass eine Frage beantwortet werden muss." }
+    { "versionCode": 292, "versionName": "1.8.281", "stand": "23.10.2026, 21:02 Uhr", "notiz": "Rückfragen beim Programmieren melden sich jetzt immer, auch wenn die Programmier-Meldungen aus sind, und bei gesperrtem Handy sagt Jarvis sofort an, dass eine Frage beantwortet werden muss." },
+    { "versionCode": 293, "versionName": "1.8.282", "stand": "23.10.2026, 21:06 Uhr", "notiz": "Die Rückfrage-Ansage wartet einen klingelnden Weckton ab, bleibt beim Abschalten der Programmier-Meldungen erhalten, und eine abgeschaltete Art klingelt nie wie ein Wecker." }
   ]
 }

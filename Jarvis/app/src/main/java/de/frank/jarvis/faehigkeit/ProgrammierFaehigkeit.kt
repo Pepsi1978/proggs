@@ -1152,7 +1152,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 titel, if (vorlesen) "$titel. $text" else null, laut = stand != "laeuft", imGespraechStill = stand in GESPERRT,
                 // Eine Rückfrage kommt immer, auch wenn Frank die Meldungen der Programmieraufträge abgeschaltet hat (sonst
                 // erschien sie bei gesperrtem Handy weder in der Leiste noch wurde sie angesagt).
-                trotzAus = stand == "frage" && frageId.isNotEmpty(),
+                trotzAus = stand == "frage",
             )
         }
     }
@@ -1201,8 +1201,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Bei ausgeschaltetem oder gesperrtem Handy immer: auch in der Ruhezeit, ohne Vorlese-Wahl und bei abgeschalteten
         // Programmier-Meldungen (Franks Vorgabe vom 23.10.2026: Rückfragen haben Vorrang). Entsperrt nur nach seiner Vorlese-Wahl.
         if (aus || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art)) {
-            Logbuch.system("Rückfrage angesagt", "${if (aus) "gesperrt" else "entsperrt"}, Auftrag ${eintrag.optString("id")}")
-            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId", ausdruecklich = aus)
+            Logbuch.system("Rückfrage-Ansage eingereiht", "${if (aus) "gesperrt" else "entsperrt"}, Auftrag ${eintrag.optString("id")}")
+            // Klingelt die Benachrichtigung derselben Rückfrage wie ein Wecker, erst danach sprechen (nicht über den Weckton).
+            val nummer = 300_000 + (eintrag.optString("id").hashCode() and 0xFFFF)
+            de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId",
+                solange = { de.frank.jarvis.meldung.WeckerTon.klingelt(nummer) }, ausdruecklich = aus)
         }
     }
 
