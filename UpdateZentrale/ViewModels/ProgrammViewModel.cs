@@ -64,6 +64,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         "cli" => "Selbst-Update",
         "reposkript" => "Eigenes Skript",
         "opencodefix" => "Windows-Fix-Build",
+        "opencodesitzung" => "OpenLauncher-Sitzung",
         _ => Eintrag.Art
     };
 
@@ -188,7 +189,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     public string AktionsText => UebernahmeOffen
-        ? "Neustart nötig"
+        ? (Eintrag.Art.Equals("opencodesitzung", StringComparison.OrdinalIgnoreCase) ? "Sitzung baut" : "Neustart nötig")
         : Zustand switch
         {
             UpdateZustand.Aktuell => "Aktuell",
@@ -232,9 +233,14 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// </summary>
     public bool UebernahmeOffen => LetzterBericht?.Ergebnis == LaufErgebnis.Ausstehend;
 
-    public string UebernahmeText => "Das Update ist bereits heruntergeladen und installiert. Es wird aktiv, "
-                                    + "sobald " + Name + " einmal neu gestartet wurde – bis dahin meldet die Prüfung "
-                                    + "weiterhin die alte Version.";
+    public string UebernahmeText => !string.IsNullOrWhiteSpace(Eintrag.UebernahmeText)
+        ? Eintrag.UebernahmeText
+        : "Das Update ist bereits heruntergeladen und installiert. Es wird aktiv, "
+          + "sobald " + Name + " einmal neu gestartet wurde – bis dahin meldet die Prüfung "
+          + "weiterhin die alte Version.";
+
+    /// <summary>"Start and take over" only where there is something to start (not for the OpenCode session).</summary>
+    public bool UebernahmeStartbar => KannStarten;
 
     partial void OnLetzterBerichtChanged(UpdateBericht? value)
     {
@@ -480,6 +486,10 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 Zustand = UpdateZustand.Pruefe;
                 return await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
             });
+
+            // A pending update (staged installer, the OpenCode session) is confirmed by the very
+            // check that sees it arrive -- not only at the next start of the app.
+            if (UebernahmeOffen && Zustand == UpdateZustand.Aktuell) await AusstehendesPruefenAsync();
         }
         finally
         {
@@ -502,7 +512,78 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     /// <summary>An update driven by "install all", inside the batch's exclusive ownership.</summary>
-    internal Task AktualisierenImSammelAsync(Laufbesitz sammel) => AktualisierenKernAsync(sammel);
+    internal async Task<UpdateBericht?> AktualisierenImSammelAsync(Laufbesitz sammel, SammelKontext? kontext = null)
+    {
+        _sammelKontext = kontext;
+        try
+        {
+            await AktualisierenKernAsync(sammel);
+            return kontext is null ? null : LetzterBericht;
+        }
+        finally
+        {
+            _sammelKontext = null;
+        }
+    }
+
+    private SammelKontext? _sammelKontext;
+
+    // ---------------- Dauer und Reihenfolge ----------------
+
+    /// <summary>Position in programs.json; the order of the catalog view.</summary>
+    public int KatalogIndex { get; set; }
+
+    /// <summary>Position of the card's group in the catalog -- the first sort key, so groups stay whole.</summary>
+    public int GruppenRang { get; set; }
+
+    private List<double> _dauern = new();
+
+    /// <summary>Measured durations of real updates, oldest first (from verlauf.jsonl).</summary>
+    public void DauernSetzen(IEnumerable<double>? dauern)
+    {
+        _dauern = dauern?.ToList() ?? new List<double>();
+        OnPropertyChanged(nameof(ErwarteteDauerSekunden));
+        OnPropertyChanged(nameof(DauerText));
+        OnPropertyChanged(nameof(DauerGemessen));
+    }
+
+    public bool DauerGemessen => _dauern.Count > 0;
+
+    /// <summary>
+    /// Median of the last three measured updates; without any, the catalog estimate, else a
+    /// quarter of the time limit (VS 120 min → 30, a CLI 15 min → 4) -- crude, but it puts the
+    /// big installers at the end until real numbers exist.
+    /// </summary>
+    public double ErwarteteDauerSekunden
+    {
+        get
+        {
+            if (_dauern.Count > 0)
+            {
+                var letzte = _dauern.TakeLast(3).OrderBy(d => d).ToList();
+                return letzte[letzte.Count / 2];
+            }
+            return Eintrag.DauerSchaetzungSekunden ?? Math.Max(1, Eintrag.ZeitlimitMinuten) * 15.0;
+        }
+    }
+
+    public string DauerText => DauerGemessen
+        ? "⏱ Update zuletzt " + Protokollierung.DauerText(ErwarteteDauerSekunden)
+          + (_dauern.Count > 1 ? " (Median aus " + Math.Min(_dauern.Count, 3) + ")" : "")
+        : "⏱ Update ≈ " + Protokollierung.DauerText(ErwarteteDauerSekunden) + " (geschätzt)";
+
+    /// <summary>"Install all" leaves a major version jump to a deliberate click when the catalog says so.</summary>
+    public bool IstHauptversionsSprung
+    {
+        get
+        {
+            if (!Eintrag.HauptversionNurPerKlick) return false;
+            static string Haupt(string v) => new string(v.TrimStart('<', '>', ' ', 'v').TakeWhile(char.IsDigit).ToArray());
+            var alt = Haupt(InstallierteVersion);
+            var neu = Haupt(VerfuegbareVersion);
+            return alt.Length > 0 && neu.Length > 0 && alt != neu;
+        }
+    }
 
     private async Task AktualisierenKernAsync(Laufbesitz? sammel)
     {
@@ -535,6 +616,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
         await LaufAsync("update", async (fortschritt, abbruch) =>
         {
+            var uhr = System.Diagnostics.Stopwatch.StartNew();
+            var kontext = _sammelKontext;
             var kette = new UpdateKette(_aktualisierer, Eintrag, fortschritt, text => StatusText = text, KettenWarten);
 
             var (vorher, vorPruefung) = await kette.VorpruefenAsync(abbruch);
@@ -603,12 +686,18 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 AusstehendeVersion = urteil.AusstehendeVersion,
                 Befehl = BefehlsBeschreibung(),
                 Erhoeht = Rechte.IstErhoeht,
-                ExitCode = urteil.Ergebnis is LaufErgebnis.Fehlgeschlagen or LaufErgebnis.NichtVerifiziert ? 1 : 0
+                ExitCode = urteil.Ergebnis is LaufErgebnis.Fehlgeschlagen or LaufErgebnis.NichtVerifiziert ? 1 : 0,
+                DauerSekunden = Math.Round(uhr.Elapsed.TotalSeconds, 1),
+                SammelId = kontext?.Id,
+                SammelPhase = kontext?.Phase,
+                SammelPosition = kontext?.Position
             };
 
-            fortschritt.Report(AbschlussZeile(bericht));
+            fortschritt.Report(AbschlussZeile(bericht) + "  (Dauer " + Protokollierung.DauerText(uhr.Elapsed.TotalSeconds) + ")");
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
+            if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend)
+                DauernSetzen(_dauern.Append(bericht.DauerSekunden.Value));
 
             return urteil.FuerKarte;
         });
@@ -658,6 +747,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
                  + " " + (Eintrag.UpdateArgumente ?? "update"),
         "reposkript" => "pwsh -File " + Eintrag.Skript + " " + Eintrag.SkriptArgumente,
         "opencodefix" => Providers.OpenCodeFixAktualisierer.Befehlsbeschreibung,
+        "opencodesitzung" => Providers.OpenCodeSitzungAktualisierer.Befehlsbeschreibung,
         _ => Eintrag.Art
     };
 
@@ -783,3 +873,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     private void Melde(string text) => Meldung?.Invoke(this, text);
 }
+
+/// <summary>Which batch, phase and position an update ran in -- written into its report.</summary>
+public sealed record SammelKontext(string Id, int Phase, int Position);

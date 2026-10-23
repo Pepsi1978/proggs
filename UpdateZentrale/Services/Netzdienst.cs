@@ -18,14 +18,22 @@ public static class Netzdienst
 {
     private static readonly TimeSpan JeAdresse = TimeSpan.FromSeconds(4);
 
-    public static HttpClient Client { get; } = new(new SocketsHttpHandler
+    public static HttpClient Client { get; } = Erzeugen();
+
+    /// <summary>GitHub's API (Kotlin, uv releases) refuses requests without a User-Agent.</summary>
+    private static HttpClient Erzeugen()
     {
-        ConnectCallback = VerbindenAsync,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-    })
-    {
-        Timeout = TimeSpan.FromSeconds(15)
-    };
+        var client = new HttpClient(new SocketsHttpHandler
+        {
+            ConnectCallback = VerbindenAsync,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(15)
+        };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("UpdateZentrale/1.0");
+        return client;
+    }
 
     private static async ValueTask<Stream> VerbindenAsync(SocketsHttpConnectionContext kontext, CancellationToken abbruch)
     {

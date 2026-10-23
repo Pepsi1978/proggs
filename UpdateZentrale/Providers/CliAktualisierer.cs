@@ -112,7 +112,8 @@ public sealed class CliAktualisierer : IAktualisierer
         if (!File.Exists(exe))
             return new PruefErgebnis(UpdateZustand.NichtInstalliert, Meldung: $"Nicht gefunden: {exe}");
 
-        var args = eintrag.UpdateArgumente ?? "update";
+        // %USERPROFILE% & Co. as in the paths -- the helper scripts under werkzeuge\ are found that way.
+        var args = Environment.ExpandEnvironmentVariables(eintrag.UpdateArgumente ?? "update");
         protokoll.Report($"{Path.GetFileName(exe)} {args}");
 
         // npm.cmd resolves its own modules relative to the working directory; started from the

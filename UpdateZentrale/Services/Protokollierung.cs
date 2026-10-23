@@ -112,6 +112,8 @@ public static class Protokollierung
             .AppendLine("Stand vorher:  " + bericht.VersionVorher)
             .AppendLine("Stand nachher: " + bericht.VersionNachher)
             .AppendLine("Exit-Code:     " + bericht.ExitCode)
+            .AppendLine("Dauer:         " + (bericht.DauerSekunden is { } s ? DauerText(s) + " (" + s.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s)" : "(nicht gemessen)"))
+            .AppendLine("Sammellauf:    " + (bericht.SammelId is null ? "–" : bericht.SammelId + ", Phase " + bericht.SammelPhase + ", Position " + bericht.SammelPosition))
             .AppendLine(new string('=', 78))
             .AppendLine()
             .ToString();
@@ -166,6 +168,66 @@ public static class Protokollierung
             Diagnose.Ausnahme(ex, "protokoll", "Verlauf lesen", Schwere.Warnung);
         }
         return ergebnis;
+    }
+
+    /// <summary>"0:42 min" / "1:05:10 h" -- the same notation on the card and in the log.</summary>
+    public static string DauerText(double sekunden)
+    {
+        var t = TimeSpan.FromSeconds(Math.Max(0, sekunden));
+        return t.TotalHours >= 1 ? ((int)t.TotalHours) + t.ToString(@"\:mm\:ss") + " h" : ((int)t.TotalMinutes) + t.ToString(@"\:ss") + " min";
+    }
+
+    /// <summary>
+    /// Measured update durations per program, oldest first. Only runs that really installed
+    /// something count (success or staged): "already current" and failures say nothing about how
+    /// long the update takes.
+    /// </summary>
+    public static Dictionary<string, List<double>> UpdateDauern()
+    {
+        var ergebnis = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            if (!File.Exists(VerlaufsDatei)) return ergebnis;
+            foreach (var zeile in LiesAlleZeilen(VerlaufsDatei))
+            {
+                if (string.IsNullOrWhiteSpace(zeile)) continue;
+                try
+                {
+                    var b = JsonSerializer.Deserialize<UpdateBericht>(zeile, Optionen);
+                    if (b?.DauerSekunden is not { } s || s <= 0 || string.IsNullOrWhiteSpace(b.ProgrammId)) continue;
+                    if (b.Ergebnis is not (LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend)) continue;
+                    if (!ergebnis.TryGetValue(b.ProgrammId, out var liste)) ergebnis[b.ProgrammId] = liste = new List<double>();
+                    liste.Add(s);
+                }
+                catch
+                {
+                    // counted by LetzteBerichte; one broken line costs one sample, nothing more
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "protokoll", "Update-Dauern lesen", Schwere.Warnung);
+        }
+        return ergebnis;
+    }
+
+    public static string SammelDatei => Path.Combine(Ordner, "sammellaeufe.jsonl");
+
+    /// <summary>
+    /// One line per "install all": planned order with phases and expected durations, then per
+    /// program start, end, duration and verdict -- for later analysis of order and speed.
+    /// </summary>
+    public static void SammellaufSchreiben(object eintrag)
+    {
+        try
+        {
+            Anhaengen(SammelDatei, JsonSerializer.Serialize(eintrag, Optionen) + Environment.NewLine);
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "protokoll", "Sammellauf schreiben", Schwere.Warnung);
+        }
     }
 
     /// <returns>false when Explorer could not be started -- the reason is in the diagnostics.</returns>

@@ -25,6 +25,13 @@ public sealed class ProgrammEinstellung
     public DateTime? FehlerQuittiertBis { get; set; }
 }
 
+public sealed class SammelFortsetzung
+{
+    public string SammelId { get; set; } = "";
+    public DateTime Zeit { get; set; }
+    public List<string> ProgrammIds { get; set; } = new();
+}
+
 /// <summary>
 /// User state lives outside the repo (%LOCALAPPDATA%\UpdateZentrale\settings.json) so the catalog
 /// stays a clean, committable file even after toggling things in the UI.
@@ -56,6 +63,15 @@ public sealed class Einstellungen
     /// so a moved program folder is noticed and the start is set up again.
     /// </summary>
     public string? HintergrundEingerichtetFuer { get; set; }
+
+    /// <summary>Cards sorted by expected update duration (shortest first) within each group.</summary>
+    public bool NachDauerSortieren { get; set; }
+
+    /// <summary>
+    /// "Install all" updated the UpdateZentrale first, which closes and restarts the app. The rest
+    /// of the batch is kept here and continued by the new instance right after its start check.
+    /// </summary>
+    public SammelFortsetzung? SammelFortsetzen { get; set; }
 
     public static Einstellungen Laden()
     {

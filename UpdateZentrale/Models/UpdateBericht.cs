@@ -51,6 +51,20 @@ public sealed class UpdateBericht
     public bool Erhoeht { get; set; }
     public string ProtokollDatei { get; set; } = "";
 
+    /// <summary>
+    /// Wall time of the whole click, pre-check to verdict (also the wait for a yes/no click of a
+    /// repo script). Null in entries written before 1.3.31. Feeds the expected duration that
+    /// orders "install all" and the duration sort.
+    /// </summary>
+    public double? DauerSekunden { get; set; }
+
+    /// <summary>Set when the run was part of "install all": that batch's id (see sammellaeufe.jsonl).</summary>
+    public string? SammelId { get; set; }
+
+    /// <summary>Phase within the batch (1 = own tools, 2 = CLI-critical, 3 = the rest) and position in it.</summary>
+    public int? SammelPhase { get; set; }
+    public int? SammelPosition { get; set; }
+
     public string ErgebnisText => Ergebnis switch
     {
         LaufErgebnis.Erfolgreich => "Erfolgreich",

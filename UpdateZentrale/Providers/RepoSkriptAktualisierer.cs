@@ -179,6 +179,10 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         if (status == "no-answer")
             return new PruefErgebnis(UpdateZustand.Abgebrochen,
                 Meldung: "Kein Klick im Zeitfenster – es wurde nichts geändert.", Protokoll: lauf.Ausgabe);
+        if (status is "failed" or "refused")
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: status == "refused" ? "Das Skript hat das Update verweigert – siehe Protokoll." : "Das Skript meldet einen Fehler beim Bauen oder Starten – siehe Protokoll.",
+                Protokoll: lauf.Ausgabe);
         if (status == "already-current")
             return new PruefErgebnis(UpdateZustand.Aktuell, Meldung: "War bereits aktuell.", Protokoll: lauf.Ausgabe);
         if (status == "started")
@@ -275,17 +279,22 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         return kandidaten.FirstOrDefault(File.Exists) ?? "powershell.exe";
     }
 
+    /// <summary>
+    /// The LAST line that starts with the prefix. Only line starts count: rebuild-overlay.ps1 once
+    /// printed its own source (an uninvoked script block), and the first line merely containing
+    /// "OVERLAY_UPDATE_STATUS=no-answer" inside a Write-Host call read as the script's answer.
+    /// </summary>
     internal static string StatusLesen(string ausgabe, string? praefix)
     {
         if (string.IsNullOrWhiteSpace(praefix)) return "";
+        var status = "";
         foreach (var zeile in ausgabe.Split('\n'))
         {
-            var index = zeile.IndexOf(praefix, StringComparison.OrdinalIgnoreCase);
-            if (index < 0) continue;
-            var rest = zeile.Substring(index + praefix.Length).Trim();
-            return rest.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+            var text = zeile.Trim();
+            if (!text.StartsWith(praefix, StringComparison.OrdinalIgnoreCase)) continue;
+            status = text.Substring(praefix.Length).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
         }
-        return "";
+        return status;
     }
 
     private static string InstallierteVersion(ProgrammEintrag eintrag)

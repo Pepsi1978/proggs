@@ -84,6 +84,20 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Sortierung innerhalb der Gruppen: Katalog oder kürzestes Update zuerst -->
+                <Border Padding="11,6" CornerRadius="9" Margin="0,0,10,0"
+                        Background="{DynamicResource PinselFlaecheHoch}"
+                        BorderBrush="{DynamicResource PinselRand}" BorderThickness="1"
+                        Effect="{DynamicResource KartenSchatten}"
+                        ToolTip="Sortiert die Karten innerhalb jeder Gruppe nach der gemessenen bzw. geschätzten Update-Dauer, die kürzesten oben.">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⏱ nach Dauer" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   Foreground="{DynamicResource PinselText}" />
+                        <ToggleButton Style="{StaticResource Schiebeschalter}" VerticalAlignment="Center"
+                                      IsChecked="{Binding NachDauerSortieren, Mode=TwoWay}" />
+                    </StackPanel>
+                </Border>
+
                 <Button Content="Katalog öffnen" Style="{StaticResource SchalterLeise}"
                         Command="{Binding KatalogOeffnenCommand}" Margin="0,0,8,0"
                         ToolTip="programs.json öffnen – dort werden neue Programme eingetragen." />
@@ -264,6 +278,11 @@
                                 <TextBlock Text="{Binding StatusText}" Style="{StaticResource TextLeise}"
                                            Margin="0,6,18,0" />
 
+                                <!-- Wie lange ein Update dieses Programms dauert: gemessen oder geschätzt -->
+                                <TextBlock Text="{Binding DauerText}" Style="{StaticResource TextLeise}"
+                                           FontSize="11" Margin="0,4,18,0"
+                                           Foreground="{DynamicResource PinselTextSehrLeise}" />
+
                                 <!-- Was beim letzten Lauf herauskam – überlebt das Schließen der App -->
                                 <TextBlock Text="{Binding BerichtKurz}" Style="{StaticResource TextLeise}"
                                            FontSize="11" Margin="0,4,18,0"
@@ -283,7 +302,8 @@
                                             <Button Content="Jetzt starten und übernehmen"
                                                     Style="{StaticResource SchalterLeise}" FontSize="11"
                                                     Padding="9,4" Margin="0,0,6,0"
-                                                    Command="{Binding StartenCommand}" />
+                                                    Command="{Binding StartenCommand}"
+                                                    Visibility="{Binding UebernahmeStartbar, Converter={StaticResource BoolSichtbar}}" />
                                             <Button Content="Protokoll öffnen" Style="{StaticResource SchalterLeise}"
                                                     FontSize="11" Padding="9,4"
                                                     Command="{Binding ProtokollOeffnenCommand}" />

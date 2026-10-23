@@ -2,9 +2,11 @@
 
 Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
 LM Studio (inklusive Engines und Runtimes), Claude Code CLI,
-Codex CLI, Kimi Code CLI, Antigravity CLI, PowerShell 7, Stream Deck, die komplette Programmierumgebung (.NET, Node.js,
-Java, Rust, Go, Python, Visual Studio, VS Code, Android Studio und SDK, Git, npm-Werkzeuge …) sowie
-die eigenen Werkzeuge OpenLauncher, TVO und CVO.
+Codex CLI, Kimi Code CLI, Antigravity CLI, OpenCode, GitHub CLI, PowerShell 7, die Kommandozeilen-Werkzeuge (ripgrep, fd,
+bat, fzf, jq, delta, lazygit, ShellCheck, shfmt, Trivy, FFmpeg, Rclone, scrcpy, uv), Stream Deck, VPN (WireGuard,
+Windscribe), die komplette Programmierumgebung (.NET 8 und 10, Node.js, fnm, Deno, Java, Gradle, Kotlin, Rust, Go,
+Python, Visual Studio, VS Code, Android Studio und SDK, Git, Docker, Windows SDK, npm-Werkzeuge …), winget selbst
+sowie die eigenen Werkzeuge OpenLauncher, TVO, CVO und die UpdateZentrale.
 
 Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmenü (`create_shortcut.ps1` legt beide an).
 
@@ -18,12 +20,31 @@ Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmen
 | **Repo-Abgleich** | Vor der Prüfung der eigenen Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) wird `~/proggs` einmal mit GitHub abgeglichen: `git fetch` und Vorspulen (`--ff-only`), nie ein Merge. Erst dadurch ist bekannt, welche Version im Repo wartet. Lässt sich das Repo nicht vorspulen (lokale Änderungen im Weg), steht das in der Fußzeile, und die Karten zählen weiter die wartenden Commits. |
 | **Prüfung beim Windows-Start** | Schalter in der Fußzeile, standardmäßig an. 45 Sekunden nach der Anmeldung startet die UpdateZentrale unsichtbar (`--hintergrund`), gleicht das Repo ab, prüft alles und beendet sich wieder. Wird sie währenddessen von Hand geöffnet, erscheint das Fenster mit dem laufenden Fortschritt. Eingerichtet wird das als geplante Aufgabe „UpdateZentrale - Hintergrund" (dafür muss die App einmal mit Administratorrechten laufen), ohne den Schalter „Immer als Administrator" als normaler Autostart-Eintrag. |
 | **Aktualisieren** | Läuft für jedes Programm still durch, ohne dass eine fremde Oberfläche aufgeht. Die Schaltfläche lädt nur dann zum Klick ein, wenn wirklich eine neuere Version vorliegt; ist alles aktuell, steht dort „Aktuell" und sie ist abgeschaltet. |
+| **Alle Updates installieren** | Ein Klick, eine Rückfrage mit der geplanten Reihenfolge, dann in Phasen (siehe „Reihenfolge"). Unabhängige Selbst-Updater laufen in der letzten Phase parallel neben der seriellen Bahn. |
+| **Dauer und Sortierung** | Jede Karte zeigt, wie lange ihr Update zuletzt gedauert hat (Median der letzten drei echten Updates) oder eine Schätzung. Der Schalter „⏱ nach Dauer" sortiert innerhalb jeder Gruppe die kürzesten nach oben; die Gruppen bleiben zusammen. |
 | **Laufende Programme** | Wird pfadgenau erkannt (inklusive Helferprogramme). Muss ein Programm für das Update beendet werden, fragt die App vorher und startet es danach wieder, wenn es vorher lief. |
 | **Autostart** | Wird pro Programm angezeigt und lässt sich auf eine geplante Aufgabe mit Administratorrechten umstellen. |
 | **Als Administrator** | Schiebeschalter pro Programm sowie für die UpdateZentrale selbst. |
 | **Hell und Dunkel** | Umschalter oben rechts; die Wahl wird gemerkt, die Fenstertitelleiste zieht mit. |
 | **Protokoll** | Rechts oben steht die vollständige Ausgabe des jeweiligen Update-Werkzeugs. |
 | **Terminal** | Rechts unten eine eingebaute PowerShell-Zeile mit den Rechten der UpdateZentrale, dazu eine Schaltfläche für ein echtes Terminalfenster. |
+
+### Reihenfolge von „Alle Updates installieren"
+
+1. **Repo-Abgleich** (`git fetch` und Vorspulen) schon bei der Prüfung – erst danach ist bekannt, welche eigenen Werkzeuge neu gebaut werden müssen.
+2. **UpdateZentrale zuerst und allein.** Ihr Skript baut neu und startet die App neu. Der Rest des Sammellaufs wird vorher in
+   `settings.json` (`sammelFortsetzen`) gesichert; die neue Fassung setzt ihn nach ihrer Startprüfung ohne zweite Rückfrage fort
+   (nur innerhalb von 30 Minuten, nie beim versteckten Start bei der Anmeldung).
+3. **Phase 1 – Eigene Werkzeuge** (OpenLauncher, TVO, CVO): Sie fragen Ja/Nein, und direkt nach dem Klick sitzt man noch davor.
+4. **Phase 2 – CLI-kritisch** (`cliRisiko`: PowerShell, Node.js, Git, Windows-Terminal, WSL, Go, Bun). Sobald sie durch sind,
+   meldet die Kopfzeile, dass im CLI weitergearbeitet werden kann.
+5. **Phase 3 – der Rest.** Seriell: winget/MSI/Store (ein Installer zur Zeit), npm (ein gemeinsamer Baum), die Hilfsskripte
+   (sie schreiben den PATH). Parallel daneben (höchstens drei): Selbst-Updater wie Claude Code, Codex, Antigravity, rustup,
+   sdkmanager, die LM-Studio-Runtimes und der Start der OpenCode-Sitzung.
+
+Innerhalb jeder Phase geht das kürzeste erwartete Update zuerst, die großen Installer (Visual Studio, Android Studio, Docker)
+also ans Ende. `zuletzt` (App Installer = winget selbst) steht immer ganz hinten; `hauptversionNurPerKlick` (TypeScript, npm,
+FFmpeg) bleibt bei einem Sprung der Hauptversion ganz draußen und läuft nur per Klick auf der Karte.
 
 ### Protokolle und Verifikation
 
@@ -66,7 +87,15 @@ Abgelegt wird alles in `%LOCALAPPDATA%\UpdateZentrale\logs\`:
   Werkzeugs; am Ende Ergebnis, Begründung, Stand nachher und Exit-Code. Auch Programmausnahmen
   landen hier.
 * `verlauf.jsonl` – eine Zeile je Lauf, maschinenlesbar. Daraus lädt die App beim Start, was
-  zuletzt passiert ist.
+  zuletzt passiert ist. Seit 1.3.31 mit `DauerSekunden` (ganzer Klick, Vorprüfung bis Urteil) sowie `SammelId`,
+  `SammelPhase` und `SammelPosition`, wenn der Lauf Teil von „Alle Updates installieren" war.
+* `sammellaeufe.jsonl` – je Sammellauf eine Zeile `plan` (Reihenfolge, Phase, parallel ja/nein, erwartete Dauer,
+  gemessen oder geschätzt) und eine Abschlusszeile mit Beginn, Ende, Dauer und Ergebnis je Programm sowie der
+  Gesamtdauer. Damit lassen sich Reihenfolge und Schätzungen später gegen die echten Zeiten prüfen.
+* Im Tagesprotokoll stehen im Fuß jedes Laufs `Dauer:` und `Sammellauf:`. Die strukturierte Diagnose misst zusätzlich
+  jede Prüfung und jedes Update als Vorgang mit Dauer.
+* winget-Prüfungen nutzen eine gemeinsame Abfrage `winget list --source winget` (90 s gültig, nach jedem Installer
+  verworfen); das Tagesprotokoll vermerkt sie unter `[winget]`.
 
 Die Schaltfläche **Protokolle** in der Fußzeile öffnet diesen Ordner.
 
@@ -122,7 +151,7 @@ Prozessnamen werden immer gegen den Ordner aus `exePfad` geprüft. Kollidieren z
 Namen und lässt sich das nicht über den Pfad trennen (etwa `claude` als CLI und als Store-App),
 bleibt `prozesse` besser leer – lieber kein Merkmal als ein falsches.
 
-### Die vier Update-Arten
+### Die Update-Arten
 
 | `art` | Wofür | Pflichtfelder | Prüfung | Update |
 |---|---|---|---|---|
@@ -130,6 +159,7 @@ bleibt `prozesse` besser leer – lieber kein Merkmal als ein falsches.
 | `cli` | Werkzeuge, die sich selbst aktualisieren | `exePfad`, `updateArgumente` | `pruefArgumente` (Trockenlauf) **oder** `npmPaket` **oder** `versionsUrl` | `exePfad updateArgumente` |
 | `store` | Store-signierte MSIX-Pakete | `appxName`, `packageFamilyName`, `storeProduktId` | `Get-AppxPackage` + `winget upgrade`-Liste | `winget upgrade --id <ProduktId> --source msstore --silent` |
 | `reposkript` | Eigene Werkzeuge in `~/proggs` | `skript`, `statusPraefix` | `git rev-list HEAD..origin/main` + csproj-Version gegen gebaute Exe | ruft das vorhandene PowerShell-Skript auf |
+| `opencodesitzung` | OpenCode mit Windows-Fix | `npmPaket` | npm-Version gegen `current.json` | startet eine OpenLauncher-Sitzung (`--jarvis-auftrag`: Opus 5.5, minimal, Schnellmodus, high), die die neue Version mit dem Fix verschmilzt und baut; die Karte steht auf „Sitzung baut", bis eine Prüfung die neue Version sieht |
 
 Weitere optionale Felder:
 
@@ -156,6 +186,10 @@ Weitere optionale Felder:
 | `pruefExitCodes` | Nur `cli`: Exit-Codes der Prüfung, die eine gültige Antwort sind (Standard `[0]`). `rustup check` endet mit 100, sobald Updates anstehen. |
 | `pruefAbschnitt` | Nur `cli`: erst Zeilen nach der ersten Zeile mit diesem Text zählen (sdkmanager: `Available Updates`). Fehlt der Abschnitt, ist nichts offen. |
 | `pruefZeilenMuster` | Nur `cli`: regulärer Ausdruck für eine geplante Update-Zeile statt des Pfeils – für Werkzeuge mit Tabellenausgabe. |
+| `uebernahmeText` | Text des Bandes „wird übernommen" statt des Standards „nach dem Neustart des Programms" (OpenCode-Sitzung). |
+| `hauptversionNurPerKlick` | Ein Sprung der ersten Versionsstelle bleibt aus „Alle Updates installieren" draußen und läuft nur per Klick. |
+| `dauerSchaetzungSekunden` | Erwartete Update-Dauer, bis echte Messungen vorliegen (sonst ein Viertel von `zeitlimitMinuten`). |
+| `zuletzt` | Immer das letzte Update eines Sammellaufs (App Installer: ersetzt winget). |
 | `updateExePfad` | Nur `cli`: anderes Programm für den Update-Lauf als für die Versionsabfrage (npm-Pakete: Version über `firebase.cmd --version`, Update über `npm.cmd install -g …`). Läuft im eigenen Ordner, damit npm seine Module findet. |
 
 Nicht über winget installierte Programme, deren Datei unter `exePfad` existiert, erscheinen nie mehr als
@@ -199,6 +233,16 @@ alle Terminalfenster samt laufender CLI-Sitzungen.
   Standalone-Build unter `~/.codex/packages`. Deshalb zwei Karten mit unterschiedlichen Wegen.
 * **Claude Code CLI** – laufende Sessions werden nie beendet; das Update greift beim nächsten Start.
 * **Stream Deck** – die Helferdienste werden beim Update mitbeendet, sonst hängt der Installer.
+* **Gradle, Kotlin, uv** – ohne winget-Paket und ohne Selbst-Update. `werkzeuge/zip-werkzeug.ps1 -Werkzeug …` lädt die
+  neueste Fassung beim Hersteller, entpackt sie nach `%LOCALAPPDATA%\Programs\<Werkzeug>\<Version>` und lässt die Junction
+  `current` darauf zeigen; der Benutzer-PATH zeigt danach nur noch auf `current` (beim ersten Lauf umgestellt). Die vorige
+  Fassung bleibt als Rückweg liegen.
+* **OpenCode CLI** – das Bauskript allein scheiterte, sobald der Windows-Fix nicht mehr auf die neue Version passte. Ein Update
+  startet deshalb eine OpenLauncher-Sitzung mit dem Auftrag, die Version über `opencode-setup/build-install-windows-mousefix.ps1`
+  zu bauen und den Fix bei Bedarf anzupassen. Eine zweite Sitzung für dieselbe Version startet frühestens nach drei Stunden.
+* **TVO / CVO** – Updates ausschließlich nach dem Klick auf „Ja" in `rebuild-overlay.ps1`. `update.ps1` leitet dorthin weiter,
+  `publish.ps1` und das Publish-Ziel im csproj verweigern ohne die Freigabe, die erst der Klick setzt. Statuszeilen werden nur
+  am Zeilenanfang gelesen, die letzte zählt.
 * **OpenLauncher / TVO / CVO** – die App ruft ausschließlich die vorhandenen Skripte auf
   (`update-launcher.ps1`, `rebuild-overlay.ps1`), **nie mit `-Force`**, und beendet deren Prozesse
   niemals selbst. Jedes Skript zeigt sein eigenes Ja/Nein-Fenster; die Antwort (`started`,

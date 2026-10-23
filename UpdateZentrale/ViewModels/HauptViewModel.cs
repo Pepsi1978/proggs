@@ -30,7 +30,8 @@ public sealed partial class HauptViewModel : ObservableObject
             ["store"] = new StoreAktualisierer(),
             ["msstore"] = new StoreAktualisierer(),   // Altname aus früheren Katalogfassungen
             ["reposkript"] = new RepoSkriptAktualisierer(),
-            ["opencodefix"] = new OpenCodeFixAktualisierer()
+            ["opencodefix"] = new OpenCodeFixAktualisierer(),
+            ["opencodesitzung"] = new OpenCodeSitzungAktualisierer()
         };
 
     public HauptViewModel()
@@ -212,26 +213,23 @@ public sealed partial class HauptViewModel : ObservableObject
 
     public bool HatUpdates => AnzahlUpdates > 0;
 
-    /// <summary>Open updates that cannot touch a running CLI session -- step 1 of "install all".</summary>
-    private List<ProgrammViewModel> SichereUpdates => Programme.Where(p => p.HatUpdate && !p.KannCliBeenden).ToList();
-
-    /// <summary>Open updates that can end a running CLI session -- step 2, once the CLIs are closed.</summary>
-    private List<ProgrammViewModel> CliUpdates => Programme.Where(p => p.HatUpdate && p.KannCliBeenden).ToList();
-
     /// <summary>
-    /// Label of the batch button: it only invites a click while updates are open. With CLI-risky
-    /// updates among them it runs in two steps and says which step is next.
+    /// Label of the batch button: it only invites a click while updates are open, and says how
+    /// many of them are CLI-critical (they run first) and how many wait for a deliberate click.
     /// </summary>
     public string SammelText
     {
         get
         {
-            var sicher = SichereUpdates.Count;
-            var cli = CliUpdates.Count;
-            if (sicher + cli == 0) return AllesAktuell ? "✔ Alles aktuell" : "Keine Updates offen";
-            if (cli == 0) return sicher == 1 ? "1 Update installieren" : $"Alle {sicher} Updates installieren";
-            if (sicher > 0) return $"Schritt 1: {sicher} Update{(sicher == 1 ? "" : "s")} installieren  ·  danach Schritt 2: {cli} CLI-kritische";
-            return $"Schritt 2: {cli} CLI-kritische{(cli == 1 ? "s Update" : " Updates")} installieren (CLI vorher schließen)";
+            var plan = Sammelplan.Planen(Programme.Where(p => p.HatUpdate));
+            var nurKlick = Programme.Count(p => p.HatUpdate && p.IstHauptversionsSprung);
+            var zusatz = nurKlick > 0 ? $"  ·  {nurKlick} nur per Klick" : "";
+            if (plan.Count == 0)
+                return nurKlick > 0 ? $"{nurKlick} Hauptversion{(nurKlick == 1 ? "" : "en")} nur per Klick auf der Karte"
+                    : AllesAktuell ? "✔ Alles aktuell" : "Keine Updates offen";
+            var cli = plan.Count(s => s.Phase == Sammelplan.PhaseCli);
+            var text = plan.Count == 1 ? "1 Update installieren" : $"Alle {plan.Count} Updates installieren";
+            return text + (cli > 0 ? $"  ·  zuerst {cli} CLI-kritische" : "") + zusatz;
         }
     }
 
@@ -271,11 +269,19 @@ public sealed partial class HauptViewModel : ObservableObject
                 ["ohneProvider"] = string.Join(",", katalog.Programme.Where(p => !_aktualisierer.ContainsKey(p.Art)).Select(p => p.Id))
             });
         var berichte = Protokollierung.LetzteBerichte();
+        var dauern = Protokollierung.UpdateDauern();
+        var gruppen = katalog.Programme.Select(p => p.Gruppe).Distinct(StringComparer.Ordinal).ToList();
+        var index = 0;
 
         foreach (var eintrag in katalog.Programme)
         {
             _aktualisierer.TryGetValue(eintrag.Art, out var dienst);
-            var vm = new ProgrammViewModel(eintrag, dienst, _einstellungen, _koordination);
+            var vm = new ProgrammViewModel(eintrag, dienst, _einstellungen, _koordination)
+            {
+                KatalogIndex = index++,
+                GruppenRang = gruppen.IndexOf(eintrag.Gruppe)
+            };
+            if (dauern.TryGetValue(eintrag.Id, out var gemessen)) vm.DauernSetzen(gemessen);
             vm.PropertyChanged += AufProgrammGeaendert;
             vm.Meldung += (_, text) => Dialoge.Hinweis(text);
 
@@ -288,8 +294,38 @@ public sealed partial class HauptViewModel : ObservableObject
             Programme.Add(vm);
         }
 
+        SortierungAnwenden();
         AusgewaehltesProgramm = Programme.FirstOrDefault();
         SammelAnzeigeMelden();
+    }
+
+    // ---------------- Sortierung ----------------
+
+    /// <summary>Within each group: catalog order, or the shortest expected update first.</summary>
+    public bool NachDauerSortieren
+    {
+        get => _einstellungen.NachDauerSortieren;
+        set
+        {
+            if (_einstellungen.NachDauerSortieren == value) return;
+            _einstellungen.NachDauerSortieren = value;
+            _einstellungen.Speichern();
+            SortierungAnwenden();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>The group rank comes first, otherwise WPF would split the groups apart.</summary>
+    private void SortierungAnwenden()
+    {
+        using (Ansicht.DeferRefresh())
+        {
+            Ansicht.SortDescriptions.Clear();
+            Ansicht.SortDescriptions.Add(new SortDescription(nameof(ProgrammViewModel.GruppenRang), ListSortDirection.Ascending));
+            if (NachDauerSortieren)
+                Ansicht.SortDescriptions.Add(new SortDescription(nameof(ProgrammViewModel.ErwarteteDauerSekunden), ListSortDirection.Ascending));
+            Ansicht.SortDescriptions.Add(new SortDescription(nameof(ProgrammViewModel.KatalogIndex), ListSortDirection.Ascending));
+        }
     }
 
     private void AufProgrammGeaendert(object? sender, PropertyChangedEventArgs e)
@@ -309,6 +345,24 @@ public sealed partial class HauptViewModel : ObservableObject
     /// what has no fresh answer -- after the logon check that is nothing, and the list is simply there.
     /// </param>
     public async Task ErstePruefungAsync(bool alles = false)
+    {
+        await ErstePruefungKernAsync(alles);
+
+        // A batch interrupted by the self-update goes on now -- never from the hidden logon start.
+        if (!alles && _einstellungen.SammelFortsetzen is not null)
+        {
+            try
+            {
+                await SammelFortsetzenAsync();
+            }
+            catch (Exception ex)
+            {
+                Diagnose.Ausnahme(ex, "sammel", "Sammellauf fortsetzen");
+            }
+        }
+    }
+
+    private async Task ErstePruefungKernAsync(bool alles)
     {
         await Task.Delay(400);
 
@@ -554,39 +608,43 @@ public sealed partial class HauptViewModel : ObservableObject
             return;
         }
 
-        // Two steps: first everything that cannot end a running CLI session; the CLI-risky updates
-        // stay open until a later click, after Claude Code, Codex and the terminals are closed.
-        var sicher = SichereUpdates;
-        var cli = CliUpdates;
-        var schritt2 = sicher.Count == 0;
-        var offen = schritt2 ? cli : sicher;
-        if (offen.Count == 0)
+        var plan = Sammelplan.Planen(Programme.Where(p => p.HatUpdate));
+        if (plan.Count == 0)
         {
-            Dialoge.Hinweis("Es ist kein Update offen. Prüfe zuerst, oder aktualisiere einzelne Programme gezielt.");
+            Dialoge.Hinweis("Es ist kein Update offen, das gesammelt installiert werden kann. Prüfe zuerst, oder "
+                            + "aktualisiere einzelne Programme gezielt (Hauptversionssprünge nur per Klick auf der Karte).");
             return;
         }
 
-        var liste = string.Join("\n", offen.Select(p => "  • " + p.Name));
-        var frage = schritt2
-            ? "Schritt 2 – diese Updates können laufende CLI-Sitzungen beenden:\n\n"
-              + string.Join("\n", cli.Select(p => "  • " + p.Name + " – " + p.Eintrag.CliRisiko))
-              + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster.\n"
-              + "Bei laufenden Programmen wird vorher nachgefragt."
-            : (cli.Count > 0 ? "Schritt 1 – diese Programme werden jetzt aktualisiert:\n\n" : "Diese Programme werden jetzt aktualisiert:\n\n")
-              + liste
-              + (cli.Count > 0
-                  ? "\n\nZurückgehalten für Schritt 2 (können CLI-Sitzungen beenden):\n"
-                    + string.Join("\n", cli.Select(p => "  • " + p.Name))
-                  : "")
-              + "\n\nBei laufenden Programmen wird vorher nachgefragt.";
-        var titel = schritt2 ? "Schritt 2: CLI-kritische Updates installieren?"
-            : cli.Count > 0 ? "Schritt 1: Updates installieren?" : "Alle Updates installieren?";
-        if (!Dialoge.Fragen(frage, titel))
-        {
-            return;
-        }
+        var cli = plan.Where(s => s.Phase == Sammelplan.PhaseCli).ToList();
+        var nurKlick = Programme.Where(p => p.HatUpdate && p.IstHauptversionsSprung).ToList();
+        var frage = "Reihenfolge der Updates:\n\n"
+                    + string.Join("\n", plan.Select((s, i) => $"  {i + 1}. {s.Programm.Name}  ({Sammelplan.PhasenName(s.Phase)}, "
+                                                              + Protokollierung.DauerText(s.Programm.ErwarteteDauerSekunden) + ")"))
+                    + (cli.Count > 0
+                        ? "\n\nDie CLI-kritischen Updates können laufende CLI-Sitzungen beenden:\n"
+                          + string.Join("\n", cli.Select(s => "  • " + s.Programm.Name + " – " + s.Programm.Eintrag.CliRisiko))
+                          + "\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Sobald sie durch sind, "
+                          + "meldet die Kopfzeile, dass im CLI weitergearbeitet werden kann."
+                        : "")
+                    + (nurKlick.Count > 0
+                        ? "\n\nNur per Klick auf der Karte (Hauptversion): " + string.Join(", ", nurKlick.Select(p => p.Name))
+                        : "")
+                    + "\n\nBei laufenden Programmen wird vorher nachgefragt.";
+        if (!Dialoge.Fragen(frage, "Alle Updates installieren?")) return;
 
-        // Acquired only now: the question above is modal, and whatever started meanwhile wins.
+        await SammelAusfuehrenAsync(plan, "sammel-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+    }
+
+    /// <summary>
+    /// Runs a batch plan inside one exclusive ownership. The UpdateZentrale itself goes first and
+    /// alone: its script restarts the app, so the rest is stored and continued by the new instance.
+    /// The phases run one after the other; within the last one, independent self-updaters run in a
+    /// parallel lane beside the serial one (winget, npm, scripts).
+    /// </summary>
+    private async Task SammelAusfuehrenAsync(List<Sammelplan.Schritt> plan, string sammelId)
+    {
+        // Acquired only now: the question before is modal, and whatever started meanwhile wins.
         using var besitz = _koordination.SammelBeginnen();
         if (besitz is null)
         {
@@ -596,25 +654,141 @@ public sealed partial class HauptViewModel : ObservableObject
         }
 
         LaeuftSammelvorgang = true;
-        using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, "Alle Updates: " + string.Join(", ", offen.Select(p => p.Eintrag.Id)));
+        var gesamt = System.Diagnostics.Stopwatch.StartNew();
+        var start = DateTime.Now;
+        var laeufe = new List<SammelLauf>();
+        var laufend = new List<string>();
+        var fertig = 0;
+        using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, "Alle Updates: " + string.Join(", ", plan.Select(s => s.Programm.Eintrag.Id)));
+        Protokollierung.SammellaufSchreiben(new
+        {
+            sammelId, ereignis = "plan", zeit = start,
+            plan = plan.Select((s, i) => new { position = i + 1, id = s.Programm.Eintrag.Id, phase = s.Phase, parallel = s.Parallel,
+                                               erwartetSekunden = Math.Round(s.Programm.ErwarteteDauerSekunden), gemessen = s.Programm.DauerGemessen })
+        });
+
+        void Anzeigen() => KopfStatus = "Aktualisiert " + (laufend.Count == 0 ? "…" : string.Join(", ", laufend))
+                                         + " (" + fertig + " von " + plan.Count + " fertig)";
+
+        async Task EinerAsync(Sammelplan.Schritt s)
+        {
+            var position = plan.IndexOf(s) + 1;
+            lock (laufend) laufend.Add(s.Programm.Name);
+            Anzeigen();
+            var uhr = System.Diagnostics.Stopwatch.StartNew();
+            var beginn = DateTime.Now;
+            UpdateBericht? bericht = null;
+            try
+            {
+                bericht = await s.Programm.AktualisierenImSammelAsync(besitz, new SammelKontext(sammelId, s.Phase, position));
+            }
+            finally
+            {
+                lock (laufend) { laufend.Remove(s.Programm.Name); fertig++; }
+                Anzeigen();
+                lock (laeufe)
+                    laeufe.Add(new SammelLauf(position, s.Programm.Eintrag.Id, s.Phase, s.Parallel, beginn, DateTime.Now,
+                                              Math.Round(uhr.Elapsed.TotalSeconds, 1), bericht?.ErgebnisText ?? "ohne Bericht",
+                                              Math.Round(s.Programm.ErwarteteDauerSekunden)));
+            }
+        }
+
+        var ende = "abgeschlossen";
         try
         {
-            for (var i = 0; i < offen.Count; i++)
+            var rest = plan;
+            var selbst = plan.FirstOrDefault(s => s.Programm.Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase));
+            if (selbst is not null)
             {
-                KopfStatus = "Aktualisiert " + offen[i].Name + " (" + (i + 1) + " von " + offen.Count + ") …";
-                AusgewaehltesProgramm = offen[i];
-                await offen[i].AktualisierenImSammelAsync(besitz);
+                rest = plan.Where(s => s != selbst).ToList();
+                // Stored BEFORE the run: the script's helper may end this process any second after it.
+                _einstellungen.SammelFortsetzen = rest.Count == 0 ? null
+                    : new SammelFortsetzung { SammelId = sammelId, Zeit = DateTime.Now, ProgrammIds = rest.Select(s => s.Programm.Eintrag.Id).ToList() };
+                _einstellungen.Speichern();
+                AusgewaehltesProgramm = selbst.Programm;
+                await EinerAsync(selbst);
+
+                if (selbst.Programm.LetzterBericht?.Ergebnis is not (LaufErgebnis.Abgebrochen or LaufErgebnis.Fehlgeschlagen))
+                {
+                    // The script answered "started": the helper closes this app within seconds and
+                    // starts the new build, which continues the batch. Should the app outlive the
+                    // wait, the restart did not happen -- then this instance carries on itself.
+                    KopfStatus = "Die UpdateZentrale startet neu und setzt die übrigen " + rest.Count + " Updates danach fort …";
+                    ende = "selbstupdate";
+                    await Task.Delay(TimeSpan.FromSeconds(90));
+                    ende = "abgeschlossen";
+                }
+                _einstellungen.SammelFortsetzen = null;
+                _einstellungen.Speichern();
             }
-            var rest = CliUpdates.Count;
-            KopfStatus = !schritt2 && rest > 0
-                ? "Schritt 1 ist durchgelaufen. Schließe jetzt die CLI-Sitzungen und starte Schritt 2 (" + rest + " CLI-kritische)."
-                : "Alle Updates sind durchgelaufen.";
+
+            foreach (var phase in rest.GroupBy(s => s.Phase).OrderBy(g => g.Key))
+            {
+                var seriell = phase.Where(s => !s.Parallel).ToList();
+                var parallel = phase.Where(s => s.Parallel).ToList();
+
+                async Task SeriellAsync()
+                {
+                    foreach (var s in seriell)
+                    {
+                        AusgewaehltesProgramm = s.Programm;
+                        await EinerAsync(s);
+                    }
+                }
+
+                async Task ParallelAsync()
+                {
+                    using var bahn = new SemaphoreSlim(3);
+                    await Task.WhenAll(parallel.Select(async s =>
+                    {
+                        await bahn.WaitAsync();
+                        try { await EinerAsync(s); }
+                        finally { bahn.Release(); }
+                    }));
+                }
+
+                await Task.WhenAll(SeriellAsync(), ParallelAsync());
+
+                if (phase.Key == Sammelplan.PhaseCli && rest.Any(s => s.Phase > Sammelplan.PhaseCli))
+                {
+                    KopfStatus = "CLI-kritische Updates sind durch – du kannst im CLI weiterarbeiten. Der Rest läuft weiter …";
+                    Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.cli_fertig", KopfStatus, sammelId);
+                }
+            }
+
+            var fehler = laeufe.Count(l => l.Ergebnis is "Fehlgeschlagen" or "Nicht verifiziert" or "ohne Bericht");
+            KopfStatus = "Alle Updates sind durchgelaufen (" + Protokollierung.DauerText(gesamt.Elapsed.TotalSeconds) + ")"
+                         + (fehler > 0 ? " – " + fehler + " mit Problemen, siehe rote Karten." : ".");
             vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         finally
         {
+            Protokollierung.SammellaufSchreiben(new
+            {
+                sammelId, ereignis = ende, zeit = DateTime.Now, gesamtSekunden = Math.Round(gesamt.Elapsed.TotalSeconds, 1),
+                laeufe = laeufe.ToList()
+            });
             LaeuftSammelvorgang = false;
+            SortierungAnwenden();
         }
+    }
+
+    /// <summary>
+    /// After the UpdateZentrale updated itself inside "install all", the new instance continues
+    /// the stored rest -- once, and only if it is fresh. The user agreed to the whole batch already.
+    /// </summary>
+    private async Task SammelFortsetzenAsync()
+    {
+        var offen = _einstellungen.SammelFortsetzen;
+        if (offen is null) return;
+        _einstellungen.SammelFortsetzen = null;
+        _einstellungen.Speichern();
+        if (DateTime.Now - offen.Zeit > TimeSpan.FromMinutes(30)) return;
+
+        var plan = Sammelplan.Planen(Programme.Where(p => p.HatUpdate && offen.ProgrammIds.Contains(p.Eintrag.Id, StringComparer.OrdinalIgnoreCase)
+                                                          && !p.Eintrag.Id.Equals(Sammelplan.SelbstId, StringComparison.OrdinalIgnoreCase)));
+        Diagnose.Ereignis(Schwere.Info, "sammel", "sammel.fortsetzung", plan.Count + " Updates nach dem Selbst-Update fortgesetzt.", offen.SammelId);
+        if (plan.Count > 0) await SammelAusfuehrenAsync(plan, offen.SammelId);
     }
 
     /// <summary>Batch buttons and "reload" are only usable while nothing at all is running.</summary>
@@ -658,6 +832,10 @@ public sealed partial class HauptViewModel : ObservableObject
             Dialoge.Hinweis("Der Katalog ließ sich nicht öffnen: " + ex.Message);
         }
     }
+
+    /// <summary>One program of a batch as written to sammellaeufe.jsonl.</summary>
+    private sealed record SammelLauf(int Position, string Id, int Phase, bool Parallel, DateTime Beginn, DateTime Ende,
+                                     double Sekunden, string Ergebnis, double ErwartetSekunden);
 
     private static void SammelAbgewiesen(string art)
         => Diagnose.Ereignis(Schwere.Warnung, "sammel", "start.abgewiesen", art + " abgewiesen: es läuft bereits ein Vorgang.", art);

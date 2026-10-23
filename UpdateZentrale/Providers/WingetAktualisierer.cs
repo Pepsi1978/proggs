@@ -65,6 +65,9 @@ public sealed class WingetAktualisierer : IAktualisierer
         await Reihe.WaitAsync(abbruch);
         try
         {
+            // Fast path: one shared "winget list --source winget" answers every card of a pass.
+            if (await AusSammelabfrageAsync(eintrag, protokoll, abbruch) is { } schnell) return schnell;
+
             protokoll?.Report("winget " + basis + quelle);
             var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, basis + quelle, TimeSpan.FromMinutes(2), abbruch: abbruch);
             protokoll?.Report(lauf.Ausgabe);
@@ -87,6 +90,64 @@ public sealed class WingetAktualisierer : IAktualisierer
         {
             Reihe.Release();
         }
+    }
+
+    // ---------------- Sammelabfrage ----------------
+
+    /// <summary>How long one shared list answers the cards of a check pass.</summary>
+    internal static TimeSpan SammelGueltig { get; set; } = TimeSpan.FromSeconds(90);
+
+    private static BefehlErgebnis? _sammel;
+    private static DateTime _sammelZeit;
+    private static int _generation;
+    private static int _sammelGeneration = -1;
+
+    /// <summary>Every winget install makes the shared list void -- the re-check must see the new version.</summary>
+    internal static void SammelVerwerfen() => Interlocked.Increment(ref _generation);
+
+    /// <summary>
+    /// Thirty single "winget list --id" calls in a row took most of a check pass (each one opens
+    /// winget's source index anew). One "winget list --source winget" holds every correlated
+    /// package; each card picks its own rows from it. Only entries with the default source and
+    /// without a display-name match use it; a package missing from the table, or a failed list,
+    /// falls back to the single query, so the fast path can never turn "installed" into anything
+    /// else. Runs inside <see cref="Reihe"/>.
+    /// </summary>
+    private static async Task<BefehlErgebnis?> AusSammelabfrageAsync(ProgrammEintrag eintrag, IProgress<string>? protokoll,
+                                                                     CancellationToken abbruch)
+    {
+        if (string.IsNullOrWhiteSpace(eintrag.WingetId) || !string.IsNullOrWhiteSpace(eintrag.WingetName)
+            || !string.Equals(eintrag.WingetQuelle?.Trim(), "winget", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var generation = Volatile.Read(ref _generation);
+        if (_sammel is null || _sammelGeneration != generation || DateTime.UtcNow - _sammelZeit > SammelGueltig)
+        {
+            var args = "list --source winget --disable-interactivity --accept-source-agreements";
+            var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(3), abbruch: abbruch);
+            Protokollierung.Schreiben("winget", "Sammelabfrage winget " + args + " -> Code " + Code(lauf.ExitCode)
+                                                + (lauf.Abgelaufen ? " (Zeitlimit)" : ""));
+            if (lauf.Abgelaufen || lauf.ExitCode != 0)
+            {
+                _sammel = null;
+                return null;
+            }
+            _sammel = lauf;
+            _sammelZeit = DateTime.UtcNow;
+            _sammelGeneration = generation;
+        }
+
+        var zeilen = SammelZeilen(_sammel.Ausgabe, eintrag.WingetId);
+        if (zeilen.Length == 0) return null;
+        protokoll?.Report("winget list (Sammelabfrage) " + eintrag.WingetId + ":\n" + zeilen);
+        return new BefehlErgebnis(0, zeilen, false);
+    }
+
+    /// <summary>The rows of one package from the shared table; empty when it is not in it.</summary>
+    internal static string SammelZeilen(string ausgabe, string id)
+    {
+        var treffer = ausgabe.Replace("\r", "").Split('\n').Where(z => ZeileLesen(z, id) is not null).ToList();
+        return treffer.Count == 0 ? "" : string.Join("\n", treffer);
     }
 
     /// <summary>winget's exit code for "no installed package matches" (measured with v1.29).</summary>
@@ -155,8 +216,18 @@ public sealed class WingetAktualisierer : IAktualisierer
                  + "--accept-source-agreements --accept-package-agreements" + QuellArgument(eintrag);
         protokoll.Report($"winget {args}");
 
-        var lauf = await Kommandozeile.AusfuehrenAsync(
-            Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+        SammelVerwerfen();
+        BefehlErgebnis lauf;
+        try
+        {
+            lauf = await Kommandozeile.AusfuehrenAsync(
+                Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+        }
+        finally
+        {
+            // Also after: a list taken while the installer ran would still show the old version.
+            SammelVerwerfen();
+        }
         protokoll.Report(lauf.Ausgabe);
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
@@ -266,6 +337,7 @@ public sealed class WingetAktualisierer : IAktualisierer
             TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
         protokoll.Report(lauf.Ausgabe);
         try { ordner.Delete(true); } catch { /* one-off folder, harmless if left behind */ }
+        SammelVerwerfen();
 
         if (Kommandozeile.UnsauberesEnde(lauf) is { } abbruchEnde) return abbruchEnde;
         if (lauf.ExitCode != 0)

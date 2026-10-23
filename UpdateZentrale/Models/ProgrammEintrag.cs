@@ -185,6 +185,27 @@ public sealed class ProgrammEintrag
 
     public string? Hinweis { get; set; }
 
+    /// <summary>Text of the "pending" band instead of the default "restart the program" wording.</summary>
+    public string? UebernahmeText { get; set; }
+
+    /// <summary>
+    /// A jump to a new major version (TypeScript 6 → 7, FFmpeg 8 → 9) is shown, but "install all"
+    /// leaves it out; it runs only on a deliberate click on the card.
+    /// </summary>
+    public bool HauptversionNurPerKlick { get; set; }
+
+    /// <summary>
+    /// Expected update duration in seconds until real runs were measured (verlauf.jsonl). Without
+    /// it a quarter of the time limit stands in. Only orders the batch and the duration sort.
+    /// </summary>
+    public int? DauerSchaetzungSekunden { get; set; }
+
+    /// <summary>
+    /// Always the last update of "install all", whatever its duration: the App Installer replaces
+    /// winget itself, and every winget call after it in the same batch would hit a half-swapped tool.
+    /// </summary>
+    public bool Zuletzt { get; set; }
+
     /// <summary>
     /// Why this update can end a running CLI session (Claude Code, Codex, a terminal window).
     /// Set = the card is marked, and "install all" holds it back for a second step that runs

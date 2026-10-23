@@ -95,6 +95,7 @@ public sealed class StoreAktualisierer : IAktualisierer
     {
         if (!File.Exists(Pfade.Winget))
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
+        WingetAktualisierer.SammelVerwerfen();   // the shared winget list must not outlive an install
 
         var args = "upgrade --id " + eintrag.StoreProduktId + " --source msstore --silent --disable-interactivity"
                  + " --accept-source-agreements --accept-package-agreements";
