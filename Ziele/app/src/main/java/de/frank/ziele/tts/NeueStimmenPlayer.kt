@@ -215,11 +215,17 @@ class NeueStimmenPlayer(context: Context) {
         var fehlerFrei: Exception? = null
         if (wahl != GEMINI_TTS_NUR_BEZAHLT) {
             val gesperrt = System.currentTimeMillis() < freiGesperrtBis
+            // Ein anderer Gemini-Weg (Chirp oder bezahlter Schlüssel): Nur dann lohnt es, den kostenlosen Schlüssel zu pausieren.
+            val andererWeg = chirp || (wahl == GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
+            if (frei.isNotBlank() && gesperrt) {
+                fehlerFrei = Abbruch("Der kostenlose Gemini-Schlüssel pausiert nach einem 429 noch bis ${
+                    java.text.SimpleDateFormat("HH:mm", java.util.Locale.GERMANY).format(java.util.Date(freiGesperrtBis))} Uhr.")
+            }
             if (frei.isNotBlank() && !gesperrt) {
                 // Mit Ausweichweg nicht erst bei 429 warten — der nächste Weg ist schneller als jede Wartezeit.
-                val ausweg = mitAusweg || chirp || (wahl == GEMINI_TTS_FREI_DANN_BEZAHLT && bezahlt.isNotBlank())
+                val ausweg = andererWeg
                 try {
-                    return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !ausweg)
+                    return geminiAnfrage(text, modell, stimmeId, frei, "kostenlos", warteBei429 = !(ausweg || mitAusweg))
                 } catch (fehler: Exception) {
                     if (fehler !is Abbruch && fehler !is Fehler) throw fehler
                     fehlerFrei = fehler
@@ -242,7 +248,12 @@ class NeueStimmenPlayer(context: Context) {
                 "Vorlesen fehlgeschlagen: Es ist kein Gemini-Schlüssel für die Stimme hinterlegt. Trag ihn in den Einstellungen ein.",
             )
         }
-        return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = !mitAusweg)
+        try {
+            return geminiAnfrage(text, modell, stimmeId, bezahlt, "bezahlt", warteBei429 = !mitAusweg)
+        } catch (fehler: Abbruch) {
+            // Im Hinweis steht so, welcher Schlüssel an seine Grenze kam.
+            throw Abbruch("Bezahlter Schlüssel: ${fehler.message?.removePrefix("Vorlesen fehlgeschlagen: ")}")
+        }
     }
 
     private suspend fun geminiAnfrage(text: String, modell: String, stimmeId: String, schluessel: String, art: String, warteBei429: Boolean): ByteArray {
@@ -503,7 +514,9 @@ class NeueStimmenPlayer(context: Context) {
                     val ms = maxOf(WARTEZEITEN_MS.getOrElse(versuch) { 0L }, (vorgabeMs ?: 0L) + 500L)
                     Log.w(TAG, "Rate-Limit von Google: quote=${QUOTA_ID.find(koerper)?.groupValues?.get(1) ?: "unbekannt"} retryDelayMs=${vorgabeMs ?: -1} warte=$ms versuch=$versuch")
                     // Verlangt Google länger als die Höchstwartezeit (etwa ein Tageskontingent), sofort aufgeben.
-                    if (!warteBei429 || versuch >= WARTEZEITEN_MS.size || ms > RETRY_HOECHSTENS_MS) throw Abbruch(kontingentText(vorgabeMs ?: 0L))
+                    if (!warteBei429 || versuch >= WARTEZEITEN_MS.size || ms > RETRY_HOECHSTENS_MS) {
+                        throw Abbruch(kontingentText(vorgabeMs ?: 0L, QUOTA_ID.find(koerper)?.groupValues?.get(1)))
+                    }
                     delay(ms)
                     versuch++
                 }
@@ -515,8 +528,10 @@ class NeueStimmenPlayer(context: Context) {
         }
     }
 
-    private fun kontingentText(restMs: Long): String =
-        "Vorlesen fehlgeschlagen: Google lässt die Stimme gerade nicht zu (Fehler 429, Ratenlimit oder Kontingent)" +
+    /** [quote] ist die quotaId aus Googles 429, etwa „GenerateRequestsPerMinutePerProjectPerModel“: Sie nennt das erreichte Limit. */
+    private fun kontingentText(restMs: Long, quote: String? = null): String =
+        "Vorlesen fehlgeschlagen: Google lässt die Stimme gerade nicht zu (Fehler 429, " +
+            (quote?.let { "Quote $it" } ?: "Ratenlimit oder Kontingent") + ")" +
             (if (restMs >= 1_000L) ", wieder in etwa ${(restMs + 999) / 1000} s." else ".")
 
     private fun xmlEscape(text: String): String = text

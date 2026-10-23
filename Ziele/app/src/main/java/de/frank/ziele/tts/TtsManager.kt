@@ -175,12 +175,17 @@ class TtsManager(context: Context) {
                         if (requestGeneration == generation.get() && !terminal.get() && !started.get()) {
                             logger.warning("${provider.id} gescheitert, Rückfall auf Edge: ${fehler.message}")
                             activeProviderId = TtsProvider.EDGE.id
-                            onRueckfall?.invoke("${provider.kurz} gerade nicht verfügbar – liest mit Edge. (${fehler.message?.take(90)})")
+                            // Der volle Grund steht im Hinweis: Auch ein Einrichtungsfehler (Schlüssel, Region) bleibt so sichtbar.
+                            val grund = fehler.message?.removePrefix("Vorlesen fehlgeschlagen: ")?.takeIf { it.isNotBlank() }
+                                ?: fehler.javaClass.simpleName
+                            onRueckfall?.invoke("${provider.kurz} liest gerade nicht, darum liest Edge. Grund: $grund")
                             edgePlayer.speak(
                                 text = spokenText,
-                                voice = preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
+                                voice = rotatedVoice(TtsCatalog.edgeVoices, step, varied)
+                                    ?: preferences?.getString(PREF_EDGE_VOICE, TtsCatalog.DEFAULT_EDGE_VOICE)
                                     ?: TtsCatalog.DEFAULT_EDGE_VOICE,
                                 speechRate = speechRate,
+                                pitchPercent = pitchPercent,
                                 erzwingeDeutsch = erzwingeDeutsch,
                                 onPlaybackStart = guardedStart,
                                 onComplete = guardedComplete,
