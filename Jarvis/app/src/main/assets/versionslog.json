@@ -277,6 +277,7 @@
     {"versionCode": 272, "versionName": "1.8.261", "stand": "23.10.2026, 16:27 Uhr", "notiz": "Fragt Jarvis nach dem Stand einer Ziel-Auswertung, meldet er jetzt richtig, ob sie noch läuft oder fertig ist."},
     {"versionCode": 273, "versionName": "1.8.262", "stand": "23.10.2026, 16:30 Uhr", "notiz": "Tippst du bei der Modellwahl schnell auf Opus 5.5 oder Sol 6.1, wird das sofort übernommen und Jarvis fragt nicht mehr nach; sonst kommt die Frage immer gleich, als Karte mit festem Wortlaut."},
     {"versionCode": 274, "versionName": "1.8.263", "stand": "23.10.2026, 16:36 Uhr", "notiz": "Die schnelle Modellwahl ist robuster: Nach dem Tipp sagt Jarvis erst dann Übernommen, wenn die Folgefrage oder der Start feststeht, andere Antworten derselben Runde bleiben erhalten, und im Live-Gespräch wird nichts doppelt gefragt."},
-    {"versionCode": 274, "versionName": "1.8.263", "stand": "23.10.2026, 16:34 Uhr", "notiz": "Nach dem Papierkorb holt ein Rückgängig-Pfeil den gelöschten Text zurück, die Eingabeblase springt nicht mehr beim ersten Zeichen, und die offene Session in der Seitenleiste ist auch für TalkBack als ausgewählt erkennbar."}
+    {"versionCode": 274, "versionName": "1.8.263", "stand": "23.10.2026, 16:34 Uhr", "notiz": "Nach dem Papierkorb holt ein Rückgängig-Pfeil den gelöschten Text zurück, die Eingabeblase springt nicht mehr beim ersten Zeichen, und die offene Session in der Seitenleiste ist auch für TalkBack als ausgewählt erkennbar."},
+    {"versionCode": 275, "versionName": "1.8.264", "stand": "23.10.2026, 16:37 Uhr", "notiz": "Enthält den Papierkorb mit Rückgängig in der Eingabeblase und die robustere schnelle Modellwahl zusammen in einem Update."}
   ]
 }
