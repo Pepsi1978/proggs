@@ -14,7 +14,6 @@ internal fun anthropicChatPayload(
     model: CodexModel,
     reasoningEffort: ReasoningEffort,
     mitFallback: Boolean,
-    maxTokens: Int = ANTHROPIC_MAX_TOKENS,
 ): JSONObject {
     val messages = JSONArray()
     var rolle: String? = null
@@ -38,8 +37,8 @@ internal fun anthropicChatPayload(
     abschliessen()
     val payload = JSONObject()
         .put("model", model.apiId)
-        // Die Grenze aus den Einstellungen, gedeckelt auf das, was die API annimmt (darüber käme ein Fehler 400).
-        .put("max_tokens", maxTokens.coerceIn(1_024, ANTHROPIC_MAX_TOKENS))
+        // Immer das Maximum je Antwort: Franks Tokenlimit gilt für die ganze Aufgabe und fragt beim Erreichen nach (JarvisAgent).
+        .put("max_tokens", ANTHROPIC_MAX_TOKENS)
         .put("stream", true)
         // Die große Anweisung bleibt über alle Schritte einer Antwort gleich: zwischenspeichern spart Kosten und Wartezeit.
         .put("system", JSONArray().put(textBlock(instructions.trim() + "\n\n" + UMLAUT_HINWEIS).put("cache_control", JSONObject().put("type", "ephemeral"))))
@@ -98,6 +97,12 @@ internal class AnthropicSseAccumulator {
     private var stopReason: String? = null
     var isCompleted = false
         private set
+    private var eingabe = 0L
+    private var ausgabe = 0L
+    /** Verbrauchte Ausgabe-Token dieser Antwort, Denken eingeschlossen (aus `message_delta.usage`). */
+    val ausgabeToken: Int get() = ausgabe.toInt()
+    /** Verbrauchte Tokens dieser Anfrage: Eingabe (auch aus dem Zwischenspeicher) plus Ausgabe samt Denken. */
+    val tokens: Long get() = eingabe + ausgabe
 
     fun accept(data: String): String? {
         if (data.isBlank()) return null
@@ -107,7 +112,19 @@ internal class AnthropicSseAccumulator {
         return when (event.optString("type")) {
             "content_block_delta" -> event.optJSONObject("delta")?.takeIf { it.optString("type") == "text_delta" }
                 ?.optString("text")?.takeIf(String::isNotEmpty)?.also(text::append)
-            "message_delta" -> { event.optJSONObject("delta")?.optString("stop_reason")?.takeIf(String::isNotBlank)?.let { stopReason = it }; null }
+            "message_start" -> {
+                event.optJSONObject("message")?.optJSONObject("usage")?.let { u ->
+                    eingabe = u.optLong("input_tokens") + u.optLong("cache_creation_input_tokens") + u.optLong("cache_read_input_tokens")
+                    ausgabe = u.optLong("output_tokens")
+                }
+                null
+            }
+            "message_delta" -> {
+                event.optJSONObject("delta")?.optString("stop_reason")?.takeIf(String::isNotBlank)?.let { stopReason = it }
+                // Die Ausgabe-Zahl hier ist schon die Summe der ganzen Antwort.
+                event.optJSONObject("usage")?.optLong("output_tokens")?.takeIf { it > 0 }?.let { ausgabe = it }
+                null
+            }
             "message_stop" -> { isCompleted = true; null }
             "error" -> {
                 val fehler = event.optJSONObject("error")

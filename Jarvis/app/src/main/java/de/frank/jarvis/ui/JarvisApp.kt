@@ -151,6 +151,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             }
             // Rückfrage einer Programmier-Sitzung im Vollbild, über allem außer der kurzen Meldung.
             if (!vm.gesperrt) RueckfrageEbene(vm)
+            if (!vm.gesperrt) TokenlimitFenster(vm)
             Meldung(vm, Modifier.align(Alignment.TopCenter).statusBarsPadding())
         }
     }
@@ -205,6 +206,21 @@ private fun Leiste(vm: AppViewModel) {
             }
         }
     }
+}
+
+/** Rückfrage, wenn eine Chat-Aufgabe Franks Tokenlimit ausgeschöpft hat. Tippen daneben entscheidet nichts. */
+@Composable
+private fun TokenlimitFenster(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val frage = vm.tokenlimitFrage ?: return
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = {},
+        containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+        title = { Text("Aufgabe weitermachen?") },
+        text = { Text(frage.text) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.tokenlimitEntscheiden(true) }) { Text("Weiter") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { vm.tokenlimitEntscheiden(false) }) { Text("Abbrechen", color = f.gefahr) } },
+    )
 }
 
 /** Kurze Rückmeldung oben, verschwindet von selbst. */

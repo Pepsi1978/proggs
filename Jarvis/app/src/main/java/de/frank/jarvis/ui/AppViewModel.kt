@@ -55,7 +55,7 @@ enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), AKT
  * Eine Nachricht im Gespräch. [art]: „antwort“, „fehler“ (Fehlermeldung statt Antwort, geht nicht ans Modell) oder
  * „abgebrochen“ (Franks Frage blieb unbeantwortet). [kontext] sieht nur das Modell, etwa was in der Runde erledigt wurde.
  */
-data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0)
+data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "", val anhaenge: List<String> = emptyList(), val bewertung: Int = 0, val tokens: Long = 0)
 
 /** Ein Schritt für „Rückgängig“ in einer Merkliste: wie sich die eigene Änderung umkehren lässt, ohne fremde zu berühren. */
 private sealed class MerkSchritt {
@@ -174,6 +174,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         var schritt by mutableStateOf("")
         lateinit var job: Job
         val erledigt: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
+        /** Tokens aller Modellanfragen dieser Runde; läuft im Koroutinen-Kontext mit. */
+        val tokens = de.frank.jarvis.auth.TokenZaehler()
+    }
+
+    /** Offene Rückfrage „Tokenlimit erreicht“ einer Chat-Runde; die Oberfläche zeigt dafür ein Fenster mit Weiter und Abbrechen. */
+    class TokenlimitFrage(val text: String, val antwort: kotlinx.coroutines.CompletableDeferred<Boolean>)
+    var tokenlimitFrage by mutableStateOf<TokenlimitFrage?>(null)
+        private set
+    /** Mehrere Gespräche können gleichzeitig ans Limit kommen: Sie fragen nacheinander. */
+    private val tokenlimitSperre = kotlinx.coroutines.sync.Mutex()
+
+    /** Fragt Frank im Fenster, ob die Runde mit einem neuen Kontingent weiterarbeiten soll; true = weiter. */
+    private suspend fun tokenlimitFragen(stand: de.frank.jarvis.agent.Zeitablauf): Boolean = tokenlimitSperre.withLock {
+        val frage = TokenlimitFrage("Das Tokenlimit ist erreicht: ${String.format(java.util.Locale.GERMANY, "%,d", stand.tokenVerbraucht)} von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} verbraucht, " +
+            "${stand.schritte} Schritte erledigt. Weiter gibt der Aufgabe noch einmal ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)}; Abbrechen schreibt einen Zwischenstand.",
+            kotlinx.coroutines.CompletableDeferred())
+        withContext(Dispatchers.Main) { tokenlimitFrage = frage }
+        try { frage.antwort.await() } finally { withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) { if (tokenlimitFrage === frage) tokenlimitFrage = null } }
+    }
+
+    fun tokenlimitEntscheiden(weiter: Boolean) {
+        tokenlimitFrage?.antwort?.complete(weiter)
+        tokenlimitFrage = null
     }
 
     /** Die laufenden Antworten je Gespräch (Kennung → Runde). */
@@ -329,7 +352,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .takeLast(2).map { it.text }
         val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
             aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = letzteRueckfrage(gespraech.take(frage)))
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext)) {
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext)) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
@@ -339,7 +362,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val zeitlimit = if (schritte <= 0) 30 * 60_000L else maxOf(120_000L, schritte * 12_000L)
                 var grund: String? = null
                 agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true,
-                    beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it })
+                    beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it },
+                    beiTokenlimit = { stand -> if (tokenlimitFragen(stand)) null else "Tokenlimit von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} erreicht, von Frank abgebrochen" })
                     ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText(grund)).also { art = "fehler" }
             } catch (e: CancellationException) {
                 throw e
@@ -353,7 +377,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (einstellungen.modell.istAnthropic) {
             anthropicKostenStart()
             // Ohne Job (sofort beendet) trotzdem abschließen, sonst bliebe der Zähler hängen.
-            runde.job?.invokeOnCompletion { viewModelScope.launch { anthropicKostenEnde() } } ?: anthropicKostenEnde()
+            runde.job.invokeOnCompletion { viewModelScope.launch { anthropicKostenEnde() } }
         }
     }
 
@@ -516,7 +540,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
         // (wie bei einem Abbruch), sonst führte „versuch es nochmal“ alles ein zweites Mal aus.
         val frageNotiz = if (art == "fehler") erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", runde.erledigt) else ""
-        val neu = Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", runde.erledigt))
+        val neu = Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", runde.erledigt), tokens = runde.tokens.tokens)
         if (runde.sitzung == sitzungId) {
             rundeInsOffene(runde, frageNotiz, neu, vorlesen)
             return
@@ -529,7 +553,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (runde.sitzung == sitzungId) true else {
                     withContext(Dispatchers.IO) {
                         if (frageNotiz.isNotEmpty()) de.frank.jarvis.data.Gespraeche.letzteFrageKontext(getApplication(), runde.sitzung, frageNotiz)
-                        de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), runde.sitzung, de.frank.jarvis.data.GespeicherteNachricht(false, neu.text, neu.art, neu.kontext))
+                        de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), runde.sitzung, de.frank.jarvis.data.GespeicherteNachricht(false, neu.text, neu.art, neu.kontext, tokens = neu.tokens))
                     }
                     false
                 }
@@ -2041,7 +2065,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
         val projekt = sitzungProjekt
-        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) }
+        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) }
         offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
@@ -2198,7 +2222,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             programmierGespraech = id
             val geladen = de.frank.jarvis.data.Gespraeche.laden(app, id)
             if (geladen != null) {
-                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
                 sitzungProjekt = geladen.first.projekt
@@ -2238,7 +2262,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 vorleser.stopp()
                 sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
                 gespraech.clear()
-                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung) })
+                gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) })
                 sitzungId = id
                 sitzungErstellt = geladen.first.erstellt
                 sitzungProjekt = geladen.first.projekt

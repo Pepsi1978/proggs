@@ -150,6 +150,13 @@ internal class CodexSseAccumulator {
     val sources = linkedSetOf<String>()
 
     val isCompleted: Boolean get() = completed
+    /** Verbrauchte Ausgabe-Token dieser Antwort, Denken eingeschlossen (aus `response.completed`). */
+    var ausgabeToken = 0
+        private set
+
+    /** Verbrauchte Tokens dieser Anfrage (`usage.total_tokens` aus `response.completed`); 0 = keine Angabe. */
+    var tokens = 0L
+        private set
 
     /** Wie im Sammler von News Kompass: jedes fertige Ausgabe-Element nur einmal auswerten. */
     private fun collect(item: JSONObject) {
@@ -188,6 +195,10 @@ internal class CodexSseAccumulator {
                     for (index in 0 until output.length()) output.optJSONObject(index)?.let(::collect)
                 }
                 completedText = response?.let(::extractOutputText)
+                response?.optJSONObject("usage")?.let { u ->
+                    tokens = u.optLong("total_tokens").takeIf { it > 0 } ?: (u.optLong("input_tokens") + u.optLong("output_tokens"))
+                    ausgabeToken = u.optInt("output_tokens")
+                }
                 null
             }
             "response.incomplete" -> throw CodexAuthException(
@@ -322,13 +333,15 @@ class CodexAuthManager(context: Context) {
         model: CodexModel,
         reasoningEffort: ReasoningEffort,
         onDelta: suspend (String) -> Unit = {},
+        /** Bekommt die verbrauchten Ausgabe-Token dieser Antwort (Denken eingeschlossen), für Franks Tokenlimit je Aufgabe. */
+        onUsage: (Int) -> Unit = {},
     ): String = withContext(Dispatchers.IO) {
         if (turns.isEmpty()) {
             throw CodexAuthException(AuthErrorKind.NETWORK, "Für die Anfrage fehlt der Text.")
         }
         try {
-            if (model.istAnthropic) requestAnthropic(instructions, turns, model, reasoningEffort, onDelta)
-            else requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+            if (model.istAnthropic) requestAnthropic(instructions, turns, model, reasoningEffort, onDelta, onUsage)
+            else requestCodexAccumulated(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta).also { onUsage(it.ausgabeToken) }.result()
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die Antwort konnte nicht vollständig empfangen werden.", error)
@@ -764,6 +777,7 @@ class CodexAuthManager(context: Context) {
                 activeQuestionCall.clear(trackedResponse.call)
             }
         }
+        currentCoroutineContext()[TokenZaehler]?.dazu(accumulator.tokens)
         // Prüft, ob die Antwort vollständig ist; das Ergebnis selbst holt der Aufrufer.
         accumulator.result()
         return accumulator
@@ -776,6 +790,7 @@ class CodexAuthManager(context: Context) {
         model: CodexModel,
         reasoningEffort: ReasoningEffort,
         onDelta: suspend (String) -> Unit,
+        onUsage: (Int) -> Unit = {},
     ): String {
         val key = anthropicSchluessel().ifBlank {
             throw CodexAuthException(AuthErrorKind.NETWORK, "Für ${model.label} fehlt der Anthropic-API-Schlüssel. Bitte unter Einstellungen → Jarvis' Kopf eintragen.")
@@ -785,7 +800,7 @@ class CodexAuthManager(context: Context) {
         while (true) {
             var deliveredText = false
             try {
-                return requestAnthropicOnce(anthropicChatPayload(instructions, turns, model, reasoningEffort, mitFallback, de.frank.jarvis.data.Einstellungen.get(appContext).tokenlimit), key, mitFallback && model.mitFallback) { delta ->
+                return requestAnthropicOnce(anthropicChatPayload(instructions, turns, model, reasoningEffort, mitFallback), key, mitFallback && model.mitFallback, onUsage) { delta ->
                     deliveredText = true
                     onDelta(delta)
                 }
@@ -807,6 +822,7 @@ class CodexAuthManager(context: Context) {
         payload: JSONObject,
         key: String,
         mitFallback: Boolean,
+        onUsage: (Int) -> Unit,
         onDelta: suspend (String) -> Unit,
     ): String {
         val builder = Request.Builder()
@@ -851,6 +867,9 @@ class CodexAuthManager(context: Context) {
                 activeQuestionCall.clear(trackedResponse.call)
             }
         }
+        currentCoroutineContext()[TokenZaehler]?.dazu(accumulator.tokens)
+        // Auch eine abgeschnittene Antwort hat Token gekostet: vor der Vollständigkeitsprüfung melden.
+        onUsage(accumulator.ausgabeToken)
         return accumulator.result()
     }
 

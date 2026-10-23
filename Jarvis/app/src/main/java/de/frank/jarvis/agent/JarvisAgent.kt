@@ -46,9 +46,16 @@ data class Zeitablauf(
     val unterbrochen: String?,
     val unterbrochenSeitMs: Long,
     val letzterSchrittVorMs: Long?,
+    /** > 0 = nicht die Zeit, sondern Franks Tokenlimit ist erreicht: so viele Token je Durchgang, [tokenVerbraucht] davon verbraucht. */
+    val tokenGrenze: Int = 0,
+    val tokenVerbraucht: Int = 0,
 ) {
+    /** Welche Grenze erreicht ist, als Satzteil („nach Erreichen …“). */
+    val anlass: String get() = if (tokenGrenze > 0) "des Tokenlimits (${Einstellungen.tokenlimitLabel(tokenGrenze)})" else "des internen Zeitlimits ($minuten Minuten)"
+
     /** Läuft die Arbeit normal, hängt sie oder ist sie gestört? Eine Zeile. */
     val zustand: String get() = when {
+        tokenGrenze > 0 && fehlerFolge < 3 -> "Läuft: Der letzte Schritt ist fertig, nur das Tokenlimit ist ausgeschöpft."
         fehlerFolge >= 3 -> "Gestört: Die letzten $fehlerFolge Werkzeugaufrufe sind gescheitert (zuletzt $letzterFehler). Mehr Zeit allein hilft hier vermutlich nicht."
         unterbrochen != null && unterbrochenSeitMs >= HAENGT_MS ->
             "Hängt vermutlich: „$unterbrochen“ lief seit ${unterbrochenSeitMs / 60_000} Minuten ohne Ergebnis und wurde unterbrochen. Ob es beim nächsten Versuch klappt, ist unbekannt."
@@ -58,10 +65,20 @@ data class Zeitablauf(
     }
 
     /** Kurzfassung für Vorgangsbuch und Startseite. */
-    fun kurz(): String = "Zeitlimit erreicht nach $minuten Minuten, $schritte " + (if (maxSchritte > 0) "von $maxSchritte " else "") + "Schritten. " + zustand
+    fun kurz(): String = (if (tokenGrenze > 0) "Tokenlimit erreicht (${tokenText(tokenVerbraucht)} von ${tokenText(tokenGrenze)} Token) nach $minuten Minuten, "
+        else "Zeitlimit erreicht nach $minuten Minuten, ") + "$schritte " + (if (maxSchritte > 0) "von $maxSchritte " else "") + "Schritten. " + zustand
 
     /** Der vollständige Statusbericht für Frank, mit der Frage am Ende. */
-    fun bericht(agent: String): String = buildString {
+    fun bericht(agent: String): String = if (tokenGrenze > 0) buildString {
+        append("Das Tokenlimit ist erreicht: ${tokenText(tokenVerbraucht)} von ${tokenText(tokenGrenze)} Token verbraucht. Aufgabe weitermachen oder abbrechen?\n\n")
+        append("**Zustand:** ").append(zustand).append("\n\n")
+        append("**Bisher erledigt** (").append(minuten).append(" Minuten):\n")
+        append("- ").append(schritte).append(if (maxSchritte > 0) " von $maxSchritte Schritten genutzt" else " Schritte (Schrittlimit unbegrenzt)").append('\n')
+        if (genutzt.isNotEmpty()) append("- Werkzeuge: ").append(genutzt.entries.joinToString { (t, n) -> if (n > 1) "$t ($n×)" else t }).append('\n')
+        if (aenderungen.isNotEmpty()) append("- Änderungen: ").append(aenderungen.joinToString("; ").take(600)).append('\n')
+        append("\n**Weiterarbeiten:** Der Agent $agent setzt denselben Auftrag mit seinem Arbeitsstand fort, mit weiteren ${tokenText(tokenGrenze)} Token.")
+        append(" **Abbrechen:** Er schreibt einen Zwischenstand aus dem bisher Gesammelten.")
+    } else buildString {
         append("Das interne Zeitlimit ist erreicht. Abbrechen oder weiterarbeiten?\n\n")
         append("**Zustand:** ").append(zustand).append("\n\n")
         append("**Bisher erledigt** (").append(minuten).append(" Minuten, ").append(zeitfenster).append(if (zeitfenster == 1) ". Zeitfenster" else ". Zeitfenster in Folge").append("):\n")
@@ -77,6 +94,7 @@ data class Zeitablauf(
     }
 
     private fun minutenText(ms: Long): String = if (ms < 60_000) "${ms / 1000} Sekunden" else "${ms / 60_000} Minuten"
+    private fun tokenText(n: Int): String = String.format(java.util.Locale.GERMANY, "%,d", n)
 
     companion object {
         /** So lange ohne Ergebnis gilt ein einzelnes Werkzeug oder ein Modellschritt als vermutlich hängend. */
@@ -141,11 +159,17 @@ class JarvisAgent(context: Context) {
          * ein Text = beenden mit Zwischenstand, der Text ist der Grund. Ohne Rückruf endet der Lauf beim Zeitlimit wie bisher.
          */
         beiZeitablauf: (suspend (Zeitablauf) -> String?)? = null,
+        /**
+         * Franks Tokenlimit (Einstellungen → Jarvis' Kopf) gilt nur mit diesem Rückruf: Haben die Modellschritte zusammen so viele
+         * Ausgabe-Token verbraucht, pausiert der Lauf zwischen zwei Schritten und fragt hier. null = noch einmal so viele Token,
+         * ein Text = beenden mit Zwischenstand. Ohne Rückruf (Tagesauswertung, Live-Gespräch) gibt es kein Tokenlimit: Niemand könnte antworten.
+         */
+        beiTokenlimit: (suspend (Zeitablauf) -> String?)? = null,
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
             versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, ablageDauerhaft, lernen, abschluss, beiAenderung, bilder,
-                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf)
+                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf, beiTokenlimit)
         }
 
     private suspend fun versucheIntern(
@@ -167,6 +191,7 @@ class JarvisAgent(context: Context) {
         schnell: Boolean,
         beiAbbruch: (String) -> Unit,
         beiZeitablauf: (suspend (Zeitablauf) -> String?)?,
+        beiTokenlimit: (suspend (Zeitablauf) -> String?)?,
     ): String? {
         if (!auth.kannDenken(modell)) { beiAbbruch(if (modell.istAnthropic) "Für ${modell.label} fehlt der Anthropic-API-Schlüssel" else "Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
@@ -210,6 +235,10 @@ class JarvisAgent(context: Context) {
         val meldeAenderung: (String) -> Unit = { aenderungen += it; beiAenderung(it) }
         var zeitfenster = 0
         var endeVonAussen: String? = null
+        // Franks Tokenlimit je Durchgang (0 = keines); gezählt werden die Ausgabe-Token aller Modellschritte, Denken eingeschlossen.
+        val tokenGrenze = if (beiTokenlimit != null) einstellungen.tokenlimit else 0
+        var verbraucht = 0
+        var tokenErreicht = false
         // Wo in zuege die Werkzeugergebnisse stehen: Wird das Gesamtbudget überschritten, werden die älteren gekürzt.
         val ergebnisZuege = mutableListOf<Int>()
         var ergebnis: String?
@@ -224,7 +253,7 @@ class JarvisAgent(context: Context) {
                 val modellBeginn = System.currentTimeMillis()
                 laeuftGerade = MODELL_DENKT
                 laeuftSeit = modellBeginn
-                val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe)
+                val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it })
                 Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen")
                 val schritt = lies(roh)
                 val (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
@@ -265,6 +294,8 @@ class JarvisAgent(context: Context) {
                 }
                 ergebnisZuege += zuege.lastIndex
                 kuerzeAeltere(zuege, ergebnisZuege, ERGEBNIS_BUDGET)
+                // Tokenlimit ausgeschöpft: zwischen zwei Schritten anhalten, unten wird Frank gefragt. Eine fertige Antwort geht immer durch.
+                if (tokenGrenze > 0 && verbraucht >= tokenGrenze && (maxSchritte <= 0 || schritte < maxSchritte)) { tokenErreicht = true; return@withTimeoutOrNull null }
             }
             alleSchritte = true
             null
@@ -281,8 +312,25 @@ class JarvisAgent(context: Context) {
             null
           }
             }
+            if (ergebnis != null || alleSchritte || modellFehler != null) break
+            if (tokenErreicht && beiTokenlimit != null) {
+                // Tokenlimit erreicht: fragen; weiter = derselbe Arbeitsstand mit einem neuen Kontingent gleicher Größe.
+                tokenErreicht = false
+                val stand = Zeitablauf(
+                    zeitfenster = zeitfenster, minuten = (System.currentTimeMillis() - beginn) / 60_000, schritte = schritte, maxSchritte = maxSchritte,
+                    genutzt = genutzt.toMap(), fehler = fehlerZahl, fehlerFolge = fehlerFolge, letzterFehler = letzterFehler, aenderungen = aenderungen.toList(),
+                    unterbrochen = null, unterbrochenSeitMs = 0L, letzterSchrittVorMs = 0L, tokenGrenze = tokenGrenze, tokenVerbraucht = verbraucht,
+                )
+                endeVonAussen = beiTokenlimit(stand)
+                if (endeVonAussen != null) break
+                verbraucht = 0
+                val letzter = zuege.lastIndex
+                zuege[letzter] = zuege[letzter].copy(text = zuege[letzter].text + "\n\nFORTSETZUNG: Das Tokenlimit war erreicht; Frank hat entschieden, dass du weiterarbeitest " +
+                    "(weitere ${Einstellungen.tokenlimitLabel(tokenGrenze)}). Mach dort weiter, wo du warst.")
+                continue
+            }
             // Fertig, Schrittlimit, Modellfehler oder ohne Rückfrage (Chat, Tagesauswertung): wie bisher weiter unten.
-            if (ergebnis != null || alleSchritte || modellFehler != null || beiZeitablauf == null) break
+            if (beiZeitablauf == null) break
             // Zeitfenster abgelaufen: Zustand festhalten und fragen, statt die Arbeit zu verwerfen.
             val jetzt = System.currentTimeMillis()
             val unterbrochen = laeuftGerade

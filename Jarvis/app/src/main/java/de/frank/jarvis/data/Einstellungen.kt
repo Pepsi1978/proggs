@@ -208,7 +208,7 @@ class Einstellungen private constructor(context: Context) {
             require(v in SCHRITTLIMITS) { "Ungültiges Schrittlimit $v; erlaubt: ${SCHRITTLIMITS.joinToString { schrittlimitLabel(it) }}" }
             put { putInt("schrittlimit", v) }
         }
-    /** Höchstens so viele Token darf das Modell je Antwort verbrauchen (Denken samt Text); Claude nimmt davon höchstens 128 000. */
+    /** So viele Ausgabe-Token (Denken samt Text) darf eine Aufgabe im Chat oder ein Agent verbrauchen, bevor Jarvis fragt, ob er weitermachen soll. */
     var tokenlimit: Int
         get() = prefs.getInt("tokenlimit", STANDARD_TOKENLIMIT).takeIf { it in TOKENLIMITS } ?: STANDARD_TOKENLIMIT
         set(v) {

@@ -244,18 +244,19 @@ object Agenten {
         try {
             _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = stand.kurz(), wartet = kennung) else it } }
             imBuch?.let { (v, buch) -> runCatching { buch.rueckfrage(v, stand.kurz()) } }
-            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Zeitlimit erreicht, wartet auf Franks Entscheidung: ${stand.kurz()}", ok = true)
+            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Grenze erreicht, wartet auf Franks Entscheidung: ${stand.kurz()}", ok = true)
             runCatching { beiFrage(kennung, stand.bericht(plan.name)) }.onFailure { Log.w(TAG, "Zeitablauf-Frage nicht zugestellt", it) }
             weiter = kotlinx.coroutines.withTimeoutOrNull(ANTWORT_MS) { antwort.await() }
             runCatching { nachEntscheidung(kennung, weiter == true) }
             return when (weiter) {
                 true -> {
                     imBuch?.let { (v, buch) -> runCatching { buch.weiter(v) } }
-                    Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Frank: weiterarbeiten, weitere $ZEITLIMIT_MINUTEN Minuten", ok = true)
+                    Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Frank: weiterarbeiten, " +
+                        if (stand.tokenGrenze > 0) "weitere ${de.frank.jarvis.data.Einstellungen.tokenlimitLabel(stand.tokenGrenze)}" else "weitere $ZEITLIMIT_MINUTEN Minuten", ok = true)
                     null
                 }
-                false -> "Nach Ablauf des internen Zeitlimits (${stand.minuten} Minuten) von Frank abgebrochen"
-                null -> "Nach Ablauf des internen Zeitlimits (${stand.minuten} Minuten) kam ${ANTWORT_MS / 3_600_000} Stunden lang keine Entscheidung; beendet"
+                false -> "Nach Erreichen ${stand.anlass} von Frank abgebrochen"
+                null -> "Nach Erreichen ${stand.anlass} kam ${ANTWORT_MS / 3_600_000} Stunden lang keine Entscheidung; beendet"
             }
         } finally {
             entscheidungen.remove(kennung, antwort)
@@ -298,6 +299,8 @@ object Agenten {
                 beiSchritt = { schritt -> _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = schritt) else it } }; beiSchritt(schritt) },
                 beiAbbruch = { grund = it },
                 beiZeitablauf = { stand -> beiZeitablauf(stand).also { if (it != null) nachZeitablaufBeendet = true } },
+                // Franks Tokenlimit: dieselbe Rückfrage wie beim Zeitlimit, nur mit dem Tokenstand.
+                beiTokenlimit = { stand -> beiZeitablauf(stand).also { if (it != null) nachZeitablaufBeendet = true } },
             ) }
             if (bericht.isNullOrBlank()) {
                 Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Kein Ergebnis (${grund ?: "leere Antwort"}) für: ${auftrag.take(120)}", ok = false)

@@ -537,6 +537,13 @@ private fun AntwortLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
         LeistenKnopf(Icons.AutoMirrored.Rounded.CallSplit, "In neuem Chat fortsetzen", f.textLeise) { vm.abzweigen(nummer) }
         LeistenKnopf(Icons.Rounded.Refresh, "Erneut versuchen", f.textLeise) { vm.erneutVersuchen(nummer) }
     }
+    // Verbrauch dieser Antwort und aller Antworten des Gesprächs bis hierher.
+    if (n.tokens > 0) {
+        val gesamt = vm.gespraech.take(nummer + 1).sumOf { it.tokens }
+        val zahl = { t: Long -> String.format(java.util.Locale.GERMAN, "%,d", t) }
+        Text("${zahl(n.tokens)} Tokens · im Gespräch gesamt ${zahl(gesamt)}", color = f.textLeise, fontSize = 13.sp,
+            modifier = Modifier.padding(start = 8.dp, bottom = 4.dp))
+    }
     if (grundFragen) androidx.compose.material3.ModalBottomSheet(onDismissRequest = { grundFragen = false }, containerColor = menueFlaeche(f)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             Text("Was hat nicht gepasst?", color = f.text, fontSize = 19.sp, fontWeight = FontWeight.Bold)

@@ -243,10 +243,14 @@ object Tagesauswertung {
 
             val deuten = einstellungen.auswertungDeutung
             if (deuten) schritt("Auswertung schreiben")
+            // Zählt die Tokens aller Modellanfragen dieser Auswertung; sie stehen danach unter dem Text.
+            val zaehler = de.frank.jarvis.auth.TokenZaehler()
             val antwort: String? = if (!deuten) null else try {
                 // „Maximal“ denkt mehrere Minuten pro Schritt: dann mehr Zeit, sonst endet der Lauf als reiner Datenbericht.
                 val zeitlimit = if (einstellungen.denkstufe == de.frank.jarvis.auth.ReasoningEffort.MAX) 12 * 60_000L else 5 * 60_000L
-                JarvisAgent(app).versuche(auftrag(daten), zeitlimitMs = zeitlimit, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
+                kotlinx.coroutines.withContext(zaehler) {
+                    JarvisAgent(app).versuche(auftrag(daten), zeitlimitMs = zeitlimit, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
@@ -254,7 +258,10 @@ object Tagesauswertung {
                 Logbuch.fehler("Tagesauswertung: Modell fehlgeschlagen", e, anlass)
                 null
             }
-            val text = antwort?.trim()?.takeIf { it.length > 200 }
+            val text = antwort?.trim()?.takeIf { it.length > 200 }?.let { t ->
+                if (zaehler.tokens <= 0) t
+                else t + "\n\nVerbrauch dieser Auswertung: " + String.format(Locale.GERMAN, "%,d", zaehler.tokens) + " Tokens (${einstellungen.modell.label})."
+            }
 
             val fertig = Auswertung(
                 zeit = System.currentTimeMillis(),

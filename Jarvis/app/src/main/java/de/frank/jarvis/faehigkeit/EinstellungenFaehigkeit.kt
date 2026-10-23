@@ -406,7 +406,7 @@ class EinstellungsKatalog(context: Context) {
                 { ReasoningEffort.entries.flatMap { st -> listOf(st.name to st.label, st.name to st.anthropicLabel) } }) { e.denkstufe = ReasoningEffort.valueOf(it) },
             auswahl("schrittlimit", "Modell", "Schrittlimit pro Anfrage", "Höchstens so viele Bearbeitungsrunden samt Werkzeugaufrufen je Anfrage, im Chat und bei allen Agenten; Unbegrenzt hebt nur dieses Limit auf (Zeitlimit und Abbrechen gelten weiter) und kann mehr kosten und länger dauern.",
                 { Einstellungen.SCHRITTLIMITS.map { it.toString() to Einstellungen.schrittlimitLabel(it) } }, { e.schrittlimit.toString() }) { e.schrittlimit = it.toInt() },
-            auswahl("tokenlimit", "Modell", "Tokenlimit pro Antwort", "Höchstens so viele Token darf das Modell je Antwort verbrauchen, Denken samt Text. Claude nimmt davon höchstens 128 000; die GPT-Modelle über das ChatGPT-Konto haben keine einstellbare Grenze und nutzen immer ihr Maximum.",
+            auswahl("tokenlimit", "Modell", "Tokenlimit pro Aufgabe", "So viele Token (Denken samt Text) darf eine Aufgabe im Chat oder ein Agent verbrauchen, bei allen Modellen. Ist es erreicht, fragt Jarvis, ob er weitermachen soll: Weiter gibt noch einmal so viele Token, Abbrechen schreibt einen Zwischenstand. Die Tagesauswertung und das Live-Gespräch sind ausgenommen.",
                 { Einstellungen.TOKENLIMITS.map { it.toString() to Einstellungen.tokenlimitLabel(it) } }, { e.tokenlimit.toString() }) { e.tokenlimit = it.toInt() },
 
             // ---- Live-Gespräch ----
