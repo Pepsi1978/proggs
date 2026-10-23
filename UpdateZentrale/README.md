@@ -4,7 +4,7 @@ Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und ak
 LM Studio (inklusive Engines und Runtimes), Claude Code CLI,
 Codex CLI, Kimi Code CLI, Antigravity CLI, OpenCode, GitHub CLI, PowerShell 7, die Kommandozeilen-Werkzeuge (ripgrep, fd,
 bat, fzf, jq, delta, lazygit, ShellCheck, shfmt, Trivy, FFmpeg, Rclone, scrcpy, uv), Stream Deck, VPN (WireGuard,
-Windscribe), die komplette Programmierumgebung (.NET 8 und 10, Node.js, fnm, Deno, Java, Gradle, Kotlin, Rust, Go,
+Windscribe), die komplette Programmierumgebung (.NET 8 und 10, Node.js, Deno, Java, Gradle, Kotlin, Rust, Go,
 Python, Visual Studio, VS Code, Android Studio und SDK, Git, Docker, Windows SDK, npm-Werkzeuge …), winget selbst
 sowie die eigenen Werkzeuge OpenLauncher, TVO, CVO und die UpdateZentrale.
 
