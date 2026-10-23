@@ -230,8 +230,12 @@ def frage_status(frage_id: str, status: str, antwort: str = "", grund: str = "",
     return melde_sicher("frage_status", "", {"frage_id": frage_id, "status": status, "antwort": antwort[:2000], "grund": grund}, versuche=versuche)
 
 
-def warte_auf_antwort(frage_id: str) -> dict | None:
+def warte_auf_antwort(frage_id: str, neu_melden=None) -> dict | None:
+    """Franks Antwort, {"freigeben": True}, {"geschlossen": True} (in Jarvis ohne Antwort geschlossen) oder None (abgelaufen).
+    404 heißt nicht „abgelaufen“: Der Relay hat die Frage verloren (Neustart) oder kannte sie noch nicht. Dann meldet
+    [neu_melden] sie höchstens alle 30 s erneut, und es wird bis zur Frist weiter gewartet; Frank hat die Frage ja vor sich."""
     frist = time.monotonic() + FRAGE_WARTEN_S
+    zuletzt_neu = time.monotonic()
     while time.monotonic() < frist:
         try:
             code, daten = rufe("/pc/antwort?frage_id=" + urllib.parse.quote(frage_id), zeitlimit=35)
@@ -243,8 +247,18 @@ def warte_auf_antwort(frage_id: str) -> dict | None:
             if daten.get("freigeben"):
                 return {"freigeben": True}
             return daten
-        if code in (404, 410):
-            return None
+        if code == 410:
+            return {"geschlossen": True}
+        if code == 404:
+            if neu_melden and time.monotonic() - zuletzt_neu >= 30:
+                zuletzt_neu = time.monotonic()
+                schreib("Rückfrage beim Relay unbekannt: erneut gemeldet")
+                try:
+                    neu_melden()
+                except Exception as fehler:
+                    schreib(f"Erneut melden: {fehler}")
+            time.sleep(3)
+            continue
         # 204 = noch keine Antwort (der Relay hat schon gewartet); alles andere (etwa 502 beim Neustart des Relays) kommt
         # sofort zurück und darf die Schleife nicht ohne Pause gegen den Server laufen lassen.
         if code != 204:
@@ -944,7 +958,8 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
         frage_text = str(f.get("question", ""))
         labels = [str(o.get("label", "")) for o in f.get("options") or [] if isinstance(o, dict)]
         nein = next((l for l in labels if l.strip().lower().startswith("nein")), "")
-        if "review" in frage_text.lower():
+        # Nur das Angebot eines Code-Reviews gilt als Nein, nie etwa „Soll ich die Review-Befunde beheben?“.
+        if re.search(r"(?i)code[- ]?review", frage_text) and not re.search(r"(?i)befund|beheb|fix", frage_text):
             antworten[frage_text] = nein or "Nein"
         else:
             empfohlen = next((l for l in labels if re.search(r"(?i)recommended|empfohlen", l)), "")
@@ -958,6 +973,14 @@ def ohne_antwort(ein: dict, fragen: list, grund: str) -> dict:
         "permissionDecisionReason": grund + ".",
         "updatedInput": {**ein, "answers": antworten},
     }}
+
+
+def weiter_ohne_antwort(grund: str) -> str:
+    """Anweisung an die Sitzung, wenn eine freie Rückfrage am Zugende ohne Antwort blieb (Stop-Hook, decision block)."""
+    return (f"{grund}: Frank hat auf deine Frage nicht geantwortet. Halte das fest und frag nicht erneut. Geht es um das Angebot "
+            "eines Code-Reviews, gilt Nein. Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende "
+            "den Zug mit einem Satz. Sonst überlege selbst die bestmögliche Lösung, baue sie ein, arbeite weiter und nenne die "
+            "Entscheidung in der Abschlussmeldung.")
 
 
 def frage(eingabe: dict) -> None:
@@ -992,7 +1015,12 @@ def frage(eingabe: dict) -> None:
         sys.stdout.write(json.dumps(ohne_antwort(ein, fragen, "Jarvis war nicht erreichbar")))
         return
     merke_frage(tool_use_id, frage_id, "jarvis")
-    antwort = warte_auf_antwort(frage_id)
+    antwort = warte_auf_antwort(frage_id, lambda: melde("frage", "❓ " + kurz, daten))
+    if antwort and antwort.get("geschlossen"):
+        antwort = None
+        grund = "Die Rückfrage wurde in Jarvis ohne Antwort geschlossen"
+    else:
+        grund = f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht geantwortet"
     if antwort and antwort.get("freigeben"):
         # Frank hat in Jarvis „In der Claude-App beantworten“ getippt: Er sitzt dran, der normale Dialog erscheint.
         schreib("Keine Antwort über Jarvis (freigegeben): normaler Dialog")
@@ -1003,7 +1031,7 @@ def frage(eingabe: dict) -> None:
         # Abgelaufen: Früher öffnete jetzt der Dialog am Rechner und die Sitzung stand, bis jemand dort antwortete
         # (Vorfälle 22./23.10.2026). Jetzt gilt: kein Review, sonst selbst entscheiden und weiterarbeiten.
         schreib("Keine Antwort über Jarvis (abgelaufen): Sitzung entscheidet selbst und arbeitet weiter")
-        ausgabe = ohne_antwort(ein, fragen, f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht geantwortet")
+        ausgabe = ohne_antwort(ein, fragen, grund)
         text = "; ".join(ausgabe["hookSpecificOutput"]["updatedInput"]["answers"].values())
         # Zuerst die Antwort: Ist der Relay weg (ein Grund für das Ausbleiben), darf keine Meldung sie verhindern.
         sys.stdout.write(json.dumps(ausgabe))
@@ -1077,34 +1105,36 @@ def stop(eingabe: dict) -> None:
                  "fragen": [{"question": letzte[-3000:], "options": optionen}]}
         # Bei sehr langer Nachricht zählt das Ende (dort steht die Frage); vorn sichtbar markiert statt still abgeschnitten.
         # Platz für Zeichen und Hinweis lassen, sonst kürzte melde() hinten, wo die Frage steht.
-        if not melde_sicher("frage", "❓ " + (letzte if len(letzte) <= MAX_TEXT - 2 else "[… Anfang gekürzt] " + letzte[-(MAX_TEXT - 40):]), daten):
-            schreib("Freie Rückfrage nicht an Jarvis zugestellt")
-            nachtraege_im_stop()
+        schritt = "❓ " + (letzte if len(letzte) <= MAX_TEXT - 2 else "[… Anfang gekürzt] " + letzte[-(MAX_TEXT - 40):])
+        if not melde_sicher("frage", schritt, daten):
+            # Ohne Jarvis bliebe die Sitzung stehen, bis jemand am Rechner antwortet (Franks Vorgabe vom 23.10.2026: nie).
+            schreib("Freie Rückfrage nicht an Jarvis zugestellt: Sitzung arbeitet weiter")
+            sys.stdout.write(json.dumps({"decision": "block", "reason": weiter_ohne_antwort("Jarvis war nicht erreichbar")}, ensure_ascii=False))
+            sys.stdout.flush()
             return
-        antwort = warte_auf_antwort(frage_id)
-        if antwort and not antwort.get("freigeben"):
+        antwort = warte_auf_antwort(frage_id, lambda: melde("frage", schritt, daten))
+        if antwort and not antwort.get("freigeben") and not antwort.get("geschlossen"):
             inhalt = str(antwort.get("text", "")).strip() or "; ".join(str(v) for v in (antwort.get("antworten") or {}).values())
-            frage_status(frage_id, "beantwortet", antwort=inhalt)
-            melde("laeuft", "💬 Antwort von Frank: " + inhalt)
+            # Zuerst die Antwort: Ein Netzfehler beim Melden ließ sie sonst verloren gehen.
             sys.stdout.write(json.dumps({"decision": "block", "reason": f"Frank hat über Jarvis geantwortet: {inhalt}"}, ensure_ascii=False))
+            sys.stdout.flush()
+            frage_status(frage_id, "beantwortet", antwort=inhalt)
+            melde_still("laeuft", "💬 Antwort von Frank: " + inhalt)
             return
-        if antwort:
+        if antwort and antwort.get("freigeben"):
             # Freigegeben: Frank antwortet am Rechner oder in der Claude-App wie auf jede Nachricht.
             frage_status(frage_id, "am_pc", grund="freigegeben")
             schreib("Freie Rückfrage ohne Antwort über Jarvis (freigegeben)")
             nachtraege_im_stop()
             return
-        # Abgelaufen: nie stehen bleiben (Vorgabe vom 23.10.2026). Einmal weiterarbeiten lassen; stop_hook_active verhindert
-        # beim nächsten Stop eine zweite Runde.
-        schreib("Freie Rückfrage ohne Antwort über Jarvis (abgelaufen): Sitzung arbeitet weiter")
-        sys.stdout.write(json.dumps({"decision": "block", "reason": (
-            f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht auf deine Frage geantwortet. Nicht erneut fragen: Geht es um ein Review, "
-            "gilt Nein. Ist es nur ein Angebot oder Vorschlag für Zusatzarbeit, setze nichts davon um und beende den Zug mit einem "
-            "Satz. Sonst entscheide selbst die sicherste sinnvolle Variante, arbeite weiter und nenne die Annahme in der Abschlussmeldung.")},
-            ensure_ascii=False))
+        # Abgelaufen oder in Jarvis ohne Antwort geschlossen: nie stehen bleiben. Einmal weiterarbeiten lassen;
+        # stop_hook_active verhindert beim nächsten Stop eine zweite Runde.
+        grund = "Die Rückfrage wurde in Jarvis ohne Antwort geschlossen" if antwort else f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht geantwortet"
+        schreib(f"Freie Rückfrage ohne Antwort über Jarvis ({grund}): Sitzung arbeitet weiter")
+        sys.stdout.write(json.dumps({"decision": "block", "reason": weiter_ohne_antwort(grund)}, ensure_ascii=False))
         sys.stdout.flush()
         frage_status(frage_id, "erledigt", antwort="keine Antwort, Sitzung entscheidet selbst", grund="abgelaufen")
-        melde_still("laeuft", "⏱️ Keine Antwort in fünf Minuten, die Sitzung entscheidet selbst und arbeitet weiter.")
+        melde_still("laeuft", "⏱️ Keine Antwort, die Sitzung entscheidet selbst und arbeitet weiter.")
         return
     # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung), dazu die Dauer
     # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal). Der Stand „info“ ist das Merkmal des ausführlichen

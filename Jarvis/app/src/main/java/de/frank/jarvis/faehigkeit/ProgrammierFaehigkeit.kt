@@ -727,6 +727,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val eintrag = Auftragsbuch.zuFrage(app, frageId) ?: Auftragsbuch.finde(app, auftragId) ?: return
         val gespraech = eintrag.optString("gespraech")
         Auftragsbuch.frageErledigt(app, frageId)
+        rueckfrageAnsageAbbrechen(frageId)
         aktivitaetMelden(Auftragsbuch.finde(app, eintrag.optString("id")) ?: eintrag)
         if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, stand, frage.optString("antwort"), frage.optString("grund"))
     }
@@ -767,7 +768,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val stand = standVomServer(status) ?: continue
             if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, stand, f.optString("antwort_text"), f.optString("grund"))
-            if (RueckfrageStand.endgueltig(stand)) Auftragsbuch.frageErledigt(app, frageId)
+            if (RueckfrageStand.endgueltig(stand)) {
+                Auftragsbuch.frageErledigt(app, frageId)
+                rueckfrageAnsageAbbrechen(frageId)
+            }
         }
     }
 
@@ -1131,8 +1135,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         oeffnen?.let {
                             val tippen = PendingIntent.getActivity(app, nummer, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                             setContentIntent(tippen)
-                            // Rückfrage bei gesperrtem Bildschirm: als Vollbild, nicht nur als Zeile in der Leiste.
-                            if (stand == "frage" && frageId.isNotEmpty()) setPriority(NotificationCompat.PRIORITY_HIGH).setFullScreenIntent(tippen, true)
+                            // Rückfrage bei gesperrtem Bildschirm: als Vollbild, nicht nur als Zeile in der Leiste. Android löst das
+                            // nur auf einem Kanal mit hoher Wichtigkeit aus (jarvis_ergebnisse ist DEFAULT), daher ein eigener Kanal.
+                            if (stand == "frage" && frageId.isNotEmpty()) {
+                                rueckfrageKanalAnlegen()
+                                setChannelId(KANAL_RUECKFRAGE).setCategory(NotificationCompat.CATEGORY_CALL)
+                                    .setPriority(NotificationCompat.PRIORITY_HIGH).setFullScreenIntent(tippen, true)
+                                if (android.os.Build.VERSION.SDK_INT >= 34 &&
+                                    !app.getSystemService(android.app.NotificationManager::class.java).canUseFullScreenIntent())
+                                    Logbuch.system("Rückfrage ohne Vollbild-Benachrichtigung", "Vollbild-Benachrichtigungen sind für Jarvis nicht erlaubt")
+                            }
                         }
                     },
                 // Zwischenschritte still; Rückfrage, Fertig und Problem nach Franks Einstellung (Ton, Wecker, Vorlesen).
@@ -1149,6 +1161,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Antwort fehlt, unabhängig von Vorlese-Einstellung und Ruhezeit; nach dem Entsperren steht das Vollbild schon vorn.
      * Erst nach dem Posten ins Gespräch aufrufen: Das Vollbild sucht die Frage dort.
      */
+    private fun rueckfrageKanalAnlegen() {
+        app.getSystemService(android.app.NotificationManager::class.java).createNotificationChannel(
+            android.app.NotificationChannel(KANAL_RUECKFRAGE, "Rückfragen beim Programmieren", android.app.NotificationManager.IMPORTANCE_HIGH)
+                .apply { description = "Eine Programmier-Sitzung wartet auf deine Antwort: erscheint sofort im Vollbild." })
+    }
+
     private fun rueckfrageVorn(eintrag: JSONObject, frage: JSONObject, kurz: String) {
         val appName = eintrag.optString("app")
         val gespraech = eintrag.optString("gespraech")
@@ -1163,15 +1181,23 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 Logbuch.system("Rückfrage nur als Benachrichtigung", "„Über anderen Apps einblenden“ ist für Jarvis nicht erlaubt")
             }
         }
-        val review = kurz.contains("review", ignoreCase = true)
+        // Eine freie Rückfrage trägt die ganze letzte Nachricht der Sitzung: Die eigentliche Frage steht an ihrem Ende.
+        val frageText = if (frage.optBoolean("frei")) kurz.lines().map { it.trim() }.filter { it.isNotEmpty() }.takeLast(2).joinToString(" ").takeLast(300)
+            else kurz.take(300)
+        val review = Regex("(?i)code[- ]?review").containsMatchIn(frageText) && !Regex("(?i)befund|beheb|fix").containsMatchIn(frageText)
         val satz = if (review) "Eine Code-Review-Frage vom Programmierer zu $appName wartet auf deine Antwort."
-            else "Eine Rückfrage vom Programmierer zu $appName wartet auf deine Antwort: ${kurz.take(300)}"
+            else "Eine Rückfrage vom Programmierer zu $appName wartet auf deine Antwort: $frageText"
         val aus = !(app.getSystemService(android.os.PowerManager::class.java)?.isInteractive ?: true) ||
             (app.getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked ?: false)
         val art = de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN
-        if (aus || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art))
+        // Bei ausgeschaltetem Handy immer, auch in der Ruhezeit und ohne Vorlese-Wahl; nur nie, wenn Frank die Art ganz abgeschaltet hat.
+        if ((aus && de.frank.jarvis.meldung.Meldungen.an(app, art)) || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art))
             de.frank.jarvis.meldung.Meldungen.vorlesenSpaeter(app, art, "Rückfrage: $appName", satz, "rueckfrage-$frageId", ausdruecklich = aus)
     }
+
+    /** Eine erledigte Rückfrage (beantwortet, abgelaufen, am Rechner) wird nicht mehr nachträglich angesagt. */
+    private fun rueckfrageAnsageAbbrechen(frageId: String) =
+        de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN, "rueckfrage-$frageId")
 
     /** Die letzten Programmieraufträge mit ihren Schritten, dauerhaft in den App-Einstellungen (höchstens 20). */
     private object Auftragsbuch {
@@ -1845,6 +1871,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Extras der Benachrichtigung einer Rückfrage: welches Gespräch und welche Rückfrage die App öffnet. */
         const val EXTRA_GESPRAECH = "de.frank.jarvis.rueckfrage_gespraech"
         const val EXTRA_RUECKFRAGE = "de.frank.jarvis.rueckfrage_id"
+        private const val KANAL_RUECKFRAGE = "jarvis_rueckfrage"
         private val STATUS_HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(8, TimeUnit.SECONDS).build()
         /** Nur Zusatzinfo zur Auftragsübersicht: kurz, damit eine Sprachantwort nie lange darauf wartet. */
         private val SITZUNGS_HTTP: OkHttpClient = STATUS_HTTP.newBuilder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(3, TimeUnit.SECONDS).callTimeout(4, TimeUnit.SECONDS).build()
