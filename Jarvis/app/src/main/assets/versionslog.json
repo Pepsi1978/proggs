@@ -269,6 +269,7 @@
     {"versionCode": 264, "versionName": "1.8.253", "stand": "23.10.2026, 14:25 Uhr", "notiz": "Gemini-Stimmen mit eigenem Sprechtempo enden nicht mehr mit einem kurzen Rauschen."},
     {"versionCode": 265, "versionName": "1.8.254", "stand": "23.10.2026, 14:33 Uhr", "notiz": "Der Reiter „Guthaben“ zeigt jetzt auch deine Google-Vorauszahlung (echtes Geld) und warnt rot, sobald sie sinkt; bei abgelaufener Anmeldung gibt es Knöpfe zum erneuten Abfragen und Neu-Anmelden."},
     {"versionCode": 266, "versionName": "1.8.255", "stand": "23.10.2026, 14:34 Uhr", "notiz": "Gemini-Stimmen werden jetzt immer ohne den angehängten Herkunftsnachweis gespeichert, damit am Ende auch bei normalem Tempo nichts rauscht."},
-    {"versionCode": 267, "versionName": "1.8.256", "stand": "23.10.2026, 16:05 Uhr", "notiz": "Das Guthaben vor dem Modellnamen steht jetzt kleiner und nicht fett, ein abgezogener Betrag erscheint rot."}
+    {"versionCode": 267, "versionName": "1.8.256", "stand": "23.10.2026, 16:05 Uhr", "notiz": "Das Guthaben vor dem Modellnamen steht jetzt kleiner und nicht fett, ein abgezogener Betrag erscheint rot."},
+    {"versionCode": 268, "versionName": "1.8.257", "stand": "23.10.2026, 16:08 Uhr", "notiz": "Ein Abzug von null Dollar wird nicht mehr rot angezeigt."}
   ]
 }

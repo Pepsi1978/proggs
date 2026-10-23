@@ -132,15 +132,13 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     // Das Guthaben steht eine Schriftstufe kleiner und nicht fett vor dem Modellnamen, getrennt durch „ · “.
     fun mitGuthaben(name: String) = buildAnnotatedString {
         if (guthabenUsd != null) {
-            val klein = 0.87.em
-            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Normal, fontSize = klein)) {
-                append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $")
+            val stil = SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Normal, fontSize = 0.87.em)
+            withStyle(stil) { append("(${AnthropicGuthabenFaehigkeit.betrag(guthabenUsd)} $") }
+            // Was die letzte Aufgabe gekostet hat, als roter Abzug direkt hinter dem Guthaben; ohne Abzug kein „−0,00 $“.
+            vm.anthropicKosten?.takeIf { it > 0.0 }?.let { k ->
+                withStyle(stil.copy(color = f.gefahr)) { append(" −${AnthropicGuthabenFaehigkeit.betrag(k)} $") }
             }
-            // Was die letzte Aufgabe gekostet hat, als roter Abzug direkt hinter dem Guthaben.
-            vm.anthropicKosten?.let { k ->
-                withStyle(SpanStyle(color = f.gefahr, fontWeight = FontWeight.Normal, fontSize = klein)) { append(" −${AnthropicGuthabenFaehigkeit.betrag(k)} $") }
-            }
-            withStyle(SpanStyle(color = if (guthabenKnapp) f.gefahr else f.erfolg, fontWeight = FontWeight.Normal, fontSize = klein)) { append(")") }
+            withStyle(stil) { append(")") }
             append(" · ")
         }
         append(name)
