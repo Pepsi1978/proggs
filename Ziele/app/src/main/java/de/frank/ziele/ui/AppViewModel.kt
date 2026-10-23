@@ -191,47 +191,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun reihenfolge(ids: List<Long>) { viewModelScope.launch { repo.reihenfolge(ids) } }
 
     /**
-     * Ordnet frei Gesprochenes in Titel, Beschreibung, Warum und Frist (KI). Ohne KI bleibt der Text in der Beschreibung
-     * und die ersten Wörter werden zum Titel.
+     * Übernimmt frei Gesprochenes vollständig und wörtlich in die Beschreibung; die KI ergänzt nur Titel, Frist und Symbol.
+     * Verdichten und Umformulieren macht ausschließlich der KI-Knopf danach. Ohne KI werden die ersten Wörter zum Titel.
      */
     private fun zielOrdnen(gesprochen: String) {
+        eBeschreibung = (eBeschreibung.trim() + " " + gesprochen).trim()
         if (!kiBereit) {
             if (eTitel.isBlank()) eTitel = gesprochen.split(Regex("(?<=[.!?])\\s")).first().take(60).trimEnd('.', '!', '?')
-            eBeschreibung = (eBeschreibung.trim() + " " + gesprochen).trim()
             return
         }
         ordnet = true
         korrektur = null
         viewModelScope.launch {
             try {
-                val bisher = buildString {
-                    if (eTitel.isNotBlank()) append("Bisheriger Titel: ").append(eTitel).append('\n')
-                    if (eBeschreibung.isNotBlank()) append("Bisherige Beschreibung: ").append(eBeschreibung).append('\n')
-                    if (eWarum.isNotBlank()) append("Bisheriges Warum: ").append(eWarum).append('\n')
-                }
+                val bisherTitel = eTitel
                 val antwort = auth.streamChat(
-                    instructions = "Frank hat ein persönliches Ziel frei eingesprochen (Spracherkennung, daher unsauber). Ordne es, ohne etwas zu erfinden. " +
+                    instructions = "Frank hat ein persönliches Ziel frei eingesprochen (Spracherkennung, daher unsauber). Erfinde nichts. " +
                         "Heute ist ${LocalDate.now()}. Antworte NUR mit JSON: {\"titel\": \"kurz und klar, höchstens 50 Zeichen, als Ziel formuliert (z. B. „10 kg abnehmen“)\", " +
-                        "\"beschreibung\": \"was genau erreicht werden soll, möglichst messbar, ein bis drei Sätze in Franks Worten\", " +
-                        "\"warum\": \"warum es ihm wichtig ist, nur wenn er es gesagt hat, sonst leer\", " +
                         "\"frist\": \"JJJJ-MM-TT, nur wenn er ein Datum oder einen Zeitraum genannt hat, sonst leer\", \"symbol\": \"ein passendes Emoji\"}. " +
-                        "Gibt es schon Angaben, ergänze sie mit dem Neuen und behalte, was nicht widersprochen wird.",
-                    turns = listOf(ChatTurn("user", bisher + "Neu gesprochen: " + gesprochen)),
+                        "Gibt es schon einen Titel, behalte ihn, solange das Neue ihm nicht widerspricht.",
+                    turns = listOf(ChatTurn("user", (if (bisherTitel.isNotBlank()) "Bisheriger Titel: $bisherTitel\n" else "") + "Gesprochen: " + eBeschreibung)),
                     model = einstellungen.modell,
                     reasoningEffort = de.frank.ziele.auth.ReasoningEffort.LOW,
                 )
-                val o = Auswertung.jsonAus(antwort) ?: throw IllegalStateException("Die KI hat das Ziel nicht ordnen können.")
-                o.optString("titel").trim().takeIf { it.isNotEmpty() }?.let { eTitel = it }
-                o.optString("beschreibung").trim().takeIf { it.isNotEmpty() }?.let { eBeschreibung = it }
-                o.optString("warum").trim().takeIf { it.isNotEmpty() }?.let { eWarum = it }
+                val o = Auswertung.jsonAus(antwort) ?: throw IllegalStateException("Die KI hat keinen Titel finden können.")
+                // Hat Frank den Titel währenddessen selbst getippt, gewinnt seine Eingabe.
+                if (eTitel == bisherTitel) o.optString("titel").trim().takeIf { it.isNotEmpty() }?.let { eTitel = it }
                 o.optString("frist").trim().takeIf { it.length >= 10 }?.let { f -> runCatching { LocalDate.parse(f.take(10)).toEpochDay() }.getOrNull()?.let { eFrist = it } }
                 o.optString("symbol").trim().takeIf { it.isNotEmpty() && it.length <= 8 && eSymbol == "🎯" }?.let { eSymbol = it }
             } catch (c: CancellationException) {
                 throw c
             } catch (e: Throwable) {
                 if (eTitel.isBlank()) eTitel = gesprochen.take(50)
-                eBeschreibung = (eBeschreibung.trim() + " " + gesprochen).trim()
-                melde(e.message ?: "Die KI hat das Ziel nicht ordnen können; der Text steht in der Beschreibung.")
+                melde(e.message ?: "Die KI hat keinen Titel finden können; der Text steht vollständig in der Beschreibung.")
             } finally {
                 ordnet = false
             }

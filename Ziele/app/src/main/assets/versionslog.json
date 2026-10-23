@@ -8,6 +8,7 @@
     { "versionCode": 4, "versionName": "1.0.3", "stand": "23.10.2026, 17:29 Uhr", "notiz": "Ist eine Gemini- oder Azure-Stimme gerade ausgeschöpft (Fehler 429), liest die Probe sofort mit der Edge-Stimme im eingestellten Tempo und ein Hinweis nennt den Grund, statt stumm zu bleiben." },
     { "versionCode": 5, "versionName": "1.0.4", "stand": "23.10.2026, 17:32 Uhr", "notiz": "Gestreckte Gemini-Proben enden ohne Rauschen, die Probe kommt auch bei pausiertem Schlüssel aus dem Vorrat, ein zweiter Tipp während des Ladens startet sie neu und Google-Sperren werden abgewartet statt sinnlos wiederholt." },
     { "versionCode": 6, "versionName": "1.0.5", "stand": "23.10.2026, 17:33 Uhr", "notiz": "Der Hinweis beim Edge-Rückfall nennt jetzt den vollen Grund, welcher Gemini-Schlüssel an seine Grenze kam und welche Google-Quote erreicht ist; der kostenlose Schlüssel pausiert nur noch, wenn es einen anderen Gemini-Weg gibt." },
-    { "versionCode": 7, "versionName": "1.0.6", "stand": "23.10.2026, 17:42 Uhr", "notiz": "Beim neuen Ziel bringt der Knopf KI-Korrektur Ziel, Beschreibung und Warum sprachlich in Form, und ein zweiter Tipp holt den Originaltext zurück." }
+    { "versionCode": 7, "versionName": "1.0.6", "stand": "23.10.2026, 17:42 Uhr", "notiz": "Beim neuen Ziel bringt der Knopf KI-Korrektur Ziel, Beschreibung und Warum sprachlich in Form, und ein zweiter Tipp holt den Originaltext zurück." },
+    { "versionCode": 8, "versionName": "1.0.7", "stand": "23.10.2026, 17:52 Uhr", "notiz": "Ein eingesprochenes Ziel steht jetzt vollständig und wörtlich in der Beschreibung, auch bei langen Texten; die KI ergänzt nur Titel, Frist und Symbol, verdichten macht allein der KI-Knopf." }
   ]
 }
