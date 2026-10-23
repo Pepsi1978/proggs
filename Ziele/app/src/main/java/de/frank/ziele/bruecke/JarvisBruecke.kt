@@ -192,6 +192,7 @@ class JarvisBruecke : ContentProvider() {
                 }
                 if (a.has("recherche")) e.recherche = a.optBoolean("recherche")
                 if (a.has("jarvis_kontext")) e.jarvisKontext = a.optBoolean("jarvis_kontext")
+                if (a.has("kontext_nutzen")) e.kontextNutzen = a.optBoolean("kontext_nutzen")
                 if (a.has("sortierung")) e.sortierung = sortierungAus(a, e)
                 if (a.has("modus")) a.optString("modus").lowercase(Locale.GERMAN).let { m -> e.modus = when (m) { "hell" -> "hell"; "dunkel" -> "dunkel"; else -> "system" } }
                 if (a.has("menge")) a.optString("menge").lowercase(Locale.GERMAN).let { m -> e.vorschlagMenge = if (m in setOf("knapp", "normal", "ausfuehrlich")) m else "normal" }
@@ -202,6 +203,7 @@ class JarvisBruecke : ContentProvider() {
                     .put("denkstufen", JSONArray(e.modell.supportedEfforts.map { it.titel(e.modell) }))
                     .put("recherche", e.recherche)
                     .put("jarvis_kontext", e.jarvisKontext)
+                    .put("kontext_nutzen", e.kontextNutzen)
                     .put("sortierung", e.sortierung.name.lowercase())
                     .put("sortierungen", JSONArray(Sortierung.entries.map { it.name.lowercase() }))
                     .put("modus", e.modus)

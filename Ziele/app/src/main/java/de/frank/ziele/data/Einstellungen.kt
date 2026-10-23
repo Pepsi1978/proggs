@@ -68,6 +68,8 @@ class Einstellungen private constructor(context: Context) {
     /** Die Auswertung recherchiert zuerst im Internet (Websuche des Modells). */
     var recherche: Boolean get() = prefs.getBoolean("recherche", true); set(v) = put { putBoolean("recherche", v) }
     /** Jarvis' Live-Gedächtnis geht als Kontext mit (über die Jarvis-Brücke). */
+    /** Aus = allgemeine Vorschläge für jedermann: weder Kontextdatei noch Jarvis' Live-Gedächtnis fließen ein. */
+    var kontextNutzen: Boolean get() = prefs.getBoolean("kontext_nutzen", true); set(v) = put { putBoolean("kontext_nutzen", v) }
     var jarvisKontext: Boolean get() = prefs.getBoolean("jarvis_kontext", true); set(v) = put { putBoolean("jarvis_kontext", v) }
     /** Wie viele Vorschläge eine Auswertung etwa liefert. */
     var vorschlagMenge: String get() = s("vorschlag_menge", "normal"); set(v) = put { putString("vorschlag_menge", v) }

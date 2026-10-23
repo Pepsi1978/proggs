@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -82,10 +83,17 @@ fun KontextBildschirm(vm: AppViewModel) {
                 }
             }
             Text(
-                "Jede Auswertung liest diese Datei mit" + (if (vm.einstellungen.jarvisKontext) ", dazu Jarvis' Live-Gedächtnis" else "") +
-                    ". Eingesprochenes kommt mit Datum unten dazu; du kannst alles direkt ändern.",
+                (if (vm.einstellungen.kontextNutzen) "Jede Auswertung liest diese Datei mit" + (if (vm.einstellungen.jarvisKontext) ", dazu Jarvis' Live-Gedächtnis" else "") + "."
+                else "Der persönliche Kontext ist in den Einstellungen ausgeschaltet: Die Auswertung liest diese Datei gerade nicht.") +
+                    " Eingesprochenes kommt mit Datum unten dazu; du kannst alles direkt tippen oder einfügen.",
                 color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp),
             )
+            val ablage = androidx.compose.ui.platform.LocalContext.current.getSystemService(android.content.ClipboardManager::class.java)
+            de.frank.ziele.ui.theme.Chip("Aus der Zwischenablage einfügen", false, icon = Icons.Rounded.ContentPaste) {
+                val neu = ablage?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text?.toString()?.trim().orEmpty()
+                if (neu.isEmpty()) vm.melde("Die Zwischenablage ist leer.")
+                else { text = if (text.isBlank()) neu else text.trimEnd() + "\n\n" + neu; getippt = true; vm.melde("Eingefügt ✓") }
+            }
             Box(Modifier.fillMaxWidth().heightIn(min = 260.dp).glas(f, 16.dp, 0.6f, f.flaecheStark).padding(14.dp)) {
                 if (text.isEmpty()) Text("Noch leer. Sprich oben einfach los oder tippe hier.", color = f.textSchwach, fontSize = 15.sp)
                 BasicTextField(

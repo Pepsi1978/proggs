@@ -89,15 +89,19 @@ object Auswertung {
         val ziel = repo.ziel(zielId) ?: throw IllegalStateException("Das Ziel gibt es nicht mehr.")
         val bisher = repo.vorschlaege(zielId)
 
-        schritt(zielId, "Lese deinen Kontext …")
-        val kontextDatei = Kontext.lies(app).trim()
-        val gedaechtnis = if (e.jarvisKontext) runCatching { Jarvis.gedaechtnis(app) }.getOrNull()?.take(24_000) else null
+        val persoenlich = e.kontextNutzen
+        if (persoenlich) schritt(zielId, if (e.jarvisKontext) "Lese deinen Kontext und Jarvis' Live-Gedächtnis …" else "Lese deinen Kontext …")
+        val kontextDatei = if (persoenlich) Kontext.lies(app).trim() else ""
+        val gedaechtnis = if (persoenlich && e.jarvisKontext) runCatching { Jarvis.gedaechtnis(app) }.getOrNull()?.take(24_000) else null
 
         val ueberFrank = buildString {
             append("HEUTE: ").append(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMAN))).append("\n\n")
-            if (kontextDatei.isNotEmpty()) append("KONTEXTDATEI (von Frank selbst eingesprochen):\n").append(kontextDatei.takeLast(12_000)).append("\n\n")
+            if (!persoenlich) append(
+                "OHNE PERSÖNLICHEN KONTEXT: Frank möchte diesmal allgemeine Empfehlungen, die für jeden Menschen mit diesem Ziel gelten. " +
+                    "Stimme nichts auf seine persönliche Lage, seinen Alltag oder seine Daten ab.\n\n",
+            ) else if (kontextDatei.isNotEmpty()) append("KONTEXTDATEI (von Frank selbst eingesprochen):\n").append(kontextDatei.takeLast(12_000)).append("\n\n")
             if (gedaechtnis != null) append("JARVIS-LIVE-GEDÄCHTNIS (Franks persönlicher Assistent, aus allen seinen Apps):\n").append(gedaechtnis).append("\n\n")
-            if (kontextDatei.isEmpty() && gedaechtnis == null) append("(Kein weiterer Kontext über Frank vorhanden.)\n\n")
+            if (persoenlich && kontextDatei.isEmpty() && gedaechtnis == null) append("(Kein weiterer Kontext über Frank vorhanden.)\n\n")
         }
         val zielText = zielBeschreibung(ziel)
 

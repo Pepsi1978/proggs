@@ -118,13 +118,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Erledigt-Stand aus Geniale Aufgaben holen (still; nicht erreichbar heißt nur: alter Stand bleibt). */
     fun abgleichen() { viewModelScope.launch { runCatching { Abgleich.stand(getApplication()) } } }
 
-    fun zeige(b: Bildschirm) { bildschirm = b }
+    fun zeige(b: Bildschirm) {
+        if (b == Bildschirm.Kontext) kontextZurueck = if (bildschirm == Bildschirm.Einstellungen) Bildschirm.Einstellungen else Bildschirm.Liste
+        bildschirm = b
+    }
+
+    /** Aus den Einstellungen geöffnet, führt Zurück dorthin. */
+    private var kontextZurueck: Bildschirm = Bildschirm.Liste
+
+    /** Prüfung, ob Jarvis' Live-Gedächtnis erreichbar ist: null = noch nicht geprüft. */
+    var jarvisAngebunden by mutableStateOf<Boolean?>(null); private set
+    var jarvisPruefung by mutableStateOf(""); private set
+    var jarvisPrueft by mutableStateOf(false); private set
+
+    fun jarvisPruefen() {
+        if (jarvisPrueft) return
+        jarvisPrueft = true
+        viewModelScope.launch {
+            try {
+                val g = try { Jarvis.gedaechtnis(getApplication()) } catch (c: CancellationException) { throw c } catch (_: Throwable) { null }
+                jarvisAngebunden = g != null
+                jarvisPruefung = if (g != null) "Angebunden: ${"%,d".format(g.length).replace(',', '.')} Zeichen Live-Gedächtnis fließen in jede Auswertung ein."
+                else "Nicht erreichbar. Ist Jarvis installiert und läuft? Die Auswertung nutzt dann nur die Kontextdatei."
+            } finally {
+                jarvisPrueft = false
+            }
+        }
+    }
 
     fun zurueck(): Boolean {
         when (val b = bildschirm) {
             Bildschirm.Liste -> return false
             is Bildschirm.Bearbeiten -> { aufnahmeVerwerfen(); bildschirm = b.id?.let { Bildschirm.Detail(it) } ?: Bildschirm.Liste }
-            Bildschirm.Kontext -> { aufnahmeVerwerfen(); bildschirm = Bildschirm.Liste }
+            Bildschirm.Kontext -> { aufnahmeVerwerfen(); bildschirm = kontextZurueck }
             else -> bildschirm = Bildschirm.Liste
         }
         return true

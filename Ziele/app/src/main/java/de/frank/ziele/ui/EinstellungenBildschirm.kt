@@ -192,12 +192,50 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Text("Denkstufe", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { e.modell.supportedEfforts.forEach { r -> Chip(r.titel(e.modell), e.denkstufe == r) { e.denkstufe = r } } }
                 }
+                // ---- Kontext ----
+                Block("Kontext für die Auswertung") {
+                    var persoenlich by remember { mutableStateOf(e.kontextNutzen) }
+                    var mitJarvis by remember { mutableStateOf(e.jarvisKontext) }
+                    Schalter("Persönlichen Kontext nutzen", persoenlich) { persoenlich = it; e.kontextNutzen = it }
+                    Text(
+                        if (persoenlich) "An: Die Aufgaben werden auf dich zugeschnitten, mit Kontextdatei und, wenn eingeschaltet, Jarvis' Live-Gedächtnis."
+                        else "Aus: Die Auswertung empfiehlt allgemeine Aufgaben, die für jeden mit diesem Ziel gelten.",
+                        color = f.textLeise, fontSize = 12.sp,
+                    )
+                    if (persoenlich) {
+                        Schalter("Jarvis' Live-Gedächtnis einbeziehen", mitJarvis) { mitJarvis = it; e.jarvisKontext = it; if (it) vm.jarvisPruefen() }
+                        Text("Deine Regeln, Ziele, Dienst, Biodaten und was Jarvis über dich weiß, fließen in die Vorschläge ein.", color = f.textLeise, fontSize = 12.sp)
+                        if (mitJarvis) {
+                            androidx.compose.runtime.LaunchedEffect(Unit) { if (vm.jarvisAngebunden == null) vm.jarvisPruefen() }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                when {
+                                    vm.jarvisPrueft -> CircularProgressIndicator(color = f.primaer, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                    vm.jarvisAngebunden == true -> Text("✅", fontSize = 18.sp)
+                                    vm.jarvisAngebunden == false -> Text("⚠️", fontSize = 18.sp)
+                                }
+                                Text(
+                                    if (vm.jarvisPrueft) "Prüfe die Anbindung …" else vm.jarvisPruefung.ifBlank { "Noch nicht geprüft." },
+                                    color = if (vm.jarvisAngebunden == false && !vm.jarvisPrueft) f.gefahr else f.text, fontSize = 13.sp,
+                                    modifier = Modifier.weight(1f).padding(start = 10.dp),
+                                )
+                            }
+                            Chip("Anbindung prüfen", false, icon = Icons.Rounded.Link) { vm.jarvisPruefen() }
+                        }
+                        val kontextText by vm.kontext.collectAsState()
+                        val inhalt = kontextText.orEmpty().trim()
+                        Text("Kontextdatei", color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (inhalt.isEmpty()) "Noch leer. Hier schreibst, kopierst oder sprichst du ein, was die KI über dich wissen soll."
+                            else "${"%,d".format(inhalt.length).replace(',', '.')} Zeichen: " + inhalt.take(140).replace('\n', ' ') + if (inhalt.length > 140) " …" else "",
+                            color = f.textLeise, fontSize = 12.sp, lineHeight = 16.sp,
+                        )
+                        Chip("Kontextdatei bearbeiten", false, icon = Icons.Rounded.AutoAwesome) { vm.zeige(Bildschirm.Kontext) }
+                    }
+                }
                 // ---- Auswertung ----
                 Block("Auswertung") {
                     Schalter("Vorher im Internet recherchieren", e.recherche) { e.recherche = it }
                     Text("Die KI sucht mit ihrer Websuche, wie man das Ziel nachweislich am besten erreicht, und baut die Aufgaben darauf auf. Dauert etwas länger, ist aber deutlich besser.", color = f.textLeise, fontSize = 12.sp)
-                    Schalter("Jarvis' Live-Gedächtnis als Kontext", e.jarvisKontext) { e.jarvisKontext = it }
-                    Text("Deine Regeln, Ziele, Dienst, Biodaten und was Jarvis über dich weiß, fließen in die Vorschläge ein. Dazu kommt immer die Kontextdatei.", color = f.textLeise, fontSize = 12.sp)
                     Text("Wie viele Vorschläge", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { listOf("knapp" to "Knapp", "normal" to "Normal", "ausfuehrlich" to "Ausführlich").forEach { (id, name) -> Chip(name, e.vorschlagMenge == id) { e.vorschlagMenge = id } } }
                 }
