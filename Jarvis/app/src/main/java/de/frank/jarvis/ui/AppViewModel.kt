@@ -2031,7 +2031,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun rueckfrageVonSelbst() {
         if (rueckfrageDialog != null) return
-        naechsteRueckfrage()
+        // Nur im offenen Gespräch: Beim Öffnen eines Gesprächs oder bei „Hey Jarvis“ (neues Gespräch) zog die Reihe sonst in
+        // eine andere Session und verwarf dabei die laufende Aufnahme.
+        naechsteRueckfrage(wechseln = false)
     }
 
     /**
@@ -2039,33 +2041,51 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * allem. Eine neu eingetroffene drängt sich nicht vor die gerade offene, sie wartet dahinter; nach einer Antwort kommt
      * sofort die nächste, auch aus einem anderen Gespräch. Selbst geschlossene öffnen sich nicht von selbst wieder.
      * [gewuenscht]: die Rückfrage, deren Benachrichtigung getippt wurde oder die gerade eintraf (Gespräch, frage_id).
+     * [wechseln] = false: nur Rückfragen des offenen Gesprächs, nie ein Wechsel in eine andere Session.
      */
-    fun naechsteRueckfrage(gewuenscht: Pair<String, String>? = null) {
+    fun naechsteRueckfrage(gewuenscht: Pair<String, String>? = null, wechseln: Boolean = true) {
         viewModelScope.launch {
             val app = getApplication<Application>()
             val geschlossen = rueckfrageGeschlossen.toSet()
             val bisherige = rueckfrageOffen
+            val hier = sitzungId
+            // Das offene Gespräch gilt aus dem Speicher: Seine Datei schreibt sitzungSichern erst danach, eine eben
+            // eingetroffene Rückfrage fehlte dort noch (dann öffnete sich nichts).
+            val imSpeicher = gespraech.filter { it.art == "rueckfrage" }.map { de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) to it.kontext }
             val ziel = withContext(Dispatchers.IO) {
                 val jetzt = System.currentTimeMillis() / 1000
+                fun kontext(g: String, f: String): org.json.JSONObject? =
+                    if (g == hier) imSpeicher.lastOrNull { it.first == f }?.let { runCatching { org.json.JSONObject(it.second) }.getOrNull() }
+                    else de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, g, f)
                 fun stand(g: String, f: String): String? {
-                    val k = de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, g, f) ?: return null
+                    val k = kontext(g, f) ?: return null
                     if (k.optLong("bis") != 0L && k.optLong("bis") <= jetzt) return null
                     return de.frank.jarvis.faehigkeit.RueckfrageStand.von(k)
                 }
                 fun offen(p: Pair<String, String>) = stand(p.first, p.second)?.let { de.frank.jarvis.faehigkeit.RueckfrageStand.beantwortbar(it) } == true
+                fun erlaubt(p: Pair<String, String>) = wechseln || p.first == hier
                 // Die offene bleibt vorn, auch während ihre Antwort gerade gesendet wird.
-                bisherige?.takeIf { p -> stand(p.first, p.second)?.let { de.frank.jarvis.faehigkeit.RueckfrageStand.beantwortbar(it) || it == de.frank.jarvis.faehigkeit.RueckfrageStand.SENDET } == true }
-                    ?: de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.offeneRueckfragen(app).firstOrNull { it.second !in geschlossen && offen(it) }
-                    ?: gewuenscht?.takeIf { offen(it) }
+                bisherige?.takeIf { p -> erlaubt(p) && stand(p.first, p.second)?.let { de.frank.jarvis.faehigkeit.RueckfrageStand.beantwortbar(it) || it == de.frank.jarvis.faehigkeit.RueckfrageStand.SENDET } == true }
+                    ?: de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.offeneRueckfragen(app).firstOrNull { it.second !in geschlossen && erlaubt(it) && offen(it) }
+                    // Wie früher: eine offene Rückfrage im Gespräch, auch wenn das Auftragsbuch sie nicht (mehr) als wartend führt.
+                    ?: hier?.let { g -> imSpeicher.firstOrNull { it.first !in geschlossen && stand(g, it.first) == de.frank.jarvis.faehigkeit.RueckfrageStand.OFFEN }?.let { g to it.first } }
+                    ?: gewuenscht?.takeIf { erlaubt(it) && offen(it) }
             }
+            // Inzwischen hat Frank selbst geöffnet, geschlossen oder das Gespräch gewechselt: nichts überschreiben.
+            if (rueckfrageOffen != bisherige || (!wechseln && sitzungId != hier)) return@launch
             if (ziel == null) {
                 // Schon beantwortet oder abgelaufen: Der Tipp auf ihre Benachrichtigung öffnet wenigstens ihr Gespräch.
                 gewuenscht?.let { sitzungOeffnen(it.first) }
                 return@launch
             }
+            if (ziel != gewuenscht && ziel.second in rueckfrageGeschlossen) return@launch
             rueckfrageGeschlossen -= ziel.second
             rueckfrageOffen = ziel
-            if (ziel.first != sitzungId) { aufnahmeVerwerfen(); sitzungLaden(ziel.first) }
+            if (ziel.first != sitzungId) {
+                aufnahmeVerwerfen()
+                // Ließ sich das Gespräch nicht öffnen, bleibt die Frage nicht als offen stehen (sonst versuchte es jeder Anstoß erneut).
+                if (!sitzungLaden(ziel.first) && rueckfrageOffen == ziel) rueckfrageOffen = null
+            }
         }
     }
 
@@ -2097,7 +2117,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // und zeigt den Grund samt „Erneut senden“.
             if (ergebnis.isSuccess) {
                 if (rueckfrageOffen?.second == frageId) { rueckfrageOffen = null; rueckfrageGeschlossen += frageId }
-                rueckfrageVonSelbst()
+                if (rueckfrageDialog == null) naechsteRueckfrage()
             }
         }
     }

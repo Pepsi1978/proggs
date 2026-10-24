@@ -305,6 +305,7 @@
     { "versionCode": 299, "versionName": "1.8.288", "stand": "24.10.2026, 10:33 Uhr", "notiz": "Ein abgeschickter Nachtrag zeigt oben keine zusätzliche Bestätigungsblase mehr, die Annahme steht nur noch unten im Gespräch." },
     { "versionCode": 300, "versionName": "1.8.289", "stand": "24.10.2026, 10:35 Uhr", "notiz": "Am PC oder Mac direkt gestartete Claude-Code-Sitzungen erscheinen lila unter Programmierung, lassen sich aus Jarvis begleiten und per Löschen nur aus Jarvis entfernen." },
     { "versionCode": 301, "versionName": "1.8.290", "stand": "24.10.2026, 10:40 Uhr", "notiz": "Rückfragen werden jetzt zuverlässig angesagt, auch mehrere nacheinander aus verschiedenen Sessions; offene Rückfragen stehen in einer Reihe, die älteste vorn, und nach einer Antwort öffnet sofort die nächste." },
-    { "versionCode": 302, "versionName": "1.8.291", "stand": "24.10.2026, 10:49 Uhr", "notiz": "Sitzungen vom PC bleiben nach dem Löschen sicher weg und auch umbenannt lila; ein Abbruch am PC stoppt die Anzeige, und Rückfragen gehen erst nach 5 Minuten ohne Eingabe am Rechner an Jarvis." }
+    { "versionCode": 302, "versionName": "1.8.291", "stand": "24.10.2026, 10:49 Uhr", "notiz": "Sitzungen vom PC bleiben nach dem Löschen sicher weg und auch umbenannt lila; ein Abbruch am PC stoppt die Anzeige, und Rückfragen gehen erst nach 5 Minuten ohne Eingabe am Rechner an Jarvis." },
+    { "versionCode": 303, "versionName": "1.8.292", "stand": "24.10.2026, 10:53 Uhr", "notiz": "Review-Befunde: Die Rückfrage-Reihe wechselt nur noch nach einer Antwort oder beim Eintreffen in eine andere Session, eine selbst geschlossene Frage öffnet sich nicht wieder, und eine abgebrochene Ansage verstummt sauber." }
   ]
 }

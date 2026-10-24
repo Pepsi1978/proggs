@@ -50,14 +50,20 @@ object Ansage {
                 if (aktiv++ == 0) ausgang = runCatching { ton.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrDefault(laut)
                 zuletztGesetzt = laut
             }
+            var quelle = ""
             try {
                 // Die Meldung hat ihre eigene Lautstärke, unabhängig davon, wie leise das Handy gerade steht.
                 if (eigen) runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
                 // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
-                val quelle = "$art:" + System.currentTimeMillis()
+                quelle = "$art:" + System.currentTimeMillis()
                 val vorleser = Vorleser.hole(app, SecureSettings(app))
                 vorleser.sprich(quelle, titel, text, wahl = wahl)
                 withTimeoutOrNull(hoechstens) { vorleser.stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }
+            } catch (abbruch: kotlinx.coroutines.CancellationException) {
+                // Verworfen, während sie spricht (etwa eine inzwischen beantwortete Rückfrage): Die Stimme verstummt, statt nach dem
+                // Zurückstellen der Lautstärke ohne Wachhaltung weiterzulaufen; der Abbruch geht an den Aufrufer weiter.
+                runCatching { Vorleser.hole(app, SecureSettings(app)).let { v -> if (quelle.isNotEmpty() && v.stand.value.quelle == quelle) v.stopp() } }
+                throw abbruch
             } catch (f: Exception) {
                 Log.w(TAG, "Vorlesen nicht möglich", f)
             } finally {
