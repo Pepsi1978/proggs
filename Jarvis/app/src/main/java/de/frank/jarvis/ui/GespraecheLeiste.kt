@@ -189,7 +189,7 @@ private fun Leiste(
     val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
     val arbeitende = remember(programmiert) { programmiert.filterValues { it.arbeitet }.keys }
     // Reiter mit mindestens einer arbeitenden Session, unabhängig vom gewählten Reiter: dort blinkt ein oranger Punkt.
-    val aktiveReiter = aktiveReiter(arbeitende + vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
+    val aktiveReiter = aktiveReiter(arbeitende, vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
     // Ein Takt für alle Claude-Symbole in der Liste, nur solange eines zu sehen ist.
     var bild by remember { mutableStateOf(0) }
     val mitEintraegen = !projekte || projekt != null
@@ -217,9 +217,9 @@ private fun Leiste(
             BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 12.dp)) {
                 val schmal = maxWidth < 420.dp
                 Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f), LeistenReiter.GESPRAECHE in aktiveReiter) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
-                    Reiter("Programmierung", Icons.Rounded.Code, gewaehlt = reiter == LeistenReiter.PROGRAMMIERUNG, schmal, Modifier.weight(1.35f), LeistenReiter.PROGRAMMIERUNG in aktiveReiter) { reiterWaehlen(LeistenReiter.PROGRAMMIERUNG) }
-                    Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, schmal, Modifier.weight(1f), LeistenReiter.PROJEKTE in aktiveReiter) { reiterWaehlen(LeistenReiter.PROJEKTE) }
+                    Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f), LeistenReiter.GESPRAECHE in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
+                    Reiter("Programmierung", Icons.Rounded.Code, gewaehlt = reiter == LeistenReiter.PROGRAMMIERUNG, schmal, Modifier.weight(1.35f), LeistenReiter.PROGRAMMIERUNG in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.PROGRAMMIERUNG) }
+                    Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, schmal, Modifier.weight(1f), LeistenReiter.PROJEKTE in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.PROJEKTE) }
                 }
             }
             if (projekte && projekt != null) {
@@ -420,7 +420,7 @@ private fun SitzungEintrag(
  * [arbeitet]: In diesem Bereich arbeitet gerade eine Session; oben rechts blinkt dann ein oranger Punkt wie eine Benachrichtigung.
  */
 @Composable
-private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: Boolean, modifier: Modifier = Modifier, arbeitet: Boolean = false, aktion: () -> Unit) {
+private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: Boolean, modifier: Modifier = Modifier, arbeitet: Boolean = false, blinken: Boolean = true, aktion: () -> Unit) {
     val f = LocalFarben.current
     val flaeche = Modifier.fillMaxWidth().antippen(rolle = Role.Tab, aktion = aktion)
         .semantics { selected = gewaehlt }
@@ -441,12 +441,15 @@ private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: B
             }
         }
         if (arbeitet) {
-            val takt = androidx.compose.animation.core.rememberInfiniteTransition(label = "reiterPunkt")
-            val sichtbar by takt.animateFloat(
-                1f, 0.2f,
-                androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(600), androidx.compose.animation.core.RepeatMode.Reverse),
-                label = "reiterPunktAlpha",
-            )
+            // Blinkt nur bei offener Leiste: Geschlossen bleibt sie komponiert, der Takt soll dann nicht weiterlaufen.
+            val sichtbar = if (blinken) {
+                val takt = androidx.compose.animation.core.rememberInfiniteTransition(label = "reiterPunkt")
+                takt.animateFloat(
+                    1f, 0.2f,
+                    androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(600), androidx.compose.animation.core.RepeatMode.Reverse),
+                    label = "reiterPunktAlpha",
+                ).value
+            } else 1f
             Box(
                 Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 3.dp).size(10.dp)
                     .graphicsLayer { alpha = sichtbar }
@@ -462,15 +465,16 @@ private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: B
  * „Projekte“, sonst „Gespräche“. Das offene, noch nicht in der Liste stehende Gespräch zählt nach seinen eigenen Angaben.
  */
 internal fun aktiveReiter(
-    arbeitende: Set<String>, sitzungen: List<Sitzung>, projektIds: Set<String>, offenId: String?, offenProgrammierung: Boolean, offenProjekt: String,
+    programmierend: Set<String>, antwortend: Set<String>, sitzungen: List<Sitzung>, projektIds: Set<String>, offenId: String?, offenProgrammierung: Boolean, offenProjekt: String,
 ): Set<LeistenReiter> {
-    if (arbeitende.isEmpty()) return emptySet()
+    if (programmierend.isEmpty() && antwortend.isEmpty()) return emptySet()
     val nachId = sitzungen.associateBy { it.id }
     val ergebnis = mutableSetOf<LeistenReiter>()
-    for (id in arbeitende) {
+    for (id in programmierend + antwortend) {
         val s = nachId[id]
-        val programmierung = s?.programmierung ?: if (id == offenId) offenProgrammierung else continue
-        val projekt = s?.projekt ?: offenProjekt
+        // Eine arbeitende Programmier-Session, die (noch) nicht in der Liste steht, gehört trotzdem unter „Programmierung“.
+        val programmierung = s?.programmierung ?: if (id == offenId) offenProgrammierung || id in programmierend else if (id in programmierend) true else continue
+        val projekt = s?.projekt ?: if (id == offenId) offenProjekt else ""
         val imProjekt = projekt.isNotEmpty() && projekt in projektIds
         if (programmierung) ergebnis += LeistenReiter.PROGRAMMIERUNG
         if (imProjekt) ergebnis += LeistenReiter.PROJEKTE
