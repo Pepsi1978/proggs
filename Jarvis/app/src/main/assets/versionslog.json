@@ -343,6 +343,7 @@
     { "versionCode": 337, "versionName": "1.8.326", "stand": "24.10.2026, 18:26 Uhr", "notiz": "Die nachträgliche Startbestätigung vom PC kommt jetzt auch dann an, wenn die Sitzung sich vorher schon mit einem Lebenszeichen gemeldet hat." },
     { "versionCode": 338, "versionName": "1.8.327", "stand": "24.10.2026, 18:34 Uhr", "notiz": "Eine nachgereichte Startbestätigung ändert nur noch einen unbestätigten Auftrag, bleibt sie ganz aus, meldet Jarvis das nach gut drei Minuten, und ein fehlendes Login gilt als nicht gestartet." },
     { "versionCode": 339, "versionName": "1.8.328", "stand": "24.10.2026, 20:00 Uhr", "notiz": "Nachtrag und Programmierauftrag stehen jetzt direkt unter „Neue Session“, ohne Lücke, alle schwebenden Knöpfe gleichmäßig untereinander." },
-    { "versionCode": 340, "versionName": "1.8.329", "stand": "24.10.2026, 20:04 Uhr", "notiz": "Neue Session und Papierkorb bleiben an ihrer alten Stelle, Nachtrag und Programmierauftrag rücken nach oben direkt darunter." }
+    { "versionCode": 340, "versionName": "1.8.329", "stand": "24.10.2026, 20:04 Uhr", "notiz": "Neue Session und Papierkorb bleiben an ihrer alten Stelle, Nachtrag und Programmierauftrag rücken nach oben direkt darunter." },
+    { "versionCode": 341, "versionName": "1.8.330", "stand": "24.10.2026, 20:56 Uhr", "notiz": "In der Gesprächsleiste liegen die Reiter und der Knopf Neues Gespräch jetzt unten in Daumennähe, die neueste Session steht unten und ältere darüber." }
   ]
 }

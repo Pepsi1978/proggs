@@ -88,7 +88,7 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
     val f = LocalFarben.current
     val raum = rememberCoroutineScope()
     BackHandler(enabled = schublade.isOpen) { raum.launch { schublade.close() } }
-    // Reiter oben: Gespräche, Programmierung oder Projekte. Beim Wechsel bleibt alles erhalten; geschlossen springt die Leiste
+    // Reiter unten: Gespräche, Programmierung oder Projekte. Beim Wechsel bleibt alles erhalten; geschlossen springt die Leiste
     // zurück auf die Liste, zu der das offene Gespräch gehört, damit Wischen zum Gesprächswechsel sie zeigt.
     var reiter by rememberSaveable { mutableStateOf(LeistenReiter.GESPRAECHE) }
     // Das geöffnete Projekt im Reiter „Projekte“; null = Liste der Projekte.
@@ -211,17 +211,8 @@ private fun Leiste(
         Column(
             Modifier.fillMaxSize()
                 .background(Brush.verticalGradient(listOf(lerp(f.hgOben, f.primaer, if (f.dunkel) 0.10f else 0.06f), f.hgUnten, lerp(f.hgUnten, f.primaer, if (f.dunkel) 0.06f else 0.04f))))
-                .statusBarsPadding().navigationBarsPadding().padding(horizontal = 14.dp),
+                .statusBarsPadding().navigationBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp),
         ) {
-            // Drei Reiter: auf schmalen Bildschirmen (Fold zugeklappt) Symbol über dem Namen, damit „Programmierung“ ganz hineinpasst.
-            BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 12.dp)) {
-                val schmal = maxWidth < 420.dp
-                Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f), LeistenReiter.GESPRAECHE in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
-                    Reiter("Programmierung", Icons.Rounded.Code, gewaehlt = reiter == LeistenReiter.PROGRAMMIERUNG, schmal, Modifier.weight(1.35f), LeistenReiter.PROGRAMMIERUNG in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.PROGRAMMIERUNG) }
-                    Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, schmal, Modifier.weight(1f), LeistenReiter.PROJEKTE in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.PROJEKTE) }
-                }
-            }
             if (projekte && projekt != null) {
                 // Ein Projekt: seine eigenen Gespräche, getrennt von allen übrigen.
                 Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -231,20 +222,20 @@ private fun Leiste(
                     Icon(Icons.Rounded.Folder, null, tint = f.primaer, modifier = Modifier.padding(start = 4.dp).size(22.dp))
                     Text(projekt.name, Modifier.weight(1f).padding(start = 8.dp), color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                Knopf("Neues Gespräch im Projekt", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment) { aufNeuImProjekt(projekt.id) }
+                // Neueste Session unten, über dem Knopf; ältere darüber.
+                LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom)) {
+                    items(imProjekt, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
+                }
                 if (imProjekt.isEmpty()) {
                     Text(
                         "Noch keine Gespräche in diesem Projekt. Starte es mit „Neues Gespräch im Projekt“.",
                         Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
                     )
                 }
-                LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(imProjekt, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
-                }
                 if (imProjekt.isNotEmpty()) Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
+                Knopf("Neues Gespräch im Projekt", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment) { aufNeuImProjekt(projekt.id) }
             } else if (projekte) {
-                // Eigener Bereich, getrennt von den Gesprächen: oben immer „Neues Projekt“, darunter die Projekte.
-                Knopf("Neues Projekt", Modifier.fillMaxWidth(), icon = Icons.Rounded.CreateNewFolder) { projektNeu = true }
+                // Eigener Bereich, getrennt von den Gesprächen: die Projekte, darunter in Daumennähe immer „Neues Projekt“.
                 if (vm.projekte.isEmpty()) {
                     Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         Icon(Icons.Rounded.Folder, null, tint = f.primaer.copy(alpha = 0.7f), modifier = Modifier.size(48.dp))
@@ -272,12 +263,23 @@ private fun Leiste(
                         }
                     }
                 }
+                Knopf("Neues Projekt", Modifier.fillMaxWidth().padding(top = 8.dp), icon = Icons.Rounded.CreateNewFolder) { projektNeu = true }
             } else {
                 // „Gespräche“ oder „Programmierung“: alle Programmieraufträge mit ihren Gesprächen, alte wie neue; sie stehen nicht unter „Gespräche“.
                 val auftraege = reiter == LeistenReiter.PROGRAMMIERUNG
                 val liste = if (auftraege) listen.programmierung else normale
-                if (auftraege) Knopf("Neuer Programmierauftrag", Modifier.fillMaxWidth(), icon = Icons.Rounded.Code, aktion = aufNeuerAuftrag)
-                else Knopf("Neues Gespräch", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment, aktion = aufNeu)
+                // Je Reiter eine eigene Liste: Die Scrollposition des einen gilt nicht für den anderen.
+                // Von unten nach oben: die neueste Session ganz unten über dem Knopf, ältere darüber; die Überschrift steht über ihrer Gruppe.
+                key(reiter) {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), reverseLayout = true, verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.Bottom)) {
+                        (if (auftraege) programmierGruppen else gruppen).forEach { (gruppe, eintraege) ->
+                            items(eintraege, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
+                            item(key = "g:$gruppe") {
+                                Text(gruppe.uppercase(), Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), color = f.textSchwach, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
+                            }
+                        }
+                    }
+                }
                 if (liste.isEmpty()) {
                     Text(
                         if (auftraege) "Noch keine Programmieraufträge. Jeder Auftrag an den Programmierer landet mit seinem Gespräch von selbst hier."
@@ -285,18 +287,18 @@ private fun Leiste(
                         Modifier.padding(horizontal = 6.dp, vertical = 20.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
                     )
                 }
-                // Je Reiter eine eigene Liste: Die Scrollposition des einen gilt nicht für den anderen.
-                key(reiter) {
-                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        (if (auftraege) programmierGruppen else gruppen).forEach { (gruppe, eintraege) ->
-                            item(key = "g:$gruppe") {
-                                Text(gruppe.uppercase(), Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), color = f.textSchwach, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp)
-                            }
-                            items(eintraege, key = { it.id }) { s -> SitzungEintrag(vm, s, arbeitende, programmiert, SPINNER[bild], { aufWahl(s.id) }, { bearbeiten = s }) }
-                        }
-                    }
-                }
                 if (!auftraege || liste.isNotEmpty()) Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
+                if (auftraege) Knopf("Neuer Programmierauftrag", Modifier.fillMaxWidth(), icon = Icons.Rounded.Code, aktion = aufNeuerAuftrag)
+                else Knopf("Neues Gespräch", Modifier.fillMaxWidth(), icon = Icons.Rounded.AddComment, aktion = aufNeu)
+            }
+            // Drei Reiter unten, in Daumennähe: auf schmalen Bildschirmen (Fold zugeklappt) Symbol über dem Namen, damit „Programmierung“ ganz hineinpasst.
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp)) {
+                val schmal = maxWidth < 420.dp
+                Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f), LeistenReiter.GESPRAECHE in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
+                    Reiter("Programmierung", Icons.Rounded.Code, gewaehlt = reiter == LeistenReiter.PROGRAMMIERUNG, schmal, Modifier.weight(1.35f), LeistenReiter.PROGRAMMIERUNG in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.PROGRAMMIERUNG) }
+                    Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, schmal, Modifier.weight(1f), LeistenReiter.PROJEKTE in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.PROJEKTE) }
+                }
             }
         }
     }
@@ -416,7 +418,7 @@ private fun SitzungEintrag(
 }
 
 /**
- * Ein Reiter oben in der Leiste: der gewählte als getönte Glasfläche in der Akzentfarbe, die anderen schlicht und leiser. [schmal]: Symbol über dem Namen.
+ * Ein Reiter unten in der Leiste: der gewählte als getönte Glasfläche in der Akzentfarbe, die anderen schlicht und leiser. [schmal]: Symbol über dem Namen.
  * [arbeitet]: In diesem Bereich arbeitet gerade eine Session; oben rechts blinkt dann ein oranger Punkt wie eine Benachrichtigung.
  */
 @Composable
