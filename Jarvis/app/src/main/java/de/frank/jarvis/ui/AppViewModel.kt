@@ -870,9 +870,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
             val ergebnis = runCatching { faehigkeit?.nachtragPerKnopf(id, text) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
                 .getOrElse { de.frank.jarvis.faehigkeit.Ergebnis(it.message ?: "Der Nachtrag ging nicht raus.", fehler = true) }
-            // Nur der erste Satz: Der Rest richtet sich ans Modell.
-            meldung = ergebnis.text.substringBefore(". ").trimEnd('.') + "."
-            if (ergebnis.fehler && entwurf.isEmpty()) entwurf = roh
+            // Die Annahme steht schon unten im Gespräch; oben erscheint nur ein Fehler, und nur dessen erster Satz (der Rest richtet sich ans Modell).
+            if (ergebnis.fehler) {
+                meldung = ergebnis.text.substringBefore(". ").trimEnd('.') + "."
+                if (entwurf.isEmpty()) entwurf = roh
+            }
         }
     }
 
@@ -2564,6 +2566,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             sitzungen = sicherung.withLock {
                 withContext(Dispatchers.IO) {
+                    // Eine am PC gestartete Sitzung darin: nur aus Jarvis entfernen und nie wieder anlegen; am PC läuft sie weiter.
+                    de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleEntfernen(getApplication(), id)
                     de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), id)
                     alleSitzungen()
                 }

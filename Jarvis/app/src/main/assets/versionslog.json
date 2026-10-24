@@ -301,6 +301,7 @@
     { "versionCode": 295, "versionName": "1.8.284", "stand": "23.10.2026, 22:27 Uhr", "notiz": "Eine Code-Review-Frage des Programmierers wird nur noch allgemein angesagt, ohne Projekt, App, Ziel oder Inhalt der Frage." },
     { "versionCode": 296, "versionName": "1.8.285", "stand": "24.10.2026, 10:11 Uhr", "notiz": "Tagesauswertung mit Pause, Weiter und Stopp beim Vorlesen sowie wählbarer Ausführlichkeit Kurz, Normal oder Gründlich; nach der Modellwahl startet ein Programmierauftrag ohne gesprochene Bestätigung." },
     { "versionCode": 297, "versionName": "1.8.286", "stand": "24.10.2026, 10:19 Uhr", "notiz": "Pause und Stopp der Tagesauswertung treffen nur noch deren Vorlesen; dauert der Start nach der Modellwahl länger, sagt Jarvis kurz: Einen Moment." },
-    { "versionCode": 298, "versionName": "1.8.287", "stand": "24.10.2026, 10:20 Uhr", "notiz": "Die Benachrichtigung einer Rückfrage vom Programmierer verschwindet von selbst, sobald die Frage erfolgreich beantwortet ist." }
+    { "versionCode": 298, "versionName": "1.8.287", "stand": "24.10.2026, 10:20 Uhr", "notiz": "Die Benachrichtigung einer Rückfrage vom Programmierer verschwindet von selbst, sobald die Frage erfolgreich beantwortet ist." },
+    { "versionCode": 299, "versionName": "1.8.288", "stand": "24.10.2026, 10:33 Uhr", "notiz": "Ein abgeschickter Nachtrag zeigt oben keine zusätzliche Bestätigungsblase mehr, die Annahme steht nur noch unten im Gespräch." }
   ]
 }
