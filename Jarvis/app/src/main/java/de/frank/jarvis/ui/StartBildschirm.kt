@@ -383,31 +383,19 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
 
 /**
  * Auswahl vor einem Programmierauftrag: Modell („Opus 5.5“ oder „Sol 6.1“), bei Sol das CLI („Codex CLI“ oder „OpenCode CLI“),
- * bei Codex das Review („Ja“/„Nein“). Ein Tipp gilt genau einmal; danach, nach einer Wahl per Sprache oder nach einem Neustart
- * der App sind die Knöpfe aus.
+ * bei Codex das Review („Ja“/„Nein“). Hier steht nur die Frage; die Knöpfe stehen unten neben „Programmierer“ (ProgrammierSchweber).
+ * Nach einer Wahl, per Sprache oder nach einem Neustart der App steht darunter, was gilt.
  */
 @Composable
-private fun ModellWahlKarte(vm: AppViewModel, n: Nachricht) {
+private fun ModellWahlKarte(n: Nachricht) {
     val f = LocalFarben.current
-    val id = remember(n.kontext) { runCatching { org.json.JSONObject(n.kontext).optString("wahl_id") }.getOrDefault("") }
-    // Knöpfe aus dem Kontext (Modell, danach bei Sol „Codex CLI“/„OpenCode CLI“, bei Codex „Ja“/„Nein“ zum Review);
-    // ältere Karten ohne „optionen“ sind die Modellwahl.
-    val optionen = remember(n.kontext) {
-        val liste = runCatching { org.json.JSONObject(n.kontext).optJSONArray("optionen") }.getOrNull()
-        if (liste == null || liste.length() == 0) listOf(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS to "Opus 5.5", de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL to "Sol 6.1")
-        else (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.map { it.optString("wert") to it.optString("label") }
-    }
+    val id = remember(n.kontext) { de.frank.jarvis.data.Gespraeche.wahlId(n.kontext) }
+    val optionen = remember(n.kontext) { wahlOptionen(n.kontext) }
     val stand by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand.collectAsState()
     val s = stand[id]
     Column(Modifier.fillMaxWidth().widthIn(max = 720.dp).padding(start = 2.dp, end = 4.dp, top = 2.dp, bottom = 6.dp)) {
         Text(n.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp)
-        if (s == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN) {
-            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                optionen.forEachIndexed { i, (wert, label) ->
-                    Knopf(label, Modifier.height(44.dp), haupt = i == 0) { vm.programmierModell(id, wert) }
-                }
-            }
-        } else {
+        if (s != de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN) {
             Text(when (s) {
                 de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_ERLEDIGT -> "Per Sprache gewählt."
                 null -> "Diese Auswahl ist nicht mehr aktiv."
@@ -428,7 +416,7 @@ private val EXTERNE_ARTEN = setOf(de.frank.jarvis.faehigkeit.ProgrammierChat.ART
 @Composable
 private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
     if (n.art == "rueckfrage") { RueckfrageKarte(vm, n); return }
-    if (n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL) { ModellWahlKarte(vm, n); return }
+    if (n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL) { ModellWahlKarte(n); return }
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (n.vonMir) Alignment.End else Alignment.Start) {
         if (n.vonMir && n.anhaenge.isNotEmpty()) FlowRow(Modifier.padding(start = 44.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
