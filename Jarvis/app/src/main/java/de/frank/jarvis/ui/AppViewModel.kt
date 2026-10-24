@@ -847,9 +847,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     var eingabeKompakt by mutableStateOf(true)
 
-    /** Zählt bei jedem Einsetzen hoch; das schwebende Programmier- bzw. Nachtrag-Symbol leuchtet dann kurz grün auf. */
-    var programmiererBlitz by mutableStateOf(0); private set
-    var nachtragBlitz by mutableStateOf(0); private set
+    /**
+     * Nach dem Antippen leuchten „Programmierer“, „Nachtrag“ bzw. „Neue Session“ grün, auch wenn danach weiter diktiert oder
+     * eingefügt wird; erst das Abschicken macht sie wieder durchsichtig. So sieht Frank, ob er den Knopf am Anfang gedrückt hat.
+     */
+    var programmiererAktiv by mutableStateOf(false); private set
+    var nachtragAktiv by mutableStateOf(false); private set
+    var neueSessionAktiv by mutableStateOf(false); private set
+
+    private fun knoepfeAus() { programmiererAktiv = false; nachtragAktiv = false; neueSessionAktiv = false }
+
+    /** Schwebendes „Neue Session“: neues, leeres Gespräch, das Symbol bleibt bis zum Abschicken grün. */
+    fun neueSessionTippen() {
+        neuesGespraech()
+        neueSessionAktiv = true
+    }
 
     /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */
     fun programmiererEinsetzen() {
@@ -859,7 +871,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Die Blase klappt auf und zeigt den eingesetzten Text.
         eingabeKompakt = false
         entwurfFokus = true
-        programmiererBlitz++
+        programmiererAktiv = true
     }
 
     /** Ist das offene Gespräch ein Programmiergespräch? Dann zeigt das Plus-Menü neben „Programmierer“ den Knopf „+ Nachtrag“. */
@@ -870,7 +882,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!entwurf.startsWith(NACHTRAG_VORSPANN)) entwurf = "$NACHTRAG_VORSPANN " + entwurf.trimStart()
         eingabeKompakt = false
         entwurfFokus = true
-        nachtragBlitz++
+        nachtragAktiv = true
     }
 
     /** Senden mit „Nachtrag:“ vorn: Der Text (ohne den Vorspann) geht direkt als Nachtrag in die Sitzung dieses Gesprächs, ohne Modell. */
@@ -882,6 +894,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val roh = entwurf
         entwurf = ""
         entwurfDiktiert = false
+        knoepfeAus()
         gespraech += Nachricht(true, "$NACHTRAG_VORSPANN $text")
         sitzungSichern()
         eingabeKompakt = true
@@ -945,7 +958,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!sende(text, anh, diktiert)) {
             if (entwurf.isEmpty()) entwurf = roh
             anhaenge.addAll(0, anh)
-        } else entwurfDiktiert = false
+        } else { entwurfDiktiert = false; knoepfeAus() }
     }
 
     /** Der aktuelle Entwurf enthält Text vom Diktier-Mikrofon; gilt nur für das nächste Absenden. */
@@ -2364,6 +2377,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         aufnahmeVerwerfen()
         gespraechLeeren()
         eingabeKompakt = true
+        knoepfeAus()
     }
 
     /** Neues, leeres Gespräch im Projekt [projektId]: Es landet mit der ersten Nachricht in dessen Bereich der Seitenleiste. */
@@ -2489,6 +2503,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Von Hand gewechselt: Aufnahme, Mitschrift und Gesprächsmodus der alten Session enden sofort, nicht erst nach dem Laden.
         aufnahmeVerwerfen()
         eingabeKompakt = true
+        knoepfeAus()
         viewModelScope.launch { sitzungLaden(id) }
     }
 

@@ -38,7 +38,10 @@ import androidx.compose.material.icons.rounded.CallEnd
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.AddComment
+import androidx.compose.material.icons.rounded.ChatBubble
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Description
@@ -282,17 +285,17 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 // Im Programmiergespräch: etwa einen Zentimeter neben „Programmierer“ der Knopf „+ Nachtrag“; er setzt „Nachtrag:“ vor den Text.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.antippen { plusOffen = false; vm.programmiererEinsetzen() }.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
+                        Icon(Icons.Rounded.Code, null, tint = if (vm.programmiererAktiv) f.erfolg else f.text, modifier = Modifier.size(26.dp))
                         Text("Programmierer", color = f.text, fontSize = 18.sp, modifier = Modifier.padding(start = 20.dp))
                     }
                     Spacer(Modifier.width(24.dp))
                     Row(Modifier.clip(RoundedCornerShape(18.dp)).background(f.flaeche).antippen { plusOffen = false; vm.nachtragEinsetzen() }
                         .padding(start = 8.dp, end = 14.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Add, null, tint = f.primaer, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Rounded.Add, null, tint = if (vm.nachtragAktiv) f.erfolg else f.primaer, modifier = Modifier.size(22.dp))
                         Text("Nachtrag", color = f.text, fontSize = 18.sp, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
                     }
                 }
-            } else MenueZeile(Icons.Rounded.Code, "Programmierer") { plusOffen = false; vm.programmiererEinsetzen() }
+            } else MenueZeile(Icons.Rounded.Code, "Programmierer", farbe = if (vm.programmiererAktiv) f.erfolg else null) { plusOffen = false; vm.programmiererEinsetzen() }
             MenueZeile(Icons.Rounded.Extension, "Plugins") { plusOffen = false; pluginsOffen = true }
         }
     }
@@ -359,44 +362,45 @@ fun schwebeHoehe(nachtrag: Boolean) = SCHWEBE_GROESSE * (if (nachtrag) 3 else 2)
  */
 @Composable
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
+    val f = LocalFarben.current
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        SchwebeSymbol(Icons.Rounded.AddComment, "Neue Session", 0) { vm.neuesGespraech() }
+        // „Neue Session“: helle Sprechblase mit schwarzem Plus, leicht durchscheinend, damit der Text darunter lesbar bleibt.
+        SchwebeSymbol("Neue Session", vm.neueSessionAktiv, { vm.neueSessionTippen() }) {
+            Box(Modifier.size(26.dp).alpha(0.75f), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.ChatBubble, null, tint = Color.White, modifier = Modifier.fillMaxSize())
+                Icon(Icons.Rounded.Add, null, tint = Color.Black, modifier = Modifier.size(17.dp).offset(y = (-2).dp))
+            }
+        }
         Spacer(Modifier.height(SCHWEBE_LUECKE))
         if (vm.nachtragMoeglich) {
-            SchwebeSymbol(Icons.Rounded.Add, "Nachtrag in die laufende Programmier-Sitzung", vm.nachtragBlitz) { vm.nachtragEinsetzen() }
+            SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
+                Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))
+            }
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }
-        SchwebeSymbol(Icons.Rounded.Code, "Neuer Programmierauftrag", vm.programmiererBlitz) { vm.programmiererEinsetzen() }
+        SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv, { vm.programmiererEinsetzen() }) {
+            Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
+        }
     }
 }
 
 @Composable
-private fun SchwebeSymbol(icon: ImageVector, beschreibung: String, blitz: Int, aktion: () -> Unit) {
+private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Unit, inhalt: @Composable () -> Unit) {
     val f = LocalFarben.current
     // Ein schmaler Lichtstreif wandert langsam über den Grund; der Grund selbst bleibt fast durchsichtig.
     val lauf by rememberInfiniteTransition(label = "schimmer").animateFloat(-1f, 2f,
         infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "s")
-    // Ist der Text im Feld angekommen, leuchtet der Grund kurz grün auf und verblasst wieder.
-    val gruen = remember { androidx.compose.animation.core.Animatable(0f) }
-    // Nur bei neuem Einsetzen, nicht wenn das Symbol mit einem alten Zählerstand erscheint.
-    val anfang = remember { blitz }
-    LaunchedEffect(blitz) {
-        if (blitz == anfang) return@LaunchedEffect
-        gruen.snapTo(1f)
-        delay(250)
-        gruen.animateTo(0f, tween(650))
-    }
+    // Angetippt leuchtet der Grund grün und bleibt so, bis die Nachricht abgeschickt ist.
+    val gruen by androidx.compose.animation.core.animateFloatAsState(if (aktiv) 1f else 0f, tween(300), label = "gruen")
     Box(
         Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
-            .background(f.erfolg.copy(alpha = 0.85f * gruen.value)).drawBehind {
+            .background(f.erfolg.copy(alpha = 0.85f * gruen)).drawBehind {
             val x = size.width * lauf
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent),
                 start = Offset(x - size.width * 0.5f, 0f), end = Offset(x + size.width * 0.5f, size.height)))
         }.antippen(aktion = aktion).semantics { contentDescription = beschreibung },
         contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, null, tint = f.text, modifier = Modifier.size(26.dp))
-    }
+    ) { inhalt() }
 }
 
 /** „GPT-6.1 Sol“ → „6.1 Sol“, wie in der ChatGPT-App; „Claude Opus 5.5“ → „Opus 5.5“. */
@@ -410,10 +414,10 @@ private fun RundBlase(farbe: Color, icon: ImageVector, beschreibung: String, auf
 }
 
 @Composable
-private fun MenueZeile(icon: ImageVector, titel: String, aktion: () -> Unit) {
+private fun MenueZeile(icon: ImageVector, titel: String, farbe: Color? = null, aktion: () -> Unit) {
     val f = LocalFarben.current
     Row(Modifier.fillMaxWidth().antippen(aktion = aktion).padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = f.text, modifier = Modifier.size(26.dp))
+        Icon(icon, null, tint = farbe ?: f.text, modifier = Modifier.size(26.dp))
         Text(titel, color = f.text, fontSize = 18.sp, modifier = Modifier.padding(start = 20.dp))
     }
 }

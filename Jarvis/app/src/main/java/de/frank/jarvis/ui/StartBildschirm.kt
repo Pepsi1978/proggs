@@ -459,18 +459,20 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
             n.anhaenge.forEach { AnhangKachel(de.frank.jarvis.data.Anhang(it), 96.dp) }
         }
         if (n.vonMir) {
-            // Franks Nachricht: dezente Blase rechts, wie in der ChatGPT-App.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Markierbar(hell = false) {
-                    Text(
-                        n.text,
-                        Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = 48.dp)
-                            .background(f.flaecheStark, androidx.compose.foundation.shape.RoundedCornerShape(22.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
-                        color = f.text, fontSize = 16.sp, lineHeight = 22.sp,
-                    )
+            // Franks Nachricht: dezente Blase rechts, wie in der ChatGPT-App; die Symbole darunter beginnen an ihrer linken Kante.
+            Column(Modifier.padding(start = 48.dp)) {
+                Box(Modifier.align(Alignment.End)) {
+                    Markierbar(hell = false) {
+                        Text(
+                            n.text,
+                            Modifier.widthIn(max = 460.dp)
+                                .background(f.flaecheStark, androidx.compose.foundation.shape.RoundedCornerShape(22.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
+                            color = f.text, fontSize = 16.sp, lineHeight = 22.sp,
+                        )
+                    }
                 }
+                FrageLeiste(vm, nummer, n)
             }
-            FrageLeiste(vm, nummer, n)
         } else if (n.art in EXTERNE_ARTEN) {
             // Von außen zugestellte Meldung (z. B. Fortschritt einer Programmier-Sitzung am PC): keine Antwort von Jarvis,
             // daher mit Punkt davor und ohne Aktionsleiste (Wiederholen, Bewerten, Vorlesen ergeben hier keinen Sinn).
