@@ -342,6 +342,7 @@
     { "versionCode": 336, "versionName": "1.8.325", "stand": "24.10.2026, 18:21 Uhr", "notiz": "Kommt die Startbestätigung vom PC verspätet, meldet Jarvis nicht mehr fälschlich „nicht gestartet“, sondern „Start noch unbestätigt“ und korrigiert den Stand, sobald der PC bestätigt." },
     { "versionCode": 337, "versionName": "1.8.326", "stand": "24.10.2026, 18:26 Uhr", "notiz": "Die nachträgliche Startbestätigung vom PC kommt jetzt auch dann an, wenn die Sitzung sich vorher schon mit einem Lebenszeichen gemeldet hat." },
     { "versionCode": 338, "versionName": "1.8.327", "stand": "24.10.2026, 18:34 Uhr", "notiz": "Eine nachgereichte Startbestätigung ändert nur noch einen unbestätigten Auftrag, bleibt sie ganz aus, meldet Jarvis das nach gut drei Minuten, und ein fehlendes Login gilt als nicht gestartet." },
-    { "versionCode": 339, "versionName": "1.8.328", "stand": "24.10.2026, 20:00 Uhr", "notiz": "Nachtrag und Programmierauftrag stehen jetzt direkt unter „Neue Session“, ohne Lücke, alle schwebenden Knöpfe gleichmäßig untereinander." }
+    { "versionCode": 339, "versionName": "1.8.328", "stand": "24.10.2026, 20:00 Uhr", "notiz": "Nachtrag und Programmierauftrag stehen jetzt direkt unter „Neue Session“, ohne Lücke, alle schwebenden Knöpfe gleichmäßig untereinander." },
+    { "versionCode": 340, "versionName": "1.8.329", "stand": "24.10.2026, 20:04 Uhr", "notiz": "Neue Session und Papierkorb bleiben an ihrer alten Stelle, Nachtrag und Programmierauftrag rücken nach oben direkt darunter." }
   ]
 }

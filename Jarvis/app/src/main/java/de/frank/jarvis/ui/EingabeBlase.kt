@@ -345,9 +345,10 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
-/** Größe der schwebenden Symbole und ihr Abstand untereinander. */
+/** Größe der schwebenden Symbole und ihr Abstand untereinander; unter dem Stapel bleibt eine freie Bubble Platz. */
 private val SCHWEBE_GROESSE = 40.dp
 private val SCHWEBE_ABSTAND = 8.dp
+private val SCHWEBE_LUECKE = SCHWEBE_GROESSE + SCHWEBE_ABSTAND * 2
 
 /** Rechter Abstand der Symbole: ihre Mitte liegt genau über der orangen Live-Kugel (12 Rand + 10 Innenabstand + 24 halbe Kugel). */
 val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
@@ -355,13 +356,14 @@ val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
 fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
     val anzahl = 2 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
-    return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1)
+    return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + SCHWEBE_LUECKE
 }
 
 /**
  * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel, alle im selben Abstand untereinander ohne Lücke:
  * oben der Papierkorb „Gespräch löschen“, darunter „Neue Session“, direkt darunter, nur im Programmiergespräch, ein Plus
- * (wie Plus → „+ Nachtrag“) und ganz unten das Programmier-Symbol (wie Plus → „Programmierer“). Ohne Blase, nur ein kleiner,
+ * (wie Plus → „+ Nachtrag“) und als letztes das Programmier-Symbol (wie Plus → „Programmierer“). Darunter bis zur Eingabeblase
+ * eine freie Bubble Platz, damit „Neue Session“ und der Papierkorb an ihrer Stelle bleiben. Ohne Blase, nur ein kleiner,
  * leicht schimmernder, durchscheinender Grund.
  */
 @Composable
@@ -437,6 +439,8 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
             }
         }
+        // Die frühere Lücke zwischen „Neue Session“ und den unteren Symbolen steht jetzt unten: Die oberen bleiben, wo sie waren.
+        Spacer(Modifier.height(SCHWEBE_LUECKE))
     }
 }
 
