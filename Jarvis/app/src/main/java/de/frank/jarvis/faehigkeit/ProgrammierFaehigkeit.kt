@@ -325,11 +325,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Antwortet Frank auf eine offene Modellwahl kurz mit genau einem Modell („Opus 5.5“, „Sol bitte“), gilt das als Wahl,
                 // auch wenn das Modell modell nicht mitgab: keine zweite Nachfrage.
                 val worte = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]
-                // Ein vom Modell selbst eingesetztes Modell zählt im Chat nur, wenn Frank es in seinen Worten genannt hat; sonst kommen die Knöpfe.
-                val modell = when (a.optString("modell").trim().lowercase()) { MODELL_SOL -> MODELL_SOL; MODELL_OPUS -> MODELL_OPUS; else -> "" }
-                    .takeIf { worte?.streng != true || modellGenannt(worte.text) }.orEmpty()
-                    .ifEmpty { herkunft().second.takeIf { g -> g.isNotEmpty() && offeneWahlen.values.any { it.gespraech == g && it.stufe == STUFE_MODELL } }
-                        ?.let { modellAusAntwort(worte?.aktuell) }.orEmpty() }
+                // Franks Wahl vom 24.10.2026: In Jarvis kommen bei jedem neuen Auftrag die Knöpfe, auch wenn das Modell modell mitgibt.
+                // Früher genügte ein Modellname in Franks letzten zwei Nachrichten (etwa „für Opus 5.5“ als Antwort auf „Für welche
+                // App?“), und der Auftrag startete ohne Karte. modell zählt nur noch aus ChatGPT (dort gibt es keine Karte) oder als
+                // Antwort auf eine offene Modellkarte dieses Gesprächs.
+                val (ausChatGpt, gespraech) = herkunft()
+                val modellWert = when (a.optString("modell").trim().lowercase()) { MODELL_SOL -> MODELL_SOL; MODELL_OPUS -> MODELL_OPUS; else -> "" }
+                val modell = when {
+                    ausChatGpt || gespraech.isEmpty() -> modellWert
+                    offeneWahlen.values.any { it.gespraech == gespraech && it.stufe == STUFE_MODELL } ->
+                        modellAusAntwort(worte?.aktuell).ifEmpty { modellWert.takeIf { modellGenannt(worte?.aktuell.orEmpty()) }.orEmpty() }
+                    else -> ""
+                }
                 val cli = when (a.optString("cli").trim().lowercase()) { CLI_OPENCODE -> CLI_OPENCODE; CLI_CODEX -> CLI_CODEX; else -> "" }
                 val ziel = a.optString("ziel").lowercase()
                 // Früher lehnte Jarvis hier ab, sobald zum Gespräch oder zur App schon ein Auftrag lief, und schickte das Modell zu
