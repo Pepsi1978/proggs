@@ -378,7 +378,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * „Neue Aufgaben“: ergänzende Recherche und neue Vorschläge für die freien Plätze, ohne die bestehenden anzutasten;
-     * noch nicht umgesetzte Rückmeldungen bekommen zusätzlich eigene Vorschläge.
+     * je Kategorie nur bis zu den festen Plätzen, noch nicht umgesetzte Rückmeldungen haben dabei Vorrang.
      */
     fun nachfuellen(id: Long) {
         if (!kiPruefen()) return

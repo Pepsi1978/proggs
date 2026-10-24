@@ -179,7 +179,7 @@ class JarvisBruecke : ContentProvider() {
                 val z = repo.ziel(a.optLong("id", -1)) ?: return fehler("Kein Ziel mit dieser id.")
                 val gestartet = Auswertung.starte(ctx, z.id, a.optString("wunsch"), Auswertung.Modus.NACHFUELLEN)
                 JSONObject().put("gestartet", gestartet)
-                    .put("hinweis", if (gestartet) "Ergänzende Recherche und neue Vorschläge für die freien Plätze (je Ziel 10 notwendige und 10 unterstützende) laufen im Hintergrund, Rückmeldungen fließen ein. Danach mit lesen und id abrufen."
+                    .put("hinweis", if (gestartet) "Ergänzende Recherche und neue Vorschläge für die freien Plätze (je Ziel ${Auswertung.PLAETZE_JE_KATEGORIE} notwendige und ${Auswertung.PLAETZE_JE_KATEGORIE} unterstützende) laufen im Hintergrund, Rückmeldungen fließen ein. Danach mit lesen und id abrufen."
                     else "Für dieses Ziel läuft schon eine Auswertung.")
             }
 
@@ -225,7 +225,6 @@ class JarvisBruecke : ContentProvider() {
                 if (a.has("kontext_nutzen")) e.kontextNutzen = a.optBoolean("kontext_nutzen")
                 if (a.has("sortierung")) e.sortierung = sortierungAus(a, e)
                 if (a.has("modus")) a.optString("modus").lowercase(Locale.GERMAN).let { m -> e.modus = when (m) { "hell" -> "hell"; "dunkel" -> "dunkel"; else -> "system" } }
-                if (a.has("menge")) a.optString("menge").lowercase(Locale.GERMAN).let { m -> e.vorschlagMenge = if (m in setOf("knapp", "normal", "ausfuehrlich")) m else "normal" }
                 JSONObject()
                     .put("modell", e.modell.label)
                     .put("modelle", JSONArray(CodexModel.entries.map { it.label }))
@@ -237,7 +236,7 @@ class JarvisBruecke : ContentProvider() {
                     .put("sortierung", e.sortierung.name.lowercase())
                     .put("sortierungen", JSONArray(Sortierung.entries.map { it.name.lowercase() }))
                     .put("modus", e.modus)
-                    .put("menge", e.vorschlagMenge)
+                    .put("menge", "fest: je Ziel ${Auswertung.PLAETZE_JE_KATEGORIE} notwendige und ${Auswertung.PLAETZE_JE_KATEGORIE} unterstützende Vorschläge")
             }
 
             else -> fehler("Unbekannte Methode: $methode")

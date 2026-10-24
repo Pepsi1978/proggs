@@ -122,8 +122,10 @@ object Auswertung {
         val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen } else bisher
         // Freie Plätze je Kategorie: 10 minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
         val freiJe = freiePlaetze(behalten)
-        if (modus == Modus.NACHFUELLEN && freiJe.values.sum() <= 0) {
-            return "Alle $PLAETZE_JE_KATEGORIE notwendigen und $PLAETZE_JE_KATEGORIE unterstützenden Plätze sind belegt. Lehne Vorschläge ab oder blende sie aus, dann füllt „Neue Aufgaben“ genau diese Lücken."
+        // Alles belegt: keine Recherche, offene Rückmeldungen bleiben offen und fließen in den nächsten Lauf mit freien Plätzen.
+        if (modus != Modus.RUECKMELDUNG && freiJe.values.sum() <= 0) {
+            return "Alle $PLAETZE_JE_KATEGORIE notwendigen und $PLAETZE_JE_KATEGORIE unterstützenden Plätze sind belegt. Lehne Vorschläge ab oder blende sie aus, dann füllt „Neue Aufgaben“ genau diese Lücken." +
+                if (offeneRueckmeldungen.isNotEmpty()) " Deine offene Rückmeldung kommt dabei zuerst dran." else ""
         }
 
         val persoenlich = e.kontextNutzen
@@ -210,6 +212,7 @@ object Auswertung {
                     "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze mit $anzahl neuen Vorschlägen, " +
                         "vor allem aus den neuen Erkenntnissen der Ergänzung: andere Wege zum Ziel, die bisher fehlen. " +
                         "Greife dabei auch sinnvolle Anregungen aus FRANKS RÜCKMELDUNGEN (oben) auf, für die es noch keine Aufgabe gibt. " +
+                        (if (offeneRueckmeldungen.isNotEmpty()) RUECKMELDUNG_VORRANG else "") +
                         "Jeder Vorschlag muss inhaltlich eigenständig sein: nichts, was einer abgelehnten oder vorhandenen Aufgabe gleicht, " +
                         "ähnelt, sie umformuliert oder sinngleich ersetzt.",
                 )
@@ -228,7 +231,7 @@ object Auswertung {
         val vorhanden = behalten.map { it.titel to it.text }
         val kandidaten = kandidatenAus(plan)
         if (kandidaten.isNotEmpty()) schritt(zielId, "Prüfe gegen Abgelehntes und Vorhandenes …")
-        var objekte = aussieben(auth, modell, kandidaten, abgelehnt, if (modus == Modus.VOLL && abgelehnt.isEmpty()) emptyList() else vorhanden)
+        var objekte = aussieben(auth, modell, kandidaten, abgelehnt, vorhanden)
         if (modus != Modus.RUECKMELDUNG) {
             objekte = auswahl(objekte, freiJe)
             // Fehlen nach dem Aussieben noch Vorschläge, einmal gezielt nachfordern (ohne neue Websuche).
@@ -318,14 +321,15 @@ object Auswertung {
                 "Auswertung fertig ✨"
             }
             Modus.NACHFUELLEN -> {
+                var gespeichert = emptyList<Vorschlag>()
                 val frisch = Abgleich.gesperrt {
-                    repo.ziel(zielId)?.also { if (neu.isNotEmpty()) repo.neueVorschlaege(ohneAbgelehnte(repo, zielId, neu)) }
+                    repo.ziel(zielId)?.also { gespeichert = ohneAbgelehnte(repo, zielId, neu); if (gespeichert.isNotEmpty()) repo.neueVorschlaege(gespeichert) }
                 } ?: return "Das Ziel gibt es nicht mehr."
                 // Die Ergänzung bleibt in der Recherche, auch wenn alle Kandidaten durchs Raster fielen.
                 repo.speichere(frisch.copy(bericht = bericht))
-                val n = neu.count { it.kategorie == Kategorie.NOTWENDIG.name }
-                val u = neu.size - n
-                if (neu.isEmpty()) "Die Recherche ist ergänzt, aber es kam keine neue Aufgabe durch, die nicht schon da oder abgelehnt ist."
+                val n = gespeichert.count { it.kategorie == Kategorie.NOTWENDIG.name }
+                val u = gespeichert.size - n
+                if (gespeichert.isEmpty()) "Die Recherche ist ergänzt, aber es kam keine neue Aufgabe durch, die nicht schon da oder abgelehnt ist."
                 else "$n notwendige und $u unterstützende Aufgaben ergänzt, die Recherche ist erweitert ✨"
             }
             Modus.RUECKMELDUNG -> {
@@ -366,10 +370,12 @@ object Auswertung {
         return (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { titelAus(it.optString("titel")).isNotEmpty() }
     }
 
-    /** Je Kategorie die wichtigsten Kandidaten, höchstens so viele, wie Plätze frei sind. */
+    /** Je Kategorie die wichtigsten Kandidaten, höchstens so viele, wie Plätze frei sind; Aufgaben zu Franks Rückmeldungen zuerst. */
     private fun auswahl(kandidaten: List<JSONObject>, frei: Map<Kategorie, Int>): List<JSONObject> =
         Kategorie.entries.flatMap { k ->
-            kandidaten.filter { Kategorie.von(it.optString("kategorie")) == k }.sortedByDescending { it.optInt("wichtigkeit", 3) }.take(frei[k] ?: 0)
+            kandidaten.filter { Kategorie.von(it.optString("kategorie")) == k }
+                .sortedWith(compareByDescending<JSONObject> { it.optBoolean("rueckmeldung", false) }.thenByDescending { it.optInt("wichtigkeit", 3) })
+                .take(frei[k] ?: 0)
         }
 
     private fun sperrBlock(abgelehnt: List<Abgelehnt>): String = if (abgelehnt.isEmpty()) "" else buildString {
@@ -532,6 +538,12 @@ object Auswertung {
             "Gefällt ihm eine vorhandene Aufgabe nicht, schlage, wenn es passt, eine bessere Alternative vor und sag ihm, dass er die alte mit Ablehnen herausnehmen kann. " +
             "Ergänze das JSON um das Feld \"antwort\": zwei bis fünf Sätze an Frank in der Du-Form, gut vorlesbar, ohne Aufzählungszeichen; nenne darin, welche neuen Aufgaben du vorschlägst. " +
             "\"strategie\" füllst du nur, wenn sich der beste Weg durch die Rückmeldung ändert, sonst leer; \"symbol\" bleibt leer."
+
+    private const val RUECKMELDUNG_VORRANG =
+        "Vorrang haben Franks als NEU markierte Rückmeldungen: Ihre Anregungen sind noch nicht umgesetzt. Ist eine davon für das Ziel sinnvoll " +
+            "und greift sie noch keine vorhandene Aufgabe auf, mache daraus einen der Vorschläge, setze bei ihm zusätzlich \"rueckmeldung\": true " +
+            "und sag in \"begruendung\" kurz, dass er seine Rückmeldung aufgreift. Nicht sinnvolle Anregungen und was der Agent im Gespräch schon " +
+            "begründet abgelehnt hat, setzt du nicht um. "
 
     private const val RICHTER_ANWEISUNG =
         "Du prüfst neue Aufgabenvorschläge (KANDIDATEN) gegen zwei Listen. Streiche jeden Kandidaten, der einer ABGELEHNTEN Aufgabe gleicht oder ähnelt: " +
