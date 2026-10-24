@@ -488,7 +488,7 @@ class Tagebuch:
 PC_FRISCH_S = 45      # so lange nach seiner letzten Abfrage gilt der PC als da
 PC_HAUPT_LUECKE_S = 3  # so kurz nach einer Abfrage des Hauptrechners gilt er noch als „holt gleich ab“
 PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf einen Auftrag
-PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung; die Bruecke antwortet spaetestens nach 30 s
+PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung (die Bruecke braucht mitunter laenger, siehe unten)
 # Die Bruecke braucht vor dem Start mitunter laenger (Anmeldepruefung bis 35 s, dann bis 30 s OpenLauncher; am 24.10.2026
 # 51 s): Die Quittung eines schon abgeholten Auftrags nimmt der Relay danach noch so lange an und reicht sie dem Handy nach.
 PC_NACHQUITTUNG_S = 150
@@ -934,46 +934,49 @@ class PcBruecke:
             return web.json_response({"pc": True, "ok": False, "fehler": "Der PC hat den Auftrag nicht abgeholt."}, status=504)
         finally:
             if not spaeter:
-                wartend.cancel()
-                self.quittungen.pop(nummer, None)
-                rechner = self.zugestellt_an.pop(nummer, self.rechner)
+                rechner = self._quittung_abschliessen(nummer, wartend)
         return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner,
                                   "anmeldung_fehlt": bool(quittung.get("anmeldung_fehlt"))})
+
+    def _quittung_abschliessen(self, nummer: str, wartend: asyncio.Future) -> str:
+        """Raeumt die Quittung eines Auftrags weg und nennt den Rechner, der ihn abgeholt hat."""
+        wartend.cancel()
+        self.quittungen.pop(nummer, None)
+        return self.zugestellt_an.pop(nummer, self.rechner)
 
     async def _spaete_quittung(self, nummer: str, jarvis_id: str, wartend: asyncio.Future) -> None:
         """
         Quittung eines abgeholten Auftrags nach PC_QUITTUNG_S: Das Handy fuehrt ihn als „Start unbestaetigt“; die Quittung
-        geht als Programmier-Meldung hinterher und korrigiert den Stand im Gespraech. Bleibt sie ganz aus, bleibt es offen
-        (unbekannt ist nicht gescheitert); meldet sich die Sitzung selbst, zeigt das Handy ihre Schritte.
+        geht als Programmier-Meldung hinterher. „spaet“: Das Handy wendet sie nur an, solange der Eintrag noch unbestaetigt
+        ist (hat sich die Sitzung inzwischen selbst gemeldet, gilt ihr Stand). Bleibt die Quittung ganz aus und meldet sich
+        auch die Sitzung nicht, endet „unbestaetigt“ nach PC_NACHQUITTUNG_S mit einem Hinweis, statt fuer immer zu bleiben.
         """
         try:
             quittung = await asyncio.wait_for(asyncio.shield(wartend), PC_NACHQUITTUNG_S)
         except asyncio.TimeoutError:
-            log.info("Auch spaet keine Quittung vom PC")
-            return
+            quittung = None
         finally:
-            wartend.cancel()
-            self.quittungen.pop(nummer, None)
-            rechner = self.zugestellt_an.pop(nummer, self.rechner) or "Der PC"
+            rechner = self._quittung_abschliessen(nummer, wartend) or "Der PC"
         auftrag_id = jarvis_id.strip().upper()
-        if not auftrag_id:
+        if not auftrag_id or self._ist_entfernt(auftrag_id):
             return
-        log.info("Spaete Quittung vom PC: ok=%s", bool(quittung.get("ok")))
-        text = str(quittung.get("text", ""))[:300]
-        if quittung.get("anmeldung_fehlt"):
-            meldung = {"stand": "anmeldung", "seit": int(time.time()),
-                       "schritt": "Doch nicht gestartet: " + (text or "Claude Code auf dem Rechner ist nicht angemeldet.")}
-        elif not quittung.get("ok"):
-            meldung = {"stand": "fehler", "schritt": "Doch nicht gestartet: " + (text or "Der Rechner konnte die Sitzung nicht starten.")}
-        elif any(f.get("auftrag_id") == auftrag_id and f.get("antwort") is None and f.get("status") not in FRAGE_ZU for f in self.fragen.values()):
-            # Die Sitzung fragt schon: Das beweist den Start, und ein nachgereichtes „laeuft“ ueberschriebe die offene Rueckfrage.
-            # (Ein blosser Puls hebt „unbestaetigt“ am Handy nicht auf, darum nicht schon bei self.kontakt schweigen.)
-            return
+        if quittung is None:
+            log.info("Auch spaet keine Quittung vom PC")
+            meldung = {"stand": "fehler", "schritt": f"{rechner} hat den Start auch nach über drei Minuten nicht bestätigt, und die Sitzung "
+                                                      "hat sich nicht gemeldet: vermutlich nicht gestartet. Bitte am PC nachsehen, bevor du neu startest."}
         else:
-            meldung = {"stand": "laeuft", "schritt": f"{rechner} hat den Start nachträglich bestätigt, der Auftrag läuft."}
-        # Das Handy legt den Eintrag erst beim Lesen der 202-Antwort an: kurz Vorsprung lassen.
-        await asyncio.sleep(2)
-        await self.relay.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, **meldung})
+            log.info("Spaete Quittung vom PC: ok=%s", bool(quittung.get("ok")))
+            text = str(quittung.get("text", ""))[:300]
+            if quittung.get("anmeldung_fehlt"):
+                # Keine Sitzung, also auch keine Sperre, die nach /login von selbst weiterliefe: nicht gestartet.
+                meldung = {"stand": "fehler", "schritt": "Doch nicht gestartet: " + (text or "Claude Code auf dem Rechner ist nicht angemeldet.")}
+            elif not quittung.get("ok"):
+                meldung = {"stand": "fehler", "schritt": "Doch nicht gestartet: " + (text or "Der Rechner konnte die Sitzung nicht starten.")}
+            else:
+                meldung = {"stand": "laeuft", "schritt": f"{rechner} hat den Start nachträglich bestätigt, der Auftrag läuft."}
+            # Das Handy legt den Eintrag erst beim Lesen der 202-Antwort an: Vorsprung lassen (Mobilfunk, neues Gespraech).
+            await asyncio.sleep(5)
+        await self.relay.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, "spaet": True, "von": "jarvis", **meldung})
 
     async def meldung(self, request: web.Request) -> web.Response:
         """POST /pc/meldung (Hook am PC): {"auftrag_id", "stand", "schritt", "frage"?: {"frage_id", "fragen", "frei"}}."""

@@ -743,6 +743,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             daten.optJSONObject("frage")?.let { frageAusgang(daten.optString("auftrag_id"), it) }
             return
         }
+        if (daten.optBoolean("spaet")) {
+            spaeteQuittung(auftragId, daten)
+            return
+        }
         val frage = daten.optJSONObject("frage")
         // Dieselbe Rückfrage zweimal (der Hook wiederholt, wenn die Antwort des Servers ausblieb): nur einmal zeigen und melden.
         if (frage != null && Auftragsbuch.kenntFrage(app, frage.optString("frage_id"))) return
@@ -763,6 +767,19 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         // Wiederholte Sperre (gleicher Stand) oder alte Meldung während der Sperre: keine zweite Benachrichtigung.
         verteile(eintrag, frage, benachrichtigen = bisher?.optString("stand") != eintrag.optString("stand") || stand !in GESPERRT)
+    }
+
+    /**
+     * Vom Relay nachgereichte Startbestätigung (oder ihr Ausbleiben) für einen Auftrag mit „Start unbestätigt“. Gilt nur, solange
+     * der Eintrag noch unbestätigt ist: Hat sich die Sitzung inzwischen selbst gemeldet (läuft, Rückfrage, fertig …), gilt ihr Stand.
+     */
+    private fun spaeteQuittung(auftragId: String, daten: JSONObject) {
+        if (Auftragsbuch.finde(app, auftragId)?.optString("stand") != STAND_UNKLAR) return
+        val stand = daten.optString("stand")
+        // Doch nicht gestartet: Ein neuer Start aus dem Gespräch darf nicht mehr als „läuft schon“ abgewiesen werden.
+        if (stand == "fehler") knopfStarts.entries.removeIf { it.value.nummer.equals(auftragId, ignoreCase = true) }
+        val eintrag = Auftragsbuch.melde(app, auftragId, stand, ProgrammierAbschluss.kuerzen(daten.optString("schritt"), ProgrammierAbschluss.MAX_MELDUNG), "") ?: return
+        verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
     }
 
     /**

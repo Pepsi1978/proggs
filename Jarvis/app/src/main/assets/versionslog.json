@@ -340,6 +340,7 @@
     { "versionCode": 334, "versionName": "1.8.323", "stand": "24.10.2026, 18:13 Uhr", "notiz": "Die Knöpfe Opus 5.5 und Sol 6.1 erscheinen erst, nachdem du einen Programmierauftrag abgeschickt hast und die Modellfrage kommt; vorher sind unten keine Modellknöpfe mehr zu sehen." },
     { "versionCode": 335, "versionName": "1.8.324", "stand": "24.10.2026, 18:17 Uhr", "notiz": "Die Modellknöpfe bleiben jetzt auch nach einem Neustart der App kurz nach dem Abschicken erhalten, und Jarvis erinnert nicht mehr hörbar an alte, liegengebliebene Modellfragen." },
     { "versionCode": 336, "versionName": "1.8.325", "stand": "24.10.2026, 18:21 Uhr", "notiz": "Kommt die Startbestätigung vom PC verspätet, meldet Jarvis nicht mehr fälschlich „nicht gestartet“, sondern „Start noch unbestätigt“ und korrigiert den Stand, sobald der PC bestätigt." },
-    { "versionCode": 337, "versionName": "1.8.326", "stand": "24.10.2026, 18:26 Uhr", "notiz": "Die nachträgliche Startbestätigung vom PC kommt jetzt auch dann an, wenn die Sitzung sich vorher schon mit einem Lebenszeichen gemeldet hat." }
+    { "versionCode": 337, "versionName": "1.8.326", "stand": "24.10.2026, 18:26 Uhr", "notiz": "Die nachträgliche Startbestätigung vom PC kommt jetzt auch dann an, wenn die Sitzung sich vorher schon mit einem Lebenszeichen gemeldet hat." },
+    { "versionCode": 338, "versionName": "1.8.327", "stand": "24.10.2026, 18:34 Uhr", "notiz": "Eine nachgereichte Startbestätigung ändert nur noch einen unbestätigten Auftrag, bleibt sie ganz aus, meldet Jarvis das nach gut drei Minuten, und ein fehlendes Login gilt als nicht gestartet." }
   ]
 }
