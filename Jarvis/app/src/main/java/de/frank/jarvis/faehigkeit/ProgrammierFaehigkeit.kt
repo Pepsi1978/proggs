@@ -614,24 +614,34 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 modell == MODELL_SOL -> fortschrittSol(nummer)
                 else -> fortschrittsAnweisung(nummer, pc = ziel is PcBruecke)
             })
+            // Start womöglich gelungen, aber unbestätigt: als „unklar“ eintragen (nie „nicht gestartet“, sonst startet ihn Frank ein
+            // zweites Mal). Meldet sich die Sitzung oder reicht der Relay die Quittung nach, wird daraus ein normaler Auftrag.
+            suspend fun unklarEintragen(schritt: String) {
+                if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt, ausGespraech = aufrufGespraech) }.getOrDefault("") }
+                val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, "", schritt, gespraech, auftrag, stand = STAND_UNKLAR, ursprung = ursprung)
+                if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
+                verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
+            }
             val start = try {
                 withContext(CliWahl(cli)) { ziel.starte(appName, mitFortschritt, review, nummer, modell) }
             } catch (nichtDa: NichtDa) {
                 uebersprungen += nichtDa.message.orEmpty()
                 continue
+            } catch (offen: Unbestaetigt) {
+                // Abgeholt, Bestätigung steht aus: kein Fehler (die Modell-Knöpfe bleiben zu, kein zweiter Start, keine Cloud).
+                unklarEintragen("Der Auftrag ist bei ${offen.rechner} angekommen, die Startbestätigung steht noch aus. Er läuft vermutlich; " +
+                    "sobald der PC bestätigt oder sich die Sitzung meldet, steht es hier.")
+                return Ergebnis("Der Auftrag für $appName (Nummer $nummer) ist bei ${offen.rechner} angekommen; nur die Startbestätigung kam nicht rechtzeitig, " +
+                    "er läuft vermutlich. Starte ihn NICHT neu und NICHT in der Cloud: Die Bestätigung oder die ersten Schritte der Sitzung erscheinen von selbst " +
+                    "im Gespräch, programmierauftraege nennt den Stand. Sag Frank das so, nicht „nicht gestartet“.")
             } catch (zeit: java.net.SocketTimeoutException) {
                 if (vorDemSenden(zeit)) {
                     // Die Verbindung kam gar nicht zustande, also kam auch nichts an: wie „nicht erreichbar“, das nächste Ziel (die Cloud) übernimmt.
                     uebersprungen += "${ziel.name} war nicht erreichbar (Zeitlimit beim Verbindungsaufbau)" + if (ziel is PcBruecke) ", deshalb die Cloud." else "."
                     continue
                 }
-                // Keine Antwort mehr nach dem Senden: Der Auftrag kam womöglich an und läuft. Nicht als gescheitert melden (sonst
-                // startet ihn Frank ein zweites Mal), sondern als „unklar“ eintragen; meldet sich die Sitzung, wird daraus ein normaler Auftrag.
-                if (eigenes) gespraech = withContext(Dispatchers.IO) { runCatching { ProgrammierChat.neuesGespraech(app, appName, auftrag, ueberPlugin = ausChatGpt, ausGespraech = aufrufGespraech) }.getOrDefault("") }
-                val eintrag = Auftragsbuch.neu(app, nummer, appName, ziel.name, "", "Unklar: ${ziel.name} hat den Start nicht rechtzeitig bestätigt (Zeitüberschreitung). " +
-                    "Womöglich läuft der Auftrag trotzdem.", gespraech, auftrag, stand = STAND_UNKLAR, ursprung = ursprung)
-                if (eigenes) Auftragsbuch.herkunftMerken(app, nummer, aufrufGespraech)
-                verteile(eintrag, null, von = ProgrammierChat.VON_JARVIS)
+                // Keine Antwort mehr nach dem Senden: Der Auftrag kam womöglich an und läuft.
+                unklarEintragen("Unklar: ${ziel.name} hat den Start nicht rechtzeitig bestätigt (Zeitüberschreitung). Womöglich läuft der Auftrag trotzdem.")
                 return Ergebnis("Unklar, ob der Auftrag für $appName (Nummer $nummer) gestartet ist: ${ziel.name} hat nach dem Senden nicht rechtzeitig geantwortet " +
                     "(Zeitüberschreitung), er läuft womöglich trotzdem. Starte ihn NICHT neu: Prüfe erst mit programmierauftraege, ob sich die Sitzung meldet, und sag Frank das so.", fehler = true)
             } catch (fehler: Exception) {
@@ -1096,7 +1106,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (benachrichtigen) rueckfrageVorn(eintrag, frage, kurz)
             return
         }
-        val zeichen = when (letzter) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT, STAND_UNKLAR -> "⚠️"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
+        val zeichen = when (letzter) { "fertig" -> "✅"; "fehler" -> "❌"; "info" -> "📋"; in GESPERRT -> "⚠️"; STAND_UNKLAR -> "⏳"; else -> if (von == ProgrammierChat.VON_JARVIS) "🤖" else "⚙️" }
         // Stand „info“ schickt der Hook nur am Zugende mit der ganzen letzten Nachricht der Sitzung: der ausführliche
         // Abschlussbericht. Er bekommt eine eigene Art (volle Aktionsleiste) und bleibt ein Ganzes; alles andere ist Statusmeldung,
         // je Teil eine Zeile mit Symbol und Absender.
@@ -1541,7 +1551,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "frage" -> "Rückfrage, wartet auf Franks Antwort"; "fertig" -> "fertig"; "fehler" -> "fehlgeschlagen"
             STAND_ANMELDUNG -> "BLOCKIERT, Anmeldung erforderlich: Claude Code auf dem Rechner öffnen und /login ausführen, danach arbeitet die Sitzung von selbst weiter"
             STAND_STOERUNG -> "angehalten nach einem API-Fehler (etwa Nutzungslimit), arbeitet erst weiter, wenn die Sitzung wieder antwortet"
-            STAND_UNKLAR -> "unklar, ob gestartet (Zeitüberschreitung beim Start; nicht neu starten, erst abwarten, ob sich die Sitzung meldet)"
+            STAND_UNKLAR -> "Start noch unbestätigt (der PC hat nicht rechtzeitig bestätigt; läuft vermutlich, nicht neu starten, erst abwarten, ob sich die Sitzung meldet)"
             else -> "läuft"
         }
 

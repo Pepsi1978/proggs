@@ -338,6 +338,7 @@
     { "versionCode": 332, "versionName": "1.8.321", "stand": "24.10.2026, 18:01 Uhr", "notiz": "Neue Session hat jetzt dasselbe durchscheinende Schwarz wie der Papierkorb daneben."},
     { "versionCode": 333, "versionName": "1.8.322", "stand": "24.10.2026, 18:03 Uhr", "notiz": "Die Auswahl Opus 5.5 oder Sol 6.1 für einen Programmierauftrag steht jetzt unten rechts direkt neben dem Programmierer-Symbol über der Eingabeblase statt unter der Sprachblase im Chat." },
     { "versionCode": 334, "versionName": "1.8.323", "stand": "24.10.2026, 18:13 Uhr", "notiz": "Die Knöpfe Opus 5.5 und Sol 6.1 erscheinen erst, nachdem du einen Programmierauftrag abgeschickt hast und die Modellfrage kommt; vorher sind unten keine Modellknöpfe mehr zu sehen." },
-    { "versionCode": 335, "versionName": "1.8.324", "stand": "24.10.2026, 18:17 Uhr", "notiz": "Die Modellknöpfe bleiben jetzt auch nach einem Neustart der App kurz nach dem Abschicken erhalten, und Jarvis erinnert nicht mehr hörbar an alte, liegengebliebene Modellfragen." }
+    { "versionCode": 335, "versionName": "1.8.324", "stand": "24.10.2026, 18:17 Uhr", "notiz": "Die Modellknöpfe bleiben jetzt auch nach einem Neustart der App kurz nach dem Abschicken erhalten, und Jarvis erinnert nicht mehr hörbar an alte, liegengebliebene Modellfragen." },
+    { "versionCode": 336, "versionName": "1.8.325", "stand": "24.10.2026, 18:21 Uhr", "notiz": "Kommt die Startbestätigung vom PC verspätet, meldet Jarvis nicht mehr fälschlich „nicht gestartet“, sondern „Start noch unbestätigt“ und korrigiert den Stand, sobald der PC bestätigt." }
   ]
 }

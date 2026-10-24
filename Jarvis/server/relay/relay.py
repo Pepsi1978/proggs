@@ -489,6 +489,9 @@ PC_FRISCH_S = 45      # so lange nach seiner letzten Abfrage gilt der PC als da
 PC_HAUPT_LUECKE_S = 3  # so kurz nach einer Abfrage des Hauptrechners gilt er noch als „holt gleich ab“
 PC_WARTEN_S = 25      # eine Abfrage der Bruecke wartet hoechstens so lange auf einen Auftrag
 PC_QUITTUNG_S = 45    # so lange wartet das Handy auf die Bestaetigung; die Bruecke antwortet spaetestens nach 30 s
+# Die Bruecke braucht vor dem Start mitunter laenger (Anmeldepruefung bis 35 s, dann bis 30 s OpenLauncher; am 24.10.2026
+# 51 s): Die Quittung eines schon abgeholten Auftrags nimmt der Relay danach noch so lange an und reicht sie dem Handy nach.
+PC_NACHQUITTUNG_S = 150
 
 
 FRAGE_HALTEN_S = 48 * 3600  # so lange bleibt eine Rueckfrage samt Ausgang abrufbar (fuer den Abgleich der App)
@@ -528,6 +531,7 @@ class PcBruecke:
         self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
         self.auftraege = asyncio.Queue()
         self.quittungen = {}  # Auftrag-id -> Future mit der Quittung der Bruecke
+        self.spaete = set()   # laufende Warter auf die spaete Quittung eines schon abgeholten Auftrags
         self.nachtraege = {}  # AUFTRAG-ID -> [{"nachtrag_id", "text", "zeit"}], aelteste zuerst
         self.erledigt = {}    # nachtrag_id -> Zeit der Zustellung (Schutz gegen doppelte Zustellung)
         self.kontakt = {}     # AUFTRAG-ID -> monotonic der letzten Meldung der Sitzung (Schritt, Puls): Zeichen, dass sie arbeitet
@@ -899,24 +903,76 @@ class PcBruecke:
         if daten.get("modell") == "sol" and not self._haupt_da():
             return web.json_response({"pc": False}, status=409)
         nummer = uuid.uuid4().hex
+        jarvis_id = str(daten.get("nummer", ""))[:20]
         wartend = asyncio.get_running_loop().create_future()
         self.quittungen[nummer] = wartend
+        spaeter = False
         try:
             # modell: Franks Wahl beim Start (opus = Claude Code wie bisher, sol = Sol 6.1); alles andere gilt als opus.
             # cli: womit Sol laeuft (codex = Codex CLI wie bisher, opencode = OpenCode CLI); alles andere gilt als codex.
             await self.auftraege.put({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
-                                      "nummer": str(daten.get("nummer", ""))[:20], "modell": "sol" if daten.get("modell") == "sol" else "opus",
+                                      "nummer": jarvis_id, "modell": "sol" if daten.get("modell") == "sol" else "opus",
                                       "cli": "opencode" if daten.get("cli") == "opencode" else "codex"})
             log.info("Programmierauftrag an den PC: %s", daten["app"][:40])
-            quittung = await asyncio.wait_for(wartend, PC_QUITTUNG_S)
+            # shield: wait_for braeche die Future sonst ab, und eine spaete Quittung kaeme nie mehr an.
+            quittung = await asyncio.wait_for(asyncio.shield(wartend), PC_QUITTUNG_S)
         except asyncio.TimeoutError:
-            log.info("PC hat den Auftrag nicht quittiert")
-            return web.json_response({"pc": True, "ok": False, "fehler": "Der PC hat den Start nicht bestaetigt."}, status=504)
+            if nummer in self.zugestellt_an:
+                # Abgeholt, nur noch nicht quittiert: Die Bruecke startet die Sitzung womoeglich gerade. Nie „nicht gestartet“
+                # (sonst sendet Frank neu oder das Handy nimmt die Cloud: zwei Sitzungen). ok=true haelt auch ein aelteres
+                # Handy von der Cloud ab; das neue liest „unbestaetigt“. Die spaete Quittung geht als Meldung hinterher.
+                spaeter = True
+                rechner = self.zugestellt_an[nummer]
+                log.info("PC hat den Auftrag abgeholt, Quittung steht noch aus")
+                aufgabe = asyncio.create_task(self._spaete_quittung(nummer, jarvis_id, wartend))
+                self.spaete.add(aufgabe)
+                aufgabe.add_done_callback(self.spaete.discard)
+                return web.json_response({"pc": True, "ok": True, "unbestaetigt": True, "rechner": rechner,
+                                          "text": "Der PC hat den Auftrag abgeholt, die Startbestaetigung steht noch aus."}, status=202)
+            # Nie abgeholt: Er startet auch nie mehr (_warte_auf_auftrag ueberspringt ihn ohne wartende Future).
+            log.info("PC hat den Auftrag nicht abgeholt")
+            return web.json_response({"pc": True, "ok": False, "fehler": "Der PC hat den Auftrag nicht abgeholt."}, status=504)
         finally:
-            self.quittungen.pop(nummer, None)
-            rechner = self.zugestellt_an.pop(nummer, self.rechner)
+            if not spaeter:
+                wartend.cancel()
+                self.quittungen.pop(nummer, None)
+                rechner = self.zugestellt_an.pop(nummer, self.rechner)
         return web.json_response({"pc": True, "ok": bool(quittung.get("ok")), "text": str(quittung.get("text", ""))[:500], "rechner": rechner,
                                   "anmeldung_fehlt": bool(quittung.get("anmeldung_fehlt"))})
+
+    async def _spaete_quittung(self, nummer: str, jarvis_id: str, wartend: asyncio.Future) -> None:
+        """
+        Quittung eines abgeholten Auftrags nach PC_QUITTUNG_S: Das Handy fuehrt ihn als „Start unbestaetigt“; die Quittung
+        geht als Programmier-Meldung hinterher und korrigiert den Stand im Gespraech. Bleibt sie ganz aus, bleibt es offen
+        (unbekannt ist nicht gescheitert); meldet sich die Sitzung selbst, zeigt das Handy ihre Schritte.
+        """
+        try:
+            quittung = await asyncio.wait_for(asyncio.shield(wartend), PC_NACHQUITTUNG_S)
+        except asyncio.TimeoutError:
+            log.info("Auch spaet keine Quittung vom PC")
+            return
+        finally:
+            wartend.cancel()
+            self.quittungen.pop(nummer, None)
+            rechner = self.zugestellt_an.pop(nummer, self.rechner) or "Der PC"
+        auftrag_id = jarvis_id.strip().upper()
+        if not auftrag_id:
+            return
+        log.info("Spaete Quittung vom PC: ok=%s", bool(quittung.get("ok")))
+        text = str(quittung.get("text", ""))[:300]
+        if quittung.get("anmeldung_fehlt"):
+            meldung = {"stand": "anmeldung", "seit": int(time.time()),
+                       "schritt": "Doch nicht gestartet: " + (text or "Claude Code auf dem Rechner ist nicht angemeldet.")}
+        elif not quittung.get("ok"):
+            meldung = {"stand": "fehler", "schritt": "Doch nicht gestartet: " + (text or "Der Rechner konnte die Sitzung nicht starten.")}
+        elif auftrag_id in self.kontakt:
+            # Die Sitzung hat sich schon selbst gemeldet: Ihr Stand gilt, ein nachgereichtes „laeuft“ ueberschriebe etwa eine Rueckfrage.
+            return
+        else:
+            meldung = {"stand": "laeuft", "schritt": f"{rechner} hat den Start nachträglich bestätigt, der Auftrag läuft."}
+        # Das Handy legt den Eintrag erst beim Lesen der 202-Antwort an: kurz Vorsprung lassen.
+        await asyncio.sleep(2)
+        await self.relay.programmier_meldung({"signal": "programmieren", "auftrag_id": auftrag_id, **meldung})
 
     async def meldung(self, request: web.Request) -> web.Response:
         """POST /pc/meldung (Hook am PC): {"auftrag_id", "stand", "schritt", "frage"?: {"frage_id", "fragen", "frei"}}."""
