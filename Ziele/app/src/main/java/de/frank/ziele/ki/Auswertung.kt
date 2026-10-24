@@ -70,10 +70,16 @@ object Auswertung {
      * Startet die Auswertung; läuft schon eine für dieses Ziel, passiert nichts.
      * [fertig] bekommt den Fehlertext (null = Erfolg) und eine Erfolgsmeldung.
      */
-    @Synchronized
     fun starte(context: Context, zielId: Long, wunsch: String = "", modus: Modus = Modus.VOLL, fertig: (String?, String) -> Unit = { _, _ -> }): Boolean {
-        if (laeufe[zielId]?.isActive == true) return false
         val app = context.applicationContext
+        if (!synchronized(this) { anlegen(app, zielId, wunsch, modus, fertig) }) return false
+        // Außerhalb der Sperre (Systemaufruf) und erst nach dem Eintrag in „stand“: Der Dienst beendet sich, sobald keine Auswertung mehr läuft.
+        AuswertungsDienst.starte(app)
+        return true
+    }
+
+    private fun anlegen(app: Context, zielId: Long, wunsch: String, modus: Modus, fertig: (String?, String) -> Unit): Boolean {
+        if (laeufe[zielId]?.isActive == true) return false
         _fehler.update { it - zielId }
         schritt(zielId, "Bereite vor …")
         _modus.update { it + (zielId to modus) }
@@ -92,14 +98,13 @@ object Auswertung {
                 _modus.update { it - zielId }
                 synchronized(this@Auswertung) { laeufe.remove(zielId) }
             }
-            fertig(ergebnis, erfolg)
+            // Erst die Meldung im Hintergrund, dann der Hinweis in der App; ein Fehler im Hinweis darf nichts mitreißen.
             if (ergebnis != "Abgebrochen.") runCatching {
                 val titel = ZieleRepository.get(app).ziel(zielId)?.titel ?: "Ziel"
                 AuswertungsDienst.fertig(app, zielId, titel, ergebnis ?: erfolg, ergebnis != null)
             }
+            runCatching { fertig(ergebnis, erfolg) }.onFailure { Log.w("ZieleAuswertung", "Rückmeldung $zielId", it) }
         }
-        // Erst nach dem Eintrag in „stand“: Der Dienst beendet sich, sobald keine Auswertung mehr läuft.
-        AuswertungsDienst.starte(app)
         return true
     }
 

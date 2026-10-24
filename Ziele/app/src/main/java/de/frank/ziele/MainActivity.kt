@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         // Ohne diese Erlaubnis meldet sich eine im Hintergrund fertige Auswertung nicht (Android 13+).
-        if (Build.VERSION.SDK_INT >= 33 &&
+        if (savedInstanceState == null && Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) meldungsErlaubnis.launch(Manifest.permission.POST_NOTIFICATIONS)
         setContent { ZieleApp(vm, this) }

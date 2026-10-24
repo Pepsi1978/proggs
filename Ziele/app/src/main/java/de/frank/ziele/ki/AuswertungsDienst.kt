@@ -39,43 +39,48 @@ class AuswertungsDienst : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /** Letzter Start: stopSelf(startId) verwirft keinen Start, der gerade noch unterwegs ist (sonst stürzt Android die App ab). */
+    private var letzterStart = 0
+    private var beendet = false
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        letzterStart = startId
+        beendet = false
         val meldung = laufend(this, Auswertung.stand.value.values.firstOrNull() ?: "Bereite vor …", Auswertung.stand.value.size)
         try {
             if (Build.VERSION.SDK_INT >= 29) startForeground(ID_LAUFEND, meldung, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
             else startForeground(ID_LAUFEND, meldung)
         } catch (e: Exception) {
             Log.w("ZieleDienst", "Vordergrund nicht erlaubt", e)
-            stopSelf()
+            stopSelf(startId)
             return START_NOT_STICKY
         }
-        if (wach == null) {
-            wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Ziele:Auswertung").apply {
-                setReferenceCounted(false)
-                acquire(2 * 60 * 60 * 1000L)
-            }
-        }
+        // Bei jedem Start neu: Die Zeitgrenze beginnt von vorn, falls der Dienst über mehrere Läufe hinweg lebt.
+        (wach ?: getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Ziele:Auswertung")
+            .apply { setReferenceCounted(false) }.also { wach = it })
+            .acquire(2 * 60 * 60 * 1000L)
         if (beobachter == null) beobachter = bereich.launch {
             Auswertung.stand.collect { laeufe ->
-                if (laeufe.isEmpty()) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                } else {
-                    getSystemService(NotificationManager::class.java).notify(ID_LAUFEND, laufend(this@AuswertungsDienst, laeufe.values.first(), laeufe.size))
-                }
+                if (beendet) return@collect
+                if (laeufe.isEmpty()) beenden(letzterStart)
+                else getSystemService(NotificationManager::class.java).notify(ID_LAUFEND, laufend(this@AuswertungsDienst, laeufe.values.first(), laeufe.size))
             }
         }
         return START_NOT_STICKY
     }
 
-    /** Android 15+: Zeitlimit für Datenabgleich erreicht, sauber beenden (die Läufe rechnen trotzdem weiter, solange der Prozess lebt). */
-    override fun onTimeout(startId: Int, fgsType: Int) {
+    private fun beenden(startId: Int) {
+        beendet = true
         stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        stopSelf(startId)
     }
+
+    /** Android 15+: Zeitlimit für Datenabgleich erreicht, sauber beenden (die Läufe rechnen trotzdem weiter, solange der Prozess lebt). */
+    override fun onTimeout(startId: Int, fgsType: Int) = beenden(startId)
 
     override fun onDestroy() {
         bereich.cancel()
+        getSystemService(NotificationManager::class.java).cancel(ID_LAUFEND)
         wach?.takeIf { it.isHeld }?.release()
         wach = null
         super.onDestroy()
@@ -92,7 +97,11 @@ class AuswertungsDienst : Service() {
                 .onFailure { Log.w("ZieleDienst", "Dienst nicht gestartet", it) }
         }
 
+        @Volatile private var kanaeleDa = false
+
         private fun kanaele(context: Context) {
+            if (kanaeleDa) return
+            kanaeleDa = true
             val nm = context.getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(NotificationChannel(KANAL_LAUFEND, "Laufende Auswertung", NotificationManager.IMPORTANCE_LOW))
             nm.createNotificationChannel(NotificationChannel(KANAL_FERTIG, "Auswertung fertig", NotificationManager.IMPORTANCE_DEFAULT))
@@ -107,7 +116,7 @@ class AuswertungsDienst : Service() {
         private fun laufend(context: Context, schritt: String, anzahl: Int): Notification {
             kanaele(context)
             return NotificationCompat.Builder(context, KANAL_LAUFEND)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_stat_ziel)
                 .setContentTitle(if (anzahl > 1) "$anzahl Auswertungen laufen" else "Auswertung läuft")
                 .setContentText(schritt)
                 .setOngoing(true)
@@ -125,7 +134,7 @@ class AuswertungsDienst : Service() {
             ) return
             kanaele(context)
             val n = NotificationCompat.Builder(context, KANAL_FERTIG)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_stat_ziel)
                 .setContentTitle(if (fehler) "„$titel“: Auswertung fehlgeschlagen" else "„$titel“")
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
