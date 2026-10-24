@@ -46,6 +46,7 @@
     {"versionCode": 42, "versionName": "1.0.41", "stand": "22.10.2026, 12:44 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."},
     {"versionCode": 43, "versionName": "1.0.42", "stand": "24.10.2026, 19:37 Uhr", "notiz": "Neuer Bereich Ziele unter Später: Aufgaben aus der App Ziele stehen dort eingerückt unter ihrem Ziel, oben liest ein Lautsprecher alle Aufgaben samt Inhalt vor, und der Hell-Dunkel-Schalter ist überall oben erreichbar."},
     {"versionCode": 44, "versionName": "1.0.43", "stand": "24.10.2026, 19:46 Uhr", "notiz": "Feinschliff nach dem Review: Zielgruppen behalten ihren Aufklapp-Zustand, der Hell-Dunkel-Knopf hat überall die richtige Größe, und ein geändertes Ziel-Symbol kommt aus der App Ziele an."},
-    {"versionCode": 45, "versionName": "1.0.44", "stand": "24.10.2026, 19:56 Uhr", "notiz": "Zeitleiste: Sie zeigt jetzt standardmäßig nur den Bereich von einer Stunde vor der ersten bis eine Stunde nach der letzten Aufgabe, und ein Tag ohne Termine zeigt nur einen kurzen Ausschnitt statt der ganzen Spanne."}
+    {"versionCode": 45, "versionName": "1.0.44", "stand": "24.10.2026, 19:56 Uhr", "notiz": "Zeitleiste: Sie zeigt jetzt standardmäßig nur den Bereich von einer Stunde vor der ersten bis eine Stunde nach der letzten Aufgabe, und ein Tag ohne Termine zeigt nur einen kurzen Ausschnitt statt der ganzen Spanne."},
+    {"versionCode": 46, "versionName": "1.0.45", "stand": "24.10.2026, 19:59 Uhr", "notiz": "Zeitleiste: Der Umschalter Kompakt / Ganzer Tag erscheint jetzt auch, wenn nur der Rand an die Termine angepasst wird, damit ein leerer Tag sich wieder ganz aufklappen lässt."}
   ]
 }

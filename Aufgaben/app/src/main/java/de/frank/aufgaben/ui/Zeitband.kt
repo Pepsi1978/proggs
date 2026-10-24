@@ -110,10 +110,11 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
 
         private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, jetzt: Int?): Pair<Int, Int> {
             if (!auto) return von to bis
-            // Ohne Termine nur ein kurzer Ausschnitt: heute eine Stunde um die aktuelle Uhrzeit, sonst die ersten zwei Stunden.
+            // Ohne Termine nur ein kurzer Ausschnitt von zwei Stunden: heute ab einer Stunde vor der aktuellen vollen Stunde,
+            // sonst die ersten zwei Stunden der Spanne (nie über ihr Ende hinaus).
             if (termine.isEmpty()) {
-                val a = if (jetzt != null) ((jetzt / 60 - 1) * 60).coerceIn(0, 22 * 60) else von
-                return a to (a + 120).coerceAtMost(24 * 60)
+                if (jetzt != null) return ((jetzt / 60 - 1) * 60).coerceIn(0, 22 * 60).let { it to it + 120 }
+                return von to minOf(von + 120, maxOf(bis, von + 60))
             }
             val erster = termine.minOf { it.minuten ?: von }
             val letzter = termine.maxOf { (it.minuten ?: von) + maxOf(it.dauer, 30) }

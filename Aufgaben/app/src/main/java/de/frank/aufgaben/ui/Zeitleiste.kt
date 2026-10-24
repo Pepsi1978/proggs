@@ -102,13 +102,13 @@ fun Zeitleiste(
     // Beim Ziehen genau die eingestellte Spanne: Darauf rechnet ZiehZustand (ziehSpanne) den Ausgleich beim Ziehstart.
     val band = when {
         zustand.aufgabe != null -> Zeitband(vonEinst, bisEinst)
-        luecken && ganzerTag -> ganz
+        (luecken || auto) && ganzerTag -> ganz
         else -> kompakt
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Sichtbar genau dann, wenn die Einstellung an ist — nie abhängig vom Ziehen: Eine Höhenänderung über der Leiste
         // beim Ziehstart kennt der Ausgleich in ZiehZustand nicht, die Leiste spränge unter dem Finger.
-        if (luecken) AnsichtSchalter(ganzerTag, kompakt.ausgeblendet(ganz.vonMin, ganz.bisMin), ganz.vonMin, ganz.bisMin, onGanzerTag)
+        if (luecken || auto) AnsichtSchalter(ganzerTag, kompakt.ausgeblendet(ganz.vonMin, ganz.bisMin), ganz.vonMin, ganz.bisMin, onGanzerTag)
         Leiste(tag, termine, istHeute, jetzt, zustand, band, if (luecken) { { onGanzerTag(true) } } else null, onTipp, onErledigt)
     }
 }
