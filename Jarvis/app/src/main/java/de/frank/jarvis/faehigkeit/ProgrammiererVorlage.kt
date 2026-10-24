@@ -25,5 +25,5 @@ object ProgrammiererVorlage {
     const val HINWEIS = "\n\n(Frank hat das über den Menüpunkt „Programmierer“ gestellt: Der Text nach dem Doppelpunkt ist ausdrücklich ein NEUER " +
         "Programmierauftrag. Übergib ihn mit programmieren, vollständig ausformuliert mit allem Wissen aus dem Gespräch; beantworte oder " +
         "programmiere ihn nicht selbst und nimm nicht programmier_nachtrag, außer Frank verlangt darin ausdrücklich einen Nachtrag. " +
-        "Leite die App aus Auftrag und Gespräch ab; ist sie nicht eindeutig, frag Frank kurz danach und starte noch nichts.)"
+        "Leite die App aus Auftrag und Gespräch ab; nennt Frank keine, lass app weg und frag nicht danach: Der Auftrag geht trotzdem sofort raus.)"
 }

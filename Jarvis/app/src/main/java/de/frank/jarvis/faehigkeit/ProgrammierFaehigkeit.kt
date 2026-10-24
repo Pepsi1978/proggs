@@ -71,7 +71,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "neuen Auftrag oder einen Nachtrag will oder welche Sitzung er meint, frag kurz und sende nichts. Ohne Nachtragswunsch ist ein Programmierwunsch ein neuer Auftrag. " +
             "Bevor du für Jarvis selbst eine neue Funktion vorschlägst oder beauftragst, prüfe mit funktionen_lesen, ob es sie schon gibt. " +
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
-            "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Ist unklar, welche App gemeint ist, frag Frank kurz, bevor du startest. Programmiere nie selbst im Gespräch."
+            "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Frag nie nach der App: Nennt Frank keine (etwa bei einem Test), lass app weg; die Modellwahl kommt trotzdem und der Auftrag geht so an den Programmierer. Programmiere nie selbst im Gespräch."
 
     private val app = context.applicationContext
     private val e get() = Einstellungen.get(app)
@@ -297,7 +297,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "(etwa zehn bis zwanzig Minuten, dann meldet UpdateStation die neue Version). Es findet die App in Franks Repo und programmiert die Änderung. Dieser Aufruf kehrt sofort zurück. Die Sitzung kennt nur den Auftragstext (Regeln am Feld auftrag). " +
                     "Franks Programmierregeln sind nur für dich: Richte den Auftrag nach ihnen aus " +
                     "(im Plugin vorher mit jarvis_gemerktes_lesen lesen), schreibe ihren Text aber nicht hinein; Jarvis hängt sie nicht an. Ein fertiger Auftrag vom Agenten Code-Analyse oder aus repo_lesen kann unverändert hinein. " +
-                    "Ist unklar, welche App gemeint ist, frag Frank vorher. Jeder Aufruf ist ein NEUER Auftrag mit eigener Sitzung, auch wenn zur selben App oder zum selben " +
+                    "Frag nie nach der App: Nennt Frank keine eindeutige (etwa bei einem Test), lass app weg; der Auftrag geht trotzdem raus, die Modellwahl kommt wie immer. Jeder Aufruf ist ein NEUER Auftrag mit eigener Sitzung, auch wenn zur selben App oder zum selben " +
                     "Thema schon einer läuft oder gerade fertig wurde; er hängt sich nie an einen alten. Hat das Gespräch schon einen Auftrag, bekommt der neue eine eigene, " +
                     "getrennte Jarvis-Session. In eine bestehende Sitzung geht ein Wunsch nur, wenn Frank ausdrücklich einen Nachtrag dorthin verlangt (programmier_nachtrag); " +
                     "ist unklar, ob er einen neuen Auftrag oder einen Nachtrag will, frag ihn kurz, bevor du etwas startest. " +
@@ -305,7 +305,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "Verlangt Frank ausdrücklich die Übergabe solcher Abschnitte, ist jeder nicht leere Abschnitt eine Aufgabe: alle zusammen in EINEM Aufruf " +
                     "(eine Sitzung), im Auftrag durch „ ; “ getrennt; ein Trenner am Ende ist keine weitere Aufgabe.",
                 schema = schema(
-                    "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt."),
+                    "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt. Weglassen, wenn Frank keine nennt."),
                     "auftrag" to text(AUFTRAGS_REGELN),
                     "review" to schalter("Nur bei modell=sol und cli=codex: Franks Antwort, ob ein Review laufen soll, wenn die App oder das APK-Update fertig programmiert ist " +
                         "(Codex kann nicht selbst fragen). Sonst weglassen: Opus und OpenCode fragen am Ende selbst."),
@@ -315,11 +315,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         "ist er aus, in Codex Cloud). Weglassen: Jarvis fragt Frank per Knopf.", listOf("opus", "sol")),
                     "cli" to text("Nur bei modell=sol und wenn Frank es gewählt oder gesagt hat: codex (Codex CLI) oder opencode (OpenCode CLI, mit Rückfragen wie bei Claude Code). " +
                         "Weglassen: Jarvis fragt Frank per Knopf.", listOf(CLI_CODEX, CLI_OPENCODE)),
-                    pflicht = listOf("app", "auftrag"),
+                    pflicht = listOf("auftrag"),
                 ),
                 nurLesen = false,
             ) { a ->
-                val appName = a.optString("app").trim()
+                // Franks Wahl vom 24.10.2026: Ohne genannte App geht der Auftrag trotzdem raus (etwa ein reiner Test), mit Modellwahl.
+                val appName = a.optString("app").trim().ifEmpty { APP_OHNE }
                 // Mehrere Aufgaben einheitlich getrennt und ohne Trenner am Ende (siehe DiktatTrenner.auftrag).
                 val auftrag = DiktatTrenner.auftrag(a.optString("auftrag"))
                 // Antwortet Frank auf eine offene Modellwahl kurz mit genau einem Modell („Opus 5.5“, „Sol bitte“), gilt das als Wahl,
@@ -347,7 +348,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Über den Menüpunkt „Programmierer“ ist es ausdrücklich ein neuer Auftrag: dann nie „schon per Knopf gestartet“.
                 val knopf = if (neu || ProgrammiererVorlage.aufgabe(worte?.aktuell.orEmpty()) != null) null else knopfStartIn(herkunft().second, worte?.aktuell.orEmpty())
                 when {
-                    appName.isEmpty() -> Ergebnis("Welche App ist gemeint? Bitte Frank fragen.", fehler = true)
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     // Frank hat eben per Knopf gewählt und der Auftrag läuft; schiebt er gleich danach etwas nach, ruft das Modell
                     // programmieren oft noch einmal auf: dann weder die Modellfrage ein zweites Mal noch ein doppelter Auftrag.
@@ -505,9 +505,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
     private fun frageUndKnoepfe(w: OffeneWahl): Pair<String, List<Pair<String, String>>> = when (w.stufe) {
-        STUFE_CLI -> "Programmierauftrag für ${w.app}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
-        STUFE_REVIEW -> "Programmierauftrag für ${w.app}: Soll Codex ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
-        else -> "Programmierauftrag für ${w.app}: Opus 5.5 oder Sol 6.1?" to listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
+        STUFE_CLI -> "Programmierauftrag${fuer(w.app)}: Sol 6.1 mit Codex CLI oder OpenCode CLI?" to listOf(CLI_CODEX to "Codex CLI", CLI_OPENCODE to "OpenCode CLI")
+        STUFE_REVIEW -> "Programmierauftrag${fuer(w.app)}: Soll Codex ein Review machen, wenn die App oder das APK-Update fertig programmiert ist?" to listOf(REVIEW_JA to "Ja", REVIEW_NEIN to "Nein")
+        else -> "Programmierauftrag${fuer(w.app)}: Opus 5.5 oder Sol 6.1?" to listOf(MODELL_OPUS to "Opus 5.5", MODELL_SOL to "Sol 6.1")
     }
 
     /** Die offenen Modellwahl-Knöpfe eines Gesprächs gelten nicht mehr (Frank hat per Sprache gewählt). */
@@ -578,7 +578,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         var gespraech = if (eigenes) "" else aufrufGespraech
         // Franks Programmierregeln gehen bewusst nicht mit: Sie sind reiner Jarvis-Kontext (wie Jarvis Aufträge steuert), keine Anweisung an die Sitzung.
         for (ziel in wahl) {
-            val mitFortschritt = auftragMitFortschritt(auftrag, when {
+            val mitFortschritt = auftragMitFortschritt(if (appName == APP_OHNE) "$OHNE_APP_HINWEIS\n\n$auftrag" else auftrag, when {
                 ziel is CodexCloud -> fortschrittCodex(nummer)
                 // OpenCode: Hooks über das Plugin jarvis-auftrag.js, Jarvis-MCP global, Rückfragen mit dem Werkzeug question.
                 modell == MODELL_SOL && cli == CLI_OPENCODE -> fortschrittsAnweisung(nummer, pc = true, frageWerkzeug = "dem Werkzeug question")
@@ -1914,6 +1914,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "unbedingt behalten, nenne es knapp und konkret als Schutzanforderung („Unverändert lassen: …“). Keine Lösungswege, Umsetzungsschritte oder " +
             "Dateipfade vorgeben, keine Wiederholungen, keine verworfenen Ideen. Vermutete Ursachen nur, wenn sie wirklich helfen, und als „Vermutung:“ markiert. " +
             "Mehrere Aufgaben durch „ ; “ getrennt (siehe Beschreibung)."
+
+        /** App-Feld eines Auftrags, in dem Frank keine App genannt hat. */
+        const val APP_OHNE = "ohne App"
+        private const val OHNE_APP_HINWEIS = "Frank hat keine App genannt. Ergibt sich keine eindeutig aus dem Auftrag (etwa bei einem reinen Test), " +
+            "bearbeite ihn ohne App und frag nicht nach einer."
+        private fun fuer(app: String) = if (app == APP_OHNE) "" else " für $app"
 
         /** So lang darf der ganze Text an ein Programmier-Ziel höchstens werden. */
         const val HOECHSTENS = 60_000
