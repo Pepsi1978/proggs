@@ -19,7 +19,9 @@ Gemini 3.8 Flash/Flash-Lite, Azure, eigene Stimme) und Diktat (Groq Whisper) sin
   Ausblenden bleibt wie bisher (ausgegraut, wieder einblendbar).
 - **Neue Aufgaben** (Ziel-Karte und Detailseite): keine komplette Auswertung, sondern eine Ergänzungsrecherche mit
   Websuche aus anderer Richtung (weitere Fragen, andere Wege), angehängt an die bestehende Recherche („ERGÄNZUNG VOM …“,
-  Quellen zusammengeführt), dann neue Vorschläge für die freien Plätze (Zielgröße nach „Wie viele Vorschläge“ minus sichtbare).
+  Quellen zusammengeführt), dann neue Vorschläge für die freien Plätze. Feste Plätze: je Ziel 10 notwendige und 10 unterstützende
+  (`Auswertung.PLAETZE_JE_KATEGORIE`); frei = 10 minus offene, sichtbare je Kategorie. Der Plan erbittet 3 mehr, siebt aus,
+  nimmt je Kategorie die wichtigsten und fordert Fehlendes einmal nach.
 - **Rückmeldung zur Auswertung** (Detailseite, tippen oder einsprechen): der Aufgaben-Agent antwortet, ergänzt bei Bedarf
   Vorschläge und passt den Weg an. Das Gespräch (Tabelle `rueckmeldungen`) fließt in jede künftige Auswertung ein.
 - **Plus** an jedem Vorschlag legt ihn in Geniale Aufgaben an (Priorität: notwendig mit Wichtigkeit ≥ 4 = Hoch, sonst Mittel;

@@ -70,6 +70,7 @@ import de.frank.ziele.BuildConfig
 import de.frank.ziele.auth.CodexModel
 import de.frank.ziele.auth.ReasoningEffort
 import de.frank.ziele.auth.deviceCodeGroups
+import de.frank.ziele.ki.Auswertung
 import de.frank.ziele.tts.TtsCatalog
 import de.frank.ziele.tts.TtsProvider
 import de.frank.ziele.ui.theme.Chip
@@ -236,8 +237,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 Block("Auswertung") {
                     Schalter("Vorher im Internet recherchieren", e.recherche) { e.recherche = it }
                     Text("Die KI sucht mit ihrer Websuche, wie man das Ziel nachweislich am besten erreicht, und baut die Aufgaben darauf auf. Dauert etwas länger, ist aber deutlich besser.", color = f.textLeise, fontSize = 12.sp)
-                    Text("Wie viele Vorschläge", color = f.textLeise, fontSize = 13.sp)
-                    ChipReihe { listOf("knapp" to "Knapp", "normal" to "Normal", "ausfuehrlich" to "Ausführlich").forEach { (id, name) -> Chip(name, e.vorschlagMenge == id) { e.vorschlagMenge = id } } }
+                    Text("Je Ziel gibt es immer ${Auswertung.PLAETZE_JE_KATEGORIE} notwendige und ${Auswertung.PLAETZE_JE_KATEGORIE} unterstützende Vorschläge. Lehnst du welche ab oder blendest sie aus, füllt „Neue Aufgaben“ genau diese Plätze je Kategorie wieder auf.", color = f.textLeise, fontSize = 12.sp)
                 }
                 // ---- Vorlesen ----
                 Block("Vorlesen") {

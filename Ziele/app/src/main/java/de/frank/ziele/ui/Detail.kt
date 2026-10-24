@@ -254,7 +254,7 @@ private fun AuswertenKnopf(vm: AppViewModel, z: Ziel, schritt: String?, fehler: 
                     "Zuletzt ausgewertet am " + SimpleDateFormat("d. MMMM yyyy, HH:mm", Locale.GERMAN).format(Date(it)) + " Uhr" +
                         (if (z.auswertungModell.isNotBlank()) " · ${z.auswertungModell}" else "") +
                         ". Übernommene und ausgeblendete Vorschläge bleiben beim Neu-Auswerten erhalten, abgelehnte kommen nie wieder. " +
-                        "Neue Aufgaben recherchiert weiter im Internet und füllt nur die freien Plätze.",
+                        "Neue Aufgaben recherchiert weiter im Internet und füllt nur die freien Plätze, bis wieder je 10 notwendige und 10 unterstützende da sind.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }

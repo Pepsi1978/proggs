@@ -114,14 +114,16 @@ object Auswertung {
         val bisher = repo.vorschlaege(zielId)
         val abgelehnt = repo.abgelehnt(zielId)
         val gespraech = repo.rueckmeldungen(zielId)
-        // Freie Plätze: Zielgröße minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
-        val frei = zielGroesse(e.vorschlagMenge) - bisher.count { !it.verworfen && !it.erledigt }
-        // Noch nicht umgesetzte Rückmeldungen dürfen beim Nachfüllen auch über die freien Plätze hinaus Aufgaben anstoßen.
+        // Noch nicht umgesetzte Rückmeldungen fließen in diesen Lauf ein und gelten danach als bedacht.
         val offeneRueckmeldungen = gespraech.filter { it.vonFrank && !it.verarbeitet }.map { it.id }
-        // Kein Platz frei, aber neue Rückmeldungen: nur deren Aufgaben, ohne neue Websuche.
-        val nurRueckmeldung = modus == Modus.NACHFUELLEN && frei <= 0
-        if (nurRueckmeldung && offeneRueckmeldungen.isEmpty()) {
-            return "Gerade ist kein Platz frei. Lehne Vorschläge ab oder blende sie aus, dann füllt „Neue Aufgaben“ die Lücken."
+
+        // Bei der vollen Auswertung bleiben nur übernommene und ausgeblendete Vorschläge, die übrigen werden ersetzt;
+        // Nachfüllen und Rückmeldung behalten alles und ergänzen nur.
+        val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen } else bisher
+        // Freie Plätze je Kategorie: 10 minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
+        val freiJe = freiePlaetze(behalten)
+        if (modus == Modus.NACHFUELLEN && freiJe.values.sum() <= 0) {
+            return "Alle $PLAETZE_JE_KATEGORIE notwendigen und $PLAETZE_JE_KATEGORIE unterstützenden Plätze sind belegt. Lehne Vorschläge ab oder blende sie aus, dann füllt „Neue Aufgaben“ genau diese Lücken."
         }
 
         val persoenlich = e.kontextNutzen
@@ -142,10 +144,6 @@ object Auswertung {
         val sperre = sperrBlock(abgelehnt)
         val rueckmeldungen = gespraechBlock(gespraech)
 
-        // Bei der vollen Auswertung bleiben nur übernommene und ausgeblendete Vorschläge, die übrigen werden ersetzt;
-        // Nachfüllen und Rückmeldung behalten alles und ergänzen nur.
-        val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen } else bisher
-
         // ---- Schritt 1: Recherche (voll) bzw. Ergänzungsrecherche (nachfüllen); die Rückmeldung baut auf der vorhandenen auf ----
         val bericht = when (modus) {
             Modus.VOLL -> {
@@ -158,14 +156,16 @@ object Auswertung {
                     websuche = e.recherche,
                 ).trim().also { if (it.isBlank()) throw IllegalStateException("Die Recherche hat keinen Bericht geliefert.") }
             }
-            Modus.NACHFUELLEN -> if (nurRueckmeldung) ziel.bericht else {
+            Modus.NACHFUELLEN -> {
                 schritt(zielId, if (e.recherche) "Recherchiere weiter im Internet, aus anderer Richtung …" else "Denke über weitere Wege zum Ziel nach …")
                 val alt = Quellen.teilen(ziel.bericht).text
                 val ergaenzung = auth.streamChat(
                     instructions = ERGAENZUNG_ANWEISUNG + if (e.recherche) RECHERCHE_MIT_WEB else RECHERCHE_OHNE_WEB,
                     turns = listOf(ChatTurn("user", buildString {
                         append(zielText).append("\n\n")
-                        append("BISHERIGE RECHERCHE (bitte nicht wiederholen, sondern ergänzen):\n").append(alt.ifBlank { "(noch keine)" }.takeLast(20_000)).append("\n\n")
+                        // Die gesamte bisherige Recherche samt aller Ergänzungen, damit nichts doppelt recherchiert wird.
+                        append("BISHERIGE RECHERCHE (bitte nicht wiederholen, sondern ergänzen):\n").append(alt.ifBlank { "(noch keine)" }.takeLast(RECHERCHE_MAX)).append("\n\n")
+                        if (ziel.strategie.isNotBlank()) append("BISHERIGER WEG: ").append(ziel.strategie).append("\n\n")
                         append(ueberFrank).append(rueckmeldungen).append(sperre)
                         if (behalten.isNotEmpty()) append("SCHON VORHANDENE AUFGABEN:\n").append(behalten.joinToString("\n") { "- " + it.titel }).append("\n\n")
                         if (wunsch.isNotBlank()) append("BESONDERER WUNSCH: ").append(wunsch).append('\n')
@@ -182,17 +182,14 @@ object Auswertung {
 
         // ---- Schritt 2: Aufgaben ableiten ----
         schritt(zielId, if (modus == Modus.RUECKMELDUNG) "Denke über deine Rückmeldung nach …" else "Leite die wichtigsten Aufgaben ab …")
-        val anzahl = when (modus) {
-            Modus.VOLL -> "etwa " + when (e.vorschlagMenge) { "knapp" -> "5 bis 8"; "ausfuehrlich" -> "14 bis 22"; else -> "8 bis 14" }
-            Modus.NACHFUELLEN -> "genau " + frei.coerceAtMost(12)
-            Modus.RUECKMELDUNG -> ""
-        }
+        // Etwas mehr erbitten als frei ist: Das Aussieben streicht oft einige, danach zählen nur die besten je Kategorie.
+        val anzahl = mengeText(freiJe.mapValues { (_, n) -> if (n > 0) n + PUFFER else 0 })
         val planAnfrage = buildString {
             append(zielText).append("\n\n")
             if (bericht.isNotBlank()) Quellen.teilen(bericht).text.let { t ->
-                append("RECHERCHE-BERICHT:\n").append(if (modus == Modus.VOLL) t.take(30_000) else t.takeLast(30_000)).append("\n\n")
+                append("RECHERCHE-BERICHT:\n").append(if (modus == Modus.VOLL) t.take(RECHERCHE_MAX) else t.takeLast(RECHERCHE_MAX)).append("\n\n")
             }
-            if (modus == Modus.RUECKMELDUNG && ziel.strategie.isNotBlank()) append("BISHERIGER WEG: ").append(ziel.strategie).append("\n\n")
+            if (modus != Modus.VOLL && ziel.strategie.isNotBlank()) append("BISHERIGER WEG: ").append(ziel.strategie).append("\n\n")
             append(ueberFrank)
             if (behalten.isNotEmpty()) {
                 append("SCHON VORHANDEN (nicht noch einmal vorschlagen; du darfst sie als Voraussetzung über ihren Schlüssel nennen; ")
@@ -209,31 +206,59 @@ object Auswertung {
             if (wunsch.isNotBlank()) append("BESONDERER WUNSCH: ").append(wunsch).append("\n\n")
             when (modus) {
                 Modus.VOLL -> append("Liefere $anzahl neue Vorschläge.")
-                Modus.NACHFUELLEN -> {
-                    if (!nurRueckmeldung) append(
-                        "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze mit $anzahl neuen Vorschlägen, " +
-                            "vor allem aus den neuen Erkenntnissen der Ergänzung: andere Wege zum Ziel, die bisher fehlen. " +
-                            "Greife dabei auch sinnvolle Anregungen aus FRANKS RÜCKMELDUNGEN (oben) auf, für die es noch keine Aufgabe gibt. " +
-                            "Nichts, was einer abgelehnten oder vorhandenen Aufgabe gleicht oder ähnelt.",
-                    ) else append("Alle Plätze sind belegt; für die freien Plätze lieferst du nichts.")
-                    if (offeneRueckmeldungen.isNotEmpty()) append(" ").append(RUECKMELDUNG_NACHFUELLEN)
-                    else if (nurRueckmeldung) append(" Liefere eine leere Liste.")
-                }
+                Modus.NACHFUELLEN -> append(
+                    "Frank hat Vorschläge abgelehnt oder ausgeblendet; fülle die freien Plätze mit $anzahl neuen Vorschlägen, " +
+                        "vor allem aus den neuen Erkenntnissen der Ergänzung: andere Wege zum Ziel, die bisher fehlen. " +
+                        "Greife dabei auch sinnvolle Anregungen aus FRANKS RÜCKMELDUNGEN (oben) auf, für die es noch keine Aufgabe gibt. " +
+                        "Jeder Vorschlag muss inhaltlich eigenständig sein: nichts, was einer abgelehnten oder vorhandenen Aufgabe gleicht, " +
+                        "ähnelt, sie umformuliert oder sinngleich ersetzt.",
+                )
                 Modus.RUECKMELDUNG -> append("Antworte auf Franks neue Rückmeldung im Gespräch oben und setze ihre sinnvollen Anregungen in Aufgaben um.")
             }
         }
+        val anweisung = if (modus == Modus.RUECKMELDUNG) PLAN_ANWEISUNG + RUECKMELDUNG_ZUSATZ else PLAN_ANWEISUNG
         val antwort = auth.streamChat(
-            instructions = if (modus == Modus.RUECKMELDUNG) PLAN_ANWEISUNG + RUECKMELDUNG_ZUSATZ else PLAN_ANWEISUNG,
+            instructions = anweisung,
             turns = listOf(ChatTurn("user", planAnfrage)),
             model = modell,
             reasoningEffort = e.denkstufe,
         )
         val plan = jsonAus(antwort) ?: throw IllegalStateException("Die KI hat keinen lesbaren Aufgabenplan geliefert. Bitte noch einmal versuchen.")
 
-        val roh = plan.optJSONArray("vorschlaege") ?: JSONArray()
-        val kandidaten = (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { titelAus(it.optString("titel")).isNotEmpty() }
+        val vorhanden = behalten.map { it.titel to it.text }
+        val kandidaten = kandidatenAus(plan)
         if (kandidaten.isNotEmpty()) schritt(zielId, "Prüfe gegen Abgelehntes und Vorhandenes …")
-        var objekte = aussieben(auth, modell, kandidaten, abgelehnt, if (modus == Modus.VOLL && abgelehnt.isEmpty()) emptyList() else behalten)
+        var objekte = aussieben(auth, modell, kandidaten, abgelehnt, if (modus == Modus.VOLL && abgelehnt.isEmpty()) emptyList() else vorhanden)
+        if (modus != Modus.RUECKMELDUNG) {
+            objekte = auswahl(objekte, freiJe)
+            // Fehlen nach dem Aussieben noch Vorschläge, einmal gezielt nachfordern (ohne neue Websuche).
+            val fehlt = Kategorie.entries.associateWith { k -> (freiJe[k] ?: 0) - objekte.count { Kategorie.von(it.optString("kategorie")) == k } }
+            if (fehlt.values.any { it > 0 }) {
+                schritt(zielId, "Ergänze die noch freien Plätze …")
+                val schonGewaehlt = objekte.map { titelAus(it.optString("titel")) to it.optString("text").trim() }
+                val nachschlag = runCatching {
+                    jsonAus(auth.streamChat(
+                        instructions = anweisung,
+                        turns = listOf(ChatTurn("user", buildString {
+                            append(planAnfrage).append("\n\n")
+                            if (schonGewaehlt.isNotEmpty()) {
+                                append("BEREITS NEU GEWÄHLT (ebenfalls nicht wiederholen, nichts Ähnliches):\n")
+                                schonGewaehlt.forEach { (t, _) -> append("- ").append(t).append('\n') }
+                                append('\n')
+                            }
+                            append("Es fehlen noch Vorschläge. Liefere jetzt ").append(mengeText(fehlt.mapValues { (_, n) -> if (n > 0) n + 2 else 0 }))
+                            append(" weitere, inhaltlich eigenständige Vorschläge.")
+                        })),
+                        model = modell,
+                        reasoningEffort = e.denkstufe,
+                    ))?.let(::kandidatenAus).orEmpty()
+                }.onFailure { if (it is CancellationException) throw it; Log.w("ZieleAuswertung", "Nachschlag", it) }.getOrDefault(emptyList())
+                if (nachschlag.isNotEmpty()) {
+                    val dazu = auswahl(aussieben(auth, modell, nachschlag, abgelehnt, vorhanden + schonGewaehlt), fehlt)
+                    objekte = objekte + dazu
+                }
+            }
+        }
         // Während des Laufs (mehrere Minuten) kann Frank weitere Vorschläge abgelehnt haben: auch die gelten.
         val spaeter = repo.abgelehnt(zielId).filter { n -> abgelehnt.none { it.id == n.id } }
         if (spaeter.isNotEmpty() && objekte.isNotEmpty()) objekte = aussieben(auth, modell, objekte, spaeter, emptyList())
@@ -276,7 +301,7 @@ object Auswertung {
 
         val ergebnis = when (modus) {
             Modus.VOLL -> {
-                if (neu.isEmpty()) throw IllegalStateException("Die KI hat keine Aufgaben vorgeschlagen. Bitte noch einmal auswerten.")
+                if (neu.isEmpty() && freiJe.values.sum() > 0) throw IllegalStateException("Die KI hat keine Aufgaben vorgeschlagen. Bitte noch einmal auswerten.")
                 // Unter der Sperre des Übernehmens; ist das Ziel inzwischen gelöscht, nichts schreiben (sonst verwaiste Vorschläge).
                 val frisch = Abgleich.gesperrt {
                     repo.ziel(zielId)?.also { repo.vorschlaegeErsetzen(zielId, ohneAbgelehnte(repo, zielId, neu)) }
@@ -298,15 +323,10 @@ object Auswertung {
                 } ?: return "Das Ziel gibt es nicht mehr."
                 // Die Ergänzung bleibt in der Recherche, auch wenn alle Kandidaten durchs Raster fielen.
                 repo.speichere(frisch.copy(bericht = bericht))
-                if (nurRueckmeldung) when (neu.size) {
-                    0 -> "Alle Plätze sind belegt, und aus deinen neuen Rückmeldungen kam keine weitere Aufgabe."
-                    1 -> "Eine neue Aufgabe zu deiner Rückmeldung vorgeschlagen ✨"
-                    else -> "${neu.size} neue Aufgaben zu deinen Rückmeldungen vorgeschlagen ✨"
-                } else when (neu.size) {
-                    0 -> "Die Recherche ist ergänzt, aber es kam keine neue Aufgabe durch, die nicht schon da oder abgelehnt ist."
-                    1 -> "Eine neue Aufgabe vorgeschlagen, die Recherche ist ergänzt ✨"
-                    else -> "${neu.size} neue Aufgaben vorgeschlagen, die Recherche ist ergänzt ✨"
-                }
+                val n = neu.count { it.kategorie == Kategorie.NOTWENDIG.name }
+                val u = neu.size - n
+                if (neu.isEmpty()) "Die Recherche ist ergänzt, aber es kam keine neue Aufgabe durch, die nicht schon da oder abgelehnt ist."
+                else "$n notwendige und $u unterstützende Aufgaben ergänzt, die Recherche ist erweitert ✨"
             }
             Modus.RUECKMELDUNG -> {
                 val text = plan.optString("antwort").trim().ifEmpty { if (neu.isEmpty()) "Verstanden, ich habe es mir gemerkt." else "Dazu habe ich dir neue Vorschläge ergänzt." }
@@ -325,8 +345,32 @@ object Auswertung {
         return ergebnis
     }
 
-    /** So viele sichtbare Vorschläge soll ein Ziel ungefähr haben; was darunter liegt, füllt „Neue Aufgaben“ auf. */
-    private fun zielGroesse(menge: String) = when (menge) { "knapp" -> 6; "ausfuehrlich" -> 18; else -> 11 }
+    /** Feste Plätze je Ziel und Kategorie: 10 notwendige und 10 unterstützende Vorschläge. */
+    const val PLAETZE_JE_KATEGORIE = 10
+    /** So viele Kandidaten mehr als freie Plätze erbittet der Plan, damit nach dem Aussieben genug übrig bleiben. */
+    private const val PUFFER = 3
+    /** Obergrenze für den Recherchetext in einer Anfrage (die ganze Recherche samt Ergänzungen passt in aller Regel hinein). */
+    private const val RECHERCHE_MAX = 60_000
+
+    /** Freie Plätze je Kategorie: offene, sichtbare Vorschläge belegen einen Platz, erledigte und ausgeblendete nicht. */
+    fun freiePlaetze(vorschlaege: List<Vorschlag>): Map<Kategorie, Int> = Kategorie.entries.associateWith { k ->
+        (PLAETZE_JE_KATEGORIE - vorschlaege.count { !it.verworfen && !it.erledigt && Kategorie.von(it.kategorie) == k }).coerceAtLeast(0)
+    }
+
+    private fun mengeText(je: Map<Kategorie, Int>): String = Kategorie.entries.joinToString(" und ") { k ->
+        "genau ${je[k] ?: 0} ${if (k == Kategorie.NOTWENDIG) "NOTWENDIGE" else "UNTERSTUETZENDE"}"
+    }
+
+    private fun kandidatenAus(plan: JSONObject): List<JSONObject> {
+        val roh = plan.optJSONArray("vorschlaege") ?: JSONArray()
+        return (0 until roh.length()).mapNotNull { roh.optJSONObject(it) }.filter { titelAus(it.optString("titel")).isNotEmpty() }
+    }
+
+    /** Je Kategorie die wichtigsten Kandidaten, höchstens so viele, wie Plätze frei sind. */
+    private fun auswahl(kandidaten: List<JSONObject>, frei: Map<Kategorie, Int>): List<JSONObject> =
+        Kategorie.entries.flatMap { k ->
+            kandidaten.filter { Kategorie.von(it.optString("kategorie")) == k }.sortedByDescending { it.optInt("wichtigkeit", 3) }.take(frei[k] ?: 0)
+        }
 
     private fun sperrBlock(abgelehnt: List<Abgelehnt>): String = if (abgelehnt.isEmpty()) "" else buildString {
         append("VON FRANK ABGELEHNT (diese Aufgaben will er nicht. Schlage sie nie wieder vor, auch nicht umformuliert, ")
@@ -354,8 +398,8 @@ object Auswertung {
      * bereinigten Titel, dann ein kurzer Prüfpass der KI, der auch Umformulierungen erkennt. Scheitert der Prüfpass,
      * bleibt es beim ersten Sieb, statt den ganzen Lauf zu verlieren.
      */
-    private suspend fun aussieben(auth: CodexAuthManager, modell: CodexModel, kandidaten: List<JSONObject>, abgelehnt: List<Abgelehnt>, vorhanden: List<Vorschlag>): List<JSONObject> {
-        val gesehen = (abgelehnt.map { normTitel(it.titel) } + vorhanden.map { normTitel(it.titel) }).toMutableSet()
+    private suspend fun aussieben(auth: CodexAuthManager, modell: CodexModel, kandidaten: List<JSONObject>, abgelehnt: List<Abgelehnt>, vorhanden: List<Pair<String, String>>): List<JSONObject> {
+        val gesehen = (abgelehnt.map { normTitel(it.titel) } + vorhanden.map { normTitel(it.first) }).toMutableSet()
         val vorgefiltert = kandidaten.filter { gesehen.add(normTitel(titelAus(it.optString("titel")))) }
         if (vorgefiltert.isEmpty() || (abgelehnt.isEmpty() && vorhanden.isEmpty())) return vorgefiltert
         val anfrage = buildString {
@@ -366,7 +410,7 @@ object Auswertung {
             }
             if (vorhanden.isNotEmpty()) {
                 append("VORHANDEN:\n")
-                vorhanden.forEach { v -> append("- ").append(v.titel); if (v.text.isNotBlank()) append(": ").append(v.text.take(160)); append('\n') }
+                vorhanden.forEach { (titel, text) -> append("- ").append(titel); if (text.isNotBlank()) append(": ").append(text.take(160)); append('\n') }
                 append('\n')
             }
             append("KANDIDATEN:\n")
@@ -489,12 +533,6 @@ object Auswertung {
             "Ergänze das JSON um das Feld \"antwort\": zwei bis fünf Sätze an Frank in der Du-Form, gut vorlesbar, ohne Aufzählungszeichen; nenne darin, welche neuen Aufgaben du vorschlägst. " +
             "\"strategie\" füllst du nur, wenn sich der beste Weg durch die Rückmeldung ändert, sonst leer; \"symbol\" bleibt leer."
 
-    private const val RUECKMELDUNG_NACHFUELLEN =
-        "Zusätzlich zu den freien Plätzen: Unter FRANKS RÜCKMELDUNGEN (oben) sind Beiträge als NEU markiert, deren Anregungen noch nicht umgesetzt sind. " +
-            "Ist eine davon für das Ziel sinnvoll und greift sie noch keine vorhandene Aufgabe auf, liefere dafür bis zu drei weitere Vorschläge, " +
-            "die sie konkret aufgreifen, und sag in \"begruendung\" kurz, dass sie seine Rückmeldung aufgreifen. " +
-            "Nicht sinnvolle Anregungen setzt du nicht um; was der Agent im Gespräch schon begründet abgelehnt hat, ebenfalls nicht."
-
     private const val RICHTER_ANWEISUNG =
         "Du prüfst neue Aufgabenvorschläge (KANDIDATEN) gegen zwei Listen. Streiche jeden Kandidaten, der einer ABGELEHNTEN Aufgabe gleicht oder ähnelt: " +
             "dieselbe Handlung oder Absicht, nur anders formuliert, ein Teil davon, eine Variante mit anderer Zahl, anderem Ort, anderer Häufigkeit " +
@@ -543,5 +581,6 @@ object Auswertung {
             "  ]\n" +
             "}\n" +
             "Schlüssel fortlaufend v1, v2, … (außer sie sind unter SCHON VORHANDEN belegt). Voraussetzungen ohne Kreise. " +
-            "Etwa zwei Drittel notwendig, ein Drittel unterstützend. Sortiere nichts, das macht die App."
+            "Halte dich genau an die verlangte Anzahl je Gruppe (Feld kategorie); ist für eine Gruppe 0 verlangt, lieferst du dafür nichts. " +
+            "Jeder Vorschlag ist inhaltlich eigenständig, keine zwei meinen dasselbe. Sortiere nichts, das macht die App."
 }
