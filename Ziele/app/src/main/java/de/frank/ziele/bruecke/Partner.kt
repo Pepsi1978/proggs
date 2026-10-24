@@ -42,10 +42,17 @@ object GenialeAufgaben {
      * reicht „alle“ nicht, kommen „offen“ und „erledigt“ getrennt. Nur bei [Stand.vollstaendig] heißt eine fehlende id
      * „dort gelöscht“. null = nicht erreichbar.
      */
-    class Stand(val erledigt: Map<Long, Boolean>, val vollstaendig: Boolean, val zielTitel: Map<Long, String?> = emptyMap())
+    class Stand(
+        val erledigt: Map<Long, Boolean>,
+        val vollstaendig: Boolean,
+        val zielTitel: Map<Long, String?> = emptyMap(),
+        /** Symbol des Ziels dort; fehlt der Schlüssel, meldet Geniale Aufgaben noch keins (ältere Version). */
+        val zielSymbol: Map<Long, String> = emptyMap(),
+    )
 
     suspend fun stand(context: Context): Stand? {
         val zielTitel = HashMap<Long, String?>()
+        val zielSymbol = HashMap<Long, String>()
         suspend fun lies(bereich: String): Pair<Map<Long, Boolean>, Boolean>? {
             val antwort = AppBruecke.rufe(context, "Geniale Aufgaben", ADRESSE, "lesen", JSONObject().put("bereich", bereich).put("limit", 200), lesend = true)
             if (antwort.has("fehler")) return null
@@ -53,14 +60,15 @@ object GenialeAufgaben {
             val eintraege = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }
             // Ziel-Zuordnung in Geniale Aufgaben (null = keine): ältere Übernahmen bekommen sie im Abgleich nachgereicht.
             eintraege.filter { it.has("ziel_id") }.forEach { zielTitel[it.optLong("id")] = if (it.isNull("ziel_id")) null else it.optString("ziel_titel") }
+            eintraege.filter { it.has("ziel_symbol") }.forEach { zielSymbol[it.optLong("id")] = it.optString("ziel_symbol") }
             val werte = eintraege.associate { it.optLong("id") to it.optBoolean("erledigt") }
             return werte to (antwort.optInt("anzahl", werte.size) <= werte.size)
         }
         val alle = lies("alle") ?: return null
-        if (alle.second) return Stand(alle.first, true, zielTitel)
-        val offen = lies("offen") ?: return Stand(alle.first, false, zielTitel)
-        val erledigt = lies("erledigt") ?: return Stand(alle.first + offen.first, false, zielTitel)
-        return Stand(alle.first + offen.first + erledigt.first, offen.second && erledigt.second, zielTitel)
+        if (alle.second) return Stand(alle.first, true, zielTitel, zielSymbol)
+        val offen = lies("offen") ?: return Stand(alle.first, false, zielTitel, zielSymbol)
+        val erledigt = lies("erledigt") ?: return Stand(alle.first + offen.first, false, zielTitel, zielSymbol)
+        return Stand(alle.first + offen.first + erledigt.first, offen.second && erledigt.second, zielTitel, zielSymbol)
     }
 
     /** Trägt das Ziel in eine schon übernommene Aufgabe ein, damit sie in Geniale Aufgaben unter „Ziele“ erscheint. */

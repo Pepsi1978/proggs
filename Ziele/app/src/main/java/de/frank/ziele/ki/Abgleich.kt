@@ -4,6 +4,7 @@ import android.content.Context
 import de.frank.ziele.bruecke.GenialeAufgaben
 import de.frank.ziele.data.Vorschlag
 import de.frank.ziele.data.ZieleRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -37,11 +38,14 @@ object Abgleich {
                 erledigt == null -> if (stand.vollstaendig) repo.speichere(v.copy(aufgabeId = null, uebernommenAm = null, erledigt = false))
                 erledigt != v.erledigt -> repo.speichere(v.copy(erledigt = erledigt))
             }
-            // Ziel fehlt dort (ältere Übernahme) oder wurde umbenannt: nachtragen, nur bei offenen Aufgaben.
+            // Ziel fehlt dort (ältere Übernahme), wurde umbenannt oder hat ein neues Symbol: nachtragen, nur bei offenen Aufgaben.
             val id = v.aufgabeId ?: return@forEach
             if (erledigt == false && stand.zielTitel.containsKey(id)) {
                 val ziel = ziele.getOrPut(v.zielId) { repo.ziel(v.zielId) } ?: return@forEach
-                if (stand.zielTitel[id] != ziel.titel) runCatching { GenialeAufgaben.zielZuordnen(context, id, ziel) }
+                val symbolAnders = stand.zielSymbol[id]?.let { it != ziel.symbol.trim() } ?: false
+                if (stand.zielTitel[id] != ziel.titel.trim() || symbolAnders) {
+                    try { GenialeAufgaben.zielZuordnen(context, id, ziel) } catch (e: CancellationException) { throw e } catch (_: Exception) {}
+                }
             }
         }
         true
