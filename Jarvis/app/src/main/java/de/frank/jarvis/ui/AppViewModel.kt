@@ -321,6 +321,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entwurfErledigt = null
         gespraech += Nachricht(true, text, anhaenge = anhaenge.map { it.pfad }, kontext = erledigt)
         sitzungSichern()
+        eingabeKompakt = true
         // Aus dem Plus-Menü „Programmierer“: zuverlässig als neuer Programmierauftrag übergeben. Nur beim ersten Senden; ein erneuter
         // Versuch bekommt den Hinweis nicht, sonst startete er den schon übergebenen Auftrag ein zweites Mal.
         rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, antwortLaut,
@@ -838,6 +839,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Nach „Programmierer“ gesetzt: Die Eingabeblase fokussiert das Feld einmal (Cursor am Ende) und setzt es zurück. */
     var entwurfFokus by mutableStateOf(false)
 
+    /**
+     * Nach jedem Absenden klappt die Eingabeblase zu einer kompakten Zeile ein (nur Plus, Modell, Mikrofon, Live-Blase);
+     * Text im Feld, ein Anhang, „Programmierer“/„Nachtrag“ oder ein Tipp auf den freien Platz klappen sie wieder auf.
+     */
+    var eingabeKompakt by mutableStateOf(false)
+
     /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */
     fun programmiererEinsetzen() {
         // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
@@ -866,6 +873,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         entwurfDiktiert = false
         gespraech += Nachricht(true, "$NACHTRAG_VORSPANN $text")
         sitzungSichern()
+        eingabeKompakt = true
         viewModelScope.launch {
             val faehigkeit = de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()
             val ergebnis = runCatching { faehigkeit?.nachtragPerKnopf(id, text) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }

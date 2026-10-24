@@ -162,6 +162,12 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
+        // Nach dem Absenden kompakt: nur die untere Zeile. Text im Feld (etwa nach dem Diktat) oder ein Anhang klappen wieder auf.
+        val kompakt = vm.eingabeKompakt && vm.entwurf.isEmpty() && vm.anhaenge.isEmpty()
+        LaunchedEffect(vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty()) {
+            if (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty()) vm.eingabeKompakt = false
+        }
+
         // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
         // im Plus-Menü fokussiert es. Eigener Feldzustand, damit der Cursor nach Vorspann und Diktat am Ende steht.
         var feld by remember { mutableStateOf(TextFieldValue(vm.entwurf, TextRange(vm.entwurf.length))) }
@@ -173,6 +179,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         LaunchedEffect(vm.entwurfFokus) {
             if (!vm.entwurfFokus) return@LaunchedEffect
             vm.entwurfFokus = false
+            vm.eingabeKompakt = false
             // Das Plus-Menü schließt gerade und hält den Fokus noch: einige Male versuchen, die Tastatur erst nach Erfolg.
             repeat(10) {
                 delay(80)
@@ -187,7 +194,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         // Rechts oben ein fester Platz: mit Text der Papierkorb (leert die ganze Blase), gleich danach „Rückgängig“.
         // Immer gleich breit und hoch, damit die Blase beim ersten Zeichen und beim Leeren nicht springt.
         val leerbar = vm.entwurf.isNotBlank() && !vm.nimmtAuf && !vm.schreibtMit
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
+        if (!kompakt) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 4.dp)) {
             Box(Modifier.weight(1f).padding(top = 10.dp)) {
                 if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
                 BasicTextField(
@@ -212,17 +219,20 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
 
         // Unten: Plus links, rechts Modell, Mikrofon und die Live- bzw. Senden-Blase.
-        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 10.dp, top = 4.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 10.dp, top = if (kompakt) 6.dp else 4.dp, bottom = if (kompakt) 6.dp else 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clip(CircleShape).antippen { plusOffen = true }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
+            // Der freie Platz zwischen Plus und Modell öffnet das Textfeld samt Tastatur (auch aus der kompakten Zeile).
+            Box(Modifier.weight(1f).heightIn(min = 44.dp).antippen { vm.eingabeKompakt = false; vm.entwurfFokus = true }, contentAlignment = Alignment.CenterEnd) {
             // Rechtsbündig im freien Platz, aber begrenzt: zu langer Text kürzt den Modellnamen, statt Mikrofon und Senden hinauszuschieben.
-            Row(Modifier.weight(1f).wrapContentWidth(Alignment.End).clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp),
+            Row(Modifier.wrapContentWidth(Alignment.End).clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 Text(mitGuthaben(kurzName(modell)), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 Text(" " + vm.einstellungen.denkstufe.titel(vm.einstellungen.modell), color = f.text, fontSize = 15.sp, maxLines = 1)
+            }
             }
             Spacer(Modifier.width(4.dp))
             // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld.
