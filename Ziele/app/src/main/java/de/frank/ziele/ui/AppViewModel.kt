@@ -170,7 +170,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             Bildschirm.Liste -> return false
             is Bildschirm.Bearbeiten -> { aufnahmeVerwerfen(); bildschirm = b.id?.let { Bildschirm.Detail(it) } ?: Bildschirm.Liste }
             Bildschirm.Kontext -> { aufnahmeVerwerfen(); bildschirm = kontextZurueck }
-            is Bildschirm.EigeneAufgabe -> { aufnahmeVerwerfen(); bildschirm = Bildschirm.Detail(b.zielId) }
+            is Bildschirm.EigeneAufgabe -> { aufnahmeVerwerfen(); aufgabeKiAbbrechen(); bildschirm = Bildschirm.Detail(b.zielId) }
             else -> bildschirm = Bildschirm.Liste
         }
         return true
@@ -478,24 +478,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var aKiLaeuft by mutableStateOf(false); private set
     /** Die vier Felder von vor dem KI-Ausfüllen — solange gesetzt, wird der KI-Knopf zum Rückgängig-Knopf. */
     var aKi by mutableStateOf<KorrekturStand?>(null); private set
+    private var aKiJob: Job? = null
 
-    /** Öffnet den bildschirmfüllenden Editor mit leerer Schablone. */
+    /** Öffnet den bildschirmfüllenden Editor mit leerer Schablone; ein Diktat oder KI-Aufruf von vorher endet. */
     fun eigeneAufgabeNeu(zielId: Long) {
+        aufnahmeVerwerfen()
+        aufgabeKiAbbrechen()
         aTitel = ""; aText = ""; aBegruendung = ""; aErfolg = ""; aKategorie = Kategorie.NOTWENDIG
         aKi = null
         bildschirm = Bildschirm.EigeneAufgabe(zielId)
     }
+
+    private fun aufgabeKiAbbrechen() { aKiJob?.cancel(); aKiJob = null; aKiLaeuft = false }
 
     private fun aFelder() = listOf(aTitel, aText, aBegruendung, aErfolg)
 
     /** Die KI füllt aus allem Eingegebenen (meist diktiert) Überschrift, Beschreibung, Nutzen und Erledigt-Kriterium vollständig aus. */
     fun aufgabeAusfuellen(zielId: Long) {
         val roh = aFelder()
-        if (aKiLaeuft || roh.all { it.isBlank() }) { if (roh.all { it.isBlank() }) melde("Sprich oder tippe zuerst, was du tun willst."); return }
+        if (aKiLaeuft) return
+        if (aufnahme != Aufnahme.AUS) { melde("Einen Moment, das Diktat läuft noch."); return }
+        if (roh.all { it.isBlank() }) { melde("Sprich oder tippe zuerst, was du tun willst."); return }
         if (!kiBereit) { melde("Für die KI zuerst die KI in den Einstellungen verbinden."); return }
         val z = ziele.value.firstOrNull { it.id == zielId }
         aKiLaeuft = true
-        viewModelScope.launch {
+        aKiJob = viewModelScope.launch {
             try {
                 val antwort = auth.streamChat(
                     instructions = "Frank legt zu einem seiner Ziele eine eigene Aufgabe an und hat dazu frei geschrieben oder eingesprochen (Spracherkennung, daher evtl. unsauber). " +
@@ -526,7 +533,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Throwable) {
                 melde(e.message ?: "Die KI hat die Aufgabe nicht ausfüllen können.")
             } finally {
-                aKiLaeuft = false
+                // Ein abgebrochener alter Aufruf darf den Stand eines neuen nicht zurücksetzen.
+                if (aKiJob === coroutineContext[Job]) { aKiLaeuft = false; aKiJob = null }
             }
         }
     }
@@ -549,13 +557,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val t = aTitel.trim().ifEmpty { aText.trim().takeIf { it.isNotEmpty() }?.let { titelOhneKi(it) }.orEmpty() }
         if (t.isEmpty()) { melde("Gib der Aufgabe eine Überschrift – oder sprich sie ein und drück KI."); return }
         val text = aText.trim(); val begruendung = aBegruendung.trim(); val erfolg = aErfolg.trim(); val kategorie = aKategorie
+        // Sofort zurück zum Ziel: Ein zweiter Tipp auf Speichern trifft den Editor nicht mehr und legt nichts doppelt an.
+        bildschirm = Bildschirm.Detail(zielId)
         viewModelScope.launch {
-            repo.neuerVorschlag(
-                Vorschlag(zielId = zielId, schluessel = "e${System.currentTimeMillis()}", titel = t, text = text, begruendung = begruendung, erfolg = erfolg,
-                    kategorie = kategorie.name, phase = 1, eigen = true),
-            )
-            bildschirm = Bildschirm.Detail(zielId)
-            melde("Eigene Aufgabe hinzugefügt ✓")
+            try {
+                repo.neuerVorschlag(
+                    Vorschlag(zielId = zielId, schluessel = "e${System.currentTimeMillis()}", titel = t, text = text, begruendung = begruendung, erfolg = erfolg,
+                        kategorie = kategorie.name, phase = 1, eigen = true),
+                )
+                melde("Eigene Aufgabe hinzugefügt ✓")
+            } catch (c: CancellationException) {
+                throw c
+            } catch (e: Throwable) {
+                melde("Die Aufgabe ließ sich nicht speichern: ${e.message ?: e.javaClass.simpleName}")
+            }
         }
     }
 
