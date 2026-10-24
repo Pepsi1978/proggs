@@ -410,11 +410,15 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
         // Unten in einer Zeile: links die Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review), rechts
         // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
+        // Nur die frische Frage zum gerade abgeschickten Auftrag: gestellt in diesem App-Lauf, nach Franks letzter eigener Nachricht,
+        // und solange er nicht schon den nächsten Entwurf schreibt. Alte, liegengebliebene Wahlen zeigen unten keine Knöpfe.
         val stand by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand.collectAsState()
-        val karte = vm.gespraech.lastOrNull {
-            it.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
-                stand[de.frank.jarvis.data.Gespraeche.wahlId(it.kontext)] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN
-        }
+        val letzteEigene = vm.gespraech.indexOfLast { it.vonMir }
+        val karte = if (vm.entwurf.isNotBlank()) null else vm.gespraech.withIndex().lastOrNull { (i, n) ->
+            val id = de.frank.jarvis.data.Gespraeche.wahlId(n.kontext)
+            i > letzteEigene && n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
+                stand[id] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN && de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlFrisch(id)
+        }?.value
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (karte != null) {
                 val id = de.frank.jarvis.data.Gespraeche.wahlId(karte.kontext)

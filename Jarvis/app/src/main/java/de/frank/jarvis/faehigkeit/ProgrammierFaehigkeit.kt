@@ -2011,7 +2011,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private val erinnerungen = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
         private const val ERINNERUNG_NACH_MS = 30_000L
         private const val ERINNERUNG_TEXT = "Welches Modell möchtest du verwenden: Claude Opus 5.5 oder Sol 6.1?"
-        private fun wahlNochOffen(id: String) = wahlStand.value[id] == WAHL_OFFEN && offeneWahlen.containsKey(id) && id !in tippInArbeit
+        /** Seit wann diese App läuft: Wahlen von davor (nach einem Neustart zurückgeladen) bekommen unten keine Knöpfe mehr. */
+        private val PROZESS_START = System.currentTimeMillis()
+        /** Offene Wahl, die in diesem App-Lauf gestellt wurde (Franks Wunsch vom 24.10.2026: Knöpfe erst nach dem Abschicken). */
+        fun wahlFrisch(id: String) = (offeneWahlen[id]?.seit ?: 0L) >= PROZESS_START
+        private fun wahlNochOffen(id: String) =wahlStand.value[id] == WAHL_OFFEN && offeneWahlen.containsKey(id) && id !in tippInArbeit
 
         /** Das Gespräch, in dem die Karte [wahlId] steht (leer, wenn unbekannt). */
         fun gespraechDerKarte(wahlId: String): String = karten[wahlId]?.gespraech.orEmpty()
