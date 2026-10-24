@@ -353,17 +353,44 @@ private val SCHWEBE_LUECKE = SCHWEBE_GROESSE + SCHWEBE_ABSTAND * 2
 val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
 
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
-fun schwebeHoehe(nachtrag: Boolean) = SCHWEBE_GROESSE * (if (nachtrag) 3 else 2) + SCHWEBE_ABSTAND * (if (nachtrag) 1 else 0) + SCHWEBE_LUECKE
+fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false) = SCHWEBE_GROESSE * (2 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)) +
+    SCHWEBE_ABSTAND * ((if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)) + SCHWEBE_LUECKE
 
 /**
  * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel: unten das Programmier-Symbol (wie Plus →
  * „Programmierer“), darüber, nur im Programmiergespräch, ein Plus (wie Plus → „+ Nachtrag“), und eine freie Bubble höher,
- * abgesetzt gegen Fehltipps, „Neue Session“. Ohne Blase, nur ein kleiner, leicht schimmernder, durchscheinender Grund.
+ * abgesetzt gegen Fehltipps, „Neue Session“, direkt darüber der Papierkorb „Gespräch löschen“. Ohne Blase, nur ein kleiner, leicht schimmernder, durchscheinender Grund.
  */
 @Composable
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        // Aktuelles Gespräch löschen, direkt über „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
+        // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
+        var loeschenZiel by remember { mutableStateOf<String?>(null) }
+        if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
+            SchwebeSymbol("Gespräch löschen", false, { loeschenZiel = vm.sitzungId.orEmpty() }) {
+                Icon(Icons.Rounded.Delete, null, tint = f.text, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        }
+        loeschenZiel?.let { ziel -> androidx.compose.material3.AlertDialog(
+            onDismissRequest = { loeschenZiel = null },
+            containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+            title = { Text("Gespräch löschen?") },
+            text = { Text("Möchtest du dieses Gespräch wirklich löschen? Es wird endgültig entfernt und erscheint nicht mehr unter Gespräche.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    when {
+                        ziel != vm.sitzungId.orEmpty() -> vm.meldung = "Das Gespräch hat inzwischen gewechselt. Nichts gelöscht."
+                        ziel.isNotEmpty() -> vm.sitzungLoeschen(ziel)
+                        else -> vm.neuesGespraech()
+                    }
+                    loeschenZiel = null
+                }) { Text("Löschen", color = f.gefahr) }
+            },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenZiel = null }) { Text("Abbrechen") } },
+        ) }
         // „Neue Session“: schwarze, etwas aufgehellte und durchscheinende Sprechblase mit weißem Kreuz. Antippen lässt sie kurz
         // grün aufleuchten; kommt danach etwas in den Entwurf, bleibt sie grün, solange es dort steht.
         val sessionGruen = vm.neueSessionAktiv && (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty())

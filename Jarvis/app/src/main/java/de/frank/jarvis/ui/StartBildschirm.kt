@@ -44,7 +44,6 @@ import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -192,7 +191,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
         // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
-        val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich) + 10.dp
+        val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, papierkorb = vm.gespraech.isNotEmpty() || vm.sitzungId != null) + 10.dp
         Box(Modifier.weight(1f).fillMaxWidth()) {
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
@@ -339,30 +338,7 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         // „Neue Session“ steht nicht mehr hier, sondern schwebend rechts über der Eingabeblase (ProgrammierSchweber).
-        // Aktuelles Gespräch löschen: verschwindet danach auch aus der Gesprächsleiste.
-        // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
-        var loeschenZiel by remember { mutableStateOf<String?>(null) }
-        if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
-            Rundknopf(Icons.Rounded.Delete, "Gespräch löschen", farbe = f.primaer) { loeschenZiel = vm.sitzungId.orEmpty() }
-            Spacer(Modifier.width(8.dp))
-        }
-        loeschenZiel?.let { ziel -> androidx.compose.material3.AlertDialog(
-            onDismissRequest = { loeschenZiel = null },
-            containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
-            title = { Text("Gespräch löschen?") },
-            text = { Text("Möchtest du dieses Gespräch wirklich löschen? Es wird endgültig entfernt und erscheint nicht mehr unter Gespräche.") },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    when {
-                        ziel != vm.sitzungId.orEmpty() -> vm.meldung = "Das Gespräch hat inzwischen gewechselt. Nichts gelöscht."
-                        ziel.isNotEmpty() -> vm.sitzungLoeschen(ziel)
-                        else -> vm.neuesGespraech()
-                    }
-                    loeschenZiel = null
-                }) { Text("Löschen", color = f.gefahr) }
-            },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenZiel = null }) { Text("Abbrechen") } },
-        ) }
+        // Der Papierkorb „Gespräch löschen“ steht ebenfalls im Schwebestapel, direkt über „Neue Session“.
         // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
         Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
             val ids = de.frank.jarvis.ui.theme.DESIGNS
