@@ -661,7 +661,7 @@ private fun ProgrammierAktivitaet(vm: AppViewModel) {
     val f = LocalFarben.current
     val alle by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
     val a = alle[vm.sitzungId ?: return] ?: return
-    if (!a.arbeitet) return
+    if (!a.arbeitetJetzt()) return
     // Wie das Arbeitssymbol von Claude Code: die Zeichen laufen hin und zurück, alle 120 ms eins weiter, in Claude-Orange.
     var bild by remember { mutableStateOf(0) }
     var jetzt by remember { mutableStateOf(System.currentTimeMillis()) }

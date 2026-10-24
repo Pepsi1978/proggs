@@ -159,7 +159,13 @@ object ProgrammierChat {
     }
 
     /** Ob die Sitzung eines Auftrags gerade arbeitet, je Gespräch: für die drehende Anzeige unter der letzten Nachricht. [lokal]: am PC gestartet (lila). */
-    data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String, val start: Long = 0L, val lokal: Boolean = false)
+    data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String, val start: Long = 0L, val lokal: Boolean = false) {
+        /** Arbeitet sie noch? Ohne Lebenszeichen seit [STILL_MS] nicht mehr: eine geschlossene Sitzung meldet kein Zugende. */
+        fun arbeitetJetzt(jetzt: Long = System.currentTimeMillis()) = arbeitet && jetzt - zuletzt < STILL_MS
+    }
+
+    /** Länger als der längste Werkzeugaufruf ohne Puls (Bash bis 10 min). */
+    const val STILL_MS = 20 * 60_000L
 
     private val _aktivitaet = MutableStateFlow<Map<String, Aktivitaet>>(emptyMap())
     val aktivitaet: StateFlow<Map<String, Aktivitaet>> = _aktivitaet

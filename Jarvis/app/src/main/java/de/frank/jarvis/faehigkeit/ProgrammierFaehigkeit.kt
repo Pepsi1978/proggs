@@ -721,7 +721,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 Auftragsbuch.melde(app, auftragId, "laeuft", "▶️ Die Sitzung arbeitet wieder.", "")?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS); benachrichtige(it) }
                 return
             }
-            Auftragsbuch.puls(app, auftragId)?.let { aktivitaetMelden(it) }
+            Auftragsbuch.puls(app, auftragId, daten.optLong("hook_beginn"))?.let { aktivitaetMelden(it) }
             return
         }
         if (daten.optString("stand") in listOf("anmeldung_ok", "weiter")) {
@@ -759,7 +759,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val grenze = if (daten.optString("stand") == "info") ProgrammierAbschluss.MAX_BERICHT else ProgrammierAbschluss.MAX_MELDUNG
         val eintrag = Auftragsbuch.melde(app, auftragId, stand, ProgrammierAbschluss.kuerzen(daten.optString("schritt"), grenze), "", frage,
             sperrSeit = if (daten.optString("stand") in GESPERRT) daten.optLong("seit", System.currentTimeMillis() / 1000) else 0L,
-            leerlauf = daten.optBoolean("leerlauf"))
+            leerlauf = daten.optBoolean("leerlauf"), hookBeginn = daten.optLong("hook_beginn"))
         if (eintrag == null) {
             // Unbekannter Auftrag: nie still verwerfen, sondern sichtbar im Logbuch (Grund für „Frage kam nicht an“).
             Logbuch.system("Meldung ohne Auftrag", "${daten.optString("stand")} für ${daten.optString("auftrag_id")}: ${daten.optString("schritt").take(120)}")
@@ -1384,7 +1384,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         @Synchronized
         fun melde(context: Context, id: String, stand: String, schritt: String, link: String, frage: JSONObject? = null, sperrSeit: Long = 0L,
-                  leerlauf: Boolean = false): JSONObject? {
+                  leerlauf: Boolean = false, hookBeginn: Long = 0L): JSONObject? {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
             val jetzt = System.currentTimeMillis()
@@ -1399,6 +1399,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende, solange sie auf Frank wartet und nach einer
                 // Leerlauf-Meldung einer Sitzung vom PC (Anmeldung in Jarvis, wartet auf Eingabe, beendet).
                 .put("arbeitet", gueltig == "laeuft" && !leerlauf)
+            // Seit wann ruht die Sitzung (Sekunden, Uhr des Hooks): Ein später eintreffender Puls, dessen Hook davor begann, weckt sie nicht.
+            if (!eintrag.optBoolean("arbeitet")) eintrag.put("ruheSeit", if (hookBeginn > 0) hookBeginn else jetzt / 1000)
             if (frage != null) {
                 // Eingang: Reihenfolge der offenen Rückfragen über alle Sessions (die älteste steht vorn).
                 if (!frage.has("eingang")) frage.put("eingang", jetzt)
@@ -1475,11 +1477,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return null
         }
 
-        /** Lebenszeichen der Sitzung (Puls vom Hook): Sie arbeitet. */
+        /**
+         * Lebenszeichen der Sitzung (Puls vom Hook): Sie arbeitet. Nicht, wenn sie auf Frank wartet (frage) oder der Puls von
+         * einem Hook stammt, der vor dem Zugende begann ([hookBeginn] ≤ ruheSeit): Der asynchrone Puls kommt oft erst nach dem
+         * Zugende an und ließ die Sitzung sonst dauerhaft als arbeitend stehen (oranger Punkt ohne laufende Sitzung).
+         */
         @Synchronized
-        fun puls(context: Context, id: String): JSONObject? {
+        fun puls(context: Context, id: String, hookBeginn: Long = 0L): JSONObject? {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
+            if (eintrag.optString("stand") == "frage" || (hookBeginn > 0 && hookBeginn <= eintrag.optLong("ruheSeit"))) return null
             eintrag.put("aktiv", System.currentTimeMillis()).put("arbeitet", eintrag.optString("stand") !in GESPERRT)
             schreib(context, liste)
             return eintrag

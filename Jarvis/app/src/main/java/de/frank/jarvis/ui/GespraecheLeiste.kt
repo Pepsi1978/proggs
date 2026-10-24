@@ -198,7 +198,10 @@ private fun Leiste(
     BackHandler(enabled = offen && projekt != null) { projektOeffnen(null) }
     // Welche Gespräche gerade arbeiten: Programmier-Sitzungen (Claude Code) und Jarvis' eigene Antworten.
     val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
-    val arbeitende = remember(programmiert) { programmiert.filterValues { it.arbeitet }.keys }
+    // Alle 30 s neu gezählt, damit eine verstummte Sitzung (Terminal geschlossen) von selbst herausfällt.
+    var takt by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(programmiert) { while (true) { kotlinx.coroutines.delay(30_000); takt = System.currentTimeMillis() } }
+    val arbeitende = remember(programmiert, takt) { programmiert.filterValues { it.arbeitetJetzt(takt) }.keys }
     // Reiter mit mindestens einer arbeitenden Session, unabhängig vom gewählten Reiter: dort blinkt ein oranger Punkt.
     val aktiveReiter = aktiveReiter(arbeitende, vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
     // Ein Takt für alle Claude-Symbole in der Liste, nur solange eines zu sehen ist.
