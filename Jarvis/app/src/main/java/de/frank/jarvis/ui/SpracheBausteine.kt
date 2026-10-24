@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -66,6 +68,46 @@ fun Vorleseknopf(vm: AppViewModel, quelle: String, titel: String, text: String, 
             meiner && stand.zustand == VorleseZustand.LAEDT -> Kern(if (schlicht) 22.dp else groesse * 0.6f, f.primaer, aktiv = true)
             meiner -> Icon(Icons.Rounded.Stop, "Vorlesen anhalten", tint = f.primaer, modifier = Modifier.size(symbol))
             else -> Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Vorlesen", tint = f.textLeise, modifier = Modifier.size(symbol))
+        }
+    }
+}
+
+/**
+ * Vorlesesteuerung wie in einem Player (Tagesauswertung): Anfangs nur der Lautsprecher. Läuft das Vorlesen, wird derselbe
+ * rechte Knopf zu Pause bzw. Weiter, links daneben erscheint Stopp. Pause hält mitten im Satz an, Weiter setzt genau dort
+ * fort (der Vorleser pausiert den Player, statt neu zu beginnen). Stopp und das reguläre Ende stellen den Lautsprecher wieder her.
+ */
+@Composable
+fun VorleseSteuerung(vm: AppViewModel, quelle: String, titel: String, text: String, groesse: Dp = 44.dp) {
+    val f = LocalFarben.current
+    val stand by vm.vorleser.stand.collectAsState()
+    val zustand = if (stand.quelle == quelle) stand.zustand else VorleseZustand.AUS
+    val symbol = groesse * 0.45f
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (zustand != VorleseZustand.AUS) {
+            Box(Modifier.size(groesse).glas(f, groesse / 2, erhoeht = 0.5f).antippen { vm.vorlesenStoppen() }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Stop, "Vorlesen beenden", tint = f.textLeise, modifier = Modifier.size(symbol))
+            }
+            Spacer(Modifier.width(8.dp))
+        }
+        val aktiv = zustand != VorleseZustand.AUS
+        Box(
+            Modifier.size(groesse).glas(f, groesse / 2, erhoeht = 0.5f, toenung = if (aktiv) f.primaer else null).antippen {
+                when (zustand) {
+                    VorleseZustand.AUS -> vm.lies(quelle, titel, text)
+                    VorleseZustand.PAUSIERT -> vm.vorlesenWeiter()
+                    else -> vm.vorlesenPause()
+                }
+            },
+            contentAlignment = Alignment.Center,
+        ) {
+            when (zustand) {
+                VorleseZustand.AUS -> Icon(Icons.AutoMirrored.Rounded.VolumeUp, "Vorlesen", tint = f.textLeise, modifier = Modifier.size(symbol))
+                // Während der erste Ton erzeugt wird, schon antippbar: Pause hält dann vor dem ersten Satz an.
+                VorleseZustand.LAEDT -> Kern(groesse * 0.6f, f.primaer, aktiv = true)
+                VorleseZustand.SPRICHT -> Icon(Icons.Rounded.Pause, "Vorlesen pausieren", tint = f.primaer, modifier = Modifier.size(symbol))
+                VorleseZustand.PAUSIERT -> Icon(Icons.Rounded.PlayArrow, "Vorlesen fortsetzen", tint = f.primaer, modifier = Modifier.size(symbol))
+            }
         }
     }
 }

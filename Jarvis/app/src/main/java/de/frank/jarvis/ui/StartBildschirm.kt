@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -113,6 +114,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         .collectAsState(initial = remember { Protokoll.eintraege.value.any { it.quelle == Quelle.CHATGPT } })
     val auswertung by Tagesauswertung.stand.collectAsState()
     var auswertungOffen by rememberSaveable { mutableStateOf(false) }
+    var profilWahlOffen by rememberSaveable { mutableStateOf(false) }
     val liste = rememberLazyListState()
     // Rückfragen der Programmier-Sitzungen: Vollbild zum Beantworten, Abgleich mit dem Server.
     RueckfrageFenster(vm)
@@ -211,13 +213,20 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                                 when {
                                     auswertung.laeuft -> auswertung.schritt.ifEmpty { "Wird erstellt" } + " …"
                                     neueste == null -> "Noch keine. Nächste: ${vm.naechsteAuswertung}"
-                                    else -> "Stand " + zeitKurz(neueste.zeit) + " Uhr · nächste ${vm.naechsteAuswertung}"
+                                    else -> "Stand " + zeitKurz(neueste.zeit) + " Uhr" +
+                                        (if (neueste.profil.isNotEmpty()) " · " + de.frank.jarvis.data.Einstellungen.auswertungProfilName(neueste.profil) else "") +
+                                        " · nächste ${vm.naechsteAuswertung}"
                                 },
                                 color = if (auswertung.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                             )
                         }
-                        auswertung.neueste?.let { Vorleseknopf(vm, "auswertung", "Tagesauswertung", if (it.mitKi) it.text else it.text + "\n\n" + it.daten) }
+                        auswertung.neueste?.let { VorleseSteuerung(vm, "auswertung", "Tagesauswertung", if (it.mitKi) it.text else it.text + "\n\n" + it.daten) }
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f).antippen { profilWahlOffen = true }, contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Tune, "Ausführlichkeit der Tagesauswertung", tint = f.textLeise, modifier = Modifier.size(20.dp))
+                        }
                     }
+                    if (profilWahlOffen) AuswertungsProfilWahl(vm) { profilWahlOffen = false }
                     auswertung.neueste?.let { neueste ->
                         Text(
                             if (neueste.mitKi) neueste.text else neueste.text + "\n\n" + neueste.daten,
@@ -522,6 +531,43 @@ private fun BerichtAblageKnopf(vm: AppViewModel, nummer: Int, n: Nachricht, vorg
             Text("Nicht gespeichert: $it", color = f.gefahr, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
         }
     }
+}
+
+/**
+ * Auswahlfenster am Zahnrad der Tagesauswertung: Kurz, Normal, Gründlich (von oben). Ein Tipp speichert die Wahl dauerhaft
+ * und schließt das Fenster; sie gilt ab der nächsten Auswertung, die vorhandene bleibt, wie sie ist.
+ */
+@Composable
+private fun AuswertungsProfilWahl(vm: AppViewModel, schliessen: () -> Unit) {
+    val f = LocalFarben.current
+    val aktuell = vm.einstellungen.auswertungProfil
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = schliessen,
+        containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+        title = { Text("Ausführlichkeit") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Wie ausführlich Jarvis die Tagesauswertung schreibt. Gilt ab der nächsten Auswertung.", color = f.textLeise, fontSize = 14.sp)
+                de.frank.jarvis.data.Einstellungen.AUSWERTUNG_PROFILE.forEach { (id, name, beschreibung) ->
+                    val gewaehlt = id == aktuell
+                    Row(
+                        Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.3f, toenung = if (gewaehlt) f.primaer else null)
+                            .antippen { vm.auswertungProfil(id); schliessen() }
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                            .semantics { stateDescription = if (gewaehlt) "ausgewählt" else "" },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(name, color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                            Text(beschreibung, color = f.textLeise, fontSize = 13.sp, lineHeight = 17.sp)
+                        }
+                        if (gewaehlt) Icon(Icons.Rounded.Check, null, tint = f.primaer, modifier = Modifier.padding(start = 8.dp).size(20.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = schliessen) { Text("Schließen") } },
+    )
 }
 
 /** Der Punkt vor jeder Programmiermeldung (Statusmeldung und Abschlussbericht): Punkt, Symbol, Absender, Inhalt. */

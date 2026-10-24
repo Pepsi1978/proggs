@@ -552,7 +552,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val nurAuftrag = synchronized(runde.erledigt) { runde.erledigt.all { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
         if (karte != null && nurAuftrag) {
             if (runde.sitzung != sitzungId) sitzungenLaden()
-            if (!vorlesen) return
+            // Leer: Frank hat schon getippt, der Auftrag startet ohne gesprochene Bestätigung.
+            if (!vorlesen || karte.isBlank()) return
             if (runde.ursprung != null && (runde.sitzung != sitzungId || weckwortLauf?.isActive != true)) sprachZustellen(rundenZustellung(runde, karte))
             else if (runde.sitzung == sitzungId) vorleser.sprich(WAHL_QUELLE + runde.sitzung + ":" + runde.beginn, "Jarvis", karte)
             return
@@ -1222,7 +1223,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     }
             }
             val rechtzeitig = kotlinx.coroutines.withTimeoutOrNull(zeitlimit) { arbeit.await() ?: ersatz }?.let { a ->
-                karte?.let { "Die Auswahl steht als Karte im Chat. Sag Frank genau diesen Satz und sonst nichts, ohne eigene Rückfrage: „$it“" } ?: a
+                karte?.let {
+                    if (it.isBlank()) "Frank hat schon gewählt, der Programmierauftrag startet. Bestätige die Auswahl nicht, nenne kein Modell und stell keine Rückfrage; sag höchstens „Okay“."
+                    else "Die Auswahl steht als Karte im Chat. Sag Frank genau diesen Satz und sonst nichts, ohne eigene Rückfrage: „$it“"
+                } ?: a
             }
             // Nur an dieselbe, noch laufende Verbindung: Eine neue kennt diese Kennung nicht.
             // Kommt sie dort nicht an (Gemini hat den Aufruf abgebrochen, Verbindung weg), wird sie unten zugestellt.
@@ -1233,6 +1237,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             val roh = rechtzeitig ?: arbeit.await()
             // Die Karte steht schon im Chat: nachgereicht wird dann nur ihr Wortlaut, ohne zweite Blase.
+            // Leere Karte: schon getippt, der Auftrag läuft; nachgereicht wird dann nichts.
+            if (karte?.isBlank() == true) return@launch
             val antwort = karte ?: roh ?: "Die Antwort auf deine Frage ist leider nicht zustande gekommen. Details unter Aktivität."
             // Zu spät für das Live-Modell (Gespräch beendet, gewechselt oder Zwischenstand gegeben): in den Chat und hörbar zustellen.
             Logbuch.sprache("Live: Antwort nachgereicht", "${antwort.length} Zeichen, Gespräch ${if (live === sitzung) "läuft noch" else "beendet"}")
@@ -1854,6 +1860,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Lautsprecher-Knopf: vorlesen, oder anhalten, wenn genau das schon läuft. */
+    /** Vorlesesteuerung der Tagesauswertung: anhalten und an genau der Stelle fortsetzen, oder ganz beenden. */
+    fun vorlesenPause() = vorleser.pause()
+    fun vorlesenWeiter() = vorleser.weiter()
+    fun vorlesenStoppen() = vorleser.stopp()
+
     fun lies(quelle: String, titel: String, text: String) {
         val stand = vorleser.stand.value
         // Ein zweiter Tipp auf „Probe hören“, während die Stimme noch erzeugt wird (oder nach einem 429 wartet), brach die
@@ -2925,6 +2936,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun auswertungAbstand(stunden: Int) { einstellungen.auswertungAbstand = stunden; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
     fun auswertungSchlafpause(an: Boolean) { einstellungen.auswertungSchlafpause = an; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
     fun auswertungDeutung(an: Boolean) { einstellungen.auswertungDeutung = an }
+    fun auswertungProfil(id: String) {
+        einstellungen.auswertungProfil = id
+        meldung = "Ausführlichkeit: ${Einstellungen.auswertungProfilName(id)}, gilt ab der nächsten Auswertung."
+    }
 
     val naechsteAuswertung: String
         get() = de.frank.jarvis.auswertung.Zeitplan.naechster(getApplication())?.let {

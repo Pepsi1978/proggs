@@ -298,6 +298,7 @@
     { "versionCode": 292, "versionName": "1.8.281", "stand": "23.10.2026, 21:02 Uhr", "notiz": "Rückfragen beim Programmieren melden sich jetzt immer, auch wenn die Programmier-Meldungen aus sind, und bei gesperrtem Handy sagt Jarvis sofort an, dass eine Frage beantwortet werden muss." },
     { "versionCode": 293, "versionName": "1.8.282", "stand": "23.10.2026, 21:06 Uhr", "notiz": "Die Rückfrage-Ansage wartet einen klingelnden Weckton ab, bleibt beim Abschalten der Programmier-Meldungen erhalten, und eine abgeschaltete Art klingelt nie wie ein Wecker." },
     { "versionCode": 294, "versionName": "1.8.283", "stand": "23.10.2026, 21:20 Uhr", "notiz": "Neue eigene Benachrichtigung „Rückfragen vom Programmierer“ zum An- und Ausschalten: kurzer Ton, dann liest Jarvis vor, dass eine Frage beantwortet werden muss, getrennt von den Programmieraufträgen." },
-    { "versionCode": 295, "versionName": "1.8.284", "stand": "23.10.2026, 22:27 Uhr", "notiz": "Eine Code-Review-Frage des Programmierers wird nur noch allgemein angesagt, ohne Projekt, App, Ziel oder Inhalt der Frage." }
+    { "versionCode": 295, "versionName": "1.8.284", "stand": "23.10.2026, 22:27 Uhr", "notiz": "Eine Code-Review-Frage des Programmierers wird nur noch allgemein angesagt, ohne Projekt, App, Ziel oder Inhalt der Frage." },
+    { "versionCode": 296, "versionName": "1.8.285", "stand": "24.10.2026, 10:11 Uhr", "notiz": "Tagesauswertung mit Pause, Weiter und Stopp beim Vorlesen sowie wählbarer Ausführlichkeit Kurz, Normal oder Gründlich; nach der Modellwahl startet ein Programmierauftrag ohne gesprochene Bestätigung." }
   ]
 }

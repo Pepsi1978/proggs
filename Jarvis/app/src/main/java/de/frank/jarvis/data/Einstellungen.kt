@@ -329,6 +329,10 @@ class Einstellungen private constructor(context: Context) {
     var auswertungWiederholungen: Int get() = prefs.getInt("auswertung_wiederholungen", 0); set(v) = put { putInt("auswertung_wiederholungen", v) }
     /** Das Modell schreibt die Deutung. Aus = nur die Daten synchronisieren. */
     var auswertungDeutung: Boolean get() = prefs.getBoolean("auswertung_deutung", true); set(v) = put { putBoolean("auswertung_deutung", v) }
+    /** Ausführlichkeit der Deutung: kurz, normal oder gruendlich (der bisherige Umfang, Vorgabe). Gilt ab der nächsten Auswertung. */
+    var auswertungProfil: String
+        get() = prefs.getString("auswertung_profil", AUSWERTUNG_GRUENDLICH)?.takeIf { it in AUSWERTUNG_PROFILE.map { p -> p.first } } ?: AUSWERTUNG_GRUENDLICH
+        set(v) = put { putString("auswertung_profil", v) }
 
     // ---- Sperre und Vorlesen ----
     /** App nur nach Fingerabdruck (oder Gerätesperre) öffnen. Das Plugin arbeitet unabhängig davon. */
@@ -390,6 +394,16 @@ class Einstellungen private constructor(context: Context) {
 
     companion object {
         const val NAME = "jarvis_secure_prefs"
+        const val AUSWERTUNG_KURZ = "kurz"
+        const val AUSWERTUNG_NORMAL = "normal"
+        const val AUSWERTUNG_GRUENDLICH = "gruendlich"
+        /** Die Ausführlichkeitsprofile der Tagesauswertung in der Reihenfolge der Auswahl: Kennung, Name, Beschreibung. */
+        val AUSWERTUNG_PROFILE = listOf(
+            Triple(AUSWERTUNG_KURZ, "Kurz", "Schneller Überblick mit allen Warnungen, etwa ein Viertel der gründlichen Fassung, vorgelesen rund anderthalb Minuten."),
+            Triple(AUSWERTUNG_NORMAL, "Normal", "Dieselben Informationen sprachlich verdichtet, etwa halb so lang wie gründlich, vorgelesen rund drei Minuten."),
+            Triple(AUSWERTUNG_GRUENDLICH, "Gründlich", "Die ausführliche Fassung wie bisher, vorgelesen rund sechs bis sieben Minuten."),
+        )
+        fun auswertungProfilName(id: String): String = AUSWERTUNG_PROFILE.firstOrNull { it.first == id }?.second ?: "Gründlich"
         /** Wählbare Schrittlimits pro Anfrage; 0 = unbegrenzt. */
         val SCHRITTLIMITS = (10..100 step 10).toList() + 0
         const val STANDARD_SCHRITTLIMIT = 10

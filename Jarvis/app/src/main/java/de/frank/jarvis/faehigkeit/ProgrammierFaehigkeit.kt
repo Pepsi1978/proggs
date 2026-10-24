@@ -1816,7 +1816,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /**
          * Hat die Runde in [gespraech] (begonnen [seit]) eine Auswahlkarte gestellt, ersetzt das hier die Antwort des Modells, damit
          * die Frage nur einen festen Weg hat: Ist die Karte noch offen, ihr Fragetext; hat Frank schon getippt (auch schneller,
-         * als das Modell antworten konnte), „Übernommen: …“ ohne weitere Rückfrage, bei einer Folgekarte samt deren Frage.
+         * als das Modell antworten konnte), nichts (leer) bzw. nur die Frage einer Folgekarte.
          * null = keine Karte in der Runde oder per Sprache gewählt.
          */
         suspend fun wahlInRunde(gespraech: String, seit: Long): String? {
@@ -1832,8 +1832,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 null, WAHL_ERLEDIGT -> null
                 // Offen, auch nach einem Fehlstart (der Grund steht dann schon im Gespräch).
                 WAHL_OFFEN -> k.frage
-                else -> "Übernommen: " + (k.optionen.firstOrNull { it.first == s }?.second ?: s) + "." +
-                    (karten.entries.firstOrNull { it.value.vorgaenger == id }?.let { (fid, f) -> ansage(fid, f)?.let { " $it" } }.orEmpty())
+                // Schon getippt: keine gesprochene Bestätigung der Wahl (Frank-Wunsch 2026-10-24), nur eine Folgekarte fragt noch.
+                // Leer = Karte erledigt, nichts sagen; null hieße „keine Karte“ und brächte die freie Antwort des Modells zurück.
+                else -> karten.entries.firstOrNull { it.value.vorgaenger == id }?.let { (fid, f) -> ansage(fid, f) }.orEmpty()
             }
         }
 

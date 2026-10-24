@@ -376,6 +376,9 @@ class EinstellungsKatalog(context: Context) {
             zahl("auswertung_abstand", "Tagesauswertung", "Abstand", "Alle wie viele Stunden die Auswertung läuft.", 1, 12, "Stunden", { e.auswertungAbstand }) { e.auswertungAbstand = it; zeitplanNeu() },
             schalter("auswertung_schlafpause", "Tagesauswertung", "Schlafpause", "Ruht, solange Frank laut Dienstplan schläft.", { e.auswertungSchlafpause }) { e.auswertungSchlafpause = it; zeitplanNeu() },
             schalter("auswertung_deutung", "Tagesauswertung", "Deutung schreiben", "Das Modell schreibt eine Deutung; aus = nur Daten abgleichen.", { e.auswertungDeutung }) { e.auswertungDeutung = it },
+            auswahl("auswertung_profil", "Tagesauswertung", "Ausführlichkeit", "Wie ausführlich die Tagesauswertung geschrieben wird (Kurz, auch Schnellprofil genannt, Normal oder Gründlich); gilt ab der nächsten Auswertung.",
+                { Einstellungen.AUSWERTUNG_PROFILE.map { it.first to it.second } }, { e.auswertungProfil },
+                zweitnamen = { listOf(Einstellungen.AUSWERTUNG_KURZ to "Schnell", Einstellungen.AUSWERTUNG_KURZ to "Schnellprofil") }) { e.auswertungProfil = it },
             schalter("auswertung_lernen", "Tagesauswertung", "Aus Tagebuch und Gesprächen lernen", "Verdichtet alte Monate, notiert neue Tatsachen über Frank aus Tagebuch und Gesprächen und prüft und räumt das Gelernte etwa alle sechs Stunden auf (Bericht unter Live-Gedächtnis).", { e.auswertungLernen }) { e.auswertungLernen = it; de.frank.jarvis.gedaechtnis.Lernlauf.stelleWecker(context) },
 
             // ---- Timer ----

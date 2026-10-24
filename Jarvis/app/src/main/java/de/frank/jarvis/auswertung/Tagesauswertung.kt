@@ -46,7 +46,9 @@ import org.json.JSONObject
  * Eine gespeicherte Tagesauswertung. [mitKi] = vom Modell geschrieben; sonst der reine Datenbericht.
  * [vorlaeufig] = Sofort-Fassung beim Abruf: Sie zeigt frische Daten, zählt aber nicht als erfüllter Lauf.
  */
-data class Auswertung(val zeit: Long, val anlass: String, val text: String, val daten: String, val mitKi: Boolean, val modell: String, val vorlaeufig: Boolean = false) {
+// [profil]: Ausführlichkeit, mit der das Modell geschrieben hat (leer bei Datenbericht und älteren Fassungen).
+data class Auswertung(val zeit: Long, val anlass: String, val text: String, val daten: String, val mitKi: Boolean, val modell: String, val vorlaeufig: Boolean = false,
+                      val profil: String = "") {
     val zeitpunkt: LocalDateTime get() = Instant.ofEpochMilli(zeit).atZone(ZoneId.systemDefault()).toLocalDateTime()
 }
 
@@ -99,7 +101,7 @@ object Tagesauswertung {
     }
 
     private fun lies(datei: File): Auswertung? = runCatching {
-        JSONObject(datei.readText()).let { Auswertung(it.getLong("zeit"), it.optString("anlass"), it.optString("text"), it.optString("daten"), it.optBoolean("ki"), it.optString("modell"), it.optBoolean("vorlaeufig")) }
+        JSONObject(datei.readText()).let { Auswertung(it.getLong("zeit"), it.optString("anlass"), it.optString("text"), it.optString("daten"), it.optBoolean("ki"), it.optString("modell"), it.optBoolean("vorlaeufig"), it.optString("profil")) }
     }.getOrNull()
 
     /** Wie runCatching, reicht aber einen Abbruch weiter: Ein beendeter Dienst soll keine halbe Auswertung speichern. */
@@ -164,7 +166,7 @@ object Tagesauswertung {
         AblageSpeicher.schreibeAtomar(
             File(ordner(context), name),
             JSONObject().put("zeit", a.zeit).put("anlass", a.anlass).put("text", a.text).put("daten", a.daten).put("ki", a.mitKi).put("modell", a.modell)
-                .put("vorlaeufig", a.vorlaeufig).toString().toByteArray(),
+                .put("vorlaeufig", a.vorlaeufig).put("profil", a.profil).toString().toByteArray(),
         )
         if (!a.vorlaeufig) endgueltig = a
         if (a.mitKi) gedeutet = a
@@ -242,6 +244,7 @@ object Tagesauswertung {
             val daten = sammle(app)
 
             val deuten = einstellungen.auswertungDeutung
+            val profil = einstellungen.auswertungProfil
             if (deuten) schritt("Auswertung schreiben")
             // Zählt die Tokens aller Modellanfragen dieser Auswertung; sie stehen danach unter dem Text.
             val zaehler = de.frank.jarvis.auth.TokenZaehler()
@@ -249,7 +252,7 @@ object Tagesauswertung {
                 // „Maximal“ denkt mehrere Minuten pro Schritt: dann mehr Zeit, sonst endet der Lauf als reiner Datenbericht.
                 val zeitlimit = if (einstellungen.denkstufe == de.frank.jarvis.auth.ReasoningEffort.MAX) 12 * 60_000L else 5 * 60_000L
                 kotlinx.coroutines.withContext(zaehler) {
-                    JarvisAgent(app).versuche(auftrag(daten), zeitlimitMs = zeitlimit, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
+                    JarvisAgent(app).versuche(auftrag(daten, profil), zeitlimitMs = zeitlimit, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -272,6 +275,7 @@ object Tagesauswertung {
                 daten = daten,
                 mitKi = text != null,
                 modell = if (text != null) einstellungen.modell.label else "",
+                profil = if (text != null) profil else "",
             )
             // Wurde der Dienst inzwischen beendet, keine halb gesammelte Fassung als neueste ablegen.
             currentCoroutineContext().ensureActive()
@@ -381,7 +385,42 @@ object Tagesauswertung {
         }
     }
 
-    /** Schritt 2: der Auftrag an das Modell. */
+    /**
+     * Schritt 2: der Auftrag an das Modell. Gründlich ist der bisherige Auftrag Wort für Wort; Normal und Kurz bekommen
+     * denselben Auftrag und davor ihren Umfang-Block, der nur Länge und Verdichtung regelt.
+     */
+    private fun auftrag(daten: String, profil: String): String {
+        val text = auftrag(daten)
+        val block = umfang(profil) ?: return text
+        // Die erste Fundstelle ist die der Vorlage, die Daten stehen erst dahinter.
+        val stelle = text.indexOf("\nDATEN:\n").takeIf { it >= 0 } ?: return text
+        return text.substring(0, stelle) + "\n\n" + block + text.substring(stelle)
+    }
+
+    /** Länge und Verdichtung je Profil; null = gründlich, unverändert. Die Wortzahlen beziehen sich auf rund 1.000 Wörter bei Gründlich. */
+    private fun umfang(profil: String): String? = when (profil) {
+        Einstellungen.AUSWERTUNG_NORMAL -> """
+UMFANG DIESER AUSWERTUNG: NORMAL. Diese Vorgaben gehen allen Längen- und Umfangsangaben oben vor; alles andere gilt unverändert.
+Frank hat das Profil Normal gewählt: dieselben Informationen wie in der ausführlichen Fassung, sprachlich verdichtet, insgesamt etwa 450 bis 550 Wörter, also rund die Hälfte. Lass keine Information und keine Warnung weg, sag sie knapper: weniger Füllwörter, keine Wiederholungen, zusammengehörige Werte in einem Satz.
+- Fazit: ein Satz, danach eine Leerzeile.
+- RÜCKBLICK: zwei bis drei Sätze.
+- AKTUELL: drei bis vier kurze Absätze. Schlaf, HRV, Ruhepuls, Erholung und VO2max wie bisher, aber je Wert nur der aussagekräftigste Vergleich (meist der Monatsschnitt) statt Woche, Monat und Gesamt nacheinander; einen weiteren Vergleich nur, wenn er etwas anderes aussagt. Danach Wetter, Aufgaben, die Einschätzung und zwei bis drei konkrete Empfehlungen.
+- AUSBLICK: zwei bis drei Sätze.
+Die Überschriften RÜCKBLICK, AKTUELL und AUSBLICK stehen weiter in Großbuchstaben auf eigener Zeile. Schreib für das Ohr: kurze bis mittellange Sätze mit je einer Aussage, natürliche Übergänge, gerundete Zahlen, keine Klammern, keine Abkürzungen.
+""".trim()
+        Einstellungen.AUSWERTUNG_KURZ -> """
+UMFANG DIESER AUSWERTUNG: KURZ. Diese Vorgaben gehen allen Längen- und Umfangsangaben oben vor; alles andere gilt unverändert.
+Frank hat das Profil Kurz gewählt: ein schneller, stimmiger Überblick zum Zuhören, insgesamt etwa 220 bis 280 Wörter, also rund ein Viertel der ausführlichen Fassung. Das ist keine abgeschnittene Fassung: Wähle das Wesentliche aus und sag es knapp. Immer enthalten sind: die Art des Tages mit Dienst, Abfahrt und Schlafenszeit, feste Termine, jede Warnung (zum Beispiel ein Wecker, der zum Dienst fehlt, ein gestörter Abruf mit ACHTUNG, überfällige Aufgaben), die Kernaussage zu Schlaf und Erholung mit Franks wichtigsten Werten und eine klare Empfehlung.
+- Fazit: ein Satz, danach eine Leerzeile.
+- RÜCKBLICK: ein bis zwei Sätze.
+- AKTUELL: vier bis acht Stichpunkte. Jeder steht auf eigener Zeile, beginnt mit einem Bindestrich und ist ein ganzer, kurzer Satz mit Punkt, damit er vorgelesen natürlich klingt. Höchstens ein Vergleich je Messgröße, gerundete Zahlen.
+- AUSBLICK: ein bis zwei Sätze.
+Die Überschriften RÜCKBLICK, AKTUELL und AUSBLICK stehen weiter in Großbuchstaben auf eigener Zeile. Keine Klammern, keine Abkürzungen, keine Reihen bloßer Zahlen.
+""".trim()
+        else -> null
+    }
+
+    /** Der gründliche Auftrag, unverändert seit vor den Profilen. */
     private fun auftrag(daten: String): String = """
 Schreibe Franks Tagesauswertung. Sie wird gespeichert und ihm später vorgelesen: ganze, gut sprechbare Sätze, du-Anrede, keine Tabellen, kein Markdown.
 
