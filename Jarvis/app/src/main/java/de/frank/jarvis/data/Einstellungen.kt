@@ -360,6 +360,8 @@ class Einstellungen private constructor(context: Context) {
 
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
+    /** Wie viel Wischen die Gesprächsleiste zum Öffnen braucht: 0 = leicht (kurzer Wisch), 100 = schwer (langer Wisch). */
+    var leistenWischen: Int get() = prefs.getInt("leiste_wischen", 35).coerceIn(0, 100); set(v) = put { putInt("leiste_wischen", v.coerceIn(0, 100)) }
     // ---- Timer ----
     /** true = ein abgelaufener Timer klingelt wie ein Wecker, bis Frank ihn ausschaltet; false = kurze Meldung mit Ton. */
     var timerWecker: Boolean get() = prefs.getBoolean("timer_wecker", true); set(v) = put { putBoolean("timer_wecker", v) }

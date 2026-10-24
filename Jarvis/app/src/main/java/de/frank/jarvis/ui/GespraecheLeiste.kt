@@ -71,12 +71,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.data.Sitzung
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import kotlin.math.abs
+import kotlin.math.sqrt
 import kotlinx.coroutines.launch
 
 /**
@@ -111,18 +113,26 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
         gesturesEnabled = schublade.isOpen && !schublade.isAnimationRunning,
         scrimColor = Color.Black.copy(alpha = if (f.dunkel) 0.55f else 0.32f),
         // Waagerechtes Wischen irgendwo im Gespräch öffnet die Leiste (nicht nur am Rand); senkrechtes Scrollen bleibt der Liste.
-        // Erst ein deutlicher Wisch zählt: mindestens 56 dp oder 8 % der Fensterbreite (auf dem Fold innen breiter), klar
-        // waagerecht. Antippen mit etwas Zittern und schräges Scrollen öffnen die Leiste nicht mehr.
-        modifier = Modifier.pointerInput(schublade, wischen) {
+        // Wie viel Wischen es braucht, stellt der Regler „Seitenleiste öffnen“ ein (0 = leicht, 100 = schwer): Er bestimmt
+        // die Wischstrecke (etwa 20 bis 200 dp), wie schräg der Wisch sein darf und ab welchem Tempo ein kurzer schneller
+        // Wisch schon reicht (bei „schwer“ gar nicht). Antippen mit etwas Zittern öffnet die Leiste nie.
+        modifier = Modifier.pointerInput(schublade, wischen, vm.einstellungen.leistenWischen) {
             if (!wischen) return@pointerInput
             val schlupf = viewConfiguration.touchSlop
-            val schwelle = maxOf(schlupf * 3f, 56.dp.toPx(), size.width * 0.08f)
+            val t = vm.einstellungen.leistenWischen / 100f
+            val schwelle = maxOf(schlupf * 1.5f, (20f + 180f * t * sqrt(t)).dp.toPx())
+            // Senkrechtes Abbrechen und nötiger Waagerecht-Anteil: leicht ≈ 50 Grad Spielraum, schwer ≈ 27 Grad.
+            val steilAbbruch = 1.2f - 0.45f * t
+            val waagerecht = 1f + t
+            // Ein schneller Wisch zählt schon ab 40 % der Strecke; bei „schwer“ nur die volle Strecke.
+            val tempoSchwelle = if (t >= 0.95f) Float.MAX_VALUE else (600f + 2400f * t).dp.toPx()
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 if (schublade.isAnimationRunning) return@awaitEachGesture
                 val schliessen = schublade.isOpen
                 var weg = Offset.Zero
                 var erkannt = false
+                val tempo = VelocityTracker().apply { addPosition(down.uptimeMillis, down.position) }
                 while (true) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
                     val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -133,11 +143,14 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
                     }
                     if (!change.pressed || change.isConsumed) break
                     weg += change.position - change.previousPosition
-                    // Senkrecht oder steiler als etwa 37 Grad: das ist Scrollen, keine Leistengeste.
-                    if (abs(weg.y) > schlupf && abs(weg.y) > abs(weg.x) * 0.75f) break
+                    tempo.addPosition(change.uptimeMillis, change.position)
+                    // Steiler als der eingestellte Winkel: das ist Scrollen, keine Leistengeste.
+                    if (abs(weg.y) > schlupf && abs(weg.y) > abs(weg.x) * steilAbbruch) break
                     // Falsche Richtung früh aufgeben, damit Wischen in der Gegenrichtung frei bleibt.
                     if (abs(weg.x) > schlupf && ((schliessen && weg.x >= 0f) || (!schliessen && weg.x <= 0f))) break
-                    if (abs(weg.x) >= schwelle && abs(weg.x) >= abs(weg.y) * 2f) {
+                    val weitGenug = abs(weg.x) >= schwelle ||
+                        (abs(weg.x) >= maxOf(schlupf, schwelle * 0.4f) && abs(tempo.calculateVelocity().x) >= tempoSchwelle)
+                    if (weitGenug && abs(weg.x) >= abs(weg.y) * waagerecht) {
                         if (schublade.isAnimationRunning) break
                         erkannt = true
                         change.consume()

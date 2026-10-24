@@ -423,6 +423,7 @@ class EinstellungsKatalog(context: Context) {
             // ---- Darstellung ----
             auswahl("modus", "Darstellung", "Hell oder dunkel", "Helles oder dunkles Design.",
                 { listOf("system" to "Automatisch", "hell" to "Hell", "dunkel" to "Dunkel") }, { e.modus }) { e.modus = it },
+            zahl("leiste_wischen", "System", "Wischempfindlichkeit der Seitenleiste", "Wie weit man von links nach rechts wischen muss, damit sich die Gesprächsleiste öffnet; 0 = leicht (kurzer Wisch), 100 = schwer (langer Wisch).", 0, 100, "Prozent", { e.leistenWischen }) { e.leistenWischen = it },
             auswahl("design", "Darstellung", "Farbdesign", "Blau (Jarvis) oder Gold (wie Geniale Ideen).",
                 { listOf("blau" to "Blau", "gold" to "Gold") }, { e.design }) { e.design = it },
             auswahl("ablage_ansicht", "Darstellung", "Ansicht der Ablage", "Wie die Ablage ihre Dateien zeigt.",

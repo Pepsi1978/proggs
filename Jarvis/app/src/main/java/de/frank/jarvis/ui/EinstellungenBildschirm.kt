@@ -24,11 +24,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.jarvis.BuildConfig
+import kotlin.math.roundToInt
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.KiAnbieter
 import de.frank.jarvis.auth.deviceCodeGroups
@@ -563,6 +568,19 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("system" to "Automatisch", "hell" to "Hell", "dunkel" to "Dunkel").forEach { (id, name) -> Chip(name, aktiv = e.modus == id) { e.modus = id } }
                 }
+                Unterzeile("Seitenleiste öffnen")
+                // Während des Ziehens nur hier merken, gespeichert wird beim Loslassen.
+                var wischen by remember(e.leistenWischen) { mutableFloatStateOf(e.leistenWischen.toFloat()) }
+                Slider(
+                    value = wischen, onValueChange = { wischen = it }, onValueChangeFinished = { e.leistenWischen = wischen.roundToInt() },
+                    valueRange = 0f..100f, steps = 9,
+                    colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer, inactiveTrackColor = f.rand, activeTickColor = f.aufPrimaer, inactiveTickColor = f.textSchwach),
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Leicht", color = f.textLeise, fontSize = 13.sp)
+                    Text("Schwer", color = f.textLeise, fontSize = 13.sp)
+                }
+                Text("Leicht: ein kurzer Wisch von links nach rechts öffnet die Gesprächsleiste. Schwer: nur ein deutlich längerer Wisch.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Unterzeile("Sicherheit")
                 Knopf("Plugin-Adresse erneuern", Modifier.fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.adresseErneuern() }
                 Text("Macht die bisherige Adresse ungültig. Danach in ChatGPT neu eintragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
