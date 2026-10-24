@@ -45,6 +45,7 @@ sealed interface Bildschirm {
     data object Liste : Bildschirm
     data class Detail(val id: Long) : Bildschirm
     data class Bearbeiten(val id: Long?) : Bildschirm
+    data class EigeneAufgabe(val zielId: Long) : Bildschirm
     data object Kontext : Bildschirm
     data object Einstellungen : Bildschirm
 }
@@ -52,7 +53,7 @@ sealed interface Bildschirm {
 enum class Aufnahme { AUS, LAEUFT, VERARBEITET }
 
 /** Wohin der gesprochene Text geht. */
-enum class DiktatZiel { ZIEL, KONTEXT, RUECKMELDUNG }
+enum class DiktatZiel { ZIEL, KONTEXT, RUECKMELDUNG, AUFGABE }
 
 /** Die drei Textfelder vor (original) und nach (korrigiert) der KI-Korrektur. */
 data class KorrekturStand(val original: List<String>, val korrigiert: List<String>)
@@ -169,6 +170,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             Bildschirm.Liste -> return false
             is Bildschirm.Bearbeiten -> { aufnahmeVerwerfen(); bildschirm = b.id?.let { Bildschirm.Detail(it) } ?: Bildschirm.Liste }
             Bildschirm.Kontext -> { aufnahmeVerwerfen(); bildschirm = kontextZurueck }
+            is Bildschirm.EigeneAufgabe -> { aufnahmeVerwerfen(); bildschirm = Bildschirm.Detail(b.zielId) }
             else -> bildschirm = Bildschirm.Liste
         }
         return true
@@ -467,14 +469,92 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Editor für eigene Aufgaben ----
+    var aTitel by mutableStateOf("")
+    var aText by mutableStateOf("")
+    var aBegruendung by mutableStateOf("")
+    var aErfolg by mutableStateOf("")
+    var aKategorie by mutableStateOf(Kategorie.NOTWENDIG)
+    var aKiLaeuft by mutableStateOf(false); private set
+    /** Die vier Felder von vor dem KI-Ausfüllen — solange gesetzt, wird der KI-Knopf zum Rückgängig-Knopf. */
+    var aKi by mutableStateOf<KorrekturStand?>(null); private set
+
+    /** Öffnet den bildschirmfüllenden Editor mit leerer Schablone. */
+    fun eigeneAufgabeNeu(zielId: Long) {
+        aTitel = ""; aText = ""; aBegruendung = ""; aErfolg = ""; aKategorie = Kategorie.NOTWENDIG
+        aKi = null
+        bildschirm = Bildschirm.EigeneAufgabe(zielId)
+    }
+
+    private fun aFelder() = listOf(aTitel, aText, aBegruendung, aErfolg)
+
+    /** Die KI füllt aus allem Eingegebenen (meist diktiert) Überschrift, Beschreibung, Nutzen und Erledigt-Kriterium vollständig aus. */
+    fun aufgabeAusfuellen(zielId: Long) {
+        val roh = aFelder()
+        if (aKiLaeuft || roh.all { it.isBlank() }) { if (roh.all { it.isBlank() }) melde("Sprich oder tippe zuerst, was du tun willst."); return }
+        if (!kiBereit) { melde("Für die KI zuerst die KI in den Einstellungen verbinden."); return }
+        val z = ziele.value.firstOrNull { it.id == zielId }
+        aKiLaeuft = true
+        viewModelScope.launch {
+            try {
+                val antwort = auth.streamChat(
+                    instructions = "Frank legt zu einem seiner Ziele eine eigene Aufgabe an und hat dazu frei geschrieben oder eingesprochen (Spracherkennung, daher evtl. unsauber). " +
+                        "Mach daraus eine vollständige Aufgabe und fülle ALLE vier Felder sinnvoll aus:\n" +
+                        "- titel: kurze Überschrift, drei bis acht Wörter, als Tätigkeit formuliert.\n" +
+                        "- text: die Aufgabenbeschreibung, was konkret zu tun ist; alles Inhaltliche aus seinem Text bleibt erhalten.\n" +
+                        "- begruendung: Begründung bzw. Nutzen, wie die Aufgabe das Ziel voranbringt.\n" +
+                        "- erfolg: ein klares, prüfbares Kriterium, wann die Aufgabe erledigt ist.\n" +
+                        "Nutze, was Frank gesagt hat; fehlt etwas, leite es sinnvoll aus Text und Ziel ab, ohne Neues zu erfinden, das ihm widerspricht. " +
+                        "Gutes Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß), keine Füllwörter, kein Markdown.\n" +
+                        "Antworte NUR mit JSON: {\"titel\": \"…\", \"text\": \"…\", \"begruendung\": \"…\", \"erfolg\": \"…\"}",
+                    turns = listOf(ChatTurn("user",
+                        (z?.let { "Ziel: ${it.titel}\nZielbeschreibung: ${it.beschreibung}\nWarum: ${it.warum}\n\n" } ?: "") +
+                            "Überschrift: ${roh[0]}\nAufgabenbeschreibung: ${roh[1]}\nBegründung/Nutzen: ${roh[2]}\nErledigt, wenn: ${roh[3]}",
+                    )),
+                    model = einstellungen.modell,
+                    reasoningEffort = de.frank.ziele.auth.ReasoningEffort.LOW,
+                )
+                val o = Auswertung.jsonAus(antwort) ?: throw IllegalStateException("Die KI hat die Aufgabe nicht ausfüllen können.")
+                // Editor verlassen oder währenddessen weitergetippt: Franks Stand gewinnt.
+                if (bildschirm != Bildschirm.EigeneAufgabe(zielId) || aFelder() != roh) return@launch
+                val neu = listOf("titel", "text", "begruendung", "erfolg").mapIndexed { i, k -> UmlautKorrektur.korrigiere(o.optString(k).trim()).ifBlank { roh[i] } }
+                if (neu == roh) { melde("Die Aufgabe war schon vollständig."); return@launch }
+                aTitel = neu[0]; aText = neu[1]; aBegruendung = neu[2]; aErfolg = neu[3]
+                aKi = KorrekturStand(original = roh, korrigiert = neu)
+            } catch (c: CancellationException) {
+                throw c
+            } catch (e: Throwable) {
+                melde(e.message ?: "Die KI hat die Aufgabe nicht ausfüllen können.")
+            } finally {
+                aKiLaeuft = false
+            }
+        }
+    }
+
+    /** Holt die Felder von vor dem KI-Ausfüllen zurück. */
+    fun aufgabeKiZuruecknehmen() {
+        val stand = aKi ?: return
+        aKi = null
+        aTitel = stand.original[0]; aText = stand.original[1]; aBegruendung = stand.original[2]; aErfolg = stand.original[3]
+        melde("Dein Originaltext ist wieder da.")
+    }
+
+    /** Von Hand geändert heißt: Das KI-Ausfüllen ist nicht mehr rücknehmbar. */
+    fun aufgabeKiVergessen() { aKi = null }
+
     /** Eigene Aufgabe: Frank formuliert sie selbst; sie steht neben den KI-Vorschlägen und lässt sich genauso übernehmen. */
-    fun eigeneAufgabe(zielId: Long, titel: String, text: String, kategorie: Kategorie) {
-        val t = titel.trim()
-        if (t.isEmpty()) return
+    fun eigeneAufgabeSpeichern(zielId: Long) {
+        if (aKiLaeuft) { melde("Einen Moment, die KI füllt die Aufgabe noch aus."); return }
+        if (aufnahme != Aufnahme.AUS) { melde("Einen Moment, das Diktat läuft noch."); return }
+        val t = aTitel.trim().ifEmpty { aText.trim().takeIf { it.isNotEmpty() }?.let { titelOhneKi(it) }.orEmpty() }
+        if (t.isEmpty()) { melde("Gib der Aufgabe eine Überschrift – oder sprich sie ein und drück KI."); return }
+        val text = aText.trim(); val begruendung = aBegruendung.trim(); val erfolg = aErfolg.trim(); val kategorie = aKategorie
         viewModelScope.launch {
             repo.neuerVorschlag(
-                Vorschlag(zielId = zielId, schluessel = "e${System.currentTimeMillis()}", titel = t, text = text.trim(), kategorie = kategorie.name, phase = 1, eigen = true),
+                Vorschlag(zielId = zielId, schluessel = "e${System.currentTimeMillis()}", titel = t, text = text, begruendung = begruendung, erfolg = erfolg,
+                    kategorie = kategorie.name, phase = 1, eigen = true),
             )
+            bildschirm = Bildschirm.Detail(zielId)
             melde("Eigene Aufgabe hinzugefügt ✓")
         }
     }
@@ -558,6 +638,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 when {
                     text.isBlank() -> melde("Keine Sprache erkannt.")
                     wohin == DiktatZiel.KONTEXT -> { Kontext.ergaenze(getApplication(), text); melde("In die Kontextdatei übernommen ✓") }
+                    wohin == DiktatZiel.AUFGABE -> { aKi = null; aText = (aText.trim() + " " + text).trim() }
                     wohin == DiktatZiel.RUECKMELDUNG -> diktatZielId?.let { id -> rueckmeldungEntwurf[id] = (rueckmeldungEntwurf[id].orEmpty().trim() + " " + text).trim() }
                     else -> zielOrdnen(text)
                 }

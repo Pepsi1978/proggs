@@ -106,7 +106,6 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     var loeschenFragen by remember { mutableStateOf(false) }
     var verworfeneZeigen by rememberSaveable { mutableStateOf(false) }
     var abgelehnteZeigen by rememberSaveable { mutableStateOf(false) }
-    var eigeneOffen by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -143,7 +142,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
                 item { GruppenKopf(vm, z, Kategorie.UNTERSTUETZEND, hilfe) }
                 items(hilfe, key = { it.id }) { v -> VorschlagKarte(vm, v, schluesselTitel, sortierung, hilfe.indexOf(v) + 1) }
             }
-            item { EigeneAufgabeKnopf { eigeneOffen = true } }
+            item { EigeneAufgabeKnopf { vm.eigeneAufgabeNeu(z.id) } }
             if (verworfen.isNotEmpty()) item {
                 Row(Modifier.fillMaxWidth().antippen(haptik = false) { verworfeneZeigen = !verworfeneZeigen }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Ausgeblendet (${verworfen.size})", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.weight(1f))
@@ -160,7 +159,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
                     Icon(Icons.AutoMirrored.Rounded.Undo, "Wieder einblenden", tint = f.primaer, modifier = Modifier.size(22.dp).antippen { vm.verwerfen(v, false) })
                 }
             }
-        } else item { EigeneAufgabeKnopf { eigeneOffen = true } }
+        } else item { EigeneAufgabeKnopf { vm.eigeneAufgabeNeu(z.id) } }
         if (abgelehnt.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().antippen(haptik = false) { abgelehnteZeigen = !abgelehnteZeigen }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Abgelehnt (${abgelehnt.size}) · kommt nicht wieder", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.weight(1f))
@@ -194,14 +193,13 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
         confirmButton = { TextButton(onClick = { loeschenFragen = false; vm.loeschen(z) }) { Text("Löschen", color = f.gefahr) } },
         dismissButton = { TextButton(onClick = { loeschenFragen = false }) { Text("Abbrechen", color = f.primaer) } },
     )
-    if (eigeneOffen) EigeneAufgabeDialog(onFertig = { titel, text, k -> vm.eigeneAufgabe(z.id, titel, text, k); eigeneOffen = false }, onAbbrechen = { eigeneOffen = false })
 }
 
 /** Gelber Punkt: Frank hat die Aufgabe selbst angelegt, sie stammt nicht von der KI. */
-private val EIGEN_GELB = Color(0xFFFFD60A)
+val EIGEN_GELB = Color(0xFFFFD60A)
 
 @Composable
-private fun EigenPunkt(groesse: androidx.compose.ui.unit.Dp = 10.dp) {
+fun EigenPunkt(groesse: androidx.compose.ui.unit.Dp = 10.dp) {
     Box(Modifier.size(groesse).background(EIGEN_GELB, androidx.compose.foundation.shape.CircleShape))
 }
 
@@ -218,35 +216,6 @@ private fun EigeneAufgabeKnopf(onKlick: () -> Unit) {
         Spacer(Modifier.width(8.dp))
         EigenPunkt()
     }
-}
-
-@Composable
-private fun EigeneAufgabeDialog(onFertig: (String, String, Kategorie) -> Unit, onAbbrechen: () -> Unit) {
-    val f = LocalFarben.current
-    var titel by rememberSaveable { mutableStateOf("") }
-    var text by rememberSaveable { mutableStateOf("") }
-    var kategorie by rememberSaveable { mutableStateOf(Kategorie.NOTWENDIG) }
-    @Composable
-    fun Feld(wert: String, hinweis: String, minHoehe: androidx.compose.ui.unit.Dp, aendern: (String) -> Unit) {
-        Box(Modifier.fillMaxWidth().heightIn(min = minHoehe).glas(f, 14.dp, 0.6f, f.flaecheStark).padding(horizontal = 12.dp, vertical = 10.dp)) {
-            if (wert.isEmpty()) Text(hinweis, color = f.textSchwach, fontSize = 15.sp)
-            BasicTextField(wert, aendern, textStyle = TextStyle(color = f.text, fontSize = 15.sp, lineHeight = 21.sp), cursorBrush = SolidColor(f.primaer), modifier = Modifier.fillMaxWidth())
-        }
-    }
-    AlertDialog(
-        onDismissRequest = onAbbrechen,
-        containerColor = f.hgUnten, titleContentColor = f.text, textContentColor = f.text,
-        title = { Row(verticalAlignment = Alignment.CenterVertically) { EigenPunkt(12.dp); Spacer(Modifier.width(10.dp)); Text("Eigene Aufgabe") } },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Feld(titel, "Was willst du tun?", 48.dp) { titel = it }
-                Feld(text, "Details (optional)", 80.dp) { text = it }
-                ChipReihe { Kategorie.entries.forEach { k -> Chip(k.anzeige, kategorie == k) { kategorie = k } } }
-            }
-        },
-        confirmButton = { TextButton(onClick = { onFertig(titel, text, kategorie) }, enabled = titel.isNotBlank()) { Text("Hinzufügen", color = if (titel.isNotBlank()) f.primaer else f.textSchwach) } },
-        dismissButton = { TextButton(onClick = onAbbrechen) { Text("Abbrechen", color = f.textLeise) } },
-    )
 }
 
 @Composable

@@ -41,6 +41,7 @@ fun ZieleApp(vm: AppViewModel, activity: ComponentActivity) {
                     Bildschirm.Liste -> ListeBildschirm(vm)
                     is Bildschirm.Detail -> DetailBildschirm(vm, b.id)
                     is Bildschirm.Bearbeiten -> BearbeitenBildschirm(vm)
+                    is Bildschirm.EigeneAufgabe -> EigeneAufgabeBildschirm(vm, b.zielId)
                     Bildschirm.Kontext -> KontextBildschirm(vm)
                     Bildschirm.Einstellungen -> EinstellungenBildschirm(vm, activity)
                 }
