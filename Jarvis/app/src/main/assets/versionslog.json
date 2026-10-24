@@ -334,6 +334,7 @@
     { "versionCode": 328, "versionName": "1.8.317", "stand": "24.10.2026, 17:30 Uhr", "notiz": "Das Neue-Session-Symbol ist wieder eine schwarze, leicht durchscheinende Sprechblase mit weißem Kreuz, leuchtet beim Antippen kurz grün und bleibt grün, solange danach etwas im Eingabefeld steht." },
     { "versionCode": 329, "versionName": "1.8.318", "stand": "24.10.2026, 17:33 Uhr", "notiz": "Ein Programmierauftrag aus einer leeren Session über „Programmierer“ läuft jetzt genau in dieser Session, es entsteht kein zweiter Chat mehr." },
     { "versionCode": 330, "versionName": "1.8.319", "stand": "24.10.2026, 17:35 Uhr", "notiz": "Der Papierkorb zum Löschen des Gesprächs steht nicht mehr oben in der Leiste, sondern direkt über dem Symbol für Neue Session, die Sicherheitsabfrage bleibt wie bisher." },
-    { "versionCode": 331, "versionName": "1.8.320", "stand": "24.10.2026, 17:52 Uhr", "notiz": "Nachtrag und Programmierer leuchten nur, solange ihr Vorspann im Feld steht, ein zweiter Tipp nimmt ihn wieder heraus, beide schließen sich gegenseitig aus, und der Papierkorb ist heller." }
+    { "versionCode": 331, "versionName": "1.8.320", "stand": "24.10.2026, 17:52 Uhr", "notiz": "Nachtrag und Programmierer leuchten nur, solange ihr Vorspann im Feld steht, ein zweiter Tipp nimmt ihn wieder heraus, beide schließen sich gegenseitig aus, und der Papierkorb ist heller." },
+    { "versionCode": 332, "versionName": "1.8.321", "stand": "24.10.2026, 18:01 Uhr", "notiz": "Neue Session hat jetzt dasselbe durchscheinende Schwarz wie der Papierkorb daneben." }
   ]
 }

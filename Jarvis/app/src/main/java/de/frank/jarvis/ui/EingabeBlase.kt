@@ -58,6 +58,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -364,7 +365,7 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false) = SCHWEBE_GROES
 @Composable
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier, horizontalAlignment = Alignment.End) {
         // Aktuelles Gespräch löschen, direkt über „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
         // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
         var loeschenZiel by remember { mutableStateOf<String?>(null) }
@@ -391,12 +392,12 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenZiel = null }) { Text("Abbrechen") } },
         ) }
-        // „Neue Session“: schwarze, etwas aufgehellte und durchscheinende Sprechblase mit weißem Kreuz. Antippen lässt sie kurz
+        // „Neue Session“: Sprechblase im selben durchscheinenden Schwarz wie der Papierkorb, mit weißem Kreuz. Antippen lässt sie kurz
         // grün aufleuchten; kommt danach etwas in den Entwurf, bleibt sie grün, solange es dort steht.
         val sessionGruen = vm.neueSessionAktiv && (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty())
         SchwebeSymbol("Neue Session", sessionGruen, { vm.neueSessionTippen() }, blitz = vm.neueSessionBlitz) {
             Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.ChatBubble, null, tint = Color(0xFF2A2A2A).copy(alpha = 0.7f), modifier = Modifier.fillMaxSize())
+                Icon(Icons.Rounded.ChatBubble, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.fillMaxSize())
                 Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(17.dp).offset(y = (-2).dp))
             }
         }
@@ -407,10 +408,37 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }
-        SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv, { vm.programmiererEinsetzen() }) {
-            Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
+        // Unten in einer Zeile: links die Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review), rechts
+        // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
+        val stand by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand.collectAsState()
+        val karte = vm.gespraech.lastOrNull {
+            it.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
+                stand[de.frank.jarvis.data.Gespraeche.wahlId(it.kontext)] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (karte != null) {
+                val id = de.frank.jarvis.data.Gespraeche.wahlId(karte.kontext)
+                wahlOptionen(karte.kontext).forEachIndexed { i, (wert, label) ->
+                    Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
+                        .background(if (i == 0) f.text else f.flaeche).antippen { vm.programmierModell(id, wert) }
+                        .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                        Text(label, color = if (i == 0) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+            }
+            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv, { vm.programmiererEinsetzen() }) {
+                Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
+            }
         }
     }
+}
+
+/** Knöpfe einer Auswahlkarte aus ihrem Kontext (Wert, Beschriftung); ältere Karten ohne „optionen“ sind die Modellwahl. */
+internal fun wahlOptionen(kontext: String): List<Pair<String, String>> {
+    val liste = runCatching { org.json.JSONObject(kontext).optJSONArray("optionen") }.getOrNull()
+    return if (liste == null || liste.length() == 0) listOf(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS to "Opus 5.5", de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL to "Sol 6.1")
+    else (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.map { it.optString("wert") to it.optString("label") }
 }
 
 @Composable
