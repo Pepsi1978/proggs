@@ -76,6 +76,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private val app = context.applicationContext
     private val e get() = Einstellungen.get(app)
 
+    // Offene Auswahlkarten von vor einem Neustart (Update aus einer parallelen Sitzung) gelten weiter.
+    init { wahlenLaden(app) }
+
     /** In dieser Reihenfolge versucht; das erste bereite Ziel bekommt den Auftrag. */
     private val ziele: List<ProgrammierZiel> by lazy { listOf(PcBruecke(), CloudRoutine()) }
     /** Sol 6.1 ohne Windows-PC: Codex Cloud mit Franks ChatGPT-Konto (nur für modell=sol, nie automatisch). */
@@ -319,7 +322,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val appName = a.optString("app").trim()
                 // Mehrere Aufgaben einheitlich getrennt und ohne Trenner am Ende (siehe DiktatTrenner.auftrag).
                 val auftrag = DiktatTrenner.auftrag(a.optString("auftrag"))
+                // Antwortet Frank auf eine offene Modellwahl kurz mit genau einem Modell („Opus 5.5“, „Sol bitte“), gilt das als Wahl,
+                // auch wenn das Modell modell nicht mitgab: keine zweite Nachfrage.
                 val modell = when (a.optString("modell").trim().lowercase()) { MODELL_SOL -> MODELL_SOL; MODELL_OPUS -> MODELL_OPUS; else -> "" }
+                    .ifEmpty { herkunft().second.takeIf { g -> g.isNotEmpty() && offeneWahlen.values.any { it.gespraech == g && it.stufe == STUFE_MODELL } }
+                        ?.let { modellAusAntwort(kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]?.aktuell) }.orEmpty() }
                 val cli = when (a.optString("cli").trim().lowercase()) { CLI_OPENCODE -> CLI_OPENCODE; CLI_CODEX -> CLI_CODEX; else -> "" }
                 val ziel = a.optString("ziel").lowercase()
                 // Früher lehnte Jarvis hier ab, sobald zum Gespräch oder zur App schon ein Auftrag lief, und schickte das Modell zu
@@ -435,6 +442,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             offeneWahlen[id] = neuGefasst
             // Gilt als Karte dieser Runde: Am Ende fragt sie (bzw. „Übernommen: …“) statt einer freien Antwort des Modells.
             karten[id]?.let { karten[id] = it.copy(frage = frageUndKnoepfe(neuGefasst).first, zeit = System.currentTimeMillis(), ausRunde = true) }
+            wahlenSichern(app)
             return Ergebnis("Noch nicht gestartet: " + when (alt.stufe) {
                 STUFE_CLI -> "Frank hat schon Sol 6.1 gewählt; im Chat stehen die Knöpfe „Codex CLI“ und „OpenCode CLI“."
                 STUFE_REVIEW -> "Frank hat schon Sol 6.1 im Codex CLI gewählt; im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review."
@@ -480,9 +488,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         karten[id] = Karte(w.gespraech, frage, optionen, jetzt, ausRunde = vorgaenger == null, vorgaenger = vorgaenger)
         offeneWahlen[id] = w
         wahlStand.update { it + (id to WAHL_OFFEN) }
-        val knoepfe = JSONArray().apply { optionen.forEach { (wert, label) -> put(JSONObject().put("wert", wert).put("label", label)) } }
-        ProgrammierChat.poste(app, w.gespraech, frage, ProgrammierChat.ART_MODELLWAHL,
-            JSONObject().put("wahl_id", id).put("app", w.app).put("optionen", knoepfe).toString())
+        wahlenSichern(app)
+        ProgrammierChat.poste(app, w.gespraech, frage, ProgrammierChat.ART_MODELLWAHL, kartenKontext(id, w.app, optionen))
     }
 
     /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
@@ -497,6 +504,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val weg = offeneWahlen.filterValues { it.gespraech == gespraech }.keys
         weg.forEach { offeneWahlen.remove(it) }
         if (weg.isNotEmpty()) wahlStand.update { stand -> stand + weg.associateWith { WAHL_ERLEDIGT } }
+        if (weg.isNotEmpty()) wahlenSichern(app)
     }
 
     /**
@@ -507,6 +515,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     suspend fun modellGewaehlt(wahlId: String, wert: String) {
         val w = offeneWahlen.remove(wahlId) ?: return
         wahlStand.update { it + (wahlId to wert) }
+        wahlenSichern(app)
         // Bis Folgekarte bzw. Start feststehen, wartet [wahlInRunde] mit seiner Ansage.
         tippInArbeit += wahlId
         try { tippVerarbeiten(wahlId, w, wert) } finally { tippInArbeit -= wahlId }
@@ -540,6 +549,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (!ergebnis.text.startsWith("Unklar")) {
             offeneWahlen[wahlId] = w
             wahlStand.update { it + (wahlId to WAHL_OFFEN) }
+            wahlenSichern(app)
         }
     }
 
@@ -1956,6 +1966,92 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         /** Das Gespräch, in dem die Karte [wahlId] steht (leer, wenn unbekannt). */
         fun gespraechDerKarte(wahlId: String): String = karten[wahlId]?.gespraech.orEmpty()
+
+        /** Kontext einer Karte im Gespräch: wahl_id, App und Knöpfe (so liest sie die Oberfläche). */
+        private fun kartenKontext(id: String, app: String, optionen: List<Pair<String, String>>): String =
+            JSONObject().put("wahl_id", id).put("app", app)
+                .put("optionen", JSONArray().apply { optionen.forEach { (wert, label) -> put(JSONObject().put("wert", wert).put("label", label)) } }).toString()
+
+        /** Eine noch offene Auswahlkarte, wie sie im Gespräch steht. */
+        data class OffeneKarte(val id: String, val frage: String, val kontext: String)
+
+        /**
+         * Die offenen Karten von [gespraech], älteste zuerst. Die App trägt jede davon ins offene Gespräch nach, die dort fehlt:
+         * Ging die Karte beim Zustellen verloren (Neustart, ein überholender Speicherstand), stehen die Knöpfe trotzdem da.
+         */
+        fun offeneKarten(gespraech: String): List<OffeneKarte> {
+            if (gespraech.isEmpty()) return emptyList()
+            val stand = wahlStand.value
+            return karten.entries.filter { it.value.gespraech == gespraech && stand[it.key] == WAHL_OFFEN }.sortedBy { it.value.zeit }
+                .mapNotNull { (id, k) -> offeneWahlen[id]?.let { w -> OffeneKarte(id, k.frage, kartenKontext(id, w.app, k.optionen)) } }
+        }
+
+        /** Franks kurze Antwort nennt genau ein Modell: dessen Kennung, sonst leer (lang, beide oder keins). */
+        internal fun modellAusAntwort(worte: String?): String {
+            val t = worte?.trim()?.lowercase(Locale.ROOT).orEmpty()
+            if (t.isEmpty() || t.length > 60) return ""
+            val opus = Regex("\\bopus\\b").containsMatchIn(t)
+            val sol = Regex("\\bsol\\b").containsMatchIn(t)
+            return when { opus && !sol -> MODELL_OPUS; sol && !opus -> MODELL_SOL; else -> "" }
+        }
+
+        private const val WAHL_PREFS = "jarvis_auswahlkarten"
+        @Volatile private var wahlenGeladen = false
+
+        /**
+         * Hält Karten, ihren Stand und offene Aufträge in den Prefs: Ein Update von Jarvis (oft aus einer parallelen Sitzung)
+         * beendet die App ohne Vorwarnung, danach waren die Knöpfe sonst weg („Diese Auswahl ist nicht mehr aktiv“).
+         */
+        private fun wahlenSichern(context: Context) {
+            val jetzt = System.currentTimeMillis()
+            val stand = wahlStand.value
+            val liste = JSONArray()
+            karten.forEach { (id, k) ->
+                val s = stand[id] ?: return@forEach
+                if (jetzt - k.zeit > KARTEN_HALTEN_MS) return@forEach
+                liste.put(JSONObject().put("id", id).put("gespraech", k.gespraech).put("frage", k.frage).put("zeit", k.zeit).put("stand", s)
+                    .put("vorgaenger", k.vorgaenger.orEmpty())
+                    .put("optionen", JSONArray().apply { k.optionen.forEach { (wert, label) -> put(JSONObject().put("wert", wert).put("label", label)) } })
+                    .apply {
+                        offeneWahlen[id]?.let { w ->
+                            put("wahl", JSONObject().put("app", w.app).put("auftrag", w.auftrag).put("review", w.review).put("neu", w.neu)
+                                .put("gespraech", w.gespraech).put("ziel", w.ziel).put("modell", w.modell).put("cli", w.cli).put("stufe", w.stufe).put("seit", w.seit))
+                        }
+                    })
+            }
+            runCatching { context.getSharedPreferences(WAHL_PREFS, Context.MODE_PRIVATE).edit().putString("karten", liste.toString()).apply() }
+        }
+
+        /** Einmal je Prozess: die gesicherten Karten zurück (ohne Sprachursprung; sie gehören zu keiner laufenden Runde mehr). */
+        private fun wahlenLaden(context: Context) {
+            synchronized(this) { if (wahlenGeladen) return; wahlenGeladen = true }
+            val roh = runCatching { context.getSharedPreferences(WAHL_PREFS, Context.MODE_PRIVATE).getString("karten", null) }.getOrNull() ?: return
+            runCatching {
+                val jetzt = System.currentTimeMillis()
+                val liste = JSONArray(roh)
+                val stand = HashMap<String, String>()
+                for (i in 0 until liste.length()) {
+                    val o = liste.optJSONObject(i) ?: continue
+                    val id = o.optString("id")
+                    val zeit = o.optLong("zeit")
+                    if (id.isEmpty() || jetzt - zeit > KARTEN_HALTEN_MS) continue
+                    val l = o.optJSONArray("optionen")
+                    val optionen = if (l == null) emptyList() else (0 until l.length()).mapNotNull { l.optJSONObject(it) }.map { it.optString("wert") to it.optString("label") }
+                    val w = o.optJSONObject("wahl")?.let {
+                        OffeneWahl(it.optString("app"), it.optString("auftrag"), it.optBoolean("review"), it.optBoolean("neu"), it.optString("gespraech"), null,
+                            it.optString("ziel"), it.optString("modell"), it.optString("cli"), it.optString("stufe", STUFE_MODELL), it.optLong("seit", zeit))
+                    }
+                    val s = o.optString("stand")
+                    // Offen ohne gemerkten Auftrag ließe sich nicht starten: dann nicht mehr aktiv.
+                    if (s == WAHL_OFFEN && w == null) continue
+                    karten.putIfAbsent(id, Karte(o.optString("gespraech"), o.optString("frage"), optionen, zeit, ausRunde = false,
+                        vorgaenger = o.optString("vorgaenger").ifEmpty { null }))
+                    if (s == WAHL_OFFEN && w != null) offeneWahlen.putIfAbsent(id, w)
+                    stand[id] = s
+                }
+                wahlStand.update { stand + it }
+            }.onFailure { Logbuch.fehler("Auswahlkarten laden", it) }
+        }
 
         /**
          * Hat die Runde in [gespraech] (begonnen [seit]) eine Auswahlkarte gestellt, ersetzt das hier die Antwort des Modells, damit

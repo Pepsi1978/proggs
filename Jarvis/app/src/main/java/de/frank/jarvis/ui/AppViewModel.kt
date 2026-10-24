@@ -1978,6 +1978,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         // Dieselbe Rückfrage nur einmal (Wiederholung des Hooks, Abgleich mit dem Server).
                         val frageId = if (n.art == "rueckfrage") de.frank.jarvis.data.Gespraeche.rueckfrageId(n.kontext) else ""
                         if (frageId.isNotEmpty() && gespraech.any { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == frageId }) return@withLock
+                        // Dieselbe Modellwahl-Karte nur einmal (siehe kartenNachtragen).
+                        if (n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL && kartenDa(n.kontext)) return@withLock
                         gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext, n.anhaenge)
                         sitzungSichern()
                     } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), id, n) }
@@ -2103,6 +2105,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         de.frank.jarvis.faehigkeit.Sprachsession.beenden = sprachsessionBeenden
     }
 
+    /** Steht die Karte mit der wahl_id aus [kontext] schon im offenen Gespräch? */
+    private fun kartenDa(kontext: String): Boolean {
+        val wahl = de.frank.jarvis.data.Gespraeche.wahlId(kontext)
+        return wahl.isNotEmpty() && gespraech.any { it.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL && de.frank.jarvis.data.Gespraeche.wahlId(it.kontext) == wahl }
+    }
+
+    /**
+     * Jede offene Auswahlkarte (Opus 5.5 / Sol 6.1 usw.) des offenen Gesprächs steht im Chat, mit Knöpfen: Fehlt sie dort, weil
+     * die Zustellung sie verlor (Neustart durch ein Update, ein Speicherstand überholte die Datei), trägt die App sie nach.
+     * Damit gehört das Gespräch zugleich unter „Programmierung“.
+     */
+    private fun kartenNachtragen() {
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(snapshotFlow { sitzungId }, de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand) { id, _ -> id }.collect { id ->
+                if (id == null) return@collect
+                sicherung.withLock {
+                    if (id != sitzungId) return@withLock
+                    val fehlen = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.offeneKarten(id).filter { !kartenDa(it.kontext) }
+                    if (fehlen.isEmpty()) return@withLock
+                    fehlen.forEach { gespraech += Nachricht(false, it.frage, de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL, it.kontext) }
+                    sitzungSichern()
+                }
+            }
+        }
+    }
+
     /**
      * Knopf in einer Rückfrage: Franks Antwort an die wartende Programmier-Sitzung, oder mit [freigeben] die Frage an den
      * Rechner und die Claude-App weitergeben. Der Stand steht danach an der Rückfrage (sendet, beantwortet, Fehler mit Grund).
@@ -2205,6 +2233,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         bildschirmBeobachten()
         runCatching { de.frank.jarvis.faehigkeit.Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.aktivitaetLaden() }
         sitzungenLaden()
+        // Nach der Sicherung und dem wiederhergestellten Gespräch: erst jetzt sind alle Felder dafür angelegt.
+        kartenNachtragen()
         // Das Stimmprofil braucht erst „Hey Jarvis“ (und der Weckwort-Dienst lädt es selbst): nicht den ersten Frame aufhalten.
         viewModelScope.launch(Dispatchers.IO) { de.frank.jarvis.weckwort.Stimmprofil.laden(app) }
     }

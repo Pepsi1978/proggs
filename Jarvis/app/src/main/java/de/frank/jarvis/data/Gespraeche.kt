@@ -41,8 +41,11 @@ object Gespraeche {
     /** Liest eine Gesprächsdatei; eine nach Absturz übrig gebliebene Sicherung (.bak) greift dabei von selbst. */
     private fun lies(d: File): JSONObject = JSONObject(String(AtomicFile(d).readFully(), Charsets.UTF_8))
 
-    /** Nachrichtenarten, die nur ein Programmierauftrag ins Gespräch schreibt (Statusmeldung, Abschlussbericht, Rückfrage). */
-    private val PROGRAMMIER_ARTEN = setOf(ProgrammierChat.ART_STATUS, ProgrammierChat.ART_BERICHT, "rueckfrage")
+    /**
+     * Nachrichtenarten, die nur ein Programmierauftrag ins Gespräch schreibt (Statusmeldung, Abschlussbericht, Rückfrage) und
+     * die Modellwahl-Karte: Schon der noch nicht gestartete Auftrag gehört unter „Programmierung“, egal welcher Reiter offen war.
+     */
+    private val PROGRAMMIER_ARTEN = setOf(ProgrammierChat.ART_STATUS, ProgrammierChat.ART_BERICHT, "rueckfrage", ProgrammierChat.ART_MODELLWAHL)
 
     /**
      * Gehört das Gespräch zu einem Programmierauftrag? Die gespeicherte Markierung, sonst die Spuren eines Auftrags: der
@@ -232,6 +235,9 @@ object Gespraeche {
                 val liste = j.optJSONArray("nachrichten") ?: JSONArray().also { j.put("nachrichten", it) }
                 // Dieselbe Rückfrage (frage_id) nur einmal: Der Hook wiederholt Meldungen, und der Abgleich mit dem Server reicht nach.
                 if (n.art == "rueckfrage" && rueckfrageIndex(liste, rueckfrageId(n.kontext)) >= 0) return@runCatching
+                // Dieselbe Modellwahl-Karte (wahl_id) nur einmal: Die App trägt fehlende Karten selbst nach.
+                if (n.art == ProgrammierChat.ART_MODELLWAHL && wahlId(n.kontext).let { w -> w.isNotEmpty() &&
+                        (0 until liste.length()).any { liste.optJSONObject(it)?.let { m -> m.optString("art") == n.art && wahlId(m.optString("kontext")) == w } == true } }) return@runCatching
                 liste.put(JSONObject().put("mir", n.vonMir).put("text", n.text).apply {
                     if (n.art != "antwort") put("art", n.art)
                     if (n.kontext.isNotEmpty()) put("kontext", n.kontext)
@@ -262,6 +268,9 @@ object Gespraeche {
 
     /** Die frage_id im Kontext einer Rückfrage, leer ohne. */
     fun rueckfrageId(kontext: String): String = runCatching { JSONObject(kontext).optString("frage_id") }.getOrDefault("")
+
+    /** Die wahl_id im Kontext einer Modellwahl-Karte, leer ohne. */
+    fun wahlId(kontext: String): String = runCatching { JSONObject(kontext).optString("wahl_id") }.getOrDefault("")
 
     private fun rueckfrageIndex(liste: JSONArray, frageId: String): Int {
         if (frageId.isEmpty()) return -1
