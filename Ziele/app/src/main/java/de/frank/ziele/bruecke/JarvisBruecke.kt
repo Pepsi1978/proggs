@@ -162,16 +162,24 @@ class JarvisBruecke : ContentProvider() {
             }
 
             "verwerfen" -> {
-                val v = repo.vorschlag(a.optLong("vorschlag_id", -1)) ?: return fehler("Kein Vorschlag mit dieser id.")
-                val neu = v.copy(verworfen = a.optBoolean("verworfen", true))
-                repo.speichere(neu)
+                val neu = Abgleich.gesperrt {
+                    repo.vorschlag(a.optLong("vorschlag_id", -1))?.copy(verworfen = a.optBoolean("verworfen", true))?.also { repo.speichere(it) }
+                } ?: return fehler("Kein Vorschlag mit dieser id.")
+                JSONObject().put("vorschlag", vorschlagJson(neu))
+            }
+
+            "annehmen" -> {
+                val an = a.optBoolean("angenommen", true)
+                val neu = Abgleich.gesperrt {
+                    repo.vorschlag(a.optLong("vorschlag_id", -1))?.copy(angenommen = an, angenommenAm = if (an) System.currentTimeMillis() else null)?.also { repo.speichere(it) }
+                } ?: return fehler("Kein Vorschlag mit dieser id.")
                 JSONObject().put("vorschlag", vorschlagJson(neu))
             }
 
             "ablehnen" -> {
                 val v = repo.vorschlag(a.optLong("vorschlag_id", -1)) ?: return fehler("Kein Vorschlag mit dieser id.")
-                val abgelehnt = Abgleich.gesperrt { repo.vorschlag(v.id)?.takeIf { it.aufgabeId == null }?.also { repo.ablehnen(it) } }
-                    ?: return fehler("Dieser Vorschlag steht schon in Geniale Aufgaben und kann nicht abgelehnt werden.")
+                val abgelehnt = Abgleich.gesperrt { repo.vorschlag(v.id)?.takeIf { it.aufgabeId == null && !it.angenommen }?.also { repo.ablehnen(it) } }
+                    ?: return fehler("Dieser Vorschlag steht schon in Geniale Aufgaben oder ist angenommen und kann nicht abgelehnt werden.")
                 JSONObject().put("abgelehnt", JSONObject().put("id", v.id).put("titel", v.titel))
             }
 

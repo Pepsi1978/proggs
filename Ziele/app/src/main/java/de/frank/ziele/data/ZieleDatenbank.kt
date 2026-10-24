@@ -47,6 +47,10 @@ interface ZieleDao {
     @Query("SELECT * FROM vorschlaege WHERE id = :id")
     suspend fun vorschlag(id: Long): Vorschlag?
 
+    /** Angenommene Vorschläge als Vorlieben: die des Ziels zuerst, dann die neuesten. */
+    @Query("SELECT * FROM vorschlaege WHERE angenommen = 1 AND verworfen = 0 ORDER BY (zielId != :zielId), angenommenAm DESC LIMIT :max")
+    suspend fun angenommene(zielId: Long, max: Int): List<Vorschlag>
+
     @Insert
     suspend fun neueVorschlaege(v: List<Vorschlag>)
 
@@ -157,6 +161,7 @@ class ZieleRepository private constructor(private val app: Context) {
     suspend fun vorschlaege(zielId: Long) = dao.vorschlaege(zielId)
     suspend fun alleVorschlaegeEinmal() = dao.alleVorschlaegeEinmal()
     suspend fun vorschlag(id: Long) = dao.vorschlag(id)
+    suspend fun angenommene(zielId: Long, max: Int) = dao.angenommene(zielId, max)
     suspend fun abgelehnt(zielId: Long) = dao.abgelehnt(zielId)
     suspend fun rueckmeldungen(zielId: Long) = dao.rueckmeldungen(zielId)
 

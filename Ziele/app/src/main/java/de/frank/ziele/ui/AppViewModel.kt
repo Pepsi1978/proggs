@@ -440,8 +440,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun verwerfen(v: Vorschlag, verworfen: Boolean = true) {
         viewModelScope.launch {
-            repo.speichere(v.copy(verworfen = verworfen))
-            if (verworfen) melde("Vorschlag ausgeblendet") { viewModelScope.launch { repo.speichere(v.copy(verworfen = false)) } }
+            // Frisch lesen unter der Sperre: ein gerade gesetztes Annehmen oder Übernehmen bleibt so erhalten.
+            suspend fun setze(wert: Boolean) = Abgleich.gesperrt { repo.vorschlag(v.id)?.let { repo.speichere(it.copy(verworfen = wert)) } }
+            setze(verworfen)
+            if (verworfen) melde("Vorschlag ausgeblendet") { viewModelScope.launch { setze(false) } }
         }
     }
 
@@ -457,10 +459,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Ablehnen: endgültig weg und gemerkt, damit nichts Ähnliches wiederkommt. Rückgängig holt ihn zurück. */
     fun ablehnen(v: Vorschlag) {
-        if (v.aufgabeId != null) return
+        if (v.aufgabeId != null || v.angenommen) return
         viewModelScope.launch {
-            val frisch = Abgleich.gesperrt { repo.vorschlag(v.id)?.takeIf { it.aufgabeId == null }?.also { repo.ablehnen(it) } }
-            if (frisch == null) { melde("Der Vorschlag steht schon in Geniale Aufgaben und bleibt."); return@launch }
+            val frisch = Abgleich.gesperrt { repo.vorschlag(v.id)?.takeIf { it.aufgabeId == null && !it.angenommen }?.also { repo.ablehnen(it) } }
+            if (frisch == null) { melde("Der Vorschlag steht schon in Geniale Aufgaben oder ist angenommen und bleibt."); return@launch }
             melde("Abgelehnt – kommt nicht wieder") { viewModelScope.launch { Abgleich.gesperrt { repo.ablehnenZuruecknehmen(frisch) } } }
         }
     }

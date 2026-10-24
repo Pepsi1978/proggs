@@ -151,7 +151,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             if (verworfeneZeigen) items(verworfen, key = { it.id }) { v ->
                 Row(Modifier.fillMaxWidth().glas(f, 14.dp, 0.3f).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(v.titel, color = f.textSchwach, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    if (v.aufgabeId == null) {
+                    if (v.aufgabeId == null && !v.angenommen) {
                         Icon(Icons.Rounded.ThumbDown, "Ablehnen", tint = f.gefahr, modifier = Modifier.size(20.dp).antippen { vm.ablehnen(v) })
                         Spacer(Modifier.width(16.dp))
                     }
@@ -466,6 +466,7 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
 @Composable
 private fun AnnehmenZeile(vm: AppViewModel, v: Vorschlag) {
     val f = LocalFarben.current
+    if (!v.angenommen && (v.aufgabeId != null || v.erledigt)) return
     if (v.angenommen) {
         Row(Modifier.fillMaxWidth().padding(top = 6.dp).glas(f, 14.dp, 0.5f, f.erfolg.copy(alpha = 0.16f)).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.CheckCircle, null, tint = f.erfolg, modifier = Modifier.size(20.dp))

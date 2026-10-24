@@ -154,7 +154,11 @@ object Auswertung {
             if (persoenlich && kontextDatei.isEmpty() && gedaechtnis == null) append("(Kein weiterer Kontext über Frank vorhanden.)\n\n")
         }
         val zielText = zielBeschreibung(ziel)
-        val vorlieben = vorliebenBlock(zielId, if (persoenlich) repo.alleVorschlaegeEinmal() else bisher)
+        // Angenommene dieses Ziels stehen schon in „vorhanden“ (mit Vermerk); hier nur die übrigen, damit nichts doppelt im Prompt steht.
+        val vorlieben = vorliebenBlock(
+            zielId,
+            (if (persoenlich) repo.angenommene(zielId, 40) else bisher.filter { it.angenommen && !it.verworfen }).filter { v -> behalten.none { it.id == v.id } },
+        )
         val sperre = sperrBlock(abgelehnt)
         val rueckmeldungen = gespraechBlock(gespraech)
 
@@ -370,7 +374,8 @@ object Auswertung {
 
     /** Freie Plätze je Kategorie: offene, sichtbare Vorschläge belegen einen Platz, erledigte und ausgeblendete nicht. */
     fun freiePlaetze(vorschlaege: List<Vorschlag>): Map<Kategorie, Int> = Kategorie.entries.associateWith { k ->
-        (PLAETZE_JE_KATEGORIE - vorschlaege.count { !it.verworfen && !it.erledigt && Kategorie.von(it.kategorie) == k }).coerceAtLeast(0)
+        // Angenommene belegen keinen Platz: Frank behält sie, und es soll trotzdem Neues nachkommen.
+        (PLAETZE_JE_KATEGORIE - vorschlaege.count { !it.verworfen && !it.erledigt && !it.angenommen && Kategorie.von(it.kategorie) == k }).coerceAtLeast(0)
     }
 
     private fun mengeText(je: Map<Kategorie, Int>): String = Kategorie.entries.joinToString(" und ") { k ->
