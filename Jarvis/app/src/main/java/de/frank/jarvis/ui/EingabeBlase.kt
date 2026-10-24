@@ -162,8 +162,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Kompakt: nur die untere Zeile. Aufklappen nur per Tipp auf den freien Platz; Diktat, Anhang oder Vorspann ändern nur den
-        // Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
+        // Kompakt: nur die untere Zeile. Aufklappen per Tipp auf den freien Platz oder sobald der Diktattext da ist; Anhang oder
+        // Vorspann ändern nur den Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
         val kompakt = vm.eingabeKompakt
 
         // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
@@ -227,6 +227,12 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             Box(Modifier.weight(1f).heightIn(min = 44.dp).antippen {
                 if (kompakt) { vm.eingabeKompakt = false; vm.entwurfFokus = true } else { tastatur?.hide(); vm.eingabeKompakt = true }
             }, contentAlignment = Alignment.CenterEnd) {
+            // Eingeklappt ist kein Feld mit Platzhalter zu sehen: Aufnahme und Mitschrift stehen dann statt des Modells im freien Platz.
+            if (kompakt && (vm.nimmtAuf || vm.schreibtMit)) Text(
+                if (vm.nimmtAuf) "Ich höre zu …" else "Schreibe mit …",
+                color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            ) else
             // Rechtsbündig im freien Platz, aber begrenzt: zu langer Text kürzt den Modellnamen, statt Mikrofon und Senden hinauszuschieben.
             Row(Modifier.wrapContentWidth(Alignment.End).clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {

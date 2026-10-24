@@ -841,7 +841,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Nach jedem Absenden und beim Öffnen der App ist die Eingabeblase eine kompakte Zeile (nur Plus, Modell, Mikrofon, Live-Blase);
-     * nur ein Tipp auf den freien Platz klappt sie auf, ein weiterer wieder ein.
+     * ein Tipp auf den freien Platz klappt sie auf, ein weiterer wieder ein; der fertige Text vom Diktier-Mikrofon klappt sie ebenfalls auf.
      */
     var eingabeKompakt by mutableStateOf(true)
 
@@ -950,7 +950,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             nimmtAuf -> aufnahmeBeenden()
             sprache.groqApiKey.isBlank() -> { meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel eintragen."; reiter = Reiter.EINSTELLUNGEN }
             else -> {
-                diktatZiel = { t -> entwurf = DiktatTrenner.anhaengen(entwurf, t); entwurfDiktiert = true }
+                // Der erkannte Text klappt die Blase auf, damit Frank ihn gleich sieht (ohne Tastatur).
+                diktatZiel = { t -> entwurf = DiktatTrenner.anhaengen(entwurf, t); entwurfDiktiert = true; eingabeKompakt = false }
                 diktatInsFeld = true
                 mikrofonAnfragen()
             }
@@ -1811,8 +1812,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         diktatInsFeld = false
         mitschriftJob = viewModelScope.launch {
             try {
-                val wav = mikro.stop()
-                val stimmhaft = mikro.letzteStimmhaft
+                // Puffer kopieren, WAV bauen und Stimmhaft-Zeitachse lesen dauern bei langen Diktaten spürbar: nicht auf dem
+                // Hauptfaden, sonst steht die Mitschrift-Animation still.
+                val (wav, stimmhaft) = withContext(Dispatchers.Default) { mikro.stop() to mikro.letzteStimmhaft }
                 de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 if (freigeben && weckwortLauf?.isActive != true) {
                     de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
