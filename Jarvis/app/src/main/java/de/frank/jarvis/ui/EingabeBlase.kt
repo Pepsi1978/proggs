@@ -162,12 +162,9 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Nach dem Absenden kompakt: nur die untere Zeile. Neuer Text im Feld (etwa nach dem Diktat) oder ein Anhang klappen wieder auf;
-        // von Hand eingeklappt bleibt ein Entwurf erhalten, bis er sich ändert.
+        // Kompakt: nur die untere Zeile. Aufklappen nur per Tipp auf den freien Platz; Diktat, Anhang oder Vorspann ändern nur den
+        // Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
         val kompakt = vm.eingabeKompakt
-        LaunchedEffect(vm.entwurf, vm.anhaenge.size) {
-            if (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty()) vm.eingabeKompakt = false
-        }
 
         // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
         // im Plus-Menü fokussiert es. Eigener Feldzustand, damit der Cursor nach Vorspann und Diktat am Ende steht.
@@ -180,7 +177,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         LaunchedEffect(vm.entwurfFokus) {
             if (!vm.entwurfFokus) return@LaunchedEffect
             vm.entwurfFokus = false
-            vm.eingabeKompakt = false
+            // Eingeklappt gibt es kein Feld zum Fokussieren; die Tastatur kommt erst mit dem Tipp, der die Blase öffnet.
+            if (vm.eingabeKompakt) return@LaunchedEffect
             // Das Plus-Menü schließt gerade und hält den Fokus noch: einige Male versuchen, die Tastatur erst nach Erfolg.
             repeat(10) {
                 delay(80)

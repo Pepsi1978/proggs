@@ -323,6 +323,7 @@
     { "versionCode": 317, "versionName": "1.8.306", "stand": "24.10.2026, 13:43 Uhr", "notiz": "Die Eingabeblase schrumpft nach dem Absenden zu einer kompakten Zeile; Antippen des freien Platzes öffnet sie wieder zum Tippen." },
     { "versionCode": 318, "versionName": "1.8.307", "stand": "24.10.2026, 13:51 Uhr", "notiz": "Die Eingabeblase startet beim Öffnen der App schon als kompakte Zeile und bleibt es, bis du hineintippst oder diktierst." },
     { "versionCode": 319, "versionName": "1.8.308", "stand": "24.10.2026, 13:54 Uhr", "notiz": "Beim Wechsel in ein anderes oder neues Gespräch ist die Eingabeblase ebenfalls gleich kompakt." },
-    { "versionCode": 320, "versionName": "1.8.309", "stand": "24.10.2026, 13:56 Uhr", "notiz": "Ein zweiter Tipp auf den freien Platz der Eingabeblase klappt sie wieder zur kompakten Zeile ein." }
+    { "versionCode": 320, "versionName": "1.8.309", "stand": "24.10.2026, 13:56 Uhr", "notiz": "Ein zweiter Tipp auf den freien Platz der Eingabeblase klappt sie wieder zur kompakten Zeile ein." },
+    { "versionCode": 321, "versionName": "1.8.310", "stand": "24.10.2026, 15:01 Uhr", "notiz": "Die Eingabeblase bleibt immer eingeklappt und öffnet sich nur noch per Tipp auf den freien Platz, nicht mehr von selbst nach Diktat, Anhang, Programmierer oder Nachtrag." }
   ]
 }

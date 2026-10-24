@@ -841,7 +841,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Nach jedem Absenden und beim Öffnen der App ist die Eingabeblase eine kompakte Zeile (nur Plus, Modell, Mikrofon, Live-Blase);
-     * Text im Feld, ein Anhang, „Programmierer“/„Nachtrag“ oder ein Tipp auf den freien Platz klappen sie wieder auf.
+     * nur ein Tipp auf den freien Platz klappt sie auf, ein weiterer wieder ein.
      */
     var eingabeKompakt by mutableStateOf(true)
 
