@@ -345,22 +345,24 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
-/** Größe der schwebenden Symbole und ihr Abstand untereinander; „Neue Session“ steht eine freie Bubble höher. */
+/** Größe der schwebenden Symbole und ihr Abstand untereinander. */
 private val SCHWEBE_GROESSE = 40.dp
 private val SCHWEBE_ABSTAND = 8.dp
-private val SCHWEBE_LUECKE = SCHWEBE_GROESSE + SCHWEBE_ABSTAND * 2
 
 /** Rechter Abstand der Symbole: ihre Mitte liegt genau über der orangen Live-Kugel (12 Rand + 10 Innenabstand + 24 halbe Kugel). */
 val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
 
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
-fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false) = SCHWEBE_GROESSE * (2 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)) +
-    SCHWEBE_ABSTAND * ((if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)) + SCHWEBE_LUECKE
+fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
+    val anzahl = 2 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
+    return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1)
+}
 
 /**
- * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel: unten das Programmier-Symbol (wie Plus →
- * „Programmierer“), darüber, nur im Programmiergespräch, ein Plus (wie Plus → „+ Nachtrag“), und eine freie Bubble höher,
- * abgesetzt gegen Fehltipps, „Neue Session“, direkt darüber der Papierkorb „Gespräch löschen“. Ohne Blase, nur ein kleiner, leicht schimmernder, durchscheinender Grund.
+ * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel, alle im selben Abstand untereinander ohne Lücke:
+ * oben der Papierkorb „Gespräch löschen“, darunter „Neue Session“, direkt darunter, nur im Programmiergespräch, ein Plus
+ * (wie Plus → „+ Nachtrag“) und ganz unten das Programmier-Symbol (wie Plus → „Programmierer“). Ohne Blase, nur ein kleiner,
+ * leicht schimmernder, durchscheinender Grund.
  */
 @Composable
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
@@ -401,7 +403,8 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(17.dp).offset(y = (-2).dp))
             }
         }
-        Spacer(Modifier.height(SCHWEBE_LUECKE))
+        // Nachtrag und Programmierauftrag schließen direkt unter „Neue Session“ an, im selben Abstand wie die übrigen Symbole.
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
         if (vm.nachtragMoeglich) {
             SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
                 Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))
