@@ -164,8 +164,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Kompakt: nur die untere Zeile. Aufklappen per Tipp auf den freien Platz oder sobald der Diktattext da ist; Anhang oder
-        // Vorspann ändern nur den Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
+        // Kompakt: nur die untere Zeile. Aufklappen per Tipp auf den freien Platz, sobald der Diktattext da ist oder nach
+        // „Programmierer“/„Nachtrag“; ein Anhang ändert nur den Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
         val kompakt = vm.eingabeKompakt
 
         // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
@@ -346,19 +346,30 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
 @Composable
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (vm.nachtragMoeglich) SchwebeSymbol(Icons.Rounded.Add, "Nachtrag in die laufende Programmier-Sitzung") { vm.nachtragEinsetzen() }
-        SchwebeSymbol(Icons.Rounded.Code, "Neuer Programmierauftrag") { vm.programmiererEinsetzen() }
+        if (vm.nachtragMoeglich) SchwebeSymbol(Icons.Rounded.Add, "Nachtrag in die laufende Programmier-Sitzung", vm.nachtragBlitz) { vm.nachtragEinsetzen() }
+        SchwebeSymbol(Icons.Rounded.Code, "Neuer Programmierauftrag", vm.programmiererBlitz) { vm.programmiererEinsetzen() }
     }
 }
 
 @Composable
-private fun SchwebeSymbol(icon: ImageVector, beschreibung: String, aktion: () -> Unit) {
+private fun SchwebeSymbol(icon: ImageVector, beschreibung: String, blitz: Int, aktion: () -> Unit) {
     val f = LocalFarben.current
     // Ein schmaler Lichtstreif wandert langsam über den Grund; der Grund selbst bleibt fast durchsichtig.
     val lauf by rememberInfiniteTransition(label = "schimmer").animateFloat(-1f, 2f,
         infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "s")
+    // Ist der Text im Feld angekommen, leuchtet der Grund kurz grün auf und verblasst wieder.
+    val gruen = remember { androidx.compose.animation.core.Animatable(0f) }
+    // Nur bei neuem Einsetzen, nicht wenn das Symbol mit einem alten Zählerstand erscheint.
+    val anfang = remember { blitz }
+    LaunchedEffect(blitz) {
+        if (blitz == anfang) return@LaunchedEffect
+        gruen.snapTo(1f)
+        delay(250)
+        gruen.animateTo(0f, tween(650))
+    }
     Box(
-        Modifier.size(40.dp).clip(CircleShape).background(f.text.copy(alpha = 0.06f)).drawBehind {
+        Modifier.size(40.dp).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
+            .background(f.erfolg.copy(alpha = 0.85f * gruen.value)).drawBehind {
             val x = size.width * lauf
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent),
                 start = Offset(x - size.width * 0.5f, 0f), end = Offset(x + size.width * 0.5f, size.height)))

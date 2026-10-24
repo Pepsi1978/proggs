@@ -847,12 +847,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     var eingabeKompakt by mutableStateOf(true)
 
+    /** Zählt bei jedem Einsetzen hoch; das schwebende Programmier- bzw. Nachtrag-Symbol leuchtet dann kurz grün auf. */
+    var programmiererBlitz by mutableStateOf(0); private set
+    var nachtragBlitz by mutableStateOf(0); private set
+
     /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */
     fun programmiererEinsetzen() {
         // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
         if (sitzungId == null) sitzungProgrammierung = true
         entwurf = ProgrammiererVorlage.einsetzen(entwurf)
+        // Die Blase klappt auf und zeigt den eingesetzten Text.
+        eingabeKompakt = false
         entwurfFokus = true
+        programmiererBlitz++
     }
 
     /** Ist das offene Gespräch ein Programmiergespräch? Dann zeigt das Plus-Menü neben „Programmierer“ den Knopf „+ Nachtrag“. */
@@ -861,7 +868,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Plus-Menü „+ Nachtrag“: „Nachtrag:“ vor den Entwurf, Getipptes bleibt dahinter; der Pfeil schickt ihn in die Sitzung. */
     fun nachtragEinsetzen() {
         if (!entwurf.startsWith(NACHTRAG_VORSPANN)) entwurf = "$NACHTRAG_VORSPANN " + entwurf.trimStart()
+        eingabeKompakt = false
         entwurfFokus = true
+        nachtragBlitz++
     }
 
     /** Senden mit „Nachtrag:“ vorn: Der Text (ohne den Vorspann) geht direkt als Nachtrag in die Sitzung dieses Gesprächs, ohne Modell. */
