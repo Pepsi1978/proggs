@@ -965,8 +965,9 @@ class PcBruecke:
                        "schritt": "Doch nicht gestartet: " + (text or "Claude Code auf dem Rechner ist nicht angemeldet.")}
         elif not quittung.get("ok"):
             meldung = {"stand": "fehler", "schritt": "Doch nicht gestartet: " + (text or "Der Rechner konnte die Sitzung nicht starten.")}
-        elif auftrag_id in self.kontakt:
-            # Die Sitzung hat sich schon selbst gemeldet: Ihr Stand gilt, ein nachgereichtes „laeuft“ ueberschriebe etwa eine Rueckfrage.
+        elif any(f.get("auftrag_id") == auftrag_id and f.get("antwort") is None and f.get("status") not in FRAGE_ZU for f in self.fragen.values()):
+            # Die Sitzung fragt schon: Das beweist den Start, und ein nachgereichtes „laeuft“ ueberschriebe die offene Rueckfrage.
+            # (Ein blosser Puls hebt „unbestaetigt“ am Handy nicht auf, darum nicht schon bei self.kontakt schweigen.)
             return
         else:
             meldung = {"stand": "laeuft", "schritt": f"{rechner} hat den Start nachträglich bestätigt, der Auftrag läuft."}
