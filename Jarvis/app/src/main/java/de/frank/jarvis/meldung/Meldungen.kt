@@ -22,6 +22,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalTime
 
@@ -318,6 +319,15 @@ object Meldungen {
      * Vorlesen abgewählt oder inzwischen Ruhezeit heißt still. [ausdruecklich] = Frank hat das Vorlesen eigens verlangt.
      */
     private suspend fun sprich(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean) {
+        // Franks Vorgabe vom 24.10.2026: Jede Rückfrage wird einzeln angesagt, auch bei gleichem Wortlaut aus einer anderen
+        // Session. Die nächste wartet, bis die vorige gesprochen ist; ihr Start schnitt sonst die laufende mitten im Satz ab.
+        if (art === Meldungsarten.RUECKFRAGE) rueckfrageReihe.withLock { sprichEinzeln(context, art, titel, text, solange, ausdruecklich, warten = true) }
+        else sprichEinzeln(context, art, titel, text, solange, ausdruecklich, warten = false)
+    }
+
+    private val rueckfrageReihe = kotlinx.coroutines.sync.Mutex()
+
+    private suspend fun sprichEinzeln(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean, warten: Boolean) {
         // Erst den Weckton zu Ende klingeln lassen (er endet selbst, spätestens nach seiner Höchstdauer), dann das Gespräch abwarten.
         if (solange != null) withTimeoutOrNull(WECKTON_HOECHSTENS_MS + 5_000L) { while (solange()) delay(500L) }
         val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
@@ -327,7 +337,8 @@ object Meldungen {
         if (frei != true) return
         val p = profil(context, art)
         if (!ausdruecklich && (!an(context, art) || inRuhe(context, art) || (art.vorlesen && !p.vorlesen))) return
-        Ansage.sprich(context, art.id, titel, text, p.lautstaerke, p.stimmWahl)
+        if (warten) Ansage.sprichUndWarte(context, art.id, titel, text, p.lautstaerke, p.stimmWahl)
+        else Ansage.sprich(context, art.id, titel, text, p.lautstaerke, p.stimmWahl)
     }
 
     /** Probe aus den Einstellungen: zeigt (und liest) eine Beispielmeldung mit den aktuellen Einstellungen. */

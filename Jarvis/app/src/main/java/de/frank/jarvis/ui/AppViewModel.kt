@@ -2031,14 +2031,42 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun rueckfrageVonSelbst() {
         if (rueckfrageDialog != null) return
-        val jetzt = System.currentTimeMillis() / 1000
-        gespraech.firstOrNull { n ->
-            if (n.art != "rueckfrage") return@firstOrNull false
-            val k = runCatching { org.json.JSONObject(n.kontext) }.getOrNull() ?: return@firstOrNull false
-            val stand = de.frank.jarvis.faehigkeit.RueckfrageStand.von(k)
-            stand == de.frank.jarvis.faehigkeit.RueckfrageStand.OFFEN && k.optString("frage_id") !in rueckfrageGeschlossen &&
-                (k.optLong("bis") == 0L || k.optLong("bis") > jetzt)
-        }?.let { rueckfrageOeffnen(de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext)) }
+        naechsteRueckfrage()
+    }
+
+    /**
+     * Franks Vorgabe vom 24.10.2026: Die offenen Rückfragen aller Sessions stehen in einer Reihe, die älteste vorn und über
+     * allem. Eine neu eingetroffene drängt sich nicht vor die gerade offene, sie wartet dahinter; nach einer Antwort kommt
+     * sofort die nächste, auch aus einem anderen Gespräch. Selbst geschlossene öffnen sich nicht von selbst wieder.
+     * [gewuenscht]: die Rückfrage, deren Benachrichtigung getippt wurde oder die gerade eintraf (Gespräch, frage_id).
+     */
+    fun naechsteRueckfrage(gewuenscht: Pair<String, String>? = null) {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val geschlossen = rueckfrageGeschlossen.toSet()
+            val bisherige = rueckfrageOffen
+            val ziel = withContext(Dispatchers.IO) {
+                val jetzt = System.currentTimeMillis() / 1000
+                fun stand(g: String, f: String): String? {
+                    val k = de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, g, f) ?: return null
+                    if (k.optLong("bis") != 0L && k.optLong("bis") <= jetzt) return null
+                    return de.frank.jarvis.faehigkeit.RueckfrageStand.von(k)
+                }
+                fun offen(p: Pair<String, String>) = stand(p.first, p.second)?.let { de.frank.jarvis.faehigkeit.RueckfrageStand.beantwortbar(it) } == true
+                // Die offene bleibt vorn, auch während ihre Antwort gerade gesendet wird.
+                bisherige?.takeIf { p -> stand(p.first, p.second)?.let { de.frank.jarvis.faehigkeit.RueckfrageStand.beantwortbar(it) || it == de.frank.jarvis.faehigkeit.RueckfrageStand.SENDET } == true }
+                    ?: de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.offeneRueckfragen(app).firstOrNull { it.second !in geschlossen && offen(it) }
+                    ?: gewuenscht?.takeIf { offen(it) }
+            }
+            if (ziel == null) {
+                // Schon beantwortet oder abgelaufen: Der Tipp auf ihre Benachrichtigung öffnet wenigstens ihr Gespräch.
+                gewuenscht?.let { sitzungOeffnen(it.first) }
+                return@launch
+            }
+            rueckfrageGeschlossen -= ziel.second
+            rueckfrageOffen = ziel
+            if (ziel.first != sitzungId) { aufnahmeVerwerfen(); sitzungLaden(ziel.first) }
+        }
     }
 
     /** Merkt sich die angefangene Auswahl im Gespräch: Nach dem Schließen oder einem Neustart der App ist sie wieder da. */
@@ -2065,7 +2093,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val ergebnis = runCatching { faehigkeit?.beantworte(frageId, antworten, text, freigeben) ?: throw IllegalStateException("Programmieren ist nicht verfügbar.") }
             // Angekommen braucht keine Blase oben (sie verdeckte die Reiter): Der Stand steht schon an der Rückfrage im Chat.
             ergebnis.onFailure { meldung = it.message ?: "Die Antwort ging nicht raus." }
-            // Angekommen: weiter zur nächsten offenen Rückfrage dieses Gesprächs. Bei einem Fehler bleibt das Fenster offen
+            // Angekommen: weiter zur nächsten offenen Rückfrage, auch aus einer anderen Session. Bei einem Fehler bleibt das Fenster offen
             // und zeigt den Grund samt „Erneut senden“.
             if (ergebnis.isSuccess) {
                 if (rueckfrageOffen?.second == frageId) { rueckfrageOffen = null; rueckfrageGeschlossen += frageId }
@@ -2388,7 +2416,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             ladeZiel = id
             try {
                 val geladen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } ?: return@withLock false
-                vorleser.stopp()
+                // Eine Rückfrage-Ansage gehört zu keinem Gespräch: Sie öffnet selbst ihr Gespräch und brach sich damit früher ab.
+                if (vorleser.stand.value.quelle?.startsWith("${de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE.id}:") != true) vorleser.stopp()
                 sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
                 gespraech.clear()
                 gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) })

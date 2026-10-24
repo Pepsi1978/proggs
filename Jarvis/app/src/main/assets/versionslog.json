@@ -303,6 +303,7 @@
     { "versionCode": 297, "versionName": "1.8.286", "stand": "24.10.2026, 10:19 Uhr", "notiz": "Pause und Stopp der Tagesauswertung treffen nur noch deren Vorlesen; dauert der Start nach der Modellwahl länger, sagt Jarvis kurz: Einen Moment." },
     { "versionCode": 298, "versionName": "1.8.287", "stand": "24.10.2026, 10:20 Uhr", "notiz": "Die Benachrichtigung einer Rückfrage vom Programmierer verschwindet von selbst, sobald die Frage erfolgreich beantwortet ist." },
     { "versionCode": 299, "versionName": "1.8.288", "stand": "24.10.2026, 10:33 Uhr", "notiz": "Ein abgeschickter Nachtrag zeigt oben keine zusätzliche Bestätigungsblase mehr, die Annahme steht nur noch unten im Gespräch." },
-    { "versionCode": 300, "versionName": "1.8.289", "stand": "24.10.2026, 10:35 Uhr", "notiz": "Am PC oder Mac direkt gestartete Claude-Code-Sitzungen erscheinen lila unter Programmierung, lassen sich aus Jarvis begleiten und per Löschen nur aus Jarvis entfernen." }
+    { "versionCode": 300, "versionName": "1.8.289", "stand": "24.10.2026, 10:35 Uhr", "notiz": "Am PC oder Mac direkt gestartete Claude-Code-Sitzungen erscheinen lila unter Programmierung, lassen sich aus Jarvis begleiten und per Löschen nur aus Jarvis entfernen." },
+    { "versionCode": 301, "versionName": "1.8.290", "stand": "24.10.2026, 10:40 Uhr", "notiz": "Rückfragen werden jetzt zuverlässig angesagt, auch mehrere nacheinander aus verschiedenen Sessions; offene Rückfragen stehen in einer Reihe, die älteste vorn, und nach einer Antwort öffnet sofort die nächste." }
   ]
 }

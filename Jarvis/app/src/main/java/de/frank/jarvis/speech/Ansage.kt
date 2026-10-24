@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -30,8 +31,13 @@ object Ansage {
 
     /** [art] wird Teil der Quelle (z. B. „abfahrt“); [lautstaerke] in Prozent der Medienlautstärke, 0 = so laut, wie das Handy steht. */
     fun sprich(context: Context, art: String, titel: String, text: String, lautstaerke: Int, wahl: StimmWahl? = null) {
+        CoroutineScope(Dispatchers.Main).launch { sprichUndWarte(context, art, titel, text, lautstaerke, wahl) }
+    }
+
+    /** Wie [sprich], kehrt aber erst zurück, wenn die Stimme fertig ist (oder ein anderes Vorlesen übernommen hat). */
+    suspend fun sprichUndWarte(context: Context, art: String, titel: String, text: String, lautstaerke: Int, wahl: StimmWahl? = null) {
         val app = context.applicationContext
-        CoroutineScope(Dispatchers.Main).launch {
+        withContext(Dispatchers.Main) {
             val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:$art-stimme")
             // Lange Texte (Agenten-Zusammenfassung) brauchen länger als zwei Minuten: Grenze nach der Textlänge, gut 12 Zeichen je Sekunde.
             val hoechstens = (60_000L + text.length * 80L).coerceIn(110_000L, 10 * 60_000L)

@@ -1323,6 +1323,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Leerlauf-Meldung einer Sitzung vom PC (Anmeldung in Jarvis, wartet auf Eingabe, beendet).
                 .put("arbeitet", gueltig == "laeuft" && !leerlauf)
             if (frage != null) {
+                // Eingang: Reihenfolge der offenen Rückfragen über alle Sessions (die älteste steht vorn).
+                if (!frage.has("eingang")) frage.put("eingang", jetzt)
                 eintrag.put("offeneFrage", frage)
                 // Alle Rückfragen des Auftrags: Antwort und Ausgang finden ihr Gespräch auch, wenn längst eine neuere offen ist.
                 val ids = eintrag.optJSONArray("frageIds") ?: JSONArray().also { eintrag.put("frageIds", it) }
@@ -1446,6 +1448,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             e.optJSONObject("offeneFrage")?.optString("frage_id") == frageId ||
                 e.optJSONArray("frageIds")?.let { l -> (0 until l.length()).any { l.optString(it) == frageId } } == true
         }
+
+        /** Gespräch und frage_id aller Rückfragen, auf die eine Sitzung gerade wartet, die älteste zuerst. */
+        fun offeneRueckfragen(context: Context): List<Pair<String, String>> = alle(context)
+            .filter { it.optString("stand") == "frage" && it.optString("gespraech").isNotEmpty() && it.optJSONObject("offeneFrage")?.optString("frage_id").orEmpty().isNotEmpty() }
+            .sortedBy { it.optJSONObject("offeneFrage")!!.optLong("eingang", it.optLong("zeit")) }
+            .map { it.optString("gespraech") to it.optJSONObject("offeneFrage")!!.optString("frage_id") }
 
         /** Kennt Jarvis diese Rückfrage schon (gezeigt oder erledigt)? */
         fun kenntFrage(context: Context, frageId: String): Boolean = zuFrage(context, frageId) != null
@@ -1813,6 +1821,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         /** Gespräche, denen das Auftragsbuch einen Programmierauftrag zuordnet (für den Reiter „Programmierung“). */
         fun gespraecheMitAuftrag(context: Context): Map<String, Long> = Auftragsbuch.gespraechStarts(context.applicationContext)
+
+        /** Offene Rückfragen aller Sessions (Gespräch, frage_id), die älteste zuerst: die Reihe der Vollbilder. */
+        fun offeneRueckfragen(context: Context): List<Pair<String, String>> = Auftragsbuch.offeneRueckfragen(context.applicationContext)
 
         private val lokalSperre = Any()
         private const val LOKAL_DATEI = "programmieren"

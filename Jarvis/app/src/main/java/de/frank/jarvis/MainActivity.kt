@@ -185,8 +185,8 @@ class MainActivity : FragmentActivity() {
         intent.removeExtra(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.EXTRA_RUECKFRAGE)
         // Die Rückfrage lebt im Jarvis-Reiter: Stand die App zuletzt auf einem anderen, erschiene sonst kein Vollbild.
         vm.reiter = de.frank.jarvis.ui.Reiter.JARVIS
-        vm.sitzungOeffnen(gespraech)
-        if (frageId.isNotEmpty()) vm.rueckfrageOeffnen(frageId, gespraech)
+        // Eine ältere offene Rückfrage (auch aus einer anderen Session) bleibt vorn; diese reiht sich dahinter ein.
+        if (frageId.isNotEmpty()) vm.naechsteRueckfrage(gespraech to frageId) else vm.sitzungOeffnen(gespraech)
     }
 
     /** „Hey Jarvis“ wurde erkannt: aufnehmen, piepen, antworten; bei gesperrtem Handy über dem Sperrbildschirm. */
