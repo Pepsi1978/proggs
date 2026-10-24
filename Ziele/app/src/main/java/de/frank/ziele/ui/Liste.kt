@@ -72,9 +72,9 @@ fun ListeBildschirm(vm: AppViewModel) {
                             color = f.textLeise, fontSize = 14.sp,
                         )
                     }
+                    ModusKnopf(vm)
                     RundKnopf(if (vm.sprichtId == "alle") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Ziele vorlesen") { vm.alleZieleVorlesen() }
                     RundKnopf(Icons.Rounded.EditNote, "Kontextdatei") { vm.zeige(Bildschirm.Kontext) }
-                    ModusKnopf(vm)
                     RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
                 }
             }

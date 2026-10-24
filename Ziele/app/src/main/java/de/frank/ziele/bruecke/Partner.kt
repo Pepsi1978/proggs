@@ -29,6 +29,9 @@ object GenialeAufgaben {
             .put("prioritaet", if (v.gruppe == Kategorie.NOTWENDIG) (if (v.wichtigkeit >= 4) "hoch" else "mittel") else "gering")
             .put("dauer", v.minuten.coerceIn(5, 24 * 60))
             .put("vorlesen", true)
+            .put("ziel_id", ziel.id)
+            .put("ziel_titel", ziel.titel)
+            .put("ziel_symbol", ziel.symbol)
         val antwort = AppBruecke.rufe(context, "Geniale Aufgaben", ADRESSE, "anlegen", anfrage, lesend = false)
         antwort.optString("fehler").takeIf { it.isNotBlank() }?.let { throw Fehler(it) }
         return antwort.optJSONObject("aufgabe")?.optLong("id", -1)?.takeIf { it >= 0 } ?: throw Fehler("Geniale Aufgaben hat keine Aufgabe zurückgemeldet.")
@@ -39,21 +42,31 @@ object GenialeAufgaben {
      * reicht „alle“ nicht, kommen „offen“ und „erledigt“ getrennt. Nur bei [Stand.vollstaendig] heißt eine fehlende id
      * „dort gelöscht“. null = nicht erreichbar.
      */
-    class Stand(val erledigt: Map<Long, Boolean>, val vollstaendig: Boolean)
+    class Stand(val erledigt: Map<Long, Boolean>, val vollstaendig: Boolean, val zielTitel: Map<Long, String?> = emptyMap())
 
     suspend fun stand(context: Context): Stand? {
+        val zielTitel = HashMap<Long, String?>()
         suspend fun lies(bereich: String): Pair<Map<Long, Boolean>, Boolean>? {
             val antwort = AppBruecke.rufe(context, "Geniale Aufgaben", ADRESSE, "lesen", JSONObject().put("bereich", bereich).put("limit", 200), lesend = true)
             if (antwort.has("fehler")) return null
             val liste = antwort.optJSONArray("aufgaben") ?: JSONArray()
-            val werte = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }.associate { it.optLong("id") to it.optBoolean("erledigt") }
+            val eintraege = (0 until liste.length()).mapNotNull { liste.optJSONObject(it) }
+            // Ziel-Zuordnung in Geniale Aufgaben (null = keine): ältere Übernahmen bekommen sie im Abgleich nachgereicht.
+            eintraege.filter { it.has("ziel_id") }.forEach { zielTitel[it.optLong("id")] = if (it.isNull("ziel_id")) null else it.optString("ziel_titel") }
+            val werte = eintraege.associate { it.optLong("id") to it.optBoolean("erledigt") }
             return werte to (antwort.optInt("anzahl", werte.size) <= werte.size)
         }
         val alle = lies("alle") ?: return null
-        if (alle.second) return Stand(alle.first, true)
-        val offen = lies("offen") ?: return Stand(alle.first, false)
-        val erledigt = lies("erledigt") ?: return Stand(alle.first + offen.first, false)
-        return Stand(alle.first + offen.first + erledigt.first, offen.second && erledigt.second)
+        if (alle.second) return Stand(alle.first, true, zielTitel)
+        val offen = lies("offen") ?: return Stand(alle.first, false, zielTitel)
+        val erledigt = lies("erledigt") ?: return Stand(alle.first + offen.first, false, zielTitel)
+        return Stand(alle.first + offen.first + erledigt.first, offen.second && erledigt.second, zielTitel)
+    }
+
+    /** Trägt das Ziel in eine schon übernommene Aufgabe ein, damit sie in Geniale Aufgaben unter „Ziele“ erscheint. */
+    suspend fun zielZuordnen(context: Context, aufgabeId: Long, ziel: Ziel): Boolean {
+        val anfrage = JSONObject().put("id", aufgabeId).put("ziel_id", ziel.id).put("ziel_titel", ziel.titel).put("ziel_symbol", ziel.symbol)
+        return !AppBruecke.rufe(context, "Geniale Aufgaben", ADRESSE, "aendern", anfrage, lesend = false).has("fehler")
     }
 }
 

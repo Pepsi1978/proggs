@@ -30,11 +30,18 @@ object Abgleich {
         val uebernommen = repo.alleVorschlaegeEinmal().filter { it.aufgabeId != null }
         if (uebernommen.isEmpty()) return true
         val stand = GenialeAufgaben.stand(context) ?: return false
+        val ziele = HashMap<Long, de.frank.ziele.data.Ziel?>()
         uebernommen.forEach { v ->
             val erledigt = stand.erledigt[v.aufgabeId]
             when {
                 erledigt == null -> if (stand.vollstaendig) repo.speichere(v.copy(aufgabeId = null, uebernommenAm = null, erledigt = false))
                 erledigt != v.erledigt -> repo.speichere(v.copy(erledigt = erledigt))
+            }
+            // Ziel fehlt dort (ältere Übernahme) oder wurde umbenannt: nachtragen, nur bei offenen Aufgaben.
+            val id = v.aufgabeId ?: return@forEach
+            if (erledigt == false && stand.zielTitel.containsKey(id)) {
+                val ziel = ziele.getOrPut(v.zielId) { repo.ziel(v.zielId) } ?: return@forEach
+                if (stand.zielTitel[id] != ziel.titel) runCatching { GenialeAufgaben.zielZuordnen(context, id, ziel) }
             }
         }
         true

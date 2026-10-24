@@ -66,6 +66,7 @@ fun KontextBildschirm(vm: AppViewModel) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
             Text("Kontextdatei", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp).weight(1f))
+            ModusKnopf(vm)
             RundKnopf(if (vm.sprichtId == "kontext") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Vorlesen") { vm.kontextVorlesen() }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {

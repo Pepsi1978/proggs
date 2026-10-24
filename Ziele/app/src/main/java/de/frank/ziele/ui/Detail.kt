@@ -107,22 +107,27 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     var verworfeneZeigen by rememberSaveable { mutableStateOf(false) }
     var abgelehnteZeigen by rememberSaveable { mutableStateOf(false) }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
-                Spacer(Modifier.weight(1f))
-                RundKnopf(if (vm.sprichtId == "plan_${z.id}") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Plan vorlesen") { vm.planVorlesen(z) }
-                RundKnopf(Icons.Rounded.Edit, "Bearbeiten") { vm.bearbeiten(z) }
-                RundKnopf(Icons.Rounded.Close, "Löschen", farbe = f.gefahr) { loeschenFragen = true }
-            }
-        }
+    Column(Modifier.fillMaxSize()) {
+    // Kopfleiste bleibt beim Scrollen stehen: Hell/Dunkel und Vorlesen sind immer erreichbar.
+    Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
+        Spacer(Modifier.weight(1f))
+        ModusKnopf(vm)
+        RundKnopf(if (vm.sprichtId == "plan_${z.id}") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Plan vorlesen") { vm.planVorlesen(z) }
+        RundKnopf(Icons.Rounded.Edit, "Bearbeiten") { vm.bearbeiten(z) }
+        RundKnopf(Icons.Rounded.Close, "Löschen", farbe = f.gefahr) { loeschenFragen = true }
+    }
+    LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Kopf(vm, z, notwendig) }
         item { AuswertenKnopf(vm, z, schritt, fehler[id]) }
         if (z.strategie.isNotBlank()) item {
             Column(Modifier.fillMaxWidth().glas(f, erhoeht = 1f, toenung = f.primaer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("DEIN WEG", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("DEIN WEG", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
+                    Icon(if (vm.sprichtId == "weg_${z.id}") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Dein Weg vorlesen", tint = f.primaer,
+                        modifier = Modifier.size(24.dp).antippen { vm.vorlesen("weg_${z.id}", z.strategie) })
+                }
                 Text(z.strategie, color = f.text, fontSize = 15.sp, lineHeight = 22.sp)
             }
         }
@@ -185,6 +190,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             }
         }
     }
+    }
     if (loeschenFragen) AlertDialog(
         onDismissRequest = { loeschenFragen = false },
         containerColor = f.hgUnten, titleContentColor = f.text, textContentColor = f.text,
@@ -195,26 +201,26 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     )
 }
 
-/** Gelber Punkt: Frank hat die Aufgabe selbst angelegt, sie stammt nicht von der KI. */
-val EIGEN_GELB = Color(0xFFFFD60A)
+/** Leuchtend grüner Punkt: Frank hat die Aufgabe selbst angelegt, sie stammt nicht von der KI. */
+val EIGEN_GRUEN = Color(0xFF39FF14)
 
 @Composable
 fun EigenPunkt(groesse: androidx.compose.ui.unit.Dp = 10.dp) {
-    Box(Modifier.size(groesse).background(EIGEN_GELB, androidx.compose.foundation.shape.CircleShape))
+    Box(Modifier.size(groesse).background(EIGEN_GRUEN, androidx.compose.foundation.shape.CircleShape))
 }
 
 @Composable
 private fun EigeneAufgabeKnopf(onKlick: () -> Unit) {
     val f = LocalFarben.current
     Row(
-        Modifier.fillMaxWidth().padding(top = 4.dp).height(50.dp).glas(f, 18.dp, 0.9f, EIGEN_GELB.copy(alpha = 0.10f)).antippen { onKlick() },
+        Modifier.fillMaxWidth().padding(top = 4.dp).height(50.dp).glas(f, 18.dp, 0.9f, EIGEN_GRUEN.copy(alpha = 0.10f)).antippen { onKlick() },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
     ) {
         Icon(Icons.Rounded.Add, null, tint = f.primaer)
         Spacer(Modifier.width(8.dp))
-        Text("Eigene Aufgabe hinzufügen", color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.width(8.dp))
         EigenPunkt()
+        Spacer(Modifier.width(8.dp))
+        Text("Eigene Aufgabe hinzufügen", color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -233,10 +239,25 @@ private fun Kopf(vm: AppViewModel, z: Ziel, notwendig: List<Vorschlag>) {
             }
             if (notwendig.isNotEmpty()) Fortschrittsring(notwendig.count { it.erledigt } / notwendig.size.toFloat(), 58.dp)
         }
-        if (z.beschreibung.isNotBlank()) Text(z.beschreibung, color = f.text, fontSize = 15.sp, lineHeight = 21.sp)
-        if (z.warum.isNotBlank()) Row {
-            Text("Warum: ", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text(z.warum, color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp)
+        // Beschreibung und Warum als Aufklapper, standardmäßig zu: Der Anfang der Seite bleibt ruhig.
+        if (z.beschreibung.isNotBlank() || z.warum.isNotBlank()) {
+            var offen by rememberSaveable(z.id) { mutableStateOf(false) }
+            Column(Modifier.fillMaxWidth().glas(f, 14.dp, 0.5f, f.flaecheStark).animateContentSize().padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().antippen(haptik = false) { offen = !offen }, verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        listOfNotNull("Beschreibung".takeIf { z.beschreibung.isNotBlank() }, "Warum".takeIf { z.warum.isNotBlank() }).joinToString(" und "),
+                        color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
+                    )
+                    Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise)
+                }
+                if (offen) {
+                    if (z.beschreibung.isNotBlank()) Text(z.beschreibung, color = f.text, fontSize = 15.sp, lineHeight = 21.sp)
+                    if (z.warum.isNotBlank()) Row {
+                        Text("Warum: ", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(z.warum, color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp)
+                    }
+                }
+            }
         }
     }
 }
@@ -266,21 +287,21 @@ private fun AuswertenKnopf(vm: AppViewModel, z: Ziel, schritt: String?, fehler: 
                 Spacer(Modifier.width(10.dp))
                 Text(if (z.ausgewertetAm == null) "Auswerten: Weg und Aufgaben finden" else "Neu auswerten", color = f.aufPrimaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
+            // Beide Knöpfe gleich groß, mit etwas Luft dazwischen.
             if (z.ausgewertetAm != null) Row(
-                Modifier.fillMaxWidth().height(48.dp).glas(f, 18.dp, 0.9f, f.flaecheStark).antippen { vm.nachfuellen(z.id) },
+                Modifier.padding(top = 6.dp).fillMaxWidth().height(58.dp).glas(f, 18.dp, 0.9f, f.flaecheStark).antippen { vm.nachfuellen(z.id) },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
             ) {
                 Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, null, tint = f.primaer)
                 Spacer(Modifier.width(10.dp))
-                Text("Neue Aufgaben: freie Plätze füllen", color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("Neue Aufgaben: freie Plätze füllen", color = f.primaer, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             z.ausgewertetAm?.let {
+                val wann = Date(it)
                 Text(
-                    "Zuletzt ausgewertet am " + SimpleDateFormat("d. MMMM yyyy, HH:mm", Locale.GERMAN).format(Date(it)) + " Uhr" +
-                        (if (z.auswertungModell.isNotBlank()) " · ${z.auswertungModell}" else "") +
-                        ". Übernommene, angenommene und ausgeblendete Vorschläge bleiben beim Neu-Auswerten erhalten, abgelehnte kommen nie wieder. Angenommene zeigen dem Agenten, was dir gefällt. " +
-                        "Neue Aufgaben recherchiert weiter im Internet und füllt nur die freien Plätze, bis wieder je ${de.frank.ziele.ki.Auswertung.PLAETZE_JE_KATEGORIE} notwendige und ${de.frank.ziele.ki.Auswertung.PLAETZE_JE_KATEGORIE} unterstützende da sind.",
-                    color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp),
+                    "Zuletzt ausgewertet am " + SimpleDateFormat("d. MMMM", Locale.GERMAN).format(wann) + " um " + SimpleDateFormat("HH:mm", Locale.GERMAN).format(wann) + " Uhr" +
+                        (if (z.auswertungModell.isNotBlank()) " mit ${z.auswertungModell}" else ""),
+                    color = f.textSchwach, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
         }
@@ -293,16 +314,17 @@ private fun Bericht(vm: AppViewModel, z: Ziel) {
     val f = LocalFarben.current
     var offen by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.8f).animateContentSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Zugeklappt nur die Kopfzeile, ohne Vorschau; aufgeklappt die ganze Recherche mit Quellen.
         Row(Modifier.fillMaxWidth().antippen(haptik = false) { offen = !offen }, verticalAlignment = Alignment.CenterVertically) {
-            Text("RECHERCHE", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
+            Box(Modifier.size(10.dp).knopf3d(f.primaer, f.primaer, 99.dp, f.dunkel))
+            Text("RECHERCHE LESEN", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
             Icon(if (vm.sprichtId == "bericht_${z.id}") Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.VolumeUp, "Recherche vorlesen", tint = f.primaer,
                 modifier = Modifier.size(22.dp).antippen { vm.berichtVorlesen(z) })
             Spacer(Modifier.width(12.dp))
             Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise)
         }
         val recherche = remember(z.bericht) { Quellen.teilen(z.bericht) }
-        val zeilen = recherche.text.lines()
-        val gezeigt = if (offen) zeilen else zeilen.filter { it.isNotBlank() }.take(4)
+        val gezeigt = if (offen) recherche.text.lines() else emptyList()
         gezeigt.forEachIndexed { i, zeile ->
             // Markdown räumt Quellen.teilen schon ab; Spiegelstriche werden hier zu Punkten.
             val inhalt = zeile.trim()
@@ -318,7 +340,6 @@ private fun Bericht(vm: AppViewModel, z: Ziel) {
                 else -> Text(inhalt, color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
             }
         }
-        if (!offen) Text("Ganze Recherche lesen", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { offen = true })
         if (offen && recherche.quellen.isNotEmpty()) QuellenAbschnitt(recherche.quellen)
     }
 }

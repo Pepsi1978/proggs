@@ -71,6 +71,7 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
             Text(if (neu) "Neues Ziel" else "Ziel bearbeiten", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp).weight(1f))
+            ModusKnopf(vm)
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // Einsprechen ist der schnellste Weg: Das Gesprochene wird die Zielbeschreibung, die KI bildet daraus den Titel.

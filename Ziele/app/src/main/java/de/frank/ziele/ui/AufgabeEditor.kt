@@ -62,6 +62,7 @@ fun EigeneAufgabeBildschirm(vm: AppViewModel, zielId: Long) {
                 }
                 ziel?.let { Text("${it.symbol} ${it.titel}", color = f.textLeise, fontSize = 13.sp, maxLines = 1) }
             }
+            ModusKnopf(vm)
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.fillMaxWidth().glas(f, erhoeht = 1.2f, toenung = f.primaer).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
