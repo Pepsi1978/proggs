@@ -314,6 +314,7 @@
     { "versionCode": 308, "versionName": "1.8.297", "stand": "24.10.2026, 11:22 Uhr", "notiz": "Rückfragen aus am PC gestarteten Sitzungen kommen jetzt wie bei Jarvis-Aufträgen als Ja/Nein-Fenster mit Ansage aufs Handy, und abgelaufene Rückfragen öffnen sich nicht mehr mit aktiven Knöpfen." },
     { "versionCode": 309, "versionName": "1.8.298", "stand": "24.10.2026, 11:26 Uhr", "notiz": "Nach dem Löschen eines Gesprächs erscheint keine Bestätigungsblase „Gespräch gelöscht“ mehr." },
     { "versionCode": 310, "versionName": "1.8.299", "stand": "24.10.2026, 11:30 Uhr", "notiz": "Meldungen vom Rechner und der Stand beantworteter Rückfragen erscheinen wieder live im offenen Gespräch, ohne das Gespräch zu wechseln." },
-    { "versionCode": 311, "versionName": "1.8.300", "stand": "24.10.2026, 11:44 Uhr", "notiz": "Die Knöpfe Opus 5.5 und Sol 6.1 erscheinen jetzt bei jedem Programmierauftrag, auch beim zweiten und dritten hintereinander und wenn der PC gerade langsam antwortet." }
+    { "versionCode": 311, "versionName": "1.8.300", "stand": "24.10.2026, 11:44 Uhr", "notiz": "Die Knöpfe Opus 5.5 und Sol 6.1 erscheinen jetzt bei jedem Programmierauftrag, auch beim zweiten und dritten hintereinander und wenn der PC gerade langsam antwortet." },
+    { "versionCode": 312, "versionName": "1.8.301", "stand": "24.10.2026, 11:48 Uhr", "notiz": "Startest du mehrere Programmieraufträge nacheinander im selben Gespräch, behält jeder seine eigenen Knöpfe zur Modellwahl." }
   ]
 }

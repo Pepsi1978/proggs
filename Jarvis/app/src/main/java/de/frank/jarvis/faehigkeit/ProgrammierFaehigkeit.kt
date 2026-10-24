@@ -439,12 +439,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "„Opus 5.5 oder Sol 6.1?“ und rufe programmieren danach mit demselben Auftrag und modell=opus bzw. modell=sol erneut auf.")
         // Ruft das Modell in derselben Runde ([runde] = Franks Nachricht) noch einmal auf, keine zweite Karte: Die frische übernimmt
         // den neu gefassten Auftrag, ein schon per Knopf gewähltes Sol wird nicht noch einmal erfragt. Eine offene Karte aus einer
-        // früheren Runde steht womöglich weit oben: Sie gilt nicht mehr, unten kommt eine neue.
-        offeneWahlen.filterValues { it.gespraech == gespraech && runde.isNotEmpty() && it.runde != runde }.keys.takeIf { it.isNotEmpty() }?.let { alt ->
-            alt.forEach { offeneWahlen.remove(it) }
-            wahlStand.update { stand -> stand + alt.associateWith { WAHL_ERLEDIGT } }
-        }
-        offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS }?.let { (id, alt) ->
+        // früheren Runde gehört zu einem eigenen Auftrag: Sie bleibt offen, unten kommt eine neue.
+        offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS &&
+            (runde.isEmpty() || it.value.runde == runde) }?.let { (id, alt) ->
             val neuGefasst = alt.copy(app = appName, auftrag = auftrag)
             offeneWahlen[id] = neuGefasst
             // Gilt als Karte dieser Runde: Am Ende fragt sie (bzw. „Übernommen: …“) statt einer freien Antwort des Modells.
