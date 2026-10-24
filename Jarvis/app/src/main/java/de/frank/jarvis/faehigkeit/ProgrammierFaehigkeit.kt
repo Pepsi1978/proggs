@@ -578,7 +578,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         var gespraech = if (eigenes) "" else aufrufGespraech
         // Franks Programmierregeln gehen bewusst nicht mit: Sie sind reiner Jarvis-Kontext (wie Jarvis Aufträge steuert), keine Anweisung an die Sitzung.
         for (ziel in wahl) {
-            val mitFortschritt = auftragMitFortschritt(if (appName == APP_OHNE) "$OHNE_APP_HINWEIS\n\n$auftrag" else auftrag, when {
+            val mitFortschritt = auftragMitFortschritt(auftrag, when {
                 ziel is CodexCloud -> fortschrittCodex(nummer)
                 // OpenCode: Hooks über das Plugin jarvis-auftrag.js, Jarvis-MCP global, Rückfragen mit dem Werkzeug question.
                 modell == MODELL_SOL && cli == CLI_OPENCODE -> fortschrittsAnweisung(nummer, pc = true, frageWerkzeug = "dem Werkzeug question")
@@ -1915,10 +1915,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "Dateipfade vorgeben, keine Wiederholungen, keine verworfenen Ideen. Vermutete Ursachen nur, wenn sie wirklich helfen, und als „Vermutung:“ markiert. " +
             "Mehrere Aufgaben durch „ ; “ getrennt (siehe Beschreibung)."
 
-        /** App-Feld eines Auftrags, in dem Frank keine App genannt hat. */
+        /**
+         * App-Feld eines Auftrags, in dem Frank keine App genannt hat. Nur Jarvis fragt dann nicht nach; der Programmierer bekommt
+         * „APP: ohne App“ und klärt die App nach seinem Ablauf selbst, bei Bedarf per Rückfrage.
+         */
         const val APP_OHNE = "ohne App"
-        private const val OHNE_APP_HINWEIS = "Frank hat keine App genannt. Ergibt sich keine eindeutig aus dem Auftrag (etwa bei einem reinen Test), " +
-            "bearbeite ihn ohne App und frag nicht nach einer."
         private fun fuer(app: String) = if (app == APP_OHNE) "" else " für $app"
 
         /** So lang darf der ganze Text an ein Programmier-Ziel höchstens werden. */
