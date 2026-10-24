@@ -127,7 +127,11 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück (speichert)") { vm.zurueck() }
-                Text(if (neu) "Neue Aufgabe" else "Aufgabe", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                Text(if (neu) "Neu" else "Aufgabe", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                ModusKnopf(vm)
+                RundKnopf(if (vm.sprichtId == "editor") Icons.Rounded.StopCircle else Icons.Rounded.VolumeUp, "Aufgabe vorlesen") {
+                    vm.vorlesen("editor", listOf(vm.eTitel, vm.eText).filter { it.isNotBlank() }.joinToString(". "))
+                }
                 if (!neu) RundKnopf(Icons.Rounded.SelfImprovement, "Fokus starten") { vm.eId?.let { vm.speichern(); vm.fokusStarten(it) } }
                 RundKnopf(if (neu) Icons.Rounded.Close else Icons.Rounded.DeleteOutline, if (neu) "Verwerfen" else "Löschen") {
                     // Neue Aufgaben verwirft der Knopf sofort, gespeicherte erst nach Rückfrage.

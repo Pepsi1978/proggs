@@ -75,6 +75,10 @@ data class Aufgabe(
     @ColumnInfo(defaultValue = "0") val vorlesen: Boolean = false,
     /** Erinnerung als Wecker: läuft weiter, bis man sie in der Benachrichtigung ausschaltet. */
     @ColumnInfo(defaultValue = "0") val alsWecker: Boolean = false,
+    /** Stammt aus der App „Ziele“: id, Titel und Symbol des Ziels. null = normale Aufgabe. */
+    val zielId: Long? = null,
+    @ColumnInfo(defaultValue = "") val zielTitel: String = "",
+    @ColumnInfo(defaultValue = "") val zielSymbol: String = "",
 ) {
     val prio: Prioritaet get() = Prioritaet.von(prioritaet)
     val wdh: Wiederholung get() = Wiederholung.von(wiederholung)

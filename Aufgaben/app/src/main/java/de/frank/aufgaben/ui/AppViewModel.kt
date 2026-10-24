@@ -470,6 +470,44 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         vorlesen("bereich_$schluessel", text)
     }
 
+    /**
+     * Liest alle offenen Aufgaben nacheinander vor, jede mit allem, was in ihr steht: Titel, Tag und Uhrzeit, Priorität,
+     * Dauer, Wiederholung, Text (bei Aufgaben aus Zielen samt „Erledigt, wenn“ und Warum) und Schritte.
+     */
+    fun alleVorlesen(b: Bereiche) {
+        val gesehen = HashSet<Long>()
+        val gruppen = buildList {
+            add("Heute" to (b.heuteOffen + b.heuteTermine.filter { !it.erledigt }.sortedBy { it.minuten }))
+            add("Morgen" to (b.morgenOffen + b.morgenTermine.filter { !it.erledigt }.sortedBy { it.minuten }))
+            Prioritaet.entries.forEach { p -> add("Priorität ${p.anzeige}" to b.nachPrio[p].orEmpty()) }
+            b.nachZiel.forEach { liste -> add("Ziel ${liste.first().zielTitel.ifBlank { "ohne Namen" }}" to liste) }
+            add("Demnächst" to b.demnaechst)
+        }.map { (name, liste) -> name to liste.filter { gesehen.add(it.id) } }.filter { it.second.isNotEmpty() }
+        val anzahl = gruppen.sumOf { it.second.size }
+        val text = if (anzahl == 0) "Es stehen keine offenen Aufgaben an." else buildString {
+            append(if (anzahl == 1) "Du hast eine offene Aufgabe. " else "Du hast $anzahl offene Aufgaben. ")
+            var nr = 0
+            gruppen.forEach { (name, liste) ->
+                append("$name. ")
+                liste.forEach { a ->
+                    nr++
+                    append("Aufgabe $nr: ${a.titel.trim().trimEnd('.')}. ")
+                    a.tag?.let { t -> append("Geplant für ${Tage.datum(t)}${a.minuten?.let { " um ${Tage.zeit(it)} Uhr" } ?: ""}. ") }
+                    append("Priorität ${a.prio.anzeige}. ")
+                    append("Dauer etwa ${a.dauer} Minuten. ")
+                    if (a.wdh != Wiederholung.KEINE) append("Wiederholung ${a.wdh.anzeige}. ")
+                    if (a.text.isNotBlank() && a.text.trim() != a.titel.trim()) append(a.text.trim().let { if (it.last() in ".!?") it else "$it." }).append(' ')
+                    val schritte = a.schritte
+                    if (schritte.isNotEmpty()) {
+                        append("Schritte: ")
+                        schritte.forEach { s -> append("${s.text.trim().trimEnd('.')}${if (s.erledigt) ", erledigt" else ""}. ") }
+                    }
+                }
+            }
+        }
+        vorlesen("alle", text)
+    }
+
     // ================= KI-Verbindung =================
 
     fun kiVerbinden(activity: ComponentActivity) {

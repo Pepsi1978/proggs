@@ -106,7 +106,11 @@ class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String) {
     val heuteErledigt = gefiltert.filter { it.erledigt && it.tag == heute && it.minuten == null }
     val morgenOffen = gefiltert.filter { it.tag == heute + 1 && it.minuten == null && !it.erledigt }.sortedWith(tagesOrdnung)
     val morgenTermine = gefiltert.filter { it.tag == heute + 1 && it.minuten != null }
-    val nachPrio = Prioritaet.entries.associateWith { p -> gefiltert.filter { !it.erledigt && it.tag == null && it.prio == p }.sortedByDescending { it.erstellt } }
+    // Aufgaben aus der App „Ziele“ ohne Tag stehen unter „Ziele“ bei ihrem Ziel, nicht in den Prioritäten.
+    val nachPrio = Prioritaet.entries.associateWith { p -> gefiltert.filter { !it.erledigt && it.tag == null && it.zielId == null && it.prio == p }.sortedByDescending { it.erstellt } }
+    /** Offene Aufgaben je Ziel (auch mit Tag), in der Reihenfolge des Übernehmens. */
+    val nachZiel: List<List<Aufgabe>> = gefiltert.filter { !it.erledigt && it.zielId != null }
+        .sortedBy { it.erstellt }.groupBy { it.zielId }.values.toList()
     val demnaechst = gefiltert.filter { !it.erledigt && it.tag != null && it.tag > heute + 1 }.sortedWith(compareBy({ it.tag }, { it.minuten ?: -1 }))
     val erledigt = gefiltert.filter { it.erledigt && it.tag != heute }.sortedByDescending { it.erledigtAm ?: 0 }.take(40)
     val heuteGesamt = alle.count { (it.tag == heute) || (!it.erledigt && it.tag != null && it.tag < heute) }
@@ -264,6 +268,16 @@ fun ListeBildschirm(vm: AppViewModel) {
                     liste.forEach { a -> Karte(vm, a, heute, zustand) }
                 }
             }
+            // ---- Ziele: je Ziel ein Knopf, darunter eingerückt seine Aufgaben ----
+            val zielAufgaben = b.nachZiel.flatten()
+            Sektion(
+                "ziele", "Ziele", Icons.Rounded.Flag, f.tertiaer, b.nachZiel.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
+                untertitel = "Aufgaben aus deinen Zielen", verzoegerung = 280, leer = b.nachZiel.isEmpty(), automatik = suche.isBlank(),
+                aktionen = { VorlesenKnopf(vm, "bereich_ziele") { vm.bereichVorlesen("ziele", "Ziele", zielAufgaben, mitDatum = true) } },
+            ) {
+                if (b.nachZiel.isEmpty()) LeerHinweis(Icons.Rounded.Flag, "Noch keine Aufgaben aus der App Ziele. Übernimm dort eine Aufgabe mit dem Plus.")
+                b.nachZiel.forEach { liste -> ZielGruppe(vm, liste, heute, zustand) }
+            }
             if (b.demnaechst.isNotEmpty()) Sektion(
                 "demnaechst", "Demnächst", Icons.Rounded.Event, f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
                 untertitel = "Nach morgen geplant", verzoegerung = 300,
@@ -287,6 +301,11 @@ fun ListeBildschirm(vm: AppViewModel) {
             ) {
                 Text("Aufgaben", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text("${b.heuteFertig}/${b.heuteGesamt} heute", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                // Hell/Dunkel und Vorlesen bleiben auch beim Scrollen oben erreichbar.
+                Spacer(Modifier.width(10.dp))
+                ModusKnopf(vm, 38.dp)
+                Spacer(Modifier.width(6.dp))
+                RundKnopf(if (vm.sprichtId == "alle") Icons.Rounded.StopCircle else Icons.Rounded.VolumeUp, "Alle Aufgaben vorlesen", 38.dp) { vm.alleVorlesen(b) }
             }
         }
 
@@ -331,6 +350,34 @@ private fun Karte(vm: AppViewModel, a: Aufgabe, heute: Long, zustand: ZiehZustan
     }
 }
 
+/** Ein Ziel als Knopf; antippen klappt seine Aufgaben eingerückt darunter auf. Ziehen und Bearbeiten wie überall. */
+@Composable
+private fun ZielGruppe(vm: AppViewModel, liste: List<Aufgabe>, heute: Long, zustand: ZiehZustand) {
+    val f = LocalFarben.current
+    val erste = liste.first()
+    var offen by rememberSaveable(erste.zielId) { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth().glas(f, 16.dp, 0.9f, f.tertiaer.copy(alpha = 0.14f)).antippen(haptik = false) { offen = !offen }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(erste.zielSymbol.ifBlank { "🎯" }, fontSize = 20.sp)
+            Text(
+                erste.zielTitel.ifBlank { "Ziel" }, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+            )
+            Box(Modifier.glas(f, 99.dp, 0f, f.tertiaer.copy(alpha = 0.18f), rand = false).padding(horizontal = 8.dp, vertical = 1.dp)) {
+                Text("${liste.size}", color = f.tertiaer, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise, modifier = Modifier.padding(start = 6.dp))
+        }
+        if (offen) Column(Modifier.fillMaxWidth().padding(start = 22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            liste.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = a.tag != null) }
+        }
+    }
+}
+
 /** Öffnet den Vier-Wochen-Kalender; sitzt in jedem Bereich direkt vor dem Lautsprecher. */
 @Composable
 private fun KalenderKnopf(vm: AppViewModel, farbe: Color) {
@@ -360,7 +407,7 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
     BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp)) {
         val titelBreite = 98.dp
         val fokusPlus = 8.dp
-        val g = ((maxWidth - titelBreite - fokusPlus - 6.dp * 5) / 6).coerceIn(30.dp, 44.dp)
+        val g = ((maxWidth - titelBreite - fokusPlus - 6.dp * 6) / 7).coerceIn(28.dp, 44.dp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             // „Geniale“ klein, „Aufgaben“ groß: Das Hauptwort der App trägt den Titel.
             Column(Modifier.weight(1f).padding(start = 2.dp)) {
@@ -385,17 +432,9 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
                 e.design = neu.id
                 vm.melde("Design: ${neu.anzeige}")
             }
-            // Hell → Automatisch (wie das System) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus.
-            val modus = e.modus
-            RundKnopf(
-                when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
-                when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" },
-                g,
-            ) {
-                val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
-                e.modus = neu
-                vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
-            }
+            ModusKnopf(vm, g)
+            // Liest alle offenen Aufgaben nacheinander mit allem vor, was in ihnen steht.
+            RundKnopf(if (vm.sprichtId == "alle") Icons.Rounded.StopCircle else Icons.Rounded.VolumeUp, if (vm.sprichtId == "alle") "Vorlesen stoppen" else "Alle Aufgaben vorlesen", g) { vm.alleVorlesen(b) }
             RundKnopf(Icons.Rounded.Settings, "Einstellungen", g) { vm.zeige(Bildschirm.Einstellungen) }
         }
     }
@@ -406,6 +445,21 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
     )
+}
+
+/** Hell → Automatisch (wie das System) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus. Sitzt oben auf jedem Bildschirm. */
+@Composable
+fun ModusKnopf(vm: AppViewModel, groesse: Dp = 44.dp) {
+    val e = vm.einstellungen
+    val modus = e.modus
+    val icon = when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto }
+    val text = when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }
+    val aktion = {
+        val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
+        e.modus = neu
+        vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
+    }
+    if (groesse == 44.dp) RundKnopf(icon, text, aktion) else RundKnopf(icon, text, groesse, aktion)
 }
 
 /** Runder Glas-Knopf der Kopfzeile in frei wählbarer Größe; das Symbol wächst mit. */

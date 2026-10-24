@@ -75,6 +75,7 @@ class JarvisBruecke : ContentProvider() {
                     }
                     "demnaechst" -> alle.filter { !it.erledigt && it.tag != null && it.tag > heute + 1 }
                     "ohne_tag" -> alle.filter { !it.erledigt && it.tag == null }
+                    "ziele" -> alle.filter { !it.erledigt && it.zielId != null }
                     "erledigt" -> alle.filter { it.erledigt }.sortedByDescending { it.erledigtAm ?: 0 }
                     "alle" -> alle
                     else -> alle.filter { !it.erledigt }
@@ -117,6 +118,9 @@ class JarvisBruecke : ContentProvider() {
                     vorlesen = a.optBoolean("vorlesen", true),
                     alsWecker = a.optBoolean("als_wecker", false),
                     schritteJson = Aufgabe.schritteAlsJson(schritte),
+                    zielId = a.optLong("ziel_id", -1).takeIf { it >= 0 },
+                    zielTitel = a.optString("ziel_titel").trim(),
+                    zielSymbol = a.optString("ziel_symbol").trim(),
                 )
                 val id = repo.neu(neu)
                 if (kiTitel && einstellungen.kiTitel) titelErzeugen(id, text)
@@ -169,6 +173,9 @@ class JarvisBruecke : ContentProvider() {
                     alsWecker = if (a.has("als_wecker")) a.optBoolean("als_wecker") else alt.alsWecker,
                     wiederholung = if (a.has("wiederholung")) wdhAus(a.optString("wiederholung")).name else alt.wiederholung,
                     schritteJson = if (a.has("schritte")) Aufgabe.schritteAlsJson(schritteAus(a.optJSONArray("schritte"))) else alt.schritteJson,
+                    zielId = if (a.has("ziel_id")) a.optLong("ziel_id", -1).takeIf { it >= 0 } else alt.zielId,
+                    zielTitel = if (a.has("ziel_titel")) a.optString("ziel_titel").trim() else alt.zielTitel,
+                    zielSymbol = if (a.has("ziel_symbol")) a.optString("ziel_symbol").trim() else alt.zielSymbol,
                 )
                 repo.speichere(neu)
                 // Neuer Text, aber der Titel stammte von der KI: Titel passend zum neuen Text nachziehen.
@@ -228,6 +235,8 @@ class JarvisBruecke : ContentProvider() {
         .put("erledigt", a.erledigt)
         .put("ueberfaellig", !a.erledigt && a.tag != null && a.tag < heute)
         .put("schritte", JSONArray(a.schritte.map { JSONObject().put("text", it.text).put("erledigt", it.erledigt) }))
+        .put("ziel_id", a.zielId ?: JSONObject.NULL)
+        .put("ziel_titel", a.zielTitel)
 
     private fun ohne(wert: String): Boolean = wert.trim().lowercase(Locale.GERMAN) in setOf("", "ohne", "kein", "keine", "null", "none")
 
