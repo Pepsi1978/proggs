@@ -41,8 +41,8 @@ Lokale Sitzungen (am Rechner direkt gestartet, nicht über Jarvis): Die Claude-C
 Sitzung python jarvis_hook.py lokal <art> auf. In Jarvis-Sitzungen (JARVIS_AUFTRAG_ID gesetzt) und ohne interaktive CLI
 (claude -p, SDK) endet das sofort. Sonst bekommt die Sitzung eine feste Nummer aus ihrer session_id (lokale_nummer, gleich
 auch nach --resume) und meldet wie ein Jarvis-Auftrag, mit dem Feld „lokal“ (Name, Ordner, Rechner, Claude-App-Link).
-Abweichungen: Eine Auswahlfrage (frage) geht nur an Jarvis, wenn am Rechner seit PC_AKTIV_S niemand Tastatur oder Maus
-benutzt hat; sonst und nach Ablauf erscheint der normale Dialog am Rechner, nie eine Antwort an Franks Stelle. Stop läuft
+Abweichungen: Eine Auswahlfrage (frage) geht immer an Jarvis; berührt Frank am Rechner nach FRAGE_SCHONFRIST_S Tastatur
+oder Maus, und nach Ablauf, erscheint der normale Dialog am Rechner, nie eine Antwort an Franks Stelle. Stop läuft
 async: Eine freie Rückfrage am Zugende wartet nicht, Franks Antwort in Jarvis kommt als Nachtrag über den Warter. prompt
 (UserPromptSubmit) zeigt in Jarvis, was am Rechner eingegeben wurde. Entfernt Frank die Sitzung in Jarvis, antwortet der
 Relay „entfernt“: Die Marke entfernt-<Nummer> lässt danach jeden Hook still enden; die Sitzung selbst läuft weiter.
@@ -916,9 +916,8 @@ def warte(eingabe: dict) -> int:
 # ---------------------------------------------------------------- Lokale Sitzungen (siehe Kopf)
 
 ZEICHEN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # wie Auftragsbuch.neueNummer in der App
-# So kurz nach der letzten Eingabe am Rechner sitzt Frank noch dran. Großzügig: Wer einem langen Zug nur zuschaut, berührt
-# nichts; der Dialog am Rechner soll ihm dann nicht verborgen bleiben.
-PC_AKTIV_S = 300
+# So lange nach dem Stellen einer Rückfrage zählt eine Eingabe am Rechner noch nicht als „Frank antwortet am Rechner“.
+FRAGE_SCHONFRIST_S = 15
 FRAGE_HALTEN_LOKAL_S = 24 * 3600  # so lange ist eine freie Rückfrage einer lokalen Sitzung in Jarvis beantwortbar
 
 
@@ -1278,10 +1277,17 @@ def frage(eingabe: dict) -> None:
     kurz = " / ".join(str(f.get("question", "")) for f in fragen)
     # Mit Frist (Sekunden seit 1970): Jarvis zeigt, wie lange die Frage dort noch beantwortbar ist.
     daten = {"frage_id": frage_id, "fragen": fragen, "bis": int(time.time() + FRAGE_WARTEN_S), "tool_use_id": tool_use_id}
-    if LOKAL and pc_ruhe_s() < PC_AKTIV_S:
-        # Frank sitzt am Rechner: Der Dialog erscheint sofort dort; Jarvis zeigt die Frage nur an.
-        melde_still("laeuft", "❓ Rückfrage am PC: " + kurz)
-        return
+    # Franks Vorgabe vom 24.10.2026: Auch eine am Rechner gestartete Sitzung schickt ihre Rückfrage immer als Ja/Nein-Fenster an
+    # Jarvis, wie ein Jarvis-Auftrag (früher nur eine stille Zeile „Rückfrage am PC“, sobald er in den letzten fünf Minuten am
+    # Rechner etwas getippt hatte). Der Dialog am Rechner kommt, sobald er dort nach einer kurzen Schonfrist Tastatur oder Maus
+    # berührt, nach Ablauf der Frist oder mit „In der Claude-App beantworten“.
+    gestellt = time.monotonic()
+
+    def am_rechner() -> bool:
+        # Die Schonfrist fängt Eingaben ab, die beim Erscheinen der Frage noch liefen (Diktat, Tippen in einem anderen Fenster).
+        frei = time.monotonic() - gestellt - FRAGE_SCHONFRIST_S
+        return frei > 0 and pc_ruhe_s() < min(10, frei)
+
     if not melde_sicher("frage", "❓ " + kurz, daten) or (LOKAL and ist_entfernt()):
         if LOKAL:
             # Eine am Rechner gestartete Sitzung entscheidet nie an Franks Stelle: Der Dialog erscheint dort.
@@ -1292,7 +1298,7 @@ def frage(eingabe: dict) -> None:
         sys.stdout.write(json.dumps(ohne_antwort(ein, fragen, "Jarvis war nicht erreichbar")))
         return
     merke_frage(tool_use_id, frage_id, "jarvis")
-    antwort = warte_auf_antwort(frage_id, lambda: melde("frage", "❓ " + kurz, daten), am_pc=(lambda: pc_ruhe_s() < 10) if LOKAL else None)
+    antwort = warte_auf_antwort(frage_id, lambda: melde("frage", "❓ " + kurz, daten), am_pc=am_rechner if LOKAL else None)
     if antwort and antwort.get("geschlossen"):
         antwort = None
         grund = "Die Rückfrage wurde in Jarvis ohne Antwort geschlossen"
@@ -1382,10 +1388,10 @@ def stop(eingabe: dict) -> None:
     # 1/2/3 nach einer Frage, etwa Frage 1 des Research-Skills ohne AskUserQuestion); nur dann wartet der Hook (nie zweimal).
     ende = letzte.rstrip().rstrip("*_ )\"“”").strip()
     optionen, auswahl = optionen_im_text(letzte)
-    # Am Rechner gestartet: nie warten, am Rechner kann Frank sofort tippen. Eine Rückfrage geht nur an Jarvis, wenn er gerade
-    # nicht am Rechner sitzt (sonst nur der Bericht unten); antwortet er dort, macht der Relay daraus einen Nachtrag
+    # Am Rechner gestartet: nie warten, am Rechner kann Frank sofort tippen. Die Rückfrage geht trotzdem immer an Jarvis wie bei
+    # einem Jarvis-Auftrag (Franks Vorgabe vom 24.10.2026); antwortet er dort, macht der Relay daraus einen Nachtrag
     # (als_nachtrag), und der Warter weckt die Sitzung damit.
-    if LOKAL and (ende.endswith("?") or auswahl) and pc_ruhe_s() >= PC_AKTIV_S:
+    if LOKAL and (ende.endswith("?") or auswahl):
         frage_id = uuid.uuid4().hex[:12]
         daten = {"frage_id": frage_id, "frei": True, "als_nachtrag": True, "bis": int(time.time() + FRAGE_HALTEN_LOKAL_S),
                  "fragen": [{"question": letzte[-3000:], "options": optionen}]}

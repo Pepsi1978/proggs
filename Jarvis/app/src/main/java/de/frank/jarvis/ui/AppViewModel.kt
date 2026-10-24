@@ -1982,9 +1982,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         if (n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL && kartenDa(n.kontext)) return@withLock
                         gespraech += Nachricht(n.vonMir, n.text, n.art, n.kontext, n.anhaenge)
                         sitzungSichern()
-                        // Franks Vorgabe vom 24.10.2026: Das Ja/Nein-Fenster geht von selbst auf, sobald die Frage im offenen
-                        // Gespräch steht, nicht erst über den Tipp auf die Benachrichtigung (dessen Prüfung kam oft zu früh).
-                        if (frageId.isNotEmpty()) naechsteRueckfrage(id to frageId, wechseln = false)
                     } else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.anhaengen(getApplication(), id, n) }
                 }
             }
@@ -2051,6 +2048,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun naechsteRueckfrage(gewuenscht: Pair<String, String>? = null, wechseln: Boolean = true) {
         viewModelScope.launch {
             val app = getApplication<Application>()
+            // Die getippte bzw. eben eingetroffene Rückfrage ist oft noch unterwegs ins Gespräch (die Ansicht hängt sie erst
+            // nach der laufenden Sicherung an): bis zu 3 s auf sie warten, sonst verwarf die Prüfung sie und kein Fenster ging auf.
+            if (gewuenscht != null) for (versuch in 0 until 15) {
+                val da = if (gewuenscht.first == sitzungId) gespraech.any { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == gewuenscht.second }
+                    else withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, gewuenscht.first, gewuenscht.second) != null }
+                if (da) break
+                kotlinx.coroutines.delay(200)
+            }
             val geschlossen = rueckfrageGeschlossen.toSet()
             val bisherige = rueckfrageOffen
             val hier = sitzungId
@@ -2074,9 +2079,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     ?: de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.offeneRueckfragen(app).firstOrNull { it.second !in geschlossen && erlaubt(it) && offen(it) }
                     // Wie früher: eine offene Rückfrage im Gespräch, auch wenn das Auftragsbuch sie nicht (mehr) als wartend führt.
                     ?: hier?.let { g -> imSpeicher.firstOrNull { it.first !in geschlossen && stand(g, it.first) == de.frank.jarvis.faehigkeit.RueckfrageStand.OFFEN }?.let { g to it.first } }
-                    // Die getippte bzw. eben eingetroffene Rückfrage öffnet sich immer (wie vor 1.8.290), auch wenn sie im Gespräch
-                    // noch nicht steht (das Vollbild erscheint, sobald sie ankommt) oder schon erledigt ist (dann mit ihrem Stand).
-                    ?: gewuenscht?.takeIf { erlaubt(it) }
+                    ?: gewuenscht?.takeIf { erlaubt(it) && offen(it) }
             }
             // Inzwischen hat Frank selbst geöffnet, geschlossen oder das Gespräch gewechselt: nichts überschreiben.
             if (rueckfrageOffen != bisherige || (!wechseln && sitzungId != hier)) return@launch
