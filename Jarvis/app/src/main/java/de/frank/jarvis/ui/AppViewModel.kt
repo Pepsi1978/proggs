@@ -857,10 +857,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun knoepfeAus() { programmiererAktiv = false; nachtragAktiv = false; neueSessionAktiv = false }
 
-    /** Schwebendes „Neue Session“: neues, leeres Gespräch, das Symbol bleibt bis zum Abschicken grün. */
+    /** Zählt bei jedem Antippen von „Neue Session“ hoch; das Symbol leuchtet dann kurz grün auf. */
+    var neueSessionBlitz by mutableStateOf(0); private set
+
+    /** Schwebendes „Neue Session“: neues, leeres Gespräch; grün bleibt das Symbol nur, solange danach etwas im Entwurf steht. */
     fun neueSessionTippen() {
         neuesGespraech()
         neueSessionAktiv = true
+        neueSessionBlitz++
     }
 
     /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */

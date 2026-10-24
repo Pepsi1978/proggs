@@ -364,11 +364,13 @@ fun schwebeHoehe(nachtrag: Boolean) = SCHWEBE_GROESSE * (if (nachtrag) 3 else 2)
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        // „Neue Session“: helle Sprechblase mit schwarzem Plus, leicht durchscheinend, damit der Text darunter lesbar bleibt.
-        SchwebeSymbol("Neue Session", vm.neueSessionAktiv, { vm.neueSessionTippen() }) {
-            Box(Modifier.size(26.dp).alpha(0.75f), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.ChatBubble, null, tint = Color.White, modifier = Modifier.fillMaxSize())
-                Icon(Icons.Rounded.Add, null, tint = Color.Black, modifier = Modifier.size(17.dp).offset(y = (-2).dp))
+        // „Neue Session“: schwarze, etwas aufgehellte und durchscheinende Sprechblase mit weißem Kreuz. Antippen lässt sie kurz
+        // grün aufleuchten; kommt danach etwas in den Entwurf, bleibt sie grün, solange es dort steht.
+        val sessionGruen = vm.neueSessionAktiv && (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty())
+        SchwebeSymbol("Neue Session", sessionGruen, { vm.neueSessionTippen() }, blitz = vm.neueSessionBlitz) {
+            Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.ChatBubble, null, tint = Color(0xFF2A2A2A).copy(alpha = 0.7f), modifier = Modifier.fillMaxSize())
+                Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(17.dp).offset(y = (-2).dp))
             }
         }
         Spacer(Modifier.height(SCHWEBE_LUECKE))
@@ -385,16 +387,25 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Unit, inhalt: @Composable () -> Unit) {
+private fun SchwebeSymbol(beschreibung: String, aktiv: Boolean, aktion: () -> Unit, blitz: Int = 0, inhalt: @Composable () -> Unit) {
     val f = LocalFarben.current
     // Ein schmaler Lichtstreif wandert langsam über den Grund; der Grund selbst bleibt fast durchsichtig.
     val lauf by rememberInfiniteTransition(label = "schimmer").animateFloat(-1f, 2f,
         infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "s")
-    // Angetippt leuchtet der Grund grün und bleibt so, bis die Nachricht abgeschickt ist.
+    // Angetippt leuchtet der Grund grün und bleibt so, solange [aktiv] gilt.
     val gruen by androidx.compose.animation.core.animateFloatAsState(if (aktiv) 1f else 0f, tween(300), label = "gruen")
+    // Zählt [blitz] hoch, leuchtet der Grund kurz grün auf und verblasst wieder; nicht beim ersten Erscheinen.
+    val aufblitzen = remember { androidx.compose.animation.core.Animatable(0f) }
+    val anfang = remember { blitz }
+    LaunchedEffect(blitz) {
+        if (blitz == anfang) return@LaunchedEffect
+        aufblitzen.snapTo(1f)
+        delay(250)
+        aufblitzen.animateTo(0f, tween(650))
+    }
     Box(
         Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
-            .background(f.erfolg.copy(alpha = 0.85f * gruen)).drawBehind {
+            .background(f.erfolg.copy(alpha = 0.85f * maxOf(gruen, aufblitzen.value))).drawBehind {
             val x = size.width * lauf
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent),
                 start = Offset(x - size.width * 0.5f, 0f), end = Offset(x + size.width * 0.5f, size.height)))

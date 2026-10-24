@@ -330,6 +330,8 @@
     { "versionCode": 324, "versionName": "1.8.313", "stand": "24.10.2026, 16:17 Uhr", "notiz": "Rechts über der Eingabeblase schwebt jetzt ein Programmier-Symbol für einen neuen Programmierauftrag, im Programmiergespräch darüber ein Plus für den Nachtrag." },
     { "versionCode": 325, "versionName": "1.8.314", "stand": "24.10.2026, 17:05 Uhr", "notiz": "Programmierer und Nachtrag klappen die Eingabeblase jetzt auf und zeigen den eingefügten Text, das getippte Symbol leuchtet dabei kurz grün auf." },
     { "versionCode": 326, "versionName": "1.8.315", "stand": "24.10.2026, 17:14 Uhr", "notiz": "Programmierer, Nachtrag und Neue Session liegen jetzt rechtsbündig über der orangen Kugel, Neue Session eine freie Bubble höher und nicht mehr oben in der Leiste." },
-    { "versionCode": 327, "versionName": "1.8.316", "stand": "24.10.2026, 17:24 Uhr", "notiz": "Programmierer, Nachtrag und Neue Session bleiben nach dem Antippen grün bis zum Abschicken, Neue Session ist eine helle, leicht durchscheinende Blase mit schwarzem Plus, und die Symbole unter den Einträgen stehen linksbündig." }
+    { "versionCode": 327, "versionName": "1.8.316", "stand": "24.10.2026, 17:24 Uhr", "notiz": "Programmierer, Nachtrag und Neue Session bleiben nach dem Antippen grün bis zum Abschicken, Neue Session ist eine helle, leicht durchscheinende Blase mit schwarzem Plus, und die Symbole unter den Einträgen stehen linksbündig." },
+    { "versionCode": 328, "versionName": "1.8.317", "stand": "24.10.2026, 17:30 Uhr", "notiz": "Das Neue-Session-Symbol ist wieder eine schwarze, leicht durchscheinende Sprechblase mit weißem Kreuz, leuchtet beim Antippen kurz grün und bleibt grün, solange danach etwas im Eingabefeld steht." },
+    { "versionCode": 329, "versionName": "1.8.318", "stand": "24.10.2026, 17:33 Uhr", "notiz": "Ein Programmierauftrag aus einer leeren Session über „Programmierer“ läuft jetzt genau in dieser Session, es entsteht kein zweiter Chat mehr." }
   ]
 }
