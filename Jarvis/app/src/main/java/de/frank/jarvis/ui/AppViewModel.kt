@@ -2659,7 +2659,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     alleSitzungen()
                 }
             }
-            meldung = "Gespräch gelöscht."
         }
     }
 

@@ -354,7 +354,7 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
                     when {
                         ziel != vm.sitzungId.orEmpty() -> vm.meldung = "Das Gespräch hat inzwischen gewechselt. Nichts gelöscht."
                         ziel.isNotEmpty() -> vm.sitzungLoeschen(ziel)
-                        else -> { vm.neuesGespraech(); vm.meldung = "Gespräch gelöscht." }
+                        else -> vm.neuesGespraech()
                     }
                     loeschenZiel = null
                 }) { Text("Löschen", color = f.gefahr) }
