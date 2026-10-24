@@ -139,6 +139,11 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         }
 
         katalogFehlerBand.isHidden = true
+        // Ausgeblendet belegte das Band samt Abstaenden sonst rund 60 Punkte Hoehe.
+        fehlerBandOben = katalogFehlerBand.topAnchor.constraint(equalTo: kopf.bottomAnchor, constant: 10)
+        fehlerBandZu = katalogFehlerBand.heightAnchor.constraint(equalToConstant: 0)
+        fehlerBandZu.isActive = true
+        katalogFehlerText.isHidden = true
 
         NSLayoutConstraint.activate([
             kopf.leadingAnchor.constraint(equalTo: inhalt.leadingAnchor, constant: 20),
@@ -147,7 +152,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
             katalogFehlerBand.leadingAnchor.constraint(equalTo: kopf.leadingAnchor),
             katalogFehlerBand.trailingAnchor.constraint(equalTo: kopf.trailingAnchor),
-            katalogFehlerBand.topAnchor.constraint(equalTo: kopf.bottomAnchor, constant: 10),
+            fehlerBandOben,
 
             mitte.leadingAnchor.constraint(equalTo: kopf.leadingAnchor),
             mitte.trailingAnchor.constraint(equalTo: kopf.trailingAnchor),
@@ -219,31 +224,33 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         // Drei Zeilen statt zwei Spalten (wie die Windows-Fassung seit 1.3.32): nebeneinander
         // drueckte die breite Bedienleiste den Titelblock zusammen. AppKit hat kein WrapPanel, also
         // verteilt sich die Bedienleiste fest auf zwei Zeilen, die beide in das schmalste Fenster passen.
-        let zeileZwei = NSStackView(views: [untertitel, UI.platzhalter(), designRahmen, dauerRahmen,
-                                            katalogOeffnen, neuLaden, allePruefenSchalter])
+        // Hoehe ist auf dem MacBook knapp (832 Punkte samt Menueleiste und Dock): deshalb nur ZWEI
+        // Zeilen. Oben Titel und die beiden Schiebeschalter, darunter alle Schaltflaechen.
+        titelReihe.addArrangedSubview(designRahmen)
+        titelReihe.addArrangedSubview(dauerRahmen)
+        titelReihe.setCustomSpacing(8, after: designRahmen)
+
+        let zeileZwei = NSStackView(views: [untertitel, UI.platzhalter(), katalogOeffnen, neuLaden, allePruefenSchalter,
+                                            cliUpdatesSchalter, sichereUpdatesSchalter])
         zeileZwei.orientation = .horizontal
         zeileZwei.alignment = .centerY
         zeileZwei.spacing = 8
         zeileZwei.setCustomSpacing(16, after: untertitel)
+        zeileZwei.detachesHiddenViews = true
         zeileZwei.translatesAutoresizingMaskIntoConstraints = false
-
-        let zeileDrei = NSStackView(views: [UI.platzhalter(), cliUpdatesSchalter, sichereUpdatesSchalter])
-        zeileDrei.orientation = .horizontal
-        zeileDrei.alignment = .centerY
-        zeileDrei.spacing = 8
-        zeileDrei.detachesHiddenViews = true
-        zeileDrei.translatesAutoresizingMaskIntoConstraints = false
+        // Wird es eng, kuerzt zuerst der Untertitel.
+        untertitel.setContentCompressionResistancePriority(.init(rawValue: 250), for: .horizontal)
 
         for knopf in [katalogOeffnen, neuLaden, allePruefenSchalter, cliUpdatesSchalter, sichereUpdatesSchalter] {
             knopf.setContentCompressionResistancePriority(UI.schalterFestigkeit, for: .horizontal)
         }
 
-        let reihe = NSStackView(views: [titelReihe, zeileZwei, zeileDrei])
+        let reihe = NSStackView(views: [titelReihe, zeileZwei])
         reihe.orientation = .vertical
         reihe.alignment = .leading
         reihe.spacing = 8
         reihe.translatesAutoresizingMaskIntoConstraints = false
-        for zeile in [titelReihe, zeileZwei, zeileDrei] {
+        for zeile in [titelReihe, zeileZwei] {
             zeile.widthAnchor.constraint(equalTo: reihe.widthAnchor).isActive = true
         }
 
@@ -276,6 +283,9 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         ])
         return rahmen
     }
+
+    private var fehlerBandOben: NSLayoutConstraint!
+    private var fehlerBandZu: NSLayoutConstraint!
 
     private var logoKachel: ThemedView?
     private var logoPfeil: ThemedLabel?
@@ -407,8 +417,8 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         }
 
         // Verhaeltnis wie unter Windows: Protokoll 2 Teile, Terminal 1,3 Teile.
-        protokollKonsole.heightAnchor.constraint(greaterThanOrEqualToConstant: 90).isActive = true
-        terminalKonsole.heightAnchor.constraint(greaterThanOrEqualToConstant: 90).isActive = true
+        protokollKonsole.heightAnchor.constraint(greaterThanOrEqualToConstant: 70).isActive = true
+        terminalKonsole.heightAnchor.constraint(greaterThanOrEqualToConstant: 60).isActive = true
         protokollKonsole.heightAnchor.constraint(equalTo: terminalKonsole.heightAnchor,
                                                  multiplier: 2.0 / 1.3).isActive = true
     }
@@ -434,27 +444,31 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         fussBalken.widthAnchor.constraint(equalToConstant: 110).isActive = true
         fussBalken.isHidden = true
 
-        let statusReihe = NSStackView(views: [fussBalken, fussStatus])
-        statusReihe.orientation = .horizontal
-        statusReihe.alignment = .centerY
-        statusReihe.spacing = 10
-        statusReihe.detachesHiddenViews = true
-        statusReihe.translatesAutoresizingMaskIntoConstraints = false
+        // Der Status bekommt die volle Breite (sonst blieb er auf der schmalen Breite seines ersten
+        // Layouts haengen, brach Wort fuer Wort um und schob das Fenster unten aus dem Bildschirm) und
+        // hoechstens drei Zeilen; der volle Text steht im Tooltip. Senkrecht gibt er nach, statt das
+        // Fenster hoeher als den Bildschirm zu machen.
+        for (feld, zeilen) in [(fussStatus, 3), (fussDetail, 4)] {
+            feld.maximumNumberOfLines = zeilen
+            feld.lineBreakMode = .byWordWrapping
+            feld.cell?.truncatesLastVisibleLine = true
+            feld.setContentCompressionResistancePriority(.init(rawValue: 250), for: .vertical)
+        }
 
-        let schalterReihe = NSStackView(views: [UI.platzhalter(), protokolle, diagnoseSchalter, auffrischen, versionsAnzeige])
+        let schalterReihe = NSStackView(views: [fussBalken, UI.platzhalter(), protokolle, diagnoseSchalter, auffrischen, versionsAnzeige])
         schalterReihe.orientation = .horizontal
         schalterReihe.alignment = .centerY
         schalterReihe.spacing = 10
         schalterReihe.translatesAutoresizingMaskIntoConstraints = false
 
         // Drei Zeilen: der Status vollstaendig, darunter was gerade laeuft, darunter die Schalter.
-        let stapel = NSStackView(views: [statusReihe, fussDetail, schalterReihe])
+        let stapel = NSStackView(views: [fussStatus, fussDetail, schalterReihe])
         stapel.orientation = .vertical
         stapel.alignment = .leading
         stapel.spacing = 6
         stapel.detachesHiddenViews = true
         stapel.translatesAutoresizingMaskIntoConstraints = false
-        for zeile in [statusReihe, fussDetail, schalterReihe] {
+        for zeile in [fussStatus, fussDetail, schalterReihe] {
             zeile.widthAnchor.constraint(equalTo: stapel.widthAnchor).isActive = true
         }
         fussDetail.isHidden = true
@@ -511,6 +525,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     private func aktualisieren() {
         zusammenfassungPlakette.text = modell.updateZusammenfassung
         fussStatus.stringValue = modell.kopfStatus
+        fussStatus.toolTip = modell.kopfStatus
         fussDetail.stringValue = modell.laufDetail
         fussDetail.isHidden = modell.laufDetail.istLeer
         fussBalken.isHidden = !modell.laeuftSammelvorgang
@@ -533,10 +548,16 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
         if let fehler = modell.katalogFehler, !fehler.istLeer {
             katalogFehlerBand.isHidden = false
+            katalogFehlerText.isHidden = false
+            fehlerBandZu.isActive = false
+            fehlerBandOben.constant = 10
             katalogFehlerText.stringValue = fehler
             katalogFehlerText.festeFarbe = Darstellung.satz.fehlerText
         } else {
             katalogFehlerBand.isHidden = true
+            katalogFehlerText.isHidden = true
+            fehlerBandZu.isActive = true
+            fehlerBandOben.constant = 0
         }
 
         let gewaehlt = modell.ausgewaehltesProgramm

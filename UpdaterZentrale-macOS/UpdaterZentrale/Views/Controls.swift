@@ -555,14 +555,22 @@ final class Schiebeschalter: NSControl {
 
 // MARK: - Bildlaufleiste (Style ScrollBar)
 
-/// Schlanker Griff ohne Rinne -- sonst rahmt macOS die Karten mit einem langen grauen Strich.
+/// Immer sichtbarer Rollbalken: der Overlay-Stil blendete ihn aus, bis man mit Maus oder Trackpad
+/// scrollte -- ohne Maus war das Ende der Liste nicht zu erreichen. Nicht overlay-faehig erzwingt den
+/// klassischen Stil (auch wenn die Systemeinstellung "Automatisch" sagt); die Rinne bleibt dezent,
+/// statt die Karten mit einem harten grauen Strich zu rahmen.
 final class SchlankerRollbalken: NSScroller {
-    override class var isCompatibleWithOverlayScrollers: Bool { true }
+    override class var isCompatibleWithOverlayScrollers: Bool { false }
 
     override class func scrollerWidth(for controlSize: NSControl.ControlSize,
-                                      scrollerStyle: NSScroller.Style) -> CGFloat { 11 }
+                                      scrollerStyle: NSScroller.Style) -> CGFloat { 14 }
 
-    override func drawKnobSlot(in slotRect: NSRect, highlight flag: Bool) { }
+    override func drawKnobSlot(in slotRect: NSRect, highlight flag: Bool) {
+        let rinne = slotRect.insetBy(dx: 4, dy: 2)
+        guard rinne.width > 0, rinne.height > 0 else { return }
+        Darstellung.satz.rollbalken.withAlphaComponent(0.25).setFill()
+        NSBezierPath(roundedRect: rinne, xRadius: rinne.width / 2, yRadius: rinne.width / 2).fill()
+    }
 
     override func drawKnob() {
         let griff = rect(for: .knob)
@@ -577,9 +585,10 @@ final class SchlankerRollbalken: NSScroller {
 enum Rollen {
     static func anwenden(_ ansicht: NSScrollView) {
         ansicht.hasVerticalScroller = true
+        // Nur ausblenden, wenn nichts zu rollen ist -- sonst steht er immer da.
         ansicht.autohidesScrollers = true
         ansicht.drawsBackground = false
-        ansicht.scrollerStyle = .overlay
+        ansicht.scrollerStyle = .legacy
         ansicht.verticalScroller = SchlankerRollbalken()
         ansicht.contentView.drawsBackground = false
         ansicht.backgroundColor = .clear
