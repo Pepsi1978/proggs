@@ -295,7 +295,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Text("Die ganze Spanne deines Tages. Sie ist immer zu sehen, wenn beide Schalter aus sind – und immer, sobald du eine Aufgabe ziehst.", color = f.textLeise, fontSize = 12.sp)
                     OptionSchalter(
                         Icons.Rounded.AutoAwesome, "Rand an die Termine anpassen",
-                        "Die Leiste beginnt eine Stunde vor deinem ersten Termin des Tages und endet eine Stunde nach dem letzten. Leere Stunden am Morgen und am Abend verschwinden. Ohne Termine siehst du die ganze Spanne.",
+                        "Die Leiste beginnt eine Stunde vor deinem ersten Termin des Tages und endet eine Stunde nach dem letzten. Leere Stunden am Morgen und am Abend verschwinden. Ohne Termine siehst du nur einen kurzen Ausschnitt: heute um die aktuelle Uhrzeit, sonst die ersten zwei Stunden der Spanne.",
                         e.zeitleisteAuto,
                     ) { e.zeitleisteAuto = it }
                     OptionSchalter(

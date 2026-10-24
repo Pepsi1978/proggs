@@ -66,7 +66,7 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
          * 16:00 und 19:00 bleiben als Ränder stehen, 17 und 18 Uhr verschwinden).
          */
         fun fuer(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, luecken: Boolean, jetzt: Int? = null): Zeitband {
-            var (a, b) = spanne(termine, von, bis, auto)
+            var (a, b) = spanne(termine, von, bis, auto, jetzt)
             // Die aktuelle Uhrzeit [jetzt] (nur heute) ist immer zu sehen: Die Spanne reicht bis zu ihrer vollen Stunde,
             // und sie zählt wie ein Termin – viel freie Zeit zwischen ihr und den Terminen rückt also zusammen.
             if (jetzt != null) {
@@ -108,8 +108,13 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
             return Zeitband(a, b)
         }
 
-        private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean): Pair<Int, Int> {
-            if (!auto || termine.isEmpty()) return von to bis
+        private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, jetzt: Int?): Pair<Int, Int> {
+            if (!auto) return von to bis
+            // Ohne Termine nur ein kurzer Ausschnitt: heute eine Stunde um die aktuelle Uhrzeit, sonst die ersten zwei Stunden.
+            if (termine.isEmpty()) {
+                val a = if (jetzt != null) ((jetzt / 60 - 1) * 60).coerceIn(0, 22 * 60) else von
+                return a to (a + 120).coerceAtMost(24 * 60)
+            }
             val erster = termine.minOf { it.minuten ?: von }
             val letzter = termine.maxOf { (it.minuten ?: von) + maxOf(it.dauer, 30) }
             val a = ((erster / 60 - 1) * 60).coerceIn(0, 23 * 60)
