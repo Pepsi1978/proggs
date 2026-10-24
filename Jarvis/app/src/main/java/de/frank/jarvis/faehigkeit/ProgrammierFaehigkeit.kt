@@ -595,8 +595,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // vorgelesen wird, auch nach Stille-Ende, App-Neustart oder aus dem Hintergrund. Aus ChatGPT nie.
         val ursprung = if (ausChatGpt) null else kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung]
         // Aus ChatGPT nie das gerade offene App-Gespräch, in der App nie ein Gespräch, das schon einen Auftrag hat, und bei
-        // ausdrücklich neuer Session immer: Der Auftrag bekommt nach dem Start sein eigenes (siehe unten).
-        val eigenes = NachtragsRegel.eigenesGespraech(ausChatGpt, neu, if (aufrufGespraech.isEmpty()) 0 else Auftragsbuch.alleImGespraech(app, aufrufGespraech).size)
+        // ausdrücklich neuer Session immer: Der Auftrag bekommt nach dem Start sein eigenes (siehe unten). Ausnahme: Begann das
+        // Gespräch mit genau diesem „Programmierer“-Auftrag, ist es selbst die neue Session (ein Auftrag, ein Chat).
+        val leer = !ausChatGpt && neu && aufrufGespraech.isNotEmpty() && withContext(Dispatchers.IO) {
+            runCatching { Gespraeche.laden(app, aufrufGespraech)?.second?.let { NachtragsRegel.ausLeeremGespraech(it) } }.getOrNull() == true
+        }
+        val eigenes = NachtragsRegel.eigenesGespraech(ausChatGpt, neu, if (aufrufGespraech.isEmpty()) 0 else Auftragsbuch.alleImGespraech(app, aufrufGespraech).size, leer)
         var gespraech = if (eigenes) "" else aufrufGespraech
         // Franks Programmierregeln gehen bewusst nicht mit: Sie sind reiner Jarvis-Kontext (wie Jarvis Aufträge steuert), keine Anweisung an die Sitzung.
         for (ziel in wahl) {

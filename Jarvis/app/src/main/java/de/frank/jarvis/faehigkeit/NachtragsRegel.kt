@@ -180,6 +180,15 @@ object NachtragsRegel {
     /**
      * Bekommt ein neuer Auftrag ein eigenes Jarvis-Gespräch? Über das Plugin immer; in der App, wenn Frank ausdrücklich eine
      * neue Session will ([neu]) oder das Gespräch schon einen Auftrag hat: Ein neuer Auftrag hängt sich nie an einen alten.
+     * [leer]: Das Gespräch begann mit genau diesem „Programmierer“-Auftrag ([ausLeeremGespraech]); dann ist es selbst die neue
+     * Session, sonst entstünden aus einem Auftrag zwei Chats.
      */
-    fun eigenesGespraech(ausChatGpt: Boolean, neu: Boolean, auftraegeImGespraech: Int): Boolean = ausChatGpt || neu || auftraegeImGespraech > 0
+    fun eigenesGespraech(ausChatGpt: Boolean, neu: Boolean, auftraegeImGespraech: Int, leer: Boolean = false): Boolean =
+        ausChatGpt || (neu && !leer) || auftraegeImGespraech > 0
+
+    /** Beginnt das Gespräch mit Franks „Programmierer“-Nachricht, ohne Frage oder Antwort davor? */
+    fun ausLeeremGespraech(nachrichten: List<de.frank.jarvis.data.GespeicherteNachricht>): Boolean {
+        val erste = nachrichten.indexOfFirst { it.vonMir }
+        return erste >= 0 && ProgrammiererVorlage.aufgabe(nachrichten[erste].text) != null && nachrichten.take(erste).none { it.art == "antwort" }
+    }
 }
