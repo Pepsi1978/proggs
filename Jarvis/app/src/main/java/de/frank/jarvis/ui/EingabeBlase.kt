@@ -228,7 +228,9 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 if (kompakt) { vm.eingabeKompakt = false; vm.entwurfFokus = true } else { tastatur?.hide(); vm.eingabeKompakt = true }
             }, contentAlignment = Alignment.CenterEnd) {
             // Eingeklappt ist kein Feld mit Platzhalter zu sehen: Aufnahme und Mitschrift stehen dann statt des Modells im freien Platz.
-            if (kompakt && (vm.nimmtAuf || vm.schreibtMit)) Text(
+            // Nur fürs Diktier-Mikrofon; Hey Jarvis und der Gesprächsmodus lassen die Modellwahl stehen.
+            val feldDiktat = (vm.nimmtAuf && vm.diktatInsFeld) || (vm.schreibtMit && vm.feldMitschrift)
+            if (kompakt && feldDiktat) Text(
                 if (vm.nimmtAuf) "Ich höre zu …" else "Schreibe mit …",
                 color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                 modifier = Modifier.padding(horizontal = 8.dp),

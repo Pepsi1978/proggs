@@ -805,7 +805,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
     private var diktatZiel: ((String) -> Unit)? = null
     /** Die laufende Aufnahme kam vom Diktier-Mikrofon der Eingabeblase: Der Text geht ins Feld statt direkt an Jarvis. */
-    private var diktatInsFeld = false
+    var diktatInsFeld by mutableStateOf(false); private set
+    /** Die laufende Mitschrift stammt vom Diktier-Mikrofon und geht ins Feld (für „Schreibe mit …“ in der eingeklappten Blase). */
+    var feldMitschrift by mutableStateOf(false); private set
 
     // ---- Eingabeblase: Entwurf, Anhänge, Diktat ----
 
@@ -1512,7 +1514,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
-                if (!aufnahmeStarten()) { diktatZiel = null; meldung = "Die Aufnahme ließ sich nicht starten." }
+                if (!aufnahmeStarten()) { diktatZiel = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
                 else {
                     de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
                     // Laufende Musik pausiert fürs Diktat, sonst landet sie in der Mitschrift.
@@ -1557,7 +1559,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         nimmtAuf = false
         freihaendig = false
         schreibtMit = false
+        feldMitschrift = false
         diktatZiel = null
+        diktatInsFeld = false
         Logbuch.sprache("Aufnahme verworfen", "Session von Hand gewechselt")
         return viewModelScope.launch {
             mikro.stop()
@@ -1808,6 +1812,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
         // Das Diktier-Mikrofon der Eingabeblase schreibt ins Feld, Hey Jarvis und der Gesprächsmodus senden weiter direkt.
         val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld }
+        feldMitschrift = ziel != null && diktatInsFeld
         diktatZiel = null
         diktatInsFeld = false
         mitschriftJob = viewModelScope.launch {
@@ -1849,6 +1854,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 meldung = e.message ?: "Die Aufnahme konnte nicht in Text umgewandelt werden."
             } finally {
                 schreibtMit = false
+                feldMitschrift = false
             }
         }
     }
