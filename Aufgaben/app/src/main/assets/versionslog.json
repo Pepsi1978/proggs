@@ -44,6 +44,7 @@
     {"versionCode": 40, "versionName": "1.0.39", "stand": "22.10.2026, 11:50 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar."},
     {"versionCode": 41, "versionName": "1.0.40", "stand": "22.10.2026, 12:07 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural, auch für vorgelesene Erinnerungen; Stimmen per langem Drücken als Favorit oben anheften."},
     {"versionCode": 42, "versionName": "1.0.41", "stand": "22.10.2026, 12:44 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."},
-    {"versionCode": 43, "versionName": "1.0.42", "stand": "24.10.2026, 19:37 Uhr", "notiz": "Neuer Bereich Ziele unter Später: Aufgaben aus der App Ziele stehen dort eingerückt unter ihrem Ziel, oben liest ein Lautsprecher alle Aufgaben samt Inhalt vor, und der Hell-Dunkel-Schalter ist überall oben erreichbar."}
+    {"versionCode": 43, "versionName": "1.0.42", "stand": "24.10.2026, 19:37 Uhr", "notiz": "Neuer Bereich Ziele unter Später: Aufgaben aus der App Ziele stehen dort eingerückt unter ihrem Ziel, oben liest ein Lautsprecher alle Aufgaben samt Inhalt vor, und der Hell-Dunkel-Schalter ist überall oben erreichbar."},
+    {"versionCode": 44, "versionName": "1.0.43", "stand": "24.10.2026, 19:46 Uhr", "notiz": "Feinschliff nach dem Review: Zielgruppen behalten ihren Aufklapp-Zustand, der Hell-Dunkel-Knopf hat überall die richtige Größe, und ein geändertes Ziel-Symbol kommt aus der App Ziele an."}
   ]
 }

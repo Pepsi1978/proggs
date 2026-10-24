@@ -130,7 +130,8 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                 Text(if (neu) "Neu" else "Aufgabe", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f).padding(start = 8.dp))
                 ModusKnopf(vm)
                 RundKnopf(if (vm.sprichtId == "editor") Icons.Rounded.StopCircle else Icons.Rounded.VolumeUp, "Aufgabe vorlesen") {
-                    vm.vorlesen("editor", listOf(vm.eTitel, vm.eText).filter { it.isNotBlank() }.joinToString(". "))
+                    val text = listOf(vm.eTitel, vm.eText).filter { it.isNotBlank() }.joinToString(". ")
+                    if (text.isBlank() && vm.sprichtId != "editor") vm.melde("Noch nichts zum Vorlesen.") else vm.vorlesen("editor", text)
                 }
                 if (!neu) RundKnopf(Icons.Rounded.SelfImprovement, "Fokus starten") { vm.eId?.let { vm.speichern(); vm.fokusStarten(it) } }
                 RundKnopf(if (neu) Icons.Rounded.Close else Icons.Rounded.DeleteOutline, if (neu) "Verwerfen" else "Löschen") {

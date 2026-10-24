@@ -276,7 +276,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 aktionen = { VorlesenKnopf(vm, "bereich_ziele") { vm.bereichVorlesen("ziele", "Ziele", zielAufgaben, mitDatum = true) } },
             ) {
                 if (b.nachZiel.isEmpty()) LeerHinweis(Icons.Rounded.Flag, "Noch keine Aufgaben aus der App Ziele. Übernimm dort eine Aufgabe mit dem Plus.")
-                b.nachZiel.forEach { liste -> ZielGruppe(vm, liste, heute, zustand) }
+                b.nachZiel.forEach { liste -> androidx.compose.runtime.key(liste.first().zielId) { ZielGruppe(vm, liste, heute, zustand) } }
             }
             if (b.demnaechst.isNotEmpty()) Sektion(
                 "demnaechst", "Demnächst", Icons.Rounded.Event, f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
@@ -305,7 +305,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 Spacer(Modifier.width(10.dp))
                 ModusKnopf(vm, 38.dp)
                 Spacer(Modifier.width(6.dp))
-                RundKnopf(if (vm.sprichtId == "alle") Icons.Rounded.StopCircle else Icons.Rounded.VolumeUp, "Alle Aufgaben vorlesen", 38.dp) { vm.alleVorlesen(b) }
+                RundKnopf(if (vm.sprichtId == "alle") Icons.Rounded.StopCircle else Icons.Rounded.VolumeUp, if (vm.sprichtId == "alle") "Vorlesen stoppen" else "Alle Aufgaben vorlesen", 38.dp) { vm.alleVorlesen(b) }
             }
         }
 
@@ -407,7 +407,7 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
     BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp)) {
         val titelBreite = 98.dp
         val fokusPlus = 8.dp
-        val g = ((maxWidth - titelBreite - fokusPlus - 6.dp * 6) / 7).coerceIn(28.dp, 44.dp)
+        val g = ((maxWidth - titelBreite - fokusPlus - 6.dp * 7) / 7).coerceIn(28.dp, 44.dp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             // „Geniale“ klein, „Aufgaben“ groß: Das Hauptwort der App trägt den Titel.
             Column(Modifier.weight(1f).padding(start = 2.dp)) {
@@ -449,7 +449,7 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
 
 /** Hell → Automatisch (wie das System) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus. Sitzt oben auf jedem Bildschirm. */
 @Composable
-fun ModusKnopf(vm: AppViewModel, groesse: Dp = 44.dp) {
+fun ModusKnopf(vm: AppViewModel, groesse: Dp? = null) {
     val e = vm.einstellungen
     val modus = e.modus
     val icon = when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto }
@@ -459,7 +459,8 @@ fun ModusKnopf(vm: AppViewModel, groesse: Dp = 44.dp) {
         e.modus = neu
         vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
     }
-    if (groesse == 44.dp) RundKnopf(icon, text, aktion) else RundKnopf(icon, text, groesse, aktion)
+    // Ohne Größe der Standardknopf der Unterseiten; mit Größe genau so groß wie die übrigen Kopfknöpfe (auch bei 44 dp).
+    if (groesse == null) RundKnopf(icon, text, aktion) else RundKnopf(icon, text, groesse, aktion)
 }
 
 /** Runder Glas-Knopf der Kopfzeile in frei wählbarer Größe; das Symbol wächst mit. */

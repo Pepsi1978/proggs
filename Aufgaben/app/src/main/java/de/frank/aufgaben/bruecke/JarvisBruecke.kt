@@ -237,6 +237,7 @@ class JarvisBruecke : ContentProvider() {
         .put("schritte", JSONArray(a.schritte.map { JSONObject().put("text", it.text).put("erledigt", it.erledigt) }))
         .put("ziel_id", a.zielId ?: JSONObject.NULL)
         .put("ziel_titel", a.zielTitel)
+        .put("ziel_symbol", a.zielSymbol)
 
     private fun ohne(wert: String): Boolean = wert.trim().lowercase(Locale.GERMAN) in setOf("", "ohne", "kein", "keine", "null", "none")
 
