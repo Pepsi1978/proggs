@@ -2346,6 +2346,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Von Hand (Knopf, Seitenleiste, Löschen): Aufnahme und Gesprächsmodus der alten Session enden.
         aufnahmeVerwerfen()
         gespraechLeeren()
+        eingabeKompakt = true
     }
 
     /** Neues, leeres Gespräch im Projekt [projektId]: Es landet mit der ersten Nachricht in dessen Bereich der Seitenleiste. */
@@ -2470,6 +2471,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (id == sitzungId) return
         // Von Hand gewechselt: Aufnahme, Mitschrift und Gesprächsmodus der alten Session enden sofort, nicht erst nach dem Laden.
         aufnahmeVerwerfen()
+        eingabeKompakt = true
         viewModelScope.launch { sitzungLaden(id) }
     }
 
