@@ -497,6 +497,9 @@ final class ProgrammViewModel {
         switch eintrag.art {
         case "brew":
             if let formel = eintrag.formel, !formel.istLeer { return "brew upgrade " + formel }
+            if let installer = eintrag.updateArgumente, !installer.istLeer {
+                return "brew fetch --cask " + (eintrag.cask ?? "?") + " + Installer " + installer
+            }
             return "brew install --cask --force " + (eintrag.cask ?? "?")
         case "cli":
             return Pfade.aufloesen(CliAktualisierer.updateExe(eintrag)) + " " + (eintrag.updateArgumente ?? "update")

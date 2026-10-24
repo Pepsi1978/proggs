@@ -149,7 +149,17 @@ struct BrewAktualisierer: Aktualisierer {
         // Ueber brew installierte Apps werden aktualisiert; alle anderen ersetzt `--force`. `--adopt`
         // waere der saubere Weg, scheitert aber, sobald die installierte Version von der des Casks
         // abweicht -- und genau das ist hier immer der Fall.
-        let ueberBrew = await istUeberBrewInstalliert(cask)
+        let infoJson = await infoLauf(["info", "--cask", cask, "--json=v2"]).ausgabe
+
+        // Casks mit `installer manual:` (Windscribe) legen nur einen Installer in den Caskroom, die App
+        // bleibt alt. `brew upgrade` waere hier schaedlich: es fuehrt die `delete`-Anweisungen des alten
+        // Casks aus und loescht App und Helfer, ohne die neue App zu installieren. Deshalb nur laden.
+        if let manuell = manuellerInstallerName(infoJson) {
+            let verfuegbar = Versionen.caskBereinigen(caskInfo(infoJson)?.version ?? "")
+            return await manuellAktualisieren(eintrag, cask, manuell, verfuegbar: verfuegbar, protokoll)
+        }
+
+        let ueberBrew = caskInfo(infoJson)?.installiert != nil
         let argumente = ueberBrew
             ? ["upgrade", "--cask", cask]
             : ["install", "--cask", "--force", cask]
@@ -161,16 +171,6 @@ struct BrewAktualisierer: Aktualisierer {
 
         if lauf.abgelaufen {
             return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
-        }
-
-        // Casks mit `installer manual:` (Windscribe) laden nur den Installer in den Caskroom -- die App
-        // bleibt alt, und ab dann meldet `brew upgrade` "already installed". Den Installer selbst starten.
-        if let installer = await manuellerInstaller(cask) {
-            if lauf.exitCode != 0 && !istBereitsAktuell(lauf.ausgabe) {
-                return PruefErgebnis(zustand: .fehler, meldung: fehlergrund(lauf.ausgabe, exitCode: lauf.exitCode),
-                                     protokoll: lauf.ausgabe)
-            }
-            return await installerAusfuehren(eintrag, installer, protokoll)
         }
 
         if istBereitsAktuell(lauf.ausgabe) {
@@ -340,42 +340,92 @@ struct BrewAktualisierer: Aktualisierer {
         return CaskInfo(version: version, installiert: installiert)
     }
 
-    /// Pfad des Installers, den ein Cask mit `installer manual:` in den Caskroom legt; nil bei normalen Casks.
-    private func manuellerInstaller(_ cask: String) async -> String? {
-        let lauf = await infoLauf(["info", "--cask", cask, "--json=v2"])
-        guard let daten = lauf.ausgabe.data(using: .utf8),
+    /// Name des Installers bei Casks mit `installer manual:` ("WindscribeInstaller.app"); nil bei normalen Casks.
+    private func manuellerInstallerName(_ json: String) -> String? {
+        guard let daten = json.data(using: .utf8),
               let wurzel = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
               let erstes = (wurzel["casks"] as? [[String: Any]])?.first,
-              let installiert = erstes["installed"] as? String,
               let artefakte = erstes["artifacts"] as? [[String: Any]] else { return nil }
-        let manuell = artefakte
+        return artefakte
             .compactMap { $0["installer"] as? [[String: Any]] }
             .flatMap { $0 }
             .compactMap { $0["manual"] as? String }
             .first
-        guard let manuell else { return nil }
-        let caskroom = ((Pfade.brew as NSString).deletingLastPathComponent as NSString)
-            .deletingLastPathComponent + "/Caskroom"
-        return [caskroom, cask, installiert, manuell].joined(separator: "/")
     }
 
-    /// Startet den Installer direkt (nicht ueber `open`), damit das Ende abgewartet werden kann.
+    /// `brew fetch` laedt nur herunter und laesst die installierte App unangetastet. Das Image oeffnet
+    /// die Zentrale selbst und startet den Installer direkt (nicht ueber `open`), um sein Ende abzuwarten.
     /// Windscribe: `-update` klickt "Installieren" selbst, beendet die alte App und startet die neue.
-    private func installerAusfuehren(_ eintrag: ProgrammEintrag, _ installer: String,
-                                     _ protokoll: Fortschritt) async -> PruefErgebnis {
+    private func manuellAktualisieren(_ eintrag: ProgrammEintrag, _ cask: String, _ manuell: String,
+                                      verfuegbar: String, _ protokoll: Fortschritt) async -> PruefErgebnis {
+        let stand = await installierteVersion(eintrag)
+        if !verfuegbar.istLeer, !stand.istLeer, !Versionen.istNeuer(verfuegbar, als: stand) {
+            return PruefErgebnis(zustand: .aktuell, installierteVersion: stand, meldung: "War bereits aktuell.")
+        }
+
+        let zeitlimit = TimeInterval(eintrag.zeitlimitMinuten * 60)
+        protokoll.berichte("brew fetch --cask \(cask)")
+        let laden = await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask], zeitlimit: zeitlimit)
+        protokoll.berichte(laden.ausgabe)
+        if laden.abgelaufen {
+            return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit beim Herunterladen überschritten.",
+                                 protokoll: laden.ausgabe)
+        }
+        if laden.exitCode != 0 {
+            return PruefErgebnis(zustand: .fehler, meldung: fehlergrund(laden.ausgabe, exitCode: laden.exitCode),
+                                 protokoll: laden.ausgabe)
+        }
+
+        let cache = await infoLauf(["--cache", "--cask", cask]).ausgabe
+        guard let datei = cache.split(separator: "\n").map({ String($0).trimmed }).last(where: { $0.hasPrefix("/") }),
+              FileManager.default.fileExists(atPath: datei) else {
+            return PruefErgebnis(zustand: .fehler, meldung: "Heruntergeladene Datei nicht gefunden.", protokoll: cache)
+        }
+
+        let ordner = FileManager.default.temporaryDirectory
+            .appendingPathComponent("UpdaterZentrale-\(cask)-\(UUID().uuidString)").path
+        try? FileManager.default.createDirectory(atPath: ordner, withIntermediateDirectories: true)
+        let istImage = datei.lowercased().hasSuffix(".dmg")
+        defer { try? FileManager.default.removeItem(atPath: ordner) }
+
+        let auspacken: BefehlErgebnis
+        if istImage {
+            auspacken = await Kommandozeile.ausfuehren(
+                "/usr/bin/hdiutil", ["attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", ordner, datei],
+                zeitlimit: 300)
+        } else {
+            auspacken = await Kommandozeile.ausfuehren("/usr/bin/ditto", ["-x", "-k", datei, ordner], zeitlimit: 300)
+        }
+        if auspacken.exitCode != 0 {
+            return PruefErgebnis(zustand: .fehler, meldung: "Download ließ sich nicht öffnen (\(datei)).",
+                                 protokoll: auspacken.ausgabe)
+        }
+
+        let ergebnis = await installerStarten(eintrag, ordner + "/" + manuell, zeitlimit: zeitlimit, protokoll)
+        if istImage {
+            _ = await Kommandozeile.ausfuehren("/usr/bin/hdiutil", ["detach", ordner, "-force"], zeitlimit: 60)
+        }
+        return ergebnis
+    }
+
+    private func installerStarten(_ eintrag: ProgrammEintrag, _ installer: String, zeitlimit: TimeInterval,
+                                  _ protokoll: Fortschritt) async -> PruefErgebnis {
         var programm = installer
         if installer.hasSuffix(".app") {
             let name = (NSDictionary(contentsOfFile: installer + "/Contents/Info.plist")?["CFBundleExecutable"]
                         as? String) ?? ""
-            programm = installer + "/Contents/MacOS/" + name
+            programm = name.istLeer ? "" : installer + "/Contents/MacOS/" + name
         }
-        guard FileManager.default.isExecutableFile(atPath: programm) else {
+        var istOrdner: ObjCBool = false
+        guard !programm.istLeer,
+              FileManager.default.fileExists(atPath: programm, isDirectory: &istOrdner), !istOrdner.boolValue,
+              FileManager.default.isExecutableFile(atPath: programm) else {
             return PruefErgebnis(zustand: .fehler, meldung: "Installer nicht gefunden: \(installer)")
         }
+
         let argumente = eintrag.updateArgumente ?? ""
         protokoll.berichte("Installer: \(programm) \(argumente)")
-        let lauf = await Kommandozeile.ausfuehren(
-            programm, argumente, zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60))
+        let lauf = await Kommandozeile.ausfuehren(programm, argumente, zeitlimit: zeitlimit)
         if !lauf.ausgabe.istLeer { protokoll.berichte(lauf.ausgabe) }
         if lauf.abgelaufen {
             return PruefErgebnis(zustand: .fehler, meldung: "Installer: Zeitlimit überschritten.", protokoll: lauf.ausgabe)
@@ -387,12 +437,6 @@ struct BrewAktualisierer: Aktualisierer {
         let neu = await fingerabdruck(eintrag)
         return PruefErgebnis(zustand: .fertig, installierteVersion: neu,
                              meldung: "Update installiert.", protokoll: lauf.ausgabe)
-    }
-
-    private func istUeberBrewInstalliert(_ cask: String) async -> Bool {
-        let lauf = await Kommandozeile.ausfuehren(Pfade.brew, ["info", "--cask", cask, "--json=v2"],
-                                                  zeitlimit: 120)
-        return caskInfo(lauf.ausgabe)?.installiert != nil
     }
 
     private func istBereitsAktuell(_ ausgabe: String) -> Bool {

@@ -951,7 +951,7 @@
       "prozesse": [],
       "helferProzesse": [],
       "beendenVorUpdate": true,
-      "neuStartenNachUpdate": true,
+      "neuStartenNachUpdate": false,
       "akzent": "#0F2C49",
       "hinweis": "Die VPN-Verbindung bricht während des Updates kurz ab.",
       "cliRisiko": "Die VPN-Verbindung bricht während des Updates ab: laufende API-Anfragen der CLI-Sitzungen (Claude, Codex) können dabei abreißen."
