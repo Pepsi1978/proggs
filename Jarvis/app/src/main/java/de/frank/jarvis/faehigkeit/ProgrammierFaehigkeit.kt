@@ -500,6 +500,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         karten.entries.removeIf { jetzt - it.value.zeit > KARTEN_HALTEN_MS }
         karten[id] = Karte(w.gespraech, frage, optionen, jetzt, ausRunde = vorgaenger == null, vorgaenger = vorgaenger)
         offeneWahlen[id] = w
+        // Eine neue Modellfrage löst die Knöpfe älterer Wahlen desselben Gesprächs ab.
+        val aelter = if (vorgaenger == null) karten.filter { it.key != id && it.value.gespraech == w.gespraech }.keys else emptySet()
+        frischeWahlen.update { it - aelter + id }
         wahlStand.update { it + (id to WAHL_OFFEN) }
         wahlenSichern(app)
         ProgrammierChat.poste(app, w.gespraech, frage, ProgrammierChat.ART_MODELLWAHL, kartenKontext(id, w.app, optionen))
@@ -517,7 +520,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             kotlinx.coroutines.withTimeoutOrNull(KNOPF_FRIST_MS) {
                 while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise && wahlNochOffen(id)) kotlinx.coroutines.delay(1_000L)
             } ?: return@launch
-            if (!wahlNochOffen(id)) return@launch
+            if (!wahlNochOffen(id) || id !in frischeWahlen.value) return@launch
             Logbuch.system("Modellwahl-Erinnerung", id)
             val p = de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE)
             de.frank.jarvis.speech.Ansage.sprichUndWarte(app, "modellwahl", "Modellwahl", ERINNERUNG_TEXT, p.lautstaerke, p.stimmWahl)
@@ -1720,6 +1723,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Das Ziel ist gerade nicht erreichbar; es wurde nichts gestartet. */
     class NichtDa(grund: String) : Exception(grund)
 
+    /** Der PC hat den Auftrag abgeholt, den Start aber noch nicht bestätigt: läuft vermutlich, nicht neu starten. */
+    class Unbestaetigt(val rechner: String) : Exception("Start auf $rechner noch unbestätigt")
+
     /** Wohin ein Programmierauftrag gehen kann. */
     interface ProgrammierZiel {
         val name: String
@@ -1756,15 +1762,19 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 throw NichtDa("Der Jarvis-Server war nicht erreichbar, deshalb die Cloud.")
             }
             val antwort = runCatching { JSONObject(roh) }.getOrDefault(JSONObject())
+            // Abgeholt, aber die Startbestätigung kam nicht in der Frist des Relays (Brücke langsam, am 24.10.2026 51 s): läuft
+            // vermutlich. Nie „nicht gestartet“ und nie die Cloud; die späte Quittung reicht der Relay als Meldung nach.
+            if (code in 200..299 && antwort.optBoolean("unbestaetigt")) throw Unbestaetigt(antwort.optString("rechner").ifEmpty { "dem PC" })
             when {
                 // OpenCode gibt es nur am Windows-PC: kein Ersatz in Codex Cloud.
                 openCode && code == 409 -> throw IllegalStateException("Der Windows-PC fragt gerade nicht ab; OpenCode CLI läuft nur dort. Mit Codex CLI ginge Sol 6.1 in Codex Cloud.")
                 // Sol nie still als Opus in die Claude-Code-Routine: Ist der Windows-PC aus, übernimmt Codex Cloud (nächstes Ziel).
                 sol && code == 409 -> throw NichtDa("Der Windows-PC fragt gerade nicht ab, deshalb Sol 6.1 in Codex Cloud.")
-                sol && code == 504 -> throw IllegalStateException("Der Windows-PC hat den Sol-Start nicht bestätigt. Bitte am PC nachsehen; mit ziel=cloud ginge Sol in Codex Cloud.")
+                // 504 heißt seit Relay-Stand 24.10.2026: nicht abgeholt, also sicher nicht gestartet (und startet auch nicht mehr).
+                sol && code == 504 -> throw IllegalStateException("Der Windows-PC hat den Sol-Auftrag nicht abgeholt, er ist nicht gestartet. Bitte am PC nachsehen; mit ziel=cloud ginge Sol in Codex Cloud.")
                 sol && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Rechner konnte die Sol-Sitzung nicht starten." })
                 code == 409 -> throw NichtDa("Der PC ist nicht an, deshalb die Cloud.")
-                code == 504 -> throw IllegalStateException("Der PC hat den Start nicht bestätigt. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
+                code == 504 -> throw IllegalStateException("Der PC hat den Auftrag nicht abgeholt, er ist nicht gestartet. Bitte am PC nachsehen; mit ziel=cloud geht der Auftrag in die Cloud.")
                 code !in 200..299 -> throw IllegalStateException("HTTP $code vom Jarvis-Server")
                 // Nicht angemeldet: kein Start und bewusst keine Cloud (Frank soll sich anmelden, nicht unbemerkt woanders landen).
                 antwort.optBoolean("anmeldung_fehlt") -> {
@@ -2011,11 +2021,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private val erinnerungen = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
         private const val ERINNERUNG_NACH_MS = 30_000L
         private const val ERINNERUNG_TEXT = "Welches Modell möchtest du verwenden: Claude Opus 5.5 oder Sol 6.1?"
-        /** Seit wann diese App läuft: Wahlen von davor (nach einem Neustart zurückgeladen) bekommen unten keine Knöpfe mehr. */
-        private val PROZESS_START = System.currentTimeMillis()
-        /** Offene Wahl, die in diesem App-Lauf gestellt wurde (Franks Wunsch vom 24.10.2026: Knöpfe erst nach dem Abschicken). */
-        fun wahlFrisch(id: String) = (offeneWahlen[id]?.seit ?: 0L) >= PROZESS_START
-        private fun wahlNochOffen(id: String) =wahlStand.value[id] == WAHL_OFFEN && offeneWahlen.containsKey(id) && id !in tippInArbeit
+        /**
+         * Wahlen, die unten Knöpfe bekommen (Franks Wunsch vom 24.10.2026: erst nach dem Abschicken): nur die jüngste Modellfrage je
+         * Gespräch samt ihren Folgefragen. Nach einem Neustart nur, was höchstens [FRISCH_NACH_NEUSTART_MS] alt ist; liegengebliebene
+         * Wahlen bleiben per Sprache wählbar, zeigen aber keine Knöpfe und erinnern nicht mehr hörbar.
+         */
+        val frischeWahlen = kotlinx.coroutines.flow.MutableStateFlow<Set<String>>(emptySet())
+        private const val FRISCH_NACH_NEUSTART_MS = 10 * 60_000L
+        private fun wahlNochOffen(id: String) = wahlStand.value[id] == WAHL_OFFEN && offeneWahlen.containsKey(id) && id !in tippInArbeit
 
         /** Das Gespräch, in dem die Karte [wahlId] steht (leer, wenn unbekannt). */
         fun gespraechDerKarte(wahlId: String): String = karten[wahlId]?.gespraech.orEmpty()
@@ -2086,6 +2099,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val jetzt = System.currentTimeMillis()
                 val liste = JSONArray(roh)
                 val stand = HashMap<String, String>()
+                val frisch = HashSet<String>()
                 for (i in 0 until liste.length()) {
                     val o = liste.optJSONObject(i) ?: continue
                     val id = o.optString("id")
@@ -2103,8 +2117,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     karten.putIfAbsent(id, Karte(o.optString("gespraech"), o.optString("frage"), optionen, zeit, ausRunde = false,
                         vorgaenger = o.optString("vorgaenger").ifEmpty { null }))
                     if (s == WAHL_OFFEN && w != null) offeneWahlen.putIfAbsent(id, w)
+                    if (s == WAHL_OFFEN && w != null && jetzt - w.seit in 0 until FRISCH_NACH_NEUSTART_MS) frisch += id
                     stand[id] = s
                 }
+                frischeWahlen.update { it + frisch }
                 wahlStand.update { stand + it }
             }.onFailure { Logbuch.fehler("Auswahlkarten laden", it) }
         }
