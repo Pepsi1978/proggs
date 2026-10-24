@@ -370,7 +370,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         var loeschenZiel by remember { mutableStateOf<String?>(null) }
         if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
             SchwebeSymbol("Gespräch löschen", false, { loeschenZiel = vm.sitzungId.orEmpty() }) {
-                Icon(Icons.Rounded.Delete, null, tint = f.text, modifier = Modifier.size(24.dp))
+                Icon(Icons.Rounded.Delete, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
             }
             Spacer(Modifier.height(SCHWEBE_ABSTAND))
         }

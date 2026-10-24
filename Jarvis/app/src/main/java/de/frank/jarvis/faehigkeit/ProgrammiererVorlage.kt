@@ -15,6 +15,10 @@ object ProgrammiererVorlage {
         else -> "$VORSPANN ${entwurf.trim()}"
     }
 
+    /** Nimmt genau den Vorspann vorn wieder heraus; Getipptes dahinter bleibt unverändert. */
+    fun entfernen(entwurf: String): String =
+        entwurf.trimStart().takeIf { it.startsWith(VORSPANN) }?.removePrefix(VORSPANN)?.trimStart() ?: entwurf
+
     /** Die Aufgabe hinter dem Vorspann (getrimmt, leer = noch keine); null, wenn [text] nicht mit dem Vorspann beginnt. */
     fun aufgabe(text: String): String? = text.trimStart().takeIf { it.startsWith(VORSPANN) }?.removePrefix(VORSPANN)?.trim()
 

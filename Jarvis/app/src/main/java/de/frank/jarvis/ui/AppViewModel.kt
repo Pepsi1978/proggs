@@ -848,14 +848,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var eingabeKompakt by mutableStateOf(true)
 
     /**
-     * Nach dem Antippen leuchten „Programmierer“, „Nachtrag“ bzw. „Neue Session“ grün, auch wenn danach weiter diktiert oder
-     * eingefügt wird; erst das Abschicken macht sie wieder durchsichtig. So sieht Frank, ob er den Knopf am Anfang gedrückt hat.
+     * „Programmierer“ und „Nachtrag“ leuchten genau dann grün, wenn ihr Vorspann vorn im Entwurf steht (auch beim Weiterdiktieren);
+     * Abschicken oder erneutes Antippen nimmt ihn heraus, dann sind sie wieder durchsichtig. „Neue Session“ leuchtet nach dem Antippen.
      */
-    var programmiererAktiv by mutableStateOf(false); private set
-    var nachtragAktiv by mutableStateOf(false); private set
+    val programmiererAktiv: Boolean get() = entwurf.trimStart().startsWith(ProgrammiererVorlage.VORSPANN)
+    val nachtragAktiv: Boolean get() = entwurf.trimStart().startsWith(NACHTRAG_VORSPANN)
     var neueSessionAktiv by mutableStateOf(false); private set
 
-    private fun knoepfeAus() { programmiererAktiv = false; nachtragAktiv = false; neueSessionAktiv = false }
+    private fun knoepfeAus() { neueSessionAktiv = false }
+
+    /** Nimmt genau „Nachtrag:“ vorn wieder heraus; Getipptes dahinter bleibt unverändert. */
+    private fun ohneNachtragVorspann(text: String) =
+        text.trimStart().takeIf { it.startsWith(NACHTRAG_VORSPANN) }?.removePrefix(NACHTRAG_VORSPANN)?.trimStart() ?: text
 
     /** Zählt bei jedem Antippen von „Neue Session“ hoch; das Symbol leuchtet dann kurz grün auf. */
     var neueSessionBlitz by mutableStateOf(0); private set
@@ -867,26 +871,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         neueSessionBlitz++
     }
 
-    /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */
+    /**
+     * Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil.
+     * Steht er schon drin, nimmt ein erneutes Antippen genau ihn wieder heraus. Ein „Nachtrag:“ vorn weicht ihm.
+     */
     fun programmiererEinsetzen() {
+        if (programmiererAktiv) {
+            entwurf = ProgrammiererVorlage.entfernen(entwurf)
+            if (sitzungId == null) sitzungProgrammierung = false
+            return
+        }
         // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
         if (sitzungId == null) sitzungProgrammierung = true
-        entwurf = ProgrammiererVorlage.einsetzen(entwurf)
+        entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf))
         // Die Blase klappt auf und zeigt den eingesetzten Text.
         eingabeKompakt = false
         entwurfFokus = true
-        programmiererAktiv = true
     }
 
     /** Ist das offene Gespräch ein Programmiergespräch? Dann zeigt das Plus-Menü neben „Programmierer“ den Knopf „+ Nachtrag“. */
     val nachtragMoeglich: Boolean get() = sitzungId?.let { id -> sitzungen.any { it.id == id && it.programmierung } } == true
 
-    /** Plus-Menü „+ Nachtrag“: „Nachtrag:“ vor den Entwurf, Getipptes bleibt dahinter; der Pfeil schickt ihn in die Sitzung. */
+    /**
+     * Plus-Menü „+ Nachtrag“: „Nachtrag:“ vor den Entwurf, Getipptes bleibt dahinter; der Pfeil schickt ihn in die Sitzung.
+     * Steht er schon drin, nimmt ein erneutes Antippen genau ihn wieder heraus. Der Programmierer-Vorspann weicht ihm.
+     */
     fun nachtragEinsetzen() {
-        if (!entwurf.startsWith(NACHTRAG_VORSPANN)) entwurf = "$NACHTRAG_VORSPANN " + entwurf.trimStart()
+        if (nachtragAktiv) { entwurf = ohneNachtragVorspann(entwurf); return }
+        val rest = ProgrammiererVorlage.entfernen(entwurf).trimStart()
+        entwurf = "$NACHTRAG_VORSPANN $rest"
         eingabeKompakt = false
         entwurfFokus = true
-        nachtragAktiv = true
     }
 
     /** Senden mit „Nachtrag:“ vorn: Der Text (ohne den Vorspann) geht direkt als Nachtrag in die Sitzung dieses Gesprächs, ohne Modell. */
