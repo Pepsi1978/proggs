@@ -322,6 +322,7 @@
     { "versionCode": 316, "versionName": "1.8.305", "stand": "24.10.2026, 13:40 Uhr", "notiz": "Bleibt die Modellwahl eines Programmierauftrags 30 Sekunden offen, fragt Jarvis einmal hörbar, ob Claude Opus 5.5 oder Sol 6.1 verwendet werden soll." },
     { "versionCode": 317, "versionName": "1.8.306", "stand": "24.10.2026, 13:43 Uhr", "notiz": "Die Eingabeblase schrumpft nach dem Absenden zu einer kompakten Zeile; Antippen des freien Platzes öffnet sie wieder zum Tippen." },
     { "versionCode": 318, "versionName": "1.8.307", "stand": "24.10.2026, 13:51 Uhr", "notiz": "Die Eingabeblase startet beim Öffnen der App schon als kompakte Zeile und bleibt es, bis du hineintippst oder diktierst." },
-    { "versionCode": 319, "versionName": "1.8.308", "stand": "24.10.2026, 13:54 Uhr", "notiz": "Beim Wechsel in ein anderes oder neues Gespräch ist die Eingabeblase ebenfalls gleich kompakt." }
+    { "versionCode": 319, "versionName": "1.8.308", "stand": "24.10.2026, 13:54 Uhr", "notiz": "Beim Wechsel in ein anderes oder neues Gespräch ist die Eingabeblase ebenfalls gleich kompakt." },
+    { "versionCode": 320, "versionName": "1.8.309", "stand": "24.10.2026, 13:56 Uhr", "notiz": "Ein zweiter Tipp auf den freien Platz der Eingabeblase klappt sie wieder zur kompakten Zeile ein." }
   ]
 }

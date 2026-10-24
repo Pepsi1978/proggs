@@ -162,9 +162,10 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Nach dem Absenden kompakt: nur die untere Zeile. Text im Feld (etwa nach dem Diktat) oder ein Anhang klappen wieder auf.
-        val kompakt = vm.eingabeKompakt && vm.entwurf.isEmpty() && vm.anhaenge.isEmpty()
-        LaunchedEffect(vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty()) {
+        // Nach dem Absenden kompakt: nur die untere Zeile. Neuer Text im Feld (etwa nach dem Diktat) oder ein Anhang klappen wieder auf;
+        // von Hand eingeklappt bleibt ein Entwurf erhalten, bis er sich ändert.
+        val kompakt = vm.eingabeKompakt
+        LaunchedEffect(vm.entwurf, vm.anhaenge.size) {
             if (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty()) vm.eingabeKompakt = false
         }
 
@@ -224,8 +225,10 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
-            // Der freie Platz zwischen Plus und Modell öffnet das Textfeld samt Tastatur (auch aus der kompakten Zeile).
-            Box(Modifier.weight(1f).heightIn(min = 44.dp).antippen { vm.eingabeKompakt = false; vm.entwurfFokus = true }, contentAlignment = Alignment.CenterEnd) {
+            // Der freie Platz zwischen Plus und Modell schaltet um: kompakt → Textfeld samt Tastatur, groß → wieder kompakt.
+            Box(Modifier.weight(1f).heightIn(min = 44.dp).antippen {
+                if (kompakt) { vm.eingabeKompakt = false; vm.entwurfFokus = true } else { tastatur?.hide(); vm.eingabeKompakt = true }
+            }, contentAlignment = Alignment.CenterEnd) {
             // Rechtsbündig im freien Platz, aber begrenzt: zu langer Text kürzt den Modellnamen, statt Mikrofon und Senden hinauszuschieben.
             Row(Modifier.wrapContentWidth(Alignment.End).clip(RoundedCornerShape(12.dp)).antippen { modellOffen = true }.padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
