@@ -104,6 +104,8 @@ data class Vorschlag(
     /** Frank hat den Vorschlag angenommen: gefällt ihm, er will ihn behalten und machen. Nicht erledigt, nicht übernommen. */
     val angenommen: Boolean = false,
     val angenommenAm: Long? = null,
+    /** Frank hat die Aufgabe selbst formuliert (kein KI-Vorschlag): gelber Punkt, bleibt bei jeder Auswertung, belegt keinen Platz. */
+    val eigen: Boolean = false,
     val erstellt: Long = System.currentTimeMillis(),
 ) {
     val gruppe: Kategorie get() = Kategorie.von(kategorie)

@@ -130,7 +130,7 @@ object Auswertung {
 
         // Bei der vollen Auswertung bleiben nur übernommene und ausgeblendete Vorschläge, die übrigen werden ersetzt;
         // Nachfüllen und Rückmeldung behalten alles und ergänzen nur.
-        val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen || it.angenommen } else bisher
+        val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen || it.angenommen || it.eigen } else bisher
         // Freie Plätze je Kategorie: 10 minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
         val freiJe = freiePlaetze(behalten)
         // Alles belegt: keine Recherche, offene Rückmeldungen bleiben offen und fließen in den nächsten Lauf mit freien Plätzen.
@@ -214,6 +214,7 @@ object Auswertung {
                 append("ihr Wortlaut kann sprachlich missglückt sein, nimm ihn nicht als Stilvorbild):\n")
                 behalten.forEach { v ->
                     append("- [").append(v.schluessel).append("] ").append(v.titel)
+                    if (v.eigen) append(" (von Frank selbst angelegt)")
                     append(when { v.verworfen -> " (von Frank verworfen, nichts Ähnliches mehr vorschlagen)"; v.erledigt -> " (erledigt)"; v.aufgabeId != null -> " (übernommen, in Arbeit)"; v.angenommen -> " (von Frank angenommen: gefällt ihm, will er machen)"; else -> " (offener Vorschlag)" })
                     append('\n')
                 }
@@ -374,8 +375,8 @@ object Auswertung {
 
     /** Freie Plätze je Kategorie: offene, sichtbare Vorschläge belegen einen Platz, erledigte und ausgeblendete nicht. */
     fun freiePlaetze(vorschlaege: List<Vorschlag>): Map<Kategorie, Int> = Kategorie.entries.associateWith { k ->
-        // Angenommene belegen keinen Platz: Frank behält sie, und es soll trotzdem Neues nachkommen.
-        (PLAETZE_JE_KATEGORIE - vorschlaege.count { !it.verworfen && !it.erledigt && !it.angenommen && Kategorie.von(it.kategorie) == k }).coerceAtLeast(0)
+        // Angenommene und eigene belegen keinen Platz: Frank behält sie, und es soll trotzdem Neues nachkommen.
+        (PLAETZE_JE_KATEGORIE - vorschlaege.count { !it.verworfen && !it.erledigt && !it.angenommen && !it.eigen && Kategorie.von(it.kategorie) == k }).coerceAtLeast(0)
     }
 
     private fun mengeText(je: Map<Kategorie, Int>): String = Kategorie.entries.joinToString(" und ") { k ->

@@ -467,6 +467,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Eigene Aufgabe: Frank formuliert sie selbst; sie steht neben den KI-Vorschlägen und lässt sich genauso übernehmen. */
+    fun eigeneAufgabe(zielId: Long, titel: String, text: String, kategorie: Kategorie) {
+        val t = titel.trim()
+        if (t.isEmpty()) return
+        viewModelScope.launch {
+            repo.neuerVorschlag(
+                Vorschlag(zielId = zielId, schluessel = "e${System.currentTimeMillis()}", titel = t, text = text.trim(), kategorie = kategorie.name, phase = 1, eigen = true),
+            )
+            melde("Eigene Aufgabe hinzugefügt ✓")
+        }
+    }
+
+    /** Eigene Aufgaben löscht Frank einfach (ohne Sperrliste); Rückgängig holt sie zurück. */
+    fun eigeneLoeschen(v: Vorschlag) {
+        if (!v.eigen) return
+        viewModelScope.launch {
+            val frisch = Abgleich.gesperrt { repo.vorschlag(v.id)?.also { repo.vorschlagLoeschen(it.id) } } ?: return@launch
+            melde("Eigene Aufgabe gelöscht") { viewModelScope.launch { repo.neuerVorschlag(frisch) } }
+        }
+    }
+
     fun ablehnungAufheben(a: Abgelehnt) {
         viewModelScope.launch {
             repo.ablehnungAufheben(a)

@@ -106,6 +106,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     var loeschenFragen by remember { mutableStateOf(false) }
     var verworfeneZeigen by rememberSaveable { mutableStateOf(false) }
     var abgelehnteZeigen by rememberSaveable { mutableStateOf(false) }
+    var eigeneOffen by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -142,6 +143,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
                 item { GruppenKopf(vm, z, Kategorie.UNTERSTUETZEND, hilfe) }
                 items(hilfe, key = { it.id }) { v -> VorschlagKarte(vm, v, schluesselTitel, sortierung, hilfe.indexOf(v) + 1) }
             }
+            item { EigeneAufgabeKnopf { eigeneOffen = true } }
             if (verworfen.isNotEmpty()) item {
                 Row(Modifier.fillMaxWidth().antippen(haptik = false) { verworfeneZeigen = !verworfeneZeigen }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Ausgeblendet (${verworfen.size})", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.weight(1f))
@@ -158,7 +160,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
                     Icon(Icons.AutoMirrored.Rounded.Undo, "Wieder einblenden", tint = f.primaer, modifier = Modifier.size(22.dp).antippen { vm.verwerfen(v, false) })
                 }
             }
-        }
+        } else item { EigeneAufgabeKnopf { eigeneOffen = true } }
         if (abgelehnt.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().antippen(haptik = false) { abgelehnteZeigen = !abgelehnteZeigen }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Abgelehnt (${abgelehnt.size}) · kommt nicht wieder", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.weight(1f))
@@ -191,6 +193,59 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
         text = { Text("„${z.titel}“ und alle Vorschläge werden gelöscht. Aufgaben, die schon in Geniale Aufgaben stehen, bleiben dort.") },
         confirmButton = { TextButton(onClick = { loeschenFragen = false; vm.loeschen(z) }) { Text("Löschen", color = f.gefahr) } },
         dismissButton = { TextButton(onClick = { loeschenFragen = false }) { Text("Abbrechen", color = f.primaer) } },
+    )
+    if (eigeneOffen) EigeneAufgabeDialog(onFertig = { titel, text, k -> vm.eigeneAufgabe(z.id, titel, text, k); eigeneOffen = false }, onAbbrechen = { eigeneOffen = false })
+}
+
+/** Gelber Punkt: Frank hat die Aufgabe selbst angelegt, sie stammt nicht von der KI. */
+private val EIGEN_GELB = Color(0xFFFFD60A)
+
+@Composable
+private fun EigenPunkt(groesse: androidx.compose.ui.unit.Dp = 10.dp) {
+    Box(Modifier.size(groesse).background(EIGEN_GELB, androidx.compose.foundation.shape.CircleShape))
+}
+
+@Composable
+private fun EigeneAufgabeKnopf(onKlick: () -> Unit) {
+    val f = LocalFarben.current
+    Row(
+        Modifier.fillMaxWidth().padding(top = 4.dp).height(50.dp).glas(f, 18.dp, 0.9f, EIGEN_GELB.copy(alpha = 0.10f)).antippen { onKlick() },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(Icons.Rounded.Add, null, tint = f.primaer)
+        Spacer(Modifier.width(8.dp))
+        Text("Eigene Aufgabe hinzufügen", color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(8.dp))
+        EigenPunkt()
+    }
+}
+
+@Composable
+private fun EigeneAufgabeDialog(onFertig: (String, String, Kategorie) -> Unit, onAbbrechen: () -> Unit) {
+    val f = LocalFarben.current
+    var titel by rememberSaveable { mutableStateOf("") }
+    var text by rememberSaveable { mutableStateOf("") }
+    var kategorie by rememberSaveable { mutableStateOf(Kategorie.NOTWENDIG) }
+    @Composable
+    fun Feld(wert: String, hinweis: String, minHoehe: androidx.compose.ui.unit.Dp, aendern: (String) -> Unit) {
+        Box(Modifier.fillMaxWidth().heightIn(min = minHoehe).glas(f, 14.dp, 0.6f, f.flaecheStark).padding(horizontal = 12.dp, vertical = 10.dp)) {
+            if (wert.isEmpty()) Text(hinweis, color = f.textSchwach, fontSize = 15.sp)
+            BasicTextField(wert, aendern, textStyle = TextStyle(color = f.text, fontSize = 15.sp, lineHeight = 21.sp), cursorBrush = SolidColor(f.primaer), modifier = Modifier.fillMaxWidth())
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onAbbrechen,
+        containerColor = f.hgUnten, titleContentColor = f.text, textContentColor = f.text,
+        title = { Row(verticalAlignment = Alignment.CenterVertically) { EigenPunkt(12.dp); Spacer(Modifier.width(10.dp)); Text("Eigene Aufgabe") } },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Feld(titel, "Was willst du tun?", 48.dp) { titel = it }
+                Feld(text, "Details (optional)", 80.dp) { text = it }
+                ChipReihe { Kategorie.entries.forEach { k -> Chip(k.anzeige, kategorie == k) { kategorie = k } } }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onFertig(titel, text, kategorie) }, enabled = titel.isNotBlank()) { Text("Hinzufügen", color = if (titel.isNotBlank()) f.primaer else f.textSchwach) } },
+        dismissButton = { TextButton(onClick = onAbbrechen) { Text("Abbrechen", color = f.textLeise) } },
     )
 }
 
@@ -431,10 +486,12 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (sortierung == Sortierung.REIHENFOLGE) Text("$nummer. ", color = farbe, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    if (v.eigen) Box(Modifier.padding(end = 8.dp)) { EigenPunkt() }
                     if (v.angenommen) Icon(Icons.Rounded.CheckCircle, "Angenommen", tint = f.erfolg, modifier = Modifier.padding(end = 6.dp).size(18.dp))
                     Text(v.titel, color = if (v.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp)) {
+                if (v.eigen) Text("Selbst erstellt", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                else Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp)) {
                     Wichtigkeit(v.wichtigkeit, farbe)
                     Etikett(v.aufwandKlasse.anzeige + " · " + dauerText(v.minuten))
                     Etikett(when (v.phase) { 1 -> "sofort"; 2 -> "bald"; else -> "später" })
@@ -451,8 +508,9 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
                 val vor = v.voraussetzungen.mapNotNull { titelVon[it] }
                 if (vor.isNotEmpty()) Zeile("Vorher", vor.joinToString(" · "))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 4.dp)) {
-                    if (v.aufgabeId == null) Text("Ausblenden", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.antippen { vm.verwerfen(v) })
-                    if (v.aufgabeId == null && !v.angenommen) Text("Ablehnen", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { vm.ablehnen(v) })
+                    if (v.eigen) Text("Löschen", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { vm.eigeneLoeschen(v) })
+                    if (v.aufgabeId == null && !v.eigen) Text("Ausblenden", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.antippen { vm.verwerfen(v) })
+                    if (v.aufgabeId == null && !v.angenommen && !v.eigen) Text("Ablehnen", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { vm.ablehnen(v) })
                     Text(if (vm.sprichtId == "v_${v.id}") "Stopp" else "Vorlesen", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.antippen { vm.vorlesen("v_${v.id}", listOf(v.titel + ".", v.text, v.begruendung).filter { it.isNotBlank() }.joinToString(" ")) })
                 }
@@ -466,7 +524,7 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
 @Composable
 private fun AnnehmenZeile(vm: AppViewModel, v: Vorschlag) {
     val f = LocalFarben.current
-    if (!v.angenommen && (v.aufgabeId != null || v.erledigt)) return
+    if (v.eigen || (!v.angenommen && (v.aufgabeId != null || v.erledigt))) return
     if (v.angenommen) {
         Row(Modifier.fillMaxWidth().padding(top = 6.dp).glas(f, 14.dp, 0.5f, f.erfolg.copy(alpha = 0.16f)).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.CheckCircle, null, tint = f.erfolg, modifier = Modifier.size(20.dp))

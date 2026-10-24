@@ -63,10 +63,10 @@ interface ZieleDao {
     @Query("DELETE FROM vorschlaege WHERE zielId = :zielId")
     suspend fun vorschlaegeLoeschen(zielId: Long)
 
-    @Query("DELETE FROM vorschlaege WHERE zielId = :zielId AND aufgabeId IS NULL AND verworfen = 0 AND angenommen = 0")
+    @Query("DELETE FROM vorschlaege WHERE zielId = :zielId AND aufgabeId IS NULL AND verworfen = 0 AND angenommen = 0 AND eigen = 0")
     suspend fun offeneVorschlaegeLoeschen(zielId: Long)
 
-    /** Neue Auswertung: übernommene, angenommene und verworfene Vorschläge bleiben, die übrigen werden ersetzt. */
+    /** Neue Auswertung: übernommene, angenommene, verworfene und eigene Vorschläge bleiben, die übrigen werden ersetzt. */
     @Transaction
     suspend fun vorschlaegeErsetzen(zielId: Long, neu: List<Vorschlag>) {
         offeneVorschlaegeLoeschen(zielId)
@@ -116,7 +116,7 @@ interface ZieleDao {
     suspend fun rueckmeldungenVerarbeitet(ids: List<Long>)
 }
 
-@Database(entities = [Ziel::class, Vorschlag::class, Abgelehnt::class, Rueckmeldung::class], version = 4, exportSchema = false)
+@Database(entities = [Ziel::class, Vorschlag::class, Abgelehnt::class, Rueckmeldung::class], version = 5, exportSchema = false)
 abstract class ZieleDatenbank : RoomDatabase() {
     abstract fun dao(): ZieleDao
 }
@@ -147,9 +147,16 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/** Version 5: Frank kann eigene Aufgaben anlegen. Bisherige Vorschläge stammen alle von der KI. */
+private val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `vorschlaege` ADD COLUMN `eigen` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 /** Einziger Zugang zu den Daten. Jede Änderung meldet Jarvis und dem Wecker ein Signal, damit sie frisch lesen. */
 class ZieleRepository private constructor(private val app: Context) {
-    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().dao()
+    private val dao = Room.databaseBuilder(app, ZieleDatenbank::class.java, "ziele.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().dao()
 
     val ziele: Flow<List<Ziel>> = dao.alleZiele()
     val vorschlaege: Flow<List<Vorschlag>> = dao.alleVorschlaege()
@@ -201,6 +208,8 @@ class ZieleRepository private constructor(private val app: Context) {
     suspend fun speichere(v: Vorschlag) { dao.speichere(v); signal() }
 
     suspend fun neuerVorschlag(v: Vorschlag): Long = dao.neuerVorschlag(v).also { signal() }
+
+    suspend fun vorschlagLoeschen(id: Long) { dao.vorschlagLoeschen(id); signal() }
 
     suspend fun vorschlaegeErsetzen(zielId: Long, neu: List<Vorschlag>) { dao.vorschlaegeErsetzen(zielId, neu); signal() }
 

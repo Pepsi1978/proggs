@@ -306,6 +306,7 @@ class JarvisBruecke : ContentProvider() {
         .put("erledigt", v.erledigt)
         .put("verworfen", v.verworfen)
         .put("angenommen", v.angenommen)
+        .put("eigen", v.eigen)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
