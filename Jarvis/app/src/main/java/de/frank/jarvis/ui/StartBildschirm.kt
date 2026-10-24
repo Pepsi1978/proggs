@@ -191,9 +191,13 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         LaeuftGerade(vm)
         // Die Stoppuhr erscheint nur, wenn Frank sie über Jarvis startet, und bleibt bis zum Zurücksetzen.
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        // Rechts unten über der Liste schweben Programmierer und, im Programmiergespräch, „+ Nachtrag“; die Liste bekommt
+        // unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
+        val schweber = if (vm.liveAktiv) 0.dp else if (vm.nachtragMoeglich) 96.dp else 50.dp
+        Box(Modifier.weight(1f).fillMaxWidth()) {
         LazyColumn(
-            Modifier.weight(1f).fillMaxWidth().nestedScroll(nachOben), state = liste,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp + schweber),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (offen > 0) item(key = "einrichtung") {
@@ -275,6 +279,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     Text(vm.schritt.ifEmpty { "Jarvis denkt" } + " …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
                 }
             }
+        }
+        if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = 27.dp, bottom = 2.dp))
         }
         // Die Eingabeblase wie in der ChatGPT-App: Text, Plus-Menü, Modell, Diktat und Live-Gespräch.
         EingabeBlase(vm)
