@@ -361,7 +361,7 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compo
 
 /**
  * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel, alle im selben Abstand untereinander ohne Lücke:
- * oben der Papierkorb „Gespräch löschen“, darunter „Neue Session“, direkt darunter, nur im Programmiergespräch, ein Plus
+ * oben „Neue Session“, darunter der Papierkorb „Gespräch löschen“, direkt darunter, nur im Programmiergespräch, ein Plus
  * (wie Plus → „+ Nachtrag“) und als letztes das Programmier-Symbol (wie Plus → „Programmierer“). Darunter bis zur Eingabeblase
  * eine freie Bubble Platz, damit „Neue Session“ und der Papierkorb an ihrer Stelle bleiben. Ohne Blase, nur ein kleiner,
  * leicht schimmernder, durchscheinender Grund.
@@ -370,7 +370,17 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compo
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     Column(modifier, horizontalAlignment = Alignment.End) {
-        // Aktuelles Gespräch löschen, direkt über „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
+        // „Neue Session“: Sprechblase im selben durchscheinenden Schwarz wie der Papierkorb, mit weißem Kreuz. Antippen lässt sie kurz
+        // grün aufleuchten; kommt danach etwas in den Entwurf, bleibt sie grün, solange es dort steht.
+        val sessionGruen = vm.neueSessionAktiv && (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty())
+        SchwebeSymbol("Neue Session", sessionGruen, { vm.neueSessionTippen() }, blitz = vm.neueSessionBlitz) {
+            Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.ChatBubble, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.fillMaxSize())
+                Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(17.dp).offset(y = (-2).dp))
+            }
+        }
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        // Aktuelles Gespräch löschen, direkt unter „Neue Session“: verschwindet danach auch aus der Gesprächsleiste.
         // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
         var loeschenZiel by remember { mutableStateOf<String?>(null) }
         if (vm.gespraech.isNotEmpty() || vm.sitzungId != null) {
@@ -396,17 +406,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenZiel = null }) { Text("Abbrechen") } },
         ) }
-        // „Neue Session“: Sprechblase im selben durchscheinenden Schwarz wie der Papierkorb, mit weißem Kreuz. Antippen lässt sie kurz
-        // grün aufleuchten; kommt danach etwas in den Entwurf, bleibt sie grün, solange es dort steht.
-        val sessionGruen = vm.neueSessionAktiv && (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty())
-        SchwebeSymbol("Neue Session", sessionGruen, { vm.neueSessionTippen() }, blitz = vm.neueSessionBlitz) {
-            Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.ChatBubble, null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.fillMaxSize())
-                Icon(Icons.Rounded.Add, null, tint = Color.White, modifier = Modifier.size(17.dp).offset(y = (-2).dp))
-            }
-        }
-        // Nachtrag und Programmierauftrag schließen direkt unter „Neue Session“ an, im selben Abstand wie die übrigen Symbole.
-        Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        // Nachtrag und Programmierauftrag schließen direkt unter „Neue Session“ und dem Papierkorb an, im selben Abstand wie die übrigen Symbole.
         if (vm.nachtragMoeglich) {
             SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
                 Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))

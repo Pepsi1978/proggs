@@ -338,7 +338,7 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         // „Neue Session“ steht nicht mehr hier, sondern schwebend rechts über der Eingabeblase (ProgrammierSchweber).
-        // Der Papierkorb „Gespräch löschen“ steht ebenfalls im Schwebestapel, direkt über „Neue Session“.
+        // Der Papierkorb „Gespräch löschen“ steht ebenfalls im Schwebestapel, direkt unter „Neue Session“.
         // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
         Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
             val ids = de.frank.jarvis.ui.theme.DESIGNS
