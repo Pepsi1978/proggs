@@ -13,6 +13,8 @@ final class ProgrammKarteView: KartenView {
 
     // Kopfzeile
     private let nameBeschriftung: ThemedLabel
+    /// Schutzfilter: dieses Update kann laufende CLI-Sitzungen beenden (Grund im Tooltip).
+    private let cliWarnung: ThemedLabel
     private let artPlakette: PlakettenView
     private let laeuftPlakette: PlakettenView
     private let autostartPlakette: PlakettenView
@@ -25,11 +27,14 @@ final class ProgrammKarteView: KartenView {
     private let zustandBeschriftung: ThemedLabel
     private let versionBeschriftung: ThemedLabel
     private let statusBeschriftung: ThemedLabel
+    /// Wie lange ein Update dieses Programms dauert: gemessen oder geschaetzt.
+    private let dauerBeschriftung: ThemedLabel
     private let berichtBeschriftung: ThemedLabel
 
     // Bänder
     private let uebernahmeBand = FlaechenView(ton: .autostart, eckenRadius: 7)
     private let uebernahmeText: ThemedLabel
+    private var uebernahmeStartenSchalter: Schalter?
     private let fehlerBand = FlaechenView(ton: .fehler, eckenRadius: 7)
     private let fehlerText: ThemedLabel
 
@@ -43,6 +48,7 @@ final class ProgrammKarteView: KartenView {
         self.modell = modell
 
         nameBeschriftung = UI.beschriftung(modell.name, groesse: 14, gewicht: .semibold, einzeilig: true)
+        cliWarnung = UI.beschriftung("⚠", groesse: 15, rolle: .fest, einzeilig: true)
         artPlakette = PlakettenView(text: modell.artText, ton: .plakette)
         laeuftPlakette = PlakettenView(text: "läuft gerade", ton: .laeuft)
         autostartPlakette = PlakettenView(text: "Autostart", ton: .autostart)
@@ -53,6 +59,7 @@ final class ProgrammKarteView: KartenView {
         zustandBeschriftung = UI.beschriftung("", groesse: 11, gewicht: .semibold, rolle: .fest, einzeilig: true)
         versionBeschriftung = UI.beschriftung("–", groesse: 12, rolle: .leise, mono: true, einzeilig: true)
         statusBeschriftung = UI.beschriftung("", rolle: .leise)
+        dauerBeschriftung = UI.beschriftung("", groesse: 11, rolle: .sehrLeise)
         berichtBeschriftung = UI.beschriftung("", groesse: 11, rolle: .sehrLeise)
 
         uebernahmeText = UI.beschriftung("", groesse: 11, rolle: .fest)
@@ -75,7 +82,9 @@ final class ProgrammKarteView: KartenView {
         addSubview(kennzeichen)
 
         // --- Mitte ---
-        let plakettenReihe = NSStackView(views: [nameBeschriftung, artPlakette, laeuftPlakette, autostartPlakette])
+        cliWarnung.toolTip = modell.cliRisiko
+        cliWarnung.isHidden = !modell.kannCliBeenden
+        let plakettenReihe = NSStackView(views: [nameBeschriftung, cliWarnung, artPlakette, laeuftPlakette, autostartPlakette])
         plakettenReihe.orientation = .horizontal
         plakettenReihe.alignment = .centerY
         plakettenReihe.spacing = 7
@@ -102,10 +111,10 @@ final class ProgrammKarteView: KartenView {
         zustandReihe.spacing = 10
         zustandReihe.translatesAutoresizingMaskIntoConstraints = false
 
-        bandAufbauen(uebernahmeBand, text: uebernahmeText, schalter: [
+        uebernahmeStartenSchalter = bandAufbauen(uebernahmeBand, text: uebernahmeText, schalter: [
             ("Jetzt starten und übernehmen", #selector(startenGeklickt)),
             ("Protokoll öffnen", #selector(protokollGeklickt))
-        ])
+        ]).first
         bandAufbauen(fehlerBand, text: fehlerText, schalter: [
             ("Protokoll öffnen", #selector(protokollGeklickt)),
             ("Ausblenden", #selector(fehlerQuittierenGeklickt))
@@ -113,7 +122,7 @@ final class ProgrammKarteView: KartenView {
 
         let mitte = NSStackView(views: [
             plakettenReihe, beschreibungBeschriftung, hinweisBeschriftung,
-            zustandReihe, statusBeschriftung, berichtBeschriftung,
+            zustandReihe, statusBeschriftung, dauerBeschriftung, berichtBeschriftung,
             uebernahmeBand, fehlerBand
         ])
         mitte.orientation = .vertical
@@ -171,7 +180,7 @@ final class ProgrammKarteView: KartenView {
         // Die Mitte darf waagerecht nicht ueber ihren Platz hinauswachsen, sonst schiebt ein
         // langer Beschreibungstext die Bedienelemente aus dem Fenster.
         for beschriftung in [beschreibungBeschriftung, hinweisBeschriftung, statusBeschriftung,
-                             berichtBeschriftung] {
+                             dauerBeschriftung, berichtBeschriftung] {
             beschriftung.widthAnchor.constraint(equalTo: mitte.widthAnchor).isActive = true
         }
         plakettenReihe.widthAnchor.constraint(lessThanOrEqualTo: mitte.widthAnchor).isActive = true
@@ -180,8 +189,9 @@ final class ProgrammKarteView: KartenView {
     }
 
     /// Ein farbiges Hinweisband mit Text und ein bis zwei Schaltflaechen darunter.
+    @discardableResult
     private func bandAufbauen(_ band: FlaechenView, text: ThemedLabel,
-                              schalter: [(String, Selector)]) {
+                              schalter: [(String, Selector)]) -> [Schalter] {
         let knoepfe = schalter.map { titel, aktion -> Schalter in
             let knopf = Schalter(.leise, titel)
             knopf.schriftgroesse = 11
@@ -212,6 +222,7 @@ final class ProgrammKarteView: KartenView {
             text.widthAnchor.constraint(equalTo: inhalt.widthAnchor)
         ])
         band.isHidden = true
+        return knoepfe
     }
 
     // MARK: - Anzeige nachziehen
@@ -230,6 +241,8 @@ final class ProgrammKarteView: KartenView {
 
         versionBeschriftung.stringValue = modell.versionsText
         statusBeschriftung.stringValue = modell.statusText
+        dauerBeschriftung.stringValue = modell.dauerText
+        uebernahmeStartenSchalter?.isHidden = !modell.uebernahmeStartbar
 
         berichtBeschriftung.stringValue = modell.berichtKurz
         berichtBeschriftung.isHidden = !modell.hatBericht
@@ -257,6 +270,7 @@ final class ProgrammKarteView: KartenView {
 
     override func farbenAnwenden() {
         super.farbenAnwenden()
+        cliWarnung.festeFarbe = Darstellung.satz.warnText
         zustandFlaeche.layer?.backgroundColor = Zustandsfarben.hintergrund(modell.zustand).cgColor
         zustandBeschriftung.festeFarbe = Zustandsfarben.vordergrund(modell.zustand)
     }
@@ -264,7 +278,7 @@ final class ProgrammKarteView: KartenView {
     // MARK: - Aktionen
 
     @objc private func aktualisierenGeklickt() {
-        Task { await modell.aktualisieren() }
+        Task { await modell.aktualisierenGeklickt() }
     }
 
     @objc private func pruefenGeklickt() {

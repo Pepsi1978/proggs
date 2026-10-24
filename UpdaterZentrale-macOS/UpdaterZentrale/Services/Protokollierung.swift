@@ -69,11 +69,14 @@ enum Protokollierung {
         let strich = String(repeating: "-", count: 78)
         let fuss = """
         \(strich)
+        Programm:      \(bericht.name)  (\(bericht.programmId))
         Ergebnis:      \(bericht.ergebnisText)
         Begründung:    \(bericht.meldung)
         Stand vorher:  \(bericht.versionVorher)
         Stand nachher: \(bericht.versionNachher)
         Exit-Code:     \(bericht.exitCode)
+        Dauer:         \(dauerZeile(bericht))
+        Sammellauf:    \(bericht.sammelId.map { "\($0), Phase \(bericht.sammelPhase ?? 0), Position \(bericht.sammelPosition ?? 0)" } ?? "–")
         \(linie)
 
         """
@@ -85,10 +88,54 @@ enum Protokollierung {
         }
     }
 
+    private static func dauerZeile(_ bericht: UpdateBericht) -> String {
+        guard let s = bericht.dauerSekunden else { return "(nicht gemessen)" }
+        var text = dauerText(s) + " (" + String(format: "%.1f", locale: Locale(identifier: "en_US_POSIX"), s) + " s)"
+        if let a = bericht.arbeitSekunden {
+            text += ", davon Update-Aufrufe " + dauerText(a) + " (\(bericht.updateAufrufe ?? 0) Aufruf(e))"
+        }
+        return text
+    }
+
+    /// "0:42 min" / "1:05:10 h" -- dieselbe Schreibweise auf der Karte und im Protokoll.
+    static func dauerText(_ sekunden: Double) -> String {
+        let gesamt = Int(max(0, sekunden).rounded(.down))
+        let h = gesamt / 3600, m = (gesamt % 3600) / 60, s = gesamt % 60
+        return h >= 1 ? String(format: "%d:%02d:%02d h", h, m, s) : String(format: "%d:%02d min", m, s)
+    }
+
+    /// Der Messwert eines Berichts: die Anbieterzeit, wenn gemessen, sonst der ganze Klick.
+    static func messwert(_ bericht: UpdateBericht) -> Double? {
+        if let a = bericht.arbeitSekunden, a > 0 { return a }
+        if let d = bericht.dauerSekunden, d > 0 { return d }
+        return nil
+    }
+
+    static var sammelDatei: String {
+        (ordner as NSString).appendingPathComponent("sammellaeufe.jsonl")
+    }
+
+    /// Eine Zeile je Ereignis eines Sammellaufs: geplante Reihenfolge mit Phasen und erwarteten
+    /// Dauern, dann je Programm Beginn, Ende, Dauer und Urteil -- fuer die spaetere Auswertung.
+    static func sammellaufSchreiben(_ eintrag: [String: Any]) {
+        var sauber = eintrag
+        sauber["zeit"] = ISO8601DateFormatter().string(from: Date())
+        guard JSONSerialization.isValidJSONObject(sauber),
+              let daten = try? JSONSerialization.data(withJSONObject: sauber, options: [.sortedKeys]),
+              let zeile = String(data: daten, encoding: .utf8) else { return }
+        anhaengen(sammelDatei, zeile + "\n")
+    }
+
     /// Der jeweils letzte Bericht je Programm-Id -- daraus zeigt jede Karte ihren "Zuletzt"-Stand.
-    static func letzteBerichte() -> [String: UpdateBericht] {
+    static func letzteBerichte() -> [String: UpdateBericht] { verlaufLesen().berichte }
+
+    /// Ein Durchgang durch verlauf.jsonl fuer den Start: der letzte Bericht je Programm UND die
+    /// gemessenen Update-Dauern (aelteste zuerst). Nur Laeufe, die wirklich etwas installiert
+    /// haben (Erfolg oder abgelegt), zaehlen als Dauer.
+    static func verlaufLesen() -> (berichte: [String: UpdateBericht], dauern: [String: [Double]]) {
         var ergebnis: [String: UpdateBericht] = [:]
-        guard let inhalt = try? String(contentsOfFile: verlaufsDatei, encoding: .utf8) else { return ergebnis }
+        var dauern: [String: [Double]] = [:]
+        guard let inhalt = try? String(contentsOfFile: verlaufsDatei, encoding: .utf8) else { return (ergebnis, dauern) }
 
         for zeile in inhalt.split(separator: "\n") {
             let text = String(zeile).trimmed
@@ -98,8 +145,11 @@ enum Protokollierung {
                   !bericht.programmId.istLeer else { continue }
             // Die Datei wird nur angehaengt und ist chronologisch -- der letzte Eintrag gewinnt.
             ergebnis[bericht.programmId] = bericht
+            if bericht.ergebnis == .erfolgreich || bericht.ergebnis == .ausstehend, let s = messwert(bericht) {
+                dauern[bericht.programmId, default: []].append(s)
+            }
         }
-        return ergebnis
+        return (ergebnis, dauern)
     }
 
     @MainActor

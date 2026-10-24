@@ -136,6 +136,11 @@ struct RepoSkriptAktualisierer: Aktualisierer {
         if let skriptArgumente = eintrag.skriptArgumente, !skriptArgumente.istLeer {
             argumente.append(contentsOf: Kommandozeile.zerlegen(skriptArgumente))
         }
+        // Die Updater-Zentrale selbst: der Helfer des Skripts wartet auf das Ende GENAU dieses
+        // Prozesses (die App beendet sich, sobald ihr Bericht geschrieben ist) und legt erst dann
+        // die neue Fassung nach /Applications -- statt die App nach festen Sekunden von aussen zu schliessen.
+        let selbst = eintrag.id.caseInsensitiveCompare(Sammelplan.selbstId) == .orderedSame
+        if selbst { argumente += ["--app-pid", String(ProcessInfo.processInfo.processIdentifier)] }
 
         protokoll.berichte("bash " + argumente.joined(separator: " "))
         if hatEigeneRueckfrage {
@@ -170,8 +175,16 @@ struct RepoSkriptAktualisierer: Aktualisierer {
                 return PruefErgebnis(zustand: .abgebrochen,
                                      meldung: "Kein Klick im Zeitfenster – es wurde nichts geändert.",
                                      protokoll: lauf.ausgabe)
+            case "failed", "refused":
+                return PruefErgebnis(zustand: .fehler,
+                                     meldung: status == "refused" ? "Das Skript hat das Update verweigert – siehe Protokoll."
+                                                                  : "Das Skript meldet einen Fehler beim Bauen oder Starten – siehe Protokoll.",
+                                     protokoll: lauf.ausgabe)
             case "already-current":
                 return PruefErgebnis(zustand: .aktuell, meldung: "War bereits aktuell.",
+                                     protokoll: lauf.ausgabe)
+            case "built":
+                return PruefErgebnis(zustand: .fertig, meldung: "Neu gebaut, aber nicht gestartet.",
                                      protokoll: lauf.ausgabe)
             case "started":
                 // "started" allein beweist kein Update: das Skript sagt es auch, wenn der Build schon
@@ -187,6 +200,13 @@ struct RepoSkriptAktualisierer: Aktualisierer {
         }
 
         // Weg B: kein Statusband -- Exit-Code und Schlusszeile entscheiden (rebuild-overlay.sh).
+        // Die Updater-Zentrale selbst ist danach ein abgelegtes Update: die neue Fassung kommt erst
+        // nach dem Ende dieses Prozesses nach /Applications und bestaetigt es bei ihrem Start.
+        if lauf.exitCode == 0 && selbst {
+            return PruefErgebnis(zustand: .fertig,
+                                 meldung: "Neu gebaut – die Updater-Zentrale startet in der neuen Fassung neu und bestätigt das Update dann selbst.",
+                                 protokoll: lauf.ausgabe, erstNachNeustart: true)
+        }
         if lauf.exitCode == 0 {
             let meldung = lauf.ausgabe.contains("Fertig — alle Ziele")
                        || lauf.ausgabe.contains("Fertig - alle Ziele")
@@ -222,15 +242,18 @@ struct RepoSkriptAktualisierer: Aktualisierer {
 
     // MARK: - Intern
 
+    /// Die LETZTE Zeile, die mit dem Praefix beginnt. Nur Zeilenanfaenge zaehlen: ein Skript, das
+    /// seinen eigenen Quelltext ausgibt, enthielte "…_STATUS=no-answer" sonst mitten in einer Zeile.
     private func statusLesen(_ ausgabe: String, _ praefix: String?) -> String {
         guard let praefix, !praefix.istLeer else { return "" }
+        var status = ""
         for zeile in ausgabe.split(separator: "\n", omittingEmptySubsequences: false) {
-            let text = String(zeile)
-            guard let stelle = text.range(of: praefix, options: .caseInsensitive) else { continue }
-            let rest = String(text[stelle.upperBound...]).trimmed
-            return rest.split(separator: " ").first.map(String.init) ?? ""
+            let text = String(zeile).trimmed
+            guard text.lowercased().hasPrefix(praefix.lowercased()) else { continue }
+            let rest = String(text.dropFirst(praefix.count)).trimmed
+            status = rest.split(separator: " ").first.map(String.init) ?? ""
         }
-        return ""
+        return status
     }
 
     /// Die gebaute Fassung. Unter Windows war das FileVersionInfo der exe; auf dem Mac liegt die

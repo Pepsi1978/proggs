@@ -65,9 +65,14 @@ final class ProgrammViewModel {
         case "brew": return "Homebrew"
         case "cli": return "Selbst-Update"
         case "reposkript": return "Eigenes Skript"
+        case "opencodesitzung": return "OpenLauncher-Sitzung"
         default: return eintrag.art
         }
     }
+
+    /// Tooltip des ⚠ neben dem Namen.
+    var cliRisiko: String? { eintrag.cliRisiko.map { "Kann CLI-Sitzungen beenden: " + $0 } }
+    var kannCliBeenden: Bool { eintrag.kannCliBeenden }
 
     /// Ein App-Buendel laeuft ueber den Finder-Weg, ein Werkzeug ueber seinen Pfad.
     var kannStarten: Bool { eintrag.istAppBuendel || !eintrag.exePfadWirksam.istLeer }
@@ -112,7 +117,7 @@ final class ProgrammViewModel {
     }
 
     var aktionsText: String {
-        if uebernahmeOffen { return "Neustart nötig" }
+        if uebernahmeOffen { return eintrag.art.lowercased() == "opencodesitzung" ? "Sitzung baut" : "Neustart nötig" }
         switch zustand {
         case .aktuell: return "Aktuell"
         case .updateVerfuegbar: return "Aktualisieren"
@@ -152,8 +157,64 @@ final class ProgrammViewModel {
     var uebernahmeOffen: Bool { letzterBericht?.ergebnis == .ausstehend }
 
     var uebernahmeText: String {
-        "Das Update ist bereits heruntergeladen und installiert. Es wird aktiv, sobald \(name) "
-        + "einmal neu gestartet wurde – bis dahin meldet die Prüfung weiterhin die alte Version."
+        if let text = eintrag.uebernahmeText, !text.istLeer { return text }
+        return "Das Update ist bereits heruntergeladen und installiert. Es wird aktiv, sobald \(name) "
+             + "einmal neu gestartet wurde – bis dahin meldet die Prüfung weiterhin die alte Version."
+    }
+
+    /// Diese Karte ist die App selbst, und ihr Skript hat gerade gebaut: der Helfer wartet darauf,
+    /// dass die App endet.
+    var istSelbstupdateNeustart: Bool {
+        guard Sammelplan.istSelbst(self), let b = letzterBericht, b.ergebnis == .ausstehend else { return false }
+        return Date().timeIntervalSince(b.zeit) < 5 * 60
+    }
+
+    /// "Jetzt starten und übernehmen" nur, wo es etwas zu starten gibt (nicht fuer die
+    /// OpenCode-Sitzung und nicht fuer die App selbst).
+    var uebernahmeStartbar: Bool { kannStarten && !Sammelplan.istSelbst(self) }
+
+    // MARK: - Dauer und Reihenfolge
+
+    /// Stelle in programs.json; die Reihenfolge der Katalogansicht.
+    var katalogIndex = 0
+
+    private var dauern: [Double] = []
+
+    /// Gemessene Dauern echter Updates, aelteste zuerst (aus verlauf.jsonl).
+    func dauernSetzen(_ werte: [Double]) {
+        dauern = werte
+        melden()
+    }
+
+    var dauerGemessen: Bool { !dauern.isEmpty }
+
+    /// Median der letzten drei gemessenen Updates; ohne Messung die Katalog-Schaetzung, sonst ein
+    /// Viertel des Zeitlimits -- grob, aber die grossen Installer stehen so am Ende, bis echte
+    /// Zahlen vorliegen.
+    var erwarteteDauerSekunden: Double {
+        if !dauern.isEmpty {
+            let letzte = dauern.suffix(3).sorted()
+            return letzte[letzte.count / 2]
+        }
+        if let schaetzung = eintrag.dauerSchaetzungSekunden { return Double(schaetzung) }
+        return Double(max(1, eintrag.zeitlimitMinuten)) * 15
+    }
+
+    var dauerText: String {
+        dauerGemessen
+            ? "⏱ Update zuletzt " + Protokollierung.dauerText(erwarteteDauerSekunden)
+              + (dauern.count > 1 ? " (Median aus \(min(dauern.count, 3)))" : "")
+            : "⏱ Update ≈ " + Protokollierung.dauerText(erwarteteDauerSekunden) + " (geschätzt)"
+    }
+
+    /// Die Sammelknoepfe lassen einen Hauptversionssprung aus, wenn der Katalog das sagt.
+    var istHauptversionsSprung: Bool {
+        guard eintrag.hauptversionNurPerKlick else { return false }
+        func haupt(_ v: String) -> String {
+            String(v.drop(while: { "<> v".contains($0) }).prefix(while: { $0.isNumber }))
+        }
+        let alt = haupt(installierteVersion), neu = haupt(verfuegbareVersion)
+        return !alt.isEmpty && !neu.isEmpty && alt != neu
     }
 
     /// Wird von der Fensterlogik gerufen, wenn sich die app-weite Sperre aendert.
@@ -176,14 +237,17 @@ final class ProgrammViewModel {
     /// Ein abgelegtes Update (Claude Desktop macht das) wird erst beim naechsten Start des
     /// Programms echt. Bei einem spaeteren Start der Updater-Zentrale wird es hier rueckwirkend
     /// bestaetigt -- oder als nie angekommen ausgewiesen, was sonst unbemerkt bliebe.
-    func ausstehendesPruefen() async {
+    /// - Parameter frisch: eine gerade gelaufene Pruefung -- wiederverwendet statt neu gefragt.
+    func ausstehendesPruefen(_ frisch: PruefErgebnis? = nil) async {
         guard let aktualisierer,
               let offen = letzterBericht, offen.ergebnis == .ausstehend else { return }
 
         // Bestaetigt nur mit erreichtem Ziel UND echter "aktuell"-Pruefung -- eine andere
         // Aenderung des Fingerabdrucks ist kein Beweis, solange ein Update angeboten wird.
         let jetzt = await aktualisierer.fingerabdruck(eintrag)
-        let pruefung = await aktualisierer.pruefen(eintrag, Fortschritt { _ in })
+        var pruefung = frisch
+        if pruefung == nil { pruefung = await aktualisierer.pruefen(eintrag, Fortschritt { _ in }) }
+        guard let pruefung else { return }
         guard let urteil = UpdateKette.stagedUrteil(offen, jetzt: jetzt, pruefung: pruefung, zeitpunkt: Date()) else { return }
 
         var nachtrag = UpdateBericht()
@@ -234,6 +298,53 @@ final class ProgrammViewModel {
             self.zustand = .pruefe
             return await aktualisierer.pruefen(self.eintrag, fortschritt)
         }
+
+        // Ein abgelegtes Update (die OpenCode-Sitzung) bestaetigt schon die Pruefung, die es
+        // ankommen sieht -- nicht erst der naechste Start der App.
+        if uebernahmeOffen, let frisch = letztePruefung, frisch.zustand == .aktuell {
+            await ausstehendesPruefen(frisch)
+        }
+    }
+
+    /// Die Antwort der gerade gelaufenen Pruefung (nil nach einem Update).
+    private var letztePruefung: PruefErgebnis?
+
+    /// Welcher Sammellauf, welche Phase und Position -- landet im Bericht.
+    private var sammelKontext: SammelKontext?
+
+    /// Ein Klick auf der Karte. Eine riskante Karte bekommt dieselbe Warnung, die der Sammellauf
+    /// durch das Zurueckhalten gibt.
+    func aktualisierenGeklickt() async {
+        if kannCliBeenden && !Dialoge.fragen(
+            "\(name) kann laufende CLI-Sitzungen beenden:\n\n\(eintrag.cliRisiko ?? "")"
+            + "\n\nSchließe vorher Claude Code, Codex und alle Terminalfenster. Jetzt trotzdem aktualisieren?",
+            "CLI-Sitzungen in Gefahr") {
+            return
+        }
+        let vorher = letzterBericht?.zeit
+        await aktualisieren()
+        // Ein Klick auf die eigene Karte: der Lauf ist jetzt ganz geschrieben (Bericht, Karte), also
+        // beendet sich die App, und der Helfer des Skripts spielt die neue Fassung ein. Im
+        // Sammellauf erledigt das der Sammellauf nach seiner eigenen Protokollzeile.
+        if letzterBericht?.zeit != vorher && istSelbstupdateNeustart { await Self.appBeenden() }
+    }
+
+    /// Ein Update im Sammellauf, innerhalb seines exklusiven Besitzes.
+    /// - Returns: nur ein Bericht, den DIESER Lauf geschrieben hat; nil sonst.
+    func aktualisierenImSammel(_ besitz: Laufbesitz, _ kontext: SammelKontext) async -> UpdateBericht? {
+        sammelKontext = kontext
+        defer { sammelKontext = nil }
+        let vorher = letzterBericht?.zeit
+        await aktualisieren(sammel: besitz)
+        return letzterBericht?.zeit != vorher ? letzterBericht : nil
+    }
+
+    /// Beendet die App nach einem kurzen Moment, damit wartende Anzeige- und Protokollzeilen noch
+    /// laufen. Der Helfer sieht den Prozess gehen und uebernimmt.
+    static func appBeenden() async {
+        Diagnose.ereignis(.info, "selbstupdate", "selbstupdate.beenden", "Selbst-Update: die App beendet sich für den Helfer.")
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        NSApp.terminate(nil)
     }
 
     /// Ein Klick = eine begrenzte Update-Kette (siehe UpdateKette), innerhalb des Besitzes.
@@ -247,6 +358,8 @@ final class ProgrammViewModel {
         defer { eigen.freigeben() }
 
         await lauf("update") { fortschritt in
+            let uhr = Date()
+            let kontext = self.sammelKontext
             let kette = UpdateKette(aktualisierer, self.eintrag, fortschritt) { self.statusText = $0 }
             let (vorher, vorPruefung) = await kette.vorpruefen()
             Protokollierung.laufBeginnen(self.eintrag, befehl: self.befehlsBeschreibung(),
@@ -312,10 +425,21 @@ final class ProgrammViewModel {
             bericht.ausstehendeVersion = ende.ausstehendeVersion
             bericht.befehl = self.befehlsBeschreibung()
             bericht.exitCode = ende.ergebnis == .fehlgeschlagen || ende.ergebnis == .nichtVerifiziert ? 1 : 0
+            let dauer = Date().timeIntervalSince(uhr)
+            bericht.dauerSekunden = (dauer * 10).rounded() / 10
+            bericht.arbeitSekunden = ende.arbeitSekunden
+            bericht.updateAufrufe = ende.updateAufrufe
+            bericht.sammelId = kontext?.id
+            bericht.sammelPhase = kontext?.phase
+            bericht.sammelPosition = kontext?.position
 
-            fortschritt.berichte(Self.abschlussZeile(bericht))
+            fortschritt.berichte(Self.abschlussZeile(bericht) + "  (Dauer " + Protokollierung.dauerText(dauer) + ")")
             Protokollierung.laufBeenden(&bericht)
             self.letzterBericht = bericht
+            if bericht.ergebnis == .erfolgreich || bericht.ergebnis == .ausstehend,
+               let messwert = Protokollierung.messwert(bericht) {
+                self.dauernSetzen(self.dauern + [messwert])
+            }
             return ende.fuerKarte
         }
     }
@@ -378,6 +502,8 @@ final class ProgrammViewModel {
             return Pfade.aufloesen(CliAktualisierer.updateExe(eintrag)) + " " + (eintrag.updateArgumente ?? "update")
         case "reposkript":
             return "bash " + (eintrag.skript ?? "") + " " + (eintrag.skriptArgumente ?? "")
+        case "opencodesitzung":
+            return OpenCodeSitzungAktualisierer.befehlsbeschreibung
         default:
             return eintrag.art
         }
@@ -402,7 +528,9 @@ final class ProgrammViewModel {
             }
         }
 
+        letztePruefung = nil
         let ergebnis = await arbeit(fortschritt)
+        if art == "pruefung" { letztePruefung = ergebnis }
 
         zustand = ergebnis.zustand
         if !ergebnis.installierteVersion.istLeer { installierteVersion = ergebnis.installierteVersion }
@@ -436,4 +564,11 @@ final class ProgrammViewModel {
             protokollPuffer = "…[ältere Zeilen gekürzt]…\n" + String(protokollPuffer.suffix(Self.maxProtokollZeichen))
         }
     }
+}
+
+/// Welcher Sammellauf, welche Phase und Position ein Update hatte -- steht in seinem Bericht.
+struct SammelKontext {
+    let id: String
+    let phase: Int
+    let position: Int
 }

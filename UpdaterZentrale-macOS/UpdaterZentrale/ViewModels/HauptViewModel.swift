@@ -18,7 +18,8 @@ final class HauptViewModel {
     private let aktualisierer: [String: Aktualisierer] = [
         "brew": BrewAktualisierer(),
         "cli": CliAktualisierer(),
-        "reposkript": RepoSkriptAktualisierer()
+        "reposkript": RepoSkriptAktualisierer(),
+        "opencodesitzung": OpenCodeSitzungAktualisierer()
     ]
 
     /// Wird nach jeder Aenderung gefeuert, die das Fenster neu zeichnen muss.
@@ -34,6 +35,13 @@ final class HauptViewModel {
 
     private(set) var kopfStatus = "Bereit." { didSet { beiAenderung?() } }
     private(set) var laeuftSammelvorgang = false { didSet { beiAenderung?() } }
+
+    /// Zweite Fusszeile waehrend eines Sammellaufs: was gerade laeuft, an welcher Position, seit wann.
+    private(set) var laufDetail = "" { didSet { beiAenderung?() } }
+
+    /// Wie weit Sammelpruefung bzw. Sammellauf sind: x von n fertig (Fortschrittsbalken der Fusszeile).
+    private(set) var fortschrittFertig = 0
+    private(set) var fortschrittGesamt = 1
     private(set) var katalogFehler: String? { didSet { beiAenderung?() } }
 
     init() {
@@ -49,8 +57,9 @@ final class HauptViewModel {
 
     // MARK: - Gruppierung
 
-    /// Die Karten in der Reihenfolge des Katalogs, nach Gruppe gebuendelt.
-    /// Ersetzt die CollectionViewSource-Gruppierung aus WPF.
+    /// Die Karten nach Gruppe gebuendelt, die Gruppen in der Reihenfolge des Katalogs. Innerhalb
+    /// jeder Gruppe: Katalogreihenfolge, oder -- mit "⏱ nach Dauer" -- das kuerzeste erwartete
+    /// Update zuerst. Ersetzt die CollectionViewSource-Gruppierung und -Sortierung aus WPF.
     var gruppen: [(name: String, programme: [ProgrammViewModel])] {
         var reihenfolge: [String] = []
         var inhalt: [String: [ProgrammViewModel]] = [:]
@@ -61,7 +70,37 @@ final class HauptViewModel {
             }
             inhalt[programm.gruppe]?.append(programm)
         }
-        return reihenfolge.map { ($0, inhalt[$0] ?? []) }
+        return reihenfolge.map { name in
+            var liste = inhalt[name] ?? []
+            if nachDauerSortieren {
+                liste.sort { a, b in
+                    a.erwarteteDauerSekunden != b.erwarteteDauerSekunden
+                        ? a.erwarteteDauerSekunden < b.erwarteteDauerSekunden
+                        : a.katalogIndex < b.katalogIndex
+                }
+            }
+            return (name, liste)
+        }
+    }
+
+    // MARK: - Sortierung
+
+    /// Innerhalb jeder Gruppe: Katalogreihenfolge, oder das kuerzeste erwartete Update zuerst.
+    var nachDauerSortieren: Bool {
+        get { einstellungen.nachDauerSortieren }
+        set {
+            guard einstellungen.nachDauerSortieren != newValue else { return }
+            einstellungen.nachDauerSortieren = newValue
+            einstellungen.speichern()
+            sortierungAnwenden()
+        }
+    }
+
+    /// Ordnet die Karten neu -- nur, wenn gerade nichts laeuft; sonst nach dem Lauf.
+    private func sortierungAnwenden() {
+        guard !laeuftSammelvorgang else { return }
+        beiListenWechsel?()
+        beiAenderung?()
     }
 
     // MARK: - Darstellung
@@ -138,14 +177,35 @@ final class HauptViewModel {
         }
     }
 
-    /// Beschriftung des Sammelschalters: er laedt nur zum Klick ein, solange Updates offen sind.
-    var sammelText: String {
-        switch anzahlUpdates {
-        case 0: return allesAktuell ? "✔ Alles aktuell" : "Keine Updates offen"
-        case 1: return "1 Update installieren"
-        default: return "Alle \(anzahlUpdates) Updates installieren"
-        }
+    /// Beide Teilplaene aus EINEM Plan, getrennt nach dem CLI-Risiko der Karte -- nicht nach der
+    /// Phase: ein Repo-Skript oder ein "zuletzt"-Eintrag mit cliRisiko hat eine andere Phase und
+    /// gehoert trotzdem zum CLI-Knopf.
+    private func plaeneBerechnen() -> (sicher: [Sammelplan.Schritt], cli: [Sammelplan.Schritt]) {
+        let alles = Sammelplan.planen(programme.filter(\.hatUpdate))
+        return (alles.filter { !$0.programm.kannCliBeenden }, alles.filter { $0.programm.kannCliBeenden })
     }
+
+    /// Beschriftung des Knopfs fuer alles, was nicht CLI-kritisch ist.
+    var sicherText: String {
+        let n = plaeneBerechnen().sicher.count
+        let nurKlick = programme.filter { $0.hatUpdate && $0.istHauptversionsSprung && !$0.kannCliBeenden }.count
+        if n == 0 {
+            if nurKlick > 0 { return "\(nurKlick) Hauptversion\(nurKlick == 1 ? "" : "en") nur per Klick auf der Karte" }
+            return allesAktuell ? "✔ Alles aktuell" : "Keine unkritischen Updates"
+        }
+        return (n == 1 ? "1 Update installieren" : "\(n) Updates installieren") + "  ·  nicht CLI-kritisch"
+            + (nurKlick > 0 ? "  ·  \(nurKlick) nur per Klick" : "")
+    }
+
+    /// Beschriftung des Knopfs fuer die CLI-kritischen Updates.
+    var cliText: String {
+        let n = plaeneBerechnen().cli.count
+        return n == 0 ? "Keine CLI-kritischen Updates"
+            : (n == 1 ? "1 CLI-kritisches Update" : "\(n) CLI-kritische Updates") + " installieren"
+    }
+
+    var hatSichereUpdates: Bool { !plaeneBerechnen().sicher.isEmpty }
+    var hatCliUpdates: Bool { !plaeneBerechnen().cli.isEmpty }
 
     var updateZusammenfassung: String {
         switch anzahlUpdates {
@@ -165,12 +225,14 @@ final class HauptViewModel {
         Diagnose.ereignis(fehler == nil ? .info : .fehler, "katalog", "katalog.geladen",
                           fehler ?? "\(katalog.programme.count) Programme geladen.",
                           ["programme": katalog.programme.map { $0.id + ":" + $0.art }.joined(separator: ",")])
-        let berichte = Protokollierung.letzteBerichte()
+        let (berichte, dauern) = Protokollierung.verlaufLesen()
 
-        for eintrag in katalog.programme {
+        for (index, eintrag) in katalog.programme.enumerated() {
             let dienst = aktualisierer[eintrag.art.lowercased()]
             let karte = ProgrammViewModel(eintrag: eintrag, aktualisierer: dienst, einstellungen: einstellungen,
                                           koordination: koordination)
+            karte.katalogIndex = index
+            if let gemessen = dauern[eintrag.id] { karte.dauernSetzen(gemessen) }
             karte.beiAenderung = { [weak self] in self?.beiAenderung?() }
             karte.beiMeldung = { text in Dialoge.hinweis(text) }
 
@@ -252,6 +314,13 @@ final class HauptViewModel {
     /// Laeuft einmal, nachdem das Fenster steht -- so ist die Liste ohne ersten Klick aussagekraeftig,
     /// und die Update-Schaltflaechen zeigen ueberall dort "Aktuell", wo nichts ansteht.
     func erstePruefung() async {
+        await erstePruefungKern()
+
+        // Ein vom Selbst-Update unterbrochener Sammellauf geht jetzt weiter.
+        if einstellungen.sammelFortsetzen != nil { await sammelFortsetzen() }
+    }
+
+    private func erstePruefungKern() async {
         try? await Task.sleep(nanoseconds: 400_000_000)
 
         // Die Anfangspruefung fragt brew, git und die Werkzeuge ab wie ein Sammellauf und haelt
@@ -333,7 +402,9 @@ final class HauptViewModel {
         // langsamste einzelne Pruefung das Tempo.
         var offen = liste.map(\.name)
         var fertig = 0
+        fortschrittGesamt = max(liste.count, 1)
         func anzeigen() {
+            fortschrittFertig = fertig
             kopfStatus = "Prüft … \(fertig) von \(liste.count) fertig"
                 + (offen.isEmpty ? "" : " – läuft noch: " + offen.prefix(4).joined(separator: ", ")
                                         + (offen.count > 4 ? " …" : ""))
@@ -357,41 +428,284 @@ final class HauptViewModel {
                    + (repoHinweis.map { "  ·  " + $0 } ?? "")
     }
 
-    func alleAktualisieren() async {
+    /// Zwei unabhaengige Knoepfe: alles, was keine CLI-Sitzung beruehren kann, und die
+    /// CLI-kritischen Updates. Jeder darf zuerst -- keiner wartet auf den anderen.
+    func sichereAktualisieren() async { await sammelStarten(cli: false) }
+    func cliAktualisieren() async { await sammelStarten(cli: true) }
+
+    private func sammelStarten(cli: Bool) async {
         if koordination.belegt {
-            kopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist."
+            kopfStatus = "Updates gehen erst, wenn der laufende Vorgang fertig ist."
             sammelAbgewiesen("sammelupdate")
             return
         }
 
-        let offen = programme.filter(\.hatUpdate)
-        guard !offen.isEmpty else {
-            Dialoge.hinweis("Es ist kein Update offen. Prüfe zuerst, oder aktualisiere einzelne Programme gezielt.")
+        let plaene = plaeneBerechnen()
+        let plan = cli ? plaene.cli : plaene.sicher
+        guard !plan.isEmpty else {
+            Dialoge.hinweis(cli
+                ? "Es ist kein CLI-kritisches Update offen."
+                : "Es ist kein unkritisches Update offen, das gesammelt installiert werden kann. Prüfe zuerst, oder "
+                  + "aktualisiere einzelne Programme gezielt (Hauptversionssprünge nur per Klick auf der Karte).")
             return
         }
 
-        let liste = offen.map { "  • " + $0.name }.joined(separator: "\n")
-        guard Dialoge.fragen("Diese Programme werden jetzt aktualisiert:\n\n\(liste)"
-                             + "\n\nBei laufenden Programmen wird vorher nachgefragt.",
-                             "Alle Updates installieren?") else { return }
+        let nurKlick = programme.filter { $0.hatUpdate && $0.istHauptversionsSprung }
+        let liste = plan.enumerated().map { i, s in
+            "  \(i + 1). \(s.programm.name)  (\(Sammelplan.phasenName(s.phase)), "
+            + Protokollierung.dauerText(s.programm.erwarteteDauerSekunden) + ")"
+        }.joined(separator: "\n")
+        let frage = cli
+            ? "Diese Updates können laufende CLI-Sitzungen beenden:\n\n"
+              + plan.enumerated().map { i, s in "  \(i + 1). \(s.programm.name) – \(s.programm.eintrag.cliRisiko ?? "")" }
+                  .joined(separator: "\n")
+              + "\n\nSchließe vorher Claude Code, Codex, OpenCode und alle Terminalfenster, dann „Ja“."
+              + "\n\nBei laufenden Programmen wird vorher nachgefragt."
+            : "Reihenfolge der Updates (keines davon ist CLI-kritisch):\n\n" + liste
+              + Self.abhaengigkeiten(plan, plaene.cli)
+              + (nurKlick.isEmpty ? "" : "\n\nNur per Klick auf der Karte (Hauptversion): " + nurKlick.map(\.name).joined(separator: ", "))
+              + "\n\nBei laufenden Programmen wird vorher nachgefragt."
+        guard Dialoge.fragen(frage, cli ? "CLI-kritische Updates installieren?" : "Unkritische Updates installieren?") else { return }
 
-        // Erst jetzt erworben: die Frage oben ist modal, und was inzwischen startete, gewinnt.
+        let stempel = DateFormatter()
+        stempel.dateFormat = "yyyyMMdd-HHmmss"
+        // Die Frage des CLI-Knopfs war schon "jetzt die CLIs schließen" -- im Lauf keine zweite.
+        await sammelAusfuehren(plan, sammelId: "sammel-" + (cli ? "cli-" : "") + stempel.string(from: Date()), cliBestaetigt: cli)
+    }
+
+    /// Mit zwei Knoepfen bestimmt der Benutzer die Reihenfolge -- manche unkritischen Updates bauen
+    /// aber auf einem CLI-kritischen auf (npm-Werkzeuge auf Node, Gradle/Kotlin auf dem JDK). Die
+    /// Frage nennt das, damit die Wahl eine bewusste ist.
+    private static func abhaengigkeiten(_ plan: [Sammelplan.Schritt], _ cliOffen: [Sammelplan.Schritt]) -> String {
+        var offen: [String: String] = [:]
+        for s in cliOffen { offen[s.programm.eintrag.id.lowercased()] = s.programm.name }
+        var paare: [(vorher: String, danach: [String])] = []
+        for s in plan {
+            for v in s.programm.eintrag.nach {
+                guard let name = offen[v.lowercased()] else { continue }
+                if let i = paare.firstIndex(where: { $0.vorher == name }) {
+                    paare[i].danach.append(s.programm.name)
+                } else {
+                    paare.append((name, [s.programm.name]))
+                }
+            }
+        }
+        guard !paare.isEmpty else { return "" }
+        return "\n\nHinweis: Diese Updates bauen auf CLI-kritischen auf, die noch offen sind. Am besten zuerst den Knopf "
+            + "„⚠ CLI-kritische Updates“:\n" + paare.map { "  • \($0.vorher) vor " + $0.danach.joined(separator: ", ") }.joined(separator: "\n")
+    }
+
+    /// Ein Programm eines Sammellaufs, wie es in sammellaeufe.jsonl steht.
+    private struct SammelLauf {
+        let position: Int, id: String, phase: Int, parallel: Bool
+        let beginn: Date, ende: Date, sekunden: Double, ergebnis: String, erwartetSekunden: Double
+
+        var json: [String: Any] {
+            let f = ISO8601DateFormatter()
+            return ["position": position, "id": id, "phase": phase, "parallel": parallel,
+                    "beginn": f.string(from: beginn), "ende": f.string(from: ende), "sekunden": sekunden,
+                    "ergebnis": ergebnis, "erwartetSekunden": erwartetSekunden]
+        }
+    }
+
+    /// Fuehrt einen Sammelplan in EINEM exklusiven Besitz aus. Die Updater-Zentrale selbst geht
+    /// zuerst und allein: ihr Skript startet die App neu, also wird der Rest gesichert und von der
+    /// neuen Fassung fortgesetzt. Ein Plan vom CLI-Knopf wurde mit dessen Frage bestaetigt; jeder
+    /// andere Plan, der doch CLI-kritische Schritte enthaelt, haelt davor einmal an und fragt. Die
+    /// Phasen laufen nacheinander; innerhalb einer Phase laufen "parallel"-Eintraege in einer
+    /// zweiten Bahn (hoechstens drei) neben der seriellen (brew, npm, Skripte).
+    private func sammelAusfuehren(_ plan: [Sammelplan.Schritt], sammelId: String, versatz: Int = 0,
+                                  planGroesse: Int = 0, cliBestaetigt: Bool = false) async {
+        // Erst jetzt erworben: die Frage davor ist modal, und was inzwischen startete, gewinnt.
         guard let besitz = koordination.sammelBeginnen() else {
-            kopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist."
+            kopfStatus = "Updates gehen erst, wenn der laufende Vorgang fertig ist."
             sammelAbgewiesen("sammelupdate")
             return
         }
         defer { besitz.freigeben() }
-        laeuftSammelvorgang = true
-        defer { laeuftSammelvorgang = false }
-        let vorgang = Diagnose.vorgangBeginnen("sammelupdate", nil, "Alle Updates: " + offen.map(\.eintrag.id).joined(separator: ", "))
 
-        for (i, programm) in offen.enumerated() {
-            kopfStatus = "Aktualisiert \(programm.name) (\(i + 1) von \(offen.count)) …"
-            ausgewaehltesProgramm = programm
-            await programm.aktualisieren(sammel: besitz)
+        let gesamtZahl = max(planGroesse, plan.count + versatz)
+        let laufName = cliBestaetigt ? "CLI-kritische Updates" : "Updates"
+        laeuftSammelvorgang = true
+        let gesamtBeginn = Date()
+        var laeufe: [SammelLauf] = []
+        var laufend: [(name: String, zeile: String)] = []
+        var fertig = 0
+        var cliHinweis = ""
+        fortschrittGesamt = max(plan.count, 1)
+        fortschrittFertig = 0
+        let vorgang = Diagnose.vorgangBeginnen("sammelupdate", nil, laufName + ": " + plan.map(\.programm.eintrag.id).joined(separator: ", "))
+        Protokollierung.sammellaufSchreiben([
+            "sammelId": sammelId, "ereignis": versatz == 0 ? "plan" : "fortsetzung", "versatz": versatz, "planGroesse": gesamtZahl,
+            "plan": plan.enumerated().map { i, s in
+                ["position": versatz + i + 1, "id": s.programm.eintrag.id, "phase": s.phase, "parallel": s.parallel,
+                 "erwartetSekunden": s.programm.erwarteteDauerSekunden.rounded(), "gemessen": s.programm.dauerGemessen] as [String: Any]
+            }
+        ])
+
+        func anzeigen() {
+            fortschrittFertig = fertig
+            kopfStatus = laufName + ": \(versatz + fertig) von \(gesamtZahl) fertig, \(laufend.count) laufen gerade"
+                + " – seit " + Protokollierung.dauerText(Date().timeIntervalSince(gesamtBeginn)) + "." + cliHinweis
+            laufDetail = laufend.map(\.zeile).joined(separator: "\n")
         }
-        kopfStatus = "Alle Updates sind durchgelaufen."
+
+        func abschluss(_ ereignis: String) {
+            Protokollierung.sammellaufSchreiben([
+                "sammelId": sammelId, "ereignis": ereignis,
+                "gesamtSekunden": (Date().timeIntervalSince(gesamtBeginn) * 10).rounded() / 10,
+                "laeufe": laeufe.map(\.json)
+            ])
+        }
+
+        func einer(_ s: Sammelplan.Schritt) async -> UpdateBericht? {
+            let position = versatz + (plan.firstIndex { $0.programm === s.programm } ?? 0) + 1
+            laufend.append((s.programm.name, "▶ " + s.programm.name + "  ·  Position \(position) von \(gesamtZahl)"
+                            + "  ·  " + Sammelplan.phasenName(s.phase) + (s.parallel ? " (parallel)" : "")
+                            + "  ·  gestartet " + Formate.uhrzeitMitSekunden(Date())
+                            + "  ·  erwartet ≈ " + Protokollierung.dauerText(s.programm.erwarteteDauerSekunden)))
+            anzeigen()
+            let beginn = Date()
+            let bericht = await s.programm.aktualisierenImSammel(besitz, SammelKontext(id: sammelId, phase: s.phase, position: position))
+            laufend.removeAll { $0.name == s.programm.name }
+            fertig += 1
+            anzeigen()
+            laeufe.append(SammelLauf(position: position, id: s.programm.eintrag.id, phase: s.phase, parallel: s.parallel,
+                                     beginn: beginn, ende: Date(),
+                                     sekunden: (Date().timeIntervalSince(beginn) * 10).rounded() / 10,
+                                     ergebnis: bericht?.ergebnisText ?? "ohne Bericht",
+                                     erwartetSekunden: s.programm.erwarteteDauerSekunden.rounded()))
+            return bericht
+        }
+
+        var ende = "abgeschlossen"
+        var rest = plan
+        if let selbst = plan.first(where: { Sammelplan.istSelbst($0.programm) }) {
+            rest = plan.filter { !Sammelplan.istSelbst($0.programm) }
+            // VOR dem Lauf gesichert: der Helfer des Skripts uebernimmt, sobald die App endet.
+            if rest.isEmpty {
+                einstellungen.sammelFortsetzen = nil
+            } else {
+                let f = SammelFortsetzung()
+                f.sammelId = sammelId
+                f.zeit = Date()
+                f.versatz = versatz + 1
+                f.planGroesse = gesamtZahl
+                f.programmIds = rest.map(\.programm.eintrag.id)
+                f.cliBestaetigt = cliBestaetigt
+                einstellungen.sammelFortsetzen = f
+            }
+            einstellungen.speichern()
+            ausgewaehltesProgramm = selbst.programm
+            let bericht = await einer(selbst)
+
+            // Nur ein echtes "gebaut" startet die App neu: das Selbst-Update ist ausstehend (die neue
+            // Fassung kommt erst nach dem Ende dieses Prozesses). Alles andere -- Nein, Fehler, nichts
+            // zu tun -- geht hier sofort weiter.
+            if bericht?.ergebnis == .ausstehend {
+                ende = "selbstupdate"
+                abschluss("selbstupdate-neustart")   // jetzt geschrieben: dieser Prozess erreicht das Ende nicht
+                kopfStatus = rest.isEmpty
+                    ? "Die Updater-Zentrale startet in der neuen Fassung neu …"
+                    : "Die Updater-Zentrale startet neu und setzt die übrigen \(rest.count) Updates danach fort …"
+                laufDetail = ""
+                // Alles dieses Laufs ist geschrieben: die App beendet sich, der Helfer wartet genau darauf.
+                await ProgrammViewModel.appBeenden()
+                try? await Task.sleep(nanoseconds: 90_000_000_000)
+                // Noch am Leben: der Neustart kam nicht zustande -- diese Fassung macht selbst weiter.
+                ende = "abgeschlossen"
+                Diagnose.ereignis(.warnung, "sammel", "sammel.kein_neustart",
+                                  "Kein Neustart nach dem Selbst-Update – der Sammellauf geht hier weiter.")
+            }
+            einstellungen.sammelFortsetzen = nil
+            einstellungen.speichern()
+        }
+
+        let phasen = Array(Set(rest.map(\.phase))).sorted()
+        for phase in phasen {
+            let schritte = rest.filter { $0.phase == phase }
+
+            // Der eine Moment, in dem die CLIs zu sein muessen: direkt vor den Updates, die ihre
+            // Sitzungen beenden koennen. "Nein" laesst sie fuer einen spaeteren Klick offen.
+            if phase == Sammelplan.phaseCli && !cliBestaetigt {
+                laufDetail = ""
+                let frage = "Jetzt kommen die CLI-kritischen Updates:\n\n"
+                    + schritte.map { "  • \($0.programm.name) – \($0.programm.eintrag.cliRisiko ?? "")" }.joined(separator: "\n")
+                    + "\n\nSchließe jetzt Claude Code, Codex, OpenCode und alle Terminalfenster und klicke dann auf „Ja“."
+                    + "\n„Nein“ überspringt sie (sie bleiben offen); die übrigen Updates laufen weiter."
+                if !Dialoge.fragen(frage, "CLI-kritische Updates jetzt installieren?") {
+                    Diagnose.ereignis(.info, "sammel", "sammel.cli_uebersprungen", "\(schritte.count) CLI-kritische Updates übersprungen.")
+                    Protokollierung.sammellaufSchreiben(["sammelId": sammelId, "ereignis": "cli-uebersprungen",
+                                                         "ids": schritte.map(\.programm.eintrag.id)])
+                    fertig += schritte.count
+                    cliHinweis = "  ·  CLI-kritische Updates übersprungen – sie bleiben offen."
+                    anzeigen()
+                    continue
+                }
+            }
+
+            let seriell = schritte.filter { !$0.parallel }
+            let parallel = schritte.filter(\.parallel)
+
+            await withTaskGroup(of: Void.self) { gruppe in
+                gruppe.addTask { @MainActor in
+                    for s in seriell {
+                        self.ausgewaehltesProgramm = s.programm
+                        _ = await einer(s)
+                    }
+                }
+                // Parallele Bahn: hoechstens drei zugleich.
+                gruppe.addTask { @MainActor in
+                    var index = 0
+                    await withTaskGroup(of: Void.self) { bahn in
+                        func naechster() {
+                            guard index < parallel.count else { return }
+                            let s = parallel[index]
+                            index += 1
+                            bahn.addTask { @MainActor in _ = await einer(s) }
+                        }
+                        for _ in 0..<3 { naechster() }
+                        for await _ in bahn { naechster() }
+                    }
+                }
+            }
+
+            if phase == Sammelplan.phaseCli && rest.contains(where: { $0.phase > Sammelplan.phaseCli }) {
+                cliHinweis = "  ✔ CLI-kritische Updates sind durch – du kannst im CLI weiterarbeiten."
+                anzeigen()
+                Diagnose.ereignis(.info, "sammel", "sammel.cli_fertig", kopfStatus)
+            }
+        }
+
+        let fehler = laeufe.filter { ["Fehlgeschlagen", "Nicht verifiziert", "ohne Bericht"].contains($0.ergebnis) }.count
+        kopfStatus = laufName + " sind durchgelaufen (" + Protokollierung.dauerText(Date().timeIntervalSince(gesamtBeginn)) + ")"
+            + (fehler > 0 ? " – \(fehler) mit Problemen, siehe rote Karten." : ".")
+            + (cliHinweis.contains("übersprungen") ? cliHinweis : "")
+            + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "")
         vorgang.beenden("abgeschlossen", kopfStatus)
+        abschluss(ende)
+        laeuftSammelvorgang = false
+        laufDetail = ""
+        if nachDauerSortieren { sortierungAnwenden() }
+    }
+
+    /// Nach dem Selbst-Update in einem Sammellauf setzt die neue Fassung den gesicherten Rest fort --
+    /// einmal, und nur, wenn er frisch ist. Dem ganzen Lauf hat der Benutzer schon zugestimmt; die
+    /// CLI-kritische Phase stellt trotzdem ihre eigene Frage (ausser der Lauf kam vom CLI-Knopf).
+    private func sammelFortsetzen() async {
+        guard let offen = einstellungen.sammelFortsetzen else { return }
+        einstellungen.sammelFortsetzen = nil
+        einstellungen.speichern()
+        guard Date().timeIntervalSince(offen.zeit) <= 30 * 60 else { return }
+
+        let ids = Set(offen.programmIds.map { $0.lowercased() })
+        let plan = Sammelplan.planen(programme.filter {
+            $0.hatUpdate && ids.contains($0.eintrag.id.lowercased()) && !Sammelplan.istSelbst($0)
+        })
+        Diagnose.ereignis(.info, "sammel", "sammel.fortsetzung", "\(plan.count) Updates nach dem Selbst-Update fortgesetzt.")
+        if !plan.isEmpty {
+            await sammelAusfuehren(plan, sammelId: offen.sammelId, versatz: offen.versatz, planGroesse: offen.planGroesse,
+                                   cliBestaetigt: offen.cliBestaetigt)
+        }
     }
 }

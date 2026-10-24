@@ -49,6 +49,11 @@ struct ProgrammEintrag: Codable {
     /// Blendet den Eintrag aus, wenn auf diesem Rechner keiner der Pfadkandidaten existiert.
     var ausblendenWennFehlt: Bool = false
 
+    /// Merkmal "vorhanden" fuer Eintraege ohne startbare Programmdatei: Homebrew-Formeln
+    /// ("/opt/homebrew/bin/fd") und der OpenCode-Fix-Build (current.json). Zaehlt nur fuer
+    /// `aufDiesemRechnerVorhanden` -- nie gestartet, nie als laufend erkannt.
+    var vorhandenPfad: String?
+
     var versionsArgumente: String?
     var updateArgumente: String?
     var pruefArgumente: String?
@@ -102,6 +107,44 @@ struct ProgrammEintrag: Codable {
     var neuStartenNachUpdate: Bool = false
 
     var hinweis: String?
+
+    /// Text des Bandes "wird uebernommen" statt des Standards "nach dem Neustart des Programms".
+    var uebernahmeText: String?
+
+    /// Ein Sprung auf eine neue Hauptversion (TypeScript 6 → 7, FFmpeg 8 → 9) wird angezeigt, aber
+    /// die Sammelknoepfe lassen ihn aus; er laeuft nur per bewusstem Klick auf der Karte.
+    var hauptversionNurPerKlick: Bool = false
+
+    /// Erwartete Update-Dauer in Sekunden, bis echte Laeufe gemessen sind (verlauf.jsonl). Ohne sie
+    /// steht ein Viertel des Zeitlimits. Ordnet nur den Sammellauf und die Dauer-Sortierung.
+    var dauerSchaetzungSekunden: Int?
+
+    /// Immer das letzte Update eines Sammellaufs, nach allen Phasen.
+    var zuletzt: Bool = false
+
+    /// Darf im Sammellauf in der parallelen Bahn laufen: ein Selbst-Updater, der nur seinen eigenen
+    /// Ordner anfasst und weder Sperre, Baum noch Laufzeit mit einem anderen Eintrag teilt. Bewusst
+    /// ausdruecklich statt aus der Befehlszeile geraten.
+    var parallel: Bool = false
+
+    /// Ids, die im selben Lauf vorher drankommen muessen (sdkmanager braucht das neue JDK, die
+    /// npm-Werkzeuge das neue Node). Ordnet nur einen Lauf, zieht nie ein Update hinein.
+    var nach: [String] = []
+
+    /// Regulaerer Ausdruck, dessen Gruppe 1 die installierte Version in der Ausgabe von
+    /// `versionsArgumente` ist. Ohne ihn gewinnt das erste "x.y.z".
+    var versionsMuster: String?
+
+    /// Dasselbe fuer die Antwort von `versionsUrl`.
+    var versionsUrlMuster: String?
+
+    /// Warum dieses Update eine laufende CLI-Sitzung (Claude Code, Codex, ein Terminalfenster)
+    /// beenden kann. Gesetzt = die Karte traegt ein ⚠, und das Update laeuft nur ueber den eigenen
+    /// Knopf "⚠ CLI-kritische Updates installieren", nie mit den unkritischen.
+    var cliRisiko: String?
+
+    var kannCliBeenden: Bool { !(cliRisiko?.istLeer ?? true) }
+
     var akzent: String = "#7C5CFF"
 
     /// Alle Prozessnamen -- Haupt- und Helferprogramme.
@@ -134,19 +177,22 @@ struct ProgrammEintrag: Codable {
     /// Gibt es auf diesem Rechner das App-Buendel oder einen der Programmpfade?
     var aufDiesemRechnerVorhanden: Bool {
         if let appPfad, !appPfad.isEmpty, FileManager.default.fileExists(atPath: Pfade.aufloesen(appPfad)) { return true }
+        if let vorhandenPfad, !vorhandenPfad.istLeer, FileManager.default.fileExists(atPath: Pfade.aufloesen(vorhandenPfad)) { return true }
         return pfadKandidaten.contains { FileManager.default.fileExists(atPath: Pfade.aufloesen($0)) }
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, gruppe, beschreibung, art
         case cask, formel, appPfad, bundleId
-        case exePfad, exePfadAlternativen, ausblendenWennFehlt
+        case exePfad, exePfadAlternativen, ausblendenWennFehlt, vorhandenPfad
         case versionsArgumente, updateArgumente, pruefArgumente, npmPaket,
              pruefExitCodes, pruefAbschnitt, pruefZeilenMuster, updateExePfad, versionsUrl, startArgumente
         case pfeilZaehlen, zeitlimitMinuten
         case repoOrdner, skript, skriptArgumente, statusPraefix, projektDatei, dialogWartezeitSekunden
         case prozesse, helferProzesse, beendenVorUpdate, neuStartenNachUpdate
         case hinweis, akzent
+        case uebernahmeText, hauptversionNurPerKlick, dauerSchaetzungSekunden, zuletzt, parallel, nach,
+             versionsMuster, versionsUrlMuster, cliRisiko
     }
 
     init(from decoder: Decoder) throws {
@@ -190,6 +236,16 @@ struct ProgrammEintrag: Codable {
         neuStartenNachUpdate = (try? c.decode(Bool.self, forKey: .neuStartenNachUpdate)) ?? false
         hinweis = try? c.decode(String.self, forKey: .hinweis)
         akzent = (try? c.decode(String.self, forKey: .akzent)) ?? "#7C5CFF"
+        vorhandenPfad = try? c.decode(String.self, forKey: .vorhandenPfad)
+        uebernahmeText = try? c.decode(String.self, forKey: .uebernahmeText)
+        hauptversionNurPerKlick = (try? c.decode(Bool.self, forKey: .hauptversionNurPerKlick)) ?? false
+        dauerSchaetzungSekunden = try? c.decode(Int.self, forKey: .dauerSchaetzungSekunden)
+        zuletzt = (try? c.decode(Bool.self, forKey: .zuletzt)) ?? false
+        parallel = (try? c.decode(Bool.self, forKey: .parallel)) ?? false
+        nach = (try? c.decode([String].self, forKey: .nach)) ?? []
+        versionsMuster = try? c.decode(String.self, forKey: .versionsMuster)
+        versionsUrlMuster = try? c.decode(String.self, forKey: .versionsUrlMuster)
+        cliRisiko = try? c.decode(String.self, forKey: .cliRisiko)
     }
 }
 
@@ -281,6 +337,22 @@ struct UpdateBericht: Codable {
 
     var protokollDatei: String = ""
 
+    /// Wanduhrzeit des ganzen Klicks, Vorpruefung bis Urteil. Nil in Eintraegen vor 1.0.16.
+    var dauerSekunden: Double?
+
+    /// Nur die Zeit in den Update-Aufrufen des Anbieters -- ohne Vorpruefung, Beenden-Frage und
+    /// Nachpruefung. Treibt die erwartete Dauer.
+    var arbeitSekunden: Double?
+
+    /// Wie viele Update-Aufrufe die Kette machte; 0 = nichts installiert.
+    var updateAufrufe: Int?
+
+    /// Gesetzt, wenn der Lauf Teil eines Sammellaufs war (siehe sammellaeufe.jsonl).
+    var sammelId: String?
+    /// Phase im Sammellauf (1 = eigene Werkzeuge, 2 = CLI-kritisch, 3 = Rest, 4 = zum Schluss) und Position.
+    var sammelPhase: Int?
+    var sammelPosition: Int?
+
     var ergebnisText: String {
         switch ergebnis {
         case .erfolgreich: return "Erfolgreich"
@@ -321,6 +393,12 @@ struct UpdateBericht: Codable {
         case exitCode = "ExitCode"
         case erhoeht = "Erhoeht"
         case protokollDatei = "ProtokollDatei"
+        case dauerSekunden = "DauerSekunden"
+        case arbeitSekunden = "ArbeitSekunden"
+        case updateAufrufe = "UpdateAufrufe"
+        case sammelId = "SammelId"
+        case sammelPhase = "SammelPhase"
+        case sammelPosition = "SammelPosition"
     }
 
     init() {}
@@ -340,6 +418,12 @@ struct UpdateBericht: Codable {
         exitCode = (try? c.decode(Int.self, forKey: .exitCode)) ?? 0
         erhoeht = (try? c.decode(Bool.self, forKey: .erhoeht)) ?? false
         protokollDatei = (try? c.decode(String.self, forKey: .protokollDatei)) ?? ""
+        dauerSekunden = try? c.decode(Double.self, forKey: .dauerSekunden)
+        arbeitSekunden = try? c.decode(Double.self, forKey: .arbeitSekunden)
+        updateAufrufe = try? c.decode(Int.self, forKey: .updateAufrufe)
+        sammelId = try? c.decode(String.self, forKey: .sammelId)
+        sammelPhase = try? c.decode(Int.self, forKey: .sammelPhase)
+        sammelPosition = try? c.decode(Int.self, forKey: .sammelPosition)
     }
 }
 

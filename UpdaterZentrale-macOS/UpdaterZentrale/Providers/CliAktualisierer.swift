@@ -21,7 +21,7 @@ struct CliAktualisierer: Aktualisierer {
         var installiert = ""
         if let argumente = eintrag.versionsArgumente, !argumente.istLeer {
             let lauf = await Kommandozeile.ausfuehren(exe, argumente, zeitlimit: 120)
-            installiert = Versionen.ausText(lauf.ausgabe)
+            installiert = Self.versionAus(lauf.ausgabe, eintrag.versionsMuster)
             protokoll.berichte("\((exe as NSString).lastPathComponent) \(argumente) -> \(lauf.ausgabe)")
         }
 
@@ -64,7 +64,8 @@ struct CliAktualisierer: Aktualisierer {
             quelle = nil
         }
         if let quelle {
-            let abfrage = await Self.netzVersion(quelle.adresse, json: quelle.json, protokoll)
+            let abfrage = await Self.netzVersion(quelle.adresse, json: quelle.json, protokoll,
+                                                 muster: quelle.json ? nil : eintrag.versionsUrlMuster)
             guard let verfuegbar = abfrage.version else {
                 // Eine fehlgeschlagene Abfrage ist nie "aktuell" -- sonst verschwindet ein offenes
                 // Update hinter einer gruenen Plakette.
@@ -117,7 +118,7 @@ struct CliAktualisierer: Aktualisierer {
 
         if let argumente = eintrag.versionsArgumente, !argumente.istLeer {
             let lauf = await Kommandozeile.ausfuehren(exe, argumente, zeitlimit: 120)
-            let version = Versionen.ausText(lauf.ausgabe)
+            let version = Self.versionAus(lauf.ausgabe, eintrag.versionsMuster)
             if !version.istLeer { return version }
         }
 
@@ -172,16 +173,30 @@ struct CliAktualisierer: Aktualisierer {
         return zeilen.filter(passt).map { $0.trimmed }.filter { !$0.isEmpty }
     }
 
+    /// Die Version in einem Text: Gruppe 1 des Katalog-Musters, wenn eines gesetzt ist (zweistellige
+    /// Versionen wie Gradles "9.7"), sonst das erste "x.y.z". Ein ungueltiges Muster ergibt "" (unbekannt).
+    static func versionAus(_ text: String, _ muster: String?) -> String {
+        guard let muster, !muster.istLeer else { return Versionen.ausText(text) }
+        guard let regex = try? NSRegularExpression(pattern: muster, options: [.anchorsMatchLines]),
+              let treffer = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return "" }
+        let bereich = treffer.numberOfRanges > 1 ? treffer.range(at: 1) : treffer.range
+        guard let r = Range(bereich, in: text) else { return "" }
+        return String(text[r])
+    }
+
     /// Fragt die Version direkt per HTTPS ab statt ueber "npm view": das braucht weder node noch
     /// ein bestimmtes Arbeitsverzeichnis (der npm-Shim sucht seine Module relativ zum
     /// Arbeitsverzeichnis und bricht sonst mit MODULE_NOT_FOUND ab). `json` liest das Feld "version"
     /// der npm-Registry, sonst zaehlt die erste Versionsnummer im Klartext.
-    static func netzVersion(_ adresse: String, json: Bool, _ protokoll: Fortschritt) async -> (version: String?, problem: String?) {
+    static func netzVersion(_ adresse: String, json: Bool, _ protokoll: Fortschritt,
+                            muster: String? = nil) async -> (version: String?, problem: String?) {
         guard let url = URL(string: adresse) else {
             return (nil, "Ungültige Versionsadresse: \(adresse)")
         }
         var anfrage = URLRequest(url: url)
         anfrage.timeoutInterval = 30
+        // Die GitHub-API (Releases) weist Anfragen ohne User-Agent ab.
+        anfrage.setValue("UpdaterZentrale/1.0", forHTTPHeaderField: "User-Agent")
         let ergebnis: (version: String?, problem: String?)
         do {
             let (daten, antwort) = try await URLSession.shared.data(for: anfrage)
@@ -194,7 +209,7 @@ struct CliAktualisierer: Aktualisierer {
                     let objekt = (try? JSONSerialization.jsonObject(with: daten)) as? [String: Any]
                     text = objekt?["version"] as? String ?? ""
                 }
-                let version = Versionen.ausText(text)
+                let version = versionAus(text, muster)
                 ergebnis = version.istLeer ? (nil, "Die Versionsadresse lieferte keine Versionsnummer.") : (version, nil)
             }
         } catch {

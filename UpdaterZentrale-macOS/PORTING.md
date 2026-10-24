@@ -291,3 +291,30 @@ Nicht portiert:
 * **1.3.23** Backslashes im Windows-Katalog.
 * **1.3.24 / 1.3.25** Übernahme-Knopf für Paket-Apps (Appx-Staging, Windows Terminal) – kein
   macOS-Gegenstück; iTerm2 wird beendet und direkt ersetzt.
+
+---
+
+## E) Windows-Gleichstand 1.3.40 (macOS 1.0.16, 24.10.2026)
+
+Übernommen aus UpdateZentrale 1.3.26–1.3.40:
+
+| Windows | macOS |
+|---|---|
+| Schutzfilter `cliRisiko`, ⚠ auf der Karte, Rückfrage beim Einzelklick | ✅ – eingeordnet nach Mac-Verhalten (iTerm2, LM Studio + Runtimes, JDK 17/21, Android SDK, VS Code, Windscribe) |
+| Zwei unabhängige Sammelknöpfe (CLI-kritisch / nicht CLI-kritisch) mit Plan in der Rückfrage und Abhängigkeitshinweis | ✅ 1:1 |
+| Sammelplan: Phasen, Selbst-Update zuerst, `nach`, kürzeste zuerst, `zuletzt`, `hauptversionNurPerKlick`, parallele Bahn (max. 3) | ✅ 1:1 |
+| Fortsetzung nach dem Selbst-Update (`SammelFortsetzen`, 30 min) | ✅ 1:1 |
+| Dauer je Karte (Median der letzten drei), „⏱ nach Dauer“, `DauerSekunden`/`ArbeitSekunden` im Verlauf, `sammellaeufe.jsonl` | ✅ 1:1 |
+| Kopfzeile in Zeilen statt Spalten, Fußzeile mit vollem Status, Fortschritt und Laufdetails | ✅ – AppKit hat kein WrapPanel, die Bedienleiste steht fest auf zwei Zeilen |
+| Selbst-Update über Prozessnummer, Helfer als Datei, Kopieren erst nach dem Ende | ✅ – `tools/selbstupdate-helfer.sh`, `ditto` in Zwischenordner und Tausch |
+| OpenCode-Update per OpenLauncher-Sitzung (`opencodesitzung`) | ✅ – Mac-Fix-Build (`build-install-macos-tuifix.sh`), OpenLauncher.app `--jarvis-auftrag` |
+| Neue Programme | ✅ fd, bat, fzf, delta, lazygit, ShellCheck, shfmt, Trivy, FFmpeg, Rclone, scrcpy, uv, Deno, Docker Desktop, WireGuard (wireguard-tools), Windscribe |
+| `versionsMuster` / `versionsUrlMuster`, User-Agent für die GitHub-API | ✅ |
+| Statuszeile nur am Zeilenanfang, letzte zählt; `failed`/`refused`/`built` | ✅ |
+| Firebase CLI mit erlaubten Installationsskripten | ✅ |
+
+Nicht übernommen, weil es das Programm hier nicht gibt oder es Windows-spezifisch ist: ripgrep (nur als Shell-Funktion von
+Claude Code), jq (macOS bringt `/usr/bin/jq` mit, kein Homebrew-Paket), CMake (nur aus den Android-Kommandozeilen-Werkzeugen),
+Bionic, Kimi Desktop, .NET SDK 8, Python Launcher, Visual Studio 2026 / Build Tools, Windows SDK, WSL, Windows-Terminal,
+App Installer (winget), `zip-werkzeug.ps1` (Gradle, Kotlin und uv kommen hier aus Homebrew), winget-Abfrage-Cache und
+Hersteller-Installer bei falschem winget-Manifest.

@@ -14,10 +14,13 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     // Kopfzeile
     private let zusammenfassungPlakette: PlakettenView
     private let designSchalter = Schiebeschalter()
+    private let dauerSchalter = Schiebeschalter()
     private let allePruefenSchalter = Schalter(.zweit, "Alle prüfen")
     private let neuLadenSchalter = Schalter(.leise, "Neu laden")
     private let diagnoseSchalter = Schalter(.leise, "Diagnose exportieren")
-    private let alleUpdatesSchalter = Schalter(.haupt, "Alle Updates installieren")
+    /// Zwei unabhaengige Sammelknoepfe: die Reihenfolge waehlt der Benutzer selbst.
+    private let cliUpdatesSchalter = Schalter(.zweit, "CLI-kritische Updates installieren")
+    private let sichereUpdatesSchalter = Schalter(.haupt, "Updates installieren")
     private let katalogFehlerBand = FlaechenView(ton: .fehler, eckenRadius: 9)
     private let katalogFehlerText: ThemedLabel
 
@@ -42,6 +45,8 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
     // Fußzeile
     private let fussStatus: ThemedLabel
+    private let fussDetail: ThemedLabel
+    private let fussBalken = NSProgressIndicator()
     private let versionsAnzeige: ThemedLabel
 
     private let hintergrund = ThemedView()
@@ -57,7 +62,10 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         statusText = UI.beschriftung("", groesse: 12)
         statusVersion = UI.beschriftung("", groesse: 11.5, rolle: .leise, mono: true, einzeilig: true)
         terminalUeberschrift = UI.beschriftung(modell.terminalKopf, groesse: 14, gewicht: .semibold, einzeilig: true)
-        fussStatus = UI.beschriftung(modell.kopfStatus, rolle: .leise, einzeilig: true)
+        // Der Status steht vollstaendig da (umbrechend statt gekuerzt), darunter waehrend eines
+        // Sammellaufs je laufendem Update eine Zeile mit Position, Phase, Startzeit und Erwartung.
+        fussStatus = UI.beschriftung(modell.kopfStatus, rolle: .leise)
+        fussDetail = UI.beschriftung("", groesse: 11.5, rolle: .leise, mono: true)
         versionsAnzeige = UI.beschriftung(modell.anwendungsVersion, rolle: .leise, einzeilig: true)
 
         // Fenstergroesse nach macOS-Verhaeltnissen, NICHT nach den Windows-Maßen.
@@ -178,36 +186,22 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
         let untertitel = UI.beschriftung("Alle Werkzeuge an einem Ort prüfen und aktualisieren.", rolle: .leise, einzeilig: true)
 
-        let linkeSpalte = NSStackView(views: [titelReihe, untertitel])
-        linkeSpalte.orientation = .vertical
-        linkeSpalte.alignment = .leading
-        linkeSpalte.spacing = 5
-        linkeSpalte.translatesAutoresizingMaskIntoConstraints = false
-
         // Hell/Dunkel-Umschalter im gerahmten Kaestchen, wie unter Windows.
         designSchalter.istAn = modell.hellModus
         designSchalter.beiWechsel = { [weak self] an in self?.modell.hellModus = an }
+        let designRahmen = gerahmt([UI.beschriftung("🌙", groesse: 13, einzeilig: true), designSchalter,
+                                    UI.beschriftung("☀", groesse: 13, einzeilig: true)])
 
-        let mondBeschriftung = UI.beschriftung("🌙", groesse: 13, einzeilig: true)
-        let sonneBeschriftung = UI.beschriftung("☀", groesse: 13, einzeilig: true)
-        let designReihe = NSStackView(views: [mondBeschriftung, designSchalter, sonneBeschriftung])
-        designReihe.orientation = .horizontal
-        designReihe.alignment = .centerY
-        designReihe.spacing = 7
-        designReihe.translatesAutoresizingMaskIntoConstraints = false
+        // Sortierung innerhalb der Gruppen: Katalog oder kuerzestes Update zuerst.
+        dauerSchalter.istAn = modell.nachDauerSortieren
+        dauerSchalter.beiWechsel = { [weak self] an in self?.modell.nachDauerSortieren = an }
+        let dauerRahmen = gerahmt([UI.beschriftung("⏱ nach Dauer", groesse: 12, einzeilig: true), dauerSchalter])
+        dauerRahmen.toolTip = "Sortiert die Karten innerhalb jeder Gruppe nach der gemessenen bzw. geschätzten Update-Dauer, die kürzesten oben."
 
-        let designRahmen = FlaechenView(ton: .hoch, eckenRadius: 9)
-        designRahmen.addSubview(designReihe)
-        NSLayoutConstraint.activate([
-            designReihe.leadingAnchor.constraint(equalTo: designRahmen.leadingAnchor, constant: 11),
-            designReihe.trailingAnchor.constraint(equalTo: designRahmen.trailingAnchor, constant: -11),
-            designReihe.topAnchor.constraint(equalTo: designRahmen.topAnchor, constant: 6),
-            designReihe.bottomAnchor.constraint(equalTo: designRahmen.bottomAnchor, constant: -6)
-        ])
-
-        let katalogOeffnen = Schalter(.leise, "Katalog")
+        let katalogOeffnen = Schalter(.leise, "Katalog öffnen")
         katalogOeffnen.target = self
         katalogOeffnen.action = #selector(katalogOeffnenGeklickt)
+        katalogOeffnen.toolTip = "programs.json öffnen – dort werden neue Programme eingetragen."
 
         let neuLaden = neuLadenSchalter
         neuLaden.target = self
@@ -215,21 +209,43 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
         allePruefenSchalter.target = self
         allePruefenSchalter.action = #selector(allePruefenGeklickt)
-        alleUpdatesSchalter.target = self
-        alleUpdatesSchalter.action = #selector(alleUpdatesGeklickt)
+        cliUpdatesSchalter.target = self
+        cliUpdatesSchalter.action = #selector(cliUpdatesGeklickt)
+        cliUpdatesSchalter.toolTip = "Updates, die laufende CLI-Sitzungen (Claude Code, Codex, Terminals) beenden können. Vorher die CLIs schließen."
+        sichereUpdatesSchalter.target = self
+        sichereUpdatesSchalter.action = #selector(sichereUpdatesGeklickt)
+        sichereUpdatesSchalter.toolTip = "Alle Updates, die keine CLI-Sitzung unterbrechen – eigene Werkzeuge zuerst, dann die kürzesten."
 
-        let rechteSpalte = NSStackView(views: [designRahmen, katalogOeffnen, neuLaden,
-                                               allePruefenSchalter, alleUpdatesSchalter])
-        rechteSpalte.orientation = .horizontal
-        rechteSpalte.alignment = .centerY
-        rechteSpalte.spacing = 8
-        rechteSpalte.translatesAutoresizingMaskIntoConstraints = false
+        // Drei Zeilen statt zwei Spalten (wie die Windows-Fassung seit 1.3.32): nebeneinander
+        // drueckte die breite Bedienleiste den Titelblock zusammen. AppKit hat kein WrapPanel, also
+        // verteilt sich die Bedienleiste fest auf zwei Zeilen, die beide in das schmalste Fenster passen.
+        let zeileZwei = NSStackView(views: [untertitel, UI.platzhalter(), designRahmen, dauerRahmen,
+                                            katalogOeffnen, neuLaden, allePruefenSchalter])
+        zeileZwei.orientation = .horizontal
+        zeileZwei.alignment = .centerY
+        zeileZwei.spacing = 8
+        zeileZwei.setCustomSpacing(16, after: untertitel)
+        zeileZwei.translatesAutoresizingMaskIntoConstraints = false
 
-        let reihe = NSStackView(views: [linkeSpalte, UI.platzhalter(), rechteSpalte])
-        reihe.orientation = .horizontal
-        reihe.alignment = .centerY
-        reihe.spacing = 12
+        let zeileDrei = NSStackView(views: [UI.platzhalter(), cliUpdatesSchalter, sichereUpdatesSchalter])
+        zeileDrei.orientation = .horizontal
+        zeileDrei.alignment = .centerY
+        zeileDrei.spacing = 8
+        zeileDrei.detachesHiddenViews = true
+        zeileDrei.translatesAutoresizingMaskIntoConstraints = false
+
+        for knopf in [katalogOeffnen, neuLaden, allePruefenSchalter, cliUpdatesSchalter, sichereUpdatesSchalter] {
+            knopf.setContentCompressionResistancePriority(UI.schalterFestigkeit, for: .horizontal)
+        }
+
+        let reihe = NSStackView(views: [titelReihe, zeileZwei, zeileDrei])
+        reihe.orientation = .vertical
+        reihe.alignment = .leading
+        reihe.spacing = 8
         reihe.translatesAutoresizingMaskIntoConstraints = false
+        for zeile in [titelReihe, zeileZwei, zeileDrei] {
+            zeile.widthAnchor.constraint(equalTo: reihe.widthAnchor).isActive = true
+        }
 
         // Katalogfehler-Band vorbereiten.
         katalogFehlerBand.addSubview(katalogFehlerText)
@@ -241,6 +257,24 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         ])
 
         return reihe
+    }
+
+    /// Ein gerahmtes Kaestchen mit Beschriftung und Schiebeschalter, wie in der Windows-Kopfzeile.
+    private func gerahmt(_ ansichten: [NSView]) -> FlaechenView {
+        let reihe = NSStackView(views: ansichten)
+        reihe.orientation = .horizontal
+        reihe.alignment = .centerY
+        reihe.spacing = 7
+        reihe.translatesAutoresizingMaskIntoConstraints = false
+        let rahmen = FlaechenView(ton: .hoch, eckenRadius: 9)
+        rahmen.addSubview(reihe)
+        NSLayoutConstraint.activate([
+            reihe.leadingAnchor.constraint(equalTo: rahmen.leadingAnchor, constant: 11),
+            reihe.trailingAnchor.constraint(equalTo: rahmen.trailingAnchor, constant: -11),
+            reihe.topAnchor.constraint(equalTo: rahmen.topAnchor, constant: 6),
+            reihe.bottomAnchor.constraint(equalTo: rahmen.bottomAnchor, constant: -6)
+        ])
+        return rahmen
     }
 
     private var logoKachel: ThemedView?
@@ -392,19 +426,46 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         auffrischen.target = self
         auffrischen.action = #selector(auffrischenGeklickt)
 
-        let reihe = NSStackView(views: [fussStatus, UI.platzhalter(), protokolle, diagnoseSchalter, auffrischen, versionsAnzeige])
-        reihe.orientation = .horizontal
-        reihe.alignment = .centerY
-        reihe.spacing = 10
-        reihe.translatesAutoresizingMaskIntoConstraints = false
+        // Wie weit die Sammelpruefung bzw. der Sammellauf ist: x von n Programmen fertig.
+        fussBalken.style = .bar
+        fussBalken.isIndeterminate = false
+        fussBalken.controlSize = .small
+        fussBalken.translatesAutoresizingMaskIntoConstraints = false
+        fussBalken.widthAnchor.constraint(equalToConstant: 110).isActive = true
+        fussBalken.isHidden = true
+
+        let statusReihe = NSStackView(views: [fussBalken, fussStatus])
+        statusReihe.orientation = .horizontal
+        statusReihe.alignment = .centerY
+        statusReihe.spacing = 10
+        statusReihe.detachesHiddenViews = true
+        statusReihe.translatesAutoresizingMaskIntoConstraints = false
+
+        let schalterReihe = NSStackView(views: [UI.platzhalter(), protokolle, diagnoseSchalter, auffrischen, versionsAnzeige])
+        schalterReihe.orientation = .horizontal
+        schalterReihe.alignment = .centerY
+        schalterReihe.spacing = 10
+        schalterReihe.translatesAutoresizingMaskIntoConstraints = false
+
+        // Drei Zeilen: der Status vollstaendig, darunter was gerade laeuft, darunter die Schalter.
+        let stapel = NSStackView(views: [statusReihe, fussDetail, schalterReihe])
+        stapel.orientation = .vertical
+        stapel.alignment = .leading
+        stapel.spacing = 6
+        stapel.detachesHiddenViews = true
+        stapel.translatesAutoresizingMaskIntoConstraints = false
+        for zeile in [statusReihe, fussDetail, schalterReihe] {
+            zeile.widthAnchor.constraint(equalTo: stapel.widthAnchor).isActive = true
+        }
+        fussDetail.isHidden = true
 
         let rahmen = FlaechenView(ton: .tief, eckenRadius: 11)
-        rahmen.addSubview(reihe)
+        rahmen.addSubview(stapel)
         NSLayoutConstraint.activate([
-            reihe.leadingAnchor.constraint(equalTo: rahmen.leadingAnchor, constant: 16),
-            reihe.trailingAnchor.constraint(equalTo: rahmen.trailingAnchor, constant: -16),
-            reihe.topAnchor.constraint(equalTo: rahmen.topAnchor, constant: 10),
-            reihe.bottomAnchor.constraint(equalTo: rahmen.bottomAnchor, constant: -10)
+            stapel.leadingAnchor.constraint(equalTo: rahmen.leadingAnchor, constant: 16),
+            stapel.trailingAnchor.constraint(equalTo: rahmen.trailingAnchor, constant: -16),
+            stapel.topAnchor.constraint(equalTo: rahmen.topAnchor, constant: 10),
+            stapel.bottomAnchor.constraint(equalTo: rahmen.bottomAnchor, constant: -10)
         ])
         return rahmen
     }
@@ -450,13 +511,23 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     private func aktualisieren() {
         zusammenfassungPlakette.text = modell.updateZusammenfassung
         fussStatus.stringValue = modell.kopfStatus
+        fussDetail.stringValue = modell.laufDetail
+        fussDetail.isHidden = modell.laufDetail.istLeer
+        fussBalken.isHidden = !modell.laeuftSammelvorgang
+        fussBalken.maxValue = Double(modell.fortschrittGesamt)
+        fussBalken.doubleValue = Double(modell.fortschrittFertig)
         versionsAnzeige.stringValue = modell.anwendungsVersion
 
-        allePruefenSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
-        alleUpdatesSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
-        alleUpdatesSchalter.titel = modell.sammelText
-        alleUpdatesSchalter.auspraegung = modell.anzahlUpdates > 0 ? .haupt : .zweit
-        alleUpdatesSchalter.erledigt = modell.allesAktuell
+        let frei = !modell.laeuftSammelvorgang && modell.sammelMoeglich
+        allePruefenSchalter.isEnabled = frei
+        cliUpdatesSchalter.isHidden = !modell.hatCliUpdates
+        cliUpdatesSchalter.isEnabled = frei
+        cliUpdatesSchalter.titel = "⚠  " + modell.cliText
+        sichereUpdatesSchalter.isEnabled = frei
+        sichereUpdatesSchalter.titel = modell.sicherText
+        sichereUpdatesSchalter.auspraegung = modell.hatSichereUpdates ? .haupt : .zweit
+        sichereUpdatesSchalter.erledigt = modell.allesAktuell
+        dauerSchalter.istAn = modell.nachDauerSortieren
         neuLadenSchalter.isEnabled = modell.sammelMoeglich
         diagnoseSchalter.isEnabled = !modell.exportLaeuft
 
@@ -576,7 +647,8 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     // MARK: - Aktionen
 
     @objc private func allePruefenGeklickt() { Task { await modell.allePruefen() } }
-    @objc private func alleUpdatesGeklickt() { Task { await modell.alleAktualisieren() } }
+    @objc private func sichereUpdatesGeklickt() { Task { await modell.sichereAktualisieren() } }
+    @objc private func cliUpdatesGeklickt() { Task { await modell.cliAktualisieren() } }
     @objc private func neuLadenGeklickt() { modell.katalogNeuLaden() }
     @objc private func katalogOeffnenGeklickt() { modell.katalogOeffnen() }
     @objc private func protokolleGeklickt() { modell.protokolleOeffnen() }

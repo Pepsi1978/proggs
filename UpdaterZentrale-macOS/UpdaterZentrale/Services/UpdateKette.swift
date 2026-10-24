@@ -11,6 +11,8 @@ struct KettenUrteil {
     var updateLiefDurch: Bool
     var ausstehendeVersion: String? = nil
     var uebergaenge: [String] = []
+    /// Nur die Zeit in den Update-Aufrufen des Anbieters.
+    var arbeitSekunden: Double = 0
 }
 
 /// Fuehrt einen Klick auf "Aktualisieren" bis zum ECHTEN Endstand, statt einem Exit-Code zu
@@ -81,6 +83,7 @@ final class UpdateKette {
         var liefDurch = false
         var letztePruefung = vor
         var standNach = fingerabdruckStart
+        var arbeitSekunden = 0.0   // nur die Zeit in den Update-Aufrufen des Anbieters
 
         func ende(_ urteil: LaufErgebnis, _ meldung: String, _ karte: PruefErgebnis, _ ausstehend: String? = nil) -> KettenUrteil {
             let schwere: Schwere = urteil == .fehlgeschlagen || urteil == .nichtVerifiziert ? .fehler
@@ -92,7 +95,8 @@ final class UpdateKette {
             k.meldung = meldung
             return KettenUrteil(ergebnis: urteil, meldung: meldung, fingerabdruckVorher: fingerabdruckStart,
                                 fingerabdruckNachher: standNach, fuerKarte: k, updateAufrufe: aufrufe,
-                                updateLiefDurch: liefDurch, ausstehendeVersion: ausstehend, uebergaenge: uebergaenge)
+                                updateLiefDurch: liefDurch, ausstehendeVersion: ausstehend, uebergaenge: uebergaenge,
+                                arbeitSekunden: (arbeitSekunden * 10).rounded() / 10)
         }
 
         func alsFehler(_ p: PruefErgebnis) -> PruefErgebnis {
@@ -114,7 +118,9 @@ final class UpdateKette {
             aufrufe += 1
             Diagnose.ereignis(.info, "kette", "kette.durchlauf", "Durchlauf \(durchlauf) von \(maxDurchlaeufe)",
                               ["programm": eintrag.id, "angebot": angebot, "standVor": standVor])
+            let arbeitBeginn = Date()
             let ergebnis = await aktualisierer.aktualisieren(eintrag, protokoll)
+            arbeitSekunden += Date().timeIntervalSince(arbeitBeginn)
 
             if ergebnis.zustand == .abgebrochen {
                 var k = ergebnis
