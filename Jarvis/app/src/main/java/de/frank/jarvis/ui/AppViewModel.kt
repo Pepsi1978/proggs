@@ -210,6 +210,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val denkt: Boolean get() = sitzungId?.let { laufende.containsKey(it) } == true
     /** Was Jarvis im offenen Gespräch gerade tut („Aufgaben lesen“), solange er arbeitet. */
     val schritt: String get() = sitzungId?.let { laufende[it]?.schritt }.orEmpty()
+    /**
+     * Leuchtkern „Jarvis denkt“ unter der letzten Nachricht: nicht beim Absenden eines Programmierauftrags (Plus → „Programmierer“),
+     * das Arbeitssymbol dort gehört nur Programmier-Sitzungen, die wirklich arbeiten.
+     */
+    val denktSichtbar: Boolean get() = sitzungId?.let { id -> laufende[id] }?.let { r ->
+        gespraech.getOrNull(r.frage)?.let { !(it.vonMir && it.text.trimStart().startsWith(ProgrammiererVorlage.VORSPANN)) } ?: true
+    } == true
 
     // ---- ChatGPT-Anmeldung ----
     var kiVerbunden by mutableStateOf(auth.isConnected); private set

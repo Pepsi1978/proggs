@@ -271,7 +271,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
             items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
             item(key = "programmiert") { ProgrammierAktivitaet(vm) }
-            if (vm.denkt) item(key = "denkt") {
+            if (vm.denktSichtbar) item(key = "denkt") {
                 Row(Modifier.padding(start = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Kern(30.dp, f.primaer, aktiv = true)
                     Text(vm.schritt.ifEmpty { "Jarvis denkt" } + " …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))

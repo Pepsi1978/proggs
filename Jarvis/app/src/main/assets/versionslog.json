@@ -348,6 +348,7 @@
     { "versionCode": 342, "versionName": "1.8.331", "stand": "24.10.2026, 21:02 Uhr", "notiz": "Unter dem Reiter Gespräche gibt es keinen Knopf Neues Gespräch mehr, ein neues Gespräch entsteht über eine normale Session; Neuer Programmierauftrag und Neues Projekt bleiben." },
     { "versionCode": 343, "versionName": "1.8.332", "stand": "24.10.2026, 21:05 Uhr", "notiz": "Auch unter dem Reiter Programmierung steht kein Knopf Neuer Programmierauftrag mehr; Neues Projekt bleibt." },
     { "versionCode": 344, "versionName": "1.8.333", "stand": "24.10.2026, 21:08 Uhr", "notiz": "Auf dem Hauptbildschirm steht Neue Session jetzt oben und der Papierkorb darunter." },
-    { "versionCode": 345, "versionName": "1.8.334", "stand": "24.10.2026, 21:14 Uhr", "notiz": "In den Einstellungen unter System stellt ein Schieberegler ein, wie leicht sich die Gesprächsleiste per Wischen öffnet." }
+    { "versionCode": 345, "versionName": "1.8.334", "stand": "24.10.2026, 21:14 Uhr", "notiz": "In den Einstellungen unter System stellt ein Schieberegler ein, wie leicht sich die Gesprächsleiste per Wischen öffnet." },
+    { "versionCode": 346, "versionName": "1.8.335", "stand": "24.10.2026, 21:15 Uhr", "notiz": "Beim Absenden eines Programmierauftrags leuchtet über „Neue Session“ kein Arbeitssymbol mehr auf; es erscheint nur noch bei wirklich arbeitenden Programmier-Sitzungen." }
   ]
 }
