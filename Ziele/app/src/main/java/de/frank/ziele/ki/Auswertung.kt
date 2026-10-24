@@ -93,7 +93,13 @@ object Auswertung {
                 synchronized(this@Auswertung) { laeufe.remove(zielId) }
             }
             fertig(ergebnis, erfolg)
+            if (ergebnis != "Abgebrochen.") runCatching {
+                val titel = ZieleRepository.get(app).ziel(zielId)?.titel ?: "Ziel"
+                AuswertungsDienst.fertig(app, zielId, titel, ergebnis ?: erfolg, ergebnis != null)
+            }
         }
+        // Erst nach dem Eintrag in „stand“: Der Dienst beendet sich, sobald keine Auswertung mehr läuft.
+        AuswertungsDienst.starte(app)
         return true
     }
 

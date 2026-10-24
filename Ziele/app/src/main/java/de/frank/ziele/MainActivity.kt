@@ -2,6 +2,7 @@ package de.frank.ziele
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -20,6 +21,8 @@ class MainActivity : ComponentActivity() {
         vm.mikrofonErlaubnisErgebnis(ok)
     }
 
+    private val meldungsErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
@@ -33,6 +36,10 @@ class MainActivity : ComponentActivity() {
                 mikroErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
             }
         }
+        // Ohne diese Erlaubnis meldet sich eine im Hintergrund fertige Auswertung nicht (Android 13+).
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) meldungsErlaubnis.launch(Manifest.permission.POST_NOTIFICATIONS)
         setContent { ZieleApp(vm, this) }
     }
 

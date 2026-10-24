@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Auswertungen laufen weiter, wenn Frank die App minimiert: Vordergrund-Dienst, Wach-Sperre, Fertig-Meldung. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Ziele lesen und schreiben. -->
     <permission
@@ -50,6 +55,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".ki.AuswertungsDienst"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Brücke zum Genialen Wecker: liest die aktiven Ziele (nur lesend, ohne Erlaubnis, eigener Signierschlüssel des Weckers). -->
         <provider
