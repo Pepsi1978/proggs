@@ -85,7 +85,7 @@ fun VorleseSteuerung(vm: AppViewModel, quelle: String, titel: String, text: Stri
     val symbol = groesse * 0.45f
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (zustand != VorleseZustand.AUS) {
-            Box(Modifier.size(groesse).glas(f, groesse / 2, erhoeht = 0.5f).antippen { vm.vorlesenStoppen() }, contentAlignment = Alignment.Center) {
+            Box(Modifier.size(groesse).glas(f, groesse / 2, erhoeht = 0.5f).antippen { vm.vorlesenStoppen(quelle) }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Stop, "Vorlesen beenden", tint = f.textLeise, modifier = Modifier.size(symbol))
             }
             Spacer(Modifier.width(8.dp))
@@ -95,8 +95,8 @@ fun VorleseSteuerung(vm: AppViewModel, quelle: String, titel: String, text: Stri
             Modifier.size(groesse).glas(f, groesse / 2, erhoeht = 0.5f, toenung = if (aktiv) f.primaer else null).antippen {
                 when (zustand) {
                     VorleseZustand.AUS -> vm.lies(quelle, titel, text)
-                    VorleseZustand.PAUSIERT -> vm.vorlesenWeiter()
-                    else -> vm.vorlesenPause()
+                    VorleseZustand.PAUSIERT -> vm.vorlesenWeiter(quelle)
+                    else -> vm.vorlesenPause(quelle)
                 }
             },
             contentAlignment = Alignment.Center,

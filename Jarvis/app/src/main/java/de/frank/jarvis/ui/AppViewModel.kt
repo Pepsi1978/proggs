@@ -547,7 +547,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (laufende[runde.sitzung] !== runde) return
         laufende.remove(runde.sitzung)
         // Hat die Runde nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), ist die Karte die Antwort: keine freie Rückfrage des
-        // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut, oder nach einem schnellen Tipp „Übernommen: …“. Hat die Runde
+        // Modells daneben. Vorgelesen wird nur ihr fester Wortlaut; nach einem schnellen Tipp nichts (leer) bzw. nur eine Folgefrage. Hat die Runde
         // daneben noch etwas anderes erledigt (Timer, Aufgabe …), bleibt die Antwort des Modells stehen.
         val nurAuftrag = synchronized(runde.erledigt) { runde.erledigt.all { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
         if (karte != null && nurAuftrag) {
@@ -1207,7 +1207,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Die Arbeit selbst darf länger dauern als die Geduld des Live-Modells: Sie läuft weiter, das Modell bekommt nach dem
             // Zeitlimit einen Zwischenstand, und die echte Antwort wird später zugestellt (Chat und Stimme), nie verworfen.
             // Hat die Antwort nur eine Auswahlkarte gestellt (Opus 5.5 / Sol 6.1 usw.), gilt nur deren fester Wortlaut, nach einem
-            // schnellen Tipp „Übernommen: …“ (wie im Chat, siehe rundeFertig).
+            // schnellen Tipp keine Bestätigung, nur eine Folgefrage (wie im Chat, siehe rundeFertig).
             val erledigt = java.util.Collections.synchronizedList(mutableListOf<String>())
             var karte: String? = null
             val arbeit = async {
@@ -1860,11 +1860,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Lautsprecher-Knopf: vorlesen, oder anhalten, wenn genau das schon läuft. */
-    /** Vorlesesteuerung der Tagesauswertung: anhalten und an genau der Stelle fortsetzen, oder ganz beenden. */
-    fun vorlesenPause() = vorleser.pause()
-    fun vorlesenWeiter() = vorleser.weiter()
-    fun vorlesenStoppen() = vorleser.stopp()
-
     fun lies(quelle: String, titel: String, text: String) {
         val stand = vorleser.stand.value
         // Ein zweiter Tipp auf „Probe hören“, während die Stimme noch erzeugt wird (oder nach einem 429 wartet), brach die
@@ -1878,6 +1873,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         if (stand.quelle == quelle && stand.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) vorleser.stopp() else vorleser.sprich(quelle, titel, text)
     }
+
+    /**
+     * Vorlesesteuerung der Tagesauswertung: anhalten und an genau der Stelle fortsetzen, oder ganz beenden. Nur, wenn noch
+     * [quelle] liest: Hat inzwischen eine Antwort oder Ansage übernommen, trifft der Tipp sie nicht.
+     */
+    private fun meineQuelle(quelle: String) = vorleser.stand.value.quelle == quelle
+    fun vorlesenPause(quelle: String) { if (meineQuelle(quelle)) vorleser.pause() }
+    fun vorlesenWeiter(quelle: String) { if (meineQuelle(quelle)) vorleser.weiter() }
+    fun vorlesenStoppen(quelle: String) { if (meineQuelle(quelle)) vorleser.stopp() }
 
     // ---- Bilder und PDFs im Chat: bewusst in die Ablage übernehmen ----
 

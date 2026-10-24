@@ -728,6 +728,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val gespraech = eintrag.optString("gespraech")
         Auftragsbuch.frageErledigt(app, frageId)
         rueckfrageAnsageAbbrechen(frageId)
+        if (stand in RueckfrageStand.BEANTWORTET_ALLE) rueckfrageMeldungWeg(eintrag.optString("id"), frageId)
         aktivitaetMelden(Auftragsbuch.finde(app, eintrag.optString("id")) ?: eintrag)
         if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, stand, frage.optString("antwort"), frage.optString("grund"))
     }
@@ -768,6 +769,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             }
             val stand = standVomServer(status) ?: continue
             if (gespraech.isNotEmpty()) ProgrammierChat.rueckfrageStand(app, gespraech, frageId, stand, f.optString("antwort_text"), f.optString("grund"))
+            if (stand in RueckfrageStand.BEANTWORTET_ALLE) rueckfrageMeldungWeg(eintrag.optString("id"), frageId)
             if (RueckfrageStand.endgueltig(stand)) {
                 Auftragsbuch.frageErledigt(app, frageId)
                 rueckfrageAnsageAbbrechen(frageId)
@@ -1063,6 +1065,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (ausgang != null) {
                 stand(ausgang, json.optString("antwort_text").ifEmpty { if (ausgang in RueckfrageStand.BEANTWORTET_ALLE) "eine frühere Antwort" else "" }, grund)
                 Auftragsbuch.frageErledigt(app, frageId)
+                if (ausgang in RueckfrageStand.BEANTWORTET_ALLE) rueckfrageMeldungWeg(eintrag?.optString("id").orEmpty(), frageId)
             } else stand(RueckfrageStand.FEHLER, grund = grund)
             throw IllegalStateException(grund)
         }
@@ -1074,6 +1077,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         // Angenommen heißt: Der Server hat sie, die Sitzung holt sie in Sekunden ab. Ihre Bestätigung setzt „beantwortet“.
         stand(RueckfrageStand.ANGENOMMEN)
+        rueckfrageMeldungWeg(eintrag?.optString("id").orEmpty(), frageId)
         "Die Antwort „$antwortText“ ist beim Jarvis-Server; die Sitzung übernimmt sie jetzt."
     }
 
@@ -1095,6 +1099,19 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Die letzten Programmieraufträge mit Stand, letztem Schritt und Auftragstext (für die Aktualitätsprüfung des Lernlaufs; nur lesen). */
     fun auftragsUebersicht(anzahl: Int = 20): String = Auftragsbuch.uebersicht(app, anzahl)
+
+    /**
+     * Beantwortete Rückfrage: Ihre Benachrichtigung verschwindet, aber nur, solange sie noch genau diese Frage zeigt (eine
+     * neuere Frage oder ein neuer Stand desselben Auftrags bleibt stehen, Meldungen anderer Aufträge sowieso).
+     */
+    private fun rueckfrageMeldungWeg(auftragId: String, frageId: String) {
+        if (auftragId.isEmpty() || frageId.isEmpty()) return
+        val nummer = 300_000 + (auftragId.hashCode() and 0xFFFF)
+        runCatching {
+            val nm = app.getSystemService(android.app.NotificationManager::class.java)
+            if (nm.activeNotifications.any { it.id == nummer && it.notification.extras.getString(EXTRA_RUECKFRAGE) == frageId }) nm.cancel(nummer)
+        }
+    }
 
     /** Eine Benachrichtigung je Auftrag, nur bei Rückfrage, Fertig und Problem; ein Tipp öffnet die Sitzung oder die Claude-App. */
     private fun benachrichtige(eintrag: JSONObject, vorlesen: Boolean = true) {
@@ -1147,6 +1164,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                                 de.frank.jarvis.meldung.Meldungen.rueckfrageKanalAnlegen(app)
                                 setChannelId(de.frank.jarvis.meldung.Meldungen.KANAL_RUECKFRAGE).setCategory(NotificationCompat.CATEGORY_CALL)
                                     .setPriority(NotificationCompat.PRIORITY_HIGH).setFullScreenIntent(tippen, true)
+                                    // Woran rueckfrageMeldungWeg erkennt, dass die Meldung noch genau diese Frage zeigt.
+                                    .addExtras(android.os.Bundle().apply { putString(EXTRA_RUECKFRAGE, frageId) })
                                 if (android.os.Build.VERSION.SDK_INT >= 34 &&
                                     !app.getSystemService(android.app.NotificationManager::class.java).canUseFullScreenIntent())
                                     Logbuch.system("Rückfrage ohne Vollbild-Benachrichtigung", "Vollbild-Benachrichtigungen sind für Jarvis nicht erlaubt")
@@ -1828,6 +1847,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         private suspend fun ansage(id: String, k: Karte): String? {
             kotlinx.coroutines.withTimeoutOrNull(TIPP_WARTEN_MS) { while (id in tippInArbeit) kotlinx.coroutines.delay(100) }
+            // Läuft der Start nach der Wartezeit noch (Rechner langsam), steht weder Erfolg noch Folgekarte fest: nur kurz vertrösten,
+            // statt still zu bleiben oder einen Start zu behaupten. Scheitert er, steht der Grund im Gespräch.
+            if (id in tippInArbeit) return "Einen Moment."
             return when (val s = wahlStand.value[id]) {
                 null, WAHL_ERLEDIGT -> null
                 // Offen, auch nach einem Fehlstart (der Grund steht dann schon im Gespräch).
