@@ -324,9 +324,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val auftrag = DiktatTrenner.auftrag(a.optString("auftrag"))
                 // Antwortet Frank auf eine offene Modellwahl kurz mit genau einem Modell („Opus 5.5“, „Sol bitte“), gilt das als Wahl,
                 // auch wenn das Modell modell nicht mitgab: keine zweite Nachfrage.
+                val worte = kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]
+                // Ein vom Modell selbst eingesetztes Modell zählt im Chat nur, wenn Frank es in seinen Worten genannt hat; sonst kommen die Knöpfe.
                 val modell = when (a.optString("modell").trim().lowercase()) { MODELL_SOL -> MODELL_SOL; MODELL_OPUS -> MODELL_OPUS; else -> "" }
+                    .takeIf { worte?.streng != true || modellGenannt(worte.text) }.orEmpty()
                     .ifEmpty { herkunft().second.takeIf { g -> g.isNotEmpty() && offeneWahlen.values.any { it.gespraech == g && it.stufe == STUFE_MODELL } }
-                        ?.let { modellAusAntwort(kotlinx.coroutines.currentCoroutineContext()[ProgrammierChat.FranksWorte]?.aktuell) }.orEmpty() }
+                        ?.let { modellAusAntwort(worte?.aktuell) }.orEmpty() }
                 val cli = when (a.optString("cli").trim().lowercase()) { CLI_OPENCODE -> CLI_OPENCODE; CLI_CODEX -> CLI_CODEX; else -> "" }
                 val ziel = a.optString("ziel").lowercase()
                 // Früher lehnte Jarvis hier ab, sobald zum Gespräch oder zur App schon ein Auftrag lief, und schickte das Modell zu
@@ -334,22 +337,24 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // ein neuer Auftrag mit eigener Sitzung (siehe NachtragsRegel.eigenesGespraech).
                 val wahl = zieleFuer(ziel, modell, cli)
                 val neu = a.optBoolean("neu")
-                val knopf = if (neu) null else knopfStartIn(herkunft().second)
+                // Über den Menüpunkt „Programmierer“ ist es ausdrücklich ein neuer Auftrag: dann nie „schon per Knopf gestartet“.
+                val knopf = if (neu || ProgrammiererVorlage.aufgabe(worte?.aktuell.orEmpty()) != null) null else knopfStartIn(herkunft().second, worte?.aktuell.orEmpty())
                 when {
                     appName.isEmpty() -> Ergebnis("Welche App ist gemeint? Bitte Frank fragen.", fehler = true)
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     // Frank hat eben per Knopf gewählt und der Auftrag läuft; schiebt er gleich danach etwas nach, ruft das Modell
                     // programmieren oft noch einmal auf: dann weder die Modellfrage ein zweites Mal noch ein doppelter Auftrag.
                     knopf != null -> schonPerKnopfGestartet(knopf)
+                    // Franks Wahl vom 24.10.2026: Ohne genanntes Modell kommen bei jedem Auftrag die Knöpfe, auch wenn Sol gerade nicht
+                    // erreichbar scheint (früher entfielen sie dann still, etwa wenn die PC-Abfrage länger als 4 s brauchte).
+                    // Scheitert das gewählte Modell, steht der Grund im Gespräch und die Knöpfe sind wieder offen.
+                    modell.isEmpty() -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel, worte?.aktuell.orEmpty())
                     wahl.isEmpty() -> Ergebnis(fehltFuer(modell), fehler = true)
-                    // Franks Wahl vom 22.10.2026: Er wählt beim Start das Modell (Knöpfe im Chat), wenn Sol möglich ist: am Windows-PC
-                    // oder, ist der aus, in Codex Cloud (ChatGPT-Konto verbunden).
-                    modell.isEmpty() && solMoeglich(ziel) -> modellWahlAnbieten(appName, auftrag, a.optBoolean("review"), neu, ziel)
                     // Danach bei Sol am Windows-PC: Codex CLI oder OpenCode CLI, bei Codex die Review-Frage (Codex kann nicht selbst fragen).
                     modell == MODELL_SOL && cli.isEmpty() && ziel != "cloud" && rechnerDa() ->
-                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI))
+                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, stufe = STUFE_CLI, runde = worte?.aktuell.orEmpty()))
                     modell == MODELL_SOL && cli == CLI_CODEX && !a.has("review") && ziel != "cloud" && rechnerDa() ->
-                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, CLI_CODEX, STUFE_REVIEW))
+                        wahlAnbieten(OffeneWahl(appName, auftrag, false, neu, herkunft().second, null, ziel, MODELL_SOL, CLI_CODEX, STUFE_REVIEW, runde = worte?.aktuell.orEmpty()))
                     else -> {
                         // Per Sprache gewählt: Die Knöpfe im selben Gespräch haben ausgedient (sonst startete ein Tipp ein zweites Mal).
                         herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
@@ -379,13 +384,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         else -> ziele
     }.filter { it.bereit() }
 
-    /** Lohnt die Modellwahl? Sol geht am Windows-PC (fragt er ab) oder, außer bei ziel=pc, in Codex Cloud. */
-    private suspend fun solMoeglich(ziel: String): Boolean = when (ziel) {
-        "pc" -> ziele.first().bereit() && rechnerDa()
-        "cloud" -> codex.bereit()
-        else -> codex.bereit() || (ziele.first().bereit() && rechnerDa())
-    }
-
     /**
      * Fragt gerade der Windows-PC (Rang „haupt“) beim Relay ab? Nur dort läuft Sol; ist nur der Mac da, startet Opus wie bisher
      * ohne Rückfrage. Kurz (höchstens 4 s); im Zweifel nein.
@@ -410,14 +408,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     private data class OffeneWahl(val app: String, val auftrag: String, val review: Boolean, val neu: Boolean, val gespraech: String,
                                   val ursprung: de.frank.jarvis.speech.SprachUrsprung?, val ziel: String = "",
                                   val modell: String = "", val cli: String = "", val stufe: String = STUFE_MODELL,
-                                  val seit: Long = System.currentTimeMillis())
+                                  val seit: Long = System.currentTimeMillis(), val runde: String = "")
 
     /** Ein per Knopf gestarteter Auftrag, gemerkt je Gespräch für [KNOPF_FRIST_MS] (siehe [knopfStartIn]). */
-    private class KnopfStart(val nummer: String, val app: String, val modell: String, val cli: String, val zeit: Long = System.currentTimeMillis())
+    private class KnopfStart(val nummer: String, val app: String, val modell: String, val cli: String, val runde: String = "", val zeit: Long = System.currentTimeMillis())
 
-    /** Der Auftrag, den Frank in [gespraech] vor höchstens [KNOPF_FRIST_MS] per Knopf gestartet hat. */
-    private fun knopfStartIn(gespraech: String): KnopfStart? =
+    /**
+     * Der Auftrag, den Frank in [gespraech] vor höchstens [KNOPF_FRIST_MS] per Knopf gestartet hat, nur aus derselben Runde
+     * ([runde] = Franks Nachricht): Ein neuer Auftrag in einer späteren Nachricht ist eine eigene Session und bekommt die Knöpfe.
+     */
+    private fun knopfStartIn(gespraech: String, runde: String): KnopfStart? =
         gespraech.takeIf { it.isNotEmpty() }?.let { knopfStarts[it] }?.takeIf { System.currentTimeMillis() - it.zeit < KNOPF_FRIST_MS }
+            ?.takeIf { runde.isEmpty() || it.runde.isEmpty() || it.runde == runde }
 
     private fun modellName(modell: String, cli: String) =
         if (modell == MODELL_SOL) "Sol 6.1 (" + (if (cli == CLI_OPENCODE) "OpenCode CLI" else "Codex CLI") + ")" else "Opus 5.5"
@@ -431,12 +433,17 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Sol möglich, Modell offen: In der App kommt eine Karte mit „Opus 5.5“ und „Sol 6.1“ ins Gespräch, der Start folgt
      * auf den Tipp ([modellGewaehlt]). Aus ChatGPT gibt es keine Karte: Das Modell fragt Frank und ruft mit modell erneut auf.
      */
-    private suspend fun modellWahlAnbieten(appName: String, auftrag: String, review: Boolean, neu: Boolean, ziel: String): Ergebnis {
+    private suspend fun modellWahlAnbieten(appName: String, auftrag: String, review: Boolean, neu: Boolean, ziel: String, runde: String): Ergebnis {
         val (ausChatGpt, gespraech) = herkunft()
         if (ausChatGpt || gespraech.isEmpty()) return Ergebnis("Noch nichts gestartet: Frank wählt das Modell (Sol 6.1 läuft am Windows-PC oder, ist der aus, in Codex Cloud). Frag ihn kurz: " +
             "„Opus 5.5 oder Sol 6.1?“ und rufe programmieren danach mit demselben Auftrag und modell=opus bzw. modell=sol erneut auf.")
-        // Steht im Gespräch schon eine frische Karte, keine zweite: Sie übernimmt den neu gefassten Auftrag, und ein schon
-        // per Knopf gewähltes Sol wird nicht noch einmal erfragt.
+        // Ruft das Modell in derselben Runde ([runde] = Franks Nachricht) noch einmal auf, keine zweite Karte: Die frische übernimmt
+        // den neu gefassten Auftrag, ein schon per Knopf gewähltes Sol wird nicht noch einmal erfragt. Eine offene Karte aus einer
+        // früheren Runde steht womöglich weit oben: Sie gilt nicht mehr, unten kommt eine neue.
+        offeneWahlen.filterValues { it.gespraech == gespraech && runde.isNotEmpty() && it.runde != runde }.keys.takeIf { it.isNotEmpty() }?.let { alt ->
+            alt.forEach { offeneWahlen.remove(it) }
+            wahlStand.update { stand -> stand + alt.associateWith { WAHL_ERLEDIGT } }
+        }
         offeneWahlen.entries.firstOrNull { it.value.gespraech == gespraech && System.currentTimeMillis() - it.value.seit < KNOPF_FRIST_MS }?.let { (id, alt) ->
             val neuGefasst = alt.copy(app = appName, auftrag = auftrag)
             offeneWahlen[id] = neuGefasst
@@ -449,7 +456,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 else -> "Im Chat stehen schon die Knöpfe „Opus 5.5“ und „Sol 6.1“."
             } + " Frag NICHT noch einmal nach dem Modell; der Tipp startet den Auftrag in der neuen Fassung. $KARTE_FRAGT")
         }
-        karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel))
+        karte(OffeneWahl(appName, auftrag, review, neu, gespraech, kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung], ziel, runde = runde))
         return Ergebnis("Noch nicht gestartet: Im Chat stehen die Knöpfe „Opus 5.5“ und „Sol 6.1“. $KARTE_FRAGT " +
             "Sagt Frank das Modell später, rufe programmieren mit demselben Auftrag und modell=opus bzw. modell=sol auf; sonst starte nichts.")
     }
@@ -543,7 +550,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             else starteErstes(wahl, w.app, w.auftrag, review, nummer, w.neu, modell, cli)
         }
         // Gestartet (oder unklar, läuft womöglich): Ein erneuter Aufruf aus diesem Gespräch fragt nicht noch einmal (siehe knopfStartIn).
-        if (!ergebnis.fehler || ergebnis.text.startsWith("Unklar")) knopfStarts[w.gespraech] = KnopfStart(nummer, w.app, modell, cli)
+        if (!ergebnis.fehler || ergebnis.text.startsWith("Unklar")) knopfStarts[w.gespraech] = KnopfStart(nummer, w.app, modell, cli, w.runde)
         if (!ergebnis.fehler) return
         ProgrammierChat.poste(app, w.gespraech, "⚠️ " + ergebnis.text, ProgrammierChat.ART_STATUS)
         if (!ergebnis.text.startsWith("Unklar")) {
@@ -1994,6 +2001,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val sol = Regex("\\bsol\\b").containsMatchIn(t)
             return when { opus && !sol -> MODELL_OPUS; sol && !opus -> MODELL_SOL; else -> "" }
         }
+
+        /** Nennt Frank selbst ein Modell (Opus, Sol oder GPT)? Nur dann gilt ein vom Modell eingesetztes modell ohne Knöpfe. */
+        internal fun modellGenannt(worte: String): Boolean = Regex("\\b(opus|sol|gpt)\\b").containsMatchIn(worte.lowercase(Locale.ROOT))
 
         private const val WAHL_PREFS = "jarvis_auswahlkarten"
         @Volatile private var wahlenGeladen = false
