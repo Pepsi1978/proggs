@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.rounded.CallEnd
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.AddComment
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Description
@@ -339,14 +341,31 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
+/** Größe der schwebenden Symbole und ihr Abstand untereinander; „Neue Session“ steht eine freie Bubble höher. */
+private val SCHWEBE_GROESSE = 40.dp
+private val SCHWEBE_ABSTAND = 8.dp
+private val SCHWEBE_LUECKE = SCHWEBE_GROESSE + SCHWEBE_ABSTAND * 2
+
+/** Rechter Abstand der Symbole: ihre Mitte liegt genau über der orangen Live-Kugel (12 Rand + 10 Innenabstand + 24 halbe Kugel). */
+val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
+
+/** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
+fun schwebeHoehe(nachtrag: Boolean) = SCHWEBE_GROESSE * (if (nachtrag) 3 else 2) + SCHWEBE_ABSTAND * (if (nachtrag) 1 else 0) + SCHWEBE_LUECKE
+
 /**
- * Frei schwebend rechts über der Eingabeblase: das Programmier-Symbol (wie Plus → „Programmierer“) und darüber, nur im
- * Programmiergespräch, ein Plus (wie Plus → „+ Nachtrag“). Ohne Blase, nur ein kleiner, leicht schimmernder, durchscheinender Grund.
+ * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel: unten das Programmier-Symbol (wie Plus →
+ * „Programmierer“), darüber, nur im Programmiergespräch, ein Plus (wie Plus → „+ Nachtrag“), und eine freie Bubble höher,
+ * abgesetzt gegen Fehltipps, „Neue Session“. Ohne Blase, nur ein kleiner, leicht schimmernder, durchscheinender Grund.
  */
 @Composable
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (vm.nachtragMoeglich) SchwebeSymbol(Icons.Rounded.Add, "Nachtrag in die laufende Programmier-Sitzung", vm.nachtragBlitz) { vm.nachtragEinsetzen() }
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        SchwebeSymbol(Icons.Rounded.AddComment, "Neue Session", 0) { vm.neuesGespraech() }
+        Spacer(Modifier.height(SCHWEBE_LUECKE))
+        if (vm.nachtragMoeglich) {
+            SchwebeSymbol(Icons.Rounded.Add, "Nachtrag in die laufende Programmier-Sitzung", vm.nachtragBlitz) { vm.nachtragEinsetzen() }
+            Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        }
         SchwebeSymbol(Icons.Rounded.Code, "Neuer Programmierauftrag", vm.programmiererBlitz) { vm.programmiererEinsetzen() }
     }
 }
@@ -368,7 +387,7 @@ private fun SchwebeSymbol(icon: ImageVector, beschreibung: String, blitz: Int, a
         gruen.animateTo(0f, tween(650))
     }
     Box(
-        Modifier.size(40.dp).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
+        Modifier.size(SCHWEBE_GROESSE).clip(CircleShape).background(f.text.copy(alpha = 0.06f))
             .background(f.erfolg.copy(alpha = 0.85f * gruen.value)).drawBehind {
             val x = size.width * lauf
             drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.10f), Color.Transparent),

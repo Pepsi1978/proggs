@@ -35,7 +35,6 @@ import androidx.compose.material.icons.automirrored.rounded.CallSplit
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.AddComment
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Mic
@@ -191,9 +190,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         LaeuftGerade(vm)
         // Die Stoppuhr erscheint nur, wenn Frank sie über Jarvis startet, und bleibt bis zum Zurücksetzen.
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-        // Rechts unten über der Liste schweben Programmierer und, im Programmiergespräch, „+ Nachtrag“; die Liste bekommt
-        // unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
-        val schweber = if (vm.liveAktiv) 0.dp else if (vm.nachtragMoeglich) 96.dp else 50.dp
+        // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
+        // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
+        val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich) + 10.dp
         Box(Modifier.weight(1f).fillMaxWidth()) {
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
@@ -280,7 +279,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
         }
-        if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = 27.dp, bottom = 2.dp))
+        if (!vm.liveAktiv) ProgrammierSchweber(vm, Modifier.align(Alignment.BottomEnd).padding(end = SCHWEBE_RECHTS, bottom = 2.dp))
         }
         // Die Eingabeblase wie in der ChatGPT-App: Text, Plus-Menü, Modell, Diktat und Live-Gespräch.
         EingabeBlase(vm)
@@ -339,10 +338,7 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             Text("Jarvis", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
             Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        if (vm.gespraech.isNotEmpty()) {
-            Rundknopf(Icons.Rounded.AddComment, "Neues Gespräch", farbe = f.primaer) { vm.neuesGespraech() }
-            Spacer(Modifier.width(8.dp))
-        }
+        // „Neue Session“ steht nicht mehr hier, sondern schwebend rechts über der Eingabeblase (ProgrammierSchweber).
         // Aktuelles Gespräch löschen: verschwindet danach auch aus der Gesprächsleiste.
         // Das Ziel wird beim Öffnen festgehalten ("" = noch nicht gespeichert): wechselt das Gespräch inzwischen, wird nichts gelöscht.
         var loeschenZiel by remember { mutableStateOf<String?>(null) }

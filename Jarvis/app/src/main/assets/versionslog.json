@@ -328,6 +328,7 @@
     { "versionCode": 322, "versionName": "1.8.311", "stand": "24.10.2026, 15:23 Uhr", "notiz": "Nach dem zweiten Tipp aufs Diktier-Mikrofon läuft die Mitschrift-Animation sichtbar mit „Schreibe mit …“ weiter, und sobald der Text erkannt ist, öffnet sich die Eingabeblase von selbst und zeigt ihn." },
     { "versionCode": 323, "versionName": "1.8.312", "stand": "24.10.2026, 15:33 Uhr", "notiz": "„Ich höre zu …“ und „Schreibe mit …“ stehen in der eingeklappten Blase nur noch beim Diktier-Mikrofon; bei Hey Jarvis und im Gesprächsmodus bleibt die Modellwahl sichtbar." },
     { "versionCode": 324, "versionName": "1.8.313", "stand": "24.10.2026, 16:17 Uhr", "notiz": "Rechts über der Eingabeblase schwebt jetzt ein Programmier-Symbol für einen neuen Programmierauftrag, im Programmiergespräch darüber ein Plus für den Nachtrag." },
-    { "versionCode": 325, "versionName": "1.8.314", "stand": "24.10.2026, 17:05 Uhr", "notiz": "Programmierer und Nachtrag klappen die Eingabeblase jetzt auf und zeigen den eingefügten Text, das getippte Symbol leuchtet dabei kurz grün auf." }
+    { "versionCode": 325, "versionName": "1.8.314", "stand": "24.10.2026, 17:05 Uhr", "notiz": "Programmierer und Nachtrag klappen die Eingabeblase jetzt auf und zeigen den eingefügten Text, das getippte Symbol leuchtet dabei kurz grün auf." },
+    { "versionCode": 326, "versionName": "1.8.315", "stand": "24.10.2026, 17:14 Uhr", "notiz": "Programmierer, Nachtrag und Neue Session liegen jetzt rechtsbündig über der orangen Kugel, Neue Session eine freie Bubble höher und nicht mehr oben in der Leiste." }
   ]
 }
