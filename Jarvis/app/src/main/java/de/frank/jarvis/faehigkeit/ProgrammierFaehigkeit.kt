@@ -479,6 +479,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "programmiert ist? Ja oder Nein?“ und rufe programmieren danach mit demselben Auftrag, modell=sol, cli=codex und review=true bzw. review=false erneut auf."
         else "Noch nichts gestartet: Sol 6.1 läuft am Windows-PC im Codex CLI oder im OpenCode CLI. Frag Frank kurz: „Codex CLI oder OpenCode CLI?“ und rufe " +
             "programmieren danach mit demselben Auftrag, modell=sol und cli=codex bzw. cli=opencode erneut auf.")
+        // Das Modell ist per Sprache oder Text schon gewählt: keine Erinnerung an eine Modellwahl-Karte dieses Gesprächs mehr.
+        offeneWahlen.filterValues { it.gespraech == gespraech && it.stufe == STUFE_MODELL }.keys.forEach { erinnerungen.remove(it)?.cancel() }
         karte(w.copy(gespraech = gespraech, ursprung = kotlinx.coroutines.currentCoroutineContext()[de.frank.jarvis.speech.SprachUrsprung]))
         return Ergebnis(if (review) "Noch nicht gestartet: Im Chat stehen die Knöpfe „Ja“ und „Nein“ zum Review. $KARTE_FRAGT " +
             "Sagt Frank es später, rufe programmieren mit demselben Auftrag, modell=sol, cli=codex und review=true bzw. review=false auf; sonst starte nichts."
@@ -501,6 +503,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         wahlStand.update { it + (id to WAHL_OFFEN) }
         wahlenSichern(app)
         ProgrammierChat.poste(app, w.gespraech, frage, ProgrammierChat.ART_MODELLWAHL, kartenKontext(id, w.app, optionen))
+        if (w.stufe == STUFE_MODELL) modellErinnerung(id)
+    }
+
+    /**
+     * Franks Wunsch vom 24.10.2026: Ist die Modellwahl nach 30 Sekunden noch offen, fragt Jarvis einmal hörbar nach (etwa im
+     * Auto, ohne Blick aufs Handy). Ein Tipp, eine Wahl per Sprache oder eine nicht mehr offene Karte verhindern sie.
+     */
+    private fun modellErinnerung(id: String) {
+        erinnerungen[id] = ansagen.launch {
+            kotlinx.coroutines.delay(ERINNERUNG_NACH_MS)
+            // Ein laufendes Gespräch hat Vorrang: abwarten, solange die Wahl offen bleibt.
+            kotlinx.coroutines.withTimeoutOrNull(KNOPF_FRIST_MS) {
+                while (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise && wahlNochOffen(id)) kotlinx.coroutines.delay(1_000L)
+            } ?: return@launch
+            if (!wahlNochOffen(id)) return@launch
+            Logbuch.system("Modellwahl-Erinnerung", id)
+            val p = de.frank.jarvis.meldung.Meldungen.profil(app, de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE)
+            de.frank.jarvis.speech.Ansage.sprichUndWarte(app, "modellwahl", "Modellwahl", ERINNERUNG_TEXT, p.lautstaerke, p.stimmWahl)
+        }.also { job -> job.invokeOnCompletion { erinnerungen.remove(id, job) } }
     }
 
     /** Fester Fragetext und Knöpfe einer Karte je Stufe. */
@@ -513,7 +534,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Die offenen Modellwahl-Knöpfe eines Gesprächs gelten nicht mehr (Frank hat per Sprache gewählt). */
     private fun wahlenSchliessen(gespraech: String) {
         val weg = offeneWahlen.filterValues { it.gespraech == gespraech }.keys
-        weg.forEach { offeneWahlen.remove(it) }
+        weg.forEach { offeneWahlen.remove(it); erinnerungen.remove(it)?.cancel() }
         if (weg.isNotEmpty()) wahlStand.update { stand -> stand + weg.associateWith { WAHL_ERLEDIGT } }
         if (weg.isNotEmpty()) wahlenSichern(app)
     }
@@ -525,6 +546,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     suspend fun modellGewaehlt(wahlId: String, wert: String) {
         val w = offeneWahlen.remove(wahlId) ?: return
+        erinnerungen.remove(wahlId)?.cancel()
         wahlStand.update { it + (wahlId to wert) }
         wahlenSichern(app)
         // Bis Folgekarte bzw. Start feststehen, wartet [wahlInRunde] mit seiner Ansage.
@@ -1981,6 +2003,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Karten, deren Tipp gerade verarbeitet wird (Rechner prüfen, Folgekarte, Start), und wie lange die Ansage darauf wartet. */
         private val tippInArbeit: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
         private const val TIPP_WARTEN_MS = 8_000L
+        /** Hörbare Erinnerung an eine noch offene Modellwahl (siehe modellErinnerung), je wahl_id höchstens eine. */
+        private val erinnerungen = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+        private const val ERINNERUNG_NACH_MS = 30_000L
+        private const val ERINNERUNG_TEXT = "Welches Modell möchtest du verwenden: Claude Opus 5.5 oder Sol 6.1?"
+        private fun wahlNochOffen(id: String) = wahlStand.value[id] == WAHL_OFFEN && offeneWahlen.containsKey(id) && id !in tippInArbeit
 
         /** Das Gespräch, in dem die Karte [wahlId] steht (leer, wenn unbekannt). */
         fun gespraechDerKarte(wahlId: String): String = karten[wahlId]?.gespraech.orEmpty()
