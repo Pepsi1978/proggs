@@ -320,6 +320,7 @@
     { "versionCode": 314, "versionName": "1.8.303", "stand": "24.10.2026, 12:12 Uhr", "notiz": "Aufträge an den Programmierer gehen auch ohne genannte App raus, die Modellwahl kommt trotzdem sofort." },
     { "versionCode": 315, "versionName": "1.8.304", "stand": "24.10.2026, 12:30 Uhr", "notiz": "Bei Aufträgen ohne App fragt nur Jarvis nicht mehr nach; der Programmierer darf wie gewohnt zurückfragen, wofür der Auftrag ist." },
     { "versionCode": 316, "versionName": "1.8.305", "stand": "24.10.2026, 13:40 Uhr", "notiz": "Bleibt die Modellwahl eines Programmierauftrags 30 Sekunden offen, fragt Jarvis einmal hörbar, ob Claude Opus 5.5 oder Sol 6.1 verwendet werden soll." },
-    { "versionCode": 317, "versionName": "1.8.306", "stand": "24.10.2026, 13:43 Uhr", "notiz": "Die Eingabeblase schrumpft nach dem Absenden zu einer kompakten Zeile; Antippen des freien Platzes öffnet sie wieder zum Tippen." }
+    { "versionCode": 317, "versionName": "1.8.306", "stand": "24.10.2026, 13:43 Uhr", "notiz": "Die Eingabeblase schrumpft nach dem Absenden zu einer kompakten Zeile; Antippen des freien Platzes öffnet sie wieder zum Tippen." },
+    { "versionCode": 318, "versionName": "1.8.307", "stand": "24.10.2026, 13:51 Uhr", "notiz": "Die Eingabeblase startet beim Öffnen der App schon als kompakte Zeile und bleibt es, bis du hineintippst oder diktierst." }
   ]
 }

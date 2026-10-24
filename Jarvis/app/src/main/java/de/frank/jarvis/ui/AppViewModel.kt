@@ -840,10 +840,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var entwurfFokus by mutableStateOf(false)
 
     /**
-     * Nach jedem Absenden klappt die Eingabeblase zu einer kompakten Zeile ein (nur Plus, Modell, Mikrofon, Live-Blase);
+     * Nach jedem Absenden und beim Öffnen der App ist die Eingabeblase eine kompakte Zeile (nur Plus, Modell, Mikrofon, Live-Blase);
      * Text im Feld, ein Anhang, „Programmierer“/„Nachtrag“ oder ein Tipp auf den freien Platz klappen sie wieder auf.
      */
-    var eingabeKompakt by mutableStateOf(false)
+    var eingabeKompakt by mutableStateOf(true)
 
     /** Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil. */
     fun programmiererEinsetzen() {
