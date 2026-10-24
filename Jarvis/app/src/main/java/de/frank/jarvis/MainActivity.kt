@@ -106,6 +106,18 @@ class MainActivity : FragmentActivity() {
         super.onStop()
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        drehenNachDisplay(newConfig)
+    }
+
+    // Drehen nur aufgeklappt: Das Innendisplay (ab 600 dp) dreht wie bisher frei, das schmale Frontdisplay bleibt hochkant.
+    private fun drehenNachDisplay(config: android.content.res.Configuration) {
+        val gewuenscht = if (config.smallestScreenWidthDp >= 600) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_NOSENSOR
+        if (requestedOrientation != gewuenscht) requestedOrientation = gewuenscht
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         vm.kameraZiel?.let { outState.putString(KAMERA_ZIEL, it.toString()) }
@@ -117,6 +129,7 @@ class MainActivity : FragmentActivity() {
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        drehenNachDisplay(resources.configuration)
         // Die Kamera-App beendet Jarvis oft im Hintergrund: Das Ziel des Fotos kommt dann aus dem gesicherten Zustand zurück.
         if (vm.kameraZiel == null) savedInstanceState?.getString(KAMERA_ZIEL)?.let { vm.kameraZiel = android.net.Uri.parse(it) }
         vm.hinweiseAnfragen = {

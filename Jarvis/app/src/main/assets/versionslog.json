@@ -350,6 +350,7 @@
     { "versionCode": 344, "versionName": "1.8.333", "stand": "24.10.2026, 21:08 Uhr", "notiz": "Auf dem Hauptbildschirm steht Neue Session jetzt oben und der Papierkorb darunter." },
     { "versionCode": 345, "versionName": "1.8.334", "stand": "24.10.2026, 21:14 Uhr", "notiz": "In den Einstellungen unter System stellt ein Schieberegler ein, wie leicht sich die Gesprächsleiste per Wischen öffnet." },
     { "versionCode": 346, "versionName": "1.8.335", "stand": "24.10.2026, 21:15 Uhr", "notiz": "Beim Absenden eines Programmierauftrags leuchtet über „Neue Session“ kein Arbeitssymbol mehr auf; es erscheint nur noch bei wirklich arbeitenden Programmier-Sitzungen." },
-    { "versionCode": 347, "versionName": "1.8.336", "stand": "24.10.2026, 21:28 Uhr", "notiz": "Der orange Punkt am Reiter „Programmierung“ blinkt nur noch, solange eine Session wirklich arbeitet, und erlischt nach dem Ende oder Schließen einer Sitzung." }
+    { "versionCode": 347, "versionName": "1.8.336", "stand": "24.10.2026, 21:28 Uhr", "notiz": "Der orange Punkt am Reiter „Programmierung“ blinkt nur noch, solange eine Session wirklich arbeitet, und erlischt nach dem Ende oder Schließen einer Sitzung." },
+    { "versionCode": 348, "versionName": "1.8.337", "stand": "24.10.2026, 21:29 Uhr", "notiz": "Jarvis dreht sich nur noch aufgeklappt auf dem Innendisplay, auf dem Frontdisplay bleibt die App hochkant." }
   ]
 }
