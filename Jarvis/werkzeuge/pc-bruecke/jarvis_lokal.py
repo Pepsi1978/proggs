@@ -39,28 +39,6 @@ def transkript(basis: Path, sitzung: str) -> str:
     return str(treffer[0]) if treffer else ""
 
 
-def zug_zu_ende(pfad: str) -> bool:
-    """Steht die Sitzung an der Eingabe? Der letzte Eintrag von KI oder Nutzer ist eine fertige Antwort (end_turn)."""
-    try:
-        with open(pfad, "rb") as f:
-            groesse = os.fstat(f.fileno()).st_size
-            f.seek(max(0, groesse - 400_000))
-            zeilen = f.read().split(b"\n")
-    except OSError:
-        return False
-    for zeile in reversed(zeilen):
-        if b'"type":"user"' not in zeile and b'"type":"assistant"' not in zeile:
-            continue
-        try:
-            eintrag = json.loads(zeile)
-        except Exception:
-            continue
-        if eintrag.get("isSidechain") or eintrag.get("type") not in ("user", "assistant"):
-            continue
-        return eintrag.get("type") == "assistant" and (eintrag.get("message") or {}).get("stop_reason") == "end_turn"
-    return False
-
-
 def von_jarvis(pfad: str) -> bool:
     """Beginnt die Sitzung mit einem Programmierauftrag der Jarvis-Brücke (jarvis_pc_bruecke.auftragstext)?"""
     try:
@@ -94,7 +72,7 @@ def lies_mit(basis: Path, eintrag: dict) -> None:
     sitzung = str(eintrag.get("sessionId") or "")
     if not sitzung or eintrag.get("kind") != "interactive" or eintrag.get("entrypoint") != "cli" or not lebt(eintrag):
         return
-    if (h.ORDNER / f"jarvis-{sitzung}.sitzung").exists() or str(eintrag.get("name") or "").startswith("Jarvis"):
+    if (h.ORDNER / f"jarvis-{sitzung}.sitzung").exists() or str(eintrag.get("name") or "").startswith("Jarvis:"):
         return
     h.setze_auftrag(h.lokale_nummer(sitzung))
     h.LOKAL = True
@@ -119,7 +97,8 @@ def lies_mit(basis: Path, eintrag: dict) -> None:
     with h.Sperre():
         z = h.lies_zustand()
         texte = h.neue_texte({"transcript_path": pfad}, z)
-        fertig = zug_zu_ende(pfad)
+        # Fertige Antwort oder am Rechner abgebrochen (Esc, API-Fehler): Die Sitzung steht an der Eingabe.
+        fertig = h.zugstand(pfad) in ("ende", "abbruch")
         vorher = z.get("scan_arbeitet", False)
         z["scan_arbeitet"] = not fertig
         h.schreib_zustand(z)

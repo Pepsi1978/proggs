@@ -116,7 +116,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
             "timeout": 43200,
             "asyncRewake": true,
             "rewakeSummary": "Nachricht von Frank über Jarvis"
@@ -153,7 +153,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal prompt",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal prompt",
             "timeout": 15,
             "async": true
           }
@@ -254,7 +254,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal frage",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal frage",
             "timeout": 660
           }
         ],
@@ -264,7 +264,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal puls",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal puls",
             "timeout": 10,
             "async": true
           }
@@ -348,7 +348,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
             "timeout": 15,
             "async": true
           }
@@ -370,7 +370,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
             "timeout": 15,
             "async": true
           }
@@ -396,7 +396,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal fehlschlag",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal fehlschlag",
             "timeout": 30,
             "async": true
           }
@@ -463,7 +463,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal stop",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal stop",
             "timeout": 30,
             "async": true
           }
@@ -473,7 +473,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
             "timeout": 43200,
             "asyncRewake": true,
             "rewakeSummary": "Nachricht von Frank über Jarvis"
@@ -570,7 +570,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal ende",
+            "command": "[ -n \"$JARVIS_AUFTRAG_ID\" ] || python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal ende",
             "timeout": 10,
             "async": true
           }

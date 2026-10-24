@@ -260,7 +260,8 @@ def warte_auf_antwort(frage_id: str, neu_melden=None, am_pc=None) -> dict | None
     frist = time.monotonic() + FRAGE_WARTEN_S
     zuletzt_neu = time.monotonic()
     while time.monotonic() < frist:
-        if am_pc and am_pc():
+        # Lokal: Frank sitzt wieder am Rechner, oder er hat die Sitzung in Jarvis entfernt (dann fragt dort niemand mehr).
+        if am_pc and (am_pc() or ist_entfernt()):
             return {"freigeben": True, "am_pc": True}
         try:
             code, daten = rufe("/pc/antwort?frage_id=" + urllib.parse.quote(frage_id), zeitlimit=8 if am_pc else 35)
@@ -858,6 +859,20 @@ def warte(eingabe: dict) -> int:
                     schreib("Warter: in Jarvis entfernt")
                     return 0
                 hook_marke()
+                # Am Rechner mit Esc abgebrochen: Claude Code ruft dann keinen Stop-Hook, Jarvis zeigte sonst weiter „arbeitet“.
+                pfad = str(eingabe.get("transcript_path") or "")
+                if pfad and zugstand(pfad) == "abbruch":
+                    try:
+                        groesse = os.path.getsize(pfad)
+                        with Sperre():
+                            z = lies_zustand()
+                            neu = z.get("abbruch_stelle") != groesse
+                            z["abbruch_stelle"] = groesse
+                            schreib_zustand(z)
+                        if neu:
+                            melde_still_leer("⏸️ Am PC abgebrochen, die Sitzung wartet auf die nächste Eingabe.")
+                    except (OSError, SperreBelegt):
+                        pass
             # Steht die Sitzung an einem Anmeldefehler, ist der Warter der einzige Hook, der noch läuft.
             try:
                 with Sperre():
@@ -901,7 +916,9 @@ def warte(eingabe: dict) -> int:
 # ---------------------------------------------------------------- Lokale Sitzungen (siehe Kopf)
 
 ZEICHEN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # wie Auftragsbuch.neueNummer in der App
-PC_AKTIV_S = 120                  # so kurz nach der letzten Eingabe am Rechner sitzt Frank noch dran
+# So kurz nach der letzten Eingabe am Rechner sitzt Frank noch dran. Großzügig: Wer einem langen Zug nur zuschaut, berührt
+# nichts; der Dialog am Rechner soll ihm dann nicht verborgen bleiben.
+PC_AKTIV_S = 300
 FRAGE_HALTEN_LOKAL_S = 24 * 3600  # so lange ist eine freie Rückfrage einer lokalen Sitzung in Jarvis beantwortbar
 
 
@@ -967,6 +984,34 @@ def pc_ruhe_s() -> float:
     except Exception:
         pass
     return 0
+
+
+def zugstand(pfad: str) -> str:
+    """Wie der letzte Zug im Transkript endete: „ende“ (fertige Antwort), „abbruch“ (am Rechner mit Esc abgebrochen oder
+    an einem API-Fehler stehen geblieben; dann kommt kein Stop-Hook) oder „“ (arbeitet noch bzw. unbekannt)."""
+    try:
+        with open(pfad, "rb") as f:
+            groesse = os.fstat(f.fileno()).st_size
+            f.seek(max(0, groesse - 400_000))
+            zeilen = f.read().split(b"\n")
+    except OSError:
+        return ""
+    for zeile in reversed(zeilen):
+        if b'"type":"user"' not in zeile and b'"type":"assistant"' not in zeile:
+            continue
+        try:
+            eintrag = json.loads(zeile)
+        except Exception:
+            continue
+        if eintrag.get("isSidechain") or eintrag.get("type") not in ("user", "assistant"):
+            continue
+        nachricht = eintrag.get("message") or {}
+        if eintrag.get("type") == "assistant":
+            if eintrag.get("isApiErrorMessage"):
+                return "abbruch"
+            return "ende" if nachricht.get("stop_reason") == "end_turn" else ""
+        return "abbruch" if "[Request interrupted" in json.dumps(nachricht.get("content"), ensure_ascii=False) else ""
+    return ""
 
 
 def lokal_angaben(sitzung: str, ordner: str, mit_hook: bool, name: str = "", link: str = "") -> dict:
@@ -1237,7 +1282,7 @@ def frage(eingabe: dict) -> None:
         # Frank sitzt am Rechner: Der Dialog erscheint sofort dort; Jarvis zeigt die Frage nur an.
         melde_still("laeuft", "❓ Rückfrage am PC: " + kurz)
         return
-    if not melde_sicher("frage", "❓ " + kurz, daten):
+    if not melde_sicher("frage", "❓ " + kurz, daten) or (LOKAL and ist_entfernt()):
         if LOKAL:
             # Eine am Rechner gestartete Sitzung entscheidet nie an Franks Stelle: Der Dialog erscheint dort.
             schreib("Rückfrage nicht an Jarvis zugestellt: Dialog am Rechner")

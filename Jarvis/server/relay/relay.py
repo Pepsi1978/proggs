@@ -130,7 +130,7 @@ class Relay:
         # Signale, die ohne verbundenes Handy kamen (hoechstens 20): gehen beim naechsten Verbinden raus. Eine Liste statt
         # eines Platzes: Zwei apk-update-Laeufe im Funkloch verloren sonst das Signal des ersten.
         self.ausstehend = []
-        self.meldungen = []          # Programmier-Meldungen ohne verbundenes Handy (hoechstens 100, aelteste fallen weg)
+        self.meldungen = []          # Programmier-Meldungen ohne verbundenes Handy (hoechstens 1000, aelteste fallen weg)
         self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.da = asyncio.Event()
         self._lade()
@@ -252,7 +252,8 @@ class Relay:
         # Lebenszeichen nur live: nachgereicht hätten sie keinen Wert und verdrängten echte Meldungen aus der Warteschlange.
         if daten.get("stand") != "puls":
             self.meldungen.append(daten)
-            del self.meldungen[:-100]
+            # 1000 statt 100: Eine am PC gestartete Sitzung soll auch nach längerer Funkstille des Handys komplett in Jarvis stehen.
+            del self.meldungen[:-1000]
         return False
 
     # ---------------------------------------------------------------- ChatGPT
@@ -565,6 +566,12 @@ class PcBruecke:
         if self.nachtraege.pop(auftrag_id, None) is not None:
             self._sichere_nachtraege()
         self._ereignis(auftrag_id).set()
+        # Eine offene Rueckfrage dieser Sitzung beantwortet in Jarvis niemand mehr: an den Rechner freigeben, ihr Dialog erscheint dort.
+        for frage_id, eintrag in self.fragen.items():
+            if eintrag.get("auftrag_id") == auftrag_id and eintrag.get("status") == "offen":
+                eintrag["status"] = "freigegeben"
+                self._da(frage_id).set()
+        self._sichere_fragen()
         try:
             ENTFERNT.parent.mkdir(parents=True, exist_ok=True)
             ENTFERNT.write_text(json.dumps(self.entfernt), "utf-8")

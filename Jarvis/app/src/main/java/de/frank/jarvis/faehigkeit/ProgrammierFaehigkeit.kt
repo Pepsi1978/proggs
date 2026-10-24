@@ -713,11 +713,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     private fun lokaleSitzung(id: String, info: JSONObject): Boolean {
         if (id.isBlank()) return false
-        if (id.uppercase() in entfernteLokale(app)) {
-            lokalEntfernenSenden(app, id)
-            return false
-        }
         synchronized(lokalSperre) {
+            if (id.uppercase() in entfernteLokale(app)) {
+                lokalEntfernenSenden(app, id)
+                return false
+            }
             if (Auftragsbuch.finde(app, id) == null) {
                 val name = info.optString("name").ifBlank { "Sitzung" }
                 val rechner = info.optString("rechner")
@@ -1358,6 +1358,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             schreib(context, liste)
         }
 
+        fun lokaleGespraeche(context: Context): Set<String> =
+            alle(context).filter { it.optBoolean("lokal") }.map { it.optString("gespraech") }.filter { it.isNotEmpty() }.toSet()
+
         /** Nimmt einen Eintrag ganz aus dem Auftragsbuch (eine in Jarvis entfernte Sitzung vom PC). */
         @Synchronized
         fun vergiss(context: Context, id: String) {
@@ -1827,11 +1830,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
         private val lokalSperre = Any()
         private const val LOKAL_DATEI = "programmieren"
-        private const val LOKAL_ENTFERNT = "lokal_entfernt"
+        private const val LOKAL_ENTFERNT = "lokal_entfernt_liste"
 
-        /** In Jarvis entfernte Sitzungen vom PC (Nummern): Ihre Meldungen legen nie wieder einen Eintrag an. */
-        private fun entfernteLokale(context: Context): Set<String> =
-            context.getSharedPreferences(LOKAL_DATEI, Context.MODE_PRIVATE).getStringSet(LOKAL_ENTFERNT, emptySet()).orEmpty()
+        /** In Jarvis entfernte Sitzungen vom PC (Nummern, älteste zuerst): Ihre Meldungen legen nie wieder einen Eintrag an. */
+        private fun entfernteLokale(context: Context): List<String> = runCatching {
+            val l = JSONArray(context.getSharedPreferences(LOKAL_DATEI, Context.MODE_PRIVATE).getString(LOKAL_ENTFERNT, "[]"))
+            (0 until l.length()).map { l.optString(it) }
+        }.getOrDefault(emptyList())
+
+        /** Gespräche, deren Sitzung am PC gestartet wurde (für Lila und Kennzeichen in der Leiste, auch nach dem Umbenennen). */
+        fun lokaleGespraeche(context: Context): Set<String> = Auftragsbuch.lokaleGespraeche(context.applicationContext)
 
         /**
          * Frank löscht ein Gespräch (langes Drücken, „Löschen“): Gehört eine am PC direkt gestartete Sitzung dazu, vergisst Jarvis sie
@@ -1842,11 +1850,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val app = context.applicationContext
             val ids = Auftragsbuch.alleImGespraech(app, gespraech).filter { it.optBoolean("lokal") }.map { it.optString("id").uppercase() }
             if (ids.isEmpty()) return
+            // Unter derselben Sperre wie lokaleSitzung: Eine gleichzeitige Meldung legt die Sitzung sonst gleich wieder an.
             synchronized(lokalSperre) {
-                val prefs = app.getSharedPreferences(LOKAL_DATEI, Context.MODE_PRIVATE)
-                prefs.edit().putStringSet(LOKAL_ENTFERNT, (entfernteLokale(app) + ids).toList().takeLast(300).toSet()).apply()
+                val liste = (entfernteLokale(app).filter { it !in ids } + ids).takeLast(300)
+                app.getSharedPreferences(LOKAL_DATEI, Context.MODE_PRIVATE).edit().putString(LOKAL_ENTFERNT, JSONArray(liste).toString()).commit()
+                ids.forEach { Auftragsbuch.vergiss(app, it) }
             }
-            ids.forEach { Auftragsbuch.vergiss(app, it) }
             Logbuch.system("Lokale Sitzung entfernt", ids.joinToString(", ") + " (nur in Jarvis, am PC läuft sie weiter)")
             ids.forEach { lokalEntfernenSenden(app, it) }
         }

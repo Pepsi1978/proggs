@@ -351,7 +351,7 @@ private fun Leiste(
             containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
             title = { Text("Gespräch löschen?") },
             text = {
-                Text("„${s.titel.ifBlank { "Gespräch" }}“ wird endgültig gelöscht." + if (s.programmierung && de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel))
+                Text("„${s.titel.ifBlank { "Gespräch" }}“ wird endgültig gelöscht." + if (s.programmierung && (s.id in lokaleGespraeche() || de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel)))
                     " Die Sitzung verschwindet nur aus Jarvis und erscheint nicht wieder; am PC läuft sie weiter und bleibt dort offen." else "")
             },
             confirmButton = { TextButton(onClick = { vm.sitzungLoeschen(s.id); loeschen = null }) { Text("Löschen", color = f.gefahr) } },
@@ -381,7 +381,7 @@ private fun SitzungEintrag(
         val codet = s.id in arbeitende
         val denkt = vm.laufende.containsKey(s.id)
         // Am PC direkt gestartet (nicht über Jarvis): Kennzeichen „Gestartet auf dem PC“ und alles in Lila statt Orange.
-        val vomPc = s.programmierung && de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel)
+        val vomPc = s.programmierung && (s.id in lokaleGespraeche() || de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel))
         val claudeFarbe = if (vomPc) PC_LILA else CLAUDE_ORANGE
         if (vomPc) Text("💻 Gestartet auf dem PC", Modifier.padding(bottom = 2.dp), color = PC_LILA, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -432,6 +432,14 @@ private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: B
             Text(text, Modifier.padding(start = 6.dp), color = farbe, fontSize = 16.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
+}
+
+/** Gespräche der am PC gestarteten Sitzungen (Auftragsbuch), je Gesprächsliste einmal gelesen: Lila bleibt auch nach dem Umbenennen. */
+@Composable
+private fun lokaleGespraeche(): Set<String> {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val vm = androidx.lifecycle.viewmodel.compose.viewModel<AppViewModel>()
+    return remember(vm.sitzungen) { de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.lokaleGespraeche(context) }
 }
 
 /** Die drei Bereiche der Gesprächsleiste. */
