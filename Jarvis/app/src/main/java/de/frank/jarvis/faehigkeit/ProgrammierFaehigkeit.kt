@@ -45,6 +45,10 @@ import org.json.JSONObject
  * Brücke meldet den lokalen Anmeldestand (`claude auth status`, nur „Anmeldedaten liegen vor“), die Sitzungen beweisen ihn:
  * Ein „Login expired“ meldet der Hook als Stand [STAND_ANMELDUNG] (Auftrag gesperrt, Benachrichtigung), jede spätere Arbeit
  * hebt die Sperre auf. Eine abgemeldete Brücke startet keine Sitzung; der Auftrag geht dann nicht ungefragt in die Cloud.
+ *
+ * Am PC oder Mac direkt gestartete Sitzungen (nicht über Jarvis) melden mit dem Feld „lokal“ ([lokaleSitzung]): eigener
+ * Eintrag mit fester Nummer aus der session_id, eigenes Gespräch „Gestartet auf dem PC“, lila Anzeige. Löschen des Gesprächs
+ * entfernt sie nur aus Jarvis ([lokaleEntfernen]).
  */
 /** Was das Auftragsbuch über die Programmieraufträge eines Gesprächs weiß: App, Stand (laeuft, frage, fertig, fehler), letztes Lebenszeichen, Inhalt. */
 data class AuftragsLage(val app: String, val stand: String, val aktiv: Long, val inhalt: String)
@@ -647,6 +651,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      */
     fun meldungVomServer(daten: JSONObject) {
         val auftragId = daten.optString("auftrag_id")
+        daten.optJSONObject("lokal")?.let { if (!lokaleSitzung(auftragId, it)) return }
         if (daten.optString("stand") == "puls") {
             // Lebenszeichen: nur die drehende Anzeige auffrischen, keine Nachricht, keine Benachrichtigung. Ein gesperrter Auftrag
             // (Anmeldung, Störung) arbeitet nachweislich wieder, wenn der Puls eine Minute nach der Sperre kommt (ein früherer
@@ -689,7 +694,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Der Abschlussbericht am Zugende (info) kommt ganz an: Früher schnitt take(4000) ihn wie der Hook mitten im Wort ab.
         val grenze = if (daten.optString("stand") == "info") ProgrammierAbschluss.MAX_BERICHT else ProgrammierAbschluss.MAX_MELDUNG
         val eintrag = Auftragsbuch.melde(app, auftragId, stand, ProgrammierAbschluss.kuerzen(daten.optString("schritt"), grenze), "", frage,
-            sperrSeit = if (daten.optString("stand") in GESPERRT) daten.optLong("seit", System.currentTimeMillis() / 1000) else 0L)
+            sperrSeit = if (daten.optString("stand") in GESPERRT) daten.optLong("seit", System.currentTimeMillis() / 1000) else 0L,
+            leerlauf = daten.optBoolean("leerlauf"))
         if (eintrag == null) {
             // Unbekannter Auftrag: nie still verwerfen, sondern sichtbar im Logbuch (Grund für „Frage kam nicht an“).
             Logbuch.system("Meldung ohne Auftrag", "${daten.optString("stand")} für ${daten.optString("auftrag_id")}: ${daten.optString("schritt").take(120)}")
@@ -697,6 +703,32 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         // Wiederholte Sperre (gleicher Stand) oder alte Meldung während der Sperre: keine zweite Benachrichtigung.
         verteile(eintrag, frage, benachrichtigen = bisher?.optString("stand") != eintrag.optString("stand") || stand !in GESPERRT)
+    }
+
+    /**
+     * Eine am PC direkt gestartete Claude-Code-Sitzung (Feld „lokal“: Name, Ordner, Rechner, Claude-App-Link, hook, auftrag).
+     * Beim ersten Lebenszeichen bekommt sie einen Eintrag im Auftragsbuch und ein eigenes Gespräch unter „Programmierung“;
+     * die Nummer kommt fest aus ihrer session_id, dieselbe Sitzung landet also immer im selben Eintrag. false = Frank hat sie in
+     * Jarvis entfernt: Dann bleibt sie weg, und der Relay erfährt es noch einmal (falls ihn die Entfernung nicht erreicht hatte).
+     */
+    private fun lokaleSitzung(id: String, info: JSONObject): Boolean {
+        if (id.isBlank()) return false
+        if (id.uppercase() in entfernteLokale(app)) {
+            lokalEntfernenSenden(app, id)
+            return false
+        }
+        synchronized(lokalSperre) {
+            if (Auftragsbuch.finde(app, id) == null) {
+                val name = info.optString("name").ifBlank { "Sitzung" }
+                val rechner = info.optString("rechner")
+                val auftrag = info.optString("auftrag")
+                val gespraech = ProgrammierChat.lokalesGespraech(app, name, rechner)
+                Auftragsbuch.neu(app, id, name, ZIEL_PC, info.optString("link"), "💻 Gestartet auf dem PC", gespraech, auftrag)
+                Logbuch.system("Sitzung vom PC erkannt", "$id: $name auf $rechner" + if (info.optBoolean("hook")) "" else " (nur mitlesen)")
+            }
+            Auftragsbuch.lokalMerken(app, id, info)
+        }
+        return true
     }
 
     /**
@@ -859,6 +891,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "nicht fortsetzen. Der Nachtrag wurde nicht gesendet. Sag Frank das offen und starte keinen Ersatzauftrag; einen neuen Auftrag nur, wenn Frank ihn danach " +
                 "ausdrücklich verlangt.", fehler = true)
         }
+        // Am PC gestartet, aber ohne Jarvis-Hooks (lief schon vor dem Update): Jarvis liest nur mit, nichts kommt hinein.
+        if (eintrag.optBoolean("lokal") && !eintrag.optBoolean("lokalHook")) {
+            return Ergebnis("Nicht zustellbar: Die Sitzung $id ($appName) wurde am PC gestartet, bevor Jarvis sie begleiten konnte; Jarvis liest dort nur mit. " +
+                "Der Nachtrag wurde nicht gesendet. Sag Frank das offen: Setzt er die Sitzung am PC mit claude --resume fort, gehen Nachträge und Rückfragen " +
+                "unter derselben Nummer direkt hinein.", fehler = true)
+        }
         val (n, doppelt) = Auftragsbuch.nachtragNeu(app, id, text, if (ausChatGpt) "ChatGPT/MCP" else "Jarvis")
             ?: return Ergebnis("Den Auftrag $id gibt es nicht mehr im Auftragsbuch. Nichts wurde gesendet.", fehler = true)
         val nummer = n.optString("id")
@@ -914,7 +952,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun aktivitaetMelden(eintrag: JSONObject) = ProgrammierChat.setze(
         eintrag.optString("gespraech"),
-        ProgrammierChat.Aktivitaet(eintrag.optString("app"), eintrag.optBoolean("arbeitet"), eintrag.optLong("aktiv", eintrag.optLong("zeit")), eintrag.optString("schritt"), eintrag.optLong("start")),
+        ProgrammierChat.Aktivitaet(eintrag.optString("app"), eintrag.optBoolean("arbeitet"), eintrag.optLong("aktiv", eintrag.optLong("zeit")), eintrag.optString("schritt"), eintrag.optLong("start"),
+            lokal = eintrag.optBoolean("lokal")),
     )
 
     /** Beim Start der App: die drehende Anzeige für Aufträge, die noch arbeiten, aus dem Auftragsbuch herstellen. */
@@ -1267,7 +1306,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun gespraechStarts(context: Context): Map<String, Long> = Gespraeche.fruehesteStarts(alle(context).map { it.optString("gespraech") to it.optLong("start") })
 
         @Synchronized
-        fun melde(context: Context, id: String, stand: String, schritt: String, link: String, frage: JSONObject? = null, sperrSeit: Long = 0L): JSONObject? {
+        fun melde(context: Context, id: String, stand: String, schritt: String, link: String, frage: JSONObject? = null, sperrSeit: Long = 0L,
+                  leerlauf: Boolean = false): JSONObject? {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
             val jetzt = System.currentTimeMillis()
@@ -1279,8 +1319,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // Gespeichert gekürzt (das Auftragsbuch wird bei jedem Lebenszeichen gelesen und geschrieben); der volle Text geht
             // mit dem zurückgegebenen Eintrag ins Gespräch (verteile) und steht dort vollständig.
             eintrag.put("letzterStand", gueltig).put("schritt", ProgrammierAbschluss.kuerzen(schritt, ProgrammierAbschluss.MAX_MELDUNG)).put("zeit", jetzt).put("aktiv", jetzt)
-                // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende und solange sie auf Frank wartet.
-                .put("arbeitet", gueltig == "laeuft")
+                // Arbeitet die Sitzung? Nicht nach dem Zugende (info), am Ende, solange sie auf Frank wartet und nach einer
+                // Leerlauf-Meldung einer Sitzung vom PC (Anmeldung in Jarvis, wartet auf Eingabe, beendet).
+                .put("arbeitet", gueltig == "laeuft" && !leerlauf)
             if (frage != null) {
                 eintrag.put("offeneFrage", frage)
                 // Alle Rückfragen des Auftrags: Antwort und Ausgang finden ihr Gespräch auch, wenn längst eine neuere offen ist.
@@ -1298,6 +1339,30 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             while (schritte.length() > 30) schritte.remove(0)
             schreib(context, liste)
             return eintrag.put("schritt", schritt)
+        }
+
+        /** Angaben einer am PC gestarteten Sitzung: lokal, ob sie die Jarvis-Hooks hat, Rechner, Link und Auftrag (die beiden nur, wenn noch leer). */
+        @Synchronized
+        fun lokalMerken(context: Context, id: String, info: JSONObject) {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return
+            val hook = info.optBoolean("hook")
+            val link = info.optString("link").takeIf { it.startsWith("https://") && eintrag.optString("link").isEmpty() }
+            val auftrag = info.optString("auftrag").takeIf { it.isNotBlank() && eintrag.optString("auftrag").isBlank() }
+            if (eintrag.optBoolean("lokal") && eintrag.optBoolean("lokalHook") == hook && link == null && auftrag == null) return
+            eintrag.put("lokal", true).put("lokalHook", hook).put("rechner", info.optString("rechner"))
+            link?.let { eintrag.put("link", it) }
+            auftrag?.let { eintrag.put("auftrag", it.take(1_500)) }
+            schreib(context, liste)
+        }
+
+        /** Nimmt einen Eintrag ganz aus dem Auftragsbuch (eine in Jarvis entfernte Sitzung vom PC). */
+        @Synchronized
+        fun vergiss(context: Context, id: String) {
+            val liste = lies(context)
+            schreib(context, JSONArray().apply {
+                for (i in 0 until liste.length()) liste.optJSONObject(i)?.takeUnless { it.optString("id").equals(id, ignoreCase = true) }?.let { put(it) }
+            })
         }
 
         /** Wartet ein Nachtrag noch auf die Sitzung (angenommen oder zugestellt, nicht bearbeitet)? Dann arbeitet sie gleich weiter. */
@@ -1322,7 +1387,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val grenze = System.currentTimeMillis() - 2 * 3_600_000L
             for (i in liste.length() - 1 downTo 0) {
                 val e = liste.getJSONObject(i)
-                if (e.optString("gespraech").isNotEmpty() && offen(e) && e.optLong("zeit") >= grenze) return e.optString("gespraech")
+                // Sitzungen vom PC nicht: Sie laufen neben Jarvis her, und ein Neustart von Jarvis soll nicht dorthin springen.
+                if (e.optString("gespraech").isNotEmpty() && offen(e) && !e.optBoolean("lokal") && e.optLong("zeit") >= grenze) return e.optString("gespraech")
             }
             return null
         }
@@ -1747,6 +1813,45 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         /** Gespräche, denen das Auftragsbuch einen Programmierauftrag zuordnet (für den Reiter „Programmierung“). */
         fun gespraecheMitAuftrag(context: Context): Map<String, Long> = Auftragsbuch.gespraechStarts(context.applicationContext)
+
+        private val lokalSperre = Any()
+        private const val LOKAL_DATEI = "programmieren"
+        private const val LOKAL_ENTFERNT = "lokal_entfernt"
+
+        /** In Jarvis entfernte Sitzungen vom PC (Nummern): Ihre Meldungen legen nie wieder einen Eintrag an. */
+        private fun entfernteLokale(context: Context): Set<String> =
+            context.getSharedPreferences(LOKAL_DATEI, Context.MODE_PRIVATE).getStringSet(LOKAL_ENTFERNT, emptySet()).orEmpty()
+
+        /**
+         * Frank löscht ein Gespräch (langes Drücken, „Löschen“): Gehört eine am PC direkt gestartete Sitzung dazu, vergisst Jarvis sie
+         * dauerhaft, auch während sie noch läuft, und sagt es dem Relay; ihr Hook schweigt danach. Die Sitzung am Rechner läuft
+         * unberührt weiter und bleibt dort offen. Über Jarvis gestartete Aufträge bleiben, wie sie sind.
+         */
+        fun lokaleEntfernen(context: Context, gespraech: String) {
+            val app = context.applicationContext
+            val ids = Auftragsbuch.alleImGespraech(app, gespraech).filter { it.optBoolean("lokal") }.map { it.optString("id").uppercase() }
+            if (ids.isEmpty()) return
+            synchronized(lokalSperre) {
+                val prefs = app.getSharedPreferences(LOKAL_DATEI, Context.MODE_PRIVATE)
+                prefs.edit().putStringSet(LOKAL_ENTFERNT, (entfernteLokale(app) + ids).toList().takeLast(300).toSet()).apply()
+            }
+            ids.forEach { Auftragsbuch.vergiss(app, it) }
+            Logbuch.system("Lokale Sitzung entfernt", ids.joinToString(", ") + " (nur in Jarvis, am PC läuft sie weiter)")
+            ids.forEach { lokalEntfernenSenden(app, it) }
+        }
+
+        /** Sagt dem Relay, dass Frank die Sitzung [id] in Jarvis entfernt hat (im Hintergrund; ein Fehlschlag wird beim nächsten Lebenszeichen wiederholt). */
+        internal fun lokalEntfernenSenden(context: Context, id: String) {
+            val e = Einstellungen.get(context.applicationContext)
+            if (e.serverHost.isBlank() || e.serverToken.isBlank()) return
+            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                runCatching {
+                    val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/lokal-entfernen").header("X-Jarvis-Token", e.serverToken)
+                        .post(JSONObject().put("auftrag_id", id).toString().toRequestBody("application/json".toMediaType())).build()
+                    HTTP.newCall(anfrage).execute().use { if (!it.isSuccessful) throw IllegalStateException("HTTP ${it.code}") }
+                }.onFailure { Logbuch.system("Entfernen nicht beim Server", "$id: ${it.message ?: it.javaClass.simpleName}") }
+            }
+        }
 
         /** Fertig gemeldete Aufträge an eine App (nur Zusatzinfo: fertig gemeldet ist noch nicht installiert). */
         fun fertigeAuftraege(context: Context, app: String, seit: Long): List<String> = Auftragsbuch.fertige(context.applicationContext, app, seit)

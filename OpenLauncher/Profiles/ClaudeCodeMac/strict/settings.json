@@ -137,6 +137,17 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
+            "timeout": 43200,
+            "asyncRewake": true,
+            "rewakeSummary": "Nachricht von Frank über Jarvis"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -155,6 +166,16 @@
           {
             "type": "command",
             "command": "bash \"$HOME/.claude/hooks/task-ledger-prompt.sh\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal prompt",
+            "timeout": 15,
+            "async": true
           }
         ]
       }
@@ -241,6 +262,17 @@
             "command": "bash \"$HOME/.claude/hooks/task-ledger-tool.sh\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
+            "timeout": 15,
+            "async": true
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "PreToolUse": [
@@ -322,6 +354,27 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal frage",
+            "timeout": 660
+          }
+        ],
+        "matcher": "AskUserQuestion"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal puls",
+            "timeout": 10,
+            "async": true
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "Stop": [
@@ -360,6 +413,27 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal stop",
+            "timeout": 30,
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
+            "timeout": 43200,
+            "asyncRewake": true,
+            "rewakeSummary": "Nachricht von Frank über Jarvis"
+          }
+        ]
       }
     ],
     "PreCompact": [
@@ -387,6 +461,17 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
+            "timeout": 15,
+            "async": true
+          }
+        ],
+        "matcher": "Bash|PowerShell"
       }
     ],
     "InstructionsLoaded": [
@@ -533,6 +618,16 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal ende",
+            "timeout": 10,
+            "async": true
+          }
+        ]
       }
     ],
     "SubagentStart": [
@@ -557,6 +652,16 @@
           {
             "type": "command",
             "command": "bash \"$HOME/.claude/hooks/task-ledger-stop.sh\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal fehlschlag",
+            "timeout": 30,
+            "async": true
           }
         ]
       }

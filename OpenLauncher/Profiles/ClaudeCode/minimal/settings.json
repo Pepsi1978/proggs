@@ -1,12 +1,12 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5"
   },
-  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus[1m]",
+  "model": "opus",
   "hooks": {
     "PreToolUse": [
       {
@@ -28,6 +28,27 @@
             "timeout": 8
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal frage",
+            "timeout": 660
+          }
+        ],
+        "matcher": "AskUserQuestion"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal puls",
+            "timeout": 10,
+            "async": true
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "SessionStart": [
@@ -37,6 +58,17 @@
             "type": "command",
             "command": "pwsh -NoProfile -File \"$USERPROFILE/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.ps1\"",
             "timeout": 20
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
+            "timeout": 43200,
+            "asyncRewake": true,
+            "rewakeSummary": "Nachricht von Frank über Jarvis"
           }
         ]
       }
@@ -50,8 +82,94 @@
             "timeout": 20
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal ende",
+            "timeout": 10,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
+            "timeout": 15,
+            "async": true
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal post",
+            "timeout": 15,
+            "async": true
+          }
+        ],
+        "matcher": "Bash|PowerShell"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal prompt",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal stop",
+            "timeout": 30,
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal warte",
+            "timeout": 43200,
+            "asyncRewake": true,
+            "rewakeSummary": "Nachricht von Frank über Jarvis"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$USERPROFILE/proggs/Jarvis/werkzeuge/pc-bruecke/jarvis_hook.py\" lokal fehlschlag",
+            "timeout": 30,
+            "async": true
+          }
+        ]
       }
     ]
+  },
+  "worktree": {
+    "baseRef": "fresh"
   },
   "statusLine": {
     "type": "command",
@@ -78,6 +196,7 @@
     "cowork-plugin-management@synced": false
   },
   "language": "german",
+  "feedbackDrafts": "notify",
   "effortLevel": "xhigh",
   "modelSettings": {
     "claude-fable-5-1": {
@@ -91,7 +210,9 @@
     }
   },
   "advisorModel": "fable",
-  "askUserQuestionTimeout": "never",
+  "askUserQuestionTimeout": "5m",
+  "dialogExpiry": "5m",
+  "timeFormat": "24-hour",
   "skipDangerousModePermissionPrompt": true,
   "claudeMdExcludes": [
     "**/proggs/AGENTS.md",
@@ -100,8 +221,12 @@
     "**/.claude/rules/**"
   ],
   "theme": "dark",
-  "preferredNotifChannel": "auto",
+  "verbose": false,
+  "preferredNotifChannel": "terminal_bell",
+  "autoCompactEnabled": true,
+  "switchModelsOnFlag": true,
   "remoteControlAtStartup": true,
+  "crossSessionInbound": "accept",
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true
 }

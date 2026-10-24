@@ -59,7 +59,8 @@ function Raeume-Auf {
     $grenze = (Get-Date).AddDays(-14)
     $muster = @(
         @{ Ordner = (Join-Path $env:TEMP 'JarvisPcBruecke'); Namen = @('auftrag-*.txt', 'start-*.ps1', 'settings-*.json') },
-        @{ Ordner = (Split-Path $protokoll); Namen = @('hook-*.json', 'hook-*.json.*.tmp', 'hook-*.sperre', 'hook-*.lock', 'puls-*.txt', 'warter-*.pid') }
+        @{ Ordner = (Split-Path $protokoll); Namen = @('hook-*.json', 'hook-*.json.*.tmp', 'hook-*.sperre', 'hook-*.lock', 'puls-*.txt', 'warter-*.pid',
+            'lokal-*.hook', 'jarvis-*.sitzung', 'entfernt-*') }
     )
     foreach ($m in $muster) {
         foreach ($name in $m.Namen) {
@@ -337,8 +338,19 @@ function Rufe([string]$adresse, [string]$token, [int]$sekunden, [string]$rumpfDa
 Schreib 'Brücke gestartet'
 Raeume-Auf
 $pause = 2
+# Am PC direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess, endet nach Sekunden).
+$scanner = (Join-Path $proggs 'Jarvis\werkzeuge\pc-bruecke\jarvis_lokal.py')
+$letzterScan = [DateTime]::MinValue
+# Neue Fassung dieses Skripts (git pull): beenden, die Aufgabenplanung startet binnen einer Minute die neue.
+$eigenerStand = (Get-Item -LiteralPath $PSCommandPath).LastWriteTimeUtc
 while ($true) {
     try {
+        if ((Get-Item -LiteralPath $PSCommandPath).LastWriteTimeUtc -ne $eigenerStand) { Schreib 'Neue Fassung, Neustart'; exit 0 }
+        if (((Get-Date) - $letzterScan).TotalSeconds -ge 30) {
+            $letzterScan = Get-Date
+            try { Start-Process -FilePath 'python' -ArgumentList @("`"$scanner`"", 'scan') -WindowStyle Hidden | Out-Null }
+            catch { Schreib "Scanner nicht gestartet: $($_.Exception.Message)" }
+        }
         $zugang = Lies-Zugang
         Pruefe-Anmeldung-Hintergrund
         $code = Rufe "https://$($zugang.host)/pc/auftrag" $zugang.token 40 $null

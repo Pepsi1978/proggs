@@ -31,6 +31,12 @@ Abfrage den lokalen Stand (X-Jarvis-Anmeldung: lokal = Anmeldedaten liegen vor, 
 unbekannt) mit Pruefzeit. Ob die Anmeldung wirklich gilt, zeigen nur die Sitzungen: Meldet ein Hook „anmeldung“ (Login
 expired), ist sie abgelaufen; jede spaetere Arbeit einer Sitzung (Puls, Schritt, „anmeldung_ok“), die nach dem Fehler begann,
 bestaetigt sie wieder. /geraet/pc liefert beides je Rechner und je Auftrag die Lebenszeichen (kontakt, warter).
+
+Siebte Aufgabe: am Rechner direkt gestartete Sitzungen (Meldungen mit dem Feld „lokal“, jarvis_hook.py lokal und
+jarvis_lokal.py). Sie laufen wie Auftraege durch dieselben Wege. Entfernt Frank eine in Jarvis (POST /geraet/lokal-entfernen),
+merkt sich der Relay die Nummer (/data/lokal-entfernt.json, 30 Tage): Ihre Meldungen gehen nicht mehr ans Handy, die Antwort
+traegt „entfernt“, und /pc/nachtrag antwortet 410. Die Sitzung am Rechner laeuft davon unberuehrt weiter. Eine freie Rueckfrage
+einer lokalen Sitzung (frage.als_nachtrag) wartet nicht: Franks Antwort wird zum Nachtrag „antwort-<frage_id>“, den der Warter zustellt.
 """
 import asyncio
 import hmac
@@ -496,6 +502,8 @@ NACHTRAG_WARTEN_S = 25          # eine Abfrage des Hooks wartet hoechstens so la
 NACHTRAG_ZUSTELLEN_S = 8        # so lange wartet das Handy auf die Quittung, wenn die Sitzung gerade abfragt
 WARTER_FRISCH_S = 40            # so lange nach seiner letzten Abfrage gilt der Warter einer Sitzung als da
 NACHTRAEGE = ZUSTAND.with_name("nachtraege.json")
+ENTFERNT = ZUSTAND.with_name("lokal-entfernt.json")
+ENTFERNT_HALTEN_S = 30 * 86400  # so lange bleibt eine in Jarvis entfernte lokale Sitzung stumm
 
 
 class PcBruecke:
@@ -528,8 +536,42 @@ class PcBruecke:
         # Rechner -> {"stand": abgelaufen|bestaetigt, "zeit": Sekunden seit 1970, "auftrag_id"}: was die Sitzungen zuletzt bewiesen
         self.sitzung_anmeldung = {}
         self.zugestellt = {}  # nachtrag_id -> asyncio.Event: der Hook hat quittiert
+        self.entfernt = {}    # AUFTRAG-ID einer lokalen Sitzung -> Zeit, zu der Frank sie in Jarvis entfernt hat
         self._lade_nachtraege()
         self._lade_fragen()
+        try:
+            self.entfernt = {k: v for k, v in json.loads(ENTFERNT.read_text("utf-8")).items() if isinstance(v, (int, float))}
+        except Exception:
+            pass
+
+    # ---------------------------------------------------------------- Lokale Sitzungen
+
+    def _ist_entfernt(self, auftrag_id: str) -> bool:
+        return time.time() - self.entfernt.get(auftrag_id, -1e12) < ENTFERNT_HALTEN_S
+
+    async def lokal_entfernen(self, request: web.Request) -> web.Response:
+        """POST /geraet/lokal-entfernen (Handy): {"auftrag_id"}. Nur Jarvis vergisst die Sitzung, am Rechner laeuft sie weiter."""
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            auftrag_id = str((await request.json())["auftrag_id"]).strip().upper()
+            assert auftrag_id
+        except Exception:
+            return web.Response(status=400, text="auftrag_id fehlt")
+        jetzt = time.time()
+        self.entfernt[auftrag_id] = jetzt
+        self.entfernt = {k: v for k, v in self.entfernt.items() if jetzt - v < ENTFERNT_HALTEN_S}
+        # Offene Nachtraege dieser Sitzung kommen nie mehr an: weg damit; ein wartender Warter erfaehrt es sofort (410).
+        if self.nachtraege.pop(auftrag_id, None) is not None:
+            self._sichere_nachtraege()
+        self._ereignis(auftrag_id).set()
+        try:
+            ENTFERNT.parent.mkdir(parents=True, exist_ok=True)
+            ENTFERNT.write_text(json.dumps(self.entfernt), "utf-8")
+        except Exception as fehler:
+            log.warning("Entfernte Sitzungen nicht gesichert: %s", fehler)
+        log.info("Lokale Sitzung %s in Jarvis entfernt", auftrag_id)
+        return web.json_response({"entfernt": True})
 
     # ---------------------------------------------------------------- Rueckfragen
 
@@ -571,6 +613,9 @@ class PcBruecke:
         return self.frage_da.setdefault(frage_id, asyncio.Event())
 
     def _wartet_hook(self, eintrag: dict) -> bool:
+        # Freie Rueckfrage einer lokalen Sitzung: Niemand fragt die Antwort ab, sie geht als Nachtrag an den Warter.
+        if (eintrag.get("frage") or {}).get("als_nachtrag"):
+            return self._wartet(str(eintrag.get("auftrag_id", "")))
         return time.time() - eintrag.get("abgefragt", eintrag.get("zeit", 0)) < HOOK_FRISCH_S
 
     def _frage_merken(self, auftrag_id: str, stand: str, schritt: str, frage: dict) -> None:
@@ -591,7 +636,7 @@ class PcBruecke:
                 eintrag["ausgang"] = jetzt
         elif frage_id not in self.fragen:
             # Der Hook wiederholt eine Meldung, wenn die Antwort ausblieb: dieselbe frage_id nie zweimal anlegen.
-            nutzlast = {k: v for k, v in frage.items() if k in ("frage_id", "fragen", "frei", "bis", "tool_use_id")}
+            nutzlast = {k: v for k, v in frage.items() if k in ("frage_id", "fragen", "frei", "bis", "tool_use_id", "als_nachtrag")}
             self.fragen[frage_id] = {"zeit": jetzt, "abgefragt": jetzt, "auftrag_id": auftrag_id, "frage": nutzlast, "schritt": schritt[:2000],
                                      "status": "offen", "antwort": None, "antwort_id": "", "antwort_text": ""}
         self._sichere_fragen()
@@ -696,6 +741,8 @@ class PcBruecke:
         auftrag_id = request.query.get("auftrag_id", "").strip().upper()
         if not auftrag_id:
             return web.Response(status=400, text="auftrag_id fehlt")
+        if self._ist_entfernt(auftrag_id):
+            return web.Response(status=410, text="In Jarvis entfernt")
         try:
             warten = max(0, min(int(request.query.get("warten", "0")), NACHTRAG_WARTEN_S))
         except ValueError:
@@ -874,6 +921,9 @@ class PcBruecke:
         except Exception:
             return web.Response(status=400, text="Meldung unlesbar")
         auftrag_id = daten["auftrag_id"].strip().upper()
+        if self._ist_entfernt(auftrag_id):
+            # In Jarvis entfernt: nicht mehr ans Handy (sonst erschiene sie sofort wieder); der Hook schweigt danach.
+            return web.json_response({"zugestellt": False, "entfernt": True})
         self.kontakt[auftrag_id] = time.monotonic()
         self._anmeldung_aus_meldung(auftrag_id, daten)
         if daten.get("stand") == "nachtrag" and isinstance(daten.get("nachtrag_ids"), list):
@@ -971,6 +1021,16 @@ class PcBruecke:
             werte = [str(v) for v in (daten.get("antworten") or {}).values() if str(v).strip()]
             eintrag["antwort_text"] = ("; ".join(werte) or str(daten.get("text", "")))[:2000]
             log.info("Rueckfrage beantwortet")
+            if (eintrag.get("frage") or {}).get("als_nachtrag"):
+                # Lokale Sitzung: Die Antwort geht als Nachtrag in die Sitzung; der Warter weckt sie damit.
+                auftrag_id = str(eintrag.get("auftrag_id", ""))
+                nachtrag_id = f"antwort-{frage_id}"
+                liste = self.nachtraege.setdefault(auftrag_id, [])
+                if nachtrag_id not in self.erledigt and not any(n.get("nachtrag_id") == nachtrag_id for n in liste):
+                    liste.append({"nachtrag_id": nachtrag_id, "zeit": time.time(),
+                                  "text": f"Antwort von Frank (über Jarvis) auf deine letzte Frage: {eintrag['antwort_text']}"})
+                    self._sichere_nachtraege()
+                self._ereignis(auftrag_id).set()
         self._sichere_fragen()
         self._da(frage_id).set()
         return web.json_response({"angenommen": True, "status": eintrag["status"]})
@@ -1064,6 +1124,7 @@ def app() -> web.Application:
     anwendung.router.add_get("/geraet/fragen", pc.fragen_liste)
     anwendung.router.add_post("/geraet/nachtrag", pc.nachtrag_geben)
     anwendung.router.add_get("/pc/nachtrag", pc.nachtrag_abholen)
+    anwendung.router.add_post("/geraet/lokal-entfernen", pc.lokal_entfernen)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

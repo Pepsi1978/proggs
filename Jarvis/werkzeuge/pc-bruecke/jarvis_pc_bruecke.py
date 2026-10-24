@@ -225,7 +225,8 @@ def raeume_auf() -> None:
     14 Tage: Kein Warter lebt länger als 12 h, und so alte Sitzungen laufen nicht mehr."""
     grenze = time.time() - 14 * 86400
     for ordner, muster in ((TEMP, ("auftrag-*.txt", "start-*.command", "settings-*.json")),
-                           (ORDNER, ("hook-*.json", "hook-*.json.*.tmp", "hook-*.sperre", "hook-*.lock", "puls-*.txt", "warter-*.pid"))):
+                           (ORDNER, ("hook-*.json", "hook-*.json.*.tmp", "hook-*.sperre", "hook-*.lock", "puls-*.txt", "warter-*.pid",
+                                     "lokal-*.hook", "jarvis-*.sitzung", "entfernt-*"))):
         for m in muster:
             for datei in ordner.glob(m):
                 try:
@@ -339,8 +340,23 @@ def main() -> int:
     schreib(f"Brücke gestartet ({RECHNER}, Rang ersatz)")
     raeume_auf()
     pause = 2
+    # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
+    scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")
+    letzter_scan = 0.0
+    # Neue Fassung (git pull): beenden, launchd (KeepAlive) startet die neue.
+    eigener_stand = Path(__file__).stat().st_mtime
     while True:
         try:
+            if Path(__file__).stat().st_mtime != eigener_stand:
+                schreib("Neue Fassung, Neustart")
+                return 0
+            if time.time() - letzter_scan >= 30:
+                letzter_scan = time.time()
+                try:
+                    subprocess.Popen([sys.executable, str(scanner), "scan"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL)
+                except Exception as fehler:
+                    schreib(f"Scanner nicht gestartet: {fehler}")
             zugang = lies_zugang()
             pruefe_anmeldung()
             code, roh = rufe(f"https://{zugang['host']}/pc/auftrag", zugang["token"], 40)

@@ -350,7 +350,10 @@ private fun Leiste(
             onDismissRequest = { loeschen = null },
             containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
             title = { Text("Gespräch löschen?") },
-            text = { Text("„${s.titel.ifBlank { "Gespräch" }}“ wird endgültig gelöscht.") },
+            text = {
+                Text("„${s.titel.ifBlank { "Gespräch" }}“ wird endgültig gelöscht." + if (s.programmierung && de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel))
+                    " Die Sitzung verschwindet nur aus Jarvis und erscheint nicht wieder; am PC läuft sie weiter und bleibt dort offen." else "")
+            },
             confirmButton = { TextButton(onClick = { vm.sitzungLoeschen(s.id); loeschen = null }) { Text("Löschen", color = f.gefahr) } },
             dismissButton = { TextButton(onClick = { loeschen = null }) { Text("Abbrechen") } },
         )
@@ -377,12 +380,17 @@ private fun SitzungEintrag(
     ) {
         val codet = s.id in arbeitende
         val denkt = vm.laufende.containsKey(s.id)
+        // Am PC direkt gestartet (nicht über Jarvis): Kennzeichen „Gestartet auf dem PC“ und alles in Lila statt Orange.
+        val vomPc = s.programmierung && de.frank.jarvis.faehigkeit.ProgrammierChat.istLokal(s.titel)
+        val claudeFarbe = if (vomPc) PC_LILA else CLAUDE_ORANGE
+        if (vomPc) Text("💻 Gestartet auf dem PC", Modifier.padding(bottom = 2.dp), color = PC_LILA, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(s.titel.ifBlank { "Gespräch" }, Modifier.weight(1f), color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
+            val titel = if (vomPc) s.titel.removePrefix(de.frank.jarvis.faehigkeit.ProgrammierChat.LOKAL_TITEL) else s.titel
+            Text(titel.ifBlank { "Gespräch" }, Modifier.weight(1f), color = if (gewaehlt) f.primaer else f.text, fontSize = 15.sp, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 20.sp)
             // Jarvis antwortet oder recherchiert selbst: sein pulsierender Leuchtkern.
             if (denkt) Kern(22.dp, f.primaer, aktiv = true, modifier = Modifier.padding(start = 8.dp))
-            // Eine Programmier-Sitzung (Claude Code) arbeitet: das laufende Claude-Symbol in Orange.
-            if (codet) Text(zeichen, Modifier.padding(start = 8.dp).width(24.dp), color = CLAUDE_ORANGE, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            // Eine Programmier-Sitzung (Claude Code) arbeitet: das laufende Claude-Symbol in Orange, vom PC gestartet in Lila.
+            if (codet) Text(zeichen, Modifier.padding(start = 8.dp).width(24.dp), color = claudeFarbe, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
         // Programmieraufträge: vorn die feste Startzeit des ersten Auftrags, damit bei mehreren sofort klar ist, welcher zuerst kam.
         val start = if (s.programmierung && s.auftragStart > 0) zeitKurz(s.auftragStart) + " · " else ""
@@ -396,7 +404,7 @@ private fun SitzungEintrag(
                     // Mit Startzeit davor: „zuletzt“ unterscheidet die letzte Änderung vom Start.
                     else -> (if (start.isNotEmpty()) "zuletzt " else "") + zeitKurz(s.geaendert) + " · " + if (s.anzahl == 1) "1 Nachricht" else "${s.anzahl} Nachrichten"
                 },
-                color = if (codet) CLAUDE_ORANGE else if (denkt) f.primaer else f.textLeise, fontSize = 12.sp,
+                color = if (codet) claudeFarbe else if (denkt) f.primaer else f.textLeise, fontSize = 12.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }

@@ -140,8 +140,26 @@ object ProgrammierChat {
         return id
     }
 
-    /** Ob die Sitzung eines Auftrags gerade arbeitet, je Gespräch: für die drehende Anzeige unter der letzten Nachricht. */
-    data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String, val start: Long = 0L)
+    /** Titelanfang des Gesprächs einer am PC direkt gestarteten Sitzung; daran erkennt auch die Leiste sie („Gestartet auf dem PC“, lila). */
+    const val LOKAL_TITEL = "Gestartet auf dem PC: "
+
+    fun istLokal(titel: String) = titel.startsWith(LOKAL_TITEL)
+
+    /**
+     * Gespräch für eine am PC oder Mac direkt gestartete Sitzung (nicht über Jarvis): unter „Programmierung“, Titel
+     * „Gestartet auf dem PC: <Name> (<Rechner>)“. Leer = ließ sich nicht anlegen.
+     */
+    fun lokalesGespraech(context: Context, name: String, rechner: String): String {
+        val id = Gespraeche.neueId()
+        val bei = if (rechner.isNotEmpty()) " ($rechner)" else ""
+        val erste = GespeicherteNachricht(false, "💻 $VON_JARVIS · Gestartet auf dem PC$bei, nicht über Jarvis. Löschen entfernt die Sitzung nur aus Jarvis, am PC läuft sie weiter.", ART_STATUS)
+        Gespraeche.speichern(context, id, System.currentTimeMillis(), listOf(erste), programmierung = true) ?: return ""
+        Gespraeche.umbenennen(context, id, LOKAL_TITEL + name + bei)
+        return id
+    }
+
+    /** Ob die Sitzung eines Auftrags gerade arbeitet, je Gespräch: für die drehende Anzeige unter der letzten Nachricht. [lokal]: am PC gestartet (lila). */
+    data class Aktivitaet(val app: String, val arbeitet: Boolean, val zuletzt: Long, val schritt: String, val start: Long = 0L, val lokal: Boolean = false)
 
     private val _aktivitaet = MutableStateFlow<Map<String, Aktivitaet>>(emptyMap())
     val aktivitaet: StateFlow<Map<String, Aktivitaet>> = _aktivitaet

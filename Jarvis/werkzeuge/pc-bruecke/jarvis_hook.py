@@ -37,6 +37,17 @@ post, puls, frage, stop und warte mit derselben Eingabe auf (Werkzeugnamen wie b
          Sitzung an einem Anmeldefehler, läuft weder ein Werkzeug- noch der Stop-Hook, nur noch er (Vorfall vom 21.10.2026:
          „Login expired“ um 10:41, gemeldet erst nach Franks /login um 11:01).
 
+Lokale Sitzungen (am Rechner direkt gestartet, nicht über Jarvis): Die Claude-Code-Profile des OpenLaunchers rufen in jeder
+Sitzung python jarvis_hook.py lokal <art> auf. In Jarvis-Sitzungen (JARVIS_AUFTRAG_ID gesetzt) und ohne interaktive CLI
+(claude -p, SDK) endet das sofort. Sonst bekommt die Sitzung eine feste Nummer aus ihrer session_id (lokale_nummer, gleich
+auch nach --resume) und meldet wie ein Jarvis-Auftrag, mit dem Feld „lokal“ (Name, Ordner, Rechner, Claude-App-Link).
+Abweichungen: Eine Auswahlfrage (frage) geht nur an Jarvis, wenn am Rechner seit PC_AKTIV_S niemand Tastatur oder Maus
+benutzt hat; sonst und nach Ablauf erscheint der normale Dialog am Rechner, nie eine Antwort an Franks Stelle. Stop läuft
+async: Eine freie Rückfrage am Zugende wartet nicht, Franks Antwort in Jarvis kommt als Nachtrag über den Warter. prompt
+(UserPromptSubmit) zeigt in Jarvis, was am Rechner eingegeben wurde. Entfernt Frank die Sitzung in Jarvis, antwortet der
+Relay „entfernt“: Die Marke entfernt-<Nummer> lässt danach jeden Hook still enden; die Sitzung selbst läuft weiter.
+Sitzungen ohne diese Hooks (vor dem Update gestartet) liest jarvis_lokal.py über das Sitzungsregister nur mit.
+
 Anmeldung: Ein Anmeldefehler sperrt den Auftrag in Jarvis („Anmeldung erforderlich“), bis die Sitzung beweist, dass sie
 wieder arbeitet: „Login successful“ von /login im Transkript, ein Werkzeug oder ein Stop, das nach dem Fehler begann. Dann
 geht stand „anmeldung_ok“ (bzw. „weiter“ nach einer Störung) an Jarvis. Tokens und Zugangsdaten liest der Hook nie.
@@ -45,6 +56,8 @@ Wege: Relay https://<host>/pc/meldung und /pc/antwort mit dem Geräte-Token aus 
 (auf diesem Netz hängt IPv6 zeitweise, siehe bugs/desktop/dotnet-httpclient-ipv6-haenger.md).
 Protokoll: %LOCALAPPDATA%/JarvisPcBruecke/hook.log, macOS ~/Library/Logs/JarvisPcBruecke/hook.log
 """
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -59,6 +72,9 @@ import uuid
 from pathlib import Path
 
 AUFTRAG = os.environ.get("JARVIS_AUFTRAG_ID", "").strip()
+# Am Rechner gestartete Sitzung (siehe Kopf): setze_auftrag(lokale_nummer(session_id)), dazu ihre Angaben für Jarvis.
+LOKAL = False
+LOKAL_INFO: dict = {}
 # Gesetzt vom OpenCode-Plugin: Diese Sitzung ist kein Claude Code und beweist nichts über die Claude-Anmeldung des Rechners.
 FREMDE_CLI = os.environ.get("JARVIS_CLI", "").strip()
 START = time.time()        # Beginn dieses Hooks: Nur was danach begann, beweist eine wieder gültige Anmeldung
@@ -198,8 +214,13 @@ def melde(stand: str, schritt: str, frage: dict | None = None, nachtrag_ids: lis
         daten["frage"] = frage
     if nachtrag_ids:
         daten["nachtrag_ids"] = nachtrag_ids
-    code, _ = rufe("/pc/meldung", daten)
+    if LOKAL:
+        daten["lokal"] = LOKAL_INFO
+    code, antwort = rufe("/pc/meldung", daten)
     schreib(f"Meldung {stand}: {schritt[:120]} -> {code}")
+    # Frank hat die Sitzung in Jarvis entfernt: ab jetzt still (die Sitzung selbst läuft weiter).
+    if LOKAL and antwort.get("entfernt"):
+        merke_entfernt()
     return code
 
 
@@ -230,18 +251,23 @@ def frage_status(frage_id: str, status: str, antwort: str = "", grund: str = "",
     return melde_sicher("frage_status", "", {"frage_id": frage_id, "status": status, "antwort": antwort[:2000], "grund": grund}, versuche=versuche)
 
 
-def warte_auf_antwort(frage_id: str, neu_melden=None) -> dict | None:
+def warte_auf_antwort(frage_id: str, neu_melden=None, am_pc=None) -> dict | None:
     """Franks Antwort, {"freigeben": True}, {"geschlossen": True} (in Jarvis ohne Antwort geschlossen) oder None (abgelaufen).
     404 heißt nicht „abgelaufen“: Der Relay hat die Frage verloren (Neustart) oder kannte sie noch nicht. Dann meldet
-    [neu_melden] sie höchstens alle 30 s erneut, und es wird bis zur Frist weiter gewartet; Frank hat die Frage ja vor sich."""
+    [neu_melden] sie höchstens alle 30 s erneut, und es wird bis zur Frist weiter gewartet; Frank hat die Frage ja vor sich.
+    [am_pc] (lokale Sitzung): Liefert es True, sitzt Frank wieder am Rechner, und es kommt {"freigeben": True, "am_pc": True};
+    dann fragt der Hook in kurzen Stücken (der Relay hält eine Abfrage sonst bis zu 25 s)."""
     frist = time.monotonic() + FRAGE_WARTEN_S
     zuletzt_neu = time.monotonic()
     while time.monotonic() < frist:
+        if am_pc and am_pc():
+            return {"freigeben": True, "am_pc": True}
         try:
-            code, daten = rufe("/pc/antwort?frage_id=" + urllib.parse.quote(frage_id), zeitlimit=35)
+            code, daten = rufe("/pc/antwort?frage_id=" + urllib.parse.quote(frage_id), zeitlimit=8 if am_pc else 35)
         except Exception as fehler:
-            schreib(f"Antwort abholen: {fehler}")
-            time.sleep(3)
+            if not (am_pc and isinstance(fehler, (TimeoutError, socket.timeout))):
+                schreib(f"Antwort abholen: {fehler}")
+                time.sleep(3)
             continue
         if code == 200:
             if daten.get("freigeben"):
@@ -634,6 +660,10 @@ WARTER = ORDNER / f"warter-{AUFTRAG or 'ohne'}.pid"
 def hole_nachtraege(warten: int) -> list[dict]:
     """Nachträge zu diesem Auftrag vom Relay; mit [warten] Long-Polling. Leer = keiner (oder Relay nicht erreichbar)."""
     code, daten = rufe(f"/pc/nachtrag?auftrag_id={urllib.parse.quote(AUFTRAG)}&warten={warten}", zeitlimit=warten + 10)
+    if code == 410 and LOKAL:
+        # In Jarvis entfernt: Es kommt nie wieder ein Nachtrag.
+        merke_entfernt()
+        return []
     if code != 200:
         # Beim Long-Polling nie ohne Pause neu fragen: 404 (Relay ohne Endpunkt, falsches Token) käme sofort zurück und liefe
         # sonst bis zu zwölf Stunden im Kreis gegen den Server.
@@ -672,6 +702,13 @@ def uebergib(neu: list[dict]) -> str:
     except Exception as fehler:
         schreib(f"Quittung der Übergabe: {fehler}")
     teile = "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in neu)
+    if LOKAL:
+        # Antworten auf eine freie Rückfrage kommen als Nachtrag „antwort-<frage_id>“: in Jarvis überall beantwortet.
+        for n in neu:
+            if n["nachtrag_id"].startswith("antwort-"):
+                frage_status(n["nachtrag_id"].removeprefix("antwort-"), "beantwortet", antwort=n["text"], versuche=2)
+        return (f"Frank hat dir über Jarvis (Handy) {'eine Nachricht' if len(neu) == 1 else str(len(neu)) + ' Nachrichten'} zu dieser Sitzung "
+                f"geschickt. Behandle sie wie eine Eingabe von ihm am Rechner und arbeite damit hier weiter.\n\n{teile}")
     return (f"Frank hat über Jarvis {'einen Nachtrag' if len(neu) == 1 else str(len(neu)) + ' Nachträge'} zu diesem Programmierauftrag "
             f"(AUFTRAG-ID {AUFTRAG}) geschickt. Er gehört zu genau diesem Auftrag und dieser Sitzung: Setze ihn hier um, als Teil des "
             f"Auftrags, und schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde "
@@ -805,8 +842,9 @@ def warte(eingabe: dict) -> int:
     if alter and alter != os.getpid() and lebt(alter, alter_start):
         return 0
     WARTER.write_text(f"{os.getpid()} {startzeit(os.getpid()) or ''}".strip(), encoding="utf-8")
-    # OpenCode: Das Plugin nennt seinen Prozess, einen claude*-Vorfahren gibt es dort nicht.
-    claude = int(os.environ.get("JARVIS_ELTERN_PID") or 0) or claude_prozess()
+    # OpenCode: Das Plugin nennt seinen Prozess, einen claude*-Vorfahren gibt es dort nicht. Claude Code nennt sich selbst
+    # (CLAUDE_PID, ab 2.1.x); der Vorfahr bleibt der Ersatz für ältere Fassungen.
+    claude = int(os.environ.get("JARVIS_ELTERN_PID") or 0) or int(os.environ.get("CLAUDE_PID") or 0) or claude_prozess()
     claude_start = (startzeit(claude) or "") if claude else ""
     schreib(f"Warter gestartet ({eingabe.get('hook_event_name', '')}, Claude-Prozess {claude})")
     try:
@@ -815,6 +853,11 @@ def warte(eingabe: dict) -> int:
             if claude and not lebt(claude, claude_start):
                 schreib("Warter: Claude-Sitzung beendet")
                 return 0
+            if LOKAL:
+                if ist_entfernt():
+                    schreib("Warter: in Jarvis entfernt")
+                    return 0
+                hook_marke()
             # Steht die Sitzung an einem Anmeldefehler, ist der Warter der einzige Hook, der noch läuft.
             try:
                 with Sperre():
@@ -853,6 +896,187 @@ def warte(eingabe: dict) -> int:
                 WARTER.unlink()
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------- Lokale Sitzungen (siehe Kopf)
+
+ZEICHEN = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # wie Auftragsbuch.neueNummer in der App
+PC_AKTIV_S = 120                  # so kurz nach der letzten Eingabe am Rechner sitzt Frank noch dran
+FRAGE_HALTEN_LOKAL_S = 24 * 3600  # so lange ist eine freie Rückfrage einer lokalen Sitzung in Jarvis beantwortbar
+
+
+def setze_auftrag(nummer: str) -> None:
+    """Nummer der Sitzung und die Dateien, die daran hängen (Zustand, Sperre, Warter)."""
+    global AUFTRAG, ZUSTAND, SPERRE, WARTER
+    AUFTRAG = nummer
+    ZUSTAND = ORDNER / f"hook-{nummer}.json"
+    SPERRE = ORDNER / f"hook-{nummer}.lock"
+    WARTER = ORDNER / f"warter-{nummer}.pid"
+
+
+def lokale_nummer(sitzung: str) -> str:
+    """Feste Nummer einer am Rechner gestarteten Sitzung aus ihrer session_id: Hook und jarvis_lokal.py kommen immer auf
+    dieselbe, auch nach --resume. So entsteht in Jarvis nie ein zweiter Eintrag für dieselbe Sitzung."""
+    zahl = int(hashlib.sha1(sitzung.encode("utf-8")).hexdigest(), 16)
+    return "".join(ZEICHEN[(zahl >> (5 * i)) & 31] for i in range(5))
+
+
+def _beruehre(datei: Path) -> None:
+    try:
+        ORDNER.mkdir(parents=True, exist_ok=True)
+        datei.touch()
+    except OSError:
+        pass
+
+
+def ist_entfernt() -> bool:
+    return (ORDNER / f"entfernt-{AUFTRAG}").exists()
+
+
+def merke_entfernt() -> None:
+    if not ist_entfernt():
+        schreib("In Jarvis entfernt: keine Meldungen mehr")
+    _beruehre(ORDNER / f"entfernt-{AUFTRAG}")
+
+
+def hook_marke() -> None:
+    """Diese Sitzung hat die Hooks: jarvis_lokal.py liest sie dann nicht zusätzlich mit (sonst käme alles doppelt)."""
+    _beruehre(ORDNER / f"lokal-{AUFTRAG}.hook")
+
+
+def pc_ruhe_s() -> float:
+    """Sekunden seit der letzten Eingabe an Tastatur oder Maus dieses Rechners. Unbekannt = 0: Dann gilt Frank als am
+    Rechner, und eine Frage erscheint wie gewohnt dort."""
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            class Eingabe(ctypes.Structure):
+                _fields_ = [("cbSize", ctypes.c_uint), ("dwTime", ctypes.c_uint)]
+
+            info = Eingabe()
+            info.cbSize = ctypes.sizeof(Eingabe)
+            if not ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info)):
+                return 0
+            return ((ctypes.windll.kernel32.GetTickCount() - info.dwTime) & 0xFFFFFFFF) / 1000
+        if sys.platform == "darwin":
+            import subprocess
+            aus = subprocess.run(["ioreg", "-c", "IOHIDSystem", "-d", "4"], capture_output=True, text=True, timeout=5).stdout
+            m = re.search(r'"HIDIdleTime"\s*=\s*(\d+)', aus)
+            return int(m.group(1)) / 1e9 if m else 0
+    except Exception:
+        pass
+    return 0
+
+
+def lokal_angaben(sitzung: str, ordner: str, mit_hook: bool, name: str = "", link: str = "") -> dict:
+    """Was Jarvis zum Anlegen und Anzeigen des Eintrags braucht. Name und Claude-App-Link stehen im Sitzungsregister von
+    Claude Code (<Profil>/sessions/<pid>.json); ohne Register gelten Ordnername und kein Link."""
+    if not name or not link:
+        try:
+            pid = os.environ.get("CLAUDE_PID", "")
+            basis = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+            eintrag = json.loads((basis / "sessions" / f"{pid}.json").read_text(encoding="utf-8")) if pid else {}
+            name = name or str(eintrag.get("name") or "")
+            link = link or str(eintrag.get("bridgeSessionId") or "")
+        except Exception:
+            pass
+        link = link or os.environ.get("CLAUDE_CODE_BRIDGE_SESSION_ID", "")
+    return {"sitzung": sitzung, "name": (name or Path(ordner or ".").name or "Sitzung")[:60], "ordner": ordner[:200],
+            "rechner": rechner(), "link": f"https://claude.ai/code/{link}" if link.startswith("session_") else "", "hook": mit_hook}
+
+
+def registriere(transkript: str) -> bool:
+    """Erste Meldung dieser Sitzung an Jarvis? Dann ab dem jetzigen Ende des Transkripts lesen: Eine lange (fortgesetzte)
+    Sitzung schickt ihren ganzen Verlauf sonst noch einmal. True = neu, die Anmeldung ist zu senden."""
+    with Sperre():
+        z = lies_zustand()
+        if z.get("lokal_seit"):
+            return False
+        try:
+            groesse = os.path.getsize(transkript) if transkript else 0
+        except OSError:
+            groesse = 0
+        z.update({"lokal_seit": time.time(), "beginn": time.time(), "stelle": groesse, "pruef_stelle": groesse})
+        schreib_zustand(z)
+        return True
+
+
+def merke_freie_frage(frage_id: str) -> None:
+    """Offene freie Rückfrage einer lokalen Sitzung: Tippt Frank am Rechner weiter, gilt sie dort als beantwortet (prompt)."""
+    try:
+        with Sperre():
+            z = lies_zustand()
+            z["frei_offen"] = (z.get("frei_offen") or [])[-9:] + [frage_id]
+            schreib_zustand(z)
+    except SperreBelegt as fehler:
+        schreib(f"merke_freie_frage: {fehler}")
+
+
+def prompt(eingabe: dict) -> None:
+    """UserPromptSubmit (lokal, async): Was Frank am Rechner eingibt, steht auch in Jarvis; offene freie Rückfragen sind damit beantwortet."""
+    text = lesbar(str(eingabe.get("prompt") or ""))
+    if not text:
+        return
+    with Sperre():
+        z = lies_zustand()
+        offen = z.pop("frei_offen", [])
+        erster = not z.get("auftrag_gemeldet")
+        z["auftrag_gemeldet"] = True
+        schreib_zustand(z)
+    # Die erste Eingabe ist der Auftrag der Sitzung (Jarvis zeigt ihn über Rückfragen, wie bei eigenen Aufträgen).
+    if erster:
+        LOKAL_INFO["auftrag"] = text[:1500]
+    for frage_id in offen:
+        frage_status(frage_id, "beantwortet_am_pc", antwort=text, versuche=2)
+    melde_still("laeuft", "👤 Frank am PC: " + kuerze(text, 1500))
+
+
+def ende(_: dict) -> None:
+    """SessionEnd (lokal): Die Sitzung wurde am Rechner geschlossen. Sie bleibt dort fortsetzbar (claude --resume)."""
+    melde_still_leer("⏹️ Am PC beendet. Fortsetzen geht dort mit claude --resume; Jarvis begleitet sie dann wieder.")
+
+
+def melde_still_leer(schritt: str) -> None:
+    """Eine Meldung, nach der die Sitzung nicht arbeitet (Anmeldung, Ende): Jarvis zeigt dann keine drehende Anzeige."""
+    try:
+        melde("laeuft", schritt, extra={"leerlauf": True})
+    except Exception as fehler:
+        schreib(f"Meldung nicht gesendet: {fehler}")
+
+
+def lokal(art: str) -> int:
+    """Einstieg der Profil-Hooks (siehe Kopf): nur in interaktiven, nicht von Jarvis gestarteten Claude-Code-Sitzungen."""
+    global LOKAL
+    try:
+        eingabe = json.loads(sys.stdin.buffer.read().decode("utf-8") or "{}")
+    except Exception:
+        eingabe = {}
+    sitzung = str(eingabe.get("session_id") or "")
+    if AUFTRAG:
+        # Jarvis-Sitzung: Ihre eigenen Hooks melden schon. Nur vermerken, damit jarvis_lokal.py sie nie als lokal zeigt.
+        if sitzung and art == "warte":
+            _beruehre(ORDNER / f"jarvis-{sitzung}.sitzung")
+        return 0
+    if FREMDE_CLI or not sitzung or os.environ.get("CLAUDE_CODE_ENTRYPOINT", "cli") != "cli":
+        return 0
+    if not (Path.home() / "SK" / "Jarvis" / "relay.properties").exists():
+        return 0
+    setze_auftrag(lokale_nummer(sitzung))
+    LOKAL = True
+    if ist_entfernt():
+        return 0
+    hook_marke()
+    LOKAL_INFO.update(lokal_angaben(sitzung, str(eingabe.get("cwd") or os.getcwd()), True))
+    try:
+        if registriere(str(eingabe.get("transcript_path") or "")):
+            melde_still_leer(f"💻 Gestartet auf dem PC ({rechner()}): Jarvis begleitet diese Sitzung. Rückfragen beantwortest du hier, "
+                             "Nachträge gehen direkt in die Sitzung. Löschen entfernt sie nur aus Jarvis, am PC läuft sie weiter.")
+        return {"post": post, "frage": frage, "stop": stop, "puls": puls, "warte": warte, "fehlschlag": fehlschlag,
+                "prompt": prompt, "ende": ende}.get(art, lambda _: None)(eingabe) or 0
+    except Exception as fehler:
+        schreib(f"lokal {art}: {type(fehler).__name__}: {fehler}")
+        return 0
 
 
 # ---------------------------------------------------------------- Ereignisse
@@ -1009,23 +1233,35 @@ def frage(eingabe: dict) -> None:
     kurz = " / ".join(str(f.get("question", "")) for f in fragen)
     # Mit Frist (Sekunden seit 1970): Jarvis zeigt, wie lange die Frage dort noch beantwortbar ist.
     daten = {"frage_id": frage_id, "fragen": fragen, "bis": int(time.time() + FRAGE_WARTEN_S), "tool_use_id": tool_use_id}
+    if LOKAL and pc_ruhe_s() < PC_AKTIV_S:
+        # Frank sitzt am Rechner: Der Dialog erscheint sofort dort; Jarvis zeigt die Frage nur an.
+        melde_still("laeuft", "❓ Rückfrage am PC: " + kurz)
+        return
     if not melde_sicher("frage", "❓ " + kurz, daten):
+        if LOKAL:
+            # Eine am Rechner gestartete Sitzung entscheidet nie an Franks Stelle: Der Dialog erscheint dort.
+            schreib("Rückfrage nicht an Jarvis zugestellt: Dialog am Rechner")
+            return
         # Ohne Jarvis wartete der Dialog am Rechner ohne Ende, und die Sitzung stünde (Franks Vorgabe vom 23.10.2026: nie).
         schreib("Rückfrage nicht an Jarvis zugestellt: Sitzung entscheidet selbst")
         sys.stdout.write(json.dumps(ohne_antwort(ein, fragen, "Jarvis war nicht erreichbar")))
         return
     merke_frage(tool_use_id, frage_id, "jarvis")
-    antwort = warte_auf_antwort(frage_id, lambda: melde("frage", "❓ " + kurz, daten))
+    antwort = warte_auf_antwort(frage_id, lambda: melde("frage", "❓ " + kurz, daten), am_pc=(lambda: pc_ruhe_s() < 10) if LOKAL else None)
     if antwort and antwort.get("geschlossen"):
         antwort = None
         grund = "Die Rückfrage wurde in Jarvis ohne Antwort geschlossen"
     else:
         grund = f"Frank hat in {FRAGE_WARTEN_S // 60} Minuten nicht geantwortet"
+    if LOKAL and not antwort:
+        # Lokal nie selbst entscheiden: abgelaufen oder in Jarvis geschlossen, dann steht der Dialog am Rechner.
+        antwort = {"freigeben": True, "abgelaufen": True}
     if antwort and antwort.get("freigeben"):
-        # Frank hat in Jarvis „In der Claude-App beantworten“ getippt: Er sitzt dran, der normale Dialog erscheint.
-        schreib("Keine Antwort über Jarvis (freigegeben): normaler Dialog")
+        # Frank hat in Jarvis „In der Claude-App beantworten“ getippt (oder sitzt wieder am Rechner): der normale Dialog erscheint.
+        warum = "am_rechner" if antwort.get("am_pc") else "abgelaufen" if antwort.get("abgelaufen") else "freigegeben"
+        schreib(f"Keine Antwort über Jarvis ({warum}): normaler Dialog")
         merke_frage(tool_use_id, frage_id, "am_pc")
-        frage_status(frage_id, "am_pc", grund="freigegeben")
+        frage_status(frage_id, "am_pc", grund=warum)
         return
     if not antwort:
         # Abgelaufen: Früher öffnete jetzt der Dialog am Rechner und die Sitzung stand, bis jemand dort antwortete
@@ -1093,13 +1329,26 @@ def stop(eingabe: dict) -> None:
     for frage_id, ausgang, text in erledigt:
         frage_status(frage_id, ausgang, antwort=text)
     if not neu:
-        nachtraege_im_stop()
+        # Lokal läuft Stop async: Eine Ausgabe nähme niemand an, Nachträge stellt dort nur der Warter zu.
+        if not LOKAL:
+            nachtraege_im_stop()
         return
     # Eine echte Rückfrage steht am Ende der Nachricht (Fragezeichen oder eine wörtlich aufgezählte Auswahl A/B/C … bzw.
     # 1/2/3 nach einer Frage, etwa Frage 1 des Research-Skills ohne AskUserQuestion); nur dann wartet der Hook (nie zweimal).
     ende = letzte.rstrip().rstrip("*_ )\"“”").strip()
     optionen, auswahl = optionen_im_text(letzte)
-    if (ende.endswith("?") or auswahl) and not eingabe.get("stop_hook_active"):
+    # Am Rechner gestartet: nie warten, am Rechner kann Frank sofort tippen. Eine Rückfrage geht nur an Jarvis, wenn er gerade
+    # nicht am Rechner sitzt (sonst nur der Bericht unten); antwortet er dort, macht der Relay daraus einen Nachtrag
+    # (als_nachtrag), und der Warter weckt die Sitzung damit.
+    if LOKAL and (ende.endswith("?") or auswahl) and pc_ruhe_s() >= PC_AKTIV_S:
+        frage_id = uuid.uuid4().hex[:12]
+        daten = {"frage_id": frage_id, "frei": True, "als_nachtrag": True, "bis": int(time.time() + FRAGE_HALTEN_LOKAL_S),
+                 "fragen": [{"question": letzte[-3000:], "options": optionen}]}
+        schritt = "❓ " + (letzte if len(letzte) <= MAX_TEXT - 2 else "[… Anfang gekürzt] " + letzte[-(MAX_TEXT - 40):])
+        if melde_sicher("frage", schritt, daten, versuche=2):
+            merke_freie_frage(frage_id)
+        return
+    if (ende.endswith("?") or auswahl) and not eingabe.get("stop_hook_active") and not LOKAL:
         frage_id = uuid.uuid4().hex[:12]
         daten = {"frage_id": frage_id, "frei": True, "bis": int(time.time() + FRAGE_WARTEN_S),
                  "fragen": [{"question": letzte[-3000:], "options": optionen}]}
@@ -1139,9 +1388,10 @@ def stop(eingabe: dict) -> None:
     # Zugende: die ganze letzte Nachricht, so wie sie im Terminal steht (am Schluss die Zusammenfassung), dazu die Dauer
     # seit dem Start des Auftrags (wie „Cooked for …“ im Terminal). Der Stand „info“ ist das Merkmal des ausführlichen
     # Abschlussberichts: Jarvis zeigt ihn mit voller Aktionsleiste, alle anderen Stände als kurze Statusmeldung.
-    melde("info", "🏁 " + letzte + f"\n\n⏱️ Dauer seit Start: {dauer}")
+    melde("info", "🏁 " + letzte + ("" if LOKAL else f"\n\n⏱️ Dauer seit Start: {dauer}"))
     # Danach (nicht davor: „info“ markiert in Jarvis die zuvor übergebenen Nachträge als bearbeitet) die neuen Nachträge.
-    nachtraege_im_stop()
+    if not LOKAL:
+        nachtraege_im_stop()
 
 
 def puls(eingabe: dict) -> None:
@@ -1179,9 +1429,11 @@ def puls(eingabe: dict) -> None:
 
 
 def main() -> int:
+    art = sys.argv[1] if len(sys.argv) > 1 else ""
+    if art == "lokal":
+        return lokal(sys.argv[2] if len(sys.argv) > 2 else "")
     if not AUFTRAG:
         return 0
-    art = sys.argv[1] if len(sys.argv) > 1 else ""
     if art == "melde":
         # Von Hand aus einer Sitzung ohne Hooks (Codex CLI, Sol 6.1): python jarvis_hook.py melde <laeuft|fertig|fehler> "<Satz>".
         # Ohne stdin: Die Sitzung ruft das als normalen Befehl auf.

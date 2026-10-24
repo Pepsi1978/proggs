@@ -712,12 +712,13 @@ private fun ProgrammierAktivitaet(vm: AppViewModel) {
     // darunter (eingerückt, bis drei Zeilen) App und letzte Aktivität.
     Column(Modifier.padding(start = 6.dp, top = 4.dp, bottom = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(SPINNER[bild], color = CLAUDE_ORANGE, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp))
-            Text("$wort…", color = CLAUDE_ORANGE, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+            val farbe = if (a.lokal) PC_LILA else CLAUDE_ORANGE
+            Text(SPINNER[bild], color = farbe, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp))
+            Text("$wort…", color = farbe, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
             if (a.start > 0) Text(" · " + laufzeit((jetzt - a.start) / 1_000), color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
         Text(
-            "(${a.app} · letzte Aktivität vor $seit)",
+            "(${a.app}${if (a.lokal) " · gestartet auf dem PC" else ""} · letzte Aktivität vor $seit)",
             color = if (sekunden > 180) f.gefahr else f.textLeise, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = 28.dp, top = 1.dp),
         )
@@ -735,6 +736,8 @@ private fun laufzeit(sekunden: Long): String {
 }
 
 internal val CLAUDE_ORANGE = Color(0xFFD97757)
+/** Am PC direkt gestartete Sitzungen (nicht über Jarvis): dasselbe Arbeitssymbol in Lila statt Orange. */
+internal val PC_LILA = Color(0xFF8B5CF6)
 /** Die Bilder des Claude-Code-Arbeitssymbols, alle 120 ms eins weiter; auch die Seitenleiste zeigt es an arbeitenden Programmier-Gesprächen. */
 internal val SPINNER = listOf("·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢")
 private val SPINNER_WOERTER = listOf(
