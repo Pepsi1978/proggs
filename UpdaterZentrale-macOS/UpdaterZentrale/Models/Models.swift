@@ -55,6 +55,8 @@ struct ProgrammEintrag: Codable {
     var vorhandenPfad: String?
 
     var versionsArgumente: String?
+    /// CLI: Argumente des Update-Befehls. Brew-Cask mit manuellem Installer (Windscribe): Argumente,
+    /// mit denen der Installer ohne Klick durchlaeuft.
     var updateArgumente: String?
     var pruefArgumente: String?
 

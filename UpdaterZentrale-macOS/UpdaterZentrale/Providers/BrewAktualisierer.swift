@@ -163,6 +163,16 @@ struct BrewAktualisierer: Aktualisierer {
             return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
         }
 
+        // Casks mit `installer manual:` (Windscribe) laden nur den Installer in den Caskroom -- die App
+        // bleibt alt, und ab dann meldet `brew upgrade` "already installed". Den Installer selbst starten.
+        if let installer = await manuellerInstaller(cask) {
+            if lauf.exitCode != 0 && !istBereitsAktuell(lauf.ausgabe) {
+                return PruefErgebnis(zustand: .fehler, meldung: fehlergrund(lauf.ausgabe, exitCode: lauf.exitCode),
+                                     protokoll: lauf.ausgabe)
+            }
+            return await installerAusfuehren(eintrag, installer, protokoll)
+        }
+
         if istBereitsAktuell(lauf.ausgabe) {
             let stand = await fingerabdruck(eintrag)
             return PruefErgebnis(zustand: .aktuell, installierteVersion: stand,
@@ -328,6 +338,55 @@ struct BrewAktualisierer: Aktualisierer {
         let version = (erstes["version"] as? String) ?? ""
         let installiert = erstes["installed"] as? String
         return CaskInfo(version: version, installiert: installiert)
+    }
+
+    /// Pfad des Installers, den ein Cask mit `installer manual:` in den Caskroom legt; nil bei normalen Casks.
+    private func manuellerInstaller(_ cask: String) async -> String? {
+        let lauf = await infoLauf(["info", "--cask", cask, "--json=v2"])
+        guard let daten = lauf.ausgabe.data(using: .utf8),
+              let wurzel = try? JSONSerialization.jsonObject(with: daten) as? [String: Any],
+              let erstes = (wurzel["casks"] as? [[String: Any]])?.first,
+              let installiert = erstes["installed"] as? String,
+              let artefakte = erstes["artifacts"] as? [[String: Any]] else { return nil }
+        let manuell = artefakte
+            .compactMap { $0["installer"] as? [[String: Any]] }
+            .flatMap { $0 }
+            .compactMap { $0["manual"] as? String }
+            .first
+        guard let manuell else { return nil }
+        let caskroom = ((Pfade.brew as NSString).deletingLastPathComponent as NSString)
+            .deletingLastPathComponent + "/Caskroom"
+        return [caskroom, cask, installiert, manuell].joined(separator: "/")
+    }
+
+    /// Startet den Installer direkt (nicht ueber `open`), damit das Ende abgewartet werden kann.
+    /// Windscribe: `-update` klickt "Installieren" selbst, beendet die alte App und startet die neue.
+    private func installerAusfuehren(_ eintrag: ProgrammEintrag, _ installer: String,
+                                     _ protokoll: Fortschritt) async -> PruefErgebnis {
+        var programm = installer
+        if installer.hasSuffix(".app") {
+            let name = (NSDictionary(contentsOfFile: installer + "/Contents/Info.plist")?["CFBundleExecutable"]
+                        as? String) ?? ""
+            programm = installer + "/Contents/MacOS/" + name
+        }
+        guard FileManager.default.isExecutableFile(atPath: programm) else {
+            return PruefErgebnis(zustand: .fehler, meldung: "Installer nicht gefunden: \(installer)")
+        }
+        let argumente = eintrag.updateArgumente ?? ""
+        protokoll.berichte("Installer: \(programm) \(argumente)")
+        let lauf = await Kommandozeile.ausfuehren(
+            programm, argumente, zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60))
+        if !lauf.ausgabe.istLeer { protokoll.berichte(lauf.ausgabe) }
+        if lauf.abgelaufen {
+            return PruefErgebnis(zustand: .fehler, meldung: "Installer: Zeitlimit überschritten.", protokoll: lauf.ausgabe)
+        }
+        if lauf.exitCode != 0 {
+            return PruefErgebnis(zustand: .fehler, meldung: "Installer abgebrochen (Exit \(lauf.exitCode)).",
+                                 protokoll: lauf.ausgabe)
+        }
+        let neu = await fingerabdruck(eintrag)
+        return PruefErgebnis(zustand: .fertig, installierteVersion: neu,
+                             meldung: "Update installiert.", protokoll: lauf.ausgabe)
     }
 
     private func istUeberBrewInstalliert(_ cask: String) async -> Bool {

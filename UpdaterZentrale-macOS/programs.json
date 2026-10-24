@@ -942,6 +942,7 @@
       "beschreibung": "VPN-Client.",
       "art": "brew",
       "cask": "windscribe",
+      "updateArgumente": "-update",
       "appPfad": "/Applications/Windscribe.app",
       "bundleId": "com.windscribe.client",
       "exePfad": "",
