@@ -130,7 +130,7 @@ object Auswertung {
 
         // Bei der vollen Auswertung bleiben nur übernommene und ausgeblendete Vorschläge, die übrigen werden ersetzt;
         // Nachfüllen und Rückmeldung behalten alles und ergänzen nur.
-        val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen } else bisher
+        val behalten = if (modus == Modus.VOLL) bisher.filter { it.aufgabeId != null || it.verworfen || it.angenommen } else bisher
         // Freie Plätze je Kategorie: 10 minus offene, sichtbare Vorschläge (erledigte und ausgeblendete belegen keinen Platz).
         val freiJe = freiePlaetze(behalten)
         // Alles belegt: keine Recherche, offene Rückmeldungen bleiben offen und fließen in den nächsten Lauf mit freien Plätzen.
@@ -154,6 +154,7 @@ object Auswertung {
             if (persoenlich && kontextDatei.isEmpty() && gedaechtnis == null) append("(Kein weiterer Kontext über Frank vorhanden.)\n\n")
         }
         val zielText = zielBeschreibung(ziel)
+        val vorlieben = vorliebenBlock(zielId, if (persoenlich) repo.alleVorschlaegeEinmal() else bisher)
         val sperre = sperrBlock(abgelehnt)
         val rueckmeldungen = gespraechBlock(gespraech)
 
@@ -163,7 +164,7 @@ object Auswertung {
                 schritt(zielId, if (e.recherche) "Recherchiere, wie man das Ziel am besten erreicht …" else "Denke über den besten Weg nach …")
                 auth.streamChat(
                     instructions = RECHERCHE_ANWEISUNG + if (e.recherche) RECHERCHE_MIT_WEB else RECHERCHE_OHNE_WEB,
-                    turns = listOf(ChatTurn("user", "$zielText\n\n$ueberFrank$rueckmeldungen" + if (wunsch.isNotBlank()) "BESONDERER WUNSCH FÜR DIESE AUSWERTUNG: $wunsch\n" else "")),
+                    turns = listOf(ChatTurn("user", "$zielText\n\n$ueberFrank$vorlieben$rueckmeldungen" + if (wunsch.isNotBlank()) "BESONDERER WUNSCH FÜR DIESE AUSWERTUNG: $wunsch\n" else "")),
                     model = modell,
                     reasoningEffort = e.denkstufe,
                     websuche = e.recherche,
@@ -179,7 +180,7 @@ object Auswertung {
                         // Die gesamte bisherige Recherche samt aller Ergänzungen, damit nichts doppelt recherchiert wird.
                         append("BISHERIGE RECHERCHE (bitte nicht wiederholen, sondern ergänzen):\n").append(alt.ifBlank { "(noch keine)" }.takeLast(RECHERCHE_MAX)).append("\n\n")
                         if (ziel.strategie.isNotBlank()) append("BISHERIGER WEG: ").append(ziel.strategie).append("\n\n")
-                        append(ueberFrank).append(rueckmeldungen).append(sperre)
+                        append(ueberFrank).append(vorlieben).append(rueckmeldungen).append(sperre)
                         if (behalten.isNotEmpty()) append("SCHON VORHANDENE AUFGABEN:\n").append(behalten.joinToString("\n") { "- " + it.titel }).append("\n\n")
                         if (wunsch.isNotBlank()) append("BESONDERER WUNSCH: ").append(wunsch).append('\n')
                     })),
@@ -203,13 +204,13 @@ object Auswertung {
                 append("RECHERCHE-BERICHT:\n").append(if (modus == Modus.VOLL) t.take(RECHERCHE_MAX) else t.takeLast(RECHERCHE_MAX)).append("\n\n")
             }
             if (modus != Modus.VOLL && ziel.strategie.isNotBlank()) append("BISHERIGER WEG: ").append(ziel.strategie).append("\n\n")
-            append(ueberFrank)
+            append(ueberFrank).append(vorlieben)
             if (behalten.isNotEmpty()) {
                 append("SCHON VORHANDEN (nicht noch einmal vorschlagen; du darfst sie als Voraussetzung über ihren Schlüssel nennen; ")
                 append("ihr Wortlaut kann sprachlich missglückt sein, nimm ihn nicht als Stilvorbild):\n")
                 behalten.forEach { v ->
                     append("- [").append(v.schluessel).append("] ").append(v.titel)
-                    append(when { v.verworfen -> " (von Frank verworfen, nichts Ähnliches mehr vorschlagen)"; v.erledigt -> " (erledigt)"; v.aufgabeId != null -> " (übernommen, in Arbeit)"; else -> " (offener Vorschlag)" })
+                    append(when { v.verworfen -> " (von Frank verworfen, nichts Ähnliches mehr vorschlagen)"; v.erledigt -> " (erledigt)"; v.aufgabeId != null -> " (übernommen, in Arbeit)"; v.angenommen -> " (von Frank angenommen: gefällt ihm, will er machen)"; else -> " (offener Vorschlag)" })
                     append('\n')
                 }
                 append('\n')
@@ -388,6 +389,26 @@ object Auswertung {
                 .sortedWith(compareByDescending<JSONObject> { it.optBoolean("rueckmeldung", false) }.thenByDescending { it.optInt("wichtigkeit", 3) })
                 .take(frei[k] ?: 0)
         }
+
+    /**
+     * Angenommene Aufgaben zeigen, was Frank gefällt: die dieses Ziels zuerst, danach (mit persönlichem Kontext) die der übrigen Ziele.
+     * Daraus soll der Agent Art, Umfang und Stil ableiten, die Frank mag, ohne sie zu wiederholen.
+     */
+    private fun vorliebenBlock(zielId: Long, vorschlaege: List<Vorschlag>): String {
+        val angenommen = vorschlaege.filter { it.angenommen && !it.verworfen }.sortedWith(compareBy({ it.zielId != zielId }, { -(it.angenommenAm ?: 0L) })).take(40)
+        if (angenommen.isEmpty()) return ""
+        return buildString {
+            append("VON FRANK ANGENOMMENE AUFGABEN (diese Vorschläge gefallen ihm, er will sie behalten und machen; erkenne daraus seine Vorlieben ")
+            append("bei Art, Umfang, Aufwand und Stil und richte neue Vorschläge danach aus, ohne diese zu wiederholen):\n")
+            angenommen.forEach { v ->
+                append("- ").append(v.titel)
+                if (v.zielId != zielId) append(" (anderes Ziel)")
+                if (v.text.isNotBlank()) append(": ").append(v.text.take(160))
+                append('\n')
+            }
+            append('\n')
+        }
+    }
 
     private fun sperrBlock(abgelehnt: List<Abgelehnt>): String = if (abgelehnt.isEmpty()) "" else buildString {
         append("VON FRANK ABGELEHNT (diese Aufgaben will er nicht. Schlage sie nie wieder vor, auch nicht umformuliert, ")

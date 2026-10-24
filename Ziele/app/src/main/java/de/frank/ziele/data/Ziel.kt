@@ -101,6 +101,9 @@ data class Vorschlag(
     val erledigt: Boolean = false,
     /** Frank hat den Vorschlag verworfen: bleibt unten ausgegraut, damit die nächste Auswertung ihn nicht wiederholt. */
     val verworfen: Boolean = false,
+    /** Frank hat den Vorschlag angenommen: gefällt ihm, er will ihn behalten und machen. Nicht erledigt, nicht übernommen. */
+    val angenommen: Boolean = false,
+    val angenommenAm: Long? = null,
     val erstellt: Long = System.currentTimeMillis(),
 ) {
     val gruppe: Kategorie get() = Kategorie.von(kategorie)

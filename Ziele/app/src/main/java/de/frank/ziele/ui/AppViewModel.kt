@@ -445,6 +445,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Annehmen: Frank will die Aufgabe behalten und machen. Übernimmt nichts nach Geniale Aufgaben und erledigt nichts. */
+    fun annehmen(v: Vorschlag, angenommen: Boolean = true) {
+        viewModelScope.launch {
+            Abgleich.gesperrt {
+                repo.vorschlag(v.id)?.let { repo.speichere(it.copy(angenommen = angenommen, angenommenAm = if (angenommen) System.currentTimeMillis() else null)) }
+            }
+            melde(if (angenommen) "Angenommen ✓ – fließt in künftige Vorschläge ein" else "Annahme zurückgenommen")
+        }
+    }
+
     /** Ablehnen: endgültig weg und gemerkt, damit nichts Ähnliches wiederkommt. Rückgängig holt ihn zurück. */
     fun ablehnen(v: Vorschlag) {
         if (v.aufgabeId != null) return

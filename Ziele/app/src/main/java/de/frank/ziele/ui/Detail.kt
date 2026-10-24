@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.Edit
@@ -253,7 +254,7 @@ private fun AuswertenKnopf(vm: AppViewModel, z: Ziel, schritt: String?, fehler: 
                 Text(
                     "Zuletzt ausgewertet am " + SimpleDateFormat("d. MMMM yyyy, HH:mm", Locale.GERMAN).format(Date(it)) + " Uhr" +
                         (if (z.auswertungModell.isNotBlank()) " · ${z.auswertungModell}" else "") +
-                        ". Übernommene und ausgeblendete Vorschläge bleiben beim Neu-Auswerten erhalten, abgelehnte kommen nie wieder. " +
+                        ". Übernommene, angenommene und ausgeblendete Vorschläge bleiben beim Neu-Auswerten erhalten, abgelehnte kommen nie wieder. Angenommene zeigen dem Agenten, was dir gefällt. " +
                         "Neue Aufgaben recherchiert weiter im Internet und füllt nur die freien Plätze, bis wieder je ${de.frank.ziele.ki.Auswertung.PLAETZE_JE_KATEGORIE} notwendige und ${de.frank.ziele.ki.Auswertung.PLAETZE_JE_KATEGORIE} unterstützende da sind.",
                     color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp),
                 )
@@ -430,6 +431,7 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (sortierung == Sortierung.REIHENFOLGE) Text("$nummer. ", color = farbe, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    if (v.angenommen) Icon(Icons.Rounded.CheckCircle, "Angenommen", tint = f.erfolg, modifier = Modifier.padding(end = 6.dp).size(18.dp))
                     Text(v.titel, color = if (v.erledigt) f.textLeise else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 5.dp)) {
@@ -450,11 +452,33 @@ private fun VorschlagKarte(vm: AppViewModel, v: Vorschlag, titelVon: Map<String,
                 if (vor.isNotEmpty()) Zeile("Vorher", vor.joinToString(" · "))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(top = 4.dp)) {
                     if (v.aufgabeId == null) Text("Ausblenden", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.antippen { vm.verwerfen(v) })
-                    if (v.aufgabeId == null) Text("Ablehnen", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { vm.ablehnen(v) })
+                    if (v.aufgabeId == null && !v.angenommen) Text("Ablehnen", color = f.gefahr, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.antippen { vm.ablehnen(v) })
                     Text(if (vm.sprichtId == "v_${v.id}") "Stopp" else "Vorlesen", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.antippen { vm.vorlesen("v_${v.id}", listOf(v.titel + ".", v.text, v.begruendung).filter { it.isNotBlank() }.joinToString(" ")) })
                 }
+                AnnehmenZeile(vm, v)
             }
+        }
+    }
+}
+
+/** Annehmen: „gefällt mir, will ich machen“. Danach dauerhaft grün „Angenommen“; übernimmt nichts und erledigt nichts. */
+@Composable
+private fun AnnehmenZeile(vm: AppViewModel, v: Vorschlag) {
+    val f = LocalFarben.current
+    if (v.angenommen) {
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp).glas(f, 14.dp, 0.5f, f.erfolg.copy(alpha = 0.16f)).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.CheckCircle, null, tint = f.erfolg, modifier = Modifier.size(20.dp))
+            Text("Angenommen", color = f.erfolg, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp).weight(1f))
+            Text("Zurücknehmen", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.antippen { vm.annehmen(v, false) })
+        }
+    } else {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 6.dp).height(44.dp).knopf3d(f.erfolg, f.erfolg, 14.dp, f.dunkel).antippen { vm.annehmen(v) },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(Icons.Rounded.CheckCircle, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Text("Aufgabe annehmen", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
         }
     }
 }
