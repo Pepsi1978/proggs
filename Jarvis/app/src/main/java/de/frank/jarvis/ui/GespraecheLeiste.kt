@@ -153,7 +153,6 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
         drawerContent = {
             Leiste(
                 vm, schublade.isOpen, reiter, { reiter = it }, projektOffen, { projektOffen = it },
-                aufNeuerAuftrag = { vm.neuesGespraech(); vm.programmiererEinsetzen(); raum.launch { schublade.close() } },
                 aufNeuImProjekt = { vm.neuesGespraechImProjekt(it); raum.launch { schublade.close() } },
                 aufWahl = { vm.sitzungOeffnen(it); raum.launch { schublade.close() } },
             )
@@ -166,7 +165,7 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
 @Composable
 private fun Leiste(
     vm: AppViewModel, offen: Boolean, reiter: LeistenReiter, reiterWaehlen: (LeistenReiter) -> Unit, projektOffen: String?, projektOeffnen: (String?) -> Unit,
-    aufNeuerAuftrag: () -> Unit, aufNeuImProjekt: (String) -> Unit, aufWahl: (String) -> Unit,
+    aufNeuImProjekt: (String) -> Unit, aufWahl: (String) -> Unit,
 ) {
     val projekte = reiter == LeistenReiter.PROJEKTE
     val f = LocalFarben.current
@@ -287,8 +286,7 @@ private fun Leiste(
                     )
                 }
                 if (!auftraege || liste.isNotEmpty()) Text("Lange drücken: umbenennen oder löschen", Modifier.padding(6.dp, 8.dp), color = f.textSchwach, fontSize = 12.sp)
-                // Unter „Gespräche“ kein Knopf: Ein neues Gespräch entsteht über eine normale Session.
-                if (auftraege) Knopf("Neuer Programmierauftrag", Modifier.fillMaxWidth(), icon = Icons.Rounded.Code, aktion = aufNeuerAuftrag)
+                // Unter „Gespräche“ und „Programmierung“ kein Knopf: Neues entsteht über eine normale Session oder den Programmierer.
             }
             // Drei Reiter unten, in Daumennähe: auf schmalen Bildschirmen (Fold zugeklappt) Symbol über dem Namen, damit „Programmierung“ ganz hineinpasst.
             BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp)) {
