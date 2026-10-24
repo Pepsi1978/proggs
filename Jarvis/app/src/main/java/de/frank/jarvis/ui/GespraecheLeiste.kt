@@ -57,6 +57,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -186,6 +188,8 @@ private fun Leiste(
     // Welche Gespräche gerade arbeiten: Programmier-Sitzungen (Claude Code) und Jarvis' eigene Antworten.
     val programmiert by de.frank.jarvis.faehigkeit.ProgrammierChat.aktivitaet.collectAsState()
     val arbeitende = remember(programmiert) { programmiert.filterValues { it.arbeitet }.keys }
+    // Reiter mit mindestens einer arbeitenden Session, unabhängig vom gewählten Reiter: dort blinkt ein oranger Punkt.
+    val aktiveReiter = aktiveReiter(arbeitende + vm.laufende.keys, vm.sitzungen, projektIds, vm.sitzungId, vm.sitzungProgrammierung, vm.sitzungProjekt)
     // Ein Takt für alle Claude-Symbole in der Liste, nur solange eines zu sehen ist.
     var bild by remember { mutableStateOf(0) }
     val mitEintraegen = !projekte || projekt != null
@@ -213,9 +217,9 @@ private fun Leiste(
             BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 12.dp)) {
                 val schmal = maxWidth < 420.dp
                 Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f)) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
-                    Reiter("Programmierung", Icons.Rounded.Code, gewaehlt = reiter == LeistenReiter.PROGRAMMIERUNG, schmal, Modifier.weight(1.35f)) { reiterWaehlen(LeistenReiter.PROGRAMMIERUNG) }
-                    Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, schmal, Modifier.weight(1f)) { reiterWaehlen(LeistenReiter.PROJEKTE) }
+                    Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f), LeistenReiter.GESPRAECHE in aktiveReiter) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
+                    Reiter("Programmierung", Icons.Rounded.Code, gewaehlt = reiter == LeistenReiter.PROGRAMMIERUNG, schmal, Modifier.weight(1.35f), LeistenReiter.PROGRAMMIERUNG in aktiveReiter) { reiterWaehlen(LeistenReiter.PROGRAMMIERUNG) }
+                    Reiter("Projekte", Icons.Rounded.Folder, gewaehlt = projekte, schmal, Modifier.weight(1f), LeistenReiter.PROJEKTE in aktiveReiter) { reiterWaehlen(LeistenReiter.PROJEKTE) }
                 }
             }
             if (projekte && projekt != null) {
@@ -411,27 +415,68 @@ private fun SitzungEintrag(
     }
 }
 
-/** Ein Reiter oben in der Leiste: der gewählte als getönte Glasfläche in der Akzentfarbe, die anderen schlicht und leiser. [schmal]: Symbol über dem Namen. */
+/**
+ * Ein Reiter oben in der Leiste: der gewählte als getönte Glasfläche in der Akzentfarbe, die anderen schlicht und leiser. [schmal]: Symbol über dem Namen.
+ * [arbeitet]: In diesem Bereich arbeitet gerade eine Session; oben rechts blinkt dann ein oranger Punkt wie eine Benachrichtigung.
+ */
 @Composable
-private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: Boolean, modifier: Modifier = Modifier, aktion: () -> Unit) {
+private fun Reiter(text: String, icon: ImageVector, gewaehlt: Boolean, schmal: Boolean, modifier: Modifier = Modifier, arbeitet: Boolean = false, aktion: () -> Unit) {
     val f = LocalFarben.current
-    val flaeche = modifier.antippen(rolle = Role.Tab, aktion = aktion)
+    val flaeche = Modifier.fillMaxWidth().antippen(rolle = Role.Tab, aktion = aktion)
         .semantics { selected = gewaehlt }
         .clip(RoundedCornerShape(14.dp))
         .then(if (gewaehlt) Modifier.glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer) else Modifier)
     val farbe = if (gewaehlt) f.text else f.textLeise
     val gewicht = if (gewaehlt) FontWeight.Bold else FontWeight.Medium
-    if (schmal) {
-        Column(flaeche.padding(horizontal = 4.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = if (gewaehlt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
-            Text(text, Modifier.padding(top = 2.dp), color = farbe, fontSize = 13.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Box(modifier) {
+        if (schmal) {
+            Column(flaeche.padding(horizontal = 4.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(icon, null, tint = if (gewaehlt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
+                Text(text, Modifier.padding(top = 2.dp), color = farbe, fontSize = 13.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        } else {
+            Row(flaeche.padding(horizontal = 8.dp, vertical = 10.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = if (gewaehlt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
+                Text(text, Modifier.padding(start = 6.dp), color = farbe, fontSize = 16.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
-    } else {
-        Row(flaeche.padding(horizontal = 8.dp, vertical = 10.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = if (gewaehlt) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
-            Text(text, Modifier.padding(start = 6.dp), color = farbe, fontSize = 16.sp, fontWeight = gewicht, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (arbeitet) {
+            val takt = androidx.compose.animation.core.rememberInfiniteTransition(label = "reiterPunkt")
+            val sichtbar by takt.animateFloat(
+                1f, 0.2f,
+                androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(600), androidx.compose.animation.core.RepeatMode.Reverse),
+                label = "reiterPunktAlpha",
+            )
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(top = 3.dp, end = 3.dp).size(10.dp)
+                    .graphicsLayer { alpha = sichtbar }
+                    .clip(androidx.compose.foundation.shape.CircleShape).background(CLAUDE_ORANGE),
+            )
         }
     }
+}
+
+/**
+ * Die Reiter, in denen gerade mindestens eine der [arbeitende] Sessions arbeitet, nach derselben Zuordnung wie die Listen:
+ * Programmiergespräche unter „Programmierung“ und, mit Projekt, zusätzlich unter „Projekte“; übrige mit bekanntem Projekt unter
+ * „Projekte“, sonst „Gespräche“. Das offene, noch nicht in der Liste stehende Gespräch zählt nach seinen eigenen Angaben.
+ */
+internal fun aktiveReiter(
+    arbeitende: Set<String>, sitzungen: List<Sitzung>, projektIds: Set<String>, offenId: String?, offenProgrammierung: Boolean, offenProjekt: String,
+): Set<LeistenReiter> {
+    if (arbeitende.isEmpty()) return emptySet()
+    val nachId = sitzungen.associateBy { it.id }
+    val ergebnis = mutableSetOf<LeistenReiter>()
+    for (id in arbeitende) {
+        val s = nachId[id]
+        val programmierung = s?.programmierung ?: if (id == offenId) offenProgrammierung else continue
+        val projekt = s?.projekt ?: offenProjekt
+        val imProjekt = projekt.isNotEmpty() && projekt in projektIds
+        if (programmierung) ergebnis += LeistenReiter.PROGRAMMIERUNG
+        if (imProjekt) ergebnis += LeistenReiter.PROJEKTE
+        if (!programmierung && !imProjekt) ergebnis += LeistenReiter.GESPRAECHE
+    }
+    return ergebnis
 }
 
 /** Gespräche der am PC gestarteten Sitzungen (Auftragsbuch), je Gesprächsliste einmal gelesen: Lila bleibt auch nach dem Umbenennen. */
