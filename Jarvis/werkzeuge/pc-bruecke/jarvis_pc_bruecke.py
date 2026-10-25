@@ -317,8 +317,10 @@ def starte_sitzung(auftrag: dict) -> str:
     # Normalfall: über den OpenLauncherMac, genau wie der Startknopf (Profil, aktive CLAUDE.md mit Schnellmodus, Anmeldung,
     # Terminal-Farbe), dazu Remote Control mit Namen und der Auftrag als erste Nachricht. Ab OpenLauncherMac 1.24.39.
     # Frei gewähltes Modell: genau mit Franks Angaben (die App hat sie gegen das OpenLauncher-Angebot geprüft), nie still Opus.
-    if cli and not openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB):
-        raise RuntimeError("Für ein frei gewähltes Modell braucht der Mac OpenLauncher ab 1.24.45; bitte den OpenLauncher aktualisieren.")
+    # Claude Code mit Modell, Effort, Profil und Modus kann schon jede Fassung mit --jarvis-auftrag (--cli und --anbieter ignoriert
+    # sie); Codex, OpenCode, Kimi und Antigravity erst ab 1.24.45.
+    if cli not in ("", "claude") and not openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB):
+        raise RuntimeError(f"{cli} braucht am Mac OpenLauncher ab 1.24.45; bitte den OpenLauncher über das Updatescript aktualisieren.")
     if openlauncher_kann_jarvis():
         argumente = [str(OPENLAUNCHER / "Contents" / "MacOS" / "OpenLauncher"), "--jarvis-auftrag", str(auftrag_datei),
                      "--name", name, "--profil", PROFIL, "--modus", MODUS, "--modell", MODELL, "--effort", EFFORT]

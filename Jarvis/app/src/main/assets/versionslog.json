@@ -355,6 +355,7 @@
     { "versionCode": 349, "versionName": "1.8.338", "stand": "25.10.2026, 11:23 Uhr", "notiz": "Programmieraufträge gehen jetzt zuerst an den Mac; der Windows-PC springt nur ein, wenn der Mac nicht erreichbar ist, Sol 6.1 bleibt am Windows-PC." },
     { "versionCode": 350, "versionName": "1.8.339", "stand": "25.10.2026, 11:31 Uhr", "notiz": "In den Einstellungen unter Programmieren am Rechner legst du jetzt per Ziehen fest, ob Programmieraufträge zuerst an den Mac oder an den Windows-PC gehen." },
     { "versionCode": 351, "versionName": "1.8.340", "stand": "25.10.2026, 11:38 Uhr", "notiz": "Programmieraufträge starten wieder in der Reihenfolge, in der du sie schickst, und ein Sol- und ein Opus-Auftrag zugleich blockieren sich nicht mehr; die Rechner-Liste zeigt immer die gespeicherte Reihenfolge." },
-    { "versionCode": 352, "versionName": "1.8.341", "stand": "25.10.2026, 17:20 Uhr", "notiz": "Beim Programmierer kannst du jetzt jedes Modell aus OpenLauncher nennen, mit Effort, Profil, Modus und CLI, etwa „Kimi K3 in OpenCode mit Effort High“; ohne Modellangabe bleibt alles wie bisher." }
+    { "versionCode": 352, "versionName": "1.8.341", "stand": "25.10.2026, 17:20 Uhr", "notiz": "Beim Programmierer kannst du jetzt jedes Modell aus OpenLauncher nennen, mit Effort, Profil, Modus und CLI, etwa „Kimi K3 in OpenCode mit Effort High“; ohne Modellangabe bleibt alles wie bisher." },
+    { "versionCode": 353, "versionName": "1.8.342", "stand": "25.10.2026, 17:25 Uhr", "notiz": "Claude-Modelle wie Fable, Sonnet oder Haiku mit Effort, Profil und Modus starten aus Jarvis schon mit dem jetzigen OpenLauncher am Mac." }
   ]
 }
