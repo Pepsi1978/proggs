@@ -117,6 +117,18 @@ final class OpenLauncherService {
 
     private static var configDir: String { Paths.openCodeConfigDir }
 
+    /// Shell-Zeilen fuer Jarvis-Auftraege (Codex, Kimi, Antigravity, OpenCode): JARVIS_AUFTRAG_ID fuer jarvis_hook.py melde
+    /// bzw. das OpenCode-Plugin, PROMPT = der Auftragstext als erste Nachricht (leer ohne Auftrag).
+    static func jarvisScript(initialPromptFile: String?, jarvisAuftragId: String?) -> String {
+        """
+        JARVISID=\(Shell.singleQuoted(jarvisAuftragId ?? ""))
+        if [ -n "$JARVISID" ]; then export JARVIS_AUFTRAG_ID="$JARVISID"; else unset JARVIS_AUFTRAG_ID 2>/dev/null || true; fi
+        PROMPTFILE=\(Shell.singleQuoted(initialPromptFile ?? ""))
+        PROMPT=""
+        if [ -n "$PROMPTFILE" ] && [ -f "$PROMPTFILE" ]; then PROMPT="$(cat "$PROMPTFILE")"; fi
+        """
+    }
+
     // ===================== Provider konfigurieren =====================
 
     /// Schreibt bei OpenRouter die gewaehlte Provider-Order ohne Fallback. Native Direktmodelle
@@ -198,17 +210,21 @@ final class OpenLauncherService {
     // ===================== Starten =====================
 
     /// Startet opencode in einem neuen Terminal-Tab.
+    /// Jarvis-Auftraege: [initialPromptFile] geht als erste Nachricht mit (--prompt), [jarvisAuftragId] macht das Plugin
+    /// jarvis-auftrag.js aktiv (Rueckfragen, Abschluss, Nachtraege ans Handy), [title] ersetzt den Fenstertitel.
     func launch(modelString: String, workDir: String, thinkingLevel rawLevel: String?,
-                profileConfigPath: String, workMode: String, useTmux: Bool = false) throws {
+                profileConfigPath: String, workMode: String, useTmux: Bool = false,
+                initialPromptFile: String? = nil, jarvisAuftragId: String? = nil, title customTitle: String? = nil) throws {
         let thinkingLevel = Self.normalizeThinkingLevel(rawLevel)
         do {
             Paths.ensureDirectory(workDir)
             let tabColor = TerminalLauncher.pickOpenCodeColor()
-            let title = thinkingLevel == nil ? "OpenCode-\(tabColor.name)" : "OpenCode-\(tabColor.name)-\(thinkingLevel!)"
+            let title = customTitle ?? (thinkingLevel == nil ? "OpenCode-\(tabColor.name)" : "OpenCode-\(tabColor.name)-\(thinkingLevel!)")
             let script = try Self.buildOpenCodeStartScript(modelString: modelString, workDir: workDir,
                                                            thinkingLevel: thinkingLevel,
                                                            profileConfigPath: profileConfigPath,
-                                                           workMode: workMode, tabColor: tabColor, title: title)
+                                                           workMode: workMode, tabColor: tabColor, title: title,
+                                                           initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId)
             let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launch", "opencode gestartet (\(terminal))",
                                ["modelString": modelString, "workDir": workDir,
@@ -277,16 +293,18 @@ final class OpenLauncherService {
     /// Startet das eigenstaendige Codex CLI (OpenAI) statt OpenCode in einem neuen Terminal-Tab.
     /// Die Profilregeln stehen bereits in der AGENTS.md des Arbeitsverzeichnisses
     /// (InstructionProfileService.activateCodexProjectAgents).
-    func launchCodexCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, codexHome: String, useTmux: Bool = false) throws {
+    func launchCodexCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, codexHome: String, useTmux: Bool = false,
+                        initialPromptFile: String? = nil, jarvisAuftragId: String? = nil, title customTitle: String? = nil) throws {
         let (slug, serviceTier) = Self.resolveCodexModelSlug(model.slug)
         let effort = Self.normalizeCodexEffort(rawEffort)
         do {
             Paths.ensureDirectory(workDir)
             let tabColor = TerminalLauncher.pickCodexColor()
-            let title = effort == nil ? "Codex-\(tabColor.name)" : "Codex-\(tabColor.name)-\(effort!)"
+            let title = customTitle ?? (effort == nil ? "Codex-\(tabColor.name)" : "Codex-\(tabColor.name)-\(effort!)")
             let script = try Self.buildCodexStartScript(slug: slug, workDir: workDir, effort: effort,
                                                         serviceTier: serviceTier, codexHome: codexHome,
-                                                        tabColor: tabColor, title: title)
+                                                        tabColor: tabColor, title: title,
+                                                        initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId)
             let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launchCodexCli", "Codex CLI gestartet (\(terminal))",
                                ["slug": slug, "workDir": workDir, "effort": effort ?? "",
@@ -303,7 +321,8 @@ final class OpenLauncherService {
     /// Angemeldet ist das CLI selbst (kimi login ueber kimi.ai). Die Effort-Stufe kennt das CLI
     /// nicht als Schalter: sie wird in ~/.kimi-code/config.toml gesetzt ([thinking] effort und
     /// default_effort des Modells), der Rest der Datei bleibt unveraendert.
-    func launchKimiCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, useTmux: Bool = false) throws {
+    func launchKimiCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, useTmux: Bool = false,
+                       initialPromptFile: String? = nil, jarvisAuftragId: String? = nil, title customTitle: String? = nil) throws {
         var effort = rawEffort?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let e = effort, !["low", "high", "max"].contains(e) { effort = nil }
         let alias = "kimi-code/\(model.slug)"
@@ -311,8 +330,9 @@ final class OpenLauncherService {
             if let effort { Self.setKimiEffort(alias: alias, effort: effort) }
             Paths.ensureDirectory(workDir)
             let tabColor = TerminalLauncher.pickCodexColor()
-            let title = effort == nil ? "Kimi-\(tabColor.name)" : "Kimi-\(tabColor.name)-\(effort!)"
-            let script = try Self.buildKimiStartScript(alias: alias, workDir: workDir, tabColor: tabColor, title: title)
+            let title = customTitle ?? (effort == nil ? "Kimi-\(tabColor.name)" : "Kimi-\(tabColor.name)-\(effort!)")
+            let script = try Self.buildKimiStartScript(alias: alias, workDir: workDir, tabColor: tabColor, title: title,
+                                                       initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId)
             let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launchKimiCli", "Kimi Code CLI gestartet (\(terminal))",
                                ["alias": alias, "workDir": workDir, "effort": effort ?? "", "tabColor": tabColor.name])
@@ -347,7 +367,8 @@ final class OpenLauncherService {
     /// Temp-Script fuer den Kimi-Start. --auto (Never Ask): Kimi fragt nie nach, alle Aktionen und
     /// Entscheidungen laufen automatisch. Beendet sich Kimi direkt nach dem Oeffnen sofort (Terminal noch
     /// nicht bereit), folgen bis zu zwei weitere Versuche; jedes Ende landet im Launcher-Log.
-    private static func buildKimiStartScript(alias: String, workDir: String, tabColor: TerminalTabColor, title: String) throws -> String {
+    private static func buildKimiStartScript(alias: String, workDir: String, tabColor: TerminalTabColor, title: String,
+                                             initialPromptFile: String? = nil, jarvisAuftragId: String? = nil) throws -> String {
         let tempScript = (Paths.tempDir as NSString)
             .appendingPathComponent("openlauncher-kimi-cli-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
         let script = """
@@ -368,6 +389,7 @@ final class OpenLauncherService {
         export PATH="$HOME/.kimi-code/bin:$PATH"
         # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
         \(inheritedAgentEnvScrubScript)
+        \(jarvisScript(initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId))
 
         AGENTSFILE=\(Shell.singleQuoted((workDir as NSString).appendingPathComponent("AGENTS.md")))
         if [ -f "$AGENTSFILE" ]; then
@@ -379,11 +401,18 @@ final class OpenLauncherService {
         KIMI="$(command -v kimi || echo "$HOME/.kimi-code/bin/kimi")"
         LOGFILE=\(Shell.singleQuoted(Logger.shared.logPath))
         ALIAS=\(Shell.singleQuoted(alias))
+        # Jarvis-Auftrag: Kimi kennt keine erste Nachricht fuer die TUI, nur -p (ein Durchlauf ohne Rueckfragen). Danach
+        # geht dieselbe Sitzung interaktiv weiter (-c), damit Frank am Mac nachschauen kann.
+        kimiResume=()
+        if [ -n "$PROMPT" ]; then
+            "$KIMI" --auto -m "$ALIAS" -p "$PROMPT"
+            kimiResume=(-c)
+        fi
         attempt=0
         while true; do
             attempt=$((attempt + 1))
             started=$(date +%s)
-            "$KIMI" --auto -m "$ALIAS"
+            "$KIMI" --auto -m "$ALIAS" "${kimiResume[@]}"
             kimiExit=$?
             seconds=$(( $(date +%s) - started ))
             quick=0; [ "$seconds" -lt 5 ] && quick=1
@@ -420,16 +449,18 @@ final class OpenLauncherService {
     /// Start). agy liest die AGENTS.md des Arbeitsverzeichnisses, dort stehen Profil und Modus wie bei
     /// Codex/Kimi. Modell und Denkstufe gehen als Schalter mit (--model, --effort), ~/.gemini bleibt
     /// unberuehrt.
-    func launchAntigravityCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, useTmux: Bool = false) throws {
+    func launchAntigravityCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, useTmux: Bool = false,
+                              initialPromptFile: String? = nil, jarvisAuftragId: String? = nil, title customTitle: String? = nil) throws {
         var effort = rawEffort?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if let e = effort, !["low", "medium", "high", "xhigh", "max"].contains(e) { effort = nil }
         let slug = model.slug.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             Paths.ensureDirectory(workDir)
             let tabColor = TerminalLauncher.pickCodexColor()
-            let title = effort == nil ? "Agy-\(tabColor.name)" : "Agy-\(tabColor.name)-\(effort!)"
+            let title = customTitle ?? (effort == nil ? "Agy-\(tabColor.name)" : "Agy-\(tabColor.name)-\(effort!)")
             let script = try Self.buildAntigravityStartScript(slug: slug, effort: effort, workDir: workDir,
-                                                              tabColor: tabColor, title: title)
+                                                              tabColor: tabColor, title: title,
+                                                              initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId)
             let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launchAntigravityCli", "Antigravity CLI gestartet (\(terminal))",
                                ["slug": slug, "workDir": workDir, "effort": effort ?? "", "tabColor": tabColor.name])
@@ -444,7 +475,8 @@ final class OpenLauncherService {
     /// Werkzeugaufrufe laufen automatisch (wie Kimi --auto). Fehlt agy, installiert das Skript es mit
     /// dem offiziellen Installer nach.
     private static func buildAntigravityStartScript(slug: String, effort: String?, workDir: String,
-                                                    tabColor: TerminalTabColor, title: String) throws -> String {
+                                                    tabColor: TerminalTabColor, title: String,
+                                                    initialPromptFile: String? = nil, jarvisAuftragId: String? = nil) throws -> String {
         let tempScript = (Paths.tempDir as NSString)
             .appendingPathComponent("openlauncher-agy-cli-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
         let effortArgs = effort.map { "--effort \(Shell.singleQuoted($0)) " } ?? ""
@@ -468,6 +500,7 @@ final class OpenLauncherService {
         \(inheritedAgentEnvScrubScript)
         # Ein API-Schluessel in der Umgebung wuerde die Abo-Anmeldung ueberstimmen.
         unset GEMINI_API_KEY
+        \(jarvisScript(initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId))
 
         AGENTSFILE=\(Shell.singleQuoted((workDir as NSString).appendingPathComponent("AGENTS.md")))
         if [ -f "$AGENTSFILE" ]; then
@@ -489,7 +522,10 @@ final class OpenLauncherService {
             LOGFILE=\(Shell.singleQuoted(Logger.shared.logPath))
             MODEL=\(Shell.singleQuoted(slug))
             started=$(date +%s)
-            "$AGY" --model "$MODEL" \(effortArgs)--dangerously-skip-permissions
+            # Jarvis-Auftrag als erste Nachricht (-i: interaktiv mit Startnachricht).
+            agyPrompt=()
+            if [ -n "$PROMPT" ]; then agyPrompt=(-i "$PROMPT"); fi
+            "$AGY" --model "$MODEL" \(effortArgs)--dangerously-skip-permissions "${agyPrompt[@]}"
             agyExit=$?
             seconds=$(( $(date +%s) - started ))
             level=INFO; [ "$agyExit" != 0 ] && level=WARN
@@ -536,7 +572,8 @@ final class OpenLauncherService {
     ///                                 Modus-Prompt steht am ENDE und fiele als Erstes weg.
     ///   --dangerously-bypass-approvals-and-sandbox  Gegenstueck zu Claudes --dangerously-skip-permissions.
     private static func buildCodexStartScript(slug: String, workDir: String, effort: String?, serviceTier: String?,
-                                              codexHome: String, tabColor: TerminalTabColor, title: String) throws -> String {
+                                              codexHome: String, tabColor: TerminalTabColor, title: String,
+                                              initialPromptFile: String? = nil, jarvisAuftragId: String? = nil) throws -> String {
         let tempScript = (Paths.tempDir as NSString)
             .appendingPathComponent("openlauncher-codex-cli-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
         let script = """
@@ -559,6 +596,7 @@ final class OpenLauncherService {
 
         # Eigenes Codex-Zuhause: keine globale AGENTS.md, keine Plugins, keine MCP-Server, keine Hooks.
         export CODEX_HOME=\(Shell.singleQuoted(codexHome))
+        \(jarvisScript(initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId))
 
         codexArgs=(--dangerously-bypass-approvals-and-sandbox -C \(Shell.singleQuoted(workDir)) -m \(Shell.singleQuoted(slug)) -c 'project_doc_max_bytes=1048576')
         EFFORT=\(Shell.singleQuoted(effort ?? ""))
@@ -577,6 +615,8 @@ final class OpenLauncherService {
             printf '\\033[33m[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - Codex startet ohne Profil.\\033[0m\\n'
         fi
 
+        # Jarvis-Auftrag als erste Nachricht.
+        if [ -n "$PROMPT" ]; then codexArgs+=("$PROMPT"); fi
         codex "${codexArgs[@]}"
 
         # Tab offen lassen (Gegenstueck zu -NoExit unter Windows).
@@ -751,7 +791,8 @@ final class OpenLauncherService {
 
     static func buildOpenCodeStartScript(modelString: String, workDir: String, thinkingLevel: String?,
                                                   profileConfigPath: String, workMode: String,
-                                                  tabColor: TerminalTabColor, title: String) throws -> String {
+                                                  tabColor: TerminalTabColor, title: String,
+                                                  initialPromptFile: String? = nil, jarvisAuftragId: String? = nil) throws -> String {
         let executable = resolveOpenCodeExecutable()
         // configureProvider legt die gewaehlte Startstufe bereits im nativen Varianten-Zustand von
         // OpenCode ab. Ein zweiter, prozesslokaler --variant-Override wuerde mit Ctrl+T konkurrieren,
@@ -801,6 +842,7 @@ final class OpenLauncherService {
         export OPENLAUNCHER_SERVICE_TIER=\(Shell.singleQuoted(launcherServiceTier))
         export OPENLAUNCHER_WORK_MODE=\(Shell.singleQuoted(workMode))
         export OPENCODE_DISABLE_CLAUDE_CODE_PROMPT='1'
+        \(jarvisScript(initialPromptFile: initialPromptFile, jarvisAuftragId: jarvisAuftragId))
 
         stderrDir="$HOME/.local/share/opencode/log/stderr"
         mkdir -p "$stderrDir" 2>/dev/null || stderrDir="$TMPDIR"
@@ -817,7 +859,11 @@ final class OpenLauncherService {
         fi
         stderrLog="$stderrDir/opencode-stderr-$(date +%Y%m%d-%H%M%S)-$$.log"
 
-        \(Shell.singleQuoted(executable)) -m \(Shell.singleQuoted(modelString)) 2>"$stderrLog"
+        if [ -n "$PROMPT" ]; then
+            \(Shell.singleQuoted(executable)) -m \(Shell.singleQuoted(modelString)) --prompt "$PROMPT" 2>"$stderrLog"
+        else
+            \(Shell.singleQuoted(executable)) -m \(Shell.singleQuoted(modelString)) 2>"$stderrLog"
+        fi
 
         if [ -f "$stderrLog" ]; then
             if [ -s "$stderrLog" ]; then

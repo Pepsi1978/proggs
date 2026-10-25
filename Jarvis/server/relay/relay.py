@@ -822,6 +822,10 @@ class PcBruecke:
         # der Vorrangrechner nicht gleich selbst abholt.
         if auftrag.get("modell") == "sol":
             return not mac
+        # Ein frei gewaehltes Modell aus dem OpenLauncher-Angebot (Effort, Profil, Modus, CLI) startet nur die Mac-Bruecke:
+        # Die Windows-Bruecke kennt diese Felder nicht und startete sonst still Opus.
+        if auftrag.get("modell") == "katalog":
+            return mac
         mac_zuerst = auftrag.get("vorrang") != "windows"
         return mac == mac_zuerst or not self._nimmt(mac=mac_zuerst)
 
@@ -907,7 +911,8 @@ class PcBruecke:
         return web.json_response({"angenommen": wartend is not None})
 
     async def auftrag(self, request: web.Request) -> web.Response:
-        """POST /geraet/pc-auftrag (Handy): {"app", "auftrag", "review", "modell"?, "cli"?}. 409 = kein PC da, 504 = keine Quittung."""
+        """POST /geraet/pc-auftrag (Handy): {"app", "auftrag", "review", "modell"?, "cli"?, bei modell=katalog auch "slug", "anbieter",
+        "name", "effort", "profil", "modus"}. 409 = kein PC da, 504 = keine Quittung."""
         if not darf_handy(request):
             return web.Response(status=404, text="Not found")
         if not self.da():
@@ -920,6 +925,8 @@ class PcBruecke:
         # Sol nur mit dem Windows-PC (Hauptrechner); fragt nur der Mac ab, ist fuer Sol kein Rechner da.
         if daten.get("modell") == "sol" and not self._haupt_da():
             return web.json_response({"pc": False}, status=409)
+        if daten.get("modell") == "katalog" and not self._rechner_da(mac=True):
+            return web.json_response({"pc": False, "mac": False}, status=409)
         nummer = uuid.uuid4().hex
         jarvis_id = str(daten.get("nummer", ""))[:20]
         wartend = asyncio.get_running_loop().create_future()
@@ -928,10 +935,18 @@ class PcBruecke:
         try:
             # modell: Franks Wahl beim Start (opus = Claude Code wie bisher, sol = Sol 6.1); alles andere gilt als opus.
             # cli: womit Sol laeuft (codex = Codex CLI wie bisher, opencode = OpenCode CLI); alles andere gilt als codex.
-            self.auftraege.append({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
-                                      "nummer": jarvis_id, "modell": "sol" if daten.get("modell") == "sol" else "opus",
-                                      "cli": "opencode" if daten.get("cli") == "opencode" else "codex",
-                                      "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac"})
+            # katalog: ein Modell aus dem OpenLauncher-Angebot mit slug, anbieter, effort, profil, modus und cli
+            # (claude, codex, opencode, kimi, antigravity); nur der Mac startet es.
+            katalog = daten.get("modell") == "katalog"
+            eintrag = {"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
+                       "nummer": jarvis_id, "modell": "katalog" if katalog else "sol" if daten.get("modell") == "sol" else "opus",
+                       "cli": "opencode" if daten.get("cli") == "opencode" else "codex",
+                       "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac"}
+            if katalog:
+                for feld in ("slug", "anbieter", "name", "effort", "profil", "modus"):
+                    eintrag[feld] = str(daten.get(feld, ""))[:80]
+                eintrag["cli"] = daten.get("cli") if daten.get("cli") in ("claude", "codex", "opencode", "kimi", "antigravity") else "claude"
+            self.auftraege.append(eintrag)
             self.neuer_auftrag.set()
             log.info("Programmierauftrag an den PC: %s", daten["app"][:40])
             # shield: wait_for braeche die Future sonst ab, und eine spaete Quittung kaeme nie mehr an.

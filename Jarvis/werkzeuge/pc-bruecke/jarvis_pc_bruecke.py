@@ -6,7 +6,9 @@ beim Relay als da. Die Mac-Brücke meldet sich mit X-Jarvis-Rang: ersatz (nur de
 der Mac Vorrang, der Windows-PC bekommt Opus-Aufträge nur, wenn der Mac nicht abfragt; Sol 6.1 bleibt beim PC. Ist keiner da, nimmt Jarvis
 die Cloud. Start: LaunchAgent de.frank.jarvis.pc-bruecke (einrichten.sh). Zugang aus ~/SK/Jarvis/relay.properties.
 
-Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows.
+Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows. Nennt Frank in Jarvis ein
+Modell aus dem OpenLauncher-Angebot (Auftrag mit modell=katalog), startet die Brücke genau das: slug, anbieter, effort,
+profil, modus und cli (claude, codex, opencode, kimi, antigravity). Das kann nur der Mac (der Relay gibt solche Aufträge nur ihm).
 Anmeldung: Mit jeder Abfrage meldet die Brücke den lokalen Anmeldestand von Claude Code (X-Jarvis-Anmeldung: lokal,
 abgemeldet oder unbekannt, dazu die Prüfzeit). Grundlage ist `claude auth status` im Profilordner, höchstens alle fünf
 Minuten und frisch vor jedem Start; gelesen wird nur „loggedIn“, nie Konto oder Token. „lokal“ heißt nur: Anmeldedaten
@@ -41,6 +43,7 @@ PROTOKOLL = ORDNER / "bruecke.log"
 TEMP = Path(os.environ.get("TMPDIR", "/tmp")) / "JarvisPcBruecke"
 OPENLAUNCHER = Path("/Applications/OpenLauncher.app")
 OPENLAUNCHER_AB = (1, 24, 39)  # erste Mac-Fassung mit --jarvis-auftrag
+OPENLAUNCHER_KATALOG_AB = (1, 24, 45)  # erste Mac-Fassung mit --cli und --anbieter (jedes Modell aus dem OpenLauncher-Angebot)
 HOOK = PROGGS / "Jarvis" / "werkzeuge" / "pc-bruecke" / "jarvis_hook.py"
 CONFIG_DIR = PROGGS / "OpenLauncher" / "Profiles" / "ClaudeCodeMac" / PROFIL
 LOGIN_SYNC = PROGGS / "OpenLauncher" / "Profiles" / "hooks" / "claude-login-sync.py"
@@ -202,13 +205,18 @@ def pruefe_anmeldung_nebenher() -> None:
     _PRUEFER.start()
 
 
-def openlauncher_kann_jarvis() -> bool:
+def openlauncher_kann_jarvis(ab: tuple = OPENLAUNCHER_AB) -> bool:
     try:
         with (OPENLAUNCHER / "Contents" / "Info.plist").open("rb") as f:
             version = plistlib.load(f).get("CFBundleShortVersionString", "0")
-        return tuple(int(x) for x in version.split(".")[:3]) >= OPENLAUNCHER_AB
+        return tuple(int(x) for x in version.split(".")[:3]) >= ab
     except Exception:
         return False
+
+
+def katalog_cli(auftrag: dict) -> str:
+    """Das CLI eines Katalog-Auftrags; bei Opus/Sol leer."""
+    return str(auftrag.get("cli") or "claude") if auftrag.get("modell") == "katalog" else ""
 
 
 def jarvis_hooks() -> dict:
@@ -259,15 +267,33 @@ def auftragstext(auftrag: dict) -> str:
     # Ohne REVIEW-Zeile (Franks Wahl vom 22.10.2026): Claude Code fragt am Ende selbst, ob ein Review laufen soll.
     app = auftrag.get("app") or ""
     text = (auftrag.get("auftrag") or "").replace("\r\n", "\n").replace("\r", "\n")
-    return f"""Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control.
+    cli = katalog_cli(auftrag)
+    kopf = "Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Sitzung per Remote Control."
+    unklar1 = "Nicht eindeutig: Frank mit AskUserQuestion fragen und die Kandidaten nennen."
+    unklar2 = "2. Wesentliche Unklarheiten mit AskUserQuestion klären, Kleinigkeiten selbst entscheiden."
+    review = ""
+    if cli == "opencode":
+        # OpenCode: Rückfragen über das Werkzeug question; das Plugin jarvis-auftrag.js bringt sie aufs Handy und die Antwort zurück.
+        kopf = "Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Schritte in Jarvis."
+        unklar1 = "Nicht eindeutig: Frank mit dem Werkzeug question fragen und die Kandidaten nennen."
+        unklar2 = "2. Wesentliche Unklarheiten mit dem Werkzeug question klären, Kleinigkeiten selbst entscheiden."
+    elif cli in ("codex", "kimi", "antigravity"):
+        # Ohne Hooks und ohne Rückfragen (wie Sol im Codex CLI am Windows-PC): Die Sitzung meldet selbst über jarvis_hook.py melde.
+        kopf = ("Programmierauftrag von Frank über Jarvis (Sprachassistent auf seinem Handy); Frank verfolgt die Schritte in Jarvis.\n"
+                f'MELDEN (statt programmier_fortschritt, das es hier nicht gibt): python3 "{HOOK}" melde <laeuft|fertig|fehler> "<ein Satz>"')
+        unklar1 = "Nicht eindeutig: die wahrscheinlichste App nehmen und das in der ersten Meldung nennen."
+        unklar2 = "2. Niemand antwortet in dieser Sitzung: Unklarheiten selbst sinnvoll entscheiden und in der Meldung nennen, nie auf eine Antwort warten."
+        review = ("REVIEW: Ja (vor dem Abschluss den gesamten Diff gründlich selbst auf Fehler prüfen und Befunde beheben)\n"
+                  if auftrag.get("review") else "REVIEW: Nein\n")
+    return f"""{kopf}
 
 APP: {app}
-AUFTRAG:
+{review}AUFTRAG:
 {text}
 
 VORGEHEN
-1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. Nicht eindeutig: Frank mit AskUserQuestion fragen und die Kandidaten nennen.
-2. Wesentliche Unklarheiten mit AskUserQuestion klären, Kleinigkeiten selbst entscheiden.
+1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. {unklar1}
+{unklar2}
 3. Nach den Profilregeln vollständig abschließen: bauen, Version, Commit, Push, Installation per WLAN, bei Android-Apps Skill apk-update. Abschlussmeldung auf Deutsch.
 """
 
@@ -275,6 +301,10 @@ VORGEHEN
 def starte_sitzung(auftrag: dict) -> str:
     app = re.sub(r"[^\w ._-]", "", str(auftrag.get("app", ""))).strip() or "App"
     name = f"Jarvis: {app}"
+    cli = katalog_cli(auftrag)
+    if cli:
+        modellname = re.sub(r"[^\w ._()-]", "", str(auftrag.get("name") or auftrag.get("slug") or "")).strip()
+        name += f" ({modellname}" + ("" if cli == "claude" else f", {cli}") + ")"
     text = auftragstext(auftrag)
     stempel = time.strftime("%Y%m%d-%H%M%S")
     TEMP.mkdir(parents=True, exist_ok=True)
@@ -286,9 +316,17 @@ def starte_sitzung(auftrag: dict) -> str:
 
     # Normalfall: über den OpenLauncherMac, genau wie der Startknopf (Profil, aktive CLAUDE.md mit Schnellmodus, Anmeldung,
     # Terminal-Farbe), dazu Remote Control mit Namen und der Auftrag als erste Nachricht. Ab OpenLauncherMac 1.24.39.
+    # Frei gewähltes Modell: genau mit Franks Angaben (die App hat sie gegen das OpenLauncher-Angebot geprüft), nie still Opus.
+    if cli and not openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB):
+        raise RuntimeError("Für ein frei gewähltes Modell braucht der Mac OpenLauncher ab 1.24.45; bitte den OpenLauncher aktualisieren.")
     if openlauncher_kann_jarvis():
         argumente = [str(OPENLAUNCHER / "Contents" / "MacOS" / "OpenLauncher"), "--jarvis-auftrag", str(auftrag_datei),
                      "--name", name, "--profil", PROFIL, "--modus", MODUS, "--modell", MODELL, "--effort", EFFORT]
+        if cli:
+            argumente = [str(OPENLAUNCHER / "Contents" / "MacOS" / "OpenLauncher"), "--jarvis-auftrag", str(auftrag_datei),
+                         "--name", name, "--profil", str(auftrag.get("profil") or PROFIL), "--modus", str(auftrag.get("modus") or MODUS),
+                         "--modell", str(auftrag.get("slug") or MODELL), "--effort", str(auftrag.get("effort") or EFFORT),
+                         "--cli", cli, "--anbieter", str(auftrag.get("anbieter") or "")]
         # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.
         if mit_hooks:
             argumente += ["--auftrag-id", nummer]
@@ -388,8 +426,9 @@ def main() -> int:
                 if auftrag.get("modell") == "sol":
                     raise RuntimeError(f"Sol 6.1 geht bisher nur am Windows-PC, nicht auf {RECHNER}. Mit Opus 5.5 starten oder den Windows-PC einschalten.")
                 # Ohne Anmeldung keine Sitzung: Sie bliebe sofort bei „Please run /login“ stehen. Das Handy weicht dann
-                # nicht in die Cloud aus (anmeldung_fehlt), sondern sagt Frank, was zu tun ist.
-                if pruefe_anmeldung(frisch=True)["stand"] == "abgemeldet":
+                # nicht in die Cloud aus (anmeldung_fehlt), sondern sagt Frank, was zu tun ist. Codex, OpenCode, Kimi und
+                # Antigravity haben eigene Anmeldungen: Dort zählt die von Claude Code nicht.
+                if katalog_cli(auftrag) in ("", "claude") and pruefe_anmeldung(frisch=True)["stand"] == "abgemeldet":
                     raise AnmeldungFehlt(f"Claude Code auf {RECHNER} ist nicht angemeldet. Claude Code auf dem Rechner öffnen und /login ausführen, "
                                          f"danach den Auftrag neu senden.")
                 name = starte_sitzung(auftrag)

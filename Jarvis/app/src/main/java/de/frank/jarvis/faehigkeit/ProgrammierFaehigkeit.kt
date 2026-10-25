@@ -71,6 +71,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             "neuen Auftrag oder einen Nachtrag will oder welche Sitzung er meint, frag kurz und sende nichts. Ohne Nachtragswunsch ist ein Programmierwunsch ein neuer Auftrag. " +
             "Bevor du für Jarvis selbst eine neue Funktion vorschlägst oder beauftragst, prüfe mit funktionen_lesen, ob es sie schon gibt. " +
             "Sagt Frank „programmiere“, „bau in App … ein“, „ändere in … dass …“ oder „mach in … einen Knopf/Filter/…“, rufst du programmieren auf. " +
+            "Nennt Frank dabei ein Modell (etwa „GPT-6 Astra“, „Kimi K3“), einen Effort, ein Profil, einen Modus oder ein CLI (Claude Code, Codex, OpenCode, Kimi CLI, Antigravity), " +
+            "gib genau das in modell, effort, profil, modus und cli mit und lass Fehlendes weg; Jarvis prüft es gegen OpenLauncher und fragt bei Unklarem zurück. " +
             "Den Auftrag schreibst du nach den Regeln am Feld auftrag. Frag nie nach der App: Nennt Frank keine (etwa bei einem Test), lass app weg; die Modellwahl kommt trotzdem und der Auftrag geht so an den Programmierer. Programmiere nie selbst im Gespräch."
 
     private val app = context.applicationContext
@@ -320,9 +322,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc oder cloud. Vorgabe automatisch (PC, wenn er an ist, sonst Cloud).", listOf("automatisch", "pc", "cloud")),
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
                     "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.1: am Windows-PC im Codex CLI, " +
-                        "ist er aus, in Codex Cloud). Weglassen: Jarvis fragt Frank per Knopf.", listOf("opus", "sol")),
-                    "cli" to text("Nur bei modell=sol und wenn Frank es gewählt oder gesagt hat: codex (Codex CLI) oder opencode (OpenCode CLI, mit Rückfragen wie bei Claude Code). " +
-                        "Weglassen: Jarvis fragt Frank per Knopf.", listOf(CLI_CODEX, CLI_OPENCODE)),
+                        "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
+                        "„Gemini 4 Argon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
+                        "OpenLauncher und startet genau dieses Modell am Mac. Weglassen: Jarvis fragt Frank per Knopf."),
+                    "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh oder max (auch „hoch“, „mittel“, „maximal“). Weglassen: Standard des Modells."),
+                    "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: Standard des Modells."),
+                    "modus" to text("Nur wenn Frank ihn nennt: frei, schnell, normal oder gruendlich. Weglassen: Standard des Modells."),
+                    "cli" to text("Nur wenn Frank es gewählt oder gesagt hat: claude (Claude Code), codex (Codex CLI), opencode (OpenCode), kimi (Kimi Code CLI) oder " +
+                        "antigravity (Antigravity CLI). Bei modell=sol ohne weitere Angaben codex oder opencode wie bisher. Weglassen: Standard bzw. Knopf.",
+                        listOf(CLI_CLAUDE, CLI_CODEX, CLI_OPENCODE, CLI_KIMI, CLI_ANTIGRAVITY)),
                     pflicht = listOf("auftrag"),
                 ),
                 nurLesen = false,
@@ -355,11 +363,25 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val neu = a.optBoolean("neu")
                 // Über den Menüpunkt „Programmierer“ ist es ausdrücklich ein neuer Auftrag: dann nie „schon per Knopf gestartet“.
                 val knopf = if (neu || ProgrammiererVorlage.aufgabe(worte?.aktuell.orEmpty()) != null) null else knopfStartIn(herkunft().second, worte?.aktuell.orEmpty())
+                // Franks Wahl vom 25.10.2026: Nennt er ein Modell aus dem OpenLauncher-Angebot (oder zu Opus/Sol Effort, Profil, Modus,
+                // ein anderes CLI), startet genau das am Mac. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
+                val katalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, worte?.aktuell)
                 when {
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     // Frank hat eben per Knopf gewählt und der Auftrag läuft; schiebt er gleich danach etwas nach, ruft das Modell
                     // programmieren oft noch einmal auf: dann weder die Modellfrage ein zweites Mal noch ein doppelter Auftrag.
                     knopf != null -> schonPerKnopfGestartet(knopf)
+                    katalog is Ergebnis -> katalog
+                    katalog is OpenLauncherKatalog.Wahl -> {
+                        herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
+                        val pc = ziele.filterIsInstance<PcBruecke>().filter { it.bereit() }
+                        if (pc.isEmpty()) Ergebnis(ziele.first().fehlt(), fehler = true)
+                        else withContext(KatalogStart(katalog)) {
+                            // Ohne Hooks (Codex, Kimi, Antigravity) gilt Franks Review-Angabe als REVIEW-Zeile; die anderen fragen am Ende selbst.
+                            starteErstes(pc, appName, auftrag, a.optBoolean("review") && katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE),
+                                Auftragsbuch.neueNummer(), neu, MODELL_KATALOG, katalog.cli)
+                        }
+                    }
                     // Franks Wahl vom 24.10.2026: Ohne genanntes Modell kommen bei jedem Auftrag die Knöpfe, auch wenn Sol gerade nicht
                     // erreichbar scheint (früher entfielen sie dann still, etwa wenn die PC-Abfrage länger als 4 s brauchte).
                     // Scheitert das gewählte Modell, steht der Grund im Gespräch und die Knöpfe sind wieder offen.
@@ -380,6 +402,32 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 }
             },
         )
+    }
+
+    /**
+     * Franks freie Modellwahl aus den Angaben des Aufrufs: null = keine (der bisherige Weg mit Opus/Sol gilt), [OpenLauncherKatalog.Wahl]
+     * = geprüft und startbereit, [Ergebnis] = Rückfrage an Frank (mehrdeutig, nicht im Angebot) oder Fehler beim Lesen des Angebots.
+     * Opus und Sol ohne weitere Angaben bleiben beim bisherigen Weg. In der App zählt ein Modell nur, wenn Franks eigene Worte es
+     * nennen (sonst kämen wie bisher die Knöpfe).
+     */
+    private suspend fun katalogWahl(a: JSONObject, ausChatGpt: Boolean, worte: String?): Any? {
+        val modellText = a.optString("modell").trim()
+        if (modellText.isEmpty()) return null
+        val cliText = a.optString("cli").trim()
+        val zusatz = listOf("effort", "profil", "modus").any { a.optString(it).isNotBlank() } ||
+            OpenLauncherKatalog.cliAus(cliText).let { it != null && it !in listOf(CLI_CODEX, CLI_OPENCODE) }
+        val klein = modellText.lowercase(Locale.ROOT)
+        if (klein in listOf(MODELL_OPUS, MODELL_SOL) && !zusatz) return null
+        val suche = when (klein) { MODELL_OPUS -> "Claude Opus 5.5"; MODELL_SOL -> "GPT-6.1 Sol"; else -> modellText }
+        val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: Exception) {
+            return Ergebnis("Noch nichts gestartet: ${fehler.message} Sag Frank das und biete an, mit Opus 5.5 oder Sol 6.1 zu starten (programmieren ohne modell).", fehler = true)
+        }
+        return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliText)) {
+            is OpenLauncherKatalog.Aufloesung.Frage -> Ergebnis("Noch nichts gestartet: ${l.text} Frag Frank kurz, was er meint, und rufe programmieren danach mit " +
+                "demselben Auftrag und den genauen Angaben erneut auf. Rate nicht.")
+            is OpenLauncherKatalog.Aufloesung.Start ->
+                if (ausChatGpt || worte.isNullOrBlank() || OpenLauncherKatalog.genannt(l.wahl.modell, worte) || klein in listOf(MODELL_OPUS, MODELL_SOL)) l.wahl else null
+        }
     }
 
     /**
@@ -617,6 +665,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         for (ziel in wahl) {
             val mitFortschritt = auftragMitFortschritt(auftrag, when {
                 ziel is CodexCloud -> fortschrittCodex(nummer)
+                // Frei gewähltes Modell am Mac: Claude Code mit Hooks, OpenCode mit dem Plugin, Codex, Kimi und Antigravity melden selbst.
+                modell == MODELL_KATALOG && cli == CLI_CLAUDE -> fortschrittsAnweisung(nummer, pc = true)
+                modell == MODELL_KATALOG && cli == CLI_OPENCODE -> fortschrittsAnweisung(nummer, pc = true, frageWerkzeug = "dem Werkzeug question")
+                modell == MODELL_KATALOG -> fortschrittSol(nummer)
                 // OpenCode: Hooks über das Plugin jarvis-auftrag.js, Jarvis-MCP global, Rückfragen mit dem Werkzeug question.
                 modell == MODELL_SOL && cli == CLI_OPENCODE -> fortschrittsAnweisung(nummer, pc = true, frageWerkzeug = "dem Werkzeug question")
                 modell == MODELL_SOL -> fortschrittSol(nummer)
@@ -1793,6 +1845,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val openCode = sol && kotlinx.coroutines.currentCoroutineContext()[CliWahl]?.cli == CLI_OPENCODE
             val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer).put("modell", modell).put("vorrang", vorrang())
                 .put("cli", if (openCode) CLI_OPENCODE else CLI_CODEX)
+            // Frei gewähltes Modell: genau Franks geprüfte Wahl (nur der Mac startet sie, siehe Relay).
+            val frei = if (modell == MODELL_KATALOG) kotlinx.coroutines.currentCoroutineContext()[KatalogStart]?.wahl else null
+            if (modell == MODELL_KATALOG && frei == null) throw IllegalStateException("Die Modellwahl fehlt.")
+            frei?.let { w ->
+                rumpf.put("slug", w.modell.slug).put("anbieter", w.modell.anbieter).put("name", w.modell.name).put("effort", w.effort)
+                    .put("profil", w.profil).put("modus", w.modus).put("cli", w.cli)
+            }
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()
             val (code, roh) = try {
@@ -1808,6 +1867,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // vermutlich. Nie „nicht gestartet“ und nie die Cloud; die späte Quittung reicht der Relay als Meldung nach.
             if (code in 200..299 && antwort.optBoolean("unbestaetigt")) throw Unbestaetigt(antwort.optString("rechner").ifEmpty { "dem PC" })
             when {
+                // Frei gewählte Modelle startet nur der Mac: kein Ersatz am Windows-PC und keiner in der Cloud.
+                frei != null && code == 409 -> throw IllegalStateException("Der Mac fragt gerade nicht ab; ein frei gewähltes Modell (${frei.modell.name}) startet nur dort. " +
+                    "Bitte den Mac und die Jarvis-Brücke prüfen, oder ohne Modellangabe mit Opus 5.5 bzw. Sol 6.1 starten.")
+                frei != null && code == 504 -> throw IllegalStateException("Der Mac hat den Auftrag nicht abgeholt, er ist nicht gestartet. Bitte am Mac nachsehen.")
+                frei != null && code in 200..299 && !antwort.optBoolean("ok") -> throw IllegalStateException(antwort.optString("text").take(300).ifEmpty { "Der Mac konnte die Sitzung nicht starten." })
                 // OpenCode gibt es nur am Windows-PC: kein Ersatz in Codex Cloud.
                 openCode && code == 409 -> throw IllegalStateException("Der Windows-PC fragt gerade nicht ab; OpenCode CLI läuft nur dort. Mit Codex CLI ginge Sol 6.1 in Codex Cloud.")
                 // Sol nie still als Opus in die Claude-Code-Routine: Ist der Windows-PC aus, übernimmt Codex Cloud (nächstes Ziel).
@@ -1828,7 +1892,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 !antwort.optBoolean("ok") -> throw NichtDa("Der PC konnte die Sitzung nicht starten (${antwort.optString("text").take(160)}), deshalb die Cloud.")
             }
             val rechner = antwort.optString("rechner").ifEmpty { "dem PC" }
-            if (openCode) Start("", "Die Sitzung „Jarvis: $app (Sol 6.1, OpenCode)“ läuft auf $rechner im OpenCode CLI mit Sol 6.1 (Minimalprofil, Schnellmodus, Effort High). " +
+            if (frei != null) Start("", "Die Sitzung „Jarvis: $app (${frei.modell.name}${if (frei.cli == CLI_CLAUDE) "" else ", ${frei.cli}"})“ läuft auf $rechner: " +
+                "${frei.beschreibung()}. " + when (frei.cli) {
+                    CLI_CLAUDE -> "Sie ist in der Claude-App unter Code zu sehen; Schritte und Rückfragen laufen über Jarvis."
+                    CLI_OPENCODE -> "Schritte, Rückfragen und Nachträge laufen wie bei Claude Code über Jarvis."
+                    else -> "Sie meldet ihre Schritte selbst; Rückfragen und Nachträge gehen dort nicht."
+                })
+            else if (openCode) Start("", "Die Sitzung „Jarvis: $app (Sol 6.1, OpenCode)“ läuft auf $rechner im OpenCode CLI mit Sol 6.1 (Minimalprofil, Schnellmodus, Effort High). " +
                 "Schritte, Rückfragen und Nachträge laufen wie bei Claude Code über Jarvis; meist kommt die App danach per WLAN aufs Handy.")
             else if (sol) Start("", "Die Sitzung „Jarvis: $app (Sol 6.1)“ läuft auf $rechner im Codex CLI mit Sol 6.1 (Minimalprofil, Schnellmodus, Effort High). " +
                 "Sie meldet ihre Schritte selbst; Rückfragen und Nachträge gehen dort nicht.")
@@ -2020,6 +2090,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** Womit Sol 6.1 am Windows-PC läuft (Franks Wahl per Knopf): Codex CLI (wie bisher) oder OpenCode CLI. */
         const val CLI_CODEX = "codex"
         const val CLI_OPENCODE = "opencode"
+        const val CLI_CLAUDE = "claude"
+        const val CLI_KIMI = "kimi"
+        const val CLI_ANTIGRAVITY = "antigravity"
+        /** Ein frei gewähltes Modell aus dem OpenLauncher-Angebot (Relay und Mac-Brücke kennen es unter diesem Namen). */
+        const val MODELL_KATALOG = "katalog"
         /** Antworten auf die Review-Frage vor einem Codex-Auftrag. */
         const val REVIEW_JA = "ja"
         const val REVIEW_NEIN = "nein"
@@ -2027,6 +2102,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private const val STUFE_MODELL = "modell"
         private const val STUFE_CLI = "cli"
         private const val STUFE_REVIEW = "review"
+
+        /** Trägt ein frei gewähltes Modell (Effort, Profil, Modus, CLI) bis PcBruecke.starte. */
+        private class KatalogStart(val wahl: OpenLauncherKatalog.Wahl) : kotlin.coroutines.AbstractCoroutineContextElement(KatalogStart) {
+            companion object Key : kotlin.coroutines.CoroutineContext.Key<KatalogStart>
+        }
 
         /** Trägt die CLI-Wahl von starteErstes bis PcBruecke.starte (die Ziele kennen nur das Modell). */
         private class CliWahl(val cli: String) : kotlin.coroutines.AbstractCoroutineContextElement(CliWahl) {
