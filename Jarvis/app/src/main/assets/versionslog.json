@@ -365,6 +365,7 @@
     { "versionCode": 359, "versionName": "1.8.348", "stand": "25.10.2026, 18:11 Uhr", "notiz": "Neue Programmieraufträge mit frei genanntem Modell starten ohne weitere Angaben mit Minimalprofil, Schnellmodus und Effort High, Jarvis fragt bei mehreren möglichen CLIs nach dem CLI und erkennt gesprochene Namen wie „Chemica 3.1 Pro“, ohne nach Opus oder Sol zu fragen." },
     { "versionCode": 360, "versionName": "1.8.349", "stand": "25.10.2026, 18:17 Uhr", "notiz": "Die CLI-Rückfrage gilt nur für ein Modell, das Frank selbst genannt hat, eine kurze Antwort wie „OpenCode“ startet das Modell aus der Rückfrage, und Wörter wie „soll“ oder „Programmierer“ gelten nicht mehr als Modellname." },
     { "versionCode": 361, "versionName": "1.8.350", "stand": "25.10.2026, 19:23 Uhr", "notiz": "Unter Guthaben stehen jetzt die Ausgaben des laufenden Monats wie in AI Studio, dazu getrennt, was davon schon vom Guthaben abgebucht ist." },
-    { "versionCode": 362, "versionName": "1.8.351", "stand": "25.10.2026, 19:37 Uhr", "notiz": "Die Guthaben-Karte nennt jetzt auch das Live-Gespräch, und das Logbuch hält für jedes Live-Gespräch Schlüssel, Dauer und Kosten fest." }
+    { "versionCode": 362, "versionName": "1.8.351", "stand": "25.10.2026, 19:37 Uhr", "notiz": "Die Guthaben-Karte nennt jetzt auch das Live-Gespräch, und das Logbuch hält für jedes Live-Gespräch Schlüssel, Dauer und Kosten fest." },
+    { "versionCode": 363, "versionName": "1.8.352", "stand": "25.10.2026, 20:13 Uhr", "notiz": "Die obere Leiste zeigt nur noch „online“, Aktualisieren und Hell/Dunkel sitzen im Schwebestapel über „Neue Session“, und der Chat beginnt weiter oben." }
 ]
 }

@@ -183,9 +183,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     }
 
     // Die Seitenleiste selbst liegt in JarvisApp: So reicht sie von ganz oben bis ganz unten, über die Reiter-Leiste.
-    val raum = androidx.compose.runtime.rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
-        Kopf(vm, tunnel, auswertung.laeuft) { raum.launch { schublade.open() } }
+        Kopf(tunnel)
         LaeuftGerade(vm)
         // Die Stoppuhr erscheint nur, wenn Frank sie über Jarvis startet, und bleibt bis zum Zurücksetzen.
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
@@ -286,80 +285,21 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
 }
 
 @Composable
-private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, leisteOeffnen: () -> Unit) {
+private fun Kopf(tunnel: TunnelZustand) {
     val f = LocalFarben.current
     val (zeile, farbe) = when (tunnel.stufe) {
-        TunnelStufe.ONLINE -> "Online" to f.erfolg
+        TunnelStufe.ONLINE -> "online" to f.erfolg
         TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
         TunnelStufe.NICHT_EINGERICHTET -> "Server noch nicht eingerichtet" to f.textLeise
         TunnelStufe.FEHLER -> tunnel.meldung to f.gefahr
         TunnelStufe.AUS -> "Ausgeschaltet" to f.textLeise
     }
-    Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Gespräche: dasselbe wie von links nach rechts wischen.
-        Rundknopf(Icons.Rounded.Menu, "Gespräche", farbe = f.primaer) { leisteOeffnen() }
-        Spacer(Modifier.width(6.dp))
-        // Der Kern ist zugleich der Knopf „Tagesauswertung aktualisieren“: frische Daten aller Apps holen und alles neu auswerten.
-        // Sperre gegen Doppeltippen: „wertetAus“ springt erst um, wenn der Dienst wirklich angefangen hat; bis dahin gilt „startet“.
-        var startet by remember { mutableStateOf(false) }
-        LaunchedEffect(startet, wertetAus) { if (startet) { if (wertetAus) startet = false else { delay(15_000); startet = false } } }
-        val laeuft = wertetAus || startet
-        val kernFarbe = if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer
-        Box(
-            Modifier
-                .semantics { contentDescription = "Tagesauswertung aktualisieren"; stateDescription = if (laeuft) "läuft gerade" else "" }
-                .antippen {
-                    if (laeuft) vm.meldung = "Die Tagesauswertung läuft schon."
-                    else { startet = true; vm.auswertungJetzt() }
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Kern(56.dp, kernFarbe, aktiv = vm.denkt || laeuft || tunnel.stufe == TunnelStufe.VERBINDET)
-            // Aktualisierungspfeil in der Mitte, weiß auf dunkler Scheibe, damit der Kern klar als Knopf erkennbar ist.
-            // Er dreht sich ständig langsam und während der Auswertung schnell. Die Scheibe lässt den inneren Ring frei.
-            // key: InfiniteTransition übernimmt ein geändertes Tempo nicht, deshalb wird sie beim Wechsel neu angelegt.
-            val drehung = if (LocalBewegung.current) key(laeuft) {
-                rememberInfiniteTransition(label = "pfeil")
-                    .animateFloat(0f, 360f, infiniteRepeatable(tween(if (laeuft) 900 else 3_500, easing = LinearEasing)), label = "pfeilDreh")
-            } else null
-            Box(
-                Modifier.size(25.dp).background(lerp(kernFarbe, Color.Black, 0.55f).copy(alpha = 0.9f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Rounded.Refresh, null,
-                    Modifier.size(21.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f },
-                    tint = Color.White,
-                )
-            }
-        }
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text("Jarvis", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-            Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        // „Neue Session“ steht nicht mehr hier, sondern schwebend rechts über der Eingabeblase (ProgrammierSchweber).
-        // Der Papierkorb „Gespräch löschen“ steht ebenfalls im Schwebestapel, direkt unter „Neue Session“.
-        // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
-        Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
-            val ids = de.frank.jarvis.ui.theme.DESIGNS
-            val i = ids.indexOfFirst { it.first == vm.einstellungen.design }
-            val neu = ids[(i + 1) % ids.size]
-            vm.einstellungen.design = neu.first
-            vm.meldung = "Design: " + neu.second
-        }
-        Spacer(Modifier.width(8.dp))
-        // Hell → Automatisch (wie das System) → Dunkel → Hell, wie in Geniale Aufgaben. Das Symbol zeigt den aktuellen Modus.
-        val modus = vm.einstellungen.modus
-        Rundknopf(
-            when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
-            when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" },
-            farbe = f.primaer,
-        ) {
-            val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
-            vm.einstellungen.modus = neu
-            vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" }
-        }
-    }
+    // Oben steht nur noch der Verbindungsstand, damit der Chat höher beginnt. Gespräche öffnen per Wischen von links,
+    // Aktualisieren und Hell/Dunkel stehen im Schwebestapel über „Neue Session“, das Design bleibt fest.
+    Text(
+        zeile, Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp),
+        color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable

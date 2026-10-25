@@ -43,6 +43,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Extension
@@ -355,7 +360,8 @@ val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
 
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
 fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
-    val anzahl = 2 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
+    // Aktualisieren, Hell/Dunkel, Neue Session, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar.
+    val anzahl = 4 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
     return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + SCHWEBE_LUECKE
 }
 
@@ -370,6 +376,34 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compo
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     Column(modifier, horizontalAlignment = Alignment.End) {
+        // Ganz oben „Tagesauswertung aktualisieren“ (früher der Kern in der Kopfleiste): frische Daten aller Apps holen und neu auswerten.
+        // Sperre gegen Doppeltippen: „läuft“ springt erst um, wenn der Dienst wirklich angefangen hat; bis dahin gilt „startet“.
+        val wertetAus = de.frank.jarvis.auswertung.Tagesauswertung.stand.collectAsState().value.laeuft
+        var startet by remember { mutableStateOf(false) }
+        LaunchedEffect(startet, wertetAus) { if (startet) { if (wertetAus) startet = false else { delay(15_000); startet = false } } }
+        val laeuft = wertetAus || startet
+        SchwebeSymbol(if (laeuft) "Tagesauswertung läuft gerade" else "Tagesauswertung aktualisieren", false, {
+            if (laeuft) vm.meldung = "Die Tagesauswertung läuft schon."
+            else { startet = true; vm.auswertungJetzt() }
+        }) {
+            // Dreht sich nur, solange die Auswertung läuft.
+            val drehung = if (laeuft && de.frank.jarvis.ui.theme.LocalBewegung.current) rememberInfiniteTransition(label = "pfeil")
+                .animateFloat(0f, 360f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "pfeilDreh") else null
+            Icon(Icons.Rounded.Refresh, null, tint = f.text.copy(alpha = 0.5f),
+                modifier = Modifier.size(26.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f })
+        }
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        // Hell → Automatisch (wie das System) → Dunkel → Hell, direkt über „Neue Session“. Das Symbol zeigt den aktuellen Modus.
+        val modus = vm.einstellungen.modus
+        SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
+            val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
+            vm.einstellungen.modus = neu
+            vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" }
+        }) {
+            Icon(when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
+                null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
         // „Neue Session“: Sprechblase im selben durchscheinenden Schwarz wie der Papierkorb, mit weißem Kreuz. Antippen lässt sie kurz
         // grün aufleuchten; kommt danach etwas in den Entwurf, bleibt sie grün, solange es dort steht.
         val sessionGruen = vm.neueSessionAktiv && (vm.entwurf.isNotEmpty() || vm.anhaenge.isNotEmpty())
