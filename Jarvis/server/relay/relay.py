@@ -532,7 +532,11 @@ class PcBruecke:
         self.haupt_abfragen = {}  # id(request) -> request: offene Abfragen des Windows-PCs, nur lebende zaehlen
         self.mac_abfragen = {}    # id(request) -> request: offene Abfragen des Macs, nur lebende zaehlen
         self.zugestellt_an = {}      # Auftrag-id -> Rechner, der ihn abgeholt hat
-        self.auftraege = asyncio.Queue()
+        # Wartende Auftraege, aelteste zuerst. Eine Liste statt Queue: Jede Bruecke nimmt den aeltesten, der ihr gehoert, und
+        # laesst die anderen liegen (kein Herausnehmen und Zuruecklegen: das brachte die Reihenfolge durcheinander und konnte
+        # einen Sol- und einen Opus-Auftrag endlos zwischen den Rechnern kreisen lassen).
+        self.auftraege = []
+        self.neuer_auftrag = asyncio.Event()
         self.quittungen = {}  # Auftrag-id -> Future mit der Quittung der Bruecke
         self.spaete = set()   # laufende Warter auf die spaete Quittung eines schon abgeholten Auftrags
         self.nachtraege = {}  # AUFTRAG-ID -> [{"nachtrag_id", "text", "zeit"}], aelteste zuerst
@@ -806,6 +810,32 @@ class PcBruecke:
         self.bruecke_anmeldung[rechner] = {"stand": stand if stand in ("lokal", "abgemeldet") else "unbekannt",
                                            "geprueft": geprueft if stand else 0}
 
+    def _rechner_da(self, mac: bool) -> bool:
+        return time.monotonic() - (self.ersatz_zuletzt if mac else self.haupt_zuletzt) < PC_FRISCH_S
+
+    def _naechster_ist_mac(self, mac_zuerst: bool) -> bool:
+        """Wer einen Opus-Auftrag bekaeme: der Vorrangrechner, wenn er gleich abholt oder der andere nicht da ist."""
+        return mac_zuerst if self._nimmt(mac=mac_zuerst) or not self._rechner_da(not mac_zuerst) else not mac_zuerst
+
+    def _darf(self, mac: bool, auftrag: dict) -> bool:
+        # Sol 6.1 (Codex CLI) kann nur der Windows-PC. Opus gehoert dem Vorrangrechner; der andere nimmt ihn nur, solange
+        # der Vorrangrechner nicht gleich selbst abholt.
+        if auftrag.get("modell") == "sol":
+            return not mac
+        mac_zuerst = auftrag.get("vorrang") != "windows"
+        return mac == mac_zuerst or not self._nimmt(mac=mac_zuerst)
+
+    def _auftrag_fuer(self, mac: bool) -> dict | None:
+        """Der aelteste Auftrag, den diese Bruecke holen darf; verwaiste (das Handy wartet nicht mehr) fallen dabei weg."""
+        for auftrag in list(self.auftraege):
+            # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
+            wartend = self.quittungen.get(auftrag["id"])
+            if wartend is None or wartend.done():
+                self.auftraege.remove(auftrag)
+            elif self._darf(mac, auftrag):
+                return auftrag
+        return None
+
     def _melde_dich(self, ersatz: bool, rechner: str, request: web.Request | None = None) -> None:
         if request is not None:
             self._anmeldung_merken(rechner, request)
@@ -839,29 +869,21 @@ class PcBruecke:
             if rest <= 0:
                 self._melde_dich(ersatz, rechner)
                 return web.Response(status=204)
-            # Beide warten in kurzen Stuecken: So merkt der zweite Rechner binnen Sekunden, wenn der erste wieder da ist oder wegfaellt.
-            try:
-                auftrag = await asyncio.wait_for(self.auftraege.get(), min(rest, 1))
-            except asyncio.TimeoutError:
+            auftrag = self._auftrag_fuer(ersatz)
+            if auftrag is None:
+                # In kurzen Stuecken warten: So merkt der zweite Rechner binnen Sekunden, wenn der erste wegfaellt.
+                self.neuer_auftrag.clear()
+                try:
+                    await asyncio.wait_for(self.neuer_auftrag.wait(), min(rest, 1))
+                except asyncio.TimeoutError:
+                    pass
                 continue
             self._melde_dich(ersatz, rechner)
-            sol = auftrag.get("modell") == "sol"
-            # Sol 6.1 (Codex CLI) kann nur der Windows-PC: Der Mac legt ihn zurueck, bis der PC ihn holt oder das Handy aufgibt.
-            # Opus-Auftraege gehoeren dem Vorrangrechner: Fragt er ab, legt der andere sie zurueck und laesst ihm den Vortritt.
-            mac_zuerst = auftrag.get("vorrang") != "windows"
-            if (ersatz and sol) or (not sol and ersatz != mac_zuerst and self._nimmt(mac=mac_zuerst)):
-                self.auftraege.put_nowait(auftrag)
-                await asyncio.sleep(min(rest, 1))
-                continue
-            # Ein Auftrag, auf dessen Quittung das Handy nicht mehr wartet, darf nie mehr starten (sonst doppelt mit der Cloud).
-            wartend = self.quittungen.get(auftrag["id"])
-            if wartend is None or wartend.done():
-                continue
             # Ist die Abfrage der Bruecke inzwischen abgerissen (Ruhezustand, Netzwechsel), ginge der Auftrag ins Leere:
-            # zuruecklegen, die naechste Abfrage holt ihn.
+            # liegen lassen, die naechste Abfrage holt ihn.
             if request.transport is None or request.transport.is_closing():
-                self.auftraege.put_nowait(auftrag)
                 return web.Response(status=204)
+            self.auftraege.remove(auftrag)
             self.rechner = rechner
             self.zugestellt_an[auftrag["id"]] = rechner
             return web.json_response(auftrag)
@@ -906,10 +928,11 @@ class PcBruecke:
         try:
             # modell: Franks Wahl beim Start (opus = Claude Code wie bisher, sol = Sol 6.1); alles andere gilt als opus.
             # cli: womit Sol laeuft (codex = Codex CLI wie bisher, opencode = OpenCode CLI); alles andere gilt als codex.
-            await self.auftraege.put({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
+            self.auftraege.append({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
                                       "nummer": jarvis_id, "modell": "sol" if daten.get("modell") == "sol" else "opus",
                                       "cli": "opencode" if daten.get("cli") == "opencode" else "codex",
                                       "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac"})
+            self.neuer_auftrag.set()
             log.info("Programmierauftrag an den PC: %s", daten["app"][:40])
             # shield: wait_for braeche die Future sonst ab, und eine spaete Quittung kaeme nie mehr an.
             quittung = await asyncio.wait_for(asyncio.shield(wartend), PC_QUITTUNG_S)
@@ -1110,11 +1133,7 @@ class PcBruecke:
                 rechner.append({"rechner": name, "rang": rang, "da": jetzt - zuletzt < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - zuletzt)})
         # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
         # ?vorrang=windows: Franks Reihenfolge aus der App (Standard Mac zuerst).
-        if request.query.get("vorrang") == "windows":
-            mac_da = time.monotonic() - self.ersatz_zuletzt < PC_FRISCH_S
-            aktiv = self.haupt_rechner if self._nimmt(mac=False) or not mac_da else self.ersatz_rechner
-        else:
-            aktiv = self.ersatz_rechner if self._nimmt(mac=True) or not self._haupt_da() else self.haupt_rechner
+        aktiv = self.ersatz_rechner if self._naechster_ist_mac(request.query.get("vorrang") != "windows") else self.haupt_rechner
         jetzt_s = time.time()
         for r in rechner:
             b = self.bruecke_anmeldung.get(r["rechner"]) or {"stand": "unbekannt", "geprueft": 0}

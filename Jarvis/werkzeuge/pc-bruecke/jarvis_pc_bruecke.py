@@ -24,6 +24,7 @@ import shlex
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -184,6 +185,21 @@ def pruefe_anmeldung(frisch: bool = False) -> dict:
         schreib(f"Anmeldung: {stand}")
     ANMELDUNG.update(stand=stand, zeit=time.time())
     return ANMELDUNG
+
+
+_PRUEFER: threading.Thread | None = None
+
+
+def pruefe_anmeldung_nebenher() -> None:
+    """
+    Die regelmäßige Prüfung (mit Login-Abgleich bis etwa 25 s) in einem eigenen Faden: Die Abfrageschleife läuft weiter, sonst
+    gälte der Mac beim Relay nach 3 s als „holt nicht ab“ und ein Auftrag ginge trotz Mac-Vorrang an den Windows-PC.
+    """
+    global _PRUEFER
+    if time.time() - ANMELDUNG["zeit"] < ANMELDUNG_ALLE_S or (_PRUEFER is not None and _PRUEFER.is_alive()):
+        return
+    _PRUEFER = threading.Thread(target=pruefe_anmeldung, daemon=True)
+    _PRUEFER.start()
 
 
 def openlauncher_kann_jarvis() -> bool:
@@ -358,7 +374,7 @@ def main() -> int:
                 except Exception as fehler:
                     schreib(f"Scanner nicht gestartet: {fehler}")
             zugang = lies_zugang()
-            pruefe_anmeldung()
+            pruefe_anmeldung_nebenher()
             code, roh = rufe(f"https://{zugang['host']}/pc/auftrag", zugang["token"], 40)
             pause = 2
             if code == 204:

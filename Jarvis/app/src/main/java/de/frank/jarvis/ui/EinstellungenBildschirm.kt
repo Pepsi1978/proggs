@@ -725,7 +725,9 @@ internal fun Zeile(titel: String, wert: String, farbe: Color) {
 @Composable
 private fun RechnerReihenfolge(e: Einstellungen) {
     val f = LocalFarben.current
-    var reihe by remember { mutableStateOf(e.rechnerReihenfolge) }
+    // Neu gelesen, wenn sich die gespeicherte Reihenfolge ändert (auch per Sprache über den Einstellungs-Katalog).
+    val gespeichert = e.rechnerReihenfolge
+    var reihe by remember(gespeichert) { mutableStateOf(gespeichert) }
     var gezogen by remember { mutableStateOf<String?>(null) }
     var versatz by remember { mutableFloatStateOf(0f) }
     var schritt by remember { mutableFloatStateOf(1f) }
@@ -744,7 +746,7 @@ private fun RechnerReihenfolge(e: Einstellungen) {
                         detectDragGesturesAfterLongPress(
                             onDragStart = { gezogen = id; versatz = 0f },
                             onDragEnd = { gezogen = null; versatz = 0f; if (reihe != e.rechnerReihenfolge) e.rechnerReihenfolge = reihe },
-                            onDragCancel = { gezogen = null; versatz = 0f },
+                            onDragCancel = { gezogen = null; versatz = 0f; reihe = e.rechnerReihenfolge },
                         ) { change, delta ->
                             change.consume()
                             versatz += delta.y

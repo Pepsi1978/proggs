@@ -16,10 +16,10 @@ import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.AEADBadTagException
 
-/** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 /** Die Rechner, die Programmieraufträge holen können (Kennungen für [Einstellungen.rechnerReihenfolge]). */
 private val RECHNER = listOf("mac", "windows")
 
+/** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
 class Einstellungen private constructor(context: Context) {
     /**
      * true = der verschlüsselte Speicher ließ sich nicht öffnen (Keystore gestört). Dann gelten Schlüssel und Passwörter
