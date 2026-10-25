@@ -590,6 +590,19 @@ public sealed class ModelRegistry
                 }
             }
 
+            if (string.Equals(group.Id, MoonshotGroupId, StringComparison.OrdinalIgnoreCase))
+            {
+                // Neue Kimi-Vorgaben (z. B. K3.1 Pro) einmalig nachtragen; danach bleiben
+                // Nutzer-Aenderungen unangetastet.
+                foreach (var definition in defaults.Models)
+                {
+                    if (group.KnownSyncedModelSlugs.Contains(definition.Slug, StringComparer.OrdinalIgnoreCase)) continue;
+                    if (!group.Models.Any(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
+                        group.Models.Insert(Math.Min(defaults.Models.IndexOf(definition), group.Models.Count), definition);
+                    AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
+                }
+            }
+
             if (string.Equals(group.Id, "entropic", StringComparison.OrdinalIgnoreCase))
             {
                 // Zuerst die 1M-Umstellung, danach der Nachtrag: beide teilen sich den Merker
@@ -685,9 +698,10 @@ public sealed class ModelRegistry
             Model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI"),
         }),
         // Kimi-Code-Abo (kimi.ai), in OpenCode per /connect -> "Kimi For Coding" mit API-Schluessel
-        // angemeldet. Die vier Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.
+        // angemeldet. Die Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.
         CreateGroup(MoonshotGroupId, "Moonshot AI", MoonshotProviderId, "Moonshot AI", new[]
         {
+            Model("k3.1-pro", "Kimi K3.1 Pro", MoonshotProviderId, "Moonshot AI"),
             Model("k3", "Kimi K3 (1M)", MoonshotProviderId, "Moonshot AI"),
             Model("k3-256k", "Kimi K3 256K", MoonshotProviderId, "Moonshot AI"),
             Model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", MoonshotProviderId, "Moonshot AI"),

@@ -486,6 +486,18 @@ final class ModelRegistry {
                 }
             }
 
+            if group.id.caseInsensitiveCompare(ModelRegistry.moonshotGroupId) == .orderedSame {
+                // Neue Kimi-Vorgaben (z. B. K3.1 Pro) einmalig nachtragen; danach bleiben
+                // Nutzer-Aenderungen unangetastet.
+                for (index, definition) in defaults.models.enumerated() {
+                    if group.knownSyncedModelSlugs.contains(where: { $0.caseInsensitiveCompare(definition.slug) == .orderedSame }) { continue }
+                    if !group.models.contains(where: { $0.slug.caseInsensitiveCompare(definition.slug) == .orderedSame }) {
+                        group.models.insert(definition, at: min(index, group.models.count))
+                    }
+                    ModelRegistry.addUnique(&group.knownSyncedModelSlugs, definition.slug)
+                }
+            }
+
             if group.id.caseInsensitiveCompare("entropic") == .orderedSame {
                 // Zuerst die 1M-Umstellung, danach der Nachtrag: beide teilen sich den Merker
                 // (neuer Slug in knownSyncedModelSlugs), sonst legte der Nachtrag Opus 5 nach der
@@ -577,8 +589,9 @@ final class ModelRegistry {
                 model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI")
             ]),
             // Kimi-Code-Abo (kimi.ai), in OpenCode per /connect -> "Kimi For Coding" mit API-Schluessel
-            // angemeldet. Die vier Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.
+            // angemeldet. Die Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.
             createGroup(moonshotGroupId, "Moonshot AI", moonshotProviderId, "Moonshot AI", [
+                model("k3.1-pro", "Kimi K3.1 Pro", moonshotProviderId, "Moonshot AI"),
                 model("k3", "Kimi K3 (1M)", moonshotProviderId, "Moonshot AI"),
                 model("k3-256k", "Kimi K3 256K", moonshotProviderId, "Moonshot AI"),
                 model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", moonshotProviderId, "Moonshot AI"),

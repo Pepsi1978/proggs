@@ -118,6 +118,15 @@
         "IsUserDefined": false,
         "ProviderId": "kimi-code-plan-global",
         "ProviderName": "Moonshot AI",
+        "Slug": "k3.1-pro",
+        "DisplayName": "Kimi K3.1 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "kimi-code-plan-global",
+        "ProviderName": "Moonshot AI",
         "Slug": "k3-256k",
         "DisplayName": "Kimi K3 256K",
         "IsHidden": false
@@ -197,24 +206,6 @@
         "IsUserDefined": false,
         "ProviderId": "opencode",
         "ProviderName": "OpenCode Zen",
-        "Slug": "muse-spark-1.3-contributor-free",
-        "DisplayName": "Muse Spark 1.3 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
-        "Slug": "muse-spark-1.2-contributor-free",
-        "DisplayName": "Muse Spark 1.2 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
         "Slug": "nemotron-3-ultra-free",
         "DisplayName": "Nemotron 3 Ultra Free",
         "IsHidden": false
@@ -233,15 +224,6 @@
         "IsUserDefined": false,
         "ProviderId": "opencode",
         "ProviderName": "OpenCode Zen",
-        "Slug": "ling-3.0-flash-fin-free",
-        "DisplayName": "Ling 3.0 Flash Fin Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
         "Slug": "nemotron-3.5-lightning-free",
         "DisplayName": "Nemotron 3.5 Lightning Free",
         "IsHidden": false
@@ -254,17 +236,64 @@
         "Slug": "mimo-v2.6-flash-free",
         "DisplayName": "MiMo-V2.6-Flash Free",
         "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "beam-free",
+        "DisplayName": "Beam Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "deepseek-v4.1-flash-free",
+        "DisplayName": "DeepSeek V4.1 Flash Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "flint-40b-free",
+        "DisplayName": "Flint 40B Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "glm-5.3-flash-free",
+        "DisplayName": "GLM-5.3-Flash Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "nemotron-3.5-super-vl-free",
+        "DisplayName": "Nemotron 3.5 Super VL Free",
+        "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
+      "beam-free",
       "big-pickle",
-      "ling-3.0-flash-fin-free",
+      "deepseek-v4.1-flash-free",
+      "flint-40b-free",
+      "glm-5.3-flash-free",
       "mimo-v2.6-flash-free",
-      "muse-spark-1.2-contributor-free",
-      "muse-spark-1.3-contributor-free",
       "nemotron-3-ultra-free",
-      "nemotron-3.5-lightning-free"
+      "nemotron-3.5-lightning-free",
+      "nemotron-3.5-super-vl-free"
     ],
     "IsExpanded": false
   },
@@ -640,15 +669,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "anthropic/claude-3-haiku",
-        "DisplayName": "Anthropic: Claude 3 Haiku",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "anthropic/claude-fable-5",
         "DisplayName": "Anthropic: Claude Fable 5",
         "IsHidden": false
@@ -811,15 +831,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "anthropic/claude-sonnet-4",
-        "DisplayName": "Anthropic: Claude Sonnet 4",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "anthropic/claude-sonnet-4.5",
         "DisplayName": "Anthropic: Claude Sonnet 4.5",
         "IsHidden": false
@@ -894,15 +905,6 @@
         "ProviderName": "OpenRouter",
         "Slug": "auto-beta",
         "DisplayName": "Auto Router (Beta)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "baidu/ernie-4.5-vl-424b-a47b",
-        "DisplayName": "Baidu: ERNIE 4.5 VL 424B A47B ",
         "IsHidden": false
       },
       {
@@ -1126,26 +1128,8 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "deepseek/deepseek-r1",
-        "DisplayName": "DeepSeek: R1",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "deepseek/deepseek-r1-0528",
         "DisplayName": "DeepSeek: R1 0528",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "deepseek/deepseek-r1-distill-llama-70b",
-        "DisplayName": "DeepSeek: R1 Distill Llama 70B",
         "IsHidden": false
       },
       {
@@ -1189,15 +1173,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "google/gemini-2.5-flash:batch",
-        "DisplayName": "Google: Gemini 2.5 Flash (batch)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "google/gemini-2.5-flash-lite",
         "DisplayName": "Google: Gemini 2.5 Flash Lite",
         "IsHidden": false
@@ -1207,26 +1182,8 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "google/gemini-2.5-flash-lite:batch",
-        "DisplayName": "Google: Gemini 2.5 Flash Lite (batch)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "google/gemini-2.5-pro",
         "DisplayName": "Google: Gemini 2.5 Pro",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "google/gemini-2.5-pro:batch",
-        "DisplayName": "Google: Gemini 2.5 Pro (batch)",
         "IsHidden": false
       },
       {
@@ -1560,24 +1517,6 @@
         "ProviderName": "OpenRouter",
         "Slug": "inclusionai/ling-3.0-flash",
         "DisplayName": "inclusionAI: Ling 3.0 Flash",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "inclusionai/ling-3.0-flash-fin",
-        "DisplayName": "inclusionAI: Ling 3.0 Flash Fin",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "kwaipilot/kat-coder-pro-v2.5",
-        "DisplayName": "Kwaipilot: KAT-Coder-Pro V2.5",
         "IsHidden": false
       },
       {
@@ -2179,24 +2118,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "openai/gpt-3.5-turbo",
-        "DisplayName": "OpenAI: GPT-3.5 Turbo",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "openai/gpt-3.5-turbo:batch",
-        "DisplayName": "OpenAI: GPT-3.5 Turbo (batch)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "openai/gpt-3.5-turbo-0613",
         "DisplayName": "OpenAI: GPT-3.5 Turbo (older v0613)",
         "IsHidden": false
@@ -2208,15 +2129,6 @@
         "ProviderName": "OpenRouter",
         "Slug": "openai/gpt-3.5-turbo-16k",
         "DisplayName": "OpenAI: GPT-3.5 Turbo 16k",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "openai/gpt-3.5-turbo-instruct",
-        "DisplayName": "OpenAI: GPT-3.5 Turbo Instruct",
         "IsHidden": false
       },
       {
@@ -3034,15 +2946,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen-plus-2025-07-28",
-        "DisplayName": "Qwen: Qwen Plus 0728",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen-plus",
         "DisplayName": "Qwen: Qwen-Plus",
         "IsHidden": false
@@ -3072,15 +2975,6 @@
         "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen3-14b",
         "DisplayName": "Qwen: Qwen3 14B",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-235b-a22b",
-        "DisplayName": "Qwen: Qwen3 235B A22B",
         "IsHidden": false
       },
       {
@@ -3124,26 +3018,8 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-30b-a3b-thinking-2507",
-        "DisplayName": "Qwen: Qwen3 30B A3B Thinking 2507",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen3-32b",
         "DisplayName": "Qwen: Qwen3 32B",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-8b",
-        "DisplayName": "Qwen: Qwen3 8B",
         "IsHidden": false
       },
       {
@@ -3187,33 +3063,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-coder-plus",
-        "DisplayName": "Qwen: Qwen3 Coder Plus",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-max",
-        "DisplayName": "Qwen: Qwen3 Max",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-max-thinking",
-        "DisplayName": "Qwen: Qwen3 Max Thinking",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen3-next-80b-a3b-instruct",
         "DisplayName": "Qwen: Qwen3 Next 80B A3B Instruct",
         "IsHidden": false
@@ -3241,15 +3090,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-vl-235b-a22b-thinking",
-        "DisplayName": "Qwen: Qwen3 VL 235B A22B Thinking",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen3-vl-30b-a3b-instruct",
         "DisplayName": "Qwen: Qwen3 VL 30B A3B Instruct",
         "IsHidden": false
@@ -3268,26 +3108,8 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-vl-32b-instruct",
-        "DisplayName": "Qwen: Qwen3 VL 32B Instruct",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen3-vl-8b-instruct",
         "DisplayName": "Qwen: Qwen3 VL 8B Instruct",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3-vl-8b-thinking",
-        "DisplayName": "Qwen: Qwen3 VL 8B Thinking",
         "IsHidden": false
       },
       {
@@ -3387,15 +3209,6 @@
         "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen3.6-flash",
         "DisplayName": "Qwen: Qwen3.6 Flash",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "qwen/qwen3.6-max-preview",
-        "DisplayName": "Qwen: Qwen3.6 Max Preview",
         "IsHidden": false
       },
       {
@@ -3531,15 +3344,6 @@
         "ProviderName": "OpenRouter",
         "Slug": "sao10k/l3.1-euryale-70b",
         "DisplayName": "Sao10K: Llama 3.1 Euryale 70B v2.2",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "sao10k/l3.3-euryale-70b",
-        "DisplayName": "Sao10K: Llama 3.3 Euryale 70B",
         "IsHidden": false
       },
       {
@@ -3756,15 +3560,6 @@
         "ProviderName": "OpenRouter",
         "Slug": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
         "DisplayName": "Venice: Uncensored",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "microsoft/wizardlm-2-8x22b",
-        "DisplayName": "WizardLM-2 8x22B",
         "IsHidden": false
       },
       {
@@ -4141,15 +3936,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "unbiased/pareto",
-        "DisplayName": "Pareto",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "prism-ml/ternary-bonsai-2-27b",
         "DisplayName": "PrismML: Ternary Bonsai 2 27B",
         "IsHidden": false
@@ -4351,10 +4137,408 @@
         "Slug": "qwen/qwen3.8-omni-flash",
         "DisplayName": "Qwen: Qwen3.8 Omni Flash",
         "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "aion-labs/aion-3.5",
+        "DisplayName": "AionLabs: Aion 3.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "aion-labs/aion-3.5-mini",
+        "DisplayName": "AionLabs: Aion 3.5 Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-haiku-5.5",
+        "DisplayName": "Anthropic: Claude Haiku 5.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-haiku-5.5:batch",
+        "DisplayName": "Anthropic: Claude Haiku 5.5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-5.5",
+        "DisplayName": "Anthropic: Claude Sonnet 5.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-5.5:batch",
+        "DisplayName": "Anthropic: Claude Sonnet 5.5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4.1-flash-1017",
+        "DisplayName": "DeepSeek: DeepSeek V4.1 Flash 1017",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "elorian/glimpse",
+        "DisplayName": "Elorian: Glimpse",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "fireworks/ember-1",
+        "DisplayName": "Fireworks: Ember-1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-4-argon",
+        "DisplayName": "Google: Gemini 4 Argon",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-4-argon:batch",
+        "DisplayName": "Google: Gemini 4 Argon (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-nano-banana-2.1",
+        "DisplayName": "Google: Nano Banana 2.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inception/mercury-3",
+        "DisplayName": "Inception: Mercury 3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inclusionai/ling-3.1-flash",
+        "DisplayName": "inclusionAI: Ling 3.1 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "liquid/lfm-2.5-2.6b",
+        "DisplayName": "LiquidAI: LFM2.5-2.6B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "liquid/lfm-2.5-24b-a2b",
+        "DisplayName": "LiquidAI: LFM2.5-24B-A2B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-spark-open",
+        "DisplayName": "Meta: Muse Spark Open",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-wonder",
+        "DisplayName": "Meta: Muse Wonder",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m3.1-flash",
+        "DisplayName": "MiniMax: MiniMax M3.1 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-large-2512",
+        "DisplayName": "Mistral: Mistral Large 3 2512",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-large-4-0",
+        "DisplayName": "Mistral: Mistral Large 4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moondream/moondream3-preview",
+        "DisplayName": "Moondream: Moondream 3 Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moondream/moondream3.1-9b-a2b",
+        "DisplayName": "Moondream: Moondream 3.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k3.1-pro",
+        "DisplayName": "MoonshotAI: Kimi K3.1 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3.5-super-vl",
+        "DisplayName": "NVIDIA: Nemotron 3.5 Super VL",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/switchyard",
+        "DisplayName": "NVIDIA: Switchyard",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-6.1-sol",
+        "DisplayName": "OpenAI: GPT-6.1 Sol",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-6.1-sol:batch",
+        "DisplayName": "OpenAI: GPT-6.1 Sol (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-6.1-sol-pro",
+        "DisplayName": "OpenAI: GPT-6.1 Sol Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-6.1-sol-pro:batch",
+        "DisplayName": "OpenAI: GPT-6.1 Sol Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-oss-120b:batch",
+        "DisplayName": "OpenAI: gpt-oss-120b (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "unbiased/pareto-26.10",
+        "DisplayName": "Pareto 26.10",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "unbiased/pareto-26.9",
+        "DisplayName": "Pareto 26.9",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~unbiased/pareto-latest",
+        "DisplayName": "Pareto Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "perceptron/perceptron-mk1.5",
+        "DisplayName": "Perceptron: Perceptron Mk1.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.7-plus:batch",
+        "DisplayName": "Qwen: Qwen3.7 Plus (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.8-max-prime",
+        "DisplayName": "Qwen: Qwen3.8 Max Prime",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "reflection/beam-1.0-501b-a23b",
+        "DisplayName": "Reflection: Beam 1.0 501B A23B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "scaledown/extract",
+        "DisplayName": "ScaleDown: Extract",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "scaledown/summarize",
+        "DisplayName": "ScaleDown: Summarize",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "stepfun/step-5-preview",
+        "DisplayName": "StepFun: Step 5 Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "typesafe/jev-router",
+        "DisplayName": "TypeSafe: Jev Router",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "upstage/solar-mini4",
+        "DisplayName": "Upstage: Solar Mini 4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.3-prime",
+        "DisplayName": "Z.ai: GLM 5.3 Prime",
+        "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
+      "aion-labs/aion-3.5",
+      "aion-labs/aion-3.5-mini",
       "aion-labs/aion-2.0",
       "aion-labs/aion-3.0",
       "aion-labs/aion-3.0-mini",
@@ -4364,7 +4548,6 @@
       "amazon/nova-micro-v1",
       "amazon/nova-premier-v1",
       "amazon/nova-pro-v1",
-      "anthropic/claude-3-haiku",
       "anthropic/claude-fable-5",
       "anthropic/claude-fable-5:batch",
       "anthropic/claude-fable-5.1",
@@ -4372,6 +4555,8 @@
       "~anthropic/claude-fable-latest",
       "anthropic/claude-haiku-4.5",
       "anthropic/claude-haiku-4.5:batch",
+      "anthropic/claude-haiku-5.5",
+      "anthropic/claude-haiku-5.5:batch",
       "~anthropic/claude-haiku-latest",
       "anthropic/claude-opus-4.1",
       "anthropic/claude-opus-4.1:batch",
@@ -4388,18 +4573,18 @@
       "anthropic/claude-opus-5.5",
       "anthropic/claude-opus-5.5:batch",
       "~anthropic/claude-opus-latest",
-      "anthropic/claude-sonnet-4",
       "anthropic/claude-sonnet-4.5",
       "anthropic/claude-sonnet-4.5:batch",
       "anthropic/claude-sonnet-4.6",
       "anthropic/claude-sonnet-4.6:batch",
       "anthropic/claude-sonnet-5",
       "anthropic/claude-sonnet-5:batch",
+      "anthropic/claude-sonnet-5.5",
+      "anthropic/claude-sonnet-5.5:batch",
       "~anthropic/claude-sonnet-latest",
       "arcee-ai/trinity-large-thinking",
       "auto",
       "auto-beta",
-      "baidu/ernie-4.5-vl-424b-a47b",
       "bodybuilder",
       "bytedance-seed/seed-1.6",
       "bytedance-seed/seed-1.6-flash",
@@ -4429,16 +4614,14 @@
       "deepseek/deepseek-v4-pro-0813",
       "deepseek/deepseek-v4.1-flash",
       "deepseek/deepseek-v4.1-flash:batch",
-      "deepseek/deepseek-r1",
+      "deepseek/deepseek-v4.1-flash-1017",
       "deepseek/deepseek-r1-0528",
-      "deepseek/deepseek-r1-distill-llama-70b",
+      "elorian/glimpse",
+      "fireworks/ember-1",
       "free",
       "google/gemini-2.5-flash",
-      "google/gemini-2.5-flash:batch",
       "google/gemini-2.5-flash-lite",
-      "google/gemini-2.5-flash-lite:batch",
       "google/gemini-2.5-pro",
-      "google/gemini-2.5-pro:batch",
       "google/gemini-2.5-pro-preview",
       "google/gemini-3-flash-preview",
       "google/gemini-3-flash-preview:batch",
@@ -4458,6 +4641,8 @@
       "google/gemini-3.7-flash:batch",
       "google/gemini-3.8-flash",
       "google/gemini-3.8-flash:batch",
+      "google/gemini-4-argon",
+      "google/gemini-4-argon:batch",
       "~google/gemini-flash-latest",
       "~google/gemini-pro-latest",
       "google/gemma-2-27b-it",
@@ -4472,18 +4657,21 @@
       "google/gemini-3.1-flash-image-preview",
       "google/gemini-3.1-flash-image",
       "google/gemini-3.1-flash-lite-image",
+      "google/gemini-nano-banana-2.1",
       "google/gemini-3-pro-image-preview",
       "google/gemini-3-pro-image",
       "ibm-granite/granite-4.0-h-micro",
       "ibm-granite/granite-4.2-8b",
       "inception/mercury-2",
       "inception/mercury-2.5",
+      "inception/mercury-3",
       "inclusionai/ling-3.0-flash",
-      "inclusionai/ling-3.0-flash-fin",
       "inclusionai/ling-3.0-flash-vl",
+      "inclusionai/ling-3.1-flash",
       "inference-net/schematron-v2-small",
       "inference-net/schematron-v2-turbo",
-      "kwaipilot/kat-coder-pro-v2.5",
+      "liquid/lfm-2.5-2.6b",
+      "liquid/lfm-2.5-24b-a2b",
       "anthracite-org/magnum-v4-72b",
       "mancer/weaver",
       "meituan/longcat-2.0",
@@ -4501,6 +4689,8 @@
       "meta/muse-spark-1.2-contributor",
       "meta/muse-spark-1.3",
       "meta/muse-spark-1.3-contributor",
+      "meta/muse-spark-open",
+      "meta/muse-wonder",
       "microsoft/phi-4",
       "minimax/minimax-m1",
       "minimax/minimax-m2",
@@ -4509,6 +4699,7 @@
       "minimax/minimax-m2.5",
       "minimax/minimax-m2.7",
       "minimax/minimax-m3",
+      "minimax/minimax-m3.1-flash",
       "minimax/minimax-01",
       "mistralai/mistral-large",
       "mistralai/mistral-large-2407",
@@ -4519,7 +4710,9 @@
       "mistralai/ministral-3b-2512",
       "mistralai/ministral-8b-2512",
       "mistralai/ministral-8b-2512:batch",
+      "mistralai/mistral-large-2512",
       "mistralai/mistral-large-2512:batch",
+      "mistralai/mistral-large-4-0",
       "mistralai/mistral-medium-3",
       "mistralai/mistral-medium-3.1",
       "mistralai/mistral-medium-3.1:batch",
@@ -4534,6 +4727,8 @@
       "mistralai/mixtral-8x22b-instruct",
       "mistralai/mistral-saba",
       "mistralai/voxtral-small-24b-2507",
+      "moondream/moondream3-preview",
+      "moondream/moondream3.1-9b-a2b",
       "moonshotai/kimi-k2",
       "moonshotai/kimi-k2-0905",
       "moonshotai/kimi-k2-thinking",
@@ -4542,6 +4737,7 @@
       "moonshotai/kimi-k2.7-code",
       "moonshotai/kimi-k3",
       "moonshotai/kimi-k3:batch",
+      "moonshotai/kimi-k3.1-pro",
       "~moonshotai/kimi-latest",
       "morph/morph-v3-fast",
       "morph/morph-v3-large",
@@ -4556,6 +4752,8 @@
       "nvidia/nemotron-3-ultra-550b-a55b",
       "nvidia/nemotron-3.5-content-safety",
       "nvidia/nemotron-3.5-lightning",
+      "nvidia/nemotron-3.5-super-vl",
+      "nvidia/switchyard",
       "~openai/gpt-astra-latest",
       "openai/gpt-audio",
       "openai/gpt-audio-mini",
@@ -4564,11 +4762,8 @@
       "~openai/gpt-mini-latest",
       "~openai/gpt-sol-latest",
       "~openai/gpt-terra-latest",
-      "openai/gpt-3.5-turbo",
-      "openai/gpt-3.5-turbo:batch",
       "openai/gpt-3.5-turbo-0613",
       "openai/gpt-3.5-turbo-16k",
-      "openai/gpt-3.5-turbo-instruct",
       "openai/gpt-4",
       "openai/gpt-4-turbo",
       "openai/gpt-4-turbo:batch",
@@ -4645,7 +4840,12 @@
       "openai/gpt-6-sol:batch",
       "openai/gpt-6-sol-pro",
       "openai/gpt-6-sol-pro:batch",
+      "openai/gpt-6.1-sol",
+      "openai/gpt-6.1-sol:batch",
+      "openai/gpt-6.1-sol-pro",
+      "openai/gpt-6.1-sol-pro:batch",
       "openai/gpt-oss-120b",
+      "openai/gpt-oss-120b:batch",
       "openai/gpt-oss-20b",
       "openai/gpt-oss-20b:batch",
       "openai/gpt-oss-safeguard-20b",
@@ -4661,9 +4861,12 @@
       "openai/o4-mini:batch",
       "openai/o4-mini-high",
       "fusion",
-      "unbiased/pareto",
+      "unbiased/pareto-26.10",
+      "unbiased/pareto-26.9",
       "pareto-code",
+      "~unbiased/pareto-latest",
       "perceptron/perceptron-mk1",
+      "perceptron/perceptron-mk1.5",
       "perplexity/sonar",
       "perplexity/sonar-deep-research",
       "perplexity/sonar-pro",
@@ -4674,35 +4877,25 @@
       "prism-ml/ternary-bonsai-2-27b",
       "qwen/qwen-2.5-72b-instruct",
       "qwen/qwen-2.5-coder-32b-instruct",
-      "qwen/qwen-plus-2025-07-28",
       "qwen/qwen-plus",
       "qwen/qwen-2.5-7b-instruct",
       "qwen/qwen2.5-vl-72b-instruct",
       "qwen/qwen3-14b",
-      "qwen/qwen3-235b-a22b",
       "qwen/qwen3-235b-a22b-2507",
       "qwen/qwen3-235b-a22b-thinking-2507",
       "qwen/qwen3-30b-a3b",
       "qwen/qwen3-30b-a3b-instruct-2507",
-      "qwen/qwen3-30b-a3b-thinking-2507",
       "qwen/qwen3-32b",
-      "qwen/qwen3-8b",
       "qwen/qwen3-coder-30b-a3b-instruct",
       "qwen/qwen3-coder",
       "qwen/qwen3-coder-flash",
       "qwen/qwen3-coder-next",
-      "qwen/qwen3-coder-plus",
-      "qwen/qwen3-max",
-      "qwen/qwen3-max-thinking",
       "qwen/qwen3-next-80b-a3b-instruct",
       "qwen/qwen3-next-80b-a3b-thinking",
       "qwen/qwen3-vl-235b-a22b-instruct",
-      "qwen/qwen3-vl-235b-a22b-thinking",
       "qwen/qwen3-vl-30b-a3b-instruct",
       "qwen/qwen3-vl-30b-a3b-thinking",
-      "qwen/qwen3-vl-32b-instruct",
       "qwen/qwen3-vl-8b-instruct",
-      "qwen/qwen3-vl-8b-thinking",
       "qwen/qwen3.5-397b-a17b",
       "qwen/qwen3.5-plus-02-15",
       "qwen/qwen3.5-plus-20260420",
@@ -4714,16 +4907,18 @@
       "qwen/qwen3.6-27b",
       "qwen/qwen3.6-35b-a3b",
       "qwen/qwen3.6-flash",
-      "qwen/qwen3.6-max-preview",
       "qwen/qwen3.6-plus",
       "qwen/qwen3.7-flash",
       "qwen/qwen3.7-max",
       "qwen/qwen3.7-plus",
+      "qwen/qwen3.7-plus:batch",
       "qwen/qwen3.8-2.4t-a95b",
       "qwen/qwen3.8-27b",
       "qwen/qwen3.8-flash",
       "qwen/qwen3.8-max-0902",
+      "qwen/qwen3.8-max-prime",
       "qwen/qwen3.8-omni-flash",
+      "reflection/beam-1.0-501b-a23b",
       "rekaai/reka-edge",
       "rekaai/reka-flash-3",
       "relace/relace-apply-3",
@@ -4735,7 +4930,8 @@
       "sakana/sakana-namazu",
       "sao10k/l3-lunaris-8b",
       "sao10k/l3.1-euryale-70b",
-      "sao10k/l3.3-euryale-70b",
+      "scaledown/extract",
+      "scaledown/summarize",
       "x-ai/grok-4.20",
       "x-ai/grok-4.20-multi-agent",
       "x-ai/grok-4.3",
@@ -4746,6 +4942,7 @@
       "x-ai/grok-build-0.1",
       "stepfun/step-3.5-flash",
       "stepfun/step-3.7-flash",
+      "stepfun/step-5-preview",
       "tencent/hunyuan-a13b-instruct",
       "tencent/hy-mt2-1.8b",
       "tencent/hy-mt2-30b-a3b",
@@ -4758,10 +4955,11 @@
       "thedrummer/unslopnemo-12b",
       "thinkingmachines/inkling",
       "thinkingmachines/inkling-small",
+      "typesafe/jev-router",
+      "upstage/solar-mini4",
       "upstage/solar-pro-3",
       "upstage/solar-pro4",
       "cognitivecomputations/dolphin-mistral-24b-venice-edition",
-      "microsoft/wizardlm-2-8x22b",
       "writer/palmyra-x5",
       "~x-ai/grok-latest",
       "xiaomi/mimo-v2.5",
@@ -4785,6 +4983,7 @@
       "z-ai/glm-5.3-flash",
       "z-ai/glm-5.3-flash:batch",
       "z-ai/glm-5.3-flashx",
+      "z-ai/glm-5.3-prime",
       "z-ai/glm-5v-turbo",
       "~z-ai/glm-flash-latest",
       "~z-ai/glm-latest"
@@ -5093,7 +5292,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "qwen3.8-27b@iq3_xxs",
-        "DisplayName": "Qwen3.8 27B UD - unsloth (lokal)",
+        "DisplayName": "Qwen3.8 27b@iq3_xxs (lokal)",
         "IsHidden": false
       },
       {
@@ -5102,7 +5301,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "qwen/qwen3.8-27b",
-        "DisplayName": "Qwen3.8 27B - qwen (lokal)",
+        "DisplayName": "Qwen3.8 27b - qwen (lokal)",
         "IsHidden": false
       },
       {
@@ -5111,7 +5310,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "qwen3.8-27b@iq1_m",
-        "DisplayName": "Qwen3.8 27B UD - unsloth (lokal)",
+        "DisplayName": "Qwen3.8 27b@iq1_m (lokal)",
         "IsHidden": false
       },
       {
@@ -5120,7 +5319,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "google/gemma-4-e4b",
-        "DisplayName": "Gemma 4 E4B - google (lokal)",
+        "DisplayName": "Gemma 4 E4b - google (lokal)",
         "IsHidden": false
       },
       {
@@ -5129,7 +5328,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "qwen/qwen3.5-9b",
-        "DisplayName": "Qwen3.5 9B - qwen (lokal)",
+        "DisplayName": "Qwen3.5 9b - qwen (lokal)",
         "IsHidden": false
       },
       {
@@ -5138,7 +5337,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "medgemma-1.5-4b-it",
-        "DisplayName": "Medgemma 1.5 4B Instruct - mradermacher (lokal)",
+        "DisplayName": "Medgemma 1.5 4b It (lokal)",
         "IsHidden": false
       },
       {
@@ -5147,7 +5346,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "mistralai/ministral-3-14b-reasoning",
-        "DisplayName": "Ministral 3 14B Reasoning - mistralai (lokal)",
+        "DisplayName": "Ministral 3 14b Reasoning - mistralai (lokal)",
         "IsHidden": false
       },
       {
@@ -5156,7 +5355,7 @@
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
         "Slug": "openai/gpt-oss-20b",
-        "DisplayName": "GPT-OSS 20B - openai (lokal)",
+        "DisplayName": "Gpt Oss 20b - openai (lokal)",
         "IsHidden": false
       }
     ],

@@ -53,6 +53,12 @@
     "ThinkingValue": "high",
     "CliTargetId": "opencode"
   },
+  "kimi-code-plan-global/k3.1-pro": {
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
+    "ThinkingValue": "high",
+    "CliTargetId": "opencode"
+  },
   "kimi-code-plan-global/k3-256k": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
