@@ -13,17 +13,15 @@ import org.json.JSONObject
 
 /**
  * Das Angebot von OpenLauncher für Programmieraufträge mit frei gewähltem Modell (Franks Wahl vom 25.10.2026: „Starte
- * KimiK3 in OpenCode mit Effort High“). Modelle und ihre Standards kommen aus dem Repo (OpenLauncher/models.json und
- * model-defaults.json, über GitHub gelesen), Profile, Modi und die CLIs je Anbieter sind wie im OpenLauncherMac fest
+ * KimiK3 in OpenCode mit Effort High“). Die Modelle kommen aus dem Repo (OpenLauncher/models.json, über GitHub gelesen), Profile, Modi und die CLIs je Anbieter sind wie im OpenLauncherMac fest
  * (MainViewModel: profiles, workModes, fillCliTargets). Franks Wahl vom 25.10.2026: Fehlen Profil, Modus oder Effort, gelten
  * minimal, schnell und high; bietet OpenLauncher dem Modell mehrere CLIs an und nennt Frank keins, fragt Jarvis nach. Ist eine
  * Angabe mehrdeutig oder nicht im Angebot, fragt Jarvis ebenfalls nach ([Aufloesung.Frage]) statt zu raten.
  */
 object OpenLauncherKatalog {
 
-    data class Modell(val anbieter: String, val slug: String, val name: String,
-                      val profil: String, val modus: String, val effort: String, val cli: String) {
-        /** Die CLIs, die OpenLauncher diesem Modell anbietet (erstes = Standard ohne gespeicherte Wahl). */
+    data class Modell(val anbieter: String, val slug: String, val name: String) {
+        /** Die CLIs, die OpenLauncher diesem Modell anbietet (bei mehreren fragt Jarvis, wenn Frank keins nennt). */
         val clis: List<String> get() = clisFuer(anbieter)
     }
 
@@ -34,7 +32,8 @@ object OpenLauncherKatalog {
 
     sealed class Aufloesung {
         data class Start(val wahl: Wahl) : Aufloesung()
-        data class Frage(val text: String) : Aufloesung()
+        /** [modell]: das schon eindeutige Modell, wenn nur noch eine Angabe fehlt (etwa das CLI). */
+        data class Frage(val text: String, val modell: Modell? = null) : Aufloesung()
     }
 
     const val ANTHROPIC = "anthropic"
@@ -87,15 +86,14 @@ object OpenLauncherKatalog {
                 return a.body?.string().orEmpty()
             }
         }
-        val liste = runCatching { auslesen(lies("OpenLauncher/models.json"), runCatching { lies("OpenLauncher/model-defaults.json") }.getOrDefault("{}")) }
+        val liste = runCatching { auslesen(lies("OpenLauncher/models.json")) }
             .getOrElse { fehler -> zwischen?.second ?: throw IllegalStateException("Das Angebot von OpenLauncher ist gerade nicht lesbar (${fehler.message}).") }
         zwischen = System.currentTimeMillis() to liste
         liste
     }
 
-    /** models.json (Gruppen mit Models) und model-defaults.json („anbieter/slug“ → ProfileId, WorkModeId, ThinkingValue, CliTargetId). */
-    internal fun auslesen(modelsJson: String, standardsJson: String): List<Modell> {
-        val standards = runCatching { JSONObject(standardsJson) }.getOrDefault(JSONObject())
+    /** models.json (Gruppen mit Models); Profil, Modus und Effort sind Franks Standards, nicht model-defaults.json. */
+    internal fun auslesen(modelsJson: String): List<Modell> {
         val gruppen = JSONArray(modelsJson)
         val liste = mutableListOf<Modell>()
         for (g in 0 until gruppen.length()) {
@@ -106,13 +104,7 @@ object OpenLauncherKatalog {
                 val anbieter = m.optString("ProviderId")
                 val slug = m.optString("Slug")
                 if (anbieter.isBlank() || slug.isBlank()) continue
-                val s = standards.optJSONObject("$anbieter/$slug")
-                val clis = clisFuer(anbieter)
-                val cli = s?.optString("CliTargetId")?.lowercase(Locale.ROOT)?.takeIf { it in clis } ?: clis.first()
-                liste += Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug },
-                    s?.optString("ProfileId")?.takeIf { it in PROFIL_NAMEN } ?: "minimal",
-                    s?.optString("WorkModeId")?.takeIf { it in MODUS_NAMEN } ?: "schnell",
-                    s?.optString("ThinkingValue")?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() } ?: "high", cli)
+                liste += Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug })
             }
         }
         return liste
@@ -133,9 +125,11 @@ object OpenLauncherKatalog {
      * Gesprochene Formen von Modellnamen in Schreibweise: Die Spracherkennung macht aus „Kimi K3.1 Pro“ gern „Chemica 3.1 Pro“
      * oder „Kimika 3.1 Pro“, aus dem Buchstaben K vor einer Zahl ein „Ka“ („Kimi Ka 3.1 Pro“).
      */
-    fun gesprochen(s: String): String = s
-        .replace(Regex("(?i)\\b(?:che|ki|ke|chi)m+i?[ck]a\\s*(?=[0-9])"), "Kimi K")
-        .replace(Regex("(?i)\\bka(?=\\s*[0-9])"), "k")
+    fun gesprochen(s: String): String = s.replace(KIMI_K, "Kimi K").replace(KA, "k")
+    private val KIMI_K = Regex("(?i)\\b(?:che|ki|ke|chi)m+i?[ck]a\\s*(?=[0-9])")
+    private val KA = Regex("(?i)\\bka(?=\\s*[0-9])")
+    /** Namensteile, die viele Modelle teilen oder in gewöhnlichen Wörtern stecken („pro“ in „Programmierer“): kein Beleg für ein Modell. */
+    private val ALLGEMEIN = setOf("gpt", "claude", "free", "for", "coding", "preview", "ultra", "flash", "pro", "mini")
 
     /**
      * Das Modell zu Franks Worten [anfrage]: genaue Treffer (Name, Slug) vor Buchstabendrehern („GPT-Astra 6“) vor Teilen
@@ -166,17 +160,20 @@ object OpenLauncherKatalog {
 
     /** Ob Franks eigene Worte das Modell nennen (ein unterscheidender Namensteil wie „astra“, „kimi“, „fable“). */
     fun genannt(m: Modell, worte: String): Boolean {
-        val w = voll(gesprochen(worte))
-        val allgemein = setOf("gpt", "claude", "free", "for", "coding", "preview", "ultra", "flash", "pro", "mini")
-        return teile(m.name).filter { it.length >= 3 && it !in allgemein }.any { w.contains(it) } ||
+        val g = gesprochen(worte)
+        val w = voll(g)
+        // Ganze Wortteile vergleichen: „soll“ nennt nicht Sol.
+        val wt = teile(g).toSet()
+        return teile(m.name).filter { it.length >= 3 && it !in ALLGEMEIN }.any { it in wt } ||
             voll(m.slug.substringAfterLast('/')).let { it.length >= 3 && w.contains(it) }
     }
 
     /** Ob Franks Worte den Modellnamen [modellText] enthalten (ein Namensteil ab drei Zeichen, etwa „kimi“, „astra“, „opus“, „sol“). */
     fun textGenannt(modellText: String, worte: String): Boolean {
-        val w = voll(gesprochen(worte))
-        val t = teile(gesprochen(modellText)).filter { it.length >= 3 && it !in setOf("gpt", "claude", "free") }
-        return if (t.isEmpty()) w.contains(voll(modellText)) else t.any { w.contains(it) }
+        val g = gesprochen(worte)
+        val wt = teile(g).toSet()
+        val t = teile(gesprochen(modellText)).filter { it.length >= 3 && it !in ALLGEMEIN }
+        return if (t.isEmpty()) voll(g).contains(voll(modellText)) else t.any { it in wt }
     }
 
     fun cliAus(text: String): String? {
@@ -191,6 +188,9 @@ object OpenLauncherKatalog {
             else -> ""
         }
     }
+
+    /** Ob [text] irgendwo ein CLI nennt („In OpenCode bitte“). */
+    fun cliErwaehnt(text: String): Boolean = voll(text).let { t -> listOf("claudecode", "codex", "opencode", "kimi", "antigravity").any { t.contains(it) } }
 
     fun effortAus(text: String): String? {
         val t = voll(text)
@@ -242,7 +242,7 @@ object OpenLauncherKatalog {
         val m = treffer.single()
         val cliGenannt = cliAus(cliText)
         if (cliGenannt == null && m.clis.size > 1) return Aufloesung.Frage("${m.name} bietet OpenLauncher in " +
-            m.clis.joinToString(" und ") { CLI_NAMEN.getValue(it) } + " an. Frag Frank, in welchem CLI es starten soll, und gib seine Wahl in cli mit.")
+            m.clis.joinToString(" und ") { CLI_NAMEN.getValue(it) } + " an. Frag Frank, in welchem CLI es starten soll, und gib seine Wahl in cli mit.", m)
         val cli = cliGenannt ?: m.clis.single()
         if (cli !in m.clis) return Aufloesung.Frage("${m.name} läuft bei OpenLauncher nur in " + m.clis.joinToString(" oder ") { CLI_NAMEN.getValue(it) } + ".")
         val erlaubt = EFFORTS.getValue(cli)

@@ -374,7 +374,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: minimal."),
                     "modus" to text("Nur wenn Frank ihn nennt: frei, schnell, normal oder gruendlich. Weglassen: schnell."),
                     "cli" to text("Nur wenn Frank es gewählt oder gesagt hat: claude (Claude Code), codex (Codex CLI), opencode (OpenCode), kimi (Kimi Code CLI) oder " +
-                        "antigravity (Antigravity CLI). Bei modell=sol ohne weitere Angaben codex oder opencode wie bisher. Weglassen: Bietet OpenLauncher dem Modell mehrere CLIs an, fragt Jarvis zurück.",
+                        "antigravity (Antigravity CLI). Weglassen: Bietet OpenLauncher dem Modell mehrere CLIs an, fragt Jarvis zurück.",
                         listOf(CLI_CLAUDE, CLI_CODEX, CLI_OPENCODE, CLI_KIMI, CLI_ANTIGRAVITY)),
                     pflicht = listOf("auftrag"),
                 ),
@@ -410,8 +410,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val knopf = if (neu || ProgrammiererVorlage.aufgabe(worte?.aktuell.orEmpty()) != null) null else knopfStartIn(herkunft().second, worte?.aktuell.orEmpty())
                 // Franks Wahl vom 25.10.2026: Nennt er ein Modell aus dem OpenLauncher-Angebot (oder zu Opus/Sol Effort, Profil, Modus,
                 // ein anderes CLI), startet genau das am Mac. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
-                // Franks Worte dieser und der vorigen Nachricht: Antwortet er auf die CLI-Rückfrage nur „OpenCode“, steht das Modell davor.
-                val katalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, worte?.text)
+                val katalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, worte?.aktuell, worte?.angebot)
                 when {
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     // Frank hat eben per Knopf gewählt und der Auftrag läuft; schiebt er gleich danach etwas nach, ruft das Modell
@@ -458,10 +457,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
      * Opus und Sol ohne weitere Angaben bleiben beim bisherigen Weg. In der App zählt ein Modell nur, wenn Franks eigene Worte es
      * nennen (sonst kämen wie bisher die Knöpfe).
      */
-    private suspend fun katalogWahl(a: JSONObject, ausChatGpt: Boolean, worte: String?): Any? {
+    private suspend fun katalogWahl(a: JSONObject, ausChatGpt: Boolean, aktuell: String?, rueckfrage: String?): Any? {
         val modellText = a.optString("modell").trim()
         if (modellText.isEmpty()) return null
         val cliText = a.optString("cli").trim()
+        // Antwortet Frank auf Jarvis' CLI-Rückfrage nur mit dem CLI („OpenCode“), steht das Modell in dieser Rückfrage.
+        val worte = if (!aktuell.isNullOrBlank() && !rueckfrage.isNullOrBlank() && OpenLauncherKatalog.cliErwaehnt(aktuell))
+            aktuell + "\n" + rueckfrage else aktuell
         val zusatz = listOf("effort", "profil", "modus").any { a.optString(it).isNotBlank() } ||
             OpenLauncherKatalog.cliAus(cliText).let { it != null && it !in listOf(CLI_CODEX, CLI_OPENCODE) }
         val klein = modellText.lowercase(Locale.ROOT)
@@ -474,7 +476,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return Ergebnis("Noch nichts gestartet: ${fehler.message} Sag Frank das und biete an, mit Opus 5.5 oder Sol 6.1 zu starten (programmieren ohne modell).", fehler = true)
         }
         return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliText)) {
-            is OpenLauncherKatalog.Aufloesung.Frage -> Ergebnis("Noch nichts gestartet: ${l.text} Frag Frank kurz, was er meint, und rufe programmieren danach mit " +
+            // Auch die CLI-Frage nur zu einem Modell, das Frank selbst genannt hat (sonst wie bisher die Knöpfe).
+            is OpenLauncherKatalog.Aufloesung.Frage -> if (l.modell != null && !ausChatGpt && !worte.isNullOrBlank() && !OpenLauncherKatalog.genannt(l.modell, worte)) null else Ergebnis("Noch nichts gestartet: ${l.text} Frag Frank kurz, was er meint, und rufe programmieren danach mit " +
                 "demselben Auftrag und den genauen Angaben erneut auf. Rate nicht.")
             is OpenLauncherKatalog.Aufloesung.Start ->
                 if (ausChatGpt || worte.isNullOrBlank() || OpenLauncherKatalog.genannt(l.wahl.modell, worte)) l.wahl else null
