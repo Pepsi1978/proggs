@@ -361,6 +361,7 @@
     { "versionCode": 355, "versionName": "1.8.344", "stand": "25.10.2026, 17:44 Uhr", "notiz": "Jarvis kann jetzt mit dem Programmierer der geöffneten Session sprechen: Fragen stellen, Antworten vorlesen und deine Wünsche ohne Nachtrag-Befehl direkt weitergeben." },
     { "versionCode": 356, "versionName": "1.8.345", "stand": "25.10.2026, 17:48 Uhr", "notiz": "Auch Programmier-Sitzungen, die vor dem Update gestartet wurden, können Jarvis jetzt auf seine Fragen antworten." },
     { "versionCode": 357, "versionName": "1.8.346", "stand": "25.10.2026, 17:54 Uhr", "notiz": "Das Gespräch mit dem Programmierer ist zuverlässiger: späte Antworten lassen sich abholen, Gegenfragen kommen immer an, und nach einem Wunsch wird der neue Abschluss wieder angesagt." },
-    { "versionCode": 358, "versionName": "1.8.347", "stand": "25.10.2026, 18:05 Uhr", "notiz": "Jarvis erkennt Kimi K3.1 Pro auch gesprochen als „Kimi Ka 3.1 Pro“ und nimmt bei „Kimi 3.1 Pro“ das normale Pro-Modell statt HighSpeed." }
+    { "versionCode": 358, "versionName": "1.8.347", "stand": "25.10.2026, 18:05 Uhr", "notiz": "Jarvis erkennt Kimi K3.1 Pro auch gesprochen als „Kimi Ka 3.1 Pro“ und nimmt bei „Kimi 3.1 Pro“ das normale Pro-Modell statt HighSpeed." },
+    { "versionCode": 359, "versionName": "1.8.348", "stand": "25.10.2026, 18:11 Uhr", "notiz": "Neue Programmieraufträge mit frei genanntem Modell starten ohne weitere Angaben mit Minimalprofil, Schnellmodus und Effort High, Jarvis fragt bei mehreren möglichen CLIs nach dem CLI und erkennt gesprochene Namen wie „Chemica 3.1 Pro“, ohne nach Opus oder Sol zu fragen." }
   ]
 }

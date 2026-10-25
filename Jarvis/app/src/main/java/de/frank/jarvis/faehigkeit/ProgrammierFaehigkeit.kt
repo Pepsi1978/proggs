@@ -369,12 +369,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "modell" to text("Nur wenn Frank es gewählt oder gesagt hat: opus (Claude Opus 5.5, wie bisher) oder sol (Sol 6.1: am Windows-PC im Codex CLI, " +
                         "ist er aus, in Codex Cloud). Nennt Frank ein anderes Modell aus dem OpenLauncher-Angebot (etwa „GPT-6 Astra“, „Kimi K3“, „Claude Fable 5.1“, " +
                         "„Gemini 4 Argon“) oder zu Opus/Sol Effort, Profil, Modus oder ein anderes CLI: dessen Namen so, wie Frank ihn sagt; Jarvis prüft ihn gegen " +
-                        "OpenLauncher und startet genau dieses Modell am Mac. Weglassen: Jarvis fragt Frank per Knopf."),
-                    "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh oder max (auch „hoch“, „mittel“, „maximal“). Weglassen: Standard des Modells."),
-                    "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: Standard des Modells."),
-                    "modus" to text("Nur wenn Frank ihn nennt: frei, schnell, normal oder gruendlich. Weglassen: Standard des Modells."),
+                        "OpenLauncher und startet genau dieses Modell am Mac, ohne Frage nach Opus oder Sol. Weglassen: Jarvis fragt Frank per Knopf."),
+                    "effort" to text("Nur wenn Frank ihn nennt: low, medium, high, xhigh oder max (auch „hoch“, „mittel“, „maximal“). Weglassen: high."),
+                    "profil" to text("Nur wenn Frank es nennt: minimal, standard oder strikt. Weglassen: minimal."),
+                    "modus" to text("Nur wenn Frank ihn nennt: frei, schnell, normal oder gruendlich. Weglassen: schnell."),
                     "cli" to text("Nur wenn Frank es gewählt oder gesagt hat: claude (Claude Code), codex (Codex CLI), opencode (OpenCode), kimi (Kimi Code CLI) oder " +
-                        "antigravity (Antigravity CLI). Bei modell=sol ohne weitere Angaben codex oder opencode wie bisher. Weglassen: Standard bzw. Knopf.",
+                        "antigravity (Antigravity CLI). Bei modell=sol ohne weitere Angaben codex oder opencode wie bisher. Weglassen: Bietet OpenLauncher dem Modell mehrere CLIs an, fragt Jarvis zurück.",
                         listOf(CLI_CLAUDE, CLI_CODEX, CLI_OPENCODE, CLI_KIMI, CLI_ANTIGRAVITY)),
                     pflicht = listOf("auftrag"),
                 ),
@@ -410,7 +410,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val knopf = if (neu || ProgrammiererVorlage.aufgabe(worte?.aktuell.orEmpty()) != null) null else knopfStartIn(herkunft().second, worte?.aktuell.orEmpty())
                 // Franks Wahl vom 25.10.2026: Nennt er ein Modell aus dem OpenLauncher-Angebot (oder zu Opus/Sol Effort, Profil, Modus,
                 // ein anderes CLI), startet genau das am Mac. Ohne solche Angaben bleibt alles wie bisher (Knöpfe Opus 5.5 / Sol 6.1).
-                val katalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, worte?.aktuell)
+                // Franks Worte dieser und der vorigen Nachricht: Antwortet er auf die CLI-Rückfrage nur „OpenCode“, steht das Modell davor.
+                val katalog = if (auftrag.length < 20 || knopf != null) null else katalogWahl(a, ausChatGpt, worte?.text)
                 when {
                     auftrag.length < 20 -> Ergebnis("Der Auftrag ist zu knapp. Formuliere ihn vollständig aus.", fehler = true)
                     // Frank hat eben per Knopf gewählt und der Auftrag läuft; schiebt er gleich danach etwas nach, ruft das Modell
@@ -469,12 +470,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // (auch kein Laden des Angebots und keine Rückfrage, die den Auftrag aufhielte).
         if (!ausChatGpt && !worte.isNullOrBlank() && !OpenLauncherKatalog.textGenannt(modellText, worte)) return null
         val suche = when (klein) { MODELL_OPUS -> "Claude Opus 5.5"; MODELL_SOL -> "GPT-6.1 Sol"; else -> modellText }
-        // Sol läuft ohne genanntes CLI wie bisher im Codex CLI (nicht im OpenCode-Standard des OpenLauncher).
-        val cliWahl = if (klein == MODELL_SOL && cliText.isEmpty()) CLI_CODEX else cliText
         val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: Exception) {
             return Ergebnis("Noch nichts gestartet: ${fehler.message} Sag Frank das und biete an, mit Opus 5.5 oder Sol 6.1 zu starten (programmieren ohne modell).", fehler = true)
         }
-        return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliWahl)) {
+        return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliText)) {
             is OpenLauncherKatalog.Aufloesung.Frage -> Ergebnis("Noch nichts gestartet: ${l.text} Frag Frank kurz, was er meint, und rufe programmieren danach mit " +
                 "demselben Auftrag und den genauen Angaben erneut auf. Rate nicht.")
             is OpenLauncherKatalog.Aufloesung.Start ->
