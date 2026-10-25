@@ -914,6 +914,12 @@ sichtbarem Hinweis (funktionserhaltend). Generisches, technologie-neutrales Must
 **FIX:** Bei `[data-lexical-editor="true"]` den Editorinhalt markieren und genau ein `ClipboardEvent("paste")` mit `DataTransfer` ausloesen. Kein `insertReplacementText` und kein `reactNudge` auf Lexical. Schreibvorgänge serialisieren und einen bereits erreichten Zieltext nicht erneut schreiben.
 **Quelle:** direkte Reproduktion auf Kimi.ai und Fix in overlays 0.6.17; Details `bugs/bug-cases/2026-10-25-overlays-lexical-diktat-vervielfacht.md`.
 
+### 76. Leeres Paste markiert Lexical-Text nur statt ihn zu loeschen  [⭐ EIGENER VORFALL 2026-10-25]
+**Symptom:** Der X-Knopf der Erweiterung markiert den Text auf Kimi.ai nur, loescht ihn aber nicht.
+**Ursache:** Nach dem Lexical-Fix aus #75 lief auch das Leeren ueber `ClipboardEvent("paste")`. Ein Paste mit leerem `text/plain`-Inhalt ersetzt die Auswahl nicht; sie bleibt einfach markiert.
+**FIX:** Bei leerem Zieltext den Editorinhalt markieren und `beforeinput` mit `inputType: "deleteContentBackward"` senden. Danach pruefen, ob der Editor wirklich leer ist; natives `document.execCommand("delete")` bleibt als Fallback.
+**Quelle:** direkte Reproduktion auf Kimi.ai und Fix in overlays 0.6.18; Details `bugs/bug-cases/2026-10-25-overlays-lexical-leeren.md`.
+
 ## Fix-Status: was ist (belegt) gefixt vs. noch offen
 
 > Ehrlichkeitsregel: „gefixt" nur mit Beleg (offizielles Changelog / `gh`-Status). GitHub-Tracker wurden am

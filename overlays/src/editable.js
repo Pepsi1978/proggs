@@ -485,6 +485,28 @@
 
 	async function setLexicalViaPaste(el, target) {
 		const want = normalizeForCompare(target);
+		if (!want) {
+			try {
+				if (!selectEditorContents(el)) return false;
+				await OV.sleep(25);
+				el.dispatchEvent(
+					new InputEvent("beforeinput", {
+						bubbles: true,
+						cancelable: true,
+						inputType: "deleteContentBackward",
+					}),
+				);
+				await OV.sleep(CFG.postPasteDelayMs);
+				if (!normalizeForCompare(readPromptText(el))) return true;
+				if (!selectEditorContents(el) || !document.execCommand("delete"))
+					return false;
+				await OV.sleep(CFG.postPasteDelayMs);
+				return !normalizeForCompare(readPromptText(el));
+			} catch (error) {
+				console.warn("[Overlays] Lexical-Leeren fehlgeschlagen:", error);
+				return false;
+			}
+		}
 		try {
 			if (!selectEditorContents(el)) return false;
 			await OV.sleep(25);
