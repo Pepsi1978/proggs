@@ -45,7 +45,7 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "google_guthaben",
             titel = "Google-Guthaben lesen",
-            beschreibung = "Jarvis: Franks Google-Cloud-Guthaben aus dem Google Developer Program (bezahlt die Gemini-Stimmen Flash und Flash-Lite TTS): " +
+            beschreibung = "Jarvis: Franks Google-Cloud-Guthaben aus dem Google Developer Program (bezahlt die Gemini-Stimmen Flash und Flash-Lite TTS und das Live-Gespräch auf dem bezahlten Schlüssel): " +
                 "übrig, verbraucht, jede Gutschrift mit Verfallsdatum und wann voraussichtlich das nächste Guthaben kommt. Holt höchstens alle 15 Minuten frisch.",
             schema = schema("frisch" to schalter("true = jetzt neu bei Google abfragen statt des Stands der letzten 15 Minuten.")),
             nurLesen = true,

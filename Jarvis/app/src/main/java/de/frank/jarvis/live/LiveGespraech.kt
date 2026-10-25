@@ -172,6 +172,10 @@ class LiveGespraech(
             // Realtime rechnet nur nach Tokens ab; die Dauer misst die App und dient nur der Zeitbasis.
             LiveKostenBuch.Abrechnung(gemessen, false, berechnet, 0.0, ohnePreis)
         }
+        // Je Gespräch eine Zeile mit Schlüssel und Kosten: So lässt sich später trennen, was Live auf dem bezahlten Schlüssel gekostet hat.
+        Logbuch.netz("Live-Gespräch abgerechnet", "anbieter=${if (gemini) "Gemini" else if (live) "GPT-Live" else "Realtime"} modell=$modell" +
+            (if (gemini) " schluessel=" + (if (gratis) "kostenlos" else "bezahlt") else "") +
+            " dauer=${gemessen.toInt()}s kosten=" + String.format(java.util.Locale.ROOT, "%.4f", a.berechnetUsd + a.geschaetztUsd) + "$")
         beiAbrechnung(a)
     }
 
@@ -183,7 +187,10 @@ class LiveGespraech(
         }
         status("Verbinde …")
         anrufWaechterAn()
-        if (gemini) { testEingabeAn(); geminiVerbinden(schluessel); stilleWaechter(); return }
+        if (gemini) {
+            Logbuch.netz("Live: Gemini-Gespräch beginnt", "modell=$modell schluessel=" + if (gratis) "kostenlos" else "bezahlt")
+            testEingabeAn(); geminiVerbinden(schluessel); stilleWaechter(); return
+        }
         val url = if (live) "wss://api.openai.com/v1/live/sessions" else "wss://api.openai.com/v1/realtime?model=$modell"
         val anfrage = Request.Builder().url(url).header("Authorization", "Bearer $schluessel").build()
         ws = client.newWebSocket(anfrage, object : WebSocketListener() {

@@ -92,7 +92,7 @@ private fun GoogleKarte(vm: AppViewModel) {
     var anmelden by rememberSaveable { mutableStateOf(false) }
     val g = vm.googleGuthaben
     Bereich("Gemini-Stimmen (Google AI Studio)") {
-        Text("Bezahlt das Vorlesen mit Gemini 3.8 Flash TTS und Flash-Lite TTS über deinen bezahlten Schlüssel.", color = f.textSchwach, fontSize = 13.sp)
+        Text("Bezahlt alles, was über deinen bezahlten Gemini-Schlüssel läuft: das Vorlesen mit Gemini 3.8 Flash TTS und Flash-Lite TTS und das Live-Gespräch mit Gemini, sobald es auf den bezahlten Schlüssel wechselt.", color = f.textSchwach, fontSize = 13.sp)
         val rest = g?.restEur
         if (rest == null) {
             NichtDa(g?.hinweis, vm.googleGuthabenLaedt, vm.googleAngemeldet, "Google",
