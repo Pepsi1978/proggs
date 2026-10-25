@@ -238,9 +238,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 nurLesen = false,
             ) { a ->
                 val id = a.optString("auftrag_id").trim()
-                val antwortAuf = a.optString("antwort_auf").trim()
+                // Sitzungen von vor dem Update kennen das Feld antwort_auf nicht: Sie beginnen schritt mit „Antwort auf G…:“.
+                val vorspann = ANTWORT_VORSPANN.find(a.optString("schritt").trim())
+                val antwortAuf = a.optString("antwort_auf").trim().ifEmpty { vorspann?.groupValues?.get(1).orEmpty() }
                 // Früher hart nach 400 Zeichen abgeschnitten (mitten im Satz); jetzt länger und sichtbar gekürzt.
-                val schritt = ProgrammierAbschluss.kuerzen(a.optString("schritt").trim(), ProgrammierAbschluss.MAX_FORTSCHRITT)
+                val schritt = ProgrammierAbschluss.kuerzen(a.optString("schritt").trim().let { t -> vorspann?.let { t.removeRange(it.range).trim() } ?: t },
+                    ProgrammierAbschluss.MAX_FORTSCHRITT)
                 val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"), if (antwortAuf.isEmpty()) schritt else "💬 $schritt", a.optString("link").trim())
                 if (eintrag == null) Ergebnis("Unbekannte auftrag_id.", fehler = true)
                 else {
@@ -1162,7 +1165,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Die Nachricht so, wie sie in der Sitzung ankommt: Franks bzw. Jarvis' Text vorn (erste Zeile = Anzeige), danach die Anleitung. */
     private fun gespraechsText(art: String, nummer: String, id: String, text: String): String {
-        val antworten = "programmier_fortschritt (MCP-Server Jarvis) mit auftrag_id=$id, stand=laeuft, antwort_auf=$nummer und schritt="
+        val antworten = "programmier_fortschritt (MCP-Server Jarvis; kennt es kein Feld antwort_auf, beginne schritt mit „Antwort auf $nummer: “) " +
+            "mit auftrag_id=$id, stand=laeuft, antwort_auf=$nummer und schritt="
         return if (art == ART_FRAGE)
             "FRAGE VON JARVIS (Nachricht $nummer): $text\n\nJarvis (Franks Sprachassistent) wartet auf deine Antwort, um sie Frank vorzulesen. Antworte sofort, " +
                 "bevor du weiterarbeitest: kurz, in ganzen Sätzen, gut vorlesbar und ohne Markdown, mit ${antworten}deiner Antwort. Brauchst du selbst eine Klärung, " +
@@ -2216,6 +2220,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         private val gespraechsAntworten = java.util.concurrent.ConcurrentHashMap<String, CompletableDeferred<String>>()
         private val offeneNachricht = java.util.concurrent.ConcurrentHashMap<String, String>()
         internal fun istNachricht(nachtragId: String) = nachtragId.startsWith(NACHRICHT)
+        private val ANTWORT_VORSPANN = Regex("^(?:💬\\s*)?Antwort auf (G[A-Z0-9]{5})\\s*:", RegexOption.IGNORE_CASE)
 
         /** Gespräche, denen das Auftragsbuch einen Programmierauftrag zuordnet (für den Reiter „Programmierung“). */
         fun gespraecheMitAuftrag(context: Context): Map<String, Long> = Auftragsbuch.gespraechStarts(context.applicationContext)
