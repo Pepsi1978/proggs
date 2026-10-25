@@ -550,9 +550,11 @@ Stand 17.10.2026 (OpenLauncherMac 1.24.39). Voraussetzung: `~/SK/Jarvis/` (`rela
   Terminal.app, Profil Minimal (`Profiles/ClaudeCodeMac/minimal`), Schnellmodus, Opus 5.5 (1M), Effort High, Remote Control
   „Jarvis: <App>“, mit Nummer dieselben Hooks wie unter Windows (`python3 …/jarvis_hook.py`). Notweg ohne passenden Launcher:
   `claude` direkt in Terminal.app mit eigenem `--settings`.
-- **Vorrang Mac** (Franks Wahl vom 25.10.2026, vorher Vorrang Windows): Die Mac-Brücke fragt mit `X-Jarvis-Rang: ersatz`
-  (der Name blieb), die Windows-Brücke ohne Rang. Opus-Aufträge holt der Mac; die Windows-Brücke legt sie zurück, solange der Mac
-  eine lebende Abfrage hat oder seine letzte vor weniger als 3 s endete. Sol 6.1 holt nur die Windows-Brücke. `GET /geraet/pc` nennt unter `rechner_alle` beide Brücken mit Rang und Alter, `rechner` ist der
+- **Vorrang einstellbar** (Franks Wahl vom 25.10.2026, Standard Mac, vorher fest Windows): Die Mac-Brücke fragt mit
+  `X-Jarvis-Rang: ersatz` (der Name blieb), die Windows-Brücke ohne Rang. Die Reihenfolge stellt Frank in Jarvis unter
+  Einstellungen → Programmieren am Rechner per Ziehen ein; das Handy schickt sie mit jedem Auftrag (`vorrang`: mac/windows) und
+  beim Status (`GET /geraet/pc?vorrang=…`). Opus-Aufträge holt der Vorrangrechner; der andere legt sie zurück, solange der
+  Vorrangrechner eine lebende Abfrage hat oder seine letzte vor weniger als 3 s endete. Sol 6.1 holt nur die Windows-Brücke. `GET /geraet/pc` nennt unter `rechner_alle` beide Brücken mit Rang und Alter, `rechner` ist der
   Rechner, der den nächsten Auftrag bekäme.
 - **Hook** `jarvis_hook.py` ist eine Datei für beide Systeme: auf dem Mac Protokoll und Zustand in `~/Library/Logs/JarvisPcBruecke/`,
   Claude-Prozess über die Elternkette (`ps -o ppid=,comm=`), Lebenszeichen über `os.kill(pid, 0)`; so endet der Warter mit der Sitzung.

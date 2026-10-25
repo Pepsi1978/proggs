@@ -521,9 +521,10 @@ class PcBruecke:
         self.frage_da = {}    # frage_id -> asyncio.Event: Franks Antwort oder Freigabe kam
         self.zuletzt = 0.0
         self.rechner = ""
-        # Zwei Bruecken: Die Windows-Bruecke fragt ohne Rang ab („haupt“), die Mac-Bruecke mit X-Jarvis-Rang: ersatz. Seit
-        # Franks Wahl vom 25.10.2026 hat der Mac Vorrang: Opus-Auftraege bekommt der Windows-PC nur, solange der Mac nicht
-        # abfragt. Sol 6.1 bleibt beim Windows-PC (nur dort laeuft das Codex CLI). Die Rang-Namen bleiben fuer Bruecken und App.
+        # Zwei Bruecken: Die Windows-Bruecke fragt ohne Rang ab („haupt“), die Mac-Bruecke mit X-Jarvis-Rang: ersatz. Welche
+        # zuerst drankommt, schickt das Handy mit jedem Auftrag („vorrang“: mac oder windows, Einstellung in Jarvis; Standard
+        # seit 25.10.2026 der Mac). Der andere Rechner bekommt Opus-Auftraege nur, solange der Vorrangrechner nicht abfragt.
+        # Sol 6.1 bleibt immer beim Windows-PC (nur dort laeuft das Codex CLI). Die Rang-Namen bleiben fuer Bruecken und App.
         self.haupt_zuletzt = 0.0
         self.haupt_rechner = ""
         self.ersatz_zuletzt = 0.0
@@ -784,15 +785,16 @@ class PcBruecke:
     def _haupt_da(self) -> bool:
         return time.monotonic() - self.haupt_zuletzt < PC_FRISCH_S
 
-    def _mac_nimmt(self) -> bool:
+    def _nimmt(self, mac: bool) -> bool:
         """
-        Der Mac (Vorrangrechner) holt einen Auftrag gleich selbst: Er wartet gerade mit einer lebenden Abfrage, oder seine
-        letzte Abfrage endete eben erst (die naechste folgt sofort). Nicht die 45 s von PC_FRISCH_S: Solange wartete das Handy
-        schon auf die Quittung, der Windows-PC griffe erst zu, wenn das Handy auf die Cloud ausweicht (zwei Sitzungen).
+        Der Mac (mac=True) bzw. der Windows-PC holt einen Auftrag gleich selbst: Er wartet gerade mit einer lebenden Abfrage,
+        oder seine letzte Abfrage endete eben erst (die naechste folgt sofort). Nicht die 45 s von PC_FRISCH_S: Solange wartete
+        das Handy schon auf die Quittung, der andere Rechner griffe erst zu, wenn das Handy auf die Cloud ausweicht (zwei Sitzungen).
         """
-        if any(a.transport is not None and not a.transport.is_closing() for a in self.mac_abfragen.values()):
+        abfragen = self.mac_abfragen if mac else self.haupt_abfragen
+        if any(a.transport is not None and not a.transport.is_closing() for a in abfragen.values()):
             return True
-        return time.monotonic() - self.ersatz_zuletzt < PC_HAUPT_LUECKE_S
+        return time.monotonic() - (self.ersatz_zuletzt if mac else self.haupt_zuletzt) < PC_HAUPT_LUECKE_S
 
     def _anmeldung_merken(self, rechner: str, request: web.Request) -> None:
         stand = request.headers.get("X-Jarvis-Anmeldung", "").strip().lower()
@@ -837,7 +839,7 @@ class PcBruecke:
             if rest <= 0:
                 self._melde_dich(ersatz, rechner)
                 return web.Response(status=204)
-            # Beide warten in kurzen Stuecken: So merkt der Windows-PC binnen Sekunden, wenn der Mac wieder da ist oder wegfaellt.
+            # Beide warten in kurzen Stuecken: So merkt der zweite Rechner binnen Sekunden, wenn der erste wieder da ist oder wegfaellt.
             try:
                 auftrag = await asyncio.wait_for(self.auftraege.get(), min(rest, 1))
             except asyncio.TimeoutError:
@@ -845,8 +847,9 @@ class PcBruecke:
             self._melde_dich(ersatz, rechner)
             sol = auftrag.get("modell") == "sol"
             # Sol 6.1 (Codex CLI) kann nur der Windows-PC: Der Mac legt ihn zurueck, bis der PC ihn holt oder das Handy aufgibt.
-            # Opus-Auftraege gehoeren dem Mac: Fragt er ab, legt der Windows-PC sie zurueck und laesst ihm den Vortritt.
-            if (ersatz and sol) or (not ersatz and not sol and self._mac_nimmt()):
+            # Opus-Auftraege gehoeren dem Vorrangrechner: Fragt er ab, legt der andere sie zurueck und laesst ihm den Vortritt.
+            mac_zuerst = auftrag.get("vorrang") != "windows"
+            if (ersatz and sol) or (not sol and ersatz != mac_zuerst and self._nimmt(mac=mac_zuerst)):
                 self.auftraege.put_nowait(auftrag)
                 await asyncio.sleep(min(rest, 1))
                 continue
@@ -905,7 +908,8 @@ class PcBruecke:
             # cli: womit Sol laeuft (codex = Codex CLI wie bisher, opencode = OpenCode CLI); alles andere gilt als codex.
             await self.auftraege.put({"id": nummer, "app": daten["app"], "auftrag": daten["auftrag"], "review": bool(daten.get("review")),
                                       "nummer": jarvis_id, "modell": "sol" if daten.get("modell") == "sol" else "opus",
-                                      "cli": "opencode" if daten.get("cli") == "opencode" else "codex"})
+                                      "cli": "opencode" if daten.get("cli") == "opencode" else "codex",
+                                      "vorrang": "windows" if daten.get("vorrang") == "windows" else "mac"})
             log.info("Programmierauftrag an den PC: %s", daten["app"][:40])
             # shield: wait_for braeche die Future sonst ab, und eine spaete Quittung kaeme nie mehr an.
             quittung = await asyncio.wait_for(asyncio.shield(wartend), PC_QUITTUNG_S)
@@ -1105,7 +1109,12 @@ class PcBruecke:
             if zuletzt:
                 rechner.append({"rechner": name, "rang": rang, "da": jetzt - zuletzt < PC_FRISCH_S, "zuletzt_vor_s": int(jetzt - zuletzt)})
         # „rechner“ bleibt fuer die App: der Rechner, der den naechsten Auftrag bekaeme.
-        aktiv = self.ersatz_rechner if self._mac_nimmt() or not self._haupt_da() else self.haupt_rechner
+        # ?vorrang=windows: Franks Reihenfolge aus der App (Standard Mac zuerst).
+        if request.query.get("vorrang") == "windows":
+            mac_da = time.monotonic() - self.ersatz_zuletzt < PC_FRISCH_S
+            aktiv = self.haupt_rechner if self._nimmt(mac=False) or not mac_da else self.ersatz_rechner
+        else:
+            aktiv = self.ersatz_rechner if self._nimmt(mac=True) or not self._haupt_da() else self.haupt_rechner
         jetzt_s = time.time()
         for r in rechner:
             b = self.bruecke_anmeldung.get(r["rechner"]) or {"stand": "unbekannt", "geprueft": 0}

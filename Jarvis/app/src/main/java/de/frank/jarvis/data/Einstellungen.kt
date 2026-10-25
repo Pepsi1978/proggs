@@ -17,6 +17,9 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.AEADBadTagException
 
 /** Alle Einstellungen und Schlüssel, verschlüsselt abgelegt. */
+/** Die Rechner, die Programmieraufträge holen können (Kennungen für [Einstellungen.rechnerReihenfolge]). */
+private val RECHNER = listOf("mac", "windows")
+
 class Einstellungen private constructor(context: Context) {
     /**
      * true = der verschlüsselte Speicher ließ sich nicht öffnen (Keystore gestört). Dann gelten Schlüssel und Passwörter
@@ -362,6 +365,12 @@ class Einstellungen private constructor(context: Context) {
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
     /** Wie viel Wischen die Gesprächsleiste zum Öffnen braucht: 0 = leicht (kurzer Wisch), 100 = schwer (langer Wisch). */
     var leistenWischen: Int get() = prefs.getInt("leiste_wischen", 35).coerceIn(0, 100); set(v) = put { putInt("leiste_wischen", v.coerceIn(0, 100)) }
+    // ---- Programmieren am Rechner ----
+    /** Reihenfolge der Rechner für Programmieraufträge („mac“, „windows“): Der erste hat Vorrang, Standard Mac (Franks Wahl vom 25.10.2026). */
+    var rechnerReihenfolge: List<String>
+        get() = ((prefs.getString("rechner_reihenfolge", null)?.split(',') ?: emptyList()).filter { it in RECHNER } + RECHNER).distinct()
+        set(v) = put { putString("rechner_reihenfolge", (v.filter { it in RECHNER } + RECHNER).distinct().joinToString(",")) }
+    val macZuerst: Boolean get() = rechnerReihenfolge.first() == "mac"
     // ---- Timer ----
     /** true = ein abgelaufener Timer klingelt wie ein Wecker, bis Frank ihn ausschaltet; false = kurze Meldung mit Ton. */
     var timerWecker: Boolean get() = prefs.getBoolean("timer_wecker", true); set(v) = put { putBoolean("timer_wecker", v) }

@@ -358,6 +358,10 @@ class EinstellungsKatalog(context: Context) {
             freitext("adresse_arbeit","Losfahr-Meldung", "Adresse Arbeit", "Wohin die Losfahr-Meldung vor dem Dienst rechnet.",
                 "eine Adresse, z. B. Straße Hausnummer, PLZ Ort", { e.adresseArbeit }) { e.adresseArbeit = it; abfahrtNeu() },
 
+            // ---- Programmieren am Rechner ----
+            auswahl("rechner_reihenfolge", "Programmieren am Rechner", "Welcher Rechner zuerst",
+                "An welchen Rechner Programmieraufträge zuerst gehen; ist er nicht erreichbar, springt der andere ein, sind beide aus, die Cloud. Sol 6.1 läuft immer am Windows-PC.",
+                { listOf("mac" to "Mac zuerst", "windows" to "Windows-PC zuerst") }, { e.rechnerReihenfolge.first() }) { e.rechnerReihenfolge = listOf(it) },
             // ---- E-Mail und GitHub ----
             Eintrag("mail_adresse", "E-Mail (Gmail)", "Gmail-Adresse", "Das Gmail-Konto, über das Jarvis Mails sendet und liest; das App-Passwort gehört zu ihm und wird nur in der App eingetragen.",
                 "eine E-Mail-Adresse", { e.mailAdresse }) { w ->

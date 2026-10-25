@@ -5,6 +5,8 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,7 +40,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -516,6 +523,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Schluesselfeld(vm, "Repo", e.repoName, geheim = false) { e.repoName = it }
                 Schluesselfeld(vm, "GitHub-Schlüssel", e.githubToken) { e.githubToken = it }
             }
+            // ---------------------------------------------------------------- Programmieren am Rechner
+            Bereich("Programmieren am Rechner") { RechnerReihenfolge(e) }
             // ---------------------------------------------------------------- Programmieren (Cloud)
             Bereich("Programmieren in der Cloud") {
                 val bereit = e.routineUrl.isNotBlank() && e.routineToken.isNotBlank()
@@ -706,6 +715,61 @@ internal fun Zeile(titel: String, wert: String, farbe: Color) {
         Text(titel, Modifier.weight(1f), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         Box(Modifier.size(8.dp).glas(f, 4.dp, 0f, farbe, rand = false))
         Text(wert, Modifier.padding(start = 8.dp).weight(1.2f, fill = false), color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 3)
+    }
+}
+
+/**
+ * Reihenfolge der Rechner für Programmieraufträge: lang drücken und ziehen. Oben steht der Rechner, an den Aufträge zuerst gehen;
+ * gespeichert wird beim Loslassen, der Relay bekommt die Reihenfolge mit jedem Auftrag.
+ */
+@Composable
+private fun RechnerReihenfolge(e: Einstellungen) {
+    val f = LocalFarben.current
+    var reihe by remember { mutableStateOf(e.rechnerReihenfolge) }
+    var gezogen by remember { mutableStateOf<String?>(null) }
+    var versatz by remember { mutableFloatStateOf(0f) }
+    var schritt by remember { mutableFloatStateOf(1f) }
+    val namen = mapOf("mac" to "Mac", "windows" to "Windows-PC")
+    Text("Lang drücken und ziehen. Programmieraufträge gehen an den Rechner oben; ist er nicht erreichbar, springt der untere ein, " +
+        "sind beide aus, die Cloud. Sol 6.1 läuft immer am Windows-PC.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+    reihe.forEachIndexed { i, id ->
+        key(id) {
+            val aktiv = gezogen == id
+            Row(
+                Modifier.onSizeChanged { schritt = it.height.toFloat() }.padding(top = 8.dp).fillMaxWidth()
+                    .zIndex(if (aktiv) 1f else 0f)
+                    .graphicsLayer { translationY = if (aktiv) versatz else 0f }
+                    .background(if (aktiv) f.primaer.copy(alpha = 0.18f) else f.text.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
+                    .pointerInput(id) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { gezogen = id; versatz = 0f },
+                            onDragEnd = { gezogen = null; versatz = 0f; if (reihe != e.rechnerReihenfolge) e.rechnerReihenfolge = reihe },
+                            onDragCancel = { gezogen = null; versatz = 0f },
+                        ) { change, delta ->
+                            change.consume()
+                            versatz += delta.y
+                            val pos = reihe.indexOf(id)
+                            val ziel = when {
+                                versatz > schritt / 2 && pos < reihe.lastIndex -> pos + 1
+                                versatz < -schritt / 2 && pos > 0 -> pos - 1
+                                else -> pos
+                            }
+                            if (ziel != pos) {
+                                reihe = reihe.toMutableList().apply { add(ziel, removeAt(pos)) }
+                                versatz -= (ziel - pos) * schritt
+                            }
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("${i + 1}. ${namen[id] ?: id}", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (i == 0) "Standardrechner" else "Ersatz, wenn der obere nicht erreichbar ist", color = f.textSchwach, fontSize = 12.sp)
+                }
+                Text("≡", color = f.textSchwach, fontSize = 22.sp)
+            }
+        }
     }
 }
 

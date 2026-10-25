@@ -111,10 +111,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         "$pc $cloud $sol"
     }
 
+    /** Franks Reihenfolge aus den Einstellungen für den Relay: „mac“ oder „windows“ zuerst. */
+    private fun vorrang() = if (e.macZuerst) "mac" else "windows"
+
     /**
-     * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“ (nur die Namen: seit
-     * 25.10.2026 hat der Mac bei Opus Vorrang, Sol bleibt am Windows-PC). Ein Rechner, der sich seit dem letzten Serverstart nie
-     * gemeldet hat, fehlt in der Liste.
+     * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“ (nur die Namen: wer bei
+     * Opus Vorrang hat, stellt Frank in den Einstellungen ein, Standard Mac; Sol bleibt am Windows-PC). Ein Rechner, der sich seit
+     * dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
      */
     private fun rechnerZustand(alle: JSONArray, pcDa: Boolean, naechster: String): String {
         val eintraege = (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }
@@ -129,12 +132,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return (if (da) "$art $name: an und erreichbar$seit." else "$art $name: nicht erreichbar$seit; aus, im Standby oder die Brücke läuft nicht.") +
                 " " + anmeldungZeile(r, da)
         }
-        // „rechner“ ist der Rechner, den der Relay für den nächsten Auftrag wählt (der Mac nur mit frischer Abfrage).
+        // „rechner“ ist der Rechner, den der Relay für den nächsten Auftrag wählt (der Vorrangrechner nur mit frischer Abfrage).
+        val macZuerst = e.macZuerst
+        val erster = if (macZuerst) ersatz else haupt
+        val zweiter = if (macZuerst) haupt else ersatz
+        val (ersterName, zweiterName) = if (macZuerst) "Mac" to "Windows-PC" else "Windows-PC" to "Mac"
         val wohin = when {
             !pcDa -> "Programmieraufträge gehen in die Cloud."
-            haupt?.optBoolean("da") == true && ersatz?.optBoolean("da") == true && naechster != ersatz.optString("rechner") ->
-                "Der nächste Auftrag ginge an $naechster: Der Mac fragt gerade nicht ab, deshalb springt der Windows-PC ein."
-            haupt?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der Mac hat Vorrang, ist er aus, springt der Windows-PC ein. Sol 6.1 läuft immer am Windows-PC."
+            erster?.optBoolean("da") == true && zweiter?.optBoolean("da") == true && naechster != erster.optString("rechner") ->
+                "Der nächste Auftrag ginge an $naechster: Der $ersterName fragt gerade nicht ab, deshalb springt der $zweiterName ein."
+            zweiter?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der $ersterName hat Vorrang (Einstellungen), ist er aus, springt der $zweiterName ein. Sol 6.1 läuft immer am Windows-PC."
             else -> "Der nächste Auftrag ginge an $naechster."
         }
         return "${zeile(haupt, "Windows-PC")} ${zeile(ersatz, "Mac")} $wohin"
@@ -170,7 +177,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         runCatching { SITZUNGS_HTTP.newCall(pcAnfrage()).execute().use { a -> if (!a.isSuccessful) null else JSONObject(a.body?.string().orEmpty()).optJSONObject("sitzungen") } }.getOrNull()
     }
 
-    private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc").header("X-Jarvis-Token", e.serverToken).build()
+    private fun pcAnfrage() = Request.Builder().url("https://${e.serverHost}/geraet/pc?vorrang=${vorrang()}").header("X-Jarvis-Token", e.serverToken).build()
 
     private fun zeitspanne(sekunden: Int): String = when {
         sekunden < 120 -> "$sekunden Sekunden"
@@ -1784,7 +1791,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val sol = modell == MODELL_SOL
             // Womit Sol läuft (Codex CLI oder OpenCode CLI); steht im Kontext von starteErstes.
             val openCode = sol && kotlinx.coroutines.currentCoroutineContext()[CliWahl]?.cli == CLI_OPENCODE
-            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer).put("modell", modell)
+            val rumpf = JSONObject().put("app", app).put("auftrag", auftrag.take(HOECHSTENS)).put("review", review).put("nummer", nummer).put("modell", modell).put("vorrang", vorrang())
                 .put("cli", if (openCode) CLI_OPENCODE else CLI_CODEX)
             val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc-auftrag").header("X-Jarvis-Token", e.serverToken)
                 .post(rumpf.toString().toRequestBody("application/json".toMediaType())).build()

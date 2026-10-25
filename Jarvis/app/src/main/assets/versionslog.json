@@ -352,6 +352,7 @@
     { "versionCode": 346, "versionName": "1.8.335", "stand": "24.10.2026, 21:15 Uhr", "notiz": "Beim Absenden eines Programmierauftrags leuchtet über „Neue Session“ kein Arbeitssymbol mehr auf; es erscheint nur noch bei wirklich arbeitenden Programmier-Sitzungen." },
     { "versionCode": 347, "versionName": "1.8.336", "stand": "24.10.2026, 21:28 Uhr", "notiz": "Der orange Punkt am Reiter „Programmierung“ blinkt nur noch, solange eine Session wirklich arbeitet, und erlischt nach dem Ende oder Schließen einer Sitzung." },
     { "versionCode": 348, "versionName": "1.8.337", "stand": "24.10.2026, 21:29 Uhr", "notiz": "Jarvis dreht sich nur noch aufgeklappt auf dem Innendisplay, auf dem Frontdisplay bleibt die App hochkant." },
-    { "versionCode": 349, "versionName": "1.8.338", "stand": "25.10.2026, 11:23 Uhr", "notiz": "Programmieraufträge gehen jetzt zuerst an den Mac; der Windows-PC springt nur ein, wenn der Mac nicht erreichbar ist, Sol 6.1 bleibt am Windows-PC." }
+    { "versionCode": 349, "versionName": "1.8.338", "stand": "25.10.2026, 11:23 Uhr", "notiz": "Programmieraufträge gehen jetzt zuerst an den Mac; der Windows-PC springt nur ein, wenn der Mac nicht erreichbar ist, Sol 6.1 bleibt am Windows-PC." },
+    { "versionCode": 350, "versionName": "1.8.339", "stand": "25.10.2026, 11:31 Uhr", "notiz": "In den Einstellungen unter Programmieren am Rechner legst du jetzt per Ziehen fest, ob Programmieraufträge zuerst an den Mac oder an den Windows-PC gehen." }
   ]
 }
