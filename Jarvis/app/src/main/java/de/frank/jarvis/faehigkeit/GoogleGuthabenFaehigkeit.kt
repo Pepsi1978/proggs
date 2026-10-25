@@ -74,6 +74,10 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         val vorauszahlungSeit: Long = 0,
         /** Der Betrag davor, falls er sich geändert hat; null = seit der ersten Abfrage gleich. */
         val vorauszahlungVorher: Double? = null,
+        /** Ausgaben im laufenden Monat über alle Projekte, wie AI Studio sie unter „Ausgaben“ zeigt; null = nicht lesbar. */
+        val ausgabenMonat: Double? = null,
+        /** Summe der monatlichen Ausgabenlimits dieser Projekte; null = keins gesetzt oder nicht lesbar. */
+        val ausgabenLimit: Double? = null,
     ) {
         val restEur: Double? get() = if (geholt <= 0) null else gutschriften.sumOf { it.rest }
 
@@ -99,7 +103,12 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
 
         fun satz(): String = buildString {
             val rest = restEur ?: return hinweis ?: "Noch nicht abgefragt."
-            append("Google-Guthaben für die Gemini-Stimmen: übrig ${betrag(rest)} $waehrung von ${betrag(gewaehrt)} $waehrung, verbraucht ${betrag(verbraucht)} $waehrung.")
+            append("Google-Guthaben für die Gemini-Stimmen: übrig ${betrag(rest)} $waehrung von ${betrag(gewaehrt)} $waehrung, vom Guthaben abgebucht ${betrag(verbraucht)} $waehrung.")
+            ausgabenMonat?.let {
+                append(" Ausgaben diesen Monat laut AI Studio: ${betrag(it)} $waehrung")
+                ausgabenLimit?.let { l -> append(" von ${betrag(l)} $waehrung Limit") }
+                append('.')
+            }
             offen.firstOrNull()?.let { append(" Als Nächstes verfallen ${betrag(it.rest)} $waehrung am ${datum(it.ende)} (${tageText(tageBis(it.ende))}).") }
             naechste?.let { append(" Nächstes Guthaben voraussichtlich am ${DATUM.format(it)} (${tageText(ChronoUnit.DAYS.between(LocalDate.now(), it))})") }
             letzterBetrag?.let { append(", etwa ${betrag(it)} $waehrung") }
@@ -182,6 +191,8 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                 vorauszahlung = if (j.has("vorauszahlung")) j.getDouble("vorauszahlung") else null,
                 vorauszahlungSeit = j.optLong("vorauszahlungSeit"),
                 vorauszahlungVorher = if (j.has("vorauszahlungVorher")) j.getDouble("vorauszahlungVorher") else null,
+                ausgabenMonat = if (j.has("ausgabenMonat")) j.getDouble("ausgabenMonat") else null,
+                ausgabenLimit = if (j.has("ausgabenLimit")) j.getDouble("ausgabenLimit") else null,
             )
         }
 
@@ -193,7 +204,35 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             s.letzterBetrag?.let { j.put("letzterBetrag", it) }
             s.vorauszahlung?.let { j.put("vorauszahlung", it) }
             s.vorauszahlungVorher?.let { j.put("vorauszahlungVorher", it) }
+            s.ausgabenMonat?.let { j.put("ausgabenMonat", it) }
+            s.ausgabenLimit?.let { j.put("ausgabenLimit", it) }
             datei(context).writeText(j.toString())
+        }
+
+        /**
+         * Die Ausgaben des laufenden Monats, wie sie AI Studio unter „Ausgaben“ zeigt: GetProjectUsageLimit liefert je Projekt
+         * [Name, Limit, Ausgaben]. Sie enthalten auch, was Google noch nicht vom Guthaben abgebucht hat, deshalb liegen sie
+         * oft über dem Verbrauch der Gutschriften. Projekte ohne Abrechnung antworten mit 403 und zählen nicht.
+         */
+        private fun ausgaben(ua: String): Pair<Double, Double?>? {
+            val projekte = linkedSetOf<String>()
+            runCatching { rpc("ListCloudProjects", "[]", ua).optJSONArray(0) }.getOrNull()?.let { l ->
+                for (i in 0 until l.length()) l.optJSONArray(i)?.optString(0)?.takeIf { it.startsWith("projects/") }?.let(projekte::add)
+            }
+            runCatching { rpc("ListImportedProjects", "[]", ua).optJSONArray(4) }.getOrNull()?.let { l ->
+                for (i in 0 until l.length()) l.optJSONArray(i)?.optString(0)?.takeIf { it.startsWith("projects/") }?.let(projekte::add)
+            }
+            var summe = 0.0
+            var limit = 0.0
+            var gefunden = false
+            projekte.forEach { p ->
+                val z = runCatching { rpc("GetProjectUsageLimit", JSONArray().put(p).toString(), ua) }.getOrNull() ?: return@forEach
+                val ausgegeben = z.optJSONArray(2) ?: return@forEach
+                gefunden = true
+                summe += geld(ausgegeben)
+                limit += geld(z.optJSONArray(1))
+            }
+            return if (gefunden) summe to limit.takeIf { it > 0.004 } else null
         }
 
         /**
@@ -266,13 +305,16 @@ class GoogleGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                         kotlin.math.abs(neu - betragAlt) < 0.004 -> Triple(neu, alt!!.vorauszahlungSeit.takeIf { it > 0 } ?: jetztMs, alt.vorauszahlungVorher)
                         else -> Triple(neu, jetztMs, betragAlt)
                     }
-                    Stand(gutschriften, waehrung, letzte, letzterBetrag, jetztMs, hinweis, vz, seit, vorher).also { schreib(app, it); _frisch.value = it }
+                    val monat = runCatching { ausgaben(ua) }.onFailure { Log.w(TAG, "Ausgaben nicht lesbar", it) }.getOrNull()
+                    Stand(gutschriften, waehrung, letzte, letzterBetrag, jetztMs, hinweis, vz, seit, vorher,
+                        monat?.first ?: alt?.ausgabenMonat, if (monat != null) monat.second else alt?.ausgabenLimit)
+                        .also { schreib(app, it); _frisch.value = it }
                 } catch (f: Exception) { // no-cancellation-rethrow
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Google-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
                     val grund = f.message ?: "Abfrage gerade nicht möglich (${f.javaClass.simpleName})."
                     if (alt != null) Stand(alt.gutschriften, alt.waehrung, alt.letzteGewaehrung, alt.letzterBetrag, alt.geholt, "Neue Abfrage gescheitert, das ist der letzte Stand: $grund",
-                        alt.vorauszahlung, alt.vorauszahlungSeit, alt.vorauszahlungVorher)
+                        alt.vorauszahlung, alt.vorauszahlungSeit, alt.vorauszahlungVorher, alt.ausgabenMonat, alt.ausgabenLimit)
                     else Stand(emptyList(), "€", 0, null, 0, grund)
                 }
             }

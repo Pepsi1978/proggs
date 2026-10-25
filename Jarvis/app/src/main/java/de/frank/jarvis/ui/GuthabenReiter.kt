@@ -103,7 +103,8 @@ private fun GoogleKarte(vm: AppViewModel) {
             val b = GoogleGuthabenFaehigkeit::betrag
             Gross("${b(rest)} $w", "übrig von ${b(g.gewaehrt)} $w")
             if (g.gewaehrt > 0) Balken((g.verbraucht / g.gewaehrt).toFloat())
-            Wert("Verbraucht", "${b(g.verbraucht)} $w")
+            g.ausgabenMonat?.let { Wert("Ausgaben diesen Monat", "${b(it)} $w" + (g.ausgabenLimit?.let { l -> " von ${b(l)} $w Limit" } ?: "")) }
+            Wert("Vom Guthaben abgebucht", "${b(g.verbraucht)} $w")
             g.offen.firstOrNull()?.let { Wert("Verfällt als Nächstes", "${b(it.rest)} $w am " + bis(java.time.Instant.ofEpochSecond(it.ende).atZone(java.time.ZoneId.systemDefault()).toLocalDate())) }
             g.naechste?.let { Wert("Nächstes Guthaben", "voraussichtlich " + bis(it) + (g.letzterBetrag?.let { x -> " · etwa ${b(x)} $w" } ?: "")) }
             val vz = g.vorauszahlung
