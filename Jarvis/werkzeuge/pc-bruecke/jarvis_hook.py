@@ -697,11 +697,19 @@ def beanspruche(liste: list[dict]) -> list[dict]:
 
 def uebergib(neu: list[dict]) -> str:
     """Quittiert die Übergabe (Relay und Jarvis) und liefert den Text, mit dem die Sitzung weiterarbeitet."""
+    # Nachrichten aus dem Gespräch mit Jarvis (programmierer_sprechen, Nummer „G…“) tragen ihre Anleitung selbst: Frage beantworten
+    # bzw. Wunsch bestätigen und umsetzen, danach weiterarbeiten. Sie sind kein Nachtrag mit Abschlusspflicht.
+    gespraech = all(n["nachtrag_id"].startswith("G") for n in neu)
     kurz = " · ".join(n["text"].replace("\n", " ")[:300] for n in neu)
     try:
-        melde("nachtrag", "📨 Nachtrag in der Sitzung angekommen: " + kurz, nachtrag_ids=[n["nachtrag_id"] for n in neu])
+        melde("nachtrag", "✓ Beim Programmierer angekommen." if gespraech else "📨 Nachtrag in der Sitzung angekommen: " + kurz,
+              nachtrag_ids=[n["nachtrag_id"] for n in neu])
     except Exception as fehler:
         schreib(f"Quittung der Übergabe: {fehler}")
+    if gespraech:
+        teile = "\n\n".join(n["text"] for n in neu)
+        return (f"Jarvis, Franks Sprachassistent, spricht über das Handy mit dir (Frank hört mit). Reagiere genau wie in der Nachricht "
+                f"beschrieben und arbeite danach an deiner bisherigen Aufgabe weiter. AUFTRAG-ID {AUFTRAG}.\n\n{teile}")
     teile = "\n\n".join(f"NACHTRAG {n['nachtrag_id']}:\n{n['text']}" for n in neu)
     if LOKAL:
         # Antworten auf eine freie Rückfrage kommen als Nachtrag „antwort-<frage_id>“: in Jarvis überall beantwortet.
