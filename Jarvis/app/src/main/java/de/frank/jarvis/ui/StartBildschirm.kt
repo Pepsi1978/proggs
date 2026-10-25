@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -206,7 +207,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
             if (vm.gespraech.isEmpty()) item(key = "auswertung") {
                 Karte {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.Top) {
                         Column(Modifier.weight(1f)) {
                             Text("Tagesauswertung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             val neueste = auswertung.neueste
@@ -221,10 +222,23 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                                 color = if (auswertung.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                             )
                         }
-                        auswertung.neueste?.let { VorleseSteuerung(vm, "auswertung", "Tagesauswertung", if (it.mitKi) it.text else it.text + "\n\n" + it.daten) }
-                        Spacer(Modifier.width(8.dp))
-                        Box(Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f).antippen { profilWahlOffen = true }, contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Tune, "Ausführlichkeit der Tagesauswertung", tint = f.textLeise, modifier = Modifier.size(20.dp))
+                        // Oben: Vorlesen links neben dem Zahnrad, darunter der Knopf für eine neue Auswertung.
+                        Column(Modifier.offset(x = 4.dp, y = (-6).dp), horizontalAlignment = Alignment.End) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                auswertung.neueste?.let { VorleseSteuerung(vm, "auswertung", "Tagesauswertung", if (it.mitKi) it.text else it.text + "\n\n" + it.daten) }
+                                Spacer(Modifier.width(8.dp))
+                                Box(Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f).antippen { profilWahlOffen = true }, contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Rounded.Tune, "Ausführlichkeit der Tagesauswertung", tint = f.textLeise, modifier = Modifier.size(20.dp))
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Box(
+                                Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = if (auswertung.laeuft) f.primaer else null)
+                                    .antippen { if (!auswertung.laeuft) vm.auswertungJetzt() },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.Rounded.Refresh, "Tagesauswertung jetzt aktualisieren", tint = if (auswertung.laeuft) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                     if (profilWahlOffen) AuswertungsProfilWahl(vm) { profilWahlOffen = false }

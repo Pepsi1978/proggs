@@ -367,6 +367,7 @@
     { "versionCode": 361, "versionName": "1.8.350", "stand": "25.10.2026, 19:23 Uhr", "notiz": "Unter Guthaben stehen jetzt die Ausgaben des laufenden Monats wie in AI Studio, dazu getrennt, was davon schon vom Guthaben abgebucht ist." },
     { "versionCode": 362, "versionName": "1.8.351", "stand": "25.10.2026, 19:37 Uhr", "notiz": "Die Guthaben-Karte nennt jetzt auch das Live-Gespräch, und das Logbuch hält für jedes Live-Gespräch Schlüssel, Dauer und Kosten fest." },
     { "versionCode": 363, "versionName": "1.8.352", "stand": "25.10.2026, 20:13 Uhr", "notiz": "Die obere Leiste zeigt nur noch „online“, Aktualisieren und Hell/Dunkel sitzen im Schwebestapel über „Neue Session“, und der Chat beginnt weiter oben." },
-    { "versionCode": 364, "versionName": "1.8.353", "stand": "25.10.2026, 20:24 Uhr", "notiz": "Ein kleiner Pfeil unter „Programmierer“ klappt die Symbole rechts über dem Chat ein und wieder aus." }
+    { "versionCode": 364, "versionName": "1.8.353", "stand": "25.10.2026, 20:24 Uhr", "notiz": "Ein kleiner Pfeil unter „Programmierer“ klappt die Symbole rechts über dem Chat ein und wieder aus." },
+    { "versionCode": 365, "versionName": "1.8.354", "stand": "25.10.2026, 20:36 Uhr", "notiz": "In der Tagesauswertung sitzt unter dem Zahnrad ein neuer Knopf, der die Auswertung sofort neu erstellt; Vorlesen und Zahnrad stehen jetzt etwas höher." }
 ]
 }
