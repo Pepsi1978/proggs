@@ -97,6 +97,8 @@ def rufe(adresse: str, token: str, sekunden: int, rumpf: dict | None = None) -> 
                                      data=json.dumps(rumpf, ensure_ascii=False).encode("utf-8") if rumpf is not None else None,
                                      headers={"X-Jarvis-Token": token, "X-Jarvis-Rechner": RECHNER, "X-Jarvis-Rang": "ersatz",
                                               "X-Jarvis-Anmeldung": ANMELDUNG["stand"], "X-Jarvis-Anmeldung-Zeit": str(int(ANMELDUNG["zeit"])),
+                                              # Diese Brücke kennt Aufträge mit frei gewähltem Modell (modell=katalog).
+                                              "X-Jarvis-Katalog": "1",
                                               "Content-Type": "application/json; charset=utf-8"})
     try:
         with urllib.request.urlopen(anfrage, timeout=sekunden) as antwort:
@@ -322,13 +324,13 @@ def starte_sitzung(auftrag: dict) -> str:
     if cli not in ("", "claude") and not openlauncher_kann_jarvis(OPENLAUNCHER_KATALOG_AB):
         raise RuntimeError(f"{cli} braucht am Mac OpenLauncher ab 1.24.45; bitte den OpenLauncher über das Updatescript aktualisieren.")
     if openlauncher_kann_jarvis():
-        argumente = [str(OPENLAUNCHER / "Contents" / "MacOS" / "OpenLauncher"), "--jarvis-auftrag", str(auftrag_datei),
-                     "--name", name, "--profil", PROFIL, "--modus", MODUS, "--modell", MODELL, "--effort", EFFORT]
+        argumente = [str(OPENLAUNCHER / "Contents" / "MacOS" / "OpenLauncher"), "--jarvis-auftrag", str(auftrag_datei), "--name", name,
+                     "--profil", str(auftrag.get("profil") or PROFIL) if cli else PROFIL,
+                     "--modus", str(auftrag.get("modus") or MODUS) if cli else MODUS,
+                     "--modell", str(auftrag.get("slug") or MODELL) if cli else MODELL,
+                     "--effort", str(auftrag.get("effort") or EFFORT) if cli else EFFORT]
         if cli:
-            argumente = [str(OPENLAUNCHER / "Contents" / "MacOS" / "OpenLauncher"), "--jarvis-auftrag", str(auftrag_datei),
-                         "--name", name, "--profil", str(auftrag.get("profil") or PROFIL), "--modus", str(auftrag.get("modus") or MODUS),
-                         "--modell", str(auftrag.get("slug") or MODELL), "--effort", str(auftrag.get("effort") or EFFORT),
-                         "--cli", cli, "--anbieter", str(auftrag.get("anbieter") or "")]
+            argumente += ["--cli", cli, "--anbieter", str(auftrag.get("anbieter") or "")]
         # Mit der Nummer bekommt die Sitzung die Jarvis-Hooks: Fortschritt und Rückfragen erscheinen im Jarvis-Chat.
         if mit_hooks:
             argumente += ["--auftrag-id", nummer]
@@ -346,6 +348,9 @@ def starte_sitzung(auftrag: dict) -> str:
 
     # Notweg für einen älteren OpenLauncherMac: direkt in Terminal.app starten (Profil-Ordner, Modell, Effort, Hooks wie
     # oben; die aktive CLAUDE.md und damit der Modus bleiben so, wie der OpenLauncher sie zuletzt geschrieben hat).
+    # Der Notweg kennt nur Opus: ein frei gewähltes Modell nie still als Opus starten.
+    if cli:
+        raise RuntimeError("Für ein frei gewähltes Modell braucht der Mac einen aktuellen OpenLauncher; bitte über das Updatescript aktualisieren.")
     schreib("OpenLauncher ohne --jarvis-auftrag, starte direkt")
     umgebung = frische_umgebung()
     claude = finde_claude(umgebung["PATH"].split(":"))

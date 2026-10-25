@@ -528,6 +528,7 @@ class PcBruecke:
         self.haupt_zuletzt = 0.0
         self.haupt_rechner = ""
         self.ersatz_zuletzt = 0.0
+        self.mac_katalog = False
         self.ersatz_rechner = ""
         self.haupt_abfragen = {}  # id(request) -> request: offene Abfragen des Windows-PCs, nur lebende zaehlen
         self.mac_abfragen = {}    # id(request) -> request: offene Abfragen des Macs, nur lebende zaehlen
@@ -825,7 +826,7 @@ class PcBruecke:
         # Ein frei gewaehltes Modell aus dem OpenLauncher-Angebot (Effort, Profil, Modus, CLI) startet nur die Mac-Bruecke:
         # Die Windows-Bruecke kennt diese Felder nicht und startete sonst still Opus.
         if auftrag.get("modell") == "katalog":
-            return mac
+            return mac and self.mac_katalog
         mac_zuerst = auftrag.get("vorrang") != "windows"
         return mac == mac_zuerst or not self._nimmt(mac=mac_zuerst)
 
@@ -858,6 +859,9 @@ class PcBruecke:
             log.info("PC-Bruecke verbunden")
         ersatz = request.headers.get("X-Jarvis-Rang", "").strip().lower() == "ersatz"
         rechner = request.headers.get("X-Jarvis-Rechner", "PC")[:60]
+        if ersatz:
+            # Nur eine Mac-Bruecke, die modell=katalog kennt, bekommt solche Auftraege (eine aeltere startete still Opus).
+            self.mac_katalog = request.headers.get("X-Jarvis-Katalog") == "1"
         self._melde_dich(ersatz, rechner, request)
         abfragen = self.mac_abfragen if ersatz else self.haupt_abfragen
         abfragen[id(request)] = request
@@ -925,7 +929,7 @@ class PcBruecke:
         # Sol nur mit dem Windows-PC (Hauptrechner); fragt nur der Mac ab, ist fuer Sol kein Rechner da.
         if daten.get("modell") == "sol" and not self._haupt_da():
             return web.json_response({"pc": False}, status=409)
-        if daten.get("modell") == "katalog" and not self._rechner_da(mac=True):
+        if daten.get("modell") == "katalog" and not (self._rechner_da(mac=True) and self.mac_katalog):
             return web.json_response({"pc": False, "mac": False}, status=409)
         nummer = uuid.uuid4().hex
         jarvis_id = str(daten.get("nummer", ""))[:20]

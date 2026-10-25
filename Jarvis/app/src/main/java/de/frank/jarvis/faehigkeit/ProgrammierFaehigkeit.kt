@@ -226,16 +226,19 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     "stand" to text("laeuft, frage, fertig oder fehler.", listOf("laeuft", "frage", "fertig", "fehler")),
                     "schritt" to text("Ein kurzer Satz auf Deutsch, was gerade passiert oder was gefragt wird, zum Beispiel „App gefunden: Aufgaben“ oder „Pull Request #212 gemergt, GitHub baut die APK“."),
                     "link" to text("Optional: Adresse der eigenen Sitzung oder des Pull Requests."),
+                    "antwort_auf" to text("Nur als Antwort auf eine Nachricht von Jarvis (FRAGE oder WUNSCH mit Nachricht G…): deren Nummer. schritt ist dann deine Antwort, kurz und gut vorlesbar."),
                     pflicht = listOf("auftrag_id", "stand", "schritt"),
                 ),
                 nurLesen = false,
             ) { a ->
                 val id = a.optString("auftrag_id").trim()
+                val antwortAuf = a.optString("antwort_auf").trim()
                 // Früher hart nach 400 Zeichen abgeschnitten (mitten im Satz); jetzt länger und sichtbar gekürzt.
-                val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"),
-                    ProgrammierAbschluss.kuerzen(a.optString("schritt").trim(), ProgrammierAbschluss.MAX_FORTSCHRITT), a.optString("link").trim())
+                val schritt = ProgrammierAbschluss.kuerzen(a.optString("schritt").trim(), ProgrammierAbschluss.MAX_FORTSCHRITT)
+                val eintrag = Auftragsbuch.melde(app, id, a.optString("stand"), if (antwortAuf.isEmpty()) schritt else "💬 $schritt", a.optString("link").trim())
                 if (eintrag == null) Ergebnis("Unbekannte auftrag_id.", fehler = true)
                 else {
+                    if (antwortAuf.isNotEmpty()) gespraechsAntwort(eintrag, antwortAuf, schritt)
                     // Die Cloud-Sitzung erreicht Jarvis nur über ihre eigenen Meldungen: Nachträge reisen mit der Antwort zurück.
                     // Am PC stellt der Hook zu (sonst käme ein Nachtrag doppelt an).
                     // Nicht bei frage (die Rückfrage bliebe sonst unsichtbar) und nicht bei fehler: dann bleibt er für die nächste Meldung liegen.
@@ -250,8 +253,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     else {
                         Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(200) }, "")
                             ?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS) }
-                        Ergebnis("Gemeldet.\n\nNACHTRAG VON FRANK zu diesem Auftrag (AUFTRAG-ID ${eintrag.optString("id")}), über Jarvis. Er gehört zu genau diesem Auftrag: " +
-                            "Setze ihn in dieser Sitzung um, schließe danach wieder vollständig ab und melde erneut stand=fertig.\n\n" +
+                        Ergebnis("Gemeldet.\n\n" + (if (nachtraege.all { istNachricht(it.optString("id")) })
+                            "JARVIS SPRICHT MIT DIR zu diesem Auftrag (AUFTRAG-ID ${eintrag.optString("id")}): Reagiere genau wie in der Nachricht beschrieben und arbeite danach an deiner Aufgabe weiter.\n\n"
+                        else "NACHTRAG VON FRANK zu diesem Auftrag (AUFTRAG-ID ${eintrag.optString("id")}), über Jarvis. Er gehört zu genau diesem Auftrag: " +
+                            "Setze ihn in dieser Sitzung um, schließe danach wieder vollständig ab und melde erneut stand=fertig.\n\n") +
                             nachtraege.joinToString("\n\n") { "NACHTRAG ${it.optString("id")}:\n${it.optString("text")}" })
                     }
                 }
@@ -317,7 +322,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 schema = schema(
                     "app" to text("Name der App, wie Frank sie nennt, zum Beispiel „Geniale Aufgaben“, „Genialer Wecker“, „Jarvis“; gern mit Ordner im Repo, wenn bekannt. Weglassen, wenn Frank keine nennt."),
                     "auftrag" to text(AUFTRAGS_REGELN),
-                    "review" to schalter("Nur bei modell=sol und cli=codex: Franks Antwort, ob ein Review laufen soll, wenn die App oder das APK-Update fertig programmiert ist " +
+                    "review" to schalter("Nur bei modell=sol und cli=codex oder bei einem frei gewählten Modell im Codex CLI, Kimi Code CLI oder Antigravity CLI: Franks Antwort, ob ein Review laufen soll, wenn die App oder das APK-Update fertig programmiert ist " +
                         "(Codex kann nicht selbst fragen). Sonst weglassen: Opus und OpenCode fragen am Ende selbst."),
                     "ziel" to text("Nur wenn Frank es ausdrücklich sagt: pc oder cloud. Vorgabe automatisch (PC, wenn er an ist, sonst Cloud).", listOf("automatisch", "pc", "cloud")),
                     "neu" to schalter("true, wenn Frank ausdrücklich eine neue, getrennte Session will: Der Auftrag bekommt dann in jedem Fall eine eigene Jarvis-Session. Vorgabe false."),
@@ -373,13 +378,15 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     knopf != null -> schonPerKnopfGestartet(knopf)
                     katalog is Ergebnis -> katalog
                     katalog is OpenLauncherKatalog.Wahl -> {
-                        herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
                         val pc = ziele.filterIsInstance<PcBruecke>().filter { it.bereit() }
                         if (pc.isEmpty()) Ergebnis(ziele.first().fehlt(), fehler = true)
                         else withContext(KatalogStart(katalog)) {
                             // Ohne Hooks (Codex, Kimi, Antigravity) gilt Franks Review-Angabe als REVIEW-Zeile; die anderen fragen am Ende selbst.
                             starteErstes(pc, appName, auftrag, a.optBoolean("review") && katalog.cli !in listOf(CLI_CLAUDE, CLI_OPENCODE),
                                 Auftragsbuch.neueNummer(), neu, MODELL_KATALOG, katalog.cli)
+                        }.also { ergebnis ->
+                            // Erst nach dem Start haben offene Knöpfe ausgedient; nach einem Fehlstart bleiben sie (Opus/Sol als Ausweg).
+                            if (!ergebnis.fehler || ergebnis.text.startsWith("Unklar")) herkunft().second.takeIf { it.isNotEmpty() }?.let { wahlenSchliessen(it) }
                         }
                     }
                     // Franks Wahl vom 24.10.2026: Ohne genanntes Modell kommen bei jedem Auftrag die Knöpfe, auch wenn Sol gerade nicht
@@ -418,15 +425,20 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             OpenLauncherKatalog.cliAus(cliText).let { it != null && it !in listOf(CLI_CODEX, CLI_OPENCODE) }
         val klein = modellText.lowercase(Locale.ROOT)
         if (klein in listOf(MODELL_OPUS, MODELL_SOL) && !zusatz) return null
+        // In der App zählt ein vom Modell eingesetzter Name nur, wenn Franks eigene Worte ihn nennen; sonst wie bisher die Knöpfe
+        // (auch kein Laden des Angebots und keine Rückfrage, die den Auftrag aufhielte).
+        if (!ausChatGpt && !worte.isNullOrBlank() && !OpenLauncherKatalog.textGenannt(modellText, worte)) return null
         val suche = when (klein) { MODELL_OPUS -> "Claude Opus 5.5"; MODELL_SOL -> "GPT-6.1 Sol"; else -> modellText }
+        // Sol läuft ohne genanntes CLI wie bisher im Codex CLI (nicht im OpenCode-Standard des OpenLauncher).
+        val cliWahl = if (klein == MODELL_SOL && cliText.isEmpty()) CLI_CODEX else cliText
         val alle = try { OpenLauncherKatalog.modelle(app) } catch (fehler: Exception) {
             return Ergebnis("Noch nichts gestartet: ${fehler.message} Sag Frank das und biete an, mit Opus 5.5 oder Sol 6.1 zu starten (programmieren ohne modell).", fehler = true)
         }
-        return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliText)) {
+        return when (val l = OpenLauncherKatalog.aufloesen(alle, suche, a.optString("effort"), a.optString("profil"), a.optString("modus"), cliWahl)) {
             is OpenLauncherKatalog.Aufloesung.Frage -> Ergebnis("Noch nichts gestartet: ${l.text} Frag Frank kurz, was er meint, und rufe programmieren danach mit " +
                 "demselben Auftrag und den genauen Angaben erneut auf. Rate nicht.")
             is OpenLauncherKatalog.Aufloesung.Start ->
-                if (ausChatGpt || worte.isNullOrBlank() || OpenLauncherKatalog.genannt(l.wahl.modell, worte) || klein in listOf(MODELL_OPUS, MODELL_SOL)) l.wahl else null
+                if (ausChatGpt || worte.isNullOrBlank() || OpenLauncherKatalog.genannt(l.wahl.modell, worte)) l.wahl else null
         }
     }
 
@@ -1703,21 +1715,39 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
          * dann der vorhandene und true. null = Auftrag unbekannt.
          */
         @Synchronized
-        fun nachtragNeu(context: Context, id: String, text: String, quelle: String): Pair<JSONObject, Boolean>? {
+        fun nachtragNeu(context: Context, id: String, text: String, quelle: String, nachricht: String? = null): Pair<JSONObject, Boolean>? {
             val liste = lies(context)
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return null
             val nachtraege = eintrag.optJSONArray("nachtraege") ?: JSONArray().also { eintrag.put("nachtraege", it) }
             val jetzt = System.currentTimeMillis()
-            for (i in nachtraege.length() - 1 downTo 0) {
+            // Gesprächsnachrichten ([nachricht], eigene Nummer) dürfen sich wiederholen: „Wie ist der Stand?“ zweimal ist zweimal gefragt.
+            if (nachricht == null) for (i in nachtraege.length() - 1 downTo 0) {
                 val n = nachtraege.getJSONObject(i)
                 if (NachtragsRegel.doppelt(n.optString("text"), n.optLong("zeit"), text, jetzt)) return n to true
             }
-            val n = JSONObject().put("id", "N" + neueNummer()).put("text", text.take(4_000)).put("zeit", jetzt).put("quelle", quelle).put("stand", "angenommen")
+            val n = JSONObject().put("id", nachricht ?: ("N" + neueNummer())).put("text", text.take(4_000)).put("zeit", jetzt).put("quelle", quelle).put("stand", "angenommen")
             nachtraege.put(n)
             while (nachtraege.length() > 20) nachtraege.remove(0)
             schreib(context, liste)
             return n to false
         }
+
+        /** Antwort des Programmierers auf die Gesprächsnachricht [nachricht] von Jarvis: Stand beantwortet, Antwort am Nachtrag. */
+        @Synchronized
+        fun nachrichtBeantwortet(context: Context, id: String, nachricht: String, antwort: String): Boolean {
+            val liste = lies(context)
+            val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return false
+            val n = eintrag.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }
+                ?.lastOrNull { it.optString("id").equals(nachricht, ignoreCase = true) } ?: return false
+            n.put("stand", "beantwortet").put("beantwortet", System.currentTimeMillis()).put("antwort", antwort.take(2_000))
+            schreib(context, liste)
+            return true
+        }
+
+        /** Die schon eingetroffene Antwort auf die Gesprächsnachricht [nachricht] (leer = noch keine). */
+        fun antwortAuf(context: Context, id: String, nachricht: String): String = finde(context, id)?.optJSONArray("nachtraege")
+            ?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }?.lastOrNull { it.optString("id").equals(nachricht, ignoreCase = true) }
+            ?.optString("antwort").orEmpty()
 
         /** Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. */
         @Synchronized

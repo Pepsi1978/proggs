@@ -20,7 +20,7 @@ import org.json.JSONObject
  */
 object OpenLauncherKatalog {
 
-    data class Modell(val anbieter: String, val slug: String, val name: String, val gruppe: Int,
+    data class Modell(val anbieter: String, val slug: String, val name: String,
                       val profil: String, val modus: String, val effort: String, val cli: String) {
         /** Die CLIs, die OpenLauncher diesem Modell anbietet (erstes = Standard ohne gespeicherte Wahl). */
         val clis: List<String> get() = clisFuer(anbieter)
@@ -103,7 +103,7 @@ object OpenLauncherKatalog {
                 val s = standards.optJSONObject("$anbieter/$slug")
                 val clis = clisFuer(anbieter)
                 val cli = s?.optString("CliTargetId")?.lowercase(Locale.ROOT)?.takeIf { it in clis } ?: clis.first()
-                liste += Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug }, g,
+                liste += Modell(anbieter, slug, m.optString("DisplayName").ifBlank { slug },
                     s?.optString("ProfileId")?.takeIf { it in PROFIL_NAMEN } ?: "minimal",
                     s?.optString("WorkModeId")?.takeIf { it in MODUS_NAMEN } ?: "schnell",
                     s?.optString("ThinkingValue")?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() } ?: "high", cli)
@@ -152,6 +152,13 @@ object OpenLauncherKatalog {
         val allgemein = setOf("gpt", "claude", "free", "for", "coding", "preview", "ultra", "flash", "pro", "mini")
         return teile(m.name).filter { it.length >= 3 && it !in allgemein }.any { w.contains(it) } ||
             voll(m.slug.substringAfterLast('/')).let { it.length >= 3 && w.contains(it) }
+    }
+
+    /** Ob Franks Worte den Modellnamen [modellText] enthalten (ein Namensteil ab drei Zeichen, etwa „kimi“, „astra“, „opus“, „sol“). */
+    fun textGenannt(modellText: String, worte: String): Boolean {
+        val w = voll(worte)
+        val t = teile(modellText).filter { it.length >= 3 && it !in setOf("gpt", "claude", "free") }
+        return if (t.isEmpty()) w.contains(voll(modellText)) else t.any { w.contains(it) }
     }
 
     fun cliAus(text: String): String? {
