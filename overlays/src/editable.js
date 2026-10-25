@@ -465,12 +465,73 @@
 		return ok;
 	}
 
-	async function setViaPaste(el, text) {
+	const pasteQueues = new WeakMap();
+
+	function isLexicalEditor(el) {
+		return !!el?.matches?.("[data-lexical-editor='true']");
+	}
+
+	function selectEditorContents(el) {
+		el.focus();
+		const selection = window.getSelection?.();
+		if (!selection) return false;
+		const range = document.createRange();
+		range.selectNodeContents(el);
+		selection.removeAllRanges();
+		selection.addRange(range);
+		document.dispatchEvent(new Event("selectionchange"));
+		return true;
+	}
+
+	async function setLexicalViaPaste(el, target) {
+		const want = normalizeForCompare(target);
+		try {
+			if (!selectEditorContents(el)) return false;
+			await OV.sleep(25);
+			const clipboardData = new DataTransfer();
+			clipboardData.setData("text/plain", target);
+			el.dispatchEvent(
+				new ClipboardEvent("paste", {
+					bubbles: true,
+					cancelable: true,
+					clipboardData,
+				}),
+			);
+			await OV.sleep(CFG.postPasteDelayMs);
+			const got = normalizeForCompare(readPromptText(el));
+			if (got === want) return true;
+			if (got.replace(/\s+/g, " ") === want.replace(/\s+/g, " ")) return true;
+		} catch (error) {
+			console.warn("[Overlays] Lexical-Paste fehlgeschlagen:", error);
+		}
+		try {
+			if (!selectEditorContents(el) || !navigator.clipboard?.writeText)
+				return false;
+			await navigator.clipboard.writeText(target);
+			if (!document.execCommand("paste")) return false;
+			await OV.sleep(CFG.postPasteDelayMs);
+			const got = normalizeForCompare(readPromptText(el));
+			return (
+				got === want ||
+				got.replace(/\s+/g, " ") === want.replace(/\s+/g, " ")
+			);
+		} catch (error) {
+			console.warn("[Overlays] Lexical-Zwischenablage-Fallback fehlgeschlagen:", error);
+			return false;
+		}
+	}
+
+	async function setViaPasteOnce(el, text) {
 		const target = String(text ?? "")
 			.replace(/\r\n/g, "\n")
 			.replace(/\r/g, "\n");
 		el = resolveEditableTarget(el) || el;
 		if (!el) return false;
+		const want = normalizeForCompare(target);
+		const current = normalizeForCompare(readPromptText(el));
+		if (current === want) return true;
+		if (current.replace(/\s+/g, " ") === want.replace(/\s+/g, " ")) return true;
+		if (isLexicalEditor(el)) return setLexicalViaPaste(el, target);
 		try {
 			el.focus();
 		} catch {}
@@ -490,11 +551,9 @@
 		await OV.sleep(40);
 
 		const got = normalizeForCompare(readPromptText(el));
-		const want = normalizeForCompare(target);
 		if (got === want) return true;
 		if (got.replace(/\s+/g, " ") === want.replace(/\s+/g, " ")) return true;
 
-		// Letzter Versuch ueber Clipboard (falls Editor nur Paste verarbeitet)
 		let pasted = false;
 		try {
 			if (navigator.clipboard?.writeText) {
@@ -520,6 +579,19 @@
 		const gotAfter = normalizeForCompare(readPromptText(el));
 		if (gotAfter === want) return true;
 		return gotAfter.replace(/\s+/g, " ") === want.replace(/\s+/g, " ");
+	}
+
+	function setViaPaste(el, text) {
+		const target = resolveEditableTarget(el) || el;
+		if (!target) return Promise.resolve(false);
+		const previous = pasteQueues.get(target) || Promise.resolve();
+		const next = previous
+			.catch((error) => {
+				console.warn("[Overlays] Vorheriges Einfuegen fehlgeschlagen:", error);
+			})
+			.then(() => setViaPasteOnce(target, text));
+		pasteQueues.set(target, next);
+		return next;
 	}
 
 	OV.editable = {

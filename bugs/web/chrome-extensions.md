@@ -908,6 +908,12 @@ sichtbarem Hinweis (funktionserhaltend). Generisches, technologie-neutrales Must
 `bugs/desktop/voice-pipeline.md` §7 + `best-practices/desktop/voice-pipeline.md` §9.
 **Quelle:** eigener Vorfall 2026-06-24 (overlays 0.6.4). Verifiziert — von Frank bestaetigt.
 
+### 75. Lexical vervielfacht Text durch kuenstliche `insertReplacementText`-Ereignisse  [⭐ EIGENER VORFALL 2026-10-25]
+**Symptom:** Eine einmalige Spracheingabe erscheint im Kimi-Editor etwa zwanzigmal.
+**Ursache:** Der Text stand bereits per `innerHTML` im Editor. Das anschliessende synthetische `insertReplacementText` fuegte ihn durch Lexical erneut ein; Nudge und Fallback vervielfachten den bereits doppelten Inhalt weiter.
+**FIX:** Bei `[data-lexical-editor="true"]` den Editorinhalt markieren und genau ein `ClipboardEvent("paste")` mit `DataTransfer` ausloesen. Kein `insertReplacementText` und kein `reactNudge` auf Lexical. Schreibvorgänge serialisieren und einen bereits erreichten Zieltext nicht erneut schreiben.
+**Quelle:** direkte Reproduktion auf Kimi.ai und Fix in overlays 0.6.17; Details `bugs/bug-cases/2026-10-25-overlays-lexical-diktat-vervielfacht.md`.
+
 ## Fix-Status: was ist (belegt) gefixt vs. noch offen
 
 > Ehrlichkeitsregel: „gefixt" nur mit Beleg (offizielles Changelog / `gh`-Status). GitHub-Tracker wurden am
