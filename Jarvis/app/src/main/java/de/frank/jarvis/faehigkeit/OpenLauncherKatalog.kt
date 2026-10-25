@@ -125,9 +125,12 @@ object OpenLauncherKatalog {
 
     /**
      * Das Modell zu Franks Worten [anfrage]: genaue Treffer (Name, Slug) vor Buchstabendrehern („GPT-Astra 6“) vor Teilen
-     * („Astra“). Je Stufe gewinnen Anbieter mit eigenem Zugang; bleiben mehrere übrig, ist es mehrdeutig.
+     * („Astra“). Je Stufe gewinnen Anbieter mit eigenem Zugang; bleiben mehrere übrig, ist es mehrdeutig, außer ein Treffer ist
+     * die Grundform der anderen („Kimi 3.1 Pro“ → Kimi K3.1 Pro statt Kimi K3.1 Pro HighSpeed). Ein gesprochenes „Ka“ vor einer
+     * Zahl ist der Buchstabe K („Kimi Ka 3.1 Pro“ → Kimi K3.1 Pro).
      */
-    fun findeModell(alle: List<Modell>, anfrage: String): List<Modell> {
+    fun findeModell(alle: List<Modell>, roh: String): List<Modell> {
+        val anfrage = roh.replace(Regex("(?i)ka(?=\\s*[0-9])"), "k")
         val q = kern(anfrage)
         if (q.isEmpty()) return emptyList()
         val sortiert = q.toList().sorted()
@@ -140,8 +143,9 @@ object OpenLauncherKatalog {
         for (passt in stufen) {
             val treffer = alle.filter(passt).distinctBy { it.anbieter + "/" + it.slug }
             if (treffer.isEmpty()) continue
-            val direkte = treffer.filter(::direkt)
-            return direkte.ifEmpty { treffer }
+            val auswahl = treffer.filter(::direkt).ifEmpty { treffer }
+            val grundform = auswahl.filter { g -> auswahl.all { m -> teile(m.name).containsAll(teile(g.name)) } }
+            return if (auswahl.size > 1 && grundform.size == 1) grundform else auswahl
         }
         return emptyList()
     }
