@@ -395,23 +395,6 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             exit = androidx.compose.animation.shrinkVertically(tween(180), shrinkTowards = Alignment.Bottom) + androidx.compose.animation.fadeOut(tween(140)),
         ) {
         Column(horizontalAlignment = Alignment.End) {
-        // Ganz oben „Tagesauswertung aktualisieren“ (früher der Kern in der Kopfleiste): frische Daten aller Apps holen und neu auswerten.
-        // Sperre gegen Doppeltippen: „läuft“ springt erst um, wenn der Dienst wirklich angefangen hat; bis dahin gilt „startet“.
-        val wertetAus = de.frank.jarvis.auswertung.Tagesauswertung.stand.collectAsState().value.laeuft
-        var startet by remember { mutableStateOf(false) }
-        LaunchedEffect(startet, wertetAus) { if (startet) { if (wertetAus) startet = false else { delay(15_000); startet = false } } }
-        val laeuft = wertetAus || startet
-        SchwebeSymbol(if (laeuft) "Tagesauswertung läuft gerade" else "Tagesauswertung aktualisieren", false, {
-            if (laeuft) vm.meldung = "Die Tagesauswertung läuft schon."
-            else { startet = true; vm.auswertungJetzt() }
-        }) {
-            // Dreht sich nur, solange die Auswertung läuft.
-            val drehung = if (laeuft && de.frank.jarvis.ui.theme.LocalBewegung.current) rememberInfiniteTransition(label = "pfeil")
-                .animateFloat(0f, 360f, infiniteRepeatable(tween(900, easing = LinearEasing)), label = "pfeilDreh") else null
-            Icon(Icons.Rounded.Refresh, null, tint = f.text.copy(alpha = 0.5f),
-                modifier = Modifier.size(26.dp).graphicsLayer { rotationZ = drehung?.value ?: 0f })
-        }
-        Spacer(Modifier.height(SCHWEBE_ABSTAND))
         // Hell → Automatisch (wie das System) → Dunkel → Hell, direkt über „Neue Session“. Das Symbol zeigt den aktuellen Modus.
         val modus = vm.einstellungen.modus
         SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {

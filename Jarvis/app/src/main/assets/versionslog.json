@@ -368,6 +368,7 @@
     { "versionCode": 362, "versionName": "1.8.351", "stand": "25.10.2026, 19:37 Uhr", "notiz": "Die Guthaben-Karte nennt jetzt auch das Live-Gespräch, und das Logbuch hält für jedes Live-Gespräch Schlüssel, Dauer und Kosten fest." },
     { "versionCode": 363, "versionName": "1.8.352", "stand": "25.10.2026, 20:13 Uhr", "notiz": "Die obere Leiste zeigt nur noch „online“, Aktualisieren und Hell/Dunkel sitzen im Schwebestapel über „Neue Session“, und der Chat beginnt weiter oben." },
     { "versionCode": 364, "versionName": "1.8.353", "stand": "25.10.2026, 20:24 Uhr", "notiz": "Ein kleiner Pfeil unter „Programmierer“ klappt die Symbole rechts über dem Chat ein und wieder aus." },
-    { "versionCode": 365, "versionName": "1.8.354", "stand": "25.10.2026, 20:36 Uhr", "notiz": "In der Tagesauswertung sitzt unter dem Zahnrad ein neuer Knopf, der die Auswertung sofort neu erstellt; Vorlesen und Zahnrad stehen jetzt etwas höher." }
+    { "versionCode": 365, "versionName": "1.8.354", "stand": "25.10.2026, 20:36 Uhr", "notiz": "In der Tagesauswertung sitzt unter dem Zahnrad ein neuer Knopf, der die Auswertung sofort neu erstellt; Vorlesen und Zahnrad stehen jetzt etwas höher." },
+    { "versionCode": 366, "versionName": "1.8.355", "stand": "25.10.2026, 20:38 Uhr", "notiz": "Der Aktualisieren-Pfeil ist aus der Seitenleiste rechts verschwunden; aktualisiert wird die Tagesauswertung jetzt nur noch über ihren eigenen Knopf." }
 ]
 }

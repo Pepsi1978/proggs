@@ -232,12 +232,18 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                                 }
                             }
                             Spacer(Modifier.height(8.dp))
+                            // Sperre gegen Doppeltippen: „läuft“ springt erst um, wenn der Dienst wirklich angefangen hat; bis dahin gilt „startet“.
+                            var startet by remember { mutableStateOf(false) }
+                            LaunchedEffect(startet, auswertung.laeuft) { if (startet) { if (auswertung.laeuft) startet = false else { kotlinx.coroutines.delay(15_000); startet = false } } }
+                            val wertetAus = auswertung.laeuft || startet
                             Box(
-                                Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = if (auswertung.laeuft) f.primaer else null)
-                                    .antippen { if (!auswertung.laeuft) vm.auswertungJetzt() },
+                                Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f, toenung = if (wertetAus) f.primaer else null).antippen {
+                                    if (wertetAus) vm.meldung = "Die Tagesauswertung läuft schon."
+                                    else { startet = true; vm.auswertungJetzt() }
+                                },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(Icons.Rounded.Refresh, "Tagesauswertung jetzt aktualisieren", tint = if (auswertung.laeuft) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Rounded.Refresh, if (wertetAus) "Tagesauswertung läuft gerade" else "Tagesauswertung aktualisieren", tint = if (wertetAus) f.primaer else f.textLeise, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
