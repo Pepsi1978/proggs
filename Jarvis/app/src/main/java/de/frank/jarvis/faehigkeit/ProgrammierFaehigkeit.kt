@@ -112,8 +112,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     /**
-     * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“. Ein Rechner, der sich
-     * seit dem letzten Serverstart nie gemeldet hat, fehlt in der Liste.
+     * Beide Brücken einzeln: Der Relay meldet den Windows-PC als Rang „haupt“ und den Mac als „ersatz“ (nur die Namen: seit
+     * 25.10.2026 hat der Mac bei Opus Vorrang, Sol bleibt am Windows-PC). Ein Rechner, der sich seit dem letzten Serverstart nie
+     * gemeldet hat, fehlt in der Liste.
      */
     private fun rechnerZustand(alle: JSONArray, pcDa: Boolean, naechster: String): String {
         val eintraege = (0 until alle.length()).mapNotNull { alle.optJSONObject(it) }
@@ -128,12 +129,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return (if (da) "$art $name: an und erreichbar$seit." else "$art $name: nicht erreichbar$seit; aus, im Standby oder die Brücke läuft nicht.") +
                 " " + anmeldungZeile(r, da)
         }
-        // „rechner“ ist der Rechner, den der Relay für den nächsten Auftrag wählt (Hauptrechner nur mit frischer Abfrage).
+        // „rechner“ ist der Rechner, den der Relay für den nächsten Auftrag wählt (der Mac nur mit frischer Abfrage).
         val wohin = when {
             !pcDa -> "Programmieraufträge gehen in die Cloud."
-            haupt?.optBoolean("da") == true && ersatz?.optBoolean("da") == true && naechster != haupt.optString("rechner") ->
-                "Der nächste Auftrag ginge an $naechster: Der Windows-PC fragt gerade nicht ab, deshalb springt der Mac ein."
-            ersatz?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der Windows-PC hat Vorrang, ist er aus, springt der Mac ein."
+            haupt?.optBoolean("da") == true && ersatz?.optBoolean("da") == true && naechster != ersatz.optString("rechner") ->
+                "Der nächste Auftrag ginge an $naechster: Der Mac fragt gerade nicht ab, deshalb springt der Windows-PC ein."
+            haupt?.optBoolean("da") == true -> "Der nächste Auftrag ginge an $naechster; der Mac hat Vorrang, ist er aus, springt der Windows-PC ein. Sol 6.1 läuft immer am Windows-PC."
             else -> "Der nächste Auftrag ginge an $naechster."
         }
         return "${zeile(haupt, "Windows-PC")} ${zeile(ersatz, "Mac")} $wohin"

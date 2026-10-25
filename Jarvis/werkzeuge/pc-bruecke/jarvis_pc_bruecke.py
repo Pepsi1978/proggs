@@ -2,8 +2,8 @@
 mit Remote Control. Frank sieht sie im Terminal und in der Claude-App unter Code. Gegenstück zu jarvis-pc-bruecke.ps1.
 
 Ablauf: Dauerschleife GET https://<Server>/pc/auftrag (Long-Polling, bis 25 s). Solange das Skript fragt, gilt der Mac
-beim Relay als da. Die Mac-Brücke meldet sich als Ersatz (X-Jarvis-Rang: ersatz): Fragt zugleich der Windows-PC ab, bekommt
-er den Auftrag (Franks Wahl vom 17.10.2026, Lösung B); der Mac nur, wenn der PC nicht abfragt. Ist keiner da, nimmt Jarvis
+beim Relay als da. Die Mac-Brücke meldet sich mit X-Jarvis-Rang: ersatz (nur der Name): Seit Franks Wahl vom 25.10.2026 hat
+der Mac Vorrang, der Windows-PC bekommt Opus-Aufträge nur, wenn der Mac nicht abfragt; Sol 6.1 bleibt beim PC. Ist keiner da, nimmt Jarvis
 die Cloud. Start: LaunchAgent de.frank.jarvis.pc-bruecke (einrichten.sh). Zugang aus ~/SK/Jarvis/relay.properties.
 
 Sitzung: Profil Minimal, Schnellmodus, Claude Opus 5.5 (1M), Effort High, wie unter Windows.

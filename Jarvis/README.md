@@ -488,7 +488,7 @@ Jarvis und die angebundenen Apps müssen mit demselben Schlüssel signiert sein 
 „Jarvis, programmiere in App … ein, dass …“ → Werkzeug `programmieren` (`faehigkeit/ProgrammierFaehigkeit.kt`). Zwei Ziele, beide
 über Franks Claude-Abo (keine API-Kosten):
 
-1. **PC** (zuerst): Läuft am PC die Brücke `werkzeuge/pc-bruecke/jarvis-pc-bruecke.ps1` (Aufgabe „JarvisPcBruecke“ bei der
+1. **Rechner** (zuerst der Mac, siehe „Mac“ unten, sonst der Windows-PC): Läuft am PC die Brücke `werkzeuge/pc-bruecke/jarvis-pc-bruecke.ps1` (Aufgabe „JarvisPcBruecke“ bei der
    Anmeldung, eingerichtet mit `einrichten.ps1`), holt sie den Auftrag über den Relay (`/pc/auftrag`, Long-Polling) ab und startet
    über `OpenLauncher.exe --jarvis-auftrag` eine Sitzung wie der Startknopf: Profil Minimal, Schnellmodus, Opus 5.5 (1M),
    Effort High, dazu Remote Control „Jarvis: <App>“. Die Sitzung steht in der Claude-App unter Code. Ob der PC an ist, erkennt
@@ -500,7 +500,7 @@ Jarvis und die angebundenen Apps müssen mit demselben Schlüssel signiert sein 
 
 Agenten und die Tagesauswertung bekommen das Werkzeug nicht (`JarvisAgent.versuche`).
 
-**Mac:** eigene Brücke als Ersatz für den PC, siehe Abschnitt „Mac“ unten. Einrichtung per Prompt `JARVIS-MACOS-PROMPT.md`.
+**Mac:** eigene Brücke, Vorrangrechner vor dem Windows-PC, siehe Abschnitt „Mac“ unten. Einrichtung per Prompt `JARVIS-MACOS-PROMPT.md`.
 
 ### Fortschritt und Rückfragen im Jarvis-Chat
 
@@ -550,9 +550,9 @@ Stand 17.10.2026 (OpenLauncherMac 1.24.39). Voraussetzung: `~/SK/Jarvis/` (`rela
   Terminal.app, Profil Minimal (`Profiles/ClaudeCodeMac/minimal`), Schnellmodus, Opus 5.5 (1M), Effort High, Remote Control
   „Jarvis: <App>“, mit Nummer dieselben Hooks wie unter Windows (`python3 …/jarvis_hook.py`). Notweg ohne passenden Launcher:
   `claude` direkt in Terminal.app mit eigenem `--settings`.
-- **Vorrang Windows** (Franks Wahl, Lösung B): Die Mac-Brücke fragt mit `X-Jarvis-Rang: ersatz`. Der Relay gibt ihr nur
-  Aufträge, solange die Windows-Brücke (ohne Rang) seit 45 s nicht abgefragt hat; wartet sie schon, wenn der PC dazukommt, legt
-  der Relay den Auftrag zurück. `GET /geraet/pc` nennt unter `rechner_alle` beide Brücken mit Rang und Alter, `rechner` ist der
+- **Vorrang Mac** (Franks Wahl vom 25.10.2026, vorher Vorrang Windows): Die Mac-Brücke fragt mit `X-Jarvis-Rang: ersatz`
+  (der Name blieb), die Windows-Brücke ohne Rang. Opus-Aufträge holt der Mac; die Windows-Brücke legt sie zurück, solange der Mac
+  eine lebende Abfrage hat oder seine letzte vor weniger als 3 s endete. Sol 6.1 holt nur die Windows-Brücke. `GET /geraet/pc` nennt unter `rechner_alle` beide Brücken mit Rang und Alter, `rechner` ist der
   Rechner, der den nächsten Auftrag bekäme.
 - **Hook** `jarvis_hook.py` ist eine Datei für beide Systeme: auf dem Mac Protokoll und Zustand in `~/Library/Logs/JarvisPcBruecke/`,
   Claude-Prozess über die Elternkette (`ps -o ppid=,comm=`), Lebenszeichen über `os.kill(pid, 0)`; so endet der Warter mit der Sitzung.
