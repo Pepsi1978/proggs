@@ -240,7 +240,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 val id = a.optString("auftrag_id").trim()
                 // Sitzungen von vor dem Update kennen das Feld antwort_auf nicht: Sie beginnen schritt mit „Antwort auf G…:“.
                 val vorspann = ANTWORT_VORSPANN.find(a.optString("schritt").trim())
+                val bisher = Auftragsbuch.finde(app, id)
+                // Nur eine Gesprächsnachricht genau dieses Auftrags zählt (keine N-Nachtragsnummer, keine frage_id, keine fremde G-Nummer).
+                // Ohne Angabe: Wartet Jarvis gerade auf die Antwort einer zugestellten Frage, ist die nächste laeuft-Meldung die Antwort.
                 val antwortAuf = a.optString("antwort_auf").trim().ifEmpty { vorspann?.groupValues?.get(1).orEmpty() }
+                    .takeIf { Auftragsbuch.nachricht(bisher, it) != null }
+                    ?: Auftragsbuch.letzteNachricht(bisher)?.takeIf { n -> a.optString("stand") == "laeuft" && n.optString("stand") == "zugestellt" &&
+                        n.optString("antwort").isEmpty() && n.optString("text").startsWith(FRAGE_KOPF) && gespraechsAntworten.containsKey(n.optString("id")) }
+                        ?.optString("id").orEmpty()
                 // Früher hart nach 400 Zeichen abgeschnitten (mitten im Satz); jetzt länger und sichtbar gekürzt.
                 val schritt = ProgrammierAbschluss.kuerzen(a.optString("schritt").trim().let { t -> vorspann?.let { t.removeRange(it.range).trim() } ?: t },
                     ProgrammierAbschluss.MAX_FORTSCHRITT)
@@ -260,7 +267,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     if (nachtraege.isEmpty()) sprachAbschluss(eintrag)
                     if (nachtraege.isEmpty()) Ergebnis("Gemeldet.")
                     else {
-                        Auftragsbuch.melde(app, id, "laeuft", "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(200) }, "")
+                        Auftragsbuch.melde(app, id, "laeuft", if (nachtraege.all { istNachricht(it.optString("id")) }) "✓ An den Programmierer übergeben."
+                            else "📨 Nachtrag an die Sitzung übergeben: " + nachtraege.joinToString(" · ") { anzeige(it).replace('\n', ' ').take(200) }, "")
                             ?.let { verteile(it, null, von = ProgrammierChat.VON_JARVIS) }
                         Ergebnis("Gemeldet.\n\n" + (if (nachtraege.all { istNachricht(it.optString("id")) })
                             "JARVIS SPRICHT MIT DIR zu diesem Auftrag (AUFTRAG-ID ${eintrag.optString("id")}): Reagiere genau wie in der Nachricht beschrieben und arbeite danach an deiner Aufgabe weiter.\n\n"
@@ -1003,7 +1011,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (neu.isEmpty()) return
         val text = schritt.ifBlank {
             if (neu.all { istNachricht(it.optString("id")) }) "✓ Beim Programmierer angekommen."
-            else "📨 Nachtrag in der Sitzung angekommen: " + neu.joinToString(" · ") { it.optString("text").replace('\n', ' ').take(300) }
+            else "📨 Nachtrag in der Sitzung angekommen: " + neu.joinToString(" · ") { anzeige(it).replace('\n', ' ').take(300) }
         }
         // Den Satz des Hooks meldet der Programmierer; ohne ihn schreibt Jarvis selbst, dass der Nachtrag angekommen ist.
         Auftragsbuch.melde(app, auftragId, "laeuft", ProgrammierAbschluss.kuerzen(text, ProgrammierAbschluss.MAX_MELDUNG), "")
@@ -1105,10 +1113,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             return Ergebnis("Zugestellt: Nachtrag $nummer ist in derselben Sitzung von Auftrag $id ($appName) angekommen, sie arbeitet ihn jetzt ab. " +
                 "Umgesetzt ist er, wenn programmierauftraege ihn als bearbeitet zeigt.")
         }
-        val vor = if (antwort.isNull("kontakt_vor_s")) -1 else antwort.optInt("kontakt_vor_s", -1)
-        val warterVor = if (antwort.isNull("warter_vor_s")) -1 else antwort.optInt("warter_vor_s", -1)
-        // Arbeitet: kürzlich eine Meldung, und danach hat kein Warter mehr im Leerlauf abgefragt (sonst ist die Sitzung seitdem weg).
-        val arbeitet = vor in 0..600 && (warterVor < 0 || warterVor > vor)
+        val vor = kontaktVor(antwort)
+        val arbeitet = arbeitet(antwort)
         return when {
             // Der Relay hat schon bis zu 8 s auf die Übernahme gewartet: Kam sie nicht, ist die Sitzung womöglich gerade geschlossen worden.
             antwort.optBoolean("wartet") -> Ergebnis("Angenommen, aber noch NICHT zugestellt: Nachtrag $nummer für Auftrag $id ($appName). Die Sitzung hat eben noch auf " +
@@ -1122,6 +1128,16 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 "wartet ohne Nachtrags-Empfang. Nachtrag $nummer bleibt sieben Tage eingereiht und geht nur in genau diese Sitzung, sobald sie sich wieder meldet. " +
                 "Sag Frank das offen; einen Ersatzauftrag startet Jarvis nicht.")
         }
+    }
+
+    /** Sekunden seit der letzten Arbeit der Sitzung laut Relay (-1 = unbekannt). */
+    private fun kontaktVor(antwort: JSONObject) = if (antwort.isNull("kontakt_vor_s")) -1 else antwort.optInt("kontakt_vor_s", -1)
+
+    /** Arbeitet: kürzlich eine Meldung, und danach hat kein Warter mehr im Leerlauf abgefragt (sonst ist die Sitzung seitdem weg). */
+    private fun arbeitet(antwort: JSONObject): Boolean {
+        val vor = kontaktVor(antwort)
+        val warterVor = if (antwort.isNull("warter_vor_s")) -1 else antwort.optInt("warter_vor_s", -1)
+        return vor in 0..600 && (warterVor < 0 || warterVor > vor)
     }
 
     /** Legt [text] als Nachtrag [nummer] beim Relay für die Sitzung von Auftrag [id] ab; Antwort: zugestellt, wartet, kontakt_vor_s, pc. */
@@ -1144,10 +1160,10 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         fun laufend(e: JSONObject) = e.optString("stand") in listOf("laeuft", "frage", STAND_UNKLAR) + GESPERRT
         fun ausGespraech(g: String): Pair<JSONObject?, String>? {
             val hier = Auftragsbuch.alleImGespraech(app, g)
-            if (hier.isNotEmpty()) return (hier.lastOrNull { laufend(it) } ?: hier.last()) to ""
+            hier.lastOrNull { laufend(it) }?.let { return it to "" }
             val gestartet = Auftragsbuch.gestartetAus(app, g).filter { laufend(it) }
             return when (gestartet.size) {
-                0 -> null
+                0 -> hier.lastOrNull()?.let { it to "" }
                 1 -> gestartet.first() to ""
                 else -> null to "Aus diesem Gespräch laufen mehrere Programmier-Sessions; welche gemeint ist, ist nicht eindeutig. Frag Frank kurz, welche er meint " +
                     "(oder er öffnet sie in Jarvis).\n" + gestartet.reversed().joinToString("\n") { "- " + Auftragsbuch.kurzZeile(it) }
@@ -1168,11 +1184,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val antworten = "programmier_fortschritt (MCP-Server Jarvis; kennt es kein Feld antwort_auf, beginne schritt mit „Antwort auf $nummer: “) " +
             "mit auftrag_id=$id, stand=laeuft, antwort_auf=$nummer und schritt="
         return if (art == ART_FRAGE)
-            "FRAGE VON JARVIS (Nachricht $nummer): $text\n\nJarvis (Franks Sprachassistent) wartet auf deine Antwort, um sie Frank vorzulesen. Antworte sofort, " +
+            "$FRAGE_KOPF (Nachricht $nummer): $text\n\nJarvis (Franks Sprachassistent) wartet auf deine Antwort, um sie Frank vorzulesen. Antworte sofort, " +
                 "bevor du weiterarbeitest: kurz, in ganzen Sätzen, gut vorlesbar und ohne Markdown, mit ${antworten}deiner Antwort. Brauchst du selbst eine Klärung, " +
                 "stell die Gegenfrage genau so als deine Antwort; Jarvis antwortet dir mit einer neuen Nachricht. Danach arbeitest du an deiner bisherigen Aufgabe weiter."
         else
-            "WUNSCH VON FRANK über Jarvis (Nachricht $nummer): $text\n\nEr gehört zu dieser Sitzung und ihrem Auftrag. Bestätige sofort in einem kurzen, gut " +
+            "$WUNSCH_KOPF (Nachricht $nummer): $text\n\nEr gehört zu dieser Sitzung und ihrem Auftrag. Bestätige sofort in einem kurzen, gut " +
                 "vorlesbaren Satz ohne Markdown mit ${antworten}was du jetzt tust (ist er unklar, stell stattdessen dort deine Gegenfrage). Setze ihn dann hier um, " +
                 "schließe danach wieder nach den Profilregeln ab (bauen, Version, Commit, Push, Installation) und melde stand=fertig."
     }
@@ -1191,9 +1207,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val id = eintrag.optString("id")
         val appName = eintrag.optString("app")
         if (art == ART_WARTEN) {
-            val offen = offeneNachricht[id.uppercase()]
-                ?: return Ergebnis("Jarvis wartet bei Auftrag $id ($appName) auf keine Antwort des Programmierers. Zuletzt gemeldet: ${eintrag.optString("schritt").take(500)}")
-            return warteAufAntwort(id, appName, offen, System.currentTimeMillis())
+            val letzte = Auftragsbuch.letzteNachricht(eintrag)
+                ?: return Ergebnis("Jarvis hat dem Programmierer von Auftrag $id ($appName) noch nichts geschrieben. Zuletzt gemeldet: ${eintrag.optString("schritt").take(500)}")
+            letzte.optString("antwort").takeIf { it.isNotEmpty() }?.let { return antwortErgebnis(id, appName, it) }
+            if (letzte.optString("stand") !in listOf("angenommen", "zugestellt"))
+                return Ergebnis("Auf die letzte Nachricht an Auftrag $id ($appName) kommt keine Antwort mehr (${letzte.optString("stand")}). Zuletzt gemeldet: ${eintrag.optString("schritt").take(500)}")
+            // seit = 0: Eine Rückfrage, die schon vor diesem Aufruf kam, meldet sich sofort.
+            return warteAufAntwort(id, appName, letzte.optString("id"), 0L)
         }
         if (text.length < 3) return Ergebnis("Der Text ist leer. Formuliere die Frage bzw. den Wunsch vollständig aus.", fehler = true)
         eintrag.optJSONObject("offeneFrage")?.takeIf { eintrag.optString("stand") == "frage" }?.let { frage ->
@@ -1217,7 +1237,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             ProgrammierChat.poste(app, it, ProgrammierChat.zeile(ProgrammierChat.VON_JARVIS,
                 (if (art == ART_FRAGE) "Frage an den Programmierer: " else "Franks Wunsch an den Programmierer: ") + text, "💬"), ProgrammierChat.ART_STATUS)
         }
-        offeneNachricht[id.uppercase()] = nummer
         val seit = System.currentTimeMillis()
         if (cloud) return Ergebnis("Angenommen: Die Cloud-Sitzung von Auftrag $id ($appName) bekommt die ${if (art == ART_FRAGE) "Frage" else "Nachricht"} mit ihrer nächsten " +
             "Fortschrittsmeldung. Ihre Antwort erscheint dann im Gespräch und wird vorgelesen; abholen kannst du sie mit art=warten. Sag Frank das kurz.")
@@ -1225,15 +1244,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val wartend = CompletableDeferred<String>().also { gespraechsAntworten[nummer] = it }
         val antwort = runCatching { anSitzung(id, nummer, inhalt) }.getOrElse { fehler ->
             gespraechsAntworten.remove(nummer)
-            offeneNachricht.remove(id.uppercase(), nummer)
             Auftragsbuch.setzeNachtraege(app, id, setOf(nummer), setOf("angenommen"), "fehler")
             return Ergebnis("Die Nachricht ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}); nichts wurde zugestellt. Sag Frank das kurz.", fehler = true)
         }
         if (antwort.optBoolean("zugestellt")) alsZugestellt(id, setOf(nummer), "")
-        val vor = if (antwort.isNull("kontakt_vor_s")) -1 else antwort.optInt("kontakt_vor_s", -1)
-        val warterVor = if (antwort.isNull("warter_vor_s")) -1 else antwort.optInt("warter_vor_s", -1)
-        val arbeitet = vor in 0..600 && (warterVor < 0 || warterVor > vor)
-        if (!antwort.optBoolean("zugestellt") && !antwort.optBoolean("wartet") && !arbeitet) {
+        if (!antwort.optBoolean("zugestellt") && !antwort.optBoolean("wartet") && !arbeitet(antwort)) {
             gespraechsAntworten.remove(nummer)
             return Ergebnis("Angenommen, aber NICHT zugestellt: Die Sitzung von Auftrag $id ($appName) ist gerade nicht erreichbar" +
                 (if (antwort.optBoolean("pc")) "" else ", der Rechner ist aus oder die PC-Brücke läuft nicht") + ". Die Nachricht bleibt eingereiht und geht nur in genau diese " +
@@ -1251,17 +1266,18 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         try {
             val ende = System.currentTimeMillis() + GESPRAECH_WARTEN_MS
             while (System.currentTimeMillis() < ende) {
-                Auftragsbuch.antwortAuf(app, id, nummer).takeIf { it.isNotEmpty() }?.let { return antwortErgebnis(id, appName, it) }
-                withTimeoutOrNull(1_000L) { wartend.await() }?.let { return antwortErgebnis(id, appName, it) }
                 val e = Auftragsbuch.finde(app, id) ?: break
+                Auftragsbuch.nachricht(e, nummer)?.optString("antwort")?.takeIf { it.isNotEmpty() }?.let { return antwortErgebnis(id, appName, it) }
                 val frage = e.optJSONObject("offeneFrage")
                 if (frage != null && e.optString("stand") == "frage" && frage.optLong("eingang") >= seit)
                     return Ergebnis("GEGENFRAGE des Programmierers (Auftrag $id, $appName, frage_id ${frage.optString("frage_id")}): ${Auftragsbuch.frageText(frage)}\n\n" +
                         "Beantworte sie mit programmier_antwort: selbst, wenn sie sich aus Gespräch und Auftrag ergibt, sonst frag Frank kurz. Seine Antwort auf deine " +
                         "Nachricht holst du danach mit programmierer_sprechen art=warten ab.")
+                withTimeoutOrNull(3_000L) { wartend.await() }?.let { return antwortErgebnis(id, appName, it) }
             }
         } finally {
-            gespraechsAntworten.remove(nummer, wartend)
+            // Hat gespraechsAntwort das Deferred schon genommen, kommt die Antwort gleich: dann sie liefern statt „steht noch aus“.
+            if (!gespraechsAntworten.remove(nummer, wartend)) withTimeoutOrNull(2_000L) { wartend.await() }?.let { return antwortErgebnis(id, appName, it) }
         }
         return Ergebnis("Die Nachricht ist beim Programmierer von Auftrag $id ($appName), seine Antwort steht noch aus (er ist mitten in einem Arbeitsschritt). " +
             "Sag Frank das kurz: Sobald sie kommt, erscheint sie im Gespräch und Jarvis liest sie vor. Abholen kannst du sie mit art=warten.")
@@ -1279,7 +1295,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         val id = eintrag.optString("id")
         val nummer = nachricht.uppercase()
         Auftragsbuch.nachrichtBeantwortet(app, id, nummer, antwort)
-        offeneNachricht.remove(id.uppercase(), nummer)
         if (gespraechsAntworten.remove(nummer)?.complete(antwort) == true) return
         val art = de.frank.jarvis.meldung.Meldungsarten.PROGRAMMIEREN
         if (de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, art))
@@ -1927,15 +1942,21 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             val eintrag = (0 until liste.length()).map { liste.getJSONObject(it) }.lastOrNull { it.optString("id").equals(id, ignoreCase = true) } ?: return false
             val n = eintrag.optJSONArray("nachtraege")?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }
                 ?.lastOrNull { it.optString("id").equals(nachricht, ignoreCase = true) } ?: return false
-            n.put("stand", "beantwortet").put("beantwortet", System.currentTimeMillis()).put("antwort", antwort.take(2_000))
+            // Ein Wunsch ist mit der Bestätigung nicht erledigt: Er bleibt zugestellt und zählt beim nächsten fertig als bearbeitet
+            // (eigene Abschluss-Ansage); eine Frage ist mit der Antwort beantwortet.
+            if (!n.optString("text").startsWith(WUNSCH_KOPF)) n.put("stand", "beantwortet")
+            n.put("beantwortet", System.currentTimeMillis()).put("antwort", antwort.take(2_000))
             schreib(context, liste)
             return true
         }
 
-        /** Die schon eingetroffene Antwort auf die Gesprächsnachricht [nachricht] (leer = noch keine). */
-        fun antwortAuf(context: Context, id: String, nachricht: String): String = finde(context, id)?.optJSONArray("nachtraege")
-            ?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }?.lastOrNull { it.optString("id").equals(nachricht, ignoreCase = true) }
-            ?.optString("antwort").orEmpty()
+        /** Die Gesprächsnachricht [nachricht] am Auftrag [e] (null = keine, etwa eine fremde Nummer). */
+        fun nachricht(e: JSONObject?, nachricht: String): JSONObject? = e?.optJSONArray("nachtraege")
+            ?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }?.lastOrNull { istNachricht(it.optString("id")) && it.optString("id").equals(nachricht, ignoreCase = true) }
+
+        /** Die jüngste Gesprächsnachricht von Jarvis an Auftrag [e] (dauerhaft, auch nach einem Neustart). */
+        fun letzteNachricht(e: JSONObject?): JSONObject? = e?.optJSONArray("nachtraege")
+            ?.let { l -> (0 until l.length()).map { l.getJSONObject(it) } }?.lastOrNull { istNachricht(it.optString("id")) }
 
         /** Setzt Nachträge ([ids], null = alle) von einem der Stände [von] auf [nach]; liefert die geänderten. */
         @Synchronized
@@ -2218,8 +2239,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         /** So lange wartet eine Frage auf die Antwort; darunter bleibt das Plugin-Zeitlimit (120 s) und das Live-Gespräch hängt nicht ewig. */
         private const val GESPRAECH_WARTEN_MS = 45_000L
         private val gespraechsAntworten = java.util.concurrent.ConcurrentHashMap<String, CompletableDeferred<String>>()
-        private val offeneNachricht = java.util.concurrent.ConcurrentHashMap<String, String>()
         internal fun istNachricht(nachtragId: String) = nachtragId.startsWith(NACHRICHT)
+        private const val FRAGE_KOPF = "FRAGE VON JARVIS"
+        private const val WUNSCH_KOPF = "WUNSCH VON FRANK über Jarvis"
+        /** Was Frank von einem Nachtrag sieht: bei Gesprächsnachrichten nur der erste Absatz (ohne die Anleitung an die Sitzung). */
+        private fun anzeige(n: JSONObject) = n.optString("text").let { if (istNachricht(n.optString("id"))) it.substringBefore("\n\n") else it }
         private val ANTWORT_VORSPANN = Regex("^(?:💬\\s*)?Antwort auf (G[A-Z0-9]{5})\\s*:", RegexOption.IGNORE_CASE)
 
         /** Gespräche, denen das Auftragsbuch einen Programmierauftrag zuordnet (für den Reiter „Programmierung“). */

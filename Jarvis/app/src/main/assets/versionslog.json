@@ -359,6 +359,7 @@
     { "versionCode": 353, "versionName": "1.8.342", "stand": "25.10.2026, 17:25 Uhr", "notiz": "Claude-Modelle wie Fable, Sonnet oder Haiku mit Effort, Profil und Modus starten aus Jarvis schon mit dem jetzigen OpenLauncher am Mac." },
     { "versionCode": 354, "versionName": "1.8.343", "stand": "25.10.2026, 17:42 Uhr", "notiz": "Die freie Modellwahl greift nur, wenn du das Modell selbst nennst; Sol bleibt dabei im Codex CLI, und nach einem Fehlstart bleiben die Knöpfe Opus und Sol offen." },
     { "versionCode": 355, "versionName": "1.8.344", "stand": "25.10.2026, 17:44 Uhr", "notiz": "Jarvis kann jetzt mit dem Programmierer der geöffneten Session sprechen: Fragen stellen, Antworten vorlesen und deine Wünsche ohne Nachtrag-Befehl direkt weitergeben." },
-    { "versionCode": 356, "versionName": "1.8.345", "stand": "25.10.2026, 17:48 Uhr", "notiz": "Auch Programmier-Sitzungen, die vor dem Update gestartet wurden, können Jarvis jetzt auf seine Fragen antworten." }
+    { "versionCode": 356, "versionName": "1.8.345", "stand": "25.10.2026, 17:48 Uhr", "notiz": "Auch Programmier-Sitzungen, die vor dem Update gestartet wurden, können Jarvis jetzt auf seine Fragen antworten." },
+    { "versionCode": 357, "versionName": "1.8.346", "stand": "25.10.2026, 17:54 Uhr", "notiz": "Das Gespräch mit dem Programmierer ist zuverlässiger: späte Antworten lassen sich abholen, Gegenfragen kommen immer an, und nach einem Wunsch wird der neue Abschluss wieder angesagt." }
   ]
 }
