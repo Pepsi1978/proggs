@@ -27,9 +27,9 @@ public static class OpenCodeVariantCatalog
         };
     }
 
-    /// <summary>Kimi-Code-Abo: OpenCode und Kimi CLI kennen low/high/max; HighSpeed hat keine Stufen.</summary>
+    /// <summary>Kimi-Code-Abo: OpenCode und Kimi CLI kennen low/high/max; kimi-for-coding-highspeed hat keine Stufen.</summary>
     private static IReadOnlyList<string> GetKimiLevels(string slug) =>
-        slug is "k3.1-pro" or "k3" or "k3-256k" or "kimi-for-coding" ? ["low", "high", "max"] : [];
+        slug is "k3.1-pro" or "k3.1-pro-highspeed" or "k3" or "k3-256k" or "kimi-for-coding" ? ["low", "high", "max"] : [];
 
     /// <summary>
     /// Antigravity CLI (agy --effort): Gemini 3.8 Flash kennt low/medium/high, Gemini 4 Argon bietet

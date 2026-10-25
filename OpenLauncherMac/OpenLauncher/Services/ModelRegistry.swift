@@ -63,6 +63,8 @@ final class ModelRegistry {
 
     static let moonshotGroupId = "moonshot"
     static let moonshotProviderId = "kimi-code-plan-global"
+    /// Kimi-Vorgaben bis 1.24.45, als die Moonshot-Gruppe noch keinen Nachtrags-Merker fuehrte.
+    private static let legacyMoonshotSlugs = ["k3", "k3-256k", "kimi-for-coding", "kimi-for-coding-highspeed"]
     static let googleGroupId = "google"
     static let googleProviderId = "google"
 
@@ -488,7 +490,11 @@ final class ModelRegistry {
 
             if group.id.caseInsensitiveCompare(ModelRegistry.moonshotGroupId) == .orderedSame {
                 // Neue Kimi-Vorgaben (z. B. K3.1 Pro) einmalig nachtragen; danach bleiben
-                // Nutzer-Aenderungen unangetastet.
+                // Nutzer-Aenderungen unangetastet. Gruppen von vor 1.24.46 haben keinen Merker:
+                // ihre damaligen Vorgaben gelten als bekannt, damit geloeschte nicht zurueckkehren.
+                if group.knownSyncedModelSlugs.isEmpty {
+                    for slug in ModelRegistry.legacyMoonshotSlugs { ModelRegistry.addUnique(&group.knownSyncedModelSlugs, slug) }
+                }
                 for (index, definition) in defaults.models.enumerated() {
                     if group.knownSyncedModelSlugs.contains(where: { $0.caseInsensitiveCompare(definition.slug) == .orderedSame }) { continue }
                     if !group.models.contains(where: { $0.slug.caseInsensitiveCompare(definition.slug) == .orderedSame }) {
@@ -592,6 +598,7 @@ final class ModelRegistry {
             // angemeldet. Die Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.
             createGroup(moonshotGroupId, "Moonshot AI", moonshotProviderId, "Moonshot AI", [
                 model("k3.1-pro", "Kimi K3.1 Pro", moonshotProviderId, "Moonshot AI"),
+                model("k3.1-pro-highspeed", "Kimi K3.1 Pro HighSpeed", moonshotProviderId, "Moonshot AI"),
                 model("k3", "Kimi K3 (1M)", moonshotProviderId, "Moonshot AI"),
                 model("k3-256k", "Kimi K3 256K", moonshotProviderId, "Moonshot AI"),
                 model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", moonshotProviderId, "Moonshot AI"),
@@ -682,7 +689,8 @@ final class ModelRegistry {
     private static func createGroup(_ id: String, _ title: String, _ providerId: String,
                                     _ providerName: String, _ models: [ModelEntry]) -> ModelGroupEntry {
         let known: [String]
-        if id.caseInsensitiveCompare("openrouter-free") == .orderedSame {
+        if id.caseInsensitiveCompare("openrouter-free") == .orderedSame
+            || id.caseInsensitiveCompare(moonshotGroupId) == .orderedSame {
             known = models.map(\.slug)
         } else if id.caseInsensitiveCompare("openai") == .orderedSame {
             known = models.filter { m in gpt56Models.contains { $0.slug.caseInsensitiveCompare(m.slug) == .orderedSame } }.map(\.slug)

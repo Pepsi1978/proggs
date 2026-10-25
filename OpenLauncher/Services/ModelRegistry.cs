@@ -593,12 +593,16 @@ public sealed class ModelRegistry
             if (string.Equals(group.Id, MoonshotGroupId, StringComparison.OrdinalIgnoreCase))
             {
                 // Neue Kimi-Vorgaben (z. B. K3.1 Pro) einmalig nachtragen; danach bleiben
-                // Nutzer-Aenderungen unangetastet.
-                foreach (var definition in defaults.Models)
+                // Nutzer-Aenderungen unangetastet. Gruppen von vor 1.24.102 haben keinen Merker:
+                // ihre damaligen Vorgaben gelten als bekannt, damit geloeschte nicht zurueckkehren.
+                if (group.KnownSyncedModelSlugs.Count == 0)
+                    foreach (var slug in LegacyMoonshotSlugs) AddUnique(group.KnownSyncedModelSlugs, slug);
+                for (var index = 0; index < defaults.Models.Count; index++)
                 {
+                    var definition = defaults.Models[index];
                     if (group.KnownSyncedModelSlugs.Contains(definition.Slug, StringComparer.OrdinalIgnoreCase)) continue;
                     if (!group.Models.Any(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
-                        group.Models.Insert(Math.Min(defaults.Models.IndexOf(definition), group.Models.Count), definition);
+                        group.Models.Insert(Math.Min(index, group.Models.Count), definition);
                     AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
                 }
             }
@@ -702,6 +706,7 @@ public sealed class ModelRegistry
         CreateGroup(MoonshotGroupId, "Moonshot AI", MoonshotProviderId, "Moonshot AI", new[]
         {
             Model("k3.1-pro", "Kimi K3.1 Pro", MoonshotProviderId, "Moonshot AI"),
+            Model("k3.1-pro-highspeed", "Kimi K3.1 Pro HighSpeed", MoonshotProviderId, "Moonshot AI"),
             Model("k3", "Kimi K3 (1M)", MoonshotProviderId, "Moonshot AI"),
             Model("k3-256k", "Kimi K3 256K", MoonshotProviderId, "Moonshot AI"),
             Model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", MoonshotProviderId, "Moonshot AI"),
@@ -776,6 +781,8 @@ public sealed class ModelRegistry
     private const string NvidiaProviderId = ModelEntry.NvidiaProviderId;
     public const string MoonshotGroupId = "moonshot";
     public const string MoonshotProviderId = "kimi-code-plan-global";
+    /// <summary>Kimi-Vorgaben bis 1.24.101, als die Moonshot-Gruppe noch keinen Nachtrags-Merker fuehrte.</summary>
+    private static readonly string[] LegacyMoonshotSlugs = ["k3", "k3-256k", "kimi-for-coding", "kimi-for-coding-highspeed"];
     public const string GoogleGroupId = "google";
     public const string GoogleProviderId = "google";
 
@@ -821,7 +828,8 @@ public sealed class ModelRegistry
         ProviderName = providerName,
         IsExpanded = true,
         Models = new ObservableCollection<ModelEntry>(models),
-        KnownSyncedModelSlugs = string.Equals(id, "openrouter-free", StringComparison.OrdinalIgnoreCase)
+        KnownSyncedModelSlugs = string.Equals(id, "openrouter-free", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(id, MoonshotGroupId, StringComparison.OrdinalIgnoreCase)
             ? models.Select(m => m.Slug).ToList()
             : string.Equals(id, "openai", StringComparison.OrdinalIgnoreCase)
                 ? models.Where(model => Gpt56Models.Any(definition =>
