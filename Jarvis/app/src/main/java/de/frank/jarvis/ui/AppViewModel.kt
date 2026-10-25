@@ -868,6 +868,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun ohneNachtragVorspann(text: String) =
         text.trimStart().takeIf { it.startsWith(NACHTRAG_VORSPANN) }?.removePrefix(NACHTRAG_VORSPANN)?.trimStart() ?: text
 
+    /** Schwebestapel rechts eingeklappt (nur der Pfeil nach oben sichtbar); beim App-Start ausgeklappt. */
+    var schweberEingeklappt by mutableStateOf(false)
+
     /** Zählt bei jedem Antippen von „Neue Session“ hoch; das Symbol leuchtet dann kurz grün auf. */
     var neueSessionBlitz by mutableStateOf(0); private set
 

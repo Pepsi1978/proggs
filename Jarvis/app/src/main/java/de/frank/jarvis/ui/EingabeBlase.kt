@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.rounded.LightMode
@@ -375,7 +376,25 @@ fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compo
 @Composable
 fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
+    // Nur die frische Frage zum gerade abgeschickten Auftrag (siehe ProgrammierFaehigkeit.frischeWahlen), und solange Frank nicht
+    // schon den nächsten Entwurf schreibt. Alte, liegengebliebene Wahlen zeigen unten keine Knöpfe.
+    val stand by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand.collectAsState()
+    val frisch by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.frischeWahlen.collectAsState()
+    val karte = if (vm.entwurf.isNotBlank()) null else vm.gespraech.lastOrNull { n ->
+        n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
+            de.frank.jarvis.data.Gespraeche.wahlId(n.kontext).let { id -> id in frisch && stand[id] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN }
+    }
+    // Kommt eine frische Auswahl (Opus/Sol, CLI, Review), klappt der Stapel von selbst auf, damit ihre Knöpfe zu sehen sind.
+    val karteId = karte?.let { de.frank.jarvis.data.Gespraeche.wahlId(it.kontext) }
+    LaunchedEffect(karteId) { if (karteId != null) vm.schweberEingeklappt = false }
     Column(modifier, horizontalAlignment = Alignment.End) {
+        // Eingeklappt verschwindet der ganze Stapel nach unten in den Pfeil; die Liste behält ihren Abstand, der Chat springt nicht.
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !vm.schweberEingeklappt,
+            enter = androidx.compose.animation.expandVertically(tween(180), expandFrom = Alignment.Bottom) + androidx.compose.animation.fadeIn(tween(180)),
+            exit = androidx.compose.animation.shrinkVertically(tween(180), shrinkTowards = Alignment.Bottom) + androidx.compose.animation.fadeOut(tween(140)),
+        ) {
+        Column(horizontalAlignment = Alignment.End) {
         // Ganz oben „Tagesauswertung aktualisieren“ (früher der Kern in der Kopfleiste): frische Daten aller Apps holen und neu auswerten.
         // Sperre gegen Doppeltippen: „läuft“ springt erst um, wenn der Dienst wirklich angefangen hat; bis dahin gilt „startet“.
         val wertetAus = de.frank.jarvis.auswertung.Tagesauswertung.stand.collectAsState().value.laeuft
@@ -449,14 +468,6 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
         // Unten in einer Zeile: links die Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review), rechts
         // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
-        // Nur die frische Frage zum gerade abgeschickten Auftrag (siehe ProgrammierFaehigkeit.frischeWahlen), und solange Frank nicht
-        // schon den nächsten Entwurf schreibt. Alte, liegengebliebene Wahlen zeigen unten keine Knöpfe.
-        val stand by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlStand.collectAsState()
-        val frisch by de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.frischeWahlen.collectAsState()
-        val karte = if (vm.entwurf.isNotBlank()) null else vm.gespraech.lastOrNull { n ->
-            n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
-                de.frank.jarvis.data.Gespraeche.wahlId(n.kontext).let { id -> id in frisch && stand[id] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN }
-        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (karte != null) {
                 val id = de.frank.jarvis.data.Gespraeche.wahlId(karte.kontext)
@@ -473,8 +484,22 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
             }
         }
-        // Die frühere Lücke zwischen „Neue Session“ und den unteren Symbolen steht jetzt unten: Die oberen bleiben, wo sie waren.
-        Spacer(Modifier.height(SCHWEBE_LUECKE))
+        }
+        }
+        // Unter „Programmierer“ in der freien Bubble: Pfeil ohne Kreis und Grund, grau wie der Papierkorb. Nach unten = einklappen,
+        // nach oben = wieder aufklappen. Er bleibt an seiner Stelle, die übrigen Symbole stehen ausgeklappt so hoch wie früher.
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
+        val drehung by androidx.compose.animation.core.animateFloatAsState(if (vm.schweberEingeklappt) 180f else 0f, tween(180), label = "klappPfeil")
+        Box(
+            Modifier.size(SCHWEBE_GROESSE).clip(CircleShape)
+                .antippen { vm.schweberEingeklappt = !vm.schweberEingeklappt }
+                .semantics { contentDescription = if (vm.schweberEingeklappt) "Symbole aufklappen" else "Symbole einklappen" },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = f.text.copy(alpha = 0.5f),
+                modifier = Modifier.size(30.dp).graphicsLayer { rotationZ = drehung })
+        }
+        Spacer(Modifier.height(SCHWEBE_ABSTAND))
     }
 }
 
