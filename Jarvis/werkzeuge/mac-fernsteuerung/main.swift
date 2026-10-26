@@ -718,6 +718,29 @@ final class Dienst {
     /// Ferne nicht entsperren).
     private var sperreGewarnt = false
 
+    /// macOS fragt etwa alle 30–90 Tage per Dialog am Mac, ob Terminal den Bildschirm weiter aufnehmen darf; den
+    /// Dialog kann vom Handy aus niemand bestätigen. Den nächsten Hinweis-Termin daher weit in die Zukunft legen.
+    private func aufnahmeNachfrageAus() {
+        let pfad = NSHomeDirectory() + "/Library/Group Containers/group.com.apple.replayd/ScreenCaptureApprovals.plist"
+        guard let daten = FileManager.default.contents(atPath: pfad),
+              var plist = (try? PropertyListSerialization.propertyList(from: daten, options: [], format: nil)) as? [String: Any]
+        else { return }
+        let fern = DateComponents(calendar: Calendar(identifier: .gregorian), year: 2100, month: 1, day: 1).date!
+        var geaendert = false
+        for app in ["com.apple.Terminal", "de.frank.jarvis.fernsteuerung"] {
+            var e = plist[app] as? [String: Any] ?? [:]
+            if (e["kScreenCapturePrivacyHintDate"] as? Date ?? .distantPast) < fern.addingTimeInterval(-86400) {
+                e["kScreenCapturePrivacyHintDate"] = fern
+                e["kScreenCapturePrivacyHintPolicy"] = 2_147_483_647
+                e["kScreenCaptureApprovalLastAlerted"] = Date()
+                plist[app] = e; geaendert = true
+            }
+        }
+        guard geaendert, let neu = try? PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0) else { return }
+        do { try neu.write(to: URL(fileURLWithPath: pfad), options: .atomic); log("Nachfrage zur Bildschirmaufnahme bis 2100 abgeschaltet") }
+        catch { log("Nachfrage zur Bildschirmaufnahme: \(error.localizedDescription)") }
+    }
+
     /// Bildschirmschoner nie starten (Benutzereinstellung, gilt auch nach Neustart).
     private func bildschirmschonerAus() {
         let lesen = Process()
@@ -743,6 +766,7 @@ final class Dienst {
         bildschirm.sicherstellen()
         wach.an()
         bildschirmschonerAus()
+        aufnahmeNachfrageAus()
     }
 
     func start() {
