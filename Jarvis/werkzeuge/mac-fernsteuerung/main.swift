@@ -489,6 +489,18 @@ final class Eingabe {
     /// Sperrbildschirm: wecken, Passwortfeld hervorholen, Passwort tippen, Enter.
     var meldung: ((String) -> Void)?
 
+    /// true, wenn macOS nach Ruhezustand/Zuklappen kein Passwort verlangt ("screenLock is off").
+    static func bildschirmsperreIstAus() -> Bool {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/sbin/sysadminctl")
+        p.arguments = ["-screenLock", "status"]
+        let rohr = Pipe(); p.standardError = rohr; p.standardOutput = rohr
+        guard (try? p.run()) != nil else { return false }
+        p.waitUntilExit()
+        let text = String(data: rohr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        return text.contains("screenLock is off")
+    }
+
     /// "Passwort nach Ruhezustand verlangen" ausschalten (sysadminctl braucht das Benutzerpasswort, kein sudo).
     /// Das Passwort geht nur als Argument an sysadminctl, nie ins Protokoll.
     func bildschirmsperreAus(_ passwort: String) {
@@ -498,8 +510,9 @@ final class Eingabe {
         let rohr = Pipe(); p.standardError = rohr; p.standardOutput = rohr
         do { try p.run() } catch { log("Bildschirmsperre: \(error)"); return }
         p.waitUntilExit()
-        let text = String(data: rohr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let ok = p.terminationStatus == 0 && !text.lowercased().contains("error") && !text.lowercased().contains("fail")
+        _ = rohr.fileHandleForReading.readDataToEndOfFile()
+        // sysadminctl endet auch bei Erfolg oft mit 253: maßgeblich ist der Status danach.
+        let ok = Eingabe.bildschirmsperreIstAus()
         log("Bildschirmsperre aus: \(ok ? "ok" : "fehlgeschlagen (\(p.terminationStatus))")")
         meldung?(ok ? "Am Mac ist „Passwort nach Ruhezustand verlangen“ jetzt aus." : "Die Bildschirmsperre ließ sich nicht ausschalten (Passwort falsch?).")
     }
@@ -690,7 +703,13 @@ final class Dienst {
 
     /// Deckel zu: eigenen Bildschirm bereithalten und wach halten, damit sich der Mac nicht von selbst sperrt
     /// (einen gesperrten Mac lässt macOS aus der Ferne nicht entsperren).
+    private var sperreGewarnt = false
+
     func wachHalten() {
+        // Ziel: Zuklappen sperrt nie. Geht die Sperre wieder an (z. B. Systemeinstellungen), einmal im Protokoll melden.
+        let aus = Eingabe.bildschirmsperreIstAus()
+        if !aus && !sperreGewarnt { log("Achtung: Bildschirmsperre ist an, Zuklappen sperrt den Mac wieder") }
+        sperreGewarnt = !aus
         if Bildschirm.eingebauterAktiv() { if sitzung == nil { wach.aus() }; return }
         bildschirm.sicherstellen()
         wach.an()
