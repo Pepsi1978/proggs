@@ -375,6 +375,7 @@
     { "versionCode": 369, "versionName": "1.8.358", "stand": "26.10.2026, 14:35 Uhr", "notiz": "Neuer Knopf in der unteren Leiste zeigt den Mac-Bildschirm live und lässt ihn per Tippen, Wischen und Handy-Tastatur bedienen, inklusive Entsperren mit dem Mac-Passwort." },
     { "versionCode": 370, "versionName": "1.8.359", "stand": "26.10.2026, 14:56 Uhr", "notiz": "Die Mac-Fernsteuerung kommt jetzt durch die Mac-Firewall und zeigt bei zugeklapptem Deckel zuverlässig einen eigenen Bildschirm." },
     { "versionCode": 371, "versionName": "1.8.360", "stand": "26.10.2026, 15:04 Uhr", "notiz": "Mac-Fernsteuerung: Entsperren meldet jetzt, ob es geklappt hat, kann die automatische Sperre am Mac abschalten, hält den Mac bei zugeklapptem Deckel wach, und Bildausfälle erholen sich von selbst." },
-    { "versionCode": 372, "versionName": "1.8.361", "stand": "26.10.2026, 15:18 Uhr", "notiz": "Mac-Fernsteuerung: Das Abschalten der Mac-Sperre meldet jetzt zuverlässig, ob es geklappt hat; so sperrt der Mac beim Zuklappen nicht mehr." }
+    { "versionCode": 372, "versionName": "1.8.361", "stand": "26.10.2026, 15:18 Uhr", "notiz": "Mac-Fernsteuerung: Das Abschalten der Mac-Sperre meldet jetzt zuverlässig, ob es geklappt hat; so sperrt der Mac beim Zuklappen nicht mehr." },
+    { "versionCode": 373, "versionName": "1.8.362", "stand": "26.10.2026, 15:23 Uhr", "notiz": "Mac-Fernsteuerung: Der Mac-Bildschirm bleibt dauerhaft gleich, auch zugeklappt und über Tage, ohne Bildschirmschoner, Ruhezustand oder Sperre." }
 ]
 }

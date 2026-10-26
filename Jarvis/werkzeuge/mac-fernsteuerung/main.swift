@@ -54,29 +54,36 @@ final class Bildschirm {
         return ids.contains { CGDisplayIsBuiltin($0) != 0 }
     }
 
-    /// Ohne aktiven Bildschirm (Deckel zu) einen virtuellen anlegen und behalten, solange der Dienst läuft.
-    func sicherstellen() {
-        // Eingebauter Bildschirm aktiv (Deckel offen): den zeigen, den eigenen virtuellen freigeben. Sonst immer einen eigenen
-        // virtuellen nutzen, auch wenn Reste fremder virtueller Bildschirme noch als aktiv gelten (deren Inhalt zeichnet
-        // macOS nicht zuverlässig).
-        if Bildschirm.eingebauterAktiv(), virtuell == nil || Bildschirm.aktiveAnzahl() > 1 {
-            virtuell = nil; displayID = CGMainDisplayID(); return
+    /// Logische Größe des eingebauten Bildschirms (auch bei zugeklapptem Deckel abfragbar), sonst 1440x900.
+    static func eingebauteGroesse() -> (Int, Int) {
+        var n: UInt32 = 0; CGGetOnlineDisplayList(0, nil, &n)
+        var ids = [CGDirectDisplayID](repeating: 0, count: Int(n)); CGGetOnlineDisplayList(n, &ids, &n)
+        if let b = ids.first(where: { CGDisplayIsBuiltin($0) != 0 }) {
+            let r = CGDisplayBounds(b)
+            if r.width >= 800, r.height >= 500 { return (Int(r.width), Int(r.height)) }
         }
+        return (1440, 900)
+    }
+
+    /// Der eigene virtuelle Bildschirm bleibt dauerhaft, so groß wie der eingebaute. Bei offenem Deckel spiegelt der
+    /// eingebaute ihn; beim Zuklappen fällt nur der eingebaute weg, Fenster und Anordnung bleiben, wie sie sind.
+    func sicherstellen() {
         if let v = virtuell { displayID = v.displayID; zumHauptbildschirm(v.displayID); spiegeln(); return }
+        let (bw, bh) = Bildschirm.eingebauteGroesse()
         for versuch in 0..<5 {
             let d = CGVirtualDisplayDescriptor()
             d.queue = DispatchQueue.main
             d.name = "Jarvis-Fernsteuerung"
             d.maxPixelsWide = 3840; d.maxPixelsHigh = 2400
-            d.sizeInMillimeters = CGSize(width: 330, height: 206)
+            d.sizeInMillimeters = CGSize(width: 300, height: 195)
             d.serialNum = UInt32(4711 + versuch); d.productID = 0x4A56; d.vendorID = 0x4A56
             d.terminationHandler = { _, _ in log("virtueller Bildschirm beendet") }
             guard let v = CGVirtualDisplay(descriptor: d) else { continue }
             let s = CGVirtualDisplaySettings(); s.hiDPI = 1
-            s.modes = [CGVirtualDisplayMode(width: 1440, height: 900, refreshRate: 60)]
+            s.modes = [CGVirtualDisplayMode(width: UInt(bw), height: UInt(bh), refreshRate: 60)]
             if v.apply(s) {
                 virtuell = v; displayID = v.displayID
-                log("virtueller Bildschirm \(v.displayID) angelegt")
+                log("virtueller Bildschirm \(v.displayID) angelegt, \(bw)x\(bh)")
                 zumHauptbildschirm(v.displayID)
                 spiegeln()
                 return
@@ -86,7 +93,7 @@ final class Bildschirm {
         displayID = CGMainDisplayID()
     }
 
-    /// Ohne eingebauten Bildschirm (Deckel zu) alle übrigen aktiven Bildschirme auf den gezeigten spiegeln.
+    /// Alle übrigen aktiven Bildschirme (auch den eingebauten) auf den virtuellen spiegeln.
     /// Bildschirm-Umbau blockiert bei gesperrtem Mac bis zu 20 s und greift erst nach dem Entsperren: dann im Hintergrund.
     private let umbau = DispatchQueue(label: "bildschirm-umbau")
 
@@ -100,7 +107,7 @@ final class Bildschirm {
         var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n)
         guard n > 1 else { return }
         var ids = [CGDirectDisplayID](repeating: 0, count: Int(n)); CGGetActiveDisplayList(n, &ids, &n)
-        guard !ids.contains(where: { CGDisplayIsBuiltin($0) != 0 }) else { return }
+        guard ids.contains(where: { $0 != displayID && CGDisplayMirrorsDisplay($0) != displayID }) else { return }
         var cfg: CGDisplayConfigRef?
         guard CGBeginDisplayConfiguration(&cfg) == .success else { return }
         for id in ids where id != displayID && CGDisplayMirrorsDisplay(id) != displayID {
@@ -130,11 +137,16 @@ final class Bildschirm {
 final class Wachhalter {
     private var assertion: IOPMAssertionID = 0
     private var aktivitaet: IOPMAssertionID = 0
+    private var system: IOPMAssertionID = 0
     func wecken() {
         IOPMAssertionDeclareUserActivity("Jarvis-Fernsteuerung" as CFString, kIOPMUserActiveLocal, &aktivitaet)
     }
     func an() {
         wecken()
+        if system == 0 {
+            IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleSystemSleep as CFString,
+                                        IOPMAssertionLevel(kIOPMAssertionLevelOn), "Jarvis-Fernsteuerung" as CFString, &system)
+        }
         if assertion == 0 {
             IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleDisplaySleep as CFString,
                                         IOPMAssertionLevel(kIOPMAssertionLevelOn), "Jarvis-Fernsteuerung" as CFString, &assertion)
@@ -701,18 +713,36 @@ final class Dienst {
         }
     }
 
-    /// Deckel zu: eigenen Bildschirm bereithalten und wach halten, damit sich der Mac nicht von selbst sperrt
-    /// (einen gesperrten Mac lässt macOS aus der Ferne nicht entsperren).
+    /// Dauerhaft: eigenen Bildschirm bereithalten, Bildschirm und Rechner nie schlafen lassen (Franks Vorgabe: der
+    /// Bildschirm bleibt immer, wie er ist, auch zugeklappt und über Tage; einen gesperrten Mac lässt macOS aus der
+    /// Ferne nicht entsperren).
     private var sperreGewarnt = false
+
+    /// Bildschirmschoner nie starten (Benutzereinstellung, gilt auch nach Neustart).
+    private func bildschirmschonerAus() {
+        let lesen = Process()
+        lesen.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+        lesen.arguments = ["-currentHost", "read", "com.apple.screensaver", "idleTime"]
+        let rohr = Pipe(); lesen.standardOutput = rohr; lesen.standardError = Pipe()
+        guard (try? lesen.run()) != nil else { return }
+        lesen.waitUntilExit()
+        let wert = String(data: rohr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wert != "0" else { return }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+        p.arguments = ["-currentHost", "write", "com.apple.screensaver", "idleTime", "-int", "0"]
+        try? p.run(); p.waitUntilExit()
+        log("Bildschirmschoner ausgeschaltet (war \(wert ?? "-"))")
+    }
 
     func wachHalten() {
         // Ziel: Zuklappen sperrt nie. Geht die Sperre wieder an (z. B. Systemeinstellungen), einmal im Protokoll melden.
         let aus = Eingabe.bildschirmsperreIstAus()
         if !aus && !sperreGewarnt { log("Achtung: Bildschirmsperre ist an, Zuklappen sperrt den Mac wieder") }
         sperreGewarnt = !aus
-        if Bildschirm.eingebauterAktiv() { if sitzung == nil { wach.aus() }; return }
         bildschirm.sicherstellen()
         wach.an()
+        bildschirmschonerAus()
     }
 
     func start() {
