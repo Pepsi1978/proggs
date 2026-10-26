@@ -86,6 +86,8 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
         return ((x - r.left) / r.width()).toDouble().coerceIn(0.0, 1.0) to ((y - r.top) / r.height()).toDouble().coerceIn(0.0, 1.0)
     }
 
+    private fun imBild(x: Float, y: Float) = bildRahmen().contains(x, y)
+
     private fun ereignis(t: String, x: Float, y: Float, extra: JSONObject.() -> Unit = {}) {
         val (mx, my) = macPunkt(x, y)
         senden(JSONObject().put("t", t).put("x", mx).put("y", my).apply(extra))
@@ -105,17 +107,18 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
 
     private val gesten = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
-            if (zweiFinger) return false
+            // Tippen auf die schwarzen Ränder neben dem Bild löst am Mac nichts aus.
+            if (zweiFinger || !imBild(e.x, e.y)) return false
             ereignis("klick", e.x, e.y)
             return true
         }
         override fun onDoubleTapEvent(e: MotionEvent): Boolean {
             // Zweiter Klick des Doppelklicks erst beim Loslassen, mit Klickzähler 2.
-            if (e.actionMasked == MotionEvent.ACTION_UP && !ziehtMaus && !zweiFinger) ereignis("klick", e.x, e.y) { put("doppel", true) }
+            if (e.actionMasked == MotionEvent.ACTION_UP && !ziehtMaus && !zweiFinger && imBild(e.x, e.y)) ereignis("klick", e.x, e.y) { put("doppel", true) }
             return true
         }
         override fun onLongPress(e: MotionEvent) {
-            if (!zweiFinger && !ziehtMaus) ereignis("rechtsklick", e.x, e.y)
+            if (!zweiFinger && !ziehtMaus && imBild(e.x, e.y)) ereignis("rechtsklick", e.x, e.y)
         }
     })
 
@@ -167,7 +170,7 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
                     } else { letzteMitteX = mitteX(e); letzteMitteY = mitteY(e) }
                 } else if (ziehtMaus) {
                     ereignis("ziehen", e.x, e.y)
-                } else if (hypot(e.x - startX, e.y - startY) > slop * 1.5f) {
+                } else if (hypot(e.x - startX, e.y - startY) > slop * 1.5f && imBild(startX, startY)) {
                     ziehtMaus = true
                     gesten.onTouchEvent(MotionEvent.obtain(e).apply { action = MotionEvent.ACTION_CANCEL })
                     ereignis("runter", startX, startY)
@@ -223,7 +226,12 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
             override fun setComposingText(t: CharSequence, pos: Int): Boolean { ersetzeEntwurf(t.toString()); return true }
             override fun finishComposingText(): Boolean { entwurf = ""; return true }
             override fun deleteSurroundingText(vor: Int, nach: Int): Boolean {
-                repeat(maxOf(1, vor)) { taste("zurueck") }; return true
+                // Gelöschtes aus dem Entwurf nehmen, damit der nächste Entwurf richtig verglichen wird.
+                entwurf = entwurf.dropLast(minOf(vor, entwurf.length))
+                repeat(vor) { taste("zurueck") }
+                repeat(nach) { taste("entf") }
+                if (vor == 0 && nach == 0) taste("zurueck")
+                return true
             }
             override fun sendKeyEvent(e: KeyEvent): Boolean {
                 if (e.action != KeyEvent.ACTION_DOWN) return true

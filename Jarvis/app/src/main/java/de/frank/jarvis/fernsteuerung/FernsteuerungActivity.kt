@@ -10,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -144,6 +146,9 @@ class FernsteuerungActivity : ComponentActivity() {
 
     @Composable
     private fun Oberflaeche() {
+        // Knopfzustand folgt der echten Tastatur (auch wenn sie per Zurück-Geste geschlossen wurde).
+        val imeSichtbar = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+        androidx.compose.runtime.LaunchedEffect(imeSichtbar) { tastaturAn = imeSichtbar }
         Box(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding().imePadding()) {
             Column(Modifier.fillMaxSize()) {
                 AndroidView({ ansicht }, Modifier.weight(1f).fillMaxWidth())

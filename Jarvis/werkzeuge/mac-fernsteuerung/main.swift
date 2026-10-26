@@ -46,14 +46,6 @@ final class Bildschirm {
     /// Bildschirm, den die Aufnahme tatsächlich zeigt (kann vom gewünschten abweichen); Klicks gehen dorthin.
     var gezeigt: CGDirectDisplayID?
 
-    static func aktiveAnzahl() -> UInt32 { var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n); return n }
-
-    static func eingebauterAktiv() -> Bool {
-        var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n)
-        var ids = [CGDirectDisplayID](repeating: 0, count: Int(n)); CGGetActiveDisplayList(n, &ids, &n)
-        return ids.contains { CGDisplayIsBuiltin($0) != 0 }
-    }
-
     /// Logische Größe des eingebauten Bildschirms (auch bei zugeklapptem Deckel abfragbar), sonst 1440x900.
     static func eingebauteGroesse() -> (Int, Int) {
         var n: UInt32 = 0; CGGetOnlineDisplayList(0, nil, &n)
@@ -63,6 +55,14 @@ final class Bildschirm {
             if r.width >= 800, r.height >= 500 { return (Int(r.width), Int(r.height)) }
         }
         return (1440, 900)
+    }
+
+    /// Läuft ein echter Bildschirm (z. B. externer Monitor bei zugeklapptem Deckel)? Dann wird er gezeigt und nichts
+    /// umgebaut. Reste virtueller Bildschirme (Hersteller 0x4A56) zählen nicht.
+    static func echterAktiv(ausser: CGDirectDisplayID?) -> Bool {
+        var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n)
+        var ids = [CGDirectDisplayID](repeating: 0, count: Int(n)); CGGetActiveDisplayList(n, &ids, &n)
+        return ids.contains { $0 != ausser && CGDisplayVendorNumber($0) != 0x4A56 && CGDisplayIsBuiltin($0) == 0 }
     }
 
     /// Deckel zu? (IOPMrootDomain, AppleClamshellState)
@@ -77,7 +77,7 @@ final class Bildschirm {
     /// Nur während einer Verbindung aufrufen. Deckel offen: den eingebauten Bildschirm zeigen und nichts verändern.
     /// Deckel zu: einen virtuellen Bildschirm in der Größe des eingebauten anlegen (ohne ihn gäbe es kein Bild).
     func sicherstellen() {
-        if !Bildschirm.deckelZu() {
+        if !Bildschirm.deckelZu() || Bildschirm.echterAktiv(ausser: virtuell?.displayID) {
             if virtuell != nil { freigeben() }
             displayID = CGMainDisplayID(); return
         }
@@ -251,21 +251,26 @@ final class Kodierer {
                 if let p { out.append(contentsOf: start); out.append(p, count: n) }
             }
         }
-        var laenge = 0; var zeiger: UnsafeMutablePointer<CChar>?
-        guard CMBlockBufferGetDataPointer(block, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &laenge, dataPointerOut: &zeiger) == noErr,
-              let zeiger else { return nil }
-        var pos = 0
-        while pos + 4 <= laenge {
-            var nal: UInt32 = 0
-            memcpy(&nal, zeiger + pos, 4)
-            let n = Int(CFSwapInt32BigToHost(nal))
-            pos += 4
-            guard pos + n <= laenge else { break }
-            out.append(contentsOf: start)
-            zeiger.advanced(by: pos).withMemoryRebound(to: UInt8.self, capacity: n) { out.append($0, count: n) }
-            pos += n
+        // Kopie statt Zeiger: der Blockpuffer muss nicht zusammenhängend sein.
+        let laenge = CMBlockBufferGetDataLength(block)
+        var roh = Data(count: laenge)
+        let st = roh.withUnsafeMutableBytes { CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: laenge, destination: $0.baseAddress!) }
+        guard st == kCMBlockBufferNoErr else { return nil }
+        return roh.withUnsafeBytes { (b: UnsafeRawBufferPointer) -> Data in
+            let zeiger = b.baseAddress!.assumingMemoryBound(to: CChar.self)
+            var pos = 0
+            while pos + 4 <= laenge {
+                var nal: UInt32 = 0
+                memcpy(&nal, zeiger + pos, 4)
+                let n = Int(CFSwapInt32BigToHost(nal))
+                pos += 4
+                guard pos + n <= laenge else { break }
+                out.append(contentsOf: start)
+                out.append(UnsafeRawPointer(zeiger + pos).assumingMemoryBound(to: UInt8.self), count: n)
+                pos += n
+            }
+            return out
         }
-        return out
     }
 }
 
@@ -407,7 +412,7 @@ final class Eingabe {
             maus(gedrueckt ? .leftMouseDragged : .mouseMoved, punkt(j))
         case "klick":
             let p = punkt(j)
-            let n = (j["n"] as? Int) ?? 1
+            let n = min(max((j["n"] as? Int) ?? 1, 1), 3)
             maus(.mouseMoved, p)
             if (j["doppel"] as? Bool) == true {
                 // Zweiter Klick eines Doppelklicks: der erste kam schon beim ersten Tippen.
@@ -637,6 +642,8 @@ final class Zustand {
 final class Sitzung {
     let verbindung: NWConnection
     var angemeldet = false
+    /// Letztes Lebenszeichen vom Handy (Eingabe oder Puls).
+    var zuletzt = Date()
     private var offen = 0
     private let sperre = NSLock()
     var beendet: (() -> Void)?
@@ -716,6 +723,8 @@ final class Dienst {
     var wartend: [ObjectIdentifier: Sitzung] = [:]
     var listener: NWListener?
     var verworfen = 0
+    /// Eingaben der Reihe nach, aber nicht auf main (langes Tippen soll das Bild nicht anhalten).
+    let eingabeWarteschlange = DispatchQueue(label: "eingabe")
     var warGesperrt = Zustand.gesperrt()
     var fehlstarts = 0
 
@@ -746,7 +755,10 @@ final class Dienst {
 
     /// macOS fragt etwa alle 30–90 Tage per Dialog am Mac, ob Terminal den Bildschirm weiter aufnehmen darf; den
     /// Dialog kann vom Handy aus niemand bestätigen. Den nächsten Hinweis-Termin daher weit in die Zukunft legen.
+    private var nachfrageGescheitert = false
+
     private func aufnahmeNachfrageAus() {
+        guard !nachfrageGescheitert else { return }
         let pfad = NSHomeDirectory() + "/Library/Group Containers/group.com.apple.replayd/ScreenCaptureApprovals.plist"
         guard let daten = FileManager.default.contents(atPath: pfad),
               var plist = (try? PropertyListSerialization.propertyList(from: daten, options: [], format: nil)) as? [String: Any]
@@ -754,7 +766,7 @@ final class Dienst {
         let fern = DateComponents(calendar: Calendar(identifier: .gregorian), year: 2100, month: 1, day: 1).date!
         var geaendert = false
         for app in ["com.apple.Terminal", "de.frank.jarvis.fernsteuerung"] {
-            var e = plist[app] as? [String: Any] ?? [:]
+            guard var e = plist[app] as? [String: Any] else { continue }
             if (e["kScreenCapturePrivacyHintDate"] as? Date ?? .distantPast) < fern.addingTimeInterval(-86400) {
                 e["kScreenCapturePrivacyHintDate"] = fern
                 e["kScreenCapturePrivacyHintPolicy"] = 2_147_483_647
@@ -764,7 +776,7 @@ final class Dienst {
         }
         guard geaendert, let neu = try? PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0) else { return }
         do { try neu.write(to: URL(fileURLWithPath: pfad), options: .atomic); log("Nachfrage zur Bildschirmaufnahme bis 2100 abgeschaltet") }
-        catch { log("Nachfrage zur Bildschirmaufnahme: \(error.localizedDescription)") }
+        catch { log("Nachfrage zur Bildschirmaufnahme: \(error.localizedDescription)"); nachfrageGescheitert = true }
     }
 
     /// Bildschirmschoner nie starten (Benutzereinstellung, gilt auch nach Neustart).
@@ -784,15 +796,26 @@ final class Dienst {
         log("Bildschirmschoner ausgeschaltet (war \(wert ?? "-"))")
     }
 
+    private let pflege = DispatchQueue(label: "pflege")
+
+    /// Nur auf main. Bildschirme ohne Verbindung freigeben; mit Verbindung Deckelwechsel nachziehen.
     func wachHalten() {
-        // Ziel: Zuklappen sperrt nie. Geht die Sperre wieder an (z. B. Systemeinstellungen), einmal im Protokoll melden.
-        let aus = Eingabe.bildschirmsperreIstAus()
-        if !aus && !sperreGewarnt { log("Achtung: Bildschirmsperre ist an, Zuklappen sperrt den Mac wieder") }
-        sperreGewarnt = !aus
         wach.systemAn()
-        if sitzung == nil { bildschirm.freigeben(); wach.aus() } else { bildschirm.sicherstellen() }
-        bildschirmschonerAus()
-        aufnahmeNachfrageAus()
+        if sitzung == nil { bildschirm.freigeben(); wach.aus() }
+        else {
+            let vorher = bildschirm.displayID
+            bildschirm.sicherstellen()
+            if bildschirm.displayID != vorher { log("Bildschirm gewechselt, Aufnahme neu"); aufnahmeStarten() }
+        }
+        // Prozesse und Dateien im Hintergrund, damit Bild und Eingaben nicht stocken.
+        pflege.async {
+            // Ziel: Zuklappen sperrt nie. Geht die Sperre wieder an (z. B. Systemeinstellungen), einmal melden.
+            let aus = Eingabe.bildschirmsperreIstAus()
+            if !aus && !self.sperreGewarnt { log("Achtung: Bildschirmsperre ist an, Zuklappen sperrt den Mac wieder") }
+            self.sperreGewarnt = !aus
+            self.bildschirmschonerAus()
+            self.aufnahmeNachfrageAus()
+        }
     }
 
     func start() {
@@ -842,6 +865,13 @@ final class Dienst {
         }
         wachHalten()
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.wachHalten() }
+        // Handy schickt alle 3 s ein Lebenszeichen; bleibt es 12 s aus (Tunnel weg, Handy aus), Sitzung beenden,
+        // damit der Mac nicht mit virtuellem Bildschirm und wachem Bildschirm hängen bleibt.
+        Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { [weak self] _ in
+            guard let s = self?.sitzung, Date().timeIntervalSince(s.zuletzt) > 12 else { return }
+            log("kein Lebenszeichen vom Handy, Sitzung beendet")
+            s.stop()
+        }
     }
 
     private func neu(_ v: NWConnection) {
@@ -858,7 +888,8 @@ final class Dienst {
             guard let self, let s else { return }
             log("angemeldet")
             self.wartend[id] = nil
-            if let alt = self.sitzung, alt !== s { self.sitzung = nil; alt.stop(); self.aufraeumen() }
+            // Übernahme: alte Sitzung schließen, Bildschirm und Wachhalten bleiben (kein doppelter Umbau).
+            if let alt = self.sitzung, alt !== s { self.sitzung = nil; alt.stop(); self.aufnahme.stop(); self.zustand.stop() }
             self.sitzung = s
             self.eingabe.meldung = { [weak s] text in DispatchQueue.main.async { s?.sendenJSON(0x04, ["meldung": text]) } }
             self.wach.an()
@@ -872,11 +903,13 @@ final class Dienst {
         }
         s.eingabe = { [weak self, weak s] j in
             guard let self, let s, self.sitzung === s else { return }
+            s.zuletzt = Date()
+            if (j["t"] as? String) == "puls" { return }
             self.wach.wecken()
             if (j["t"] as? String) == "schluesselbild" {
                 self.kodierer.schluesselbildErzwingen = true; self.aufnahme.wiederholen(); return
             }
-            self.eingabe.ausfuehren(j)
+            self.eingabeWarteschlange.async { self.eingabe.ausfuehren(j) }
         }
         s.beendet = { [weak self, weak s] in
             guard let self, let s else { return }

@@ -6,7 +6,7 @@ bin="$HOME/Library/Application Support/JarvisFernsteuerung/jarvis-fernsteuerung"
 logdir="$HOME/Library/Logs/JarvisFernsteuerung"; mkdir -p "$logdir"
 # Muster verankert: sonst trifft pgrep auch fremde Befehlszeilen, in denen der Name nur vorkommt.
 dienst_laeuft() { pgrep -f "^zsh -c while true; do \"$bin\"" >/dev/null; }
-weiterleitung_laeuft() { pgrep -f "^/usr/bin/ruby .*weiterleitung\.rb" >/dev/null; }
+weiterleitung_laeuft() { pgrep -f "^zsh -c while true; do /usr/bin/ruby .*weiterleitung\.rb" >/dev/null; }
 if dienst_laeuft && weiterleitung_laeuft; then echo "läuft bereits"; exit 0; fi
 if ! dienst_laeuft; then
   nohup zsh -c "while true; do \"$bin\" >> \"$logdir/dienst.log\" 2>&1; sleep 3; done" >/dev/null 2>&1 &

@@ -39,6 +39,13 @@ class FernVerbindung(
                 socket = s
                 aus = DataOutputStream(s.getOutputStream().buffered())
                 senden(0x10, JSONObject().put("token", token))
+                // Lebenszeichen: ohne es beendet der Mac die Sitzung nach 12 s (Tunnel weg, Handy aus).
+                Thread({
+                    while (!beendet) {
+                        senden(0x11, JSONObject().put("t", "puls"))
+                        try { Thread.sleep(3000) } catch (_: InterruptedException) { break }
+                    }
+                }, "Fernsteuerung-Puls").apply { isDaemon = true }.start()
                 val ein = DataInputStream(s.getInputStream().buffered(1 shl 16))
                 while (!beendet) {
                     val typ = ein.readUnsignedByte()
@@ -68,7 +75,8 @@ class FernVerbindung(
 
     private fun senden(typ: Int, j: JSONObject) {
         if (beendet) return
-        sender.execute {
+        // Zwischen Prüfung und execute kann stop() den Sender schon geschlossen haben.
+        try { sender.execute {
             val o = aus ?: return@execute
             try {
                 val b = j.toString().toByteArray()
@@ -76,7 +84,7 @@ class FernVerbindung(
             } catch (e: Exception) {
                 Log.w(TAG, "Senden fehlgeschlagen", e)
             }
-        }
+        } } catch (_: java.util.concurrent.RejectedExecutionException) {}
     }
 
     fun stop() {

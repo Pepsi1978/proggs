@@ -38,7 +38,8 @@ class VideoDekoder(private val surface: Surface, private val breite: Int, privat
                         ausgeben(info); continue
                     }
                     if (codec == null) anlegen(d) ?: continue
-                    wartetAufSchluessel = false
+                    // Nur ein Schlüsselbild beendet das Warten (ein gleichzeitiger Rückstau setzt es wieder).
+                    if (5 in nal) wartetAufSchluessel = false else if (wartetAufSchluessel) { ausgeben(info); continue }
                     val c = codec ?: continue
                     val idx = c.dequeueInputBuffer(30_000)
                     if (idx >= 0) {

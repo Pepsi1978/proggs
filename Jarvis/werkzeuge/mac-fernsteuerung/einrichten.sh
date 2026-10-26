@@ -4,7 +4,7 @@
 set -e
 cd "${0:A:h}"
 t="$HOME/SK/Jarvis/fernsteuerung-token.txt"
-[ -f "$t" ] || { openssl rand -hex 24 > "$t"; chmod 600 "$t"; }
+[ -f "$t" ] || ( umask 077; openssl rand -hex 24 > "$t" )
 ./bauen.sh
 cp de.frank.jarvis.fernsteuerung.plist ~/Library/LaunchAgents/
 launchctl bootout gui/$(id -u)/de.frank.jarvis.fernsteuerung 2>/dev/null || true
