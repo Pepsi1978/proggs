@@ -192,7 +192,16 @@ class FernAnsicht(context: Context, private val senden: (JSONObject) -> Unit) : 
     // --- Tastatur ---
 
     fun tastaturZeigen(an: Boolean) {
-        if (an) { requestFocus(); imm.showSoftInput(this, 0) } else imm.hideSoftInputFromWindow(windowToken, 0)
+        if (an) {
+            requestFocus()
+            imm.restartInput(this)
+            // Ab Android 11 zuverlässiger über die Fenster-Insets; showSoftInput zusätzlich für ältere Geräte.
+            if (android.os.Build.VERSION.SDK_INT >= 30) windowInsetsController?.show(android.view.WindowInsets.Type.ime())
+            imm.showSoftInput(this, 0)
+        } else {
+            if (android.os.Build.VERSION.SDK_INT >= 30) windowInsetsController?.hide(android.view.WindowInsets.Type.ime())
+            imm.hideSoftInputFromWindow(windowToken, 0)
+        }
     }
 
     private fun taste(name: String) = senden(JSONObject().put("t", "taste").put("k", name))

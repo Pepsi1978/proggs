@@ -377,6 +377,7 @@
     { "versionCode": 371, "versionName": "1.8.360", "stand": "26.10.2026, 15:04 Uhr", "notiz": "Mac-Fernsteuerung: Entsperren meldet jetzt, ob es geklappt hat, kann die automatische Sperre am Mac abschalten, hält den Mac bei zugeklapptem Deckel wach, und Bildausfälle erholen sich von selbst." },
     { "versionCode": 372, "versionName": "1.8.361", "stand": "26.10.2026, 15:18 Uhr", "notiz": "Mac-Fernsteuerung: Das Abschalten der Mac-Sperre meldet jetzt zuverlässig, ob es geklappt hat; so sperrt der Mac beim Zuklappen nicht mehr." },
     { "versionCode": 373, "versionName": "1.8.362", "stand": "26.10.2026, 15:23 Uhr", "notiz": "Mac-Fernsteuerung: Der Mac-Bildschirm bleibt dauerhaft gleich, auch zugeklappt und über Tage, ohne Bildschirmschoner, Ruhezustand oder Sperre." },
-    { "versionCode": 374, "versionName": "1.8.363", "stand": "26.10.2026, 15:27 Uhr", "notiz": "Mac-Fernsteuerung: macOS fragt nicht mehr regelmäßig am Mac nach, ob die Bildschirmaufnahme weiter erlaubt ist." }
+    { "versionCode": 374, "versionName": "1.8.363", "stand": "26.10.2026, 15:27 Uhr", "notiz": "Mac-Fernsteuerung: macOS fragt nicht mehr regelmäßig am Mac nach, ob die Bildschirmaufnahme weiter erlaubt ist." },
+    { "versionCode": 375, "versionName": "1.8.364", "stand": "26.10.2026, 15:28 Uhr", "notiz": "Mac-Fernsteuerung: Runder Tastatur-Knopf unten rechts und vorn in der Leiste öffnet die Handy-Tastatur von Hand, auch wenn sie bei einem Eingabefeld nicht von selbst aufspringt." }
 ]
 }

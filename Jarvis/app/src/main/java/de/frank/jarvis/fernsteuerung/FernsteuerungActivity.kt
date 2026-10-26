@@ -42,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
@@ -134,6 +136,9 @@ class FernsteuerungActivity : ComponentActivity() {
         if (feld != tastaturAn && !gesperrt) { tastaturAn = feld; ansicht.tastaturZeigen(feld) }
     }
 
+    /** Von Hand: für Eingabefelder, bei denen der Mac den Fokus nicht meldet. */
+    private fun tastaturUmschalten() { tastaturAn = !tastaturAn; ansicht.tastaturZeigen(tastaturAn) }
+
     private fun taste(k: String, vararg m: String) =
         verbindung?.eingabe(JSONObject().put("t", "taste").put("k", k).put("m", org.json.JSONArray(m.toList())))
 
@@ -151,6 +156,15 @@ class FernsteuerungActivity : ComponentActivity() {
                 }
             }
             if (gesperrt) Entsperren(Modifier.align(Alignment.Center))
+            // Tastatur-Knopf unten rechts in Daumennähe, über der Leiste.
+            if (!gesperrt) Box(
+                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp).size(56.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(if (tastaturAn) Color(0xFF3B6FE0) else Color(0xCC2A2E37))
+                    .clickable { tastaturUmschalten() }
+                    .semantics { contentDescription = "Tastatur ein- oder ausblenden" },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.Keyboard, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
         }
     }
 
@@ -162,6 +176,7 @@ class FernsteuerungActivity : ComponentActivity() {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Knopf(icon = Icons.Rounded.Close, text = "Ende") { finish() }
+            Knopf(icon = Icons.Rounded.Keyboard, text = "Tastatur", aktiv = tastaturAn) { tastaturUmschalten() }
             Knopf(text = "Esc") { taste("esc") }
             Knopf(text = "Tab") { taste("tab") }
             Knopf(text = "⌫") { taste("zurueck") }
@@ -174,9 +189,6 @@ class FernsteuerungActivity : ComponentActivity() {
             Knopf(text = "↓") { taste("runter") }
             Knopf(text = "←") { taste("links") }
             Knopf(text = "→") { taste("rechts") }
-            Knopf(icon = Icons.Rounded.Keyboard, text = "Tastatur", aktiv = tastaturAn) {
-                tastaturAn = !tastaturAn; ansicht.tastaturZeigen(tastaturAn)
-            }
         }
     }
 
