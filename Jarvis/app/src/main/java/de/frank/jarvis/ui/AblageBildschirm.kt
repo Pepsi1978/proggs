@@ -231,7 +231,8 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         } else {
             Text("Ablage", Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Suche, Sortierung und Ansicht gelten nur für die Ablage-Einträge, nicht für den Reiter „Prompts“.
+        if (filter != PROMPTS_REITER) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f)) {
                 Eingabe(suche, { suche = it }, "Suchen in Titeln, Texten, Dateien", Modifier.fillMaxWidth())
                 if (suche.isEmpty()) Icon(Icons.Rounded.Search, null, tint = f.textSchwach, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 14.dp).size(20.dp))
@@ -259,7 +260,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Alle", filter == null) { filter = null }
             Kategorie.entries.forEach { k -> Chip(k.anzeige, filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
-            Chip("Prompts", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER }
+            Chip("Prompts", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER; if (filter == PROMPTS_REITER) suche = "" }
         }
         // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
         if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }

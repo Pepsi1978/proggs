@@ -68,9 +68,13 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     val liste by ladeImHintergrund<List<Prompt>?>(null, stand, behalten = true) { Prompts.alle(context) }
     var offen by rememberSaveable { mutableStateOf<Int?>(null) }
     var neu by rememberSaveable { mutableStateOf(false) }
+    val defekt by ladeImHintergrund(false, stand) { withContext(Dispatchers.IO) { Prompts.defekt(context) } }
 
     LazyColumn(modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (liste?.isEmpty() == true) item(key = "leer") {
+        if (defekt) item(key = "defekt") {
+            Text("Die Prompt-Datei ist beschädigt und wurde als prompts.json.defekt gesichert. Jarvis speichert dort nichts Neues, bis sie repariert ist; Details unter Aktivität.",
+                color = f.gefahr, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        } else if (liste?.isEmpty() == true) item(key = "leer") {
             Text("Noch keine Prompts. Tippe auf +, oder sag Jarvis: „Speicher folgendes als Prompt ab: …“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
         items(liste.orEmpty(), key = { it.nummer }) { p ->
@@ -88,12 +92,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    if (neu) PromptEingabe(vm, schliessen = { vm.promptEingabeSchliessen(); neu = false }) { text ->
-        bereich.launch {
-            val p = withContext(Dispatchers.IO) { Prompts.speichere(context, text) }
-            if (p == null) vm.meldung = "Der Prompt ließ sich nicht speichern." else { vm.meldung = "Als Prompt ${p.nummer} gespeichert."; neu = false }
-        }
-    }
+    if (neu) PromptEingabe(vm, schliessen = { vm.promptEingabeSchliessen(); neu = false }) { vm.promptSpeichern { neu = false } }
 
     liste?.firstOrNull { it.nummer == offen }?.let { p ->
         var loeschen by remember(p.nummer) { mutableStateOf(false) }
@@ -107,7 +106,11 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (loeschen) {
                         Knopf("Wirklich löschen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) {
-                            bereich.launch { withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer) }; vm.meldung = "Prompt ${p.nummer} gelöscht."; offen = null }
+                            bereich.launch {
+                                val weg = withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer) }
+                                vm.meldung = if (weg != null) "Prompt ${p.nummer} gelöscht." else "Prompt ${p.nummer} ließ sich nicht löschen."
+                                if (weg != null) offen = null
+                            }
                         }
                         Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
                     } else {
@@ -123,16 +126,15 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
 
 /** Eingabe eines neuen Prompts: eintippen oder einsprechen, KI-Knopf formuliert in gutes Deutsch, Diskette speichert. */
 @Composable
-private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: (String) -> Unit) {
+private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: () -> Unit) {
     val f = LocalFarben.current
-    var text by rememberSaveable { mutableStateOf("") }
     Dialog(schliessen, DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.padding(16.dp).fillMaxWidth().glas(f, fuellung = f.flaecheStark).padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box(Modifier.size(40.dp).antippen(aktion = schliessen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
-            Eingabe(text, { text = it }, if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen",
+            Eingabe(vm.promptEntwurf, { vm.promptEntwurf = it }, if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen",
                 Modifier.fillMaxWidth().padding(vertical = 12.dp), einzeilig = false)
             if (vm.promptFormuliert) Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Kern(28.dp, f.primaer, aktiv = true)
@@ -140,10 +142,10 @@ private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: (
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Rund(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
-                    vm.promptMikrofonTippen({ text }) { text = it }
+                    vm.promptMikrofonTippen()
                 }
-                Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren(text) { text = it } }
-                Rund(Icons.Rounded.Save, "Speichern", f.primaer) { if (text.isNotBlank() && !vm.nimmtAuf && !vm.schreibtMit) speichern(text.trim()) }
+                Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
+                Rund(Icons.Rounded.Save, "Speichern", f.primaer) { speichern() }
             }
         }
     }

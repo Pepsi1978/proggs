@@ -61,6 +61,9 @@ object Prompts {
         }
     }
 
+    /** true = die Datei ist unlesbar (als `.defekt-…` gesichert); dann wird nichts geschrieben. */
+    fun defekt(c: Context): Boolean = lies(c).defekt
+
     /** Alle Prompts, aufsteigend nach Nummer. */
     fun alle(c: Context): List<Prompt> = lies(c).liste
 

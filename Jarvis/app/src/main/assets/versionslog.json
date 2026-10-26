@@ -370,6 +370,7 @@
     { "versionCode": 364, "versionName": "1.8.353", "stand": "25.10.2026, 20:24 Uhr", "notiz": "Ein kleiner Pfeil unter „Programmierer“ klappt die Symbole rechts über dem Chat ein und wieder aus." },
     { "versionCode": 365, "versionName": "1.8.354", "stand": "25.10.2026, 20:36 Uhr", "notiz": "In der Tagesauswertung sitzt unter dem Zahnrad ein neuer Knopf, der die Auswertung sofort neu erstellt; Vorlesen und Zahnrad stehen jetzt etwas höher." },
     { "versionCode": 366, "versionName": "1.8.355", "stand": "25.10.2026, 20:38 Uhr", "notiz": "Der Aktualisieren-Pfeil ist aus der Seitenleiste rechts verschwunden; aktualisiert wird die Tagesauswertung jetzt nur noch über ihren eigenen Knopf." },
-    { "versionCode": 367, "versionName": "1.8.356", "stand": "26.10.2026, 13:15 Uhr", "notiz": "Neuer Reiter Prompts in der Ablage: Prompts per Sprache oder über + anlegen, mit KI in gutes Deutsch bringen, nummeriert speichern und per Senden in einer neuen Programmier-Session verwenden." }
+    { "versionCode": 367, "versionName": "1.8.356", "stand": "26.10.2026, 13:15 Uhr", "notiz": "Neuer Reiter Prompts in der Ablage: Prompts per Sprache oder über + anlegen, mit KI in gutes Deutsch bringen, nummeriert speichern und per Senden in einer neuen Programmier-Session verwenden." },
+    { "versionCode": 368, "versionName": "1.8.357", "stand": "26.10.2026, 13:21 Uhr", "notiz": "Prompts verlieren beim Schließen oder Aufklappen kein Diktat mehr, werden nicht doppelt gespeichert und melden Fehler beim Löschen oder bei einer beschädigten Datei." }
 ]
 }

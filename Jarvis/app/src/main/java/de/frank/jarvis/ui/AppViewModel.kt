@@ -1561,33 +1561,45 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Das laufende Diktat gehört in die Prompt-Eingabe der Ablage, nicht ins Gespräch. */
     private var promptDiktat = false
     var promptFormuliert by mutableStateOf(false); private set
+    /**
+     * Text der Prompt-Eingabe: im ViewModel, damit ein Diktat oder die KI-Antwort, die nach dem Schließen des Fensters
+     * oder nach einem Auf-/Zuklappen des Fold ankommt, nicht verloren geht. Geleert erst nach dem Speichern.
+     */
+    var promptEntwurf by mutableStateOf("")
+    var promptSpeichert by mutableStateOf(false); private set
 
-    /** Mikrofon der Prompt-Eingabe: Tippen startet, nochmal Tippen hängt das Gesprochene an [feld] an. */
-    fun promptMikrofonTippen(feld: () -> String, setze: (String) -> Unit) {
+    /** Mikrofon der Prompt-Eingabe: Tippen startet, nochmal Tippen hängt das Gesprochene an den Entwurf an. */
+    fun promptMikrofonTippen() {
         when {
-            schreibtMit -> Unit
+            schreibtMit || promptFormuliert -> Unit
             nimmtAuf -> aufnahmeBeenden()
             sprache.groqApiKey.isBlank() -> meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."
             else -> {
-                diktatZiel = { t -> setze(feld().trimEnd().let { if (it.isEmpty()) t else "$it $t" }) }
+                diktatZiel = { t -> promptEntwurf = promptEntwurf.trimEnd().let { if (it.isEmpty()) t else "$it $t" } }
                 promptDiktat = true
                 mikrofonAnfragen()
             }
         }
     }
 
-    /** Schließt die Prompt-Eingabe: Ein laufendes Diktat geht noch hinein und die Aufnahme endet. */
+    /** Schließt die Prompt-Eingabe: Ein laufendes Diktat geht noch in den Entwurf und die Aufnahme endet. */
     fun promptEingabeSchliessen() { if (nimmtAuf && promptDiktat) aufnahmeBeenden() }
 
-    /** KI-Knopf: bringt den Entwurf sinngemäß in gutes Deutsch, als klaren Auftrag an Jarvis; [fertig] bekommt die neue Fassung. */
-    fun promptFormulieren(text: String, fertig: (String) -> Unit) {
-        if (text.isBlank() || promptFormuliert) return
+    /** KI-Knopf: bringt den Entwurf sinngemäß in gutes Deutsch, als klaren Auftrag an Jarvis. */
+    fun promptFormulieren() {
+        val text = promptEntwurf
+        if (text.isBlank() || promptFormuliert || nimmtAuf || schreibtMit) return
         if (!modellBereit) { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
         promptFormuliert = true
         viewModelScope.launch {
             try {
                 val neu = auth.streamChat(PROMPT_KORREKTUR, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
-                if (neu.length < 5) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else fertig(neu)
+                when {
+                    neu.length < 5 -> meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
+                    // Inzwischen weitergetippt: die neuere Fassung gewinnt.
+                    promptEntwurf != text -> meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen."
+                    else -> promptEntwurf = neu
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1599,17 +1611,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Diskette: speichert den Entwurf als nächsten Prompt; [fertig] nur bei Erfolg. Mehrfaches Tippen speichert nur einmal. */
+    fun promptSpeichern(fertig: () -> Unit) {
+        val text = promptEntwurf.trim()
+        if (text.isEmpty() || promptSpeichert || nimmtAuf || schreibtMit || promptFormuliert) return
+        promptSpeichert = true
+        viewModelScope.launch {
+            try {
+                val p = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.speichere(getApplication(), text) }
+                if (p == null) meldung = "Der Prompt ließ sich nicht speichern."
+                else {
+                    meldung = "Als Prompt ${p.nummer} gespeichert."
+                    if (promptEntwurf.trim() == text) promptEntwurf = ""
+                    fertig()
+                }
+            } finally {
+                promptSpeichert = false
+            }
+        }
+    }
+
     /** Senden-Knopf eines Prompts: neue Programmier-Session, der Prompt steht mit dem Programmierer-Vorspann in der Eingabeblase. */
     fun promptSenden(text: String) {
         promptEingabeSchliessen()
+        if (entwurf.isNotBlank()) meldung = "Der bisherige Entwurf in der Eingabeblase wurde durch den Prompt ersetzt."
         neuesGespraech()
+        // Alte Anhänge gehören nicht zum Prompt und gingen sonst unbemerkt mit in die neue Session.
+        anhaenge.toList().forEach { anhangWeg(it) }
         entwurf = text.trim()
         programmiererEinsetzen()
         reiter = Reiter.JARVIS
     }
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
-        if (!erlaubt) { diktatZiel = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (!erlaubt) { diktatZiel = null; promptDiktat = false; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (holtMikro) return
         vorleser.stopp()
         holtMikro = true
@@ -1617,7 +1652,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
-                if (!aufnahmeStarten()) { diktatZiel = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
+                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
                 else {
                     de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
                     // Laufende Musik pausiert fürs Diktat, sonst landet sie in der Mitschrift.
@@ -1653,6 +1688,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun aufnahmeVerwerfen(): Job? {
         wechselStand++
+        if (!nimmtAuf) promptDiktat = false
         val aktiv = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true
         weckwortLauf?.cancel()
         mitschriftJob?.cancel()
@@ -1663,7 +1699,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         freihaendig = false
         schreibtMit = false
         feldMitschrift = false
-        diktatZiel = null
+        diktatZiel = null; promptDiktat = false
         diktatInsFeld = false
         Logbuch.sprache("Aufnahme verworfen", "Session von Hand gewechselt")
         return viewModelScope.launch {
@@ -1777,7 +1813,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
         GedaechtnisAnsicht.offen = false
         FunktionenAnsicht.offen = false
-        diktatZiel = null
+        diktatZiel = null; promptDiktat = false
         vorleser.stopp()
         // Kam „Hey Jarvis“ aus einer anderen App, aus dem Hintergrund oder per Kaltstart, beginnt ein neues Gespräch (beim
         // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
@@ -1916,9 +1952,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Das Diktier-Mikrofon der Eingabeblase schreibt ins Feld, Hey Jarvis und der Gesprächsmodus senden weiter direkt.
         val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat }
         feldMitschrift = ziel != null && diktatInsFeld
-        diktatZiel = null
+        diktatZiel = null; promptDiktat = false
         diktatInsFeld = false
-        promptDiktat = false
         mitschriftJob = viewModelScope.launch {
             try {
                 // Puffer kopieren, WAV bauen und Stimmhaft-Zeitachse lesen dauern bei langen Diktaten spürbar: nicht auf dem

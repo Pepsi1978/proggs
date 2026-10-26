@@ -53,7 +53,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Gestaltetes PDF (Titelseite, Inhalt, Merkkästen, Tabellen, Abbildungen) nur auf ausdrücklichen Wunsch; `pdf_entwurf_pruefen` setzt probeweise. Recherchen sonst als formatierter Chattext.
 - `bild_erzeugen`: Bild oder Infografik als PNG, auf Wunsch DIN-A4-PDF.
 - In der App: Vorschau für Text, Code, Tabellen, Bilder, PDF (ohne Textsuche), Office als Textauszug, Audio, Video; Filter, Suche, Ansichten, Mehrfachauswahl, Teilen, Download.
-- Reiter „Prompts“ in der Ablage (eigene Datei, fortlaufend nummeriert): `prompts` (speichern, lesen, löschen); „Speicher folgendes als Prompt ab …“ im Chat und Live formuliert aus und speichert. In der App: + öffnet Eingabe (tippen/einsprechen, KI-Knopf in gutes Deutsch, Diskette speichert); Antippen öffnet den Prompt, „Senden“ startet eine neue Programmier-Session mit dem Prompt in der Eingabeblase.
+- Reiter „Prompts“ in der Ablage (eigene Datei, fortlaufend nummeriert): `prompt_speichern` (speichern, löschen), `prompts_lesen`; „Speicher folgendes als Prompt ab …“ im Chat und Live formuliert aus und speichert. In der App: + öffnet Eingabe (tippen/einsprechen, KI-Knopf in gutes Deutsch, Diskette speichert); Antippen öffnet den Prompt, „Senden“ startet eine neue Programmier-Session mit dem Prompt in der Eingabeblase.
 
 ## Agenten und Hintergrundaufträge
 
