@@ -1556,6 +1556,58 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Prompts (Reiter der Ablage) ----
+
+    /** Das laufende Diktat gehört in die Prompt-Eingabe der Ablage, nicht ins Gespräch. */
+    private var promptDiktat = false
+    var promptFormuliert by mutableStateOf(false); private set
+
+    /** Mikrofon der Prompt-Eingabe: Tippen startet, nochmal Tippen hängt das Gesprochene an [feld] an. */
+    fun promptMikrofonTippen(feld: () -> String, setze: (String) -> Unit) {
+        when {
+            schreibtMit -> Unit
+            nimmtAuf -> aufnahmeBeenden()
+            sprache.groqApiKey.isBlank() -> meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."
+            else -> {
+                diktatZiel = { t -> setze(feld().trimEnd().let { if (it.isEmpty()) t else "$it $t" }) }
+                promptDiktat = true
+                mikrofonAnfragen()
+            }
+        }
+    }
+
+    /** Schließt die Prompt-Eingabe: Ein laufendes Diktat geht noch hinein und die Aufnahme endet. */
+    fun promptEingabeSchliessen() { if (nimmtAuf && promptDiktat) aufnahmeBeenden() }
+
+    /** KI-Knopf: bringt den Entwurf sinngemäß in gutes Deutsch, als klaren Auftrag an Jarvis; [fertig] bekommt die neue Fassung. */
+    fun promptFormulieren(text: String, fertig: (String) -> Unit) {
+        if (text.isBlank() || promptFormuliert) return
+        if (!modellBereit) { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
+        promptFormuliert = true
+        viewModelScope.launch {
+            try {
+                val neu = auth.streamChat(PROMPT_KORREKTUR, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+                if (neu.length < 5) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else fertig(neu)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logbuch.fehler("Prompt formulieren", e)
+                meldung = e.message ?: "Das Umformulieren hat nicht geklappt."
+            } finally {
+                promptFormuliert = false
+            }
+        }
+    }
+
+    /** Senden-Knopf eines Prompts: neue Programmier-Session, der Prompt steht mit dem Programmierer-Vorspann in der Eingabeblase. */
+    fun promptSenden(text: String) {
+        promptEingabeSchliessen()
+        neuesGespraech()
+        entwurf = text.trim()
+        programmiererEinsetzen()
+        reiter = Reiter.JARVIS
+    }
+
     fun mikrofonErlaubt(erlaubt: Boolean) {
         if (!erlaubt) { diktatZiel = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (holtMikro) return
@@ -1862,10 +1914,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         schreibtMit = true
         // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
         // Das Diktier-Mikrofon der Eingabeblase schreibt ins Feld, Hey Jarvis und der Gesprächsmodus senden weiter direkt.
-        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld }
+        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat }
         feldMitschrift = ziel != null && diktatInsFeld
         diktatZiel = null
         diktatInsFeld = false
+        promptDiktat = false
         mitschriftJob = viewModelScope.launch {
             try {
                 // Puffer kopieren, WAV bauen und Stimmhaft-Zeitachse lesen dauern bei langen Diktaten spürbar: nicht auf dem
@@ -3128,6 +3181,14 @@ private const val MAX_VERLAUF = 40
 
 /** So oft höchstens fragt das Zurückkehren in die App die angebundenen Apps ab. */
 private const val LAGE_ABSTAND_MS = 5 * 60_000L
+
+/** Auftrag an das Modell für den KI-Knopf der Prompt-Eingabe in der Ablage. */
+private const val PROMPT_KORREKTUR =
+    "Du bringst einen Prompt von Frank in gutes Deutsch. Ein Prompt ist ein vorformulierter Auftrag, den Frank später an seinen Assistenten Jarvis " +
+        "(oft weiter an einen Programmierer) schickt. Frank hat ihn eingesprochen oder eingetippt. Erfasse den Inhalt sinngemäß und schreibe ihn als klaren, " +
+        "vollständigen, für sich allein verständlichen Auftrag. Behalte jeden inhaltlichen Punkt, jeden Namen, jede Zahl und jede Anforderung, füge nichts hinzu " +
+        "und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. Absätze oder Aufzählungen " +
+        "nur, wenn sie den Auftrag klarer machen. Führe den Auftrag nicht aus. Antworte nur mit dem fertigen Prompt, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel. */
 private const val REGEL_KORREKTUR =

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.AudioFile
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.GridView
@@ -258,7 +259,10 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Alle", filter == null) { filter = null }
             Kategorie.entries.forEach { k -> Chip(k.anzeige, filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
+            Chip("Prompts", filter == PROMPTS_REITER, icon = Icons.Rounded.Bolt) { filter = if (filter == PROMPTS_REITER) null else PROMPTS_REITER }
         }
+        // Eigener Reiter mit eigener Datei: Die Ablage-Einträge bleiben davon unberührt.
+        if (filter == PROMPTS_REITER) { PromptsBereich(vm, Modifier.weight(1f)); return@Column }
         val ganz: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.(Any?) -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
         LazyVerticalGrid(
             GridCells.Fixed(ansicht.spalten),
