@@ -65,9 +65,22 @@ final class Bildschirm {
         return (1440, 900)
     }
 
-    /// Der eigene virtuelle Bildschirm bleibt dauerhaft, so groß wie der eingebaute. Bei offenem Deckel spiegelt der
-    /// eingebaute ihn; beim Zuklappen fällt nur der eingebaute weg, Fenster und Anordnung bleiben, wie sie sind.
+    /// Deckel zu? (IOPMrootDomain, AppleClamshellState)
+    static func deckelZu() -> Bool {
+        let dienst = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        guard dienst != 0 else { return false }
+        defer { IOObjectRelease(dienst) }
+        let wert = IORegistryEntryCreateCFProperty(dienst, "AppleClamshellState" as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue()
+        return (wert as? Bool) ?? false
+    }
+
+    /// Nur während einer Verbindung aufrufen. Deckel offen: den eingebauten Bildschirm zeigen und nichts verändern.
+    /// Deckel zu: einen virtuellen Bildschirm in der Größe des eingebauten anlegen (ohne ihn gäbe es kein Bild).
     func sicherstellen() {
+        if !Bildschirm.deckelZu() {
+            if virtuell != nil { freigeben() }
+            displayID = CGMainDisplayID(); return
+        }
         if let v = virtuell { displayID = v.displayID; zumHauptbildschirm(v.displayID); spiegeln(); return }
         let (bw, bh) = Bildschirm.eingebauteGroesse()
         for versuch in 0..<5 {
@@ -93,7 +106,16 @@ final class Bildschirm {
         displayID = CGMainDisplayID()
     }
 
-    /// Alle übrigen aktiven Bildschirme (auch den eingebauten) auf den virtuellen spiegeln.
+    /// Virtuellen Bildschirm entfernen: macOS stellt dann die eigene Anordnung wieder her (Franks Vorgabe: ohne
+    /// Verbindung ist der Mac so, als gäbe es die Fernsteuerung nicht).
+    func freigeben() {
+        guard virtuell != nil else { return }
+        log("virtueller Bildschirm entfernt")
+        virtuell = nil; gezeigt = nil
+        displayID = CGMainDisplayID()
+    }
+
+    /// Bei zugeklapptem Deckel übrige aktive Bildschirme (Reste) auf den virtuellen spiegeln.
     /// Bildschirm-Umbau blockiert bei gesperrtem Mac bis zu 20 s und greift erst nach dem Entsperren: dann im Hintergrund.
     private let umbau = DispatchQueue(label: "bildschirm-umbau")
 
@@ -141,12 +163,17 @@ final class Wachhalter {
     func wecken() {
         IOPMAssertionDeclareUserActivity("Jarvis-Fernsteuerung" as CFString, kIOPMUserActiveLocal, &aktivitaet)
     }
-    func an() {
-        wecken()
+    /// Rechner nicht schlafen lassen, damit die Fernsteuerung erreichbar bleibt; ändert am Bildschirm nichts.
+    func systemAn() {
         if system == 0 {
             IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleSystemSleep as CFString,
                                         IOPMAssertionLevel(kIOPMAssertionLevelOn), "Jarvis-Fernsteuerung" as CFString, &system)
         }
+    }
+    /// Nur während einer Verbindung: Bildschirm wecken und wach halten.
+    func an() {
+        wecken()
+        systemAn()
         if assertion == 0 {
             IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleDisplaySleep as CFString,
                                         IOPMAssertionLevel(kIOPMAssertionLevelOn), "Jarvis-Fernsteuerung" as CFString, &assertion)
@@ -713,9 +740,8 @@ final class Dienst {
         }
     }
 
-    /// Dauerhaft: eigenen Bildschirm bereithalten, Bildschirm und Rechner nie schlafen lassen (Franks Vorgabe: der
-    /// Bildschirm bleibt immer, wie er ist, auch zugeklappt und über Tage; einen gesperrten Mac lässt macOS aus der
-    /// Ferne nicht entsperren).
+    /// Rechner wach und erreichbar halten, Bildschirmschoner und Sperre aus lassen. Bildschirme nur während einer
+    /// Verbindung anfassen (einen gesperrten Mac lässt macOS aus der Ferne nicht entsperren).
     private var sperreGewarnt = false
 
     /// macOS fragt etwa alle 30–90 Tage per Dialog am Mac, ob Terminal den Bildschirm weiter aufnehmen darf; den
@@ -763,8 +789,8 @@ final class Dienst {
         let aus = Eingabe.bildschirmsperreIstAus()
         if !aus && !sperreGewarnt { log("Achtung: Bildschirmsperre ist an, Zuklappen sperrt den Mac wieder") }
         sperreGewarnt = !aus
-        bildschirm.sicherstellen()
-        wach.an()
+        wach.systemAn()
+        if sitzung == nil { bildschirm.freigeben(); wach.aus() } else { bildschirm.sicherstellen() }
         bildschirmschonerAus()
         aufnahmeNachfrageAus()
     }
