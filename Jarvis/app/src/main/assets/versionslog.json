@@ -379,6 +379,7 @@
     { "versionCode": 373, "versionName": "1.8.362", "stand": "26.10.2026, 15:23 Uhr", "notiz": "Mac-Fernsteuerung: Der Mac-Bildschirm bleibt dauerhaft gleich, auch zugeklappt und über Tage, ohne Bildschirmschoner, Ruhezustand oder Sperre." },
     { "versionCode": 374, "versionName": "1.8.363", "stand": "26.10.2026, 15:27 Uhr", "notiz": "Mac-Fernsteuerung: macOS fragt nicht mehr regelmäßig am Mac nach, ob die Bildschirmaufnahme weiter erlaubt ist." },
     { "versionCode": 375, "versionName": "1.8.364", "stand": "26.10.2026, 15:28 Uhr", "notiz": "Mac-Fernsteuerung: Runder Tastatur-Knopf unten rechts und vorn in der Leiste öffnet die Handy-Tastatur von Hand, auch wenn sie bei einem Eingabefeld nicht von selbst aufspringt." },
-    { "versionCode": 376, "versionName": "1.8.365", "stand": "26.10.2026, 15:33 Uhr", "notiz": "Mac-Fernsteuerung: Ohne Verbindung bleibt der Mac-Bildschirm unverändert; einen virtuellen Bildschirm gibt es nur noch während einer Verbindung bei zugeklapptem Deckel." }
+    { "versionCode": 376, "versionName": "1.8.365", "stand": "26.10.2026, 15:33 Uhr", "notiz": "Mac-Fernsteuerung: Ohne Verbindung bleibt der Mac-Bildschirm unverändert; einen virtuellen Bildschirm gibt es nur noch während einer Verbindung bei zugeklapptem Deckel." },
+    { "versionCode": 377, "versionName": "1.8.366", "stand": "26.10.2026, 15:37 Uhr", "notiz": "Mac-Fernsteuerung: Startet nach einem Neustart des Macs zuverlässig von selbst, mit allen nötigen Rechten." }
 ]
 }
