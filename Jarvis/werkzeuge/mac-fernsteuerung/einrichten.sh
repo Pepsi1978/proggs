@@ -9,4 +9,4 @@ t="$HOME/SK/Jarvis/fernsteuerung-token.txt"
 cp de.frank.jarvis.fernsteuerung.plist ~/Library/LaunchAgents/
 launchctl bootout gui/$(id -u)/de.frank.jarvis.fernsteuerung 2>/dev/null || true
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/de.frank.jarvis.fernsteuerung.plist
-./starten.command
+# RunAtLoad im LaunchAgent startet den Dienst (starten.command), hier nicht noch einmal.

@@ -7,7 +7,8 @@
 // in Terminal und nicht launchd direkt.
 //
 // Protokoll, beide Richtungen: [1 Byte Typ][4 Byte Länge, Big Endian][Nutzlast]
-//   Mac -> Handy: 0x01 Info-JSON {w,h}, 0x02 H.264-Bild (Annex B), 0x03 Zustand-JSON {tastatur,geheim,gesperrt}
+//   Mac -> Handy: 0x01 Info-JSON {w,h}, 0x02 H.264-Bild (Annex B), 0x03 Zustand-JSON {tastatur,geheim,gesperrt},
+//                 0x04 Meldung-JSON {meldung}
 //   Handy -> Mac: 0x10 Anmeldung-JSON {token}, 0x11 Eingabe-JSON {t:…}
 
 import AppKit
@@ -42,6 +43,8 @@ let token: String = {
 final class Bildschirm {
     private var virtuell: CGVirtualDisplay?
     private(set) var displayID: CGDirectDisplayID = CGMainDisplayID()
+    /// Bildschirm, den die Aufnahme tatsächlich zeigt (kann vom gewünschten abweichen); Klicks gehen dorthin.
+    var gezeigt: CGDirectDisplayID?
 
     static func aktiveAnzahl() -> UInt32 { var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n); return n }
 
@@ -119,7 +122,7 @@ final class Bildschirm {
         CGCompleteDisplayConfiguration(cfg, .forSession)
     }
 
-    var rahmen: CGRect { CGDisplayBounds(displayID) }
+    var rahmen: CGRect { CGDisplayBounds(gezeigt ?? displayID) }
 }
 
 // MARK: - Energie: Bildschirm wecken und wach halten, solange jemand zusieht
@@ -237,12 +240,35 @@ final class Aufnahme: NSObject, SCStreamOutput, SCStreamDelegate {
     private var letztesBild: CVPixelBuffer?
     private var nachschaerfen: DispatchWorkItem?
     private var statusZaehler = 0
+    /// Jeder start/stop zählt hoch; Rückmeldungen älterer Starts werden verworfen (nur auf main ändern).
+    private var generation = 0
 
-    func start(display: CGDirectDisplayID, fertig: @escaping (Bool) -> Void) {
+    /// fertig(ok, gezeigter Bildschirm) kommt auf main.
+    func start(display: CGDirectDisplayID, versuch: Int = 0, fertig: @escaping (Bool, CGDirectDisplayID) -> Void) {
+        generation += 1
+        let gen = generation
         SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { inhalt, fehler in
-            guard let inhalt, let ziel = inhalt.displays.first(where: { $0.displayID == display }) ?? inhalt.displays.first else {
-                log("Aufnahme: kein Bildschirm (\(fehler?.localizedDescription ?? "-"))"); fertig(false); return
+            DispatchQueue.main.async { self.starten(inhalt, fehler, display, versuch, gen, fertig) }
+        }
+    }
+
+    private func starten(_ inhalt: SCShareableContent?, _ fehler: Error?, _ display: CGDirectDisplayID, _ versuch: Int, _ gen: Int,
+                         _ fertig: @escaping (Bool, CGDirectDisplayID) -> Void) {
+        guard gen == generation else { return }
+        var ziel = inhalt?.displays.first(where: { $0.displayID == display })
+        if ziel == nil, versuch < 6 {
+            // Ein eben angelegter Bildschirm taucht erst nach kurzer Zeit in der Liste auf.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                guard gen == self.generation else { return }
+                self.start(display: display, versuch: versuch + 1, fertig: fertig)
             }
+            return
+        }
+        if ziel == nil { ziel = inhalt?.displays.first }
+        guard let ziel else {
+            log("Aufnahme: kein Bildschirm (\(fehler?.localizedDescription ?? "-"))"); fertig(false, display); return
+        }
+        do {
             let rahmen = CGDisplayBounds(ziel.displayID)
             var w = Int(rahmen.width), h = Int(rahmen.height)
             if w > STREAM_BREITE_MAX { h = h * STREAM_BREITE_MAX / w; w = STREAM_BREITE_MAX }
@@ -259,19 +285,24 @@ final class Aufnahme: NSObject, SCStreamOutput, SCStreamDelegate {
             let s = SCStream(filter: filter, configuration: cfg, delegate: self)
             do {
                 try s.addStreamOutput(self, type: .screen, sampleHandlerQueue: self.queue)
-            } catch { log("Aufnahme: \(error)"); fertig(false); return }
+            } catch { log("Aufnahme: \(error)"); fertig(false, ziel.displayID); return }
             s.startCapture { fehler in
-                if let fehler { log("Aufnahme startet nicht: \(fehler.localizedDescription)"); fertig(false); return }
-                self.stream = s
-                log("Aufnahme läuft \(w)x\(h) von Bildschirm \(ziel.displayID)")
-                fertig(true)
+                DispatchQueue.main.async {
+                    guard gen == self.generation else { s.stopCapture(completionHandler: nil); return }
+                    if let fehler { log("Aufnahme startet nicht: \(fehler.localizedDescription)"); fertig(false, ziel.displayID); return }
+                    self.stream = s
+                    log("Aufnahme läuft \(w)x\(h) von Bildschirm \(ziel.displayID)")
+                    fertig(true, ziel.displayID)
+                }
             }
         }
     }
 
+    /// Nur auf main.
     func stop() {
+        generation += 1
         stream?.stopCapture(completionHandler: nil); stream = nil
-        letztesBild = nil
+        queue.async { self.letztesBild = nil }
     }
 
     /// Letztes Bild erneut senden, damit der Kodierer es nach einer Bewegung scharf nachzieht oder ein neues
@@ -299,8 +330,11 @@ final class Aufnahme: NSObject, SCStreamOutput, SCStreamDelegate {
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
         log("Aufnahme gestoppt: \(error.localizedDescription)")
-        self.stream = nil
-        abgebrochen?()
+        DispatchQueue.main.async {
+            guard stream === self.stream else { return }
+            self.stream = nil
+            self.abgebrochen?()
+        }
     }
 }
 
@@ -327,6 +361,8 @@ final class Eingabe {
 
     func ausfuehren(_ j: [String: Any]) {
         guard let t = j["t"] as? String else { return }
+        if !["bewegen", "ziehen", "text", "entsperren"].contains(t) { log("Eingabe: \(t) \(j["k"] as? String ?? "")") }
+        if t == "text" { log("Eingabe: text (\((j["s"] as? String)?.count ?? 0) Zeichen)") }
         switch t {
         case "bewegen":
             maus(gedrueckt ? .leftMouseDragged : .mouseMoved, punkt(j))
@@ -362,13 +398,14 @@ final class Eingabe {
         case "taste":
             taste((j["k"] as? String) ?? "", mods: (j["m"] as? [String]) ?? [])
         case "entsperren":
-            entsperren((j["s"] as? String) ?? "")
+            entsperren((j["s"] as? String) ?? "", sperreAus: (j["sperreAus"] as? Bool) ?? false)
         default: break
         }
     }
 
     /// Zeichen -> (Tastencode, Umschalt, Wahl) aus der aktuellen Tastaturbelegung (z. B. Deutsch).
-    private lazy var belegung: [Character: (CGKeyCode, Bool, Bool)] = {
+    /// Wird beim Anlegen auf main gebaut (TIS-Aufrufe gehören auf den Hauptfaden).
+    private let belegung: [Character: (CGKeyCode, Bool, Bool)] = {
         var m: [Character: (CGKeyCode, Bool, Bool)] = [:]
         guard let quelle = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
               let roh = TISGetInputSourceProperty(quelle, kTISPropertyUnicodeKeyLayoutData) else { return m }
@@ -450,13 +487,53 @@ final class Eingabe {
     }
 
     /// Sperrbildschirm: wecken, Passwortfeld hervorholen, Passwort tippen, Enter.
-    func entsperren(_ passwort: String) {
+    var meldung: ((String) -> Void)?
+
+    /// "Passwort nach Ruhezustand verlangen" ausschalten (sysadminctl braucht das Benutzerpasswort, kein sudo).
+    /// Das Passwort geht nur als Argument an sysadminctl, nie ins Protokoll.
+    func bildschirmsperreAus(_ passwort: String) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/sbin/sysadminctl")
+        p.arguments = ["-screenLock", "off", "-password", passwort]
+        let rohr = Pipe(); p.standardError = rohr; p.standardOutput = rohr
+        do { try p.run() } catch { log("Bildschirmsperre: \(error)"); return }
+        p.waitUntilExit()
+        let text = String(data: rohr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let ok = p.terminationStatus == 0 && !text.lowercased().contains("error") && !text.lowercased().contains("fail")
+        log("Bildschirmsperre aus: \(ok ? "ok" : "fehlgeschlagen (\(p.terminationStatus))")")
+        meldung?(ok ? "Am Mac ist „Passwort nach Ruhezustand verlangen“ jetzt aus." : "Die Bildschirmsperre ließ sich nicht ausschalten (Passwort falsch?).")
+    }
+
+    func entsperren(_ passwort: String, sperreAus: Bool) {
+        // Nie ein Passwort in eine offene App tippen: nur bei wirklich gesperrtem Mac.
+        guard Zustand.gesperrt() else {
+            log("Entsperren abgelehnt: Mac ist nicht gesperrt")
+            meldung?("Der Mac ist nicht gesperrt, das Passwort wurde nicht eingetippt."); return
+        }
+        let ohneTaste = passwort.filter { belegung[$0] == nil }.count
+        log("Entsperren: \(passwort.count) Zeichen, davon \(ohneTaste) ohne Taste auf der Tastaturbelegung, gesperrt=\(Zustand.gesperrt())")
         DispatchQueue.global().async {
-            self.taste("esc", mods: [])
-            usleep(700_000)
-            self.schreiben(passwort)
-            usleep(100_000)
+            if sperreAus { self.bildschirmsperreAus(passwort) }
+            // Bildschirm wecken (Maus wackeln), Sperrbildschirm Zeit geben, Passwortfeld mit Umschalt aktivieren.
+            let r = self.bildschirm.rahmen
+            self.maus(.mouseMoved, CGPoint(x: r.midX, y: r.midY))
+            self.maus(.mouseMoved, CGPoint(x: r.midX + 5, y: r.midY + 5))
+            usleep(1_500_000)
+            for runter in [true, false] {
+                let e = CGEvent(keyboardEventSource: self.quelle, virtualKey: 56, keyDown: runter); e?.flags = runter ? .maskShift : []
+                e?.post(tap: .cghidEventTap)
+            }
+            usleep(1_000_000)
+            for z in passwort { self.schreiben(String(z)); usleep(40_000) }
+            usleep(300_000)
             self.taste("enter", mods: [])
+            log("Entsperren: Eingabe gesendet")
+            sleep(4)
+            let noch = Zustand.gesperrt()
+            log("Entsperren: danach gesperrt=\(noch)")
+            self.meldung?(noch
+                ? "Das Passwort wurde am Mac eingetippt (\(passwort.count) Zeichen), aber der Mac ist noch gesperrt. Entweder nimmt der Sperrbildschirm künstliche Tastendrücke nicht an, oder das Passwort stimmt nicht."
+                : "Mac entsperrt.")
         }
     }
 }
@@ -580,47 +657,70 @@ final class Dienst {
     let kodierer = Kodierer()
     let aufnahme = Aufnahme()
     let zustand = Zustand()
-    lazy var eingabe = Eingabe(bildschirm: bildschirm)
+    var eingabe: Eingabe!
+    /// Angemeldete Sitzung; nur auf main lesen und schreiben.
     var sitzung: Sitzung?
+    /// Neue Verbindungen, bis sie sich angemeldet haben (verdrängen die laufende Sitzung erst danach).
+    var wartend: [ObjectIdentifier: Sitzung] = [:]
     var listener: NWListener?
     var verworfen = 0
     var warGesperrt = Zustand.gesperrt()
+    var fehlstarts = 0
 
     func aufnahmeStarten() {
         aufnahme.stop()
         kodierer.schluesselbildErzwingen = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.aufnahme.start(display: self.bildschirm.displayID) { ok in
-                DispatchQueue.main.async {
-                    let g = self.aufnahme.groesse
-                    self.sitzung?.sendenJSON(0x01, ["w": Int(g.width), "h": Int(g.height), "ok": ok])
-                    self.kodierer.schluesselbildErzwingen = true
-                    self.aufnahme.wiederholen()
+            guard self.sitzung != nil else { return }
+            self.aufnahme.start(display: self.bildschirm.displayID) { ok, gezeigt in
+                guard let s = self.sitzung else { return }
+                self.bildschirm.gezeigt = gezeigt
+                let g = self.aufnahme.groesse
+                s.sendenJSON(0x01, ["w": Int(g.width), "h": Int(g.height), "ok": ok])
+                self.kodierer.schluesselbildErzwingen = true
+                self.aufnahme.wiederholen()
+                if ok { self.fehlstarts = 0 }
+                else if self.fehlstarts < 3 {
+                    self.fehlstarts += 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if self.sitzung === s { self.aufnahmeStarten() } }
                 }
             }
         }
     }
 
+    /// Deckel zu: eigenen Bildschirm bereithalten und wach halten, damit sich der Mac nicht von selbst sperrt
+    /// (einen gesperrten Mac lässt macOS aus der Ferne nicht entsperren).
+    func wachHalten() {
+        if Bildschirm.eingebauterAktiv() { if sitzung == nil { wach.aus() }; return }
+        bildschirm.sicherstellen()
+        wach.an()
+    }
+
     func start() {
         guard !token.isEmpty else { log("Kein Token in ~/SK/Jarvis/fernsteuerung-token.txt"); exit(1) }
         log("Bedienungshilfen erlaubt: \(AXIsProcessTrusted()), Bildschirmaufnahme erlaubt: \(CGPreflightScreenCaptureAccess())")
+        eingabe = Eingabe(bildschirm: bildschirm)
         let params = NWParameters.tcp
         (params.defaultProtocolStack.transportProtocol as? NWProtocolTCP.Options)?.noDelay = true
-        params.allowLocalEndpointReuse = true
         params.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: PORT)!)
         do { listener = try NWListener(using: params) } catch {
-            log("Port \(PORT) belegt: \(error)"); exit(1)
+            log("Listener: \(error)"); exit(1)
         }
         listener?.newConnectionHandler = { [weak self] v in self?.neu(v) }
-        listener?.stateUpdateHandler = { st in log("Listener: \(st)") }
+        listener?.stateUpdateHandler = { st in
+            log("Listener: \(st)")
+            // Port belegt o. Ä.: beenden, damit die Schleife in starten.command neu startet.
+            if case .failed = st { exit(1) }
+        }
         listener?.start(queue: .main)
 
         kodierer.ausgabe = { [weak self] d in DispatchQueue.main.async { self?.sitzung?.senden(0x02, d) } }
         aufnahme.bild = { [weak self] p in
-            guard let self else { return }
-            guard let s = self.sitzung, s.angemeldet else { return }
-            if s.ausgelastet { self.verworfen += 1; return }
-            self.kodierer.kodiere(p)
+            DispatchQueue.main.async {
+                guard let self, let s = self.sitzung, s.angemeldet else { return }
+                if s.ausgelastet { self.verworfen += 1; return }
+                self.kodierer.kodiere(p)
+            }
         }
         // Bildschirm umgebaut (Entsperren, Deckel auf/zu): Aufnahme nach kurzer Pause neu starten.
         aufnahme.abgebrochen = { [weak self] in
@@ -641,26 +741,38 @@ final class Dienst {
             }
             self.warGesperrt = w.gesperrt
         }
+        wachHalten()
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.wachHalten() }
     }
 
     private func neu(_ v: NWConnection) {
         log("Verbindung von \(v.endpoint)")
-        sitzung?.stop()
         let s = Sitzung(v)
-        sitzung = s
+        let id = ObjectIdentifier(s)
+        wartend[id] = s
+        // Ohne Anmeldung binnen 10 s wieder schließen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self, weak s] in
+            if let s, !s.angemeldet { s.stop() }
+            self?.wartend[id] = nil
+        }
         s.angemeldetCallback = { [weak self, weak s] in
             guard let self, let s else { return }
             log("angemeldet")
+            self.wartend[id] = nil
+            if let alt = self.sitzung, alt !== s { self.sitzung = nil; alt.stop(); self.aufraeumen() }
+            self.sitzung = s
+            self.eingabe.meldung = { [weak s] text in DispatchQueue.main.async { s?.sendenJSON(0x04, ["meldung": text]) } }
             self.wach.an()
             self.bildschirm.sicherstellen()
             self.warGesperrt = Zustand.gesperrt()
             let w = self.zustand.werte
             s.sendenJSON(0x03, ["tastatur": w.tastatur, "geheim": w.geheim, "gesperrt": self.warGesperrt])
+            self.fehlstarts = 0
             self.aufnahmeStarten()
             self.zustand.start()
         }
-        s.eingabe = { [weak self] j in
-            guard let self else { return }
+        s.eingabe = { [weak self, weak s] j in
+            guard let self, let s, self.sitzung === s else { return }
             self.wach.wecken()
             if (j["t"] as? String) == "schluesselbild" {
                 self.kodierer.schluesselbildErzwingen = true; self.aufnahme.wiederholen(); return
@@ -668,14 +780,20 @@ final class Dienst {
             self.eingabe.ausfuehren(j)
         }
         s.beendet = { [weak self, weak s] in
-            guard let self, self.sitzung === s else { return }
+            guard let self, let s else { return }
+            self.wartend[id] = nil
+            guard self.sitzung === s else { return }
             log("Verbindung beendet")
             self.sitzung = nil
-            self.aufnahme.stop()
-            self.zustand.stop()
-            self.wach.aus()
+            self.aufraeumen()
         }
         s.start()
+    }
+
+    private func aufraeumen() {
+        aufnahme.stop()
+        zustand.stop()
+        wachHalten()
     }
 }
 

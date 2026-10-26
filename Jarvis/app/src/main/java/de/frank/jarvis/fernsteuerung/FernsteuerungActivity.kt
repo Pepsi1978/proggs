@@ -69,13 +69,20 @@ class FernsteuerungActivity : ComponentActivity() {
     private var gesperrt by mutableStateOf(false)
     private var tastaturAn by mutableStateOf(false)
     private var getrennt by mutableStateOf(false)
+    private var meldung by mutableStateOf("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         ansicht = FernAnsicht(this) { verbindung?.eingabe(it) }
-        ansicht.surfaceBereit = { s -> surface = s; dekoderNeu() }
+        ansicht.surfaceBereit = { s ->
+            // Erst den Dekoder lösen, dann die alte Surface freigeben.
+            dekoder?.stop(); dekoder = null
+            surface?.takeIf { it != s }?.release()
+            surface = s
+            if (s != null) dekoderNeu()
+        }
         setContent { MaterialTheme(colorScheme = darkColorScheme()) { Oberflaeche() } }
     }
 
@@ -92,10 +99,17 @@ class FernsteuerungActivity : ComponentActivity() {
         status = "Verbinde mit dem Mac …"
         verbindung = FernVerbindung(
             MAC_ADRESSE, PORT, t,
-            beiInfo = { w, h -> runOnUiThread { macW = w; macH = h; ansicht.macGroesse(w, h); status = ""; dekoderNeu() } },
+            beiInfo = { w, h, ok ->
+                runOnUiThread {
+                    status = if (ok) "" else "Der Mac liefert gerade kein Bild (Bildschirmaufnahme gescheitert). Er versucht es erneut …"
+                    if (ok && (w != macW || h != macH || dekoder == null)) { macW = w; macH = h; ansicht.macGroesse(w, h); dekoderNeu() }
+                    else if (ok) verbindung?.eingabe(JSONObject().put("t", "schluesselbild"))
+                }
+            },
             beiBild = { dekoder?.bild(it) },
             beiZustand = { j -> runOnUiThread { zustand(j) } },
-            beiEnde = { grund -> runOnUiThread { status = "Verbindung getrennt: $grund"; getrennt = true } },
+            beiEnde = { grund -> runOnUiThread { status = "Verbindung getrennt: $grund"; getrennt = true; gesperrt = false } },
+            beiMeldung = { text -> runOnUiThread { meldung = if (meldung.isEmpty() || meldung.endsWith("…")) text else "$meldung\n$text" } },
         ).also { it.start() }
     }
 
@@ -182,16 +196,18 @@ class FernsteuerungActivity : ComponentActivity() {
     @Composable
     private fun Entsperren(modifier: Modifier) {
         var passwort by remember { mutableStateOf("") }
+        var sperreAus by remember { mutableStateOf(true) }
         val los = {
-            verbindung?.eingabe(JSONObject().put("t", "entsperren").put("s", passwort))
+            verbindung?.eingabe(JSONObject().put("t", "entsperren").put("s", passwort).put("sperreAus", sperreAus))
             passwort = ""
+            meldung = "Wird am Mac eingetippt …"
         }
         Column(
             modifier.widthIn(max = 420.dp).padding(24.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFF1E222A)).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Der Mac ist gesperrt", color = Color.White, fontSize = 18.sp)
-            Text("Im gesperrten Zustand zeigt macOS kein Bild. Gib dein Mac-Passwort ein, dann entsperrt Jarvis den Mac.",
+            Text("Im gesperrten Zustand zeigt macOS kein Bild. Jarvis tippt dein Passwort am Mac ein; bei zugeklapptem Deckel lässt macOS das aber oft nicht zu. Dann den Mac einmal am Gerät entsperren, danach hält Jarvis ihn wach.",
                 color = Color(0xFFB8BEC9), fontSize = 14.sp)
             OutlinedTextField(
                 passwort, { passwort = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text("Mac-Passwort") },
@@ -199,7 +215,12 @@ class FernsteuerungActivity : ComponentActivity() {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { los() }),
             )
+            Row(Modifier.fillMaxWidth().clickable { sperreAus = !sperreAus }, verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Checkbox(sperreAus, { sperreAus = it })
+                Text("Mac danach nicht mehr von selbst sperren", color = Color.White, fontSize = 14.sp)
+            }
             Button(onClick = los, Modifier.fillMaxWidth(), enabled = passwort.isNotEmpty()) { Text("Entsperren") }
+            if (meldung.isNotEmpty()) Text(meldung, color = Color(0xFFFFD27A), fontSize = 14.sp)
         }
     }
 

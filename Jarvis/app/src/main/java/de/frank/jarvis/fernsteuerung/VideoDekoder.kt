@@ -29,8 +29,8 @@ class VideoDekoder(private val surface: Surface, private val breite: Int, privat
 
     private fun schleife() {
         val info = MediaCodec.BufferInfo()
-        try {
-            while (laeuft) {
+        while (laeuft) {
+            try {
                 val d = schlange.poll(20, TimeUnit.MILLISECONDS)
                 if (d != null) {
                     val nal = nalTypen(d)
@@ -43,17 +43,29 @@ class VideoDekoder(private val surface: Surface, private val breite: Int, privat
                     val idx = c.dequeueInputBuffer(30_000)
                     if (idx >= 0) {
                         val buf = c.getInputBuffer(idx)!!
-                        buf.clear(); buf.put(d)
+                        buf.clear()
+                        if (d.size > buf.capacity()) { c.queueInputBuffer(idx, 0, 0, 0, 0); throw IllegalStateException("Bild zu groß: ${d.size}") }
+                        buf.put(d)
                         c.queueInputBuffer(idx, 0, d.size, System.nanoTime() / 1000, 0)
                     }
                 }
                 ausgeben(info)
+            } catch (e: InterruptedException) {
+                break
+            } catch (e: Exception) {
+                // Dekoderfehler: frisch anlegen und auf ein neues Schlüsselbild warten, statt schwarz zu bleiben.
+                Log.w(FernVerbindung.TAG, "Dekoder", e)
+                freigeben()
+                schlange.clear(); wartetAufSchluessel = true; schluesselbildHolen()
+                Thread.sleep(200)
             }
-        } catch (e: Exception) {
-            Log.w(FernVerbindung.TAG, "Dekoder", e)
-        } finally {
-            runCatching { codec?.stop() }; runCatching { codec?.release() }
         }
+        freigeben()
+    }
+
+    private fun freigeben() {
+        runCatching { codec?.stop() }; runCatching { codec?.release() }
+        codec = null
     }
 
     private fun ausgeben(info: MediaCodec.BufferInfo) {
@@ -73,7 +85,7 @@ class VideoDekoder(private val surface: Surface, private val breite: Int, privat
         f.setByteBuffer("csd-1", ByteBuffer.wrap(erstes, pps.first, pps.third))
         if (Build.VERSION.SDK_INT >= 30) f.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)
         f.setInteger(MediaFormat.KEY_PRIORITY, 0)
-        f.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, breite * hoehe)
+        f.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, breite * hoehe * 2)
         val c = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
         c.configure(f, surface, null, 0)
         c.start()
@@ -81,7 +93,11 @@ class VideoDekoder(private val surface: Surface, private val breite: Int, privat
         return Unit
     }
 
-    fun stop() { laeuft = false }
+    /** Wartet kurz, bis der Codec die Surface freigegeben hat, damit ein Nachfolger sie verbinden kann. */
+    fun stop() {
+        laeuft = false
+        if (Thread.currentThread() != faden) runCatching { faden.join(1000) }
+    }
 
     companion object {
         /** (Anfang inkl. Startcode, NAL-Typ, Länge inkl. Startcode) jeder NAL-Einheit. */

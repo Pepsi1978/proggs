@@ -14,8 +14,20 @@ end
 
 server = TCPServer.new('0.0.0.0', AUSSEN)
 $stderr.puts "Weiterleitung #{AUSSEN} -> 127.0.0.1:#{INNEN}"
+# Nur der eigene Tunnel (10.8.0.x) und der Mac selbst dürfen herein, nicht das WLAN, in dem der Mac gerade hängt.
+def erlaubt?(a)
+  ip = a.remote_address.ip_address
+  ip.start_with?('10.8.0.') || ip == '127.0.0.1'
+rescue StandardError
+  false
+end
+
 loop do
   aussen = server.accept
+  unless erlaubt?(aussen)
+    aussen.close rescue nil
+    next
+  end
   Thread.new(aussen) do |a|
     i = nil
     begin

@@ -11,17 +11,18 @@ import java.util.concurrent.Executors
 /**
  * TCP-Verbindung zum Fernsteuerungs-Dienst auf dem Mac (Jarvis/werkzeuge/mac-fernsteuerung).
  * Rahmen in beide Richtungen: [1 Byte Typ][4 Byte Länge][Nutzlast].
- * Mac -> Handy: 0x01 Info {w,h}, 0x02 H.264 (Annex B), 0x03 Zustand {tastatur,geheim,gesperrt}.
+ * Mac -> Handy: 0x01 Info {w,h}, 0x02 H.264 (Annex B), 0x03 Zustand {tastatur,geheim,gesperrt}, 0x04 Meldung {meldung}.
  * Handy -> Mac: 0x10 Anmeldung {token}, 0x11 Eingabe {t:…}.
  */
 class FernVerbindung(
     private val host: String,
     private val port: Int,
     private val token: String,
-    private val beiInfo: (Int, Int) -> Unit,
+    private val beiInfo: (Int, Int, Boolean) -> Unit,
     private val beiBild: (ByteArray) -> Unit,
     private val beiZustand: (JSONObject) -> Unit,
     private val beiEnde: (String) -> Unit,
+    private val beiMeldung: (String) -> Unit = {},
 ) {
     private val sender = Executors.newSingleThreadExecutor()
     @Volatile private var socket: Socket? = null
@@ -46,9 +47,10 @@ class FernVerbindung(
                     val daten = ByteArray(n)
                     ein.readFully(daten)
                     when (typ) {
-                        0x01 -> JSONObject(String(daten)).let { beiInfo(it.optInt("w"), it.optInt("h")) }
+                        0x01 -> JSONObject(String(daten)).let { beiInfo(it.optInt("w"), it.optInt("h"), it.optBoolean("ok", true)) }
                         0x02 -> beiBild(daten)
                         0x03 -> beiZustand(JSONObject(String(daten)))
+                        0x04 -> beiMeldung(JSONObject(String(daten)).optString("meldung"))
                     }
                 }
             } catch (e: Exception) {
