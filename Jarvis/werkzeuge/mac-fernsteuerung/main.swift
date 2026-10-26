@@ -21,7 +21,8 @@ import Network
 import ScreenCaptureKit
 import VideoToolbox
 
-let PORT: UInt16 = UInt16(ProcessInfo.processInfo.environment["FERNSTEUERUNG_PORT"] ?? "") ?? 47800
+// Nur lokal; von außen (Tunnel, Port 47800) kommt man über weiterleitung.rb (Firewall).
+let PORT: UInt16 = UInt16(ProcessInfo.processInfo.environment["FERNSTEUERUNG_PORT"] ?? "") ?? 47801
 let STREAM_BREITE_MAX = 1600
 let BITRATE = 4_000_000
 let BILDER_PRO_SEKUNDE: Int32 = 30
@@ -44,10 +45,21 @@ final class Bildschirm {
 
     static func aktiveAnzahl() -> UInt32 { var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n); return n }
 
+    static func eingebauterAktiv() -> Bool {
+        var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n)
+        var ids = [CGDirectDisplayID](repeating: 0, count: Int(n)); CGGetActiveDisplayList(n, &ids, &n)
+        return ids.contains { CGDisplayIsBuiltin($0) != 0 }
+    }
+
     /// Ohne aktiven Bildschirm (Deckel zu) einen virtuellen anlegen und behalten, solange der Dienst läuft.
     func sicherstellen() {
-        if let v = virtuell { displayID = v.displayID; spiegeln(); return }
-        if Bildschirm.aktiveAnzahl() > 0 { displayID = CGMainDisplayID(); spiegeln(); return }
+        // Eingebauter Bildschirm aktiv (Deckel offen): den zeigen, den eigenen virtuellen freigeben. Sonst immer einen eigenen
+        // virtuellen nutzen, auch wenn Reste fremder virtueller Bildschirme noch als aktiv gelten (deren Inhalt zeichnet
+        // macOS nicht zuverlässig).
+        if Bildschirm.eingebauterAktiv(), virtuell == nil || Bildschirm.aktiveAnzahl() > 1 {
+            virtuell = nil; displayID = CGMainDisplayID(); return
+        }
+        if let v = virtuell { displayID = v.displayID; zumHauptbildschirm(v.displayID); spiegeln(); return }
         for versuch in 0..<5 {
             let d = CGVirtualDisplayDescriptor()
             d.queue = DispatchQueue.main
@@ -63,6 +75,7 @@ final class Bildschirm {
                 virtuell = v; displayID = v.displayID
                 log("virtueller Bildschirm \(v.displayID) angelegt")
                 zumHauptbildschirm(v.displayID)
+                spiegeln()
                 return
             }
         }
@@ -71,7 +84,16 @@ final class Bildschirm {
     }
 
     /// Ohne eingebauten Bildschirm (Deckel zu) alle übrigen aktiven Bildschirme auf den gezeigten spiegeln.
+    /// Bildschirm-Umbau blockiert bei gesperrtem Mac bis zu 20 s und greift erst nach dem Entsperren: dann im Hintergrund.
+    private let umbau = DispatchQueue(label: "bildschirm-umbau")
+
     private func spiegeln() {
+        guard !Zustand.gesperrt() else { return }
+        let ziel = displayID
+        umbau.async { Bildschirm.spiegeln(auf: ziel) }
+    }
+
+    private static func spiegeln(auf displayID: CGDirectDisplayID) {
         var n: UInt32 = 0; CGGetActiveDisplayList(0, nil, &n)
         guard n > 1 else { return }
         var ids = [CGDirectDisplayID](repeating: 0, count: Int(n)); CGGetActiveDisplayList(n, &ids, &n)
@@ -86,6 +108,11 @@ final class Bildschirm {
     }
 
     private func zumHauptbildschirm(_ id: CGDirectDisplayID) {
+        guard !Zustand.gesperrt(), CGMainDisplayID() != id else { return }
+        umbau.async { Bildschirm.hauptbildschirm(id) }
+    }
+
+    private static func hauptbildschirm(_ id: CGDirectDisplayID) {
         var cfg: CGDisplayConfigRef?
         guard CGBeginDisplayConfiguration(&cfg) == .success else { return }
         CGConfigureDisplayOrigin(cfg, id, 0, 0)
@@ -268,9 +295,12 @@ final class Aufnahme: NSObject, SCStreamOutput, SCStreamDelegate {
         queue.asyncAfter(deadline: .now() + 0.4, execute: w)
     }
 
+    var abgebrochen: (() -> Void)?
+
     func stream(_ stream: SCStream, didStopWithError error: Error) {
         log("Aufnahme gestoppt: \(error.localizedDescription)")
         self.stream = nil
+        abgebrochen?()
     }
 }
 
@@ -577,7 +607,8 @@ final class Dienst {
         let params = NWParameters.tcp
         (params.defaultProtocolStack.transportProtocol as? NWProtocolTCP.Options)?.noDelay = true
         params.allowLocalEndpointReuse = true
-        do { listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: PORT)!) } catch {
+        params.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: PORT)!)
+        do { listener = try NWListener(using: params) } catch {
             log("Port \(PORT) belegt: \(error)"); exit(1)
         }
         listener?.newConnectionHandler = { [weak self] v in self?.neu(v) }
@@ -590,6 +621,14 @@ final class Dienst {
             guard let s = self.sitzung, s.angemeldet else { return }
             if s.ausgelastet { self.verworfen += 1; return }
             self.kodierer.kodiere(p)
+        }
+        // Bildschirm umgebaut (Entsperren, Deckel auf/zu): Aufnahme nach kurzer Pause neu starten.
+        aufnahme.abgebrochen = { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                guard let self, self.sitzung != nil else { return }
+                self.bildschirm.sicherstellen()
+                self.aufnahmeStarten()
+            }
         }
         zustand.geaendert = { [weak self] w in
             guard let self else { return }
