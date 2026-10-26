@@ -93,6 +93,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Mac-Bildschirm live bedienen (Gegenstück: werkzeuge/mac-fernsteuerung). Falten/Drehen ohne Neuaufbau. -->
+        <activity
+            android:name=".fernsteuerung.FernsteuerungActivity"
+            android:exported="false"
+            android:label="Mac-Bildschirm"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|density|uiMode"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Hält MCP-Server und Tunnel am Leben, auch bei gesperrtem Handy. -->
         <service
             android:name=".dienst.JarvisDienst"

@@ -35,7 +35,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.DesktopMac
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -205,6 +208,15 @@ private fun Leiste(vm: AppViewModel) {
                 if (aktiv) Text(r.anzeige, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+        // Kein Reiter: öffnet den Mac-Bildschirm zum Fernbedienen.
+        val context = androidx.compose.ui.platform.LocalContext.current
+        Row(
+            Modifier.weight(1f).height(50.dp).antippen {
+                context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java))
+            }.semantics { contentDescription = "Mac-Bildschirm" },
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) { Icon(Icons.Rounded.DesktopMac, null, tint = f.textLeise, modifier = Modifier.size(20.dp)) }
     }
 }
 

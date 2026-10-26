@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Startet die Fernsteuerung nach der Anmeldung über Terminal.app (versteckt), damit sie dessen Rechte für
+     Bildschirmaufnahme und Bedienungshilfen erbt. Einrichten: einrichten.sh -->
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>de.frank.jarvis.fernsteuerung</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/open</string>
+        <string>-g</string>
+        <string>-j</string>
+        <string>-a</string>
+        <string>Terminal</string>
+        <string>/Users/frank/proggs/Jarvis/werkzeuge/mac-fernsteuerung/starten.command</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+</dict>
+</plist>
