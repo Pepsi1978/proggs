@@ -10,7 +10,7 @@ plist="/Library/LaunchDaemons/de.frank.hotspot-suche.plist"
 
 if [[ "$1" == "--zurueck" ]]; then
   launchctl bootout system "$plist" 2>/dev/null || true
-  rm -rf "$plist" "$ordner"
+  rm -rf "$plist" "$ordner" /Library/Logs/hotspot-suche.log
   echo "Entfernt: macOS sucht wieder nur nach eigenem Ermessen."
   exit 0
 fi
@@ -20,5 +20,7 @@ mkdir -p "$ordner"
 install -m 700 -o root -g wheel "$hier/hotspot-suche.sh" "$ordner/hotspot-suche.sh"
 install -m 644 -o root -g wheel "$hier/de.frank.hotspot-suche.plist" "$plist"
 launchctl bootout system "$plist" 2>/dev/null || true
+# bootout läuft asynchron: warten, bis der alte Dienst weg ist, sonst scheitert bootstrap mit Fehler 5
+for i in {1..20}; do launchctl print system/de.frank.hotspot-suche >/dev/null 2>&1 || break; sleep 0.5; done
 launchctl bootstrap system "$plist"
 echo "Eingerichtet: hotspot-suche läuft alle 30 s."
