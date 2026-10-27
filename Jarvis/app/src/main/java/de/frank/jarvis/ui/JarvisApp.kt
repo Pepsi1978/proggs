@@ -40,7 +40,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.DesktopMac
-import androidx.compose.material.icons.outlined.DesktopMac as DesktopMacUmriss
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -222,13 +221,11 @@ private fun Leiste(vm: AppViewModel) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            when (rechnerDa) {
-                true -> Icon(Icons.Rounded.DesktopMac, null, tint = f.erfolg, modifier = Modifier.size(22.dp).drawBehind {
-                    drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(f.erfolg.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
-                })
-                false -> Icon(Icons.Outlined.DesktopMacUmriss, null, tint = f.gefahr, modifier = Modifier.size(22.dp))
-                null -> Icon(Icons.Outlined.DesktopMacUmriss, null, tint = f.textLeise, modifier = Modifier.size(22.dp))
-            }
+            // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
+            val farbe = when (rechnerDa) { true -> f.erfolg; false -> f.gefahr; null -> f.textLeise }
+            Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(28.dp).drawBehind {
+                if (rechnerDa == true) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
+            })
         }
     }
 }
