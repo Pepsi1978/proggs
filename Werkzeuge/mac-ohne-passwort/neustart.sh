@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Neustart ohne Passwort-Eingabe, Touch ID bleibt an: authentifizierter FileVault-Neustart (fdesetup authrestart),
-# danach ist der Mac direkt angemeldet. Braucht eingeschaltetes FileVault.
+# danach ist der Mac direkt angemeldet. Bei ausgeschaltetem FileVault normaler Neustart (Anmeldung: auto-anmelden.rb).
 #   Einmal einrichten:  sudo zsh neustart.sh --einrichten   (fragt das Mac-Passwort ab und legt es nur für root lesbar ab)
 #   Neu starten:        neustart   (Alias in ~/.zshrc) oder  sudo zsh neustart.sh
 set -e
@@ -23,6 +23,7 @@ if [[ "$1" == "--einrichten" ]]; then
   exit 0
 fi
 
-[[ "$(fdesetup isactive)" == "true" ]] || { echo "FileVault ist aus: erst einschalten (sudo fdesetup enable)."; exit 1; }
+# Ohne FileVault meldet auto-anmelden.rb nach dem Neustart an: normaler Neustart genügt.
+[[ "$(fdesetup isactive)" == "true" ]] || exec shutdown -r now
 [[ -f "$datei" ]] || { echo "Noch nicht eingerichtet: sudo zsh $0 --einrichten"; exit 1; }
 fdesetup authrestart -inputplist < "$datei"

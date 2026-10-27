@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Meldet Frank ohne Passwort-Eingabe an (Anmelde- und Sperrbildschirm). Einrichten: anmeldung-einrichten.sh -->
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>de.frank.mac-auto-anmelden</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/ruby</string>
+        <string>/Library/Application Support/MacOhnePasswort/auto-anmelden.rb</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ThrottleInterval</key><integer>10</integer>
+</dict>
+</plist>
