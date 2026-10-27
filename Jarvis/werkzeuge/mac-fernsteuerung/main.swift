@@ -182,6 +182,7 @@ final class Wachhalter {
     func aus() {
         if assertion != 0 { IOPMAssertionRelease(assertion); assertion = 0 }
     }
+    var aktiv: Bool { assertion != 0 }
 }
 
 // MARK: - H.264-Kodierer
@@ -801,8 +802,15 @@ final class Dienst {
     /// Nur auf main. Bildschirme ohne Verbindung freigeben; mit Verbindung Deckelwechsel nachziehen.
     func wachHalten() {
         wach.systemAn()
-        if sitzung == nil { bildschirm.freigeben(); wach.aus() }
-        else {
+        if sitzung == nil {
+            bildschirm.freigeben()
+            // Deckel zu: Display nie in den Ruhezustand gehen lassen, denn danach sperrt macOS den Mac trotz
+            // ausgeschalteter Bildschirmsperre, und aus der Ferne lässt er sich nicht entsperren. Das Display ist bei
+            // zugeklapptem Deckel ohnehin dunkel; mit offenem Deckel bleibt alles wie ohne Fernsteuerung.
+            let zu = Bildschirm.deckelZu()
+            if zu { if !wach.aktiv { log("Deckel zu: Display bleibt wach, damit der Mac nicht sperrt") }; wach.an() }
+            else { wach.aus() }
+        } else {
             let vorher = bildschirm.displayID
             bildschirm.sicherstellen()
             if bildschirm.displayID != vorher { log("Bildschirm gewechselt, Aufnahme neu"); aufnahmeStarten() }
