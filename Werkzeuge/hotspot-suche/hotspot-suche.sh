@@ -40,7 +40,7 @@ fi
 stempel="$ordner/letzter-neustart"
 zuletzt=$(cat "$stempel" 2>/dev/null || echo 0)
 (( jetzt - zuletzt >= 120 )) || exit 0
-wlan_an && ! verbunden || exit 0
+if ! wlan_an || verbunden; then exit 0; fi
 echo "$jetzt" > "$stempel"
 echo "$(date '+%d.%m.%Y %H:%M:%S') WLAN-Neustart" >> "$log"
 networksetup -setairportpower "$dev" off
