@@ -84,6 +84,15 @@
         "IsUserDefined": true,
         "ProviderId": "openai",
         "ProviderName": "OpenAI",
+        "Slug": "gpt-6.1-terra",
+        "DisplayName": "GPT-6.1 Terra",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": true,
+        "ProviderId": "openai",
+        "ProviderName": "OpenAI",
         "Slug": "gpt-6-luna",
         "DisplayName": "GPT-6 Luna",
         "IsHidden": false
@@ -102,6 +111,7 @@
     "KnownSyncedModelSlugs": [
       "gpt-6-astra",
       "gpt-6.1-sol",
+      "gpt-6.1-terra",
       "gpt-5.6-terra",
       "gpt-6-luna"
     ],
@@ -480,7 +490,6 @@
       "google/gemma-4-31b-it:free",
       "liquid/lfm-2.5-2.6b:free",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
       "nvidia/nemotron-3-ultra-550b-a55b:free",
       "nvidia/nemotron-3.5-content-safety:free",
       "nvidia/nemotron-3.5-lightning:free",

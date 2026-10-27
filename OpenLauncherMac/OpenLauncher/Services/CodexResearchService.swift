@@ -184,7 +184,7 @@ final class CodexResearchService {
         let sorted = items.sorted { ($0["priority"] as? Int ?? Int.max) < ($1["priority"] as? Int ?? Int.max) }
         return sorted.compactMap { item in
             guard item["supported_in_api"] as? Bool != false, item["visibility"] as? String != "hide", let id = item["slug"] as? String, !id.isEmpty else { return nil }
-            guard ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna"].contains(id) else { return nil }
+            guard ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-5.6-terra", "gpt-6-luna"].contains(id) else { return nil }
             let values = (item["supported_reasoning_levels"] as? [Any] ?? []).compactMap {
                 ($0 as? String) ?? (($0 as? [String: Any])?["effort"] as? String)
             }

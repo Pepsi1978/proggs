@@ -322,7 +322,7 @@ final class MainViewModel {
         let isCodex = target.access == "codex"
         let cached = EffortStore.cached(target)
             ?? (isCodex ? nil : UserDefaults.standard.dictionary(forKey: "thinking-levels." + value.modelString))
-        let currentCodex = value.providerId == "openai" && ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna"].contains(value.slug)
+        let currentCodex = value.providerId == "openai" && ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-5.6-terra", "gpt-6-luna"].contains(value.slug)
         let levels = (currentCodex ? OpenCodeVariantCatalog.launcherLevels(for: value) : (cached?["levels"] as? [String]
                        ?? (isCodex ? EffortRefreshService.localCodex(target)?.levels : nil)
                        ?? OpenCodeVariantCatalog.launcherLevels(for: value)))
@@ -452,7 +452,7 @@ final class MainViewModel {
         // Only explicit live catalog enumerations may remove levels; AI evidence is additive.
         if snapshot.canRemove { levels = snapshot.levels }
         for level in snapshot.levels where !levels.contains(level) { levels.append(level) }
-        if target.provider == "openai", ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna"].contains(target.model) {
+        if target.provider == "openai", ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-5.6-terra", "gpt-6-luna"].contains(target.model) {
             let model = ModelEntry(slug: target.model, displayName: target.model, providerId: "openai", providerName: "OpenAI")
             levels = OpenCodeVariantCatalog.launcherLevels(for: model)
         }

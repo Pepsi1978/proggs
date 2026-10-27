@@ -70,7 +70,7 @@ public static class OpenCodeVariantCatalog
 
     private static IReadOnlyList<string> GetOpenAiLevels(string slug)
     {
-        if (slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-5.6-terra") return ["low", "medium", "high", "xhigh", "max", "ultra"];
+        if (slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-6.1-terra" or "gpt-5.6-terra") return ["low", "medium", "high", "xhigh", "max", "ultra"];
         if (slug == "gpt-6-luna") return ["low", "medium", "high", "xhigh", "max"];
         if (slug.Contains("-mini", StringComparison.Ordinal) || slug.Contains("-nano", StringComparison.Ordinal)) return [];
         if (slug.Contains("-chat", StringComparison.Ordinal)) return ["medium"];
@@ -93,7 +93,7 @@ public static class OpenCodeVariantCatalog
     private static IReadOnlyList<string> GetOpenAiCompatibleLevels(string id)
     {
         var local = id.StartsWith("openai/", StringComparison.Ordinal) ? id["openai/".Length..] : id;
-        if (local is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-5.6-terra") return ["low", "medium", "high", "xhigh", "max", "ultra"];
+        if (local is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-6.1-terra" or "gpt-5.6-terra") return ["low", "medium", "high", "xhigh", "max", "ultra"];
         if (local == "gpt-6-luna") return ["low", "medium", "high", "xhigh", "max"];
         if (local.Contains("-chat", StringComparison.Ordinal)) return ["medium"];
         if (local.Contains("pro", StringComparison.Ordinal)) return local.Contains("gpt-5.", StringComparison.Ordinal)

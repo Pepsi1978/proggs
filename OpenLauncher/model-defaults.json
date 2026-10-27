@@ -47,6 +47,12 @@
     "ThinkingValue": "high",
     "CliTargetId": "opencode"
   },
+  "openai/gpt-6.1-terra": {
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
+    "ThinkingValue": "high",
+    "CliTargetId": "opencode"
+  },
   "openai/gpt-6-luna": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",

@@ -287,7 +287,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var cached = _thinkingCache.Find(key) ?? (access == "codex" ? null : _thinkingCache.Find(model.ModelString));
             var local = access == "codex" ? EffortRefreshService.ReadCodexCache(model) : null;
-            var currentCodex = model.ProviderId == "openai" && model.Slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-5.6-terra" or "gpt-6-luna";
+            var currentCodex = model.ProviderId == "openai" && model.Slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-6.1-terra" or "gpt-5.6-terra" or "gpt-6-luna";
             foreach (var level in currentCodex ? GetStaticThinkingLevels(model).ToList() : cached?.Levels ?? local?.Levels ?? GetStaticThinkingLevels(model).ToList())
                 ThinkingOptions.Add(ToThinkingOption(level));
             var selected = _pendingModelDefault?.ThinkingValue ?? cached?.Selected;
@@ -337,7 +337,7 @@ public sealed partial class MainViewModel : ObservableObject
         var saved = _thinkingCache.Find(key);
         var existing = visible ? ThinkingOptions.Select(x => x.Value).ToList() : saved?.Levels ?? [];
         var levels = snapshot.CanRemove ? snapshot.Levels.Distinct().ToList() : existing.Union(snapshot.Levels).ToList();
-        if (model.ProviderId == "openai" && model.Slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-5.6-terra" or "gpt-6-luna")
+        if (model.ProviderId == "openai" && model.Slug is "gpt-6-astra" or "gpt-6.1-sol" or "gpt-6.1-terra" or "gpt-5.6-terra" or "gpt-6-luna")
             levels = GetStaticThinkingLevels(model).ToList();
         var selected = visible ? SelectedThinkingOption?.Value : saved?.Selected;
         if (visible)

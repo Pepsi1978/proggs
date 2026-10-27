@@ -57,6 +57,7 @@ public sealed class ModelRegistry
     [
         ("gpt-6-astra", "GPT-6 Astra"),
         ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.1-terra", "GPT-6.1 Terra"),
         (Gpt56TerraSlug, "GPT-5.6 Terra"),
         ("gpt-6-luna", "GPT-6 Luna"),
     ];
@@ -69,6 +70,7 @@ public sealed class ModelRegistry
     private static readonly (string Slug, string DisplayName)[] Gpt6Models =
     [
         ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.1-terra", "GPT-6.1 Terra"),
         ("gpt-6-luna", "GPT-6 Luna"),
     ];
 
@@ -698,6 +700,7 @@ public sealed class ModelRegistry
         {
             Model("gpt-6-astra", "GPT-6 Astra", "openai", "OpenAI"),
             Model("gpt-6.1-sol", "GPT-6.1 Sol", "openai", "OpenAI"),
+            Model("gpt-6.1-terra", "GPT-6.1 Terra", "openai", "OpenAI"),
             Model(Gpt56TerraSlug, "GPT-5.6 Terra", "openai", "OpenAI"),
             Model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI"),
         }),

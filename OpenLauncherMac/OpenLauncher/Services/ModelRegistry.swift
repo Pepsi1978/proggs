@@ -43,6 +43,7 @@ final class ModelRegistry {
     private static let gpt56Models: [(slug: String, displayName: String)] = [
         ("gpt-6-astra", "GPT-6 Astra"),
         ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.1-terra", "GPT-6.1 Terra"),
         (gpt56TerraSlug, "GPT-5.6 Terra"),
         ("gpt-6-luna", "GPT-6 Luna")
     ]
@@ -52,6 +53,7 @@ final class ModelRegistry {
     /// damit configureProvider den provider.openai.models-Eintrag schreibt.
     private static let gpt6Models: [(slug: String, displayName: String)] = [
         ("gpt-6.1-sol", "GPT-6.1 Sol"),
+        ("gpt-6.1-terra", "GPT-6.1 Terra"),
         ("gpt-6-luna", "GPT-6 Luna")
     ]
 
@@ -591,6 +593,7 @@ final class ModelRegistry {
             createGroup("openai", "OpenAI", "openai", "OpenAI", [
                 model("gpt-6-astra", "GPT-6 Astra", "openai", "OpenAI"),
                 model("gpt-6.1-sol", "GPT-6.1 Sol", "openai", "OpenAI"),
+                model("gpt-6.1-terra", "GPT-6.1 Terra", "openai", "OpenAI"),
                 model(gpt56TerraSlug, "GPT-5.6 Terra", "openai", "OpenAI"),
                 model("gpt-6-luna", "GPT-6 Luna", "openai", "OpenAI")
             ]),
