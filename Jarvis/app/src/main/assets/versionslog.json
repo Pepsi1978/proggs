@@ -384,6 +384,7 @@
     { "versionCode": 378, "versionName": "1.8.367", "stand": "26.10.2026, 15:47 Uhr", "notiz": "Mac-Fernsteuerung: Abgerissene Verbindungen werden erkannt, Tippen auf die schwarzen Ränder klickt nichts mehr, der Tastatur-Knopf zeigt den echten Zustand und ein externer Monitor bleibt unangetastet." },
     { "versionCode": 379, "versionName": "1.8.368", "stand": "27.10.2026, 11:11 Uhr", "notiz": "Mac-Fernsteuerung: Bei zugeklapptem Deckel bleibt der Mac auch ohne Verbindung wach und sperrt nicht mehr von selbst, nach der ersten Anmeldung ist kein Passwort mehr nötig." },
     { "versionCode": 380, "versionName": "1.8.369", "stand": "27.10.2026, 11:12 Uhr", "notiz": "Mac-Fernsteuerung: Ein bereits gesperrter Mac wird bei zugeklapptem Deckel nicht mehr unnötig jede Minute geweckt." },
-    { "versionCode": 381, "versionName": "1.8.370", "stand": "27.10.2026, 11:13 Uhr", "notiz": "Mac-Fernsteuerung: Der Mac geht nie mehr in den Ruhezustand, auch das Display nicht, egal ob der Deckel offen oder zu ist." }
+    { "versionCode": 381, "versionName": "1.8.370", "stand": "27.10.2026, 11:13 Uhr", "notiz": "Mac-Fernsteuerung: Der Mac geht nie mehr in den Ruhezustand, auch das Display nicht, egal ob der Deckel offen oder zu ist." },
+    { "versionCode": 382, "versionName": "1.8.371", "stand": "27.10.2026, 11:14 Uhr", "notiz": "Mac-Fernsteuerung: Aufgeräumt, das Verhalten bleibt gleich: kein Ruhezustand von Mac und Display." }
 ]
 }

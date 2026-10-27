@@ -154,7 +154,7 @@ final class Bildschirm {
     var rahmen: CGRect { CGDisplayBounds(gezeigt ?? displayID) }
 }
 
-// MARK: - Energie: Bildschirm wecken und wach halten, solange jemand zusieht
+// MARK: - Energie: Rechner und Bildschirm dauerhaft wach halten
 
 final class Wachhalter {
     private var assertion: IOPMAssertionID = 0
@@ -170,7 +170,7 @@ final class Wachhalter {
                                         IOPMAssertionLevel(kIOPMAssertionLevelOn), "Jarvis-Fernsteuerung" as CFString, &system)
         }
     }
-    /// Nur während einer Verbindung: Bildschirm wecken und wach halten.
+    /// Bildschirm wecken und dauerhaft wach halten (Franks Vorgabe: nie Ruhezustand).
     func an() {
         wecken()
         systemAn()
@@ -178,9 +178,6 @@ final class Wachhalter {
             IOPMAssertionCreateWithName(kIOPMAssertPreventUserIdleDisplaySleep as CFString,
                                         IOPMAssertionLevel(kIOPMAssertionLevelOn), "Jarvis-Fernsteuerung" as CFString, &assertion)
         }
-    }
-    func aus() {
-        if assertion != 0 { IOPMAssertionRelease(assertion); assertion = 0 }
     }
     var aktiv: Bool { assertion != 0 }
 }
