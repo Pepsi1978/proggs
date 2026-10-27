@@ -35,10 +35,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.DesktopMac
+import androidx.compose.material.icons.outlined.DesktopMac as DesktopMacUmriss
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -208,15 +210,26 @@ private fun Leiste(vm: AppViewModel) {
                 if (aktiv) Text(r.anzeige, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        // Kein Reiter: öffnet den Mac-Bildschirm zum Fernbedienen.
+        // Kein Reiter: öffnet den Mac-Bildschirm zum Fernbedienen. Grün ausgefüllt = ein Rechner ist verbunden, rot = keiner.
         val context = androidx.compose.ui.platform.LocalContext.current
+        val rechnerDa by androidx.compose.runtime.produceState<Boolean?>(null) {
+            while (true) { value = de.frank.jarvis.fernsteuerung.RechnerStatus.verbunden(context); kotlinx.coroutines.delay(10_000) }
+        }
         Row(
             Modifier.weight(1f).height(50.dp).antippen {
                 context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java))
-            }.semantics { contentDescription = "Mac-Bildschirm" },
+            }.semantics { contentDescription = "Mac-Bildschirm, " + when (rechnerDa) { true -> "Rechner verbunden"; false -> "kein Rechner verbunden"; null -> "Verbindung wird geprüft" } },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
-        ) { Icon(Icons.Rounded.DesktopMac, null, tint = f.textLeise, modifier = Modifier.size(20.dp)) }
+        ) {
+            when (rechnerDa) {
+                true -> Icon(Icons.Rounded.DesktopMac, null, tint = f.erfolg, modifier = Modifier.size(22.dp).drawBehind {
+                    drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(f.erfolg.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
+                })
+                false -> Icon(Icons.Outlined.DesktopMacUmriss, null, tint = f.gefahr, modifier = Modifier.size(22.dp))
+                null -> Icon(Icons.Outlined.DesktopMacUmriss, null, tint = f.textLeise, modifier = Modifier.size(22.dp))
+            }
+        }
     }
 }
 
