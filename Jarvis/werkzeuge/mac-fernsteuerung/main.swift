@@ -807,7 +807,8 @@ final class Dienst {
             // Deckel zu: Display nie in den Ruhezustand gehen lassen, denn danach sperrt macOS den Mac trotz
             // ausgeschalteter Bildschirmsperre, und aus der Ferne lässt er sich nicht entsperren. Das Display ist bei
             // zugeklapptem Deckel ohnehin dunkel; mit offenem Deckel bleibt alles wie ohne Fernsteuerung.
-            let zu = Bildschirm.deckelZu()
+            // Schon gesperrt (etwa nach einem Neustart): den Sperrbildschirm nicht jede Minute sinnlos wecken.
+            let zu = Bildschirm.deckelZu() && !Zustand.gesperrt()
             if zu { if !wach.aktiv { log("Deckel zu: Display bleibt wach, damit der Mac nicht sperrt") }; wach.an() }
             else { wach.aus() }
         } else {
