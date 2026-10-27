@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Sucht ohne WLAN-Verbindung alle 30 s weiter nach dem Hotspot. Einrichten: einrichten.sh -->
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>de.frank.hotspot-suche</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Library/Application Support/HotspotSuche/hotspot-suche.sh</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>StartInterval</key><integer>30</integer>
+</dict>
+</plist>
