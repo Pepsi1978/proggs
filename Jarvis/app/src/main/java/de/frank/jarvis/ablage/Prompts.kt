@@ -81,11 +81,14 @@ object Prompts {
         return neu.takeIf { schreibe(c, (s.liste + neu).sortedBy { it.nummer }) }
     }
 
-    /** Ersetzt den Text eines vorhandenen Prompts. */
+    /**
+     * Ersetzt den Text eines vorhandenen Prompts. Mit [erstellt] nur, wenn unter [nummer] noch genau dieser Prompt steht
+     * (die Nummer kann nach einem Löschen an einen neuen Prompt gegangen sein).
+     */
     @Synchronized
-    fun aendere(c: Context, nummer: Int, text: String): Boolean {
+    fun aendere(c: Context, nummer: Int, text: String, erstellt: Long? = null): Boolean {
         val s = lies(c)
-        if (s.defekt || text.isBlank() || s.liste.none { it.nummer == nummer }) return false
+        if (s.defekt || text.isBlank() || s.liste.none { it.nummer == nummer && (erstellt == null || it.erstellt == erstellt) }) return false
         return schreibe(c, s.liste.map { if (it.nummer == nummer) it.copy(text = text.trim()) else it })
     }
 

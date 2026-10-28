@@ -392,6 +392,7 @@
     { "versionCode": 386, "versionName": "1.8.375", "stand": "28.10.2026, 13:47 Uhr", "notiz": "Windows-Fernwartung zeigt sofort Bild statt erst nach zwei Sekunden, lässt die Maustaste bei Abbruch los, und der Monitor-Knopf wird beim Suchen grau." },
     { "versionCode": 387, "versionName": "1.8.376", "stand": "28.10.2026, 14:04 Uhr", "notiz": "Die Modellwahl Opus 5.5 oder Sol 6.1 erscheint beim Abschicken eines Programmierauftrags jetzt auch bei eingeklappten Symbolen." },
     { "versionCode": 388, "versionName": "1.8.377", "stand": "28.10.2026, 14:04 Uhr", "notiz": "Neue Prompts bekommen die kleinste freie Nummer, jeder Prompt lässt sich bearbeiten, und die KI-Verbesserung kann rückgängig gemacht werden." },
-    { "versionCode": 389, "versionName": "1.8.378", "stand": "28.10.2026, 14:08 Uhr", "notiz": "Die Modellwahl beim Ein- und Ausklappen der Symbole steht nicht mehr kurz doppelt da und sitzt bündig über dem Pfeil." }
+    { "versionCode": 389, "versionName": "1.8.378", "stand": "28.10.2026, 14:08 Uhr", "notiz": "Die Modellwahl beim Ein- und Ausklappen der Symbole steht nicht mehr kurz doppelt da und sitzt bündig über dem Pfeil." },
+    { "versionCode": 390, "versionName": "1.8.379", "stand": "28.10.2026, 14:10 Uhr", "notiz": "Beim Bearbeiten eines Prompts landen Diktat und KI nie mehr im falschen Text, und Rückgängig nimmt nur die KI-Verbesserung zurück." }
 ]
 }

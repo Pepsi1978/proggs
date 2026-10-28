@@ -68,7 +68,8 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     val bereich = rememberCoroutineScope()
     val stand by Prompts.stand.collectAsState()
     val liste by ladeImHintergrund<List<Prompt>?>(null, stand, behalten = true) { Prompts.alle(context) }
-    var offen by rememberSaveable { mutableStateOf<Int?>(null) }
+    // Gemerkt wird der Anlagezeitpunkt, nicht die Nummer: eine gelöschte Nummer kann an einen neuen Prompt gehen.
+    var offen by rememberSaveable { mutableStateOf<Long?>(null) }
     var neu by rememberSaveable { mutableStateOf(false) }
     val defekt by ladeImHintergrund(false, stand) { withContext(Dispatchers.IO) { Prompts.defekt(context) } }
 
@@ -80,7 +81,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
             Text("Noch keine Prompts. Tippe auf +, oder sag Jarvis: „Speicher folgendes als Prompt ab: …“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
         items(liste.orEmpty(), key = { it.nummer }) { p ->
-            Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { offen = p.nummer }.padding(16.dp)) {
+            Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { offen = p.erstellt }.padding(16.dp)) {
                 Text("Prompt ${p.nummer}", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Text(p.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
             }
@@ -96,7 +97,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
 
     if (neu || vm.promptBearbeitet != null) PromptEingabe(vm, schliessen = { vm.promptEingabeSchliessen(); neu = false }) { vm.promptSpeichern { neu = false } }
 
-    liste?.firstOrNull { it.nummer == offen }?.let { p ->
+    liste?.firstOrNull { it.erstellt == offen }?.let { p ->
         var loeschen by remember(p.nummer) { mutableStateOf(false) }
         Dialog({ offen = null }, DialogProperties(usePlatformDefaultWidth = false)) {
             Column(Modifier.padding(16.dp).fillMaxWidth().glas(f, fuellung = f.flaecheStark).padding(18.dp)) {
@@ -134,10 +135,10 @@ private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: (
     Dialog(schliessen, DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.padding(16.dp).fillMaxWidth().glas(f, fuellung = f.flaecheStark).padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(vm.promptBearbeitet?.let { "Prompt $it bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(vm.promptBearbeitet?.let { "Prompt ${it.nummer} bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box(Modifier.size(40.dp).antippen(aktion = schliessen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
-            Eingabe(vm.promptEntwurf, { vm.promptEntwurf = it }, if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen",
+            Eingabe(vm.promptText, { vm.promptText = it }, if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen",
                 Modifier.fillMaxWidth().padding(vertical = 12.dp), einzeilig = false)
             if (vm.promptFormuliert) Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Kern(28.dp, f.primaer, aktiv = true)
