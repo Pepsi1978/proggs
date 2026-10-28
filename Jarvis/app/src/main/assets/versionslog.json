@@ -399,6 +399,7 @@
     { "versionCode": 393, "versionName": "1.8.382", "stand": "28.10.2026, 14:26 Uhr", "notiz": "Prompts sind immer lückenlos von oben durchnummeriert und lassen sich am Griff rechts per Ziehen umsortieren; Überschriften entstehen sparsamer und zuverlässiger." },
     { "versionCode": 394, "versionName": "1.8.383", "stand": "28.10.2026, 14:39 Uhr", "notiz": "Bearbeiten und Löschen treffen nach dem Verschieben oder Aufrücken immer den richtigen Prompt, und ein abgebrochenes Ziehen öffnet keinen Prompt mehr." },
     { "versionCode": 395, "versionName": "1.8.384", "stand": "28.10.2026, 14:47 Uhr", "notiz": "Die Zurück-Geste in einer Session führt jetzt zum Startbildschirm mit der Tagesauswertung, erst die nächste Zurück-Geste beendet die App." },
-    { "versionCode": 396, "versionName": "1.8.385", "stand": "28.10.2026, 15:27 Uhr", "notiz": "Im Live-Gespräch stehen die deutschen GPT-Live-Stimmen Nuri, Juni und Flitz jetzt oben, alle Live-Stimmen zeigen ihre Sprache, und Jarvis erklärt, dass es Miko und Sonna bisher nur in der ChatGPT-App gibt." }
+    { "versionCode": 396, "versionName": "1.8.385", "stand": "28.10.2026, 15:27 Uhr", "notiz": "Im Live-Gespräch stehen die deutschen GPT-Live-Stimmen Nuri, Juni und Flitz jetzt oben, alle Live-Stimmen zeigen ihre Sprache, und Jarvis erklärt, dass es Miko und Sonna bisher nur in der ChatGPT-App gibt." },
+    { "versionCode": 397, "versionName": "1.8.386", "stand": "28.10.2026, 17:46 Uhr", "notiz": "Das Fernwartungssymbol ist nur noch grün, wenn ein Rechner wirklich fernbedienbar ist, wird bei Abbruch sofort rot, und ohne erreichbaren Rechner verbindet Jarvis nicht mehr blind mit dem Mac." }
 ]
 }

@@ -1,25 +1,21 @@
 package de.frank.jarvis.fernsteuerung
 
-import android.content.Context
-import de.frank.jarvis.data.Einstellungen
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONObject
-import java.util.concurrent.TimeUnit
+import androidx.compose.runtime.mutableStateOf
 
-/** Fragt den Jarvis-Server, ob gerade ein Rechner (Mac oder Windows-PC) für Programmieraufträge verbunden ist. */
+/**
+ * Fernwartungszustand für das Symbol unten rechts: welche Rechner der Fernwartungs-Dienst im Tunnel gerade wirklich
+ * bedienen lässt. Bewusst nicht der Jarvis-Server: Dort meldet sich die Programmier-Brücke, und die läuft auch, wenn die
+ * Fernwartung des Rechners nicht erreichbar ist (grün, obwohl das Verbinden scheiterte, 28.10.2026).
+ */
 object RechnerStatus {
-    private val HTTP = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build()
+    /** null = noch nicht geprüft, leer = kein Rechner fernbedienbar. */
+    val erreichbar = mutableStateOf<List<Fernziel>?>(null)
 
-    /** true = ein Rechner meldet sich, false = keiner oder Server nicht erreichbar. */
-    suspend fun verbunden(context: Context): Boolean = withContext(Dispatchers.IO) {
-        val e = Einstellungen.get(context.applicationContext)
-        if (e.serverToken.isBlank()) return@withContext false
-        runCatching {
-            val anfrage = Request.Builder().url("https://${e.serverHost}/geraet/pc").header("X-Jarvis-Token", e.serverToken).build()
-            HTTP.newCall(anfrage).execute().use { a -> a.isSuccessful && JSONObject(a.body?.string().orEmpty()).optBoolean("pc") }
-        }.getOrDefault(false)
-    }
+    suspend fun pruefen(): List<Fernziel> = Fernziel.erreichbar().also { erreichbar.value = it }
+
+    /** Eine Sitzung ist gescheitert oder abgerissen: sofort rot für diesen Rechner, bis die nächste Prüfung ihn wieder findet. */
+    fun verloren(ziel: Fernziel) { erreichbar.value = erreichbar.value?.minus(ziel) }
+
+    /** Eine Sitzung läuft: dieser Rechner ist sicher fernbedienbar. */
+    fun aktiv(ziel: Fernziel) { erreichbar.value = ((erreichbar.value ?: emptyList()) + ziel).distinct() }
 }

@@ -88,6 +88,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 
 @Composable
@@ -213,12 +214,18 @@ private fun Leiste(vm: AppViewModel) {
                 if (aktiv) Text(r.anzeige, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        // Kein Reiter: öffnet den Mac-Bildschirm zum Fernbedienen. Grün ausgefüllt = ein Rechner ist verbunden, rot = keiner.
+        // Kein Reiter: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = mindestens ein Rechner ist wirklich
+        // fernbedienbar (Fernwartungs-Dienst im Tunnel antwortet), rot = keiner. Geprüft alle 10 s, solange Jarvis vorn ist.
         val context = androidx.compose.ui.platform.LocalContext.current
-        val rechnerDa by androidx.compose.runtime.produceState<Boolean?>(null) {
-            while (true) { value = de.frank.jarvis.fernsteuerung.RechnerStatus.verbunden(context); kotlinx.coroutines.delay(10_000) }
+        val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
+        androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
+            lebenszyklus.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                while (true) { de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen(); kotlinx.coroutines.delay(10_000) }
+            }
         }
-        // Antworten Mac und Windows-PC beide, fragt Jarvis, welcher; sonst direkt zum erreichbaren (keiner: wie bisher der Mac).
+        val rechnerDa = de.frank.jarvis.fernsteuerung.RechnerStatus.erreichbar.value?.isNotEmpty()
+        // Antworten Mac und Windows-PC beide, fragt Jarvis, welcher; sonst direkt zum erreichbaren. Keiner: nicht blind
+        // verbinden (früher der Mac, dann 6 s schwarzer Bildschirm), sondern sagen, dass keiner erreichbar ist.
         val bereich = androidx.compose.runtime.rememberCoroutineScope()
         var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
         var sucht by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -232,11 +239,15 @@ private fun Leiste(vm: AppViewModel) {
                 if (sucht) return@antippen
                 sucht = true
                 bereich.launch {
-                    val da = de.frank.jarvis.fernsteuerung.Fernziel.erreichbar()
+                    val da = de.frank.jarvis.fernsteuerung.RechnerStatus.pruefen()
                     sucht = false
-                    if (da.size > 1) auswahl = true else oeffnen(da.firstOrNull() ?: de.frank.jarvis.fernsteuerung.Fernziel.MAC)
+                    when {
+                        da.size > 1 -> auswahl = true
+                        da.size == 1 -> oeffnen(da.first())
+                        else -> android.widget.Toast.makeText(context, "Kein Rechner für die Fernwartung erreichbar. Mac und Windows-PC antworten im Tunnel nicht.", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
-            }.semantics { contentDescription = "Fernwartung Mac oder Windows, " + when (rechnerDa) { true -> "Rechner verbunden"; false -> "kein Rechner verbunden"; null -> "Verbindung wird geprüft" } },
+            }.semantics { contentDescription = "Fernwartung Mac oder Windows, " + when (rechnerDa) { true -> "Fernwartung möglich"; false -> "kein Rechner für die Fernwartung erreichbar"; null -> "Verbindung wird geprüft" } },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {

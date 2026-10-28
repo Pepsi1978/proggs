@@ -108,6 +108,7 @@ class FernsteuerungActivity : ComponentActivity() {
             ziel.adresse, PORT, t,
             beiInfo = { w, h, ok ->
                 runOnUiThread {
+                    RechnerStatus.aktiv(ziel)
                     status = if (ok) "" else "${ziel.nominativ} liefert gerade kein Bild (Bildschirmaufnahme gescheitert). Er versucht es erneut …"
                     if (ok && (w != macW || h != macH || dekoder == null)) { macW = w; macH = h; ansicht.macGroesse(w, h); dekoderNeu() }
                     else if (ok) verbindung?.eingabe(JSONObject().put("t", "schluesselbild"))
@@ -115,7 +116,16 @@ class FernsteuerungActivity : ComponentActivity() {
             },
             beiBild = { dekoder?.bild(it) },
             beiZustand = { j -> runOnUiThread { zustand(j) } },
-            beiEnde = { grund -> runOnUiThread { status = "Verbindung getrennt: $grund"; getrennt = true; gesperrt = false } },
+            beiEnde = { grund ->
+                runOnUiThread {
+                    RechnerStatus.verloren(ziel)
+                    // Kam gar keine Verbindung zustande, ist der Rechner im Tunnel nicht da; das sagen statt nur der Socket-Meldung.
+                    status = if (grund.contains("failed to connect") || grund.contains("timed out", true))
+                        "${ziel.nominativ} ist für die Fernwartung nicht erreichbar (aus, im Ruhezustand oder Tunnel getrennt)."
+                    else "Verbindung getrennt: $grund"
+                    getrennt = true; gesperrt = false
+                }
+            },
             beiMeldung = { text -> runOnUiThread { meldung = if (meldung.isEmpty() || meldung.endsWith("…")) text else "$meldung\n$text" } },
         ).also { it.start() }
     }
