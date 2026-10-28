@@ -114,6 +114,7 @@ public sealed class CliAktualisierer : IAktualisierer
 
         // %USERPROFILE% & Co. as in the paths -- the helper scripts under werkzeuge\ are found that way.
         var args = Environment.ExpandEnvironmentVariables(eintrag.UpdateArgumente ?? "update");
+        VerwaisteBeenden(exe, protokoll);
         protokoll.Report($"{Path.GetFileName(exe)} {args}");
 
         // npm.cmd resolves its own modules relative to the working directory; started from the
@@ -226,6 +227,55 @@ public sealed class CliAktualisierer : IAktualisierer
             : new Regex(eintrag.PruefZeilenMuster).IsMatch;
 
         return zeilen.Where(geplant).Select(z => z.Trim()).Where(z => z.Length > 0).ToList();
+    }
+
+    /// <summary>
+    /// Ends leftovers of an earlier update run of the same exe. A run that stalled (Antigravity's
+    /// download hung without a connection) outlives the app that started it once that app is
+    /// closed; it keeps its update lock open and every later "agy update" ends at once with
+    /// "update already in progress". Only orphans count: an interactive session still has its
+    /// terminal as parent and is left alone.
+    /// </summary>
+    private static void VerwaisteBeenden(string exe, IProgress<string> protokoll)
+    {
+        var name = Path.GetFileNameWithoutExtension(exe);
+        var alle = Prozessbaum.Schnappschuss();
+        foreach (var kandidat in System.Diagnostics.Process.GetProcessesByName(name))
+        {
+            using (kandidat)
+            {
+                try
+                {
+                    if (!Prozesspfad.GleicheDatei(Prozesspfad.Lesen(kandidat.Id), exe)) continue;
+                    var knoten = alle.FirstOrDefault(k => k.Pid == kandidat.Id);
+                    if (knoten.Pid == 0 || !IstVerwaist(knoten.ElternPid, kandidat.StartTime, alle)) continue;
+
+                    protokoll.Report($"Verwaister {Path.GetFileName(exe)}-Prozess {kandidat.Id} (gestartet "
+                                     + kandidat.StartTime.ToString("dd.MM. HH:mm") + ") hält das Update auf – wird beendet.");
+                    kandidat.Kill(entireProcessTree: true);
+                    kandidat.WaitForExit(5000);
+                }
+                catch (Exception diagAusnahme)
+                {
+                    Diagnose.Gefangen(diagAusnahme, "provider", Schwere.Warnung);
+                }
+            }
+        }
+    }
+
+    /// <summary>Parent gone, or its PID now belongs to a younger process (reused).</summary>
+    private static bool IstVerwaist(int elternPid, DateTime kindStart, List<Prozessbaum.Knoten> alle)
+    {
+        if (alle.All(k => k.Pid != elternPid)) return true;
+        try
+        {
+            using var eltern = System.Diagnostics.Process.GetProcessById(elternPid);
+            return eltern.StartTime > kindStart;
+        }
+        catch
+        {
+            return false;   // not readable (other user, elevated): rather keep a live session
+        }
     }
 
     private static readonly string[] NetzHinweise =
