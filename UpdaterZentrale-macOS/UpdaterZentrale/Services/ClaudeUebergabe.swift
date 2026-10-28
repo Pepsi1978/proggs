@@ -14,35 +14,41 @@ enum ClaudeUebergabe {
     static let sperrfrist: TimeInterval = 6 * 3600
 
     /// Nie zwei automatische Sitzungen zugleich: sie wuerden dieselben Dateien aendern und auf main pushen.
+    /// Wer spaeter kommt, wartet und wird danach gegen die Sperrfrist geprueft -- verloren geht keiner.
     @MainActor private static var automatischLaeuft = false
 
     /// Nur echte Fehlschlaege; "nicht verifiziert" heisst oft nur "Version nicht feststellbar".
     static func automatischRelevant(_ bericht: UpdateBericht) -> Bool { bericht.ergebnis == .fehlgeschlagen }
 
-    /// Startet EINE Sitzung fuer alle Fehler, die nicht in der Sperrfrist liegen, und merkt sie sich
-    /// erst nach gelungenem Start vor. Nil, wenn nichts zu tun war oder es klappte, sonst das Problem.
+    /// `gestartet`: eine Sitzung laeuft (vermutlich). `problem`: warum nicht, oder was unklar blieb.
+    struct AutoErgebnis { var gestartet = false; var problem: String? }
+
+    /// Startet EINE Sitzung fuer alle Fehler ausserhalb der Sperrfrist und merkt sie nach dem Start vor --
+    /// auch wenn der Launcher nur nicht rechtzeitig antwortete, denn dann laeuft die Sitzung meist doch.
     @MainActor static func automatischStarten(_ faelle: [(ProgrammEintrag, UpdateBericht)],
-                                              _ einstellungen: Einstellungen) async -> String? {
+                                              _ einstellungen: Einstellungen) async -> AutoErgebnis {
+        guard faelle.contains(where: { automatischRelevant($0.1) }) else { return AutoErgebnis() }
+        while automatischLaeuft { try? await Task.sleep(nanoseconds: 500_000_000) }
+        automatischLaeuft = true
+        defer { automatischLaeuft = false }
+
         let offen = faelle.filter { eintrag, bericht in
             guard automatischRelevant(bericht) else { return false }
             guard let zuletzt = einstellungen.fuer(eintrag.id).automatischUebergebenAm else { return true }
             return Date().timeIntervalSince(zuletzt) >= sperrfrist
         }
-        guard !offen.isEmpty, !automatischLaeuft else {
-            if !faelle.isEmpty {
-                Diagnose.ereignis(.info, "uebergabe", "auto.gesperrt", "Sperrfrist oder laufende Übergabe",
-                                  ["programme": faelle.map(\.0.id).joined(separator: ",")])
-            }
-            return nil
+        guard !offen.isEmpty else {
+            Diagnose.ereignis(.info, "uebergabe", "auto.gesperrt", "Sperrfrist läuft",
+                              ["programme": faelle.filter { automatischRelevant($0.1) }.map(\.0.id).joined(separator: ",")])
+            return AutoErgebnis()
         }
-        automatischLaeuft = true
-        defer { automatischLaeuft = false }
-        let problem = await starten(offen)
-        if problem == nil {
+        let (problem, vielleicht) = await startenKern(offen)
+        let gestartet = problem == nil || vielleicht
+        if gestartet {
             for (eintrag, _) in offen { einstellungen.fuer(eintrag.id).automatischUebergebenAm = Date() }
             einstellungen.speichern()
         }
-        return problem
+        return AutoErgebnis(gestartet: gestartet, problem: problem)
     }
 
     static func starten(_ eintrag: ProgrammEintrag, _ bericht: UpdateBericht) async -> String? {
@@ -51,10 +57,15 @@ enum ClaudeUebergabe {
 
     /// Nil bei Erfolg, sonst warum keine Sitzung gestartet wurde.
     static func starten(_ faelle: [(ProgrammEintrag, UpdateBericht)]) async -> String? {
-        guard let erster = faelle.first else { return nil }
+        await startenKern(faelle).problem
+    }
+
+    /// `vielleicht`: der Launcher antwortete nicht rechtzeitig -- die Sitzung laeuft womoeglich doch.
+    private static func startenKern(_ faelle: [(ProgrammEintrag, UpdateBericht)]) async -> (problem: String?, vielleicht: Bool) {
+        guard let erster = faelle.first else { return (nil, false) }
         let launcher = OpenCodeSitzungAktualisierer.launcherExe
         guard FileManager.default.isExecutableFile(atPath: launcher) else {
-            return "OpenLauncher nicht gefunden: " + launcher
+            return ("OpenLauncher nicht gefunden: " + launcher, false)
         }
 
         let ordner = (Pfade.benutzerOrdner as NSString).appendingPathComponent("auftraege")
@@ -67,15 +78,15 @@ enum ClaudeUebergabe {
             try auftragText(faelle).write(toFile: datei, atomically: true, encoding: .utf8)
         } catch {
             Diagnose.ereignis(.warnung, "uebergabe", "auftrag.schreiben", error.localizedDescription, ["programm": kennung])
-            return "Übergabe an Claude Code fehlgeschlagen: \(error.localizedDescription)"
+            return ("Übergabe an Claude Code fehlgeschlagen: \(error.localizedDescription)", false)
         }
 
         let argumente = OpenCodeSitzungAktualisierer.argumente(datei, name: "Updater-Zentrale: Fehler \(kennung)")
         guard let code = await OpenCodeSitzungAktualisierer.launcherStarten(argumente) else {
-            return "Der OpenLauncher hat sich nach zwei Minuten nicht zurückgemeldet – ob die Sitzung läuft, ist unklar."
+            return ("Der OpenLauncher hat sich nach zwei Minuten nicht zurückgemeldet – ob die Sitzung läuft, ist unklar.", true)
         }
-        return code == 0 ? nil
-            : "Der OpenLauncher konnte die Sitzung nicht starten (Code \(code)) – Einzelheiten im OpenLauncher-Log."
+        return code == 0 ? (nil, false)
+            : ("Der OpenLauncher konnte die Sitzung nicht starten (Code \(code)) – Einzelheiten im OpenLauncher-Log.", false)
     }
 
     private static func auftragText(_ faelle: [(ProgrammEintrag, UpdateBericht)]) -> String {
@@ -114,7 +125,7 @@ enum ClaudeUebergabe {
                 var laenge = 0
                 for zeile in zeilen.reversed() {
                     let kurz = zeile.count > 2000 ? String(zeile.prefix(2000)) + " …" : zeile
-                    if laenge + kurz.count >= protokollZeichen { break }
+                    if laenge + kurz.count >= protokollZeichen / faelle.count { break }
                     ende.insert(kurz, at: 0)
                     laenge += kurz.count + 1
                 }

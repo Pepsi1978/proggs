@@ -42,6 +42,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/Einstellungen.swift"
     "$SRC_DIR/Services/Katalogdienst.swift"
     "$SRC_DIR/Services/ClaudeUebergabe.swift"
+    "$SRC_DIR/Services/Programmpruefung.swift"
     "$SRC_DIR/Services/Protokollierung.swift"
     "$SRC_DIR/Services/Prozessdienst.swift"
     "$SRC_DIR/Services/Systemdienst.swift"

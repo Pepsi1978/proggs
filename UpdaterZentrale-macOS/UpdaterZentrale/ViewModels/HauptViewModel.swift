@@ -692,14 +692,17 @@ final class HauptViewModel {
             guard let b = s.programm.letzterBericht, b.sammelId == sammelId else { return nil }
             return (s.programm.eintrag, b)
         }
+        // Eigene Aufgabe: der Sammelbesitz (defer oben) ist dann schon frei, ein langsamer Launcher
+        // blockiert keine neuen Updates.
         if faelle.contains(where: { ClaudeUebergabe.automatischRelevant($0.1) }) {
-            if let problem = await ClaudeUebergabe.automatischStarten(faelle, einstellungen) {
-                kopfStatus += "  ·  " + problem
-            } else if faelle.contains(where: { $0.1.ergebnis == .fehlgeschlagen
-                && Date().timeIntervalSince(einstellungen.fuer($0.0.id).automatischUebergebenAm ?? .distantPast) < 60 }) {
-                kopfStatus += "  ·  Fehler automatisch an Claude Code übergeben."
+            Task { @MainActor in
+                let uebergabe = await ClaudeUebergabe.automatischStarten(faelle, self.einstellungen)
+                if let problem = uebergabe.problem {
+                    self.kopfStatus += "  ·  " + problem
+                } else if uebergabe.gestartet {
+                    self.kopfStatus += "  ·  Fehler automatisch an Claude Code übergeben."
+                }
             }
-            anzeigen()
         }
         laufDetail = ""
         if nachDauerSortieren { sortierungAnwenden() }

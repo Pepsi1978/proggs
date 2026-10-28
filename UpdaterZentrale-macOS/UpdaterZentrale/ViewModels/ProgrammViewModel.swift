@@ -292,13 +292,13 @@ final class ProgrammViewModel {
         uebergibtAnClaude = true
         defer { uebergibtAnClaude = false }
         statusText = "Übergebe das Problem mit \(name) an Claude Code …"
-        let problem = automatisch
+        let ergebnis = automatisch
             ? await ClaudeUebergabe.automatischStarten([(eintrag, bericht)], einstellungen)
-            : await ClaudeUebergabe.starten(eintrag, bericht)
-        if let problem {
+            : ClaudeUebergabe.AutoErgebnis(gestartet: true, problem: await ClaudeUebergabe.starten(eintrag, bericht))
+        if let problem = ergebnis.problem {
             statusText = problem
             beiMeldung?(problem)
-        } else {
+        } else if ergebnis.gestartet {
             statusText = (automatisch ? "Fehler automatisch" : "Problem mit \(name)")
                 + " an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor."
         }
@@ -390,6 +390,7 @@ final class ProgrammViewModel {
 
             var urteil = UpdateKette.bereitsAktuell(vorher, vorPruefung)
             var liefVorher = false
+            let ganzVorher = Programmpruefung.vollstaendig(self.eintrag)
 
             if urteil == nil {
                 liefVorher = Prozessdienst.laeuft(self.eintrag)
@@ -434,7 +435,17 @@ final class ProgrammViewModel {
 
                 if urteil == nil { urteil = await kette.ausfuehren(vorher, vorPruefung) }
             }
-            let ende = urteil!
+            var ende = urteil!
+
+            // Ein abgebrochenes oder gescheitertes Update kann die App halb ersetzt zuruecklassen
+            // (alte geloescht, neue nicht fertig verschoben). Das muss als eigener Befund sichtbar werden.
+            if ganzVorher == nil, ende.ergebnis != .erfolgreich,
+               let fehlt = Programmpruefung.vollstaendig(self.eintrag) {
+                fortschritt.berichte("⚠ " + fehlt)
+                ende.ergebnis = .fehlgeschlagen
+                ende.meldung = fehlt + " Vorheriger Befund: " + ende.meldung
+                ende.fuerKarte.zustand = .fehler
+            }
 
             // Einmal neu starten, nach der ganzen Kette -- nie zwischen Durchlaeufen, wo ein
             // laufendes Ziel den naechsten Installer blockieren wuerde.
