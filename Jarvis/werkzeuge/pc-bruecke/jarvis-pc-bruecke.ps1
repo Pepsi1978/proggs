@@ -276,7 +276,8 @@ $unklar2
     $daten = [ordered]@{ model = $Modell; effortLevel = $Effort }
     if ($mitHooks) { $daten.hooks = Jarvis-Hooks }
     [System.IO.File]::WriteAllText($einstellungen, ($daten | ConvertTo-Json -Depth 10 -Compress), [System.Text.UTF8Encoding]::new($false))
-    $auftragId = if ($mitHooks) { "`$env:JARVIS_AUFTRAG_ID = '$nummer'" } else { '' }
+    # Ohne Hooks nie eine geerbte Nummer stehen lassen: Mit ihr schwiegen die Profil-Hooks der Sitzung (28.10.2026).
+    $auftragId = if ($mitHooks) { "`$env:JARVIS_AUFTRAG_ID = '$nummer'" } else { "Remove-Item Env:JARVIS_AUFTRAG_ID -ErrorAction SilentlyContinue" }
     $start = Join-Path $ordner "start-$stempel.ps1"
     @"
 `$Host.UI.RawUI.WindowTitle = '$($name -replace "'", "''")'

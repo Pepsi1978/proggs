@@ -75,12 +75,10 @@ if ($env:TERM -eq 'dumb') {
 if ([string]::IsNullOrWhiteSpace($env:COLORTERM)) {
     Remove-Item -LiteralPath 'Env:COLORTERM' -ErrorAction SilentlyContinue
 }
-foreach ($staleClaude in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'CLAUDE*' -and $_.Name -ne 'CLAUDE_CONFIG_DIR' })) {
-    Remove-Item -LiteralPath "Env:$($staleClaude.Name)" -ErrorAction SilentlyContinue
-}
-# Geerbte Jarvis-Auftragsnummer: Mit ihr schwiegen die Profil-Hooks einer lokalen Sitzung, ein echter Auftrag setzt sie danach neu.
-foreach ($staleJarvis in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'JARVIS_*' })) {
-    Remove-Item -LiteralPath "Env:$($staleJarvis.Name)" -ErrorAction SilentlyContinue
+# Dazu die Marker einer Jarvis-Sitzung: Mit geerbter Auftragsnummer schwiegen die Profil-Hooks einer lokalen Sitzung,
+# ein echter Auftrag setzt sie danach neu.
+foreach ($staleAgent in @(Get-ChildItem Env: | Where-Object { ($_.Name -like 'CLAUDE*' -and $_.Name -ne 'CLAUDE_CONFIG_DIR') -or $_.Name -in 'JARVIS_AUFTRAG_ID', 'JARVIS_CLI', 'JARVIS_ELTERN_PID' })) {
+    Remove-Item -LiteralPath "Env:$($staleAgent.Name)" -ErrorAction SilentlyContinue
 }
 """;
 

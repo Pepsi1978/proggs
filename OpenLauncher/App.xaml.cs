@@ -33,7 +33,7 @@ public partial class App : Application
         // Startet eine Jarvis-Sitzung das Update-Skript, erbt der neue OpenLauncher deren JARVIS_AUFTRAG_ID und gäbe sie an
         // jede danach gestartete Sitzung weiter: Deren Profil-Hooks hielten sie für einen Jarvis-Auftrag und blieben stumm,
         // Rückfragen kamen nie in Jarvis an (28.10.2026). Ein Jarvis-Auftrag bekommt seine Nummer immer per Argument.
-        foreach (var name in Environment.GetEnvironmentVariables().Keys.Cast<string>().Where(n => n.StartsWith("JARVIS_", StringComparison.OrdinalIgnoreCase)).ToList())
+        foreach (var name in new[] { "JARVIS_AUFTRAG_ID", "JARVIS_CLI", "JARVIS_ELTERN_PID" })
             Environment.SetEnvironmentVariable(name, null);
 
         // Muss VOR jedem anderen Zugriff auf den Anwendungsdatenordner laufen (auch vor dem Logger,

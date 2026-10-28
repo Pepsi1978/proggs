@@ -59,6 +59,9 @@ final class OpenLauncherService {
             unset "$staleClaude" 2>/dev/null || true
         fi
     done
+    # Geerbte Jarvis-Auftragsnummer (Update-Skript aus einer Jarvis-Sitzung): Mit ihr schwiegen die Profil-Hooks einer
+    # lokalen Sitzung, ihre Rückfragen kamen nie in Jarvis an. Ein echter Auftrag setzt sie danach neu.
+    unset JARVIS_AUFTRAG_ID JARVIS_CLI JARVIS_ELTERN_PID 2>/dev/null || true
     """
 
     /// Kuerzt mehrzeilige Secret-Variablen auf ihre erste echte Zeile.
