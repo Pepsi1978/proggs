@@ -7,13 +7,22 @@ $logdir = Join-Path $env:LOCALAPPDATA 'JarvisFernsteuerung'
 New-Item -ItemType Directory -Force $logdir | Out-Null
 
 function Lauscht([int]$port) { [bool](Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue) }
+# Start-Process überschreibt die Protokolle; das vorige als .alt.log aufheben, sonst ist die Absturzursache weg.
+function Sichern([string[]]$namen) {
+    foreach ($n in $namen) {
+        $p = Join-Path $logdir "$n.log"
+        if (Test-Path $p) { Move-Item $p (Join-Path $logdir "$n.alt.log") -Force }
+    }
+}
 
 if (-not (Lauscht 47801)) {
+    Sichern 'dienst', 'dienst.out'
     $py = (Get-Command pythonw.exe).Source
     Start-Process -FilePath $py -ArgumentList "`"$ordner\fernsteuerung.py`"" -WindowStyle Hidden `
         -RedirectStandardError (Join-Path $logdir 'dienst.log') -RedirectStandardOutput (Join-Path $logdir 'dienst.out.log')
 }
 if (-not (Lauscht 47800)) {
+    Sichern 'weiterleitung', 'weiterleitung.out'
     $node = Join-Path $env:ProgramFiles 'nodejs\node.exe'
     Start-Process -FilePath $node -ArgumentList "`"$ordner\weiterleitung.js`"" -WindowStyle Hidden `
         -RedirectStandardError (Join-Path $logdir 'weiterleitung.log') -RedirectStandardOutput (Join-Path $logdir 'weiterleitung.out.log')

@@ -238,7 +238,8 @@ private fun Leiste(vm: AppViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
-            val farbe = when (rechnerDa) { true -> f.erfolg; false -> f.gefahr; null -> f.textLeise }
+            // Während Jarvis prüft, welche Rechner antworten (bis 1,5 s), grau: das Tippen ist angekommen.
+            val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> f.erfolg; false -> f.gefahr; null -> f.textLeise }
             Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(28.dp).drawBehind {
                 if (rechnerDa == true) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
             })

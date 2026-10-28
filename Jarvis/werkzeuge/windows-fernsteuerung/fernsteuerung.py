@@ -103,6 +103,7 @@ user32.GetGUIThreadInfo.argtypes = [wt.DWORD, ctypes.POINTER(GUITHREADINFO)]
 user32.GetWindowThreadProcessId.argtypes = [wt.HWND, ctypes.POINTER(wt.DWORD)]
 user32.GetForegroundWindow.restype = wt.HWND
 user32.GetWindowLongW.argtypes = [wt.HWND, ctypes.c_int]
+user32.GetClassNameW.argtypes = [wt.HWND, wt.LPWSTR, ctypes.c_int]
 
 MOUSE, TASTATUR = 0, 1
 M_BEWEGEN, M_LINKS_RUNTER, M_LINKS_HOCH, M_RECHTS_RUNTER, M_RECHTS_HOCH = 0x0001, 0x0002, 0x0004, 0x0008, 0x0010
@@ -159,7 +160,12 @@ def fokus():
     if not user32.GetGUIThreadInfo(faden, ctypes.byref(info)):
         return False, False
     text = bool(info.hwndCaret)
-    geheim = text and bool(info.hwndFocus) and bool(user32.GetWindowLongW(info.hwndFocus, -16) & 0x0020)
+    geheim = False
+    if text and info.hwndFocus:
+        # ES_PASSWORD (0x20) gilt nur für Edit-Felder; bei anderen Klassen bedeutet das Bit etwas anderes.
+        klasse = ctypes.create_unicode_buffer(32)
+        user32.GetClassNameW(info.hwndFocus, klasse, 32)
+        geheim = klasse.value.lower() == "edit" and bool(user32.GetWindowLongW(info.hwndFocus, -16) & 0x0020)
     return text, geheim
 
 
@@ -243,6 +249,11 @@ class Eingabe:
             self.schreiben(str(j.get("s", "")))
         elif t == "taste":
             self.taste(str(j.get("k", "")), [str(m) for m in j.get("m", [])])
+        elif t == "loslassen":
+            # Verbindung mitten im Ziehen abgerissen: linke Taste nicht gedrückt hängen lassen.
+            if self.gedrueckt:
+                senden_eingaben([maus_eingabe(M_LINKS_HOCH)])
+                self.gedrueckt = False
         elif t == "entsperren":
             self.meldung("Den Windows-Sperrbildschirm lässt Windows aus der Ferne nicht bedienen. Bitte den PC einmal am Gerät entsperren.")
 
@@ -533,24 +544,29 @@ class Dienst:
                     erstes[0] = False
                     self.fehlstarts = 0
                     log(f"Aufnahme läuft {w}x{h}")
-                    s.senden_json(0x01, {"w": w, "h": h, "ok": True})
                 s.bild(au)
 
             def ende(s=s):
                 log("Aufnahme beendet")
                 with self.sperre:
-                    if self.sitzung is not s:
+                    # Eine neuere Aufnahme (z. B. nach dem Entsperren gestartet) nicht wieder abschießen.
+                    if self.sitzung is not s or self.aufnahme is not neu:
                         return
                     if erstes[0]:
                         s.senden_json(0x01, {"w": w, "h": h, "ok": False})
+                    if self.zustand[2]:
+                        return  # gesperrt: _beobachten startet die Aufnahme nach dem Entsperren neu
                     self.fehlstarts += 1
                     warten = 2 if self.fehlstarts <= 3 else 5
-                # Gesperrt, Bildschirm umgebaut, Grafiktreiber neu: nach kurzer Pause neu versuchen, solange verbunden.
-                threading.Timer(warten, lambda: self.sitzung is s and self.aufnahme_starten()).start()
+                # Bildschirm umgebaut, Grafiktreiber neu: nach kurzer Pause neu versuchen, solange verbunden.
+                threading.Timer(warten, lambda: self.sitzung is s and self.aufnahme is neu and self.aufnahme_starten()).start()
 
-            a = Aufnahme(w, h, bild, ende)
-            self.aufnahme = a
-            a.start()
+            neu = Aufnahme(w, h, bild, ende)
+            self.aufnahme = neu
+            neu.start()
+            # Info schon beim Start (Quick Sync braucht etwa 1 s bis zum ersten Bild): So steht der Dekoder am Handy,
+            # wenn das erste Schlüsselbild kommt; sonst ginge es verloren und das Bild bliebe bis zum nächsten schwarz.
+            s.senden_json(0x01, {"w": w, "h": h, "ok": True})
 
     def eingabe(self, s: Sitzung, j):
         if self.sitzung is not s:
@@ -569,6 +585,7 @@ class Dienst:
             log("Verbindung beendet")
             self.sitzung = None
             self.wach.aktiv = False
+            self.eingaben.put({"t": "loslassen"})
             if self.aufnahme:
                 self.aufnahme.stop()
                 self.aufnahme = None
