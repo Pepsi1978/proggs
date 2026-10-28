@@ -34,7 +34,7 @@ BILDER_PRO_SEKUNDE = 30
 SCHLUESSEL_ABSTAND = 60
 # Ohne Anzeige (zugeklappt) hängt ddagrab still, ohne Fehler und ohne Ende (28.10.2026). Kommt bis dahin kein Bild,
 # gilt der Start als gescheitert: ffmpeg beenden, damit Wecken und virtueller Bildschirm greifen.
-ERSTES_BILD_FRIST = 3
+ERSTES_BILD_FRIST = 5
 
 TOKEN_PFAD = os.path.join(os.path.expanduser("~"), "SK", "Jarvis", "fernsteuerung-token.txt")
 FFMPEG = os.environ.get("FERNSTEUERUNG_FFMPEG", "ffmpeg")
@@ -156,6 +156,32 @@ def bildschirm_wecken() -> None:
 def bildschirm_groesse():
     """Hauptbildschirm in physischen Pixeln (ddagrab output_idx=0)."""
     return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+
+
+class DISPLAY_DEVICEW(ctypes.Structure):
+    _fields_ = [("cb", wt.DWORD), ("DeviceName", wt.WCHAR * 32), ("DeviceString", wt.WCHAR * 128),
+                ("StateFlags", wt.DWORD), ("DeviceID", wt.WCHAR * 128), ("DeviceKey", wt.WCHAR * 128)]
+
+
+def ohne_bildschirm() -> bool:
+    """Kein angeschlossener Bildschirm im Windows-Bild (Deckel zu, Anzeige „Nichts unternehmen“): Der Desktop hängt
+    dann an einer Ausgabe ohne aktiven Monitor, ddagrab wartet ewig (28.10.2026). Dann gleich den virtuellen nehmen."""
+    i = 0
+    while True:
+        a = DISPLAY_DEVICEW(cb=ctypes.sizeof(DISPLAY_DEVICEW))
+        if not user32.EnumDisplayDevicesW(None, i, ctypes.byref(a), 0):
+            return True
+        i += 1
+        if not a.StateFlags & 0x1:  # DISPLAY_DEVICE_ATTACHED_TO_DESKTOP
+            continue
+        j = 0
+        while True:
+            m = DISPLAY_DEVICEW(cb=ctypes.sizeof(DISPLAY_DEVICEW))
+            if not user32.EnumDisplayDevicesW(a.DeviceName, j, ctypes.byref(m), 0):
+                break
+            j += 1
+            if m.StateFlags & 0x1:  # DISPLAY_DEVICE_ACTIVE
+                return False
 
 
 def gesperrt() -> bool:
@@ -549,8 +575,22 @@ class Dienst:
             alt.stop()
         t, g, gs = self.zustand
         s.senden_json(0x03, {"tastatur": t, "geheim": g, "gesperrt": gs})
+        if ohne_bildschirm():
+            # Zugeklappt: nicht erst zweimal scheitern, sondern gleich den virtuellen Bildschirm (Treiber bis 5 s).
+            threading.Thread(target=self._virtuell_starten, args=(s,), daemon=True, name="virtuell").start()
+            return
         # Nicht im Lesefaden warten: Ist die Anzeige aus, scheitert der erste Versuch, der zweite (2 s) hat Bild.
         threading.Thread(target=bildschirm_wecken, daemon=True, name="wecken").start()
+        self.aufnahme_starten()
+
+    def _virtuell_starten(self, s: Sitzung):
+        log("kein Bildschirm angeschlossen, virtueller Bildschirm")
+        if self.virtuell.an():
+            time.sleep(2)  # bis Windows ihn als Hauptbildschirm eingerichtet hat
+        with self.sperre:
+            if self.sitzung is not s:
+                self.virtuell.aus()  # Sitzung inzwischen weg: beendet() kam vor an()
+                return
         self.aufnahme_starten()
 
     def _nachhelfen(self):
@@ -582,6 +622,7 @@ class Dienst:
             def bild(au, s=s):
                 if erstes[0]:
                     erstes[0] = False
+                    wecker.cancel()
                     self.fehlstarts = 0
                     log(f"Aufnahme läuft {w}x{h}")
                 s.bild(au)
@@ -611,14 +652,20 @@ class Dienst:
                 threading.Timer(warten, nochmal).start()
 
             def frist():
-                if erstes[0] and self.aufnahme is neu and neu.proc and neu.proc.poll() is None:
-                    log(f"kein Bild nach {ERSTES_BILD_FRIST} s, Aufnahme neu")
-                    neu.proc.kill()  # nicht stop(): ende() soll laufen und nachhelfen
+                with self.sperre:
+                    # Gesperrt: ddagrab sieht den Sperrbildschirm nicht, _beobachten startet nach dem Entsperren neu.
+                    if not erstes[0] or self.aufnahme is not neu or self.zustand[2]:
+                        return
+                    if neu.proc and neu.proc.poll() is None:
+                        log(f"kein Bild nach {ERSTES_BILD_FRIST} s, Aufnahme neu")
+                        neu.proc.kill()  # nicht stop(): ende() soll laufen und nachhelfen
 
             neu = Aufnahme(w, h, bild, ende)
+            wecker = threading.Timer(ERSTES_BILD_FRIST, frist)
+            wecker.daemon = True
             self.aufnahme = neu
             neu.start()
-            threading.Timer(ERSTES_BILD_FRIST, frist).start()
+            wecker.start()
             # Info schon beim Start (Quick Sync braucht etwa 1 s bis zum ersten Bild): So steht der Dekoder am Handy,
             # wenn das erste Schlüsselbild kommt; sonst ginge es verloren und das Bild bliebe bis zum nächsten schwarz.
             s.senden_json(0x01, {"w": w, "h": h, "ok": True})
