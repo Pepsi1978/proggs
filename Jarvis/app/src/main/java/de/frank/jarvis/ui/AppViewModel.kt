@@ -1633,6 +1633,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Fassungen (Anlagezeitpunkt + Text), deren Überschrift gerade angefragt wird oder geliefert wurde. */
     private val promptTitelVersucht = mutableSetOf<String>()
     private var promptTitelLauf: Job? = null
+    @Volatile private var promptTitelNochmal = false
 
     /**
      * Holt für Prompts ohne Überschrift im Hintergrund eine kurze KI-Überschrift, die zeigt, worum es im Prompt geht.
@@ -1640,26 +1641,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * fehl, wird sie beim nächsten Aufruf erneut versucht.
      */
     fun promptTitelNachziehen(liste: List<de.frank.jarvis.ablage.Prompt>) {
-        if (!modellBereit || promptTitelLauf?.isActive == true) return
-        val offen = liste.filter { it.titel.isEmpty() && "${it.erstellt}:${it.text.hashCode()}" !in promptTitelVersucht }
-        if (offen.isEmpty()) return
+        if (!modellBereit) return
+        // Läuft schon einer, holt er danach selbst nach, was inzwischen dazukam.
+        if (promptTitelLauf?.isActive == true) { promptTitelNochmal = true; return }
+        fun ohneTitel(l: List<de.frank.jarvis.ablage.Prompt>) = l.filter { it.titel.isEmpty() && "${it.erstellt}:${it.text.hashCode()}" !in promptTitelVersucht }
+        if (ohneTitel(liste).isEmpty()) return
         val app = getApplication<android.app.Application>()
         promptTitelLauf = viewModelScope.launch {
-            for (p in offen) {
-                val schluessel = "${p.erstellt}:${p.text.hashCode()}"
-                promptTitelVersucht += schluessel
-                try {
-                    val titel = auth.streamChat(PROMPT_TITEL, listOf(ChatTurn("user", p.text)), einstellungen.modell, ReasoningEffort.LOW)
-                        .lines().joinToString(" ") { it.trim() }.trim().trim { it in "\"'„“”‚‘’«»." || it.isWhitespace() }.take(160)
-                    if (titel.length < 3 || !withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.setzeTitel(app, p.erstellt, p.text, titel) }) promptTitelVersucht -= schluessel
-                } catch (e: CancellationException) {
-                    promptTitelVersucht -= schluessel
-                    throw e
-                } catch (e: Exception) {
-                    promptTitelVersucht -= schluessel
-                    Logbuch.fehler("Prompt-Überschrift", e)
-                    break
+            var offen = ohneTitel(liste)
+            while (offen.isNotEmpty()) {
+                promptTitelNochmal = false
+                for (p in offen) {
+                    val schluessel = "${p.erstellt}:${p.text.hashCode()}"
+                    promptTitelVersucht += schluessel
+                    try {
+                        val titel = auth.streamChat(PROMPT_TITEL, listOf(ChatTurn("user", p.text)), einstellungen.modell, ReasoningEffort.LOW)
+                            .lines().joinToString(" ") { it.trim() }.trim().trim { it in "\"'„“”‚‘’«»." || it.isWhitespace() }.take(160)
+                        if (titel.length < 3 || !withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.setzeTitel(app, p.erstellt, p.text, titel) }) promptTitelVersucht -= schluessel
+                    } catch (e: CancellationException) {
+                        promptTitelVersucht -= schluessel
+                        throw e
+                    } catch (e: Exception) {
+                        promptTitelVersucht -= schluessel
+                        Logbuch.fehler("Prompt-Überschrift", e)
+                        return@launch
+                    }
                 }
+                offen = if (promptTitelNochmal) ohneTitel(withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.alle(app) }) else emptyList()
             }
         }
     }

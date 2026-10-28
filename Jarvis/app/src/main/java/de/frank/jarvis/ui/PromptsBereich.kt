@@ -117,7 +117,15 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
             state = zustand,
             order = { reihenfolge },
             onMove = { von, nach -> reihenfolge = reihenfolge.toMutableList().apply { add(nach, removeAt(von)) } },
-            onDrop = { val neu = reihenfolge; bereich.launch { if (!withContext(Dispatchers.IO) { Prompts.ordne(context, neu) }) vm.meldung = "Die neue Reihenfolge ließ sich nicht speichern." } },
+            onDrop = {
+                val neu = reihenfolge
+                bereich.launch {
+                    if (withContext(Dispatchers.IO) { Prompts.ordne(context, neu) }) return@launch
+                    // Nicht gespeichert: zurück zur Reihenfolge der Datei, damit Anzeige und Nummern übereinstimmen.
+                    reihenfolge = liste.orEmpty().map { it.erstellt }
+                    vm.meldung = "Die neue Reihenfolge ließ sich nicht speichern."
+                }
+            },
             reducedMotion = reduziert,
         ),
         state = listState, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -130,8 +138,9 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
         itemsIndexed(sortiert, key = { _, p -> p.erstellt }) { i, p ->
             // Die Nummer ist der Platz: oben immer Prompt 1, auch während des Ziehens.
-            Row(reorderItem(zustand, p.erstellt, reduziert).fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { offen = p.erstellt }, verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f).padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
+            Row(reorderItem(zustand, p.erstellt, reduziert).fillMaxWidth().glas(f, erhoeht = 0.7f), verticalAlignment = Alignment.CenterVertically) {
+                // Nur der Textteil öffnet den Prompt; der Griff bleibt frei, sonst öffnete ein abgebrochenes Ziehen den Dialog.
+                Column(Modifier.weight(1f).antippen { offen = p.erstellt }.padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
                     // Hinter der Nummer die KI-Überschrift (höchstens zwei Zeilen), damit man den Inhalt ohne Lesen erkennt.
                     Text(buildAnnotatedString {
                         withStyle(SpanStyle(color = f.primaer)) { append("Prompt ${i + 1}") }
@@ -195,7 +204,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                 if (loeschen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Knopf("Wirklich löschen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) {
                         bereich.launch {
-                            val weg = withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer) }
+                            val weg = withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer, p.erstellt) }
                             vm.meldung = if (weg != null) "Prompt ${p.nummer} gelöscht." else "Prompt ${p.nummer} ließ sich nicht löschen."
                             if (weg != null) offen = null
                         }

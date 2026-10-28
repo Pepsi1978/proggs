@@ -20,7 +20,7 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
             name = "prompt_speichern",
             titel = "Prompt speichern",
             beschreibung = "Jarvis: Prompt-Speicher im Reiter „Prompts“ der Ablage (lückenlos nummeriert von oben: Prompt 1 ist der oberste; neue kommen unten dazu, nach dem Löschen rücken die übrigen auf). „Speicher folgendes als Prompt ab: …“ → aktion speichern " +
-                "mit dem ausformulierten Text (nicht ausführen). „Ändere Prompt 2 in …“ → aktion aendern mit nummer und dem vollständigen neuen Text. „Lösche Prompt 2“ → aktion loeschen mit nummer, nur wenn Frank die Nummer ausdrücklich nennt.",
+                "mit dem ausformulierten Text (nicht ausführen). „Ändere Prompt 2 in …“ → aktion aendern mit nummer und dem vollständigen neuen Text. „Lösche Prompt 2“ → aktion loeschen mit nummer, nur wenn Frank die Nummer ausdrücklich nennt. Mehrere löschen: von der höchsten Nummer abwärts, weil nach jedem Löschen die folgenden aufrücken; im Zweifel vorher prompts_lesen.",
             schema = schema(
                 "aktion" to text("speichern, aendern oder loeschen.", listOf("speichern", "aendern", "loeschen")),
                 "text" to text("Beim Speichern und Ändern: der Prompt, sinnvoll ausformuliert als klarer Auftrag in gutem Deutsch."),
@@ -31,7 +31,7 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
         ) { a ->
             val nummer = a.optInt("nummer", 0)
             if (a.optString("aktion") == "loeschen") {
-                Prompts.loesche(context, nummer)?.let { Ergebnis("Prompt ${it.nummer} gelöscht.") }
+                Prompts.loesche(context, nummer)?.let { Ergebnis("Prompt ${it.nummer} gelöscht. Die folgenden Prompts sind eine Nummer aufgerückt.") }
                     ?: Ergebnis("Prompt $nummer ließ sich nicht löschen (gibt es nicht oder Datei beschädigt).", fehler = true)
             } else if (a.optString("aktion") == "aendern") {
                 val text = DiktatTrenner.ohneSchluss(a.optString("text")).trim()
@@ -55,10 +55,10 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
             val alle = Prompts.alle(context)
             when {
                 Prompts.defekt(context) -> Ergebnis("Die Prompt-Datei ist beschädigt und wurde gesichert; Details unter Aktivität.", fehler = true)
-                nummer > 0 -> alle.firstOrNull { it.nummer == nummer }?.let { Ergebnis("Prompt ${it.nummer}:\n${it.text}") }
+                nummer > 0 -> alle.firstOrNull { it.nummer == nummer }?.let { Ergebnis("Prompt ${it.nummer}${it.titel.takeIf(String::isNotEmpty)?.let { t -> " ($t)" }.orEmpty()}:\n${it.text}") }
                     ?: Ergebnis("Einen Prompt mit der Nummer $nummer gibt es nicht.", fehler = true)
                 alle.isEmpty() -> Ergebnis("Noch keine Prompts gespeichert.")
-                else -> Ergebnis(alle.joinToString("\n\n") { "Prompt ${it.nummer}:\n${it.text}" })
+                else -> Ergebnis(alle.joinToString("\n\n") { "Prompt ${it.nummer}${it.titel.takeIf(String::isNotEmpty)?.let { t -> " ($t)" }.orEmpty()}:\n${it.text}" })
             }
         },
     )

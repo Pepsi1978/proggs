@@ -27,6 +27,16 @@ object Prompts {
 
     private class Stand(val liste: List<Prompt>, val defekt: Boolean = false)
 
+    /** [Prompt.erstellt] dient als feste Kennung: fehlende (0) oder doppelte Werte bekommen beim Lesen den nächsten freien. */
+    private fun List<Prompt>.eindeutig(): List<Prompt> {
+        val belegt = HashSet<Long>()
+        return map { p ->
+            var e = p.erstellt.coerceAtLeast(1)
+            while (!belegt.add(e)) e++
+            if (e == p.erstellt) p else p.copy(erstellt = e)
+        }
+    }
+
     /** Nummeriert lückenlos von oben: Prompt 1, 2, 3 … in der gegebenen Reihenfolge. */
     private fun List<Prompt>.durchnummeriert(): List<Prompt> = mapIndexed { i, p -> p.copy(nummer = i + 1) }
 
@@ -43,7 +53,7 @@ object Prompts {
             val arr = json.getJSONArray("prompts")
             val liste = (0 until arr.length()).mapNotNull { i ->
                 arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), it.optString("text").trim(), it.optLong("erstellt"), it.optString("titel").trim()) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
-            }.sortedBy { it.nummer }.durchnummeriert()
+            }.sortedBy { it.nummer }.eindeutig().durchnummeriert()
             Stand(liste)
         } catch (e: Exception) {
             runCatching { f.copyTo(File(f.path + ".defekt-" + f.lastModified())) }
@@ -82,14 +92,15 @@ object Prompts {
     }
 
     /**
-     * Ersetzt den Text eines vorhandenen Prompts. Mit [erstellt] nur, wenn unter [nummer] noch genau dieser Prompt steht
-     * (nach Löschen oder Verschieben steht dort womöglich ein anderer).
+     * Ersetzt den Text eines vorhandenen Prompts. Mit [erstellt] wird genau dieser Prompt gesucht, egal auf welchem Platz er
+     * inzwischen steht (nach Löschen oder Verschieben trägt er womöglich eine andere [nummer]).
      */
     @Synchronized
     fun aendere(c: Context, nummer: Int, text: String, erstellt: Long? = null): Boolean {
         val s = lies(c)
-        if (s.defekt || text.isBlank() || s.liste.none { it.nummer == nummer && (erstellt == null || it.erstellt == erstellt) }) return false
-        return schreibe(c, s.liste.map { if (it.nummer == nummer) it.copy(text = text.trim(), titel = if (it.text == text.trim()) it.titel else "") else it })
+        val ziel = s.liste.firstOrNull { if (erstellt != null) it.erstellt == erstellt else it.nummer == nummer }
+        if (s.defekt || text.isBlank() || ziel == null) return false
+        return schreibe(c, s.liste.map { if (it.erstellt == ziel.erstellt) it.copy(text = text.trim(), titel = if (it.text == text.trim()) it.titel else "") else it })
     }
 
     /** Setzt die KI-Überschrift, aber nur, wenn der Prompt noch genau diesen [text] hat (sonst gehört sie zu einer alten Fassung). */
@@ -101,9 +112,10 @@ object Prompts {
     }
 
     @Synchronized
-    fun loesche(c: Context, nummer: Int): Prompt? {
+    /** Löscht den Prompt auf Platz [nummer], oder mit [erstellt] genau diesen Prompt, egal auf welchem Platz er steht. */
+    fun loesche(c: Context, nummer: Int, erstellt: Long? = null): Prompt? {
         val s = lies(c)
-        val weg = s.liste.firstOrNull { it.nummer == nummer } ?: return null
+        val weg = s.liste.firstOrNull { if (erstellt != null) it.erstellt == erstellt else it.nummer == nummer } ?: return null
         return weg.takeIf { !s.defekt && schreibe(c, (s.liste - weg).durchnummeriert()) }
     }
 
@@ -114,7 +126,9 @@ object Prompts {
         if (s.defekt) return false
         val nach = s.liste.associateBy { it.erstellt }
         // Inzwischen neu dazugekommene bleiben unten, inzwischen gelöschte fallen weg.
-        val neu = reihenfolge.mapNotNull(nach::get) + s.liste.filter { it.erstellt !in reihenfolge.toSet() }
+        val gezogen = reihenfolge.distinct()
+        val drin = gezogen.toSet()
+        val neu = gezogen.mapNotNull(nach::get) + s.liste.filter { it.erstellt !in drin }
         return neu.map { it.erstellt } == s.liste.map { it.erstellt } || schreibe(c, neu.durchnummeriert())
     }
 }
