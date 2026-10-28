@@ -403,6 +403,7 @@
     { "versionCode": 397, "versionName": "1.8.386", "stand": "28.10.2026, 17:46 Uhr", "notiz": "Das Fernwartungssymbol ist nur noch grün, wenn ein Rechner wirklich fernbedienbar ist, wird bei Abbruch sofort rot, und ohne erreichbaren Rechner verbindet Jarvis nicht mehr blind mit dem Mac." },
     { "versionCode": 398, "versionName": "1.8.387", "stand": "28.10.2026, 18:19 Uhr", "notiz": "Die Fernwartung zeigt den Windows-Laptop jetzt auch zugeklappt mit abgeschalteter Anzeige, notfalls über einen virtuellen Bildschirm, der nach der Sitzung wieder verschwindet." },
     { "versionCode": 399, "versionName": "1.8.388", "stand": "28.10.2026, 18:34 Uhr", "notiz": "Das Fernwartungssymbol steht in der unteren Leiste jetzt links neben den Einstellungen, die Einstellungen ganz rechts." },
-    { "versionCode": 400, "versionName": "1.8.389", "stand": "28.10.2026, 18:40 Uhr", "notiz": "Bricht eine laufende Fernwartung ab, meldet Jarvis jetzt richtig, dass die Verbindung getrennt wurde, statt den Rechner als nicht erreichbar zu bezeichnen; der Windows-Dienst ist bei zugeklapptem Deckel robuster." }
+    { "versionCode": 400, "versionName": "1.8.389", "stand": "28.10.2026, 18:40 Uhr", "notiz": "Bricht eine laufende Fernwartung ab, meldet Jarvis jetzt richtig, dass die Verbindung getrennt wurde, statt den Rechner als nicht erreichbar zu bezeichnen; der Windows-Dienst ist bei zugeklapptem Deckel robuster." },
+    { "versionCode": 401, "versionName": "1.8.390", "stand": "28.10.2026, 19:04 Uhr", "notiz": "Das Fernwartungssymbol in der unteren Leiste ist jetzt genauso groß wie die anderen Symbole, in Rot wie in Grün." }
 ]
 }

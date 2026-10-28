@@ -257,7 +257,8 @@ private fun Leiste(vm: AppViewModel) {
             // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
             // Während Jarvis prüft, welche Rechner antworten (bis 1,5 s), grau: das Tippen ist angekommen.
             val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> f.erfolg; false -> f.gefahr; null -> f.textLeise }
-            Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(28.dp).drawBehind {
+            // Gleiche Größe wie die Reitersymbole (20 dp).
+            Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(20.dp).drawBehind {
                 if (rechnerDa == true) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
             })
         }
