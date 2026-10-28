@@ -32,6 +32,9 @@ BILDER_PRO_SEKUNDE = 30
 # Schlüsselbild alle 2 s: ein laufender ffmpeg lässt sich keins auf Zuruf entlocken; so hat ein neuer Dekoder
 # (Verbinden, Drehen, Rückstau) spätestens nach 2 s wieder Bild.
 SCHLUESSEL_ABSTAND = 60
+# Ohne Anzeige (zugeklappt) hängt ddagrab still, ohne Fehler und ohne Ende (28.10.2026). Kommt bis dahin kein Bild,
+# gilt der Start als gescheitert: ffmpeg beenden, damit Wecken und virtueller Bildschirm greifen.
+ERSTES_BILD_FRIST = 3
 
 TOKEN_PFAD = os.path.join(os.path.expanduser("~"), "SK", "Jarvis", "fernsteuerung-token.txt")
 FFMPEG = os.environ.get("FERNSTEUERUNG_FFMPEG", "ffmpeg")
@@ -607,9 +610,15 @@ class Dienst:
                         self.aufnahme_starten()
                 threading.Timer(warten, nochmal).start()
 
+            def frist():
+                if erstes[0] and self.aufnahme is neu and neu.proc and neu.proc.poll() is None:
+                    log(f"kein Bild nach {ERSTES_BILD_FRIST} s, Aufnahme neu")
+                    neu.proc.kill()  # nicht stop(): ende() soll laufen und nachhelfen
+
             neu = Aufnahme(w, h, bild, ende)
             self.aufnahme = neu
             neu.start()
+            threading.Timer(ERSTES_BILD_FRIST, frist).start()
             # Info schon beim Start (Quick Sync braucht etwa 1 s bis zum ersten Bild): So steht der Dekoder am Handy,
             # wenn das erste Schlüsselbild kommt; sonst ginge es verloren und das Bild bliebe bis zum nächsten schwarz.
             s.senden_json(0x01, {"w": w, "h": h, "ok": True})
