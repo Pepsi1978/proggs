@@ -13,7 +13,7 @@ import java.io.File
 import java.io.FileNotFoundException
 
 /** Ein gespeicherter Prompt: vorformulierter Auftrag an Jarvis. Ein neuer Prompt bekommt immer die kleinste freie [nummer]; gelöschte Nummern werden wieder vergeben. */
-data class Prompt(val nummer: Int, val text: String, val erstellt: Long)
+data class Prompt(val nummer: Int, val text: String, val erstellt: Long, val titel: String = "")
 
 /**
  * Der Reiter „Prompts“ der Ablage: eigene Datei `prompts.json`, getrennt von den Ablage-Einträgen (die bleiben unberührt).
@@ -42,7 +42,7 @@ object Prompts {
             val json = JSONObject(text)
             val arr = json.getJSONArray("prompts")
             val liste = (0 until arr.length()).mapNotNull { i ->
-                arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), it.optString("text").trim(), it.optLong("erstellt")) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
+                arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), it.optString("text").trim(), it.optLong("erstellt"), it.optString("titel").trim()) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
             }.sortedBy { it.nummer }
             Stand(liste)
         } catch (e: Exception) {
@@ -54,7 +54,7 @@ object Prompts {
 
     private fun schreibe(c: Context, liste: List<Prompt>): Boolean {
         val inhalt = JSONObject().put("format", 1)
-            .put("prompts", JSONArray(liste.map { JSONObject().put("nummer", it.nummer).put("text", it.text).put("erstellt", it.erstellt) })).toString(2)
+            .put("prompts", JSONArray(liste.map { JSONObject().put("nummer", it.nummer).put("text", it.text).put("erstellt", it.erstellt).put("titel", it.titel) })).toString(2)
         val atomar = AtomicFile(datei(c))
         val aus = try { atomar.startWrite() } catch (e: Exception) { Logbuch.fehler("Prompts schreiben", e); return false }
         return try {
@@ -89,7 +89,15 @@ object Prompts {
     fun aendere(c: Context, nummer: Int, text: String, erstellt: Long? = null): Boolean {
         val s = lies(c)
         if (s.defekt || text.isBlank() || s.liste.none { it.nummer == nummer && (erstellt == null || it.erstellt == erstellt) }) return false
-        return schreibe(c, s.liste.map { if (it.nummer == nummer) it.copy(text = text.trim()) else it })
+        return schreibe(c, s.liste.map { if (it.nummer == nummer) it.copy(text = text.trim(), titel = if (it.text == text.trim()) it.titel else "") else it })
+    }
+
+    /** Setzt die KI-Überschrift, aber nur, wenn der Prompt noch genau diesen [text] hat (sonst gehört sie zu einer alten Fassung). */
+    @Synchronized
+    fun setzeTitel(c: Context, erstellt: Long, text: String, titel: String): Boolean {
+        val s = lies(c)
+        if (s.defekt || s.liste.none { it.erstellt == erstellt && it.text == text }) return false
+        return schreibe(c, s.liste.map { if (it.erstellt == erstellt) it.copy(titel = titel.trim()) else it })
     }
 
     @Synchronized

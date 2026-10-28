@@ -394,6 +394,7 @@
     { "versionCode": 388, "versionName": "1.8.377", "stand": "28.10.2026, 14:04 Uhr", "notiz": "Neue Prompts bekommen die kleinste freie Nummer, jeder Prompt lässt sich bearbeiten, und die KI-Verbesserung kann rückgängig gemacht werden." },
     { "versionCode": 389, "versionName": "1.8.378", "stand": "28.10.2026, 14:08 Uhr", "notiz": "Die Modellwahl beim Ein- und Ausklappen der Symbole steht nicht mehr kurz doppelt da und sitzt bündig über dem Pfeil." },
     { "versionCode": 390, "versionName": "1.8.379", "stand": "28.10.2026, 14:10 Uhr", "notiz": "Beim Bearbeiten eines Prompts landen Diktat und KI nie mehr im falschen Text, und Rückgängig nimmt nur die KI-Verbesserung zurück." },
-    { "versionCode": 391, "versionName": "1.8.380", "stand": "28.10.2026, 14:11 Uhr", "notiz": "Unter jedem Prompt stehen jetzt klare Symbole für Löschen, Bearbeiten, Kopieren und Teilen an andere Apps, Senden bleibt rechts hervorgehoben." }
+    { "versionCode": 391, "versionName": "1.8.380", "stand": "28.10.2026, 14:11 Uhr", "notiz": "Unter jedem Prompt stehen jetzt klare Symbole für Löschen, Bearbeiten, Kopieren und Teilen an andere Apps, Senden bleibt rechts hervorgehoben." },
+    { "versionCode": 392, "versionName": "1.8.381", "stand": "28.10.2026, 14:21 Uhr", "notiz": "Jeder Prompt zeigt hinter seiner Nummer eine kurze KI-Überschrift, worum es geht, und ein geöffneter Prompt ist nicht mehr durchsichtig." }
 ]
 }

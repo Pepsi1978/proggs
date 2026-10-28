@@ -44,6 +44,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -80,6 +85,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     var offen by rememberSaveable { mutableStateOf<Long?>(null) }
     var neu by rememberSaveable { mutableStateOf(false) }
     val defekt by ladeImHintergrund(false, stand) { withContext(Dispatchers.IO) { Prompts.defekt(context) } }
+    LaunchedEffect(liste) { liste?.let { vm.promptTitelNachziehen(it) } }
 
     LazyColumn(modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (defekt) item(key = "defekt") {
@@ -90,7 +96,11 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
         items(liste.orEmpty(), key = { it.nummer }) { p ->
             Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { offen = p.erstellt }.padding(16.dp)) {
-                Text("Prompt ${p.nummer}", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                // Hinter der Nummer die KI-Überschrift (höchstens zwei Zeilen), damit man den Inhalt ohne Lesen erkennt.
+                Text(buildAnnotatedString {
+                    withStyle(SpanStyle(color = f.primaer)) { append("Prompt ${p.nummer}") }
+                    if (p.titel.isNotEmpty()) { append("  ·  "); append(p.titel) }
+                }, color = f.text, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(p.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
             }
         }
@@ -108,11 +118,12 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     liste?.firstOrNull { it.erstellt == offen }?.let { p ->
         var loeschen by remember(p.nummer) { mutableStateOf(false) }
         Dialog({ offen = null }, DialogProperties(usePlatformDefaultWidth = false)) {
-            Column(Modifier.padding(16.dp).fillMaxWidth().glas(f, fuellung = f.flaecheStark).padding(18.dp)) {
+            Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Prompt ${p.nummer}", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Box(Modifier.size(40.dp).antippen { offen = null }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
                 }
+                if (p.titel.isNotEmpty()) Text(p.titel, color = f.primaer, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
                 Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(vertical = 10.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
                 var hinweis by remember(p.nummer) { mutableStateOf<String?>(null) }
                 var kopiert by remember(p.nummer) { mutableStateOf(false) }
@@ -161,7 +172,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
 private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: () -> Unit) {
     val f = LocalFarben.current
     Dialog(schliessen, DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.padding(16.dp).fillMaxWidth().glas(f, fuellung = f.flaecheStark).padding(18.dp)) {
+        Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(vm.promptBearbeitet?.let { "Prompt ${it.nummer} bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box(Modifier.size(40.dp).antippen(aktion = schliessen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
@@ -183,6 +194,10 @@ private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: (
         }
     }
 }
+
+/** Glasfläche der Prompt-Fenster auf deckendem Grund: dahinter scheint nichts durch. */
+private fun Modifier.deckend(f: de.frank.jarvis.ui.theme.Farben): Modifier =
+    background(f.hgUnten, RoundedCornerShape(f.radius)).glas(f, fuellung = f.flaecheStark)
 
 /** Rundes Symbol unter einem Prompt; langes Drücken zeigt über [hinweis] kurz, was es tut. */
 @Composable

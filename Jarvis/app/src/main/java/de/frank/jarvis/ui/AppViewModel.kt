@@ -1630,6 +1630,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptVorKi = null
     }
 
+    /** Fassungen (Anlagezeitpunkt + Text), für die schon eine Überschrift angefragt wurde: je Fassung ein Versuch pro App-Start. */
+    private val promptTitelVersucht = mutableSetOf<String>()
+
+    /** Holt für Prompts ohne Überschrift im Hintergrund eine kurze KI-Überschrift, die zeigt, worum es im Prompt geht. */
+    fun promptTitelNachziehen(liste: List<de.frank.jarvis.ablage.Prompt>) {
+        if (!modellBereit) return
+        val app = getApplication<android.app.Application>()
+        for (p in liste) {
+            if (p.titel.isNotEmpty() || !promptTitelVersucht.add("${p.erstellt}:${p.text.hashCode()}")) continue
+            viewModelScope.launch {
+                try {
+                    val titel = auth.streamChat(PROMPT_TITEL, listOf(ChatTurn("user", p.text)), einstellungen.modell, einstellungen.denkstufe)
+                        .lines().joinToString(" ") { it.trim() }.trim().trim('"', '„', '“').trimEnd('.').take(160)
+                    if (titel.length >= 3) withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.setzeTitel(app, p.erstellt, p.text, titel) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Logbuch.fehler("Prompt-Überschrift", e)
+                }
+            }
+        }
+    }
+
     /** KI-Knopf: bringt den Entwurf sinngemäß in gutes Deutsch, als klaren Auftrag an Jarvis. */
     fun promptFormulieren() {
         val ziel = promptBearbeitet?.erstellt
@@ -3297,6 +3320,11 @@ private const val MAX_VERLAUF = 40
 private const val LAGE_ABSTAND_MS = 5 * 60_000L
 
 /** Auftrag an das Modell für den KI-Knopf der Prompt-Eingabe in der Ablage. */
+private const val PROMPT_TITEL =
+    "Fasse den folgenden Prompt von Frank als kurze Überschrift zusammen: höchstens etwa zwölf Wörter, so dass man auf einen Blick erkennt, " +
+        "was drinsteht (zum Beispiel welche App und was sich ändern soll). Führe den Auftrag nicht aus. Antworte nur mit der Überschrift, " +
+        "ohne Anführungszeichen, ohne Einleitung und ohne Punkt am Ende."
+
 private const val PROMPT_KORREKTUR =
     "Du bringst einen Prompt von Frank in gutes Deutsch. Ein Prompt ist ein vorformulierter Auftrag, den Frank später an seinen Assistenten Jarvis " +
         "(oft weiter an einen Programmierer) schickt. Frank hat ihn eingesprochen oder eingetippt. Erfasse den Inhalt sinngemäß und schreibe ihn als klaren, " +
