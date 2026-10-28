@@ -17,7 +17,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
@@ -26,7 +29,10 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import android.content.Intent
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,6 +57,7 @@ import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import de.frank.jarvis.ui.theme.knopf3d
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -106,22 +114,42 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                     Box(Modifier.size(40.dp).antippen { offen = null }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
                 }
                 Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(vertical = 10.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (loeschen) {
-                        Knopf("Wirklich löschen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) {
-                            bereich.launch {
-                                val weg = withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer) }
-                                vm.meldung = if (weg != null) "Prompt ${p.nummer} gelöscht." else "Prompt ${p.nummer} ließ sich nicht löschen."
-                                if (weg != null) offen = null
-                            }
-                        }
-                        Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
-                    } else {
-                        Knopf("Löschen", Modifier.weight(1f), Icons.Rounded.Delete, haupt = false, farbe = f.gefahr) { loeschen = true }
-                        Knopf("Bearbeiten", Modifier.weight(1f), Icons.Rounded.Edit, haupt = false) { offen = null; vm.promptBearbeiten(p) }
-                        // Rechts, gut mit dem Daumen erreichbar.
-                        Knopf("Senden", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Send) { offen = null; vm.promptSenden(p.text) }
+                var hinweis by remember(p.nummer) { mutableStateOf<String?>(null) }
+                var kopiert by remember(p.nummer) { mutableStateOf(false) }
+                LaunchedEffect(hinweis) { if (hinweis != null) { delay(1_800); hinweis = null } }
+                LaunchedEffect(kopiert) { if (kopiert) { delay(1_500); kopiert = false } }
+                // Beschreibung beim langen Drücken bzw. „Kopiert“ als kurze Rückmeldung über den Symbolen.
+                Text(hinweis ?: if (kopiert) "Kopiert" else " ", color = if (hinweis == null && kopiert) f.erfolg else f.textLeise, fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp), textAlign = TextAlign.End)
+                if (!loeschen) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Symbol(Icons.Rounded.Delete, "Löschen", f.gefahr, { hinweis = it }) { loeschen = true }
+                    Symbol(Icons.Rounded.Edit, "Bearbeiten", f.text, { hinweis = it }) { offen = null; vm.promptBearbeiten(p) }
+                    Symbol(if (kopiert) Icons.Rounded.Check else Icons.Rounded.ContentCopy, "Kopieren", if (kopiert) f.erfolg else f.text, { hinweis = it }) {
+                        vm.kopiere(p.text, "Prompt ${p.nummer}"); kopiert = true
                     }
+                    Symbol(Icons.Rounded.Share, "Senden an …", f.text, { hinweis = it }) {
+                        vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
+                        runCatching {
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, p.text), "Prompt ${p.nummer} senden an")
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    // Rechts, gut mit dem Daumen erreichbar, als einziges Symbol plastisch hervorgehoben.
+                    Box(Modifier.size(60.dp).knopf3d(f.primaer, f.tertiaer, 30.dp, f.dunkel)
+                        .antippen(lange = { hinweis = "Senden" }, langeText = "Senden") { offen = null; vm.promptSenden(p.text) }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(28.dp))
+                    }
+                }
+                if (loeschen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Knopf("Wirklich löschen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) {
+                        bereich.launch {
+                            val weg = withContext(Dispatchers.IO) { Prompts.loesche(context, p.nummer) }
+                            vm.meldung = if (weg != null) "Prompt ${p.nummer} gelöscht." else "Prompt ${p.nummer} ließ sich nicht löschen."
+                            if (weg != null) offen = null
+                        }
+                    }
+                    Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
                 }
             }
         }
@@ -153,6 +181,15 @@ private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: (
                 Rund(Icons.Rounded.Save, "Speichern", f.primaer) { speichern() }
             }
         }
+    }
+}
+
+/** Rundes Symbol unter einem Prompt; langes Drücken zeigt über [hinweis] kurz, was es tut. */
+@Composable
+private fun Symbol(icon: androidx.compose.ui.graphics.vector.ImageVector, beschreibung: String, farbe: androidx.compose.ui.graphics.Color, hinweis: (String) -> Unit, aktion: () -> Unit) {
+    val f = LocalFarben.current
+    Box(Modifier.size(52.dp).glas(f, 26.dp, erhoeht = 0.5f).antippen(lange = { hinweis(beschreibung) }, langeText = beschreibung, aktion = aktion), contentAlignment = Alignment.Center) {
+        Icon(icon, beschreibung, tint = farbe, modifier = Modifier.size(24.dp))
     }
 }
 
