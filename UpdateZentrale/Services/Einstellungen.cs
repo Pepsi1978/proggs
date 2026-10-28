@@ -23,6 +23,12 @@ public sealed class ProgrammEinstellung
     /// wird nur die Anzeige, nichts wird geloescht.
     /// </summary>
     public DateTime? FehlerQuittiertBis { get; set; }
+
+    /// <summary>
+    /// Wann zuletzt ein Fehler dieses Programms automatisch an Claude Code ging -- die Sperrfrist
+    /// uebersteht so Neustarts. Nur gesetzt, wenn die Sitzung wirklich startete.
+    /// </summary>
+    public DateTime? AutomatischUebergebenAm { get; set; }
 }
 
 public sealed class SammelFortsetzung

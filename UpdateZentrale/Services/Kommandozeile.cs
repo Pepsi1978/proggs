@@ -39,14 +39,25 @@ public static class Kommandozeile
     /// Bewusst NICHT der Standard: winget und die Update-Skripte starten Installer weiter, die
     /// ihre Elevation selbst anfordern dürfen müssen.
     /// </param>
+    /// <param name="lebenszeichen">
+    /// Gesetzt, ist <paramref name="zeitlimit"/> eine Ruhezeit: abgebrochen wird erst, wenn so lange
+    /// weder Ausgabe kam noch sich der Wert dieses Lebenszeichens geaendert hat (etwa die Groesse eines
+    /// Download-Ordners). Ein langsamer, aber laufender Download wird so nie abgewuergt, ein haengender
+    /// schon. Hoechstens <see cref="Hoechstdauer"/> insgesamt.
+    /// </param>
     public static Task<BefehlErgebnis> AusfuehrenAsync(
         string datei,
         string argumente,
         TimeSpan zeitlimit,
         string? arbeitsverzeichnis = null,
         CancellationToken abbruch = default,
-        bool alsAufrufer = false)
-        => AusfuehrenInternAsync(datei, argumente, zeitlimit, arbeitsverzeichnis, abbruch, alsAufrufer);
+        bool alsAufrufer = false,
+        Func<long>? lebenszeichen = null)
+        => AusfuehrenInternAsync(datei, argumente, zeitlimit, arbeitsverzeichnis, abbruch, alsAufrufer,
+                                 lebenszeichen: lebenszeichen);
+
+    /// <summary>Obergrenze eines Laufs mit Ruhezeit, egal wie viel er noch tut.</summary>
+    public static readonly TimeSpan Hoechstdauer = TimeSpan.FromHours(8);
 
     /// <param name="baumBeenden">Test seam: how the tree is killed (default Kill(entireProcessTree)).</param>
     /// <param name="einzelnBeenden">Test seam: the follow-up kill of one captured survivor.</param>
@@ -58,7 +69,8 @@ public static class Kommandozeile
         CancellationToken abbruch = default,
         bool alsAufrufer = false,
         Action<Process>? baumBeenden = null,
-        Func<Process, bool>? einzelnBeenden = null)
+        Func<Process, bool>? einzelnBeenden = null,
+        Func<long>? lebenszeichen = null)
     {
         // Every external command of the app passes here, so this is where it is recorded -- with
         // the ambient operation (see Diagnose), whichever provider or feature started it.
@@ -72,12 +84,13 @@ public static class Kommandozeile
                 ["argumente"] = Bereinigung.Sicher(argumente, 1000),
                 ["verzeichnis"] = arbeitsverzeichnis,
                 ["zeitlimitSek"] = (long)zeitlimit.TotalSeconds,
+                ["ruhezeit"] = lebenszeichen is not null,
                 ["alsAufrufer"] = alsAufrufer
             });
         try
         {
             var lauf = await AusfuehrenKernAsync(datei, argumente, zeitlimit, arbeitsverzeichnis, abbruch, alsAufrufer,
-                baumBeenden, einzelnBeenden);
+                baumBeenden, einzelnBeenden, lebenszeichen);
             BefehlEnde(befehlId, datei, lauf, uhr);
             return lauf;
         }
@@ -147,7 +160,8 @@ public static class Kommandozeile
         CancellationToken abbruch,
         bool alsAufrufer,
         Action<Process>? baumBeenden,
-        Func<Process, bool>? einzelnBeenden)
+        Func<Process, bool>? einzelnBeenden,
+        Func<long>? lebenszeichen = null)
     {
         var start = new ProcessStartInfo
         {
@@ -206,14 +220,43 @@ public static class Kommandozeile
         var fehler = MitlesenAsync(prozess.StandardError, fehlerPuffer, lesen);
 
         using var zeitgeber = new CancellationTokenSource(zeitlimit);
-        using var verbund = CancellationTokenSource.CreateLinkedTokenSource(zeitgeber.Token, abbruch);
+        using var deckel = new CancellationTokenSource(lebenszeichen is null ? Timeout.InfiniteTimeSpan
+                                                       : (zeitlimit > Hoechstdauer ? zeitlimit : Hoechstdauer));
+        using var verbund = CancellationTokenSource.CreateLinkedTokenSource(zeitgeber.Token, deckel.Token, abbruch);
+        using var waechterEnde = new CancellationTokenSource();
+        var waechter = lebenszeichen is null ? Task.CompletedTask : Task.Run(async () =>
+        {
+            // Jedes Lebenszeichen stellt die Ruhezeit-Uhr zurueck.
+            long Menge() { lock (puffer) lock (fehlerPuffer) return puffer.Length + fehlerPuffer.Length; }
+            var letztesZeichen = SicherLesen(lebenszeichen);
+            var letzteMenge = Menge();
+            try
+            {
+                while (!waechterEnde.IsCancellationRequested && !verbund.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), waechterEnde.Token);
+                    var zeichen = SicherLesen(lebenszeichen);
+                    var menge = Menge();
+                    if (zeichen == letztesZeichen && menge == letzteMenge) continue;
+                    letztesZeichen = zeichen;
+                    letzteMenge = menge;
+                    zeitgeber.CancelAfter(zeitlimit);
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (ObjectDisposedException) { }
+        });
 
         try
         {
             await prozess.WaitForExitAsync(verbund.Token);
+            waechterEnde.Cancel();
+            await waechter;
         }
         catch (OperationCanceledException)
         {
+            waechterEnde.Cancel();
+            await waechter;
             // The caller wins over the timer when both fired: a cancel is never reported as a
             // time limit.
             var vomAufrufer = abbruch.IsCancellationRequested;
@@ -377,6 +420,12 @@ public static class Kommandozeile
                 Meldung: "Abgebrochen – der Prozessbaum wurde beendet.", Protokoll: lauf.Ausgabe)
             : new Models.PruefErgebnis(Models.UpdateZustand.Fehler,
                 Meldung: "Zeitlimit überschritten – der Prozessbaum wurde beendet.", Protokoll: lauf.Ausgabe);
+    }
+
+    private static long SicherLesen(Func<long> lebenszeichen)
+    {
+        try { return lebenszeichen(); }
+        catch { return 0; }
     }
 
     private static async Task MitlesenAsync(StreamReader leser, StringBuilder ziel, Lesezustand zustand)

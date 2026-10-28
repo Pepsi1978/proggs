@@ -18,6 +18,12 @@
 - `Aktualisierer.vorbereiten`: Für Casks läuft `brew fetch --cask` nach dem Ja zum Beenden, aber bevor das Programm geschlossen wird. Hängt oder scheitert der Download, bleibt das Programm offen und das Update endet mit einer Fehlermeldung. Klappt er, installiert `brew upgrade` danach aus dem Cache.
 - Fehlgeschlagene Updates gehen automatisch an Claude Code, „nicht verifiziert“ zählt nicht dazu. Ein Sammellauf übergibt alle Fehler erst am Ende in einer einzigen Sitzung. Die Sperrfrist von 6 Stunden je Programm wird gespeichert und übersteht so auch einen Neustart; sie zählt erst ab einem gelungenen Start der Sitzung. Der Auftrag lautet: Ursache finden, Update zu Ende bringen, die Fehlerart dauerhaft vorbeugen und den Fall hier festhalten.
 
+## Windows (UpdateZentrale 1.3.45)
+
+- Die automatische Übergabe an Claude Code funktioniert unter Windows genauso: nur bei „Fehlgeschlagen“, eine Sitzung am Ende eines Sammellaufs, eine Sperrfrist von 6 Stunden, die gespeichert wird (`AutomatischUebergebenAm`).
+- `Kommandozeile.AusfuehrenAsync(…, lebenszeichen:)`: Das Zeitlimit zählt als Ruhezeit. winget wächst `%TEMP%\WinGet`, der Hersteller-Download per curl wächst die Zieldatei.
+- Einen Vorab-Download gibt es unter Windows nicht. `winget upgrade` nutzt einen vorher mit `winget download` geladenen Installer nicht und würde ihn ein zweites Mal laden.
+
 ## Dateien
 
 - `UpdaterZentrale-macOS/UpdaterZentrale/Services/Kommandozeile.swift`

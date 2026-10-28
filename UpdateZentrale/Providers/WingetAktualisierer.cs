@@ -10,6 +10,23 @@ namespace UpdateZentrale.Providers;
 /// </summary>
 public sealed class WingetAktualisierer : IAktualisierer
 {
+    /// <summary>
+    /// Groesse des winget-Download-Ordners (%TEMP%\WinGet): waechst, solange winget ein Installer-Paket
+    /// laedt. Lebenszeichen fuer die Ruhezeit, damit ein langsamer Download nicht als Haenger gilt.
+    /// </summary>
+    internal static long DownloadGroesse()
+    {
+        var ordner = new DirectoryInfo(Path.Combine(Path.GetTempPath(), "WinGet"));
+        if (!ordner.Exists) return 0;
+        long summe = 0;
+        foreach (var datei in ordner.EnumerateFiles("*", SearchOption.AllDirectories))
+        {
+            try { summe += datei.Length; }
+            catch (IOException) { }
+        }
+        return summe;
+    }
+
     public string Art => "winget";
 
     public async Task<PruefErgebnis> PruefenAsync(ProgrammEintrag eintrag, IProgress<string> protokoll, CancellationToken abbruch)
@@ -232,7 +249,8 @@ public sealed class WingetAktualisierer : IAktualisierer
         try
         {
             lauf = await Kommandozeile.AusfuehrenAsync(
-                Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+                Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
+                lebenszeichen: DownloadGroesse);
         }
         finally
         {
@@ -325,7 +343,8 @@ public sealed class WingetAktualisierer : IAktualisierer
 
         // curl: IPv4 first (see Netzdienst) and no 15-second client timeout for a 100 MB download.
         var laden = await Kommandozeile.AusfuehrenAsync("curl.exe", "-4 -sS -fL --retry 2 -o \"" + ziel + "\" \"" + url + "\"",
-            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+            TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
+            lebenszeichen: () => File.Exists(ziel) ? new FileInfo(ziel).Length : 0);
         if (Kommandozeile.UnsauberesEnde(laden) is { } unsauber) return unsauber;
         if (laden.ExitCode != 0 || !File.Exists(ziel))
             return new PruefErgebnis(UpdateZustand.Fehler,

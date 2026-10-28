@@ -277,6 +277,25 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Direkt nach einem Fehlschlag, ohne Klick: hoechstens eine Sitzung je Programm in
+    /// <see cref="ClaudeUebergabe.Sperrfrist"/>, damit ein Dauerfehler keine Kette startet.
+    /// </summary>
+    private async Task AutomatischUebergebenAsync(UpdateBericht bericht)
+    {
+        try
+        {
+            var problem = await ClaudeUebergabe.AutomatischStartenAsync(new[] { (Eintrag, bericht) }, _einstellungen);
+            if (problem is not null) Melde(problem);
+            else if (_einstellungen.Fuer(Eintrag.Id).AutomatischUebergebenAm is { } am && DateTime.Now - am < TimeSpan.FromMinutes(1))
+                Melde("Fehler automatisch an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor.");
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
+        }
+    }
+
+    /// <summary>
     /// Nimmt das rote Band von der Karte. Gemeldet bleibt der Lauf trotzdem: im Tagesprotokoll und
     /// in verlauf.jsonl steht er unveraendert, und die graue "Zuletzt:"-Zeile nennt ihn weiter.
     /// Weggeklickt wird nur der Alarm, nicht die Tatsache.
@@ -731,6 +750,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
             fortschritt.Report(AbschlussZeile(bericht) + "  (Dauer " + Protokollierung.DauerText(uhr.Elapsed.TotalSeconds) + ")");
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
+            // Im Sammellauf uebergibt der Sammellauf am Ende alle Fehler in EINER Sitzung.
+            if (kontext is null && ClaudeUebergabe.AutomatischRelevant(bericht)) _ = AutomatischUebergebenAsync(bericht);
             if (bericht.Ergebnis is LaufErgebnis.Erfolgreich or LaufErgebnis.Ausstehend && Protokollierung.Messwert(bericht) is { } messwert)
                 DauernSetzen(_dauern.Append(messwert));
 

@@ -889,6 +889,19 @@ public sealed partial class HauptViewModel : ObservableObject
                          + (cliHinweis.Contains("übersprungen") ? cliHinweis : "")
                          + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "");
             vorgang.Beenden("abgeschlossen", KopfStatus);
+
+            // Erst am Ende und in EINER Sitzung: mitten im Lauf koennten spaetere Schritte (Terminal,
+            // CLI, Launcher) die Sitzung beenden, und mehrere Sitzungen kaemen sich auf main in die Quere.
+            var faelle = plan.Where(s => s.Programm.LetzterBericht is { } b && b.SammelId == sammelId)
+                             .Select(s => (s.Programm.Eintrag, s.Programm.LetzterBericht!)).ToList();
+            if (faelle.Any(f => ClaudeUebergabe.AutomatischRelevant(f.Item2)))
+            {
+                var problem = await ClaudeUebergabe.AutomatischStartenAsync(faelle, _einstellungen);
+                if (problem is not null) KopfStatus += "  ·  " + problem;
+                else if (faelle.Any(f => _einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm is { } am
+                                         && DateTime.Now - am < TimeSpan.FromMinutes(1)))
+                    KopfStatus += "  ·  Fehler automatisch an Claude Code übergeben.";
+            }
         }
         finally
         {
