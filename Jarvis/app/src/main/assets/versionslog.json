@@ -408,6 +408,7 @@
     { "versionCode": 402, "versionName": "1.8.391", "stand": "28.10.2026, 19:10 Uhr", "notiz": "Die Fernwartung zeigt den Windows-Desktop jetzt auch bei zugeklapptem Laptop mit ausgeschaltetem Bildschirm, über einen virtuellen Bildschirm." },
     { "versionCode": 403, "versionName": "1.8.392", "stand": "28.10.2026, 19:14 Uhr", "notiz": "Bei zugeklapptem Windows-Laptop erscheint das Fernwartungsbild jetzt nach wenigen Sekunden ohne Fehlermeldung, weil der virtuelle Bildschirm sofort angehängt wird." },
     { "versionCode": 404, "versionName": "1.8.393", "stand": "28.10.2026, 19:22 Uhr", "notiz": "Die untere Tastenleiste der Fernwartung ist jetzt ausgeblendet und lässt sich mit dem runden Pfeil-Knopf unter dem Tastatur-Knopf ein- und ausblenden." },
-    { "versionCode": 405, "versionName": "1.8.394", "stand": "28.10.2026, 19:24 Uhr", "notiz": "Die Tastenleiste der Fernwartung behält beim Aus- und Einblenden ihre Scroll-Position." }
+    { "versionCode": 405, "versionName": "1.8.394", "stand": "28.10.2026, 19:24 Uhr", "notiz": "Die Tastenleiste der Fernwartung behält beim Aus- und Einblenden ihre Scroll-Position." },
+    { "versionCode": 406, "versionName": "1.8.395", "stand": "28.10.2026, 19:32 Uhr", "notiz": "In der Fernwartung ist die Statusleiste des Handys ausgeblendet und das Rechnerbild nutzt auch den oberen Bildschirmrand." }
 ]
 }

@@ -19,7 +19,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
@@ -84,6 +90,14 @@ class FernsteuerungActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Vollbild: Statusleiste aus (per Wischen von oben kurz holbar), Bild auch neben der Kamera-Aussparung.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) window.attributes = window.attributes.apply {
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.statusBars())
+        }
         setTitle(ziel.titel)
         ansicht = FernAnsicht(this) { verbindung?.eingabe(it) }
         ansicht.surfaceBereit = { s ->
@@ -167,7 +181,9 @@ class FernsteuerungActivity : ComponentActivity() {
         androidx.compose.runtime.LaunchedEffect(imeSichtbar) { tastaturAn = imeSichtbar }
         // Außerhalb der Leiste, damit die Scroll-Position beim Aus- und Einblenden erhalten bleibt.
         val leisteScroll = rememberScrollState()
-        Box(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding().imePadding()) {
+        // Oben kein Abstand: der Bereich der ausgeblendeten Statusleiste gehört dem Bild.
+        val ohneOben = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+        Box(Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(ohneOben).imePadding()) {
             Column(Modifier.fillMaxSize()) {
                 AndroidView({ ansicht }, Modifier.weight(1f).fillMaxWidth())
                 if (leisteAn) Leiste(leisteScroll)
