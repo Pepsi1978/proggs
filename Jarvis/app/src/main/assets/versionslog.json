@@ -389,6 +389,8 @@
     { "versionCode": 383, "versionName": "1.8.372", "stand": "27.10.2026, 17:50 Uhr", "notiz": "Das Monitor-Symbol unten rechts leuchtet grün, wenn Mac oder Windows-PC verbunden ist, und wird rot, wenn keiner verbunden ist." },
     { "versionCode": 384, "versionName": "1.8.373", "stand": "27.10.2026, 18:06 Uhr", "notiz": "Der Monitor unten rechts ist größer und ganz mit Farbe gefüllt: grün mit Rechner-Verbindung, rot ohne." },
     { "versionCode": 385, "versionName": "1.8.374", "stand": "28.10.2026, 13:35 Uhr", "notiz": "Fernwartung jetzt auch für den Windows-PC: Sind Mac und Windows beide erreichbar, fragt Jarvis, welchen Bildschirm du sehen willst, sonst verbindet er direkt." },
-    { "versionCode": 386, "versionName": "1.8.375", "stand": "28.10.2026, 13:47 Uhr", "notiz": "Windows-Fernwartung zeigt sofort Bild statt erst nach zwei Sekunden, lässt die Maustaste bei Abbruch los, und der Monitor-Knopf wird beim Suchen grau." }
+    { "versionCode": 386, "versionName": "1.8.375", "stand": "28.10.2026, 13:47 Uhr", "notiz": "Windows-Fernwartung zeigt sofort Bild statt erst nach zwei Sekunden, lässt die Maustaste bei Abbruch los, und der Monitor-Knopf wird beim Suchen grau." },
+    { "versionCode": 387, "versionName": "1.8.376", "stand": "28.10.2026, 14:04 Uhr", "notiz": "Die Modellwahl Opus 5.5 oder Sol 6.1 erscheint beim Abschicken eines Programmierauftrags jetzt auch bei eingeklappten Symbolen." },
+    { "versionCode": 388, "versionName": "1.8.377", "stand": "28.10.2026, 14:04 Uhr", "notiz": "Neue Prompts bekommen die kleinste freie Nummer, jeder Prompt lässt sich bearbeiten, und die KI-Verbesserung kann rückgängig gemacht werden." }
 ]
 }

@@ -384,9 +384,21 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         n.art == de.frank.jarvis.faehigkeit.ProgrammierChat.ART_MODELLWAHL &&
             de.frank.jarvis.data.Gespraeche.wahlId(n.kontext).let { id -> id in frisch && stand[id] == de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WAHL_OFFEN }
     }
-    // Kommt eine frische Auswahl (Opus/Sol, CLI, Review), klappt der Stapel von selbst auf, damit ihre Knöpfe zu sehen sind.
-    val karteId = karte?.let { de.frank.jarvis.data.Gespraeche.wahlId(it.kontext) }
-    LaunchedEffect(karteId) { if (karteId != null) vm.schweberEingeklappt = false }
+    // Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review). Sie stehen unabhängig vom Einklappen immer da:
+    // ausgeklappt links neben „Programmierer“, eingeklappt allein direkt über dem Pfeil.
+    val wahlKnoepfe: @Composable () -> Unit = {
+        if (karte != null) {
+            val id = de.frank.jarvis.data.Gespraeche.wahlId(karte.kontext)
+            wahlOptionen(karte.kontext).forEachIndexed { i, (wert, label) ->
+                Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
+                    .background(if (i == 0) f.text else f.flaeche).antippen { vm.programmierModell(id, wert) }
+                    .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                    Text(label, color = if (i == 0) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                }
+                Spacer(Modifier.width(8.dp))
+            }
+        }
+    }
     Column(modifier, horizontalAlignment = Alignment.End) {
         // Eingeklappt verschwindet der ganze Stapel nach unten in den Pfeil; die Liste behält ihren Abstand, der Chat springt nicht.
         androidx.compose.animation.AnimatedVisibility(
@@ -452,22 +464,16 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         // Unten in einer Zeile: links die Knöpfe der offenen Auswahl (Opus 5.5 / Sol 6.1, danach CLI oder Review), rechts
         // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (karte != null) {
-                val id = de.frank.jarvis.data.Gespraeche.wahlId(karte.kontext)
-                wahlOptionen(karte.kontext).forEachIndexed { i, (wert, label) ->
-                    Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
-                        .background(if (i == 0) f.text else f.flaeche).antippen { vm.programmierModell(id, wert) }
-                        .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (i == 0) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                }
-            }
+            wahlKnoepfe()
             SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv, { vm.programmiererEinsetzen() }) {
                 Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
             }
         }
         }
+        }
+        // Eingeklappt: die Auswahl bleibt trotzdem sichtbar und bedienbar, an der Stelle der Programmierer-Zeile.
+        if (vm.schweberEingeklappt && karte != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) { wahlKnoepfe() }
         }
         // Unter „Programmierer“ in der freien Bubble: Pfeil ohne Kreis und Grund, grau wie der Papierkorb. Nach unten = einklappen,
         // nach oben = wieder aufklappen. Er bleibt an seiner Stelle, die übrigen Symbole stehen ausgeklappt so hoch wie früher.
