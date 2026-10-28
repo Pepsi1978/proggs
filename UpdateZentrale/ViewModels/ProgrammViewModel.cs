@@ -263,13 +263,17 @@ public sealed partial class ProgrammViewModel : ObservableObject
     [RelayCommand]
     private void ProtokollOeffnen() => Protokollierung.DateiOeffnen(LetzterBericht?.ProtokollDatei);
 
-    /// <summary>Sends the failed run with its log to a new Claude Code session to analyse and fix it.</summary>
+    /// <summary>
+    /// Sends the failed run with its log to a new Claude Code session to analyse and fix it.
+    /// An async command is disabled while it runs, so a double click starts one session, not two.
+    /// </summary>
     [RelayCommand]
-    private void AnClaudeUebergeben()
+    private async Task AnClaudeUebergebenAsync()
     {
         if (LetzterBericht is not { IstFehler: true } bericht) return;
-        Melde(ClaudeUebergabe.Starten(Eintrag, bericht)
-              ?? "Problem mit " + Name + " an Claude Code übergeben – die Sitzung startet im Terminal.");
+        Melde("Übergebe das Problem mit " + Name + " an Claude Code …");
+        Melde(await ClaudeUebergabe.StartenAsync(Eintrag, bericht)
+              ?? "Problem mit " + Name + " an Claude Code übergeben – die Sitzung läuft im Terminal.");
     }
 
     /// <summary>

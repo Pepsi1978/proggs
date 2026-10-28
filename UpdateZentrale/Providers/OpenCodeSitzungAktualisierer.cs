@@ -100,7 +100,7 @@ public sealed class OpenCodeSitzungAktualisierer : IAktualisierer
     /// file. No redirected pipes in either way -- the launcher opens a terminal that would inherit
     /// them, and the wait would last until that session ends (memory "erbt Agenten-Pipe").
     /// </summary>
-    private static async Task<int?> LauncherStartenAsync(string args, string ordner, IProgress<string> protokoll, CancellationToken abbruch)
+    internal static async Task<int?> LauncherStartenAsync(string args, string ordner, IProgress<string> protokoll, CancellationToken abbruch)
     {
         using var zeit = CancellationTokenSource.CreateLinkedTokenSource(abbruch);
         zeit.CancelAfter(TimeSpan.FromMinutes(2));
@@ -143,8 +143,8 @@ public sealed class OpenCodeSitzungAktualisierer : IAktualisierer
         }
     }
 
-    internal static string Argumente(string auftragsDatei)
-        => "--jarvis-auftrag \"" + auftragsDatei + "\" --name \"" + SitzungsName + "\" --profil " + Profil
+    internal static string Argumente(string auftragsDatei, string name = SitzungsName)
+        => "--jarvis-auftrag \"" + auftragsDatei + "\" --name \"" + name + "\" --profil " + Profil
            + " --modus " + Modus + " --modell \"" + Modell + "\" --effort " + Effort
            + " --ordner \"" + Pfade.RepoWurzel + "\"";
 

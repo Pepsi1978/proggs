@@ -315,7 +315,7 @@ public static class Protokollierung
         }
     }
 
-    private static IEnumerable<string> LiesAlleZeilen(string datei)
+    internal static IEnumerable<string> LiesAlleZeilen(string datei)
     {
         using var strom = new FileStream(datei, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var leser = new StreamReader(strom, Encoding.UTF8);
