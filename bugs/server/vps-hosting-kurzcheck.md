@@ -14,3 +14,8 @@
 | 4 | Backup bei Hostinger | Nur **wöchentliche** Backups gratis; **tägliche** kosten extra — riskant für eine oft schreibende DB. | §4 |
 | 5 | RAM für den Stack | pgvector allein: kleinster VPS (4 GB) ok. **Lokale Ollama-Embeddings: 8–16 GB** (KVM 2/4). | §5 |
 | 6 | EU-Datenschutz / flexible Abrechnung | **Hetzner** (DE/EU, stundengenaue Abrechnung, bessere Netzwerk-/CPU-Note) statt Hostinger, wenn Datenschutz/Performance zählt. | §6 |
+| 7 | ⭐ Öffentlicher Caddy 2.11.x | Die Go-Version im Binary zählt: 2.11.7 + `servers { protocols h1 h3 }` gegen HTTP/2-Absturz CVE-2026-97032; 2.11.6 meiden. | §7.1 |
+| 8 | MinIO im Stack | Community-Edition eingestellt, Image weg, offene CVSS-8.8-Lücken → Image sichern, `pgsty/silo` gepinnt. | §7.2 |
+| 9 | Redis/Postgres-Container | Redis immer mit `requirepass` (auch intern); Rolling-Tags regelmäßig pro Dienst `pull`. | §7.3–4 |
+| 10 | fail2ban bis 1.1.1 | `ignoreip` mit WireGuard-Netz gegen Fremd-Bann (CVE-2026-109786). | §7.5 |
+| 11 | cloud-init 26.2 auf noble | Regression, zurückgezogen → `apt-mark hold cloud-init`. | §7.7 |

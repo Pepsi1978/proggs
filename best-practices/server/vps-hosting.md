@@ -52,3 +52,19 @@ ist die einsteigerfreundliche Alternative.
 
 ## Quellen
 - hostinger.com/applications/postgresql · /compare/hostinger-vs-hetzner · vpsbenchmarks.com · A/B-Research 2026-06-19.
+
+---
+
+## §7 Sicherheits-Routine für den Docker-VPS (Stand 28.10.2026)
+
+Ergebnis des Audits vom 28.10.2026 (Gegenseite: `bugs/server/vps-hosting.md` §7). `offiziell` = Hersteller/Ubuntu/CISA, `extern` = Fachpresse.
+
+1. **Patchstand maschinell prüfen** (offiziell): Ubuntu-CVE-JSON `https://ubuntu.com/security/cves/CVE-XXXX.json`, Notices `https://ubuntu.com/security/notices.json?release=noble`, CISA-KEV-Feed `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json`. Ein Kernel-Fix gilt erst nach dem Reboot.
+2. **Öffentliche Kante minimal** (offiziell): nur 443 (Caddy), 22 (nur Schlüssel) und 51820/udp offen; alles andere an 10.8.0.1/127.0.0.1 binden, weil veröffentlichte Docker-Ports UFW umgehen. https://docs.docker.com/engine/network/packet-filtering-firewalls/
+3. **Caddy** (offiziell): Patch-Version pinnen, Go-Version mit `caddy build-info` prüfen, `admin off`, `header_down -Server`, bei offenen Go-HTTP/2-Lücken `protocols h1 h3`. Rate-Limit nur per xcaddy-Modul `mholt/caddy-ratelimit`. https://caddyserver.com/docs/caddyfile/options
+4. **Interne Datenbanken trotzdem mit Auth** (offiziell): Redis `requirepass`/ACL (`-@scripting -restore -debug -config`), Qdrant-API-Key `QDRANT__SERVICE__API_KEY`. https://qdrant.tech/documentation/security/
+5. **Images**: kein `:latest` von Drittanbietern; Patch-Version pinnen, Projektstatus (archiviert?) prüfen, wichtige Images per `docker save` sichern. Rolling-Tags monatlich pro Dienst `pull` + `up -d`.
+6. **SSH/fail2ban** (offiziell): `PasswordAuthentication no`, `X11Forwarding no` per `/etc/ssh/sshd_config.d/00-haertung.conf` (der erste Wert gewinnt), `sshd -t` vor dem Reload; fail2ban `ignoreip` mit dem VPN-Netz.
+7. **API-Schlüssel-Diebstahl** (extern, SANS ISC 07/2026): Scanner suchen `/mcp`, `/sse`, `/.env`, `/.claude/.credentials.json`, `/v1/models`, `/api/tags`. Relay: Token-Pflicht je Route (constant-time), unbekannte Pfade 404. Wichtigster Schutz: **harte Ausgabenlimits** pro Projekt bei OpenAI/Anthropic; Google-Keys auf die nötigen APIs beschränken. https://isc.sans.edu/diary/33150 · https://developers.openai.com/api/docs/guides/spend-limits.md
+8. **Secret-Scanning**: GitHub Push Protection blockiert Anthropic-Keys seit 13.10.2026 standardmäßig; zusätzlich gitleaks als pre-commit und einmal über die Historie. https://github.blog/changelog/2026-10-13-secret-scanning-blocks-anthropic-keys-by-default-adds-salesforce
+9. **WireGuard**: AllowedIPs je Peer /32, eigener PresharedKey je Peer, nie benutzte Peers prüfen und entfernen. https://manpages.ubuntu.com/manpages/noble/man8/wg.8.html

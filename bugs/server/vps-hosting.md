@@ -84,3 +84,20 @@ flexibler Abrechnung** → für einen Memory-Server mit (lokalen) Embeddings mei
 - hostinger.com/applications/postgresql · hostinger.com/compare/hostinger-vs-hetzner
 - vpsbenchmarks.com/compare/hetzner_vs_hostinger
 - Eigenes A/B-Research 2026-06-19 (Firecrawl + deepseek-v4-pro, gegengeprüft mit Opus).
+
+---
+
+## §7 Sicherheits-Audit 28.10.2026 (Hostinger-VPS, Ubuntu 24.04, Docker-Stack)
+
+Quelle: eigenes Audit + Sonnet-5.5-Recherche-Schwarm (7 Researcher), Stand 28.10.2026. Je Eintrag Symptom · Ursache · Versionen · Fix · Quelle.
+
+1. **Caddy-Image hat alte Go-Version** – Caddy 2.11.4 = go1.26.3, 2.11.7 = go1.26.8. Fernauslösbare DoS: crypto/tls CVE-2026-56862 (Go < 1.26.6), HTTP/2-Serverabsturz CVE-2026-97032 (Go < 1.26.9, steckt in KEINEM Caddy-Release bis 2.11.7). Fix: 2.11.7 + global `servers { protocols h1 h3 }`. 2.11.6 meiden (HTTP/2-Panic im reverse_proxy). `caddy build-info | grep ^go` prüft die Go-Version. https://pkg.go.dev/vuln/GO-2026-6617 · https://github.com/caddyserver/caddy/releases/tag/v2.11.7
+2. **MinIO Community eingestellt** – Repo archiviert (2026), `minio/minio` auf Docker Hub gelöscht (11.09.2026, Sekundärquelle). RELEASE.2025-09-07 betroffen von CVE-2025-62506, CVE-2026-40344, CVE-2026-41145 (Schreiben in jeden Bucket mit gültigem Access-Key, CVSS 8.8), CVE-2026-34204, CVE-2026-39414 – kein Community-Fix. Fix: Image per `docker save` sichern, Wechsel auf Drop-in `pgsty/silo` (gepinnt) planen. https://github.com/minio/minio/security/advisories · https://github.com/pgsty/silo
+3. **Redis ohne Passwort im Docker-Netz** – jeder Nachbar-Container gilt als „authentifiziert“; Redis-RCEs (RESTORE-OOB 8.8.1, ACL-Bypässe 8.8.2/8.8.3, Cluster-Bus 8.8.4) brauchen nur Befehlsrechte. Fix: `--requirepass` + `REDISCLI_AUTH` für den Healthcheck + `redis://:pw@redis:6379`, Rolling-Tag neu ziehen. https://github.com/redis/redis/releases/tag/8.8.4
+4. **Rolling-Tags veralten still** – `redis:8-alpine`/`postgres:17-alpine` bekommen Fixe erst nach `docker compose pull` + Neustart (Postgres 17.10 → 17.11: über 20 CVEs). Bei `minio/minio:latest` im selben Compose: Pull **pro Dienst**, sonst bricht der ganze Pull ab. https://www.postgresql.org/docs/release/17.11/
+5. **fail2ban 0.10.5–1.1.1: Fremd-Bann per präpariertem SSH-Benutzernamen** (CVE-2026-109786, Debian/Ubuntu ungefixt) → Admin kann ausgesperrt werden. Fix: `ignoreip = 127.0.0.1/8 ::1 10.8.0.0/24` in `/etc/fail2ban/jail.d/00-ignoreip.local`. https://bugzilla.redhat.com/show_bug.cgi?id=2550189
+6. **aiohttp-Version im `Server`-Header** – der Relay verriet `Python/3.12 aiohttp/3.11.11` (Dez 2024). Fix: aiohttp auf aktuell pinnen (3.14.5) + in Caddy `header_down -Server`.
+7. **cloud-init 26.2 Regression** – 26.2-0ubuntu1~24.04.1 am 23.10.2026 aus noble-updates gelöscht (LP #2171959); 24.1.3 hat nur lokale CVEs (CVE-2024-11584/-6174). Fix: `apt-mark hold cloud-init`, bis das Update sich bewährt hat; Update nur mit Snapshot. https://launchpad.net/ubuntu/+source/cloud-init/+changelog
+8. **Docker < 29.9.2 / containerd < 2.4.2 / buildx < 0.37.2** – `docker cp`-Ausbruch CVE-2026-17106 (< 29.7.0), Registry-TLS-Fallback CVE-2026-92543 (< 29.8.2), containerd-Pull-DoS CVE-2026-95839, buildx-Bake CVE-2026-93325. runc ab 1.3.3 nötig (Ausbrüche vom Nov 2025). CRI-Plugin in reinen Docker-Hosts abgeschaltet lassen. https://github.com/moby/moby/security/advisories
+9. **Kernel-KEV** – CVE-2026-53362 (KEV 27.08.2026) erst ab 6.8.0-147.147 behoben, CVE-2026-31431 „Copy Fail“ ab -117. Fix wirkt erst nach Reboot: `uname -r` gegen das installierte Paket prüfen. https://ubuntu.com/security/CVE-2026-53362
+10. **Samba 4ubuntu9.8 ist KEIN Sicherheitsupdate** (nur FUSE-Panic-Fix); Ubuntu-Versionssprünge immer am Launchpad-Changelog prüfen. https://launchpad.net/ubuntu/noble/+source/samba/2:4.19.5+dfsg-4ubuntu9.8
