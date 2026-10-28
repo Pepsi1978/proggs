@@ -2,6 +2,11 @@
 # Zertifikat: Let's Encrypt über TLS-ALPN auf Port 443, Port 80 bleibt zu.
 {
 	admin off
+	# HTTP/2 aus: Caddy 2.11.7 ist noch mit Go 1.26.8 gebaut, die HTTP/2-Absturzfixe kamen erst mit Go 1.26.9
+	# (bugs/server/reverse-proxy-tls.md). SSE, WebSocket und MCP laufen über HTTP/1.1 unverändert.
+	servers {
+		protocols h1 h3
+	}
 }
 
 srv1774016.hstgr.cloud {
@@ -9,6 +14,8 @@ srv1774016.hstgr.cloud {
 	reverse_proxy relay:8080 {
 		# Werkzeugaufrufe dürfen dauern; Antworten sofort durchreichen.
 		flush_interval -1
+		# Der Relay verrät sonst nach außen seine aiohttp-Version.
+		header_down -Server
 		transport http {
 			response_header_timeout 90s
 		}

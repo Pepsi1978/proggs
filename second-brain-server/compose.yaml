@@ -261,7 +261,7 @@ services:
       start_period: 25s
 
   caddy:
-    image: caddy:2.11.4-alpine   # gepinnt (Reproduzierbarkeit, bugs/server/docker.md §10). HTTPS-Proxy fuers Cockpit.
+    image: caddy:2.11.7-alpine   # gepinnt (Reproduzierbarkeit, bugs/server/docker.md §10). HTTPS-Proxy fuers Cockpit.
     container_name: sb-caddy
     logging: *sb-logging
     restart: unless-stopped
@@ -271,6 +271,7 @@ services:
       # An die WireGuard-IP gebunden -> https://10.8.0.1 NUR ueber den VPN-Tunnel, NIE oeffentlich.
       # Genau wie alle anderen Dienste (bewusst NICHT 0.0.0.0). Gibt dem Cockpit den "secure context"
       # fuers Mikrofon (getUserMedia), ohne den Server nach aussen zu oeffnen.
+      - "10.8.0.1:80:80"    # nur Umleitung http -> https (wer "10.8.0.1" ohne Schema tippt)
       - "10.8.0.1:443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
