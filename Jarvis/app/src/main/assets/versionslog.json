@@ -387,6 +387,7 @@
     { "versionCode": 381, "versionName": "1.8.370", "stand": "27.10.2026, 11:13 Uhr", "notiz": "Mac-Fernsteuerung: Der Mac geht nie mehr in den Ruhezustand, auch das Display nicht, egal ob der Deckel offen oder zu ist." },
     { "versionCode": 382, "versionName": "1.8.371", "stand": "27.10.2026, 11:14 Uhr", "notiz": "Mac-Fernsteuerung: Aufgeräumt, das Verhalten bleibt gleich: kein Ruhezustand von Mac und Display." },
     { "versionCode": 383, "versionName": "1.8.372", "stand": "27.10.2026, 17:50 Uhr", "notiz": "Das Monitor-Symbol unten rechts leuchtet grün, wenn Mac oder Windows-PC verbunden ist, und wird rot, wenn keiner verbunden ist." },
-    { "versionCode": 384, "versionName": "1.8.373", "stand": "27.10.2026, 18:06 Uhr", "notiz": "Der Monitor unten rechts ist größer und ganz mit Farbe gefüllt: grün mit Rechner-Verbindung, rot ohne." }
+    { "versionCode": 384, "versionName": "1.8.373", "stand": "27.10.2026, 18:06 Uhr", "notiz": "Der Monitor unten rechts ist größer und ganz mit Farbe gefüllt: grün mit Rechner-Verbindung, rot ohne." },
+    { "versionCode": 385, "versionName": "1.8.374", "stand": "28.10.2026, 13:35 Uhr", "notiz": "Fernwartung jetzt auch für den Windows-PC: Sind Mac und Windows beide erreichbar, fragt Jarvis, welchen Bildschirm du sehen willst, sonst verbindet er direkt." }
 ]
 }

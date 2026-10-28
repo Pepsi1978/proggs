@@ -58,8 +58,9 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * Mac-Bildschirm live auf dem Handy bedienen (Gegenstück: Jarvis/werkzeuge/mac-fernsteuerung auf dem Mac).
- * Verbindet über den Tunnel zur Mac-Adresse; der Token liegt in files/fernsteuerung-token.txt (kommt per adb aus ~/SK).
+ * Mac- oder Windows-Bildschirm live auf dem Handy bedienen (Gegenstück: Jarvis/werkzeuge/mac-fernsteuerung bzw.
+ * windows-fernsteuerung). Ziel kommt als Extra [EXTRA_ZIEL], ohne Extra der Mac. Verbindet über den Tunnel zur Adresse
+ * des Rechners; der Token (für beide derselbe) liegt in files/fernsteuerung-token.txt (kommt per adb aus ~/SK).
  */
 class FernsteuerungActivity : ComponentActivity() {
     private var verbindung: FernVerbindung? = null
@@ -68,8 +69,9 @@ class FernsteuerungActivity : ComponentActivity() {
     private var macW = 0
     private var macH = 0
     private lateinit var ansicht: FernAnsicht
+    private val ziel by lazy { Fernziel.aus(intent.getStringExtra(EXTRA_ZIEL)) }
 
-    private var status by mutableStateOf("Verbinde mit dem Mac …")
+    private var status by mutableStateOf("")
     private var gesperrt by mutableStateOf(false)
     private var tastaturAn by mutableStateOf(false)
     private var getrennt by mutableStateOf(false)
@@ -79,6 +81,7 @@ class FernsteuerungActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        setTitle(ziel.titel)
         ansicht = FernAnsicht(this) { verbindung?.eingabe(it) }
         ansicht.surfaceBereit = { s ->
             // Erst den Dekoder lösen, dann die alte Surface freigeben.
@@ -100,12 +103,12 @@ class FernsteuerungActivity : ComponentActivity() {
         val t = token()
         if (t.isEmpty()) { status = "Kein Zugang eingerichtet (fernsteuerung-token.txt fehlt)."; getrennt = true; return }
         getrennt = false
-        status = "Verbinde mit dem Mac …"
+        status = "Verbinde mit ${ziel.dativ} …"
         verbindung = FernVerbindung(
-            MAC_ADRESSE, PORT, t,
+            ziel.adresse, PORT, t,
             beiInfo = { w, h, ok ->
                 runOnUiThread {
-                    status = if (ok) "" else "Der Mac liefert gerade kein Bild (Bildschirmaufnahme gescheitert). Er versucht es erneut …"
+                    status = if (ok) "" else "${ziel.nominativ} liefert gerade kein Bild (Bildschirmaufnahme gescheitert). Er versucht es erneut …"
                     if (ok && (w != macW || h != macH || dekoder == null)) { macW = w; macH = h; ansicht.macGroesse(w, h); dekoderNeu() }
                     else if (ok) verbindung?.eingabe(JSONObject().put("t", "schluesselbild"))
                 }
@@ -160,7 +163,7 @@ class FernsteuerungActivity : ComponentActivity() {
                     if (getrennt) Button(onClick = { verbinden() }, Modifier.padding(top = 12.dp)) { Text("Neu verbinden") }
                 }
             }
-            if (gesperrt) Entsperren(Modifier.align(Alignment.Center))
+            if (gesperrt) { if (ziel == Fernziel.WINDOWS) WindowsGesperrt(Modifier.align(Alignment.Center)) else Entsperren(Modifier.align(Alignment.Center)) }
             // Tastatur-Knopf unten rechts in Daumennähe, über der Leiste.
             if (!gesperrt) Box(
                 Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp).size(56.dp)
@@ -186,10 +189,17 @@ class FernsteuerungActivity : ComponentActivity() {
             Knopf(text = "Tab") { taste("tab") }
             Knopf(text = "⌫") { taste("zurueck") }
             Knopf(text = "Enter") { taste("enter") }
-            Knopf(text = "Suche ⌘␣") { taste("leer", "cmd") }
-            Knopf(text = "App-Wechsel") { taste("tab", "cmd") }
-            Knopf(text = "Fenster zu ⌘W") { taste("w", "cmd") }
-            Knopf(text = "Beenden ⌘Q") { taste("q", "cmd") }
+            if (ziel == Fernziel.WINDOWS) {
+                Knopf(text = "Start ⊞") { taste("win") }
+                Knopf(text = "App-Wechsel") { taste("tab", "alt") }
+                Knopf(text = "Tab zu Strg+W") { taste("w", "ctrl") }
+                Knopf(text = "Fenster zu Alt+F4") { taste("f4", "alt") }
+            } else {
+                Knopf(text = "Suche ⌘␣") { taste("leer", "cmd") }
+                Knopf(text = "App-Wechsel") { taste("tab", "cmd") }
+                Knopf(text = "Fenster zu ⌘W") { taste("w", "cmd") }
+                Knopf(text = "Beenden ⌘Q") { taste("q", "cmd") }
+            }
             Knopf(text = "↑") { taste("hoch") }
             Knopf(text = "↓") { taste("runter") }
             Knopf(text = "←") { taste("links") }
@@ -241,9 +251,22 @@ class FernsteuerungActivity : ComponentActivity() {
         }
     }
 
+    /** Windows lässt den Sperrbildschirm aus der Benutzersitzung heraus weder aufnehmen noch bedienen. */
+    @Composable
+    private fun WindowsGesperrt(modifier: Modifier) {
+        Column(
+            modifier.widthIn(max = 420.dp).padding(24.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFF1E222A)).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Windows ist gesperrt", color = Color.White, fontSize = 18.sp)
+            Text("Sperrbildschirm und Administrator-Abfragen zeigt Windows aus der Ferne nicht und nimmt dort keine Eingaben an. Den PC einmal am Gerät entsperren; sobald er entsperrt ist, kommt das Bild von selbst zurück.",
+                color = Color(0xFFB8BEC9), fontSize = 14.sp)
+        }
+    }
+
     companion object {
-        /** Adresse des Macs im eigenen Tunnel (WireGuard, utun am Mac). */
-        const val MAC_ADRESSE = "10.8.0.6"
         const val PORT = 47800
+        /** Fernziel.name ("MAC" oder "WINDOWS"); fehlt es, verbindet die Fernsteuerung wie bisher mit dem Mac. */
+        const val EXTRA_ZIEL = "ziel"
     }
 }

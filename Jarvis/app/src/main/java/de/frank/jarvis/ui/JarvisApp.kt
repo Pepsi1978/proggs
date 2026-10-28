@@ -88,6 +88,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
@@ -214,10 +215,25 @@ private fun Leiste(vm: AppViewModel) {
         val rechnerDa by androidx.compose.runtime.produceState<Boolean?>(null) {
             while (true) { value = de.frank.jarvis.fernsteuerung.RechnerStatus.verbunden(context); kotlinx.coroutines.delay(10_000) }
         }
+        // Antworten Mac und Windows-PC beide, fragt Jarvis, welcher; sonst direkt zum erreichbaren (keiner: wie bisher der Mac).
+        val bereich = androidx.compose.runtime.rememberCoroutineScope()
+        var auswahl by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+        var sucht by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+        val oeffnen = { z: de.frank.jarvis.fernsteuerung.Fernziel ->
+            context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java)
+                .putExtra(de.frank.jarvis.fernsteuerung.FernsteuerungActivity.EXTRA_ZIEL, z.name))
+        }
+        if (auswahl) RechnerAuswahl({ auswahl = false }) { auswahl = false; oeffnen(it) }
         Row(
             Modifier.weight(1f).height(50.dp).antippen {
-                context.startActivity(android.content.Intent(context, de.frank.jarvis.fernsteuerung.FernsteuerungActivity::class.java))
-            }.semantics { contentDescription = "Mac-Bildschirm, " + when (rechnerDa) { true -> "Rechner verbunden"; false -> "kein Rechner verbunden"; null -> "Verbindung wird geprüft" } },
+                if (sucht) return@antippen
+                sucht = true
+                bereich.launch {
+                    val da = de.frank.jarvis.fernsteuerung.Fernziel.erreichbar()
+                    sucht = false
+                    if (da.size > 1) auswahl = true else oeffnen(da.firstOrNull() ?: de.frank.jarvis.fernsteuerung.Fernziel.MAC)
+                }
+            }.semantics { contentDescription = "Fernwartung Mac oder Windows, " + when (rechnerDa) { true -> "Rechner verbunden"; false -> "kein Rechner verbunden"; null -> "Verbindung wird geprüft" } },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -228,6 +244,24 @@ private fun Leiste(vm: AppViewModel) {
             })
         }
     }
+}
+
+/** Mac und Windows-PC sind beide erreichbar: Frank wählt, wessen Bildschirm er sehen will. */
+@Composable
+private fun RechnerAuswahl(schliessen: () -> Unit, gewaehlt: (de.frank.jarvis.fernsteuerung.Fernziel) -> Unit) {
+    val f = LocalFarben.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = schliessen,
+        containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
+        title = { Text("Fernwartung") },
+        text = { Text("Mac und Windows-PC sind beide erreichbar. Welchen Bildschirm möchtest du sehen?") },
+        confirmButton = {
+            androidx.compose.material3.Button(onClick = { gewaehlt(de.frank.jarvis.fernsteuerung.Fernziel.WINDOWS) }) { Text("Windows") }
+        },
+        dismissButton = {
+            androidx.compose.material3.Button(onClick = { gewaehlt(de.frank.jarvis.fernsteuerung.Fernziel.MAC) }) { Text("Mac") }
+        },
+    )
 }
 
 /** Rückfrage, wenn eine Chat-Aufgabe Franks Tokenlimit ausgeschöpft hat. Tippen daneben entscheidet nichts. */
