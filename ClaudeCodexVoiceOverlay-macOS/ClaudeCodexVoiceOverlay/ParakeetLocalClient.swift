@@ -236,7 +236,8 @@ final class ParakeetLocalClient {
     // MARK: - Download
 
     /// Laedt die Modelldateien der festgelegten Revision (einmalig, rund 640 MB). Fertige Dateien werden
-    /// uebersprungen. progress(geladen, gesamt) und completion kommen auf dem Main-Thread.
+    /// uebersprungen. progress(geladen, gesamt) und completion kommen auf dem Main-Thread, im Modus .common:
+    /// Das Einstellungsfenster laeuft modal, ein schlichtes DispatchQueue.main.async kaeme erst nach dem Schliessen an.
     static func download(progress: @escaping (Int64, Int64) -> Void,
                          completion: @escaping (Error?) -> Void) {
         Task.detached {
@@ -250,7 +251,7 @@ final class ParakeetLocalClient {
                     let url = URL(string: "https://huggingface.co/\(repo)/resolve/\(revision)/\(f.name)")!
                     let base = done
                     let tmp = try await DownloadWithProgress().run(url) { n in
-                        DispatchQueue.main.async { progress(base + n, totalBytes) }
+                        RunLoop.main.perform(inModes: [.common]) { progress(base + n, totalBytes) }
                     }
                     let size = (try FileManager.default.attributesOfItem(atPath: tmp.path)[.size] as? NSNumber)?.int64Value
                     guard size == f.size else {
@@ -262,9 +263,9 @@ final class ParakeetLocalClient {
                     done += f.size
                 }
                 DiagLog.write("STT", "parakeet_model_downloaded", [("bytes", totalBytes)])
-                DispatchQueue.main.async { completion(nil) }
+                RunLoop.main.perform(inModes: [.common]) { completion(nil) }
             } catch {
-                DispatchQueue.main.async { completion(error) }
+                RunLoop.main.perform(inModes: [.common]) { completion(error) }
             }
         }
     }

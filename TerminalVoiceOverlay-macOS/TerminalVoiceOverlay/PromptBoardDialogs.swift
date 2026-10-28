@@ -1022,6 +1022,14 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     // hier editierbar wie auf Windows, Aenderung geht sofort ins Drive-Backup.
     private let preambleTextView = NSTextView()
     private let preambleScroll = NSScrollView()
+    // Transkriptions-Modell (geteilte SK-Datei transcription-engine.txt, gilt fuer TVO und CVO):
+    // Groq Whisper, Gemini Transcribe oder Parakeet primeline offline. Dazu der Download des Offline-Modells.
+    private let enginePopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    private var parakeetButton: NSButton!
+    private let parakeetStatus = NSTextField(wrappingLabelWithString: "")
+    /// Laeuft der Download gerade? Gilt ueber das Schliessen des Dialogs hinaus.
+    private static var parakeetDownloading = false
+    private static var parakeetProgressText = ""
 
     private var settings: PBAppSettings
     private var result: PBSettingsResult?
@@ -1175,6 +1183,25 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             return box
         }
 
+        enginePopup.addItems(withTitles: [
+            "Groq Whisper (online)",
+            "Gemini Transcribe (online)",
+            "Parakeet primeline (offline auf diesem Mac, Deutsch)",
+        ])
+        enginePopup.selectItem(at: TranscriptionEngineSetting.useParakeet ? 2
+                               : TranscriptionEngineSetting.useGemini ? 1 : 0)
+        PBDarkTheme.stylePopup(enginePopup)
+        parakeetButton = PBDarkTheme.makeSecondaryButton(title: "", target: self, action: #selector(downloadParakeet))
+        PBDarkTheme.styleLabel(parakeetStatus)
+        parakeetStatus.textColor = NSColor(white: 0.65, alpha: 1)
+        parakeetStatus.font = .systemFont(ofSize: 11)
+        parakeetStatus.preferredMaxLayoutWidth = 560
+        updateParakeetUI()
+        let engineCard = card("Transkription", [
+            label("Transkriptions-Modell"), enginePopup,
+            parakeetButton, parakeetStatus,
+        ], fullWidth: [enginePopup, parakeetStatus])
+
         let apiCard = card("API-Schlüssel", [
             label("Groq API Key (Whisper-Transkription)"), groqField,
             label("Gemini API Key (optional)"), geminiField,
@@ -1202,7 +1229,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         // FEST am unteren Rand. Wuerde sie mitscrollen, waeren "Speichern" und
         // "Abbrechen" auf einem kleinen Bildschirm erst nach dem Scrollen
         // erreichbar — genau die Falle, die den Dialog vorher unbedienbar machte.
-        let stack = NSStackView(views: [apiCard, vocabCard, behaviorCard, driveCard])
+        let stack = NSStackView(views: [engineCard, apiCard, vocabCard, behaviorCard, driveCard])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
@@ -1251,6 +1278,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             stack.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 16),
             stack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -16),
 
+            engineCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
             apiCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
             vocabCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
             behaviorCard.widthAnchor.constraint(equalTo: stack.widthAnchor),
@@ -1263,6 +1291,44 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    private func updateParakeetUI() {
+        let mb = ParakeetLocalClient.totalBytes / 1_048_576
+        let installed = ParakeetLocalClient.isInstalled
+        if Self.parakeetDownloading {
+            parakeetButton.title = Self.parakeetProgressText.isEmpty ? "Lädt …" : Self.parakeetProgressText
+            parakeetButton.isEnabled = false
+        } else {
+            parakeetButton.title = installed ? "Offline-Modell bereit" : "Offline-Modell herunterladen (\(mb) MB)"
+            parakeetButton.isEnabled = !installed
+        }
+        parakeetStatus.stringValue = "Parakeet primeline: deutscher Fine-Tune von NVIDIA Parakeet TDT 0.6B v3 (int8, sherpa-onnx), "
+            + "genau das Modell aus winidi/dictate. Rechnet nur auf der CPU dieses Macs: nach dem einmaligen Download "
+            + "(rund \(mb) MB, geteilt von TVO und CVO) kein Internet, kein Schlüssel. Fehlt das Modell, kommt eine Meldung, "
+            + "nie ein Rückfall auf Groq oder Gemini. Wörterbuch und Stille-Schutz gelten hier nicht. "
+            + (installed ? "Status: Modell liegt bereit." : "Status: Modell noch nicht geladen.")
+    }
+
+    @objc private func downloadParakeet() {
+        guard !Self.parakeetDownloading, !ParakeetLocalClient.isInstalled else { return }
+        Self.parakeetDownloading = true
+        Self.parakeetProgressText = "Lädt … 0 %"
+        updateParakeetUI()
+        ParakeetLocalClient.download(progress: { [weak self] done, total in
+            Self.parakeetProgressText = "Lädt … \(Int(Double(done) * 100 / Double(total))) % (\(done / 1_048_576) von \(total / 1_048_576) MB)"
+            self?.updateParakeetUI()
+        }, completion: { [weak self] error in
+            Self.parakeetDownloading = false
+            if let error = error {
+                DiagLog.warn("Settings", "parakeet_download_failed", [("error", error.localizedDescription)])
+                self?.parakeetStatus.stringValue = "Download fehlgeschlagen: \(error.localizedDescription)"
+                self?.parakeetButton.title = "Erneut herunterladen"
+                self?.parakeetButton.isEnabled = true
+            } else {
+                self?.updateParakeetUI()
+            }
+        })
+    }
 
     private func updateStatus() {
         if let token = settings.googleOAuthRefreshToken, !token.isEmpty {
@@ -1334,6 +1400,11 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
             persistOverlayPosition: persistPositionCheck.state == .on)
         // Persoenliches Vokabular zusaetzlich in die SK-Datei schreiben (wird von
         // GeminiClient direkt gelesen, nicht ueber die DB-Settings).
+        // Transkriptions-Modell in die geteilte SK-Datei: wirkt sofort und gilt fuer beide Overlays.
+        let engine = [TranscriptionEngineSetting.groq, TranscriptionEngineSetting.gemini,
+                      TranscriptionEngineSetting.parakeet][max(0, enginePopup.indexOfSelectedItem)]
+        TranscriptionEngineSetting.save(engine)
+        if engine == TranscriptionEngineSetting.parakeet { ParakeetLocalClient.shared.preload() }
         PBSettingsDialog.savePersonalVocabulary(vocabularyTextView.string)
         PBSettingsDialog.saveVocabularyEnabled(vocabularyEnabledCheck.state == .on)
         GeminiClient.saveVocabularyPreamble(preambleTextView.string)   // editierbare Praeambel (wie Windows)
