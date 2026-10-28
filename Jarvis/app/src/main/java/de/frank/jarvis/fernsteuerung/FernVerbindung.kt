@@ -21,7 +21,8 @@ class FernVerbindung(
     private val beiInfo: (Int, Int, Boolean) -> Unit,
     private val beiBild: (ByteArray) -> Unit,
     private val beiZustand: (JSONObject) -> Unit,
-    private val beiEnde: (String) -> Unit,
+    /** Grund und ob die Verbindung überhaupt zustande kam (false = Rechner nicht erreichbar). */
+    private val beiEnde: (String, Boolean) -> Unit,
     private val beiMeldung: (String) -> Unit = {},
 ) {
     private val sender = Executors.newSingleThreadExecutor()
@@ -31,11 +32,13 @@ class FernVerbindung(
 
     fun start() {
         Thread({
+            var verbunden = false
             try {
                 val s = Socket()
                 s.tcpNoDelay = true
                 s.receiveBufferSize = 1 shl 20
                 s.connect(InetSocketAddress(host, port), 6000)
+                verbunden = true
                 socket = s
                 aus = DataOutputStream(s.getOutputStream().buffered())
                 senden(0x10, JSONObject().put("token", token))
@@ -63,7 +66,7 @@ class FernVerbindung(
             } catch (e: Exception) {
                 if (!beendet) {
                     Log.w(TAG, "Verbindung beendet", e)
-                    beiEnde(e.message ?: e.javaClass.simpleName)
+                    beiEnde(e.message ?: e.javaClass.simpleName, verbunden)
                 }
             } finally {
                 runCatching { socket?.close() }

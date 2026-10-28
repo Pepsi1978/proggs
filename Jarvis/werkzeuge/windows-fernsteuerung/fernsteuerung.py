@@ -132,13 +132,22 @@ def taste_eingabe(vk=0, scan=0, flags=0) -> INPUT:
     return i
 
 
+user32.SendMessageTimeoutW.argtypes = [wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM, wt.UINT, wt.UINT, ctypes.c_void_p]
+
+
+def wach_anfordern() -> None:
+    # ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED setzt die Leerlaufzähler zurück (ohne ES_CONTINUOUS: nichts bleibt hängen).
+    kernel32.SetThreadExecutionState(0x00000001 | 0x00000002)
+
+
 def bildschirm_wecken() -> None:
     """Anzeige einschalten. Bei zugeklapptem Deckel (Deckelaktion „Nichts unternehmen“) schaltet Windows sie nach der
     Bildschirm-Zeitsperre ab; Desktop Duplication liefert dann „access denied“ oder gar kein Bild (28.10.2026). Der
-    Wachhalter verhindert nur das Abschalten, einschalten tut erst eine Eingabe oder SC_MONITORPOWER."""
+    Wachhalter verhindert nur das Abschalten; SC_MONITORPOWER „an“ schaltet sie wieder ein (am 28.10.2026 bei
+    zugeklapptem Deckel geprüft: danach wieder Bilder). Kann bei hängenden Fenstern dauern, daher nie unter einer Sperre."""
     senden_eingaben([maus_eingabe(M_BEWEGEN, 0, 0)])
     user32.SendMessageTimeoutW(0xFFFF, 0x0112, 0xF170, -1, 0x0002, 300, None)  # HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER an
-    kernel32.SetThreadExecutionState(0x00000001 | 0x00000002)
+    wach_anfordern()
 
 
 def bildschirm_groesse():
@@ -189,9 +198,8 @@ class Wachhalter:
 
     def _schleife(self):
         while True:
-            # ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED setzt die Leerlaufzähler zurück (ohne ES_CONTINUOUS: nichts bleibt hängen).
             if self.aktiv:
-                kernel32.SetThreadExecutionState(0x00000001 | 0x00000002)
+                wach_anfordern()
             time.sleep(20)
 
 
@@ -538,9 +546,24 @@ class Dienst:
             alt.stop()
         t, g, gs = self.zustand
         s.senden_json(0x03, {"tastatur": t, "geheim": g, "gesperrt": gs})
-        bildschirm_wecken()
-        time.sleep(1.5)  # bis die Anzeige wieder im Bild ist, sonst scheitert der erste Aufnahmeversuch
+        # Nicht im Lesefaden warten: Ist die Anzeige aus, scheitert der erste Versuch, der zweite (2 s) hat Bild.
+        threading.Thread(target=bildschirm_wecken, daemon=True, name="wecken").start()
         self.aufnahme_starten()
+
+    def _nachhelfen(self):
+        """Kein einziges Bild: Anzeige wecken; hilft das zweimal nicht (kein Bildschirm mehr im Windows-Bild, etwa
+        zugeklappt), wie am Mac einen virtuellen Bildschirm anhängen. Außerhalb der Sperre (Treiber bis 5 s)."""
+        bildschirm_wecken()
+        if self.fehlstarts < 2 or self.virtuell.aktiv or not self.virtuell.an():
+            return
+        time.sleep(2)
+        # Bleibt ein zweiter (dunkler) Bildschirm im Windows-Bild, nur noch den virtuellen zeigen: Dann ist er Haupt-
+        # bildschirm, Aufnahme (output_idx=0) und Eingaben (Hauptbildschirm) treffen ihn. Verschwindet er nach der
+        # Sitzung, stellt Windows die vorige Anordnung selbst wieder her.
+        if user32.GetSystemMetrics(80) > 1:  # SM_CMONITORS
+            log("Nur virtueller Bildschirm (DisplaySwitch /external)")
+            subprocess.run(["DisplaySwitch.exe", "/external"], creationflags=0x08000000)
+            time.sleep(2)
 
     def aufnahme_starten(self):
         with self.sperre:
@@ -572,14 +595,17 @@ class Dienst:
                         return  # gesperrt: _beobachten startet die Aufnahme nach dem Entsperren neu
                     self.fehlstarts += 1
                     warten = 2 if self.fehlstarts <= 3 else 5
-                    if erstes[0]:
-                        # Kein einziges Bild: Anzeige wecken; hilft das zweimal nicht (kein Bildschirm mehr im
-                        # Windows-Bild, etwa zugeklappt), wie am Mac einen virtuellen Bildschirm anhängen.
-                        bildschirm_wecken()
-                        if self.fehlstarts >= 2 and not self.virtuell.aktiv and self.virtuell.an():
-                            warten = 3
+                    ohne_bild = erstes[0]
+
                 # Bildschirm umgebaut, Grafiktreiber neu: nach kurzer Pause neu versuchen, solange verbunden.
-                threading.Timer(warten, lambda: self.sitzung is s and self.aufnahme is neu and self.aufnahme_starten()).start()
+                def nochmal():
+                    if self.sitzung is not s or self.aufnahme is not neu:
+                        return
+                    if ohne_bild:
+                        self._nachhelfen()
+                    if self.sitzung is s and self.aufnahme is neu:
+                        self.aufnahme_starten()
+                threading.Timer(warten, nochmal).start()
 
             neu = Aufnahme(w, h, bild, ende)
             self.aufnahme = neu
@@ -652,7 +678,7 @@ class Dienst:
         log(f"Jarvis-Fernsteuerung lauscht auf Port {PORT}, Bildschirm {bildschirm_groesse()}, Stream {stream_groesse()}")
         while True:
             sock, adresse = server.accept()
-            log(f"Verbindung von {adresse}")
+            # Nicht protokollieren: Jarvis prüft alle 10 s ohne Anmeldung, ob der Dienst antwortet (Symbol unten rechts).
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 1 << 20)
             s = Sitzung(sock, self)

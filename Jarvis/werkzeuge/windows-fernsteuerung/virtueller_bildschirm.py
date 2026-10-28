@@ -78,18 +78,26 @@ def _oeffnen():
         setupapi.SetupDiDestroyDeviceInfoList(info)
 
 
-def _ioctl(h, code, daten=b""):
+kernel32.CancelIoEx.argtypes = [wt.HANDLE, ctypes.POINTER(OVERLAPPED)]
+kernel32.GetOverlappedResult.argtypes = [wt.HANDLE, ctypes.POINTER(OVERLAPPED), ctypes.POINTER(wt.DWORD), wt.BOOL]
+kernel32.ResetEvent.argtypes = [wt.HANDLE]
+
+
+def _ioctl(h, ereignis, code, daten=b""):
+    """Nur unter der Sperre von VirtuellerBildschirm aufrufen (ein gemeinsames Ereignis je Gerät)."""
     ein = ctypes.create_string_buffer(daten.ljust(32, b"\0")[:32], 32)
     aus = wt.DWORD(0)
-    ov = OVERLAPPED(hEvent=kernel32.CreateEventW(None, True, False, None))
-    try:
-        kernel32.DeviceIoControl(h, code, ein, 32, ctypes.byref(aus), 4, None, ctypes.byref(ov))
-        n = wt.DWORD()
-        if not kernel32.GetOverlappedResultEx(h, ctypes.byref(ov), ctypes.byref(n), 5000, False):
-            return -1
+    kernel32.ResetEvent(ereignis)
+    ov = OVERLAPPED(hEvent=ereignis)
+    kernel32.DeviceIoControl(h, code, ein, 32, ctypes.byref(aus), 4, None, ctypes.byref(ov))
+    n = wt.DWORD()
+    if kernel32.GetOverlappedResultEx(h, ctypes.byref(ov), ctypes.byref(n), 5000, False):
         return aus.value
-    finally:
-        kernel32.CloseHandle(ov.hEvent)
+    # Zeitüberschreitung: abbrechen und auf das Ende warten, bevor Puffer und OVERLAPPED freigegeben werden,
+    # sonst schreibt der Treiber später in freigegebenen Speicher.
+    kernel32.CancelIoEx(h, ctypes.byref(ov))
+    kernel32.GetOverlappedResult(h, ctypes.byref(ov), ctypes.byref(n), True)
+    return -1
 
 
 class VirtuellerBildschirm:
@@ -98,8 +106,10 @@ class VirtuellerBildschirm:
     def __init__(self, log=lambda s: None):
         self.log = log
         self.h = None
+        self.ereignis = None
         self.index = None
         self.sperre = threading.Lock()
+        self.laeuft = threading.Event()  # Puls nur, solange ein Bildschirm hängt (sonst schläft der Faden)
         threading.Thread(target=self._puls, daemon=True, name="vdd-puls").start()
 
     @property
@@ -115,12 +125,14 @@ class VirtuellerBildschirm:
                 if self.h is None:
                     self.log("Virtueller Bildschirm: Parsec-Treiber nicht gefunden (einrichten.ps1 ausführen)")
                     return False
-            i = _ioctl(self.h, IOCTL_ADD)
-            _ioctl(self.h, IOCTL_UPDATE)
+                self.ereignis = kernel32.CreateEventW(None, True, False, None)
+            i = _ioctl(self.h, self.ereignis, IOCTL_ADD)
+            _ioctl(self.h, self.ereignis, IOCTL_UPDATE)
             if i < 0 or i > 0xFFFF:
                 self.log(f"Virtueller Bildschirm: Anlegen gescheitert ({i})")
                 return False
             self.index = i
+            self.laeuft.set()
             self.log(f"Virtueller Bildschirm an (Index {i})")
             return True
 
@@ -129,17 +141,18 @@ class VirtuellerBildschirm:
             if self.index is None:
                 return
             i, self.index = self.index, None
-            _ioctl(self.h, IOCTL_REMOVE, bytes([(i >> 8) & 0xFF, i & 0xFF]))
-            _ioctl(self.h, IOCTL_UPDATE)
+            self.laeuft.clear()
+            _ioctl(self.h, self.ereignis, IOCTL_REMOVE, bytes([(i >> 8) & 0xFF, i & 0xFF]))
+            _ioctl(self.h, self.ereignis, IOCTL_UPDATE)
             self.log("Virtueller Bildschirm aus")
 
     def _puls(self):
         while True:
+            self.laeuft.wait()
             time.sleep(0.05)
-            if self.index is not None and self.h is not None:
-                with self.sperre:
-                    if self.index is not None:
-                        _ioctl(self.h, IOCTL_UPDATE)
+            with self.sperre:
+                if self.index is not None:
+                    _ioctl(self.h, self.ereignis, IOCTL_UPDATE)
 
 
 if __name__ == "__main__":
