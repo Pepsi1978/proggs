@@ -369,7 +369,7 @@ final class PromptBoardStore {
 
     func settings() throws -> PBAppSettings {
         var result: PBAppSettings?
-        try query("SELECT Id,GroqApiKey,GeminiApiKey,GoogleOAuthRefreshToken,GoogleClientId,GoogleClientSecret,GoogleAccountEmail,GroqModel,AlwaysOnTop,BarHeight,SeparatorTemplate,CreatedAt,UpdatedAt,AutoHide,Orientation,PersistOverlayPosition,OverlayVerticalLeft,OverlayVerticalTop,OverlayHorizontalLeft,OverlayHorizontalTop FROM AppSettings LIMIT 1") { stmt in
+        try query("SELECT Id,GroqApiKey,GeminiApiKey,GoogleOAuthRefreshToken,GoogleClientId,GoogleClientSecret,GoogleAccountEmail,GroqModel,AlwaysOnTop,BarHeight,SeparatorTemplate,CreatedAt,UpdatedAt,AutoHide,Orientation,PersistOverlayPosition,OverlayVerticalLeft,OverlayVerticalTop,OverlayHorizontalLeft,OverlayHorizontalTop FROM AppSettings ORDER BY rowid LIMIT 1") { stmt in
             result = self.readSettings(stmt)
         }
         if let s = result { return s }

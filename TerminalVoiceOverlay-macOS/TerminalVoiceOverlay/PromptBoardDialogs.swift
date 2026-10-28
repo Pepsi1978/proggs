@@ -20,6 +20,9 @@ import AppKit
 /// of whether a modal is up.
 private func onMainCommon(_ work: @escaping () -> Void) {
     RunLoop.main.perform(inModes: [.common], block: work)
+    // perform() weckt den schlafenden Main-Loop nicht — ohne Weckruf blieb
+    // z. B. das Drive-Login-Ergebnis liegen, bis zufaellig ein Ereignis kam.
+    CFRunLoopWakeUp(CFRunLoopGetMain())
 }
 
 // MARK: - Modal presenter (safe against invisible / trapped modal sessions)
@@ -1439,12 +1442,10 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
                 self.connectButton.isEnabled = true
                 self.setButtonTitle(self.connectButton, "Verbinden")
                 switch result {
-                case .success(let info):
-                    self.settings.googleOAuthRefreshToken = info.refreshToken
-                    self.settings.googleAccountEmail = info.email
-                    try? PromptBoardStore.shared.updateSettings(self.settings)
-                    // Sofort abgleichen statt bis zu 30 s auf den Timer zu warten.
-                    NotificationCenter.default.post(name: GoogleDriveBackupService.didConnectNotification, object: nil)
+                case .success:
+                    // Token + E-Mail hat der Service bereits gespeichert (auch wenn
+                    // der Dialog zwischendurch geschlossen wurde) — hier nur neu laden.
+                    if let fresh = try? PromptBoardStore.shared.settings() { self.settings = fresh }
                     self.updateStatus()
                 case .failure(let err):
                     NSAlert.warn("Google-Login fehlgeschlagen: \(err.localizedDescription)")

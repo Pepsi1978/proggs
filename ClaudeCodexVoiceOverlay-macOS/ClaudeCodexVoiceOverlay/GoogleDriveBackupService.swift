@@ -12,6 +12,10 @@ final class GoogleDriveBackupService {
 
     static let shared = GoogleDriveBackupService()
 
+    /// Wird nach erfolgreichem Verbinden gepostet — der AppDelegate zieht dann
+    /// Slots und Historie sofort aus der Cloud.
+    static let didConnectNotification = Notification.Name("tvo.GoogleDriveBackupService.didConnect")
+
     // Eigene Session mit harten Grenzen (Windows-Pendant DriveHttp, 03.09.2026):
     // URLSession.shared wartet bis 60 s pro Paket und 7 Tage insgesamt — ein
     // haengender Drive-Aufruf blockierte so Backup und Slot-Sync still.
@@ -46,9 +50,13 @@ final class GoogleDriveBackupService {
 
     func connect(clientId: String, clientSecret: String,
                  completion: @escaping (Result<ConnectInfo, Error>) -> Void) {
+        // Doppelklick / erneuter Versuch: alten Listener sauber schliessen,
+        // sonst landet der Browser-Rueckruf auf einem verwaisten Port.
+        stopListener()
         authCompletion = completion
         clientIdPending = clientId
         clientSecretPending = clientSecret
+        DiagLog.info("Drive", "connect_start")
         startLoopbackListener()
     }
 
@@ -121,14 +129,19 @@ final class GoogleDriveBackupService {
             let params = NWParameters.tcp
             tcpListener = try NWListener(using: params, on: .any)
         } catch {
+            DiagLog.error("Drive", "listener_failed", error)
             authCompletion?(.failure(error))
+            authCompletion = nil
             return
         }
 
         tcpListener?.stateUpdateHandler = { [weak self] state in
             if case .ready = state, let port = self?.tcpListener?.port?.rawValue {
                 self?.listenerPort = port
+                DiagLog.info("Drive", "listener_ready", [("port", port)])
                 self?.openBrowserForAuth(port: port)
+            } else if case .failed(let err) = state {
+                DiagLog.error("Drive", "listener_state_failed", err)
             }
         }
         tcpListener?.newConnectionHandler = { [weak self] conn in
@@ -151,9 +164,11 @@ final class GoogleDriveBackupService {
             URLQueryItem(name: "prompt", value: "consent"),
         ]
         if let url = comps.url {
+            DiagLog.info("Drive", "browser_open", [("port", port)])
             NSWorkspace.shared.open(url)
         } else {
             authCompletion?(.failure(errorString("Could not build auth URL")))
+            authCompletion = nil
         }
     }
 
@@ -167,22 +182,100 @@ final class GoogleDriveBackupService {
             let firstLine = request.split(separator: "\r\n", maxSplits: 1).first.map(String.init) ?? request
             let parts = firstLine.split(separator: " ")
             guard parts.count >= 2, let path = parts[safe: 1] else { conn.cancel(); return }
-            let fullURL = "http://127.0.0.1\(path)"
-            let code = URLComponents(string: fullURL)?
-                .queryItems?.first(where: { $0.name == "code" })?.value
-            let body = "Received verification code. You may now close this window."
-            let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: \(body.utf8.count)\r\n\r\n\(body)"
-            conn.send(content: response.data(using: .utf8), completion: .contentProcessed({ _ in
-                conn.cancel()
-                self.stopListener()
-                if let code = code {
-                    self.exchangeCodeForTokens(code: code)
-                } else {
-                    self.authCompletion?(.failure(self.errorString("No code in callback")))
-                    self.authCompletion = nil
-                }
-            }))
+            // Nur /callback beantwortet den Login. favicon.ico, Vorab-Verbindungen
+            // u. ae. duerfen den Listener nicht beenden (sonst kommt der echte
+            // Rueckruf nie an).
+            guard path.hasPrefix("/callback") else {
+                DiagLog.info("Drive", "callback_ignored", [("path", String(path.prefix(40)))])
+                self.respond(conn, status: "404 Not Found", html: "")
+                return
+            }
+            let items = URLComponents(string: "http://127.0.0.1\(path)")?.queryItems ?? []
+            let code = items.first(where: { $0.name == "code" })?.value
+            let googleError = items.first(where: { $0.name == "error" })?.value
+            self.stopListener()
+            guard let code = code, !code.isEmpty else {
+                let msg = googleError == "access_denied"
+                    ? "Zugriff wurde im Browser abgelehnt."
+                    : "Google hat keinen Anmelde-Code geliefert (\(googleError ?? "unbekannt"))."
+                DiagLog.warn("Drive", "callback_without_code", [("error", googleError)])
+                self.finishAuth(.failure(self.errorString(msg)), conn: conn)
+                return
+            }
+            DiagLog.info("Drive", "callback_code_received")
+            // Browser erst antworten, wenn der Token-Tausch durch ist — vorher
+            // meldete die Seite "fertig", obwohl die App gar nicht verbunden war.
+            self.exchangeCodeForTokens(code: code) { result in
+                DispatchQueue.main.async { self.finishAuth(result, conn: conn) }
+            }
         }
+    }
+
+    /// Speichert das Ergebnis selbst in der Datenbank (unabhaengig davon, ob der
+    /// Einstellungsdialog noch offen ist), zeigt es im Browser an und meldet es
+    /// danach an den Aufrufer. Laeuft auf dem Main-Thread.
+    private func finishAuth(_ result: Result<ConnectInfo, Error>, conn: NWConnection) {
+        switch result {
+        case .success(let info):
+            var saved = false
+            if var s = try? PromptBoardStore.shared.settings() {
+                s.googleClientId = clientIdPending
+                s.googleClientSecret = clientSecretPending
+                s.googleOAuthRefreshToken = info.refreshToken
+                s.googleAccountEmail = info.email
+                do {
+                    try PromptBoardStore.shared.updateSettings(s)
+                    saved = isAuthenticated()
+                } catch {
+                    DiagLog.error("Drive", "token_save_failed", error)
+                }
+            }
+            DiagLog.info("Drive", "connect_done", [("saved", saved), ("email", info.email)])
+            if saved {
+                let who = info.email.map { " als \($0)" } ?? ""
+                respond(conn, status: "200 OK",
+                        html: "<h2>Google Drive ist verbunden\(who).</h2><p>Du kannst dieses Fenster schließen und zum Overlay zurückkehren.</p>")
+                NotificationCenter.default.post(name: Self.didConnectNotification, object: nil)
+                authCompletion?(.success(info))
+            } else {
+                respond(conn, status: "500 Internal Server Error",
+                        html: "<h2>Anmeldung bei Google war erfolgreich, aber das Speichern im Overlay ist fehlgeschlagen.</h2><p>Bitte im Overlay erneut auf Verbinden klicken.</p>")
+                authCompletion?(.failure(errorString("Die Verbindung konnte nicht gespeichert werden.")))
+            }
+        case .failure(let err):
+            DiagLog.error("Drive", "connect_failed", err)
+            respond(conn, status: "200 OK",
+                    html: "<h2>Verbindung mit Google Drive fehlgeschlagen.</h2><p>\(Self.htmlEscape(err.localizedDescription))</p><p>Bitte im Overlay erneut auf Verbinden klicken.</p>")
+            authCompletion?(.failure(err))
+        }
+        authCompletion = nil
+        // Overlay nach vorn holen, damit Status bzw. Fehlermeldung sichtbar sind.
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func respond(_ conn: NWConnection, status: String, html: String) {
+        let page = html.isEmpty ? "" :
+            "<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><title>Google Drive</title></head>" +
+            "<body style=\"font-family:-apple-system,sans-serif;padding:40px\">\(html)</body></html>"
+        let body = Data(page.utf8)
+        var head = "HTTP/1.1 \(status)\r\nContent-Type: text/html; charset=utf-8\r\n"
+        head += "Content-Length: \(body.count)\r\nConnection: close\r\n\r\n"
+        conn.send(content: Data(head.utf8) + body, completion: .contentProcessed({ _ in conn.cancel() }))
+    }
+
+    private static func htmlEscape(_ s: String) -> String {
+        s.replacingOccurrences(of: "&", with: "&amp;")
+         .replacingOccurrences(of: "<", with: "&lt;")
+         .replacingOccurrences(of: ">", with: "&gt;")
+    }
+
+    /// application/x-www-form-urlencoded streng nach RFC 3986 — `.urlQueryAllowed`
+    /// liess `+ & = /` unkodiert durch und konnte Code oder Secret verfaelschen.
+    static func formEncode(_ params: [String: String]) -> Data? {
+        let allowed = CharacterSet(charactersIn:
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+        return params.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")" }
+            .joined(separator: "&").data(using: .utf8)
     }
 
     private func stopListener() {
@@ -190,35 +283,41 @@ final class GoogleDriveBackupService {
         tcpListener = nil
     }
 
-    private func exchangeCodeForTokens(code: String) {
+    private func exchangeCodeForTokens(code: String,
+                                       completion: @escaping (Result<ConnectInfo, Error>) -> Void) {
         let redirect = "http://127.0.0.1:\(listenerPort)/callback"
         var req = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
         req.httpMethod = "POST"
         req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let body = [
+        req.httpBody = Self.formEncode([
             "code": code,
             "client_id": clientIdPending,
             "client_secret": clientSecretPending,
             "redirect_uri": redirect,
             "grant_type": "authorization_code",
-        ]
-        req.httpBody = body.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
-            .joined(separator: "&").data(using: .utf8)
+        ])
 
-        Self.driveSession.dataTask(with: req) { [weak self] data, _, err in
+        Self.driveSession.dataTask(with: req) { [weak self] data, response, err in
             guard let self = self else { return }
-            if let err = err { self.authCompletion?(.failure(err)); self.authCompletion = nil; return }
-            guard let data = data,
-                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let refresh = dict["refresh_token"] as? String,
+            if let err = err { completion(.failure(err)); return }
+            let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let dict = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+            DiagLog.info("Drive", "token_exchange", [("status", status),
+                                                       ("error", dict["error"] as? String),
+                                                       ("desc", dict["error_description"] as? String),
+                                                       ("hasRefresh", dict["refresh_token"] != nil)])
+            guard let refresh = dict["refresh_token"] as? String,
                   let access = dict["access_token"] as? String else {
-                self.authCompletion?(.failure(self.errorString("Missing refresh_token. Widerrufe die App bei myaccount.google.com und versuch es erneut.")))
-                self.authCompletion = nil
+                if let gErr = dict["error"] as? String {
+                    let desc = (dict["error_description"] as? String) ?? ""
+                    completion(.failure(self.errorString("Google lehnt den Token-Tausch ab: \(gErr) \(desc) (HTTP \(status)).")))
+                } else {
+                    completion(.failure(self.errorString("Missing refresh_token. Widerrufe die App bei myaccount.google.com und versuch es erneut.")))
+                }
                 return
             }
             self.fetchEmail(accessToken: access) { email in
-                self.authCompletion?(.success(ConnectInfo(refreshToken: refresh, email: email)))
-                self.authCompletion = nil
+                completion(.success(ConnectInfo(refreshToken: refresh, email: email)))
             }
         }.resume()
     }
@@ -248,14 +347,12 @@ final class GoogleDriveBackupService {
         var req = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
         req.httpMethod = "POST"
         req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let body = [
+        req.httpBody = Self.formEncode([
             "client_id": id,
             "client_secret": secret,
             "refresh_token": refresh,
             "grant_type": "refresh_token",
-        ]
-        req.httpBody = body.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
-            .joined(separator: "&").data(using: .utf8)
+        ])
         Self.driveSession.dataTask(with: req) { data, response, err in
             if let err = err { completion(.failure(err)); return }
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
@@ -276,6 +373,7 @@ final class GoogleDriveBackupService {
             // automatisch zuruecksetzen, damit der naechste Verbindungsversuch
             // sauber durchlaeuft und der User klare Anweisung bekommt.
             if googleError == "invalid_grant" {
+                DiagLog.warn("Drive", "refresh_invalid_grant_token_cleared", [("desc", googleErrorDesc)])
                 if var settings = try? PromptBoardStore.shared.settings() {
                     settings.googleOAuthRefreshToken = nil
                     settings.googleAccountEmail = nil
