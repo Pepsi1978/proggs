@@ -742,7 +742,7 @@
       "bundleId": "com.google.android.studio",
       "exePfad": "",
       "ausblendenWennFehlt": true,
-      "zeitlimitMinuten": 45,
+      "zeitlimitMinuten": 120,
       "prozesse": [],
       "helferProzesse": [],
       "beendenVorUpdate": true,
