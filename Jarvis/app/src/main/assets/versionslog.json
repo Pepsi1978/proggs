@@ -397,6 +397,7 @@
     { "versionCode": 391, "versionName": "1.8.380", "stand": "28.10.2026, 14:11 Uhr", "notiz": "Unter jedem Prompt stehen jetzt klare Symbole für Löschen, Bearbeiten, Kopieren und Teilen an andere Apps, Senden bleibt rechts hervorgehoben." },
     { "versionCode": 392, "versionName": "1.8.381", "stand": "28.10.2026, 14:21 Uhr", "notiz": "Jeder Prompt zeigt hinter seiner Nummer eine kurze KI-Überschrift, worum es geht, und ein geöffneter Prompt ist nicht mehr durchsichtig." },
     { "versionCode": 393, "versionName": "1.8.382", "stand": "28.10.2026, 14:26 Uhr", "notiz": "Prompts sind immer lückenlos von oben durchnummeriert und lassen sich am Griff rechts per Ziehen umsortieren; Überschriften entstehen sparsamer und zuverlässiger." },
-    { "versionCode": 394, "versionName": "1.8.383", "stand": "28.10.2026, 14:39 Uhr", "notiz": "Bearbeiten und Löschen treffen nach dem Verschieben oder Aufrücken immer den richtigen Prompt, und ein abgebrochenes Ziehen öffnet keinen Prompt mehr." }
+    { "versionCode": 394, "versionName": "1.8.383", "stand": "28.10.2026, 14:39 Uhr", "notiz": "Bearbeiten und Löschen treffen nach dem Verschieben oder Aufrücken immer den richtigen Prompt, und ein abgebrochenes Ziehen öffnet keinen Prompt mehr." },
+    { "versionCode": 395, "versionName": "1.8.384", "stand": "28.10.2026, 14:47 Uhr", "notiz": "Die Zurück-Geste in einer Session führt jetzt zum Startbildschirm mit der Tagesauswertung, erst die nächste Zurück-Geste beendet die App." }
 ]
 }

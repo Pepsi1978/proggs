@@ -101,6 +101,9 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
             // Zurück-Geste auf Ablage, Aktivität oder Einstellungen: vorheriger Reiter, sonst Jarvis-Start, nie App schließen.
             // Steht vor dem Inhalt, damit die Zurück-Behandlung innerer Ansichten (Ablage, Merkliste, Gedächtnis) Vorrang hat.
             androidx.activity.compose.BackHandler(enabled = vm.reiter != Reiter.JARVIS && !vm.gesperrt) { vm.reiterZurueck() }
+            // Zurück-Geste in einer Session: zum Startbildschirm mit der Tagesauswertung; erst dort beendet die nächste Geste die App.
+            // Die Session bleibt in der Seitenleiste; während eines Live-Gesprächs bleibt die Geste wie bisher.
+            androidx.activity.compose.BackHandler(enabled = vm.reiter == Reiter.JARVIS && !vm.gesperrt && !vm.liveAktiv && (vm.gespraech.isNotEmpty() || vm.sitzungId != null)) { vm.neuesGespraech() }
             val schublade = rememberGespraecheSchublade(fensterBreite)
             // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
             val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen && !FunktionenAnsicht.offen
