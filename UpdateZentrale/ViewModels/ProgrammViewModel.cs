@@ -263,6 +263,15 @@ public sealed partial class ProgrammViewModel : ObservableObject
     [RelayCommand]
     private void ProtokollOeffnen() => Protokollierung.DateiOeffnen(LetzterBericht?.ProtokollDatei);
 
+    /// <summary>Sends the failed run with its log to a new Claude Code session to analyse and fix it.</summary>
+    [RelayCommand]
+    private void AnClaudeUebergeben()
+    {
+        if (LetzterBericht is not { IstFehler: true } bericht) return;
+        Melde(ClaudeUebergabe.Starten(Eintrag, bericht)
+              ?? "Problem mit " + Name + " an Claude Code übergeben – die Sitzung startet im Terminal.");
+    }
+
     /// <summary>
     /// Nimmt das rote Band von der Karte. Gemeldet bleibt der Lauf trotzdem: im Tagesprotokoll und
     /// in verlauf.jsonl steht er unveraendert, und die graue "Zuletzt:"-Zeile nennt ihn weiter.
