@@ -3,7 +3,7 @@
 > **Zweite Seite der Medaille** zum Almanach [`bugs/server/vps-hosting.md`](../../bugs/server/vps-hosting.md):
 > den richtigen VPS für eine selbst-gehostete Memory-DB (Postgres+pgvector, supermemory, mem0) wählen und
 > dimensionieren. Verwandt: [`best-practices/opencode/self-hosted-memory-server.md`](../opencode/self-hosted-memory-server.md),
-> [`best-practices/server/wireguard.md`](wireguard.md). **Stand 2026-06-19.**
+> [`best-practices/server/wireguard.md`](wireguard.md). **Stand 2026-06-19, Sicherheits-Routine §7 am 2026-10-28.**
 
 ---
 
@@ -16,6 +16,7 @@
 | 3 | Größe | pgvector allein: 4 GB ok. **Lokale Ollama-Embeddings: 8–16 GB.** |
 | 4 | Backup | Nie nur auf Hoster-Backup verlassen — eigenes `pg_dump`-Cron + Offsite. |
 | 5 | Zugriff absichern | Dienst **nicht** öffentlich exponieren → WireGuard-Split-Tunnel (siehe `server/wireguard.md`). |
+| 6 | Sicherheits-Routine | Patchstand, öffentliche Kante, Caddy-Go-Version, interne DB-Auth, Image-Pins, Ausgabenlimits: §7. |
 
 ---
 
@@ -61,7 +62,7 @@ Ergebnis des Audits vom 28.10.2026 (Gegenseite: `bugs/server/vps-hosting.md` §7
 
 1. **Patchstand maschinell prüfen** (offiziell): Ubuntu-CVE-JSON `https://ubuntu.com/security/cves/CVE-XXXX.json`, Notices `https://ubuntu.com/security/notices.json?release=noble`, CISA-KEV-Feed `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json`. Ein Kernel-Fix gilt erst nach dem Reboot.
 2. **Öffentliche Kante minimal** (offiziell): nur 443 (Caddy), 22 (nur Schlüssel) und 51820/udp offen; alles andere an 10.8.0.1/127.0.0.1 binden, weil veröffentlichte Docker-Ports UFW umgehen. https://docs.docker.com/engine/network/packet-filtering-firewalls/
-3. **Caddy** (offiziell): Patch-Version pinnen, Go-Version mit `caddy build-info` prüfen, `admin off`, `header_down -Server`, bei offenen Go-HTTP/2-Lücken `protocols h1 h3`. Rate-Limit nur per xcaddy-Modul `mholt/caddy-ratelimit`. https://caddyserver.com/docs/caddyfile/options
+3. **Caddy** (offiziell): Patch-Version pinnen, Go-Version mit `caddy build-info` prüfen, `admin off`, `header_down -Server`, bei offenen Go-HTTP/2-Lücken `protocols h1` (h3 nur mit veröffentlichtem UDP 443). Rate-Limit nur per xcaddy-Modul `mholt/caddy-ratelimit`. https://caddyserver.com/docs/caddyfile/options
 4. **Interne Datenbanken trotzdem mit Auth** (offiziell): Redis `requirepass`/ACL (`-@scripting -restore -debug -config`), Qdrant-API-Key `QDRANT__SERVICE__API_KEY`. https://qdrant.tech/documentation/security/
 5. **Images**: kein `:latest` von Drittanbietern; Patch-Version pinnen, Projektstatus (archiviert?) prüfen, wichtige Images per `docker save` sichern. Rolling-Tags monatlich pro Dienst `pull` + `up -d`.
 6. **SSH/fail2ban** (offiziell): `PasswordAuthentication no`, `X11Forwarding no` per `/etc/ssh/sshd_config.d/00-haertung.conf` (der erste Wert gewinnt), `sshd -t` vor dem Reload; fail2ban `ignoreip` mit dem VPN-Netz.

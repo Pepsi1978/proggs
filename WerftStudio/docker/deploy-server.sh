@@ -18,6 +18,10 @@ if [ ! -f .env ]; then
   } > .env
 fi
 
+if ! grep -q '^WERFT_REDIS_PASSWORD=' .env; then
+  # hex, weil das Passwort unkodiert in REDIS_URL steht
+  printf 'WERFT_REDIS_PASSWORD=%s\n' "$(openssl rand -hex 24)" >> .env
+fi
 if ! grep -q '^WERFT_ADMIN_EMAIL=' .env; then
   printf 'WERFT_ADMIN_EMAIL=frank@example.de\n' >> .env
 fi
@@ -28,6 +32,8 @@ fi
 chmod 600 .env
 mkdir -p /var/lib/werft-studio-maintenance
 docker compose -f compose.server.yaml config --quiet
+# Rolling-Tags holen, sonst bleiben Sicherheitsfixe in redis/postgres aus; pro Dienst, weil minio/minio nicht mehr ziehbar ist
+docker compose -f compose.server.yaml pull redis postgres
 docker compose -f compose.server.yaml up -d --build
 install -m 0644 docker/werft-docker-cache-prune.service docker/werft-docker-cache-prune.timer docker/werft-docker-cache-prune.path /etc/systemd/system/
 systemctl daemon-reload

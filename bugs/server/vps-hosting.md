@@ -7,7 +7,7 @@
 > **Zweite Seite der Medaille:** [`best-practices/server/vps-hosting.md`](../../best-practices/server/vps-hosting.md).
 > Verwandt: [`best-practices/opencode/self-hosted-memory-server.md`](../../best-practices/opencode/self-hosted-memory-server.md),
 > [`bugs/server/wireguard.md`](wireguard.md).
-> **Stand:** 2026-06-19 (Preise/Benchmarks ändern sich — Datum beachten). **Anker:** Hostinger/Hetzner-Preise 2026-06.
+> **Stand:** 2026-06-19, Sicherheits-Audit §7 am 2026-10-28 (Preise/Benchmarks ändern sich — Datum beachten). **Anker:** Hostinger/Hetzner-Preise 2026-06.
 
 ---
 
@@ -21,6 +21,7 @@
 | 4 | Backup bei Hostinger | Nur **wöchentliche** Backups gratis; **tägliche** kosten extra — riskant für eine oft schreibende DB. | §4 |
 | 5 | RAM für den Stack | pgvector allein: kleinster VPS (4 GB) ok. **Lokale Ollama-Embeddings: 8–16 GB** (KVM 2/4). | §5 |
 | 6 | EU-Datenschutz / flexible Abrechnung | **Hetzner** (DE/EU, stundengenaue Abrechnung, bessere Netzwerk-/CPU-Note) statt Hostinger, wenn Datenschutz/Performance zählt. | §6 |
+| 7 | ⭐ Server-Sicherheit (Caddy, MinIO, Redis, fail2ban, cloud-init, Docker, Kernel) | Audit-Funde vom 28.10.2026 mit Fix je Komponente. | §7 |
 
 ---
 
@@ -91,7 +92,7 @@ flexibler Abrechnung** → für einen Memory-Server mit (lokalen) Embeddings mei
 
 Quelle: eigenes Audit + Sonnet-5.5-Recherche-Schwarm (7 Researcher), Stand 28.10.2026. Je Eintrag Symptom · Ursache · Versionen · Fix · Quelle.
 
-1. **Caddy-Image hat alte Go-Version** – Caddy 2.11.4 = go1.26.3, 2.11.7 = go1.26.8. Fernauslösbare DoS: crypto/tls CVE-2026-56862 (Go < 1.26.6), HTTP/2-Serverabsturz CVE-2026-97032 (Go < 1.26.9, steckt in KEINEM Caddy-Release bis 2.11.7). Fix: 2.11.7 + global `servers { protocols h1 h3 }`. 2.11.6 meiden (HTTP/2-Panic im reverse_proxy). `caddy build-info | grep ^go` prüft die Go-Version. https://pkg.go.dev/vuln/GO-2026-6617 · https://github.com/caddyserver/caddy/releases/tag/v2.11.7
+1. **Caddy-Image hat alte Go-Version** – Caddy 2.11.4 = go1.26.3, 2.11.7 = go1.26.8. Fernauslösbare DoS: crypto/tls CVE-2026-56862 (Go < 1.26.6), HTTP/2-Serverabsturz CVE-2026-97032 (Go < 1.26.9, steckt in KEINEM Caddy-Release bis 2.11.7). Fix: 2.11.7 + global `servers { protocols h1 }` (h3 nur, wenn UDP 443 veröffentlicht ist). 2.11.6 meiden (HTTP/2-Panic im reverse_proxy). `caddy build-info | grep ^go` prüft die Go-Version. https://pkg.go.dev/vuln/GO-2026-6617 · https://github.com/caddyserver/caddy/releases/tag/v2.11.7
 2. **MinIO Community eingestellt** – Repo archiviert (2026), `minio/minio` auf Docker Hub gelöscht (11.09.2026, Sekundärquelle). RELEASE.2025-09-07 betroffen von CVE-2025-62506, CVE-2026-40344, CVE-2026-41145 (Schreiben in jeden Bucket mit gültigem Access-Key, CVSS 8.8), CVE-2026-34204, CVE-2026-39414 – kein Community-Fix. Fix: Image per `docker save` sichern, Wechsel auf Drop-in `pgsty/silo` (gepinnt) planen. https://github.com/minio/minio/security/advisories · https://github.com/pgsty/silo
 3. **Redis ohne Passwort im Docker-Netz** – jeder Nachbar-Container gilt als „authentifiziert“; Redis-RCEs (RESTORE-OOB 8.8.1, ACL-Bypässe 8.8.2/8.8.3, Cluster-Bus 8.8.4) brauchen nur Befehlsrechte. Fix: `--requirepass` + `REDISCLI_AUTH` für den Healthcheck + `redis://:pw@redis:6379`, Rolling-Tag neu ziehen. https://github.com/redis/redis/releases/tag/8.8.4
 4. **Rolling-Tags veralten still** – `redis:8-alpine`/`postgres:17-alpine` bekommen Fixe erst nach `docker compose pull` + Neustart (Postgres 17.10 → 17.11: über 20 CVEs). Bei `minio/minio:latest` im selben Compose: Pull **pro Dienst**, sonst bricht der ganze Pull ab. https://www.postgresql.org/docs/release/17.11/

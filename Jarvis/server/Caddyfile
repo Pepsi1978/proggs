@@ -3,9 +3,10 @@
 {
 	admin off
 	# HTTP/2 aus: Caddy 2.11.7 ist noch mit Go 1.26.8 gebaut, die HTTP/2-Absturzfixe kamen erst mit Go 1.26.9
-	# (bugs/server/reverse-proxy-tls.md). SSE, WebSocket und MCP laufen über HTTP/1.1 unverändert.
+	# (bugs/server/vps-hosting.md §7 Nr. 1). SSE, WebSocket und MCP laufen über HTTP/1.1 unverändert.
+	# Nur h1: UDP 443 ist nicht veröffentlicht, h3 würde per Alt-Svc nur ins Leere angeboten.
 	servers {
-		protocols h1 h3
+		protocols h1
 	}
 }
 

@@ -13,6 +13,6 @@
 | 3 | Größe | pgvector allein: 4 GB ok. **Lokale Ollama-Embeddings: 8–16 GB.** |
 | 4 | Backup | Nie nur auf Hoster-Backup verlassen — eigenes `pg_dump`-Cron + Offsite. |
 | 5 | Zugriff absichern | Dienst **nicht** öffentlich exponieren → WireGuard-Split-Tunnel (siehe `server/wireguard.md`). |
-| 6 | ⭐ Sicherheits-Routine | Monatlich: `apt list --upgradable`, Ubuntu-CVE/KEV prüfen, Rolling-Tags pro Dienst `pull`, Caddy-Go-Version prüfen. | §7 |
-| 7 | Interne DBs | Redis `requirepass`, Qdrant-API-Key – auch ohne veröffentlichten Port. | §7.4 |
-| 8 | KI-Schlüssel | Harte Ausgabenlimits beim Anbieter; Relay mit Token je Route, unbekannte Pfade 404. | §7.7 |
+| 6 | ⭐ Sicherheits-Routine | Monatlich: `apt list --upgradable`, Ubuntu-CVE/KEV prüfen, Rolling-Tags pro Dienst `pull`, Caddy-Go-Version prüfen. (Volltext §7) |
+| 7 | Interne DBs | Redis `requirepass`, Qdrant-API-Key – auch ohne veröffentlichten Port. (Volltext §7) |
+| 8 | KI-Schlüssel | Harte Ausgabenlimits beim Anbieter; Relay mit Token je Route, unbekannte Pfade 404. (Volltext §7) |

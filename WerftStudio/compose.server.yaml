@@ -39,7 +39,8 @@ services:
     image: redis:8-alpine
     container_name: werft-redis
     restart: unless-stopped
-    # Passwort Pflicht: ohne requirepass darf jeder Nachbar-Container alle Redis-Befehle (RESTORE/EVAL-Lücken bis 8.8.3).
+    # Passwort Pflicht: ohne requirepass darf jeder Nachbar-Container alle Redis-Befehle (RESTORE/ACL/Cluster-Bus-Lücken bis 8.8.4). Passwort nur hex, es steht unkodiert in REDIS_URL.
+    # Keine ACL-Sperre von EVAL: BullMQ braucht Lua-Skripte.
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "192mb", "--maxmemory-policy", "noeviction", "--requirepass", "${WERFT_REDIS_PASSWORD:?}"]
     environment: { REDISCLI_AUTH: "${WERFT_REDIS_PASSWORD:?}" }
     volumes: [werft-redis:/data]
