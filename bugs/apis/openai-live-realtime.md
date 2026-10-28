@@ -6,6 +6,7 @@
 > **Versions-Anker:** OpenAI API Stand 16.10.2026, gpt-live-1 GA 10.09.2026, gpt-realtime-2.1 06.07.2026,
 > openai-python Stand 16.10.2026.
 > **Anker:** openai-api=2026-10-16
+> Ergänzt 28.10.2026, 15:35: A13 um die 9 Sprachstimmen und den SDK-Rückstand erweitert, A17 (ChatGPT-Stimmennamen als voice-ID).
 > Zweite Seite (wie macht man es richtig): `best-practices/apis/openai-live-realtime.md`.
 > Allgemeine OpenAI-Fehler (Responses/Chat, 429, Structured Outputs): `bugs/apis/openai-api.md`.
 >
@@ -39,6 +40,7 @@
 | 15 | Altmodelle | `gpt-realtime`/`-mini` Abschaltung 20.01.2027; `gpt-4o-*-transcribe`/`whisper-1` 26.02.2027 | E3, E4 |
 | 16 | GPT-Live hackt (Wortanfang, Lücken im Satz) / „spricht" hängt | Live liefert Stille in Echtzeit: Sprechen nur per Pegel; Füll-Stille nur nach Füllstand; Polster nur hinter Stille in Pausen; Logcat-Prüfung Best Practice §14.6 | F13, F15, F16, F17 |
 | 17 | Telefonklang / Hinweiston über Live-Stimme | Medienweg statt Telefonmodus; Hinweise im Gespräch `setSilent` | F18, F19 |
+| 18 | Stimme „Miko“/„Sonna“ (ChatGPT) gewünscht / SDK meckert über `nuri` | App-Namen sind keine API-IDs: für Deutsch `nuri`/`juni`/`flitz` als freien String senden | A13, A17 |
 
 ---
 
@@ -133,7 +135,15 @@
 - **Ursache:** Drei verschiedene Listen: Referenz 31 Stimmen, Live-Guide 12 (Standard `marin` fehlt dort), Python-SDK-Literal 23. Ob alle 31 in allen Konten verfügbar sind, ist ungeklärt.
 - **Versionen:** Doku/SDK Stand 16.10.2026 [unbestätigt].
 - **FIX:** Stimme als freien String übergeben (SDK-Typ ist `Union[str, …]`); beim Fehler auf `marin` zurückfallen und dem Nutzer melden; Liste nicht fest verdrahten.
+- **Nachtrag 28.10.2026:** Am 16.10.2026 kamen 9 Sprachstimmen dazu (de `nuri`/`juni`/`flitz`, fr `brise`/`sillage`, hi `nira`, ja `harema`/`shida`, ko `noeul`). openai-python 3.40.0 kennt im Literal `BuiltInVoice` nur `shida` davon; Typprüfer bemängeln die übrigen, die API nimmt sie laut Guide an. Freien String verwenden. [offiziell] https://developers.openai.com/api/docs/changelog · https://github.com/openai/openai-python/blob/main/src/openai/types/live/built_in_voice.py
 - **Quelle:** https://developers.openai.com/api/reference/resources/live/primary-websocket · https://developers.openai.com/api/docs/guides/live-conversations · https://github.com/openai/openai-python/tree/main/src/openai/types/live [offiziell]
+
+### 17. ChatGPT-Stimmennamen als voice-ID (Miko, Sonna)
+- **Symptom:** Gewünschte Stimme aus der ChatGPT-App („Sonna“, „Miko“ unter German) ist in der API nicht wählbar oder wird abgelehnt.
+- **Ursache:** ChatGPT nutzt seit 15.10.2026 GPT-Live-1.1 mit eigenen Stimmennamen; die API hat nur `gpt-live-1` mit anderen IDs. GPT-Live-1.1 ist für die API nur angekündigt.
+- **Versionen:** gpt-live-1, Stand 28.10.2026 [offiziell für API-Liste, extern für App-Namen].
+- **FIX:** Für Deutsch `nuri`, `juni` oder `flitz` nehmen und dem Nutzer offen sagen, dass Miko/Sonna nur in ChatGPT laufen; nach API-Freigabe von 1.1 Liste neu prüfen.
+- **Quelle:** https://developers.openai.com/api/docs/guides/live-conversations [offiziell] · all-ai.de · notebookcheck.net [extern]
 
 ### 14. Modell in der URL / „WebSocket geht bei Live nicht"
 - **Symptom:** Verbindungsfehler mit `.../v1/live/sessions?model=gpt-live-1`; Blogs behaupten, Live laufe nur über WebRTC.

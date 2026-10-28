@@ -9,6 +9,8 @@
 > **Versions-Anker:** OpenAI API Stand 16.10.2026, gpt-live-1 GA 10.09.2026, gpt-realtime-2.1 06.07.2026,
 > openai-python Stand 16.10.2026.
 > **Anker:** openai-api=2026-10-16
+> Ergänzt 28.10.2026, 15:35 (research-Skill, Sonnet-Schwarm, 3 Researcher): Modellstand (kein Nachfolger von gpt-live-1 in der API),
+> Sprachzuordnung der 9 Stimmen vom 16.10.2026, ChatGPT-Stimmen Miko/Sonna (GPT-Live-1.1) nur in der App.
 > Ergänzt 16.10.2026, 19:23: **§14 Praxis-Erkenntnisse aus Jarvis 1.8.100–1.8.108** (eigener Code, Commits, Logcat-Messung
 > eines Live-Tests) mit eigener Belegkennzeichnung, Ursachen der Abhacker, bewährten Werten und Rückfall-Prüfung.
 >
@@ -35,6 +37,8 @@
 | 8 | Kosten | Live 0,05 USD/Min läuft auch bei Stille/Mute → `session.close` + auf `session.closed` warten; Realtime wächst überlinear mit der Gesprächslänge | §8, §9 |
 | 9 | Android-Audio | `VOICE_COMMUNICATION`, PCM16 mono 24 kHz, 100-ms-Blöcke (4.800 Byte), AEC prüfen, `setCommunicationDevice`, FGS-Typ `microphone` aus sichtbarer Activity | §11 |
 | 10 | Optionslisten | Stimmen/Effort/Backend-Modelle nicht fest verdrahten (SDK, Doku und Modellseiten weichen ab) | §13 |
+| 11 | Deutsche Stimme | Live: `nuri`, `juni` (w), `flitz` (m) sind offiziell Deutsch; es gibt kein Sprach-/Locale-Feld, Sprache hängt an der Stimme. ChatGPT-Namen (Miko, Sonna) sind **keine** API-IDs | §13 |
+| 12 | Neuestes Modell (28.10.2026) | API: weiter nur `gpt-live-1` und `gpt-realtime-2.1`/`-mini`; GPT-Live-1.1 nur in ChatGPT, für die API „coming soon“ | §2 |
 | 11 | API-Schlüssel | Standard-Key gehört auf einen Server; in einer verteilten App nur Ephemeral-Key — private Eigen-App mit eigenem Key ist bewusstes Restrisiko | §12 |
 | 12 | GPT-Live flüssig abspielen | Live liefert auch in Pausen Stille-Audio in Echtzeit → „spricht" nur per Pegel erkennen; Puffer wächst nie von selbst → Polster **in Pausen hinter Stille** aufbauen, Füll-Stille nur bei fast leerem Puffer, nie mitten in die Rede; Medienton statt Telefonmodus; Rückfall-Prüfung per Logcat-Tag `JarvisLiveRouting` | §14 |
 | 13 | Live vor Hintergrundarbeit | Ton-/Mikro-Faden `URGENT_AUDIO`, Socket-Lesefaden `AUDIO`; eigene Hinweise im Gespräch stumm (`GespraechsFokus.stilleHinweise`); nichts Blockierendes zwischen Füllstandsmessung und `write()` | §14.2 Nr. 9 |
@@ -55,6 +59,7 @@
 | Modell | Zweck | Status | Quelle |
 |---|---|---|---|
 | `gpt-live-1` | Live-Sprachmodell | GA seit 10.09.2026; einzige Live-Variante in der API (ein „GPT-Live-1 mini" existiert nur in ChatGPT laut Sekundärquellen) | [offiziell] https://developers.openai.com/api/docs/models/gpt-live-1 · https://developers.openai.com/api/docs/changelog |
+| (kein Nachfolger, Stand 28.10.2026) | — | Modellkatalog und Changelog nennen nur `gpt-live-1` (einziger Snapshot, Default); kein `gpt-live-1.1`, `-mini`, `-2` oder datierter Snapshot. GPT-Live-1.1 läuft seit 15.10.2026 nur in der ChatGPT-App, für die API laut OpenAI „coming soon“ ohne Datum. Seit GA nur Zubehör: Decisions-Delegation (15.10.), Prompt-to-Voice und 9 Sprachstimmen (16.10.) | [offiziell] https://developers.openai.com/api/docs/models · https://developers.openai.com/api/docs/changelog · [extern] all-ai.de, notebookcheck.net |
 | `gpt-realtime-2.1` | Realtime-Flaggschiff (Reasoning) | Release 06.07.2026; bessere Zahlen-/Buchstabenerkennung, Rausch-/Stille-Handling, Unterbrechungen | [offiziell] https://developers.openai.com/api/docs/models/gpt-realtime-2.1 |
 | `gpt-realtime-2.1-mini` | Realtime, günstig (Reasoning, destilliert) | Release 06.07.2026; OpenAI warnt: Instruktionstreue und Function Calling schwächer | [offiziell] https://developers.openai.com/api/docs/models/gpt-realtime-2.1-mini |
 | `gpt-realtime-2` | Vorgänger von 2.1 | Release 07.05.2026 | [offiziell] https://developers.openai.com/api/docs/models/gpt-realtime-2 |
@@ -260,7 +265,10 @@ Annahmen: 5 Min Nutzer, 5 Min Assistent, 20 Antworten, 10 Delegationen, 1.000 To
 
 ## 13. Optionskataloge in Apps (Einstellungen)
 
-- Stimmen: Live-Referenz listet 31 (alloy, ash, ballad, beacon, bossa, brise, cedar, cinder, coral, delta, echo, flitz, gleam, harema, juni, marin, meridian, nira, noeul, nuri, quartz, ripple, sage, shida, shimmer, sillage, stone, tempo, verse, vesper, willow), der Live-Guide beschreibt 12 mit Akzent (quartz en-AU w, ripple en-AU m, vesper en-GB m, willow en-IE w, stone en-IE m, gleam en-US w, meridian en-US m, bossa pt-BR w, tempo pt-BR m, beacon en-PH m, delta en-US-Süd w, cinder en-US-Süd m), das Python-SDK-Literal 23. Realtime: alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar (marin/cedar empfohlen). Kein Preisunterschied. [offiziell] https://developers.openai.com/api/reference/resources/live/primary-websocket · https://developers.openai.com/api/docs/guides/live-conversations · openai-python `types/live/built_in_voice.py`
+- Stimmen: Live-Referenz listet 31 (alloy, ash, ballad, beacon, bossa, brise, cedar, cinder, coral, delta, echo, flitz, gleam, harema, juni, marin, meridian, nira, noeul, nuri, quartz, ripple, sage, shida, shimmer, sillage, stone, tempo, verse, vesper, willow), der Live-Guide beschreibt 12 mit Akzent (quartz en-AU w, ripple en-AU m, vesper en-GB m, willow en-IE w, stone en-IE m, gleam en-US w, meridian en-US m, bossa pt-BR w, tempo pt-BR m, beacon en-PH m, delta en-US-Süd w, cinder en-US-Süd m), das Python-SDK-Literal 23. Realtime: alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar (marin/cedar empfohlen, ohne Sprachzuordnung). Kein Preisunterschied.
+- **Sprachstimmen (Changelog 16.10.2026, Live-Guide mit Spalte Sprache, Stand 28.10.2026):** Deutsch `nuri` (w), `juni` (w), `flitz` (m); Französisch `brise` (w), `sillage` (m); Hindi `nira` (w); Japanisch `harema` (w), `shida` (m); Koreanisch `noeul` (w). Kein `language`-/Locale-Feld: „The only voice parameter is `audio.output.voice`“; Zielsprache zusätzlich in `session.instructions` nennen. Gleichzeitig kam Prompt-to-Voice (eigene Stimme aus Textbeschreibung, `CustomVoice`). [offiziell] https://developers.openai.com/api/docs/guides/live-conversations · https://developers.openai.com/api/docs/changelog
+- **ChatGPT-App ≠ API:** Die App hat mit GPT-Live-1.1 (ab 15.10.2026) eigene Sprachstimmen, Deutsch „Sonna“ und „Miko“ (Einstellungen › Voice › German), dazu u. a. Aube/Rivage (fr), Himari/Rindō (ja). Diese Namen gibt es in der API nicht; nicht als voice-ID schicken. Ob sie klanglich `nuri`/`juni`/`flitz` entsprechen, ist unbelegt. [extern] all-ai.de · notebookcheck.net · skill-sprinters.de
+- In der App (Jarvis 1.8.385) die deutschen Stimmen oben listen und Sprache im Titel nennen; Standard `marin` nicht still umstellen (gespeicherte Auswahl bleibt gültig). [Schluss] [offiziell] https://developers.openai.com/api/reference/resources/live/primary-websocket · https://developers.openai.com/api/docs/guides/live-conversations · openai-python `types/live/built_in_voice.py`
 - Stimme, Effort (`max` fehlt im SDK), Backend-Modell und Service-Tier daher **konfigurierbar** halten (freier String), beim Start die aufgelöste Konfig aus `session.started` übernehmen und Fehler (`unknown_parameter`, `responses_validation_failed`) als „Option nicht verfügbar" anzeigen. Preise in der App mit Stand-Datum anzeigen. [Schluss aus offiziellen Abweichungen]
 - Realtime-`audio.output.speed` 0,25–1,5 (nur zwischen Antworten änderbar; schnelleres Sprechen klingt per Prompt natürlicher). [offiziell] openai-python `realtime_audio_config_output.py`
 
