@@ -126,15 +126,15 @@ struct OpenCodeSitzungAktualisierer: Aktualisierer {
 
     // MARK: - Intern
 
-    static func argumente(_ auftragsDatei: String) -> [String] {
-        ["--jarvis-auftrag", auftragsDatei, "--name", sitzungsName, "--profil", profil, "--modus", modus,
+    static func argumente(_ auftragsDatei: String, name: String = sitzungsName) -> [String] {
+        ["--jarvis-auftrag", auftragsDatei, "--name", name, "--profil", profil, "--modus", modus,
          "--modell", modell, "--effort", effort, "--ordner", Pfade.repoWurzel]
     }
 
     /// Startet den Launcher und liefert seinen Exit-Code (nil = keine Antwort binnen zwei Minuten).
     /// Bewusst OHNE umgeleitete Pipes: der Launcher oeffnet ein Terminal, das sie erben wuerde, und
     /// das Warten dauerte dann, bis diese Sitzung endet.
-    private static func launcherStarten(_ argumente: [String]) async -> Int32? {
+    static func launcherStarten(_ argumente: [String]) async -> Int32? {
         let umwelt = Kommandozeile.umgebung
         return await withCheckedContinuation { fortsetzung in
             DispatchQueue.global(qos: .userInitiated).async {

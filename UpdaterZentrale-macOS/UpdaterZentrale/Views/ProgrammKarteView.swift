@@ -36,6 +36,7 @@ final class ProgrammKarteView: KartenView {
     private let uebernahmeText: ThemedLabel
     private var uebernahmeStartenSchalter: Schalter?
     private let fehlerBand = FlaechenView(ton: .fehler, eckenRadius: 7)
+    private var claudeSchalter: Schalter?
     private let fehlerText: ThemedLabel
 
     // Bedienelemente
@@ -115,10 +116,14 @@ final class ProgrammKarteView: KartenView {
             ("Jetzt starten und übernehmen", #selector(startenGeklickt)),
             ("Protokoll öffnen", #selector(protokollGeklickt))
         ]).first
-        bandAufbauen(fehlerBand, text: fehlerText, schalter: [
+        let fehlerSchalter = bandAufbauen(fehlerBand, text: fehlerText, schalter: [
             ("Protokoll öffnen", #selector(protokollGeklickt)),
+            ("An Claude Code übergeben", #selector(claudeGeklickt)),
             ("Ausblenden", #selector(fehlerQuittierenGeklickt))
         ])
+        claudeSchalter = fehlerSchalter[1]
+        claudeSchalter?.toolTip = "Startet eine neue Claude-Code-Sitzung (Opus 5.5, Minimal, Schnellmodus, Effort High) "
+                                + "mit Problem und Protokoll, um es zu analysieren und zu lösen"
 
         let mitte = NSStackView(views: [
             plakettenReihe, beschreibungBeschriftung, hinweisBeschriftung,
@@ -252,6 +257,7 @@ final class ProgrammKarteView: KartenView {
         uebernahmeText.festeFarbe = satz.autostartText
 
         fehlerBand.isHidden = !modell.berichtIstFehler
+        claudeSchalter?.isEnabled = !modell.uebergibtAnClaude
         fehlerText.stringValue = modell.berichtGrund
         fehlerText.festeFarbe = satz.fehlerText
 
@@ -291,6 +297,10 @@ final class ProgrammKarteView: KartenView {
 
     @objc private func protokollGeklickt() {
         modell.protokollOeffnen()
+    }
+
+    @objc private func claudeGeklickt() {
+        Task { await modell.anClaudeUebergeben() }
     }
 
     /// Nimmt nur den Alarm von der Karte; Tagesprotokoll und Verlauf bleiben unveraendert.

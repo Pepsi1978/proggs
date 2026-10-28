@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 /// Kommandozeilen-Werkzeuge, die sich selbst aktualisieren ("claude update", "codex update",
 /// "lms runtime update"). 1:1-Port von Providers/CliAktualisierer.cs.
@@ -94,10 +95,22 @@ struct CliAktualisierer: Aktualisierer {
 
         // npm sucht seine Module relativ zum Arbeitsverzeichnis (MODULE_NOT_FOUND); der eigene
         // Ordner des Programms ist immer richtig und fuer jedes andere Werkzeug harmlos.
-        let lauf = await Kommandozeile.ausfuehren(exe, argumente,
+        var lauf = await Kommandozeile.ausfuehren(exe, argumente,
                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
                                                   arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent)
         protokoll.berichte(lauf.ausgabe)
+
+        // Das Werkzeug meldet, dass noch ein anderes Update laeuft. Nur fuer Werkzeuge, die sich
+        // selbst aktualisieren: ihre verwaisten Reste sind ein haengengebliebener frueherer Lauf.
+        if Self.istUpdateSperre(lauf),
+           Self.gleicheDatei(exe, Pfade.aufloesen(eintrag.exePfadWirksam)),
+           Self.verwaisteBeenden(exe, protokoll) > 0 {
+            protokoll.berichte("Neuer Versuch nach dem Beenden des hängengebliebenen Laufs …")
+            lauf = await Kommandozeile.ausfuehren(exe, argumente,
+                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                                  arbeitsverzeichnis: (exe as NSString).deletingLastPathComponent)
+            protokoll.berichte(lauf.ausgabe)
+        }
 
         if lauf.abgelaufen {
             return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
@@ -133,6 +146,64 @@ struct CliAktualisierer: Aktualisierer {
     }
 
     // MARK: - Intern
+
+    /// Ein Lauf, der abgewiesen wurde, weil noch ein anderes Update desselben Werkzeugs laeuft.
+    static func istUpdateSperre(_ lauf: BefehlErgebnis) -> Bool {
+        !lauf.abgelaufen && lauf.exitCode != 0 && lauf.ausgabe.localizedCaseInsensitiveContains("already in progress")
+    }
+
+    static func gleicheDatei(_ a: String, _ b: String) -> Bool {
+        !a.isEmpty && !b.isEmpty
+            && (a as NSString).resolvingSymlinksInPath == (b as NSString).resolvingSymlinksInPath
+    }
+
+    /// Beendet Reste eines frueheren Update-Laufs derselben Programmdatei. Ein haengengebliebener
+    /// Lauf (Antigravitys Download ohne Verbindung) ueberlebt die App, die ihn gestartet hat; er
+    /// haelt seine Update-Sperre offen, und jedes spaetere Update endet sofort mit "update already
+    /// in progress". Nur Waisen zaehlen (Elternprozess ist launchd): eine interaktive Sitzung hat
+    /// ihr Terminal als Elternteil und bleibt unberuehrt. Gerufen nur, nachdem das Werkzeug selbst
+    /// eine laufende Aktualisierung gemeldet hat.
+    /// - Returns: wie viele Reste beendet wurden.
+    static func verwaisteBeenden(_ exe: String, _ protokoll: Fortschritt) -> Int {
+        var beendet = 0
+        for pid in Prozessdienst.pidsFuer((exe as NSString).lastPathComponent) {
+            guard gleicheDatei(Prozessdienst.pfadVon(pid), exe),
+                  let info = bsdInfo(pid), info.pbi_ppid == 1 else { continue }
+            let start = Date(timeIntervalSince1970: TimeInterval(info.pbi_start_tvsec))
+            protokoll.berichte("Verwaister \((exe as NSString).lastPathComponent)-Prozess \(pid) (gestartet "
+                               + Formate.zeitpunkt(start) + ") hält das Update auf – wird beendet.")
+            // Auch die Nachfahren koennen die Sperre halten.
+            let baum = [pid] + nachfahren(pid)
+            for p in baum { kill(p, SIGKILL) }
+            let ende = Date().addingTimeInterval(5)
+            while Date() < ende && baum.contains(where: { kill($0, 0) == 0 }) { Thread.sleep(forTimeInterval: 0.1) }
+            beendet += 1
+        }
+        return beendet
+    }
+
+    private static func bsdInfo(_ pid: pid_t) -> proc_bsdinfo? {
+        var info = proc_bsdinfo()
+        let groesse = Int32(MemoryLayout<proc_bsdinfo>.size)
+        return proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, groesse) == groesse ? info : nil
+    }
+
+    private static func nachfahren(_ wurzel: pid_t) -> [pid_t] {
+        var pids = [pid_t](repeating: 0, count: 8192)
+        let anzahl = Int(proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size)))
+        let eltern = pids.prefix(max(0, anzahl)).compactMap { p -> (pid_t, pid_t)? in
+            guard p > 0, let info = bsdInfo(p) else { return nil }
+            return (p, pid_t(info.pbi_ppid))
+        }
+        var ergebnis: [pid_t] = []
+        var offen = [wurzel]
+        while let p = offen.popLast() {
+            let kinder = eltern.filter { $0.1 == p }.map { $0.0 }
+            ergebnis += kinder
+            offen += kinder
+        }
+        return ergebnis
+    }
 
     /// Das Programm fuer den Update-Lauf: `updateExePfad`, sonst dasselbe wie fuer die Version.
     static func updateExe(_ eintrag: ProgrammEintrag) -> String {

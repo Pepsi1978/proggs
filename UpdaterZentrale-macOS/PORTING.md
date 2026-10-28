@@ -318,3 +318,14 @@ Claude Code), jq (macOS bringt `/usr/bin/jq` mit, kein Homebrew-Paket), CMake (n
 Bionic, Kimi Desktop, .NET SDK 8, Python Launcher, Visual Studio 2026 / Build Tools, Windows SDK, WSL, Windows-Terminal,
 App Installer (winget), `zip-werkzeug.ps1` (Gradle, Kotlin und uv kommen hier aus Homebrew), winget-Abfrage-Cache und
 Hersteller-Installer bei falschem winget-Manifest.
+
+---
+
+## F) Windows-Gleichstand 1.3.44 (macOS 1.0.20, 28.10.2026)
+
+| Windows | macOS |
+|---|---|
+| 1.3.41/1.3.42 Knopf „An Claude Code übergeben“ im roten Fehlerband: Auftrag mit Problem und Protokollende (14 000 Zeichen) über den OpenLauncher-Start (`--jarvis-auftrag`, Opus 5.5, minimal, Schnellmodus, high), Exit-Code geprüft, Doppelklick gesperrt | ✅ `Services/ClaudeUebergabe.swift`, nutzt `OpenCodeSitzungAktualisierer.launcherStarten` |
+| 1.3.43/1.3.44 Meldet ein selbst-aktualisierendes CLI „already in progress“: verwaiste Reste derselben Programmdatei samt Nachfahren beenden, dann ein neuer Versuch | ✅ Waise = Elternprozess launchd (PID 1), Nachfahren über `proc_listallpids`, SIGKILL und bis 5 s warten |
+
+Nicht übernommen: der Umweg über eine `.cmd`-Datei für erhöhte Rechte – auf dem Mac läuft die App nie erhöht.

@@ -281,6 +281,23 @@ final class ProgrammViewModel {
         Protokollierung.dateiOeffnen(letzterBericht?.protokollDatei)
     }
 
+    /// Solange die Uebergabe laeuft, ist der Knopf gesperrt: ein Doppelklick startet eine Sitzung, nicht zwei.
+    private(set) var uebergibtAnClaude = false { didSet { melden() } }
+
+    /// Schickt den gescheiterten Lauf samt Protokoll an eine neue Claude-Code-Sitzung zum Analysieren und Beheben.
+    func anClaudeUebergeben() async {
+        guard !uebergibtAnClaude, let bericht = letzterBericht, bericht.istFehler else { return }
+        uebergibtAnClaude = true
+        defer { uebergibtAnClaude = false }
+        statusText = "Übergebe das Problem mit \(name) an Claude Code …"
+        if let problem = await ClaudeUebergabe.starten(eintrag, bericht) {
+            statusText = problem
+            beiMeldung?(problem)
+        } else {
+            statusText = "Problem mit \(name) an Claude Code übergeben – die Sitzung läuft im Terminal."
+        }
+    }
+
     func starten() {
         if !Prozessdienst.starten(eintrag) {
             beiMeldung?("Konnte nicht gestartet werden: \(eintrag.zielPfad)")

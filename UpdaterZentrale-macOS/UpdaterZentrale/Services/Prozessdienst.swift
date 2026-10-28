@@ -82,7 +82,7 @@ enum Prozessdienst {
     }
 
     /// `pgrep -x` findet exakt benannte Prozesse -- das Gegenstueck zu GetProcessesByName.
-    private static func pidsFuer(_ name: String) -> [pid_t] {
+    static func pidsFuer(_ name: String) -> [pid_t] {
         let rohr = Pipe()
         let prozess = Process()
         prozess.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
@@ -97,7 +97,7 @@ enum Prozessdienst {
     }
 
     /// Programmpfad einer PID. Gegenstueck zu Process.MainModule.FileName.
-    private static func pfadVon(_ pid: pid_t) -> String {
+    static func pfadVon(_ pid: pid_t) -> String {
         var puffer = [CChar](repeating: 0, count: Int(4 * MAXPATHLEN))
         let laenge = proc_pidpath(pid, &puffer, UInt32(puffer.count))
         guard laenge > 0 else { return "" }   // Kein Leserecht: gilt als "unbekannter Pfad".
