@@ -34,4 +34,12 @@ protocol Aktualisierer: Sendable {
     /// LM-Studio-Runtimes. Eine leere Rueckgabe heisst "nicht feststellbar" -- der Lauf gilt dann
     /// als nicht verifiziert statt als Erfolg.
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String
+
+    /// Laeuft VOR der Frage, ob das Programm beendet werden darf: laedt schon herunter, was ohne
+    /// Eingriff in die installierte App geht. So bleibt die App waehrend eines langen Downloads offen.
+    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async
+}
+
+extension Aktualisierer {
+    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async {}
 }

@@ -284,9 +284,15 @@ final class ProgrammViewModel {
     /// Solange die Uebergabe laeuft, ist der Knopf gesperrt: ein Doppelklick startet eine Sitzung, nicht zwei.
     private(set) var uebergibtAnClaude = false { didSet { melden() } }
 
-    /// Schickt den gescheiterten Lauf samt Protokoll an eine neue Claude-Code-Sitzung zum Analysieren und Beheben.
-    func anClaudeUebergeben() async {
+    /// Schickt den gescheiterten Lauf samt Protokoll an eine neue Claude-Code-Sitzung zum Analysieren,
+    /// Beheben und Vorbeugen. `automatisch`: direkt nach dem Fehler, ohne Klick -- dann hoechstens
+    /// eine Sitzung je Programm in `ClaudeUebergabe.sperrfrist`, damit ein Dauerfehler keine Kette startet.
+    func anClaudeUebergeben(automatisch: Bool = false) async {
         guard !uebergibtAnClaude, let bericht = letzterBericht, bericht.istFehler else { return }
+        if automatisch && !ClaudeUebergabe.automatischErlaubt(eintrag.id) {
+            Diagnose.ereignis(.info, "uebergabe", "auto.gesperrt", "Sperrfrist läuft", ["programm": eintrag.id])
+            return
+        }
         uebergibtAnClaude = true
         defer { uebergibtAnClaude = false }
         statusText = "Übergebe das Problem mit \(name) an Claude Code …"
@@ -294,7 +300,8 @@ final class ProgrammViewModel {
             statusText = problem
             beiMeldung?(problem)
         } else {
-            statusText = "Problem mit \(name) an Claude Code übergeben – die Sitzung läuft im Terminal."
+            statusText = (automatisch ? "Fehler automatisch" : "Problem mit \(name)")
+                + " an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor."
         }
     }
 
@@ -386,6 +393,10 @@ final class ProgrammViewModel {
             var liefVorher = false
 
             if urteil == nil {
+                if self.eintrag.beendenVorUpdate && Prozessdienst.laeuft(self.eintrag) {
+                    self.statusText = "Lädt das Update vorab herunter, \(self.name) bleibt offen …"
+                    await aktualisierer.vorbereiten(self.eintrag, fortschritt)
+                }
                 liefVorher = Prozessdienst.laeuft(self.eintrag)
 
                 // Installer haengen still, solange das Programm laeuft -- deshalb gehen die Helfer
@@ -453,6 +464,7 @@ final class ProgrammViewModel {
             fortschritt.berichte(Self.abschlussZeile(bericht) + "  (Dauer " + Protokollierung.dauerText(dauer) + ")")
             Protokollierung.laufBeenden(&bericht)
             self.letzterBericht = bericht
+            if bericht.istFehler { Task { await self.anClaudeUebergeben(automatisch: true) } }
             if bericht.ergebnis == .erfolgreich || bericht.ergebnis == .ausstehend,
                let messwert = Protokollierung.messwert(bericht) {
                 self.dauernSetzen(self.dauern + [messwert])

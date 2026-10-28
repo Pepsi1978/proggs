@@ -109,6 +109,37 @@ struct BrewAktualisierer: Aktualisierer {
 
     // MARK: - Aktualisieren
 
+    /// Groesse des Homebrew-Download-Ordners: waechst, solange ein Download laeuft, auch wenn brew
+    /// ohne Terminal keinen Fortschritt ausgibt. Lebenszeichen fuer die Ruhezeit der Kommandozeile.
+    static let downloadGroesse: @Sendable () -> Int64 = {
+        let cache = ProcessInfo.processInfo.environment["HOMEBREW_CACHE"]
+            ?? (NSHomeDirectory() as NSString).appendingPathComponent("Library/Caches/Homebrew")
+        let ordner = (cache as NSString).appendingPathComponent("downloads")
+        let dateien = (try? FileManager.default.contentsOfDirectory(atPath: ordner)) ?? []
+        return dateien.reduce(Int64(0)) { summe, name in
+            let werte = try? FileManager.default.attributesOfItem(atPath: (ordner as NSString).appendingPathComponent(name))
+            return summe + ((werte?[.size] as? NSNumber)?.int64Value ?? 0)
+        }
+    }
+
+    /// Casks vorab laden (`brew fetch` laesst die installierte App unangetastet), damit das Beenden
+    /// erst nach dem Download kommt und `brew upgrade` danach aus dem Cache installiert.
+    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async {
+        guard eintrag.formel?.istLeer ?? true, let cask = eintrag.cask, !cask.istLeer,
+              FileManager.default.isExecutableFile(atPath: Pfade.brew) else { return }
+        protokoll.berichte("brew update --quiet")
+        let auffrischen = await Kommandozeile.ausfuehren(Pfade.brew, ["update", "--quiet"], zeitlimit: 300)
+        if !auffrischen.ausgabe.istLeer { protokoll.berichte(auffrischen.ausgabe) }
+        protokoll.berichte("brew fetch --cask \(cask)  (Download vorab, das Programm bleibt offen)")
+        let laden = await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask],
+                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                                   lebenszeichen: Self.downloadGroesse)
+        if !laden.ausgabe.istLeer { protokoll.berichte(laden.ausgabe) }
+        if laden.abgelaufen || laden.exitCode != 0 {
+            protokoll.berichte("Vorab-Download nicht fertig – das Update lädt beim Installieren erneut.")
+        }
+    }
+
     func aktualisieren(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
         let ergebnis = await aktualisierenOhneNacharbeit(eintrag, protokoll)
         // Auch nach einem Fehler: `brew upgrade X` kann openjdk als Abhaengigkeit schon erneuert haben.
@@ -166,7 +197,8 @@ struct BrewAktualisierer: Aktualisierer {
 
         protokoll.berichte("brew " + argumente.joined(separator: " "))
         let lauf = await Kommandozeile.ausfuehren(
-            Pfade.brew, argumente, zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60))
+            Pfade.brew, argumente, zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+            lebenszeichen: Self.downloadGroesse)
         protokoll.berichte(lauf.ausgabe)
 
         if lauf.abgelaufen {
@@ -269,7 +301,8 @@ struct BrewAktualisierer: Aktualisierer {
 
         protokoll.berichte("brew upgrade \(formel)")
         let lauf = await Kommandozeile.ausfuehren(Pfade.brew, ["upgrade", formel],
-                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60))
+                                                  zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
+                                                  lebenszeichen: Self.downloadGroesse)
         protokoll.berichte(lauf.ausgabe)
 
         if lauf.abgelaufen {
@@ -365,7 +398,8 @@ struct BrewAktualisierer: Aktualisierer {
 
         let zeitlimit = TimeInterval(eintrag.zeitlimitMinuten * 60)
         protokoll.berichte("brew fetch --cask \(cask)")
-        let laden = await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask], zeitlimit: zeitlimit)
+        let laden = await Kommandozeile.ausfuehren(Pfade.brew, ["fetch", "--cask", cask], zeitlimit: zeitlimit,
+                                                   lebenszeichen: Self.downloadGroesse)
         protokoll.berichte(laden.ausgabe)
         if laden.abgelaufen {
             return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit beim Herunterladen überschritten.",

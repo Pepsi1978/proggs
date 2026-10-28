@@ -116,17 +116,25 @@ enum Kommandozeile {
 
     /// Fuehrt ein Programm mit bereits zerlegten Argumenten aus -- der sichere Weg, wenn ein
     /// Argument Leerzeichen enthaelt (Pfade wie "/Applications/LM Studio.app").
+    ///
+    /// Mit `lebenszeichen` ist `zeitlimit` eine Ruhezeit: abgebrochen wird erst, wenn so lange weder
+    /// Ausgabe kam noch sich der Wert von `lebenszeichen` geaendert hat (etwa die Groesse eines
+    /// Download-Ordners) -- ein langsamer, aber laufender Download wird so nie abgewuergt, ein
+    /// haengender schon. Hoechstens `hoechstdauer` insgesamt.
     static func ausfuehren(_ datei: String,
                            _ argumente: [String],
                            zeitlimit: TimeInterval,
-                           arbeitsverzeichnis: String? = nil) async -> BefehlErgebnis {
+                           arbeitsverzeichnis: String? = nil,
+                           lebenszeichen: (@Sendable () -> Int64)? = nil,
+                           hoechstdauer: TimeInterval = 8 * 3600) async -> BefehlErgebnis {
         let umwelt = umgebung
         return await withCheckedContinuation { fortsetzung in
             // Eigener Thread: Process blockiert, und der MainActor darf dabei nie stehenbleiben.
             DispatchQueue.global(qos: .userInitiated).async {
                 let ergebnis = ausfuehrenBlockierend(datei, argumente, zeitlimit: zeitlimit,
                                                      arbeitsverzeichnis: arbeitsverzeichnis,
-                                                     umwelt: umwelt)
+                                                     umwelt: umwelt, lebenszeichen: lebenszeichen,
+                                                     hoechstdauer: hoechstdauer)
                 fortsetzung.resume(returning: ergebnis)
             }
         }
@@ -136,7 +144,9 @@ enum Kommandozeile {
                                               _ argumente: [String],
                                               zeitlimit: TimeInterval,
                                               arbeitsverzeichnis: String?,
-                                              umwelt: [String: String]) -> BefehlErgebnis {
+                                              umwelt: [String: String],
+                                              lebenszeichen: (@Sendable () -> Int64)? = nil,
+                                              hoechstdauer: TimeInterval = 8 * 3600) -> BefehlErgebnis {
         guard FileManager.default.isExecutableFile(atPath: datei) else {
             return BefehlErgebnis(exitCode: -1,
                                   ausgabe: "Start fehlgeschlagen: \((datei as NSString).lastPathComponent) wurde nicht gefunden (\(datei)).",
@@ -186,9 +196,28 @@ enum Kommandozeile {
 
         var abgelaufen = false
         if zeitlimit > 0 {
-            let ende = Date().addingTimeInterval(zeitlimit)
-            while prozess.isRunning && Date() < ende {
-                Thread.sleep(forTimeInterval: 0.05)
+            var ende = Date().addingTimeInterval(zeitlimit)
+            if let lebenszeichen {
+                let deckel = Date().addingTimeInterval(max(zeitlimit, hoechstdauer))
+                var letztesZeichen = lebenszeichen()
+                var letzteMenge = 0
+                var naechstePruefung = Date().addingTimeInterval(5)
+                while prozess.isRunning && Date() < ende && Date() < deckel {
+                    Thread.sleep(forTimeInterval: 0.05)
+                    guard Date() >= naechstePruefung else { continue }
+                    naechstePruefung = Date().addingTimeInterval(5)
+                    let zeichen = lebenszeichen()
+                    let menge = schleuse.sync { ausgabeDaten.count + fehlerDaten.count }
+                    if zeichen != letztesZeichen || menge != letzteMenge {
+                        letztesZeichen = zeichen
+                        letzteMenge = menge
+                        ende = Date().addingTimeInterval(zeitlimit)
+                    }
+                }
+            } else {
+                while prozess.isRunning && Date() < ende {
+                    Thread.sleep(forTimeInterval: 0.05)
+                }
             }
             if prozess.isRunning {
                 // Erst freundlich, dann hart -- ein haengender Installer soll die App nicht binden.

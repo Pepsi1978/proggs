@@ -10,6 +10,17 @@ enum ClaudeUebergabe {
     /// Protokolls bleibt deshalb kurz; das volle Protokoll steht per Pfad im Auftrag.
     private static let protokollZeichen = 14000
 
+    /// Automatische Uebergaben je Programm hoechstens einmal in dieser Frist (Klick geht immer).
+    static let sperrfrist: TimeInterval = 6 * 3600
+    @MainActor private static var letzteAutomatische: [String: Date] = [:]
+
+    /// Merkt die Uebergabe gleich vor, damit ein zweiter Fehler im selben Sammellauf keine zweite Sitzung startet.
+    @MainActor static func automatischErlaubt(_ id: String) -> Bool {
+        if let zuletzt = letzteAutomatische[id], Date().timeIntervalSince(zuletzt) < sperrfrist { return false }
+        letzteAutomatische[id] = Date()
+        return true
+    }
+
     /// Nil bei Erfolg, sonst warum keine Sitzung gestartet wurde.
     static func starten(_ eintrag: ProgrammEintrag, _ bericht: UpdateBericht) async -> String? {
         let launcher = OpenCodeSitzungAktualisierer.launcherExe
@@ -43,6 +54,12 @@ enum ClaudeUebergabe {
         var t = "Auftrag von der Updater-Zentrale (macOS): Ein Update ist fehlgeschlagen. Analysiere die Ursache und behebe das Problem.\n"
         t += "Das kann am Update-Weg der Updater-Zentrale liegen (" + Pfade.projektOrdner
            + ", Katalog programs.json) oder am Programm bzw. dessen Update-Skript selbst.\n\n"
+        t += "Gehe so vor:\n"
+        t += "1. Finde die Ursache im Protokoll unten (bei Bedarf in den Protokolldateien).\n"
+        t += "2. Bring das Update zu Ende. Nutze schon geladene Downloads im Homebrew- bzw. Paket-Cache und lade große Dateien nicht unnötig erneut.\n"
+        t += "3. Sorge dafür, dass dieser Fehler nicht wieder auftritt: Bau die Vorbeugung dauerhaft in die Updater-Zentrale ein "
+           + "(programs.json, Update-Weg im Code oder das Update-Skript des Programms), möglichst für die ganze Fehlerart, nicht nur für diesen einen Fall.\n"
+        t += "4. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter ~/proggs/bugs fest, damit die Updater-Zentrale aus jedem Fehler lernt.\n\n"
         t += "Programm: \(bericht.name) (Id \(eintrag.id), Art \(eintrag.art))\n"
         t += "Zeitpunkt: \(zeit.string(from: bericht.zeit))\n"
         t += "Ergebnis: \(bericht.ergebnisText), Exit-Code \(bericht.exitCode)\n"
