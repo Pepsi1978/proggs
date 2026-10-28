@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verbindet das Android-Handy per WLAN mit adb – mit Kabel und ohne.
 # Reihenfolge: schon verbunden und antwortet? -> mDNS (findet das Handy in jedem Netz, auch nach IP-Wechsel)
-# -> zuletzt bekannte IP -> WireGuard-Tunnel (Handy unterwegs im Mobilnetz) -> Kabel (schaltet WLAN-Debugging + Port 5555 ein).
+# -> zuletzt bekannte IP -> WireGuard-Tunnel (fragt dort die aktuelle WLAN-IP ab und verbindet direkt, sonst bleibt der Tunnel) -> Kabel (schaltet WLAN-Debugging + Port 5555 ein).
 # Gleicher Stand wie adb-wlan.ps1; nur die Direktverbindung über den PC-Hotspot (Schritt 6) gibt es am Mac nicht.
 # Ohne Kabel wird nach einem Handy-Neustart Port 5555 über "Debugging über WLAN" (TLS) wiederhergestellt.
 # Gebunden an die Seriennummer des Handys (gemerkt bei Kabelverbindung): fremde Geräte werden nie angesprochen.
@@ -124,6 +124,20 @@ mdns_verbinden() {
   return 1
 }
 
+# Über den Tunnel verbunden: das Handy nach seiner aktuellen WLAN-Adresse fragen und direkt verbinden.
+# Hilft, wenn das Netz (z. B. ein Hotspot) eine neue Adresse vergeben hat und mDNS sie nicht liefert. 0 = direkt verbunden.
+tunnel_umsteigen() {
+  local ip
+  ip=$(adbzeit 8 -s "$TUNNEL_IP:$PORT" shell ip -f inet addr show wlan0 | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)
+  [ -z "$ip" ] && return 1
+  melde "Handy meldet über den Tunnel die WLAN-Adresse $ip – versuche direkt"
+  verbinde "$ip:$PORT" || return 1
+  merke_ip "$ip"
+  adb disconnect "$TUNNEL_IP:$PORT" >/dev/null 2>&1
+  melde "Direkt per WLAN verbunden ($ip) – Tunnelverbindung getrennt"
+  return 0
+}
+
 # Parallele Aufrufe nicht gegeneinander laufen lassen
 LOCK="${TMPDIR:-/tmp}/adb-wlan.lock"
 for _ in $(seq 1 90); do mkdir "$LOCK" 2>/dev/null && break; sleep 1; done
@@ -171,6 +185,8 @@ for RUNDE in 1 2; do
       if mdns_verbinden; then
         adb disconnect "$TUNNEL_IP:$PORT" >/dev/null 2>&1
         melde "Handy wieder im WLAN erreichbar – Tunnelverbindung getrennt"
+      else
+        tunnel_umsteigen
       fi
       break
     fi
@@ -189,7 +205,12 @@ for RUNDE in 1 2; do
 
   # 3b. WireGuard-Tunnel (Second-Brain-Netz über den VPS): Handy unterwegs im Mobilnetz.
   #     Braucht WireGuard an auf Mac und Handy und Port 5555 (seit dem letzten Handy-Neustart).
-  if [ -n "$TUNNEL_IP" ] && verbinde "$TUNNEL_IP:$PORT"; then melde "Verbunden über WireGuard-Tunnel $TUNNEL_IP:$PORT"; break; fi
+  #     Danach nach der aktuellen WLAN-Adresse fragen: Ist das Handy im selben Netz, geht es direkt weiter (viel schneller).
+  if [ -n "$TUNNEL_IP" ] && verbinde "$TUNNEL_IP:$PORT"; then
+    melde "Verbunden über WireGuard-Tunnel $TUNNEL_IP:$PORT"
+    tunnel_umsteigen
+    break
+  fi
 
   # 4. Kabel
   USB=$(usb_geraet)

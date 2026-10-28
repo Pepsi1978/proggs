@@ -1,6 +1,7 @@
 ﻿# Verbindet das Android-Handy per WLAN mit adb – mit Kabel und ohne.
 # Reihenfolge: schon verbunden und antwortet? -> mDNS (findet das Handy in jedem Netz, auch nach IP-Wechsel)
-# -> zuletzt bekannte IP -> Kabel (schaltet WLAN-Debugging + Port 5555 ein).
+# -> zuletzt bekannte IP -> WireGuard-Tunnel (fragt dort die aktuelle WLAN-IP ab und verbindet direkt, sonst bleibt der Tunnel)
+# -> Kabel (schaltet WLAN-Debugging + Port 5555 ein).
 # Ohne Kabel wird nach einem Handy-Neustart Port 5555 über "Debugging über WLAN" (TLS) wiederhergestellt.
 # Gebunden an die Seriennummer des Handys (gemerkt bei Kabelverbindung): fremde Geräte im selben
 # Netz werden nie angesprochen.
@@ -319,6 +320,20 @@ function Direktverbindung {
 
 function Merke-Ip($ip) { if ($ip) { Set-Content -Path $State -Value $ip -Encoding ascii } }
 
+# Über den Tunnel verbunden: das Handy nach seiner aktuellen WLAN-Adresse fragen und direkt verbinden.
+# Hilft, wenn das Netz (z. B. ein Hotspot) eine neue Adresse vergeben hat und mDNS sie nicht liefert.
+function Tunnel-Umsteigen {
+    $line = (AdbZeit "-s ${TunnelIp}:$Port shell ip -f inet addr show wlan0") | Select-String "inet (\d+\.\d+\.\d+\.\d+)"
+    if (-not $line) { return $false }
+    $ip = $line.Matches[0].Groups[1].Value
+    Melde "Handy meldet über den Tunnel die WLAN-Adresse $ip – versuche direkt"
+    if (-not (Verbinde "${ip}:$Port")) { return $false }
+    Merke-Ip $ip
+    & $Adb disconnect "${TunnelIp}:$Port" 2>&1 | Out-Null
+    Melde "Direkt per WLAN verbunden ($ip) – Tunnelverbindung getrennt"
+    return $true
+}
+
 function Stabilisiere($tlsSerial, $ip) {
     # Nur TLS erreichbar (z. B. nach Handy-Neustart): Port 5555 ohne Kabel zurückholen.
     Melde "Nur WLAN-Debugging (TLS) erreichbar – stelle Port $Port wieder her"
@@ -377,6 +392,8 @@ try {
                 if (Mdns-Verbinden) {
                     & $Adb disconnect "${TunnelIp}:$Port" 2>&1 | Out-Null
                     Melde "Handy wieder im WLAN erreichbar – Tunnelverbindung getrennt"
+                } else {
+                    Tunnel-Umsteigen | Out-Null
                 }
                 break
             }
@@ -396,7 +413,12 @@ try {
 
         # 3b. WireGuard-Tunnel (Second-Brain-Netz über den VPS): Handy unterwegs im Mobilnetz.
         #     Braucht WireGuard an auf PC und Handy und Port 5555 (seit dem letzten Handy-Neustart).
-        if ($TunnelIp -and (Verbinde "${TunnelIp}:$Port")) { Melde "Verbunden über WireGuard-Tunnel ${TunnelIp}:$Port"; break }
+        #     Danach nach der aktuellen WLAN-Adresse fragen: Ist das Handy im selben Netz, geht es direkt weiter (viel schneller).
+        if ($TunnelIp -and (Verbinde "${TunnelIp}:$Port")) {
+            Melde "Verbunden über WireGuard-Tunnel ${TunnelIp}:$Port"
+            Tunnel-Umsteigen | Out-Null
+            break
+        }
 
         # 4. Kabel: WLAN-IP holen, Port 5555 einschalten
         $usb = Usb-Geraet
