@@ -677,6 +677,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             var urteil = UpdateKette.BereitsAktuell(vorher, vorPruefung);
             var liefVorher = false;
+            var ganzVorher = Programmpruefung.Vollstaendig(Eintrag);
 
             if (urteil is null)
             {
@@ -716,6 +717,20 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 }
 
                 urteil ??= await kette.AusfuehrenAsync(vorher, vorPruefung, abbruch);
+            }
+
+            // Ein abgebrochenes oder gescheitertes Update kann die Programmdatei halb ersetzt zuruecklassen.
+            // Das muss als eigener Befund sichtbar werden, nicht nur als "Zeitlimit".
+            if (ganzVorher is null && urteil.Ergebnis != LaufErgebnis.Erfolgreich
+                && Programmpruefung.Vollstaendig(Eintrag) is { } fehlt)
+            {
+                fortschritt.Report("⚠ " + fehlt);
+                urteil = urteil with
+                {
+                    Ergebnis = LaufErgebnis.Fehlgeschlagen,
+                    Meldung = fehlt + " Vorheriger Befund: " + urteil.Meldung,
+                    FuerKarte = urteil.FuerKarte with { Zustand = UpdateZustand.Fehler }
+                };
             }
 
             // Restart once, after the whole chain -- never between passes, where a running target
