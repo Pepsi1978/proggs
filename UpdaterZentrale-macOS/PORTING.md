@@ -326,6 +326,6 @@ Hersteller-Installer bei falschem winget-Manifest.
 | Windows | macOS |
 |---|---|
 | 1.3.41/1.3.42 Knopf „An Claude Code übergeben“ im roten Fehlerband: Auftrag mit Problem und Protokollende (14 000 Zeichen) über den OpenLauncher-Start (macOS: nur die Zeilen dieses Programms aus dem Tagesprotokoll; `--jarvis-auftrag`, Opus 5.5, minimal, Schnellmodus, high), Exit-Code geprüft, Doppelklick gesperrt | ✅ `Services/ClaudeUebergabe.swift`, nutzt `OpenCodeSitzungAktualisierer.launcherStarten` |
-| 1.3.43/1.3.44 Meldet ein selbst-aktualisierendes CLI „already in progress“: verwaiste Reste derselben Programmdatei samt Nachfahren beenden, dann ein neuer Versuch | ✅ Waise = Elternprozess launchd (PID 1) und mindestens 2 min alt, Suche über den Programmpfad aller Prozesse (nicht pgrep, Claudes Installer heißt „2.1.x“), Nachfahren über `Kommandozeile.prozessbaum`, SIGTERM dann SIGKILL, gezählt nur, was wirklich endete (1.0.21) |
+| 1.3.43/1.3.44 Meldet ein selbst-aktualisierendes CLI „already in progress“: verwaiste Reste derselben Programmdatei samt Nachfahren beenden, dann ein neuer Versuch | ✅ Waise = Elternprozess launchd (PID 1) und mindestens 2 min alt, Suche über den Programmpfad aller Prozesse (nicht pgrep, Claudes Installer heißt „2.1.x“), Nachfahren über `Kommandozeile.prozessbaum`, SIGTERM dann SIGKILL, gezählt nur, was wirklich endete (1.0.22) |
 
 Nicht übernommen: der Umweg über eine `.cmd`-Datei für erhöhte Rechte – auf dem Mac läuft die App nie erhöht.
