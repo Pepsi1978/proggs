@@ -125,9 +125,42 @@ fun SpracheEinstellungen(vm: AppViewModel) {
     stand.let { }
 
     Bereich("Spracheingabe") {
-        val eingerichtet = s.groqApiKey.isNotBlank()
-        Zeile("Mikrofon", if (eingerichtet) "Eingerichtet" else "Groq-Schlüssel fehlt", if (eingerichtet) f.erfolg else f.textLeise)
-        Text("Das Mikrofon in der Eingabeblase schreibt mit Groq (${s.whisperModell}${if (s.whisperModell == de.frank.module.transkriptionsmodul.GroqTranscriber.MODELL_LARGE_V3 && de.frank.module.transkriptionsmodul.GroqTranscriber.largeV3Gesperrt()) ", derzeit Turbo – Large V3 gesperrt" else ""}) mit und setzt den Text ins Feld. Jedes weitere Diktat kommt hinten dran; gesendet wird mit dem Pfeil. „Hey Jarvis“ sendet weiter direkt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        val pl = de.frank.jarvis.speech.ParakeetLokal
+        val lokal = s.transkriptionLokal
+        val modellDa = pl.bereit(vm.getApplication())
+        val eingerichtet = if (lokal) modellDa else s.groqApiKey.isNotBlank()
+        Zeile("Mikrofon", if (eingerichtet) (if (lokal) "Offline eingerichtet" else "Eingerichtet") else if (lokal) "Offline-Modell fehlt" else "Groq-Schlüssel fehlt", if (eingerichtet) f.erfolg else f.textLeise)
+        Unterzeile("Transkription")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("Groq Whisper (online)", aktiv = !lokal) { geaendert { vm.transkriptionLokalSetzen(false) } }
+            Chip("Parakeet primeline (offline)", aktiv = lokal) { geaendert { vm.transkriptionLokalSetzen(true) } }
+        }
+        if (lokal) {
+            Text("Deutsches Diktat ganz auf dem Handy: parakeet-primeline (deutscher Fine-Tune von NVIDIA Parakeet TDT 0.6B v3, int8, sherpa-onnx, nur CPU mit 4 Threads). " +
+                "Nach dem einmaligen Download kein Internet, keine Cloud, kein Schlüssel, auch im Flugmodus. Fehlt das Modell, gibt es eine Meldung, nie einen Rückfall auf Groq. " +
+                "Wörterbuch und Whisper-Filter gelten nur für Groq; „Stille vorab“ wirkt auch hier.",
+                color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            val mb = { b: Long -> "${b / 1_048_576} MB" }
+            val laeuft = vm.parakeetDownload
+            Zeile("Modell", when {
+                laeuft != null -> "Lädt … ${(laeuft * 100).toInt()} %"
+                modellDa -> "Bereit, ${mb(pl.belegteBytes(vm.getApplication()))} belegt"
+                else -> "Nicht geladen (${mb(pl.GESAMT_BYTES)})"
+            }, if (modellDa) f.erfolg else f.textLeise)
+            pl.messung?.let { m ->
+                val zeilen = buildList {
+                    add("Laden und Aufwärmen: ${"%.1f".format(m.ladeMs / 1000.0)} s, Arbeitsspeicher etwa ${m.ramMb} MB")
+                    if (m.audioMs > 0) add("Letzte Mitschrift: ${"%.1f".format(m.audioMs / 1000.0)} s Aufnahme in ${"%.2f".format(m.rechenMs / 1000.0)} s gerechnet")
+                }
+                Text("Gemessen auf diesem Handy: " + zeilen.joinToString("; ") + ".", color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+            when {
+                laeuft != null -> Unit
+                !modellDa -> Knopf("Modell herunterladen (${mb(pl.GESAMT_BYTES)}, einmalig)", Modifier.padding(top = 10.dp).fillMaxWidth()) { geaendert { vm.parakeetHerunterladen() } }
+                else -> Knopf("Modell löschen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { geaendert { vm.parakeetLoeschen() } }
+            }
+        }
+        if (!lokal) Text("Das Mikrofon in der Eingabeblase schreibt mit Groq (${s.whisperModell}${if (s.whisperModell == de.frank.module.transkriptionsmodul.GroqTranscriber.MODELL_LARGE_V3 && de.frank.module.transkriptionsmodul.GroqTranscriber.largeV3Gesperrt()) ", derzeit Turbo – Large V3 gesperrt" else ""}) mit und setzt den Text ins Feld. Jedes weitere Diktat kommt hinten dran; gesendet wird mit dem Pfeil. „Hey Jarvis“ sendet weiter direkt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         var groq by rememberSaveable { mutableStateOf(s.groqApiKey) }
         Unterzeile("Groq-Schlüssel")
         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -259,6 +259,11 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.WHISPER_MODEL, de.frank.module.transkriptionsmodul.GroqTranscriber.MODELL_TURBO)
         set(value) = writeString(Keys.WHISPER_MODEL, value)
 
+    /** Spracheingabe offline auf dem Handy (parakeet-primeline) statt online mit Groq. */
+    var transkriptionLokal: Boolean
+        get() = readFlag(Keys.TRANSCRIPTION_LOCAL, false)
+        set(value) = writeFlag(Keys.TRANSCRIPTION_LOCAL, value)
+
     /** Persönliches Wörterbuch als Whisper-Prompt mitsenden. */
     var woerterbuchAn: Boolean
         get() = readFlag(Keys.VOCABULARY_ENABLED, true)
@@ -384,6 +389,7 @@ class SecureSettings(context: Context) : Closeable {
         const val FILTER_TIMESTAMPS = "filter_timestamps"
         const val FILTER_PHRASES = "filter_phrases"
         const val WHISPER_MODEL = "whisper_model"
+        const val TRANSCRIPTION_LOCAL = "transcription_local"
         const val VOCABULARY_ENABLED = "vocabulary_enabled"
         const val VOCABULARY_TERMS = "vocabulary_terms"
         const val GEMINI_API_KEY = "gemini_api_key"

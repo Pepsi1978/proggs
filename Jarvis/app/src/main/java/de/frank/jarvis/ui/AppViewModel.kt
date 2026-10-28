@@ -1001,7 +1001,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         when {
             schreibtMit -> Unit
             nimmtAuf -> aufnahmeBeenden()
-            sprache.groqApiKey.isBlank() -> { meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel eintragen."; reiter = Reiter.EINSTELLUNGEN }
+            transkriptionFehlt() != null -> { meldung = transkriptionFehlt(); reiter = Reiter.EINSTELLUNGEN }
             else -> {
                 // Der erkannte Text klappt die Blase auf, damit Frank ihn gleich sieht (ohne Tastatur).
                 diktatZiel = { t -> entwurf = DiktatTrenner.anhaengen(entwurf, t); entwurfDiktiert = true; eingabeKompakt = false }
@@ -1402,7 +1402,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             !de.frank.jarvis.MainActivity.sichtbar && !de.frank.jarvis.weckwort.WeckwortDienst.imVordergrund ->
                 "Wenn du weiterreden willst, öffne Jarvis. Ohne Hey Jarvis darf ich das Mikrofon im Hintergrund nicht von selbst öffnen."
             z.modus == SprachModus.LIVE && liveWiederTauglich() -> null
-            sprache.groqApiKey.isBlank() || !modellBereit -> "Zum Weiterreden öffne Jarvis."
+            transkriptionFehlt() != null || !modellBereit -> "Zum Weiterreden öffne Jarvis."
             else -> null
         }
     }
@@ -1551,7 +1551,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         when {
             schreibtMit -> Unit
             nimmtAuf -> aufnahmeBeenden()
-            sprache.groqApiKey.isBlank() -> meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."
+            transkriptionFehlt() != null -> meldung = transkriptionFehlt()
             else -> { diktatZiel = liste::neu; mikrofonAnfragen() }
         }
     }
@@ -1607,7 +1607,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         when {
             schreibtMit || promptFormuliert -> Unit
             nimmtAuf -> aufnahmeBeenden()
-            sprache.groqApiKey.isBlank() -> meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."
+            transkriptionFehlt() != null -> meldung = transkriptionFehlt()
             else -> {
                 // Das Diktat gehört in die Eingabe, in der es begonnen hat, auch wenn das Fenster inzwischen gewechselt hat.
                 val ziel = promptBearbeitet?.erstellt
@@ -1791,7 +1791,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
         // Während des Wartens von Hand die Session gewechselt: Diese Aufnahme gehört zur alten und startet nicht mehr.
         if (stand != wechselStand) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return false }
-        if (mikro.start(viewModelScope)) { nimmtAuf = true; aufnahmeStand = stand; return true }
+        if (mikro.start(viewModelScope)) {
+            nimmtAuf = true; aufnahmeStand = stand
+            // Offline: Das Modell lädt, während Frank spricht, statt danach.
+            if (sprache.transkriptionLokal) viewModelScope.launch(Dispatchers.Default) { de.frank.jarvis.speech.ParakeetLokal.vorwaermen(getApplication()) }
+            return true
+        }
         de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         return false
     }
@@ -1914,7 +1919,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         de.frank.jarvis.weckwort.Weckwort.uebernommen()
         val grund = when {
             nimmtAuf || schreibtMit || holtMikro -> ""
-            sprache.groqApiKey.isBlank() -> "Für „Hey Jarvis“ bitte zuerst den Groq-Schlüssel eintragen."
+            transkriptionFehlt() != null -> if (sprache.transkriptionLokal) "Für „Hey Jarvis“ bitte zuerst das Offline-Modell herunterladen." else "Für „Hey Jarvis“ bitte zuerst den Groq-Schlüssel eintragen."
             !modellBereit -> "Für „Hey Jarvis“ bitte zuerst ${zuerstVerbinden()}."
             else -> null
         }
@@ -2087,8 +2092,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val beginn = System.currentTimeMillis()
-                val groq = transkribierer()
-                val text = withContext(Dispatchers.IO) { de.frank.module.transkriptionsmodul.TranskriptionAnbindung.diktat(groq).transkribiere(wav, stimmhaft).text.trim() }
+                // Offline gewählt: nur auf dem Handy, nie still über Groq; fehlt das Modell, kommt ein Fehler.
+                val text = if (sprache.transkriptionLokal) {
+                    de.frank.jarvis.speech.ParakeetLokal.transkribiere(getApplication(), wav, stimmhaft, sprache.filterStilleVorabAn).trim()
+                } else {
+                    val groq = transkribierer()
+                    withContext(Dispatchers.IO) { de.frank.module.transkriptionsmodul.TranskriptionAnbindung.diktat(groq).transkribiere(wav, stimmhaft).text.trim() }
+                }
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
                 // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
                 if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", "Session von Hand gewechselt"); return@launch }
@@ -2116,6 +2126,52 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 schreibtMit = false
                 feldMitschrift = false
             }
+        }
+    }
+
+    /** Warum das Mikrofon nicht mitschreiben kann; null = bereit. Offline braucht es das Modell, online den Groq-Schlüssel. */
+    fun transkriptionFehlt(): String? = when {
+        sprache.transkriptionLokal ->
+            if (de.frank.jarvis.speech.ParakeetLokal.bereit(getApplication())) null
+            else "Für das Offline-Diktat bitte zuerst das Modell unter Einstellungen → Sprache herunterladen."
+        sprache.groqApiKey.isBlank() -> "Für das Mikrofon bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."
+        else -> null
+    }
+
+    /** Download des Offline-Modells: Fortschritt 0..1, null = läuft nicht. */
+    var parakeetDownload by mutableStateOf<Float?>(null)
+        private set
+    private var parakeetJob: kotlinx.coroutines.Job? = null
+
+    fun parakeetHerunterladen() {
+        if (parakeetJob?.isActive == true) return
+        parakeetDownload = 0f
+        parakeetJob = viewModelScope.launch {
+            try {
+                de.frank.jarvis.speech.ParakeetLokal.herunterladen(getApplication()) { fertig, gesamt -> parakeetDownload = fertig.toFloat() / gesamt }
+                meldung = "Offline-Modell geladen. Die Spracheingabe läuft jetzt ohne Internet."
+                if (sprache.transkriptionLokal) launch(Dispatchers.Default) { de.frank.jarvis.speech.ParakeetLokal.vorwaermen(getApplication()) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logbuch.fehler("Parakeet-Download", e)
+                meldung = e.message ?: "Das Offline-Modell konnte nicht geladen werden."
+            } finally {
+                parakeetDownload = null
+            }
+        }
+    }
+
+    fun parakeetLoeschen() {
+        parakeetJob?.cancel()
+        viewModelScope.launch { de.frank.jarvis.speech.ParakeetLokal.loeschen(getApplication()); meldung = "Offline-Modell gelöscht." }
+    }
+
+    /** Offline-Diktat an oder aus; an lädt das Modell gleich vor, aus gibt den Arbeitsspeicher frei. */
+    fun transkriptionLokalSetzen(an: Boolean) {
+        sprache.transkriptionLokal = an
+        viewModelScope.launch(Dispatchers.Default) {
+            if (an) de.frank.jarvis.speech.ParakeetLokal.vorwaermen(getApplication()) else de.frank.jarvis.speech.ParakeetLokal.freigeben()
         }
     }
 

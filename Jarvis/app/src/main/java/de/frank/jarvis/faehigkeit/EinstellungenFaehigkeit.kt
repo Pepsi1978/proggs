@@ -300,6 +300,16 @@ class EinstellungsKatalog(context: Context) {
             zahl("ansage_lautstaerke", "Benachrichtigungen: Update-Ansagen", "Lautstärke der Ansagen", "Lautstärke nur für die Ansage, danach gilt wieder die alte; 0 = so laut, wie das Handy steht.", 0, 100, "Prozent", { e.ansageLautstaerke }) { e.ansageLautstaerke = it },
 
             // ---- Spracheingabe ----
+            // Wie die Chips in der Oberfläche: offline lädt das Modell vor, online gibt es den Speicher frei.
+            auswahl("transkription", "Spracheingabe", "Transkription", "Womit die Spracheingabe umschreibt: Groq Whisper online oder Parakeet primeline offline auf dem Handy (Modell einmal in den Einstellungen herunterladen).",
+                { listOf("groq" to "Groq Whisper (online)", "parakeet" to "Parakeet primeline (offline)") },
+                { if (s.transkriptionLokal) "parakeet" else "groq" }) {
+                val an = it == "parakeet"
+                s.transkriptionLokal = an
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+                    if (an) de.frank.jarvis.speech.ParakeetLokal.vorwaermen(app) else de.frank.jarvis.speech.ParakeetLokal.freigeben()
+                }
+            },
             schalter("filter_stille", "Spracheingabe", "Filter: Stille vorab", "Wirft Aufnahmen ohne Sprache weg, bevor sie umgeschrieben werden.", { s.filterStilleVorabAn }) { s.filterStilleVorabAn = it },
             schalter("filter_segmente", "Spracheingabe", "Filter: Segment-Werte", "Verwirft Textstücke, die das Erkennungsmodell selbst für unsicher hält.", { s.filterSegmentmetrikenAn }) { s.filterSegmentmetrikenAn = it },
             schalter("filter_zeitstempel", "Spracheingabe", "Filter: Zeitstempel", "Verwirft Text, der außerhalb der gesprochenen Zeit liegt.", { s.filterZeitstempelAn }) { s.filterZeitstempelAn = it },
