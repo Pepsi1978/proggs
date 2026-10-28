@@ -1953,7 +1953,13 @@ if (-not $env:NVIDIA_API_KEY) {
         // Siehe PatchProvider: EnsureObject-Ergebnis verwenden und zurückgeben, damit der Patch
         // auch bei einer nicht-objektförmigen Wurzel greift statt still verloren zu gehen.
         var rootObject = JsonExtensions.EnsureObject(root);
-        var models = rootObject.GetOrAddObject("provider").GetOrAddObject(providerId).GetOrAddObject("models");
+        var providerNode = rootObject.GetOrAddObject("provider").GetOrAddObject(providerId);
+        // Eine vorhandene Whitelist blendet alle nicht genannten Modelle aus; OpenCode meldet das
+        // gewählte Modell dann als "not valid" und fällt auf ein anderes zurück (GPT-6.1 Terra).
+        if (providerNode["whitelist"] is JsonArray whitelist &&
+            !whitelist.Any(n => string.Equals(n?.GetValue<string>(), slug, StringComparison.OrdinalIgnoreCase)))
+            whitelist.Add(slug);
+        var models = providerNode.GetOrAddObject("models");
         var modelNode = models.GetOrAddObject(slug);
         modelNode["name"] = modelDisplayName;
 

@@ -162,8 +162,17 @@
     // Astra fehlt die automatische Reasoning-Erkennung im OpenCode-Katalog.
     // Nur die aktuellen vier Familien, Stufen aus dem Codex-Kontokatalog vom 22.10.2026.
     "openai": {
-      "whitelist": ["gpt-6-astra", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-6-luna"],
+      "whitelist": ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-5.6-terra", "gpt-6-luna"],
       "models": {
+        "gpt-6.1-terra": {
+          "name": "GPT-6.1 Terra", "reasoning": true,
+          "variants": {
+            "none": { "disabled": true }, "minimal": { "disabled": true },
+            "low": { "reasoningEffort": "low" }, "medium": { "reasoningEffort": "medium" },
+            "high": { "reasoningEffort": "high" }, "xhigh": { "reasoningEffort": "xhigh" },
+            "max": { "reasoningEffort": "max" }, "ultra": { "reasoningEffort": "ultra" }
+          }
+        },
         "gpt-6.1-sol": {
           "name": "GPT-6.1 Sol", "reasoning": true,
           "variants": {
