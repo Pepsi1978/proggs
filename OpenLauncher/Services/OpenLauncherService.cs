@@ -78,6 +78,10 @@ if ([string]::IsNullOrWhiteSpace($env:COLORTERM)) {
 foreach ($staleClaude in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'CLAUDE*' -and $_.Name -ne 'CLAUDE_CONFIG_DIR' })) {
     Remove-Item -LiteralPath "Env:$($staleClaude.Name)" -ErrorAction SilentlyContinue
 }
+# Geerbte Jarvis-Auftragsnummer: Mit ihr schwiegen die Profil-Hooks einer lokalen Sitzung, ein echter Auftrag setzt sie danach neu.
+foreach ($staleJarvis in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'JARVIS_*' })) {
+    Remove-Item -LiteralPath "Env:$($staleJarvis.Name)" -ErrorAction SilentlyContinue
+}
 """;
 
     /// <summary>

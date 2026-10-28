@@ -30,6 +30,12 @@ public partial class App : Application
         // Deshalb sofort aus der eigenen Umgebung loeschen; lms.exe setzt sie bei Bedarf selbst.
         Environment.SetEnvironmentVariable("__COMPAT_LAYER", null);
 
+        // Startet eine Jarvis-Sitzung das Update-Skript, erbt der neue OpenLauncher deren JARVIS_AUFTRAG_ID und gäbe sie an
+        // jede danach gestartete Sitzung weiter: Deren Profil-Hooks hielten sie für einen Jarvis-Auftrag und blieben stumm,
+        // Rückfragen kamen nie in Jarvis an (28.10.2026). Ein Jarvis-Auftrag bekommt seine Nummer immer per Argument.
+        foreach (var name in Environment.GetEnvironmentVariables().Keys.Cast<string>().Where(n => n.StartsWith("JARVIS_", StringComparison.OrdinalIgnoreCase)).ToList())
+            Environment.SetEnvironmentVariable(name, null);
+
         // Muss VOR jedem anderen Zugriff auf den Anwendungsdatenordner laufen (auch vor dem Logger,
         // der seinen Ordner selbst anlegt) — sonst existiert das Ziel bereits und die Uebernahme
         // der alten Daten wuerde stillschweigend ausbleiben.
