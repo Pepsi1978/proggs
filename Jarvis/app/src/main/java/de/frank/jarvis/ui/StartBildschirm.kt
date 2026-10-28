@@ -343,7 +343,7 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
 
 /**
  * Auswahl vor einem Programmierauftrag: Modell („Opus 5.5“ oder „Sol 6.1“), bei Sol das CLI („Codex CLI“ oder „OpenCode CLI“),
- * bei Codex das Review („Ja“/„Nein“). Hier steht nur die Frage; die Knöpfe stehen unten neben „Programmierer“ (ProgrammierSchweber).
+ * bei Codex das Review („Ja“/„Nein“). Hier steht nur die Frage; die Knöpfe stehen unten neben „Programmierer“, bei eingeklappten Symbolen allein über dem Pfeil (ProgrammierSchweber).
  * Nach einer Wahl, per Sprache oder nach einem Neustart der App steht darunter, was gilt.
  */
 @Composable
