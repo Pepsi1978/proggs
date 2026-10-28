@@ -146,7 +146,7 @@ class MainActivity : ComponentActivity() {
                         },
                         speichereVorladen = { an ->
                             einst.vorladen = an
-                            if (an) PruefWorker.planeVorladen(this@MainActivity)
+                            if (an) PruefWorker.planeVorladen(this@MainActivity, ersetzen = true)
                             melde(if (an) "APK-Updates werden wieder vorgeladen." else "Vorladen aus: Updates werden erst beim Tippen geladen.")
                         },
                     ),

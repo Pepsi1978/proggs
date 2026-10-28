@@ -130,13 +130,18 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             WorkManager.getInstance(context).enqueueUniqueWork("update-signal", policy, anfrage)
         }
 
-        /** Aus der offenen App: gefundene Updates im Hintergrund vorladen (ohne Benachrichtigung und Ansage). */
-        fun planeVorladen(context: Context) {
+        /**
+         * Aus der offenen App: gefundene Updates im Hintergrund vorladen (ohne Benachrichtigung und Ansage).
+         * [ersetzen] = gerade wieder eingeschaltet: ein noch laufender, schon abgebrochener Lauf darf nicht übrig bleiben.
+         */
+        fun planeVorladen(context: Context, ersetzen: Boolean = false) {
+            if (!Einstellungen(context).vorladen) return
             val anfrage = OneTimeWorkRequestBuilder<PruefWorker>()
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .setInputData(workDataOf(EINGABE_NUR_VORLADEN to true))
                 .build()
-            WorkManager.getInstance(context).enqueueUniqueWork("update-vorladen", ExistingWorkPolicy.KEEP, anfrage)
+            WorkManager.getInstance(context).enqueueUniqueWork("update-vorladen",
+                if (ersetzen) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP, anfrage)
         }
 
         /**

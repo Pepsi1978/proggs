@@ -45,11 +45,13 @@ object Vorladen {
             val updates = eintraege.filter { it.status == Status.UPDATE && it.fund.apkRef != null && PAKET_MUSTER.matches(it.paket) }
             val behalten = updates.map { datei(context, it.fund.manifest).name }.toSet()
             ordner(context).listFiles()?.filter { it.name !in behalten }?.forEach { it.delete() }
+            // Schalter „APK-Updates vorladen“ aus: nichts automatisch herunterladen, auch nicht mitten im Lauf.
+            val einst = Einstellungen(context)
+            if (!einst.vorladen) return@withContext emptyList()
             val quelle = Quellen.aktuelle(context) ?: return@withContext emptyList()
             val neu = mutableListOf<AppEintrag>()
             for (e in updates) {
-                // Schalter „APK-Updates vorladen“ aus (auch mitten im Lauf): nichts automatisch herunterladen.
-                if (!Einstellungen(context).vorladen) break
+                if (!einst.vorladen) break
                 val m = e.fund.manifest
                 if (vorhanden(context, m) != null || Installierer.laeuft(m.paket)) continue
                 val ziel = datei(context, m)
@@ -61,12 +63,14 @@ object Vorladen {
                             val puffer = ByteArray(64 * 1024)
                             while (true) {
                                 val n = ein.read(puffer)
-                                if (n < 0) break
+                                if (n < 0 || !einst.vorladen) break
                                 aus.write(puffer, 0, n)
                                 digest.update(puffer, 0, n)
                             }
                         }
                     }
+                    // Während des Downloads ausgeschaltet: angefangene Datei verwerfen (finally), nicht melden.
+                    if (!einst.vorladen) break
                     val hash = digest.digest().joinToString("") { "%02x".format(it) }
                     if (hash != m.sha256) {
                         // Meist ist Drive noch beim Hochladen: beim nächsten Signal oder Prüflauf erneut.
