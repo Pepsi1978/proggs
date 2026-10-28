@@ -114,7 +114,6 @@ public sealed class CliAktualisierer : IAktualisierer
 
         // %USERPROFILE% & Co. as in the paths -- the helper scripts under werkzeuge\ are found that way.
         var args = Environment.ExpandEnvironmentVariables(eintrag.UpdateArgumente ?? "update");
-        VerwaisteBeenden(exe, protokoll);
         protokoll.Report($"{Path.GetFileName(exe)} {args}");
 
         // npm.cmd resolves its own modules relative to the working directory; started from the
@@ -134,6 +133,17 @@ public sealed class CliAktualisierer : IAktualisierer
         {
             protokoll.Report("Netzfehler beim Abruf – Versuch " + versuch + " von 3 …");
             await Task.Delay(TimeSpan.FromSeconds(3), abbruch);
+            lauf = await Kommandozeile.AusfuehrenAsync(
+                exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
+            protokoll.Report(lauf.Ausgabe);
+        }
+
+        // The tool says another update is still running. Only for tools that update themselves
+        // (not via pwsh/cmd): their orphaned leftovers are a stalled earlier run, see VerwaisteBeenden.
+        if (IstUpdateSperre(lauf) && Prozesspfad.GleicheDatei(exe, Pfade.Aufloesen(eintrag.ExePfadWirksam))
+            && await Task.Run(() => VerwaisteBeenden(exe, protokoll, abbruch), abbruch) > 0)
+        {
+            protokoll.Report("Neuer Versuch nach dem Beenden des hängengebliebenen Laufs …");
             lauf = await Kommandozeile.AusfuehrenAsync(
                 exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
             protokoll.Report(lauf.Ausgabe);
@@ -234,33 +244,47 @@ public sealed class CliAktualisierer : IAktualisierer
     /// download hung without a connection) outlives the app that started it once that app is
     /// closed; it keeps its update lock open and every later "agy update" ends at once with
     /// "update already in progress". Only orphans count: an interactive session still has its
-    /// terminal as parent and is left alone.
+    /// terminal as parent and is left alone. Called only after the tool itself reported a running
+    /// update, so a live session is never touched on a normal run.
     /// </summary>
-    private static void VerwaisteBeenden(string exe, IProgress<string> protokoll)
+    /// <returns>How many leftovers were ended.</returns>
+    private static int VerwaisteBeenden(string exe, IProgress<string> protokoll, CancellationToken abbruch)
     {
-        var name = Path.GetFileNameWithoutExtension(exe);
+        var beendet = 0;
         var alle = Prozessbaum.Schnappschuss();
-        foreach (var kandidat in System.Diagnostics.Process.GetProcessesByName(name))
+        foreach (var kandidat in System.Diagnostics.Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exe)))
         {
             using (kandidat)
             {
+                if (abbruch.IsCancellationRequested) continue;
+                var baum = new List<System.Diagnostics.Process>();
                 try
                 {
+                    _ = kandidat.Handle;                          // identity pinned before any check
                     if (!Prozesspfad.GleicheDatei(Prozesspfad.Lesen(kandidat.Id), exe)) continue;
+                    var start = kandidat.StartTime;
                     var knoten = alle.FirstOrDefault(k => k.Pid == kandidat.Id);
-                    if (knoten.Pid == 0 || !IstVerwaist(knoten.ElternPid, kandidat.StartTime, alle)) continue;
+                    if (knoten.Pid == 0 || !IstVerwaist(knoten.ElternPid, start, alle)) continue;
 
                     protokoll.Report($"Verwaister {Path.GetFileName(exe)}-Prozess {kandidat.Id} (gestartet "
-                                     + kandidat.StartTime.ToString("dd.MM. HH:mm") + ") hält das Update auf – wird beendet.");
+                                     + start.ToString("dd.MM. HH:mm") + ") hält das Update auf – wird beendet.");
+                    baum = Prozessbaum.Erfassen(kandidat);       // descendants may hold the lock too
                     kandidat.Kill(entireProcessTree: true);
                     kandidat.WaitForExit(5000);
+                    foreach (var kind in baum) kind.WaitForExit(5000);
+                    beendet++;
                 }
                 catch (Exception diagAusnahme)
                 {
                     Diagnose.Gefangen(diagAusnahme, "provider", Schwere.Warnung);
                 }
+                finally
+                {
+                    foreach (var kind in baum) kind.Dispose();
+                }
             }
         }
+        return beendet;
     }
 
     /// <summary>Parent gone, or its PID now belongs to a younger process (reused).</summary>
@@ -272,11 +296,20 @@ public sealed class CliAktualisierer : IAktualisierer
             using var eltern = System.Diagnostics.Process.GetProcessById(elternPid);
             return eltern.StartTime > kindStart;
         }
+        catch (ArgumentException)
+        {
+            return true;    // exited since the snapshot
+        }
         catch
         {
             return false;   // not readable (other user, elevated): rather keep a live session
         }
     }
+
+    /// <summary>A run refused because another update of the same tool is still going.</summary>
+    internal static bool IstUpdateSperre(BefehlErgebnis lauf)
+        => !lauf.Abgelaufen && !lauf.Abgebrochen && lauf.ExitCode != 0
+           && lauf.Ausgabe.Contains("already in progress", StringComparison.OrdinalIgnoreCase);
 
     private static readonly string[] NetzHinweise =
     {
