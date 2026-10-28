@@ -1380,6 +1380,23 @@ try {
     }
     $claudeExecutable = $claudeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     if (-not $claudeExecutable) { throw 'Keine funktionsfähige Claude-Installation gefunden. Bitte Claude Code reparieren oder installieren.' }
+    # Aktualisiert sich eine laufende Claude-Sitzung gerade selbst (Auto-Updater per npm), ist claude.exe einige Minuten
+    # gesperrt und der Start scheiterte mit „von einem anderen Prozess verwendet“ (28.10.2026): bis zu 10 min warten.
+    $frist = (Get-Date).AddMinutes(10)
+    $gemeldet = $false
+    while ((Get-Date) -lt $frist) {
+        try { [IO.File]::Open($claudeExecutable, 'Open', 'Read', 'ReadWrite, Delete').Dispose(); break } catch {
+            $fehler = $_.Exception
+            while ($fehler.InnerException) { $fehler = $fehler.InnerException }
+            # Nur die Freigabeverletzung (0x80070020) heißt „gerade gesperrt“; alles andere startet wie bisher.
+            if ($fehler.HResult -ne -2147024864) { break }
+        }
+        if (-not $gemeldet) {
+            Write-Host 'Claude Code wird gerade aktualisiert. Der Start wartet, bis das Update fertig ist …' -ForegroundColor Yellow
+            $gemeldet = $true
+        }
+        Start-Sleep -Seconds 2
+    }
     if ($initialPromptFile) {
         # Jarvis-Auftrag: Er ist die erste Nachricht (es gibt nur eine), die Tab-Farbe setzt das Terminal selbst.
         $claudeArgs += (Get-Content -Raw -Encoding utf8 -LiteralPath $initialPromptFile)
