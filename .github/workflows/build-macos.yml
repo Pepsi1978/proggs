@@ -6,11 +6,15 @@ on:
     paths:
       - 'TerminalVoiceOverlay-macOS/**'
       - 'ClaudeCodexVoiceOverlay-macOS/**'
+      - 'voice-overlay-sherpa.sh'
+      - '.github/workflows/build-macos.yml'
   pull_request:
     branches: ["main"]
     paths:
       - 'TerminalVoiceOverlay-macOS/**'
       - 'ClaudeCodexVoiceOverlay-macOS/**'
+      - 'voice-overlay-sherpa.sh'
+      - '.github/workflows/build-macos.yml'
 
 jobs:
   build-terminal-overlay:
@@ -26,6 +30,12 @@ jobs:
 
       - name: Swift-Version anzeigen
         run: swift --version
+
+      - name: sherpa-onnx-Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/sherpa-onnx
+          key: sherpa-onnx-${{ hashFiles('voice-overlay-sherpa.sh') }}
 
       - name: Build ausfuehren
         run: |
@@ -44,13 +54,25 @@ jobs:
           SDK_PATH=$(xcrun --show-sdk-path)
           SWIFT_FILES=($(find "$SRC_DIR" -name "*.swift"))
 
+          # sherpa-onnx (Offline-Transkription Parakeet) wie in build.sh einbinden
+          source ../voice-overlay-sherpa.sh
+          ensure_sherpa || { echo "FEHLER: sherpa-onnx nicht verfuegbar"; exit 1; }
+          mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+          cp "$SHERPA_LIB/libsherpa-onnx-c-api.dylib" "$SHERPA_LIB/libonnxruntime.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+
           swiftc \
               -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" \
+              -import-objc-header "$SHERPA_HEADER" \
+              -L "$SHERPA_LIB" -lsherpa-onnx-c-api \
+              -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
               -sdk "$SDK_PATH" \
               -target arm64-apple-macos13.0 \
-              -framework Cocoa \
+              -framework AppKit \
               -framework AVFoundation \
               -framework CoreGraphics \
+              -framework Carbon \
+              -framework Network \
+              -lsqlite3 \
               "${SWIFT_FILES[@]}"
 
           echo "Build erfolgreich: $APP_BUNDLE"
@@ -67,6 +89,12 @@ jobs:
     steps:
       - name: Projektdateien laden
         uses: actions/checkout@v5
+
+      - name: sherpa-onnx-Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/sherpa-onnx
+          key: sherpa-onnx-${{ hashFiles('voice-overlay-sherpa.sh') }}
 
       - name: Build ausfuehren
         run: |
@@ -85,13 +113,25 @@ jobs:
           SDK_PATH=$(xcrun --show-sdk-path)
           SWIFT_FILES=($(find "$SRC_DIR" -name "*.swift"))
 
+          # sherpa-onnx (Offline-Transkription Parakeet) wie in build.sh einbinden
+          source ../voice-overlay-sherpa.sh
+          ensure_sherpa || { echo "FEHLER: sherpa-onnx nicht verfuegbar"; exit 1; }
+          mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+          cp "$SHERPA_LIB/libsherpa-onnx-c-api.dylib" "$SHERPA_LIB/libonnxruntime.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+
           swiftc \
               -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" \
+              -import-objc-header "$SHERPA_HEADER" \
+              -L "$SHERPA_LIB" -lsherpa-onnx-c-api \
+              -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
               -sdk "$SDK_PATH" \
               -target arm64-apple-macos13.0 \
-              -framework Cocoa \
+              -framework AppKit \
               -framework AVFoundation \
               -framework CoreGraphics \
+              -framework Carbon \
+              -framework Network \
+              -lsqlite3 \
               "${SWIFT_FILES[@]}"
 
           echo "Build erfolgreich: $APP_BUNDLE"
