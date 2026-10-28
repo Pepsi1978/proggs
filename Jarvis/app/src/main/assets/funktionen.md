@@ -93,6 +93,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 ## Live-Gespräch
 
 - Gleichzeitig zuhören und sprechen über OpenAI GPT-Live, OpenAI Realtime oder Google Gemini Live (mit eigenen API-Schlüsseln, nicht über das ChatGPT-Abo); Fragen an Jarvis gehen über ein Werkzeug an den Jarvis-Agenten.
+- OpenAI-Modelle: GPT-Live 1 (`gpt-live-1`, neuestes Live-Modell der API, Stand 28.10.2026), Realtime 2.1 und 2.1 mini. GPT-Live-Stimmen mit Sprachangabe, die deutschen Nuri, Juni (weiblich) und Flitz (männlich) stehen oben; Miko und Sonna (GPT-Live 1.1) gibt es nur in der ChatGPT-App, nicht über die API.
 - Braucht Jarvis länger als 60 s (hohe Denkstufe 120 s), bekommt das Live-Modell einen Zwischenstand („Das dauert noch etwas …“), die Arbeit läuft bis 10 min weiter und wird zugestellt; im noch laufenden Live-Gespräch liest Jarvis sie in einer stillen Pause bei stummem Live-Mikrofon vor (Antippen der Blase beendet das Vorlesen; Realtime bekommt das Ergebnis in den Verlauf). Während Jarvis arbeitet, zählt die Stille-Uhr nicht.
 - Schnellwahl-Profile, Stimmen mit Hörprobe, Kostenschätzung und Kostenbuch; Ton bevorzugt über Headset oder Auto; Medientasten werden währenddessen abgefangen.
 - Echosperre im Medienton: Mikrofon zu, solange Jarvis zu hören ist; über Bluetooth (Auto) wartet sie die gemessene Ausgabelatenz ab (mindestens 1 s), damit das Ende der eigenen Antwort nicht als Franks Worte zurückkommt. Je Gemini-Beitrag eine Logbuch-Zeile „Live-Mitschrift (Gemini)“ (Sperrzustand, Latenz, Echoverdacht, ohne Inhalt).

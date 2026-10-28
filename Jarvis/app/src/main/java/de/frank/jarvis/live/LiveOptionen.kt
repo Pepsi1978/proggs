@@ -6,8 +6,9 @@ import java.util.Locale
 
 /**
  * Alle Einstellungen des Live-Gesprächs an einer Stelle: Einstellungs-Bildschirm, Jarvis' Einstellungs-Katalog und der
- * Aufbau der Sitzung lesen dieselbe Liste. Preise und Werte nach der OpenAI-Doku, Stand 16.10.2026
- * (developers.openai.com/api/docs/pricing, models/gpt-live-1, guides/live-delegation, guides/realtime-costs).
+ * Aufbau der Sitzung lesen dieselbe Liste. Preise und Werte nach der OpenAI-Doku, Stand 16.10.2026, Modelle und Stimmen
+ * Stand 28.10.2026 (developers.openai.com/api/docs/pricing, models/gpt-live-1, guides/live-delegation, guides/realtime-costs,
+ * guides/live-conversations, changelog).
  *
  * Zwei Arten von Live-Gespräch: GPT-Live (`gpt-live-1`, eigener Endpunkt, 0,05 $ pro Minute plus Denk-Modell) und die
  * Realtime-API (`gpt-realtime-*`, Abrechnung nach Tokens). Viele Optionen gibt es nur bei einer der beiden.
@@ -195,15 +196,20 @@ object LiveOptionen {
     private fun mio(p: Preis) = "${zahl(p.ein)} / ${zahl(p.cache)} / ${zahl(p.aus)} $ je 1 Mio. Tokens (ein / Cache / aus)"
     private fun zahl(v: Double) = if (v == Math.floor(v)) v.toInt().toString() else String.format(Locale.GERMAN, "%s", v.toString().replace('.', ','))
 
-    /** Stimmen von GPT-Live laut API-Referenz; die beschriebenen haben einen englischen oder portugiesischen Akzent. */
+    /**
+     * Stimmen von GPT-Live laut API-Referenz und Sprachtabelle im Live-Guide (Stand 28.10.2026); die deutschen zuerst.
+     * Nuri, Juni und Flitz sind die deutschen Stimmen der API (seit 16.10.2026). Miko und Sonna gibt es nur in der ChatGPT-App.
+     */
     private val LIVE_STIMMEN = listOf(
+        "nuri" to "Nuri (Deutsch, weiblich)", "juni" to "Juni (Deutsch, weiblich)", "flitz" to "Flitz (Deutsch, männlich)",
         "marin" to "Marin (Standard)", "cedar" to "Cedar", "alloy" to "Alloy", "ash" to "Ash", "ballad" to "Ballad", "coral" to "Coral",
         "echo" to "Echo", "sage" to "Sage", "shimmer" to "Shimmer", "verse" to "Verse", "beacon" to "Beacon (en-PH)", "bossa" to "Bossa (pt-BR)",
-        "brise" to "Brise", "cinder" to "Cinder (en-US Süd)", "delta" to "Delta (en-US Süd)", "flitz" to "Flitz", "gleam" to "Gleam (en-US)",
-        "harema" to "Harema", "juni" to "Juni", "meridian" to "Meridian (en-US)", "nira" to "Nira", "noeul" to "Noeul", "nuri" to "Nuri",
-        "quartz" to "Quartz (en-AU)", "ripple" to "Ripple (en-AU)", "shida" to "Shida", "sillage" to "Sillage", "stone" to "Stone (en-IE)",
+        "brise" to "Brise (Französisch)", "cinder" to "Cinder (en-US Süd)", "delta" to "Delta (en-US Süd)", "gleam" to "Gleam (en-US)",
+        "harema" to "Harema (Japanisch)", "meridian" to "Meridian (en-US)", "nira" to "Nira (Hindi)", "noeul" to "Noeul (Koreanisch)",
+        "quartz" to "Quartz (en-AU)", "ripple" to "Ripple (en-AU)", "shida" to "Shida (Japanisch)", "sillage" to "Sillage (Französisch)", "stone" to "Stone (en-IE)",
         "tempo" to "Tempo (pt-BR)", "vesper" to "Vesper (en-GB)", "willow" to "Willow (en-IE)",
     )
+    private val DEUTSCHE_LIVE_STIMMEN = setOf("nuri", "juni", "flitz")
 
     private val AN_AUS = listOf(Wahl("an", "An"), Wahl("aus", "Aus"))
 
@@ -246,7 +252,8 @@ object LiveOptionen {
             "GPT-Live spricht und lässt ein Denk-Modell arbeiten, Realtime und Gemini machen alles selbst. Gilt ab dem nächsten Gespräch.",
             "gpt-live-1", {
                 listOf(
-                    Wahl("gpt-live-1", "GPT-Live 1 (neuestes)", "Das neue Sprachmodell von OpenAI (seit 10.09.2026). Hört dauernd zu, man kann jederzeit dazwischenreden. Denken übernimmt das gewählte Denk-Modell.",
+                    Wahl("gpt-live-1", "GPT-Live 1 (neuestes in der API)", "Das neueste Sprachmodell der OpenAI-API (seit 10.09.2026, Stand 28.10.2026). Hört dauernd zu, man kann jederzeit dazwischenreden. " +
+                        "Denken übernimmt das gewählte Denk-Modell. GPT-Live 1.1 gibt es bisher nur in der ChatGPT-App, für die API ist es nur angekündigt.",
                         "0,05 $ pro Minute, sekundengenau, auch bei Stille; plus Denk-Modell"),
                     Wahl("gpt-realtime-2.1", "Realtime 2.1", "Bestes Realtime-Modell mit eigener Denkstufe und Werkzeugen. Kosten wachsen mit der Gesprächslänge.", "Audio " + mio(REALTIME.getValue("gpt-realtime-2.1").audio)),
                     Wahl("gpt-realtime-2.1-mini", "Realtime 2.1 mini", "Schneller und rund dreimal günstiger, folgt Anweisungen und Werkzeugen etwas schlechter.", "Audio " + mio(REALTIME.getValue("gpt-realtime-2.1-mini").audio)),
@@ -482,10 +489,11 @@ object LiveOptionen {
                 )
             }),
         Option("stimme", "Live-Gespräch", "Stimme",
-            "Stimme im Live-Gespräch. Gilt ab dem nächsten Gespräch.",
+            "Stimme im Live-Gespräch. Gilt ab dem nächsten Gespräch. Bei GPT-Live sind Nuri, Juni und Flitz die deutschen Stimmen; " +
+                "Miko und Sonna gibt es bisher nur in der ChatGPT-App (GPT-Live 1.1), nicht über die API. Die Realtime-Stimmen haben keine Sprachzuordnung.",
             "marin", { st ->
                 if (st.istGemini) GEMINI_STIMMEN.map { Wahl(it.first, it.first + " · " + it.second) }
-                else if (st.istLive) LIVE_STIMMEN.map { Wahl(it.first, it.second) }
+                else if (st.istLive) LIVE_STIMMEN.map { Wahl(it.first, it.second, if (it.first in DEUTSCHE_LIVE_STIMMEN) "Von OpenAI als deutsche Stimme geführt, ohne fremden Akzent." else "") }
                 else LiveGespraech.STIMMEN.map { Wahl(it.first, it.second, if (it.first == "marin" || it.first == "cedar") "Von OpenAI empfohlen." else "") }
             }),
         Option("stille_ende", "Live-Gespräch", "Bei Stille beenden",

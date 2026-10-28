@@ -398,6 +398,7 @@
     { "versionCode": 392, "versionName": "1.8.381", "stand": "28.10.2026, 14:21 Uhr", "notiz": "Jeder Prompt zeigt hinter seiner Nummer eine kurze KI-Überschrift, worum es geht, und ein geöffneter Prompt ist nicht mehr durchsichtig." },
     { "versionCode": 393, "versionName": "1.8.382", "stand": "28.10.2026, 14:26 Uhr", "notiz": "Prompts sind immer lückenlos von oben durchnummeriert und lassen sich am Griff rechts per Ziehen umsortieren; Überschriften entstehen sparsamer und zuverlässiger." },
     { "versionCode": 394, "versionName": "1.8.383", "stand": "28.10.2026, 14:39 Uhr", "notiz": "Bearbeiten und Löschen treffen nach dem Verschieben oder Aufrücken immer den richtigen Prompt, und ein abgebrochenes Ziehen öffnet keinen Prompt mehr." },
-    { "versionCode": 395, "versionName": "1.8.384", "stand": "28.10.2026, 14:47 Uhr", "notiz": "Die Zurück-Geste in einer Session führt jetzt zum Startbildschirm mit der Tagesauswertung, erst die nächste Zurück-Geste beendet die App." }
+    { "versionCode": 395, "versionName": "1.8.384", "stand": "28.10.2026, 14:47 Uhr", "notiz": "Die Zurück-Geste in einer Session führt jetzt zum Startbildschirm mit der Tagesauswertung, erst die nächste Zurück-Geste beendet die App." },
+    { "versionCode": 396, "versionName": "1.8.385", "stand": "28.10.2026, 15:27 Uhr", "notiz": "Im Live-Gespräch stehen die deutschen GPT-Live-Stimmen Nuri, Juni und Flitz jetzt oben, alle Live-Stimmen zeigen ihre Sprache, und Jarvis erklärt, dass es Miko und Sonna bisher nur in der ChatGPT-App gibt." }
 ]
 }
