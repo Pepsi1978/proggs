@@ -1567,6 +1567,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     var promptEntwurf by mutableStateOf("")
     var promptSpeichert by mutableStateOf(false); private set
+    /** Nummer des Prompts, der gerade bearbeitet wird; null = die Eingabe legt einen neuen Prompt an. */
+    var promptBearbeitet by mutableStateOf<Int?>(null); private set
+    /** Text vor der letzten KI-Verbesserung, für „Rückgängig“; null = nichts rückgängig zu machen. */
+    var promptVorKi by mutableStateOf<String?>(null); private set
+    /** Entwurf eines neuen Prompts, beiseitegelegt, solange ein vorhandener Prompt bearbeitet wird. */
+    private var promptNeuEntwurf = ""
+
+    /** Öffnet einen vorhandenen Prompt zum Bearbeiten; ein angefangener neuer Entwurf bleibt erhalten. */
+    fun promptBearbeiten(p: de.frank.jarvis.ablage.Prompt) {
+        if (promptBearbeitet == null) promptNeuEntwurf = promptEntwurf
+        promptBearbeitet = p.nummer
+        promptEntwurf = p.text
+        promptVorKi = null
+    }
+
+    /** Beendet das Bearbeiten und holt den beiseitegelegten neuen Entwurf zurück. */
+    private fun promptBearbeitenEnde() {
+        if (promptBearbeitet == null) return
+        promptBearbeitet = null
+        promptEntwurf = promptNeuEntwurf
+        promptNeuEntwurf = ""
+        promptVorKi = null
+    }
+
+    /** Rückgängig-Knopf: stellt den Text vor der KI-Verbesserung wieder her. */
+    fun promptKiRueckgaengig() {
+        promptVorKi?.let { promptEntwurf = it }
+        promptVorKi = null
+    }
 
     /** Mikrofon der Prompt-Eingabe: Tippen startet, nochmal Tippen hängt das Gesprochene an den Entwurf an. */
     fun promptMikrofonTippen() {
@@ -1583,7 +1612,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Schließt die Prompt-Eingabe: Ein laufendes Diktat geht noch in den Entwurf und die Aufnahme endet. */
-    fun promptEingabeSchliessen() { if (nimmtAuf && promptDiktat) aufnahmeBeenden() }
+    fun promptEingabeSchliessen() {
+        if (nimmtAuf && promptDiktat) aufnahmeBeenden()
+        promptBearbeitenEnde()
+        promptVorKi = null
+    }
 
     /** KI-Knopf: bringt den Entwurf sinngemäß in gutes Deutsch, als klaren Auftrag an Jarvis. */
     fun promptFormulieren() {
@@ -1598,7 +1631,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     neu.length < 5 -> meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
                     // Inzwischen weitergetippt: die neuere Fassung gewinnt.
                     promptEntwurf != text -> meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen."
-                    else -> promptEntwurf = neu
+                    else -> { promptVorKi = text; promptEntwurf = neu }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -1611,18 +1644,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Diskette: speichert den Entwurf als nächsten Prompt; [fertig] nur bei Erfolg. Mehrfaches Tippen speichert nur einmal. */
+    /**
+     * Diskette: speichert den Entwurf als neuen Prompt (kleinste freie Nummer) oder, beim Bearbeiten, als neuen Text des
+     * Prompts; [fertig] nur bei Erfolg. Mehrfaches Tippen speichert nur einmal.
+     */
     fun promptSpeichern(fertig: () -> Unit) {
         val text = promptEntwurf.trim()
         if (text.isEmpty() || promptSpeichert || nimmtAuf || schreibtMit || promptFormuliert) return
         promptSpeichert = true
+        val nummer = promptBearbeitet
         viewModelScope.launch {
             try {
+                if (nummer != null) {
+                    val ok = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.aendere(getApplication(), nummer, text) }
+                    if (!ok) meldung = "Prompt $nummer ließ sich nicht speichern."
+                    else {
+                        meldung = "Prompt $nummer geändert."
+                        promptBearbeitenEnde()
+                        fertig()
+                    }
+                    return@launch
+                }
                 val p = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.speichere(getApplication(), text) }
                 if (p == null) meldung = "Der Prompt ließ sich nicht speichern."
                 else {
                     meldung = "Als Prompt ${p.nummer} gespeichert."
                     if (promptEntwurf.trim() == text) promptEntwurf = ""
+                    promptVorKi = null
                     fertig()
                 }
             } finally {

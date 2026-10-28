@@ -19,9 +19,11 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +59,7 @@ const val PROMPTS_REITER = "PROMPTS"
 /**
  * Reiter „Prompts“ der Ablage: nummerierte, vorformulierte Aufträge an Jarvis. Nach dem letzten steht „+“ (eintippen oder
  * einsprechen, KI bringt den Text in gutes Deutsch, Diskette speichert). Antippen öffnet den Prompt; „Senden“ startet
- * eine neue Programmier-Session mit dem Prompt in der Eingabeblase.
+ * eine neue Programmier-Session mit dem Prompt in der Eingabeblase, „Bearbeiten“ öffnet ihn in derselben Eingabe.
  */
 @Composable
 fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
@@ -92,7 +94,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    if (neu) PromptEingabe(vm, schliessen = { vm.promptEingabeSchliessen(); neu = false }) { vm.promptSpeichern { neu = false } }
+    if (neu || vm.promptBearbeitet != null) PromptEingabe(vm, schliessen = { vm.promptEingabeSchliessen(); neu = false }) { vm.promptSpeichern { neu = false } }
 
     liste?.firstOrNull { it.nummer == offen }?.let { p ->
         var loeschen by remember(p.nummer) { mutableStateOf(false) }
@@ -115,6 +117,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                         Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
                     } else {
                         Knopf("Löschen", Modifier.weight(1f), Icons.Rounded.Delete, haupt = false, farbe = f.gefahr) { loeschen = true }
+                        Knopf("Bearbeiten", Modifier.weight(1f), Icons.Rounded.Edit, haupt = false) { offen = null; vm.promptBearbeiten(p) }
                         // Rechts, gut mit dem Daumen erreichbar.
                         Knopf("Senden", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Send) { offen = null; vm.promptSenden(p.text) }
                     }
@@ -124,14 +127,14 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
-/** Eingabe eines neuen Prompts: eintippen oder einsprechen, KI-Knopf formuliert in gutes Deutsch, Diskette speichert. */
+/** Eingabe eines neuen oder zu bearbeitenden Prompts: eintippen oder einsprechen, KI-Knopf formuliert in gutes Deutsch (rückgängig machbar), Diskette speichert. */
 @Composable
 private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: () -> Unit) {
     val f = LocalFarben.current
     Dialog(schliessen, DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.padding(16.dp).fillMaxWidth().glas(f, fuellung = f.flaecheStark).padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(vm.promptBearbeitet?.let { "Prompt $it bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box(Modifier.size(40.dp).antippen(aktion = schliessen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
             Eingabe(vm.promptEntwurf, { vm.promptEntwurf = it }, if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen",
@@ -144,7 +147,8 @@ private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: (
                 Rund(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
                     vm.promptMikrofonTippen()
                 }
-                Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
+                if (vm.promptVorKi != null) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) { vm.promptKiRueckgaengig() }
+                else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
                 Rund(Icons.Rounded.Save, "Speichern", f.primaer) { speichern() }
             }
         }

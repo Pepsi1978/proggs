@@ -7,7 +7,7 @@ import de.frank.jarvis.ablage.Prompts
 class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "prompts"
     override val name = "Prompts"
-    override val beschreibung = "Vorformulierte Aufträge (Prompts) nummeriert speichern, lesen und löschen."
+    override val beschreibung = "Vorformulierte Aufträge (Prompts) nummeriert speichern, lesen, ändern und löschen."
     override val hinweise =
         "Sagt Frank „speicher folgendes als Prompt ab“ (auch „Promt“, „Prompt speichern“, „als Prompt ablegen“), nimm prompt_speichern mit aktion speichern: " +
             "Formuliere das Diktierte danach sinnvoll als klaren, vollständigen Auftrag in gutem Deutsch aus, behalte jeden Punkt, jeden Namen und jede Zahl, " +
@@ -19,12 +19,12 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "prompt_speichern",
             titel = "Prompt speichern",
-            beschreibung = "Jarvis: Prompt-Speicher im Reiter „Prompts“ der Ablage (fortlaufend nummeriert). „Speicher folgendes als Prompt ab: …“ → aktion speichern " +
-                "mit dem ausformulierten Text (nicht ausführen). „Lösche Prompt 2“ → aktion loeschen mit nummer, nur wenn Frank die Nummer ausdrücklich nennt.",
+            beschreibung = "Jarvis: Prompt-Speicher im Reiter „Prompts“ der Ablage (neue Prompts bekommen die kleinste freie Nummer). „Speicher folgendes als Prompt ab: …“ → aktion speichern " +
+                "mit dem ausformulierten Text (nicht ausführen). „Ändere Prompt 2 in …“ → aktion aendern mit nummer und dem vollständigen neuen Text. „Lösche Prompt 2“ → aktion loeschen mit nummer, nur wenn Frank die Nummer ausdrücklich nennt.",
             schema = schema(
-                "aktion" to text("speichern oder loeschen.", listOf("speichern", "loeschen")),
-                "text" to text("Beim Speichern: der Prompt, sinnvoll ausformuliert als klarer Auftrag in gutem Deutsch."),
-                "nummer" to zahl("Beim Löschen: Nummer des Prompts."),
+                "aktion" to text("speichern, aendern oder loeschen.", listOf("speichern", "aendern", "loeschen")),
+                "text" to text("Beim Speichern und Ändern: der Prompt, sinnvoll ausformuliert als klarer Auftrag in gutem Deutsch."),
+                "nummer" to zahl("Beim Ändern und Löschen: Nummer des Prompts."),
                 pflicht = listOf("aktion"),
             ),
             nurLesen = false,
@@ -33,6 +33,10 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
             if (a.optString("aktion") == "loeschen") {
                 Prompts.loesche(context, nummer)?.let { Ergebnis("Prompt ${it.nummer} gelöscht.") }
                     ?: Ergebnis("Prompt $nummer ließ sich nicht löschen (gibt es nicht oder Datei beschädigt).", fehler = true)
+            } else if (a.optString("aktion") == "aendern") {
+                val text = DiktatTrenner.ohneSchluss(a.optString("text")).trim()
+                if (Prompts.aendere(context, nummer, text)) Ergebnis("Prompt $nummer geändert.")
+                else Ergebnis("Prompt $nummer ließ sich nicht ändern (gibt es nicht, kein Text oder Datei beschädigt).", fehler = true)
             } else {
                 val text = DiktatTrenner.ohneSchluss(a.optString("text")).trim()
                 if (text.isEmpty()) Ergebnis("Kein Text zum Speichern angegeben.", fehler = true)
