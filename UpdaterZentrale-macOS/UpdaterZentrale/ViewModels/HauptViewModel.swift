@@ -695,8 +695,11 @@ final class HauptViewModel {
         // Eigene Aufgabe: der Sammelbesitz (defer oben) ist dann schon frei, ein langsamer Launcher
         // blockiert keine neuen Updates.
         if faelle.contains(where: { ClaudeUebergabe.automatischRelevant($0.1) }) {
+            let zusammenfassung = kopfStatus
             Task { @MainActor in
                 let uebergabe = await ClaudeUebergabe.automatischStarten(faelle, self.einstellungen)
+                // Inzwischen lief schon etwas anderes: dessen Status nicht mit dem alten Ergebnis verfaelschen.
+                guard self.kopfStatus == zusammenfassung else { return }
                 if let problem = uebergabe.problem {
                     self.kopfStatus += "  ·  " + problem
                 } else if uebergabe.gestartet {

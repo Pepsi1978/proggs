@@ -58,10 +58,19 @@ public static class ClaudeUebergabe
                                   });
                 return new AutoErgebnis(false, null);
             }
+            // VOR dem Start vorgemerkt: endet die App waehrend des Launcher-Starts (Selbst-Update), gilt
+            // die Sperrfrist trotzdem. Scheitert der Start sicher, wird die Marke zurueckgenommen.
+            var bisher = offen.Select(f => einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm).ToList();
+            foreach (var f in offen) einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm = DateTime.Now;
+            einstellungen.Speichern();
             var (problem, vielleicht) = await StartenKernAsync(offen);
-            if (problem is null || vielleicht)
+            if (problem is not null)
             {
-                foreach (var f in offen) einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm = DateTime.Now;
+                // Unklar (Launcher antwortete nicht): nur eine Stunde sperren statt sechs -- haengt er
+                // an einem Dialog, kommt der Fehler bald noch einmal an.
+                for (var i = 0; i < offen.Count; i++)
+                    einstellungen.Fuer(offen[i].Eintrag.Id).AutomatischUebergebenAm =
+                        vielleicht ? DateTime.Now - Sperrfrist + TimeSpan.FromHours(1) : bisher[i];
                 einstellungen.Speichern();
             }
             return new AutoErgebnis(problem is null || vielleicht, problem);
@@ -146,11 +155,15 @@ public static class ClaudeUebergabe
                     var zeilen = Protokollierung.LiesAlleZeilen(bericht.ProtokollDatei).ToList();
                     var ende = new List<string>();
                     var laenge = 0;
-                    for (var i = zeilen.Count - 1; i >= 0 && laenge + zeilen[i].Length < ProtokollZeichen / faelle.Count; i--)
+                    var budget = ProtokollZeichen / faelle.Count;
+                    for (var i = zeilen.Count - 1; i >= 0 && laenge + zeilen[i].Length < budget; i--)
                     {
                         ende.Insert(0, zeilen[i]);
                         laenge += zeilen[i].Length + 1;
                     }
+                    // Die letzte Zeile ist meist die entscheidende Fehlermeldung: notfalls gekuerzt mitnehmen.
+                    if (ende.Count == 0 && zeilen.Count > 0)
+                        ende.Add(zeilen[^1][..Math.Min(zeilen[^1].Length, Math.Max(200, budget - 2))] + " …");
                     sb.AppendLine();
                     sb.AppendLine(ende.Count < zeilen.Count
                         ? "Protokoll (letzte " + ende.Count + " von " + zeilen.Count + " Zeilen, den Rest in der Datei oben lesen):"

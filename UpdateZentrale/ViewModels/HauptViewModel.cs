@@ -906,7 +906,10 @@ public sealed partial class HauptViewModel : ObservableObject
                          .Select(s => (s.Programm.Eintrag, s.Programm.LetzterBericht!)).ToList();
         if (faelle.Any(f => ClaudeUebergabe.AutomatischRelevant(f.Item2)))
         {
+            var zusammenfassung = KopfStatus;
             var uebergabe = await ClaudeUebergabe.AutomatischStartenAsync(faelle, _einstellungen);
+            // Inzwischen lief schon etwas anderes: dessen Status nicht mit dem alten Ergebnis verfaelschen.
+            if (KopfStatus != zusammenfassung) return;
             if (uebergabe.Problem is not null) KopfStatus += "  ·  " + uebergabe.Problem;
             else if (uebergabe.Gestartet) KopfStatus += "  ·  Fehler automatisch an Claude Code übergeben.";
         }

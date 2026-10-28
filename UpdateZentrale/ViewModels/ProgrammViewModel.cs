@@ -677,7 +677,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             var urteil = UpdateKette.BereitsAktuell(vorher, vorPruefung);
             var liefVorher = false;
-            var ganzVorher = Programmpruefung.Vollstaendig(Eintrag);
 
             if (urteil is null)
             {
@@ -721,15 +720,23 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             // Ein abgebrochenes oder gescheitertes Update kann die Programmdatei halb ersetzt zuruecklassen.
             // Das muss als eigener Befund sichtbar werden, nicht nur als "Zeitlimit".
-            if (ganzVorher is null && urteil.Ergebnis != LaufErgebnis.Erfolgreich
-                && Programmpruefung.Vollstaendig(Eintrag) is { } fehlt)
+            // Ein Installer ausserhalb des beendeten Prozessbaums (msiexec im Windows-Installer-Dienst)
+            // kopiert womoeglich noch: bis zu einer Minute nachpruefen, bevor "fehlt" gilt.
+            var fehlt = urteil.Ergebnis == LaufErgebnis.Erfolgreich ? null : Programmpruefung.Vollstaendig(Eintrag);
+            for (var versuch = 0; fehlt is not null && versuch < 12; versuch++)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                fehlt = Programmpruefung.Vollstaendig(Eintrag);
+            }
+            if (fehlt is not null)
             {
                 fortschritt.Report("⚠ " + fehlt);
                 urteil = urteil with
                 {
                     Ergebnis = LaufErgebnis.Fehlgeschlagen,
                     Meldung = fehlt + " Vorheriger Befund: " + urteil.Meldung,
-                    FuerKarte = urteil.FuerKarte with { Zustand = UpdateZustand.Fehler }
+                    FuerKarte = urteil.FuerKarte with { Zustand = UpdateZustand.Fehler },
+                    UpdateLiefDurch = false
                 };
             }
 

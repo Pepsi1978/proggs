@@ -13,7 +13,15 @@ enum Programmpruefung {
         guard fm.fileExists(atPath: ziel) else {
             return "\(eintrag.name) fehlt nach dem Update (\(ziel)) – bitte neu installieren."
         }
-        guard eintrag.istAppBuendel else { return nil }
+        guard eintrag.istAppBuendel else {
+            let groesse = (try? fm.attributesOfItem(atPath: ziel)[.size] as? NSNumber)?.int64Value ?? 0
+            var ordner: ObjCBool = false
+            if fm.fileExists(atPath: ziel, isDirectory: &ordner), !ordner.boolValue,
+               groesse == 0 || !fm.isExecutableFile(atPath: ziel) {
+                return "\(eintrag.name) ist nach dem Update unvollständig (\(ziel) ist leer oder nicht ausführbar) – bitte neu installieren."
+            }
+            return nil
+        }
         let plist = (ziel as NSString).appendingPathComponent("Contents/Info.plist")
         guard let info = NSDictionary(contentsOfFile: plist),
               let programm = info["CFBundleExecutable"] as? String, !programm.istLeer else {

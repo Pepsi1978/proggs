@@ -28,7 +28,10 @@ enum ClaudeUebergabe {
     @MainActor static func automatischStarten(_ faelle: [(ProgrammEintrag, UpdateBericht)],
                                               _ einstellungen: Einstellungen) async -> AutoErgebnis {
         guard faelle.contains(where: { automatischRelevant($0.1) }) else { return AutoErgebnis() }
-        while automatischLaeuft { try? await Task.sleep(nanoseconds: 500_000_000) }
+        while automatischLaeuft {
+            // Abgebrochen: aussteigen statt ohne Pause auf dem MainActor zu kreisen.
+            do { try await Task.sleep(nanoseconds: 500_000_000) } catch { return AutoErgebnis() }
+        }
         automatischLaeuft = true
         defer { automatischLaeuft = false }
 
@@ -42,13 +45,22 @@ enum ClaudeUebergabe {
                               ["programme": faelle.filter { automatischRelevant($0.1) }.map(\.0.id).joined(separator: ",")])
             return AutoErgebnis()
         }
+        // VOR dem Start vorgemerkt: endet die App waehrend des Launcher-Starts (Selbst-Update), gilt
+        // die Sperrfrist trotzdem. Scheitert der Start sicher, wird die Marke zurueckgenommen.
+        let bisher = offen.map { einstellungen.fuer($0.0.id).automatischUebergebenAm }
+        for (eintrag, _) in offen { einstellungen.fuer(eintrag.id).automatischUebergebenAm = Date() }
+        einstellungen.speichern()
         let (problem, vielleicht) = await startenKern(offen)
-        let gestartet = problem == nil || vielleicht
-        if gestartet {
-            for (eintrag, _) in offen { einstellungen.fuer(eintrag.id).automatischUebergebenAm = Date() }
+        if problem != nil {
+            for ((eintrag, _), alt) in zip(offen, bisher) {
+                // Unklar (Launcher antwortete nicht): nur eine Stunde sperren statt sechs -- haengt er
+                // an einem Dialog, kommt der Fehler bald noch einmal an.
+                einstellungen.fuer(eintrag.id).automatischUebergebenAm =
+                    vielleicht ? Date().addingTimeInterval(3600 - sperrfrist) : alt
+            }
             einstellungen.speichern()
         }
-        return AutoErgebnis(gestartet: gestartet, problem: problem)
+        return AutoErgebnis(gestartet: problem == nil || vielleicht, problem: problem)
     }
 
     static func starten(_ eintrag: ProgrammEintrag, _ bericht: UpdateBericht) async -> String? {
@@ -123,11 +135,17 @@ enum ClaudeUebergabe {
                     .filter { $0.contains(marke) }
                 var ende: [String] = []
                 var laenge = 0
+                let budget = protokollZeichen / faelle.count
                 for zeile in zeilen.reversed() {
-                    let kurz = zeile.count > 2000 ? String(zeile.prefix(2000)) + " …" : zeile
-                    if laenge + kurz.count >= protokollZeichen / faelle.count { break }
+                    var kurz = zeile.count > 2000 ? String(zeile.prefix(2000)) + " …" : zeile
+                    if laenge + kurz.count >= budget {
+                        // Die letzte Zeile ist meist die entscheidende Fehlermeldung: gekuerzt mitnehmen.
+                        guard ende.isEmpty else { break }
+                        kurz = String(kurz.prefix(max(200, budget - 2))) + " …"
+                    }
                     ende.insert(kurz, at: 0)
                     laenge += kurz.count + 1
+                    if laenge >= budget { break }
                 }
                 t += "\n" + (ende.count < zeilen.count
                     ? "Protokoll von \(eintrag.id) (letzte \(ende.count) von \(zeilen.count) Zeilen, den Rest in der Datei oben lesen):\n"

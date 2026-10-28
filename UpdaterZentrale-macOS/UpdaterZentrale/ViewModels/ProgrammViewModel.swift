@@ -301,6 +301,8 @@ final class ProgrammViewModel {
         } else if ergebnis.gestartet {
             statusText = (automatisch ? "Fehler automatisch" : "Problem mit \(name)")
                 + " an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor."
+        } else {
+            statusText = "Dieser Fehler ging in den letzten Stunden schon an Claude Code – „An Claude Code übergeben“ startet eine neue Sitzung."
         }
     }
 
@@ -390,7 +392,6 @@ final class ProgrammViewModel {
 
             var urteil = UpdateKette.bereitsAktuell(vorher, vorPruefung)
             var liefVorher = false
-            let ganzVorher = Programmpruefung.vollstaendig(self.eintrag)
 
             if urteil == nil {
                 liefVorher = Prozessdienst.laeuft(self.eintrag)
@@ -439,12 +440,13 @@ final class ProgrammViewModel {
 
             // Ein abgebrochenes oder gescheitertes Update kann die App halb ersetzt zuruecklassen
             // (alte geloescht, neue nicht fertig verschoben). Das muss als eigener Befund sichtbar werden.
-            if ganzVorher == nil, ende.ergebnis != .erfolgreich,
-               let fehlt = Programmpruefung.vollstaendig(self.eintrag) {
+            // Auch bei einer schon vorher kaputten App: der Hinweis zum Neuinstallieren bleibt dann stehen.
+            if ende.ergebnis != .erfolgreich, let fehlt = Programmpruefung.vollstaendig(self.eintrag) {
                 fortschritt.berichte("⚠ " + fehlt)
                 ende.ergebnis = .fehlgeschlagen
                 ende.meldung = fehlt + " Vorheriger Befund: " + ende.meldung
                 ende.fuerKarte.zustand = .fehler
+                ende.updateLiefDurch = false
             }
 
             // Einmal neu starten, nach der ganzen Kette -- nie zwischen Durchlaeufen, wo ein
