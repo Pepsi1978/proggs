@@ -165,10 +165,12 @@ class FernsteuerungActivity : ComponentActivity() {
         // Knopfzustand folgt der echten Tastatur (auch wenn sie per Zurück-Geste geschlossen wurde).
         val imeSichtbar = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
         androidx.compose.runtime.LaunchedEffect(imeSichtbar) { tastaturAn = imeSichtbar }
+        // Außerhalb der Leiste, damit die Scroll-Position beim Aus- und Einblenden erhalten bleibt.
+        val leisteScroll = rememberScrollState()
         Box(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding().imePadding()) {
             Column(Modifier.fillMaxSize()) {
                 AndroidView({ ansicht }, Modifier.weight(1f).fillMaxWidth())
-                if (leisteAn) Leiste()
+                if (leisteAn) Leiste(leisteScroll)
             }
             if (status.isNotEmpty() && !gesperrt) {
                 Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -179,39 +181,35 @@ class FernsteuerungActivity : ComponentActivity() {
             if (gesperrt) { if (ziel == Fernziel.WINDOWS) WindowsGesperrt(Modifier.align(Alignment.Center)) else Entsperren(Modifier.align(Alignment.Center)) }
             // Tastatur-Knopf unten rechts in Daumennähe, darunter der Leisten-Knopf, beide über der Leiste.
             Column(
-                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (leisteAn) 64.dp else 16.dp),
+                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (leisteAn) LEISTE_HOEHE + 12.dp else 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (!gesperrt) Box(
-                    Modifier.size(56.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(if (tastaturAn) Color(0xFF3B6FE0) else Color(0xCC2A2E37))
-                        .clickable { tastaturUmschalten() }
-                        .semantics { contentDescription = "Tastatur ein- oder ausblenden" },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Rounded.Keyboard, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+                if (!gesperrt) RundKnopf(Icons.Rounded.Keyboard, tastaturAn, "Tastatur ein- oder ausblenden", 26.dp) { tastaturUmschalten() }
                 // Bleibt immer sichtbar, damit die ausgeblendete Leiste (mit „Ende“) erreichbar bleibt.
-                Box(
-                    Modifier.size(56.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(if (leisteAn) Color(0xFF3B6FE0) else Color(0xCC2A2E37))
-                        .clickable { leisteAn = !leisteAn }
-                        .semantics { contentDescription = "Untere Leiste ein- oder ausblenden" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        if (leisteAn) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowUp,
-                        null, tint = Color.White, modifier = Modifier.size(30.dp),
-                    )
-                }
+                RundKnopf(
+                    if (leisteAn) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowUp,
+                    leisteAn, "Untere Leiste ein- oder ausblenden", 30.dp,
+                ) { leisteAn = !leisteAn }
             }
         }
     }
 
     @Composable
-    private fun Leiste() {
+    private fun RundKnopf(icon: ImageVector, aktiv: Boolean, beschreibung: String, iconGroesse: androidx.compose.ui.unit.Dp, aktion: () -> Unit) {
+        Box(
+            Modifier.size(56.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(if (aktiv) Color(0xFF3B6FE0) else Color(0xCC2A2E37))
+                .clickable(onClick = aktion)
+                .semantics { contentDescription = beschreibung },
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(iconGroesse)) }
+    }
+
+    @Composable
+    private fun Leiste(scroll: androidx.compose.foundation.ScrollState) {
         Row(
-            Modifier.fillMaxWidth().height(52.dp).background(Color(0xFF15171C)).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp),
+            Modifier.fillMaxWidth().height(LEISTE_HOEHE).background(Color(0xFF15171C)).horizontalScroll(scroll).padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -300,5 +298,6 @@ class FernsteuerungActivity : ComponentActivity() {
         const val PORT = 47800
         /** Fernziel.name ("MAC" oder "WINDOWS"); fehlt es, verbindet die Fernsteuerung wie bisher mit dem Mac. */
         const val EXTRA_ZIEL = "ziel"
+        private val LEISTE_HOEHE = 52.dp
     }
 }
