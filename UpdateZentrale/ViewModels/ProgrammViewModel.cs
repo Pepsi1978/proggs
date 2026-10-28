@@ -284,9 +284,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         try
         {
-            var problem = await ClaudeUebergabe.AutomatischStartenAsync(new[] { (Eintrag, bericht) }, _einstellungen);
-            if (problem is not null) Melde(problem);
-            else if (_einstellungen.Fuer(Eintrag.Id).AutomatischUebergebenAm is { } am && DateTime.Now - am < TimeSpan.FromMinutes(1))
+            var ergebnis = await ClaudeUebergabe.AutomatischStartenAsync(new[] { (Eintrag, bericht) }, _einstellungen);
+            if (ergebnis.Problem is not null) Melde(ergebnis.Problem);
+            else if (ergebnis.Gestartet)
                 Melde("Fehler automatisch an Claude Code übergeben – die Sitzung läuft im Terminal und beugt dem Fehler künftig vor.");
         }
         catch (Exception diagAusnahme)

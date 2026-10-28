@@ -40,10 +40,11 @@ public static class Kommandozeile
     /// ihre Elevation selbst anfordern dürfen müssen.
     /// </param>
     /// <param name="lebenszeichen">
-    /// Gesetzt, ist <paramref name="zeitlimit"/> eine Ruhezeit: abgebrochen wird erst, wenn so lange
-    /// weder Ausgabe kam noch sich der Wert dieses Lebenszeichens geaendert hat (etwa die Groesse eines
-    /// Download-Ordners). Ein langsamer, aber laufender Download wird so nie abgewuergt, ein haengender
-    /// schon. Hoechstens <see cref="Hoechstdauer"/> insgesamt.
+    /// Gesetzt, ist <paramref name="zeitlimit"/> eine Ruhezeit: abgebrochen wird erst, wenn das
+    /// Lebenszeichen (etwa die Groesse des Download-Ordners) so lange nicht ueber seinen bisher hoechsten
+    /// Wert gewachsen ist. Die Ausgabe zaehlt bewusst nicht: winget dreht seinen Spinner auch dann weiter,
+    /// wenn der Installer haengt. Ein langsamer, aber laufender Download wird so nie abgewuergt, ein
+    /// haengender schon. Hoechstens <see cref="Hoechstdauer"/> insgesamt.
     /// </param>
     public static Task<BefehlErgebnis> AusfuehrenAsync(
         string datei,
@@ -226,20 +227,17 @@ public static class Kommandozeile
         using var waechterEnde = new CancellationTokenSource();
         var waechter = lebenszeichen is null ? Task.CompletedTask : Task.Run(async () =>
         {
-            // Jedes Lebenszeichen stellt die Ruhezeit-Uhr zurueck.
-            long Menge() { lock (puffer) lock (fehlerPuffer) return puffer.Length + fehlerPuffer.Length; }
-            var letztesZeichen = SicherLesen(lebenszeichen);
-            var letzteMenge = Menge();
+            // Nur echtes Wachstum stellt die Ruhezeit-Uhr zurueck: Loeschen, Messfehler (0) oder ein
+            // Zurueckspringen zaehlen nicht.
+            var hoechstes = SicherLesen(lebenszeichen);
             try
             {
                 while (!waechterEnde.IsCancellationRequested && !verbund.IsCancellationRequested)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(5), waechterEnde.Token);
                     var zeichen = SicherLesen(lebenszeichen);
-                    var menge = Menge();
-                    if (zeichen == letztesZeichen && menge == letzteMenge) continue;
-                    letztesZeichen = zeichen;
-                    letzteMenge = menge;
+                    if (zeichen <= hoechstes) continue;
+                    hoechstes = zeichen;
                     zeitgeber.CancelAfter(zeitlimit);
                 }
             }

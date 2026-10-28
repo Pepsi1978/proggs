@@ -11,19 +11,31 @@ namespace UpdateZentrale.Providers;
 public sealed class WingetAktualisierer : IAktualisierer
 {
     /// <summary>
-    /// Groesse des winget-Download-Ordners (%TEMP%\WinGet): waechst, solange winget ein Installer-Paket
-    /// laedt. Lebenszeichen fuer die Ruhezeit, damit ein langsamer Download nicht als Haenger gilt.
+    /// Groesse der winget-Download-Ordner DIESES Pakets (%TEMP%\WinGet\&lt;Id&gt;.&lt;Version&gt;): waechst,
+    /// solange winget den Installer laedt. Lebenszeichen fuer die Ruhezeit; andere, parallel laufende
+    /// Pakete zaehlen nicht mit. Verschwindet ein Ordner waehrend der Messung, zaehlt er einfach nicht.
     /// </summary>
-    internal static long DownloadGroesse()
+    internal static long DownloadGroesse(string? wingetId)
     {
-        var ordner = new DirectoryInfo(Path.Combine(Path.GetTempPath(), "WinGet"));
-        if (!ordner.Exists) return 0;
+        if (string.IsNullOrWhiteSpace(wingetId)) return 0;
+        var wurzel = Path.Combine(Path.GetTempPath(), "WinGet");
         long summe = 0;
-        foreach (var datei in ordner.EnumerateFiles("*", SearchOption.AllDirectories))
+        try
         {
-            try { summe += datei.Length; }
-            catch (IOException) { }
+            foreach (var ordner in Directory.GetDirectories(wurzel, wingetId + "*"))
+            {
+                try
+                {
+                    foreach (var datei in Directory.GetFiles(ordner, "*", SearchOption.AllDirectories))
+                    {
+                        try { summe += new FileInfo(datei).Length; }
+                        catch (IOException) { }
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
         }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         return summe;
     }
 
@@ -250,7 +262,7 @@ public sealed class WingetAktualisierer : IAktualisierer
         {
             lauf = await Kommandozeile.AusfuehrenAsync(
                 Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch,
-                lebenszeichen: DownloadGroesse);
+                lebenszeichen: () => DownloadGroesse(eintrag.WingetId));
         }
         finally
         {

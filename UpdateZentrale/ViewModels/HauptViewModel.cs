@@ -890,18 +890,6 @@ public sealed partial class HauptViewModel : ObservableObject
                          + (cliBestaetigt ? "  ✔ Du kannst im CLI weiterarbeiten." : "");
             vorgang.Beenden("abgeschlossen", KopfStatus);
 
-            // Erst am Ende und in EINER Sitzung: mitten im Lauf koennten spaetere Schritte (Terminal,
-            // CLI, Launcher) die Sitzung beenden, und mehrere Sitzungen kaemen sich auf main in die Quere.
-            var faelle = plan.Where(s => s.Programm.LetzterBericht is { } b && b.SammelId == sammelId)
-                             .Select(s => (s.Programm.Eintrag, s.Programm.LetzterBericht!)).ToList();
-            if (faelle.Any(f => ClaudeUebergabe.AutomatischRelevant(f.Item2)))
-            {
-                var problem = await ClaudeUebergabe.AutomatischStartenAsync(faelle, _einstellungen);
-                if (problem is not null) KopfStatus += "  ·  " + problem;
-                else if (faelle.Any(f => _einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm is { } am
-                                         && DateTime.Now - am < TimeSpan.FromMinutes(1)))
-                    KopfStatus += "  ·  Fehler automatisch an Claude Code übergeben.";
-            }
         }
         finally
         {
@@ -909,6 +897,18 @@ public sealed partial class HauptViewModel : ObservableObject
             LaeuftSammelvorgang = false;
             LaufDetail = "";
             SortierungAnwenden();
+        }
+
+        // Erst am Ende, ausserhalb des Sammelbesitzes und in EINER Sitzung: mitten im Lauf koennten
+        // spaetere Schritte (Terminal, CLI, Launcher) die Sitzung beenden, mehrere Sitzungen kaemen sich
+        // auf main in die Quere, und ein langsamer Launcher soll keine neuen Updates blockieren.
+        var faelle = plan.Where(s => s.Programm.LetzterBericht is { } b && b.SammelId == sammelId)
+                         .Select(s => (s.Programm.Eintrag, s.Programm.LetzterBericht!)).ToList();
+        if (faelle.Any(f => ClaudeUebergabe.AutomatischRelevant(f.Item2)))
+        {
+            var uebergabe = await ClaudeUebergabe.AutomatischStartenAsync(faelle, _einstellungen);
+            if (uebergabe.Problem is not null) KopfStatus += "  ·  " + uebergabe.Problem;
+            else if (uebergabe.Gestartet) KopfStatus += "  ·  Fehler automatisch an Claude Code übergeben.";
         }
     }
 

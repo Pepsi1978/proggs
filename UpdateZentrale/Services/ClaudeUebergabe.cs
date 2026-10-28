@@ -22,42 +22,53 @@ public static class ClaudeUebergabe
     /// <summary>Automatische Uebergaben je Programm hoechstens einmal in dieser Frist (Klick geht immer).</summary>
     public static readonly TimeSpan Sperrfrist = TimeSpan.FromHours(6);
 
-    /// <summary>Nie zwei automatische Sitzungen zugleich: sie aenderten dieselben Dateien und pushten auf main.</summary>
-    private static int _automatischLaeuft;
+    /// <summary>
+    /// Nie zwei automatische Sitzungen zugleich: sie aenderten dieselben Dateien und pushten auf main.
+    /// Wer spaeter kommt, wartet und wird danach gegen die Sperrfrist geprueft -- verloren geht keiner.
+    /// </summary>
+    private static readonly SemaphoreSlim AutomatischSchleuse = new(1, 1);
 
     /// <summary>Nur echte Fehlschlaege; "nicht verifiziert" heisst oft nur "Version nicht feststellbar".</summary>
     public static bool AutomatischRelevant(UpdateBericht bericht) => bericht.Ergebnis == LaufErgebnis.Fehlgeschlagen;
 
+    /// <param name="Gestartet">Eine Sitzung wurde (vermutlich) gestartet.</param>
+    /// <param name="Problem">Warum nicht, oder was unklar blieb; null = alles gut oder nichts zu tun.</param>
+    public sealed record AutoErgebnis(bool Gestartet, string? Problem);
+
     /// <summary>
-    /// Startet EINE Sitzung fuer alle Fehler ausserhalb der Sperrfrist und merkt sie erst nach gelungenem
-    /// Start vor. Null, wenn nichts zu tun war oder es klappte, sonst das Problem.
+    /// Startet EINE Sitzung fuer alle Fehler ausserhalb der Sperrfrist und merkt sie nach dem Start vor --
+    /// auch wenn der Launcher nur nicht rechtzeitig antwortete, denn dann laeuft die Sitzung meist doch.
     /// </summary>
-    public static async Task<string?> AutomatischStartenAsync(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle,
-                                                              Einstellungen einstellungen)
+    public static async Task<AutoErgebnis> AutomatischStartenAsync(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle,
+                                                                   Einstellungen einstellungen)
     {
-        var offen = faelle.Where(f => AutomatischRelevant(f.Bericht)
-                                      && (einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm is not { } zuletzt
-                                          || DateTime.Now - zuletzt >= Sperrfrist)).ToList();
-        if (offen.Count == 0 || Interlocked.Exchange(ref _automatischLaeuft, 1) == 1)
-        {
-            if (faelle.Count > 0)
-                Diagnose.Ereignis(Schwere.Info, "uebergabe", "auto.gesperrt", "Sperrfrist oder laufende Übergabe", null,
-                                  new Dictionary<string, object?> { ["programme"] = string.Join(",", faelle.Select(f => f.Eintrag.Id)) });
-            return null;
-        }
+        if (!faelle.Any(f => AutomatischRelevant(f.Bericht))) return new AutoErgebnis(false, null);
+        await AutomatischSchleuse.WaitAsync();
         try
         {
-            var problem = await StartenAsync(offen);
-            if (problem is null)
+            var offen = faelle.Where(f => AutomatischRelevant(f.Bericht)
+                                          && (einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm is not { } zuletzt
+                                              || DateTime.Now - zuletzt >= Sperrfrist)).ToList();
+            if (offen.Count == 0)
+            {
+                Diagnose.Ereignis(Schwere.Info, "uebergabe", "auto.gesperrt", "Sperrfrist läuft", null,
+                                  new Dictionary<string, object?>
+                                  {
+                                      ["programme"] = string.Join(",", faelle.Where(f => AutomatischRelevant(f.Bericht)).Select(f => f.Eintrag.Id))
+                                  });
+                return new AutoErgebnis(false, null);
+            }
+            var (problem, vielleicht) = await StartenKernAsync(offen);
+            if (problem is null || vielleicht)
             {
                 foreach (var f in offen) einstellungen.Fuer(f.Eintrag.Id).AutomatischUebergebenAm = DateTime.Now;
                 einstellungen.Speichern();
             }
-            return problem;
+            return new AutoErgebnis(problem is null || vielleicht, problem);
         }
         finally
         {
-            Volatile.Write(ref _automatischLaeuft, 0);
+            AutomatischSchleuse.Release();
         }
     }
 
@@ -66,10 +77,14 @@ public static class ClaudeUebergabe
 
     /// <summary>Null on success, otherwise why no session was started.</summary>
     public static async Task<string?> StartenAsync(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)
+        => (await StartenKernAsync(faelle)).Problem;
+
+    /// <param name="Vielleicht">Der Launcher antwortete nicht rechtzeitig -- die Sitzung laeuft womoeglich doch.</param>
+    private static async Task<(string? Problem, bool Vielleicht)> StartenKernAsync(IReadOnlyList<(ProgrammEintrag Eintrag, UpdateBericht Bericht)> faelle)
     {
-        if (faelle.Count == 0) return null;
+        if (faelle.Count == 0) return (null, false);
         if (!File.Exists(OpenCodeSitzungAktualisierer.LauncherExe))
-            return "OpenLauncher nicht gefunden: " + OpenCodeSitzungAktualisierer.LauncherExe;
+            return ("OpenLauncher nicht gefunden: " + OpenCodeSitzungAktualisierer.LauncherExe, false);
 
         try
         {
@@ -84,15 +99,15 @@ public static class ClaudeUebergabe
             var code = await OpenCodeSitzungAktualisierer.LauncherStartenAsync(args, ordner, new Progress<string>(_ => { }), CancellationToken.None);
             return code switch
             {
-                null => "Der OpenLauncher hat sich nach zwei Minuten nicht zurückgemeldet – ob die Sitzung läuft, ist unklar.",
-                0 => null,
-                _ => "Der OpenLauncher konnte die Sitzung nicht starten (Code " + code + ") – Einzelheiten im OpenLauncher-Log."
+                null => ("Der OpenLauncher hat sich nach zwei Minuten nicht zurückgemeldet – ob die Sitzung läuft, ist unklar.", true),
+                0 => (null, false),
+                _ => ("Der OpenLauncher konnte die Sitzung nicht starten (Code " + code + ") – Einzelheiten im OpenLauncher-Log.", false)
             };
         }
         catch (Exception diagAusnahme)
         {
             Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Warnung);
-            return "Übergabe an Claude Code fehlgeschlagen: " + diagAusnahme.Message;
+            return ("Übergabe an Claude Code fehlgeschlagen: " + diagAusnahme.Message, false);
         }
     }
 
@@ -112,43 +127,43 @@ public static class ClaudeUebergabe
         sb.AppendLine("4. Halte Ursache und Vorbeugung im passenden Bug-Almanach unter proggs\\bugs fest, damit die UpdateZentrale aus jedem Fehler lernt.");
         foreach (var (eintrag, bericht) in faelle)
         {
-        sb.AppendLine();
-        if (faelle.Count > 1) sb.AppendLine("=== " + bericht.Name + " ===");
-        sb.AppendLine("Programm: " + bericht.Name + " (Id " + eintrag.Id + ", Art " + eintrag.Art + ")");
-        sb.AppendLine("Zeitpunkt: " + bericht.Zeit.ToString("dd.MM.yyyy, HH:mm:ss"));
-        sb.AppendLine("Ergebnis: " + bericht.ErgebnisText + ", Exit-Code " + bericht.ExitCode + (bericht.Erhoeht ? ", lief mit Administratorrechten" : ""));
-        if (!string.IsNullOrWhiteSpace(bericht.VersionVorher) || !string.IsNullOrWhiteSpace(bericht.VersionNachher))
-            sb.AppendLine("Version vorher/nachher: " + bericht.VersionVorher + " → " + bericht.VersionNachher);
-        if (!string.IsNullOrWhiteSpace(bericht.Befehl)) sb.AppendLine("Befehl: " + bericht.Befehl);
-        sb.AppendLine("Meldung: " + bericht.Meldung);
-        sb.AppendLine("Protokolldatei (vollständig): " + bericht.ProtokollDatei);
-        sb.AppendLine("Weitere Protokolle (Tagesprotokolle, Diagnose-JSONL, verlauf.jsonl): " + Protokollierung.Ordner);
+            sb.AppendLine();
+            if (faelle.Count > 1) sb.AppendLine("=== " + bericht.Name + " ===");
+            sb.AppendLine("Programm: " + bericht.Name + " (Id " + eintrag.Id + ", Art " + eintrag.Art + ")");
+            sb.AppendLine("Zeitpunkt: " + bericht.Zeit.ToString("dd.MM.yyyy, HH:mm:ss"));
+            sb.AppendLine("Ergebnis: " + bericht.ErgebnisText + ", Exit-Code " + bericht.ExitCode + (bericht.Erhoeht ? ", lief mit Administratorrechten" : ""));
+            if (!string.IsNullOrWhiteSpace(bericht.VersionVorher) || !string.IsNullOrWhiteSpace(bericht.VersionNachher))
+                sb.AppendLine("Version vorher/nachher: " + bericht.VersionVorher + " → " + bericht.VersionNachher);
+            if (!string.IsNullOrWhiteSpace(bericht.Befehl)) sb.AppendLine("Befehl: " + bericht.Befehl);
+            sb.AppendLine("Meldung: " + bericht.Meldung);
+            sb.AppendLine("Protokolldatei (vollständig): " + bericht.ProtokollDatei);
+            sb.AppendLine("Weitere Protokolle (Tagesprotokolle, Diagnose-JSONL, verlauf.jsonl): " + Protokollierung.Ordner);
 
-        if (File.Exists(bericht.ProtokollDatei))
-        {
-            try
+            if (File.Exists(bericht.ProtokollDatei))
             {
-                var zeilen = Protokollierung.LiesAlleZeilen(bericht.ProtokollDatei).ToList();
-                var ende = new List<string>();
-                var laenge = 0;
-                for (var i = zeilen.Count - 1; i >= 0 && laenge + zeilen[i].Length < ProtokollZeichen; i--)
+                try
                 {
-                    ende.Insert(0, zeilen[i]);
-                    laenge += zeilen[i].Length + 1;
+                    var zeilen = Protokollierung.LiesAlleZeilen(bericht.ProtokollDatei).ToList();
+                    var ende = new List<string>();
+                    var laenge = 0;
+                    for (var i = zeilen.Count - 1; i >= 0 && laenge + zeilen[i].Length < ProtokollZeichen / faelle.Count; i--)
+                    {
+                        ende.Insert(0, zeilen[i]);
+                        laenge += zeilen[i].Length + 1;
+                    }
+                    sb.AppendLine();
+                    sb.AppendLine(ende.Count < zeilen.Count
+                        ? "Protokoll (letzte " + ende.Count + " von " + zeilen.Count + " Zeilen, den Rest in der Datei oben lesen):"
+                        : "Protokoll:");
+                    sb.AppendLine("----");
+                    foreach (var z in ende) sb.AppendLine(z);
+                    sb.AppendLine("----");
                 }
-                sb.AppendLine();
-                sb.AppendLine(ende.Count < zeilen.Count
-                    ? "Protokoll (letzte " + ende.Count + " von " + zeilen.Count + " Zeilen, den Rest in der Datei oben lesen):"
-                    : "Protokoll:");
-                sb.AppendLine("----");
-                foreach (var z in ende) sb.AppendLine(z);
-                sb.AppendLine("----");
+                catch (Exception diagAusnahme)
+                {
+                    Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Info);
+                }
             }
-            catch (Exception diagAusnahme)
-            {
-                Diagnose.Gefangen(diagAusnahme, "uebergabe", Schwere.Info);
-            }
-        }
         }
 
         return sb.ToString();
