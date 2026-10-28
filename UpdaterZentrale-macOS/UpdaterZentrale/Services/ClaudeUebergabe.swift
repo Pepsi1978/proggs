@@ -54,18 +54,23 @@ enum ClaudeUebergabe {
         t += "Protokolldatei (vollständig): \(bericht.protokollDatei)\n"
         t += "Weitere Protokolle (Tagesprotokolle, Diagnose-JSONL, verlauf.jsonl): \(Protokollierung.ordner)\n"
 
+        // Das Tagesprotokoll teilen sich alle Programme; nur die Zeilen dieses Programms zaehlen.
+        // \r-Fortschrittsbalken werden zu eigenen Zeilen, damit keine Riesenzeile den Auszug sprengt.
         if let inhalt = try? String(contentsOfFile: bericht.protokollDatei, encoding: .utf8) {
-            let zeilen = inhalt.replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n")
+            let marke = "[\(eintrag.id)]"
+            let zeilen = inhalt.components(separatedBy: CharacterSet(charactersIn: "\r\n"))
+                .filter { $0.contains(marke) }
             var ende: [String] = []
             var laenge = 0
             for zeile in zeilen.reversed() {
-                if laenge + zeile.count >= protokollZeichen { break }
-                ende.insert(zeile, at: 0)
-                laenge += zeile.count + 1
+                let kurz = zeile.count > 2000 ? String(zeile.prefix(2000)) + " …" : zeile
+                if laenge + kurz.count >= protokollZeichen { break }
+                ende.insert(kurz, at: 0)
+                laenge += kurz.count + 1
             }
             t += "\n" + (ende.count < zeilen.count
-                ? "Protokoll (letzte \(ende.count) von \(zeilen.count) Zeilen, den Rest in der Datei oben lesen):\n"
-                : "Protokoll:\n")
+                ? "Protokoll von \(eintrag.id) (letzte \(ende.count) von \(zeilen.count) Zeilen, den Rest in der Datei oben lesen):\n"
+                : "Protokoll von \(eintrag.id):\n")
             t += "----\n" + ende.joined(separator: "\n") + "\n----\n"
         }
         return t

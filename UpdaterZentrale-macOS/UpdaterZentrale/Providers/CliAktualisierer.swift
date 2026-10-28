@@ -104,7 +104,7 @@ struct CliAktualisierer: Aktualisierer {
         // selbst aktualisieren: ihre verwaisten Reste sind ein haengengebliebener frueherer Lauf.
         if Self.istUpdateSperre(lauf),
            Self.gleicheDatei(exe, Pfade.aufloesen(eintrag.exePfadWirksam)),
-           Self.verwaisteBeenden(exe, protokoll) > 0 {
+           await Self.verwaisteBeenden(exe, protokoll) > 0 {
             protokoll.berichte("Neuer Versuch nach dem Beenden des hängengebliebenen Laufs …")
             lauf = await Kommandozeile.ausfuehren(exe, argumente,
                                                   zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
@@ -160,24 +160,49 @@ struct CliAktualisierer: Aktualisierer {
     /// Beendet Reste eines frueheren Update-Laufs derselben Programmdatei. Ein haengengebliebener
     /// Lauf (Antigravitys Download ohne Verbindung) ueberlebt die App, die ihn gestartet hat; er
     /// haelt seine Update-Sperre offen, und jedes spaetere Update endet sofort mit "update already
-    /// in progress". Nur Waisen zaehlen (Elternprozess ist launchd): eine interaktive Sitzung hat
-    /// ihr Terminal als Elternteil und bleibt unberuehrt. Gerufen nur, nachdem das Werkzeug selbst
-    /// eine laufende Aktualisierung gemeldet hat.
-    /// - Returns: wie viele Reste beendet wurden.
-    static func verwaisteBeenden(_ exe: String, _ protokoll: Fortschritt) -> Int {
+    /// in progress". Nur Waisen zaehlen (Elternprozess ist launchd), die mindestens zwei Minuten
+    /// laufen: eine interaktive Sitzung hat ihr Terminal als Elternteil, ein gerade gestartetes
+    /// Update darf fertig werden. Gerufen nur, nachdem das Werkzeug selbst eine laufende
+    /// Aktualisierung gemeldet hat.
+    /// - Returns: wie viele Reste wirklich beendet sind.
+    static func verwaisteBeenden(_ exe: String, _ protokoll: Fortschritt) async -> Int {
+        await withCheckedContinuation { fortsetzung in
+            // Eigener Thread: Prozesstabelle, pgrep und das Warten blockieren.
+            DispatchQueue.global(qos: .userInitiated).async {
+                fortsetzung.resume(returning: verwaisteBeendenBlockierend(exe, protokoll))
+            }
+        }
+    }
+
+    private static func verwaisteBeendenBlockierend(_ exe: String, _ protokoll: Fortschritt) -> Int {
+        let ziel = (exe as NSString).resolvingSymlinksInPath
+        var pids = [pid_t](repeating: 0, count: 8192)
+        let anzahl = Int(proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size)))
         var beendet = 0
-        for pid in Prozessdienst.pidsFuer((exe as NSString).lastPathComponent) {
-            guard gleicheDatei(Prozessdienst.pfadVon(pid), exe),
+        // Ueber den Programmpfad statt den Namen: Claudes nativer Installer laeuft als "2.1.x".
+        for pid in pids.prefix(max(0, anzahl)) where pid > 1 && pid != getpid() {
+            guard (Prozessdienst.pfadVon(pid) as NSString).resolvingSymlinksInPath == ziel,
                   let info = bsdInfo(pid), info.pbi_ppid == 1 else { continue }
             let start = Date(timeIntervalSince1970: TimeInterval(info.pbi_start_tvsec))
+            guard Date().timeIntervalSince(start) >= 120 else { continue }
             protokoll.berichte("Verwaister \((exe as NSString).lastPathComponent)-Prozess \(pid) (gestartet "
                                + Formate.zeitpunkt(start) + ") hält das Update auf – wird beendet.")
-            // Auch die Nachfahren koennen die Sperre halten.
-            let baum = [pid] + nachfahren(pid)
+            // Auch die Nachfahren koennen die Sperre halten. Erst freundlich, dann hart.
+            let baum = [pid] + Kommandozeile.prozessbaum(pid)
+            func lebt() -> Bool { baum.contains { kill($0, 0) == 0 } }
+            func warten(_ sekunden: TimeInterval) {
+                let ende = Date().addingTimeInterval(sekunden)
+                while Date() < ende && lebt() { Thread.sleep(forTimeInterval: 0.1) }
+            }
+            for p in baum { kill(p, SIGTERM) }
+            warten(2)
             for p in baum { kill(p, SIGKILL) }
-            let ende = Date().addingTimeInterval(5)
-            while Date() < ende && baum.contains(where: { kill($0, 0) == 0 }) { Thread.sleep(forTimeInterval: 0.1) }
-            beendet += 1
+            warten(5)
+            if lebt() {
+                protokoll.berichte("Prozess \(pid) ließ sich nicht beenden.")
+            } else {
+                beendet += 1
+            }
         }
         return beendet
     }
@@ -188,22 +213,6 @@ struct CliAktualisierer: Aktualisierer {
         return proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, groesse) == groesse ? info : nil
     }
 
-    private static func nachfahren(_ wurzel: pid_t) -> [pid_t] {
-        var pids = [pid_t](repeating: 0, count: 8192)
-        let anzahl = Int(proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size)))
-        let eltern = pids.prefix(max(0, anzahl)).compactMap { p -> (pid_t, pid_t)? in
-            guard p > 0, let info = bsdInfo(p) else { return nil }
-            return (p, pid_t(info.pbi_ppid))
-        }
-        var ergebnis: [pid_t] = []
-        var offen = [wurzel]
-        while let p = offen.popLast() {
-            let kinder = eltern.filter { $0.1 == p }.map { $0.0 }
-            ergebnis += kinder
-            offen += kinder
-        }
-        return ergebnis
-    }
 
     /// Das Programm fuer den Update-Lauf: `updateExePfad`, sonst dasselbe wie fuer die Version.
     static func updateExe(_ eintrag: ProgrammEintrag) -> String {
