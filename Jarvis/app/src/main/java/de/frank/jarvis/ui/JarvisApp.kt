@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -201,7 +202,8 @@ private fun Leiste(vm: AppViewModel) {
         Modifier.padding(horizontal = 16.dp, vertical = 10.dp).fillMaxWidth().height(62.dp).glas(f, 31.dp, erhoeht = 1.2f, fuellung = f.flaecheStark).padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Reiter.entries.forEach { r ->
+        // Reihenfolge: Reiter, dann Fernwartung, Einstellungen ganz rechts.
+        @Composable fun RowScope.reiterKnopf(r: Reiter) {
             val aktiv = vm.reiter == r
             val icon = when (r) { Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune }
             val grund = if (aktiv) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier
@@ -214,6 +216,7 @@ private fun Leiste(vm: AppViewModel) {
                 if (aktiv) Text(r.anzeige, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+        Reiter.entries.filter { it != Reiter.EINSTELLUNGEN }.forEach { reiterKnopf(it) }
         // Kein Reiter: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = mindestens ein Rechner ist wirklich
         // fernbedienbar (Fernwartungs-Dienst im Tunnel antwortet), rot = keiner. Geprüft alle 10 s, solange Jarvis vorn ist.
         val context = androidx.compose.ui.platform.LocalContext.current
@@ -258,6 +261,7 @@ private fun Leiste(vm: AppViewModel) {
                 if (rechnerDa == true) drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(farbe.copy(alpha = 0.5f), androidx.compose.ui.graphics.Color.Transparent)), radius = size.minDimension * 1.1f)
             })
         }
+        reiterKnopf(Reiter.EINSTELLUNGEN)
     }
 }
 
