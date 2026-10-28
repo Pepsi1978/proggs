@@ -12,7 +12,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileNotFoundException
 
-/** Ein gespeicherter Prompt: vorformulierter Auftrag an Jarvis. Ein neuer Prompt bekommt immer die kleinste freie [nummer]; gelöschte Nummern werden wieder vergeben. */
+/** Ein gespeicherter Prompt: vorformulierter Auftrag an Jarvis. [nummer] ist der Platz in der Liste (oben 1, lückenlos); [erstellt] kennzeichnet ihn dauerhaft. */
 data class Prompt(val nummer: Int, val text: String, val erstellt: Long, val titel: String = "")
 
 /**
@@ -27,8 +27,8 @@ object Prompts {
 
     private class Stand(val liste: List<Prompt>, val defekt: Boolean = false)
 
-    /** Kleinste Nummer ab 1, die kein Prompt belegt. */
-    private fun Stand.freieNummer(): Int = generateSequence(1) { it + 1 }.first { n -> liste.none { it.nummer == n } }
+    /** Nummeriert lückenlos von oben: Prompt 1, 2, 3 … in der gegebenen Reihenfolge. */
+    private fun List<Prompt>.durchnummeriert(): List<Prompt> = mapIndexed { i, p -> p.copy(nummer = i + 1) }
 
     private fun datei(c: Context) = File(c.applicationContext.filesDir, DATEI)
 
@@ -43,7 +43,7 @@ object Prompts {
             val arr = json.getJSONArray("prompts")
             val liste = (0 until arr.length()).mapNotNull { i ->
                 arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), it.optString("text").trim(), it.optLong("erstellt"), it.optString("titel").trim()) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
-            }.sortedBy { it.nummer }
+            }.sortedBy { it.nummer }.durchnummeriert()
             Stand(liste)
         } catch (e: Exception) {
             runCatching { f.copyTo(File(f.path + ".defekt-" + f.lastModified())) }
@@ -70,20 +70,20 @@ object Prompts {
     /** Alle Prompts, aufsteigend nach Nummer. */
     fun alle(c: Context): List<Prompt> = lies(c).liste
 
-    /** Legt einen neuen Prompt mit der kleinsten freien Nummer an. null = nicht gespeichert (leer oder Datei defekt). */
+    /** Hängt einen neuen Prompt unten an (nächste Nummer). null = nicht gespeichert (leer oder Datei defekt). */
     @Synchronized
     fun speichere(c: Context, text: String): Prompt? {
         val sauber = text.trim()
         if (sauber.isEmpty()) return null
         val s = lies(c)
         if (s.defekt) return null
-        val neu = Prompt(s.freieNummer(), sauber, System.currentTimeMillis())
-        return neu.takeIf { schreibe(c, (s.liste + neu).sortedBy { it.nummer }) }
+        val neu = Prompt(s.liste.size + 1, sauber, System.currentTimeMillis())
+        return neu.takeIf { schreibe(c, s.liste + neu) }
     }
 
     /**
      * Ersetzt den Text eines vorhandenen Prompts. Mit [erstellt] nur, wenn unter [nummer] noch genau dieser Prompt steht
-     * (die Nummer kann nach einem Löschen an einen neuen Prompt gegangen sein).
+     * (nach Löschen oder Verschieben steht dort womöglich ein anderer).
      */
     @Synchronized
     fun aendere(c: Context, nummer: Int, text: String, erstellt: Long? = null): Boolean {
@@ -97,13 +97,24 @@ object Prompts {
     fun setzeTitel(c: Context, erstellt: Long, text: String, titel: String): Boolean {
         val s = lies(c)
         if (s.defekt || s.liste.none { it.erstellt == erstellt && it.text == text }) return false
-        return schreibe(c, s.liste.map { if (it.erstellt == erstellt) it.copy(titel = titel.trim()) else it })
+        return schreibe(c, s.liste.map { if (it.erstellt == erstellt && it.text == text) it.copy(titel = titel.trim()) else it })
     }
 
     @Synchronized
     fun loesche(c: Context, nummer: Int): Prompt? {
         val s = lies(c)
         val weg = s.liste.firstOrNull { it.nummer == nummer } ?: return null
-        return weg.takeIf { !s.defekt && schreibe(c, s.liste - weg) }
+        return weg.takeIf { !s.defekt && schreibe(c, (s.liste - weg).durchnummeriert()) }
+    }
+
+    /** Neue Reihenfolge nach dem Ziehen (Anlagezeitpunkte von oben nach unten); danach wieder Prompt 1, 2, 3 … von oben. */
+    @Synchronized
+    fun ordne(c: Context, reihenfolge: List<Long>): Boolean {
+        val s = lies(c)
+        if (s.defekt) return false
+        val nach = s.liste.associateBy { it.erstellt }
+        // Inzwischen neu dazugekommene bleiben unten, inzwischen gelöschte fallen weg.
+        val neu = reihenfolge.mapNotNull(nach::get) + s.liste.filter { it.erstellt !in reihenfolge.toSet() }
+        return neu.map { it.erstellt } == s.liste.map { it.erstellt } || schreibe(c, neu.durchnummeriert())
     }
 }

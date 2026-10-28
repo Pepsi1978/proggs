@@ -19,7 +19,7 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "prompt_speichern",
             titel = "Prompt speichern",
-            beschreibung = "Jarvis: Prompt-Speicher im Reiter „Prompts“ der Ablage (neue Prompts bekommen die kleinste freie Nummer). „Speicher folgendes als Prompt ab: …“ → aktion speichern " +
+            beschreibung = "Jarvis: Prompt-Speicher im Reiter „Prompts“ der Ablage (lückenlos nummeriert von oben: Prompt 1 ist der oberste; neue kommen unten dazu, nach dem Löschen rücken die übrigen auf). „Speicher folgendes als Prompt ab: …“ → aktion speichern " +
                 "mit dem ausformulierten Text (nicht ausführen). „Ändere Prompt 2 in …“ → aktion aendern mit nummer und dem vollständigen neuen Text. „Lösche Prompt 2“ → aktion loeschen mit nummer, nur wenn Frank die Nummer ausdrücklich nennt.",
             schema = schema(
                 "aktion" to text("speichern, aendern oder loeschen.", listOf("speichern", "aendern", "loeschen")),

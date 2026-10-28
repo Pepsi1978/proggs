@@ -566,13 +566,13 @@ private fun FrageLeiste(vm: AppViewModel, nummer: Int, n: Nachricht) {
 }
 
 /** Öffnet Androids Teilen-Dialog mit genau [text]; die Sperre wartet solange, damit Jarvis nicht dazwischen sperrt. */
-private fun teilen(vm: AppViewModel, context: android.content.Context, text: String, titel: String) {
+internal fun teilen(vm: AppViewModel, context: android.content.Context, text: String, titel: String) {
     vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
     runCatching {
         context.startActivity(android.content.Intent.createChooser(
             android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), titel,
         ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-    }
+    }.onFailure { vm.meldung = "Das Teilen-Menü ließ sich nicht öffnen." }
 }
 
 @Composable

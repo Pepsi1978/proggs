@@ -1630,24 +1630,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptVorKi = null
     }
 
-    /** Fassungen (Anlagezeitpunkt + Text), für die schon eine Überschrift angefragt wurde: je Fassung ein Versuch pro App-Start. */
+    /** Fassungen (Anlagezeitpunkt + Text), deren Überschrift gerade angefragt wird oder geliefert wurde. */
     private val promptTitelVersucht = mutableSetOf<String>()
+    private var promptTitelLauf: Job? = null
 
-    /** Holt für Prompts ohne Überschrift im Hintergrund eine kurze KI-Überschrift, die zeigt, worum es im Prompt geht. */
+    /**
+     * Holt für Prompts ohne Überschrift im Hintergrund eine kurze KI-Überschrift, die zeigt, worum es im Prompt geht.
+     * Nacheinander und mit niedriger Denkstufe (viele Prompts ohne Überschrift lösen keine Anfragewelle aus); schlägt eine
+     * fehl, wird sie beim nächsten Aufruf erneut versucht.
+     */
     fun promptTitelNachziehen(liste: List<de.frank.jarvis.ablage.Prompt>) {
-        if (!modellBereit) return
+        if (!modellBereit || promptTitelLauf?.isActive == true) return
+        val offen = liste.filter { it.titel.isEmpty() && "${it.erstellt}:${it.text.hashCode()}" !in promptTitelVersucht }
+        if (offen.isEmpty()) return
         val app = getApplication<android.app.Application>()
-        for (p in liste) {
-            if (p.titel.isNotEmpty() || !promptTitelVersucht.add("${p.erstellt}:${p.text.hashCode()}")) continue
-            viewModelScope.launch {
+        promptTitelLauf = viewModelScope.launch {
+            for (p in offen) {
+                val schluessel = "${p.erstellt}:${p.text.hashCode()}"
+                promptTitelVersucht += schluessel
                 try {
-                    val titel = auth.streamChat(PROMPT_TITEL, listOf(ChatTurn("user", p.text)), einstellungen.modell, einstellungen.denkstufe)
-                        .lines().joinToString(" ") { it.trim() }.trim().trim('"', '„', '“').trimEnd('.').take(160)
-                    if (titel.length >= 3) withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.setzeTitel(app, p.erstellt, p.text, titel) }
+                    val titel = auth.streamChat(PROMPT_TITEL, listOf(ChatTurn("user", p.text)), einstellungen.modell, ReasoningEffort.LOW)
+                        .lines().joinToString(" ") { it.trim() }.trim().trim { it in "\"'„“”‚‘’«»." || it.isWhitespace() }.take(160)
+                    if (titel.length < 3 || !withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.setzeTitel(app, p.erstellt, p.text, titel) }) promptTitelVersucht -= schluessel
                 } catch (e: CancellationException) {
+                    promptTitelVersucht -= schluessel
                     throw e
                 } catch (e: Exception) {
+                    promptTitelVersucht -= schluessel
                     Logbuch.fehler("Prompt-Überschrift", e)
+                    break
                 }
             }
         }
@@ -1687,7 +1698,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Diskette: speichert den Entwurf als neuen Prompt (kleinste freie Nummer) oder, beim Bearbeiten, als neuen Text des
+     * Diskette: speichert den Entwurf als neuen Prompt (unten angehängt) oder, beim Bearbeiten, als neuen Text des
      * Prompts; gibt es diesen nicht mehr, wird der Text als neuer Prompt gespeichert. [fertig] nur bei Erfolg.
      * Mehrfaches Tippen speichert nur einmal.
      */
@@ -3158,12 +3169,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         get() = einstellungen.serverHost.takeIf { it.isNotEmpty() }?.let { "https://$it/j/${einstellungen.geheimnis}/mcp" }.orEmpty()
 
     /** [geheim]: Zugangsdaten wie die Plugin-Adresse; Android zeigt sie dann nicht in der Vorschau der Zwischenablage. */
-    fun kopiere(text: String, was: String, geheim: Boolean = false) {
+    fun kopiere(text: String, was: String, geheim: Boolean = false, melden: Boolean = true) {
         val app = getApplication<Application>()
         val clip = ClipData.newPlainText(was, text)
         if (geheim) clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
         app.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
-        meldung = "$was kopiert."
+        if (melden) meldung = "$was kopiert."
     }
 
     fun ausZwischenablage(): String {

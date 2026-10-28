@@ -10,7 +10,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Save
@@ -29,7 +31,6 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import android.content.Intent
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,7 +58,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import de.frank.jarvis.ablage.Prompt
 import de.frank.jarvis.ablage.Prompts
+import de.frank.jarvis.ui.theme.LocalBewegung
 import de.frank.jarvis.ui.theme.LocalFarben
+import de.frank.module.draganddrop.ReorderAutoScroll
+import de.frank.module.draganddrop.rememberReorderState
+import de.frank.module.draganddrop.reorderHandle
+import de.frank.module.draganddrop.reorderItem
+import de.frank.module.draganddrop.reorderViewport
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import de.frank.jarvis.ui.theme.knopf3d
@@ -85,23 +92,57 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     var offen by rememberSaveable { mutableStateOf<Long?>(null) }
     var neu by rememberSaveable { mutableStateOf(false) }
     val defekt by ladeImHintergrund(false, stand) { withContext(Dispatchers.IO) { Prompts.defekt(context) } }
-    LaunchedEffect(liste) { liste?.let { vm.promptTitelNachziehen(it) } }
+    // Auch nach dem Verbinden des Modells: vorher kann keine Überschrift entstehen.
+    LaunchedEffect(liste, vm.modellBereit) { liste?.let { vm.promptTitelNachziehen(it) } }
 
-    LazyColumn(modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // Ziehen zum Umsortieren (Modul M1.2): Die Reihenfolge lebt während der Geste lokal, damit ein Neuladen sie nicht zurücksetzt.
+    val listState = rememberLazyListState()
+    val zustand = rememberReorderState(listState, PROMPTS_REITER)
+    val reduziert = !LocalBewegung.current
+    ReorderAutoScroll(zustand)
+    var reihenfolge by remember { mutableStateOf(liste.orEmpty().map { it.erstellt }) }
+    LaunchedEffect(liste) {
+        val ids = liste.orEmpty().map { it.erstellt }
+        reihenfolge = if (zustand.draggedId == null) ids else {
+            val vorhanden = ids.toSet()
+            val lokal = reihenfolge.toSet()
+            reihenfolge.filter { it in vorhanden } + ids.filter { it !in lokal }
+        }
+    }
+    val nachId = remember(liste) { liste.orEmpty().associateBy { it.erstellt } }
+    val sortiert = remember(reihenfolge, nachId) { reihenfolge.mapNotNull(nachId::get) }
+
+    LazyColumn(
+        modifier.fillMaxWidth().reorderViewport(
+            state = zustand,
+            order = { reihenfolge },
+            onMove = { von, nach -> reihenfolge = reihenfolge.toMutableList().apply { add(nach, removeAt(von)) } },
+            onDrop = { val neu = reihenfolge; bereich.launch { if (!withContext(Dispatchers.IO) { Prompts.ordne(context, neu) }) vm.meldung = "Die neue Reihenfolge ließ sich nicht speichern." } },
+            reducedMotion = reduziert,
+        ),
+        state = listState, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         if (defekt) item(key = "defekt") {
             Text("Die Prompt-Datei ist beschädigt und wurde als prompts.json.defekt gesichert. Jarvis speichert dort nichts Neues, bis sie repariert ist; Details unter Aktivität.",
                 color = f.gefahr, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
         } else if (liste?.isEmpty() == true) item(key = "leer") {
             Text("Noch keine Prompts. Tippe auf +, oder sag Jarvis: „Speicher folgendes als Prompt ab: …“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
-        items(liste.orEmpty(), key = { it.nummer }) { p ->
-            Column(Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { offen = p.erstellt }.padding(16.dp)) {
-                // Hinter der Nummer die KI-Überschrift (höchstens zwei Zeilen), damit man den Inhalt ohne Lesen erkennt.
-                Text(buildAnnotatedString {
-                    withStyle(SpanStyle(color = f.primaer)) { append("Prompt ${p.nummer}") }
-                    if (p.titel.isNotEmpty()) { append("  ·  "); append(p.titel) }
-                }, color = f.text, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(p.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+        itemsIndexed(sortiert, key = { _, p -> p.erstellt }) { i, p ->
+            // Die Nummer ist der Platz: oben immer Prompt 1, auch während des Ziehens.
+            Row(reorderItem(zustand, p.erstellt, reduziert).fillMaxWidth().glas(f, erhoeht = 0.7f).antippen { offen = p.erstellt }, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
+                    // Hinter der Nummer die KI-Überschrift (höchstens zwei Zeilen), damit man den Inhalt ohne Lesen erkennt.
+                    Text(buildAnnotatedString {
+                        withStyle(SpanStyle(color = f.primaer)) { append("Prompt ${i + 1}") }
+                        if (p.titel.isNotEmpty()) { append("  ·  "); append(p.titel) }
+                    }, color = f.text, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(p.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                }
+                // Griff rechts, gut mit dem Daumen erreichbar: lange drücken und ziehen.
+                Box(reorderHandle(zustand, p.erstellt).size(48.dp, 64.dp), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.DragIndicator, "Zum Verschieben lange drücken und ziehen", tint = f.textLeise)
+                }
             }
         }
         item(key = "plus") {
@@ -116,7 +157,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     if (neu || vm.promptBearbeitet != null) PromptEingabe(vm, schliessen = { vm.promptEingabeSchliessen(); neu = false }) { vm.promptSpeichern { neu = false } }
 
     liste?.firstOrNull { it.erstellt == offen }?.let { p ->
-        var loeschen by remember(p.nummer) { mutableStateOf(false) }
+        var loeschen by remember(p.erstellt) { mutableStateOf(false) }
         Dialog({ offen = null }, DialogProperties(usePlatformDefaultWidth = false)) {
             Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -125,30 +166,29 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                 }
                 if (p.titel.isNotEmpty()) Text(p.titel, color = f.primaer, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
                 Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(vertical = 10.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
-                var hinweis by remember(p.nummer) { mutableStateOf<String?>(null) }
-                var kopiert by remember(p.nummer) { mutableStateOf(false) }
-                LaunchedEffect(hinweis) { if (hinweis != null) { delay(1_800); hinweis = null } }
+                var hinweis by remember(p.erstellt) { mutableStateOf<String?>(null) }
+                // Zählt jedes lange Drücken, damit derselbe Hinweis erneut die volle Zeit stehen bleibt.
+                var hinweisNr by remember(p.erstellt) { mutableStateOf(0) }
+                val zeige: (String) -> Unit = { hinweis = it; hinweisNr++ }
+                var kopiert by remember(p.erstellt) { mutableStateOf(false) }
+                LaunchedEffect(hinweisNr) { if (hinweis != null) { delay(1_800); hinweis = null } }
                 LaunchedEffect(kopiert) { if (kopiert) { delay(1_500); kopiert = false } }
                 // Beschreibung beim langen Drücken bzw. „Kopiert“ als kurze Rückmeldung über den Symbolen.
                 Text(hinweis ?: if (kopiert) "Kopiert" else " ", color = if (hinweis == null && kopiert) f.erfolg else f.textLeise, fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp), textAlign = TextAlign.End)
                 if (!loeschen) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Symbol(Icons.Rounded.Delete, "Löschen", f.gefahr, { hinweis = it }) { loeschen = true }
-                    Symbol(Icons.Rounded.Edit, "Bearbeiten", f.text, { hinweis = it }) { offen = null; vm.promptBearbeiten(p) }
-                    Symbol(if (kopiert) Icons.Rounded.Check else Icons.Rounded.ContentCopy, "Kopieren", if (kopiert) f.erfolg else f.text, { hinweis = it }) {
-                        vm.kopiere(p.text, "Prompt ${p.nummer}"); kopiert = true
+                    Symbol(Icons.Rounded.Delete, "Löschen", f.gefahr, zeige) { loeschen = true }
+                    Symbol(Icons.Rounded.Edit, "Bearbeiten", f.text, zeige) { offen = null; vm.promptBearbeiten(p) }
+                    Symbol(if (kopiert) Icons.Rounded.Check else Icons.Rounded.ContentCopy, "Kopieren", if (kopiert) f.erfolg else f.text, zeige) {
+                        vm.kopiere(p.text, "Prompt ${p.nummer}", melden = false); kopiert = true
                     }
-                    Symbol(Icons.Rounded.Share, "Senden an …", f.text, { hinweis = it }) {
-                        vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
-                        runCatching {
-                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, p.text), "Prompt ${p.nummer} senden an")
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        }
+                    Symbol(Icons.Rounded.Share, "Senden an …", f.text, zeige) {
+                        teilen(vm, context, p.text, "Prompt ${p.nummer} senden an")
                     }
                     Spacer(Modifier.weight(1f))
                     // Rechts, gut mit dem Daumen erreichbar, als einziges Symbol plastisch hervorgehoben.
                     Box(Modifier.size(60.dp).knopf3d(f.primaer, f.tertiaer, 30.dp, f.dunkel)
-                        .antippen(lange = { hinweis = "Senden" }, langeText = "Senden") { offen = null; vm.promptSenden(p.text) }, contentAlignment = Alignment.Center) {
+                        .antippen(lange = { zeige("Senden") }, langeText = "Senden") { offen = null; vm.promptSenden(p.text) }, contentAlignment = Alignment.Center) {
                         Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(28.dp))
                     }
                 }

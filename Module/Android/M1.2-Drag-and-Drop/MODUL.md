@@ -107,6 +107,7 @@ eine zweite App wirklich andere Werte, wird daraus v2.
 | GenialeIdeen | v1 | `GenialeIdeen/app/src/main/java/de/frank/module/draganddrop/` |
 | GenialerWecker | v1 | `GenialerWecker/app/src/main/java/de/frank/module/draganddrop/` |
 | NewsKompass | v1 | `NewsKompass/app/src/main/java/de/frank/module/draganddrop/` |
+| Jarvis | v1 | `Jarvis/app/src/main/java/de/frank/module/draganddrop/` |
 
 ## Abnahme
 
