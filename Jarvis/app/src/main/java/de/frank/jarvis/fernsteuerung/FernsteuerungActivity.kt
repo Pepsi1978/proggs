@@ -30,6 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +76,7 @@ class FernsteuerungActivity : ComponentActivity() {
     private var status by mutableStateOf("")
     private var gesperrt by mutableStateOf(false)
     private var tastaturAn by mutableStateOf(false)
+    private var leisteAn by mutableStateOf(false)
     private var getrennt by mutableStateOf(false)
     private var meldung by mutableStateOf("")
 
@@ -165,7 +168,7 @@ class FernsteuerungActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding().imePadding()) {
             Column(Modifier.fillMaxSize()) {
                 AndroidView({ ansicht }, Modifier.weight(1f).fillMaxWidth())
-                Leiste()
+                if (leisteAn) Leiste()
             }
             if (status.isNotEmpty() && !gesperrt) {
                 Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -174,15 +177,34 @@ class FernsteuerungActivity : ComponentActivity() {
                 }
             }
             if (gesperrt) { if (ziel == Fernziel.WINDOWS) WindowsGesperrt(Modifier.align(Alignment.Center)) else Entsperren(Modifier.align(Alignment.Center)) }
-            // Tastatur-Knopf unten rechts in Daumennähe, über der Leiste.
-            if (!gesperrt) Box(
-                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 68.dp).size(56.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(if (tastaturAn) Color(0xFF3B6FE0) else Color(0xCC2A2E37))
-                    .clickable { tastaturUmschalten() }
-                    .semantics { contentDescription = "Tastatur ein- oder ausblenden" },
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Rounded.Keyboard, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+            // Tastatur-Knopf unten rechts in Daumennähe, darunter der Leisten-Knopf, beide über der Leiste.
+            Column(
+                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (leisteAn) 64.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (!gesperrt) Box(
+                    Modifier.size(56.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(if (tastaturAn) Color(0xFF3B6FE0) else Color(0xCC2A2E37))
+                        .clickable { tastaturUmschalten() }
+                        .semantics { contentDescription = "Tastatur ein- oder ausblenden" },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Rounded.Keyboard, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
+                // Bleibt immer sichtbar, damit die ausgeblendete Leiste (mit „Ende“) erreichbar bleibt.
+                Box(
+                    Modifier.size(56.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(if (leisteAn) Color(0xFF3B6FE0) else Color(0xCC2A2E37))
+                        .clickable { leisteAn = !leisteAn }
+                        .semantics { contentDescription = "Untere Leiste ein- oder ausblenden" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (leisteAn) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowUp,
+                        null, tint = Color.White, modifier = Modifier.size(30.dp),
+                    )
+                }
+            }
         }
     }
 

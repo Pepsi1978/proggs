@@ -406,6 +406,7 @@
     { "versionCode": 400, "versionName": "1.8.389", "stand": "28.10.2026, 18:40 Uhr", "notiz": "Bricht eine laufende Fernwartung ab, meldet Jarvis jetzt richtig, dass die Verbindung getrennt wurde, statt den Rechner als nicht erreichbar zu bezeichnen; der Windows-Dienst ist bei zugeklapptem Deckel robuster." },
     { "versionCode": 401, "versionName": "1.8.390", "stand": "28.10.2026, 19:04 Uhr", "notiz": "Das Fernwartungssymbol in der unteren Leiste ist jetzt genauso groß wie die anderen Symbole, in Rot wie in Grün." },
     { "versionCode": 402, "versionName": "1.8.391", "stand": "28.10.2026, 19:10 Uhr", "notiz": "Die Fernwartung zeigt den Windows-Desktop jetzt auch bei zugeklapptem Laptop mit ausgeschaltetem Bildschirm, über einen virtuellen Bildschirm." },
-    { "versionCode": 403, "versionName": "1.8.392", "stand": "28.10.2026, 19:14 Uhr", "notiz": "Bei zugeklapptem Windows-Laptop erscheint das Fernwartungsbild jetzt nach wenigen Sekunden ohne Fehlermeldung, weil der virtuelle Bildschirm sofort angehängt wird." }
+    { "versionCode": 403, "versionName": "1.8.392", "stand": "28.10.2026, 19:14 Uhr", "notiz": "Bei zugeklapptem Windows-Laptop erscheint das Fernwartungsbild jetzt nach wenigen Sekunden ohne Fehlermeldung, weil der virtuelle Bildschirm sofort angehängt wird." },
+    { "versionCode": 404, "versionName": "1.8.393", "stand": "28.10.2026, 19:22 Uhr", "notiz": "Die untere Tastenleiste der Fernwartung ist jetzt ausgeblendet und lässt sich mit dem runden Pfeil-Knopf unter dem Tastatur-Knopf ein- und ausblenden." }
 ]
 }
