@@ -54,7 +54,8 @@ report to Frank. Never pass `-Force` unless Frank explicitly says so.
 | `Services/GeminiBatchTranscribeClient.cs` | **Default Gemini path.** `gemini-3.5-transcribe` via the Interactions API (`POST /v1beta/interactions`), audio inline as base64 — no WebSocket, no VAD, no file upload. Measured 4,4 s vs 15,1 s for the live variant; WER 2,6 % vs 4,0 % (Groq 4,6 %). Mode `verbatim`, because `smart` drops words |
 | `Services/PersonalVocabulary.cs` | Shared word list from `SK/VoiceOverlays/personal-vocabulary.txt`, fed to both Gemini paths as `customVocabulary` |
 | `Services/SpeechToTextRouter.cs` | Picks Groq / Gemini / Gemini-Live per recording; falls back to Groq on any technical Gemini failure (quota, network) but NOT on `NoSpeechException`; Whisper hallucination guard stays Groq-only |
-| `Services/TranscriptionEngineSetting.cs` | Engine switch (`groq` / `gemini` / `gemini-live`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
+| `Services/TranscriptionEngineSetting.cs` | Engine switch (`groq` / `gemini` / `gemini-live` / `parakeet`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
+| `Services/ParakeetLocalClient.cs` | **Offline speech-to-text** (`parakeet`): parakeet-primeline via NuGet `org.k2fsa.sherpa.onnx`, CPU, 4 threads. Model (~640 MB, pinned revision of `flozen1981/parakeet-primeline-onnx`, same as winidi/dictate) in `%LOCALAPPDATA%\VoiceOverlays\`, shared by TVO/CVO, downloaded from Settings. Never falls back to Groq/Gemini |
 | `Services/TerminalController.cs` | Win32 keyboard simulation for terminals (keybd_event) |
 | `Services/TerminalWatcher.cs` | SetWinEventHook for target app detection |
 | `Views/OverlayWindow.xaml` | WPF overlay UI (XAML layout) |

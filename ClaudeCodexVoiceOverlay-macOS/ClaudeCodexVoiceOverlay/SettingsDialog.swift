@@ -19,6 +19,9 @@ final class SettingsDialog: NSWindow {
     /// Wortgetreu oder aufgeraeumt — ebenfalls als geteilte SK-Datei
     /// (TranscriptionModeSetting), gilt nur fuer die Gemini-Modelle.
     private let transcriptionModePopup = NSPopUpButton()
+    /// Laedt das Offline-Modell (parakeet-primeline) einmal herunter; zeigt den Stand.
+    private let parakeetButton = NSButton(title: "", target: nil, action: nil)
+    private static var parakeetDownloading = false
     private let autoHideCheck    = NSButton(checkboxWithTitle: "Auto-Hide (Collapsed-Mic)", target: nil, action: nil)
     private let horizontalCheck  = NSButton(checkboxWithTitle: "Horizontal-Orientierung", target: nil, action: nil)
     private let persistPosCheck  = NSButton(checkboxWithTitle: "Position ueber Neustart merken", target: nil, action: nil)
@@ -64,7 +67,9 @@ final class SettingsDialog: NSWindow {
     /// Werte aus UserDefaults vorbefuellen.
     func loadFromDefaults() {
         let d = UserDefaults.standard
-        transcriptionEnginePopup.selectItem(at: TranscriptionEngineSetting.useGemini ? 1 : 0)
+        transcriptionEnginePopup.selectItem(at: TranscriptionEngineSetting.useParakeet ? 2
+                                            : TranscriptionEngineSetting.useGemini ? 1 : 0)
+        updateParakeetButton()
         transcriptionModePopup.selectItem(at: TranscriptionModeSetting.useSmart ? 1 : 0)
         groqKeyField.stringValue    = d.string(forKey: "GROQ_API_KEY") ?? ""
         geminiKeyField.stringValue  = d.string(forKey: "GEMINI_API_KEY") ?? ""
@@ -110,17 +115,25 @@ final class SettingsDialog: NSWindow {
         transcriptionEnginePopup.removeAllItems()
         transcriptionEnginePopup.addItems(withTitles: [
             "Groq Whisper — schnell, mit Stille-Schutz",
-            "Gemini Transcribe — genauer, kostenlos (empfohlen)"
+            "Gemini Transcribe — genauer, kostenlos (empfohlen)",
+            "Parakeet primeline — offline auf diesem Mac, Deutsch"
         ])
-        transcriptionEnginePopup.frame = NSRect(x: pad, y: y, width: 580, height: 26)
-        cv.addSubview(transcriptionEnginePopup); y -= 34
+        transcriptionEnginePopup.frame = NSRect(x: pad, y: y, width: 370, height: 26)
+        cv.addSubview(transcriptionEnginePopup)
+        parakeetButton.bezelStyle = .rounded
+        parakeetButton.target = self
+        parakeetButton.action = #selector(parakeetClicked)
+        parakeetButton.frame = NSRect(x: pad + 380, y: y - 2, width: 200, height: 30)
+        cv.addSubview(parakeetButton)
+        updateParakeetButton(); y -= 34
 
         let engineHint = NSTextField(wrappingLabelWithString:
             "Gemini Transcribe ist der von Google fuer fertige Aufnahmen vorgesehene Weg: "
             + "gemessen 4,4 s statt 15,1 s gegenueber der Streaming-Variante, Wortfehlerrate "
             + "2,6 % gegenueber 4,6 % bei Groq, und dein Woerterbuch geht direkt in die Erkennung. "
             + "Der Stille-Schutz gegen Whisper-Halluzinationen greift nur bei Groq. Faellt Gemini "
-            + "aus (Kontingent erschoepft, Netz weg), springt automatisch Groq ein.")
+            + "aus (Kontingent erschoepft, Netz weg), springt automatisch Groq ein. Parakeet laeuft "
+            + "ohne Netz und Schluessel auf der CPU (Modell einmal laden, rund 640 MB), ohne Rueckfall.")
         engineHint.frame = NSRect(x: pad, y: y - 34, width: 580, height: 48)
         engineHint.textColor = NSColor(white: 0.6, alpha: 1)
         engineHint.font = .systemFont(ofSize: 10)
@@ -205,6 +218,32 @@ final class SettingsDialog: NSWindow {
 
     // MARK: - Actions
 
+    private func updateParakeetButton() {
+        guard !Self.parakeetDownloading else { return }
+        let mb = ParakeetLocalClient.totalBytes / 1_048_576
+        parakeetButton.title = ParakeetLocalClient.isInstalled ? "Offline-Modell bereit" : "Offline-Modell laden (\(mb) MB)"
+        parakeetButton.isEnabled = !ParakeetLocalClient.isInstalled
+    }
+
+    @objc private func parakeetClicked() {
+        guard !Self.parakeetDownloading, !ParakeetLocalClient.isInstalled else { return }
+        Self.parakeetDownloading = true
+        parakeetButton.isEnabled = false
+        parakeetButton.title = "Laedt … 0 %"
+        ParakeetLocalClient.download(progress: { [weak self] done, total in
+            self?.parakeetButton.title = "Laedt … \(Int(Double(done) * 100 / Double(total))) %"
+        }, completion: { [weak self] error in
+            Self.parakeetDownloading = false
+            if let error = error {
+                self?.parakeetButton.isEnabled = true
+                self?.parakeetButton.title = "Fehler — erneut laden"
+                DiagLog.warn("Settings", "parakeet_download_failed", [("error", error.localizedDescription)])
+            } else {
+                self?.updateParakeetButton()
+            }
+        })
+    }
+
     @objc private func saveClicked() {
         let values = SettingsValues(
             groqApiKey: groqKeyField.stringValue,
@@ -218,9 +257,12 @@ final class SettingsDialog: NSWindow {
         )
         // Modellauswahl in die geteilte SK-Datei (nicht in die UserDefaults),
         // damit sie sofort wirkt und sich beide Overlays teilen.
-        TranscriptionEngineSetting.save(transcriptionEnginePopup.indexOfSelectedItem == 1
+        TranscriptionEngineSetting.save(transcriptionEnginePopup.indexOfSelectedItem == 2
+                                        ? TranscriptionEngineSetting.parakeet
+                                        : transcriptionEnginePopup.indexOfSelectedItem == 1
                                         ? TranscriptionEngineSetting.gemini
                                         : TranscriptionEngineSetting.groq)
+        if transcriptionEnginePopup.indexOfSelectedItem == 2 { ParakeetLocalClient.shared.preload() }
         TranscriptionModeSetting.save(transcriptionModePopup.indexOfSelectedItem == 1
                                       ? TranscriptionModeSetting.smart
                                       : TranscriptionModeSetting.verbatim)

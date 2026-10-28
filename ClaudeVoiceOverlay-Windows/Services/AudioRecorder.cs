@@ -169,6 +169,8 @@ namespace ClaudeVoiceOverlay.Services
 
         public Task<bool> StartAsync()
         {
+            // Offline: Das Modell laedt, waehrend gesprochen wird, statt danach.
+            if (TranscriptionEngineSetting.UseParakeet) ParakeetLocalClient.Shared.Preload();
             lock (_stateLock)
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);

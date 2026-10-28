@@ -25,7 +25,8 @@ Direct `swiftc` results in ad-hoc signing → macOS revokes accessibility permis
 | `GeminiBatchTranscribeClient.swift` | **Gemini speech-to-text.** `gemini-3.5-transcribe` via the Interactions API (`POST /v1beta/interactions`), audio inline as base64. Measured on Windows: 4,4 s vs 15,1 s for the live variant; WER 2,6 % vs 4,6 % (Groq). Mode `verbatim`, because `smart` drops words |
 | `PersonalVocabulary.swift` | Shared word list from `SK/VoiceOverlays/personal-vocabulary.txt`, fed to Gemini as `customVocabulary` |
 | `SpeechToTextRouter.swift` | Picks Groq or Gemini per recording; falls back to Groq on technical Gemini failure (quota, network) but NOT on `noSpeech` |
-| `TranscriptionEngineSetting.swift` | Engine switch (`groq` / `gemini`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
+| `TranscriptionEngineSetting.swift` | Engine switch (`groq` / `gemini` / `parakeet`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
+| `ParakeetLocalClient.swift` | **Offline speech-to-text** (`parakeet`): parakeet-primeline (German fine-tune of Parakeet TDT 0.6B v3, int8) via sherpa-onnx C API, CPU, 4 threads. Model (~640 MB, pinned revision of `flozen1981/parakeet-primeline-onnx`, same as winidi/dictate) in `~/Library/Application Support/VoiceOverlays/`, shared by TVO/CVO, downloaded from Settings. Never falls back to Groq/Gemini. dylibs come from `../voice-overlay-sherpa.sh` (cache `~/Library/Caches/sherpa-onnx`) into `Contents/Frameworks` |
 | `build.sh` | **Fixed source list** — every new `.swift` file must be added there, otherwise it is silently not compiled |
 | `GeminiClient.swift` | Gemini API for text correction/formatting |
 | `TerminalController.swift` | CGEvent keyboard simulation for terminals (Ctrl+U to clear line) |

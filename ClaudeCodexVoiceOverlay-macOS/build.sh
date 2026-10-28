@@ -7,6 +7,7 @@ BUILD_DIR="$PROJECT_DIR/build"
 APP_NAME="ClaudeCodexVoiceOverlay"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 source "$PROJECT_DIR/../voice-overlay-deploy-guard.sh"
+source "$PROJECT_DIR/../voice-overlay-sherpa.sh"
 DEPLOYMENT_RESERVED=0
 cleanup_deployment_guard() {
     release_voice_overlay_deployment "$APP_NAME" 5724 "$DEPLOYMENT_RESERVED"
@@ -55,6 +56,7 @@ SWIFT_FILES=(
     "$SRC_DIR/TranscriptionModeSetting.swift"
     "$SRC_DIR/PersonalVocabulary.swift"
     "$SRC_DIR/GeminiBatchTranscribeClient.swift"
+    "$SRC_DIR/ParakeetLocalClient.swift"
     "$SRC_DIR/SpeechToTextRouter.swift"
     "$SRC_DIR/RecordingArchive.swift"
     "$SRC_DIR/GeminiClient.swift"
@@ -92,8 +94,17 @@ SWIFT_FILES=(
     "$SRC_DIR/main.swift"
 )
 
+# sherpa-onnx fuer die Offline-Transkription (Parakeet primeline): C-API per Bridging-Header,
+# die dylibs kommen nach Contents/Frameworks und werden unten mit signiert.
+ensure_sherpa || { echo "FEHLER: sherpa-onnx nicht verfuegbar"; exit 1; }
+mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+cp "$SHERPA_LIB/libsherpa-onnx-c-api.dylib" "$SHERPA_LIB/libonnxruntime.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+
 swiftc \
     -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" \
+    -import-objc-header "$SHERPA_HEADER" \
+    -L "$SHERPA_LIB" -lsherpa-onnx-c-api \
+    -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
     -target arm64-apple-macos13.0 \
     -sdk "$(xcrun --show-sdk-path)" \
     -framework AppKit \

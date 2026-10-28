@@ -20,14 +20,16 @@
          (Details -> Produktversion) pruefbar. Bei JEDER Aenderung hochzaehlen.
          2.0.0 = grosse Portierung: volle Feature-Paritaet mit TerminalVoiceOverlay
          (PromptBoard, Drive-Sync, History, Slots, Hotkeys, Settings). -->
-    <Version>2.4.28</Version>
-    <InformationalVersion>2.4.28 (22.10.2026, 13:53 Uhr)</InformationalVersion>
+    <Version>2.4.29</Version>
+    <InformationalVersion>2.4.29 (28.10.2026, 22:25 Uhr)</InformationalVersion>
     <AssemblyTitle>Spracheingabe - Claude</AssemblyTitle>
     <Company>Voice Overlay</Company>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="NAudio" Version="$(NAudioVersion)" />
+    <!-- Offline-Transkription (Parakeet primeline): sherpa-onnx samt nativer Laufzeit fuer win-x64. -->
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.8" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftPackagesVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftPackagesVersion)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="$(MicrosoftPackagesVersion)" />

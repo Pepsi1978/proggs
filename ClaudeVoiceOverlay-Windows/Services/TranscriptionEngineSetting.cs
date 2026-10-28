@@ -9,7 +9,7 @@ namespace ClaudeVoiceOverlay.Services
     /// sie sofort wirkt, keinen Neustart braucht und sich TVO/CVO auf einem
     /// Rechner teilen.
     ///
-    /// Inhalt: "groq", "gemini" oder "gemini-live". Fehlende/kaputte Datei = groq.
+    /// Inhalt: "groq", "gemini", "gemini-live" oder "parakeet" (offline, ParakeetLocalClient). Fehlende/kaputte Datei = groq.
     /// "gemini" ist bewusst der schnellere, genauere Batch-Weg
     /// (gemini-3.5-transcribe): wer die Auswahl frueher auf Gemini gestellt
     /// hatte, bekommt damit automatisch den besseren Weg statt der
@@ -22,6 +22,8 @@ namespace ClaudeVoiceOverlay.Services
         public const string Gemini = "gemini";
         /// <summary>gemini-3.5-transcribe-live — Streaming ueber WebSocket.</summary>
         public const string GeminiLive = "gemini-live";
+        /// <summary>parakeet-primeline — offline auf diesem Rechner (sherpa-onnx, CPU).</summary>
+        public const string Parakeet = "parakeet";
 
         private static string Path_ => System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -51,6 +53,7 @@ namespace ClaudeVoiceOverlay.Services
                             {
                                 Gemini => Gemini,
                                 GeminiLive => GeminiLive,
+                                Parakeet => Parakeet,
                                 _ => Groq,
                             };
                             _cachedStamp = stamp;
@@ -64,6 +67,7 @@ namespace ClaudeVoiceOverlay.Services
 
         public static bool UseGemini => Current == Gemini;
         public static bool UseGeminiLive => Current == GeminiLive;
+        public static bool UseParakeet => Current == Parakeet;
         /// <summary>Irgendeine der beiden Gemini-Varianten.</summary>
         public static bool UseAnyGemini => Current is Gemini or GeminiLive;
 
@@ -77,6 +81,7 @@ namespace ClaudeVoiceOverlay.Services
                 {
                     Gemini => Gemini,
                     GeminiLive => GeminiLive,
+                    Parakeet => Parakeet,
                     _ => Groq,
                 };
                 File.WriteAllText(path, value + "\n");

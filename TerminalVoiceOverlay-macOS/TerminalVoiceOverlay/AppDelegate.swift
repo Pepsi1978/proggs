@@ -610,6 +610,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try audioRecorder.start()
             isRecording = true
+            // Offline: Das Modell laedt, waehrend gesprochen wird, statt danach.
+            if TranscriptionEngineSetting.useParakeet { ParakeetLocalClient.shared.preload() }
             if btw {
                 panel.setBtwMicState(.recording)
             } else {

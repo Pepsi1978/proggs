@@ -22,12 +22,18 @@ final class SpeechToTextRouter {
 
     /// Welcher Weg gerade greift — fuer Logs/Statusanzeige.
     var activeEngine: String {
-        (TranscriptionEngineSetting.useGemini && gemini != nil)
+        if TranscriptionEngineSetting.useParakeet { return TranscriptionEngineSetting.parakeet }
+        return (TranscriptionEngineSetting.useGemini && gemini != nil)
             ? TranscriptionEngineSetting.gemini
             : TranscriptionEngineSetting.groq
     }
 
     func transcribe(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
+        // Offline gewaehlt: nur auf diesem Mac, nie still ueber Groq oder Gemini. Fehlt das Modell, kommt ein Fehler.
+        if TranscriptionEngineSetting.useParakeet {
+            ParakeetLocalClient.shared.transcribe(fileURL: fileURL, completion: completion)
+            return
+        }
         guard TranscriptionEngineSetting.useGemini, let gemini = gemini else {
             if TranscriptionEngineSetting.useGemini {
                 // Auswahl steht auf Gemini, aber kein Schluessel hinterlegt:

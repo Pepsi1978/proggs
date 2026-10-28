@@ -45,7 +45,31 @@ public partial class SettingsDialog : Window
         {
             TranscriptionEngineSetting.Gemini => 1,
             TranscriptionEngineSetting.GeminiLive => 2,
+            TranscriptionEngineSetting.Parakeet => 3,
             _ => 0,
+        };
+        UpdateParakeetButton();
+        ParakeetDownloadButton.Click += async (_, _) =>
+        {
+            if (_parakeetDownloading || ParakeetLocalClient.IsInstalled) return;
+            _parakeetDownloading = true;
+            ParakeetDownloadButton.IsEnabled = false;
+            ParakeetDownloadButton.Content = "Lädt … 0 %";
+            var progress = new Progress<(long Done, long Total)>(p =>
+                ParakeetDownloadButton.Content = $"Lädt … {p.Done * 100 / p.Total} %");
+            try
+            {
+                await ParakeetLocalClient.DownloadAsync(progress);
+                _parakeetDownloading = false;
+                UpdateParakeetButton();
+            }
+            catch (Exception ex)
+            {
+                _parakeetDownloading = false;
+                DiagLog.Warn("Settings", "parakeet_download_failed", ("error", ex.Message));
+                ParakeetDownloadButton.IsEnabled = true;
+                ParakeetDownloadButton.Content = "Fehler — erneut laden";
+            }
         };
         var groqModelInitial = (GroqModelSetting.Current ?? fileConfig?.WhisperModel) == GroqModelSetting.LargeV3 ? 1 : 0;
         GroqModelBox.SelectedIndex = groqModelInitial;
@@ -74,8 +98,10 @@ public partial class SettingsDialog : Window
             {
                 1 => TranscriptionEngineSetting.Gemini,
                 2 => TranscriptionEngineSetting.GeminiLive,
+                3 => TranscriptionEngineSetting.Parakeet,
                 _ => TranscriptionEngineSetting.Groq,
             });
+            if (TranscriptionEngineBox.SelectedIndex == 3) ParakeetLocalClient.Shared.Preload();
             // Nur bei echter Aenderung schreiben, sonst ueberstimmt die Datei ein WHISPER_MODEL aus der .env.
             if (GroqModelBox.SelectedIndex != groqModelInitial)
                 GroqModelSetting.Save(GroqModelBox.SelectedIndex == 1
@@ -114,6 +140,19 @@ public partial class SettingsDialog : Window
 
     /// <summary>The .env value shown in a key box because the DB had none
     /// (null when the box shows the DB value).</summary>
+    /// <summary>Laeuft der Download des Offline-Modells gerade (gilt ueber das Schliessen des Dialogs hinaus)?</summary>
+    private static bool _parakeetDownloading;
+
+    private void UpdateParakeetButton()
+    {
+        if (_parakeetDownloading) { ParakeetDownloadButton.IsEnabled = false; ParakeetDownloadButton.Content = "Lädt …"; return; }
+        var installed = ParakeetLocalClient.IsInstalled;
+        ParakeetDownloadButton.IsEnabled = !installed;
+        ParakeetDownloadButton.Content = installed
+            ? "Offline-Modell bereit"
+            : $"Offline-Modell laden ({ParakeetLocalClient.TotalBytes / 1_048_576} MB)";
+    }
+
     private readonly string? _groqEnvPrefill;
     private readonly string? _geminiEnvPrefill;
 

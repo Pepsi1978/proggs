@@ -34,6 +34,7 @@ namespace TerminalVoiceOverlay.Services
         /// <summary>Welcher Weg gerade greift — fuer Logs/Statusanzeige.</summary>
         public string ActiveEngine => TranscriptionEngineSetting.Current switch
         {
+            TranscriptionEngineSetting.Parakeet => TranscriptionEngineSetting.Parakeet,
             TranscriptionEngineSetting.Gemini when _geminiBatch is not null => TranscriptionEngineSetting.Gemini,
             TranscriptionEngineSetting.GeminiLive when _geminiLive is not null => TranscriptionEngineSetting.GeminiLive,
             _ => TranscriptionEngineSetting.Groq,
@@ -41,6 +42,10 @@ namespace TerminalVoiceOverlay.Services
 
         public async Task<string> TranscribeAsync(string wavFilePath)
         {
+            // Offline gewaehlt: nur auf diesem Rechner, nie still ueber Groq oder Gemini. Fehlt das Modell, kommt ein Fehler.
+            if (TranscriptionEngineSetting.UseParakeet)
+                return await ParakeetLocalClient.Shared.TranscribeAsync(wavFilePath).ConfigureAwait(false);
+
             // Auswahl steht auf Gemini, aber kein Schluessel hinterlegt: still
             // auf Groq zurueckfallen statt die Aufnahme zu verlieren.
             Func<Task<string>>? gemini = TranscriptionEngineSetting.Current switch

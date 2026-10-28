@@ -5,7 +5,7 @@ import Foundation
 /// sofort wirkt, keinen Neustart braucht und sich die Overlays auf einem
 /// Rechner teilen.
 ///
-/// Inhalt: "groq" oder "gemini". Fehlende/kaputte Datei = groq.
+/// Inhalt: "groq", "gemini" oder "parakeet" (offline, ParakeetLocalClient). Fehlende/kaputte Datei = groq.
 ///
 /// Portierung von TerminalVoiceOverlay-Windows/Services/TranscriptionEngineSetting.cs.
 /// Der dortige dritte Wert "gemini-live" (Streaming ueber WebSocket) wird hier
@@ -16,6 +16,7 @@ enum TranscriptionEngineSetting {
 
     static let groq   = "groq"
     static let gemini = "gemini"
+    static let parakeet = "parakeet"
 
     private static var path: String {
         (NSHomeDirectory() as NSString)
@@ -41,16 +42,17 @@ enum TranscriptionEngineSetting {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .lowercased() ?? ""
             // "gemini-live" faellt hier bewusst auf den Batch-Weg (siehe oben).
-            cached = raw.hasPrefix(gemini) ? gemini : groq
+            cached = raw.hasPrefix(gemini) ? gemini : raw.hasPrefix(parakeet) ? parakeet : groq
             cachedStamp = stamp
         }
         return cached
     }
 
     static var useGemini: Bool { current == gemini }
+    static var useParakeet: Bool { current == parakeet }
 
     static func save(_ engine: String) {
-        let value = (engine == gemini) ? gemini : groq
+        let value = (engine == gemini || engine == parakeet) ? engine : groq
         let p = path
         let dir = (p as NSString).deletingLastPathComponent
         try? FileManager.default.createDirectory(atPath: dir,

@@ -108,7 +108,13 @@
                                 <ComboBoxItem Content="Groq Whisper — schnell, mit Stille-Schutz"/>
                                 <ComboBoxItem Content="Gemini Transcribe — genauer, kostenlos (empfohlen)"/>
                                 <ComboBoxItem Content="Gemini Transcribe Live — Streaming-Variante"/>
+                                <ComboBoxItem Content="Parakeet primeline — offline auf diesem Rechner, Deutsch"/>
                             </ComboBox>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button x:Name="ParakeetDownloadButton" Padding="12,5" FontSize="12"/>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                                       Text="Parakeet primeline ist der deutsche Fine-Tune von NVIDIA Parakeet TDT 0.6B v3 (int8, sherpa-onnx), genau das Modell aus winidi/dictate. Es rechnet nur auf der CPU dieses Rechners: nach dem einmaligen Download (rund 640 MB, geteilt von TVO und CVO) kein Internet, kein Schlüssel. Fehlt das Modell oder scheitert es, gibt es eine Meldung, nie einen Rückfall auf Groq oder Gemini. Wörterbuch und Stille-Schutz gelten hier nicht."/>
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,4" Text="Welches Whisper-Modell bei Groq?"/>
                             <ComboBox x:Name="GroqModelBox"
                                       Background="#FF1B1B1B" Foreground="Black"
