@@ -6,6 +6,10 @@
 $ErrorActionPreference = 'Stop'
 $token = Join-Path $HOME 'SK\Jarvis\fernsteuerung-token.txt'
 if (-not (Test-Path $token)) { throw "Token fehlt: $token" }
+# Virtueller Bildschirm für den zugeklappten Laptop (virtueller_bildschirm.py): Parsec-Treiber, einmalig mit Adminrechten.
+if (-not (Get-PnpDevice -FriendlyName 'Parsec Virtual Display Adapter' -ErrorAction SilentlyContinue)) {
+    Start-Process winget -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList 'install --id Parsec.ParsecVDD -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity'
+}
 $skript = Join-Path $PSScriptRoot 'starten.ps1'
 $pwsh = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
 if (-not $pwsh) { $pwsh = (Get-Command powershell.exe).Source }

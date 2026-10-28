@@ -23,6 +23,8 @@ import sys
 import threading
 import time
 
+from virtueller_bildschirm import VirtuellerBildschirm
+
 PORT = int(os.environ.get("FERNSTEUERUNG_PORT", "47801"))
 STREAM_BREITE_MAX = 1600
 BITRATE = "4M"
@@ -128,6 +130,15 @@ def taste_eingabe(vk=0, scan=0, flags=0) -> INPUT:
     i = INPUT(type=TASTATUR)
     i.u.ki = KEYBDINPUT(vk, scan, flags, 0, 0)
     return i
+
+
+def bildschirm_wecken() -> None:
+    """Anzeige einschalten. Bei zugeklapptem Deckel (Deckelaktion „Nichts unternehmen“) schaltet Windows sie nach der
+    Bildschirm-Zeitsperre ab; Desktop Duplication liefert dann „access denied“ oder gar kein Bild (28.10.2026). Der
+    Wachhalter verhindert nur das Abschalten, einschalten tut erst eine Eingabe oder SC_MONITORPOWER."""
+    senden_eingaben([maus_eingabe(M_BEWEGEN, 0, 0)])
+    user32.SendMessageTimeoutW(0xFFFF, 0x0112, 0xF170, -1, 0x0002, 300, None)  # HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER an
+    kernel32.SetThreadExecutionState(0x00000001 | 0x00000002)
 
 
 def bildschirm_groesse():
@@ -497,6 +508,7 @@ class Dienst:
         self.aufnahme = None
         self.eingabe_ = Eingabe()
         self.wach = Wachhalter()
+        self.virtuell = VirtuellerBildschirm(log)
         self.sperre = threading.RLock()
         self.verworfen = 0
         self.fehlstarts = 0
@@ -526,6 +538,8 @@ class Dienst:
             alt.stop()
         t, g, gs = self.zustand
         s.senden_json(0x03, {"tastatur": t, "geheim": g, "gesperrt": gs})
+        bildschirm_wecken()
+        time.sleep(1.5)  # bis die Anzeige wieder im Bild ist, sonst scheitert der erste Aufnahmeversuch
         self.aufnahme_starten()
 
     def aufnahme_starten(self):
@@ -558,6 +572,12 @@ class Dienst:
                         return  # gesperrt: _beobachten startet die Aufnahme nach dem Entsperren neu
                     self.fehlstarts += 1
                     warten = 2 if self.fehlstarts <= 3 else 5
+                    if erstes[0]:
+                        # Kein einziges Bild: Anzeige wecken; hilft das zweimal nicht (kein Bildschirm mehr im
+                        # Windows-Bild, etwa zugeklappt), wie am Mac einen virtuellen Bildschirm anhängen.
+                        bildschirm_wecken()
+                        if self.fehlstarts >= 2 and not self.virtuell.aktiv and self.virtuell.an():
+                            warten = 3
                 # Bildschirm umgebaut, Grafiktreiber neu: nach kurzer Pause neu versuchen, solange verbunden.
                 threading.Timer(warten, lambda: self.sitzung is s and self.aufnahme is neu and self.aufnahme_starten()).start()
 
@@ -589,6 +609,8 @@ class Dienst:
             if self.aufnahme:
                 self.aufnahme.stop()
                 self.aufnahme = None
+            # Nach der Sitzung weg damit, sonst landen beim Aufklappen Fenster auf einem unsichtbaren Bildschirm.
+            self.virtuell.aus()
 
     def _beobachten(self):
         war_gesperrt = self.zustand[2]
