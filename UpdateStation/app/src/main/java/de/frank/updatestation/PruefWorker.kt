@@ -102,7 +102,8 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         val versuch = inputData.getInt(EINGABE_VERSUCH, 0)
         val e = liste.firstOrNull { it.paket == paket }
         val erledigt = e != null && e.fund.manifest.versionCode >= vc &&
-            (e.status != Status.UPDATE || Vorladen.vorhanden(applicationContext, e.fund.manifest) != null)
+            (e.status != Status.UPDATE || !Einstellungen(applicationContext).vorladen ||
+                Vorladen.vorhanden(applicationContext, e.fund.manifest) != null)
         if (erledigt || versuch >= SIGNAL_ABSTAENDE_S.size) return
         planeSignal(applicationContext, paket, vc, versuch + 1, ExistingWorkPolicy.APPEND_OR_REPLACE)
         Log.i(TAG, "Signal $paket vc $vc noch nicht da: Versuch ${versuch + 1} in ${SIGNAL_ABSTAENDE_S[versuch]} s")

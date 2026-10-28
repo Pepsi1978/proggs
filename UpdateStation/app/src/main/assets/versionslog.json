@@ -27,6 +27,7 @@
     {"versionCode": 23, "versionName": "1.0.22", "stand": "14.10.2026, 08:28 Uhr", "notiz": "Installationen laufen beim Drehen und Designwechsel weiter; alle Updates gehen sofort an Android und die Bestätigungen kommen sofort als Benachrichtigung, nur die Systemdialoge öffnen nacheinander; wartende Updates zeigen „Wartet in der Reihe“"},
     {"versionCode": 24, "versionName": "1.0.23", "stand": "15.10.2026, 11:01 Uhr", "notiz": "Neue Updates kommen in Echtzeit über Jarvis an und werden sofort im Hintergrund heruntergeladen; ist eins bereit, kommt eine Benachrichtigung und Jarvis sagt es an; Aktualisieren installiert ohne zweiten Android-Dialog"},
     {"versionCode": 25, "versionName": "1.0.24", "stand": "15.10.2026, 12:48 Uhr", "notiz": "Eine Update-bereit-Meldung verschwindet, sobald die App anders aktualisiert wurde, statt zu einer veralteten Version zu führen"},
-    {"versionCode": 26, "versionName": "1.0.25", "stand": "15.10.2026, 13:53 Uhr", "notiz": "Die App-Liste lässt sich nach Name, Größe oder Aktualität sortieren und mit dem Knopf daneben umkehren; beim Start stehen die zuletzt aktualisierten Apps oben"}
+    {"versionCode": 26, "versionName": "1.0.25", "stand": "15.10.2026, 13:53 Uhr", "notiz": "Die App-Liste lässt sich nach Name, Größe oder Aktualität sortieren und mit dem Knopf daneben umkehren; beim Start stehen die zuletzt aktualisierten Apps oben"},
+    {"versionCode": 27, "versionName": "1.0.26", "stand": "28.10.2026, 18:57 Uhr", "notiz": "Neuer Schalter „APK-Updates vorladen“ in den Einstellungen: ausgeschaltet lädt UpdateStation gefundene Updates nicht mehr automatisch im Hintergrund herunter, sondern erst beim Tippen auf Aktualisieren"}
   ]
 }

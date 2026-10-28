@@ -70,6 +70,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -121,6 +122,7 @@ data class Aktionen(
     val erlaubeBenachrichtigungen: () -> Unit,
     val speicherePfad: (String) -> Unit,
     val speichereIntervall: (Int) -> Unit,
+    val speichereVorladen: (Boolean) -> Unit,
     val teileDiagnose: () -> Unit,
 )
 
@@ -841,6 +843,19 @@ private fun EinstellungenInhalt(quelle: String?, drivePfad: String, intervall: I
                 "Schneller als alle 15 Minuten erlaubt Android nicht. Für sofort: „Jetzt prüfen“.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val context = LocalContext.current
+        var vorladen by remember { mutableStateOf(Einstellungen(context).vorladen) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("APK-Updates vorladen", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    if (vorladen) "Gefundene Updates werden im Hintergrund schon heruntergeladen."
+                    else "Aus: Updates werden nur erkannt und erst beim Tippen auf „Aktualisieren“ geladen.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = vorladen, onCheckedChange = { vorladen = it; aktionen.speichereVorladen(it) })
+        }
         Text(
             "UpdateStation prüft automatisch ${Einstellungen.intervallText(intervall)}, sobald Internet da ist, und meldet jedes neue Update und jede neue App einmal. " +
                 "Installiert wird nie automatisch: erst nach deinem Tippen und der Bestätigung durch Android – " +

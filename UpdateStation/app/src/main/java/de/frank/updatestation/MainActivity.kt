@@ -144,6 +144,11 @@ class MainActivity : ComponentActivity() {
                             PruefWorker.plane(this@MainActivity)
                             melde("Automatische Prüfung ${Einstellungen.intervallText(intervall)} (ungefährer Takt)")
                         },
+                        speichereVorladen = { an ->
+                            einst.vorladen = an
+                            if (an) PruefWorker.planeVorladen(this@MainActivity)
+                            melde(if (an) "APK-Updates werden wieder vorgeladen." else "Vorladen aus: Updates werden erst beim Tippen geladen.")
+                        },
                     ),
                 )
             }

@@ -199,6 +199,11 @@ class Einstellungen(context: Context) {
         get() = DesignModus.ausGespeichert(prefs.getString("designModus", null))
         set(v) = prefs.edit().putString("designModus", v.name).apply()
 
+    /** Gefundene Updates im Hintergrund schon herunterladen ([Vorladen]). Aus = kein automatischer Download. */
+    var vorladen: Boolean
+        get() = prefs.getBoolean("vorladen", true)
+        set(v) = prefs.edit().putBoolean("vorladen", v).apply()
+
     /**
      * Ergebnis der Zählung: [offen] = Fenster von max Versuchen noch nicht ausgeschöpft,
      * [erschoepft] = ausgeschöpft und noch nicht gewarnt, [neu] = Episode beginnt gerade.

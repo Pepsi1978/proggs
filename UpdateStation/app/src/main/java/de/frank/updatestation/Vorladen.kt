@@ -48,6 +48,8 @@ object Vorladen {
             val quelle = Quellen.aktuelle(context) ?: return@withContext emptyList()
             val neu = mutableListOf<AppEintrag>()
             for (e in updates) {
+                // Schalter „APK-Updates vorladen“ aus (auch mitten im Lauf): nichts automatisch herunterladen.
+                if (!Einstellungen(context).vorladen) break
                 val m = e.fund.manifest
                 if (vorhanden(context, m) != null || Installierer.laeuft(m.paket)) continue
                 val ziel = datei(context, m)
