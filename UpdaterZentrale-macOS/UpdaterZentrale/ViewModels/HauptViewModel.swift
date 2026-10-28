@@ -685,6 +685,22 @@ final class HauptViewModel {
         vorgang.beenden("abgeschlossen", kopfStatus)
         abschluss(ende)
         laeuftSammelvorgang = false
+
+        // Erst am Ende und in EINER Sitzung: mitten im Lauf koennten spaetere Schritte (Terminal,
+        // CLI, Launcher) die Sitzung wieder beenden, und mehrere Sitzungen kaemen sich auf main in die Quere.
+        let faelle = plan.compactMap { s -> (ProgrammEintrag, UpdateBericht)? in
+            guard let b = s.programm.letzterBericht, b.sammelId == sammelId else { return nil }
+            return (s.programm.eintrag, b)
+        }
+        if faelle.contains(where: { ClaudeUebergabe.automatischRelevant($0.1) }) {
+            if let problem = await ClaudeUebergabe.automatischStarten(faelle, einstellungen) {
+                kopfStatus += "  ·  " + problem
+            } else if faelle.contains(where: { $0.1.ergebnis == .fehlgeschlagen
+                && Date().timeIntervalSince(einstellungen.fuer($0.0.id).automatischUebergebenAm ?? .distantPast) < 60 }) {
+                kopfStatus += "  ·  Fehler automatisch an Claude Code übergeben."
+            }
+            anzeigen()
+        }
         laufDetail = ""
         if nachDauerSortieren { sortierungAnwenden() }
     }

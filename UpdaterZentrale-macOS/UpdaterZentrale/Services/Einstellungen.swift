@@ -13,17 +13,23 @@ final class ProgrammEinstellung: Codable {
     /// Zeitstempel jenseits dieser Marke liegt. Das Protokoll bleibt davon unberuehrt.
     var fehlerQuittiertBis: Date?
 
+    /// Wann zuletzt ein Fehler dieses Programms automatisch an Claude Code ging (Sperrfrist ueber
+    /// Neustarts hinweg). Nur gesetzt, wenn die Sitzung wirklich startete.
+    var automatischUebergebenAm: Date?
+
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case ausgeblendet = "Ausgeblendet"
         case fehlerQuittiertBis = "FehlerQuittiertBis"
+        case automatischUebergebenAm = "AutomatischUebergebenAm"
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         ausgeblendet = (try? c.decode(Bool.self, forKey: .ausgeblendet)) ?? false
         fehlerQuittiertBis = try? c.decode(Date.self, forKey: .fehlerQuittiertBis)
+        automatischUebergebenAm = try? c.decode(Date.self, forKey: .automatischUebergebenAm)
     }
 }
 

@@ -289,14 +289,13 @@ final class ProgrammViewModel {
     /// eine Sitzung je Programm in `ClaudeUebergabe.sperrfrist`, damit ein Dauerfehler keine Kette startet.
     func anClaudeUebergeben(automatisch: Bool = false) async {
         guard !uebergibtAnClaude, let bericht = letzterBericht, bericht.istFehler else { return }
-        if automatisch && !ClaudeUebergabe.automatischErlaubt(eintrag.id) {
-            Diagnose.ereignis(.info, "uebergabe", "auto.gesperrt", "Sperrfrist läuft", ["programm": eintrag.id])
-            return
-        }
         uebergibtAnClaude = true
         defer { uebergibtAnClaude = false }
         statusText = "Übergebe das Problem mit \(name) an Claude Code …"
-        if let problem = await ClaudeUebergabe.starten(eintrag, bericht) {
+        let problem = automatisch
+            ? await ClaudeUebergabe.automatischStarten([(eintrag, bericht)], einstellungen)
+            : await ClaudeUebergabe.starten(eintrag, bericht)
+        if let problem {
             statusText = problem
             beiMeldung?(problem)
         } else {
@@ -393,10 +392,6 @@ final class ProgrammViewModel {
             var liefVorher = false
 
             if urteil == nil {
-                if self.eintrag.beendenVorUpdate && Prozessdienst.laeuft(self.eintrag) {
-                    self.statusText = "Lädt das Update vorab herunter, \(self.name) bleibt offen …"
-                    await aktualisierer.vorbereiten(self.eintrag, fortschritt)
-                }
                 liefVorher = Prozessdienst.laeuft(self.eintrag)
 
                 // Installer haengen still, solange das Programm laeuft -- deshalb gehen die Helfer
@@ -412,6 +407,12 @@ final class ProgrammViewModel {
                     if !Dialoge.fragen(frage, "Programm beenden?") {
                         karte.zustand = .abgebrochen
                         urteil = KettenUrteil(ergebnis: .abgebrochen, meldung: "Abgebrochen – das Programm läuft weiter.",
+                                              fingerabdruckVorher: vorher, fingerabdruckNachher: vorher,
+                                              fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
+                    } else if let problem = await aktualisierer.vorbereiten(self.eintrag, fortschritt) {
+                        // Download hing oder scheiterte: das Programm bleibt offen, statt umsonst zu schliessen.
+                        karte.zustand = .fehler
+                        urteil = KettenUrteil(ergebnis: .fehlgeschlagen, meldung: problem,
                                               fingerabdruckVorher: vorher, fingerabdruckNachher: vorher,
                                               fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
                     } else {
@@ -464,7 +465,10 @@ final class ProgrammViewModel {
             fortschritt.berichte(Self.abschlussZeile(bericht) + "  (Dauer " + Protokollierung.dauerText(dauer) + ")")
             Protokollierung.laufBeenden(&bericht)
             self.letzterBericht = bericht
-            if bericht.istFehler { Task { await self.anClaudeUebergeben(automatisch: true) } }
+            // Im Sammellauf uebergibt der Sammellauf am Ende alle Fehler in EINER Sitzung.
+            if kontext == nil && ClaudeUebergabe.automatischRelevant(bericht) {
+                Task { await self.anClaudeUebergeben(automatisch: true) }
+            }
             if bericht.ergebnis == .erfolgreich || bericht.ergebnis == .ausstehend,
                let messwert = Protokollierung.messwert(bericht) {
                 self.dauernSetzen(self.dauern + [messwert])

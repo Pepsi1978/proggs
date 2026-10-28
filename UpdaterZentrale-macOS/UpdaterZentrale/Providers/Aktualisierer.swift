@@ -35,11 +35,12 @@ protocol Aktualisierer: Sendable {
     /// als nicht verifiziert statt als Erfolg.
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String
 
-    /// Laeuft VOR der Frage, ob das Programm beendet werden darf: laedt schon herunter, was ohne
-    /// Eingriff in die installierte App geht. So bleibt die App waehrend eines langen Downloads offen.
-    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async
+    /// Laeuft nach dem Ja zum Beenden, aber VOR dem Beenden: laedt schon herunter, was ohne Eingriff
+    /// in die installierte App geht. So bleibt die App waehrend eines langen Downloads offen.
+    /// - Returns: nil = weiter; sonst der Grund, warum das Update hier endet (App bleibt offen).
+    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> String?
 }
 
 extension Aktualisierer {
-    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async {}
+    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> String? { nil }
 }

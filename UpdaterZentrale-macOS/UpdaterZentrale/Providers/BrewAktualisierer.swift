@@ -112,10 +112,12 @@ struct BrewAktualisierer: Aktualisierer {
     /// Groesse des Homebrew-Download-Ordners: waechst, solange ein Download laeuft, auch wenn brew
     /// ohne Terminal keinen Fortschritt ausgibt. Lebenszeichen fuer die Ruhezeit der Kommandozeile.
     static let downloadGroesse: @Sendable () -> Int64 = {
-        let cache = ProcessInfo.processInfo.environment["HOMEBREW_CACHE"]
+        let cache = Kommandozeile.umgebung["HOMEBREW_CACHE"]
             ?? (NSHomeDirectory() as NSString).appendingPathComponent("Library/Caches/Homebrew")
         let ordner = (cache as NSString).appendingPathComponent("downloads")
-        let dateien = (try? FileManager.default.contentsOfDirectory(atPath: ordner)) ?? []
+        // Nur laufende Downloads: fertige Dateien aendern sich nicht und kosten je 5 s ein stat.
+        let dateien = ((try? FileManager.default.contentsOfDirectory(atPath: ordner)) ?? [])
+            .filter { $0.hasSuffix(".incomplete") }
         return dateien.reduce(Int64(0)) { summe, name in
             let werte = try? FileManager.default.attributesOfItem(atPath: (ordner as NSString).appendingPathComponent(name))
             return summe + ((werte?[.size] as? NSNumber)?.int64Value ?? 0)
@@ -124,9 +126,9 @@ struct BrewAktualisierer: Aktualisierer {
 
     /// Casks vorab laden (`brew fetch` laesst die installierte App unangetastet), damit das Beenden
     /// erst nach dem Download kommt und `brew upgrade` danach aus dem Cache installiert.
-    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async {
+    func vorbereiten(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> String? {
         guard eintrag.formel?.istLeer ?? true, let cask = eintrag.cask, !cask.istLeer,
-              FileManager.default.isExecutableFile(atPath: Pfade.brew) else { return }
+              FileManager.default.isExecutableFile(atPath: Pfade.brew) else { return nil }
         protokoll.berichte("brew update --quiet")
         let auffrischen = await Kommandozeile.ausfuehren(Pfade.brew, ["update", "--quiet"], zeitlimit: 300)
         if !auffrischen.ausgabe.istLeer { protokoll.berichte(auffrischen.ausgabe) }
@@ -135,9 +137,13 @@ struct BrewAktualisierer: Aktualisierer {
                                                    zeitlimit: TimeInterval(eintrag.zeitlimitMinuten * 60),
                                                    lebenszeichen: Self.downloadGroesse)
         if !laden.ausgabe.istLeer { protokoll.berichte(laden.ausgabe) }
-        if laden.abgelaufen || laden.exitCode != 0 {
-            protokoll.berichte("Vorab-Download nicht fertig – das Update lädt beim Installieren erneut.")
+        if laden.abgelaufen {
+            return "Download hängt (\(eintrag.zeitlimitMinuten) min ohne Fortschritt) – \(eintrag.name) bleibt offen, nichts geändert."
         }
+        if laden.exitCode != 0 {
+            return "Download fehlgeschlagen – \(eintrag.name) bleibt offen, nichts geändert. " + fehlergrund(laden.ausgabe, exitCode: laden.exitCode)
+        }
+        return nil
     }
 
     func aktualisieren(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {

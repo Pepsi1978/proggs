@@ -1,6 +1,6 @@
 # Updater-Zentrale macOS: Android-Studio-Update bricht mit „Zeitlimit überschritten“ ab (28.10.2026)
 
-> Behoben in Updater-Zentrale macOS 1.0.22.
+> Behoben in Updater-Zentrale macOS 1.0.22, nachgeschärft in 1.0.24.
 
 ## Symptom
 
@@ -15,8 +15,8 @@
 ## Behebung
 
 - `Kommandozeile.ausfuehren(…, lebenszeichen:)`: Das Zeitlimit zählt jetzt als Ruhezeit. Es läuft erst ab, wenn weder Ausgabe kommt noch der Homebrew-Ordner `downloads` wächst. Insgesamt gilt eine Obergrenze von 8 Stunden.
-- `Aktualisierer.vorbereiten`: Für Casks läuft `brew fetch --cask` vor der Frage, ob das Programm beendet werden darf. `brew upgrade` installiert danach aus dem Cache.
-- Fehlgeschlagene Updates gehen automatisch an Claude Code. Je Programm geschieht das höchstens einmal in 6 Stunden. Der Auftrag lautet: Ursache finden, Update zu Ende bringen, die Fehlerart dauerhaft vorbeugen und den Fall hier festhalten.
+- `Aktualisierer.vorbereiten`: Für Casks läuft `brew fetch --cask` nach dem Ja zum Beenden, aber bevor das Programm geschlossen wird. Hängt oder scheitert der Download, bleibt das Programm offen und das Update endet mit einer Fehlermeldung. Klappt er, installiert `brew upgrade` danach aus dem Cache.
+- Fehlgeschlagene Updates gehen automatisch an Claude Code, „nicht verifiziert“ zählt nicht dazu. Ein Sammellauf übergibt alle Fehler erst am Ende in einer einzigen Sitzung. Die Sperrfrist von 6 Stunden je Programm wird gespeichert und übersteht so auch einen Neustart; sie zählt erst ab einem gelungenen Start der Sitzung. Der Auftrag lautet: Ursache finden, Update zu Ende bringen, die Fehlerart dauerhaft vorbeugen und den Fall hier festhalten.
 
 ## Dateien
 
