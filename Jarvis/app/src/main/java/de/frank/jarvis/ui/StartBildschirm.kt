@@ -208,12 +208,15 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
         // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
         val mitte = if (vm.gespraech.isEmpty()) 0.dp else with(dichte) { (listenHoehe / 2).toDp() }
+        // Im Gespräch genau eine halbe Listenhöhe, nicht mehr: Die schwebenden Knöpfe rechts sind im Querformat höher als die
+        // halbe Liste und schoben das Ende sonst nach oben (rechts hält SCHWEBE_FREI_RECHTS den Text von ihnen frei).
         val vonUnten = vm.gespraech.isNotEmpty()
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
-            // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer).
-            contentPadding = PaddingValues(start = 16.dp, end = if (vm.liveAktiv) 16.dp else SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = maxOf(8.dp + schweber, mitte)),
+            // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer);
+            // auch im Live-Gespräch, damit beim Starten und Beenden nichts neu umbricht und die Lesestelle springt.
+            contentPadding = PaddingValues(start = 16.dp, end = SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = if (vonUnten) mitte else 8.dp + schweber),
             verticalArrangement = if (vonUnten) Arrangement.spacedBy(10.dp, Alignment.Bottom) else Arrangement.spacedBy(10.dp),
         ) {
             if (offen > 0) item(key = "einrichtung") {
