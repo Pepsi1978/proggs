@@ -61,6 +61,8 @@ data class Meldung(
     val istFehler: Boolean = false,
     val wiederholen: (() -> Unit)? = null,
     val zuEinstellungen: Boolean = false,
+    /** Erklärt, warum etwas nicht ging. Reine Bestätigungen („gespeichert“, „gelöscht“) erscheinen gar nicht mehr. */
+    val hinweis: Boolean = false,
 )
 
 data class AufnahmeStand(
@@ -484,7 +486,7 @@ class IdeenViewModel(
                 KiVerbesserung.Ausgang.Leer -> zeige(Meldung("Es kam keine verbesserte Fassung zurück.", istFehler = true))
                 KiVerbesserung.Ausgang.Geaendert ->
                     zeige(Meldung("Die Idee wurde inzwischen geändert — bitte noch einmal verbessern.", istFehler = true))
-                KiVerbesserung.Ausgang.AndereLaeuft -> zeige(Meldung("Für diese Idee läuft gerade schon eine Verbesserung."))
+                KiVerbesserung.Ausgang.AndereLaeuft -> zeige(Meldung("Für diese Idee läuft gerade schon eine Verbesserung.", hinweis = true))
                 is KiVerbesserung.Ausgang.Fehler ->
                     zeige(Meldung(fehlerText(ausgang.ursache), istFehler = true, wiederholen = { verbessereMitKi(idee) }))
             }
@@ -563,7 +565,7 @@ class IdeenViewModel(
         val ideen = alleIdeen.value.filter { it.status == IdeenStatus.ANGENOMMEN.name } +
             alleIdeen.value.filter { it.status == IdeenStatus.OFFEN.name }
         if (ideen.isEmpty()) {
-            zeige(Meldung("Es sind keine offenen Ideen zum Vorlesen vorhanden."))
+            zeige(Meldung("Es sind keine offenen Ideen zum Vorlesen vorhanden.", hinweis = true))
             return
         }
         vorleser.sprich(
@@ -1086,6 +1088,7 @@ class IdeenViewModel(
                             Meldung(
                                 "Zu diesem Schlüssel gibt es noch keine geklonte Stimme. " +
                                     "Nimm unter „Eigene Stimme aufnehmen“ eine auf.",
+                                hinweis = true,
                             ),
                         )
                     }
@@ -1263,7 +1266,7 @@ class IdeenViewModel(
     fun schalteSicherungsteil(teil: IdeenTeil) {
         val jetzt = _sicherungsUmfang.value
         if (teil in jetzt && jetzt.size == 1) {
-            zeige(Meldung("Mindestens ein Teil muss gesichert werden."))
+            zeige(Meldung("Mindestens ein Teil muss gesichert werden.", hinweis = true))
             return
         }
         val neu = if (teil in jetzt) jetzt - teil else jetzt + teil
@@ -1384,14 +1387,14 @@ class IdeenViewModel(
             return
         }
         if (sicherung.sicherungsOrdner == null) {
-            zeige(Meldung("Wähl zuerst einen Sicherungsordner."))
+            zeige(Meldung("Wähl zuerst einen Sicherungsordner.", hinweis = true))
             return
         }
         viewModelScope.launch {
             runCatching { sicherung.sicherungen() }
                 .onSuccess { liste ->
                     _sicherungsAuswahl.value = liste
-                    if (liste.isEmpty()) zeige(Meldung("In dem Ordner liegt noch keine Sicherung."))
+                    if (liste.isEmpty()) zeige(Meldung("In dem Ordner liegt noch keine Sicherung.", hinweis = true))
                 }
                 .onFailure { fehler ->
                     if (fehler is CancellationException) throw fehler
@@ -1407,13 +1410,13 @@ class IdeenViewModel(
     /** Nimmt ungefragt die jüngste Sicherung — aber zeigt auch sie erst als Vorschau. */
     fun stelleNeuesteWiederHer() {
         if (sicherung.sicherungsOrdner == null) {
-            zeige(Meldung("Wähl zuerst einen Sicherungsordner."))
+            zeige(Meldung("Wähl zuerst einen Sicherungsordner.", hinweis = true))
             return
         }
         viewModelScope.launch {
             runCatching { sicherung.neuesteSicherung() }
                 .onSuccess { datei ->
-                    if (datei == null) zeige(Meldung("In dem Ordner liegt noch keine Sicherung."))
+                    if (datei == null) zeige(Meldung("In dem Ordner liegt noch keine Sicherung.", hinweis = true))
                     else stelleWiederHer(datei.uri)
                 }
                 .onFailure { fehler ->
@@ -1484,15 +1487,7 @@ class IdeenViewModel(
                 .onSuccess { anzahl ->
                     letzteSpur = null
                     _zurueckNehmenText.value = ""
-                    zeige(
-                        Meldung(
-                            if (anzahl == 0) {
-                                "Es war nichts mehr zurückzunehmen."
-                            } else {
-                                "$anzahl eingespielte Ideen wieder entfernt."
-                            },
-                        ),
-                    )
+                    if (anzahl == 0) zeige(Meldung("Es war nichts mehr zurückzunehmen.", hinweis = true))
                     rechneNaechsteSicherung()
                 }
                 .onFailure { fehler ->
@@ -1512,15 +1507,7 @@ class IdeenViewModel(
                     viewModelScope.launch {
                         runCatching { repository.entferneDoppelte() }
                             .onSuccess { anzahl ->
-                                zeige(
-                                    Meldung(
-                                        if (anzahl == 0) {
-                                            "Keine doppelten Ideen gefunden."
-                                        } else {
-                                            "$anzahl doppelte Ideen entfernt."
-                                        },
-                                    ),
-                                )
+                                if (anzahl == 0) zeige(Meldung("Keine doppelten Ideen gefunden.", hinweis = true))
                                 rechneNaechsteSicherung()
                             }
                             .onFailure { fehler ->
@@ -1607,6 +1594,8 @@ class IdeenViewModel(
     // ---- Hilfen ----
 
     fun zeige(meldung: Meldung) {
+        // Frank will keine Bestätigungsblasen: Was geklappt hat, sieht er ohnehin. Es bleiben Fehler, Hinweise und Rückfragen.
+        if (!meldung.istFehler && !meldung.hinweis && meldung.wiederholen == null && !meldung.zuEinstellungen) return
         _meldung.value = meldung
     }
 

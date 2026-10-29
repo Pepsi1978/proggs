@@ -186,7 +186,7 @@ fun EinstellungenScreen(
                     aufAufnehmen = aufEigeneStimme,
                     aufFehlendenSchluessel = {
                         viewModel.zeige(
-                            Meldung("Trag den fehlenden Schlüssel hier im Block „Vorlesen“ ein."),
+                            Meldung("Trag den fehlenden Schlüssel hier im Block „Vorlesen“ ein.", hinweis = true),
                         )
                     },
                 )
