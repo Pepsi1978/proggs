@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -174,6 +175,9 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boole
     )
 }
 
+/** Die Knöpfe unten in der Leiste stehen um etwa 2 mm (12 dp) nach rechts versetzt, näher am Daumen. */
+private val KNOEPFE_VERSATZ = 12.dp
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Leiste(
@@ -277,7 +281,7 @@ private fun Leiste(
                         }
                     }
                 }
-                Knopf("Neues Projekt", Modifier.fillMaxWidth().padding(top = 8.dp), icon = Icons.Rounded.CreateNewFolder) { projektNeu = true }
+                Knopf("Neues Projekt", Modifier.fillMaxWidth().padding(top = 8.dp).offset(x = KNOEPFE_VERSATZ), icon = Icons.Rounded.CreateNewFolder) { projektNeu = true }
             } else {
                 // „Gespräche“ oder „Programmierung“: alle Programmieraufträge mit ihren Gesprächen, alte wie neue; sie stehen nicht unter „Gespräche“.
                 val auftraege = reiter == LeistenReiter.PROGRAMMIERUNG
@@ -305,7 +309,8 @@ private fun Leiste(
                 // Unter „Gespräche“ und „Programmierung“ kein Knopf: Neues entsteht über eine normale Session oder den Programmierer.
             }
             // Drei Reiter unten, in Daumennähe: auf schmalen Bildschirmen (Fold zugeklappt) Symbol über dem Namen, damit „Programmierung“ ganz hineinpasst.
-            BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp)) {
+            // Etwa 2 mm nach rechts versetzt, Größe und Abstände bleiben gleich.
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp).offset(x = KNOEPFE_VERSATZ)) {
                 val schmal = maxWidth < 420.dp
                 Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Reiter("Gespräche", Icons.Rounded.Forum, gewaehlt = reiter == LeistenReiter.GESPRAECHE, schmal, Modifier.weight(1f), LeistenReiter.GESPRAECHE in aktiveReiter, offen) { reiterWaehlen(LeistenReiter.GESPRAECHE) }
