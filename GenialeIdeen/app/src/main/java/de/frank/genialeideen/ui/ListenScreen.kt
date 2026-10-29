@@ -112,11 +112,19 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.material.icons.filled.RocketLaunch
+import de.frank.genialeideen.data.local.vorleseText
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+/** Die leuchtenden Farben der drei Reiter: Angenommen grün, Offen rot, Umgesetzt blau. */
+internal val FarbeAngenommen = Color(0xFF2BE36F)
+internal val FarbeOffen = Color(0xFFFF4D5E)
+internal val FarbeUmgesetzt = Color(0xFF3FA2FF)
+
 enum class ListenBereich(val titel: String) {
     ALLE("Alle"),
+    ANGENOMMEN("Angenommen"),
     OFFEN("Offen"),
     ENTWURF("Entwürfe"),
     UMGESETZT("Umgesetzt"),
@@ -131,6 +139,7 @@ fun ListenScreen(
 ) {
     val gold = LocalGold.current
     val theme by viewModel.theme.collectAsState()
+    val angenommene by viewModel.angenommeneIdeen.collectAsState()
     val offene by viewModel.offeneIdeen.collectAsState()
     val umgesetzte by viewModel.umgesetzteIdeen.collectAsState()
     val entwuerfe by viewModel.entwuerfe.collectAsState()
@@ -162,8 +171,8 @@ fun ListenScreen(
 
     // Die volle Kategorie steht oben: sortiert nach Anzahl, bei Gleichstand nach Name.
     // Gezählt wird genau das, was ein Tipp auf die Zeile zeigen würde.
-    val zaehlbasis = remember(offene, umgesetzte, entwuerfe, umfangAlle) {
-        if (umfangAlle) offene + umgesetzte + entwuerfe else offene + entwuerfe
+    val zaehlbasis = remember(angenommene, offene, umgesetzte, entwuerfe, umfangAlle) {
+        if (umfangAlle) angenommene + offene + umgesetzte + entwuerfe else angenommene + offene + entwuerfe
     }
     val zaehlung = remember(zaehlbasis) { alleZaehlung(zaehlbasis) }
     // Zu welcher Art gehört eine umgesetzte Idee? Nach ihrer Stammkategorie. Ohne Kategorie
@@ -192,7 +201,8 @@ fun ListenScreen(
     val roheListe = when {
         // Die Sammelkategorie zeigt nur Umgesetztes der jeweiligen Art.
         umgesetztArt != null -> umgesetzte.filter { artVon(it) == umgesetztArt }
-        bereich == ListenBereich.ALLE -> offene + umgesetzte
+        bereich == ListenBereich.ALLE -> angenommene + offene + umgesetzte
+        bereich == ListenBereich.ANGENOMMEN -> angenommene
         bereich == ListenBereich.ENTWURF -> entwuerfe
         bereich == ListenBereich.UMGESETZT -> umgesetzte
         else -> offene
@@ -229,8 +239,16 @@ fun ListenScreen(
                 kategorien = sortierteKategorien,
                 gewaehlt = gewaehlteKategorie,
                 anzahlJeKategorie = zaehlung,
-                offeneAnzahl = offene.size + entwuerfe.size,
-                alleAnzahl = offene.size + umgesetzte.size + entwuerfe.size,
+                offeneAnzahl = angenommene.size + offene.size + entwuerfe.size,
+                alleAnzahl = angenommene.size + offene.size + umgesetzte.size + entwuerfe.size,
+                entwuerfeAnzahl = entwuerfe.size,
+                entwuerfeGewaehlt = bereich == ListenBereich.ENTWURF && gewaehlteKategorie == null && umgesetztArt == null,
+                aufEntwuerfe = {
+                    umgesetztArt = null
+                    bereich = ListenBereich.ENTWURF
+                    viewModel.waehleKategorie(null)
+                    bereichsraum.launch { schublade.close() }
+                },
                 umfangAlle = umfangAlle,
                 umgesetztJeArt = umgesetztJeArt,
                 gewaehltUmgesetzt = umgesetztArt,
@@ -280,7 +298,7 @@ fun ListenScreen(
             aufEinstellungen = aufEinstellungen,
         )
 
-        BereichsWaehler(bereich, offene.size, entwuerfe.size, umgesetzte.size) {
+        BereichsWaehler(bereich, angenommene.size, offene.size, umgesetzte.size) {
             umgesetztArt = null
             bereich = it
         }
@@ -308,6 +326,13 @@ fun ListenScreen(
                         "Der Knopf unten nimmt sofort auf.",
                     knopfText = "Erste Idee festhalten",
                     aufKnopf = aufNeueIdee,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+                sortiert.isEmpty() && bereich == ListenBereich.ANGENOMMEN -> Leerzustand(
+                    symbol = "🚀",
+                    ueberschrift = "Noch keine Idee angenommen",
+                    satz = "Tipp in einer offenen Idee auf „Annehmen“, sobald du sie umsetzt. " +
+                        "Der Wecker liest nur angenommene Ideen vor.",
                     modifier = Modifier.align(Alignment.Center),
                 )
                 sortiert.isEmpty() && bereich == ListenBereich.ENTWURF -> Leerzustand(
@@ -355,7 +380,12 @@ fun ListenScreen(
                                 vorleseZustand = vorlese.zustand,
                                 aufTipp = { aufIdee(idee) },
                                 aufVorlesen = {
-                                    viewModel.lies("idee-${idee.id}", idee.titel, "${idee.titel}.\n\n${idee.text}")
+                                    viewModel.lies("idee-${idee.id}", idee.titel, "${idee.titel}.\n\n${idee.vorleseText()}")
+                                },
+                                aufAnnehmen = if (idee.status == IdeenStatus.OFFEN.name || idee.status == IdeenStatus.ANGENOMMEN.name) {
+                                    { viewModel.schalteAngenommen(idee) }
+                                } else {
+                                    null
                                 },
                                 aufVerwerfen = if (bereich == ListenBereich.ENTWURF) {
                                     { viewModel.verwirfEntwurf(idee) }
@@ -585,6 +615,9 @@ private fun KategorienLeiste(
     anzahlJeKategorie: Map<Long, Int>,
     offeneAnzahl: Int,
     alleAnzahl: Int,
+    entwuerfeAnzahl: Int,
+    entwuerfeGewaehlt: Boolean,
+    aufEntwuerfe: () -> Unit,
     umfangAlle: Boolean,
     umgesetztJeArt: Map<Kategorieart, Int>,
     gewaehltUmgesetzt: Kategorieart?,
@@ -636,8 +669,15 @@ private fun KategorienLeiste(
                 KategorieZeile(
                     name = "Offene Ideen",
                     anzahl = offeneAnzahl,
-                    gewaehlt = !umfangAlle && gewaehlt == null,
+                    gewaehlt = !umfangAlle && gewaehlt == null && !entwuerfeGewaehlt,
                     aufTipp = aufOffene,
+                )
+                // Die Entwürfe wohnen hier statt oben bei den Reitern.
+                KategorieZeile(
+                    name = "Entwürfe",
+                    anzahl = entwuerfeAnzahl,
+                    gewaehlt = entwuerfeGewaehlt,
+                    aufTipp = aufEntwuerfe,
                 )
                 KategorieZeile(
                     name = "Alle Ideen",
@@ -904,8 +944,8 @@ private fun hintergrundVerlauf(): Brush {
 @Composable
 private fun BereichsWaehler(
     aktuell: ListenBereich,
+    angenommene: Int,
     offene: Int,
-    entwuerfe: Int,
     umgesetzte: Int,
     aufWahl: (ListenBereich) -> Unit,
 ) {
@@ -920,32 +960,32 @@ private fun BereichsWaehler(
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // „Alle“ ist kein Reiter, sondern der Umfang aus der Seitenleiste — hier bleibt er weg.
-        ListenBereich.entries.filter { it != ListenBereich.ALLE }.forEach { eintrag ->
+        // „Alle“ und „Entwürfe“ liegen in der Seitenleiste; oben stehen nur die drei leuchtenden
+        // Reiter: Angenommen (grün), Offen (rot), Umgesetzt (blau).
+        listOf(
+            Triple(ListenBereich.ANGENOMMEN, angenommene, FarbeAngenommen),
+            Triple(ListenBereich.OFFEN, offene, FarbeOffen),
+            Triple(ListenBereich.UMGESETZT, umgesetzte, FarbeUmgesetzt),
+        ).forEach { (eintrag, anzahl, leuchtfarbe) ->
             val gewaehlt = eintrag == aktuell
             val farbe by animateColorAsState(
-                if (gewaehlt) gold.primaer else Color.Transparent,
+                if (gewaehlt) leuchtfarbe else leuchtfarbe.copy(alpha = 0.16f),
                 label = "bereich",
             )
+            var zeile = Modifier.weight(1f).druckEffekt { aufWahl(eintrag) }
+            if (gewaehlt) zeile = zeile.goldSchein(leuchtfarbe.copy(alpha = 0.7f), hoehe = 10.dp, radius = 12.dp)
             Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .druckEffekt { aufWahl(eintrag) }
+                modifier = zeile
                     .clip(RoundedCornerShape(12.dp))
                     .background(farbe)
+                    .border(1.dp, leuchtfarbe.copy(alpha = if (gewaehlt) 1f else 0.7f), RoundedCornerShape(12.dp))
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val anzahl = when (eintrag) {
-                    ListenBereich.ALLE -> offene + umgesetzte
-                    ListenBereich.OFFEN -> offene
-                    ListenBereich.ENTWURF -> entwuerfe
-                    ListenBereich.UMGESETZT -> umgesetzte
-                }
                 Text(
                     text = "${eintrag.titel} ($anzahl)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (gewaehlt) gold.aufPrimaer else gold.textGedaempft,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = if (gewaehlt) Color(0xFF0B0B0B) else leuchtfarbe,
                     maxLines = 1,
                 )
             }
@@ -964,13 +1004,16 @@ private fun IdeenKarte(
     aufVorlesen: () -> Unit,
     /** Nur bei Entwürfen gesetzt: Der Papierkorb wirft das Halbfertige weg. */
     aufVerwerfen: (() -> Unit)? = null,
+    /** Bei offenen und angenommenen Ideen: Annehmen bzw. zurück zu den offenen. */
+    aufAnnehmen: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
     // maxLines begrenzt nur die Ausgabe, nicht das Einlesen/Shape-Layout langer Texte.
     // Die Liste braucht lediglich einen großzügigen Vorschau-Ausschnitt; Detail/Vorlesen
     // erhalten weiterhin den vollständigen Originaltext.
-    val vorschau = remember(idee.text) { idee.text.take(1024) }
+    // Die Karte zeigt die Kurzfassung; fehlt sie noch, einen Ausschnitt des Textes.
+    val vorschau = remember(idee.text, idee.kurzfassung) { idee.kurzfassung.ifBlank { idee.text.take(1024) } }
     // Kein kippbar: Der Kipp-Effekt fängt Zieh-Gesten ab und liesse die Liste haken.
     GoldKarte(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -1014,6 +1057,25 @@ private fun IdeenKarte(
                         color = gold.textGedaempft,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
+                    )
+                }
+            }
+            aufAnnehmen?.let { annehmen ->
+                val angenommen = idee.status == IdeenStatus.ANGENOMMEN.name
+                var knopf = Modifier.size(38.dp)
+                if (angenommen) knopf = knopf.goldSchein(FarbeAngenommen.copy(alpha = 0.6f), hoehe = 8.dp, radius = 19.dp)
+                Box(
+                    modifier = knopf
+                        .druckEffekt(annehmen)
+                        .clip(RoundedCornerShape(19.dp))
+                        .background(if (angenommen) FarbeAngenommen else Color.Transparent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.RocketLaunch,
+                        contentDescription = if (angenommen) "Angenommen – zurück zu Offen" else "Annehmen",
+                        tint = if (angenommen) Color(0xFF00210C) else gold.textGedaempft,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
@@ -1150,6 +1212,7 @@ private fun SuchErgebnisse(
                         val stand = when (idee.status) {
                             IdeenStatus.UMGESETZT.name -> "Umgesetzt"
                             IdeenStatus.ENTWURF.name -> "Entwurf"
+                            IdeenStatus.ANGENOMMEN.name -> "Angenommen"
                             else -> "Offen"
                         }
                         Text(

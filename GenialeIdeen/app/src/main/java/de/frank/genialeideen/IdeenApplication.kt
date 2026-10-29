@@ -39,6 +39,8 @@ class GenialeIdeenApplication : Application() {
         bereit.countDown()
         // Von Jarvis angelegte Ideen, deren KI-Glättung ein beendeter Prozess unterbrochen hat.
         JarvisGlaettung.nachholen(container, this)
+        // Fehlende Kurzfassungen (Altbestand, neue und geänderte Ideen) im Hintergrund nachziehen.
+        de.frank.genialeideen.text.Kurzfassung.starte(container)
         container.appLockManager.start()
         meldeAenderungenAnDieSicherung()
         // Damit beim Verlassen der App sofort gesichert wird, statt die Änderung zu verlieren.

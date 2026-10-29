@@ -59,6 +59,7 @@ class JarvisBruecke : ContentProvider() {
                 var liste = (if (suche.isNotEmpty()) repo.suche(suche) else repo.alleIdeen().first()).filter { it.status != IdeenStatus.ENTWURF.name }
                 liste = when (status) {
                     "umgesetzt" -> liste.filter { it.status == IdeenStatus.UMGESETZT.name }
+                    "angenommen" -> liste.filter { it.status == IdeenStatus.ANGENOMMEN.name }
                     "alle" -> liste
                     else -> liste.filter { it.status == IdeenStatus.OFFEN.name }
                 }
@@ -106,6 +107,7 @@ class JarvisBruecke : ContentProvider() {
                 when (a.optString("status").lowercase(Locale.GERMAN)) {
                     "umgesetzt" -> repo.setzeStatus(idee, IdeenStatus.UMGESETZT)
                     "offen" -> repo.setzeStatus(idee, IdeenStatus.OFFEN)
+                    "angenommen" -> repo.setzeStatus(idee, IdeenStatus.ANGENOMMEN)
                 }
                 JSONObject().put("idee", alsJson(repo.lade(idee.id) ?: idee, repo.alleKategorien().first(), Int.MAX_VALUE))
             }
@@ -137,7 +139,12 @@ class JarvisBruecke : ContentProvider() {
             .put("titel", i.titel)
             .put("text", if (i.text.length > laenge) i.text.take(laenge) + " …" else i.text)
             .put("gekuerzt", i.text.length > laenge)
-            .put("status", if (i.status == IdeenStatus.UMGESETZT.name) "umgesetzt" else "offen")
+            .put("kurzfassung", i.kurzfassung)
+            .put("status", when (i.status) {
+                IdeenStatus.UMGESETZT.name -> "umgesetzt"
+                IdeenStatus.ANGENOMMEN.name -> "angenommen"
+                else -> "offen"
+            })
             .put("kategorien", JSONArray(namen))
             .put("angelegt", tag(i.angelegtAm))
             .put("geaendert", tag(i.geaendertAm))

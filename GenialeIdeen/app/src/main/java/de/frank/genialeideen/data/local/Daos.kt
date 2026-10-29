@@ -37,6 +37,10 @@ interface IdeenDao {
         jetzt: Long = System.currentTimeMillis(),
     )
 
+    /** Schreibt die Kurzfassung nur, wenn der Text seither unverändert ist. Kein inhaltliches Ändern. */
+    @Query("UPDATE ideen SET kurzfassung = :kurzfassung WHERE id = :id AND text = :text")
+    suspend fun setzeKurzfassung(id: Long, text: String, kurzfassung: String): Int
+
     @Query("SELECT COALESCE(MIN(reihenfolge), 0) - 1 FROM ideen WHERE status = :status")
     suspend fun naechsteReihenfolgeOben(status: String): Int
 

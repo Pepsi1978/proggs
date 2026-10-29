@@ -44,7 +44,9 @@ import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -80,6 +82,7 @@ import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.data.local.weitereKategorieIds
+import de.frank.genialeideen.data.local.vorleseText
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -109,6 +112,7 @@ fun DetailScreen(
     val theme by viewModel.theme.collectAsState()
     val korrektur by viewModel.korrektur.collectAsState()
     val kategorien by viewModel.kategorien.collectAsState()
+    val verbesserung by viewModel.verbesserungLaeuft.collectAsState()
 
     var eingabe by remember { mutableStateOf("") }
     // Titel und Text der Idee lassen sich im Nachhinein ändern — solange dieser Schalter steht,
@@ -227,16 +231,20 @@ fun DetailScreen(
                             viewModel.lies(
                                 "detail-${aktuelle.id}",
                                 aktuelle.titel,
-                                "${aktuelle.titel}.\n\n${aktuelle.text}",
+                                "${aktuelle.titel}.\n\n${aktuelle.vorleseText()}",
                             )
                         },
                         aufUmgesetzt = {
-                            if (aktuelle.status == IdeenStatus.OFFEN.name) {
-                                viewModel.setzeUmgesetzt(aktuelle)
-                            } else {
+                            if (aktuelle.status == IdeenStatus.UMGESETZT.name) {
                                 viewModel.zurueckZuOffen(aktuelle)
+                            } else {
+                                viewModel.setzeUmgesetzt(aktuelle)
                             }
                         },
+                        aufAnnehmen = { viewModel.schalteAngenommen(aktuelle) },
+                        verbessertGerade = verbesserung == aktuelle.id,
+                        aufVerbessern = { viewModel.verbessereMitKi(aktuelle) },
+                        aufZuruecknehmen = { viewModel.nimmVerbesserungZurueck(aktuelle) },
                         aufLoeschen = {
                             viewModel.loesche(aktuelle)
                             aufZurueck()
@@ -586,10 +594,15 @@ private fun IdeenKopf(
     vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
     aufVorlesen: () -> Unit,
     aufUmgesetzt: () -> Unit,
+    aufAnnehmen: () -> Unit,
+    verbessertGerade: Boolean,
+    aufVerbessern: () -> Unit,
+    aufZuruecknehmen: () -> Unit,
     aufLoeschen: () -> Unit,
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
+    val angenommen = idee.status == IdeenStatus.ANGENOMMEN.name
     var frageLoeschen by remember { mutableStateOf(false) }
     if (frageLoeschen) {
         AlertDialog(
@@ -615,6 +628,25 @@ private fun IdeenKopf(
         erhoeht = true,
     ) {
         Column(Modifier.padding(16.dp)) {
+            // Die Kurzfassung steht über der ausführlichen Fassung — nur sie wird vorgelesen.
+            Text(
+                "Kurzfassung",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = gold.primaer,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                idee.kurzfassung.ifBlank { "Wird gerade erstellt …" },
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = if (idee.kurzfassung.isBlank()) gold.textGedaempft else gold.textPrimaer,
+            )
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "Ausführliche Fassung",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = gold.primaer,
+            )
+            Spacer(Modifier.height(4.dp))
             Text(
                 idee.text.ifBlank { "Ohne weiteren Text." },
                 // Ein Tipp auf den Text öffnet das Bearbeiten — genau dort, wo man
@@ -645,10 +677,39 @@ private fun IdeenKopf(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(14.dp))
+            // KI verbessert beide Fassungen und speichert sofort; Rückgängig holt die vorige zurück.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                KiVerbessernKnopf(laeuft = verbessertGerade, aufTipp = aufVerbessern)
+                if (idee.vorigerText != null && !verbessertGerade) {
+                    Row(
+                        modifier = Modifier
+                            .druckEffekt(aufZuruecknehmen)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(gold.textGedaempft.copy(alpha = 0.16f))
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Default.Undo, contentDescription = null, tint = gold.primaer, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Rückgängig",
+                            color = gold.primaer,
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (!umgesetzt && idee.status != IdeenStatus.ENTWURF.name) {
+                    AnnehmenKnopf(angenommen = angenommen, aufTipp = aufAnnehmen)
+                }
                 UmsetzungsKnopf(umgesetzt = umgesetzt, aufTipp = aufUmgesetzt)
                 Spacer(Modifier.weight(1f))
                 Box(
@@ -679,23 +740,80 @@ private fun IdeenKopf(
     }
 }
 
+/** Annehmen heißt: Frank setzt die Idee gerade um. Angenommen leuchtet der Knopf grün. */
+@Composable
+private fun AnnehmenKnopf(angenommen: Boolean, aufTipp: () -> Unit) {
+    val gold = LocalGold.current
+    val inhalt = if (angenommen) Color(0xFF00210C) else gold.textGedaempft
+    var zeile = Modifier.druckEffekt(aufTipp)
+    if (angenommen) zeile = zeile.goldSchein(FarbeAngenommen.copy(alpha = 0.6f), hoehe = 10.dp, radius = 16.dp)
+    Row(
+        modifier = zeile
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (angenommen) {
+                    Brush.horizontalGradient(listOf(FarbeAngenommen, FarbeAngenommen.copy(alpha = 0.75f)))
+                } else {
+                    SolidColor(gold.textGedaempft.copy(alpha = 0.16f))
+                },
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.RocketLaunch, contentDescription = null, tint = inhalt, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(
+            if (angenommen) "Angenommen" else "Annehmen",
+            color = inhalt,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        )
+    }
+}
+
+/** Verbessert die ausführliche Fassung und erzeugt die Kurzfassung neu. */
+@Composable
+private fun KiVerbessernKnopf(laeuft: Boolean, aufTipp: () -> Unit) {
+    val gold = LocalGold.current
+    Row(
+        modifier = Modifier
+            .druckEffekt { if (!laeuft) aufTipp() }
+            .clip(RoundedCornerShape(16.dp))
+            .background(gold.primaer.copy(alpha = 0.18f))
+            .border(1.dp, gold.primaer.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (laeuft) {
+            CircularProgressIndicator(color = gold.primaer, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+        } else {
+            Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = gold.primaer, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(6.dp))
+        Text(
+            if (laeuft) "KI verbessert …" else "Mit KI verbessern",
+            color = gold.primaer,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        )
+    }
+}
+
 /** Der grosse Knopf „Umgesetzt" mit kleiner Feier beim Umlegen (Baustein N.2). */
 @Composable
 private fun UmsetzungsKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
     val gold = LocalGold.current
     // While the idea is still open the button stays greyed out (but tappable); only a
-    // realised idea gets the green, glowing look.
+    // realised idea gets the blue, glowing look of the Umgesetzt tab.
     val inhalt = if (umgesetzt) gold.aufPrimaer else gold.textGedaempft
     var zeile = Modifier.druckEffekt(aufTipp)
     if (umgesetzt) {
-        zeile = zeile.goldSchein(Semantisch.erfolg.copy(alpha = 0.55f), hoehe = 10.dp, radius = 16.dp)
+        zeile = zeile.goldSchein(FarbeUmgesetzt.copy(alpha = 0.55f), hoehe = 10.dp, radius = 16.dp)
     }
     Row(
         modifier = zeile
             .clip(RoundedCornerShape(16.dp))
             .background(
                 if (umgesetzt) {
-                    Brush.horizontalGradient(listOf(Semantisch.erfolg, Semantisch.erfolg.copy(alpha = 0.75f)))
+                    Brush.horizontalGradient(listOf(FarbeUmgesetzt, FarbeUmgesetzt.copy(alpha = 0.75f)))
                 } else {
                     SolidColor(gold.textGedaempft.copy(alpha = 0.16f))
                 },

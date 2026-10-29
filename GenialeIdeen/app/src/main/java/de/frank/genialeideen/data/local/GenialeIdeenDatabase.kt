@@ -24,7 +24,7 @@ class DatenWandler {
         SuchanfrageEntity::class,
         KategorieEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 @TypeConverters(DatenWandler::class)
@@ -41,7 +41,7 @@ abstract class GenialeIdeenDatabase : RoomDatabase() {
          * Sie steht im Kopf jeder Sicherung, damit beim Einspielen erkennbar ist, aus welcher
          * Zeit die Datei stammt. Bei einer Migration hier mit anheben.
          */
-        const val VERSION = 4
+        const val VERSION = 5
 
         @Volatile private var instanz: GenialeIdeenDatabase? = null
 
@@ -80,13 +80,22 @@ abstract class GenialeIdeenDatabase : RoomDatabase() {
             }
         }
 
+        /** Every idea gets a short version (filled in the background) and a one-step undo. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE ideen ADD COLUMN kurzfassung TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE ideen ADD COLUMN vorigerText TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE ideen ADD COLUMN vorigeKurzfassung TEXT DEFAULT NULL")
+            }
+        }
+
         fun getInstance(context: Context): GenialeIdeenDatabase =
             instanz ?: synchronized(this) {
                 instanz ?: Room.databaseBuilder(
                     context.applicationContext,
                     GenialeIdeenDatabase::class.java,
                     "geniale_ideen.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instanz = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().also { instanz = it }
             }
     }
 }

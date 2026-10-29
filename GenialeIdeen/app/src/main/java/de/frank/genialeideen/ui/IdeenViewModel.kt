@@ -24,6 +24,8 @@ import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.NachrichtEntity
+import de.frank.genialeideen.data.local.begrenzeWoerter
+import de.frank.genialeideen.data.local.vorleseText
 import de.frank.genialeideen.di.AppContainer
 import de.frank.genialeideen.observability.IdeenCrashHandler
 import de.frank.genialeideen.observability.IdeenLog
@@ -183,6 +185,10 @@ class IdeenViewModel(
 
     val offeneIdeen: StateFlow<List<IdeeEntity>> = alleIdeen
         .map { liste -> liste.filter { it.status == IdeenStatus.OFFEN.name } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val angenommeneIdeen: StateFlow<List<IdeeEntity>> = alleIdeen
+        .map { liste -> liste.filter { it.status == IdeenStatus.ANGENOMMEN.name } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val umgesetzteIdeen: StateFlow<List<IdeeEntity>> = alleIdeen
@@ -445,6 +451,73 @@ class IdeenViewModel(
         }
     }
 
+    /** Annehmen heißt: Frank setzt die Idee gerade um. Ein zweiter Tipp legt sie zurück zu den offenen. */
+    fun schalteAngenommen(idee: IdeeEntity) {
+        viewModelScope.launch {
+            if (idee.status == IdeenStatus.ANGENOMMEN.name) {
+                repository.setzeStatus(idee, IdeenStatus.OFFEN)
+                zeige(Meldung("„${idee.titel}“ steht wieder unter den offenen Ideen."))
+            } else {
+                repository.setzeStatus(idee, IdeenStatus.ANGENOMMEN)
+                zeige(Meldung("„${idee.titel}“ ist angenommen."))
+            }
+        }
+    }
+
+    private val _verbessert = MutableStateFlow<Long?>(null)
+
+    /** Die Idee, deren beide Fassungen die KI gerade verbessert — null, wenn nichts läuft. */
+    val verbesserungLaeuft: StateFlow<Long?> = _verbessert.asStateFlow()
+
+    /**
+     * Verbessert die ausführliche Fassung und erzeugt daraus die Kurzfassung neu. Die bisherigen
+     * Fassungen bleiben für „Rückgängig“ stehen; gespeichert wird sofort.
+     */
+    fun verbessereMitKi(idee: IdeeEntity) {
+        if (_verbessert.value != null || idee.text.isBlank()) return
+        _verbessert.value = idee.id
+        viewModelScope.launch {
+            try {
+                val modell = CodexModel.fromLabel(settings.model)
+                val stufe = ReasoningEffort.fromLabel(settings.reasoning)
+                val text = UmlautKorrektur.korrigiere(
+                    codex.streamChat(
+                        instructions = VERBESSERUNG,
+                        turns = listOf(ChatTurn("user", idee.text)),
+                        model = modell,
+                        reasoningEffort = stufe,
+                    ).trim(),
+                )
+                if (text.isBlank()) {
+                    zeige(Meldung("Es kam keine verbesserte Fassung zurück.", istFehler = true))
+                    return@launch
+                }
+                val kurz = begrenzeWoerter(
+                    UmlautKorrektur.korrigiere(
+                        codex.streamChat(
+                            instructions = KURZFASSUNG,
+                            turns = listOf(ChatTurn("user", text)),
+                            model = modell,
+                            reasoningEffort = stufe,
+                        ).trim().trim('"', '„', '“'),
+                    ),
+                )
+                repository.setzeVerbessert(idee.id, text, kurz)
+                zeige(Meldung("Beide Fassungen sind verbessert."))
+            } catch (fehler: Exception) {
+                zeige(Meldung(fehlerText(fehler), istFehler = true, wiederholen = { verbessereMitKi(idee) }))
+            } finally {
+                _verbessert.value = null
+            }
+        }
+    }
+
+    fun nimmVerbesserungZurueck(idee: IdeeEntity) {
+        viewModelScope.launch {
+            if (repository.nimmVerbesserungZurueck(idee.id)) zeige(Meldung("Die vorige Fassung ist wieder da."))
+        }
+    }
+
     fun zurueckZuOffen(idee: IdeeEntity) {
         viewModelScope.launch {
             repository.setzeStatus(idee, IdeenStatus.OFFEN)
@@ -516,7 +589,7 @@ class IdeenViewModel(
         vorleser.sprich(
             quelle = "alle-ideen",
             titel = "Offene Ideen",
-            rohText = ideen.joinToString("\n\n") { "${it.titel}.\n\n${it.text}" },
+            rohText = ideen.joinToString("\n\n") { "${it.titel}.\n\n${it.vorleseText()}" },
             wiederholen = true,
         )
     }
@@ -1668,6 +1741,29 @@ class IdeenViewModel(
                 "- Behalte Ton und Sichtweise des Originals bei; aus einer Notiz wird kein Aufsatz.\n" +
                 "- Gib nur den korrigierten Text zurück, ohne Vorrede, ohne Anführungszeichen, " +
                 "ohne Kommentar."
+
+        /** Die Kurzfassung wird vorgelesen (etwa im Genialen Wecker) — deshalb mit [TTS_REGEL]. */
+        const val KURZFASSUNG =
+            "Du bekommst eine Idee. Fasse sie in HÖCHSTENS 35 WÖRTERN zusammen und nenne dabei " +
+                "alle Kernpunkte der Idee.\n\n" +
+                "Regeln:\n" +
+                "- Höchstens 35 Wörter, ein bis drei ganze Sätze.\n" +
+                "- Jeder Kernpunkt kommt vor; Beispiele und Nebensächliches lässt du weg.\n" +
+                "- Erfinde nichts hinzu und behalte die Sichtweise des Originals bei.\n" +
+                "- Gib nur die Kurzfassung zurück, ohne Vorrede, ohne Titel, ohne Anführungszeichen.\n\n" +
+                TTS_REGEL
+
+        /** Der KI-Knopf in der Einzelansicht: Die ausführliche Fassung wird besser, nicht kürzer. */
+        const val VERBESSERUNG =
+            "Du bekommst die ausführliche Fassung einer Idee. Verbessere sie: klarer formuliert, " +
+                "sinnvoll gegliedert, in einwandfreiem Deutsch, Füllwörter und Wiederholungen raus.\n\n" +
+                "Strenge Regeln:\n" +
+                "- Lass keinen Gedanken weg; jede Aussage des Originals bleibt erhalten.\n" +
+                "- Erfinde keine neuen Inhalte; du darfst Gedanken nur schärfen und ordnen.\n" +
+                "- Behalte Ton und Sichtweise bei.\n" +
+                "- Kein Markdown, keine Aufzählungszeichen, keine Überschriften.\n" +
+                "- Gib nur den verbesserten Text zurück, ohne Vorrede, ohne Kommentar. " +
+                "Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß)."
 
         const val GLAETTUNG =
             "Bring den folgenden diktierten Text in gutes Deutsch: Füllwörter raus, Satzzeichen " +

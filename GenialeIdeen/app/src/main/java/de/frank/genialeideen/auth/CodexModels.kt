@@ -3,7 +3,7 @@ package de.frank.genialeideen.auth
 enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbieter = KiAnbieter.OPENAI) {
     ASTRA("GPT-6 Astra", "gpt-6-astra"),
     SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
-    TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
+    TERRA("GPT-6.1 Terra", "gpt-6.1-terra"),
     LUNA("GPT-6 Luna", "gpt-6-luna"),
     OPUS("Claude Opus 5.5", "claude-opus-5-5", KiAnbieter.ANTHROPIC),
     FABLE("Claude Fable 5.1", "claude-fable-5-1", KiAnbieter.ANTHROPIC),
@@ -13,7 +13,7 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
 
     val istAnthropic: Boolean get() = anbieter == KiAnbieter.ANTHROPIC
 
-    /** Sol 6.1, Astra 6 und Terra 5.6: low bis ultra; Luna 6 und Claude: low bis max. */
+    /** Sol 6.1, Astra 6 und Terra 6.1: low bis ultra; Luna 6 und Claude: low bis max. */
     val supportedEfforts: List<ReasoningEffort>
         get() = when (this) {
             ASTRA, SOL, TERRA -> ReasoningEffort.entries.toList()
@@ -31,6 +31,7 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
             "gpt-5.6-sol", "gpt 5.6 sol", "gpt-5.6 sol",
             "gpt-6-sol", "gpt 6 sol", "gpt-6 sol" -> SOL
             "gpt-5.6-luna", "gpt 5.6 luna", "gpt-5.6 luna" -> LUNA
+            "gpt-5.6-terra", "gpt 5.6 terra", "gpt-5.6 terra" -> TERRA
             else -> TERRA
         }
 

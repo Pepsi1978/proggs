@@ -8,10 +8,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Offen, umgesetzt — oder ein Entwurf, der beim Verlassen des Erfassen-Bildschirms von allein
- * gesichert wurde, damit halbfertige Ideen nicht verloren gehen.
+ * Angenommen (Frank setzt sie gerade um), offen, umgesetzt — oder ein Entwurf, der beim Verlassen
+ * des Erfassen-Bildschirms von allein gesichert wurde, damit halbfertige Ideen nicht verloren gehen.
  */
-enum class IdeenStatus { OFFEN, UMGESETZT, ENTWURF }
+enum class IdeenStatus { OFFEN, UMGESETZT, ENTWURF, ANGENOMMEN }
 
 /** Die vom Nutzer gewählte Art einer Kategorie. */
 enum class Kategorieart { MENTAL, PRAKTISCH }
@@ -36,7 +36,24 @@ data class IdeeEntity(
     @ColumnInfo(defaultValue = "NULL") val kategorieId: Long? = null,
     /** Additional categories besides [kategorieId], stored as comma-separated ids ("3,7"). */
     @ColumnInfo(defaultValue = "''") val weitereKategorien: String = "",
+    /** Die Kurzfassung (höchstens 35 Wörter). Leer heißt: wird im Hintergrund erzeugt. */
+    @ColumnInfo(defaultValue = "''") val kurzfassung: String = "",
+    /** Die Fassung vor der letzten KI-Verbesserung — „Rückgängig“ holt sie zurück. */
+    @ColumnInfo(defaultValue = "NULL") val vorigerText: String? = null,
+    @ColumnInfo(defaultValue = "NULL") val vorigeKurzfassung: String? = null,
 )
+
+const val KURZFASSUNG_MAX_WOERTER = 35
+
+/** Kürzt auf höchstens [max] Wörter; abgeschnittene Sätze enden mit einem Punkt. */
+fun begrenzeWoerter(text: String, max: Int = KURZFASSUNG_MAX_WOERTER): String {
+    val woerter = text.trim().split(Regex("\\s+")).filter(String::isNotBlank)
+    if (woerter.size <= max) return woerter.joinToString(" ")
+    return woerter.take(max).joinToString(" ").trimEnd('.', ',', ';', ':', '-', '–') + "."
+}
+
+/** Was vorgelesen wird: nur die Kurzfassung — fehlt sie noch, die ersten 35 Wörter des Textes. */
+fun IdeeEntity.vorleseText(): String = kurzfassung.ifBlank { begrenzeWoerter(text) }
 
 /** The additional category ids of an idea (without the main category). */
 fun IdeeEntity.weitereKategorieIds(): List<Long> =

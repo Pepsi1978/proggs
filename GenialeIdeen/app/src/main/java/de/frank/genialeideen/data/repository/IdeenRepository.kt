@@ -102,13 +102,49 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
     }
 
     suspend fun aendere(idee: IdeeEntity, titel: String, text: String) {
+        val neuerText = text.trim()
         ideenDao.aktualisieren(
             idee.copy(
                 titel = titel.trim(),
-                text = text.trim(),
+                text = neuerText,
+                // Ein neuer Text braucht eine neue Kurzfassung — leer heißt: wird nachgezogen.
+                kurzfassung = if (neuerText == idee.text) idee.kurzfassung else "",
                 geaendertAm = System.currentTimeMillis(),
             ),
         )
+    }
+
+    suspend fun setzeKurzfassung(id: Long, text: String, kurzfassung: String): Boolean =
+        ideenDao.setzeKurzfassung(id, text, kurzfassung) > 0
+
+    /** Beide Fassungen neu; die bisherigen bleiben für „Rückgängig“ stehen. */
+    suspend fun setzeVerbessert(id: Long, text: String, kurzfassung: String) {
+        val idee = ideenDao.lade(id) ?: return
+        ideenDao.aktualisieren(
+            idee.copy(
+                text = text.trim(),
+                kurzfassung = kurzfassung.trim(),
+                vorigerText = idee.text,
+                vorigeKurzfassung = idee.kurzfassung,
+                geaendertAm = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    /** Holt die Fassung vor der letzten Verbesserung zurück. */
+    suspend fun nimmVerbesserungZurueck(id: Long): Boolean {
+        val idee = ideenDao.lade(id) ?: return false
+        val alt = idee.vorigerText ?: return false
+        ideenDao.aktualisieren(
+            idee.copy(
+                text = alt,
+                kurzfassung = idee.vorigeKurzfassung.orEmpty(),
+                vorigerText = null,
+                vorigeKurzfassung = null,
+                geaendertAm = System.currentTimeMillis(),
+            ),
+        )
+        return true
     }
 
     /**
