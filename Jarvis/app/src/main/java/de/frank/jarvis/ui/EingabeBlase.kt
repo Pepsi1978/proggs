@@ -359,6 +359,9 @@ private val SCHWEBE_LUECKE = SCHWEBE_GROESSE + SCHWEBE_ABSTAND * 2
 /** Rechter Abstand der Symbole: ihre Mitte liegt genau über der orangen Live-Kugel (12 Rand + 10 Innenabstand + 24 halbe Kugel). */
 val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
 
+/** Rechter Rand der Gesprächsliste: bis zur linken Kante der Symbolspalte und etwa ein Millimeter Luft (1 mm ≈ 6 dp). */
+val SCHWEBE_FREI_RECHTS = SCHWEBE_RECHTS + SCHWEBE_GROESSE + 6.dp
+
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
 fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
     // Aktualisieren, Hell/Dunkel, Neue Session, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar.

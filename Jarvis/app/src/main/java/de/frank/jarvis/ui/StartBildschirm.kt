@@ -212,7 +212,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = maxOf(8.dp + schweber, mitte)),
+            // Rechts endet der Text etwa einen Millimeter vor der Spalte der schwebenden Symbole, ein- wie ausgeklappt (der Pfeil steht dort immer).
+            contentPadding = PaddingValues(start = 16.dp, end = if (vm.liveAktiv) 16.dp else SCHWEBE_FREI_RECHTS, top = 8.dp, bottom = maxOf(8.dp + schweber, mitte)),
             verticalArrangement = if (vonUnten) Arrangement.spacedBy(10.dp, Alignment.Bottom) else Arrangement.spacedBy(10.dp),
         ) {
             if (offen > 0) item(key = "einrichtung") {
