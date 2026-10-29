@@ -237,11 +237,13 @@ object Meldungen {
         val p = profil(app, art)
         if (!probe && !an(app, art)) return false
         val ruhe = !probe && inRuhe(app, art)
-        val gespraech = (GespraechsFokus.stilleHinweise || de.frank.jarvis.ui.AppViewModel.aufnahmeAktiv) && !art.dringend
+        val gespraech = GespraechsFokus.stilleHinweise && !art.dringend
+        // Während einer Aufnahme kein Hinweiston (er landete in der Mitschrift); ein Wecker klingelt trotzdem.
+        val leise = gespraech || (GespraechsFokus.aufnahme && !art.dringend)
         // Lautlos gewählt heißt auch: kein Wecker, selbst wenn er noch eingeschaltet ist.
         val tonAus = art.ton && !p.ton
         val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech
-        val still = !laut || ruhe || (gespraech && imGespraechStill) || tonAus
+        val still = !laut || ruhe || (leise && imGespraechStill) || tonAus
         if (klingeln) {
             weckerKanalAnlegen(app)
             bauer.setChannelId(KANAL_WECKER).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_MAX)
@@ -330,9 +332,11 @@ object Meldungen {
     private suspend fun sprichEinzeln(context: Context, art: Meldungsart, titel: String, text: String, solange: (() -> Boolean)?, ausdruecklich: Boolean, warten: Boolean) {
         // Erst den Weckton zu Ende klingeln lassen (er endet selbst, spätestens nach seiner Höchstdauer), dann das Gespräch abwarten.
         if (solange != null) withTimeoutOrNull(WECKTON_HOECHSTENS_MS + 5_000L) { while (solange()) delay(500L) }
+        // Während einer Sprachaufnahme nichts vorlesen, sonst landet die Ansage in Franks Mitschrift. Ohne Zeitgrenze: Ein Diktat
+        // darf lange laufen; eine inzwischen erledigte Rückfrage bricht ihre Ansage selbst ab.
+        while (GespraechsFokus.aufnahme) delay(1_000L)
         val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
-            // Auch während einer Sprachaufnahme still: Die Ansage landete sonst in Franks Mitschrift.
-            while (GespraechsFokus.stilleHinweise || de.frank.jarvis.ui.AppViewModel.aufnahmeAktiv) delay(2_000L)
+            while (GespraechsFokus.stilleHinweise) delay(2_000L)
             true
         }
         if (frei != true) return

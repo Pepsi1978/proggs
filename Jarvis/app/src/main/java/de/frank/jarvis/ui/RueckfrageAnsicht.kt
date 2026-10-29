@@ -225,9 +225,11 @@ fun RueckfrageEbene(vm: AppViewModel) {
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext
     // Nebenher (Rückfrage aus einem anderen Gespräch während einer Aufnahme): Stand laufend aus der Datei ihres Gesprächs.
     val fremd by androidx.compose.runtime.produceState<String?>(null, gespraechId, id, imOffenen) {
+        // Neue Rückfrage: nie kurz den Stand der vorigen mit dem Gespräch der neuen zeigen.
+        value = null
         if (!imOffenen) while (true) {
             value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, gespraechId, id)?.toString() }
-            delay(1_000)
+            delay(2_000)
         }
     }
     val kontext = (if (imOffenen) vm.gespraech.lastOrNull { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == id }?.kontext else fremd) ?: return
@@ -259,8 +261,6 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage, gespraechId: String) {
         .put("eigen", JSONObject().apply { eigen.forEach { (i, b) -> put(i.toString(), b) } })
         .put("text", JSONObject().apply { texte.forEach { (i, t) -> put(i.toString(), t) } })
     fun sichern() = vm.rueckfrageEntwurf(r.id, entwurfJson(), gespraechId)
-    // Verlässt die Rückfrage das Vollbild, endet eine Antwort-Aufnahme: Ihre Mitschrift kommt noch ins Feld und wird gesichert.
-    androidx.compose.runtime.DisposableEffect(r.id) { onDispose { vm.antwortAufnahmeBeenden() } }
     LaunchedEffect(r.id) {
         // Alle zwei Sekunden den Entwurf sichern, wenn er sich geändert hat.
         var zuletzt = entwurfJson().toString()
@@ -276,20 +276,23 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage, gespraechId: String) {
     // gesperrtem Handy): Stand beim Öffnen und bei jedem Wechsel festhalten, damit das Logbuch zeigt, ob die Optionen gesperrt waren.
     val fensterFokus = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
     val kontextApp = androidx.compose.ui.platform.LocalContext.current.applicationContext
-    LaunchedEffect(r.id, r.stand, fensterFokus) {
+    LaunchedEffect(r.id, r.stand) {
         val gesperrt = runCatching { kontextApp.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked }.getOrDefault(false)
         val frist = if (r.bis <= 0) "ohne Frist" else "${r.bis - System.currentTimeMillis() / 1000}s"
         Logbuch.system("Rückfrage-Vollbild", "frage=${r.id} stand=${r.stand.ifEmpty { "leer" }} aktiv=${beantwortbar && !sendet} sitzung=${vm.sitzungId} gespraech=$gespraechId bis=$frist fensterFokus=$fensterFokus sperrbildschirm=$gesperrt aufnahme=${vm.nimmtAuf}")
     }
+    // Nur der verdächtige Fall: Vollbild offen, beantwortbar, aber das Fenster hat keinen Fokus (Tipps kämen dann nicht an).
+    LaunchedEffect(fensterFokus) { if (!fensterFokus && beantwortbar) Logbuch.system("Rückfrage-Vollbild ohne Fensterfokus", "frage=${r.id}") }
 
     /** Antwort je Frage; null = noch nichts (oder eigene Antwort ohne Text). */
     fun antwort(i: Int, q: Frage): String? {
         val text = texte[i].orEmpty().trim()
         val eigene = eigen[i] == true
         if (r.frei) {
-            val gewaehlt = wahl[i].orEmpty().firstOrNull()?.let { label -> q.optionen.firstOrNull { it.label == label } }
+            // Alle gewählten Optionen, bei Mehrfachauswahl nicht nur die erste.
+            val gewaehlte = q.optionen.filter { it.label in wahl[i].orEmpty() }
             return when {
-                gewaehlt != null -> "${gewaehlt.kennung}: ${gewaehlt.label}" + (if (text.isNotEmpty()) " — $text" else "")
+                gewaehlte.isNotEmpty() -> gewaehlte.joinToString(", ") { "${it.kennung}: ${it.label}" } + (if (text.isNotEmpty()) " — $text" else "")
                 eigene || q.optionen.isEmpty() -> text.ifEmpty { null }
                 else -> null
             }
@@ -483,6 +486,20 @@ private fun SprachLeiste(vm: AppViewModel, feld: String, text: String, aendern: 
     var kiFassung by remember { mutableStateOf<String?>(null) }
     // Rückgängig nur, solange der Text noch die KI-Fassung ist; jede eigene Änderung beendet es.
     val rueckgaengig = vorKi?.takeIf { text == kiFassung }
+    // Angekommene Mitschrift und KI-Fassung aus dem ViewModel übernehmen (auch wenn sie ankamen, während das Vollbild zu war).
+    val diktat = vm.antwortDiktate[feld]
+    LaunchedEffect(diktat) {
+        if (diktat == null) return@LaunchedEffect
+        vm.antwortDiktate.remove(feld)
+        aendern(jetzt.trimEnd().let { if (it.isEmpty()) diktat else "$it $diktat" }); sichern()
+    }
+    val ki = vm.antwortKiFassungen[feld]
+    LaunchedEffect(ki) {
+        val (vorher, neu) = ki ?: return@LaunchedEffect
+        vm.antwortKiFassungen.remove(feld)
+        if (jetzt == vorher) { kiFassung = neu; vorKi = vorher; aendern(neu); sichern() }
+        else vm.meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen."
+    }
     // Läuft eine Aufnahme, die nicht hier begann (Spracheingabe im Chat, anderes Antwortfeld), bleibt sie unberührt.
     val fremdeAufnahme = (vm.nimmtAuf || vm.schreibtMit) && !meins
     if (vm.antwortFormuliertFeld == feld) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -493,20 +510,16 @@ private fun SprachLeiste(vm: AppViewModel, feld: String, text: String, aendern: 
         when {
             fremdeAufnahme -> Text("Eine andere Spracheingabe läuft im Hintergrund weiter. Antwort hier eintippen oder wählen.", Modifier.weight(1f), color = f.textLeise, fontSize = 14.sp)
             meins -> {
-                if (vm.nimmtAuf) Rundknopf(Icons.Rounded.Stop, "Aufnahme beenden", f.gefahr) { vm.antwortMikrofonTippen(feld) {} }
-                Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else "Schreibe mit …", Modifier.weight(1f), color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                if (vm.nimmtAuf) Rundknopf(Icons.Rounded.Stop, "Aufnahme beenden", f.gefahr) { vm.antwortMikrofonTippen(feld) }
+                Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Mikrofon startet …", Modifier.weight(1f), color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
             else -> {
                 Rundknopf(Icons.Rounded.Mic, "Antwort einsprechen", f.primaer) {
-                    vm.antwortMikrofonTippen(feld) { t -> aendern(jetzt.trimEnd().let { if (it.isEmpty()) t else "$it $t" }); sichern() }
+                    vm.antwortMikrofonTippen(feld)
                 }
                 if (rueckgaengig != null) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) { vorKi = null; kiFassung = null; aendern(rueckgaengig) }
                 else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) {
-                    val vorher = text
-                    vm.antwortFormulieren(feld, vorher) { neu ->
-                        if (jetzt == vorher) { kiFassung = neu; vorKi = vorher; aendern(neu); sichern() }
-                        else vm.meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen."
-                    }
+                    vm.antwortFormulieren(feld, text)
                 }
             }
         }

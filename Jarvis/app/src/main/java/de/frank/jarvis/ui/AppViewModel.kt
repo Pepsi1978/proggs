@@ -72,9 +72,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return androidx.lifecycle.ViewModelProvider(app, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(app))[AppViewModel::class.java]
         }
 
-        /** Läuft gerade eine Sprachaufnahme? Für Meldungen, die solange nicht vorlesen dürfen (sonst landen sie in der Mitschrift). */
-        @Volatile var aufnahmeAktiv = false; private set
-
         /** Zustand in [ablageUmzug]: Die Übernahme in die Ablage läuft gerade. */
         const val UMZUG_LAEUFT = "läuft"
 
@@ -162,7 +159,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var nimmtAufZustand by mutableStateOf(false)
     var nimmtAuf: Boolean
         get() = nimmtAufZustand
-        private set(wert) { nimmtAufZustand = wert; aufnahmeAktiv = wert }
+        private set(wert) { nimmtAufZustand = wert; de.frank.jarvis.speech.GespraechsFokus.aufnahme = wert }
     var schreibtMit by mutableStateOf(false); private set
     var mikrofonAnfragen: () -> Unit = {}
     /** Die laufende Frage kam über das Mikrofon: Dann wird die Antwort vorgelesen. */
@@ -1717,25 +1714,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var antwortDiktatFeld by mutableStateOf<String?>(null); private set
     /** Antwortfeld, das die KI gerade glättet; null = keins. */
     var antwortFormuliertFeld by mutableStateOf<String?>(null); private set
+    /**
+     * Angekommene Mitschriften je Antwortfeld, bis die Rückfrage-Ansicht sie übernimmt. Im ViewModel statt in der Ansicht:
+     * Wurde das Vollbild inzwischen geschlossen oder neu geöffnet, geht das Gesagte nicht in einer verworfenen Ansicht verloren.
+     */
+    val antwortDiktate = androidx.compose.runtime.mutableStateMapOf<String, String>()
+    /** Angekommene KI-Fassungen je Antwortfeld: Text davor und Fassung, bis die Ansicht sie übernimmt. */
+    val antwortKiFassungen = androidx.compose.runtime.mutableStateMapOf<String, Pair<String, String>>()
+    /** Das Vollbild wurde geschlossen, während die Antwort-Aufnahme noch startete: Sie beginnt dann gar nicht erst. */
+    private var antwortStartAbbrechen = false
 
     /**
      * Mikrofon unter einem Antwortfeld einer Rückfrage: Tippen startet, nochmal Tippen hängt das Gesprochene über [ziel] an.
      * Läuft wie das Prompt-Diktat (ins Feld, nie an Jarvis), mit derselben Transkription wie überall in Jarvis. Eine fremde
      * Aufnahme (Spracheingabe im Chat, Gesprächsmodus) bleibt unberührt.
      */
-    fun antwortMikrofonTippen(feld: String, ziel: (String) -> Unit) {
+    fun antwortMikrofonTippen(feld: String) {
+        val ziel: (String) -> Unit = { t -> antwortDiktate[feld] = listOfNotNull(antwortDiktate[feld], t).joinToString(" ") }
         when {
             nimmtAuf && antwortDiktatFeld == feld -> aufnahmeBeenden()
             nimmtAuf || schreibtMit || holtMikro -> meldung = "Es läuft schon eine Aufnahme. Bitte erst diese beenden."
             antwortFormuliertFeld == feld -> meldung = "Jarvis formuliert diese Antwort gerade."
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
-            else -> { diktatZiel = ziel; antwortDiktatFeld = feld; mikrofonAnfragen() }
+            else -> { antwortStartAbbrechen = false; diktatZiel = ziel; antwortDiktatFeld = feld; mikrofonAnfragen() }
         }
     }
 
     /** Beendet eine laufende Antwort-Aufnahme (Vollbild geschlossen oder nächste Frage): Das Gesprochene geht noch ins Feld. */
     fun antwortAufnahmeBeenden() {
-        if (nimmtAuf && antwortDiktatFeld != null) aufnahmeBeenden()
+        if (antwortDiktatFeld == null) return
+        if (nimmtAuf) aufnahmeBeenden()
+        // Noch beim Starten (Erlaubnis-Abfrage, Mikrofon wird geholt): nicht mehr anfangen.
+        else if (!schreibtMit) { antwortStartAbbrechen = true; antwortDiktatFeld = null; diktatZiel = null }
     }
 
     /** Ein Text, von der KI nach [auftrag] geglättet; ohne Anführungszeichen außen herum. */
@@ -1743,7 +1753,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         auth.streamChat(auftrag, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
 
     /** KI-Knopf unter einem Antwortfeld: bringt den Text in gutes Deutsch und gibt die neue Fassung an [fertig]. */
-    fun antwortFormulieren(feld: String, text: String, fertig: (String) -> Unit) {
+    fun antwortFormulieren(feld: String, text: String) {
         when {
             text.isBlank() -> { meldung = "Erst eine Antwort eintippen oder einsprechen."; return }
             antwortFormuliertFeld != null -> { meldung = "Jarvis formuliert gerade schon eine Antwort."; return }
@@ -1754,7 +1764,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val neu = kiGlaetten(ANTWORT_KORREKTUR, text)
-                if (neu.length < 2) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else fertig(neu)
+                if (neu.length < 2) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else antwortKiFassungen[feld] = text to neu
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1827,7 +1837,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
         if (!erlaubt) { diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
-        if (holtMikro) return
+        if (antwortStartAbbrechen) { antwortStartAbbrechen = false; diktatZiel = null; antwortDiktatFeld = null; return }
+        if (holtMikro) {
+            // Ein anderer Start („Hey Jarvis“, Gesprächsmodus) ist schneller: Die Antwort-Aufnahme fängt nicht an und hängt nicht.
+            if (antwortDiktatFeld != null) { antwortDiktatFeld = null; diktatZiel = null; meldung = "Das Mikrofon ist gerade belegt. Bitte gleich noch einmal tippen." }
+            return
+        }
         vorleser.stopp()
         holtMikro = true
         viewModelScope.launch {
@@ -1835,7 +1850,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
                 if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
-                else {
+                else if (antwortStartAbbrechen) {
+                    // Während des Starts geschlossen: Die Aufnahme gleich wieder verwerfen, sonst liefe sie unsichtbar weiter.
+                    antwortStartAbbrechen = false
+                    aufnahmeVerwerfen()
+                } else {
                     de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
                     // Laufende Musik pausiert fürs Diktat, sonst landet sie in der Mitschrift.
                     de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
@@ -1881,7 +1900,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mitschriftJob?.cancel()
         mitschriftJob = null
         weichendeRunde = null
-        if (!aktiv) return null
+        if (!aktiv) { antwortDiktatFeld = null; return null }
         nimmtAuf = false
         freihaendig = false
         schreibtMit = false
@@ -2000,7 +2019,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
         GedaechtnisAnsicht.offen = false
         FunktionenAnsicht.offen = false
-        diktatZiel = null; promptDiktat = false
+        diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null
         vorleser.stopp()
         // Kam „Hey Jarvis“ aus einer anderen App, aus dem Hintergrund oder per Kaltstart, beginnt ein neues Gespräch (beim
         // Kaltstart ist womöglich schon das Gespräch eines laufenden Programmierauftrags offen). Das bisherige bleibt
@@ -2409,9 +2428,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var rueckfrageOffen by mutableStateOf<Pair<String, String>?>(null)
 
     /** Die Rückfrage (frage_id), die im offenen Gespräch im Vollbild steht, oder null (eine aus einem anderen Gespräch zählt nicht). */
-    val rueckfrageDialog: String? get() = rueckfrageOffen?.takeIf { it.first == sitzungId || it == rueckfrageNebenher }?.second
-    /** Gespräch der offenen Rückfrage (auch einer, die nebenher über einem anderen Gespräch steht). */
-    val rueckfrageGespraech: String? get() = rueckfrageOffen?.takeIf { it.first == sitzungId || it == rueckfrageNebenher }?.first
+    /** Die sichtbare Rückfrage (Gespräch, frage_id): im offenen Gespräch oder nebenher über ihm. */
+    private val sichtbareRueckfrage: Pair<String, String>? get() = rueckfrageOffen?.takeIf { it.first == sitzungId || it == rueckfrageNebenher }
+    val rueckfrageDialog: String? get() = sichtbareRueckfrage?.second
+    /** Gespräch der sichtbaren Rückfrage (auch einer, die nebenher über einem anderen Gespräch steht). */
+    val rueckfrageGespraech: String? get() = sichtbareRueckfrage?.first
     /**
      * Rückfrage aus einem anderen Gespräch, die über dem offenen steht, ohne es zu wechseln: Kam sie während einer Sprachaufnahme,
      * hätte der Wechsel die Aufnahme verworfen. So beantwortet Frank sie mittendrin, und die Aufnahme läuft im Hintergrund weiter.
@@ -2425,8 +2446,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         rueckfrageOffen = (gespraech ?: return) to frageId
     }
 
+    /** Läuft eine Aufnahme, ein Gesprächsmodus oder ein Live-Gespräch? Dann wechselt eine Rückfrage nie das Gespräch. */
+    private fun sprachwegAktiv() = nimmtAuf || holtMikro || schreibtMit || weckwortLauf?.isActive == true || de.frank.jarvis.live.LiveGespraech.aktiv
+
     fun rueckfrageSchliessen() {
         antwortAufnahmeBeenden()
+        rueckfrageNebenher = null
         rueckfrageOffen?.let { rueckfrageGeschlossen += it.second }
         rueckfrageOffen = null
     }
@@ -2489,13 +2514,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (rueckfrageOffen != bisherige || (!wechseln && sitzungId != hier)) return@launch
             if (ziel == null) {
                 // Schon beantwortet oder abgelaufen: Der Tipp auf ihre Benachrichtigung öffnet wenigstens ihr Gespräch.
-                gewuenscht?.let { sitzungOeffnen(it.first) }
+                // Nie mitten in eine Aufnahme oder ein Sprachgespräch: Der Wechsel würde sie verwerfen.
+                gewuenscht?.let { if (sprachwegAktiv()) meldung = "Diese Rückfrage ist schon erledigt." else sitzungOeffnen(it.first) }
                 return@launch
             }
             if (ziel != gewuenscht && ziel.second in rueckfrageGeschlossen) return@launch
             rueckfrageGeschlossen -= ziel.second
             rueckfrageOffen = ziel
-            if (ziel.first != sitzungId && (nimmtAuf || holtMikro || schreibtMit)) {
+            if (ziel.first != sitzungId && sprachwegAktiv()) {
                 rueckfrageNebenher = ziel
                 Logbuch.sprache("Rückfrage nebenher", "Aufnahme läuft weiter, Gespräch bleibt offen")
             } else if (ziel.first != sitzungId) {
@@ -2559,7 +2585,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Angekommen: weiter zur nächsten offenen Rückfrage, auch aus einer anderen Session. Bei einem Fehler bleibt das Fenster offen
             // und zeigt den Grund samt „Erneut senden“.
             if (ergebnis.isSuccess) {
-                if (rueckfrageOffen?.second == frageId) { rueckfrageOffen = null; rueckfrageGeschlossen += frageId }
+                if (rueckfrageOffen?.second == frageId) { rueckfrageOffen = null; rueckfrageNebenher = null; rueckfrageGeschlossen += frageId }
                 if (rueckfrageDialog == null) naechsteRueckfrage()
             }
         }
@@ -2586,6 +2612,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        // Das Aufnahme-Signal gehört zu diesem ViewModel: Endet es mitten in einer Aufnahme, blieben Ansagen sonst für immer still.
+        de.frank.jarvis.speech.GespraechsFokus.aufnahme = false
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger === programmierEmpfaenger) de.frank.jarvis.faehigkeit.ProgrammierChat.empfaenger = null
         if (de.frank.jarvis.faehigkeit.ProgrammierChat.aendern === programmierAendern) de.frank.jarvis.faehigkeit.ProgrammierChat.aendern = null
         if (de.frank.jarvis.faehigkeit.Sprachsession.beenden === sprachsessionBeenden) de.frank.jarvis.faehigkeit.Sprachsession.beenden = null

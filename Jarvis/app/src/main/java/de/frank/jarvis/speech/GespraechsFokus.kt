@@ -27,6 +27,12 @@ object GespraechsFokus {
      */
     val stilleHinweise: Boolean get() = anfrage != null || de.frank.jarvis.live.LiveGespraech.aktiv
 
+    /**
+     * Eine Sprachaufnahme läuft (Diktat, Antwort auf eine Rückfrage, Gesprächsmodus): Ansagen und Hinweistöne warten, sonst
+     * landen sie in der Mitschrift. Ein echter Wecker klingelt trotzdem, eine verpasste Erinnerung wöge schwerer.
+     */
+    @Volatile var aufnahme = false
+
     /** Holt den Fokus, falls er nicht schon gehalten wird. Ein mehrfacher Aufruf schadet nicht. */
     fun halten(context: Context) {
         synchronized(this) {
