@@ -14,6 +14,7 @@ import de.frank.jarvis.faehigkeit.ohneNull
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.gedaechtnis.Lagebild
 import de.frank.jarvis.observability.Logbuch
+import de.frank.jarvis.text.WerkzeugMarkup
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -237,6 +238,7 @@ class JarvisAgent(context: Context) {
         var fehlerZahl = 0
         var fehlerFolge = 0
         var letzterFehler: String? = null
+        var formNachgefragt = false
         val aenderungen = java.util.Collections.synchronizedList(mutableListOf<String>())
         val meldeAenderung: (String) -> Unit = { aenderungen += it; beiAenderung(it) }
         var zeitfenster = 0
@@ -261,11 +263,31 @@ class JarvisAgent(context: Context) {
                 laeuftSeit = modellBeginn
                 val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it })
                 Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen")
-                val schritt = lies(roh)
-                val (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
+                var schritt = lies(roh)
+                var (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
+                // Werkzeugaufruf als Markup oder fremdes JSON geschrieben: trotzdem ausführen, statt ihn als Antwort vorzulesen.
+                if (aufrufe.isEmpty()) {
+                    val ausText = WerkzeugMarkup.aufrufe(roh, werkzeuge.map { it.name }.toSet())
+                    if (ausText.isNotEmpty()) {
+                        Logbuch.aktion("Antwort: Werkzeugaufruf als Text erkannt", ausText.joinToString { it.optString("werkzeug") })
+                        schritt = JSONObject().put("werkzeuge", org.json.JSONArray(ausText))
+                        aufrufe = ausText.take(MAX_AUFRUFE)
+                        verworfen = ausText.drop(MAX_AUFRUFE)
+                    }
+                }
                 if (schritt == null || aufrufe.isEmpty()) {
+                    val antwort = schritt?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim()
+                    // Markup ohne ausführbaren Aufruf: einmal um eine saubere Antwort bitten, nie das Markup ausgeben.
+                    if (WerkzeugMarkup.enthaelt(antwort) && !formNachgefragt) {
+                        formNachgefragt = true
+                        zuege += ChatTurn("assistant", roh.take(2_000))
+                        zuege += ChatTurn("user", "FORMATFEHLER: Deine letzte Nachricht enthielt technisches Markup statt des vereinbarten JSON. " +
+                            "Willst du ein Werkzeug aufrufen, dann nur als {\"werkzeug\": \"<name>\", \"argumente\": { … }}. Sonst antworte mit {\"antwort\": \"…\"} " +
+                            "in ganzen deutschen Sätzen, ohne Werkzeugnamen, Parameter, Tags, Pfeile oder JSON im Text.")
+                        continue
+                    }
                     Logbuch.dauer("Antwort: gesamt", System.currentTimeMillis() - beginn, "$schritte Schritt(e)" + (rolle?.let { ", Agent" } ?: ""))
-                    return@withTimeoutOrNull schritt?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim()
+                    return@withTimeoutOrNull WerkzeugMarkup.entferne(antwort).ifBlank { MARKUP_ERSATZ }
                 }
                 // Mehrere voneinander unabhängige lesende Werkzeuge laufen gleichzeitig; sobald eines schreibt, alle der Reihe nach.
                 val nurLesend = aufrufe.size > 1 && aufrufe.all { c -> werkzeuge.firstOrNull { it.name == c.optString("werkzeug") }?.nurLesen == true }
@@ -384,6 +406,7 @@ class JarvisAgent(context: Context) {
             runCatching { auth.streamChat(anweisungText, zuege, modell, denkstufe) }.getOrNull()
         }
         val antwort = ende?.let { roh -> lies(roh)?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim().takeIf { it.isNotEmpty() && !it.trimStart().startsWith("{") } }
+            ?.let { WerkzeugMarkup.entferne(it).ifBlank { null } }
         val endgrund = if (antwort != null) "$grund; Zwischenstand geschrieben" else "$grund; auch der Zwischenstand kam nicht zustande"
         beiAbbruch(endgrund)
         Protokoll.melde(Quelle.JARVIS, "Abbruch", endgrund, ok = false)
@@ -541,7 +564,12 @@ class JarvisAgent(context: Context) {
                 append("Du arbeitest mit Franks Apps über Werkzeuge. Grundsätze:\n")
                 append("- Handle selbstständig: Lies nach, bevor du fragst. Frage nur, wenn eine nötige Angabe wirklich fehlt oder mehrdeutig ist.\n")
                 append("- Erfinde nie Daten. Was du über Aufgaben sagst, stammt aus einem Werkzeug-Ergebnis.\n")
-                append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n")
+                append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt. Scheitert ein Werkzeug oder geht eine Änderung nicht, sag das in einem Satz mit dem Grund. ")
+                append("Überspringe nie still eine Bitte: Jede gewünschte Änderung rufst du wirklich auf und bestätigst sie, nichts gilt als erledigt ohne Werkzeug-Ergebnis.\n")
+                append("- Antworten an Frank sind Klartext in ganzen deutschen Sätzen. Werkzeugnamen, Kennungen, Parameter, Tags wie invoke oder parameter, „name=“, Pfeile, spitze Klammern ")
+                append("und JSON gehören nie in den Antworttext; ein Werkzeug rufst du ausschließlich im JSON-Format unter ANTWORTFORMAT auf.\n")
+                append("- Jede Antwort richtet sich an Frank als Menschen, der sie liest oder vorgelesen hört. Versetz dich vor dem Schreiben in ihn: ")
+                append("Versteht er das beim einmaligen Hören ohne Technikwissen? Dann schreib es so, natürlich und freundlich, Werkzeug-Ergebnisse in deinen eigenen Worten statt als Rohtext.\n")
                 append("- Behaupte nie, eine Datei, ein Bild oder ein Dokument erzeugt oder gespeichert zu haben, wenn ein Werkzeug-Ergebnis das nicht mit „Gespeichert“ bestätigt. ")
                 append("Meldet ein Werkzeug „läuft noch“ oder einen Fehler, sag genau das.\n\n")
                 // Nur im Gespräch mit Frank (dort gibt es agent_starten): die feste Regel Websuche statt Agent, vor den App-Hinweisen.
@@ -591,6 +619,8 @@ class JarvisAgent(context: Context) {
         private const val MAX_AUFRUFE = 6
         /** Was läuft, solange das Modell an einem Schritt denkt (für [Zeitablauf.unterbrochen]). */
         const val MODELL_DENKT = "Das Modell denkt nach"
+        /** Bestand eine Antwort nur aus technischem Markup, sagt Jarvis das statt nichts oder Markup. */
+        const val MARKUP_ERSATZ = "Das hat nicht geklappt: Meine Antwort kam technisch fehlerhaft an. Sag es bitte noch einmal."
         const val NICHT_VERBUNDEN = "Ich bin noch nicht mit ChatGPT verbunden. Bitte in Jarvis unter Einstellungen anmelden."
         /** Abgekoppelter Raum für das Gesamtbild: Ein hängender Aufbau hält die Frage nicht fest. */
         private val HINTERGRUND = CoroutineScope(SupervisorJob() + Dispatchers.IO)

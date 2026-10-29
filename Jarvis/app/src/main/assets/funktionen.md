@@ -30,7 +30,8 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Wetter für sieben Tage: `wetter_lesen`, mit Datum und Uhrzeit zugleich Abgleich mit Dienst, Schlaf und Terminen.
 - Fahrzeit mit Verkehr (Google Routes): `fahrzeit_lesen`. Losfahr-Meldung an Arbeitstagen laut Dienstplan: `abfahrt_einstellen` (Ankunftszeiten, Vorlauf, Vorlesen); in der Meldung „Heute still“ und Navigation.
 - Timer (`timer`): klingeln wie ein Wecker, überstehen Neustart. Stoppuhr (`stoppuhr`) mit laufender Benachrichtigung. Beide nur über Jarvis startbar, kein eigener Bildschirm.
-- Einstellungen per Sprache lesen und ändern: `einstellungen` (Benachrichtigungen, Vorlesen, Stimme, Ruhezeit, Hey Jarvis, Wetter-Ort, Timer, Modell, Darstellung …). Zugangsschlüssel und Passwörter gehen damit bewusst nicht.
+- Einstellungen per Sprache lesen und ändern: `einstellungen` (Benachrichtigungen, Wecker, Vorlesen, Stimme, Gemini-Schlüsselwahl, Ruhezeit, Spracheingabe, Hey Jarvis, Wetter-Ort, Losfahr-Meldung, Tagesauswertung, Timer, Modell, Darstellung …); Kennungen werden auch ungefähr erkannt (Leerzeichen statt Unterstrich, eindeutiger Anfang oder Titelteil). Zugangsschlüssel, Passwörter und die Liste erlaubter Mail-Empfänger gehen damit bewusst nicht.
+- Kein technisches Markup in Antworten (ab 1.8.411): Schreibt das Modell einen Werkzeugaufruf als Text (invoke/parameter-Tags, tool_call, JSON mit name/arguments), führt Jarvis ihn trotzdem aus; sonstiges Markup führt einmal zu einer Formatkorrektur, danach wird es entfernt (nur Markup → Satz „Das hat nicht geklappt …“). Der Vorlesetext filtert Tags, Aufruf-JSON, Zuweisungen und Pfeile immer heraus.
 
 ## Tagesauswertung
 

@@ -23,7 +23,9 @@ class EinstellungenFaehigkeit(private val context: Context) : Faehigkeit {
     override val hinweise =
         "Fragt Frank, was Jarvis für Einstellungen hat (allgemein oder zu einem Bereich wie Vorlesen), nimm einstellungen mit aktion lesen " +
             "und beschreibe die Schalter verständlich mit ihrem Stand, ohne die Kennungen vorzulesen. Will er etwas ein-, aus- oder umstellen, " +
-            "nimm aktion aendern mit der Kennung aus der Liste; bist du unsicher, welche gemeint ist, lies erst. Bestätige danach kurz den neuen Stand."
+            "nimm aktion aendern mit der Kennung aus der Liste; bist du unsicher, welche gemeint ist, lies erst. Jede gewünschte Änderung rufst du wirklich auf, " +
+            "auch mehrere in einem Satz, und bestätigst danach in einem Satz, was jetzt gilt; meldet das Werkzeug, dass es nicht geht, sag klar, warum. " +
+            "Stimme und Rückfall-Reihenfolge der Stimme änderst du nur, wenn Frank genau das verlangt."
 
     override fun stoerung(): String? = null
 
@@ -37,7 +39,8 @@ class EinstellungenFaehigkeit(private val context: Context) : Faehigkeit {
                 "Wetter-Ort, Losfahr-Meldung, Tagesauswertung, Timer, Modell, Darstellung, System). aktion lesen ohne bereich = alle Bereiche mit ihren Schaltern, Stand und möglichen Werten; " +
                 "mit bereich nur diesen. aktion aendern setzt einen Schalter: kennung aus der Liste, wert wie dort angegeben (an/aus, Zahl oder eine der Auswahlen). " +
                 "Mehrere Änderungen auf einmal über aenderungen. Beispiele: „Schalte die Update-Ansagen aus“ → aendern, kennung ansage_vorlesen, wert aus. " +
-                "„Was hast du beim Vorlesen für Einstellungen?“ → lesen, bereich Vorlesen. „Lies schneller vor“ → aendern, kennung vorlese_tempo, wert Zügig. " +
+                "„Was hast du beim Vorlesen für Einstellungen?“ → lesen, bereich Vorlesen. „Lies schneller vor“ → aendern, kennung vorlese_tempo_<Anbieter>, wert Zügig. " +
+                "„Stelle den Gemini-Schlüssel auf nur bezahlt“ → aendern, kennung gemini_tts_schluessel, wert Nur bezahlt. „Nimm die Stimme Katja“ → aendern, kennung vorlese_stimme, wert Katja. " +
                 "Zugangsschlüssel und Passwörter gehen hier bewusst nicht.",
             schema = schema(
                 "aktion" to text("lesen oder aendern.", listOf("lesen", "aendern")),
@@ -474,7 +477,11 @@ class EinstellungsKatalog(context: Context) {
     /** first = geklappt, second = Antwort in einem Satz. */
     fun setze(kennung: String, wert: String): Pair<Boolean, String> {
         val k = norm(kennung)
-        val eintrag = eintraege.firstOrNull { it.kennung == k } ?: eintraege.firstOrNull { norm(it.titel) == k }
+        // Genau, dann mit Leerzeichen oder Bindestrich statt Unterstrich, dann eindeutig als Anfang der Kennung oder als Teil des Titels.
+        val k2 = k.replace(Regex("[\\s-]+"), "_")
+        val eintrag = eintraege.firstOrNull { it.kennung == k || it.kennung == k2 } ?: eintraege.firstOrNull { norm(it.titel) == k }
+            ?: eintraege.filter { it.kennung.startsWith(k2) }.singleOrNull()
+            ?: eintraege.filter { k.length >= 4 && norm(it.titel).contains(k) }.singleOrNull()
             ?: return false to "Eine Einstellung „$kennung“ gibt es nicht. Lies erst die Liste mit aktion lesen."
         if (wert.isBlank()) return false to "Für „${eintrag.titel}“ fehlt der Wert. Möglich: ${eintrag.werte}."
         return try {

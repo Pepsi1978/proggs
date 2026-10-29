@@ -45,6 +45,9 @@ object SprechText {
 
     /** Zeichen, die ausgesprochen statt buchstabiert werden. */
     private val ERSATZ = linkedMapOf(
+        // Zuerst, sonst würden „-“, „=“ und „>“ einzeln gesprochen.
+        "->" to ", ",
+        "=>" to ", ",
         "&" to " und ",
         "%" to " Prozent ",
         "€" to " Euro ",
@@ -54,8 +57,9 @@ object SprechText {
         "=" to " gleich ",
         "<" to " kleiner als ",
         ">" to " grösser als ",
-        "→" to " führt zu ",
-        "←" to " kommt von ",
+        // Pfeile werden nicht ausgesprochen, nur als Pause.
+        "→" to ", ",
+        "←" to ", ",
         "@" to " at ",
         "/" to " oder ",
         "|" to ". ",
@@ -159,7 +163,8 @@ object SprechText {
      */
     fun fuerStimme(roh: String): String {
         if (roh.isBlank()) return ""
-        var text = roh
+        // Werkzeugaufrufe, Tags und JSON werden nie vorgelesen.
+        var text = de.frank.jarvis.text.WerkzeugMarkup.entferne(roh)
 
         // Code ergibt gesprochen nie einen Satz.
         text = CODEBLOCK.replace(text, " Codebeispiel. ")
