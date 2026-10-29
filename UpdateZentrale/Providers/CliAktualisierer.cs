@@ -138,6 +138,13 @@ public sealed class CliAktualisierer : IAktualisierer
             protokoll.Report(lauf.Ausgabe);
         }
 
+        if (IstDownloadFrist(lauf))
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: LangsamesNetzMeldung + eintrag.Name + " bricht seinen eigenen Download nach etwa 10 Minuten ab. "
+                         + "Die Verbindung ist gerade zu langsam für die neue Version – in einem schnelleren Netz erneut versuchen. "
+                         + "Die installierte Version bleibt unverändert nutzbar.",
+                Protokoll: lauf.Ausgabe);
+
         // The tool says another update is still running. Only for tools that update themselves
         // (not via pwsh/cmd): their orphaned leftovers are a stalled earlier run, see VerwaisteBeenden.
         if (IstUpdateSperre(lauf) && Prozesspfad.GleicheDatei(exe, Pfade.Aufloesen(eintrag.ExePfadWirksam))
@@ -350,7 +357,21 @@ public sealed class CliAktualisierer : IAktualisierer
     /// <summary>A failed run that ended by itself and names the network as the reason.</summary>
     internal static bool IstNetzfehler(BefehlErgebnis lauf)
         => !lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null && lauf.ExitCode != 0
+           && !IstDownloadFrist(lauf)
            && NetzHinweise.Any(h => lauf.Ausgabe.Contains(h, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Start of the failure text for <see cref="IstDownloadFrist"/>; keeps it out of the Claude handover.</summary>
+    public const string LangsamesNetzMeldung = "Download zu langsam: ";
+
+    /// <summary>
+    /// The tool's own overall download deadline ran out (Claude Code: ~10 min for ~300 MB). Not a
+    /// transient error: on the same slow line every retry burns another full deadline, three
+    /// attempts kept the card busy for half an hour.
+    /// </summary>
+    internal static bool IstDownloadFrist(BefehlErgebnis lauf)
+        => lauf.ExitCode != 0
+           && (lauf.Ausgabe.Contains("exceeded the total deadline", StringComparison.OrdinalIgnoreCase)
+               || lauf.Ausgabe.Contains("Download timed out", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>IPv4 first and bounded per address -- see Netzdienst for why that matters here.</summary>
     private static HttpClient Netz => Netzdienst.Client;

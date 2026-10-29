@@ -29,7 +29,10 @@ public static class ClaudeUebergabe
     private static readonly SemaphoreSlim AutomatischSchleuse = new(1, 1);
 
     /// <summary>Nur echte Fehlschlaege; "nicht verifiziert" heisst oft nur "Version nicht feststellbar".</summary>
-    public static bool AutomatischRelevant(UpdateBericht bericht) => bericht.Ergebnis == LaufErgebnis.Fehlgeschlagen;
+    /// A line too slow for the tool's own download deadline is no code problem: no session for that.
+    public static bool AutomatischRelevant(UpdateBericht bericht)
+        => bericht.Ergebnis == LaufErgebnis.Fehlgeschlagen
+           && !(bericht.Meldung ?? "").StartsWith(CliAktualisierer.LangsamesNetzMeldung, StringComparison.Ordinal);
 
     /// <param name="Gestartet">Eine Sitzung wurde (vermutlich) gestartet.</param>
     /// <param name="Problem">Warum nicht, oder was unklar blieb; null = alles gut oder nichts zu tun.</param>
