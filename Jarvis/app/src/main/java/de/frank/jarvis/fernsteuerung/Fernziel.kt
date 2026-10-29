@@ -18,12 +18,21 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
 
         /**
          * Welche Rechner gerade wirklich fernbedienbar sind (gleichzeitig geprüft, höchstens [wartezeitMs] plus kurze
-         * Dienstprüfung). 1,5 s reichten im Tunnel nicht: Nach einer Pause braucht WireGuard erst einen Handshake über den
+         * Dienstprüfung, bei Fehlschlag ein zweiter Versuch mit 2,5 s). 1,5 s reichten im Tunnel nicht: Nach einer Pause braucht WireGuard erst einen Handshake über den
          * VPS, der erste Verbindungsversuch kam am 28.10.2026 zu spät an und Jarvis verband blind mit dem ausgeschalteten Mac.
          */
-        suspend fun erreichbar(wartezeitMs: Int = 4000): List<Fernziel> = coroutineScope {
-            entries.map { z -> async(Dispatchers.IO) { z.takeIf { bereit(it.adresse, FernsteuerungActivity.PORT, wartezeitMs) } } }
-                .mapNotNull { it.await() }
+        suspend fun erreichbar(wartezeitMs: Int = 4000): List<Fernziel> = pruefen(wartezeitMs).filter { it.ok }.map { it.ziel }
+
+        /** Wie [erreichbar], aber mit Grund und Dauer je Rechner, damit das Logbuch erklären kann, warum einer rot wurde. */
+        suspend fun pruefen(wartezeitMs: Int = 4000): List<Pruefung> = coroutineScope {
+            entries.map { z ->
+                async(Dispatchers.IO) {
+                    // Im Tunnel geht gelegentlich ein einzelner Verbindungsversuch verloren: einmal nachfassen.
+                    val erst = bereit(z, FernsteuerungActivity.PORT, wartezeitMs)
+                    if (erst.ok) erst
+                    else bereit(z, FernsteuerungActivity.PORT, 2500).let { it.copy(ms = erst.ms + it.ms, grund = if (it.ok) it.grund else "2 Versuche: ${erst.grund} / ${it.grund}") }
+                }
+            }.map { it.await() }
         }
 
         /**
@@ -32,14 +41,26 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
          * also nichts und kein Verbindungsende, ist er da. Ohne Anmeldung schließt er die Prüfverbindung selbst, eine
          * laufende Sitzung bleibt unberührt.
          */
-        private suspend fun bereit(host: String, port: Int, wartezeitMs: Int): Boolean = withContext(Dispatchers.IO) {
-            runCatching {
+        private suspend fun bereit(z: Fernziel, port: Int, wartezeitMs: Int): Pruefung = withContext(Dispatchers.IO) {
+            val beginn = System.currentTimeMillis()
+            fun ergebnis(ok: Boolean, grund: String) = Pruefung(z, ok, grund, System.currentTimeMillis() - beginn)
+            try {
                 Socket().use { s ->
-                    s.connect(InetSocketAddress(host, port), wartezeitMs)
+                    s.connect(InetSocketAddress(z.adresse, port), wartezeitMs)
                     s.soTimeout = 800
-                    try { s.getInputStream().read() >= 0 } catch (_: SocketTimeoutException) { true }
+                    try {
+                        if (s.getInputStream().read() >= 0) ergebnis(true, "Dienst antwortet")
+                        else ergebnis(false, "Weiterleitung nimmt an, Dienst dahinter schließt sofort (Dienst aus?)")
+                    } catch (_: SocketTimeoutException) { ergebnis(true, "Dienst wartet auf Anmeldung") }
                 }
-            }.getOrDefault(false)
+            } catch (_: SocketTimeoutException) {
+                ergebnis(false, "Verbindungsaufbau nach $wartezeitMs ms ohne Antwort (Tunnel-Paket verloren, Rechner schläft oder aus)")
+            } catch (e: Exception) {
+                ergebnis(false, "${e.javaClass.simpleName}: ${e.message.orEmpty()}")
+            }
         }
     }
 }
+
+/** Ergebnis einer Erreichbarkeitsprüfung: [grund] und [ms] landen bei Fehlschlägen im Logbuch. */
+data class Pruefung(val ziel: Fernziel, val ok: Boolean, val grund: String, val ms: Long)

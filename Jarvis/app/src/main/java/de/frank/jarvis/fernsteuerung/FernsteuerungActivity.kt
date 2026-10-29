@@ -135,7 +135,7 @@ class FernsteuerungActivity : ComponentActivity() {
             beiZustand = { j -> runOnUiThread { zustand(j) } },
             beiEnde = { grund, verbunden ->
                 runOnUiThread {
-                    RechnerStatus.verloren(ziel)
+                    RechnerStatus.verloren(ziel, sofort = !verbunden, grund = if (verbunden) "getrennt: $grund" else "kein Verbindungsaufbau: $grund")
                     // Kam gar keine Verbindung zustande, ist der Rechner im Tunnel nicht da; das sagen statt nur der Socket-Meldung.
                     status = if (!verbunden)
                         "${ziel.nominativ} ist für die Fernwartung nicht erreichbar (aus, im Ruhezustand oder Tunnel getrennt)."

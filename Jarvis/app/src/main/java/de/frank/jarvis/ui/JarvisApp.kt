@@ -217,8 +217,9 @@ private fun Leiste(vm: AppViewModel) {
             }
         }
         Reiter.entries.filter { it != Reiter.EINSTELLUNGEN }.forEach { reiterKnopf(it) }
-        // Kein Reiter: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = mindestens ein Rechner ist wirklich
-        // fernbedienbar (Fernwartungs-Dienst im Tunnel antwortet), rot = keiner. Geprüft alle 10 s, solange Jarvis vorn ist.
+        // Kein Reiter: öffnet einen Rechner-Bildschirm zum Fernbedienen. Grün = mindestens ein Rechner hat in den letzten
+        // 25 s geantwortet (Fernwartungs-Dienst im Tunnel), rot = keiner. Geprüft alle 10 s, solange Jarvis vorn ist.
+        // Beim Antippen zählt nur, wer gerade wirklich antwortet (RechnerStatus.pruefen liefert das ungeglättet).
         val context = androidx.compose.ui.platform.LocalContext.current
         val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current
         androidx.compose.runtime.LaunchedEffect(lebenszyklus) {
@@ -255,7 +256,7 @@ private fun Leiste(vm: AppViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Immer derselbe ausgefüllte Monitor, nur die Farbe zeigt den Zustand; grün leuchtet zusätzlich.
-            // Während Jarvis prüft, welche Rechner antworten (bis 1,5 s), grau: das Tippen ist angekommen.
+            // Während Jarvis prüft, welche Rechner antworten (bis etwa 8 s mit zweitem Versuch), grau: das Tippen ist angekommen.
             val farbe = if (sucht) f.textLeise else when (rechnerDa) { true -> f.erfolg; false -> f.gefahr; null -> f.textLeise }
             // Gleiche Größe wie die Reitersymbole (20 dp).
             Icon(Icons.Rounded.DesktopMac, null, tint = farbe, modifier = Modifier.size(20.dp).drawBehind {
