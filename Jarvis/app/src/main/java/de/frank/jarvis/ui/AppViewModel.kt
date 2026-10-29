@@ -72,6 +72,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return androidx.lifecycle.ViewModelProvider(app, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(app))[AppViewModel::class.java]
         }
 
+        /** Läuft gerade eine Sprachaufnahme? Für Meldungen, die solange nicht vorlesen dürfen (sonst landen sie in der Mitschrift). */
+        @Volatile var aufnahmeAktiv = false; private set
+
         /** Zustand in [ablageUmzug]: Die Übernahme in die Ablage läuft gerade. */
         const val UMZUG_LAEUFT = "läuft"
 
@@ -156,7 +159,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val vorleser: de.frank.jarvis.speech.Vorleser = de.frank.jarvis.speech.Vorleser.hole(app, sprache)
     private val mikro = de.frank.module.transkriptionsmodul.TranskriptionAnbindung.mikrofon(app)
     val pegel get() = mikro.pegel
-    var nimmtAuf by mutableStateOf(false); private set
+    private var nimmtAufZustand by mutableStateOf(false)
+    var nimmtAuf: Boolean
+        get() = nimmtAufZustand
+        private set(wert) { nimmtAufZustand = wert; aufnahmeAktiv = wert }
     var schreibtMit by mutableStateOf(false); private set
     var mikrofonAnfragen: () -> Unit = {}
     /** Die laufende Frage kam über das Mikrofon: Dann wird die Antwort vorgelesen. */
@@ -1725,7 +1731,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** KI-Knopf unter der eigenen Antwort: bringt den Text in gutes Deutsch und gibt die neue Fassung an [fertig]. */
     fun antwortFormulieren(text: String, fertig: (String) -> Unit) {
-        if (text.isBlank() || antwortFormuliert || nimmtAuf || schreibtMit) return
+        // Eine laufende Aufnahme hindert nicht: Die Antwort-Ansicht verwirft die KI-Fassung, wenn sich der Text inzwischen geändert hat.
+        if (text.isBlank() || antwortFormuliert) return
         if (!modellBereit) { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
         antwortFormuliert = true
         viewModelScope.launch {
@@ -2383,7 +2390,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var rueckfrageOffen by mutableStateOf<Pair<String, String>?>(null)
 
     /** Die Rückfrage (frage_id), die im offenen Gespräch im Vollbild steht, oder null (eine aus einem anderen Gespräch zählt nicht). */
-    val rueckfrageDialog: String? get() = rueckfrageOffen?.takeIf { it.first == sitzungId }?.second
+    val rueckfrageDialog: String? get() = rueckfrageOffen?.takeIf { it.first == sitzungId || it == rueckfrageNebenher }?.second
+    /** Gespräch der offenen Rückfrage (auch einer, die nebenher über einem anderen Gespräch steht). */
+    val rueckfrageGespraech: String? get() = rueckfrageOffen?.takeIf { it.first == sitzungId || it == rueckfrageNebenher }?.first
+    /**
+     * Rückfrage aus einem anderen Gespräch, die über dem offenen steht, ohne es zu wechseln: Kam sie während einer Sprachaufnahme,
+     * hätte der Wechsel die Aufnahme verworfen. So beantwortet Frank sie mittendrin, und die Aufnahme läuft im Hintergrund weiter.
+     */
+    private var rueckfrageNebenher by mutableStateOf<Pair<String, String>?>(null)
 
     /** Rückfragen, die Frank in diesem Lauf geschlossen hat: Sie öffnen sich nicht von selbst wieder (der Chat zeigt „Beantworten“). */
     private val rueckfrageGeschlossen = mutableSetOf<String>()
@@ -2461,7 +2475,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (ziel != gewuenscht && ziel.second in rueckfrageGeschlossen) return@launch
             rueckfrageGeschlossen -= ziel.second
             rueckfrageOffen = ziel
-            if (ziel.first != sitzungId) {
+            if (ziel.first != sitzungId && (nimmtAuf || holtMikro || schreibtMit)) {
+                rueckfrageNebenher = ziel
+                Logbuch.sprache("Rückfrage nebenher", "Aufnahme läuft weiter, Gespräch bleibt offen")
+            } else if (ziel.first != sitzungId) {
                 aufnahmeVerwerfen()
                 // Ließ sich das Gespräch nicht öffnen, bleibt die Frage nicht als offen stehen (sonst versuchte es jeder Anstoß erneut).
                 if (!sitzungLaden(ziel.first) && rueckfrageOffen == ziel) rueckfrageOffen = null
@@ -2471,7 +2488,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Merkt sich die angefangene Auswahl im Gespräch: Nach dem Schließen oder einem Neustart der App ist sie wieder da. */
     fun rueckfrageEntwurf(frageId: String, entwurf: org.json.JSONObject) {
-        val gespraechId = sitzungId ?: return
+        val gespraechId = rueckfrageOffen?.takeIf { it.second == frageId }?.first ?: sitzungId ?: return
         de.frank.jarvis.faehigkeit.ProgrammierChat.rueckfrageAendern(getApplication(), gespraechId, frageId) { k ->
             if (k.optJSONObject("entwurf")?.toString() == entwurf.toString()) false else { k.put("entwurf", entwurf); true }
         }

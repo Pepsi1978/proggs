@@ -220,8 +220,18 @@ fun RueckfrageFenster(vm: AppViewModel) {
 @Composable
 fun RueckfrageEbene(vm: AppViewModel) {
     val id = vm.rueckfrageDialog ?: return
-    val nachricht = vm.gespraech.lastOrNull { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == id } ?: return
-    val r = remember(nachricht.kontext) { lies(nachricht.kontext) } ?: return
+    val gespraechId = vm.rueckfrageGespraech ?: return
+    val imOffenen = gespraechId == vm.sitzungId
+    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    // Nebenher (Rückfrage aus einem anderen Gespräch während einer Aufnahme): Stand laufend aus der Datei ihres Gesprächs.
+    val fremd by androidx.compose.runtime.produceState<String?>(null, gespraechId, id, imOffenen) {
+        if (!imOffenen) while (true) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.rueckfrageKontext(app, gespraechId, id)?.toString() }
+            delay(1_000)
+        }
+    }
+    val kontext = (if (imOffenen) vm.gespraech.lastOrNull { it.art == "rueckfrage" && de.frank.jarvis.data.Gespraeche.rueckfrageId(it.kontext) == id }?.kontext else fremd) ?: return
+    val r = remember(kontext) { lies(kontext) } ?: return
     androidx.activity.compose.BackHandler { vm.rueckfrageSchliessen() }
     Vollbild(vm, r)
 }
@@ -455,6 +465,10 @@ private fun SprachLeiste(vm: AppViewModel, text: String, aendern: (String) -> Un
     // Aktueller Text für das Diktat, das erst nach dem Transkribieren ankommt: nie über einen veralteten Stand schreiben.
     val jetzt by androidx.compose.runtime.rememberUpdatedState(text)
     var vorKi by remember { mutableStateOf<String?>(null) }
+    // Läuft eine Aufnahme, die nicht hier begann (Spracheingabe im Chat), bleibt sie unberührt: Das Mikrofon hier wartet.
+    var meins by remember { mutableStateOf(false) }
+    LaunchedEffect(vm.nimmtAuf, vm.schreibtMit) { if (!vm.nimmtAuf && !vm.schreibtMit) meins = false }
+    val fremdeAufnahme = (vm.nimmtAuf || vm.schreibtMit) && !meins
     var kiFassung by remember { mutableStateOf<String?>(null) }
     // Rückgängig nur, solange der Text noch die KI-Fassung ist; jede eigene Änderung beendet es.
     val rueckgaengig = vorKi?.takeIf { text == kiFassung }
@@ -463,10 +477,15 @@ private fun SprachLeiste(vm: AppViewModel, text: String, aendern: (String) -> Un
         Text("Jarvis formuliert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
     }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Rundknopf(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Antwort einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
-            vm.antwortMikrofonTippen { t -> aendern(jetzt.trimEnd().let { if (it.isEmpty()) t else "$it $t" }) }
+        if (fremdeAufnahme) Text("Deine Spracheingabe im Chat läuft im Hintergrund weiter. Antwort hier eintippen oder wählen.", Modifier.weight(1f), color = f.textLeise, fontSize = 14.sp)
+        else {
+            Rundknopf(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Antwort einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
+                if (!vm.nimmtAuf) meins = true
+                vm.antwortMikrofonTippen { t -> aendern(jetzt.trimEnd().let { if (it.isEmpty()) t else "$it $t" }) }
+            }
         }
-        if (vm.nimmtAuf || vm.schreibtMit) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else "Schreibe mit …", Modifier.weight(1f), color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        if (fremdeAufnahme) Unit
+        else if (vm.nimmtAuf || vm.schreibtMit) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else "Schreibe mit …", Modifier.weight(1f), color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         else if (rueckgaengig != null) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) { vorKi = null; kiFassung = null; aendern(rueckgaengig) }
         else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) {
             val vorher = text

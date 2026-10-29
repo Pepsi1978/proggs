@@ -237,7 +237,7 @@ object Meldungen {
         val p = profil(app, art)
         if (!probe && !an(app, art)) return false
         val ruhe = !probe && inRuhe(app, art)
-        val gespraech = GespraechsFokus.stilleHinweise && !art.dringend
+        val gespraech = (GespraechsFokus.stilleHinweise || de.frank.jarvis.ui.AppViewModel.aufnahmeAktiv) && !art.dringend
         // Lautlos gewählt heißt auch: kein Wecker, selbst wenn er noch eingeschaltet ist.
         val tonAus = art.ton && !p.ton
         val klingeln = laut && p.weckerWirksam && !ruhe && !gespraech
@@ -331,7 +331,8 @@ object Meldungen {
         // Erst den Weckton zu Ende klingeln lassen (er endet selbst, spätestens nach seiner Höchstdauer), dann das Gespräch abwarten.
         if (solange != null) withTimeoutOrNull(WECKTON_HOECHSTENS_MS + 5_000L) { while (solange()) delay(500L) }
         val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
-            while (GespraechsFokus.stilleHinweise) delay(2_000L)
+            // Auch während einer Sprachaufnahme still: Die Ansage landete sonst in Franks Mitschrift.
+            while (GespraechsFokus.stilleHinweise || de.frank.jarvis.ui.AppViewModel.aufnahmeAktiv) delay(2_000L)
             true
         }
         if (frei != true) return
