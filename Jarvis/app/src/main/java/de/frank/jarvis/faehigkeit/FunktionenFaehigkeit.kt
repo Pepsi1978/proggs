@@ -48,6 +48,9 @@ object Funktionen {
     private const val TEXT = "funktionen.md"
     private const val META = "funktionen.json"
     private const val VORHER = "funktionen_vorher.md"
+    private const val NACHGETRAGEN = "funktionen_nachgetragen.txt"
+    /** Neue Bereiche, die [nachtragen] einmalig aus der APK übernimmt. */
+    private val NEUE_BEREICHE = listOf("Geniale Ideen")
     private const val PFLEGE_MS = 4 * 60_000L
     /** So viele Versionen gehen höchstens in einen Modellaufruf, so viele Portionen höchstens in einen Lauf. */
     private const val PORTION = 30
@@ -109,8 +112,37 @@ object Funktionen {
             Logbuch.gedaechtnis("Funktionsübersicht angelegt", "Erstbefüllung, geprüft bis versionCode $code")
             neu
         }
-        _stand.value = geladen
-        geladen
+        nachtragen(c, geladen).also { _stand.value = it }
+    }
+
+    /**
+     * Bereiche, die eine Version neu mitbringt. Die Pflege ergänzt nur Zeilen in vorhandenen Bereichen, deshalb kommt ein
+     * neuer Bereich einmalig aus der APK (hinter „Angebundene Apps“). Gemerkt wird das in einer eigenen Datei: Löscht Frank
+     * den Bereich danach, bleibt er weg.
+     */
+    private fun nachtragen(c: Context, s: FunktionsStand): FunktionsStand {
+        val datei = File(ordner(c), NACHGETRAGEN)
+        val erledigt = runCatching { datei.readLines().filter { it.isNotBlank() }.toSet() }.getOrDefault(emptySet())
+        val offen = NEUE_BEREICHE.filter { it !in erledigt }
+        if (offen.isEmpty()) return s
+        val vorlage = Funktionsdatei.erstbefuellung(erstbefuellung(c)).third
+        var text = s.text
+        for (name in offen) {
+            if (text.lines().any { it.trim() == "## $name" }) continue
+            val teil = Funktionsdatei.bereiche(vorlage, name) ?: continue
+            val zeilen = text.trimEnd().lines().toMutableList()
+            val anker = zeilen.indexOfFirst { it.trim() == "## Angebundene Apps" }
+            val danach = if (anker < 0) -1 else (anker + 1 until zeilen.size).firstOrNull { zeilen[it].startsWith("## ") } ?: -1
+            if (danach < 0) zeilen += listOf("", teil) else zeilen.addAll(danach, listOf(teil, ""))
+            text = zeilen.joinToString("\n") + "\n"
+        }
+        AblageSpeicher.schreibeAtomar(datei, (erledigt + offen).joinToString("\n").toByteArray())
+        if (text == s.text) return s
+        sichere(c, s)
+        val neu = s.copy(text = text, revision = s.revision + 1)
+        schreibe(c, neu)
+        Logbuch.gedaechtnis("Funktionsübersicht ergänzt", "neue Bereiche: " + offen.joinToString(", "))
+        return neu
     }
 
     private fun erstbefuellung(c: Context): String =

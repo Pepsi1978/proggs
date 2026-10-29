@@ -9,15 +9,20 @@ import org.json.JSONObject
 
 /**
  * Anbindung an „Geniale Ideen“ (de.frank.genialeideen) über deren Jarvis-Brücke (Signatur-Erlaubnis):
- * Ideen lesen, neue anlegen (die App glättet Text und Titel mit ihrer KI), ändern, als umgesetzt markieren, löschen.
+ * Ideen lesen (auch wie die Reiter und die Seitenleiste der App), neue anlegen (die App glättet Text und Titel mit ihrer KI),
+ * ändern, annehmen, als umgesetzt markieren, löschen; Kurzfassung lesen, mit KI neu erzeugen und zurücknehmen.
  */
 class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "ideen"
     override val name = "Geniale Ideen"
-    override val beschreibung = "Ideen lesen, neue speichern (mit KI-Glättung), ändern, als umgesetzt markieren und löschen."
+    override val beschreibung = "Ideen lesen (Reiter und Seitenleiste), neue speichern (mit KI-Glättung), ändern, annehmen, als umgesetzt markieren, " +
+        "Kurzfassung mit KI verbessern oder zurücknehmen und löschen."
     override val hinweise =
         "Geniale Ideen ist Franks Ideensammlung. Eine Idee hat einen kurzen Titel (höchstens drei Wörter, bildet die App selbst), einen Text, " +
-            "optional Kategorien und den Status offen oder umgesetzt. Neue Ideen übergibst du in Franks eigenen Worten; die App glättet den Text selbst " +
+            "optional Kategorien, eine Kurzfassung (höchstens 35 Wörter, über der ausführlichen Fassung; sie wird vorgelesen) " +
+            "und den Status offen, angenommen (von Frank für gut befunden, noch nicht umgesetzt) oder umgesetzt. Halbfertiges liegt als Entwurf. " +
+            "Die App hat die Reiter Angenommen, Offen und Umgesetzt und in der Seitenleiste zusätzlich Entwürfe und Alle Ideen; ideen_lesen mit uebersicht nennt deren Zahlen. " +
+            "„Mit KI verbessern“ und „Rückgängig“ der App gehen über idee_speichern mit ki_aktion. Neue Ideen übergibst du in Franks eigenen Worten; die App glättet den Text selbst " +
             "und behält das Original. Ideen sind etwas anderes als Aufgaben: Eine Idee ist ein Einfall zum Aufheben, eine Aufgabe etwas zu Erledigendes. " +
             "Sagt Frank „geniale Idee“ oder „Idee“, gehört es hierher. Vor dem Löschen kurz bestätigen lassen."
 
@@ -74,7 +79,10 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
         listOf(
             w("ideen_lesen").als(
                 beschreibung = "Jarvis: liest Franks geniale Ideen aus der App Geniale Ideen. Nutze es für „Welche Ideen habe ich?“, „Was war meine Idee zu …?“, " +
-                    "„Welche Ideen sind umgesetzt?“. In der Liste sind lange Texte gekürzt; mit id kommt eine einzelne Idee vollständig, samt dem bisherigen Gespräch dazu.",
+                    "„Welche Ideen sind umgesetzt?“, „Welche Ideen habe ich angenommen?“, „Was steht in den Entwürfen?“. In der Liste sind lange Texte gekürzt; " +
+                    "mit id kommt eine einzelne Idee vollständig mit Kurzfassung, samt dem bisherigen Gespräch dazu. " +
+                    "Reiter und Seitenleiste der App: Angenommene = status angenommen, Offene = nur_offen, Umgesetzte = umgesetzt, Entwürfe = entwurf, Alle Ideen = alle mit entwuerfe; " +
+                    "uebersicht nennt die Zahl je Reiter.",
                 schema = w("ideen_lesen").schema.mit("id" to zahl("id einer Idee aus der Liste: dann nur diese, im Volltext.")),
             ) { a -> (if (a.idGesetzt()) w("idee_lesen") else w("ideen_lesen")).ausfuehren(a) },
             Werkzeug(
@@ -82,15 +90,22 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                 titel = "Idee speichern oder ändern",
                 beschreibung = "Jarvis: speichert eine neue geniale Idee in der App Geniale Ideen oder ändert eine vorhandene. " +
                     "NEU (ohne id und ohne suche): bei „Jarvis, ich habe eine Idee …“, „speichere als geniale Idee …“. Übergib den Inhalt vollständig in Franks Worten; die App glättet den Text sprachlich und bildet den Titel selbst. " +
-                    "ÄNDERN (mit id oder suche): neuer Text oder Titel, andere Kategorie, oder status umgesetzt bzw. wieder offen.",
+                    "ÄNDERN (mit id oder suche): neuer Text oder Titel, andere Kategorie, oder status angenommen, umgesetzt bzw. wieder offen. " +
+                    "KI (mit id oder suche und ki_aktion): verbessern wie der Knopf „Mit KI verbessern“ (ausführliche Fassung und Kurzfassung neu), " +
+                    "kurzfassung (nur die Kurzfassung neu, Text bleibt), rueckgaengig (holt die Fassung vor der letzten Verbesserung zurück).",
                 schema = schema(
                     "id" to zahl("Nur beim Ändern: id der Idee aus ideen_lesen."),
                     "suche" to text("Nur beim Ändern, statt id: Wort aus Titel oder Text der Idee."),
                     "text" to text("Die Idee vollständig, so wie Frank sie gesagt hat, ohne die Anrede an Jarvis. Pflicht bei einer neuen Idee."),
                     "titel" to text("Nur wenn Frank ausdrücklich einen Titel nennt (höchstens drei Wörter)."),
                     "kategorie" to text("Nur wenn Frank eine Kategorie nennt. Unbekannte Namen werden neu angelegt; ohne = Kategorie entfernen."),
-                    "status" to text("Nur beim Ändern: umgesetzt oder offen.", listOf("offen", "umgesetzt")),
+                    "status" to text("Nur beim Ändern: offen, angenommen oder umgesetzt.", listOf("offen", "angenommen", "umgesetzt")),
                     "verbessern" to schalter("Nur bei einer neuen Idee: Text von der KI glätten lassen (Vorgabe: an)."),
+                    "ki_aktion" to text(
+                        "Nur bei einer vorhandenen Idee: verbessern (beide Fassungen mit KI verbessern), kurzfassung (nur die Kurzfassung neu erzeugen) " +
+                            "oder rueckgaengig (vorige Fassung zurückholen). Dauert bis etwa eine Minute.",
+                        listOf("verbessern", "kurzfassung", "rueckgaengig"),
+                    ),
                 ),
                 nurLesen = false,
             ) { a ->
@@ -98,6 +113,12 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                 // Das ist eine Änderung, keine neue Idee: sonst entstünde ein Doppel oder der Fehler „braucht einen Text“.
                 val nurAenderung = a.gesetzt("status") || (!a.gesetzt("text") && (a.gesetzt("titel") || a.has("kategorie")))
                 when {
+                    a.gesetzt("ki_aktion") -> {
+                        val ohneId = !a.idGesetzt() && !a.gesetzt("suche")
+                        val suche = a.optString("titel").trim().ifEmpty { a.optString("text").trim() }
+                        if (ohneId && suche.isEmpty()) Ergebnis("Für ki_aktion fehlt die id oder ein Suchwort (suche) für die Idee. Hole die id mit ideen_lesen.", fehler = true)
+                        else mitIdee(if (ohneId) JSONObject().put("suche", suche) else a) { id -> kiAktion(id, a.optString("ki_aktion").trim().lowercase()) }
+                    }
                     a.idGesetzt() || a.gesetzt("suche") -> w("idee_aendern").ausfuehren(a)
                     nurAenderung -> {
                         val suche = a.optString("titel").trim().ifEmpty { a.optString("text").trim() }
@@ -120,12 +141,26 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             beschreibung = "Jarvis: liest Franks geniale Ideen aus der App Geniale Ideen. Nutze es für „Welche Ideen habe ich?“, „Was war meine Idee zu …?“, " +
                 "„Welche Ideen sind umgesetzt?“. Lange Texte sind gekürzt; den vollen Text einer Idee liefert idee_lesen.",
             schema = schema(
-                "status" to text("offen (Vorgabe), umgesetzt oder alle.", listOf("offen", "umgesetzt", "alle")),
+                "status" to text(
+                    "offen (Vorgabe: offene und angenommene, also alles noch nicht Umgesetzte), angenommen, nur_offen (wie der Reiter Offen, ohne angenommene), " +
+                        "umgesetzt, entwurf oder alle (ohne Entwürfe).",
+                    listOf("offen", "angenommen", "nur_offen", "umgesetzt", "entwurf", "alle"),
+                ),
                 "suche" to text("Suchwort oder Wortgruppe; durchsucht Titel und Text."),
                 "kategorie" to text("Nur Ideen dieser Kategorie (Name oder Teil davon)."),
+                "entwuerfe" to schalter("Entwürfe mitnehmen (Vorgabe: aus). Mit status alle wie die Seitenleiste „Alle Ideen“."),
+                "uebersicht" to schalter("Zahl der Ideen je Reiter und Seitenleiste (Angenommen, Offen, Umgesetzt, Entwürfe, Alle). Mit status zusätzlich diese Liste."),
             ),
             nurLesen = true,
-        ) { a -> rufe("lesen", a).fehlerOder(::liste) },
+        ) { a ->
+            if (!a.optBoolean("uebersicht")) return@Werkzeug rufe("lesen", a).fehlerOder(::liste)
+            val zahlen = rufe("uebersicht", JSONObject())
+            zahlen.optString("fehler").takeIf { it.isNotEmpty() }?.let { return@Werkzeug Ergebnis(it, fehler = true) }
+            val kopf = "Reiter und Seitenleiste in Geniale Ideen: Angenommene Ideen ${zahlen.optInt("angenommen")}, Offene Ideen ${zahlen.optInt("offen")}, " +
+                "Umgesetzte Ideen ${zahlen.optInt("umgesetzt")}, Entwürfe ${zahlen.optInt("entwuerfe")}, Alle Ideen ${zahlen.optInt("alle")}."
+            if (!a.gesetzt("status") && !a.gesetzt("suche") && !a.gesetzt("kategorie")) return@Werkzeug Ergebnis(kopf)
+            rufe("lesen", a).fehlerOder { kopf + "\n\n" + liste(it) }
+        },
         Werkzeug(
             name = "idee_lesen",
             titel = "Idee im Volltext",
@@ -137,7 +172,10 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                 rufe("idee", JSONObject().put("id", id)).fehlerOder { antwort ->
                     val i = antwort.getJSONObject("idee")
                     buildString {
-                        append(kopf(i)).append('\n').append(i.optString("text"))
+                        append(kopf(i)).append('\n')
+                        i.optString("kurzfassung").takeIf { it.isNotBlank() }?.let { append("Kurzfassung: ").append(it).append("\n\n") }
+                        append(i.optString("text"))
+                        if (i.optBoolean("rueckgaengig_moeglich")) append("\n\n(Die Fassung vor der letzten KI-Verbesserung lässt sich mit idee_speichern, ki_aktion rueckgaengig zurückholen.)")
                         val gespraech = antwort.optJSONArray("gespraech") ?: JSONArray()
                         if (gespraech.length() > 0) {
                             append("\n\nBisheriges Gespräch zur Idee:\n")
@@ -189,7 +227,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                 "text" to text("Neuer vollständiger Text."),
                 "titel" to text("Neuer Titel."),
                 "kategorie" to text("Neue Kategorie; ohne = Kategorie entfernen."),
-                "status" to text("umgesetzt oder offen.", listOf("offen", "umgesetzt")),
+                "status" to text("offen, angenommen oder umgesetzt.", listOf("offen", "angenommen", "umgesetzt")),
             ),
             nurLesen = false,
         ) { a ->
@@ -204,6 +242,25 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             loeschend = true,
         ) { a -> mitIdee(a) { id -> rufe("loeschen", JSONObject().put("id", id)).fehlerOder { "Gelöscht: „${it.getJSONObject("geloescht").optString("titel")}“." } } },
     )
+
+    /** „Mit KI verbessern“, nur die Kurzfassung neu oder „Rückgängig“, wie in der Einzelansicht der App. */
+    private suspend fun kiAktion(id: Long, aktion: String): Ergebnis {
+        val antwort = when (aktion) {
+            "verbessern" -> rufe("verbessern", JSONObject().put("id", id).put("warte_ms", KI_WARTE_MS))
+            "kurzfassung" -> rufe("verbessern", JSONObject().put("id", id).put("nur_kurzfassung", true).put("warte_ms", KI_WARTE_MS))
+            "rueckgaengig" -> rufe("rueckgaengig", JSONObject().put("id", id))
+            else -> return Ergebnis("Unbekannte ki_aktion „$aktion“: verbessern, kurzfassung oder rueckgaengig.", fehler = true)
+        }
+        if (antwort.optBoolean("laeuft")) return Ergebnis(antwort.optString("hinweis"))
+        return antwort.fehlerOder { r ->
+            val i = r.getJSONObject("idee")
+            buildString {
+                append(r.optString("hinweis")).append(' ').append(kopf(i)).append('\n')
+                append("Kurzfassung: ").append(i.optString("kurzfassung").ifBlank { "(wird gleich im Hintergrund erzeugt)" })
+                if (aktion != "kurzfassung") append("\n\nAusführliche Fassung:\n").append(i.optString("text"))
+            }
+        }
+    }
 
     private suspend fun mitIdee(a: JSONObject, dann: suspend (Long) -> Ergebnis): Ergebnis {
         // id 0 heißt bei vielen Modellen „nicht angegeben“: dann gilt das Suchwort.
@@ -236,7 +293,10 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             append(":\n")
             for (n in 0 until ideen.length()) {
                 val i = ideen.getJSONObject(n)
-                append("- ").append(kopf(i)).append(": ").append(i.optString("text").replace('\n', ' ').let { if (it.length > laenge) it.take(laenge) + " …" else it }).append('\n')
+                append("- ").append(kopf(i)).append(": ").append(i.optString("text").replace('\n', ' ').let { if (it.length > laenge) it.take(laenge) + " …" else it })
+                // Nur in der Werkzeug-Liste; Überblick und Gedächtnis bleiben knapp.
+                if (laenge == Int.MAX_VALUE) i.optString("kurzfassung").takeIf { it.isNotBlank() }?.let { append(" | Kurzfassung: ").append(it) }
+                append('\n')
             }
         }.trim()
     }
@@ -253,7 +313,9 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
 
     companion object {
         private val BRUECKE: Uri = Uri.parse("content://de.frank.genialeideen.jarvis")
-        private val LESEND = setOf("kategorien", "lesen", "idee")
+        private val LESEND = setOf("kategorien", "lesen", "idee", "uebersicht")
+        /** Die KI braucht für beide Fassungen oft länger als die 25 s eines Schreibaufrufs; unter der Relay-Grenze von 75 s. */
+        private const val KI_WARTE_MS = 50_000L
         private const val UEBERBLICK_ZEICHEN = 14_000
     }
 }

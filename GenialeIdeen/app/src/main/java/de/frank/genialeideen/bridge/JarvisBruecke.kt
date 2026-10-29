@@ -15,9 +15,22 @@ import de.frank.genialeideen.di.AppContainer
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
+import de.frank.genialeideen.auth.ChatTurn
+import de.frank.genialeideen.auth.CodexModel
+import de.frank.genialeideen.auth.EigeneAnfrage
+import de.frank.genialeideen.auth.ReasoningEffort
+import de.frank.genialeideen.text.Kurzfassung
+import de.frank.genialeideen.text.UmlautKorrektur
+import de.frank.genialeideen.ui.IdeenViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -28,7 +41,8 @@ import org.json.JSONObject
  * Aufruf: `ContentResolver.call(content://de.frank.genialeideen.jarvis, methode, null, Bundle("json" → Anfrage))`,
  * Antwort im Bundle unter "json". Fachliche Fehler kommen als `{"fehler": "..."}` zurück.
  *
- * Methoden: `lesen`, `idee`, `anlegen`, `aendern`, `loeschen`, `kategorien`.
+ * Methoden: `lesen`, `idee`, `anlegen`, `aendern`, `loeschen`, `kategorien`, `uebersicht` (Reiter und Seitenleiste),
+ * `verbessern` (wie der Knopf „Mit KI verbessern“) und `rueckgaengig` (holt die Fassung davor zurück).
  *
  * Eine neue Idee wird sofort mit dem gesprochenen Text gespeichert. Danach glättet die KI den Text und
  * findet einen Titel — mit denselben Anweisungen wie der Erfassen-Bildschirm. Das Original bleibt als
@@ -56,8 +70,13 @@ class JarvisBruecke : ContentProvider() {
                 val status = a.optString("status", "offen").lowercase(Locale.GERMAN)
                 val suche = a.optString("suche").trim()
                 val kategorie = a.optString("kategorie").trim().lowercase(Locale.GERMAN)
-                var liste = (if (suche.isNotEmpty()) repo.suche(suche) else repo.alleIdeen().first()).filter { it.status != IdeenStatus.ENTWURF.name }
+                val bestand = if (suche.isNotEmpty()) repo.suche(suche) else repo.alleIdeen().first()
+                // Entwürfe nur auf ausdrücklichen Wunsch: Ohne neue Angaben bleibt alles wie bisher.
+                var liste = if (status == "entwurf" || a.optBoolean("entwuerfe")) bestand else bestand.filter { it.status != IdeenStatus.ENTWURF.name }
                 liste = when (status) {
+                    "entwurf" -> liste.filter { it.status == IdeenStatus.ENTWURF.name }
+                    // Wie der Reiter „Offen“ der App: ohne die angenommenen.
+                    "nur_offen" -> liste.filter { it.status == IdeenStatus.OFFEN.name }
                     "umgesetzt" -> liste.filter { it.status == IdeenStatus.UMGESETZT.name }
                     "angenommen" -> liste.filter { it.status == IdeenStatus.ANGENOMMEN.name }
                     "alle" -> liste
@@ -113,6 +132,40 @@ class JarvisBruecke : ContentProvider() {
                 JSONObject().put("idee", alsJson(repo.lade(idee.id) ?: idee, repo.alleKategorien().first(), Int.MAX_VALUE))
             }
 
+            "uebersicht" -> {
+                // Dieselben Listen wie Reiter und Seitenleiste der App, mit denselben Zählungen.
+                val alle = repo.alleIdeen().first()
+                fun zahl(status: IdeenStatus) = alle.count { it.status == status.name }
+                JSONObject()
+                    .put("angenommen", zahl(IdeenStatus.ANGENOMMEN))
+                    .put("offen", zahl(IdeenStatus.OFFEN))
+                    .put("umgesetzt", zahl(IdeenStatus.UMGESETZT))
+                    .put("entwuerfe", zahl(IdeenStatus.ENTWURF))
+                    .put("alle", alle.size)
+            }
+
+            "verbessern" -> {
+                val idee = repo.lade(a.optLong("id", -1)) ?: return fehler("Keine Idee mit dieser id.")
+                if (idee.text.isBlank()) return fehler("Die Idee hat keinen Text zum Verbessern.")
+                if (!c.codexAuthManager.kannDenken(CodexModel.fromLabel(c.settings.model))) return fehler("Geniale Ideen ist nicht bei der KI angemeldet; Verbessern geht gerade nicht.")
+                val nurKurz = a.optBoolean("nur_kurzfassung")
+                // Läuft im Hintergrund zu Ende, auch wenn Jarvis nicht so lange wartet; ein zweiter Aufruf hängt sich an.
+                val auftrag = synchronized(verbesserungen) {
+                    verbesserungen[idee.id]?.takeIf { it.isActive } ?: nebenbei.async { verbessere(c, idee, nurKurz) }.also { verbesserungen[idee.id] = it }
+                }
+                val fertig = withTimeoutOrNull(a.optLong("warte_ms", 50_000L).coerceIn(1_000L, 60_000L)) { auftrag.await() }
+                    ?: return JSONObject().put("laeuft", true).put("hinweis", "Die KI verbessert noch; das Ergebnis steht gleich in der App. Mit der id nachlesen, nicht erneut verbessern.")
+                fertig.optString("fehler").takeIf { it.isNotEmpty() }?.let { return fehler(it) }
+                JSONObject().put("idee", alsJson(repo.lade(idee.id) ?: idee, kategorien, Int.MAX_VALUE))
+                    .put("hinweis", if (nurKurz) "Die Kurzfassung ist neu erzeugt." else "Beide Fassungen sind verbessert.")
+            }
+
+            "rueckgaengig" -> {
+                val idee = repo.lade(a.optLong("id", -1)) ?: return fehler("Keine Idee mit dieser id.")
+                if (!repo.nimmVerbesserungZurueck(idee.id)) return fehler("Bei dieser Idee gibt es keine vorige Fassung zum Zurückholen.")
+                JSONObject().put("idee", alsJson(repo.lade(idee.id) ?: idee, kategorien, Int.MAX_VALUE)).put("hinweis", "Die vorige Fassung ist wieder da.")
+            }
+
             "loeschen" -> {
                 val idee = repo.lade(a.optLong("id", -1)) ?: return fehler("Keine Idee mit dieser id.")
                 repo.loesche(idee)
@@ -121,6 +174,30 @@ class JarvisBruecke : ContentProvider() {
 
             else -> fehler("Unbekannte Methode: $methode")
         }
+    }
+
+    /** Wie „Mit KI verbessern“ in der Einzelansicht; mit [nurKurz] bleibt der Text und nur die Kurzfassung wird neu. */
+    private suspend fun verbessere(c: AppContainer, idee: IdeeEntity, nurKurz: Boolean): JSONObject = try {
+        val modell = CodexModel.fromLabel(c.settings.model)
+        val stufe = ReasoningEffort.fromLabel(c.settings.reasoning)
+        val text = if (nurKurz) idee.text else UmlautKorrektur.korrigiere(
+            withContext(EigeneAnfrage) {
+                c.codexAuthManager.streamChat(IdeenViewModel.VERBESSERUNG, listOf(ChatTurn("user", idee.text)), modell, stufe)
+            }.trim(),
+        )
+        if (text.isBlank()) {
+            fehler("Es kam keine verbesserte Fassung zurück.")
+        } else {
+            val kurz = runCatching { Kurzfassung.erzeuge(c.codexAuthManager, modell, stufe, text) }.getOrDefault("")
+            when {
+                nurKurz && kurz.isBlank() -> fehler("Es kam keine Kurzfassung zurück.")
+                c.ideenRepository.setzeVerbessert(idee.id, idee.text, text, kurz) -> JSONObject()
+                else -> fehler("Die Idee wurde inzwischen geändert — bitte noch einmal verbessern.")
+            }
+        }
+    } catch (e: Exception) {
+        if (e is kotlinx.coroutines.CancellationException) throw e
+        fehler(e.message ?: e.javaClass.simpleName)
     }
 
     /** Bestehende Kategorie nach Name; ein unbekannter Name legt eine neue (mentale) Kategorie an. Leer = keine. */
@@ -141,9 +218,11 @@ class JarvisBruecke : ContentProvider() {
             .put("text", if (i.text.length > laenge) i.text.take(laenge) + " …" else i.text)
             .put("gekuerzt", i.text.length > laenge)
             .put("kurzfassung", i.kurzfassung)
+            .put("rueckgaengig_moeglich", i.vorigerText != null)
             .put("status", when (i.status) {
                 IdeenStatus.UMGESETZT.name -> "umgesetzt"
                 IdeenStatus.ANGENOMMEN.name -> "angenommen"
+                IdeenStatus.ENTWURF.name -> "entwurf"
                 else -> "offen"
             })
             .put("kategorien", JSONArray(namen))
@@ -152,6 +231,12 @@ class JarvisBruecke : ContentProvider() {
     }
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
+
+    private companion object {
+        /** Überlebt den einzelnen Aufruf: Die Verbesserung läuft zu Ende, auch wenn Jarvis nicht mehr wartet. */
+        val nebenbei = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val verbesserungen = mutableMapOf<Long, Deferred<JSONObject>>()
+    }
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor? = null
     override fun getType(uri: Uri): String? = null

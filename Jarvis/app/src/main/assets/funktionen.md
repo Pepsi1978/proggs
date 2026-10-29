@@ -14,7 +14,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 - Geniale Aufgaben: `aufgaben_lesen`, `aufgabe_anlegen`, `aufgabe_aendern` (auch abhaken), `aufgabe_loeschen`.
 - Genialer Wecker: `wecker_lesen`, `wecker_stellen` (anlegen, ändern, schalten, auslassen), `wecker_loeschen`.
-- Geniale Ideen: `ideen_lesen` (mit id Volltext), `idee_speichern` (anlegen/ändern), `idee_loeschen`.
+- Geniale Ideen: `ideen_lesen`, `idee_speichern`, `idee_loeschen`; Einzelheiten im Bereich Geniale Ideen.
 - Entropie Reductor, nur lesen: `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf` (ohne Messgrößen = Katalog), `trainings_lesen`; `biomarker_aktualisieren` stößt den Abgleich an. Vor dem Lesen holt Jarvis frische Daten, wenn sie älter als 30 Minuten sind.
 - Stack-Labor: `stacks_lesen`, `stack_mittel_setzen`, `stack_speichern`, `mittel_speichern`; `stacklabor_loeschen` nur mit Bestätigung. Agenten und Tagesauswertung lesen nur.
 - Epigenetik: `epigenetik_lesen` (Auswertung, startet fehlende Recherchen, wartet bis 50 s), `epigenetik_recherchieren`, `epigenetik_schalter`, `epigenetik_uebersicht`.
@@ -24,6 +24,14 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - Gmail: `mail_lesen` (mit nr vollständig), `mail_senden` (ohne Empfänger an Frank; nur erlaubte Empfänger).
 - GitHub-Repo, nur lesen: `repo_lesen` (Projekte, Dateien, Code-Suche, Verlauf). Jarvis ändert nie Code im Repo.
 - Web: `web_suche` (Kurzantwort und Quellen), `web_seite_lesen`; auch im eigenen Chat, Sprachmodus und Live-Gespräch. Aktuelle Fragen beantwortet Jarvis damit sofort im Gespräch, kurz und ohne Quellen, Quellennamen oder Webadressen (bei allen Anbietern, auch Live und ChatGPT; die Symbiose-Regel 6 wird dazu einmal ersetzt); nur auf ausdrückliche Nachfrage („nenne mir die Quellen“) nennt er sie, Recherche-Berichte der Agenten behalten ihre Quellen; im Gespräch zuerst die Websuche des ChatGPT-Modells (eine gezielte Suche, höchstens 20 s), sonst Tavily (höchstens 12 s); in Agenten und über ChatGPT/MCP gründlich mit Tavily zuerst. Geht keine Suche, sagt er das, statt einen Agenten zu starten. Daten aus Franks Apps kommen weiter aus deren Werkzeugen.
+
+## Geniale Ideen
+
+- Lesen: `ideen_lesen` mit status offen (Vorgabe: offene und angenommene), angenommen, nur_offen, umgesetzt, entwurf oder alle; mit `entwuerfe` kommen die Entwürfe dazu, mit id eine Idee im Volltext mit Kurzfassung und Gespräch.
+- Reiter und Seitenleiste der App: Angenommene, Offene und Umgesetzte Ideen, Entwürfe und Alle Ideen; `ideen_lesen` mit `uebersicht` nennt die Zahl je Liste.
+- Speichern und ändern: `idee_speichern` legt neu an (die App glättet Text und Titel) oder ändert Text, Titel, Kategorie und Status offen, angenommen oder umgesetzt.
+- Kurzfassung (höchstens 35 Wörter, wird vorgelesen): steht in jeder Idee; `idee_speichern` mit `ki_aktion` verbessern wie der Knopf „Mit KI verbessern“ (beide Fassungen), kurzfassung (nur die Kurzfassung neu) oder rueckgaengig (vorige Fassung zurück); wartet bis etwa 50 s, sonst läuft es in der App zu Ende.
+- Löschen: `idee_loeschen`, nur nach Franks eindeutiger Bestätigung.
 
 ## Alltag
 
