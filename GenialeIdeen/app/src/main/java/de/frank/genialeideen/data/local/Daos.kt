@@ -40,10 +40,34 @@ interface IdeenDao {
         jetzt: Long = System.currentTimeMillis(),
     )
 
-    /** Schreibt die Kurzfassung nur, wenn der Text seither unverändert ist. Kein inhaltliches Ändern. */
+    /** Ändert nur die Überschrift — Text, Kurzfassung, Kategorien und Status bleiben stehen. */
     @Query("UPDATE ideen SET titel = :titel, geaendertAm = :jetzt WHERE id = :id")
     suspend fun setzeTitel(id: Long, titel: String, jetzt: Long = System.currentTimeMillis())
 
+    /**
+     * Glättung eines Jarvis-Diktats: schreibt nur, solange der Text noch das Rohdiktat ist, und
+     * ersetzt den Titel nur, solange er noch der Ersatztitel ist. Ein gezieltes UPDATE statt der
+     * ganzen Zeile — sonst überschriebe ein veralteter Stand einen gerade von Hand gesetzten Titel.
+     */
+    @Query(
+        "UPDATE ideen SET text = :text, originalText = :roh, kurzfassung = '', geaendertAm = :jetzt, " +
+            "titel = CASE WHEN :titel IS NOT NULL AND titel = :ersatz THEN :titel ELSE titel END " +
+            "WHERE id = :id AND text = :roh",
+    )
+    suspend fun setzeGeglaettet(
+        id: Long,
+        roh: String,
+        text: String,
+        titel: String?,
+        ersatz: String,
+        jetzt: Long = System.currentTimeMillis(),
+    ): Int
+
+    /** Setzt den KI-Titel nur, solange noch der Ersatztitel steht. */
+    @Query("UPDATE ideen SET titel = :titel, geaendertAm = :jetzt WHERE id = :id AND titel = :ersatz")
+    suspend fun ersetzeErsatzTitel(id: Long, titel: String, ersatz: String, jetzt: Long = System.currentTimeMillis()): Int
+
+    /** Schreibt die Kurzfassung nur, wenn der Text seither unverändert ist. Kein inhaltliches Ändern. */
     @Query("UPDATE ideen SET kurzfassung = :kurzfassung WHERE id = :id AND text = :text")
     suspend fun setzeKurzfassung(id: Long, text: String, kurzfassung: String): Int
 

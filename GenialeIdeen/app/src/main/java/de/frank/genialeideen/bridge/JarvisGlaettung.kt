@@ -76,15 +76,12 @@ object JarvisGlaettung {
                 c.codexAuthManager.streamChat(IdeenViewModel.TITEL, listOf(ChatTurn("user", roh.take(4000))), modell, stufe),
             )).takeIf { it.isNotBlank() }
         }
-        val repo = c.ideenRepository
-        val idee = repo.lade(id) ?: return
-        // Nur überschreiben, wenn der Text seit dem Anlegen unverändert ist — sonst gewinnt die Bearbeitung von Hand.
-        // Ein inzwischen von Hand geänderter Titel bleibt ebenfalls stehen.
-        if (idee.text == roh && sauber.isNotBlank()) {
-            c.database.ideenDao().aktualisieren(idee.copy(text = sauber, titel = if (idee.titel == ersatzTitel(roh)) titel ?: idee.titel else idee.titel, originalText = roh, kurzfassung = "", geaendertAm = System.currentTimeMillis()))
-        } else if (titel != null && idee.titel == ersatzTitel(roh)) {
-            repo.aendere(idee, titel, idee.text)
-        }
+        val dao = c.database.ideenDao()
+        val ersatz = ersatzTitel(roh)
+        // Gezielte UPDATEs: Text nur, solange er noch das Rohdiktat ist (sonst gewinnt die
+        // Bearbeitung von Hand), Titel nur, solange noch der Ersatztitel steht.
+        val geglaettet = sauber.isNotBlank() && dao.setzeGeglaettet(id, roh, sauber, titel, ersatz) > 0
+        if (!geglaettet && titel != null) dao.ersetzeErsatzTitel(id, titel, ersatz)
     }
 
     fun dreiWoerter(roh: String): String = roh.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty().trim()

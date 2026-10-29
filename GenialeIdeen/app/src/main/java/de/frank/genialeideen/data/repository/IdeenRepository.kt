@@ -119,7 +119,9 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
     }
 
     /** Nur die Überschrift — Text, Kurzfassung, Kategorien und Status bleiben unberührt. */
-    suspend fun setzeTitel(id: Long, titel: String) = ideenDao.setzeTitel(id, titel.trim())
+    suspend fun setzeTitel(id: Long, titel: String) =
+        // Ein Titel ist eine Zeile — eingefügte Umbrüche würden Kopfleiste und Liste sprengen.
+        ideenDao.setzeTitel(id, titel.replace(Regex("\\s+"), " ").trim())
 
     suspend fun setzeKurzfassung(id: Long, text: String, kurzfassung: String): Boolean =
         ideenDao.setzeKurzfassung(id, text, kurzfassung) > 0

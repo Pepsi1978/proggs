@@ -608,8 +608,11 @@ private fun IdeenKopf(
     var frageLoeschen by remember { mutableStateOf(false) }
     // Nur die Überschrift ändern — ohne Umweg über den Bearbeiten-Bildschirm, damit Text und
     // Kurzfassung garantiert stehen bleiben.
-    var titelAendern by remember { mutableStateOf(false) }
+    var titelAendern by rememberSaveable(idee.id) { mutableStateOf(false) }
     if (titelAendern) {
+        // Der Ausgangswert wird beim Öffnen festgehalten: Speichern ohne eigene Änderung soll
+        // keinen Titel zurückschreiben, den der Hintergrund inzwischen ersetzt hat.
+        val ausgang = rememberSaveable(idee.id) { idee.titel }
         var neuerTitel by rememberSaveable(idee.id) { mutableStateOf(idee.titel) }
         AlertDialog(
             onDismissRequest = { titelAendern = false },
@@ -617,7 +620,7 @@ private fun IdeenKopf(
             text = {
                 EingabeFeld(
                     beschriftung = "Titel",
-                    platzhalter = "Höchstens drei Wörter",
+                    platzhalter = "Kurz und treffend",
                     wert = neuerTitel,
                     aufWert = { neuerTitel = it },
                     einzeilig = true,
@@ -628,7 +631,7 @@ private fun IdeenKopf(
                     enabled = neuerTitel.isNotBlank(),
                     onClick = {
                         titelAendern = false
-                        if (neuerTitel.trim() != idee.titel) aufTitel(neuerTitel)
+                        if (neuerTitel.trim() != ausgang.trim()) aufTitel(neuerTitel)
                     },
                 ) { Text("Speichern", color = gold.primaer) }
             },

@@ -373,7 +373,11 @@ class IdeenViewModel(
 
     fun setzeTitel(ideeId: Long, titel: String) {
         if (titel.isBlank()) return
-        viewModelScope.launch { repository.setzeTitel(ideeId, titel) }
+        viewModelScope.launch {
+            runCatching { repository.setzeTitel(ideeId, titel) }.onFailure {
+                zeige(Meldung("Der Titel konnte nicht gespeichert werden.", istFehler = true))
+            }
+        }
     }
 
     fun setzeWeitereKategorien(ideeId: Long, weitere: List<Long>) {
