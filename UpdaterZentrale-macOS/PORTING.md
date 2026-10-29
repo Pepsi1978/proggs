@@ -329,3 +329,15 @@ Hersteller-Installer bei falschem winget-Manifest.
 | 1.3.43/1.3.44 Meldet ein selbst-aktualisierendes CLI „already in progress“: verwaiste Reste derselben Programmdatei samt Nachfahren beenden, dann ein neuer Versuch | ✅ Waise = Elternprozess launchd (PID 1) und mindestens 2 min alt, Suche über den Programmpfad aller Prozesse (nicht pgrep, Claudes Installer heißt „2.1.x“), Nachfahren über `Kommandozeile.prozessbaum`, SIGTERM dann SIGKILL, gezählt nur, was wirklich endete (1.0.22) |
 
 Nicht übernommen: der Umweg über eine `.cmd`-Datei für erhöhte Rechte – auf dem Mac läuft die App nie erhöht.
+
+## G) macOS → Windows 1.3.49 (29.10.2026)
+
+Aus den macOS-Commits 1.0.21, die Windows noch fehlten, übernommen:
+
+| macOS | Windows |
+|---|---|
+| 1.0.21 Übergabe an Claude Code enthält nur die Zeilen dieses Programms aus dem Tagesprotokoll, `\r`-Fortschrittszeilen getrennt, Zeilen auf 2000 Zeichen gekappt | ✅ `Services/ClaudeUebergabe.cs` |
+| 1.0.21 Update-Waisen: Suche über den Programmpfad aller Prozesse, nur ab 2 min Laufzeit, gezählt nur, was wirklich endete | ✅ `Providers/CliAktualisierer.cs` |
+| 1.0.21 Android Studio Zeitlimit 120 Minuten | ✅ `programs.json` |
+
+Nicht übernommen, weil nur macOS: Windscribe per `brew fetch` + eigener Installer (1.0.18/1.0.19), Casks vor dem Beenden vorab laden (1.0.22/1.0.24), Fensteranpassung ans MacBook (1.0.17).

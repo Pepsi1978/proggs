@@ -152,22 +152,33 @@ public static class ClaudeUebergabe
             {
                 try
                 {
-                    var zeilen = Protokollierung.LiesAlleZeilen(bericht.ProtokollDatei).ToList();
+                    // Das Tagesprotokoll teilen sich alle Programme; nur die Zeilen dieses Programms zaehlen.
+                    // \r-Fortschrittsbalken werden zu eigenen Zeilen, damit keine Riesenzeile den Auszug sprengt.
+                    var marke = "[" + eintrag.Id + "]";
+                    var zeilen = Protokollierung.LiesAlleZeilen(bericht.ProtokollDatei)
+                        .SelectMany(z => z.Split('\r'))
+                        .Where(z => z.Contains(marke, StringComparison.Ordinal))
+                        .ToList();
                     var ende = new List<string>();
                     var laenge = 0;
                     var budget = ProtokollZeichen / faelle.Count;
-                    for (var i = zeilen.Count - 1; i >= 0 && laenge + zeilen[i].Length < budget; i--)
+                    for (var i = zeilen.Count - 1; i >= 0; i--)
                     {
-                        ende.Insert(0, zeilen[i]);
-                        laenge += zeilen[i].Length + 1;
+                        var kurz = zeilen[i].Length > 2000 ? zeilen[i][..2000] + " …" : zeilen[i];
+                        if (laenge + kurz.Length >= budget)
+                        {
+                            // Die letzte Zeile ist meist die entscheidende Fehlermeldung: gekuerzt mitnehmen.
+                            if (ende.Count > 0) break;
+                            kurz = kurz[..Math.Min(kurz.Length, Math.Max(200, budget - 2))] + " …";
+                        }
+                        ende.Insert(0, kurz);
+                        laenge += kurz.Length + 1;
+                        if (laenge >= budget) break;
                     }
-                    // Die letzte Zeile ist meist die entscheidende Fehlermeldung: notfalls gekuerzt mitnehmen.
-                    if (ende.Count == 0 && zeilen.Count > 0)
-                        ende.Add(zeilen[^1][..Math.Min(zeilen[^1].Length, Math.Max(200, budget - 2))] + " …");
                     sb.AppendLine();
                     sb.AppendLine(ende.Count < zeilen.Count
-                        ? "Protokoll (letzte " + ende.Count + " von " + zeilen.Count + " Zeilen, den Rest in der Datei oben lesen):"
-                        : "Protokoll:");
+                        ? "Protokoll von " + eintrag.Id + " (letzte " + ende.Count + " von " + zeilen.Count + " Zeilen, den Rest in der Datei oben lesen):"
+                        : "Protokoll von " + eintrag.Id + ":");
                     sb.AppendLine("----");
                     foreach (var z in ende) sb.AppendLine(z);
                     sb.AppendLine("----");

@@ -243,26 +243,30 @@ public sealed class CliAktualisierer : IAktualisierer
     /// Ends leftovers of an earlier update run of the same exe. A run that stalled (Antigravity's
     /// download hung without a connection) outlives the app that started it once that app is
     /// closed; it keeps its update lock open and every later "agy update" ends at once with
-    /// "update already in progress". Only orphans count: an interactive session still has its
-    /// terminal as parent and is left alone. Called only after the tool itself reported a running
-    /// update, so a live session is never touched on a normal run.
+    /// "update already in progress". Only orphans running for at least two minutes count: an
+    /// interactive session still has its terminal as parent, a just-started update may finish.
+    /// Called only after the tool itself reported a running update, so a live session is never
+    /// touched on a normal run.
     /// </summary>
-    /// <returns>How many leftovers were ended.</returns>
+    /// <returns>How many leftovers really ended.</returns>
     private static int VerwaisteBeenden(string exe, IProgress<string> protokoll, CancellationToken abbruch)
     {
         var beendet = 0;
         var alle = Prozessbaum.Schnappschuss();
-        foreach (var kandidat in System.Diagnostics.Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exe)))
+        var eigene = Environment.ProcessId;
+        // By path, not by name: a self-updater's installer may run under another file name.
+        foreach (var kandidat in System.Diagnostics.Process.GetProcesses())
         {
             using (kandidat)
             {
-                if (abbruch.IsCancellationRequested) continue;
+                if (abbruch.IsCancellationRequested || kandidat.Id <= 4 || kandidat.Id == eigene) continue;
                 var baum = new List<System.Diagnostics.Process>();
                 try
                 {
                     _ = kandidat.Handle;                          // identity pinned before any check
                     if (!Prozesspfad.GleicheDatei(Prozesspfad.Lesen(kandidat.Id), exe)) continue;
                     var start = kandidat.StartTime;
+                    if (DateTime.Now - start < TimeSpan.FromMinutes(2)) continue;
                     var knoten = alle.FirstOrDefault(k => k.Pid == kandidat.Id);
                     if (knoten.Pid == 0 || !IstVerwaist(knoten.ElternPid, start, alle)) continue;
 
@@ -272,7 +276,10 @@ public sealed class CliAktualisierer : IAktualisierer
                     kandidat.Kill(entireProcessTree: true);
                     kandidat.WaitForExit(5000);
                     foreach (var kind in baum) kind.WaitForExit(5000);
-                    beendet++;
+                    if (!kandidat.HasExited || baum.Any(k => !k.HasExited))
+                        protokoll.Report($"Prozess {kandidat.Id} ließ sich nicht beenden.");
+                    else
+                        beendet++;
                 }
                 catch (Exception diagAusnahme)
                 {

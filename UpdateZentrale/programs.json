@@ -862,7 +862,7 @@
       "art": "winget",
       "wingetId": "Google.AndroidStudio",
       "exePfad": "C:/Program Files/Android/Android Studio/bin/studio64.exe",
-      "zeitlimitMinuten": 45,
+      "zeitlimitMinuten": 120,
       "prozesse": [
         "studio64"
       ],
