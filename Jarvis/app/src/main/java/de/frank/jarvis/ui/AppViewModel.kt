@@ -1705,6 +1705,44 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---- Eigene Antwort auf eine Rückfrage: einsprechen und von der KI glätten lassen ----
+
+    /** Die KI glättet gerade eine eigene Antwort auf eine Rückfrage. */
+    var antwortFormuliert by mutableStateOf(false); private set
+
+    /**
+     * Mikrofon unter der eigenen Antwort einer Rückfrage: Tippen startet, nochmal Tippen hängt das Gesprochene über [ziel] an.
+     * Läuft wie das Prompt-Diktat (ins Feld, nie an Jarvis), mit derselben Transkription wie überall in Jarvis.
+     */
+    fun antwortMikrofonTippen(ziel: (String) -> Unit) {
+        when {
+            schreibtMit || antwortFormuliert -> Unit
+            nimmtAuf -> aufnahmeBeenden()
+            transkriptionFehlt() != null -> meldung = transkriptionFehlt()
+            else -> { diktatZiel = ziel; promptDiktat = true; mikrofonAnfragen() }
+        }
+    }
+
+    /** KI-Knopf unter der eigenen Antwort: bringt den Text in gutes Deutsch und gibt die neue Fassung an [fertig]. */
+    fun antwortFormulieren(text: String, fertig: (String) -> Unit) {
+        if (text.isBlank() || antwortFormuliert || nimmtAuf || schreibtMit) return
+        if (!modellBereit) { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
+        antwortFormuliert = true
+        viewModelScope.launch {
+            try {
+                val neu = auth.streamChat(ANTWORT_KORREKTUR, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+                if (neu.length < 2) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else fertig(neu)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Logbuch.fehler("Antwort formulieren", e)
+                meldung = e.message ?: "Das Umformulieren hat nicht geklappt."
+            } finally {
+                antwortFormuliert = false
+            }
+        }
+    }
+
     /**
      * Diskette: speichert den Entwurf als neuen Prompt (unten angehängt) oder, beim Bearbeiten, als neuen Text des
      * Prompts; gibt es diesen nicht mehr, wird der Text als neuer Prompt gespeichert. [fertig] nur bei Erfolg.
@@ -3406,6 +3444,13 @@ private const val PROMPT_KORREKTUR =
         "vollständigen, für sich allein verständlichen Auftrag. Behalte jeden inhaltlichen Punkt, jeden Namen, jede Zahl und jede Anforderung, füge nichts hinzu " +
         "und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg und berichtige Hörfehler der Spracherkennung. Absätze oder Aufzählungen " +
         "nur, wenn sie den Auftrag klarer machen. Führe den Auftrag nicht aus. Antworte nur mit dem fertigen Prompt, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+
+/** Auftrag an das Modell für die KI-Glättung einer eigenen Antwort auf eine Rückfrage der Programmier-Sitzung. */
+private const val ANTWORT_KORREKTUR =
+    "Du bringst Franks Antwort auf eine Rückfrage seiner Programmier-Sitzung in gutes Deutsch. Frank hat sie eingesprochen oder eingetippt. " +
+        "Erfasse den Inhalt sinngemäß und schreibe ihn als klare, für sich allein verständliche Antwort an den Programmierer. Behalte jeden inhaltlichen Punkt, " +
+        "jeden Namen, jede Zahl und jede Anforderung, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg und " +
+        "berichtige Hörfehler der Spracherkennung. Beantworte nichts selbst. Antworte nur mit der fertigen Antwort, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel. */
 private const val REGEL_KORREKTUR =

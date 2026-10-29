@@ -27,11 +27,15 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.RadioButtonChecked
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -297,7 +301,7 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
                 if (r.aufgabe.isNotEmpty()) Text(r.aufgabe, Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp), color = f.textLeise, fontSize = 15.sp, lineHeight = 20.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
                 r.fragen.forEachIndexed { i, q ->
                     FrageBlock(
-                        i, r, q, wahl[i].orEmpty(), eigen[i] == true, texte[i].orEmpty(), i in fehlend, aktiv = beantwortbar && !sendet,
+                        vm, i, r, q, wahl[i].orEmpty(), eigen[i] == true, texte[i].orEmpty(), i in fehlend, aktiv = beantwortbar && !sendet,
                         waehlen = { label ->
                             fehlend.remove(i)
                             val bisher = wahl[i].orEmpty()
@@ -343,7 +347,7 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
 
 @Composable
 private fun FrageBlock(
-    i: Int, r: Rueckfrage, q: Frage, wahl: List<String>, eigen: Boolean, text: String, fehlt: Boolean, aktiv: Boolean,
+    vm: AppViewModel, i: Int, r: Rueckfrage, q: Frage, wahl: List<String>, eigen: Boolean, text: String, fehlt: Boolean, aktiv: Boolean,
     waehlen: (String) -> Unit, eigeneWaehlen: () -> Unit, textAendern: (String) -> Unit,
 ) {
     val f = LocalFarben.current
@@ -362,13 +366,14 @@ private fun FrageBlock(
             val gewaehlt = o.label in wahl
             OptionFlaeche(o.kennung, o.label, o.beschreibung, gewaehlt, q.mehrfach, aktiv) { waehlen(o.label) }
             // Freie Rückfrage: Zur gewählten Option darf Frank etwas ergänzen (etwa bei „Freitext“ oder „erst besprechen“).
-            if (r.frei && gewaehlt) Textfeld(text, textAendern, "Ergänzung (optional)", autofokus = false, aktiv = aktiv)
+            if (r.frei && gewaehlt) { Textfeld(text, textAendern, "Ergänzung (optional)", autofokus = false, aktiv = aktiv); SprachLeiste(vm, text, textAendern, aktiv) }
         }
         if (q.optionen.isEmpty()) {
             Textfeld(text, textAendern, "Deine Antwort", autofokus = false, aktiv = aktiv)
+            SprachLeiste(vm, text, textAendern, aktiv)
         } else {
             OptionFlaeche(q.eigeneKennung, "Eigene Antwort", "Freitext, geht genau so an die Sitzung", eigen, q.mehrfach, aktiv) { eigeneWaehlen() }
-            if (eigen) Textfeld(text, textAendern, "Deine Antwort", autofokus = true, aktiv = aktiv)
+            if (eigen) { Textfeld(text, textAendern, "Deine Antwort", autofokus = true, aktiv = aktiv); SprachLeiste(vm, text, textAendern, aktiv) }
         }
     }
 }
@@ -428,5 +433,36 @@ private fun Textfeld(wert: String, aendern: (String) -> Unit, platzhalter: Strin
             minLines = 3,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         )
+    }
+}
+
+/**
+ * Unter dem Antwortfeld: Mikrofon zum Einsprechen (normale Jarvis-Transkription, hängt an den Text an) und KI-Knopf, der den
+ * Text in gutes Deutsch bringt; danach „Rückgängig“, bis Frank selbst weiterschreibt oder -spricht.
+ */
+@Composable
+private fun SprachLeiste(vm: AppViewModel, text: String, aendern: (String) -> Unit, aktiv: Boolean) {
+    if (!aktiv) return
+    val f = LocalFarben.current
+    // Aktueller Text für das Diktat, das erst nach dem Transkribieren ankommt: nie über einen veralteten Stand schreiben.
+    val jetzt by androidx.compose.runtime.rememberUpdatedState(text)
+    var vorKi by remember { mutableStateOf<String?>(null) }
+    var kiFassung by remember { mutableStateOf<String?>(null) }
+    // Rückgängig nur, solange der Text noch die KI-Fassung ist; jede eigene Änderung beendet es.
+    val rueckgaengig = vorKi?.takeIf { text == kiFassung }
+    if (vm.antwortFormuliert) Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Kern(24.dp, f.primaer, aktiv = true)
+        Text("Jarvis formuliert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Rundknopf(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Antwort einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
+            vm.antwortMikrofonTippen { t -> aendern(jetzt.trimEnd().let { if (it.isEmpty()) t else "$it $t" }) }
+        }
+        if (vm.nimmtAuf || vm.schreibtMit) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else "Schreibe mit …", Modifier.weight(1f), color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        else if (rueckgaengig != null) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) { vorKi = null; kiFassung = null; aendern(rueckgaengig) }
+        else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) {
+            val vorher = text
+            vm.antwortFormulieren(vorher) { neu -> if (jetzt == vorher) { kiFassung = neu; vorKi = vorher; aendern(neu) } else vm.meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen." }
+        }
     }
 }
