@@ -152,33 +152,33 @@ public static class ClaudeUebergabe
             {
                 try
                 {
-                    // Das Tagesprotokoll teilen sich alle Programme; nur die Zeilen dieses Programms zaehlen.
-                    // \r-Fortschrittsbalken werden zu eigenen Zeilen, damit keine Riesenzeile den Auszug sprengt.
-                    var marke = "[" + eintrag.Id + "]";
-                    var zeilen = Protokollierung.LiesAlleZeilen(bericht.ProtokollDatei)
-                        .SelectMany(z => z.Split('\r'))
-                        .Where(z => z.Contains(marke, StringComparison.Ordinal))
-                        .ToList();
+                    // The daily log is shared by all programs; only this program's lines count.
+                    var alleZeilen = Protokollierung.LiesAlleZeilen(bericht.ProtokollDatei).ToList();
+                    var zeilen = ZeilenDesProgramms(alleZeilen, eintrag.Id);
+                    var gefiltert = zeilen.Count > 0;
+                    if (!gefiltert) zeilen = alleZeilen;     // nothing tagged in this part: the plain tail as before
                     var ende = new List<string>();
                     var laenge = 0;
                     var budget = ProtokollZeichen / faelle.Count;
                     for (var i = zeilen.Count - 1; i >= 0; i--)
                     {
-                        var kurz = zeilen[i].Length > 2000 ? zeilen[i][..2000] + " …" : zeilen[i];
+                        var kurz = Kappen(zeilen[i], 2000);
                         if (laenge + kurz.Length >= budget)
                         {
-                            // Die letzte Zeile ist meist die entscheidende Fehlermeldung: gekuerzt mitnehmen.
+                            // The last line is usually the decisive error: keep it, shortened.
                             if (ende.Count > 0) break;
-                            kurz = kurz[..Math.Min(kurz.Length, Math.Max(200, budget - 2))] + " …";
+                            kurz = Kappen(zeilen[i], Math.Max(200, budget - 2));
                         }
                         ende.Insert(0, kurz);
                         laenge += kurz.Length + 1;
                         if (laenge >= budget) break;
                     }
+                    var titel = gefiltert ? "Protokoll von " + eintrag.Id
+                                          : "Protokoll (keine Zeilen von " + eintrag.Id + " in dieser Datei, daher das Dateiende)";
                     sb.AppendLine();
                     sb.AppendLine(ende.Count < zeilen.Count
-                        ? "Protokoll von " + eintrag.Id + " (letzte " + ende.Count + " von " + zeilen.Count + " Zeilen, den Rest in der Datei oben lesen):"
-                        : "Protokoll von " + eintrag.Id + ":");
+                        ? titel + " (letzte " + ende.Count + " von " + zeilen.Count + " Zeilen, den Rest in der Datei oben lesen):"
+                        : titel + ":");
                     sb.AppendLine("----");
                     foreach (var z in ende) sb.AppendLine(z);
                     sb.AppendLine("----");
@@ -192,4 +192,41 @@ public static class ClaudeUebergabe
 
         return sb.ToString();
     }
+
+    private static readonly System.Text.RegularExpressions.Regex Zeilenkopf =
+        new(@"^\d\d:\d\d:\d\d  \[(.+?)\]  ", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// The lines that belong to one program. A tagged line ("HH:mm:ss  [id]  ...") names its
+    /// owner; untagged lines -- fragments after a bare \r that ReadLine split off, and the run
+    /// header/footer from LaufBeginnen/LaufBeenden -- belong to the last owner, and the header and
+    /// footer lines that name a program switch the owner themselves.
+    /// </summary>
+    internal static List<string> ZeilenDesProgramms(IReadOnlyList<string> zeilen, string id)
+    {
+        var ergebnis = new List<string>();
+        var eigen = false;
+        for (var i = 0; i < zeilen.Count; i++)
+        {
+            var zeile = zeilen[i];
+            var kopf = Zeilenkopf.Match(zeile);
+            if (kopf.Success)
+                eigen = kopf.Groups[1].Value == id;
+            else if (zeile.StartsWith("Update-Lauf: ", StringComparison.Ordinal))
+            {
+                eigen = zeile.Contains("(" + id + ", ", StringComparison.Ordinal);
+                // The "=====" line just before the header belongs to this run too.
+                if (eigen && i > 0 && zeilen[i - 1].StartsWith("====", StringComparison.Ordinal)) ergebnis.Add(zeilen[i - 1]);
+            }
+            else if (zeile.StartsWith("Programm: ", StringComparison.Ordinal))
+                eigen = zeile.TrimEnd().EndsWith("(" + id + ")", StringComparison.Ordinal);
+
+            if (eigen) ergebnis.Add(zeile);
+        }
+        return ergebnis;
+    }
+
+    /// <summary>At most <paramref name="max"/> characters; the ellipsis only when something was cut.</summary>
+    private static string Kappen(string zeile, int max)
+        => zeile.Length <= max ? zeile : zeile[..Math.Max(0, max - 2)] + " …";
 }

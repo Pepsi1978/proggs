@@ -260,24 +260,40 @@ public sealed class CliAktualisierer : IAktualisierer
             using (kandidat)
             {
                 if (abbruch.IsCancellationRequested || kandidat.Id <= 4 || kandidat.Id == eigene) continue;
+                // Cheap path check with limited rights first: protected processes yield "" here and
+                // are skipped without opening a full-access handle or logging a warning.
+                if (!Prozesspfad.GleicheDatei(Prozesspfad.Lesen(kandidat.Id), exe)) continue;
                 var baum = new List<System.Diagnostics.Process>();
                 try
                 {
-                    _ = kandidat.Handle;                          // identity pinned before any check
+                    _ = kandidat.Handle;                          // identity pinned, then the path again
                     if (!Prozesspfad.GleicheDatei(Prozesspfad.Lesen(kandidat.Id), exe)) continue;
                     var start = kandidat.StartTime;
-                    if (DateTime.Now - start < TimeSpan.FromMinutes(2)) continue;
                     var knoten = alle.FirstOrDefault(k => k.Pid == kandidat.Id);
                     if (knoten.Pid == 0 || !IstVerwaist(knoten.ElternPid, start, alle)) continue;
+                    if (DateTime.Now - start < TimeSpan.FromMinutes(2))
+                    {
+                        protokoll.Report($"Verwaister {Path.GetFileName(exe)}-Prozess {kandidat.Id} läuft erst seit "
+                                         + start.ToString("HH:mm") + " – bleibt bestehen, das Update bitte in ein paar Minuten erneut versuchen.");
+                        continue;
+                    }
 
                     protokoll.Report($"Verwaister {Path.GetFileName(exe)}-Prozess {kandidat.Id} (gestartet "
                                      + start.ToString("dd.MM. HH:mm") + ") hält das Update auf – wird beendet.");
                     baum = Prozessbaum.Erfassen(kandidat);       // descendants may hold the lock too
-                    kandidat.Kill(entireProcessTree: true);
+                    try
+                    {
+                        kandidat.Kill(entireProcessTree: true);
+                    }
+                    catch (Exception killAusnahme)
+                    {
+                        // Some descendant (elevated) refused; the check below tells whether the lock is gone.
+                        Diagnose.Gefangen(killAusnahme, "provider", Schwere.Info);
+                    }
                     kandidat.WaitForExit(5000);
                     foreach (var kind in baum) kind.WaitForExit(5000);
-                    if (!kandidat.HasExited || baum.Any(k => !k.HasExited))
-                        protokoll.Report($"Prozess {kandidat.Id} ließ sich nicht beenden.");
+                    if (!kandidat.HasExited || baum.Any(k => !BeendetSicher(k)))
+                        protokoll.Report($"Prozess {kandidat.Id} ließ sich nicht vollständig beenden.");
                     else
                         beendet++;
                 }
@@ -292,6 +308,13 @@ public sealed class CliAktualisierer : IAktualisierer
             }
         }
         return beendet;
+    }
+
+    /// <summary>HasExited, but a handle without query rights counts as still running.</summary>
+    private static bool BeendetSicher(System.Diagnostics.Process prozess)
+    {
+        try { return prozess.HasExited; }
+        catch { return false; }
     }
 
     /// <summary>Parent gone, or its PID now belongs to a younger process (reused).</summary>
