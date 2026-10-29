@@ -37,18 +37,31 @@ enum Shell {
             aus.fileHandleForReading.readabilityHandler = { ausDaten.anhaengen($0.availableData) }
             err.fileHandleForReading.readabilityHandler = { errDaten.anhaengen($0.availableData) }
             let zeitAus = SammelPuffer()
-            p.terminationHandler = { proc in
+            let einmal = SammelPuffer()
+            // Fortsetzen genau einmal: Prozessende ODER Zeitlimit. Nie readDataToEndOfFile – Hintergrundkinder („&“)
+            // halten die Pipe offen, das Lesen bliebe dann für immer hängen.
+            let fertig: @Sendable (Int32) -> Void = { code in
+                guard einmal.einmalSetzen() else { return }
                 aus.fileHandleForReading.readabilityHandler = nil
                 err.fileHandleForReading.readabilityHandler = nil
-                ausDaten.anhaengen(aus.fileHandleForReading.readDataToEndOfFile())
-                errDaten.anhaengen(err.fileHandleForReading.readDataToEndOfFile())
-                fort.resume(returning: Ergebnis(ausgabe: ausDaten.text, fehler: errDaten.text, code: proc.terminationStatus, zeitAus: zeitAus.istGesetzt))
+                fort.resume(returning: Ergebnis(ausgabe: ausDaten.text, fehler: errDaten.text, code: code, zeitAus: zeitAus.istGesetzt))
+            }
+            p.terminationHandler = { proc in
+                let code = proc.terminationStatus
+                DispatchQueue.global().asyncAfter(deadline: .now() + 0.25) { fertig(code) }   // Restausgabe einsammeln
             }
             do { try p.run() } catch {
                 fort.resume(returning: Ergebnis(ausgabe: "", fehler: error.localizedDescription, code: -1, zeitAus: false)); return
             }
+            let pid = p.processIdentifier
             DispatchQueue.global().asyncAfter(deadline: .now() + sekunden) {
-                if p.isRunning { zeitAus.setzen(); p.terminate() }
+                guard !einmal.istGesetzt else { return }
+                zeitAus.setzen()
+                // Kinder zuerst (z. B. „sleep 999 | cat“), dann die Shell selbst.
+                let k = Process(); k.executableURL = URL(fileURLWithPath: "/usr/bin/pkill"); k.arguments = ["-TERM", "-P", "\(pid)"]
+                try? k.run(); k.waitUntilExit()
+                if p.isRunning { p.terminate() }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 1) { fertig(-15) }
             }
         }
     }
@@ -70,6 +83,8 @@ final class SammelPuffer: @unchecked Sendable {
     func anhaengen(_ d: Data) { lock.lock(); if daten.count < 2_000_000 { daten.append(d) }; lock.unlock() }
     var text: String { lock.lock(); defer { lock.unlock() }; return String(decoding: daten, as: UTF8.self) }
     func setzen() { lock.lock(); gesetzt = true; lock.unlock() }
+    /// true nur beim ersten Aufruf.
+    func einmalSetzen() -> Bool { lock.lock(); defer { lock.unlock() }; if gesetzt { return false }; gesetzt = true; return true }
     var istGesetzt: Bool { lock.lock(); defer { lock.unlock() }; return gesetzt }
 }
 
@@ -125,6 +140,7 @@ enum MacWerkzeuge {
                  schema(["aktion": ("string", "liste | vordergrund | beenden | hart_beenden"), "name": ("string", "Programmname")], pflicht: ["aktion"])) { a in
             let aktion = a["aktion"] as? String ?? "liste"
             let name = (a["name"] as? String ?? "").lowercased()
+            if aktion == "beenden" || aktion == "hart_beenden", let g = await gesperrt() { return g }
             return await MainActor.run {
                 let apps = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
                 if aktion == "liste" {
@@ -146,9 +162,11 @@ enum MacWerkzeuge {
         werkzeug("mac_bildschirm",
                  "Mac: macht ein Bildschirmfoto des Hauptbildschirms und zeigt es dir, damit du siehst, was gerade auf dem Mac los ist (Fenster, Fehlermeldungen, Dialoge).",
                  schema([:])) { _ in
-            let datei = Pfade.temp.appendingPathComponent("bildschirm.png")
+            if let g = await gesperrt() { return g }
+            // JPEG, 1440 px: rund 200 KB statt mehrerer MB PNG – der Verlauf bleibt klein.
+            let datei = Pfade.temp.appendingPathComponent("bildschirm.jpg")
             try? FileManager.default.removeItem(at: datei)
-            let r = await Shell.zsh("screencapture -x -m -t png '\(datei.path)' && sips -Z 1600 '\(datei.path)' >/dev/null", sekunden: 20)
+            let r = await Shell.zsh("screencapture -x -m -t jpg '\(datei.path)' && sips -Z 1440 -s formatOptions 60 '\(datei.path)' >/dev/null", sekunden: 20)
             guard let d = try? Data(contentsOf: datei) else {
                 return WerkzeugErgebnis(text: "Bildschirmfoto ging nicht (Bildschirmaufnahme-Recht für Jarvis in Systemeinstellungen → Datenschutz erteilen). \(r.fehler)", fehler: true)
             }
@@ -169,7 +187,8 @@ enum MacWerkzeuge {
         werkzeug("mac_zwischenablage",
                  "Mac: liest die Zwischenablage oder schreibt Text hinein. aktion = lesen | schreiben.",
                  schema(["aktion": ("string", "lesen | schreiben"), "text": ("string", "Text zum Schreiben")], pflicht: ["aktion"])) { a in
-            await MainActor.run {
+            if let g = await gesperrt() { return g }
+            return await MainActor.run {
                 let pb = NSPasteboard.general
                 if (a["aktion"] as? String) == "schreiben" {
                     pb.clearContents(); pb.setString(a["text"] as? String ?? "", forType: .string)
@@ -188,6 +207,7 @@ enum MacWerkzeuge {
         werkzeug("mac_lautstaerke",
                  "Mac: Lautstärke lesen oder setzen (0–100), stumm schalten oder Stummschaltung aufheben.",
                  schema(["wert": ("integer", "0–100"), "stumm": ("boolean", "true = stumm, false = Ton an")])) { a in
+            if let g = await gesperrt() { return g }
             var skript = ""
             if let w = a["wert"] as? Int { skript += "set volume output volume \(min(max(w, 0), 100))\n" }
             if let s = a["stumm"] as? Bool { skript += "set volume output muted \(s)\n" }
@@ -198,6 +218,7 @@ enum MacWerkzeuge {
                  "Mac: Datei lesen (aktion lesen, bis 200 000 Zeichen), schreiben/überschreiben (schreiben), anhängen (anhaengen) oder Ordner auflisten (liste).",
                  schema(["aktion": ("string", "lesen | schreiben | anhaengen | liste"), "pfad": ("string", "Pfad, ~ erlaubt"),
                          "inhalt": ("string", "Inhalt für schreiben/anhaengen")], pflicht: ["aktion", "pfad"])) { a in
+            if let g = await gesperrt() { return g }
             let pfad = ((a["pfad"] as? String ?? "") as NSString).expandingTildeInPath
             let url = URL(fileURLWithPath: pfad)
             switch a["aktion"] as? String ?? "" {
@@ -206,7 +227,6 @@ enum MacWerkzeuge {
                 let t = String(decoding: d.prefix(400_000), as: UTF8.self)
                 return WerkzeugErgebnis(text: t.count > 200_000 ? String(t.prefix(200_000)) + "\n… [gekürzt]" : t)
             case "schreiben", "anhaengen":
-                if let g = await gesperrt() { return g }
                 let inhalt = a["inhalt"] as? String ?? ""
                 try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
                 if (a["aktion"] as? String) == "anhaengen", let h = try? FileHandle(forWritingTo: url) {

@@ -119,6 +119,7 @@ struct EinstellungenAnsicht: View {
                 }
                 zeile("Tastenkürzel", "⌥⌘J überall: sprechen · ⌥⌘K: Jarvis öffnen · im Fenster ⌘D sprechen, ⌘L Live, ⌘N neues Gespräch.") {
                     Toggle("", isOn: $einst.globalesKuerzel).toggleStyle(.switch)
+                        .onChange(of: einst.globalesKuerzel) { _, an in an ? AppSteuerung.shared.kuerzelRegistrieren() : AppSteuerung.shared.kuerzelAbmelden() }
                 }
                 HStack(spacing: 8) {
                     Circle().fill(Weckwort.shared.lauscht ? Farbe.gruen : Farbe.text3).frame(width: 8, height: 8)
@@ -159,7 +160,7 @@ struct EinstellungenAnsicht: View {
             GlasKarte {
                 VStack(alignment: .leading, spacing: 8) {
                     KartenTitel(symbol: "bolt.shield.fill", titel: "Vollzugriff", farbe: Farbe.orange)
-                    zeile("Jarvis darf am Mac alles", "Befehle, Programme, Dateien, Tastatur und Terminal ohne Rückfrage – wie „Bypass Permissions“. Aus = nur lesen und öffnen.") {
+                    zeile("Jarvis darf am Mac alles", "Befehle, Programme, Dateien, Tastatur, Bildschirm und Terminal ohne Rückfrage – wie „Bypass Permissions“. Aus = nur Programme und Adressen öffnen, Mitteilungen, Status.") {
                         Toggle("", isOn: $einst.vollzugriff).toggleStyle(.switch)
                     }
                 }

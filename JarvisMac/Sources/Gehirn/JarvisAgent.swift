@@ -78,16 +78,19 @@ final class JarvisAgent {
     @discardableResult
     func frage(_ text: String, in g: Gespraech, gesprochen: Bool = false, bild: Data? = nil,
                onText: ((String) -> Void)? = nil) async -> String {
+        // Ein Gespräch, eine Werkzeugschleife: sonst landet eine neue Frage zwischen tool_use und tool_result.
+        while g.arbeitet { try? await Task.sleep(for: .milliseconds(200)) }
         g.arbeitet = true
         defer { g.arbeitet = false; g.speichern() }
         GespraechsSpeicher.shared.nachOben(g)
 
         g.nachrichten.append(Nachricht(rolle: .frank, text: text, gesprochen: gesprochen, bild: bild))
         var inhalt: [JSONObjekt] = []
-        if let bild { inhalt.append(["type": "image", "source": ["type": "base64", "media_type": "image/png", "data": bild.base64EncodedString()]]) }
+        if let bild { inhalt.append(Self.bildBlock(bild)) }
         inhalt.append(["type": "text", "text": "[\(Self.zeitstempel())\(gesprochen ? ", gesprochen" : "")] \(text)"])
         g.verlauf.append(["role": "user", "content": inhalt])
 
+        Self.verdichte(g)
         let jarvisIndex = g.nachrichten.count
         g.nachrichten.append(Nachricht(rolle: .jarvis, text: "", laeuft: true))
 
@@ -176,7 +179,7 @@ final class JarvisAgent {
                 if t.count > 60_000 { t = String(t.prefix(60_000)) + "\n… [gekürzt]" }
                 var bl: [JSONObjekt] = [["type": "text", "text": t]]
                 if let png = erg.bildPNG {
-                    bl.append(["type": "image", "source": ["type": "base64", "media_type": "image/png", "data": png.base64EncodedString()]])
+                    bl.append(Self.bildBlock(png))
                 }
                 var r: JSONObjekt = ["type": "tool_result", "tool_use_id": auf["id"] as? String ?? "", "content": bl]
                 if erg.fehler { r["is_error"] = true }
@@ -203,6 +206,45 @@ final class JarvisAgent {
             return await w.ausfuehren(args)
         }
         return await McpKlient.shared.rufe(name, args)
+    }
+
+    static func bildBlock(_ d: Data) -> JSONObjekt {
+        let typ = d.starts(with: [0xFF, 0xD8]) ? "image/jpeg" : (d.starts(with: [0x47, 0x49, 0x46]) ? "image/gif" : "image/png")
+        return ["type": "image", "source": ["type": "base64", "media_type": typ, "data": d.base64EncodedString()]]
+    }
+
+    /// Hält lange Gespräche sendefähig: Wird der Verlauf zu groß (> 6 MB oder grob > 500 000 Tokens), ersetzt Jarvis Bilder
+    /// und sehr lange Werkzeugergebnisse in älteren Runden durch kurze Platzhalter. Dabei fallen auch alle Denkblöcke vor der
+    /// letzten Frage weg – ein geänderter Verlauf darf keine alten Denkblöcke mehr tragen (sonst lehnt die API ab).
+    static func verdichte(_ g: Gespraech) {
+        let groesse = JSON.daten(g.verlauf).count
+        guard groesse > 6_000_000 else { return }
+        let behalte = 6   // jüngste Einträge unverändert
+        let grenze = max(0, g.verlauf.count - behalte)
+        func kuerze(_ bloecke: [JSONObjekt]) -> [JSONObjekt] {
+            bloecke.compactMap { b in
+                var b = b
+                switch b["type"] as? String {
+                case "image": return ["type": "text", "text": "[Bild aus einer früheren Runde entfernt]"]
+                case "thinking", "redacted_thinking": return nil
+                case "tool_result":
+                    if let inner = b["content"] as? [JSONObjekt] { b["content"] = kuerze(inner) }
+                    return b
+                case "text":
+                    if let t = b["text"] as? String, t.count > 8000 { b["text"] = String(t.prefix(8000)) + "\n… [gekürzt]" }
+                    return b
+                default: return b
+                }
+            }
+        }
+        for i in g.verlauf.indices {
+            guard var inhalt = g.verlauf[i]["content"] as? [JSONObjekt] else { continue }
+            if i < grenze { inhalt = kuerze(inhalt) }
+            else { inhalt = inhalt.filter { !["thinking", "redacted_thinking"].contains($0["type"] as? String ?? "") } }
+            if inhalt.isEmpty { inhalt = [["type": "text", "text": "…"]] }
+            g.verlauf[i]["content"] = inhalt
+        }
+        log("gehirn", "Verlauf verdichtet: \(groesse / 1000) kB → \(JSON.daten(g.verlauf).count / 1000) kB")
     }
 
     static func kurz(_ name: String, _ args: JSONObjekt) -> String {

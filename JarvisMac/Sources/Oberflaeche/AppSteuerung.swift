@@ -38,7 +38,8 @@ final class AppSteuerung {
     var entwurf = ""
     var handyVerbunden = false
     var handyVersion = ""
-    private var hotKeyRef: EventHotKeyRef?
+    private var hotKeyRefs: [EventHotKeyRef] = []
+    private var hotKeyHandler = false
     private var hud: SprachHUD?
 
     func hochfahren() {
@@ -113,24 +114,32 @@ final class AppSteuerung {
 
     // MARK: Globales Tastenkürzel ⌥⌘J = sprechen, ⌥⌘K = Fenster
 
-    private func kuerzelRegistrieren() {
-        var typ = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(GetApplicationEventTarget(), { _, ereignis, _ in
-            var id = EventHotKeyID()
-            GetEventParameter(ereignis, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
-                              MemoryLayout<EventHotKeyID>.size, nil, &id)
-            MainActor.assumeIsolated {
-                if id.id == 1 { AppSteuerung.shared.kuerzelSprechen() } else { AppSteuerung.shared.fensterZeigen() }
-            }
-            return noErr
-        }, 1, &typ, nil, nil)
-        var ref: EventHotKeyRef?
-        RegisterEventHotKey(UInt32(kVK_ANSI_J), UInt32(cmdKey | optionKey), EventHotKeyID(signature: OSType(0x4A525653), id: 1),
-                            GetApplicationEventTarget(), 0, &ref)
-        hotKeyRef = ref
-        var ref2: EventHotKeyRef?
-        RegisterEventHotKey(UInt32(kVK_ANSI_K), UInt32(cmdKey | optionKey), EventHotKeyID(signature: OSType(0x4A525653), id: 2),
-                            GetApplicationEventTarget(), 0, &ref2)
+    func kuerzelRegistrieren() {
+        guard hotKeyRefs.isEmpty else { return }
+        if !hotKeyHandler {
+            hotKeyHandler = true
+            var typ = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+            InstallEventHandler(GetApplicationEventTarget(), { _, ereignis, _ in
+                var id = EventHotKeyID()
+                GetEventParameter(ereignis, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
+                                  MemoryLayout<EventHotKeyID>.size, nil, &id)
+                MainActor.assumeIsolated {
+                    if id.id == 1 { AppSteuerung.shared.kuerzelSprechen() } else { AppSteuerung.shared.fensterZeigen() }
+                }
+                return noErr
+            }, 1, &typ, nil, nil)
+        }
+        for (taste, nr) in [(kVK_ANSI_J, UInt32(1)), (kVK_ANSI_K, UInt32(2))] {
+            var ref: EventHotKeyRef?
+            RegisterEventHotKey(UInt32(taste), UInt32(cmdKey | optionKey), EventHotKeyID(signature: OSType(0x4A525653), id: nr),
+                                GetApplicationEventTarget(), 0, &ref)
+            if let ref { hotKeyRefs.append(ref) }
+        }
+    }
+
+    func kuerzelAbmelden() {
+        hotKeyRefs.forEach { UnregisterEventHotKey($0) }
+        hotKeyRefs = []
     }
 
     func kuerzelSprechen() {

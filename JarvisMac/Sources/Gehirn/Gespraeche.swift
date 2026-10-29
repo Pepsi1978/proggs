@@ -33,7 +33,8 @@ final class Gespraech: Identifiable {
     /// Live-Gedächtnis des Handys zum Gesprächsbeginn (bleibt im Gespräch fest, damit der Prompt-Cache trägt).
     var kontext: String
     var arbeitet = false
-    var gelernt = false
+    /// Bis zu dieser Nachrichtenzahl hat „Lernen am Mac“ das Gespräch schon ausgewertet.
+    var gelerntBis = 0
 
     init(id: UUID = UUID(), titel: String = "Neues Gespräch") {
         self.id = id; self.titel = titel; erstellt = Date(); geaendert = Date()
@@ -42,7 +43,7 @@ final class Gespraech: Identifiable {
 
     private struct Datei: Codable {
         var id: UUID; var titel: String; var erstellt: Date; var geaendert: Date
-        var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelernt: Bool?
+        var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelerntBis: Int?
     }
 
     var dateiURL: URL { Pfade.gespraeche.appendingPathComponent("\(id.uuidString).json") }
@@ -50,7 +51,7 @@ final class Gespraech: Identifiable {
     func speichern() {
         geaendert = Date()
         let d = Datei(id: id, titel: titel, erstellt: erstellt, geaendert: geaendert, nachrichten: nachrichten,
-                      verlauf: JSON.daten(verlauf), kontext: kontext, gelernt: gelernt)
+                      verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis)
         if let daten = try? JSONEncoder().encode(d) { try? daten.write(to: dateiURL, options: .atomic) }
     }
 
@@ -60,7 +61,7 @@ final class Gespraech: Identifiable {
         g.erstellt = d.erstellt; g.geaendert = d.geaendert
         g.nachrichten = d.nachrichten.map { var n = $0; n.laeuft = false; return n }
         g.verlauf = (JSON.wert(d.verlauf) as? [JSONObjekt]) ?? []
-        g.kontext = d.kontext; g.gelernt = d.gelernt ?? false
+        g.kontext = d.kontext; g.gelerntBis = d.gelerntBis ?? 0
         return g
     }
 }

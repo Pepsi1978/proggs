@@ -131,7 +131,8 @@ import Observation
             }
             geplant += 1
             s.scheduleBuffer(puffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
-                Task { @MainActor in self?.gespielt += 1 }
+                // Nur Rückrufe der eigenen Wiedergabe zählen – stopp() löst die alten nachträglich aus.
+                Task { @MainActor in if self?.generation == meine { self?.gespielt += 1 } }
             }
             if !s.isPlaying { s.play() }
         }
@@ -565,6 +566,9 @@ import Observation
         log("sprache", "Sprachschleife gestartet")
         while lauf == meiner && !Task.isCancelled {
             zustand = .hoert
+            // Ein gerade abgebrochenes Diktat braucht einen Moment, bis es frei ist.
+            var warte = 0
+            while Diktat.shared.aktiv && warte < 40 { try? await Task.sleep(for: .milliseconds(50)); warte += 1 }
             guard let text = await Diktat.shared.hoereBisStille(maxSekunden: 30) else { break }
             guard lauf == meiner, !Task.isCancelled else { break }
             if Self.istEnde(text) {

@@ -25,6 +25,7 @@ actor McpKlient {
     private(set) var anweisungen = ""
     private(set) var serverVersion = ""
     private var naechsteId = 1
+    private var verbundeneAdresse = ""
 
     private var adresse: String { get async { await MainActor.run { Einstellungen.shared.zugang.relay } } }
 
@@ -77,6 +78,8 @@ actor McpKlient {
 
     /// Werkzeugliste des Handys, 10 Minuten zwischengespeichert, nach Namen sortiert (stabil für den Prompt-Cache).
     func werkzeuge(frisch: Bool = false) async -> [WerkzeugDefinition] {
+        let a = await adresse
+        if a != verbundeneAdresse { werkzeugCache = []; anweisungen = ""; verbundeneAdresse = a }   // Relay gewechselt
         if !frisch, !werkzeugCache.isEmpty, Date().timeIntervalSince(cacheZeit) < 600 { return werkzeugCache }
         do {
             if anweisungen.isEmpty { try await verbinden() }
@@ -90,6 +93,8 @@ actor McpKlient {
             if !liste.isEmpty { werkzeugCache = liste; cacheZeit = Date() }
             log("system", "Handy-Jarvis verbunden: \(liste.count) Werkzeuge (\(serverVersion))")
         } catch {
+            // Nicht mehr erreichbar: keinen alten Stand als „verbunden“ melden.
+            werkzeugCache = []
             log("fehler", "Handy-Jarvis nicht erreichbar: \(error.localizedDescription)")
         }
         return werkzeugCache

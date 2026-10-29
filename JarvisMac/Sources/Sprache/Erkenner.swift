@@ -237,9 +237,12 @@ final class ApfelErkenner: @unchecked Sendable {
             fortsetzung?.finish()
             fortsetzung = nil
             if abschliessen {
-                try? await a.finalizeAndFinishThroughEndOfInput()
                 let aufgabe = ergebnisAufgabe
-                _ = await mitFrist(3) { await aufgabe?.value }
+                let fertig = await mitFrist(5) {
+                    try? await a.finalizeAndFinishThroughEndOfInput()
+                    await aufgabe?.value
+                }
+                if !fertig { await a.cancelAndFinishNow(); ergebnisAufgabe?.cancel() }
             } else {
                 await a.cancelAndFinishNow()
                 ergebnisAufgabe?.cancel()
@@ -263,14 +266,29 @@ final class ApfelErkenner: @unchecked Sendable {
     }
 }
 
-/// Wartet höchstens `sekunden` auf eine Arbeit.
+/// Wartet höchstens `sekunden` auf eine Arbeit. Ungebundene Aufgaben statt TaskGroup: Eine TaskGroup wartet beim Verlassen
+/// auf alle Kinder, und eine hängende Continuation endet durch cancelAll nicht – die Frist wäre wirkungslos.
 func mitFrist(_ sekunden: Double, _ arbeit: @escaping @Sendable () async -> Void) async -> Bool {
-    await withTaskGroup(of: Bool.self) { g in
-        g.addTask { await arbeit(); return true }
-        g.addTask { try? await Task.sleep(for: .seconds(sekunden)); return false }
-        let erstes = await g.next() ?? false
-        g.cancelAll()
-        return erstes
+    let signal = EinmalSignal()
+    return await withCheckedContinuation { (k: CheckedContinuation<Bool, Never>) in
+        signal.setze(k)
+        Task { await arbeit(); signal.melde(true) }
+        Task { try? await Task.sleep(for: .seconds(sekunden)); signal.melde(false) }
+    }
+}
+
+final class EinmalSignal: @unchecked Sendable {
+    private let lock = NSLock()
+    private var k: CheckedContinuation<Bool, Never>?
+    private var fertig = false
+    func setze(_ k: CheckedContinuation<Bool, Never>) { lock.withLock { self.k = k } }
+    func melde(_ wert: Bool) {
+        let k: CheckedContinuation<Bool, Never>? = lock.withLock {
+            guard !fertig else { return nil }
+            fertig = true
+            let x = self.k; self.k = nil; return x
+        }
+        k?.resume(returning: wert)
     }
 }
 

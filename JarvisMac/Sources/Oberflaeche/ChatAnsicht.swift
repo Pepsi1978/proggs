@@ -43,7 +43,7 @@ struct ChatAnsicht: View {
         .onDrop(of: [.image, .fileURL], isTargeted: nil) { anbieter in
             guard let a = anbieter.first else { return false }
             _ = a.loadDataRepresentation(for: .image) { d, _ in
-                if let d, let png = NSImage(data: d)?.pngDaten() { Task { @MainActor in anhang = png } }
+                if let d, let jpg = NSImage(data: d)?.jpgDaten() { Task { @MainActor in anhang = jpg } }
             }
             return true
         }
@@ -178,18 +178,28 @@ struct ChatAnsicht: View {
     private func bildWaehlen() {
         let p = NSOpenPanel()
         p.allowedContentTypes = [.image]
-        if p.runModal() == .OK, let u = p.url, let b = NSImage(contentsOf: u) { anhang = b.pngDaten() }
+        if p.runModal() == .OK, let u = p.url, let b = NSImage(contentsOf: u) { anhang = b.jpgDaten() }
     }
 
     static func bildschirmfoto() async -> Data? {
-        let datei = Pfade.temp.appendingPathComponent("anhang.png")
+        let datei = Pfade.temp.appendingPathComponent("anhang.jpg")
         try? FileManager.default.removeItem(at: datei)
-        _ = await Shell.zsh("screencapture -x -m -t png '\(datei.path)' && sips -Z 1600 '\(datei.path)' >/dev/null", sekunden: 20)
+        _ = await Shell.zsh("screencapture -x -m -t jpg '\(datei.path)' && sips -Z 1440 -s formatOptions 60 '\(datei.path)' >/dev/null", sekunden: 20)
         return try? Data(contentsOf: datei)
     }
 }
 
 extension NSImage {
+    /// Verkleinert auf höchstens 1600 px und speichert als JPEG – hält Anhänge im Verlauf klein.
+    func jpgDaten() -> Data? {
+        let gross = max(size.width, size.height)
+        let f = gross > 1600 ? 1600 / gross : 1
+        let ziel = NSSize(width: size.width * f, height: size.height * f)
+        let neu = NSImage(size: ziel)
+        neu.lockFocus(); draw(in: NSRect(origin: .zero, size: ziel)); neu.unlockFocus()
+        guard let tiff = neu.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        return rep.representation(using: .jpeg, properties: [.compressionFactor: 0.7])
+    }
     func pngDaten() -> Data? {
         guard let tiff = tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
         return rep.representation(using: .png, properties: [:])

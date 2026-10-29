@@ -19,8 +19,12 @@ final class Lernen {
     }
 
     private func lerne(aus g: Gespraech) async {
-        guard !g.arbeitet, g.nachrichten.contains(where: { $0.rolle == .frank }) else { return }
-        let verlauf = g.nachrichten.suffix(30).map { "\($0.rolle == .frank ? "Frank" : "Jarvis"): \($0.text.prefix(1500))" }.joined(separator: "\n")
+        // Läuft gerade etwas, später noch einmal versuchen statt diese Phase zu verlieren.
+        if g.arbeitet { merkeAktivitaet(g); return }
+        let neu = Array(g.nachrichten.dropFirst(min(g.gelerntBis, g.nachrichten.count)))
+        guard neu.contains(where: { $0.rolle == .frank }) else { return }
+        let stand = g.nachrichten.count
+        let verlauf = neu.suffix(30).map { "\($0.rolle == .frank ? "Frank" : "Jarvis"): \($0.text.prefix(1500))" }.joined(separator: "\n")
         let bekannt = await McpKlient.shared.text("jarvis_gemerktes_lesen", [:]) ?? ""
         let prompt = """
         Gespräch zwischen Frank und Jarvis am Mac:
@@ -36,6 +40,7 @@ final class Lernen {
         Ist nichts Neues dabei: {"eintraege":[]}
         """
         guard let antwort = await Kurzauftrag.frage(prompt, modell: "claude-sonnet-5-5") else { return }
+        defer { g.gelerntBis = stand; g.speichern() }
         guard let a = antwort.firstIndex(of: "{"), let b = antwort.lastIndex(of: "}"), a < b,
               let o = JSON.objekt(String(antwort[a...b])), let liste = o["eintraege"] as? [JSONObjekt] else { return }
         for e in liste.prefix(5) {
@@ -44,7 +49,7 @@ final class Lernen {
             let r = await McpKlient.shared.rufe("jarvis_merken", ["art": art, "text": text + " (gelernt am Mac)"])
             log("system", "Gelernt am Mac (\(art)): \(text) → \(r.fehler ? "Fehler" : "gemerkt")")
         }
-        g.gelernt = true
+        g.gelerntBis = stand
         g.speichern()
     }
 }
