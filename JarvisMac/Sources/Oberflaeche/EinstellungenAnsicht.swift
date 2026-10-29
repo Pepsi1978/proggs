@@ -1,0 +1,336 @@
+import AVFoundation
+import SwiftUI
+
+struct EinstellungenAnsicht: View {
+    @State private var einst = Einstellungen.shared
+    @State private var reiter = EinstellungenAnsicht.startReiter
+    @MainActor static var startReiter = "gehirn"
+
+    private let reiterListe: [(String, String, String)] = [
+        ("gehirn", "Jarvis' Kopf", "brain"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
+        ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("konten", "Konten", "key.fill"), ("ueber", "Über", "info.circle.fill"),
+    ]
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                let _ = { EinstellungenAnsicht.startReiter = "gehirn" }()
+                Text("Einstellungen").font(.jarvis(24, .bold)).padding(.bottom, 14).padding(.leading, 8)
+                ForEach(reiterListe, id: \.0) { r in
+                    LeistenEintrag(symbol: r.2, titel: r.1, aktiv: reiter == r.0) { reiter = r.0 }
+                }
+                Spacer()
+            }
+            .frame(width: 230)
+            .padding(.top, 40).padding(.horizontal, 18)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    switch reiter {
+                    case "gehirn": gehirn
+                    case "stimme": stimme
+                    case "sprache": sprache
+                    case "live": live
+                    case "mac": mac
+                    case "konten": KontenAnsicht()
+                    default: ueber
+                    }
+                }
+                .padding(.horizontal, 30).padding(.top, 44).padding(.bottom, 30)
+                .frame(maxWidth: 780, alignment: .leading)
+            }
+        }
+    }
+
+    private func zeile<V: View>(_ titel: String, _ beschreibung: String = "", @ViewBuilder _ inhalt: () -> V) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(titel).font(.jarvis(14, .semibold))
+                if !beschreibung.isEmpty { Text(beschreibung).font(.jarvis(12)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true) }
+            }
+            Spacer(minLength: 20)
+            inhalt()
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var gehirn: some View {
+        GlasKarte {
+            VStack(alignment: .leading, spacing: 8) {
+                KartenTitel(symbol: "brain", titel: "Jarvis' Kopf")
+                zeile("Modell", "Claude über deinen Anthropic-Schlüssel oder GPT über dein ChatGPT-Konto.") {
+                    Picker("", selection: $einst.modell) { ForEach(ModellWahl.alle) { Text($0.name).tag($0.id) } }.frame(width: 220)
+                }
+                zeile("Denkstufe", "Höher = gründlicher, aber langsamer und teurer.") {
+                    Picker("", selection: $einst.effort) { ForEach(["low", "medium", "high", "xhigh", "max"], id: \.self) { Text($0).tag($0) } }
+                        .pickerStyle(.segmented).frame(width: 300)
+                }
+                zeile("Schrittlimit je Anfrage", "Wie viele Werkzeugschritte Jarvis höchstens am Stück macht (0 = unbegrenzt).") {
+                    Stepper("\(einst.schrittLimit)", value: $einst.schrittLimit, in: 0...200, step: 10).frame(width: 120)
+                }
+                zeile("Lernen am Mac", "Ruht ein Gespräch 10 Minuten, gibt Jarvis neue dauerhafte Angaben von dir ins gemeinsame Gedächtnis.") {
+                    Toggle("", isOn: $einst.lernenAn).toggleStyle(.switch)
+                }
+            }
+        }
+    }
+
+    private var stimme: some View {
+        GlasKarte {
+            VStack(alignment: .leading, spacing: 8) {
+                KartenTitel(symbol: "speaker.wave.3.fill", titel: "Stimme")
+                zeile("Antworten vorlesen", "Im Sprachgespräch liest Jarvis seine Antworten vor.") { Toggle("", isOn: $einst.vorlesen).toggleStyle(.switch) }
+                zeile("Stimme", "Google Chirp 3 HD – ohne Schlüssel die beste deutsche Systemstimme.") {
+                    Picker("", selection: $einst.stimme) {
+                        ForEach(Stimme.shared.stimmen, id: \.id) { Text($0.name).tag($0.id) }
+                    }
+                    .frame(width: 240)
+                }
+                zeile("Tempo") {
+                    Slider(value: $einst.tempo, in: 0.8...1.4, step: 0.05).frame(width: 200)
+                    Text(String(format: "%.2f×", einst.tempo)).font(.jarvis(12)).frame(width: 46)
+                }
+                HStack(spacing: 10) {
+                    KapselKnopf(symbol: "play.fill", titel: "Hörprobe", hervorgehoben: true) {
+                        Task { await Stimme.shared.sprich("Hallo Frank, ich bin Jarvis. Heute ist der \(ZentraleAnsicht.datumZeile), es ist \(Date().formatted(date: .omitted, time: .shortened)) Uhr.") }
+                    }
+                    KapselKnopf(symbol: "stop.fill", titel: "Stopp") { Stimme.shared.stopp() }
+                }
+            }
+        }
+    }
+
+    private var sprache: some View {
+        GlasKarte {
+            VStack(alignment: .leading, spacing: 8) {
+                KartenTitel(symbol: "mic.fill", titel: "Sprache & Weckwort")
+                zeile("„\(einst.weckwort)“", "Jarvis lauscht am Mac auf das Weckwort, auch wenn das Fenster zu ist.") {
+                    Toggle("", isOn: $einst.weckwortAn).toggleStyle(.switch)
+                        .onChange(of: einst.weckwortAn) { _, an in an ? Weckwort.shared.starten() : Weckwort.shared.stoppen() }
+                }
+                zeile("Weckwort", "z. B. „Hey Jarvis“ oder „Okay Computer“.") {
+                    TextField("", text: $einst.weckwort).textFieldStyle(.roundedBorder).frame(width: 200)
+                        .onSubmit { Weckwort.shared.stoppen(); if einst.weckwortAn { Weckwort.shared.starten() } }
+                }
+                zeile("Transkription", "Apple: offline auf dem Mac, kostenlos. Groq Whisper: sehr genau, braucht Netz und Schlüssel.") {
+                    Picker("", selection: $einst.transkription) {
+                        Text("Apple (offline)").tag("apple"); Text("Groq Whisper").tag("groq")
+                    }
+                    .pickerStyle(.segmented).frame(width: 260)
+                }
+                zeile("Tastenkürzel", "⌥⌘J überall: sprechen · ⌥⌘K: Jarvis öffnen · im Fenster ⌘D sprechen, ⌘L Live, ⌘N neues Gespräch.") {
+                    Toggle("", isOn: $einst.globalesKuerzel).toggleStyle(.switch)
+                }
+                HStack(spacing: 8) {
+                    Circle().fill(Weckwort.shared.lauscht ? Farbe.gruen : Farbe.text3).frame(width: 8, height: 8)
+                    Text(Weckwort.shared.lauscht ? "Weckwort lauscht gerade" : "Weckwort lauscht nicht").font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                }
+            }
+        }
+    }
+
+    private var live: some View {
+        GlasKarte {
+            VStack(alignment: .leading, spacing: 8) {
+                KartenTitel(symbol: "waveform", titel: "Live-Gespräch")
+                zeile("Anbieter", "Gleichzeitig zuhören und sprechen, mit deinen eigenen API-Schlüsseln.") {
+                    Picker("", selection: $einst.liveAnbieter) { Text("OpenAI").tag("openai"); Text("Gemini").tag("gemini") }
+                        .pickerStyle(.segmented).frame(width: 200)
+                }
+                zeile("OpenAI-Modell") {
+                    Picker("", selection: $einst.liveModellOpenAI) { ForEach(LiveOptionen.openAIModelle, id: \.id) { Text($0.name).tag($0.id) } }.frame(width: 260)
+                }
+                zeile("OpenAI-Stimme") {
+                    Picker("", selection: $einst.liveStimmeOpenAI) {
+                        ForEach(einst.liveModellOpenAI == "gpt-live-1" ? LiveOptionen.liveStimmen : LiveOptionen.realtimeStimmen, id: \.id) { Text($0.name).tag($0.id) }
+                    }.frame(width: 260)
+                }
+                zeile("Gemini-Modell") {
+                    Picker("", selection: $einst.liveModellGemini) { ForEach(LiveOptionen.geminiModelle, id: \.id) { Text($0.name).tag($0.id) } }.frame(width: 260)
+                }
+                zeile("Gemini-Stimme") {
+                    Picker("", selection: $einst.liveStimmeGemini) { ForEach(LiveOptionen.geminiStimmen, id: \.id) { Text("\($0.id) – \($0.name)").tag($0.id) } }.frame(width: 260)
+                }
+            }
+        }
+    }
+
+    private var mac: some View {
+        VStack(spacing: 18) {
+            GlasKarte {
+                VStack(alignment: .leading, spacing: 8) {
+                    KartenTitel(symbol: "bolt.shield.fill", titel: "Vollzugriff", farbe: Farbe.orange)
+                    zeile("Jarvis darf am Mac alles", "Befehle, Programme, Dateien, Tastatur und Terminal ohne Rückfrage – wie „Bypass Permissions“. Aus = nur lesen und öffnen.") {
+                        Toggle("", isOn: $einst.vollzugriff).toggleStyle(.switch)
+                    }
+                }
+            }
+            GlasKarte {
+                VStack(alignment: .leading, spacing: 10) {
+                    KartenTitel(symbol: "checkmark.shield.fill", titel: "Rechte von macOS", farbe: Farbe.gruen)
+                    Text("Einmal erteilen, dann bleibt es (Jarvis ist fest signiert).").font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    RechtZeile(titel: "Mikrofon", text: "Für Weckwort, Diktat und Live.", status: Self.mikrofonStatus) {
+                        AVCaptureDevice.requestAccess(for: .audio) { _ in }
+                    } oeffnen: { Self.oeffne("Privacy_Microphone") }
+                    RechtZeile(titel: "Spracherkennung", text: "Für die Erkennung direkt auf dem Mac.", status: nil, anfragen: nil) { Self.oeffne("Privacy_SpeechRecognition") }
+                    RechtZeile(titel: "Bedienungshilfen", text: "Damit Jarvis tippen und klicken kann.", status: AXIsProcessTrusted() ? "erteilt" : "fehlt") {
+                        let opt = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+                        _ = AXIsProcessTrustedWithOptions(opt)
+                    } oeffnen: { Self.oeffne("Privacy_Accessibility") }
+                    RechtZeile(titel: "Bildschirmaufnahme", text: "Damit Jarvis deinen Bildschirm ansehen kann.", status: CGPreflightScreenCaptureAccess() ? "erteilt" : "fehlt") {
+                        _ = CGRequestScreenCaptureAccess()
+                    } oeffnen: { Self.oeffne("Privacy_ScreenCapture") }
+                    RechtZeile(titel: "Automation", text: "Terminal, ChatGPT, System Events steuern – fragt macOS beim ersten Mal selbst.", status: nil, anfragen: nil) {
+                        Self.oeffne("Privacy_Automation")
+                    }
+                }
+            }
+        }
+    }
+
+    static var mikrofonStatus: String {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized: return "erteilt"
+        case .denied, .restricted: return "verweigert"
+        default: return "offen"
+        }
+    }
+
+    static func oeffne(_ bereich: String) {
+        if let u = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(bereich)") { NSWorkspace.shared.open(u) }
+    }
+
+    private var ueber: some View {
+        GlasKarte {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 16) {
+                    JarvisKugel(pegel: 0, zustand: .ruhe, groesse: 70)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Jarvis für macOS").font(.jarvis(20, .bold))
+                        Text("Version \(AppInfo.version) · Stand \(AppInfo.stand)").font(.jarvis(13)).foregroundStyle(Farbe.text2)
+                        Text("Handy-Jarvis: \(AppSteuerung.shared.handyVerbunden ? "verbunden (\(AppSteuerung.shared.handyVersion))" : "nicht erreichbar")")
+                            .font(.jarvis(13)).foregroundStyle(Farbe.text2)
+                    }
+                }
+                Text("Dasselbe Jarvis wie auf dem Handy – gleiches Live-Gedächtnis, gleiche Apps über das Relay – plus volle Steuerung des Macs.")
+                    .font(.jarvis(13)).foregroundStyle(Farbe.text2)
+            }
+        }
+    }
+}
+
+struct RechtZeile: View {
+    let titel: String
+    let text: String
+    let status: String?
+    let anfragen: (() -> Void)?
+    let oeffnen: () -> Void
+
+    init(titel: String, text: String, status: String?, anfragen: (() -> Void)?, oeffnen: @escaping () -> Void) {
+        self.titel = titel; self.text = text; self.status = status; self.anfragen = anfragen; self.oeffnen = oeffnen
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: status == "erteilt" ? "checkmark.circle.fill" : "circle.dashed")
+                .foregroundStyle(status == "erteilt" ? Farbe.gruen : Farbe.text3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(titel).font(.jarvis(13, .semibold))
+                Text(text).font(.jarvis(11)).foregroundStyle(Farbe.text2)
+            }
+            Spacer()
+            if let status { Text(status).font(.jarvis(11, .medium)).foregroundStyle(Farbe.text3) }
+            if let anfragen { Button("Anfragen", action: anfragen) }
+            Button("Öffnen", action: oeffnen)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct KontenAnsicht: View {
+    @State private var einst = Einstellungen.shared
+    @State private var codexCode = ""
+    @State private var codexStatus = ""
+    @State private var relayTest = ""
+
+    var body: some View {
+        VStack(spacing: 18) {
+            GlasKarte {
+                VStack(alignment: .leading, spacing: 10) {
+                    KartenTitel(symbol: "iphone.radiowaves.left.and.right", titel: "Verbindung zum Handy-Jarvis", farbe: Farbe.violett)
+                    Text("Über diese Relay-Adresse teilt der Mac Gedächtnis, Apps und Ablage mit deinem Handy (dieselbe wie im ChatGPT-Plugin).")
+                        .font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    SecureField("https://…/j/…", text: $einst.zugang.relay).textFieldStyle(.roundedBorder)
+                    HStack {
+                        KapselKnopf(symbol: "antenna.radiowaves.left.and.right", titel: "Verbindung testen", hervorgehoben: true) {
+                            Task {
+                                let n = await McpKlient.shared.werkzeuge(frisch: true).count
+                                relayTest = n > 0 ? "Verbunden – \(n) Werkzeuge vom Handy." : "Keine Verbindung (Handy aus oder Adresse falsch)."
+                                AppSteuerung.shared.handyVerbunden = n > 0
+                            }
+                        }
+                        Text(relayTest).font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    }
+                }
+            }
+            GlasKarte {
+                VStack(alignment: .leading, spacing: 10) {
+                    KartenTitel(symbol: "person.badge.key.fill", titel: "ChatGPT-Konto (für GPT-Modelle)", farbe: Farbe.gruen)
+                    Text("Eigene Anmeldung nur für diesen Mac – das Handy bleibt angemeldet.").font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    HStack(spacing: 10) {
+                        KapselKnopf(symbol: "link", titel: "Mit ChatGPT anmelden", hervorgehoben: true) { anmelden() }
+                        KapselKnopf(symbol: "rectangle.portrait.and.arrow.right", titel: "Abmelden") {
+                            Task { await CodexAnmeldung.shared.abmelden(); codexStatus = "Abgemeldet." }
+                        }
+                    }
+                    if !codexCode.isEmpty {
+                        Text(codexCode).font(.system(size: 28, weight: .bold, design: .monospaced)).foregroundStyle(Farbe.cyan).textSelection(.enabled)
+                    }
+                    if !codexStatus.isEmpty { Text(codexStatus).font(.jarvis(12)).foregroundStyle(Farbe.text2) }
+                }
+            }
+            .task {
+                if await CodexAnmeldung.shared.angemeldet {
+                    codexStatus = "Angemeldet" + ((await CodexAnmeldung.shared.email).map { " als \($0)" } ?? "") + "."
+                }
+            }
+            GlasKarte {
+                VStack(alignment: .leading, spacing: 10) {
+                    KartenTitel(symbol: "key.fill", titel: "API-Schlüssel", farbe: Farbe.orange)
+                    Text("Aus ~/SK übernommen. Liegen nur auf diesem Mac (Application Support, nur für dich lesbar).")
+                        .font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    schluessel("Anthropic (Claude)", $einst.zugang.anthropic)
+                    schluessel("OpenAI (Live, GPT)", $einst.zugang.openai)
+                    schluessel("Gemini (Live)", $einst.zugang.gemini)
+                    schluessel("Google Cloud (Stimme)", $einst.zugang.google)
+                    schluessel("Groq (Whisper)", $einst.zugang.groq)
+                }
+            }
+        }
+    }
+
+    private func schluessel(_ titel: String, _ wert: Binding<String>) -> some View {
+        HStack {
+            Image(systemName: wert.wrappedValue.isEmpty ? "xmark.circle" : "checkmark.circle.fill")
+                .foregroundStyle(wert.wrappedValue.isEmpty ? Farbe.text3 : Farbe.gruen)
+            Text(titel).font(.jarvis(13, .medium)).frame(width: 170, alignment: .leading)
+            SecureField("", text: wert).textFieldStyle(.roundedBorder)
+        }
+    }
+
+    private func anmelden() {
+        Task {
+            do {
+                let (code, url) = try await CodexAnmeldung.shared.start()
+                codexCode = code
+                NSPasteboard.general.clearContents(); NSPasteboard.general.setString(code, forType: .string)
+                codexStatus = "Code kopiert – im Browser einfügen und freigeben."
+                NSWorkspace.shared.open(url)
+                let email = try await CodexAnmeldung.shared.warteAufFreigabe()
+                codexCode = ""
+                codexStatus = "Angemeldet als \(email ?? "ChatGPT-Konto")."
+            } catch {
+                codexStatus = "Anmeldung fehlgeschlagen: \(error.localizedDescription)"
+            }
+        }
+    }
+}
