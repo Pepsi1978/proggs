@@ -196,7 +196,10 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp + schweber),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            // Im Sprachgespräch steht eine kurze Antwort mittig, mit Luft nach oben und unten. Füllt sie den Bildschirm,
+            // greift die Ausrichtung nicht mehr: Die Liste beginnt oben und scrollt wie bisher.
+            verticalArrangement = if ((vm.liveAktiv || vm.sprachmodusAktiv) && vm.gespraech.isNotEmpty()) Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
+                else Arrangement.spacedBy(10.dp),
         ) {
             if (offen > 0) item(key = "einrichtung") {
                 Karte(toenung = f.primaer) {

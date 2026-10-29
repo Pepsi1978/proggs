@@ -418,6 +418,7 @@
     { "versionCode": 412, "versionName": "1.8.401", "stand": "29.10.2026, 12:05 Uhr", "notiz": "Kommt eine Rückfrage während einer Spracheingabe, lässt sie sich sofort beantworten, die Aufnahme läuft im Hintergrund weiter und die Ansage wartet bis zum Ende der Aufnahme." },
     { "versionCode": 413, "versionName": "1.8.402", "stand": "29.10.2026, 12:09 Uhr", "notiz": "Antworten auf Rückfragen gehen beim Einsprechen nicht mehr verloren: Senden wartet auf die Mitschrift, Schließen übernimmt das Gesagte, und Mikrofon und KI gehören jeweils nur zu ihrem Antwortfeld." },
     { "versionCode": 414, "versionName": "1.8.403", "stand": "29.10.2026, 12:15 Uhr", "notiz": "Das Fernwartungssymbol bleibt am Handy-Hotspot stabil grün: Jarvis wartet bis zu 8 Sekunden auf den Rechner und färbt erst nach einer Minute ohne Antwort rot." },
-    { "versionCode": 415, "versionName": "1.8.404", "stand": "29.10.2026, 12:21 Uhr", "notiz": "Eingesprochene Antworten auf Rückfragen gehen auch nach Schließen und Wiederöffnen nicht verloren, ein laufender Gesprächsmodus bleibt bei einer Rückfrage erhalten, und Wecker klingeln auch während einer Aufnahme." }
+    { "versionCode": 415, "versionName": "1.8.404", "stand": "29.10.2026, 12:21 Uhr", "notiz": "Eingesprochene Antworten auf Rückfragen gehen auch nach Schließen und Wiederöffnen nicht verloren, ein laufender Gesprächsmodus bleibt bei einer Rückfrage erhalten, und Wecker klingeln auch während einer Aufnahme." },
+    { "versionCode": 416, "versionName": "1.8.405", "stand": "29.10.2026, 13:00 Uhr", "notiz": "Im Sprachgespräch steht eine kurze Antwort von Jarvis jetzt mittig auf dem Bildschirm, lange Antworten beginnen weiter oben und lassen sich scrollen." }
 ]
 }
