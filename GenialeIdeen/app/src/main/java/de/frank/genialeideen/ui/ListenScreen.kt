@@ -112,15 +112,13 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.unit.DpSize
-import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Flag
 import de.frank.genialeideen.data.local.vorleseText
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-/** Die leuchtenden Farben der drei Reiter: Angenommen grün, Offen rot, Umgesetzt blau. */
-internal val FarbeAngenommen = Color(0xFF2BE36F)
-internal val FarbeOffen = Color(0xFFFF4D5E)
-internal val FarbeUmgesetzt = Color(0xFF3FA2FF)
+/** Das Grün von „Angenommen“ — das gedeckte Erfolgsgrün der App, passend zum Gold. */
+internal val FarbeAngenommen = Semantisch.erfolg
 
 enum class ListenBereich(val titel: String) {
     ALLE("Alle"),
@@ -245,25 +243,24 @@ fun ListenScreen(
                 kategorien = sortierteKategorien,
                 gewaehlt = gewaehlteKategorie,
                 anzahlJeKategorie = zaehlung,
-                offeneAnzahl = offene.size,
                 alleAnzahl = angenommene.size + offene.size + umgesetzte.size + entwuerfe.size,
-                entwuerfeAnzahl = entwuerfe.size,
-                entwuerfeGewaehlt = bereich == ListenBereich.ENTWURF && gewaehlteKategorie == null && umgesetztArt == null,
-                aufEntwuerfe = {
+                anzahlJeBereich = mapOf(
+                    ListenBereich.ANGENOMMEN to angenommene.size,
+                    ListenBereich.OFFEN to offene.size,
+                    ListenBereich.UMGESETZT to umgesetzte.size,
+                    ListenBereich.ENTWURF to entwuerfe.size,
+                ),
+                // Hervorgehoben nur ohne Kategorie und ohne Sammelkategorie — sonst gilt diese.
+                gewaehlterBereich = bereich.takeIf { gewaehlteKategorie == null && umgesetztArt == null },
+                aufBereich = { neuer ->
                     umgesetztArt = null
-                    bereich = ListenBereich.ENTWURF
+                    bereich = neuer
                     viewModel.waehleKategorie(null)
                     bereichsraum.launch { schublade.close() }
                 },
                 umfangAlle = umfangAlle,
                 umgesetztJeArt = umgesetztJeArt,
                 gewaehltUmgesetzt = umgesetztArt,
-                aufOffene = {
-                    umgesetztArt = null
-                    bereich = ListenBereich.OFFEN
-                    viewModel.waehleKategorie(null)
-                    bereichsraum.launch { schublade.close() }
-                },
                 aufAlle = {
                     umgesetztArt = null
                     bereich = ListenBereich.ALLE
@@ -337,7 +334,7 @@ fun ListenScreen(
                     modifier = Modifier.align(Alignment.Center),
                 )
                 sortiert.isEmpty() && bereich == ListenBereich.ANGENOMMEN -> Leerzustand(
-                    symbol = "🚀",
+                    symbol = "⚑",
                     ueberschrift = "Noch keine Idee angenommen",
                     satz = "Tipp in einer offenen Idee auf „Annehmen“, sobald du sie umsetzt. " +
                         "Der Wecker liest nur angenommene Ideen vor.",
@@ -621,15 +618,13 @@ private fun KategorienLeiste(
     kategorien: List<KategorieEntity>,
     gewaehlt: Long?,
     anzahlJeKategorie: Map<Long, Int>,
-    offeneAnzahl: Int,
     alleAnzahl: Int,
-    entwuerfeAnzahl: Int,
-    entwuerfeGewaehlt: Boolean,
-    aufEntwuerfe: () -> Unit,
+    anzahlJeBereich: Map<ListenBereich, Int>,
+    gewaehlterBereich: ListenBereich?,
+    aufBereich: (ListenBereich) -> Unit,
     umfangAlle: Boolean,
     umgesetztJeArt: Map<Kategorieart, Int>,
     gewaehltUmgesetzt: Kategorieart?,
-    aufOffene: () -> Unit,
     aufAlle: () -> Unit,
     aufUmgesetzt: (Kategorieart) -> Unit,
     aufWahl: (Long?) -> Unit,
@@ -674,23 +669,24 @@ private fun KategorienLeiste(
             ) {
                 // Der Umfang steht vor den Kategorien: „Offene Ideen“ ist der Normalfall,
                 // „Alle Ideen“ holt das schon Umgesetzte dazu.
-                KategorieZeile(
-                    name = "Offene Ideen",
-                    anzahl = offeneAnzahl,
-                    gewaehlt = !umfangAlle && gewaehlt == null && !entwuerfeGewaehlt,
-                    aufTipp = aufOffene,
-                )
-                // Die Entwürfe wohnen hier statt oben bei den Reitern.
-                KategorieZeile(
-                    name = "Entwürfe",
-                    anzahl = entwuerfeAnzahl,
-                    gewaehlt = entwuerfeGewaehlt,
-                    aufTipp = aufEntwuerfe,
-                )
+                // Dieselben Listen wie oben bei den Reitern, dazu die Entwürfe und alle Ideen.
+                listOf(
+                    ListenBereich.ANGENOMMEN to "Angenommene Ideen",
+                    ListenBereich.OFFEN to "Offene Ideen",
+                    ListenBereich.UMGESETZT to "Umgesetzte Ideen",
+                    ListenBereich.ENTWURF to "Entwürfe",
+                ).forEach { (eintrag, name) ->
+                    KategorieZeile(
+                        name = name,
+                        anzahl = anzahlJeBereich[eintrag] ?: 0,
+                        gewaehlt = gewaehlterBereich == eintrag,
+                        aufTipp = { aufBereich(eintrag) },
+                    )
+                }
                 KategorieZeile(
                     name = "Alle Ideen",
                     anzahl = alleAnzahl,
-                    gewaehlt = umfangAlle && gewaehlt == null && gewaehltUmgesetzt == null,
+                    gewaehlt = gewaehlterBereich == ListenBereich.ALLE,
                     aufTipp = aufAlle,
                 )
                 KategorieartWahl(
@@ -968,32 +964,41 @@ private fun BereichsWaehler(
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // „Alle“ und „Entwürfe“ liegen in der Seitenleiste; oben stehen nur die drei leuchtenden
-        // Reiter: Angenommen (grün), Offen (rot), Umgesetzt (blau).
+        // „Alle“ und „Entwürfe“ liegen in der Seitenleiste. Oben stehen Angenommen (leuchtend
+        // grün), Offen und Umgesetzt (im gewohnten Gold).
         listOf(
-            Triple(ListenBereich.ANGENOMMEN, angenommene, FarbeAngenommen),
-            Triple(ListenBereich.OFFEN, offene, FarbeOffen),
-            Triple(ListenBereich.UMGESETZT, umgesetzte, FarbeUmgesetzt),
-        ).forEach { (eintrag, anzahl, leuchtfarbe) ->
+            ListenBereich.ANGENOMMEN to angenommene,
+            ListenBereich.OFFEN to offene,
+            ListenBereich.UMGESETZT to umgesetzte,
+        ).forEach { (eintrag, anzahl) ->
             val gewaehlt = eintrag == aktuell
+            val gruen = eintrag == ListenBereich.ANGENOMMEN
             val farbe by animateColorAsState(
-                if (gewaehlt) leuchtfarbe else leuchtfarbe.copy(alpha = 0.16f),
+                when {
+                    gruen && gewaehlt -> FarbeAngenommen
+                    gruen -> FarbeAngenommen.copy(alpha = 0.14f)
+                    gewaehlt -> gold.primaer
+                    else -> Color.Transparent
+                },
                 label = "bereich",
             )
             var zeile = Modifier.weight(1f).druckEffekt { aufWahl(eintrag) }
-            if (gewaehlt) zeile = zeile.goldSchein(leuchtfarbe.copy(alpha = 0.7f), hoehe = 10.dp, radius = 12.dp)
+            if (gruen && gewaehlt) zeile = zeile.goldSchein(FarbeAngenommen.copy(alpha = 0.55f), hoehe = 8.dp, radius = 12.dp)
+            zeile = zeile.clip(RoundedCornerShape(12.dp)).background(farbe)
+            if (gruen) zeile = zeile.border(1.dp, FarbeAngenommen.copy(alpha = if (gewaehlt) 0.9f else 0.5f), RoundedCornerShape(12.dp))
             Box(
-                modifier = zeile
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(farbe)
-                    .border(1.dp, leuchtfarbe.copy(alpha = if (gewaehlt) 1f else 0.7f), RoundedCornerShape(12.dp))
-                    .padding(vertical = 10.dp),
+                modifier = zeile.padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "${eintrag.titel} ($anzahl)",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = if (gewaehlt) Color(0xFF0B0B0B) else leuchtfarbe,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = when {
+                        gewaehlt && gruen -> Color.White
+                        gewaehlt -> gold.aufPrimaer
+                        gruen -> FarbeAngenommen
+                        else -> gold.textGedaempft
+                    },
                     maxLines = 1,
                 )
             }
@@ -1080,9 +1085,9 @@ private fun IdeenKarte(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        Icons.Default.RocketLaunch,
+                        Icons.Default.Flag,
                         contentDescription = if (angenommen) "Angenommen – zurück zu Offen" else "Annehmen",
-                        tint = if (angenommen) Color(0xFF00210C) else gold.textGedaempft,
+                        tint = if (angenommen) Color.White else gold.textGedaempft,
                         modifier = Modifier.size(18.dp),
                     )
                 }
