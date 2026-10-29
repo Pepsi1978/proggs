@@ -18,19 +18,21 @@ enum class Fernziel(val adresse: String, val titel: String, val nominativ: Strin
 
         /**
          * Welche Rechner gerade wirklich fernbedienbar sind (gleichzeitig geprüft, höchstens [wartezeitMs] plus kurze
-         * Dienstprüfung, bei Fehlschlag ein zweiter Versuch mit 2,5 s). 1,5 s reichten im Tunnel nicht: Nach einer Pause braucht WireGuard erst einen Handshake über den
+         * Dienstprüfung, bei Fehlschlag ein zweiter Versuch mit 4 s). 4 s reichten am 29.10.2026 nicht: Hängt der Mac am
+         * Handy-Hotspot, laufen Prüfungen zweimal übers Mobilnetz (Handy, VPS, Handy, Mac), gemessen 1,7 s Antwortzeit und
+         * 10 % Verlust; erfolgreiche Verbindungen brauchten bis 4 s. 1,5 s reichten im Tunnel nicht: Nach einer Pause braucht WireGuard erst einen Handshake über den
          * VPS, der erste Verbindungsversuch kam am 28.10.2026 zu spät an und Jarvis verband blind mit dem ausgeschalteten Mac.
          */
-        suspend fun erreichbar(wartezeitMs: Int = 4000): List<Fernziel> = pruefen(wartezeitMs).filter { it.ok }.map { it.ziel }
+        suspend fun erreichbar(wartezeitMs: Int = 8000): List<Fernziel> = pruefen(wartezeitMs).filter { it.ok }.map { it.ziel }
 
         /** Wie [erreichbar], aber mit Grund und Dauer je Rechner, damit das Logbuch erklären kann, warum einer rot wurde. */
-        suspend fun pruefen(wartezeitMs: Int = 4000): List<Pruefung> = coroutineScope {
+        suspend fun pruefen(wartezeitMs: Int = 8000): List<Pruefung> = coroutineScope {
             entries.map { z ->
                 async(Dispatchers.IO) {
                     // Im Tunnel geht gelegentlich ein einzelner Verbindungsversuch verloren: einmal nachfassen.
                     val erst = bereit(z, FernsteuerungActivity.PORT, wartezeitMs)
                     if (erst.ok) erst
-                    else bereit(z, FernsteuerungActivity.PORT, 2500).let { it.copy(ms = erst.ms + it.ms, grund = if (it.ok) it.grund else "2 Versuche: ${erst.grund} / ${it.grund}") }
+                    else bereit(z, FernsteuerungActivity.PORT, 4000).let { it.copy(ms = erst.ms + it.ms, grund = if (it.ok) it.grund else "2 Versuche: ${erst.grund} / ${it.grund}") }
                 }
             }.map { it.await() }
         }

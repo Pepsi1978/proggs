@@ -21,7 +21,7 @@ import kotlinx.coroutines.sync.withLock
  * Auslöser. Erfolgreiche Prüfungen ohne Wechsel bleiben draußen (alle 10 s). Alle Aufrufe laufen auf dem Main-Thread.
  */
 object RechnerStatus {
-    private const val SCHONFRIST_MS = 25_000L
+    private const val SCHONFRIST_MS = 60_000L
 
     /** null = noch nicht geprüft, leer = kein Rechner fernbedienbar (geglättet, nur für die Anzeige). */
     val erreichbar = mutableStateOf<List<Fernziel>?>(null)
