@@ -112,7 +112,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.unit.DpSize
-import androidx.compose.material.icons.filled.Flag
 import de.frank.genialeideen.data.local.vorleseText
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -153,7 +152,7 @@ fun ListenScreen(
 
     // Der Host bewahrt diesen Zustand und rememberLazyListState beim Bildschirmwechsel
     // auf, damit auch ein tiefer Listenplatz nach dem Lesen wiederhergestellt wird.
-    var bereich by rememberSaveable { mutableStateOf(ListenBereich.OFFEN) }
+    var bereich by rememberSaveable { mutableStateOf(ListenBereich.ANGENOMMEN) }
     // Die Sammelkategorie „Umgesetzt“ ist keine echte Kategorie, sondern ein Filter auf die
     // Art der Stammkategorie — deshalb liegt sie hier und nicht in der Datenbank.
     var umgesetztArt by rememberSaveable { mutableStateOf<Kategorieart?>(null) }
@@ -387,11 +386,6 @@ fun ListenScreen(
                                 aufVorlesen = {
                                     viewModel.lies("idee-${idee.id}", idee.titel, "${idee.titel}.\n\n${idee.vorleseText()}")
                                 },
-                                aufAnnehmen = if (idee.status == IdeenStatus.OFFEN.name || idee.status == IdeenStatus.ANGENOMMEN.name) {
-                                    { viewModel.schalteAngenommen(idee) }
-                                } else {
-                                    null
-                                },
                                 aufVerwerfen = if (bereich == ListenBereich.ENTWURF) {
                                     { viewModel.verwirfEntwurf(idee) }
                                 } else {
@@ -421,10 +415,19 @@ fun ListenScreen(
                     },
                 )
                 val liestAlle = vorlese.quelle == "alle-ideen"
+                // Der Lautsprecher liest genau den Reiter, der gerade zu sehen ist, in seiner Reihenfolge.
+                val reiterName = when {
+                    umgesetztArt != null -> "Umgesetzte Ideen"
+                    bereich == ListenBereich.ALLE -> "Alle Ideen"
+                    bereich == ListenBereich.ANGENOMMEN -> "Angenommene Ideen"
+                    bereich == ListenBereich.ENTWURF -> "Entwürfe"
+                    bereich == ListenBereich.UMGESETZT -> "Umgesetzte Ideen"
+                    else -> "Offene Ideen"
+                }
                 Box(Modifier.size(90.dp), contentAlignment = Alignment.Center) {
                     RundKnopf3D(
-                        beschreibung = if (liestAlle) "Offene Ideen: Vorlesen stoppen" else "Offene Ideen endlos vorlesen",
-                        aufTipp = viewModel::liesAlleIdeen,
+                        beschreibung = if (liestAlle) "$reiterName: Vorlesen stoppen" else "$reiterName endlos vorlesen",
+                        aufTipp = { viewModel.liesAlleIdeen(reiterName, sortiert) },
                         modifier = Modifier.schwebend(aktiv = !liestAlle),
                         groesse = 68.dp,
                         grundfarbe = Color(0xFFFF8A24),
@@ -1017,8 +1020,6 @@ private fun IdeenKarte(
     aufVorlesen: () -> Unit,
     /** Nur bei Entwürfen gesetzt: Der Papierkorb wirft das Halbfertige weg. */
     aufVerwerfen: (() -> Unit)? = null,
-    /** Bei offenen und angenommenen Ideen: Annehmen bzw. zurück zu den offenen. */
-    aufAnnehmen: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
@@ -1070,25 +1071,6 @@ private fun IdeenKarte(
                         color = gold.textGedaempft,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
-                    )
-                }
-            }
-            aufAnnehmen?.let { annehmen ->
-                val angenommen = idee.status == IdeenStatus.ANGENOMMEN.name
-                var knopf = Modifier.size(38.dp)
-                if (angenommen) knopf = knopf.goldSchein(FarbeAngenommen.copy(alpha = 0.6f), hoehe = 8.dp, radius = 19.dp)
-                Box(
-                    modifier = knopf
-                        .druckEffekt(annehmen)
-                        .clip(RoundedCornerShape(19.dp))
-                        .background(if (angenommen) FarbeAngenommen else Color.Transparent),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.Flag,
-                        contentDescription = if (angenommen) "Angenommen – zurück zu Offen" else "Annehmen",
-                        tint = if (angenommen) Color.White else gold.textGedaempft,
-                        modifier = Modifier.size(18.dp),
                     )
                 }
             }

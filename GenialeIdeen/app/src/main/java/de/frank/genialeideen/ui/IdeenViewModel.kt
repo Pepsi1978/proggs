@@ -564,22 +564,19 @@ class IdeenViewModel(
 
     fun lies(quelle: String, titel: String, text: String) = vorleser.sprich(quelle, titel, text)
 
-    fun liesAlleIdeen() {
+    /** Liest die Ideen des gewählten Reiters endlos vor; ein zweiter Tipp stoppt. */
+    fun liesAlleIdeen(titel: String, ideen: List<IdeeEntity>) {
         if (vorleseStand.value.quelle == "alle-ideen") {
             vorleser.stopp()
             return
         }
-        // Angenommene zuerst, dann offene: Umgesetztes und Entwürfe gehören nicht in die Endlosschleife.
-        // Direkt aus alleIdeen gefiltert, weil die Teillisten ohne Abonnenten leer sein können.
-        val ideen = alleIdeen.value.filter { it.status == IdeenStatus.ANGENOMMEN.name } +
-            alleIdeen.value.filter { it.status == IdeenStatus.OFFEN.name }
         if (ideen.isEmpty()) {
-            zeige(Meldung("Es sind keine offenen Ideen zum Vorlesen vorhanden.", hinweis = true))
+            zeige(Meldung("In diesem Reiter sind keine Ideen zum Vorlesen vorhanden.", hinweis = true))
             return
         }
         vorleser.sprich(
             quelle = "alle-ideen",
-            titel = "Offene Ideen",
+            titel = titel,
             rohText = ideen.joinToString("\n\n") { "${it.titel}.\n\n${it.vorleseText()}" },
             wiederholen = true,
         )
