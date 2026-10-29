@@ -265,8 +265,9 @@ class JarvisAgent(context: Context) {
                 Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen")
                 var schritt = lies(roh)
                 var (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
-                // Werkzeugaufruf als Markup oder fremdes JSON geschrieben: trotzdem ausführen, statt ihn als Antwort vorzulesen.
-                if (aufrufe.isEmpty()) {
+                // Nur wenn das vereinbarte JSON fehlt: Werkzeugaufruf als Markup oder fremdes JSON trotzdem ausführen, statt ihn vorzulesen.
+                // Eine gültige {"antwort"} wird nie nach Aufrufen durchsucht, sonst liefe zitiertes Markup aus Mails oder Webseiten als Befehl.
+                if (schritt == null) {
                     val ausText = WerkzeugMarkup.aufrufe(roh, werkzeuge.map { it.name }.toSet())
                     if (ausText.isNotEmpty()) {
                         Logbuch.aktion("Antwort: Werkzeugaufruf als Text erkannt", ausText.joinToString { it.optString("werkzeug") })
@@ -277,17 +278,20 @@ class JarvisAgent(context: Context) {
                 }
                 if (schritt == null || aufrufe.isEmpty()) {
                     val antwort = schritt?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim()
-                    // Markup ohne ausführbaren Aufruf: einmal um eine saubere Antwort bitten, nie das Markup ausgeben.
-                    if (WerkzeugMarkup.enthaelt(antwort) && !formNachgefragt) {
+                    // Rohtext mit Markup ohne ausführbaren Aufruf: einmal um eine saubere Antwort bitten; die Runde zählt nicht als Schritt.
+                    if (schritt == null && WerkzeugMarkup.enthaelt(antwort) && !formNachgefragt) {
                         formNachgefragt = true
+                        schritte--
                         zuege += ChatTurn("assistant", roh.take(2_000))
                         zuege += ChatTurn("user", "FORMATFEHLER: Deine letzte Nachricht enthielt technisches Markup statt des vereinbarten JSON. " +
                             "Willst du ein Werkzeug aufrufen, dann nur als {\"werkzeug\": \"<name>\", \"argumente\": { … }}. Sonst antworte mit {\"antwort\": \"…\"} " +
-                            "in ganzen deutschen Sätzen, ohne Werkzeugnamen, Parameter, Tags, Pfeile oder JSON im Text.")
+                            "in ganzen deutschen Sätzen, ohne Werkzeugnamen, Parameter, Tags oder JSON im Text.")
                         continue
                     }
                     Logbuch.dauer("Antwort: gesamt", System.currentTimeMillis() - beginn, "$schritte Schritt(e)" + (rolle?.let { ", Agent" } ?: ""))
-                    return@withTimeoutOrNull WerkzeugMarkup.entferne(antwort).ifBlank { MARKUP_ERSATZ }
+                    // Ersatzsatz nur, wenn die Antwort aus nichts als Markup bestand; eine leere Antwort bleibt leer, wie die Aufrufer es erwarten.
+                    val sauber = WerkzeugMarkup.entferne(antwort)
+                    return@withTimeoutOrNull if (sauber.isBlank() && antwort.isNotBlank()) MARKUP_ERSATZ else sauber
                 }
                 // Mehrere voneinander unabhängige lesende Werkzeuge laufen gleichzeitig; sobald eines schreibt, alle der Reihe nach.
                 val nurLesend = aufrufe.size > 1 && aufrufe.all { c -> werkzeuge.firstOrNull { it.name == c.optString("werkzeug") }?.nurLesen == true }
@@ -595,8 +599,13 @@ class JarvisAgent(context: Context) {
         val start = roh.indexOf('{')
         val ende = roh.lastIndexOf('}')
         if (start < 0 || ende <= start) return null
-        return runCatching { JSONObject(roh.substring(start, ende + 1)) }.getOrNull()
-            ?.takeIf { it.has("werkzeug") || it.has("werkzeuge") || it.has("antwort") }
+        runCatching { JSONObject(roh.substring(start, ende + 1)) }.getOrNull()
+            ?.takeIf { it.has("werkzeug") || it.has("werkzeuge") || it.has("antwort") }?.let { return it }
+        // Mehrere Objekte hintereinander ({"werkzeug": …} {"werkzeug": …}): je Block einzeln lesen, Aufrufe zusammenfassen.
+        val bloecke = WerkzeugMarkup.jsonBloecke(roh).mapNotNull { (s, e) -> runCatching { JSONObject(roh.substring(s, e + 1)) }.getOrNull() }
+        val aufrufe = bloecke.filter { it.optString("werkzeug").isNotEmpty() }
+        if (aufrufe.isNotEmpty()) return JSONObject().put("werkzeuge", org.json.JSONArray(aufrufe))
+        return bloecke.firstOrNull { it.has("antwort") || it.has("werkzeuge") }
     }
 
     companion object {

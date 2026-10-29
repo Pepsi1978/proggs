@@ -477,10 +477,10 @@ class EinstellungsKatalog(context: Context) {
     /** first = geklappt, second = Antwort in einem Satz. */
     fun setze(kennung: String, wert: String): Pair<Boolean, String> {
         val k = norm(kennung)
-        // Genau, dann mit Leerzeichen oder Bindestrich statt Unterstrich, dann eindeutig als Anfang der Kennung oder als Teil des Titels.
+        // Genau, dann mit Leerzeichen oder Bindestrich statt Unterstrich, dann eindeutig als Anfang der Kennung (ab 6 Zeichen) oder als Teil des Titels (ab 4).
         val k2 = k.replace(Regex("[\\s-]+"), "_")
         val eintrag = eintraege.firstOrNull { it.kennung == k || it.kennung == k2 } ?: eintraege.firstOrNull { norm(it.titel) == k }
-            ?: eintraege.filter { it.kennung.startsWith(k2) }.singleOrNull()
+            ?: eintraege.filter { k2.length >= 6 && it.kennung.startsWith(k2) }.singleOrNull()
             ?: eintraege.filter { k.length >= 4 && norm(it.titel).contains(k) }.singleOrNull()
             ?: return false to "Eine Einstellung „$kennung“ gibt es nicht. Lies erst die Liste mit aktion lesen."
         if (wert.isBlank()) return false to "Für „${eintrag.titel}“ fehlt der Wert. Möglich: ${eintrag.werte}."

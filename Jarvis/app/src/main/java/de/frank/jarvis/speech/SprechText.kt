@@ -46,8 +46,8 @@ object SprechText {
     /** Zeichen, die ausgesprochen statt buchstabiert werden. */
     private val ERSATZ = linkedMapOf(
         // Zuerst, sonst würden „-“, „=“ und „>“ einzeln gesprochen.
-        "->" to ", ",
-        "=>" to ", ",
+        "->" to " führt zu ",
+        "=>" to " führt zu ",
         "&" to " und ",
         "%" to " Prozent ",
         "€" to " Euro ",
@@ -57,9 +57,8 @@ object SprechText {
         "=" to " gleich ",
         "<" to " kleiner als ",
         ">" to " grösser als ",
-        // Pfeile werden nicht ausgesprochen, nur als Pause.
-        "→" to ", ",
-        "←" to ", ",
+        "→" to " führt zu ",
+        "←" to " kommt von ",
         "@" to " at ",
         "/" to " oder ",
         "|" to ". ",

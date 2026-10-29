@@ -7,32 +7,35 @@ import org.json.JSONObject
  * Werkzeugaufrufe, die ein Modell als Text statt im vereinbarten JSON-Format schreibt: Claude-Markup
  * (`<invoke name="…"><parameter name="…">…</parameter></invoke>`), `<tool_call>{…}</tool_call>` oder
  * JSON wie `{"name": "…", "arguments": {…}}`. [aufrufe] macht daraus echte Aufrufe, [entferne] hält solches
- * Markup aus jeder Antwort und jedem Vorlesetext heraus.
+ * Markup aus jeder Antwort und jedem Vorlesetext heraus. Beides greift nur bei Werkzeug-Markup: Code,
+ * spitze Klammern im Satz, erbetenes JSON und Pfeil-Listen bleiben unangetastet.
  */
 object WerkzeugMarkup {
 
-    private val INVOKE = Regex("""<(?:[\w-]+:)?invoke\s+name\s*=\s*["']([^"']+)["']\s*/?>([\s\S]*?)(?:</(?:[\w-]+:)?invoke>|$)""", RegexOption.IGNORE_CASE)
-    private val PARAMETER = Regex("""<(?:[\w-]+:)?parameter\s+name\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)</(?:[\w-]+:)?parameter>""", RegexOption.IGNORE_CASE)
-    private val BLOECKE = Regex(
-        """<(?:[\w-]+:)?(function_calls|invoke|parameter|tool_call|tool_use|function_call|tool_result|function_results|thinking)\b[^>]*>[\s\S]*?</(?:[\w-]+:)?\1>""",
+    private const val NS = """(?:[\w-]+:)?"""
+    private const val WERKZEUG_TAGS = "function_calls|invoke|parameter|tool_call|tool_use|function_call|tool_result|function_results"
+
+    /** Ein Aufruf: selbstschließend, geschlossen oder offen bis zum nächsten invoke bzw. zum Textende. */
+    private val INVOKE = Regex(
+        """<${NS}invoke\s+name\s*=\s*["']([^"']+)["']\s*(?:/>|>([\s\S]*?)(?:</${NS}invoke>|(?=<${NS}invoke\b)|$))""",
         RegexOption.IGNORE_CASE,
     )
-    /** Übrige Tags, auch abgeschnittene am Ende. Ein „<“ ohne Buchstaben dahinter („< 5“, „<3“) bleibt. */
-    private val TAG = Regex("""</?[A-Za-z][\w:-]*(?:\s[^<>]*)?(?:>|$)""")
-    /** Attribute und Zuweisungen wie name="einstellungen" oder kennung=wert. */
-    private val ZUWEISUNG = Regex("""\b[\w-]+\s*=\s*(?:"[^"]*"|'[^']*'|[\w.,:-]+)""")
-    /** Zeilen, die nur einen Aufruf zeigen: „→ einstellungen(…)“, „-> aendern {…}“. */
-    private val PFEIL_ZEILE = Regex("""(?m)^[ \t]*(?:→|->|=>|⇒)[ \t]*[\w.-]+[ \t]*[({:].*$""")
-    private val MERKMALE = Regex(
-        """<(?:[\w-]+:)?(?:invoke|parameter|function_calls|tool_call|tool_use)\b|</(?:[\w-]+:)?(?:invoke|parameter)>|\bname\s*=\s*["']|"(?:werkzeug|werkzeuge|argumente|arguments|parameters)"\s*:""",
-        RegexOption.IGNORE_CASE,
-    )
+    private val PARAMETER = Regex("""<${NS}parameter\s+name\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)</${NS}parameter>""", RegexOption.IGNORE_CASE)
+    /** Geschlossene Werkzeug-Blöcke samt Inhalt. */
+    private val BLOECKE = Regex("""<$NS($WERKZEUG_TAGS)\b[^>]*>[\s\S]*?</$NS\1>""", RegexOption.IGNORE_CASE)
+    /** Übrig gebliebene einzelne Werkzeug-Tags; nur das Tag selbst, nie der Text dahinter. */
+    private val EINZELTAG = Regex("""</?$NS(?:$WERKZEUG_TAGS)\b[^<>\n]*>""", RegexOption.IGNORE_CASE)
+    private val MERKMALE = Regex("""</?$NS(?:$WERKZEUG_TAGS)\b""", RegexOption.IGNORE_CASE)
+    /** JSON-Schlüssel, die nur in Aufrufen vorkommen. */
+    private val AUFRUF_SCHLUESSEL = Regex(""""(?:werkzeug|werkzeuge|argumente|arguments|tool_calls)"\s*:""")
+    private val NAME_SCHLUESSEL = Regex("""^\{\s*"(?:name|tool|function)"\s*:""")
+    private val ARGUMENT_SCHLUESSEL = Regex(""""(?:arguments|argumente|input)"\s*:""")
+    private val LEERRAUM = Regex("[ \\t]{2,}")
+    private val LEERZEILEN = Regex("\\n{3,}")
 
-    /** {"name": …, "arguments"/"input"/"parameters": …} wie bei nativen Aufrufen anderer Anbieter. */
-    private val NAME_JSON = Regex("""^\{\s*"(?:name|tool|function|tool_calls)"\s*:""")
-
-    /** true = der Text enthält etwas, das nach Werkzeugaufruf oder Markup aussieht. */
-    fun enthaelt(text: String): Boolean = MERKMALE.containsMatchIn(text)
+    /** true = der Text enthält Werkzeug-Tags oder Aufruf-JSON. */
+    fun enthaelt(text: String): Boolean =
+        MERKMALE.containsMatchIn(text) || ('{' in text && jsonBloecke(text).any { (s, e) -> istAufruf(text.substring(s, e + 1)) })
 
     /**
      * Die als Text geschriebenen Aufrufe bekannter Werkzeuge, je als {"werkzeug": …, "argumente": {…}};
@@ -50,12 +53,14 @@ object WerkzeugMarkup {
         if (liste.isNotEmpty()) return liste
         jsonBloecke(roh).forEach { (start, ende) ->
             val o = runCatching { JSONObject(roh.substring(start, ende + 1)) }.getOrNull() ?: return@forEach
-            val kandidaten = o.optJSONArray("tool_calls")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } } ?: listOf(o)
+            val kandidaten = o.optJSONArray("tool_calls")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }
+                ?: o.optJSONArray("werkzeuge")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }
+                ?: listOf(o)
             kandidaten.forEach { k ->
                 val f = k.optJSONObject("function") ?: k
-                val name = (f.optString("name").ifBlank { f.optString("tool") }).trim()
+                val name = listOf("werkzeug", "name", "tool").firstNotNullOfOrNull { f.optString(it).trim().ifEmpty { null } }.orEmpty()
                 if (name !in bekannt) return@forEach
-                val arg = listOf("arguments", "argumente", "parameters", "input", "args").firstNotNullOfOrNull { schluessel ->
+                val arg = listOf("argumente", "arguments", "parameters", "input", "args").firstNotNullOfOrNull { schluessel ->
                     f.optJSONObject(schluessel) ?: f.optString(schluessel).takeIf { it.startsWith("{") }?.let { runCatching { JSONObject(it) }.getOrNull() }
                 } ?: JSONObject()
                 liste += JSONObject().put("werkzeug", name).put("argumente", arg)
@@ -64,34 +69,36 @@ object WerkzeugMarkup {
         return liste
     }
 
-    /** Entfernt Werkzeug-Markup, Tags, JSON und Zuweisungen; Klartext bleibt unverändert stehen. */
+    /** Entfernt Werkzeug-Tags samt Inhalt und Aufruf-JSON; ohne solches Markup bleibt der Text Zeichen für Zeichen gleich. */
     fun entferne(text: String): String {
-        if (!enthaelt(text) && !TAG.containsMatchIn(text) && '{' !in text && !PFEIL_ZEILE.containsMatchIn(text)) return text
+        if (!enthaelt(text)) return text
         var t = BLOECKE.replace(text, " ")
-        t = INVOKE.replace(t, " ")
-        // Nur JSON, das nach Werkzeugaufruf aussieht; erbetenes JSON in einer Antwort bleibt stehen.
-        val bloecke = jsonBloecke(t).filter { (s, e) -> MERKMALE.containsMatchIn(t.substring(s, e + 1)) || NAME_JSON.containsMatchIn(t.substring(s, e + 1)) }
-        bloecke.asReversed().forEach { (s, e) -> t = t.removeRange(s, e + 1) }
-        t = PFEIL_ZEILE.replace(t, "")
-        t = TAG.replace(t, " ")
-        if (enthaelt(text)) t = ZUWEISUNG.replace(t, " ")
-        return t.replace(Regex("[ \\t]{2,}"), " ").replace(Regex("\\n{3,}"), "\n\n").replace(Regex("(?m)^[ \\t]+|[ \\t]+$"), "").trim()
+        t = EINZELTAG.replace(t, " ")
+        jsonBloecke(t).filter { (s, e) -> istAufruf(t.substring(s, e + 1)) }.asReversed().forEach { (s, e) -> t = t.removeRange(s, e + 1) }
+        return LEERZEILEN.replace(LEERRAUM.replace(t, " "), "\n\n").trim()
     }
+
+    /** Aufruf-JSON: eigene Aufrufschlüssel oder name/tool/function zusammen mit arguments/input. Erbetenes JSON wie {"name": "Frank"} bleibt. */
+    private fun istAufruf(block: String): Boolean =
+        AUFRUF_SCHLUESSEL.containsMatchIn(block) || (NAME_SCHLUESSEL.containsMatchIn(block) && ARGUMENT_SCHLUESSEL.containsMatchIn(block))
 
     private fun wert(roh: String): Any {
         val w = roh.trim()
         if (w.startsWith("[")) runCatching { return JSONArray(w) }
         if (w.startsWith("{")) runCatching { return JSONObject(w) }
-        return w
+        return w.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&#39;", "'").replace("&amp;", "&")
     }
 
-    /** Anfang und Ende jedes äußersten {…}-Blocks, Klammern in Zeichenketten zählen nicht. */
-    private fun jsonBloecke(t: String): List<Pair<Int, Int>> {
+    /**
+     * Anfang und Ende jedes äußersten {…}-Blocks, Klammern in Zeichenketten zählen nicht. Bleibt eine Klammer im
+     * Fließtext offen, wird ab dem Zeichen danach weitergesucht, damit ein späterer Block trotzdem gefunden wird.
+     */
+    fun jsonBloecke(t: String, ab: Int = 0): List<Pair<Int, Int>> {
         val ergebnis = mutableListOf<Pair<Int, Int>>()
         var tiefe = 0
         var start = -1
         var inText = false
-        var i = 0
+        var i = ab
         while (i < t.length) {
             val c = t[i]
             when {
@@ -103,6 +110,7 @@ object WerkzeugMarkup {
             }
             i++
         }
+        if (tiefe > 0 && start >= 0) ergebnis += jsonBloecke(t, start + 1)
         return ergebnis
     }
 }
