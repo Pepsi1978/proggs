@@ -355,6 +355,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
 private val SCHWEBE_GROESSE = 40.dp
 private val SCHWEBE_ABSTAND = 8.dp
 private val SCHWEBE_LUECKE = SCHWEBE_GROESSE + SCHWEBE_ABSTAND * 2
+/** Ein freier Platz in Symbolgröße zwischen den übrigen Symbolen und Nachtrag/Programmierer. */
+private val SCHWEBE_FREIPLATZ = SCHWEBE_GROESSE + SCHWEBE_ABSTAND
 
 /** Rechter Abstand der Symbole: ihre Mitte liegt genau über der orangen Live-Kugel (12 Rand + 10 Innenabstand + 24 halbe Kugel). */
 val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
@@ -364,14 +366,15 @@ val SCHWEBE_FREI_RECHTS = SCHWEBE_RECHTS + SCHWEBE_GROESSE + 6.dp
 
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
 fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
-    // Aktualisieren, Hell/Dunkel, Neue Session, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar.
+    // Aktualisieren, Hell/Dunkel, Neue Session, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar,
+    // und der freie Platz zwischen den übrigen Symbolen und den Programmier-Symbolen.
     val anzahl = 4 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
-    return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + SCHWEBE_LUECKE
+    return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + SCHWEBE_FREIPLATZ + SCHWEBE_LUECKE
 }
 
 /**
- * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel, alle im selben Abstand untereinander ohne Lücke:
- * oben „Neue Session“, darunter der Papierkorb „Gespräch löschen“, direkt darunter, nur im Programmiergespräch, ein Plus
+ * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel, im selben Abstand untereinander:
+ * oben „Neue Session“, darunter der Papierkorb „Gespräch löschen“, dann ein freier Platz, darunter, nur im Programmiergespräch, ein Plus
  * (wie Plus → „+ Nachtrag“) und als letztes das Programmier-Symbol (wie Plus → „Programmierer“). Darunter bis zur Eingabeblase
  * eine freie Bubble Platz, damit „Neue Session“ und der Papierkorb an ihrer Stelle bleiben. Ohne Blase, nur ein kleiner,
  * leicht schimmernder, durchscheinender Grund.
@@ -442,7 +445,9 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { loeschenZiel = null }) { Text("Abbrechen") } },
         ) }
-        // Nachtrag und Programmierauftrag schließen direkt unter „Neue Session“ und dem Papierkorb an, im selben Abstand wie die übrigen Symbole.
+        // Zwischen den übrigen Symbolen und den Programmier-Symbolen (Nachtrag, Programmierer) bleibt immer genau ein Platz frei,
+        // egal ob Papierkorb oder Nachtrag gerade zu sehen sind.
+        Spacer(Modifier.height(SCHWEBE_FREIPLATZ))
         if (vm.nachtragMoeglich) {
             SchwebeSymbol("Nachtrag in die laufende Programmier-Sitzung", vm.nachtragAktiv, { vm.nachtragEinsetzen() }) {
                 Icon(Icons.Rounded.Add, null, tint = f.text, modifier = Modifier.size(26.dp))
