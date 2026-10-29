@@ -64,6 +64,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import kotlinx.coroutines.isActive
 import androidx.compose.ui.graphics.Color
@@ -166,21 +167,49 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
         }
     }
-    // Ganz unten angekommen, egal wie: wieder mitlesen.
+    // Mitlesen mittig (Franks Wunsch, gerade auf dem aufgeklappten Fold): Die neueste Nachricht steht in der Mitte der Liste,
+    // mit Luft nach oben und unten, und bleibt dort, auch wenn sie wächst oder darunter der Arbeitsstand läuft. Füllt sie
+    // fast den ganzen Bildschirm, gilt das Alte: ihr Ende steht unten, nach oben scrollt man zum Anfang.
+    // Oben und unten je eine halbe Listenhöhe Polster, damit die Mitte auch für die erste und die letzte Nachricht erreichbar ist.
+    val dichte = androidx.compose.ui.platform.LocalDensity.current
+    var listenHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, papierkorb = vm.gespraech.isNotEmpty() || vm.sitzungId != null) + 10.dp
+    val untenPx by androidx.compose.runtime.rememberUpdatedState(with(dichte) { (8.dp + schweber).toPx() })
+    val vorne by androidx.compose.runtime.rememberUpdatedState(if (offen > 0) 1 else 0)
+    // Wie weit die Liste vorrücken muss, damit die neueste Nachricht am Zielort steht (negativ: schon darüber hinaus);
+    // null, solange sie nicht im Bild ist.
+    fun abstandZumZiel(): Float? {
+        if (vm.gespraech.isEmpty()) return null
+        val info = liste.layoutInfo
+        val blase = info.visibleItemsInfo.firstOrNull { it.index == vorne + vm.gespraech.lastIndex } ?: return null
+        val oben = info.viewportStartOffset
+        val unten = info.viewportEndOffset
+        val ende = blase.offset + blase.size
+        return if (blase.size < (unten - oben) * 0.9f) (blase.offset + ende) / 2f - (oben + unten) / 2f
+            else ende - (unten - untenPx)
+    }
+    // Hat Frank die neueste Nachricht wieder bis zur Mitte (oder weiter) geholt: wieder mitlesen.
     LaunchedEffect(liste, folgenZustand) {
-        androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgenZustand.value = true }
+        androidx.compose.runtime.snapshotFlow { !liste.isScrollInProgress && (abstandZumZiel() ?: Float.MAX_VALUE) <= 1f }
+            .collect { da -> if (da) folgenZustand.value = true }
+    }
+    // Beim Mitlesen hält die Liste die neueste Nachricht am Zielort: neue Nachricht, wachsender Text, Drehen, Aufklappen.
+    LaunchedEffect(liste, folgenZustand) {
+        androidx.compose.runtime.snapshotFlow { if (folgenZustand.value && !liste.isScrollInProgress) abstandZumZiel() else null }
+            .collect { abstand ->
+                if (abstand == null || kotlin.math.abs(abstand) <= 1f) return@collect
+                // Greift Frank in den Sprung, bricht er ab; das Abbrechen des ganzen Effekts (neues Gespräch) geht weiter durch.
+                try { if (kotlin.math.abs(abstand) > 200f) liste.animateScrollBy(abstand) else liste.scrollBy(abstand) }
+                catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
+            }
     }
     LaunchedEffect(vm.gespraech.size, vm.denkt) {
         // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
         if (vm.gespraech.lastOrNull()?.vonMir == true) folgen = true
-        // Nur im laufenden Gespräch ans Ende springen; beim Start bleibt die Einrichtung oben sichtbar.
-        val letzter = liste.layoutInfo.totalItemsCount - 1
-        if (folgen && vm.gespraech.isNotEmpty() && letzter >= 0) {
-            // Greift Frank in den Sprung, bricht er ab; das Abbrechen des ganzen Effekts (neue Nachricht) geht weiter durch.
-            try { liste.animateScrollToItem(letzter) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
-            // Rest bis ganz unten ohne Animation: die neue Zeile war beim Lesen der Anzahl evtl. noch nicht vermessen,
-            // oder die letzte Blase ist höher als der Bildschirm (dann steht nach dem Sprung nur ihr Anfang oben).
-            if (folgen && liste.canScrollForward) liste.scrollBy(100_000f)
+        // Liegt die neueste Nachricht außer Sicht (Gespräch geöffnet, viele Meldungen auf einmal): erst hinspringen, den
+        // Rest bis zur Mitte erledigt das Mitlesen oben. Beim Start ohne Gespräch bleibt die Einrichtung oben sichtbar.
+        if (folgen && vm.gespraech.isNotEmpty() && abstandZumZiel() == null) {
+            try { liste.scrollToItem(vorne + vm.gespraech.lastIndex) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
         }
     }
 
@@ -192,18 +221,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         StoppuhrKarte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
         // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
-        val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, papierkorb = vm.gespraech.isNotEmpty() || vm.sitzungId != null) + 10.dp
-        // Im Gespräch steht das Neueste mittig, mit Luft nach oben und unten (Franks Wunsch, gerade auf dem aufgeklappten
-        // Fold): oben und unten so viel Polster, dass die letzte Nachricht beim Mitlesen in der Mitte landet. Füllt sie den
-        // Bildschirm, schrumpft das Polster auf null: lange Antworten beginnen oben und scrollen wie bisher.
-        var listenHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-        var letzteHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
-        val mitte = if (vm.gespraech.isEmpty()) 0.dp
-            else with(androidx.compose.ui.platform.LocalDensity.current) { ((listenHoehe - letzteHoehe) / 2).coerceAtLeast(0).toDp() }
-        // Wächst die letzte Nachricht (neue Zeilen, Schritte), bleibt sie beim Mitlesen mittig. Lange Antworten wie bisher.
-        LaunchedEffect(letzteHoehe, listenHoehe) {
-            if (folgen && vm.gespraech.isNotEmpty() && letzteHoehe < listenHoehe && liste.canScrollForward) liste.scrollBy(100_000f)
-        }
+        val mitte = if (vm.gespraech.isEmpty()) 0.dp else with(dichte) { (listenHoehe / 2).toDp() }
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
@@ -300,9 +318,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     }
                 }
             }
-            items(vm.gespraech.size) { i ->
-                Box(if (i == vm.gespraech.lastIndex) Modifier.onSizeChanged { letzteHoehe = it.height } else Modifier) { Blase(vm, i, vm.gespraech[i]) }
-            }
+            items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
             item(key = "programmiert") { ProgrammierAktivitaet(vm) }
             if (vm.denktSichtbar) item(key = "denkt") {
                 Row(Modifier.padding(start = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
