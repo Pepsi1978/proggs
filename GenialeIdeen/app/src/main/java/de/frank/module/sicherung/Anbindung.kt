@@ -283,6 +283,8 @@ class IdeenSicherungsInhalt(
                 schreiber.name("kategorieId").value(idee.kategorieId)
                 schreiber.name("weitereKategorien").value(idee.weitereKategorien)
                 schreiber.name("kurzfassung").value(idee.kurzfassung)
+                schreiber.name("vorigerText").value(idee.vorigerText)
+                schreiber.name("vorigeKurzfassung").value(idee.vorigeKurzfassung)
                 schreiber.endObject()
                 pruefsumme.nimm(idee.id, idee.titel, idee.text, idee.status)
                 ideen += 1
@@ -496,6 +498,8 @@ private fun zuIdee(werte: Map<String, String>, ersatzZeit: Long): IdeeEntity {
         kategorieId = werte["kategorieId"]?.toLongOrNull()?.takeIf { it > 0L },
         weitereKategorien = werte["weitereKategorien"].orEmpty(),
         kurzfassung = werte["kurzfassung"].orEmpty(),
+        vorigerText = werte["vorigerText"]?.takeIf(String::isNotBlank),
+        vorigeKurzfassung = werte["vorigeKurzfassung"],
     )
 }
 

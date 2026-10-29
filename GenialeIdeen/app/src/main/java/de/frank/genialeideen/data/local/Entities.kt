@@ -49,7 +49,8 @@ const val KURZFASSUNG_MAX_WOERTER = 35
 fun begrenzeWoerter(text: String, max: Int = KURZFASSUNG_MAX_WOERTER): String {
     val woerter = text.trim().split(Regex("\\s+")).filter(String::isNotBlank)
     if (woerter.size <= max) return woerter.joinToString(" ")
-    return woerter.take(max).joinToString(" ").trimEnd('.', ',', ';', ':', '-', '–') + "."
+    val gekuerzt = woerter.take(max).joinToString(" ").trimEnd('.', ',', ';', ':', '-', '–', '"', '”', '“', '»', '«')
+    return if (gekuerzt.endsWith('?') || gekuerzt.endsWith('!')) gekuerzt else "$gekuerzt."
 }
 
 /** Was vorgelesen wird: nur die Kurzfassung — fehlt sie noch, die ersten 35 Wörter des Textes. */

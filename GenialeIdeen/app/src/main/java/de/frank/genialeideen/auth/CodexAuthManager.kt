@@ -218,6 +218,7 @@ class CodexAuthManager(context: Context) {
     private val loginMutex = Mutex()
     private val activeLoginJob = AtomicReference<Job?>()
     private val activeQuestionCall = ActiveCallTracker()
+    private val eigeneAnfragen = ActiveCallTracker()
     private val store by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         val masterKey = MasterKey.Builder(appContext)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -461,14 +462,18 @@ class CodexAuthManager(context: Context) {
     private suspend fun executeWithDnsRetry(client: OkHttpClient, request: Request): Response =
         withDnsRetry { client.newCall(request).awaitResponse() }
 
-    private suspend fun executeQuestionRequest(request: Request): TrackedResponse = withDnsRetry {
-        val call = RESPONSES_HTTP_CLIENT.newCall(request)
-        activeQuestionCall.track(call)
-        try {
-            TrackedResponse(call, call.awaitResponse())
-        } catch (error: Throwable) {
-            activeQuestionCall.clear(call)
-            throw error
+    private suspend fun executeQuestionRequest(request: Request): TrackedResponse {
+        // Hintergrundarbeit (Kurzfassung, KI-Verbessern) bricht der Stopp-Knopf des Chats nicht mit ab.
+        val tracker = if (currentCoroutineContext()[EigeneAnfrage] != null) eigeneAnfragen else activeQuestionCall
+        return withDnsRetry {
+            val call = RESPONSES_HTTP_CLIENT.newCall(request)
+            tracker.track(call)
+            try {
+                TrackedResponse(call, call.awaitResponse())
+            } catch (error: Throwable) {
+                tracker.clear(call)
+                throw error
+            }
         }
     }
 
@@ -556,6 +561,7 @@ class CodexAuthManager(context: Context) {
             throw error
         } finally {
             activeQuestionCall.clear(trackedResponse.call)
+            eigeneAnfragen.clear(trackedResponse.call)
         }
         return accumulator.result()
     }
@@ -715,3 +721,10 @@ private fun streamException(error: JSONObject?): CodexAuthException {
 
 private fun networkException(message: String, cause: Throwable? = null): CodexAuthException =
     CodexAuthException(AuthErrorKind.NETWORK, message, cause)
+
+/**
+ * Markiert Anfragen, die nicht zum Chat gehören (Kurzfassung, KI-Verbessern): [CodexAuthManager.cancelChat]
+ * lässt sie in Ruhe. Aufruf: `withContext(EigeneAnfrage) { streamChat(...) }`.
+ */
+object EigeneAnfrage : kotlin.coroutines.AbstractCoroutineContextElement(EigeneAnfrage),
+    kotlin.coroutines.CoroutineContext.Key<EigeneAnfrage>

@@ -23,6 +23,9 @@ interface IdeenDao {
     @Query("SELECT * FROM ideen WHERE id = :id")
     suspend fun lade(id: Long): IdeeEntity?
 
+    @Query("SELECT * FROM ideen WHERE status = :status ORDER BY reihenfolge ASC, angelegtAm DESC, id ASC")
+    suspend fun mitStatus(status: String): List<IdeeEntity>
+
     @Query("UPDATE ideen SET kategorieId = :kategorieId, geaendertAm = :jetzt WHERE id = :id")
     suspend fun setzeKategorie(id: Long, kategorieId: Long?, jetzt: Long = System.currentTimeMillis())
 

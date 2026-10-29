@@ -171,8 +171,14 @@ fun ListenScreen(
 
     // Die volle Kategorie steht oben: sortiert nach Anzahl, bei Gleichstand nach Name.
     // Gezählt wird genau das, was ein Tipp auf die Zeile zeigen würde.
-    val zaehlbasis = remember(angenommene, offene, umgesetzte, entwuerfe, umfangAlle) {
-        if (umfangAlle) angenommene + offene + umgesetzte + entwuerfe else angenommene + offene + entwuerfe
+    val zaehlbasis = remember(angenommene, offene, umgesetzte, entwuerfe, bereich, umfangAlle) {
+        when {
+            umfangAlle -> angenommene + offene + umgesetzte + entwuerfe
+            bereich == ListenBereich.ANGENOMMEN -> angenommene
+            bereich == ListenBereich.ENTWURF -> entwuerfe
+            bereich == ListenBereich.UMGESETZT -> umgesetzte
+            else -> offene
+        }
     }
     val zaehlung = remember(zaehlbasis) { alleZaehlung(zaehlbasis) }
     // Zu welcher Art gehört eine umgesetzte Idee? Nach ihrer Stammkategorie. Ohne Kategorie
@@ -239,7 +245,7 @@ fun ListenScreen(
                 kategorien = sortierteKategorien,
                 gewaehlt = gewaehlteKategorie,
                 anzahlJeKategorie = zaehlung,
-                offeneAnzahl = angenommene.size + offene.size + entwuerfe.size,
+                offeneAnzahl = offene.size,
                 alleAnzahl = angenommene.size + offene.size + umgesetzte.size + entwuerfe.size,
                 entwuerfeAnzahl = entwuerfe.size,
                 entwuerfeGewaehlt = bereich == ListenBereich.ENTWURF && gewaehlteKategorie == null && umgesetztArt == null,
@@ -272,6 +278,8 @@ fun ListenScreen(
                 },
                 aufWahl = { id ->
                     umgesetztArt = null
+                    // Die Entwürfe sind ein eigener Eintrag; eine Kategorie gilt für die Reiter.
+                    if (bereich == ListenBereich.ENTWURF) bereich = ListenBereich.OFFEN
                     viewModel.waehleKategorie(id)
                     bereichsraum.launch { schublade.close() }
                 },

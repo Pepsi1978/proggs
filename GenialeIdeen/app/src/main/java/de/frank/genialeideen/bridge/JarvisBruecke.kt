@@ -61,7 +61,8 @@ class JarvisBruecke : ContentProvider() {
                     "umgesetzt" -> liste.filter { it.status == IdeenStatus.UMGESETZT.name }
                     "angenommen" -> liste.filter { it.status == IdeenStatus.ANGENOMMEN.name }
                     "alle" -> liste
-                    else -> liste.filter { it.status == IdeenStatus.OFFEN.name }
+                    // Angenommene gehören zu den noch nicht umgesetzten — Jarvis soll sie weiter sehen.
+                    else -> liste.filter { it.status == IdeenStatus.OFFEN.name || it.status == IdeenStatus.ANGENOMMEN.name }
                 }
                 if (kategorie.isNotEmpty()) {
                     val ids = kategorien.filter { kategorie in it.name.lowercase(Locale.GERMAN) }.map { it.id }.toSet()

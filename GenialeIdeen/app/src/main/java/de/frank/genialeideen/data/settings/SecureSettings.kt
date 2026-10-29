@@ -386,7 +386,7 @@ class SecureSettings(context: Context) : Closeable {
         const val QWEN_STANDARD_VOICE = "Cherry"
         const val TTS_SPEECH_RATE = 1f
         const val KI_ZUGANG = "abo"
-        const val MODEL = "gpt-5.6-terra"
+        const val MODEL = "gpt-6.1-terra"
         const val REASONING = "medium"
         const val THEME = "light"
         const val AUSRICHTUNG = "automatisch"

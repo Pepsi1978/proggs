@@ -41,7 +41,7 @@ class WeckerProvider : ContentProvider() {
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor {
         authorize()
         require(uri == URI) { "Unbekannte Wecker-Abfrage" }
-        val ideen = runBlocking { angenommene(database.ideenDao().alleEinmal()) }
+        val ideen = runBlocking { database.ideenDao().mitStatus(IdeenStatus.ANGENOMMEN.name) }
         return MatrixCursor(arrayOf("_id", "titel", "text", "reihenfolge", "geaendertAm")).apply {
             ideen.forEach { addRow(arrayOf<Any>(it.id, it.titel, it.vorleseText(), it.reihenfolge, it.geaendertAm)) }
             setNotificationUri(requireNotNull(context).contentResolver, URI)

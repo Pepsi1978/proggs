@@ -31,7 +31,6 @@ enum class CodexModel(val label: String, val apiId: String, val anbieter: KiAnbi
             "gpt-5.6-sol", "gpt 5.6 sol", "gpt-5.6 sol",
             "gpt-6-sol", "gpt 6 sol", "gpt-6 sol" -> SOL
             "gpt-5.6-luna", "gpt 5.6 luna", "gpt-5.6 luna" -> LUNA
-            "gpt-5.6-terra", "gpt 5.6 terra", "gpt-5.6 terra" -> TERRA
             else -> TERRA
         }
 

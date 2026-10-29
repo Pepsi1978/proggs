@@ -24,13 +24,14 @@ import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.NachrichtEntity
-import de.frank.genialeideen.data.local.begrenzeWoerter
 import de.frank.genialeideen.data.local.vorleseText
 import de.frank.genialeideen.di.AppContainer
 import de.frank.genialeideen.observability.IdeenCrashHandler
 import de.frank.genialeideen.observability.IdeenLog
 import de.frank.genialeideen.speech.VorleseStand
+import de.frank.genialeideen.text.Kurzfassung
 import de.frank.genialeideen.text.UmlautKorrektur
+import de.frank.genialeideen.auth.EigeneAnfrage
 import de.frank.genialeideen.tts.ClonedVoice
 import de.frank.genialeideen.tts.QwenVoiceDirectory
 import de.frank.genialeideen.tts.QwenVoiceEnrollment
@@ -257,6 +258,8 @@ class IdeenViewModel(
 
     fun oeffne(id: Long?) {
         _offeneIdee.value = id
+        // Ein inzwischen eingetragener KI-Schlüssel soll fehlende Kurzfassungen sofort erzeugen.
+        if (id != null) Kurzfassung.anstossen()
         IdeenCrashHandler.letzteAktion = if (id == null) "Liste" else "Idee geöffnet"
     }
 
@@ -480,30 +483,29 @@ class IdeenViewModel(
             try {
                 val modell = CodexModel.fromLabel(settings.model)
                 val stufe = ReasoningEffort.fromLabel(settings.reasoning)
+                // Vom Stopp-Knopf des Chats unabhängig: Die Verbesserung läuft zu Ende.
                 val text = UmlautKorrektur.korrigiere(
-                    codex.streamChat(
-                        instructions = VERBESSERUNG,
-                        turns = listOf(ChatTurn("user", idee.text)),
-                        model = modell,
-                        reasoningEffort = stufe,
-                    ).trim(),
+                    withContext(EigeneAnfrage) {
+                        codex.streamChat(
+                            instructions = VERBESSERUNG,
+                            turns = listOf(ChatTurn("user", idee.text)),
+                            model = modell,
+                            reasoningEffort = stufe,
+                        )
+                    }.trim(),
                 )
                 if (text.isBlank()) {
                     zeige(Meldung("Es kam keine verbesserte Fassung zurück.", istFehler = true))
                     return@launch
                 }
-                val kurz = begrenzeWoerter(
-                    UmlautKorrektur.korrigiere(
-                        codex.streamChat(
-                            instructions = KURZFASSUNG,
-                            turns = listOf(ChatTurn("user", text)),
-                            model = modell,
-                            reasoningEffort = stufe,
-                        ).trim().trim('"', '„', '“'),
-                    ),
-                )
-                repository.setzeVerbessert(idee.id, text, kurz)
-                zeige(Meldung("Beide Fassungen sind verbessert."))
+                // Scheitert nur die Kurzfassung, bleibt der verbesserte Text trotzdem stehen —
+                // die leere Kurzfassung zieht der Hintergrund nach.
+                val kurz = runCatching { Kurzfassung.erzeuge(codex, modell, stufe, text) }.getOrDefault("")
+                if (repository.setzeVerbessert(idee.id, idee.text, text, kurz)) {
+                    zeige(Meldung("Beide Fassungen sind verbessert."))
+                } else {
+                    zeige(Meldung("Die Idee wurde inzwischen geändert — bitte noch einmal verbessern.", istFehler = true))
+                }
             } catch (fehler: Exception) {
                 zeige(Meldung(fehlerText(fehler), istFehler = true, wiederholen = { verbessereMitKi(idee) }))
             } finally {
@@ -579,9 +581,10 @@ class IdeenViewModel(
             vorleser.stopp()
             return
         }
-        // Nur offene Ideen: Umgesetztes und Entwürfe gehören nicht in die Endlosschleife.
-        // Direkt aus alleIdeen gefiltert, weil offeneIdeen ohne Abonnenten leer sein kann.
-        val ideen = alleIdeen.value.filter { it.status == IdeenStatus.OFFEN.name }
+        // Angenommene zuerst, dann offene: Umgesetztes und Entwürfe gehören nicht in die Endlosschleife.
+        // Direkt aus alleIdeen gefiltert, weil die Teillisten ohne Abonnenten leer sein können.
+        val ideen = alleIdeen.value.filter { it.status == IdeenStatus.ANGENOMMEN.name } +
+            alleIdeen.value.filter { it.status == IdeenStatus.OFFEN.name }
         if (ideen.isEmpty()) {
             zeige(Meldung("Es sind keine offenen Ideen zum Vorlesen vorhanden."))
             return
@@ -931,6 +934,8 @@ class IdeenViewModel(
                 }
                 settings.chatGptConnectedAt = System.currentTimeMillis()
                 _anmeldung.value = AnmeldeStand()
+                // Jetzt mit KI-Zugang: fehlende Kurzfassungen gleich nachziehen.
+                Kurzfassung.anstossen()
                 zeige(Meldung("Angemeldet als ${ergebnis.email ?: "ChatGPT-Konto"}."))
             } catch (fehler: Exception) {
                 _anmeldung.value = AnmeldeStand()
@@ -1741,17 +1746,6 @@ class IdeenViewModel(
                 "- Behalte Ton und Sichtweise des Originals bei; aus einer Notiz wird kein Aufsatz.\n" +
                 "- Gib nur den korrigierten Text zurück, ohne Vorrede, ohne Anführungszeichen, " +
                 "ohne Kommentar."
-
-        /** Die Kurzfassung wird vorgelesen (etwa im Genialen Wecker) — deshalb mit [TTS_REGEL]. */
-        const val KURZFASSUNG =
-            "Du bekommst eine Idee. Fasse sie in HÖCHSTENS 35 WÖRTERN zusammen und nenne dabei " +
-                "alle Kernpunkte der Idee.\n\n" +
-                "Regeln:\n" +
-                "- Höchstens 35 Wörter, ein bis drei ganze Sätze.\n" +
-                "- Jeder Kernpunkt kommt vor; Beispiele und Nebensächliches lässt du weg.\n" +
-                "- Erfinde nichts hinzu und behalte die Sichtweise des Originals bei.\n" +
-                "- Gib nur die Kurzfassung zurück, ohne Vorrede, ohne Titel, ohne Anführungszeichen.\n\n" +
-                TTS_REGEL
 
         /** Der KI-Knopf in der Einzelansicht: Die ausführliche Fassung wird besser, nicht kürzer. */
         const val VERBESSERUNG =

@@ -109,6 +109,10 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
                 text = neuerText,
                 // Ein neuer Text braucht eine neue Kurzfassung — leer heißt: wird nachgezogen.
                 kurzfassung = if (neuerText == idee.text) idee.kurzfassung else "",
+                // Nach einer Änderung von Hand gibt es keine KI-Fassung mehr zurückzuholen —
+                // „Rückgängig“ würde sonst die Bearbeitung still verwerfen.
+                vorigerText = if (neuerText == idee.text) idee.vorigerText else null,
+                vorigeKurzfassung = if (neuerText == idee.text) idee.vorigeKurzfassung else null,
                 geaendertAm = System.currentTimeMillis(),
             ),
         )
@@ -118,8 +122,10 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
         ideenDao.setzeKurzfassung(id, text, kurzfassung) > 0
 
     /** Beide Fassungen neu; die bisherigen bleiben für „Rückgängig“ stehen. */
-    suspend fun setzeVerbessert(id: Long, text: String, kurzfassung: String) {
-        val idee = ideenDao.lade(id) ?: return
+    /** false, wenn sich der Text seit Beginn der Verbesserung geändert hat — dann bleibt alles stehen. */
+    suspend fun setzeVerbessert(id: Long, alterText: String, text: String, kurzfassung: String): Boolean {
+        val idee = ideenDao.lade(id) ?: return false
+        if (idee.text != alterText) return false
         ideenDao.aktualisieren(
             idee.copy(
                 text = text.trim(),
@@ -129,6 +135,7 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
                 geaendertAm = System.currentTimeMillis(),
             ),
         )
+        return true
     }
 
     /** Holt die Fassung vor der letzten Verbesserung zurück. */
@@ -205,6 +212,7 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
                 status = IdeenStatus.OFFEN.name,
                 reihenfolge = oben,
                 kategorieId = kategorieId,
+                kurzfassung = "",
                 originalText = originalText ?: bestand.originalText,
                 geaendertAm = System.currentTimeMillis(),
             ),
@@ -219,8 +227,11 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
 
     suspend fun setzeStatus(idee: IdeeEntity, status: IdeenStatus) {
         val oben = ideenDao.naechsteReihenfolgeOben(status.name)
+        // Frisch laden: Das übergebene Objekt kann eine inzwischen geschriebene Kurzfassung oder
+        // KI-Fassung noch nicht kennen und würde sie sonst überschreiben.
+        val frisch = ideenDao.lade(idee.id) ?: idee
         ideenDao.aktualisieren(
-            idee.copy(
+            frisch.copy(
                 status = status.name,
                 reihenfolge = oben,
                 geaendertAm = System.currentTimeMillis(),

@@ -635,8 +635,10 @@ private fun IdeenKopf(
                 color = gold.primaer,
             )
             Spacer(Modifier.height(4.dp))
+            // Fehlt die KI-Kurzfassung noch (oder gibt es keinen KI-Zugang), steht hier gedämpft,
+            // was stattdessen vorgelesen wird: die ersten 35 Wörter.
             Text(
-                idee.kurzfassung.ifBlank { "Wird gerade erstellt …" },
+                idee.vorleseText().ifBlank { "Ohne Text." },
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = if (idee.kurzfassung.isBlank()) gold.textGedaempft else gold.textPrimaer,
             )
