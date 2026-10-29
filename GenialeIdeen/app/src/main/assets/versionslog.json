@@ -26,6 +26,7 @@
     {"versionCode": 63, "versionName": "1.7.32", "stand": "29.10.2026, 20:24 Uhr", "notiz": "Jarvis kann jetzt Ideen mit KI verbessern, nur die Kurzfassung neu erzeugen, die Verbesserung zurücknehmen, Entwürfe lesen und die Zahlen der Reiter und der Seitenleiste abfragen."},
     {"versionCode": 64, "versionName": "1.7.33", "stand": "29.10.2026, 20:34 Uhr", "notiz": "Knopf und Jarvis verbessern eine Idee nie mehr doppelt gleichzeitig, eine neu erzeugte Kurzfassung lässt den Rückgängig-Stand stehen, und eine wiederholte Jarvis-Anfrage verbessert den Text nicht ein zweites Mal."},
     {"versionCode": 65, "versionName": "1.7.34", "stand": "29.10.2026, 20:46 Uhr", "notiz": "Die kleinen Bestätigungsblasen nach Speichern, Löschen, Annehmen oder Einstellen erscheinen nicht mehr; Fehler und wichtige Hinweise zeigt die App weiter an."},
-    {"versionCode": 66, "versionName": "1.7.35", "stand": "29.10.2026, 21:37 Uhr", "notiz": "Die App stürzt nach dem Ändern und Speichern eines Ideentextes nicht mehr ab; die neue Kurzfassung entsteht wieder im Hintergrund."}
+    {"versionCode": 66, "versionName": "1.7.35", "stand": "29.10.2026, 21:37 Uhr", "notiz": "Die App stürzt nach dem Ändern und Speichern eines Ideentextes nicht mehr ab; die neue Kurzfassung entsteht wieder im Hintergrund."},
+    {"versionCode": 67, "versionName": "1.7.36", "stand": "29.10.2026, 22:17 Uhr", "notiz": "Der Titel einer Idee lässt sich jetzt in der Ideen-Ansicht direkt antippen, ändern und speichern, ohne dass Text oder Kurzfassung angetastet werden."}
   ]
 }

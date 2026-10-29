@@ -220,6 +220,7 @@ fun DetailScreen(
                         idee = aktuelle,
                         aufBearbeiten = { bearbeiten = true },
                         kategorien = kategorien,
+                        aufTitel = { neu -> viewModel.setzeTitel(aktuelle.id, neu) },
                         aufKategorie = { id -> viewModel.setzeKategorie(aktuelle.id, id) },
                         aufWeitereKategorien = { ids -> viewModel.setzeWeitereKategorien(aktuelle.id, ids) },
                         aufNeueKategorie = { name, art, fertig ->
@@ -586,6 +587,7 @@ private fun IdeeBearbeiten(
 private fun IdeenKopf(
     idee: IdeeEntity,
     aufBearbeiten: () -> Unit,
+    aufTitel: (String) -> Unit,
     kategorien: List<de.frank.genialeideen.data.local.KategorieEntity>,
     aufKategorie: (Long?) -> Unit,
     aufWeitereKategorien: (List<Long>) -> Unit,
@@ -604,6 +606,38 @@ private fun IdeenKopf(
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
     val angenommen = idee.status == IdeenStatus.ANGENOMMEN.name
     var frageLoeschen by remember { mutableStateOf(false) }
+    // Nur die Überschrift ändern — ohne Umweg über den Bearbeiten-Bildschirm, damit Text und
+    // Kurzfassung garantiert stehen bleiben.
+    var titelAendern by remember { mutableStateOf(false) }
+    if (titelAendern) {
+        var neuerTitel by rememberSaveable(idee.id) { mutableStateOf(idee.titel) }
+        AlertDialog(
+            onDismissRequest = { titelAendern = false },
+            title = { Text("Titel ändern") },
+            text = {
+                EingabeFeld(
+                    beschriftung = "Titel",
+                    platzhalter = "Höchstens drei Wörter",
+                    wert = neuerTitel,
+                    aufWert = { neuerTitel = it },
+                    einzeilig = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = neuerTitel.isNotBlank(),
+                    onClick = {
+                        titelAendern = false
+                        if (neuerTitel.trim() != idee.titel) aufTitel(neuerTitel)
+                    },
+                ) { Text("Speichern", color = gold.primaer) }
+            },
+            dismissButton = {
+                TextButton(onClick = { titelAendern = false }) { Text("Abbrechen") }
+            },
+            containerColor = gold.flaecheErhoeht,
+        )
+    }
     if (frageLoeschen) {
         AlertDialog(
             onDismissRequest = { frageLoeschen = false },
@@ -628,6 +662,31 @@ private fun IdeenKopf(
         erhoeht = true,
     ) {
         Column(Modifier.padding(16.dp)) {
+            Text(
+                "Titel",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = gold.primaer,
+            )
+            Spacer(Modifier.height(4.dp))
+            // Ein Tipp auf den Titel öffnet das Ändern der Überschrift.
+            Row(
+                modifier = Modifier.fillMaxWidth().druckEffekt { titelAendern = true },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    idee.titel,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = gold.textPrimaer,
+                )
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Titel ändern",
+                    tint = gold.primaer,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Spacer(Modifier.height(14.dp))
             // Die Kurzfassung steht über der ausführlichen Fassung — nur sie wird vorgelesen.
             Text(
                 "Kurzfassung",

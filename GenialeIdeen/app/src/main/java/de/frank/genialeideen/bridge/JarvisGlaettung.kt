@@ -79,8 +79,9 @@ object JarvisGlaettung {
         val repo = c.ideenRepository
         val idee = repo.lade(id) ?: return
         // Nur überschreiben, wenn der Text seit dem Anlegen unverändert ist — sonst gewinnt die Bearbeitung von Hand.
+        // Ein inzwischen von Hand geänderter Titel bleibt ebenfalls stehen.
         if (idee.text == roh && sauber.isNotBlank()) {
-            c.database.ideenDao().aktualisieren(idee.copy(text = sauber, titel = titel ?: idee.titel, originalText = roh, kurzfassung = "", geaendertAm = System.currentTimeMillis()))
+            c.database.ideenDao().aktualisieren(idee.copy(text = sauber, titel = if (idee.titel == ersatzTitel(roh)) titel ?: idee.titel else idee.titel, originalText = roh, kurzfassung = "", geaendertAm = System.currentTimeMillis()))
         } else if (titel != null && idee.titel == ersatzTitel(roh)) {
             repo.aendere(idee, titel, idee.text)
         }

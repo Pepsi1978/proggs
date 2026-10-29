@@ -371,6 +371,11 @@ class IdeenViewModel(
         viewModelScope.launch { repository.setzeKategorie(ideeId, kategorieId) }
     }
 
+    fun setzeTitel(ideeId: Long, titel: String) {
+        if (titel.isBlank()) return
+        viewModelScope.launch { repository.setzeTitel(ideeId, titel) }
+    }
+
     fun setzeWeitereKategorien(ideeId: Long, weitere: List<Long>) {
         viewModelScope.launch { repository.setzeWeitereKategorien(ideeId, weitere) }
     }

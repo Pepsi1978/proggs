@@ -41,6 +41,9 @@ interface IdeenDao {
     )
 
     /** Schreibt die Kurzfassung nur, wenn der Text seither unverändert ist. Kein inhaltliches Ändern. */
+    @Query("UPDATE ideen SET titel = :titel, geaendertAm = :jetzt WHERE id = :id")
+    suspend fun setzeTitel(id: Long, titel: String, jetzt: Long = System.currentTimeMillis())
+
     @Query("UPDATE ideen SET kurzfassung = :kurzfassung WHERE id = :id AND text = :text")
     suspend fun setzeKurzfassung(id: Long, text: String, kurzfassung: String): Int
 
