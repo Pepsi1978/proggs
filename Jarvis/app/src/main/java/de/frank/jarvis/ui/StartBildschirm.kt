@@ -64,7 +64,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import kotlinx.coroutines.isActive
 import androidx.compose.ui.graphics.Color
@@ -167,49 +166,36 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
         }
     }
-    // Mitlesen mittig (Franks Wunsch, gerade auf dem aufgeklappten Fold): Die neueste Nachricht steht in der Mitte der Liste,
-    // mit Luft nach oben und unten, und bleibt dort, auch wenn sie wächst oder darunter der Arbeitsstand läuft. Füllt sie
-    // fast den ganzen Bildschirm, gilt das Alte: ihr Ende steht unten, nach oben scrollt man zum Anfang.
-    // Oben und unten je eine halbe Listenhöhe Polster, damit die Mitte auch für die erste und die letzte Nachricht erreichbar ist.
+    // Mitlesen mittig (Franks Wunsch, gerade auf dem aufgeklappten Fold): Ohne eigenes Scrollen steht das Ende des Gesprächs,
+    // also das, was gerade hereinkommt, in der Bildschirmmitte. Dafür bekommt die Liste unten eine halbe Listenhöhe Polster
+    // und stapelt kurze Gespräche von unten: Ganz unten angekommen, endet der Text genau in der Mitte, darüber steht der Rest.
     val dichte = androidx.compose.ui.platform.LocalDensity.current
     var listenHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, papierkorb = vm.gespraech.isNotEmpty() || vm.sitzungId != null) + 10.dp
-    val untenPx by androidx.compose.runtime.rememberUpdatedState(with(dichte) { (8.dp + schweber).toPx() })
-    val vorne by androidx.compose.runtime.rememberUpdatedState(if (offen > 0) 1 else 0)
-    // Wie weit die Liste vorrücken muss, damit die neueste Nachricht am Zielort steht (negativ: schon darüber hinaus);
-    // null, solange sie nicht im Bild ist.
-    fun abstandZumZiel(): Float? {
-        if (vm.gespraech.isEmpty()) return null
-        val info = liste.layoutInfo
-        val blase = info.visibleItemsInfo.firstOrNull { it.index == vorne + vm.gespraech.lastIndex } ?: return null
-        val oben = info.viewportStartOffset
-        val unten = info.viewportEndOffset
-        val ende = blase.offset + blase.size
-        return if (blase.size < (unten - oben) * 0.9f) (blase.offset + ende) / 2f - (oben + unten) / 2f
-            else ende - (unten - untenPx)
-    }
-    // Hat Frank die neueste Nachricht wieder bis zur Mitte (oder weiter) geholt: wieder mitlesen.
+    // Ganz unten angekommen, egal wie: wieder mitlesen.
     LaunchedEffect(liste, folgenZustand) {
-        androidx.compose.runtime.snapshotFlow { !liste.isScrollInProgress && (abstandZumZiel() ?: Float.MAX_VALUE) <= 1f }
-            .collect { da -> if (da) folgenZustand.value = true }
+        androidx.compose.runtime.snapshotFlow { liste.canScrollForward }.collect { weiter -> if (!weiter) folgenZustand.value = true }
     }
-    // Beim Mitlesen hält die Liste die neueste Nachricht am Zielort: neue Nachricht, wachsender Text, Drehen, Aufklappen.
+    // Beim Mitlesen bleibt das Ende in der Mitte, auch wenn die letzte Nachricht wächst, darunter der Arbeitsstand läuft oder
+    // das Handy auf- oder zugeklappt wird. Greift Frank selbst ein (Finger, laufende Animation), wartet das.
     LaunchedEffect(liste, folgenZustand) {
-        androidx.compose.runtime.snapshotFlow { if (folgenZustand.value && !liste.isScrollInProgress) abstandZumZiel() else null }
-            .collect { abstand ->
-                if (abstand == null || kotlin.math.abs(abstand) <= 1f) return@collect
-                // Greift Frank in den Sprung, bricht er ab; das Abbrechen des ganzen Effekts (neues Gespräch) geht weiter durch.
-                try { if (kotlin.math.abs(abstand) > 200f) liste.animateScrollBy(abstand) else liste.scrollBy(abstand) }
-                catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
+        androidx.compose.runtime.snapshotFlow { folgenZustand.value && vm.gespraech.isNotEmpty() && !liste.isScrollInProgress && liste.canScrollForward }
+            .collect { nachziehen ->
+                if (!nachziehen) return@collect
+                try { liste.scrollBy(100_000f) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
             }
     }
     LaunchedEffect(vm.gespraech.size, vm.denkt) {
         // Eigene Nachricht abgeschickt: Frank will die Antwort sehen, also wieder mitlesen.
         if (vm.gespraech.lastOrNull()?.vonMir == true) folgen = true
-        // Liegt die neueste Nachricht außer Sicht (Gespräch geöffnet, viele Meldungen auf einmal): erst hinspringen, den
-        // Rest bis zur Mitte erledigt das Mitlesen oben. Beim Start ohne Gespräch bleibt die Einrichtung oben sichtbar.
-        if (folgen && vm.gespraech.isNotEmpty() && abstandZumZiel() == null) {
-            try { liste.scrollToItem(vorne + vm.gespraech.lastIndex) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
+        // Nur im laufenden Gespräch ans Ende springen; beim Start bleibt die Einrichtung oben sichtbar.
+        val letzter = liste.layoutInfo.totalItemsCount - 1
+        if (folgen && vm.gespraech.isNotEmpty() && letzter >= 0) {
+            // Greift Frank in den Sprung, bricht er ab; das Abbrechen des ganzen Effekts (neue Nachricht) geht weiter durch.
+            try { liste.animateScrollToItem(letzter) } catch (e: kotlinx.coroutines.CancellationException) { if (!isActive) throw e }
+            // Rest bis ganz unten ohne Animation: die neue Zeile war beim Lesen der Anzahl evtl. noch nicht vermessen,
+            // oder die letzte Blase ist höher als der Bildschirm (dann steht nach dem Sprung nur ihr Anfang oben).
+            if (folgen && liste.canScrollForward) liste.scrollBy(100_000f)
         }
     }
 
@@ -222,11 +208,12 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
         // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
         val mitte = if (vm.gespraech.isEmpty()) 0.dp else with(dichte) { (listenHoehe / 2).toDp() }
+        val vonUnten = vm.gespraech.isNotEmpty()
         Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = maxOf(8.dp, mitte), bottom = maxOf(8.dp + schweber, mitte)),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = maxOf(8.dp + schweber, mitte)),
+            verticalArrangement = if (vonUnten) Arrangement.spacedBy(10.dp, Alignment.Bottom) else Arrangement.spacedBy(10.dp),
         ) {
             if (offen > 0) item(key = "einrichtung") {
                 Karte(toenung = f.primaer) {
