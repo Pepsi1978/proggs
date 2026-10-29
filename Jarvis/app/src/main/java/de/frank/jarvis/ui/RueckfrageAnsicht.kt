@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import de.frank.jarvis.faehigkeit.RueckfrageStand
+import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
@@ -258,6 +259,11 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
     }
     val beantwortbar = RueckfrageStand.beantwortbar(r.stand)
     val sendet = r.stand == RueckfrageStand.SENDET
+    // Diagnose (29.10.2026: Vollbild offen, Tippen auf die Optionen ohne Wirkung, nach Neustart durch ein Update bei zugeklapptem,
+    // gesperrtem Handy): Stand beim Öffnen und bei jedem Wechsel festhalten, damit das Logbuch zeigt, ob die Optionen gesperrt waren.
+    LaunchedEffect(r.id, r.stand) {
+        Logbuch.system("Rückfrage-Vollbild", "frage=${r.id} stand=${r.stand.ifEmpty { "leer" }} aktiv=${beantwortbar && !sendet} sitzung=${vm.sitzungId} bis=${r.bis - System.currentTimeMillis() / 1000}s")
+    }
 
     /** Antwort je Frage; null = noch nichts (oder eigene Antwort ohne Text). */
     fun antwort(i: Int, q: Frage): String? {
@@ -282,7 +288,7 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
     Box(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
             // Berührungen neben den Bedienelementen gehen nicht an den Chat darunter.
-            .pointerInput(Unit) { detectTapGestures { } }
+            .pointerInput(r.id) { detectTapGestures { Logbuch.system("Rückfrage-Vollbild: Tipp neben den Bedienelementen", "frage=${r.id} x=${it.x.toInt()} y=${it.y.toInt()}") } }
             .windowInsetsPadding(WindowInsets.safeDrawing),
         contentAlignment = Alignment.TopCenter,
     ) {
@@ -303,12 +309,14 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage) {
                     FrageBlock(
                         vm, i, r, q, wahl[i].orEmpty(), eigen[i] == true, texte[i].orEmpty(), i in fehlend, aktiv = beantwortbar && !sendet,
                         waehlen = { label ->
+                            Logbuch.system("Rückfrage-Option getippt", "frage=${r.id} frage_nr=${i + 1} option=$label")
                             fehlend.remove(i)
                             val bisher = wahl[i].orEmpty()
                             if (q.mehrfach) wahl[i] = if (label in bisher) bisher - label else bisher + label
                             else { wahl[i] = listOf(label); eigen[i] = false }
                         },
                         eigeneWaehlen = {
+                            Logbuch.system("Rückfrage-Option getippt", "frage=${r.id} frage_nr=${i + 1} option=Eigene Antwort")
                             fehlend.remove(i)
                             if (q.mehrfach) eigen[i] = eigen[i] != true else { eigen[i] = true; wahl[i] = emptyList() }
                         },

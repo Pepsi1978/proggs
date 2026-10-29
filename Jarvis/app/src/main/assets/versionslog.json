@@ -411,6 +411,7 @@
     { "versionCode": 405, "versionName": "1.8.394", "stand": "28.10.2026, 19:24 Uhr", "notiz": "Die Tastenleiste der Fernwartung behält beim Aus- und Einblenden ihre Scroll-Position." },
     { "versionCode": 406, "versionName": "1.8.395", "stand": "28.10.2026, 19:32 Uhr", "notiz": "In der Fernwartung ist die Statusleiste des Handys ausgeblendet und das Rechnerbild nutzt auch den oberen Bildschirmrand." },
     { "versionCode": 407, "versionName": "1.8.396", "stand": "28.10.2026, 21:55 Uhr", "notiz": "Unter Spracheingabe → Transkription gibt es jetzt Parakeet primeline als Offline-Diktat auf Deutsch, das nach einmaligem Modell-Download ohne Internet auf dem Handy läuft." },
-    { "versionCode": 408, "versionName": "1.8.397", "stand": "29.10.2026, 11:49 Uhr", "notiz": "Die eigene Antwort auf eine Rückfrage der Programmier-Sitzung lässt sich jetzt per Mikrofon einsprechen und mit dem KI-Knopf in gutes Deutsch bringen." }
+    { "versionCode": 408, "versionName": "1.8.397", "stand": "29.10.2026, 11:49 Uhr", "notiz": "Die eigene Antwort auf eine Rückfrage der Programmier-Sitzung lässt sich jetzt per Mikrofon einsprechen und mit dem KI-Knopf in gutes Deutsch bringen." },
+    { "versionCode": 409, "versionName": "1.8.398", "stand": "29.10.2026, 12:00 Uhr", "notiz": "Jarvis protokolliert im Rückfrage-Vollbild, ob die Optionen antippbar sind und wohin getippt wurde, damit sich nicht reagierende Rückfragen aufklären lassen." }
 ]
 }
