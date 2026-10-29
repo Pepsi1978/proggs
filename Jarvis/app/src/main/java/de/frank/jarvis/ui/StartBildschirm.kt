@@ -53,6 +53,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -192,14 +193,22 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         // Rechts unten über der Liste schweben Programmierer, im Programmiergespräch „+ Nachtrag“ und abgesetzt „Neue Session“;
         // die Liste bekommt unten so viel Luft, dass sich die letzte Nachricht darüber schieben lässt.
         val schweber = if (vm.liveAktiv) 0.dp else schwebeHoehe(vm.nachtragMoeglich, papierkorb = vm.gespraech.isNotEmpty() || vm.sitzungId != null) + 10.dp
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        // Im Gespräch steht das Neueste mittig, mit Luft nach oben und unten (Franks Wunsch, gerade auf dem aufgeklappten
+        // Fold): oben und unten so viel Polster, dass die letzte Nachricht beim Mitlesen in der Mitte landet. Füllt sie den
+        // Bildschirm, schrumpft das Polster auf null: lange Antworten beginnen oben und scrollen wie bisher.
+        var listenHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+        var letzteHoehe by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+        val mitte = if (vm.gespraech.isEmpty()) 0.dp
+            else with(androidx.compose.ui.platform.LocalDensity.current) { ((listenHoehe - letzteHoehe) / 2).coerceAtLeast(0).toDp() }
+        // Wächst die letzte Nachricht (neue Zeilen, Schritte), bleibt sie beim Mitlesen mittig. Lange Antworten wie bisher.
+        LaunchedEffect(letzteHoehe, listenHoehe) {
+            if (folgen && vm.gespraech.isNotEmpty() && letzteHoehe < listenHoehe && liste.canScrollForward) liste.scrollBy(100_000f)
+        }
+        Box(Modifier.weight(1f).fillMaxWidth().onSizeChanged { listenHoehe = it.height }) {
         LazyColumn(
             Modifier.fillMaxSize().nestedScroll(nachOben), state = liste,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp + schweber),
-            // Im Sprachgespräch steht eine kurze Antwort mittig, mit Luft nach oben und unten. Füllt sie den Bildschirm,
-            // greift die Ausrichtung nicht mehr: Die Liste beginnt oben und scrollt wie bisher.
-            verticalArrangement = if ((vm.liveAktiv || vm.sprachmodusAktiv) && vm.gespraech.isNotEmpty()) Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
-                else Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = maxOf(8.dp, mitte), bottom = maxOf(8.dp + schweber, mitte)),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (offen > 0) item(key = "einrichtung") {
                 Karte(toenung = f.primaer) {
@@ -291,7 +300,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     }
                 }
             }
-            items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
+            items(vm.gespraech.size) { i ->
+                Box(if (i == vm.gespraech.lastIndex) Modifier.onSizeChanged { letzteHoehe = it.height } else Modifier) { Blase(vm, i, vm.gespraech[i]) }
+            }
             item(key = "programmiert") { ProgrammierAktivitaet(vm) }
             if (vm.denktSichtbar) item(key = "denkt") {
                 Row(Modifier.padding(start = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
