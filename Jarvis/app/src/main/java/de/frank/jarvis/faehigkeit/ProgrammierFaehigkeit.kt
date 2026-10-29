@@ -1596,7 +1596,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Eine freie Rückfrage trägt die ganze letzte Nachricht der Sitzung: Die eigentliche Frage steht an ihrem Ende.
         val frageText = if (frage.optBoolean("frei")) kurz.lines().map { it.trim() }.filter { it.isNotEmpty() }.takeLast(2).joinToString(" ").takeLast(300)
             else kurz.take(300)
-        val review = Regex("(?i)code[- ]?review").containsMatchIn(frageText) && !Regex("(?i)befund|beheb|fix").containsMatchIn(frageText)
+        // „bis 100 Befunde“ gehört zur Antwortmöglichkeit „Ja, sehr ausführlich“ der Review-Frage, nicht zu einer Frage nach Befunden.
+        val ohneUmfang = frageText.replace(Regex("(?i)\\(?\\s*bis\\s+\\d+\\s+befunde?\\s*\\)?"), "")
+        val review = Regex("(?i)code[- ]?review").containsMatchIn(ohneUmfang) && !Regex("(?i)befund|beheb|fix").containsMatchIn(ohneUmfang)
         // Ein kurzer fester Satz gleich beim Eintreffen (= Beginn des Countdowns), nach dem kurzen Ton der Benachrichtigung;
         // die Frage selbst steht im Vollbild. Franks Vorgabe vom 23.10.2026: Die Code-Review-Frage nur allgemein ansagen,
         // ohne Projekt, App, Ziel oder Inhalt der Frage.

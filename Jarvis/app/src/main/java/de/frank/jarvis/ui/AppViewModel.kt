@@ -1687,7 +1687,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptFormuliert = true
         viewModelScope.launch {
             try {
-                val neu = auth.streamChat(PROMPT_KORREKTUR, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+                val neu = kiGlaetten(PROMPT_KORREKTUR, text)
                 val aktuell = promptTextVon(ziel)
                 when {
                     // Bearbeiten inzwischen geschlossen: die KI-Fassung gehört zu keinem offenen Text mehr.
@@ -1713,31 +1713,47 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Eigene Antwort auf eine Rückfrage: einsprechen und von der KI glätten lassen ----
 
-    /** Die KI glättet gerade eine eigene Antwort auf eine Rückfrage. */
-    var antwortFormuliert by mutableStateOf(false); private set
+    /** Antwortfeld („frage_id:Nummer“), in das die laufende Aufnahme samt Mitschrift gehört; null = keine Antwort-Aufnahme. */
+    var antwortDiktatFeld by mutableStateOf<String?>(null); private set
+    /** Antwortfeld, das die KI gerade glättet; null = keins. */
+    var antwortFormuliertFeld by mutableStateOf<String?>(null); private set
 
     /**
-     * Mikrofon unter der eigenen Antwort einer Rückfrage: Tippen startet, nochmal Tippen hängt das Gesprochene über [ziel] an.
-     * Läuft wie das Prompt-Diktat (ins Feld, nie an Jarvis), mit derselben Transkription wie überall in Jarvis.
+     * Mikrofon unter einem Antwortfeld einer Rückfrage: Tippen startet, nochmal Tippen hängt das Gesprochene über [ziel] an.
+     * Läuft wie das Prompt-Diktat (ins Feld, nie an Jarvis), mit derselben Transkription wie überall in Jarvis. Eine fremde
+     * Aufnahme (Spracheingabe im Chat, Gesprächsmodus) bleibt unberührt.
      */
-    fun antwortMikrofonTippen(ziel: (String) -> Unit) {
+    fun antwortMikrofonTippen(feld: String, ziel: (String) -> Unit) {
         when {
-            schreibtMit || antwortFormuliert -> Unit
-            nimmtAuf -> aufnahmeBeenden()
+            nimmtAuf && antwortDiktatFeld == feld -> aufnahmeBeenden()
+            nimmtAuf || schreibtMit || holtMikro -> meldung = "Es läuft schon eine Aufnahme. Bitte erst diese beenden."
+            antwortFormuliertFeld == feld -> meldung = "Jarvis formuliert diese Antwort gerade."
             transkriptionFehlt() != null -> meldung = transkriptionFehlt()
-            else -> { diktatZiel = ziel; promptDiktat = true; mikrofonAnfragen() }
+            else -> { diktatZiel = ziel; antwortDiktatFeld = feld; mikrofonAnfragen() }
         }
     }
 
-    /** KI-Knopf unter der eigenen Antwort: bringt den Text in gutes Deutsch und gibt die neue Fassung an [fertig]. */
-    fun antwortFormulieren(text: String, fertig: (String) -> Unit) {
-        // Eine laufende Aufnahme hindert nicht: Die Antwort-Ansicht verwirft die KI-Fassung, wenn sich der Text inzwischen geändert hat.
-        if (text.isBlank() || antwortFormuliert) return
-        if (!modellBereit) { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
-        antwortFormuliert = true
+    /** Beendet eine laufende Antwort-Aufnahme (Vollbild geschlossen oder nächste Frage): Das Gesprochene geht noch ins Feld. */
+    fun antwortAufnahmeBeenden() {
+        if (nimmtAuf && antwortDiktatFeld != null) aufnahmeBeenden()
+    }
+
+    /** Ein Text, von der KI nach [auftrag] geglättet; ohne Anführungszeichen außen herum. */
+    private suspend fun kiGlaetten(auftrag: String, text: String): String =
+        auth.streamChat(auftrag, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+
+    /** KI-Knopf unter einem Antwortfeld: bringt den Text in gutes Deutsch und gibt die neue Fassung an [fertig]. */
+    fun antwortFormulieren(feld: String, text: String, fertig: (String) -> Unit) {
+        when {
+            text.isBlank() -> { meldung = "Erst eine Antwort eintippen oder einsprechen."; return }
+            antwortFormuliertFeld != null -> { meldung = "Jarvis formuliert gerade schon eine Antwort."; return }
+            antwortDiktatFeld == feld -> { meldung = "Bitte erst die Aufnahme beenden."; return }
+            !modellBereit -> { meldung = "Für die KI bitte zuerst ${zuerstVerbinden()}."; return }
+        }
+        antwortFormuliertFeld = feld
         viewModelScope.launch {
             try {
-                val neu = auth.streamChat(ANTWORT_KORREKTUR, listOf(ChatTurn("user", text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+                val neu = kiGlaetten(ANTWORT_KORREKTUR, text)
                 if (neu.length < 2) meldung = "Die KI hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist." else fertig(neu)
             } catch (e: CancellationException) {
                 throw e
@@ -1745,7 +1761,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Logbuch.fehler("Antwort formulieren", e)
                 meldung = e.message ?: "Das Umformulieren hat nicht geklappt."
             } finally {
-                antwortFormuliert = false
+                antwortFormuliertFeld = null
             }
         }
     }
@@ -1810,7 +1826,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
-        if (!erlaubt) { diktatZiel = null; promptDiktat = false; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (!erlaubt) { diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         if (holtMikro) return
         vorleser.stopp()
         holtMikro = true
@@ -1818,7 +1834,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Von Hand gestartet: Die Aufnahme läuft weiter, auch wenn Frank in eine andere App wechselt, bis er
                 // wieder auf das Mikrofon tippt. Dafür braucht Android einen Mikrofon-Dienst im Vordergrund.
-                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
+                if (!aufnahmeStarten()) { diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null; diktatInsFeld = false; meldung = "Die Aufnahme ließ sich nicht starten." }
                 else {
                     de.frank.jarvis.audio.AufnahmeDienst.starten(getApplication())
                     // Laufende Musik pausiert fürs Diktat, sonst landet sie in der Mitschrift.
@@ -1870,7 +1886,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         freihaendig = false
         schreibtMit = false
         feldMitschrift = false
-        diktatZiel = null; promptDiktat = false
+        diktatZiel = null; promptDiktat = false; antwortDiktatFeld = null
         diktatInsFeld = false
         Logbuch.sprache("Aufnahme verworfen", "Session von Hand gewechselt")
         return viewModelScope.launch {
@@ -2121,7 +2137,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         schreibtMit = true
         // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
         // Das Diktier-Mikrofon der Eingabeblase schreibt ins Feld, Hey Jarvis und der Gesprächsmodus senden weiter direkt.
-        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat }
+        val ziel = diktatZiel?.takeIf { merkOffen != null || diktatInsFeld || promptDiktat || antwortDiktatFeld != null }
+        // Das Antwortfeld bleibt bis zum Ende der Mitschrift markiert: So lange sperrt die Rückfrage das Senden.
+        val antwortFeld = antwortDiktatFeld
         feldMitschrift = ziel != null && diktatInsFeld
         diktatZiel = null; promptDiktat = false
         diktatInsFeld = false
@@ -2170,6 +2188,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 schreibtMit = false
                 feldMitschrift = false
+                if (antwortFeld != null && antwortDiktatFeld == antwortFeld) antwortDiktatFeld = null
             }
         }
     }
@@ -2407,6 +2426,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun rueckfrageSchliessen() {
+        antwortAufnahmeBeenden()
         rueckfrageOffen?.let { rueckfrageGeschlossen += it.second }
         rueckfrageOffen = null
     }
@@ -2487,8 +2507,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Merkt sich die angefangene Auswahl im Gespräch: Nach dem Schließen oder einem Neustart der App ist sie wieder da. */
-    fun rueckfrageEntwurf(frageId: String, entwurf: org.json.JSONObject) {
-        val gespraechId = rueckfrageOffen?.takeIf { it.second == frageId }?.first ?: sitzungId ?: return
+    fun rueckfrageEntwurf(frageId: String, entwurf: org.json.JSONObject, gespraech: String? = null) {
+        val gespraechId = gespraech ?: rueckfrageOffen?.takeIf { it.second == frageId }?.first ?: sitzungId ?: return
         de.frank.jarvis.faehigkeit.ProgrammierChat.rueckfrageAendern(getApplication(), gespraechId, frageId) { k ->
             if (k.optJSONObject("entwurf")?.toString() == entwurf.toString()) false else { k.put("entwurf", entwurf); true }
         }

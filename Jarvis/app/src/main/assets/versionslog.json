@@ -415,6 +415,7 @@
     { "versionCode": 409, "versionName": "1.8.398", "stand": "29.10.2026, 12:00 Uhr", "notiz": "Jarvis protokolliert im Rückfrage-Vollbild, ob die Optionen antippbar sind und wohin getippt wurde, damit sich nicht reagierende Rückfragen aufklären lassen." },
     { "versionCode": 410, "versionName": "1.8.399", "stand": "29.10.2026, 12:02 Uhr", "notiz": "Das Fernwartungssymbol springt nicht mehr bei einzelnen verlorenen Prüfungen im Tunnel auf Rot, sondern erst nach drei Fehlschlägen in Folge." },
     { "versionCode": 411, "versionName": "1.8.400", "stand": "29.10.2026, 12:04 Uhr", "notiz": "Jarvis schreibt ins Logbuch, warum das Fernwartungssymbol rot oder grün wird: jeder Fehlversuch mit Grund und Dauer, jeder Farbwechsel mit Auslöser; die Prüfung fasst bei Aussetzern einmal nach, und beim Antippen verbindet Jarvis nur mit einem Rechner, der gerade wirklich antwortet." },
-    { "versionCode": 412, "versionName": "1.8.401", "stand": "29.10.2026, 12:05 Uhr", "notiz": "Kommt eine Rückfrage während einer Spracheingabe, lässt sie sich sofort beantworten, die Aufnahme läuft im Hintergrund weiter und die Ansage wartet bis zum Ende der Aufnahme." }
+    { "versionCode": 412, "versionName": "1.8.401", "stand": "29.10.2026, 12:05 Uhr", "notiz": "Kommt eine Rückfrage während einer Spracheingabe, lässt sie sich sofort beantworten, die Aufnahme läuft im Hintergrund weiter und die Ansage wartet bis zum Ende der Aufnahme." },
+    { "versionCode": 413, "versionName": "1.8.402", "stand": "29.10.2026, 12:09 Uhr", "notiz": "Antworten auf Rückfragen gehen beim Einsprechen nicht mehr verloren: Senden wartet auf die Mitschrift, Schließen übernimmt das Gesagte, und Mikrofon und KI gehören jeweils nur zu ihrem Antwortfeld." }
 ]
 }
