@@ -423,6 +423,7 @@
     { "versionCode": 417, "versionName": "1.8.406", "stand": "29.10.2026, 13:04 Uhr", "notiz": "In jedem Gespräch steht die neueste Nachricht, etwa ein Programmierschritt oder eine Antwort, beim Mitlesen mittig auf dem Bildschirm, mit Luft nach oben und unten; lange Antworten bleiben wie bisher." },
     { "versionCode": 418, "versionName": "1.8.407", "stand": "29.10.2026, 13:09 Uhr", "notiz": "Die neueste Nachricht bleibt beim Mitlesen fest in der Bildschirmmitte stehen, auch wenn sie wächst, darunter Schritte einlaufen oder das Handy aufgeklappt wird, statt wieder nach oben wegzuspringen." },
     { "versionCode": 419, "versionName": "1.8.408", "stand": "29.10.2026, 13:14 Uhr", "notiz": "Ohne eigenes Scrollen endet das Gespräch jetzt genau in der Bildschirmmitte: Was gerade hereinkommt, steht mittig, der Rest darüber, auch bei kurzen Gesprächen." },
-    { "versionCode": 420, "versionName": "1.8.409", "stand": "29.10.2026, 13:16 Uhr", "notiz": "Der Text im Gesprächsverlauf endet jetzt etwa einen Millimeter vor den seitlichen Symbolen und ist nie mehr dahinter zu sehen, im Hoch- und Querformat, ein- wie ausgeklappt." }
+    { "versionCode": 420, "versionName": "1.8.409", "stand": "29.10.2026, 13:16 Uhr", "notiz": "Der Text im Gesprächsverlauf endet jetzt etwa einen Millimeter vor den seitlichen Symbolen und ist nie mehr dahinter zu sehen, im Hoch- und Querformat, ein- wie ausgeklappt." },
+    { "versionCode": 421, "versionName": "1.8.410", "stand": "29.10.2026, 13:32 Uhr", "notiz": "Ganz unten im Gespräch steht die letzte Zeile jetzt auch im aufgeklappten Querformat in der Bildschirmmitte statt oben, weil die Knopfleiste rechts den Abstand nach unten nicht mehr vergrößert." }
 ]
 }
