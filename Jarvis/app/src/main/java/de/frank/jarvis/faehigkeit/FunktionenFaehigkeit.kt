@@ -49,8 +49,10 @@ object Funktionen {
     private const val META = "funktionen.json"
     private const val VORHER = "funktionen_vorher.md"
     private const val NACHGETRAGEN = "funktionen_nachgetragen.txt"
-    /** Neue Bereiche, die [nachtragen] einmalig aus der APK übernimmt. */
-    private val NEUE_BEREICHE = listOf("Geniale Ideen")
+    /** Neue Bereiche, die [nachtragen] einmalig aus der APK übernimmt, mit der alten Zeile unter „Angebundene Apps“, die dann wegfällt. */
+    private val NEUE_BEREICHE = mapOf(
+        "Geniale Ideen" to "- Geniale Ideen: `ideen_lesen` (mit id Volltext), `idee_speichern` (anlegen/ändern), `idee_loeschen`.",
+    )
     private const val PFLEGE_MS = 4 * 60_000L
     /** So viele Versionen gehen höchstens in einen Modellaufruf, so viele Portionen höchstens in einen Lauf. */
     private const val PORTION = 30
@@ -123,25 +125,36 @@ object Funktionen {
     private fun nachtragen(c: Context, s: FunktionsStand): FunktionsStand {
         val datei = File(ordner(c), NACHGETRAGEN)
         val erledigt = runCatching { datei.readLines().filter { it.isNotBlank() }.toSet() }.getOrDefault(emptySet())
-        val offen = NEUE_BEREICHE.filter { it !in erledigt }
-        if (offen.isEmpty()) return s
+        val offen = NEUE_BEREICHE.filterKeys { it !in erledigt }
+        // Die alte Kurzzeile unter „Angebundene Apps“ steht wörtlich da, solange niemand sie angefasst hat: Dann verweist sie
+        // auf den eigenen Bereich, statt ihn zu wiederholen. Auch nach dem Nachtragen, deshalb unabhängig von [erledigt].
+        val alt = NEUE_BEREICHE.values.filter { zeile -> s.text.lines().any { it.trim() == zeile } }
+        if (offen.isEmpty() && alt.isEmpty()) return s
         val vorlage = Funktionsdatei.erstbefuellung(erstbefuellung(c)).third
         var text = s.text
-        for (name in offen) {
-            if (text.lines().any { it.trim() == "## $name" }) continue
-            val teil = Funktionsdatei.bereiche(vorlage, name) ?: continue
-            val zeilen = text.trimEnd().lines().toMutableList()
-            val anker = zeilen.indexOfFirst { it.trim() == "## Angebundene Apps" }
-            val danach = if (anker < 0) -1 else (anker + 1 until zeilen.size).firstOrNull { zeilen[it].startsWith("## ") } ?: -1
-            if (danach < 0) zeilen += listOf("", teil) else zeilen.addAll(danach, listOf(teil, ""))
-            text = zeilen.joinToString("\n") + "\n"
+        for (alteZeile in alt) {
+            val neueZeile = vorlage.lines().firstOrNull { it.startsWith(alteZeile.substringBefore(':') + ":") && it != alteZeile } ?: continue
+            text = text.lines().joinToString("\n") { if (it.trim() == alteZeile) neueZeile else it }
         }
-        AblageSpeicher.schreibeAtomar(datei, (erledigt + offen).joinToString("\n").toByteArray())
+        val fertig = mutableListOf<String>()
+        for (name in offen.keys) {
+            if (text.lines().none { it.trim() == "## $name" }) {
+                // Ohne lesbare Vorlage nichts als erledigt merken: Der nächste Start versucht es erneut.
+                val teil = Funktionsdatei.bereiche(vorlage, name) ?: continue
+                val zeilen = text.trimEnd().lines().toMutableList()
+                val anker = zeilen.indexOfFirst { it.trim() == "## Angebundene Apps" }
+                val danach = if (anker < 0) -1 else (anker + 1 until zeilen.size).firstOrNull { zeilen[it].startsWith("## ") } ?: -1
+                if (danach < 0) zeilen += listOf("", teil) else zeilen.addAll(danach, listOf(teil, ""))
+                text = zeilen.joinToString("\n") + "\n"
+            }
+            fertig += name
+        }
+        if (fertig.isNotEmpty()) AblageSpeicher.schreibeAtomar(datei, (erledigt + fertig).joinToString("\n").toByteArray())
         if (text == s.text) return s
-        sichere(c, s)
+        // Ohne eigene Sicherung: „Rückgängig“ soll weiter Franks letzte Bearbeitung zurücknehmen, nicht diesen Nachtrag.
         val neu = s.copy(text = text, revision = s.revision + 1)
         schreibe(c, neu)
-        Logbuch.gedaechtnis("Funktionsübersicht ergänzt", "neue Bereiche: " + offen.joinToString(", "))
+        Logbuch.gedaechtnis("Funktionsübersicht ergänzt", "neue Bereiche: " + fertig.joinToString(", ").ifEmpty { "keine, nur Verweiszeilen" })
         return neu
     }
 

@@ -5,31 +5,22 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import de.frank.genialeideen.GenialeIdeenApplication
+import de.frank.genialeideen.auth.CodexModel
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.alleKategorieIds
 import de.frank.genialeideen.di.AppContainer
+import de.frank.genialeideen.text.KiVerbesserung
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
-import de.frank.genialeideen.auth.ChatTurn
-import de.frank.genialeideen.auth.CodexModel
-import de.frank.genialeideen.auth.EigeneAnfrage
-import de.frank.genialeideen.auth.ReasoningEffort
-import de.frank.genialeideen.text.Kurzfassung
-import de.frank.genialeideen.text.UmlautKorrektur
-import de.frank.genialeideen.ui.IdeenViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -52,14 +43,15 @@ class JarvisBruecke : ContentProvider() {
     override fun onCreate(): Boolean = true
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
+        val beginn = SystemClock.elapsedRealtime()
         val antwort = runCatching {
             val anfrage = extras?.getString("json")?.takeIf { it.isNotBlank() }?.let(::JSONObject) ?: JSONObject()
-            runBlocking(Dispatchers.IO) { verarbeite(method, anfrage) }
+            runBlocking(Dispatchers.IO) { verarbeite(method, anfrage, beginn) }
         }.getOrElse { fehler -> JSONObject().put("fehler", fehler.message ?: fehler.javaClass.simpleName) }
         return Bundle().apply { putString("json", antwort.toString()) }
     }
 
-    private suspend fun verarbeite(methode: String, a: JSONObject): JSONObject {
+    private suspend fun verarbeite(methode: String, a: JSONObject, beginn: Long): JSONObject {
         val c = (context?.applicationContext as? GenialeIdeenApplication)?.warteAufContainer() ?: return fehler("App nicht bereit.")
         val repo = c.ideenRepository
         val kategorien = repo.alleKategorien().first()
@@ -87,7 +79,8 @@ class JarvisBruecke : ContentProvider() {
                     val ids = kategorien.filter { kategorie in it.name.lowercase(Locale.GERMAN) }.map { it.id }.toSet()
                     liste = liste.filter { idee -> idee.alleKategorieIds().any { it in ids } }
                 }
-                liste = liste.sortedWith(compareBy({ it.status }, { it.reihenfolge }))
+                // Reihenfolge wie bisher (angenommen, offen, umgesetzt); Entwürfe stehen hinten.
+                liste = liste.sortedWith(compareBy({ RANG[it.status] ?: RANG.size }, { it.reihenfolge }))
                 val grenze = a.optInt("limit", 50).coerceIn(1, 300)
                 val voll = a.optBoolean("volltext", false)
                 JSONObject().put("anzahl", liste.size).put("ideen", JSONArray(liste.take(grenze).map { alsJson(it, kategorien, if (voll) Int.MAX_VALUE else 400) }))
@@ -108,7 +101,7 @@ class JarvisBruecke : ContentProvider() {
                 val id = repo.lege(titel = titelEingabe.ifEmpty { JarvisGlaettung.ersatzTitel(roh) }, text = roh, kategorieId = kategorieId)
                 if (a.optBoolean("verbessern", true)) JarvisGlaettung.starte(c, requireNotNull(context), id, roh, titelFehlt = titelEingabe.isEmpty())
                 JSONObject().put("idee", alsJson(repo.lade(id) ?: return fehler("Speichern fehlgeschlagen."), repo.alleKategorien().first(), Int.MAX_VALUE))
-                    .put("hinweis", if (a.optBoolean("verbessern", true) && c.codexAuthManager.kannDenken(de.frank.genialeideen.auth.CodexModel.fromLabel(c.settings.model))) "Text und Titel werden gerade von der KI geglättet." else "Gespeichert wie gesprochen.")
+                    .put("hinweis", if (a.optBoolean("verbessern", true) && c.codexAuthManager.kannDenken(CodexModel.fromLabel(c.settings.model))) "Text und Titel werden gerade von der KI geglättet." else "Gespeichert wie gesprochen.")
             }
 
             "aendern" -> {
@@ -149,15 +142,21 @@ class JarvisBruecke : ContentProvider() {
                 if (idee.text.isBlank()) return fehler("Die Idee hat keinen Text zum Verbessern.")
                 if (!c.codexAuthManager.kannDenken(CodexModel.fromLabel(c.settings.model))) return fehler("Geniale Ideen ist nicht bei der KI angemeldet; Verbessern geht gerade nicht.")
                 val nurKurz = a.optBoolean("nur_kurzfassung")
-                // Läuft im Hintergrund zu Ende, auch wenn Jarvis nicht so lange wartet; ein zweiter Aufruf hängt sich an.
-                val auftrag = synchronized(verbesserungen) {
-                    verbesserungen[idee.id]?.takeIf { it.isActive } ?: nebenbei.async { verbessere(c, idee, nurKurz) }.also { verbesserungen[idee.id] = it }
-                }
-                val fertig = withTimeoutOrNull(a.optLong("warte_ms", 50_000L).coerceIn(1_000L, 60_000L)) { auftrag.await() }
+                // Dieselbe Verbesserung wie der Knopf in der Einzelansicht; ein Wiederholungsaufruf hängt sich an oder bekommt das fertige Ergebnis.
+                val auftrag = KiVerbesserung.starte(c, idee.id, nurKurz, wiederholschutz = true)
+                // Jarvis wartet warte_ms ab seinem Aufruf: Die Zeit bis hierher (Kaltstart, Laden) geht davon ab.
+                val rest = a.optLong("warte_ms", 50_000L).coerceIn(1_000L, 60_000L) - (SystemClock.elapsedRealtime() - beginn) - 2_000L
+                val ausgang = withTimeoutOrNull(rest.coerceAtLeast(1_000L)) { auftrag.await() }
                     ?: return JSONObject().put("laeuft", true).put("hinweis", "Die KI verbessert noch; das Ergebnis steht gleich in der App. Mit der id nachlesen, nicht erneut verbessern.")
-                fertig.optString("fehler").takeIf { it.isNotEmpty() }?.let { return fehler(it) }
-                JSONObject().put("idee", alsJson(repo.lade(idee.id) ?: idee, kategorien, Int.MAX_VALUE))
-                    .put("hinweis", if (nurKurz) "Die Kurzfassung ist neu erzeugt." else "Beide Fassungen sind verbessert.")
+                when (ausgang) {
+                    is KiVerbesserung.Ausgang.Fertig -> JSONObject().put("idee", alsJson(repo.lade(idee.id) ?: idee, kategorien, Int.MAX_VALUE))
+                        .put("hinweis", (if (nurKurz) "Die Kurzfassung ist neu erzeugt." else "Beide Fassungen sind verbessert.") +
+                            if (ausgang.bereits) " (War gerade erst fertig, nicht noch einmal verbessert.)" else "")
+                    KiVerbesserung.Ausgang.Leer -> fehler(if (nurKurz) "Es kam keine Kurzfassung zurück." else "Es kam keine verbesserte Fassung zurück.")
+                    KiVerbesserung.Ausgang.Geaendert -> fehler("Die Idee wurde inzwischen geändert — bitte noch einmal verbessern.")
+                    KiVerbesserung.Ausgang.AndereLaeuft -> fehler("Für diese Idee läuft gerade schon eine andere KI-Verbesserung; danach noch einmal versuchen.")
+                    is KiVerbesserung.Ausgang.Fehler -> fehler(ausgang.ursache.message ?: ausgang.ursache.javaClass.simpleName)
+                }
             }
 
             "rueckgaengig" -> {
@@ -174,30 +173,6 @@ class JarvisBruecke : ContentProvider() {
 
             else -> fehler("Unbekannte Methode: $methode")
         }
-    }
-
-    /** Wie „Mit KI verbessern“ in der Einzelansicht; mit [nurKurz] bleibt der Text und nur die Kurzfassung wird neu. */
-    private suspend fun verbessere(c: AppContainer, idee: IdeeEntity, nurKurz: Boolean): JSONObject = try {
-        val modell = CodexModel.fromLabel(c.settings.model)
-        val stufe = ReasoningEffort.fromLabel(c.settings.reasoning)
-        val text = if (nurKurz) idee.text else UmlautKorrektur.korrigiere(
-            withContext(EigeneAnfrage) {
-                c.codexAuthManager.streamChat(IdeenViewModel.VERBESSERUNG, listOf(ChatTurn("user", idee.text)), modell, stufe)
-            }.trim(),
-        )
-        if (text.isBlank()) {
-            fehler("Es kam keine verbesserte Fassung zurück.")
-        } else {
-            val kurz = runCatching { Kurzfassung.erzeuge(c.codexAuthManager, modell, stufe, text) }.getOrDefault("")
-            when {
-                nurKurz && kurz.isBlank() -> fehler("Es kam keine Kurzfassung zurück.")
-                c.ideenRepository.setzeVerbessert(idee.id, idee.text, text, kurz) -> JSONObject()
-                else -> fehler("Die Idee wurde inzwischen geändert — bitte noch einmal verbessern.")
-            }
-        }
-    } catch (e: Exception) {
-        if (e is kotlinx.coroutines.CancellationException) throw e
-        fehler(e.message ?: e.javaClass.simpleName)
     }
 
     /** Bestehende Kategorie nach Name; ein unbekannter Name legt eine neue (mentale) Kategorie an. Leer = keine. */
@@ -233,9 +208,7 @@ class JarvisBruecke : ContentProvider() {
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
     private companion object {
-        /** Überlebt den einzelnen Aufruf: Die Verbesserung läuft zu Ende, auch wenn Jarvis nicht mehr wartet. */
-        val nebenbei = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        val verbesserungen = mutableMapOf<Long, Deferred<JSONObject>>()
+        val RANG = listOf(IdeenStatus.ANGENOMMEN, IdeenStatus.OFFEN, IdeenStatus.UMGESETZT, IdeenStatus.ENTWURF).mapIndexed { n, s -> s.name to n }.toMap()
     }
 
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?, sortOrder: String?): Cursor? = null

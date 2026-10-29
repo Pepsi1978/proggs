@@ -117,7 +117,18 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                         val ohneId = !a.idGesetzt() && !a.gesetzt("suche")
                         val suche = a.optString("titel").trim().ifEmpty { a.optString("text").trim() }
                         if (ohneId && suche.isEmpty()) Ergebnis("Für ki_aktion fehlt die id oder ein Suchwort (suche) für die Idee. Hole die id mit ideen_lesen.", fehler = true)
-                        else mitIdee(if (ohneId) JSONObject().put("suche", suche) else a) { id -> kiAktion(id, a.optString("ki_aktion").trim().lowercase()) }
+                        else {
+                            // Ohne id dienen Titel oder Text als Suchwort; Status und Kategorie im selben Aufruf gelten trotzdem.
+                            val ziel = if (ohneId) JSONObject(a.toString()).put("suche", suche).apply { remove("titel"); remove("text") } else a
+                            mitIdee(ziel) { id ->
+                                val aenderung = ziel.gesetzt("status") || ziel.gesetzt("text") || ziel.gesetzt("titel") || ziel.has("kategorie")
+                                val vorher = if (!aenderung) null else w("idee_aendern").ausfuehren(
+                                    JSONObject(ziel.toString()).put("id", id).apply { remove("suche"); remove("ki_aktion"); remove("verbessern") },
+                                )
+                                if (vorher?.fehler == true) vorher
+                                else kiAktion(id, a.optString("ki_aktion").trim().lowercase()).let { ki -> if (vorher == null) ki else Ergebnis(vorher.text + "\n" + ki.text, fehler = ki.fehler) }
+                            }
+                        }
                     }
                     a.idGesetzt() || a.gesetzt("suche") -> w("idee_aendern").ausfuehren(a)
                     nurAenderung -> {
@@ -220,7 +231,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "idee_aendern",
             titel = "Idee ändern",
-            beschreibung = "Jarvis: ändert eine Idee in Geniale Ideen: neuer Text oder Titel, andere Kategorie, oder Status umgesetzt bzw. wieder offen. Über id ODER Suchwort.",
+            beschreibung = "Jarvis: ändert eine Idee in Geniale Ideen: neuer Text oder Titel, andere Kategorie, oder Status angenommen, umgesetzt bzw. wieder offen. Über id ODER Suchwort.",
             schema = schema(
                 "id" to zahl("id der Idee aus ideen_lesen."),
                 "suche" to text("Statt id: Wort aus Titel oder Text."),
@@ -256,7 +267,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             val i = r.getJSONObject("idee")
             buildString {
                 append(r.optString("hinweis")).append(' ').append(kopf(i)).append('\n')
-                append("Kurzfassung: ").append(i.optString("kurzfassung").ifBlank { "(wird gleich im Hintergrund erzeugt)" })
+                append("Kurzfassung: ").append(i.optString("kurzfassung").ifBlank { "(noch keine)" })
                 if (aktion != "kurzfassung") append("\n\nAusführliche Fassung:\n").append(i.optString("text"))
             }
         }
@@ -267,8 +278,13 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
         if (a.idGesetzt()) return dann(a.optLong("id"))
         val suche = a.optString("suche").trim()
         if (suche.isEmpty()) return Ergebnis("Es fehlt die id oder ein Suchwort für die Idee.", fehler = true)
-        val treffer = rufe("lesen", JSONObject().put("status", "alle").put("suche", suche))
+        var treffer = rufe("lesen", JSONObject().put("status", "alle").put("suche", suche))
         treffer.optString("fehler").takeIf { it.isNotEmpty() }?.let { return Ergebnis(it, fehler = true) }
+        // Erst ohne Entwürfe wie bisher; findet sich nichts, auch unter den Entwürfen suchen.
+        if ((treffer.optJSONArray("ideen")?.length() ?: 0) == 0) {
+            treffer = rufe("lesen", JSONObject().put("status", "alle").put("entwuerfe", true).put("suche", suche))
+            treffer.optString("fehler").takeIf { it.isNotEmpty() }?.let { return Ergebnis(it, fehler = true) }
+        }
         val ideen = treffer.optJSONArray("ideen") ?: JSONArray()
         return when (ideen.length()) {
             0 -> Ergebnis("Keine Idee gefunden, die zu „$suche“ passt.", fehler = true)
@@ -294,8 +310,8 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             for (n in 0 until ideen.length()) {
                 val i = ideen.getJSONObject(n)
                 append("- ").append(kopf(i)).append(": ").append(i.optString("text").replace('\n', ' ').let { if (it.length > laenge) it.take(laenge) + " …" else it })
-                // Nur in der Werkzeug-Liste; Überblick und Gedächtnis bleiben knapp.
-                if (laenge == Int.MAX_VALUE) i.optString("kurzfassung").takeIf { it.isNotBlank() }?.let { append(" | Kurzfassung: ").append(it) }
+                // Nur in kurzen Werkzeug-Listen; lange Listen, Überblick und Gedächtnis bleiben knapp (Kurzfassung dann mit id).
+                if (laenge == Int.MAX_VALUE && ideen.length() <= KURZFASSUNG_IN_LISTE) i.optString("kurzfassung").takeIf { it.isNotBlank() }?.let { append(" | Kurzfassung: ").append(it) }
                 append('\n')
             }
         }.trim()
@@ -316,6 +332,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
         private val LESEND = setOf("kategorien", "lesen", "idee", "uebersicht")
         /** Die KI braucht für beide Fassungen oft länger als die 25 s eines Schreibaufrufs; unter der Relay-Grenze von 75 s. */
         private const val KI_WARTE_MS = 50_000L
+        private const val KURZFASSUNG_IN_LISTE = 25
         private const val UEBERBLICK_ZEICHEN = 14_000
     }
 }

@@ -242,7 +242,7 @@ fun DetailScreen(
                             }
                         },
                         aufAnnehmen = { viewModel.schalteAngenommen(aktuelle) },
-                        verbessertGerade = verbesserung == aktuelle.id,
+                        verbessertGerade = aktuelle.id in verbesserung,
                         aufVerbessern = { viewModel.verbessereMitKi(aktuelle) },
                         aufZuruecknehmen = { viewModel.nimmVerbesserungZurueck(aktuelle) },
                         aufLoeschen = {

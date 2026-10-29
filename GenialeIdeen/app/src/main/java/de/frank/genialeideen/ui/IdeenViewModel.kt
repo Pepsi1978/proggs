@@ -29,6 +29,7 @@ import de.frank.genialeideen.di.AppContainer
 import de.frank.genialeideen.observability.IdeenCrashHandler
 import de.frank.genialeideen.observability.IdeenLog
 import de.frank.genialeideen.speech.VorleseStand
+import de.frank.genialeideen.text.KiVerbesserung
 import de.frank.genialeideen.text.Kurzfassung
 import de.frank.genialeideen.text.UmlautKorrektur
 import de.frank.genialeideen.auth.EigeneAnfrage
@@ -467,49 +468,25 @@ class IdeenViewModel(
         }
     }
 
-    private val _verbessert = MutableStateFlow<Long?>(null)
-
-    /** Die Idee, deren beide Fassungen die KI gerade verbessert — null, wenn nichts läuft. */
-    val verbesserungLaeuft: StateFlow<Long?> = _verbessert.asStateFlow()
+    /** Die Ideen, deren beide Fassungen die KI gerade verbessert — auch die, die Jarvis angestoßen hat. */
+    val verbesserungLaeuft: StateFlow<Set<Long>> = KiVerbesserung.laeuft
 
     /**
      * Verbessert die ausführliche Fassung und erzeugt daraus die Kurzfassung neu. Die bisherigen
      * Fassungen bleiben für „Rückgängig“ stehen; gespeichert wird sofort.
      */
     fun verbessereMitKi(idee: IdeeEntity) {
-        if (_verbessert.value != null || idee.text.isBlank()) return
-        _verbessert.value = idee.id
+        if (idee.id in KiVerbesserung.laeuft.value || idee.text.isBlank()) return
+        val auftrag = KiVerbesserung.starte(container, idee.id, nurKurz = false)
         viewModelScope.launch {
-            try {
-                val modell = CodexModel.fromLabel(settings.model)
-                val stufe = ReasoningEffort.fromLabel(settings.reasoning)
-                // Vom Stopp-Knopf des Chats unabhängig: Die Verbesserung läuft zu Ende.
-                val text = UmlautKorrektur.korrigiere(
-                    withContext(EigeneAnfrage) {
-                        codex.streamChat(
-                            instructions = VERBESSERUNG,
-                            turns = listOf(ChatTurn("user", idee.text)),
-                            model = modell,
-                            reasoningEffort = stufe,
-                        )
-                    }.trim(),
-                )
-                if (text.isBlank()) {
-                    zeige(Meldung("Es kam keine verbesserte Fassung zurück.", istFehler = true))
-                    return@launch
-                }
-                // Scheitert nur die Kurzfassung, bleibt der verbesserte Text trotzdem stehen —
-                // die leere Kurzfassung zieht der Hintergrund nach.
-                val kurz = runCatching { Kurzfassung.erzeuge(codex, modell, stufe, text) }.getOrDefault("")
-                if (repository.setzeVerbessert(idee.id, idee.text, text, kurz)) {
-                    zeige(Meldung("Beide Fassungen sind verbessert."))
-                } else {
+            when (val ausgang = auftrag.await()) {
+                is KiVerbesserung.Ausgang.Fertig -> zeige(Meldung("Beide Fassungen sind verbessert."))
+                KiVerbesserung.Ausgang.Leer -> zeige(Meldung("Es kam keine verbesserte Fassung zurück.", istFehler = true))
+                KiVerbesserung.Ausgang.Geaendert ->
                     zeige(Meldung("Die Idee wurde inzwischen geändert — bitte noch einmal verbessern.", istFehler = true))
-                }
-            } catch (fehler: Exception) {
-                zeige(Meldung(fehlerText(fehler), istFehler = true, wiederholen = { verbessereMitKi(idee) }))
-            } finally {
-                _verbessert.value = null
+                KiVerbesserung.Ausgang.AndereLaeuft -> zeige(Meldung("Für diese Idee läuft gerade schon eine Verbesserung."))
+                is KiVerbesserung.Ausgang.Fehler ->
+                    zeige(Meldung(fehlerText(ausgang.ursache), istFehler = true, wiederholen = { verbessereMitKi(idee) }))
             }
         }
     }
