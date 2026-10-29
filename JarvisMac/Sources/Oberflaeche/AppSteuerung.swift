@@ -61,9 +61,10 @@ final class AppSteuerung {
 
     var projekt: String?   // offenes Projekt in der Leiste
 
-    func neuesGespraech() {
+    /// imProjekt = aus der Projektleiste („Neues Gespräch im Projekt“); alles andere landet unter „Gespräche“.
+    func neuesGespraech(imProjekt: Bool = false) {
         let g = GespraechsSpeicher.shared.neu()
-        g.projekt = projekt
+        g.projekt = imProjekt ? projekt : nil
         gespraech = g
         bereich = .gespraech
     }

@@ -65,10 +65,12 @@ struct Seitenleiste: View {
         return basis.filter { $0.titel.lowercased().contains(s) || $0.nachrichten.contains { $0.text.lowercased().contains(s) } }
     }
 
-    private var arbeitet: (Bool, Bool, Bool) {
-        (speicher.alle.contains { $0.arbeitet && $0.projekt == nil && !$0.istProgrammierung },
-         speicher.alle.contains { $0.arbeitet && $0.istProgrammierung },
-         speicher.alle.contains { $0.arbeitet && $0.projekt != nil })
+    /// Welche Reiter gerade arbeiten – nur über die (wenigen) arbeitenden Gespräche, einmal je Darstellung.
+    private var arbeitet: [Bool] {
+        let aktiv = speicher.alle.filter(\.arbeitet)
+        guard !aktiv.isEmpty else { return [false, false, false] }
+        let prog = aktiv.map(\.istProgrammierung)
+        return [zip(aktiv, prog).contains { $0.projekt == nil && !$1 }, prog.contains(true), aktiv.contains { $0.projekt != nil }]
     }
 
     var body: some View {
@@ -114,9 +116,10 @@ struct Seitenleiste: View {
             .padding(.horizontal, 12).padding(.vertical, 9)
             .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
 
+            let status = arbeitet
             HStack(spacing: 4) {
                 ForEach(Array(["Gespräche", "Programmierung", "Projekte"].enumerated()), id: \.offset) { i, name in
-                    let laeuft = [arbeitet.0, arbeitet.1, arbeitet.2][i]
+                    let laeuft = status[i]
                     Button { reiter = i; if i != 2 { steuerung.projekt = nil } } label: {
                         HStack(spacing: 4) {
                             Text(name).font(.jarvis(11, reiter == i ? .bold : .medium)).lineLimit(1).minimumScaleFactor(0.8)
@@ -135,7 +138,7 @@ struct Seitenleiste: View {
                         Button { steuerung.projekt = nil } label: { Image(systemName: "chevron.left") }.buttonStyle(.plain)
                         Text(p).font(.jarvis(13, .bold)).lineLimit(1)
                         Spacer()
-                        Button { steuerung.neuesGespraech() } label: { Image(systemName: "plus.bubble") }.buttonStyle(.plain).help("Neues Gespräch im Projekt")
+                        Button { steuerung.neuesGespraech(imProjekt: true) } label: { Image(systemName: "plus.bubble") }.buttonStyle(.plain).help("Neues Gespräch im Projekt")
                     }
                     .padding(.horizontal, 6)
                 } else {

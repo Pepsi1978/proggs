@@ -24,6 +24,7 @@ enum MacEinstellungsKatalog {
 
     static var alle: [Eintrag] {
         let e = Einstellungen.shared
+        let v = VorleseEinstellungen.shared
         return [
             Eintrag(kennung: "modell", bereich: "Jarvis' Kopf", titel: "Modell", beschreibung: "Welches Modell am Mac denkt.",
                     werte: ModellWahl.alle.map(\.id).joined(separator: " | "), lesen: { e.modell }) { v in
@@ -48,15 +49,21 @@ enum MacEinstellungsKatalog {
                     werte: "an | aus", lesen: { e.vorlesen ? "an" : "aus" }) { v in
                 guard let b = wahr(v) else { return "an oder aus" }; e.vorlesen = b; return nil
             },
-            Eintrag(kennung: "tempo", bereich: "Stimme", titel: "Sprechtempo", beschreibung: "Tempo der Vorlesestimme.",
-                    werte: "0.8–1.4", lesen: { String(format: "%.2f", e.tempo) }) { v in
-                guard let x = Double(v.replacingOccurrences(of: ",", with: ".")), (0.8...1.4).contains(x) else { return "Zahl 0,8–1,4" }
-                e.tempo = x; return nil
+            Eintrag(kennung: "vorlese_anbieter", bereich: "Stimme", titel: "Vorlese-Anbieter", beschreibung: "Wer vorliest.",
+                    werte: VorleseAnbieter.allCases.map(\.rawValue).joined(separator: " | "), lesen: { v.anbieter.rawValue }) { w in
+                guard let a = VorleseAnbieter.allCases.first(where: { $0.rawValue == w || $0.titel.lowercased().contains(w.lowercased()) }) else { return "Unbekannter Anbieter" }
+                v.anbieter = a; return nil
             },
-            Eintrag(kennung: "stimme", bereich: "Stimme", titel: "Stimme", beschreibung: "Kennung der Vorlesestimme.",
-                    werte: Stimme.shared.stimmen.prefix(40).map(\.id).joined(separator: " | "), lesen: { e.stimme }) { v in
-                guard let s = Stimme.shared.stimmen.first(where: { $0.id == v || $0.name.lowercased().contains(v.lowercased()) }) else { return "Unbekannte Stimme" }
-                e.stimme = s.id; return nil
+            Eintrag(kennung: "tempo", bereich: "Stimme", titel: "Sprechtempo", beschreibung: "Tempo des gewählten Vorlese-Anbieters.",
+                    werte: "\(VorleseEinstellungen.tempoMin)–\(VorleseEinstellungen.tempoMax)", lesen: { String(format: "%.2f", v.tempo(v.anbieter)) }) { w in
+                guard let x = Double(w.replacingOccurrences(of: ",", with: ".")),
+                      (VorleseEinstellungen.tempoMin...VorleseEinstellungen.tempoMax).contains(x) else { return "Zahl außerhalb des Bereichs" }
+                v.setzeTempo(x, fuer: v.anbieter); return nil
+            },
+            Eintrag(kennung: "stimme", bereich: "Stimme", titel: "Stimme", beschreibung: "Stimme des gewählten Vorlese-Anbieters.",
+                    werte: v.stimmenListe(v.anbieter).prefix(40).map(\.id).joined(separator: " | "), lesen: { v.stimme(v.anbieter) }) { w in
+                guard let s = v.stimmenListe(v.anbieter).first(where: { $0.id == w || $0.name.lowercased().contains(w.lowercased()) }) else { return "Unbekannte Stimme" }
+                v.setzeStimme(s.id, fuer: v.anbieter); return nil
             },
             Eintrag(kennung: "weckwort_an", bereich: "Sprache", titel: "Weckwort", beschreibung: "Auf das Weckwort lauschen.",
                     werte: "an | aus", lesen: { e.weckwortAn ? "an" : "aus" }) { v in
@@ -69,7 +76,11 @@ enum MacEinstellungsKatalog {
                 e.weckwort = v; Weckwort.shared.stoppen(); if e.weckwortAn { Weckwort.shared.starten() }; return nil
             },
             Eintrag(kennung: "transkription", bereich: "Sprache", titel: "Transkription", beschreibung: "Welche Spracherkennung das Diktat nutzt.",
-                    werte: "apple | groq | parakeet", lesen: { e.transkription }) { v in e.transkription = v; return nil },
+                    werte: "parakeet | groq | apple", lesen: { e.transkription }) { v in
+                let w = v.lowercased()
+                guard ["apple", "groq", "parakeet"].contains(w) else { return "Erlaubt: parakeet, groq, apple" }
+                e.transkription = w; return nil
+            },
             Eintrag(kennung: "tastenkuerzel", bereich: "Sprache", titel: "Globale Tastenkürzel", beschreibung: "⌥⌘J sprechen, ⌥⌘K Fenster.",
                     werte: "an | aus", lesen: { e.globalesKuerzel ? "an" : "aus" }) { v in
                 guard let b = wahr(v) else { return "an oder aus" }
@@ -88,8 +99,9 @@ enum MacEinstellungsKatalog {
             Eintrag(kennung: "live_stimme_gemini", bereich: "Live-Gespräch", titel: "Gemini-Live-Stimme", beschreibung: "",
                     werte: LiveOptionen.geminiStimmen.map(\.id).joined(separator: " | "), lesen: { e.liveStimmeGemini }) { v in e.liveStimmeGemini = v; return nil },
             Eintrag(kennung: "vollzugriff", bereich: "Mac", titel: "Vollzugriff", beschreibung: "Jarvis darf am Mac alles ohne Rückfrage.",
-                    werte: "an | aus", lesen: { e.vollzugriff ? "an" : "aus" }) { v in
-                guard let b = wahr(v) else { return "an oder aus" }; e.vollzugriff = b; return nil
+                    werte: "nur lesen", lesen: { e.vollzugriff ? "an" : "aus" }) { _ in
+                // Bewusst nicht per Werkzeug änderbar: sonst könnte das Modell eine ausgeschaltete Sperre selbst aufheben.
+                "Den Vollzugriff schaltet nur Frank selbst um (Einstellungen → Mac & Rechte)."
             },
         ]
     }

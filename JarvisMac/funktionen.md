@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.3 -->
+<!-- stand: JarvisMac 1.0.4 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis

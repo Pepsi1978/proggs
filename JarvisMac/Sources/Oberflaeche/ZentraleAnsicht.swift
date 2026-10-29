@@ -44,6 +44,8 @@ struct ZentraleAnsicht: View {
     @State private var auswertungOffen = false
     @FocusState private var fokus: Bool
     @State private var zugangDa = true
+    @State private var neuLaeuft = false
+    @State private var neuFehler = false
 
     private var gruss: String {
         let h = Calendar.current.component(.hour, from: Date())
@@ -168,15 +170,18 @@ struct ZentraleAnsicht: View {
                         if let a = daten.auswertung { Task { await Stimme.shared.sprich(a) } }
                     }
                     RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 30) { Task { await daten.laden(erzwingen: true) } }
-                    RundKnopf(symbol: "sparkles", hilfe: "Neue Auswertung erstellen lassen (1–3 Minuten)", groesse: 30) {
+                    RundKnopf(symbol: "sparkles", hilfe: "Neue Auswertung erstellen lassen (1–3 Minuten)", aktiv: neuLaeuft, groesse: 30) {
+                        guard !neuLaeuft else { return }
+                        neuLaeuft = true
                         Task {
-                            daten.laedt = true
-                            let t = await McpKlient.shared.text("tagesauswertung_lesen", ["neu_erstellen": true])
-                            if let t { daten.auswertung = ZentraleDaten.kuerzeAuswertung(t) }
-                            daten.laedt = false
+                            let t = await McpKlient.shared.text("tagesauswertung_lesen", ["neu_erstellen": true], sekunden: 240)
+                            if let t { daten.auswertung = ZentraleDaten.kuerzeAuswertung(t) } else { neuFehler = true }
+                            neuLaeuft = false
                         }
                     }
                 }
+                if neuLaeuft { Text("Jarvis schreibt eine neue Auswertung – das dauert ein bis drei Minuten …").font(.jarvis(12)).foregroundStyle(Farbe.cyan) }
+                if neuFehler { Text("Die neue Auswertung kam nicht an – das Handy war nicht erreichbar oder brauchte zu lange.").font(.jarvis(12)).foregroundStyle(Farbe.orange) }
                 if let a = daten.auswertung {
                     MarkdownText(text: auswertungOffen ? a : Self.anfang(a), groesse: 14)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -286,9 +286,11 @@ struct NachrichtAnsicht: View {
                         }
                         KleinKnopf(symbol: "speaker.wave.2", hilfe: "Vorlesen") { Task { await Stimme.shared.sprich(n.text) } }
                         KleinKnopf(symbol: bewertung == true ? "hand.thumbsup.fill" : "hand.thumbsup", hilfe: "Gefällt mir – Jarvis lernt daraus") {
+                            guard bewertung != true else { return }   // je Antwort nur einmal lernen
                             bewertung = true; StilLernen.bewerte(antwort: n.text, frage: frageVorher, gut: true)
                         }
                         KleinKnopf(symbol: bewertung == false ? "hand.thumbsdown.fill" : "hand.thumbsdown", hilfe: "Gefällt mir nicht – Jarvis lernt daraus") {
+                            guard bewertung != false else { return }
                             bewertung = false; StilLernen.bewerte(antwort: n.text, frage: frageVorher, gut: false)
                         }
                         TeilenKnopf(text: n.text).frame(width: 26, height: 24)

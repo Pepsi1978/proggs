@@ -119,8 +119,8 @@ actor McpKlient {
     }
 
     /// Bequemer Textaufruf für die Oberfläche (Tagesauswertung, Aufgaben, Kontext …).
-    func text(_ name: String, _ argumente: JSONObjekt = [:]) async -> String? {
-        let e = await rufe(name, argumente, sekunden: 60)
+    func text(_ name: String, _ argumente: JSONObjekt = [:], sekunden: Double = 60) async -> String? {
+        let e = await rufe(name, argumente, sekunden: sekunden)
         return e.fehler ? nil : e.text
     }
 }

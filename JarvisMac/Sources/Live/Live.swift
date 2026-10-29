@@ -102,7 +102,7 @@ struct LiveZeile: Identifiable, Hashable {
         bruecke = b
         neu.delegate = b
         neuerTon.beiMikro = { [weak neu] pcm in neu?.mikro(pcm) }
-        do { try neuerTon.starten() } catch {
+        do { try await neuerTon.starten() } catch {
             abbrechen("Mikrofon oder Lautsprecher lässt sich nicht starten: \(error.localizedDescription)")
             return
         }

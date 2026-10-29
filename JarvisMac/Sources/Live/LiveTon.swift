@@ -63,7 +63,7 @@ final class LiveTon: @unchecked Sendable {
     /// Startet den Ton. Voice Processing scheitert am Mac gelegentlich mit -10875 (kAudioUnitErr_FailedInitialization),
     /// etwa wenn das Weckwort das Mikrofon gerade erst freigibt oder Ein- und Ausgabegerät nicht zusammenpassen
     /// (Bluetooth, externer Monitor). Deshalb: zweiter Versuch mit frischer Engine, danach ohne Voice Processing mit Echosperre.
-    func starten() throws {
+    func starten() async throws {
         var letzterFehler: Error?
         for versuch in 0..<3 {
             if versuch > 0 {
@@ -71,7 +71,7 @@ final class LiveTon: @unchecked Sendable {
                 engine.stop()
                 engine = AVAudioEngine()
                 player = AVAudioPlayerNode()
-                Thread.sleep(forTimeInterval: 0.4)
+                try? await Task.sleep(for: .milliseconds(400))   // nicht den Hauptfaden blockieren
             }
             do {
                 try startenIntern(sprachverarbeitung: versuch < 2)

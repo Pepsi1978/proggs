@@ -196,6 +196,14 @@ enum MacWerkzeuge {
                 return WerkzeugErgebnis(text: "Screenshot ging nicht – Bildschirmaufnahme-Recht für Jarvis erteilen.", fehler: true)
             }
             let alsPfad = (a["art"] as? String) == "pfad"
+            let vorher = await MainActor.run { NSPasteboard.general.string(forType: .string) }
+            defer {
+                // Alte Zwischenablage nach dem Einfügen zurücklegen.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(2))
+                    if let vorher { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(vorher, forType: .string) }
+                }
+            }
             await MainActor.run {
                 let pb = NSPasteboard.general
                 pb.clearContents()

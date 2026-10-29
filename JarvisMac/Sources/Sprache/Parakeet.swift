@@ -24,8 +24,8 @@ final class ParakeetLocalClient: @unchecked Sendable {
         var errorDescription: String? {
             switch self {
             case .notInstalled: return "Offline-Modell fehlt — in den Einstellungen \"Offline-Modell laden\" klicken"
-            case .loadFailed: return "Offline-Modell liess sich nicht laden"
-            case .audioUnreadable: return "Aufnahme fuer die Offline-Transkription nicht lesbar"
+            case .loadFailed: return "Offline-Modell ließ sich nicht laden"
+            case .audioUnreadable: return "Aufnahme für die Offline-Transkription nicht lesbar"
             case .download(let s): return "Download des Offline-Modells fehlgeschlagen: \(s)"
             }
         }
@@ -77,7 +77,7 @@ final class ParakeetLocalClient: @unchecked Sendable {
     /// Laedt das Modell im Hintergrund vor (beim Aufnahmestart), damit das Diktat nicht wartet.
     func preload() {
         guard Self.isInstalled else { return }
-        queue.async { _ = try? self.loadIfNeeded() }
+        queue.async { _ = try? self.loadIfNeeded(); self.scheduleUnload() }
     }
 
     /// Mitschrift einer fertigen Aufnahme, ganz auf diesem Mac.
@@ -320,7 +320,7 @@ final class ParakeetLocalClient: @unchecked Sendable {
                     let size = (try FileManager.default.attributesOfItem(atPath: tmp.path)[.size] as? NSNumber)?.int64Value
                     guard size == f.size else {
                         try? FileManager.default.removeItem(at: tmp)
-                        throw ParakeetError.download("\(f.name) unvollstaendig")
+                        throw ParakeetError.download("\(f.name) unvollständig")
                     }
                     try? FileManager.default.removeItem(at: target)
                     try FileManager.default.moveItem(at: tmp, to: target)

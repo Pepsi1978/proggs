@@ -116,7 +116,8 @@ enum Transkription {
 /// Stimm-Zeitachse einer Aufnahme (20-ms-Rahmen) – Grundlage für „Stille vorab“, Zuschnitt und Zeitstempel-Filter.
 struct SprachAnalyse: Sendable {
     static let rahmenMs = 20
-    static let rmsSchwelle: Float = 0.015
+    // Unter der Diktat-Schwelle (mindestens 0,012), sonst verwirft „Stille vorab“ leises Sprechen, das das Diktat als begonnen zählt.
+    static let rmsSchwelle: Float = 0.009
     static let minSprachMs = 150
     let stimmhaft: [Bool]
     var stimmMs: Int { stimmhaft.filter { $0 }.count * Self.rahmenMs }

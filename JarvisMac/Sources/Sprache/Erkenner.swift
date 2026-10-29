@@ -309,6 +309,8 @@ enum GroqWhisper {
         "danke fürs zuschauen", "untertitel im auftrag des zdf", "sous titrage société radio canada", "merci d avoir regardé",
         "subtítulos realizados por la comunidad de amara org", "gracias por ver el video",
     ]
+    /// Kurze Wörter, die Whisper bei fast stiller Aufnahme erfindet – gesperrt bis 1,5 s Stimme.
+    private static let kurzeFloskeln: Set<String> = ["danke", "danke schön", "dankeschön", "tschüss", "amen", "musik", "swr", "copyright wdr", "untertitel"]
 
     private static let sperreLock = NSLock()
     nonisolated(unsafe) private static var gesperrtBis = Date.distantPast
@@ -410,7 +412,9 @@ enum GroqWhisper {
         var n = ""
         for z in text.lowercased() { n.append(z.isLetter ? z : " ") }
         let norm = n.split(separator: " ").joined(separator: " ")
-        guard !norm.isEmpty, norm.split(separator: " ").count <= 8, floskeln.contains(norm) else { return text }
+        guard !norm.isEmpty, norm.split(separator: " ").count <= 8 else { return text }
+        if kurzeFloskeln.contains(norm) { return analyse.stimmMs < 1500 ? "" : text }
+        guard floskeln.contains(norm) else { return text }
         return analyse.stimmMs < 600 ? "" : text
     }
 
