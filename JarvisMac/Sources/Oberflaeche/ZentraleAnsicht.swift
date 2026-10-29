@@ -168,6 +168,14 @@ struct ZentraleAnsicht: View {
                         if let a = daten.auswertung { Task { await Stimme.shared.sprich(a) } }
                     }
                     RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 30) { Task { await daten.laden(erzwingen: true) } }
+                    RundKnopf(symbol: "sparkles", hilfe: "Neue Auswertung erstellen lassen (1–3 Minuten)", groesse: 30) {
+                        Task {
+                            daten.laedt = true
+                            let t = await McpKlient.shared.text("tagesauswertung_lesen", ["neu_erstellen": true])
+                            if let t { daten.auswertung = ZentraleDaten.kuerzeAuswertung(t) }
+                            daten.laedt = false
+                        }
+                    }
                 }
                 if let a = daten.auswertung {
                     MarkdownText(text: auswertungOffen ? a : Self.anfang(a), groesse: 14)
@@ -205,9 +213,10 @@ struct ZentraleAnsicht: View {
     }
 
     /// Werkzeugtexte etwas lesbarer: interne Kennungen raus.
-    static func aufbereiten(_ t: String) -> String {
+    static func aufbereiten(_ t: String, grenze: Int = 1600) -> String {
         var s = t.replacingOccurrences(of: #"\[id \d+\] "#, with: "", options: .regularExpression)
-        if s.count > 1600 { s = String(s.prefix(1600)) + " …" }
+        s = s.replacingOccurrences(of: "\n(Falls in diesem Gespräch noch nicht geschehen: zuerst jarvis_kontext aufrufen.)", with: "")
+        if s.count > grenze { s = String(s.prefix(grenze)) + " …" }
         return s
     }
 

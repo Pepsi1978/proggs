@@ -7,8 +7,8 @@ import Observation
 
 // MARK: - Stimme (Vorlesen)
 
-/// Sprachausgabe: Google Cloud TTS (Chirp 3 HD, deutsch) satzweise und lückenlos, Rückfall auf die beste
-/// deutsche Systemstimme. Während des Sprechens ruht das Weckwort (kein Selbstauslösen).
+/// Sprachausgabe mit allen Anbietern der Android-App (Edge, Chirp 3 HD, Gemini 3.8 Flash/Lite, Azure, Alibaba, eigene
+/// Stimme) satzweise und lückenlos, Rückfallkette wie am Handy, zuletzt die beste deutsche Systemstimme. Während des Sprechens ruht das Weckwort (kein Selbstauslösen).
 @MainActor @Observable final class Stimme: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = Stimme()
     private(set) var spricht = false
@@ -24,19 +24,12 @@ import Observation
     private var systemFertig: CheckedContinuation<Void, Never>?
     private var pegelUhr: Timer?
 
-    private static let chirpNamen = [
-        "Achernar", "Aoede", "Autonoe", "Callirrhoe", "Despina", "Erinome", "Gacrux", "Kore", "Laomedeia", "Leda",
-        "Pulcherrima", "Sulafat", "Vindemiatrix", "Zephyr",
-        "Achird", "Algenib", "Algieba", "Alnilam", "Charon", "Enceladus", "Fenrir", "Iapetus", "Orus", "Puck",
-        "Rasalgethi", "Sadachbia", "Sadaltager", "Schedar", "Umbriel", "Zubenelgenubi",
-    ]
-    private static let weiblich: Set<String> = ["Achernar", "Aoede", "Autonoe", "Callirrhoe", "Despina", "Erinome", "Gacrux",
-                                                "Kore", "Laomedeia", "Leda", "Pulcherrima", "Sulafat", "Vindemiatrix", "Zephyr"]
-
-    /// Verfügbare Stimmen (Kennung, Anzeigename) für die Einstellungen.
+    /// Stimmen des gewählten Anbieters (Kennung, Anzeigename), Favoriten oben – für einfache Auswahllisten.
     var stimmen: [(id: String, name: String)] {
-        Self.chirpNamen.map { ("de-DE-Chirp3-HD-\($0)", "\($0) (\(Self.weiblich.contains($0) ? "weiblich" : "männlich"), Chirp 3 HD)") }
-            + [("system", "Systemstimme (offline)")]
+        let v = VorleseEinstellungen.shared
+        return v.stimmenListe(v.anbieter).map { st in
+            (st.id, "\(v.favoriten.contains(st.id) ? "★ " : "")\(st.name) (\(st.geschlecht == .weiblich ? "weiblich" : "männlich"), \(v.anbieter.kurz))")
+        }
     }
 
     override init() {
@@ -45,7 +38,17 @@ import Observation
     }
 
     /// Liest den Text vor und kehrt zurück, wenn fertig oder gestoppt.
-    func sprich(_ text: String) async {
+    func sprich(_ text: String) async { await sprich(text, stimme: nil) }
+
+    /// Hörprobe einer bestimmten Stimme (bestimmt auch den Anbieter).
+    func probe(_ stimmeId: String) async {
+        let f = DateFormatter(); f.locale = Locale(identifier: "de_DE"); f.dateFormat = "EEEE, d. MMMM"
+        await sprich("Hallo Frank, ich bin Jarvis. Heute ist \(f.string(from: Date())), es ist \(Date().formatted(date: .omitted, time: .shortened)) Uhr.",
+                     stimme: stimmeId)
+    }
+
+    /// Liest mit der gewählten (oder einer Sonder-)Stimme vor; scheitert sie, Rückfallkette, dann Edge, zuletzt die Systemstimme.
+    func sprich(_ text: String, stimme sonder: String?) async {
         stopp()
         generation += 1
         let meine = generation
@@ -56,18 +59,15 @@ import Observation
         spricht = true
         defer { if generation == meine { spricht = false; pegel = 0 } }
 
-        let e = Einstellungen.shared
-        let schluessel = e.zugang.google
-        let stimme = e.stimme
-        let stuecke = SprechText.stuecke(sauber)
-        if !schluessel.isEmpty && stimme.contains("Chirp") {
-            let rest = await sprichGoogle(stuecke, stimme: stimme, schluessel: schluessel, tempo: e.tempo, generation: meine)
-            guard generation == meine else { return }
-            if rest.isEmpty { return }
-            await sprichSystem(rest.joined(separator: " "), tempo: e.tempo, generation: meine)
-        } else {
-            await sprichSystem(sauber, tempo: e.tempo, generation: meine)
+        let stand = VorleseEinstellungen.shared.stand(sonderStimme: sonder)
+        if stand.anbieter == .system {
+            await sprichSystem(sauber, tempo: stand.tempo(.system), generation: meine)
+            return
         }
+        let rest = await sprichKette(SprechText.stuecke(sauber), stand: stand, generation: meine)
+        guard generation == meine, !rest.isEmpty else { return }
+        log("fehler", "Vorlesen: alle Stimmen gescheitert – Rückfall auf die Systemstimme")
+        await sprichSystem(rest.joined(separator: " "), tempo: stand.tempo(.system), generation: meine)
     }
 
     func stopp() {
@@ -101,8 +101,8 @@ import Observation
         return s
     }
 
-    /// Gibt die Stücke zurück, die nicht über Google gesprochen werden konnten (für den Rückfall).
-    private func sprichGoogle(_ stuecke: [String], stimme: String, schluessel: String, tempo: Double, generation meine: Int) async -> [String] {
+    /// Erzeugt die Stücke (zwei im Voraus) und spielt sie lückenlos. Gibt die Stücke zurück, die keine Stimme erzeugen konnte.
+    private func sprichKette(_ stuecke: [String], stand: VorleseStand, generation meine: Int) async -> [String] {
         let s: AVAudioPlayerNode
         do { s = try bereiteEngine() } catch {
             log("fehler", "Vorlesen: Audioausgabe nicht startbar (\(error.localizedDescription))")
@@ -115,7 +115,15 @@ import Observation
             let text = stuecke[i]
             let fmt = format
             aufgaben[i] = Task.detached {
-                await Self.synthese(text, stimme: stimme, schluessel: schluessel, tempo: tempo, format: fmt)
+                do {
+                    let (ton, anbieter) = try await VorleseSynthese.synthetisiere(text, stand)
+                    // Gemini kennt kein Sprechtempo: der fertige Ton wird gestreckt (Tonhöhe bleibt).
+                    let strecken = anbieter.istGemini ? stand.tempo(anbieter) : 1
+                    return VorleseSynthese.puffer(ton, format: fmt, strecken: strecken)
+                } catch {
+                    if !(error is CancellationError) { log("fehler", "Vorlesen: \(error.localizedDescription)") }
+                    return nil
+                }
             }
         }
         var rest: [String] = []
@@ -124,7 +132,6 @@ import Observation
             let puffer = await aufgaben[i]?.value
             guard generation == meine else { aufgaben.values.forEach { $0.cancel() }; return [] }
             guard let puffer else {
-                log("fehler", "Vorlesen: Google-TTS fehlgeschlagen – Rückfall auf Systemstimme")
                 rest = Array(stuecke[i...])
                 aufgaben.values.forEach { $0.cancel() }
                 break
@@ -141,42 +148,6 @@ import Observation
             try? await Task.sleep(for: .milliseconds(40))
         }
         return generation == meine ? rest : []
-    }
-
-    nonisolated private static func synthese(_ text: String, stimme: String, schluessel: String, tempo: Double, format: AVAudioFormat) async -> AVAudioPCMBuffer? {
-        var komp = URLComponents(string: "https://texttospeech.googleapis.com/v1/text:synthesize")!
-        komp.queryItems = [URLQueryItem(name: "key", value: schluessel)]
-        var req = URLRequest(url: komp.url!, timeoutInterval: 20)
-        req.httpMethod = "POST"
-        req.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
-        req.httpBody = JSON.daten([
-            "input": ["text": text],
-            "voice": ["languageCode": "de-DE", "name": stimme],
-            "audioConfig": ["audioEncoding": "LINEAR16", "sampleRateHertz": 24000, "speakingRate": min(max(tempo, 0.7), 1.3)],
-        ] as JSONObjekt)
-        for versuch in 0..<2 {
-            if Task.isCancelled { return nil }
-            do {
-                let (daten, antwort) = try await URLSession.shared.data(for: req)
-                let code = (antwort as? HTTPURLResponse)?.statusCode ?? 0
-                guard code == 200, let o = JSON.objekt(daten), let b64 = o["audioContent"] as? String,
-                      let wav = Data(base64Encoded: b64), let (samples, _) = Wav.lies(wav) else {
-                    log("fehler", "Google-TTS \(code): \(String(decoding: daten.prefix(200), as: UTF8.self))")
-                    if code >= 500 && versuch == 0 { continue }
-                    return nil
-                }
-                guard let p = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)) else { return nil }
-                p.frameLength = AVAudioFrameCount(samples.count)
-                let ziel = p.floatChannelData![0]
-                samples.withUnsafeBufferPointer { q in ziel.update(from: q.baseAddress!, count: samples.count) }
-                return p
-            } catch {
-                if versuch == 0 && !Task.isCancelled { continue }
-                log("fehler", "Google-TTS: \(error.localizedDescription)")
-                return nil
-            }
-        }
-        return nil
     }
 
     // MARK: Systemstimme
@@ -260,7 +231,10 @@ import Observation
         aktiv = true; stoppWunsch = false; abbruchWunsch = false; vorschau = ""; pegel = 0
         defer { aktiv = false; pegel = 0 }
 
-        let apple = Einstellungen.shared.transkription != "groq"
+        _ = TranskriptionsEinstellungen.shared            // setzt beim ersten Mal die Vorgabe (Parakeet, falls vorhanden)
+        let verfahren = Einstellungen.shared.transkription
+        let apple = verfahren == "apple"
+        if verfahren == "parakeet" { ParakeetLocalClient.shared.preload() }   // lädt, während Frank spricht
         let messung = Messung()
         let ziel16k = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)!
         let umwandler = Umwandler(ziel: ziel16k)
@@ -336,18 +310,18 @@ import Observation
         if let erkenner {
             text = await erkenner.beenden(abschliessen: true)
         } else {
-            let (samples, sprach) = messung.mit { ($0.samples, $0.sprachZeit) }
+            let samples = messung.mit { $0.samples }
             do {
-                text = try await GroqWhisper.transkribiere(samples, sprachSekunden: sprach, schluessel: Einstellungen.shared.zugang.groq)
+                text = try await Transkription.erkenne(samples)
             } catch {
                 fehler = error.localizedDescription
-                log("fehler", "Diktat (Groq): \(fehler!)")
+                log("fehler", "Diktat (\(verfahren)): \(fehler!)")
                 return nil
             }
         }
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         vorschau = text
-        log("sprache", "Diktat erkannt (\(apple ? "Apple" : "Groq")): \(text.prefix(120))")
+        log("sprache", "Diktat erkannt (\(TranskriptionsEinstellungen.shared.anzeigeName)): \(text.prefix(120))")
         return text.isEmpty ? nil : text
     }
 

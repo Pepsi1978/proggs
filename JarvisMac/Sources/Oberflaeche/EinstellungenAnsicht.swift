@@ -28,7 +28,7 @@ struct EinstellungenAnsicht: View {
                     switch reiter {
                     case "gehirn": gehirn
                     case "stimme": stimme
-                    case "sprache": sprache
+                    case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
                     case "live": live
                     case "mac": mac
                     case "konten": KontenAnsicht()
@@ -75,27 +75,14 @@ struct EinstellungenAnsicht: View {
     }
 
     private var stimme: some View {
-        GlasKarte {
-            VStack(alignment: .leading, spacing: 8) {
-                KartenTitel(symbol: "speaker.wave.3.fill", titel: "Stimme")
-                zeile("Antworten vorlesen", "Im Sprachgespräch liest Jarvis seine Antworten vor.") { Toggle("", isOn: $einst.vorlesen).toggleStyle(.switch) }
-                zeile("Stimme", "Google Chirp 3 HD – ohne Schlüssel die beste deutsche Systemstimme.") {
-                    Picker("", selection: $einst.stimme) {
-                        ForEach(Stimme.shared.stimmen, id: \.id) { Text($0.name).tag($0.id) }
-                    }
-                    .frame(width: 240)
-                }
-                zeile("Tempo") {
-                    Slider(value: $einst.tempo, in: 0.8...1.4, step: 0.05).frame(width: 200)
-                    Text(String(format: "%.2f×", einst.tempo)).font(.jarvis(12)).frame(width: 46)
-                }
-                HStack(spacing: 10) {
-                    KapselKnopf(symbol: "play.fill", titel: "Hörprobe", hervorgehoben: true) {
-                        Task { await Stimme.shared.sprich("Hallo Frank, ich bin Jarvis. Heute ist der \(ZentraleAnsicht.datumZeile), es ist \(Date().formatted(date: .omitted, time: .shortened)) Uhr.") }
-                    }
-                    KapselKnopf(symbol: "stop.fill", titel: "Stopp") { Stimme.shared.stopp() }
+        VStack(spacing: 18) {
+            GlasKarte {
+                VStack(alignment: .leading, spacing: 8) {
+                    KartenTitel(symbol: "speaker.wave.3.fill", titel: "Vorlesen")
+                    zeile("Antworten vorlesen", "Im Sprachgespräch liest Jarvis seine Antworten vor.") { Toggle("", isOn: $einst.vorlesen).toggleStyle(.switch) }
                 }
             }
+            VorleseEinstellungenAnsicht()
         }
     }
 
@@ -110,12 +97,6 @@ struct EinstellungenAnsicht: View {
                 zeile("Weckwort", "z. B. „Hey Jarvis“ oder „Okay Computer“.") {
                     TextField("", text: $einst.weckwort).textFieldStyle(.roundedBorder).frame(width: 200)
                         .onSubmit { Weckwort.shared.stoppen(); if einst.weckwortAn { Weckwort.shared.starten() } }
-                }
-                zeile("Transkription", "Apple: offline auf dem Mac, kostenlos. Groq Whisper: sehr genau, braucht Netz und Schlüssel.") {
-                    Picker("", selection: $einst.transkription) {
-                        Text("Apple (offline)").tag("apple"); Text("Groq Whisper").tag("groq")
-                    }
-                    .pickerStyle(.segmented).frame(width: 260)
                 }
                 zeile("Tastenkürzel", "⌥⌘J überall: sprechen · ⌥⌘K: Jarvis öffnen · im Fenster ⌘D sprechen, ⌘L Live, ⌘N neues Gespräch.") {
                     Toggle("", isOn: $einst.globalesKuerzel).toggleStyle(.switch)
@@ -302,7 +283,7 @@ struct KontenAnsicht: View {
                     schluessel("Anthropic (Claude)", $einst.zugang.anthropic)
                     schluessel("OpenAI (Live, GPT)", $einst.zugang.openai)
                     schluessel("Gemini (Live)", $einst.zugang.gemini)
-                    schluessel("Google Cloud (Stimme)", $einst.zugang.google)
+                    Text("Schlüssel für die Vorlesestimmen (Google, Gemini-TTS, Azure, Qwen) stehen unter Stimme.").font(.jarvis(11)).foregroundStyle(Farbe.text3)
                     schluessel("Groq (Whisper)", $einst.zugang.groq)
                 }
             }

@@ -172,6 +172,48 @@ enum MacWerkzeuge {
             }
             return WerkzeugErgebnis(text: "Bildschirmfoto aufgenommen.", bildPNG: d)
         },
+        werkzeug("mac_screenshot",
+                 "Mac: „Erstelle einen Screenshot“ – nimmt den ganzen Bildschirm auf (Jarvis blendet sich dafür kurz aus), speichert ihn als PNG am Bildschirmfoto-Ort von macOS (meist Schreibtisch) und legt ihn zusätzlich in die Zwischenablage. Mit zeigen=true siehst du ihn auch selbst.",
+                 schema(["zeigen": ("boolean", "Bild auch dir zeigen (Vorgabe false)"), "name": ("string", "optionaler Dateiname ohne Endung")])) { a in
+            if let g = await gesperrt() { return g }
+            guard let (pfad, daten) = await Screenshot.aufnehmen(name: a["name"] as? String) else {
+                return WerkzeugErgebnis(text: "Screenshot ging nicht – Bildschirmaufnahme-Recht für Jarvis erteilen (Einstellungen → Mac & Rechte).", fehler: true)
+            }
+            await Screenshot.inZwischenablage(daten, pfad: pfad)
+            var e = WerkzeugErgebnis(text: "Screenshot gespeichert: \(pfad) – liegt auch in der Zwischenablage.")
+            if a["zeigen"] as? Bool == true { e.bildPNG = Screenshot.verkleinert(pfad) }
+            return e
+        },
+        werkzeug("screenshot_ins_cli",
+                 "Mac: „Füg einen Screenshot ins CLI ein“ – nimmt den ganzen Bildschirm auf und fügt ihn in die gerade aktive Terminal-Sitzung ein (Claude Code, Codex, OpenCode …; das zuletzt benutzte Terminal-Fenster). art=bild fügt das Bild per Ctrl+V ein (Vorgabe, wie Claude Code es erwartet), art=pfad tippt den Dateipfad ein. Mit text wird danach noch eine Nachricht dazugeschrieben, mit senden=true abgeschickt.",
+                 schema(["art": ("string", "bild | pfad"), "text": ("string", "optional: Text, der hinter das Bild geschrieben wird"),
+                         "senden": ("boolean", "danach Enter drücken (Vorgabe false)")])) { a in
+            if let g = await gesperrt() { return g }
+            guard let ziel = await MainActor.run(body: { VorderApp.terminal() }) else {
+                return WerkzeugErgebnis(text: "Kein offenes Terminal gefunden (Terminal, iTerm, Ghostty, Warp …).", fehler: true)
+            }
+            guard let (pfad, daten) = await Screenshot.aufnehmen(name: nil) else {
+                return WerkzeugErgebnis(text: "Screenshot ging nicht – Bildschirmaufnahme-Recht für Jarvis erteilen.", fehler: true)
+            }
+            let alsPfad = (a["art"] as? String) == "pfad"
+            await MainActor.run {
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                if alsPfad { pb.setString(pfad, forType: .string) } else { pb.setData(daten, forType: .png); pb.setData(NSImage(data: daten)?.tiffRepresentation ?? daten, forType: .tiff) }
+                ziel.activate()
+            }
+            try? await Task.sleep(for: .milliseconds(600))
+            var skript = "tell application \"System Events\"\n"
+            skript += alsPfad ? "keystroke \"v\" using command down\n" : "keystroke \"v\" using control down\n"
+            if let t = a["text"] as? String, !t.isEmpty {
+                skript += "delay 0.6\nkeystroke \" \(t.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))\"\n"
+            }
+            if a["senden"] as? Bool == true { skript += "delay 0.3\nkey code 36\n" }
+            skript += "end tell"
+            let r = await Shell.osascript(skript)
+            if r.code != 0 { return befehlsText(r) }
+            return WerkzeugErgebnis(text: "Screenshot (\(pfad)) in \(ziel.localizedName ?? "das Terminal") eingefügt\(alsPfad ? " als Pfad" : " als Bild").")
+        },
         werkzeug("mac_tastatur",
                  "Mac: tippt Text in das vorderste Programm oder drückt ein Tastenkürzel (z. B. 'cmd+t', 'cmd+shift+n', 'enter', 'esc'). Braucht das Bedienungshilfen-Recht.",
                  schema(["text": ("string", "zu tippender Text"), "kuerzel": ("string", "Tastenkürzel wie cmd+v, enter, tab")])) { a in
@@ -341,5 +383,72 @@ enum Tasten {
         let using = mods.isEmpty ? "" : " using {\(mods.joined(separator: ", "))}"
         if let c = codes[taste] { return "key code \(c)\(using)" }
         return "keystroke \"\(taste)\"\(using)"
+    }
+}
+
+/// Merkt sich das zuletzt aktive Programm außer Jarvis – „die gerade geöffnete Session“.
+@MainActor
+enum VorderApp {
+    static var letzte: NSRunningApplication?
+    static var letztesTerminal: NSRunningApplication?
+    static let terminals = ["com.apple.Terminal", "com.googlecode.iterm2", "com.mitchellh.ghostty", "dev.warp.Warp-Stable",
+                            "com.github.wez.wezterm", "org.alacritty", "net.kovidgoyal.kitty"]
+
+    static func beobachten() {
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { n in
+            guard let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  app.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
+            MainActor.assumeIsolated {
+                letzte = app
+                if terminals.contains(app.bundleIdentifier ?? "") { letztesTerminal = app }
+            }
+        }
+    }
+
+    /// Das Terminal der aktiven Sitzung: zuletzt benutztes Terminal, sonst irgendein laufendes.
+    static func terminal() -> NSRunningApplication? {
+        if let t = letztesTerminal, !t.isTerminated { return t }
+        return NSWorkspace.shared.runningApplications.first { terminals.contains($0.bundleIdentifier ?? "") }
+    }
+}
+
+enum Screenshot {
+    /// Ganzer Bildschirm als PNG am Bildschirmfoto-Ort von macOS. Jarvis blendet sich dafür kurz aus.
+    static func aufnehmen(name: String?) async -> (String, Data)? {
+        let ort = await Shell.zsh("defaults read com.apple.screencapture location 2>/dev/null", sekunden: 5).ausgabe
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        var ordner = (ort.isEmpty ? "~/Desktop" : ort) as NSString
+        ordner = ordner.expandingTildeInPath as NSString
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd 'um' HH.mm.ss"
+        var basis = "Bildschirmfoto \(f.string(from: Date()))"
+        if let name, !name.isEmpty { basis = name }
+        let datei: String = (ordner as String) + "/" + basis + ".png"
+        let versteckt = await MainActor.run { () -> Bool in
+            guard NSApp.isActive else { return false }
+            NSApp.hide(nil); return true
+        }
+        if versteckt { try? await Task.sleep(for: .milliseconds(500)) }
+        _ = await Shell.zsh("screencapture -x -m -t png \(Shell.zitiert(datei))", sekunden: 20)
+        if versteckt { await MainActor.run { NSApp.unhide(nil) } }
+        guard let d = try? Data(contentsOf: URL(fileURLWithPath: datei)) else { return nil }
+        return (datei, d)
+    }
+
+    @MainActor static func inZwischenablage(_ daten: Data, pfad: String) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setData(daten, forType: .png)
+        if let tiff = NSImage(data: daten)?.tiffRepresentation { pb.setData(tiff, forType: .tiff) }
+    }
+
+    /// Kleine JPEG-Fassung fürs Modell.
+    static func verkleinert(_ pfad: String) -> Data? {
+        let ziel = Pfade.temp.appendingPathComponent("screenshot-klein.jpg").path
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/sips")
+        p.arguments = ["-Z", "1440", "-s", "format", "jpeg", "-s", "formatOptions", "60", pfad, "--out", ziel]
+        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+        try? p.run(); p.waitUntilExit()
+        return try? Data(contentsOf: URL(fileURLWithPath: ziel))
     }
 }

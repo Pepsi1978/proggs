@@ -3,13 +3,14 @@ import Carbon.HIToolbox
 import SwiftUI
 
 enum Bereich: String, CaseIterable, Identifiable {
-    case zentrale, gespraech, live, ablage, gedaechtnis, aktivitaet, einstellungen
+    case zentrale, gespraech, live, programmierung, ablage, gedaechtnis, aktivitaet, einstellungen
     var id: String { rawValue }
     var titel: String {
         switch self {
         case .zentrale: return "Zentrale"
         case .gespraech: return "Gespräch"
         case .live: return "Live"
+        case .programmierung: return "Programmierung"
         case .ablage: return "Ablage"
         case .gedaechtnis: return "Gedächtnis"
         case .aktivitaet: return "Aktivität"
@@ -21,6 +22,7 @@ enum Bereich: String, CaseIterable, Identifiable {
         case .zentrale: return "sparkles"
         case .gespraech: return "bubble.left.and.text.bubble.right.fill"
         case .live: return "waveform"
+        case .programmierung: return "chevron.left.forwardslash.chevron.right"
         case .ablage: return "tray.full.fill"
         case .gedaechtnis: return "brain.head.profile.fill"
         case .aktivitaet: return "list.bullet.rectangle.portrait.fill"
@@ -43,6 +45,7 @@ final class AppSteuerung {
     private var hud: SprachHUD?
 
     func hochfahren() {
+        VorderApp.beobachten()
         Weckwort.shared.beiErkennung = { [weak self] in self?.weckwortErkannt() }
         if Einstellungen.shared.weckwortAn { Weckwort.shared.starten() }
         if Einstellungen.shared.globalesKuerzel { kuerzelRegistrieren() }
@@ -56,8 +59,11 @@ final class AppSteuerung {
         }
     }
 
+    var projekt: String?   // offenes Projekt in der Leiste
+
     func neuesGespraech() {
         let g = GespraechsSpeicher.shared.neu()
+        g.projekt = projekt
         gespraech = g
         bereich = .gespraech
     }

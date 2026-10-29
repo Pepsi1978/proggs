@@ -116,11 +116,22 @@ struct AblageAnsicht: View {
     @State private var titel = ""
     @State private var neuTitel = ""
     @State private var neuText = ""
+    @State private var reiter = 0
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                BereichsKopf(symbol: "tray.full.fill", titel: "Ablage", untertitel: "Dieselbe Ablage wie auf deinem Handy – Texte, Recherchen, Dateien.")
+                BereichsKopf(symbol: "tray.full.fill", titel: "Ablage", untertitel: "Dieselbe Ablage wie auf deinem Handy – Texte, Recherchen, Dateien und Prompts.")
+                Picker("", selection: $reiter) { Text("Einträge").tag(0); Text("Prompts").tag(1) }.pickerStyle(.segmented).frame(width: 240)
+                if reiter == 1 { PromptsAnsicht() } else { eintraege }
+            }
+            .padding(36).frame(maxWidth: 1240).frame(maxWidth: .infinity)
+        }
+        .task { await liste.laden("ablage_lesen") }
+    }
+
+    private var eintraege: some View {
+            VStack(alignment: .leading, spacing: 20) {
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Farbe.text3)
                     TextField("In der Ablage suchen …", text: $suche).textFieldStyle(.plain)
@@ -165,9 +176,6 @@ struct AblageAnsicht: View {
                     }
                 }
             }
-            .padding(36).frame(maxWidth: 1240).frame(maxWidth: .infinity)
-        }
-        .task { await liste.laden("ablage_lesen") }
     }
 }
 

@@ -11,6 +11,7 @@ struct ChatAnsicht: View {
     @State private var text = ""
     @State private var anhang: Data?
     @State private var diktiert = false
+    @State private var guthaben = ""
     @FocusState private var fokus: Bool
 
     var body: some View {
@@ -39,6 +40,18 @@ struct ChatAnsicht: View {
         .onAppear {
             if !steuerung.entwurf.isEmpty { text = steuerung.entwurf; steuerung.entwurf = "" }
             fokus = true
+        }
+        .onChange(of: steuerung.entwurf) { _, neu in if !neu.isEmpty { text = neu; steuerung.entwurf = "" } }
+        .task {
+            // Anthropic-Restguthaben wie am Handy vor dem Modellnamen, alle 15 Minuten, nicht während Live.
+            while !Task.isCancelled {
+                if einst.modellWahl.anbieter == .anthropic, !LiveGespraech.shared.aktiv,
+                   let t = await McpKlient.shared.text("anthropic_guthaben"),
+                   let r = t.range(of: #"Übrig: [0-9.,]+ \$"#, options: .regularExpression) {
+                    guthaben = String(t[r].dropFirst(7))
+                }
+                try? await Task.sleep(for: .seconds(900))
+            }
         }
         .onDrop(of: [.image, .fileURL], isTargeted: nil) { anbieter in
             guard let a = anbieter.first else { return false }
@@ -129,7 +142,7 @@ struct ChatAnsicht: View {
                         Button { einst.effort = e } label: { Text("Denkstufe \(e)" + (e == einst.effort ? "  ✓" : "")) }
                     }
                 } label: {
-                    Text(einst.modellWahl.name.replacingOccurrences(of: "Claude ", with: ""))
+                    Text((einst.modellWahl.anbieter == .anthropic && !guthaben.isEmpty ? guthaben + "  " : "") + einst.modellWahl.name.replacingOccurrences(of: "Claude ", with: ""))
                         .font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
                         .padding(.horizontal, 10).padding(.vertical, 8)
                         .background(Capsule().fill(Color.white.opacity(0.06)))
@@ -227,6 +240,12 @@ struct NachrichtAnsicht: View {
     let gespraech: Gespraech
     @State private var schwebt = false
     @State private var schritteOffen = false
+    @State private var bewertung: Bool?
+
+    private var frageVorher: String {
+        guard let i = gespraech.nachrichten.firstIndex(where: { $0.id == n.id }) else { return "" }
+        return gespraech.nachrichten[..<i].last(where: { $0.rolle == .frank })?.text ?? ""
+    }
 
     var body: some View {
         if n.rolle == .frank { frank } else { jarvis }
@@ -266,6 +285,17 @@ struct NachrichtAnsicht: View {
                             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(n.text, forType: .string)
                         }
                         KleinKnopf(symbol: "speaker.wave.2", hilfe: "Vorlesen") { Task { await Stimme.shared.sprich(n.text) } }
+                        KleinKnopf(symbol: bewertung == true ? "hand.thumbsup.fill" : "hand.thumbsup", hilfe: "Gefällt mir – Jarvis lernt daraus") {
+                            bewertung = true; StilLernen.bewerte(antwort: n.text, frage: frageVorher, gut: true)
+                        }
+                        KleinKnopf(symbol: bewertung == false ? "hand.thumbsdown.fill" : "hand.thumbsdown", hilfe: "Gefällt mir nicht – Jarvis lernt daraus") {
+                            bewertung = false; StilLernen.bewerte(antwort: n.text, frage: frageVorher, gut: false)
+                        }
+                        TeilenKnopf(text: n.text).frame(width: 26, height: 24)
+                        KleinKnopf(symbol: "arrow.turn.up.right", hilfe: "In neuem Gespräch fortsetzen") {
+                            AppSteuerung.shared.neuesGespraech()
+                            AppSteuerung.shared.entwurf = "Zur Fortsetzung, deine letzte Antwort war:\n\n\(n.text.prefix(3000))\n\nWeiter: "
+                        }
                         KleinKnopf(symbol: "arrow.clockwise", hilfe: "Erneut fragen") {
                             if let frage = gespraech.nachrichten.last(where: { $0.rolle == .frank })?.text {
                                 AppSteuerung.shared.gespraech = gespraech; AppSteuerung.shared.sende(frage)

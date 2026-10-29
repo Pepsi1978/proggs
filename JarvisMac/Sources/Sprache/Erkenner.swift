@@ -294,13 +294,26 @@ final class EinmalSignal: @unchecked Sendable {
 
 // MARK: - Groq Whisper
 
+/// Groq Whisper wie im Handy-Modul M1.4: Large V3 Turbo oder Large V3, Wörterbuch-Prompt mit Echo-Schutz und vier Filter
+/// (Stille vorab, Segment-Werte, Zeitstempel, Floskeln). Ist Large V3 für die Organisation gesperrt, nimmt Jarvis
+/// dieselbe Aufnahme sofort mit Turbo und überspringt Large V3 30 Minuten – wie am Handy.
 enum GroqWhisper {
+    struct Filter: Sendable { var stille = true, segmente = true, zeitstempel = true, floskeln = true }
+
     private static let floskeln: Set<String> = [
-        "vielen dank", "danke", "danke schön", "vielen dank fürs zuschauen", "vielen dank für ihre aufmerksamkeit",
-        "untertitel im auftrag des zdf", "untertitel im auftrag des zdf für funk", "untertitelung des zdf",
-        "untertitel von stephanie geiges", "copyright wdr", "bis zum nächsten mal", "tschüss", "amen",
-        "untertitel der amaraorg community", "swr", "musik",
+        "vielen dank", "vielen dank fürs zuschauen", "vielen dank fuers zuschauen", "vielen dank für eure aufmerksamkeit",
+        "vielen dank für ihre aufmerksamkeit", "vielen dank für die aufmerksamkeit", "bis zum nächsten mal", "bis zum nächsten video",
+        "untertitel", "untertitel des zdf", "untertitelung des zdf für funk", "untertitel im auftrag des zdf für funk",
+        "untertitel von stephanie geiges", "untertitel der amara org community", "der text ist nicht auf deutsch",
+        "thank you", "thank you for watching", "thanks for watching", "please subscribe", "subtitles by the amara org community",
+        "danke fürs zuschauen", "untertitel im auftrag des zdf", "sous titrage société radio canada", "merci d avoir regardé",
+        "subtítulos realizados por la comunidad de amara org", "gracias por ver el video",
     ]
+
+    private static let sperreLock = NSLock()
+    nonisolated(unsafe) private static var gesperrtBis = Date.distantPast
+    static var largeV3Gesperrt: Bool { sperreLock.withLock { Date() < gesperrtBis } }
+    static func sperreAufheben() { sperreLock.withLock { gesperrtBis = .distantPast } }
 
     static func normal(_ s: String) -> String {
         var c = ""
@@ -308,19 +321,55 @@ enum GroqWhisper {
         return c.split(separator: " ").joined(separator: " ")
     }
 
-    /// Transkribiert 16-kHz-Mono-Samples. `sprachSekunden` = gemessene laute Zeit (für den Floskelfilter).
-    static func transkribiere(_ samples: [Float], sprachSekunden: Double, schluessel: String) async throws -> String {
+    /// Transkribiert 16-kHz-Mono-Samples.
+    static func transkribiere(_ samples: [Float], analyse roh: SprachAnalyse, schluessel: String, modell: String,
+                              prompt: String?, filter: Filter) async throws -> String {
         guard !schluessel.isEmpty else {
-            throw NSError(domain: "Jarvis", code: 5, userInfo: [NSLocalizedDescriptionKey: "Kein Groq-Schlüssel eingetragen"])
+            throw NSError(domain: "Jarvis", code: 5, userInfo: [NSLocalizedDescriptionKey: "Kein Groq-Schlüssel eingetragen (Einstellungen → Konten)."])
         }
-        let wav = Wav.kodiere(samples, rate: 16000)
+        // Schicht 1: Stille vorab – gar nicht erst hochladen, und Stille vorn/hinten abschneiden.
+        if filter.stille && roh.stimmMs < SprachAnalyse.minSprachMs { return "" }
+        let hochladen = filter.stille ? roh.zugeschnitten(samples) : samples
+        let analyse = filter.stille ? roh.nachZuschnitt() : roh
+        let wav = Wav.kodiere(hochladen, rate: 16000)
+        guard wav.count <= 25 * 1024 * 1024 else {
+            throw NSError(domain: "Jarvis", code: 6, userInfo: [NSLocalizedDescriptionKey: "Die Aufnahme ist für Groq zu groß."])
+        }
+        var o = try await einmal(wav, modell: modell, prompt: prompt, schluessel: schluessel)
+        // Whisper gibt bei Gemurmel gern den Prompt selbst aus: dann einmal ohne Wörterbuch.
+        if let prompt, istPromptEcho(o["text"] as? String ?? "", prompt) {
+            log("sprache", "Groq: Prompt-Echo erkannt, erneut ohne Wörterbuch")
+            o = try await einmal(wav, modell: modell, prompt: nil, schluessel: schluessel)
+        }
+        return filtere(o, analyse, filter)
+    }
+
+    private static func einmal(_ wav: Data, modell gewaehlt: String, prompt: String?, schluessel: String) async throws -> JSONObjekt {
+        var modell = gewaehlt == TranskriptionsEinstellungen.modellLargeV3 && largeV3Gesperrt ? TranskriptionsEinstellungen.modellTurbo : gewaehlt
+        var (code, daten) = try await sende(wav, modell: modell, prompt: prompt, schluessel: schluessel)
+        let text = String(decoding: daten.prefix(600), as: UTF8.self)
+        if code != 200 && modell == TranskriptionsEinstellungen.modellLargeV3 && (code == 403 || text.contains("model_permission_blocked")) {
+            sperreLock.withLock { gesperrtBis = Date().addingTimeInterval(30 * 60) }
+            log("sprache", "Groq: Large V3 für die Organisation gesperrt – 30 Minuten Turbo")
+            modell = TranskriptionsEinstellungen.modellTurbo
+            (code, daten) = try await sende(wav, modell: modell, prompt: prompt, schluessel: schluessel)
+        }
+        guard code == 200, let o = JSON.objekt(daten) else {
+            throw NSError(domain: "Jarvis", code: code, userInfo: [NSLocalizedDescriptionKey: "Groq \(code): \(String(decoding: daten.prefix(300), as: UTF8.self))"])
+        }
+        return o
+    }
+
+    private static func sende(_ wav: Data, modell: String, prompt: String?, schluessel: String) async throws -> (Int, Data) {
         let grenze = UUID().uuidString
         var req = URLRequest(url: URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!, timeoutInterval: 60)
         req.httpMethod = "POST"
         req.setValue("Bearer \(schluessel)", forHTTPHeaderField: "Authorization")
         req.setValue("multipart/form-data; boundary=\(grenze)", forHTTPHeaderField: "Content-Type")
+        var felder = [("model", modell), ("language", "de"), ("response_format", "verbose_json"), ("temperature", "0")]
+        if let prompt { felder.append(("prompt", prompt)) }
         var rumpf = Data()
-        for (k, v) in [("model", "whisper-large-v3-turbo"), ("language", "de"), ("response_format", "verbose_json"), ("temperature", "0")] {
+        for (k, v) in felder {
             rumpf.append(Data("--\(grenze)\r\nContent-Disposition: form-data; name=\"\(k)\"\r\n\r\n\(v)\r\n".utf8))
         }
         rumpf.append(Data("--\(grenze)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"aufnahme.wav\"\r\nContent-Type: audio/wav\r\n\r\n".utf8))
@@ -328,25 +377,49 @@ enum GroqWhisper {
         rumpf.append(Data("\r\n--\(grenze)--\r\n".utf8))
         req.httpBody = rumpf
         let (daten, antwort) = try await URLSession.shared.data(for: req)
-        let code = (antwort as? HTTPURLResponse)?.statusCode ?? 0
-        guard code == 200, let o = JSON.objekt(daten) else {
-            throw NSError(domain: "Jarvis", code: code, userInfo: [NSLocalizedDescriptionKey: "Groq \(code): \(String(decoding: daten.prefix(300), as: UTF8.self))"])
+        return ((antwort as? HTTPURLResponse)?.statusCode ?? 0, daten)
+    }
+
+    /// Schichten 2–4 wie WhisperHallucinationFilter.kt.
+    private static func filtere(_ o: JSONObjekt, _ analyse: SprachAnalyse, _ f: Filter) -> String {
+        let gesamt = (o["text"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard f.segmente, let segmente = o["segments"] as? [JSONObjekt], !segmente.isEmpty else { return floskelSperre(gesamt, analyse, f) }
+        func d(_ s: JSONObjekt, _ k: String) -> Double { (s[k] as? NSNumber)?.doubleValue ?? 0 }
+        let sicher = segmente.filter { s in
+            let stille = d(s, "no_speech_prob"), logp = d(s, "avg_logprob"), komp = d(s, "compression_ratio")
+            let dauer = d(s, "end") - d(s, "start")
+            if stille > 0.6 && logp < -1.0 { return false }
+            if komp > 2.4 { return false }
+            return !(dauer > 0 && dauer < 0.4 && stille > 0.6)
         }
-        // Halluzinationsfilter: Segmente mit hoher Stille-Wahrscheinlichkeit verwerfen.
-        var text: String
-        if let segmente = o["segments"] as? [JSONObjekt], !segmente.isEmpty {
-            text = segmente.filter { s in
-                let stille = s["no_speech_prob"] as? Double ?? 0
-                let logp = s["avg_logprob"] as? Double ?? 0
-                return !(stille > 0.6 && logp < -0.7)
-            }.compactMap { $0["text"] as? String }.joined(separator: " ")
-        } else {
-            text = o["text"] as? String ?? ""
+        if sicher.isEmpty { return "" }
+        var behalten = sicher
+        if f.zeitstempel {
+            let passend = sicher.filter { s in
+                guard s["start"] != nil, s["end"] != nil else { return true }
+                return analyse.segmentHatSprache(d(s, "start"), d(s, "end"))
+            }
+            if !passend.isEmpty { behalten = passend }   // alle verworfen = vermutlich Zeitversatz, Schicht 2 behalten
         }
-        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let n = normal(text)
-        if floskeln.contains(n) && sprachSekunden < 1.5 { return "" }
-        return text
+        let text = behalten.compactMap { ($0["text"] as? String)?.trimmingCharacters(in: .whitespaces) }.joined(separator: " ")
+        return floskelSperre(text.trimmingCharacters(in: .whitespacesAndNewlines), analyse, f)
+    }
+
+    private static func floskelSperre(_ text: String, _ analyse: SprachAnalyse, _ f: Filter) -> String {
+        guard f.floskeln, !text.isEmpty, text.count <= 64 else { return text }
+        var n = ""
+        for z in text.lowercased() { n.append(z.isLetter ? z : " ") }
+        let norm = n.split(separator: " ").joined(separator: " ")
+        guard !norm.isEmpty, norm.split(separator: " ").count <= 8, floskeln.contains(norm) else { return text }
+        return analyse.stimmMs < 600 ? "" : text
+    }
+
+    static func istPromptEcho(_ text: String, _ prompt: String) -> Bool {
+        func norm(_ s: String) -> String { String(s.lowercased().filter { $0.isLetter || $0.isNumber }) }
+        let t = norm(text), p = norm(prompt), marker = norm("Begriffe")
+        guard !t.isEmpty, !p.isEmpty else { return false }
+        if t.hasPrefix(marker) && p.contains(String(t.dropFirst(marker.count))) { return true }
+        return t.count >= 12 && p.contains(t)
     }
 }
 

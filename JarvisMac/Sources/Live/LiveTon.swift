@@ -21,8 +21,11 @@ final class LiveTon: @unchecked Sendable {
     /// Mikrofon stumm (Stille statt Mikrofon an den Dienst), z. B. während eines späten Vorlesens.
     var mikroStumm = false
 
-    private let engine = AVAudioEngine()
-    private let player = AVAudioPlayerNode()
+    private var engine = AVAudioEngine()
+    private var player = AVAudioPlayerNode()
+    /// Ohne Apples Echounterdrückung (Rückfall, wenn Voice Processing auf diesem Gerät nicht startet):
+    /// dann ist das Mikrofon stumm, solange Jarvis hörbar spricht (Echosperre wie am Handy).
+    private(set) var ohneEchoUnterdrueckung = false
     private let ausFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: LiveTon.ausgabeRate, channels: 1, interleaved: false)!
     private var zielFormat: AVAudioFormat
     private var wandler: AVAudioConverter?
@@ -57,12 +60,41 @@ final class LiveTon: @unchecked Sendable {
 
     // MARK: Start / Stopp
 
+    /// Startet den Ton. Voice Processing scheitert am Mac gelegentlich mit -10875 (kAudioUnitErr_FailedInitialization),
+    /// etwa wenn das Weckwort das Mikrofon gerade erst freigibt oder Ein- und Ausgabegerät nicht zusammenpassen
+    /// (Bluetooth, externer Monitor). Deshalb: zweiter Versuch mit frischer Engine, danach ohne Voice Processing mit Echosperre.
     func starten() throws {
-        let eingang = engine.inputNode
-        try eingang.setVoiceProcessingEnabled(true)
-        if #available(macOS 14.0, *) {
-            eingang.voiceProcessingOtherAudioDuckingConfiguration = .init(enableAdvancedDucking: false, duckingLevel: .min)
+        var letzterFehler: Error?
+        for versuch in 0..<3 {
+            if versuch > 0 {
+                engine.inputNode.removeTap(onBus: 0)
+                engine.stop()
+                engine = AVAudioEngine()
+                player = AVAudioPlayerNode()
+                Thread.sleep(forTimeInterval: 0.4)
+            }
+            do {
+                try startenIntern(sprachverarbeitung: versuch < 2)
+                ohneEchoUnterdrueckung = versuch == 2
+                if versuch > 0 { log("live", "Ton im \(versuch + 1). Versuch gestartet\(versuch == 2 ? " – ohne Echounterdrückung, Echosperre aktiv" : "")") }
+                return
+            } catch {
+                letzterFehler = error
+                log("fehler", "Live: Tonstart Versuch \(versuch + 1) fehlgeschlagen: \(error.localizedDescription)")
+            }
         }
+        throw letzterFehler ?? NSError(domain: "JarvisLive", code: 2)
+    }
+
+    private func startenIntern(sprachverarbeitung: Bool) throws {
+        let eingang = engine.inputNode
+        if sprachverarbeitung {
+            try eingang.setVoiceProcessingEnabled(true)
+            if #available(macOS 14.0, *) {
+                eingang.voiceProcessingOtherAudioDuckingConfiguration = .init(enableAdvancedDucking: false, duckingLevel: .min)
+            }
+        }
+        _ = engine.outputNode   // Voice Processing braucht Ein- und Ausgabe in derselben Einheit
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: ausFormat)
         try abgriffSetzen()
@@ -107,7 +139,7 @@ final class LiveTon: @unchecked Sendable {
             let rms = sqrt(summe / Double(n))
             self.lock.lock(); self._pegelEin = Float(min(1, rms / 6000)); self.lock.unlock()
             var daten = Data(bytes: p, count: n * 2)
-            if self.mikroStumm { daten = Data(count: daten.count) }
+            if self.mikroStumm || (self.ohneEchoUnterdrueckung && self.sprichtHoerbar) { daten = Data(count: daten.count) }
             self.sammel.append(daten)
             while self.sammel.count >= blockBytes {
                 let block = self.sammel.prefix(blockBytes)

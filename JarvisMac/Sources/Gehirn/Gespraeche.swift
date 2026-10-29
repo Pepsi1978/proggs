@@ -35,6 +35,12 @@ final class Gespraech: Identifiable {
     var arbeitet = false
     /// Bis zu dieser Nachrichtenzahl hat „Lernen am Mac“ das Gespräch schon ausgewertet.
     var gelerntBis = 0
+    /// Projekt, zu dem das Gespräch gehört (nil = normales Gespräch).
+    var projekt: String?
+    /// Gespräch mit Programmierauftrag – steht im Leistenreiter „Programmierung“.
+    var istProgrammierung: Bool {
+        nachrichten.contains { $0.schritte.contains { ["programmieren", "openlauncher_sitzung", "programmier_nachtrag", "programmierer_sprechen"].contains($0.werkzeug) } }
+    }
 
     init(id: UUID = UUID(), titel: String = "Neues Gespräch") {
         self.id = id; self.titel = titel; erstellt = Date(); geaendert = Date()
@@ -43,7 +49,7 @@ final class Gespraech: Identifiable {
 
     private struct Datei: Codable {
         var id: UUID; var titel: String; var erstellt: Date; var geaendert: Date
-        var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelerntBis: Int?
+        var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelerntBis: Int?; var projekt: String?
     }
 
     var dateiURL: URL { Pfade.gespraeche.appendingPathComponent("\(id.uuidString).json") }
@@ -51,7 +57,7 @@ final class Gespraech: Identifiable {
     func speichern() {
         geaendert = Date()
         let d = Datei(id: id, titel: titel, erstellt: erstellt, geaendert: geaendert, nachrichten: nachrichten,
-                      verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis)
+                      verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis, projekt: projekt)
         if let daten = try? JSONEncoder().encode(d) { try? daten.write(to: dateiURL, options: .atomic) }
     }
 
@@ -61,7 +67,7 @@ final class Gespraech: Identifiable {
         g.erstellt = d.erstellt; g.geaendert = d.geaendert
         g.nachrichten = d.nachrichten.map { var n = $0; n.laeuft = false; return n }
         g.verlauf = (JSON.wert(d.verlauf) as? [JSONObjekt]) ?? []
-        g.kontext = d.kontext; g.gelerntBis = d.gelerntBis ?? 0
+        g.kontext = d.kontext; g.gelerntBis = d.gelerntBis ?? 0; g.projekt = d.projekt
         return g
     }
 }

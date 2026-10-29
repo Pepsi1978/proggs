@@ -35,6 +35,8 @@ final class JarvisAgent {
     - OpenLauncher, TerminalVoiceOverlay und ClaudeVoiceOverlay nur über ihre Update-Skripte aktualisieren, nie von Hand bauen.
     - Programmierauftrag an den Programmierer = Werkzeug programmieren (geht über das Handy an Mac oder PC, wie gewohnt). \
     „Starte eine OpenLauncher-Session …“ mit genanntem Modell/CLI direkt hier = openlauncher_sitzung.
+    - „Erstelle einen Screenshot“ = mac_screenshot. „Füg einen Screenshot ins CLI / in die Session ein“ = screenshot_ins_cli \
+    (fügt ihn in die zuletzt benutzte Terminal-Sitzung ein). Jarvis' eigene Mac-Einstellungen per Sprache = mac_einstellungen.
 
     ANTWORTEN
     - Deutsch, kurz und klar. Nie Quellen, Quellennamen oder Webadressen nennen, außer Frank fragt ausdrücklich danach.
@@ -99,7 +101,7 @@ final class JarvisAgent {
             g.kontext = await McpKlient.shared.text("jarvis_kontext", [:]) ?? ""
         }
         let handyWerkzeuge = await mcpListe
-        let lokale = MacWerkzeuge.alle
+        let lokale = MacWerkzeuge.alleLokal
         let lokaleNamen = Set(lokale.map(\.definition.name))
         let alleWerkzeuge = lokale.map(\.definition) + handyWerkzeuge.filter { !lokaleNamen.contains($0.name) }
         let system = await systemTeile(g: g)
@@ -202,7 +204,7 @@ final class JarvisAgent {
     }
 
     nonisolated static func fuehreAus(_ name: String, _ args: JSONObjekt, lokal: Bool) async -> WerkzeugErgebnis {
-        if lokal, let w = await MainActor.run(body: { MacWerkzeuge.alle.first { $0.definition.name == name } }) {
+        if lokal, let w = await MainActor.run(body: { MacWerkzeuge.alleLokal.first { $0.definition.name == name } }) {
             return await w.ausfuehren(args)
         }
         return await McpKlient.shared.rufe(name, args)

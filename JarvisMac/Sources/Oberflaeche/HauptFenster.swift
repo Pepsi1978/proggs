@@ -14,6 +14,7 @@ struct HauptFenster: View {
                 case .gespraech:
                     if let g = steuerung.gespraech { ChatAnsicht(gespraech: g).id(g.id) } else { ZentraleAnsicht() }
                 case .live: LiveAnsicht()
+                case .programmierung: ProgrammierungAnsicht()
                 case .ablage: AblageAnsicht()
                 case .gedaechtnis: GedaechtnisAnsicht()
                 case .aktivitaet: AktivitaetAnsicht()
@@ -48,11 +49,26 @@ struct Seitenleiste: View {
     @State private var steuerung = AppSteuerung.shared
     @State private var speicher = GespraechsSpeicher.shared
     @State private var suche = ""
+    @State private var reiter = 0          // 0 Gespräche, 1 Programmierung, 2 Projekte
+    @State private var projekte = Projekte.shared
+    @State private var neuesProjekt = ""
 
     private var gefiltert: [Gespraech] {
+        let basis: [Gespraech]
+        switch reiter {
+        case 1: basis = speicher.alle.filter { $0.istProgrammierung }
+        case 2: basis = steuerung.projekt.map { p in speicher.alle.filter { $0.projekt == p } } ?? []
+        default: basis = speicher.alle.filter { $0.projekt == nil && !$0.istProgrammierung }
+        }
         let s = suche.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !s.isEmpty else { return speicher.alle }
-        return speicher.alle.filter { $0.titel.lowercased().contains(s) || $0.nachrichten.contains { $0.text.lowercased().contains(s) } }
+        guard !s.isEmpty else { return basis }
+        return basis.filter { $0.titel.lowercased().contains(s) || $0.nachrichten.contains { $0.text.lowercased().contains(s) } }
+    }
+
+    private var arbeitet: (Bool, Bool, Bool) {
+        (speicher.alle.contains { $0.arbeitet && $0.projekt == nil && !$0.istProgrammierung },
+         speicher.alle.contains { $0.arbeitet && $0.istProgrammierung },
+         speicher.alle.contains { $0.arbeitet && $0.projekt != nil })
     }
 
     var body: some View {
@@ -86,7 +102,7 @@ struct Seitenleiste: View {
             .buttonStyle(.plain)
 
             VStack(spacing: 2) {
-                ForEach([Bereich.zentrale, .live, .ablage, .gedaechtnis, .aktivitaet, .einstellungen]) { b in
+                ForEach([Bereich.zentrale, .live, .programmierung, .ablage, .gedaechtnis, .aktivitaet, .einstellungen]) { b in
                     LeistenEintrag(symbol: b.symbol, titel: b.titel, aktiv: steuerung.bereich == b) { steuerung.bereich = b }
                 }
             }
@@ -98,7 +114,48 @@ struct Seitenleiste: View {
             .padding(.horizontal, 12).padding(.vertical, 9)
             .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
 
-            Text("GESPRÄCHE").font(.jarvis(10, .bold)).tracking(2).foregroundStyle(Farbe.text3).padding(.leading, 6)
+            HStack(spacing: 4) {
+                ForEach(Array(["Gespräche", "Programmierung", "Projekte"].enumerated()), id: \.offset) { i, name in
+                    let laeuft = [arbeitet.0, arbeitet.1, arbeitet.2][i]
+                    Button { reiter = i; if i != 2 { steuerung.projekt = nil } } label: {
+                        HStack(spacing: 4) {
+                            Text(name).font(.jarvis(11, reiter == i ? .bold : .medium)).lineLimit(1).minimumScaleFactor(0.8)
+                            if laeuft { Circle().fill(Farbe.orange).frame(width: 6, height: 6).shadow(color: Farbe.orange, radius: 3) }
+                        }
+                        .foregroundStyle(reiter == i ? Farbe.text : Farbe.text3)
+                        .padding(.horizontal, 8).padding(.vertical, 6).frame(maxWidth: .infinity)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(reiter == i ? 0.09 : 0)))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if reiter == 2 {
+                if let p = steuerung.projekt {
+                    HStack {
+                        Button { steuerung.projekt = nil } label: { Image(systemName: "chevron.left") }.buttonStyle(.plain)
+                        Text(p).font(.jarvis(13, .bold)).lineLimit(1)
+                        Spacer()
+                        Button { steuerung.neuesGespraech() } label: { Image(systemName: "plus.bubble") }.buttonStyle(.plain).help("Neues Gespräch im Projekt")
+                    }
+                    .padding(.horizontal, 6)
+                } else {
+                    HStack {
+                        TextField("Neues Projekt", text: $neuesProjekt).textFieldStyle(.plain).font(.jarvis(12))
+                            .onSubmit { projekte.neu(neuesProjekt); neuesProjekt = "" }
+                        Button { projekte.neu(neuesProjekt); neuesProjekt = "" } label: { Image(systemName: "folder.badge.plus") }.buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(projekte.namen, id: \.self) { p in
+                                LeistenEintrag(symbol: "folder.fill", titel: p, aktiv: false) { steuerung.projekt = p }
+                            }
+                        }
+                    }
+                    .scrollIndicators(.never)
+                }
+            }
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 2) {
