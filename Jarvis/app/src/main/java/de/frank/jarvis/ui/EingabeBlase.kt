@@ -354,9 +354,9 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
 /** Größe der schwebenden Symbole und ihr Abstand untereinander; unter dem Stapel bleibt eine freie Bubble Platz. */
 private val SCHWEBE_GROESSE = 40.dp
 private val SCHWEBE_ABSTAND = 8.dp
-private val SCHWEBE_LUECKE = SCHWEBE_GROESSE + SCHWEBE_ABSTAND * 2
 /** Ein freier Platz in Symbolgröße zwischen den übrigen Symbolen und Nachtrag/Programmierer. */
 private val SCHWEBE_FREIPLATZ = SCHWEBE_GROESSE + SCHWEBE_ABSTAND
+private val SCHWEBE_LUECKE = SCHWEBE_FREIPLATZ + SCHWEBE_ABSTAND
 
 /** Rechter Abstand der Symbole: ihre Mitte liegt genau über der orangen Live-Kugel (12 Rand + 10 Innenabstand + 24 halbe Kugel). */
 val SCHWEBE_RECHTS = 46.dp - SCHWEBE_GROESSE / 2
@@ -366,17 +366,17 @@ val SCHWEBE_FREI_RECHTS = SCHWEBE_RECHTS + SCHWEBE_GROESSE + 6.dp
 
 /** Höhe des ganzen Stapels, damit die Liste darüber genug Luft bekommt. */
 fun schwebeHoehe(nachtrag: Boolean, papierkorb: Boolean = false): androidx.compose.ui.unit.Dp {
-    // Aktualisieren, Hell/Dunkel, Neue Session, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar,
+    // Hell/Dunkel, Neue Session, Programmierer, dazu Nachtrag und Papierkorb, wenn sichtbar,
     // und der freie Platz zwischen den übrigen Symbolen und den Programmier-Symbolen.
-    val anzahl = 4 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
+    val anzahl = 3 + (if (nachtrag) 1 else 0) + (if (papierkorb) 1 else 0)
     return SCHWEBE_GROESSE * anzahl + SCHWEBE_ABSTAND * (anzahl - 1) + SCHWEBE_FREIPLATZ + SCHWEBE_LUECKE
 }
 
 /**
  * Frei schwebend rechts über der Eingabeblase, auf der Linie der orangen Kugel, im selben Abstand untereinander:
- * oben „Neue Session“, darunter der Papierkorb „Gespräch löschen“, dann ein freier Platz, darunter, nur im Programmiergespräch, ein Plus
+ * oben Hell/Dunkel und „Neue Session“, darunter der Papierkorb „Gespräch löschen“, dann ein freier Platz, darunter, nur im Programmiergespräch, ein Plus
  * (wie Plus → „+ Nachtrag“) und als letztes das Programmier-Symbol (wie Plus → „Programmierer“). Darunter bis zur Eingabeblase
- * eine freie Bubble Platz, damit „Neue Session“ und der Papierkorb an ihrer Stelle bleiben. Ohne Blase, nur ein kleiner,
+ * eine freie Bubble Platz mit dem Klapp-Pfeil. Ohne Blase, nur ein kleiner,
  * leicht schimmernder, durchscheinender Grund.
  */
 @Composable

@@ -427,6 +427,7 @@
     { "versionCode": 421, "versionName": "1.8.410", "stand": "29.10.2026, 13:32 Uhr", "notiz": "Ganz unten im Gespräch steht die letzte Zeile jetzt auch im aufgeklappten Querformat in der Bildschirmmitte statt oben, weil die Knopfleiste rechts den Abstand nach unten nicht mehr vergrößert." },
     { "versionCode": 422, "versionName": "1.8.411", "stand": "29.10.2026, 15:36 Uhr", "notiz": "Jarvis liest nie mehr Werkzeugaufrufe oder technisches Markup vor, führt als Text geschriebene Aufrufe trotzdem aus und versteht Einstellungsbefehle wie „Gemini-Schlüssel auf nur bezahlt“ zuverlässiger." },
     { "versionCode": 423, "versionName": "1.8.412", "stand": "29.10.2026, 15:51 Uhr", "notiz": "Der Markup-Filter greift nur noch bei echten Werkzeugaufrufen, sodass Code, spitze Klammern, Pfeile und erbetenes JSON in Antworten erhalten bleiben und zitierte Befehle aus Mails nie ausgeführt werden." },
-    { "versionCode": 424, "versionName": "1.8.413", "stand": "29.10.2026, 15:52 Uhr", "notiz": "In der rechten Symbolspalte liegt zwischen den übrigen Symbolen und Nachtrag/Programmierer wieder immer genau ein freier Platz." }
+    { "versionCode": 424, "versionName": "1.8.413", "stand": "29.10.2026, 15:52 Uhr", "notiz": "In der rechten Symbolspalte liegt zwischen den übrigen Symbolen und Nachtrag/Programmierer wieder immer genau ein freier Platz." },
+    { "versionCode": 425, "versionName": "1.8.414", "stand": "29.10.2026, 16:02 Uhr", "notiz": "Unter leeren Gesprächen bleibt kein überflüssiger Leerraum mehr über der Eingabeblase, und die Funktionsliste beschreibt die Symbolspalte wieder genau." }
 ]
 }
