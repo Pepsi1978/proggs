@@ -464,7 +464,7 @@ class CodexAuthManager(context: Context) {
 
     private suspend fun executeQuestionRequest(request: Request): TrackedResponse {
         // Hintergrundarbeit (Kurzfassung, KI-Verbessern) bricht der Stopp-Knopf des Chats nicht mit ab.
-        val tracker = if (currentCoroutineContext()[EigeneAnfrage] != null) eigeneAnfragen else activeQuestionCall
+        val tracker = if (currentCoroutineContext()[EigeneAnfrage.Schluessel] != null) eigeneAnfragen else activeQuestionCall
         return withDnsRetry {
             val call = RESPONSES_HTTP_CLIENT.newCall(request)
             tracker.track(call)
@@ -726,5 +726,8 @@ private fun networkException(message: String, cause: Throwable? = null): CodexAu
  * Markiert Anfragen, die nicht zum Chat gehören (Kurzfassung, KI-Verbessern): [CodexAuthManager.cancelChat]
  * lässt sie in Ruhe. Aufruf: `withContext(EigeneAnfrage) { streamChat(...) }`.
  */
-object EigeneAnfrage : kotlin.coroutines.AbstractCoroutineContextElement(EigeneAnfrage),
-    kotlin.coroutines.CoroutineContext.Key<EigeneAnfrage>
+object EigeneAnfrage : kotlin.coroutines.AbstractCoroutineContextElement(EigeneAnfrage.Schluessel) {
+    // Eigener Schlüssel: Verwiese das Objekt auf sich selbst, wäre er beim Erzeugen noch null — die App stürzte dann
+    // bei der ersten Kurzfassung ab (ExceptionInInitializerError).
+    object Schluessel : kotlin.coroutines.CoroutineContext.Key<EigeneAnfrage>
+}
