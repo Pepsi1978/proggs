@@ -24,6 +24,8 @@ final class Guthaben {
     var macAbgelaufen: Bool { macAbgelehntAm != nil }
     private var macAbgelehntAm: Date?
     var anmeldungOffen = false
+    /// Keine Zahlen zu den Kosten: nicht angemeldet und das Handy liefert nichts, oder die Console lehnt ab und auch das Handy hilft nicht.
+    var konsoleGetrennt: Bool { (anthropicRest == nil && !laedt) || (macAbgelaufen && anthropicHinweis != nil) }
     /// Was die letzte Aufgabe mit einem Claude-Modell gekostet hat, in Dollar: aus den Tokens der API, sofort und ohne Abfrage.
     var kosten: Double?
 
@@ -175,6 +177,9 @@ struct ModellKapsel: View {
                         Text("·").font(.jarvis(11)).foregroundStyle(Farbe.text3)
                     }
                 }
+                if guthaben.konsoleGetrennt {
+                    Label("Anthropic-Konsole nicht verbunden", systemImage: "exclamationmark.triangle.fill").font(.jarvis(11, .bold)).foregroundStyle(Farbe.rot)
+                }
                 Text(einst.modellWahl.name.replacingOccurrences(of: "Claude ", with: "")).font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
             }
             .lineLimit(1)
@@ -182,7 +187,7 @@ struct ModellKapsel: View {
             .background(Capsule().fill(Farbe.glas(0.06)))
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-        .help("Modell, Denkstufe und Guthaben")
+        .help(guthaben.konsoleGetrennt ? "Anthropic-Konsole nicht verbunden: Kosten und Kostenveränderungen sind deshalb nicht sichtbar." : "Modell, Denkstufe und Guthaben")
     }
 }
 
@@ -194,6 +199,18 @@ struct GuthabenAnsicht: View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Geschenktes Guthaben wird immer vor deinem eigenen Geld verbraucht. Hier siehst du, wie viel noch übrig ist und wann es verfällt.")
                 .font(.jarvis(13)).foregroundStyle(Farbe.text2)
+            if g.konsoleGetrennt {
+                Button { g.anmeldungOffen = true } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label("Anthropic-Konsole nicht verbunden", systemImage: "exclamationmark.triangle.fill").font(.jarvis(14, .bold)).foregroundStyle(Farbe.rot)
+                        Text("Kosten und Kostenveränderungen sind deshalb nicht sichtbar. Klicken zum Anmelden.").font(.jarvis(13)).foregroundStyle(Farbe.text)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Farbe.rot.opacity(0.14)))
+                }
+                .buttonStyle(.plain).pointerStyle(.link)
+            }
             karte(titel: "Claude-Modelle (Anthropic)", symbol: "brain", erklaerung: "Bezahlt Jarvis' Kopf, wenn du ein Claude-Modell gewählt hast.",
                   rest: g.anthropicRest, gewaehrt: g.anthropicGewaehrt, einheit: "$", umrechnung: g.kurs, text: g.anthropicText, hinweis: g.anthropicHinweis) {
                 if g.macAngemeldet {
