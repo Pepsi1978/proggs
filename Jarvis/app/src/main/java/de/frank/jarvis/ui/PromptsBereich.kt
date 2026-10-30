@@ -62,6 +62,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import de.frank.jarvis.ablage.Prompt
 import de.frank.jarvis.ablage.Prompts
 import de.frank.jarvis.ui.theme.LocalBewegung
@@ -226,23 +234,45 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
 @Composable
 private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: () -> Unit) {
     val f = LocalFarben.current
-    Dialog(schliessen, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    val ausgang = remember { vm.promptText }
+    var verwerfen by remember { mutableStateOf(false) }
+    // Ein neuer Prompt bleibt als Entwurf erhalten; nur Änderungen an einem bestehenden gingen verloren.
+    val versuchen = { if (vm.promptBearbeitet != null && vm.promptText != ausgang && !verwerfen) verwerfen = true else schliessen() }
+    Dialog(versuchen, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        // Das Dialogfenster hat eigene Systemleisten: Deren Symbole müssen zum Hintergrund passen.
+        val ansicht = LocalView.current
+        SideEffect {
+            (ansicht.parent as? DialogWindowProvider)?.window?.let { w ->
+                WindowCompat.getInsetsController(w, ansicht).apply { isAppearanceLightStatusBars = !f.dunkel; isAppearanceLightNavigationBars = !f.dunkel }
+            }
+        }
         Column(Modifier.fillMaxSize().background(f.hgOben).systemBarsPadding().imePadding().padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(vm.promptBearbeitet?.let { "Prompt ${it.nummer} bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Box(Modifier.size(40.dp).antippen(aktion = schliessen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
+                Box(Modifier.size(40.dp).antippen(aktion = versuchen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
-            // Das Feld nimmt den ganzen freien Platz ein und scrollt langen Text in sich.
-            Box(Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(16.dp)) {
-                if (vm.promptText.isEmpty()) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen", color = f.textSchwach, fontSize = 16.sp)
-                BasicTextField(vm.promptText, { vm.promptText = it }, Modifier.fillMaxSize(),
-                    textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer))
-            }
+            // Mit Schreibmarke am Ende, auch nach Diktat und KI: So bleibt der neue Text im Blick. Das Feld füllt den Platz und scrollt in sich.
+            var feld by remember { mutableStateOf(TextFieldValue(vm.promptText, TextRange(vm.promptText.length))) }
+            LaunchedEffect(vm.promptText) { if (feld.text != vm.promptText) feld = TextFieldValue(vm.promptText, TextRange(vm.promptText.length)) }
+            val fokus = remember { FocusRequester() }
+            LaunchedEffect(Unit) { fokus.requestFocus() }
+            BasicTextField(feld, { feld = it; vm.promptText = it.text },
+                Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).focusRequester(fokus),
+                textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer),
+                decorationBox = { inhalt ->
+                    Box(Modifier.padding(16.dp)) {
+                        if (feld.text.isEmpty()) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen", color = f.textSchwach, fontSize = 16.sp)
+                        inhalt()
+                    }
+                })
             if (vm.promptFormuliert) Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Kern(28.dp, f.primaer, aktiv = true)
                 Text("Jarvis formuliert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (verwerfen) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Knopf("Änderungen verwerfen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) { schliessen() }
+                Knopf("Weiter bearbeiten", Modifier.weight(1f), haupt = false) { verwerfen = false }
+            } else Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Rund(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
                     vm.promptMikrofonTippen()
                 }
