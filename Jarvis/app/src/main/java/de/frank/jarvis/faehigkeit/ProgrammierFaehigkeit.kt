@@ -985,6 +985,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                     }
                     daSchon && !wartet && jetzt - f.optLong("zeit") > 120 -> {
                         Auftragsbuch.frageErledigt(app, frageId)
+                        rueckfrageAnsageAbbrechen(frageId)
                         ProgrammierChat.rueckfrageStand(app, gespraech, frageId, RueckfrageStand.VERWAIST)
                     }
                 }
@@ -1373,6 +1374,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
     private fun verteile(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean = true, von: String = ProgrammierChat.VON_PROGRAMMIERER) {
+        // Gleich zuerst: Eine Rückfrage hält jedes laufende Vorlesen an dieser Stelle an, bis sie erledigt ist.
+        if (frage != null && benachrichtigen) frage.optString("frage_id").takeIf { it.isNotEmpty() }?.let { de.frank.jarvis.speech.Vorleser.aktuell()?.anhalten(it, frage.optLong("bis")) }
         aktivitaetMelden(eintrag)
         // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
         // nur, wenn Frank gebraucht wird oder der Auftrag zu Ende ist: Rückfrage, fertig (App installiert) oder Problem.
@@ -1458,11 +1461,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             if (ausgang != null) {
                 stand(ausgang, json.optString("antwort_text").ifEmpty { if (ausgang in RueckfrageStand.BEANTWORTET_ALLE) "eine frühere Antwort" else "" }, grund)
                 Auftragsbuch.frageErledigt(app, frageId)
+                rueckfrageAnsageAbbrechen(frageId)
                 if (ausgang in RueckfrageStand.BEANTWORTET_ALLE) rueckfrageMeldungWeg(eintrag?.optString("id").orEmpty(), frageId)
             } else stand(RueckfrageStand.FEHLER, grund = grund)
             throw IllegalStateException(grund)
         }
         Auftragsbuch.frageErledigt(app, frageId)
+        rueckfrageAnsageAbbrechen(frageId)
         eintrag?.let { Auftragsbuch.finde(app, it.optString("id"))?.let { e -> aktivitaetMelden(e) } }
         if (freigeben) {
             stand(RueckfrageStand.AM_PC, "", "freigegeben")
@@ -1611,9 +1616,11 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    /** Eine erledigte Rückfrage (beantwortet, abgelaufen, am Rechner) wird nicht mehr nachträglich angesagt. */
-    private fun rueckfrageAnsageAbbrechen(frageId: String) =
+    /** Eine erledigte Rückfrage (beantwortet, abgelaufen, am Rechner) wird nicht mehr nachträglich angesagt, und das Vorlesen darf weiter. */
+    private fun rueckfrageAnsageAbbrechen(frageId: String) {
         de.frank.jarvis.meldung.Meldungen.vorlesenAbbrechen(de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE, "rueckfrage-$frageId")
+        de.frank.jarvis.speech.Vorleser.aktuell()?.freigeben(frageId)
+    }
 
     /** Die letzten Programmieraufträge mit ihren Schritten, dauerhaft in den App-Einstellungen (höchstens 20). */
     private object Auftragsbuch {

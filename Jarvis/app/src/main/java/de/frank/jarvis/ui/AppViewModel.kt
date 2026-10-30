@@ -595,7 +595,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Leer: Frank hat schon getippt, der Auftrag startet ohne gesprochene Bestätigung. Schon vorgelesen: nicht ein zweites Mal.
             if (!vorlesen || karte.isBlank() || runde.karteGesprochen) return
             if (runde.ursprung != null && (runde.sitzung != sitzungId || weckwortLauf?.isActive != true)) sprachZustellen(rundenZustellung(runde, karte))
-            else if (runde.sitzung == sitzungId) vorleser.sprich(WAHL_QUELLE + runde.sitzung + ":" + runde.beginn, "Jarvis", karte)
+            else if (runde.sitzung == sitzungId) sprichRunde(WAHL_QUELLE + runde.sitzung + ":" + runde.beginn, karte)
             return
         }
         // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
@@ -640,7 +640,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         else if (runde.vorab != null) vorleser.sprichNachVorab(runde.vorab!!, "gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
         // Die schon vorgelesene Auswahlkarte wird nicht abgeschnitten: Die Antwort des Modells kommt hinter ihr.
         else if (runde.karteGesprochen) vorleser.sprichDanach("gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
-        else vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
+        else sprichRunde("gespraech:" + (gespraech.size - 1), neu.text)
+    }
+
+    /** Eine fertige Antwort: Steht das Vorlesen gerade wegen einer Rückfrage, kommt sie danach und nimmt ihm nicht seine Stelle. */
+    private fun sprichRunde(quelle: String, text: String) {
+        if (vorleser.unterbrochen) vorleser.sprichDanach(quelle, "Jarvis", text) else vorleser.sprich(quelle, "Jarvis", text)
     }
 
     /** Was noch zuzustellen ist: ohne den ersten Satz, wenn er schon zu hören war. */
@@ -1499,9 +1504,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun vorlesenUndWarten(quelle: String, text: String): String? {
         vorleser.sprich(quelle, "Jarvis", text)
         if (vorleser.stand.value.quelle != quelle) return vorleser.stand.value.fehler ?: "nicht begonnen"
-        val ende = kotlinx.coroutines.withTimeoutOrNull(vorleseDauer(text)) {
-            vorleser.stand.first { it.quelle != quelle || it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
-        } ?: run {
+        var wartend: de.frank.jarvis.speech.VorleseStand?
+        do {
+            wartend = kotlinx.coroutines.withTimeoutOrNull(vorleseDauer(text)) {
+                vorleser.stand.first { it.quelle != quelle || it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
+            }
+            // Die Zeit, die eine Rückfrage das Vorlesen anhält, zählt nicht gegen die Zeitgrenze.
+        } while (wartend == null && vorleser.unterbrochen)
+        val ende = wartend ?: run {
             // Nicht weiterlesen lassen, während der Aufrufer das Live-Mikrofon öffnet und die Wachsperre freigibt.
             if (vorleser.stand.value.quelle == quelle) vorleser.stopp()
             return "Zeitgrenze"
@@ -1922,7 +1932,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (antwortDiktatFeld != null) { antwortDiktatFeld = null; diktatZiel = null; meldung = "Das Mikrofon ist gerade belegt. Bitte gleich noch einmal tippen." }
             return
         }
-        vorleser.stopp()
+        // Eine diktierte Antwort auf die Rückfrage beendet das dafür angehaltene Vorlesen nicht.
+        if (antwortDiktatFeld == null || !vorleser.unterbrochen) vorleser.stopp()
         holtMikro = true
         viewModelScope.launch {
             try {
@@ -2558,6 +2569,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun rueckfrageSchliessen() {
         antwortAufnahmeBeenden()
+        vorleser.alleFreigeben()
         rueckfrageNebenher = null
         rueckfrageOffen?.let { rueckfrageGeschlossen += it.second }
         rueckfrageOffen = null
@@ -3022,7 +3034,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val geladen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } ?: return@withLock false
                 // Eine Rückfrage-Ansage gehört zu keinem Gespräch: Sie öffnet selbst ihr Gespräch und brach sich damit früher ab.
-                if (vorleser.stand.value.quelle?.startsWith("${de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE.id}:") != true) vorleser.stopp()
+                // Auch ein wegen der Rückfrage angehaltenes Vorlesen bleibt: Es läuft nach ihrer Antwort an derselben Stelle weiter.
+                if (!vorleser.unterbrochen && vorleser.stand.value.quelle?.startsWith("${de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE.id}:") != true) vorleser.stopp()
                 sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
                 gespraech.clear()
                 gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) })

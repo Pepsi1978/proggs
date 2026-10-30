@@ -112,6 +112,9 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         else withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) }
     }
 
+    /** Wie [synthetisiere], aber vor der Warteschlange: Die Ansage einer Rückfrage wartet nicht hinter vorausgeschickten Absätzen. */
+    suspend fun synthetisiereSofort(text: String, wahl: StimmWahl? = null): File = withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) }
+
     private fun nacheinander(wahl: StimmWahl?): Boolean {
         val a = anbieter(wahl)
         return (a == TtsProvider.GEMINI_FLASH.id || a == TtsProvider.GEMINI_LITE.id) && settings.geminiTtsSchluesselWahl != SecureSettings.GEMINI_TTS_NUR_BEZAHLT
