@@ -203,10 +203,10 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                     Symbol(Icons.Rounded.Delete, "Löschen", f.gefahr, zeige) { loeschen = true }
                     Symbol(Icons.Rounded.Edit, "Bearbeiten", f.text, zeige) { offen = null; vm.promptBearbeiten(p) }
                     Symbol(if (kopiert) Icons.Rounded.Check else Icons.Rounded.ContentCopy, "Kopieren", if (kopiert) f.erfolg else f.text, zeige) {
-                        vm.kopiere(p.text, "Prompt ${p.nummer}", melden = false); kopiert = true
+                        vm.kopiere(de.frank.jarvis.faehigkeit.DiktatTrenner.ohneSchluss(p.text), "Prompt ${p.nummer}", melden = false); kopiert = true
                     }
                     Symbol(Icons.Rounded.Share, "Senden an …", f.text, zeige) {
-                        teilen(vm, context, p.text, "Prompt ${p.nummer} senden an")
+                        teilen(vm, context, de.frank.jarvis.faehigkeit.DiktatTrenner.ohneSchluss(p.text), "Prompt ${p.nummer} senden an")
                     }
                     Spacer(Modifier.weight(1f))
                     // Rechts, gut mit dem Daumen erreichbar, als einziges Symbol plastisch hervorgehoben.

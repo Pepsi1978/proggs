@@ -95,4 +95,18 @@ class DiktatTrennerTest {
         assertEquals("Knopf grün", DiktatTrenner.auftrag(";\n\nKnopf grün\n;\n"))
         assertEquals("Eins ; })", DiktatTrenner.auftrag("Eins\n;\n})"))
     }
+
+    @Test fun gespeichertBehaeltDenSchluss() {
+        assertEquals("Eins ; Zwei ; ", DiktatTrenner.gespeichert("  Eins ; Zwei ;  "))
+        assertEquals("Eins ; ", DiktatTrenner.gespeichert("Eins\n\n;\n\n"))
+        assertEquals("Eins", DiktatTrenner.gespeichert(" Eins "))
+        assertEquals("x;", DiktatTrenner.gespeichert("x;"))
+        assertEquals("", DiktatTrenner.gespeichert(" ; "))
+    }
+
+    @Test fun kiFassungBekommtDenSchlussDerVorlage() {
+        assertEquals("Neu ; ", DiktatTrenner.mitSchlussWie("Alt ; ", "Neu"))
+        assertEquals("Neu ; ", DiktatTrenner.mitSchlussWie("Alt ; ", "Neu ;"))
+        assertEquals("Neu", DiktatTrenner.mitSchlussWie("Alt", "Neu"))
+    }
 }

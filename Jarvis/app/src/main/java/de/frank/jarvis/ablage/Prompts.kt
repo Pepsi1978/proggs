@@ -53,7 +53,7 @@ object Prompts {
             val json = JSONObject(text)
             val arr = json.getJSONArray("prompts")
             val liste = (0 until arr.length()).mapNotNull { i ->
-                arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), DiktatTrenner.gespeichert(it.optString("text")), it.optLong("erstellt"), it.optString("titel").trim()) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
+                arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), it.optString("text").trimStart(), it.optLong("erstellt"), it.optString("titel").trim()) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
             }.sortedBy { it.nummer }.eindeutig().durchnummeriert()
             Stand(liste)
         } catch (e: Exception) {

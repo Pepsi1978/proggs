@@ -1626,8 +1626,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val ziel = promptBearbeitet?.erstellt
                 diktatZiel = { t ->
                     promptTextVon(ziel)?.let { alt ->
-                        if (ziel == promptBearbeitet?.erstellt) promptVorKi = null
-                        promptTextSetzen(ziel, DiktatTrenner.anhaengen(alt, t))
+                        val neu = DiktatTrenner.anhaengen(alt, t)
+                        if (neu != alt) {
+                            if (ziel == promptBearbeitet?.erstellt) promptVorKi = null
+                            promptTextSetzen(ziel, neu)
+                        }
                     }
                 }
                 promptDiktat = true
@@ -1669,7 +1672,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val schluessel = "${p.erstellt}:${p.text.hashCode()}"
                     promptTitelVersucht += schluessel
                     try {
-                        val titel = auth.streamChat(PROMPT_TITEL, listOf(ChatTurn("user", p.text)), einstellungen.modell, ReasoningEffort.LOW)
+                        val titel = auth.streamChat(PROMPT_TITEL, listOf(ChatTurn("user", DiktatTrenner.ohneSchluss(p.text))), einstellungen.modell, ReasoningEffort.LOW)
                             .lines().joinToString(" ") { it.trim() }.trim().trim { it in "\"'„“”‚‘’«»." || it.isWhitespace() }.take(160)
                         if (titel.length < 3 || !withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.setzeTitel(app, p.erstellt, p.text, titel) }) promptTitelVersucht -= schluessel
                     } catch (e: CancellationException) {
@@ -1686,6 +1689,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Glättet jede Einsprache einzeln, sonst schriebe das Modell mehrere Aufgaben zu einem Fließtext zusammen. Höchstens vier gleichzeitig;
+     * ein versehentlicher Trenner in einer Antwort wird zum gewöhnlichen Semikolon. Leer, wenn keine Antwort brauchbar war.
+     */
+    private suspend fun promptGlaetten(text: String): String {
+        val teile = DiktatTrenner.abschnitte(text)
+        val antworten = teile.chunked(4).flatMap { gruppe ->
+            coroutineScope { gruppe.map { t -> async { DiktatTrenner.ohneSchluss(kiGlaetten(PROMPT_KORREKTUR, t)).replace(DiktatTrenner.TRENNER, "; ") } }.awaitAll() }
+        }
+        if (antworten.all { it.isEmpty() }) return ""
+        return teile.zip(antworten) { t, a -> a.ifEmpty { t } }.joinToString(DiktatTrenner.TRENNER)
+    }
+
     /** KI-Knopf: bringt den Entwurf sinngemäß in gutes Deutsch, als klaren Auftrag an Jarvis. */
     fun promptFormulieren() {
         val ziel = promptBearbeitet?.erstellt
@@ -1695,7 +1711,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptFormuliert = true
         viewModelScope.launch {
             try {
-                val neu = kiGlaetten(PROMPT_KORREKTUR, text)
+                val neu = promptGlaetten(text)
                 val aktuell = promptTextVon(ziel)
                 when {
                     // Bearbeiten inzwischen geschlossen: die KI-Fassung gehört zu keinem offenen Text mehr.
