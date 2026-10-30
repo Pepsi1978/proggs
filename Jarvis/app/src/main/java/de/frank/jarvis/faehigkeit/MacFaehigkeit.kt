@@ -113,7 +113,8 @@ class MacFaehigkeit(private val context: Context) : Faehigkeit {
     } catch (e: CancellationException) {
         throw e
     } catch (e: java.io.IOException) {
-        Ergebnis("Der Mac ist gerade nicht erreichbar (aus, im Ruhezustand, Tunnel getrennt oder Fernsteuerung nicht gestartet): ${e.message}", fehler = true)
+        Ergebnis("Die Verbindung zum Mac ist gescheitert (${e.message}). Das kann ein kurzer Aussetzer im Tunnel sein: Sieh mit mac_bildschirm nach, ob er antwortet und ob eine Aktion schon gewirkt hat, " +
+            "statt sie blind zu wiederholen. Erst wenn auch das scheitert, sag Frank, dass der Mac nicht erreichbar ist.", fehler = true)
     }
 
     private fun fehlerAus(j: JSONObject): Ergebnis? =
@@ -141,7 +142,7 @@ class MacFaehigkeit(private val context: Context) : Faehigkeit {
                 .put("x", a.optDouble("bereich_x", 0.0) / bildBreite).put("y", a.optDouble("bereich_y", 0.0) / bildHoehe)
                 .put("w", a.optDouble("bereich_breite") / bildBreite).put("h", a.optDouble("bereich_hoehe") / bildHoehe))
         }
-        val j = MacSteuerung.befehl(context, befehl)
+        val j = MacSteuerung.befehl(context, befehl, fristMs = BILD_FRIST_MS)
         fehlerAus(j)?.let { return it }
         return bildErgebnis(j, ausschnitt, a.optBoolean("zeigen"), "Screenshot vom Mac")
     }
@@ -208,7 +209,7 @@ class MacFaehigkeit(private val context: Context) : Faehigkeit {
         if (!a.optBoolean("bild", true)) return Ergebnis("Ausgeführt: $aktion.")
         // Der Oberfläche Zeit geben, sonst zeigt das Bild noch den alten Stand.
         delay(NACH_AKTION_MS)
-        val b = MacSteuerung.befehl(context, JSONObject().put("t", "bildschirm"))
+        val b = MacSteuerung.befehl(context, JSONObject().put("t", "bildschirm"), fristMs = BILD_FRIST_MS)
         return fehlerAus(b)?.let { Ergebnis("Ausgeführt: $aktion. Aber kein neues Bild: ${it.text}") } ?: bildErgebnis(b, ausschnitt = false, zeigen = false, einleitung = "Ausgeführt: $aktion. Neues Bild")
     }
 
@@ -267,5 +268,7 @@ class MacFaehigkeit(private val context: Context) : Faehigkeit {
 
     private companion object {
         const val NACH_AKTION_MS = 700L
+        /** Ein Bild braucht sonst rund eine Sekunde; danach lieber einmal neu verbinden als lange warten. */
+        const val BILD_FRIST_MS = 12_000
     }
 }

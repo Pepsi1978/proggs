@@ -454,6 +454,7 @@
     {"versionCode": 448, "versionName": "1.8.437", "stand": "30.10.2026, 13:51 Uhr", "notiz": "Erscheint die Frage zur Installation einer neuen Jarvis-Version, sagt Jarvis das jetzt laut mit der eingestellten Vorlesestimme an; unter Benachrichtigungen lässt sich das abschalten."},
     {"versionCode": 449, "versionName": "1.8.438", "stand": "30.10.2026, 13:58 Uhr", "notiz": "Die Ansage der Installationsfrage hält die Ruhezeit ein, verstummt beim Abschalten oder bei einer Aufnahme, und ihr Probe-Knopf spricht jetzt."},
     {"versionCode": 450, "versionName": "1.8.439", "stand": "30.10.2026, 14:00 Uhr", "notiz": "Der Kanal zu Jarvis Mac OS ist robuster: Antworten gehen nicht mehr verloren, Mitteilungen stören nicht mehr, und Hintergrund-Agenten kommen nicht mehr an den Mac."},
-    {"versionCode": 451, "versionName": "1.8.440", "stand": "30.10.2026, 14:05 Uhr", "notiz": "Prüfversion ohne neue Funktion: Mit ihr wird die Installationsfrage auf dem Weg über UpdateStation getestet"}
+    {"versionCode": 451, "versionName": "1.8.440", "stand": "30.10.2026, 14:05 Uhr", "notiz": "Prüfversion ohne neue Funktion: Mit ihr wird die Installationsfrage auf dem Weg über UpdateStation getestet"},
+    {"versionCode": 452, "versionName": "1.8.441", "stand": "30.10.2026, 14:06 Uhr", "notiz": "Hängt die Verbindung zum Mac kurz, versucht Jarvis es beim Ansehen des Bildschirms von selbst erneut und meldet den Mac nicht mehr vorschnell als nicht erreichbar"}
 ]
 }

@@ -29,9 +29,11 @@ object MacSteuerung {
     suspend fun befehl(context: Context, befehl: JSONObject, fristMs: Int = 30_000, datei: File? = null): JSONObject {
         val t = token(context)
         if (t.isEmpty()) throw IOException("Der Zugang zum Mac fehlt (fernsteuerung-token.txt).")
-        // Im Tunnel geht gelegentlich ein einzelner Verbindungsversuch verloren (siehe Fernziel): einmal nachfassen.
+        // Im Tunnel geht gelegentlich ein Verbindungsversuch verloren oder eine Verbindung hängt (siehe Fernziel): einmal nachfassen.
+        // Nach einer hängenden Antwort nur bei reinen Ansichten; eine Aktion könnte schon gewirkt haben und liefe sonst doppelt.
+        val nurAnsicht = befehl.optString("t") == "bildschirm" || (befehl.optString("t") == "programme" && befehl.optString("aktion") == "liste")
         return try { einmal(t, befehl, fristMs, datei, VERBINDEN_MS) } catch (e: java.net.SocketTimeoutException) {
-            if (e.message.orEmpty().contains("connect", ignoreCase = true)) einmal(t, befehl, fristMs, datei, 4000) else throw e
+            if (nurAnsicht || e.message.orEmpty().contains("connect", ignoreCase = true)) einmal(t, befehl, fristMs, datei, 4000) else throw e
         }
     }
 
