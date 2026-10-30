@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
@@ -56,8 +57,7 @@ import de.frank.jarvis.speech.Ansage
 import de.frank.jarvis.speech.GespraechsFokus
 import de.frank.jarvis.ui.theme.JarvisTheme
 import de.frank.jarvis.ui.theme.LocalFarben
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -91,7 +91,9 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        kennung = intent?.getStringExtra(EXTRA_KENNUNG).orEmpty()
+        val neueKennung = intent?.getStringExtra(EXTRA_KENNUNG).orEmpty()
+        val neueFrage = ansicht == null || neueKennung != kennung
+        kennung = neueKennung
         antwort = antwortAus(intent)
         // Ein abgelehnter Vordergrundstart darf nie den Prozess und damit eine laufende Aufnahme mitreißen.
         val gestartet = runCatching {
@@ -107,7 +109,10 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
                 Logbuch.fehler("Installationsfrage: Overlay-Recht fehlt", null)
                 scheitere()
             }
-            ansicht != null || zeige() -> schreibe("offen")
+            ansicht != null || zeige() -> {
+                if (neueFrage) kuendigeAn()
+                schreibe("offen")
+            }
             else -> scheitere()
         }
         return START_NOT_STICKY
@@ -151,26 +156,36 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
             title = "Jarvis-Installationsfrage"
         }
         return runCatching { getSystemService(WindowManager::class.java).addView(neu, lp) }
-            .onSuccess {
-                ansicht = neu
-                kuendigeAn()
-            }
+            .onSuccess { ansicht = neu }
             .onFailure { Logbuch.fehler("Installationsfrage ließ sich nicht einblenden", it) }
             .isSuccess
     }
 
     /**
-     * Stimme und Lautstärke wie unter Einstellungen → Benachrichtigungen. Bei laufender Aufnahme oder laufendem Gespräch bleibt
-     * es beim Fenster: Die Stimme landete sonst in der Mitschrift, und genau die soll die Frage schützen.
+     * Stimme, Lautstärke und Satz wie unter Einstellungen → Benachrichtigungen. Bei laufender Aufnahme oder laufendem Gespräch
+     * bleibt es beim Fenster: Die Stimme landete sonst in der Mitschrift, und genau die soll die Frage schützen. Beginnt so etwas
+     * während der Ansage oder wird sie abgeschaltet, verstummt sie. Sie unterbricht ein laufendes Vorlesen: Ohne Antwort beendete
+     * die Installation es ohnehin. Ein Fehler hier darf nie die Frage oder eine laufende Aufnahme mitreißen.
      */
     private fun kuendigeAn() {
-        val art = Meldungsarten.INSTALLFRAGE
-        if (!Meldungen.an(this, art) || GespraechsFokus.aufnahme || GespraechsFokus.stilleHinweise) return
-        val profil = Meldungen.profil(this, art)
-        ansage = CoroutineScope(Dispatchers.Main).launch {
-            Ansage.sprichUndWarte(this@InstallFrageDienst, "ansage", "Jarvis-Update", ANSAGE_TEXT, profil.lautstaerke, profil.stimmWahl)
-        }
+        runCatching {
+            val art = Meldungsarten.INSTALLFRAGE
+            if (!sollSprechen() || Meldungen.inRuhe(this, art) || ansage?.isActive == true) return
+            val profil = Meldungen.profil(this, art)
+            ansage = lifecycleScope.launch {
+                val stimme = launch {
+                    runCatching { Ansage.sprichUndWarte(this@InstallFrageDienst, "ansage", "Jarvis-Update", profil.sprechtext(""), profil.lautstaerke, profil.stimmWahl) }
+                        .onFailure { if (it !is CancellationException) Logbuch.fehler("Installationsfrage: Ansage gescheitert", it) }
+                }
+                while (stimme.isActive) {
+                    if (!sollSprechen()) stimme.cancel()
+                    delay(200)
+                }
+            }
+        }.onFailure { Logbuch.fehler("Installationsfrage: Ansage gescheitert", it) }
     }
+
+    private fun sollSprechen() = Meldungen.an(this, Meldungsarten.INSTALLFRAGE) && !GespraechsFokus.aufnahme && !GespraechsFokus.stilleHinweise
 
     private fun antwortAus(intent: Intent?): PendingIntent? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -202,10 +217,9 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     }.onFailure { Logbuch.fehler("Installationsfrage: Datei nicht geschrieben", it) }.isSuccess
 
     override fun onDestroy() {
-        // Nach der Antwort ist die Ansage überholt: Sie verstummt, und die Lautstärke geht zurück.
-        ansage?.cancel()
         ansicht?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeViewImmediate(v) } }
         ansicht = null
+        // Bricht auch die Ansage ab: Nach der Antwort ist sie überholt, sie verstummt, und die Lautstärke geht zurück.
         lebenszyklus.currentState = Lifecycle.State.DESTROYED
         super.onDestroy()
     }
@@ -218,7 +232,6 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         const val KANAL = "jarvis_installationsfrage"
         const val BENACHRICHTIGUNG = 4310
         const val FRIST_S = 30
-        const val ANSAGE_TEXT = "Eine neue Jarvis-Version kann installiert werden. Bitte wähle im eingeblendeten Fenster, wann die Installation starten soll. Ohne Antwort startet sie in einer halben Minute."
     }
 
     @Composable

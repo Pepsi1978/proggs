@@ -153,7 +153,8 @@ object Meldungsarten {
     val INSTALLFRAGE = Meldungsart(
         "installfrage", "Installationsfrage ansagen", "Jarvis sagt an, wenn eine neue Jarvis-Version installiert werden kann und das Fenster auf deine Antwort wartet.",
         "Wenn die Frage zur Installation erscheint, außer während einer Aufnahme oder eines Gesprächs.", ALLTAG, null,
-        sprichtImmer = true, lautStandard = 100,
+        sprichtImmer = true, ruhezeit = true, lautStandard = 100,
+        eigenerTextStandard = "Eine neue Jarvis-Version kann installiert werden. Bitte wähle auf dem Handy im Jarvis-Fenster, wann die Installation starten soll. Ohne Antwort startet sie gleich von selbst.",
     )
     val WECKWORT_HOERT = Meldungsart(
         "weckwort", "Jarvis hört zu", "Zeigt, dass Jarvis auf dein Weckwort lauscht, auch bei gesperrtem Handy.",
@@ -358,6 +359,7 @@ object Meldungen {
             Meldungsarten.ABFAHRT -> de.frank.jarvis.fahrt.Abfahrt.probe(app)
             Meldungsarten.TIMER -> de.frank.jarvis.timer.Timer.starten(app, 5_000L, "Probe-Timer")
             Meldungsarten.ANSAGE -> Ansage.ansage(app, "UpdateStation", "Ein Update von Jarvis ist bereit in UpdateStation.")
+            Meldungsarten.INSTALLFRAGE -> profil(app, art).let { p -> Ansage.sprich(app, "ansage", "Jarvis-Update", p.sprechtext(""), p.lautstaerke, p.stimmWahl) }
             else -> {
                 de.frank.jarvis.dienst.JarvisDienst.kanalAnlegen(app)
                 de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(app)
