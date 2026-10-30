@@ -24,8 +24,11 @@ final class Guthaben {
     var macAbgelaufen: Bool { macAbgelehntAm != nil }
     private var macAbgelehntAm: Date?
     var anmeldungOffen = false
-    /// Keine Zahlen zu den Kosten: nicht angemeldet und das Handy liefert nichts, oder die Console lehnt ab und auch das Handy hilft nicht.
-    var konsoleGetrennt: Bool { (anthropicRest == nil && !laedt) || (macAbgelaufen && anthropicHinweis != nil) }
+    /// Nur wenn neu anmelden hilft: Ein Netzfehler oder die Bot-Abwehr zählen nicht, ein alter Stand vom Handy nach dessen Ablehnung schon.
+    var konsoleGetrennt: Bool {
+        if macAbgelaufen { return anthropicRest == nil || anthropicHinweis != nil }
+        return !macAngemeldet && ((anthropicRest == nil && !laedt) || anthropicHinweis?.contains("lehnt die Anmeldung") == true)
+    }
     /// Was die letzte Aufgabe mit einem Claude-Modell gekostet hat, in Dollar: aus den Tokens der API, sofort und ohne Abfrage.
     var kosten: Double?
 
@@ -90,12 +93,14 @@ final class Guthaben {
 
     private func uebernehmen(_ t: String) {
         guard let rest = Self.zahl(t, #"Übrig: ([0-9.,]+) \$"#) else { anthropicHinweis = t; return }
-        anthropicHinweis = nil
-        anthropicText = t
+        // Das Handy hängt bei einem alten Stand den Grund an: Der Betrag darf dann nicht wie ein aktueller aussehen.
+        let alterStand = ["Letzter Stand.", "Neue Abfrage gescheitert"].compactMap { t.range(of: $0) }.first
+        anthropicHinweis = alterStand.map { String(t[$0.lowerBound...]) }
+        anthropicText = alterStand.map { String(t[..<$0.lowerBound]) } ?? t
         anthropicRest = rest
         anthropicGewaehrt = Self.zahl(t, #"Übrig: [^\n]*? von ([0-9.,]+) \$"#)
         kurs = Self.zahl(t, #"Kurs 1 \$ = ([0-9.,]+) €"#)
-        geholt = Date()
+        if alterStand == nil { geholt = Date() }
     }
 
     private func googleLaden(frisch: Bool) async {
@@ -160,7 +165,7 @@ struct ModellKapsel: View {
             if let r = guthaben.anthropicRest { Text("Anthropic: \(Guthaben.betrag(r)) $ übrig") }
             if let k = guthaben.kosten, k > 0 { Text("Letzte Aufgabe: \(Self.kostenText(k)) $ (Listenpreis)") }
             if let g = guthaben.googleRest { Text("Google: \(Guthaben.betrag(g)) \(guthaben.googleWaehrung) übrig") }
-            if guthaben.macAbgelaufen || (guthaben.anthropicRest == nil && !guthaben.macAngemeldet) { Button("Bei der Anthropic-Konsole anmelden …") { guthaben.anmeldungOffen = true } }
+            if guthaben.macAbgelaufen || guthaben.konsoleGetrennt { Button("Bei der Anthropic-Konsole anmelden …") { guthaben.anmeldungOffen = true } }
             Button("Guthaben ansehen …") { EinstellungenAnsicht.startReiter = "guthaben"; AppSteuerung.shared.bereich = .einstellungen }
         } label: {
             HStack(spacing: 5) {
@@ -178,7 +183,7 @@ struct ModellKapsel: View {
                     }
                 }
                 if guthaben.konsoleGetrennt {
-                    Label("Anthropic-Konsole nicht verbunden", systemImage: "exclamationmark.triangle.fill").font(.jarvis(11, .bold)).foregroundStyle(Farbe.rot)
+                    Label("Konsole nicht verbunden", systemImage: "exclamationmark.triangle.fill").font(.jarvis(11, .bold)).foregroundStyle(Farbe.rot)
                 }
                 Text(einst.modellWahl.name.replacingOccurrences(of: "Claude ", with: "")).font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
             }
