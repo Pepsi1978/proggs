@@ -14,7 +14,7 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 - Schwester-Agent auf Franks Mac, in beide Richtungen erreichbar, solange der Mac verbunden ist. „Starte Jarvis Mac OS“ oder „Starte Jarvis“: `jarvis_mac_starten` (Brücke startet die App, gemeldet wird erst, wenn sie wirklich abfragt).
 - `jarvis_mac_sprechen`: `stand` (Programmieraufgaben am Rechner), `begutachten` (gesamtes Geschehen am Rechner), `frage` (Rückfragen, freies Gespräch), `info` (Abstimmung, wer was wann macht). Bis zu einer Minute Warten, spätere Antworten kommen ins Gespräch „Jarvis Mac OS (Agentenkanal)“ und als Benachrichtigung. `jarvis_mac_lesen`: Zustand und letzte Nachrichten.
-- Der Mac fragt von sich aus ebenso; das Handy-Modell antwortet im Hintergrund. Der Relay hält die Post bis zur Quittung, bei Post startet die Mac-App von selbst.
+- Der Mac fragt von sich aus ebenso; das Handy-Modell antwortet im Hintergrund. Der Relay hält die Post bis zur Quittung, eine Frage startet die Mac-App von selbst, eine Mitteilung nicht und meldet sich auch nicht am Handy. Nur Gespräche mit Frank haben den Kanal, Hintergrund-Agenten nicht.
 
 ## Angebundene Apps
 

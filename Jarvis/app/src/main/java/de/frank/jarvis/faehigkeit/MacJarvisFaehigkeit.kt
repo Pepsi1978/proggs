@@ -18,7 +18,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -35,9 +34,10 @@ import org.json.JSONObject
 /**
  * Der Agentenkanal zwischen Jarvis am Handy und Jarvis Mac OS: zwei gleichberechtigte Agenten, die sich jederzeit schreiben,
  * solange der Mac verbunden ist. Der Relay hält die Post, bis die Gegenseite sie quittiert ([AgentenKanal] in relay.py); Post vom Mac
- * kommt als Signal über den Tunnel ([empfangen]). Fragen vom Mac beantwortet das Modell des Handys im Hintergrund. Quittiert wird
- * erst nach der fertigen Antwort: Stirbt der Prozess mittendrin, kommt die Frage beim nächsten Verbinden wieder. Alles steht im
- * Gespräch „Jarvis Mac OS (Agentenkanal)“, damit Frank mitlesen kann.
+ * kommt als Signal über den Tunnel ([empfangen]). Fragen vom Mac beantwortet das Modell des Handys im Hintergrund, als Lauf ohne Frank
+ * (lernen=false: kein Merken, keine Programmieraufträge, kein Kanal; Rückfragen stehen in der Antwort). Quittiert wird erst nach der
+ * zugestellten Antwort: Stirbt der Prozess mittendrin, kommt die Frage beim nächsten Verbinden wieder. Alles steht im Gespräch
+ * „Jarvis Mac OS (Agentenkanal)“, damit Frank mitlesen kann. Mitteilungen melden sich nicht: Die Abstimmung soll Frank nicht unterbrechen.
  */
 class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
     private val app = context.applicationContext
@@ -59,11 +59,6 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
             "Er fragt dich genauso. Stimmt euch laufend ab, wer was wann macht: Du hast Franks Alltag, das Handy und die Sprache im Blick, er den Mac, das Repo und die Sitzungen."
 
     override fun stoerung(): String? = if (e.serverHost.isBlank()) "Kein Jarvis-Server eingetragen." else null
-
-    /** Kennzeichnet einen Lauf, der gerade eine Kanalnachricht beantwortet: Rückfragen stehen in der Antwort, sonst warten beide aufeinander. */
-    private class KanalLauf : kotlin.coroutines.AbstractCoroutineContextElement(Key) {
-        companion object Key : kotlin.coroutines.CoroutineContext.Key<KanalLauf>
-    }
 
     override val werkzeuge: List<Werkzeug> by lazy {
         listOf(
@@ -114,7 +109,7 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
             .getOrElse { return@withContext Ergebnis("Der Jarvis-Server ist nicht erreichbar (${it.message ?: it.javaClass.simpleName}); nichts wurde gestartet. Sag Frank das kurz.", fehler = true) }
         when (antwort.optString("ergebnis")) {
             "gestartet" -> Ergebnis("Jarvis Mac OS ist gestartet und auf dem Agentenkanal erreichbar.")
-            "laeuft_schon" -> Ergebnis("Jarvis Mac OS lief schon und ist auf dem Agentenkanal erreichbar; die App wurde nach vorn geholt.")
+            "laeuft_schon" -> Ergebnis("Jarvis Mac OS lief schon und ist auf dem Agentenkanal erreichbar" + if (antwort.optBoolean("nach_vorn")) "; die App kommt am Mac nach vorn." else ".")
             "mac_nicht_verbunden" -> Ergebnis("Der Mac ist nicht verbunden (aus, im Ruhezustand oder die Jarvis-Brücke läuft nicht); Jarvis Mac OS wurde nicht gestartet. Sag Frank das kurz.", fehler = true)
             else -> Ergebnis("Der Mac hat den Start bekommen, aber Jarvis Mac OS hat sich nach 30 Sekunden nicht gemeldet. Sag Frank, dass er am Mac nachsehen möge.", fehler = true)
         }
@@ -135,13 +130,12 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
     private suspend fun sprechen(art: String, text: String): Ergebnis {
         if (art !in setOf("stand", "begutachten", "frage", "info")) return Ergebnis("art muss stand, begutachten, frage oder info sein.", fehler = true)
         if (text.isEmpty() && art != "stand") return Ergebnis("Der Text ist leer.", fehler = true)
-        if (art != "info" && currentCoroutineContext()[KanalLauf] != null)
-            return Ergebnis("Du beantwortest gerade eine Nachricht von Jarvis Mac OS: Schreib die Rückfrage in deine Antwort.", fehler = true)
         val nachricht = text.ifEmpty { "Wie ist der aktuelle Stand aller Programmieraufgaben am Rechner?" }
         val kennung = UUID.randomUUID().toString()
         val wartend = CompletableDeferred<String>().takeIf { art != "info" }?.also { wartende[kennung] = it }
+        val beginn = System.currentTimeMillis()
         val stand = withContext(Dispatchers.IO) {
-            runCatching { sende(kennung, art, nachricht, null) }
+            runCatching { sende(kennung, art, nachricht, null, versuche = 2) }
         }.getOrElse { fehler ->
             wartende.remove(kennung)
             return Ergebnis("Die Nachricht ist nicht beim Jarvis-Server angekommen (${fehler.message ?: fehler.javaClass.simpleName}); nichts wurde zugestellt. Sag Frank das kurz.", fehler = true)
@@ -152,8 +146,12 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
             wartende.remove(kennung)
             return Ergebnis("Der Mac ist gerade nicht verbunden. Die Nachricht bleibt eingereiht und geht ein, sobald er wieder da ist; die Antwort kommt dann ins Gespräch und als Benachrichtigung. Sag Frank das offen.")
         }
-        val antwort = withTimeoutOrNull(WARTEN_MS) { wartend.await() }
-        wartende.remove(kennung)
+        // Abgebrochen (Frank stoppt, Live endet): Die spätere Antwort soll sich melden, nicht einen toten Wartenden treffen.
+        val antwort = try {
+            withTimeoutOrNull((WARTEN_MS - (System.currentTimeMillis() - beginn)).coerceAtLeast(1_000L)) { wartend.await() }
+        } finally {
+            wartende.remove(kennung)
+        }
         return if (antwort != null) Ergebnis("Antwort von Jarvis Mac OS:\n$antwort")
         else Ergebnis("Jarvis Mac OS arbeitet noch (keine Antwort nach einer Minute). Die Antwort kommt von selbst ins Gespräch „Jarvis Mac OS (Agentenkanal)“ und als Benachrichtigung. Sag Frank das kurz.")
     }
@@ -186,11 +184,8 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
                         val wartend = wartende.remove(nachricht.optString("antwort_auf"))
                         if (wartend != null) wartend.complete(text) else melde("Antwort von Jarvis Mac OS", text)
                     }
-                    "info" -> {
-                        ins(GESPRAECH_MAC, "💻", text)
-                        melde("Jarvis Mac OS", text)
-                    }
-                    else -> reihe.withLock { beantworte(kennung, text) }
+                    "info" -> ins(GESPRAECH_MAC, "💻", text)
+                    else -> reihe.withLock { beantworte(kennung, text, nachricht.optLong("zeit")) }
                 }
                 merkeErledigt(kennung)
                 quittiere(kennung)
@@ -203,22 +198,36 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
         }
     }
 
-    private suspend fun beantworte(kennung: String, text: String) {
+    private suspend fun beantworte(kennung: String, text: String, zeit: Long) {
         val verlauf = verlaufText(8)
         ins(GESPRAECH_MAC, "💻", text)
+        val antwort = if (zeit > 0 && System.currentTimeMillis() / 1000 - zeit > HOECHSTALTER_S) "Deine Nachricht lag länger als sechs Stunden, ich habe sie nicht mehr bearbeitet. Frag neu, falls sie noch gilt."
+        else denke(text, verlauf)
+        ins(GESPRAECH_JARVIS, "📱", antwort)
+        // Dieselbe Kennung bei jedem Versuch: Der Relay legt die Antwort nicht doppelt ab. Unquittiert käme die Frage erst beim nächsten Verbinden wieder.
+        repeat(SENDE_RUNDEN) { runde ->
+            if (runCatching { sende("antwort-$kennung", "antwort", antwort, kennung, versuche = 3) }.isSuccess) return
+            if (runde < SENDE_RUNDEN - 1) delay(60_000L)
+        }
+        error("Antwort nicht zugestellt")
+    }
+
+    private suspend fun denke(text: String, verlauf: String): String {
         val agent = JarvisAgent(app)
+        if (!agent.verbunden) return "Jarvis am Handy kann gerade nicht denken: Das Modell ist nicht verbunden."
         var grund: String? = null
-        val antwort = if (!agent.verbunden) "Jarvis am Handy kann gerade nicht denken: Das Modell ist nicht verbunden."
-        else withContext(KanalLauf()) {
+        return runCatching {
             agent.versuche(
                 text, zeitlimitMs = ZEITLIMIT_MS, maxSchritte = JarvisAgent.STANDARD_SCHRITTE, abschluss = true, beiAbbruch = { grund = it },
                 rolle = "Diese Nachricht kommt von deinem Schwester-Agenten Jarvis Mac OS, nicht von Frank. Antworte ihm als Kollege: kurz, sachlich, für sich verständlich, " +
                     "mit dem, was Handy und Franks Apps dazu hergeben. Rückfragen und Vorschläge, wer was wann macht, schreibst du in die Antwort." +
                     if (verlauf.isEmpty()) "" else "\n\nZuletzt auf dem Kanal:\n$verlauf",
             )
+        }.getOrElse { fehler ->
+            if (fehler is kotlinx.coroutines.CancellationException) throw fehler
+            grund = fehler.message ?: fehler.javaClass.simpleName
+            null
         } ?: agent.ersatzText(grund)
-        ins(GESPRAECH_JARVIS, "📱", antwort)
-        sende(UUID.randomUUID().toString(), "antwort", antwort, kennung, versuche = 6)
     }
 
     private suspend fun quittiere(kennung: String) {
@@ -267,7 +276,7 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
             JarvisDienst.kanalAnlegen(app)
             val kurz = text.replace("**", "")
             Meldungen.zeige(
-                app, Meldungsarten.AGENT, MELDUNG,
+                app, Meldungsarten.AGENT, MELDUNG + (text.hashCode() and 0xFFF),
                 NotificationCompat.Builder(app, "jarvis_ergebnisse").setSmallIcon(R.drawable.ic_stat_jarvis)
                     .setContentTitle(titel).setContentText(kurz).setStyle(NotificationCompat.BigTextStyle().bigText(kurz)).setAutoCancel(true),
                 titel, kurz.take(400),
@@ -279,8 +288,10 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
         const val GESPRAECH_TITEL = "Jarvis Mac OS (Agentenkanal)"
         const val GESPRAECH_MAC = "Jarvis Mac OS"
         const val GESPRAECH_JARVIS = "Jarvis"
-        /** Unter den 75 s des Relays: Der Aufruf kann auch aus ChatGPT kommen. */
-        const val WARTEN_MS = 60_000L
+        /** Samt Senden unter den 75 s des Relays: Der Aufruf kann auch aus ChatGPT kommen. */
+        const val WARTEN_MS = 65_000L
+        const val HOECHSTALTER_S = 6 * 3600L
+        const val SENDE_RUNDEN = 30
         const val ZEITLIMIT_MS = 300_000L
         const val MELDUNG = 310_001
         val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).callTimeout(25, TimeUnit.SECONDS).build()

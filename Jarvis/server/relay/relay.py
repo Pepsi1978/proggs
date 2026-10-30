@@ -39,10 +39,11 @@ traegt „entfernt“, und /pc/nachtrag antwortet 410. Die Sitzung am Rechner la
 einer lokalen Sitzung (frage.als_nachtrag) wartet nicht: Franks Antwort wird zum Nachtrag „antwort-<frage_id>“, den der Warter zustellt.
 
 Achte Aufgabe: der Agentenkanal zwischen Jarvis am Handy und Jarvis Mac OS (Klasse AgentenKanal). Zwei Postfaecher, die Neustarts
-ueberleben (/data/agentenkanal.json); jede Nachricht bleibt, bis die Gegenseite sie quittiert, und traegt eine id gegen doppelte
-Zustellung. Das Handy schreibt ueber /geraet/kanal und bekommt seine Post als {"signal": "agentenkanal"}; die Mac-App fragt mit dem
+ueberleben (/data/agentenkanal.json); jede Nachricht bleibt, bis die Gegenseite sie quittiert (hoechstens sieben Tage und 200 je
+Postfach), und traegt eine id gegen doppelte Zustellung. Das Handy schreibt ueber /geraet/kanal und bekommt seine Post als {"signal": "agentenkanal"}; die Mac-App fragt mit dem
 Geheimnis ihrer MCP-Adresse ab (GET /j/<Geheimnis>/kanal, Long-Polling) und braucht keinen weiteren Zugang. Laeuft die Mac-App nicht,
-startet die Mac-Bruecke sie (GET /pc/mac-befehl, Long-Polling): auf Franks Wunsch (/geraet/mac-start) und bei Post fuer den Mac.
+startet die Mac-Bruecke sie (GET /pc/mac-befehl, Long-Polling): auf Franks Wunsch (/geraet/mac-start) und bei einer Frage an den Mac,
+nicht bei einer blossen Mitteilung: Die holt sie beim naechsten Start ab, und Frank kann die App bewusst beendet haben.
 """
 import asyncio
 import hmac
@@ -1184,7 +1185,9 @@ KANAL_FRISCH_S = 40        # laenger offen = die Abfrage haengt (Mac schlaeft), 
 KANAL_NACHLAUF_S = 3       # zwischen zwei Abfragen gilt die Gegenstelle weiter als da
 KANAL_HOECHSTENS = 200     # je Postfach
 KANAL_ALTER_S = 7 * 86_400
-MAC_START_FRIST_S = 30     # so lange wartet /geraet/mac-start, bis die gestartete App abfragt
+MAC_START_VERSUCHE = 4     # /geraet/mac-start: so oft den Start anfordern. Eine tote Abfrage der Bruecke kann ihn schlucken.
+MAC_START_ABSTAND_S = 8
+MAC_WECKEN_ABSTAND_S = 20  # wie oft die Bruecke die App fuer eine liegende Frage hoechstens startet
 
 
 class _Abfrage:
@@ -1213,6 +1216,7 @@ class AgentenKanal:
         self.mac_kam = asyncio.Event()       # die Mac-App hat gerade abgefragt
         self.befehl = asyncio.Event()
         self.start_vorn = None               # None = kein Start offen, sonst: App nach vorn holen?
+        self.geweckt = 0.0
         try:
             daten = json.loads(KANAL_DATEI.read_text("utf-8"))
             self.post = {"mac": daten.get("mac", []), "handy": daten.get("handy", [])}
@@ -1258,6 +1262,9 @@ class AgentenKanal:
         self.start_vorn = bool(self.start_vorn) or vorn
         self.befehl.set()
 
+    def _frage_liegt(self) -> bool:
+        return not self.mac.da() and any(n["art"] != "info" for n in self.post["mac"])
+
     def _status(self) -> dict:
         return {"mac_app": self.mac.da(), "bruecke": self.bruecke.da(), "offen_an_mac": len(self.post["mac"])}
 
@@ -1280,8 +1287,9 @@ class AgentenKanal:
         if nachricht is None:
             return web.Response(status=400, text="Nachricht unvollstaendig")
         self.eingang_mac.set()
-        if not self.mac.da():
-            self._start_anfordern(vorn=False)   # Post weckt die App, ohne Frank das Fenster vor die Nase zu setzen
+        if self._frage_liegt():
+            self.geweckt = time.monotonic()
+            self._start_anfordern(vorn=False)   # Eine Frage weckt die App, ohne Frank das Fenster vor die Nase zu setzen
         return web.json_response(self._status())
 
     async def handy_quittiert(self, request: web.Request) -> web.Response:
@@ -1304,18 +1312,21 @@ class AgentenKanal:
             return web.Response(status=404, text="Not found")
         vorn = request.query.get("vorn") != "0"
         if self.mac.da():
-            if vorn and self.bruecke.da():
+            nach_vorn = vorn and self.bruecke.da()
+            if nach_vorn:
                 self._start_anfordern(vorn=True)   # laeuft schon: nur nach vorn holen
-            return web.json_response(dict(self._status(), ergebnis="laeuft_schon"))
+            return web.json_response(dict(self._status(), ergebnis="laeuft_schon", nach_vorn=nach_vorn))
         if not self.bruecke.da():
             return web.json_response(dict(self._status(), ergebnis="mac_nicht_verbunden"))
         self.mac_kam.clear()
-        self._start_anfordern(vorn=vorn)
-        try:
-            await asyncio.wait_for(self.mac_kam.wait(), MAC_START_FRIST_S)
-        except asyncio.TimeoutError:
-            return web.json_response(dict(self._status(), ergebnis="keine_rueckmeldung"))
-        return web.json_response(dict(self._status(), ergebnis="gestartet"))
+        for _ in range(MAC_START_VERSUCHE):
+            self._start_anfordern(vorn=vorn)
+            try:
+                await asyncio.wait_for(self.mac_kam.wait(), MAC_START_ABSTAND_S)
+                return web.json_response(dict(self._status(), ergebnis="gestartet"))
+            except asyncio.TimeoutError:
+                pass
+        return web.json_response(dict(self._status(), ergebnis="keine_rueckmeldung"))
 
     # ---------------------------------------------------------------- Mac-App (Geheimnis der MCP-Adresse)
 
@@ -1373,6 +1384,10 @@ class AgentenKanal:
             return web.Response(status=404, text="Not found")
         self.bruecke.anfrage, self.bruecke.beginn = request, time.monotonic()
         try:
+            # Auch nachtraeglich: Eine Frage, die kam, als der Mac schlief, oder deren Start auf einer toten Abfrage verloren ging.
+            if self.start_vorn is None and self._frage_liegt() and time.monotonic() - self.geweckt >= MAC_WECKEN_ABSTAND_S:
+                self.geweckt = time.monotonic()
+                self.start_vorn = False
             if self.start_vorn is None:
                 self.befehl.clear()
                 try:
