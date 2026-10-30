@@ -21,8 +21,8 @@ final class LiveTon: @unchecked Sendable {
     /// Mikrofon stumm (Stille statt Mikrofon an den Dienst), z. B. während eines späten Vorlesens.
     var mikroStumm = false
 
-    private var engine = AVAudioEngine()
-    private var player = AVAudioPlayerNode()
+    private let engine = AVAudioEngine()
+    private let player = AVAudioPlayerNode()
     /// Ohne Apples Echounterdrückung (Rückfall, wenn Voice Processing auf diesem Gerät nicht startet):
     /// dann ist das Mikrofon stumm, solange Jarvis hörbar spricht (Echosperre wie am Handy).
     private(set) var ohneEchoUnterdrueckung = false
@@ -60,17 +60,19 @@ final class LiveTon: @unchecked Sendable {
 
     // MARK: Start / Stopp
 
-    /// Startet den Ton. Voice Processing scheitert am Mac gelegentlich mit -10875 (kAudioUnitErr_FailedInitialization),
+    /// Startet den Ton. Voice Processing kann am Mac mit -10875 (kAudioUnitErr_FailedInitialization) scheitern,
     /// etwa wenn das Weckwort das Mikrofon gerade erst freigibt oder Ein- und Ausgabegerät nicht zusammenpassen
-    /// (Bluetooth, externer Monitor). Deshalb: zweiter Versuch mit frischer Engine, danach ohne Voice Processing mit Echosperre.
+    /// (Bluetooth, externer Monitor). Deshalb: zweiter Versuch, danach ohne Voice Processing mit Echosperre.
+    /// Immer dieselbe Engine: Eine frische Engine bekommt nach gescheitertem Voice Processing ein falsches Eingangsformat
+    /// (44,1 kHz, 2 Kanäle) und scheitert ebenfalls mit -10875 (gemessen unter macOS 27.2).
     func starten() async throws {
         var letzterFehler: Error?
         for versuch in 0..<3 {
             if versuch > 0 {
                 engine.inputNode.removeTap(onBus: 0)
+                player.stop()
                 engine.stop()
-                engine = AVAudioEngine()
-                player = AVAudioPlayerNode()
+                try? engine.inputNode.setVoiceProcessingEnabled(false)
                 try? await Task.sleep(for: .milliseconds(400))   // nicht den Hauptfaden blockieren
             }
             do {
@@ -94,9 +96,8 @@ final class LiveTon: @unchecked Sendable {
                 eingang.voiceProcessingOtherAudioDuckingConfiguration = .init(enableAdvancedDucking: false, duckingLevel: .min)
             }
         }
-        _ = engine.outputNode   // Voice Processing braucht Ein- und Ausgabe in derselben Einheit
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: ausFormat)
+        if player.engine == nil { engine.attach(player) }
+        ausgangVerbinden()
         try abgriffSetzen()
         engine.prepare()
         try engine.start()
@@ -107,6 +108,17 @@ final class LiveTon: @unchecked Sendable {
         beobachter = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil) { [weak self] _ in
             self?.tonFaden.async { self?.neuStarten() }
         }
+    }
+
+    /// Mixer und Ausgang mit fester Rate des Ausgabegeräts verbinden. Die automatische Verbindung lässt unter
+    /// Voice Processing den Start mit -10875 scheitern (gemessen unter macOS 27.2). Voice Processing braucht
+    /// Ein- und Ausgabe in derselben Einheit.
+    private func ausgangVerbinden() {
+        engine.connect(player, to: engine.mainMixerNode, format: ausFormat)
+        let ausgang = engine.outputNode
+        let rate = ausgang.inputFormat(forBus: 0).sampleRate
+        guard rate > 0, let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2) else { return }
+        engine.connect(engine.mainMixerNode, to: ausgang, format: format)
     }
 
     private func abgriffSetzen() throws {
@@ -154,6 +166,7 @@ final class LiveTon: @unchecked Sendable {
         log("live", "Audiogerät gewechselt, Ton wird neu verbunden")
         engine.stop()
         do {
+            ausgangVerbinden()
             try abgriffSetzen()
             engine.prepare()
             try engine.start()
