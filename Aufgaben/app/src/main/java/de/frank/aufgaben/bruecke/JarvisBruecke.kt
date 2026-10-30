@@ -67,14 +67,14 @@ class JarvisBruecke : ContentProvider() {
                 val suche = a.optString("suche").trim().lowercase(Locale.GERMAN)
                 val alle = repo.alleEinmal()
                 var liste = when (bereich) {
-                    "heute" -> alle.filter { !it.erledigt && it.tag != null && it.tag <= heute }
-                    "morgen" -> alle.filter { !it.erledigt && it.tag == heute + 1 }
+                    "heute" -> alle.map { it.aufHeute(heute) }.filter { !it.erledigt && it.tag != null && it.tag <= heute }
+                    "morgen" -> alle.mapNotNull { it.amTag(heute + 1, heute) }.filter { !it.erledigt }
                     "tag" -> {
                         val tag = tagAus(a.optString("datum")) ?: return fehler("Für bereich=tag fehlt ein gültiges datum (JJJJ-MM-TT).")
-                        alle.filter { it.tag == tag }
+                        alle.mapNotNull { it.amTag(tag, heute) }
                     }
                     "demnaechst" -> alle.filter { !it.erledigt && it.tag != null && it.tag > heute + 1 }
-                    "ohne_tag" -> alle.filter { !it.erledigt && it.tag == null }
+                    "ohne_tag" -> alle.filter { !it.erledigt && it.tag == null && !it.laeuftTaeglich }
                     "ziele" -> alle.filter { !it.erledigt && it.zielId != null }
                     "erledigt" -> alle.filter { it.erledigt }.sortedByDescending { it.erledigtAm ?: 0 }
                     "alle" -> alle
@@ -233,7 +233,7 @@ class JarvisBruecke : ContentProvider() {
         .put("als_wecker", a.alsWecker)
         .put("wiederholung", a.wdh.name)
         .put("erledigt", a.erledigt)
-        .put("ueberfaellig", !a.erledigt && a.tag != null && a.tag < heute)
+        .put("ueberfaellig", !a.erledigt && a.tag != null && a.tag < heute && !a.laeuftTaeglich)
         .put("schritte", JSONArray(a.schritte.map { JSONObject().put("text", it.text).put("erledigt", it.erledigt) }))
         .put("ziel_id", a.zielId ?: JSONObject.NULL)
         .put("ziel_titel", a.zielTitel)

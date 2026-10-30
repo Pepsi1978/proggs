@@ -74,7 +74,7 @@ object Planer {
         val jetzt = System.currentTimeMillis()
         AufgabenRepository.get(app).alleEinmal().forEach { a ->
             val pi = ausloeser(app, a.id, (a.id * 2).toInt())
-            val tag = a.tag
+            val tag = a.aufHeute(heute).tag
             val min = a.minuten
             val zeit = if (tag != null && min != null) Tage.millis(tag, min) - a.vorlauf * 60_000L else 0L
             if (!a.erledigt && a.erinnerung && tag != null && min != null && tag in heute..heute + 1 && zeit > jetzt) {

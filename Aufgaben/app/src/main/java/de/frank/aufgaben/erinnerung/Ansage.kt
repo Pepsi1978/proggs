@@ -61,7 +61,7 @@ object Ansage {
 
     /** Aufgaben, deren Erinnerung noch kommt und vorlesen soll. */
     fun braucht(a: Aufgabe, heute: Long): Boolean =
-        a.vorlesen && a.erinnerung && !a.erledigt && a.tag != null && a.minuten != null && a.tag >= heute
+        a.vorlesen && a.erinnerung && !a.erledigt && a.tag != null && a.minuten != null && (a.tag >= heute || a.laeuftTaeglich)
 
     private fun gewaehlt(e: Einstellungen): Stimme = when (e.ttsAnbieter) {
         TtsProvider.GOOGLE_CLOUD.id -> Stimme(TtsProvider.GOOGLE_CLOUD.id, e.googleStimme, e.sprechtempo, e.immerDeutsch)

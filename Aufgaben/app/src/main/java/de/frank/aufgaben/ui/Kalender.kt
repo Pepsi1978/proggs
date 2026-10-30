@@ -82,7 +82,7 @@ fun KalenderBildschirm(vm: AppViewModel) {
     val heute = vm.heute
     val start = heute - TAGE_ZURUECK
     val ende = start + TAGE_GESAMT - 1
-    val proTag = remember(alle) { alle.filter { it.tag != null }.groupBy { it.tag!! } }
+    val proTag = remember(alle, heute) { (start..ende).associateWith { t -> alle.mapNotNull { it.amTag(t, heute) } } }
     // Nach Mitternacht kann der gewählte Tag aus dem Fenster fallen: dann zurück zur Übersicht.
     val gewaehlt = vm.kalenderTag?.takeIf { it in start..ende }
     AnimatedContent(
@@ -104,7 +104,8 @@ private fun KalenderUebersicht(vm: AppViewModel, heute: Long, start: Long, proTa
     val kurz = DateTimeFormatter.ofPattern("d. MMM", Locale.GERMAN)
     val vonText = LocalDate.ofEpochDay(start).format(kurz)
     val bisText = LocalDate.ofEpochDay(start + TAGE_GESAMT - 1).format(kurz)
-    val offenVoraus = (heute until start + TAGE_GESAMT).sumOf { t -> proTag[t].orEmpty().count { !it.erledigt } }
+    // Eine tägliche Aufgabe steht an vielen Tagen, zählt hier aber nur einmal.
+    val offenVoraus = (heute until start + TAGE_GESAMT).flatMap { t -> proTag[t].orEmpty().filter { !it.erledigt } }.distinctBy { it.id }.size
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,

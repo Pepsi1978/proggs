@@ -400,6 +400,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun erledigen(a: Aufgabe, erledigt: Boolean) {
+        // Jeder Tag einer täglichen Aufgabe zeigt dieselbe Zeile: Abhaken zählt immer für den Tag selbst.
+        if (erledigt && a.laeuftTaeglich && (a.tag ?: heute) > heute) {
+            melde("Tägliche Aufgaben lassen sich erst an ihrem Tag abhaken.")
+            return
+        }
         viewModelScope.launch {
             val folge = repo.setzeErledigt(a, erledigt)
             if (erledigt) {

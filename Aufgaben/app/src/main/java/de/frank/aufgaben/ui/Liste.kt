@@ -101,19 +101,21 @@ class Bereiche(alle: List<Aufgabe>, heute: Long, suche: String) {
         it.titel.contains(suche, true) || it.text.contains(suche, true)
     }
     private val tagesOrdnung = compareBy<Aufgabe>({ it.prio.rang }, { -it.erstellt })
-    val heuteOffen = gefiltert.filter { !it.erledigt && it.tag != null && it.tag <= heute && (it.minuten == null || it.tag < heute) }.sortedWith(tagesOrdnung)
-    val heuteTermine = gefiltert.filter { it.tag == heute && it.minuten != null }
+    private val aufHeute = gefiltert.map { it.aufHeute(heute) }
+    private val aufMorgen = gefiltert.mapNotNull { it.amTag(heute + 1, heute) }
+    val heuteOffen = aufHeute.filter { !it.erledigt && it.tag != null && it.tag <= heute && (it.minuten == null || it.tag < heute) }.sortedWith(tagesOrdnung)
+    val heuteTermine = aufHeute.filter { it.tag == heute && it.minuten != null }
     val heuteErledigt = gefiltert.filter { it.erledigt && it.tag == heute && it.minuten == null }
-    val morgenOffen = gefiltert.filter { it.tag == heute + 1 && it.minuten == null && !it.erledigt }.sortedWith(tagesOrdnung)
-    val morgenTermine = gefiltert.filter { it.tag == heute + 1 && it.minuten != null }
-    // Aufgaben aus der App „Ziele“ ohne Tag stehen unter „Ziele“ bei ihrem Ziel, nicht in den Prioritäten.
-    val nachPrio = Prioritaet.entries.associateWith { p -> gefiltert.filter { !it.erledigt && it.tag == null && it.zielId == null && it.prio == p }.sortedByDescending { it.erstellt } }
+    val morgenOffen = aufMorgen.filter { it.minuten == null && !it.erledigt }.sortedWith(tagesOrdnung)
+    val morgenTermine = aufMorgen.filter { it.minuten != null }
+    // Aufgaben aus der App „Ziele“ ohne Tag stehen unter „Ziele“ bei ihrem Ziel, nicht in den Prioritäten; tägliche stehen an den Tagen.
+    val nachPrio = Prioritaet.entries.associateWith { p -> gefiltert.filter { !it.erledigt && it.tag == null && it.zielId == null && !it.laeuftTaeglich && it.prio == p }.sortedByDescending { it.erstellt } }
     /** Offene Aufgaben je Ziel (auch mit Tag), in der Reihenfolge des Übernehmens. */
     val nachZiel: List<List<Aufgabe>> = gefiltert.filter { !it.erledigt && it.zielId != null }
         .sortedBy { it.erstellt }.groupBy { it.zielId }.values.toList()
     val demnaechst = gefiltert.filter { !it.erledigt && it.tag != null && it.tag > heute + 1 }.sortedWith(compareBy({ it.tag }, { it.minuten ?: -1 }))
     val erledigt = gefiltert.filter { it.erledigt && it.tag != heute }.sortedByDescending { it.erledigtAm ?: 0 }.take(40)
-    val heuteGesamt = alle.count { (it.tag == heute) || (!it.erledigt && it.tag != null && it.tag < heute) }
+    val heuteGesamt = alle.map { it.aufHeute(heute) }.count { (it.tag == heute) || (!it.erledigt && it.tag != null && it.tag < heute) }
     val heuteFertig = alle.count { it.tag == heute && it.erledigt }
 
     /** Tage in Folge (bis heute oder gestern) mit mindestens einer erledigten Aufgabe. */

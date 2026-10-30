@@ -35,6 +35,9 @@ interface AufgabenDao {
     @Query("SELECT * FROM aufgaben WHERE tag = :tag OR (:mitUeberfaelligen = 1 AND tag < :tag AND erledigt = 0)")
     suspend fun fuerTag(tag: Long, mitUeberfaelligen: Int): List<Aufgabe>
 
+    @Query("SELECT * FROM aufgaben WHERE wiederholung = 'TAEGLICH' AND erledigt = 0")
+    suspend fun taeglichOffen(): List<Aufgabe>
+
     @Insert
     suspend fun neu(aufgabe: Aufgabe): Long
 

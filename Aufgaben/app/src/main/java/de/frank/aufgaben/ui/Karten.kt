@@ -160,7 +160,7 @@ fun AufgabeKarte(
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null,
             )
             val schritte = a.schritte
-            val ueberfaellig = !a.erledigt && a.tag != null && a.tag < heute
+            val ueberfaellig = !a.erledigt && a.tag != null && a.tag < heute && !a.laeuftTaeglich
             val zeigtMerkmale = a.minuten != null || a.erinnerung || a.wdh != Wiederholung.KEINE || schritte.isNotEmpty() || ueberfaellig || zeigeDatum
             if (a.text.isNotBlank() && a.text != a.titel) {
                 Text(a.text, color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))

@@ -83,6 +83,19 @@ data class Aufgabe(
     val prio: Prioritaet get() = Prioritaet.von(prioritaet)
     val wdh: Wiederholung get() = Wiederholung.von(wiederholung)
 
+    /** Offen und täglich: steht an jedem Tag ab heute (bzw. ab ihrem Tag, falls der später liegt) und wird nie überfällig. */
+    val laeuftTaeglich: Boolean get() = !erledigt && wdh == Wiederholung.TAEGLICH
+
+    /** Diese Aufgabe, wie sie an [tag] erscheint; null, wenn sie dort nicht steht. Tägliche bekommen [tag] als Tag eingesetzt. */
+    fun amTag(tag: Long, heute: Long): Aufgabe? = when {
+        !laeuftTaeglich -> takeIf { it.tag == tag }
+        tag < maxOf(this.tag ?: heute, heute) -> null
+        else -> copy(tag = tag)
+    }
+
+    /** Für die Heute-Listen: Tägliche zählen auf heute, alles andere bleibt, wie es ist. */
+    fun aufHeute(heute: Long): Aufgabe = if (laeuftTaeglich) amTag(heute, heute) ?: this else this
+
     val schritte: List<Schritt>
         get() = if (schritteJson.isBlank()) emptyList() else runCatching {
             val array = JSONArray(schritteJson)

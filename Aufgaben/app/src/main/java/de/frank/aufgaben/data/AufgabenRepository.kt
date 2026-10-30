@@ -24,7 +24,9 @@ class AufgabenRepository private constructor(context: Context) {
 
     suspend fun eine(id: Long): Aufgabe? = dao.eine(id)
     suspend fun alleEinmal(): List<Aufgabe> = dao.alleEinmal()
-    suspend fun fuerTag(tag: Long, mitUeberfaelligen: Boolean) = dao.fuerTag(tag, if (mitUeberfaelligen) 1 else 0)
+    suspend fun fuerTag(tag: Long, mitUeberfaelligen: Boolean): List<Aufgabe> =
+        dao.fuerTag(tag, if (mitUeberfaelligen) 1 else 0).filter { !it.laeuftTaeglich } +
+            dao.taeglichOffen().mapNotNull { it.amTag(tag, Tage.heute()) }
 
     suspend fun neu(aufgabe: Aufgabe): Long {
         val id = dao.neu(aufgabe)
@@ -47,11 +49,21 @@ class AufgabenRepository private constructor(context: Context) {
     /** Erledigt oder wieder offen. Bei Wiederholungen entsteht beim Erledigen der nächste Termin. */
     suspend fun setzeErledigt(aufgabe: Aufgabe, erledigt: Boolean): Aufgabe? {
         if (erledigt) ErinnerungsDienst.stoppe(app, aufgabe.id)
-        dao.aendere(aufgabe.copy(erledigt = erledigt, erledigtAm = if (erledigt) System.currentTimeMillis() else null, geaendert = System.currentTimeMillis()))
+        val heute = Tage.heute()
+        val taeglich = aufgabe.wdh == Wiederholung.TAEGLICH
+        // Täglich: Erledigt wird das Vorkommen von heute. Ohne Tag oder mit altem Tag zählt es deshalb auf heute.
+        val tagJetzt = if (erledigt && taeglich) maxOf(aufgabe.tag ?: heute, heute) else aufgabe.tag
+        dao.aendere(aufgabe.copy(tag = tagJetzt, erledigt = erledigt, erledigtAm = if (erledigt) System.currentTimeMillis() else null, geaendert = System.currentTimeMillis()))
+        // Wieder offen: Die beim Erledigen entstandene Folge muss weg, sonst stünde die Aufgabe ab morgen doppelt da.
+        if (!erledigt && taeglich && aufgabe.erledigt) {
+            dao.taeglichOffen().filter {
+                it.id != aufgabe.id && it.titel == aufgabe.titel && it.text == aufgabe.text && it.minuten == aufgabe.minuten && it.erstellt >= aufgabe.erstellt
+            }.forEach { loesche(it) }
+        }
         var folge: Aufgabe? = null
         if (erledigt && aufgabe.wdh != Wiederholung.KEINE) {
-            val basis = aufgabe.tag ?: Tage.heute()
-            Tage.naechster(maxOf(basis, Tage.heute() - 1), aufgabe.wdh)?.let { naechster ->
+            val basis = if (taeglich) tagJetzt ?: heute else maxOf(aufgabe.tag ?: heute, heute - 1)
+            Tage.naechster(basis, aufgabe.wdh)?.let { naechster ->
                 val neu = aufgabe.copy(
                     id = 0, tag = naechster, erledigt = false, erledigtAm = null,
                     erstellt = System.currentTimeMillis(), geaendert = System.currentTimeMillis(),
