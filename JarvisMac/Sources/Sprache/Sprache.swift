@@ -269,6 +269,7 @@ import Observation
         }
         let mikro = Mikrofon()
         let mitSamples = !apple
+        let hoechstSamples = 16000 * Int(maxSekunden)
         mikro.beiPuffer = { p in
             erkenner?.fuettere(p)
             let rms = Mikrofon.pegel(p)
@@ -294,7 +295,7 @@ import Observation
                         if m.sprachZeit > 0.18 { m.begonnen = true }
                     }
                 }
-                if let w, let k = w.floatChannelData, m.samples.count < 16000 * 120 {
+                if let w, let k = w.floatChannelData, m.samples.count < hoechstSamples {
                     m.samples.append(contentsOf: UnsafeBufferPointer(start: k[0], count: Int(w.frameLength)))
                 }
             }

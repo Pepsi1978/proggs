@@ -88,7 +88,10 @@ final class JarvisAgent {
     func frage(_ text: String, in g: Gespraech, gesprochen: Bool = false, bild: Data? = nil,
                onText: ((String) -> Void)? = nil) async -> String {
         // Ein Gespräch, eine Werkzeugschleife: sonst landet eine neue Frage zwischen tool_use und tool_result.
-        while g.arbeitet { try? await Task.sleep(for: .milliseconds(200)) }
+        while g.arbeitet {
+            if Task.isCancelled { return "" }   // sonst kehrt das Warten sofort zurück und die Schleife dreht leer
+            try? await Task.sleep(for: .milliseconds(200))
+        }
         g.arbeitet = true
         defer { g.arbeitet = false; g.speichern() }
         GespraechsSpeicher.shared.nachOben(g)
