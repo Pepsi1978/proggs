@@ -1735,6 +1735,11 @@ fun SettingsScreen(
                     divider = false,
                 )
             }
+            SettingsSection("Spracheingabe · Offline") {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                }
+            }
             SettingsSection("Spracheingabe") {
                 WhisperModelSetting(viewModel)
                 SettingRow(

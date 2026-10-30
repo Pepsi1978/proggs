@@ -10,6 +10,7 @@
     {"versionCode": 112, "versionName": "0.1.123", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, auch wenn Whisper nur das Ende des Wörterbuchs wiederholt."},
     {"versionCode": 113, "versionName": "0.1.124", "stand": "22.10.2026, 12:03 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Favoriten (langes Drücken) stehen in jeder Stimmenliste oben mit gelbem Stern."},
     {"versionCode": 114, "versionName": "0.1.125", "stand": "22.10.2026, 12:50 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."},
-    {"versionCode": 115, "versionName": "0.1.126", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."}
+    {"versionCode": 115, "versionName": "0.1.126", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
+    {"versionCode": 116, "versionName": "0.1.127", "stand": "30.10.2026, 11:43 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
   ]
 }

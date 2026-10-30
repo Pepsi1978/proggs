@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import de.frank.perfectmoment.BuildConfig
 import de.frank.perfectmoment.audio.GroqTranscriber
 import de.frank.perfectmoment.audio.MicRecorder
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import de.frank.perfectmoment.audio.VoiceSampleScript
 import de.frank.perfectmoment.backup.BackupRepository
 import de.frank.perfectmoment.backup.BackupStatus
@@ -2093,7 +2094,7 @@ class AppViewModel(
     ) {
         when (recordingState) {
             RecordingState.IDLE -> {
-                if (groqApiKey.isBlank()) {
+                if (groqApiKey.isBlank() && !ParakeetUeberJarvis.gewaehlt(appContext)) {
                     recordingMessage = "Bitte zuerst einen Groq-API-Schlüssel hinterlegen."
                     return
                 }
@@ -2153,13 +2154,17 @@ class AppViewModel(
                     recordingMessage = "Ich habe nichts verstanden."
                     return@launch
                 }
-                transcriber = GroqTranscriber(
-                    settings.groqApiKey,
-                    model = settings.whisperModel,
-                    woerterbuchPrompt = settings.vocabularyPrompt,
-                )
-                activeTranscriber = transcriber
-                val transcript = transcriber.transcribe(wav)
+                val transcript = if (ParakeetUeberJarvis.gewaehlt(appContext)) {
+                    ParakeetUeberJarvis.transkribiere(appContext, wav)
+                } else {
+                    transcriber = GroqTranscriber(
+                        settings.groqApiKey,
+                        model = settings.whisperModel,
+                        woerterbuchPrompt = settings.vocabularyPrompt,
+                    )
+                    activeTranscriber = transcriber
+                    transcriber.transcribe(wav)
+                }
                 if (generation != recordingGeneration) return@launch
                 if (transcript.isBlank()) {
                     recordingMessage = "Ich habe nichts verstanden."
