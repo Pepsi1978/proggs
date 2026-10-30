@@ -73,7 +73,7 @@ class EinstellungenStore(context: Context) {
     // --- Erscheinungsbild -----------------------------------------------------------------
 
     private val _themeModus = MutableStateFlow(
-        ThemeModus.fromId(offen.getString(SCHL_THEME, ThemeModus.HELL.id) ?: ThemeModus.HELL.id),
+        ThemeModus.fromId(offen.getString(SCHL_THEME, ThemeModus.AUTOMATISCH.id) ?: ThemeModus.AUTOMATISCH.id),
     )
     val themeModus: StateFlow<ThemeModus> = _themeModus.asStateFlow()
 
