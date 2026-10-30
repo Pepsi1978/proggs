@@ -2072,7 +2072,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val treffer = if (wiederaufnahme) null else de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         if (!wiederaufnahme) de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
-        gespraechInApp = fortsetzen
+        // Eine Wiederaufnahme übergibt immer fortsetzen = true und ändert nichts daran, wo das Gespräch begann.
+        if (!wiederaufnahme) gespraechInApp = fortsetzen
         val nr = ++sprachmodusNr
         sprachmodusAktiv = true
         weckwortLauf = viewModelScope.launch {
@@ -2145,10 +2146,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         SprachBlase.abgleichen(getApplication())
     }
 
-    /**
-     * Eine Runde im Gesprächsmodus: Mikrofon holen, piepen (ab jetzt sprechen), aufnehmen, bis Frank die eingestellte
-     * Stillezeit lang schweigt, und abschicken. Liefert [SprechEnde.Lage.NICHTS_GEHOERT], wenn nach dem Piepton nichts kam.
-     */
     private var mikroFehlte = false
     /** Das Weckwort fiel in der geöffneten App; sonst gilt die Stillezeit für außerhalb. */
     private var gespraechInApp = false
@@ -2161,6 +2158,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return if (inApp) einstellungen.stilleInAppMs else einstellungen.stilleAussenMs
     }
 
+    /**
+     * Eine Runde im Gesprächsmodus: Mikrofon holen, piepen (ab jetzt sprechen), aufnehmen, bis Frank die eingestellte
+     * Stillezeit lang schweigt, und abschicken. Liefert [SprechEnde.Lage.NICHTS_GEHOERT], wenn nach dem Piepton nichts kam.
+     */
     private suspend fun runde(erste: Boolean): de.frank.module.transkriptionsmodul.SprechEnde.Lage {
         holtMikro = true
         val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }

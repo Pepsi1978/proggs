@@ -410,6 +410,7 @@ fun Eingabe(
     geheim: Boolean = false,
     einzeilig: Boolean = true,
     senden: (() -> Unit)? = null,
+    tastatur: androidx.compose.ui.text.input.KeyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
 ) {
     val f = LocalFarben.current
     var sichtbar by remember { mutableStateOf(false) }
@@ -423,7 +424,7 @@ fun Eingabe(
                 singleLine = einzeilig,
                 maxLines = if (einzeilig) 1 else 5,
                 visualTransformation = if (geheim && !sichtbar && wert.isNotEmpty()) PasswordVisualTransformation() else VisualTransformation.None,
-                keyboardOptions = KeyboardOptions(imeAction = if (senden != null) ImeAction.Send else ImeAction.Default),
+                keyboardOptions = KeyboardOptions(keyboardType = tastatur, imeAction = if (senden != null) ImeAction.Send else ImeAction.Default),
                 keyboardActions = KeyboardActions(onSend = { senden?.invoke() }),
             )
         }

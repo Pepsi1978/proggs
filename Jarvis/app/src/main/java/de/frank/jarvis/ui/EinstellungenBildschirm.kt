@@ -30,6 +30,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -224,11 +227,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Chip("An", aktiv = e.weckwortAn) { vm.weckwortSchalten(true, activity) }
                     Chip("Aus", aktiv = !e.weckwortAn) { vm.weckwortSchalten(false, activity) }
                 }
-                var stilleApp by remember { mutableStateOf(e.stilleInAppMs) }
-                var stilleAussen by remember { mutableStateOf(e.stilleAussenMs) }
                 Text(
                     "Sag „$wort“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
-                        "Erst nach der eingestellten Stillezeit schickt er ab (in der App ${Einstellungen.stilleText(stilleApp)}, außerhalb ${Einstellungen.stilleText(stilleAussen)}), du kannst also zwischendurch nachdenken. " +
+                        "Erst nach der eingestellten Stillezeit schickt er ab (in der App ${Einstellungen.stilleText(e.stilleInAppMs)}, außerhalb ${Einstellungen.stilleText(e.stilleAussenMs)}), du kannst also zwischendurch nachdenken. " +
                         "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
                         "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
                         "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
@@ -239,8 +240,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Text("Damit Jarvis von selbst nach vorn kommt (auch über dem Sperrbildschirm), braucht er „Über anderen Apps einblenden“. Ohne kommt nur eine Benachrichtigung zum Antippen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
                     Knopf("„Über anderen Apps einblenden“ erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
                 }
-                StillezeitFeld("Stillezeit in der App", stilleApp, vm) { stilleApp = it; e.stilleInAppMs = it }
-                StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", stilleAussen, vm) { stilleAussen = it; e.stilleAussenMs = it }
+                StillezeitFeld("Stillezeit in der App", e.stilleInAppMs, vm) { e.stilleInAppMs = it }
+                StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", e.stilleAussenMs, vm) { e.stilleAussenMs = it }
                 Text("Wie lange nach deinem letzten Wort das Mikrofon offen bleibt, 1 bis 15 Sekunden, auch mit Komma. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Unterzeile("Weckwort")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -609,18 +610,25 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
     }
 }
 
-/** Eine Stillezeit in Sekunden eintragen; [ms] ist der gespeicherte Wert. */
+/** Eine Stillezeit in Sekunden eintragen; [ms] ist der gespeicherte Wert. Ein gültiger Wert gilt auch ohne „Übernehmen“ beim Verlassen des Bildschirms. */
 @Composable
 private fun StillezeitFeld(titel: String, ms: Int, vm: AppViewModel, setze: (Int) -> Unit) {
-    var text by remember(ms) { mutableStateOf(Einstellungen.stilleZahl(ms)) }
+    var text by remember { mutableStateOf(Einstellungen.stilleZahl(ms)) }
+    // Per Sprache geändert, während der Bildschirm offen ist: Das Feld zieht mit.
+    LaunchedEffect(ms) { text = Einstellungen.stilleZahl(ms) }
+    val aktuell by rememberUpdatedState(ms)
+    val setzeAktuell by rememberUpdatedState(setze)
+    DisposableEffect(Unit) {
+        onDispose { Einstellungen.stilleMsAus(text)?.takeIf { it != aktuell }?.let { setzeAktuell(it) } }
+    }
     val uebernehmen: () -> Unit = {
         val neu = Einstellungen.stilleMsAus(text)
         if (neu == null) vm.meldung = "Bitte 1 bis 15 Sekunden eintragen, auch mit Komma."
-        else { setze(neu); text = Einstellungen.stilleZahl(neu) }
+        else { setze(neu); text = Einstellungen.stilleZahl(neu); vm.meldung = "$titel: jetzt ${Einstellungen.stilleText(neu)}." }
     }
     Unterzeile(titel)
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Eingabe(text, { text = it }, "Sekunden, z. B. 2,5", Modifier.weight(1f), senden = uebernehmen)
+        Eingabe(text, { text = it }, "Sekunden, z. B. 2,5", Modifier.weight(1f), senden = uebernehmen, tastatur = androidx.compose.ui.text.input.KeyboardType.Decimal)
         Spacer(Modifier.width(8.dp))
         Knopf("Übernehmen", haupt = text != Einstellungen.stilleZahl(ms), aktion = uebernehmen)
     }

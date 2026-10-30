@@ -411,9 +411,16 @@ class Einstellungen private constructor(context: Context) {
         const val STILLE_STANDARD_MS = 4_500
         const val STILLE_MIN_MS = 1_000
         const val STILLE_MAX_MS = 15_000
-        /** Sekunden aus Text („2,5“, „2.5 Sekunden“) in ms, auf eine Kommastelle gerundet; null ohne Zahl oder außerhalb der Grenzen. */
+        /**
+         * Sekunden aus Text („2,5“, „2.5 Sekunden“, „Maximum“) in ms, auf eine Kommastelle gerundet. null bei allem anderen,
+         * auch bei anderer Einheit oder Vorzeichen: „2 Minuten“ darf nie still 2 Sekunden werden.
+         */
         fun stilleMsAus(text: String): Int? {
-            val sekunden = Regex("\\d+(?:[.,]\\d+)?").find(text)?.value?.replace(',', '.')?.toDoubleOrNull() ?: return null
+            val t = text.trim().lowercase(java.util.Locale.GERMAN)
+            when (t) { "maximal", "maximum", "max", "voll" -> return STILLE_MAX_MS; "minimal", "minimum", "min" -> return STILLE_MIN_MS }
+            val zahl = Regex("(\\d+(?:[.,]\\d+)?)\\s*(?:s|sek\\.?|sekunden?)?").matchEntire(t)?.groupValues?.get(1) ?: return null
+            val sekunden = zahl.replace(',', '.').toDoubleOrNull() ?: return null
+            if (sekunden > STILLE_MAX_MS / 1_000.0 + 0.05) return null
             return (Math.round(sekunden * 10) * 100).toInt().takeIf { it in STILLE_MIN_MS..STILLE_MAX_MS }
         }
         /** „2,5“ oder „2“: die Sekunden als Zahl, mit Komma nur, wenn nötig. */

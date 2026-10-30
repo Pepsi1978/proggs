@@ -340,7 +340,7 @@ class GroqTranscriber(
 
         /**
          * Rand hinter dem Gesprochenen: leise Satzenden und nachgeschobene Wörter. Im Gesprächsmodus
-         * folgen ohnehin 4,5 s Stille, es bleiben also über 3 s Ersparnis.
+         * folgt ohnehin die eingestellte Stillezeit (Standard 4,5 s, dann über 3 s Ersparnis).
          */
         private const val STILLE_RAND_HINTEN_MS = 1_200L
 
