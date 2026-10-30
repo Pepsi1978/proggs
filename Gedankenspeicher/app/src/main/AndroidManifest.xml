@@ -31,6 +31,16 @@
          die App dafür nicht. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+
+    <!-- Offline-Transkription über Jarvis (Parakeet). -->
+    <queries>
+        <provider android:authorities="de.frank.jarvis.parakeet" />
+    </queries>
+
     <application
         android:name=".GedankenspeicherApp"
         android:allowBackup="false"

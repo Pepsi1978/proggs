@@ -133,6 +133,7 @@ fun EinstellungenBildschirm(
     beiProfilSpeichern: (Auswertungsprofil) -> Unit,
     beiProfile: () -> Unit,
     beiGroq: (String) -> Unit,
+    beiParakeet: (Boolean) -> Unit = {},
     beiWhisperModell: (String) -> Unit,
     beiWoerterbuchAn: (Boolean) -> Unit,
     beiWoerterbuch: (String) -> Unit,
@@ -421,6 +422,11 @@ fun EinstellungenBildschirm(
                     wert = qwenSchluessel,
                     beiAenderung = beiQwenSchluessel,
                 )
+            }
+
+            // 4a — Spracheingabe offline über Jarvis (Parakeet)
+            Gruppe("Spracheingabe · Offline") {
+                de.frank.module.transkriptionsmodul.ParakeetEinstellungen(geaendert = beiParakeet)
             }
 
             // 4b — Spracheingabe: Whisper-Modell und persönliches Wörterbuch

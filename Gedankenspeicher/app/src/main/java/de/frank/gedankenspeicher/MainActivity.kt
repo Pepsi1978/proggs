@@ -785,6 +785,7 @@ private fun Oberflaeche(
                 beiProfilSpeichern = vm::speichereProfil,
                 beiProfile = { ziel = Ziel.PROFILE },
                 beiGroq = vm::setzeGroqSchluessel,
+                beiParakeet = vm::parakeetGeaendert,
                 beiWhisperModell = vm::setzeWhisperModell,
                 beiWoerterbuchAn = vm::setzeWoerterbuchAn,
                 beiWoerterbuch = vm::setzeWoerterbuch,

@@ -9,7 +9,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope as lebenszeit
 import de.frank.gedankenspeicher.audio.AufnahmeDienst
 import de.frank.gedankenspeicher.audio.AufnahmeFernbedienung
+import de.frank.gedankenspeicher.audio.GroqTranscriber
 import de.frank.gedankenspeicher.audio.MicRecorder
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import de.frank.gedankenspeicher.hintergrund.AuswertungsDienst
 import de.frank.gedankenspeicher.hintergrund.AuswertungsFernbedienung
 import de.frank.gedankenspeicher.hintergrund.VorleseAnzeige
@@ -261,7 +263,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             // Auswahl offen, und die Sitzung sucht sich Frank selbst aus.
             _verlauf.update { if (it.sitzung == null) it.copy(laedt = false) else it }
             initialisiert = true
-            if (einstellungen.groqSchluessel.isNotBlank()) holeLiegengebliebeneNach()
+            if (einstellungen.groqSchluessel.isNotBlank() || parakeetGewaehlt()) holeLiegengebliebeneNach()
             reicheWartendeNach()
             holeFehlendeUeberschriften()
         }
@@ -820,7 +822,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         try {
             val wav = ausstehend.second
             val puffer = puffere(wav).also { datei = it }
-            val online = hatNetz()
+            // Bei Parakeet läuft die Erkennung offline über Jarvis: fehlendes Internet zählt dann nicht.
+            val online = hatNetz() || parakeetGewaehlt()
             val id = repo.legeGesprocheneNotizAn(ausstehend.first,
                 if (online) Notizzustand.TRANSKRIBIERT_GERADE else Notizzustand.WARTET_AUF_TRANSKRIPTION,
                 puffer.absolutePath)
@@ -878,10 +881,22 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     // --- Transkription (F-03) --------------------------------------------------------------------
 
+    /** Ist Parakeet (offline über Jarvis) gewählt, zählen weder der Groq-Schlüssel noch das Internet. */
+    private fun parakeetGewaehlt(): Boolean = ParakeetUeberJarvis.gewaehlt(ctx)
+
+    /** Eine Aufnahme in Text wandeln: über Jarvis, wenn Parakeet gewählt ist, sonst über Groq — nie ein stiller Rückfall. */
+    private suspend fun transkribiereAudio(transkriber: GroqTranscriber, wav: ByteArray): String =
+        if (parakeetGewaehlt()) ParakeetUeberJarvis.transkribiere(ctx, wav) else transkriber.transcribe(wav)
+
+    /** Parakeet wurde in den Einstellungen umgeschaltet: was am fehlenden Schlüssel liegen blieb, bekommt seine Chance. */
+    fun parakeetGeaendert(an: Boolean) {
+        if (an) holeLiegengebliebeneNach()
+    }
+
     private suspend fun transkribiere(notizId: Long, sitzungId: Long, wav: ByteArray, datei: File?) {
         val notiz = repo.notiz(notizId) ?: return
         val transkriber = repo.transkriber()
-        if (!transkriber.isConfigured) {
+        if (!parakeetGewaehlt() && !transkriber.isConfigured) {
             // Auch eine Online-Aufnahme wird gepuffert — sonst wäre sie ohne Schlüssel verloren.
             val pfad = datei?.absolutePath ?: puffere(wav).absolutePath
             repo.aendereAktuell(notizId, inhalt = false) { aktuell ->
@@ -893,7 +908,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         try {
-            val text = transkriber.transcribe(wav)
+            val text = transkribiereAudio(transkriber, wav)
             if (text.isBlank()) {
                 // Alle vier Schichten haben nichts durchgelassen. Es wird ausdrücklich
                 // **nichts erfunden** (F-01, Fehlerfall): die Karte sagt, dass nichts ankam.
@@ -942,14 +957,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun schreibeInsAntwortfeld(wav: ByteArray, blattGeneration: Int) {
         if (kiBlattGeneration != blattGeneration) return
         val transkriber = repo.transkriber()
-        if (!transkriber.isConfigured) {
+        if (!parakeetGewaehlt() && !transkriber.isConfigured) {
             if (kiBlattGeneration == blattGeneration) {
                 _kiBlatt.update { it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") }
             }
             return
         }
         try {
-            val text = transkriber.transcribe(wav)
+            val text = transkribiereAudio(transkriber, wav)
             // Wurde das Blatt inzwischen geschlossen oder neu geöffnet, gehört das
             // Transkript nicht mehr hinein.
             if (kiBlattGeneration != blattGeneration) return
@@ -986,7 +1001,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (generation != bearbeitungsGeneration) return
         val notizId = _bearbeitung.value.notiz?.id ?: return
         val transkriber = repo.transkriber()
-        if (!transkriber.isConfigured) {
+        if (!parakeetGewaehlt() && !transkriber.isConfigured) {
             _bearbeitung.update {
                 if (it.notiz?.id == notizId && generation == bearbeitungsGeneration) {
                     it.copy(transkribiert = false, fehler = "Für die Transkription fehlt der Groq-Schlüssel.")
@@ -996,7 +1011,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         _bearbeitung.update { it.copy(transkribiert = true, fehler = null) }
         try {
-            val text = transkriber.transcribe(wav)
+            val text = transkribiereAudio(transkriber, wav)
             if (text.isBlank()) {
                 _bearbeitung.update {
                     if (it.notiz?.id == notizId && generation == bearbeitungsGeneration) it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") else it
@@ -1121,7 +1136,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * Entstehung. Jede Karte füllt sich an ihrer Stelle — sie springt nicht ans Ende.
      */
     fun reicheWartendeNach() {
-        if (!initialisiert || wiederherstellungLaeuft || _neustartNoetig.value || !hatNetz()) return
+        if (!initialisiert || wiederherstellungLaeuft || _neustartNoetig.value || !(hatNetz() || parakeetGewaehlt())) return
         viewModelScope.launch {
             // Immer nur ein Durchlauf zugleich: Start, Netz-Rückkehr und Schlüsseleingabe
             // stoßen ihn unabhängig voneinander an. Wer zu spät kommt, stellt sich nicht an,
