@@ -693,7 +693,7 @@ loescht den Eintrag auch in der Cloud.
 
 ### N4 — `AVAudioPlayerNode.play()` beendet die App trotz erfolgreichem `engine.start()`
 - **Bug:** Voice Processing bekommt kein Mikrofonsignal (`problems pulling on microphone (err=-10876)`), `engine.start()` meldet trotzdem Erfolg. `play()` wartet rund 6,6 s auf den Tonlauf und wirft dann die NSException `com.apple.coreaudio.avfaudio: player did not see an IO cycle.`. Swift kann sie nicht fangen, die App endet mit SIGABRT. `engine.isRunning` schuetzt davor nicht (JarvisMac 1.0.15, macOS 27.2, Crash-Log vom 30.10.2026).
-- **Loesung:** `play()` in einem Objective-C-`@try/@catch` ausfuehren (`JarvisMac/Sources/ObjC/JarvisObjC.m`) und die Ausnahme als `Error` in den Rueckfall geben. Den genauen Grund liefert `log show --predicate 'process == "Jarvis"'`, das Crash-Log nennt ihn nicht.
+- **Loesung:** `play()` direkt in einem Objective-C-`@try/@catch` ausfuehren (`JarvisMac/Sources/ObjC/JarvisObjC.m`), ohne Swift-Closure dazwischen, denn Swift-Frames ueberstehen das Abwickeln nicht. Die Ausnahme als `Error` in den Rueckfall geben, nach so einem Fehler Voice Processing nicht wiederholen und die wartende `play()` nie auf dem Hauptfaden aufrufen. Den genauen Grund liefert `log show --predicate 'process == "Jarvis"'`, das Crash-Log nennt ihn nicht.
 
 ## Fix-Status (was ist bereits gefixt? — ehrlich getrennt)
 

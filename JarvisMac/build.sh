@@ -13,6 +13,8 @@ APP_BUNDLE="$BUILD_DIR/Jarvis.app"
 SDK="$(xcrun --show-sdk-path)"
 SWIFT_FILES=()
 while IFS= read -r f; do SWIFT_FILES+=("$f"); done < <(find "$PROJECT_DIR/Sources" -name '*.swift' | sort)
+OBJC_FILES=()
+while IFS= read -r f; do OBJC_FILES+=("$f"); done < <(find "$PROJECT_DIR/Sources" -name '*.m' | sort)
 
 # sherpa-onnx (C-API) für Parakeet primeline offline – dasselbe Skript wie TVO/CVO, Bibliothek einmal in ~/Library/Caches.
 source "$PROJECT_DIR/../voice-overlay-sherpa.sh"
@@ -26,7 +28,10 @@ FLAGS=(-target arm64-apple-macos26.0 -sdk "$SDK" -swift-version 5 -parse-as-libr
        -framework LocalAuthentication -framework Security -framework CryptoKit -framework PDFKit
        -import-objc-header "$PROJECT_DIR/Sources/ObjC/JarvisObjC.h" -Xcc -I"$(dirname "$SHERPA_HEADER")")
 
+OBJC_FLAGS=(-fobjc-arc -target arm64-apple-macos26.0 -isysroot "$SDK" -I "$(dirname "$SHERPA_HEADER")")
+
 if [ "$1" = "check" ]; then
+    for m in "${OBJC_FILES[@]}"; do clang -fsyntax-only "${OBJC_FLAGS[@]}" "$m"; done
     swiftc -typecheck "${FLAGS[@]}" "${SWIFT_FILES[@]}"
     echo "=== Typprüfung ok ==="
     exit 0
@@ -40,12 +45,15 @@ sed "s/__BUILD_TIMESTAMP__/$BUILD_TIMESTAMP/" "$PROJECT_DIR/Info.plist" > "$APP_
 
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 cp "$SHERPA_LIB/libsherpa-onnx-c-api.dylib" "$SHERPA_LIB/libonnxruntime.dylib" "$APP_BUNDLE/Contents/Frameworks/"
-OBJC_OBJEKT="$BUILD_DIR/JarvisObjC.o"
-clang -c -O2 -fobjc-arc -target arm64-apple-macos26.0 -isysroot "$SDK" -I "$(dirname "$SHERPA_HEADER")" \
-    "$PROJECT_DIR/Sources/ObjC/JarvisObjC.m" -o "$OBJC_OBJEKT"
+OBJC_OBJEKTE=()
+for m in "${OBJC_FILES[@]}"; do
+    o="$BUILD_DIR/$(basename "$m" .m).o"
+    clang -c -O2 "${OBJC_FLAGS[@]}" "$m" -o "$o"
+    OBJC_OBJEKTE+=("$o")
+done
 swiftc -o "$APP_BUNDLE/Contents/MacOS/Jarvis" -O "${FLAGS[@]}" \
     -L "$SHERPA_LIB" -lsherpa-onnx-c-api -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
-    "$OBJC_OBJEKT" "${SWIFT_FILES[@]}"
+    "${OBJC_OBJEKTE[@]}" "${SWIFT_FILES[@]}"
 
 if [ ! -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
     bash "$PROJECT_DIR/tools/make-icon.sh" || true

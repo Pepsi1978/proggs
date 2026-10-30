@@ -66,7 +66,7 @@ import Observation
         }
         let rest = await sprichKette(SprechText.stuecke(sauber), stand: stand, generation: meine)
         guard generation == meine, !rest.isEmpty else { return }
-        log("fehler", "Vorlesen: alle Stimmen gescheitert – Rückfall auf die Systemstimme")
+        log("fehler", "Vorlesen: Stimmen oder Wiedergabe gescheitert – Rückfall auf die Systemstimme")
         await sprichSystem(rest.joined(separator: " "), tempo: stand.tempo(.system), generation: meine)
     }
 
@@ -141,15 +141,26 @@ import Observation
                 // Nur Rückrufe der eigenen Wiedergabe zählen – stopp() löst die alten nachträglich aus.
                 Task { @MainActor in if self?.generation == meine { self?.gespielt += 1 } }
             }
-            // play() kann ohne Tonlauf eine NSException werfen: Dann übernimmt der Rückfall des Aufrufers den Rest.
-            if !s.isPlaying, let ausnahme = JarvisObjCFangen({ s.play() }) {
-                log("fehler", "Vorlesen: Wiedergabe nicht startbar (\(ausnahme.localizedDescription))")
-                aufgaben.values.forEach { $0.cancel() }
-                return Array(stuecke[i...])
+            if !s.isPlaying {
+                // play() kann ohne Tonlauf Sekunden warten und dann eine Ausnahme werfen: nicht auf dem Hauptfaden.
+                // Danach übernimmt der Rückfall des Aufrufers den Rest, die Engine wird nicht wiederverwendet.
+                let ausnahme = await Task.detached { JarvisSpielen(s) }.value
+                guard generation == meine else { aufgaben.values.forEach { $0.cancel() }; return [] }
+                if let ausnahme {
+                    log("fehler", "Vorlesen: Wiedergabe nicht startbar (\(ausnahme.localizedDescription))")
+                    engine?.stop(); engine = nil; spieler = nil
+                    aufgaben.values.forEach { $0.cancel() }
+                    return Array(stuecke[i...])
+                }
             }
         }
         // Warten, bis alles geplante gespielt ist.
         while generation == meine && gespielt < geplant {
+            // Steht die Engine (Gerätewechsel), kommen keine Rückmeldungen mehr: nicht ewig warten.
+            guard engine?.isRunning == true else {
+                log("fehler", "Vorlesen: Audioausgabe während der Wiedergabe gestoppt")
+                break
+            }
             try? await Task.sleep(for: .milliseconds(40))
         }
         return generation == meine ? rest : []

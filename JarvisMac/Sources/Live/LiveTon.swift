@@ -75,9 +75,12 @@ final class LiveTon: @unchecked Sendable {
     /// (Bluetooth, externer Monitor). Deshalb: zweiter Versuch, danach ohne Voice Processing mit Echosperre.
     /// Immer dieselbe Engine: Eine frische Engine bekommt nach gescheitertem Voice Processing ein falsches Eingangsformat
     /// (44,1 kHz, 2 Kanäle) und scheitert ebenfalls mit -10875 (gemessen unter macOS 27.2).
+    /// Eine geworfene Ausnahme heißt: Der Ton lief trotz Start nicht an, das hat 6,6 s gekostet und gelingt mit Voice Processing
+    /// auch beim zweiten Mal nicht. Dann gleich ohne weiter.
     func starten() async throws {
         var letzterFehler: Error?
-        for versuch in 0..<3 {
+        var versuch = 0
+        while versuch < 3 {
             if versuch > 0 {
                 tonAbbauen()
                 try? await Task.sleep(for: .milliseconds(400))   // nicht den Hauptfaden blockieren
@@ -90,8 +93,10 @@ final class LiveTon: @unchecked Sendable {
             } catch {
                 letzterFehler = error
                 log("fehler", "Live: Tonstart Versuch \(versuch + 1) fehlgeschlagen: \(error.localizedDescription)")
+                versuch += (error as NSError).domain == "JarvisObjC" ? 2 : 1
             }
         }
+        tonAbbauen()   // Die Engine kann trotz Fehler laufen, das Mikrofon darf nicht offen bleiben.
         throw letzterFehler ?? NSError(domain: "JarvisLive", code: 2)
     }
 
@@ -119,7 +124,7 @@ final class LiveTon: @unchecked Sendable {
         // play() wirft eine NSException, wenn die Engine trotz erfolgreichem start() keinen Tonlauf bekommt
         // („player did not see an IO cycle“, Voice Processing findet kein Mikrofonsignal, -10876, macOS 27.2).
         // Als Fehler weitergeben, damit der nächste Versuch bzw. die Echosperre greift.
-        if let ausnahme = JarvisObjCFangen({ player.play() }) { throw ausnahme }
+        if let ausnahme = JarvisSpielen(player) { throw ausnahme }
         // 250 ms Stille vorlegen, damit der Ausgang nicht leer startet (§14.2 Nr. 7).
         planeStille(ms: Self.startPolsterMs)
     }
@@ -142,11 +147,11 @@ final class LiveTon: @unchecked Sendable {
         // Rate vor dem ersten Zugriff auf den Mixer lesen: Danach meldet der Ausgang unter Voice Processing 0 Hz.
         let ausgang = engine.outputNode
         let rate = ausgang.outputFormat(forBus: 0).sampleRate   // Rate des Geräts, nicht der bisherigen Verbindung
-        engine.connect(player, to: engine.mainMixerNode, format: ausFormat)
+        if let ausnahme = JarvisVerbinden(engine, player, engine.mainMixerNode, ausFormat) { throw ausnahme }
         guard rate > 0, let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2) else {
             throw NSError(domain: "JarvisLive", code: 3, userInfo: [NSLocalizedDescriptionKey: "Kein Lautsprecher verfügbar."])
         }
-        engine.connect(engine.mainMixerNode, to: ausgang, format: format)
+        if let ausnahme = JarvisVerbinden(engine, engine.mainMixerNode, ausgang, format) { throw ausnahme }
     }
 
     private func abgriffSetzen() throws {
@@ -166,7 +171,8 @@ final class LiveTon: @unchecked Sendable {
         wandler = w
         wandlerFehlerGemeldet = false
         let blockBytes = Int(eingabeRate) * Self.blockMs / 1000 * 2
-        eingang.installTap(onBus: 0, bufferSize: AVAudioFrameCount(format.sampleRate / 20), format: format) { [weak self] puffer, _ in
+        // Das Format kann sich zwischen Lesen und Abgriff ändern (Gerätewechsel), dann wirft installTap.
+        let ausnahme = JarvisAbgriffSetzen(eingang, AVAudioFrameCount(format.sampleRate / 20), format) { [weak self] puffer, _ in
             guard let self, let w = self.wandler, let quelle = puffer.floatChannelData?[0],
                   let einzeln = AVAudioPCMBuffer(pcmFormat: mono, frameCapacity: puffer.frameLength),
                   let ziel = einzeln.floatChannelData?[0] else { return }
@@ -202,6 +208,7 @@ final class LiveTon: @unchecked Sendable {
                 self.beiMikro?(Data(block))
             }
         }
+        if let ausnahme { throw ausnahme }
     }
 
     /// Geräte melden Änderungen oft mehrfach kurz hintereinander: Erst nach 250 ms Ruhe neu verbinden.
@@ -241,7 +248,20 @@ final class LiveTon: @unchecked Sendable {
     }
 
     func stoppen() {
-        aufbauLock.lock(); defer { aufbauLock.unlock() }
+        // Ein Neustart kann die Sperre Sekunden halten (play() wartet auf den Tonlauf): Dann nicht den Aufrufer blockieren,
+        // der Ton-Faden räumt danach auf.
+        guard aufbauLock.try() else {
+            tonFaden.async { [self] in
+                aufbauLock.lock(); defer { aufbauLock.unlock() }
+                abbauen()
+            }
+            return
+        }
+        defer { aufbauLock.unlock() }
+        abbauen()
+    }
+
+    private func abbauen() {
         laeuft = false
         if let b = beobachter { NotificationCenter.default.removeObserver(b); beobachter = nil }
         pufferZuruecksetzen()
@@ -321,14 +341,21 @@ final class LiveTon: @unchecked Sendable {
     /// Wiedergabe sofort leeren (Frank unterbricht).
     func leeren() {
         pufferZuruecksetzen()
+        let frei = aufbauLock.try()
+        if frei { player.stop(); aufbauLock.unlock() }
+        // play() kann Sekunden warten: nie auf dem Hauptfaden oder Netzwerkfaden, die hier aufrufen.
+        tonFaden.async { [weak self] in self?.wiedergabeFortsetzen(erstStoppen: !frei) }
+    }
+
+    private func wiedergabeFortsetzen(erstStoppen: Bool) {
         aufbauLock.lock(); defer { aufbauLock.unlock() }
-        player.stop()
-        // play() ohne laufende Engine löst eine nicht abfangbare Ausnahme aus (etwa mitten im Gerätewechsel).
-        guard laeuft && engine.isRunning else { return }
-        if let ausnahme = JarvisObjCFangen({ player.play() }) {
+        if erstStoppen { player.stop() }
+        // play() ohne laufende Engine wirft eine Ausnahme (etwa mitten im Gerätewechsel).
+        guard laeuft, engine.isRunning, !player.isPlaying else { return }
+        if let ausnahme = JarvisSpielen(player) {
             log("fehler", "Live: Wiedergabe nach Unterbrechung nicht gestartet: \(ausnahme.localizedDescription)")
             engine.stop()   // neuStarten verbindet nur eine stehende Engine neu
-            tonFaden.async { [weak self] in self?.neustartAnfordern() }
+            neustartAnfordern()
         }
     }
 }
