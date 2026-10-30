@@ -51,6 +51,7 @@ import de.frank.fisetinbegleiter.BuildConfig
 import de.frank.fisetinbegleiter.data.IngredientEntity
 import de.frank.fisetinbegleiter.data.IngredientPhase
 import de.frank.fisetinbegleiter.data.ProtocolTemplateEntity
+import de.frank.fisetinbegleiter.ui.theme.AppThemeMode
 import de.frank.fisetinbegleiter.ui.theme.AppThemeVariant
 import de.frank.fisetinbegleiter.ui.theme.LocalAppColors
 
@@ -59,6 +60,8 @@ fun MoreScreen(
     state: MainUiState,
     themeVariant: AppThemeVariant,
     onThemeVariantChange: (AppThemeVariant) -> Unit,
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit,
     onSaveProtocol: (ProtocolTemplateEntity) -> Unit,
     onSaveIngredient: (IngredientEntity) -> Unit,
     onDeleteIngredient: (IngredientEntity) -> Unit,
@@ -80,6 +83,7 @@ fun MoreScreen(
     ) {
         item { SectionTitle("System", "Darstellung, Protokoll und Zuverlässigkeit der App.") }
         item { ThemeFamilySelector(themeVariant, onThemeVariantChange) }
+        item { ThemeModeSelector(themeMode, onThemeModeChange) }
         item {
             Text("Standard-Protokoll", modifier = Modifier.padding(top = 8.dp), color = colors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
             Text("Änderungen gelten für neue Abläufe.", color = colors.sub, fontSize = 12.5.sp)
@@ -239,6 +243,34 @@ private fun ThemeFamilySelector(themeVariant: AppThemeVariant, onThemeVariantCha
         ThemePill("Aurora", AppThemeVariant.AURORA, Color(0xFF6A5CFF), themeVariant, onThemeVariantChange, Modifier.weight(1f))
         ThemePill("Vital", AppThemeVariant.VITAL, Color(0xFF0C8F74), themeVariant, onThemeVariantChange, Modifier.weight(1f))
         ThemePill("Ember", AppThemeVariant.EMBER, Color(0xFFE0562F), themeVariant, onThemeVariantChange, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun ThemeModeSelector(themeMode: AppThemeMode, onThemeModeChange: (AppThemeMode) -> Unit) {
+    val colors = LocalAppColors.current
+    Text("ERSCHEINUNGSBILD", color = colors.sub, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(
+            AppThemeMode.AUTO to "Automatisch nach der Sonne",
+            AppThemeMode.LIGHT to "Hell",
+            AppThemeMode.DARK to "Dunkel",
+        ).forEach { (mode, label) ->
+            val selected = mode == themeMode
+            val shape = RoundedCornerShape(999.dp)
+            Box(
+                Modifier
+                    .weight(if (mode == AppThemeMode.AUTO) 2.2f else 1f)
+                    .clip(shape)
+                    .background(if (selected) colors.accentSoft else colors.chip)
+                    .border(1.dp, if (selected) colors.accent else colors.line, shape)
+                    .clickable { onThemeModeChange(mode) }
+                    .padding(horizontal = 10.dp, vertical = 9.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, color = if (selected) colors.accent else colors.sub, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        }
     }
 }
 

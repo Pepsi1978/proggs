@@ -83,6 +83,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.fisetinbegleiter.ui.theme.AppThemeMode
 import de.frank.fisetinbegleiter.ui.theme.AppThemeVariant
 import de.frank.fisetinbegleiter.ui.theme.LocalAppColors
+import de.frank.fisetinbegleiter.ui.theme.LocalAppDark
 
 private val FbEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
 
@@ -103,7 +104,7 @@ fun FisetinApp(
     themeVariant: AppThemeVariant,
     themeMode: AppThemeMode,
     onThemeVariantChange: (AppThemeVariant) -> Unit,
-    onThemeModeToggle: () -> Unit,
+    onThemeModeChange: (AppThemeMode) -> Unit,
     externalDestination: String?,
     onDestinationConsumed: () -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
@@ -147,8 +148,7 @@ fun FisetinApp(
                 Column(Modifier.fillMaxSize()) {
                     AppHeader(
                         subtitle = headerSubtitle(state),
-                        themeMode = themeMode,
-                        onThemeModeToggle = onThemeModeToggle,
+                        onThemeModeChange = onThemeModeChange,
                     )
                     val screenOffset = with(LocalDensity.current) { 14.dp.roundToPx() }
                     AnimatedContent(
@@ -210,6 +210,8 @@ fun FisetinApp(
                                         state = state,
                                         themeVariant = themeVariant,
                                         onThemeVariantChange = onThemeVariantChange,
+                                        themeMode = themeMode,
+                                        onThemeModeChange = onThemeModeChange,
                                         onSaveProtocol = viewModel::saveProtocol,
                                         onSaveIngredient = viewModel::saveIngredient,
                                         onDeleteIngredient = viewModel::deleteIngredient,
@@ -278,10 +280,10 @@ private fun AppGlow(modifier: Modifier = Modifier) {
 @Composable
 private fun AppHeader(
     subtitle: String,
-    themeMode: AppThemeMode,
-    onThemeModeToggle: () -> Unit,
+    onThemeModeChange: (AppThemeMode) -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val dunkel = LocalAppDark.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -338,7 +340,7 @@ private fun AppHeader(
                 .clip(CircleShape)
                 .background(colors.card)
                 .border(1.dp, colors.line, CircleShape)
-                .clickable(onClick = onThemeModeToggle),
+                .clickable { onThemeModeChange(if (dunkel) AppThemeMode.LIGHT else AppThemeMode.DARK) },
             contentAlignment = Alignment.Center,
         ) {
             Box(
@@ -349,8 +351,8 @@ private fun AppHeader(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = if (themeMode == AppThemeMode.DARK) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                    contentDescription = if (themeMode == AppThemeMode.DARK) "Helles Design" else "Dunkles Design",
+                    imageVector = if (dunkel) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
+                    contentDescription = if (dunkel) "Helles Design" else "Dunkles Design",
                     modifier = Modifier.size(18.dp),
                     tint = colors.text,
                 )

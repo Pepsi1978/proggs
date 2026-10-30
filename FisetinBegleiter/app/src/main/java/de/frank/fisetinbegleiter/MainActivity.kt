@@ -25,6 +25,7 @@ import de.frank.fisetinbegleiter.ui.theme.AppThemeMode
 import de.frank.fisetinbegleiter.ui.theme.AppThemeVariant
 import de.frank.fisetinbegleiter.ui.theme.FisetinTheme
 import de.frank.fisetinbegleiter.ui.theme.LocalAppColors
+import de.frank.fisetinbegleiter.ui.theme.LocalAppDark
 
 class MainActivity : ComponentActivity() {
     private var externalDestination by mutableStateOf<String?>(null)
@@ -51,8 +52,9 @@ class MainActivity : ComponentActivity() {
                 mode = themeMode,
             ) {
                 val appColors = LocalAppColors.current
+                val darkJetzt = LocalAppDark.current
                 SideEffect {
-                    val darkMode = themeMode == AppThemeMode.DARK
+                    val darkMode = darkJetzt
                     enableEdgeToEdge(
                         statusBarStyle = if (darkMode) {
                             SystemBarStyle.dark(appColors.bg0.toArgb())
@@ -70,7 +72,7 @@ class MainActivity : ComponentActivity() {
                     themeVariant = themeVariant,
                     themeMode = themeMode,
                     onThemeVariantChange = ::changeThemeVariant,
-                    onThemeModeToggle = ::toggleThemeMode,
+                    onThemeModeChange = ::changeThemeMode,
                     externalDestination = externalDestination,
                     onDestinationConsumed = { externalDestination = null },
                     onOpenExactAlarmSettings = {
@@ -123,8 +125,8 @@ class MainActivity : ComponentActivity() {
         persistThemePreference(KEY_THEME_VARIANT, variant.persistenceValue)
     }
 
-    private fun toggleThemeMode() {
-        themeMode = if (themeMode == AppThemeMode.LIGHT) AppThemeMode.DARK else AppThemeMode.LIGHT
+    private fun changeThemeMode(mode: AppThemeMode) {
+        themeMode = mode
         persistThemePreference(KEY_THEME_MODE, themeMode.persistenceValue)
     }
 
