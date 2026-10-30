@@ -64,11 +64,11 @@ final class AppSteuerung {
                 try? await Task.sleep(for: .seconds(handyVerbunden ? 300 : 30))
             }
         }
-        // Guthaben wie am Handy alle 15 Minuten, nicht während Live; solange noch nichts da ist, jede Minute.
+        // Guthaben wie am Handy alle 15 Minuten, nicht während Live; jede Minute nur, solange das Handy noch gar nicht geantwortet hat.
         Task {
             while true {
                 if !LiveGespraech.shared.aktiv { await Guthaben.shared.laden() }
-                try? await Task.sleep(for: .seconds(Guthaben.shared.anthropicRest == nil ? 60 : 900))
+                try? await Task.sleep(for: .seconds(handyVerbunden ? 900 : 60))
             }
         }
     }
