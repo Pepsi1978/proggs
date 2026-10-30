@@ -238,7 +238,11 @@ struct GedaechtnisAnsicht: View {
             // Ohne Handy bleibt der Stand aus dem letzten Mac-Build.
             Task { if await !handyFunktionen.laden("funktionen_lesen") { handyFunktionen.text = Self.mitgeliefert("handy-funktionen") } }
         }
-        .onChange(of: regelnOffen) { _, an in if an { Task { regeln = await McpKlient.shared.anweisungen } } }
+        .onChange(of: regelnOffen) { _, an in if an { Task {
+            // Die Vorgaben des Handys enden mit dem Symbiose-Block; davor stehen Franks übrige Regeln.
+            let t = await McpKlient.shared.anweisungen
+            regeln = t.range(of: "SYMBIOSE CHATGPT LIVE ⇄ JARVIS · Stand").map { String(t[$0.lowerBound...]) } ?? t
+        } } }
         // Der Mac hat kein eigenes Gedächtnis: Solange die Karte offen ist, kommt jede Minute der aktuelle Stand vom Handy.
         .task(id: liveOffen) {
             guard liveOffen else { return }
