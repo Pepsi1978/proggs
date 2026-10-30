@@ -460,6 +460,7 @@
     {"versionCode": 455, "versionName": "1.8.444", "stand": "30.10.2026, 16:52 Uhr", "notiz": "Mit drei Punkten gekürzte Texte in Rückfragen klappen beim Antippen ganz auf und beim nächsten Antippen wieder zu, auch der vollständige Auftrag über der Review-Frage"},
     {"versionCode": 457, "versionName": "1.8.446", "stand": "30.10.2026, 17:05 Uhr", "notiz": "Aufgeklappte Rückfragen zeigen auch sehr lange Aufträge vollständig, bleiben beim Scrollen und bei neuen Agentenschritten aufgeklappt und kippen beim Antippen nicht mehr"},
     {"versionCode": 458, "versionName": "1.8.447", "stand": "30.10.2026, 17:09 Uhr", "notiz": "Die Stillezeit bis zum Schließen des Mikrofons beim Weckwort lässt sich getrennt für innerhalb und außerhalb der App einstellen, auch per Sprache"},
-    {"versionCode": 459, "versionName": "1.8.448", "stand": "30.10.2026, 17:25 Uhr", "notiz": "Stillezeit: Eingaben wie 2 Minuten werden abgelehnt statt still als 2 Sekunden übernommen, ein eingetragener Wert gilt auch ohne Übernehmen beim Verlassen, und das Feld zeigt die Zifferntastatur"}
+    {"versionCode": 459, "versionName": "1.8.448", "stand": "30.10.2026, 17:25 Uhr", "notiz": "Stillezeit: Eingaben wie 2 Minuten werden abgelehnt statt still als 2 Sekunden übernommen, ein eingetragener Wert gilt auch ohne Übernehmen beim Verlassen, und das Feld zeigt die Zifferntastatur"},
+    {"versionCode": 460, "versionName": "1.8.449", "stand": "30.10.2026, 17:32 Uhr", "notiz": "Die beiden Stillezeit-Felder stehen jetzt als immer offene Karte ganz oben auf den Einstellungs-Reitern Jarvis und Stimme"}
 ]
 }

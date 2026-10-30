@@ -95,6 +95,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 
         if (reiter == "guthaben") GuthabenReiter(vm)
 
+        // Nicht aufklappbar und auf den Reitern „Jarvis“ und „Stimme“ ganz oben: Diese Felder sollen sofort zu sehen sein.
+        if (reiter == "jarvis" || reiter == "stimme") StillezeitKarte(vm)
+
         if (reiter == "jarvis") {
             // ---------------------------------------------------------------- Kopf
             Bereich("Jarvis' Kopf") {
@@ -229,7 +232,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 Text(
                     "Sag „$wort“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
-                        "Erst nach der eingestellten Stillezeit schickt er ab (in der App ${Einstellungen.stilleText(e.stilleInAppMs)}, außerhalb ${Einstellungen.stilleText(e.stilleAussenMs)}), du kannst also zwischendurch nachdenken. " +
+                        "Erst nach der oben eingestellten Stillezeit schickt er ab (in der App ${Einstellungen.stilleText(e.stilleInAppMs)}, außerhalb ${Einstellungen.stilleText(e.stilleAussenMs)}), du kannst also zwischendurch nachdenken. " +
                         "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
                         "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
                         "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
@@ -240,9 +243,6 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Text("Damit Jarvis von selbst nach vorn kommt (auch über dem Sperrbildschirm), braucht er „Über anderen Apps einblenden“. Ohne kommt nur eine Benachrichtigung zum Antippen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
                     Knopf("„Über anderen Apps einblenden“ erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
                 }
-                StillezeitFeld("Stillezeit in der App", e.stilleInAppMs, vm) { e.stilleInAppMs = it }
-                StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", e.stilleAussenMs, vm) { e.stilleAussenMs = it }
-                Text("Wie lange nach deinem letzten Wort das Mikrofon offen bleibt, 1 bis 15 Sekunden, auch mit Komma. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Unterzeile("Weckwort")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("Hey Jarvis", aktiv = e.weckwortArt != "phrase") { vm.weckwortArtSetzen("jarvis") }
@@ -607,6 +607,19 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp), color = f.textSchwach, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+/** Immer offene Karte mit beiden Stillezeiten nach dem Weckwort. */
+@Composable
+private fun StillezeitKarte(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val e = vm.einstellungen
+    Column(Modifier.fillMaxWidth().glas(f).padding(18.dp)) {
+        Text("Stillezeit: Wie lange das Mikrofon offen bleibt", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text("Nach dem Weckwort schließt das Mikrofon, wenn du so lange nichts mehr sagst: 1 bis 15 Sekunden, auch mit Komma. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        StillezeitFeld("Stillezeit in der App", e.stilleInAppMs, vm) { e.stilleInAppMs = it }
+        StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", e.stilleAussenMs, vm) { e.stilleAussenMs = it }
     }
 }
 
