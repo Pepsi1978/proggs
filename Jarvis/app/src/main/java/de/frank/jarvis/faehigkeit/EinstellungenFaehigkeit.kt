@@ -450,7 +450,7 @@ class EinstellungsKatalog(context: Context) {
             }.toTypedArray(),
 
             // ---- Darstellung ----
-            auswahl("modus", "Darstellung", "Hell oder dunkel", "Helles oder dunkles Design.",
+            auswahl("modus", "Darstellung", "Hell oder dunkel", "Helles oder dunkles Design. Automatisch wechselt abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, für Neuenhagen bei Berlin.",
                 { listOf("system" to "Automatisch", "hell" to "Hell", "dunkel" to "Dunkel") }, { e.modus }) { e.modus = it },
             zahl("leiste_wischen", "System", "Wischempfindlichkeit der Seitenleiste", "Wie weit man von links nach rechts wischen muss, damit sich die Gesprächsleiste öffnet; 0 = leicht (kurzer Wisch), 100 = schwer (langer Wisch).", 0, 100, "Prozent", { e.leistenWischen }) { e.leistenWischen = it },
             auswahl("design", "Darstellung", "Farbdesign", "Blau (Jarvis) oder Gold (wie Geniale Ideen).",

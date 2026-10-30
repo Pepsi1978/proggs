@@ -1,19 +1,29 @@
 package de.frank.jarvis.ui.theme
 
+import android.app.Activity
 import android.provider.Settings
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 
 /** Farben im selben Aufbau wie in Geniale Aufgaben, damit die Glas-Bausteine unverändert passen. */
 @Immutable
@@ -74,10 +84,30 @@ val LocalBewegung = staticCompositionLocalOf { true }
 
 @Composable
 fun JarvisTheme(modus: String, design: String = "blau", inhalt: @Composable () -> Unit) {
-    val system = isSystemInDarkTheme()
-    val dunkel = when (modus) { "hell" -> false; "dunkel" -> true; else -> system }
+    // Automatisch folgt der Sonne; die Schleife prüft mindestens jede Minute, weil Android die Wartezeit im Tiefschlaf anhält.
+    var sonneDunkel by remember { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus) {
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                val jetzt = System.currentTimeMillis()
+                delay((Sonnenstand.naechsterWechsel(jetzt) - jetzt).coerceIn(1_000L, 60_000L))
+            }
+        }
+    }
+    val dunkel = when (modus) { "hell" -> false; "dunkel" -> true; else -> sonneDunkel }
     val farben = remember(dunkel, design) { if (design == "gold") goldFarbenFuer(dunkel) else farbenFuer(dunkel) }
     val context = LocalContext.current
+    // Die Systemleisten richten sich sonst nach dem System-Modus; Symbole wären auf gleichfarbigem Grund unsichtbar.
+    SideEffect {
+        (context as? Activity)?.window?.let { fenster ->
+            WindowCompat.getInsetsController(fenster, fenster.decorView).run {
+                isAppearanceLightStatusBars = !dunkel
+                isAppearanceLightNavigationBars = !dunkel
+            }
+        }
+    }
     val bewegung = remember {
         runCatching { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) }.getOrDefault(1f) > 0f
     }

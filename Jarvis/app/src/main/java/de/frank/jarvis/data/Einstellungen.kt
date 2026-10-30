@@ -365,7 +365,7 @@ class Einstellungen private constructor(context: Context) {
     /** Die eigene Weckwort-Phrase in Großbuchstaben, z. B. „OKAY COMPUTER JARVIS“. */
     var weckwortPhrase: String get() = s("weckwort_phrase", "OKAY COMPUTER JARVIS"); set(v) = put { putString("weckwort_phrase", v) }
 
-    /** system | hell | dunkel */
+    /** system (Automatisch: dunkel vom Ende der Dämmerung bis Sonnenaufgang in Neuenhagen) | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
     /** Wie viel Wischen die Gesprächsleiste zum Öffnen braucht: 0 = leicht (kurzer Wisch), 100 = schwer (langer Wisch). */
     var leistenWischen: Int get() = prefs.getInt("leiste_wischen", 35).coerceIn(0, 100); set(v) = put { putInt("leiste_wischen", v.coerceIn(0, 100)) }

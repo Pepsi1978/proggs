@@ -406,7 +406,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
             val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
             vm.einstellungen.modus = neu
-            vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" }
+            vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" }
         }) {
             Icon(when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
                 null, tint = f.text.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
