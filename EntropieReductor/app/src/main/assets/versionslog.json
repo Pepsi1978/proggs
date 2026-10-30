@@ -20,6 +20,7 @@
     {"versionCode": 356, "versionName": "0.29.21", "stand": "22.10.2026, 11:23 Uhr", "notiz": "Einstellungen unter KI-Modell-Auswahl: Whisper-Modell mit klaren Namen (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter; ist Large V3 bei Groq gesperrt, nimmt die App still Turbo."},
     {"versionCode": 357, "versionName": "0.29.22", "stand": "22.10.2026, 11:51 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar, und das Wörterbuch-Feld speichert ohne Ruckeln."},
     {"versionCode": 358, "versionName": "0.29.23", "stand": "22.10.2026, 12:06 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural für alle Vorlese-Stellen; Stimmen per langem Drücken oder Stern als Favorit oben anheften."},
-    {"versionCode": 359, "versionName": "0.29.24", "stand": "30.10.2026, 11:45 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
+    {"versionCode": 359, "versionName": "0.29.24", "stand": "30.10.2026, 11:45 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
+    {"versionCode": 360, "versionName": "0.29.25", "stand": "30.10.2026, 11:47 Uhr", "notiz": "Interne Datenbankschemata ergänzt, keine sichtbare Änderung."}
   ]
 }
