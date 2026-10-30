@@ -16,4 +16,4 @@ Die Uhr bleibt am Handy mit Huawei Health gekoppelt. Alle Schritte laufen auf di
 
 Anleitung von Gadgetbridge: https://gadgetbridge.org/basics/pairing/huawei-honor-pairing/
 
-Der Weg ist laut Gadgetbridge vorgesehen, aber auf einer Watch 3 mit dieser Datei noch nicht getestet. Die Rückkehr zu Huawei Health ist dort nur als „should be able“ beschrieben.
+Der Weg ist laut Gadgetbridge vorgesehen, aber auf einer Watch 3 mit dieser Datei noch nicht getestet. Offen ist auch, ob die Uhr den aus GT-3-Dateien übernommenen Displaycode `HWHD09` annimmt. Die Rückkehr zu Huawei Health ist dort nur als „should be able“ beschrieben.

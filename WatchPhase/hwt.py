@@ -1,7 +1,7 @@
 """Schreibt Huawei-Zifferblätter (.hwt) ohne Theme Studio.
 
 Das Format stammt aus der Analyse echter Theme-Studio-Exporte. tests/test_rundreise.py
-prüft das Ergebnis Byte für Byte gegen solche Exporte.
+prüft watchface.bin Byte für Byte gegen solche Exporte und den Aufbau der fertigen Datei.
 """
 import hashlib
 import io
@@ -16,10 +16,13 @@ BILD_MAGIC = b"\x45\x23\x88\x88"
 BILDBEREICH_KOPF = b"\x55\x55\x55\x55\x01\x00\x00\x01"
 # Vierter Wert in hashCode: in allen untersuchten Exporten gleich, Herkunft unbekannt.
 HASH_KONSTANTE = "0E0B408C4FA09BA786E0530DAAEBDB7D972C42EFB8710CDB9377B859B9468444"
+ZIP_ZEIT = (2026, 1, 1, 0, 0, 0)  # fest, damit gleicher Inhalt die gleiche Datei ergibt
 ELEMENT_ID = {"background": 0, "time": 1, "date": 2, "widget": 3}
 
 
 def _varint(n):
+    if n < 0:
+        raise ValueError(f"negative Werte sind im Format nicht vorgesehen: {n}")
     aus = bytearray()
     while True:
         b = n & 0x7F
@@ -121,8 +124,7 @@ def _beschreibung(config_xml, titel, titel_cn, schriften):
 def bild_kodieren(png_bytes):
     """BGRA mit gerader Alpha; Läufe ab vier gleichen Pixeln werden zusammengefasst."""
     bild = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
-    b, g, r, a = (bild.getchannel(c).tobytes() for c in "BGRA")
-    roh = bytes(x for p in zip(b, g, r, a) for x in p)
+    roh = bild.tobytes("raw", "BGRA")
     aus = bytearray(BILD_MAGIC + struct.pack("<HH", *bild.size))
     i, n = 0, len(roh)
     while i < n:
@@ -131,7 +133,8 @@ def bild_kodieren(png_bytes):
         while j < n and roh[j : j + 4] == p:
             j += 4
         lauf = (j - i) // 4
-        if lauf >= 4:
+        # Ein Pixel mit den Bytes der Marke darf nur als Lauf stehen, sonst liest der Decoder es als Kopf.
+        if lauf >= 4 or p == RLE_MARKE:
             aus += RLE_MARKE + p + struct.pack("<I", lauf)
         else:
             aus += p * lauf
@@ -155,10 +158,10 @@ def _zip(eintraege):
     puffer = io.BytesIO()
     with zipfile.ZipFile(puffer, "w", zipfile.ZIP_DEFLATED) as z:
         for name, inhalt in eintraege:
-            if name.endswith("/"):
-                z.writestr(zipfile.ZipInfo(name), b"")
-            else:
-                z.writestr(name, inhalt)
+            info = zipfile.ZipInfo(name, ZIP_ZEIT)
+            if not name.endswith("/"):
+                info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, inhalt)
     return puffer.getvalue()
 
 

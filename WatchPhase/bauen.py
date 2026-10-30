@@ -3,7 +3,6 @@ import io
 import math
 import os
 import sys
-import datetime as dt
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -13,11 +12,15 @@ import hwt
 GROESSE = 466
 MITTE = GROESSE // 2
 SS = 4  # Überabtastung
+ORDNER = os.path.dirname(os.path.abspath(__file__))
 TITEL = "Watch Phase"
 TAG_X = 110  # Abstand des Datums von der Mitte
 BLAU = (64, 170, 245)
 LEUCHTEN = (70, 175, 255)
-SCHRIFT = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
+SCHRIFT = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"  # nur macOS
+SCHRIFT_TAG = "/System/Library/Fonts/Supplemental/Arial.ttf"  # nur macOS
+# Lage der value_type-Werte in der Bitliste von ability.xml, aus Theme-Studio-Exporten abgeleitet.
+WERT_BIT = {70: 64, 71: 65, 150: 141, 153: 144, 154: 145}
 ROEMISCH = ["XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"]
 
 
@@ -111,12 +114,12 @@ def zeiger(laenge, schweif, breite, ring_bei=None, ring=6, farbe=(255, 255, 255,
     """Bild mit der Spitze nach oben; gibt das Bild und den Drehpunkt zurück."""
     rand = 7
     halb = int(max(breite, 2 * ring, 2 * 5.5) / 2 + rand + 3)
-    b, h = 2 * halb + 1, laenge + schweif + 2 * rand
+    b, h = 2 * halb, laenge + schweif + 2 * rand
     py = rand + laenge
     bild = Image.new("RGBA", (b * SS, h * SS), (0, 0, 0, 0))
     d = ImageDraw.Draw(bild)
-    cx = (halb + 0.5) * SS
-    cy = (py + 0.5) * SS
+    cx = halb * SS
+    cy = py * SS
     w = breite * SS / 2
     d.polygon(
         [(cx - w * 0.6, cy + schweif * SS), (cx + w * 0.6, cy + schweif * SS), (cx + w, cy),
@@ -138,7 +141,7 @@ def zeiger(laenge, schweif, breite, ring_bei=None, ring=6, farbe=(255, 255, 255,
 
 
 def nabe(aod=False):
-    g = 33
+    g = 34
     bild = Image.new("RGBA", (g * SS, g * SS), (0, 0, 0, 0))
     d = ImageDraw.Draw(bild)
     m = g * SS / 2
@@ -151,7 +154,7 @@ def nabe(aod=False):
 
 
 def ziffer(n):
-    schrift = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 26 * SS)
+    schrift = ImageFont.truetype(SCHRIFT_TAG, 26 * SS)
     bild = Image.new("RGBA", (17 * SS, 28 * SS), (0, 0, 0, 0))
     ImageDraw.Draw(bild).text((8.5 * SS, 14 * SS), str(n), font=schrift, fill=(255, 255, 255, 255), anchor="mm")
     return klein(glimmen(bild, 1.2, 0.8))
@@ -169,14 +172,14 @@ def zeichnen(hg, teile, stunde, minute, sekunde, tag):
     if tag is not None:
         bild.alpha_composite(teile["ziffern"][tag // 10], (TAG_X + MITTE - 17, 219))
         bild.alpha_composite(teile["ziffern"][tag % 10], (TAG_X + MITTE, 219))
-    winkel = [(stunde % 12 + minute / 60) * 30, (minute + sekunde / 60) * 6]
-    paare = [(teile["h"], winkel[0]), (teile["m"], winkel[1])]
-    if sekunde is not None and teile.get("s"):
+    sek = sekunde or 0
+    paare = [(teile["h"], (stunde % 12 + minute / 60) * 30), (teile["m"], (minute + sek / 60) * 6)]
+    if sekunde is not None:
         paare.append((teile["s"], sekunde * 6))
     for (z, (px, py)), w in paare:
         leinwand = Image.new("RGBA", (GROESSE, GROESSE), (0, 0, 0, 0))
         leinwand.alpha_composite(z, (MITTE - px, MITTE - py))
-        bild.alpha_composite(leinwand.rotate(-w, Image.BICUBIC, center=(MITTE + 0.5, MITTE + 0.5)))
+        bild.alpha_composite(leinwand.rotate(-w, Image.BICUBIC, center=(MITTE, MITTE)))
     n = teile["nabe"]
     bild.alpha_composite(n, (MITTE - n.width // 2, MITTE - n.height // 2))
     return bild
@@ -219,36 +222,39 @@ def main():
     teile_a = {"h": (h_a, hap), "m": (m_a, map_), "nabe": na_a, "ziffern": ziffern}
 
     cover = rundmaske(zeichnen(hg, teile, 10, 8, 36, 30))
-    aod_bild = rundmaske(_aod_vorschau(aod, teile_a))
+    aod_bild = rundmaske(zeichnen(aod, teile_a, 10, 8, None, None))
 
-    bilder = [
-        cover.convert("RGB").resize((250, 250), Image.LANCZOS),  # 001 Vorschau
-        hg.convert("RGB"),                                       # 002 Hintergrund
-        aod.convert("RGB"),                                      # 003 Always-on
-        *ziffern,                                                # 004-013 Tag
-        h, m, s, na,                                             # 014-017
-        h_a, m_a, na_a,                                          # 018-020
+    benannt = [
+        ("vorschau", cover.convert("RGB").resize((250, 250), Image.LANCZOS)),
+        ("hg", hg.convert("RGB")),
+        ("aod", aod.convert("RGB")),
+        *((f"ziffer{i}", z) for i, z in enumerate(ziffern)),
+        ("h", h), ("m", m), ("s", s), ("nabe", na),
+        ("h_a", h_a), ("m_a", m_a), ("nabe_a", na_a),
     ]
-    einer = ",".join(f"A100_{4 + i:03d}.png" for i in range(10))
-    zehner = ",".join(f"A100_{4 + i:03d}.png" for i in range(4))
+    bilder = [b for _, b in benannt]
+    nr = {name: i + 1 for i, (name, _) in enumerate(benannt)}
+    res = lambda name: f"A100_{nr[name]:03d}.png"
+    einer = ",".join(res(f"ziffer{i}") for i in range(10))
+    zehner = ",".join(res(f"ziffer{i}") for i in range(4))
     config = f'''<?xml version="1.0" encoding="utf-8"?>
 <watchface>
     <element label="background" is_support_option="false" res_preview="">
-        <layer index="1" draw_type="single_res" ambient_mode="0" res_name="A100_002.png" res_position="0,0"/>
-        <layer index="2" draw_type="single_res" ambient_mode="1" res_name="A100_003.png" res_position="0,0"/>
+        <layer index="1" draw_type="single_res" ambient_mode="0" res_name="{res("hg")}" res_position="0,0"/>
+        <layer index="2" draw_type="single_res" ambient_mode="1" res_name="{res("aod")}" res_position="0,0"/>
     </element>
     <element label="date" is_support_option="false" res_preview="">
         <layer index="1" draw_type="selected_res" value_type="70" ambient_mode="0" res_name="{zehner}" res_position="{TAG_X + MITTE - 17},219"/>
         <layer index="2" draw_type="selected_res" value_type="71" ambient_mode="0" res_name="{einer}" res_position="{TAG_X + MITTE},219"/>
     </element>
     <element label="time" is_support_option="false" res_preview="">
-        {hand_ebene(1, 150, 0, 14, hp)}
-        {hand_ebene(2, 153, 0, 15, mp)}
-        {hand_ebene(3, 154, 0, 16, sp)}
-        <layer index="4" draw_type="single_res" ambient_mode="0" res_name="A100_017.png" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}"/>
-        {hand_ebene(5, 150, 1, 18, hap)}
-        {hand_ebene(6, 153, 1, 19, map_)}
-        <layer index="7" draw_type="single_res" ambient_mode="1" res_name="A100_020.png" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}"/>
+        {hand_ebene(1, 150, 0, nr["h"], hp)}
+        {hand_ebene(2, 153, 0, nr["m"], mp)}
+        {hand_ebene(3, 154, 0, nr["s"], sp)}
+        <layer index="4" draw_type="single_res" ambient_mode="0" res_name="{res("nabe")}" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}"/>
+        {hand_ebene(5, 150, 1, nr["h_a"], hap)}
+        {hand_ebene(6, 153, 1, nr["m_a"], map_)}
+        <layer index="7" draw_type="single_res" ambient_mode="1" res_name="{res("nabe_a")}" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}"/>
     </element>
 </watchface>
 '''.encode()
@@ -265,9 +271,9 @@ def main():
         <briefinfo>{{"de_DE":"Watch Phase für die Watch 3"}}</briefinfo>
   </HwTheme>
 '''.encode()
-    wort = lambda *bits: "".join("1" if i in bits else "0" for i in range(32))
     nullen = "0" * 32
-    wertarten = [nullen, nullen, wort(0, 1), nullen, wort(13, 16, 17)] + [nullen] * 13 + ["0000"]
+    gesetzt = set(WERT_BIT.values())
+    wertarten = ["".join("1" if w * 32 + i in gesetzt else "0" for i in range(32)) for w in range(18)] + ["0000"]
     ability = f'''<?xml version="1.0" encoding="UTF-8"?>
         <attribute>
             <dataType>{nullen},{nullen},{"0" * 22}</dataType>
@@ -278,23 +284,14 @@ def main():
     vorschau = {"cover.jpg": jpg(cover, 960), "aod.jpg": jpg(aod_bild, 960), "icon_small.jpg": jpg(cover, 390)}
     datei = hwt.hwt_bauen(config, [png(b) for b in bilder], description, ability, vorschau, TITEL, TITEL)
 
-    os.makedirs("dist", exist_ok=True)
-    open("dist/WatchPhase.hwt", "wb").write(datei)
-    cover.save("dist/vorschau.png")
-    rundmaske(zeichnen(hg, teile, 12, 3, 23, 1)).save("dist/vergleich-foto.png")
-    aod_bild.save("dist/vorschau-aod.png")
-    print("dist/WatchPhase.hwt", len(datei), "Bytes")
-
-
-def _aod_vorschau(aod, teile):
-    bild = aod.copy()
-    for (z, (px, py)), w in ((teile["h"], 304), (teile["m"], 48)):
-        leinwand = Image.new("RGBA", (GROESSE, GROESSE), (0, 0, 0, 0))
-        leinwand.alpha_composite(z, (MITTE - px, MITTE - py))
-        bild.alpha_composite(leinwand.rotate(-w, Image.BICUBIC, center=(MITTE + 0.5, MITTE + 0.5)))
-    n = teile["nabe"]
-    bild.alpha_composite(n, (MITTE - n.width // 2, MITTE - n.height // 2))
-    return bild
+    dist = os.path.join(ORDNER, "dist")
+    os.makedirs(dist, exist_ok=True)
+    with open(os.path.join(dist, "WatchPhase.hwt"), "wb") as f:
+        f.write(datei)
+    cover.save(os.path.join(dist, "vorschau.png"))
+    rundmaske(zeichnen(hg, teile, 12, 3, 23, 1)).save(os.path.join(dist, "vergleich-foto.png"))
+    aod_bild.save(os.path.join(dist, "vorschau-aod.png"))
+    print(os.path.join(dist, "WatchPhase.hwt"), len(datei), "Bytes")
 
 
 if __name__ == "__main__":
