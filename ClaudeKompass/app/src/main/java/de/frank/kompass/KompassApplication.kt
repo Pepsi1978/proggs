@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
  */
 class KompassContainer(context: Context) {
 
-    private val appContext = context.applicationContext
+    val appContext = context.applicationContext
 
     val einstellungen = EinstellungenStore(appContext)
     val repository = KompassRepository(appContext)

@@ -7,6 +7,16 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
+    <!-- Offline-Transkription über Jarvis (Parakeet): nur mit Franks gemeinsamem Signaturschlüssel. -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+
+    <queries>
+        <provider android:authorities="de.frank.jarvis.parakeet" />
+    </queries>
+
     <application
         android:name="de.frank.kompass.KompassApplication"
         android:allowBackup="true"
