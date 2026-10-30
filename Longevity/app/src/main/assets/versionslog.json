@@ -19,6 +19,7 @@
     {"versionCode": 15, "versionName": "1.0.14", "stand": "22.10.2026, 11:21 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für bessere Schreibweisen beim Diktat."},
     {"versionCode": 16, "versionName": "1.0.15", "stand": "22.10.2026, 11:50 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 ist nach erneuter Auswahl sofort wieder nutzbar."},
     {"versionCode": 17, "versionName": "1.0.16", "stand": "22.10.2026, 12:49 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe, Websuche und eigenem API-Schlüssel wie in Jarvis."},
-    {"versionCode": 18, "versionName": "1.0.17", "stand": "30.10.2026, 11:40 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
+    {"versionCode": 18, "versionName": "1.0.17", "stand": "30.10.2026, 11:40 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
+    {"versionCode": 19, "versionName": "1.0.18", "stand": "30.10.2026, 19:27 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
   ]
 }

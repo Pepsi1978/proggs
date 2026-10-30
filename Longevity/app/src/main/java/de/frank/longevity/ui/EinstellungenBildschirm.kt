@@ -103,7 +103,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 }
                 Block("Hell / Dunkel") {
                     ChipReihe {
-                        Chip("Wie System", e.modus == "system") { e.modus = "system" }
+                        Chip("Automatisch (Sonne)", e.modus == "system") { e.modus = "system" }
                         Chip("☀️ Hell", e.modus == "hell") { e.modus = "hell" }
                         Chip("🌙 Dunkel", e.modus == "dunkel") { e.modus = "dunkel" }
                     }

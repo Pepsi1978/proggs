@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Forum
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Palette
@@ -57,7 +58,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -206,10 +206,15 @@ fun ListeBildschirm(vm: AppViewModel) {
                 }
                 AktualisierenKnopf(vm)
                 RundKnopf(Icons.Rounded.Palette, "Design wechseln", aktiv = designOffen) { designOffen = !designOffen }
-                val system = isSystemInDarkTheme()
-                RundKnopf(if (f.dunkel) Icons.Rounded.LightMode else Icons.Rounded.DarkMode, if (f.dunkel) "Hell" else "Dunkel") {
-                    vm.einstellungen.modus = if (f.dunkel) "hell" else "dunkel"
-                    if ((vm.einstellungen.modus == "dunkel") == system) vm.einstellungen.modus = "system"
+                // Hell → Automatisch (nach der Sonne) → Dunkel → Hell. Das Symbol zeigt den eingestellten Modus.
+                val modus = vm.einstellungen.modus
+                RundKnopf(
+                    when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
+                    when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" },
+                ) {
+                    val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
+                    vm.einstellungen.modus = neu
+                    vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" })
                 }
                 RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
             }
