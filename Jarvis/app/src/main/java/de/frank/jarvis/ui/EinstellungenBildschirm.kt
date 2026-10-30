@@ -672,7 +672,9 @@ private fun AnthropicGuthaben(vm: AppViewModel) {
     androidx.compose.runtime.LaunchedEffect(Unit) { vm.anthropicGuthabenAbfragen() }
     val g = vm.anthropicGuthaben
     var anmelden by rememberSaveable { mutableStateOf(false) }
+    val konsole by de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.verbunden.collectAsState()
     Unterzeile("Guthaben (Claude Console)")
+    if (konsole == false) KonsolenWarnung(Modifier.padding(bottom = 8.dp)) { anmelden = true }
     Text(
         if (g == null) (if (vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Noch nicht abgefragt.") else g.zeile(),
         color = if (g?.restUsd == null) f.textLeise else f.text,
@@ -684,20 +686,23 @@ private fun AnthropicGuthaben(vm: AppViewModel) {
     )
     Knopf(if (vm.anthropicGuthabenLaedt) "Wird abgefragt …" else "Jetzt abfragen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.anthropicGuthabenAbfragen(erzwingen = true) }
     if (vm.anthropicConsoleAngemeldet) Knopf("Bei der Claude Console abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.anthropicConsoleAbmelden() }
-    else Knopf("Bei der Claude Console anmelden", Modifier.padding(top = 8.dp).fillMaxWidth()) { anmelden = true }
-    Text("Jarvis liest das Guthaben so, wie es die Claude Console oben rechts zeigt. Dafür einmal anmelden, am besten per E-Mail-Code " +
-        "(die Google-Anmeldung lässt Google in eingebetteten Browsern nicht zu).",
+    if (!vm.anthropicConsoleAngemeldet || konsole == false) Knopf("Bei der Claude Console anmelden", Modifier.padding(top = 8.dp).fillMaxWidth()) { anmelden = true }
+    Text("Jarvis liest das Guthaben so, wie es die Claude Console oben rechts zeigt. Dafür einmal anmelden, per E-Mail-Code oder Google; die Anmeldung bleibt, bis du dich selbst abmeldest.",
         color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
     if (anmelden) ConsoleAnmeldung(onFertig = { anmelden = false; vm.anthropicConsoleAnmeldungPruefen() })
 }
 
 /** Eingebetteter Browser mit der Anmeldeseite der Claude Console; schließt sich, sobald die Sitzung steht. */
 @Composable
-internal fun ConsoleAnmeldung(onFertig: () -> Unit) = AnmeldeBrowser(
-    "Claude Console anmelden", de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.LOGIN_URL, googleTauglich = false,
-    fertig = { u -> de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() && u.startsWith("https://platform.claude.com") && !u.contains("/login") },
-    onFertig = onFertig,
-)
+internal fun ConsoleAnmeldung(onFertig: () -> Unit) {
+    // Nur beim Öffnen: Danach zeigt jede Sitzung im Browser, dass die Anmeldung geglückt ist.
+    remember { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.anmeldungVorbereiten() }
+    AnmeldeBrowser(
+        "Claude Console anmelden", de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.LOGIN_URL, googleTauglich = true,
+        fertig = { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.browserAngemeldet() },
+        onFertig = onFertig,
+    )
+}
 
 /** Eingebetteter Browser mit der Google-Anmeldung; schließt sich, sobald AI Studio erreicht ist. */
 @Composable
@@ -730,6 +735,15 @@ private fun AnmeldeBrowser(titel: String, url: String, googleTauglich: Boolean, 
                         android.webkit.CookieManager.getInstance().flush()
                         if (!erledigt && fertig(u)) { erledigt = true; onFertig() }
                     }
+                    // Das Cookie kann später kommen als die neue Adresse: regelmäßig nachsehen, bis der Browser zu ist.
+                    val wache = object : Runnable {
+                        override fun run() {
+                            val haupt = rahmen.getChildAt(0) as? android.webkit.WebView ?: return
+                            haupt.url?.let(::pruefen)
+                            if (!erledigt) rahmen.postDelayed(this, 1_000L)
+                        }
+                    }
+                    rahmen.postDelayed(wache, 1_000L)
                     fun einrichten(w: android.webkit.WebView) {
                         w.settings.javaScriptEnabled = true
                         w.settings.domStorageEnabled = true
@@ -743,6 +757,9 @@ private fun AnmeldeBrowser(titel: String, url: String, googleTauglich: Boolean, 
                             override fun onPageFinished(view: android.webkit.WebView?, url: String?) = pruefen(url.orEmpty())
                             // Die Console wechselt nach der Anmeldung per Client-Navigation, ohne neue Seite.
                             override fun doUpdateVisitedHistory(view: android.webkit.WebView?, url: String?, isReload: Boolean) = pruefen(url.orEmpty())
+                            override fun onReceivedHttpError(view: android.webkit.WebView?, request: android.webkit.WebResourceRequest?, antwort: android.webkit.WebResourceResponse?) {
+                                if (request?.isForMainFrame == true) de.frank.jarvis.observability.Logbuch.netz("Anmeldeseite antwortet mit ${antwort?.statusCode}", request.url.host.orEmpty() + request.url.path.orEmpty())
+                            }
                         }
                         w.webChromeClient = object : android.webkit.WebChromeClient() {
                             override fun onCreateWindow(view: android.webkit.WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {

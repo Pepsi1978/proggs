@@ -141,6 +141,11 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     LaunchedEffect(vm, modell.istAnthropic) {
         if (modell.istAnthropic) vm.anthropicGuthabenZeigen()
     }
+    // Einmal beim Öffnen: Sonst merkt die Warnung erst bei der nächsten Aufgabe, dass die Anthropic-Konsole nicht mehr verbunden ist.
+    LaunchedEffect(vm) { vm.anthropicGuthabenAbfragen() }
+    val konsole by AnthropicGuthabenFaehigkeit.verbunden.collectAsState()
+    var konsoleAnmelden by remember { mutableStateOf(false) }
+    if (konsoleAnmelden) ConsoleAnmeldung(onFertig = { konsoleAnmelden = false; vm.anthropicConsoleAnmeldungPruefen() })
     val guthabenStand = if (modell.istAnthropic) vm.anthropicGuthaben?.takeIf { it.hinweis == null } else null
     val guthabenUsd = guthabenStand?.restUsd
     // Unter 5 € (EZB-Tageskurs aus der Guthaben-Abfrage) rot, sonst grün; ohne Kurs bleibt es grün.
@@ -162,6 +167,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
 
     Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, 28.dp, erhoeht = 0.8f, fuellung = f.flaecheStark)) {
         if (vm.liveAktiv) { LiveLeiste(vm); return@Column }
+
+        if (konsole == false) KonsolenWarnung(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp)) { konsoleAnmelden = true }
 
         if (vm.anhaenge.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

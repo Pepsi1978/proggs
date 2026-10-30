@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit
 import de.frank.jarvis.faehigkeit.GoogleGuthabenFaehigkeit
 import de.frank.jarvis.ui.theme.LocalFarben
+import de.frank.jarvis.ui.theme.antippen
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -55,8 +57,10 @@ private fun ClaudeKarte(vm: AppViewModel) {
     val f = LocalFarben.current
     var anmelden by rememberSaveable { mutableStateOf(false) }
     val g = vm.anthropicGuthaben
+    val konsole by AnthropicGuthabenFaehigkeit.verbunden.collectAsState()
     Bereich("Claude-Modelle (Anthropic)") {
         Text("Bezahlt Jarvis' Kopf, wenn du ein Claude-Modell gewählt hast.", color = f.textSchwach, fontSize = 13.sp)
+        if (konsole == false) KonsolenWarnung(Modifier.padding(top = 10.dp)) { anmelden = true }
         val rest = g?.restUsd
         if (rest == null) {
             NichtDa(g?.hinweis, vm.anthropicGuthabenLaedt, vm.anthropicConsoleAngemeldet, "Claude Console",
@@ -80,6 +84,7 @@ private fun ClaudeKarte(vm: AppViewModel) {
                 ok = rest > 0.004,
             )
             Fuss(g.standText(), g.hinweis, vm.anthropicGuthabenLaedt) { vm.anthropicGuthabenAbfragen(erzwingen = true) }
+            if (konsole == false) Knopf("Neu bei Claude Console anmelden", Modifier.padding(top = 8.dp).fillMaxWidth()) { anmelden = true }
             Knopf("Bei der Claude Console abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.anthropicConsoleAbmelden() }
         }
     }
@@ -141,6 +146,16 @@ private fun GoogleKarte(vm: AppViewModel) {
         }
     }
     if (anmelden) GoogleAnmeldung(onFertig = { anmelden = false; vm.googleAnmeldungPruefen() })
+}
+
+/** Deutlich, denn ohne die Konsole fällt nicht auf, was Claude-Modelle gerade kosten. Antippen führt zur Anmeldung. */
+@Composable
+internal fun KonsolenWarnung(modifier: Modifier = Modifier, anmelden: () -> Unit) {
+    val f = LocalFarben.current
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(f.gefahr.copy(alpha = 0.16f)).antippen(aktion = anmelden).padding(10.dp)) {
+        Text("⚠ Anthropic-Konsole nicht verbunden", color = f.gefahr, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text("Kosten und Kostenveränderungen sind deshalb nicht sichtbar. Antippen zum Anmelden.", color = f.text, fontSize = 13.sp)
+    }
 }
 
 /** Noch keine Zahl: entweder anmelden oder der Grund, warum die Abfrage scheiterte. */

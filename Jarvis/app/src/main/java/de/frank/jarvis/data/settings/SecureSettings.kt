@@ -291,6 +291,16 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.ANTHROPIC_API_KEY, "")
         set(value) = writeString(Keys.ANTHROPIC_API_KEY, value)
 
+    /** Sitzung der Anthropic-Konsole: Sie gilt, bis Frank sich abmeldet, auch wenn das Cookie im Browser abläuft. */
+    var anthropicConsoleSitzung: String
+        get() = readString(Keys.ANTHROPIC_CONSOLE_SITZUNG, "")
+        set(value) = writeString(Keys.ANTHROPIC_CONSOLE_SITZUNG, value)
+
+    /** Die Konsole hat die gespeicherte Sitzung zuletzt abgelehnt; die Warnung bleibt auch nach einem Neustart. */
+    var anthropicConsoleAbgelehnt: Boolean
+        get() = readString(Keys.ANTHROPIC_CONSOLE_ABGELEHNT, "") == "1"
+        set(value) = writeString(Keys.ANTHROPIC_CONSOLE_ABGELEHNT, if (value) "1" else "")
+
     // ---- Live-Gespräch (OpenAI Realtime) ----
 
     /** Eigener OpenAI-Plattform-Schlüssel (sk-…) für das Live-Gespräch; das ChatGPT-Abo reicht dafür nicht. */
@@ -396,6 +406,8 @@ class SecureSettings(context: Context) : Closeable {
         const val GEMINI_API_KEY_BEZAHLT = "gemini_api_key_bezahlt"
         const val OPENAI_API_KEY = "openai_api_key"
         const val ANTHROPIC_API_KEY = "anthropic_api_key"
+        const val ANTHROPIC_CONSOLE_SITZUNG = "anthropic_console_sitzung"
+        const val ANTHROPIC_CONSOLE_ABGELEHNT = "anthropic_console_abgelehnt"
         const val MODEL = "model"
         const val REASONING = "reasoning"
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"

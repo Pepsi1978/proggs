@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebSettings
+import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.Logbuch
 import java.io.File
 import java.time.Instant
@@ -26,8 +27,9 @@ import org.json.JSONObject
  * Franks Anthropic-Guthaben, genau wie es die Claude Console oben rechts zeigt („Organisationscredits“): Rest, monatlich
  * gewährter Betrag (z. B. 100 $ aus dem Max-Abo) und Verfallsdatum. Die Console liest es aus
  * `/api/organizations/<org>/prepaid/credits`; das geht nur mit Franks Console-Anmeldung (Cookie), nicht mit einem
- * API-Schlüssel. Frank meldet sich dafür einmal in Jarvis an ([LOGIN_URL], eingebetteter Browser); Jarvis nutzt danach
- * dessen Cookies. Inoffizielle Schnittstelle: ändert Anthropic sie, kommt ein Hinweis statt einer Zahl.
+ * API-Schlüssel. Frank meldet sich dafür einmal in Jarvis an ([LOGIN_URL], eingebetteter Browser). Das Sitzungs-Cookie läuft
+ * nach sieben Tagen ab, deshalb liegt die Sitzung zusätzlich verschlüsselt in [SecureSettings] und endet nur durch Franks
+ * Abmelden. Inoffizielle Schnittstelle: ändert Anthropic sie, kommt ein Hinweis statt einer Zahl.
  * Umgerechnet wird mit dem Tageskurs der EZB (Frankfurter, ohne Schlüssel).
  */
 class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
@@ -126,6 +128,9 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         private val CLIENT = OkHttpClient.Builder().connectTimeout(12, TimeUnit.SECONDS).readTimeout(25, TimeUnit.SECONDS).build()
         private val sperre = Mutex()
         private val hintergrund = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+        private val _verbunden = kotlinx.coroutines.flow.MutableStateFlow<Boolean?>(null)
+        /** Sitzung vorhanden und nicht abgelehnt; null = noch nicht geprüft. Steuert die Warnung, auch bei Abfragen aus dem Dienst. */
+        val verbunden: kotlinx.coroutines.flow.StateFlow<Boolean?> = _verbunden
         private val _frisch = kotlinx.coroutines.flow.MutableStateFlow<Stand?>(null)
         /** Jeder frisch geholte Stand, auch aus dem Dienst (Tagesauswertung): Die Anzeige unten übernimmt ihn sofort. */
         val frisch: kotlinx.coroutines.flow.StateFlow<Stand?> = _frisch
@@ -143,19 +148,68 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             }
         }
 
+        /** Hält die Sitzung ohne Aufgabe mit einem Claude-Modell am Leben: Jede Antwort der Console kann sie verlängern. */
+        fun frischHalten(context: Context) {
+            val app = context.applicationContext
+            hintergrund.launch { stand(app) }
+        }
+
         private fun datei(context: Context) = File(context.filesDir, "anthropic_guthaben.json")
 
         fun betrag(w: Double): String = String.format(Locale.GERMAN, "%,.2f", w)
 
         private fun cookies(): String = runCatching { CookieManager.getInstance().getCookie(CONSOLE) }.getOrNull().orEmpty()
 
-        /** true, wenn Frank in Jarvis bei der Claude Console angemeldet ist (Sitzungs-Cookie vorhanden). */
-        fun angemeldet(): Boolean = cookies().contains("sessionKey=")
+        private fun browserSitzung(): String? = cookies().split(';').map { it.trim() }
+            .firstOrNull { it.startsWith("sessionKey=") }?.substringAfter('=')?.takeIf { it.isNotEmpty() }
+
+        /** true, sobald der Anmelde-Browser eine Sitzung hat. */
+        fun browserAngemeldet(): Boolean = browserSitzung() != null
+
+        /** Die gültige Sitzung: Das Cookie geht vor und wird gesichert, ohne Cookie zählt die gesicherte. */
+        private fun sitzung(context: Context): String? {
+            val s = SecureSettings.get(context)
+            val browser = browserSitzung()
+            if (browser != null && browser != s.anthropicConsoleSitzung) s.anthropicConsoleSitzung = browser
+            return browser ?: s.anthropicConsoleSitzung.takeIf { it.isNotEmpty() }
+        }
+
+        /** true, wenn Frank in Jarvis bei der Claude Console angemeldet ist. Nur sein Abmelden beendet das. */
+        fun angemeldet(context: Context): Boolean = sitzung(context) != null
+
+        /** Vor einer Anmeldung: alte Cookies und Seitendaten weg, damit nichts Altes sie stört. Die gesicherte Sitzung bleibt, bis die neue steht. */
+        fun anmeldungVorbereiten() {
+            browserLeeren()
+            android.webkit.WebStorage.getInstance().deleteOrigin(CONSOLE)
+        }
+
+        /** Nach dem Anmelde-Browser: true, wenn eine neue Sitzung da ist; sie ersetzt die gesicherte. */
+        fun anmeldungUebernehmen(context: Context): Boolean {
+            if (!browserAngemeldet()) return false
+            sitzung(context)
+            ablehnungSetzen(context, false)
+            Logbuch.netz("Bei der Claude Console angemeldet", "")
+            return true
+        }
+
+        private fun ablehnungSetzen(context: Context, abgelehnt: Boolean) {
+            SecureSettings.get(context).anthropicConsoleAbgelehnt = abgelehnt
+            _verbunden.value = !abgelehnt
+        }
 
         /** Meldet Jarvis bei der Console ab: alle Cookies weg, gespeicherter Stand weg. Wartet eine laufende Abfrage ab. */
         suspend fun abmelden(context: Context) = withContext(Dispatchers.IO) { sperre.withLock { abmeldenOhneSperre(context.applicationContext) } }
 
         private fun abmeldenOhneSperre(context: Context) {
+            browserLeeren()
+            val s = SecureSettings.get(context)
+            s.anthropicConsoleSitzung = ""
+            s.anthropicConsoleAbgelehnt = false
+            _verbunden.value = false
+            datei(context).delete()
+        }
+
+        private fun browserLeeren() {
             // Nur die Cookies der Console löschen: Die Google-Anmeldung für das Google-Guthaben bleibt bestehen.
             val cm = CookieManager.getInstance()
             // Mit Secure, sonst lehnt Chromium das Überschreiben der __Secure-/__Host-Cookies ab.
@@ -166,11 +220,10 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                 }
             }
             CookieManager.getInstance().flush()
-            datei(context).delete()
         }
 
-        /** Sitzung bei der Console abgelaufen: Cookies löschen, damit die Einstellungen wieder „Anmelden“ anbieten. */
-        private class SitzungAbgelaufen(meldung: String) : IllegalStateException(meldung)
+        /** Die Console lehnt die Sitzung ab. Sie bleibt gespeichert und wird weiter versucht, die Warnung bietet das Neuanmelden an. */
+        private class SitzungAbgelehnt(meldung: String) : IllegalStateException(meldung)
 
         /** ISO-Zeitpunkt mit „Z“ oder Versatz (auch mit Mikrosekunden) als Instant; null, wenn unlesbar. */
         private fun zeitpunkt(text: String): Instant? =
@@ -197,15 +250,19 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
          */
         suspend fun stand(context: Context, erzwingen: Boolean = false): Stand = withContext(Dispatchers.IO) {
             val app = context.applicationContext
-            if (!angemeldet()) return@withContext Stand(null, null, "", null, "", 0,
-                "Für das Guthaben bitte unter Einstellungen → Jarvis einmal bei der Claude Console anmelden.")
+            if (!angemeldet(app)) {
+                _verbunden.value = false
+                return@withContext Stand(null, null, "", null, "", 0,
+                    "Für das Guthaben bitte unter Einstellungen → Guthaben einmal bei der Claude Console anmelden.")
+            }
+            _verbunden.value = !SecureSettings.get(app).anthropicConsoleAbgelehnt
             sperre.withLock {
                 val alt = gespeichert(app)
                 if (!erzwingen && alt != null && System.currentTimeMillis() - alt.geholt < FRISCH_MS) return@withLock alt
                 try {
-                    val ua = runCatching { WebSettings.getDefaultUserAgent(app) }.getOrDefault("Mozilla/5.0")
+                    val ua = browserKennung(app)
                     val org = organisation(app, ua)
-                    val c = holen("$CONSOLE/api/organizations/$org/prepaid/credits", ua) as JSONObject
+                    val c = holen(app, "$CONSOLE/api/organizations/$org/prepaid/credits", ua) as JSONObject
                     val rest = betragAus(c.optJSONObject("balance"), c.getLong("amount"))
                     // Nur gültige Tranchen mit Rest zählen; abgelaufene oder aufgebrauchte Vormonate verfälschen sonst
                     // „gewährt“, „verbraucht“ und das Verfallsdatum.
@@ -236,11 +293,11 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                         }
                     }
                     val verfaellt = verfaelltI?.toString().orEmpty()
-                    if (!angemeldet()) throw SitzungAbgelaufen("Inzwischen abgemeldet.")
                     // Der EZB-Kurs ändert sich nur einmal am Tag: ein höchstens sechs Stunden alter genügt.
                     val (kurs, kursDatum) = alt?.kurs?.takeIf { System.currentTimeMillis() - alt.geholt < 6 * 3_600_000L }
                         ?.let { it to alt.kursDatum } ?: kurs(app)
                     val jetzt = System.currentTimeMillis()
+                    ablehnungSetzen(app, false)
                     val j = JSONObject().put("org", org).put("rest", rest).put("verfaellt", verfaellt).put("geholt", jetzt).put("kursDatum", kursDatum)
                     if (gewaehrt > 0) j.put("gewaehrt", gewaehrt)
                     kurs?.let { j.put("kurs", it) }
@@ -249,9 +306,11 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     datei(app).writeText(j.toString())
                     Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt, gewaehrtAm = gewaehrtAm, eigenesUsd = eigenes,
                         abobetragUsd = abobetrag.takeIf { it > 0 }).also { _frisch.value = it }
-                } catch (f: SitzungAbgelaufen) {
-                    abmeldenOhneSperre(app)
-                    Stand(null, null, "", null, "", 0, f.message)
+                } catch (f: SitzungAbgelehnt) {
+                    Logbuch.netz("Claude Console lehnt die Anmeldung ab", f.message.orEmpty())
+                    ablehnungSetzen(app, true)
+                    if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Letzter Stand. ${f.message}", alt.gewaehrtAm, alt.eigenesUsd, alt.abobetragUsd)
+                    else Stand(null, null, "", null, "", 0, f.message)
                 } catch (f: Exception) { // no-cancellation-rethrow
                     Log.w(TAG, "Abfrage fehlgeschlagen", f)
                     Logbuch.netz("Anthropic-Guthaben nicht abrufbar", f.message ?: f.javaClass.simpleName)
@@ -265,7 +324,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         /** Die Organisation mit API-Zugang (nicht die Abo-Organisation von claude.ai); gemerkt in der Stand-Datei. */
         private fun organisation(context: Context, ua: String): String {
             runCatching { JSONObject(datei(context).readText()).optString("org") }.getOrNull()?.takeIf { it.isNotBlank() }?.let { return it }
-            val liste = holen("$CONSOLE/api/organizations", ua) as JSONArray
+            val liste = holen(context, "$CONSOLE/api/organizations", ua) as JSONArray
             for (i in 0 until liste.length()) {
                 val o = liste.getJSONObject(i)
                 val kann = o.optJSONArray("capabilities") ?: continue
@@ -274,17 +333,37 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             throw IllegalStateException("In der Claude Console gibt es keine Organisation mit API-Zugang.")
         }
 
-        private fun holen(url: String, ua: String): Any =
+        /** Dieselbe Browserkennung wie beim Anmelden: Die Bot-Abwehr bindet ihr Cookie daran. Ohne „; wv“ gehen auch E-Mail-Code und Google. */
+        private fun browserKennung(context: Context): String = runCatching { WebSettings.getDefaultUserAgent(context) }.getOrDefault("Mozilla/5.0")
+            .replace("; wv", "").replace(Regex("Version/\\d+(\\.\\d+)* "), "")
+
+        /** Set-Cookie wie im Browser übernehmen, sonst läuft die Sitzung trotz Abfragen ab. Eine Antwort beendet sie nie von allein. */
+        private fun neueCookies(context: Context, a: okhttp3.Response) {
+            val cm = CookieManager.getInstance()
+            a.headers("Set-Cookie").forEach { kopf ->
+                val c = okhttp3.Cookie.parse(a.request.url, kopf) ?: return@forEach
+                if (c.name == "sessionKey") {
+                    if (c.value.isEmpty() || c.expiresAt <= System.currentTimeMillis()) return@forEach
+                    SecureSettings.get(context).anthropicConsoleSitzung = c.value
+                }
+                cm.setCookie(CONSOLE, kopf)
+            }
+            cm.flush()
+        }
+
+        private fun holen(context: Context, url: String, ua: String): Any =
             CLIENT.newCall(
-                Request.Builder().url(url).header("Cookie", cookies()).header("User-Agent", ua)
-                    .header("Accept", "application/json").header("Referer", "$CONSOLE/dashboard").build(),
+                Request.Builder().url(url)
+                    .header("Cookie", (cookies().split(';').map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("sessionKey=") } + "sessionKey=${sitzung(context).orEmpty()}").joinToString("; "))
+                    .header("User-Agent", ua).header("Accept", "application/json").header("Referer", "$CONSOLE/dashboard").build(),
             ).execute().use { a ->
+                neueCookies(context, a)
                 val text = a.body?.string().orEmpty()
                 val json = text.trimStart().let { it.startsWith("{") || it.startsWith("[") }
                 // 401 oder ein 403 mit JSON-Antwort kommt von der Console selbst: Sitzung weg. Ein 403 als HTML-Seite ist die
                 // Bot-Abwehr (Cloudflare) vor der Console; neu anmelden hilft dort nicht.
-                if (a.code == 401 || (a.code == 403 && json)) throw SitzungAbgelaufen(
-                    "Die Anmeldung bei der Claude Console ist abgelaufen (${a.code}). Bitte unter Einstellungen → Jarvis neu anmelden.")
+                if (a.code == 401 || (a.code == 403 && json)) throw SitzungAbgelehnt(
+                    "Die Claude Console lehnt die Anmeldung gerade ab (${a.code}). Sie bleibt gespeichert und Jarvis versucht es weiter; hilft das nicht, unter Einstellungen → Guthaben neu anmelden.")
                 if (!a.isSuccessful) throw IllegalStateException(when (a.code) {
                     403 -> "Die Bot-Abwehr der Claude Console lässt die Abfrage vom Handy gerade nicht durch (403); neu anmelden hilft hier nicht."
                     429 -> "Anthropic bremst gerade (429); bitte gleich noch einmal versuchen."

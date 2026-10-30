@@ -3264,7 +3264,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (anthropicGuthaben == null) gespeichertesGuthabenLaden()
             anthropicGuthaben = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.stand(app, erzwingen)
             // Erst hier (nicht beim Aufbau) gelesen: CookieManager lädt den WebView-Unterbau.
-            anthropicConsoleAngemeldet = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet() }
+            anthropicConsoleAngemeldet = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet(app) }
             anthropicGuthabenLaedt = false
         }
     }
@@ -3388,7 +3388,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Nach dem eingebetteten Anmelde-Browser: Sitzung prüfen und das Guthaben frisch holen. */
     fun anthropicConsoleAnmeldungPruefen() {
-        if (!de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.angemeldet()) return
+        if (!de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.anmeldungUebernehmen(getApplication())) return
         anthropicConsoleAngemeldet = true
         meldung = "Bei der Claude Console angemeldet."
         anthropicGuthaben = null
