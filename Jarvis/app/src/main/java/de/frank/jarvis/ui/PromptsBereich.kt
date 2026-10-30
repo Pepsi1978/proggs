@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,6 +49,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -216,18 +222,22 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
-/** Eingabe eines neuen oder zu bearbeitenden Prompts: eintippen oder einsprechen, KI-Knopf formuliert in gutes Deutsch (rückgängig machbar), Diskette speichert. */
+/** Eingabe eines neuen oder zu bearbeitenden Prompts als ganzer Bildschirm: eintippen oder einsprechen, KI-Knopf formuliert in gutes Deutsch (rückgängig machbar), Diskette speichert. */
 @Composable
 private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: () -> Unit) {
     val f = LocalFarben.current
-    Dialog(schliessen, DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
+    Dialog(schliessen, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Column(Modifier.fillMaxSize().background(f.hgOben).systemBarsPadding().imePadding().padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(vm.promptBearbeitet?.let { "Prompt ${it.nummer} bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Box(Modifier.size(40.dp).antippen(aktion = schliessen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
             }
-            Eingabe(vm.promptText, { vm.promptText = it }, if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen",
-                Modifier.fillMaxWidth().padding(vertical = 12.dp), einzeilig = false)
+            // Das Feld nimmt den ganzen freien Platz ein und scrollt langen Text in sich.
+            Box(Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(16.dp)) {
+                if (vm.promptText.isEmpty()) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen", color = f.textSchwach, fontSize = 16.sp)
+                BasicTextField(vm.promptText, { vm.promptText = it }, Modifier.fillMaxSize(),
+                    textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer))
+            }
             if (vm.promptFormuliert) Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Kern(28.dp, f.primaer, aktiv = true)
                 Text("Jarvis formuliert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
