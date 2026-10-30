@@ -218,8 +218,8 @@ struct TranskriptionsEinstellungenAnsicht: View {
                 Spacer(minLength: 0)
             }
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white.opacity(aktiv ? 0.08 : 0.03)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(aktiv ? Farbe.gruen.opacity(0.5) : Color.white.opacity(0.06)))
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Farbe.glas(aktiv ? 0.08 : 0.03)))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(aktiv ? Farbe.gruen.opacity(0.5) : Farbe.glas(0.06)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -233,7 +233,7 @@ struct TranskriptionsEinstellungenAnsicht: View {
             }
             .foregroundStyle(wert.wrappedValue ? Color.black : Farbe.text2)
             .padding(.horizontal, 12).padding(.vertical, 7)
-            .background(Capsule().fill(wert.wrappedValue ? AnyShapeStyle(Farbe.gruen) : AnyShapeStyle(Color.white.opacity(0.07))))
+            .background(Capsule().fill(wert.wrappedValue ? AnyShapeStyle(Farbe.gruen) : AnyShapeStyle(Farbe.glas(0.07))))
         }
         .buttonStyle(.plain)
     }
@@ -271,14 +271,14 @@ struct TranskriptionsEinstellungenAnsicht: View {
             if let f = tk.downloadFehler { Text(f).font(.jarvis(12)).foregroundStyle(Farbe.rot) }
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.black.opacity(0.2)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Farbe.tiefe(0.2)))
         .onChange(of: tk.download) { _, _ in auffrischen += 1 }
     }
 
     private var groq: some View {
         VStack(alignment: .leading, spacing: 10) {
             if einst.zugang.groq.isEmpty {
-                Text("Kein Groq-Schlüssel eingetragen (Einstellungen → Konten).").font(.jarvis(12, .medium)).foregroundStyle(Farbe.orange)
+                Text("Kein Groq-Schlüssel eingetragen (Einstellungen → Konten).").font(.jarvis(12, .medium)).foregroundStyle(Farbe.warnung)
             }
             Text("Whisper-Modell").font(.jarvis(13, .semibold))
             HStack(spacing: 8) {
@@ -297,14 +297,14 @@ struct TranskriptionsEinstellungenAnsicht: View {
             if tk.woerterbuchAn {
                 Text("Begriffe (durch Komma oder Zeilenumbruch getrennt)").font(.jarvis(11)).foregroundStyle(Farbe.text2)
                 TextEditor(text: $begriffe).font(.jarvis(12)).frame(minHeight: 70).scrollContentBackground(.hidden)
-                    .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
+                    .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.25)))
                 if begriffe != tk.woerterbuchBegriffe {
                     KapselKnopf(symbol: "checkmark", titel: "Begriffe speichern", hervorgehoben: true) { tk.woerterbuchBegriffe = begriffe }
                 }
             }
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.black.opacity(0.2)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Farbe.tiefe(0.2)))
     }
 
     private func chipWahl(_ titel: String, _ aktiv: Bool, _ aktion: @escaping () -> Void) -> some View {
@@ -312,7 +312,7 @@ struct TranskriptionsEinstellungenAnsicht: View {
             Text(titel).font(.jarvis(12, .semibold))
                 .foregroundStyle(aktiv ? Color.black : Farbe.text2)
                 .padding(.horizontal, 12).padding(.vertical, 7)
-                .background(Capsule().fill(aktiv ? AnyShapeStyle(Farbe.cyan) : AnyShapeStyle(Color.white.opacity(0.07))))
+                .background(Capsule().fill(aktiv ? AnyShapeStyle(Farbe.haupt) : AnyShapeStyle(Farbe.glas(0.07))))
         }
         .buttonStyle(.plain)
     }

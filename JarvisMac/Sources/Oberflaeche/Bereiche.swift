@@ -61,7 +61,7 @@ struct LiveAnsicht: View {
                             ForEach(live.mitschrift) { z in
                                 HStack(alignment: .top, spacing: 10) {
                                     Text(z.vonFrank ? "Du" : "Jarvis").font(.jarvis(12, .bold))
-                                        .foregroundStyle(z.vonFrank ? Farbe.gruen : Farbe.cyan).frame(width: 50, alignment: .trailing)
+                                        .foregroundStyle(z.vonFrank ? Farbe.gruen : Farbe.haupt).frame(width: 50, alignment: .trailing)
                                     Text(z.text).font(.jarvis(14)).foregroundStyle(Farbe.text).textSelection(.enabled)
                                 }
                                 .id(z.id)
@@ -70,7 +70,7 @@ struct LiveAnsicht: View {
                         .padding(20)
                     }
                     .frame(maxWidth: 760, maxHeight: 260)
-                    .background(RoundedRectangle(cornerRadius: 20).fill(Color.white.opacity(0.04)))
+                    .background(RoundedRectangle(cornerRadius: 20).fill(Farbe.glas(0.04)))
                     .onChange(of: live.mitschrift.count) { _, _ in if let id = live.mitschrift.last?.id { l.scrollTo(id) } }
                 }
             }
@@ -107,7 +107,7 @@ struct BereichsKopf: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: symbol).font(.system(size: 20, weight: .semibold)).foregroundStyle(Farbe.akzent)
-                .frame(width: 46, height: 46).background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.06)))
+                .frame(width: 46, height: 46).background(RoundedRectangle(cornerRadius: 14).fill(Farbe.glas(0.06)))
             VStack(alignment: .leading, spacing: 3) {
                 Text(titel).font(.jarvis(26, .bold))
                 Text(untertitel).font(.jarvis(13)).foregroundStyle(Farbe.text2)
@@ -157,6 +157,16 @@ struct GedaechtnisAnsicht: View {
     @State private var liveStand: Date?
     @State private var liveVoll = false
     @State private var liveWeg = false
+    @State private var handyFunktionen = BereichsLader()
+    @State private var macOffen = false
+    @State private var handyOffen = false
+    @State private var wissenOffen = false
+    @State private var regelnOffen = false
+    @State private var regeln = ""
+
+    private static func mitgeliefert(_ name: String) -> String {
+        Bundle.main.url(forResource: name, withExtension: "md").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Datei fehlt im App-Bundle."
+    }
 
     var body: some View {
         ScrollView {
@@ -173,7 +183,7 @@ struct GedaechtnisAnsicht: View {
                             }
                             .labelsHidden().frame(width: 150)
                             TextField("z. B. „Ich arbeite am Mac meistens mit Opus 5.5.“", text: $merken).textFieldStyle(.plain)
-                                .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
+                                .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Farbe.glas(0.05)))
                             KapselKnopf(symbol: "checkmark", titel: "Merken", hervorgehoben: true) {
                                 let t = merken, a = art
                                 Task {
@@ -186,10 +196,10 @@ struct GedaechtnisAnsicht: View {
                         if !antwort.isEmpty { Text(antwort).font(.jarvis(12)).foregroundStyle(Farbe.text2) }
                     }
                 }
-                KlappKarte(symbol: "doc.plaintext.fill", titel: "Langzeitkontext", farbe: Farbe.orange, untertitel: "Deine Textdatei für Jarvis, auf Mac und Handy gleich", offen: $langzeitOffen) {
+                KlappKarte(symbol: "doc.plaintext.fill", titel: "Langzeitkontext", farbe: Farbe.warnung, untertitel: "Deine Textdatei für Jarvis, auf Mac und Handy gleich", offen: $langzeitOffen) {
                     LangzeitkontextEditor()
                 }
-                KlappKarte(symbol: "bookmark.fill", titel: "Gemerktes", farbe: Farbe.violett, offen: $gemerktOffen) {
+                KlappKarte(symbol: "bookmark.fill", titel: "Gemerktes", farbe: Farbe.gold, offen: $gemerktOffen) {
                     HStack {
                         if gemerkt.laedt { ProgressView().controlSize(.small) }
                         Spacer()
@@ -197,7 +207,7 @@ struct GedaechtnisAnsicht: View {
                     }
                     MarkdownText(text: gemerkt.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
-                KlappKarte(symbol: "bolt.heart.fill", titel: "Live-Gedächtnis", farbe: Farbe.cyan,
+                KlappKarte(symbol: "bolt.heart.fill", titel: "Live-Gedächtnis", farbe: Farbe.haupt,
                            untertitel: liveWeg ? "Handy nicht erreichbar, letzter Stand" + (liveStand.map { " \($0.formatted(date: .omitted, time: .shortened))" } ?? "")
                                      : liveStand.map { "vom Handy, Stand \($0.formatted(date: .omitted, time: .shortened))" } ?? "", offen: $liveOffen) {
                     HStack {
@@ -207,10 +217,28 @@ struct GedaechtnisAnsicht: View {
                     }
                     MarkdownText(text: live.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
+                KlappKarte(symbol: "macbook", titel: "Funktionsübersicht am Mac", farbe: Farbe.haupt, untertitel: "Was Jarvis am Rechner kann, aus dem Repo", offen: $macOffen) {
+                    MarkdownText(text: Self.mitgeliefert("funktionen"), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                KlappKarte(symbol: "iphone", titel: "Funktionsübersicht am Handy", farbe: Farbe.gold, untertitel: handyFunktionen.laedt ? "lädt …" : "Was die Handy-App kann", offen: $handyOffen) {
+                    MarkdownText(text: handyFunktionen.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                KlappKarte(symbol: "square.grid.2x2.fill", titel: "Handy-Reiter und CLI", farbe: Farbe.kupfer, untertitel: "Reiter der Handy-App, Zusammenarbeit mit dem CLI", offen: $wissenOffen) {
+                    MarkdownText(text: Self.mitgeliefert("jarvis-wissen"), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                KlappKarte(symbol: "waveform.circle.fill", titel: "Regeln für ChatGPT Live", farbe: Farbe.gruen, untertitel: "Vorgaben des Handy-Jarvis", offen: $regelnOffen) {
+                    MarkdownText(text: regeln.isEmpty ? "Das Handy-Jarvis ist gerade nicht erreichbar." : regeln, groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .padding(36).frame(maxWidth: .infinity, alignment: .leading)
         }
         .onChange(of: gemerktOffen) { _, an in if an { Task { await gemerkt.laden("jarvis_gemerktes_lesen") } } }
+        .onChange(of: handyOffen) { _, an in
+            guard an else { return }
+            // Ohne Handy bleibt der Stand aus dem letzten Mac-Build.
+            Task { if await !handyFunktionen.laden("funktionen_lesen") { handyFunktionen.text = Self.mitgeliefert("handy-funktionen") } }
+        }
+        .onChange(of: regelnOffen) { _, an in if an { Task { regeln = await McpKlient.shared.anweisungen } } }
         // Der Mac hat kein eigenes Gedächtnis: Solange die Karte offen ist, kommt jede Minute der aktuelle Stand vom Handy.
         .task(id: liveOffen) {
             guard liveOffen else { return }
@@ -293,7 +321,7 @@ struct LangzeitkontextEditor: View {
             Text("Jarvis liest diesen Text bei jeder Frage mit. Füg zum Beispiel ein, was ChatGPT sich über dich gemerkt hat.")
                 .font(.jarvis(12)).foregroundStyle(Farbe.text2)
             TextEditor(text: $e.text).font(.jarvis(13)).frame(minHeight: 280).scrollContentBackground(.hidden)
-                .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
+                .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.25)))
                 .disabled(e.laedt)
             HStack(spacing: 10) {
                 KapselKnopf(symbol: "square.and.arrow.down.fill", titel: "Speichern", hervorgehoben: e.geaendert) {
@@ -304,7 +332,7 @@ struct LangzeitkontextEditor: View {
                 }
                 if e.laedt { ProgressView().controlSize(.small) }
                 Spacer()
-                Text("\(e.text.count) Zeichen\(e.geaendert ? ", nicht gespeichert" : "")").font(.jarvis(11)).foregroundStyle(e.geaendert ? Farbe.orange : Farbe.text3)
+                Text("\(e.text.count) Zeichen\(e.geaendert ? ", nicht gespeichert" : "")").font(.jarvis(11)).foregroundStyle(e.geaendert ? Farbe.warnung : Farbe.text3)
             }
             if e.konflikt {
                 HStack(spacing: 10) {
@@ -312,7 +340,7 @@ struct LangzeitkontextEditor: View {
                     KapselKnopf(symbol: "macbook", titel: "Meine Fassung speichern", hervorgehoben: true) { Task { await e.speichern(ueberschreiben: true) } }
                 }
             }
-            if !e.meldung.isEmpty { Text(e.meldung).font(.jarvis(12)).foregroundStyle(e.fehlerMeldung ? Farbe.orange : Farbe.gruen) }
+            if !e.meldung.isEmpty { Text(e.meldung).font(.jarvis(12)).foregroundStyle(e.fehlerMeldung ? Farbe.warnung : Farbe.gruen) }
         }
         .task { await e.laden() }
         .confirmationDialog("Deine ungespeicherten Änderungen verwerfen?", isPresented: $frageVerwerfen) {
@@ -354,10 +382,10 @@ struct AktivitaetAnsicht: View {
                     }
                     .padding(18)
                 }
-                .background(RoundedRectangle(cornerRadius: 18).fill(Color.white.opacity(0.03)))
+                .background(RoundedRectangle(cornerRadius: 18).fill(Farbe.glas(0.03)))
             } else {
                 ScrollView { MarkdownText(text: protokoll.text ?? "Lade …", groesse: 13).padding(18) }
-                    .background(RoundedRectangle(cornerRadius: 18).fill(Color.white.opacity(0.03)))
+                    .background(RoundedRectangle(cornerRadius: 18).fill(Farbe.glas(0.03)))
                     .task { await protokoll.laden("protokoll_lesen") }
             }
         }
@@ -367,11 +395,11 @@ struct AktivitaetAnsicht: View {
     private func farbe(_ art: String) -> Color {
         switch art {
         case "fehler": return Farbe.rot
-        case "werkzeug": return Farbe.violett
-        case "gehirn": return Farbe.cyan
+        case "werkzeug": return Farbe.gold
+        case "gehirn": return Farbe.haupt
         case "sprache", "live": return Farbe.gruen
-        case "tresor": return Farbe.orange
-        case "ablage", "gedaechtnis", "gespraech": return Farbe.rosa
+        case "tresor": return Farbe.warnung
+        case "ablage", "gedaechtnis", "gespraech": return Farbe.kupfer
         default: return Farbe.text3
         }
     }
@@ -409,6 +437,5 @@ struct MenueLeiste: View {
         }
         .padding(16)
         .frame(width: 300)
-        .preferredColorScheme(.dark)
     }
 }

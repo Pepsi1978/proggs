@@ -69,7 +69,7 @@ struct VorleseEinstellungenAnsicht: View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    KartenTitel(symbol: "person.wave.2.fill", titel: "Stimme · \(v.anbieter.kurz)", farbe: Farbe.violett)
+                    KartenTitel(symbol: "person.wave.2.fill", titel: "Stimme · \(v.anbieter.kurz)", farbe: Farbe.gold)
                     Spacer()
                     if v.anbieter == .qwenKlon {
                         KapselKnopf(symbol: "arrow.clockwise", titel: "Aus dem Alibaba-Konto laden") { Task { await v.klonStimmenLaden() } }
@@ -113,12 +113,12 @@ struct VorleseEinstellungenAnsicht: View {
                 Task { await stimme.probe(st.id); if probeLaeuft == st.id { probeLaeuft = nil } }
             } label: {
                 Image(systemName: probeLaeuft == st.id && stimme.spricht ? "speaker.wave.2.fill" : "play.circle")
-                    .foregroundStyle(Farbe.cyan)
+                    .foregroundStyle(Farbe.haupt)
             }
             .buttonStyle(.plain).help("Hörprobe")
         }
         .padding(.horizontal, 10).padding(.vertical, 7)
-        .background(RoundedRectangle(cornerRadius: 9).fill(Color.white.opacity(gewaehlt ? 0.09 : 0.02)))
+        .background(RoundedRectangle(cornerRadius: 9).fill(Farbe.glas(gewaehlt ? 0.09 : 0.02)))
         .contentShape(Rectangle())
         .onTapGesture { v.setzeStimme(st.id, fuer: v.anbieter) }
         .contextMenu {
@@ -133,7 +133,7 @@ struct VorleseEinstellungenAnsicht: View {
     private var schluesselKarte: some View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 10) {
-                KartenTitel(symbol: "key.fill", titel: "Schlüssel fürs Vorlesen", farbe: Farbe.orange)
+                KartenTitel(symbol: "key.fill", titel: "Schlüssel fürs Vorlesen", farbe: Farbe.warnung)
                 Text("Verschlüsselt im Tresor dieses Macs, Anzeigen und Ändern nur nach Touch ID. Edge braucht keinen Schlüssel.")
                     .font(.jarvis(11)).foregroundStyle(Farbe.text2)
                 TresorKopf()
@@ -183,10 +183,10 @@ struct VorleseEinstellungenAnsicht: View {
         return HStack(spacing: 10) {
             Toggle("", isOn: Binding(get: { aktiv }, set: { _ in v.stufeUmschalten(stufe.id) })).toggleStyle(.switch).labelsHidden()
             if aktiv, let nr = v.kette.firstIndex(of: stufe.id) {
-                Text("\(nr + 1).").font(.jarvis(12, .bold)).foregroundStyle(Farbe.cyan).frame(width: 20)
+                Text("\(nr + 1).").font(.jarvis(12, .bold)).foregroundStyle(Farbe.haupt).frame(width: 20)
             }
             Text(stufe.titel).font(.jarvis(13, aktiv ? .semibold : .regular)).foregroundStyle(aktiv ? Farbe.text : Farbe.text2)
-            if !bereit { Text("Schlüssel fehlt").font(.jarvis(10, .medium)).foregroundStyle(Farbe.orange) }
+            if !bereit { Text("Schlüssel fehlt").font(.jarvis(10, .medium)).foregroundStyle(Farbe.warnung) }
             Spacer()
             if aktiv {
                 Button { v.stufeVerschieben(stufe.id, um: -1) } label: { Image(systemName: "chevron.up") }.buttonStyle(.plain)

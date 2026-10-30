@@ -3,10 +3,11 @@ import Carbon.HIToolbox
 import SwiftUI
 
 enum Bereich: String, CaseIterable, Identifiable {
-    case zentrale, gespraech, live, programmierung, ablage, gedaechtnis, aktivitaet, einstellungen
+    case start, zentrale, gespraech, live, programmierung, ablage, gedaechtnis, aktivitaet, einstellungen
     var id: String { rawValue }
     var titel: String {
         switch self {
+        case .start: return "Start"
         case .zentrale: return "Zentrale"
         case .gespraech: return "Gespräch"
         case .live: return "Live"
@@ -19,6 +20,7 @@ enum Bereich: String, CaseIterable, Identifiable {
     }
     var symbol: String {
         switch self {
+        case .start: return "house.fill"
         case .zentrale: return "sparkles"
         case .gespraech: return "bubble.left.and.text.bubble.right.fill"
         case .live: return "waveform"
@@ -35,9 +37,12 @@ enum Bereich: String, CaseIterable, Identifiable {
 @MainActor @Observable
 final class AppSteuerung {
     static let shared = AppSteuerung()
-    var bereich: Bereich = .zentrale { didSet { if bereich != oldValue { log("oberflaeche", "Bereich geöffnet: \(bereich.titel)", wo: "Seitenleiste") } } }
+    var bereich: Bereich = .start { didSet { if bereich != oldValue { log("oberflaeche", "Bereich geöffnet: \(bereich.titel)", wo: "Seitenleiste") } } }
     var gespraech: Gespraech?
     var entwurf = ""
+    /// Der Prompt, der gerade im Vollbild bearbeitet wird; promptStand zählt hoch, wenn die Liste neu geladen werden muss.
+    var promptBearbeiten: PromptEintrag?
+    var promptStand = 0
     var handyVerbunden = false
     var handyVersion = ""
     private var hotKeyRefs: [EventHotKeyRef] = []
@@ -45,6 +50,7 @@ final class AppSteuerung {
     private var hud: SprachHUD?
 
     func hochfahren() {
+        DesignStand.shared.starten()
         VorderApp.beobachten()
         TresorSperre.shared.beobachten()
         Weckwort.shared.beiErkennung = { [weak self] in self?.weckwortErkannt() }
@@ -56,6 +62,13 @@ final class AppSteuerung {
                 handyVerbunden = !liste.isEmpty
                 handyVersion = await McpKlient.shared.serverVersion
                 try? await Task.sleep(for: .seconds(handyVerbunden ? 300 : 30))
+            }
+        }
+        // Guthaben wie am Handy alle 15 Minuten, nicht während Live; solange noch nichts da ist, jede Minute.
+        Task {
+            while true {
+                if !LiveGespraech.shared.aktiv { await Guthaben.shared.laden() }
+                try? await Task.sleep(for: .seconds(Guthaben.shared.anthropicRest == nil ? 60 : 900))
             }
         }
     }
@@ -240,7 +253,7 @@ struct SprachHUDAnsicht: View {
         HStack(spacing: 16) {
             JarvisKugel(pegel: schleife.zustand == .spricht ? stimme.pegel : diktat.pegel, zustand: kugelZustand, groesse: 96)
             VStack(alignment: .leading, spacing: 6) {
-                Text("JARVIS").font(.jarvis(11, .heavy)).tracking(3).foregroundStyle(Farbe.cyan)
+                Text("JARVIS").font(.jarvis(11, .heavy)).tracking(3).foregroundStyle(Farbe.haupt)
                 Text(zeile).font(.jarvis(15, .medium)).foregroundStyle(Farbe.text).lineLimit(4)
                     .animation(.easeOut(duration: 0.2), value: zeile)
             }
@@ -250,8 +263,7 @@ struct SprachHUDAnsicht: View {
         .frame(width: 420, height: 168)
         .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Farbe.grund.opacity(0.82)))
         .glassEffect(.regular, in: .rect(cornerRadius: 28))
-        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(Color.white.opacity(0.14)))
-        .preferredColorScheme(.dark)
+        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(Farbe.glas(0.14)))
         .onTapGesture { SprachSchleife.shared.beenden() }
     }
 }

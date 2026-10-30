@@ -73,11 +73,11 @@ enum AblageBereich: String, CaseIterable, Identifiable {
     }
     var farbe: Color {
         switch self {
-        case .bilder, .video: return Farbe.rosa
-        case .pdfs, .audio: return Farbe.orange
+        case .bilder, .video: return Farbe.kupfer
+        case .pdfs, .audio: return Farbe.warnung
         case .prompts, .tabellen: return Farbe.gruen
-        case .recherchen, .praesentationen: return Farbe.violett
-        default: return Farbe.cyan
+        case .recherchen, .praesentationen: return Farbe.gold
+        default: return Farbe.haupt
         }
     }
 }
@@ -269,13 +269,13 @@ struct AblageAnsicht: View {
                     if daten.laedt { ProgressView().controlSize(.small) }
                     RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 28) { Task { await daten.laden() } }
                 }
-                .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.05)))
+                .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(Farbe.glas(0.05)))
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
                     ForEach(AblageBereich.allCases) { b in
                         ordnerKachel(b)
                     }
                 }
-                if let f = daten.fehler { Text(f).font(.jarvis(13)).foregroundStyle(Farbe.orange) }
+                if let f = daten.fehler { Text(f).font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
                 inhalt
             }
             .padding(36).frame(maxWidth: .infinity, alignment: .leading)
@@ -304,8 +304,8 @@ struct AblageAnsicht: View {
                 Spacer(minLength: 0)
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white.opacity(aktiv ? 0.13 : 0.04)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(aktiv ? AnyShapeStyle(b.farbe.opacity(0.7)) : AnyShapeStyle(Color.white.opacity(0.06))))
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Farbe.glas(aktiv ? 0.13 : 0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(aktiv ? AnyShapeStyle(b.farbe.opacity(0.7)) : AnyShapeStyle(Farbe.glas(0.06))))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -346,7 +346,7 @@ struct AblageAnsicht: View {
                 Text(e.eintrag.geaendert.formatted(date: .abbreviated, time: .omitted)).font(.jarvis(11)).foregroundStyle(Farbe.text3)
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.04)))
+            .background(RoundedRectangle(cornerRadius: 12).fill(Farbe.glas(0.04)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -369,7 +369,7 @@ struct AblageAnsicht: View {
                 if neuOffen {
                     TextField("Titel", text: $neuTitel).textFieldStyle(.roundedBorder)
                     TextEditor(text: $neuText).font(.jarvis(13)).frame(minHeight: 120).scrollContentBackground(.hidden)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.25)))
                     KapselKnopf(symbol: "tray.and.arrow.down.fill", titel: "In die Ablage", hervorgehoben: true) {
                         let t = neuTitel, x = neuText
                         Task {
@@ -394,7 +394,7 @@ struct BildKachel: View {
         Button(action: aktion) {
             VStack(alignment: .leading, spacing: 6) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05))
+                    RoundedRectangle(cornerRadius: 12).fill(Farbe.glas(0.05))
                     if let bild {
                         Image(nsImage: bild).resizable().scaledToFill()
                     } else if fertig {
@@ -405,7 +405,7 @@ struct BildKachel: View {
                 }
                 .frame(height: 140).frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.white.opacity(schwebt ? 0.3 : 0.06)))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Farbe.glas(schwebt ? 0.3 : 0.06)))
                 Text(element.name).font(.jarvis(11, .medium)).foregroundStyle(Farbe.text2).lineLimit(1)
             }
             .contentShape(Rectangle())
@@ -449,8 +449,8 @@ struct AblageDetail: View {
                 KapselKnopf(symbol: "trash", titel: "Löschen") { loeschenFrage = true }
                 RundKnopf(symbol: "xmark", hilfe: "Schließen", groesse: 30) { schliessen() }
             }
-            if let fehler { Text(fehler).font(.jarvis(13)).foregroundStyle(Farbe.orange) }
-            if gekuerzt { Text("Der Text ist sehr lang und hier gekürzt; vollständig steht er auf dem Handy.").font(.jarvis(12)).foregroundStyle(Farbe.orange) }
+            if let fehler { Text(fehler).font(.jarvis(13)).foregroundStyle(Farbe.warnung) }
+            if gekuerzt { Text("Der Text ist sehr lang und hier gekürzt; vollständig steht er auf dem Handy.").font(.jarvis(12)).foregroundStyle(Farbe.warnung) }
             if dateiArbeit != nil { ProgressView(value: fortschritt).frame(maxWidth: 240) }
             Group {
                 if let bild {
@@ -474,7 +474,6 @@ struct AblageDetail: View {
         .padding(22)
         .frame(width: 900, height: 660)
         .background(Farbe.grund2)
-        .preferredColorScheme(.dark)
         .task { await laden() }
         .onDisappear { dateiArbeit?.cancel() }
         .confirmationDialog(loeschenText, isPresented: $loeschenFrage) {

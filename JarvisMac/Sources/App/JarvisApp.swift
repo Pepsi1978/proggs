@@ -9,7 +9,6 @@ struct JarvisApp: App {
         Window("Jarvis", id: "haupt") {
             HauptFenster()
                 .frame(minWidth: 980, minHeight: 640)
-                .preferredColorScheme(.dark)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1280, height: 820)

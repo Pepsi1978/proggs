@@ -1,21 +1,27 @@
 import SwiftUI
 
-/// Festes, dunkles Jarvis-Design (Frank will kein Hell/Dunkel-Umschalten).
+/// Jarvis-Design: Schwarz mit Orange im Dunkelmodus, warmes Hell mit Orange im Hellmodus. Umgeschaltet über [DesignStand].
 enum Farbe {
-    static let grund = Color(red: 0.027, green: 0.035, blue: 0.060)
-    static let grund2 = Color(red: 0.050, green: 0.062, blue: 0.105)
-    static let cyan = Color(red: 0.22, green: 0.88, blue: 1.0)
-    static let violett = Color(red: 0.55, green: 0.36, blue: 0.96)
-    static let rosa = Color(red: 0.96, green: 0.36, blue: 0.72)
-    static let gruen = Color(red: 0.30, green: 0.92, blue: 0.58)
-    static let orange = Color(red: 1.0, green: 0.62, blue: 0.24)
-    static let rot = Color(red: 1.0, green: 0.36, blue: 0.40)
-    static let text = Color.white.opacity(0.94)
-    static let text2 = Color.white.opacity(0.62)
-    static let text3 = Color.white.opacity(0.38)
-    static let linie = Color.white.opacity(0.08)
-    static let akzent = LinearGradient(colors: [cyan, violett], startPoint: .topLeading, endPoint: .bottomTrailing)
-    static let akzentWarm = LinearGradient(colors: [violett, rosa], startPoint: .topLeading, endPoint: .bottomTrailing)
+    private static var d: Bool { DesignStand.shared.dunkel }
+    private static func c(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(red: r, green: g, blue: b) }
+    static var grund: Color { d ? .black : c(1.0, 0.975, 0.94) }
+    static var grund2: Color { d ? c(0.065, 0.06, 0.055) : c(1.0, 0.95, 0.885) }
+    static var haupt: Color { d ? c(1.0, 0.55, 0.10) : c(0.92, 0.43, 0.03) }
+    static var gold: Color { d ? c(1.0, 0.73, 0.28) : c(0.82, 0.52, 0.02) }
+    static var kupfer: Color { d ? c(1.0, 0.38, 0.16) : c(0.80, 0.29, 0.07) }
+    static var gruen: Color { d ? c(0.30, 0.92, 0.58) : c(0.09, 0.58, 0.30) }
+    static var warnung: Color { d ? c(1.0, 0.82, 0.28) : c(0.70, 0.42, 0.0) }
+    static var rot: Color { d ? c(1.0, 0.36, 0.40) : c(0.80, 0.15, 0.17) }
+    static var text: Color { d ? Color.white.opacity(0.94) : Color.black.opacity(0.88) }
+    static var text2: Color { d ? Color.white.opacity(0.62) : Color.black.opacity(0.62) }
+    static var text3: Color { d ? Color.white.opacity(0.38) : Color.black.opacity(0.42) }
+    static var linie: Color { d ? Color.white.opacity(0.10) : Color.black.opacity(0.10) }
+    /// Flächen und Ränder: heller als der Grund im Dunkelmodus, dunkler im Hellmodus.
+    static func glas(_ a: Double) -> Color { d ? Color.white.opacity(a) : Color.black.opacity(a * 0.8) }
+    /// Vertiefte Felder wie Texteditoren.
+    static func tiefe(_ a: Double) -> Color { d ? Color.black.opacity(a) : Color.white.opacity(min(1, a * 2.4)) }
+    static var akzent: LinearGradient { LinearGradient(colors: [haupt, gold], startPoint: .topLeading, endPoint: .bottomTrailing) }
+    static var akzentWarm: LinearGradient { LinearGradient(colors: [kupfer, haupt], startPoint: .topLeading, endPoint: .bottomTrailing) }
 }
 
 extension Font {
@@ -27,13 +33,15 @@ extension Font {
 /// Hintergrund mit langsam wandernden Lichtflecken.
 struct JarvisHintergrund: View {
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20)) { tl in
+        // Vor dem Canvas lesen: Lesevorgänge in seinem Zeichenblock lösen beim Umschalten kein Neuzeichnen aus.
+        let grund = Farbe.grund
+        let flecken: [(Color, Double, Double, Double)] = [
+            (Farbe.haupt, 0.10, 0.07, 0.0), (Farbe.gold, 0.07, 0.05, 2.1), (Farbe.kupfer, 0.06, 0.04, 4.2),
+        ]
+        return TimelineView(.animation(minimumInterval: 1.0 / 20)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
-                ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Farbe.grund))
-                let flecken: [(Color, Double, Double, Double)] = [
-                    (Farbe.cyan, 0.18, 0.07, 0.0), (Farbe.violett, 0.22, 0.05, 2.1), (Farbe.rosa, 0.10, 0.04, 4.2),
-                ]
+                ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(grund))
                 for (farbe, staerke, tempo, phase) in flecken {
                     let x = size.width * (0.5 + 0.38 * cos(t * tempo + phase))
                     let y = size.height * (0.5 + 0.34 * sin(t * tempo * 1.3 + phase))
@@ -59,12 +67,12 @@ struct GlasKarte<Inhalt: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: ecke, style: .continuous)
-                    .fill(Color.white.opacity(0.035))
+                    .fill(Farbe.glas(0.035))
             )
-            .glassEffect(.regular.tint(Color.white.opacity(0.02)), in: .rect(cornerRadius: ecke))
+            .glassEffect(.regular.tint(Farbe.glas(0.02)), in: .rect(cornerRadius: ecke))
             .overlay(
                 RoundedRectangle(cornerRadius: ecke, style: .continuous)
-                    .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0.03)],
+                    .strokeBorder(LinearGradient(colors: [Farbe.glas(0.16), Farbe.glas(0.03)],
                                                  startPoint: .top, endPoint: .bottom), lineWidth: 1)
             )
     }
@@ -73,7 +81,7 @@ struct GlasKarte<Inhalt: View>: View {
 struct KartenTitel: View {
     let symbol: String
     let titel: String
-    var farbe: Color = Farbe.cyan
+    var farbe: Color = Farbe.haupt
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: symbol)
@@ -105,10 +113,10 @@ struct JarvisKugel: View {
             let beben = zustand == .spricht ? max(p, 0.4) : 0
             let farben: [Color] = {
                 switch zustand {
-                case .ruhe: return [Farbe.cyan, Farbe.violett, Farbe.cyan]
-                case .hoert: return [Farbe.gruen, Farbe.cyan, Farbe.gruen]
-                case .denkt: return [Farbe.violett, Farbe.rosa, Farbe.cyan, Farbe.violett]
-                case .spricht: return [Farbe.cyan, Farbe.rosa, Farbe.violett, Farbe.cyan]
+                case .ruhe: return [Farbe.haupt, Farbe.gold, Farbe.haupt]
+                case .hoert: return [Farbe.gruen, Farbe.haupt, Farbe.gruen]
+                case .denkt: return [Farbe.gold, Farbe.kupfer, Farbe.haupt, Farbe.gold]
+                case .spricht: return [Farbe.haupt, Farbe.kupfer, Farbe.gold, Farbe.haupt]
                 }
             }()
             ZStack {
@@ -206,7 +214,7 @@ struct RundKnopf: View {
     let symbol: String
     var hilfe: String = ""
     var aktiv = false
-    var farbe: Color = Farbe.cyan
+    var farbe: Color = Farbe.haupt
     var groesse: CGFloat = 34
     let aktion: () -> Void
     @State private var schwebt = false
@@ -216,8 +224,8 @@ struct RundKnopf: View {
                 .font(.system(size: groesse * 0.42, weight: .semibold))
                 .foregroundStyle(aktiv ? Color.black : Farbe.text)
                 .frame(width: groesse, height: groesse)
-                .background(Circle().fill(aktiv ? AnyShapeStyle(farbe) : AnyShapeStyle(Color.white.opacity(schwebt ? 0.14 : 0.07))))
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.10)))
+                .background(Circle().fill(aktiv ? AnyShapeStyle(farbe) : AnyShapeStyle(Farbe.glas(schwebt ? 0.14 : 0.07))))
+                .overlay(Circle().strokeBorder(Farbe.glas(0.10)))
         }
         .buttonStyle(.plain)
         .help(hilfe)
@@ -230,6 +238,8 @@ struct KapselKnopf: View {
     let symbol: String
     let titel: String
     var hervorgehoben = false
+    /// Volle Breite, Inhalt linksbündig (Schnellverknüpfungen).
+    var voll = false
     let aktion: () -> Void
     @State private var schwebt = false
     var body: some View {
@@ -238,11 +248,13 @@ struct KapselKnopf: View {
                 Image(systemName: symbol).font(.system(size: 13, weight: .semibold))
                 Text(titel).font(.jarvis(13, .semibold))
             }
+            .frame(maxWidth: voll ? .infinity : nil, alignment: .leading)
             .foregroundStyle(hervorgehoben ? Color.black : Farbe.text)
             .padding(.horizontal, 16).padding(.vertical, 10)
-            .background(Capsule().fill(hervorgehoben ? AnyShapeStyle(Farbe.akzent) : AnyShapeStyle(Color.white.opacity(schwebt ? 0.13 : 0.07))))
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.10)))
-            .scaleEffect(schwebt ? 1.02 : 1)
+            .background(Capsule().fill(hervorgehoben ? AnyShapeStyle(Farbe.akzent) : AnyShapeStyle(Farbe.glas(schwebt ? 0.13 : 0.07))))
+            .overlay(Capsule().strokeBorder(Farbe.glas(0.10)))
+            .contentShape(Capsule())
+            .scaleEffect(schwebt && !voll ? 1.02 : 1)
         }
         .buttonStyle(.plain)
         .onHover { schwebt = $0 }
@@ -304,20 +316,20 @@ struct MarkdownText: View {
                         .foregroundStyle(Farbe.text).padding(.top, 4)
                 case .punkt(let zeichen, let s):
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(zeichen).font(.system(size: groesse, weight: .bold)).foregroundStyle(Farbe.cyan)
+                        Text(zeichen).font(.system(size: groesse, weight: .bold)).foregroundStyle(Farbe.haupt)
                         Text(inline(s)).font(.system(size: groesse)).foregroundStyle(Farbe.text)
                     }
                 case .code(let s):
                     ScrollView(.horizontal, showsIndicators: false) {
                         Text(s).font(.system(size: groesse - 1, design: .monospaced)).foregroundStyle(Farbe.text).padding(12)
                     }
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.35)))
                 case .linie:
                     Rectangle().fill(Farbe.linie).frame(height: 1)
                 }
             }
         }
         .textSelection(.enabled)
-        .tint(Farbe.cyan)
+        .tint(Farbe.haupt)
     }
 }

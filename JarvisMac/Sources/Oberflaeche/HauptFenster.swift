@@ -10,9 +10,10 @@ struct HauptFenster: View {
             Rectangle().fill(Farbe.linie).frame(width: 1)
             ZStack {
                 switch steuerung.bereich {
+                case .start: StartAnsicht()
                 case .zentrale: ZentraleAnsicht()
                 case .gespraech:
-                    if let g = steuerung.gespraech { ChatAnsicht(gespraech: g).id(g.id) } else { ZentraleAnsicht() }
+                    if let g = steuerung.gespraech { ChatAnsicht(gespraech: g).id(g.id) } else { StartAnsicht() }
                 case .live: LiveAnsicht()
                 case .programmierung: ProgrammierungAnsicht()
                 case .ablage: AblageAnsicht()
@@ -28,11 +29,16 @@ struct HauptFenster: View {
         }
         .background(JarvisHintergrund())
         .foregroundStyle(Farbe.text)
+        .tint(Farbe.haupt)
         .background(TastenKuerzel())
+        // Prompt bearbeiten deckt alles ab, auch die Seitenleiste.
+        .overlay {
+            if let p = steuerung.promptBearbeiten { PromptEditorVollbild(prompt: p).id(p.id).foregroundStyle(Farbe.text).tint(Farbe.haupt) }
+        }
     }
 }
 
-/// Fenster-Tastenkürzel: ⌘N neues Gespräch, ⌘L Live, ⌘D Sprechen, ⌘, Einstellungen, ⌘1 Zentrale.
+/// Fenster-Tastenkürzel: ⌘N neues Gespräch, ⌘L Live, ⌘D Sprechen, ⌘, Einstellungen, ⌘1 Start, ⌘2 Zentrale.
 private struct TastenKuerzel: View {
     var body: some View {
         ZStack {
@@ -40,7 +46,8 @@ private struct TastenKuerzel: View {
             Button("") { AppSteuerung.shared.live() }.keyboardShortcut("l", modifiers: .command)
             Button("") { AppSteuerung.shared.sprechen() }.keyboardShortcut("d", modifiers: .command)
             Button("") { AppSteuerung.shared.bereich = .einstellungen }.keyboardShortcut(",", modifiers: .command)
-            Button("") { AppSteuerung.shared.bereich = .zentrale }.keyboardShortcut("1", modifiers: .command)
+            Button("") { AppSteuerung.shared.bereich = .start }.keyboardShortcut("1", modifiers: .command)
+            Button("") { AppSteuerung.shared.bereich = .zentrale }.keyboardShortcut("2", modifiers: .command)
         }
         .opacity(0).frame(width: 0, height: 0)
     }
@@ -53,6 +60,7 @@ struct Seitenleiste: View {
     @State private var reiter = 0          // 0 Gespräche, 1 Programmierung, 2 Projekte
     @State private var projekte = Projekte.shared
     @State private var neuesProjekt = ""
+    @State private var design = DesignStand.shared
 
     private var gefiltert: [Gespraech] {
         let basis: [Gespraech]
@@ -81,8 +89,8 @@ struct Seitenleiste: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("JARVIS").font(.jarvis(17, .heavy)).tracking(4)
                     HStack(spacing: 6) {
-                        Circle().fill(steuerung.handyVerbunden ? Farbe.gruen : Farbe.orange).frame(width: 7, height: 7)
-                            .shadow(color: steuerung.handyVerbunden ? Farbe.gruen : Farbe.orange, radius: 4)
+                        Circle().fill(steuerung.handyVerbunden ? Farbe.gruen : Farbe.warnung).frame(width: 7, height: 7)
+                            .shadow(color: steuerung.handyVerbunden ? Farbe.gruen : Farbe.warnung, radius: 4)
                         Text(steuerung.handyVerbunden ? "Mit dem Handy verbunden" : "Handy nicht erreichbar")
                             .font(.jarvis(11, .medium)).foregroundStyle(Farbe.text2)
                     }
@@ -105,7 +113,7 @@ struct Seitenleiste: View {
             .buttonStyle(.plain)
 
             VStack(spacing: 2) {
-                ForEach([Bereich.zentrale, .live, .programmierung, .ablage, .gedaechtnis, .aktivitaet, .einstellungen]) { b in
+                ForEach([Bereich.start, .zentrale, .live, .programmierung, .ablage, .gedaechtnis, .aktivitaet, .einstellungen]) { b in
                     LeistenEintrag(symbol: b.symbol, titel: b.titel, aktiv: steuerung.bereich == b) { steuerung.bereich = b }
                 }
             }
@@ -115,7 +123,7 @@ struct Seitenleiste: View {
                 TextField("Gespräche durchsuchen", text: $suche).textFieldStyle(.plain).font(.jarvis(13))
             }
             .padding(.horizontal, 12).padding(.vertical, 9)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.05)))
+            .background(RoundedRectangle(cornerRadius: 12).fill(Farbe.glas(0.05)))
 
             let status = arbeitet
             HStack(spacing: 4) {
@@ -124,11 +132,11 @@ struct Seitenleiste: View {
                     Button { reiter = i; if i != 2 { steuerung.projekt = nil } } label: {
                         HStack(spacing: 4) {
                             Text(name).font(.jarvis(11, reiter == i ? .bold : .medium)).lineLimit(1).minimumScaleFactor(0.8)
-                            if laeuft { Circle().fill(Farbe.orange).frame(width: 6, height: 6).shadow(color: Farbe.orange, radius: 3) }
+                            if laeuft { Circle().fill(Farbe.warnung).frame(width: 6, height: 6).shadow(color: Farbe.warnung, radius: 3) }
                         }
                         .foregroundStyle(reiter == i ? Farbe.text : Farbe.text3)
                         .padding(.horizontal, 8).padding(.vertical, 6).frame(maxWidth: .infinity)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(reiter == i ? 0.09 : 0)))
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Farbe.glas(reiter == i ? 0.09 : 0)))
                     }
                     .buttonStyle(.plain)
                 }
@@ -149,7 +157,7 @@ struct Seitenleiste: View {
                         Button { projekte.neu(neuesProjekt); neuesProjekt = "" } label: { Image(systemName: "folder.badge.plus") }.buttonStyle(.plain)
                     }
                     .padding(.horizontal, 10).padding(.vertical, 7)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Farbe.glas(0.05)))
                     ScrollView {
                         VStack(alignment: .leading, spacing: 2) {
                             ForEach(projekte.namen, id: \.self) { p in
@@ -170,14 +178,15 @@ struct Seitenleiste: View {
             }
             .scrollIndicators(.never)
 
-            HStack {
+            HStack(spacing: 10) {
+                RundKnopf(symbol: design.modus.symbol, hilfe: design.hilfe, groesse: 30) { design.weiter() }
                 Text("Jarvis für macOS \(AppInfo.version)").font(.jarvis(10)).foregroundStyle(Farbe.text3)
                 Spacer()
             }
-            .padding(.bottom, 12).padding(.leading, 6)
+            .padding(.bottom, 12).padding(.leading, 2)
         }
         .padding(.horizontal, 14)
-        .background(Color.black.opacity(0.22))
+        .background(Farbe.tiefe(0.22))
     }
 }
 
@@ -196,7 +205,7 @@ struct LeistenEintrag: View {
                 Spacer()
             }
             .padding(.horizontal, 12).padding(.vertical, 9)
-            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(aktiv ? 0.09 : (schwebt ? 0.05 : 0))))
+            .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Farbe.glas(aktiv ? 0.09 : (schwebt ? 0.05 : 0))))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -224,13 +233,13 @@ struct GespraechsEintrag: View {
                 }
                 Spacer(minLength: 0)
                 if schwebt {
-                    Button { GespraechsSpeicher.shared.loeschen(g); if aktiv { AppSteuerung.shared.bereich = .zentrale } } label: {
+                    Button { GespraechsSpeicher.shared.loeschen(g); if aktiv { AppSteuerung.shared.bereich = .start } } label: {
                         Image(systemName: "trash").font(.system(size: 11)).foregroundStyle(Farbe.text3)
                     }.buttonStyle(.plain).help("Gespräch löschen")
                 }
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(aktiv ? 0.09 : (schwebt ? 0.04 : 0))))
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Farbe.glas(aktiv ? 0.09 : (schwebt ? 0.04 : 0))))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

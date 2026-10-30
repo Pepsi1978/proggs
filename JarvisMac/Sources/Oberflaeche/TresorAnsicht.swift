@@ -64,7 +64,7 @@ struct TresorKopf: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 10) {
-                Image(systemName: sperre.entsperrt ? "lock.open.fill" : "lock.fill").foregroundStyle(sperre.entsperrt ? Farbe.orange : Farbe.gruen)
+                Image(systemName: sperre.entsperrt ? "lock.open.fill" : "lock.fill").foregroundStyle(sperre.entsperrt ? Farbe.warnung : Farbe.gruen)
                 Text(sperre.entsperrt ? "Tresor offen, sperrt in \(sperre.rest) s" : "Tresor gesperrt").font(.jarvis(13, .semibold))
                 Spacer()
                 if sperre.entsperrt {
@@ -73,7 +73,7 @@ struct TresorKopf: View {
                     KapselKnopf(symbol: "touchid", titel: "Mit Touch ID anzeigen", hervorgehoben: true) { Task { await sperre.entsperren() } }
                 }
             }
-            if !sperre.meldung.isEmpty { Text(sperre.meldung).font(.jarvis(11)).foregroundStyle(Farbe.orange) }
+            if !sperre.meldung.isEmpty { Text(sperre.meldung).font(.jarvis(11)).foregroundStyle(Farbe.warnung) }
             if let s = Tresor.stoerung { Text(s).font(.jarvis(11)).foregroundStyle(Farbe.rot) }
         }
         .padding(.vertical, 4)
@@ -98,7 +98,7 @@ struct TresorFeld: View {
                     .font(.jarvis(13)).foregroundStyle(wert.isEmpty ? Farbe.text3 : Farbe.text2).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 8).padding(.vertical, 5)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.05)))
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Farbe.glas(0.05)))
                     .contentShape(Rectangle())
                     .onTapGesture { Task { await sperre.entsperren() } }
                     .help("Antippen und mit Touch ID entsperren")

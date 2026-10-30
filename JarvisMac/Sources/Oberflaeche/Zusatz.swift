@@ -19,10 +19,11 @@ struct ProgrammierungAnsicht: View {
                              untertitel: "Alle Programmier-Sessions von Mac, PC und Cloud – wie im Handy-Reiter „Programmierung“.")
                 GlasKarte {
                     VStack(alignment: .leading, spacing: 10) {
-                        KartenTitel(symbol: "plus.circle.fill", titel: "Neuer Programmierauftrag", farbe: Farbe.cyan)
+                        KartenTitel(symbol: "plus.circle.fill", titel: "Neuer Programmierauftrag", farbe: Farbe.haupt)
                         TextEditor(text: $auftrag).font(.jarvis(14)).frame(minHeight: 90).scrollContentBackground(.hidden)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.25)))
                         HStack {
+                            DiktatKnopf(text: $auftrag)
                             KapselKnopf(symbol: "paperplane.fill", titel: "An den Programmierer", hervorgehoben: true) {
                                 let t = auftrag; auftrag = ""
                                 AppSteuerung.shared.neuesGespraech()
@@ -39,7 +40,7 @@ struct ProgrammierungAnsicht: View {
                 HStack(alignment: .top, spacing: 18) {
                     GlasKarte {
                         VStack(alignment: .leading, spacing: 10) {
-                            KartenTitel(symbol: "text.bubble.fill", titel: "Rückfrage beantworten", farbe: Farbe.orange)
+                            KartenTitel(symbol: "text.bubble.fill", titel: "Rückfrage beantworten", farbe: Farbe.warnung)
                             TextField("frage_id", text: $frageId).textFieldStyle(.roundedBorder)
                             TextField("Deine Antwort", text: $antwort).textFieldStyle(.roundedBorder)
                             KapselKnopf(symbol: "checkmark", titel: "Antworten", hervorgehoben: true) {
@@ -54,7 +55,7 @@ struct ProgrammierungAnsicht: View {
                     }
                     GlasKarte {
                         VStack(alignment: .leading, spacing: 10) {
-                            KartenTitel(symbol: "plus.bubble.fill", titel: "Nachtrag an eine Session", farbe: Farbe.violett)
+                            KartenTitel(symbol: "plus.bubble.fill", titel: "Nachtrag an eine Session", farbe: Farbe.gold)
                             TextField("auftrag_id (z. B. BD2XW)", text: $nachtragId).textFieldStyle(.roundedBorder)
                             TextField("Nachtrag", text: $nachtrag).textFieldStyle(.roundedBorder)
                             KapselKnopf(symbol: "paperplane", titel: "Nachtrag senden", hervorgehoben: true) {
@@ -130,6 +131,7 @@ struct PromptsAnsicht: View {
     @State private var laedt = false
     @State private var neu = ""
     @State private var offen: PromptEintrag?
+    @State private var steuerung = AppSteuerung.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -137,11 +139,11 @@ struct PromptsAnsicht: View {
                 VStack(alignment: .leading, spacing: 10) {
                     KartenTitel(symbol: "plus.circle.fill", titel: "Neuer Prompt", farbe: Farbe.gruen)
                     TextEditor(text: $neu).font(.jarvis(13)).frame(minHeight: 70).scrollContentBackground(.hidden)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.25)))
+                    PromptWerkzeuge(text: $neu)
                     HStack {
-                        KapselKnopf(symbol: "sparkles", titel: "In gutes Deutsch") {
-                            let t = neu
-                            Task { if let b = await Kurzauftrag.frage("Formuliere diesen Prompt als klaren Auftrag in gutem Deutsch, ohne Inhalt wegzulassen. Nur den Prompt ausgeben:\n\n\(t)") { neu = b } }
+                        KapselKnopf(symbol: "arrow.up.left.and.arrow.down.right", titel: "Im Vollbild schreiben") {
+                            steuerung.promptBearbeiten = PromptEintrag(nummer: 0, titel: "", text: neu); neu = ""
                         }
                         KapselKnopf(symbol: "square.and.arrow.down.fill", titel: "Speichern", hervorgehoben: true) {
                             let t = neu
@@ -172,7 +174,7 @@ struct PromptsAnsicht: View {
                             KleinKnopf(symbol: "doc.on.doc", hilfe: "Kopieren") {
                                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(p.text, forType: .string)
                             }
-                            KleinKnopf(symbol: "square.and.pencil", hilfe: "Bearbeiten") { neu = p.text }
+                            KleinKnopf(symbol: "square.and.pencil", hilfe: "Bearbeiten") { steuerung.promptBearbeiten = p }
                             KapselKnopf(symbol: "paperplane.fill", titel: "Senden", hervorgehoben: true) {
                                 AppSteuerung.shared.neuesGespraech()
                                 AppSteuerung.shared.entwurf = "Übergib bitte folgende Aufgabe an den Programmierer: " + p.text
@@ -182,7 +184,7 @@ struct PromptsAnsicht: View {
                 }
             }
         }
-        .task { await laden() }
+        .task(id: steuerung.promptStand) { await laden() }
     }
 
     private func laden() async {

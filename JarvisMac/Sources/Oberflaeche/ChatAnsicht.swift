@@ -5,14 +5,7 @@ import UniformTypeIdentifiers
 struct ChatAnsicht: View {
     let gespraech: Gespraech
     @State private var steuerung = AppSteuerung.shared
-    @State private var einst = Einstellungen.shared
-    @State private var schleife = SprachSchleife.shared
-    @State private var diktat = Diktat.shared
-    @State private var text = ""
     @State private var anhang: Data?
-    @State private var diktiert = false
-    @State private var guthaben = ""
-    @FocusState private var fokus: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,23 +28,7 @@ struct ChatAnsicht: View {
                 .onChange(of: gespraech.nachrichten.last?.text) { _, _ in leser.scrollTo("ende", anchor: .bottom) }
                 .onChange(of: gespraech.nachrichten.count) { _, _ in withAnimation { leser.scrollTo("ende", anchor: .bottom) } }
             }
-            eingabe
-        }
-        .onAppear {
-            if !steuerung.entwurf.isEmpty { text = steuerung.entwurf; steuerung.entwurf = "" }
-            fokus = true
-        }
-        .onChange(of: steuerung.entwurf) { _, neu in if !neu.isEmpty { text = neu; steuerung.entwurf = "" } }
-        .task {
-            // Anthropic-Restguthaben wie am Handy vor dem Modellnamen, alle 15 Minuten, nicht während Live.
-            while !Task.isCancelled {
-                if einst.modellWahl.anbieter == .anthropic, !LiveGespraech.shared.aktiv,
-                   let t = await McpKlient.shared.text("anthropic_guthaben"),
-                   let r = t.range(of: #"Übrig: [0-9.,]+ \$"#, options: .regularExpression) {
-                    guthaben = String(t[r].dropFirst(7))
-                }
-                try? await Task.sleep(for: .seconds(900))
-            }
+            EingabeBlase(gespraech: gespraech, anhang: $anhang)
         }
         .onDrop(of: [.image, .fileURL], isTargeted: nil) { anbieter in
             guard let a = anbieter.first else { return false }
@@ -75,11 +52,11 @@ struct ChatAnsicht: View {
                     Text("Jarvis arbeitet …").font(.jarvis(12, .medium)).foregroundStyle(Farbe.text2)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(Capsule().fill(Color.white.opacity(0.06)))
+                .background(Capsule().fill(Farbe.glas(0.06)))
             }
-            RundKnopf(symbol: "waveform", hilfe: "Live-Gespräch (⌘L)", farbe: Farbe.violett) { steuerung.live() }
+            RundKnopf(symbol: "waveform", hilfe: "Live-Gespräch (⌘L)", farbe: Farbe.gold) { steuerung.live() }
             RundKnopf(symbol: "trash", hilfe: "Gespräch löschen") {
-                GespraechsSpeicher.shared.loeschen(gespraech); steuerung.gespraech = nil; steuerung.bereich = .zentrale
+                GespraechsSpeicher.shared.loeschen(gespraech); steuerung.gespraech = nil; steuerung.bereich = .start
             }
         }
         .padding(.horizontal, 28).padding(.top, 30).padding(.bottom, 12)
@@ -94,104 +71,6 @@ struct ChatAnsicht: View {
                 .font(.jarvis(14)).foregroundStyle(Farbe.text2)
         }
         .frame(maxWidth: .infinity).padding(.top, 80)
-    }
-
-    private var eingabe: some View {
-        VStack(spacing: 8) {
-            if let anhang, let bild = NSImage(data: anhang) {
-                HStack {
-                    Image(nsImage: bild).resizable().scaledToFit().frame(height: 70).clipShape(RoundedRectangle(cornerRadius: 10))
-                    Button { self.anhang = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain)
-                    Spacer()
-                }
-            }
-            if diktat.aktiv && diktiert {
-                HStack(spacing: 8) {
-                    PegelBalken(pegel: diktat.pegel)
-                    Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(13)).foregroundStyle(Farbe.text2).lineLimit(2)
-                    Spacer()
-                }
-            }
-            HStack(alignment: .bottom, spacing: 10) {
-                Menu {
-                    Button("Bildschirmfoto anhängen") { Task { anhang = await Self.bildschirmfoto() } }
-                    Button("Bild auswählen …") { bildWaehlen() }
-                    Divider()
-                    Button("An den Programmierer übergeben") { text = "Übergib bitte folgende Aufgabe an den Programmierer: " + text; fokus = true }
-                    Button("OpenLauncher-Session hier am Mac") { text = "Starte eine OpenLauncher-Session mit Opus 5.5 für folgende Aufgabe: " + text; fokus = true }
-                } label: {
-                    Image(systemName: "plus").font(.system(size: 15, weight: .semibold)).frame(width: 34, height: 34)
-                        .background(Circle().fill(Color.white.opacity(0.07)))
-                }
-                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-
-                TextField("Nachricht an Jarvis …  (⏎ senden, ⇧⏎ neue Zeile)", text: $text, axis: .vertical)
-                    .textFieldStyle(.plain).font(.jarvis(15)).lineLimit(1...10).focused($fokus)
-                    .padding(.vertical, 8)
-                    .onKeyPress(.return, phases: .down) { druck in
-                        if druck.modifiers.contains(.shift) { return .ignored }
-                        senden(); return .handled
-                    }
-
-                Menu {
-                    ForEach(ModellWahl.alle) { m in
-                        Button { einst.modell = m.id } label: { Text(m.name + (m.id == einst.modell ? "  ✓" : "")) }
-                    }
-                    Divider()
-                    ForEach(["low", "medium", "high", "xhigh", "max"], id: \.self) { e in
-                        Button { einst.effort = e } label: { Text("Denkstufe \(e)" + (e == einst.effort ? "  ✓" : "")) }
-                    }
-                } label: {
-                    Text((einst.modellWahl.anbieter == .anthropic && !guthaben.isEmpty ? guthaben + "  " : "") + einst.modellWahl.name.replacingOccurrences(of: "Claude ", with: ""))
-                        .font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
-                        .padding(.horizontal, 10).padding(.vertical, 8)
-                        .background(Capsule().fill(Color.white.opacity(0.06)))
-                }
-                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-
-                RundKnopf(symbol: diktiert && diktat.aktiv ? "stop.fill" : "mic.fill", hilfe: "Diktieren", aktiv: diktiert && diktat.aktiv, farbe: Farbe.gruen) { diktieren() }
-                RundKnopf(symbol: "person.wave.2.fill", hilfe: "Sprachgespräch (⌘D)", aktiv: schleife.zustand != .aus, farbe: Farbe.cyan) {
-                    steuerung.gespraech = gespraech; steuerung.sprechen()
-                }
-                RundKnopf(symbol: "arrow.up", hilfe: "Senden", aktiv: !text.isEmpty || anhang != nil, farbe: Farbe.cyan) { senden() }
-            }
-            .padding(.leading, 10).padding(.trailing, 8).padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.white.opacity(0.05)))
-            .glassEffect(.regular, in: .rect(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white.opacity(fokus ? 0.2 : 0.1)))
-        }
-        .padding(.horizontal, 40).padding(.bottom, 22).padding(.top, 6)
-        .frame(maxWidth: 940)
-        .frame(maxWidth: .infinity)
-    }
-
-    private func senden() {
-        var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if t.hasSuffix(";") { t = String(t.dropLast()).trimmingCharacters(in: .whitespaces) }
-        guard !t.isEmpty || anhang != nil else { return }
-        let bild = anhang
-        text = ""; anhang = nil
-        steuerung.gespraech = gespraech
-        steuerung.sende(t, bild: bild)
-    }
-
-    private func diktieren() {
-        if diktat.aktiv { diktat.stoppen(); return }
-        diktiert = true
-        Task {
-            if let erkannt = await diktat.hoereBisStille(maxSekunden: 120), !erkannt.isEmpty {
-                let basis = text.trimmingCharacters(in: .whitespaces)
-                text = (basis.isEmpty ? "" : basis + " ") + erkannt + " ; "
-            }
-            diktiert = false
-            fokus = true
-        }
-    }
-
-    private func bildWaehlen() {
-        let p = NSOpenPanel()
-        p.allowedContentTypes = [.image]
-        if p.runModal() == .OK, let u = p.url, let b = NSImage(contentsOf: u) { anhang = b.jpgDaten() }
     }
 
     static func bildschirmfoto() async -> Data? {
@@ -317,7 +196,7 @@ struct NachrichtAnsicht: View {
         VStack(alignment: .leading, spacing: 6) {
             Button { withAnimation(.spring(duration: 0.3)) { schritteOffen.toggle() } } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "bolt.fill").font(.system(size: 10)).foregroundStyle(Farbe.violett)
+                    Image(systemName: "bolt.fill").font(.system(size: 10)).foregroundStyle(Farbe.gold)
                     Text("\(n.schritte.count) \(n.schritte.count == 1 ? "Schritt" : "Schritte")").font(.jarvis(12, .semibold)).foregroundStyle(Farbe.text2)
                     if let letzter = n.schritte.last, !schritteOffen {
                         Text("· \(Self.anzeigename(letzter.werkzeug))").font(.jarvis(12)).foregroundStyle(Farbe.text3).lineLimit(1)
@@ -329,10 +208,10 @@ struct NachrichtAnsicht: View {
             if schritteOffen {
                 ForEach(n.schritte) { s in
                     HStack(spacing: 8) {
-                        Image(systemName: s.amHandy ? "iphone" : "macbook").font(.system(size: 10)).foregroundStyle(s.amHandy ? Farbe.violett : Farbe.cyan).frame(width: 14)
+                        Image(systemName: s.amHandy ? "iphone" : "macbook").font(.system(size: 10)).foregroundStyle(s.amHandy ? Farbe.gold : Farbe.haupt).frame(width: 14)
                         Group {
                             if let ok = s.ok {
-                                Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill").foregroundStyle(ok ? Farbe.gruen : Farbe.orange)
+                                Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill").foregroundStyle(ok ? Farbe.gruen : Farbe.warnung)
                             } else { ProgressView().controlSize(.mini) }
                         }
                         .font(.system(size: 11)).frame(width: 14)
@@ -343,7 +222,7 @@ struct NachrichtAnsicht: View {
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.04)))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Farbe.glas(0.04)))
     }
 
     static func anzeigename(_ w: String) -> String {
@@ -359,7 +238,7 @@ struct KleinKnopf: View {
     var body: some View {
         Button(action: aktion) {
             Image(systemName: symbol).font(.system(size: 11, weight: .medium)).foregroundStyle(Farbe.text2)
-                .frame(width: 26, height: 24).background(RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(0.06)))
+                .frame(width: 26, height: 24).background(RoundedRectangle(cornerRadius: 7).fill(Farbe.glas(0.06)))
         }
         .buttonStyle(.plain).help(hilfe)
     }

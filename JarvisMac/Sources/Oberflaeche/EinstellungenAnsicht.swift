@@ -7,7 +7,7 @@ struct EinstellungenAnsicht: View {
     @MainActor static var startReiter = "gehirn"
 
     private let reiterListe: [(String, String, String)] = [
-        ("gehirn", "Jarvis' Kopf", "brain"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
+        ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
         ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("konten", "Konten", "key.fill"), ("ueber", "Über", "info.circle.fill"),
     ]
 
@@ -27,6 +27,7 @@ struct EinstellungenAnsicht: View {
                 VStack(alignment: .leading, spacing: 18) {
                     switch reiter {
                     case "gehirn": gehirn
+                    case "guthaben": GuthabenAnsicht()
                     case "stimme": stimme
                     case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
                     case "live": live
@@ -147,7 +148,7 @@ struct EinstellungenAnsicht: View {
         VStack(spacing: 18) {
             GlasKarte {
                 VStack(alignment: .leading, spacing: 8) {
-                    KartenTitel(symbol: "bolt.shield.fill", titel: "Vollzugriff", farbe: Farbe.orange)
+                    KartenTitel(symbol: "bolt.shield.fill", titel: "Vollzugriff", farbe: Farbe.warnung)
                     zeile("Jarvis darf am Mac alles", "Befehle, Programme, Dateien, Tastatur, Bildschirm und Terminal ohne Rückfrage – wie „Bypass Permissions“. Aus = nur Programme und Adressen öffnen, Mitteilungen, Status.") {
                         Toggle("", isOn: $einst.vollzugriff).toggleStyle(.switch)
                     }
@@ -218,7 +219,7 @@ struct StufenWahl: View {
                     Text(s).font(.jarvis(12, wahl == s ? .bold : .medium)).lineLimit(1).minimumScaleFactor(0.7)
                         .foregroundStyle(wahl == s ? Color.black : Farbe.text)
                         .frame(maxWidth: .infinity).padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(wahl == s ? AnyShapeStyle(Farbe.akzent) : AnyShapeStyle(Color.white.opacity(0.07))))
+                        .background(RoundedRectangle(cornerRadius: 9).fill(wahl == s ? AnyShapeStyle(Farbe.akzent) : AnyShapeStyle(Farbe.glas(0.07))))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -265,7 +266,7 @@ struct KontenAnsicht: View {
         VStack(spacing: 18) {
             GlasKarte {
                 VStack(alignment: .leading, spacing: 10) {
-                    KartenTitel(symbol: "iphone.radiowaves.left.and.right", titel: "Verbindung zum Handy-Jarvis", farbe: Farbe.violett)
+                    KartenTitel(symbol: "iphone.radiowaves.left.and.right", titel: "Verbindung zum Handy-Jarvis", farbe: Farbe.gold)
                     Text("Über diese Relay-Adresse teilt der Mac Gedächtnis, Apps und Ablage mit deinem Handy (dieselbe wie im ChatGPT-Plugin).")
                         .font(.jarvis(12)).foregroundStyle(Farbe.text2)
                     TresorFeld(titel: "Relay-Adresse", wert: $einst.zugang.relay)
@@ -292,7 +293,7 @@ struct KontenAnsicht: View {
                         }
                     }
                     if !codexCode.isEmpty {
-                        Text(codexCode).font(.system(size: 28, weight: .bold, design: .monospaced)).foregroundStyle(Farbe.cyan).textSelection(.enabled)
+                        Text(codexCode).font(.system(size: 28, weight: .bold, design: .monospaced)).foregroundStyle(Farbe.haupt).textSelection(.enabled)
                     }
                     if !codexStatus.isEmpty { Text(codexStatus).font(.jarvis(12)).foregroundStyle(Farbe.text2) }
                 }
@@ -304,7 +305,7 @@ struct KontenAnsicht: View {
             }
             GlasKarte {
                 VStack(alignment: .leading, spacing: 10) {
-                    KartenTitel(symbol: "key.fill", titel: "API-Schlüssel", farbe: Farbe.orange)
+                    KartenTitel(symbol: "key.fill", titel: "API-Schlüssel", farbe: Farbe.warnung)
                     Text("Verschlüsselt im Tresor, gebunden an den Sicherheitschip dieses Macs. Anzeigen und Ändern nur nach Touch ID.")
                         .font(.jarvis(12)).foregroundStyle(Farbe.text2)
                     TresorKopf()

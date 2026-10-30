@@ -38,6 +38,13 @@ final class JarvisAgent {
     - „Erstelle einen Screenshot“ = mac_screenshot. „Füg einen Screenshot ins CLI / in die Session ein“ = screenshot_ins_cli \
     (fügt ihn in die zuletzt benutzte Terminal-Sitzung ein). Jarvis' eigene Mac-Einstellungen per Sprache = mac_einstellungen.
 
+    REPO UND CLI
+    - Franks Repo liegt hier unter ~/proggs. Fragen dazu beantwortest du aus dem Repo statt aus dem Gedächtnis: repo_lesen liest direkt und unbegrenzt, \
+    cli_frage fragt für Prüfungen über mehrere Dateien im Hintergrund das CLI, nur lesend. Code ändern: openlauncher_sitzung oder programmieren.
+    - Was du selbst am Mac kannst, was die Handy-Reiter (Jarvis, Ablage mit Prompts, Aktivität, Einstellungen) bieten und wie du mit dem CLI arbeitest, \
+    steht in mac_funktionen_lesen; die Funktionen des Handys in funktionen_lesen. Beides nur bei Bedarf lesen.
+    - Die Regeln SYMBIOSE CHATGPT LIVE ⇄ JARVIS gelten für ChatGPT Live; wird es an den Mac angebunden, gelten sie hier genauso.
+
     ANTWORTEN
     - Deutsch, kurz und klar. Nie Quellen, Quellennamen oder Webadressen nennen, außer Frank fragt ausdrücklich danach.
     - Aktuelle Fragen aus dem Internet beantwortest du sofort selbst mit der Websuche; Agenten nur, wenn Frank ausdrücklich \
@@ -108,6 +115,8 @@ final class JarvisAgent {
         let (a, modell) = await anbieter()
         let effort = e.effort
         let limit = e.schrittLimit
+        let misstKosten = a is AnthropicKlient
+        if misstKosten { Guthaben.shared.kostenStart() }
 
         var textTeile: [String] = []
         let puffer = TextPuffer()
@@ -191,6 +200,7 @@ final class JarvisAgent {
             g.speichern()
         }
 
+        if misstKosten { Guthaben.shared.kostenEnde() }
         let endtext = textTeile.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
         if jarvisIndex < g.nachrichten.count {
             g.nachrichten[jarvisIndex].text = endtext.isEmpty ? "(keine Antwort)" : endtext

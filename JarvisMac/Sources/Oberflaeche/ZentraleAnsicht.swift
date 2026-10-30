@@ -47,7 +47,7 @@ struct ZentraleAnsicht: View {
     @State private var neuLaeuft = false
     @State private var neuFehler = false
 
-    private var gruss: String {
+    static var gruss: String {
         let h = Calendar.current.component(.hour, from: Date())
         switch h {
         case 5..<11: return "Guten Morgen, Frank."
@@ -62,19 +62,22 @@ struct ZentraleAnsicht: View {
             VStack(spacing: 20) {
                 if !zugangDa { zugangsHinweis }
                 macKarte
-                held
+                VStack(spacing: 10) {
+                    held
+                    schnellVerknuepfungen
+                }
+                .frame(maxWidth: 640)
                 HStack(alignment: .top, spacing: 18) {
                     auswertungsKarte.frame(maxWidth: .infinity)
                     listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
                         .frame(width: 360)
                 }
                 HStack(alignment: .top, spacing: 18) {
-                    listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.violett, text: daten.termine)
+                    listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.gold, text: daten.termine)
                         .frame(maxWidth: .infinity)
-                    listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.orange, text: daten.wetter)
+                    listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.warnung, text: daten.wetter)
                         .frame(width: 360)
                 }
-                schnellVerknuepfungen
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 26)
@@ -97,32 +100,41 @@ struct ZentraleAnsicht: View {
                 .buttonStyle(.plain)
                 .help("Antippen zum Sprechen (⌥⌘J überall)")
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(gruss).font(.jarvis(30, .bold))
-                        .foregroundStyle(LinearGradient(colors: [.white, Farbe.cyan.opacity(0.9)], startPoint: .leading, endPoint: .trailing))
+                    HStack(spacing: 10) {
+                        LivePunkt()
+                        Text(Self.gruss).font(.jarvis(30, .bold))
+                        .foregroundStyle(LinearGradient(colors: [Farbe.text, Farbe.haupt], startPoint: .leading, endPoint: .trailing))
+                    }
                     Text(Self.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
                 }
             }
-            HStack(spacing: 10) {
-                Image(systemName: "sparkle").foregroundStyle(Farbe.akzent)
-                TextField("Frag Jarvis oder sag, was er am Mac tun soll …", text: $frage)
-                    .textFieldStyle(.plain).font(.jarvis(16)).focused($fokus)
-                    .onSubmit { senden() }
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkle").foregroundStyle(Farbe.akzent)
+                    TextField("Frag Jarvis oder sag, was er am Mac tun soll …", text: $frage)
+                        .textFieldStyle(.plain).font(.jarvis(16)).focused($fokus)
+                        .onSubmit { senden() }
+                }
+                .padding(.leading, 8)
+                HStack(spacing: 10) {
+                ModellKapsel()
+                Spacer(minLength: 0)
                 RundKnopf(symbol: "mic.fill", hilfe: "Sprechen (⌥⌘J)", aktiv: schleife.zustand != .aus, farbe: Farbe.gruen) { steuerung.kuerzelSprechen() }
-                RundKnopf(symbol: "waveform", hilfe: "Live-Gespräch (⌘L)", farbe: Farbe.violett) { steuerung.live() }
-                RundKnopf(symbol: "arrow.up", hilfe: "Senden", aktiv: !frage.isEmpty, farbe: Farbe.cyan) { senden() }
+                RundKnopf(symbol: "waveform", hilfe: "Live-Gespräch (⌘L)", farbe: Farbe.gold) { steuerung.live() }
+                RundKnopf(symbol: "arrow.up", hilfe: "Senden", aktiv: !frage.isEmpty, farbe: Farbe.haupt) { senden() }
+                }
             }
-            .padding(.leading, 20).padding(.trailing, 8).padding(.vertical, 8)
-            .background(Capsule().fill(Color.white.opacity(0.05)))
-            .glassEffect(.regular, in: .capsule)
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.12)))
-            .frame(maxWidth: 760)
+            .padding(.leading, 12).padding(.trailing, 10).padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Farbe.glas(0.05)))
+            .glassEffect(.regular, in: .rect(cornerRadius: 24))
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Farbe.glas(0.12)))
         }
     }
 
     private var schnellVerknuepfungen: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 10)], spacing: 10) {
+        VStack(spacing: 8) {
             ForEach(Self.vorschlaege, id: \.self) { v in
-                KapselKnopf(symbol: "arrow.turn.down.right", titel: v) { frage = v; senden() }
+                KapselKnopf(symbol: "arrow.turn.down.right", titel: v, voll: true) { frage = v; senden() }
             }
         }
     }
@@ -130,7 +142,7 @@ struct ZentraleAnsicht: View {
     private var zugangsHinweis: some View {
         GlasKarte {
             HStack(spacing: 14) {
-                Image(systemName: "key.horizontal.fill").font(.system(size: 20)).foregroundStyle(Farbe.orange)
+                Image(systemName: "key.horizontal.fill").font(.system(size: 20)).foregroundStyle(Farbe.warnung)
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Noch ein Schritt: Jarvis braucht einen Kopf").font(.jarvis(15, .semibold))
                     Text("Melde dich einmal mit deinem ChatGPT-Konto an (läuft über dein Abo) oder trage einen Anthropic-Schlüssel ein.")
@@ -162,7 +174,7 @@ struct ZentraleAnsicht: View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    KartenTitel(symbol: "sun.horizon.fill", titel: "Tagesauswertung", farbe: Farbe.cyan)
+                    KartenTitel(symbol: "sun.horizon.fill", titel: "Tagesauswertung", farbe: Farbe.haupt)
                     Spacer()
                     if daten.laedt { ProgressView().controlSize(.small) }
                     RundKnopf(symbol: "speaker.wave.2.fill", hilfe: "Vorlesen", groesse: 30) {
@@ -179,15 +191,15 @@ struct ZentraleAnsicht: View {
                         }
                     }
                 }
-                if neuLaeuft { Text("Jarvis schreibt eine neue Auswertung – das dauert ein bis drei Minuten …").font(.jarvis(12)).foregroundStyle(Farbe.cyan) }
-                if neuFehler { Text("Die neue Auswertung kam nicht an – das Handy war nicht erreichbar oder brauchte zu lange.").font(.jarvis(12)).foregroundStyle(Farbe.orange) }
+                if neuLaeuft { Text("Jarvis schreibt eine neue Auswertung – das dauert ein bis drei Minuten …").font(.jarvis(12)).foregroundStyle(Farbe.haupt) }
+                if neuFehler { Text("Die neue Auswertung kam nicht an – das Handy war nicht erreichbar oder brauchte zu lange.").font(.jarvis(12)).foregroundStyle(Farbe.warnung) }
                 if let a = daten.auswertung {
                     MarkdownText(text: auswertungOffen ? a : Self.anfang(a), groesse: 14)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Button(auswertungOffen ? "Weniger anzeigen" : "Ganze Auswertung lesen") {
                         withAnimation(.spring(duration: 0.35)) { auswertungOffen.toggle() }
                     }
-                    .buttonStyle(.plain).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.cyan)
+                    .buttonStyle(.plain).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.haupt)
                 } else if !daten.laedt {
                     Text("Das Handy-Jarvis ist gerade nicht erreichbar – sobald es online ist, steht hier deine Tagesauswertung.")
                         .font(.jarvis(14)).foregroundStyle(Farbe.text2)
@@ -227,24 +239,24 @@ struct ZentraleAnsicht: View {
     private var macKarte: some View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 14) {
-                KartenTitel(symbol: "macbook", titel: "Am Mac", farbe: Farbe.rosa)
+                KartenTitel(symbol: "macbook", titel: "Am Mac", farbe: Farbe.kupfer)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 10)], spacing: 10) {
-                    MacKachel(symbol: "terminal.fill", titel: "Programmier-Session", farbe: Farbe.cyan) {
+                    MacKachel(symbol: "terminal.fill", titel: "Programmier-Session", farbe: Farbe.haupt) {
                         steuerung.neuesGespraech(); steuerung.entwurf = "Starte eine OpenLauncher-Session mit Opus 5.5 für folgende Aufgabe: "
                     }
                     MacKachel(symbol: "arrow.triangle.2.circlepath", titel: "Updates prüfen", farbe: Farbe.gruen) {
                         steuerung.gespraech = nil; steuerung.sende("Prüfe in der Updater-Zentrale, welche Programme auf dem Mac ein Update brauchen, und sag mir das Ergebnis.")
                     }
-                    MacKachel(symbol: "eye.fill", titel: "Bildschirm ansehen", farbe: Farbe.violett) {
+                    MacKachel(symbol: "eye.fill", titel: "Bildschirm ansehen", farbe: Farbe.gold) {
                         steuerung.gespraech = nil; steuerung.sende("Schau dir meinen Bildschirm an und sag mir kurz, was du siehst.")
                     }
-                    MacKachel(symbol: "gauge.with.dots.needle.67percent", titel: "Mac-Status", farbe: Farbe.orange) {
+                    MacKachel(symbol: "gauge.with.dots.needle.67percent", titel: "Mac-Status", farbe: Farbe.warnung) {
                         steuerung.gespraech = nil; steuerung.sende("Wie geht es meinem Mac? Kurzer Status.")
                     }
                     MacKachel(symbol: "bubble.left.and.bubble.right.fill", titel: "ChatGPT öffnen", farbe: Farbe.gruen) {
                         Task { _ = await Shell.zsh("open -a ChatGPT") }
                     }
-                    MacKachel(symbol: "square.stack.3d.up.fill", titel: "OpenLauncher", farbe: Farbe.cyan) {
+                    MacKachel(symbol: "square.stack.3d.up.fill", titel: "OpenLauncher", farbe: Farbe.haupt) {
                         Task { _ = await Shell.zsh("open -a OpenLauncher") }
                     }
                 }
@@ -268,8 +280,8 @@ struct MacKachel: View {
                 Spacer(minLength: 0)
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white.opacity(schwebt ? 0.09 : 0.04)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.white.opacity(schwebt ? 0.14 : 0.06)))
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Farbe.glas(schwebt ? 0.09 : 0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Farbe.glas(schwebt ? 0.14 : 0.06)))
             .scaleEffect(schwebt ? 1.015 : 1)
         }
         .buttonStyle(.plain)

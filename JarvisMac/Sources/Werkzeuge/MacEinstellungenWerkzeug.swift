@@ -98,6 +98,11 @@ enum MacEinstellungsKatalog {
                     werte: LiveOptionen.geminiModelle.map(\.id).joined(separator: " | "), lesen: { e.liveModellGemini }) { v in e.liveModellGemini = v; return nil },
             Eintrag(kennung: "live_stimme_gemini", bereich: "Live-Gespräch", titel: "Gemini-Live-Stimme", beschreibung: "",
                     werte: LiveOptionen.geminiStimmen.map(\.id).joined(separator: " | "), lesen: { e.liveStimmeGemini }) { v in e.liveStimmeGemini = v; return nil },
+            Eintrag(kennung: "darstellung", bereich: "Darstellung", titel: "Darstellung", beschreibung: "Hell, dunkel oder automatisch nach Sonnenauf- und -untergang in Berlin.",
+                    werte: "hell | automatik | dunkel", lesen: { DesignStand.shared.modus.rawValue }) { v in
+                guard let m = DesignStand.Modus(rawValue: v.lowercased()) else { return "hell, automatik oder dunkel" }
+                DesignStand.shared.modus = m; return nil
+            },
             Eintrag(kennung: "vollzugriff", bereich: "Mac", titel: "Vollzugriff", beschreibung: "Jarvis darf am Mac alles ohne Rückfrage.",
                     werte: "nur lesen", lesen: { e.vollzugriff ? "an" : "aus" }) { _ in
                 // Bewusst nicht per Werkzeug änderbar: sonst könnte das Modell eine ausgeschaltete Sperre selbst aufheben.
@@ -135,13 +140,14 @@ extension MacWerkzeuge {
         },
         LokalesWerkzeug(definition: WerkzeugDefinition(
             name: "mac_funktionen_lesen",
-            beschreibung: "Jarvis am Mac: Übersicht, was die Mac-Version kann (nur bei Bedarf, z. B. „Kannst du am Mac …?“). Für die Handy-App funktionen_lesen.",
+            beschreibung: "Jarvis am Mac: Übersicht, was die Mac-Version kann, dazu die Reiter der Handy-App, die Zusammenarbeit mit dem CLI und die Regeln für ChatGPT Live (nur bei Bedarf, z. B. „Kannst du am Mac …?“). Für die vollständigen Funktionen des Handys funktionen_lesen.",
             schema: ["type": "object", "properties": [:] as JSONObjekt])) { _ in
-            let url = Bundle.main.url(forResource: "funktionen", withExtension: "md")
-            let t = url.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Funktionsdatei fehlt im App-Bundle."
-            return WerkzeugErgebnis(text: t)
+            let t = ["funktionen", "jarvis-wissen"].map { name in
+                Bundle.main.url(forResource: name, withExtension: "md").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "\(name).md fehlt im App-Bundle."
+            }
+            return WerkzeugErgebnis(text: t.joined(separator: "\n\n"))
         },
     ]
 
-    static var alleLokal: [LokalesWerkzeug] { alle + weitere }
+    static var alleLokal: [LokalesWerkzeug] { alle + weitere + RepoWerkzeuge.alle }
 }

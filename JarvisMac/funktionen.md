@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.4 -->
+<!-- stand: JarvisMac 1.0.7 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -23,11 +23,12 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Gleichzeitig zuhören und sprechen mit OpenAI GPT-Live/Realtime oder Gemini Live (eigene Schlüssel), Echounterdrückung des Macs, Unterbrechen möglich; startet die Echounterdrückung nicht (Fehler -10875), zweiter Versuch und danach Echosperre statt Abbruch; Sachfragen gehen an dasselbe Jarvis-Gehirn.
 
 ## Oberfläche
+- Start (beim Öffnen): große Kugel, Begrüßung, Reiter als Kacheln, Tagesauswertung, Schnellverknüpfungen, unten die Sprechblase mit Modell und Kosten.
 - Zentrale: Kugel, Begrüßung, Schnellfrage, Tagesauswertung (vorlesbar, neu erstellen lassen), Aufgaben heute, Termine, Wetter, Mac-Kacheln.
 - Leiste mit Reitern Gespräche, Programmierung, Projekte (oranger Punkt, wenn dort gearbeitet wird); Projekte anlegen, Gespräche im Projekt.
 - Unter jeder Antwort: Kopieren, Vorlesen, Daumen hoch/runter (daraus lernt die Stil-Datei), Teilen, in neuem Gespräch fortsetzen, erneut fragen. Anthropic-Restguthaben vor dem Claude-Modellnamen.
-- Bereiche: Gespräch, Live, Programmierung (alle Sessions, neuer Auftrag, Rückfrage beantworten, Nachtrag), Ablage (Explorer mit Bereichen, Volltextsuche, Vorschau, Öffnen, Sichern, Löschen), Gedächtnis (Gemerktes, Live-Gedächtnis, Merken), Aktivität (Mac-Logbuch, Handy-Protokoll), Einstellungen (Kopf, Stimme, Sprache, Live, Mac & Rechte, Konten, Über).
-- Menüleisten-Symbol mit Schnellfrage, Sprechen, Live. Fenster-Kürzel ⌘N, ⌘D, ⌘L, ⌘1, ⌘,.
+- Bereiche: Start, Zentrale, Gespräch, Live, Programmierung (alle Sessions, neuer Auftrag, Rückfrage beantworten, Nachtrag), Ablage (Explorer mit Bereichen, Volltextsuche, Vorschau, Öffnen, Sichern, Löschen), Gedächtnis (Gemerktes, Live-Gedächtnis, Merken), Aktivität (Mac-Logbuch, Handy-Protokoll), Einstellungen (Kopf, Stimme, Sprache, Live, Mac & Rechte, Konten, Über).
+- Menüleisten-Symbol mit Schnellfrage, Sprechen, Live. Fenster-Kürzel ⌘N, ⌘D, ⌘L, ⌘1 Start, ⌘2 Zentrale, ⌘,.
 
 ## Neu seit 1.0.5
 - Zentrale: Am Mac als Funktionsboard über die volle Breite zuerst, darunter Begrüßung mit Kugel, Tagesauswertung und Aufgaben, Termine und Wetter, zuletzt die Schnellverknüpfungen.
@@ -36,3 +37,11 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Ablage als Explorer mit Bereichen (Bilder, PDFs, Prompts, Recherchen, Texte, Dokumente, Tabellen, Präsentationen, Audio, Video, Sonstige), Vorschau, Öffnen, Sichern, Löschen.
 - Gedächtnis: Langzeitkontext (Textdatei, synchron mit dem Handy, Entwurf bleibt erhalten, bei Konflikt entscheidet Frank), Gemerktes und Live-Gedächtnis eingeklappt, Live-Gedächtnis aktualisiert sich jede Minute.
 - Logbuch: JSON je Ereignis (was, wo, wann, Werkzeug, Eingabe, Ergebnis, Fehler, Dauer; private Inhalte nur als Länge) unter Application Support/JarvisMac/Logbuch, höchstens 30 Tage; Werkzeug mac_logbuch.
+
+## Neu seit 1.0.7
+- Darstellung: Dunkelmodus Schwarz mit Orange, Hellmodus warm mit Orange. Umschalter ganz unten links: Hell → Automatik → Dunkel. Die Automatik wechselt bei Sonnenauf- und -untergang in Berlin, auf dem Mac gerechnet. Kennung `darstellung` in `mac_einstellungen`.
+- Prompts: Mikrofon im Prompt-Bereich und beim Programmierauftrag; jede Einsprechung endet mit „ ; “, dazwischen steht immer „ ; “. „Mit KI verbessern“ verbessert jede Aufgabe zwischen den Trennern einzeln und behält die Trenner, mit Rückgängig. Bearbeiten öffnet einen Editor über das ganze Fenster im Vollbildmodus von macOS und ändert den Prompt selbst.
+- Guthaben: Einstellungen → Guthaben mit Anthropic und Google (wie am Handy, die Anmeldung bleibt dort). In jeder Eingabeblase Guthaben, Kosten der letzten Claude-Aufgabe (Guthaben vorher minus nachher) und Modell.
+- Zentrale: Sprechblase über den Schnellverknüpfungen, diese untereinander in voller Breite, Bereich schmaler.
+- Gedächtnis: zusätzlich Funktionsübersicht Mac, Funktionsübersicht Handy, Handy-Reiter und CLI, Regeln für ChatGPT Live.
+- `repo_lesen` liest am Mac direkt aus ~/proggs (ohne Vollzugriff wie bisher über das Handy), `cli_frage` fragt im Hintergrund das CLI, nur lesend.
