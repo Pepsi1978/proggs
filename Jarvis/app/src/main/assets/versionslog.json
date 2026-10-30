@@ -443,6 +443,7 @@
     {"versionCode": 437, "versionName": "1.8.426", "stand": "30.10.2026, 12:13 Uhr", "notiz": "Eingesprochener Text endet im Reiter Prompts immer mit Leerzeichen, Semikolon, Leerzeichen, und die nächste Einsprache setzt genau dort an."},
     {"versionCode": 438, "versionName": "1.8.427", "stand": "30.10.2026, 12:22 Uhr", "notiz": "Der KI-Knopf bei den Prompts glättet jede Einsprache einzeln und behält die Trenner, Kopieren und Teilen geben den Text ohne Schluss-Trenner weiter."},
     {"versionCode": 439, "versionName": "1.8.428", "stand": "30.10.2026, 12:33 Uhr", "notiz": "Nach dem Senden eines Prompts aus der Ablage fragt Jarvis, ob der Prompt gelöscht werden soll; der Text in der Eingabe bleibt dabei immer erhalten."},
-    {"versionCode": 440, "versionName": "1.8.429", "stand": "30.10.2026, 12:40 Uhr", "notiz": "Die Löschfrage nach dem Senden erscheint jetzt ohne Tastatur und Eingabe zu stören, und ein inzwischen geänderter Prompt wird dabei nicht mehr gelöscht."}
+    {"versionCode": 440, "versionName": "1.8.429", "stand": "30.10.2026, 12:40 Uhr", "notiz": "Die Löschfrage nach dem Senden erscheint jetzt ohne Tastatur und Eingabe zu stören, und ein inzwischen geänderter Prompt wird dabei nicht mehr gelöscht."},
+    {"versionCode": 441, "versionName": "1.8.430", "stand": "30.10.2026, 12:44 Uhr", "notiz": "Testversion ohne Funktionsänderung, um das neue Zeitfenster von UpdateStation vor der Jarvis-Installation zu prüfen"}
 ]
 }
