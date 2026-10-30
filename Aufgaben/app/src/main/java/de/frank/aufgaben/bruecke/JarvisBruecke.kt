@@ -186,9 +186,10 @@ class JarvisBruecke : ContentProvider() {
             "erledigen" -> {
                 val alt = repo.eine(a.optLong("id", -1)) ?: return fehler("Keine Aufgabe mit dieser id.")
                 val erledigt = a.optBoolean("erledigt", true)
+                if (erledigt && alt.zuFrueh(Tage.heute())) return fehler("Tägliche Aufgaben lassen sich erst an ihrem Tag abhaken.")
                 val folge = repo.setzeErledigt(alt, erledigt)
                 JSONObject()
-                    .put("aufgabe", alsJson(alt.copy(erledigt = erledigt), Tage.heute()))
+                    .put("aufgabe", alsJson(repo.eine(alt.id) ?: alt.copy(erledigt = erledigt), Tage.heute()))
                     .apply { folge?.let { put("naechste_wiederholung", alsJson(it, Tage.heute())) } }
             }
 
@@ -218,7 +219,7 @@ class JarvisBruecke : ContentProvider() {
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
-    private fun alsJson(a: Aufgabe, heute: Long): JSONObject = JSONObject()
+    private fun alsJson(aufgabe: Aufgabe, heute: Long): JSONObject = aufgabe.aufHeute(heute).let { a -> JSONObject()
         .put("id", a.id)
         .put("titel", a.titel)
         .put("text", a.text)
@@ -233,11 +234,11 @@ class JarvisBruecke : ContentProvider() {
         .put("als_wecker", a.alsWecker)
         .put("wiederholung", a.wdh.name)
         .put("erledigt", a.erledigt)
-        .put("ueberfaellig", !a.erledigt && a.tag != null && a.tag < heute && !a.laeuftTaeglich)
+        .put("ueberfaellig", a.ueberfaellig(heute))
         .put("schritte", JSONArray(a.schritte.map { JSONObject().put("text", it.text).put("erledigt", it.erledigt) }))
         .put("ziel_id", a.zielId ?: JSONObject.NULL)
         .put("ziel_titel", a.zielTitel)
-        .put("ziel_symbol", a.zielSymbol)
+        .put("ziel_symbol", a.zielSymbol) }
 
     private fun ohne(wert: String): Boolean = wert.trim().lowercase(Locale.GERMAN) in setOf("", "ohne", "kein", "keine", "null", "none")
 

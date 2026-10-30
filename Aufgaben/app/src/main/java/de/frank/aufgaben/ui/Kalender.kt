@@ -82,7 +82,12 @@ fun KalenderBildschirm(vm: AppViewModel) {
     val heute = vm.heute
     val start = heute - TAGE_ZURUECK
     val ende = start + TAGE_GESAMT - 1
-    val proTag = remember(alle, heute) { (start..ende).associateWith { t -> alle.mapNotNull { it.amTag(t, heute) } } }
+    val proTag = remember(alle, heute) {
+        val (taeglich, rest) = alle.partition { it.laeuftTaeglich }
+        val feste = rest.filter { it.tag != null }.groupBy { it.tag!! }
+        if (taeglich.isEmpty()) feste
+        else (start..ende).associateWith { t -> feste[t].orEmpty() + taeglich.mapNotNull { it.amTag(t, heute) } }
+    }
     // Nach Mitternacht kann der gewählte Tag aus dem Fenster fallen: dann zurück zur Übersicht.
     val gewaehlt = vm.kalenderTag?.takeIf { it in start..ende }
     AnimatedContent(

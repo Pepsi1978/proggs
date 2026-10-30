@@ -375,7 +375,7 @@ private fun ZielGruppe(vm: AppViewModel, liste: List<Aufgabe>, heute: Long, zust
             Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise, modifier = Modifier.padding(start = 6.dp))
         }
         if (offen) Column(Modifier.fillMaxWidth().padding(start = 22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            liste.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = a.tag != null) }
+            liste.map { it.aufHeute(heute) }.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = a.tag != null) }
         }
     }
 }

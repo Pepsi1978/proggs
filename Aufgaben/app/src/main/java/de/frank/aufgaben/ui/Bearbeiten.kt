@@ -356,8 +356,8 @@ private fun Mikrofon(vm: AppViewModel) {
         Text(
             when {
                 laeuft -> "%d:%02d · Tippen zum Beenden".format(sekunden / 60, sekunden % 60)
-                verarbeitet -> "Whisper transkribiert …"
-                vm.einstellungen.groqKey.isBlank() -> "Für Sprache: Groq-Schlüssel in den Einstellungen"
+                verarbeitet -> if (de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(androidx.compose.ui.platform.LocalContext.current)) "Parakeet transkribiert …" else "Whisper transkribiert …"
+                vm.einstellungen.groqKey.isBlank() && !de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(androidx.compose.ui.platform.LocalContext.current) -> "Für Sprache: Groq-Schlüssel in den Einstellungen"
                 else -> "Tippen und sprechen"
             },
             color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp),

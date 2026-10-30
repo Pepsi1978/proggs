@@ -136,7 +136,7 @@ fun AufgabeKarte(
 ) {
     val f = LocalFarben.current
     val prio = f.prio(a.prio)
-    val gezogen = zustand?.aufgabe?.id == a.id && !schwebend
+    val gezogen = zustand?.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true && !schwebend
     val glow by animateFloatAsState(if (hervorheben) 1f else 0f, tween(600), label = "glow")
     var basis = Modifier
         .fillMaxWidth()
@@ -160,7 +160,7 @@ fun AufgabeKarte(
                 textDecoration = if (a.erledigt) TextDecoration.LineThrough else null,
             )
             val schritte = a.schritte
-            val ueberfaellig = !a.erledigt && a.tag != null && a.tag < heute && !a.laeuftTaeglich
+            val ueberfaellig = a.ueberfaellig(heute)
             val zeigtMerkmale = a.minuten != null || a.erinnerung || a.wdh != Wiederholung.KEINE || schritte.isNotEmpty() || ueberfaellig || zeigeDatum
             if (a.text.isNotBlank() && a.text != a.titel) {
                 Text(a.text, color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))

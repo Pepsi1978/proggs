@@ -50,11 +50,12 @@ interface AufgabenDao {
 
 @Database(
     entities = [Aufgabe::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
     // 1 → 2: Spalten vorlesen und alsWecker (beide mit Standard 0), von Room erzeugt.
     // 2 → 3: Spalten zielId, zielTitel, zielSymbol (Aufgaben aus der App „Ziele“).
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    // 3 → 4: Spalte folgeVon (Verknüpfung einer Wiederholung mit ihrem Vorgänger).
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
 )
 abstract class AufgabenDatenbank : RoomDatabase() {
     abstract fun dao(): AufgabenDao

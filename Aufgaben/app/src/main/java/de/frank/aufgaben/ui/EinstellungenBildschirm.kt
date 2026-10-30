@@ -132,6 +132,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Schalter("Animierte Szene oben zeigen", e.szeneZeigen) { e.szeneZeigen = it }
                 }
                 // ---- Sprache ----
+                Block("Spracheingabe · Offline") {
+                    de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                }
                 Block("Spracheingabe · Whisper (Groq)") {
                     Feld("Groq-API-Schlüssel", e.groqKey, geheim = true) { e.groqKey = it }
                     Schalter("Beim Plus sofort aufnehmen", e.autoMikro) { e.autoMikro = it }

@@ -190,7 +190,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         eVorlesen = einstellungen.vorlesenStandard; eAlsWecker = false
         eSchritte.clear(); eVorschlag = null; textVorKorrektur = null; korrekturFassungen = emptyList()
         bildschirm = Bildschirm.Bearbeiten(null)
-        if (mitMikro && einstellungen.autoMikro && einstellungen.groqKey.isNotBlank()) mikroTippen()
+        if (mitMikro && einstellungen.autoMikro && (einstellungen.groqKey.isNotBlank() || de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication()))) mikroTippen()
     }
 
     fun oeffne(id: Long, zurueckZu: Bildschirm = Bildschirm.Liste) {
@@ -198,7 +198,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val a = repo.eine(id) ?: return@launch
             editorQuelle = a
             nachEditor = zurueckZu
-            eId = a.id; eTitel = a.titel; eText = a.text; ePrio = a.prio; eTag = a.tag; eMinuten = a.minuten
+            eId = a.id; eTitel = a.titel; eText = a.text; ePrio = a.prio; eTag = a.aufHeute(heute).tag; eMinuten = a.minuten
             eDauer = a.dauer; eErinnerung = a.erinnerung; eVorlauf = a.vorlauf; eWdh = a.wdh
             eVorlesen = a.vorlesen; eAlsWecker = a.alsWecker
             eSchritte.clear(); eSchritte.addAll(a.schritte)
@@ -321,7 +321,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun mikroTippen() {
         when (aufnahme) {
             Aufnahme.AUS -> {
-                if (einstellungen.groqKey.isBlank()) { melde("Bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."); return }
+                if (einstellungen.groqKey.isBlank() && !de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication())) { melde("Bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."); return }
                 mikrofonAnfragen()
             }
             Aufnahme.LAEUFT -> aufnahmeBeenden()
@@ -356,7 +356,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val wav = mikro.stop()
                 if (wav == null) { melde("Es wurde nichts aufgenommen."); return@launch }
-                val text = Diktat(transcriber).transkribiere(wav).text.trim()
+                val text = if (de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication())) de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.transkribiere(getApplication(), wav)
+                else Diktat(transcriber).transkribiere(wav).text.trim()
                 if (text.isBlank()) {
                     melde("Keine Sprache erkannt.")
                 } else {
@@ -382,6 +383,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun verschiebe(a: Aufgabe, ziel: Ziel) {
         viewModelScope.launch {
+            // Karten täglicher Aufgaben tragen den angezeigten Tag; gespeichert wird immer die echte Zeile.
+            val zeile = if (a.laeuftTaeglich) repo.eine(a.id) ?: a else a
             when (ziel) {
                 is Ziel.Tag -> {
                     val prio = if (a.prio == Prioritaet.SPAETER) Prioritaet.MITTEL else a.prio
@@ -389,10 +392,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val erinnerung = if (minuten != null && a.minuten == null) true else a.erinnerung
                     val vorlauf = if (minuten != null && a.minuten == null) einstellungen.vorlaufStandard else a.vorlauf
                     val vorlesen = if (minuten != null && a.minuten == null) einstellungen.vorlesenStandard else a.vorlesen
-                    repo.speichere(a.copy(tag = ziel.tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && minuten != null, vorlauf = vorlauf, vorlesen = vorlesen))
+                    // Täglich: Ziehen ändert nur die Uhrzeit, kein Tag fällt dadurch weg. Früher anfangen geht.
+                    val tag = if (a.laeuftTaeglich) minOf(maxOf(zeile.tag ?: heute, heute), ziel.tag) else ziel.tag
+                    repo.speichere(zeile.copy(tag = tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && minuten != null, vorlauf = vorlauf, vorlesen = vorlesen))
                     if (minuten != null) hinweiseAnfragen()
                 }
-                is Ziel.Prio -> repo.speichere(a.copy(prioritaet = ziel.prioritaet.name, tag = null, minuten = null))
+                is Ziel.Prio -> if (a.laeuftTaeglich) {
+                    repo.speichere(zeile.copy(prioritaet = ziel.prioritaet.name))
+                    melde("Tägliche Aufgaben bleiben an den Tagen, nur die Priorität ändert sich.")
+                } else repo.speichere(a.copy(prioritaet = ziel.prioritaet.name, tag = null, minuten = null))
                 Ziel.Erledigt -> erledigen(a, true)
                 Ziel.Loeschen -> loeschen(a)
             }
@@ -400,8 +408,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun erledigen(a: Aufgabe, erledigt: Boolean) {
-        // Jeder Tag einer täglichen Aufgabe zeigt dieselbe Zeile: Abhaken zählt immer für den Tag selbst.
-        if (erledigt && a.laeuftTaeglich && (a.tag ?: heute) > heute) {
+        if (erledigt && a.zuFrueh(heute)) {
             melde("Tägliche Aufgaben lassen sich erst an ihrem Tag abhaken.")
             return
         }
@@ -421,8 +428,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun loeschen(a: Aufgabe) {
         viewModelScope.launch {
-            repo.loesche(a)
-            melde("Gelöscht") { viewModelScope.launch { repo.wiederherstellen(a) } }
+            val zeile = repo.eine(a.id) ?: a
+            repo.loesche(zeile)
+            melde("Gelöscht") { viewModelScope.launch { repo.wiederherstellen(zeile) } }
         }
     }
 
@@ -468,7 +476,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val text = if (liste.isEmpty()) "In $name steht nichts." else buildString {
             append("In $name ${if (liste.size == 1) "steht eine Aufgabe" else "stehen ${liste.size} Aufgaben"}. ")
             liste.forEach { a ->
-                if (mitDatum && a.tag != null) append("${Tage.datum(a.tag)}${a.minuten?.let { " um ${Tage.zeit(it)} Uhr" } ?: ""}: ")
+                a.aufHeute(heute).tag?.takeIf { mitDatum }?.let { t -> append("${Tage.datum(t)}${a.minuten?.let { " um ${Tage.zeit(it)} Uhr" } ?: ""}: ") }
                 append("${a.titel}. ")
             }
         }
@@ -497,7 +505,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 liste.forEach { a ->
                     nr++
                     append("Aufgabe $nr: ${a.titel.trim().trimEnd('.')}. ")
-                    a.tag?.let { t -> append("Geplant für ${Tage.datum(t)}${a.minuten?.let { " um ${Tage.zeit(it)} Uhr" } ?: ""}. ") }
+                    a.aufHeute(heute).tag?.let { t -> append("Geplant für ${Tage.datum(t)}${a.minuten?.let { " um ${Tage.zeit(it)} Uhr" } ?: ""}. ") }
                     append("Priorität ${a.prio.anzeige}. ")
                     append("Dauer etwa ${a.dauer} Minuten. ")
                     if (a.wdh != Wiederholung.KEINE) append("Wiederholung ${a.wdh.anzeige}. ")

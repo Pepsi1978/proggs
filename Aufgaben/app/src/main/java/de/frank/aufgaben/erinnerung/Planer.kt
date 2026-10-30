@@ -74,8 +74,10 @@ object Planer {
         val jetzt = System.currentTimeMillis()
         AufgabenRepository.get(app).alleEinmal().forEach { a ->
             val pi = ausloeser(app, a.id, (a.id * 2).toInt())
-            val tag = a.aufHeute(heute).tag
             val min = a.minuten
+            // Täglich: Ist der Zeitpunkt heute vorbei, gilt schon der von morgen.
+            var tag = a.aufHeute(heute).tag
+            if (a.laeuftTaeglich && tag == heute && min != null && Tage.millis(heute, min) - a.vorlauf * 60_000L <= jetzt) tag = heute + 1
             val zeit = if (tag != null && min != null) Tage.millis(tag, min) - a.vorlauf * 60_000L else 0L
             if (!a.erledigt && a.erinnerung && tag != null && min != null && tag in heute..heute + 1 && zeit > jetzt) {
                 if (a.alsWecker) stelleWecker(app, zeit, pi, a.id) else stelle(app, zeit, pi)

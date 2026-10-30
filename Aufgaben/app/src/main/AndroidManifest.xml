@@ -18,6 +18,16 @@
         android:name="de.frank.aufgaben.permission.JARVIS"
         android:protectionLevel="signature" />
 
+    <!-- Brücke zu Jarvis (Parakeet-Offline-Transkription): nur Apps mit demselben Signierschlüssel dürfen zugreifen. -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+
+    <queries>
+        <provider android:authorities="de.frank.jarvis.parakeet" />
+    </queries>
+
     <application
         android:name=".AufgabenApplication"
         android:allowBackup="true"

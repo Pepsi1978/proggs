@@ -370,7 +370,7 @@ fun ZeitMarke(zustand: ZiehZustand) {
 private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, onErledigt: () -> Unit) {
     val f = LocalFarben.current
     val farbe = f.prio(a.prio)
-    val gezogen = zustand.aufgabe?.id == a.id
+    val gezogen = zustand.aufgabe?.let { it.id == a.id && it.tag == a.tag } == true
     val ende = (a.minuten ?: 0) + a.dauer
     Row(
         Modifier.fillMaxSize()

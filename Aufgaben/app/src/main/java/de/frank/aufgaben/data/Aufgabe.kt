@@ -79,6 +79,8 @@ data class Aufgabe(
     val zielId: Long? = null,
     @ColumnInfo(defaultValue = "") val zielTitel: String = "",
     @ColumnInfo(defaultValue = "") val zielSymbol: String = "",
+    /** Bei Wiederholungen: id der Aufgabe, durch deren Erledigen diese Folge entstanden ist. */
+    val folgeVon: Long? = null,
 ) {
     val prio: Prioritaet get() = Prioritaet.von(prioritaet)
     val wdh: Wiederholung get() = Wiederholung.von(wiederholung)
@@ -94,7 +96,12 @@ data class Aufgabe(
     }
 
     /** Für die Heute-Listen: Tägliche zählen auf heute, alles andere bleibt, wie es ist. */
-    fun aufHeute(heute: Long): Aufgabe = if (laeuftTaeglich) amTag(heute, heute) ?: this else this
+    fun aufHeute(heute: Long): Aufgabe = amTag(heute, heute) ?: this
+
+    /** Tägliche lassen sich erst an ihrem Tag abhaken: Jeder Tag zeigt dieselbe Zeile. */
+    fun zuFrueh(heute: Long): Boolean = laeuftTaeglich && (tag ?: heute) > heute
+
+    fun ueberfaellig(heute: Long): Boolean = !erledigt && !laeuftTaeglich && tag != null && tag < heute
 
     val schritte: List<Schritt>
         get() = if (schritteJson.isBlank()) emptyList() else runCatching {
