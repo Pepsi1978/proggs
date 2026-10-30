@@ -1,16 +1,27 @@
 package de.frank.updatestation.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 
 object Farben {
     val kopfVerlauf: Brush
@@ -110,11 +121,43 @@ private val Schrift = Typography().let { t ->
 
 val TextStyle.fett get() = copy(fontWeight = FontWeight.SemiBold)
 
+/**
+ * Automatisch folgt der Sonne in Neuenhagen (offline, ohne Standortrechte), nicht dem System:
+ * hell ab Sonnenaufgang, dunkel ab Ende der bürgerlichen Dämmerung. Jede Minute prüfen, nur solange die App sichtbar ist.
+ * Einzige Quelle für „Ist es dunkel?“ im Automatikmodus; sie gehört vor Theme und Systemleisten.
+ */
 @Composable
-fun UpdateStationTheme(dunkel: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (dunkel) Dunkel else Hell,
-        typography = Schrift,
-        content = content,
-    )
+fun rememberSonneDunkel(automatisch: Boolean): Boolean {
+    var sonneDunkel by remember(automatisch) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, automatisch) {
+        if (!automatisch) return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
+    return sonneDunkel
+}
+
+@Composable
+fun UpdateStationTheme(dunkel: Boolean, content: @Composable () -> Unit) {
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb
+    // bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, dunkel) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                (if (dunkel) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
+    CompositionLocalProvider(LocalConfiguration provides konfig) {
+        MaterialTheme(
+            colorScheme = if (dunkel) Dunkel else Hell,
+            typography = Schrift,
+            content = content,
+        )
+    }
 }

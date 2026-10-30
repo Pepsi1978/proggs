@@ -14,7 +14,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +28,7 @@ import com.google.android.gms.common.api.ApiException
 import de.frank.updatestation.ui.Aktionen
 import de.frank.updatestation.ui.HauptScreen
 import de.frank.updatestation.ui.UpdateStationTheme
+import de.frank.updatestation.ui.rememberSonneDunkel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -79,7 +79,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val dunkel = designModus.istDunkel(isSystemInDarkTheme())
+            val dunkel = designModus.istDunkel(rememberSonneDunkel(designModus == DesignModus.AUTOMATISCH))
             SideEffect {
                 val transparent = android.graphics.Color.TRANSPARENT
                 enableEdgeToEdge(

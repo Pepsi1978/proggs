@@ -5,9 +5,10 @@ enum class DesignModus(val titel: String) {
     AUTOMATISCH("Automatisch"),
     DUNKEL("Dunkel");
 
-    fun istDunkel(systemDunkel: Boolean): Boolean = when (this) {
+    /** [sonneDunkel] kommt aus der Sonnen-Automatik in Neuenhagen (rememberSonneDunkel), nicht vom System. */
+    fun istDunkel(sonneDunkel: Boolean): Boolean = when (this) {
         HELL -> false
-        AUTOMATISCH -> systemDunkel
+        AUTOMATISCH -> sonneDunkel
         DUNKEL -> true
     }
 
