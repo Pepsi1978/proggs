@@ -81,6 +81,15 @@ enum MacEinstellungsKatalog {
                 guard ["apple", "groq", "parakeet"].contains(w) else { return "Erlaubt: parakeet, groq, apple" }
                 e.transkription = w; return nil
             },
+            Eintrag(kennung: "parakeet_woerterbuch_an", bereich: "Sprache", titel: "Parakeet-Wörterbuch", beschreibung: "Eigene Begriffe bei der Offline-Transkription mit Parakeet bevorzugen.",
+                    werte: "an | aus", lesen: { TranskriptionsEinstellungen.shared.parakeetWoerterbuchAn ? "an" : "aus" }) { v in
+                guard let b = wahr(v) else { return "an oder aus" }
+                TranskriptionsEinstellungen.shared.parakeetWoerterbuchAn = b; return nil
+            },
+            Eintrag(kennung: "parakeet_begriffe", bereich: "Sprache", titel: "Parakeet-Begriffe", beschreibung: "Begriffe des Parakeet-Wörterbuchs. Ersetzt die ganze Liste.",
+                    werte: "Begriffe durch Komma oder Zeilenumbruch getrennt, höchstens 100", lesen: { TranskriptionsEinstellungen.shared.parakeetWoerterbuch }) { v in
+                TranskriptionsEinstellungen.shared.parakeetWoerterbuch = v; return nil
+            },
             Eintrag(kennung: "tastenkuerzel", bereich: "Sprache", titel: "Globale Tastenkürzel", beschreibung: "⌥⌘J sprechen, ⌥⌘K Fenster.",
                     werte: "an | aus", lesen: { e.globalesKuerzel ? "an" : "aus" }) { v in
                 guard let b = wahr(v) else { return "an oder aus" }
@@ -116,7 +125,7 @@ extension MacWerkzeuge {
     static let weitere: [LokalesWerkzeug] = [
         LokalesWerkzeug(definition: WerkzeugDefinition(
             name: "mac_einstellungen",
-            beschreibung: "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am Mac: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Tastenkürzel, Live-Anbieter/-Modell/-Stimme, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
+            beschreibung: "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am Mac: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Parakeet-Wörterbuch, Tastenkürzel, Live-Anbieter/-Modell/-Stimme, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
             schema: ["type": "object", "properties": [
                 "aktion": ["type": "string", "enum": ["lesen", "aendern"]],
                 "bereich": ["type": "string", "description": "optional: nur dieser Bereich"],

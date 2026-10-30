@@ -15,6 +15,8 @@ final class TranskriptionsEinstellungen {
     nonisolated static let modellTurbo = "whisper-large-v3-turbo"
     nonisolated static let modellLargeV3 = "whisper-large-v3"
     nonisolated static let standardWoerterbuch = "Bug-Almanach, Sonnet-Schwarm, Groq, Whisper, APK-Update, UpdateStation, OpenLauncher, Jarvis, debugging, Logcat, Harness, Best Practices, VCO, CVO, ChatGPT, Claude, Claude Code, OpenAI, Anthropic, bug almanach, Anthrophic"
+    /// Startliste des Parakeet-Wörterbuchs, gleicher Stand wie ParakeetUeberJarvis.STANDARD_WOERTERBUCH (Modul M1.4).
+    nonisolated static let standardParakeetWoerterbuch = "Bug-Almanach, Sonnet-Schwarm, Groq, Whisper, APK-Update, UpdateStation, OpenLauncher, Jarvis, debugging, Logcat, Harness, Best Practices, VCO, CVO, ChatGPT, Claude, Claude Code, OpenAI, Anthropic"
 
     var whisperModell: String { didSet { d.set(whisperModell, forKey: "tk.whisperModell") } }
     var filterStilleVorab: Bool { didSet { d.set(filterStilleVorab, forKey: "tk.filterStille") } }
@@ -23,6 +25,9 @@ final class TranskriptionsEinstellungen {
     var filterFloskeln: Bool { didSet { d.set(filterFloskeln, forKey: "tk.filterFloskeln") } }
     var woerterbuchAn: Bool { didSet { d.set(woerterbuchAn, forKey: "tk.woerterbuchAn") } }
     var woerterbuchBegriffe: String { didSet { d.set(woerterbuchBegriffe, forKey: "tk.woerterbuch") } }
+    // Eigener Schalter und eigene Liste für Parakeet, getrennt vom Whisper-Wörterbuch.
+    var parakeetWoerterbuchAn: Bool { didSet { d.set(parakeetWoerterbuchAn, forKey: "tk.parakeetWoerterbuchAn") } }
+    var parakeetWoerterbuch: String { didSet { d.set(parakeetWoerterbuch, forKey: "tk.parakeetWoerterbuch") } }
 
     /// Fortschritt des Parakeet-Downloads (0…1), nil = kein Download.
     var download: Double?
@@ -38,6 +43,8 @@ final class TranskriptionsEinstellungen {
         filterFloskeln = b("tk.filterFloskeln")
         woerterbuchAn = b("tk.woerterbuchAn")
         woerterbuchBegriffe = d.string(forKey: "tk.woerterbuch") ?? Self.standardWoerterbuch
+        parakeetWoerterbuchAn = b("tk.parakeetWoerterbuchAn")
+        parakeetWoerterbuch = d.string(forKey: "tk.parakeetWoerterbuch") ?? Self.standardParakeetWoerterbuch
         // Vorgabe wie gewünscht: Parakeet, wenn das geteilte Modell (von TVO/CVO) schon auf dem Mac liegt.
         if d.string(forKey: "transkription") == nil && ParakeetLocalClient.isInstalled {
             Einstellungen.shared.transkription = "parakeet"
@@ -60,6 +67,11 @@ final class TranskriptionsEinstellungen {
             s += w; n += 1
         }
         return n == 0 ? nil : s + "."
+    }
+
+    /// Wortliste für Parakeet je Aufnahme; leer = ohne Wörterbuch.
+    var parakeetHotwords: String {
+        parakeetWoerterbuchAn ? ParakeetLocalClient.hotwords(aus: parakeetWoerterbuch) : ""
     }
 
     var anzeigeName: String {
@@ -103,7 +115,7 @@ enum Transkription {
             // „Stille vorab“ gilt wie am Handy auch offline.
             if e.filterStilleVorab && analyse.stimmMs < SprachAnalyse.minSprachMs { return "" }
             let zuschnitt = e.filterStilleVorab ? analyse.zugeschnitten(samples) : samples
-            return try await ParakeetLocalClient.shared.transkribiere(zuschnitt)
+            return try await ParakeetLocalClient.shared.transkribiere(zuschnitt, hotwords: e.parakeetHotwords)
         default:
             return try await GroqWhisper.transkribiere(samples, analyse: analyse, schluessel: Einstellungen.shared.zugang.groq,
                                                       modell: e.whisperModell, prompt: e.prompt,
@@ -169,6 +181,7 @@ struct TranskriptionsEinstellungenAnsicht: View {
     @State private var einst = Einstellungen.shared
     @State private var tk = TranskriptionsEinstellungen.shared
     @State private var begriffe = TranskriptionsEinstellungen.shared.woerterbuchBegriffe
+    @State private var parakeetBegriffe = TranskriptionsEinstellungen.shared.parakeetWoerterbuch
     @State private var auffrischen = 0
 
     private var parakeetDa: Bool { _ = auffrischen; return ParakeetLocalClient.isInstalled }
@@ -198,7 +211,7 @@ struct TranskriptionsEinstellungenAnsicht: View {
                     }
                 }
                 if einst.transkription == "parakeet" {
-                    Text("Wörterbuch und Whisper-Filter gelten nur für Groq; „Stille vorab“ wirkt auch hier.")
+                    Text("Die Whisper-Filter gelten nur für Groq; „Stille vorab“ wirkt auch hier.")
                         .font(.jarvis(11)).foregroundStyle(Farbe.text3)
                 }
             }
@@ -269,6 +282,17 @@ struct TranskriptionsEinstellungenAnsicht: View {
                 }
             }
             if let f = tk.downloadFehler { Text(f).font(.jarvis(12)).foregroundStyle(Farbe.rot) }
+            Text("Wörterbuch").font(.jarvis(13, .semibold)).padding(.top, 4)
+            chip("Wörterbuch nutzen", $tk.parakeetWoerterbuchAn)
+            if tk.parakeetWoerterbuchAn {
+                Text("Begriffe, die Parakeet bevorzugt erkennen soll (durch Komma oder Zeilenumbruch getrennt, höchstens 100). Die dafür nötige Beam-Suche rechnet rund 30 % langsamer.")
+                    .font(.jarvis(11)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true)
+                TextEditor(text: $parakeetBegriffe).font(.jarvis(12)).frame(minHeight: 70).scrollContentBackground(.hidden)
+                    .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.25)))
+                if parakeetBegriffe != tk.parakeetWoerterbuch {
+                    KapselKnopf(symbol: "checkmark", titel: "Speichern", hervorgehoben: true) { tk.parakeetWoerterbuch = parakeetBegriffe }
+                }
+            }
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 14).fill(Farbe.tiefe(0.2)))

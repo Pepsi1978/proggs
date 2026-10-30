@@ -67,12 +67,33 @@ final class ParakeetLocalClient: @unchecked Sendable {
     /// Leise Aufnahmen kommen sonst leer zurueck: auf diese Spitze anheben, hoechstens um maxGain.
     private static let targetPeak: Float = 0.5
     private static let maxGain: Float = 30
+    /// Am echten Modell gemessen: 1,5 ließ „Jarvis“ als „Travis“ stehen, ab 4 verbiegt es Nachbarwörter.
+    private static let hotwordsScore: Float = 3
+    /// Wie am Handy: mehr als 100 Begriffe gehen nicht in die Beam-Suche.
+    private static let maxHotwords = 100
     /// Nach so langer Ruhe gibt das Overlay den Arbeitsspeicher wieder frei (TVO und CVO laufen gleichzeitig).
     private static let idleUnloadS: Double = 15 * 60
 
     private let queue = DispatchQueue(label: "parakeet.local", qos: .userInitiated)
     private var recognizer: OpaquePointer?
     private var idleWork: DispatchWorkItem?
+    /// Nur mit bpe.vocab im Bundle läuft die Beam-Suche, die allein Wortlisten beachtet.
+    private var hotwordsVerfuegbar = false
+
+    /// Begriffe im Format von sherpa-onnx: durch „/“ getrennt; „/“, „:“ und „#“ haben dort eine eigene Bedeutung und werden
+    /// zu Leerzeichen. Doppelte (ohne Groß/Klein) fallen weg, höchstens 100 Begriffe.
+    static func hotwords(aus text: String) -> String {
+        var gesehen = Set<String>()
+        var begriffe: [String] = []
+        for teil in text.components(separatedBy: CharacterSet(charactersIn: "\n\r,;")) {
+            let begriff = teil.replacingOccurrences(of: "[/:#]", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespaces)
+            guard !begriff.isEmpty, gesehen.insert(begriff.lowercased()).inserted else { continue }
+            begriffe.append(begriff)
+            if begriffe.count >= maxHotwords { break }
+        }
+        return begriffe.joined(separator: "/")
+    }
 
     /// Laedt das Modell im Hintergrund vor (beim Aufnahmestart), damit das Diktat nicht wartet.
     func preload() {
@@ -81,18 +102,19 @@ final class ParakeetLocalClient: @unchecked Sendable {
     }
 
     /// Mitschrift einer fertigen Aufnahme, ganz auf diesem Mac.
-    func transcribe(fileURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
+    func transcribe(fileURL: URL, hotwords: String = "", completion: @escaping (Result<String, Error>) -> Void) {
         queue.async {
             do {
                 let r = try self.loadIfNeeded()
                 let samples = try Self.readSamples(fileURL)
                 let start = CFAbsoluteTimeGetCurrent()
+                let liste = self.hotwordsVerfuegbar ? hotwords : ""
                 var parts: [String] = []
                 for chunk in Self.split(samples, maxS: Self.maxChunkS) {
-                    var text = Self.decode(r, chunk)
+                    var text = Self.decode(r, chunk, hotwords: liste)
                     // Ein langes Stueck kommt gelegentlich leer zurueck; kurze Teile derselben Aufnahme klappen.
                     if text.isEmpty && chunk.count > Self.retryChunkS * Self.sampleRate {
-                        text = Self.split(chunk, maxS: Self.retryChunkS).map { Self.decode(r, $0) }
+                        text = Self.split(chunk, maxS: Self.retryChunkS).map { Self.decode(r, $0, hotwords: liste) }
                             .filter { !$0.isEmpty }.joined(separator: " ")
                     }
                     if !text.isEmpty { parts.append(text) }
@@ -110,17 +132,19 @@ final class ParakeetLocalClient: @unchecked Sendable {
     }
 
     /// Mitschrift aus 16-kHz-Mono-Samples (vom Diktat), ganz auf diesem Mac.
-    func transkribiere(_ samples: [Float]) async throws -> String {
+    /// `hotwords`: Wortliste je Aufnahme aus `hotwords(aus:)`; leer = ohne Wortliste.
+    func transkribiere(_ samples: [Float], hotwords: String = "") async throws -> String {
         try await withCheckedThrowingContinuation { (k: CheckedContinuation<String, Error>) in
             queue.async {
                 do {
                     let r = try self.loadIfNeeded()
                     let start = CFAbsoluteTimeGetCurrent()
+                    let liste = self.hotwordsVerfuegbar ? hotwords : ""
                     var parts: [String] = []
                     for chunk in Self.split(samples, maxS: Self.maxChunkS) {
-                        var text = Self.decode(r, chunk)
+                        var text = Self.decode(r, chunk, hotwords: liste)
                         if text.isEmpty && chunk.count > Self.retryChunkS * Self.sampleRate {
-                            text = Self.split(chunk, maxS: Self.retryChunkS).map { Self.decode(r, $0) }
+                            text = Self.split(chunk, maxS: Self.retryChunkS).map { Self.decode(r, $0, hotwords: liste) }
                                 .filter { !$0.isEmpty }.joined(separator: " ")
                         }
                         if !text.isEmpty { parts.append(text) }
@@ -195,7 +219,19 @@ final class ParakeetLocalClient: @unchecked Sendable {
         cfg.model_config.num_threads = Self.threads
         cfg.model_config.provider = c("cpu")
         cfg.model_config.model_type = c("nemo_transducer")
-        cfg.decoding_method = c("greedy_search")
+        // Vokabular des Modells: zerlegt die Begriffe der Wortliste in Modell-Token. Liegt im App-Bundle, nicht im
+        // Modell-Download. Die Liste selbst kommt je Aufnahme über den Stream, darum kein hotwords_file.
+        if let bpe = Bundle.main.url(forResource: "bpe", withExtension: "vocab") {
+            cfg.model_config.bpe_vocab = c(bpe.path)
+            cfg.model_config.modeling_unit = c("bpe")
+            cfg.decoding_method = c("modified_beam_search")
+            cfg.hotwords_score = Self.hotwordsScore
+            hotwordsVerfuegbar = true
+        } else {
+            log("fehler", "Parakeet: bpe.vocab fehlt im Bundle, Wörterbuch wirkt nicht")
+            cfg.decoding_method = c("greedy_search")
+            hotwordsVerfuegbar = false
+        }
 
         guard let r = SherpaOnnxCreateOfflineRecognizer(&cfg) else { throw ParakeetError.loadFailed }
         // Aufwaermen: Die erste echte Mitschrift waere sonst etwa doppelt so langsam.
@@ -221,7 +257,7 @@ final class ParakeetLocalClient: @unchecked Sendable {
 
     // MARK: - Rechnen
 
-    private static func decode(_ r: OpaquePointer, _ chunk: [Float]) -> String {
+    private static func decode(_ r: OpaquePointer, _ chunk: [Float], hotwords: String = "") -> String {
         var peak: Float = 0
         for v in chunk { peak = max(peak, abs(v)) }
         var input = chunk
@@ -229,7 +265,10 @@ final class ParakeetLocalClient: @unchecked Sendable {
             let gain = min(targetPeak / peak, maxGain)
             input = chunk.map { $0 * gain }
         }
-        guard let stream = SherpaOnnxCreateOfflineStream(r) else { return "" }
+        // Leere Liste = normaler Stream.
+        let erzeugt = hotwords.isEmpty ? SherpaOnnxCreateOfflineStream(r)
+                                       : SherpaOnnxCreateOfflineStreamWithHotwords(r, hotwords)
+        guard let stream = erzeugt else { return "" }
         defer { SherpaOnnxDestroyOfflineStream(stream) }
         input.withUnsafeBufferPointer { buf in
             SherpaOnnxAcceptWaveformOffline(stream, Int32(sampleRate), buf.baseAddress, Int32(buf.count))

@@ -16,7 +16,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 ## Sprache
 - Weckwort „Hey Jarvis“ (einstellbar) offline am Mac, schwebende Sprach-Einblendung über allen Programmen; ⌥⌘J überall sprechen, ⌥⌘K Fenster.
 - Sprachschleife: zuhören → Jarvis → vorlesen → 8 s Folgefenster; „Danke“, „Stopp“, „Hör auf“ beenden.
-- Diktat ins Eingabefeld (endet mit „ ; “). Transkription wie am Handy: Parakeet primeline offline am Mac (sherpa-onnx, geteiltes Modell der Voice-Overlays, Lade-/Rechenzeit und Speicher gemessen, nie stiller Rückfall), Groq Whisper Large V3 Turbo/Large V3 mit Wörterbuch und den vier Halluzinationsfiltern, Apple offline mit Live-Vorschau.
+- Diktat ins Eingabefeld (endet mit „ ; “). Transkription wie am Handy: Parakeet primeline offline am Mac (sherpa-onnx, geteiltes Modell der Voice-Overlays, Lade-/Rechenzeit und Speicher gemessen, nie stiller Rückfall, mit eigenem abschaltbarem Wörterbuch: bis 100 Begriffe gehen als Wortliste in die Beam-Suche, per Sprache über mac_einstellungen änderbar), Groq Whisper Large V3 Turbo/Large V3 mit Wörterbuch und den vier Halluzinationsfiltern, Apple offline mit Live-Vorschau.
 - Vorlesen wie am Handy: Microsoft Edge, Google Chirp 3 HD, Gemini 3.8 Flash TTS und Flash-Lite TTS (kostenlos/bezahlt, Reihenfolge), Azure Neural (17 + Seraphina/Florian HD), Alibaba Qwen, eigene geklonte Stimme, Systemstimme; Favoriten mit Stern, Hörprobe je Stimme, Tempo je Anbieter, „Immer deutsch“, sortierbare Rückfallkette.
 
 ## Live-Gespräch
