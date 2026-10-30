@@ -141,7 +141,12 @@ import Observation
                 // Nur Rückrufe der eigenen Wiedergabe zählen – stopp() löst die alten nachträglich aus.
                 Task { @MainActor in if self?.generation == meine { self?.gespielt += 1 } }
             }
-            if !s.isPlaying { s.play() }
+            // play() kann ohne Tonlauf eine NSException werfen: Dann übernimmt der Rückfall des Aufrufers den Rest.
+            if !s.isPlaying, let ausnahme = JarvisObjCFangen({ s.play() }) {
+                log("fehler", "Vorlesen: Wiedergabe nicht startbar (\(ausnahme.localizedDescription))")
+                aufgaben.values.forEach { $0.cancel() }
+                return Array(stuecke[i...])
+            }
         }
         // Warten, bis alles geplante gespielt ist.
         while generation == meine && gespielt < geplant {

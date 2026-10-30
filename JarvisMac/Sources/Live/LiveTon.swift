@@ -116,7 +116,10 @@ final class LiveTon: @unchecked Sendable {
         try abgriffSetzen()
         engine.prepare()
         try engine.start()
-        player.play()
+        // play() wirft eine NSException, wenn die Engine trotz erfolgreichem start() keinen Tonlauf bekommt
+        // („player did not see an IO cycle“, Voice Processing findet kein Mikrofonsignal, -10876, macOS 27.2).
+        // Als Fehler weitergeben, damit der nächste Versuch bzw. die Echosperre greift.
+        if let ausnahme = JarvisObjCFangen({ player.play() }) { throw ausnahme }
         // 250 ms Stille vorlegen, damit der Ausgang nicht leer startet (§14.2 Nr. 7).
         planeStille(ms: Self.startPolsterMs)
     }
@@ -321,6 +324,11 @@ final class LiveTon: @unchecked Sendable {
         aufbauLock.lock(); defer { aufbauLock.unlock() }
         player.stop()
         // play() ohne laufende Engine löst eine nicht abfangbare Ausnahme aus (etwa mitten im Gerätewechsel).
-        if laeuft && engine.isRunning { player.play() }
+        guard laeuft && engine.isRunning else { return }
+        if let ausnahme = JarvisObjCFangen({ player.play() }) {
+            log("fehler", "Live: Wiedergabe nach Unterbrechung nicht gestartet: \(ausnahme.localizedDescription)")
+            engine.stop()   // neuStarten verbindet nur eine stehende Engine neu
+            tonFaden.async { [weak self] in self?.neustartAnfordern() }
+        }
     }
 }

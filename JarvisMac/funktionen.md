@@ -20,7 +20,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Vorlesen wie am Handy: Microsoft Edge, Google Chirp 3 HD, Gemini 3.8 Flash TTS und Flash-Lite TTS (kostenlos/bezahlt, Reihenfolge), Azure Neural (17 + Seraphina/Florian HD), Alibaba Qwen, eigene geklonte Stimme, Systemstimme; Favoriten mit Stern, Hörprobe je Stimme, Tempo je Anbieter, „Immer deutsch“, sortierbare Rückfallkette.
 
 ## Live-Gespräch
-- Gleichzeitig zuhören und sprechen mit OpenAI GPT-Live/Realtime oder Gemini Live (eigene Schlüssel), Echounterdrückung des Macs, Unterbrechen möglich; startet die Echounterdrückung nicht (Fehler -10875), zweiter Versuch und danach Echosperre statt Abbruch; Sachfragen gehen an dasselbe Jarvis-Gehirn.
+- Gleichzeitig zuhören und sprechen mit OpenAI GPT-Live/Realtime oder Gemini Live (eigene Schlüssel), Echounterdrückung des Macs, Unterbrechen möglich; startet die Echounterdrückung nicht (Fehler -10875), zweiter Versuch und danach Echosperre statt Abbruch, auch wenn der Ton nach dem Start nicht anläuft (kein Absturz mehr); Sachfragen gehen an dasselbe Jarvis-Gehirn.
 
 ## Oberfläche
 - Start (beim Öffnen): große Kugel, Begrüßung, Tagesauswertung, Schnellverknüpfungen, unten die Sprechblase mit Modell und Kosten.

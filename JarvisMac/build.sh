@@ -24,7 +24,7 @@ FLAGS=(-target arm64-apple-macos26.0 -sdk "$SDK" -swift-version 5 -parse-as-libr
        -framework AppKit -framework SwiftUI -framework AVFoundation -framework Speech
        -framework CoreAudio -framework AudioToolbox -framework Carbon -framework UserNotifications
        -framework LocalAuthentication -framework Security -framework CryptoKit -framework PDFKit
-       -import-objc-header "$SHERPA_HEADER")
+       -import-objc-header "$PROJECT_DIR/Sources/ObjC/JarvisObjC.h" -Xcc -I"$(dirname "$SHERPA_HEADER")")
 
 if [ "$1" = "check" ]; then
     swiftc -typecheck "${FLAGS[@]}" "${SWIFT_FILES[@]}"
@@ -40,9 +40,12 @@ sed "s/__BUILD_TIMESTAMP__/$BUILD_TIMESTAMP/" "$PROJECT_DIR/Info.plist" > "$APP_
 
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 cp "$SHERPA_LIB/libsherpa-onnx-c-api.dylib" "$SHERPA_LIB/libonnxruntime.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+OBJC_OBJEKT="$BUILD_DIR/JarvisObjC.o"
+clang -c -O2 -fobjc-arc -target arm64-apple-macos26.0 -isysroot "$SDK" -I "$(dirname "$SHERPA_HEADER")" \
+    "$PROJECT_DIR/Sources/ObjC/JarvisObjC.m" -o "$OBJC_OBJEKT"
 swiftc -o "$APP_BUNDLE/Contents/MacOS/Jarvis" -O "${FLAGS[@]}" \
     -L "$SHERPA_LIB" -lsherpa-onnx-c-api -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
-    "${SWIFT_FILES[@]}"
+    "$OBJC_OBJEKT" "${SWIFT_FILES[@]}"
 
 if [ ! -f "$PROJECT_DIR/Resources/AppIcon.icns" ]; then
     bash "$PROJECT_DIR/tools/make-icon.sh" || true
