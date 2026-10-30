@@ -5,7 +5,7 @@ import AppKit
 /// Unter Windows ging das ueber Process.GetProcessesByName plus Pfadvergleich. Auf dem Mac gibt es
 /// zwei Sorten Prozesse, und sie brauchen zwei Wege:
 ///   * GUI-Programme (.app) findet NSWorkspace ueber ihre Bundle-Kennung bzw. ihren Bundle-Pfad.
-///   * Kommandozeilen-Werkzeuge (lms, claude, codex) kennt NSWorkspace gar nicht -- die findet nur
+///   * Kommandozeilen-Werkzeuge (claude, codex) kennt NSWorkspace gar nicht -- die findet nur
 ///     `pgrep`, und dort ist der Pfadvergleich genauso noetig wie unter Windows.
 enum Prozessdienst {
 

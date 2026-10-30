@@ -562,7 +562,7 @@ public sealed partial class HauptViewModel : ObservableObject
             if (!abgleich.GezogenOk) repoHinweis = abgleich.Meldung;
         }
 
-        // All at once: the checks wait on different things (winget, the registries, git, lms).
+        // All at once: the checks wait on different things (winget, the registries, git).
         // Only winget itself is queued, inside its provider. One after the other the same pass
         // took five minutes; the slowest single check now sets the pace.
         var offen = liste.Select(p => p.Name).ToList();

@@ -398,7 +398,7 @@ final class HauptViewModel {
         }
 
         // Alle gleichzeitig: die Pruefungen warten auf verschiedene Dinge (brew, die Registries,
-        // git, lms). Nacheinander dauerte derselbe Durchgang Minuten; jetzt bestimmt die
+        // git). Nacheinander dauerte derselbe Durchgang Minuten; jetzt bestimmt die
         // langsamste einzelne Pruefung das Tempo.
         var offen = liste.map(\.name)
         var fertig = 0

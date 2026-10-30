@@ -28,6 +28,7 @@ enum Kommandozeile {
         let zusatz = [
             "/opt/homebrew/bin", "/opt/homebrew/sbin", "/usr/local/bin",
             (Pfade.heim as NSString).appendingPathComponent(".local/bin"),
+            (Pfade.heim as NSString).appendingPathComponent(".lmstudio/bin"),
             "/usr/bin", "/bin", "/usr/sbin", "/sbin"
         ]
         let vorhanden = (umwelt["PATH"] ?? "").split(separator: ":").map(String.init)

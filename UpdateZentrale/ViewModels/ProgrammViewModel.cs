@@ -362,8 +362,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
     public bool AutostartUmstellbar => KannStarten && (ImAutostart || AutostartAlsAufgabe) && AlsAdministrator;
 
     /// <summary>
-    /// Kommandozeilen-Werkzeuge werden von anderen Programmen im Hintergrund gestartet (der
-    /// OpenLauncher ruft lms.exe, jedes Terminal ruft claude.exe/codex.exe) — und zwar per
+    /// Kommandozeilen-Werkzeuge werden von anderen Programmen im Hintergrund gestartet (jedes
+    /// Terminal ruft claude.exe/codex.exe) — und zwar per
     /// CreateProcess ohne Shell. Für so einen Start kann Windows keinen UAC-Dialog zeigen: steht
     /// die exe auf "Als Administrator ausführen", bricht der Start mit Fehler 740 ab. Die
     /// Zentrale selbst umgeht das für ihre eigenen Aufrufe, fremde Programme können das nicht.

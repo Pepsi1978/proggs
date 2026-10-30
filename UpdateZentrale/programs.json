@@ -515,7 +515,7 @@
       "id": "bionic",
       "name": "Bionic",
       "gruppe": "KI-Anwendungen",
-      "beschreibung": "Desktop-App von Element Labs (LM Studio).",
+      "beschreibung": "Desktop-App von Element Labs.",
       "art": "winget",
       "wingetId": "ElementLabs.Bionic",
       "exePfad": "C:/Program Files/Bionic/Bionic.exe",

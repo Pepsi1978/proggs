@@ -26,7 +26,7 @@ Geprüft am 20.09.2026 auf diesem Mac (macOS 27, Apple Silicon, 1280 × 832 Punk
 | Fenstergröße passt auf den Bildschirm | ✅ 1180 × 709 |
 | Installation nach `/Applications` + Schreibtisch-Verknüpfung | ✅ |
 
-Ergebnis des ersten Laufs — jede Zeile ist eine echte Erkennung, keine Annahme:
+Ergebnis des ersten Laufs — jede Zeile ist eine echte Erkennung, keine Annahme (die zwei LM-Studio-Zeilen sind entfallen, seit LM Studio mit 1.0.27 aus dem Katalog genommen wurde):
 
 | Programm | Installiert | Verfügbar | Zustand |
 |---|---|---|---|
@@ -194,21 +194,24 @@ bliebe nach dem Beenden ungebaut zurück. Deshalb setzt `Kommandozeile.umgebung`
 
 Nicht automatisch prüfbar, weil ein echter Installationslauf Programme beendet und Daten verändert:
 
-1. **Codex CLI aktualisieren** → läuft ohne Beenden durch, danach 0.155.1.
-2. **OpenLauncher aktualisieren** → das Skript zeigt sein eigenes Ja/Nein-Fenster; bei „Nein"
+1. **VS Code aktualisieren** → Rückfrage „Programm beenden?" erscheint, VS Code wird beendet,
+   `brew install --cask --force visual-studio-code` läuft durch, VS Code startet wieder, die Karte
+   zeigt danach „Aktuell" und ein grünes „Verifiziert: alt → neu".
+2. **Codex CLI aktualisieren** → läuft ohne Beenden durch, danach 0.155.1.
+3. **OpenLauncher aktualisieren** → das Skript zeigt sein eigenes Ja/Nein-Fenster; bei „Nein"
    muss die Karte „Abgebrochen" zeigen, bei „Ja" „Neue Version gebaut und gestartet".
-3. **TVO oder CVO aktualisieren** → hier fragt die Updater-Zentrale selbst; bei „Nein" darf das
+4. **TVO oder CVO aktualisieren** → hier fragt die Updater-Zentrale selbst; bei „Nein" darf das
    Skript gar nicht erst starten.
-4. **Hell-Modus** oben rechts umschalten (am 20.09.2026 NICHT visuell geprüft – der Bildschirm
+5. **Hell-Modus** oben rechts umschalten (am 20.09.2026 NICHT visuell geprüft – der Bildschirm
    war gesperrt, die Farbwerte sind aber 1:1 aus `Hell.xaml` übernommen) → alle Flächen, Karten und die Fenstertitelleiste ziehen
    mit; nach einem Neustart der App ist die Wahl noch gesetzt.
-5. **Terminal** rechts unten: `brew --version` eingeben → Ausgabe erscheint (beweist, dass der
+6. **Terminal** rechts unten: `brew --version` eingeben → Ausgabe erscheint (beweist, dass der
    PATH stimmt). „Fenster" öffnet iTerm im Repo-Ordner.
-6. **Einzelstart**: die App ein zweites Mal starten → das vorhandene Fenster kommt nach vorn.
-7. **Schreibtisch-Verknüpfung** doppelklicken → die App startet mit ihrem Symbol.
-8. **Karte anklicken** – auf den Beschreibungstext, nicht auf eine Schaltfläche → der Rahmen wird
+7. **Einzelstart**: die App ein zweites Mal starten → das vorhandene Fenster kommt nach vorn.
+8. **Schreibtisch-Verknüpfung** doppelklicken → die App startet mit ihrem Symbol.
+9. **Karte anklicken** – auf den Beschreibungstext, nicht auf eine Schaltfläche → der Rahmen wird
    violett, und rechts wechselt der Protokollbereich auf dieses Programm.
-9. **Beim ersten Start** fragt macOS nach der Erlaubnis, „Systemereignisse" zu steuern (für das
+10. **Beim ersten Start** fragt macOS nach der Erlaubnis, „Systemereignisse" zu steuern (für das
     Auslesen der Anmeldeobjekte). Bei „Nicht erlauben" fehlt nur das Autostart-Kennzeichen aus den
     Anmeldeobjekten – die LaunchAgents werden weiterhin erkannt, alles andere bleibt unberührt.
 

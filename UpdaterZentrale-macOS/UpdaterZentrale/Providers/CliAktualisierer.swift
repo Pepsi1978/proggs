@@ -1,8 +1,7 @@
 import Foundation
 import Darwin
 
-/// Kommandozeilen-Werkzeuge, die sich selbst aktualisieren ("claude update", "codex update",
-/// "lms runtime update"). 1:1-Port von Providers/CliAktualisierer.cs.
+/// Kommandozeilen-Werkzeuge, die sich selbst aktualisieren ("claude update", "codex update"). 1:1-Port von Providers/CliAktualisierer.cs.
 ///
 /// Woher die verfuegbare Version kommt, entscheidet der Katalog-Eintrag: entweder ein
 /// Trockenlauf-Unterbefehl, oder die npm-Registry fuer die dort veroeffentlichten Werkzeuge.
@@ -122,17 +121,18 @@ struct CliAktualisierer: Aktualisierer {
         return PruefErgebnis(zustand: .fertig, meldung: "Update abgeschlossen.", protokoll: lauf.ausgabe)
     }
 
-    /// Die Version, wo das Werkzeug eine meldet. Eintraege ohne Version -- ihr
-    /// Fingerabdruck ist stattdessen der Trockenlauf-Plan: nach einem erfolgreichen Update muss
-    /// er leer sein.
+    /// Die Version, wo das Werkzeug eine meldet. Bei Eintraegen ohne Versionsabfrage ist der
+    /// Fingerabdruck der Trockenlauf-Plan: nach einem erfolgreichen Update muss er leer sein. Eine
+    /// gescheiterte Versionsabfrage ergibt "" (unbekannt) und faellt nicht auf den Plan zurueck:
+    /// die beiden Werte waeren verschiedener Art und wuerden immer als Aenderung gelten.
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String {
         let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         guard FileManager.default.isExecutableFile(atPath: exe) else { return "" }
 
         if let argumente = eintrag.versionsArgumente, !argumente.istLeer {
             let lauf = await Kommandozeile.ausfuehren(exe, argumente, zeitlimit: 120)
-            let version = Self.versionAus(lauf.ausgabe, eintrag.versionsMuster)
-            if !version.istLeer { return version }
+            if lauf.abgelaufen || lauf.exitCode != 0 { return "" }
+            return Self.versionAus(lauf.ausgabe, eintrag.versionsMuster)
         }
 
         if let pruefArgumente = eintrag.pruefArgumente, !pruefArgumente.istLeer {

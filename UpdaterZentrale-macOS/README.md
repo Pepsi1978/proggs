@@ -110,7 +110,7 @@ Alles steht in **`programs.json`** im Projektordner. Die App liest die Datei bei
 {
   "id": "beispiel",                          // eindeutig, Schlüssel für Einstellungen und Protokoll
   "name": "Beispielprogramm",
-  "gruppe": "KI-Anwendungen",                // Überschrift in der Liste; freie Wahl
+  "gruppe": "Kommandozeile",                 // Überschrift in der Liste; freie Wahl
   "beschreibung": "Kurztext auf der Karte.",
   "art": "brew",                             // siehe Tabelle unten
   "cask": "beispiel",

@@ -7,8 +7,8 @@ using UpdateZentrale.Services;
 namespace UpdateZentrale.Providers;
 
 /// <summary>
-/// Command line tools that update themselves ("claude update", "codex update",
-/// "lms runtime update"). Availability comes from one of two sources, whichever the catalog
+/// Command line tools that update themselves ("claude update", "codex update").
+/// Availability comes from one of two sources, whichever the catalog
 /// entry provides: a dry-run subcommand, or the npm registry for tools published there.
 /// </summary>
 public sealed class CliAktualisierer : IAktualisierer
