@@ -25,6 +25,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -103,6 +105,11 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      * Netzfehler laufen unverändert durch — die wiederholt der Vorleser selbst. Scheitern alle, zählt der Fehler der Hauptstimme.
      */
     suspend fun synthetisiere(text: String, wahl: StimmWahl? = null): File = gleichzeitig.withPermit {
+        // Der Platz wird noch auf dem Faden des Aufrufers geholt (der Vorleser startet die Teile sofort in Lesereihenfolge), gearbeitet wird auf IO.
+        withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) }
+    }
+
+    private suspend fun erzeugeMitRueckfall(text: String, wahl: StimmWahl?): File {
         val sonder = wahl?.stimme?.takeIf { TtsCatalog.anbieterZu(it) != null }
         // Jede Stimme mit ihrem eigenen Tempo, auch als Rückfallstufe; ein Sondertempo der Meldung gilt für alle.
         fun tempo(anbieter: String) = wahl?.tempo ?: settings.ttsTempo(anbieter)
@@ -112,7 +119,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             .filterNot { it.anbieter.id == haupt && it.schluessel == null }
             .filter(settings::rueckfallBereit)
         val hauptFehler = try {
-            return@withPermit erzeuge(haupt, text, sonder, tempo(haupt), null, mitAusweg = kette.isNotEmpty())
+            return erzeuge(haupt, text, sonder, tempo(haupt), null, mitAusweg = kette.isNotEmpty())
         } catch (fehler: Exception) {
             if (!rueckfallFaehig(fehler)) throw fehler
             fehler
@@ -122,7 +129,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             try {
                 val datei = erzeuge(stufe.anbieter.id, text, null, tempo(stufe.anbieter.id), stufe.schluessel, mitAusweg = i < kette.lastIndex)
                 Logbuch.sprache("Vorlese-Rückfall", "stufe=${stufe.id} haupt=$haupt grund=${hauptFehler.message?.take(80)}")
-                return@withPermit datei
+                return datei
             } catch (fehler: Exception) {
                 // Auch Netzfehler einer Stufe führen zur nächsten: Sonst wiederholte der Vorleser die ganze Kette samt Hauptstimme.
                 if (!rueckfallFaehig(fehler) && fehler !is IOException) throw fehler
@@ -342,8 +349,9 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             .addHeader("x-goog-api-key", schluessel)
             .post(koerper.toString().toRequestBody(JSON_TYP))
             .build()
-        // Nur eine Gemini-Anfrage zugleich: Parallele Absätze verbrauchten das Minutenlimit doppelt (zwei 429 im selben Augenblick).
-        val kandidat = JSONObject(geminiEinzeln.withPermit { fuehreAus(anfrage, warteBei429) }).optJSONArray("candidates")?.optJSONObject(0)
+        // Kostenloser Schlüssel: nur eine Anfrage zugleich, parallele Absätze verbrauchten das Minutenlimit doppelt (zwei 429 im selben Augenblick).
+        // Der bezahlte hat dieses Limit nicht; nacheinander stand hier der erste Satz hinter dem Rest des Absatzes an (bis 11 s bis zum ersten Ton).
+        val kandidat = JSONObject(if (art == "bezahlt") fuehreAus(anfrage, warteBei429) else geminiEinzeln.withPermit { fuehreAus(anfrage, warteBei429) }).optJSONArray("candidates")?.optJSONObject(0)
         val ende = kandidat?.optString("finishReason").orEmpty()
         val teil = kandidat?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optJSONObject("inlineData")
         val daten = teil?.optString("data").orEmpty()
@@ -666,6 +674,15 @@ class Synthese(context: Context, private val settings: SecureSettings) {
                 datei.delete()
             }
         }
+    }
+
+    /** Öffnet die Verbindung zum Sprachdienst schon während der Aufnahme, wie [de.frank.jarvis.auth.CodexAuthManager.vorwaermen]. */
+    fun vorwaermen() {
+        if (settings.ttsProvider != TtsProvider.GEMINI_FLASH.id && settings.ttsProvider != TtsProvider.GEMINI_LITE.id) return
+        client.newCall(Request.Builder().url(GEMINI_URL).head().build()).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: Call, e: IOException) = Unit
+            override fun onResponse(call: Call, response: Response) = response.close()
+        })
     }
 
     private suspend fun fuehreAus(anfrage: Request, warteBei429: Boolean = true): String {

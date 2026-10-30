@@ -433,7 +433,7 @@ object Lagebild {
      * Das Gesamtbild als ein Text für jedes Modell (eigener Chat, Agenten, Plugin). [frisch] = die schnellen Bereiche
      * vorher nachlesen (höchstens [wartenMs]; was dann noch läuft, landet für die nächste Frage im Speicher).
      */
-    suspend fun kontext(context: Context, frisch: Boolean = true, wartenMs: Long = 2_500L): String {
+    suspend fun kontext(context: Context, frisch: Boolean = true, wartenMs: Long = 2_500L, trenner: String? = null): String {
         val app = context.applicationContext
         lade(app)
         val fehlend = Bereich.entries.filter { it !in _stand.value.abschnitte }
@@ -447,7 +447,10 @@ object Lagebild {
         val s = _stand.value
         val jetzt = LocalDateTime.now()
         val kopf = buildString {
-            append("GESAMTBILD VON FRANK (Live-Gedächtnis von Jarvis), Stand ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append(".\n")
+            append("GESAMTBILD VON FRANK (Live-Gedächtnis von Jarvis)")
+            // Mit Trenner steht die Uhrzeit weiter hinten: Hier änderte sie jede Minute den selten wechselnden Teil.
+            if (trenner == null) append(", Stand ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN)))
+            append(".\n")
             append("Das ist dein Gedächtnis und Hintergrundwissen für jede Frage, live aus allen angebundenen Apps: Jarvis frischt jeden Bereich auf, sobald sich in einer App etwas ändert. ")
             append("Hinter jeder Überschrift steht, wann der Bereich zuletzt gelesen wurde. Betrachte Franks Frage in diesem Zusammenhang und beziehe von dir aus ein, was die Antwort besser macht ")
             append("(zum Beispiel Dienst und Schlafzeiten, Erholung, Wetter, eine offene Aufgabe, eine passende Idee, was er im Tagebuch oder im Gespräch erzählt hat). Was nichts mit der Frage zu tun hat, lässt du weg; zähle das Gesamtbild nicht ungefragt auf.\n")
@@ -476,12 +479,19 @@ object Lagebild {
         val tagebuchMindestens = tagebuchTeile?.mindestens ?: 0
         var teile = baue(emptyMap())
         if (laenge(teile) + tagebuchMindestens > HOECHSTENS) teile = baue(DECKEL)
+        val tagebuchText = if (tagebuch != null && tagebuchTeile != null)
+            abschnitt(Bereich.TAGEBUCH, tagebuch.copy(text = tagebuchTeile.imBudget((HOECHSTENS - laenge(teile)).coerceAtLeast(tagebuchMindestens)))) else ""
         return buildString {
             append(kopf)
-            teile.forEach { append(it).append('\n') }
-            if (tagebuch != null && tagebuchTeile != null) {
-                val platz = (HOECHSTENS - laenge(teile)).coerceAtLeast(tagebuchMindestens)
-                append(abschnitt(Bereich.TAGEBUCH, tagebuch.copy(text = tagebuchTeile.imBudget(platz))))
+            if (trenner == null) {
+                teile.forEach { append(it).append('\n') }
+                append(tagebuchText)
+            } else {
+                // Selten Wechselndes zuerst (Gemerktes, Tagebuch), dahinter die Live-Bereiche: Derselbe Inhalt, aber der vordere Teil trifft den Zwischenspeicher.
+                val gemerkt = if (Bereich.GEMERKT in s.abschnitte) 1 else 0
+                teile.take(gemerkt).forEach { append(it).append('\n') }
+                append(tagebuchText).append(trenner)
+                teile.drop(gemerkt).forEach { append(it).append('\n') }
             }
         }.trim()
     }

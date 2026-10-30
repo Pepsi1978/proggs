@@ -60,6 +60,9 @@ internal fun devicePollInterval(value: Any?): Int =
     (value?.toString()?.toIntOrNull() ?: CodexAuthManager.DEFAULT_DEVICE_POLL_SECONDS)
         .coerceIn(CodexAuthManager.MIN_DEVICE_POLL_SECONDS, CodexAuthManager.MAX_DEVICE_POLL_SECONDS)
 
+/** Trennt in der Anweisung die Teile, die unterschiedlich oft wechseln; geht nie ans Modell. */
+internal const val CACHE_TRENNER = "\u0001CACHE\u0001"
+
 /** Der Satz aus Baustein M.3 — er steht in jedem Systemprompt an das Modell. */
 internal const val UMLAUT_HINWEIS =
     "Antworte auf Deutsch mit echten Umlauten (ä ö ü Ä Ö Ü ß). Verwende niemals die " +
@@ -87,7 +90,7 @@ internal fun codexChatPayload(
         .put("service_tier", "priority")
         .put("stream", true)
         .put("store", false)
-        .put("instructions", instructions.trim() + "\n\n" + UMLAUT_HINWEIS)
+        .put("instructions", instructions.replace(CACHE_TRENNER, "").trim() + "\n\n" + UMLAUT_HINWEIS)
         .put("input", input)
         .put("reasoning", JSONObject().put("effort", model.normalizeEffort(reasoningEffort).apiValue))
 }
@@ -327,6 +330,18 @@ class CodexAuthManager(context: Context) {
      * Führt ein Gespräch mit dem Modell. [onDelta] bekommt jedes Textstück, sobald es eintrifft,
      * damit die Antwort Wort für Wort erscheint.
      */
+    /**
+     * Öffnet die Verbindung zum Denk-Modell schon während der Aufnahme: DNS und TLS fallen dann nicht erst in die Wartezeit nach der Frage.
+     * Die Antwort zählt nicht; die Verbindung bleibt im Vorrat des Clients liegen.
+     */
+    fun vorwaermen(model: CodexModel) {
+        val anfrage = Request.Builder().url(if (model.istAnthropic) ANTHROPIC_URL else RESPONSES_URL).head().build()
+        RESPONSES_HTTP_CLIENT.newCall(anfrage).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) = Unit
+            override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) = response.close()
+        })
+    }
+
     suspend fun streamChat(
         instructions: String,
         turns: List<ChatTurn>,
@@ -868,6 +883,7 @@ class CodexAuthManager(context: Context) {
             }
         }
         currentCoroutineContext()[TokenZaehler]?.dazu(accumulator.tokens)
+        de.frank.jarvis.observability.Logbuch.netz("Anthropic-Zwischenspeicher", accumulator.cacheText)
         // Auch eine abgeschnittene Antwort hat Token gekostet: vor der Vollständigkeitsprüfung melden.
         onUsage(accumulator.ausgabeToken)
         return accumulator.result()

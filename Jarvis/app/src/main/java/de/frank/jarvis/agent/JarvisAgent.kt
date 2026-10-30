@@ -13,6 +13,7 @@ import de.frank.jarvis.faehigkeit.merkKontextOhneSymbiose
 import de.frank.jarvis.faehigkeit.ohneNull
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.gedaechtnis.Lagebild
+import de.frank.jarvis.observability.Antwortkette
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.text.WerkzeugMarkup
 import java.time.LocalDateTime
@@ -172,11 +173,13 @@ class JarvisAgent(context: Context) {
          * ein Text = beenden mit Zwischenstand. Ohne Rückruf (Tagesauswertung, Live-Gespräch) gibt es kein Tokenlimit: Niemand könnte antworten.
          */
         beiTokenlimit: (suspend (Zeitablauf) -> String?)? = null,
+        /** Bekommt den ersten fertigen Satz einer Antwort, während das Modell noch schreibt (nur Antworten, nie Werkzeugaufrufe). */
+        beiErstemSatz: ((String) -> Unit)? = null,
     ): String? =
         // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
         withContext(Dispatchers.Default) {
             versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, ablageDauerhaft, lernen, abschluss, beiAenderung, bilder,
-                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf, beiTokenlimit)
+                modell ?: einstellungen.modell, denkstufe ?: einstellungen.denkstufe, schnell, beiAbbruch, beiZeitablauf, beiTokenlimit, beiErstemSatz)
         }
 
     private suspend fun versucheIntern(
@@ -199,6 +202,7 @@ class JarvisAgent(context: Context) {
         beiAbbruch: (String) -> Unit,
         beiZeitablauf: (suspend (Zeitablauf) -> String?)?,
         beiTokenlimit: (suspend (Zeitablauf) -> String?)?,
+        beiErstemSatz: ((String) -> Unit)?,
     ): String? {
         if (!auth.kannDenken(modell)) { beiAbbruch(if (modell.istAnthropic) "Für ${modell.label} fehlt der Anthropic-API-Schlüssel" else "Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
@@ -219,12 +223,13 @@ class JarvisAgent(context: Context) {
         // sonst wartet Frank bei jeder Frage bis zu 2,5 Sekunden, bevor das Denk-Modell überhaupt anfängt.
         // wartenMs = 0: Die schnellen Bereiche frischen im Hintergrund für die nächste Frage auf, ohne dass diese Frage wartet;
         // nur beim allerersten Start (Bereiche fehlen ganz) wird kurz gewartet. Abbruch wird nie verschluckt.
-        val gesamtbild = if (schnell) try { withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, wartenMs = 0L) + Programmierregeln.alsKontext(app) } }
+        val gesamtbild = if (schnell) try { withContext(Dispatchers.IO) { de.frank.jarvis.gedaechtnis.Lagebild.kontext(app, wartenMs = 0L, trenner = de.frank.jarvis.auth.CACHE_TRENNER) + Programmierregeln.alsKontext(app) } }
             catch (e: CancellationException) { throw e } catch (e: Exception) { Logbuch.fehler("Gesamtbild", e); gesamtbildMitZeitlimit() }
             else if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontextOhneSymbiose(app) }
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
         val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
         Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen, Verlauf ${zuege.size} Züge")
+        Antwortkette.punkt("Kontext")
         // Für den Abschluss bleibt ein Teil der Zeit übrig: Ein langes Werkzeug (Bild, Download) darf nicht das ganze Ergebnis verschlucken.
         val reserve = if (abschluss) (zeitlimitMs / 6).coerceIn(25_000L, 180_000L) else 0L
         var schritte = 0
@@ -262,8 +267,14 @@ class JarvisAgent(context: Context) {
                 val modellBeginn = System.currentTimeMillis()
                 laeuftGerade = MODELL_DENKT
                 laeuftSeit = modellBeginn
-                val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it })
-                Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen")
+                var erstesZeichen = 0L
+                val strom = beiErstemSatz?.let { AntwortStrom() }
+                val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it }, onDelta = { d ->
+                    if (erstesZeichen == 0L) { erstesZeichen = System.currentTimeMillis() - modellBeginn; Antwortkette.punkt("Denken") }
+                    strom?.neu(d)?.let { satz -> beiErstemSatz?.invoke(satz) }
+                })
+                Antwortkette.punkt("Schreiben")
+                Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen, erstes Zeichen nach $erstesZeichen ms")
                 var schritt = lies(roh)
                 var (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
                 // Nur wenn das vereinbarte JSON fehlt: Werkzeugaufruf als Markup oder fremdes JSON trotzdem ausführen, statt ihn vorzulesen.
@@ -514,7 +525,7 @@ class JarvisAgent(context: Context) {
      */
     private suspend fun gesamtbildMitZeitlimit(): String {
         val beginn = System.currentTimeMillis()
-        val aufbau = HINTERGRUND.async { Gehirn.kontext(app) }
+        val aufbau = HINTERGRUND.async { Gehirn.kontext(app, de.frank.jarvis.auth.CACHE_TRENNER) }
         val bild = try {
             withTimeoutOrNull(GESAMTBILD_MS) { aufbau.await() }
         } catch (e: CancellationException) {
@@ -557,11 +568,16 @@ class JarvisAgent(context: Context) {
     private fun anweisung(faehigkeiten: List<de.frank.jarvis.faehigkeit.Faehigkeit>, rolle: String?, gesamtbild: String): String {
         val jetzt = LocalDateTime.now()
         val datum = jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))
+        // Vorn, was über viele Fragen gleich bleibt; die Trenner legen fest, wo der Zwischenspeicher von Anthropic greifen kann.
+        val trenner = de.frank.jarvis.auth.CACHE_TRENNER
+        val selten = gesamtbild.substringBefore(trenner, "")
+        val wechselnd = gesamtbild.substringAfter(trenner)
         return buildString {
-            append(festerTeil(faehigkeiten))
+            append(festerTeil(faehigkeiten)).append(trenner)
+            if (selten.isNotEmpty()) append(selten).append(trenner)
             append("\n\nLAGE JETZT:\n")
             append("Jetzt ist ").append(datum).append(" (ISO-Datum ").append(jetzt.toLocalDate()).append(").\n\n")
-            if (gesamtbild.isNotEmpty()) append(gesamtbild).append('\n')
+            if (wechselnd.isNotEmpty()) append(wechselnd).append('\n')
             if (rolle != null) append('\n').append(rolle).append('\n')
             // Das Antwortformat steht weit oben; am Ende kurz daran erinnern, ohne den gleichbleibenden Anfang zu ändern.
             append("\nAntworte jetzt wie unter ANTWORTFORMAT beschrieben: genau ein JSON-Objekt und sonst nichts.")

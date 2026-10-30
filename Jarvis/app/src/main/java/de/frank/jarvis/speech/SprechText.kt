@@ -347,6 +347,18 @@ object SprechText {
         return grenze
     }
 
+    /**
+     * Der erste fertige Satz einer noch wachsenden Antwort, roh und ungekürzt; null, solange keiner sicher feststeht. Fertig ist
+     * er erst, wenn der nächste Satz schon beginnt. Offene Fettschrift oder Tags warten: Daraus könnte noch etwas anderes werden.
+     */
+    fun ersterSatz(text: String): String? {
+        val grenze = SATZGRENZE.findAll(text).map { it.range.first }.firstOrNull { it >= ERSTER_TEIL_MIN } ?: return null
+        if (grenze > ERSTER_TEIL_MAX) return null
+        val satz = text.substring(0, grenze)
+        if (satz.contains('\n') || satz.startsWith("#") || satz.startsWith("- ") || satz.contains('<') || satz.contains('`') || satz.contains('|') || satz.split("**").size % 2 == 0) return null
+        return satz
+    }
+
     private fun teileAnSatzgrenzen(absatz: String, maxZeichen: Int): List<String> {
         val saetze = Regex("(?<=[.!?])\\s+").split(absatz)
         val teile = mutableListOf<String>()

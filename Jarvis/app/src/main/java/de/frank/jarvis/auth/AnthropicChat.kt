@@ -41,13 +41,30 @@ internal fun anthropicChatPayload(
         .put("max_tokens", ANTHROPIC_MAX_TOKENS)
         .put("stream", true)
         // Die große Anweisung bleibt über alle Schritte einer Antwort gleich: zwischenspeichern spart Kosten und Wartezeit.
-        .put("system", JSONArray().put(textBlock(instructions.trim() + "\n\n" + UMLAUT_HINWEIS).put("cache_control", JSONObject().put("type", "ephemeral"))))
+        .put("system", anthropicSystem(instructions))
         .put("cache_control", JSONObject().put("type", "ephemeral"))
         .put("messages", messages)
         .put("output_config", JSONObject().put("effort", model.normalizeEffort(reasoningEffort).apiValue))
     // Lehnt die Sicherheitsprüfung eine Anfrage ab, rechnet Anthropic sie selbst mit einem passenden Ersatzmodell weiter.
     if (mitFallback && model.mitFallback) payload.put("fallbacks", "default")
     return payload
+}
+
+/**
+ * Die Anweisung als Blöcke, getrennt an [CACHE_TRENNER]: Der Zwischenspeicher trifft nur an Blockgrenzen. In einem einzigen Block
+ * änderte die Uhrzeit am Ende jede Minute den ganzen Text, und das Modell läse bei jeder neuen Frage alles neu.
+ * Der erste Block (Werkzeuge, Grundsätze) bleibt eine Stunde, spätere Blöcke die üblichen 5 Minuten; längere müssen vorn stehen.
+ */
+internal fun anthropicSystem(instructions: String): JSONArray {
+    val teile = instructions.split(CACHE_TRENNER).filter { it.isNotBlank() }
+    val bloecke = JSONArray()
+    teile.forEachIndexed { i, teil ->
+        val cache = JSONObject().put("type", "ephemeral")
+        if (i == 0 && teile.size > 1) cache.put("ttl", "1h")
+        val text = if (i == teile.lastIndex) teil.trim() + "\n\n" + UMLAUT_HINWEIS else teil
+        bloecke.put(textBlock(text).put("cache_control", cache))
+    }
+    return bloecke
 }
 
 /** Ersatzmodell bei Ablehnung gibt es für Opus, Fable und Sonnet, nicht für Haiku. */
@@ -99,6 +116,9 @@ internal class AnthropicSseAccumulator {
         private set
     private var eingabe = 0L
     private var ausgabe = 0L
+    /** Aus dem Zwischenspeicher gelesen / neu hineingeschrieben / ungespeichert, für die Messung im Logbuch. */
+    var cacheText = ""
+        private set
     /** Verbrauchte Ausgabe-Token dieser Antwort, Denken eingeschlossen (aus `message_delta.usage`). */
     val ausgabeToken: Int get() = ausgabe.toInt()
     /** Verbrauchte Tokens dieser Anfrage: Eingabe (auch aus dem Zwischenspeicher) plus Ausgabe samt Denken. */
@@ -116,6 +136,7 @@ internal class AnthropicSseAccumulator {
                 event.optJSONObject("message")?.optJSONObject("usage")?.let { u ->
                     eingabe = u.optLong("input_tokens") + u.optLong("cache_creation_input_tokens") + u.optLong("cache_read_input_tokens")
                     ausgabe = u.optLong("output_tokens")
+                    cacheText = "gelesen=${u.optLong("cache_read_input_tokens")} geschrieben=${u.optLong("cache_creation_input_tokens")} neu=${u.optLong("input_tokens")}"
                 }
                 null
             }

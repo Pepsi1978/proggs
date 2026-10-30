@@ -181,6 +181,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val erledigt: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
         /** Tokens aller Modellanfragen dieser Runde; läuft im Koroutinen-Kontext mit. */
         val tokens = de.frank.jarvis.auth.TokenZaehler()
+        /** Quelle des schon vorab gesprochenen ersten Satzes; null = noch nichts gesprochen. */
+        var vorab: String? = null
+        /** Die Auswahlkarte eines Programmierauftrags wurde schon vorgelesen, bevor das Modell fertig war. */
+        var karteGesprochen = false
     }
 
     /** Offene Rückfrage „Tokenlimit erreicht“ einer Chat-Runde; die Oberfläche zeigt dafür ein Fenster mit Weiter und Abbrechen. */
@@ -380,7 +384,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     .let { if (einstellungen.denkstufe == ReasoningEffort.MAX) maxOf(it, 15 * 60_000L) else it }
                 var grund: String? = null
                 agent.versuche(auftrag, verlauf, zeitlimitMs = zeitlimit, maxSchritte = schritte, beiSchritt = { runde.schritt = it }, lernen = true, abschluss = true,
-                    beiAenderung = { runde.erledigt += it }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it },
+                    beiAenderung = { aenderung ->
+                        runde.erledigt += aenderung
+                        // Programmierauftrag mit Auswahlkarte: Deren fester Wortlaut steht jetzt fest, das Modell muss dafür nicht erst fertig schreiben.
+                        if (vorlesen && aenderung.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL)) viewModelScope.launch { karteVorab(runde) }
+                    }, bilder = beilage?.bilder.orEmpty(), beiAbbruch = { grund = it },
+                    beiErstemSatz = if (!vorlesen) null else { satz -> viewModelScope.launch { ersterSatzVorab(runde, satz) } },
                     beiTokenlimit = { stand -> if (tokenlimitFragen(stand)) null else "Tokenlimit von ${Einstellungen.tokenlimitLabel(stand.tokenGrenze)} erreicht, von Frank abgebrochen" })
                     ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText(grund)).also { art = "fehler" }
             } catch (e: CancellationException) {
@@ -398,6 +407,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Ohne Job (sofort beendet) trotzdem abschließen, sonst bliebe der Zähler hängen.
             runde.job.invokeOnCompletion { viewModelScope.launch { anthropicKostenEnde() } }
         }
+    }
+
+    /** Spricht den ersten Satz, während das Modell noch schreibt. Nicht neben einer Karte oder wenn gerade etwas anderes läuft. */
+    private fun ersterSatzVorab(runde: Runde, satz: String) {
+        if (laufende[runde.sitzung] !== runde || runde.sitzung != sitzungId || runde.vorab != null || runde.karteGesprochen || runde.erledigt.isNotEmpty()) return
+        // Der Gesprächsmodus ist schon zu Ende: Dann kommt die Antwort angesagt über die Sprachzustellung.
+        if (runde.ursprung != null && weckwortLauf?.isActive != true) return
+        val quelle = "gespraech:vorab:" + runde.beginn
+        if (vorleser.sprichVorab(quelle, "Jarvis", satz)) runde.vorab = quelle
+    }
+
+    private suspend fun karteVorab(runde: Runde) {
+        val karte = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(runde.sitzung, runde.beginn)
+        if (karte.isNullOrBlank() || laufende[runde.sitzung] !== runde || runde.sitzung != sitzungId || runde.karteGesprochen) return
+        if (runde.ursprung != null && weckwortLauf?.isActive != true) return
+        if (vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) return
+        runde.karteGesprochen = true
+        vorleser.sprich(WAHL_QUELLE + runde.sitzung + ":" + runde.beginn, "Jarvis", karte)
     }
 
     // ---- Aktionen unter einer Antwort ----
@@ -563,8 +590,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val nurAuftrag = synchronized(runde.erledigt) { runde.erledigt.all { it.startsWith(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.WERKZEUG_TITEL) } }
         if (karte != null && nurAuftrag) {
             if (runde.sitzung != sitzungId) sitzungenLaden()
-            // Leer: Frank hat schon getippt, der Auftrag startet ohne gesprochene Bestätigung.
-            if (!vorlesen || karte.isBlank()) return
+            // Leer: Frank hat schon getippt, der Auftrag startet ohne gesprochene Bestätigung. Schon vorgelesen: nicht ein zweites Mal.
+            if (!vorlesen || karte.isBlank() || runde.karteGesprochen) return
             if (runde.ursprung != null && (runde.sitzung != sitzungId || weckwortLauf?.isActive != true)) sprachZustellen(rundenZustellung(runde, karte))
             else if (runde.sitzung == sitzungId) vorleser.sprich(WAHL_QUELLE + runde.sitzung + ":" + runde.beginn, "Jarvis", karte)
             return
@@ -608,6 +635,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!vorlesen) return
         // Der Gesprächsmodus ist inzwischen zu Ende (etwa bewusst beendet oder abgelöst): angesagt zustellen und danach wieder zuhören.
         if (runde.ursprung != null && weckwortLauf?.isActive != true) sprachZustellen(rundenZustellung(runde, neu.text))
+        else if (runde.vorab != null) vorleser.sprichNachVorab(runde.vorab!!, "gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
         else vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
     }
 
@@ -1289,7 +1317,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         if (nurAuftrag) karte = de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(herkunft, beginn)
                     }
             }
-            val rechtzeitig = kotlinx.coroutines.withTimeoutOrNull(zeitlimit) { arbeit.await() ?: ersatz }?.let { a ->
+            val rechtzeitig = kotlinx.coroutines.withTimeoutOrNull(zeitlimit) { arbeit.await() ?: ersatz }?.also {
+                Logbuch.sprache("Live: Denken bis Ergebnis", "${it.length} Zeichen", System.currentTimeMillis() - beginn)
+            }?.let { a ->
                 karte?.let {
                     if (it.isBlank()) "Frank hat schon gewählt, der Programmierauftrag startet. Bestätige die Auswahl nicht, nenne kein Modell und stell keine Rückfrage; sag höchstens „Okay“."
                     else "Die Auswahl steht als Karte im Chat. Sag Frank genau diesen Satz und sonst nichts, ohne eigene Rückfrage: „$it“"
@@ -1915,6 +1945,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (stand != wechselStand) { de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben(); return false }
         if (mikro.start(viewModelScope)) {
             nimmtAuf = true; aufnahmeStand = stand
+            // Verbindungen schon jetzt öffnen: DNS und TLS fallen nicht mehr in die Wartezeit nach der Frage.
+            runCatching { agent.auth.vorwaermen(einstellungen.modell); vorleser.vorwaermen() }
             // Offline: Das Modell lädt, während Frank spricht, statt danach.
             if (sprache.transkriptionLokal) viewModelScope.launch(Dispatchers.Default) { de.frank.jarvis.speech.ParakeetLokal.vorwaermen(getApplication()) }
             return true
@@ -2213,6 +2245,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         nimmtAuf = false
         val schluss = schlussStilleMs
         schlussStilleMs = 0L
+        de.frank.jarvis.observability.Antwortkette.start(schluss)
         // Die Mitschrift gehört zur Session, in der die Aufnahme begann.
         val stand = aufnahmeStand
         schreibtMit = true
@@ -2246,6 +2279,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     withContext(Dispatchers.IO) { de.frank.module.transkriptionsmodul.TranskriptionAnbindung.diktat(groq).transkribiere(wav, stimmhaft).text.trim() }
                 }
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
+                de.frank.jarvis.observability.Antwortkette.punkt("Mitschrift")
                 // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
                 if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", "Session von Hand gewechselt"); return@launch }
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."

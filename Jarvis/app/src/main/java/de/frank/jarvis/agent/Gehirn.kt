@@ -14,5 +14,5 @@ object Gehirn {
     /** Wann das Plugin zuletzt Gedächtnis oder Neuigkeiten mit einem Werkzeug-Ergebnis nachgereicht bekam. */
     @Volatile var zuletztNachgereicht = 0L
 
-    suspend fun kontext(context: Context): String = Lagebild.kontext(context)
+    suspend fun kontext(context: Context, trenner: String? = null): String = Lagebild.kontext(context, trenner = trenner)
 }
