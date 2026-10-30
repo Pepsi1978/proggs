@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Refresh
@@ -116,6 +117,7 @@ fun ThemeKnopf(
         symbol = when (themeModus) {
             ThemeModus.HELL -> Icons.Default.LightMode
             ThemeModus.DUNKEL -> Icons.Default.DarkMode
+            ThemeModus.AUTOMATISCH -> Icons.Default.BrightnessAuto
         },
         beschreibung = "Erscheinungsbild: ${themeModus.label}. Tippen wechselt.",
         beiKlick = beiKlick,
