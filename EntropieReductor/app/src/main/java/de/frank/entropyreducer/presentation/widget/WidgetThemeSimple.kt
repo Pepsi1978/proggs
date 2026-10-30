@@ -1,8 +1,8 @@
 package de.frank.entropyreducer.presentation.widget
 
 import android.content.Context
-import android.content.res.Configuration
 import de.frank.entropyreducer.data.settings.ThemeMode
+import de.frank.entropyreducer.presentation.theme.Sonnenstand
 
 /**
  * Int-basierte Palette fuer den klassischen RemoteViews-Widget-Provider.
@@ -109,10 +109,8 @@ val SimpleWidgetLightPalette = SimpleWidgetPalette(
 )
 
 fun resolveWidgetPaletteSimple(context: Context, mode: ThemeMode): SimpleWidgetPalette {
-    val isSystemDark = (context.resources.configuration.uiMode and
-        Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     val effectiveDark = when (mode) {
-        ThemeMode.SYSTEM -> isSystemDark
+        ThemeMode.SYSTEM -> Sonnenstand.istDunkel()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }

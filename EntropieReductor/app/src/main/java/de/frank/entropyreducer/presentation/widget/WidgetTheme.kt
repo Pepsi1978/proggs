@@ -1,9 +1,9 @@
 package de.frank.entropyreducer.presentation.widget
 
 import android.content.Context
-import android.content.res.Configuration
 import androidx.compose.ui.graphics.Color
 import de.frank.entropyreducer.data.settings.ThemeMode
+import de.frank.entropyreducer.presentation.theme.Sonnenstand
 
 /**
  * Theme-Paletten fuer das Home-Screen-Widget (Frank-Wunsch 2026-05-11).
@@ -130,13 +130,11 @@ val WidgetLightPalette = WidgetPalette(
  *
  *  - LIGHT  → immer hell, egal was das Geraet sagt
  *  - DARK   → immer dunkel, egal was das Geraet sagt
- *  - SYSTEM → folgt der aktuellen Geraete-Konfiguration (Configuration.uiMode)
+ *  - SYSTEM → Automatik: folgt der Sonne in Neuenhagen (Stand der letzten Widget-Aktualisierung)
  */
 fun resolveWidgetPalette(context: Context, mode: ThemeMode): WidgetPalette {
-    val isSystemDark = (context.resources.configuration.uiMode and
-        Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     val effectiveDark = when (mode) {
-        ThemeMode.SYSTEM -> isSystemDark
+        ThemeMode.SYSTEM -> Sonnenstand.istDunkel()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }

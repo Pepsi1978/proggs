@@ -39,7 +39,7 @@ fun ThemeToggleIcon(
 ) {
     val cosmos = LocalCosmos.current
     val (icon, label) = when (current) {
-        ThemeMode.SYSTEM -> Icons.Outlined.Brightness4 to "Auto (System)"
+        ThemeMode.SYSTEM -> Icons.Outlined.Brightness4 to "Automatisch nach der Sonne"
         ThemeMode.LIGHT -> Icons.Outlined.LightMode to "Hell-Modus"
         ThemeMode.DARK -> Icons.Outlined.DarkMode to "Dunkel-Modus"
     }

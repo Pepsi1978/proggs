@@ -180,8 +180,8 @@ fun WidgetSettingsScreen(
 
             ThemeOptionRow(
                 icon = Icons.Outlined.BrightnessAuto,
-                label = "System",
-                description = "Folgt dem Geräte-Theme (hell/dunkel)",
+                label = "Automatisch nach der Sonne",
+                description = "Hell ab Sonnenaufgang, dunkel nach der Dämmerung; das Widget wechselt mit seiner nächsten Aktualisierung (spätestens nach etwa 30 Minuten)",
                 isActive = mode == ThemeMode.SYSTEM,
                 onClick = { setAndRefresh(ThemeMode.SYSTEM) },
             )

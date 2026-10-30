@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Drei Theme-Modi: dem System folgen, immer hell, immer dunkel. */
+/** Drei Theme-Modi: automatisch nach der Sonne (SYSTEM, gespeicherter Name bleibt), immer hell, immer dunkel. */
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 private val Context.dataStore by preferencesDataStore(name = "app_settings")

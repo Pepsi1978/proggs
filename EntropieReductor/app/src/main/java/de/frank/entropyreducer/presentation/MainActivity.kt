@@ -7,7 +7,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -96,14 +95,8 @@ class MainActivity : ComponentActivity() {
 
             val themeVm: ThemeViewModel = hiltViewModel()
             val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
-            val systemDark = isSystemInDarkTheme()
-            val effectiveDark = when (themeMode) {
-                ThemeMode.SYSTEM -> systemDark
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
-            }
 
-            EntropieReductorTheme(darkTheme = effectiveDark) {
+            EntropieReductorTheme(themeMode = themeMode) {
                 var started by rememberSaveable { mutableStateOf(widgetFastTrack) }
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     WidgetDeepLinkBus.events.collect { link ->

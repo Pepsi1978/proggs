@@ -2,7 +2,6 @@ package de.frank.entropyreducer.presentation.theme
 
 import android.app.Activity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -15,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import de.frank.entropyreducer.data.settings.ThemeMode
 
 /**
  * Eigene Theme-Erweiterungen — "Glut"-Design (2026-06-12, Mockup docs/mockup-neues-design.html).
@@ -88,9 +89,24 @@ private val LightScheme =
         onError = Color(0xFFFFF7F0),
     )
 
+/** Einzige Auswertung des App-Modus: ThemeMode.SYSTEM bedeutet automatisch nach der Sonne. */
 @Composable
 fun EntropieReductorTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode,
+    content: @Composable () -> Unit,
+) {
+    val automatikDunkel = sonneDunkel(themeMode == ThemeMode.SYSTEM)
+    val dunkel = when (themeMode) {
+        ThemeMode.SYSTEM -> automatikDunkel
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    EntropieReductorTheme(darkTheme = dunkel, content = content)
+}
+
+@Composable
+fun EntropieReductorTheme(
+    darkTheme: Boolean,
     content: @Composable () -> Unit,
 ) {
     val scheme = if (darkTheme) DarkScheme else LightScheme
@@ -152,7 +168,10 @@ fun EntropieReductorTheme(
         }
     }
 
-    androidx.compose.runtime.CompositionLocalProvider(LocalCosmos provides ext) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalCosmos provides ext,
+        LocalConfiguration provides appModusKonfiguration(darkTheme),
+    ) {
         MaterialTheme(
             colorScheme = scheme,
             typography = CosmosTypography,

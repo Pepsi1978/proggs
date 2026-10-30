@@ -13,9 +13,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import de.frank.entropyreducer.presentation.ThemeViewModel
 import de.frank.entropyreducer.presentation.theme.EntropieReductorTheme
 
 /**
@@ -35,7 +39,9 @@ class HealthConnectPrivacyActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            EntropieReductorTheme {
+            val themeVm: ThemeViewModel = hiltViewModel()
+            val themeMode by themeVm.themeMode.collectAsStateWithLifecycle()
+            EntropieReductorTheme(themeMode = themeMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     PrivacyContent()
                 }
