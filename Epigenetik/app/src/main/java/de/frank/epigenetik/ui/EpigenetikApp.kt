@@ -151,7 +151,7 @@ fun Kopf(vm: AppViewModel, titel: String, untertitel: String) {
             ) {
                 val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
                 e.modus = neu
-                vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
+                vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" })
             }
             RundKnopf(Icons.Rounded.Settings, "Einstellungen", 40.dp) { vm.oeffne(Seite.Einstellungen) }
         }
