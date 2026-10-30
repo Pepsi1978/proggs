@@ -2046,7 +2046,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
                 // Diktat-Weg aus den Einstellungen: Groq (API-Schlüssel) oder Whisper direkt auf dem Handy.
                 val diktatRevision by vm.settingsRevision.collectAsStateWithLifecycle()
-                val lokal = remember(diktatRevision) { vm.settings.diktatWeg == "lokal" }
+                val parakeet = remember(diktatRevision) { de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(activity) }
+                // Parakeet (Jarvis) hat Vorrang und läuft über den Aufnahme-Weg des ViewModels (Sicherung als letztes Diktat).
+                val lokal = remember(diktatRevision) { vm.settings.diktatWeg == "lokal" } && !parakeet
                 if (lokal) {
                     // Wie in GenialerWeckerAndroid: links Einsprechen, rechts Vorlesen. Erkanntes wird an den AKTUELLEN
                     // Entwurf angehängt, damit ein spätes Ergebnis keine neueren Handänderungen überschreibt.
@@ -2073,7 +2075,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                         StillerKnopf("Text verbessern", vm::improve)
                         if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
                     }
-                    Text("Groq · Whisper ${de.frank.genialeideen.audio.GroqTranscriber.modellName(vm.settings.groqModell)}. Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
+                    Text((if (parakeet) "Parakeet über Jarvis (offline)" else "Groq · Whisper ${de.frank.genialeideen.audio.GroqTranscriber.modellName(vm.settings.groqModell)}") + ". Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             }

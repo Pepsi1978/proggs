@@ -30,6 +30,7 @@
     {"versionCode": 115, "versionName": "1.1.120", "stand": "22.10.2026, 11:19 Uhr", "notiz": "Einstellungen: Whisper-Modell wählbar (Large V3 Turbo oder Large V3) und persönliches Wörterbuch mit Ein/Aus-Schalter für die Spracheingabe über Groq."},
     {"versionCode": 116, "versionName": "1.1.121", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, Large V3 sofort wieder nutzbar nach erneuter Auswahl."},
     {"versionCode": 117, "versionName": "1.1.122", "stand": "22.10.2026, 11:57 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural, auch für einzelne Wecker; Stimmen per langem Drücken oder Stern als Favorit oben anheften."},
-    {"versionCode": 118, "versionName": "1.1.123", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."}
+    {"versionCode": 118, "versionName": "1.1.123", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
+    {"versionCode": 119, "versionName": "1.1.124", "stand": "30.10.2026, 11:45 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
   ]
 }

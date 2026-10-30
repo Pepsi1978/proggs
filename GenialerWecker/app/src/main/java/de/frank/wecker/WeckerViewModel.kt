@@ -412,11 +412,16 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             val kept = if (saved) " Die Aufnahme liegt als letztes Diktat vor." else " Die Aufnahme konnte nicht gesichert werden."
             try {
                 currentCoroutineContext().ensureActive()
-                val transcriber = GroqTranscriber(settings.groqApiKey, filterStille = settings.filterStilleVorabAn,
-                    filterMetriken = settings.filterSegmentmetrikenAn, filterZeitstempel = settings.filterZeitstempelAn,
-                    filterFloskeln = settings.filterFloskelnAn, model = settings.groqModell,
-                    prompt = GroqTranscriber.vokabularPrompt(settings.woerterbuchAn, settings.woerterbuch))
-                val result = try { Diktat(transcriber).transkribiere(bytes) } finally { transcriber.shutdown() }
+                // Offline über Jarvis (Parakeet) hat Vorrang vor Groq: kein Schlüssel, kein Netz, kein stiller Rückfall.
+                val result = if (de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(app)) {
+                    Diktat.Ergebnis(de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.transkribiere(app, bytes).trim(), 1, 0)
+                } else {
+                    val transcriber = GroqTranscriber(settings.groqApiKey, filterStille = settings.filterStilleVorabAn,
+                        filterMetriken = settings.filterSegmentmetrikenAn, filterZeitstempel = settings.filterZeitstempelAn,
+                        filterFloskeln = settings.filterFloskelnAn, model = settings.groqModell,
+                        prompt = GroqTranscriber.vokabularPrompt(settings.woerterbuchAn, settings.woerterbuch))
+                    try { Diktat(transcriber).transkribiere(bytes) } finally { transcriber.shutdown() }
+                }
                 // A late, non-cooperative network result of a cancelled or replaced job is dropped silently.
                 currentCoroutineContext().ensureActive()
                 if (!owns()) return@launch

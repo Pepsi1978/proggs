@@ -25,12 +25,14 @@
         <package android:name="de.frank.genialeideen" />
         <!-- Brücke zur App „Aufgaben“: ohne diesen Eintrag liefert die Abfrage ab Android 11 nichts. -->
         <provider android:authorities="de.frank.aufgaben.wecker" />
+        <provider android:authorities="de.frank.jarvis.parakeet" />
         <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
         <!-- Sichtbarkeit des geräteeigenen Spracherkennungsdienstes (Android 11+), Rückfall ohne Whisper-Modell. -->
         <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
     <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Wecker lesen und stellen. -->
     <permission android:name="de.frank.jarvis.permission.BRUECKE" android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
 
     <application android:name="de.frank.wecker.WeckerApplication"
         android:allowBackup="false" android:dataExtractionRules="@xml/no_backup" android:fullBackupContent="false" android:label="Genialer Wecker"

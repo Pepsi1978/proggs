@@ -50,6 +50,7 @@ import de.frank.genialeideen.ui.*
 import de.frank.genialeideen.ui.theme.*
 import de.frank.wecker.design.Design
 import de.frank.wecker.design.LocalGestalt
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 
 @Composable
 fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
@@ -397,7 +398,13 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         var erkennungOffen by remember { mutableStateOf(false) }
         var erkennungStand by remember { mutableIntStateOf(0) }
         val lokalesModell = remember(erkennungStand, erkennungOffen) { Erkennung.aktiv(activity) }
-        Section("Spracheingabe", collapsible = true, summary = if (diktatWeg == "lokal")
+        Section("Spracheingabe · Offline (Jarvis)", collapsible = true, summary = if (ParakeetUeberJarvis.gewaehlt(activity))
+            "Parakeet über Jarvis · offline" else "Aus · Parakeet über Jarvis wählen") {
+            Text("Parakeet läuft in Jarvis, ohne Internet und ohne Schlüssel. Ist es eingeschaltet, hat es Vorrang vor Groq und dem Whisper auf dem Handy.",
+                style = MaterialTheme.typography.bodySmall)
+            de.frank.module.transkriptionsmodul.ParakeetEinstellungen(geaendert = { vm.settingsRevision.value++ })
+        }
+        Section("Spracheingabe", collapsible = true, summary = if (ParakeetUeberJarvis.gewaehlt(activity)) "Parakeet über Jarvis hat Vorrang" else if (diktatWeg == "lokal")
             "Auf dem Handy · ${lokalesModell?.modellName ?: "Modell noch nicht geladen"}" else "Groq · Whisper ${GroqTranscriber.modellName(settings.groqModell)} (API-Schlüssel)") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip3D(diktatWeg == "groq", { diktatWeg = "groq"; settings.diktatWeg = "groq"; vm.settingsRevision.value++ }, "Groq · API-Schlüssel")

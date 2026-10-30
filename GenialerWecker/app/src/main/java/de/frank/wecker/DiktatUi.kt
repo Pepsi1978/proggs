@@ -33,6 +33,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.genialeideen.ui.GoldKnopf
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import de.frank.genialeideen.ui.StillerKnopf
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.LocalSemantisch
@@ -96,7 +97,7 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
             whisper.erkennt -> GoldKnopf("Erkenne …", {}, aktiviert = false, laedt = true)
             diktat.hoertZu -> GoldKnopf("■ Fertig", { diktat.beenden() }, hauptKnopf = true, beschreibung = "Diktat beenden und Text einfügen")
             else -> GoldKnopf("Einsprechen", {
-                if (!Erkennung.auswahlGetroffen(context) || !WhisperModell.bereit(context)) { nachAuswahlStarten = true; auswahlOffen = true } else mitFreigabe(::loslegen)
+                if (!ParakeetUeberJarvis.gewaehlt(context) && (!Erkennung.auswahlGetroffen(context) || !WhisperModell.bereit(context))) { nachAuswahlStarten = true; auswahlOffen = true } else mitFreigabe(::loslegen)
             }, symbol = { Icon(Icons.Default.Mic, null, Modifier.size(18.dp)) })
         }
         vorlesen()
@@ -104,8 +105,10 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
     if (whisper.hoertZu) Pegel(whisper.pegel, whisper.sekunden)
     if (!whisper.hoertZu && !whisper.erkennt) {
         val aktiv = remember(erkennungStand) { Erkennung.aktiv(context) }
-        Text("Erkennung: ${aktiv?.titel ?: "noch nicht geladen"} · ${if (aktiv == null) "laden" else "ändern"}",
-            Modifier.clip(RoundedCornerShape(8.dp)).clickable { nachAuswahlStarten = false; auswahlOffen = true }.padding(vertical = 4.dp),
+        val parakeet = ParakeetUeberJarvis.gewaehlt(context)
+        Text(if (parakeet) "Erkennung: Parakeet über Jarvis (offline)"
+            else "Erkennung: ${aktiv?.titel ?: "noch nicht geladen"} · ${if (aktiv == null) "laden" else "ändern"}",
+            Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = !parakeet) { nachAuswahlStarten = false; auswahlOffen = true }.padding(vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium, color = LocalGold.current.primaer)
     }
     if (auswahlOffen) ErkennungDialog { starten ->

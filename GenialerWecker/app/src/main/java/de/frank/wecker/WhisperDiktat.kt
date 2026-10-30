@@ -16,10 +16,12 @@ import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 import kotlinx.coroutines.*
 import kotlin.math.sqrt
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 
 /** Whisper fürs Einsprechen: beide Modelle kommen per Download (siehe [Erkennung]); ohne geladenes Modell kein Whisper. */
 object WhisperModell {
-    fun bereit(context: Context): Boolean = Erkennung.aktiv(context) != null
+    /** Bereit ist die Erkennung mit geladenem Whisper-Modell oder, vorrangig, mit gewähltem Parakeet über Jarvis. */
+    fun bereit(context: Context): Boolean = ParakeetUeberJarvis.gewaehlt(context) || Erkennung.aktiv(context) != null
 }
 
 /** Der geladene Erkenner; teuer im Aufbau, darum eine Instanz, die nach einer Minute Ruhe freigegeben wird. */
@@ -33,7 +35,11 @@ object WhisperErkenner {
     private val lock = Any()
 
     /** Vorab laden, während noch gesprochen wird – dann steht das Ergebnis gleich nach „Fertig“. */
-    fun vorwaermen(context: Context, code: String) { scope.launch { runCatching { holen(context, code) } } }
+    fun vorwaermen(context: Context, code: String) {
+        // Mit Parakeet (Jarvis) lädt Jarvis sein Modell vor; hier gibt es kein Whisper-Modell zu laden.
+        if (ParakeetUeberJarvis.gewaehlt(context)) { scope.launch { ParakeetUeberJarvis.vorwaermen(context) }; return }
+        scope.launch { runCatching { holen(context, code) } }
+    }
 
     private fun holen(context: Context, code: String): OfflineRecognizer = synchronized(lock) {
         freigabe?.cancel()
@@ -94,6 +100,17 @@ object DiktatAudio {
         if (erstes < 0) return samples
         val rand = RATE * 3 / 10
         return samples.copyOfRange((erstes * FENSTER - rand).coerceAtLeast(0), ((letztes + 1) * FENSTER + rand).coerceAtMost(samples.size))
+    }
+
+    /** 16-kHz-Mono-WAV (16 Bit) aus Samples, damit Jarvis die Aufnahme als Datei bekommt. */
+    fun alsWav(samples: FloatArray): ByteArray {
+        val daten = samples.size * 2
+        val b = java.nio.ByteBuffer.allocate(44 + daten).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        b.put("RIFF".toByteArray()).putInt(36 + daten).put("WAVE".toByteArray()).put("fmt ".toByteArray())
+            .putInt(16).putShort(1).putShort(1).putInt(RATE).putInt(RATE * 2).putShort(2).putShort(16)
+            .put("data".toByteArray()).putInt(daten)
+        for (s in samples) b.putShort((s.coerceIn(-1f, 1f) * 32767f).toInt().toShort())
+        return b.array()
     }
 
     private fun fensterPegel(samples: FloatArray): FloatArray = FloatArray(samples.size / FENSTER) { i ->
@@ -175,11 +192,17 @@ class WhisperDiktat(private val context: Context) {
             if (samples == null) { zustand = DiktatZustand.Hinweis("Das Mikrofon ließ sich nicht öffnen. Prüfe, ob eine andere App es gerade benutzt."); return@launch }
             if (DiktatAudio.sprachMs(samples) < 400) { zustand = DiktatZustand.Hinweis("Ich habe nichts verstanden. Sprich etwas näher am Handy und tippe erneut auf „Diktieren“."); return@launch }
             zustand = DiktatZustand.Pruefe
-            val text = try { withContext(Dispatchers.Default) { WhisperErkenner.erkenne(context, DiktatAudio.kuerzen(samples), code) } }
+            val text = try {
+                if (ParakeetUeberJarvis.gewaehlt(context)) {
+                    // Offline über Jarvis: kein stiller Rückfall auf das eigene Whisper oder einen Online-Dienst.
+                    ParakeetUeberJarvis.transkribiere(context, DiktatAudio.alsWav(DiktatAudio.kuerzen(samples)))
+                } else withContext(Dispatchers.Default) { WhisperErkenner.erkenne(context, DiktatAudio.kuerzen(samples), code) }
+            }
                 catch (e: CancellationException) { throw e }
                 catch (e: Throwable) {
                     android.util.Log.w("WeckerDiktat", "Whisper-Erkennung fehlgeschlagen", e)
-                    zustand = DiktatZustand.Hinweis("Die Spracherkennung ist fehlgeschlagen. Bitte versuch es noch einmal."); return@launch
+                    zustand = DiktatZustand.Hinweis(if (e is de.frank.module.transkriptionsmodul.ParakeetUeberJarvisFehler) (e.message ?: "Jarvis hat nicht geantwortet.")
+                        else "Die Spracherkennung ist fehlgeschlagen. Bitte versuch es noch einmal."); return@launch
                 }
             zustand = if (text.isBlank()) DiktatZustand.Hinweis("Ich habe nichts verstanden. Bitte noch einmal.") else DiktatZustand.Ergebnis(text)
         }
