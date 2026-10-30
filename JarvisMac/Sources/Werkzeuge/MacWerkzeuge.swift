@@ -104,6 +104,11 @@ private func gesperrt() async -> WerkzeugErgebnis? {
         : WerkzeugErgebnis(text: "Vollzugriff ist in den Einstellungen ausgeschaltet. Frank muss ihn einschalten (Einstellungen → Mac).", fehler: true)
 }
 
+/// Solange der Tresor offen ist, stehen Schlüssel im Klartext auf dem Bildschirm: kein Bildschirmfoto durch Jarvis.
+private func bildschirmGesperrt() async -> WerkzeugErgebnis? {
+    await MainActor.run { TresorSperre.shared.entsperrt } ? WerkzeugErgebnis(text: "Der Tresor ist gerade offen, deshalb macht Jarvis kein Bildschirmfoto. Frag in einer Minute erneut.", fehler: true) : nil
+}
+
 enum MacWerkzeuge {
     static let openLauncher = "/Applications/OpenLauncher.app/Contents/MacOS/OpenLauncher"
 
@@ -113,6 +118,7 @@ enum MacWerkzeuge {
                  schema(["befehl": ("string", "Der zsh-Befehl"), "ordner": ("string", "Arbeitsordner, Vorgabe ~/proggs"),
                          "zeitlimit_s": ("integer", "Zeitlimit in Sekunden, Vorgabe 120")], pflicht: ["befehl"])) { a in
             if let g = await gesperrt() { return g }
+            if let g = Tresor.sperre(a["befehl"] as? String ?? "") { return g }
             let s = Double(a["zeitlimit_s"] as? Int ?? 120)
             return befehlsText(await Shell.zsh(a["befehl"] as? String ?? "", ordner: a["ordner"] as? String, sekunden: min(max(s, 5), 1800)))
         },
@@ -120,6 +126,7 @@ enum MacWerkzeuge {
                  "Mac: führt AppleScript aus – Programme fernsteuern (Finder, Safari, Mail, Musik, Systemeinstellungen, Terminal, System Events für Klicks und Tasten), Fenster anordnen, Dialoge. Gibt das Ergebnis zurück.",
                  schema(["skript": ("string", "AppleScript-Quelltext")], pflicht: ["skript"])) { a in
             if let g = await gesperrt() { return g }
+            if let g = Tresor.sperre(a["skript"] as? String ?? "") { return g }
             return befehlsText(await Shell.osascript(a["skript"] as? String ?? ""))
         },
         werkzeug("mac_oeffnen",
@@ -163,6 +170,7 @@ enum MacWerkzeuge {
                  "Mac: macht ein Bildschirmfoto des Hauptbildschirms und zeigt es dir, damit du siehst, was gerade auf dem Mac los ist (Fenster, Fehlermeldungen, Dialoge).",
                  schema([:])) { _ in
             if let g = await gesperrt() { return g }
+            if let g = await bildschirmGesperrt() { return g }
             // JPEG, 1440 px: rund 200 KB statt mehrerer MB PNG – der Verlauf bleibt klein.
             let datei = Pfade.temp.appendingPathComponent("bildschirm.jpg")
             try? FileManager.default.removeItem(at: datei)
@@ -176,6 +184,7 @@ enum MacWerkzeuge {
                  "Mac: „Erstelle einen Screenshot“ – nimmt den ganzen Bildschirm auf (Jarvis blendet sich dafür kurz aus), speichert ihn als PNG am Bildschirmfoto-Ort von macOS (meist Schreibtisch) und legt ihn zusätzlich in die Zwischenablage. Mit zeigen=true siehst du ihn auch selbst.",
                  schema(["zeigen": ("boolean", "Bild auch dir zeigen (Vorgabe false)"), "name": ("string", "optionaler Dateiname ohne Endung")])) { a in
             if let g = await gesperrt() { return g }
+            if let g = await bildschirmGesperrt() { return g }
             guard let (pfad, daten) = await Screenshot.aufnehmen(name: a["name"] as? String) else {
                 return WerkzeugErgebnis(text: "Screenshot ging nicht – Bildschirmaufnahme-Recht für Jarvis erteilen (Einstellungen → Mac & Rechte).", fehler: true)
             }
@@ -189,6 +198,7 @@ enum MacWerkzeuge {
                  schema(["art": ("string", "bild | pfad"), "text": ("string", "optional: Text, der hinter das Bild geschrieben wird"),
                          "senden": ("boolean", "danach Enter drücken (Vorgabe false)")])) { a in
             if let g = await gesperrt() { return g }
+            if let g = await bildschirmGesperrt() { return g }
             guard let ziel = await MainActor.run(body: { VorderApp.terminal() }) else {
                 return WerkzeugErgebnis(text: "Kein offenes Terminal gefunden (Terminal, iTerm, Ghostty, Warp …).", fehler: true)
             }
@@ -270,6 +280,7 @@ enum MacWerkzeuge {
                          "inhalt": ("string", "Inhalt für schreiben/anhaengen")], pflicht: ["aktion", "pfad"])) { a in
             if let g = await gesperrt() { return g }
             let pfad = ((a["pfad"] as? String ?? "") as NSString).expandingTildeInPath
+            if let g = Tresor.sperre(pfad) { return g }
             let url = URL(fileURLWithPath: pfad)
             switch a["aktion"] as? String ?? "" {
             case "lesen":
@@ -297,6 +308,7 @@ enum MacWerkzeuge {
                  "Mac: öffnet ein sichtbares Terminal-Fenster (Terminal.app) und führt dort einen Befehl aus, damit Frank zusehen oder weiterarbeiten kann. Für interaktive Programme (z. B. claude, codex, ssh, htop).",
                  schema(["befehl": ("string", "Befehl"), "ordner": ("string", "Startordner, Vorgabe ~/proggs")], pflicht: ["befehl"])) { a in
             if let g = await gesperrt() { return g }
+            if let g = Tresor.sperre(a["befehl"] as? String ?? "") { return g }
             let ordner = ((a["ordner"] as? String ?? "~/proggs") as NSString).expandingTildeInPath
             let voll = "cd \(Shell.zitiert(ordner)) && \(a["befehl"] as? String ?? "")"
             let esc = voll.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
@@ -357,6 +369,17 @@ enum MacWerkzeuge {
             end tell
             """
             return befehlsText(await Shell.osascript(skript))
+        },
+        werkzeug("mac_logbuch",
+                 "Mac: liest das ausführliche Logbuch der Mac-App (je Ereignis eine JSON-Zeile: zeit, art, was, wo, werkzeug, eingabe, ergebnis, fehler, dauer_ms; höchstens 30 Tage). Für Auswertungen, wie sich die App verbessern lässt, und zur Fehlersuche. tage = wie viele Tage rückwärts (Vorgabe 1), nur_fehler = nur Fehler.",
+                 schema(["tage": ("integer", "Tage rückwärts, Vorgabe 1"), "nur_fehler": ("boolean", "nur Einträge mit Fehler")])) { a in
+            let tage = min(max(a["tage"] as? Int ?? 1, 1), Logbuch.aufbewahrungTage)
+            let namen = ((try? FileManager.default.contentsOfDirectory(atPath: Logbuch.ordner.path)) ?? []).filter { $0.hasSuffix(".jsonl") }.sorted().suffix(tage)
+            var zeilen = namen.flatMap { n in
+                ((try? String(contentsOf: Logbuch.ordner.appendingPathComponent(n), encoding: .utf8)) ?? "").split(separator: "\n").map(String.init)
+            }
+            if a["nur_fehler"] as? Bool == true { zeilen = zeilen.filter { $0.contains("\"fehler\":") } }
+            return WerkzeugErgebnis(text: zeilen.isEmpty ? "Keine Einträge." : String(zeilen.joined(separator: "\n").suffix(180_000)))
         },
         werkzeug("mac_status",
                  "Mac: kurzer Systemüberblick – Akku, Netzwerk, freier Speicher, Laufzeit, Rechnername, macOS-Version, angeschlossene Bildschirme.",

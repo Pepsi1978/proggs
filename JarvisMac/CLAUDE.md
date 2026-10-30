@@ -28,7 +28,8 @@ bash build.sh install   # bauen, nach /Applications/Jarvis.app, starten
 - **Mac-Werkzeuge** (`Sources/Werkzeuge`): Shell, AppleScript, Programme, Tastatur, Bildschirm, Dateien, Terminal, OpenLauncher
   (`--jarvis-auftrag`), Updater-Zentrale, ChatGPT-App. Neue Mac-Werkzeuge dort ergänzen und in `funktionen.md` eintragen.
 - **Sprache** (`Sources/Sprache`), **Live** (`Sources/Live`), **Oberfläche** (`Sources/Oberflaeche`).
-- Zugangsschlüssel nur in `~/Library/Application Support/JarvisMac/zugang.json` (0600), beim ersten Start aus `~/SK` übernommen. Nie ins Git.
+- Zugangsschlüssel nur verschlüsselt in `~/Library/Application Support/JarvisMac/Tresor` (`Sources/Kern/Tresor.swift`, Secure Enclave), beim ersten Start aus `~/SK` übernommen. Nie ins Git, nie im Klartext. Keine Keychain: Sie sperrt bei lokaler Signatur fremde Programme nicht aus (getestet).
+- Logbuch: `Application Support/JarvisMac/Logbuch/JJJJ-MM-TT.jsonl`, höchstens 30 Tage. Neue Abläufe mit `log(art, was, wo:, werkzeug:, ergebnis:, fehler:, dauerMs:)` eintragen.
 
 ## Live-Gespräch
 Vor Änderungen an `Sources/Live` `best-practices/apis/openai-live-realtime.md` §14 lesen (wie bei der Android-App).

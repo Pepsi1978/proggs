@@ -29,7 +29,7 @@ struct VorleseEinstellungenAnsicht: View {
                     Picker("", selection: $v.anbieter) {
                         ForEach(VorleseAnbieter.allCases) { a in Text(a.titel).tag(a) }
                     }
-                    .frame(width: 260)
+                    .labelsHidden().frame(maxWidth: 260)
                 }
                 Text(v.anbieter.beschreibung).font(.jarvis(12)).foregroundStyle(Farbe.text2)
                 if v.anbieter.kenntTempo {
@@ -38,7 +38,7 @@ struct VorleseEinstellungenAnsicht: View {
                         Spacer()
                         Slider(value: Binding(get: { v.tempo(v.anbieter) }, set: { v.setzeTempo($0, fuer: v.anbieter) }),
                                in: VorleseEinstellungen.tempoMin...VorleseEinstellungen.tempoMax, step: 0.05)
-                            .frame(width: 220)
+                            .frame(maxWidth: 220)
                         Text(String(format: "%.2f×", v.tempo(v.anbieter))).font(.jarvis(12)).frame(width: 50)
                     }
                     Text("Jede Stimme behält ihr eigenes Tempo, auch als Rückfallstufe.").font(.jarvis(11)).foregroundStyle(Farbe.text3)
@@ -134,37 +134,29 @@ struct VorleseEinstellungenAnsicht: View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 10) {
                 KartenTitel(symbol: "key.fill", titel: "Schlüssel fürs Vorlesen", farbe: Farbe.orange)
-                Text("Liegen nur auf diesem Mac (Application Support, nur für dich lesbar). Edge braucht keinen Schlüssel.")
+                Text("Verschlüsselt im Tresor dieses Macs, Anzeigen und Ändern nur nach Touch ID. Edge braucht keinen Schlüssel.")
                     .font(.jarvis(11)).foregroundStyle(Farbe.text2)
-                feld("Google Cloud (Chirp 3 HD)", $v.zugang.google)
-                feld("Gemini TTS kostenlos", $v.zugang.geminiFrei)
-                feld("Gemini TTS bezahlt", $v.zugang.geminiBezahlt)
+                TresorKopf()
+                TresorFeld(titel: "Google Cloud (Chirp 3 HD)", wert: $v.zugang.google)
+                TresorFeld(titel: "Gemini TTS kostenlos", wert: $v.zugang.geminiFrei)
+                TresorFeld(titel: "Gemini TTS bezahlt", wert: $v.zugang.geminiBezahlt)
                 HStack {
-                    Text("Gemini-Reihenfolge").font(.jarvis(13, .medium)).frame(width: 190, alignment: .leading)
+                    Text("Gemini-Reihenfolge").font(.jarvis(13, .medium)).frame(width: 150, alignment: .leading)
                     Picker("", selection: $v.geminiWahl) {
                         Text("Erst kostenlos, dann bezahlt").tag(VorleseEinstellungen.geminiFreiDannBezahlt)
                         Text("Nur kostenlos").tag(VorleseEinstellungen.geminiNurFrei)
                         Text("Nur bezahlt").tag(VorleseEinstellungen.geminiNurBezahlt)
                     }
-                    .pickerStyle(.segmented)
+                    .labelsHidden().frame(maxWidth: .infinity)
                 }
-                feld("Azure Speech-Schlüssel", $v.zugang.azure)
+                TresorFeld(titel: "Azure Speech-Schlüssel", wert: $v.zugang.azure)
                 HStack {
-                    Text("Azure-Region").font(.jarvis(13, .medium)).frame(width: 190, alignment: .leading)
+                    Text("Azure-Region").font(.jarvis(13, .medium)).frame(width: 150, alignment: .leading)
                     TextField("westeurope", text: $v.zugang.azureRegion).textFieldStyle(.roundedBorder)
                 }
                 Text("F0 kostenlos 500 000 Zeichen im Monat; HD-Stimmen nur mit S0.").font(.jarvis(11)).foregroundStyle(Farbe.text3)
-                feld("Alibaba DashScope", $v.zugang.qwen)
+                TresorFeld(titel: "Alibaba DashScope", wert: $v.zugang.qwen)
             }
-        }
-    }
-
-    private func feld(_ titel: String, _ wert: Binding<String>) -> some View {
-        HStack {
-            Image(systemName: wert.wrappedValue.isEmpty ? "xmark.circle" : "checkmark.circle.fill")
-                .foregroundStyle(wert.wrappedValue.isEmpty ? Farbe.text3 : Farbe.gruen)
-            Text(titel).font(.jarvis(13, .medium)).frame(width: 170, alignment: .leading)
-            SecureField("", text: wert).textFieldStyle(.roundedBorder)
         }
     }
 

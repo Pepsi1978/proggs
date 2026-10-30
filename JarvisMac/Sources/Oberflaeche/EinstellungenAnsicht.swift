@@ -36,8 +36,11 @@ struct EinstellungenAnsicht: View {
                     }
                 }
                 .padding(.horizontal, 30).padding(.top, 44).padding(.bottom, 30)
-                .frame(maxWidth: 780, alignment: .leading)
+                // minWidth 0: Auch ein zu breites Kind darf die Spalte nie aufweiten, sonst rutscht die Seitenleiste nach links.
+                .frame(minWidth: 0, maxWidth: 780, alignment: .leading)
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .clipped()
         }
     }
 
@@ -58,12 +61,16 @@ struct EinstellungenAnsicht: View {
             VStack(alignment: .leading, spacing: 8) {
                 KartenTitel(symbol: "brain", titel: "Jarvis' Kopf")
                 zeile("Modell", "Claude über deinen Anthropic-Schlüssel oder GPT über dein ChatGPT-Konto.") {
-                    Picker("", selection: $einst.modell) { ForEach(ModellWahl.alle) { Text($0.name).tag($0.id) } }.frame(width: 220)
+                    Picker("", selection: $einst.modell) { ForEach(ModellWahl.alle) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 220)
                 }
-                zeile("Denkstufe", "Höher = gründlicher, aber langsamer und teurer.") {
-                    Picker("", selection: $einst.effort) { ForEach(["low", "medium", "high", "xhigh", "max"], id: \.self) { Text($0).tag($0) } }
-                        .pickerStyle(.segmented).frame(width: 300)
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Denkstufe").font(.jarvis(14, .semibold))
+                        Text("Höher = gründlicher, aber langsamer und teurer.").font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    }
+                    StufenWahl(stufen: ["low", "medium", "high", "xhigh", "max"], wahl: $einst.effort)
                 }
+                .padding(.vertical, 6)
                 zeile("Schrittlimit je Anfrage", "Wie viele Werkzeugschritte Jarvis höchstens am Stück macht (0 = unbegrenzt).") {
                     Stepper("\(einst.schrittLimit)", value: $einst.schrittLimit, in: 0...200, step: 10).frame(width: 120)
                 }
@@ -116,21 +123,21 @@ struct EinstellungenAnsicht: View {
                 KartenTitel(symbol: "waveform", titel: "Live-Gespräch")
                 zeile("Anbieter", "Gleichzeitig zuhören und sprechen, mit deinen eigenen API-Schlüsseln.") {
                     Picker("", selection: $einst.liveAnbieter) { Text("OpenAI").tag("openai"); Text("Gemini").tag("gemini") }
-                        .pickerStyle(.segmented).frame(width: 200)
+                        .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 200)
                 }
                 zeile("OpenAI-Modell") {
-                    Picker("", selection: $einst.liveModellOpenAI) { ForEach(LiveOptionen.openAIModelle, id: \.id) { Text($0.name).tag($0.id) } }.frame(width: 260)
+                    Picker("", selection: $einst.liveModellOpenAI) { ForEach(LiveOptionen.openAIModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
                 }
                 zeile("OpenAI-Stimme") {
                     Picker("", selection: $einst.liveStimmeOpenAI) {
                         ForEach(einst.liveModellOpenAI == "gpt-live-1" ? LiveOptionen.liveStimmen : LiveOptionen.realtimeStimmen, id: \.id) { Text($0.name).tag($0.id) }
-                    }.frame(width: 260)
+                    }.labelsHidden().frame(maxWidth: 260)
                 }
                 zeile("Gemini-Modell") {
-                    Picker("", selection: $einst.liveModellGemini) { ForEach(LiveOptionen.geminiModelle, id: \.id) { Text($0.name).tag($0.id) } }.frame(width: 260)
+                    Picker("", selection: $einst.liveModellGemini) { ForEach(LiveOptionen.geminiModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
                 }
                 zeile("Gemini-Stimme") {
-                    Picker("", selection: $einst.liveStimmeGemini) { ForEach(LiveOptionen.geminiStimmen, id: \.id) { Text("\($0.id) – \($0.name)").tag($0.id) } }.frame(width: 260)
+                    Picker("", selection: $einst.liveStimmeGemini) { ForEach(LiveOptionen.geminiStimmen, id: \.id) { Text("\($0.id) – \($0.name)").tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
                 }
             }
         }
@@ -200,6 +207,26 @@ struct EinstellungenAnsicht: View {
     }
 }
 
+/// Gleich breite Stufen, die immer in ihre Karte passen (ein Segmented-Picker wächst mit seinen Beschriftungen aus der Karte heraus).
+struct StufenWahl: View {
+    let stufen: [String]
+    @Binding var wahl: String
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(stufen, id: \.self) { s in
+                Button { wahl = s } label: {
+                    Text(s).font(.jarvis(12, wahl == s ? .bold : .medium)).lineLimit(1).minimumScaleFactor(0.7)
+                        .foregroundStyle(wahl == s ? Color.black : Farbe.text)
+                        .frame(maxWidth: .infinity).padding(.vertical, 7)
+                        .background(RoundedRectangle(cornerRadius: 9).fill(wahl == s ? AnyShapeStyle(Farbe.akzent) : AnyShapeStyle(Color.white.opacity(0.07))))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
 struct RechtZeile: View {
     let titel: String
     let text: String
@@ -241,7 +268,7 @@ struct KontenAnsicht: View {
                     KartenTitel(symbol: "iphone.radiowaves.left.and.right", titel: "Verbindung zum Handy-Jarvis", farbe: Farbe.violett)
                     Text("Über diese Relay-Adresse teilt der Mac Gedächtnis, Apps und Ablage mit deinem Handy (dieselbe wie im ChatGPT-Plugin).")
                         .font(.jarvis(12)).foregroundStyle(Farbe.text2)
-                    SecureField("https://…/j/…", text: $einst.zugang.relay).textFieldStyle(.roundedBorder)
+                    TresorFeld(titel: "Relay-Adresse", wert: $einst.zugang.relay)
                     HStack {
                         KapselKnopf(symbol: "antenna.radiowaves.left.and.right", titel: "Verbindung testen", hervorgehoben: true) {
                             Task {
@@ -278,24 +305,16 @@ struct KontenAnsicht: View {
             GlasKarte {
                 VStack(alignment: .leading, spacing: 10) {
                     KartenTitel(symbol: "key.fill", titel: "API-Schlüssel", farbe: Farbe.orange)
-                    Text("Aus ~/SK übernommen. Liegen nur auf diesem Mac (Application Support, nur für dich lesbar).")
+                    Text("Verschlüsselt im Tresor, gebunden an den Sicherheitschip dieses Macs. Anzeigen und Ändern nur nach Touch ID.")
                         .font(.jarvis(12)).foregroundStyle(Farbe.text2)
-                    schluessel("Anthropic (Claude)", $einst.zugang.anthropic)
-                    schluessel("OpenAI (Live, GPT)", $einst.zugang.openai)
-                    schluessel("Gemini (Live)", $einst.zugang.gemini)
+                    TresorKopf()
+                    TresorFeld(titel: "Anthropic (Claude)", wert: $einst.zugang.anthropic)
+                    TresorFeld(titel: "OpenAI (Live, GPT)", wert: $einst.zugang.openai)
+                    TresorFeld(titel: "Gemini (Live)", wert: $einst.zugang.gemini)
                     Text("Schlüssel für die Vorlesestimmen (Google, Gemini-TTS, Azure, Qwen) stehen unter Stimme.").font(.jarvis(11)).foregroundStyle(Farbe.text3)
-                    schluessel("Groq (Whisper)", $einst.zugang.groq)
+                    TresorFeld(titel: "Groq (Whisper)", wert: $einst.zugang.groq)
                 }
             }
-        }
-    }
-
-    private func schluessel(_ titel: String, _ wert: Binding<String>) -> some View {
-        HStack {
-            Image(systemName: wert.wrappedValue.isEmpty ? "xmark.circle" : "checkmark.circle.fill")
-                .foregroundStyle(wert.wrappedValue.isEmpty ? Farbe.text3 : Farbe.gruen)
-            Text(titel).font(.jarvis(13, .medium)).frame(width: 170, alignment: .leading)
-            SecureField("", text: wert).textFieldStyle(.roundedBorder)
         }
     }
 

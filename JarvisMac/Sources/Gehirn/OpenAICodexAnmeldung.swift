@@ -1,7 +1,7 @@
 import Foundation
 
 /// Anmeldung mit Franks ChatGPT-Konto per Codex-Gerätecode – eigener Login nur für diesen Mac.
-/// Tokens liegen in ~/Library/Application Support/JarvisMac/codex.json (0600). NIE die Tokens des Handys oder aus
+/// Tokens liegen verschlüsselt im Tresor (Tresor.swift). NIE die Tokens des Handys oder aus
 /// ~/SK/VoiceAgent mitbenutzen: OpenAI rotiert den Refresh-Token, zwei Geräte mit demselben Token beenden sich
 /// gegenseitig (refresh_token_reused).
 ///
@@ -43,7 +43,8 @@ actor CodexAnmeldung {
     private var erneuerung: Task<Speicher, Error>?
 
     init() {
-        speicher = (try? Data(contentsOf: datei)).flatMap { try? JSONDecoder().decode(Speicher.self, from: $0) }
+        speicher = Tresor.lade(Speicher.self, name: "codex", klartext: datei)
+        Geheimnisse.setzen("codex", [speicher?.accessToken ?? "", (speicher?.refreshToken ?? nil) ?? ""])
     }
 
     var angemeldet: Bool { speicher != nil }
@@ -51,7 +52,8 @@ actor CodexAnmeldung {
 
     func abmelden() {
         speicher = nil
-        try? FileManager.default.removeItem(at: datei)
+        Tresor.loesche(name: "codex")
+        Geheimnisse.setzen("codex", [])
     }
 
     /// Nach 401/403 vom Backend: Token sofort als abgelaufen behandeln, damit der nächste Aufruf erneuert.
@@ -144,9 +146,8 @@ actor CodexAnmeldung {
 
     private func sichern(_ s: Speicher) {
         speicher = s
-        guard let d = try? JSONEncoder().encode(s) else { return }
-        try? d.write(to: datei, options: .atomic)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: datei.path)
+        Tresor.sichere(s, name: "codex")
+        Geheimnisse.setzen("codex", [s.accessToken, s.refreshToken ?? ""])
     }
 
     private static func speicherAus(_ code: Int, _ text: String, alt: Speicher?) throws -> Speicher {

@@ -31,7 +31,7 @@ final class JarvisAgent {
     sichtbaren Befehlen, OpenLauncher-Sitzungen (Claude Code, Codex, OpenCode …), Updater-Zentrale, ChatGPT-App. \
     Handle direkt statt zu erklären, wie man es macht. Nur bei klar unumkehrbarem Datenverlust (Nutzerdaten löschen, \
     Laufwerke formatieren, Git-Verlauf überschreiben) fragst du einmal kurz nach.
-    - Franks Projekte liegen in ~/proggs (Monorepo). Zugangsdaten liegen in ~/SK – nie ausgeben oder vorlesen.
+    - Franks Projekte liegen in ~/proggs (Monorepo). Zugangsdaten (~/SK, Tresor von Jarvis) sind für dich gesperrt: nie lesen, nie ausgeben, nie vorlesen.
     - OpenLauncher, TerminalVoiceOverlay und ClaudeVoiceOverlay nur über ihre Update-Skripte aktualisieren, nie von Hand bauen.
     - Programmierauftrag an den Programmierer = Werkzeug programmieren (geht über das Handy an Mac oder PC, wie gewohnt). \
     „Starte eine OpenLauncher-Session …“ mit genanntem Modell/CLI direkt hier = openlauncher_sitzung.
@@ -103,7 +103,7 @@ final class JarvisAgent {
         let handyWerkzeuge = await mcpListe
         let lokale = MacWerkzeuge.alleLokal
         let lokaleNamen = Set(lokale.map(\.definition.name))
-        let alleWerkzeuge = lokale.map(\.definition) + handyWerkzeuge.filter { !lokaleNamen.contains($0.name) }
+        let alleWerkzeuge = lokale.map(\.definition) + handyWerkzeuge.filter { !lokaleNamen.contains($0.name) && !McpKlient.nurFuerOberflaeche.contains($0.name) }
         let system = await systemTeile(g: g)
         let (a, modell) = await anbieter()
         let effort = e.effort
@@ -186,7 +186,6 @@ final class JarvisAgent {
                 var r: JSONObjekt = ["type": "tool_result", "tool_use_id": auf["id"] as? String ?? "", "content": bl]
                 if erg.fehler { r["is_error"] = true }
                 resultate.append(r)
-                log("werkzeug", "\(auf["name"] as? String ?? "?") → \(erg.fehler ? "Fehler" : "ok"): \(t.prefix(160))")
             }
             g.verlauf.append(["role": "user", "content": resultate])
             g.speichern()
@@ -204,10 +203,18 @@ final class JarvisAgent {
     }
 
     nonisolated static func fuehreAus(_ name: String, _ args: JSONObjekt, lokal: Bool) async -> WerkzeugErgebnis {
+        var e: WerkzeugErgebnis
         if lokal, let w = await MainActor.run(body: { MacWerkzeuge.alleLokal.first { $0.definition.name == name } }) {
-            return await w.ausfuehren(args)
+            let start = Date()
+            e = await w.ausfuehren(args)
+            log("werkzeug", "Mac-Werkzeug \(name): \(e.fehler ? "Fehler" : "ok")", wo: "Mac", werkzeug: name, eingabe: JSON.text(args),
+                ergebnis: e.fehler ? nil : e.text, fehler: e.fehler ? e.text : nil, dauerMs: Int(Date().timeIntervalSince(start) * 1000))
+        } else {
+            e = await McpKlient.shared.rufe(name, args)
         }
-        return await McpKlient.shared.rufe(name, args)
+        // Kein Schlüssel erreicht je das Modell, selbst wenn ein Befehl ihn ausgibt.
+        e.text = Geheimnisse.schwaerzen(e.text)
+        return e
     }
 
     static func bildBlock(_ d: Data) -> JSONObjekt {

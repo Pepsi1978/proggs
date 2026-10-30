@@ -19,6 +19,8 @@ struct WerkzeugErgebnis {
 /// Biodaten, Agenten, Programmieraufträge … – so ist der Mac immer auf demselben Stand wie das Handy.
 actor McpKlient {
     static let shared = McpKlient()
+    /// Technische Werkzeuge für die Ablage-Oberfläche; das Modell braucht sie nicht.
+    static let nurFuerOberflaeche: Set<String> = ["ablage_struktur", "ablage_datei"]
 
     private var werkzeugCache: [WerkzeugDefinition] = []
     private var cacheZeit = Date.distantPast
@@ -103,6 +105,17 @@ actor McpKlient {
     var verbunden: Bool { !werkzeugCache.isEmpty }
 
     func rufe(_ name: String, _ argumente: JSONObjekt, sekunden: Double = 150) async -> WerkzeugErgebnis {
+        let start = Date()
+        let e = await rufeOhneLog(name, argumente, sekunden: sekunden)
+        let ms = Int(Date().timeIntervalSince(start) * 1000)
+        // Dateiinhalte der Ablage nicht ins Logbuch.
+        let inhalt = name == "ablage_datei" ? "(\(e.text.count) Zeichen)" : e.text
+        log("werkzeug", "Handy-Werkzeug \(name): \(e.fehler ? "Fehler" : "ok")", wo: "Handy über MCP", werkzeug: name, eingabe: JSON.text(argumente),
+            ergebnis: e.fehler ? nil : inhalt, fehler: e.fehler ? e.text : nil, dauerMs: ms)
+        return e
+    }
+
+    private func rufeOhneLog(_ name: String, _ argumente: JSONObjekt, sekunden: Double) async -> WerkzeugErgebnis {
         do {
             let r = try await rpc("tools/call", ["name": name, "arguments": argumente], sekunden: sekunden)
             let inhalt = r["content"] as? [JSONObjekt] ?? []

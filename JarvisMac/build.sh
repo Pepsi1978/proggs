@@ -23,6 +23,7 @@ PLUGINS="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/De
 FLAGS=(-target arm64-apple-macos26.0 -sdk "$SDK" -swift-version 5 -parse-as-library -plugin-path "$PLUGINS"
        -framework AppKit -framework SwiftUI -framework AVFoundation -framework Speech
        -framework CoreAudio -framework AudioToolbox -framework Carbon -framework UserNotifications
+       -framework LocalAuthentication -framework Security -framework CryptoKit -framework PDFKit
        -import-objc-header "$SHERPA_HEADER")
 
 if [ "$1" = "check" ]; then

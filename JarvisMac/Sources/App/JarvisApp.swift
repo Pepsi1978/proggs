@@ -25,8 +25,18 @@ struct JarvisApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Logbuch.shared.schreib("system", "Jarvis \(AppInfo.version) gestartet")
+        // Alle Schlüssel gleich beim Start in den Tresor übernehmen und für das Schwärzen bekannt machen, nicht erst bei der ersten Nutzung.
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: Pfade.unterstuetzung.path)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: Pfade.gespraeche.path)
+        _ = Einstellungen.shared
+        _ = VorleseEinstellungen.shared
+        Task { _ = await CodexAnmeldung.shared.angemeldet }
         Task { _ = await McpKlient.shared.werkzeuge(frisch: true) }
         AppSteuerung.shared.hochfahren()
+    }
+    func applicationWillTerminate(_ notification: Notification) {
+        TresorSperre.shared.sperren()
+        Logbuch.shared.schreib("system", "Jarvis beendet")
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 }

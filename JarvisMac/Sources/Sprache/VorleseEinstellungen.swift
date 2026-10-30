@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Schlüssel nur fürs Vorlesen. Liegen in ~/Library/Application Support/JarvisMac/vorlese-zugang.json (0600), nie im Git.
+/// Schlüssel nur fürs Vorlesen. Liegen verschlüsselt im Tresor (Tresor.swift), nie im Klartext, nie im Git.
 struct VorleseZugang: Codable, Equatable, Sendable {
     var google = ""          // Google Cloud TTS (Chirp 3 HD)
     var geminiFrei = ""      // AI-Studio-Projekt ohne Abrechnung
@@ -13,7 +13,7 @@ struct VorleseZugang: Codable, Equatable, Sendable {
     static let datei = Pfade.unterstuetzung.appendingPathComponent("vorlese-zugang.json")
 
     @MainActor static func laden() -> VorleseZugang {
-        var z = (try? Data(contentsOf: datei)).flatMap { try? JSONDecoder().decode(VorleseZugang.self, from: $0) }
+        var z = Tresor.lade(VorleseZugang.self, name: "vorlese-zugang", klartext: datei)
         let neu = z == nil
         if z == nil { z = VorleseZugang() }
         // Erstbefüllung aus den allgemeinen Zugängen (aus ~/SK übernommen).
@@ -25,9 +25,8 @@ struct VorleseZugang: Codable, Equatable, Sendable {
     }
 
     func speichern() {
-        guard let d = try? JSONEncoder().encode(self) else { return }
-        try? d.write(to: VorleseZugang.datei, options: .atomic)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: VorleseZugang.datei.path)
+        Tresor.sichere(self, name: "vorlese-zugang")
+        Geheimnisse.setzen("vorlese", [google, geminiFrei, geminiBezahlt, azure, qwen])
     }
 }
 
@@ -67,21 +66,21 @@ struct VorleseStand: Sendable {
     var zugang: VorleseZugang { didSet { zugang.speichern() } }
 
     var anbieter: VorleseAnbieter { didSet { d.set(anbieter.rawValue, forKey: "vl_anbieter") } }
-    var edgeStimme: String { didSet { d.set(edgeStimme, forKey: "vl_edge_stimme") } }
-    var googleStimme: String { didSet { d.set(googleStimme, forKey: "vl_google_stimme") } }
-    var geminiFlashStimme: String { didSet { d.set(geminiFlashStimme, forKey: "vl_gemini_flash_stimme") } }
-    var geminiLiteStimme: String { didSet { d.set(geminiLiteStimme, forKey: "vl_gemini_lite_stimme") } }
-    var azureStimme: String { didSet { d.set(azureStimme, forKey: "vl_azure_stimme") } }
-    var qwenStimme: String { didSet { d.set(qwenStimme, forKey: "vl_qwen_stimme") } }
-    var klonStimme: String { didSet { d.set(klonStimme, forKey: "vl_klon_stimme") } }
-    var geminiWahl: String { didSet { d.set(geminiWahl, forKey: "vl_gemini_wahl") } }
+    var edgeStimme: String { didSet { d.set(edgeStimme, forKey: "vl_edge_stimme"); log("einstellung", "vl_edge_stimme = \(edgeStimme)", wo: "Einstellungen/Stimme") } }
+    var googleStimme: String { didSet { d.set(googleStimme, forKey: "vl_google_stimme"); log("einstellung", "vl_google_stimme = \(googleStimme)", wo: "Einstellungen/Stimme") } }
+    var geminiFlashStimme: String { didSet { d.set(geminiFlashStimme, forKey: "vl_gemini_flash_stimme"); log("einstellung", "vl_gemini_flash_stimme = \(geminiFlashStimme)", wo: "Einstellungen/Stimme") } }
+    var geminiLiteStimme: String { didSet { d.set(geminiLiteStimme, forKey: "vl_gemini_lite_stimme"); log("einstellung", "vl_gemini_lite_stimme = \(geminiLiteStimme)", wo: "Einstellungen/Stimme") } }
+    var azureStimme: String { didSet { d.set(azureStimme, forKey: "vl_azure_stimme"); log("einstellung", "vl_azure_stimme = \(azureStimme)", wo: "Einstellungen/Stimme") } }
+    var qwenStimme: String { didSet { d.set(qwenStimme, forKey: "vl_qwen_stimme"); log("einstellung", "vl_qwen_stimme = \(qwenStimme)", wo: "Einstellungen/Stimme") } }
+    var klonStimme: String { didSet { d.set(klonStimme, forKey: "vl_klon_stimme"); log("einstellung", "vl_klon_stimme = \(klonStimme)", wo: "Einstellungen/Stimme") } }
+    var geminiWahl: String { didSet { d.set(geminiWahl, forKey: "vl_gemini_wahl"); log("einstellung", "vl_gemini_wahl = \(geminiWahl)", wo: "Einstellungen/Stimme") } }
     /// Kennungen aus VorleseKatalog.rueckfallStufen in ihrer Reihenfolge.
-    var kette: [String] { didSet { d.set(kette, forKey: "vl_kette") } }
+    var kette: [String] { didSet { d.set(kette, forKey: "vl_kette"); log("einstellung", "vl_kette = \(kette)", wo: "Einstellungen/Stimme") } }
     var favoriten: Set<String> { didSet { d.set(Array(favoriten), forKey: "vl_favoriten") } }
-    var immerDeutsch: Bool { didSet { d.set(immerDeutsch, forKey: "vl_immer_deutsch") } }
+    var immerDeutsch: Bool { didSet { d.set(immerDeutsch, forKey: "vl_immer_deutsch"); log("einstellung", "vl_immer_deutsch = \(immerDeutsch)", wo: "Einstellungen/Stimme") } }
     var klonStimmen: [KlonStimme] = []
     var klonFehler: String?
-    private var tempoJe: [String: Double] { didSet { d.set(tempoJe, forKey: "vl_tempo") } }
+    private var tempoJe: [String: Double] { didSet { d.set(tempoJe, forKey: "vl_tempo"); log("einstellung", "vl_tempo = \(tempoJe)", wo: "Einstellungen/Stimme") } }
 
     init() {
         let d = UserDefaults.standard

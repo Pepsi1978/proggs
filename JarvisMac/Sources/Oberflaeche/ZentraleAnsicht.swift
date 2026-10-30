@@ -59,26 +59,25 @@ struct ZentraleAnsicht: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 26) {
+            VStack(spacing: 20) {
                 if !zugangDa { zugangsHinweis }
+                macKarte
                 held
                 HStack(alignment: .top, spacing: 18) {
-                    VStack(spacing: 18) {
-                        auswertungsKarte
-                        macKarte
-                    }
-                    .frame(maxWidth: .infinity)
-                    VStack(spacing: 18) {
-                        listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
-                        listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.violett, text: daten.termine)
-                        listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.orange, text: daten.wetter)
-                    }
-                    .frame(width: 360)
+                    auswertungsKarte.frame(maxWidth: .infinity)
+                    listenKarte(symbol: "checklist", titel: "Aufgaben heute", farbe: Farbe.gruen, text: daten.aufgaben)
+                        .frame(width: 360)
                 }
+                HStack(alignment: .top, spacing: 18) {
+                    listenKarte(symbol: "calendar", titel: "Termine", farbe: Farbe.violett, text: daten.termine)
+                        .frame(maxWidth: .infinity)
+                    listenKarte(symbol: "cloud.sun.fill", titel: "Wetter", farbe: Farbe.orange, text: daten.wetter)
+                        .frame(width: 360)
+                }
+                schnellVerknuepfungen
             }
-            .padding(.horizontal, 36)
-            .padding(.vertical, 30)
-            .frame(maxWidth: 1240)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 26)
             .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.never)
@@ -88,22 +87,21 @@ struct ZentraleAnsicht: View {
         }
     }
 
+    /// Kompakte Kopfzeile: Kugel links neben der Begrüßung, darunter das Eingabefeld.
     private var held: some View {
-        VStack(spacing: 18) {
-            Button { steuerung.kuerzelSprechen() } label: {
-                JarvisKugel(pegel: schleife.zustand == .spricht ? Stimme.shared.pegel : Diktat.shared.pegel,
-                            zustand: schleife.zustand == .hoert ? .hoert : (schleife.zustand == .denkt ? .denkt : (schleife.zustand == .spricht ? .spricht : .ruhe)),
-                            groesse: 190)
+        VStack(spacing: 14) {
+            HStack(spacing: 22) {
+                Button { steuerung.kuerzelSprechen() } label: {
+                    JarvisKugel(pegel: KugelStand.pegel, zustand: KugelStand.zustand, groesse: 96)
+                }
+                .buttonStyle(.plain)
+                .help("Antippen zum Sprechen (⌥⌘J überall)")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(gruss).font(.jarvis(30, .bold))
+                        .foregroundStyle(LinearGradient(colors: [.white, Farbe.cyan.opacity(0.9)], startPoint: .leading, endPoint: .trailing))
+                    Text(Self.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
+                }
             }
-            .buttonStyle(.plain)
-            .help("Antippen zum Sprechen (⌥⌘J überall)")
-
-            VStack(spacing: 6) {
-                Text(gruss).font(.jarvis(34, .bold))
-                    .foregroundStyle(LinearGradient(colors: [.white, Farbe.cyan.opacity(0.9)], startPoint: .leading, endPoint: .trailing))
-                Text(Self.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
-            }
-
             HStack(spacing: 10) {
                 Image(systemName: "sparkle").foregroundStyle(Farbe.akzent)
                 TextField("Frag Jarvis oder sag, was er am Mac tun soll …", text: $frage)
@@ -118,14 +116,15 @@ struct ZentraleAnsicht: View {
             .glassEffect(.regular, in: .capsule)
             .overlay(Capsule().strokeBorder(Color.white.opacity(0.12)))
             .frame(maxWidth: 760)
+        }
+    }
 
-            HStack(spacing: 10) {
-                ForEach(Self.vorschlaege, id: \.self) { v in
-                    KapselKnopf(symbol: "arrow.turn.down.right", titel: v) { frage = v; senden() }
-                }
+    private var schnellVerknuepfungen: some View {
+        HStack(spacing: 10) {
+            ForEach(Self.vorschlaege, id: \.self) { v in
+                KapselKnopf(symbol: "arrow.turn.down.right", titel: v) { frage = v; senden() }
             }
         }
-        .padding(.top, 10)
     }
 
     private var zugangsHinweis: some View {
@@ -229,7 +228,7 @@ struct ZentraleAnsicht: View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 14) {
                 KartenTitel(symbol: "macbook", titel: "Am Mac", farbe: Farbe.rosa)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], spacing: 10) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 10)], spacing: 10) {
                     MacKachel(symbol: "terminal.fill", titel: "Programmier-Session", farbe: Farbe.cyan) {
                         steuerung.neuesGespraech(); steuerung.entwurf = "Starte eine OpenLauncher-Session mit Opus 5.5 für folgende Aufgabe: "
                     }
@@ -261,7 +260,7 @@ struct MacKachel: View {
     let aktion: () -> Void
     @State private var schwebt = false
     var body: some View {
-        Button(action: aktion) {
+        Button { log("oberflaeche", "Funktionsboard: \(titel) gestartet", wo: "Zentrale/Am Mac"); aktion() } label: {
             HStack(spacing: 10) {
                 Image(systemName: symbol).font(.system(size: 15, weight: .semibold)).foregroundStyle(farbe)
                     .frame(width: 34, height: 34).background(RoundedRectangle(cornerRadius: 10).fill(farbe.opacity(0.13)))

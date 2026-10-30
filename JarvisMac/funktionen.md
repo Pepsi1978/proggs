@@ -28,3 +28,11 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Unter jeder Antwort: Kopieren, Vorlesen, Daumen hoch/runter (daraus lernt die Stil-Datei), Teilen, in neuem Gespräch fortsetzen, erneut fragen. Anthropic-Restguthaben vor dem Claude-Modellnamen.
 - Bereiche: Gespräch, Live, Programmierung (alle Sessions, neuer Auftrag, Rückfrage beantworten, Nachtrag), Ablage (Einträge lesen, suchen, neuer Texteintrag; Reiter Prompts mit Speichern, KI-Umformulieren, Kopieren, Löschen, Senden an den Programmierer), Gedächtnis (Gemerktes, Live-Gedächtnis, Merken), Aktivität (Mac-Logbuch, Handy-Protokoll), Einstellungen (Kopf, Stimme, Sprache, Live, Mac & Rechte, Konten, Über).
 - Menüleisten-Symbol mit Schnellfrage, Sprechen, Live. Fenster-Kürzel ⌘N, ⌘D, ⌘L, ⌘1, ⌘,.
+
+## Neu in 1.0.5
+- Zentrale: Am Mac als Funktionsboard über die volle Breite zuerst, darunter Begrüßung mit Kugel, Tagesauswertung und Aufgaben, Termine und Wetter, zuletzt die Schnellverknüpfungen.
+- Kugel rund ohne Rahmen, seitlicher Schimmer, vibriert beim Sprechen, beim Zuhören Wellen und Mikrofon.
+- Tresor: alle Schlüssel und die ChatGPT-Anmeldung verschlüsselt, gebunden an den Secure Enclave; Anzeige nur nach Touch ID, höchstens eine Minute; Werkzeuge kommen nicht an Zugangsdaten, Schlüssel werden in Werkzeugergebnissen und Logbuch geschwärzt.
+- Ablage als Explorer mit Bereichen (Bilder, PDFs, Prompts, Recherchen, Texte, Dokumente, Tabellen, Präsentationen, Audio, Video, Sonstige), Vorschau, Öffnen, Sichern, Löschen.
+- Gedächtnis: Langzeitkontext (Textdatei, synchron mit dem Handy), Gemerktes und Live-Gedächtnis eingeklappt.
+- Logbuch: JSON je Ereignis (was, wo, wann, Werkzeug, Eingabe, Ergebnis, Fehler, Dauer) unter Application Support/JarvisMac/Logbuch, höchstens 30 Tage; Werkzeug mac_logbuch.

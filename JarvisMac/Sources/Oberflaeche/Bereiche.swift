@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // MARK: - Live
@@ -30,9 +31,10 @@ struct LiveAnsicht: View {
         VStack(spacing: 26) {
             Spacer(minLength: 20)
             Button { steuerung.live() } label: {
-                JarvisKugel(pegel: max(live.pegelEin, live.pegelAus), zustand: kugel, groesse: 300)
+                JarvisKugel(pegel: live.zustand == .spricht ? live.pegelAus : live.pegelEin, zustand: kugel, groesse: 260)
             }
             .buttonStyle(.plain)
+            .padding(.vertical, 30)
             VStack(spacing: 8) {
                 Text(statusText).font(.jarvis(26, .bold))
                 Text(live.aktiv ? "Sprich einfach – du kannst mich jederzeit unterbrechen." :
@@ -109,73 +111,31 @@ struct BereichsKopf: View {
     }
 }
 
-struct AblageAnsicht: View {
-    @State private var liste = BereichsLader()
-    @State private var eintrag = BereichsLader()
-    @State private var suche = ""
-    @State private var titel = ""
-    @State private var neuTitel = ""
-    @State private var neuText = ""
-    @State private var reiter = 0
+/// Eine einklappbare Karte: klein, solange sie zu ist; lädt erst beim ersten Aufklappen.
+struct KlappKarte<Inhalt: View>: View {
+    let symbol: String
+    let titel: String
+    let farbe: Color
+    var untertitel = ""
+    @Binding var offen: Bool
+    @ViewBuilder var inhalt: Inhalt
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                BereichsKopf(symbol: "tray.full.fill", titel: "Ablage", untertitel: "Dieselbe Ablage wie auf deinem Handy – Texte, Recherchen, Dateien und Prompts.")
-                Picker("", selection: $reiter) { Text("Einträge").tag(0); Text("Prompts").tag(1) }.pickerStyle(.segmented).frame(width: 240)
-                if reiter == 1 { PromptsAnsicht() } else { eintraege }
+        GlasKarte(abstand: 14) {
+            VStack(alignment: .leading, spacing: 12) {
+                Button { withAnimation(.easeOut(duration: 0.15)) { offen.toggle() } } label: {
+                    HStack(spacing: 10) {
+                        KartenTitel(symbol: symbol, titel: titel, farbe: farbe)
+                        if !untertitel.isEmpty { Text(untertitel).font(.jarvis(12)).foregroundStyle(Farbe.text3).lineLimit(1) }
+                        Spacer()
+                        Image(systemName: "chevron.down").foregroundStyle(Farbe.text3).rotationEffect(.degrees(offen ? 180 : 0))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if offen { inhalt }
             }
-            .padding(36).frame(maxWidth: 1240).frame(maxWidth: .infinity)
         }
-        .task { await liste.laden("ablage_lesen") }
-    }
-
-    private var eintraege: some View {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Farbe.text3)
-                    TextField("In der Ablage suchen …", text: $suche).textFieldStyle(.plain)
-                        .onSubmit { Task { await liste.laden("ablage_lesen", suche.isEmpty ? [:] : ["suche": suche]) } }
-                    TextField("Eintrag öffnen (Titel)", text: $titel).textFieldStyle(.plain).frame(width: 240)
-                        .onSubmit { Task { await eintrag.laden("ablage_lesen", ["titel": titel]) } }
-                }
-                .padding(12).background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.05)))
-                HStack(alignment: .top, spacing: 18) {
-                    GlasKarte {
-                        VStack(alignment: .leading, spacing: 10) {
-                            KartenTitel(symbol: "list.bullet", titel: "Einträge")
-                            if liste.laedt { ProgressView() }
-                            MarkdownText(text: liste.text ?? "", groesse: 13)
-                        }
-                    }
-                    .frame(width: 380)
-                    VStack(spacing: 18) {
-                        GlasKarte {
-                            VStack(alignment: .leading, spacing: 10) {
-                                KartenTitel(symbol: "doc.text.fill", titel: titel.isEmpty ? "Eintrag" : titel, farbe: Farbe.violett)
-                                if eintrag.laedt { ProgressView() }
-                                MarkdownText(text: eintrag.text ?? "Titel oben eingeben und ⏎ drücken.", groesse: 14)
-                            }
-                        }
-                        GlasKarte {
-                            VStack(alignment: .leading, spacing: 10) {
-                                KartenTitel(symbol: "square.and.pencil", titel: "Neuer Texteintrag", farbe: Farbe.gruen)
-                                TextField("Titel", text: $neuTitel).textFieldStyle(.roundedBorder)
-                                TextEditor(text: $neuText).font(.jarvis(13)).frame(minHeight: 120).scrollContentBackground(.hidden)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
-                                KapselKnopf(symbol: "tray.and.arrow.down.fill", titel: "In die Ablage", hervorgehoben: true) {
-                                    let t = neuTitel, x = neuText
-                                    Task {
-                                        _ = await McpKlient.shared.rufe("ablage_schreiben", ["titel": t, "inhalt": x])
-                                        neuTitel = ""; neuText = ""
-                                        await liste.laden("ablage_lesen")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
     }
 }
 
@@ -185,10 +145,14 @@ struct GedaechtnisAnsicht: View {
     @State private var merken = ""
     @State private var art = "info"
     @State private var antwort = ""
+    @State private var gemerktOffen = false
+    @State private var liveOffen = false
+    @State private var langzeitOffen = false
+    @State private var liveStand: Date?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 BereichsKopf(symbol: "brain.head.profile.fill", titel: "Gedächtnis",
                              untertitel: "Ein Gedächtnis für alle Geräte: Was du hier sagst oder merkst, weiß Jarvis auch auf dem Handy.")
                 GlasKarte {
@@ -199,7 +163,7 @@ struct GedaechtnisAnsicht: View {
                                 Text("Über Frank").tag("info"); Text("Regel").tag("regel"); Text("Ziel").tag("ziel")
                                 Text("Entscheidung").tag("entscheidung"); Text("Stil").tag("stil")
                             }
-                            .frame(width: 160)
+                            .labelsHidden().frame(width: 150)
                             TextField("z. B. „Ich arbeite am Mac meistens mit Opus 5.5.“", text: $merken).textFieldStyle(.plain)
                                 .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.05)))
                             KapselKnopf(symbol: "checkmark", titel: "Merken", hervorgehoben: true) {
@@ -207,45 +171,100 @@ struct GedaechtnisAnsicht: View {
                                 Task {
                                     let r = await McpKlient.shared.rufe("jarvis_merken", ["art": a, "text": t])
                                     antwort = r.text; merken = ""
-                                    await gemerkt.laden("jarvis_gemerktes_lesen")
+                                    if gemerktOffen { await gemerkt.laden("jarvis_gemerktes_lesen") }
                                 }
                             }
                         }
                         if !antwort.isEmpty { Text(antwort).font(.jarvis(12)).foregroundStyle(Farbe.text2) }
                     }
                 }
-                HStack(alignment: .top, spacing: 18) {
-                    GlasKarte {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                KartenTitel(symbol: "bookmark.fill", titel: "Gemerktes", farbe: Farbe.violett)
-                                Spacer()
-                                RundKnopf(symbol: "arrow.clockwise", groesse: 28) { Task { await gemerkt.laden("jarvis_gemerktes_lesen") } }
-                            }
-                            if gemerkt.laedt { ProgressView() }
-                            MarkdownText(text: gemerkt.text ?? "", groesse: 13)
-                        }
+                KlappKarte(symbol: "doc.plaintext.fill", titel: "Langzeitkontext", farbe: Farbe.orange, untertitel: "Deine Textdatei für Jarvis, auf Mac und Handy gleich", offen: $langzeitOffen) {
+                    LangzeitkontextEditor()
+                }
+                KlappKarte(symbol: "bookmark.fill", titel: "Gemerktes", farbe: Farbe.violett, offen: $gemerktOffen) {
+                    HStack {
+                        if gemerkt.laedt { ProgressView().controlSize(.small) }
+                        Spacer()
+                        RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 28) { Task { await gemerkt.laden("jarvis_gemerktes_lesen") } }
                     }
-                    GlasKarte {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                KartenTitel(symbol: "bolt.heart.fill", titel: "Live-Gedächtnis", farbe: Farbe.cyan)
-                                Spacer()
-                                RundKnopf(symbol: "arrow.clockwise", groesse: 28) { Task { await live.laden("jarvis_kontext", ["umfang": "voll"]) } }
-                            }
-                            if live.laedt { ProgressView() }
-                            MarkdownText(text: live.text ?? "", groesse: 13)
-                        }
+                    MarkdownText(text: gemerkt.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                }
+                KlappKarte(symbol: "bolt.heart.fill", titel: "Live-Gedächtnis", farbe: Farbe.cyan,
+                           untertitel: liveStand.map { "vom Handy, Stand \($0.formatted(date: .omitted, time: .shortened))" } ?? "", offen: $liveOffen) {
+                    HStack {
+                        if live.laedt { ProgressView().controlSize(.small) }
+                        Spacer()
+                        RundKnopf(symbol: "arrow.clockwise", hilfe: "Alles neu laden", groesse: 28) { Task { await live.laden("jarvis_kontext", ["umfang": "voll"]); liveStand = Date() } }
                     }
+                    MarkdownText(text: live.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(36).frame(maxWidth: 1240).frame(maxWidth: .infinity)
+            .padding(36).frame(maxWidth: .infinity, alignment: .leading)
         }
-        .task {
-            async let a: () = gemerkt.laden("jarvis_gemerktes_lesen")
-            async let b: () = live.laden("jarvis_kontext", [:])
-            _ = await (a, b)
+        .onChange(of: gemerktOffen) { _, an in if an { Task { await gemerkt.laden("jarvis_gemerktes_lesen") } } }
+        // Der Mac hat kein eigenes Gedächtnis: Solange die Karte offen ist, kommt jede Minute der aktuelle Stand vom Handy.
+        .task(id: liveOffen) {
+            guard liveOffen else { return }
+            while !Task.isCancelled {
+                await live.laden("jarvis_kontext", [:])
+                liveStand = Date()
+                try? await Task.sleep(for: .seconds(60))
+            }
         }
+    }
+}
+
+/// Die Textdatei liegt auf dem Handy; der Mac liest und schreibt sie über das Relay, dadurch gibt es nur einen Stand.
+struct LangzeitkontextEditor: View {
+    @State private var text = ""
+    @State private var gelesen = ""
+    @State private var stand: Int64 = 0
+    @State private var laedt = true
+    @State private var meldung = ""
+    @State private var fehlerMeldung = false
+
+    private var geaendert: Bool { text != gelesen }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Jarvis liest diesen Text bei jeder Frage mit. Füg zum Beispiel ein, was ChatGPT sich über dich gemerkt hat.")
+                .font(.jarvis(12)).foregroundStyle(Farbe.text2)
+            TextEditor(text: $text).font(.jarvis(13)).frame(minHeight: 280).scrollContentBackground(.hidden)
+                .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
+                .disabled(laedt)
+            HStack(spacing: 10) {
+                KapselKnopf(symbol: "square.and.arrow.down.fill", titel: "Speichern", hervorgehoben: geaendert) { Task { await speichern() } }
+                KapselKnopf(symbol: "arrow.clockwise", titel: "Vom Handy laden") { Task { await laden() } }
+                if laedt { ProgressView().controlSize(.small) }
+                Spacer()
+                Text("\(text.count) Zeichen").font(.jarvis(11)).foregroundStyle(Farbe.text3)
+            }
+            if !meldung.isEmpty { Text(meldung).font(.jarvis(12)).foregroundStyle(fehlerMeldung ? Farbe.orange : Farbe.gruen) }
+        }
+        .task { await laden() }
+    }
+
+    private func laden() async {
+        laedt = true; defer { laedt = false }
+        let r = await McpKlient.shared.rufe("jarvis_langzeitkontext", ["aktion": "lesen"])
+        guard !r.fehler, let kopfEnde = r.text.firstIndex(of: "\n"), r.text.hasPrefix("STAND ") else {
+            meldung = r.fehler ? r.text : "Die Antwort des Handys war nicht lesbar. Läuft dort schon die neueste Jarvis-Version?"
+            fehlerMeldung = true
+            return
+        }
+        stand = Int64(r.text[r.text.index(r.text.startIndex, offsetBy: 6)..<kopfEnde]) ?? 0
+        text = String(r.text[r.text.index(after: kopfEnde)...])
+        gelesen = text
+        meldung = ""
+    }
+
+    private func speichern() async {
+        let t = text
+        let r = await McpKlient.shared.rufe("jarvis_langzeitkontext", ["aktion": "ersetzen", "text": t, "basis_stand": String(stand)])
+        fehlerMeldung = r.fehler
+        meldung = r.fehler ? r.text : "Gespeichert, auf Mac und Handy gleich."
+        log("gedaechtnis", "Langzeitkontext gespeichert (\(t.count) Zeichen)", wo: "Gedächtnis", fehler: r.fehler ? r.text : nil)
+        if !r.fehler, r.text.hasPrefix("STAND "), let z = r.text.split(separator: "\n").first { stand = Int64(z.dropFirst(6)) ?? stand; gelesen = t }
     }
 }
 
@@ -262,13 +281,18 @@ struct AktivitaetAnsicht: View {
             }
             .pickerStyle(.segmented).frame(width: 260)
             if reiter == 0 {
+                HStack {
+                    Text("Ausführliches Logbuch der letzten \(Logbuch.aufbewahrungTage) Tage, für jede KI lesbar (JSON je Zeile).").font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                    Spacer()
+                    KapselKnopf(symbol: "folder.fill", titel: "Im Finder zeigen") { NSWorkspace.shared.open(Logbuch.ordner) }
+                }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
                         ForEach(logbuch.eintraege.reversed()) { e in
                             HStack(alignment: .top, spacing: 10) {
                                 Text(e.zeit.formatted(date: .omitted, time: .standard)).font(.system(size: 11, design: .monospaced)).foregroundStyle(Farbe.text3)
                                 Text(e.art).font(.jarvis(11, .bold)).foregroundStyle(farbe(e.art)).frame(width: 70, alignment: .leading)
-                                Text(e.text).font(.jarvis(12)).foregroundStyle(Farbe.text2).textSelection(.enabled)
+                                Text(e.anzeige).font(.jarvis(12)).foregroundStyle(Farbe.text2).textSelection(.enabled)
                             }
                         }
                     }

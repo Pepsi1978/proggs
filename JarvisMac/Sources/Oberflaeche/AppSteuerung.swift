@@ -35,7 +35,7 @@ enum Bereich: String, CaseIterable, Identifiable {
 @MainActor @Observable
 final class AppSteuerung {
     static let shared = AppSteuerung()
-    var bereich: Bereich = .zentrale
+    var bereich: Bereich = .zentrale { didSet { if bereich != oldValue { log("oberflaeche", "Bereich geöffnet: \(bereich.titel)", wo: "Seitenleiste") } } }
     var gespraech: Gespraech?
     var entwurf = ""
     var handyVerbunden = false
@@ -46,6 +46,7 @@ final class AppSteuerung {
 
     func hochfahren() {
         VorderApp.beobachten()
+        TresorSperre.shared.beobachten()
         Weckwort.shared.beiErkennung = { [weak self] in self?.weckwortErkannt() }
         if Einstellungen.shared.weckwortAn { Weckwort.shared.starten() }
         if Einstellungen.shared.globalesKuerzel { kuerzelRegistrieren() }
@@ -78,6 +79,7 @@ final class AppSteuerung {
     func sende(_ text: String, gesprochen: Bool = false, bild: Data? = nil) {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty || bild != nil else { return }
+        log("gespraech", "Frage an Jarvis: \(t.prefix(500))", wo: gesprochen ? "Sprache" : "Texteingabe")
         let g = gespraech ?? GespraechsSpeicher.shared.neu()
         gespraech = g
         bereich = .gespraech

@@ -45,7 +45,7 @@ enum AppInfo {
     static var stand: String { Bundle.main.object(forInfoDictionaryKey: "BuildTimestamp") as? String ?? "" }
 }
 
-// MARK: - Zugänge (Schlüssel). Liegen nur in ~/Library/Application Support/JarvisMac/zugang.json (0600), nie im Git.
+// MARK: - Zugänge (Schlüssel). Liegen verschlüsselt im Tresor (Tresor.swift), nie im Klartext, nie im Git.
 
 struct Zugang: Codable, Equatable {
     var anthropic = ""
@@ -58,10 +58,11 @@ struct Zugang: Codable, Equatable {
     static let datei = Pfade.unterstuetzung.appendingPathComponent("zugang.json")
 
     static func laden() -> Zugang {
-        var z = (try? Data(contentsOf: datei)).flatMap { try? JSONDecoder().decode(Zugang.self, from: $0) } ?? Zugang()
+        var z = Tresor.lade(Zugang.self, name: "zugang", klartext: datei) ?? Zugang()
         let vorher = z
         z.ergaenzeAusSK()
         if z != vorher { z.speichern() }
+        z.geheimnisseMelden()
         return z
     }
 
@@ -85,9 +86,13 @@ struct Zugang: Codable, Equatable {
     }
 
     func speichern() {
-        guard let d = try? JSONEncoder().encode(self) else { return }
-        try? d.write(to: Zugang.datei, options: .atomic)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: Zugang.datei.path)
+        Tresor.sichere(self, name: "zugang")
+        geheimnisseMelden()
+    }
+
+    private func geheimnisseMelden() {
+        let token = relay.split(separator: "/").last.map(String.init) ?? ""
+        Geheimnisse.setzen("zugang", [anthropic, openai, gemini, google, groq, relay, token])
     }
 }
 
@@ -96,32 +101,92 @@ struct Zugang: Codable, Equatable {
 struct LogEintrag: Identifiable, Codable {
     var id = UUID()
     var zeit = Date()
-    var art: String      // fehler, werkzeug, gehirn, sprache, live, system
-    var text: String
+    var art: String      // fehler, werkzeug, gehirn, sprache, live, system, oberflaeche, gespraech, einstellung, tresor, ablage, gedaechtnis
+    var text: String     // Was ist passiert
+    var wo: String? = nil          // In welchem Bereich
+    var werkzeug: String? = nil    // Eingesetztes Werkzeug
+    var eingabe: String? = nil     // Argumente des Werkzeugs
+    var ergebnis: String? = nil    // Was herauskam
+    var fehler: String? = nil      // Fehlertext, sonst leer
+    var dauerMs: Int? = nil
+
+    var anzeige: String {
+        var t = text
+        if let wo { t += " · \(wo)" }
+        if let dauerMs { t += " · \(dauerMs) ms" }
+        if let fehler { t += "\nFehler: \(fehler)" } else if let ergebnis { t += "\n\(ergebnis.prefix(300))" }
+        return t
+    }
 }
 
+/// Ausführliches Logbuch für die spätere Auswertung durch eine KI: je Tag eine Datei mit einer JSON-Zeile je Ereignis (was, wo, wann,
+/// Werkzeug, Ergebnis, Fehler, Dauer). Bleibt höchstens 30 Tage liegen, Schlüssel werden vor dem Schreiben geschwärzt.
 @MainActor @Observable
 final class Logbuch {
     static let shared = Logbuch()
+    nonisolated static let aufbewahrungTage = 30
+    nonisolated static let ordner: URL = {
+        let u = Pfade.unterstuetzung.appendingPathComponent("Logbuch", isDirectory: true)
+        try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        return u
+    }()
     private(set) var eintraege: [LogEintrag] = []
-    private let datei = Pfade.unterstuetzung.appendingPathComponent("logbuch.txt")
+    private var aufgeraeumtAm = ""
+    private let tagFormat: DateFormatter = { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f }()
+    private let zeitFormat: ISO8601DateFormatter = { let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; f.timeZone = .current; return f }()
 
-    func schreib(_ art: String, _ text: String) {
-        let e = LogEintrag(art: art, text: text)
+    init() {
+        // Der alte Klartext-Mitschnitt ohne Altersgrenze entfällt.
+        try? FileManager.default.removeItem(at: Pfade.unterstuetzung.appendingPathComponent("logbuch.txt"))
+        aufraeumen()
+    }
+
+    func schreib(_ art: String, _ text: String, wo: String? = nil, werkzeug: String? = nil, eingabe: String? = nil,
+                 ergebnis: String? = nil, fehler: String? = nil, dauerMs: Int? = nil) {
+        func sauber(_ s: String?, _ grenze: Int) -> String? { s.map { String(Geheimnisse.schwaerzen($0).prefix(grenze)) } }
+        let e = LogEintrag(art: art, text: sauber(text, 4000) ?? "", wo: wo, werkzeug: werkzeug, eingabe: sauber(eingabe, 2000),
+                           ergebnis: sauber(ergebnis, 4000), fehler: sauber(fehler, 2000), dauerMs: dauerMs)
         eintraege.append(e)
         if eintraege.count > 800 { eintraege.removeFirst(eintraege.count - 800) }
-        let f = DateFormatter(); f.dateFormat = "dd.MM. HH:mm:ss"
-        let zeile = "\(f.string(from: e.zeit)) [\(art)] \(text.replacingOccurrences(of: "\n", with: " ⏎ "))\n"
+        aufraeumen()
+        var o: JSONObjekt = ["zeit": zeitFormat.string(from: e.zeit), "art": e.art, "was": e.text, "version": AppInfo.version]
+        o["wo"] = e.wo ?? Self.ort(art); o["werkzeug"] = e.werkzeug; o["eingabe"] = e.eingabe
+        o["ergebnis"] = e.ergebnis; o["fehler"] = e.fehler ?? (art == "fehler" ? e.text : nil); o["dauer_ms"] = e.dauerMs
+        var zeile = JSON.daten(o); zeile.append(0x0A)
+        let datei = Self.ordner.appendingPathComponent(tagFormat.string(from: e.zeit) + ".jsonl")
         if let h = try? FileHandle(forWritingTo: datei) {
-            h.seekToEndOfFile(); h.write(Data(zeile.utf8)); try? h.close()
+            h.seekToEndOfFile(); h.write(zeile); try? h.close()
         } else {
-            try? Data(zeile.utf8).write(to: datei)
+            FileManager.default.createFile(atPath: datei.path, contents: zeile, attributes: [.posixPermissions: 0o600])
+        }
+    }
+
+    private static func ort(_ art: String) -> String {
+        switch art {
+        case "gehirn": return "Gehirn"
+        case "sprache": return "Sprache"
+        case "live": return "Live-Gespräch"
+        case "werkzeug": return "Werkzeuge"
+        default: return "App"
+        }
+    }
+
+    /// Einmal am Tag: Dateien, deren Datum älter als 30 Tage ist, löschen.
+    private func aufraeumen() {
+        let heute = tagFormat.string(from: Date())
+        guard heute != aufgeraeumtAm else { return }
+        aufgeraeumtAm = heute
+        let grenze = Date().addingTimeInterval(-Double(Self.aufbewahrungTage) * 86400)
+        let dateien = (try? FileManager.default.contentsOfDirectory(at: Self.ordner, includingPropertiesForKeys: nil)) ?? []
+        for d in dateien where d.pathExtension == "jsonl" {
+            if let tag = tagFormat.date(from: d.deletingPathExtension().lastPathComponent), tag < grenze { try? FileManager.default.removeItem(at: d) }
         }
     }
 }
 
-func log(_ art: String, _ text: String) {
-    Task { @MainActor in Logbuch.shared.schreib(art, text) }
+func log(_ art: String, _ text: String, wo: String? = nil, werkzeug: String? = nil, eingabe: String? = nil,
+         ergebnis: String? = nil, fehler: String? = nil, dauerMs: Int? = nil) {
+    Task { @MainActor in Logbuch.shared.schreib(art, text, wo: wo, werkzeug: werkzeug, eingabe: eingabe, ergebnis: ergebnis, fehler: fehler, dauerMs: dauerMs) }
 }
 
 // MARK: - Einstellungen
@@ -156,23 +221,23 @@ final class Einstellungen {
 
     var zugang = Zugang.laden() { didSet { zugang.speichern() } }
 
-    var modell: String { didSet { d.set(modell, forKey: "modell") } }
-    var effort: String { didSet { d.set(effort, forKey: "effort") } }
-    var schrittLimit: Int { didSet { d.set(schrittLimit, forKey: "schrittLimit") } }
-    var vorlesen: Bool { didSet { d.set(vorlesen, forKey: "vorlesen") } }
-    var stimme: String { didSet { d.set(stimme, forKey: "stimme") } }
-    var tempo: Double { didSet { d.set(tempo, forKey: "tempo") } }
-    var weckwortAn: Bool { didSet { d.set(weckwortAn, forKey: "weckwortAn") } }
-    var weckwort: String { didSet { d.set(weckwort, forKey: "weckwort") } }
-    var transkription: String { didSet { d.set(transkription, forKey: "transkription") } }   // apple | groq
-    var liveAnbieter: String { didSet { d.set(liveAnbieter, forKey: "liveAnbieter") } }     // openai | gemini
-    var liveStimmeOpenAI: String { didSet { d.set(liveStimmeOpenAI, forKey: "liveStimmeOpenAI") } }
-    var liveStimmeGemini: String { didSet { d.set(liveStimmeGemini, forKey: "liveStimmeGemini") } }
-    var liveModellOpenAI: String { didSet { d.set(liveModellOpenAI, forKey: "liveModellOpenAI") } }
-    var liveModellGemini: String { didSet { d.set(liveModellGemini, forKey: "liveModellGemini") } }
-    var vollzugriff: Bool { didSet { d.set(vollzugriff, forKey: "vollzugriff") } }
-    var lernenAn: Bool { didSet { d.set(lernenAn, forKey: "lernenAn") } }
-    var globalesKuerzel: Bool { didSet { d.set(globalesKuerzel, forKey: "globalesKuerzel") } }
+    var modell: String { didSet { d.set(modell, forKey: "modell"); log("einstellung", "modell = \(modell)", wo: "Einstellungen") } }
+    var effort: String { didSet { d.set(effort, forKey: "effort"); log("einstellung", "effort = \(effort)", wo: "Einstellungen") } }
+    var schrittLimit: Int { didSet { d.set(schrittLimit, forKey: "schrittLimit"); log("einstellung", "schrittLimit = \(schrittLimit)", wo: "Einstellungen") } }
+    var vorlesen: Bool { didSet { d.set(vorlesen, forKey: "vorlesen"); log("einstellung", "vorlesen = \(vorlesen)", wo: "Einstellungen") } }
+    var stimme: String { didSet { d.set(stimme, forKey: "stimme"); log("einstellung", "stimme = \(stimme)", wo: "Einstellungen") } }
+    var tempo: Double { didSet { d.set(tempo, forKey: "tempo"); log("einstellung", "tempo = \(tempo)", wo: "Einstellungen") } }
+    var weckwortAn: Bool { didSet { d.set(weckwortAn, forKey: "weckwortAn"); log("einstellung", "weckwortAn = \(weckwortAn)", wo: "Einstellungen") } }
+    var weckwort: String { didSet { d.set(weckwort, forKey: "weckwort"); log("einstellung", "weckwort = \(weckwort)", wo: "Einstellungen") } }
+    var transkription: String { didSet { d.set(transkription, forKey: "transkription"); log("einstellung", "transkription = \(transkription)", wo: "Einstellungen") } }   // apple | groq
+    var liveAnbieter: String { didSet { d.set(liveAnbieter, forKey: "liveAnbieter"); log("einstellung", "liveAnbieter = \(liveAnbieter)", wo: "Einstellungen") } }     // openai | gemini
+    var liveStimmeOpenAI: String { didSet { d.set(liveStimmeOpenAI, forKey: "liveStimmeOpenAI"); log("einstellung", "liveStimmeOpenAI = \(liveStimmeOpenAI)", wo: "Einstellungen") } }
+    var liveStimmeGemini: String { didSet { d.set(liveStimmeGemini, forKey: "liveStimmeGemini"); log("einstellung", "liveStimmeGemini = \(liveStimmeGemini)", wo: "Einstellungen") } }
+    var liveModellOpenAI: String { didSet { d.set(liveModellOpenAI, forKey: "liveModellOpenAI"); log("einstellung", "liveModellOpenAI = \(liveModellOpenAI)", wo: "Einstellungen") } }
+    var liveModellGemini: String { didSet { d.set(liveModellGemini, forKey: "liveModellGemini"); log("einstellung", "liveModellGemini = \(liveModellGemini)", wo: "Einstellungen") } }
+    var vollzugriff: Bool { didSet { d.set(vollzugriff, forKey: "vollzugriff"); log("einstellung", "vollzugriff = \(vollzugriff)", wo: "Einstellungen") } }
+    var lernenAn: Bool { didSet { d.set(lernenAn, forKey: "lernenAn"); log("einstellung", "lernenAn = \(lernenAn)", wo: "Einstellungen") } }
+    var globalesKuerzel: Bool { didSet { d.set(globalesKuerzel, forKey: "globalesKuerzel"); log("einstellung", "globalesKuerzel = \(globalesKuerzel)", wo: "Einstellungen") } }
 
     init() {
         let d = UserDefaults.standard

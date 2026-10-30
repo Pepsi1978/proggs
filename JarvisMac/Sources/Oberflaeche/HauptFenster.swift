@@ -21,7 +21,8 @@ struct HauptFenster: View {
                 case .einstellungen: EinstellungenAnsicht()
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
             .transition(.opacity)
             .animation(.easeInOut(duration: 0.18), value: steuerung.bereich)
         }
@@ -76,7 +77,7 @@ struct Seitenleiste: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                JarvisKugel(pegel: 0, zustand: .ruhe, groesse: 38)
+                JarvisKugel(pegel: KugelStand.pegel, zustand: KugelStand.zustand, groesse: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("JARVIS").font(.jarvis(17, .heavy)).tracking(4)
                     HStack(spacing: 6) {

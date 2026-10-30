@@ -86,7 +86,7 @@ struct KartenTitel: View {
     }
 }
 
-/// Die Jarvis-Kugel: lebendige, mehrschichtige Lichtkugel, reagiert auf Sprachpegel und Zustand.
+/// Die Jarvis-Kugel: runde, seitlich schimmernde Lichtkugel ohne Rahmen. Vibriert beim Sprechen, zeigt beim Zuhören Wellen und ein Mikrofon.
 struct JarvisKugel: View {
     var pegel: Float = 0
     var zustand: KugelZustand = .ruhe
@@ -100,6 +100,8 @@ struct JarvisKugel: View {
             let p = Double(min(max(pegel, 0), 1))
             let tempo: Double = zustand == .denkt ? 2.4 : (zustand == .ruhe ? 0.5 : 1.2)
             let atmen = 1 + 0.03 * sin(t * 1.6) + p * 0.22
+            // Sprechen: sichtbares Vibrieren, auch wenn die Stimme gerade keinen Pegel liefert.
+            let beben = zustand == .spricht ? max(p, 0.4) : 0
             let farben: [Color] = {
                 switch zustand {
                 case .ruhe: return [Farbe.cyan, Farbe.violett, Farbe.cyan]
@@ -112,14 +114,15 @@ struct JarvisKugel: View {
                 Circle()
                     .fill(RadialGradient(colors: [farben[0].opacity(0.45), .clear], center: .center, startRadius: 0, endRadius: groesse * 0.75))
                     .frame(width: groesse * 1.6, height: groesse * 1.6)
-                    .blur(radius: 30)
+                    .blur(radius: groesse * 0.1)
                     .scaleEffect(atmen)
+                if zustand == .hoert { zuhoerWellen(t: t, p: p) }
                 ForEach(0..<3, id: \.self) { i in
                     let w = Double(i)
                     Circle()
                         .fill(AngularGradient(colors: farben, center: .center, angle: .degrees(t * 40 * tempo * (w + 1) + w * 70)))
                         .frame(width: groesse * (0.82 - 0.14 * w), height: groesse * (0.82 - 0.14 * w))
-                        .blur(radius: 14 - w * 3)
+                        .blur(radius: groesse * (0.07 - w * 0.015))
                         .opacity(0.75 - w * 0.12)
                         .offset(x: cos(t * tempo + w * 2) * groesse * 0.035 * (1 + p * 2),
                                 y: sin(t * tempo * 1.2 + w) * groesse * 0.035 * (1 + p * 2))
@@ -131,14 +134,63 @@ struct JarvisKugel: View {
                     .frame(width: groesse * 0.62, height: groesse * 0.62)
                     .blendMode(.plusLighter)
                     .opacity(0.55 + p * 0.4)
-                Circle()
-                    .strokeBorder(AngularGradient(colors: farben + [farben[0]], center: .center, angle: .degrees(-t * 30)), lineWidth: 1.5)
-                    .frame(width: groesse * 0.9, height: groesse * 0.9)
-                    .opacity(0.5)
-                    .scaleEffect(atmen)
+                // Seitlicher Schimmer: zwei weiche Lichtbögen links und rechts statt eines Rings.
+                ForEach(0..<2, id: \.self) { i in
+                    let seite = Double(i) * 180
+                    Circle()
+                        .trim(from: 0, to: 0.2)
+                        .stroke(i == 0 ? Color.white.opacity(0.75) : farben[0].opacity(0.85),
+                                style: StrokeStyle(lineWidth: groesse * 0.035, lineCap: .round))
+                        .frame(width: groesse * 0.78, height: groesse * 0.78)
+                        .blur(radius: groesse * 0.025)
+                        .rotationEffect(.degrees(seite - 36 + 22 * sin(t * 0.9 + seite)))
+                        .opacity(0.5 + 0.35 * sin(t * 1.7 + seite))
+                        .blendMode(.plusLighter)
+                }
+                if zustand == .hoert && groesse >= 80 {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: groesse * 0.16, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.95))
+                        .shadow(color: Farbe.gruen, radius: groesse * 0.03)
+                        .scaleEffect(1 + p * 0.35)
+                }
             }
-            .frame(width: groesse, height: groesse)
+            .scaleEffect(x: 1 + 0.07 * beben * sin(t * 33), y: 1 + 0.07 * beben * cos(t * 41))
+            .offset(x: groesse * 0.018 * beben * sin(t * 47), y: groesse * 0.018 * beben * cos(t * 53))
+            // Malfläche größer als der Lichthof: sonst schneidet drawingGroup ihn als Viereck ab.
+            .frame(width: groesse * 2.8, height: groesse * 2.8)
             .drawingGroup()
+            .frame(width: groesse, height: groesse)
+        }
+        .contentShape(Circle())
+    }
+
+    /// Eigene Zuhör-Animation: Wellen laufen vom Rand der Kugel nach außen, lauter gesprochen = kräftiger.
+    private func zuhoerWellen(t: Double, p: Double) -> some View {
+        ForEach(0..<3, id: \.self) { i in
+            let phase = (t * 0.55 + Double(i) / 3).truncatingRemainder(dividingBy: 1)
+            Circle()
+                .stroke(Farbe.gruen.opacity((1 - phase) * (0.45 + p * 0.5)), lineWidth: groesse * 0.012)
+                .frame(width: groesse * (0.8 + 0.75 * phase), height: groesse * (0.8 + 0.75 * phase))
+        }
+    }
+}
+
+/// Zustand und Pegel der Kugel aus allem, was gerade spricht oder zuhört (Sprachschleife, Live, reines Vorlesen).
+@MainActor
+enum KugelStand {
+    static var zustand: JarvisKugel.KugelZustand {
+        let schleife = SprachSchleife.shared.zustand, live = LiveGespraech.shared.zustand
+        if Stimme.shared.spricht || schleife == .spricht || live == .spricht { return .spricht }
+        if schleife == .denkt || live == .denkt { return .denkt }
+        if schleife == .hoert || live == .hoert { return .hoert }
+        return .ruhe
+    }
+    static var pegel: Float {
+        switch zustand {
+        case .spricht: return max(Stimme.shared.pegel, LiveGespraech.shared.pegelAus)
+        case .hoert: return max(Diktat.shared.pegel, LiveGespraech.shared.pegelEin)
+        default: return 0
         }
     }
 }
