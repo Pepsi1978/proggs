@@ -141,8 +141,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
     LaunchedEffect(vm, modell.istAnthropic) {
         if (modell.istAnthropic) vm.anthropicGuthabenZeigen()
     }
-    // Einmal beim Öffnen: Sonst merkt die Warnung erst bei der nächsten Aufgabe, dass die Anthropic-Konsole nicht mehr verbunden ist.
-    LaunchedEffect(vm) { vm.anthropicGuthabenAbfragen() }
+    LaunchedEffect(vm) { vm.anthropicConsoleLesen() }
     val konsole by AnthropicGuthabenFaehigkeit.verbunden.collectAsState()
     var konsoleAnmelden by remember { mutableStateOf(false) }
     if (konsoleAnmelden) ConsoleAnmeldung(onFertig = { konsoleAnmelden = false; vm.anthropicConsoleAnmeldungPruefen() })

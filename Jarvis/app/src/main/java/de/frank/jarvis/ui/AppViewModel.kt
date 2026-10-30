@@ -3386,13 +3386,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** true, wenn Jarvis bei der Claude Console angemeldet ist (für das Guthaben). */
     var anthropicConsoleAngemeldet by mutableStateOf(false); private set
 
+    /** Beim Öffnen, ohne Netz: Stimmt die Warnung sofort, auch ohne Aufgabe mit einem Claude-Modell. */
+    fun anthropicConsoleLesen() {
+        val app = getApplication<Application>()
+        viewModelScope.launch { anthropicConsoleAngemeldet = withContext(Dispatchers.IO) { de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.verbundenLesen(app) } }
+    }
+
     /** Nach dem eingebetteten Anmelde-Browser: Sitzung prüfen und das Guthaben frisch holen. */
     fun anthropicConsoleAnmeldungPruefen() {
         if (!de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.anmeldungUebernehmen(getApplication())) return
         anthropicConsoleAngemeldet = true
         meldung = "Bei der Claude Console angemeldet."
         anthropicGuthaben = null
-        anthropicGuthabenAbfragen(erzwingen = true)
+        viewModelScope.launch {
+            // Eine laufende Abfrage mit der alten Sitzung abwarten, sonst ginge diese hier verloren.
+            while (anthropicGuthabenLaedt) kotlinx.coroutines.delay(200)
+            anthropicGuthabenAbfragen(erzwingen = true)
+        }
     }
 
     fun anthropicConsoleAbmelden() {

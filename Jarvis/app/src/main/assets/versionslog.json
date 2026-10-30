@@ -470,6 +470,7 @@
     {"versionCode": 466, "versionName": "1.8.455", "stand": "30.10.2026, 18:18 Uhr", "notiz": "Im Automatikmodus wird Jarvis abends am Ende der Dämmerung dunkel und morgens bei Sonnenaufgang hell, passend für Neuenhagen bei Berlin."},
     {"versionCode": 467, "versionName": "1.8.456", "stand": "30.10.2026, 18:26 Uhr", "notiz": "Auch die aufklappenden Menüs folgen dem Automatikmodus, und im Live-Gespräch wartet der Wechsel bis zum Ende des Gesprächs."},
     {"versionCode": 468, "versionName": "1.8.457", "stand": "30.10.2026, 19:59 Uhr", "notiz": "Jarvis antwortet im Gespräch schneller: Der erste Satz wird schon vorgelesen, während das Modell noch schreibt, er wartet nicht mehr hinter dem Rest, und das Modell liest seine große Anweisung aus dem Zwischenspeicher."},
-    {"versionCode": 469, "versionName": "1.8.458", "stand": "30.10.2026, 20:04 Uhr", "notiz": "Die Anmeldung an der Anthropic-Konsole klappt wieder und bleibt gespeichert, bis du dich abmeldest; ohne Verbindung warnt Jarvis deutlich."}
+    {"versionCode": 469, "versionName": "1.8.458", "stand": "30.10.2026, 20:04 Uhr", "notiz": "Die Anmeldung an der Anthropic-Konsole klappt wieder und bleibt gespeichert, bis du dich abmeldest; ohne Verbindung warnt Jarvis deutlich."},
+    {"versionCode": 470, "versionName": "1.8.459", "stand": "30.10.2026, 20:16 Uhr", "notiz": "Die Anmeldung an der Anthropic-Konsole ist robuster: Ein Abbruch oder eine parallele Abfrage stört sie nicht mehr."}
 ]
 }

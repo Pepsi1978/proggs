@@ -747,7 +747,7 @@ private fun AnmeldeBrowser(titel: String, url: String, googleTauglich: Boolean, 
                     fun einrichten(w: android.webkit.WebView) {
                         w.settings.javaScriptEnabled = true
                         w.settings.domStorageEnabled = true
-                        if (googleTauglich) w.settings.userAgentString = w.settings.userAgentString.replace("; wv", "").replace(Regex("Version/\\d+(\\.\\d+)* "), "")
+                        if (googleTauglich) w.settings.userAgentString = de.frank.jarvis.faehigkeit.AnthropicGuthabenFaehigkeit.chromeKennung(w.settings.userAgentString)
                         // Die Google-Anmeldung öffnet ein Popup und meldet das Ergebnis per postMessage an die Console zurück;
                         // ohne eigenes Fenster lädt sie im selben WebView und bleibt dort weiß stehen.
                         w.settings.setSupportMultipleWindows(true)

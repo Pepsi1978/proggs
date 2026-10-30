@@ -123,6 +123,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         private const val TAG = "JarvisAnthropicGuthaben"
         private const val FRISCH_MS = 15 * 60_000L
         private const val CONSOLE = "https://platform.claude.com"
+        private val BOT_ABWEHR_COOKIES = setOf("cf_clearance", "__cf_bm", "_cfuvid")
         /** Anmeldeseite der Claude Console für den eingebetteten Browser. */
         const val LOGIN_URL = "$CONSOLE/login"
         private val CLIENT = OkHttpClient.Builder().connectTimeout(12, TimeUnit.SECONDS).readTimeout(25, TimeUnit.SECONDS).build()
@@ -167,6 +168,11 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         fun browserAngemeldet(): Boolean = browserSitzung() != null
 
         /** Die gültige Sitzung: Das Cookie geht vor und wird gesichert, ohne Cookie zählt die gesicherte. */
+        /** Zählt jede Anmeldung: Eine Antwort, die über eine davon läuft, darf weder Cookies setzen noch eine Ablehnung melden. */
+        @Volatile private var anmeldungNr = 0
+        /** Der Anmelde-Browser ist offen: Ein Cookie darin kommt nur von der neuen Anmeldung. */
+        @Volatile private var anmeldungLaeuft = false
+
         private fun sitzung(context: Context): String? {
             val s = SecureSettings.get(context)
             val browser = browserSitzung()
@@ -177,16 +183,29 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         /** true, wenn Frank in Jarvis bei der Claude Console angemeldet ist. Nur sein Abmelden beendet das. */
         fun angemeldet(context: Context): Boolean = sitzung(context) != null
 
-        /** Vor einer Anmeldung: alte Cookies und Seitendaten weg, damit nichts Altes sie stört. Die gesicherte Sitzung bleibt, bis die neue steht. */
+        /** Ohne Netz: Beim Start zeigt das die Warnung, die letzte Ablehnung zählt weiter. */
+        fun verbundenLesen(context: Context): Boolean {
+            val ja = angemeldet(context) && !SecureSettings.get(context).anthropicConsoleAbgelehnt
+            _verbunden.value = ja
+            return angemeldet(context)
+        }
+
+        /** Vor einer Anmeldung: alte Cookies und Seitendaten weg, damit nichts Altes sie stört. Sitzung im Tresor und Bot-Abwehr-Cookies bleiben für den Fall eines Abbruchs. */
         fun anmeldungVorbereiten() {
-            browserLeeren()
+            anmeldungLaeuft = true
+            anmeldungNr++
+            browserLeeren { it !in BOT_ABWEHR_COOKIES }
             android.webkit.WebStorage.getInstance().deleteOrigin(CONSOLE)
         }
 
         /** Nach dem Anmelde-Browser: true, wenn eine neue Sitzung da ist; sie ersetzt die gesicherte. */
         fun anmeldungUebernehmen(context: Context): Boolean {
+            anmeldungLaeuft = false
+            anmeldungNr++
             if (!browserAngemeldet()) return false
             sitzung(context)
+            // Das neue Konto kann eine andere Organisation haben.
+            runCatching { datei(context).writeText(JSONObject(datei(context).readText()).apply { remove("org") }.toString()) }
             ablehnungSetzen(context, false)
             Logbuch.netz("Bei der Claude Console angemeldet", "")
             return true
@@ -209,11 +228,11 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             datei(context).delete()
         }
 
-        private fun browserLeeren() {
+        private fun browserLeeren(loeschen: (String) -> Boolean = { true }) {
             // Nur die Cookies der Console löschen: Die Google-Anmeldung für das Google-Guthaben bleibt bestehen.
             val cm = CookieManager.getInstance()
             // Mit Secure, sonst lehnt Chromium das Überschreiben der __Secure-/__Host-Cookies ab.
-            cookies().split(';').map { it.substringBefore('=').trim() }.filter { it.isNotEmpty() }.forEach { name ->
+            cookies().split(';').map { it.substringBefore('=').trim() }.filter { it.isNotEmpty() && loeschen(it) }.forEach { name ->
                 listOf("", "; Domain=.claude.com", "; Domain=claude.com", "; Domain=platform.claude.com").forEach { d ->
                     cm.setCookie(CONSOLE, "$name=; Max-Age=0; Path=/; Secure$d")
                     cm.setCookie(CONSOLE, "$name=; Max-Age=0; Path=/$d")
@@ -257,6 +276,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             }
             _verbunden.value = !SecureSettings.get(app).anthropicConsoleAbgelehnt
             sperre.withLock {
+                val nr = anmeldungNr
                 val alt = gespeichert(app)
                 if (!erzwingen && alt != null && System.currentTimeMillis() - alt.geholt < FRISCH_MS) return@withLock alt
                 try {
@@ -307,6 +327,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                     Stand(rest, gewaehrt.takeIf { it > 0 }, verfaellt, kurs, kursDatum, jetzt, gewaehrtAm = gewaehrtAm, eigenesUsd = eigenes,
                         abobetragUsd = abobetrag.takeIf { it > 0 }).also { _frisch.value = it }
                 } catch (f: SitzungAbgelehnt) {
+                    if (nr != anmeldungNr) return@withLock Stand(null, null, "", null, "", 0, "Die Anmeldung wurde gerade geändert; bitte gleich noch einmal abfragen.")
                     Logbuch.netz("Claude Console lehnt die Anmeldung ab", f.message.orEmpty())
                     ablehnungSetzen(app, true)
                     if (alt != null) Stand(alt.restUsd, alt.gewaehrtUsd, alt.verfaellt, alt.kurs, alt.kursDatum, alt.geholt, "Letzter Stand. ${f.message}", alt.gewaehrtAm, alt.eigenesUsd, alt.abobetragUsd)
@@ -334,16 +355,19 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
         }
 
         /** Dieselbe Browserkennung wie beim Anmelden: Die Bot-Abwehr bindet ihr Cookie daran. Ohne „; wv“ gehen auch E-Mail-Code und Google. */
-        private fun browserKennung(context: Context): String = runCatching { WebSettings.getDefaultUserAgent(context) }.getOrDefault("Mozilla/5.0")
-            .replace("; wv", "").replace(Regex("Version/\\d+(\\.\\d+)* "), "")
+        private fun browserKennung(context: Context): String = chromeKennung(runCatching { WebSettings.getDefaultUserAgent(context) }.getOrDefault("Mozilla/5.0"))
+
+        /** Die Kennung des normalen Chrome statt der eines WebViews; auch die Google-Anmeldung lässt nur die zu. */
+        fun chromeKennung(ua: String): String = ua.replace("; wv", "").replace(Regex("Version/\\d+(\\.\\d+)* "), "")
 
         /** Set-Cookie wie im Browser übernehmen, sonst läuft die Sitzung trotz Abfragen ab. Eine Antwort beendet sie nie von allein. */
-        private fun neueCookies(context: Context, a: okhttp3.Response) {
+        private fun neueCookies(context: Context, a: okhttp3.Response, nr: Int) {
+            if (anmeldungLaeuft || nr != anmeldungNr) return
             val cm = CookieManager.getInstance()
             a.headers("Set-Cookie").forEach { kopf ->
                 val c = okhttp3.Cookie.parse(a.request.url, kopf) ?: return@forEach
                 if (c.name == "sessionKey") {
-                    if (c.value.isEmpty() || c.expiresAt <= System.currentTimeMillis()) return@forEach
+                    if (!a.isSuccessful || c.value.isEmpty() || c.expiresAt <= System.currentTimeMillis()) return@forEach
                     SecureSettings.get(context).anthropicConsoleSitzung = c.value
                 }
                 cm.setCookie(CONSOLE, kopf)
@@ -351,13 +375,14 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
             cm.flush()
         }
 
-        private fun holen(context: Context, url: String, ua: String): Any =
-            CLIENT.newCall(
+        private fun holen(context: Context, url: String, ua: String): Any {
+            val nr = anmeldungNr
+            return CLIENT.newCall(
                 Request.Builder().url(url)
                     .header("Cookie", (cookies().split(';').map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("sessionKey=") } + "sessionKey=${sitzung(context).orEmpty()}").joinToString("; "))
                     .header("User-Agent", ua).header("Accept", "application/json").header("Referer", "$CONSOLE/dashboard").build(),
             ).execute().use { a ->
-                neueCookies(context, a)
+                neueCookies(context, a, nr)
                 val text = a.body?.string().orEmpty()
                 val json = text.trimStart().let { it.startsWith("{") || it.startsWith("[") }
                 // 401 oder ein 403 mit JSON-Antwort kommt von der Console selbst: Sitzung weg. Ein 403 als HTML-Seite ist die
@@ -372,6 +397,7 @@ class AnthropicGuthabenFaehigkeit(private val context: Context) : Faehigkeit {
                 runCatching { if (text.trimStart().startsWith("[")) JSONArray(text) else JSONObject(text) }
                     .getOrElse { throw IllegalStateException("Die Claude Console lieferte keine lesbare Antwort (Schnittstelle geändert?).") }
             }
+        }
 
         /** Euro je Dollar und Datum des Kurses; scheitert der Abruf, der zuletzt gespeicherte Kurs, sonst null. */
         private fun kurs(context: Context): Pair<Double?, String> {
