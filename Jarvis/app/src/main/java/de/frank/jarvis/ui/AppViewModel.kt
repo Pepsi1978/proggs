@@ -372,7 +372,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .takeLast(2).map { it.text }
         val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
             aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = letzteRueckfrage(gespraech.take(frage)))
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke else kotlin.coroutines.EmptyCoroutineContext)) {
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke() else kotlin.coroutines.EmptyCoroutineContext)) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }

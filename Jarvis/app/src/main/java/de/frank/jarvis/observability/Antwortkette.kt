@@ -36,7 +36,10 @@ object Antwortkette {
     @Synchronized fun verwerfen() { beginn = 0L }
 
     /** Markiert im Koroutinen-Kontext den Lauf, der gemessen wird: Hintergrund-Agenten setzen so keine Punkte. */
-    object Marke : kotlin.coroutines.AbstractCoroutineContextElement(Marke), kotlin.coroutines.CoroutineContext.Key<Marke>
+    class Marke : kotlin.coroutines.AbstractCoroutineContextElement(Marke) {
+        // Eigener Schlüssel statt „object Marke : …(Marke)“: Dort wäre das Objekt beim Aufruf des Basis-Konstruktors noch null und die App stürzt ab.
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<Marke>
+    }
 
     private const val MAX_MS = 5 * 60_000L
 }
