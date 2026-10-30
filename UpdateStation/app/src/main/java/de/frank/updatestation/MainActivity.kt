@@ -27,7 +27,6 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.ApiException
 import de.frank.updatestation.ui.Aktionen
-import de.frank.updatestation.ui.AufschubFenster
 import de.frank.updatestation.ui.HauptScreen
 import de.frank.updatestation.ui.UpdateStationTheme
 import kotlinx.coroutines.launch
@@ -42,8 +41,6 @@ class MainActivity : ComponentActivity() {
     private var designModus by mutableStateOf(DesignModus.AUTOMATISCH)
     private var darfInstallieren by mutableStateOf(true)
     private var darfBenachrichtigen by mutableStateOf(true)
-    /** Paket, für das gerade das Fenster „Wann installieren?“ offen ist. */
-    private var aufschubFrage by mutableStateOf<String?>(null)
 
     private val benachrichtigungsRecht = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         aktualisiereRechte()
@@ -76,7 +73,6 @@ class MainActivity : ComponentActivity() {
         drivePfad = einst.drivePfad
         intervall = einst.intervallMinuten
         designModus = einst.designModus
-        aufschubFrage = savedInstanceState?.getString(ZUSTAND_AUFSCHUB)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hatBenachrichtigungsRecht()) {
             benachrichtigungsRecht.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -155,23 +151,9 @@ class MainActivity : ComponentActivity() {
                         },
                     ),
                 )
-                aufschubFrage?.let { paket ->
-                    AufschubFenster(
-                        onWahl = { minuten ->
-                            aufschubFrage = null
-                            waehleZeitpunkt(paket, minuten)
-                        },
-                        onSchliessen = { aufschubFrage = null },
-                    )
-                }
             }
         }
         verarbeite(intent)
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putString(ZUSTAND_AUFSCHUB, aufschubFrage)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -205,26 +187,6 @@ class MainActivity : ComponentActivity() {
             melde("${eintrag.label}: Installation läuft bereits – bitte den Android-Dialog bestätigen oder abbrechen.")
             return
         }
-        // Jarvis ersetzt die App, mit der Frank vielleicht gerade arbeitet: Zeitpunkt erst erfragen.
-        if (eintrag.paket == Aufschub.PAKET_JARVIS) {
-            aufschubFrage = eintrag.paket
-            return
-        }
-        starte(eintrag)
-    }
-
-    private fun waehleZeitpunkt(paket: String, minuten: Int) {
-        if (minuten > 0) {
-            Aufschub.plane(this, paket, minuten)
-            return
-        }
-        Aufschub.abbrechen(this, paket)
-        ZustandsSpeicher.setzeInstallation(paket, null)
-        val eintrag = ZustandsSpeicher.zustand.value.eintraege.firstOrNull { it.paket == paket }
-        if (eintrag == null) melde("Dieses Update ist nicht mehr nötig – die App ist bereits aktuell.") else starte(eintrag)
-    }
-
-    private fun starte(eintrag: AppEintrag) {
         lifecycleScope.launch {
             // Die Installation selbst läuft im Installierer weiter, auch wenn die Activity neu entsteht.
             when (Installierer.starte(this@MainActivity, eintrag).await()) {
@@ -283,9 +245,5 @@ class MainActivity : ComponentActivity() {
 
     private fun melde(text: String) {
         lifecycleScope.launch { snackbar.showSnackbar(text) }
-    }
-
-    private companion object {
-        const val ZUSTAND_AUFSCHUB = "aufschubFrage"
     }
 }

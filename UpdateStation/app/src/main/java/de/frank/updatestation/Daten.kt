@@ -112,8 +112,6 @@ data class AppEintrag(
 }
 
 sealed interface InstallStatus {
-    /** Verschoben: Die Installation startet erst um [um] (Millisekunden seit 1970). */
-    data class Geplant(val um: Long) : InstallStatus
     /** Alle Ladeplätze sind belegt; der Download startet, sobald einer frei wird. */
     data object WartetAufLadeplatz : InstallStatus
     data class Laedt(val prozent: Int) : InstallStatus
