@@ -119,8 +119,8 @@ private fun TextStyle.skaliert(faktor: Float, familie: FontFamily): TextStyle =
     copy(fontFamily = familie, fontSize = (fontSize.value * faktor).sp)
 
 /**
- * @param themeWahl `light` oder `dark`. Es gibt bewusst **keinen** Automatik-Modus:
- *   Die App folgt der Systemvorgabe nicht (Baustein A).
+ * @param themeWahl `light` oder `dark`, bereits aufgelöst: die Wahl „system“ (Automatik nach der Sonne)
+ *   löst `wirksamesTheme` auf. Die App folgt der Systemvorgabe nicht.
  *
  * Der Wechsel läuft weich: Jede Farbe wandert in den neuen Wert, statt hart umzuspringen
  * (Baustein N.5).

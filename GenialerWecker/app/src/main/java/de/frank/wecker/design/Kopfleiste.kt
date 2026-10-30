@@ -189,7 +189,7 @@ private fun LeistenKnoepfe(
         KopfKnopf(
             beschreibung = when (themeWahl) {
                 "dark" -> "Dunkler Modus, tippen für automatisch"
-                "system" -> "Automatisch wie das Handy, tippen für hell"
+                "system" -> "Automatisch nach der Sonne, tippen für hell"
                 else -> "Heller Modus, tippen für dunkel"
             },
             aufTipp = aufThemeTipp,

@@ -147,7 +147,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         var design by remember(revision) { mutableStateOf(settings.design) }
         val modus by vm.theme.collectAsStateWithLifecycle()
         var statuszeile by remember(revision) { mutableStateOf(settings.statuszeileSichtbar) }
-        val modusOptionen = listOf("light" to "Hell", "dark" to "Dunkel", "system" to "Automatisch")
+        val modusOptionen = listOf("light" to "Hell", "dark" to "Dunkel", "system" to "Automatisch nach der Sonne")
         Section("Darstellung", collapsible = true, initiallyExpanded = false,
             summary = "${Design.von(design).anzeige} · ${modusOptionen.find { it.first == modus }?.second ?: "Hell"} · " +
                 (Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch")) {
