@@ -11,6 +11,7 @@
     {"versionCode": 7, "versionName": "0.1.6", "stand": "22.10.2026, 12:58 Uhr", "notiz": "KI: Neben OpenAI lässt sich jetzt Anthropic wählen, mit Claude-Modellen, Denkstufe und eigenem API-Schlüssel wie in Jarvis."},
     {"versionCode": 8, "versionName": "0.1.7", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
     {"versionCode": 9, "versionName": "0.1.8", "stand": "22.10.2026, 22:52 Uhr", "notiz": "Review: Bereits bekannte eigene Modelle erscheinen nicht doppelt in der Modellauswahl."},
-    {"versionCode": 10, "versionName": "0.1.9", "stand": "30.10.2026, 11:41 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
+    {"versionCode": 10, "versionName": "0.1.9", "stand": "30.10.2026, 11:41 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
+    {"versionCode": 11, "versionName": "0.1.10", "stand": "30.10.2026, 19:24 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
   ]
 }
