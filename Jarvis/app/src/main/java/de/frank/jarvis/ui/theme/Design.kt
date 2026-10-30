@@ -1,6 +1,7 @@
 package de.frank.jarvis.ui.theme
 
 import android.app.Activity
+import android.content.res.Configuration
 import android.provider.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -16,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -23,6 +25,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import de.frank.jarvis.live.LiveGespraech
 import kotlinx.coroutines.delay
 
 /** Farben im selben Aufbau wie in Geniale Aufgaben, damit die Glas-Bausteine unverändert passen. */
@@ -84,15 +87,15 @@ val LocalBewegung = staticCompositionLocalOf { true }
 
 @Composable
 fun JarvisTheme(modus: String, design: String = "blau", inhalt: @Composable () -> Unit) {
-    // Automatisch folgt der Sonne; die Schleife prüft mindestens jede Minute, weil Android die Wartezeit im Tiefschlaf anhält.
-    var sonneDunkel by remember { mutableStateOf(Sonnenstand.istDunkel()) }
+    // Automatisch folgt der Sonne: jede Minute prüfen, nur solange sichtbar. Im Live-Gespräch wartet der Wechsel bis zu dessen Ende.
+    var sonneDunkel by remember(modus) { mutableStateOf(Sonnenstand.istDunkel()) }
     val lebenszyklus = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(lebenszyklus) {
+    LaunchedEffect(lebenszyklus, modus) {
+        if (modus == "hell" || modus == "dunkel") return@LaunchedEffect
         lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                sonneDunkel = Sonnenstand.istDunkel()
-                val jetzt = System.currentTimeMillis()
-                delay((Sonnenstand.naechsterWechsel(jetzt) - jetzt).coerceIn(1_000L, 60_000L))
+                if (!LiveGespraech.aktiv) sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
             }
         }
     }
@@ -100,6 +103,13 @@ fun JarvisTheme(modus: String, design: String = "blau", inhalt: @Composable () -
     val farben = remember(dunkel, design) { if (design == "gold") goldFarbenFuer(dunkel) else farbenFuer(dunkel) }
     val context = LocalContext.current
     // Die Systemleisten richten sich sonst nach dem System-Modus; Symbole wären auf gleichfarbigem Grund unsichtbar.
+    // Eigene Fenster wie ModalBottomSheet lesen ihn über isSystemInDarkTheme, deshalb bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, dunkel) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or (if (dunkel) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
     SideEffect {
         (context as? Activity)?.window?.let { fenster ->
             WindowCompat.getInsetsController(fenster, fenster.decorView).run {
@@ -114,6 +124,6 @@ fun JarvisTheme(modus: String, design: String = "blau", inhalt: @Composable () -
     val schema = if (dunkel) darkColorScheme(primary = farben.primaer, secondary = farben.sekundaer, surface = farben.hgUnten, background = farben.hgOben)
     else lightColorScheme(primary = farben.primaer, secondary = farben.sekundaer, surface = farben.hgOben, background = farben.hgOben)
     MaterialTheme(colorScheme = schema) {
-        CompositionLocalProvider(LocalFarben provides farben, LocalBewegung provides bewegung, content = inhalt)
+        CompositionLocalProvider(LocalFarben provides farben, LocalBewegung provides bewegung, LocalConfiguration provides konfig, content = inhalt)
     }
 }

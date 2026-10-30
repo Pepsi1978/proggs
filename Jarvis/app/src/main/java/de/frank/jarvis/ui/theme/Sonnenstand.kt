@@ -2,7 +2,6 @@ package de.frank.jarvis.ui.theme
 
 import kotlin.math.acos
 import kotlin.math.cos
-import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -33,18 +32,7 @@ object Sonnenstand {
     private fun zeit(j2000: Double) = ((j2000 + 10957.5) * TAG_MS).toLong()
 
     fun istDunkel(jetzt: Long = System.currentTimeMillis()): Boolean {
-        val (auf, unter) = aufUndUntergang(floor(jetzt.toDouble() / TAG_MS).toLong())
+        val (auf, unter) = aufUndUntergang(Math.floorDiv(jetzt, TAG_MS))
         return jetzt < auf || jetzt >= unter
-    }
-
-    /** Zeitpunkt des nächsten Wechsels zwischen Hell und Dunkel. */
-    fun naechsterWechsel(jetzt: Long = System.currentTimeMillis()): Long {
-        val tag = floor(jetzt.toDouble() / TAG_MS).toLong()
-        val (auf, unter) = aufUndUntergang(tag)
-        return when {
-            jetzt < auf -> auf
-            jetzt < unter -> unter
-            else -> aufUndUntergang(tag + 1).first
-        }
     }
 }

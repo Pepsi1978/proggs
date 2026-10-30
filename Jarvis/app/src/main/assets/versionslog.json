@@ -467,6 +467,7 @@
     {"versionCode": 463, "versionName": "1.8.452", "stand": "30.10.2026, 17:52 Uhr", "notiz": "Die beiden Stillezeiten wählst du jetzt aus einem Aufklappmenü statt mit dem Regler, und lange Pausen am Ende werden nicht mehr mit transkribiert."},
     {"versionCode": 464, "versionName": "1.8.453", "stand": "30.10.2026, 17:57 Uhr", "notiz": "Die Stillezeiten stellst du wieder per Schieberegler ein, und die Karte klappt jetzt wie die anderen Einstellungsmenüs auf und zu."},
     {"versionCode": 465, "versionName": "1.8.454", "stand": "30.10.2026, 18:01 Uhr", "notiz": "Die Stillezeit-Karte steht nur noch einmal in den Einstellungen, ganz oben auf dem Reiter Stimme."},
-    {"versionCode": 466, "versionName": "1.8.455", "stand": "30.10.2026, 18:18 Uhr", "notiz": "Im Automatikmodus wird Jarvis abends am Ende der Dämmerung dunkel und morgens bei Sonnenaufgang hell, passend für Neuenhagen bei Berlin."}
+    {"versionCode": 466, "versionName": "1.8.455", "stand": "30.10.2026, 18:18 Uhr", "notiz": "Im Automatikmodus wird Jarvis abends am Ende der Dämmerung dunkel und morgens bei Sonnenaufgang hell, passend für Neuenhagen bei Berlin."},
+    {"versionCode": 467, "versionName": "1.8.456", "stand": "30.10.2026, 18:26 Uhr", "notiz": "Auch die aufklappenden Menüs folgen dem Automatikmodus, und im Live-Gespräch wartet der Wechsel bis zum Ende des Gesprächs."}
 ]
 }

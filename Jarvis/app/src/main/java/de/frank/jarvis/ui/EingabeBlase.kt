@@ -401,7 +401,7 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
             exit = androidx.compose.animation.shrinkVertically(tween(180), shrinkTowards = Alignment.Bottom) + androidx.compose.animation.fadeOut(tween(140)),
         ) {
         Column(horizontalAlignment = Alignment.End) {
-        // Hell → Automatisch (wie das System) → Dunkel → Hell, direkt über „Neue Session“. Das Symbol zeigt den aktuellen Modus.
+        // Hell → Automatisch (nach der Sonne, gespeichert als „system“) → Dunkel → Hell, direkt über „Neue Session“. Das Symbol zeigt den aktuellen Modus.
         val modus = vm.einstellungen.modus
         SchwebeSymbol(when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" }, false, {
             val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
