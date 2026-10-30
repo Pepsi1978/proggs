@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Guthaben von Anthropic und Google, gelesen über die Werkzeuge des Handys (dort liegt die Anmeldung), und was die letzte Aufgabe gekostet hat.
@@ -14,6 +15,9 @@ final class Guthaben {
     var googleGewaehrt: Double?
     var googleWaehrung = "€"
     var laedt = false
+    /// Der Mac hat eine eigene Console-Anmeldung und liest das Guthaben dann selbst statt über das Handy.
+    var macAngemeldet = false
+    var anmeldungOffen = false
     /// Was die letzte Aufgabe mit einem Claude-Modell gekostet hat, in Dollar (Guthaben vorher minus nachher, wie am Handy).
     var kosten: Double?
 
@@ -30,10 +34,37 @@ final class Guthaben {
     }
 
     private func anthropicLaden(frisch: Bool) async {
+        macAngemeldet = await ConsoleSitzung.angemeldet()
+        if macAngemeldet {
+            if !frisch, anthropicRest != nil, let geholt, Date().timeIntervalSince(geholt) < 900 { return }
+            do {
+                uebernehmen(try await ConsoleSitzung.guthabenSatz())
+                return
+            } catch ConsoleSitzung.Fehler.abgelaufen {
+                await abmelden()   // Fällt danach auf das Handy zurück und bietet wieder den Link an.
+            } catch {
+                log("fehler", "Anthropic-Guthaben nicht abrufbar", wo: "Guthaben", fehler: error.localizedDescription)
+                anthropicText = error.localizedDescription
+                return
+            }
+        }
         let r = await McpKlient.shared.rufe("anthropic_guthaben", frisch ? ["frisch": true] : [:], sekunden: 60)
         let t = Self.ohneHinweis(r.text)
+        // Der Hinweis des Handys verweist auf dessen Einstellungen; am Mac steht der Link direkt darunter.
+        anthropicText = r.fehler && t.contains("anmelden") ? "Für das Guthaben einmal bei der Anthropic-Konsole anmelden." : t
+        guard !r.fehler else { return }
+        uebernehmen(t)
+    }
+
+    func abmelden() async {
+        await ConsoleSitzung.abmelden()
+        macAngemeldet = false
+        anthropicRest = nil; anthropicGewaehrt = nil; geholt = nil
+    }
+
+    private func uebernehmen(_ t: String) {
         anthropicText = t
-        guard !r.fehler, let rest = Self.zahl(t, #"Übrig: ([0-9.,]+) \$"#) else { return }
+        guard let rest = Self.zahl(t, #"Übrig: ([0-9.,]+) \$"#) else { return }
         anthropicRest = rest
         anthropicGewaehrt = Self.zahl(t, #"Übrig: [^\n]*? von ([0-9.,]+) \$"#)
         kurs = Self.zahl(t, #"Kurs 1 \$ = ([0-9.,]+) €"#)
@@ -130,6 +161,7 @@ struct ModellKapsel: View {
             if let r = guthaben.anthropicRest { Text("Anthropic: \(Guthaben.betrag(r)) $ übrig") }
             if let k = guthaben.kosten, k > 0 { Text("Letzte Aufgabe: \(Guthaben.betrag(k)) $") }
             if let g = guthaben.googleRest { Text("Google: \(Guthaben.betrag(g)) \(guthaben.googleWaehrung) übrig") }
+            if guthaben.anthropicRest == nil { Button("Bei der Anthropic-Konsole anmelden …") { guthaben.anmeldungOffen = true } }
             Button("Guthaben ansehen …") { EinstellungenAnsicht.startReiter = "guthaben"; AppSteuerung.shared.bereich = .einstellungen }
         } label: {
             HStack(spacing: 5) {
@@ -160,9 +192,19 @@ struct GuthabenAnsicht: View {
             Text("Geschenktes Guthaben wird immer vor deinem eigenen Geld verbraucht. Hier siehst du, wie viel noch übrig ist und wann es verfällt.")
                 .font(.jarvis(13)).foregroundStyle(Farbe.text2)
             karte(titel: "Claude-Modelle (Anthropic)", symbol: "brain", erklaerung: "Bezahlt Jarvis' Kopf, wenn du ein Claude-Modell gewählt hast.",
-                  rest: g.anthropicRest, gewaehrt: g.anthropicGewaehrt, einheit: "$", umrechnung: g.kurs, text: g.anthropicText)
+                  rest: g.anthropicRest, gewaehrt: g.anthropicGewaehrt, einheit: "$", umrechnung: g.kurs, text: g.anthropicText) {
+                if g.macAngemeldet {
+                    Button("Am Mac bei der Anthropic-Konsole abmelden") { Task { await g.abmelden(); await g.laden(frisch: true) } }
+                        .buttonStyle(.plain).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.text2)
+                } else {
+                    Button { g.anmeldungOffen = true } label: {
+                        Label("Bei der Anthropic-Konsole anmelden", systemImage: "arrow.up.right.square").font(.jarvis(13, .semibold)).underline()
+                    }
+                    .buttonStyle(.plain).foregroundStyle(Farbe.haupt).onHover { $0 ? NSCursor.pointingHand.push() : NSCursor.pop() }
+                }
+            }
             karte(titel: "Gemini-Stimmen (Google AI Studio)", symbol: "waveform", erklaerung: "Bezahlt das Vorlesen mit Gemini-TTS und das Live-Gespräch mit Gemini auf dem bezahlten Schlüssel.",
-                  rest: g.googleRest, gewaehrt: g.googleGewaehrt, einheit: g.googleWaehrung, umrechnung: nil, text: g.googleText)
+                  rest: g.googleRest, gewaehrt: g.googleGewaehrt, einheit: g.googleWaehrung, umrechnung: nil, text: g.googleText) { EmptyView() }
             HStack(spacing: 10) {
                 KapselKnopf(symbol: "arrow.clockwise", titel: "Jetzt neu abfragen", hervorgehoben: true) { Task { await g.laden(frisch: true) } }
                 if g.laedt { ProgressView().controlSize(.small) }
@@ -170,12 +212,12 @@ struct GuthabenAnsicht: View {
             if let k = g.kosten, k > 0 {
                 Text("Die letzte Aufgabe mit einem Claude-Modell hat \(Guthaben.betrag(k)) $ gekostet.").font(.jarvis(13)).foregroundStyle(Farbe.text2)
             }
-            Text("Die Anmeldung bei der Claude Console und bei Google liegt auf dem Handy: Einstellungen → Guthaben.").font(.jarvis(12)).foregroundStyle(Farbe.text3)
+            Text("Die Anmeldung bei Google liegt auf dem Handy: Einstellungen → Guthaben.").font(.jarvis(12)).foregroundStyle(Farbe.text3)
         }
         .task { await g.laden() }
     }
 
-    private func karte(titel: String, symbol: String, erklaerung: String, rest: Double?, gewaehrt: Double?, einheit: String, umrechnung: Double?, text: String?) -> some View {
+    private func karte<Fuss: View>(titel: String, symbol: String, erklaerung: String, rest: Double?, gewaehrt: Double?, einheit: String, umrechnung: Double?, text: String?, @ViewBuilder fuss: () -> Fuss) -> some View {
         GlasKarte {
             VStack(alignment: .leading, spacing: 10) {
                 KartenTitel(symbol: symbol, titel: titel)
@@ -194,6 +236,7 @@ struct GuthabenAnsicht: View {
                 } else {
                     Text(text ?? "Lade …").font(.jarvis(13)).foregroundStyle(Farbe.text2).fixedSize(horizontal: false, vertical: true)
                 }
+                fuss()
             }
         }
     }

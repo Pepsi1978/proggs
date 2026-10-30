@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HauptFenster: View {
     @State private var steuerung = AppSteuerung.shared
+    @State private var guthaben = Guthaben.shared
 
     var body: some View {
         HStack(spacing: 0) {
@@ -15,10 +16,6 @@ struct HauptFenster: View {
                 case .gespraech:
                     if let g = steuerung.gespraech { ChatAnsicht(gespraech: g).id(g.id) } else { StartAnsicht() }
                 case .live: LiveAnsicht()
-                case .programmierung: ProgrammierungAnsicht()
-                case .ablage: AblageAnsicht()
-                case .gedaechtnis: GedaechtnisAnsicht()
-                case .aktivitaet: AktivitaetAnsicht()
                 case .einstellungen: EinstellungenAnsicht()
                 }
             }
@@ -35,6 +32,7 @@ struct HauptFenster: View {
         .overlay {
             if let p = steuerung.promptBearbeiten { PromptEditorVollbild(prompt: p).id(p.id).foregroundStyle(Farbe.text).tint(Farbe.haupt) }
         }
+        .sheet(isPresented: $guthaben.anmeldungOffen) { ConsoleAnmeldungAnsicht() }
     }
 }
 
@@ -113,7 +111,7 @@ struct Seitenleiste: View {
             .buttonStyle(.plain)
 
             VStack(spacing: 2) {
-                ForEach([Bereich.start, .zentrale, .live, .programmierung, .ablage, .gedaechtnis, .aktivitaet, .einstellungen]) { b in
+                ForEach([Bereich.start, .zentrale, .einstellungen]) { b in
                     LeistenEintrag(symbol: b.symbol, titel: b.titel, aktiv: steuerung.bereich == b) { steuerung.bereich = b }
                 }
             }

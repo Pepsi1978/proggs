@@ -9,6 +9,7 @@ struct EingabeBlase: View {
     @State private var steuerung = AppSteuerung.shared
     @State private var schleife = SprachSchleife.shared
     @State private var diktat = Diktat.shared
+    @State private var live = LiveGespraech.shared
     @State private var text = ""
     @State private var diktiert = false
     @FocusState private var fokus: Bool
@@ -54,7 +55,19 @@ struct EingabeBlase: View {
 
                 RundKnopf(symbol: diktiert && diktat.aktiv ? "stop.fill" : "mic.fill", hilfe: "Diktieren", aktiv: diktiert && diktat.aktiv, farbe: Farbe.gruen) { diktieren() }
                 if gespraech == nil {
-                    RundKnopf(symbol: "waveform", hilfe: "Live-Gespräch (⌘L)", farbe: Farbe.gold) { steuerung.live() }
+                    Button { steuerung.liveOeffnen() } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "waveform").font(.system(size: 12, weight: .semibold))
+                            Text("Live").font(.jarvis(12, .semibold))
+                        }
+                        .foregroundStyle(live.aktiv ? Color.black : Farbe.text)
+                        .padding(.horizontal, 12).frame(height: 34)
+                        .background(Capsule().fill(live.aktiv ? AnyShapeStyle(Farbe.gold) : AnyShapeStyle(Farbe.glas(0.07))))
+                        .overlay(Capsule().strokeBorder(Farbe.glas(0.10)))
+                        .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain).fixedSize()
+                    .help("Live-Bildschirm öffnen")
                 }
                 RundKnopf(symbol: "person.wave.2.fill", hilfe: "Sprachgespräch (⌘D)", aktiv: schleife.zustand != .aus, farbe: Farbe.haupt) {
                     if let gespraech { steuerung.gespraech = gespraech; steuerung.sprechen() } else { steuerung.kuerzelSprechen() }

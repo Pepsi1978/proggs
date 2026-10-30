@@ -8,7 +8,9 @@ struct EinstellungenAnsicht: View {
 
     private let reiterListe: [(String, String, String)] = [
         ("gehirn", "Jarvis' Kopf", "brain"), ("guthaben", "Guthaben", "creditcard.fill"), ("stimme", "Stimme", "speaker.wave.3.fill"), ("sprache", "Sprache & Weckwort", "mic.fill"),
-        ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("konten", "Konten", "key.fill"), ("ueber", "Über", "info.circle.fill"),
+        ("live", "Live-Gespräch", "waveform"), ("mac", "Mac & Rechte", "macbook"), ("konten", "Konten", "key.fill"),
+        ("programmierung", "Programmierung", "chevron.left.forwardslash.chevron.right"), ("ablage", "Ablage", "tray.full.fill"), ("gedaechtnis", "Gedächtnis", "brain.head.profile.fill"), ("aktivitaet", "Aktivität", "list.bullet.rectangle.portrait.fill"),
+        ("ueber", "Über", "info.circle.fill"),
     ]
 
     var body: some View {
@@ -23,7 +25,13 @@ struct EinstellungenAnsicht: View {
             }
             .frame(width: 230)
             .padding(.top, 40).padding(.horizontal, 18)
-            ScrollView {
+            // Diese vier bringen ihren Kopf und ihr Scrollen selbst mit.
+            switch reiter {
+            case "programmierung": ProgrammierungAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
+            case "ablage": AblageAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
+            case "gedaechtnis": GedaechtnisAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
+            case "aktivitaet": AktivitaetAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
+            default: ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     switch reiter {
                     case "gehirn": gehirn
@@ -42,6 +50,7 @@ struct EinstellungenAnsicht: View {
             }
             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             .clipped()
+            }
         }
     }
 

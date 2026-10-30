@@ -3,7 +3,7 @@ import Carbon.HIToolbox
 import SwiftUI
 
 enum Bereich: String, CaseIterable, Identifiable {
-    case start, zentrale, gespraech, live, programmierung, ablage, gedaechtnis, aktivitaet, einstellungen
+    case start, zentrale, gespraech, live, einstellungen
     var id: String { rawValue }
     var titel: String {
         switch self {
@@ -11,10 +11,6 @@ enum Bereich: String, CaseIterable, Identifiable {
         case .zentrale: return "Zentrale"
         case .gespraech: return "Gespräch"
         case .live: return "Live"
-        case .programmierung: return "Programmierung"
-        case .ablage: return "Ablage"
-        case .gedaechtnis: return "Gedächtnis"
-        case .aktivitaet: return "Aktivität"
         case .einstellungen: return "Einstellungen"
         }
     }
@@ -24,10 +20,6 @@ enum Bereich: String, CaseIterable, Identifiable {
         case .zentrale: return "sparkles"
         case .gespraech: return "bubble.left.and.text.bubble.right.fill"
         case .live: return "waveform"
-        case .programmierung: return "chevron.left.forwardslash.chevron.right"
-        case .ablage: return "tray.full.fill"
-        case .gedaechtnis: return "brain.head.profile.fill"
-        case .aktivitaet: return "list.bullet.rectangle.portrait.fill"
         case .einstellungen: return "gearshape.fill"
         }
     }
@@ -115,6 +107,12 @@ final class AppSteuerung {
         gespraech = g
         bereich = .live
         LiveGespraech.shared.starten(in: g)
+    }
+
+    /// Knopf „Live“ in der Blase des Startbildschirms: öffnet nur den Live-Bildschirm, gestartet wird dort. Ein neues Gespräch, wie beim Senden vom Start.
+    func liveOeffnen() {
+        if !LiveGespraech.shared.aktiv { gespraech = nil }
+        bereich = .live
     }
 
     func fensterZeigen() {

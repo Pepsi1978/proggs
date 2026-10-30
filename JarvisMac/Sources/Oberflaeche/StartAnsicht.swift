@@ -1,13 +1,11 @@
 import SwiftUI
 
-/// Großer Startbildschirm wie am Handy: Kugel und Begrüßung, die Reiter als Kacheln, Tagesauswertung, unten die Sprechblase mit Modell und Kosten.
-/// Die Reiter stehen zusätzlich links in der Leiste; die Zentrale bleibt daneben als Übersicht mit allen Karten.
+/// Großer Startbildschirm wie am Handy: Kugel und Begrüßung, Tagesauswertung, unten die Blase mit Modell, Kosten und dem Knopf für den Live-Bildschirm.
+/// Die Zentrale bleibt daneben als Übersicht mit allen Karten; alles Weitere liegt unter Einstellungen.
 struct StartAnsicht: View {
     @State private var daten = ZentraleDaten.shared
     @State private var steuerung = AppSteuerung.shared
     @State private var anhang: Data?
-
-    private static let reiter: [Bereich] = [.zentrale, .live, .programmierung, .ablage, .gedaechtnis, .aktivitaet, .einstellungen]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,11 +21,6 @@ struct StartAnsicht: View {
                             Text(ZentraleAnsicht.gruss).font(.jarvis(34, .bold))
                         }
                         Text(ZentraleAnsicht.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
-                    }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 10)], spacing: 10) {
-                        ForEach(Self.reiter) { b in
-                            MacKachel(symbol: b.symbol, titel: b.titel, farbe: Farbe.haupt) { steuerung.bereich = b }
-                        }
                     }
                     GlasKarte {
                         VStack(alignment: .leading, spacing: 12) {
