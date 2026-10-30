@@ -10,7 +10,7 @@ Nicht hinein gehören Zugangsschlüssel, Passwörter und Server-Adressen.
 
 ## Installation aufs Handy nur über das Skript
 Jarvis nie mit nacktem `adb install` installieren, sondern über `Werkzeuge/jarvis-install/jarvis-install.sh <apk>` (Windows: `.ps1`).
-Es fragt in Jarvis nach dem Zeitpunkt (`ui/InstallFrageActivity.kt`), damit eine laufende Aufnahme nicht abbricht.
+Es fragt per Overlay nach dem Zeitpunkt (`ui/InstallFrageDienst.kt`), damit eine laufende Aufnahme nicht abbricht; ohne Antwort installiert es nach 30 Sekunden.
 
 ## Live-Gespräch: erst lesen, danach messen
 Vor jeder Änderung an `live/` (vor allem `LiveGespraech.kt`: Polster, Füll-Stille, Echosperre, Fadenprioritäten, Tonweg)

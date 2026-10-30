@@ -123,17 +123,11 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- Fragt vor einer adb-Installation nach dem Zeitpunkt; gestartet von Werkzeuge/jarvis-install per adb. Durchsichtig und
-             in eigener Aufgabe, damit Jarvis darunter sichtbar bleibt und nichts unterbrochen wird. -->
-        <activity
-            android:name=".ui.InstallFrageActivity"
+        <!-- Overlay-Frage vor einer adb-Installation; gestartet von Werkzeuge/jarvis-install per adb. -->
+        <service
+            android:name=".ui.InstallFrageDienst"
             android:exported="true"
-            android:excludeFromRecents="true"
-            android:launchMode="singleInstance"
-            android:showWhenLocked="true"
-            android:taskAffinity=""
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:turnScreenOn="true" />
+            android:foregroundServiceType="shortService" />
 
         <!-- Unsichtbar: startet nach Neustart und Update den Weckwort-Dienst (das darf nur eine sichtbare App). -->
         <activity

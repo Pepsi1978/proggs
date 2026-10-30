@@ -1,13 +1,16 @@
 # Installiert eine Jarvis-APK per adb (Tunnel, WLAN, notfalls Kabel), aber erst nach Rückfrage in Jarvis:
-# Das Fenster bietet „Sofort“ oder „In 1 bis 5 Minuten“, damit eine laufende Aufnahme nicht abbricht.
+# Ein Overlay über jeder App bietet „Sofort“ oder „In 1 bis 5 Minuten“, damit eine laufende Aufnahme nicht abbricht.
+# Ohne Antwort wird nach 30 Sekunden installiert. Die APK liegt schon vor der Frage in einer Installationssitzung am
+# Handy, damit „Sofort“ wirklich sofort installiert: Nach der Antwort fehlt nur noch das Abschließen der Sitzung.
 # Aufruf: jarvis-install.ps1 <apk> [-Geraet <gerät>]
-# Letzte Zeile JARVIS_INSTALL_STATUS: installiert, abgebrochen, keine-antwort oder fehler.
+# Letzte Zeile JARVIS_INSTALL_STATUS: installiert oder fehler.
 param([Parameter(Mandatory)][string]$Apk, [string]$Geraet = "")
 
 $paket = "de.frank.jarvis"
-$fenster = "$paket/.ui.InstallFrageActivity"
+$fenster = "$paket/.ui.InstallFrageDienst"
 $antwort = "/sdcard/Android/data/$paket/files/install-antwort.txt"
-$warteS = 240
+$zwischenlager = "/data/local/tmp/jarvis-install.apk"
+$warteS = 30
 $wlanSkript = Join-Path (Split-Path $PSScriptRoot) "adb-wlan\adb-wlan.ps1"
 
 function Ende([string]$status, [string]$text = "") {
@@ -36,42 +39,58 @@ function Verbinde {
     $script:Geraet = Waehle-Geraet
     return [bool]$script:Geraet
 }
+function Handy { (& $adb -s $script:Geraet shell @args 2>&1 | Out-String).Trim() }
 function Installiere {
     if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
-    "Installiere über $script:Geraet ..."
-    $ausgabe = & $adb -s $script:Geraet install -r $Apk 2>&1 | Out-String
-    $ausgabe.Trim()
+    $ausgabe = Handy pm install-commit $script:sitzung
+    $ausgabe
     if ($ausgabe -match "(?m)^Success") { Ende installiert $script:Geraet }
-    Ende fehler "adb install gescheitert: $($ausgabe.Trim() -split "`n" | Select-Object -Last 1)"
+    Ende fehler "Installation gescheitert: $ausgabe"
 }
 
 if (-not (Verbinde)) { Ende fehler "Handy nicht erreichbar" }
 
+"Lade die APK vorab aufs Handy über $Geraet ..."
+& $adb -s $Geraet push $Apk $zwischenlager *> $null
+if ($LASTEXITCODE -ne 0) { Ende fehler "APK ließ sich nicht aufs Handy laden" }
+$groesse = (Get-Item $Apk).Length
+$ausgabe = Handy pm install-create -r -S $groesse
+if ($ausgabe -notmatch "\[(\d+)\]") { Ende fehler "Installationssitzung ließ sich nicht anlegen: $ausgabe" }
+$sitzung = $Matches[1]
+$ausgabe = Handy pm install-write -S $groesse $sitzung base.apk $zwischenlager
+Handy rm -f $zwischenlager | Out-Null
+if ($ausgabe -notmatch "(?m)^Success") {
+    Handy pm install-abandon $sitzung | Out-Null
+    Ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe"
+}
+
 $kennung = "$([DateTimeOffset]::Now.ToUnixTimeSeconds())-$PID"
-& $adb -s $Geraet shell rm -f $antwort *> $null
-$start = & $adb -s $Geraet shell am start -n $fenster --es kennung $kennung 2>&1 | Out-String
-if ($start -match "does not exist") {
-    # Die installierte Version kennt das Fenster noch nicht: nur dann ohne Rückfrage.
-    "Installierte Jarvis-Version hat das Fenster noch nicht, installiere ohne Rückfrage."
+Handy rm -f $antwort | Out-Null
+$start = Handy am start-foreground-service -n $fenster --es kennung $kennung
+if ($start -match "Not found") {
+    # Die installierte Version kennt das Overlay noch nicht: nur dann ohne Rückfrage.
+    "Installierte Jarvis-Version hat das Overlay noch nicht, installiere ohne Rückfrage."
     Installiere
 }
-if ($start -match "(?m)^Error.*") { Ende fehler "Fenster ließ sich nicht öffnen: $($Matches[0])" }
-"Fenster in Jarvis geöffnet, warte auf Antwort (höchstens $warteS s) ..."
+if ($start -match "(?m)^Error.*") {
+    $grund = $Matches[0]
+    Handy pm install-abandon $sitzung | Out-Null
+    Ende fehler "Overlay ließ sich nicht öffnen: $grund"
+}
+"Overlay geöffnet, warte auf Antwort (höchstens $warteS s) ..."
 
 $bis = (Get-Date).AddSeconds($warteS)
 $wahl = ""
 while ((Get-Date) -lt $bis) {
-    $zeile = (& $adb -s $Geraet shell cat $antwort 2>$null | Out-String).Trim()
+    $zeile = Handy cat $antwort
     if ($zeile.StartsWith("$kennung ")) { $wahl = $zeile.Substring($kennung.Length + 1); break }
-    Start-Sleep -Seconds 2
+    Start-Sleep -Milliseconds 200
 }
-& $adb -s $Geraet shell rm -f $antwort *> $null
 
 switch -Regex ($wahl) {
-    "^$" { Ende keine-antwort "nichts geändert" }
-    "^abbruch$" { Ende abgebrochen "nichts geändert" }
+    "^$" { "Keine Antwort: installiere jetzt."; break }
     "^0$" { "Gewählt: Sofort"; break }
     "^[1-5]$" { "Gewählt: in $wahl Minute(n), Installation um $((Get-Date).AddMinutes([int]$wahl).ToString('HH:mm')) Uhr"; Start-Sleep -Seconds ([int]$wahl * 60); break }
-    default { Ende fehler "unbekannte Antwort: $wahl" }
+    default { Handy pm install-abandon $sitzung | Out-Null; Ende fehler "unbekannte Antwort: $wahl" }
 }
 Installiere
