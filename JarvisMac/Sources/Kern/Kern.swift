@@ -231,9 +231,11 @@ struct ModellWahl: Identifiable, Hashable {
         .init(id: "gpt-6-astra", name: "GPT-6 Astra", anbieter: .openai),
         .init(id: "gpt-6.1-sol", name: "GPT-6.1 Sol", anbieter: .openai),
         .init(id: "gpt-6-luna", name: "GPT-6 Luna", anbieter: .openai),
-        .init(id: "gpt-5.6-terra", name: "GPT-5.6 Terra", anbieter: .openai),
+        .init(id: "gpt-6.1-terra", name: "GPT-6.1 Terra", anbieter: .openai),
     ]
     static func zu(_ id: String) -> ModellWahl { alle.first { $0.id == id } ?? alle[0] }
+    /// Abgelöste Modelle: Wer das alte gewählt hatte, bekommt den Nachfolger statt des ersten Eintrags der Liste.
+    static func aktuell(_ id: String) -> String { id == "gpt-5.6-terra" ? "gpt-6.1-terra" : id }
 }
 
 @MainActor @Observable
@@ -273,7 +275,7 @@ final class Einstellungen {
         let d = UserDefaults.standard
         func s(_ k: String, _ v: String) -> String { d.string(forKey: k) ?? v }
         func b(_ k: String, _ v: Bool) -> Bool { d.object(forKey: k) as? Bool ?? v }
-        modell = s("modell", "claude-opus-5-5")
+        modell = ModellWahl.aktuell(s("modell", "claude-opus-5-5"))
         effort = s("effort", "medium")
         schrittLimit = d.object(forKey: "schrittLimit") as? Int ?? 40
         vorlesen = b("vorlesen", true)

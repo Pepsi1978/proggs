@@ -2,7 +2,7 @@
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
-- Chat mit Claude Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.1 (Anthropic-Schlüssel) oder GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna, GPT-5.6 Terra (eigene ChatGPT-Anmeldung am Mac per Gerätecode oder OpenAI-Schlüssel); Denkstufe und Schrittlimit wählbar; Websuche des Modells.
+- Chat mit Claude Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.1 (Anthropic-Schlüssel) oder GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna, GPT-6.1 Terra (eigene ChatGPT-Anmeldung am Mac per Gerätecode oder OpenAI-Schlüssel); Denkstufe und Schrittlimit wählbar; Websuche des Modells.
 - Alle Werkzeuge des Handy-Jarvis über dessen MCP-Relay (Aufgaben, Wecker, Ideen, Kalender, Dienstplan, Biodaten, Stack-Labor, Epigenetik, Ablage, Prompts, Mail, Tagebuch, Wissen, Tagesauswertung, Agenten, Vorgänge, Programmieraufträge, Timer, Wetter, Fahrzeit, Handy-Einstellungen …). Ist das Handy aus, sagt Jarvis das.
 - Gemeinsames Gedächtnis: Live-Gedächtnis (`jarvis_kontext`) zu jedem Gesprächsbeginn, Neues mit `jarvis_merken`; „Lernen am Mac“ gibt nach 10 Minuten Ruhe neue Angaben aus Mac-Gesprächen zurück (abschaltbar).
 - Gespräche lokal gespeichert, durchsuchbar, automatischer Titel; Bilder (Datei, Ziehen, Bildschirmfoto) anhängbar.
@@ -13,7 +13,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Das Handy kann die App über die Jarvis-Brücke starten („Starte Jarvis Mac OS“); Post für den Mac startet sie im Hintergrund.
 
 ## Mac (Vollzugriff, abschaltbar)
-- `mac_befehl` (zsh), `mac_applescript`, `mac_oeffnen`, `mac_programme` (liste/vordergrund/beenden), `mac_bildschirm` (Bildschirmfoto ans Modell), `mac_tastatur`, `mac_zwischenablage`, `mac_mitteilung`, `mac_lautstaerke`, `mac_datei`, `mac_status`. Ist der Vollzugriff aus, gehen nur noch Öffnen, Mitteilungen, Programmliste und Status.
+- `mac_befehl` (zsh), `mac_applescript`, `mac_oeffnen`, `mac_programme` (liste/vordergrund/beenden), `mac_bildschirm` (Bildschirmfoto ans Modell), `mac_bedienen` (Computer Use: klicken, ziehen, scrollen in Bildpixeln des letzten Fotos, danach neues Foto; braucht Bedienungshilfen), `mac_aufnahme` (Bildschirmvideo nach ~/Movies/Jarvis), `mac_tastatur`, `mac_zwischenablage`, `mac_mitteilung`, `mac_lautstaerke`, `mac_datei`, `mac_status`. Ist der Vollzugriff aus, gehen nur noch Öffnen, Mitteilungen, Programmliste und Status.
 - `mac_screenshot` („Erstelle einen Screenshot“: ganzer Bildschirm als PNG am Bildschirmfoto-Ort, zusätzlich in der Zwischenablage), `screenshot_ins_cli` (Screenshot per Ctrl+V oder als Pfad in die zuletzt benutzte Terminal-Sitzung, optional mit Text und Absenden).
 - `mac_einstellungen` (eigene Mac-Einstellungen per Sprache lesen/ändern), `mac_funktionen_lesen` (diese Übersicht).
 - `terminal_befehl` (sichtbares Terminal-Fenster), `openlauncher_sitzung` (OpenLauncher `--jarvis-auftrag` mit CLI, Modell, Profil, Modus, Effort), `updater_zentrale` (Programmliste, öffnen), `chatgpt_app` (Nachricht in die ChatGPT-App).
