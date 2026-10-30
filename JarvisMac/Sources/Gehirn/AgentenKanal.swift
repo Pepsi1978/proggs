@@ -2,16 +2,22 @@ import Foundation
 
 /// Der allgemeine Kanal zwischen Jarvis Mac OS und Jarvis am Handy: zwei gleichberechtigte Agenten, die sich jederzeit schreiben.
 /// Läuft über den Relay (Geheimnis der MCP-Adresse), nicht über die Handy-Werkzeuge: So kommt Post auch an, wenn die Gegenseite gerade
-/// weg ist, und eine lange Begutachtung hängt an keiner Zeitgrenze. Eingang erst auf die Platte, dann quittieren, dann abarbeiten:
-/// Ein Absturz verliert nichts. Fragen vom Handy beantwortet ein eigenes Gespräch, Franks Gespräche bleiben unberührt.
+/// weg ist, und eine lange Begutachtung hängt an keiner Zeitgrenze. Eingang erst auf die Platte, dann quittieren, dann abarbeiten;
+/// die fertige Antwort bleibt im Eingang, bis sie beim Relay liegt: Ein Absturz oder Funkloch verliert nichts und rechnet nichts doppelt.
+/// Fragen vom Handy beantwortet ein eigenes Gespräch: je Nachricht ein frisches Modellgespräch mit Auszug des Kanals, damit Live-Gedächtnis
+/// und Kosten nicht mit dem Kanal altern und wachsen. Kein Lernen daraus und keine Werkzeuge, die für Frank sprechen: Dort redet nicht Frank.
 @MainActor
 final class AgentenKanal {
     static let shared = AgentenKanal()
     /// Solange ein Lauf eine Nachricht vom Handy beantwortet: Rückfragen stehen in der Antwort, sonst warten beide aufeinander.
     @TaskLocal nonisolated static var imLauf = false
 
-    private static let titel = "Jarvis am Handy (Agentenkanal)"
+    nonisolated static let titel = "Jarvis am Handy (Agentenkanal)"
     private static let warteSekunden = 60.0
+    private static let zeitlimit = 600.0
+    private static let hoechstalter = 6.0 * 3600
+    private static let gesperrt: Set<String> = ["jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden",
+                                                "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten"]
     private let eingangDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-eingang.json")
     private let verlaufDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-verlauf.json")
 
@@ -20,7 +26,8 @@ final class AgentenKanal {
     private var verlauf: [JSONObjekt] = []
     private var wartende: [String: CheckedContinuation<String?, Never>] = [:]
     private var arbeitet = false
-    private(set) var handyDa = false
+    /// Hält App Nap fern: Verdeckt gestartet soll die App weiter abfragen und arbeiten.
+    private var aktivitaet: NSObjectProtocol?
 
     private init() {
         if let d = try? Data(contentsOf: eingangDatei), let j = JSON.objekt(d) {
@@ -31,8 +38,13 @@ final class AgentenKanal {
     }
 
     func starten() {
-        Task { await abfragen() }
-        abarbeiten()
+        aktivitaet = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep, reason: "Agentenkanal mit Jarvis am Handy")
+        Task {
+            // Erst wenn die Gespräche geladen sind: Sonst legte die erste Nachricht ein zweites Kanalgespräch an.
+            while !GespraechsSpeicher.shared.geladen { try? await Task.sleep(for: .milliseconds(100)) }
+            abarbeiten()
+            await abfragen()
+        }
     }
 
     private var basis: String? {
@@ -61,10 +73,10 @@ final class AgentenKanal {
             do {
                 let (code, daten) = try await anfrage(basis, sekunden: 40)
                 guard code == 200, let j = JSON.objekt(daten) else { throw URLError(.badServerResponse) }
-                pause = 2
-                handyDa = j["handy"] as? Bool ?? false
                 let neu = j["nachrichten"] as? [JSONObjekt] ?? []
-                if !neu.isEmpty { await annehmen(neu, basis: basis) }
+                // Ohne Quittung liefert der Relay sofort dasselbe noch einmal: darum wie jeder Fehler mit Pause.
+                if !neu.isEmpty, !(await annehmen(neu, basis: basis)) { throw URLError(.badServerResponse) }
+                pause = 2
             } catch {
                 try? await Task.sleep(for: .seconds(pause))
                 pause = min(pause * 2, 15)
@@ -72,7 +84,7 @@ final class AgentenKanal {
         }
     }
 
-    private func annehmen(_ neu: [JSONObjekt], basis: String) async {
+    private func annehmen(_ neu: [JSONObjekt], basis: String) async -> Bool {
         var ids: [String] = []
         for n in neu {
             guard let id = n["id"] as? String else { continue }
@@ -80,48 +92,86 @@ final class AgentenKanal {
             if erledigt.contains(id) || eingang.contains(where: { $0["id"] as? String == id }) { continue }
             let art = n["art"] as? String ?? "info"
             let text = n["text"] as? String ?? ""
-            merke(von: "Handy", art: art, text: text)
+            merke(id: id, von: "Handy", art: art, text: text)
             if art == "antwort" { antwortKam(auf: n["antwort_auf"] as? String ?? "", text: text); erledigt.append(id) }
             else { eingang.append(n) }
         }
         erledigt = Array(erledigt.suffix(300))
         sichere()
-        _ = try? await anfrage(basis + "/quittung", rumpf: ["ids": ids], sekunden: 20)
         abarbeiten()
+        guard let (code, _) = try? await anfrage(basis + "/quittung", rumpf: ["ids": ids], sekunden: 20) else { return false }
+        return code == 200
     }
 
     private func antwortKam(auf frage: String, text: String) {
         if let w = wartende.removeValue(forKey: frage) { w.resume(returning: text); return }
         // Niemand wartet mehr: Sie steht im Kanalgespräch und im Verlauf (handy_jarvis_lesen).
         zeigeImGespraech("Späte Antwort von Jarvis am Handy: \(text)")
-        Task { _ = await Shell.osascript("display notification \"\(String(text.prefix(180)).replacingOccurrences(of: "\"", with: "'"))\" with title \"Jarvis am Handy\"") }
+        Task { _ = await Shell.mitteilung("Jarvis am Handy", String(text.prefix(180))) }
     }
 
     private func abarbeiten() {
         guard !arbeitet, let n = eingang.first else { return }
         arbeitet = true
         Task {
-            defer { arbeitet = false; abarbeiten() }
-            await bearbeite(n)
+            // Antwort nicht zugestellt (Mac ohne Netz): Sie bleibt im Eingang, später erneut senden.
+            if !(await bearbeite(n)) { try? await Task.sleep(for: .seconds(30)) }
+            arbeitet = false
+            abarbeiten()
         }
     }
 
-    private func bearbeite(_ n: JSONObjekt) async {
+    private func bearbeite(_ n: JSONObjekt) async -> Bool {
         let id = n["id"] as? String ?? ""
         let art = n["art"] as? String ?? "info"
         let text = n["text"] as? String ?? ""
-        let g = kanalGespraech()
         if art == "info" {
             zeigeImGespraech("Mitteilung von Jarvis am Handy: \(text)")
         } else {
-            log("gespraech", "Agentenkanal: \(art) vom Handy", wo: "Agentenkanal")
-            let auftrag = Self.auftrag(art: art, text: text, verlauf: verlaufText(ohneLetzte: true))
-            let antwort = await AgentenKanal.$imLauf.withValue(true) { await JarvisAgent.shared.frage(auftrag, in: g) }
-            await sende(art: "antwort", text: antwort.isEmpty ? "(keine Antwort)" : antwort, antwortAuf: id)
+            var antwort = n["fertige_antwort"] as? String
+            if antwort == nil {
+                let alter = Date().timeIntervalSince1970 - ((n["zeit"] as? NSNumber)?.doubleValue ?? 0)
+                antwort = alter > Self.hoechstalter
+                    ? "Deine Nachricht lag länger als sechs Stunden, ich habe sie nicht mehr bearbeitet. Frag neu, falls sie noch gilt."
+                    : await beantworte(art: art, text: text, id: id)
+                if let i = eingang.firstIndex(where: { $0["id"] as? String == id }) {
+                    eingang[i]["fertige_antwort"] = antwort
+                    sichere()
+                }
+            }
+            // Dieselbe Kennung bei jedem Versuch: Der Relay legt die Antwort nicht doppelt ab.
+            guard await sende(art: "antwort", text: antwort ?? "(keine Antwort)", antwortAuf: id, id: "antwort-\(id)") else { return false }
         }
         eingang.removeAll { $0["id"] as? String == id }
         erledigt.append(id)
         sichere()
+        return true
+    }
+
+    private func beantworte(art: String, text: String, id: String) async -> String {
+        log("gespraech", "Agentenkanal: \(art) vom Handy", wo: "Agentenkanal")
+        let g = kanalGespraech()
+        let auftrag = Self.auftrag(art: art, text: text, verlauf: verlaufText(ohne: id))
+        var antwort = ""
+        for versuch in 0..<3 {
+            if versuch > 0 { try? await Task.sleep(for: .seconds(20)) }
+            g.verlauf = []
+            g.kontext = ""
+            g.nachrichten = Array(g.nachrichten.suffix(200))
+            let lauf = Task { @MainActor in
+                await AgentenKanal.$imLauf.withValue(true) { await JarvisAgent.shared.frage(auftrag, in: g, ohneWerkzeuge: Self.gesperrt) }
+            }
+            guard await mitFrist(Self.zeitlimit, { _ = await lauf.value }) else {
+                lauf.cancel()
+                return "Jarvis Mac OS ist nach zehn Minuten nicht fertig geworden und hat abgebrochen. Frag enger gefasst noch einmal."
+            }
+            antwort = await lauf.value
+            // Modellfehler: frage meldet sie als Text, und ein Aussetzer soll keine Antwort sein.
+            if !(antwort.components(separatedBy: "\n\n").last ?? "").hasPrefix("⚠️") {
+                return antwort.isEmpty ? "(keine Antwort)" : antwort.replacingOccurrences(of: "sag „weiter“, dann mache ich weiter.", with: "frag nach, wenn ich weitermachen soll.")
+            }
+        }
+        return "Jarvis Mac OS konnte nicht antworten: \(antwort)"
     }
 
     private static func auftrag(art: String, text: String, verlauf: String) -> String {
@@ -157,40 +207,60 @@ final class AgentenKanal {
         g.speichern()
     }
 
-    /// Schickt an das Handy und wiederholt bei Netzfehlern; dieselbe id legt der Relay nicht doppelt ab. false = nicht angekommen.
-    @discardableResult
-    func sende(art: String, text: String, antwortAuf: String? = nil, id: String = UUID().uuidString) async -> Bool {
-        guard let basis else { return false }
+    /// Legt beim Relay ab und wiederholt bei Netzfehlern; nil = nicht angekommen.
+    private func post(art: String, text: String, antwortAuf: String?, id: String) async -> JSONObjekt? {
+        guard let basis else { return nil }
         var rumpf: JSONObjekt = ["id": id, "art": art, "text": text]
         if let antwortAuf { rumpf["antwort_auf"] = antwortAuf }
-        merke(von: "Mac", art: art, text: text)
-        for versuch in 0..<6 {
-            if let (code, _) = try? await anfrage(basis, rumpf: rumpf, sekunden: 20), code == 200 { return true }
-            try? await Task.sleep(for: .seconds(2 << versuch))
+        merke(id: id, von: "Mac", art: art, text: text)
+        for versuch in 0..<4 {
+            if versuch > 0 { try? await Task.sleep(for: .seconds(Double(1 << versuch))) }
+            if let (code, daten) = try? await anfrage(basis, rumpf: rumpf, sekunden: 15), code == 200 { return JSON.objekt(daten) ?? [:] }
         }
         log("fehler", "Agentenkanal: Nachricht ans Handy nicht angekommen", wo: "Agentenkanal")
-        return false
+        return nil
     }
+
+    func sende(art: String, text: String, antwortAuf: String? = nil, id: String = UUID().uuidString) async -> Bool {
+        await post(art: art, text: text, antwortAuf: antwortAuf, id: id) != nil
+    }
+
+    private func loese(_ id: String, _ antwort: String?) { wartende.removeValue(forKey: id)?.resume(returning: antwort) }
 
     /// Frage ans Handy: wartet höchstens eine Minute. Danach kommt die Antwort trotzdem an, sie steht dann im Kanalgespräch.
     func frageHandy(_ text: String) async -> WerkzeugErgebnis {
         let id = UUID().uuidString
-        guard await sende(art: "frage", text: text, id: id) else {
-            return WerkzeugErgebnis(text: "Die Nachricht ist nicht beim Relay angekommen (keine Verbindung oder keine Relay-Adresse).", fehler: true)
-        }
-        let antwort: String? = await withCheckedContinuation { w in
-            wartende[id] = w
-            Task {
-                try? await Task.sleep(for: .seconds(Self.warteSekunden))
-                wartende.removeValue(forKey: id)?.resume(returning: nil)
+        var abgelegt: Bool?
+        var handyDa = true
+        // Erst anmelden, dann senden: Eine schnelle Antwort kann kommen, bevor der Relay zurück ist.
+        let antwort: String? = await withTaskCancellationHandler {
+            await withCheckedContinuation { w in
+                wartende[id] = w
+                Task {
+                    try? await Task.sleep(for: .seconds(Self.warteSekunden))
+                    loese(id, nil)
+                }
+                Task {
+                    let stand = await post(art: "frage", text: text, antwortAuf: nil, id: id)
+                    abgelegt = stand != nil
+                    handyDa = stand?["zugestellt"] as? Bool ?? false
+                    if !handyDa { loese(id, nil) }
+                }
             }
+        } onCancel: {
+            Task { @MainActor in AgentenKanal.shared.loese(id, nil) }
         }
         if let antwort { return WerkzeugErgebnis(text: antwort) }
-        return WerkzeugErgebnis(text: "Noch keine Antwort nach einer Minute\(handyDa ? "" : ", das Handy ist gerade nicht verbunden"). Die Frage bleibt zugestellt; die Antwort steht später in handy_jarvis_lesen.")
+        if abgelegt == false {
+            return WerkzeugErgebnis(text: "Die Nachricht ist nicht beim Relay angekommen (keine Verbindung oder keine Relay-Adresse).", fehler: true)
+        }
+        if !handyDa { return WerkzeugErgebnis(text: "Das Handy ist gerade nicht verbunden. Die Frage bleibt eingereiht; die Antwort steht später in handy_jarvis_lesen.") }
+        return WerkzeugErgebnis(text: "Noch keine Antwort nach einer Minute. Die Frage ist zugestellt; die Antwort steht später in handy_jarvis_lesen.")
     }
 
-    private func merke(von: String, art: String, text: String) {
-        verlauf.append(["von": von, "art": art, "text": String(text.prefix(4000)), "zeit": Date().timeIntervalSince1970])
+    private func merke(id: String, von: String, art: String, text: String) {
+        guard !verlauf.contains(where: { $0["id"] as? String == id }) else { return }
+        verlauf.append(["id": id, "von": von, "art": art, "text": String(text.prefix(4000)), "zeit": Date().timeIntervalSince1970])
         verlauf = Array(verlauf.suffix(100))
         try? JSON.daten(["verlauf": verlauf]).write(to: verlaufDatei, options: .atomic)
     }
@@ -199,12 +269,11 @@ final class AgentenKanal {
         try? JSON.daten(["eingang": eingang, "erledigt": erledigt]).write(to: eingangDatei, options: .atomic)
     }
 
-    func verlaufText(anzahl: Int = 8, ohneLetzte: Bool = false) -> String {
+    func verlaufText(anzahl: Int = 8, ohne: String = "", breite: Int = 1500) -> String {
         let f = DateFormatter(); f.dateFormat = "dd.MM. HH:mm"
-        let liste = ohneLetzte ? Array(verlauf.dropLast()) : verlauf
-        return liste.suffix(anzahl).map { n in
+        return verlauf.filter { $0["id"] as? String != ohne }.suffix(anzahl).map { n in
             let zeit = f.string(from: Date(timeIntervalSince1970: n["zeit"] as? Double ?? 0))
-            return "[\(zeit)] \(n["von"] as? String ?? "") (\(n["art"] as? String ?? "")): \(n["text"] as? String ?? "")"
+            return "[\(zeit)] \(n["von"] as? String ?? "") (\(n["art"] as? String ?? "")): \((n["text"] as? String ?? "").prefix(breite))"
         }.joined(separator: "\n")
     }
 
@@ -229,7 +298,7 @@ final class AgentenKanal {
             name: "handy_jarvis_lesen",
             beschreibung: "Jarvis am Mac: die letzten Nachrichten des Agentenkanals mit Jarvis am Handy, in beide Richtungen, auch späte Antworten.",
             schema: ["type": "object", "properties": [:] as JSONObjekt])) { _ in
-            let t = await AgentenKanal.shared.verlaufText(anzahl: 20)
+            let t = await AgentenKanal.shared.verlaufText(anzahl: 20, breite: 4000)
             return WerkzeugErgebnis(text: t.isEmpty ? "Auf dem Kanal steht noch nichts." : t)
         },
     ]

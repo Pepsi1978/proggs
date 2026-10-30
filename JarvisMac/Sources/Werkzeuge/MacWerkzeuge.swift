@@ -96,6 +96,12 @@ enum Shell {
         }
     }
 
+    /// Mitteilung oben rechts. Zeichen, die den AppleScript-Text beenden könnten, werden maskiert.
+    static func mitteilung(_ titel: String, _ text: String) async -> Ergebnis {
+        func wort(_ s: String) -> String { s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") }
+        return await osascript("display notification \"\(wort(text))\" with title \"\(wort(titel))\"")
+    }
+
     static func osascript(_ skript: String) async -> Ergebnis {
         let datei = Pfade.temp.appendingPathComponent("skript-\(UUID().uuidString).applescript")
         try? skript.write(to: datei, atomically: true, encoding: .utf8)
@@ -330,9 +336,7 @@ enum MacWerkzeuge {
         werkzeug("mac_mitteilung",
                  "Mac: zeigt eine Mitteilung oben rechts an (Titel und Text).",
                  schema(["titel": ("string", "Titel"), "text": ("string", "Text")], pflicht: ["text"])) { a in
-            let t = (a["titel"] as? String ?? "Jarvis").replacingOccurrences(of: "\"", with: "'")
-            let x = (a["text"] as? String ?? "").replacingOccurrences(of: "\"", with: "'")
-            return befehlsText(await Shell.osascript("display notification \"\(x)\" with title \"\(t)\""))
+            return befehlsText(await Shell.mitteilung(a["titel"] as? String ?? "Jarvis", a["text"] as? String ?? ""))
         },
         werkzeug("mac_lautstaerke",
                  "Mac: Lautstärke lesen oder setzen (0–100), stumm schalten oder Stummschaltung aufheben.",

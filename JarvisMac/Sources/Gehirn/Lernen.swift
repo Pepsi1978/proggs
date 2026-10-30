@@ -9,7 +9,8 @@ final class Lernen {
     private var zeitgeber: [UUID: Task<Void, Never>] = [:]
 
     func merkeAktivitaet(_ g: Gespraech) {
-        guard Einstellungen.shared.lernenAn else { return }
+        // Im Kanalgespräch spricht Jarvis am Handy, nicht Frank: Daraus wird nichts über Frank gelernt.
+        guard Einstellungen.shared.lernenAn, g.titel != AgentenKanal.titel else { return }
         zeitgeber[g.id]?.cancel()
         zeitgeber[g.id] = Task { [weak self] in
             try? await Task.sleep(for: .seconds(600))

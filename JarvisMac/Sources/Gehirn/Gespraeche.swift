@@ -116,6 +116,8 @@ final class Gespraech: Identifiable {
 final class GespraechsSpeicher {
     static let shared = GespraechsSpeicher()
     var alle: [Gespraech] = []
+    /// Die gespeicherten Gespräche sind von der Platte da (der Agentenkanal sucht sein Gespräch darin).
+    private(set) var geladen = false
 
     private final class Sammler: @unchecked Sendable {
         let lock = NSLock()
@@ -138,6 +140,7 @@ final class GespraechsSpeicher {
     }
 
     private func uebernehmen(_ gelesen: [GeleseneDatei]) {
+        geladen = true
         let schonDa = Set(alle.map(\.id))
         alle = (alle + gelesen.filter { !schonDa.contains($0.datei.id) }.map(Gespraech.init(gelesen:))).sorted { $0.geaendert > $1.geaendert }
     }
