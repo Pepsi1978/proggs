@@ -92,7 +92,7 @@ struct ZentraleAnsicht: View {
         VStack(spacing: 14) {
             HStack(spacing: 22) {
                 Button { steuerung.kuerzelSprechen() } label: {
-                    JarvisKugel(pegel: KugelStand.pegel, zustand: KugelStand.zustand, groesse: 96)
+                    KugelLive(groesse: 96)
                 }
                 .buttonStyle(.plain)
                 .help("Antippen zum Sprechen (⌥⌘J überall)")
@@ -120,7 +120,7 @@ struct ZentraleAnsicht: View {
     }
 
     private var schnellVerknuepfungen: some View {
-        HStack(spacing: 10) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 10)], spacing: 10) {
             ForEach(Self.vorschlaege, id: \.self) { v in
                 KapselKnopf(symbol: "arrow.turn.down.right", titel: v) { frage = v; senden() }
             }

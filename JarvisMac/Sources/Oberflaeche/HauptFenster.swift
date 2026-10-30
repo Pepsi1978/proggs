@@ -77,7 +77,7 @@ struct Seitenleiste: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                JarvisKugel(pegel: KugelStand.pegel, zustand: KugelStand.zustand, groesse: 34)
+                KugelLive(groesse: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("JARVIS").font(.jarvis(17, .heavy)).tracking(4)
                     HStack(spacing: 6) {

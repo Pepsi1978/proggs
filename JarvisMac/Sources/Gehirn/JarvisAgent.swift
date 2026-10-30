@@ -208,7 +208,7 @@ final class JarvisAgent {
             let start = Date()
             e = await w.ausfuehren(args)
             log("werkzeug", "Mac-Werkzeug \(name): \(e.fehler ? "Fehler" : "ok")", wo: "Mac", werkzeug: name, eingabe: JSON.text(args),
-                ergebnis: e.fehler ? nil : e.text, fehler: e.fehler ? e.text : nil, dauerMs: Int(Date().timeIntervalSince(start) * 1000))
+                ergebnis: e.fehler || name == "mac_logbuch" ? nil : e.text, fehler: e.fehler ? e.text : nil, dauerMs: Int(Date().timeIntervalSince(start) * 1000))
         } else {
             e = await McpKlient.shared.rufe(name, args)
         }

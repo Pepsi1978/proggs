@@ -21,6 +21,10 @@ actor McpKlient {
     static let shared = McpKlient()
     /// Technische Werkzeuge für die Ablage-Oberfläche; das Modell braucht sie nicht.
     static let nurFuerOberflaeche: Set<String> = ["ablage_struktur", "ablage_datei"]
+    static let privateWerkzeuge: Set<String> = ["jarvis_kontext", "jarvis_gemerktes_lesen", "jarvis_merken", "jarvis_langzeitkontext_lesen", "jarvis_langzeitkontext_ersetzen",
+                                                "gedaechtnis_suchen", "mail_lesen", "mail_senden", "tagebuch_lesen", "tagesauswertung_lesen", "tagesdaten_lesen",
+                                                "biomarker_auswertung", "biomarker_tag", "biomarker_verlauf", "ablage_lesen", "ablage_struktur", "ablage_schreiben",
+                                                "prompts_lesen", "ideen_lesen", "protokoll_lesen", "logbuch_lesen", "kalender_lesen", "aufgaben_lesen"]
 
     private var werkzeugCache: [WerkzeugDefinition] = []
     private var cacheZeit = Date.distantPast
@@ -108,10 +112,13 @@ actor McpKlient {
         let start = Date()
         let e = await rufeOhneLog(name, argumente, sekunden: sekunden)
         let ms = Int(Date().timeIntervalSince(start) * 1000)
-        // Dateiinhalte der Ablage nicht ins Logbuch.
-        let inhalt = name == "ablage_datei" ? "(\(e.text.count) Zeichen)" : e.text
-        log("werkzeug", "Handy-Werkzeug \(name): \(e.fehler ? "Fehler" : "ok")", wo: "Handy über MCP", werkzeug: name, eingabe: JSON.text(argumente),
-            ergebnis: e.fehler ? nil : inhalt, fehler: e.fehler ? e.text : nil, dauerMs: ms)
+        // Das Logbuch soll die App verbessern, nicht das Leben mitschreiben: Private Inhalte nur als Länge, Dateiabrufe nur bei Fehlern.
+        if name != "ablage_datei" || e.fehler {
+            let privat = Self.privateWerkzeuge.contains(name)
+            log("werkzeug", "Handy-Werkzeug \(name): \(e.fehler ? "Fehler" : "ok")", wo: "Handy über MCP", werkzeug: name,
+                eingabe: privat ? nil : JSON.text(argumente), ergebnis: e.fehler ? nil : (privat ? "(\(e.text.count) Zeichen)" : e.text),
+                fehler: e.fehler ? e.text : nil, dauerMs: ms)
+        }
         return e
     }
 

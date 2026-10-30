@@ -52,7 +52,7 @@ actor CodexAnmeldung {
 
     func abmelden() {
         speicher = nil
-        Tresor.loesche(name: "codex")
+        Tresor.loesche(name: "codex", klartext: datei)
         Geheimnisse.setzen("codex", [])
     }
 

@@ -95,6 +95,16 @@ final class AblageDaten {
     var eintraege: [AblageEintrag] = []
     var laedt = false
     var fehler: String?
+    var treffer: Set<String>?
+
+    /// Volltextsuche am Handy: auch Wörter aus Berichten und Texten, nicht nur Namen.
+    func suchen(_ wort: String) async {
+        let w = wort.trimmingCharacters(in: .whitespaces)
+        guard !w.isEmpty else { treffer = nil; return }
+        let r = await McpKlient.shared.rufe("ablage_struktur", ["suche": w], sekunden: 40)
+        guard !r.fehler, let z = r.text.split(separator: "\n").first, let o = JSON.objekt(String(z)), let ids = o["treffer"] as? [String] else { treffer = nil; return }
+        treffer = Set(ids)
+    }
 
     func laden() async {
         laedt = true; defer { laedt = false }
@@ -126,7 +136,8 @@ final class AblageDaten {
             case .recherchen:
                 if e.recherche { r.append(AblageElement(eintrag: e, datei: nil)) }
             case .texte:
-                if !e.recherche && e.hatText && e.dateien.isEmpty { r.append(AblageElement(eintrag: e, datei: nil)) }
+                // Auch der Text von Einträgen mit Dateien: Sonst wäre er am Mac nicht mehr erreichbar.
+                if !e.recherche && e.hatText { r.append(AblageElement(eintrag: e, datei: nil)) }
                 r += e.dateien.filter { $0.kategorie == "TEXTE" }.map { AblageElement(eintrag: e, datei: $0) }
             case .pdfs:
                 r += e.dateien.filter { $0.art == "PDF" }.map { AblageElement(eintrag: e, datei: $0) }
@@ -137,7 +148,21 @@ final class AblageDaten {
             }
         }
         let s = suche.trimmingCharacters(in: .whitespaces).lowercased()
-        return s.isEmpty ? r : r.filter { $0.name.lowercased().contains(s) || $0.eintrag.titel.lowercased().contains(s) }
+        return s.isEmpty ? r : r.filter { $0.name.lowercased().contains(s) || $0.eintrag.titel.lowercased().contains(s) || treffer?.contains($0.eintrag.id) == true }
+    }
+}
+
+/// Das Handy nimmt höchstens vier gleichzeitige Aufrufe je Werkzeug an: Der Mac stellt sich hinten an, statt abgewiesen zu werden.
+actor AbrufPlaetze {
+    static let shared = AbrufPlaetze()
+    private var frei = 3
+    private var wartend: [CheckedContinuation<Void, Never>] = []
+    func nehmen() async {
+        if frei > 0 { frei -= 1; return }
+        await withCheckedContinuation { wartend.append($0) }
+    }
+    func geben() {
+        if wartend.isEmpty { frei += 1 } else { wartend.removeFirst().resume() }
     }
 }
 
@@ -149,37 +174,77 @@ enum AblageLader {
         return u
     }()
 
+    /// Ein Abruf mit Warteschlange und bis zu drei Wiederholungen.
+    private static func abruf(_ argumente: JSONObjekt, sekunden: Double) async throws -> (Data, Bool) {
+        var letzter = "Unlesbare Antwort vom Handy"
+        for versuch in 0..<3 {
+            try Task.checkCancellation()
+            if versuch > 0 { try await Task.sleep(for: .seconds(Double(versuch) * 1.5)) }
+            await AbrufPlaetze.shared.nehmen()
+            let r = await McpKlient.shared.rufe("ablage_datei", argumente, sekunden: sekunden)
+            await AbrufPlaetze.shared.geben()
+            if let z = r.text.split(separator: "\n").first, !r.fehler, let o = JSON.objekt(String(z)),
+               let b = o["daten"] as? String, let bytes = Data(base64Encoded: b) {
+                return (bytes, o["ende"] as? Bool == true)
+            }
+            if r.fehler { letzter = r.text }
+        }
+        throw NSError(domain: "Ablage", code: 2, userInfo: [NSLocalizedDescriptionKey: letzter])
+    }
+
     static func vorschau(_ e: AblageElement, laengste: Int) async -> NSImage? {
         guard let d = e.datei else { return nil }
+        // SVG und GIF rastert das Handy nicht; kleine Dateien zeigt der Mac selbst.
+        if d.art == "SVG" || d.art == "ANIMATION" {
+            guard d.groesse <= 5_000_000, let u = try? await datei(e, fortschritt: { _ in }) else { return nil }
+            return NSImage(contentsOf: u)
+        }
         let cache = ordner.appendingPathComponent("\(d.id)-\(laengste).jpg")
         if let bild = NSImage(contentsOf: cache) { return bild }
-        let r = await McpKlient.shared.rufe("ablage_datei", ["eintrag_id": e.eintrag.id, "datei_id": d.id, "vorschau": laengste], sekunden: 60)
-        guard !r.fehler, let z = r.text.split(separator: "\n").first, let o = JSON.objekt(String(z)),
-              let b = o["daten"] as? String, let bytes = Data(base64Encoded: b) else { return nil }
+        guard let (bytes, _) = try? await abruf(["eintrag_id": e.eintrag.id, "datei_id": d.id, "vorschau": laengste], sekunden: 60) else { return nil }
         try? bytes.write(to: cache)
         return NSImage(data: bytes)
     }
 
-    /// Ganze Datei in den Zwischenordner.
+    /// Ganze Datei in den Zwischenordner, Stück für Stück direkt auf die Platte. Abbrechen und Wiederaufnahme nach einem Fehler sind möglich.
     static func datei(_ e: AblageElement, fortschritt: @MainActor (Double) -> Void) async throws -> URL {
         guard let d = e.datei else { throw NSError(domain: "Ablage", code: 1) }
         let ziel = ordner.appendingPathComponent(d.id, isDirectory: true)
         try FileManager.default.createDirectory(at: ziel, withIntermediateDirectories: true)
         let url = ziel.appendingPathComponent((d.name as NSString).lastPathComponent)
         if let a = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int, a == d.groesse { return url }
-        var inhalt = Data()
+        let teil = url.appendingPathExtension("part")
+        if !FileManager.default.fileExists(atPath: teil.path) { FileManager.default.createFile(atPath: teil.path, contents: nil) }
+        let h = try FileHandle(forWritingTo: teil)
+        defer { try? h.close() }
+        var versatz = Int(try h.seekToEnd())
         while true {
-            let r = await McpKlient.shared.rufe("ablage_datei", ["eintrag_id": e.eintrag.id, "datei_id": d.id, "versatz": inhalt.count], sekunden: 70)
-            guard !r.fehler, let z = r.text.split(separator: "\n").first, let o = JSON.objekt(String(z)),
-                  let b = o["daten"] as? String, let bytes = Data(base64Encoded: b) else {
-                throw NSError(domain: "Ablage", code: 2, userInfo: [NSLocalizedDescriptionKey: r.fehler ? r.text : "Unlesbare Antwort vom Handy"])
-            }
-            inhalt.append(bytes)
-            await fortschritt(d.groesse > 0 ? Double(inhalt.count) / Double(d.groesse) : 1)
-            if o["ende"] as? Bool == true || bytes.isEmpty { break }
+            let (bytes, ende) = try await abruf(["eintrag_id": e.eintrag.id, "datei_id": d.id, "versatz": versatz], sekunden: 70)
+            try h.write(contentsOf: bytes)
+            versatz += bytes.count
+            await fortschritt(d.groesse > 0 ? Double(versatz) / Double(d.groesse) : 1)
+            if ende || bytes.isEmpty { break }
         }
-        try inhalt.write(to: url, options: .atomic)
+        try? FileManager.default.removeItem(at: url)
+        try FileManager.default.moveItem(at: teil, to: url)
+        // Wie beim Browser-Download: macOS warnt beim Öffnen von Programmen und Skripten aus der Ablage.
+        let kennung = "0081;\(String(Int(Date().timeIntervalSince1970), radix: 16));Jarvis;"
+        _ = kennung.withCString { setxattr(url.path, "com.apple.quarantine", $0, strlen($0), 0, 0) }
         return url
+    }
+
+    /// Kopien aus dem Handy nicht ewig liegen lassen.
+    static func aufraeumen() {
+        let grenze = Date().addingTimeInterval(-7 * 86400)
+        let inhalt = (try? FileManager.default.contentsOfDirectory(at: ordner, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        for u in inhalt {
+            if let d = try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, d < grenze { try? FileManager.default.removeItem(at: u) }
+        }
+    }
+
+    static func vergessen(_ d: AblageDatei) {
+        let inhalt = (try? FileManager.default.contentsOfDirectory(at: ordner, includingPropertiesForKeys: nil)) ?? []
+        for u in inhalt where u.lastPathComponent.hasPrefix(d.id) { try? FileManager.default.removeItem(at: u) }
     }
 }
 
@@ -200,7 +265,7 @@ struct AblageAnsicht: View {
                 BereichsKopf(symbol: "tray.full.fill", titel: "Ablage", untertitel: "Dieselbe Ablage wie auf deinem Handy, nach Dateiarten sortiert.")
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Farbe.text3)
-                    TextField("In diesem Bereich suchen …", text: $suche).textFieldStyle(.plain)
+                    TextField("In diesem Bereich suchen, auch in Texten …", text: $suche).textFieldStyle(.plain)
                     if daten.laedt { ProgressView().controlSize(.small) }
                     RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 28) { Task { await daten.laden() } }
                 }
@@ -216,6 +281,10 @@ struct AblageAnsicht: View {
             .padding(36).frame(maxWidth: .infinity, alignment: .leading)
         }
         .task { await daten.laden() }
+        .task(id: suche) {
+            try? await Task.sleep(for: .seconds(0.4))
+            if !Task.isCancelled { await daten.suchen(suche) }
+        }
         .onChange(of: bereich) { _, b in log("ablage", "Bereich \(b.titel) geöffnet", wo: "Ablage") }
         .sheet(item: $offen) { e in
             AblageDetail(element: e) { offen = nil; Task { await daten.laden() } }
@@ -363,6 +432,8 @@ struct AblageDetail: View {
     @State private var fehler: String?
     @State private var laedt = true
     @State private var loeschenFrage = false
+    @State private var dateiArbeit: Task<Void, Never>?
+    @State private var gekuerzt = false
 
     private var datei: AblageDatei? { element.datei }
 
@@ -372,13 +443,15 @@ struct AblageDetail: View {
                 Text(element.name).font(.jarvis(18, .bold)).lineLimit(1)
                 Spacer()
                 if datei != nil {
-                    KapselKnopf(symbol: "arrow.up.forward.app", titel: "Öffnen") { Task { await oeffnen() } }
-                    KapselKnopf(symbol: "square.and.arrow.down", titel: "Sichern") { Task { await sichern() } }
+                    KapselKnopf(symbol: "arrow.up.forward.app", titel: "Öffnen") { starte { await oeffnen() } }
+                    KapselKnopf(symbol: "square.and.arrow.down", titel: "Sichern") { starte { await sichern() } }
                 }
                 KapselKnopf(symbol: "trash", titel: "Löschen") { loeschenFrage = true }
                 RundKnopf(symbol: "xmark", hilfe: "Schließen", groesse: 30) { schliessen() }
             }
             if let fehler { Text(fehler).font(.jarvis(13)).foregroundStyle(Farbe.orange) }
+            if gekuerzt { Text("Der Text ist sehr lang und hier gekürzt; vollständig steht er auf dem Handy.").font(.jarvis(12)).foregroundStyle(Farbe.orange) }
+            if dateiArbeit != nil { ProgressView(value: fortschritt).frame(maxWidth: 240) }
             Group {
                 if let bild {
                     Image(nsImage: bild).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -403,9 +476,22 @@ struct AblageDetail: View {
         .background(Farbe.grund2)
         .preferredColorScheme(.dark)
         .task { await laden() }
-        .confirmationDialog(datei == nil ? "„\(element.name)“ löschen?" : "Datei „\(element.name)“ löschen?", isPresented: $loeschenFrage) {
+        .onDisappear { dateiArbeit?.cancel() }
+        .confirmationDialog(loeschenText, isPresented: $loeschenFrage) {
             Button("Löschen", role: .destructive) { Task { await loeschen() } }
         }
+    }
+
+    private var loeschenText: String {
+        if datei != nil { return "Datei „\(element.name)“ löschen?" }
+        let n = element.eintrag.dateien.count
+        return n == 0 ? "„\(element.name)“ löschen?" : "Den ganzen Eintrag „\(element.name)“ mit \(n) Datei(en) löschen?"
+    }
+
+    /// Nur eine Dateiarbeit zur Zeit; sie endet mit dem Schließen des Fensters.
+    private func starte(_ arbeit: @escaping @MainActor () async -> Void) {
+        guard dateiArbeit == nil else { return }
+        dateiArbeit = Task { await arbeit(); dateiArbeit = nil }
     }
 
     private func laden() async {
@@ -413,7 +499,11 @@ struct AblageDetail: View {
         log("ablage", "Geöffnet: \(element.name)", wo: "Ablage")
         guard let d = datei else {
             let r = await McpKlient.shared.rufe("ablage_struktur", ["eintrag_id": element.eintrag.id, "nur_text": true], sekunden: 40)
-            if r.fehler { fehler = r.text } else { text = (r.text.split(separator: "\n").first.flatMap { JSON.objekt(String($0)) })?["text"] as? String ?? r.text }
+            if r.fehler { fehler = r.text } else {
+                let o = r.text.split(separator: "\n").first.flatMap { JSON.objekt(String($0)) }
+                text = o?["text"] as? String ?? r.text
+                gekuerzt = o?["gekuerzt"] as? Bool == true
+            }
             return
         }
         do {
@@ -421,11 +511,11 @@ struct AblageDetail: View {
                 bild = await AblageLader.vorschau(element, laengste: 1600)
                 if bild != nil { return }
             }
-            if ["PDF", "TEXT", "MARKDOWN", "CODE", "DATEN", "TABELLE_TEXT", "HTML", "ANIMATION", "SVG"].contains(d.art), d.groesse <= 40_000_000 {
+            if ["BILD", "PDF", "TEXT", "MARKDOWN", "CODE", "DATEN", "TABELLE_TEXT", "HTML", "ANIMATION", "SVG"].contains(d.art), d.groesse <= 40_000_000 {
                 let u = try await AblageLader.datei(element) { fortschritt = $0 }
                 switch d.art {
                 case "PDF": pdf = u
-                case "ANIMATION", "SVG": bild = NSImage(contentsOf: u)
+                case "BILD", "ANIMATION", "SVG": bild = NSImage(contentsOf: u)
                 default: text = (try? String(contentsOf: u, encoding: .utf8)) ?? "(Kein lesbarer Text)"
                 }
             }
@@ -452,10 +542,12 @@ struct AblageDetail: View {
     }
 
     private func loeschen() async {
-        var a: JSONObjekt = ["titel": element.eintrag.titel]
-        if let d = datei { a["datei"] = d.name }
+        var a: JSONObjekt = ["eintrag_id": element.eintrag.id]
+        if let d = datei { a["datei_id"] = d.id }
         let r = await McpKlient.shared.rufe("ablage_loeschen", a)
-        if r.fehler { fehler = r.text } else { geloescht() }
+        if r.fehler { fehler = r.text; return }
+        (datei.map { [$0] } ?? element.eintrag.dateien).forEach(AblageLader.vergessen)
+        geloescht()
     }
 }
 

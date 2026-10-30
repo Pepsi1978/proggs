@@ -95,7 +95,8 @@ struct JarvisKugel: View {
     enum KugelZustand { case ruhe, hoert, denkt, spricht }
 
     var body: some View {
-        TimelineView(.animation) { tl in
+        // In Ruhe genügen wenige Bilder je Sekunde, das schont Akku und Grafikchip.
+        TimelineView(.animation(minimumInterval: zustand == .ruhe ? 1.0 / 15 : nil)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             let p = Double(min(max(pegel, 0), 1))
             let tempo: Double = zustand == .denkt ? 2.4 : (zustand == .ruhe ? 0.5 : 1.2)
@@ -158,7 +159,7 @@ struct JarvisKugel: View {
             .scaleEffect(x: 1 + 0.07 * beben * sin(t * 33), y: 1 + 0.07 * beben * cos(t * 41))
             .offset(x: groesse * 0.018 * beben * sin(t * 47), y: groesse * 0.018 * beben * cos(t * 53))
             // Malfläche größer als der Lichthof: sonst schneidet drawingGroup ihn als Viereck ab.
-            .frame(width: groesse * 2.8, height: groesse * 2.8)
+            .frame(width: groesse * 2.3, height: groesse * 2.3)
             .drawingGroup()
             .frame(width: groesse, height: groesse)
         }
@@ -174,6 +175,12 @@ struct JarvisKugel: View {
                 .frame(width: groesse * (0.8 + 0.75 * phase), height: groesse * (0.8 + 0.75 * phase))
         }
     }
+}
+
+/// Kugel, die selbst auf Sprechen und Zuhören reagiert. Eigene Ansicht: Pegeländerungen zeichnen nur sie neu, nicht die ganze Seite.
+struct KugelLive: View {
+    var groesse: CGFloat
+    var body: some View { JarvisKugel(pegel: KugelStand.pegel, zustand: KugelStand.zustand, groesse: groesse) }
 }
 
 /// Zustand und Pegel der Kugel aus allem, was gerade spricht oder zuhört (Sprachschleife, Live, reines Vorlesen).

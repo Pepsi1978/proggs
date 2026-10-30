@@ -161,6 +161,16 @@ final class Logbuch {
         }
     }
 
+    /// Einstellungen ändern sich beim Ziehen und Tippen im Takt: Eingetragen wird nur der Endwert nach einer Sekunde Ruhe.
+    @ObservationIgnored private var offeneEinstellungen: [String: Task<Void, Never>] = [:]
+    func einstellung(_ name: String, _ wert: String, wo: String) {
+        offeneEinstellungen[name]?.cancel()
+        offeneEinstellungen[name] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            if !Task.isCancelled { self?.schreib("einstellung", "\(name) = \(wert)", wo: wo) }
+        }
+    }
+
     private static func ort(_ art: String) -> String {
         switch art {
         case "gehirn": return "Gehirn"
@@ -219,25 +229,31 @@ final class Einstellungen {
     static let shared = Einstellungen()
     private let d = UserDefaults.standard
 
-    var zugang = Zugang.laden() { didSet { zugang.speichern() } }
+    var zugang = Zugang.laden() { didSet { speicherUhr?.cancel(); speicherUhr = Task { [weak self] in
+        // Erst nach kurzer Tipp-Pause verschlüsseln und schreiben, nicht bei jedem Tastendruck.
+        try? await Task.sleep(for: .seconds(0.7))
+        if !Task.isCancelled { self?.zugangSichern() }
+    } } }
+    @ObservationIgnored private var speicherUhr: Task<Void, Never>?
+    func zugangSichern() { speicherUhr?.cancel(); speicherUhr = nil; zugang.speichern() }
 
-    var modell: String { didSet { d.set(modell, forKey: "modell"); log("einstellung", "modell = \(modell)", wo: "Einstellungen") } }
-    var effort: String { didSet { d.set(effort, forKey: "effort"); log("einstellung", "effort = \(effort)", wo: "Einstellungen") } }
-    var schrittLimit: Int { didSet { d.set(schrittLimit, forKey: "schrittLimit"); log("einstellung", "schrittLimit = \(schrittLimit)", wo: "Einstellungen") } }
-    var vorlesen: Bool { didSet { d.set(vorlesen, forKey: "vorlesen"); log("einstellung", "vorlesen = \(vorlesen)", wo: "Einstellungen") } }
-    var stimme: String { didSet { d.set(stimme, forKey: "stimme"); log("einstellung", "stimme = \(stimme)", wo: "Einstellungen") } }
-    var tempo: Double { didSet { d.set(tempo, forKey: "tempo"); log("einstellung", "tempo = \(tempo)", wo: "Einstellungen") } }
-    var weckwortAn: Bool { didSet { d.set(weckwortAn, forKey: "weckwortAn"); log("einstellung", "weckwortAn = \(weckwortAn)", wo: "Einstellungen") } }
-    var weckwort: String { didSet { d.set(weckwort, forKey: "weckwort"); log("einstellung", "weckwort = \(weckwort)", wo: "Einstellungen") } }
-    var transkription: String { didSet { d.set(transkription, forKey: "transkription"); log("einstellung", "transkription = \(transkription)", wo: "Einstellungen") } }   // apple | groq
-    var liveAnbieter: String { didSet { d.set(liveAnbieter, forKey: "liveAnbieter"); log("einstellung", "liveAnbieter = \(liveAnbieter)", wo: "Einstellungen") } }     // openai | gemini
-    var liveStimmeOpenAI: String { didSet { d.set(liveStimmeOpenAI, forKey: "liveStimmeOpenAI"); log("einstellung", "liveStimmeOpenAI = \(liveStimmeOpenAI)", wo: "Einstellungen") } }
-    var liveStimmeGemini: String { didSet { d.set(liveStimmeGemini, forKey: "liveStimmeGemini"); log("einstellung", "liveStimmeGemini = \(liveStimmeGemini)", wo: "Einstellungen") } }
-    var liveModellOpenAI: String { didSet { d.set(liveModellOpenAI, forKey: "liveModellOpenAI"); log("einstellung", "liveModellOpenAI = \(liveModellOpenAI)", wo: "Einstellungen") } }
-    var liveModellGemini: String { didSet { d.set(liveModellGemini, forKey: "liveModellGemini"); log("einstellung", "liveModellGemini = \(liveModellGemini)", wo: "Einstellungen") } }
-    var vollzugriff: Bool { didSet { d.set(vollzugriff, forKey: "vollzugriff"); log("einstellung", "vollzugriff = \(vollzugriff)", wo: "Einstellungen") } }
-    var lernenAn: Bool { didSet { d.set(lernenAn, forKey: "lernenAn"); log("einstellung", "lernenAn = \(lernenAn)", wo: "Einstellungen") } }
-    var globalesKuerzel: Bool { didSet { d.set(globalesKuerzel, forKey: "globalesKuerzel"); log("einstellung", "globalesKuerzel = \(globalesKuerzel)", wo: "Einstellungen") } }
+    var modell: String { didSet { d.set(modell, forKey: "modell"); Logbuch.shared.einstellung("modell", "\(modell)", wo: "Einstellungen") } }
+    var effort: String { didSet { d.set(effort, forKey: "effort"); Logbuch.shared.einstellung("effort", "\(effort)", wo: "Einstellungen") } }
+    var schrittLimit: Int { didSet { d.set(schrittLimit, forKey: "schrittLimit"); Logbuch.shared.einstellung("schrittLimit", "\(schrittLimit)", wo: "Einstellungen") } }
+    var vorlesen: Bool { didSet { d.set(vorlesen, forKey: "vorlesen"); Logbuch.shared.einstellung("vorlesen", "\(vorlesen)", wo: "Einstellungen") } }
+    var stimme: String { didSet { d.set(stimme, forKey: "stimme"); Logbuch.shared.einstellung("stimme", "\(stimme)", wo: "Einstellungen") } }
+    var tempo: Double { didSet { d.set(tempo, forKey: "tempo"); Logbuch.shared.einstellung("tempo", "\(tempo)", wo: "Einstellungen") } }
+    var weckwortAn: Bool { didSet { d.set(weckwortAn, forKey: "weckwortAn"); Logbuch.shared.einstellung("weckwortAn", "\(weckwortAn)", wo: "Einstellungen") } }
+    var weckwort: String { didSet { d.set(weckwort, forKey: "weckwort"); Logbuch.shared.einstellung("weckwort", "\(weckwort)", wo: "Einstellungen") } }
+    var transkription: String { didSet { d.set(transkription, forKey: "transkription"); Logbuch.shared.einstellung("transkription", "\(transkription)", wo: "Einstellungen") } }   // apple | groq
+    var liveAnbieter: String { didSet { d.set(liveAnbieter, forKey: "liveAnbieter"); Logbuch.shared.einstellung("liveAnbieter", "\(liveAnbieter)", wo: "Einstellungen") } }     // openai | gemini
+    var liveStimmeOpenAI: String { didSet { d.set(liveStimmeOpenAI, forKey: "liveStimmeOpenAI"); Logbuch.shared.einstellung("liveStimmeOpenAI", "\(liveStimmeOpenAI)", wo: "Einstellungen") } }
+    var liveStimmeGemini: String { didSet { d.set(liveStimmeGemini, forKey: "liveStimmeGemini"); Logbuch.shared.einstellung("liveStimmeGemini", "\(liveStimmeGemini)", wo: "Einstellungen") } }
+    var liveModellOpenAI: String { didSet { d.set(liveModellOpenAI, forKey: "liveModellOpenAI"); Logbuch.shared.einstellung("liveModellOpenAI", "\(liveModellOpenAI)", wo: "Einstellungen") } }
+    var liveModellGemini: String { didSet { d.set(liveModellGemini, forKey: "liveModellGemini"); Logbuch.shared.einstellung("liveModellGemini", "\(liveModellGemini)", wo: "Einstellungen") } }
+    var vollzugriff: Bool { didSet { d.set(vollzugriff, forKey: "vollzugriff"); Logbuch.shared.einstellung("vollzugriff", "\(vollzugriff)", wo: "Einstellungen") } }
+    var lernenAn: Bool { didSet { d.set(lernenAn, forKey: "lernenAn"); Logbuch.shared.einstellung("lernenAn", "\(lernenAn)", wo: "Einstellungen") } }
+    var globalesKuerzel: Bool { didSet { d.set(globalesKuerzel, forKey: "globalesKuerzel"); Logbuch.shared.einstellung("globalesKuerzel", "\(globalesKuerzel)", wo: "Einstellungen") } }
 
     init() {
         let d = UserDefaults.standard

@@ -87,10 +87,16 @@ struct LiveAnsicht: View {
 final class BereichsLader {
     var text: String?
     var laedt = false
-    func laden(_ werkzeug: String, _ args: JSONObjekt = [:]) async {
-        laedt = true
-        text = await McpKlient.shared.text(werkzeug, args) ?? "Das Handy-Jarvis ist gerade nicht erreichbar."
-        laedt = false
+    /// Gelingt das Laden nicht, bleibt der letzte gute Stand stehen.
+    @discardableResult
+    func laden(_ werkzeug: String, _ args: JSONObjekt = [:]) async -> Bool {
+        laedt = true; defer { laedt = false }
+        guard let t = await McpKlient.shared.text(werkzeug, args) else {
+            if text == nil { text = "Das Handy-Jarvis ist gerade nicht erreichbar." }
+            return false
+        }
+        text = t
+        return true
     }
 }
 
@@ -149,6 +155,8 @@ struct GedaechtnisAnsicht: View {
     @State private var liveOffen = false
     @State private var langzeitOffen = false
     @State private var liveStand: Date?
+    @State private var liveVoll = false
+    @State private var liveWeg = false
 
     var body: some View {
         ScrollView {
@@ -190,11 +198,12 @@ struct GedaechtnisAnsicht: View {
                     MarkdownText(text: gemerkt.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 KlappKarte(symbol: "bolt.heart.fill", titel: "Live-Gedächtnis", farbe: Farbe.cyan,
-                           untertitel: liveStand.map { "vom Handy, Stand \($0.formatted(date: .omitted, time: .shortened))" } ?? "", offen: $liveOffen) {
+                           untertitel: liveWeg ? "Handy nicht erreichbar, letzter Stand" + (liveStand.map { " \($0.formatted(date: .omitted, time: .shortened))" } ?? "")
+                                     : liveStand.map { "vom Handy, Stand \($0.formatted(date: .omitted, time: .shortened))" } ?? "", offen: $liveOffen) {
                     HStack {
                         if live.laedt { ProgressView().controlSize(.small) }
                         Spacer()
-                        RundKnopf(symbol: "arrow.clockwise", hilfe: "Alles neu laden", groesse: 28) { Task { await live.laden("jarvis_kontext", ["umfang": "voll"]); liveStand = Date() } }
+                        RundKnopf(symbol: "arrow.clockwise", hilfe: "Alles neu laden", groesse: 28) { liveVoll = true; Task { await liveLaden() } }
                     }
                     MarkdownText(text: live.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -206,65 +215,112 @@ struct GedaechtnisAnsicht: View {
         .task(id: liveOffen) {
             guard liveOffen else { return }
             while !Task.isCancelled {
-                await live.laden("jarvis_kontext", [:])
-                liveStand = Date()
+                await liveLaden()
                 try? await Task.sleep(for: .seconds(60))
             }
         }
+    }
+
+    /// „leise“: Die Anzeige verbraucht keine Meldungen, die für Gespräche in ChatGPT oder am Handy gedacht sind.
+    private func liveLaden() async {
+        var a: JSONObjekt = ["leise": true]
+        if liveVoll { a["umfang"] = "voll" }
+        let ok = await live.laden("jarvis_kontext", a)
+        liveWeg = !ok
+        if ok { liveStand = Date() }
+    }
+}
+
+/// Der Entwurf lebt außerhalb der Ansicht: Zuklappen oder ein Bereichswechsel dürfen ihn nicht verwerfen.
+@MainActor @Observable
+final class LangzeitEntwurf {
+    static let shared = LangzeitEntwurf()
+    var text = ""
+    var gelesen = ""
+    var stand: Int64 = -1
+    var laedt = false
+    var meldung = ""
+    var fehlerMeldung = false
+    var konflikt = false
+    var geaendert: Bool { text != gelesen }
+
+    func laden(erzwingen: Bool = false) async {
+        guard erzwingen || !geaendert else { return }
+        laedt = true; defer { laedt = false }
+        let r = await McpKlient.shared.rufe("jarvis_langzeitkontext_lesen", [:])
+        guard !r.fehler, r.text.hasPrefix("STAND ") else {
+            meldung = r.fehler ? r.text : "Die Antwort des Handys war nicht lesbar. Läuft dort schon die neueste Jarvis-Version?"
+            fehlerMeldung = true
+            return
+        }
+        let (s, t) = Self.zerlege(r.text)
+        stand = s; text = t; gelesen = t; meldung = ""; konflikt = false
+    }
+
+    /// Aufbau: erste Zeile „STAND <zahl>“, danach der Text. Das Handy kann Hinweiszeilen nur ans Ende hängen, hier hängt es keine an.
+    private static func zerlege(_ antwort: String) -> (Int64, String) {
+        let ende = antwort.firstIndex(of: "\n") ?? antwort.endIndex
+        let stand = Int64(antwort[antwort.index(antwort.startIndex, offsetBy: 6)..<ende]) ?? 0
+        return (stand, ende == antwort.endIndex ? "" : String(antwort[antwort.index(after: ende)...]))
+    }
+
+    /// „überschreiben“: Frank hat im Konflikt entschieden, dass seine Fassung gilt. Die vorige bleibt am Handy als Vorfassung erhalten.
+    func speichern(ueberschreiben: Bool = false) async {
+        var basis = stand
+        if ueberschreiben {
+            let r = await McpKlient.shared.rufe("jarvis_langzeitkontext_lesen", [:])
+            guard !r.fehler, r.text.hasPrefix("STAND ") else { meldung = r.text; fehlerMeldung = true; return }
+            basis = Self.zerlege(r.text).0
+        }
+        let t = text
+        let r = await McpKlient.shared.rufe("jarvis_langzeitkontext_ersetzen", ["text": t, "basis_stand": String(basis)])
+        fehlerMeldung = r.fehler
+        konflikt = r.fehler && r.text.hasPrefix("KONFLIKT")
+        meldung = konflikt ? "Am Handy gibt es eine neuere Fassung. Entscheide, welche gilt." : (r.fehler ? r.text : "Gespeichert, auf Mac und Handy gleich.")
+        log("gedaechtnis", "Langzeitkontext gespeichert (\(t.count) Zeichen)", wo: "Gedächtnis", fehler: r.fehler ? r.text : nil)
+        if !r.fehler { stand = Self.zerlege(r.text).0; gelesen = t }
     }
 }
 
 /// Die Textdatei liegt auf dem Handy; der Mac liest und schreibt sie über das Relay, dadurch gibt es nur einen Stand.
 struct LangzeitkontextEditor: View {
-    @State private var text = ""
-    @State private var gelesen = ""
-    @State private var stand: Int64 = 0
-    @State private var laedt = true
-    @State private var meldung = ""
-    @State private var fehlerMeldung = false
-
-    private var geaendert: Bool { text != gelesen }
+    @State private var e = LangzeitEntwurf.shared
+    @State private var frageVerwerfen = false
+    @State private var frageLeeren = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Jarvis liest diesen Text bei jeder Frage mit. Füg zum Beispiel ein, was ChatGPT sich über dich gemerkt hat.")
                 .font(.jarvis(12)).foregroundStyle(Farbe.text2)
-            TextEditor(text: $text).font(.jarvis(13)).frame(minHeight: 280).scrollContentBackground(.hidden)
+            TextEditor(text: $e.text).font(.jarvis(13)).frame(minHeight: 280).scrollContentBackground(.hidden)
                 .padding(6).background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.25)))
-                .disabled(laedt)
+                .disabled(e.laedt)
             HStack(spacing: 10) {
-                KapselKnopf(symbol: "square.and.arrow.down.fill", titel: "Speichern", hervorgehoben: geaendert) { Task { await speichern() } }
-                KapselKnopf(symbol: "arrow.clockwise", titel: "Vom Handy laden") { Task { await laden() } }
-                if laedt { ProgressView().controlSize(.small) }
+                KapselKnopf(symbol: "square.and.arrow.down.fill", titel: "Speichern", hervorgehoben: e.geaendert) {
+                    if e.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !e.gelesen.isEmpty { frageLeeren = true } else { Task { await e.speichern() } }
+                }
+                KapselKnopf(symbol: "arrow.clockwise", titel: "Vom Handy laden") {
+                    if e.geaendert { frageVerwerfen = true } else { Task { await e.laden(erzwingen: true) } }
+                }
+                if e.laedt { ProgressView().controlSize(.small) }
                 Spacer()
-                Text("\(text.count) Zeichen").font(.jarvis(11)).foregroundStyle(Farbe.text3)
+                Text("\(e.text.count) Zeichen\(e.geaendert ? ", nicht gespeichert" : "")").font(.jarvis(11)).foregroundStyle(e.geaendert ? Farbe.orange : Farbe.text3)
             }
-            if !meldung.isEmpty { Text(meldung).font(.jarvis(12)).foregroundStyle(fehlerMeldung ? Farbe.orange : Farbe.gruen) }
+            if e.konflikt {
+                HStack(spacing: 10) {
+                    KapselKnopf(symbol: "iphone", titel: "Fassung vom Handy") { frageVerwerfen = true }
+                    KapselKnopf(symbol: "macbook", titel: "Meine Fassung speichern", hervorgehoben: true) { Task { await e.speichern(ueberschreiben: true) } }
+                }
+            }
+            if !e.meldung.isEmpty { Text(e.meldung).font(.jarvis(12)).foregroundStyle(e.fehlerMeldung ? Farbe.orange : Farbe.gruen) }
         }
-        .task { await laden() }
-    }
-
-    private func laden() async {
-        laedt = true; defer { laedt = false }
-        let r = await McpKlient.shared.rufe("jarvis_langzeitkontext", ["aktion": "lesen"])
-        guard !r.fehler, let kopfEnde = r.text.firstIndex(of: "\n"), r.text.hasPrefix("STAND ") else {
-            meldung = r.fehler ? r.text : "Die Antwort des Handys war nicht lesbar. Läuft dort schon die neueste Jarvis-Version?"
-            fehlerMeldung = true
-            return
+        .task { await e.laden() }
+        .confirmationDialog("Deine ungespeicherten Änderungen verwerfen?", isPresented: $frageVerwerfen) {
+            Button("Verwerfen und laden", role: .destructive) { Task { await e.laden(erzwingen: true) } }
         }
-        stand = Int64(r.text[r.text.index(r.text.startIndex, offsetBy: 6)..<kopfEnde]) ?? 0
-        text = String(r.text[r.text.index(after: kopfEnde)...])
-        gelesen = text
-        meldung = ""
-    }
-
-    private func speichern() async {
-        let t = text
-        let r = await McpKlient.shared.rufe("jarvis_langzeitkontext", ["aktion": "ersetzen", "text": t, "basis_stand": String(stand)])
-        fehlerMeldung = r.fehler
-        meldung = r.fehler ? r.text : "Gespeichert, auf Mac und Handy gleich."
-        log("gedaechtnis", "Langzeitkontext gespeichert (\(t.count) Zeichen)", wo: "Gedächtnis", fehler: r.fehler ? r.text : nil)
-        if !r.fehler, r.text.hasPrefix("STAND "), let z = r.text.split(separator: "\n").first { stand = Int64(z.dropFirst(6)) ?? stand; gelesen = t }
+        .confirmationDialog("Den ganzen Langzeitkontext leeren?", isPresented: $frageLeeren) {
+            Button("Leeren", role: .destructive) { Task { await e.speichern() } }
+        }
     }
 }
 
@@ -291,7 +347,7 @@ struct AktivitaetAnsicht: View {
                         ForEach(logbuch.eintraege.reversed()) { e in
                             HStack(alignment: .top, spacing: 10) {
                                 Text(e.zeit.formatted(date: .omitted, time: .standard)).font(.system(size: 11, design: .monospaced)).foregroundStyle(Farbe.text3)
-                                Text(e.art).font(.jarvis(11, .bold)).foregroundStyle(farbe(e.art)).frame(width: 70, alignment: .leading)
+                                Text(e.art).font(.jarvis(11, .bold)).foregroundStyle(farbe(e.art)).lineLimit(1).frame(width: 84, alignment: .leading)
                                 Text(e.anzeige).font(.jarvis(12)).foregroundStyle(Farbe.text2).textSelection(.enabled)
                             }
                         }
@@ -314,6 +370,8 @@ struct AktivitaetAnsicht: View {
         case "werkzeug": return Farbe.violett
         case "gehirn": return Farbe.cyan
         case "sprache", "live": return Farbe.gruen
+        case "tresor": return Farbe.orange
+        case "ablage", "gedaechtnis", "gespraech": return Farbe.rosa
         default: return Farbe.text3
         }
     }

@@ -53,7 +53,8 @@ final class TresorSperre {
 
     func sperren() {
         uhr?.cancel(); uhr = nil
-        if entsperrt { log("tresor", "Tresor gesperrt", wo: "Einstellungen") }
+        // Direkt, nicht über einen neuen Task: Beim Beenden der App liefe der nicht mehr.
+        if entsperrt { Logbuch.shared.schreib("tresor", "Tresor gesperrt", wo: "Einstellungen") }
         entsperrt = false; rest = 0
     }
 }
@@ -73,6 +74,7 @@ struct TresorKopf: View {
                 }
             }
             if !sperre.meldung.isEmpty { Text(sperre.meldung).font(.jarvis(11)).foregroundStyle(Farbe.orange) }
+            if let s = Tresor.stoerung { Text(s).font(.jarvis(11)).foregroundStyle(Farbe.rot) }
         }
         .padding(.vertical, 4)
         .onDisappear { sperre.sperren() }

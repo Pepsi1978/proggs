@@ -63,24 +63,29 @@ struct VorleseStand: Sendable {
 
     private let d = UserDefaults.standard
 
-    var zugang: VorleseZugang { didSet { zugang.speichern() } }
+    var zugang: VorleseZugang { didSet { speicherUhr?.cancel(); speicherUhr = Task { [weak self] in
+        try? await Task.sleep(for: .seconds(0.7))
+        if !Task.isCancelled { self?.zugangSichern() }
+    } } }
+    @ObservationIgnored private var speicherUhr: Task<Void, Never>?
+    func zugangSichern() { speicherUhr?.cancel(); speicherUhr = nil; zugang.speichern() }
 
     var anbieter: VorleseAnbieter { didSet { d.set(anbieter.rawValue, forKey: "vl_anbieter") } }
-    var edgeStimme: String { didSet { d.set(edgeStimme, forKey: "vl_edge_stimme"); log("einstellung", "vl_edge_stimme = \(edgeStimme)", wo: "Einstellungen/Stimme") } }
-    var googleStimme: String { didSet { d.set(googleStimme, forKey: "vl_google_stimme"); log("einstellung", "vl_google_stimme = \(googleStimme)", wo: "Einstellungen/Stimme") } }
-    var geminiFlashStimme: String { didSet { d.set(geminiFlashStimme, forKey: "vl_gemini_flash_stimme"); log("einstellung", "vl_gemini_flash_stimme = \(geminiFlashStimme)", wo: "Einstellungen/Stimme") } }
-    var geminiLiteStimme: String { didSet { d.set(geminiLiteStimme, forKey: "vl_gemini_lite_stimme"); log("einstellung", "vl_gemini_lite_stimme = \(geminiLiteStimme)", wo: "Einstellungen/Stimme") } }
-    var azureStimme: String { didSet { d.set(azureStimme, forKey: "vl_azure_stimme"); log("einstellung", "vl_azure_stimme = \(azureStimme)", wo: "Einstellungen/Stimme") } }
-    var qwenStimme: String { didSet { d.set(qwenStimme, forKey: "vl_qwen_stimme"); log("einstellung", "vl_qwen_stimme = \(qwenStimme)", wo: "Einstellungen/Stimme") } }
-    var klonStimme: String { didSet { d.set(klonStimme, forKey: "vl_klon_stimme"); log("einstellung", "vl_klon_stimme = \(klonStimme)", wo: "Einstellungen/Stimme") } }
-    var geminiWahl: String { didSet { d.set(geminiWahl, forKey: "vl_gemini_wahl"); log("einstellung", "vl_gemini_wahl = \(geminiWahl)", wo: "Einstellungen/Stimme") } }
+    var edgeStimme: String { didSet { d.set(edgeStimme, forKey: "vl_edge_stimme"); Logbuch.shared.einstellung("vl_edge_stimme", "\(edgeStimme)", wo: "Einstellungen/Stimme") } }
+    var googleStimme: String { didSet { d.set(googleStimme, forKey: "vl_google_stimme"); Logbuch.shared.einstellung("vl_google_stimme", "\(googleStimme)", wo: "Einstellungen/Stimme") } }
+    var geminiFlashStimme: String { didSet { d.set(geminiFlashStimme, forKey: "vl_gemini_flash_stimme"); Logbuch.shared.einstellung("vl_gemini_flash_stimme", "\(geminiFlashStimme)", wo: "Einstellungen/Stimme") } }
+    var geminiLiteStimme: String { didSet { d.set(geminiLiteStimme, forKey: "vl_gemini_lite_stimme"); Logbuch.shared.einstellung("vl_gemini_lite_stimme", "\(geminiLiteStimme)", wo: "Einstellungen/Stimme") } }
+    var azureStimme: String { didSet { d.set(azureStimme, forKey: "vl_azure_stimme"); Logbuch.shared.einstellung("vl_azure_stimme", "\(azureStimme)", wo: "Einstellungen/Stimme") } }
+    var qwenStimme: String { didSet { d.set(qwenStimme, forKey: "vl_qwen_stimme"); Logbuch.shared.einstellung("vl_qwen_stimme", "\(qwenStimme)", wo: "Einstellungen/Stimme") } }
+    var klonStimme: String { didSet { d.set(klonStimme, forKey: "vl_klon_stimme"); Logbuch.shared.einstellung("vl_klon_stimme", "\(klonStimme)", wo: "Einstellungen/Stimme") } }
+    var geminiWahl: String { didSet { d.set(geminiWahl, forKey: "vl_gemini_wahl"); Logbuch.shared.einstellung("vl_gemini_wahl", "\(geminiWahl)", wo: "Einstellungen/Stimme") } }
     /// Kennungen aus VorleseKatalog.rueckfallStufen in ihrer Reihenfolge.
-    var kette: [String] { didSet { d.set(kette, forKey: "vl_kette"); log("einstellung", "vl_kette = \(kette)", wo: "Einstellungen/Stimme") } }
+    var kette: [String] { didSet { d.set(kette, forKey: "vl_kette"); Logbuch.shared.einstellung("vl_kette", "\(kette)", wo: "Einstellungen/Stimme") } }
     var favoriten: Set<String> { didSet { d.set(Array(favoriten), forKey: "vl_favoriten") } }
-    var immerDeutsch: Bool { didSet { d.set(immerDeutsch, forKey: "vl_immer_deutsch"); log("einstellung", "vl_immer_deutsch = \(immerDeutsch)", wo: "Einstellungen/Stimme") } }
+    var immerDeutsch: Bool { didSet { d.set(immerDeutsch, forKey: "vl_immer_deutsch"); Logbuch.shared.einstellung("vl_immer_deutsch", "\(immerDeutsch)", wo: "Einstellungen/Stimme") } }
     var klonStimmen: [KlonStimme] = []
     var klonFehler: String?
-    private var tempoJe: [String: Double] { didSet { d.set(tempoJe, forKey: "vl_tempo"); log("einstellung", "vl_tempo = \(tempoJe)", wo: "Einstellungen/Stimme") } }
+    private var tempoJe: [String: Double] { didSet { d.set(tempoJe, forKey: "vl_tempo"); Logbuch.shared.einstellung("vl_tempo", "\(tempoJe)", wo: "Einstellungen/Stimme") } }
 
     init() {
         let d = UserDefaults.standard
