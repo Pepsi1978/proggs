@@ -448,8 +448,6 @@
     {"versionCode": 442, "versionName": "1.8.431", "stand": "30.10.2026, 12:49 Uhr", "notiz": "Vor einer schnellen Installation über Tunnel oder WLAN fragt Jarvis in einem Fenster nach dem Zeitpunkt: sofort oder in einer bis fünf Minuten, damit eine laufende Aufnahme nicht abbricht"},
     {"versionCode": 443, "versionName": "1.8.432", "stand": "30.10.2026, 12:59 Uhr", "notiz": "Die Frage vor der schnellen Installation erscheint jetzt als Overlay im Jarvis-Design über jeder App, die App darunter bleibt bedienbar, und ohne Antwort startet die Installation nach 30 Sekunden"},
     {"versionCode": 444, "versionName": "1.8.433", "stand": "30.10.2026, 13:12 Uhr", "notiz": "Die Installationsfrage ist abgesichert: Kann das Overlay nicht erscheinen, wird nicht installiert, die 30 Sekunden zählen erst ab dem sichtbaren Fenster, und ein Fehler beim Start reißt Jarvis nicht mehr mit"},
-    {"versionCode": 445, "versionName": "1.8.434", "stand": "30.10.2026, 13:41 Uhr", "notiz": "Jede neue Jarvis-Version fragt jetzt zwingend vorher nach dem Zeitpunkt: Ein nacktes adb install lehnt Android ab, und auch UpdateStation öffnet vor der Installation das goldene Overlay"},
-    {"versionCode": 446, "versionName": "1.8.435", "stand": "30.10.2026, 13:45 Uhr", "notiz": "Jarvis startet per Sprachbefehl Jarvis Mac OS und spricht über einen festen Kanal in beide Richtungen mit ihm: Stand abfragen, begutachten lassen, Rückfragen und Abstimmung."},
-    {"versionCode": 446, "versionName": "1.8.435", "stand": "30.10.2026, 13:46 Uhr", "notiz": "Prüfversion ohne neue Funktion: Mit ihr wird die Installationsfrage auf dem Weg über UpdateStation getestet"}
+    {"versionCode": 445, "versionName": "1.8.434", "stand": "30.10.2026, 13:41 Uhr", "notiz": "Jede neue Jarvis-Version fragt jetzt zwingend vorher nach dem Zeitpunkt: Ein nacktes adb install lehnt Android ab, und auch UpdateStation öffnet vor der Installation das goldene Overlay"}
 ]
 }
