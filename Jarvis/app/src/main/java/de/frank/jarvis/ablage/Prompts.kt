@@ -1,5 +1,6 @@
 package de.frank.jarvis.ablage
 
+import de.frank.jarvis.faehigkeit.DiktatTrenner
 import android.content.Context
 import android.util.AtomicFile
 import de.frank.jarvis.observability.Logbuch
@@ -52,7 +53,7 @@ object Prompts {
             val json = JSONObject(text)
             val arr = json.getJSONArray("prompts")
             val liste = (0 until arr.length()).mapNotNull { i ->
-                arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), it.optString("text").trim(), it.optLong("erstellt"), it.optString("titel").trim()) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
+                arr.optJSONObject(i)?.let { Prompt(it.optInt("nummer"), DiktatTrenner.gespeichert(it.optString("text")), it.optLong("erstellt"), it.optString("titel").trim()) }?.takeIf { it.nummer > 0 && it.text.isNotEmpty() }
             }.sortedBy { it.nummer }.eindeutig().durchnummeriert()
             Stand(liste)
         } catch (e: Exception) {
@@ -83,7 +84,7 @@ object Prompts {
     /** Hängt einen neuen Prompt unten an (nächste Nummer). null = nicht gespeichert (leer oder Datei defekt). */
     @Synchronized
     fun speichere(c: Context, text: String): Prompt? {
-        val sauber = text.trim()
+        val sauber = DiktatTrenner.gespeichert(text)
         if (sauber.isEmpty()) return null
         val s = lies(c)
         if (s.defekt) return null
@@ -99,8 +100,9 @@ object Prompts {
     fun aendere(c: Context, nummer: Int, text: String, erstellt: Long? = null): Boolean {
         val s = lies(c)
         val ziel = s.liste.firstOrNull { if (erstellt != null) it.erstellt == erstellt else it.nummer == nummer }
-        if (s.defekt || text.isBlank() || ziel == null) return false
-        return schreibe(c, s.liste.map { if (it.erstellt == ziel.erstellt) it.copy(text = text.trim(), titel = if (it.text == text.trim()) it.titel else "") else it })
+        val sauber = DiktatTrenner.gespeichert(text)
+        if (s.defekt || sauber.isEmpty() || ziel == null) return false
+        return schreibe(c, s.liste.map { if (it.erstellt == ziel.erstellt) it.copy(text = sauber, titel = if (it.text == sauber) it.titel else "") else it })
     }
 
     /** Setzt die KI-Überschrift, aber nur, wenn der Prompt noch genau diesen [text] hat (sonst gehört sie zu einer alten Fassung). */

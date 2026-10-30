@@ -42,6 +42,12 @@ object DiktatTrenner {
     /** Der Text ohne abschließende Trenner, getrimmt: So geht er ab, ein Trenner ohne Folgetext ist kein Inhalt. */
     fun ohneSchluss(text: String): String = text.replace(AM_ENDE, "").trim()
 
+    /** Der Text zum Speichern: getrimmt, ein Trenner am Schluss bleibt genau als „ ; “ erhalten; nur Trenner gelten als leer. */
+    fun gespeichert(text: String): String = if (AM_ENDE.containsMatchIn(text)) ohneSchluss(text).let { if (it.isEmpty()) "" else it + TRENNER } else text.trim()
+
+    /** [text] mit Trenner am Schluss, wenn [vorlage] einen hat: Für die KI-Fassung eines eingesprochenen Textes. */
+    fun mitSchlussWie(vorlage: String, text: String): String = if (AM_ENDE.containsMatchIn(vorlage)) ohneSchluss(text) + TRENNER else text
+
     /** Die nicht leeren Abschnitte zwischen den Trennern (neue und alte Form); leere fallen weg. */
     fun abschnitte(text: String): List<String> = ("\n" + text).split(ZWISCHEN).map { it.trim() }.filter { it.isNotEmpty() }
 

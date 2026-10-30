@@ -1615,7 +1615,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptVorKi = null
     }
 
-    /** Mikrofon der Prompt-Eingabe: Tippen startet, nochmal Tippen hängt das Gesprochene an den Entwurf an. */
+    /** Mikrofon der Prompt-Eingabe: Tippen startet, nochmal Tippen hängt das Gesprochene an den Entwurf an, danach steht „ ; “ am Ende. */
     fun promptMikrofonTippen() {
         when {
             schreibtMit || promptFormuliert -> Unit
@@ -1627,7 +1627,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 diktatZiel = { t ->
                     promptTextVon(ziel)?.let { alt ->
                         if (ziel == promptBearbeitet?.erstellt) promptVorKi = null
-                        promptTextSetzen(ziel, alt.trimEnd().let { if (it.isEmpty()) t else "$it $t" })
+                        promptTextSetzen(ziel, DiktatTrenner.anhaengen(alt, t))
                     }
                 }
                 promptDiktat = true
@@ -1704,7 +1704,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // Inzwischen weitergetippt: die neuere Fassung gewinnt.
                     aktuell != text -> meldung = "Der Text wurde inzwischen geändert. Die KI-Fassung ist verworfen."
                     else -> {
-                        promptTextSetzen(ziel, neu)
+                        promptTextSetzen(ziel, DiktatTrenner.mitSchlussWie(text, neu))
                         if (ziel == promptBearbeitet?.erstellt) promptVorKi = text
                     }
                 }
@@ -1794,7 +1794,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun promptSpeichern(fertig: () -> Unit) {
         val bearbeitet = promptBearbeitet
-        val text = promptText.trim()
+        val text = DiktatTrenner.gespeichert(promptText)
         if (text.isEmpty() || promptSpeichert || nimmtAuf || schreibtMit || promptFormuliert) return
         promptSpeichert = true
         viewModelScope.launch {
@@ -1812,7 +1812,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     when {
                         promptBearbeitet?.erstellt != bearbeitet.erstellt -> Unit
                         // Während des Speicherns ergänzt: das Fenster bleibt offen, damit die Ergänzung nicht verloren geht.
-                        promptBearbeitText.trim() != text -> {
+                        DiktatTrenner.gespeichert(promptBearbeitText) != text -> {
                             meldung = "Gespeichert. Deine Ergänzung danach ist noch nicht gespeichert."
                             promptBearbeitet = p ?: bearbeitet.copy(text = text)
                         }
@@ -1824,7 +1824,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (p == null) meldung = "Der Prompt ließ sich nicht speichern."
                 else {
                     meldung = "Als Prompt ${p.nummer} gespeichert."
-                    if (promptEntwurf.trim() == text) promptEntwurf = ""
+                    if (DiktatTrenner.gespeichert(promptEntwurf) == text) promptEntwurf = ""
                     if (promptBearbeitet == null) promptVorKi = null
                     fertig()
                 }
