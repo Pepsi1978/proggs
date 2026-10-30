@@ -37,6 +37,7 @@ import de.frank.gedankenspeicher.data.Verlaufseintrag
 import de.frank.gedankenspeicher.data.settings.Einstellungen
 import de.frank.gedankenspeicher.data.settings.Websuche
 import de.frank.gedankenspeicher.ui.theme.Erscheinung
+import de.frank.gedankenspeicher.ui.theme.Sonnenstand
 import de.frank.gedankenspeicher.auth.CodexAuthManager
 import de.frank.gedankenspeicher.tts.ClonedVoice
 import de.frank.gedankenspeicher.tts.QwenVoiceDirectory
@@ -108,6 +109,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     /** Die Erscheinung als beobachtbarer Wert — F-15 wirkt sofort und überall, ohne Neustart. */
     private val _erscheinung = MutableStateFlow(einstellungen.erscheinung)
     val erscheinung: StateFlow<String> = _erscheinung
+
+    /** Automatisch nach der Sonne: die Farbwelt aus [erscheinung] wechselt zwischen hell und dunkel. */
+    private val _erscheinungAutomatik = MutableStateFlow(einstellungen.erscheinungAutomatik)
+    val erscheinungAutomatik: StateFlow<Boolean> = _erscheinungAutomatik
 
     // Die Einstellungen liegen in EncryptedSharedPreferences und melden von sich aus keine
     // Änderung. Damit die Oberfläche trotzdem sofort nachzieht, spiegelt jeder Wert, den ein
@@ -1607,6 +1612,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _erscheinung.value = id
     }
 
+    fun setzeErscheinungAutomatik(an: Boolean) {
+        einstellungen.erscheinungAutomatik = an
+        _erscheinungAutomatik.value = an
+    }
+
     /**
      * Der Umschalter in der Kopfleiste: hell ↔ dunkel, **innerhalb derselben Familie**.
      *
@@ -1615,8 +1625,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * nur dunkler haben.
      */
     fun erscheinungUmschalten() {
+        // Bei Automatik gilt, was die Sonne gerade zeigt; der Druck macht daraus eine feste Wahl.
+        val jetzt = Erscheinung.vonId(einstellungen.erscheinung).let {
+            if (einstellungen.erscheinungAutomatik) it.alsVariante(Sonnenstand.istDunkel()) else it
+        }
+        if (einstellungen.erscheinungAutomatik) setzeErscheinungAutomatik(false)
         setzeErscheinung(
-            when (Erscheinung.vonId(einstellungen.erscheinung)) {
+            when (jetzt) {
                 Erscheinung.HELL -> Erscheinung.DUNKEL
                 Erscheinung.DUNKEL -> Erscheinung.HELL
                 Erscheinung.GOLD_HELL -> Erscheinung.GOLD_DUNKEL
@@ -2017,6 +2032,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
     private fun sicherungswerteNeuLaden() {
         _erscheinung.value = einstellungen.erscheinung
+        _erscheinungAutomatik.value = einstellungen.erscheinungAutomatik
         _groq.value = einstellungen.groqSchluessel
         _whisperModell.value = einstellungen.whisperModell
         _woerterbuchAn.value = einstellungen.woerterbuchAn

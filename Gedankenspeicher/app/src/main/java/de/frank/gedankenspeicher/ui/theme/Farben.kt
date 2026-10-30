@@ -110,6 +110,12 @@ enum class Erscheinung(val id: String, val label: String, val farben: Farbrollen
     GOLD_DUNKEL("goldDunkel", "Gold-Dunkel", GoldDunkel),
     ;
 
+    /** Dieselbe Farbwelt (Neutral oder Gold) in der hellen bzw. dunklen Fassung — für die Sonnen-Automatik. */
+    fun alsVariante(dunkel: Boolean): Erscheinung = when (this) {
+        HELL, DUNKEL -> if (dunkel) DUNKEL else HELL
+        GOLD_HELL, GOLD_DUNKEL -> if (dunkel) GOLD_DUNKEL else GOLD_HELL
+    }
+
     companion object {
         /** Unbekanntes fällt auf die Vorbelegung zurück, statt die App scheitern zu lassen. */
         fun vonId(wert: String): Erscheinung = entries.firstOrNull { it.id == wert } ?: GOLD_DUNKEL

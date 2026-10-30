@@ -96,6 +96,7 @@ import de.frank.gedankenspeicher.ui.theme.Schriften
 fun EinstellungenBildschirm(
     einstellungen: Einstellungen,
     erscheinung: String,
+    erscheinungAutomatik: Boolean,
     codexVerbunden: Boolean,
     codexKonto: String?,
     codexModell: String,
@@ -120,6 +121,7 @@ fun EinstellungenBildschirm(
     fingerabdruckAn: Boolean,
     sicherung: SicherungsAnbindung,
     beiErscheinung: (String) -> Unit,
+    beiErscheinungAutomatik: (Boolean) -> Unit,
     beiVerbinden: () -> Unit,
     beiTrennen: () -> Unit,
     beiModell: (String) -> Unit,
@@ -171,15 +173,39 @@ fun EinstellungenBildschirm(
         ) {
             // 1 — Erscheinung (F-15)
             Gruppe("Erscheinung") {
+                // Bei Automatik zeigt die Auswahl, was die Sonne gerade vorgibt; ein Druck wählt die Farbwelt.
+                val gilt = Erscheinung.vonId(erscheinung).let { if (erscheinungAutomatik) it.alsVariante(farben.istDunkel) else it }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Erscheinung.entries.forEach { e ->
                         Erscheinungskachel(
                             erscheinung = e,
-                            gewaehlt = e.id == erscheinung,
+                            gewaehlt = e.id == gilt.id,
                             modifier = Modifier.weight(1f),
                             beiDruck = { beiErscheinung(e.id) },
                         )
                     }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Automatisch nach der Sonne", style = schrift.einstellung, color = farben.textMittel)
+                        Text(
+                            "Dunkel ab dem Ende der Dämmerung, hell ab Sonnenaufgang in Neuenhagen. Gewählt wird die helle oder dunkle Fassung der Farbwelt, die oben markiert ist.",
+                            style = schrift.einstellungErklaerung,
+                            color = farben.textSchwach,
+                        )
+                    }
+                    Switch(
+                        checked = erscheinungAutomatik,
+                        onCheckedChange = beiErscheinungAutomatik,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = farben.hintergrund,
+                            checkedTrackColor = farben.akzent,
+                            uncheckedThumbColor = farben.textSchwach,
+                            uncheckedTrackColor = farben.hintergrundErhoben,
+                            uncheckedBorderColor = farben.rand,
+                        ),
+                    )
                 }
             }
 
@@ -602,7 +628,7 @@ fun EinstellungenBildschirm(
             }
 
             // 6 — Sicherung (F-17)
-            SicherungsBereich(sicherung, dunkel = erscheinung.contains("dunkel", ignoreCase = true))
+            SicherungsBereich(sicherung, dunkel = farben.istDunkel)
 
             // 7 — Über
             Gruppe("Über") {

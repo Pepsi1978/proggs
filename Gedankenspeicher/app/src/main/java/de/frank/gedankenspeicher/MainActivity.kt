@@ -78,6 +78,7 @@ import de.frank.gedankenspeicher.ui.theme.Dauern
 import de.frank.gedankenspeicher.ui.theme.Erscheinung
 import de.frank.gedankenspeicher.ui.theme.GedankenspeicherTheme
 import de.frank.gedankenspeicher.ui.theme.Kurven
+import de.frank.gedankenspeicher.ui.theme.LocalFarben
 import de.frank.gedankenspeicher.ui.theme.dauer
 import de.frank.gedankenspeicher.ui.verlauf.AntwortBearbeitenBlatt
 import de.frank.gedankenspeicher.ui.verlauf.BearbeitenBlatt
@@ -218,8 +219,9 @@ class MainActivity : FragmentActivity() {
         setContent {
             val vm = modell
             val erscheinungId by vm.erscheinung.collectAsStateWithLifecycle()
+            val erscheinungAutomatik by vm.erscheinungAutomatik.collectAsStateWithLifecycle()
 
-            GedankenspeicherTheme(erscheinung = Erscheinung.vonId(erscheinungId)) {
+            GedankenspeicherTheme(erscheinung = Erscheinung.vonId(erscheinungId), automatik = erscheinungAutomatik) {
                 Oberflaeche(
                     vm = vm,
                     beiMikrofon = { starteAufnahmeMitRecht(vm) },
@@ -443,6 +445,7 @@ private fun Oberflaeche(
     val anmeldung by vm.anmeldung.collectAsStateWithLifecycle()
     val profile by vm.profile.collectAsStateWithLifecycle()
     val erscheinungId by vm.erscheinung.collectAsStateWithLifecycle()
+    val erscheinungAutomatik by vm.erscheinungAutomatik.collectAsStateWithLifecycle()
     val liestVor by vm.vorleser.laeuft.collectAsStateWithLifecycle()
     val vorleseQuelle by vm.vorleser.quelle.collectAsStateWithLifecycle()
     val codexVerbunden by vm.codexVerbunden.collectAsStateWithLifecycle()
@@ -621,7 +624,7 @@ private fun Oberflaeche(
             // Sperrschicht darueber ist nur der sichtbare Teil; gaebe es sie einmal nicht,
             // stuende der Inhalt sonst trotzdem da.
             zustand = if (gesperrt) verlauf.copy(eintraege = emptyList()) else verlauf,
-            istDunkel = Erscheinung.vonId(erscheinungId).farben.istDunkel,
+            istDunkel = LocalFarben.current.istDunkel,
             beiSchublade = { bereich.launch { schublade.open() } },
             beiSuche = { ziel = Ziel.SUCHE },
             beiErscheinungUmschalten = vm::erscheinungUmschalten,
@@ -739,6 +742,7 @@ private fun Oberflaeche(
             EinstellungenBildschirm(
                 einstellungen = vm.einstellungen,
                 erscheinung = erscheinungId,
+                erscheinungAutomatik = erscheinungAutomatik,
                 codexVerbunden = codexVerbunden,
                 codexKonto = codexKonto,
                 codexModell = codexModell,
@@ -763,6 +767,7 @@ private fun Oberflaeche(
                 fingerabdruckAn = verlauf.fingerabdruckAn,
                 sicherung = sicherung,
                 beiErscheinung = vm::setzeErscheinung,
+                beiErscheinungAutomatik = vm::setzeErscheinungAutomatik,
                 beiVerbinden = {
                     ziel = Ziel.ANMELDUNG
                     beiAnmelden()

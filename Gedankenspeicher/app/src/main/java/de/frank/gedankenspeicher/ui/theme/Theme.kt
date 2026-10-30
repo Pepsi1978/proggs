@@ -1,17 +1,28 @@
 package de.frank.gedankenspeicher.ui.theme
 
+import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.dp
 
 /**
@@ -20,13 +31,38 @@ import androidx.compose.ui.unit.dp
  * Der Wechsel läuft über `animateColorAsState` je Rolle, nicht über einen harten Tausch:
  * `03-MOTION-SPEC.md` M-10 verlangt eine Überblendung von 400 ms, ausdrücklich ohne Wischen,
  * ohne Aufziehen, ohne Kreis, der sich ausbreitet.
+ *
+ * Ist `automatik` an, wählt die Sonne in Neuenhagen (nicht das System) zwischen der hellen und
+ * der dunklen Fassung der gewählten Farbwelt: dunkel ab Ende der bürgerlichen Dämmerung, hell
+ * ab Sonnenaufgang.
  */
 @Composable
 fun GedankenspeicherTheme(
     erscheinung: Erscheinung,
+    automatik: Boolean = false,
     inhalt: @Composable () -> Unit,
 ) {
-    val ziel = erscheinung.farben
+    // Jede Minute prüfen, nur solange die App sichtbar ist.
+    var sonneDunkel by remember(automatik) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, automatik) {
+        if (!automatik) return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
+    val gilt = if (automatik) erscheinung.alsVariante(sonneDunkel) else erscheinung
+    val ziel = gilt.farben
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, ziel.istDunkel) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or (if (ziel.istDunkel) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
     val spec = weichSpec<Color>()
 
     val farben = Farbrollen(
@@ -90,6 +126,7 @@ fun GedankenspeicherTheme(
 
     CompositionLocalProvider(
         LocalFarben provides farben,
+        LocalConfiguration provides konfig,
         LocalSchrift provides Schrift,
     ) {
         MaterialTheme(colorScheme = schema, content = inhalt)

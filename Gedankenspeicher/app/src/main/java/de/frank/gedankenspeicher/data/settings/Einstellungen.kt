@@ -37,11 +37,20 @@ class Einstellungen(ctx: Context) {
      * `hell` · `dunkel` · `goldHell` · `goldDunkel`.
      *
      * Es gibt **keine** Kopplung an die Systemeinstellung: Frank wählt selbst, und die Wahl
-     * gilt, bis er sie ändert (F-15, Regeln).
+     * gilt, bis er sie ändert (F-15, Regeln). Mit [erscheinungAutomatik] wählt die Sonne in
+     * Neuenhagen zwischen der hellen und der dunklen Fassung der gewählten Farbwelt.
      */
     var erscheinung: String
         get() = p.getString(ERSCHEINUNG, "goldDunkel")!!
         set(v) { p.edit().putString(ERSCHEINUNG, v).commit() }
+
+    /**
+     * Automatisch nach der Sonne. Ohne gespeicherten Wert (Neuinstallation) an; wer früher
+     * schon eine Erscheinung gewählt hatte, behält sie fest.
+     */
+    var erscheinungAutomatik: Boolean
+        get() = if (p.contains(ERSCHEINUNG_AUTOMATIK)) p.getBoolean(ERSCHEINUNG_AUTOMATIK, true) else !p.contains(ERSCHEINUNG)
+        set(v) { p.edit().putBoolean(ERSCHEINUNG_AUTOMATIK, v).commit() }
 
     // --- F-11: Codex ---------------------------------------------------------------------
     var codexModell: String
@@ -307,6 +316,7 @@ class Einstellungen(ctx: Context) {
 
     private companion object {
         const val ERSCHEINUNG = "erscheinung"
+        const val ERSCHEINUNG_AUTOMATIK = "erscheinung_automatik"
         const val CODEX_MODELL = "codex_modell"
         const val CODEX_EFFORT = "codex_effort"
         const val VERBESSERUNG_MODELL = "verbesserung_modell"
