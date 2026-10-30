@@ -449,7 +449,7 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
     )
 }
 
-/** Hell → Automatisch (wie das System) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus. Sitzt oben auf jedem Bildschirm. */
+/** Hell → Automatisch (nach der Sonne) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus. Sitzt oben auf jedem Bildschirm. */
 @Composable
 fun ModusKnopf(vm: AppViewModel, groesse: Dp? = null) {
     val e = vm.einstellungen
@@ -459,7 +459,7 @@ fun ModusKnopf(vm: AppViewModel, groesse: Dp? = null) {
     val aktion = {
         val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
         e.modus = neu
-        vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
+        vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" })
     }
     // Ohne Größe der Standardknopf der Unterseiten; mit Größe genau so groß wie die übrigen Kopfknöpfe (auch bei 44 dp).
     if (groesse == null) RundKnopf(icon, text, aktion) else RundKnopf(icon, text, groesse, aktion)

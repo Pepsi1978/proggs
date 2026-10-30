@@ -50,6 +50,7 @@
     {"versionCode": 46, "versionName": "1.0.45", "stand": "24.10.2026, 19:59 Uhr", "notiz": "Zeitleiste: Der Umschalter Kompakt / Ganzer Tag erscheint jetzt auch, wenn nur der Rand an die Termine angepasst wird, damit ein leerer Tag sich wieder ganz aufklappen lässt."},
     {"versionCode": 47, "versionName": "1.0.46", "stand": "30.10.2026, 11:24 Uhr", "notiz": "Täglich wiederholte Aufgaben stehen jetzt an jedem Tag in der Übersicht, auch ohne eingetragenen Tag, und werden nicht mehr überfällig."},
     {"versionCode": 48, "versionName": "1.0.47", "stand": "30.10.2026, 11:38 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
-    {"versionCode": 49, "versionName": "1.0.48", "stand": "30.10.2026, 11:40 Uhr", "notiz": "Tägliche Aufgaben: Verschieben, Löschen, Abhaken und Wiederöffnen arbeiten jetzt sauber mit allen Tagen zusammen, und die Erinnerung ist auch für den nächsten Tag schon gestellt."}
+    {"versionCode": 49, "versionName": "1.0.48", "stand": "30.10.2026, 11:40 Uhr", "notiz": "Tägliche Aufgaben: Verschieben, Löschen, Abhaken und Wiederöffnen arbeiten jetzt sauber mit allen Tagen zusammen, und die Erinnerung ist auch für den nächsten Tag schon gestellt."},
+    {"versionCode": 50, "versionName": "1.0.49", "stand": "30.10.2026, 19:00 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
   ]
 }
