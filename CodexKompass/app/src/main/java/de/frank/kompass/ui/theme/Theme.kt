@@ -1,37 +1,50 @@
 package de.frank.kompass.ui.theme
 
 import android.app.Activity
+import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 
-/** Die zwei Erscheinungsbild-Modi. Voreinstellung ist `HELL`. */
+/** Die drei Erscheinungsbild-Modi. Voreinstellung ist `AUTOMATISCH`: hell ab Sonnenaufgang, dunkel ab Ende der bürgerlichen Dämmerung in Neuenhagen. */
 enum class ThemeModus(val id: String, val label: String) {
     HELL("hell", "Hell"),
     DUNKEL("dunkel", "Dunkel"),
+    AUTOMATISCH("automatisch", "Automatisch"),
     ;
 
-    /** Reihum: hell -> dunkel -> hell. Das ist die Reihenfolge des Kopfleisten-Knopfs. */
+    /** Reihum: hell -> dunkel -> automatisch -> hell. Das ist die Reihenfolge des Kopfleisten-Knopfs. */
     fun naechster(): ThemeModus = when (this) {
         HELL -> DUNKEL
-        DUNKEL -> HELL
+        DUNKEL -> AUTOMATISCH
+        AUTOMATISCH -> HELL
     }
 
     companion object {
-        fun fromId(value: String): ThemeModus = entries.firstOrNull { it.id == value } ?: HELL
+        fun fromId(value: String): ThemeModus = entries.firstOrNull { it.id == value } ?: AUTOMATISCH
     }
 }
 
@@ -161,9 +174,23 @@ fun KompassTheme(
     modus: ThemeModus,
     inhalt: @Composable () -> Unit,
 ) {
+    // Automatisch folgt der Sonne in Neuenhagen (offline, ohne Standortrechte), nicht dem System:
+    // jede Minute prüfen, nur solange die App sichtbar ist.
+    var sonneDunkel by remember(modus) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, modus) {
+        if (modus != ThemeModus.AUTOMATISCH) return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
     val istDunkel = when (modus) {
         ThemeModus.HELL -> false
         ThemeModus.DUNKEL -> true
+        ThemeModus.AUTOMATISCH -> sonneDunkel
     }
     val schema = if (istDunkel) DunkelSchema else HellSchema
     val zusatz = if (istDunkel) DunkelZusatz else HellZusatz
@@ -186,7 +213,17 @@ fun KompassTheme(
         }
     }
 
-    CompositionLocalProvider(LocalKompassFarben provides zusatz) {
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb
+    // bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, istDunkel) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                (if (istDunkel) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
+
+    CompositionLocalProvider(LocalKompassFarben provides zusatz, LocalConfiguration provides konfig) {
         MaterialTheme(
             colorScheme = schema,
             typography = KompassTypografie,
