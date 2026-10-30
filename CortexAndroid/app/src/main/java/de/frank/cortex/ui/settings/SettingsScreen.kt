@@ -721,6 +721,17 @@ fun SettingsScreen(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Column {
+                // Spracheingabe offline über Jarvis (Parakeet): hat bei Wahl Vorrang vor Groq Whisper.
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Spracheingabe · Offline", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 14.dp))
+
                 // Spracheingabe (Groq Whisper): Modellwahl und persönliches Wörterbuch.
                 Column(
                     modifier = Modifier.padding(14.dp),

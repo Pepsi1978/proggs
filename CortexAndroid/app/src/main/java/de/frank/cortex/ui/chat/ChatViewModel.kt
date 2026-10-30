@@ -19,6 +19,7 @@ import de.frank.cortex.network.GeminiTtsAccessException
 import de.frank.cortex.observability.CortexLog
 import de.frank.cortex.vpn.TunnelState
 import de.frank.cortex.vpn.WireGuardManager
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -374,9 +375,16 @@ class ChatViewModel : ViewModel() {
                         return@launch
                     }
 
-                    // Schicht 2-4: Confidence-Gate + Audio-Abgleich + Floskel-Blocklist.
-                    val result = ApiClient.groqTranscribe(wavBytes)
-                    val filteredText = whisperFilter.filter(result, analysis)
+                    // Offline über Jarvis (Parakeet): kein Groq, kein stiller Rückfall. Whisper-Filter (Schicht 2-4)
+                    // entfällt, weil er Whisper-Segmente braucht; Schicht 1 (Stille) hat oben schon gegriffen.
+                    val ctx = de.frank.cortex.CortexApp.appContext
+                    val filteredText = if (ParakeetUeberJarvis.gewaehlt(ctx)) {
+                        ParakeetUeberJarvis.transkribiere(ctx, wavBytes)
+                    } else {
+                        // Schicht 2-4: Confidence-Gate + Audio-Abgleich + Floskel-Blocklist.
+                        val result = ApiClient.groqTranscribe(wavBytes)
+                        whisperFilter.filter(result, analysis)
+                    }
                     if (filteredText.isNotBlank()) {
                         _uiState.update { it.copy(isTranscribing = false) }
                         // Text wird über Callback ans UI zurückgegeben
@@ -400,6 +408,9 @@ class ChatViewModel : ViewModel() {
                 CortexLog.error("ChatVM", "toggleRecording", "AudioRecord konnte nicht initialisiert werden")
                 _uiState.update { it.copy(isRecording = false, error = "Mikrofon nicht verfügbar") }
                 return
+            }
+            if (ParakeetUeberJarvis.gewaehlt(de.frank.cortex.CortexApp.appContext)) {
+                viewModelScope.launch { ParakeetUeberJarvis.vorwaermen(de.frank.cortex.CortexApp.appContext) }
             }
             CortexLog.checkpoint(
                 step = "stt_start",
