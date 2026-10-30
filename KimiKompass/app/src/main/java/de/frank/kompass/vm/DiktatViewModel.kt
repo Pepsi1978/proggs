@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.kompass.KompassContainer
 import de.frank.kompass.observability.KompassLog
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +52,7 @@ class DiktatViewModel(private val container: KompassContainer) : ViewModel() {
     }
 
     private fun starte(ziel: String) {
+        val parakeet = ParakeetUeberJarvis.gewaehlt(container.appContext)
         val ging = container.mikrofon.starte(viewModelScope)
         if (!ging) {
             _zustand.value = DiktatZustand(
@@ -59,6 +61,8 @@ class DiktatViewModel(private val container: KompassContainer) : ViewModel() {
             )
             return
         }
+        // Modell in Jarvis schon beim Aufnahmestart laden, damit das Abschreiben nicht wartet.
+        if (parakeet) viewModelScope.launch { ParakeetUeberJarvis.vorwaermen(container.appContext) }
         _zustand.value = DiktatZustand(stufe = DiktatStufe.NIMMT_AUF, ziel = ziel)
         KompassLog.info("DiktatViewModel", "starte", "Aufnahme läuft", mapOf("ziel" to ziel))
     }
@@ -73,7 +77,12 @@ class DiktatViewModel(private val container: KompassContainer) : ViewModel() {
                     _zustand.value = DiktatZustand(hinweis = "Es kam keine Aufnahme zustande.")
                     return@launch
                 }
-                val text = container.transkribierer.transkribiere(wav)
+                // Offline über Jarvis, wenn gewählt. Kein stiller Rückfall auf Groq.
+                val text = if (ParakeetUeberJarvis.gewaehlt(container.appContext)) {
+                    ParakeetUeberJarvis.transkribiere(container.appContext, wav)
+                } else {
+                    container.transkribierer.transkribiere(wav)
+                }
                 if (text.isBlank()) {
                     _zustand.value = DiktatZustand(
                         hinweis = "Es wurde nichts Gesprochenes erkannt. Sprich beim nächsten " +
