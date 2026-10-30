@@ -11,6 +11,7 @@ Nicht hinein gehören Zugangsschlüssel, Passwörter und Server-Adressen.
 ## Installation aufs Handy nur über das Skript
 Jarvis nie mit nacktem `adb install` installieren, sondern über `Werkzeuge/jarvis-install/jarvis-install.sh <apk>` (Windows: `.ps1`).
 Es fragt per Overlay nach dem Zeitpunkt (`ui/InstallFrageDienst.kt`), damit eine laufende Aufnahme nicht abbricht; ohne Antwort installiert es nach 30 Sekunden.
+Technischer Schutz: Das Manifest verlangt den Pflicht-Teil `freigabe` (`requiredSplitTypes`). Gradle legt ihn signiert als `assets/freigabe-teil.apk` in die APK; nur jarvis-install und UpdateStation holen ihn heraus und installieren ihn mit. Nacktes `adb install` und `installDebug` scheitern daher mit `INSTALL_FAILED_MISSING_SPLIT`. UpdateStation öffnet dasselbe Overlay über `ui.InstallFrageBruecke` und bekommt die Antwort per PendingIntent.
 
 ## Live-Gespräch: erst lesen, danach messen
 Vor jeder Änderung an `live/` (vor allem `LiveGespraech.kt`: Polster, Füll-Stille, Echosperre, Fadenprioritäten, Tonweg)

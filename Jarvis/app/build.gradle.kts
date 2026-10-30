@@ -1,4 +1,5 @@
 import java.util.Properties
+import javax.inject.Inject
 
 plugins {
     alias(libs.plugins.android.application)
@@ -92,6 +93,66 @@ android {
     // sherpa-onnx (eigene Weckwort-Phrase) und „Hey Jarvis“ teilen EINE ONNX Runtime: die neueste von Microsoft
     // (libs.versions.toml). Aus der sherpa-AAR ist ihre eigene libonnxruntime.so entfernt (libs/LIESMICH.md), damit
     // nur diese eine geladen wird und der KleidiAI-Schalter in WeckwortErkenner für beide gilt.
+}
+
+// Pflicht-Teil „freigabe“ (siehe AndroidManifest): liegt signiert als Asset in der APK. So bleibt es für apk-update und
+// UpdateStation bei einer Datei; nur Werkzeuge/jarvis-install und UpdateStation holen ihn heraus und installieren ihn mit.
+abstract class FreigabeTeilBauen @Inject constructor(private val ausfuehren: ExecOperations) : DefaultTask() {
+    @get:Input abstract val paket: Property<String>
+    @get:Input abstract val versionCode: Property<Int>
+    @get:Input abstract val versionName: Property<String>
+    @get:Input abstract val schluessel: Property<String>
+    @get:Input abstract val sdk: Property<String>
+    @get:Input abstract val plattform: Property<String>
+    @get:OutputDirectory abstract val ausgabe: DirectoryProperty
+
+    @TaskAction
+    fun baue() {
+        val windows = System.getProperty("os.name").startsWith("Windows")
+        val aapt2Name = if (windows) "aapt2.exe" else "aapt2"
+        val apksignerName = if (windows) "apksigner.bat" else "apksigner"
+        val werkzeuge = File(sdk.get(), "build-tools").listFiles().orEmpty()
+            .filter { File(it, aapt2Name).exists() && File(it, apksignerName).exists() }
+            .maxByOrNull { it.name } ?: error("Keine build-tools mit aapt2 und apksigner gefunden")
+        val arbeit = temporaryDir
+        val manifest = File(arbeit, "AndroidManifest.xml")
+        manifest.writeText(
+            """
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="${paket.get()}" split="freigabe"
+                android:versionCode="${versionCode.get()}" android:versionName="${versionName.get()}" android:splitTypes="freigabe">
+                <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
+                <application android:hasCode="false" />
+            </manifest>
+            """.trimIndent(),
+        )
+        val roh = File(arbeit, "freigabe-roh.apk")
+        val ziel = ausgabe.get().asFile.apply { mkdirs() }.resolve("freigabe-teil.apk")
+        ausfuehren.exec {
+            commandLine(File(werkzeuge, aapt2Name).path, "link", "-o", roh.path, "-I", "${sdk.get()}/platforms/${plattform.get()}/android.jar", "--manifest", manifest.path)
+        }
+        ausfuehren.exec {
+            commandLine(
+                File(werkzeuge, apksignerName).path, "sign", "--ks", schluessel.get(), "--ks-key-alias", "androiddebugkey",
+                "--ks-pass", "pass:android", "--key-pass", "pass:android", "--min-sdk-version", "26", "--v4-signing-enabled", "false", "--out", ziel.path, roh.path,
+            )
+        }
+    }
+}
+
+val freigabeTeil = tasks.register<FreigabeTeilBauen>("baueFreigabeTeil") {
+    paket = android.defaultConfig.applicationId
+    versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
+    versionName = versionslogAktuell["versionName"] as String
+    schluessel = android.signingConfigs.getByName("debug").storeFile?.path ?: "${System.getProperty("user.home")}/.android/debug.keystore"
+    sdk = androidComponents.sdkComponents.sdkDirectory.map { it.asFile.path }
+    plattform = "android-${android.compileSdk}"
+    ausgabe = layout.buildDirectory.dir("generated/freigabeTeil")
+}
+
+androidComponents {
+    onVariants { variante ->
+        variante.sources.assets?.addGeneratedSourceDirectory(freigabeTeil, FreigabeTeilBauen::ausgabe)
+    }
 }
 
 kotlin {

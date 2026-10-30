@@ -3,6 +3,8 @@
 # Ein Overlay über jeder App bietet „Sofort“ oder „In 1 bis 5 Minuten“, damit eine laufende Aufnahme nicht abbricht.
 # Ohne Antwort wird nach 30 Sekunden installiert. Die APK liegt schon vor der Frage in einer Installationssitzung am
 # Handy, damit „Sofort“ wirklich sofort installiert: Nach der Antwort fehlt nur noch das Abschließen der Sitzung.
+# Jarvis verlangt seinen Pflicht-Teil (assets/freigabe-teil.apk in der APK): Nacktes adb install lehnt Android deshalb
+# mit INSTALL_FAILED_MISSING_SPLIT ab, nur dieses Skript und UpdateStation installieren ihn mit und stellen die Frage.
 # Aufruf: jarvis-install.sh <apk> [-s <gerät>]
 # Kann das Overlay nicht erscheinen, wird nicht installiert.
 # Letzte Zeile JARVIS_INSTALL_STATUS: installiert oder fehler.
@@ -11,6 +13,7 @@ PAKET=de.frank.jarvis
 FENSTER=$PAKET/.ui.InstallFrageDienst
 ANTWORT=/sdcard/Android/data/$PAKET/files/install-antwort.txt
 ZWISCHENLAGER=/data/local/tmp/jarvis-install.apk
+TEIL_IM_APK=assets/freigabe-teil.apk
 # Frist des Overlays plus Reserve; sie zählt ab seiner Meldung „offen“, damit jeder Tipp im sichtbaren Fenster noch gilt.
 WARTEZEIT_S=33
 MELDEFRIST_S=20
@@ -53,11 +56,13 @@ handy() { "$ADB_BIN" -s "$GERAET" shell "$@" 2>&1 | tr -d '\r'; }
 SITZUNG=""
 ABGESCHLOSSEN=""
 SERIE=""
+TEIL_DATEI=""
 # Auch bei Abbruch: Die Sitzung hält sonst die ganze APK am Handy, bis Android sie Tage später entsorgt.
 aufraeumen() {
   [ -n "$GERAET" ] || return 0
   [ -n "$SITZUNG" ] && [ -z "$ABGESCHLOSSEN" ] && handy pm install-abandon "$SITZUNG" >/dev/null
   handy rm -f "$ZWISCHENLAGER" "$ANTWORT" >/dev/null
+  [ -n "$TEIL_DATEI" ] && rm -f "$TEIL_DATEI"
 }
 trap aufraeumen EXIT
 trap 'exit 130' INT TERM
@@ -65,14 +70,26 @@ trap 'exit 130' INT TERM
 bereite_vor() {
   echo "Lade die APK vorab aufs Handy über $GERAET ..."
   "$ADB_BIN" -s "$GERAET" push "$APK" "$ZWISCHENLAGER" >/dev/null 2>&1 || ende fehler "APK ließ sich nicht aufs Handy laden"
-  local groesse ausgabe
+  local groesse ausgabe teil_groesse=0
   groesse=$(wc -c < "$APK" | tr -d ' ')
-  ausgabe=$(handy pm install-create -r -S "$groesse")
+  # Ältere Jarvis-APKs haben den Teil noch nicht und brauchen ihn auch nicht.
+  if unzip -l "$APK" "$TEIL_IM_APK" >/dev/null 2>&1; then
+    TEIL_DATEI=$(mktemp) || ende fehler "Keine Temp-Datei für den Pflicht-Teil"
+    unzip -p "$APK" "$TEIL_IM_APK" > "$TEIL_DATEI" || ende fehler "Pflicht-Teil ließ sich nicht aus der APK holen"
+    teil_groesse=$(wc -c < "$TEIL_DATEI" | tr -d ' ')
+  fi
+  ausgabe=$(handy pm install-create -r -S "$(( groesse + teil_groesse ))")
   SITZUNG=$(echo "$ausgabe" | sed -n 's/.*\[\([0-9]*\)\].*/\1/p')
   [ -n "$SITZUNG" ] || ende fehler "Installationssitzung ließ sich nicht anlegen: $ausgabe"
   ausgabe=$(handy pm install-write -S "$groesse" "$SITZUNG" base.apk "$ZWISCHENLAGER")
   handy rm -f "$ZWISCHENLAGER" >/dev/null
   echo "$ausgabe" | grep -q '^Success' || ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe"
+  if [ -n "$TEIL_DATEI" ]; then
+    "$ADB_BIN" -s "$GERAET" push "$TEIL_DATEI" "$ZWISCHENLAGER" >/dev/null 2>&1 || ende fehler "Pflicht-Teil ließ sich nicht aufs Handy laden"
+    ausgabe=$(handy pm install-write -S "$teil_groesse" "$SITZUNG" freigabe.apk "$ZWISCHENLAGER")
+    handy rm -f "$ZWISCHENLAGER" >/dev/null
+    echo "$ausgabe" | grep -q '^Success' || ende fehler "Pflicht-Teil ließ sich nicht in die Sitzung schreiben: $ausgabe"
+  fi
 }
 installiere() {
   verbinde || ende fehler "Handy nicht erreichbar"

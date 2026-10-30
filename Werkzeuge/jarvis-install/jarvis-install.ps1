@@ -2,6 +2,8 @@
 # Ein Overlay über jeder App bietet „Sofort“ oder „In 1 bis 5 Minuten“, damit eine laufende Aufnahme nicht abbricht.
 # Ohne Antwort wird nach 30 Sekunden installiert. Die APK liegt schon vor der Frage in einer Installationssitzung am
 # Handy, damit „Sofort“ wirklich sofort installiert: Nach der Antwort fehlt nur noch das Abschließen der Sitzung.
+# Jarvis verlangt seinen Pflicht-Teil (assets/freigabe-teil.apk in der APK): Nacktes adb install lehnt Android deshalb
+# mit INSTALL_FAILED_MISSING_SPLIT ab, nur dieses Skript und UpdateStation installieren ihn mit und stellen die Frage.
 # Aufruf: jarvis-install.ps1 <apk> [-Geraet <gerät>]
 # Kann das Overlay nicht erscheinen, wird nicht installiert.
 # Letzte Zeile JARVIS_INSTALL_STATUS: installiert oder fehler.
@@ -11,6 +13,8 @@ $paket = "de.frank.jarvis"
 $fenster = "$paket/.ui.InstallFrageDienst"
 $antwort = "/sdcard/Android/data/$paket/files/install-antwort.txt"
 $zwischenlager = "/data/local/tmp/jarvis-install.apk"
+$teilImApk = "assets/freigabe-teil.apk"
+$teilDatei = ""
 # Frist des Overlays plus Reserve; sie zählt ab seiner Meldung „offen“, damit jeder Tipp im sichtbaren Fenster noch gilt.
 $warteS = 33
 $meldefristS = 20
@@ -68,12 +72,32 @@ try {
     & $adb -s $Geraet push $Apk $zwischenlager *> $null
     if ($LASTEXITCODE -ne 0) { Ende fehler "APK ließ sich nicht aufs Handy laden" }
     $groesse = (Get-Item $Apk).Length
-    $ausgabe = Handy pm install-create -r -S $groesse
+    # Ältere Jarvis-APKs haben den Teil noch nicht und brauchen ihn auch nicht.
+    $teilGroesse = 0
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $Apk).Path)
+    try {
+        $eintrag = $zip.GetEntry($teilImApk)
+        if ($eintrag) {
+            $teilDatei = [System.IO.Path]::GetTempFileName()
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($eintrag, $teilDatei, $true)
+            $teilGroesse = (Get-Item $teilDatei).Length
+        }
+    }
+    finally { $zip.Dispose() }
+    $ausgabe = Handy pm install-create -r -S ($groesse + $teilGroesse)
     if ($ausgabe -notmatch "\[(\d+)\]") { Ende fehler "Installationssitzung ließ sich nicht anlegen: $ausgabe" }
     $sitzung = $Matches[1]
     $ausgabe = Handy pm install-write -S $groesse $sitzung base.apk $zwischenlager
     Handy rm -f $zwischenlager | Out-Null
     if ($ausgabe -notmatch "(?m)^Success") { Ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe" }
+    if ($teilDatei) {
+        & $adb -s $Geraet push $teilDatei $zwischenlager *> $null
+        if ($LASTEXITCODE -ne 0) { Ende fehler "Pflicht-Teil ließ sich nicht aufs Handy laden" }
+        $ausgabe = Handy pm install-write -S $teilGroesse $sitzung freigabe.apk $zwischenlager
+        Handy rm -f $zwischenlager | Out-Null
+        if ($ausgabe -notmatch "(?m)^Success") { Ende fehler "Pflicht-Teil ließ sich nicht in die Sitzung schreiben: $ausgabe" }
+    }
 
     $kennung = "$([DateTimeOffset]::Now.ToUnixTimeSeconds())-$PID"
     Handy rm -f $antwort | Out-Null
@@ -113,6 +137,7 @@ try {
     Installiere
 }
 finally {
+    if ($teilDatei) { Remove-Item $teilDatei -Force -ErrorAction SilentlyContinue }
     # Auch bei Abbruch: Die Sitzung hält sonst die ganze APK am Handy, bis Android sie Tage später entsorgt.
     if ($Geraet) {
         if ($sitzung -and -not $abgeschlossen) { Handy pm install-abandon $sitzung | Out-Null }

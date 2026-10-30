@@ -3,6 +3,7 @@ package de.frank.jarvis.ui
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -58,14 +59,16 @@ import java.io.File
  * Fragt vor einer adb-Installation, wann sie starten soll, damit sie keine laufende Aufnahme abbricht: als Overlay über
  * jeder App, ohne den Fokus zu nehmen, sodass die App darunter bedienbar bleibt. Werkzeuge/jarvis-install startet den
  * Dienst, liest aus [DATEI] erst „offen“ oder „fehler“ und dann die Antwort und installiert selbst, ohne Antwort nach
- * [FRIST_S] Sekunden; Warten und Installieren laufen am Rechner, weil Jarvis dabei beendet wird.
+ * [FRIST_S] Sekunden; Warten und Installieren laufen am Rechner, weil Jarvis dabei beendet wird. Bringt der Start einen
+ * PendingIntent in [EXTRA_ANTWORT] mit ([InstallFrageBruecke], UpdateStation), geht die Antwort dorthin statt in die Datei.
  */
-class InstallFrageDienst : Service(), SavedStateRegistryOwner {
+open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
 
     private val lebenszyklus = LifecycleRegistry(this)
     private val speicher = SavedStateRegistryController.create(this)
     private var ansicht: ComposeView? = null
     private var kennung by mutableStateOf("")
+    private var antwort: PendingIntent? = null
 
     override val lifecycle: Lifecycle get() = lebenszyklus
     override val savedStateRegistry: SavedStateRegistry get() = speicher.savedStateRegistry
@@ -80,6 +83,7 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         kennung = intent?.getStringExtra(EXTRA_KENNUNG).orEmpty()
+        antwort = antwortAus(intent)
         // Ein abgelehnter Vordergrundstart darf nie den Prozess und damit eine laufende Aufnahme mitreißen.
         val gestartet = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -123,7 +127,7 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnLifecycleDestroyed(this@InstallFrageDienst))
             setContent {
                 JarvisTheme(einst.modus, einst.design) {
-                    Frage(kennung, onWahl = ::antworte, onFristAbgelaufen = ::stopSelf)
+                    Frage(kennung, onWahl = ::antworte, onFristAbgelaufen = ::fristAbgelaufen)
                 }
             }
         }
@@ -143,13 +147,29 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
             .isSuccess
     }
 
+    private fun antwortAus(intent: Intent?): PendingIntent? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra(EXTRA_ANTWORT, PendingIntent::class.java)
+        } else {
+            @Suppress("DEPRECATION") intent?.getParcelableExtra(EXTRA_ANTWORT)
+        }
+
+    /** Das Skript zählt selbst mit; UpdateStation erfährt das Ende der Frist hier. */
+    private fun fristAbgelaufen() {
+        if (antwort != null) schreibe("frist")
+        stopSelf()
+    }
+
     /** Das Fenster bleibt offen, wenn die Antwort nicht ankäme: Sonst installierte das Skript trotz gewählter Verzögerung. */
     private fun antworte(minuten: Int) {
         if (schreibe("$minuten")) stopSelf()
     }
 
     /** Erst vollständig schreiben, dann umbenennen: Das Skript fragt laufend ab und darf nie eine halbe Zeile lesen. */
-    private fun schreibe(wert: String): Boolean = runCatching {
+    private fun schreibe(wert: String): Boolean = antwort?.let { ziel ->
+        runCatching { ziel.send(this, 0, Intent().putExtra(EXTRA_WERT, wert)) }
+            .onFailure { Logbuch.fehler("Installationsfrage: Antwort nicht zugestellt", it) }.isSuccess
+    } ?: runCatching {
         val ordner = checkNotNull(getExternalFilesDir(null)) { "kein externer Speicher" }
         val teil = File(ordner, "$DATEI.teil")
         teil.writeText("$kennung $wert")
@@ -165,6 +185,8 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
 
     private companion object {
         const val EXTRA_KENNUNG = "kennung"
+        const val EXTRA_ANTWORT = "antwort"
+        const val EXTRA_WERT = "wert"
         const val DATEI = "install-antwort.txt"
         const val KANAL = "jarvis_installationsfrage"
         const val BENACHRICHTIGUNG = 4310
@@ -226,3 +248,6 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         }
     }
 }
+
+/** Eingang für UpdateStation: eigene Klasse, weil ein Dienst nur eine Erlaubnis tragen kann (siehe Manifest). */
+class InstallFrageBruecke : InstallFrageDienst()

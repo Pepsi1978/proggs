@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:requiredSplitTypes="freigabe">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -70,7 +71,10 @@
         <provider android:authorities="de.frank.stacklabor.werftstudio.jarvis" />
     </queries>
 
+    <!-- isSplitRequired und requiredSplitTypes: Ohne den Teil „freigabe“ lehnt Android jede Installation ab
+         (INSTALL_FAILED_MISSING_SPLIT). So geht kein nacktes adb install an der Installationsfrage vorbei. -->
     <application
+        android:isSplitRequired="true"
         android:name=".JarvisApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/datensicherung_regeln"
@@ -128,6 +132,13 @@
             android:name=".ui.InstallFrageDienst"
             android:exported="true"
             android:permission="android.permission.DUMP"
+            android:foregroundServiceType="shortService" />
+
+        <!-- Dieselbe Frage für UpdateStation, die keine DUMP-Erlaubnis bekommen kann: Sie antwortet über einen PendingIntent. -->
+        <service
+            android:name=".ui.InstallFrageBruecke"
+            android:exported="true"
+            android:permission="de.frank.jarvis.permission.BRUECKE"
             android:foregroundServiceType="shortService" />
 
         <!-- Unsichtbar: startet nach Neustart und Update den Weckwort-Dienst (das darf nur eine sichtbare App). -->
