@@ -1254,7 +1254,7 @@ private fun AllStacksAdditionalInfoEditor(state: StackLaborUiState, callbacks: S
             Text(
                 when (state.allStacksInputState) {
                     GoalInputState.Recording -> "Aufnahme läuft · zum Stoppen tippen"
-                    GoalInputState.Transcribing -> "Groq transkribiert …"
+                    GoalInputState.Transcribing -> "Transkribiert …"
                     GoalInputState.Improving -> "Codex verbessert …"
                     GoalInputState.Idle -> "Spracheingabe oder KI-Verbesserung"
                 },

@@ -184,6 +184,13 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                     }
                 }
                 item {
+                    SettingsGroup("Spracheingabe · Offline", Icons.Default.Mic) {
+                        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                            de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                        }
+                    }
+                }
+                item {
                     SettingsGroup("Spracheingabe", Icons.Default.Mic) {
                         SettingsItem("Whisper-Modell", state.whisperModelLabel) { selectionId = "whisper-model" }
                         SettingsDivider()

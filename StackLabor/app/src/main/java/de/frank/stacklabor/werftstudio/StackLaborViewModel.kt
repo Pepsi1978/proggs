@@ -45,6 +45,7 @@ import de.frank.stacklabor.werftstudio.service.codex.CodexErrorKind
 import de.frank.stacklabor.werftstudio.service.codex.CodexException
 import de.frank.stacklabor.werftstudio.service.codex.CodexStreamEvent
 import de.frank.stacklabor.werftstudio.service.speech.MicRecorder
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import de.frank.stacklabor.werftstudio.service.tts.ClonedVoice
 import de.frank.stacklabor.werftstudio.service.tts.GeminiKeyChoice
 import de.frank.stacklabor.werftstudio.service.tts.TtsConfiguration
@@ -637,7 +638,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         if (!mutableState.value.goalDraftActive) return
         when (mutableState.value.goalInputState) {
             GoalInputState.Idle -> {
-                if (container.groqSchluesselAktiv().isBlank()) {
+                if (container.groqSchluesselAktiv().isBlank() && !ParakeetUeberJarvis.gewaehlt(container.applicationContext)) {
                     message("Bitte zuerst unter Einstellungen einen Groq-API-Schlüssel hinterlegen.")
                 } else {
                     pendingSpeechTarget = SpeechInputTarget.Goal
@@ -674,13 +675,21 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    /** Groq-Whisper mit gewähltem Modell und, falls eingeschaltet, dem persönlichen Wörterbuch. */
-    private suspend fun transcribeGroq(wav: ByteArray): String = container.groqTranscriber.transcribe(
-        container.groqSchluesselAktiv(),
-        wav,
-        settings.groqModell,
-        de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.vokabularPrompt(settings.woerterbuchAn, settings.woerterbuch),
-    )
+    /**
+     * Offline über Jarvis (Parakeet), wenn gewählt; sonst Groq-Whisper mit gewähltem Modell und, falls
+     * eingeschaltet, dem persönlichen Wörterbuch. Kein stiller Rückfall auf Groq.
+     */
+    private suspend fun transcribeGroq(wav: ByteArray): String =
+        if (ParakeetUeberJarvis.gewaehlt(container.applicationContext)) {
+            ParakeetUeberJarvis.transkribiere(container.applicationContext, wav)
+        } else {
+            container.groqTranscriber.transcribe(
+                container.groqSchluesselAktiv(),
+                wav,
+                settings.groqModell,
+                de.frank.stacklabor.werftstudio.service.speech.GroqTranscriber.vokabularPrompt(settings.woerterbuchAn, settings.woerterbuch),
+            )
+        }
 
     private fun stopAndTranscribeGoal() {
         if (goalInputJob?.isActive == true) return
@@ -811,7 +820,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         if (!mutableState.value.allStacksSetupOpen) return
         when (mutableState.value.allStacksInputState) {
             GoalInputState.Idle -> {
-                if (container.groqSchluesselAktiv().isBlank()) {
+                if (container.groqSchluesselAktiv().isBlank() && !ParakeetUeberJarvis.gewaehlt(container.applicationContext)) {
                     message("Bitte zuerst unter Einstellungen einen Groq-API-Schlüssel hinterlegen.")
                 } else {
                     pendingSpeechTarget = SpeechInputTarget.AllStacks
