@@ -169,6 +169,11 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             }
             // ---- Spracheingabe ----
             item {
+                Block("Spracheingabe · Offline") {
+                    de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                }
+            }
+            item {
                 Block("Spracheingabe") {
                     Text(
                         if (e.groqKey.isBlank()) "Ohne Schlüssel nutzt die App die Spracheingabe des Handys. Mit Groq-Schlüssel: Whisper, sehr genau bei Fachbegriffen."

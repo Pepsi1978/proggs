@@ -178,7 +178,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         when (aufnahme) {
             Aufnahme.AUS -> {
                 diktatZiel = ziel
-                if (einstellungen.groqKey.isBlank()) handySpracheingabe() else mikrofonAnfragen()
+                if (einstellungen.groqKey.isBlank() && !de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication())) handySpracheingabe() else mikrofonAnfragen()
             }
             Aufnahme.LAEUFT -> aufnahmeBeenden()
             Aufnahme.VERARBEITET -> Unit
@@ -236,7 +236,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val wav = mikro.stop()
                 if (wav == null) { melde("Es wurde nichts aufgenommen."); nachAufnahme = null; return@launch }
-                val text = Diktat(transcriber).transkribiere(wav).text.trim()
+                val text = if (de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication())) de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.transkribiere(getApplication(), wav)
+                else Diktat(transcriber).transkribiere(wav).text.trim()
                 if (text.isBlank()) { melde("Keine Sprache erkannt."); nachAufnahme = null } else diktatEinfuegen(text)
             } catch (c: CancellationException) {
                 throw c
