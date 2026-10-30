@@ -29,6 +29,7 @@ the target apps, and per-app data isolation (see below).
 | `GroqWhisperClient.swift` | Groq Whisper API for speech-to-text |
 | `GeminiBatchTranscribeClient.swift` | **Gemini speech-to-text.** `gemini-3.5-transcribe` via the Interactions API (`POST /v1beta/interactions`), audio inline as base64. Measured on Windows: 4,4 s vs 15,1 s for the live variant; WER 2,6 % vs 4,6 % (Groq). Mode `verbatim`, because `smart` drops words |
 | `PersonalVocabulary.swift` | Shared word list from `SK/VoiceOverlays/personal-vocabulary.txt`, fed to Gemini as `customVocabulary` |
+| `ParakeetVocabularySetting.swift` | Dictionary for offline speech-to-text, separate from the Gemini one: switch `SK/VoiceOverlays/parakeet-vocabulary-enabled.txt` (missing = on), terms `SK/VoiceOverlays/parakeet-vocabulary.txt` (missing = starter list), shared by TVO/CVO, in the Drive bundle. Passed per recording as sherpa-onnx hotwords (`A/B/C`); `bpe.vocab` comes from `../Jarvis/app/src/main/assets/parakeet/` via `build.sh` into `Contents/Resources` |
 | `SpeechToTextRouter.swift` | Picks Groq or Gemini per recording; falls back to Groq on technical Gemini failure (quota, network) but NOT on `noSpeech` |
 | `TranscriptionEngineSetting.swift` | Engine switch (`groq` / `gemini`), stored as `SK/VoiceOverlays/transcription-engine.txt` |
 | `build.sh` | **Fixed source list** — every new `.swift` file must be added there, otherwise it is silently not compiled |

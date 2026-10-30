@@ -57,6 +57,7 @@ SWIFT_FILES=(
     "$SRC_DIR/PersonalVocabulary.swift"
     "$SRC_DIR/GeminiBatchTranscribeClient.swift"
     "$SRC_DIR/ParakeetLocalClient.swift"
+    "$SRC_DIR/ParakeetVocabularySetting.swift"
     "$SRC_DIR/SpeechToTextRouter.swift"
     "$SRC_DIR/RecordingArchive.swift"
     "$SRC_DIR/GeminiClient.swift"
@@ -99,6 +100,8 @@ SWIFT_FILES=(
 ensure_sherpa || { echo "FEHLER: sherpa-onnx nicht verfuegbar"; exit 1; }
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 cp "$SHERPA_LIB/libsherpa-onnx-c-api.dylib" "$SHERPA_LIB/libonnxruntime.dylib" "$APP_BUNDLE/Contents/Frameworks/"
+# Vokabular des Modells fuer das Parakeet-Woerterbuch: nicht Teil des Modell-Downloads, darum im Bundle.
+cp "$PROJECT_DIR/../Jarvis/app/src/main/assets/parakeet/bpe.vocab" "$APP_BUNDLE/Contents/Resources/"
 
 swiftc \
     -o "$APP_BUNDLE/Contents/MacOS/$APP_NAME" \

@@ -66,6 +66,8 @@ public sealed class GeminiPromptDriveSync
         yield return "gemini-correction-prompt.txt"; // Legacy-Sammeldatei
         yield return "vocabulary-enabled.txt";       // Woerterbuch-Schalter
         yield return "vocabulary-preamble.txt";      // Woerterbuch-Einleitungstext
+        yield return "parakeet-vocabulary-enabled.txt"; // Schalter des Parakeet-Woerterbuchs
+        yield return "parakeet-vocabulary.txt";      // Begriffe des Parakeet-Woerterbuchs
         foreach (var name in QuickPromptStore.FileNames()) yield return name; // Schnell-Prompts 1-10 + Kurzbeschreibungen
     }
 

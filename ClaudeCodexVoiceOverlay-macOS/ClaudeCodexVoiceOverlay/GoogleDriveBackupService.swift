@@ -863,6 +863,8 @@ enum GeminiPromptSync {
         names.append("gemini-correction-prompt.txt")  // Legacy-Sammeldatei
         names.append("vocabulary-enabled.txt")        // Woerterbuch-Schalter
         names.append("vocabulary-preamble.txt")       // Woerterbuch-Einleitungstext
+        names.append("parakeet-vocabulary-enabled.txt")  // Schalter des Parakeet-Woerterbuchs
+        names.append("parakeet-vocabulary.txt")       // Begriffe des Parakeet-Woerterbuchs
         names.append(contentsOf: QuickPromptStore.fileNames)   // Schnell-Prompts 1-10 + Kurzbeschreibungen
         return names
     }

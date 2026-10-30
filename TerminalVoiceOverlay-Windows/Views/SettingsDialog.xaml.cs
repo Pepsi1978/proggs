@@ -49,6 +49,13 @@ public partial class SettingsDialog : Window
             _ => 0,
         };
         UpdateParakeetButton();
+        // Parakeet-Woerterbuch: eigene SK-Dateien, sichtbar nur, wenn Parakeet gewaehlt ist.
+        ParakeetVocabularyCheck.IsChecked = ParakeetVocabularySetting.IsEnabled;
+        ParakeetVocabularyBox.Text = ParakeetVocabularySetting.LoadText();
+        void UpdateParakeetVocabularyVisibility() => ParakeetVocabularyPanel.Visibility =
+            TranscriptionEngineBox.SelectedIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateParakeetVocabularyVisibility();
+        TranscriptionEngineBox.SelectionChanged += (_, _) => UpdateParakeetVocabularyVisibility();
         ParakeetDownloadButton.Click += async (_, _) =>
         {
             if (_parakeetDownloading || ParakeetLocalClient.IsInstalled) return;
@@ -112,6 +119,8 @@ public partial class SettingsDialog : Window
                 : TranscriptionModeSetting.Verbatim);
             SavePersonalVocabulary(VocabularyBox.Text);
             SaveVocabularyEnabled(UseVocabularyCheck.IsChecked == true);
+            ParakeetVocabularySetting.SaveEnabled(ParakeetVocabularyCheck.IsChecked == true);
+            ParakeetVocabularySetting.SaveText(ParakeetVocabularyBox.Text);
             GeminiClient.SaveVocabularyPreamble(PreambleBox.Text);
             GeminiPromptDriveSync.TryUpload();   // Schalter/Praeambel-Aenderung sofort ins Backup
 

@@ -1033,6 +1033,15 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
     /// Laeuft der Download gerade? Gilt ueber das Schliessen des Dialogs hinaus.
     private static var parakeetDownloading = false
     private static var parakeetProgressText = ""
+    // Woerterbuch nur fuer Parakeet (geteilte SK-Dateien parakeet-vocabulary*.txt, siehe ParakeetVocabularySetting);
+    // unabhaengig vom Woerterbuch der Gemini-Korrektur. Sichtbar nur, wenn oben Parakeet gewaehlt ist.
+    private let parakeetVocabPanel = NSView()
+    private let parakeetVocabCheck = NSButton(checkboxWithTitle: "Wörterbuch nutzen", target: nil, action: nil)
+    private let parakeetVocabTextView = NSTextView()
+    private let parakeetVocabScroll = NSScrollView()
+    private let parakeetVocabHint = NSTextField(wrappingLabelWithString: "")
+    private var parakeetVocabExpanded: NSLayoutConstraint!
+    private var parakeetVocabCollapsed: NSLayoutConstraint!
 
     private var settings: PBAppSettings
     private var result: PBSettingsResult?
@@ -1200,10 +1209,14 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         parakeetStatus.font = .systemFont(ofSize: 11)
         parakeetStatus.preferredMaxLayoutWidth = 560
         updateParakeetUI()
+        enginePopup.target = self
+        enginePopup.action = #selector(engineChanged)
+        buildParakeetVocabPanel()
         let engineCard = card("Transkription", [
             label("Transkriptions-Modell"), enginePopup,
             parakeetButton, parakeetStatus,
-        ], fullWidth: [enginePopup, parakeetStatus])
+            parakeetVocabPanel,
+        ], fullWidth: [enginePopup, parakeetStatus, parakeetVocabPanel])
 
         let apiCard = card("API-Schlüssel", [
             label("Groq API Key (Whisper-Transkription)"), groqField,
@@ -1295,6 +1308,71 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    // Eigene Ansicht mit festen Constraints statt weiterer Zeilen in der Karte: NSStackView haengt versteckte
+    // Zeilen aus und verliert dabei ihre Breiten-Constraint. Das Panel bleibt drin und klappt auf Hoehe 0 zusammen.
+    private func buildParakeetVocabPanel() {
+        parakeetVocabCheck.state = ParakeetVocabularySetting.isEnabled ? .on : .off
+        parakeetVocabCheck.contentTintColor = NSColor.white
+        parakeetVocabCheck.translatesAutoresizingMaskIntoConstraints = false
+
+        parakeetVocabTextView.string = ParakeetVocabularySetting.loadText()
+        parakeetVocabScroll.hasVerticalScroller = true
+        parakeetVocabScroll.borderType = .bezelBorder
+        parakeetVocabScroll.translatesAutoresizingMaskIntoConstraints = false
+        parakeetVocabScroll.drawsBackground = true
+        parakeetVocabScroll.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.18, alpha: 1)
+        parakeetVocabTextView.minSize = NSSize(width: 0, height: 0)
+        parakeetVocabTextView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        parakeetVocabTextView.isVerticallyResizable = true
+        parakeetVocabTextView.isHorizontallyResizable = false
+        parakeetVocabTextView.autoresizingMask = [.width]
+        parakeetVocabTextView.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        parakeetVocabTextView.textContainer?.widthTracksTextView = true
+        parakeetVocabTextView.isRichText = false
+        parakeetVocabTextView.font = .systemFont(ofSize: 13)
+        parakeetVocabTextView.drawsBackground = true
+        parakeetVocabTextView.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.18, alpha: 1)
+        parakeetVocabTextView.textColor = .white
+        parakeetVocabTextView.insertionPointColor = .white
+        parakeetVocabScroll.documentView = parakeetVocabTextView
+
+        PBDarkTheme.styleLabel(parakeetVocabHint)
+        parakeetVocabHint.textColor = NSColor(white: 0.65, alpha: 1)
+        parakeetVocabHint.font = .systemFont(ofSize: 11)
+        parakeetVocabHint.preferredMaxLayoutWidth = 560
+        parakeetVocabHint.translatesAutoresizingMaskIntoConstraints = false
+        parakeetVocabHint.stringValue = "Begriffe, die Parakeet bevorzugt erkennen soll, durch Komma oder Zeilenumbruch getrennt, "
+            + "höchstens 100. Gilt für TVO und CVO, wirkt ab der nächsten Aufnahme. Die dafür nötige Beam-Suche rechnet rund 30 % langsamer."
+
+        parakeetVocabPanel.translatesAutoresizingMaskIntoConstraints = false
+        for v in [parakeetVocabCheck, parakeetVocabScroll, parakeetVocabHint] as [NSView] { parakeetVocabPanel.addSubview(v) }
+        parakeetVocabExpanded = parakeetVocabHint.bottomAnchor.constraint(equalTo: parakeetVocabPanel.bottomAnchor)
+        parakeetVocabCollapsed = parakeetVocabPanel.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            parakeetVocabCheck.topAnchor.constraint(equalTo: parakeetVocabPanel.topAnchor, constant: 4),
+            parakeetVocabCheck.leadingAnchor.constraint(equalTo: parakeetVocabPanel.leadingAnchor),
+            parakeetVocabScroll.topAnchor.constraint(equalTo: parakeetVocabCheck.bottomAnchor, constant: 6),
+            parakeetVocabScroll.leadingAnchor.constraint(equalTo: parakeetVocabPanel.leadingAnchor),
+            parakeetVocabScroll.trailingAnchor.constraint(equalTo: parakeetVocabPanel.trailingAnchor),
+            parakeetVocabScroll.heightAnchor.constraint(equalToConstant: 90),
+            parakeetVocabHint.topAnchor.constraint(equalTo: parakeetVocabScroll.bottomAnchor, constant: 6),
+            parakeetVocabHint.leadingAnchor.constraint(equalTo: parakeetVocabPanel.leadingAnchor),
+            parakeetVocabHint.trailingAnchor.constraint(equalTo: parakeetVocabPanel.trailingAnchor),
+        ])
+        updateParakeetVocabVisibility()
+    }
+
+    private func updateParakeetVocabVisibility() {
+        let show = enginePopup.indexOfSelectedItem == 2
+        for v in [parakeetVocabCheck, parakeetVocabScroll, parakeetVocabHint] as [NSView] { v.isHidden = !show }
+        parakeetVocabCollapsed.isActive = !show
+        parakeetVocabExpanded.isActive = show
+    }
+
+    @objc private func engineChanged() {
+        updateParakeetVocabVisibility()
+    }
+
     private func updateParakeetUI() {
         let mb = ParakeetLocalClient.totalBytes / 1_048_576
         let installed = ParakeetLocalClient.isInstalled
@@ -1308,7 +1386,7 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         parakeetStatus.stringValue = "Parakeet primeline: deutscher Fine-Tune von NVIDIA Parakeet TDT 0.6B v3 (int8, sherpa-onnx), "
             + "genau das Modell aus winidi/dictate. Rechnet nur auf der CPU dieses Macs: nach dem einmaligen Download "
             + "(rund \(mb) MB, geteilt von TVO und CVO) kein Internet, kein Schlüssel. Fehlt das Modell, kommt eine Meldung, "
-            + "nie ein Rückfall auf Groq oder Gemini. Wörterbuch und Stille-Schutz gelten hier nicht. "
+            + "nie ein Rückfall auf Groq oder Gemini. Das Gemini-Wörterbuch und der Stille-Schutz gelten hier nicht. "
             + (installed ? "Status: Modell liegt bereit." : "Status: Modell noch nicht geladen.")
     }
 
@@ -1410,6 +1488,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
         if engine == TranscriptionEngineSetting.parakeet { ParakeetLocalClient.shared.preload() }
         PBSettingsDialog.savePersonalVocabulary(vocabularyTextView.string)
         PBSettingsDialog.saveVocabularyEnabled(vocabularyEnabledCheck.state == .on)
+        ParakeetVocabularySetting.saveEnabled(parakeetVocabCheck.state == .on)
+        ParakeetVocabularySetting.saveText(parakeetVocabTextView.string)
         GeminiClient.saveVocabularyPreamble(preambleTextView.string)   // editierbare Praeambel (wie Windows)
         GeminiPromptSync.tryUpload()   // Schalter-/Praeambel-Aenderung sofort ins Backup
         window?.close()    // windowWillClose handles stopModal (no double-stop)

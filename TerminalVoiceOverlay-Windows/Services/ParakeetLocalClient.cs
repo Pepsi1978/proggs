@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using NAudio.Wave;
@@ -62,12 +64,25 @@ namespace TerminalVoiceOverlay.Services
         /// <summary>Leise Aufnahmen kommen sonst leer zurueck: auf diese Spitze anheben, hoechstens um MaxGain.</summary>
         private const float TargetPeak = 0.5f;
         private const float MaxGain = 30f;
+        /// <summary>Am echten Modell gemessen: 1,5 liess "Jarvis" als "Travis" stehen, ab 4 verbiegt es Nachbarwoerter.</summary>
+        private const float HotwordsScore = 3f;
         /// <summary>Nach so langer Ruhe wird der Arbeitsspeicher wieder frei (TVO und CVO laufen gleichzeitig).</summary>
         private static readonly TimeSpan IdleUnload = TimeSpan.FromMinutes(15);
 
         private readonly SemaphoreSlim _gate = new(1, 1);
         private OfflineRecognizer? _recognizer;
         private Timer? _idleTimer;
+        /// <summary>Nur mit bpe.vocab neben der .exe laeuft die Beam-Suche, die allein Wortlisten beachtet.</summary>
+        private bool _hotwordsAvailable;
+
+        // Die NuGet-Bindung 1.13.8 kennt nur CreateStream() ohne Wortliste; die C-API exportiert die Variante mit
+        // Wortliste aber. Der Griff des Erkenners ist in der Bindung privat, darum per Reflection (Version fest im csproj).
+        [DllImport("sherpa-onnx-c-api")]
+        private static extern IntPtr SherpaOnnxCreateOfflineStreamWithHotwords(
+            IntPtr recognizer, [MarshalAs(UnmanagedType.LPUTF8Str)] string hotwords);
+
+        private static readonly FieldInfo? RecognizerHandleField =
+            typeof(OfflineRecognizer).GetField("_handle", BindingFlags.NonPublic | BindingFlags.Instance);
 
         /// <summary>Laedt das Modell im Hintergrund vor (beim Aufnahmestart), damit das Diktat nicht wartet.</summary>
         public void Preload()
@@ -92,18 +107,21 @@ namespace TerminalVoiceOverlay.Services
                 {
                     var r = LoadIfNeeded();
                     var samples = ReadSamples(wavFilePath);
+                    // Je Aufnahme frisch gelesen: Aenderungen in den Einstellungen wirken sofort, ohne neu zu laden.
+                    var hotwords = _hotwordsAvailable ? ParakeetVocabularySetting.Hotwords() : string.Empty;
                     var sw = Stopwatch.StartNew();
                     var parts = new List<string>();
                     foreach (var chunk in Split(samples, MaxChunkS))
                     {
-                        var text = Decode(r, chunk);
+                        var text = Decode(r, chunk, hotwords);
                         // Ein langes Stueck kommt gelegentlich leer zurueck; kurze Teile derselben Aufnahme klappen.
                         if (text.Length == 0 && chunk.Length > RetryChunkS * SampleRate)
-                            text = string.Join(" ", Split(chunk, RetryChunkS).Select(c => Decode(r, c)).Where(t => t.Length > 0));
+                            text = string.Join(" ", Split(chunk, RetryChunkS).Select(c => Decode(r, c, hotwords)).Where(t => t.Length > 0));
                         if (text.Length > 0) parts.Add(text);
                     }
                     DiagLog.Write("STT", "parakeet_decode",
-                        ("audio_ms", samples.Length * 1000L / SampleRate), ("ms", sw.ElapsedMilliseconds));
+                        ("audio_ms", samples.Length * 1000L / SampleRate), ("ms", sw.ElapsedMilliseconds),
+                        ("hotwords", hotwords.Length == 0 ? 0 : hotwords.Split('/').Length));
                     ScheduleUnload();
                     return string.Join(" ", parts);
                 }).ConfigureAwait(false);
@@ -132,7 +150,22 @@ namespace TerminalVoiceOverlay.Services
             cfg.ModelConfig.NumThreads = Threads;
             cfg.ModelConfig.Provider = "cpu";
             cfg.ModelConfig.ModelType = "nemo_transducer";
-            cfg.DecodingMethod = "greedy_search";
+            // Vokabular des Modells: zerlegt die Begriffe der Wortliste in Modell-Token. Liegt neben der .exe, nicht im
+            // Modell-Download. Die Liste selbst kommt je Aufnahme ueber den Stream, darum kein HotwordsFile.
+            var bpe = Path.Combine(AppContext.BaseDirectory, "bpe.vocab");
+            _hotwordsAvailable = File.Exists(bpe);
+            if (_hotwordsAvailable)
+            {
+                cfg.ModelConfig.BpeVocab = bpe;
+                cfg.ModelConfig.ModelingUnit = "bpe";
+                cfg.DecodingMethod = "modified_beam_search";
+                cfg.HotwordsScore = HotwordsScore;
+            }
+            else
+            {
+                DiagLog.Warn("STT", "parakeet_bpe_vocab_missing", ("path", bpe));
+                cfg.DecodingMethod = "greedy_search";
+            }
             var r = new OfflineRecognizer(cfg);
             // Aufwaermen: Die erste echte Mitschrift waere sonst etwa doppelt so langsam.
             for (int i = 0; i < 2; i++) Decode(r, new float[SampleRate]);
@@ -157,7 +190,26 @@ namespace TerminalVoiceOverlay.Services
             }, null, IdleUnload, Timeout.InfiniteTimeSpan);
         }
 
-        private static string Decode(OfflineRecognizer r, float[] chunk)
+        /// <summary>Leere Liste = normaler Stream. Scheitert die Wortliste, wird trotzdem transkribiert.</summary>
+        private static OfflineStream CreateStream(OfflineRecognizer r, string hotwords)
+        {
+            if (hotwords.Length == 0) return r.CreateStream();
+            try
+            {
+                var handle = ((HandleRef)RecognizerHandleField!.GetValue(r)!).Handle;
+                var stream = SherpaOnnxCreateOfflineStreamWithHotwords(handle, hotwords);
+                GC.KeepAlive(r);
+                if (stream != IntPtr.Zero) return new OfflineStream(stream);
+                DiagLog.Warn("STT", "parakeet_hotwords_failed", ("error", "kein Stream"));
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Warn("STT", "parakeet_hotwords_failed", ("error", ex.Message));
+            }
+            return r.CreateStream();
+        }
+
+        private static string Decode(OfflineRecognizer r, float[] chunk, string hotwords = "")
         {
             float peak = 0;
             foreach (var v in chunk) peak = Math.Max(peak, Math.Abs(v));
@@ -167,7 +219,7 @@ namespace TerminalVoiceOverlay.Services
                 var gain = Math.Min(TargetPeak / peak, MaxGain);
                 input = chunk.Select(v => v * gain).ToArray();
             }
-            using var stream = r.CreateStream();
+            using var stream = CreateStream(r, hotwords);
             stream.AcceptWaveform(SampleRate, input);
             r.Decode(stream);
             return (stream.Result.Text ?? "").Trim();
