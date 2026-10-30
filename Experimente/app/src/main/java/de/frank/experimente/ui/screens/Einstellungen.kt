@@ -471,6 +471,14 @@ fun Einstellungen(modell: AppViewModel) {
             }
         }
 
+        // --- Spracheingabe offline über Jarvis (Parakeet) ----------------------------
+        item("kopf-spracheingabe-offline") { Zwischenueberschrift("Spracheingabe · Offline", Modifier.padding(top = 16.dp)) }
+        item("spracheingabe-offline") {
+            Abschnittskarte {
+                de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+            }
+        }
+
         // --- Spracheingabe: Whisper-Modell und persönliches Wörterbuch ----------------
         item("kopf-spracheingabe") { Zwischenueberschrift("Spracheingabe", Modifier.padding(top = 16.dp)) }
         item("spracheingabe") {

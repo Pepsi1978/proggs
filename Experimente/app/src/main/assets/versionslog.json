@@ -9,6 +9,7 @@
     {"versionCode": 44, "versionName": "0.17.15", "stand": "22.10.2026, 11:49 Uhr", "notiz": "Spracheingabe: Wörterbuch-Echo wird zuverlässiger erkannt, das Wörterbuch-Feld speichert ruckelfrei und zeigt nach einer Wiederherstellung den aktuellen Stand."},
     {"versionCode": 45, "versionName": "0.17.16", "stand": "22.10.2026, 11:56 Uhr", "notiz": "Neue Stimmen: Gemini 3.8 Flash TTS, Gemini 3.8 Flash-Lite TTS (Schlüssel kostenlos/bezahlt, Rückfall auf Chirp 3 HD) und Azure Neural; Stimmen per langem Drücken oder Stern als Favorit oben anheften."},
     {"versionCode": 46, "versionName": "0.17.17", "stand": "22.10.2026, 12:51 Uhr", "notiz": "KI: Neben den GPT-Modellen lassen sich jetzt Claude-Modelle von Anthropic mit Denkstufe und eigenem API-Schlüssel wählen, wie in Jarvis."},
-    {"versionCode": 47, "versionName": "0.17.18", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."}
+    {"versionCode": 47, "versionName": "0.17.18", "stand": "22.10.2026, 21:54 Uhr", "notiz": "Codex zeigt nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6 mit den passenden Denkstufen; ältere Auswahlen werden übernommen."},
+    {"versionCode": 48, "versionName": "0.17.19", "stand": "30.10.2026, 11:42 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
   ]
 }

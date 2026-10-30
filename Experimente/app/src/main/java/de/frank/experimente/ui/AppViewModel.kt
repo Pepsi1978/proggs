@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import de.frank.experimente.ExperimenteApp
 import de.frank.experimente.audio.GroqTranscriber
 import de.frank.experimente.audio.MicRecorder
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import de.frank.experimente.auth.CodexFehler
 import de.frank.experimente.auth.FehlerArt
 import de.frank.experimente.auth.Geraetecode
@@ -743,7 +744,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         // ihren Puffer zurücksetzen und sie verlieren (siehe `beendeAufnahme`).
         if (stopptAufnahme) return
         val schluessel = einstellungen.groqSchluessel
-        if (schluessel.isBlank()) {
+        if (schluessel.isBlank() && !ParakeetUeberJarvis.gewaehlt(app)) {
             _stoerung.value = "Für die Spracherkennung fehlt der Groq-Schlüssel. Er steht in den Einstellungen."
             return
         }
@@ -813,13 +814,18 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 }
             _wartet.value = "Ich höre zu …"
             try {
-                val schreiber = GroqTranscriber(
-                    einstellungen.groqSchluessel,
-                    model = einstellungen.whisperModell,
-                    woerterbuchPrompt = einstellungen.woerterbuchPrompt,
-                )
-                val text = schreiber.transcribe(wav)
-                schreiber.shutdown()
+                val text = if (ParakeetUeberJarvis.gewaehlt(app)) {
+                    ParakeetUeberJarvis.transkribiere(app, wav)
+                } else {
+                    val schreiber = GroqTranscriber(
+                        einstellungen.groqSchluessel,
+                        model = einstellungen.whisperModell,
+                        woerterbuchPrompt = einstellungen.woerterbuchPrompt,
+                    )
+                    val roh = schreiber.transcribe(wav)
+                    schreiber.shutdown()
+                    roh
+                }
                 if (text.isBlank()) {
                     _stoerung.value = nichtsGehoert()
                 } else {
