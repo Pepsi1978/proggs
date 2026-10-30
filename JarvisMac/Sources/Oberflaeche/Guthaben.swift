@@ -21,7 +21,8 @@ final class Guthaben {
     /// Der Mac hat eine eigene Console-Anmeldung und liest das Guthaben dann selbst statt über das Handy.
     var macAngemeldet = ConsoleSitzung.angemeldet
     /// Die Console lehnt die gespeicherte Anmeldung gerade ab. Sie bleibt erhalten und wird weiter versucht, der Link zum Neuanmelden erscheint zusätzlich.
-    var macAbgelaufen = false
+    var macAbgelaufen: Bool { macAbgelehntAm != nil }
+    private var macAbgelehntAm: Date?
     var anmeldungOffen = false
     /// Was die letzte Aufgabe mit einem Claude-Modell gekostet hat, in Dollar: aus den Tokens der API, sofort und ohne Abfrage.
     var kosten: Double?
@@ -41,7 +42,10 @@ final class Guthaben {
     private func anthropicLaden(frisch: Bool) async {
         macAngemeldet = ConsoleSitzung.angemeldet
         var macFehler: String?
-        if macAngemeldet {
+        // Nach einer Ablehnung fragt nur jede Stunde oder ein ausdrücklicher Wunsch die Console, sonst gleich das Handy.
+        if macAngemeldet, !frisch, let macAbgelehntAm, Date().timeIntervalSince(macAbgelehntAm) < 3600 {
+            macFehler = ConsoleSitzung.Fehler.abgelaufen.errorDescription
+        } else if macAngemeldet {
             if !frisch, anthropicRest != nil, anthropicHinweis == nil, let geholt, Date().timeIntervalSince(geholt) < 900 { return }
             // Wer sich während des Abrufs an- oder abmeldet, macht dessen Ergebnis ungültig.
             let nr = ConsoleSitzung.nummer
@@ -49,15 +53,15 @@ final class Guthaben {
                 let s = try await ConsoleSitzung.stand()
                 guard nr == ConsoleSitzung.nummer else { return }
                 anthropicHinweis = nil
-                macAbgelaufen = false
+                macAbgelehntAm = nil
                 anthropicText = s.satz; anthropicRest = s.rest; anthropicGewaehrt = s.gewaehrt
                 if let k = s.kurs { kurs = k }
                 geholt = Date()
                 return
             } catch ConsoleSitzung.Fehler.abgelaufen {
                 guard nr == ConsoleSitzung.nummer else { return }
-                if !macAbgelaufen { log("guthaben", "Console lehnt die Anmeldung ab, sie bleibt gespeichert", wo: "Guthaben") }
-                macAbgelaufen = true
+                if macAbgelehntAm == nil { log("guthaben", "Console lehnt die Anmeldung ab, sie bleibt gespeichert", wo: "Guthaben") }
+                macAbgelehntAm = Date()
                 macFehler = ConsoleSitzung.Fehler.abgelaufen.errorDescription   // Das Handy kann vielleicht noch antworten.
             } catch {
                 guard nr == ConsoleSitzung.nummer else { return }
@@ -78,7 +82,7 @@ final class Guthaben {
     func abmelden() {
         ConsoleSitzung.abmelden()
         macAngemeldet = false
-        macAbgelaufen = false
+        macAbgelehntAm = nil
         anthropicRest = nil; anthropicGewaehrt = nil; anthropicText = nil; anthropicHinweis = nil; geholt = nil
     }
 

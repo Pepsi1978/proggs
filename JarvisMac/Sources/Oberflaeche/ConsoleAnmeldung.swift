@@ -34,6 +34,7 @@ enum ConsoleSitzung {
     static let browserKennung = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
     private static let orgSchluessel = "consoleOrganisation"
     private static let tresorName = "console-sitzung"
+    private static let altbestandSchluessel = "consoleAltbestandGeprueft"
     private static var kursStand: (wert: Double, datum: String, geholt: Date)?
     private static func imTresor() -> [Keks]? {
         Tresor.lade([Keks].self, name: tresorName, klartext: Pfade.unterstuetzung.appendingPathComponent("console-sitzung-gibt-es-nie-im-klartext.json"))
@@ -63,18 +64,27 @@ enum ConsoleSitzung {
     static func uebernehmen(_ cookies: [HTTPCookie]) {
         kekse = cookies.filter { gehoertZurConsole($0.domain) }.map { Keks(name: $0.name, wert: $0.value, domain: $0.domain) }
         nummer += 1
+        UserDefaults.standard.removeObject(forKey: orgSchluessel)   // Das neue Konto kann eine andere Organisation haben.
         sichern()
         log("guthaben", "Am Mac bei der Console angemeldet", wo: "Guthaben")
     }
 
     /// Bis 1.0.12 lag die Sitzung im Cookie-Speicher von WebKit, 1.0.13 hat sie beim Umzug nicht mitgenommen. Einmal in den Tresor holen und erst danach dort löschen.
-    static func altbestandUebernehmen() async {
+    /// true = eine Sitzung kam dazu.
+    static func altbestandUebernehmen() async -> Bool {
+        _ = angemeldet   // Lädt den Tresor, damit eine Störung vor der Prüfung bekannt ist.
+        guard !UserDefaults.standard.bool(forKey: altbestandSchluessel), Tresor.stoerung == nil else { return false }
         let speicher = WKWebsiteDataStore.default().httpCookieStore
         let alt = await speicher.allCookies().filter { gehoertZurConsole($0.domain) }
-        guard alt.contains(where: { $0.name == "sessionKey" }), Tresor.stoerung == nil else { return }
-        if !angemeldet { uebernehmen(alt) }
-        guard imTresor() == kekse else { return }
+        // Ein Tresor-Eintrag, auch ein leerer nach dem Abmelden, geht vor: Eine beendete Sitzung kommt nie zurück.
+        let dazu = imTresor() == nil && alt.contains { $0.name == "sessionKey" }
+        if dazu {
+            uebernehmen(alt)
+            guard imTresor() == kekse else { return false }
+        }
         for c in alt { await speicher.deleteCookie(c) }
+        UserDefaults.standard.set(true, forKey: altbestandSchluessel)
+        return dazu
     }
 
     static func abmelden() {
