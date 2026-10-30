@@ -124,6 +124,12 @@ kleine Fixes gehen ohne Wartezeit raus.
    GitHub-Bau: grün · Google Drive: hochgeladen · UpdateStation: verfügbar
    ```
 
+## Jarvis
+
+Jarvis lässt sich nur mit seinem Pflicht-Teil installieren, der als Asset in der APK liegt. An diesem Ablauf ändert
+das nichts: UpdateStation stellt vor jeder Jarvis-Installation die Overlay-Frage (Sofort oder 1 bis 5 Minuten) und
+installiert den Teil mit. Nie eine Jarvis-APK an UpdateStation vorbei installieren.
+
 ## Bekannte Cloud-Fallen (Stand 27.09.2026)
 
 - **Kein `gh` in der Cloud-VM** (Bug B15): Die alten Skripte meldeten dann still `CODEX=timeout` und
