@@ -430,7 +430,7 @@ class Einstellungen private constructor(context: Context) {
             if (sekunden > maxMs / 1_000.0 + 0.05) return null
             return (Math.round(sekunden * 10) * 100).toInt().takeIf { it in STILLE_MIN_MS..maxMs }
         }
-        /** Die Einträge der Auswahl: bis 15 s in halben Sekunden (mit 4,5), bis 30 s in ganzen, darüber in fünfen. */
+        /** Die Rasten des Reglers: bis 15 s in halben Sekunden (4,5 bleibt treffbar), bis 30 s in ganzen, darüber in fünfen. */
         fun stilleStufen(maxMs: Int): List<Int> =
             ((1_000..15_000 step 500) + (16_000..30_000 step 1_000) + (35_000..STILLE_AUSSEN_MAX_MS step 5_000)).filter { it <= maxMs }
         /** Knapp unter den 10 Minuten, die der Aufnahmepuffer von MicRecorder fasst. */

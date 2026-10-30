@@ -95,8 +95,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 
         if (reiter == "guthaben") GuthabenReiter(vm)
 
-        // Nicht aufklappbar und auf den Reitern „Jarvis“ und „Stimme“ ganz oben: Diese Felder sollen sofort zu sehen sein.
-        // key: Der Reiterwechsel entsorgt die Felder, damit ein Entwurf wie bisher übernommen wird.
+        // Auf den Reitern „Jarvis“ und „Stimme“ ganz oben.
+        // key: Der Reiterwechsel entsorgt die Regler, damit ein Entwurf übernommen und gemeldet wird.
         if (reiter == "jarvis" || reiter == "stimme") key(reiter) { StillezeitKarte(vm) }
 
         if (reiter == "jarvis") {
@@ -611,48 +611,58 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
     }
 }
 
-/** Immer offene Karte mit beiden Stillezeiten nach dem Weckwort. */
+/** Karte mit beiden Stillezeiten nach dem Weckwort. */
 @Composable
 private fun StillezeitKarte(vm: AppViewModel) {
     val f = LocalFarben.current
     val e = vm.einstellungen
-    Bereich("Stillezeit: Wie lange das Mikrofon offen bleibt", aufklappbar = false) {
+    Bereich("Stillezeit: Wie lange das Mikrofon offen bleibt") {
         Text("So lange bleibt das Mikrofon nach deinem letzten Wort offen: in der App 1 bis 15 Sekunden, außerhalb bis 2 Minuten. Eine Frage darf das Fünffache der Stillezeit dauern, mindestens 2 Minuten, höchstens knapp 10. Sagst du nach dem Piepton gar nichts, schließt es nach 7 Sekunden, nach einer Antwort nach 9. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp)
         if (!e.weckwortAn) Text("Das Weckwort ist gerade aus; du schaltest es auf dem Reiter „Stimme“ unter „Hey Jarvis“ ein.", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-        StillezeitAuswahl("Stillezeit in der App", Einstellungen.STILLE_MAX_MS, { e.stilleInAppMs }, vm) { e.stilleInAppMs = it }
-        StillezeitAuswahl("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", Einstellungen.STILLE_AUSSEN_MAX_MS, { e.stilleAussenMs }, vm) { e.stilleAussenMs = it }
+        StillezeitRegler("Stillezeit in der App", Einstellungen.STILLE_MAX_MS, { e.stilleInAppMs }, vm) { e.stilleInAppMs = it }
+        StillezeitRegler("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", Einstellungen.STILLE_AUSSEN_MAX_MS, { e.stilleAussenMs }, vm) { e.stilleAussenMs = it }
     }
 }
 
-/** Eine Stillezeit per Aufklappmenü; [lies] liefert den gespeicherten Wert. Gilt sofort, beim Verlassen des Bildschirms kommt die Meldung. */
+/** Eine Stillezeit per Regler; [lies] liefert den gespeicherten Wert. Gespeichert wird beim Loslassen, beim Verlassen kommt die Meldung. */
 @Composable
-private fun StillezeitAuswahl(titel: String, maxMs: Int, lies: () -> Int, vm: AppViewModel, setze: (Int) -> Unit) {
+private fun StillezeitRegler(titel: String, maxMs: Int, lies: () -> Int, vm: AppViewModel, setze: (Int) -> Unit) {
+    val f = LocalFarben.current
     val ms = lies()
     val stufen = remember(maxMs) { Einstellungen.stilleStufen(maxMs) }
-    // Zuletzt hier gewählt: Weicht der gespeicherte Wert ab, hat Jarvis ihn per Sprache geändert, und die Meldung entfällt.
+    var entwurf by remember { mutableStateOf(ms) }
+    // Der Wert, auf dem der Entwurf beruht: Hat Jarvis ihn inzwischen per Sprache geändert, gewinnt das Gesprochene.
     var basis by remember { mutableStateOf(ms) }
+    // Stand seit dem Öffnen oder der letzten Änderung per Sprache: Nur eine Abweichung davon ist eine Meldung wert.
     var anfang by remember { mutableStateOf(ms) }
-    LaunchedEffect(ms) { if (ms != basis) { basis = ms; anfang = ms } }
+    // Per Sprache geändert, während der Bildschirm offen ist: Der Regler zieht mit.
+    LaunchedEffect(ms) { if (ms != basis) { entwurf = ms; basis = ms; anfang = ms } }
     val liesAktuell by rememberUpdatedState(lies)
+    val setzeAktuell by rememberUpdatedState(setze)
     DisposableEffect(Unit) {
         onDispose {
             val jetzt = liesAktuell()
-            if (jetzt == basis && jetzt != anfang) {
+            if (jetzt == basis) {
+                if (entwurf != jetzt) setzeAktuell(entwurf)
                 // Beide Stillezeiten geändert: Die zweite Meldung darf die erste nicht verdrängen.
-                vm.meldung = listOfNotNull(vm.meldung?.takeIf { it.startsWith("Stillezeit") }, "$titel: jetzt ${Einstellungen.stilleText(jetzt)}.").joinToString(" ")
+                if (entwurf != anfang) vm.meldung = listOfNotNull(vm.meldung?.takeIf { it.startsWith("Stillezeit") }, "$titel: jetzt ${Einstellungen.stilleText(entwurf)}.").joinToString(" ")
             }
         }
     }
     Unterzeile(titel)
-    // Ein per Sprache gesetzter Wert zwischen zwei Einträgen bleibt genau erhalten, bis hier etwas gewählt wird.
-    Auswahlfeld(Einstellungen.stilleAnzeige(ms), zeigeEintrag = stufen.indices.minByOrNull { kotlin.math.abs(stufen[it] - ms) } ?: 0) { schliessen ->
-        stufen.forEach { stufe ->
-            WahlEintrag(Einstellungen.stilleAnzeige(stufe), if (stufe == Einstellungen.STILLE_STANDARD_MS) "Standard" else "", "", stufe == ms) {
-                basis = stufe
-                setze(stufe)
-                schliessen()
-            }
-        }
+    Text(Einstellungen.stilleAnzeige(entwurf), color = f.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+    // Ein per Sprache gesetzter Wert zwischen zwei Rasten bleibt genau erhalten, bis der Regler auf eine andere Raste kommt.
+    val position = stufen.indices.minByOrNull { kotlin.math.abs(stufen[it] - entwurf) } ?: 0
+    Slider(
+        value = position.toFloat(),
+        onValueChange = { val neu = it.roundToInt().coerceIn(stufen.indices); if (neu != position) entwurf = stufen[neu] },
+        onValueChangeFinished = { if (entwurf != liesAktuell()) { basis = entwurf; setze(entwurf) } },
+        valueRange = 0f..stufen.lastIndex.toFloat(),
+        colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer, inactiveTrackColor = f.rand),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("1 Sekunde", color = f.textLeise, fontSize = 13.sp)
+        Text(if (maxMs >= 60_000) "${maxMs / 60_000} Minuten" else "${maxMs / 1_000} Sekunden", color = f.textLeise, fontSize = 13.sp)
     }
 }
 

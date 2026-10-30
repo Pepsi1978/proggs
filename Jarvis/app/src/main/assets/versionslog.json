@@ -464,6 +464,7 @@
     {"versionCode": 460, "versionName": "1.8.449", "stand": "30.10.2026, 17:32 Uhr", "notiz": "Die beiden Stillezeit-Felder stehen jetzt als immer offene Karte ganz oben auf den Einstellungs-Reitern Jarvis und Stimme"},
     {"versionCode": 461, "versionName": "1.8.450", "stand": "30.10.2026, 17:36 Uhr", "notiz": "Stillezeit-Karte: Der Hilfetext stimmt jetzt, ein Reiterwechsel übernimmt den Entwurf, und eine nicht übernommene Eingabe wird gemeldet"},
     {"versionCode": 462, "versionName": "1.8.451", "stand": "30.10.2026, 17:45 Uhr", "notiz": "Die beiden Stillezeiten stellst du jetzt per Schieberegler ein, außerhalb der App bis 2 Minuten, auch per Sprache."},
-    {"versionCode": 463, "versionName": "1.8.452", "stand": "30.10.2026, 17:52 Uhr", "notiz": "Die beiden Stillezeiten wählst du jetzt aus einem Aufklappmenü statt mit dem Regler, und lange Pausen am Ende werden nicht mehr mit transkribiert."}
+    {"versionCode": 463, "versionName": "1.8.452", "stand": "30.10.2026, 17:52 Uhr", "notiz": "Die beiden Stillezeiten wählst du jetzt aus einem Aufklappmenü statt mit dem Regler, und lange Pausen am Ende werden nicht mehr mit transkribiert."},
+    {"versionCode": 464, "versionName": "1.8.453", "stand": "30.10.2026, 17:57 Uhr", "notiz": "Die Stillezeiten stellst du wieder per Schieberegler ein, und die Karte klappt jetzt wie die anderen Einstellungsmenüs auf und zu."}
 ]
 }
