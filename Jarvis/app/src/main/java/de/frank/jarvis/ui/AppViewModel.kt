@@ -869,7 +869,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Der Text in der Eingabeblase. Im ViewModel, damit jedes Diktat ihn hinten ergänzen kann. Neuer Text verwirft das Rückgängig des Papierkorbs. */
     var entwurf: String
         get() = entwurfText
-        set(v) { entwurfText = v; if (v.isNotEmpty()) { geleert = null; eingabeEingeklappt = false } }
+        set(v) {
+            entwurfText = v
+            if (v.isNotEmpty()) geleert = null else entwurfDiktiert = false
+            if (v.isNotBlank()) eingabeEingeklappt = false
+        }
     private var entwurfText by mutableStateOf("")
     private var eingabeEingeklappt by mutableStateOf(true)
     /** Fotos und Dateien, die mit der nächsten Frage an Jarvis gehen. */
@@ -900,11 +904,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Nach jedem Absenden und beim Öffnen der App ist die Eingabeblase eine kompakte Zeile (nur Plus, Modell, Mikrofon, Live-Blase);
      * ein Tipp auf den freien Platz klappt sie auf, ein weiterer wieder ein. Steht Text im Entwurf, ist sie immer offen, egal woher er kommt:
-     * Eingeklappt ist also immer auch leer, und kein Text kann unsichtbar mitgesendet werden.
+     * Eingeklappt ist also immer auch leer, und kein Text kann unsichtbar mitgesendet werden; reiner Leerraum fällt beim Einklappen weg.
+     * Bewusst gespeichert statt aus dem Entwurf abgeleitet: Sonst klappte die Blase beim Zurücklöschen unter dem Finger zu.
      */
     var eingabeKompakt: Boolean
         get() = eingabeEingeklappt
-        set(v) { eingabeEingeklappt = v && entwurfText.isEmpty() }
+        set(v) {
+            if (!v) eingabeEingeklappt = false
+            else if (entwurfText.isBlank()) { entwurfText = ""; eingabeEingeklappt = true }
+        }
+
+    /** Zählt hoch, wenn die Blase Fokus und Tastatur abgeben soll: Beim Wechsel des Gesprächs bleibt ein Entwurf sichtbar, aber die Tastatur verdeckt das Gespräch nicht. */
+    var tastaturWeg by mutableStateOf(0); private set
 
     /**
      * „Programmierer“ und „Nachtrag“ leuchten genau dann grün, wenn ihr Vorspann vorn im Entwurf steht (auch beim Weiterdiktieren);
@@ -946,8 +957,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
         if (sitzungId == null) sitzungProgrammierung = true
         entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf))
-        // Die Blase klappt auf und zeigt den eingesetzten Text.
-        eingabeKompakt = false
+        // Die Blase klappt mit dem Text von selbst auf und zeigt ihn.
         entwurfFokus = true
     }
 
@@ -962,7 +972,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (nachtragAktiv) { entwurf = ohneNachtragVorspann(entwurf); return }
         val rest = ProgrammiererVorlage.entfernen(entwurf).trimStart()
         entwurf = "$NACHTRAG_VORSPANN $rest"
-        eingabeKompakt = false
         entwurfFokus = true
     }
 
@@ -1037,7 +1046,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         anhaenge.clear()
         // Nicht angenommen (etwa nicht verbunden): Text und Anhänge bleiben in der Blase, statt verloren zu gehen.
         if (!sende(text, anh, diktiert)) {
-            if (entwurf.isEmpty()) entwurf = roh
+            if (entwurf.isEmpty()) { entwurf = roh; entwurfDiktiert = diktiert }
             anhaenge.addAll(0, anh)
         } else { entwurfDiktiert = false; knoepfeAus(); eingabeKompakt = true }
     }
@@ -2896,6 +2905,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         aufnahmeVerwerfen()
         gespraechLeeren()
         eingabeKompakt = true
+        tastaturWeg++
         knoepfeAus()
     }
 
@@ -3022,6 +3032,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Von Hand gewechselt: Aufnahme, Mitschrift und Gesprächsmodus der alten Session enden sofort, nicht erst nach dem Laden.
         aufnahmeVerwerfen()
         eingabeKompakt = true
+        tastaturWeg++
         knoepfeAus()
         viewModelScope.launch { sitzungLaden(id) }
     }

@@ -87,6 +87,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -183,7 +185,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
 
         // Kompakt: nur die untere Zeile. Aufklappen per Tipp auf den freien Platz oder von selbst, sobald Text im Entwurf steht;
-        // ein Anhang ändert nur den Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
+        // ein Anhang ändert nur die Anhangsliste (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
         val kompakt = vm.eingabeKompakt
 
         // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
@@ -196,14 +198,23 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         val tastatur = LocalSoftwareKeyboardController.current
         LaunchedEffect(vm.entwurfFokus) {
             if (!vm.entwurfFokus) return@LaunchedEffect
-            vm.entwurfFokus = false
-            // Eingeklappt gibt es kein Feld zum Fokussieren; die Tastatur kommt erst mit dem Tipp, der die Blase öffnet.
-            if (vm.eingabeKompakt) return@LaunchedEffect
-            // Das Plus-Menü schließt gerade und hält den Fokus noch: einige Male versuchen, die Tastatur erst nach Erfolg.
-            repeat(10) {
-                delay(80)
-                if (runCatching { fokus.requestFocus() }.isSuccess) { tastatur?.show(); return@LaunchedEffect }
-            }
+            // Erst am Ende zurücksetzen: Der Wert ist der Schlüssel dieses Effekts, früher zurückgesetzt bräche er sich beim Warten selbst ab.
+            try {
+                // Eingeklappt gibt es kein Feld zum Fokussieren; die Tastatur kommt erst mit dem Tipp, der die Blase öffnet.
+                if (vm.eingabeKompakt) return@LaunchedEffect
+                // Das Plus-Menü schließt gerade und hält den Fokus noch: einige Male versuchen, die Tastatur erst nach Erfolg.
+                repeat(10) {
+                    delay(80)
+                    if (runCatching { fokus.requestFocus() }.isSuccess) { tastatur?.show(); return@LaunchedEffect }
+                }
+            } finally { vm.entwurfFokus = false }
+        }
+        val fokusVerwalter = LocalFocusManager.current
+        var feldFokus by remember { mutableStateOf(false) }
+        LaunchedEffect(vm.tastaturWeg) {
+            if (vm.tastaturWeg == 0) return@LaunchedEffect
+            fokusVerwalter.clearFocus()
+            tastatur?.hide()
         }
         val platzhalter = when {
             vm.nimmtAuf -> "Ich höre zu …"
@@ -219,8 +230,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 BasicTextField(
                     // Verschwindet das Feld mit Fokus, meldet Compose noch einmal seinen letzten Stand. Nach dem Senden wäre das
                     // der schon abgeschickte Text: Solche Meldungen dürfen den Entwurf nicht zurückschreiben.
-                    wert, { if (!vm.eingabeKompakt && (it.text != feld.text || it.text == vm.entwurf)) { feld = it; vm.entwurf = it.text } },
-                    Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus),
+                    wert, { if (EingabeFeld.meldungGilt(vm.eingabeKompakt, feld.text, vm.entwurf, it.text)) { feld = it; vm.entwurf = it.text } },
+                    Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus).onFocusChanged { feldFokus = it.isFocused },
                     textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
                     cursorBrush = SolidColor(LIVE_ORANGE),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -245,14 +256,19 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
-            // Der freie Platz zwischen Plus und Modell schaltet um: kompakt → Textfeld samt Tastatur, groß → wieder kompakt (mit Text nur die Tastatur weg).
+            // Der freie Platz zwischen Plus und Modell schaltet um: kompakt → Textfeld samt Tastatur, groß → wieder kompakt; mit Text bleibt sie groß, dann Tastatur weg oder wieder her.
             Box(Modifier.weight(1f).heightIn(min = 44.dp).antippen {
-                if (kompakt) { vm.eingabeKompakt = false; vm.entwurfFokus = true } else { tastatur?.hide(); vm.eingabeKompakt = true }
+                when {
+                    kompakt -> { vm.eingabeKompakt = false; vm.entwurfFokus = true }
+                    vm.entwurf.isBlank() -> { tastatur?.hide(); vm.eingabeKompakt = true }
+                    feldFokus -> { tastatur?.hide(); fokusVerwalter.clearFocus() }
+                    else -> vm.entwurfFokus = true
+                }
             }, contentAlignment = Alignment.CenterEnd) {
-            // Eingeklappt ist kein Feld mit Platzhalter zu sehen: Aufnahme und Mitschrift stehen dann statt des Modells im freien Platz.
+            // Eingeklappt oder mit Text ist kein Platzhalter zu sehen: Aufnahme und Mitschrift stehen dann statt des Modells im freien Platz.
             // Nur fürs Diktier-Mikrofon; Hey Jarvis und der Gesprächsmodus lassen die Modellwahl stehen.
             val feldDiktat = (vm.nimmtAuf && vm.diktatInsFeld) || (vm.schreibtMit && vm.feldMitschrift)
-            if (kompakt && feldDiktat) Text(
+            if (feldDiktat && (kompakt || vm.entwurf.isNotEmpty())) Text(
                 if (vm.nimmtAuf) "Ich höre zu …" else "Schreibe mit …",
                 color = if (vm.nimmtAuf) f.gefahr else f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                 modifier = Modifier.padding(horizontal = 8.dp),
