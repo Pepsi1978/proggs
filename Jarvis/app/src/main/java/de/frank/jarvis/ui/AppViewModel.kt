@@ -1566,10 +1566,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var promptFormuliert by mutableStateOf(false); private set
     /**
      * Text der Eingabe für einen neuen Prompt: im ViewModel, damit ein Diktat oder die KI-Antwort, die nach dem Schließen
-     * des Fensters oder nach einem Auf-/Zuklappen des Fold ankommt, nicht verloren geht. Geleert erst nach dem Speichern.
+     * des Fensters oder nach einem Auf-/Zuklappen des Fold ankommt, nicht verloren geht. Geleert nach dem Speichern und beim nächsten Plus.
      */
     var promptEntwurf by mutableStateOf("")
     var promptSpeichert by mutableStateOf(false); private set
+    /** Die Eingabe für einen neuen Prompt ist offen; beim Bearbeiten steht stattdessen [promptBearbeitet]. */
+    var promptNeuOffen by mutableStateOf(false); private set
     /** Der Prompt, der gerade bearbeitet wird; null = die Eingabe legt einen neuen Prompt an. */
     var promptBearbeitet by mutableStateOf<de.frank.jarvis.ablage.Prompt?>(null); private set
     /** Text des bearbeiteten Prompts, getrennt von [promptEntwurf], damit Diktat und KI nie im falschen Entwurf landen. */
@@ -1590,6 +1592,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Text der Eingabe, für die [erstellt] steht; null = dieses Bearbeiten ist nicht mehr offen. */
     private fun promptTextVon(erstellt: Long?): String? =
         if (erstellt == null) promptEntwurf else promptBearbeitText.takeIf { promptBearbeitet?.erstellt == erstellt }
+
+    /** Plus-Knopf: Ein neuer Prompt beginnt immer leer. */
+    fun promptNeu() {
+        promptBearbeitet = null
+        promptEntwurf = ""
+        promptVorKi = null
+        promptNeuOffen = true
+    }
 
     /** Öffnet einen vorhandenen Prompt zum Bearbeiten; ein angefangener neuer Entwurf bleibt unberührt. */
     fun promptBearbeiten(p: de.frank.jarvis.ablage.Prompt) {
@@ -1629,6 +1639,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Schließt die Prompt-Eingabe: Ein laufendes Diktat geht noch in den Entwurf und die Aufnahme endet. */
     fun promptEingabeSchliessen() {
         if (nimmtAuf && promptDiktat) aufnahmeBeenden()
+        promptNeuOffen = false
         promptBearbeitet = null
         promptVorKi = null
     }

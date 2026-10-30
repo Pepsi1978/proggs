@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -62,14 +65,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.WindowCompat
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import de.frank.jarvis.ablage.Prompt
 import de.frank.jarvis.ablage.Prompts
 import de.frank.jarvis.ui.theme.LocalBewegung
@@ -104,7 +107,6 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     val liste by ladeImHintergrund<List<Prompt>?>(null, stand, behalten = true) { Prompts.alle(context) }
     // Gemerkt wird der Anlagezeitpunkt, nicht die Nummer: eine gelöschte Nummer kann an einen neuen Prompt gehen.
     var offen by rememberSaveable { mutableStateOf<Long?>(null) }
-    var neu by rememberSaveable { mutableStateOf(false) }
     val defekt by ladeImHintergrund(false, stand) { withContext(Dispatchers.IO) { Prompts.defekt(context) } }
     // Auch nach dem Verbinden des Modells: vorher kann keine Überschrift entstehen.
     LaunchedEffect(liste, vm.modellBereit) { liste?.let { vm.promptTitelNachziehen(it) } }
@@ -170,14 +172,12 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
         item(key = "plus") {
             Box(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(56.dp).knopf3d(f.primaer, f.tertiaer, 28.dp, f.dunkel).antippen { neu = true }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(56.dp).knopf3d(f.primaer, f.tertiaer, 28.dp, f.dunkel).antippen { vm.promptNeu() }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.Add, "Neuer Prompt", tint = f.aufPrimaer, modifier = Modifier.size(28.dp))
                 }
             }
         }
     }
-
-    if (neu || vm.promptBearbeitet != null) PromptEingabe(vm, schliessen = { vm.promptEingabeSchliessen(); neu = false }) { vm.promptSpeichern { neu = false } }
 
     liste?.firstOrNull { it.erstellt == offen }?.let { p ->
         var loeschen by remember(p.erstellt) { mutableStateOf(false) }
@@ -230,57 +230,60 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
 }
 
-/** Eingabe eines neuen oder zu bearbeitenden Prompts als ganzer Bildschirm: eintippen oder einsprechen, KI-Knopf formuliert in gutes Deutsch (rückgängig machbar), Diskette speichert. */
+/**
+ * Eingabe eines neuen oder zu bearbeitenden Prompts als ganzer Bildschirm: eintippen oder einsprechen, KI-Knopf formuliert in
+ * gutes Deutsch (rückgängig machbar), Diskette speichert. Eine Ebene über der ganzen App (in [JarvisApp]), kein Dialogfenster:
+ * Das legte Android bei randloser App zu hoch an, die Knöpfe unten lagen außerhalb des Bildschirms (Almanach jetpack-compose 8.9).
+ */
 @Composable
-private fun PromptEingabe(vm: AppViewModel, schliessen: () -> Unit, speichern: () -> Unit) {
+fun PromptEbene(vm: AppViewModel) {
+    if (!vm.promptNeuOffen && vm.promptBearbeitet == null) return
     val f = LocalFarben.current
     val ausgang = remember { vm.promptText }
     var verwerfen by remember { mutableStateOf(false) }
-    // Ein neuer Prompt bleibt als Entwurf erhalten; nur Änderungen an einem bestehenden gingen verloren.
-    val versuchen = { if (vm.promptBearbeitet != null && vm.promptText != ausgang && !verwerfen) verwerfen = true else schliessen() }
-    Dialog(versuchen, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        // Das Dialogfenster hat eigene Systemleisten: Deren Symbole müssen zum Hintergrund passen.
-        val ansicht = LocalView.current
-        SideEffect {
-            (ansicht.parent as? DialogWindowProvider)?.window?.let { w ->
-                WindowCompat.getInsetsController(w, ansicht).apply { isAppearanceLightStatusBars = !f.dunkel; isAppearanceLightNavigationBars = !f.dunkel }
-            }
+    // Das Plus beginnt immer leer: Ungespeicherter Text eines neuen Prompts ginge beim Schließen verloren, auch ein laufendes Diktat.
+    val ungespeichert = if (vm.promptBearbeitet != null) vm.promptText != ausgang else vm.promptText.isNotBlank() || vm.nimmtAuf || vm.schreibtMit
+    val versuchen = { if (ungespeichert && !verwerfen) verwerfen = true else vm.promptEingabeSchliessen() }
+    BackHandler(onBack = versuchen)
+    Column(Modifier.fillMaxSize().background(f.hgOben)
+        // Berührungen neben den Bedienelementen gehen nicht an die Ablage darunter.
+        .pointerInput(Unit) { detectTapGestures { } }
+        .windowInsetsPadding(WindowInsets.safeDrawing).padding(18.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(vm.promptBearbeitet?.let { "Prompt ${it.nummer} bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.size(40.dp).antippen(aktion = versuchen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
         }
-        Column(Modifier.fillMaxSize().background(f.hgOben).systemBarsPadding().imePadding().padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(vm.promptBearbeitet?.let { "Prompt ${it.nummer} bearbeiten" } ?: "Neuer Prompt", Modifier.weight(1f), color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Box(Modifier.size(40.dp).antippen(aktion = versuchen), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
-            }
-            // Mit Schreibmarke am Ende, auch nach Diktat und KI: So bleibt der neue Text im Blick. Das Feld füllt den Platz und scrollt in sich.
-            var feld by remember { mutableStateOf(TextFieldValue(vm.promptText, TextRange(vm.promptText.length))) }
-            LaunchedEffect(vm.promptText) { if (feld.text != vm.promptText) feld = TextFieldValue(vm.promptText, TextRange(vm.promptText.length)) }
-            val fokus = remember { FocusRequester() }
-            LaunchedEffect(Unit) { fokus.requestFocus() }
-            BasicTextField(feld, { feld = it; vm.promptText = it.text },
-                Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).focusRequester(fokus),
-                textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer),
-                decorationBox = { inhalt ->
-                    Box(Modifier.padding(16.dp)) {
-                        if (feld.text.isEmpty()) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen", color = f.textSchwach, fontSize = 16.sp)
-                        inhalt()
-                    }
-                })
-            if (vm.promptFormuliert) Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Kern(28.dp, f.primaer, aktiv = true)
-                Text("Jarvis formuliert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
-            }
-            if (verwerfen) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Knopf("Änderungen verwerfen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) { schliessen() }
-                Knopf("Weiter bearbeiten", Modifier.weight(1f), haupt = false) { verwerfen = false }
-            } else Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Rund(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
-                    vm.promptMikrofonTippen()
+        // Mit Schreibmarke am Ende, auch nach Diktat und KI: So bleibt der neue Text im Blick. Das Feld füllt den Platz und scrollt in sich.
+        var feld by remember { mutableStateOf(TextFieldValue(vm.promptText, TextRange(vm.promptText.length))) }
+        LaunchedEffect(vm.promptText) { if (feld.text != vm.promptText) feld = TextFieldValue(vm.promptText, TextRange(vm.promptText.length)) }
+        val fokus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { fokus.requestFocus() }
+        BasicTextField(feld, { feld = it; vm.promptText = it.text },
+            Modifier.padding(vertical = 12.dp).weight(1f).fillMaxWidth().glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).focusRequester(fokus),
+            textStyle = TextStyle(color = f.text, fontSize = 16.sp, lineHeight = 23.sp), cursorBrush = SolidColor(f.primaer),
+            decorationBox = { inhalt ->
+                Box(Modifier.padding(16.dp)) {
+                    if (feld.text.isEmpty()) Text(if (vm.nimmtAuf) "Ich höre zu … tippe aufs Mikrofon zum Übernehmen" else if (vm.schreibtMit) "Schreibe mit …" else "Prompt eintippen oder einsprechen", color = f.textSchwach, fontSize = 16.sp)
+                    inhalt()
                 }
-                if (vm.promptVorKi != null) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) { vm.promptKiRueckgaengig() }
-                else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
-                Rund(Icons.Rounded.Save, "Speichern", f.primaer) { speichern() }
-            }
+            })
+        if (vm.promptFormuliert) Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Kern(28.dp, f.primaer, aktiv = true)
+            Text("Jarvis formuliert …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
         }
+        if (verwerfen) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Knopf(if (vm.promptBearbeitet != null) "Änderungen verwerfen" else "Entwurf verwerfen", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) { vm.promptEingabeSchliessen() }
+            Knopf("Weiter bearbeiten", Modifier.weight(1f), haupt = false) { verwerfen = false }
+        } else Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Rund(if (vm.nimmtAuf) Icons.Rounded.Stop else Icons.Rounded.Mic, if (vm.nimmtAuf) "Aufnahme beenden" else "Einsprechen", if (vm.nimmtAuf) f.gefahr else f.primaer) {
+                vm.promptMikrofonTippen()
+            }
+            if (vm.promptVorKi != null) Knopf("Rückgängig", Modifier.weight(1f), Icons.AutoMirrored.Rounded.Undo, haupt = false) { vm.promptKiRueckgaengig() }
+            else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
+            Rund(Icons.Rounded.Save, "Speichern", f.primaer) { vm.promptSpeichern { vm.promptEingabeSchliessen() } }
+        }
+        // Ohne Tastatur rund einen Zentimeter Abstand nach unten; mit Tastatur zählt jede Zeile fürs Textfeld.
+        if (WindowInsets.ime.getBottom(LocalDensity.current) == 0) Spacer(Modifier.height(63.dp))
     }
 }
 
