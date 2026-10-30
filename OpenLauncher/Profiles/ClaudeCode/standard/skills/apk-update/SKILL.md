@@ -155,7 +155,7 @@ Meldet UpdateStation „Update-Ordner … nicht stimmig“ oder „APK fehlt“,
 pwsh -NoProfile -File ~/proggs/OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/scripts/apk-update.ps1 -Projekt <Projekt oder Alle> -Reparieren
 ```
 
-Je Ordner kommt `APK_UPDATE_ORDNER=<Ordner>|ok|repariert|fehler|ohne-manifest|<Hinweis>`. Eine fehlende APK holt das
+Je Ordner kommt eine Zeile `APK_UPDATE_ORDNER=<Ordner>|<ok, repariert, fehler oder ohne-manifest>|<Hinweis>`. Geprüft werden auch der Upload von `update.json` und, wenn die APK lokal liegt, ihre Prüfsumme. Eine fehlende APK holt das
 Skript nur mit exakt der Prüfsumme aus `update.json` aus dem Drive-Speicher (`canceled_uploads`,
 `lost_and_found`) zurück. Bei `fehler` die App neu veröffentlichen. Hintergrund:
 `bugs/werkzeuge/google-drive-desktop-abgebrochene-uploads.md`.

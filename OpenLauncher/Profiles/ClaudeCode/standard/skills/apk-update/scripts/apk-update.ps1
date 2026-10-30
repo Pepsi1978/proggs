@@ -81,7 +81,7 @@ function Upload-Pruefer {
         $ausgabe = & swiftc -O -o "$programm.$PID" $quelle 2>&1
         $code = $LASTEXITCODE
         $env:DEVELOPER_DIR = $alterEntwicklerPfad
-        if ($code -ne 0) { Fehler "Upload-Prüfer ließ sich nicht bauen, ohne Upload-Beleg wird nicht veröffentlicht: $($ausgabe -join ' ')" }
+        if ($code -ne 0) { throw "Upload-Prüfer ließ sich nicht bauen, ohne Upload-Beleg wird nicht veröffentlicht: $($ausgabe -join ' ')" }
         [IO.File]::Move("$programm.$PID", $programm, $true)
     }
     $script:uploadPruefer = $programm
@@ -89,53 +89,92 @@ function Upload-Pruefer {
 }
 function Upload-Status([string]$pfad) {
     $zeile = & (Upload-Pruefer) $pfad 2>$null | Select-Object -First 1
-    $t = "$zeile".Split('|', 5)
-    if ($t.Count -ne 5) { Fehler "Upload-Prüfer lieferte keine lesbare Antwort für $pfad." }
-    [pscustomobject]@{ vorhanden = $t[0] -eq '1'; cloud = $t[1] -eq '1'; hochgeladen = $t[2] -eq '1'; laedt = $t[3] -eq '1'; fehler = $t[4] }
+    $t = "$zeile".Split('|', 6)
+    if ($t.Count -ne 6) { throw "Upload-Prüfer lieferte keine lesbare Antwort für $pfad." }
+    [pscustomobject]@{ vorhanden = $t[0] -eq '1'; cloud = $t[1] -eq '1'; hochgeladen = $t[2] -eq '1'; laedt = $t[3] -eq '1'; lokal = $t[4] -eq '1'; fehler = $t[5] }
 }
 # Prüfbar ist der Upload nur unter macOS in einem Ordner des Dateianbieters. Cloud-Bau: rclone lädt danach synchron hoch.
 function Upload-Pruefbar([string]$ordner) { $IsMacOS -and $ordner -like (Join-Path $HOME 'Library/CloudStorage/*') }
 # Legt die Datei atomar in den Ordner; die Quelle bleibt für einen erneuten Versuch erhalten.
 function Lege-Ab([string]$quelle, [string]$ziel) {
-    $kopie = "$quelle.$([guid]::NewGuid().ToString('N').Substring(0, 8)).ablage"
+    # Die Kopie liegt im Temp-Ordner: Die Quelle kann in Drives privatem Speicher liegen.
+    $kopie = Join-Path ([IO.Path]::GetTempPath()) "apk-update-$([guid]::NewGuid().ToString('N')).ablage"
     $script:aufraeumen.Add($kopie)
     Copy-Item -LiteralPath $quelle -Destination $kopie -Force
     [IO.File]::Move($kopie, $ziel, $true)
 }
 # Wartet, bis Drive die Datei bestätigt. Rückgabe: $null = hochgeladen, sonst der Grund.
-# Löscht Drive die Datei nach einem Abbruch, legt die Funktion sie aus $quelle höchstens dreimal neu ab.
+# Mit $quelle wurde die Datei gerade abgelegt: Löscht Drive sie nach einem Abbruch, legt die Funktion sie
+# höchstens dreimal neu ab. Ohne $quelle liegt sie schon länger dort, ein bestätigter Stand gilt sofort.
+# Direkt nach dem Überschreiben zeigt der Status noch den Vorgänger und wechselt binnen etwa einer Sekunde
+# auf "lädt hoch". Darum gilt der Beleg 20 Sekunden nach dem beobachteten Upload, sonst erst nach 60 Sekunden.
 function Warte-Auf-Upload([string]$pfad, [string]$quelle) {
     $name = Split-Path $pfad -Leaf
-    $frist = (Get-Date).AddMinutes($UploadFristMinuten)
+    if (-not $quelle) {
+        $s = Upload-Status $pfad
+        if ($s.cloud -and $s.hochgeladen -and -not $s.laedt) { return $null }
+    }
+    $start = Get-Date
+    $frist = $start.AddMinutes($UploadFristMinuten)
+    if ($script:gesamtFrist -and $script:gesamtFrist -lt $frist) { $frist = $script:gesamtFrist }
     $neuVersuche = 0
-    $bestaetigt = 0
+    $nichtCloud = 0
+    $sahUpload = $false
+    $belegSeit = $null
     $letzterFehler = ''
-    Start-Sleep -Seconds 5
     while ((Get-Date) -lt $frist) {
         $s = Upload-Status $pfad
         if (-not $s.vorhanden) {
-            $bestaetigt = 0
+            $sahUpload = $false
+            $belegSeit = $null
             if (-not $quelle -or $neuVersuche -ge 3) { return "Google Drive hat den Upload von $name abgebrochen und die Datei entfernt ($neuVersuche neue Versuche)." }
             $neuVersuche++
             Write-Host "APK_UPDATE_WARNUNG=Google Drive hat den Upload von $name abgebrochen, Versuch $neuVersuche von 3"
             Lege-Ab $quelle $pfad
-            Start-Sleep -Seconds 5
             continue
         }
-        if (-not $s.cloud) { return "$name ist keine Datei von Google Drive für Desktop, der Upload ist nicht prüfbar." }
+        if (-not $s.cloud) {
+            # Direkt nach dem Ablegen oder bei einem Lesefehler kann das Merkmal kurz fehlen.
+            if (++$nichtCloud -ge 30) { return "$name ist keine Datei von Google Drive für Desktop, der Upload ist nicht prüfbar." }
+            Start-Sleep -Seconds 2
+            continue
+        }
+        $nichtCloud = 0
         if ($s.fehler -and $s.fehler -ne $letzterFehler) {
             # Drive wiederholt solche Fehler selbst: erst Abbruch oder Frist beenden das Warten.
             Write-Host "Hinweis: Google Drive meldet beim Upload von ${name}: $($s.fehler)"
             $letzterFehler = $s.fehler
         }
         if ($s.hochgeladen -and -not $s.laedt) {
-            # Mehrfach bestätigen: Direkt nach dem Ablegen kann der Stand noch den Vorgänger zeigen.
-            if (++$bestaetigt -ge 3) { return $null }
-        } else { $bestaetigt = 0 }
-        Start-Sleep -Seconds 10
+            if (-not $belegSeit) { $belegSeit = Get-Date }
+            if (((Get-Date) - $belegSeit).TotalSeconds -ge $(if ($sahUpload) { 20 } else { 60 })) { return $null }
+        } else {
+            $sahUpload = $true
+            $belegSeit = $null
+        }
+        Start-Sleep -Seconds $(if (((Get-Date) - $start).TotalSeconds -lt 30) { 2 } else { 10 })
     }
-    return "Google Drive hat den Upload von $name nicht binnen $UploadFristMinuten Minuten bestätigt."
+    return "Google Drive hat den Upload von $name nicht binnen der Frist bestätigt."
 }
+# Sperre je Projekt: Sie verschwindet beim Schließen; endet der Prozess, gibt das System sie ebenfalls frei.
+$sperrDir = Join-Path ([IO.Path]::GetTempPath()) 'apk-update-sperren'
+function Nimm-Sperre([string]$name) {
+    New-Item -ItemType Directory -Force -Path $sperrDir | Out-Null
+    try {
+        [IO.FileStream]::new((Join-Path $sperrDir "$($name.ToLowerInvariant()).lock"),
+            [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None, 4096, [IO.FileOptions]::DeleteOnClose)
+    } catch { $null }
+}
+# Die 5 neuesten APKs (nach versionCode) bleiben liegen, ältere werden gelöscht – nie die neue
+# und nie die bisher referenzierte (Handys mit altem Manifest-Stand laden sie evtl. noch).
+function Raeume-Alte-Apks([string]$ordner, [string]$neueApk, [string]$bisherigeApk) {
+    Get-ChildItem $ordner -Filter *.apk |
+        Sort-Object { VcNummer $_.Name } -Descending |
+        Select-Object -Skip 5 |
+        Where-Object { $_.Name -ne $neueApk -and $_.Name -ne $bisherigeApk } |
+        Remove-Item -Force
+}
+function VcNummer([string]$name) { $m = [regex]::Match($name, '-vc(\d+)\.apk$'); if ($m.Success) { [int]$m.Groups[1].Value } else { 0 } }
 # Echtzeit-Signal ans Handy: Jarvis-Relay → Jarvis → UpdateStation prüft sofort und lädt vor.
 # Nur ein Anstoß; scheitert er, findet die regelmäßige Prüfung das Update trotzdem.
 function Sende-Signal([string]$projektName, [string]$paketName, [int]$code) {
@@ -179,26 +218,31 @@ function Pruefe-Ordner([string]$ordner) {
     }
     $apkPfad = Join-Path $ordner $m.apk
     $pruefbar = Upload-Pruefbar $ordner
+    $repariert = $false
     if (Test-Path -LiteralPath $apkPfad) {
         $ist = (Get-Item -LiteralPath $apkPfad).Length
         if ($ist -ne [long]$m.groesse) { Write-Host "APK_UPDATE_ORDNER=$name|fehler|$($m.apk) hat $ist Bytes, update.json nennt $($m.groesse). Neu veröffentlichen."; return $false }
+        # Eine nur online liegende Datei wird für die Prüfsumme nicht heruntergeladen; sie prüft das Handy.
+        if ((-not $pruefbar -or (Upload-Status $apkPfad).lokal) -and (Get-FileHash -LiteralPath $apkPfad -Algorithm SHA256).Hash -ine "$($m.sha256)") {
+            Write-Host "APK_UPDATE_ORDNER=$name|fehler|$($m.apk) weicht von der Prüfsumme in update.json ab. Neu veröffentlichen."; return $false
+        }
         if (-not $pruefbar) { Write-Host "APK_UPDATE_ORDNER=$name|ok|vc$($m.versionCode), Upload nicht prüfbar"; return $true }
-        $s = Upload-Status $apkPfad
-        if ($s.hochgeladen -and -not $s.laedt) { Write-Host "APK_UPDATE_ORDNER=$name|ok|vc$($m.versionCode)"; return $true }
         $grund = Warte-Auf-Upload $apkPfad ''
-        if ($grund) { Write-Host "APK_UPDATE_ORDNER=$name|fehler|$grund"; return $false }
-        Write-Host "APK_UPDATE_ORDNER=$name|ok|vc$($m.versionCode), Upload jetzt bestätigt"
-        return $true
+    } else {
+        if (-not $pruefbar) { Write-Host "APK_UPDATE_ORDNER=$name|fehler|$($m.apk) fehlt. Neu veröffentlichen."; return $false }
+        $gerettet = Suche-Abgebrochene $m.apk ([long]$m.groesse) "$($m.sha256)"
+        if (-not $gerettet) { Write-Host "APK_UPDATE_ORDNER=$name|fehler|$($m.apk) fehlt und liegt nicht im Drive-Speicher. Neu veröffentlichen."; return $false }
+        Write-Host "Stelle $($m.apk) aus $gerettet wieder her ..."
+        Lege-Ab $gerettet $apkPfad
+        $grund = Warte-Auf-Upload $apkPfad $gerettet
+        $repariert = $true
     }
-    if (-not $pruefbar) { Write-Host "APK_UPDATE_ORDNER=$name|fehler|$($m.apk) fehlt. Neu veröffentlichen."; return $false }
-    $gerettet = Suche-Abgebrochene $m.apk ([long]$m.groesse) "$($m.sha256)"
-    if (-not $gerettet) { Write-Host "APK_UPDATE_ORDNER=$name|fehler|$($m.apk) fehlt und liegt nicht im Drive-Speicher. Neu veröffentlichen."; return $false }
-    Write-Host "Stelle $($m.apk) aus $gerettet wieder her ..."
-    Lege-Ab $gerettet $apkPfad
-    $grund = Warte-Auf-Upload $apkPfad $gerettet
+    if (-not $grund) { $grund = Warte-Auf-Upload $manifestDatei '' }
     if ($grund) { Write-Host "APK_UPDATE_ORDNER=$name|fehler|$grund"; return $false }
-    Write-Host "APK_UPDATE_ORDNER=$name|repariert|vc$($m.versionCode)"
-    Sende-Signal $name "$($m.paket)" ([int]$m.versionCode)
+    if ($repariert) {
+        Write-Host "APK_UPDATE_ORDNER=$name|repariert|vc$($m.versionCode)"
+        Sende-Signal $name "$($m.paket)" ([int]$m.versionCode)
+    } else { Write-Host "APK_UPDATE_ORDNER=$name|ok|vc$($m.versionCode)" }
     return $true
 }
 if ($Reparieren) {
@@ -207,7 +251,20 @@ if ($Reparieren) {
         elseif ($Projekt -match '^[A-Za-z0-9][A-Za-z0-9_.\-]{0,63}$' -and -not $Projekt.Contains('..') -and (Test-Path (Join-Path $updatesDir $Projekt) -PathType Container)) { @(Join-Path $updatesDir $Projekt) }
         else { Fehler "Update-Ordner für '$Projekt' fehlt." }
     $alleOk = $true
-    foreach ($o in $ordnerListe) { if (-not (Pruefe-Ordner $o)) { $alleOk = $false } }
+    # Gemeinsame Frist: Ein Drive-Ausfall hält den Lauf nicht je Ordner erneut auf.
+    $script:gesamtFrist = (Get-Date).AddMinutes($UploadFristMinuten)
+    foreach ($o in $ordnerListe) {
+        $ordnerName = Split-Path $o -Leaf
+        $ordnerSperre = Nimm-Sperre $ordnerName
+        if (-not $ordnerSperre) { Write-Host "APK_UPDATE_ORDNER=$ordnerName|fehler|Ein anderer apk-update-Lauf arbeitet gerade daran."; $alleOk = $false; continue }
+        try {
+            # Ein Fehler in einem Ordner darf die übrigen nicht aufhalten.
+            if (-not (Pruefe-Ordner $o)) { $alleOk = $false }
+        } catch {
+            Write-Host "APK_UPDATE_ORDNER=$ordnerName|fehler|$($_.Exception.Message)"
+            $alleOk = $false
+        } finally { $ordnerSperre.Dispose() }
+    }
     Aufraeumen
     Write-Host "APK_UPDATE_STATUS=$(if ($alleOk) { 'ok' } else { 'fehler' })"
     exit $(if ($alleOk) { 0 } else { 1 })
@@ -226,16 +283,11 @@ if ((Split-Path $projektDir -Parent) -ne $proggs -or -not (Test-Path $projektDir
 $Projekt = (Get-Item $projektDir).Name
 
 # --- Exklusiv pro Projekt: parallele Läufe (andere Sitzungen) dürfen sich nicht überschreiben ---
-# Die Sperrdatei verschwindet beim Schließen; endet der Prozess, gibt Windows sie ebenfalls frei.
 $lauf = [guid]::NewGuid().ToString('N').Substring(0, 8)
-$sperrDir = Join-Path ([IO.Path]::GetTempPath()) 'apk-update-sperren'
-New-Item -ItemType Directory -Force -Path $sperrDir | Out-Null
-try {
-    $script:sperre = [IO.FileStream]::new((Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).lock"),
-        [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None, 4096, [IO.FileOptions]::DeleteOnClose)
-} catch {
-    Fehler "$Projekt wird gerade von einem anderen apk-update-Lauf gebaut oder veröffentlicht. Warten und erneut starten."
-}
+$script:sperre = Nimm-Sperre $Projekt
+if (-not $script:sperre) { Fehler "$Projekt wird gerade von einem anderen apk-update-Lauf gebaut oder veröffentlicht. Warten und erneut starten." }
+# Merkt einen Lauf, der update.json abgelegt, aber Signal und Aufräumen noch nicht erreicht hat.
+$offenMarker = Join-Path $sperrDir "$($Projekt.ToLowerInvariant()).offen"
 
 $gradleFile = Join-Path $projektDir 'app\build.gradle.kts'
 if (-not (Test-Path $gradleFile)) {
@@ -286,7 +338,6 @@ function Badging([string]$apk) {
 # --- Zustand im Drive-Ordner (nur lesen; entschieden wird erst mit dem Versionslog) ----------
 $zielDir = Join-Path $updatesDir $Projekt
 $manifestPfad = Join-Path $zielDir 'update.json'
-function VcNummer([string]$name) { $m = [regex]::Match($name, '-vc(\d+)\.apk$'); if ($m.Success) { [int]$m.Groups[1].Value } else { 0 } }
 $apkListe = @()
 if (Test-Path $zielDir) {
     $apkListe = @(Get-ChildItem $zielDir -Filter *.apk | ForEach-Object { [pscustomobject]@{ vc = VcNummer $_.Name; datei = $_ } })
@@ -491,16 +542,23 @@ if ($manifestZustand -eq 'OK' -and $manifestCode -eq $N) {
             if ($LASTEXITCODE -ne 0) { $grund = "$Projekt seit Commit $($alt.commit) geändert" }
             elseif ($I -gt $N) { $grund = "am Handy ist schon vc$I installiert" }
             elseif (Upload-Pruefbar $zielDir) {
-                # Ein früherer Lauf kann vor dem Upload-Beleg geendet haben: Der Beleg gehört zu "schon aktuell".
-                $grund = Warte-Auf-Upload $apkPfadAlt ''
-                if (-not $grund) { $grund = Warte-Auf-Upload $manifestPfad '' }
+                # Ein früherer Lauf kann vor dem Beleg geendet haben. Ein Drive-Problem ist kein Grund für eine neue Version.
+                $beleg = Warte-Auf-Upload $apkPfadAlt ''
+                if (-not $beleg) { $beleg = Warte-Auf-Upload $manifestPfad '' }
+                if ($beleg) { Fehler "$beleg vc$N bleibt unverändert, keine neue Version. Erneut starten, sobald Google Drive wieder hochlädt." }
             }
         }
     }
     if (-not $grund) {
+        # Der frühere Lauf endete vor Signal und Aufräumen: Das holt der belegte Stand jetzt nach.
+        if (Test-Path $offenMarker) {
+            Raeume-Alte-Apks $zielDir $alteApk $alteApk
+            Sende-Signal $Projekt "$($alt.paket)" $N
+            Remove-Item $offenMarker -Force -ErrorAction SilentlyContinue
+        }
         Aufraeumen
         Write-Host "APK_UPDATE_STATUS=already-current"
-        Write-Host "APK_UPDATE_BEREIT=lokal (bereits veröffentlicht: vc$N aus Commit $($alt.commit); nichts zu tun, kein Commit)"
+        Write-Host "APK_UPDATE_BEREIT=$(if (Upload-Pruefbar $zielDir) { 'cloud' } else { 'lokal' }) (bereits veröffentlicht: vc$N aus Commit $($alt.commit); nichts zu tun, kein Commit)"
         Write-Host "APK_UPDATE_DATEI=$apkPfadAlt"
         exit 0
     }
@@ -649,6 +707,7 @@ $manifest = [ordered]@{
 $manifestTemp = Join-Path ([IO.Path]::GetTempPath()) "apk-update-$Projekt-$lauf-update.json"
 $script:aufraeumen.Add($manifestTemp)
 [IO.File]::WriteAllText($manifestTemp, ($manifest | ConvertTo-Json -Depth 5), $utf8)
+if ($uploadPruefbar) { [IO.File]::WriteAllText($offenMarker, $apkDatei, $utf8) }
 Lege-Ab $manifestTemp $manifestPfad
 $kontrolle = Get-Content $manifestPfad -Raw -Encoding utf8 | ConvertFrom-Json
 if ([int]$kontrolle.versionCode -ne $apkCode -or "$($kontrolle.sha256)" -ne $sha256) { Fehler "update.json nach dem Schreiben nicht stimmig ($manifestPfad)." }
@@ -659,19 +718,13 @@ if ($uploadPruefbar) {
 
 # Weitere verwaiste Dateien mit genau dieser Nummer (anderer Name) sind jetzt überholt.
 foreach ($o in $verwaistN) { if ($o.datei.Name -ne $apkDatei) { Remove-Item -LiteralPath $o.datei.FullName -Force -ErrorAction SilentlyContinue } }
-# Die 5 neuesten APKs (nach versionCode) bleiben liegen, ältere werden gelöscht – nie die neue
-# und nie die bisher referenzierte (Handys mit altem Manifest-Stand laden sie evtl. noch).
-$behalten = 5
-Get-ChildItem $zielDir -Filter *.apk |
-    Sort-Object { VcNummer $_.Name } -Descending |
-    Select-Object -Skip $behalten |
-    Where-Object { $_.Name -ne $apkDatei -and $_.Name -ne $alteApk } |
-    Remove-Item -Force
+Raeume-Alte-Apks $zielDir $apkDatei $alteApk
 
 Write-Host "APK_UPDATE_STATUS=ok"
 # Im Cloud-Bau (-OhneGeraet) liegen die Dateien hier erst lokal: Dort sendet der Workflow das Signal nach dem Upload.
 if ($OhneGeraet) { Write-Host "APK_UPDATE_SIGNAL=übersprungen (Cloud-Bau sendet nach dem Upload)" }
 else { Sende-Signal $Projekt $paket $apkCode }
+Remove-Item $offenMarker -Force -ErrorAction SilentlyContinue
 if ($uploadPruefbar) { Write-Host "APK_UPDATE_BEREIT=cloud (Google Drive hat den Upload von APK und update.json bestätigt)" }
 else { Write-Host "APK_UPDATE_BEREIT=lokal (liegt im Ordner; den Upload übernimmt Google Drive oder der Cloud-Bau)" }
 Write-Host "APK_UPDATE_PAKET=$paket"
