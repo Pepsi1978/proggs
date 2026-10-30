@@ -33,12 +33,12 @@ actor McpKlient {
                                                 "prompts_lesen", "ideen_lesen", "protokoll_lesen", "logbuch_lesen", "kalender_lesen", "aufgaben_lesen"]
 
     private var werkzeugCache: [WerkzeugDefinition] = []
-    private var cacheZeit = Date.distantPast
     private(set) var anweisungen = ""
     private(set) var serverVersion = ""
     private var naechsteId = 1
     private var verbundeneAdresse = ""
     private var letzterFehlschlag = Date.distantPast
+    private var fehlschlaegeInFolge = 0
     private var werkzeugAbruf: Task<[WerkzeugDefinition], Never>?
     private var kontextVorrat = ""
     private var kontextZeit = Date.distantPast
@@ -98,16 +98,15 @@ actor McpKlient {
         let a = await adresse
         if a != verbundeneAdresse {   // Relay gewechselt
             werkzeugCache = []; anweisungen = ""; verbundeneAdresse = a
-            letzterFehlschlag = .distantPast; kontextVorrat = ""; kontextZeit = .distantPast
+            letzterFehlschlag = .distantPast; fehlschlaegeInFolge = 0; kontextVorrat = ""; kontextZeit = .distantPast
         }
-        if !frisch, !werkzeugCache.isEmpty {
-            // Eine ältere Liste reicht für die Frage von gerade; erneuert wird dahinter, ohne dass Frank darauf wartet.
-            if Date().timeIntervalSince(cacheZeit) >= 600 { _ = werkzeugeHolen() }
-            return werkzeugCache
-        }
+        // Die App erneuert die Liste selbst im Hintergrund: Keine Frage wartet darauf.
+        if !frisch, !werkzeugCache.isEmpty { return werkzeugCache }
         // Eben nicht erreichbar: nicht bei jeder Frage erneut bis zur Zeitgrenze warten. Die App prüft alle 30 Sekunden selbst.
         if !frisch, Date().timeIntervalSince(letzterFehlschlag) < 45 { return [] }
-        return await werkzeugeHolen().value
+        let abruf = werkzeugeHolen()
+        // Stopp soll nicht auf den Abruf warten müssen.
+        return await withTaskCancellationHandler { await abruf.value } onCancel: { abruf.cancel() }
     }
 
     private func werkzeugeHolen() -> Task<[WerkzeugDefinition], Never> {
@@ -130,11 +129,14 @@ actor McpKlient {
                 if schema["type"] == nil { schema["type"] = "object" }
                 return WerkzeugDefinition(name: n, beschreibung: t["description"] as? String ?? "", schema: schema)
             }.sorted { $0.name < $1.name }
-            if !liste.isEmpty { werkzeugCache = liste; cacheZeit = Date(); letzterFehlschlag = .distantPast }
+            if !liste.isEmpty { werkzeugCache = liste; letzterFehlschlag = .distantPast; fehlschlaegeInFolge = 0 }
             log("system", "Handy-Jarvis verbunden: \(liste.count) Werkzeuge (\(serverVersion))")
         } catch {
-            // Nicht mehr erreichbar: keinen alten Stand als „verbunden“ melden.
-            werkzeugCache = []
+            if Task.isCancelled { return werkzeugCache }
+            // Ein einzelner Aussetzer lässt die Liste stehen. Erst beim zweiten Fehlschlag in Folge gilt das Handy als weg:
+            // keinen alten Stand als „verbunden“ melden.
+            fehlschlaegeInFolge += 1
+            if fehlschlaegeInFolge >= 2 { werkzeugCache = [] }
             letzterFehlschlag = Date()
             log("fehler", "Handy-Jarvis nicht erreichbar: \(error.localizedDescription)")
         }
@@ -142,10 +144,12 @@ actor McpKlient {
     }
 
     var verbunden: Bool { !werkzeugCache.isEmpty }
+    /// Der letzte Abruf ging schief: Die App prüft dann bald erneut statt erst in fünf Minuten.
+    var unsicher: Bool { fehlschlaegeInFolge > 0 }
 
     /// Holt das Live-Gedächtnis schon, während Frank spricht (Weckwort, neues Gespräch), damit die erste Antwort nicht darauf wartet.
     func kontextVorladen() {
-        guard kontextAbruf == nil, Date().timeIntervalSince(kontextZeit) > 120 else { return }
+        guard kontextAbruf == nil, Date().timeIntervalSince(kontextZeit) > 60 else { return }
         kontextAbruf = Task {
             let r = await rufe("jarvis_kontext", [:], sekunden: 30)
             if !r.fehler { kontextVorrat = r.text; kontextZeit = Date() }
@@ -153,18 +157,26 @@ actor McpKlient {
         }
     }
 
-    /// Das Live-Gedächtnis für ein neues Gespräch: der Vorrat, sonst höchstens 6 Sekunden Warten. Kommt nichts, holt die nächste Frage es nach.
+    /// Das Live-Gedächtnis für ein neues Gespräch: der höchstens 5 Minuten alte Vorrat, sonst höchstens 8 Sekunden Warten.
+    /// Kommt nichts, bleibt es leer: Das Modell erfährt das und die nächste Frage holt es nach. Ein alter Stand gilt nie.
     func kontextFuerGespraech() async -> String {
-        if !kontextVorrat.isEmpty, Date().timeIntervalSince(kontextZeit) < 600 { return kontextVorrat }
-        if werkzeugCache.isEmpty, Date().timeIntervalSince(letzterFehlschlag) < 45 { return kontextVorrat }
+        func frisch() -> String { Date().timeIntervalSince(kontextZeit) < 300 ? kontextVorrat : "" }
+        if !frisch().isEmpty { return frisch() }
+        if werkzeugCache.isEmpty, Date().timeIntervalSince(letzterFehlschlag) < 45 { return "" }
         kontextVorladen()
-        if let t = kontextAbruf { _ = await mitFrist(6) { await t.value } }
-        return kontextVorrat
+        if let t = kontextAbruf { _ = await mitFrist(8) { await t.value } }
+        return frisch()
+    }
+
+    /// Was nur liest, ändert das Gedächtnis nicht. Alles andere kann es ändern, etwa jarvis_merken: Dann gilt der Vorrat nicht mehr.
+    private static func nurLesend(_ name: String) -> Bool {
+        name.hasSuffix("_lesen") || ["jarvis_kontext", "gedaechtnis_suchen", "web_suche", "ablage_datei", "ablage_struktur", "vorgaenge"].contains(name)
     }
 
     func rufe(_ name: String, _ argumente: JSONObjekt, sekunden: Double = 150) async -> WerkzeugErgebnis {
         let start = Date()
         let e = await rufeOhneLog(name, argumente, sekunden: sekunden)
+        if !Self.nurLesend(name) { kontextVorrat = ""; kontextZeit = .distantPast }
         let ms = Int(Date().timeIntervalSince(start) * 1000)
         // Das Logbuch soll die App verbessern, nicht das Leben mitschreiben: Private Inhalte nur als Länge, Dateiabrufe nur bei Fehlern.
         if name != "ablage_datei" || e.fehler {

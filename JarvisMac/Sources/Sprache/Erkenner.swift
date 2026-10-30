@@ -44,7 +44,10 @@ final class Mikrofon: @unchecked Sendable {
 
     var laeuft: Bool { lock.lock(); defer { lock.unlock() }; return engine?.isRunning ?? false }
 
-    func starten() throws { try ablauf.sync { try startenIntern() } }
+    /// Nur auf `ablauf`: Ein Gerätewechsel darf ein inzwischen gestopptes Mikrofon nicht wieder starten.
+    private var gewuenscht = false
+
+    func starten() throws { try ablauf.sync { gewuenscht = true; try startenIntern() } }
 
     func startenImHintergrund() async throws {
         try await Task.detached(priority: .userInitiated) { try self.starten() }.value
@@ -72,13 +75,14 @@ final class Mikrofon: @unchecked Sendable {
             guard let self else { return }
             log("sprache", "Audiogerät gewechselt – Aufnahme startet neu")
             self.ablauf.async {
+                guard self.gewuenscht else { return }
                 try? self.startenIntern()
                 DispatchQueue.main.async { self.beiGeraetewechsel?() }
             }
         }
     }
 
-    func stoppen() { ablauf.sync { stoppenIntern() } }
+    func stoppen() { ablauf.sync { gewuenscht = false; stoppenIntern() } }
 
     private func stoppenIntern() {
         if let b = beobachter { NotificationCenter.default.removeObserver(b); beobachter = nil }

@@ -16,10 +16,9 @@ enum SprachBefehle {
             .joined(separator: " ").replacingOccurrences(of: "'", with: "")
     }
 
-    /// `imGespraechsmodus` = die Sprachschleife läuft: Dann genügt auch ein bloßes „Beenden“ oder „Session beenden“.
-    /// Sonst muss ausdrücklich die Sprachsession, der Sprachmodus oder das Mikrofon genannt sein.
-    static func istSessionEnde(_ text: String, imGespraechsmodus: Bool) -> Bool {
-        if imGespraechsmodus && istAusbefehl(text) { return true }
+    /// Für die laufende Sprachschleife: Es genügt auch ein bloßes „Beenden“ oder „Session beenden“.
+    static func istSessionEnde(_ text: String) -> Bool {
+        if istAusbefehl(text) { return true }
         let worte = normiert(text)
         if worte.isEmpty || worte.count > 8 { return false }
         // Fragen und Verneinungen beenden nie: „Wie beende ich die Sprachsession?“, „Beende die Sprachsession nicht“.
@@ -28,7 +27,6 @@ enum SprachBefehle {
         if rest.isEmpty || rest.contains(where: { !endeVerben.contains($0) && !nomenImmer.contains($0) && !nomenImModus.contains($0) }) { return false }
         if !rest.contains(where: endeVerben.contains) { return false }
         if rest.contains(where: nomenImmer.contains) { return true }
-        if !imGespraechsmodus { return false }
         // In der Sprachschleife: „Session beenden“ oder ein bloßes „Bitte beenden jetzt“, aber nie ein einzelnes „zu“ oder „ab“.
         return rest.contains(where: nomenImModus.contains) || rest.contains(where: kernVerben.contains) || (rest.contains("hör") && rest.contains("auf"))
     }
@@ -88,5 +86,7 @@ enum SprachBefehle {
         "ende", "stopp", "stop", "schluss", "aus",
         "sprachsitzung beenden", "sprachsitzung beendet", "sitzung beenden", "gespräch beenden", "beenden", "beende", "aufhören", "hör auf",
         "ende der sitzung", "session beenden", "schluss für jetzt", "erstmal nicht", "erst mal nicht",
+        // Am Mac schon vor der Angleichung ans Handy gültig, deshalb weiter dabei.
+        "das war es", "passt danke", "danke dir", "höre auf", "brich ab", "abbrechen",
     ])
 }

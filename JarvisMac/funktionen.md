@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.24 -->
+<!-- stand: JarvisMac 1.0.25 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -15,8 +15,8 @@ Was Jarvis für macOS kann (geprüft am Code).
 
 ## Sprache
 - Weckwort „Hey Jarvis“ (einstellbar) offline am Mac; ⌥⌘J überall sprechen, ⌥⌘K Fenster. Ist Jarvis vorn, geht das offene Gespräch weiter; sonst beginnt ein neues im Hintergrund und oben mittig erscheint die orange Sprachpille wie am Handy (Pegel-Spektrum, nimmt nie den Fokus, nicht auf Bildschirmfotos; Klick öffnet Jarvis, lange drücken, Rechtsklick oder nach oben ziehen beendet).
-- Gesprächsmodus wie am Handy: Piepton, zuhören bis 4,5 s Stille nach dem letzten Wort (höchstens 120 s), Jarvis, vorlesen, wieder von vorn; kommt nach dem Piepton nichts (7 s, ab der zweiten Runde 9 s), ist Schluss. Ausbefehle wie am Handy („Danke“, „Stopp“, „Das war's“, „Sprachsession beenden“ …) gehen nicht ans Modell.
-- Diktat ins Eingabefeld (endet mit „ ; “; wie am Handy: Tipp startet, zweiter Tipp beendet, höchstens 10 Minuten, kein Abbruch bei Pausen). Transkription wie am Handy: Parakeet primeline offline am Mac (sherpa-onnx, geteiltes Modell der Voice-Overlays, Lade-/Rechenzeit und Speicher gemessen, nie stiller Rückfall, mit eigenem abschaltbarem Wörterbuch: bis 100 Begriffe gehen als Wortliste in die Beam-Suche, per Sprache über mac_einstellungen änderbar), Groq Whisper Large V3 Turbo/Large V3 mit Wörterbuch und den vier Halluzinationsfiltern, Apple offline mit Live-Vorschau.
+- Gesprächsmodus wie am Handy: Piepton, zuhören bis 4,5 s Stille nach dem letzten Wort (höchstens 120 s), Jarvis, vorlesen, wieder von vorn; kommt nach dem Piepton nichts (7 s, ab der zweiten Runde 9 s), ist Schluss. Ausbefehle wie am Handy („Danke“, „Stopp“, „Das war's“, „Sprachsession beenden“ …) gehen nicht ans Modell. Mikrofon tippen: beendet die Aufnahme oder unterbricht Jarvis; Stopp in der Blase beendet das Gespräch.
+- Diktat ins Eingabefeld (endet mit „ ; “; wie am Handy: Tipp startet, zweiter Tipp beendet, höchstens 10 Minuten, kein Abbruch bei Pausen; bei Apple ohne SpeechAnalyzer höchstens 55 Sekunden; ⏎ während der Aufnahme schreibt erst fertig und sendet dann). Transkription wie am Handy: Parakeet primeline offline am Mac (sherpa-onnx, geteiltes Modell der Voice-Overlays, Lade-/Rechenzeit und Speicher gemessen, nie stiller Rückfall, mit eigenem abschaltbarem Wörterbuch: bis 100 Begriffe gehen als Wortliste in die Beam-Suche, per Sprache über mac_einstellungen änderbar), Groq Whisper Large V3 Turbo/Large V3 mit Wörterbuch und den vier Halluzinationsfiltern, Apple offline mit Live-Vorschau.
 - Vorlesen wie am Handy: Microsoft Edge, Google Chirp 3 HD, Gemini 3.8 Flash TTS und Flash-Lite TTS (kostenlos/bezahlt, Reihenfolge), Azure Neural (17 + Seraphina/Florian HD), Alibaba Qwen, eigene geklonte Stimme, Systemstimme; Favoriten mit Stern, Hörprobe je Stimme, Tempo je Anbieter, „Immer deutsch“, sortierbare Rückfallkette.
 
 ## Live-Gespräch
@@ -48,4 +48,4 @@ Was Jarvis für macOS kann (geprüft am Code).
 - `repo_lesen` liest am Mac versionierte Dateien direkt aus ~/proggs (ohne Vollzugriff wie bisher über das Handy) und markiert Gekürztes. `cli_frage` fragt im Hintergrund das CLI: nur Lesen und Suchen, ~/SK gesperrt, ohne Hooks und MCP-Server.
 
 ## Neu seit 1.0.23
-- Tempo: Live-Gedächtnis wird schon beim Weckwort und neuen Gespräch vorgeladen, Werkzeugliste bleibt warm, Handy aus kostet keine Wartezeit; Gespräche, Logbuch, Mikrofon-Start und Aufnahme-Analyse laufen neben dem Hauptfaden, Gespräche laden im Hintergrund, gestreamter Text höchstens 20-mal je Sekunde und ohne Neurechnen alter Nachrichten; Animationen ruhen im Hintergrund und während Sprache und Live; Parakeet bleibt zwei Stunden geladen.
+- Tempo: Live-Gedächtnis wird schon beim Weckwort und neuen Gespräch vorgeladen, Werkzeugliste bleibt warm, Handy aus kostet keine Wartezeit; Gespräche, Logbuch, Mikrofon-Start und Aufnahme-Analyse laufen neben dem Hauptfaden, Gespräche laden im Hintergrund, gestreamter Text höchstens 20-mal je Sekunde und ohne Neurechnen alter Nachrichten; Animationen ruhen im Hintergrund und während Sprache und Live. Stopp beendet auch laufende Mac-Befehle. Scheitert eine Mitschrift, versucht Jarvis es ein zweites Mal und bietet danach neben dem Mikrofon „erneut umwandeln“ an, die Aufnahme bleibt bis zum nächsten Diktat erhalten. Text aus einer verschwundenen Blase übernimmt die nächste Blase.

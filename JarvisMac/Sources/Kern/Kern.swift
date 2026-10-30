@@ -150,8 +150,7 @@ final class Logbuch {
 
     func schreib(_ art: String, _ text: String, wo: String? = nil, werkzeug: String? = nil, eingabe: String? = nil,
                  ergebnis: String? = nil, fehler: String? = nil, dauerMs: Int? = nil) {
-        // Vor dem Schwärzen grob kürzen: lange Werkzeugergebnisse sollen hier nicht den Hauptfaden aufhalten.
-        func sauber(_ s: String?, _ grenze: Int) -> String? { s.map { String(Geheimnisse.schwaerzen(String($0.prefix(grenze * 2))).prefix(grenze)) } }
+        func sauber(_ s: String?, _ grenze: Int) -> String? { s.map { String(Geheimnisse.schwaerzen($0).prefix(grenze)) } }
         let e = LogEintrag(art: art, text: sauber(text, 4000) ?? "", wo: wo, werkzeug: werkzeug, eingabe: sauber(eingabe, 2000),
                            ergebnis: sauber(ergebnis, 4000), fehler: sauber(fehler, 2000), dauerMs: dauerMs)
         eintraege.append(e)

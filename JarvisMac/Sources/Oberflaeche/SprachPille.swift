@@ -15,7 +15,8 @@ final class SprachPille {
     private var panel: NSPanel?
     private var ansicht: PillenAnsicht?
     private var sichtbar = false
-    private var ausgeblendet = false
+    /// Laufende Aufnahmen: Werkzeuge können parallel laufen, erst die letzte holt die Pille zurück.
+    private var aufnahmen = 0
 
     func setze(sichtbar neu: Bool) {
         guard neu != sichtbar else { return }
@@ -24,14 +25,14 @@ final class SprachPille {
     }
 
     func fuerAufnahme(ausblenden: Bool) async {
-        ausgeblendet = ausblenden
+        aufnahmen = max(0, aufnahmen + (ausblenden ? 1 : -1))
         anwenden()
         // Der Fensterserver braucht einen Moment, bis die Pille wirklich weg ist.
         if ausblenden && sichtbar { try? await Task.sleep(for: .milliseconds(80)) }
     }
 
     private func anwenden() {
-        guard sichtbar && !ausgeblendet else {
+        guard sichtbar && aufnahmen == 0 else {
             ansicht?.laufen(false)
             panel?.orderOut(nil)
             return
@@ -109,6 +110,7 @@ private final class PillenAnsicht: NSView {
         guard an else { return }
         zuletzt = CACurrentMediaTime()
         let u = displayLink(target: self, selector: #selector(takt))
+        u.preferredFrameRateRange = CAFrameRateRange(minimum: 20, maximum: 30, preferred: 30)
         u.add(to: .main, forMode: .common)
         uhr = u
     }

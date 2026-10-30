@@ -309,28 +309,30 @@ struct MarkdownText: View {
 
     private final class Inline { let wert: AttributedString; init(_ w: AttributedString) { wert = w } }
     /// Beim Streamen ändert sich nur der letzte Absatz: Die übrigen kommen aus dem Vorrat, statt bei jedem Bild neu geparst zu werden.
-    @MainActor private static let vorrat: NSCache<NSString, Inline> = { let c = NSCache<NSString, Inline>(); c.countLimit = 2000; return c }()
+    @MainActor private static let vorrat: NSCache<NSString, Inline> = { let c = NSCache<NSString, Inline>(); c.totalCostLimit = 8_000_000; return c }()
 
-    private func inline(_ s: String) -> AttributedString {
+    /// Der letzte Block wächst beim Streamen noch: Seine Zwischenstände kommen nicht in den Vorrat und verdrängen dort nichts.
+    private func inline(_ s: String, merken: Bool = true) -> AttributedString {
         if let da = Self.vorrat.object(forKey: s as NSString) { return da.wert }
         let neu = (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
-        Self.vorrat.setObject(Inline(neu), forKey: s as NSString)
+        if merken { Self.vorrat.setObject(Inline(neu), forKey: s as NSString, cost: s.utf8.count) }
         return neu
     }
 
     var body: some View {
+        let alle = bloecke
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(bloecke.enumerated()), id: \.offset) { _, b in
+            ForEach(Array(alle.enumerated()), id: \.offset) { i, b in
                 switch b {
                 case .absatz(let s):
-                    Text(inline(s)).font(.system(size: groesse)).foregroundStyle(Farbe.text).lineSpacing(3)
+                    Text(inline(s, merken: i < alle.count - 1)).font(.system(size: groesse)).foregroundStyle(Farbe.text).lineSpacing(3)
                 case .ueberschrift(let s, let stufe):
                     Text(inline(s)).font(.jarvis(stufe <= 1 ? groesse + 6 : (stufe == 2 ? groesse + 3 : groesse + 1), .bold))
                         .foregroundStyle(Farbe.text).padding(.top, 4)
                 case .punkt(let zeichen, let s):
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(zeichen).font(.system(size: groesse, weight: .bold)).foregroundStyle(Farbe.haupt)
-                        Text(inline(s)).font(.system(size: groesse)).foregroundStyle(Farbe.text)
+                        Text(inline(s, merken: i < alle.count - 1)).font(.system(size: groesse)).foregroundStyle(Farbe.text)
                     }
                 case .code(let s):
                     ScrollView(.horizontal, showsIndicators: false) {

@@ -69,6 +69,15 @@ final class Gespraech: Identifiable {
     /// Alle Schreibzugriffe der Reihe nach, damit ein späteres Löschen nie von einem älteren Speichern überholt wird.
     nonisolated static let schreiber = DispatchQueue(label: "jarvis.gespraeche", qos: .utility)
 
+    /// Zählt je Gespräch die Speicherwünsche: Von mehreren wartenden schreibt nur der jüngste, alles davor wäre überholt.
+    private final class Stand: @unchecked Sendable {
+        let lock = NSLock()
+        var je: [UUID: Int] = [:]
+        func neu(_ id: UUID) -> Int { lock.withLock { je[id, default: 0] += 1; return je[id]! } }
+        func aktuell(_ id: UUID, _ nr: Int) -> Bool { lock.withLock { je[id] == nr } }
+    }
+    private nonisolated static let stand = Stand()
+
     /// Ein Gespräch ohne Inhalt bleibt ein Entwurf: keine Datei und kein Eintrag in der Leiste.
     func speichern() {
         guard !nachrichten.isEmpty, !geloescht else { return }
@@ -77,7 +86,9 @@ final class Gespraech: Identifiable {
         let (id, titel, erstellt, geaendert, nachrichten, verlauf, kontext, gelerntBis, projekt, url) =
             (self.id, self.titel, self.erstellt, self.geaendert, self.nachrichten, self.verlauf, self.kontext, self.gelerntBis, self.projekt, dateiURL)
         // Das Gespräch samt Bildern kodieren und schreiben dauert: nicht auf dem Hauptfaden, sonst stocken Oberfläche und Pegel.
+        let nr = Self.stand.neu(id)
         Self.schreiber.async {
+            guard Self.stand.aktuell(id, nr) else { return }
             let d = GespraechsDatei(id: id, titel: titel, erstellt: erstellt, geaendert: geaendert, nachrichten: nachrichten,
                                     verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis, projekt: projekt)
             if let daten = try? JSONEncoder().encode(d) { try? daten.write(to: url, options: .atomic) }
@@ -140,12 +151,14 @@ final class GespraechsSpeicher {
 
     func loeschen(_ g: Gespraech) {
         g.geloescht = true
+        AppSteuerung.shared.gespraechBeendet(g)
         alle.removeAll { $0.id == g.id }
         let url = g.dateiURL
         Gespraech.schreiber.async { try? FileManager.default.removeItem(at: url) }
     }
 
     func nachOben(_ g: Gespraech) {
+        guard !g.geloescht else { return }
         alle.removeAll { $0.id == g.id }
         alle.insert(g, at: 0)
     }

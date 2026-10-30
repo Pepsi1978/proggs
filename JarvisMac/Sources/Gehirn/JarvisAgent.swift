@@ -57,8 +57,11 @@ final class JarvisAgent {
     private func systemTeile(g: Gespraech) async -> [String] {
         let anweisungen = await McpKlient.shared.anweisungen
         let fest = Self.persona + (anweisungen.isEmpty ? "" : "\n\nVORGABEN DES HANDY-JARVIS (gelten auch hier, soweit sie nicht den Mac betreffen):\n" + anweisungen)
+        let handyDa = await McpKlient.shared.verbunden
         let kontext = g.kontext.isEmpty
-            ? "LIVE-GEDÄCHTNIS: Das Handy-Jarvis ist gerade nicht erreichbar. Sag Frank das kurz, wenn er nach Daten aus seinen Apps fragt."
+            ? (handyDa
+                ? "LIVE-GEDÄCHTNIS: Kam noch nicht rechtzeitig vom Handy. Brauchst du Franks Daten, hol sie dir jetzt mit jarvis_kontext oder den passenden Werkzeugen."
+                : "LIVE-GEDÄCHTNIS: Das Handy-Jarvis ist gerade nicht erreichbar. Sag Frank das kurz, wenn er nach Daten aus seinen Apps fragt.")
             : "LIVE-GEDÄCHTNIS (jarvis_kontext, Stand Gesprächsbeginn):\n" + g.kontext
         return [fest, kontext]
     }
@@ -254,12 +257,19 @@ final class JarvisAgent {
     /// und sehr lange Werkzeugergebnisse in älteren Runden durch kurze Platzhalter. Dabei fallen auch alle Denkblöcke vor der
     /// letzten Frage weg – ein geänderter Verlauf darf keine alten Denkblöcke mehr tragen (sonst lehnt die API ab).
     static func verdichte(_ g: Gespraech) async {
-        // Nur zum Messen den ganzen Verlauf kodieren: nicht auf dem Hauptfaden.
+        // Messen und Kürzen im Hintergrund. Der Verlauf ändert sich derweil nicht, weil das Gespräch gerade arbeitet.
         let stand = g.verlauf
-        let groesse = await Task.detached(priority: .userInitiated) { JSON.daten(stand).count }.value
-        guard groesse > 6_000_000 else { return }
+        let neu = await Task.detached(priority: .userInitiated) { verdichtet(stand) }.value
+        if let neu { g.verlauf = neu }
+    }
+
+    /// nil = noch klein genug.
+    nonisolated private static func verdichtet(_ eingang: [JSONObjekt]) -> [JSONObjekt]? {
+        var verlauf = eingang
+        let groesse = JSON.daten(verlauf).count
+        guard groesse > 6_000_000 else { return nil }
         let behalte = 6   // jüngste Einträge unverändert
-        let grenze = max(0, g.verlauf.count - behalte)
+        let grenze = max(0, verlauf.count - behalte)
         func kuerze(_ bloecke: [JSONObjekt]) -> [JSONObjekt] {
             bloecke.compactMap { b in
                 var b = b
@@ -276,14 +286,15 @@ final class JarvisAgent {
                 }
             }
         }
-        for i in g.verlauf.indices {
-            guard var inhalt = g.verlauf[i]["content"] as? [JSONObjekt] else { continue }
+        for i in verlauf.indices {
+            guard var inhalt = verlauf[i]["content"] as? [JSONObjekt] else { continue }
             if i < grenze { inhalt = kuerze(inhalt) }
             else { inhalt = inhalt.filter { !["thinking", "redacted_thinking"].contains($0["type"] as? String ?? "") } }
             if inhalt.isEmpty { inhalt = [["type": "text", "text": "…"]] }
-            g.verlauf[i]["content"] = inhalt
+            verlauf[i]["content"] = inhalt
         }
-        log("gehirn", "Verlauf verdichtet: \(groesse / 1000) kB → \(JSON.daten(g.verlauf).count / 1000) kB")
+        log("gehirn", "Verlauf verdichtet: \(groesse / 1000) kB → \(JSON.daten(verlauf).count / 1000) kB")
+        return verlauf
     }
 
     static func kurz(_ name: String, _ args: JSONObjekt) -> String {

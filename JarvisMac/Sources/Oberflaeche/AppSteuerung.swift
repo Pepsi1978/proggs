@@ -32,6 +32,8 @@ final class AppSteuerung {
     var bereich: Bereich = .start { didSet { if bereich != oldValue { log("oberflaeche", "Bereich geöffnet: \(bereich.titel)", wo: "Seitenleiste") } } }
     var gespraech: Gespraech?
     var entwurf = ""
+    /// Text, dessen Blase verschwunden ist (getippt oder ein Diktat, das erst danach fertig wurde). Die nächste Blase übernimmt ihn.
+    var blasenRest = ""
     /// Der Prompt, der gerade im Vollbild bearbeitet wird; promptStand zählt hoch, wenn die Liste neu geladen werden muss.
     var promptBearbeiten: PromptEintrag?
     var promptStand = 0
@@ -65,7 +67,8 @@ final class AppSteuerung {
                 let liste = await McpKlient.shared.werkzeuge(frisch: true)
                 handyVerbunden = !liste.isEmpty
                 handyVersion = await McpKlient.shared.serverVersion
-                try? await Task.sleep(for: .seconds(handyVerbunden ? 300 : 30))
+                let unsicher = await McpKlient.shared.unsicher
+                try? await Task.sleep(for: .seconds(handyVerbunden && !unsicher ? 300 : 30))
             }
         }
         // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange weder Handy noch eigene Console-Anmeldung es liefern können.
@@ -130,24 +133,25 @@ final class AppSteuerung {
         })
     }
 
-    /// Stopp-Knopf wie am Handy, solange Jarvis in diesem Gespräch an einer Frage aus Blase oder Sprachgespräch arbeitet.
+    /// Stopp-Knopf wie am Handy: solange Jarvis in diesem Gespräch an einer Frage aus der Blase arbeitet oder das Sprachgespräch antwortet oder spricht.
     func abbrechbar(_ g: Gespraech) -> Bool {
-        guard g.arbeitet else { return false }
-        return fragen.values.contains { $0.gespraech == g.id } || (SprachSchleife.shared.gespraech === g && SprachSchleife.shared.zustand == .denkt)
+        let s = SprachSchleife.shared
+        if s.gespraech === g && (s.zustand == .denkt || s.zustand == .spricht) { return true }
+        return g.arbeitet && fragen.values.contains { $0.gespraech == g.id }
     }
 
     func abbrechen(_ g: Gespraech) {
-        for f in fragen.values where f.gespraech == g.id { f.aufgabe.cancel() }
-        if SprachSchleife.shared.gespraech === g && SprachSchleife.shared.zustand == .denkt { SprachSchleife.shared.beenden() }
+        gespraechBeendet(g)
         log("gespraech", "Antwort abgebrochen", wo: "Eingabeblase")
     }
 
-    func sprechen() {
-        let g = gespraech ?? GespraechsSpeicher.shared.neu()
-        gespraech = g
-        if SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden(); return }
-        SprachSchleife.shared.starten(in: g)
+    /// Laufende Fragen und das Sprachgespräch dieses Gesprächs enden, etwa beim Löschen.
+    func gespraechBeendet(_ g: Gespraech) {
+        for f in fragen.values where f.gespraech == g.id { f.aufgabe.cancel() }
+        if SprachSchleife.shared.gespraech === g && SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden() }
     }
+
+    func sprechen() { kuerzelSprechen() }
 
     func live() {
         if LiveGespraech.shared.aktiv { LiveGespraech.shared.beenden(); return }
@@ -190,18 +194,16 @@ final class AppSteuerung {
     }
 
     private func sprachgespraechStarten() {
-        let g: Gespraech
-        if fensterVorn, bereich == .gespraech, let offen = gespraech {
-            g = offen
-        } else {
-            g = entwurfOderNeu()
-            if g.nachrichten.isEmpty, g.titel == "Neues Gespräch" { g.titel = "Sprachgespräch" }
-        }
         Task { await McpKlient.shared.kontextVorladen() }
+        guard fensterVorn else {
+            // Im Hintergrund bleibt die Ansicht, wie sie ist: Ein Fehlalarm darf nichts Offenes verdrängen. Klick auf die Pille oder die Rückkehr zu Jarvis zeigt das Gespräch.
+            SprachSchleife.shared.starten(in: GespraechsSpeicher.shared.neu())
+            return
+        }
+        let g = bereich == .gespraech ? (gespraech ?? GespraechsSpeicher.shared.neu()) : entwurfOderNeu()
         gespraech = g
         bereich = .gespraech
         SprachSchleife.shared.starten(in: g)
-        pilleAbgleichen()
     }
 
     // MARK: Sprachpille
@@ -234,6 +236,11 @@ final class AppSteuerung {
                         let s = AppSteuerung.shared
                         if s.appVorn != NSApp.isActive { s.appVorn = NSApp.isActive }
                         s.pilleAbgleichen()
+                        // Zurück in Jarvis, während das Gespräch im Hintergrund schon Inhalt hat: Es erscheint.
+                        if NSApp.isActive, let g = SprachSchleife.shared.gespraech, SprachSchleife.shared.zustand != .aus, !g.nachrichten.isEmpty, s.gespraech !== g {
+                            s.gespraech = g
+                            s.bereich = .gespraech
+                        }
                     }
                 }
             }

@@ -71,8 +71,9 @@ final class ParakeetLocalClient: @unchecked Sendable {
     private static let hotwordsScore: Float = 3
     /// Wie am Handy: mehr als 100 Begriffe gehen nicht in die Beam-Suche.
     private static let maxHotwords = 100
-    /// Nach so langer Ruhe gibt Jarvis den Arbeitsspeicher wieder frei. Länger als in den Overlays: Das Weckwort soll nicht nachladen.
-    private static let idleUnloadS: Double = 2 * 3600
+    /// Nach so langer Ruhe gibt das Overlay den Arbeitsspeicher wieder frei (TVO und CVO laufen gleichzeitig).
+    /// Das Diktat lädt beim Aufnahmestart vor, das Modell ist also fertig, bevor Frank ausgesprochen hat.
+    private static let idleUnloadS: Double = 15 * 60
 
     private let queue = DispatchQueue(label: "parakeet.local", qos: .userInitiated)
     private var recognizer: OpaquePointer?

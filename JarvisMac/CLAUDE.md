@@ -38,4 +38,4 @@ Vor Änderungen an `Sources/Live` `best-practices/apis/openai-live-realtime.md` 
 `funktionen.md` nach jeder Änderung knapp nachziehen: nur tatsächlich Eingebautes. `jarvis-wissen.md` beschreibt die Handy-Reiter, die CLI-Zusammenarbeit und die Regeln für ChatGPT Live; `build.sh` legt dazu die aktuelle `Jarvis/app/src/main/assets/funktionen.md` als `handy-funktionen.md` ins Bundle.
 
 ## Farben
-Nur über `Farbe` und `DesignStand` (Hell, Automatik, Dunkel), keine festen Weiß- oder Schwarztöne für Flächen: `Farbe.glas(a)` und `Farbe.tiefe(a)` passen sich an. Nicht in `Canvas`-Blöcken lesen, sondern davor.
+Nur über `Farbe` und `DesignStand` (Hell, Automatik, Dunkel), keine festen Weiß- oder Schwarztöne für Flächen: `Farbe.glas(a)` und `Farbe.tiefe(a)` passen sich an. Nicht in `Canvas`-Blöcken lesen, sondern davor. Einzige Ausnahme: die Sprachpille (`SprachPille.swift`) bleibt wie am Handy in jedem Design dunkel mit Orange.

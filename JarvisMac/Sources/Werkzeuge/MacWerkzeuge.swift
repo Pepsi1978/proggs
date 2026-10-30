@@ -17,11 +17,35 @@ private func werkzeug(_ name: String, _ beschreibung: String, _ s: JSONObjekt,
     LokalesWerkzeug(definition: WerkzeugDefinition(name: name, beschreibung: beschreibung, schema: s), ausfuehren: f)
 }
 
+/// Merkt sich, wie ein laufender Befehl zu beenden ist; kommt der Abbruch vor dem Start, greift er gleich danach.
+final class ProzessAbbruch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var aktion: (@Sendable () -> Void)?
+    private var ausgeloest = false
+
+    func setze(_ a: @escaping @Sendable () -> Void) {
+        let sofort = lock.withLock { () -> Bool in aktion = a; return ausgeloest }
+        if sofort { a() }
+    }
+
+    func ausloesen() {
+        let a = lock.withLock { () -> (@Sendable () -> Void)? in ausgeloest = true; return aktion }
+        a?()
+    }
+}
+
 enum Shell {
     struct Ergebnis { var ausgabe: String; var fehler: String; var code: Int32; var zeitAus: Bool }
 
     /// Führt einen Befehl in einer Login-zsh aus (gleiche Umgebung wie Franks Terminal).
     static func zsh(_ befehl: String, ordner: String? = nil, sekunden: Double = 120) async -> Ergebnis {
+        let abbruch = ProzessAbbruch()
+        return await withTaskCancellationHandler {
+            await zshLauf(befehl, ordner: ordner, sekunden: sekunden, abbruch: abbruch)
+        } onCancel: { abbruch.ausloesen() }
+    }
+
+    private static func zshLauf(_ befehl: String, ordner: String?, sekunden: Double, abbruch: ProzessAbbruch) async -> Ergebnis {
         await withCheckedContinuation { (fort: CheckedContinuation<Ergebnis, Never>) in
             let p = Process()
             p.executableURL = URL(fileURLWithPath: "/bin/zsh")
@@ -54,14 +78,20 @@ enum Shell {
                 fort.resume(returning: Ergebnis(ausgabe: "", fehler: error.localizedDescription, code: -1, zeitAus: false)); return
             }
             let pid = p.processIdentifier
-            DispatchQueue.global().asyncAfter(deadline: .now() + sekunden) {
+            let beenden: @Sendable () -> Void = {
                 guard !einmal.istGesetzt else { return }
-                zeitAus.setzen()
                 // Kinder zuerst (z. B. „sleep 999 | cat“), dann die Shell selbst.
                 let k = Process(); k.executableURL = URL(fileURLWithPath: "/usr/bin/pkill"); k.arguments = ["-TERM", "-P", "\(pid)"]
                 try? k.run(); k.waitUntilExit()
                 if p.isRunning { p.terminate() }
                 DispatchQueue.global().asyncAfter(deadline: .now() + 1) { fertig(-15) }
+            }
+            // Stopp-Knopf: Der Befehl endet sofort, nicht erst an seiner Zeitgrenze.
+            abbruch.setze { DispatchQueue.global().async { beenden() } }
+            DispatchQueue.global().asyncAfter(deadline: .now() + sekunden) {
+                guard !einmal.istGesetzt else { return }
+                zeitAus.setzen()
+                beenden()
             }
         }
     }

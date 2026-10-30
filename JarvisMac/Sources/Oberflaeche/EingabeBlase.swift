@@ -16,6 +16,7 @@ struct EingabeBlase: View {
     @State private var text = ""
     @State private var diktiert = false
     @State private var diktatFehler = ""
+    @State private var nachDiktatSenden = false
     @FocusState private var fokus: Bool
 
     var body: some View {
@@ -29,12 +30,7 @@ struct EingabeBlase: View {
             }
             if diktat.aktiv && (diktiert || schleife.zustand == .hoert) {
                 HStack(spacing: 8) {
-                    if diktat.schreibtMit {
-                        Text("Schreibe mit …").font(.jarvis(13)).foregroundStyle(Farbe.text2)
-                    } else {
-                        PegelBalken(pegel: diktat.pegel)
-                        Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(13)).foregroundStyle(Farbe.text2).lineLimit(2)
-                    }
+                    DiktatStatus(groesse: 13, zeilen: 2)
                     Spacer()
                 }
             }
@@ -71,9 +67,13 @@ struct EingabeBlase: View {
         .frame(maxWidth: .infinity)
         .onAppear {
             if gespraech != nil, !steuerung.entwurf.isEmpty { text = steuerung.entwurf; steuerung.entwurf = "" }
+            restUebernehmen()
             fokus = true
         }
         .onChange(of: steuerung.entwurf) { _, neu in if gespraech != nil, !neu.isEmpty { text = neu; steuerung.entwurf = "" } }
+        .onChange(of: steuerung.blasenRest) { _, _ in restUebernehmen() }
+        // Getippter Text geht nicht verloren, wenn die Ansicht wechselt, etwa durch das Weckwort: Die nächste Blase übernimmt ihn.
+        .onDisappear { if !text.isEmpty { steuerung.blasenRest = AufgabenText.verbinde(steuerung.blasenRest, text) } }
     }
 
     private var plusMenue: some View {
@@ -104,6 +104,7 @@ struct EingabeBlase: View {
         DiktatKnopf(text: $text, vorschau: false, meldeLaeuft: { laeuft in
             diktiert = laeuft
             if !laeuft { fokus = true }
+            if !laeuft && nachDiktatSenden { nachDiktatSenden = false; senden() }
         }, meldeFehler: { diktatFehler = $0 })
         if let gespraech, steuerung.abbrechbar(gespraech) {
             RundKnopf(symbol: "stop.fill", hilfe: "Abbrechen", aktiv: true, farbe: Farbe.haupt) { steuerung.abbrechen(gespraech) }
@@ -126,7 +127,19 @@ struct EingabeBlase: View {
         }
     }
 
+    private func restUebernehmen() {
+        guard !steuerung.blasenRest.isEmpty else { return }
+        text = AufgabenText.verbinde(text, steuerung.blasenRest)
+        steuerung.blasenRest = ""
+    }
+
     private func senden() {
+        // Läuft das Mikrofon noch, gehört das Gesagte zur Nachricht: erst fertig mitschreiben, dann senden.
+        if diktiert {
+            nachDiktatSenden = true
+            diktat.stoppen()
+            return
+        }
         var t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.hasSuffix(";") { t = String(t.dropLast()).trimmingCharacters(in: .whitespaces) }
         guard !t.isEmpty || anhang != nil else { return }

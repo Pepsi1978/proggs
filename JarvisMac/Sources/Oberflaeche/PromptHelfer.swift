@@ -7,6 +7,13 @@ enum AufgabenText {
     static let trenner = " ; "
 
     /// Hängt eine neue Einsprechung an: Zwischen den Einsprechungen und am Ende steht immer der Trenner.
+    /// Zwei Texte hintereinander, ohne Trenner hinzuzufügen, wo der erste schon damit endet.
+    static func verbinde(_ a: String, _ b: String) -> String {
+        if a.isEmpty { return b }
+        if b.isEmpty { return a }
+        return a.hasSuffix(" ") ? a + b : a + " " + b
+    }
+
     static func anhaengen(_ basis: String, _ neu: String) -> String {
         let n = ohneEndTrenner(neu)
         guard !n.isEmpty else { return basis }
@@ -57,6 +64,21 @@ enum AufgabenText {
     """
 }
 
+/// „Ich höre zu …“ mit Pegel, danach „Schreibe mit …“; für die Blase und jedes Textfeld mit Diktat.
+struct DiktatStatus: View {
+    var groesse: CGFloat
+    var zeilen: Int
+    @State private var diktat = Diktat.shared
+    var body: some View {
+        if diktat.schreibtMit {
+            Text("Schreibe mit …").font(.jarvis(groesse)).foregroundStyle(Farbe.text2).lineLimit(zeilen)
+        } else {
+            PegelBalken(pegel: diktat.pegel)
+            Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(groesse)).foregroundStyle(Farbe.text2).lineLimit(zeilen)
+        }
+    }
+}
+
 /// Mikrofon für ein Textfeld: Jede Einsprechung endet mit dem Trenner, damit die nächste folgen kann.
 struct DiktatKnopf: View {
     @Binding var text: String
@@ -68,6 +90,10 @@ struct DiktatKnopf: View {
     @State private var schleife = SprachSchleife.shared
     @State private var laeuft = false
     @State private var meldung = ""
+    @State private var weg = Merker()
+
+    /// Überlebt das Neuzeichnen: Ist die Ansicht fort, zeigt das Feld nichts mehr, und der fertige Text geht an die nächste Blase.
+    private final class Merker { var ansichtFort = false }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -76,34 +102,55 @@ struct DiktatKnopf: View {
             } else {
                 RundKnopf(symbol: nimmtAuf ? "stop.fill" : "mic.fill", hilfe: nimmtAuf ? "Aufnahme beenden" : "Einsprechen", aktiv: nimmtAuf, farbe: Farbe.rot) { druecken() }
             }
-            if vorschau && laeuft && diktat.aktiv {
-                if diktat.schreibtMit {
-                    Text("Schreibe mit …").font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(1)
-                } else {
-                    PegelBalken(pegel: diktat.pegel)
-                    Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(1)
-                }
+            if diktat.offeneAufnahme != nil && !diktat.aktiv {
+                RundKnopf(symbol: "arrow.clockwise", hilfe: "Aufnahme erneut in Text umwandeln", farbe: Farbe.warnung) { erneutUmwandeln() }
             }
+            if vorschau && laeuft && diktat.aktiv { DiktatStatus(groesse: 12, zeilen: 1) }
             if vorschau && !meldung.isEmpty { Text(meldung).font(.jarvis(12)).foregroundStyle(Farbe.warnung).lineLimit(2) }
         }
-        .onDisappear { if laeuft { diktat.stoppen() } }
+        .onAppear { weg.ansichtFort = false }
+        .onDisappear { weg.ansichtFort = true; if laeuft { diktat.stoppen() } }
     }
 
     /// Wie am Handy: rot mit Stopp, solange aufgenommen wird, auch die laufende Runde des Gesprächsmodus.
     private var nimmtAuf: Bool { diktat.aktiv && !diktat.schreibtMit && (laeuft || schleife.zustand == .hoert) }
 
     private func druecken() {
-        if laeuft || (schleife.zustand == .hoert && diktat.aktiv) { diktat.stoppen(); return }
+        if laeuft { diktat.stoppen(); return }
+        // Im Gesprächsmodus gehört das Mikrofon der Schleife: Tippen beendet die Aufnahme oder unterbricht Jarvis, und es geht in der nächsten Runde weiter.
+        switch schleife.zustand {
+        case .hoert: if diktat.aktiv { diktat.stoppen() }; return
+        case .spricht: Stimme.shared.stopp(); return
+        case .denkt: melde("Jarvis antwortet gerade."); return
+        case .aus: break
+        }
         // Ein Diktat, das jemand anderes gestartet hat (Sprachgespräch, Chat), bleibt unangetastet.
         guard !diktat.aktiv else { melde("Das Mikrofon wird gerade schon benutzt."); return }
         laeuft = true; melde(""); meldeLaeuft(true)
         Task {
             if let erkannt = await diktat.hoereBisStille() {
-                text = AufgabenText.anhaengen(text, erkannt)
+                uebernehmen(erkannt)
             } else if let f = diktat.fehler {
                 melde(f)
             }
             laeuft = false; meldeLaeuft(false)
+        }
+    }
+
+    private func erneutUmwandeln() {
+        laeuft = true; melde(""); meldeLaeuft(true)
+        Task {
+            if let erkannt = await diktat.erneutUmwandeln() { uebernehmen(erkannt) } else if let f = diktat.fehler { melde(f) }
+            laeuft = false; meldeLaeuft(false)
+        }
+    }
+
+    private func uebernehmen(_ erkannt: String) {
+        if weg.ansichtFort {
+            let s = AppSteuerung.shared
+            s.blasenRest = AufgabenText.anhaengen(s.blasenRest, erkannt)
+        } else {
+            text = AufgabenText.anhaengen(text, erkannt)
         }
     }
 
