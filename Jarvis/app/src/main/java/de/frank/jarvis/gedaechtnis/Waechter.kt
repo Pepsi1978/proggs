@@ -125,6 +125,12 @@ object Waechter {
                 .onFailure { Logbuch.fehler("Signal Programmieren", it) }
             return
         }
+        if (art == "agentenkanal") {
+            // Post von Jarvis Mac OS: kann beim Neuverbinden wiederkommen, die Fähigkeit erkennt das an der id.
+            runCatching { Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.MacJarvisFaehigkeit>().firstOrNull()?.empfangen(nachricht.optJSONObject("nachricht")) }
+                .onFailure { Logbuch.fehler("Signal Agentenkanal", it) }
+            return
+        }
         if (art != "tagebuch") return
         bereich.launch {
             val beginn = System.currentTimeMillis()

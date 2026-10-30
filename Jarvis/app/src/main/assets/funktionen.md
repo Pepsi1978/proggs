@@ -8,7 +8,13 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 - ChatGPT-Plugin (MCP-Server auf dem Handy, über eigenen Relay-Server erreichbar): dieselben Werkzeuge; dazu nur im Plugin `jarvis_kontext` (Startkontext/Gesamtbild), `jarvis_status`, `tagesauswertung_lesen`, `tagesdaten_lesen`. Ist das Handy offline, antwortet das Plugin „Handy nicht erreichbar“.
 - Vordergrunddienst hält die Verbindung auch bei gesperrtem Handy, startet nach Neustart und Update von selbst.
 - Codex-Modellwahl: nur Astra 6, Sol 6.1, Terra 5.6 und Luna 6; Astra, Sol und Terra bieten Niedrig bis Ultra, Luna Niedrig bis Maximal. Ältere gespeicherte Sol-/Luna-Auswahlen werden auf die aktuelle Modellfamilie übernommen; auch die GPT-Live-Denkmodellliste zeigt nur die aktuellen vier Fassungen.
-- Gemini gibt es nur im Live-Gespräch, nicht als Chat-Modell. Keine Jarvis-App für Windows, macOS oder iOS.
+- Gemini gibt es nur im Live-Gespräch, nicht als Chat-Modell. Keine Jarvis-App für Windows oder iOS; am Mac gibt es Jarvis Mac OS.
+
+## Jarvis Mac OS (Agentenkanal)
+
+- Schwester-Agent auf Franks Mac, in beide Richtungen erreichbar, solange der Mac verbunden ist. „Starte Jarvis Mac OS“ oder „Starte Jarvis“: `jarvis_mac_starten` (Brücke startet die App, gemeldet wird erst, wenn sie wirklich abfragt).
+- `jarvis_mac_sprechen`: `stand` (Programmieraufgaben am Rechner), `begutachten` (gesamtes Geschehen am Rechner), `frage` (Rückfragen, freies Gespräch), `info` (Abstimmung, wer was wann macht). Bis zu einer Minute Warten, spätere Antworten kommen ins Gespräch „Jarvis Mac OS (Agentenkanal)“ und als Benachrichtigung. `jarvis_mac_lesen`: Zustand und letzte Nachrichten.
+- Der Mac fragt von sich aus ebenso; das Handy-Modell antwortet im Hintergrund. Der Relay hält die Post bis zur Quittung, bei Post startet die Mac-App von selbst.
 
 ## Angebundene Apps
 

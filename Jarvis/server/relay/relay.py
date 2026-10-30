@@ -37,6 +37,12 @@ jarvis_lokal.py). Sie laufen wie Auftraege durch dieselben Wege. Entfernt Frank 
 merkt sich der Relay die Nummer (/data/lokal-entfernt.json, 30 Tage): Ihre Meldungen gehen nicht mehr ans Handy, die Antwort
 traegt „entfernt“, und /pc/nachtrag antwortet 410. Die Sitzung am Rechner laeuft davon unberuehrt weiter. Eine freie Rueckfrage
 einer lokalen Sitzung (frage.als_nachtrag) wartet nicht: Franks Antwort wird zum Nachtrag „antwort-<frage_id>“, den der Warter zustellt.
+
+Achte Aufgabe: der Agentenkanal zwischen Jarvis am Handy und Jarvis Mac OS (Klasse AgentenKanal). Zwei Postfaecher, die Neustarts
+ueberleben (/data/agentenkanal.json); jede Nachricht bleibt, bis die Gegenseite sie quittiert, und traegt eine id gegen doppelte
+Zustellung. Das Handy schreibt ueber /geraet/kanal und bekommt seine Post als {"signal": "agentenkanal"}; die Mac-App fragt mit dem
+Geheimnis ihrer MCP-Adresse ab (GET /j/<Geheimnis>/kanal, Long-Polling) und braucht keinen weiteren Zugang. Laeuft die Mac-App nicht,
+startet die Mac-Bruecke sie (GET /pc/mac-befehl, Long-Polling): auf Franks Wunsch (/geraet/mac-start) und bei Post fuer den Mac.
 """
 import asyncio
 import hmac
@@ -133,6 +139,7 @@ class Relay:
         self.meldungen = []          # Programmier-Meldungen ohne verbundenes Handy (hoechstens 1000, aelteste fallen weg)
         self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.da = asyncio.Event()
+        self.kanal = None            # AgentenKanal: reicht beim Verbinden unquittierte Post nach
         self._lade()
 
     def _lade(self):
@@ -187,6 +194,8 @@ class Relay:
             except (ConnectionError, RuntimeError):
                 self.ausstehend.insert(0, signal)
                 break
+        if self.kanal is not None:
+            await self.kanal.nachreichen(ws)
         try:
             async for nachricht in ws:
                 if nachricht.type != WSMsgType.TEXT:
@@ -1169,6 +1178,217 @@ class PcBruecke:
         return web.json_response({"pc": self.da(), "rechner": aktiv, "zuletzt_vor_s": vor, "rechner_alle": rechner, "sitzungen": sitzungen})
 
 
+KANAL_DATEI = Path(os.environ.get("JARVIS_KANAL", "/data/agentenkanal.json"))
+KANAL_ABFRAGE_S = 25       # Long-Polling von Mac-App und Bruecke
+KANAL_FRISCH_S = 40        # laenger offen = die Abfrage haengt (Mac schlaeft), auch wenn die Verbindung noch offen aussieht
+KANAL_NACHLAUF_S = 3       # zwischen zwei Abfragen gilt die Gegenstelle weiter als da
+KANAL_HOECHSTENS = 200     # je Postfach
+KANAL_ALTER_S = 7 * 86_400
+MAC_START_FRIST_S = 30     # so lange wartet /geraet/mac-start, bis die gestartete App abfragt
+
+
+class _Abfrage:
+    """Eine Gegenstelle mit Long-Polling: da, solange die Abfrage lebt oder eben erst endete."""
+
+    def __init__(self):
+        self.anfrage = None
+        self.beginn = 0.0
+        self.ende = 0.0
+
+    def da(self) -> bool:
+        jetzt = time.monotonic()
+        a = self.anfrage
+        if a is not None and a.transport is not None and not a.transport.is_closing() and jetzt - self.beginn < KANAL_FRISCH_S:
+            return True
+        return jetzt - self.ende < KANAL_NACHLAUF_S
+
+
+class AgentenKanal:
+    def __init__(self, relay: Relay):
+        self.relay = relay
+        self.post = {"mac": [], "handy": []}
+        self.mac = _Abfrage()
+        self.bruecke = _Abfrage()
+        self.eingang_mac = asyncio.Event()
+        self.mac_kam = asyncio.Event()       # die Mac-App hat gerade abgefragt
+        self.befehl = asyncio.Event()
+        self.start_vorn = None               # None = kein Start offen, sonst: App nach vorn holen?
+        try:
+            daten = json.loads(KANAL_DATEI.read_text("utf-8"))
+            self.post = {"mac": daten.get("mac", []), "handy": daten.get("handy", [])}
+        except Exception:
+            pass
+
+    def _sichere(self) -> None:
+        try:
+            KANAL_DATEI.parent.mkdir(parents=True, exist_ok=True)
+            teil = KANAL_DATEI.with_suffix(".teil")
+            teil.write_text(json.dumps(self.post, ensure_ascii=False), "utf-8")
+            teil.replace(KANAL_DATEI)
+        except Exception as fehler:
+            log.warning("Agentenkanal nicht gesichert: %s", fehler)
+
+    def _ablegen(self, ziel: str, daten: dict) -> dict | None:
+        """Prueft und merkt eine Nachricht. Dieselbe id ein zweites Mal aendert nichts (Wiederholung nach Netzfehler)."""
+        text = daten.get("text")
+        kennung = daten.get("id")
+        if not isinstance(text, str) or not text.strip() or not isinstance(kennung, str) or not 8 <= len(kennung) <= 64:
+            return None
+        postfach = self.post[ziel]
+        vorhanden = next((n for n in postfach if n["id"] == kennung), None)
+        if vorhanden is not None:
+            return vorhanden
+        nachricht = {"id": kennung, "art": str(daten.get("art") or "info"), "text": text, "zeit": int(time.time())}
+        if isinstance(daten.get("antwort_auf"), str):
+            nachricht["antwort_auf"] = daten["antwort_auf"]
+        grenze = time.time() - KANAL_ALTER_S
+        postfach[:] = [n for n in postfach if n["zeit"] > grenze][-(KANAL_HOECHSTENS - 1):] + [nachricht]
+        self._sichere()
+        return nachricht
+
+    def _quittieren(self, ziel: str, ids) -> None:
+        if not isinstance(ids, list):
+            return
+        rest = [n for n in self.post[ziel] if n["id"] not in ids]
+        if len(rest) != len(self.post[ziel]):
+            self.post[ziel] = rest
+            self._sichere()
+
+    def _start_anfordern(self, vorn: bool) -> None:
+        self.start_vorn = bool(self.start_vorn) or vorn
+        self.befehl.set()
+
+    def _status(self) -> dict:
+        return {"mac_app": self.mac.da(), "bruecke": self.bruecke.da(), "offen_an_mac": len(self.post["mac"])}
+
+    async def nachreichen(self, ws) -> None:
+        for nachricht in list(self.post["handy"]):
+            try:
+                await ws.send_str(json.dumps({"signal": "agentenkanal", "nachricht": nachricht}, ensure_ascii=False))
+            except (ConnectionError, RuntimeError):
+                return
+
+    # ---------------------------------------------------------------- Handy
+
+    async def handy_sendet(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            nachricht = self._ablegen("mac", await request.json())
+        except Exception:
+            nachricht = None
+        if nachricht is None:
+            return web.Response(status=400, text="Nachricht unvollstaendig")
+        self.eingang_mac.set()
+        if not self.mac.da():
+            self._start_anfordern(vorn=False)   # Post weckt die App, ohne Frank das Fenster vor die Nase zu setzen
+        return web.json_response(self._status())
+
+    async def handy_quittiert(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        try:
+            self._quittieren("handy", (await request.json()).get("ids"))
+        except Exception:
+            return web.Response(status=400, text="Quittung unvollstaendig")
+        return web.json_response({"ok": True})
+
+    async def status(self, request: web.Request) -> web.Response:
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        return web.json_response(self._status())
+
+    async def mac_start(self, request: web.Request) -> web.Response:
+        """Startet Jarvis Mac OS ueber die Bruecke und wartet, bis die App wirklich abfragt: Nur das gilt als gestartet."""
+        if not darf_handy(request):
+            return web.Response(status=404, text="Not found")
+        vorn = request.query.get("vorn") != "0"
+        if self.mac.da():
+            if vorn and self.bruecke.da():
+                self._start_anfordern(vorn=True)   # laeuft schon: nur nach vorn holen
+            return web.json_response(dict(self._status(), ergebnis="laeuft_schon"))
+        if not self.bruecke.da():
+            return web.json_response(dict(self._status(), ergebnis="mac_nicht_verbunden"))
+        self.mac_kam.clear()
+        self._start_anfordern(vorn=vorn)
+        try:
+            await asyncio.wait_for(self.mac_kam.wait(), MAC_START_FRIST_S)
+        except asyncio.TimeoutError:
+            return web.json_response(dict(self._status(), ergebnis="keine_rueckmeldung"))
+        return web.json_response(dict(self._status(), ergebnis="gestartet"))
+
+    # ---------------------------------------------------------------- Mac-App (Geheimnis der MCP-Adresse)
+
+    async def mac_abfrage(self, request: web.Request) -> web.Response:
+        if not self.relay.passt(request.match_info["geheimnis"]):
+            return web.Response(status=404, text="Not found")
+        self.mac.anfrage, self.mac.beginn = request, time.monotonic()
+        self.mac_kam.set()
+        try:
+            if not self.post["mac"]:
+                self.eingang_mac.clear()
+                try:
+                    await asyncio.wait_for(self.eingang_mac.wait(), KANAL_ABFRAGE_S)
+                except asyncio.TimeoutError:
+                    pass
+            return web.json_response({"nachrichten": self.post["mac"], "handy": self.relay.ws is not None and not self.relay.ws.closed},
+                                     dumps=lambda d: json.dumps(d, ensure_ascii=False))
+        finally:
+            if self.mac.anfrage is request:
+                self.mac.anfrage = None
+                self.mac.ende = time.monotonic()
+
+    async def mac_sendet(self, request: web.Request) -> web.Response:
+        if not self.relay.passt(request.match_info["geheimnis"]):
+            return web.Response(status=404, text="Not found")
+        try:
+            nachricht = self._ablegen("handy", await request.json())
+        except Exception:
+            nachricht = None
+        if nachricht is None:
+            return web.Response(status=400, text="Nachricht unvollstaendig")
+        ws = self.relay.ws
+        zugestellt = False
+        if ws is not None and not ws.closed:
+            try:
+                await ws.send_str(json.dumps({"signal": "agentenkanal", "nachricht": nachricht}, ensure_ascii=False))
+                zugestellt = True
+            except (ConnectionError, RuntimeError):
+                pass
+        return web.json_response({"zugestellt": zugestellt})
+
+    async def mac_quittiert(self, request: web.Request) -> web.Response:
+        if not self.relay.passt(request.match_info["geheimnis"]):
+            return web.Response(status=404, text="Not found")
+        try:
+            self._quittieren("mac", (await request.json()).get("ids"))
+        except Exception:
+            return web.Response(status=400, text="Quittung unvollstaendig")
+        return web.json_response({"ok": True})
+
+    # ---------------------------------------------------------------- Mac-Bruecke
+
+    async def bruecke_abfrage(self, request: web.Request) -> web.Response:
+        if not darf_pc(request):
+            return web.Response(status=404, text="Not found")
+        self.bruecke.anfrage, self.bruecke.beginn = request, time.monotonic()
+        try:
+            if self.start_vorn is None:
+                self.befehl.clear()
+                try:
+                    await asyncio.wait_for(self.befehl.wait(), KANAL_ABFRAGE_S)
+                except asyncio.TimeoutError:
+                    pass
+            if self.start_vorn is None:
+                return web.Response(status=204)
+            vorn, self.start_vorn = self.start_vorn, None
+            return web.json_response({"befehl": "jarvis_starten", "vorn": vorn})
+        finally:
+            if self.bruecke.anfrage is request:
+                self.bruecke.anfrage = None
+                self.bruecke.ende = time.monotonic()
+
+
 async def gesund(_: web.Request) -> web.Response:
     return web.Response(text="ok")
 
@@ -1231,6 +1451,16 @@ def app() -> web.Application:
     anwendung.router.add_post("/geraet/nachtrag", pc.nachtrag_geben)
     anwendung.router.add_get("/pc/nachtrag", pc.nachtrag_abholen)
     anwendung.router.add_post("/geraet/lokal-entfernen", pc.lokal_entfernen)
+    kanal = AgentenKanal(relay)
+    relay.kanal = kanal
+    anwendung.router.add_post("/geraet/kanal", kanal.handy_sendet)
+    anwendung.router.add_post("/geraet/kanal/quittung", kanal.handy_quittiert)
+    anwendung.router.add_get("/geraet/kanal/status", kanal.status)
+    anwendung.router.add_post("/geraet/mac-start", kanal.mac_start)
+    anwendung.router.add_get("/pc/mac-befehl", kanal.bruecke_abfrage)
+    anwendung.router.add_get("/j/{geheimnis}/kanal", kanal.mac_abfrage)
+    anwendung.router.add_post("/j/{geheimnis}/kanal", kanal.mac_sendet)
+    anwendung.router.add_post("/j/{geheimnis}/kanal/quittung", kanal.mac_quittiert)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

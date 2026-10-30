@@ -13,6 +13,7 @@ Anmeldung: Mit jeder Abfrage meldet die Brücke den lokalen Anmeldestand von Cla
 abgemeldet oder unbekannt, dazu die Prüfzeit). Grundlage ist `claude auth status` im Profilordner, höchstens alle fünf
 Minuten und frisch vor jedem Start; gelesen wird nur „loggedIn“, nie Konto oder Token. „lokal“ heißt nur: Anmeldedaten
 liegen vor. Ob sie gelten, zeigt erst eine Sitzung (der Hook meldet „Login expired“ sofort). Abgemeldet startet keine Sitzung.
+Jarvis Mac OS: Ein eigener Faden fragt /pc/mac-befehl ab und startet die Mac-App, wenn das Handy es verlangt oder Post für sie hat.
 Protokoll: ~/Library/Logs/JarvisPcBruecke/bruecke.log
 """
 from __future__ import annotations
@@ -386,6 +387,32 @@ exec /bin/zsh -l
 RECHNER = rechnername()
 
 
+def jarvis_mac_faden() -> None:
+    """Startet Jarvis Mac OS auf Zuruf des Relays. Eigener Faden: Der Start darf die Abfrage der Programmieraufträge nie aufhalten."""
+    pause = 2
+    while True:
+        try:
+            zugang = lies_zugang()
+            code, roh = rufe(f"https://{zugang['host']}/pc/mac-befehl", zugang["token"], 40)
+            pause = 2
+            if code == 204:
+                continue
+            if code != 200:
+                # Älterer Relay ohne diese Route: nur selten nachfragen.
+                time.sleep(60 if code == 404 else 10)
+                continue
+            befehl = json.loads(roh.decode("utf-8"))
+            if befehl.get("befehl") == "jarvis_starten":
+                argumente = ["/usr/bin/open"] + ([] if befehl.get("vorn") else ["-g"]) + ["-b", "de.frank.jarvismac"]
+                ergebnis = subprocess.run(argumente, capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL)
+                schreib(f"Jarvis Mac OS gestartet (vorn={bool(befehl.get('vorn'))})" if ergebnis.returncode == 0
+                        else f"Jarvis Mac OS nicht gestartet: {ergebnis.stderr.strip()[:200]}")
+        except Exception as fehler:
+            schreib(f"Mac-Befehl: {fehler}")
+            time.sleep(pause)
+            pause = min(pause * 2, 30)
+
+
 class AnmeldungFehlt(Exception):
     pass
 
@@ -400,6 +427,7 @@ def main() -> int:
         return 0
     schreib(f"Brücke gestartet ({RECHNER}, Rang ersatz)")
     raeume_auf()
+    threading.Thread(target=jarvis_mac_faden, daemon=True).start()
     pause = 2
     # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
     scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")
