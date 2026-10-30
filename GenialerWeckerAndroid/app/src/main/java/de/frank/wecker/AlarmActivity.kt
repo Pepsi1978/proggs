@@ -116,7 +116,7 @@ class AlarmActivity : ComponentActivity() {
         val start = leseTheme()
         // Ausdrückliche, durchsichtige Ränder: der Vorgabewert setzt auf älteren Versionen einen hellen
         // Scrim hinter die Navigationsleiste, der nicht zur gewählten Oberfläche passen muss.
-        val rand = if (start == "dark") androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        val rand = if (start == "dark" || (start == "system" && Sonnenstand.istDunkel())) androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
             else androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
         enableEdgeToEdge(statusBarStyle = rand, navigationBarStyle = rand)
         hideStatusBar()

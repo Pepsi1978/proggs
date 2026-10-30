@@ -1,6 +1,9 @@
 package de.frank.wecker.design
 
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.CompositionLocalProvider
 import de.frank.genialeideen.ui.theme.GenialeIdeenTheme
@@ -19,9 +22,17 @@ import de.frank.genialeideen.ui.theme.IdeenSchriftFest
 fun WeckerTheme(themeWahl: String, design: Design, ausrichtung: String? = null, content: @Composable () -> Unit) {
     val dunkel = themeWahl == "dark"
     val palette = paletteFuer(design, dunkel)
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, dunkel) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or (if (dunkel) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
     CompositionLocalProvider(
         LocalDesignTokens provides tokensFuer(design),
         LocalGestalt provides gestaltFuer(design),
+        LocalConfiguration provides konfig,
         // Die Materialwerte hängen an Design und Modus und werden einmal hier gesetzt, damit
         // jede Fläche und jedes Bedienelement dieselbe Tiefensprache liest.
         LocalMaterial provides materialFuer(

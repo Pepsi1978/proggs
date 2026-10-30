@@ -55,6 +55,7 @@
     { "versionCode": 51, "versionName": "1.0.50", "stand": "30.09.2026, 11:06 Uhr", "notiz": "Ausschalten und Schlummern in der kleinen schwebenden Wecker-Nachricht wirken jetzt zuverlässig, und der Vollbild-Weckbildschirm im Hintergrund schließt sich mit, sobald der Wecker irgendwo aus ist." },
     {"versionCode": 52, "versionName": "1.0.51", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
     {"versionCode": 53, "versionName": "1.0.52", "stand": "15.10.2026, 15:03 Uhr", "notiz": "Morgenruhe zeigt oben jetzt ein zusammenhängendes Schlafzimmer mit Boden, Wänden und Tiefe: Bett unter dem Fenster, Nachttisch mit Lampe und Wecker, Blume auf der Fensterbank"},
-    {"versionCode": 54, "versionName": "1.0.53", "stand": "15.10.2026, 15:46 Uhr", "notiz": "Morgenruhe: Wecker-Status, Weckbereitschaft und die Knöpfe zum Anlegen und Öffnen stehen jetzt rechts neben Datum und Uhrzeit statt in einer eigenen Zeile darunter."}
+    {"versionCode": 54, "versionName": "1.0.53", "stand": "15.10.2026, 15:46 Uhr", "notiz": "Morgenruhe: Wecker-Status, Weckbereitschaft und die Knöpfe zum Anlegen und Öffnen stehen jetzt rechts neben Datum und Uhrzeit statt in einer eigenen Zeile darunter."},
+    {"versionCode": 55, "versionName": "1.0.54", "stand": "30.10.2026, 19:23 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
   ]
 }

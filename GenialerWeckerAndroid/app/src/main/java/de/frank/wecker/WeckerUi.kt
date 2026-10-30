@@ -120,7 +120,7 @@ import androidx.compose.runtime.Immutable
 fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
     AutomatischeWeckbereitschaft(activity)
     val themeRoh by vm.theme.collectAsStateWithLifecycle()
-    // „system“ folgt dem Handy; alles Weitere sieht nur noch hell oder dunkel.
+    // „system“ folgt der Sonne; alles Weitere sieht nur noch hell oder dunkel.
     val theme = wirksamesTheme(themeRoh)
     // Eigene Achse neben Hell/Dunkel und Ausrichtung; lifecycle-bewusst gesammelt.
     val designId by vm.settings.designFlow.collectAsStateWithLifecycle()
@@ -3110,10 +3110,26 @@ private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
 }
 
 
-/** Löst die Wahl „system“ in hell oder dunkel auf, je nach Einstellung des Handys. */
+/**
+ * Die einzige Stelle, die die Wahl auflöst: „system“ bedeutet Automatik nach der Sonne in Neuenhagen,
+ * nicht nach dem Android-System. Reine Rechnung ohne Speicherzugriff, also auch vor dem ersten Entsperren sicher.
+ */
 @Composable
-fun wirksamesTheme(wahl: String): String =
-    if (wahl == "system") (if (androidx.compose.foundation.isSystemInDarkTheme()) "dark" else "light") else wahl
+fun wirksamesTheme(wahl: String): String {
+    // Automatisch folgt der Sonne: jede Minute prüfen, nur solange sichtbar.
+    var sonneDunkel by remember(wahl) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, wahl) {
+        if (wahl == "light" || wahl == "dark") return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
+    return if (wahl == "system") (if (sonneDunkel) "dark" else "light") else wahl
+}
 
 
 /** „Anhören“ wird während der Vorschau zu „Stopp“; ein zweiter Tipp beendet sie. */
