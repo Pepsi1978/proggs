@@ -2149,6 +2149,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var mikroFehlte = false
     /** Das Weckwort fiel in der geöffneten App; sonst gilt die Stillezeit für außerhalb. */
     private var gespraechInApp = false
+    /** Zeit seit dem letzten Wort, wenn die Stillezeit die Aufnahme beendet hat; sonst 0. */
+    private var schlussStilleMs = 0L
 
     /** Je Runde neu: Eine per Sprache geänderte Zeit gilt ab der nächsten Frage, ebenso das Verlassen der App. */
     private fun stilleMsJetzt(): Int {
@@ -2187,7 +2189,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 mikro.stop()
                 return lage
             }
-            else -> aufnahmeBeenden(freigeben = false)
+            else -> {
+                schlussStilleMs = System.currentTimeMillis() - start - ende.letzteSpracheMs
+                aufnahmeBeenden(freigeben = false)
+            }
         }
         return de.frank.module.transkriptionsmodul.SprechEnde.Lage.FERTIG
     }
@@ -2206,6 +2211,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** [freigeben] = false im Gesprächsmodus: Das Mikrofon bleibt für die nächste Runde reserviert. */
     private fun aufnahmeBeenden(freigeben: Boolean = true) {
         nimmtAuf = false
+        val schluss = schlussStilleMs
+        schlussStilleMs = 0L
         // Die Mitschrift gehört zur Session, in der die Aufnahme begann.
         val stand = aufnahmeStand
         schreibtMit = true
@@ -2221,7 +2228,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // Puffer kopieren, WAV bauen und Stimmhaft-Zeitachse lesen dauern bei langen Diktaten spürbar: nicht auf dem
                 // Hauptfaden, sonst steht die Mitschrift-Animation still.
-                val (wav, stimmhaft) = withContext(Dispatchers.Default) { mikro.stop() to mikro.letzteStimmhaft }
+                val (wav, stimmhaft) = withContext(Dispatchers.Default) { de.frank.jarvis.data.Einstellungen.ohneSchlussstille(mikro.stop(), schluss) to mikro.letzteStimmhaft }
                 de.frank.jarvis.audio.AufnahmeDienst.stoppen()
                 if (freigeben && weckwortLauf?.isActive != true) {
                     de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()

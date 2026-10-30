@@ -463,6 +463,7 @@
     {"versionCode": 459, "versionName": "1.8.448", "stand": "30.10.2026, 17:25 Uhr", "notiz": "Stillezeit: Eingaben wie 2 Minuten werden abgelehnt statt still als 2 Sekunden übernommen, ein eingetragener Wert gilt auch ohne Übernehmen beim Verlassen, und das Feld zeigt die Zifferntastatur"},
     {"versionCode": 460, "versionName": "1.8.449", "stand": "30.10.2026, 17:32 Uhr", "notiz": "Die beiden Stillezeit-Felder stehen jetzt als immer offene Karte ganz oben auf den Einstellungs-Reitern Jarvis und Stimme"},
     {"versionCode": 461, "versionName": "1.8.450", "stand": "30.10.2026, 17:36 Uhr", "notiz": "Stillezeit-Karte: Der Hilfetext stimmt jetzt, ein Reiterwechsel übernimmt den Entwurf, und eine nicht übernommene Eingabe wird gemeldet"},
-    {"versionCode": 462, "versionName": "1.8.451", "stand": "30.10.2026, 17:45 Uhr", "notiz": "Die beiden Stillezeiten stellst du jetzt per Schieberegler ein, außerhalb der App bis 2 Minuten, auch per Sprache."}
+    {"versionCode": 462, "versionName": "1.8.451", "stand": "30.10.2026, 17:45 Uhr", "notiz": "Die beiden Stillezeiten stellst du jetzt per Schieberegler ein, außerhalb der App bis 2 Minuten, auch per Sprache."},
+    {"versionCode": 463, "versionName": "1.8.452", "stand": "30.10.2026, 17:52 Uhr", "notiz": "Die beiden Stillezeiten wählst du jetzt aus einem Aufklappmenü statt mit dem Regler, und lange Pausen am Ende werden nicht mehr mit transkribiert."}
 ]
 }

@@ -114,8 +114,8 @@ class EinstellungsKatalog(context: Context) {
     /** Stillezeit in Sekunden, auch mit Kommastelle. */
     private fun stillezeit(kennung: String, titel: String, beschreibung: String, maxMs: Int, lies: () -> Int, setze: (Int) -> Unit): Eintrag {
         val werte = "1 bis ${maxMs / 1_000} Sekunden, auch mit Komma, z. B. 2,5" + if (maxMs >= 60_000) " oder 2 Minuten" else ""
-        return Eintrag(kennung, "Hey Jarvis: Stillezeit", titel, beschreibung, werte, { Einstellungen.stilleText(lies()) }) { w ->
-            setze(Einstellungen.stilleMsAus(w, maxMs) ?: throw IllegalArgumentException("„$w“ passt nicht. Erlaubt: $werte."))
+        return Eintrag(kennung, "Hey Jarvis: Stillezeit", titel, beschreibung, werte, { Einstellungen.stilleAnzeige(lies()) }) { w ->
+            setze(Einstellungen.stilleMsAus(w, maxMs) ?: throw IllegalArgumentException("„$w“ passt nicht. Erlaubt: $werte." + if (maxMs < Einstellungen.STILLE_AUSSEN_MAX_MS) " Bis 2 Minuten geht nur außerhalb der App (weckwort_stille_aussen)." else ""))
         }
     }
 
@@ -339,7 +339,7 @@ class EinstellungsKatalog(context: Context) {
             },
             stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Weckwort in der geöffneten App fiel; nicht im Live-Modus. Sagt Frank nur „die Stillezeit“, ist diese gemeint.",
                 Einstellungen.STILLE_MAX_MS, { e.stilleInAppMs }) { e.stilleInAppMs = it },
-            stillezeit("weckwort_stille_aussen", "Stillezeit außerhalb der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Weckwort außerhalb der App fiel (App im Hintergrund oder Bildschirm aus); nicht im Live-Modus. Über 15 Sekunden darf eine Frage bis knapp 10 Minuten dauern, sonst bis 2 Minuten.",
+            stillezeit("weckwort_stille_aussen", "Stillezeit außerhalb der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Weckwort außerhalb der App fiel (App im Hintergrund oder Bildschirm aus); nicht im Live-Modus. Eine Frage darf das Fünffache der Stillezeit dauern, mindestens 2 Minuten, höchstens knapp 10.",
                 Einstellungen.STILLE_AUSSEN_MAX_MS, { e.stilleAussenMs }) { e.stilleAussenMs = it },
             auswahl("weckwort_empfindlichkeit", "Hey Jarvis", "Empfindlichkeit", "Wie leicht das Weckwort anspringt und wie großzügig die Stimmerkennung urteilt.",
                 { listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch", "sehr_hoch" to "Sehr hoch") }, { e.weckwortEmpfindlichkeit }) {

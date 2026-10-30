@@ -419,20 +419,37 @@ class Einstellungen private constructor(context: Context) {
         fun stilleMsAus(text: String, maxMs: Int = STILLE_MAX_MS): Int? {
             val t = text.trim().lowercase(java.util.Locale.GERMAN)
             when (t) { "maximal", "maximum", "max", "voll" -> return maxMs; "minimal", "minimum", "min" -> return STILLE_MIN_MS }
-            val treffer = Regex("(\\d+(?:[.,]\\d+)?)\\s*(s|sek\\.?|sekunden?|min\\.?|minuten?)?").matchEntire(t)?.groupValues ?: return null
-            val zahl = treffer[1].replace(',', '.').toDoubleOrNull() ?: return null
-            val sekunden = if (treffer[2].startsWith("min")) zahl * 60 else zahl
+            val gemischt = Regex("(\\d+)\\s*(?:min\\.?|minuten?)\\s*(?:und\\s*)?(\\d+(?:[.,]\\d+)?)\\s*(?:s|sek\\.?|sekunden?)?").matchEntire(t)?.groupValues
+            val sekunden = if (gemischt != null) {
+                gemischt[1].toInt() * 60 + (gemischt[2].replace(',', '.').toDoubleOrNull() ?: return null)
+            } else {
+                val treffer = Regex("(\\d+(?:[.,]\\d+)?)\\s*(s|sek\\.?|sekunden?|min\\.?|minuten?)?").matchEntire(t)?.groupValues ?: return null
+                val zahl = treffer[1].replace(',', '.').toDoubleOrNull() ?: return null
+                if (treffer[2].startsWith("min")) zahl * 60 else zahl
+            }
             if (sekunden > maxMs / 1_000.0 + 0.05) return null
             return (Math.round(sekunden * 10) * 100).toInt().takeIf { it in STILLE_MIN_MS..maxMs }
         }
-        /** Die Rasten des Reglers: bis 15 s in halben Sekunden (4,5 bleibt treffbar), bis 30 s in ganzen, darüber in fünfen. */
+        /** Die Einträge der Auswahl: bis 15 s in halben Sekunden (mit 4,5), bis 30 s in ganzen, darüber in fünfen. */
         fun stilleStufen(maxMs: Int): List<Int> =
             ((1_000..15_000 step 500) + (16_000..30_000 step 1_000) + (35_000..STILLE_AUSSEN_MAX_MS step 5_000)).filter { it <= maxMs }
+        /** Knapp unter den 10 Minuten, die der Aufnahmepuffer von MicRecorder fasst. */
+        private const val FRAGE_HOECHST_MS = 590_000L
+        /** Höchstdauer einer Frage: das Fünffache der Stillezeit, damit die Nachdenkpause nicht abgeschnitten wird; bis 24 s bleiben es 2 Minuten. */
+        fun frageHoechstMs(stilleMs: Int): Long = (stilleMs * 5L).coerceIn(120_000L, FRAGE_HOECHST_MS)
         /**
-         * Höchstdauer einer Frage. Über der Stillezeit der App (ab 15 s) reichen die üblichen 2 Minuten nicht mehr, sie schnitten
-         * die Nachdenkpause ab. Dann knapp unter den 10 Minuten, die der Aufnahmepuffer von MicRecorder fasst.
+         * Nimmt die Schlusspause aus der Aufnahme, wenn sie länger als die Stillezeit der App war: Sie würde sonst mit transkribiert
+         * (Parakeet stückelt und verstärkt sie). [schlussMs] ist die Zeit seit dem letzten Wort; ein kurzer Rand bleibt stehen.
          */
-        fun frageHoechstMs(stilleMs: Int): Long = if (stilleMs > STILLE_MAX_MS) 590_000L else 120_000L
+        fun ohneSchlussstille(wav: ByteArray?, schlussMs: Long): ByteArray? {
+            if (wav == null || wav.size <= 44 || schlussMs <= STILLE_MAX_MS) return wav
+            val kopf = java.nio.ByteBuffer.wrap(wav).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            val weg = (schlussMs - 1_500L) * kopf.getInt(24) / 1_000L * 2L
+            val laenge = (wav.size - 44 - weg).coerceAtLeast(0L).toInt().let { it - it % 2 }
+            val ergebnis = wav.copyOf(44 + laenge)
+            java.nio.ByteBuffer.wrap(ergebnis).order(java.nio.ByteOrder.LITTLE_ENDIAN).putInt(4, ergebnis.size - 8).putInt(40, laenge)
+            return ergebnis
+        }
         /** „2,5“ oder „2“: die Sekunden als Zahl, mit Komma nur, wenn nötig. */
         fun stilleZahl(ms: Int): String = if (ms % 1_000 == 0) "${ms / 1_000}" else "${ms / 1_000},${ms % 1_000 / 100}"
         fun stilleText(ms: Int): String = stilleZahl(ms) + if (ms == 1_000) " Sekunde" else " Sekunden"

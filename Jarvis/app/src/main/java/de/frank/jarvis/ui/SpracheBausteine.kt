@@ -494,9 +494,13 @@ private fun LiveKostenSumme(vm: AppViewModel) {
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun Auswahlfeld(titel: String, unter: String = "", inhalt: @Composable ColumnScope.(schliessen: () -> Unit) -> Unit) {
+internal fun Auswahlfeld(titel: String, unter: String = "", zeigeEintrag: Int = 0, inhalt: @Composable ColumnScope.(schliessen: () -> Unit) -> Unit) {
     val f = LocalFarben.current
     var offen by remember { mutableStateOf(false) }
+    val scroll = androidx.compose.foundation.rememberScrollState()
+    val eintragPx = with(androidx.compose.ui.platform.LocalDensity.current) { 48.dp.roundToPx() }
+    // Lange Listen öffnen bei [zeigeEintrag] (Zeilen zu je 48 dp), nicht ganz oben.
+    androidx.compose.runtime.LaunchedEffect(offen) { if (offen && zeigeEintrag > 2) scroll.scrollTo((zeigeEintrag - 2) * eintragPx) }
     androidx.compose.material3.ExposedDropdownMenuBox(offen, { offen = it }, Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
@@ -512,7 +516,7 @@ private fun Auswahlfeld(titel: String, unter: String = "", inhalt: @Composable C
         val schema = androidx.compose.material3.MaterialTheme.colorScheme.copy(onSurface = f.text, onSurfaceVariant = f.primaer)
         androidx.compose.material3.MaterialTheme(colorScheme = schema) {
             ExposedDropdownMenu(
-                offen, { offen = false }, shape = RoundedCornerShape(14.dp), containerColor = menueFlaeche(f),
+                offen, { offen = false }, scrollState = scroll, shape = RoundedCornerShape(14.dp), containerColor = menueFlaeche(f),
                 tonalElevation = 0.dp, shadowElevation = 10.dp, border = androidx.compose.foundation.BorderStroke(1.dp, f.rand),
             ) {
                 inhalt { offen = false }
@@ -525,7 +529,7 @@ private fun Auswahlfeld(titel: String, unter: String = "", inhalt: @Composable C
 
 /** Menüpunkt mit Titel, kurzer Erklärung und Preis; der gewählte steht fett mit Haken. */
 @Composable
-private fun WahlEintrag(titel: String, beschreibung: String, preis: String, gewaehlt: Boolean, aktion: () -> Unit) {
+internal fun WahlEintrag(titel: String, beschreibung: String, preis: String, gewaehlt: Boolean, aktion: () -> Unit) {
     val f = LocalFarben.current
     androidx.compose.material3.DropdownMenuItem(
         text = {
