@@ -988,6 +988,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                         rueckfrageAnsageAbbrechen(frageId)
                         ProgrammierChat.rueckfrageStand(app, gespraech, frageId, RueckfrageStand.VERWAIST)
                     }
+                    // Ohne Gesprächskarte: Niemand wartet mehr, das dafür angehaltene Vorlesen darf trotzdem weiter.
+                    !wartet && jetzt - f.optLong("zeit") > 120 -> rueckfrageAnsageAbbrechen(frageId)
                 }
                 continue
             }
@@ -1375,7 +1377,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     /** Benachrichtigung aktualisieren und die Meldung ins Gespräch des Auftrags schreiben. */
     private fun verteile(eintrag: JSONObject, frage: JSONObject?, benachrichtigen: Boolean = true, von: String = ProgrammierChat.VON_PROGRAMMIERER) {
         // Gleich zuerst: Eine Rückfrage hält jedes laufende Vorlesen an dieser Stelle an, bis sie erledigt ist.
-        if (frage != null && benachrichtigen) frage.optString("frage_id").takeIf { it.isNotEmpty() }?.let { de.frank.jarvis.speech.Vorleser.aktuell()?.anhalten(it, frage.optLong("bis")) }
+        if (frage != null && benachrichtigen && rueckfrageErreichtFrank(eintrag))
+            frage.optString("frage_id").takeIf { it.isNotEmpty() }?.let { de.frank.jarvis.speech.Vorleser.aktuell()?.anhalten(it, frage.optLong("bis")) }
         aktivitaetMelden(eintrag)
         // Zwischenschritte stehen vollständig im Gespräch (sie kommen über den Tunnel in die App). Eine Benachrichtigung gibt es
         // nur, wenn Frank gebraucht wird oder der Auftrag zu Ende ist: Rückfrage, fertig (App installiert) oder Problem.
@@ -1576,6 +1579,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             )
         }
     }
+
+    /** Geht das Vollbild auf? Sonst sieht Frank die Rückfrage nur als Benachrichtigung. */
+    private fun rueckfrageVollbildMoeglich(eintrag: JSONObject) = eintrag.optString("gespraech").isNotEmpty() &&
+        (android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app) || de.frank.jarvis.MainActivity.sichtbar)
+
+    /** Nur dann hält eine Rückfrage das Vorlesen an: Ohne Vollbild und ohne Ansage (ausgeschaltet, Ruhezeit) bräche es ohne erkennbaren Grund ab. */
+    private fun rueckfrageErreichtFrank(eintrag: JSONObject) =
+        rueckfrageVollbildMoeglich(eintrag) || de.frank.jarvis.meldung.Meldungen.vorlesenAn(app, de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE)
 
     /**
      * Franks Vorgabe vom 23.10.2026: Eine Rückfrage hat Vorrang vor allem. Sie geht sofort als Vollbild auf, egal ob Frank in

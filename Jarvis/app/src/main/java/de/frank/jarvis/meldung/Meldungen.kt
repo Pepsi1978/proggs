@@ -342,9 +342,10 @@ object Meldungen {
         // darf lange laufen; eine inzwischen erledigte Rückfrage bricht ihre Ansage selbst ab.
         while (GespraechsFokus.aufnahme) delay(1_000L)
         val frei = withTimeoutOrNull(if (art.dringend) 90_000L else 15 * 60_000L) {
-            // Steht das Vorlesen wegen dieser Rückfrage (auch eine Antwort im Gesprächsmodus), kommt ihre Ansage sofort.
+            // Steht das Vorlesen wegen einer Rückfrage (auch eine Antwort im Gesprächsmodus), kommt ihre Ansage sofort. Im Live-Gespräch steht es nie.
             val rueckfrage = art === Meldungsarten.RUECKFRAGE
-            while (GespraechsFokus.stilleHinweise && !(rueckfrage && de.frank.jarvis.speech.Vorleser.aktuell()?.unterbrochen == true)) delay(if (rueckfrage) 250L else 2_000L)
+            while (GespraechsFokus.stilleHinweise && !(rueckfrage && de.frank.jarvis.speech.Vorleser.aktuell()?.unterbrochen == true))
+                delay(if (rueckfrage && !de.frank.jarvis.live.LiveGespraech.aktiv) 250L else 2_000L)
             true
         }
         if (frei != true) return

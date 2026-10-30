@@ -645,7 +645,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Eine fertige Antwort: Steht das Vorlesen gerade wegen einer Rückfrage, kommt sie danach und nimmt ihm nicht seine Stelle. */
     private fun sprichRunde(quelle: String, text: String) {
-        if (vorleser.unterbrochen) vorleser.sprichDanach(quelle, "Jarvis", text) else vorleser.sprich(quelle, "Jarvis", text)
+        if (vorleser.unterbrochen || vorleser.stand.value.quelle?.startsWith("${de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE.id}:") == true) vorleser.sprichDanach(quelle, "Jarvis", text)
+        else {
+            vorleser.sprich(quelle, "Jarvis", text)
+            // Die Rückfrage steht offen im Vollbild: Auch diese Antwort beginnt erst nach Franks Antwort.
+            rueckfrageOffen?.let { vorleser.anhalten(it.second) }
+        }
     }
 
     /** Was noch zuzustellen ist: ohne den ersten Satz, wenn er schon zu hören war. */
@@ -1504,14 +1509,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun vorlesenUndWarten(quelle: String, text: String): String? {
         vorleser.sprich(quelle, "Jarvis", text)
         if (vorleser.stand.value.quelle != quelle) return vorleser.stand.value.fehler ?: "nicht begonnen"
-        var wartend: de.frank.jarvis.speech.VorleseStand?
-        do {
-            wartend = kotlinx.coroutines.withTimeoutOrNull(vorleseDauer(text)) {
-                vorleser.stand.first { it.quelle != quelle || it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
-            }
-            // Die Zeit, die eine Rückfrage das Vorlesen anhält, zählt nicht gegen die Zeitgrenze.
-        } while (wartend == null && vorleser.unterbrochen)
-        val ende = wartend ?: run {
+        val ende = vorleser.warteAufEnde(quelle, vorleseDauer(text)) ?: run {
             // Nicht weiterlesen lassen, während der Aufrufer das Live-Mikrofon öffnet und die Wachsperre freigibt.
             if (vorleser.stand.value.quelle == quelle) vorleser.stopp()
             return "Zeitgrenze"
@@ -1933,7 +1931,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         // Eine diktierte Antwort auf die Rückfrage beendet das dafür angehaltene Vorlesen nicht.
-        if (antwortDiktatFeld == null || !vorleser.unterbrochen) vorleser.stopp()
+        if (antwortDiktatFeld == null || !vorleser.unterbrochen) vorleser.stopp() else vorleser.einschuebeAbbrechen()
         holtMikro = true
         viewModelScope.launch {
             try {
@@ -2314,7 +2312,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     else SprachZustellung.bewusstBeendet(getApplication(), "gesagt: $text")
                     Logbuch.sprache("Sprachsitzung beendet", text)
                     // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal hielte das Vorlesen an, statt zu sprechen.
-                    vorleser.sprich("sitzung-ende:" + System.currentTimeMillis(), "Jarvis", "Okay, Sprachsession beendet.")
+                    sprichRunde("sitzung-ende:" + System.currentTimeMillis(), "Okay, Sprachsession beendet.")
                 }
                 else { schreibtMit = false; gesprochen = true; sende(text) }
             } catch (e: CancellationException) {
@@ -2646,7 +2644,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } else if (ziel.first != sitzungId) {
                 aufnahmeVerwerfen()
                 // Ließ sich das Gespräch nicht öffnen, bleibt die Frage nicht als offen stehen (sonst versuchte es jeder Anstoß erneut).
-                if (!sitzungLaden(ziel.first) && rueckfrageOffen == ziel) rueckfrageOffen = null
+                if (!sitzungLaden(ziel.first, wegenRueckfrage = true) && rueckfrageOffen == ziel) rueckfrageOffen = null
             }
         }
     }
@@ -3025,7 +3023,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Lädt ein gespeichertes Gespräch in die Ansicht. false = ließ sich nicht öffnen. */
-    private suspend fun sitzungLaden(id: String): Boolean {
+    private suspend fun sitzungLaden(id: String, wegenRueckfrage: Boolean = false): Boolean {
         // Unter der Sicherung: Eine Antwort, die genau jetzt in diese Datei geschrieben wird, ist dann mit im geladenen Stand.
         // Die Ansicht wird noch unter der Sicherung umgestellt: Was hinter ihr wartet (Antwort einer Runde, Meldung eines
         // Programmierauftrags), sieht danach das geöffnete Gespräch und kommt in die Ansicht statt nur in die Datei.
@@ -3035,7 +3033,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val geladen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) } ?: return@withLock false
                 // Eine Rückfrage-Ansage gehört zu keinem Gespräch: Sie öffnet selbst ihr Gespräch und brach sich damit früher ab.
                 // Auch ein wegen der Rückfrage angehaltenes Vorlesen bleibt: Es läuft nach ihrer Antwort an derselben Stelle weiter.
-                if (!vorleser.unterbrochen && vorleser.stand.value.quelle?.startsWith("${de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE.id}:") != true) vorleser.stopp()
+                if (!(wegenRueckfrage && vorleser.unterbrochen) && vorleser.stand.value.quelle?.startsWith("${de.frank.jarvis.meldung.Meldungsarten.RUECKFRAGE.id}:") != true) vorleser.stopp()
                 sitzungId?.takeIf { it != id }?.let { vorherigeSitzung = it }
                 gespraech.clear()
                 gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext, it.anhaenge, it.bewertung, it.tokens) })
@@ -3189,7 +3187,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         meldung = text
         navigationen++
         antwort?.invoke(text)
-        if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("navigation:" + System.currentTimeMillis(), "Jarvis", text)
+        if (vorlesen && einstellungen.antwortenVorlesen) sprichRunde("navigation:" + System.currentTimeMillis(), text)
     }
 
     fun sitzungUmbenennen(id: String, titel: String) {

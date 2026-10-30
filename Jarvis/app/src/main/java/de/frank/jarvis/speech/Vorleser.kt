@@ -9,6 +9,7 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.PowerManager
 import de.frank.jarvis.data.settings.SecureSettings
+import de.frank.jarvis.meldung.Meldungsarten
 import de.frank.jarvis.observability.IdeenLog
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.tts.SpeechLoudness
@@ -25,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,16 +94,30 @@ class Vorleser(
      * Rückfragen, für die das Vorlesen gerade steht, je mit ihrer Ablauf-Frist. Der Spieler bleibt dabei angehalten stehen und
      * die Absatz-Pipeline wartet: So geht es nach der letzten Antwort an genau derselben Stelle weiter. Nur auf dem Hauptfaden.
      */
-    private val rueckfrageHalt = HashMap<String, Runnable>()
+    private val rueckfrageHalt = HashMap<String, android.app.AlarmManager.OnAlarmListener>()
+
+    /** Die Frist nach der Wanduhr: Ein Handler bliebe im Tiefschlaf stehen, und während des Halts hält kein Player das Gerät wach. */
+    private val fristWecker = appContext.getSystemService(android.app.AlarmManager::class.java)
 
     /** Laufende oder wartende Einschübe; solange einer spricht, läuft das Vorlesen nicht weiter. Nur auf dem Hauptfaden. */
     private var einschuebe = 0
+    private val einschubLaeufe = HashSet<Job>()
     private val einschubReihe = kotlinx.coroutines.sync.Mutex()
     private val haupt = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** Beginn der Quelle einer Rückfrage-Ansage (siehe [Ansage]). */
+    private val rueckfrageQuelle = "${Meldungsarten.RUECKFRAGE.id}:"
 
     /** Das Vorlesen steht wegen einer Rückfrage: Ansagen laufen dann als Einschub ([einschub]) und lassen es unberührt. */
     @Volatile var unterbrochen = false
         private set
+
+    /** Wann zuletzt ein Halt endete: Wer auf das Ende eines Vorlesens wartet, rechnet die Haltezeit nicht gegen seine Frist ([warteAufEnde]). */
+    @Volatile private var letzterHaltEnde = 0L
+
+    /** Fertig gesprochene Antworten, die während des Halts kamen: Sie folgen dem angehaltenen Text, ohne ihm Quelle und Stelle zu nehmen. */
+    private class Danach(val quelle: String, val titel: String, val text: String)
+    private val nachDemHalt = ArrayDeque<Danach>()
 
     /**
      * Kurzes holt den Tonfokus nur vorübergehend: Musik anderer Apps pausiert und läuft danach von selbst weiter.
@@ -173,8 +189,10 @@ class Vorleser(
         laufenderJob = bereich.launch {
             try {
                 arbeit()
+                val danach = if (meiner()) nachDemHalt.removeFirstOrNull() else null
+                if (danach != null) fortsetzen(danach.quelle, danach.titel, danach.text)
                 // Läuft schon die Fortsetzung (fortsetzen), gehört ihr der Zustand: Ein kurzes „aus“ öffnete sonst das Mikrofon.
-                if (meiner()) _stand.value = _stand.value.copy(zustand = VorleseZustand.AUS, quelle = null)
+                else if (meiner()) _stand.value = _stand.value.copy(zustand = VorleseZustand.AUS, quelle = null)
                 Logbuch.dauer("Vorlesen fertig", System.currentTimeMillis() - laufBeginn, "absaetze=$absaetze zeichen=$zeichen")
             } catch (abbruch: CancellationException) {
                 throw abbruch
@@ -259,7 +277,10 @@ class Vorleser(
     fun vorabAbbrechen(vorab: String) { if (vorabQuelle == vorab) stopp() }
 
     /** Liest [rohText] im Anschluss an das, was gerade läuft, ohne Lücke im Zustand und ohne es abzuschneiden. */
-    fun sprichDanach(quelle: String, titel: String, rohText: String) = fortsetzen(quelle, titel, SprechText.fuerStimme(rohText))
+    fun sprichDanach(quelle: String, titel: String, rohText: String) {
+        val text = SprechText.fuerStimme(rohText)
+        if (unterbrochen) nachDemHalt.addLast(Danach(quelle, titel, text)) else fortsetzen(quelle, titel, text)
+    }
 
     private fun fortsetzen(quelle: String, titel: String, text: String) {
         val absaetze = SprechText.absaetze(text)
@@ -594,12 +615,18 @@ class Vorleser(
      */
     fun anhalten(kennung: String, bisSekunden: Long = 0L) = haupt.post {
         val stand = _stand.value
-        if (stand.zustand == VorleseZustand.AUS || stand.quelle?.startsWith(RUECKFRAGE_QUELLE) == true || de.frank.jarvis.live.LiveGespraech.aktiv) return@post
-        rueckfrageHalt.remove(kennung)?.let(haupt::removeCallbacks)
-        val ablauf = Runnable { freigeben(kennung) }
+        if (stand.zustand == VorleseZustand.AUS || stand.quelle?.startsWith(rueckfrageQuelle) == true || de.frank.jarvis.live.LiveGespraech.aktiv) return@post
+        rueckfrageHalt.remove(kennung)?.let { fristWecker?.cancel(it) }
+        val ablauf = android.app.AlarmManager.OnAlarmListener { freigeben(kennung) }
         rueckfrageHalt[kennung] = ablauf
         val rest = if (bisSekunden > 0) bisSekunden * 1000 - System.currentTimeMillis() else HALT_HOECHSTENS_MS
-        haupt.postDelayed(ablauf, rest.coerceIn(HALT_MINDESTENS_MS, HALT_HOECHSTENS_MS))
+        fristWecker?.set(
+            android.app.AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis() + rest.coerceIn(HALT_MINDESTENS_MS, HALT_HOECHSTENS_MS),
+            "jarvis:vorlesen-halt",
+            ablauf,
+            haupt,
+        )
         if (!unterbrochen) {
             unterbrochen = true
             if (!pausiert) tonAnhalten()
@@ -609,7 +636,8 @@ class Vorleser(
 
     /** Diese Rückfrage ist erledigt: War sie die letzte, läuft das Vorlesen an derselben Stelle weiter. */
     fun freigeben(kennung: String) = haupt.post {
-        rueckfrageHalt.remove(kennung)?.let(haupt::removeCallbacks) ?: return@post
+        val frist = rueckfrageHalt.remove(kennung) ?: return@post
+        fristWecker?.cancel(frist)
         haltNeuBewerten()
     }
 
@@ -621,45 +649,100 @@ class Vorleser(
     }
 
     private fun haltLeeren() {
-        rueckfrageHalt.values.forEach(haupt::removeCallbacks)
+        rueckfrageHalt.values.forEach { fristWecker?.cancel(it) }
         rueckfrageHalt.clear()
+        if (unterbrochen) letzterHaltEnde = System.currentTimeMillis()
         unterbrochen = einschuebe > 0
     }
 
     private fun haltNeuBewerten() {
         if (rueckfrageHalt.isNotEmpty() || einschuebe > 0) return
-        val warAngehalten = unterbrochen || _stand.value.zustand == VorleseZustand.PAUSIERT
+        val mussWeiter = !pausiert && _stand.value.zustand == VorleseZustand.PAUSIERT
+        // Läuft gerade eine Aufnahme (diktierte Antwort), wartet das Vorlesen ihr Ende ab, sonst landete die Stimme in der Mitschrift.
+        if (mussWeiter && GespraechsFokus.aufnahme) {
+            haupt.postDelayed({ haltNeuBewerten() }, AUFNAHME_PRUEF_MS)
+            return
+        }
+        if (unterbrochen) letzterHaltEnde = System.currentTimeMillis()
         unterbrochen = false
         // Hat Frank selbst pausiert, bleibt es pausiert. Nur ein vom Halt angehaltenes Vorlesen läuft von selbst weiter.
-        if (!warAngehalten || pausiert || _stand.value.zustand != VorleseZustand.PAUSIERT) return
+        if (!mussWeiter) return
         if (pausiertDurchFokus) pausiert = true else tonFortsetzen()
-        Logbuch.sprache("Vorlesen nach Rückfrage fortgesetzt", "absatz=${_stand.value.absatzNummer}/${_stand.value.absaetzeGesamt}")
+        if (!pausiert) Logbuch.sprache("Vorlesen nach Rückfrage fortgesetzt", "absatz=${_stand.value.absatzNummer}/${_stand.value.absaetzeGesamt}")
+    }
+
+    /** Soll eine Ansage dieser [art] als Einschub laufen? Beim Halt immer; eine Rückfrage-Ansage auch nach aufgehobenem Halt, damit sie das fortgesetzte Vorlesen nicht beendet. */
+    fun einschieben(art: String): Boolean {
+        val stand = _stand.value
+        return unterbrochen || (art == Meldungsarten.RUECKFRAGE.id && stand.zustand != VorleseZustand.AUS && stand.quelle?.startsWith(rueckfrageQuelle) != true)
     }
 
     /**
-     * Spricht [rohText], während das Vorlesen wegen einer Rückfrage steht, ohne es anzurühren: eigener Player, keine Änderung am
-     * Stand. Die Stimme wird an der Warteschlange der Vorausschau vorbei erzeugt, damit die Ansage ohne Verzögerung kommt.
-     * Kehrt zurück, wenn sie zu Ende ist. Mehrere Einschübe laufen nacheinander.
+     * Spricht [rohText] neben dem angehaltenen Vorlesen, ohne es anzurühren: eigener Player, keine Änderung am Stand. Die Stimme
+     * wird an der Warteschlange der Vorausschau vorbei erzeugt, damit die Ansage ohne Verzögerung kommt. Kehrt zurück, wenn sie
+     * zu Ende oder abgebrochen ist. Mehrere Einschübe laufen nacheinander.
      */
-    suspend fun einschub(rohText: String, wahl: StimmWahl? = null) = withContext(Dispatchers.Main) {
-        einschuebe++
-        unterbrochen = true
-        try {
-            einschubReihe.withLock {
-                // Nur mit Tonfokus: Während eines Telefonats bleibt es still, das Vollbild der Rückfrage steht trotzdem.
-                if (!fordereFokusAn()) return@withLock
-                SprechText.absaetze(SprechText.fuerStimme(rohText)).forEach { absatz ->
-                    val datei = synthese.synthetisiereSofort(absatz, wahl)
-                    try { spiele(datei, einschub = true) } finally { datei.delete() }
+    suspend fun einschub(rohText: String, wahl: StimmWahl? = null) {
+        val lauf = withContext(Dispatchers.Main) {
+            // Kein Halt mehr (Frank hat das Fenster geschlossen), aber es läuft etwas: Es steht nur für diese Ansage.
+            if (!unterbrochen && !pausiert && _stand.value.zustand != VorleseZustand.AUS) tonAnhalten()
+            einschuebe++
+            unterbrochen = true
+            // Sofort gestartet: Ein Abbruch vor dem ersten Schritt ließe sonst den Zähler stehen.
+            bereich.launch(start = CoroutineStart.UNDISPATCHED) {
+                try {
+                    einschubReihe.withLock {
+                        if (fokusAnfrage == null) fokusArt = AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                        // Nur mit Tonfokus: Während eines Telefonats bleibt es still, das Vollbild der Rückfrage steht trotzdem.
+                        if (!fordereFokusAn()) return@withLock
+                        SprechText.absaetze(SprechText.fuerStimme(rohText)).forEach { absatz ->
+                            val datei = erzeugeEinschub(absatz, wahl)
+                            try { spiele(datei, einschub = true) } finally { datei.delete() }
+                        }
+                    }
+                } catch (abbruch: CancellationException) {
+                    throw abbruch
+                } catch (fehler: Exception) {
+                    Logbuch.fehler("Einschub beim Vorlesen", fehler)
+                } finally {
+                    einschubLaeufe.remove(coroutineContext[Job])
+                    einschuebe--
+                    haltNeuBewerten()
+                    // Der Einschub hat den Fokus selbst geholt, wenn kein Vorlesen mehr da ist: Sonst bliebe fremde Musik still.
+                    if (einschuebe == 0 && _stand.value.zustand == VorleseZustand.AUS) gibFokusFrei()
                 }
-            }
+            }.also { if (it.isActive) einschubLaeufe += it }
+        }
+        try {
+            lauf.join()
         } catch (abbruch: CancellationException) {
+            lauf.cancel()
             throw abbruch
-        } catch (fehler: Exception) {
-            Logbuch.fehler("Einschub beim Vorlesen", fehler)
-        } finally {
-            einschuebe--
-            haltNeuBewerten()
+        }
+    }
+
+    /** Ein reiner Netzfehler wird wie beim Vorlesen einmal wiederholt, sonst fehlte die Ansage still. */
+    private suspend fun erzeugeEinschub(absatz: String, wahl: StimmWahl?): File = try {
+        synthese.synthetisiereSofort(absatz, wahl)
+    } catch (zeitlimit: SyntheseZeitlimit) {
+        throw zeitlimit
+    } catch (netz: IOException) {
+        delay(NETZ_WIEDERHOLUNG_MS)
+        synthese.synthetisiereSofort(absatz, wahl)
+    }
+
+    /** Beendet laufende Einschübe, das angehaltene Vorlesen bleibt stehen (Aufnahme beginnt, Telefonat). */
+    fun einschuebeAbbrechen() = einschubLaeufe.toList().forEach { it.cancel() }
+
+    /**
+     * Wartet, bis [quelle] zu Ende gelesen oder abgelöst ist. Die Zeit eines Halts zählt nicht: Lief in der Frist einer, beginnt
+     * sie neu. [jeRunde] läuft vor jeder neuen Frist. null = Frist abgelaufen.
+     */
+    suspend fun warteAufEnde(quelle: String, fristMs: Long, jeRunde: () -> Unit = {}): VorleseStand? {
+        while (true) {
+            kotlinx.coroutines.withTimeoutOrNull(fristMs) { stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }?.let { return it }
+            if (!unterbrochen && System.currentTimeMillis() - letzterHaltEnde >= fristMs) return null
+            jeRunde()
         }
     }
 
@@ -678,6 +761,8 @@ class Vorleser(
         laufenderJob?.cancel()
         laufenderJob = null
         pausiert = false
+        nachDemHalt.clear()
+        einschuebeAbbrechen()
         haltLeeren()
         ttsManager.stop()
         spieler?.let { player ->
@@ -726,6 +811,9 @@ class Vorleser(
                     // Ein Telefonat während der Rückfrage: Die Antwort darf das Vorlesen dann nicht ins Gespräch hinein fortsetzen.
                     pausiertDurchFokus = true
                     pausiert = true
+                    einschuebeAbbrechen()
+                } else if (unterbrochen) {
+                    einschuebeAbbrechen()
                 }
                 AudioManager.AUDIOFOCUS_GAIN -> if (pausiertDurchFokus) {
                     pausiertDurchFokus = false
@@ -790,8 +878,8 @@ class Vorleser(
         /** Wartezeit vor dem Wiederholversuch nach einem Netzfehler. */
         private const val NETZ_WIEDERHOLUNG_MS = 500L
 
-        /** Beginn der Quelle einer Rückfrage-Ansage (Art „rueckfrage“ in [Ansage]). */
-        private const val RUECKFRAGE_QUELLE = "rueckfrage:"
+        /** Wie oft nachgesehen wird, ob die Aufnahme zu Ende ist, auf die das Vorlesen wartet. */
+        private const val AUFNAHME_PRUEF_MS = 500L
 
         /** Solange steht das Vorlesen höchstens für eine Rückfrage, deren Ausgang nie ankommt. */
         private const val HALT_HOECHSTENS_MS = 30 * 60_000L

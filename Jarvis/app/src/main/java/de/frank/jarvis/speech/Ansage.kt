@@ -11,7 +11,6 @@ import de.frank.jarvis.observability.Logbuch
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -38,7 +37,7 @@ object Ansage {
     suspend fun sprichUndWarte(context: Context, art: String, titel: String, text: String, lautstaerke: Int, wahl: StimmWahl? = null) {
         val app = context.applicationContext
         withContext(Dispatchers.Main) {
-            val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:$art-stimme")
+            val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:$art-stimme").apply { setReferenceCounted(false) }
             // Lange Texte (Agenten-Zusammenfassung) brauchen länger als zwei Minuten: Grenze nach der Textlänge, gut 12 Zeichen je Sekunde.
             val hoechstens = (60_000L + text.length * 80L).coerceIn(110_000L, 10 * 60_000L)
             runCatching { wach.acquire(hoechstens + 10_000L) }
@@ -56,12 +55,13 @@ object Ansage {
                 if (eigen) runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
                 val vorleser = Vorleser.hole(app, SecureSettings(app))
                 // Das Vorlesen steht wegen einer Rückfrage: Die Ansage kommt obendrauf und nimmt ihm nicht seine Stelle.
-                if (vorleser.unterbrochen) withTimeoutOrNull(hoechstens) { vorleser.einschub(text, wahl) }
+                if (vorleser.einschieben(art)) withTimeoutOrNull(hoechstens) { vorleser.einschub(text, wahl) }
                 else {
                     // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
                     quelle = "$art:" + System.currentTimeMillis()
                     vorleser.sprich(quelle, titel, text, wahl = wahl)
-                    withTimeoutOrNull(hoechstens) { vorleser.stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }
+                    // Steht sie wegen einer Rückfrage, bleiben Lautstärke und Wachhaltung bis zu ihrem Ende.
+                    vorleser.warteAufEnde(quelle, hoechstens) { runCatching { wach.acquire(hoechstens + 10_000L) } }
                 }
             } catch (abbruch: kotlinx.coroutines.CancellationException) {
                 // Verworfen, während sie spricht (etwa eine inzwischen beantwortete Rückfrage): Die Stimme verstummt, statt nach dem
