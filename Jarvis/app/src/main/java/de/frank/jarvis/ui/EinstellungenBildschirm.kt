@@ -95,9 +95,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 
         if (reiter == "guthaben") GuthabenReiter(vm)
 
-        // Auf den Reitern „Jarvis“ und „Stimme“ ganz oben.
-        // key: Der Reiterwechsel entsorgt die Regler, damit ein Entwurf übernommen und gemeldet wird.
-        if (reiter == "jarvis" || reiter == "stimme") key(reiter) { StillezeitKarte(vm) }
+        // Auf dem Reiter „Stimme“ ganz oben. Der Reiterwechsel entsorgt die Regler, damit ein Entwurf übernommen und gemeldet wird.
+        if (reiter == "stimme") StillezeitKarte(vm)
 
         if (reiter == "jarvis") {
             // ---------------------------------------------------------------- Kopf
@@ -618,7 +617,7 @@ private fun StillezeitKarte(vm: AppViewModel) {
     val e = vm.einstellungen
     Bereich("Stillezeit: Wie lange das Mikrofon offen bleibt") {
         Text("So lange bleibt das Mikrofon nach deinem letzten Wort offen: in der App 1 bis 15 Sekunden, außerhalb bis 2 Minuten. Eine Frage darf das Fünffache der Stillezeit dauern, mindestens 2 Minuten, höchstens knapp 10. Sagst du nach dem Piepton gar nichts, schließt es nach 7 Sekunden, nach einer Antwort nach 9. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp)
-        if (!e.weckwortAn) Text("Das Weckwort ist gerade aus; du schaltest es auf dem Reiter „Stimme“ unter „Hey Jarvis“ ein.", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        if (!e.weckwortAn) Text("Das Weckwort ist gerade aus; du schaltest es weiter unten unter „Hey Jarvis“ ein.", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         StillezeitRegler("Stillezeit in der App", Einstellungen.STILLE_MAX_MS, { e.stilleInAppMs }, vm) { e.stilleInAppMs = it }
         StillezeitRegler("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", Einstellungen.STILLE_AUSSEN_MAX_MS, { e.stilleAussenMs }, vm) { e.stilleAussenMs = it }
     }
