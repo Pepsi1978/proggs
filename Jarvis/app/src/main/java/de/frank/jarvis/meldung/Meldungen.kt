@@ -150,6 +150,11 @@ object Meldungsarten {
         sprichtImmer = true, ruhezeit = true, lautStandard = 100,
         alt = mapOf("an" to "ansage_vorlesen", "stimme" to "ansage_stimme", "tempo" to "ansage_tempo", "lautstaerke" to "ansage_lautstaerke"),
     )
+    val INSTALLFRAGE = Meldungsart(
+        "installfrage", "Installationsfrage ansagen", "Jarvis sagt an, wenn eine neue Jarvis-Version installiert werden kann und das Fenster auf deine Antwort wartet.",
+        "Wenn die Frage zur Installation erscheint, außer während einer Aufnahme oder eines Gesprächs.", ALLTAG, null,
+        sprichtImmer = true, lautStandard = 100,
+    )
     val WECKWORT_HOERT = Meldungsart(
         "weckwort", "Jarvis hört zu", "Zeigt, dass Jarvis auf dein Weckwort lauscht, auch bei gesperrtem Handy.",
         "Immer, solange das Weckwort an ist.", WECKWORT, "jarvis_weckwort",
@@ -180,7 +185,7 @@ object Meldungsarten {
         pflicht = true, schaltbar = false,
     )
 
-    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, ABFAHRT, TIMER, STOPPUHR, ANSAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
+    val alle = listOf(AGENT, PROGRAMMIEREN, RUECKFRAGE, ABLAGE, GEMINI, ABFAHRT, TIMER, STOPPUHR, ANSAGE, INSTALLFRAGE, WECKWORT_HOERT, RUF, WECKWORT_AUS, BEREITSCHAFT, AUFNAHME, VORLESEN)
     val gruppen = listOf(ERGEBNISSE, ALLTAG, WECKWORT, DAUER)
 }
 

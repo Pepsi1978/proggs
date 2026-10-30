@@ -49,10 +49,18 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.meldung.Meldungen
+import de.frank.jarvis.meldung.Meldungsarten
 import de.frank.jarvis.observability.Logbuch
+import de.frank.jarvis.speech.Ansage
+import de.frank.jarvis.speech.GespraechsFokus
 import de.frank.jarvis.ui.theme.JarvisTheme
 import de.frank.jarvis.ui.theme.LocalFarben
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
@@ -69,6 +77,7 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     private var ansicht: ComposeView? = null
     private var kennung by mutableStateOf("")
     private var antwort: PendingIntent? = null
+    private var ansage: Job? = null
 
     override val lifecycle: Lifecycle get() = lebenszyklus
     override val savedStateRegistry: SavedStateRegistry get() = speicher.savedStateRegistry
@@ -142,9 +151,25 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
             title = "Jarvis-Installationsfrage"
         }
         return runCatching { getSystemService(WindowManager::class.java).addView(neu, lp) }
-            .onSuccess { ansicht = neu }
+            .onSuccess {
+                ansicht = neu
+                kuendigeAn()
+            }
             .onFailure { Logbuch.fehler("Installationsfrage ließ sich nicht einblenden", it) }
             .isSuccess
+    }
+
+    /**
+     * Stimme und Lautstärke wie unter Einstellungen → Benachrichtigungen. Bei laufender Aufnahme oder laufendem Gespräch bleibt
+     * es beim Fenster: Die Stimme landete sonst in der Mitschrift, und genau die soll die Frage schützen.
+     */
+    private fun kuendigeAn() {
+        val art = Meldungsarten.INSTALLFRAGE
+        if (!Meldungen.an(this, art) || GespraechsFokus.aufnahme || GespraechsFokus.stilleHinweise) return
+        val profil = Meldungen.profil(this, art)
+        ansage = CoroutineScope(Dispatchers.Main).launch {
+            Ansage.sprichUndWarte(this@InstallFrageDienst, "ansage", "Jarvis-Update", ANSAGE_TEXT, profil.lautstaerke, profil.stimmWahl)
+        }
     }
 
     private fun antwortAus(intent: Intent?): PendingIntent? =
@@ -177,6 +202,8 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     }.onFailure { Logbuch.fehler("Installationsfrage: Datei nicht geschrieben", it) }.isSuccess
 
     override fun onDestroy() {
+        // Nach der Antwort ist die Ansage überholt: Sie verstummt, und die Lautstärke geht zurück.
+        ansage?.cancel()
         ansicht?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeViewImmediate(v) } }
         ansicht = null
         lebenszyklus.currentState = Lifecycle.State.DESTROYED
@@ -191,6 +218,7 @@ open class InstallFrageDienst : Service(), SavedStateRegistryOwner {
         const val KANAL = "jarvis_installationsfrage"
         const val BENACHRICHTIGUNG = 4310
         const val FRIST_S = 30
+        const val ANSAGE_TEXT = "Eine neue Jarvis-Version kann installiert werden. Bitte wähle im eingeblendeten Fenster, wann die Installation starten soll. Ohne Antwort startet sie in einer halben Minute."
     }
 
     @Composable
