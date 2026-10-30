@@ -33,7 +33,7 @@ public static class Sammelplan
     {
         var liste = offen.Where(p => !p.IstHauptversionsSprung).ToList();
         var ids = new HashSet<string>(liste.Select(p => p.Eintrag.Id), StringComparer.OrdinalIgnoreCase);
-        // One level is enough for the catalog's chains (JDK → SDK, LM Studio → runtimes, Node → npm tools).
+        // One level is enough for the catalog's chains (JDK → SDK, Node → npm tools).
         bool Wartet(ProgrammViewModel p) => p.Eintrag.Nach.Any(ids.Contains);
 
         return liste

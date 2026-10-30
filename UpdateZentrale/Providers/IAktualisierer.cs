@@ -20,7 +20,7 @@ public interface IAktualisierer
     /// compared. An exit code of 0 is only the installer's own claim; this is the evidence.
     ///
     /// What that is depends on the mechanism: a version number where one exists, the write time of
-    /// the built exe for the repo scripts, the pending list for the LM Studio runtimes. Returning
+    /// the built exe for the repo scripts, the pending list for tools without a version. Returning
     /// an empty string means "cannot tell", and the run is then reported as unverified rather than
     /// as success.
     /// </summary>

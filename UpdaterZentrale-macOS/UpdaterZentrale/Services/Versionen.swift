@@ -24,7 +24,7 @@ enum Versionen {
     /// Bereinigt eine Cask-Version fuer den Vergleich.
     ///
     /// Homebrew haengt hinter ein Komma einen zweiten Bestandteil: bei Claude etwa
-    /// `2.2553.1,c38127e27202ddc1c8c187102f7798a93b1b8ede` -- eine Commit-Kennung, bei LM Studio
+    /// `2.2553.1,c38127e27202ddc1c8c187102f7798a93b1b8ede` -- eine Commit-Kennung, bei anderen
     /// `0.4.25,1` eine Build-Nummer. Die Info.plist der installierten App kennt diesen Teil nicht.
     /// Ohne das Abschneiden waere jede dieser Apps dauerhaft als "Update verfuegbar" markiert,
     /// obwohl exakt dieselbe Fassung installiert ist.

@@ -20,7 +20,7 @@ struct ProgrammEintrag: Codable {
 
     // ---- brew (Gegenstueck zu winget/store unter Windows) ----
 
-    /// Name des Homebrew-Casks, z. B. "lm-studio".
+    /// Name des Homebrew-Casks, z. B. "iterm2".
     var cask: String?
 
     /// Name einer Homebrew-Formel (Kommandozeilen-Werkzeug ohne App-Buendel, z. B. "git", "node",

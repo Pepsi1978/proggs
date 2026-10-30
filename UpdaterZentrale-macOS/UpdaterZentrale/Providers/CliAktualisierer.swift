@@ -122,7 +122,7 @@ struct CliAktualisierer: Aktualisierer {
         return PruefErgebnis(zustand: .fertig, meldung: "Update abgeschlossen.", protokoll: lauf.ausgabe)
     }
 
-    /// Die Version, wo das Werkzeug eine meldet. Die LM-Studio-Runtimes haben keine -- ihr
+    /// Die Version, wo das Werkzeug eine meldet. Eintraege ohne Version -- ihr
     /// Fingerabdruck ist stattdessen der Trockenlauf-Plan: nach einem erfolgreichen Update muss
     /// er leer sein.
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String {

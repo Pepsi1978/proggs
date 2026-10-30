@@ -34,7 +34,7 @@ enum Sammelplan {
     static func planen(_ offen: [ProgrammViewModel]) -> [Schritt] {
         let liste = offen.filter { !$0.istHauptversionsSprung }
         let ids = Set(liste.map { $0.eintrag.id.lowercased() })
-        // Eine Ebene genuegt fuer die Ketten des Katalogs (JDK → SDK, LM Studio → Runtimes, Node → npm).
+        // Eine Ebene genuegt fuer die Ketten des Katalogs (JDK → SDK, Node → npm).
         func wartet(_ p: ProgrammViewModel) -> Bool { p.eintrag.nach.contains { ids.contains($0.lowercased()) } }
 
         return liste

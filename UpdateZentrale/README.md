@@ -1,7 +1,7 @@
 # UpdateZentrale
 
 Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
-LM Studio (inklusive Engines und Runtimes), Claude Code CLI,
+Claude Code CLI,
 Codex CLI, Kimi Code CLI, Antigravity CLI, OpenCode, GitHub CLI, PowerShell 7, die Kommandozeilen-Werkzeuge (ripgrep, fd,
 bat, fzf, jq, delta, lazygit, ShellCheck, shfmt, Trivy, FFmpeg, Rclone, scrcpy, uv), Stream Deck, VPN (WireGuard,
 Windscribe), die komplette Programmierumgebung (.NET 8 und 10, Node.js, Deno, Java, Gradle, Kotlin, Rust, Go,
@@ -37,7 +37,7 @@ Oben stehen zwei voneinander unabhängige Knöpfe; welcher zuerst läuft, entsch
   Aufforderung, Claude Code, Codex, OpenCode und alle Terminalfenster zu schließen; danach fragt der Lauf nicht noch einmal.
   Eingeordnet sind (Stand 1.3.36): PowerShell 7 und Git (die Hooks und Werkzeuge der Sitzungen laufen über `pwsh` und Git Bash),
   Node.js (MCP-Server und npm-CLIs), Windows-Terminal, WSL, Go, Bun, JDK 21 (Gradle-Daemons, Android-Builds), Android SDK
-  (adb-Server), LM Studio und seine Runtimes (Sitzungen mit lokalem Modell), VS Code (integriertes Terminal), Windscribe
+  (adb-Server), VS Code (integriertes Terminal), Windscribe
   (VPN-Abbruch). Nicht kritisch sind die CLI-Selbst-Updates (Claude Code, Codex, Kimi, Antigravity: laufende Sitzungen
   behalten ihre Version) und die kleinen Kommandozeilen-Werkzeuge.
 * **Updates installieren · nicht CLI-kritisch** – alles andere, in dieser Reihenfolge:
@@ -50,7 +50,7 @@ Oben stehen zwei voneinander unabhängige Knöpfe; welcher zuerst läuft, entsch
 4. **Phase 2 – CLI-kritisch** gehört zum anderen Knopf. Enthält ein Plan sie doch einmal (etwa nach einer Fortsetzung), hält
    der Lauf davor an und fragt: CLIs schließen und „Ja“, oder „Nein“ – dann bleiben sie offen und der Rest läuft weiter.
 5. **Phase 3 – der Rest.** Seriell: winget/MSI/Store (ein Installer zur Zeit), npm (ein gemeinsamer Baum), die Hilfsskripte
-   (sie schreiben den PATH), sdkmanager (braucht das JDK) und die LM-Studio-Runtimes (LM Studio wird daneben ersetzt).
+   (sie schreiben den PATH) und sdkmanager (braucht das JDK).
    Parallel daneben (höchstens drei): nur Einträge mit `parallel` – Claude Code, Codex, Antigravity, rustup und der Start
    der OpenCode-Sitzung.
 6. **Zum Schluss** alles mit `zuletzt` (App Installer).
@@ -74,7 +74,7 @@ ist, hängt von der Update-Art ab:
 | Art | Fingerabdruck |
 |---|---|
 | `winget`, `store` | die installierte Version (bei Paket-Apps aus `Get-AppxPackage`) |
-| `cli` | die gemeldete Version, bei den LM-Studio-Runtimes stattdessen der Trockenlauf-Plan – der muss danach leer sein |
+| `cli` | die gemeldete Version, bei Werkzeugen ohne Version stattdessen der Trockenlauf-Plan – der muss danach leer sein |
 | `reposkript` | Version **und** Schreibzeit der gebauten Programmdatei (die csproj-Version allein ändert sich beim Neubau nicht) |
 
 Daraus wird eines von fünf Ergebnissen:
@@ -182,7 +182,7 @@ Weitere optionale Felder:
 | Feld | Bedeutung |
 |---|---|
 | `wingetQuelle` | Nur `winget`: die Quelle des Pakets, Standard `winget`. Mit Quelle dauert eine Abfrage 1 s, ohne fragt winget zusätzlich den Store ab (45–95 s). Leer = alle Quellen. |
-| `exePfadAlternativen` | Weitere Orte für dieselbe Programmdatei; der erste Pfad, den es auf diesem Rechner wirklich gibt, gewinnt. So läuft derselbe Katalog auf mehreren Rechnern (LM Studio unter `Program Files` statt `%LOCALAPPDATA%`, CLIs als npm-Shim statt nativem Installer). |
+| `exePfadAlternativen` | Weitere Orte für dieselbe Programmdatei; der erste Pfad, den es auf diesem Rechner wirklich gibt, gewinnt. So läuft derselbe Katalog auf mehreren Rechnern (CLIs als npm-Shim statt nativem Installer). |
 | `ausblendenWennFehlt` | Blendet die Karte aus, wenn auf diesem Rechner keiner der Pfadkandidaten existiert – für Programme, die nur auf einem Teil der Geräte benutzt werden. |
 | `versionsArgumente` | Argumente, die die installierte Version ausgeben (z. B. `--version`) |
 | `pruefArgumente` | Trockenlauf-Befehl; Zeilen mit `→` bzw. `->` gelten als geplante Updates |
@@ -207,7 +207,7 @@ Weitere optionale Felder:
 | `dauerSchaetzungSekunden` | Erwartete Update-Dauer, bis echte Messungen vorliegen (sonst ein Viertel von `zeitlimitMinuten`). |
 | `zuletzt` | Immer das letzte Update eines Sammellaufs, nach allen Phasen (App Installer: ersetzt winget). |
 | `parallel` | Darf im Sammellauf in der parallelen Bahn laufen. Nur für Selbst-Updater, die nichts mit einem anderen Eintrag teilen (Claude Code, Codex, Antigravity, rustup, OpenCode-Sitzung); bewusst kein Raten aus der Befehlszeile. |
-| `nach` | Ids, die im selben Lauf vorher drankommen müssen (Android SDK und Gradle/Kotlin nach dem JDK, die LM-Studio-Runtimes nach LM Studio, die npm-Werkzeuge nach Node.js). Steht die Voraussetzung im anderen Knopf noch offen, nennt die Rückfrage das. |
+| `nach` | Ids, die im selben Lauf vorher drankommen müssen (Android SDK und Gradle/Kotlin nach dem JDK, die npm-Werkzeuge nach Node.js). Steht die Voraussetzung im anderen Knopf noch offen, nennt die Rückfrage das. |
 | `versionsMuster` / `versionsUrlMuster` | Regulärer Ausdruck, dessen Gruppe 1 die Version in der Versionsausgabe bzw. in der Antwort von `versionsUrl` ist (Gradle „9.7“ hat nur zwei Stellen, `gradle --version` nennt auch Kotlin). |
 | `updateExePfad` | Nur `cli`: anderes Programm für den Update-Lauf als für die Versionsabfrage (npm-Pakete: Version über `firebase.cmd --version`, Update über `npm.cmd install -g …`). Läuft im eigenen Ordner, damit npm seine Module findet. |
 
@@ -230,10 +230,6 @@ alle Terminalfenster samt laufender CLI-Sitzungen.
 
 ## Besonderheiten der eingetragenen Programme
 
-* **LM Studio Engines & Runtimes** – eigener Eintrag. Geprüft wird mit
-  `lms runtime update --all --dry-run`, aktualisiert mit `lms runtime update --all --yes`. Deckt
-  llama.cpp für CPU/AVX2, NVIDIA CUDA, CUDA12 und Vulkan ab. Lädt teils mehrere Gigabyte;
-  LM Studio darf dabei laufen.
 * **Claude Desktop** – winget führt das Paket als `Anthropic.Claude` mit dem offiziellen
   Installer von `downloads.claude.ai`. Das Update läuft still und vollautomatisch. Der Installer
   **legt die neue Fassung aber nur bereit** und schaltet sie erst beim nächsten Start von Claude

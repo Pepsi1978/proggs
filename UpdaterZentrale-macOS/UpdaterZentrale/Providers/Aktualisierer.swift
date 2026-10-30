@@ -30,8 +30,8 @@ protocol Aktualisierer: Sendable {
     /// das hier ist der Beweis.
     ///
     /// Was das ist, haengt vom Mechanismus ab: die Version, wo es eine gibt; die Schreibzeit der
-    /// gebauten Programmdatei bei den Repo-Skripten; die Liste der offenen Pakete bei den
-    /// LM-Studio-Runtimes. Eine leere Rueckgabe heisst "nicht feststellbar" -- der Lauf gilt dann
+    /// gebauten Programmdatei bei den Repo-Skripten; die Liste der offenen Pakete bei
+    /// Werkzeugen ohne Version. Eine leere Rueckgabe heisst "nicht feststellbar" -- der Lauf gilt dann
     /// als nicht verifiziert statt als Erfolg.
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String
 

@@ -30,8 +30,6 @@ Ergebnis des ersten Laufs — jede Zeile ist eine echte Erkennung, keine Annahme
 
 | Programm | Installiert | Verfügbar | Zustand |
 |---|---|---|---|
-| LM Studio | 0.4.21+2 | 0.4.25 (Cask `0.4.25,1`) | Update verfügbar |
-| LM Studio Engines & Runtimes | – | – | Aktuell |
 | Claude Desktop | 2.2553.1 | 2.2553.1 (Cask `2.2553.1,c38127e2…`) | Aktuell |
 | Codex Desktop (ChatGPT.app) | 26.915.31945 | 26.915.31945 | Aktuell |
 | Claude Code CLI | 2.1.278 | 2.1.278 | Aktuell |
@@ -140,7 +138,7 @@ Deshalb wird numerisch verglichen: nur eine echt größere Version ist ein Updat
 ### 2. Cask-Versionen tragen ein Komma-Anhängsel
 
 Homebrew hängt hinter ein Komma einen zweiten Bestandteil: bei Claude
-`2.2553.1,c38127e27202ddc1c8c187102f7798a93b1b8ede`, bei LM Studio `0.4.25,1`. Die Info.plist der
+`2.2553.1,c38127e27202ddc1c8c187102f7798a93b1b8ede`, bei anderen etwa `0.4.25,1`. Die Info.plist der
 App kennt diesen Teil nicht. Ohne Abschneiden wäre **jede** dieser Apps dauerhaft falsch als
 veraltet markiert. `Versionen.caskBereinigen` erledigt das.
 
@@ -196,24 +194,21 @@ bliebe nach dem Beenden ungebaut zurück. Deshalb setzt `Kommandozeile.umgebung`
 
 Nicht automatisch prüfbar, weil ein echter Installationslauf Programme beendet und Daten verändert:
 
-1. **LM Studio aktualisieren** → Rückfrage „Programm beenden?" erscheint, LM Studio wird beendet,
-   `brew install --cask --force lm-studio` läuft durch, LM Studio startet wieder, die Karte zeigt
-   danach „Aktuell" mit 0.4.25 und ein grünes „Verifiziert: 0.4.21+2 → 0.4.25".
-2. **Codex CLI aktualisieren** → läuft ohne Beenden durch, danach 0.155.1.
-3. **OpenLauncher aktualisieren** → das Skript zeigt sein eigenes Ja/Nein-Fenster; bei „Nein"
+1. **Codex CLI aktualisieren** → läuft ohne Beenden durch, danach 0.155.1.
+2. **OpenLauncher aktualisieren** → das Skript zeigt sein eigenes Ja/Nein-Fenster; bei „Nein"
    muss die Karte „Abgebrochen" zeigen, bei „Ja" „Neue Version gebaut und gestartet".
-4. **TVO oder CVO aktualisieren** → hier fragt die Updater-Zentrale selbst; bei „Nein" darf das
+3. **TVO oder CVO aktualisieren** → hier fragt die Updater-Zentrale selbst; bei „Nein" darf das
    Skript gar nicht erst starten.
-5. **Hell-Modus** oben rechts umschalten (am 20.09.2026 NICHT visuell geprüft – der Bildschirm
+4. **Hell-Modus** oben rechts umschalten (am 20.09.2026 NICHT visuell geprüft – der Bildschirm
    war gesperrt, die Farbwerte sind aber 1:1 aus `Hell.xaml` übernommen) → alle Flächen, Karten und die Fenstertitelleiste ziehen
    mit; nach einem Neustart der App ist die Wahl noch gesetzt.
-6. **Terminal** rechts unten: `brew --version` eingeben → Ausgabe erscheint (beweist, dass der
+5. **Terminal** rechts unten: `brew --version` eingeben → Ausgabe erscheint (beweist, dass der
    PATH stimmt). „Fenster" öffnet iTerm im Repo-Ordner.
-7. **Einzelstart**: die App ein zweites Mal starten → das vorhandene Fenster kommt nach vorn.
-8. **Schreibtisch-Verknüpfung** doppelklicken → die App startet mit ihrem Symbol.
-9. **Karte anklicken** – auf den Beschreibungstext, nicht auf eine Schaltfläche → der Rahmen wird
+6. **Einzelstart**: die App ein zweites Mal starten → das vorhandene Fenster kommt nach vorn.
+7. **Schreibtisch-Verknüpfung** doppelklicken → die App startet mit ihrem Symbol.
+8. **Karte anklicken** – auf den Beschreibungstext, nicht auf eine Schaltfläche → der Rahmen wird
    violett, und rechts wechselt der Protokollbereich auf dieses Programm.
-10. **Beim ersten Start** fragt macOS nach der Erlaubnis, „Systemereignisse" zu steuern (für das
+9. **Beim ersten Start** fragt macOS nach der Erlaubnis, „Systemereignisse" zu steuern (für das
     Auslesen der Anmeldeobjekte). Bei „Nicht erlauben" fehlt nur das Autostart-Kennzeichen aus den
     Anmeldeobjekten – die LaunchAgents werden weiterhin erkannt, alles andere bleibt unberührt.
 
@@ -300,7 +295,7 @@ Nicht portiert:
 
 | Windows | macOS |
 |---|---|
-| Schutzfilter `cliRisiko`, ⚠ auf der Karte, Rückfrage beim Einzelklick | ✅ – eingeordnet nach Mac-Verhalten (iTerm2, LM Studio + Runtimes, JDK 17/21, Android SDK, VS Code, Windscribe) |
+| Schutzfilter `cliRisiko`, ⚠ auf der Karte, Rückfrage beim Einzelklick | ✅ – eingeordnet nach Mac-Verhalten (iTerm2, JDK 17/21, Android SDK, VS Code, Windscribe) |
 | Zwei unabhängige Sammelknöpfe (CLI-kritisch / nicht CLI-kritisch) mit Plan in der Rückfrage und Abhängigkeitshinweis | ✅ 1:1 |
 | Sammelplan: Phasen, Selbst-Update zuerst, `nach`, kürzeste zuerst, `zuletzt`, `hauptversionNurPerKlick`, parallele Bahn (max. 3) | ✅ 1:1 |
 | Fortsetzung nach dem Selbst-Update (`SammelFortsetzen`, 30 min) | ✅ 1:1 |

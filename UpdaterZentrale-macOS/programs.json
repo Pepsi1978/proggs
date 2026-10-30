@@ -496,47 +496,6 @@
       "akzent": "#22C55E"
     },
     {
-      "id": "lmstudio",
-      "name": "LM Studio",
-      "gruppe": "KI-Anwendungen",
-      "beschreibung": "Lokale LLM-Laufzeit mit Modell-Katalog und OpenAI-kompatiblem Server.",
-      "art": "brew",
-      "cask": "lm-studio",
-      "appPfad": "/Applications/LM Studio.app",
-      "bundleId": "ai.elementlabs.lmstudio",
-      "exePfad": "",
-      "prozesse": [],
-      "helferProzesse": [
-        "lms"
-      ],
-      "beendenVorUpdate": true,
-      "neuStartenNachUpdate": true,
-      "akzent": "#F2A13B",
-      "cliRisiko": "Beendet LM Studio samt lokalem Server: CLI-Sitzungen mit lokalem Modell (OpenCode über LM Studio) verlieren ihr Modell."
-    },
-    {
-      "id": "lmstudio-runtimes",
-      "name": "LM Studio Engines & Runtimes",
-      "gruppe": "KI-Anwendungen",
-      "beschreibung": "Inferenz-Runtimes: llama.cpp für Apple Silicon (Metal) und MLX.",
-      "art": "cli",
-      "exePfad": "~/.lmstudio/bin/lms",
-      "pruefArgumente": "runtime update --all --dry-run",
-      "updateArgumente": "runtime update --all --yes",
-      "pfeilZaehlen": true,
-      "zeitlimitMinuten": 45,
-      "prozesse": [],
-      "helferProzesse": [],
-      "beendenVorUpdate": false,
-      "neuStartenNachUpdate": false,
-      "hinweis": "Lädt teils mehrere Gigabyte herunter. LM Studio darf dabei laufen.",
-      "akzent": "#F2A13B",
-      "cliRisiko": "Tauscht die Inferenz-Engines aus; geladene Modelle können entladen werden – eine CLI-Sitzung mit lokalem Modell bricht dann ab.",
-      "nach": [
-        "lmstudio"
-      ]
-    },
-    {
       "id": "dotnet-sdk",
       "name": ".NET SDK",
       "gruppe": "Entwicklung: Sprachen & SDKs",

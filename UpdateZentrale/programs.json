@@ -512,50 +512,6 @@
       "akzent": "#22C55E"
     },
     {
-      "id": "lmstudio",
-      "name": "LM Studio",
-      "gruppe": "KI-Anwendungen",
-      "beschreibung": "Lokale LLM-Laufzeit mit Modell-Katalog und OpenAI-kompatiblem Server.",
-      "art": "winget",
-      "wingetId": "ElementLabs.LMStudio",
-      "exePfad": "%LOCALAPPDATA%/Programs/LM Studio/LM Studio.exe",
-      "exePfadAlternativen": [
-        "C:/Program Files/LM Studio/LM Studio.exe"
-      ],
-      "prozesse": [
-        "LM Studio"
-      ],
-      "helferProzesse": [
-        "lms"
-      ],
-      "beendenVorUpdate": true,
-      "neuStartenNachUpdate": true,
-      "akzent": "#F2A13B",
-      "cliRisiko": "Beendet LM Studio samt lokalem Server: CLI-Sitzungen mit lokalem Modell (OpenCode über LM Studio) verlieren ihr Modell."
-    },
-    {
-      "id": "lmstudio-runtimes",
-      "name": "LM Studio Engines & Runtimes",
-      "gruppe": "KI-Anwendungen",
-      "beschreibung": "Inferenz-Runtimes: llama.cpp für CPU/AVX2, NVIDIA CUDA, CUDA12 und Vulkan.",
-      "art": "cli",
-      "exePfad": "%USERPROFILE%/.lmstudio/bin/lms.exe",
-      "pruefArgumente": "runtime update --all --dry-run",
-      "updateArgumente": "runtime update --all --yes",
-      "pfeilZaehlen": true,
-      "zeitlimitMinuten": 45,
-      "prozesse": [],
-      "helferProzesse": [],
-      "beendenVorUpdate": false,
-      "neuStartenNachUpdate": false,
-      "hinweis": "Lädt teils mehrere Gigabyte herunter. LM Studio darf dabei laufen.",
-      "akzent": "#F2A13B",
-      "cliRisiko": "Tauscht die Inferenz-Engines aus; geladene Modelle können entladen werden – eine CLI-Sitzung mit lokalem Modell bricht dann ab.",
-      "nach": [
-        "lmstudio"
-      ]
-    },
-    {
       "id": "bionic",
       "name": "Bionic",
       "gruppe": "KI-Anwendungen",

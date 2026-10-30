@@ -28,7 +28,6 @@ enum Kommandozeile {
         let zusatz = [
             "/opt/homebrew/bin", "/opt/homebrew/sbin", "/usr/local/bin",
             (Pfade.heim as NSString).appendingPathComponent(".local/bin"),
-            (Pfade.heim as NSString).appendingPathComponent(".lmstudio/bin"),
             "/usr/bin", "/bin", "/usr/sbin", "/sbin"
         ]
         let vorhanden = (umwelt["PATH"] ?? "").split(separator: ":").map(String.init)
@@ -115,7 +114,7 @@ enum Kommandozeile {
     }
 
     /// Fuehrt ein Programm mit bereits zerlegten Argumenten aus -- der sichere Weg, wenn ein
-    /// Argument Leerzeichen enthaelt (Pfade wie "/Applications/LM Studio.app").
+    /// Argument Leerzeichen enthaelt (Pfade wie "/Applications/Visual Studio Code.app").
     ///
     /// Mit `lebenszeichen` ist `zeitlimit` eine Ruhezeit: abgebrochen wird erst, wenn so lange weder
     /// Ausgabe kam noch sich der Wert von `lebenszeichen` geaendert hat (etwa die Groesse eines

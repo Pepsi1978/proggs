@@ -6,7 +6,7 @@ namespace UpdateZentrale.Providers;
 
 /// <summary>
 /// winget packages. The CLI has no JSON output for "list", so the table is parsed by the column
-/// positions of its header row -- splitting on whitespace breaks on names like "LM Studio 0.4.24+1".
+/// positions of its header row -- splitting on whitespace breaks on names like "Some App 0.4.24+1".
 /// </summary>
 public sealed class WingetAktualisierer : IAktualisierer
 {
@@ -462,7 +462,7 @@ public sealed class WingetAktualisierer : IAktualisierer
     /// Finds the package row and returns (installed, available).
     ///
     /// Header column offsets are not usable: winget pads columns by display width, and a name
-    /// that is itself version-like ("LM Studio 0.4.24+1") pushes the row out of alignment.
+    /// that is itself version-like ("Some App 0.4.24+1") pushes the row out of alignment.
     /// Anchoring on the exact package id and reading the fields behind it survives that, and
     /// works regardless of the display language.
     /// </summary>

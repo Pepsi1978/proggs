@@ -1,7 +1,7 @@
 # Updater-Zentrale macOS
 
 Ein Mac-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
-LM Studio (inklusive Engines und Runtimes), Claude Code CLI,
+Claude Code CLI,
 Codex CLI, Stream Deck sowie die eigenen Werkzeuge OpenLauncher, TVO und CVO.
 
 macOS-Fassung von `~/proggs/UpdateZentrale` (Windows). Was gleich blieb und was sich zwangsläufig
@@ -34,7 +34,7 @@ Gleiche Logik wie die Windows-Fassung (1.3.31–1.3.40):
 
 * **⚠ CLI-kritische Updates installieren** – nur Einträge mit `cliRisiko`. Die Rückfrage davor ist zugleich die
   Aufforderung, Claude Code, Codex, OpenCode und alle Terminalfenster zu schließen. Auf dem Mac eingeordnet nach dem,
-  was hier wirklich passiert: iTerm2 (schließt alle Fenster), LM Studio und seine Runtimes, JDK 17/21 (Homebrew löscht
+  was hier wirklich passiert: iTerm2 (schließt alle Fenster), JDK 17/21 (Homebrew löscht
   den alten JDK-Ordner, Gradle-/Kotlin-Daemons brechen ab), Android SDK (adb-Server), VS Code (integriertes Terminal),
   Windscribe (VPN-Abbruch). Homebrew-Formeln wie node, git und pwsh beenden laufende Prozesse nicht und bleiben unkritisch.
 * **Updates installieren · nicht CLI-kritisch** – alles andere, in dieser Reihenfolge:
@@ -43,12 +43,12 @@ Gleiche Logik wie die Windows-Fassung (1.3.31–1.3.40):
      Fassung setzt ihn nach ihrer Startprüfung ohne zweite Rückfrage fort (nur innerhalb von 30 Minuten).
   3. Phase 1 – eigene Werkzeuge (OpenLauncher, TVO, CVO).
   4. Phase 2 – CLI-kritisch gehört zum anderen Knopf; enthält ein Plan sie doch (nach einer Fortsetzung), fragt der Lauf davor.
-  5. Phase 3 – der Rest. Seriell: brew (eine Sperre für alles), npm, sdkmanager, LM-Studio-Runtimes. Parallel daneben
+  5. Phase 3 – der Rest. Seriell: brew (eine Sperre für alles), npm, sdkmanager. Parallel daneben
      (höchstens drei): nur Einträge mit `parallel` – Claude Code, Codex, Antigravity, rustup, OpenCode-Sitzung.
   6. Zum Schluss alles mit `zuletzt`.
 
 Innerhalb jeder Phase geht das kürzeste erwartete Update zuerst; `nach` zieht Voraussetzungen davor
-(npm-Werkzeuge nach Node.js, Gradle/Kotlin/Android SDK nach dem JDK, Runtimes nach LM Studio).
+(npm-Werkzeuge nach Node.js, Gradle/Kotlin/Android SDK nach dem JDK).
 `hauptversionNurPerKlick` (TypeScript, npm, FFmpeg) bleibt bei einem Hauptversionssprung draußen.
 Die Fußzeile zeigt den Gesamtstand und je laufendem Update Position, Phase, Startzeit und erwartete Dauer.
 
@@ -63,7 +63,7 @@ Dafür liest die App vor und nach dem Lauf einen *Fingerabdruck* und vergleicht 
 | Art | Fingerabdruck |
 |---|---|
 | `brew` | `CFBundleShortVersionString` aus der Info.plist des Programms |
-| `cli` | die gemeldete Version, bei den LM-Studio-Runtimes stattdessen der Trockenlauf-Plan – der muss danach leer sein |
+| `cli` | die gemeldete Version, bei Werkzeugen ohne Version stattdessen der Trockenlauf-Plan – der muss danach leer sein |
 | `reposkript` | Version **und** Schreibzeit der gebauten Programmdatei (die Info.plist-Version allein ändert sich beim Neubau nicht) |
 
 Daraus wird eines von fünf Ergebnissen:
@@ -180,10 +180,7 @@ Der Cask `android-commandlinetools` ist bewusst **kein** Eintrag: sein Ordner is
 
 ## Besonderheiten der eingetragenen Programme
 
-* **LM Studio Engines & Runtimes** – eigener Eintrag. Geprüft mit
-  `lms runtime update --all --dry-run`, aktualisiert mit `lms runtime update --all --yes`. Deckt
-  llama.cpp für Apple Silicon (Metal) und MLX ab. LM Studio darf dabei laufen.
-* **Claude Desktop und LM Studio** – bringen einen eigenen Updater mit. Das Homebrew-Rezept kann
+* **Claude Desktop** – bringt einen eigenen Updater mit. Das Homebrew-Rezept kann
   deshalb **älter** sein als das Installierte; dann steht auf der Karte „Auf dem neuesten Stand –
   neuer als das Homebrew-Rezept". Ein Downgrade wird nie angeboten.
 * **Codex Desktop** – auf dem Mac ist das die **ChatGPT.app** (Bundle-Kennung `com.openai.codex`).

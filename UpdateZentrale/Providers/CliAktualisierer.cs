@@ -164,8 +164,8 @@ public sealed class CliAktualisierer : IAktualisierer
     }
 
     /// <summary>
-    /// The version where the tool reports one. The LM Studio runtimes have none, so their
-    /// fingerprint is the dry-run plan instead: after a successful update it must be empty.
+    /// The version where the tool reports one. Entries without one use their
+    /// dry-run plan as fingerprint instead: after a successful update it must be empty.
     /// </summary>
     public async Task<string> FingerabdruckAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
     {

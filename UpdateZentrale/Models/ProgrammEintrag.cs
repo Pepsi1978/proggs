@@ -79,9 +79,8 @@ public sealed class ProgrammEintrag
 
     /// <summary>
     /// Weitere Orte, an denen dasselbe Programm liegen kann. Dieselbe programs.json laeuft auf
-    /// mehreren Rechnern, und dort unterscheiden sich die Installationswege: LM Studio liegt mal
-    /// unter %LOCALAPPDATA%, mal unter "Program Files"; die CLIs kommen mal vom nativen Installer,
-    /// mal als npm-Shim. Statt den Katalog je Rechner zu gabeln, gewinnt der erste Pfad, den es
+    /// mehreren Rechnern, und dort unterscheiden sich die Installationswege: die CLIs kommen mal vom
+    /// nativen Installer, mal als npm-Shim. Statt den Katalog je Rechner zu gabeln, gewinnt der erste Pfad, den es
     /// wirklich gibt.
     /// </summary>
     public List<string> ExePfadAlternativen { get; set; } = new();
@@ -209,15 +208,14 @@ public sealed class ProgrammEintrag
     /// <summary>
     /// May run in the parallel lane of "install all": a self-updater that touches only its own
     /// folder and shares no lock, tree or runtime with another entry. Explicit on purpose -- guessed
-    /// from the command line it put the Android SDK (needs the JDK being replaced) and the LM Studio
-    /// runtimes (LM Studio itself is replaced beside them) into the parallel lane.
+    /// from the command line it put the Android SDK (needs the JDK being replaced) into the parallel
+    /// lane.
     /// </summary>
     public bool Parallel { get; set; }
 
     /// <summary>
     /// Ids that must be updated before this one when both are in the same run: sdkmanager needs
-    /// the new JDK, the LM Studio runtimes belong to the new LM Studio build, the npm tools to
-    /// the new Node. Only orders a run; it never pulls an update into one.
+    /// the new JDK, the npm tools the new Node. Only orders a run; it never pulls an update into one.
     /// </summary>
     public List<string> Nach { get; set; } = new();
 
