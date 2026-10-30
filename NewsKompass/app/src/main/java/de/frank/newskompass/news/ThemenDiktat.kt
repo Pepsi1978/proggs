@@ -1,5 +1,6 @@
 package de.frank.newskompass.news
 
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import de.frank.newskompass.NewsApplication
 import de.frank.newskompass.audio.GroqTranscriber
 import de.frank.newskompass.audio.MicRecorder
@@ -51,7 +52,7 @@ class ThemenDiktat(private val app: NewsApplication) {
         when {
             jetzt.stufe == SprachStufe.NIMMT_AUF && jetzt.themaId == themaId -> stoppeUndUebernimm()
             jetzt.stufe != SprachStufe.BEREIT -> Unit
-            app.einstellungen.groqSchluessel.isBlank() ->
+            app.einstellungen.groqSchluessel.isBlank() && !ParakeetUeberJarvis.gewaehlt(app) ->
                 melde(themaId, "Bitte unten bei „Spracheingabe“ einen Groq-Schlüssel hinterlegen.")
             erlaubnisDa -> starte(themaId)
             else -> {
@@ -91,8 +92,12 @@ class ThemenDiktat(private val app: NewsApplication) {
                     melde(themaId, "Ich habe nichts verstanden.")
                     return@launch
                 }
-                transkribierer = app.einstellungen.neuerTranskribierer()
-                val text = transkribierer.transcribe(wav).trim()
+                val text = if (ParakeetUeberJarvis.gewaehlt(app)) {
+                    ParakeetUeberJarvis.transkribiere(app, wav).trim()
+                } else {
+                    transkribierer = app.einstellungen.neuerTranskribierer()
+                    transkribierer.transcribe(wav).trim()
+                }
                 if (meineGeneration != generation) return@launch
                 if (text.isBlank()) {
                     melde(themaId, "Ich habe nichts verstanden.")

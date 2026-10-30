@@ -1,5 +1,6 @@
 package de.frank.newskompass.news
 
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import android.content.Context
 import de.frank.newskompass.NewsApplication
 import de.frank.newskompass.audio.GroqTranscriber
@@ -58,7 +59,7 @@ class SprachFrage(private val app: NewsApplication) {
     fun tippe(erlaubnisDa: Boolean, frageErlaubnis: () -> Unit) {
         when (_zustand.value.stufe) {
             SprachStufe.BEREIT -> {
-                if (app.einstellungen.groqSchluessel.isBlank()) {
+                if (app.einstellungen.groqSchluessel.isBlank() && !ParakeetUeberJarvis.gewaehlt(app)) {
                     melde("Bitte zuerst in den Einstellungen einen Groq-Schlüssel hinterlegen.", zuEinstellungen = true)
                     return
                 }
@@ -102,9 +103,13 @@ class SprachFrage(private val app: NewsApplication) {
                     melde("Ich habe nichts verstanden.")
                     return@launch
                 }
-                transkribierer = app.einstellungen.neuerTranskribierer()
-                laufenderTranskribierer = transkribierer
-                val frage = transkribierer.transcribe(wav).trim()
+                val frage = if (ParakeetUeberJarvis.gewaehlt(app)) {
+                    ParakeetUeberJarvis.transkribiere(app, wav).trim()
+                } else {
+                    transkribierer = app.einstellungen.neuerTranskribierer()
+                    laufenderTranskribierer = transkribierer
+                    transkribierer.transcribe(wav).trim()
+                }
                 if (meineGeneration != generation) return@launch
                 if (frage.isBlank()) {
                     melde("Ich habe nichts verstanden.")

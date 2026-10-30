@@ -1717,6 +1717,12 @@ private fun SpracheingabeBereich(app: NewsApplication, stand: EinstellungenStand
                 "Die Antwort erscheint als eigener Block unten in der aktuellen Ausgabe und wird vorgelesen. Deine Themenliste bleibt unverändert.",
         )
         Kachel {
+            Text("Offline über Jarvis", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+        }
+        Spacer(Modifier.height(12.dp))
+        Kachel {
             SchluesselFeld("Groq-Schlüssel", stand.hatGroqSchluessel) { app.einstellungen.setzeGroqSchluessel(it) }
             Spacer(Modifier.height(8.dp))
             Text(

@@ -19,6 +19,16 @@
     <!-- Private App: Ohne Akku-Ausnahme darf der Lauf nach dem Wecker oft keinen Vordergrunddienst starten. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+
+    <!-- Offline-Transkription über Jarvis (Parakeet). -->
+    <queries>
+        <provider android:authorities="de.frank.jarvis.parakeet" />
+    </queries>
+
     <application
         android:name=".NewsApplication"
         android:allowBackup="false"
