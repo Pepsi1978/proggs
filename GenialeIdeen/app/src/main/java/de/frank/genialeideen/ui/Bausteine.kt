@@ -125,7 +125,7 @@ fun IdeenKopfleiste(
             KopfKnopf(
                 beschreibung = when (themeWahl) {
                     "dark" -> "Dunkler Modus, tippen für Automatik"
-                    "auto" -> "Automatik nach Handy-Einstellung, tippen für hell"
+                    "auto" -> "Automatisch nach der Sonne, tippen für hell"
                     else -> "Heller Modus, tippen für dunkel"
                 },
                 aufTipp = aufThemeTipp,

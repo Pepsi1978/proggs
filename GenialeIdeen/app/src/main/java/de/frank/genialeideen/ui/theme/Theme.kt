@@ -1,5 +1,7 @@
 package de.frank.genialeideen.ui.theme
 
+import android.app.Activity
+import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
@@ -8,17 +10,27 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.frank.genialeideen.R
+import kotlinx.coroutines.delay
 
 val LocalGold = staticCompositionLocalOf { HelleGoldPalette }
 
@@ -69,8 +81,8 @@ private fun TextStyle.skaliert(faktor: Float, familie: FontFamily): TextStyle =
     copy(fontFamily = familie, fontSize = (fontSize.value * faktor).sp)
 
 /**
- * @param themeWahl `light`, `dark` oder `auto`. Bei `auto` folgt die App der
- *   Systemvorgabe des Handys.
+ * @param themeWahl `light`, `dark` oder `auto`. Bei `auto` folgt die App der Sonne in
+ *   Neuenhagen ([Sonnenstand]), nicht dem Android-System.
  *
  * Der Wechsel läuft weich: Jede Farbe wandert in den neuen Wert, statt hart umzuspringen
  * (Baustein N.5).
@@ -81,13 +93,41 @@ fun GenialeIdeenTheme(
     schriftSkalierung: Float = 1f,
     content: @Composable () -> Unit,
 ) {
+    // Automatisch folgt der Sonne: jede Minute prüfen, nur solange sichtbar.
+    var sonneDunkel by remember(themeWahl) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, themeWahl) {
+        if (themeWahl == "light" || themeWahl == "dark") return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
     val dunkel = when (themeWahl) {
         "dark" -> true
-        "auto" -> androidx.compose.foundation.isSystemInDarkTheme()
+        "auto" -> sonneDunkel
         else -> false
     }
     val ziel = if (dunkel) DunkleGoldPalette else HelleGoldPalette
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, dunkel) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or (if (dunkel) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
     val context = LocalContext.current
+    // Die Systemleisten richten sich sonst nach dem System-Modus; Symbole wären auf gleichfarbigem Grund unsichtbar.
+    SideEffect {
+        (context as? Activity)?.window?.let { fenster ->
+            WindowCompat.getInsetsController(fenster, fenster.decorView).run {
+                isAppearanceLightStatusBars = !dunkel
+                isAppearanceLightNavigationBars = !dunkel
+            }
+        }
+    }
     val reduziert = Motion.bewegungReduziert(context)
     val dauer = if (reduziert) 0 else Motion.THEME_WECHSEL_MS
 
@@ -148,6 +188,7 @@ fun GenialeIdeenTheme(
     CompositionLocalProvider(
         LocalGold provides palette,
         LocalBewegungReduziert provides reduziert,
+        LocalConfiguration provides konfig,
     ) {
         MaterialTheme(
             colorScheme = schema,

@@ -30,6 +30,7 @@
     {"versionCode": 67, "versionName": "1.7.36", "stand": "29.10.2026, 22:17 Uhr", "notiz": "Der Titel einer Idee lässt sich jetzt in der Ideen-Ansicht direkt antippen, ändern und speichern, ohne dass Text oder Kurzfassung angetastet werden."},
     {"versionCode": 68, "versionName": "1.7.37", "stand": "29.10.2026, 22:20 Uhr", "notiz": "Ein von Hand geänderter Titel bleibt jetzt sicher stehen, auch wenn Jarvis eine Idee gerade im Hintergrund glättet; das Titelfenster übersteht das Auf- und Zuklappen."},
     {"versionCode": 69, "versionName": "1.7.38", "stand": "29.10.2026, 22:34 Uhr", "notiz": "Der Lautsprecher liest nur die Ideen des gewählten Reiters vor, beim Start ist Angenommen ausgewählt, und die Annehmen-Flaggen in den Listen sind weg; angenommen wird in der geöffneten Idee."},
-    {"versionCode": 70, "versionName": "1.7.39", "stand": "30.10.2026, 11:40 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
+    {"versionCode": 70, "versionName": "1.7.39", "stand": "30.10.2026, 11:40 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
+    {"versionCode": 71, "versionName": "1.7.40", "stand": "30.10.2026, 19:18 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
   ]
 }

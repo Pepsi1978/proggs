@@ -396,7 +396,7 @@ class SecureSettings(context: Context) : Closeable {
 
     companion object {
         const val STORE_NAME = "geniale_ideen_secure_prefs"
-        /** Genau zwei Modi — die App folgt der Systemvorgabe bewusst nicht (Baustein A). */
+        /** Hell, dunkel oder `auto`: Automatik nach der Sonne in Neuenhagen, nicht nach dem System. */
         val ALLOWED_THEMES = setOf("light", "dark", "auto")
         val ALLOWED_AUSRICHTUNGEN = setOf("hochformat", "querformat", "automatisch")
         const val MIN_TTS_SPEECH_RATE = 0.5f
