@@ -2,11 +2,12 @@ import Foundation
 
 /// Liest die lokal in LM Studio vorhandenen Modelle ueber den OpenAI-kompatiblen Server
 /// (GET http://localhost:1234/v1/models) und startet den Server bei Bedarf ueber die
-/// mitgelieferte lms-CLI. LM Studio laedt ein angefragtes Modell per JIT-Loading selbst,
+/// mitgelieferte lms-CLI. Jeder lms-Aufruf kann LM Studio als Hintergrunddienst wecken, deshalb
+/// laufen die Abfragen hier nur bei erreichbarem Server. LM Studio laedt ein angefragtes Modell per JIT-Loading selbst,
 /// deshalb reicht es, den Server laufen zu haben - OpenCode spricht ihn dann direkt an.
 ///
-/// 1:1-Port von Services/LmStudioService.cs. Einziger Plattform-Unterschied: die CLI heisst auf
-/// macOS `lms` (ohne .exe) und liegt unter ~/.lmstudio/bin/lms.
+/// Port von Services/LmStudioService.cs. Unterschiede: die CLI heisst auf macOS `lms` (ohne .exe)
+/// und liegt unter ~/.lmstudio/bin/lms; der Launcher-Start weckt hier den Server nicht.
 final class LmStudioService {
     static let providerId = "lmstudio"
     static let providerName = "LM Studio"
@@ -40,6 +41,24 @@ final class LmStudioService {
 
     /// Ist die lms-CLI (und damit LM Studio) auf diesem Rechner installiert?
     static var isInstalled: Bool { FileManager.default.isExecutableFile(atPath: lmsPath) }
+
+    /// Antwortet gerade etwas auf dem Server-Port? Ein Verbindungsversuch auf Loopback kehrt sofort
+    /// zurueck, weckt LM Studio nicht und blockiert daher auch den Main Thread nicht.
+    static var isServerReachable: Bool {
+        let handle = socket(AF_INET, SOCK_STREAM, 0)
+        guard handle >= 0 else { return false }
+        defer { close(handle) }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = in_port_t(1234).bigEndian
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        return withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(handle, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) == 0
+            }
+        }
+    }
 
     /// Startet den lokalen LM-Studio-Server, falls er nicht schon laeuft. Idempotent -
     /// "lms server start" meldet bei laufendem Server nur Erfolg.
@@ -114,7 +133,7 @@ final class LmStudioService {
     /// Kontextlaenge je GERADE geladenem Modell. Ein Aufruf fuer alle: `loadedContextLength` wuerde
     /// die CLI sonst einmal pro Modell starten und das Oeffnen der Liste zaeh machen.
     static func loadedContexts() -> [String: Int] {
-        guard isInstalled else { return [:] }
+        guard isInstalled, isServerReachable else { return [:] }
         let result = Shell.run(lmsPath, ["ps", "--json"], timeout: 30)
         guard let data = result.stdout.data(using: .utf8),
               let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [:] }
@@ -140,7 +159,9 @@ final class LmStudioService {
     /// Bereits geladene Modelle stehen zusaetzlich oben in der Liste.
     func localModels() async -> [ModelEntry] {
         var result: [ModelEntry] = []
-        guard let url = URL(string: "\(LmStudioService.baseUrl)/models") else { return result }
+        // Ein ausgeschalteter Server ist der Normalfall und keine Warnung im Protokoll wert.
+        guard LmStudioService.isServerReachable,
+              let url = URL(string: "\(LmStudioService.baseUrl)/models") else { return result }
 
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
@@ -178,6 +199,27 @@ final class LmStudioService {
                 return a.offset < b.offset
             }
             .map { $0.element }
+    }
+
+    /// Startet den Server und liest danach die Modelle. Nur fuer den ausdruecklichen Klick bei leerem
+    /// Reiter gedacht, denn das weckt LM Studio.
+    func localModelsWithServer() async -> [ModelEntry] {
+        let models = await localModels()
+        if !models.isEmpty || !LmStudioService.isInstalled { return models }
+
+        await Task.detached { _ = LmStudioService.ensureServerRunning() }.value
+
+        // "lms server start" kehrt zurueck, bevor der HTTP-Endpunkt Anfragen annimmt. Ohne
+        // Wiederholversuche liefert die naechste Abfrage deshalb eine leere Liste - der Reiter
+        // "LM Studio" bleibt dann leer, obwohl LM Studio laeuft.
+        for attempt in 0..<4 {
+            let models = await localModels()
+            if !models.isEmpty { return models }
+            if attempt < 3 { try? await Task.sleep(nanoseconds: 1_500_000_000) }
+        }
+        Logger.shared.warn("LmStudioService", "localModelsWithServer",
+                           "Server gestartet, liefert aber keine Modelle")
+        return []
     }
 
     /// Baut den Anzeigenamen. Mit Katalogeintrag: "Qwen3.8 27B UD - unsloth (lokal)". Ohne ihn

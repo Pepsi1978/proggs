@@ -38,6 +38,7 @@ final class MainViewModel {
     private let router = OpenRouterService()
     private let openCodeCatalog = OpenCodeCatalogService()
     private let lmStudio = LmStudioService()
+    private var refreshingLmStudioModels = false
     private let launcher = OpenLauncherService()
     private let updater = OpenCodeUpdateService()
     private let profiles = InstructionProfileService()
@@ -218,6 +219,13 @@ final class MainViewModel {
         Task { await refreshOpenRouterFreeModels() }
         Task { await refreshLmStudioModels() }
         Task { await checkOpenCodeUpdate() }
+
+        // Der Launcher startet LM Studio nicht mehr selbst. Deshalb gleicht er die Liste und den
+        // Ladezustand ab, sobald er wieder nach vorn kommt: Nach einem Modellstart laeuft der Server.
+        _ = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification,
+                                                   object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.refreshLmStudioModels() }
+        }
     }
 
     /// Holt die im Initializer unterdrueckte Zustandsberechnung der Startauswahl nach.
@@ -549,19 +557,34 @@ final class MainViewModel {
         }
     }
 
-    /// Liest beim Start die lokal in LM Studio geladenen/verfuegbaren Modelle und fuellt damit den
-    /// Reiter "LM Studio". Ist LM Studio nicht installiert oder der Server aus, bleibt die zuletzt
-    /// bekannte Liste stehen - der Launcher startet trotzdem normal. LM Studio wird hier bewusst
-    /// nicht gestartet: "lms server start" weckt die ganze App als Hintergrunddienst. Der Server
-    /// startet erst, wenn wirklich ein LM-Studio-Modell gewaehlt wird (configureProvider).
-    private func refreshLmStudioModels() async {
-        guard LmStudioService.isInstalled else { return }
-        let localModels = await lmStudio.localModels()
+    /// Liest beim Start und bei jeder Aktivierung die lokal in LM Studio geladenen/verfuegbaren
+    /// Modelle und fuellt damit den Reiter "LM Studio". Ist LM Studio nicht installiert oder der
+    /// Server aus, bleibt die zuletzt bekannte Liste stehen - der Launcher startet trotzdem normal.
+    /// LM Studio wird hier bewusst nicht gestartet: "lms server start" weckt die ganze App als
+    /// Hintergrunddienst. Der Server startet erst beim Start eines LM-Studio-Modells (Startskript)
+    /// oder, bei leerem Reiter, ueber den Aktualisieren-Knopf.
+    private func refreshLmStudioModels(startServer: Bool = false) async {
+        guard LmStudioService.isInstalled, !refreshingLmStudioModels else { return }
+        refreshingLmStudioModels = true
+        defer { refreshingLmStudioModels = false }
+
+        let localModels = startServer ? await lmStudio.localModelsWithServer() : await lmStudio.localModels()
         if localModels.isEmpty { return }
+        let before = lmStudioListSignature()
         registry.syncLmStudioModels(localModels)
+        // Bei jeder Aktivierung die Liste neu aufzubauen wuerde Auswahl und Scrollstand stoeren.
+        if lmStudioListSignature() == before { return }
         modelGroups = registry.groups
         refreshHiddenModels()
         delegate?.modelGroupsChanged()
+        if selectedModel != nil && findGroup(for: selectedModel) == nil {
+            selectedModel = defaultStartModel()
+        }
+    }
+
+    private func lmStudioListSignature() -> [String] {
+        let group = registry.groups.first { $0.id.caseInsensitiveCompare("lmstudio") == .orderedSame }
+        return (group?.models ?? []).map { "\($0.slug)|\($0.displayName)|\($0.lmStudioLoadedContext)" }
     }
 
     /// Holt die kompletten Kataloge von OpenRouter und OpenCode Zen neu (Knopf in der Titelleiste).
@@ -600,6 +623,11 @@ final class MainViewModel {
         if selectedModel != nil && findGroup(for: selectedModel) == nil {
             selectedModel = defaultStartModel()
         }
+
+        // Ein leerer Reiter liesse sich sonst nie fuellen: ohne Modell kein Start, ohne Start kein
+        // Server. Nur dann weckt der ausdrueckliche Klick LM Studio.
+        let lmStudioEmpty = registry.groups.first { $0.id.caseInsensitiveCompare("lmstudio") == .orderedSame }?.models.isEmpty ?? false
+        await refreshLmStudioModels(startServer: lmStudioEmpty)
 
         statusText = updated.isEmpty
             ? "Modellaktualisierung fehlgeschlagen: \(failed.joined(separator: ", ")). Bestehende Listen bleiben erhalten."

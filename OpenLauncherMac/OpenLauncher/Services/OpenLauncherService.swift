@@ -145,17 +145,17 @@ final class OpenLauncherService {
         if model.providerId.caseInsensitiveCompare(LmStudioService.providerId) == .orderedSame {
             // Lokales Modell: OpenCode kennt LM Studio nicht von Haus aus. Der Provider-Block
             // (OpenAI-kompatibler Endpunkt auf localhost:1234) wird deshalb hier in die globale
-            // Konfig geschrieben, und der LM-Studio-Server wird gestartet. Das Modell selbst laedt
-            // LM Studio per JIT-Loading bei der ersten Anfrage.
+            // Konfig geschrieben. Den Server startet das Startskript des Terminals: ein lms-Aufruf
+            // hier koennte LM Studio erst wecken und die Oberflaeche dabei einfrieren. Das Modell
+            // selbst laedt LM Studio per JIT-Loading bei der ersten Anfrage.
             let root = Self.readConfig()
             let patched = Self.patchLmStudioModel(root, slug: model.slug, displayName: model.displayName)
             try Self.writeConfig(patched)
-            let serverOk = LmStudioService.ensureServerRunning()
             // Das Modell selbst wird NICHT hier geladen: ein 26B-Modell braucht dafuer Minuten und
             // wuerde die Oberflaeche einfrieren, bevor das Terminal ueberhaupt aufgeht. Das Laden
             // mit ausreichend Kontext passiert sichtbar im Startskript des Terminals.
             Logger.shared.info("OpenLauncherService", "configureProvider", "LM-Studio-Modell gesetzt",
-                               ["model": modelString, "serverOk": serverOk])
+                               ["model": modelString])
             return modelString
         }
 

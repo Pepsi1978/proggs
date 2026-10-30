@@ -616,8 +616,9 @@ final class ModelRegistry {
                 model("gemini-3.8-flash", "Gemini 3.8 Flash", googleProviderId, "Google")
             ]),
             createGroup("nvidia", "NVIDIA", nvidiaProviderId, nvidiaProviderName, nvidiaFreeModels),
-            // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server
-            // (syncLmStudioModels); die Vorgabe hier ist nur der Platzhalter, damit der Reiter
+            // Lokale LM-Studio-Modelle. Die Liste kommt live vom lokalen Server, sobald er beim
+            // Start oder bei einer Aktivierung des Launchers laeuft (syncLmStudioModels), sonst aus
+            // der gespeicherten Liste; die Vorgabe hier ist nur der Platzhalter, damit der Reiter
             // auch ohne laufenden Server existiert.
             createGroup("lmstudio", "LM Studio", LmStudioService.providerId, LmStudioService.providerName, [])
         ]
