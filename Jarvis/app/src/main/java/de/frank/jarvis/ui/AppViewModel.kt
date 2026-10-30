@@ -372,7 +372,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .takeLast(2).map { it.text }
         val worte = de.frank.jarvis.faehigkeit.ProgrammierChat.FranksWorte(eigene.joinToString("\n"), streng = true,
             aktuell = text, vorher = eigene.dropLast(1).lastOrNull(), angebot = letzteRueckfrage(gespraech.take(frage)))
-        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext)) {
+        runde.job = viewModelScope.launch(de.frank.jarvis.faehigkeit.ProgrammierChat.GespraechKennung(id) + worte + runde.tokens + (ursprung ?: kotlin.coroutines.EmptyCoroutineContext) + (if (vorlesen) de.frank.jarvis.observability.Antwortkette.Marke else kotlin.coroutines.EmptyCoroutineContext)) {
             var art = "antwort"
             val antwort = try {
                 val beilage = if (anhaenge.isEmpty()) null else withContext(Dispatchers.IO) { de.frank.jarvis.data.Anhaenge.fuersModell(anhaenge) }
@@ -402,6 +402,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val karte = if (art == "fehler") null else de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.wahlInRunde(id, runde.beginn)
             rundeFertig(runde, antwort, art, vorlesen, karte)
         }
+        // Endet die Runde ohne Fortsetzung des ersten Satzes, nicht länger Dienst und Fokus halten.
+        runde.job.invokeOnCompletion { viewModelScope.launch { runde.vorab?.let(vorleser::vorabAufgeben) } }
         if (einstellungen.modell.istAnthropic) {
             anthropicKostenStart()
             // Ohne Job (sofort beendet) trotzdem abschließen, sonst bliebe der Zähler hängen.
@@ -619,7 +621,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (offen) { rundeInsOffene(runde, frageNotiz, neu, vorlesen); return@launch }
             // Gesprochen gefragt, inzwischen in einem anderen Gespräch (Hey Jarvis aus einer anderen App, Wechsel): trotzdem hören.
-            if (vorlesen && runde.ursprung != null) sprachZustellen(rundenZustellung(runde, neu.text))
+            if (vorlesen && runde.ursprung != null) sprachZustellen(rundenZustellung(runde, ohneVorab(runde, neu.text)))
             sitzungenLaden()
             de.frank.jarvis.gedaechtnis.Lagebild.anstossen(getApplication(), listOf(de.frank.jarvis.gedaechtnis.Bereich.GESPRAECHE), "Gespräch mit Jarvis")
         }
@@ -634,10 +636,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         sitzungSichern()
         if (!vorlesen) return
         // Der Gesprächsmodus ist inzwischen zu Ende (etwa bewusst beendet oder abgelöst): angesagt zustellen und danach wieder zuhören.
-        if (runde.ursprung != null && weckwortLauf?.isActive != true) sprachZustellen(rundenZustellung(runde, neu.text))
+        if (runde.ursprung != null && weckwortLauf?.isActive != true) sprachZustellen(rundenZustellung(runde, ohneVorab(runde, neu.text)))
         else if (runde.vorab != null) vorleser.sprichNachVorab(runde.vorab!!, "gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
+        // Die schon vorgelesene Auswahlkarte wird nicht abgeschnitten: Die Antwort des Modells kommt hinter ihr.
+        else if (runde.karteGesprochen) vorleser.sprichDanach("gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
         else vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", neu.text)
     }
+
+    /** Was noch zuzustellen ist: ohne den ersten Satz, wenn er schon zu hören war. */
+    private fun ohneVorab(runde: Runde, text: String) = runde.vorab?.let { vorleser.ohneVorab(it, text) } ?: text
 
     private fun rundenZustellung(runde: Runde, text: String) =
         Zustellung("runde:${runde.sitzung}:${runde.frage}:${runde.beginn}", SprachModus.WECKWORT, runde.sitzung, runde.beginn, "Frank, die Antwort auf deine Frage ist jetzt da.", text)
@@ -2108,6 +2115,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!wiederaufnahme) gespraechInApp = fortsetzen
         val nr = ++sprachmodusNr
         sprachmodusAktiv = true
+        de.frank.jarvis.speech.GespraechsFokus.sprachmodus = true
         weckwortLauf = viewModelScope.launch {
             // Für das ganze Gespräch den Audiofokus halten: Andere Apps bleiben leise, bis Jarvis fertig ist.
             de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
@@ -2149,7 +2157,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 freihaendig = false
                 if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 // Ein inzwischen neu gestarteter Sprachmodus bleibt aktiv: Nur der eigene Lauf setzt das Zeichen zurück.
-                if (sprachmodusNr == nr) sprachmodusAktiv = false
+                if (sprachmodusNr == nr) { sprachmodusAktiv = false; de.frank.jarvis.speech.GespraechsFokus.sprachmodus = false }
                 fertig()
                 SprachBlase.abgleichen(getApplication())
             }
@@ -2282,6 +2290,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 de.frank.jarvis.observability.Antwortkette.punkt("Mitschrift")
                 // Inzwischen von Hand die Session gewechselt: Das verspätete Ergebnis verfällt, nie in der neuen Session.
                 if (stand != wechselStand) { Logbuch.sprache("Mitschrift verworfen", "Session von Hand gewechselt"); return@launch }
+                if (text.isBlank() || ziel != null) de.frank.jarvis.observability.Antwortkette.verwerfen()
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
                 else if (SprachBefehle.istSessionEnde(text, imGespraechsmodus = weckwortLauf?.isActive == true)) {
@@ -2730,6 +2739,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun abbrechen() {
         val id = sitzungId ?: return
         val runde = laufende.remove(id) ?: return
+        runde.vorab?.let(vorleser::vorabAbbrechen)
         // Die Frage bleibt als unbeantwortet im Verlauf, samt dem, was in dieser Runde schon erledigt war.
         frageAbgebrochen(runde)
         // Der Wächter in der Anfrage schließt die Verbindung, sobald die Koroutine abgebrochen wird: nur diese eine Antwort.
@@ -2738,7 +2748,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Bricht die Antwort eines beliebigen Gesprächs ab (beim Löschen), ohne den Verlauf anzufassen. */
     private fun rundeAbbrechen(id: String) {
-        laufende.remove(id)?.job?.cancel()
+        laufende.remove(id)?.let { r -> r.vorab?.let(vorleser::vorabAbbrechen); r.job.cancel() }
     }
 
     /** Markiert die Frage der Runde als abgebrochen, sofort und auf dem Hauptfaden (danach kann schon ein neues Gespräch beginnen). */

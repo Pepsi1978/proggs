@@ -33,6 +33,9 @@ object GespraechsFokus {
      */
     @Volatile var aufnahme = false
 
+    /** Der Gesprächsmodus („Hey Jarvis“) läuft, auch wenn Android den Tonfokus verweigert hat: Automatische Lernläufe warten dann. */
+    @Volatile var sprachmodus = false
+
     /** Holt den Fokus, falls er nicht schon gehalten wird. Ein mehrfacher Aufruf schadet nicht. */
     fun halten(context: Context) {
         synchronized(this) {

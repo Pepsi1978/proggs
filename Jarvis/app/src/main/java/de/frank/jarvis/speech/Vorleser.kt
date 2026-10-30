@@ -106,6 +106,7 @@ class Vorleser(
         // Beim Wechsel auf eine andere Idee bleibt der Dienst stehen und wird gleich darauf
         // nur aktualisiert. Ihn zu beenden und im selben Atemzug neu zu starten, brachte die
         // App zum Absturz (ForegroundServiceDidNotStartInTimeException).
+        if (vorabQuelle != null) vorabVerdraengt = vorabQuelle
         stopp(dienstBeenden = false)
         val text = SprechText.fuerStimme(rohText)
         val absaetze = SprechText.absaetze(text)
@@ -141,91 +142,129 @@ class Vorleser(
         laufBeginn = System.currentTimeMillis()
         ersterTonGemessen = false
         val meinLauf = laufNummer.incrementAndGet()
+        starteLauf(meinLauf, text.length, absaetze.size) {
+            do {
+                if (synthese.kannVorausschauen(wahl)) pipelineMitVorausschau(absaetze, pauseMs, wahl) else reihum(absaetze, pauseMs)
+                // Derselbe abbrechbare Auftrag bleibt samt Dienst über alle Runden aktiv.
+                if (wiederholen) delay(ABSATZ_PAUSE_MS)
+            } while (wiederholen)
+        }
+    }
+
+    /** Der Rahmen eines Vorlese-Laufs: Nur der jeweils jüngste Lauf setzt den Zustand und räumt auf. */
+    private fun starteLauf(meinLauf: Long, zeichen: Int, absaetze: Int, arbeit: suspend () -> Unit) {
+        fun meiner() = laufNummer.get() == meinLauf
         laufenderJob = bereich.launch {
             try {
-                do {
-                    if (synthese.kannVorausschauen(wahl)) pipelineMitVorausschau(absaetze, pauseMs, wahl) else reihum(absaetze, pauseMs)
-                    // Derselbe abbrechbare Auftrag bleibt samt Dienst über alle Runden aktiv.
-                    if (wiederholen) delay(ABSATZ_PAUSE_MS)
-                } while (wiederholen)
-                // Läuft schon die Fortsetzung (sprichNachVorab), gehört ihr der Zustand: Ein kurzes „aus“ öffnete sonst das Mikrofon.
-                if (laufNummer.get() == meinLauf) _stand.value = _stand.value.copy(zustand = VorleseZustand.AUS, quelle = null)
-                Logbuch.dauer("Vorlesen fertig", System.currentTimeMillis() - laufBeginn, "absaetze=${absaetze.size} zeichen=${text.length}")
+                arbeit()
+                // Läuft schon die Fortsetzung (fortsetzen), gehört ihr der Zustand: Ein kurzes „aus“ öffnete sonst das Mikrofon.
+                if (meiner()) _stand.value = _stand.value.copy(zustand = VorleseZustand.AUS, quelle = null)
+                Logbuch.dauer("Vorlesen fertig", System.currentTimeMillis() - laufBeginn, "absaetze=$absaetze zeichen=$zeichen")
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: SyntheseAbbruch) {
                 IdeenLog.error("Vorleser", "sprich", "Pipeline angehalten", mapOf("grund" to fehler.javaClass.simpleName))
                 Logbuch.fehler("Vorlesen angehalten", fehler)
-                _stand.value = VorleseStand(fehler = fehler.message)
+                if (meiner()) _stand.value = VorleseStand(fehler = fehler.message)
             } catch (fehler: Exception) {
                 IdeenLog.error("Vorleser", "sprich", "Vorlesen fehlgeschlagen", mapOf("art" to fehler.javaClass.simpleName))
                 Logbuch.fehler("Vorlesen fehlgeschlagen", fehler)
-                _stand.value = VorleseStand(
+                if (meiner()) _stand.value = VorleseStand(
                     fehler = fehler.message ?: "Das Vorlesen ist unterwegs abgebrochen.",
                 )
             } finally {
                 // Nur der jeweils juengste Lauf raeumt auf. Sonst nimmt der beendete Vorgaenger
                 // dem neuen Vorlesen Tonfokus, Zwischendateien und Dienst wieder weg.
-                if (laufNummer.get() == meinLauf) {
-                    gibFokusFrei()
-                    VorleseDienst.beenden(appContext)
-                    synthese.raeumeAuf()
-                }
+                // Kommt nach einem Vorab-Satz noch der Rest, bleiben Dienst und Fokus: Musik liefe sonst dazwischen kurz wieder an.
+                if (meiner() && vorabQuelle == null) raeumeLaufAuf()
             }
         }
     }
 
-    /** Quelle und gesprochener Text des vorab gelesenen ersten Satzes; ein Stopp oder neues Vorlesen löscht beides. */
+    private fun raeumeLaufAuf() {
+        gibFokusFrei()
+        VorleseDienst.beenden(appContext)
+        synthese.raeumeAuf()
+    }
+
+    /** Quelle und gesprochener Text des vorab gelesenen ersten Satzes; ein Stopp oder neues Vorlesen löscht die Quelle. */
     private var vorabQuelle: String? = null
     private var vorabText = ""
-    /** Der noch sprechende erste Satz, während die Fortsetzung schon läuft: Ein Stopp muss beide beenden. */
+    /** Erst wenn der Satz wirklich zu hören war, darf er aus der ganzen Antwort wegfallen. */
+    private var vorabGesprochen = false
+    /** Fremdes Vorlesen oder eine andere App hat den Satz abgelöst, nicht Frank: Die Antwort kommt dann trotzdem. */
+    private var vorabVerdraengt: String? = null
+    /** Der noch sprechende Vorgänger, während die Fortsetzung schon läuft: Ein Stopp muss beide beenden. */
     private var vorabJob: Job? = null
 
     /** Liest den ersten Satz, während das Modell noch schreibt. Nur, wenn gerade nichts anderes läuft. */
     fun sprichVorab(quelle: String, titel: String, satz: String): Boolean {
-        if (_stand.value.zustand != VorleseZustand.AUS) return false
+        if (_stand.value.zustand != VorleseZustand.AUS || !synthese.kannVorausschauen()) return false
         sprich(quelle, titel, satz)
         if (_stand.value.quelle != quelle) return false
         vorabQuelle = quelle
         vorabText = SprechText.fuerStimme(satz)
+        vorabGesprochen = false
+        vorabVerdraengt = null
         return true
     }
 
     /**
-     * Die ganze Antwort ist da: liest nach dem vorab gesprochenen Satz den Rest, ohne Pause im selben Dienst. Hat Frank das Vorlesen
-     * inzwischen beendet, bleibt es still. Weicht der Text ab (Modellfehler, Neuversuch), kommt sicherheitshalber alles.
+     * Die ganze Antwort ist da: liest hinter dem vorab gesprochenen Satz den Rest, ohne das Mikrofon zu öffnen. Hat Frank das
+     * Vorlesen selbst beendet, bleibt es still. War der Satz noch nicht zu hören oder weicht der Text ab, kommt alles.
      */
     fun sprichNachVorab(vorab: String, quelle: String, titel: String, rohText: String) {
-        if (vorabQuelle != vorab) return
+        if (vorabQuelle != vorab) {
+            if (vorabVerdraengt == vorab) { vorabVerdraengt = null; sprich(quelle, titel, rohText) }
+            return
+        }
         vorabQuelle = null
         val text = SprechText.fuerStimme(rohText)
-        val rest = nachVorab(text, vorabText) ?: text
-        val absaetze = SprechText.absaetze(rest)
-        val vorher = laufenderJob
+        if (!vorabGesprochen) laufenderJob?.cancel()
+        fortsetzen(quelle, titel, if (vorabGesprochen) nachVorab(text, vorabText) ?: text else text)
+    }
+
+    /** Für die angesagte Zustellung: der Text ohne den schon gesprochenen Satz. */
+    fun ohneVorab(vorab: String, rohText: String): String {
+        if (vorabQuelle != vorab) return rohText
+        val rest = if (vorabGesprochen) nachVorab(SprechText.fuerStimme(rohText), vorabText)?.takeIf { it.isNotBlank() } else null
+        vorabAufgeben(vorab)
+        return rest ?: rohText
+    }
+
+    /** Es kommt keine Fortsetzung mehr: Dienst und Fokus nicht länger halten. */
+    fun vorabAufgeben(vorab: String) {
+        if (vorabQuelle != vorab) return
+        vorabQuelle = null
+        if (laufenderJob?.isActive != true) raeumeLaufAuf()
+    }
+
+    /** Frank hat die Frage abgebrochen: Auch der schon laufende erste Satz endet. */
+    fun vorabAbbrechen(vorab: String) { if (vorabQuelle == vorab) stopp() }
+
+    /** Liest [rohText] im Anschluss an das, was gerade läuft, ohne Lücke im Zustand und ohne es abzuschneiden. */
+    fun sprichDanach(quelle: String, titel: String, rohText: String) = fortsetzen(quelle, titel, SprechText.fuerStimme(rohText))
+
+    private fun fortsetzen(quelle: String, titel: String, text: String) {
+        val absaetze = SprechText.absaetze(text)
+        if (absaetze.isEmpty()) {
+            if (laufenderJob?.isActive != true) raeumeLaufAuf()
+            return
+        }
+        val vorher = laufenderJob?.takeIf { it.isActive }
         vorabJob = vorher
-        val spricht = _stand.value.zustand == VorleseZustand.SPRICHT
-        if (absaetze.isEmpty()) return
-        _stand.value = _stand.value.copy(zustand = if (spricht) VorleseZustand.SPRICHT else VorleseZustand.LAEDT, quelle = quelle, titel = titel, absaetzeGesamt = absaetze.size)
+        val zustand = when {
+            pausiert -> VorleseZustand.PAUSIERT
+            vorher != null && _stand.value.zustand == VorleseZustand.SPRICHT -> VorleseZustand.SPRICHT
+            else -> VorleseZustand.LAEDT
+        }
+        _stand.value = _stand.value.copy(zustand = zustand, quelle = quelle, titel = titel, absaetzeGesamt = absaetze.size)
         VorleseDienst.starten(appContext)
         val meinLauf = laufNummer.incrementAndGet()
-        laufenderJob = bereich.launch {
-            try {
-                // Der neue Text wird schon erzeugt, während der erste Satz noch spricht; abgespielt wird erst danach.
-                val fertig = async { vorher?.join() }
-                pipelineMitVorausschau(absaetze, KURZE_PAUSE_MS, null, fertig)
-                if (laufNummer.get() == meinLauf) _stand.value = _stand.value.copy(zustand = VorleseZustand.AUS, quelle = null)
-            } catch (abbruch: CancellationException) {
-                throw abbruch
-            } catch (fehler: Exception) {
-                Logbuch.fehler("Vorlesen fehlgeschlagen", fehler)
-                _stand.value = VorleseStand(fehler = fehler.message ?: "Das Vorlesen ist unterwegs abgebrochen.")
-            } finally {
-                if (laufNummer.get() == meinLauf) {
-                    gibFokusFrei()
-                    VorleseDienst.beenden(appContext)
-                    synthese.raeumeAuf()
-                }
-            }
+        starteLauf(meinLauf, text.length, absaetze.size) {
+            // Der neue Text wird schon erzeugt, während der Vorgänger noch spricht; abgespielt wird erst danach.
+            if (synthese.kannVorausschauen(null)) pipelineMitVorausschau(absaetze, KURZE_PAUSE_MS, null, vorher)
+            else { vorher?.join(); reihum(absaetze, KURZE_PAUSE_MS) }
         }
     }
 
@@ -247,7 +286,7 @@ class Vorleser(
     private class Auftrag(val text: String, val ergebnis: Deferred<Result<List<File>>>)
 
     /** Alle Anbieter erzeugen vorab (Edge inzwischen auch) — hier greift die Vorausschau. */
-    private suspend fun pipelineMitVorausschau(absaetze: List<String>, pauseMs: Long, wahl: StimmWahl?, vorlauf: Deferred<Unit?>? = null) = coroutineScope {
+    private suspend fun pipelineMitVorausschau(absaetze: List<String>, pauseMs: Long, wahl: StimmWahl?, vorlauf: Job? = null) = coroutineScope {
         // Je Absatz ein oder (beim ersten) zwei Teile, die ohne Pause hintereinander laufen.
         val inArbeit = HashMap<Int, List<Auftrag>>()
 
@@ -284,7 +323,7 @@ class Vorleser(
         // Absatz 0 sowie die beiden folgenden gehen sofort in Arbeit.
         (0..VORAUSSCHAU).forEach(::beauftrage)
 
-        vorlauf?.await()
+        vorlauf?.join()
         var fehlgeschlagen = 0
         absaetze.indices.forEach { index ->
             val teile = inArbeit.remove(index) ?: listOf(erzeuge(absaetze[index]))
@@ -433,10 +472,11 @@ class Vorleser(
 
     private suspend fun spieleDatei(datei: File) {
         holeFokus()
+        if (vorabQuelle != null) vorabGesprochen = true
         if (!ersterTonGemessen) {
             ersterTonGemessen = true
             Logbuch.sprache("Erster Ton", "anbieter=${settings.ttsProvider}", System.currentTimeMillis() - laufBeginn)
-            de.frank.jarvis.observability.Antwortkette.ende()
+            if (_stand.value.quelle?.startsWith("gespraech:") == true) de.frank.jarvis.observability.Antwortkette.ende()
         }
         // Zuerst anlegen und merken — wirft prepare(), wird der Player trotzdem freigegeben.
         val neuerPlayer = MediaPlayer()
@@ -573,7 +613,7 @@ class Vorleser(
                     pausiertDurchFokus = false
                     weiter()
                 }
-                AudioManager.AUDIOFOCUS_LOSS -> stopp()
+                AudioManager.AUDIOFOCUS_LOSS -> { vorabVerdraengt = vorabQuelle; stopp() }
             }
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true

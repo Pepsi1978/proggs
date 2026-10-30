@@ -26,6 +26,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
@@ -229,7 +230,8 @@ class JarvisAgent(context: Context) {
         // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
         val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
         Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen, Verlauf ${zuege.size} Züge")
-        Antwortkette.punkt("Kontext")
+        val messen = currentCoroutineContext()[Antwortkette.Marke] != null
+        if (messen) Antwortkette.punkt("Kontext")
         // Für den Abschluss bleibt ein Teil der Zeit übrig: Ein langes Werkzeug (Bild, Download) darf nicht das ganze Ergebnis verschlucken.
         val reserve = if (abschluss) (zeitlimitMs / 6).coerceIn(25_000L, 180_000L) else 0L
         var schritte = 0
@@ -270,10 +272,10 @@ class JarvisAgent(context: Context) {
                 var erstesZeichen = 0L
                 val strom = beiErstemSatz?.let { AntwortStrom() }
                 val roh = auth.streamChat(anweisungText, zuege, modell, denkstufe, onUsage = { verbraucht += it }, onDelta = { d ->
-                    if (erstesZeichen == 0L) { erstesZeichen = System.currentTimeMillis() - modellBeginn; Antwortkette.punkt("Denken") }
+                    if (erstesZeichen == 0L) { erstesZeichen = System.currentTimeMillis() - modellBeginn; if (messen) Antwortkette.punkt("Denken") }
                     strom?.neu(d)?.let { satz -> beiErstemSatz?.invoke(satz) }
                 })
-                Antwortkette.punkt("Schreiben")
+                if (messen) Antwortkette.punkt("Schreiben")
                 Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${modell.label}, ${roh.length} Zeichen, erstes Zeichen nach $erstesZeichen ms")
                 var schritt = lies(roh)
                 var (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
@@ -595,7 +597,7 @@ class JarvisAgent(context: Context) {
                 append("die wichtigsten Fakten (Zeiten, Zahlen, Ergebnisse) **fett**. Ein Symbol (✅ ⚠️ 📅 ⏰ 💤 ❤️ 🏃 💡 …) setzt du nur an den Anfang einer Zeile, nie mitten in einen Satz; ")
                 append("zusammengehörige Angaben bleiben in einer Zeile, z. B. „✅ Genialer Wecker installiert · Version 1.1.119“. Keine Tabellen, keine verschachtelten Listen, keine Codeblöcke ohne Bitte. ")
                 append("Franks Stilregeln unter GEMERKT (FRANKS ANTWORT-STIL) gehen diesen Formatvorgaben vor.\n")
-                append("Datum, Uhrzeit, das Gesamtbild und gegebenenfalls deine Rolle stehen ganz am Ende unter LAGE JETZT; die Rolle geht allgemeinen Vorgaben vor.\n\n")
+                append("Am Ende dieser Anweisung steht zuerst das Gesamtbild mit Gemerktem und Tagebuch, danach unter LAGE JETZT Datum, Uhrzeit, die Live-Bereiche des Gesamtbilds und gegebenenfalls deine Rolle; die Rolle geht allgemeinen Vorgaben vor.\n\n")
                 append("Du arbeitest mit Franks Apps über Werkzeuge. Grundsätze:\n")
                 append("- Handle selbstständig: Lies nach, bevor du fragst. Frage nur, wenn eine nötige Angabe wirklich fehlt oder mehrdeutig ist.\n")
                 append("- Erfinde nie Daten. Was du über Aufgaben sagst, stammt aus einem Werkzeug-Ergebnis.\n")

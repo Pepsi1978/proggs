@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import de.frank.jarvis.auth.verbindungOeffnen
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -106,7 +107,14 @@ class Synthese(context: Context, private val settings: SecureSettings) {
      */
     suspend fun synthetisiere(text: String, wahl: StimmWahl? = null): File = gleichzeitig.withPermit {
         // Der Platz wird noch auf dem Faden des Aufrufers geholt (der Vorleser startet die Teile sofort in Lesereihenfolge), gearbeitet wird auf IO.
-        withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) }
+        // Der kostenlose Gemini-Weg arbeitet nacheinander; auch dort steht der erste Satz so vorn.
+        if (nacheinander(wahl)) freiReihe.withPermit { withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) } }
+        else withContext(Dispatchers.IO) { erzeugeMitRueckfall(text, wahl) }
+    }
+
+    private fun nacheinander(wahl: StimmWahl?): Boolean {
+        val a = anbieter(wahl)
+        return (a == TtsProvider.GEMINI_FLASH.id || a == TtsProvider.GEMINI_LITE.id) && settings.geminiTtsSchluesselWahl != SecureSettings.GEMINI_TTS_NUR_BEZAHLT
     }
 
     private suspend fun erzeugeMitRueckfall(text: String, wahl: StimmWahl?): File {
@@ -350,7 +358,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             .post(koerper.toString().toRequestBody(JSON_TYP))
             .build()
         // Kostenloser Schlüssel: nur eine Anfrage zugleich, parallele Absätze verbrauchten das Minutenlimit doppelt (zwei 429 im selben Augenblick).
-        // Der bezahlte hat dieses Limit nicht; nacheinander stand hier der erste Satz hinter dem Rest des Absatzes an (bis 11 s bis zum ersten Ton).
+        // Der bezahlte hat ein viel höheres Limit und läuft höchstens zu zweit ([gleichzeitig]); nacheinander stand hier der erste Satz hinter dem Rest (bis 11 s bis zum ersten Ton).
         val kandidat = JSONObject(if (art == "bezahlt") fuehreAus(anfrage, warteBei429) else geminiEinzeln.withPermit { fuehreAus(anfrage, warteBei429) }).optJSONArray("candidates")?.optJSONObject(0)
         val ende = kandidat?.optString("finishReason").orEmpty()
         val teil = kandidat?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optJSONObject("inlineData")
@@ -679,10 +687,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     /** Öffnet die Verbindung zum Sprachdienst schon während der Aufnahme, wie [de.frank.jarvis.auth.CodexAuthManager.vorwaermen]. */
     fun vorwaermen() {
         if (settings.ttsProvider != TtsProvider.GEMINI_FLASH.id && settings.ttsProvider != TtsProvider.GEMINI_LITE.id) return
-        client.newCall(Request.Builder().url(GEMINI_URL).head().build()).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: Call, e: IOException) = Unit
-            override fun onResponse(call: Call, response: Response) = response.close()
-        })
+        client.verbindungOeffnen(GEMINI_URL)
     }
 
     private suspend fun fuehreAus(anfrage: Request, warteBei429: Boolean = true): String {
@@ -798,6 +803,9 @@ class Synthese(context: Context, private val settings: SecureSettings) {
 
         /** Gemini-Stimmen fragen nacheinander, nie parallel (gemeinsames Minutenlimit). */
         val geminiEinzeln = Semaphore(1)
+
+        /** Hält beim kostenlosen Gemini-Weg die Lesereihenfolge, weil sie noch vor dem Fadenwechsel belegt wird. */
+        val freiReihe = Semaphore(1)
 
         /** Bis zu dieser Länge bleibt der ungestreckte Gemini-Ton im Vorrat (Proben, kurze Ansagen); rund 8 s Ton. */
         const val VORRAT_ZEICHEN = 120

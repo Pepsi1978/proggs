@@ -479,18 +479,23 @@ object Lagebild {
         val tagebuchMindestens = tagebuchTeile?.mindestens ?: 0
         var teile = baue(emptyMap())
         if (laenge(teile) + tagebuchMindestens > HOECHSTENS) teile = baue(DECKEL)
-        val tagebuchText = if (tagebuch != null && tagebuchTeile != null)
-            abschnitt(Bereich.TAGEBUCH, tagebuch.copy(text = tagebuchTeile.imBudget((HOECHSTENS - laenge(teile)).coerceAtLeast(tagebuchMindestens)))) else ""
+        val platz = (HOECHSTENS - laenge(teile)).coerceAtLeast(tagebuchMindestens)
+        // Für den Zwischenspeicher in groben Stufen: Sonst änderte jede neue Zeile in den Live-Bereichen den Ausschnitt des Tagebuchs.
+        val stufe = if (trenner == null) platz else (platz / TAGEBUCH_STUFE * TAGEBUCH_STUFE).coerceAtLeast(tagebuchMindestens)
+        val tagebuchVoll = if (tagebuch != null && tagebuchTeile != null) tagebuch.copy(text = tagebuchTeile.imBudget(stufe)) else null
         return buildString {
             append(kopf)
             if (trenner == null) {
                 teile.forEach { append(it).append('\n') }
-                append(tagebuchText)
+                tagebuchVoll?.let { append(abschnitt(Bereich.TAGEBUCH, it)) }
             } else {
                 // Selten Wechselndes zuerst (Gemerktes, Tagebuch), dahinter die Live-Bereiche: Derselbe Inhalt, aber der vordere Teil trifft den Zwischenspeicher.
                 val gemerkt = if (Bereich.GEMERKT in s.abschnitte) 1 else 0
                 teile.take(gemerkt).forEach { append(it).append('\n') }
-                append(tagebuchText).append(trenner)
+                // Der Stand des Tagebuchs wechselt bei jedem Auffrischen und steht deshalb im Live-Teil.
+                tagebuchVoll?.let { append(Bereich.TAGEBUCH.ueberschrift).append(":\n").append(it.text.trim()).append('\n') }
+                append(trenner)
+                tagebuchVoll?.let { append(abschnittKopf(Bereich.TAGEBUCH, it)).append(": Inhalt steht weiter oben.\n\n") }
                 teile.drop(gemerkt).forEach { append(it).append('\n') }
             }
         }.trim()
@@ -621,12 +626,13 @@ object Lagebild {
         return TagebuchTeile(monate, stich, text.substring(vollAb).trim(), sonst.toString())
     }
 
-    private fun abschnitt(b: Bereich, a: Abschnitt): String = buildString {
+    private fun abschnitt(b: Bereich, a: Abschnitt): String = abschnittKopf(b, a) + ":\n" + a.text.trim() + "\n"
+
+    private fun abschnittKopf(b: Bereich, a: Abschnitt): String = buildString {
         append(b.ueberschrift).append(" [Stand ").append(uhr(a.stand)).append(" Uhr")
         if (a.geaendert in 1 until a.stand && System.currentTimeMillis() - a.geaendert < 24 * 3_600_000L) append(", zuletzt geändert ").append(uhr(a.geaendert)).append(" Uhr")
         append("]")
         if (a.fehler.isNotEmpty()) append("\nACHTUNG: gerade nicht frisch lesbar (").append(a.fehler).append("); unten der letzte gute Stand.")
-        append(":\n").append(a.text.trim()).append('\n')
     }
 
     private val ID = Regex("\\[id ([^\\]]+)\\]")
@@ -650,6 +656,7 @@ object Lagebild {
     )
     /** Höchstlänge je geändertem Bereich beim Änderungsabruf. */
     private const val SEIT_DECKEL = 5_000
+    private const val TAGEBUCH_STUFE = 4_000
     /** Reicht das Budget nicht, werden diese großen Live-Bereiche gedeckelt (vollständig über ihre Werkzeuge). */
     private val DECKEL = mapOf(Bereich.AUSWERTUNG to 8_000, Bereich.IDEEN to 6_000, Bereich.ZIELE to 5_000, Bereich.GESPRAECHE to 6_000, Bereich.AUFGABEN to 10_000, Bereich.RUECKBLICK to 6_000, Bereich.STACKS to 12_000)
 }

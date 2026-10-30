@@ -260,7 +260,7 @@ object Lernlauf {
     /** Was einen automatischen Lauf gerade verhindert, oder null. */
     private fun hindernis(app: Context): String? {
         if (de.frank.jarvis.live.LiveGespraech.aktiv) return "ein Live-Gespräch lief"
-        if (de.frank.jarvis.speech.GespraechsFokus.stilleHinweise) return "ein Sprachgespräch lief"
+        if (de.frank.jarvis.speech.GespraechsFokus.sprachmodus) return "ein Sprachgespräch lief"
         if (!JarvisAgent(app).verbunden) return "Jarvis ist nicht mit ChatGPT angemeldet"
         if (!netzDa(app)) return "kein Netz"
         val akku = app.getSystemService(BatteryManager::class.java)

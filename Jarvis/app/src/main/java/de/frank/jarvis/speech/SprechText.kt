@@ -146,6 +146,7 @@ object SprechText {
     private val MINUTEN_MIT_PUNKT = Regex("""(\d)\s*min\.""")
 
     /** Satzgrenze für den Schnitt hinter dem ersten Satz — nicht hinter „am 3.“ vor einem Monat. */
+    private val ABKUERZUNG = Regex("""(?:^|[\s(])(?:Dr|Prof|Hr|Fr|Nr|St|ca|bzw|ggf|inkl|exkl|usw|etc|evtl|Mio|Mrd|Std|Min|Tel|Str|vgl|z\.\s?B|u\.\s?a|d\.\s?h)\.$""")
     private val SATZGRENZE = Regex("""(?<=[.!?])(?<!\d\.)\s+(?=\p{Lu})""")
 
     private val MONATE = listOf(
@@ -339,23 +340,24 @@ object SprechText {
      */
     fun ersterSatzSchnitt(absatz: String): Int? {
         if (absatz.length < ERSTER_TEIL_MIN + REST_MIN) return null
-        val grenze = SATZGRENZE.findAll(absatz)
-            .map { it.range.first }
-            .firstOrNull { it >= ERSTER_TEIL_MIN }
-            ?: return null
+        val grenze = satzGrenze(absatz) ?: return null
         if (grenze > ERSTER_TEIL_MAX || absatz.length - grenze < REST_MIN) return null
         return grenze
     }
+
+    /** Die erste Satzgrenze ab [ERSTER_TEIL_MIN], die nicht bloß hinter einer Abkürzung liegt („bei Dr. Müller“). */
+    private fun satzGrenze(text: String): Int? = SATZGRENZE.findAll(text).map { it.range.first }
+        .firstOrNull { it >= ERSTER_TEIL_MIN && !ABKUERZUNG.containsMatchIn(text.substring(maxOf(0, it - 12), it)) }
 
     /**
      * Der erste fertige Satz einer noch wachsenden Antwort, roh und ungekürzt; null, solange keiner sicher feststeht. Fertig ist
      * er erst, wenn der nächste Satz schon beginnt. Offene Fettschrift oder Tags warten: Daraus könnte noch etwas anderes werden.
      */
     fun ersterSatz(text: String): String? {
-        val grenze = SATZGRENZE.findAll(text).map { it.range.first }.firstOrNull { it >= ERSTER_TEIL_MIN } ?: return null
+        val grenze = satzGrenze(text) ?: return null
         if (grenze > ERSTER_TEIL_MAX) return null
         val satz = text.substring(0, grenze)
-        if (satz.contains('\n') || satz.startsWith("#") || satz.startsWith("- ") || satz.contains('<') || satz.contains('`') || satz.contains('|') || satz.split("**").size % 2 == 0) return null
+        if (satz.contains('\n') || satz.startsWith("#") || satz.startsWith("- ") || satz.contains('<') || satz.contains('{') || satz.contains('`') || satz.contains('|') || satz.split("**").size % 2 == 0) return null
         return satz
     }
 

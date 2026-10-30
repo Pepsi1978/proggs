@@ -53,14 +53,14 @@ internal fun anthropicChatPayload(
 /**
  * Die Anweisung als Blöcke, getrennt an [CACHE_TRENNER]: Der Zwischenspeicher trifft nur an Blockgrenzen. In einem einzigen Block
  * änderte die Uhrzeit am Ende jede Minute den ganzen Text, und das Modell läse bei jeder neuen Frage alles neu.
- * Der erste Block (Werkzeuge, Grundsätze) bleibt eine Stunde, spätere Blöcke die üblichen 5 Minuten; längere müssen vorn stehen.
+ * Die selten wechselnden Blöcke bleiben eine Stunde, der letzte die üblichen 5 Minuten; längere müssen vorn stehen.
  */
 internal fun anthropicSystem(instructions: String): JSONArray {
     val teile = instructions.split(CACHE_TRENNER).filter { it.isNotBlank() }
     val bloecke = JSONArray()
     teile.forEachIndexed { i, teil ->
         val cache = JSONObject().put("type", "ephemeral")
-        if (i == 0 && teile.size > 1) cache.put("ttl", "1h")
+        if (i < teile.lastIndex) cache.put("ttl", "1h")
         val text = if (i == teile.lastIndex) teil.trim() + "\n\n" + UMLAUT_HINWEIS else teil
         bloecke.put(textBlock(text).put("cache_control", cache))
     }
