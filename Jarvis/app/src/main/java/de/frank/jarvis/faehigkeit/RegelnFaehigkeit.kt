@@ -1,6 +1,7 @@
 package de.frank.jarvis.faehigkeit
 
 import android.content.Context
+import de.frank.jarvis.gedaechtnis.Langzeitkontext
 import android.util.AtomicFile
 import de.frank.jarvis.observability.Logbuch
 import java.io.File
@@ -524,21 +525,21 @@ internal val SYMBIOSE_VORGABE = listOf(
 val merkdateien: List<Merkdatei> get() = Merkart.entries.map { it.datei } + Symbiose
 
 /** Alle Dateien als ein Block für den Kontext von Jarvis' eigenen Modellen (Chat, Agenten, Tagesauswertung). */
-fun merkKontext(context: Context): String = merkdateien.joinToString("") { it.alsKontext(context) }
+fun merkKontext(context: Context): String = merkdateien.joinToString("") { it.alsKontext(context) } + Langzeitkontext.alsKontext(context)
 
 /**
  * Alles ohne die [Programmierregeln]: für jeden Text, der das Handy über das Plugin verlässt (Anleitung, Werkzeug-Ergebnisse,
  * Live-Gedächtnis in jarvis_kontext). Auch Programmier-Sitzungen lesen das über MCP; der Relay unterscheidet sie nicht von ChatGPT.
  */
 fun merkKontextOhneProgrammierregeln(context: Context, ohneSymbiose: Boolean = false): String =
-    merkKontextAusser(merkdateien, ohneSymbiose).joinToString("") { it.alsKontext(context) }
+    merkKontextAusser(merkdateien, ohneSymbiose).joinToString("") { it.alsKontext(context) } + Langzeitkontext.alsKontext(context)
 
 /** Die Auswahl dazu, rein und ohne Dateizugriff (auch für die Tests). */
 fun merkKontextAusser(dateien: List<Merkdatei>, ohneSymbiose: Boolean): List<Merkdatei> =
     dateien.filter { it !== Programmierregeln && !(ohneSymbiose && it === Symbiose) }
 
 /** Dasselbe ohne die Symbiose: für Nachträge an einzelne Werkzeug-Ergebnisse, die den Startkontext schon haben. */
-fun merkKontextOhneSymbiose(context: Context): String = merkdateien.filter { it !== Symbiose }.joinToString("") { it.alsKontext(context) }
+fun merkKontextOhneSymbiose(context: Context): String = merkdateien.filter { it !== Symbiose }.joinToString("") { it.alsKontext(context) } + Langzeitkontext.alsKontext(context)
 
 /** Das Gedächtnis von Jarvis: vier Dateien, drei Werkzeuge (merken, vergessen, lesen). */
 class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
@@ -663,6 +664,29 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             art.datei.defekt(context)?.let { return@Werkzeug Ergebnis("Nicht gelöscht. $it Sag Frank das.", fehler = true) }
             art.datei.loesche(context, nummer)?.let { Ergebnis("${art.wort} gelöscht: „${it.text}“. Sag Frank in einem Satz, was du gestrichen hast.") }
                 ?: Ergebnis("Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht.", fehler = true)
+        },
+        Werkzeug(
+            name = "jarvis_langzeitkontext",
+            titel = "Langzeitkontext lesen oder ersetzen",
+            beschreibung = "Jarvis: Franks Langzeitkontext, eine von ihm gepflegte Textdatei mit dauerhaftem Hintergrundwissen über ihn (auf Handy und Mac derselbe Stand). " +
+                "aktion lesen liefert in der ersten Zeile „STAND <zahl>“ und danach den Text. aktion ersetzen schreibt den ganzen Text neu, nur auf Franks ausdrücklichen Wunsch; " +
+                "basis_stand ist die Zahl vom Lesen und verhindert das Überschreiben einer neueren Fassung.",
+            schema = schema(
+                "aktion" to text("lesen (Vorgabe) oder ersetzen.", listOf("lesen", "ersetzen")),
+                "text" to text("Bei ersetzen: der ganze neue Text."),
+                "basis_stand" to text("Bei ersetzen: die Zahl aus STAND vom letzten Lesen."),
+            ),
+            nurLesen = false,
+        ) { a ->
+            if (a.optString("aktion", "lesen") != "ersetzen") return@Werkzeug Ergebnis("STAND ${Langzeitkontext.stand(context)}\n${Langzeitkontext.text(context)}")
+            if (!a.has("text")) return@Werkzeug Ergebnis("Der Text fehlt, nichts geändert.", fehler = true)
+            val neu = a.optString("text")
+            if (neu.length > Langzeitkontext.HOECHSTENS) return@Werkzeug Ergebnis("Zu lang (${neu.length} von höchstens ${Langzeitkontext.HOECHSTENS} Zeichen), nichts geändert.", fehler = true)
+            val basis = a.optString("basis_stand").trim().toLongOrNull()
+            if (basis != null && basis != Langzeitkontext.stand(context)) return@Werkzeug Ergebnis("Nicht gespeichert: Der Langzeitkontext wurde inzwischen auf einem anderen Gerät geändert. Erst neu laden.", fehler = true)
+            val stand = Langzeitkontext.ersetze(context, neu)
+            de.frank.jarvis.gedaechtnis.Lagebild.anstossen(context.applicationContext, listOf(de.frank.jarvis.gedaechtnis.Bereich.GEMERKT), "Langzeitkontext geändert")
+            Ergebnis("STAND $stand\nGespeichert (${neu.length} Zeichen).")
         },
         Werkzeug(
             name = "jarvis_gemerktes_lesen",

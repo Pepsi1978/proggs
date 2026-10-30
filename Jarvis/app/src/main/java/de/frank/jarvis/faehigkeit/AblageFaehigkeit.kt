@@ -89,7 +89,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                     "art" to text("Nur für die Liste: nach Dateiart filtern.", listOf("alle") + Kategorie.entries.map { it.name.lowercase(Locale.ROOT) }),
                 ),
             ) { a -> (if (a.gesetzt("titel")) w("ablage_lesen") else w("ablage_liste")).ausfuehren(a) },
-            w("ablage_zeigen"), w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"), w("in_ablage_uebernehmen"), w("pdf_entwurf_pruefen"),
+            w("ablage_struktur"), w("ablage_datei"), w("ablage_zeigen"), w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"), w("in_ablage_uebernehmen"), w("pdf_entwurf_pruefen"),
         )
     }
 
@@ -163,6 +163,63 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     private val einzeln: List<Werkzeug> = listOf(
+        Werkzeug(
+            name = "ablage_struktur",
+            titel = "Ablage als Verzeichnis (Mac-App)",
+            beschreibung = "Nur technisch für den Ablage-Explorer der Mac-App, nicht für Gespräche: alle Einträge mit ihren Dateien als JSON. Für Gespräche nimm ablage_lesen.",
+            schema = schema("eintrag_id" to text("Mit nur_text: Eintrag, dessen Text gelesen wird."), "nur_text" to schalter("Nur den Text dieses Eintrags liefern.")),
+            nurLesen = true,
+        ) { a ->
+            withContext(Dispatchers.IO) {
+                if (a.optBoolean("nur_text")) {
+                    val e = speicher.eintraege().firstOrNull { it.id == a.optString("eintrag_id") } ?: return@withContext Ergebnis("Diesen Eintrag gibt es nicht mehr.", fehler = true)
+                    return@withContext Ergebnis(JSONObject().put("text", speicher.text(e, 240_000)).toString())
+                }
+                val liste = JSONArray()
+                speicher.eintraege().forEach { e ->
+                    // Recherche-Agenten beginnen ihren Bericht mit „# Recherche: Auftrag“.
+                    val kopf = runCatching { speicher.textDatei(e)?.bufferedReader()?.use { it.readLine() } }.getOrNull().orEmpty()
+                    val recherche = "recherche" in e.titel.lowercase(Locale.GERMAN) || kopf.startsWith("# Recherche")
+                    val dateien = JSONArray()
+                    e.anhaenge.forEach { an ->
+                        dateien.put(JSONObject().put("id", an.id).put("name", an.originalName).put("art", an.art.name).put("kategorie", an.art.kategorie.name)
+                            .put("endung", an.endung).put("groesse", an.groesse))
+                    }
+                    liste.put(JSONObject().put("id", e.id).put("titel", e.titel).put("geaendert", e.geaendert).put("hat_text", e.hatText)
+                        .put("recherche", recherche).put("dateien", dateien))
+                }
+                Ergebnis(JSONObject().put("eintraege", liste).toString())
+            }
+        },
+        Werkzeug(
+            name = "ablage_datei",
+            titel = "Datei der Ablage holen (Mac-App)",
+            beschreibung = "Nur technisch für den Ablage-Explorer der Mac-App, nicht für Gespräche: liefert eine Datei als Base64, stückweise ab versatz oder mit vorschau (längste Kante in Pixeln) als JPEG.",
+            schema = schema(
+                "eintrag_id" to text("Kennung des Eintrags."), "datei_id" to text("Kennung der Datei."),
+                "versatz" to zahl("Ab diesem Byte."), "vorschau" to zahl("Längste Kante der Vorschau in Pixeln."),
+                pflicht = listOf("eintrag_id", "datei_id"),
+            ),
+            nurLesen = true,
+        ) { a ->
+            withContext(Dispatchers.IO) {
+                val e = speicher.eintraege().firstOrNull { it.id == a.optString("eintrag_id") } ?: return@withContext Ergebnis("Diesen Eintrag gibt es nicht mehr.", fehler = true)
+                val an = e.anhaenge.firstOrNull { it.id == a.optString("datei_id") } ?: return@withContext Ergebnis("Diese Datei gibt es nicht mehr.", fehler = true)
+                val datei = speicher.datei(an)
+                val vorschau = a.optInt("vorschau", 0)
+                if (vorschau > 0) {
+                    val bild = runCatching {
+                        if (an.art == Art.PDF) Medien.pdfSeite(datei, 0, vorschau)?.second else Medien.bildVerkleinert(datei, vorschau)
+                    }.getOrNull() ?: return@withContext Ergebnis("Keine Vorschau möglich.", fehler = true)
+                    val bytes = ByteArrayOutputStream().also { bild.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
+                    return@withContext Ergebnis(JSONObject().put("daten", Base64.encodeToString(bytes, Base64.NO_WRAP)).put("ende", true).toString())
+                }
+                val versatz = a.optLong("versatz", 0L).coerceAtLeast(0L)
+                val puffer = ByteArray(STUECK)
+                val gelesen = java.io.RandomAccessFile(datei, "r").use { f -> f.seek(versatz); f.read(puffer).coerceAtLeast(0) }
+                Ergebnis(JSONObject().put("daten", Base64.encodeToString(puffer, 0, gelesen, Base64.NO_WRAP)).put("ende", versatz + gelesen >= datei.length()).toString())
+            }
+        },
         Werkzeug(
             name = "ablage_zeigen",
             titel = "Datei aus der Ablage anzeigen",
@@ -558,6 +615,8 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
     private suspend fun herkunft(): String = if (currentCoroutineContext()[AgentenKontext] != null) "Jarvis" else "ChatGPT"
 
     private companion object {
+        /** So viele Bytes je Abruf: Base64 passt noch sicher durch den Relay. */
+        const val STUECK = 300_000
         const val CHATGPT_DATEIEN = "chatgpt_dateien"
         const val OHNE_ABLAGE = "Nicht gespeichert: Frank hat für diesen Auftrag keine Ablage verlangt. Schreib alles in deinen Bericht (Adressen von Dateien als Link); " +
             "der Bericht kommt ins Gespräch, und Frank kann ihn danach selbst in die Ablage übernehmen."

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +44,7 @@ import de.frank.jarvis.gedaechtnis.Bereich
 import de.frank.jarvis.gedaechtnis.Gespraechsgedaechtnis
 import de.frank.jarvis.gedaechtnis.Gespraechsnotiz
 import de.frank.jarvis.gedaechtnis.Lagebild
+import de.frank.jarvis.gedaechtnis.Langzeitkontext
 import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
@@ -119,6 +123,8 @@ fun GedaechtnisBildschirm(modifier: Modifier = Modifier) {
                     if (meldung.isNotEmpty()) Text(meldung, color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
                 }
             }
+
+            item(key = "langzeitkontext") { LangzeitkontextKarte() }
 
             item(key = "funktionen") {
                 Karte(Modifier.antippen { FunktionenAnsicht.offen = true }) {
@@ -229,5 +235,58 @@ private fun alter(millis: Long): String {
         minuten < 60 -> "vor $minuten Min."
         minuten < 24 * 60 -> "vor ${minuten / 60} Std."
         else -> "vor ${minuten / (24 * 60)} Tagen"
+    }
+}
+
+/**
+ * Franks Langzeitkontext zum Bearbeiten, eingeklappt, damit die Liste klein bleibt. Dieselbe Datei bearbeitet er auch am Mac:
+ * Solange er hier nichts ändert, kommt ein neuerer Stand von selbst an.
+ */
+@Composable
+private fun LangzeitkontextKarte() {
+    val f = LocalFarben.current
+    val app = LocalContext.current.applicationContext
+    val bereich = rememberCoroutineScope()
+    var offen by remember { mutableStateOf(false) }
+    var text by remember { mutableStateOf("") }
+    var gelesen by remember { mutableStateOf("") }
+    var stand by remember { mutableStateOf(0L) }
+    var meldung by remember { mutableStateOf("") }
+    LaunchedEffect(offen) {
+        while (offen) {
+            val neu = withContext(Dispatchers.IO) { Langzeitkontext.stand(app) to Langzeitkontext.text(app) }
+            if (neu.first != stand && text == gelesen) { stand = neu.first; text = neu.second; gelesen = neu.second }
+            delay(5_000)
+        }
+    }
+    Karte(toenung = f.primaer) {
+        Row(Modifier.fillMaxWidth().antippen { offen = !offen }, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Langzeitkontext", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text("Deine Textdatei für Jarvis, auf Handy und Mac gleich. Füg zum Beispiel ein, was ChatGPT sich über dich gemerkt hat.", color = f.textLeise, fontSize = 13.sp)
+            }
+            Text(if (offen) "Zuklappen" else "Öffnen", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+        if (offen) {
+            OutlinedTextField(
+                value = text, onValueChange = { text = it; meldung = "" },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 420.dp).padding(top = 10.dp),
+                textStyle = TextStyle(color = f.text, fontSize = 15.sp),
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${text.length} Zeichen", Modifier.weight(1f), color = f.textLeise, fontSize = 13.sp)
+                if (text != gelesen) Knopf("Speichern") {
+                    val neu = text
+                    bereich.launch {
+                        val aktuell = withContext(Dispatchers.IO) { Langzeitkontext.stand(app) }
+                        if (aktuell != stand) { meldung = "Nicht gespeichert: Der Text wurde inzwischen am Mac geändert. Sichere deine Fassung und öffne die Karte neu."; return@launch }
+                        stand = withContext(Dispatchers.IO) { Langzeitkontext.ersetze(app, neu).also { Lagebild.anstossen(app, listOf(Bereich.GEMERKT), "Langzeitkontext geändert") } }
+                        gelesen = neu
+                        meldung = "Gespeichert, auf Handy und Mac gleich."
+                    }
+                }
+            }
+            if (meldung.isNotEmpty()) Text(meldung, color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+        }
     }
 }

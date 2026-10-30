@@ -293,7 +293,7 @@ class McpServer(context: Context) {
         // Inzwischen fertig Gewordenes reicht Jarvis nach (ChatGPT lässt sich nicht von hier aus ansprechen). Jede Meldung gibt es nur
         // einmal; deshalb nur an Ergebnisse, die zur Ablage gehören oder ein Gespräch beginnen. Sonst verbrauchte sie ein fremdes
         // Gespräch (z. B. eine Programmiersitzung, die nur die Tagesauswertung liest), und das anstoßende erführe nichts.
-        val fertig = if (name == "jarvis_kontext" || name == "bild_erzeugen" || name.startsWith("ablage_")) AblageZentrale.fertigFuerPlugin() else emptyList()
+        val fertig = if (name == "jarvis_kontext" || name == "bild_erzeugen" || (name.startsWith("ablage_") && name != "ablage_struktur" && name != "ablage_datei")) AblageZentrale.fertigFuerPlugin() else emptyList()
         val nachtrag = if (fertig.isEmpty()) "" else "\n\nINZWISCHEN FERTIG (sag es Frank jetzt von dir aus):\n" + fertig.joinToString("\n") { "- $it" }
         // Die Anleitung liest ein Programm nur beim Verbinden. Damit Franks Regeln, Ziele und das Wissen über ihn trotzdem immer und sofort gelten, reicht Jarvis sie mit den Ergebnissen nach.
         // Jarvis kann Gespräche nicht unterscheiden (der Relay reicht nur den Rumpf weiter). Deshalb:
@@ -394,7 +394,7 @@ class McpServer(context: Context) {
          */
         private val nebenher = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         /** Die Werkzeuge des Gedächtnisses geben ihre Einträge selbst zurück; ihnen liegt der Kontext nicht noch einmal bei. */
-        private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_lesen")
+        private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_lesen", "jarvis_langzeitkontext", "ablage_struktur", "ablage_datei")
         /**
          * Schreibende Werkzeuge, bei denen eine Wiederholung nach Verbindungsabbruch Schaden anrichtet (doppelt angelegt,
          * doppelt verschickt, doppelt gestartet). Nicht hierher: Werkzeuge, die zum Nachfragen bewusst wiederholt werden
@@ -412,7 +412,7 @@ class McpServer(context: Context) {
         private const val JE_WERKZEUG = 4
         private val plaetze = java.util.concurrent.ConcurrentHashMap<String, Semaphore>()
         /** Werkzeuge ohne „VORGANG FERTIG“: eigene Übersichten und die Werkzeuge der Programmier-Sitzungen. */
-        private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen", "funktionen_lesen")
+        private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen", "funktionen_lesen", "ablage_struktur", "ablage_datei", "jarvis_langzeitkontext")
         /** Wann eine Vorgangsmeldung zuletzt an einem Ergebnis hing (Kennung → Zeit). */
         private val gezeigt = HashMap<String, Long>()
         /** Unterstützte Protokollstände, neuester zuerst. Wünscht der Client einen davon, bekommt er ihn. */
