@@ -1,21 +1,35 @@
 package de.frank.karteikartenlernen.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import android.app.Activity
+import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.frank.karteikartenlernen.R
+import kotlinx.coroutines.delay
 
 @Immutable
 data class AppPalette(
@@ -77,13 +91,46 @@ val Newsreader = FontFamily(
 fun appPalette(dark: Boolean, profile: Int): AppPalette =
     (if (dark) darkBase else lightBase)[profile.coerceIn(0, 2)]
 
+/** Einzige Quelle für den Modus: Automatisch folgt der Sonne in Neuenhagen (nicht dem System), sonst gilt festDunkel. */
 @Composable
 fun KarteikartenTheme(
-    dark: Boolean = isSystemInDarkTheme(),
-    profile: Int = 0,
+    auto: Boolean,
+    festDunkel: Boolean,
+    darkProfile: Int = 0,
+    lightProfile: Int = 0,
     content: @Composable () -> Unit,
 ) {
+    // Automatisch: jede Minute prüfen, nur solange die App sichtbar ist.
+    var sonneDunkel by remember(auto) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, auto) {
+        if (!auto) return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
+    val dark = if (auto) sonneDunkel else festDunkel
+    val profile = if (dark) darkProfile else lightProfile
     val palette = appPalette(dark, profile)
+    val context = LocalContext.current
+    // Systemleisten und eigene Fenster (ModalBottomSheet) lesen sonst den System-Modus.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, dark) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
+    SideEffect {
+        (context as? Activity)?.window?.let { fenster ->
+            WindowCompat.getInsetsController(fenster, fenster.decorView).run {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
     val scheme = remember(palette) { if (dark) {
         darkColorScheme(
             primary = palette.accent,
@@ -113,7 +160,7 @@ fun KarteikartenTheme(
         titleLarge = TextStyle(fontFamily = Newsreader, fontWeight = FontWeight.SemiBold, fontSize = 24.sp),
         headlineMedium = TextStyle(fontFamily = Newsreader, fontWeight = FontWeight.SemiBold, fontSize = 28.sp),
     ) }
-    androidx.compose.runtime.CompositionLocalProvider(LocalAppPalette provides palette) {
+    CompositionLocalProvider(LocalAppPalette provides palette, LocalConfiguration provides konfig) {
         MaterialTheme(colorScheme = scheme, typography = typography, content = content)
     }
 }

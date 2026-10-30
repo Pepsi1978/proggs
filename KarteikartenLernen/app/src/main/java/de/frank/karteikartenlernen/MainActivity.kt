@@ -13,7 +13,6 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import de.frank.karteikartenlernen.audio.EdgeTtsPlayer
 import de.frank.karteikartenlernen.model.MicState
 import de.frank.karteikartenlernen.ui.KarteikartenApp
@@ -87,12 +86,6 @@ class MainActivity : ComponentActivity() {
                 onOpenAuthPage = {
                     state.authVerificationUri?.let { uri ->
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
-                    }
-                },
-                onDarkChanged = { dark ->
-                    WindowCompat.getInsetsController(window, window.decorView).apply {
-                        isAppearanceLightStatusBars = !dark
-                        isAppearanceLightNavigationBars = !dark
                     }
                 },
             )

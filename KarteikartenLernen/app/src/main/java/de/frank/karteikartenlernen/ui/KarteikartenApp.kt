@@ -42,15 +42,12 @@ fun KarteikartenApp(
     onStopSpeaking: () -> Unit,
     onLogin: () -> Unit,
     onOpenAuthPage: () -> Unit,
-    onDarkChanged: (Boolean) -> Unit,
 ) {
     var learningNarrationEnabled by remember { mutableStateOf(false) }
     var activeReadAloudTarget by remember { mutableStateOf<String?>(null) }
     var currentResearchSpokenSegments by remember { mutableIntStateOf(0) }
     val currentResearchTarget = "research:current"
-    val profile = if (state.settings.dark) state.settings.darkProfile else state.settings.lightProfile
-    KarteikartenTheme(state.settings.dark, profile) {
-        LaunchedEffect(state.settings.dark) { onDarkChanged(state.settings.dark) }
+    KarteikartenTheme(state.settings.auto, state.settings.dark, state.settings.darkProfile, state.settings.lightProfile) {
         LaunchedEffect(activeReadAloudTarget, state.answer, state.generationPhase) {
             if (activeReadAloudTarget != currentResearchTarget) return@LaunchedEffect
             if (state.generationPhase == de.frank.karteikartenlernen.model.GenerationPhase.ANSWER && state.answer.isNullOrEmpty()) {

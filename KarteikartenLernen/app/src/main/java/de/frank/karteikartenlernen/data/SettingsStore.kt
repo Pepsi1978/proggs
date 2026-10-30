@@ -19,6 +19,7 @@ private val Context.dataStore by preferencesDataStore("app_settings")
 
 class SettingsStore(private val context: Context) {
     private object Keys {
+        val auto = booleanPreferencesKey("auto_modus")
         val dark = booleanPreferencesKey("dark")
         val darkProfile = intPreferencesKey("dark_profile")
         val lightProfile = intPreferencesKey("light_profile")
@@ -40,6 +41,8 @@ class SettingsStore(private val context: Context) {
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
         AppSettings(
+            // Ohne gespeicherten Wert (Neuinstallation) startet die App in Automatik; ein früher gewählter fester Modus bleibt fest.
+            auto = p[Keys.auto] ?: (p[Keys.dark] == null),
             dark = p[Keys.dark] ?: true,
             darkProfile = p[Keys.darkProfile] ?: 0,
             lightProfile = p[Keys.lightProfile] ?: 0,
@@ -62,6 +65,7 @@ class SettingsStore(private val context: Context) {
 
     suspend fun save(value: AppSettings) {
         context.dataStore.edit { p ->
+            p[Keys.auto] = value.auto
             p[Keys.dark] = value.dark
             p[Keys.darkProfile] = value.darkProfile
             p[Keys.lightProfile] = value.lightProfile

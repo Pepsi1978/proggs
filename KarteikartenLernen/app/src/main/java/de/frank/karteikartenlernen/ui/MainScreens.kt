@@ -229,21 +229,27 @@ fun SettingsScreen(
             SettingTextField("Gemini-Modell", keys.geminiModel, DEFAULT_GEMINI_MODEL, secret = false) { value -> onApiKeys { it.copy(geminiModel = value) } }
         }
         SettingsSection("DARSTELLUNG") {
-            SettingRow("Erscheinungsbild") {
-                SegmentedControl(listOf("Hell", "Dunkel"), if (s.dark) "Dunkel" else "Hell", onSelect = { selected -> onSettings { old -> old.copy(dark = selected == "Dunkel") } })
+            // Effektiver Modus (bei Automatik von der Sonne bestimmt) kommt aus der aktiven Palette.
+            val dunkelJetzt = c.dark
+            SettingRow("Erscheinungsbild", if (s.auto) "Automatisch nach der Sonne" else null) {
+                SegmentedControl(
+                    listOf("Auto", "Hell", "Dunkel"),
+                    if (s.auto) "Auto" else if (s.dark) "Dunkel" else "Hell",
+                    onSelect = { selected -> onSettings { old -> if (selected == "Auto") old.copy(auto = true) else old.copy(auto = false, dark = selected == "Dunkel") } },
+                )
             }
-            SettingRow("Farbprofil", if (s.dark) listOf("Mitternacht", "Bordeaux", "Tanne")[s.darkProfile] else listOf("Elfenbein", "Salbei", "Porzellan")[s.lightProfile]) {
+            SettingRow("Farbprofil", if (dunkelJetzt) listOf("Mitternacht", "Bordeaux", "Tanne")[s.darkProfile.coerceIn(0, 2)] else listOf("Elfenbein", "Salbei", "Porzellan")[s.lightProfile.coerceIn(0, 2)]) {
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                     repeat(3) { index ->
-                        val selected = (if (s.dark) s.darkProfile else s.lightProfile) == index
-                        val colors = if (s.dark) {
+                        val selected = (if (dunkelJetzt) s.darkProfile else s.lightProfile) == index
+                        val colors = if (dunkelJetzt) {
                             listOf(Color(0xFFD9A95B) to Color(0xFF7FA8C9), Color(0xFFD98098) to Color(0xFFC9A06B), Color(0xFF8FBF9F) to Color(0xFFC9B06B))
                         } else {
                             listOf(Color(0xFFA87C2F) to Color(0xFF5B7FA6), Color(0xFF537F64) to Color(0xFFC07A4A), Color(0xFF4A5FB5) to Color(0xFF8A6FC0))
                         }[index]
                         Box(
                             Modifier.size(30.dp).clip(CircleShape).background(Brush.linearGradient(listOf(colors.first, colors.second))).border(if (selected) 2.5.dp else 0.dp, c.text, CircleShape).clickable {
-                                onSettings { old -> if (old.dark) old.copy(darkProfile = index) else old.copy(lightProfile = index) }
+                                onSettings { old -> if (dunkelJetzt) old.copy(darkProfile = index) else old.copy(lightProfile = index) }
                             },
                         )
                     }

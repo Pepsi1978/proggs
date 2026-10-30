@@ -91,6 +91,8 @@ fun advanceLearningQueue(queue: List<Int>, position: Int, known: Boolean): Queue
 }
 
 data class AppSettings(
+    /** Automatisch nach der Sonne in Neuenhagen; dark gilt nur bei festem Modus. */
+    val auto: Boolean = true,
     val dark: Boolean = true,
     val darkProfile: Int = 0,
     val lightProfile: Int = 0,
