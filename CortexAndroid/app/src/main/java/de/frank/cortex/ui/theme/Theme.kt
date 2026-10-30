@@ -2,6 +2,8 @@ package de.frank.cortex.ui.theme
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
 
 private val DarkScheme = darkColorScheme(
     primary = Iris,
@@ -56,9 +58,11 @@ fun CortexTheme(
 ) {
     val colorScheme = if (darkTheme) DarkScheme else LightScheme
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = CortexTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalConfiguration provides appModusKonfiguration(darkTheme)) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = CortexTypography,
+            content = content
+        )
+    }
 }

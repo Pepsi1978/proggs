@@ -1803,14 +1803,14 @@ fun SettingsScreen(
             modifier = Modifier.padding(13.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(13.dp),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(13.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 data class ThemeOpt(val id: String, val name: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
                 val opts = listOf(
                     ThemeOpt("dark", "Dunkel", Icons.Default.DarkMode),
                     ThemeOpt("light", "Hell", Icons.Default.LightMode),
-                    ThemeOpt("system", "System", Icons.Default.PhoneAndroid)
+                    ThemeOpt("system", "Automatisch nach der Sonne", Icons.Default.BrightnessAuto)
                 )
                 opts.forEach { opt ->
                     val active = themeMode == opt.id
@@ -1822,6 +1822,7 @@ fun SettingsScreen(
                             if (active) Iris else if (isDark) DarkFieldBorder else LightFieldBorder),
                         modifier = Modifier
                             .weight(1f)
+                            .fillMaxHeight()
                             .clickable {
                                 if (!active) onSetThemeMode(opt.id)
                             }
@@ -1837,6 +1838,7 @@ fun SettingsScreen(
                                 tint = if (active) Iris else MaterialTheme.colorScheme.onSurface
                             )
                             Text(opt.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 color = if (active) Iris else MaterialTheme.colorScheme.onSurface)
                         }
                     }

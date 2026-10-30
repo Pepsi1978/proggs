@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -214,10 +213,11 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             var themeMode by rememberSaveable { mutableStateOf(SettingsStore.themeMode) }
-            val systemDark = isSystemInDarkTheme()
+            // Der gespeicherte Wert "system" bedeutet seit der Sonnen-Automatik: nach der Sonne.
+            val automatikDunkel = sonneDunkel(themeMode == "system")
             val isDark = when (themeMode) {
                 "light" -> false
-                "system" -> systemDark
+                "system" -> automatikDunkel
                 else -> true
             }
             val vpnState by WireGuardManager.state.collectAsStateWithLifecycle()

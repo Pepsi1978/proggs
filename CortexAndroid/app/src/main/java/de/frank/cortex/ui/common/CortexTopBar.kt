@@ -162,7 +162,11 @@ fun CortexTopBar(
                     "light" -> Icons.Default.LightMode
                     else -> Icons.Default.BrightnessAuto
                 },
-                contentDescription = "Theme",
+                contentDescription = when (themeMode) {
+                    "dark" -> "Dunkel"
+                    "light" -> "Hell"
+                    else -> "Automatisch nach der Sonne"
+                },
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(19.dp)
             )

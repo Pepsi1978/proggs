@@ -422,6 +422,7 @@ object SettingsStore {
 
     // --- UI-Präferenzen (klartext ok) ---
 
+    /** "dark", "light" oder "system"; "system" ist historisch benannt und bedeutet: automatisch nach der Sonne. */
     var themeMode: String
         get() = plain.getString("theme_mode", "dark") ?: "dark"
         set(value) = plain.edit().putString("theme_mode", value).apply()
