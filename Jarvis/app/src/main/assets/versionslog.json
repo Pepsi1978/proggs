@@ -446,6 +446,7 @@
     {"versionCode": 440, "versionName": "1.8.429", "stand": "30.10.2026, 12:40 Uhr", "notiz": "Die Löschfrage nach dem Senden erscheint jetzt ohne Tastatur und Eingabe zu stören, und ein inzwischen geänderter Prompt wird dabei nicht mehr gelöscht."},
     {"versionCode": 441, "versionName": "1.8.430", "stand": "30.10.2026, 12:44 Uhr", "notiz": "Testversion ohne Funktionsänderung, um das neue Zeitfenster von UpdateStation vor der Jarvis-Installation zu prüfen"},
     {"versionCode": 442, "versionName": "1.8.431", "stand": "30.10.2026, 12:49 Uhr", "notiz": "Vor einer schnellen Installation über Tunnel oder WLAN fragt Jarvis in einem Fenster nach dem Zeitpunkt: sofort oder in einer bis fünf Minuten, damit eine laufende Aufnahme nicht abbricht"},
-    {"versionCode": 443, "versionName": "1.8.432", "stand": "30.10.2026, 12:59 Uhr", "notiz": "Die Frage vor der schnellen Installation erscheint jetzt als Overlay im Jarvis-Design über jeder App, die App darunter bleibt bedienbar, und ohne Antwort startet die Installation nach 30 Sekunden"}
+    {"versionCode": 443, "versionName": "1.8.432", "stand": "30.10.2026, 12:59 Uhr", "notiz": "Die Frage vor der schnellen Installation erscheint jetzt als Overlay im Jarvis-Design über jeder App, die App darunter bleibt bedienbar, und ohne Antwort startet die Installation nach 30 Sekunden"},
+    {"versionCode": 444, "versionName": "1.8.433", "stand": "30.10.2026, 13:12 Uhr", "notiz": "Die Installationsfrage ist abgesichert: Kann das Overlay nicht erscheinen, wird nicht installiert, die 30 Sekunden zählen erst ab dem sichtbaren Fenster, und ein Fehler beim Start reißt Jarvis nicht mehr mit"}
 ]
 }

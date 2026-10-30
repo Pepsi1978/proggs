@@ -123,10 +123,11 @@
             android:exported="false"
             android:foregroundServiceType="microphone" />
 
-        <!-- Overlay-Frage vor einer adb-Installation; gestartet von Werkzeuge/jarvis-install per adb. -->
+        <!-- Overlay-Frage vor einer adb-Installation; gestartet von Werkzeuge/jarvis-install. DUMP hat die adb-Shell, fremde Apps nicht. -->
         <service
             android:name=".ui.InstallFrageDienst"
             android:exported="true"
+            android:permission="android.permission.DUMP"
             android:foregroundServiceType="shortService" />
 
         <!-- Unsichtbar: startet nach Neustart und Update den Weckwort-Dienst (das darf nur eine sichtbare App). -->

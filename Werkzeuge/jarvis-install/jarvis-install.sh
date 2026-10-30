@@ -4,13 +4,16 @@
 # Ohne Antwort wird nach 30 Sekunden installiert. Die APK liegt schon vor der Frage in einer Installationssitzung am
 # Handy, damit „Sofort“ wirklich sofort installiert: Nach der Antwort fehlt nur noch das Abschließen der Sitzung.
 # Aufruf: jarvis-install.sh <apk> [-s <gerät>]
+# Kann das Overlay nicht erscheinen, wird nicht installiert.
 # Letzte Zeile JARVIS_INSTALL_STATUS: installiert oder fehler.
 set -u
 PAKET=de.frank.jarvis
 FENSTER=$PAKET/.ui.InstallFrageDienst
 ANTWORT=/sdcard/Android/data/$PAKET/files/install-antwort.txt
 ZWISCHENLAGER=/data/local/tmp/jarvis-install.apk
-WARTEZEIT_S=30
+# Frist des Overlays plus Reserve; sie zählt ab seiner Meldung „offen“, damit jeder Tipp im sichtbaren Fenster noch gilt.
+WARTEZEIT_S=33
+MELDEFRIST_S=20
 WLAN_SKRIPT="$(cd "$(dirname "$0")/.." && pwd)/adb-wlan/adb-wlan.sh"
 
 ende() { echo "JARVIS_INSTALL_STATUS=$1${2:+ ($2)}"; [ "$1" = fehler ] && exit 1; exit 0; }
@@ -38,6 +41,7 @@ waehle_geraet() {
 }
 verbinde() {
   if [ -n "$GERAET" ] && [ "$("$ADB_BIN" -s "$GERAET" get-state 2>/dev/null)" = device ]; then return 0; fi
+  GERAET=""
   GERAET=$(waehle_geraet)
   [ -n "$GERAET" ] && return 0
   "$WLAN_SKRIPT" >/dev/null 2>&1
@@ -47,6 +51,17 @@ verbinde() {
 handy() { "$ADB_BIN" -s "$GERAET" shell "$@" 2>&1 | tr -d '\r'; }
 
 SITZUNG=""
+ABGESCHLOSSEN=""
+SERIE=""
+# Auch bei Abbruch: Die Sitzung hält sonst die ganze APK am Handy, bis Android sie Tage später entsorgt.
+aufraeumen() {
+  [ -n "$GERAET" ] || return 0
+  [ -n "$SITZUNG" ] && [ -z "$ABGESCHLOSSEN" ] && handy pm install-abandon "$SITZUNG" >/dev/null
+  handy rm -f "$ZWISCHENLAGER" "$ANTWORT" >/dev/null
+}
+trap aufraeumen EXIT
+trap 'exit 130' INT TERM
+
 bereite_vor() {
   echo "Lade die APK vorab aufs Handy über $GERAET ..."
   "$ADB_BIN" -s "$GERAET" push "$APK" "$ZWISCHENLAGER" >/dev/null 2>&1 || ende fehler "APK ließ sich nicht aufs Handy laden"
@@ -57,21 +72,24 @@ bereite_vor() {
   [ -n "$SITZUNG" ] || ende fehler "Installationssitzung ließ sich nicht anlegen: $ausgabe"
   ausgabe=$(handy pm install-write -S "$groesse" "$SITZUNG" base.apk "$ZWISCHENLAGER")
   handy rm -f "$ZWISCHENLAGER" >/dev/null
-  if ! echo "$ausgabe" | grep -q '^Success'; then
-    handy pm install-abandon "$SITZUNG" >/dev/null
-    ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe"
-  fi
+  echo "$ausgabe" | grep -q '^Success' || ende fehler "APK ließ sich nicht in die Sitzung schreiben: $ausgabe"
 }
 installiere() {
   verbinde || ende fehler "Handy nicht erreichbar"
+  # Nach einem Verbindungsabriss kann die Adresse wechseln (WLAN, Tunnel); die Sitzung gilt aber nur auf diesem Handy.
+  [ "$(handy getprop ro.serialno)" = "$SERIE" ] || ende fehler "anderes Gerät verbunden, Sitzung gehört zu $SERIE"
   local ausgabe
   ausgabe=$(handy pm install-commit "$SITZUNG")
   echo "$ausgabe" | tail -1
-  echo "$ausgabe" | grep -q '^Success' && ende installiert "$GERAET"
+  if echo "$ausgabe" | grep -q '^Success'; then
+    ABGESCHLOSSEN=1
+    ende installiert "$GERAET"
+  fi
   ende fehler "Installation gescheitert: $(echo "$ausgabe" | tail -1)"
 }
 
 verbinde || ende fehler "Handy nicht erreichbar"
+SERIE=$(handy getprop ro.serialno)
 bereite_vor
 
 KENNUNG="$(date +%s)-$$"
@@ -82,17 +100,23 @@ if echo "$START" | grep -q "Not found"; then
   echo "Installierte Jarvis-Version hat das Overlay noch nicht, installiere ohne Rückfrage."
   installiere
 fi
-if echo "$START" | grep -q "^Error"; then
-  handy pm install-abandon "$SITZUNG" >/dev/null
-  ende fehler "Overlay ließ sich nicht öffnen: $(echo "$START" | grep -m1 '^Error')"
-fi
-echo "Overlay geöffnet, warte auf Antwort (höchstens $WARTEZEIT_S s) ..."
+echo "$START" | grep -q "^Error" && ende fehler "Overlay ließ sich nicht öffnen: $(echo "$START" | grep -m1 '^Error')"
 
-BIS=$(( $(date +%s) + WARTEZEIT_S ))
+MELDUNG_BIS=$(( $(date +%s) + MELDEFRIST_S ))
+BIS=""
 WAHL=""
-while [ "$(date +%s)" -lt "$BIS" ]; do
+while :; do
+  JETZT=$(date +%s)
+  [ -n "$BIS" ] && [ "$JETZT" -ge "$BIS" ] && break
+  [ -z "$BIS" ] && [ "$JETZT" -ge "$MELDUNG_BIS" ] && ende fehler "Overlay hat sich nicht gemeldet, nicht installiert"
   ZEILE=$(handy cat "$ANTWORT")
   case "$ZEILE" in
+    "$KENNUNG offen")
+      if [ -z "$BIS" ]; then
+        BIS=$(( JETZT + WARTEZEIT_S ))
+        echo "Overlay geöffnet, warte auf Antwort ..."
+      fi ;;
+    "$KENNUNG fehler") ende fehler "Overlay konnte nicht erscheinen, nicht installiert" ;;
     "$KENNUNG "*) WAHL="${ZEILE#* }"; break ;;
   esac
   sleep 0.2
@@ -102,6 +126,6 @@ case "$WAHL" in
   "") echo "Keine Antwort: installiere jetzt." ;;
   0) echo "Gewählt: Sofort" ;;
   [1-5]) echo "Gewählt: in $WAHL Minute(n), Installation um $(date -v+"${WAHL}"M +%H:%M 2>/dev/null || date -d "+$WAHL minutes" +%H:%M) Uhr"; sleep $(( WAHL * 60 )) ;;
-  *) handy pm install-abandon "$SITZUNG" >/dev/null; ende fehler "unbekannte Antwort: $WAHL" ;;
+  *) ende fehler "unbekannte Antwort: $WAHL" ;;
 esac
 installiere

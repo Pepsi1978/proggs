@@ -57,8 +57,8 @@ import java.io.File
 /**
  * Fragt vor einer adb-Installation, wann sie starten soll, damit sie keine laufende Aufnahme abbricht: als Overlay über
  * jeder App, ohne den Fokus zu nehmen, sodass die App darunter bedienbar bleibt. Werkzeuge/jarvis-install startet den
- * Dienst, liest die Antwort aus [DATEI] und installiert selbst, ohne Antwort nach [FRIST_S] Sekunden; Warten und
- * Installieren laufen am Rechner, weil Jarvis dabei beendet wird.
+ * Dienst, liest aus [DATEI] erst „offen“ oder „fehler“ und dann die Antwort und installiert selbst, ohne Antwort nach
+ * [FRIST_S] Sekunden; Warten und Installieren laufen am Rechner, weil Jarvis dabei beendet wird.
  */
 class InstallFrageDienst : Service(), SavedStateRegistryOwner {
 
@@ -79,17 +79,23 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(BENACHRICHTIGUNG, hinweis(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
-        } else {
-            startForeground(BENACHRICHTIGUNG, hinweis())
-        }
         kennung = intent?.getStringExtra(EXTRA_KENNUNG).orEmpty()
-        if (!SprachBlase.darf(this)) {
-            Logbuch.fehler("Installationsfrage: Overlay-Recht fehlt", null)
-            stopSelf()
-        } else if (ansicht == null) {
-            zeige()
+        // Ein abgelehnter Vordergrundstart darf nie den Prozess und damit eine laufende Aufnahme mitreißen.
+        val gestartet = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(BENACHRICHTIGUNG, hinweis(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE)
+            } else {
+                startForeground(BENACHRICHTIGUNG, hinweis())
+            }
+        }.onFailure { Logbuch.fehler("Installationsfrage: Vordergrundstart abgelehnt", it) }.isSuccess
+        when {
+            !gestartet -> scheitere()
+            !SprachBlase.darf(this) -> {
+                Logbuch.fehler("Installationsfrage: Overlay-Recht fehlt", null)
+                scheitere()
+            }
+            ansicht != null || zeige() -> schreibe("offen")
+            else -> scheitere()
         }
         return START_NOT_STICKY
     }
@@ -103,7 +109,13 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
             .build()
     }
 
-    private fun zeige() {
+    /** Meldet dem Skript, dass keine Frage erscheint: Es installiert dann nicht. */
+    private fun scheitere() {
+        schreibe("fehler")
+        stopSelf()
+    }
+
+    private fun zeige(): Boolean {
         val einst = Einstellungen.get(this)
         val neu = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@InstallFrageDienst)
@@ -125,24 +137,24 @@ class InstallFrageDienst : Service(), SavedStateRegistryOwner {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             title = "Jarvis-Installationsfrage"
         }
-        runCatching { getSystemService(WindowManager::class.java).addView(neu, lp) }
+        return runCatching { getSystemService(WindowManager::class.java).addView(neu, lp) }
             .onSuccess { ansicht = neu }
-            .onFailure {
-                Logbuch.fehler("Installationsfrage ließ sich nicht einblenden", it)
-                stopSelf()
-            }
+            .onFailure { Logbuch.fehler("Installationsfrage ließ sich nicht einblenden", it) }
+            .isSuccess
     }
 
+    /** Das Fenster bleibt offen, wenn die Antwort nicht ankäme: Sonst installierte das Skript trotz gewählter Verzögerung. */
     private fun antworte(minuten: Int) {
-        // Erst vollständig schreiben, dann umbenennen: Das Skript fragt laufend ab und darf nie eine halbe Antwort lesen.
-        runCatching {
-            val ordner = getExternalFilesDir(null) ?: return@runCatching
-            val teil = File(ordner, "$DATEI.teil")
-            teil.writeText("$kennung $minuten")
-            teil.renameTo(File(ordner, DATEI))
-        }.onFailure { Logbuch.fehler("Installationsfrage: Antwort nicht gespeichert", it) }
-        stopSelf()
+        if (schreibe("$minuten")) stopSelf()
     }
+
+    /** Erst vollständig schreiben, dann umbenennen: Das Skript fragt laufend ab und darf nie eine halbe Zeile lesen. */
+    private fun schreibe(wert: String): Boolean = runCatching {
+        val ordner = checkNotNull(getExternalFilesDir(null)) { "kein externer Speicher" }
+        val teil = File(ordner, "$DATEI.teil")
+        teil.writeText("$kennung $wert")
+        check(teil.renameTo(File(ordner, DATEI))) { "Umbenennen gescheitert" }
+    }.onFailure { Logbuch.fehler("Installationsfrage: Datei nicht geschrieben", it) }.isSuccess
 
     override fun onDestroy() {
         ansicht?.let { v -> runCatching { getSystemService(WindowManager::class.java).removeViewImmediate(v) } }
