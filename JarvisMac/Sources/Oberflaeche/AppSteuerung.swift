@@ -35,6 +35,8 @@ final class AppSteuerung {
     /// Der Prompt, der gerade im Vollbild bearbeitet wird; promptStand zählt hoch, wenn die Liste neu geladen werden muss.
     var promptBearbeiten: PromptEintrag?
     var promptStand = 0
+    /// Der noch nicht gespeicherte neue Prompt: Er überlebt das Vollbild und den Wechsel des Bereichs.
+    var promptEntwurf = ""
     var handyVerbunden = false
     var handyVersion = ""
     private var hotKeyRefs: [EventHotKeyRef] = []
@@ -56,11 +58,12 @@ final class AppSteuerung {
                 try? await Task.sleep(for: .seconds(handyVerbunden ? 300 : 30))
             }
         }
-        // Guthaben wie am Handy alle 15 Minuten, nicht während Live; jede Minute nur, solange das Handy noch gar nicht geantwortet hat.
+        // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange das Handy nicht erreichbar ist.
         Task {
             while true {
-                if !LiveGespraech.shared.aktiv { await Guthaben.shared.laden() }
-                try? await Task.sleep(for: .seconds(handyVerbunden ? 900 : 60))
+                guard handyVerbunden, !LiveGespraech.shared.aktiv else { try? await Task.sleep(for: .seconds(30)); continue }
+                await Guthaben.shared.laden()
+                try? await Task.sleep(for: .seconds(900))
             }
         }
     }

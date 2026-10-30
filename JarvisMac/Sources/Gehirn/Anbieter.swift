@@ -7,6 +7,24 @@ struct ModellAntwort {
     var eingabeTokens = 0
     var ausgabeTokens = 0
     var cacheTokens = 0
+    var cacheSchreibTokens = 0
+}
+
+/// Listenpreise der Claude-API in Dollar je Million Tokens (Stand 06.10.2026). Cache schreiben = 1,25 × Eingabe. Websuche ist nicht enthalten.
+enum ClaudePreis {
+    private static let tabelle: [String: (ein: Double, aus: Double, cacheLesen: Double)] = [
+        "claude-opus-5-5": (4, 20, 0.20),
+        "claude-sonnet-5-5": (2, 10, 0.20),
+        "claude-fable-5-1": (10, 50, 0.25),
+        "claude-haiku-5-5": (0.10, 0.50, 0.01),
+    ]
+    static func dollar(modell: String, _ a: ModellAntwort) -> Double {
+        guard var p = tabelle[modell] else { return 0 }
+        // Haiku kostet oberhalb von 100 000 Tokens Eingabe das Fünffache.
+        if modell == "claude-haiku-5-5", a.eingabeTokens + a.cacheTokens + a.cacheSchreibTokens > 100_000 { p = (0.50, 2.50, 0.05) }
+        let ein = Double(a.eingabeTokens) * p.ein + Double(a.cacheSchreibTokens) * p.ein * 1.25 + Double(a.cacheTokens) * p.cacheLesen
+        return (ein + Double(a.ausgabeTokens) * p.aus) / 1_000_000
+    }
 }
 
 protocol ModellAnbieter {
@@ -91,6 +109,7 @@ struct AnthropicKlient: ModellAnbieter {
                 if let u = (e["message"] as? JSONObjekt)?["usage"] as? JSONObjekt {
                     ergebnis.eingabeTokens = u["input_tokens"] as? Int ?? 0
                     ergebnis.cacheTokens = u["cache_read_input_tokens"] as? Int ?? 0
+                    ergebnis.cacheSchreibTokens = u["cache_creation_input_tokens"] as? Int ?? 0
                 }
             case "content_block_start":
                 let i = e["index"] as? Int ?? 0

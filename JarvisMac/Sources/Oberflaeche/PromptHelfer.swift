@@ -30,14 +30,18 @@ enum AufgabenText {
         guard !teile.isEmpty else { return (text, 0) }
         var fertig = teile
         var fehlgeschlagen = 0
-        await withTaskGroup(of: (Int, String?).self) { gruppe in
-            for (i, teil) in teile.enumerated() {
-                gruppe.addTask { @MainActor in (i, await Kurzauftrag.frage(teil, system: anweisung)) }
-            }
-            for await (i, antwort) in gruppe {
-                // Das Modell darf aus einer Aufgabe nie zwei machen: ein versehentlicher Trenner im Ergebnis wird zum gewöhnlichen Semikolon.
-                let a = ohneEndTrenner(antwort ?? "").replacingOccurrences(of: trenner, with: "; ")
-                if a.isEmpty { fehlgeschlagen += 1 } else { fertig[i] = a }
+        // Höchstens vier gleichzeitig: Ein Prompt mit dreißig Aufgaben liefe sonst in die Ratenbegrenzung.
+        for start in stride(from: 0, to: teile.count, by: 4) {
+            await withTaskGroup(of: (Int, String?).self) { gruppe in
+                for i in start..<min(start + 4, teile.count) {
+                    let teil = teile[i]
+                    gruppe.addTask { @MainActor in (i, await Kurzauftrag.frage(teil, system: anweisung)) }
+                }
+                for await (i, antwort) in gruppe {
+                    // Das Modell darf aus einer Aufgabe nie zwei machen: ein versehentlicher Trenner im Ergebnis wird zum gewöhnlichen Semikolon.
+                    let a = ohneEndTrenner(antwort ?? "").replacingOccurrences(of: trenner, with: "; ")
+                    if a.isEmpty { fehlgeschlagen += 1 } else { fertig[i] = a }
+                }
             }
         }
         return (fertig.joined(separator: trenner) + (hatEndTrenner ? trenner : ""), fehlgeschlagen)
@@ -56,31 +60,49 @@ enum AufgabenText {
 /// Mikrofon für ein Textfeld: Jede Einsprechung endet mit dem Trenner, damit die nächste folgen kann.
 struct DiktatKnopf: View {
     @Binding var text: String
+    /// Pegel und erkannter Text neben dem Knopf; die Eingabeblase zeigt sie selbst darüber.
+    var vorschau = true
+    var meldeLaeuft: (Bool) -> Void = { _ in }
+    var meldeFehler: (String) -> Void = { _ in }
     @State private var diktat = Diktat.shared
     @State private var laeuft = false
+    @State private var meldung = ""
 
     var body: some View {
         HStack(spacing: 8) {
-            RundKnopf(symbol: laeuft && diktat.aktiv ? "stop.fill" : "mic.fill", hilfe: "Einsprechen", aktiv: laeuft && diktat.aktiv, farbe: Farbe.gruen) {
-                if diktat.aktiv { diktat.stoppen(); return }
-                laeuft = true
-                Task {
-                    if let erkannt = await diktat.hoereBisStille(maxSekunden: 120) { text = AufgabenText.anhaengen(text, erkannt) }
-                    laeuft = false
-                }
-            }
-            if laeuft && diktat.aktiv {
+            RundKnopf(symbol: laeuft && diktat.aktiv ? "stop.fill" : "mic.fill", hilfe: "Einsprechen", aktiv: laeuft && diktat.aktiv, farbe: Farbe.gruen) { druecken() }
+            if vorschau && laeuft && diktat.aktiv {
                 PegelBalken(pegel: diktat.pegel)
                 Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(1)
             }
+            if vorschau && !meldung.isEmpty { Text(meldung).font(.jarvis(12)).foregroundStyle(Farbe.warnung).lineLimit(2) }
+        }
+        .onDisappear { if laeuft { diktat.stoppen() } }
+    }
+
+    private func druecken() {
+        if laeuft { diktat.stoppen(); return }
+        // Ein Diktat, das jemand anderes gestartet hat (Sprachgespräch, Chat), bleibt unangetastet.
+        guard !diktat.aktiv else { melde("Das Mikrofon wird gerade schon benutzt."); return }
+        laeuft = true; melde(""); meldeLaeuft(true)
+        Task {
+            if let erkannt = await diktat.hoereBisStille(maxSekunden: 120) {
+                text = AufgabenText.anhaengen(text, erkannt)
+            } else if let f = diktat.fehler {
+                melde(f)
+            }
+            laeuft = false; meldeLaeuft(false)
         }
     }
+
+    private func melde(_ t: String) { meldung = t; meldeFehler(t) }
 }
 
 /// Mikrofon, KI-Verbesserung je Aufgabe und Rückgängig für einen Prompt.
 struct PromptWerkzeuge: View {
     @Binding var text: String
     @State private var vorher: String?
+    @State private var eigenerStand: String?
     @State private var arbeitet = false
     @State private var meldung = ""
 
@@ -94,10 +116,15 @@ struct PromptWerkzeuge: View {
                 Task {
                     let (neu, fehlgeschlagen) = await AufgabenText.verbessern(alt)
                     arbeitet = false
-                    log("ablage", "Prompt verbessert (\(fehlgeschlagen) Aufgaben unverändert)", wo: "Ablage/Prompts")
                     if fehlgeschlagen > 0 { meldung = "\(fehlgeschlagen) Aufgabe(n) konnten nicht verbessert werden und blieben unverändert." }
                     // Hat Frank währenddessen weitergeschrieben oder diktiert, bleibt sein Text stehen.
-                    if text == alt, neu != alt { vorher = alt; text = neu }
+                    if text != alt {
+                        meldung = "Du hast währenddessen weitergeschrieben, deshalb bleibt dein Text unverändert."
+                        log("ablage", "Prompt-Verbesserung verworfen, Text wurde währenddessen geändert", wo: "Ablage/Prompts")
+                    } else if neu != alt {
+                        vorher = alt; eigenerStand = neu; text = neu
+                        log("ablage", "Prompt verbessert (\(fehlgeschlagen) Aufgaben unverändert)", wo: "Ablage/Prompts")
+                    }
                 }
             }
             if arbeitet { ProgressView().controlSize(.small) }
@@ -106,6 +133,8 @@ struct PromptWerkzeuge: View {
             }
             if !meldung.isEmpty { Text(meldung).font(.jarvis(12)).foregroundStyle(Farbe.warnung) }
         }
+        // Rückgängig gilt nur für den Stand direkt nach der KI; danach würde es spätere Änderungen löschen.
+        .onChange(of: text) { _, neu in if neu != eigenerStand { vorher = nil } }
     }
 }
 
@@ -118,6 +147,8 @@ struct PromptEditorVollbild: View {
     @State private var speichert = false
     @State private var frageVerwerfen = false
     @State private var vollbildGeschaltet = false
+    /// Der Prompt wurde inzwischen geändert oder gelöscht: Der nächste Klick auf Speichern legt ihn neu an.
+    @State private var alsNeu = false
     @FocusState private var fokus: Bool
 
     init(prompt: PromptEintrag) {
@@ -125,7 +156,7 @@ struct PromptEditorVollbild: View {
         _text = State(initialValue: prompt.text)
     }
 
-    private var geaendert: Bool { text != prompt.text }
+    private var geaendert: Bool { prompt.nummer > 0 && text != prompt.text }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -148,25 +179,43 @@ struct PromptEditorVollbild: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Farbe.grund)
         .onAppear { fokus = true; vollbildGeschaltet = Self.vollbild(an: true) }
-        .onDisappear { if vollbildGeschaltet { _ = Self.vollbild(an: false) } }
+        .onDisappear {
+            guard vollbildGeschaltet else { return }
+            _ = Self.vollbild(an: false)
+            // Während der Einblend-Animation ignoriert macOS das Umschalten: dann noch einmal, sobald sie durch ist.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { MainActor.assumeIsolated { _ = Self.vollbild(an: false) } }
+        }
         .confirmationDialog("Deine Änderungen an diesem Prompt verwerfen?", isPresented: $frageVerwerfen) {
             Button("Verwerfen", role: .destructive) { schliessen() }
         }
     }
 
-    private func schliessen() { steuerung.promptBearbeiten = nil }
+    /// Ein neuer Prompt geht ohne Speichern zurück ins Feld unter „Neuer Prompt“, nichts davon ist verloren.
+    private func schliessen(gespeichert: Bool = false) {
+        if prompt.nummer == 0 { steuerung.promptEntwurf = gespeichert ? "" : text }
+        steuerung.promptBearbeiten = nil
+    }
 
     private func speichern() {
         guard !speichert else { return }
         speichert = true; fehler = ""
-        var a: JSONObjekt = ["aktion": prompt.nummer > 0 ? "aendern" : "speichern", "text": text]
-        if prompt.nummer > 0 { a["nummer"] = prompt.nummer }
         Task {
+            defer { speichert = false }
+            var a: JSONObjekt = ["aktion": "speichern", "text": text]
+            if prompt.nummer > 0 && !alsNeu {
+                // Die Nummer ist nur der Platz in der Liste: Nach dem Löschen eines anderen Prompts rückt alles auf. Deshalb am Text wiederfinden.
+                guard let liste = await McpKlient.shared.text("prompts_lesen") else { fehler = "Das Handy ist gerade nicht erreichbar, nichts wurde gespeichert."; return }
+                guard let aktuell = PromptEintrag.zerlege(liste).first(where: { $0.text == prompt.text }) else {
+                    fehler = "Dieser Prompt wurde inzwischen geändert oder gelöscht. Speichern legt deine Fassung als neuen Prompt an."
+                    alsNeu = true
+                    return
+                }
+                a = ["aktion": "aendern", "text": text, "nummer": aktuell.nummer]
+            }
             let r = await McpKlient.shared.rufe("prompt_speichern", a)
-            speichert = false
             if r.fehler { fehler = r.text; return }
             steuerung.promptStand += 1
-            schliessen()
+            schliessen(gespeichert: true)
         }
     }
 

@@ -14,7 +14,7 @@ final class ZentraleDaten {
         if laedt { return }
         if !erzwingen, let z = zuletzt, Date().timeIntervalSince(z) < 300 { return }
         laedt = true
-        defer { laedt = false; zuletzt = Date() }
+        defer { laedt = false }
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
         let bis = f.string(from: Date().addingTimeInterval(2 * 86400))
         async let a = McpKlient.shared.text("tagesauswertung_lesen", [:])
@@ -22,8 +22,10 @@ final class ZentraleDaten {
         async let c = McpKlient.shared.text("kalender_lesen", ["von": "heute", "bis": bis])
         async let d = McpKlient.shared.text("wetter_lesen", ["datum": "heute", "tage": 2])
         let (ra, rb, rc, rd) = await (a, b, c, d)
-        auswertung = ra.map(Self.kuerzeAuswertung)
-        aufgaben = rb; termine = rc; wetter = rd
+        // Was gerade nicht kam, bleibt stehen; nur ein Erfolg sperrt das erneute Laden für fünf Minuten.
+        auswertung = ra.map(Self.kuerzeAuswertung) ?? auswertung
+        aufgaben = rb ?? aufgaben; termine = rc ?? termine; wetter = rd ?? wetter
+        if ra != nil || rb != nil || rc != nil || rd != nil { zuletzt = Date() }
     }
 
     /// Nur der Teil für Frank (ohne den angehängten Regel- und Gedächtnisblock).
@@ -39,11 +41,8 @@ final class ZentraleDaten {
 struct ZentraleAnsicht: View {
     @State private var daten = ZentraleDaten.shared
     @State private var steuerung = AppSteuerung.shared
-    @State private var schleife = SprachSchleife.shared
-    @State private var frage = ""
+    @State private var anhang: Data?
     @State private var auswertungOffen = false
-    @FocusState private var fokus: Bool
-    @State private var zugangDa = true
     @State private var neuLaeuft = false
     @State private var neuFehler = false
 
@@ -60,7 +59,7 @@ struct ZentraleAnsicht: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                if !zugangDa { zugangsHinweis }
+                ZugangsHinweis()
                 macKarte
                 VStack(spacing: 10) {
                     held
@@ -85,7 +84,6 @@ struct ZentraleAnsicht: View {
         }
         .scrollIndicators(.never)
         .task {
-            zugangDa = await Einstellungen.shared.gehirnZugang()
             await daten.laden()
         }
     }
@@ -108,50 +106,14 @@ struct ZentraleAnsicht: View {
                     Text(Self.datumZeile).font(.jarvis(14, .medium)).foregroundStyle(Farbe.text2)
                 }
             }
-            VStack(spacing: 8) {
-                HStack(spacing: 10) {
-                    Image(systemName: "sparkle").foregroundStyle(Farbe.akzent)
-                    TextField("Frag Jarvis oder sag, was er am Mac tun soll …", text: $frage)
-                        .textFieldStyle(.plain).font(.jarvis(16)).focused($fokus)
-                        .onSubmit { senden() }
-                }
-                .padding(.leading, 8)
-                HStack(spacing: 10) {
-                ModellKapsel()
-                Spacer(minLength: 0)
-                RundKnopf(symbol: "mic.fill", hilfe: "Sprechen (⌥⌘J)", aktiv: schleife.zustand != .aus, farbe: Farbe.gruen) { steuerung.kuerzelSprechen() }
-                RundKnopf(symbol: "waveform", hilfe: "Live-Gespräch (⌘L)", farbe: Farbe.gold) { steuerung.live() }
-                RundKnopf(symbol: "arrow.up", hilfe: "Senden", aktiv: !frage.isEmpty, farbe: Farbe.haupt) { senden() }
-                }
-            }
-            .padding(.leading, 12).padding(.trailing, 10).padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Farbe.glas(0.05)))
-            .glassEffect(.regular, in: .rect(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Farbe.glas(0.12)))
+            EingabeBlase(gespraech: nil, anhang: $anhang, zweizeilig: true)
         }
     }
 
     private var schnellVerknuepfungen: some View {
         VStack(spacing: 8) {
             ForEach(Self.vorschlaege, id: \.self) { v in
-                KapselKnopf(symbol: "arrow.turn.down.right", titel: v, voll: true) { frage = v; senden() }
-            }
-        }
-    }
-
-    private var zugangsHinweis: some View {
-        GlasKarte {
-            HStack(spacing: 14) {
-                Image(systemName: "key.horizontal.fill").font(.system(size: 20)).foregroundStyle(Farbe.warnung)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Noch ein Schritt: Jarvis braucht einen Kopf").font(.jarvis(15, .semibold))
-                    Text("Melde dich einmal mit deinem ChatGPT-Konto an (läuft über dein Abo) oder trage einen Anthropic-Schlüssel ein.")
-                        .font(.jarvis(12)).foregroundStyle(Farbe.text2)
-                }
-                Spacer()
-                KapselKnopf(symbol: "arrow.right", titel: "Zu den Konten", hervorgehoben: true) {
-                    EinstellungenAnsicht.startReiter = "konten"; steuerung.bereich = .einstellungen
-                }
+                KapselKnopf(symbol: "arrow.turn.down.right", titel: v, voll: true) { steuerung.gespraech = nil; steuerung.sende(v) }
             }
         }
     }
@@ -161,13 +123,6 @@ struct ZentraleAnsicht: View {
     static var datumZeile: String {
         let f = DateFormatter(); f.locale = Locale(identifier: "de_DE"); f.dateFormat = "EEEE, d. MMMM yyyy"
         return f.string(from: Date())
-    }
-
-    private func senden() {
-        let t = frage
-        frage = ""
-        steuerung.gespraech = nil
-        steuerung.sende(t)
     }
 
     private var auswertungsKarte: some View {
@@ -231,7 +186,7 @@ struct ZentraleAnsicht: View {
     /// Werkzeugtexte etwas lesbarer: interne Kennungen raus.
     static func aufbereiten(_ t: String, grenze: Int = 1600) -> String {
         var s = t.replacingOccurrences(of: #"\[id \d+\] "#, with: "", options: .regularExpression)
-        s = s.replacingOccurrences(of: "\n(Falls in diesem Gespräch noch nicht geschehen: zuerst jarvis_kontext aufrufen.)", with: "")
+        s = McpKlient.ohneKontextHinweis(s)
         if s.count > grenze { s = String(s.prefix(grenze)) + " …" }
         return s
     }
@@ -262,6 +217,32 @@ struct ZentraleAnsicht: View {
                 }
             }
         }
+    }
+}
+
+/// Fehlt Jarvis jeder Zugang zu einem Modell, sagt das der erste Bildschirm.
+struct ZugangsHinweis: View {
+    @State private var zugangDa = true
+    var body: some View {
+        Group {
+            if !zugangDa {
+                GlasKarte {
+                    HStack(spacing: 14) {
+                        Image(systemName: "key.horizontal.fill").font(.system(size: 20)).foregroundStyle(Farbe.warnung)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Noch ein Schritt: Jarvis braucht einen Kopf").font(.jarvis(15, .semibold))
+                            Text("Melde dich einmal mit deinem ChatGPT-Konto an (läuft über dein Abo) oder trage einen Anthropic-Schlüssel ein.")
+                                .font(.jarvis(12)).foregroundStyle(Farbe.text2)
+                        }
+                        Spacer()
+                        KapselKnopf(symbol: "arrow.right", titel: "Zu den Konten", hervorgehoben: true) {
+                            EinstellungenAnsicht.startReiter = "konten"; AppSteuerung.shared.bereich = .einstellungen
+                        }
+                    }
+                }
+            }
+        }
+        .task { zugangDa = await Einstellungen.shared.gehirnZugang() }
     }
 }
 

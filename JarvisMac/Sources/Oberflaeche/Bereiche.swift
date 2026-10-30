@@ -164,10 +164,6 @@ struct GedaechtnisAnsicht: View {
     @State private var regelnOffen = false
     @State private var regeln = ""
 
-    private static func mitgeliefert(_ name: String) -> String {
-        Bundle.main.url(forResource: name, withExtension: "md").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Datei fehlt im App-Bundle."
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -218,13 +214,13 @@ struct GedaechtnisAnsicht: View {
                     MarkdownText(text: live.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 KlappKarte(symbol: "macbook", titel: "Funktionsübersicht am Mac", farbe: Farbe.haupt, untertitel: "Was Jarvis am Rechner kann, aus dem Repo", offen: $macOffen) {
-                    MarkdownText(text: Self.mitgeliefert("funktionen"), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                    MarkdownText(text: Bundle.main.mitgeliefert("funktionen"), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 KlappKarte(symbol: "iphone", titel: "Funktionsübersicht am Handy", farbe: Farbe.gold, untertitel: handyFunktionen.laedt ? "lädt …" : "Was die Handy-App kann", offen: $handyOffen) {
-                    MarkdownText(text: handyFunktionen.text ?? "", groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                    MarkdownText(text: McpKlient.ohneKontextHinweis(handyFunktionen.text ?? ""), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 KlappKarte(symbol: "square.grid.2x2.fill", titel: "Handy-Reiter und CLI", farbe: Farbe.kupfer, untertitel: "Reiter der Handy-App, Zusammenarbeit mit dem CLI", offen: $wissenOffen) {
-                    MarkdownText(text: Self.mitgeliefert("jarvis-wissen"), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
+                    MarkdownText(text: Bundle.main.mitgeliefert("jarvis-wissen"), groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 KlappKarte(symbol: "waveform.circle.fill", titel: "Regeln für ChatGPT Live", farbe: Farbe.gruen, untertitel: "Vorgaben des Handy-Jarvis", offen: $regelnOffen) {
                     MarkdownText(text: regeln.isEmpty ? "Das Handy-Jarvis ist gerade nicht erreichbar." : regeln, groesse: 13).frame(maxWidth: .infinity, alignment: .leading)
@@ -236,12 +232,12 @@ struct GedaechtnisAnsicht: View {
         .onChange(of: handyOffen) { _, an in
             guard an else { return }
             // Ohne Handy bleibt der Stand aus dem letzten Mac-Build.
-            Task { if await !handyFunktionen.laden("funktionen_lesen") { handyFunktionen.text = Self.mitgeliefert("handy-funktionen") } }
+            Task { if await !handyFunktionen.laden("funktionen_lesen") { handyFunktionen.text = Bundle.main.mitgeliefert("handy-funktionen") } }
         }
         .onChange(of: regelnOffen) { _, an in if an { Task {
-            // Die Vorgaben des Handys enden mit dem Symbiose-Block; davor stehen Franks übrige Regeln.
-            let t = await McpKlient.shared.anweisungen
-            regeln = t.range(of: "SYMBIOSE CHATGPT LIVE ⇄ JARVIS · Stand").map { String(t[$0.lowerBound...]) } ?? t
+            // Die Anleitung steht nur nach dem Verbinden frisch da; ist das Handy aus, bleibt der letzte Stand.
+            try? await McpKlient.shared.verbinden()
+            regeln = Self.symbioseBlock(await McpKlient.shared.anweisungen)
         } } }
         // Der Mac hat kein eigenes Gedächtnis: Solange die Karte offen ist, kommt jede Minute der aktuelle Stand vom Handy.
         .task(id: liveOffen) {
@@ -251,6 +247,13 @@ struct GedaechtnisAnsicht: View {
                 try? await Task.sleep(for: .seconds(60))
             }
         }
+    }
+
+    /// Aus der Anleitung des Handys nur Überschrift und Regeln [S…]; dahinter folgen Langzeitkontext und Werkzeughinweise, die gehören nicht in diese Karte.
+    private static func symbioseBlock(_ t: String) -> String {
+        guard let start = t.range(of: "SYMBIOSE CHATGPT LIVE ⇄ JARVIS · Stand") else { return "" }
+        let zeilen = t[start.lowerBound...].components(separatedBy: "\n")
+        return ([zeilen[0]] + zeilen.dropFirst().prefix { $0.hasPrefix("[S") }).joined(separator: "\n\n")
     }
 
     /// „leise“: Die Anzeige verbraucht keine Meldungen, die für Gespräche in ChatGPT oder am Handy gedacht sind.
@@ -427,6 +430,8 @@ struct MenueLeiste: View {
                 Spacer()
             }
             TextField("Frag Jarvis …", text: $frage).textFieldStyle(.roundedBorder)
+                // Die Antwort läge sonst unsichtbar unter dem Prompt-Editor.
+                .disabled(steuerung.promptBearbeiten != nil)
                 .onSubmit {
                     let t = frage; frage = ""
                     steuerung.gespraech = nil; steuerung.sende(t); steuerung.fensterZeigen()

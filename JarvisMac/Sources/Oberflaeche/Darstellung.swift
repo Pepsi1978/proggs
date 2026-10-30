@@ -50,15 +50,26 @@ final class DesignStand {
 
     func weiter() { modus = modus.naechster }
 
+    /// Nur für den Tooltip, aber die Seitenleiste rechnet oft neu: Die Zeiten werden einmal am Tag bestimmt.
+    @ObservationIgnored private var zeitenText = ""
+    @ObservationIgnored private var zeitenTag = -1
+    private static let uhrzeit: DateFormatter = { let f = DateFormatter(); f.timeZone = berlin; f.dateFormat = "HH:mm"; return f }()
+
     var hilfe: String {
-        let s = Self.sonne(an: Date())
-        let f = DateFormatter(); f.timeZone = Self.berlin; f.dateFormat = "HH:mm"
-        let zeiten = "Berlin heute: Sonnenaufgang \(f.string(from: s.auf)) Uhr, Sonnenuntergang \(f.string(from: s.unter)) Uhr."
-        return "\(modus.titel). Antippen wechselt zu \(modus.naechster.titel). \(zeiten)"
+        var kalender = Calendar(identifier: .gregorian)
+        kalender.timeZone = Self.berlin
+        let tag = kalender.ordinality(of: .day, in: .year, for: Date()) ?? 0
+        if tag != zeitenTag {
+            let s = Self.sonne(an: Date())
+            zeitenText = "Berlin heute: Sonnenaufgang \(Self.uhrzeit.string(from: s.auf)) Uhr, Sonnenuntergang \(Self.uhrzeit.string(from: s.unter)) Uhr."
+            zeitenTag = tag
+        }
+        return "\(modus.titel). Antippen wechselt zu \(modus.naechster.titel). \(zeitenText)"
     }
 
     /// Einmal beim Start: stellt die App ein und prüft in der Automatik jede halbe Minute, ob die Sonne auf- oder untergegangen ist.
     @MainActor func starten() {
+        NSApp?.appearance = NSAppearance(named: dunkel ? .darkAqua : .aqua)
         aktualisieren()
         Task { @MainActor [weak self] in
             while !Task.isCancelled {
@@ -70,9 +81,9 @@ final class DesignStand {
 
     private func aktualisieren() {
         let neu = Self.istDunkel(modus, jetzt: Date())
-        if neu != dunkel { dunkel = neu }
-        let d = neu
-        Task { @MainActor in NSApp?.appearance = NSAppearance(named: d ? .darkAqua : .aqua) }
+        guard neu != dunkel else { return }
+        dunkel = neu
+        Task { @MainActor in NSApp?.appearance = NSAppearance(named: neu ? .darkAqua : .aqua) }
     }
 
     private static func istDunkel(_ m: Modus, jetzt: Date) -> Bool {
@@ -111,9 +122,10 @@ final class DesignStand {
 
 /// Grüner Punkt, solange das Handy-Jarvis erreichbar ist.
 struct LivePunkt: View {
+    var groesse: CGFloat = 8
     @State private var steuerung = AppSteuerung.shared
     var body: some View {
-        Circle().fill(steuerung.handyVerbunden ? Farbe.gruen : Farbe.warnung).frame(width: 8, height: 8)
+        Circle().fill(steuerung.handyVerbunden ? Farbe.gruen : Farbe.warnung).frame(width: groesse, height: groesse)
             .shadow(color: steuerung.handyVerbunden ? Farbe.gruen : Farbe.warnung, radius: 4)
             .help(steuerung.handyVerbunden ? "Mit dem Handy verbunden" : "Handy nicht erreichbar")
     }

@@ -281,6 +281,7 @@ struct MarkdownText: View {
                 continue
             }
             if code != nil { code!.append(zeile); continue }
+            if z.hasPrefix("<!--") && z.hasSuffix("-->") { continue }
             if z.isEmpty { absatzFertig(); continue }
             if z.hasPrefix("#") {
                 absatzFertig()

@@ -20,6 +20,12 @@ struct WerkzeugErgebnis {
 actor McpKlient {
     static let shared = McpKlient()
     /// Technische Werkzeuge für die Ablage-Oberfläche; das Modell braucht sie nicht.
+    /// Der Hinweis, den das Handy an viele Ergebnisse hängt; in der Oberfläche hat er nichts zu suchen.
+    static func ohneKontextHinweis(_ t: String) -> String {
+        t.replacingOccurrences(of: "\n(Falls in diesem Gespräch noch nicht geschehen: zuerst jarvis_kontext aufrufen.)", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     static let nurFuerOberflaeche: Set<String> = ["ablage_struktur", "ablage_datei"]
     static let privateWerkzeuge: Set<String> = ["jarvis_kontext", "jarvis_gemerktes_lesen", "jarvis_merken", "jarvis_langzeitkontext_lesen", "jarvis_langzeitkontext_ersetzen",
                                                 "gedaechtnis_suchen", "mail_lesen", "mail_senden", "tagebuch_lesen", "tagesauswertung_lesen", "tagesdaten_lesen",

@@ -38,6 +38,7 @@ struct HauptFenster: View {
 
 /// Fenster-Tastenkürzel: ⌘N neues Gespräch, ⌘L Live, ⌘D Sprechen, ⌘, Einstellungen, ⌘1 Start, ⌘2 Zentrale.
 private struct TastenKuerzel: View {
+    @State private var steuerung = AppSteuerung.shared
     var body: some View {
         ZStack {
             Button("") { AppSteuerung.shared.neuesGespraech() }.keyboardShortcut("n", modifiers: .command)
@@ -47,6 +48,8 @@ private struct TastenKuerzel: View {
             Button("") { AppSteuerung.shared.bereich = .start }.keyboardShortcut("1", modifiers: .command)
             Button("") { AppSteuerung.shared.bereich = .zentrale }.keyboardShortcut("2", modifiers: .command)
         }
+        // Im Prompt-Editor würden sie den Bereich unsichtbar darunter wechseln.
+        .disabled(steuerung.promptBearbeiten != nil)
         .opacity(0).frame(width: 0, height: 0)
     }
 }
@@ -87,8 +90,7 @@ struct Seitenleiste: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("JARVIS").font(.jarvis(17, .heavy)).tracking(4)
                     HStack(spacing: 6) {
-                        Circle().fill(steuerung.handyVerbunden ? Farbe.gruen : Farbe.warnung).frame(width: 7, height: 7)
-                            .shadow(color: steuerung.handyVerbunden ? Farbe.gruen : Farbe.warnung, radius: 4)
+                        LivePunkt(groesse: 7)
                         Text(steuerung.handyVerbunden ? "Mit dem Handy verbunden" : "Handy nicht erreichbar")
                             .font(.jarvis(11, .medium)).foregroundStyle(Farbe.text2)
                     }
@@ -231,7 +233,11 @@ struct GespraechsEintrag: View {
                 }
                 Spacer(minLength: 0)
                 if schwebt {
-                    Button { GespraechsSpeicher.shared.loeschen(g); if aktiv { AppSteuerung.shared.bereich = .start } } label: {
+                    Button {
+                        GespraechsSpeicher.shared.loeschen(g)
+                        if AppSteuerung.shared.gespraech?.id == g.id { AppSteuerung.shared.gespraech = nil }
+                        if aktiv { AppSteuerung.shared.bereich = .start }
+                    } label: {
                         Image(systemName: "trash").font(.system(size: 11)).foregroundStyle(Farbe.text3)
                     }.buttonStyle(.plain).help("Gespräch löschen")
                 }

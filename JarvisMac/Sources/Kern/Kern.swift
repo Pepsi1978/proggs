@@ -40,6 +40,13 @@ enum Pfade {
     static func sk(_ teil: String) -> URL { heim.appendingPathComponent("SK").appendingPathComponent(teil) }
 }
 
+extension Bundle {
+    /// Eine mitgelieferte Markdown-Datei aus den Ressourcen der App.
+    func mitgeliefert(_ name: String) -> String {
+        url(forResource: name, withExtension: "md").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "\(name).md fehlt im App-Bundle."
+    }
+}
+
 enum AppInfo {
     static var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev" }
     static var stand: String { Bundle.main.object(forInfoDictionaryKey: "BuildTimestamp") as? String ?? "" }

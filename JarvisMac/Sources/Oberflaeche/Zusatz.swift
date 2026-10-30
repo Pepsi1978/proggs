@@ -129,7 +129,7 @@ struct PromptEintrag: Identifiable, Hashable {
 struct PromptsAnsicht: View {
     @State private var prompts: [PromptEintrag] = []
     @State private var laedt = false
-    @State private var neu = ""
+    @State private var fehler = ""
     @State private var offen: PromptEintrag?
     @State private var steuerung = AppSteuerung.shared
 
@@ -138,18 +138,26 @@ struct PromptsAnsicht: View {
             GlasKarte {
                 VStack(alignment: .leading, spacing: 10) {
                     KartenTitel(symbol: "plus.circle.fill", titel: "Neuer Prompt", farbe: Farbe.gruen)
-                    TextEditor(text: $neu).font(.jarvis(13)).frame(minHeight: 70).scrollContentBackground(.hidden)
+                    TextEditor(text: $steuerung.promptEntwurf).font(.jarvis(13)).frame(minHeight: 70).scrollContentBackground(.hidden)
                         .background(RoundedRectangle(cornerRadius: 10).fill(Farbe.tiefe(0.25)))
-                    PromptWerkzeuge(text: $neu)
+                    PromptWerkzeuge(text: $steuerung.promptEntwurf)
                     HStack {
                         KapselKnopf(symbol: "arrow.up.left.and.arrow.down.right", titel: "Im Vollbild schreiben") {
-                            steuerung.promptBearbeiten = PromptEintrag(nummer: 0, titel: "", text: neu); neu = ""
+                            steuerung.promptBearbeiten = PromptEintrag(nummer: 0, titel: "", text: steuerung.promptEntwurf)
                         }
                         KapselKnopf(symbol: "square.and.arrow.down.fill", titel: "Speichern", hervorgehoben: true) {
-                            let t = neu
-                            Task { _ = await McpKlient.shared.rufe("prompt_speichern", ["aktion": "speichern", "text": t]); neu = ""; await laden() }
+                            let t = steuerung.promptEntwurf
+                            Task {
+                                let r = await McpKlient.shared.rufe("prompt_speichern", ["aktion": "speichern", "text": t])
+                                // Nur Gespeichertes verschwindet aus dem Feld.
+                                if r.fehler { fehler = r.text; return }
+                                fehler = ""
+                                if steuerung.promptEntwurf == t { steuerung.promptEntwurf = "" }
+                                await laden()
+                            }
                         }
                     }
+                    if !fehler.isEmpty { Text(fehler).font(.jarvis(12)).foregroundStyle(Farbe.warnung) }
                 }
             }
             if laedt { ProgressView() }
@@ -189,7 +197,8 @@ struct PromptsAnsicht: View {
 
     private func laden() async {
         laedt = true
-        prompts = PromptEintrag.zerlege(await McpKlient.shared.text("prompts_lesen") ?? "")
+        // Kommt nichts vom Handy, bleibt die Liste stehen.
+        if let t = await McpKlient.shared.text("prompts_lesen") { prompts = PromptEintrag.zerlege(t) }
         laedt = false
     }
 }

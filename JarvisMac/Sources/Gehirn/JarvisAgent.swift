@@ -39,7 +39,7 @@ final class JarvisAgent {
     (fügt ihn in die zuletzt benutzte Terminal-Sitzung ein). Jarvis' eigene Mac-Einstellungen per Sprache = mac_einstellungen.
 
     REPO UND CLI
-    - Franks Repo liegt hier unter ~/proggs. Fragen dazu beantwortest du aus dem Repo statt aus dem Gedächtnis: repo_lesen liest direkt und unbegrenzt, \
+    - Franks Repo liegt hier unter ~/proggs. Fragen dazu beantwortest du aus dem Repo statt aus dem Gedächtnis: repo_lesen liest direkt ohne die Grenzen der GitHub-Anbindung und markiert, was es kürzt, \
     cli_frage fragt für Prüfungen über mehrere Dateien im Hintergrund das CLI, nur lesend. Code ändern: openlauncher_sitzung oder programmieren.
     - Was du selbst am Mac kannst, was die Handy-Reiter (Jarvis, Ablage mit Prompts, Aktivität, Einstellungen) bieten und wie du mit dem CLI arbeitest, \
     steht in mac_funktionen_lesen; die Funktionen des Handys in funktionen_lesen. Beides nur bei Bedarf lesen.
@@ -115,8 +115,9 @@ final class JarvisAgent {
         let (a, modell) = await anbieter()
         let effort = e.effort
         let limit = e.schrittLimit
-        let misstKosten = a is AnthropicKlient
-        if misstKosten { Guthaben.shared.kostenStart() }
+        let istClaude = a is AnthropicKlient
+        var kosten = 0.0
+        if istClaude { Guthaben.shared.kosten = nil }
 
         var textTeile: [String] = []
         let puffer = TextPuffer()
@@ -158,6 +159,10 @@ final class JarvisAgent {
             zeige()
             log("gehirn", "\(modell) Schritt \(schritt): \(antwort.stopGrund), ein \(antwort.eingabeTokens)+cache \(antwort.cacheTokens), aus \(antwort.ausgabeTokens)")
             g.verlauf.append(["role": "assistant", "content": antwort.inhalt])
+            if istClaude {
+                kosten += ClaudePreis.dollar(modell: modell, antwort)
+                Guthaben.shared.kosten = kosten
+            }
 
             if antwort.stopGrund == "pause_turn" { continue }
             if antwort.stopGrund == "refusal" { textTeile.append("(Die Anfrage wurde vom Modell abgelehnt.)"); break }
@@ -200,7 +205,6 @@ final class JarvisAgent {
             g.speichern()
         }
 
-        if misstKosten { Guthaben.shared.kostenEnde() }
         let endtext = textTeile.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
         if jarvisIndex < g.nachrichten.count {
             g.nachrichten[jarvisIndex].text = endtext.isEmpty ? "(keine Antwort)" : endtext

@@ -72,13 +72,6 @@ struct ChatAnsicht: View {
         }
         .frame(maxWidth: .infinity).padding(.top, 80)
     }
-
-    static func bildschirmfoto() async -> Data? {
-        let datei = Pfade.temp.appendingPathComponent("anhang.jpg")
-        try? FileManager.default.removeItem(at: datei)
-        _ = await Shell.zsh("screencapture -x -m -t jpg '\(datei.path)' && sips -Z 1440 -s formatOptions 60 '\(datei.path)' >/dev/null", sekunden: 20)
-        return try? Data(contentsOf: datei)
-    }
 }
 
 extension NSImage {

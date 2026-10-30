@@ -116,7 +116,7 @@ extension MacWerkzeuge {
     static let weitere: [LokalesWerkzeug] = [
         LokalesWerkzeug(definition: WerkzeugDefinition(
             name: "mac_einstellungen",
-            beschreibung: "Jarvis am Mac: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Tastenkürzel, Live-Anbieter/-Modell/-Stimme, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
+            beschreibung: "Auch die Darstellung (Kennung darstellung: hell, automatik, dunkel). Jarvis am Mac: eigene Einstellungen lesen (aktion lesen, optional bereich) oder ändern (aktion aendern mit kennung und wert): Modell, Denkstufe, Schrittlimit, Lernen, Vorlesen, Tempo, Stimme, Weckwort, Transkription, Tastenkürzel, Live-Anbieter/-Modell/-Stimme, Vollzugriff. Für die Einstellungen des Handys bleibt das Werkzeug einstellungen.",
             schema: ["type": "object", "properties": [
                 "aktion": ["type": "string", "enum": ["lesen", "aendern"]],
                 "bereich": ["type": "string", "description": "optional: nur dieser Bereich"],
@@ -142,10 +142,7 @@ extension MacWerkzeuge {
             name: "mac_funktionen_lesen",
             beschreibung: "Jarvis am Mac: Übersicht, was die Mac-Version kann, dazu die Reiter der Handy-App, die Zusammenarbeit mit dem CLI und die Regeln für ChatGPT Live (nur bei Bedarf, z. B. „Kannst du am Mac …?“). Für die vollständigen Funktionen des Handys funktionen_lesen.",
             schema: ["type": "object", "properties": [:] as JSONObjekt])) { _ in
-            let t = ["funktionen", "jarvis-wissen"].map { name in
-                Bundle.main.url(forResource: name, withExtension: "md").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "\(name).md fehlt im App-Bundle."
-            }
-            return WerkzeugErgebnis(text: t.joined(separator: "\n\n"))
+            WerkzeugErgebnis(text: Bundle.main.mitgeliefert("funktionen") + "\n\n" + Bundle.main.mitgeliefert("jarvis-wissen"))
         },
     ]
 

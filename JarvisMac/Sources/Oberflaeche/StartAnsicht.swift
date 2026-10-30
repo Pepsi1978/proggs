@@ -11,6 +11,7 @@ struct StartAnsicht: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 22) {
+                    ZugangsHinweis()
                     Button { steuerung.kuerzelSprechen() } label: { KugelLive(groesse: 150) }
                         .buttonStyle(.plain)
                         .help("Antippen zum Sprechen (⌥⌘J überall)")
@@ -28,6 +29,7 @@ struct StartAnsicht: View {
                                 KartenTitel(symbol: "sun.horizon.fill", titel: "Tagesauswertung")
                                 Spacer()
                                 if daten.laedt { ProgressView().controlSize(.small) }
+                                RundKnopf(symbol: "arrow.clockwise", hilfe: "Neu laden", groesse: 30) { Task { await daten.laden(erzwingen: true) } }
                             }
                             if let a = daten.auswertung {
                                 MarkdownText(text: ZentraleAnsicht.anfang(a), groesse: 14).frame(maxWidth: .infinity, alignment: .leading)

@@ -50,7 +50,8 @@ fi
 [ -f "$PROJECT_DIR/Resources/AppIcon.icns" ] && cp "$PROJECT_DIR/Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
 cp "$PROJECT_DIR/funktionen.md" "$PROJECT_DIR/jarvis-wissen.md" "$APP_BUNDLE/Contents/Resources/"
 # Stand der Handy-Funktionen für die Zeit, in der das Handy nicht erreichbar ist.
-cp "$PROJECT_DIR/../Jarvis/app/src/main/assets/funktionen.md" "$APP_BUNDLE/Contents/Resources/handy-funktionen.md"
+cp "$PROJECT_DIR/../Jarvis/app/src/main/assets/funktionen.md" "$APP_BUNDLE/Contents/Resources/handy-funktionen.md" \
+    || echo "⚠ Handy-Funktionsdatei fehlt: Ohne Handy zeigt das Gedächtnis dann keine Funktionsübersicht des Handys."
 
 # Signieren zuletzt (nach der finalen Info.plist, sonst verweigert TCC still). Kein --deep: erst die dylibs innen, dann das Bundle.
 SIGNING_IDENTITY="Frank Local Dev"
