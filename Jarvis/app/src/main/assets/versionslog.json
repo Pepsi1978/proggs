@@ -458,6 +458,7 @@
     {"versionCode": 452, "versionName": "1.8.441", "stand": "30.10.2026, 14:06 Uhr", "notiz": "Hängt die Verbindung zum Mac kurz, versucht Jarvis es beim Ansehen des Bildschirms von selbst erneut und meldet den Mac nicht mehr vorschnell als nicht erreichbar"},
     {"versionCode": 453, "versionName": "1.8.442", "stand": "30.10.2026, 14:11 Uhr", "notiz": "Die Installationsfrage gehört nur noch zur Installation über das Skript; UpdateStation bleibt die Rückfallebene und fragt nicht"},
     {"versionCode": 455, "versionName": "1.8.444", "stand": "30.10.2026, 16:52 Uhr", "notiz": "Mit drei Punkten gekürzte Texte in Rückfragen klappen beim Antippen ganz auf und beim nächsten Antippen wieder zu, auch der vollständige Auftrag über der Review-Frage"},
-    {"versionCode": 457, "versionName": "1.8.446", "stand": "30.10.2026, 17:05 Uhr", "notiz": "Aufgeklappte Rückfragen zeigen auch sehr lange Aufträge vollständig, bleiben beim Scrollen und bei neuen Agentenschritten aufgeklappt und kippen beim Antippen nicht mehr"}
+    {"versionCode": 457, "versionName": "1.8.446", "stand": "30.10.2026, 17:05 Uhr", "notiz": "Aufgeklappte Rückfragen zeigen auch sehr lange Aufträge vollständig, bleiben beim Scrollen und bei neuen Agentenschritten aufgeklappt und kippen beim Antippen nicht mehr"},
+    {"versionCode": 458, "versionName": "1.8.447", "stand": "30.10.2026, 17:09 Uhr", "notiz": "Die Stillezeit bis zum Schließen des Mikrofons beim Weckwort lässt sich getrennt für innerhalb und außerhalb der App einstellen, auch per Sprache"}
 ]
 }

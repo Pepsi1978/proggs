@@ -224,9 +224,11 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Chip("An", aktiv = e.weckwortAn) { vm.weckwortSchalten(true, activity) }
                     Chip("Aus", aktiv = !e.weckwortAn) { vm.weckwortSchalten(false, activity) }
                 }
+                var stilleApp by remember { mutableStateOf(e.stilleInAppMs) }
+                var stilleAussen by remember { mutableStateOf(e.stilleAussenMs) }
                 Text(
                     "Sag „$wort“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
-                        "Erst nach 4,5 Sekunden Stille schickt er ab, du kannst also zwischendurch nachdenken. " +
+                        "Erst nach der eingestellten Stillezeit schickt er ab (in der App ${Einstellungen.stilleText(stilleApp)}, außerhalb ${Einstellungen.stilleText(stilleAussen)}), du kannst also zwischendurch nachdenken. " +
                         "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
                         "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
                         "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
@@ -237,6 +239,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                     Text("Damit Jarvis von selbst nach vorn kommt (auch über dem Sperrbildschirm), braucht er „Über anderen Apps einblenden“. Ohne kommt nur eine Benachrichtigung zum Antippen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
                     Knopf("„Über anderen Apps einblenden“ erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
                 }
+                StillezeitFeld("Stillezeit in der App", stilleApp, vm) { stilleApp = it; e.stilleInAppMs = it }
+                StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", stilleAussen, vm) { stilleAussen = it; e.stilleAussenMs = it }
+                Text("Wie lange nach deinem letzten Wort das Mikrofon offen bleibt, 1 bis 15 Sekunden, auch mit Komma. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Unterzeile("Weckwort")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("Hey Jarvis", aktiv = e.weckwortArt != "phrase") { vm.weckwortArtSetzen("jarvis") }
@@ -601,6 +606,23 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp), color = f.textSchwach, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+/** Eine Stillezeit in Sekunden eintragen; [ms] ist der gespeicherte Wert. */
+@Composable
+private fun StillezeitFeld(titel: String, ms: Int, vm: AppViewModel, setze: (Int) -> Unit) {
+    var text by remember(ms) { mutableStateOf(Einstellungen.stilleZahl(ms)) }
+    val uebernehmen: () -> Unit = {
+        val neu = Einstellungen.stilleMsAus(text)
+        if (neu == null) vm.meldung = "Bitte 1 bis 15 Sekunden eintragen, auch mit Komma."
+        else { setze(neu); text = Einstellungen.stilleZahl(neu) }
+    }
+    Unterzeile(titel)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Eingabe(text, { text = it }, "Sekunden, z. B. 2,5", Modifier.weight(1f), senden = uebernehmen)
+        Spacer(Modifier.width(8.dp))
+        Knopf("Übernehmen", haupt = text != Einstellungen.stilleZahl(ms), aktion = uebernehmen)
     }
 }
 

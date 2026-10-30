@@ -2072,6 +2072,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val treffer = if (wiederaufnahme) null else de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         if (!wiederaufnahme) de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
+        gespraechInApp = fortsetzen
         val nr = ++sprachmodusNr
         sprachmodusAktiv = true
         weckwortLauf = viewModelScope.launch {
@@ -2145,10 +2146,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Eine Runde im Gesprächsmodus: Mikrofon holen, piepen (ab jetzt sprechen), aufnehmen, bis Frank 4,5 Sekunden
-     * schweigt, und abschicken. Liefert [SprechEnde.Lage.NICHTS_GEHOERT], wenn nach dem Piepton nichts kam.
+     * Eine Runde im Gesprächsmodus: Mikrofon holen, piepen (ab jetzt sprechen), aufnehmen, bis Frank die eingestellte
+     * Stillezeit lang schweigt, und abschicken. Liefert [SprechEnde.Lage.NICHTS_GEHOERT], wenn nach dem Piepton nichts kam.
      */
     private var mikroFehlte = false
+    /** Das Weckwort fiel in der geöffneten App; sonst gilt die Stillezeit für außerhalb. */
+    private var gespraechInApp = false
+
+    /** Je Runde neu: Eine per Sprache geänderte Zeit gilt ab der nächsten Frage, ebenso das Verlassen der App. */
+    private fun stilleMsJetzt(): Int {
+        val app = getApplication<android.app.Application>()
+        val inApp = gespraechInApp && de.frank.jarvis.MainActivity.sichtbar &&
+            !app.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
+        return if (inApp) einstellungen.stilleInAppMs else einstellungen.stilleAussenMs
+    }
 
     private suspend fun runde(erste: Boolean): de.frank.module.transkriptionsmodul.SprechEnde.Lage {
         holtMikro = true
@@ -2157,7 +2168,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT }
         freihaendig = true
         // Nach einer Antwort darf Frank etwas länger überlegen, bevor er anfängt.
-        val ende = de.frank.module.transkriptionsmodul.SprechEnde(wartenMs = if (erste) 7_000 else 9_000)
+        val ende = de.frank.module.transkriptionsmodul.SprechEnde(wartenMs = if (erste) 7_000 else 9_000, stilleMs = stilleMsJetzt().toLong())
         // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
         val start = System.currentTimeMillis()
         piep()

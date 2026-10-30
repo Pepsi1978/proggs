@@ -348,6 +348,10 @@ class Einstellungen private constructor(context: Context) {
     var ergebnisseVorlesen: Boolean get() = prefs.getBoolean("ergebnisse_vorlesen", false); set(v) = put { putBoolean("ergebnisse_vorlesen", v) }
 
     // ---- Hey Jarvis ----
+    /** Stille nach dem letzten Wort in ms, bis das Mikrofon schließt: Weckwort in der geöffneten App. */
+    var stilleInAppMs: Int get() = prefs.getInt("weckwort_stille_app_ms", STILLE_STANDARD_MS).coerceIn(STILLE_MIN_MS, STILLE_MAX_MS); set(v) = put { putInt("weckwort_stille_app_ms", v) }
+    /** Dasselbe für das Weckwort außerhalb der App (App im Hintergrund oder Bildschirm aus). */
+    var stilleAussenMs: Int get() = prefs.getInt("weckwort_stille_aussen_ms", STILLE_STANDARD_MS).coerceIn(STILLE_MIN_MS, STILLE_MAX_MS); set(v) = put { putInt("weckwort_stille_aussen_ms", v) }
     /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
     var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", true); set(v) = put { putBoolean("weckwort_an", v) }
     /** niedrig | normal | hoch | sehr_hoch: wie leicht „Hey Jarvis“ anspringt und wie großzügig die Stimmerkennung urteilt. */
@@ -404,6 +408,17 @@ class Einstellungen private constructor(context: Context) {
     var ablageAnsicht: String get() = s("ablage_ansicht", "mittel"); set(v) = put { putString("ablage_ansicht", v) }
 
     companion object {
+        const val STILLE_STANDARD_MS = 4_500
+        const val STILLE_MIN_MS = 1_000
+        const val STILLE_MAX_MS = 15_000
+        /** Sekunden aus Text („2,5“, „2.5 Sekunden“) in ms, auf eine Kommastelle gerundet; null ohne Zahl oder außerhalb der Grenzen. */
+        fun stilleMsAus(text: String): Int? {
+            val sekunden = Regex("\\d+(?:[.,]\\d+)?").find(text)?.value?.replace(',', '.')?.toDoubleOrNull() ?: return null
+            return (Math.round(sekunden * 10) * 100).toInt().takeIf { it in STILLE_MIN_MS..STILLE_MAX_MS }
+        }
+        /** „2,5“ oder „2“: die Sekunden als Zahl, mit Komma nur, wenn nötig. */
+        fun stilleZahl(ms: Int): String = if (ms % 1_000 == 0) "${ms / 1_000}" else "${ms / 1_000},${ms % 1_000 / 100}"
+        fun stilleText(ms: Int): String = stilleZahl(ms) + if (ms == 1_000) " Sekunde" else " Sekunden"
         const val NAME = "jarvis_secure_prefs"
         const val AUSWERTUNG_KURZ = "kurz"
         const val AUSWERTUNG_NORMAL = "normal"
