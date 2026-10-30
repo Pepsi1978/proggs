@@ -13,6 +13,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Updates eigener Apps ohne zweiten Android-Dialog übergeben (Android 12+). -->
     <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+    <!-- Verschobene Jarvis-Installation pünktlich auslösen, auch im Hintergrund. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- Signatur-Erlaubnis von Jarvis: Update-Signal empfangen und Ansagen an Jarvis schicken. -->
     <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
 
@@ -38,6 +41,10 @@
 
         <receiver
             android:name=".InstallErgebnisReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".Aufschub$AufschubEmpfaenger"
             android:exported="false" />
 
         <!-- Echtzeit-Signal „neue APK“ vom Server, weitergereicht von Jarvis. -->

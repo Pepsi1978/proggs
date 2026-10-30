@@ -29,6 +29,7 @@
     {"versionCode": 25, "versionName": "1.0.24", "stand": "15.10.2026, 12:48 Uhr", "notiz": "Eine Update-bereit-Meldung verschwindet, sobald die App anders aktualisiert wurde, statt zu einer veralteten Version zu führen"},
     {"versionCode": 26, "versionName": "1.0.25", "stand": "15.10.2026, 13:53 Uhr", "notiz": "Die App-Liste lässt sich nach Name, Größe oder Aktualität sortieren und mit dem Knopf daneben umkehren; beim Start stehen die zuletzt aktualisierten Apps oben"},
     {"versionCode": 27, "versionName": "1.0.26", "stand": "28.10.2026, 18:57 Uhr", "notiz": "Neuer Schalter „APK-Updates vorladen“ in den Einstellungen: ausgeschaltet lädt UpdateStation gefundene Updates nicht mehr automatisch im Hintergrund herunter, sondern erst beim Tippen auf Aktualisieren"},
-    {"versionCode": 28, "versionName": "1.0.27", "stand": "28.10.2026, 19:01 Uhr", "notiz": "Ausschalten des Vorladens bricht auch einen gerade laufenden Hintergrund-Download sofort ab, und ausgeschaltet plant die App keine Vorlade-Aufträge mehr"}
+    {"versionCode": 28, "versionName": "1.0.27", "stand": "28.10.2026, 19:01 Uhr", "notiz": "Ausschalten des Vorladens bricht auch einen gerade laufenden Hintergrund-Download sofort ab, und ausgeschaltet plant die App keine Vorlade-Aufträge mehr"},
+    {"versionCode": 29, "versionName": "1.0.28", "stand": "30.10.2026, 12:36 Uhr", "notiz": "Vor jeder Jarvis-Installation fragt ein Fenster nach dem Zeitpunkt: sofort oder in einer bis fünf Minuten, damit eine laufende Arbeit mit Jarvis noch zu Ende gebracht werden kann"}
   ]
 }

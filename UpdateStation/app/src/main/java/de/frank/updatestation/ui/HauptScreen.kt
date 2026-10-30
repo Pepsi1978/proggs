@@ -555,6 +555,12 @@ private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren
 @Composable
 private fun InstallBereich(install: InstallStatus?, darfInstallieren: Boolean, knopf: String, onInstallieren: () -> Unit) {
     when (install) {
+        is InstallStatus.Geplant -> {
+            val um = java.text.SimpleDateFormat("HH:mm", java.util.Locale.GERMANY).format(java.util.Date(install.um))
+            Zeile(Icons.Rounded.TouchApp, "Installation startet um $um Uhr.", MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onInstallieren, modifier = Modifier.fillMaxWidth()) { Text("Zeitpunkt ändern") }
+        }
         InstallStatus.WartetAufLadeplatz -> Fortschritt("Wartet in der Reihe – lädt, sobald ein anderes Update fertig geladen ist …", null)
         InstallStatus.WartetAufDialog -> Zeile(Icons.Rounded.TouchApp, "Wartet in der Reihe – der Systemdialog kommt nach dem aktuellen.", MaterialTheme.colorScheme.onSurfaceVariant)
         is InstallStatus.WirdBereitgestellt -> Fortschritt(

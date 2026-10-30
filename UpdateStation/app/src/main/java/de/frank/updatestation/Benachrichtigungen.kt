@@ -54,6 +54,12 @@ object Benachrichtigungen {
         }.onFailure { Log.w(TAG, "Benachrichtigung nicht zustellbar: ${it.javaClass.simpleName}") }.isSuccess
     }
 
+    fun verschobeneInstallation(context: Context): Notification =
+        NotificationCompat.Builder(context, KANAL_STATUS)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("Verschobene Installation startet")
+            .build()
+
     private fun oeffneApp(context: Context, code: Int, installiere: String? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
