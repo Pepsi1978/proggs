@@ -99,6 +99,11 @@ enum MacEinstellungsKatalog {
                     werte: "openai | gemini", lesen: { e.liveAnbieter }) { v in
                 guard ["openai", "gemini"].contains(v) else { return "openai oder gemini" }; e.liveAnbieter = v; return nil
             },
+            Eintrag(kennung: "live_stille_ende", bereich: "Live-Gespräch", titel: "Bei Stille beenden", beschreibung: "Beendet das Live-Gespräch nach so vielen Minuten Stille; 0 = nie.",
+                    werte: LiveOptionen.stilleEnde.map { String($0.minuten) }.joined(separator: " | "), lesen: { String(e.liveStilleMinuten) }) { v in
+                guard let m = Int(v), LiveOptionen.stilleEnde.contains(where: { $0.minuten == m }) else { return "2, 5, 10 oder 0" }
+                e.liveStilleMinuten = m; return nil
+            },
             Eintrag(kennung: "live_modell_openai", bereich: "Live-Gespräch", titel: "OpenAI-Live-Modell", beschreibung: "",
                     werte: LiveOptionen.openAIModelle.map(\.id).joined(separator: " | "), lesen: { e.liveModellOpenAI }) { v in e.liveModellOpenAI = v; return nil },
             Eintrag(kennung: "live_stimme_openai", bereich: "Live-Gespräch", titel: "OpenAI-Live-Stimme", beschreibung: "",

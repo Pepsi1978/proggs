@@ -208,9 +208,9 @@ final class AppSteuerung {
 
     // MARK: Sprachpille
 
-    /// Sichtbar genau dann, wenn der Gesprächsmodus läuft und Jarvis nicht vorn ist.
+    /// Sichtbar, solange Live läuft, und im Gesprächsmodus, wenn Jarvis nicht vorn ist.
     func pilleAbgleichen() {
-        pille.setze(sichtbar: SprachSchleife.shared.zustand != .aus && !fensterVorn)
+        pille.setze(sichtbar: LiveGespraech.shared.aktiv || (SprachSchleife.shared.zustand != .aus && !fensterVorn))
     }
 
     /// Damit die Pille nicht auf dem Bildschirmfoto landet, das sie gerade angestoßen hat.
@@ -220,7 +220,8 @@ final class AppSteuerung {
 
     /// Klick auf die Pille: öffnet Jarvis mit dem laufenden Gespräch.
     func pilleOeffnen() {
-        if let g = SprachSchleife.shared.gespraech { gespraech = g; bereich = .gespraech }
+        if LiveGespraech.shared.aktiv { bereich = .live }
+        else if let g = SprachSchleife.shared.gespraech { gespraech = g; bereich = .gespraech }
         fensterZeigen()
     }
 

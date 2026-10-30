@@ -4,6 +4,9 @@ import Foundation
 enum LiveOptionen {
     struct Wahl: Identifiable, Hashable { let id: String; let name: String }
 
+    /// „Bei Stille beenden“ wie am Handy: Minuten, 0 = nie.
+    static let stilleEnde: [(minuten: Int, name: String)] = [(2, "Nach 2 Minuten"), (5, "Nach 5 Minuten"), (10, "Nach 10 Minuten"), (0, "Nie")]
+
     static let openAIModelle: [Wahl] = [
         .init(id: "gpt-live-1", name: "GPT-Live 1 (neuestes in der API)"),
         .init(id: "gpt-realtime-2.1", name: "Realtime 2.1"),

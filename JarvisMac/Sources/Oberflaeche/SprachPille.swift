@@ -3,7 +3,7 @@ import QuartzCore
 
 /// Die schwebende Sprachpille, wie die Sprachblase am Handy (SprachBlase.kt): „Hey Jarvis“ aus einem anderen Programm öffnet Jarvis nicht, das Gespräch
 /// läuft im Hintergrund, und oben mittig zeigt eine kleine Pille ein Pegel-Spektrum in Orange. Sprechen Frank oder Jarvis, zittert es nach dem Pegel,
-/// dazwischen eine ruhige Welle. Klick öffnet Jarvis, langes Drücken, Rechtsklick oder Ziehen nach oben beendet den Gesprächsmodus.
+/// dazwischen eine ruhige Welle. Klick öffnet Jarvis, das X, langes Drücken, Rechtsklick oder Ziehen nach oben beendet das Gespräch; auch während Live.
 /// Nimmt nie den Fokus und zeichnet direkt statt über SwiftUI: leicht, damit Spracherkennung und Ausgabe nichts davon merken.
 @MainActor
 final class SprachPille {
@@ -67,9 +67,12 @@ final class SprachPille {
 }
 
 private final class PillenAnsicht: NSView {
-    static let breite: CGFloat = 126
+    static let breite: CGFloat = 150
     static let hoehe: CGFloat = 44
     private static let balken = 13
+    /// Das X rechts, Mittelpunkt und Radius; geklickt werden darf der ganze rechte Rand.
+    private static let kreuzAbstand: CGFloat = 22
+    private static let kreuzRadius: CGFloat = 11
 
     // Immer leuchtendes Orange (#FF6D00), wie am Handy; oben im Balken zu Gelb-Orange aufgehellt.
     private static let farbraum = CGColorSpaceCreateDeviceRGB()
@@ -94,7 +97,7 @@ private final class PillenAnsicht: NSView {
 
     override init(frame: NSRect) {
         super.init(frame: frame)
-        toolTip = "Jarvis hört zu. Klick öffnet Jarvis, lange drücken beendet das Gespräch."
+        toolTip = "Jarvis hört zu. Klick öffnet Jarvis, das X oder lange drücken beendet das Gespräch."
     }
 
     @available(*, unavailable)
@@ -120,6 +123,7 @@ private final class PillenAnsicht: NSView {
     // MARK: Bedienung
 
     override func mouseDown(with event: NSEvent) {
+        if convert(event.locationInWindow, from: nil).x >= bounds.width - Self.kreuzAbstand * 2 { beenden(); return }
         startPunkt = event.locationInWindow
         langDruck = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
@@ -146,6 +150,11 @@ private final class PillenAnsicht: NSView {
         langDruck?.cancel()
         startPunkt = nil
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+        if LiveGespraech.shared.aktiv {
+            log("live", "Live-Gespräch beendet", wo: "Sprachpille")
+            LiveGespraech.shared.beenden()
+            return
+        }
         log("sprache", "Sprachsitzung beendet", wo: "Sprachpille")
         SprachSchleife.shared.beenden()
     }
@@ -159,8 +168,10 @@ private final class PillenAnsicht: NSView {
         zuletzt = jetzt
         let t = CGFloat(jetzt)
 
+        let live = LiveGespraech.shared
         let frank = SprachSchleife.shared.zustand == .hoert && Diktat.shared.aktiv && !Diktat.shared.schreibtMit
-        let pegel = CGFloat(frank ? Diktat.shared.pegel : (Stimme.shared.spricht ? Stimme.shared.pegel : 0))
+        let pegel = live.aktiv ? CGFloat(live.zustand == .spricht ? live.pegelAus : live.pegelEin)
+                               : CGFloat(frank ? Diktat.shared.pegel : (Stimme.shared.spricht ? Stimme.shared.pegel : 0))
 
         let w = bounds.width, h = bounds.height
         let form = CGPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerWidth: h / 2 - 0.5, cornerHeight: h / 2 - 0.5, transform: nil)
@@ -176,7 +187,7 @@ private final class PillenAnsicht: NSView {
         ctx.strokePath()
 
         let abstand: CGFloat = 5.6
-        let start = w / 2 - abstand * CGFloat(Self.balken - 1) / 2
+        let start = (w - Self.kreuzAbstand) / 2 - abstand * CGFloat(Self.balken - 1) / 2
         let maxHoehe = h * 0.62
         let mitte = h / 2
         let breite: CGFloat = 3.2
@@ -202,5 +213,17 @@ private final class PillenAnsicht: NSView {
         ctx.drawLinearGradient(Self.strich, start: CGPoint(x: 0, y: mitte + maxHoehe / 2), end: CGPoint(x: 0, y: mitte - maxHoehe / 2),
                                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
         ctx.restoreGState()
+
+        let kreuz = CGPoint(x: w - Self.kreuzAbstand, y: mitte)
+        let r = Self.kreuzRadius
+        ctx.setFillColor(Self.orange.copy(alpha: 0.2)!)
+        ctx.fillEllipse(in: CGRect(x: kreuz.x - r, y: kreuz.y - r, width: r * 2, height: r * 2))
+        ctx.setStrokeColor(Self.orange)
+        ctx.setLineWidth(2)
+        ctx.setLineCap(.round)
+        let arm: CGFloat = 4.5
+        ctx.move(to: CGPoint(x: kreuz.x - arm, y: kreuz.y - arm)); ctx.addLine(to: CGPoint(x: kreuz.x + arm, y: kreuz.y + arm))
+        ctx.move(to: CGPoint(x: kreuz.x - arm, y: kreuz.y + arm)); ctx.addLine(to: CGPoint(x: kreuz.x + arm, y: kreuz.y - arm))
+        ctx.strokePath()
     }
 }

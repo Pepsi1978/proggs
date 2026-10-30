@@ -154,6 +154,9 @@ struct EinstellungenAnsicht: View {
                     Picker("", selection: $einst.liveAnbieter) { Text("OpenAI").tag("openai"); Text("Gemini").tag("gemini") }
                         .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 200)
                 }
+                zeile("Bei Stille beenden", "Beendet das Live-Gespräch, wenn so lange niemand spricht. GPT-Live kostet auch bei Stille weiter.") {
+                    Picker("", selection: $einst.liveStilleMinuten) { ForEach(LiveOptionen.stilleEnde, id: \.minuten) { Text($0.name).tag($0.minuten) } }.labelsHidden().frame(maxWidth: 260)
+                }
                 zeile("OpenAI-Modell") {
                     Picker("", selection: $einst.liveModellOpenAI) { ForEach(LiveOptionen.openAIModelle, id: \.id) { Text($0.name).tag($0.id) } }.labelsHidden().frame(maxWidth: 260)
                 }

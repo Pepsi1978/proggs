@@ -16,7 +16,7 @@ struct LiveZeile: Identifiable, Hashable {
 @MainActor @Observable final class LiveGespraech {
     static let shared = LiveGespraech()
     enum Zustand: String { case aus, verbindet, hoert, spricht, denkt }
-    private(set) var zustand: Zustand = .aus
+    private(set) var zustand: Zustand = .aus { didSet { if zustand != oldValue { AppSteuerung.shared.pilleAbgleichen() } } }
     private(set) var pegelEin: Float = 0
     private(set) var pegelAus: Float = 0
     private(set) var mitschrift: [LiveZeile] = []
@@ -36,7 +36,6 @@ struct LiveZeile: Identifiable, Hashable {
     /// GPT-Live/Realtime: nicht delegierte Beiträge (Smalltalk) kommen ins Gespräch; delegierte schreibt der Agent selbst.
     @ObservationIgnored private var ausstehend: [Nachricht] = []
     @ObservationIgnored private var naechsteJarvisVomAgenten = 0
-    @ObservationIgnored private var stilleEndeSek: Double = 180
 
     /// Leitet die Rückmeldungen aus dem Socket-Faden auf den Hauptfaden.
     private final class Bruecke: LiveSitzungsDelegate, @unchecked Sendable {
@@ -169,8 +168,9 @@ struct LiveZeile: Identifiable, Hashable {
         if spricht || denkt { letzteAktivitaet = Date() }
         let neu: Zustand = !sitzung.bereit ? .verbindet : spricht ? .spricht : denkt ? .denkt : .hoert
         if neu != zustand { zustand = neu }
-        if Date().timeIntervalSince(letzteAktivitaet) > stilleEndeSek {
-            log("live", "Drei Minuten Stille: Live-Gespräch endet")
+        let minuten = Einstellungen.shared.liveStilleMinuten
+        if minuten > 0, Date().timeIntervalSince(letzteAktivitaet) > Double(minuten) * 60 {
+            log("live", "\(minuten) Minuten Stille: Live-Gespräch endet")
             beenden()
         }
     }

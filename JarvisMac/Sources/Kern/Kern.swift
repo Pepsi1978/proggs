@@ -263,6 +263,8 @@ final class Einstellungen {
     var liveStimmeGemini: String { didSet { d.set(liveStimmeGemini, forKey: "liveStimmeGemini"); Logbuch.shared.einstellung("liveStimmeGemini", "\(liveStimmeGemini)", wo: "Einstellungen") } }
     var liveModellOpenAI: String { didSet { d.set(liveModellOpenAI, forKey: "liveModellOpenAI"); Logbuch.shared.einstellung("liveModellOpenAI", "\(liveModellOpenAI)", wo: "Einstellungen") } }
     var liveModellGemini: String { didSet { d.set(liveModellGemini, forKey: "liveModellGemini"); Logbuch.shared.einstellung("liveModellGemini", "\(liveModellGemini)", wo: "Einstellungen") } }
+    /// Live-Gespräch endet nach so vielen Minuten Stille, 0 = nie.
+    var liveStilleMinuten: Int { didSet { d.set(liveStilleMinuten, forKey: "liveStilleMinuten"); Logbuch.shared.einstellung("liveStilleMinuten", "\(liveStilleMinuten)", wo: "Einstellungen") } }
     var vollzugriff: Bool { didSet { d.set(vollzugriff, forKey: "vollzugriff"); Logbuch.shared.einstellung("vollzugriff", "\(vollzugriff)", wo: "Einstellungen") } }
     var lernenAn: Bool { didSet { d.set(lernenAn, forKey: "lernenAn"); Logbuch.shared.einstellung("lernenAn", "\(lernenAn)", wo: "Einstellungen") } }
     var globalesKuerzel: Bool { didSet { d.set(globalesKuerzel, forKey: "globalesKuerzel"); Logbuch.shared.einstellung("globalesKuerzel", "\(globalesKuerzel)", wo: "Einstellungen") } }
@@ -285,6 +287,7 @@ final class Einstellungen {
         liveStimmeGemini = s("liveStimmeGemini", "Charon")
         liveModellOpenAI = s("liveModellOpenAI", "gpt-live-1")
         liveModellGemini = s("liveModellGemini", "gemini-3.8-live")
+        liveStilleMinuten = d.object(forKey: "liveStilleMinuten") as? Int ?? 5
         vollzugriff = b("vollzugriff", true)
         lernenAn = b("lernenAn", true)
         globalesKuerzel = b("globalesKuerzel", true)
