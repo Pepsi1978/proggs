@@ -617,44 +617,50 @@ private fun StillezeitKarte(vm: AppViewModel) {
     val f = LocalFarben.current
     val e = vm.einstellungen
     Bereich("Stillezeit: Wie lange das Mikrofon offen bleibt", aufklappbar = false) {
-        Text("So lange bleibt das Mikrofon nach deinem letzten Wort offen, 1 bis 15 Sekunden, auch mit Komma. Sagst du nach dem Piepton gar nichts, schließt es nach 7 Sekunden, nach einer Antwort nach 9. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp)
+        Text("So lange bleibt das Mikrofon nach deinem letzten Wort offen: in der App 1 bis 15 Sekunden, außerhalb bis 2 Minuten. Über 15 Sekunden darf eine Frage bis knapp 10 Minuten dauern, sonst bis 2 Minuten. Sagst du nach dem Piepton gar nichts, schließt es nach 7 Sekunden, nach einer Antwort nach 9. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp)
         if (!e.weckwortAn) Text("Das Weckwort ist gerade aus; du schaltest es auf dem Reiter „Stimme“ unter „Hey Jarvis“ ein.", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-        StillezeitFeld("Stillezeit in der App", { e.stilleInAppMs }, vm) { e.stilleInAppMs = it }
-        StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", { e.stilleAussenMs }, vm) { e.stilleAussenMs = it }
+        StillezeitRegler("Stillezeit in der App", Einstellungen.STILLE_MAX_MS, { e.stilleInAppMs }, vm) { e.stilleInAppMs = it }
+        StillezeitRegler("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", Einstellungen.STILLE_AUSSEN_MAX_MS, { e.stilleAussenMs }, vm) { e.stilleAussenMs = it }
     }
 }
 
-/** Eine Stillezeit in Sekunden eintragen; [lies] liefert den gespeicherten Wert. Ein gültiger Wert gilt auch ohne „Übernehmen“ beim Verlassen des Bildschirms, mit Meldung. */
+/** Eine Stillezeit per Regler; [lies] liefert den gespeicherten Wert. Gespeichert wird beim Loslassen, beim Verlassen des Bildschirms kommt die Meldung. */
 @Composable
-private fun StillezeitFeld(titel: String, lies: () -> Int, vm: AppViewModel, setze: (Int) -> Unit) {
+private fun StillezeitRegler(titel: String, maxMs: Int, lies: () -> Int, vm: AppViewModel, setze: (Int) -> Unit) {
+    val f = LocalFarben.current
     val ms = lies()
-    var text by remember { mutableStateOf(Einstellungen.stilleZahl(ms)) }
+    val stufen = remember(maxMs) { Einstellungen.stilleStufen(maxMs) }
+    var entwurf by remember { mutableStateOf(ms) }
     // Der Wert, auf dem der Entwurf beruht: Hat Jarvis ihn inzwischen per Sprache geändert, gewinnt das Gesprochene.
     var basis by remember { mutableStateOf(ms) }
-    // Per Sprache geändert, während der Bildschirm offen ist: Das Feld zieht mit.
-    LaunchedEffect(ms) { text = Einstellungen.stilleZahl(ms); basis = ms }
+    // Stand seit dem Öffnen oder der letzten Änderung per Sprache: Nur eine Abweichung davon ist eine Meldung wert.
+    var anfang by remember { mutableStateOf(ms) }
+    // Per Sprache geändert, während der Bildschirm offen ist: Der Regler zieht mit.
+    LaunchedEffect(ms) { if (ms != basis) { entwurf = ms; basis = ms; anfang = ms } }
     val liesAktuell by rememberUpdatedState(lies)
     val setzeAktuell by rememberUpdatedState(setze)
     DisposableEffect(Unit) {
         onDispose {
             val jetzt = liesAktuell()
-            if (jetzt == basis && text != Einstellungen.stilleZahl(jetzt)) {
-                val neu = Einstellungen.stilleMsAus(text)
-                if (neu == null) vm.meldung = "$titel: „$text“ nicht übernommen, bleibt bei ${Einstellungen.stilleText(jetzt)}."
-                else if (neu != jetzt) { setzeAktuell(neu); vm.meldung = "$titel: jetzt ${Einstellungen.stilleText(neu)}." }
+            if (jetzt == basis) {
+                if (entwurf != jetzt) setzeAktuell(entwurf)
+                if (entwurf != anfang) vm.meldung = "$titel: jetzt ${Einstellungen.stilleText(entwurf)}."
             }
         }
     }
-    val uebernehmen: () -> Unit = {
-        val neu = Einstellungen.stilleMsAus(text)
-        if (neu == null) vm.meldung = "Bitte 1 bis 15 Sekunden eintragen, auch mit Komma."
-        else { setze(neu); text = Einstellungen.stilleZahl(neu); basis = neu; vm.meldung = "$titel: jetzt ${Einstellungen.stilleText(neu)}." }
-    }
     Unterzeile(titel)
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Eingabe(text, { text = it }, "Sekunden, z. B. 2,5", Modifier.weight(1f), senden = uebernehmen, tastatur = androidx.compose.ui.text.input.KeyboardType.Decimal)
-        Spacer(Modifier.width(8.dp))
-        Knopf("Übernehmen", haupt = text != Einstellungen.stilleZahl(ms), aktion = uebernehmen)
+    Text(Einstellungen.stilleAnzeige(entwurf), color = f.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+    // Ein per Sprache gesetzter Wert zwischen zwei Rasten bleibt genau erhalten, bis der Regler bewegt wird.
+    val position = stufen.indices.minByOrNull { kotlin.math.abs(stufen[it] - entwurf) } ?: 0
+    Slider(
+        value = position.toFloat(), onValueChange = { entwurf = stufen[it.roundToInt().coerceIn(stufen.indices)] },
+        onValueChangeFinished = { if (entwurf != liesAktuell()) { basis = entwurf; setze(entwurf) } },
+        valueRange = 0f..stufen.lastIndex.toFloat(),
+        colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer, inactiveTrackColor = f.rand),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("1 Sekunde", color = f.textLeise, fontSize = 13.sp)
+        Text(if (maxMs >= 60_000) "${maxMs / 60_000} Minuten" else "${maxMs / 1_000} Sekunden", color = f.textLeise, fontSize = 13.sp)
     }
 }
 

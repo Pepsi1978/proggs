@@ -2169,7 +2169,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return de.frank.module.transkriptionsmodul.SprechEnde.Lage.NICHTS_GEHOERT }
         freihaendig = true
         // Nach einer Antwort darf Frank etwas länger überlegen, bevor er anfängt.
-        val ende = de.frank.module.transkriptionsmodul.SprechEnde(wartenMs = if (erste) 7_000 else 9_000, stilleMs = stilleMsJetzt().toLong())
+        val stilleMs = stilleMsJetzt()
+        val ende = de.frank.module.transkriptionsmodul.SprechEnde(wartenMs = if (erste) 7_000 else 9_000, stilleMs = stilleMs.toLong(), hoechstMs = de.frank.jarvis.data.Einstellungen.frageHoechstMs(stilleMs))
         // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
         val start = System.currentTimeMillis()
         piep()
