@@ -215,6 +215,7 @@ import Observation
     private(set) var aktiv = false
     private(set) var pegel: Float = 0
     private(set) var vorschau = ""             // Zwischenergebnis während des Sprechens
+    private(set) var schreibtMit = false       // Mikrofon zu, die Aufnahme wird gerade in Text umgewandelt
     private(set) var fehler: String?
 
     private var stoppWunsch = false
@@ -226,6 +227,7 @@ import Observation
         var pegel: Float = 0
         var rauschboden: Float = 0.004
         var messungen = 0
+        var dauer: Double = 0
         var sprachZeit: Double = 0
         var begonnen = false
         var letzteSprache = Date.distantPast
@@ -233,8 +235,9 @@ import Observation
         func mit<T>(_ f: (Messung) -> T) -> T { lock.lock(); defer { lock.unlock() }; return f(self) }
     }
 
-    /// Hört zu, bis Frank fertig gesprochen hat (Stille) oder `stoppen()` kommt; gibt den erkannten Text zurück (nil = nichts).
-    func hoereBisStille(maxSekunden: Double = 30) async -> String? {
+    /// Hört zu und gibt den erkannten Text zurück (nil = nichts). Wie am Handy: Das Diktat-Mikrofon läuft, bis Frank `stoppen()` auslöst.
+    /// Mit `stilleSek` (Gesprächsmodus) endet die Aufnahme nach so viel Stille hinter dem letzten Wort, mit `wartenSek`, wenn bis dahin keine Sprache kam.
+    func hoereBisStille(maxSekunden: Double = 600, stilleSek: Double? = nil, wartenSek: Double? = nil) async -> String? {
         guard !aktiv else { return nil }
         fehler = nil
         guard await SprachRechte.mikrofon() else {
@@ -245,7 +248,7 @@ import Observation
         Weckwort.shared.pausieren()
         defer { Weckwort.shared.fortsetzen() }
         aktiv = true; stoppWunsch = false; abbruchWunsch = false; vorschau = ""; pegel = 0
-        defer { aktiv = false; pegel = 0 }
+        defer { aktiv = false; pegel = 0; schreibtMit = false }
 
         _ = TranskriptionsEinstellungen.shared            // setzt beim ersten Mal die Vorgabe (Parakeet, falls vorhanden)
         let verfahren = Einstellungen.shared.transkription
@@ -273,24 +276,31 @@ import Observation
             let w = mitSamples ? umwandler.wandle(p) : nil
             messung.mit { m in
                 m.pegel = rms
-                m.messungen += 1
-                if m.messungen <= 6 {                      // erste ~0,25 s: Rauschboden messen
-                    m.rauschboden = max(0.002, (m.rauschboden * Float(m.messungen - 1) + rms) / Float(m.messungen))
-                } else if rms < m.rauschboden * 1.5 {
-                    m.rauschboden = m.rauschboden * 0.98 + rms * 0.02
-                }
-                let schwelle = max(m.rauschboden * 3.2, 0.012)
-                if rms > schwelle {
-                    m.sprachZeit += dauer
-                    m.letzteSprache = Date()
-                    if m.sprachZeit > 0.18 { m.begonnen = true }
+                m.dauer += dauer
+                // Die ersten 250 ms läuft der Piepton (wie am Handy): zählt weder als Sprache noch fürs Grundrauschen.
+                if m.dauer >= 0.25 {
+                    m.messungen += 1
+                    if m.messungen <= 6 {                  // danach ~0,25 s: Rauschboden messen
+                        m.rauschboden = max(0.002, (m.rauschboden * Float(m.messungen - 1) + rms) / Float(m.messungen))
+                    } else if rms < m.rauschboden {        // sprach Frank schon beim Messen, stimmt es ab der ersten Wortpause
+                        m.rauschboden = max(0.002, rms)
+                    } else if rms < m.rauschboden * 1.5 {
+                        m.rauschboden = m.rauschboden * 0.98 + rms * 0.02
+                    }
+                    let schwelle = max(m.rauschboden * 3.2, 0.012)
+                    if rms > schwelle {
+                        m.sprachZeit += dauer
+                        m.letzteSprache = Date()
+                        if m.sprachZeit > 0.18 { m.begonnen = true }
+                    }
                 }
                 if let w, let k = w.floatChannelData, m.samples.count < 16000 * 120 {
                     m.samples.append(contentsOf: UnsafeBufferPointer(start: k[0], count: Int(w.frameLength)))
                 }
             }
         }
-        do { try mikro.starten() } catch {
+        messung.mit { $0.samples.reserveCapacity(16000 * 30) }   // nicht mitten in der Aufnahme umkopieren
+        do { try await mikro.startenImHintergrund() } catch {
             fehler = error.localizedDescription
             log("fehler", "Diktat: Mikrofon startet nicht (\(fehler!))")
             if let erkenner { await erkenner.beenden(abschliessen: false) }
@@ -308,20 +318,18 @@ import Observation
             let jetzt = Date()
             if jetzt.timeIntervalSince(start) > maxSekunden { abgeschlossen = true; break }
             if begonnen {
-                // Apple liefert schon Text: kleine Pause genügt nicht, wenn noch kein Wort da ist.
-                let stille = jetzt.timeIntervalSince(letzte)
-                if stille > 1.2 && (!apple || !vorschau.isEmpty || stille > 2.5) { abgeschlossen = true; break }
-            } else if jetzt.timeIntervalSince(start) > 8 {
+                if let stilleSek, jetzt.timeIntervalSince(letzte) >= stilleSek { abgeschlossen = true; break }
+            } else if let wartenSek, jetzt.timeIntervalSince(start) >= wartenSek {
                 break
             }
         }
-        mikro.stoppen()
+        await mikro.stoppenImHintergrund()
         guard abgeschlossen, messung.mit({ $0.begonnen }) || stoppWunsch else {
             if let erkenner { await erkenner.beenden(abschliessen: false) }
             vorschau = ""
             return nil
         }
-        Toene.ende()
+        schreibtMit = true
         var text: String
         if let erkenner {
             text = await erkenner.beenden(abschliessen: true)
@@ -434,9 +442,15 @@ import Observation
         let m = Mikrofon()
         m.beiPuffer = { p in e.fuettere(p) }
         m.beiGeraetewechsel = { [weak self] in Task { @MainActor in self?.neuStarten(grund: "Gerätewechsel") } }
-        do { try m.starten() } catch {
+        do { try await m.startenImHintergrund() } catch {
             fehler = "Weckwort: Mikrofon startet nicht (\(error.localizedDescription))"
             log("fehler", fehler!)
+            await e.beenden(abschliessen: false)
+            return
+        }
+        // Während des Mikrofonstarts pausiert oder abgeschaltet?
+        guard gewuenscht, pausen == 0 else {
+            await m.stoppenImHintergrund()
             await e.beenden(abschliessen: false)
             return
         }
@@ -458,7 +472,8 @@ import Observation
         let m = mikro, e = erkenner
         mikro = nil; erkenner = nil
         lauscht = false
-        m?.stoppen()
+        // Das Abschalten darf den Hörbeginn nach dem Weckwort nicht aufhalten.
+        Task.detached(priority: .userInitiated) { m?.stoppen() }
         if let e { await e.beenden(abschliessen: false) }
     }
 
@@ -489,14 +504,14 @@ import Observation
         guard Date().timeIntervalSince(letzterTreffer) > 2 else { return }
         letzterTreffer = Date()
         log("sprache", "Weckwort erkannt: „\(text.suffix(60))“")
+        // Der Piepton kommt mit der ersten Gesprächsrunde: sofort los, das Lauschen endet nebenher.
+        Task { await stoppeIntern() }
+        if let beiErkennung {
+            beiErkennung()
+        } else {
+            SprachSchleife.shared.starten(in: GespraechsSpeicher.shared.neu())
+        }
         Task {
-            await stoppeIntern()
-            Toene.weckwort()
-            if let beiErkennung {
-                beiErkennung()
-            } else {
-                SprachSchleife.shared.starten(in: GespraechsSpeicher.shared.neu())
-            }
             // Hat niemand pausiert (z. B. leerer Handler), nach kurzer Zeit wieder lauschen.
             try? await Task.sleep(for: .seconds(2))
             if pausen == 0 { await starteIntern() }
@@ -506,28 +521,15 @@ import Observation
 
 // MARK: - Sprachschleife
 
-/// Klassische Sprachschleife: zuhören → Jarvis → vorlesen → kurzes Folgefenster.
+/// Der Gesprächsmodus wie am Handy (SprechEnde.kt): Piepton, zuhören bis 4,5 Sekunden Stille nach dem letzten Wort, Jarvis, vorlesen, wieder von vorn.
+/// Kommt nach dem Piepton nichts (7 Sekunden, ab der zweiten Runde 9), ist Schluss, ebenso bei einem Ausbefehl.
 @MainActor @Observable final class SprachSchleife {
     static let shared = SprachSchleife()
     enum Zustand: String { case aus, hoert, denkt, spricht }
-    private(set) var zustand: Zustand = .aus
+    private(set) var zustand: Zustand = .aus { didSet { if zustand != oldValue { AppSteuerung.shared.pilleAbgleichen() } } }
     private(set) var gespraech: Gespraech?
     private var aufgabe: Task<Void, Never>?
     private var lauf = 0
-
-    private static let endeWoerter = ["danke", "danke schön", "dankeschön", "vielen dank", "stopp", "stop", "das wars",
-                                      "das war es", "das war's", "hör auf", "hoer auf", "tschüss", "ende", "beenden",
-                                      "sprachsession beenden", "gespräch beenden", "nichts mehr", "passt danke"]
-
-    static func istEnde(_ text: String) -> Bool {
-        let n = GroqWhisper.normal(text.replacingOccurrences(of: "'", with: ""))
-        guard n.split(separator: " ").count <= 4 else { return false }
-        let ohneJarvis = n.replacingOccurrences(of: "jarvis", with: "").trimmingCharacters(in: .whitespaces)
-        return endeWoerter.contains { w in
-            let x = GroqWhisper.normal(w)
-            return ohneJarvis == x || ohneJarvis.hasPrefix(x + " ") || ohneJarvis.hasSuffix(" " + x)
-        }
-    }
 
     func starten(in g: Gespraech) {
         aufgabe?.cancel()
@@ -554,25 +556,34 @@ import Observation
             if lauf == meiner { zustand = .aus }
         }
         log("sprache", "Sprachschleife gestartet")
+        var runde = 0
         while lauf == meiner && !Task.isCancelled {
+            if runde > 0 { try? await Task.sleep(for: .milliseconds(300)) }
+            guard lauf == meiner, !Task.isCancelled else { break }
             zustand = .hoert
             // Ein gerade abgebrochenes Diktat braucht einen Moment, bis es frei ist.
             var warte = 0
             while Diktat.shared.aktiv && warte < 40 { try? await Task.sleep(for: .milliseconds(50)); warte += 1 }
-            guard let text = await Diktat.shared.hoereBisStille(maxSekunden: 30) else { break }
+            guard let text = await Diktat.shared.hoereBisStille(maxSekunden: 120, stilleSek: 4.5, wartenSek: runde == 0 ? 7 : 9) else { break }
             guard lauf == meiner, !Task.isCancelled else { break }
-            if Self.istEnde(text) {
+            if SprachBefehle.istSessionEnde(text, imGespraechsmodus: true) {
+                // Geht nie ans Modell: kein Eintrag im Gespräch, nur die kurze Bestätigung.
                 log("sprache", "Sprachschleife beendet („\(text)“)")
+                zustand = .spricht
+                await Stimme.shared.sprich("Okay, Sprachsession beendet.")
                 break
             }
             zustand = .denkt
             let antwort = await JarvisAgent.shared.frage(text, in: g, gesprochen: true)
             guard lauf == meiner, !Task.isCancelled else { break }
-            if Einstellungen.shared.vorlesen && !antwort.isEmpty {
+            guard !antwort.isEmpty else { break }
+            if Einstellungen.shared.vorlesen {
                 zustand = .spricht
                 await Stimme.shared.sprich(antwort)
                 guard lauf == meiner, !Task.isCancelled else { break }
             }
+            if g.nachrichten.last(where: { $0.rolle == .jarvis })?.schritte.contains(where: { $0.werkzeug == "sprachsession_beenden" }) == true { break }
+            runde += 1
         }
     }
 }

@@ -38,6 +38,11 @@ actor McpKlient {
     private(set) var serverVersion = ""
     private var naechsteId = 1
     private var verbundeneAdresse = ""
+    private var letzterFehlschlag = Date.distantPast
+    private var werkzeugAbruf: Task<[WerkzeugDefinition], Never>?
+    private var kontextVorrat = ""
+    private var kontextZeit = Date.distantPast
+    private var kontextAbruf: Task<Void, Never>?
 
     private var adresse: String { get async { await MainActor.run { Einstellungen.shared.zugang.relay } } }
 
@@ -91,8 +96,31 @@ actor McpKlient {
     /// Werkzeugliste des Handys, 10 Minuten zwischengespeichert, nach Namen sortiert (stabil für den Prompt-Cache).
     func werkzeuge(frisch: Bool = false) async -> [WerkzeugDefinition] {
         let a = await adresse
-        if a != verbundeneAdresse { werkzeugCache = []; anweisungen = ""; verbundeneAdresse = a }   // Relay gewechselt
-        if !frisch, !werkzeugCache.isEmpty, Date().timeIntervalSince(cacheZeit) < 600 { return werkzeugCache }
+        if a != verbundeneAdresse {   // Relay gewechselt
+            werkzeugCache = []; anweisungen = ""; verbundeneAdresse = a
+            letzterFehlschlag = .distantPast; kontextVorrat = ""; kontextZeit = .distantPast
+        }
+        if !frisch, !werkzeugCache.isEmpty {
+            // Eine ältere Liste reicht für die Frage von gerade; erneuert wird dahinter, ohne dass Frank darauf wartet.
+            if Date().timeIntervalSince(cacheZeit) >= 600 { _ = werkzeugeHolen() }
+            return werkzeugCache
+        }
+        // Eben nicht erreichbar: nicht bei jeder Frage erneut bis zur Zeitgrenze warten. Die App prüft alle 30 Sekunden selbst.
+        if !frisch, Date().timeIntervalSince(letzterFehlschlag) < 45 { return [] }
+        return await werkzeugeHolen().value
+    }
+
+    private func werkzeugeHolen() -> Task<[WerkzeugDefinition], Never> {
+        if let werkzeugAbruf { return werkzeugAbruf }
+        let t = Task { () -> [WerkzeugDefinition] in
+            defer { werkzeugAbruf = nil }
+            return await werkzeugeAbrufen()
+        }
+        werkzeugAbruf = t
+        return t
+    }
+
+    private func werkzeugeAbrufen() async -> [WerkzeugDefinition] {
         do {
             if anweisungen.isEmpty { try await verbinden() }
             let r = try await rpc("tools/list", sekunden: 30)
@@ -102,17 +130,37 @@ actor McpKlient {
                 if schema["type"] == nil { schema["type"] = "object" }
                 return WerkzeugDefinition(name: n, beschreibung: t["description"] as? String ?? "", schema: schema)
             }.sorted { $0.name < $1.name }
-            if !liste.isEmpty { werkzeugCache = liste; cacheZeit = Date() }
+            if !liste.isEmpty { werkzeugCache = liste; cacheZeit = Date(); letzterFehlschlag = .distantPast }
             log("system", "Handy-Jarvis verbunden: \(liste.count) Werkzeuge (\(serverVersion))")
         } catch {
             // Nicht mehr erreichbar: keinen alten Stand als „verbunden“ melden.
             werkzeugCache = []
+            letzterFehlschlag = Date()
             log("fehler", "Handy-Jarvis nicht erreichbar: \(error.localizedDescription)")
         }
         return werkzeugCache
     }
 
     var verbunden: Bool { !werkzeugCache.isEmpty }
+
+    /// Holt das Live-Gedächtnis schon, während Frank spricht (Weckwort, neues Gespräch), damit die erste Antwort nicht darauf wartet.
+    func kontextVorladen() {
+        guard kontextAbruf == nil, Date().timeIntervalSince(kontextZeit) > 120 else { return }
+        kontextAbruf = Task {
+            let r = await rufe("jarvis_kontext", [:], sekunden: 30)
+            if !r.fehler { kontextVorrat = r.text; kontextZeit = Date() }
+            kontextAbruf = nil
+        }
+    }
+
+    /// Das Live-Gedächtnis für ein neues Gespräch: der Vorrat, sonst höchstens 6 Sekunden Warten. Kommt nichts, holt die nächste Frage es nach.
+    func kontextFuerGespraech() async -> String {
+        if !kontextVorrat.isEmpty, Date().timeIntervalSince(kontextZeit) < 600 { return kontextVorrat }
+        if werkzeugCache.isEmpty, Date().timeIntervalSince(letzterFehlschlag) < 45 { return kontextVorrat }
+        kontextVorladen()
+        if let t = kontextAbruf { _ = await mitFrist(6) { await t.value } }
+        return kontextVorrat
+    }
 
     func rufe(_ name: String, _ argumente: JSONObjekt, sekunden: Double = 150) async -> WerkzeugErgebnis {
         let start = Date()

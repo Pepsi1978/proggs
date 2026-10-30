@@ -106,7 +106,8 @@ enum Transkription {
 
     @MainActor static func erkenne(_ samples: [Float]) async throws -> String {
         let e = TranskriptionsEinstellungen.shared
-        let analyse = SprachAnalyse(samples)
+        // Die Zeitachse über die ganze Aufnahme rechnen: nicht auf dem Hauptfaden.
+        let analyse = await Task.detached(priority: .userInitiated) { SprachAnalyse(samples) }.value
         switch Einstellungen.shared.transkription {
         case "parakeet":
             guard ParakeetLocalClient.isInstalled else {

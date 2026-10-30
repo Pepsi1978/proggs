@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.20 -->
+<!-- stand: JarvisMac 1.0.23 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -14,9 +14,9 @@ Was Jarvis für macOS kann (geprüft am Code).
 - `terminal_befehl` (sichtbares Terminal-Fenster), `openlauncher_sitzung` (OpenLauncher `--jarvis-auftrag` mit CLI, Modell, Profil, Modus, Effort), `updater_zentrale` (Programmliste, öffnen), `chatgpt_app` (Nachricht in die ChatGPT-App).
 
 ## Sprache
-- Weckwort „Hey Jarvis“ (einstellbar) offline am Mac, schwebende Sprach-Einblendung über allen Programmen; ⌥⌘J überall sprechen, ⌥⌘K Fenster.
-- Sprachschleife: zuhören → Jarvis → vorlesen → 8 s Folgefenster; „Danke“, „Stopp“, „Hör auf“ beenden.
-- Diktat ins Eingabefeld (endet mit „ ; “). Transkription wie am Handy: Parakeet primeline offline am Mac (sherpa-onnx, geteiltes Modell der Voice-Overlays, Lade-/Rechenzeit und Speicher gemessen, nie stiller Rückfall, mit eigenem abschaltbarem Wörterbuch: bis 100 Begriffe gehen als Wortliste in die Beam-Suche, per Sprache über mac_einstellungen änderbar), Groq Whisper Large V3 Turbo/Large V3 mit Wörterbuch und den vier Halluzinationsfiltern, Apple offline mit Live-Vorschau.
+- Weckwort „Hey Jarvis“ (einstellbar) offline am Mac; ⌥⌘J überall sprechen, ⌥⌘K Fenster. Ist Jarvis vorn, geht das offene Gespräch weiter; sonst beginnt ein neues im Hintergrund und oben mittig erscheint die orange Sprachpille wie am Handy (Pegel-Spektrum, nimmt nie den Fokus, nicht auf Bildschirmfotos; Klick öffnet Jarvis, lange drücken, Rechtsklick oder nach oben ziehen beendet).
+- Gesprächsmodus wie am Handy: Piepton, zuhören bis 4,5 s Stille nach dem letzten Wort (höchstens 120 s), Jarvis, vorlesen, wieder von vorn; kommt nach dem Piepton nichts (7 s, ab der zweiten Runde 9 s), ist Schluss. Ausbefehle wie am Handy („Danke“, „Stopp“, „Das war's“, „Sprachsession beenden“ …) gehen nicht ans Modell.
+- Diktat ins Eingabefeld (endet mit „ ; “; wie am Handy: Tipp startet, zweiter Tipp beendet, höchstens 10 Minuten, kein Abbruch bei Pausen). Transkription wie am Handy: Parakeet primeline offline am Mac (sherpa-onnx, geteiltes Modell der Voice-Overlays, Lade-/Rechenzeit und Speicher gemessen, nie stiller Rückfall, mit eigenem abschaltbarem Wörterbuch: bis 100 Begriffe gehen als Wortliste in die Beam-Suche, per Sprache über mac_einstellungen änderbar), Groq Whisper Large V3 Turbo/Large V3 mit Wörterbuch und den vier Halluzinationsfiltern, Apple offline mit Live-Vorschau.
 - Vorlesen wie am Handy: Microsoft Edge, Google Chirp 3 HD, Gemini 3.8 Flash TTS und Flash-Lite TTS (kostenlos/bezahlt, Reihenfolge), Azure Neural (17 + Seraphina/Florian HD), Alibaba Qwen, eigene geklonte Stimme, Systemstimme; Favoriten mit Stern, Hörprobe je Stimme, Tempo je Anbieter, „Immer deutsch“, sortierbare Rückfallkette.
 
 ## Live-Gespräch
@@ -24,6 +24,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 
 ## Oberfläche
 - Start (beim Öffnen): große Kugel, Begrüßung, Tagesauswertung, Schnellverknüpfungen, unten die Sprechblase mit Modell und Kosten.
+- Sprechblase überall gleich wie am Handy: rechts Mikrofon und daneben genau ein Knopf: Live, sobald Text oder Anhang da ist der Pfeil, während einer Antwort Stopp. Neues Gespräch wird erst mit der ersten Nachricht gespeichert, ⌘N legt keine leeren an; alte leere Gespräche verschwinden beim Start.
 - Zentrale: Sprechblase wie im Gespräch über den Schnellverknüpfungen, Kugel, Begrüßung, Tagesauswertung (vorlesbar, neu erstellen lassen), Aufgaben heute, Termine, Wetter, Mac-Kacheln.
 - Leiste mit Reitern Gespräche, Programmierung, Projekte (oranger Punkt, wenn dort gearbeitet wird); Projekte anlegen, Gespräche im Projekt.
 - Unter jeder Antwort: Kopieren, Vorlesen, Daumen hoch/runter (daraus lernt die Stil-Datei), Teilen, in neuem Gespräch fortsetzen, erneut fragen. Anthropic-Restguthaben vor dem Claude-Modellnamen.
@@ -45,3 +46,6 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Zentrale: Sprechblase über den Schnellverknüpfungen, diese untereinander in voller Breite, Bereich schmaler.
 - Gedächtnis: zusätzlich Funktionsübersicht Mac, Funktionsübersicht Handy, Handy-Reiter und CLI, Regeln für ChatGPT Live.
 - `repo_lesen` liest am Mac versionierte Dateien direkt aus ~/proggs (ohne Vollzugriff wie bisher über das Handy) und markiert Gekürztes. `cli_frage` fragt im Hintergrund das CLI: nur Lesen und Suchen, ~/SK gesperrt, ohne Hooks und MCP-Server.
+
+## Neu seit 1.0.23
+- Tempo: Live-Gedächtnis wird schon beim Weckwort und neuen Gespräch vorgeladen, Werkzeugliste bleibt warm, Handy aus kostet keine Wartezeit; Gespräche, Logbuch, Mikrofon-Start und Aufnahme-Analyse laufen neben dem Hauptfaden, Gespräche laden im Hintergrund, gestreamter Text höchstens 20-mal je Sekunde und ohne Neurechnen alter Nachrichten; Animationen ruhen im Hintergrund und während Sprache und Live; Parakeet bleibt zwei Stunden geladen.

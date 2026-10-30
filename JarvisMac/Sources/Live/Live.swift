@@ -125,9 +125,12 @@ struct LiveZeile: Identifiable, Hashable {
         log("live", "Live-Gespräch beginnt: \(beschreibung)")
         neu.starten()
         letzteAktivitaet = Date()
-        zeitgeber = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        let uhr = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.takt() }
         }
+        // Auch während Frank scrollt oder ein Fenster zieht: Beitragsenden und die Jarvis-Weiche hängen an diesem Takt.
+        RunLoop.main.add(uhr, forMode: .common)
+        zeitgeber = uhr
     }
 
     private func abbrechen(_ text: String) {

@@ -150,7 +150,8 @@ final class Logbuch {
 
     func schreib(_ art: String, _ text: String, wo: String? = nil, werkzeug: String? = nil, eingabe: String? = nil,
                  ergebnis: String? = nil, fehler: String? = nil, dauerMs: Int? = nil) {
-        func sauber(_ s: String?, _ grenze: Int) -> String? { s.map { String(Geheimnisse.schwaerzen($0).prefix(grenze)) } }
+        // Vor dem Schwärzen grob kürzen: lange Werkzeugergebnisse sollen hier nicht den Hauptfaden aufhalten.
+        func sauber(_ s: String?, _ grenze: Int) -> String? { s.map { String(Geheimnisse.schwaerzen(String($0.prefix(grenze * 2))).prefix(grenze)) } }
         let e = LogEintrag(art: art, text: sauber(text, 4000) ?? "", wo: wo, werkzeug: werkzeug, eingabe: sauber(eingabe, 2000),
                            ergebnis: sauber(ergebnis, 4000), fehler: sauber(fehler, 2000), dauerMs: dauerMs)
         eintraege.append(e)
@@ -159,14 +160,19 @@ final class Logbuch {
         var o: JSONObjekt = ["zeit": zeitFormat.string(from: e.zeit), "art": e.art, "was": e.text, "version": AppInfo.version]
         o["wo"] = e.wo ?? Self.ort(art); o["werkzeug"] = e.werkzeug; o["eingabe"] = e.eingabe
         o["ergebnis"] = e.ergebnis; o["fehler"] = e.fehler ?? (art == "fehler" ? e.text : nil); o["dauer_ms"] = e.dauerMs
-        var zeile = JSON.daten(o); zeile.append(0x0A)
         let datei = Self.ordner.appendingPathComponent(tagFormat.string(from: e.zeit) + ".jsonl")
-        if let h = try? FileHandle(forWritingTo: datei) {
-            h.seekToEndOfFile(); h.write(zeile); try? h.close()
-        } else {
-            FileManager.default.createFile(atPath: datei.path, contents: zeile, attributes: [.posixPermissions: 0o600])
+        // Auf die Platte im Hintergrund: Der Hauptfaden wartet bei jedem Ereignis sonst auf Öffnen, Schreiben und Schließen.
+        Self.schreiber.async {
+            var zeile = JSON.daten(o); zeile.append(0x0A)
+            if let h = try? FileHandle(forWritingTo: datei) {
+                h.seekToEndOfFile(); h.write(zeile); try? h.close()
+            } else {
+                FileManager.default.createFile(atPath: datei.path, contents: zeile, attributes: [.posixPermissions: 0o600])
+            }
         }
     }
+
+    nonisolated static let schreiber = DispatchQueue(label: "jarvis.logbuch", qos: .utility)
 
     /// Einstellungen ändern sich beim Ziehen und Tippen im Takt: Eingetragen wird nur der Endwert nach einer Sekunde Ruhe.
     @ObservationIgnored private var offeneEinstellungen: [String: Task<Void, Never>] = [:]

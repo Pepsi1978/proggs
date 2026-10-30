@@ -21,6 +21,17 @@ struct Nachricht: Codable, Identifiable, Hashable {
     var laeuft = false
 }
 
+private struct GespraechsDatei: Codable {
+    var id: UUID; var titel: String; var erstellt: Date; var geaendert: Date
+    var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelerntBis: Int?; var projekt: String?
+}
+
+/// Eine eingelesene Datei, fertig entschlüsselt: Das teure JSON läuft im Hintergrund, angelegt wird das Gespräch auf dem Hauptfaden.
+private struct GeleseneDatei: @unchecked Sendable {
+    let datei: GespraechsDatei
+    let verlauf: [JSONObjekt]
+}
+
 @MainActor @Observable
 final class Gespraech: Identifiable {
     let id: UUID
@@ -37,38 +48,56 @@ final class Gespraech: Identifiable {
     var gelerntBis = 0
     /// Projekt, zu dem das Gespräch gehört (nil = normales Gespräch).
     var projekt: String?
-    /// Gespräch mit Programmierauftrag – steht im Leistenreiter „Programmierung“.
-    var istProgrammierung: Bool {
-        nachrichten.contains { $0.schritte.contains { ["programmieren", "openlauncher_sitzung", "programmier_nachtrag", "programmierer_sprechen"].contains($0.werkzeug) } }
-    }
+    /// Gespräch mit Programmierauftrag – steht im Leistenreiter „Programmierung“. Gemerkt statt gerechnet: Die Seitenleiste
+    /// liest es für alle Gespräche und würde sonst bei jedem gestreamten Textstück neu zeichnen.
+    private(set) var istProgrammierung = false
+    /// Einmal gelöscht, schreibt auch eine noch laufende Antwort die Datei nicht wieder.
+    @ObservationIgnored var geloescht = false
 
     init(id: UUID = UUID(), titel: String = "Neues Gespräch") {
         self.id = id; self.titel = titel; erstellt = Date(); geaendert = Date()
         nachrichten = []; verlauf = []; kontext = ""
     }
 
-    private struct Datei: Codable {
-        var id: UUID; var titel: String; var erstellt: Date; var geaendert: Date
-        var nachrichten: [Nachricht]; var verlauf: Data; var kontext: String; var gelerntBis: Int?; var projekt: String?
+    func programmierungPruefen() {
+        let neu = nachrichten.contains { $0.schritte.contains { ["programmieren", "openlauncher_sitzung", "programmier_nachtrag", "programmierer_sprechen"].contains($0.werkzeug) } }
+        if neu != istProgrammierung { istProgrammierung = neu }
     }
 
     var dateiURL: URL { Pfade.gespraeche.appendingPathComponent("\(id.uuidString).json") }
 
+    /// Alle Schreibzugriffe der Reihe nach, damit ein späteres Löschen nie von einem älteren Speichern überholt wird.
+    nonisolated static let schreiber = DispatchQueue(label: "jarvis.gespraeche", qos: .utility)
+
+    /// Ein Gespräch ohne Inhalt bleibt ein Entwurf: keine Datei und kein Eintrag in der Leiste.
     func speichern() {
+        guard !nachrichten.isEmpty, !geloescht else { return }
         geaendert = Date()
-        let d = Datei(id: id, titel: titel, erstellt: erstellt, geaendert: geaendert, nachrichten: nachrichten,
-                      verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis, projekt: projekt)
-        if let daten = try? JSONEncoder().encode(d) { try? daten.write(to: dateiURL, options: .atomic) }
+        GespraechsSpeicher.shared.aufnehmen(self)
+        let (id, titel, erstellt, geaendert, nachrichten, verlauf, kontext, gelerntBis, projekt, url) =
+            (self.id, self.titel, self.erstellt, self.geaendert, self.nachrichten, self.verlauf, self.kontext, self.gelerntBis, self.projekt, dateiURL)
+        // Das Gespräch samt Bildern kodieren und schreiben dauert: nicht auf dem Hauptfaden, sonst stocken Oberfläche und Pegel.
+        Self.schreiber.async {
+            let d = GespraechsDatei(id: id, titel: titel, erstellt: erstellt, geaendert: geaendert, nachrichten: nachrichten,
+                                    verlauf: JSON.daten(verlauf), kontext: kontext, gelerntBis: gelerntBis, projekt: projekt)
+            if let daten = try? JSONEncoder().encode(d) { try? daten.write(to: url, options: .atomic) }
+        }
     }
 
-    static func laden(_ url: URL) -> Gespraech? {
-        guard let daten = try? Data(contentsOf: url), let d = try? JSONDecoder().decode(Datei.self, from: daten) else { return nil }
-        let g = Gespraech(id: d.id, titel: d.titel)
-        g.erstellt = d.erstellt; g.geaendert = d.geaendert
-        g.nachrichten = d.nachrichten.map { var n = $0; n.laeuft = false; return n }
-        g.verlauf = (JSON.wert(d.verlauf) as? [JSONObjekt]) ?? []
-        g.kontext = d.kontext; g.gelerntBis = d.gelerntBis ?? 0; g.projekt = d.projekt
-        return g
+    fileprivate init(gelesen: GeleseneDatei) {
+        let d = gelesen.datei
+        id = d.id; titel = d.titel; erstellt = d.erstellt; geaendert = d.geaendert
+        nachrichten = d.nachrichten; verlauf = gelesen.verlauf
+        kontext = d.kontext; gelerntBis = d.gelerntBis ?? 0; projekt = d.projekt
+        programmierungPruefen()
+    }
+
+    /// Leere Altbestände verschwinden dabei samt Datei.
+    fileprivate nonisolated static func lesen(_ url: URL) -> GeleseneDatei? {
+        guard let daten = try? Data(contentsOf: url), var d = try? JSONDecoder().decode(GespraechsDatei.self, from: daten) else { return nil }
+        guard !d.nachrichten.isEmpty else { try? FileManager.default.removeItem(at: url); return nil }
+        d.nachrichten = d.nachrichten.map { var n = $0; n.laeuft = false; return n }
+        return GeleseneDatei(datei: d, verlauf: (JSON.wert(d.verlauf) as? [JSONObjekt]) ?? [])
     }
 }
 
@@ -77,24 +106,50 @@ final class GespraechsSpeicher {
     static let shared = GespraechsSpeicher()
     var alle: [Gespraech] = []
 
-    init() {
-        let dateien = (try? FileManager.default.contentsOfDirectory(at: Pfade.gespraeche, includingPropertiesForKeys: nil)) ?? []
-        alle = dateien.filter { $0.pathExtension == "json" }.compactMap(Gespraech.laden).sorted { $0.geaendert > $1.geaendert }
+    private final class Sammler: @unchecked Sendable {
+        let lock = NSLock()
+        var liste: [GeleseneDatei] = []
     }
 
-    func neu() -> Gespraech {
-        let g = Gespraech()
-        alle.insert(g, at: 0)
-        return g
+    init() {
+        // Im Hintergrund und parallel: Gespräche mit Bildern würden den Start sonst sichtbar aufhalten.
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let dateien = ((try? FileManager.default.contentsOfDirectory(at: Pfade.gespraeche, includingPropertiesForKeys: nil)) ?? [])
+                .filter { $0.pathExtension == "json" }
+            let sammler = Sammler()
+            DispatchQueue.concurrentPerform(iterations: dateien.count) { i in
+                guard let g = Gespraech.lesen(dateien[i]) else { return }
+                sammler.lock.withLock { sammler.liste.append(g) }
+            }
+            let gelesen = sammler.liste
+            await self?.uebernehmen(gelesen)
+        }
+    }
+
+    private func uebernehmen(_ gelesen: [GeleseneDatei]) {
+        let schonDa = Set(alle.map(\.id))
+        alle = (alle + gelesen.filter { !schonDa.contains($0.datei.id) }.map(Gespraech.init(gelesen:))).sorted { $0.geaendert > $1.geaendert }
+    }
+
+    /// Ein Entwurf: In die Liste kommt das Gespräch erst mit seiner ersten Nachricht.
+    func neu() -> Gespraech { Gespraech() }
+
+    func aufnehmen(_ g: Gespraech) {
+        if !alle.contains(where: { $0.id == g.id }) { alle.insert(g, at: 0) }
     }
 
     func loeschen(_ g: Gespraech) {
+        g.geloescht = true
         alle.removeAll { $0.id == g.id }
-        try? FileManager.default.removeItem(at: g.dateiURL)
+        let url = g.dateiURL
+        Gespraech.schreiber.async { try? FileManager.default.removeItem(at: url) }
     }
 
     func nachOben(_ g: Gespraech) {
         alle.removeAll { $0.id == g.id }
         alle.insert(g, at: 0)
     }
+
+    /// Beim Beenden der App: Was noch in der Warteschlange steht, muss auf die Platte.
+    nonisolated static func abschliessen() { Gespraech.schreiber.sync {} }
 }

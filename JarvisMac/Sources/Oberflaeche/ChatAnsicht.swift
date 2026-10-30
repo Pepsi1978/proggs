@@ -15,7 +15,7 @@ struct ChatAnsicht: View {
                     LazyVStack(alignment: .leading, spacing: 18) {
                         if gespraech.nachrichten.isEmpty { leer }
                         ForEach(gespraech.nachrichten) { n in
-                            NachrichtAnsicht(n: n, gespraech: gespraech).id(n.id)
+                            NachrichtAnsicht(n: n, gespraech: gespraech).equatable().id(n.id)
                         }
                         Color.clear.frame(height: 8).id("ende")
                     }
@@ -54,7 +54,6 @@ struct ChatAnsicht: View {
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(Capsule().fill(Farbe.glas(0.06)))
             }
-            RundKnopf(symbol: "waveform", hilfe: "Live-Gespräch (⌘L)", farbe: Farbe.gold) { steuerung.live() }
             RundKnopf(symbol: "trash", hilfe: "Gespräch löschen") {
                 GespraechsSpeicher.shared.loeschen(gespraech); steuerung.gespraech = nil; steuerung.bereich = .start
             }
@@ -107,7 +106,12 @@ struct PegelBalken: View {
     }
 }
 
-struct NachrichtAnsicht: View {
+struct NachrichtAnsicht: View, Equatable {
+    /// Beim Streamen ändert sich nur die letzte Nachricht: Die übrigen rechnen ihr Markdown nicht bei jedem Textstück neu.
+    nonisolated static func == (a: NachrichtAnsicht, b: NachrichtAnsicht) -> Bool {
+        a.n.id == b.n.id && a.n.text == b.n.text && a.n.laeuft == b.n.laeuft && a.n.schritte == b.n.schritte && a.n.gesprochen == b.n.gesprochen
+    }
+
     let n: Nachricht
     let gespraech: Gespraech
     @State private var schwebt = false
@@ -142,7 +146,8 @@ struct NachrichtAnsicht: View {
 
     private var jarvis: some View {
         HStack(alignment: .top, spacing: 14) {
-            JarvisKugel(pegel: 0, zustand: n.laeuft ? .denkt : .ruhe, groesse: 30)
+            // Abgeschlossene Antworten mit stehender Kugel: Jede laufende Kugel rechnet Unschärfe auf dem Grafikchip.
+            JarvisKugel(pegel: 0, zustand: n.laeuft ? .denkt : .ruhe, groesse: 30, still: !n.laeuft)
                 .frame(width: 30, height: 30)
             VStack(alignment: .leading, spacing: 10) {
                 if !n.schritte.isEmpty { schritteAnsicht }

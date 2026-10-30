@@ -25,7 +25,7 @@ enum Bereich: String, CaseIterable, Identifiable {
     }
 }
 
-/// Zentrale Steuerung: Navigation, Weckwort, globales Tastenkürzel, Sprach-Einblendung.
+/// Zentrale Steuerung: Navigation, Weckwort, globales Tastenkürzel, Sprachpille.
 @MainActor @Observable
 final class AppSteuerung {
     static let shared = AppSteuerung()
@@ -44,10 +44,16 @@ final class AppSteuerung {
     var handyVersion = ""
     private var hotKeyRefs: [EventHotKeyRef] = []
     private var hotKeyHandler = false
-    private var hud: SprachHUD?
+    /// Jarvis ist die vordere App. Danach richten sich die Animationen: Im Hintergrund rechnen sie nicht.
+    private(set) var appVorn = true
+    private let pille = SprachPille()
+    /// Laufende Fragen aus der Eingabeblase, zum Abbrechen.
+    private var fragen: [Int: (gespraech: UUID, aufgabe: Task<Void, Never>)] = [:]
+    private var fragenNummer = 0
 
     func hochfahren() {
         DesignStand.shared.starten()
+        fensterBeobachten()
         VorderApp.beobachten()
         TresorSperre.shared.beobachten()
         Weckwort.shared.beiErkennung = { [weak self] in self?.weckwortErkannt() }
@@ -55,7 +61,8 @@ final class AppSteuerung {
         if Einstellungen.shared.globalesKuerzel { kuerzelRegistrieren() }
         Task {
             while true {
-                let liste = await McpKlient.shared.werkzeuge()
+                // Frisch im Hintergrund: Die Liste ist warm und der Stand stimmt, wenn Frank fragt.
+                let liste = await McpKlient.shared.werkzeuge(frisch: true)
                 handyVerbunden = !liste.isEmpty
                 handyVersion = await McpKlient.shared.serverVersion
                 try? await Task.sleep(for: .seconds(handyVerbunden ? 300 : 30))
@@ -76,10 +83,17 @@ final class AppSteuerung {
 
     /// imProjekt = aus der Projektleiste („Neues Gespräch im Projekt“); alles andere landet unter „Gespräche“.
     func neuesGespraech(imProjekt: Bool = false) {
-        let g = GespraechsSpeicher.shared.neu()
+        // Ein offener Entwurf bleibt: Mehrmaliges Drücken legt nichts an.
+        let g = entwurfOderNeu()
         g.projekt = imProjekt ? projekt : nil
         gespraech = g
         bereich = .gespraech
+    }
+
+    private func entwurfOderNeu() -> Gespraech {
+        Task { await McpKlient.shared.kontextVorladen() }
+        if let g = gespraech, g.nachrichten.isEmpty, !g.arbeitet { return g }
+        return GespraechsSpeicher.shared.neu()
     }
 
     /// Ja auf die Frage nach dem Senden: löscht nur den Eintrag der Ablage, der Text in der Eingabe bleibt.
@@ -107,10 +121,25 @@ final class AppSteuerung {
         let g = gespraech ?? GespraechsSpeicher.shared.neu()
         gespraech = g
         bereich = .gespraech
-        Task {
+        fragenNummer += 1
+        let nr = fragenNummer
+        fragen[nr] = (g.id, Task {
             let antwort = await JarvisAgent.shared.frage(t.isEmpty ? "Schau dir das Bild an." : t, in: g, gesprochen: gesprochen, bild: bild)
-            if gesprochen && Einstellungen.shared.vorlesen { await Stimme.shared.sprich(antwort) }
-        }
+            fragen[nr] = nil
+            if gesprochen && Einstellungen.shared.vorlesen && !Task.isCancelled { await Stimme.shared.sprich(antwort) }
+        })
+    }
+
+    /// Stopp-Knopf wie am Handy, solange Jarvis in diesem Gespräch an einer Frage aus Blase oder Sprachgespräch arbeitet.
+    func abbrechbar(_ g: Gespraech) -> Bool {
+        guard g.arbeitet else { return false }
+        return fragen.values.contains { $0.gespraech == g.id } || (SprachSchleife.shared.gespraech === g && SprachSchleife.shared.zustand == .denkt)
+    }
+
+    func abbrechen(_ g: Gespraech) {
+        for f in fragen.values where f.gespraech == g.id { f.aufgabe.cancel() }
+        if SprachSchleife.shared.gespraech === g && SprachSchleife.shared.zustand == .denkt { SprachSchleife.shared.beenden() }
+        log("gespraech", "Antwort abgebrochen", wo: "Eingabeblase")
     }
 
     func sprechen() {
@@ -128,27 +157,87 @@ final class AppSteuerung {
         LiveGespraech.shared.starten(in: g)
     }
 
-    /// Knopf „Live“ in der Blase des Startbildschirms: öffnet nur den Live-Bildschirm, gestartet wird dort. Ein neues Gespräch, wie beim Senden vom Start.
-    func liveOeffnen() {
-        if !LiveGespraech.shared.aktiv { gespraech = nil }
+    /// Knopf „Live“ in der Blase: öffnet nur den Live-Bildschirm, gestartet wird dort. Vom Start aus ein neues Gespräch, aus einem Gespräch dieses.
+    func liveOeffnen(in g: Gespraech?) {
+        if !LiveGespraech.shared.aktiv { gespraech = g }
         bereich = .live
     }
 
     func fensterZeigen() {
         NSApp.activate()
-        for w in NSApp.windows where w.canBecomeMain { w.makeKeyAndOrderFront(nil) }
+        let fenster = NSApp.windows.filter(\.canBecomeMain)
+        for w in fenster {
+            if w.isMiniaturized { w.deminiaturize(nil) }
+            w.makeKeyAndOrderFront(nil)
+        }
+        // Geschlossen gibt es kein Fenster mehr zum Zeigen: Das erneute Öffnen der App legt es wieder an.
+        Task {
+            try? await Task.sleep(for: .milliseconds(200))
+            if !NSApp.windows.contains(where: { $0.canBecomeMain && $0.isVisible }) { NSWorkspace.shared.open(Bundle.main.bundleURL) }
+        }
     }
 
-    /// „Hey Jarvis“: neues Sprachgespräch, schwebende Einblendung über allen Programmen.
+    /// Ist Jarvis wirklich vorn? Dann ist die Blase unten die Anzeige, sonst die Pille.
+    private var fensterVorn: Bool {
+        NSApp.isActive && NSApp.windows.contains { $0.canBecomeMain && $0.isVisible && !$0.isMiniaturized }
+    }
+
+    /// „Hey Jarvis“: wie am Handy. Ist Jarvis vorn, geht das offene Gespräch weiter, sonst beginnt ein neues im Hintergrund mit der Pille.
     func weckwortErkannt() {
         guard !LiveGespraech.shared.aktiv, SprachSchleife.shared.zustand == .aus else { return }
         log("sprache", "Weckwort erkannt")
-        let g = GespraechsSpeicher.shared.neu()
-        g.titel = "Sprachgespräch"
+        sprachgespraechStarten()
+    }
+
+    private func sprachgespraechStarten() {
+        let g: Gespraech
+        if fensterVorn, bereich == .gespraech, let offen = gespraech {
+            g = offen
+        } else {
+            g = entwurfOderNeu()
+            if g.nachrichten.isEmpty, g.titel == "Neues Gespräch" { g.titel = "Sprachgespräch" }
+        }
+        Task { await McpKlient.shared.kontextVorladen() }
         gespraech = g
-        if hud == nil { hud = SprachHUD() }
-        hud?.zeigen()
+        bereich = .gespraech
         SprachSchleife.shared.starten(in: g)
+        pilleAbgleichen()
+    }
+
+    // MARK: Sprachpille
+
+    /// Sichtbar genau dann, wenn der Gesprächsmodus läuft und Jarvis nicht vorn ist.
+    func pilleAbgleichen() {
+        pille.setze(sichtbar: SprachSchleife.shared.zustand != .aus && !fensterVorn)
+    }
+
+    /// Damit die Pille nicht auf dem Bildschirmfoto landet, das sie gerade angestoßen hat.
+    func pilleFuerAufnahme(ausblenden: Bool) async {
+        await pille.fuerAufnahme(ausblenden: ausblenden)
+    }
+
+    /// Klick auf die Pille: öffnet Jarvis mit dem laufenden Gespräch.
+    func pilleOeffnen() {
+        if let g = SprachSchleife.shared.gespraech { gespraech = g; bereich = .gespraech }
+        fensterZeigen()
+    }
+
+    private func fensterBeobachten() {
+        appVorn = NSApp.isActive
+        let nc = NotificationCenter.default
+        for name in [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification, NSWindow.didMiniaturizeNotification,
+                     NSWindow.didDeminiaturizeNotification, NSWindow.willCloseNotification] {
+            nc.addObserver(forName: name, object: nil, queue: .main) { _ in
+                // Einen Schritt später: Beim Schließen zählt das Fenster in diesem Moment noch als sichtbar.
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        let s = AppSteuerung.shared
+                        if s.appVorn != NSApp.isActive { s.appVorn = NSApp.isActive }
+                        s.pilleAbgleichen()
+                    }
+                }
+            }
+        }
     }
 
     // MARK: Globales Tastenkürzel ⌥⌘J = sprechen, ⌥⌘K = Fenster
@@ -182,105 +271,8 @@ final class AppSteuerung {
     }
 
     func kuerzelSprechen() {
-        if SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden(); hud?.verbergen(); return }
-        if hud == nil { hud = SprachHUD() }
-        let g = GespraechsSpeicher.shared.neu()
-        g.titel = "Sprachgespräch"
-        gespraech = g
-        hud?.zeigen()
-        SprachSchleife.shared.starten(in: g)
-    }
-}
-
-// MARK: - Schwebende Sprach-Einblendung (über allen Programmen, ohne Fokus zu stehlen)
-
-final class HUDPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
-}
-
-@MainActor
-final class SprachHUD {
-    private let panel: HUDPanel
-    private var beobachter: Task<Void, Never>?
-
-    init() {
-        panel = HUDPanel(contentRect: NSRect(x: 0, y: 0, width: 420, height: 168),
-                         styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
-        panel.isFloatingPanel = true
-        panel.level = .statusBar
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = true
-        panel.hidesOnDeactivate = false
-        panel.contentView = NSHostingView(rootView: SprachHUDAnsicht())
-    }
-
-    func zeigen() {
-        guard let schirm = NSScreen.main?.visibleFrame else { return }
-        panel.setFrameOrigin(NSPoint(x: schirm.midX - 210, y: schirm.maxY - 190))
-        panel.alphaValue = 0
-        panel.orderFrontRegardless()
-        NSAnimationContext.runAnimationGroup { $0.duration = 0.25; panel.animator().alphaValue = 1 }
-        beobachter?.cancel()
-        beobachter = Task { [weak self] in
-            // Verbergen, sobald die Sprachschleife endet.
-            try? await Task.sleep(for: .seconds(1.5))
-            while !Task.isCancelled {
-                if SprachSchleife.shared.zustand == .aus { self?.verbergen(); return }
-                try? await Task.sleep(for: .milliseconds(400))
-            }
-        }
-    }
-
-    func verbergen() {
-        beobachter?.cancel()
-        NSAnimationContext.runAnimationGroup({ $0.duration = 0.3; panel.animator().alphaValue = 0 }) { [panel] in
-            Task { @MainActor in panel.orderOut(nil) }
-        }
-    }
-}
-
-struct SprachHUDAnsicht: View {
-    @State private var schleife = SprachSchleife.shared
-    @State private var diktat = Diktat.shared
-    @State private var stimme = Stimme.shared
-
-    private var kugelZustand: JarvisKugel.KugelZustand {
-        switch schleife.zustand {
-        case .aus: return .ruhe
-        case .hoert: return .hoert
-        case .denkt: return .denkt
-        case .spricht: return .spricht
-        }
-    }
-
-    private var zeile: String {
-        switch schleife.zustand {
-        case .hoert: return diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau
-        case .denkt: return "Einen Moment …"
-        case .spricht:
-            return schleife.gespraech?.nachrichten.last(where: { $0.rolle == .jarvis })?.text ?? ""
-        case .aus: return ""
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 16) {
-            JarvisKugel(pegel: schleife.zustand == .spricht ? stimme.pegel : diktat.pegel, zustand: kugelZustand, groesse: 96)
-            VStack(alignment: .leading, spacing: 6) {
-                Text("JARVIS").font(.jarvis(11, .heavy)).tracking(3).foregroundStyle(Farbe.haupt)
-                Text(zeile).font(.jarvis(15, .medium)).foregroundStyle(Farbe.text).lineLimit(4)
-                    .animation(.easeOut(duration: 0.2), value: zeile)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(20)
-        .frame(width: 420, height: 168)
-        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Farbe.grund.opacity(0.82)))
-        .glassEffect(.regular, in: .rect(cornerRadius: 28))
-        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(Farbe.glas(0.14)))
-        .onTapGesture { SprachSchleife.shared.beenden() }
+        if SprachSchleife.shared.zustand != .aus { SprachSchleife.shared.beenden(); return }
+        guard !LiveGespraech.shared.aktiv else { return }
+        sprachgespraechStarten()
     }
 }

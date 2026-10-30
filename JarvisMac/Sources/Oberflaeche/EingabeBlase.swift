@@ -1,7 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Die Sprechblase unten, auf dem Startbildschirm und im Gespräch gleich: Plus, Text, Modell mit Guthaben und Kosten, Diktat, Sprechen, Senden.
+/// Die Sprechblase unten, auf dem Startbildschirm und im Gespräch gleich: Plus, Text, Modell mit Guthaben und Kosten, Mikrofon und rechts wie am Handy
+/// genau ein Knopf: Abbrechen, solange Jarvis arbeitet, der Pfeil, sobald Text oder ein Anhang da ist, sonst Live.
 /// Ohne [gespraech] (Startbildschirm) beginnt das Absenden ein neues Gespräch.
 struct EingabeBlase: View {
     let gespraech: Gespraech?
@@ -26,10 +27,14 @@ struct EingabeBlase: View {
                     Spacer()
                 }
             }
-            if diktat.aktiv && diktiert {
+            if diktat.aktiv && (diktiert || schleife.zustand == .hoert) {
                 HStack(spacing: 8) {
-                    PegelBalken(pegel: diktat.pegel)
-                    Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(13)).foregroundStyle(Farbe.text2).lineLimit(2)
+                    if diktat.schreibtMit {
+                        Text("Schreibe mit …").font(.jarvis(13)).foregroundStyle(Farbe.text2)
+                    } else {
+                        PegelBalken(pegel: diktat.pegel)
+                        Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(13)).foregroundStyle(Farbe.text2).lineLimit(2)
+                    }
                     Spacer()
                 }
             }
@@ -100,8 +105,12 @@ struct EingabeBlase: View {
             diktiert = laeuft
             if !laeuft { fokus = true }
         }, meldeFehler: { diktatFehler = $0 })
-        if gespraech == nil {
-            Button { steuerung.liveOeffnen() } label: {
+        if let gespraech, steuerung.abbrechbar(gespraech) {
+            RundKnopf(symbol: "stop.fill", hilfe: "Abbrechen", aktiv: true, farbe: Farbe.haupt) { steuerung.abbrechen(gespraech) }
+        } else if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || anhang != nil {
+            RundKnopf(symbol: "arrow.up", hilfe: "Senden", aktiv: true, farbe: Farbe.haupt) { senden() }
+        } else {
+            Button { steuerung.liveOeffnen(in: gespraech) } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "waveform").font(.system(size: 12, weight: .semibold))
                     Text("Live").font(.jarvis(12, .semibold))
@@ -113,12 +122,8 @@ struct EingabeBlase: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain).fixedSize()
-            .help("Live-Bildschirm öffnen")
+            .help("Live-Bildschirm öffnen (⌘L startet direkt)")
         }
-        RundKnopf(symbol: "person.wave.2.fill", hilfe: "Sprachgespräch (⌘D)", aktiv: schleife.zustand != .aus, farbe: Farbe.haupt) {
-            if let gespraech { steuerung.gespraech = gespraech; steuerung.sprechen() } else { steuerung.kuerzelSprechen() }
-        }
-        RundKnopf(symbol: "arrow.up", hilfe: "Senden", aktiv: !text.isEmpty || anhang != nil, farbe: Farbe.haupt) { senden() }
     }
 
     private func senden() {

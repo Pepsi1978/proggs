@@ -177,6 +177,8 @@ enum MacWerkzeuge {
             // JPEG, 1440 px: rund 200 KB statt mehrerer MB PNG – der Verlauf bleibt klein.
             let datei = Pfade.temp.appendingPathComponent("bildschirm.jpg")
             try? FileManager.default.removeItem(at: datei)
+            await AppSteuerung.shared.pilleFuerAufnahme(ausblenden: true)
+            defer { Task { await AppSteuerung.shared.pilleFuerAufnahme(ausblenden: false) } }
             let r = await Shell.zsh("screencapture -x -m -t jpg '\(datei.path)' && sips -Z 1440 -s formatOptions 60 '\(datei.path)' >/dev/null", sekunden: 20)
             guard let d = try? Data(contentsOf: datei) else {
                 return WerkzeugErgebnis(text: "Bildschirmfoto ging nicht (Bildschirmaufnahme-Recht für Jarvis in Systemeinstellungen → Datenschutz erteilen). \(r.fehler)", fehler: true)
@@ -470,7 +472,9 @@ enum Screenshot {
             NSApp.hide(nil); return true
         }
         if versteckt { try? await Task.sleep(for: .milliseconds(500)) }
+        await AppSteuerung.shared.pilleFuerAufnahme(ausblenden: true)
         _ = await Shell.zsh("screencapture -x -m -t png \(Shell.zitiert(datei))", sekunden: 20)
+        await AppSteuerung.shared.pilleFuerAufnahme(ausblenden: false)
         if versteckt { await MainActor.run { NSApp.unhide(nil) } }
         guard let d = try? Data(contentsOf: URL(fileURLWithPath: datei)) else { return nil }
         return (datei, d)

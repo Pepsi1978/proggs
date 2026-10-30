@@ -65,28 +65,40 @@ struct DiktatKnopf: View {
     var meldeLaeuft: (Bool) -> Void = { _ in }
     var meldeFehler: (String) -> Void = { _ in }
     @State private var diktat = Diktat.shared
+    @State private var schleife = SprachSchleife.shared
     @State private var laeuft = false
     @State private var meldung = ""
 
     var body: some View {
         HStack(spacing: 8) {
-            RundKnopf(symbol: laeuft && diktat.aktiv ? "stop.fill" : "mic.fill", hilfe: "Einsprechen", aktiv: laeuft && diktat.aktiv, farbe: Farbe.gruen) { druecken() }
+            if laeuft && diktat.schreibtMit {
+                ProgressView().controlSize(.small).frame(width: 34, height: 34).help("Schreibe mit …")
+            } else {
+                RundKnopf(symbol: nimmtAuf ? "stop.fill" : "mic.fill", hilfe: nimmtAuf ? "Aufnahme beenden" : "Einsprechen", aktiv: nimmtAuf, farbe: Farbe.rot) { druecken() }
+            }
             if vorschau && laeuft && diktat.aktiv {
-                PegelBalken(pegel: diktat.pegel)
-                Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(1)
+                if diktat.schreibtMit {
+                    Text("Schreibe mit …").font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(1)
+                } else {
+                    PegelBalken(pegel: diktat.pegel)
+                    Text(diktat.vorschau.isEmpty ? "Ich höre zu …" : diktat.vorschau).font(.jarvis(12)).foregroundStyle(Farbe.text2).lineLimit(1)
+                }
             }
             if vorschau && !meldung.isEmpty { Text(meldung).font(.jarvis(12)).foregroundStyle(Farbe.warnung).lineLimit(2) }
         }
         .onDisappear { if laeuft { diktat.stoppen() } }
     }
 
+    /// Wie am Handy: rot mit Stopp, solange aufgenommen wird, auch die laufende Runde des Gesprächsmodus.
+    private var nimmtAuf: Bool { diktat.aktiv && !diktat.schreibtMit && (laeuft || schleife.zustand == .hoert) }
+
     private func druecken() {
-        if laeuft { diktat.stoppen(); return }
+        if laeuft || (schleife.zustand == .hoert && diktat.aktiv) { diktat.stoppen(); return }
         // Ein Diktat, das jemand anderes gestartet hat (Sprachgespräch, Chat), bleibt unangetastet.
         guard !diktat.aktiv else { melde("Das Mikrofon wird gerade schon benutzt."); return }
         laeuft = true; melde(""); meldeLaeuft(true)
         Task {
-            if let erkannt = await diktat.hoereBisStille(maxSekunden: 120) {
+            if let erkannt = await diktat.hoereBisStille() {
                 text = AufgabenText.anhaengen(text, erkannt)
             } else if let f = diktat.fehler {
                 melde(f)

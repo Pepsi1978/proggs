@@ -35,6 +35,8 @@ final class Mikrofon: @unchecked Sendable {
     private var engine: AVAudioEngine?
     private var beobachter: NSObjectProtocol?
     private let lock = NSLock()
+    /// Auf- und Abbau der Engine der Reihe nach. Beides kann dauern: Aufrufer auf dem Hauptfaden nehmen `startenImHintergrund`.
+    private let ablauf = DispatchQueue(label: "jarvis.mikrofon", qos: .userInitiated)
     /// Läuft auf dem Audio-Thread.
     var beiPuffer: ((AVAudioPCMBuffer) -> Void)?
     /// Wird nach einem Gerätewechsel aufgerufen (Hauptthread), nachdem die Aufnahme neu gestartet wurde oder scheiterte.
@@ -42,8 +44,18 @@ final class Mikrofon: @unchecked Sendable {
 
     var laeuft: Bool { lock.lock(); defer { lock.unlock() }; return engine?.isRunning ?? false }
 
-    func starten() throws {
-        stoppen()
+    func starten() throws { try ablauf.sync { try startenIntern() } }
+
+    func startenImHintergrund() async throws {
+        try await Task.detached(priority: .userInitiated) { try self.starten() }.value
+    }
+
+    func stoppenImHintergrund() async {
+        await Task.detached(priority: .userInitiated) { self.stoppen() }.value
+    }
+
+    private func startenIntern() throws {
+        stoppenIntern()
         let e = AVAudioEngine()
         let eingang = e.inputNode
         let format = eingang.outputFormat(forBus: 0)
@@ -59,12 +71,16 @@ final class Mikrofon: @unchecked Sendable {
         beobachter = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: e, queue: .main) { [weak self] _ in
             guard let self else { return }
             log("sprache", "Audiogerät gewechselt – Aufnahme startet neu")
-            try? self.starten()
-            self.beiGeraetewechsel?()
+            self.ablauf.async {
+                try? self.startenIntern()
+                DispatchQueue.main.async { self.beiGeraetewechsel?() }
+            }
         }
     }
 
-    func stoppen() {
+    func stoppen() { ablauf.sync { stoppenIntern() } }
+
+    private func stoppenIntern() {
         if let b = beobachter { NotificationCenter.default.removeObserver(b); beobachter = nil }
         lock.lock(); let e = engine; engine = nil; lock.unlock()
         guard let e else { return }
@@ -474,7 +490,7 @@ enum Wav {
 // MARK: - Töne
 
 enum Toene {
-    @MainActor static func start() { NSSound(named: "Tink")?.play() }
-    @MainActor static func ende() { NSSound(named: "Pop")?.play() }
-    @MainActor static func weckwort() { NSSound(named: "Morse")?.play() }
+    /// Einmal geladen: Der Piepton soll sofort kommen, nicht erst nach dem Lesen der Tondatei.
+    @MainActor private static let piep = NSSound(named: "Tink")
+    @MainActor static func start() { piep?.stop(); piep?.play() }
 }

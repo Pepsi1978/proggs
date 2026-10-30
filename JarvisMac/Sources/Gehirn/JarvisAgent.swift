@@ -99,13 +99,13 @@ final class JarvisAgent {
         inhalt.append(["type": "text", "text": "[\(Self.zeitstempel())\(gesprochen ? ", gesprochen" : "")] \(text)"])
         g.verlauf.append(["role": "user", "content": inhalt])
 
-        Self.verdichte(g)
         let jarvisIndex = g.nachrichten.count
         g.nachrichten.append(Nachricht(rolle: .jarvis, text: "", laeuft: true))
+        await Self.verdichte(g)
 
         async let mcpListe = McpKlient.shared.werkzeuge()
         if g.kontext.isEmpty {
-            g.kontext = await McpKlient.shared.text("jarvis_kontext", [:]) ?? ""
+            g.kontext = await McpKlient.shared.kontextFuerGespraech()
         }
         let handyWerkzeuge = await mcpListe
         let lokale = MacWerkzeuge.alleLokal
@@ -127,7 +127,9 @@ final class JarvisAgent {
         }
 
         var schritt = 0
+        var zuletztGezeigt = Date.distantPast
         while true {
+            if Task.isCancelled { textTeile.append("(abgebrochen)"); break }
             schritt += 1
             if limit > 0 && schritt > limit {
                 textTeile.append("(Schrittlimit von \(limit) erreicht – sag „weiter“, dann mache ich weiter.)")
@@ -142,10 +144,18 @@ final class JarvisAgent {
                                                modell: modell, effort: effort) { stueck in
                     Task { @MainActor in
                         guard puffer.runde == runde else { return }
-                        puffer.text += stueck; zeige(); onText?(stueck)
+                        puffer.text += stueck; onText?(stueck)
+                        // Höchstens 20-mal je Sekunde neu darstellen: Die Stücke kommen schneller, als es jemand lesen kann.
+                        let jetzt = Date()
+                        if jetzt.timeIntervalSince(zuletztGezeigt) > 0.05 { zuletztGezeigt = jetzt; zeige() }
                     }
                 }
             } catch {
+                if Task.isCancelled {
+                    if !puffer.text.isEmpty { textTeile.append(puffer.text) }
+                    textTeile.append("(abgebrochen)")
+                    break
+                }
                 log("fehler", "Gehirn: \(error.localizedDescription)")
                 textTeile.append("⚠️ \(error.localizedDescription)")
                 // Unbeantwortete Nutzernachricht entfernen wäre falsch; Verlauf bleibt gültig, wenn die letzte Nachricht vom Nutzer ist.
@@ -177,6 +187,7 @@ final class JarvisAgent {
                 g.nachrichten[jarvisIndex].schritte.append(Schritt(werkzeug: name, kurz: Self.kurz(name, args), amHandy: !lokaleNamen.contains(name)))
                 indizes.append(g.nachrichten[jarvisIndex].schritte.count - 1)
             }
+            g.programmierungPruefen()
             let ergebnisse: [WerkzeugErgebnis] = await withTaskGroup(of: (Int, WerkzeugErgebnis).self) { gruppe in
                 for (i, auf) in aufrufe.enumerated() {
                     let name = auf["name"] as? String ?? "?"
@@ -239,8 +250,10 @@ final class JarvisAgent {
     /// Hält lange Gespräche sendefähig: Wird der Verlauf zu groß (> 6 MB oder grob > 500 000 Tokens), ersetzt Jarvis Bilder
     /// und sehr lange Werkzeugergebnisse in älteren Runden durch kurze Platzhalter. Dabei fallen auch alle Denkblöcke vor der
     /// letzten Frage weg – ein geänderter Verlauf darf keine alten Denkblöcke mehr tragen (sonst lehnt die API ab).
-    static func verdichte(_ g: Gespraech) {
-        let groesse = JSON.daten(g.verlauf).count
+    static func verdichte(_ g: Gespraech) async {
+        // Nur zum Messen den ganzen Verlauf kodieren: nicht auf dem Hauptfaden.
+        let stand = g.verlauf
+        let groesse = await Task.detached(priority: .userInitiated) { JSON.daten(stand).count }.value
         guard groesse > 6_000_000 else { return }
         let behalte = 6   // jüngste Einträge unverändert
         let grenze = max(0, g.verlauf.count - behalte)

@@ -38,7 +38,9 @@ struct JarvisHintergrund: View {
         let flecken: [(Color, Double, Double, Double)] = [
             (Farbe.haupt, 0.10, 0.07, 0.0), (Farbe.gold, 0.07, 0.05, 2.1), (Farbe.kupfer, 0.06, 0.04, 4.2),
         ]
-        return TimelineView(.animation(minimumInterval: 1.0 / 20)) { tl in
+        // Die Flecken wandern langsam: Zehn Bilder je Sekunde genügen. Im Hintergrund und während Sprache und Live steht der Verlauf ganz still.
+        let bewegt = AppSteuerung.shared.appVorn && SprachSchleife.shared.zustand == .aus && !LiveGespraech.shared.aktiv
+        return TimelineView(.animation(minimumInterval: 1.0 / 10, paused: !bewegt)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             Canvas { ctx, size in
                 ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(grund))
@@ -99,12 +101,15 @@ struct JarvisKugel: View {
     var pegel: Float = 0
     var zustand: KugelZustand = .ruhe
     var groesse: CGFloat = 220
+    /// Steht fest und rechnet keine Bilder, etwa neben fertigen Antworten.
+    var still = false
 
     enum KugelZustand { case ruhe, hoert, denkt, spricht }
 
     var body: some View {
-        // In Ruhe genügen wenige Bilder je Sekunde, das schont Akku und Grafikchip.
-        TimelineView(.animation(minimumInterval: zustand == .ruhe ? 1.0 / 15 : nil)) { tl in
+        // In Ruhe genügen wenige Bilder je Sekunde, sonst 30; verdeckt oder im Hintergrund gar keine. Das schont Akku und Grafikchip,
+        // und Mikrofon und Live bekommen ihre Rechenzeit.
+        TimelineView(.animation(minimumInterval: zustand == .ruhe ? 1.0 / 15 : 1.0 / 30, paused: still || !AppSteuerung.shared.appVorn)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             let p = Double(min(max(pegel, 0), 1))
             let tempo: Double = zustand == .denkt ? 2.4 : (zustand == .ruhe ? 0.5 : 1.2)
@@ -302,8 +307,15 @@ struct MarkdownText: View {
         return r
     }
 
+    private final class Inline { let wert: AttributedString; init(_ w: AttributedString) { wert = w } }
+    /// Beim Streamen ändert sich nur der letzte Absatz: Die übrigen kommen aus dem Vorrat, statt bei jedem Bild neu geparst zu werden.
+    @MainActor private static let vorrat: NSCache<NSString, Inline> = { let c = NSCache<NSString, Inline>(); c.countLimit = 2000; return c }()
+
     private func inline(_ s: String) -> AttributedString {
-        (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
+        if let da = Self.vorrat.object(forKey: s as NSString) { return da.wert }
+        let neu = (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
+        Self.vorrat.setObject(Inline(neu), forKey: s as NSString)
+        return neu
     }
 
     var body: some View {

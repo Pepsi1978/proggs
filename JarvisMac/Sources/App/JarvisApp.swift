@@ -30,7 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = Einstellungen.shared
         _ = VorleseEinstellungen.shared
         Task { _ = await CodexAnmeldung.shared.angemeldet }
-        AblageLader.aufraeumen()
+        Task.detached(priority: .utility) { AblageLader.aufraeumen() }
         Task { _ = await McpKlient.shared.werkzeuge(frisch: true) }
         AppSteuerung.shared.hochfahren()
     }
@@ -39,6 +39,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Einstellungen.shared.zugangSichern()
         VorleseEinstellungen.shared.zugangSichern()
         Logbuch.shared.schreib("system", "Jarvis beendet")
+        Logbuch.schreiber.sync {}
+        GespraechsSpeicher.abschliessen()
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 }
