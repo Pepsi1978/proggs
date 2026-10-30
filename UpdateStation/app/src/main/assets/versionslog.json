@@ -31,6 +31,7 @@
     {"versionCode": 27, "versionName": "1.0.26", "stand": "28.10.2026, 18:57 Uhr", "notiz": "Neuer Schalter „APK-Updates vorladen“ in den Einstellungen: ausgeschaltet lädt UpdateStation gefundene Updates nicht mehr automatisch im Hintergrund herunter, sondern erst beim Tippen auf Aktualisieren"},
     {"versionCode": 28, "versionName": "1.0.27", "stand": "28.10.2026, 19:01 Uhr", "notiz": "Ausschalten des Vorladens bricht auch einen gerade laufenden Hintergrund-Download sofort ab, und ausgeschaltet plant die App keine Vorlade-Aufträge mehr"},
     {"versionCode": 29, "versionName": "1.0.28", "stand": "30.10.2026, 12:36 Uhr", "notiz": "Vor jeder Jarvis-Installation fragt ein Fenster nach dem Zeitpunkt: sofort oder in einer bis fünf Minuten, damit eine laufende Arbeit mit Jarvis noch zu Ende gebracht werden kann"},
-    {"versionCode": 30, "versionName": "1.0.29", "stand": "30.10.2026, 12:49 Uhr", "notiz": "Das Zeitfenster vor der Jarvis-Installation ist wieder entfernt: Updates installieren wie zuvor direkt beim Tippen auf Aktualisieren"}
+    {"versionCode": 30, "versionName": "1.0.29", "stand": "30.10.2026, 12:49 Uhr", "notiz": "Das Zeitfenster vor der Jarvis-Installation ist wieder entfernt: Updates installieren wie zuvor direkt beim Tippen auf Aktualisieren"},
+    {"versionCode": 31, "versionName": "1.0.30", "stand": "30.10.2026, 13:41 Uhr", "notiz": "Vor jeder Jarvis-Installation öffnet UpdateStation jetzt das goldene Overlay von Jarvis mit Sofort oder 1 bis 5 Minuten und installiert Jarvis mit seinem Pflicht-Teil"}
   ]
 }

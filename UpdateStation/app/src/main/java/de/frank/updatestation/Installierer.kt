@@ -20,6 +20,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
+import java.util.zip.ZipFile
 
 /** Eigener, erwarteter Fehler mit festem [code] fürs Diagnoseprotokoll; die Meldung ist für die Oberfläche. */
 class InstallFehler(val code: String, text: String) : IllegalStateException(text)
@@ -63,9 +64,13 @@ object Installierer {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Startet die Installation im eigenen Bereich; das Ergebnis darf die Activity abwarten, ohne sie festzuhalten. */
-    fun starte(context: Context, eintrag: AppEintrag): Deferred<Start> {
+    fun starte(context: Context, eintrag: AppEintrag, freigegeben: Boolean = false): Deferred<Start> {
         val app = context.applicationContext
-        return bereich.async { installiere(app, eintrag) }
+        return bereich.async {
+            // Jarvis nie ohne die Frage nach dem Zeitpunkt; danach kommt der Start aus Aufschub mit freigegeben.
+            val ohneFrage = freigegeben || eintrag.paket != Aufschub.PAKET_JARVIS || Aufschub.frage(app, eintrag.paket) == Aufschub.Frage.OHNE_OVERLAY
+            if (ohneFrage) installiere(app, eintrag) else Start.GESTARTET
+        }
     }
 
     /**
@@ -299,9 +304,10 @@ object Installierer {
         }
         if (alte.isNotEmpty()) Benachrichtigungen.entferneBestaetigung(context, m.paket)
         einst.loescheOffeneSession(m.paket)
+        val pflichtTeil = pflichtTeil(context, datei, m)
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(m.paket)
-            setSize(datei.length())
+            setSize(datei.length() + (pflichtTeil?.length() ?: 0))
             // Updates tippt Frank in UpdateStation selbst an, Paket, Version und Signatur sind oben geprüft: dann ohne
             // zweiten Android-Dialog (klappt, wenn UpdateStation die App zuletzt installiert hat; sonst fragt Android
             // trotzdem nach, das fängt STATUS_PENDING_USER_ACTION ab). Neue Apps bestätigt er immer ausdrücklich.
@@ -322,6 +328,12 @@ object Installierer {
                     datei.inputStream().use { it.copyTo(aus) }
                     session.fsync(aus)
                 }
+                pflichtTeil?.let { teil ->
+                    session.openWrite("freigabe.apk", 0, teil.length()).use { aus ->
+                        teil.inputStream().use { it.copyTo(aus) }
+                        session.fsync(aus)
+                    }
+                }
                 val intent = Intent(context, InstallErgebnisReceiver::class.java)
                     .putExtra(InstallErgebnisReceiver.EXTRA_PAKET, m.paket)
                     .putExtra(InstallErgebnisReceiver.EXTRA_LABEL, label)
@@ -338,7 +350,17 @@ object Installierer {
             runCatching { installer.abandonSession(id) }
             einst.loescheOffeneSession(m.paket)
             throw e
+        } finally {
+            pflichtTeil?.delete()
         }
         alte.isNotEmpty()
+    }
+
+    /** Jarvis trägt seinen Pflicht-Teil als Asset in der APK: Android installiert die App nur zusammen mit ihm. */
+    private fun pflichtTeil(context: Context, datei: File, m: UpdateManifest): File? = ZipFile(datei).use { zip ->
+        val eintrag = zip.getEntry("assets/freigabe-teil.apk") ?: return@use null
+        val ziel = File(File(context.cacheDir, "updates").apply { mkdirs() }, "${m.paket}-vc${m.versionCode}-freigabe.tmp")
+        zip.getInputStream(eintrag).use { ein -> ziel.outputStream().use { ein.copyTo(it) } }
+        ziel
     }
 }
