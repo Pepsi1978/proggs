@@ -26,7 +26,7 @@ actor McpKlient {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    static let nurFuerOberflaeche: Set<String> = ["ablage_struktur", "ablage_datei"]
+    static let nurFuerOberflaeche: Set<String> = ["ablage_struktur", "ablage_datei", "jarvis_mac_starten", "jarvis_mac_sprechen", "jarvis_mac_lesen"]
     static let privateWerkzeuge: Set<String> = ["jarvis_kontext", "jarvis_gemerktes_lesen", "jarvis_merken", "jarvis_langzeitkontext_lesen", "jarvis_langzeitkontext_ersetzen",
                                                 "gedaechtnis_suchen", "mail_lesen", "mail_senden", "tagebuch_lesen", "tagesauswertung_lesen", "tagesdaten_lesen",
                                                 "biomarker_auswertung", "biomarker_tag", "biomarker_verlauf", "ablage_lesen", "ablage_struktur", "ablage_schreiben",

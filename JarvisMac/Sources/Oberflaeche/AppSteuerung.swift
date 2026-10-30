@@ -61,6 +61,7 @@ final class AppSteuerung {
         Weckwort.shared.beiErkennung = { [weak self] in self?.weckwortErkannt() }
         if Einstellungen.shared.weckwortAn { Weckwort.shared.starten() }
         if Einstellungen.shared.globalesKuerzel { kuerzelRegistrieren() }
+        AgentenKanal.shared.starten()
         Task {
             while true {
                 // Frisch im Hintergrund: Die Liste ist warm und der Stand stimmt, wenn Frank fragt.

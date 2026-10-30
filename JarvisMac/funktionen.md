@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.25 -->
+<!-- stand: JarvisMac 1.0.28 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -6,6 +6,11 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Alle Werkzeuge des Handy-Jarvis über dessen MCP-Relay (Aufgaben, Wecker, Ideen, Kalender, Dienstplan, Biodaten, Stack-Labor, Epigenetik, Ablage, Prompts, Mail, Tagebuch, Wissen, Tagesauswertung, Agenten, Vorgänge, Programmieraufträge, Timer, Wetter, Fahrzeit, Handy-Einstellungen …). Ist das Handy aus, sagt Jarvis das.
 - Gemeinsames Gedächtnis: Live-Gedächtnis (`jarvis_kontext`) zu jedem Gesprächsbeginn, Neues mit `jarvis_merken`; „Lernen am Mac“ gibt nach 10 Minuten Ruhe neue Angaben aus Mac-Gesprächen zurück (abschaltbar).
 - Gespräche lokal gespeichert, durchsuchbar, automatischer Titel; Bilder (Datei, Ziehen, Bildschirmfoto) anhängbar.
+
+## Agentenkanal mit Jarvis am Handy
+- Allgemeiner Kanal über den Relay in beide Richtungen, solange der Mac verbunden ist: `handy_jarvis_sprechen` (frage, info), `handy_jarvis_lesen`. Nachrichten überstehen Abwesenheit und Neustarts (Quittung, id gegen Doppel, Eingang auf der Platte).
+- Fragen vom Handy (Frage, Stand der Programmieraufgaben, Begutachtung des gesamten Geschehens am Mac) beantwortet Jarvis mit vollem Mac-Zugriff im eigenen Gespräch „Jarvis am Handy (Agentenkanal)“.
+- Das Handy kann die App über die Jarvis-Brücke starten („Starte Jarvis Mac OS“); Post für den Mac startet sie im Hintergrund.
 
 ## Mac (Vollzugriff, abschaltbar)
 - `mac_befehl` (zsh), `mac_applescript`, `mac_oeffnen`, `mac_programme` (liste/vordergrund/beenden), `mac_bildschirm` (Bildschirmfoto ans Modell), `mac_tastatur`, `mac_zwischenablage`, `mac_mitteilung`, `mac_lautstaerke`, `mac_datei`, `mac_status`. Ist der Vollzugriff aus, gehen nur noch Öffnen, Mitteilungen, Programmliste und Status.

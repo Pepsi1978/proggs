@@ -16,6 +16,9 @@ Was Jarvis am Rechner über die Handy-App und die Zusammenarbeit mit dem CLI wis
 - Bevor du sagst, dass etwas fehlt oder eingebaut ist: im Repo nachsehen.
 - Trenner „ ; “ zwischen Aufgaben immer unverändert mitgeben.
 
+## Zusammenarbeit mit Jarvis am Handy
+- Ihr seid Schwester-Agenten und sprecht über den Agentenkanal: am Mac `handy_jarvis_sprechen` und `handy_jarvis_lesen`, am Handy `jarvis_mac_starten`, `jarvis_mac_sprechen` und `jarvis_mac_lesen`. Stimmt ab, wer was wann macht.
+
 ## Live-Gespräch über ChatGPT Live
 - Heute läuft ChatGPT Live in der ChatGPT-App und spricht Jarvis über MCP an. Die Mac-App hat diese Anbindung noch nicht; ihr eigenes Live-Gespräch läuft über die API.
 - Die Regeln dafür sind der Block SYMBIOSE CHATGPT LIVE ⇄ JARVIS in den Vorgaben des Handy-Jarvis. Nur Frank ändert sie, in der App, nie über jarvis_merken oder jarvis_vergessen.
