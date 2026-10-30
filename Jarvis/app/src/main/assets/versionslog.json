@@ -441,6 +441,7 @@
     {"versionCode": 435, "versionName": "1.8.424", "stand": "30.10.2026, 11:12 Uhr", "notiz": "Der Prompt-Editor öffnet mit Tastatur und Schreibmarke am Textende und fragt nach, bevor er Änderungen verwirft."},
     {"versionCode": 436, "versionName": "1.8.425", "stand": "30.10.2026, 12:05 Uhr", "notiz": "Das Plus bei den Prompts öffnet immer einen leeren Prompt, und Aufnahme, KI und Speichern sind vollständig im Bild."},
     {"versionCode": 437, "versionName": "1.8.426", "stand": "30.10.2026, 12:13 Uhr", "notiz": "Eingesprochener Text endet im Reiter Prompts immer mit Leerzeichen, Semikolon, Leerzeichen, und die nächste Einsprache setzt genau dort an."},
-    {"versionCode": 438, "versionName": "1.8.427", "stand": "30.10.2026, 12:22 Uhr", "notiz": "Der KI-Knopf bei den Prompts glättet jede Einsprache einzeln und behält die Trenner, Kopieren und Teilen geben den Text ohne Schluss-Trenner weiter."}
+    {"versionCode": 438, "versionName": "1.8.427", "stand": "30.10.2026, 12:22 Uhr", "notiz": "Der KI-Knopf bei den Prompts glättet jede Einsprache einzeln und behält die Trenner, Kopieren und Teilen geben den Text ohne Schluss-Trenner weiter."},
+    {"versionCode": 439, "versionName": "1.8.428", "stand": "30.10.2026, 12:33 Uhr", "notiz": "Nach dem Senden eines Prompts aus der Ablage fragt Jarvis, ob der Prompt gelöscht werden soll; der Text in der Eingabe bleibt dabei immer erhalten."}
 ]
 }

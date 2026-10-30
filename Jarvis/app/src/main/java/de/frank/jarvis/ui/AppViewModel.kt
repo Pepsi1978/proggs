@@ -1851,15 +1851,30 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Senden-Knopf eines Prompts: neue Programmier-Session, der Prompt steht mit dem Programmierer-Vorspann in der Eingabeblase. */
-    fun promptSenden(text: String) {
+    fun promptSenden(p: de.frank.jarvis.ablage.Prompt) {
         promptEingabeSchliessen()
         if (entwurf.isNotBlank()) meldung = "Der bisherige Entwurf in der Eingabeblase wurde durch den Prompt ersetzt."
         neuesGespraech()
         // Alte Anhänge gehören nicht zum Prompt und gingen sonst unbemerkt mit in die neue Session.
         anhaenge.toList().forEach { anhangWeg(it) }
-        entwurf = text.trim()
+        entwurf = p.text.trim()
         programmiererEinsetzen()
         reiter = Reiter.JARVIS
+        promptLoeschenFrage = p
+    }
+
+    /** Der eben gesendete Prompt, solange die Frage offen ist, ob er aus der Ablage weg soll. */
+    var promptLoeschenFrage by mutableStateOf<de.frank.jarvis.ablage.Prompt?>(null); private set
+
+    /** Antwort auf die Frage nach dem Senden: Ja löscht nur den Eintrag der Ablage, der Text in der Eingabeblase bleibt. */
+    fun promptLoeschenAntwort(loeschen: Boolean) {
+        val p = promptLoeschenFrage ?: return
+        promptLoeschenFrage = null
+        if (!loeschen) return
+        viewModelScope.launch {
+            val weg = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.loesche(getApplication(), p.nummer, p.erstellt) }
+            meldung = if (weg != null) "Prompt ${weg.nummer} gelöscht." else "Der Prompt ließ sich nicht löschen."
+        }
     }
 
     fun mikrofonErlaubt(erlaubt: Boolean) {

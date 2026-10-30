@@ -211,7 +211,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                     Spacer(Modifier.weight(1f))
                     // Rechts, gut mit dem Daumen erreichbar, als einziges Symbol plastisch hervorgehoben.
                     Box(Modifier.size(60.dp).knopf3d(f.primaer, f.tertiaer, 30.dp, f.dunkel)
-                        .antippen(lange = { zeige("Senden") }, langeText = "Senden") { offen = null; vm.promptSenden(p.text) }, contentAlignment = Alignment.Center) {
+                        .antippen(lange = { zeige("Senden") }, langeText = "Senden") { offen = null; vm.promptSenden(p) }, contentAlignment = Alignment.Center) {
                         Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(28.dp))
                     }
                 }
@@ -225,6 +225,26 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                     }
                     Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { loeschen = false }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Frage nach dem Senden eines Prompts. Über der ganzen App (in [JarvisApp]), weil das Senden die Ablage verlässt.
+ * Zurück oder Tippen daneben gilt als Nein: Der Prompt bleibt.
+ */
+@Composable
+fun PromptLoeschenFrage(vm: AppViewModel) {
+    vm.promptLoeschenFrage ?: return
+    val f = LocalFarben.current
+    Dialog({ vm.promptLoeschenAntwort(false) }, DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.padding(16.dp).fillMaxWidth().deckend(f).padding(18.dp)) {
+            Text("Soll der Prompt gelöscht werden?", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Der Text in der Eingabe bleibt erhalten.", color = f.textLeise, fontSize = 15.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 6.dp, bottom = 16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Knopf("Ja", Modifier.weight(1f), Icons.Rounded.Delete, farbe = f.gefahr) { vm.promptLoeschenAntwort(true) }
+                Knopf("Nein", Modifier.weight(1f), haupt = false) { vm.promptLoeschenAntwort(false) }
             }
         }
     }
