@@ -134,6 +134,12 @@ struct EinstellungenAnsicht: View {
                     TextField("", text: $einst.weckwort).textFieldStyle(.roundedBorder).frame(width: 200)
                         .onSubmit { Weckwort.shared.stoppen(); if einst.weckwortAn { Weckwort.shared.starten() } }
                 }
+                zeile("Stillezeit in der App", "Sekunden Stille nach deinem letzten Wort, bis das Mikrofon schließt, wenn Jarvis vorn ist: 1 bis 15, auch mit Komma. Nicht im Live-Modus.") {
+                    StillezeitFeld(sekunden: $einst.stilleInAppSek)
+                }
+                zeile("Stillezeit außerhalb der App", "Dasselbe, wenn Jarvis im Hintergrund ist (Fenster zu oder andere App vorn).") {
+                    StillezeitFeld(sekunden: $einst.stilleAussenSek)
+                }
                 zeile("Tastenkürzel", "⌥⌘J überall: sprechen · ⌥⌘K: Jarvis öffnen · im Fenster ⌘D sprechen, ⌘L Live, ⌘N neues Gespräch.") {
                     Toggle("", isOn: $einst.globalesKuerzel).toggleStyle(.switch)
                         .onChange(of: einst.globalesKuerzel) { _, an in an ? AppSteuerung.shared.kuerzelRegistrieren() : AppSteuerung.shared.kuerzelAbmelden() }
@@ -365,5 +371,28 @@ struct KontenAnsicht: View {
                 codexStatus = "Anmeldung fehlgeschlagen: \(error.localizedDescription)"
             }
         }
+    }
+}
+
+/// Eine Stillezeit in Sekunden; übernimmt mit Eingabetaste oder beim Verlassen des Felds, Ungültiges fällt auf den alten Wert zurück.
+private struct StillezeitFeld: View {
+    @Binding var sekunden: Double
+    @State private var text = ""
+    @FocusState private var fokus: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            TextField("", text: $text).textFieldStyle(.roundedBorder).frame(width: 60).focused($fokus)
+                .onSubmit(uebernehmen)
+                .onChange(of: fokus) { _, drin in if !drin { uebernehmen() } }
+            Text("Sekunden").font(.jarvis(12)).foregroundStyle(Farbe.text3)
+        }
+        .onAppear { text = Einstellungen.stilleZahl(sekunden) }
+        .onChange(of: sekunden) { _, s in text = Einstellungen.stilleZahl(s) }
+    }
+
+    private func uebernehmen() {
+        if let s = Einstellungen.stilleAus(text) { sekunden = s }
+        text = Einstellungen.stilleZahl(sekunden)
     }
 }

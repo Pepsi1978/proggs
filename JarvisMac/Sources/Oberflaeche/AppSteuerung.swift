@@ -183,7 +183,7 @@ final class AppSteuerung {
     }
 
     /// Ist Jarvis wirklich vorn? Dann ist die Blase unten die Anzeige, sonst die Pille.
-    private var fensterVorn: Bool {
+    var fensterVorn: Bool {
         NSApp.isActive && NSApp.windows.contains { $0.canBecomeMain && $0.isVisible && !$0.isMiniaturized }
     }
 
@@ -204,7 +204,7 @@ final class AppSteuerung {
         let g = bereich == .gespraech ? (gespraech ?? GespraechsSpeicher.shared.neu()) : entwurfOderNeu()
         gespraech = g
         bereich = .gespraech
-        SprachSchleife.shared.starten(in: g)
+        SprachSchleife.shared.starten(in: g, inApp: true)
     }
 
     // MARK: Sprachpille

@@ -567,7 +567,7 @@ import Observation
 
 // MARK: - Sprachschleife
 
-/// Der Gesprächsmodus wie am Handy (SprechEnde.kt): Piepton, zuhören bis 4,5 Sekunden Stille nach dem letzten Wort, Jarvis, vorlesen, wieder von vorn.
+/// Der Gesprächsmodus wie am Handy (SprechEnde.kt): Piepton, zuhören bis zur eingestellten Stillezeit nach dem letzten Wort, Jarvis, vorlesen, wieder von vorn.
 /// Kommt nach dem Piepton nichts (7 Sekunden, ab der zweiten Runde 9), ist Schluss, ebenso bei einem Ausbefehl.
 @MainActor @Observable final class SprachSchleife {
     static let shared = SprachSchleife()
@@ -576,8 +576,11 @@ import Observation
     private(set) var gespraech: Gespraech?
     private var aufgabe: Task<Void, Never>?
     private var lauf = 0
+    /// Das Gespräch begann bei Jarvis vorn; sonst gilt die Stillezeit für außerhalb.
+    private var inApp = false
 
-    func starten(in g: Gespraech) {
+    func starten(in g: Gespraech, inApp: Bool = false) {
+        self.inApp = inApp
         aufgabe?.cancel()
         Diktat.shared.abbrechen()
         Stimme.shared.stopp()
@@ -612,7 +615,9 @@ import Observation
             while Diktat.shared.aktiv && warte < 1200 && lauf == meiner { try? await Task.sleep(for: .milliseconds(50)); warte += 1 }
             guard lauf == meiner, !Task.isCancelled else { break }
             if Diktat.shared.aktiv { log("fehler", "Gesprächsmodus: Das Mikrofon wurde nicht frei"); break }
-            guard let text = await Diktat.shared.hoereBisStille(maxSekunden: 120, stilleSek: 4.5, wartenSek: runde == 0 ? 7 : 9) else { break }
+            // Je Runde neu: Eine per Sprache geänderte Zeit gilt ab der nächsten Frage, ebenso das Verlassen des Fensters.
+            let stilleJetzt = inApp && AppSteuerung.shared.fensterVorn ? Einstellungen.shared.stilleInAppSek : Einstellungen.shared.stilleAussenSek
+            guard let text = await Diktat.shared.hoereBisStille(maxSekunden: 120, stilleSek: stilleJetzt, wartenSek: runde == 0 ? 7 : 9) else { break }
             guard lauf == meiner, !Task.isCancelled else { break }
             if SprachBefehle.istSessionEnde(text) {
                 // Geht nie ans Modell: kein Eintrag im Gespräch, nur die kurze Bestätigung.
