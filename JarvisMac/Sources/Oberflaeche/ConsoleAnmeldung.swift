@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 
 /// Eigene Anmeldung des Macs bei der Claude Console. Das Guthaben gibt es nur mit dem Sitzungs-Cookie, nicht mit einem API-Schlüssel
-/// (inoffizielle Schnittstelle, wie am Handy in AnthropicGuthabenFaehigkeit.kt). Die Cookies verwaltet WebKit für Jarvis.
+/// (inoffizielle Schnittstelle, wie am Handy in AnthropicGuthabenFaehigkeit.kt). Das Anmeldefenster arbeitet flüchtig, die Cookies liegen nur im Tresor.
 @MainActor
 enum ConsoleSitzung {
     enum Fehler: LocalizedError {
@@ -16,30 +16,66 @@ enum ConsoleSitzung {
         }
     }
 
+    struct Keks: Codable, Equatable {
+        var name, wert, domain: String
+    }
+
+    struct Stand {
+        let rest: Double
+        let gewaehrt: Double?
+        let kurs: Double?
+        /// Derselbe Satz wie das Werkzeug des Handys, für die Punkte auf der Karte.
+        let satz: String
+    }
+
     private static let console = "https://platform.claude.com"
     static let loginURL = URL(string: "\(console)/login")!
     /// Fest für Anmeldung und Abfrage: Die Bot-Abwehr der Console bindet ihr Cookie an die Browserkennung.
     static let browserKennung = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
     private static let orgSchluessel = "consoleOrganisation"
+    private static let tresorName = "console-sitzung"
     private static var kursStand: (wert: Double, datum: String, geholt: Date)?
+    private static var kekse: [Keks] = {
+        let k = Tresor.lade([Keks].self, name: tresorName, klartext: Pfade.unterstuetzung.appendingPathComponent("console-sitzung-gibt-es-nie-im-klartext.json")) ?? []
+        geheimnisseMelden(k)
+        return k
+    }()
+    /// Zählt jede An- und Abmeldung; ein Abruf, der über eine davon läuft, ist ungültig.
+    private(set) static var nummer = 0
 
-    private static func cookies() async -> [HTTPCookie] {
-        await WKWebsiteDataStore.default().httpCookieStore.allCookies().filter { $0.domain.hasSuffix("claude.com") }
+    static var angemeldet: Bool { kekse.contains { $0.name == "sessionKey" } }
+
+    private static func gehoertZurConsole(_ domain: String) -> Bool {
+        let d = domain.hasPrefix(".") ? String(domain.dropFirst()) : domain
+        return d == "claude.com" || d.hasSuffix(".claude.com")
     }
 
-    static func angemeldet() async -> Bool { await cookies().contains { $0.name == "sessionKey" } }
+    private static func geheimnisseMelden(_ k: [Keks]) { Geheimnisse.setzen(tresorName, k.map(\.wert)) }
 
-    static func abmelden() async {
-        let store = WKWebsiteDataStore.default().httpCookieStore
-        for c in await cookies() { await store.deleteCookie(c) }
+    private static func sichern() {
+        Tresor.sichere(kekse, name: tresorName)
+        geheimnisseMelden(kekse)
+    }
+
+    static func uebernehmen(_ cookies: [HTTPCookie]) {
+        kekse = cookies.filter { gehoertZurConsole($0.domain) }.map { Keks(name: $0.name, wert: $0.value, domain: $0.domain) }
+        nummer += 1
+        sichern()
+        log("guthaben", "Am Mac bei der Console angemeldet", wo: "Guthaben")
+    }
+
+    static func abmelden() {
+        kekse = []
+        nummer += 1
+        sichern()
         UserDefaults.standard.removeObject(forKey: orgSchluessel)
     }
 
-    /// Derselbe Satz wie das Werkzeug des Handys, damit die Anzeige nur eine Form kennen muss.
-    static func guthabenSatz() async throws -> String {
+    static func stand() async throws -> Stand {
         let org = try await organisation()
-        guard let c = try await holen("\(console)/api/organizations/\(org)/prepaid/credits") as? [String: Any] else {
-            throw Fehler.meldung("Die Anthropic-Konsole lieferte keine lesbare Antwort.")
+        guard let c = try await holen("\(console)/api/organizations/\(org)/prepaid/credits") as? [String: Any],
+              c["balance"] is [String: Any] || c["amount"] is Double else {
+            throw Fehler.meldung("Die Anthropic-Konsole lieferte keine lesbare Antwort (Schnittstelle geändert?).")
         }
         let rest = betrag(c["balance"] as? [String: Any], cent: c["amount"] as? Double ?? 0)
         // Nur gültige Tranchen mit Rest zählen, abgelaufene Vormonate verfälschen sonst „gewährt“ und das Verfallsdatum.
@@ -68,7 +104,7 @@ enum ConsoleSitzung {
             let wert = k.wert.formatted(.number.precision(.fractionLength(4)).locale(Locale(identifier: "de_DE")))
             satz += " Kurs 1 $ = \(wert) € (EZB \(k.datum))."
         }
-        return satz
+        return Stand(rest: rest, gewaehrt: gewaehrt > 0 ? gewaehrt : nil, kurs: k?.wert, satz: satz)
     }
 
     /// Die Organisation mit API-Zugang (nicht die Abo-Organisation von claude.ai).
@@ -83,25 +119,39 @@ enum ConsoleSitzung {
     }
 
     private static func holen(_ adresse: String) async throws -> Any {
+        let nr = nummer
         var req = URLRequest(url: URL(string: adresse)!, timeoutInterval: 25)
         req.httpShouldHandleCookies = false
-        req.setValue(HTTPCookie.requestHeaderFields(with: await cookies())["Cookie"], forHTTPHeaderField: "Cookie")
+        req.setValue(kekse.map { "\($0.name)=\($0.wert)" }.joined(separator: "; "), forHTTPHeaderField: "Cookie")
         req.setValue(browserKennung, forHTTPHeaderField: "User-Agent")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         req.setValue("\(console)/dashboard", forHTTPHeaderField: "Referer")
         let (daten, antwort) = try await URLSession.shared.data(for: req)
-        let code = (antwort as? HTTPURLResponse)?.statusCode ?? 0
+        let http = antwort as? HTTPURLResponse
+        if let http, nr == nummer { erneuerteKekse(http) }
+        let code = http?.statusCode ?? 0
         let json = try? JSONSerialization.jsonObject(with: daten)
-        // 401 oder ein 403 mit JSON kommt von der Console selbst: Sitzung weg. Ein 403 als HTML-Seite ist die Bot-Abwehr.
-        if code == 401 || (code == 403 && json != nil) { throw Fehler.abgelaufen }
-        guard (200..<300).contains(code), let json else {
-            switch code {
-            case 403: throw Fehler.meldung("Die Bot-Abwehr der Anthropic-Konsole lässt die Abfrage gerade nicht durch (403).")
-            case 429: throw Fehler.meldung("Anthropic bremst gerade (429); bitte gleich noch einmal versuchen.")
-            default: throw Fehler.meldung("Die Anthropic-Konsole antwortet mit Fehler \(code).")
-            }
+        // 401 oder ein 403 mit JSON kommt von der Console selbst: Sitzung weg (am Handy so beobachtet). Ein 403 als HTML-Seite ist die Bot-Abwehr.
+        if code == 401 || (code == 403 && json != nil) || http?.url?.path.contains("/login") == true { throw Fehler.abgelaufen }
+        if let json, (200..<300).contains(code) { return json }
+        switch code {
+        case 200..<300: throw Fehler.meldung("Die Anthropic-Konsole lieferte keine lesbare Antwort (Schnittstelle geändert?).")
+        case 403: throw Fehler.meldung("Die Bot-Abwehr der Anthropic-Konsole lässt die Abfrage gerade nicht durch (403).")
+        case 429: throw Fehler.meldung("Anthropic bremst gerade (429); bitte gleich noch einmal versuchen.")
+        default: throw Fehler.meldung("Die Anthropic-Konsole antwortet mit Fehler \(code).")
         }
-        return json
+    }
+
+    /// Set-Cookie wie im Browser übernehmen, sonst veralten Sitzung und Bot-Abwehr-Cookie.
+    private static func erneuerteKekse(_ http: HTTPURLResponse) {
+        guard let felder = http.allHeaderFields as? [String: String], let url = http.url else { return }
+        let neu = HTTPCookie.cookies(withResponseHeaderFields: felder, for: url).filter { gehoertZurConsole($0.domain) }
+        guard !neu.isEmpty else { return }
+        for c in neu {
+            kekse.removeAll { $0.name == c.name && $0.domain == c.domain }
+            if !c.value.isEmpty, (c.expiresDate ?? .distantFuture) > Date() { kekse.append(Keks(name: c.name, wert: c.value, domain: c.domain)) }
+        }
+        sichern()
     }
 
     /// Euro je Dollar (EZB, ändert sich einmal am Tag); scheitert der Abruf, gilt der letzte Kurs.
@@ -136,14 +186,9 @@ enum ConsoleSitzung {
     }
 }
 
-/// Fenster mit der Anmeldeseite der Console; schließt sich, sobald die Sitzung steht. Auch beim Schließen von Hand wird das Guthaben neu geholt.
+/// Fenster mit der Anmeldeseite der Console; schließt sich, sobald die Sitzung steht. Das Guthaben holt danach das `onDismiss` des Sheets.
 struct ConsoleAnmeldungAnsicht: View {
     @State private var guthaben = Guthaben.shared
-
-    private func fertig() {
-        guthaben.anmeldungOffen = false
-        Task { await guthaben.laden(frisch: true) }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -153,10 +198,10 @@ struct ConsoleAnmeldungAnsicht: View {
                     Text("Am besten per E-Mail-Code. Danach liest Jarvis dein Guthaben direkt hier am Mac.").font(.jarvis(12)).foregroundStyle(Farbe.text2)
                 }
                 Spacer()
-                Button("Schließen") { fertig() }
+                Button("Schließen") { guthaben.anmeldungOffen = false }
             }
             .padding(14)
-            ConsoleBrowser(fertig: fertig)
+            ConsoleBrowser { guthaben.anmeldungOffen = false }
         }
         .frame(width: 560, height: 740)
         .foregroundStyle(Farbe.text)
@@ -170,26 +215,43 @@ private struct ConsoleBrowser: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSView {
         let rahmen = NSView()
-        let web = context.coordinator.neuerBrowser(WKWebViewConfiguration(), in: rahmen)
-        // Die Console wechselt nach der Anmeldung per Client-Navigation, ohne neue Seite.
-        context.coordinator.beobachter = web.observe(\.url) { [weak koordinator = context.coordinator] w, _ in
-            MainActor.assumeIsolated { koordinator?.pruefen(w.url) }
-        }
-        web.load(URLRequest(url: ConsoleSitzung.loginURL))
+        context.coordinator.starten(in: rahmen)
         return rahmen
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {}
 
+    static func dismantleNSView(_ nsView: NSView, coordinator: Koordinator) { coordinator.wache?.cancel() }
+
     @MainActor
     final class Koordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let fertig: () -> Void
-        var beobachter: NSKeyValueObservation?
+        var wache: Task<Void, Never>?
+        private let speicher = WKWebsiteDataStore.nonPersistent()
+        private weak var rahmen: NSView?
+        private weak var haupt: WKWebView?
+        private var popups: [WKWebView] = []
+        private var popupKnopf: NSButton?
         private var erledigt = false
         init(fertig: @escaping () -> Void) { self.fertig = fertig }
 
-        func neuerBrowser(_ konfiguration: WKWebViewConfiguration, in rahmen: NSView) -> WKWebView {
-            konfiguration.websiteDataStore = .default()
+        func starten(in rahmen: NSView) {
+            self.rahmen = rahmen
+            let konfiguration = WKWebViewConfiguration()
+            konfiguration.websiteDataStore = speicher
+            let web = browser(konfiguration, in: rahmen)
+            haupt = web
+            web.load(URLRequest(url: ConsoleSitzung.loginURL))
+            // Die Console wechselt nach der Anmeldung per Client-Navigation, und das Cookie kann später kommen als die neue Adresse: regelmäßig nachsehen.
+            wache = Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(1))
+                    await self?.pruefen()
+                }
+            }
+        }
+
+        private func browser(_ konfiguration: WKWebViewConfiguration, in rahmen: NSView) -> WKWebView {
             let web = WKWebView(frame: rahmen.bounds, configuration: konfiguration)
             web.customUserAgent = ConsoleSitzung.browserKennung
             web.autoresizingMask = [.width, .height]
@@ -199,27 +261,40 @@ private struct ConsoleBrowser: NSViewRepresentable {
             return web
         }
 
-        func pruefen(_ url: URL?) {
-            guard !erledigt, let u = url?.absoluteString, u.hasPrefix("https://platform.claude.com"), !u.contains("/login") else { return }
-            Task {
-                guard await ConsoleSitzung.angemeldet(), !erledigt else { return }
-                erledigt = true
-                fertig()
-            }
+        private func pruefen() async {
+            guard !erledigt, let u = haupt?.url?.absoluteString, u.hasPrefix("https://platform.claude.com"), !u.contains("/login") else { return }
+            let cookies = await speicher.httpCookieStore.allCookies()
+            guard !erledigt, cookies.contains(where: { $0.name == "sessionKey" }) else { return }
+            erledigt = true
+            wache?.cancel()
+            ConsoleSitzung.uebernehmen(cookies)
+            fertig()
         }
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { pruefen(webView.url) }
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { Task { await pruefen() } }
 
-        // Die Google-Anmeldung öffnet ein Popup und meldet das Ergebnis an die Console zurück: Es liegt über der Seite, bis es sich schließt.
+        // Die Google-Anmeldung öffnet ein Popup und meldet das Ergebnis an die Console zurück: Es liegt über der Seite, bis es sich schließt oder man es schließt.
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            guard let rahmen = webView.superview else { return nil }
-            return neuerBrowser(configuration, in: rahmen)
+            guard let rahmen else { return nil }
+            let popup = browser(configuration, in: rahmen)
+            popups.append(popup)
+            popupKnopf?.removeFromSuperview()
+            let knopf = NSButton(title: "Popup schließen", target: self, action: #selector(popupSchliessen))
+            knopf.translatesAutoresizingMaskIntoConstraints = false
+            rahmen.addSubview(knopf)
+            NSLayoutConstraint.activate([knopf.topAnchor.constraint(equalTo: rahmen.topAnchor, constant: 8), knopf.trailingAnchor.constraint(equalTo: rahmen.trailingAnchor, constant: -8)])
+            popupKnopf = knopf
+            return popup
         }
 
-        func webViewDidClose(_ webView: WKWebView) {
-            let haupt = webView.superview?.subviews.first as? WKWebView
-            webView.removeFromSuperview()
-            pruefen(haupt?.url)
+        func webViewDidClose(_ webView: WKWebView) { popupEntfernen(webView) }
+
+        @objc private func popupSchliessen() { if let p = popups.last { popupEntfernen(p) } }
+
+        private func popupEntfernen(_ popup: WKWebView) {
+            popups.removeAll { $0 === popup }
+            popup.removeFromSuperview()
+            if popups.isEmpty { popupKnopf?.removeFromSuperview(); popupKnopf = nil }
         }
     }
 }

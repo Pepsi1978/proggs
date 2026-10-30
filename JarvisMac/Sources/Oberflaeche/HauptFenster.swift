@@ -32,7 +32,7 @@ struct HauptFenster: View {
         .overlay {
             if let p = steuerung.promptBearbeiten { PromptEditorVollbild(prompt: p).id(p.id).foregroundStyle(Farbe.text).tint(Farbe.haupt) }
         }
-        .sheet(isPresented: $guthaben.anmeldungOffen) { ConsoleAnmeldungAnsicht() }
+        .sheet(isPresented: $guthaben.anmeldungOffen, onDismiss: { Task { await guthaben.laden(frisch: true) } }) { ConsoleAnmeldungAnsicht() }
     }
 }
 
@@ -62,6 +62,7 @@ struct Seitenleiste: View {
     @State private var projekte = Projekte.shared
     @State private var neuesProjekt = ""
     @State private var design = DesignStand.shared
+    @State private var live = LiveGespraech.shared
 
     private var gefiltert: [Gespraech] {
         let basis: [Gespraech]
@@ -115,6 +116,10 @@ struct Seitenleiste: View {
             VStack(spacing: 2) {
                 ForEach([Bereich.start, .zentrale, .einstellungen]) { b in
                     LeistenEintrag(symbol: b.symbol, titel: b.titel, aktiv: steuerung.bereich == b) { steuerung.bereich = b }
+                }
+                // Der Rückweg zu einem laufenden Gespräch; gestartet wird Live aus der Startblase.
+                if live.aktiv {
+                    LeistenEintrag(symbol: Bereich.live.symbol, titel: "Live läuft", aktiv: steuerung.bereich == .live) { steuerung.bereich = .live }
                 }
             }
 

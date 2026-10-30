@@ -19,7 +19,7 @@ final class Guthaben {
     var googleWaehrung = "€"
     var laedt = false
     /// Der Mac hat eine eigene Console-Anmeldung und liest das Guthaben dann selbst statt über das Handy.
-    var macAngemeldet = false
+    var macAngemeldet = ConsoleSitzung.angemeldet
     var anmeldungOffen = false
     /// Was die letzte Aufgabe mit einem Claude-Modell gekostet hat, in Dollar: aus den Tokens der API, sofort und ohne Abfrage.
     var kosten: Double?
@@ -37,29 +37,42 @@ final class Guthaben {
     }
 
     private func anthropicLaden(frisch: Bool) async {
-        macAngemeldet = await ConsoleSitzung.angemeldet()
+        macAngemeldet = ConsoleSitzung.angemeldet
+        var macFehler: String?
         if macAngemeldet {
-            if !frisch, anthropicRest != nil, let geholt, Date().timeIntervalSince(geholt) < 900 { return }
+            if !frisch, anthropicRest != nil, anthropicHinweis == nil, let geholt, Date().timeIntervalSince(geholt) < 900 { return }
+            // Wer sich während des Abrufs an- oder abmeldet, macht dessen Ergebnis ungültig.
+            let nr = ConsoleSitzung.nummer
             do {
-                uebernehmen(try await ConsoleSitzung.guthabenSatz())
+                let s = try await ConsoleSitzung.stand()
+                guard nr == ConsoleSitzung.nummer else { return }
+                anthropicHinweis = nil
+                anthropicText = s.satz; anthropicRest = s.rest; anthropicGewaehrt = s.gewaehrt
+                if let k = s.kurs { kurs = k }
+                geholt = Date()
                 return
             } catch ConsoleSitzung.Fehler.abgelaufen {
-                await abmelden()   // Fällt danach auf das Handy zurück und bietet wieder den Link an.
+                guard nr == ConsoleSitzung.nummer else { return }
+                log("guthaben", "Console-Anmeldung abgelaufen, Mac abgemeldet", wo: "Guthaben")
+                abmelden()   // Fällt danach auf das Handy zurück und bietet wieder den Link an.
             } catch {
+                guard nr == ConsoleSitzung.nummer else { return }
                 log("fehler", "Anthropic-Guthaben nicht abrufbar", wo: "Guthaben", fehler: error.localizedDescription)
-                anthropicHinweis = error.localizedDescription
-                return
+                macFehler = error.localizedDescription   // Das Handy kann vielleicht noch antworten.
             }
         }
         let r = await McpKlient.shared.rufe("anthropic_guthaben", frisch ? ["frisch": true] : [:], sekunden: 60)
         let t = McpKlient.ohneKontextHinweis(r.text)
-        // Der Hinweis des Handys verweist auf dessen Einstellungen; am Mac steht der Link direkt darunter.
-        guard !r.fehler else { anthropicHinweis = t.contains("anmelden") ? "Für das Guthaben einmal bei der Anthropic-Konsole anmelden." : t; return }
+        guard !r.fehler else {
+            // Der Hinweis des Handys verweist auf dessen Einstellungen; am Mac steht der Link direkt darunter. Die Bot-Abwehr-Meldung sagt das Gegenteil und bleibt.
+            anthropicHinweis = macFehler ?? (t.contains("anmelden") && !t.contains("hilft") ? "Für das Guthaben einmal bei der Anthropic-Konsole anmelden." : t)
+            return
+        }
         uebernehmen(t)
     }
 
-    func abmelden() async {
-        await ConsoleSitzung.abmelden()
+    func abmelden() {
+        ConsoleSitzung.abmelden()
         macAngemeldet = false
         anthropicRest = nil; anthropicGewaehrt = nil; anthropicText = nil; anthropicHinweis = nil; geholt = nil
     }
@@ -136,7 +149,7 @@ struct ModellKapsel: View {
             if let r = guthaben.anthropicRest { Text("Anthropic: \(Guthaben.betrag(r)) $ übrig") }
             if let k = guthaben.kosten, k > 0 { Text("Letzte Aufgabe: \(Self.kostenText(k)) $ (Listenpreis)") }
             if let g = guthaben.googleRest { Text("Google: \(Guthaben.betrag(g)) \(guthaben.googleWaehrung) übrig") }
-            if guthaben.anthropicRest == nil { Button("Bei der Anthropic-Konsole anmelden …") { guthaben.anmeldungOffen = true } }
+            if guthaben.anthropicRest == nil, !guthaben.macAngemeldet { Button("Bei der Anthropic-Konsole anmelden …") { guthaben.anmeldungOffen = true } }
             Button("Guthaben ansehen …") { EinstellungenAnsicht.startReiter = "guthaben"; AppSteuerung.shared.bereich = .einstellungen }
         } label: {
             HStack(spacing: 5) {
@@ -175,13 +188,13 @@ struct GuthabenAnsicht: View {
             karte(titel: "Claude-Modelle (Anthropic)", symbol: "brain", erklaerung: "Bezahlt Jarvis' Kopf, wenn du ein Claude-Modell gewählt hast.",
                   rest: g.anthropicRest, gewaehrt: g.anthropicGewaehrt, einheit: "$", umrechnung: g.kurs, text: g.anthropicText, hinweis: g.anthropicHinweis) {
                 if g.macAngemeldet {
-                    Button("Am Mac bei der Anthropic-Konsole abmelden") { Task { await g.abmelden(); await g.laden(frisch: true) } }
+                    Button("Am Mac bei der Anthropic-Konsole abmelden") { log("guthaben", "Am Mac bei der Console abgemeldet", wo: "Guthaben"); g.abmelden(); Task { await g.laden(frisch: true) } }
                         .buttonStyle(.plain).font(.jarvis(13, .semibold)).foregroundStyle(Farbe.text2)
                 } else {
                     Button { g.anmeldungOffen = true } label: {
                         Label("Bei der Anthropic-Konsole anmelden", systemImage: "arrow.up.right.square").font(.jarvis(13, .semibold)).underline()
                     }
-                    .buttonStyle(.plain).foregroundStyle(Farbe.haupt).onHover { $0 ? NSCursor.pointingHand.push() : NSCursor.pop() }
+                    .buttonStyle(.plain).foregroundStyle(Farbe.haupt).pointerStyle(.link)
                 }
             }
             karte(titel: "Gemini-Stimmen (Google AI Studio)", symbol: "waveform", erklaerung: "Bezahlt das Vorlesen mit Gemini-TTS und das Live-Gespräch mit Gemini auf dem bezahlten Schlüssel.",

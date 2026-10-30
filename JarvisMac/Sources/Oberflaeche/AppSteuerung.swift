@@ -58,10 +58,10 @@ final class AppSteuerung {
                 try? await Task.sleep(for: .seconds(handyVerbunden ? 300 : 30))
             }
         }
-        // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange das Handy nicht erreichbar ist.
+        // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange weder Handy noch eigene Console-Anmeldung es liefern können.
         Task {
             while true {
-                guard handyVerbunden, !LiveGespraech.shared.aktiv else { try? await Task.sleep(for: .seconds(30)); continue }
+                guard handyVerbunden || ConsoleSitzung.angemeldet, !LiveGespraech.shared.aktiv else { try? await Task.sleep(for: .seconds(30)); continue }
                 await Guthaben.shared.laden()
                 try? await Task.sleep(for: .seconds(900))
             }

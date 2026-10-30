@@ -13,45 +13,64 @@ struct EinstellungenAnsicht: View {
         ("ueber", "Über", "info.circle.fill"),
     ]
 
+    /// Diese vier bringen Kopf und Scrollen selbst mit und brauchen die Breite: Daneben schrumpft die Liste auf ihre Symbole.
+    private var eigenerKopf: Bool { ["programmierung", "ablage", "gedaechtnis", "aktivitaet"].contains(reiter) }
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                let _ = { EinstellungenAnsicht.startReiter = "gehirn" }()
-                Text("Einstellungen").font(.jarvis(24, .bold)).padding(.bottom, 14).padding(.leading, 8)
-                ForEach(reiterListe, id: \.0) { r in
-                    LeistenEintrag(symbol: r.2, titel: r.1, aktiv: reiter == r.0) { reiter = r.0 }
+            if eigenerKopf {
+                VStack(spacing: 6) {
+                    ForEach(reiterListe, id: \.0) { r in
+                        RundKnopf(symbol: r.2, hilfe: r.1, aktiv: reiter == r.0, groesse: 36) { reiter = r.0 }
+                    }
+                    Spacer()
                 }
-                Spacer()
+                .frame(width: 64)
+                .padding(.top, 40)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Einstellungen").font(.jarvis(24, .bold)).padding(.bottom, 14).padding(.leading, 8)
+                    ForEach(reiterListe, id: \.0) { r in
+                        LeistenEintrag(symbol: r.2, titel: r.1, aktiv: reiter == r.0) { reiter = r.0 }
+                    }
+                    Spacer()
+                }
+                .frame(width: 230)
+                .padding(.top, 40).padding(.horizontal, 18)
             }
-            .frame(width: 230)
-            .padding(.top, 40).padding(.horizontal, 18)
-            // Diese vier bringen ihren Kopf und ihr Scrollen selbst mit.
-            switch reiter {
-            case "programmierung": ProgrammierungAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
-            case "ablage": AblageAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
-            case "gedaechtnis": GedaechtnisAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
-            case "aktivitaet": AktivitaetAnsicht().frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity).clipped()
-            default: ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+            Group {
+                if eigenerKopf {
                     switch reiter {
-                    case "gehirn": gehirn
-                    case "guthaben": GuthabenAnsicht()
-                    case "stimme": stimme
-                    case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
-                    case "live": live
-                    case "mac": mac
-                    case "konten": KontenAnsicht()
-                    default: ueber
+                    case "programmierung": ProgrammierungAnsicht()
+                    case "ablage": AblageAnsicht()
+                    case "gedaechtnis": GedaechtnisAnsicht()
+                    default: AktivitaetAnsicht()
+                    }
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            switch reiter {
+                            case "gehirn": gehirn
+                            case "guthaben": GuthabenAnsicht()
+                            case "stimme": stimme
+                            case "sprache": sprache; TranskriptionsEinstellungenAnsicht()
+                            case "live": live
+                            case "mac": mac
+                            case "konten": KontenAnsicht()
+                            default: ueber
+                            }
+                        }
+                        .padding(.horizontal, 30).padding(.top, 44).padding(.bottom, 30)
+                        // minWidth 0: Auch ein zu breites Kind darf die Spalte nie aufweiten, sonst rutscht die Seitenleiste nach links.
+                        .frame(minWidth: 0, maxWidth: 780, alignment: .leading)
                     }
                 }
-                .padding(.horizontal, 30).padding(.top, 44).padding(.bottom, 30)
-                // minWidth 0: Auch ein zu breites Kind darf die Spalte nie aufweiten, sonst rutscht die Seitenleiste nach links.
-                .frame(minWidth: 0, maxWidth: 780, alignment: .leading)
             }
-            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .clipped()
-            }
         }
+        // Der zuletzt offene Reiter bleibt beim Wechsel zu Chat oder Zentrale erhalten.
+        .onChange(of: reiter) { _, neu in EinstellungenAnsicht.startReiter = neu }
     }
 
     private func zeile<V: View>(_ titel: String, _ beschreibung: String = "", @ViewBuilder _ inhalt: () -> V) -> some View {
