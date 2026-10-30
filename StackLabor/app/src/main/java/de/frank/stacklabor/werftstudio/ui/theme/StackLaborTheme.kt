@@ -1,5 +1,6 @@
 package de.frank.stacklabor.werftstudio.ui.theme
 
+import android.content.res.Configuration
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
@@ -12,6 +13,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
@@ -20,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -27,7 +30,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.frank.stacklabor.werftstudio.R
+import de.frank.stacklabor.werftstudio.ui.model.Appearance
+import kotlinx.coroutines.delay
 
 private val LightBackground = Color(0xFFF3F5FA)
 private val LightSurface = Color(0xFFFFFFFF)
@@ -115,6 +123,26 @@ val StackLaborTypography = androidx.compose.material3.Typography(
     labelSmall = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = 0.2.sp),
 )
 
+/**
+ * Einzige Quelle für „dunkel oder hell“: Automatisch folgt der Sonne in Neuenhagen (nicht dem System),
+ * geprüft jede Minute und nur solange die App sichtbar ist. Hell und Dunkel sind fest.
+ */
+@Composable
+fun rememberAppDark(appearance: Appearance): Boolean {
+    var sonneDunkel by remember(appearance) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, appearance) {
+        if (appearance != Appearance.Auto) return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
+    return when (appearance) { Appearance.Light -> false; Appearance.Dark -> true; Appearance.Auto -> sonneDunkel }
+}
+
 @Composable
 fun StackLaborTheme(
     darkTheme: Boolean,
@@ -166,7 +194,15 @@ fun StackLaborTheme(
             )
         }
     }
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, darkTheme) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or (if (darkTheme) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
     androidx.compose.runtime.CompositionLocalProvider(
+        LocalConfiguration provides konfig,
         LocalStackLaborColors provides palette,
         LocalStackLaborDimens provides remember { StackLaborDimens() },
         LocalStackLaborMotionEnabled provides !reducedMotion,

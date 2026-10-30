@@ -56,6 +56,7 @@ import de.frank.stacklabor.werftstudio.service.tts.TtsProviderId
 import de.frank.stacklabor.werftstudio.service.tts.TtsUsage
 import de.frank.stacklabor.werftstudio.service.work.CodexRetryWorker
 import de.frank.stacklabor.werftstudio.ui.model.Appearance
+import de.frank.stacklabor.werftstudio.ui.theme.Sonnenstand
 import de.frank.stacklabor.werftstudio.ui.model.CodexLoginState
 import de.frank.stacklabor.werftstudio.ui.model.CompetitionUi
 import de.frank.stacklabor.werftstudio.ui.model.DoseSummaryUi
@@ -172,7 +173,13 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         when (event) {
             is StackLaborEvent.RouteChanged -> routeChanged(event.route)
             StackLaborEvent.ToggleAppearance -> launchAction {
-                container.settings.setzeErscheinung(if (settings.erscheinung == Erscheinung.HELL) Erscheinung.DUNKEL else Erscheinung.HELL)
+                // Bei Automatik gilt, was die Sonne gerade zeigt; der Druck macht daraus eine feste Wahl.
+                val dunkelJetzt = when (settings.erscheinung) {
+                    Erscheinung.HELL -> false
+                    Erscheinung.DUNKEL -> true
+                    Erscheinung.AUTOMATIK -> Sonnenstand.istDunkel()
+                }
+                container.settings.setzeErscheinung(if (dunkelJetzt) Erscheinung.HELL else Erscheinung.DUNKEL)
             }
             is StackLaborEvent.ChangeDoseVariant -> launchAction {
                 container.settings.setzeDosisVariante(if (event.variant == DoseVariant.Frei) DosisVariante.FREI else DosisVariante.DIENST)
@@ -366,7 +373,11 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         mutableState.update { current ->
             current.copy(
                 loading = false,
-                appearance = if (settings.erscheinung == Erscheinung.DUNKEL) Appearance.Dark else Appearance.Light,
+                appearance = when (settings.erscheinung) {
+                    Erscheinung.HELL -> Appearance.Light
+                    Erscheinung.DUNKEL -> Appearance.Dark
+                    Erscheinung.AUTOMATIK -> Appearance.Auto
+                },
                 reducedMotion = settings.bewegungReduziert,
                 doseVariant = if (settings.dosisVariante == DosisVariante.FREI) DoseVariant.Frei else DoseVariant.Dienst,
                 stacks = summaries,
@@ -1542,6 +1553,11 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             "gemini-key-choice" -> container.settings.setzeGeminiTtsSchluesselWahl(
                 GeminiKeyChoice.CHOICES.firstOrNull { it.second == value }?.first ?: GeminiKeyChoice.FREE_THEN_PAID,
             )
+            "appearance" -> container.settings.setzeErscheinung(when (value) {
+                "Hell" -> Erscheinung.HELL
+                "Dunkel" -> Erscheinung.DUNKEL
+                else -> Erscheinung.AUTOMATIK
+            })
             "tts-speed" -> container.settings.setzeTtsTempo(value.removeSuffix("×").replace(',', '.').toFloat())
             "tts-pause" -> container.settings.setzeAbsatzpause(when (value) {
                 "Mittel" -> Absatzpause.MITTEL

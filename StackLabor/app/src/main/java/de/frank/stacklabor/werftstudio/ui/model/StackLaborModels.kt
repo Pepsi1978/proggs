@@ -3,7 +3,8 @@ package de.frank.stacklabor.werftstudio.ui.model
 import de.frank.stacklabor.werftstudio.service.tts.TtsConfiguration
 import de.frank.stacklabor.werftstudio.ui.navigation.StackLaborRoute
 
-enum class Appearance { Light, Dark }
+/** Auto = automatisch nach der Sonne in Neuenhagen. */
+enum class Appearance { Auto, Light, Dark }
 
 enum class DoseVariant { Frei, Dienst }
 
@@ -145,7 +146,7 @@ sealed interface MedicineSolubilityAiState {
 
 data class StackLaborUiState(
     val loading: Boolean = true,
-    val appearance: Appearance = Appearance.Light,
+    val appearance: Appearance = Appearance.Auto,
     val reducedMotion: Boolean = false,
     val doseVariant: DoseVariant = DoseVariant.Frei,
     val sortMode: SortMode = SortMode.Einnahme,

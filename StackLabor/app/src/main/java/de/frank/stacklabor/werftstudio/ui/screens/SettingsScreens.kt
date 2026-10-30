@@ -237,13 +237,7 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                 }
                 item {
                     SettingsGroup("Darstellung", Icons.Default.LightMode) {
-                        SettingsItem(
-                            "Hell/Dunkel",
-                            trailing = {
-                                SettingsToggle(state.appearance == Appearance.Dark)
-                            },
-                            onClick = { callbacks.onEvent(StackLaborEvent.ToggleAppearance) },
-                        )
+                        SettingsItem("Erscheinungsbild", appearanceLabel(state.appearance)) { selectionId = "appearance" }
                         SettingsDivider()
                         SettingsItem(
                             "Bewegung reduzieren",
@@ -622,7 +616,18 @@ private data class SettingSelection(
     val favorites: Set<String>? = null,
 )
 
+private fun appearanceLabel(appearance: Appearance): String = when (appearance) {
+    Appearance.Auto -> "Automatisch nach der Sonne"
+    Appearance.Light -> "Hell"
+    Appearance.Dark -> "Dunkel"
+}
+
 private fun settingSelection(state: StackLaborUiState, id: String?): SettingSelection? = when (id) {
+    "appearance" -> SettingSelection(
+        id, "Erscheinungsbild", appearanceLabel(state.appearance),
+        listOf("Automatisch nach der Sonne", "Hell", "Dunkel"),
+        hint = "Automatisch: dunkel ab dem Ende der Dämmerung, hell ab Sonnenaufgang in Neuenhagen.",
+    )
     "tts-provider" -> SettingSelection(id, "Anbieter", state.ttsProviderLabel, TtsAnbieter.entries.map { it.label() })
     "tts-voice" -> SettingSelection(
         id,

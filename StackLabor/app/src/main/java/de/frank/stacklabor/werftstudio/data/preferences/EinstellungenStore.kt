@@ -26,12 +26,13 @@ val Context.stackLaborEinstellungenDataStore: DataStore<Preferences> by preferen
     name = "stacklabor_einstellungen",
 )
 
-enum class Erscheinung(val code: Int) { HELL(0), DUNKEL(1) }
+/** AUTOMATIK folgt der Sonne in Neuenhagen (nicht dem System); HELL und DUNKEL sind fest. */
+enum class Erscheinung(val code: Int) { HELL(0), DUNKEL(1), AUTOMATIK(2) }
 enum class TtsAnbieter(val code: Int) { EDGE(0), GOOGLE_CLOUD(1), QWEN_CLONE(2), GEMINI_FLASH(3), GEMINI_LITE(4), AZURE(5) }
 enum class Absatzpause(val code: Int) { KURZ(0), MITTEL(1), LANG(2) }
 
 data class AppEinstellungen(
-    val erscheinung: Erscheinung = Erscheinung.HELL,
+    val erscheinung: Erscheinung = Erscheinung.AUTOMATIK,
     val dosisVariante: DosisVariante = DosisVariante.FREI,
     val ttsAnbieter: TtsAnbieter = TtsAnbieter.EDGE,
     val ttsStimme: String = "de-DE-SeraphinaMultilingualNeural",
@@ -151,7 +152,7 @@ class EinstellungenStore(
     suspend fun setzeFingerabdruckAktiv(value: Boolean): Unit = schreibe(FINGERABDRUCK_AKTIV, value)
 
     private fun mappe(preferences: Preferences): AppEinstellungen = AppEinstellungen(
-        erscheinung = enumMitCode(Erscheinung.entries, preferences[ERSCHEINUNG] ?: Erscheinung.HELL.code) { it.code },
+        erscheinung = enumMitCode(Erscheinung.entries, preferences[ERSCHEINUNG] ?: Erscheinung.AUTOMATIK.code) { it.code },
         dosisVariante = enumMitCode(DosisVariante.entries, preferences[DOSIS_VARIANTE] ?: DosisVariante.FREI.code) { it.code },
         ttsAnbieter = enumMitCode(TtsAnbieter.entries, preferences[TTS_ANBIETER] ?: TtsAnbieter.EDGE.code) { it.code },
         ttsStimme = preferences[TTS_STIMME] ?: "de-DE-SeraphinaMultilingualNeural",

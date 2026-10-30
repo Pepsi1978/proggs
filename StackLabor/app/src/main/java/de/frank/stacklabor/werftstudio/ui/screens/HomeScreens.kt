@@ -146,11 +146,11 @@ fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: 
                 )
                 Row(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 12.dp)) {
                     IconTouchButton(
-                        if (state.appearance.name == "Light") "Dunkle Darstellung einschalten" else "Helle Darstellung einschalten",
+                        if (StackLaborTheme.dark) "Helle Darstellung einschalten" else "Dunkle Darstellung einschalten",
                         { callbacks.onEvent(StackLaborEvent.ToggleAppearance) },
                     ) {
                         Icon(
-                            if (state.appearance.name == "Light") Icons.Default.LightMode else Icons.Default.DarkMode,
+                            if (StackLaborTheme.dark) Icons.Default.DarkMode else Icons.Default.LightMode,
                             null,
                             Modifier.size(22.dp),
                             tint = headerContentColor,
