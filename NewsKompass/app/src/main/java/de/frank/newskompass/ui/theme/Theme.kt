@@ -1,19 +1,30 @@
 package de.frank.newskompass.ui.theme
 
+import android.content.res.Configuration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.frank.newskompass.data.model.FarbDesign
+import kotlinx.coroutines.delay
 
 private val Hell = lightColorScheme(
     primary = Color(0xFF4F46E5),
@@ -183,13 +194,43 @@ private val Schrift = Typography(
     labelMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 0.6.sp),
 )
 
+/**
+ * Automatisch folgt der Sonne in Neuenhagen (offline, ohne Standortrechte), nicht dem System:
+ * hell ab Sonnenaufgang, dunkel ab Ende der bürgerlichen Dämmerung. Jede Minute prüfen, nur solange die App sichtbar ist.
+ * Einzige Quelle für „Ist es dunkel?“ im Automatikmodus; sie gehört vor Theme und Systemleisten.
+ */
+@Composable
+fun rememberSonneDunkel(automatisch: Boolean): Boolean {
+    var sonneDunkel by remember(automatisch) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, automatisch) {
+        if (!automatisch) return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
+    return sonneDunkel
+}
+
 @Composable
 fun NewsTheme(dunkel: Boolean, design: FarbDesign = FarbDesign.KOMPASS, inhalt: @Composable () -> Unit) {
     val schema = when (design) {
         FarbDesign.KOMPASS -> if (dunkel) Dunkel else Hell
         FarbDesign.ORANGE -> if (dunkel) OrangeDunkel else OrangeHell
     }
-    CompositionLocalProvider(LocalIstDunkel provides dunkel, LocalKompassFarben provides kompassFarben(design, dunkel)) {
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb
+    // bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, dunkel) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                (if (dunkel) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
+    CompositionLocalProvider(LocalIstDunkel provides dunkel, LocalKompassFarben provides kompassFarben(design, dunkel), LocalConfiguration provides konfig) {
         MaterialTheme(colorScheme = schema, typography = Schrift, content = inhalt)
     }
 }

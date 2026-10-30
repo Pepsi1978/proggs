@@ -26,6 +26,7 @@ data class Stimme(
 )
 
 enum class DesignModus(val id: String, val label: String) {
+    /** Gespeicherter Wert „system“ bleibt gültig; er bedeutet jetzt Automatik nach der Sonne in Neuenhagen. */
     SYSTEM("system", "Automatisch"),
     HELL("hell", "Hell"),
     DUNKEL("dunkel", "Dunkel"),

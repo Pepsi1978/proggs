@@ -398,7 +398,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                             app.einstellungen.setzeFarbDesign(neu)
                             Toast.makeText(kontext, "Design: ${neu.label}", Toast.LENGTH_SHORT).show()
                         },
-                        // Hell → Automatisch (wie das System) → Dunkel → Hell, wie in der Aufgaben-App.
+                        // Hell → Automatisch (nach der Sonne) → Dunkel → Hell, wie in der Aufgaben-App.
                         wechsleModus = {
                             val neu = when (stand.design) {
                                 DesignModus.HELL -> DesignModus.SYSTEM
@@ -406,7 +406,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 DesignModus.DUNKEL -> DesignModus.HELL
                             }
                             app.einstellungen.setzeDesign(neu)
-                            Toast.makeText(kontext, if (neu == DesignModus.SYSTEM) "Automatisch wie das System" else neu.label, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(kontext, if (neu == DesignModus.SYSTEM) "Automatisch nach der Sonne" else neu.label, Toast.LENGTH_SHORT).show()
                         },
                         oeffneEinstellungen = oeffneEinstellungen,
                     )

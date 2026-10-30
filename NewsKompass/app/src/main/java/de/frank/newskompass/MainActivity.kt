@@ -11,7 +11,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,6 +25,7 @@ import de.frank.newskompass.ui.AutomatischeBereitschaft
 import de.frank.newskompass.ui.EinstellungenScreen
 import de.frank.newskompass.ui.NachrichtenScreen
 import de.frank.newskompass.ui.theme.NewsTheme
+import de.frank.newskompass.ui.theme.rememberSonneDunkel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -42,10 +42,11 @@ class MainActivity : ComponentActivity() {
             // Führt nach der Installation einmal durch alle fehlenden Freigaben, Benachrichtigungen zuerst.
             AutomatischeBereitschaft(this@MainActivity)
             val stand by app.einstellungen.stand.collectAsStateWithLifecycle()
+            val sonneDunkel = rememberSonneDunkel(stand.design == DesignModus.SYSTEM)
             val dunkel = when (stand.design) {
                 DesignModus.HELL -> false
                 DesignModus.DUNKEL -> true
-                DesignModus.SYSTEM -> isSystemInDarkTheme()
+                DesignModus.SYSTEM -> sonneDunkel
             }
             DisposableEffect(dunkel) {
                 val leiste = if (dunkel) {
