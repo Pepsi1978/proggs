@@ -1,5 +1,6 @@
 package com.entropyjournal.data.repository
 
+import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.entropyjournal.data.audio.SpeechAnalysis
@@ -10,12 +11,14 @@ import com.entropyjournal.data.remote.groq.GroqTranscriptionRequest
 import com.entropyjournal.data.remote.groq.GroqTranscriptionResponse
 import com.entropyjournal.data.remote.groq.GroqWhisperSettings
 import com.entropyjournal.util.Constants
+import dagger.hilt.android.qualifiers.ApplicationContext
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import retrofit2.HttpException
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class TranscriptionEngine { GROQ, LOCAL }
+enum class TranscriptionEngine { GROQ, LOCAL, PARAKEET }
 
 data class TranscriptionOutcome(
     val text: String,
@@ -30,7 +33,8 @@ class TranscriptionRepository @Inject constructor(
     private val groqApi: GroqApi,
     private val localWhisper: LocalWhisperTranscriber,
     private val encryptedPrefs: SharedPreferences,
-    private val speechAnalyzer: WavSpeechAnalyzer
+    private val speechAnalyzer: WavSpeechAnalyzer,
+    @ApplicationContext private val context: Context
 ) {
     suspend fun transcribeAudio(audioFile: File): Result<TranscriptionOutcome> {
         // ── Anti-Halluzinations-Kette (bugs/desktop/groq-transkription.md §2) ──────────
@@ -50,6 +54,20 @@ class TranscriptionRepository @Inject constructor(
                     "< $MIN_SPEECH_MS ms) — nicht transkribiert"
             )
             return Result.success(TranscriptionOutcome(text = "", engine = TranscriptionEngine.GROQ))
+        }
+
+        // Offline über Jarvis (Parakeet): hat bei Wahl Vorrang. Kein Groq, kein lokales Whisper, kein stiller Rückfall;
+        // Fehler (Jarvis fehlt, Modell fehlt) gehen als Result.failure an den Aufrufer.
+        if (ParakeetUeberJarvis.gewaehlt(context)) {
+            return try {
+                val text = ParakeetUeberJarvis.transkribiere(context, audioFile)
+                Result.success(TranscriptionOutcome(text = text, engine = TranscriptionEngine.PARAKEET))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Parakeet über Jarvis fehlgeschlagen", e)
+                Result.failure(e)
+            }
         }
 
         val groqKey = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""

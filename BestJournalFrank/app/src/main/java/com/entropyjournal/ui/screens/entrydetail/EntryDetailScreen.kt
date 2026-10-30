@@ -1134,8 +1134,7 @@ fun EntryDetailScreen(
             isImproving = uiState.followUpRecordingState == RecordingState.IMPROVING,
             isUsingImproved = uiState.isUsingImprovedFollowUp,
             canDelete = uiState.activeFollowUpId != null,
-            engineLabel =
-                if (viewModel.isGroqActive()) "Groq API" else "Lokales Whisper-Modell",
+            engineLabel = viewModel.transcriptionLabel(),
             onImproveClick = { viewModel.improveFollowUp() },
             onToggleVersion = { useImproved -> viewModel.setUseImprovedFollowUp(useImproved) },
             onTextEdit = { viewModel.updateFollowUpDraft(it) },

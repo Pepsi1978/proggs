@@ -504,8 +504,7 @@ fun JournalScreen(viewModel: JournalViewModel, onEntryClick: (Long, String) -> U
             RecordingOverlay(
                 amplitude = amplitude,
                 durationSeconds = duration,
-                transcriptionModel =
-                    if (viewModel.isGroqActive()) "Groq API" else "Lokales Whisper-Modell",
+                transcriptionModel = viewModel.transcriptionLabel(),
             )
         }
 

@@ -884,6 +884,8 @@ constructor(
                                 "Groq Whisper Large V3 Turbo"
                             com.entropyjournal.data.repository.TranscriptionEngine.LOCAL ->
                                 "Lokales Whisper-Modell"
+                            com.entropyjournal.data.repository.TranscriptionEngine.PARAKEET ->
+                                "Parakeet (offline, über Jarvis)"
                         }
                     val fallbackNotice = outcome.groqError?.let {
                         "Groq fehlgeschlagen ($it) — lokales Whisper verwendet."

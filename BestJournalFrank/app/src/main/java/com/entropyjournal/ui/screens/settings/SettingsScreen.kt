@@ -3362,6 +3362,19 @@ fun SettingsScreen(
                     }
                 }
 
+                // Spracherkennung offline über Jarvis (Parakeet): hat bei Wahl Vorrang vor Groq und lokalem Whisper
+                GlassCard {
+                    Column {
+                        Text(
+                            "Spracherkennung (Offline)",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                    }
+                }
+
                 // Spracherkennung: Whisper-Modell + persoenliches Woerterbuch
                 GlassCard {
                     WhisperSettingsSection(prefs = viewModel.whisperPrefs)

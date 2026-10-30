@@ -98,6 +98,13 @@ constructor(
     val amplitude: StateFlow<Float> = recordAudioUseCase.amplitude
     val durationSeconds: StateFlow<Int> = recordAudioUseCase.durationSeconds
 
+    /** Anzeigename der aktiven Transkription: Parakeet (Jarvis) hat Vorrang vor Groq und lokalem Whisper. */
+    fun transcriptionLabel(): String = when {
+        de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(context) -> "Parakeet (offline, Jarvis)"
+        isGroqActive() -> "Groq API"
+        else -> "Lokales Whisper-Modell"
+    }
+
     fun isGroqActive(): Boolean {
         val key = encryptedPrefs.getString(Constants.PREF_GROQ_API_KEY, "") ?: ""
         return key.isNotBlank()
