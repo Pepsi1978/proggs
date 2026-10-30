@@ -869,8 +869,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Der Text in der Eingabeblase. Im ViewModel, damit jedes Diktat ihn hinten ergänzen kann. Neuer Text verwirft das Rückgängig des Papierkorbs. */
     var entwurf: String
         get() = entwurfText
-        set(v) { entwurfText = v; if (v.isNotEmpty()) geleert = null }
+        set(v) { entwurfText = v; if (v.isNotEmpty()) { geleert = null; eingabeEingeklappt = false } }
     private var entwurfText by mutableStateOf("")
+    private var eingabeEingeklappt by mutableStateOf(true)
     /** Fotos und Dateien, die mit der nächsten Frage an Jarvis gehen. */
     val anhaenge = mutableStateListOf<de.frank.jarvis.data.Anhang>()
     var kameraAnfragen: () -> Unit = {}
@@ -898,9 +899,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Nach jedem Absenden und beim Öffnen der App ist die Eingabeblase eine kompakte Zeile (nur Plus, Modell, Mikrofon, Live-Blase);
-     * ein Tipp auf den freien Platz klappt sie auf, ein weiterer wieder ein; der fertige Text vom Diktier-Mikrofon klappt sie ebenfalls auf.
+     * ein Tipp auf den freien Platz klappt sie auf, ein weiterer wieder ein. Steht Text im Entwurf, ist sie immer offen, egal woher er kommt:
+     * Eingeklappt ist also immer auch leer, und kein Text kann unsichtbar mitgesendet werden.
      */
-    var eingabeKompakt by mutableStateOf(true)
+    var eingabeKompakt: Boolean
+        get() = eingabeEingeklappt
+        set(v) { eingabeEingeklappt = v && entwurfText.isEmpty() }
 
     /**
      * „Programmierer“ und „Nachtrag“ leuchten genau dann grün, wenn ihr Vorspann vorn im Entwurf steht (auch beim Weiterdiktieren);
@@ -1035,7 +1039,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!sende(text, anh, diktiert)) {
             if (entwurf.isEmpty()) entwurf = roh
             anhaenge.addAll(0, anh)
-        } else { entwurfDiktiert = false; knoepfeAus() }
+        } else { entwurfDiktiert = false; knoepfeAus(); eingabeKompakt = true }
     }
 
     /** Der aktuelle Entwurf enthält Text vom Diktier-Mikrofon; gilt nur für das nächste Absenden. */
@@ -1052,7 +1056,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             transkriptionFehlt() != null -> { meldung = transkriptionFehlt(); reiter = Reiter.EINSTELLUNGEN }
             else -> {
                 // Der erkannte Text klappt die Blase auf, damit Frank ihn gleich sieht (ohne Tastatur).
-                diktatZiel = { t -> entwurf = DiktatTrenner.anhaengen(entwurf, t); entwurfDiktiert = true; eingabeKompakt = false }
+                diktatZiel = { t -> entwurf = DiktatTrenner.anhaengen(entwurf, t); entwurfDiktiert = true }
                 diktatInsFeld = true
                 mikrofonAnfragen()
             }

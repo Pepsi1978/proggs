@@ -182,8 +182,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
-        // Kompakt: nur die untere Zeile. Aufklappen per Tipp auf den freien Platz, sobald der Diktattext da ist oder nach
-        // „Programmierer“/„Nachtrag“; ein Anhang ändert nur den Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
+        // Kompakt: nur die untere Zeile. Aufklappen per Tipp auf den freien Platz oder von selbst, sobald Text im Entwurf steht;
+        // ein Anhang ändert nur den Entwurf (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
         val kompakt = vm.eingabeKompakt
 
         // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
@@ -217,7 +217,9 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             Box(Modifier.weight(1f).padding(top = 10.dp)) {
                 if (vm.entwurf.isEmpty()) Text(platzhalter, color = f.textLeise.copy(alpha = 0.7f), fontSize = 17.sp)
                 BasicTextField(
-                    wert, { feld = it; vm.entwurf = it.text },
+                    // Verschwindet das Feld mit Fokus, meldet Compose noch einmal seinen letzten Stand. Nach dem Senden wäre das
+                    // der schon abgeschickte Text: Solche Meldungen dürfen den Entwurf nicht zurückschreiben.
+                    wert, { if (!vm.eingabeKompakt && (it.text != feld.text || it.text == vm.entwurf)) { feld = it; vm.entwurf = it.text } },
                     Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 160.dp).focusRequester(fokus),
                     textStyle = TextStyle(color = f.text, fontSize = 17.sp, lineHeight = 23.sp),
                     cursorBrush = SolidColor(LIVE_ORANGE),
@@ -243,7 +245,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                 Icon(Icons.Rounded.Add, "Anhängen", tint = f.text, modifier = Modifier.size(28.dp))
             }
             if (vm.aktivePlugins.isNotEmpty()) Text("${vm.aktivePlugins.size} Plugin" + if (vm.aktivePlugins.size > 1) "s" else "", color = f.primaer, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
-            // Der freie Platz zwischen Plus und Modell schaltet um: kompakt → Textfeld samt Tastatur, groß → wieder kompakt.
+            // Der freie Platz zwischen Plus und Modell schaltet um: kompakt → Textfeld samt Tastatur, groß → wieder kompakt (mit Text nur die Tastatur weg).
             Box(Modifier.weight(1f).heightIn(min = 44.dp).antippen {
                 if (kompakt) { vm.eingabeKompakt = false; vm.entwurfFokus = true } else { tastatur?.hide(); vm.eingabeKompakt = true }
             }, contentAlignment = Alignment.CenterEnd) {

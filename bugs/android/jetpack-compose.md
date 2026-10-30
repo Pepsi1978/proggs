@@ -699,6 +699,12 @@ SearchBar-Modell (`SearchBarState` + `ExpandedFullScreenSearchBar`).
 **Prüfung:** Bildschirmfoto mit `adb exec-out screencap -d <display-id>` (beim Fold zwei Displays, `dumpsys SurfaceFlinger --display-id`), einmal ohne und einmal mit Tastatur.
 **Quelle:** eigener Vorfall Jarvis 1.8.181/1.8.182 → Fix 1.8.183.
 
+### 8.10 Gesendeter Text kommt zurück: `BasicTextField` meldet beim Entfernen seinen alten Stand   ⭐ (Jarvis 2026-10-30, foundation 1.7.7)
+**Symptom:** Nach dem Absenden steht der alte Text wieder im Zustand; das Feld selbst ist weg oder leer. Tritt nur auf, wenn das Feld beim Absenden den Fokus hatte (getippt, eingefügt).
+**Ursache:** Wird das Feld im selben Snapshot geleert und aus der Komposition genommen, bekommt es den leeren Wert nie. Beim Entsorgen ruft `CoreTextField` `endInputSession` → `TextFieldDelegate.onBlur`, das `onValueChange` mit dem alten Stand des `EditProcessor` aufruft (`composition = null`). Ein `onValueChange`, das blind in den Zustand schreibt, holt den Text zurück.
+**FIX (funktionserhaltend):** Im `onValueChange` Meldungen verwerfen, solange das Feld gerade ausgeblendet wird oder der gemeldete Text dem letzten Feldstand entspricht, während der Zustand schon weiter ist.
+**Quelle:** eigener Vorfall Jarvis → Fix 1.8.464; Ablauf am Bytecode von foundation 1.7.7 geprüft.
+
 ---
 
 ## 9. Animation
