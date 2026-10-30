@@ -799,7 +799,7 @@ private fun Aufgabenzeile(aufgabe: Task, modell: AppViewModel) {
  * Anzeigeelement soll den Zustand berichten, nicht das, was ein Druck aus ihm machen würde —
  * das gehört in die Beschriftung, die die Sprachausgabe vorliest.
  *
- * Sonne = Hell · Mond = Dunkel · das „A" mit den Strahlen = der Systemdarstellung folgend.
+ * Sonne = Hell · Mond = Dunkel · das „A" mit den Strahlen = automatisch nach der Sonne.
  */
 internal fun symbolFuerErscheinung(aktiv: Erscheinung) = when (aktiv) {
     Erscheinung.HELL -> Leistensymbole.Sonne
@@ -812,7 +812,7 @@ internal fun beschriftungFuer(aktiv: Erscheinung): String {
     val jetzt = when (aktiv) {
         Erscheinung.HELL -> "Hellmodus"
         Erscheinung.DUNKEL -> "Dunkelmodus"
-        Erscheinung.SYSTEM -> "Automatik, folgt der Systemdarstellung"
+        Erscheinung.SYSTEM -> "Automatik, folgt der Sonne"
     }
     val gleich = when (aktiv.naechste()) {
         Erscheinung.HELL -> "Hellmodus"

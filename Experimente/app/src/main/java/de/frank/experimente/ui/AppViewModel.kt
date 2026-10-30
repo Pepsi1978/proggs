@@ -160,7 +160,7 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         einstellungen.erscheinung = neue.schluessel
     }
 
-    /** Der Schnellschalter auf B-10 und B-01: Hell → Dunkel → Wie das System → Hell. */
+    /** Der Schnellschalter auf B-10 und B-01: Hell → Dunkel → Automatisch nach der Sonne → Hell. */
     fun naechsteErscheinung() = setzeErscheinung(_erscheinung.value.naechste())
 
     // --- F-41: Effekt-Stärke ---------------------------------------------------------------

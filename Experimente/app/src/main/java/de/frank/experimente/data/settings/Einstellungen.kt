@@ -198,9 +198,9 @@ class Einstellungen(ctx: Context) {
         set(v) { p.edit().putString(REMINDER_EVENING_TIME, v).commit() }
 
     // --- F-26: Erscheinung --------------------------------------------------------------
-    /** `light` · `dark` · `system`. Gespeichert wird der Modus, nicht die aufgelöste Farbe. */
+    /** `light` · `dark` · `system` (= Automatisch nach der Sonne). Gespeichert wird der Modus, nicht die aufgelöste Farbe. */
     var erscheinung: String
-        get() = p.getString(THEME, "dark")!!
+        get() = p.getString(THEME, "system")!!
         set(v) { p.edit().putString(THEME, v).commit() }
 
     // --- F-41: Effekt-Stärke -------------------------------------------------------------

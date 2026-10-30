@@ -624,7 +624,7 @@ fun Einstellungen(modell: AppViewModel) {
         item("kopf-erscheinung") { Zwischenueberschrift("Erscheinung", Modifier.padding(top = 16.dp)) }
         item("erscheinung") {
             Pillenwahl(
-                eintraege = listOf("Dunkel", "Hell", "Wie das System"),
+                eintraege = listOf("Dunkel", "Hell", "Automatisch"),
                 gewaehlt = when (erscheinung) {
                     Erscheinung.DUNKEL -> 0
                     Erscheinung.HELL -> 1
@@ -639,6 +639,14 @@ fun Einstellungen(modell: AppViewModel) {
                         },
                     )
                 },
+            )
+        }
+        item("erscheinung-hinweis") {
+            Text(
+                text = "Automatisch nach der Sonne: dunkel ab dem Ende der Dämmerung, hell ab Sonnenaufgang in Neuenhagen.",
+                style = schriften.fliesstextKlein,
+                color = farben.gedaempft,
+                modifier = Modifier.padding(top = 10.dp),
             )
         }
 

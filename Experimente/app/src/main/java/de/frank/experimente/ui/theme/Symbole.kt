@@ -277,7 +277,7 @@ object Leistensymbole {
     }
 
     /**
-     * Der Schnellschalter kündigt **Wie das System** an: ein „A“ mit je drei seitlichen
+     * Der Schnellschalter kündigt **Automatisch nach der Sonne** an: ein „A“ mit je drei seitlichen
      * Strahlen (F-26 Schritt 2). Als Strich gezeichnet, nicht als Fläche — sonst bliebe von
      * den Strahlen nur ein Splitter stehen.
      */
