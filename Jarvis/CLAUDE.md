@@ -8,6 +8,10 @@ Folgeaktionen wie in der Oberfläche (Dienst abgleichen, Zeitplan neu stellen, W
 Nur so kann Frank sie per Sprache abfragen („Was hast du beim Vorlesen für Einstellungen?“) und umstellen.
 Nicht hinein gehören Zugangsschlüssel, Passwörter und Server-Adressen.
 
+## Installation aufs Handy nur über das Skript
+Jarvis nie mit nacktem `adb install` installieren, sondern über `Werkzeuge/jarvis-install/jarvis-install.sh <apk>` (Windows: `.ps1`).
+Es fragt in Jarvis nach dem Zeitpunkt (`ui/InstallFrageActivity.kt`), damit eine laufende Aufnahme nicht abbricht.
+
 ## Live-Gespräch: erst lesen, danach messen
 Vor jeder Änderung an `live/` (vor allem `LiveGespraech.kt`: Polster, Füll-Stille, Echosperre, Fadenprioritäten, Tonweg)
 `best-practices/apis/openai-live-realtime.md` §14 lesen: Ursachen der früheren Abhacker, bewährte Werte, offene Punkte.
