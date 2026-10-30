@@ -626,8 +626,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return sicht.mapIndexed { i, n ->
             // Anhänge früherer Fragen gehen nur als Name mit, sonst wüchse jede Anfrage um alle alten Bilder.
             val mitAnhang = if (n.anhaenge.isEmpty()) n.text else n.text + "\n(Angehängt: " + n.anhaenge.joinToString(", ") { de.frank.jarvis.data.Anhang(it).name } + ")"
-            val kontext = if (n.art == "rueckfrage") de.frank.jarvis.faehigkeit.RueckfrageAufgabe.fuersModell(n.kontext) else n.kontext
-            val text = if (kontext.isEmpty()) mitAnhang else mitAnhang + "\n" + kontext
+            val text = if (n.kontext.isEmpty()) mitAnhang else mitAnhang + "\n" + n.kontext
             if (n.vonMir) {
                 val unbeantwortet = n.art == "abgebrochen" || i == sicht.lastIndex || sicht[i + 1].vonMir
                 ChatTurn("user", if (unbeantwortet) "$text\n(Diese Frage blieb unbeantwortet. Geh nur darauf ein, wenn Frank sich darauf bezieht.)" else text)

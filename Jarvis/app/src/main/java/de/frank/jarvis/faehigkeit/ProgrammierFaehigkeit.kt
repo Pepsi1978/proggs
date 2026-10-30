@@ -1394,7 +1394,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         if (frage != null) {
             // „aufgabe“: die Aufgabe der Sitzung, kurz, damit Karte und Vollbild zeigen, welcher von mehreren Aufträgen fragt.
             val kontext = JSONObject().put("frage_id", frage.optString("frage_id")).put("auftrag", eintrag.optString("id")).put("app", appName)
-                .put("aufgabe", RueckfrageAufgabe.aus(eintrag)).put("aufgabe_voll", RueckfrageAufgabe.vollAus(eintrag)).put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
+                .put("aufgabe", RueckfrageAufgabe.aus(eintrag)).put("fragen", fragen).put("frei", frage.optBoolean("frei")).put("beantwortet", false)
                 .put("status", RueckfrageStand.OFFEN).put("bis", frage.optLong("bis")).put("eingang", System.currentTimeMillis() / 1000)
             ProgrammierChat.poste(app, gespraech, "❓ ${ProgrammierChat.VON_PROGRAMMIERER} · Rückfrage zu $appName: " + (if (frage.optBoolean("frei")) schritt.removePrefix("❓").trim() else kurz), "rueckfrage", kontext.toString())
             if (benachrichtigen) rueckfrageVorn(eintrag, frage, kurz)
@@ -1653,6 +1653,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // Sprachursprung: Weg (weckwort/live), Gespräch, in dem Frank gesprochen hat, und Beginn der Anfrage (für ein bewusstes Ende).
             if (ursprung != null) eintrag.put("sprache", ursprung.modus.kennung).put("sprachGespraech", ursprung.gespraech).put("sprachSeit", ursprung.seit)
             schreib(context, lies(context).put(eintrag))
+            AuftragsVolltext.speichern(context, id, auftrag)
             // Auch ein normales Gespräch, aus dem der Auftrag kam, gehört ab jetzt in den Reiter „Programmierung“.
             Gespraeche.markieren(context, gespraech, jetzt)
             return eintrag
@@ -2234,6 +2235,13 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     }
 
     companion object {
+        /** Der ganze Text zur gekürzten Aufgabe [angezeigt] einer Rückfrage; leer, wenn er nicht mehr vorliegt. Liest Dateien: nicht im Hauptfaden. */
+        fun rueckfrageVolltext(context: Context, auftragId: String, angezeigt: String): String {
+            val eintrag = Auftragsbuch.finde(context, auftragId)
+            val auftrag = AuftragsVolltext.lesen(context, auftragId) ?: eintrag?.optString("auftrag").orEmpty()
+            return RueckfrageAufgabe.vollZu(eintrag, auftrag, angezeigt)
+        }
+
         // Gespräch mit dem Programmierer (programmierer_sprechen): Nachrichten tragen die Nummer „G…“, damit Hook und Cloud-Antwort
         // sie von Nachträgen unterscheiden. Wartende Fragen und offene Nachrichten gelten über alle Instanzen (App und Plugin).
         const val ART_FRAGE = "frage"

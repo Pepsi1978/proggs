@@ -212,8 +212,8 @@ object ProgrammierChat {
 
 /**
  * Die Aufgabe der Sitzung über einer Rückfrage (Kontext „aufgabe“): Bei mehreren gleichzeitigen Aufträgen sieht Frank so, zu
- * welchem die Frage gehört. Schon beim Eintreffen gekürzt, denn der Kontext geht mit dem Verlauf an das Modell. Zum Aufklappen
- * steht der ganze Text daneben in „aufgabe_voll“; den nimmt [fuersModell] wieder heraus.
+ * welchem die Frage gehört. Schon beim Eintreffen gekürzt, denn der Kontext geht mit dem Verlauf an das Modell. Den ganzen Text
+ * zum Aufklappen holt die Ansicht über die Auftragskennung ([AuftragsVolltext]), er kommt nie in den Kontext.
  */
 object RueckfrageAufgabe {
     private const val GRENZE = 240
@@ -226,42 +226,57 @@ object RueckfrageAufgabe {
 
     /** Aus dem Auftrag des Auftragsbuchs; ist schon ein Nachtrag in der Sitzung (zugestellt oder bearbeitet), der jüngste davon. */
     fun aus(eintrag: org.json.JSONObject): String {
-        val nachtrag = juengsterNachtrag(eintrag)
-        return nachtrag?.let { "Nachtrag: " + kurz(it) } ?: kurz(eintrag.optString("auftrag"))
+        val l = eintrag.optJSONArray("nachtraege")
+        val nachtrag = l?.let { (l.length() - 1 downTo 0).mapNotNull { l.optJSONObject(it) }.firstOrNull { it.optString("stand") in setOf("zugestellt", "bearbeitet") } }
+        return nachtrag?.let { "Nachtrag: " + kurz(it.optString("text")) } ?: kurz(eintrag.optString("auftrag"))
     }
 
-    /** Der ganze Text zu [aus], mit Zeilenumbrüchen; leer, wenn [aus] nichts gekürzt hat. */
-    fun vollAus(eintrag: org.json.JSONObject): String {
-        val nachtrag = juengsterNachtrag(eintrag)
-        return nachtrag?.let { n -> voll(n).let { if (it.isEmpty()) "" else "Nachtrag: $it" } } ?: voll(eintrag.optString("auftrag"))
+    /** Der ganze Text zu [angezeigt] (Ergebnis von [aus]); [auftrag] ist der ungekürzte Auftrag. Leer, wenn er nicht mehr vorliegt. */
+    fun vollZu(eintrag: org.json.JSONObject?, auftrag: String, angezeigt: String): String {
+        if (!angezeigt.startsWith("Nachtrag: ")) return voll(auftrag)
+        val l = eintrag?.optJSONArray("nachtraege") ?: return ""
+        val text = (l.length() - 1 downTo 0).mapNotNull { l.optJSONObject(it)?.optString("text") }.firstOrNull { "Nachtrag: " + kurz(it) == angezeigt } ?: return ""
+        return voll(text).let { if (it.isEmpty()) "" else "Nachtrag: $it" }
     }
 
-    /** Der Kontext einer Rückfrage ohne den Volltext: Das Modell bekommt nur die Kurzfassung. */
-    fun fuersModell(kontext: String): String =
-        if (!kontext.contains("\"aufgabe_voll\"")) kontext
-        else runCatching { org.json.JSONObject(kontext).apply { remove("aufgabe_voll") }.toString() }.getOrDefault(kontext)
-
-    private fun juengsterNachtrag(eintrag: org.json.JSONObject): String? {
-        val l = eintrag.optJSONArray("nachtraege") ?: return null
-        return (l.length() - 1 downTo 0).mapNotNull { l.optJSONObject(it) }.firstOrNull { it.optString("stand") in setOf("zugestellt", "bearbeitet") }?.optString("text")
-    }
-
-    private fun zusammen(auftrag: String, leer: Regex): String {
+    private fun zusammen(auftrag: String, einzeilig: Boolean): String {
+        val leer = if (einzeilig) LEER else LEER_IN_ZEILE
         val teile = auftrag.split(" ; ").map { it.replace(leer, " ").trim().replace(ZIEL, "") }.filter { it.isNotEmpty() }
-        return if (teile.size > 1) teile.mapIndexed { i, t -> "${i + 1}) $t" }.joinToString(if (leer === LEER) " " else "\n") else teile.firstOrNull().orEmpty()
+        return if (teile.size > 1) teile.mapIndexed { i, t -> "${i + 1}) $t" }.joinToString(if (einzeilig) " " else "\n") else teile.firstOrNull().orEmpty()
     }
 
-    /** Der ungekürzte Auftrag; leer, wenn er in die Kurzfassung ganz hineinpasst. */
-    fun voll(auftrag: String): String = if (zusammen(auftrag, LEER).length <= GRENZE) "" else zusammen(auftrag, LEER_IN_ZEILE)
+    /** Der ungekürzte Auftrag zum Lesen, mit Zeilenumbrüchen; leer, wenn er in die Kurzfassung ganz hineinpasst. */
+    fun voll(auftrag: String): String =
+        if (zusammen(auftrag, einzeilig = true).length <= GRENZE) "" else zusammen(auftrag, einzeilig = false).replace("\r", "").replace("**", "")
 
     /** Ganze Sätze bis etwa [GRENZE] Zeichen, ohne „Ziel:“ davor; mehrere Aufgaben („ ; “) als „1) … 2) …“; gekürzt mit „ …“. */
     fun kurz(auftrag: String): String {
-        val text = zusammen(auftrag, LEER)
+        val text = zusammen(auftrag, einzeilig = true)
         if (text.length <= GRENZE) return text
         val ende = SATZENDE.findAll(text).map { it.range.last }
             .filter { it < GRENZE && text.substring(0, it).substringAfterLast(' ').lowercase() !in ABKUERZUNGEN }.lastOrNull() ?: -1
         return (if (ende >= 80) text.substring(0, ende + 1) else text.take(GRENZE).substringBeforeLast(' ')) + " …"
     }
+}
+
+/**
+ * Der ungekürzte Auftragstext je Auftrag, nur zum Lesen in der App: Im Auftragsbuch steht er höchstens 1.500 Zeichen lang, und
+ * das Buch wird bei jeder Meldung neu geschrieben. Eigene kleine Dateien, die neuesten 60 bleiben (wie im Auftragsbuch).
+ */
+object AuftragsVolltext {
+    private const val BEHALTEN = 60
+
+    private fun ordner(context: Context) = java.io.File(context.filesDir, "auftragstexte")
+
+    fun speichern(context: Context, id: String, text: String) {
+        runCatching {
+            val o = ordner(context).apply { mkdirs() }
+            java.io.File(o, id).writeText(text)
+            o.listFiles().orEmpty().sortedByDescending { it.lastModified() }.drop(BEHALTEN).forEach { it.delete() }
+        }.onFailure { de.frank.jarvis.observability.Logbuch.fehler("Auftragstext nicht gespeichert", it) }
+    }
+
+    fun lesen(context: Context, id: String): String? = runCatching { java.io.File(ordner(context), id).takeIf { id.isNotEmpty() && it.isFile }?.readText() }.getOrNull()
 }
 
 /**
