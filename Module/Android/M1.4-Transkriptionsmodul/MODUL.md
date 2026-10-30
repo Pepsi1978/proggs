@@ -139,3 +139,21 @@ AudioRecord). Die Testdaten sind TTS-Sprache mit synthetischem Geräusch, keine 
 | v3 | 18.10.2026 | `MicRecorder`: Den Rückstand eines spät geladenen Silero-Modells rechnet die Leseschleife nicht mehr am Stück (bis zu 10 s ließen den Aufnahmepuffer überlaufen), sondern je Durchlauf höchstens zwei Rahmen zusätzlich. Bis die Zeitachse die Gegenwart erreicht hat, bleibt `sprachRahmen` null und das Aufnahmeende läuft über den Pegel. | nein | — |
 | v4 | 22.10.2026 | `GroqTranscriber`: Whisper-Modell wählbar (`MODELL_TURBO`/`MODELL_LARGE_V3`, 403-Sperre → einmal Turbo, 30 Min. Merker), persönliches Wörterbuch als Prompt (`prompt`, `begriffe`, `woerterbuchPrompt`, `STANDARD_WOERTERBUCH`, max. 100 Begriffe/350 Zeichen) mit Prompt-Echo-Schutz (einmal ohne Prompt wiederholen). Neue Parameter haben Standardwerte. | nein | — |
 | v5 | 22.10.2026 | `GroqTranscriber`: Prompt-Echo erkennt auch Teil-Echos ohne „Begriffe“ (Ende/Mitte des Prompts, ab 12 Zeichen normalisiert), geprüft auf dem Rohtext vor dem Filter. Neu `sperreAufheben()` (App ruft es bei Modellwahl, large-v3 sofort wieder nutzbar) und `largeV3Gesperrt()`. | nein | — |
+
+## Parakeet über Jarvis (Offline-Transkription ohne eigenes Modell)
+
+`ParakeetUeberJarvis.kt` und `ParakeetEinstellungen.kt` sind eigenständig und unabhängig vom Rest des Moduls einbaubar:
+beide unverändert nach `app/src/main/java/de/frank/module/transkriptionsmodul/` kopieren. Die App schickt ihre Aufnahme samt
+eigener Wortliste an den `ParakeetBruecke`-Provider in Jarvis; dort liegt das Modell einmal für alle.
+
+Manifest der App (nur bei Franks gemeinsamem Signaturschlüssel möglich):
+
+```xml
+<permission android:name="de.frank.jarvis.permission.BRUECKE" android:protectionLevel="signature" />
+<uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+<queries><provider android:authorities="de.frank.jarvis.parakeet" /></queries>
+```
+
+An jeder Transkriptionsstelle: `if (ParakeetUeberJarvis.gewaehlt(context)) ParakeetUeberJarvis.transkribiere(context, wav) else …`.
+Prüfungen auf einen fehlenden Groq-Schlüssel gelten dann nicht. Kein stiller Rückfall auf Groq. Beim Aufnahmestart optional `vorwaermen`.
+In den Einstellungen `ParakeetEinstellungen()` einsetzen.

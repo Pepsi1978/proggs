@@ -193,5 +193,12 @@
             android:name="ai.onnxruntime.TelemetryInitializer"
             android:authorities="${applicationId}.onnxruntime_telemetry_initializer"
             tools:node="remove" />
+        <!-- Offline-Modell für Franks andere Apps; nur mit gleichem Signaturschlüssel erreichbar. -->
+        <provider
+            android:name=".speech.ParakeetBruecke"
+            android:authorities="de.frank.jarvis.parakeet"
+            android:exported="true"
+            android:permission="de.frank.jarvis.permission.BRUECKE" />
+
     </application>
 </manifest>

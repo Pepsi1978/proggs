@@ -48,6 +48,12 @@ object ParakeetLokal {
     private const val ABTASTRATE = 16_000
     private const val THREADS = 4
 
+    /** Am echten Modell gemessen: 1,5 ließ „Jarvis“ als „Travis“ stehen, ab 4 verbiegt es Nachbarwörter („Updation“). */
+    private const val HOTWORD_STAERKE = 3f
+
+    /** Vokabular des Modells: zerlegt die Begriffe der Wortliste in Modell-Token. Liegt in der APK, damit kein Download nötig ist. */
+    private const val BPE_ASSET = "parakeet/bpe.vocab"
+
     /** Der Encoder scheitert über 400 s und braucht davor quadratisch mehr Speicher: längere Diktate in Stücken. */
     private const val MAX_STUECK_S = 90
     private const val SUCH_S = 15
@@ -101,6 +107,8 @@ object ParakeetLokal {
         // auch für sherpa-onnx, aber erst, wenn eine Java-Sitzung ihn gesetzt hat: darum vorher sicher eine anlegen.
         if (WeckwortErkenner.KLEIDIAI_ABSCHALTEN) SileroVad(context, true).close()
         val o = ordner(context)
+        val bpe = File(context.filesDir, "parakeet-bpe.vocab")
+        if (!bpe.isFile) context.assets.open(BPE_ASSET).use { ein -> bpe.outputStream().use { ein.copyTo(it) } }
         val vorher = android.os.Debug.getNativeHeapAllocatedSize() + rssBytes()
         val beginn = System.currentTimeMillis()
         val config = OfflineRecognizerConfig().apply {
@@ -115,8 +123,12 @@ object ParakeetLokal {
                 numThreads = THREADS
                 provider = "cpu"
                 modelType = "nemo_transducer"
+                bpeVocab = bpe.absolutePath
+                modelingUnit = "bpe"
             }
-            decodingMethod = "greedy_search"
+            // Nur die Beam-Suche beachtet Wortlisten; die Liste kommt je Aufnahme über createStream.
+            decodingMethod = "modified_beam_search"
+            hotwordsScore = HOTWORD_STAERKE
         }
         // Ohne AssetManager liest sherpa-onnx die Dateien vom Pfad; nur so findet ORT die externen Gewichte (.data).
         val neu = OfflineRecognizer(null, config)
@@ -138,20 +150,25 @@ object ParakeetLokal {
     /**
      * Mitschrift einer WAV aus dem MicRecorder (16 kHz, mono, 16 Bit, 44 Byte Kopf), ganz auf dem Handy.
      * [stilleFilter]: ohne erkannte Stimme gar nicht erst rechnen (gleicher Schalter wie „Stille vorab“).
+     * [hotwords]: Wortliste aus [hotwords]; leer = ohne Wortliste.
      */
-    suspend fun transkribiere(context: Context, wav: ByteArray, stimmhaft: BooleanArray?, stilleFilter: Boolean): String {
+    suspend fun transkribiere(context: Context, wav: ByteArray, stimmhaft: BooleanArray?, stilleFilter: Boolean, hotwords: String = ""): String {
         if (stilleFilter) {
             val analyse = SpeechAnalyzer().analyze(wav, stimmhaft)
             if (analyse != null && analyse.voicedMs < SpeechAnalyzer.MIN_SPEECH_MS) return ""
         }
-        val proben = alsFloat(wav)
+        return transkribiereProben(context, alsFloat(wav), hotwords)
+    }
+
+    /** Mitschrift fertiger Proben (16 kHz, mono), auch für die Aufnahmen anderer Apps über [ParakeetBruecke]. */
+    suspend fun transkribiereProben(context: Context, proben: FloatArray, hotwords: String): String {
         return sperre.withLock {
             val r = laden(context.applicationContext)
             withContext(Dispatchers.Default) {
                 val beginn = System.currentTimeMillis()
                 val text = schneide(proben, MAX_STUECK_S).map { stueck ->
-                    dekodiere(r, stueck).ifEmpty {
-                        if (stueck.size > ZWEITER_VERSUCH_S * ABTASTRATE) schneide(stueck, ZWEITER_VERSUCH_S).map { dekodiere(r, it) }.filter { it.isNotEmpty() }.joinToString(" ")
+                    dekodiere(r, stueck, hotwords).ifEmpty {
+                        if (stueck.size > ZWEITER_VERSUCH_S * ABTASTRATE) schneide(stueck, ZWEITER_VERSUCH_S).map { dekodiere(r, it, hotwords) }.filter { it.isNotEmpty() }.joinToString(" ")
                         else ""
                     }
                 }.filter { it.isNotEmpty() }.joinToString(" ")
@@ -164,14 +181,14 @@ object ParakeetLokal {
         }
     }
 
-    private fun dekodiere(r: OfflineRecognizer, stueck: FloatArray): String {
+    private fun dekodiere(r: OfflineRecognizer, stueck: FloatArray, hotwords: String = ""): String {
         var spitze = 0f
         for (w in stueck) spitze = maxOf(spitze, abs(w))
         val eingabe = if (spitze > 0f && spitze < ZIEL_SPITZE) {
             val faktor = minOf(ZIEL_SPITZE / spitze, MAX_VERSTAERKUNG)
             FloatArray(stueck.size) { stueck[it] * faktor }
         } else stueck
-        val strom = r.createStream()
+        val strom = if (hotwords.isEmpty()) r.createStream() else r.createStream(hotwords)
         try {
             strom.acceptWaveform(eingabe, ABTASTRATE)
             r.decode(strom)
@@ -180,6 +197,10 @@ object ParakeetLokal {
             strom.release()
         }
     }
+
+    /** Begriffe im Format von sherpa-onnx: durch „/“ getrennt; „/“, „:“ und „#“ haben dort eine eigene Bedeutung und fallen weg. */
+    fun hotwords(begriffe: List<String>): String =
+        begriffe.map { it.replace(Regex("[/:#]"), " ").trim() }.filter { it.isNotEmpty() }.joinToString("/")
 
     private fun alsFloat(wav: ByteArray): FloatArray {
         val kopf = 44

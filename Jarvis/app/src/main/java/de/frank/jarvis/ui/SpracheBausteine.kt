@@ -138,7 +138,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
         if (lokal) {
             Text("Deutsches Diktat ganz auf dem Handy: parakeet-primeline (deutscher Fine-Tune von NVIDIA Parakeet TDT 0.6B v3, int8, sherpa-onnx, nur CPU mit 4 Threads). " +
                 "Nach dem einmaligen Download kein Internet, keine Cloud, kein Schlüssel, auch im Flugmodus. Fehlt das Modell, gibt es eine Meldung, nie einen Rückfall auf Groq. " +
-                "Wörterbuch und Whisper-Filter gelten nur für Groq; „Stille vorab“ wirkt auch hier.",
+                "Das Wörterbuch unten gilt auch hier und erhöht die Trefferquote seiner Begriffe. Whisper-Filter gelten nur für Groq; „Stille vorab“ wirkt auch hier. Deine anderen Apps nutzen dieses Modell mit, ohne es selbst zu laden.",
                 color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             val mb = { b: Long -> "${b / 1_048_576} MB" }
             val laeuft = vm.parakeetDownload

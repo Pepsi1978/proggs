@@ -321,7 +321,7 @@ class EinstellungsKatalog(context: Context) {
             auswahl("whisper_modell", "Spracheingabe", "Whisper-Modell", "Welches Groq-Modell die Spracheingabe umschreibt: Turbo ist schneller, Large V3 genauer.",
                 { listOf(GroqTranscriber.MODELL_TURBO to "Large V3 Turbo (schnell)", GroqTranscriber.MODELL_LARGE_V3 to "Large V3 (genauer)") },
                 { val m = s.whisperModell; if (m == GroqTranscriber.MODELL_LARGE_V3 && GroqTranscriber.largeV3Gesperrt()) "Large V3 (genauer), derzeit Turbo (Large V3 gesperrt)" else m }) { s.whisperModell = it; GroqTranscriber.sperreAufheben() },
-            schalter("woerterbuch_an", "Spracheingabe", "Persönliches Wörterbuch mitsenden", "Schickt die Wörterbuch-Begriffe mit, damit Eigennamen und Fachwörter richtig geschrieben werden.", { s.woerterbuchAn }) { s.woerterbuchAn = it },
+            schalter("woerterbuch_an", "Spracheingabe", "Persönliches Wörterbuch mitsenden", "Nutzt die Wörterbuch-Begriffe bei Groq und offline, damit Eigennamen und Fachwörter richtig geschrieben werden. Bei zu vielen Fehlern ausschalten.", { s.woerterbuchAn }) { s.woerterbuchAn = it },
             freitext("woerterbuch_begriffe", "Spracheingabe", "Wörterbuch-Begriffe", "Die Begriffe des persönlichen Wörterbuchs; ersetzt die ganze Liste.",
                 "Begriffe, durch Komma getrennt", { s.woerterbuchBegriffe }) { s.woerterbuchBegriffe = it },
 

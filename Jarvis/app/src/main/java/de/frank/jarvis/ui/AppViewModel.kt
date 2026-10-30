@@ -2176,7 +2176,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val beginn = System.currentTimeMillis()
                 // Offline gewählt: nur auf dem Handy, nie still über Groq; fehlt das Modell, kommt ein Fehler.
                 val text = if (sprache.transkriptionLokal) {
-                    de.frank.jarvis.speech.ParakeetLokal.transkribiere(getApplication(), wav, stimmhaft, sprache.filterStilleVorabAn).trim()
+                    de.frank.jarvis.speech.ParakeetLokal.run {
+                        transkribiere(getApplication(), wav, stimmhaft, sprache.filterStilleVorabAn, if (sprache.woerterbuchAn) hotwords(de.frank.module.transkriptionsmodul.GroqTranscriber.begriffe(sprache.woerterbuchBegriffe)) else "")
+                    }.trim()
                 } else {
                     val groq = transkribierer()
                     withContext(Dispatchers.IO) { de.frank.module.transkriptionsmodul.TranskriptionAnbindung.diktat(groq).transkribiere(wav, stimmhaft).text.trim() }
