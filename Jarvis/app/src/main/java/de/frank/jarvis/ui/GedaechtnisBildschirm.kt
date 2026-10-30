@@ -238,55 +238,81 @@ private fun alter(millis: Long): String {
     }
 }
 
+/** Der Entwurf lebt außerhalb der Liste: Wegscrollen, Drehen und Zuklappen dürfen ihn nicht verwerfen. */
+private object LangzeitEntwurf {
+    var offen by mutableStateOf(false)
+    var text by mutableStateOf("")
+    var gelesen by mutableStateOf("")
+    var stand by mutableStateOf(-1L)
+    var neuererStand by mutableStateOf(-1L)
+    var meldung by mutableStateOf("")
+    var leerenBestaetigt by mutableStateOf(false)
+}
+
 /**
  * Franks Langzeitkontext zum Bearbeiten, eingeklappt, damit die Liste klein bleibt. Dieselbe Datei bearbeitet er auch am Mac:
- * Solange er hier nichts ändert, kommt ein neuerer Stand von selbst an.
+ * Ohne eigene Änderung kommt ein neuerer Stand von selbst an, mit eigener Änderung entscheidet Frank.
  */
 @Composable
 private fun LangzeitkontextKarte() {
     val f = LocalFarben.current
     val app = LocalContext.current.applicationContext
     val bereich = rememberCoroutineScope()
-    var offen by remember { mutableStateOf(false) }
-    var text by remember { mutableStateOf("") }
-    var gelesen by remember { mutableStateOf("") }
-    var stand by remember { mutableStateOf(0L) }
-    var meldung by remember { mutableStateOf("") }
-    LaunchedEffect(offen) {
-        while (offen) {
-            val neu = withContext(Dispatchers.IO) { Langzeitkontext.stand(app) to Langzeitkontext.text(app) }
-            if (neu.first != stand && text == gelesen) { stand = neu.first; text = neu.second; gelesen = neu.second }
+    val e = LangzeitEntwurf
+    fun uebernehmen() = bereich.launch {
+        runCatching { withContext(Dispatchers.IO) { Langzeitkontext.stand(app) to Langzeitkontext.text(app) } }
+            .onSuccess { (s, t) -> e.stand = s; e.text = t; e.gelesen = t; e.neuererStand = -1L; e.meldung = "" }
+            .onFailure { e.meldung = "Nicht lesbar: ${it.message}" }
+    }
+    fun speichern(basis: Long) = bereich.launch {
+        val neu = e.text
+        if (neu.length > Langzeitkontext.HOECHSTENS) { e.meldung = "Zu lang: höchstens ${Langzeitkontext.HOECHSTENS} Zeichen."; return@launch }
+        runCatching { withContext(Dispatchers.IO) { Langzeitkontext.ersetzeWennStand(app, basis, neu) } }
+            .onSuccess { s ->
+                if (s == null) { e.neuererStand = Langzeitkontext.stand(app); e.meldung = "Der Text wurde inzwischen am Mac geändert. Entscheide unten, welche Fassung gilt." }
+                else {
+                    e.stand = s; e.gelesen = neu; e.neuererStand = -1L; e.leerenBestaetigt = false; e.meldung = "Gespeichert, auf Handy und Mac gleich."
+                    Lagebild.anstossen(app, listOf(Bereich.GEMERKT), "Langzeitkontext geändert")
+                }
+            }
+            .onFailure { e.meldung = "Nicht gespeichert: ${it.message}" }
+    }
+    LaunchedEffect(e.offen) {
+        while (e.offen) {
+            val aktuell = withContext(Dispatchers.IO) { Langzeitkontext.stand(app) }
+            if (aktuell != e.stand) { if (e.text == e.gelesen) uebernehmen() else e.neuererStand = aktuell }
             delay(5_000)
         }
     }
     Karte(toenung = f.primaer) {
-        Row(Modifier.fillMaxWidth().antippen { offen = !offen }, verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().antippen { e.offen = !e.offen }, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Langzeitkontext", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                 Text("Deine Textdatei für Jarvis, auf Handy und Mac gleich. Füg zum Beispiel ein, was ChatGPT sich über dich gemerkt hat.", color = f.textLeise, fontSize = 13.sp)
             }
-            Text(if (offen) "Zuklappen" else "Öffnen", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(if (e.offen) "Zuklappen" else "Öffnen", color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
-        if (offen) {
+        if (e.offen) {
             OutlinedTextField(
-                value = text, onValueChange = { text = it; meldung = "" },
+                value = e.text, onValueChange = { e.text = it; e.meldung = ""; e.leerenBestaetigt = false },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 420.dp).padding(top = 10.dp),
                 textStyle = TextStyle(color = f.text, fontSize = 15.sp),
             )
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${text.length} Zeichen", Modifier.weight(1f), color = f.textLeise, fontSize = 13.sp)
-                if (text != gelesen) Knopf("Speichern") {
-                    val neu = text
-                    bereich.launch {
-                        val aktuell = withContext(Dispatchers.IO) { Langzeitkontext.stand(app) }
-                        if (aktuell != stand) { meldung = "Nicht gespeichert: Der Text wurde inzwischen am Mac geändert. Sichere deine Fassung und öffne die Karte neu."; return@launch }
-                        stand = withContext(Dispatchers.IO) { Langzeitkontext.ersetze(app, neu).also { Lagebild.anstossen(app, listOf(Bereich.GEMERKT), "Langzeitkontext geändert") } }
-                        gelesen = neu
-                        meldung = "Gespeichert, auf Handy und Mac gleich."
-                    }
+                Text("${e.text.length} Zeichen", Modifier.weight(1f), color = f.textLeise, fontSize = 13.sp)
+                if (e.text != e.gelesen && e.neuererStand < 0) {
+                    val leeren = e.text.isBlank() && e.gelesen.isNotBlank() && !e.leerenBestaetigt
+                    Knopf(if (leeren) "Wirklich leeren?" else "Speichern") { if (leeren) e.leerenBestaetigt = true else speichern(e.stand) }
                 }
             }
-            if (meldung.isNotEmpty()) Text(meldung, color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+            if (e.neuererStand >= 0) {
+                Text("Am Mac gibt es eine neuere Fassung, und du hast hier ungespeicherte Änderungen.", color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Knopf("Fassung vom Mac", haupt = false) { uebernehmen() }
+                    Knopf("Meine speichern") { speichern(e.neuererStand) }
+                }
+            }
+            if (e.meldung.isNotEmpty()) Text(e.meldung, color = f.primaer, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
         }
     }
 }

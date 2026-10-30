@@ -7,6 +7,7 @@ import de.frank.jarvis.agent.Gehirn
 import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.auswertung.Zeitplan
 import de.frank.jarvis.dienst.JarvisDienst
+import de.frank.jarvis.faehigkeit.AblageFaehigkeit
 import de.frank.jarvis.faehigkeit.schalter
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
@@ -66,6 +67,7 @@ class McpServer(context: Context) {
                 "umfang" to text("kurz (Vorgabe) oder voll.", listOf("kurz", "voll")),
                 "bereiche" to textListe("Nur diese Bereiche vollständig und frisch: " + Bereich.entries.joinToString { it.kennung } + "."),
                 "seit" to text("STAND-MARKE aus einem früheren Abruf: dann nur Neuigkeiten und geänderte Bereiche seither."),
+                "leise" to schalter("Nur für Anzeigen in Oberflächen: nichts gilt als einem Gespräch gemeldet. In Gesprächen weglassen."),
             ),
             nurLesen = true,
         ) { a ->
@@ -85,8 +87,10 @@ class McpServer(context: Context) {
                     val kopf = "JARVIS-${if (voll) "GESAMTBILD" else "STARTKONTEXT (kurz)"} · Jarvis ${BuildConfig.VERSION_NAME} · Integration v${Integration.VERSION} · $jetzt · $marke\n\n" +
                         Integration.REGELN + "\n\n" + faehigkeiten() + "\n\n" + vorgangsBlock(app).let { if (it.isEmpty()) "HINTERGRUNDAUFTRÄGE: keine offenen und keine neuen Ergebnisse.\n\n" else "$it\n\n" }
                     val text = kopf + if (voll) Gehirn.kontext(app) else Lagebild.kurz(app)
-                    Gehirn.zuletztGeholt = beginn
-                    Gehirn.zuletztNachgereicht = beginn
+                    if (!a.optBoolean("leise")) {
+                        Gehirn.zuletztGeholt = beginn
+                        Gehirn.zuletztNachgereicht = beginn
+                    }
                     Ergebnis(text)
                 }
             }
@@ -245,10 +249,12 @@ class McpServer(context: Context) {
 
     private fun rufe(name: String, argumente: JSONObject): JSONObject {
         val werkzeug = alleWerkzeuge().firstOrNull { it.name == name }
+            ?: Register.alle(app).filterIsInstance<AblageFaehigkeit>().flatMap { it.oberflaechenWerkzeuge }.firstOrNull { it.name == name }
             ?: return inhalt("Das Werkzeug $name gibt es nicht.", fehler = true)
         val beginn = System.currentTimeMillis()
         // JSON-null zählt als nicht angegeben (sonst läse das Werkzeug den Text „null“).
         val sauber = argumente.ohneNull()
+        val leise = name == "jarvis_kontext" && sauber.optBoolean("leise")
         val ausfuehren: suspend () -> Ergebnis = {
             runCatching { werkzeug.ausfuehren(sauber) }
                 .getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; Logbuch.fehler("Plugin-Werkzeug $name", it); Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
@@ -283,7 +289,7 @@ class McpServer(context: Context) {
             .apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
         // Synchron und vor der Auffrischung: Die Gespräche im Live-Gedächtnis lesen das Protokoll und sollen diese Aktion schon sehen.
         // Teuer ist das nicht, melde() ändert nur den Speicher und schreibt die Datei gebündelt auf dem eigenen Faden.
-        runCatching { Protokoll.melde(Quelle.CHATGPT, werkzeug.titel, r.text, !r.fehler) }
+        if (name !in TECHNISCH && !leise) runCatching { Protokoll.melde(Quelle.CHATGPT, werkzeug.titel, r.text, !r.fehler) }
         // Eine Schreibaktion landet sofort im Live-Gedächtnis (der betroffene Bereich wird neu gelesen).
         if (!werkzeug.nurLesen && !r.fehler) Lagebild.nachAktion(app, name, "ChatGPT")
         // Fertige Hintergrundaufträge, die Frank noch nicht erfahren hat: als kurze Zeile an passende Ergebnisse (nicht konsumierend;
@@ -293,7 +299,7 @@ class McpServer(context: Context) {
         // Inzwischen fertig Gewordenes reicht Jarvis nach (ChatGPT lässt sich nicht von hier aus ansprechen). Jede Meldung gibt es nur
         // einmal; deshalb nur an Ergebnisse, die zur Ablage gehören oder ein Gespräch beginnen. Sonst verbrauchte sie ein fremdes
         // Gespräch (z. B. eine Programmiersitzung, die nur die Tagesauswertung liest), und das anstoßende erführe nichts.
-        val fertig = if (name == "jarvis_kontext" || name == "bild_erzeugen" || (name.startsWith("ablage_") && name != "ablage_struktur" && name != "ablage_datei")) AblageZentrale.fertigFuerPlugin() else emptyList()
+        val fertig = if (!leise && (name == "jarvis_kontext" || name == "bild_erzeugen" || (name.startsWith("ablage_") && name !in TECHNISCH))) AblageZentrale.fertigFuerPlugin() else emptyList()
         val nachtrag = if (fertig.isEmpty()) "" else "\n\nINZWISCHEN FERTIG (sag es Frank jetzt von dir aus):\n" + fertig.joinToString("\n") { "- $it" }
         // Die Anleitung liest ein Programm nur beim Verbinden. Damit Franks Regeln, Ziele und das Wissen über ihn trotzdem immer und sofort gelten, reicht Jarvis sie mit den Ergebnissen nach.
         // Jarvis kann Gespräche nicht unterscheiden (der Relay reicht nur den Rumpf weiter). Deshalb:
@@ -301,7 +307,7 @@ class McpServer(context: Context) {
         // - Gedächtnis und Neuigkeiten genau einmal nach einer Änderung, sonst höchstens einmal je Stunde (nicht an jedem weiteren Ergebnis).
         val jetzt = System.currentTimeMillis()
         // Fortschrittsmeldungen kommen von Programmier-Sitzungen, nicht aus einem Gespräch mit Frank: ihnen nichts anhängen.
-        val eigenes = r.fehler || name == "jarvis_kontext" || name in GEDAECHTNIS || name == "programmier_fortschritt"
+        val eigenes = r.fehler || name == "jarvis_kontext" || name in GEDAECHTNIS || name in TECHNISCH || name == "programmier_fortschritt"
         val bekannt = maxOf(Gehirn.zuletztGeholt, Gehirn.zuletztNachgereicht)
         val stundeUm = jetzt - Gehirn.zuletztGeholt >= 60 * 60_000L && jetzt - Gehirn.zuletztNachgereicht >= 60 * 60_000L
         val gedaechtnis = if (eigenes || !(stundeUm || Merkdatei.zuletztGeaendert > bekannt)) "" else merkKontextOhneProgrammierregeln(app, ohneSymbiose = true).let { if (it.isEmpty()) "" else "\n\n$it" }
@@ -394,7 +400,9 @@ class McpServer(context: Context) {
          */
         private val nebenher = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         /** Die Werkzeuge des Gedächtnisses geben ihre Einträge selbst zurück; ihnen liegt der Kontext nicht noch einmal bei. */
-        private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_lesen", "jarvis_langzeitkontext", "ablage_struktur", "ablage_datei")
+        private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_lesen", "jarvis_langzeitkontext_lesen", "jarvis_langzeitkontext_ersetzen")
+        /** Technische Werkzeuge der Mac-Oberfläche: in keiner Werkzeugliste, nicht im Protokoll, ohne Nachträge. */
+        private val TECHNISCH = setOf("ablage_struktur", "ablage_datei")
         /**
          * Schreibende Werkzeuge, bei denen eine Wiederholung nach Verbindungsabbruch Schaden anrichtet (doppelt angelegt,
          * doppelt verschickt, doppelt gestartet). Nicht hierher: Werkzeuge, die zum Nachfragen bewusst wiederholt werden
@@ -412,7 +420,7 @@ class McpServer(context: Context) {
         private const val JE_WERKZEUG = 4
         private val plaetze = java.util.concurrent.ConcurrentHashMap<String, Semaphore>()
         /** Werkzeuge ohne „VORGANG FERTIG“: eigene Übersichten und die Werkzeuge der Programmier-Sitzungen. */
-        private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen", "funktionen_lesen", "ablage_struktur", "ablage_datei", "jarvis_langzeitkontext")
+        private val OHNE_VORGANGSMELDUNG = setOf("jarvis_kontext", "vorgaenge", "vorgang_abbrechen", "pc_status", "repo_lesen", "tagesauswertung_lesen", "funktionen_lesen", "ablage_struktur", "ablage_datei", "jarvis_langzeitkontext_lesen", "jarvis_langzeitkontext_ersetzen")
         /** Wann eine Vorgangsmeldung zuletzt an einem Ergebnis hing (Kennung → Zeit). */
         private val gezeigt = HashMap<String, Long>()
         /** Unterstützte Protokollstände, neuester zuerst. Wünscht der Client einen davon, bekommt er ihn. */

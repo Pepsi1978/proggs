@@ -49,7 +49,8 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 ## Gedächtnis
 
-- Langzeitkontext: von Frank gepflegte Textdatei (Gedächtnis-Bildschirm, Mac-App, `jarvis_langzeitkontext`), liegt in jedem Kontext, auf Handy und Mac derselbe Stand.
+- Langzeitkontext: von Frank gepflegte Textdatei (Gedächtnis-Bildschirm, Mac-App, `jarvis_langzeitkontext_lesen`, `jarvis_langzeitkontext_ersetzen`, Vorfassung bleibt erhalten), steht in `jarvis_kontext` und im eigenen Kontext, auf Handy und Mac derselbe Stand.
+- Ablage-Explorer der Mac-App: technische Werkzeuge `ablage_struktur` und `ablage_datei`, in keiner Werkzeugliste.
 
 - Merkdateien, bei jeder Antwort vor Augen: Zusammenarbeit mit ChatGPT (Symbiose), Regeln, Ziele, Über Frank, Programmierregeln (nur für Jarvis, gehen nie an den Programmierer), Stil, Entscheidungen. `jarvis_merken`, `jarvis_vergessen`, `jarvis_gemerktes_lesen`; in der App ansehen, bearbeiten, einsprechen, KI-Korrektur, Rückgängig.
 - Live-Gedächtnis: 18 Bereiche aus allen Apps (Gemerktes, Dienst, Kalender, Aufgaben, Wecker, Stack-Labor, Gespräche, Biodaten, Tagesauswertung, Ideen, Trainings, Wetter, 10-Tage-Rückblick, Ablage, E-Mail, Wissen, Tagebuch); ändert sich etwas in einer App, wird der Bereich nach Sekunden neu gelesen.

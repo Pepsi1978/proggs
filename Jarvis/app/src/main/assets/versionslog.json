@@ -433,6 +433,7 @@
     {"versionCode": 427, "versionName": "1.8.416", "stand": "29.10.2026, 20:34 Uhr", "notiz": "Fehlerbehebungen bei Geniale Ideen über Jarvis: Annehmen und KI-Verbessern im selben Auftrag gehen beide durch, Entwürfe lassen sich auch per Suchwort finden, und die Funktionsübersicht wiederholt die Ideen-Werkzeuge nicht mehr doppelt."},
     {"versionCode": 428, "versionName": "1.8.417", "stand": "29.10.2026, 22:02 Uhr", "notiz": "Die Knöpfe unten in der Seitenleiste stehen etwa 2 mm weiter rechts und sind damit besser mit dem Daumen erreichbar."},
     {"versionCode": 429, "versionName": "1.8.418", "stand": "29.10.2026, 22:08 Uhr", "notiz": "Die Seitenleiste ist wieder wie vorher; stattdessen stehen die ausklappbaren Symbole rechts über der Eingabe (Programmierer, Nachtrag, Papierkorb, Neue Session) etwa 1,6 mm weiter rechts."},
-    {"versionCode": 430, "versionName": "1.8.419", "stand": "30.10.2026, 09:59 Uhr", "notiz": "Im Live-Gedächtnis gibt es den Langzeitkontext: eine Textdatei für dauerhaftes Wissen über dich, die auf Handy und Mac immer gleich ist."}
+    {"versionCode": 430, "versionName": "1.8.419", "stand": "30.10.2026, 09:59 Uhr", "notiz": "Im Live-Gedächtnis gibt es den Langzeitkontext: eine Textdatei für dauerhaftes Wissen über dich, die auf Handy und Mac immer gleich ist."},
+    {"versionCode": 431, "versionName": "1.8.420", "stand": "30.10.2026, 10:21 Uhr", "notiz": "Der Langzeitkontext verliert keine Entwürfe mehr, und bei Änderungen auf beiden Geräten entscheidest du, welche Fassung gilt."}
 ]
 }
