@@ -471,6 +471,17 @@ fun EinstellungenScreen(
 
         // --- Spracheingabe ----------------------------------------------------------------
         item {
+            Block("Spracheingabe · Offline") {
+                Zeilentext(
+                    "Das Parakeet-Modell in Jarvis schreibt offline ab, ohne Groq-Schlüssel. " +
+                        "Ist es eingeschaltet, geht Gesprochenes nicht mehr an Groq.",
+                )
+                Spacer(Modifier.height(Mass.abstandKlein))
+                de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+            }
+        }
+
+        item {
             Block("Spracheingabe") {
                 Zeilentext(
                     "Gesprochenes wird \u00fcber Groq abgeschrieben. Die vier Filter darunter " +
