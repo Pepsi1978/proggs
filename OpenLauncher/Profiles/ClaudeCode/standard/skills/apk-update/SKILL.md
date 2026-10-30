@@ -61,7 +61,8 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
 2. **Update muss fertig sein.** `git -C ~/proggs status -sb -- <Projekt>` prüfen. Offene
    Änderungen am Projekt zuerst nach Regel 9 abschließen (bauen, Version bumpen, committen,
    pushen). Nie halbfertigen Code als Update ausliefern.
-3. **Skript starten** (Gradle braucht länger als das Standard-Zeitlimit → `timeout: 600000`):
+3. **Skript im Hintergrund starten** (`run_in_background`, denn Gradle und der Upload-Beleg können länger
+   als das höchste Zeitlimit dauern; auf die Abschlussmeldung warten, nie vorher abbrechen):
    ```powershell
    pwsh -NoProfile -File "C:\Users\barwa\proggs\OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1" -Projekt <Projekt>
    ```
@@ -106,18 +107,20 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
      SDK-adb); `-OhneGeraet` (nur für Tests) überspringt das,
    - liest Paket, versionCode, versionName und Signatur **aus der fertigen APK** (aapt2, apksigner)
      und bricht ab, wenn Paket oder Version nicht passen,
-   - legt die APK als `<Projekt>-<versionName>-vc<versionCode>.apk` ab, danach `update.json`
-     (inkl. der letzten 15 Versionslog-Einträge für „Neu in dieser Version" in UpdateStation).
-     Beide entstehen außerhalb des Drive-Ordners und kommen per Umbenennen hinein: Lokal ist so
-     nie eine halbe Datei sichtbar. Wann und in welcher Reihenfolge Google Drive für Desktop
-     hochlädt, sichert das **nicht** — Zwischenstände fängt UpdateStation ab (Nachprüfung).
-     Hash und Manifest werden zurückgelesen, erst dann meldet es `ok` und räumt auf: **die 5
+   - legt die APK als `<Projekt>-<versionName>-vc<versionCode>.apk` ab und **wartet am Mac auf den
+     Upload-Beleg von Google Drive** (`upload-status.swift`). Bricht Drive den Upload ab und löscht die
+     Datei, legt das Skript sie bis zu dreimal neu ab. Ohne Beleg nimmt es die APK wieder heraus, meldet
+     `fehler` und lässt `update.json` unverändert: Der bisherige Stand bleibt gültig,
+   - schreibt erst danach `update.json` (inkl. der letzten 15 Versionslog-Einträge für „Neu in dieser
+     Version" in UpdateStation) und wartet auch auf deren Beleg. `update.json` ist damit der
+     Veröffentlichungspunkt. Erst dann meldet es `ok`, sendet das Signal ans Handy und räumt auf: **die 5
      neuesten APKs** bleiben, dazu immer die bisher referenzierte.
 4. **Ausgabe auswerten** (Zeilen mit `APK_UPDATE_`):
    - `APK_UPDATE_STATUS=already-current` (Exit 0) → schon veröffentlicht und unverändert;
      nichts zu tun, **kein Commit** (typisch bei einer Wiederholung per Fernwartung).
-   - `APK_UPDATE_STATUS=ok` → **lokal bereit** (`APK_UPDATE_BEREIT=lokal`): Die Dateien liegen im
-     Drive-Ordner, den Upload übernimmt Google Drive für Desktop. Nicht als „in der Cloud“ melden.
+   - `APK_UPDATE_STATUS=ok` mit `APK_UPDATE_BEREIT=cloud` → Google Drive hat beide Uploads bestätigt.
+     Mit `APK_UPDATE_BEREIT=lokal` (Windows, Cloud-Bau) gibt es diesen Beleg nicht: nicht als „in der
+     Cloud“ melden.
    - `APK_UPDATE_STATUS=vorbereitet` (Exit 2) → **nichts veröffentlicht.** Das Skript hat
      Projektdateien vorbereitet, `APK_UPDATE_COMMIT_NOETIG` nennt sie:
      - `APK_UPDATE_VERSIONSLOG_EINGERICHTET=vcN (<log>, <gradle>)`: neues Projekt auf den
@@ -142,6 +145,20 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
    von Hand übernehmen. Ein Eintrag in `projekte.json` ist nur nötig, wenn Gradle-Task,
    APK-Ordner oder Paket vom Standard abweichen (z. B. Variante `debug`, mehrere
    `applicationId`); dann nachtragen, den Skill committen und pushen.
+
+## Update-Ordner prüfen und reparieren
+
+Meldet UpdateStation „Update-Ordner … nicht stimmig“ oder „APK fehlt“, nie von Hand kopieren, sondern
+(im Hintergrund, ohne Build, ohne Versionsänderung):
+
+```bash
+pwsh -NoProfile -File ~/proggs/OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/scripts/apk-update.ps1 -Projekt <Projekt oder Alle> -Reparieren
+```
+
+Je Ordner kommt `APK_UPDATE_ORDNER=<Ordner>|ok|repariert|fehler|ohne-manifest|<Hinweis>`. Eine fehlende APK holt das
+Skript nur mit exakt der Prüfsumme aus `update.json` aus dem Drive-Speicher (`canceled_uploads`,
+`lost_and_found`) zurück. Bei `fehler` die App neu veröffentlichen. Hintergrund:
+`bugs/werkzeuge/google-drive-desktop-abgebrochene-uploads.md`.
 
 ## Format von update.json (Vertrag mit der Handy-App — nur erweitern, nie umbenennen)
 
