@@ -37,6 +37,7 @@
     { "versionCode": 32, "versionName": "1.0.31", "stand": "24.10.2026, 15:33 Uhr", "notiz": "Feinschliff am Aufgaben-Editor: Ein Doppeltipp auf Speichern legt die Aufgabe nur einmal an, die KI wartet aufs laufende Diktat, und ein altes Diktat oder ein alter KI-Aufruf stört einen neu geöffneten Editor nicht mehr." },
     { "versionCode": 33, "versionName": "1.0.32", "stand": "24.10.2026, 19:37 Uhr", "notiz": "Aufgeräumte Zielseite: Beschreibung, Warum und Recherche sind zugeklappt, Dein Weg lässt sich vorlesen, eine Zeile zeigt die letzte Auswertung, eigene Aufgaben tragen einen leuchtend grünen Punkt, und übernommene Aufgaben landen in Geniale Aufgaben unter Ziele."},
     { "versionCode": 34, "versionName": "1.0.33", "stand": "24.10.2026, 19:46 Uhr", "notiz": "Ein geändertes Ziel-Symbol oder ein umbenanntes Ziel wird jetzt auch in Geniale Aufgaben nachgezogen."},
-    {"versionCode": 35, "versionName": "1.0.34", "stand": "30.10.2026, 10:59 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."}
+    {"versionCode": 35, "versionName": "1.0.34", "stand": "30.10.2026, 10:59 Uhr", "notiz": "Spracheingabe kann offline über das Modell in Jarvis laufen, mit eigenem Wörterbuch zum Ein- und Ausschalten."},
+    {"versionCode": 36, "versionName": "1.0.35", "stand": "30.10.2026, 19:38 Uhr", "notiz": "Im Automatikmodus wechselt die App abends am Ende der Dämmerung auf dunkel und morgens bei Sonnenaufgang auf hell, passend für Neuenhagen bei Berlin."}
   ]
 }

@@ -85,7 +85,7 @@ fun RundKnopf(icon: ImageVector, beschreibung: String, farbe: Color? = null, akt
     }
 }
 
-/** Hell → Automatisch (wie das System) → Dunkel → Hell, wie in Jarvis. Das Symbol zeigt den aktuellen Modus. */
+/** Hell → Automatisch (nach der Sonne) → Dunkel → Hell, wie in Jarvis. Das Symbol zeigt den aktuellen Modus. */
 @Composable
 fun ModusKnopf(vm: AppViewModel) {
     val f = LocalFarben.current
@@ -97,7 +97,7 @@ fun ModusKnopf(vm: AppViewModel) {
     ) {
         val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
         vm.einstellungen.modus = neu
-        vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
+        vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" })
     }
 }
 
