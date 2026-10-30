@@ -127,8 +127,8 @@ kleine Fixes gehen ohne Wartezeit raus.
 ## Jarvis
 
 Jarvis lässt sich nur mit seinem Pflicht-Teil installieren, der als Asset in der APK liegt. An diesem Ablauf ändert
-das nichts: UpdateStation stellt vor jeder Jarvis-Installation die Overlay-Frage (Sofort oder 1 bis 5 Minuten) und
-installiert den Teil mit. Nie eine Jarvis-APK an UpdateStation vorbei installieren.
+das nichts: UpdateStation installiert den Teil mit und stellt bewusst keine Frage, es ist Franks Rückfallebene für den
+Notfall. Die Overlay-Frage gehört nur zu Werkzeuge/jarvis-install.
 
 ## Bekannte Cloud-Fallen (Stand 27.09.2026)
 
