@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">ಡಾರ್ಕ್ ಮೋಡ್</string>
     <string name="settings_dark_active">ಸಕ್ರಿಯ</string>
     <string name="settings_dark_off">ಆಫ್</string>
-    <string name="settings_follow_system">ಸಿಸ್ಟಮ್ ಅನುಸರಿಸಿ</string>
+    <string name="settings_follow_system">ಸೂರ್ಯನ ಪ್ರಕಾರ ಸ್ವಯಂಚಾಲಿತ</string>
     <string name="settings_automatic">ಸ್ವಯಂಚಾಲಿತ</string>
     <string name="settings_sounds_haptics_section">ಧ್ವನಿಗಳು / ಹ್ಯಾಪ್ಟಿಕ್</string>
     <string name="settings_app_sounds">ಆಪ್ ಧ್ವನಿಗಳು</string>

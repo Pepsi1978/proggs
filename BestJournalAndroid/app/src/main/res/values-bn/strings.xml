@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">ডার্ক মোড</string>
     <string name="settings_dark_active">চালু</string>
     <string name="settings_dark_off">বন্ধ</string>
-    <string name="settings_follow_system">সিস্টেম অনুসরণ করো</string>
+    <string name="settings_follow_system">সূর্য অনুযায়ী স্বয়ংক্রিয়</string>
     <string name="settings_automatic">স্বয়ংক্রিয়</string>
     <string name="settings_sounds_haptics_section">শব্দ / হ্যাপটিক</string>
     <string name="settings_app_sounds">অ্যাপ শব্দ</string>

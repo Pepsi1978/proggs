@@ -32,6 +32,7 @@ object Constants {
     const val PREF_SYNC_IN_PROGRESS = "sync_in_progress"
     const val PREF_RESTORE_PENDING = "restore_pending"
     const val PREF_DARK_THEME = "dark_theme"
+    // Name historisch: Der Wert bedeutet seit der Sonnen-Automatik "Automatisch nach der Sonne".
     const val PREF_THEME_FOLLOW_SYSTEM = "theme_follow_system"
     const val PREF_APP_THEME = "app_theme"
     const val PREF_BIOMETRIC_LOCK = "biometric_lock"

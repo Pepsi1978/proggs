@@ -347,7 +347,7 @@
     <string name="settings_dark_mode">ડાર્ક મોડ</string>
     <string name="settings_dark_active">ચાલુ</string>
     <string name="settings_dark_off">બંધ</string>
-    <string name="settings_follow_system">સિસ્ટમ અનુસરો</string>
+    <string name="settings_follow_system">સૂર્ય અનુસાર આપોઆપ</string>
     <string name="settings_automatic">આપોઆપ</string>
     <string name="settings_sounds_haptics_section">અવાજ / સ્પંદન</string>
     <string name="settings_app_sounds">App અવાજ</string>

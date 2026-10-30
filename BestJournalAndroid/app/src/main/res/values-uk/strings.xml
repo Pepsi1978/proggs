@@ -369,7 +369,7 @@
     <string name="settings_dark_mode">Темний режим</string>
     <string name="settings_dark_active">Активний</string>
     <string name="settings_dark_off">Вимкнено</string>
-    <string name="settings_follow_system">Як у системі</string>
+    <string name="settings_follow_system">Автоматично за сонцем</string>
     <string name="settings_automatic">Автоматично</string>
     <string name="settings_sounds_haptics_section">Звук і вібрація</string>
     <string name="settings_app_sounds">Звуки застосунку</string>

@@ -558,7 +558,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // System folgen � Light phone (sun) | divider | Dark phone (moon)
+                        // Automatisch nach der Sonne � Light phone (sun) | divider | Dark phone (moon)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

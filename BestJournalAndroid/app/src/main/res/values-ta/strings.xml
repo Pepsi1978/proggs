@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">இருண்ட பயன்முறை</string>
     <string name="settings_dark_active">செயலில்</string>
     <string name="settings_dark_off">அணைக்கப்பட்டது</string>
-    <string name="settings_follow_system">கணினியை பின்பற்று</string>
+    <string name="settings_follow_system">சூரியனைப் பொறுத்து தானாக</string>
     <string name="settings_automatic">தானியங்கி</string>
     <string name="settings_sounds_haptics_section">ஒலிகள் / அதிர்வுகள்</string>
     <string name="settings_app_sounds">App ஒலிகள்</string>

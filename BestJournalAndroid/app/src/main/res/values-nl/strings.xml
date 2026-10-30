@@ -369,7 +369,7 @@ Voor iedereen die zichzelf beter wil begrijpen en innerlijk wil groeien.</string
     <string name="settings_dark_mode">Donkere modus</string>
     <string name="settings_dark_active">Actief</string>
     <string name="settings_dark_off">Uit</string>
-    <string name="settings_follow_system">Systeem volgen</string>
+    <string name="settings_follow_system">Automatisch volgens de zon</string>
     <string name="settings_automatic">Automatisch</string>
     <string name="settings_sounds_haptics_section">Geluid / Trillen</string>
     <string name="settings_app_sounds">App-geluiden</string>

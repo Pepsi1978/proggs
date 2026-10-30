@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">ダークモード</string>
     <string name="settings_dark_active">有効</string>
     <string name="settings_dark_off">オフ</string>
-    <string name="settings_follow_system">システムに従う</string>
+    <string name="settings_follow_system">太陽に合わせて自動</string>
     <string name="settings_automatic">自動</string>
     <string name="settings_sounds_haptics_section">音と振動</string>
     <string name="settings_app_sounds">アプリの音</string>

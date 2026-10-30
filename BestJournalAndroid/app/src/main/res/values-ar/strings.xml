@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">الوضع الداكن</string>
     <string name="settings_dark_active">مفعّل</string>
     <string name="settings_dark_off">موقف</string>
-    <string name="settings_follow_system">اتباع النظام</string>
+    <string name="settings_follow_system">تلقائي حسب الشمس</string>
     <string name="settings_automatic">تلقائي</string>
     <string name="settings_sounds_haptics_section">الأصوات والاهتزاز</string>
     <string name="settings_app_sounds">أصوات التطبيق</string>

@@ -341,7 +341,7 @@
     <string name="settings_dark_mode">ഡാർക്ക് മോഡ്</string>
     <string name="settings_dark_active">സജീവം</string>
     <string name="settings_dark_off">ഓഫ്</string>
-    <string name="settings_follow_system">സിസ്റ്റം പിന്തുടരുക</string>
+    <string name="settings_follow_system">സൂര്യനനുസരിച്ച് സ്വയമേവ</string>
     <string name="settings_automatic">സ്വയം</string>
     <string name="settings_sounds_haptics_section">ശബ്ദം / ഹാപ്റ്റിക്സ്</string>
     <string name="settings_app_sounds">ആപ്പ് ശബ്ദങ്ങൾ</string>

@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">โหมดมืด</string>
     <string name="settings_dark_active">เปิดอยู่</string>
     <string name="settings_dark_off">ปิดอยู่</string>
-    <string name="settings_follow_system">ตามระบบ</string>
+    <string name="settings_follow_system">อัตโนมัติตามดวงอาทิตย์</string>
     <string name="settings_automatic">อัตโนมัติ</string>
     <string name="settings_sounds_haptics_section">เสียง/สั่น</string>
     <string name="settings_app_sounds">เสียงของแอป</string>

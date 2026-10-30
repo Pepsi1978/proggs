@@ -1,5 +1,6 @@
 package com.bestjournal.app.ui.theme
 
+import android.app.Activity
 import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -9,9 +10,12 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
 
 val LocalIsDarkTheme = staticCompositionLocalOf { true }
 
@@ -232,7 +236,20 @@ fun BestJournalTheme(
             }
         }
 
-    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+    // Die Symbole der Systemleisten richten sich sonst nach dem System-Modus und wären auf gleichfarbigem Grund unsichtbar.
+    SideEffect {
+        (context as? Activity)?.window?.let { fenster ->
+            WindowCompat.getInsetsController(fenster, fenster.decorView).run {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalIsDarkTheme provides darkTheme,
+        LocalConfiguration provides appModusKonfiguration(darkTheme),
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,

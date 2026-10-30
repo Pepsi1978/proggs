@@ -369,7 +369,7 @@ Pour ceux qui veulent mieux se connaître et grandir intérieurement.</string>
     <string name="settings_dark_mode">Mode sombre</string>
     <string name="settings_dark_active">Actif</string>
     <string name="settings_dark_off">Désactivé</string>
-    <string name="settings_follow_system">Suivre le système</string>
+    <string name="settings_follow_system">Automatique selon le soleil</string>
     <string name="settings_automatic">Automatique</string>
     <string name="settings_sounds_haptics_section">Sons / Vibrations</string>
     <string name="settings_app_sounds">Sons de l\'appli</string>

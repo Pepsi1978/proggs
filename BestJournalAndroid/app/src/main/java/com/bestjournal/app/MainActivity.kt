@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +31,7 @@ import androidx.fragment.app.FragmentActivity
 import com.bestjournal.app.billing.BillingManager
 import com.bestjournal.app.ui.navigation.AppNavGraph
 import com.bestjournal.app.ui.theme.BestJournalTheme
+import com.bestjournal.app.ui.theme.sonneDunkel
 import com.bestjournal.app.util.AnalyticsTracker
 import com.bestjournal.app.util.Constants
 import dagger.hilt.android.AndroidEntryPoint
@@ -94,7 +94,8 @@ class MainActivity : FragmentActivity() {
             // Profile-Index kommt aus dem ProfileTheme-Singleton (1:1 wie BestJournalFrank).
             // SettingsScreen ruft ProfileTheme.update(context, index) auf — der Compose-State
             // aendert sich SOFORT und triggert die Recomposition der Theme-Composable.
-            val systemDark = isSystemInDarkTheme()
+            // Der gespeicherte Wert "System folgen" bedeutet seit der Sonnen-Automatik: nach der Sonne.
+            val automatikDunkel = sonneDunkel(followSystem.value)
 
             DisposableEffect(Unit) {
                 val encListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -143,7 +144,7 @@ class MainActivity : FragmentActivity() {
 
             val isDark =
                 when {
-                    followSystem.value -> systemDark
+                    followSystem.value -> automatikDunkel
                     else -> manualDark.value
                 }
 

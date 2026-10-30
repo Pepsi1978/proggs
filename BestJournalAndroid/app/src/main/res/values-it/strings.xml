@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">Modalità scura</string>
     <string name="settings_dark_active">Attiva</string>
     <string name="settings_dark_off">Disattivata</string>
-    <string name="settings_follow_system">Segui il sistema</string>
+    <string name="settings_follow_system">Automatico in base al sole</string>
     <string name="settings_automatic">Automatico</string>
     <string name="settings_sounds_haptics_section">Suoni / Vibrazione</string>
     <string name="settings_app_sounds">Suoni dell\'app</string>

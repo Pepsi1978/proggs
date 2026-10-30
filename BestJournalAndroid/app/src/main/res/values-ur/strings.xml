@@ -362,7 +362,7 @@
     <string name="settings_dark_mode">ڈارک موڈ</string>
     <string name="settings_dark_active">فعال</string>
     <string name="settings_dark_off">بند</string>
-    <string name="settings_follow_system">سسٹم کی پیروی کریں</string>
+    <string name="settings_follow_system">سورج کے مطابق خودکار</string>
     <string name="settings_automatic">خودکار</string>
     <string name="settings_sounds_haptics_section">آوازیں / ہیپٹک</string>
     <string name="settings_app_sounds">ایپ کی آوازیں</string>
