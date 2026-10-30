@@ -212,11 +212,13 @@ object ProgrammierChat {
 
 /**
  * Die Aufgabe der Sitzung über einer Rückfrage (Kontext „aufgabe“): Bei mehreren gleichzeitigen Aufträgen sieht Frank so, zu
- * welchem die Frage gehört. Schon beim Eintreffen gekürzt, denn der Kontext geht mit dem Verlauf an das Modell.
+ * welchem die Frage gehört. Schon beim Eintreffen gekürzt, denn der Kontext geht mit dem Verlauf an das Modell. Zum Aufklappen
+ * steht der ganze Text daneben in „aufgabe_voll“; den nimmt [fuersModell] wieder heraus.
  */
 object RueckfrageAufgabe {
     private const val GRENZE = 240
     private val LEER = Regex("\\s+")
+    private val LEER_IN_ZEILE = Regex("[ \\t]+")
     private val ZIEL = Regex("^[*_\\s]*ziel(?: und ergebnis)?\\s*:[*_\\s]*", RegexOption.IGNORE_CASE)
     // Satzende: mindestens drei Buchstaben davor (kein „z.“, „u.“, „1.8.“), danach ein Großbuchstabe.
     private val SATZENDE = Regex("(?<=[\\p{L}]{3})[.!?](?=\\s+[\\p{Lu}])")
@@ -224,15 +226,37 @@ object RueckfrageAufgabe {
 
     /** Aus dem Auftrag des Auftragsbuchs; ist schon ein Nachtrag in der Sitzung (zugestellt oder bearbeitet), der jüngste davon. */
     fun aus(eintrag: org.json.JSONObject): String {
-        val l = eintrag.optJSONArray("nachtraege")
-        val nachtrag = l?.let { (l.length() - 1 downTo 0).mapNotNull { l.optJSONObject(it) }.firstOrNull { it.optString("stand") in setOf("zugestellt", "bearbeitet") } }
-        return nachtrag?.let { "Nachtrag: " + kurz(it.optString("text")) } ?: kurz(eintrag.optString("auftrag"))
+        val nachtrag = juengsterNachtrag(eintrag)
+        return nachtrag?.let { "Nachtrag: " + kurz(it) } ?: kurz(eintrag.optString("auftrag"))
     }
+
+    /** Der ganze Text zu [aus], mit Zeilenumbrüchen; leer, wenn [aus] nichts gekürzt hat. */
+    fun vollAus(eintrag: org.json.JSONObject): String {
+        val nachtrag = juengsterNachtrag(eintrag)
+        return nachtrag?.let { n -> voll(n).let { if (it.isEmpty()) "" else "Nachtrag: $it" } } ?: voll(eintrag.optString("auftrag"))
+    }
+
+    /** Der Kontext einer Rückfrage ohne den Volltext: Das Modell bekommt nur die Kurzfassung. */
+    fun fuersModell(kontext: String): String =
+        if (!kontext.contains("\"aufgabe_voll\"")) kontext
+        else runCatching { org.json.JSONObject(kontext).apply { remove("aufgabe_voll") }.toString() }.getOrDefault(kontext)
+
+    private fun juengsterNachtrag(eintrag: org.json.JSONObject): String? {
+        val l = eintrag.optJSONArray("nachtraege") ?: return null
+        return (l.length() - 1 downTo 0).mapNotNull { l.optJSONObject(it) }.firstOrNull { it.optString("stand") in setOf("zugestellt", "bearbeitet") }?.optString("text")
+    }
+
+    private fun zusammen(auftrag: String, leer: Regex): String {
+        val teile = auftrag.split(" ; ").map { it.replace(leer, " ").trim().replace(ZIEL, "") }.filter { it.isNotEmpty() }
+        return if (teile.size > 1) teile.mapIndexed { i, t -> "${i + 1}) $t" }.joinToString(if (leer === LEER) " " else "\n") else teile.firstOrNull().orEmpty()
+    }
+
+    /** Der ungekürzte Auftrag; leer, wenn er in die Kurzfassung ganz hineinpasst. */
+    fun voll(auftrag: String): String = if (zusammen(auftrag, LEER).length <= GRENZE) "" else zusammen(auftrag, LEER_IN_ZEILE)
 
     /** Ganze Sätze bis etwa [GRENZE] Zeichen, ohne „Ziel:“ davor; mehrere Aufgaben („ ; “) als „1) … 2) …“; gekürzt mit „ …“. */
     fun kurz(auftrag: String): String {
-        val teile = auftrag.split(" ; ").map { it.replace(LEER, " ").trim().replace(ZIEL, "") }.filter { it.isNotEmpty() }
-        val text = if (teile.size > 1) teile.mapIndexed { i, t -> "${i + 1}) $t" }.joinToString(" ") else teile.firstOrNull().orEmpty()
+        val text = zusammen(auftrag, LEER)
         if (text.length <= GRENZE) return text
         val ende = SATZENDE.findAll(text).map { it.range.last }
             .filter { it < GRENZE && text.substring(0, it).substringAfterLast(' ').lowercase() !in ABKUERZUNGEN }.lastOrNull() ?: -1

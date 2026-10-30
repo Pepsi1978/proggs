@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +64,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -97,6 +99,7 @@ private class Rueckfrage(val k: JSONObject) {
     val id: String = k.optString("frage_id")
     val app: String = k.optString("app")
     val aufgabe: String = k.optString("aufgabe")
+    val aufgabeVoll: String = k.optString("aufgabe_voll")
     val frei: Boolean = k.optBoolean("frei")
     val stand: String = RueckfrageStand.von(k)
     val antwort: String = k.optString("antwort")
@@ -160,6 +163,28 @@ private fun Standzeile(r: Rueckfrage, modifier: Modifier = Modifier) {
     Text(zeichen + text, modifier.semantics { stateDescription = text }, color = farbe, fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
 }
 
+/**
+ * Text, der auf [zeilen] Zeilen gekürzt ist: Antippen klappt ihn ganz auf, erneutes Antippen wieder zu. [voll] ist der ganze Text,
+ * wenn [text] schon inhaltlich gekürzt ist. Was vollständig passt, sieht aus wie ein normaler Text und reagiert nicht.
+ */
+@Composable
+fun AufklappText(text: String, modifier: Modifier = Modifier, voll: String = "", zeilen: Int, farbe: androidx.compose.ui.graphics.Color, fontSize: TextUnit, lineHeight: TextUnit, fontWeight: FontWeight? = null) {
+    val ganz = voll.ifEmpty { text }
+    var offen by rememberSaveable(ganz) { mutableStateOf(false) }
+    var zuLang by remember(ganz) { mutableStateOf(false) }
+    Text(
+        if (offen) ganz else text,
+        modifier.then(
+            if (zuLang || ganz != text) Modifier.antippen(haptik = false) { offen = !offen }
+                .semantics { stateDescription = if (offen) "Aufgeklappt, antippen zum Kürzen" else "Gekürzt, antippen zum Aufklappen" }
+            else Modifier,
+        ),
+        color = farbe, fontSize = fontSize, lineHeight = lineHeight, fontWeight = fontWeight,
+        maxLines = if (offen) Int.MAX_VALUE else zeilen, overflow = TextOverflow.Ellipsis,
+        onTextLayout = { zuLang = it.hasVisualOverflow || it.lineCount > zeilen },
+    )
+}
+
 /** Die Karte im Chat: Frage kurz, Stand, „Beantworten“ öffnet das Vollbild (auch nach dem Schließen jederzeit wieder). */
 @Composable
 fun RueckfrageKarte(vm: AppViewModel, n: Nachricht) {
@@ -172,13 +197,17 @@ fun RueckfrageKarte(vm: AppViewModel, n: Nachricht) {
             ProgrammierText(n.text, Modifier.padding(top = 6.dp), farbe = f.text)
             return@Column
         }
-        if (r.aufgabe.isNotEmpty()) Text(r.aufgabe, Modifier.padding(top = 4.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
-        if (r.frei) ProgrammierText(r.fragen.firstOrNull()?.text.orEmpty().let { if (it.length > 500) "…" + it.takeLast(500) else it }, Modifier.padding(top = 6.dp), farbe = f.text)
-        else r.fragen.forEach { q ->
-            Text(q.text, Modifier.padding(top = 6.dp), color = f.text, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 6, overflow = TextOverflow.Ellipsis)
-            Text(
+        if (r.aufgabe.isNotEmpty()) AufklappText(r.aufgabe, Modifier.padding(top = 4.dp), voll = r.aufgabeVoll, zeilen = 4, farbe = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp)
+        if (r.frei) {
+            val ganz = r.fragen.firstOrNull()?.text.orEmpty()
+            var offen by rememberSaveable(ganz) { mutableStateOf(false) }
+            if (ganz.length > 500) ProgrammierText(if (offen) ganz else "…" + ganz.takeLast(500), Modifier.padding(top = 6.dp).antippen(haptik = false) { offen = !offen }, farbe = f.text)
+            else ProgrammierText(ganz, Modifier.padding(top = 6.dp), farbe = f.text)
+        } else r.fragen.forEach { q ->
+            AufklappText(q.text, Modifier.padding(top = 6.dp), zeilen = 6, farbe = f.text, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold)
+            AufklappText(
                 q.optionen.joinToString("  ·  ") { "${it.kennung} ${it.label}" } + "  ·  ${q.eigeneKennung} Eigene Antwort",
-                Modifier.padding(top = 2.dp), color = f.textLeise, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                Modifier.padding(top = 2.dp), zeilen = 3, farbe = f.textLeise, fontSize = 13.sp, lineHeight = 18.sp,
             )
         }
         Standzeile(r, Modifier.padding(top = 10.dp))
@@ -324,7 +353,7 @@ private fun Vollbild(vm: AppViewModel, r: Rueckfrage, gespraechId: String) {
             val scroll = rememberScrollState()
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(horizontal = 16.dp)) {
                 // Die Aufgabe oben im scrollenden Teil, nicht im festen Kopf: Mit offener Tastatur bleibt der Antwortbereich groß.
-                if (r.aufgabe.isNotEmpty()) Text(r.aufgabe, Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp), color = f.textLeise, fontSize = 15.sp, lineHeight = 20.sp, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                if (r.aufgabe.isNotEmpty()) AufklappText(r.aufgabe, Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp), voll = r.aufgabeVoll, zeilen = 4, farbe = f.textLeise, fontSize = 15.sp, lineHeight = 20.sp)
                 r.fragen.forEachIndexed { i, q ->
                     FrageBlock(
                         vm, ::sichern, i, r, q, wahl[i].orEmpty(), eigen[i] == true, texte[i].orEmpty(), i in fehlend, aktiv = beantwortbar && !sendet,

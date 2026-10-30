@@ -738,7 +738,7 @@ private fun LaeuftGerade(vm: AppViewModel) {
                 Kern(22.dp, f.primaer, aktiv = true)
                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                     Text("Agent " + l.agent, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(l.schritt.ifEmpty { l.auftrag }, color = f.textLeise, fontSize = 13.sp, maxLines = if (l.wartet != null) 6 else 2, overflow = TextOverflow.Ellipsis)
+                    AufklappText(l.schritt.ifEmpty { l.auftrag }, zeilen = if (l.wartet != null) 6 else 2, farbe = f.textLeise, fontSize = 13.sp, lineHeight = 18.sp)
                 }
             }
             // Zeitlimit erreicht: Der Agent pausiert mit seinem Arbeitsstand, bis Frank entscheidet.
