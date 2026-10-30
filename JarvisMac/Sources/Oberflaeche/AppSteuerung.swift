@@ -60,6 +60,7 @@ final class AppSteuerung {
         }
         // Guthaben wie am Handy alle 15 Minuten, nicht während Live und nicht, solange weder Handy noch eigene Console-Anmeldung es liefern können.
         Task {
+            await ConsoleSitzung.altbestandUebernehmen()
             while true {
                 guard handyVerbunden || ConsoleSitzung.angemeldet, !LiveGespraech.shared.aktiv else { try? await Task.sleep(for: .seconds(30)); continue }
                 await Guthaben.shared.laden()

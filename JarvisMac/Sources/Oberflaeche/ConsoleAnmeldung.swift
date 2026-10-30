@@ -10,7 +10,7 @@ enum ConsoleSitzung {
         case meldung(String)
         var errorDescription: String? {
             switch self {
-            case .abgelaufen: return "Die Anmeldung bei der Anthropic-Konsole ist abgelaufen."
+            case .abgelaufen: return "Die Anthropic-Konsole lehnt die Anmeldung gerade ab. Sie bleibt gespeichert und Jarvis versucht es weiter; hilft das nicht, bitte neu anmelden."
             case .meldung(let t): return t
             }
         }
@@ -35,8 +35,11 @@ enum ConsoleSitzung {
     private static let orgSchluessel = "consoleOrganisation"
     private static let tresorName = "console-sitzung"
     private static var kursStand: (wert: Double, datum: String, geholt: Date)?
+    private static func imTresor() -> [Keks]? {
+        Tresor.lade([Keks].self, name: tresorName, klartext: Pfade.unterstuetzung.appendingPathComponent("console-sitzung-gibt-es-nie-im-klartext.json"))
+    }
     private static var kekse: [Keks] = {
-        let k = Tresor.lade([Keks].self, name: tresorName, klartext: Pfade.unterstuetzung.appendingPathComponent("console-sitzung-gibt-es-nie-im-klartext.json")) ?? []
+        let k = imTresor() ?? []
         geheimnisseMelden(k)
         return k
     }()
@@ -62,6 +65,16 @@ enum ConsoleSitzung {
         nummer += 1
         sichern()
         log("guthaben", "Am Mac bei der Console angemeldet", wo: "Guthaben")
+    }
+
+    /// Bis 1.0.12 lag die Sitzung im Cookie-Speicher von WebKit, 1.0.13 hat sie beim Umzug nicht mitgenommen. Einmal in den Tresor holen und erst danach dort löschen.
+    static func altbestandUebernehmen() async {
+        let speicher = WKWebsiteDataStore.default().httpCookieStore
+        let alt = await speicher.allCookies().filter { gehoertZurConsole($0.domain) }
+        guard alt.contains(where: { $0.name == "sessionKey" }), Tresor.stoerung == nil else { return }
+        if !angemeldet { uebernehmen(alt) }
+        guard imTresor() == kekse else { return }
+        for c in alt { await speicher.deleteCookie(c) }
     }
 
     static func abmelden() {
@@ -148,8 +161,15 @@ enum ConsoleSitzung {
         let neu = HTTPCookie.cookies(withResponseHeaderFields: felder, for: url).filter { gehoertZurConsole($0.domain) }
         guard !neu.isEmpty else { return }
         for c in neu {
-            kekse.removeAll { $0.name == c.name && $0.domain == c.domain }
-            if !c.value.isEmpty, (c.expiresDate ?? .distantFuture) > Date() { kekse.append(Keks(name: c.name, wert: c.value, domain: c.domain)) }
+            let weg = c.value.isEmpty || (c.expiresDate ?? .distantFuture) <= Date()
+            // Eine Antwort beendet die Sitzung nie von allein, nur Franks Abmelden. Ein neuer Wert ersetzt den alten auf jeder Domain, sonst gingen zwei mit.
+            if c.name == "sessionKey" {
+                if weg { continue }
+                kekse.removeAll { $0.name == c.name }
+            } else {
+                kekse.removeAll { $0.name == c.name && $0.domain == c.domain }
+            }
+            if !weg { kekse.append(Keks(name: c.name, wert: c.value, domain: c.domain)) }
         }
         sichern()
     }

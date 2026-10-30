@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.16 -->
+<!-- stand: JarvisMac 1.0.19 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -41,7 +41,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 ## Neu seit 1.0.7
 - Darstellung: Dunkelmodus Schwarz mit Orange, Hellmodus warm mit Orange. Umschalter ganz unten links: Hell → Automatik → Dunkel. Die Automatik wechselt bei Sonnenauf- und -untergang in Berlin, auf dem Mac gerechnet. Kennung `darstellung` in `mac_einstellungen`.
 - Prompts: Mikrofon im Prompt-Bereich und beim Programmierauftrag; jede Einsprechung endet mit „ ; “, dazwischen steht immer „ ; “. „Mit KI verbessern“ verbessert jede Aufgabe zwischen den Trennern einzeln und behält die Trenner, mit Rückgängig. Bearbeiten öffnet einen Editor über das ganze Fenster im Vollbildmodus von macOS und ändert den Prompt selbst.
-- Guthaben: Einstellungen → Guthaben mit Anthropic und Google. Link „Bei der Anthropic-Konsole anmelden“ dort und im Modell-Menü: eigene Anmeldung im Fenster, die Sitzung liegt verschlüsselt im Tresor, danach liest der Mac das Anthropic-Guthaben selbst; ohne sie oder bei einer Störung über das Handy. Die Google-Anmeldung bleibt am Handy. In jeder Eingabeblase Guthaben, Kosten der letzten Claude-Aufgabe (aus den Tokens zum Listenpreis, ohne Websuche) und Modell.
+- Guthaben: Einstellungen → Guthaben mit Anthropic und Google. Link „Bei der Anthropic-Konsole anmelden“ dort und im Modell-Menü: eigene Anmeldung im Fenster, die Sitzung liegt verschlüsselt im Tresor und bleibt bis zum eigenen Abmelden gespeichert (lehnt die Konsole sie ab, kommt nur zusätzlich der Link), danach liest der Mac das Anthropic-Guthaben selbst; ohne sie oder bei einer Störung über das Handy. Die Google-Anmeldung bleibt am Handy. In jeder Eingabeblase Guthaben, Kosten der letzten Claude-Aufgabe (aus den Tokens zum Listenpreis, ohne Websuche) und Modell.
 - Zentrale: Sprechblase über den Schnellverknüpfungen, diese untereinander in voller Breite, Bereich schmaler.
 - Gedächtnis: zusätzlich Funktionsübersicht Mac, Funktionsübersicht Handy, Handy-Reiter und CLI, Regeln für ChatGPT Live.
 - `repo_lesen` liest am Mac versionierte Dateien direkt aus ~/proggs (ohne Vollzugriff wie bisher über das Handy) und markiert Gekürztes. `cli_frage` fragt im Hintergrund das CLI: nur Lesen und Suchen, ~/SK gesperrt, ohne Hooks und MCP-Server.
