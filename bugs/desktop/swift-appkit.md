@@ -681,11 +681,15 @@ loescht den Eintrag auch in der Cloud.
 
 ### N1 — `setVoiceProcessingEnabled(true)` + Player: `engine.start()` scheitert mit -10875
 - **Bug:** Mit Voice Processing am `inputNode` und `player → mainMixerNode` scheitert `engine.start()` mit `-10875` (kAudioUnitErr_FailedInitialization), wenn `mainMixerNode → outputNode` automatisch verbunden wird. Unter macOS 27.2 auf dem MacBook-Air-Mikrofon und -Lautsprecher jedes Mal reproduzierbar (JarvisMac 1.0.11).
-- **Loesung:** `engine.connect(engine.mainMixerNode, to: engine.outputNode, format: AVAudioFormat(standardFormatWithSampleRate: outputNode.inputFormat(forBus: 0).sampleRate, channels: 2))`. Mono und Stereo mit 48 kHz laufen, 24 kHz direkt am Ausgang scheitert ebenfalls. Der Eingang liefert dann 7 identische Kanaele mit 48 kHz, `AVAudioConverter` mit `downmix` kommt damit zurecht.
+- **Loesung:** `engine.connect(engine.mainMixerNode, to: engine.outputNode, format: AVAudioFormat(standardFormatWithSampleRate: outputNode.inputFormat(forBus: 0).sampleRate, channels: 2))`. Mono und Stereo mit 48 kHz laufen, 24 kHz direkt am Ausgang scheitert ebenfalls. Die Rate vor dem ersten Zugriff auf `mainMixerNode` lesen: Danach meldet `outputNode.outputFormat(forBus: 0)` unter Voice Processing 0 Hz, und der erste Start scheitert.
 
 ### N2 — Nach gescheitertem Voice Processing scheitert auch eine frische Engine
 - **Bug:** Eine neue `AVAudioEngine` im selben Prozess meldet danach am Eingang 44,1 kHz mit 2 Kanaelen und scheitert auch ohne Voice Processing mit `-10875`. Rueckfall-Versuche mit frischer Engine helfen deshalb nicht.
 - **Loesung:** Dieselbe Engine weiterverwenden: Tap entfernen, `stop()`, `setVoiceProcessingEnabled(false)`, neu starten. Danach stimmt das Format wieder (48 kHz, 1 Kanal).
+
+### N3 — Voice Processing: `AVAudioConverter`-Downmix liefert nur Stille
+- **Bug:** Der Eingang liefert unter Voice Processing 7 gleiche Kanaele mit diskretem Layout (48 kHz). `AVAudioConverter` mit `downmix = true` wird zwar angelegt und wandelt ohne Fehler, gibt aber nur Nullen aus. Der Tap laeuft weiter, der Dienst bekommt Bloecke ohne Stimme: Das Gespraech wirkt, als haette es sich aufgehaengt (JarvisMac 1.0.14, macOS 27.2).
+- **Loesung:** Nur den ersten Kanal in einen Mono-Puffer kopieren und den wandeln. Pruefung: Pegel des gewandelten Tons messen, nicht nur die Blockzahl.
 
 ## Fix-Status (was ist bereits gefixt? — ehrlich getrennt)
 

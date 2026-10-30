@@ -136,9 +136,10 @@ final class LiveTon: @unchecked Sendable {
     /// Voice Processing den Start mit -10875 scheitern (gemessen unter macOS 27.2). Voice Processing braucht
     /// Ein- und Ausgabe in derselben Einheit.
     private func ausgangVerbinden() throws {
-        engine.connect(player, to: engine.mainMixerNode, format: ausFormat)
+        // Rate vor dem ersten Zugriff auf den Mixer lesen: Danach meldet der Ausgang unter Voice Processing 0 Hz.
         let ausgang = engine.outputNode
         let rate = ausgang.outputFormat(forBus: 0).sampleRate   // Rate des Geräts, nicht der bisherigen Verbindung
+        engine.connect(player, to: engine.mainMixerNode, format: ausFormat)
         guard rate > 0, let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2) else {
             throw NSError(domain: "JarvisLive", code: 3, userInfo: [NSLocalizedDescriptionKey: "Kein Lautsprecher verfügbar."])
         }
@@ -152,15 +153,23 @@ final class LiveTon: @unchecked Sendable {
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw NSError(domain: "JarvisLive", code: 1, userInfo: [NSLocalizedDescriptionKey: "Kein Mikrofon verfügbar."])
         }
-        guard let w = AVAudioConverter(from: format, to: zielFormat) else {
+        // Voice Processing liefert mehrere gleiche Kanäle mit diskretem Layout. Der Downmix des Wandlers macht daraus
+        // Stille (gemessen unter macOS 27.2), deshalb nur den ersten Kanal wandeln.
+        guard format.commonFormat == .pcmFormatFloat32,
+              let mono = AVAudioFormat(standardFormatWithSampleRate: format.sampleRate, channels: 1),
+              let w = AVAudioConverter(from: mono, to: zielFormat) else {
             throw NSError(domain: "JarvisLive", code: 4, userInfo: [NSLocalizedDescriptionKey: "Mikrofonformat wird nicht unterstützt (\(format))."])
         }
-        w.downmix = true
         wandler = w
         wandlerFehlerGemeldet = false
         let blockBytes = Int(eingabeRate) * Self.blockMs / 1000 * 2
         eingang.installTap(onBus: 0, bufferSize: AVAudioFrameCount(format.sampleRate / 20), format: format) { [weak self] puffer, _ in
-            guard let self, let w = self.wandler else { return }
+            guard let self, let w = self.wandler, let quelle = puffer.floatChannelData?[0],
+                  let einzeln = AVAudioPCMBuffer(pcmFormat: mono, frameCapacity: puffer.frameLength),
+                  let ziel = einzeln.floatChannelData?[0] else { return }
+            einzeln.frameLength = puffer.frameLength
+            let schritt = puffer.stride
+            for i in 0..<Int(puffer.frameLength) { ziel[i] = quelle[i * schritt] }
             let kapazitaet = AVAudioFrameCount(Double(puffer.frameLength) * self.eingabeRate / format.sampleRate) + 32
             guard let aus = AVAudioPCMBuffer(pcmFormat: self.zielFormat, frameCapacity: kapazitaet) else { return }
             var geliefert = false
@@ -169,7 +178,7 @@ final class LiveTon: @unchecked Sendable {
                 if geliefert { status.pointee = .noDataNow; return nil }
                 geliefert = true
                 status.pointee = .haveData
-                return puffer
+                return einzeln
             }
             if let fehler, !self.wandlerFehlerGemeldet {
                 self.wandlerFehlerGemeldet = true
