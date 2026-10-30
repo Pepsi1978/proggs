@@ -18,7 +18,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -231,8 +230,7 @@ fun StartScreen(
     requestMicrophonePermission: () -> Unit,
 ) {
     val colors = LocalPmColors.current
-    val theme by viewModel.theme.collectAsStateWithLifecycle()
-    val darkThemeActive = theme == "dark" || theme == "system" && isSystemInDarkTheme()
+    val darkThemeActive = colors.dark
     val density = LocalDensity.current
     // The bottom bar floats above the scrolling content. Reserve exactly its height, otherwise the
     // locked-state hint ("Bitte zuerst ein Thema wählen") overlaps the recorder caption.
@@ -1777,8 +1775,15 @@ fun SettingsScreen(
                 Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Segment("Hell", theme == "light", { viewModel.setTheme("light") }, Modifier.weight(1f))
                     Segment("Dunkel", theme == "dark", { viewModel.setTheme("dark") }, Modifier.weight(1f))
-                    Segment("Wie System", theme == "system", { viewModel.setTheme("system") }, Modifier.weight(1f))
+                    Segment("Automatisch", theme == "system", { viewModel.setTheme("system") }, Modifier.weight(1f))
                 }
+                Text(
+                    "Automatisch nach der Sonne: hell ab Sonnenaufgang, dunkel ab Ende der Dämmerung.",
+                    color = colors.text2,
+                    fontFamily = Inter,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                )
             }
             SettingsSection("Sicherung") {
                 SettingRow(

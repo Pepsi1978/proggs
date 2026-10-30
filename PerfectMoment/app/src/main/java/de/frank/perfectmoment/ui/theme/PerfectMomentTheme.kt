@@ -1,5 +1,6 @@
 package de.frank.perfectmoment.ui.theme
 
+import android.content.res.Configuration
 import android.provider.Settings
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.RepeatMode
@@ -7,7 +8,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -16,11 +16,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -29,6 +33,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -36,7 +41,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import de.frank.perfectmoment.R
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -156,13 +165,32 @@ fun PerfectMomentTheme(
     appearance: String,
     content: @Composable () -> Unit,
 ) {
+    // Automatisch folgt der Sonne: jede Minute prüfen, nur solange sichtbar.
+    var sonneDunkel by remember(appearance) { mutableStateOf(Sonnenstand.istDunkel()) }
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lebenszyklus, appearance) {
+        if (appearance == "light" || appearance == "dark") return@LaunchedEffect
+        lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                sonneDunkel = Sonnenstand.istDunkel()
+                delay(60_000L)
+            }
+        }
+    }
     val isDark = when (appearance) {
         "light" -> false
-        "system" -> isSystemInDarkTheme()
+        "system" -> sonneDunkel
         else -> true
     }
     val colors = if (isDark) DarkPmColors else LightPmColors
     val context = LocalContext.current
+    // Eigene Fenster wie ModalBottomSheet lesen den Modus über isSystemInDarkTheme, deshalb bekommen sie den Modus der App als Konfiguration.
+    val systemKonfig = LocalConfiguration.current
+    val konfig = remember(systemKonfig, isDark) {
+        Configuration(systemKonfig).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or (if (isDark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+        }
+    }
     val reducedMotion = remember(context) {
         runCatching {
             Settings.Global.getFloat(
@@ -198,6 +226,7 @@ fun PerfectMomentTheme(
     CompositionLocalProvider(
         LocalPmColors provides colors,
         LocalReducedMotion provides reducedMotion,
+        LocalConfiguration provides konfig,
     ) {
         MaterialTheme(colorScheme = scheme, typography = MaterialTheme.typography, content = content)
     }
