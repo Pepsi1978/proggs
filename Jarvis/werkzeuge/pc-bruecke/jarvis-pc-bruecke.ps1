@@ -216,7 +216,7 @@ $($auftrag.auftrag)
 VORGEHEN
 1. App im Repo finden. Bekannt: Geniale Aufgaben = Aufgaben, Genialer Wecker = GenialerWeckerAndroid, Geniale Ideen = GenialeIdeen, Entropie Reductor = EntropieReductor, Jarvis = Jarvis, UpdateStation = UpdateStation. $unklar1
 $unklar2
-3. Nach den Profilregeln vollständig abschließen: bauen, Version, Commit, Push, Installation per WLAN, bei Android-Apps Skill apk-update. Abschlussmeldung auf Deutsch.
+3. Nach den Profilregeln vollständig abschließen: bauen, Version, Commit, Push, Installation per WLAN (die App Jarvis nie mit nacktem adb install, sondern immer über Werkzeuge/jarvis-install, das vorher per Overlay nach dem Zeitpunkt fragt), bei Android-Apps Skill apk-update. Abschlussmeldung auf Deutsch.
 "@
     # Die Brücke läuft tagelang und behielte sonst die Umgebung von ihrem Start: Nach einem JDK-Update zeigte
     # JAVA_HOME in jeder neuen Sitzung auf den gelöschten Ordner, und gradlew brach ab. Darum vor jedem Auftrag

@@ -1161,7 +1161,7 @@ def post(eingabe: dict) -> None:
             text = json.dumps(aus, ensure_ascii=False) if not isinstance(aus, str) else aus
             # Ein Exit-Code ungleich 0 kommt nur als PostToolUseFailure an; dazu Fehler, die mit Exit 0 enden.
             fehlgeschlagen = eingabe.get("hook_event_name") == "PostToolUseFailure" or \
-                bool(re.search(r"BUILD FAILED|INSTALL_FAILED|! \[rejected\]|APK_UPDATE_STATUS=fehler", text)) or \
+                bool(re.search(r"BUILD FAILED|INSTALL_FAILED|! \[rejected\]|APK_UPDATE_STATUS=fehler|JARVIS_INSTALL_STATUS=fehler", text)) or \
                 (isinstance(aus, dict) and bool(aus.get("interrupted")))
             if re.search(r"gradlew(\.bat)?\b.*\b(assemble|install|build|bundle)", befehl):
                 raus += sammel(z, "🔴 Bau fehlgeschlagen" if fehlgeschlagen else "🔨 Bau erfolgreich", sofort=True)
@@ -1169,6 +1169,11 @@ def post(eingabe: dict) -> None:
                 raus += sammel(z, "🔴 Push fehlgeschlagen" if fehlgeschlagen else "⬆️ Gepusht", sofort=True)
             elif re.search(r"\bgit\b.*\bcommit\b", befehl):
                 raus += sammel(z, "🔴 Commit fehlgeschlagen" if fehlgeschlagen else "📦 Committet", sofort=True)
+            elif "jarvis-install" in befehl:
+                # Das Skript wählt das Gerät selbst und nennt es erst in seiner Rückmeldung.
+                m = re.search(r"JARVIS_INSTALL_STATUS=installiert \(([^)]+)\)", text)
+                weg = installweg(f"adb -s {m.group(1)}") if m else ""
+                raus += sammel(z, "🔴 Installation fehlgeschlagen" if fehlgeschlagen else "📲 Auf dem Handy installiert" + weg, sofort=True)
             elif re.search(r"\badb\b.*\binstall\b", befehl):
                 raus += sammel(z, "🔴 Installation fehlgeschlagen" if fehlgeschlagen else "📲 Auf dem Handy installiert" + installweg(befehl), sofort=True)
             elif re.search(r"apk-update", befehl):
