@@ -8,7 +8,11 @@ import org.json.JSONObject
  * Was ein Werkzeug zurückgibt. [struktur] (für Modell und Karte) und [meta] (nur für die Karte, das Modell sieht es
  * nicht) braucht nur ein Werkzeug, das in ChatGPT etwas anzeigt (siehe [AblageKarte]).
  */
-data class Ergebnis(val text: String, val fehler: Boolean = false, val struktur: JSONObject? = null, val meta: JSONObject? = null)
+data class Ergebnis(
+    val text: String, val fehler: Boolean = false, val struktur: JSONObject? = null, val meta: JSONObject? = null,
+    /** Bilder als data-URL, die das eigene Modell von Jarvis mit dem Ergebnis sieht (Screenshots); das Plugin bekommt sie nicht. */
+    val bilder: List<String> = emptyList(),
+)
 
 /**
  * Ein Werkzeug, das ChatGPT (über das Plugin) und das eigene Modell von Jarvis gleichermaßen aufrufen können.
@@ -52,7 +56,7 @@ object Register {
             RegelnFaehigkeit(context.applicationContext),
             AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext), WetterFaehigkeit(context.applicationContext), FahrtFaehigkeit(context.applicationContext), AnthropicGuthabenFaehigkeit(context.applicationContext), GoogleGuthabenFaehigkeit(context.applicationContext),
             WeckerFaehigkeit(context.applicationContext), TimerFaehigkeit(context.applicationContext), StoppuhrFaehigkeit(context.applicationContext), EinstellungenFaehigkeit(context.applicationContext), IdeenFaehigkeit(context.applicationContext), ZieleFaehigkeit(context.applicationContext), EpigenetikFaehigkeit(context.applicationContext), StackLaborFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), PromptsFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
-            GedaechtnisFaehigkeit(context.applicationContext), FunktionenFaehigkeit(context.applicationContext), WebFaehigkeit(context.applicationContext), RepoFaehigkeit(context.applicationContext), ProgrammierFaehigkeit(context.applicationContext), MacJarvisFaehigkeit(context.applicationContext), AgentenFaehigkeit(context.applicationContext), SprachsessionFaehigkeit(),
+            GedaechtnisFaehigkeit(context.applicationContext), FunktionenFaehigkeit(context.applicationContext), WebFaehigkeit(context.applicationContext), RepoFaehigkeit(context.applicationContext), MacFaehigkeit(context.applicationContext), ProgrammierFaehigkeit(context.applicationContext), MacJarvisFaehigkeit(context.applicationContext), AgentenFaehigkeit(context.applicationContext), SprachsessionFaehigkeit(),
         ).also { liste = it }
     }
 

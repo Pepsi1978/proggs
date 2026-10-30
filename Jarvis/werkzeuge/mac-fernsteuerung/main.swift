@@ -9,7 +9,8 @@
 // Protokoll, beide Richtungen: [1 Byte Typ][4 Byte Länge, Big Endian][Nutzlast]
 //   Mac -> Handy: 0x01 Info-JSON {w,h}, 0x02 H.264-Bild (Annex B), 0x03 Zustand-JSON {tastatur,geheim,gesperrt},
 //                 0x04 Meldung-JSON {meldung}
-//   Handy -> Mac: 0x10 Anmeldung-JSON {token}, 0x11 Eingabe-JSON {t:…}
+//   Handy -> Mac: 0x10 Anmeldung-JSON {token, art?}, 0x11 Eingabe-JSON {t:…}
+//   Computer Use (art=werkzeug, eigene Verbindung neben der Live-Sitzung): siehe Befehle.swift
 
 import AppKit
 import Carbon
@@ -395,9 +396,10 @@ final class Eingabe {
         return CGPoint(x: r.minX + x * r.width, y: r.minY + y * r.height)
     }
 
-    private func maus(_ typ: CGEventType, _ p: CGPoint, _ knopf: CGMouseButton = .left, klicks: Int64 = 1) {
+    private func maus(_ typ: CGEventType, _ p: CGPoint, _ knopf: CGMouseButton = .left, klicks: Int64 = 1, flags: CGEventFlags = []) {
         let e = CGEvent(mouseEventSource: quelle, mouseType: typ, mouseCursorPosition: p, mouseButton: knopf)
         e?.setIntegerValueField(.mouseEventClickState, value: klicks)
+        if !flags.isEmpty { e?.flags = flags }
         e?.post(tap: .cghidEventTap)
     }
 
@@ -416,9 +418,10 @@ final class Eingabe {
                 // Zweiter Klick eines Doppelklicks: der erste kam schon beim ersten Tippen.
                 maus(.leftMouseDown, p, klicks: 2); maus(.leftMouseUp, p, klicks: 2); return
             }
+            let flags = Eingabe.flags((j["m"] as? [String]) ?? [])
             for k in 1...max(1, n) {
-                maus(.leftMouseDown, p, klicks: Int64(k))
-                maus(.leftMouseUp, p, klicks: Int64(k))
+                maus(.leftMouseDown, p, klicks: Int64(k), flags: flags)
+                maus(.leftMouseUp, p, klicks: Int64(k), flags: flags)
             }
         case "rechtsklick":
             let p = punkt(j)
@@ -505,15 +508,38 @@ final class Eingabe {
         "links": 123, "rechts": 124, "runter": 125, "hoch": 126,
         "a": 0, "c": 8, "f": 3, "n": 45, "q": 12, "r": 15, "s": 1, "t": 17, "v": 9, "w": 13, "x": 7, "z": 6,
         "komma": 43, "h": 4, "m": 46,
+        "f1": 122, "f2": 120, "f3": 99, "f4": 118, "f5": 96, "f6": 97, "f7": 98, "f8": 100, "f9": 101, "f10": 109, "f11": 103, "f12": 111,
+        "pos1": 115, "ende": 119, "bildhoch": 116, "bildrunter": 121,
     ]
 
-    func taste(_ name: String, mods: [String]) {
-        guard let code = Eingabe.tasten[name] else { return }
+    /// Tastenname eines Modells (auch englisch) auf den Namen der Tabelle.
+    private static let andereNamen: [String: String] = [
+        "return": "enter", "space": "leer", "leertaste": "leer", "backspace": "zurueck", "escape": "esc", "delete": "entf",
+        "left": "links", "right": "rechts", "down": "runter", "up": "hoch", "home": "pos1", "end": "ende",
+        "pageup": "bildhoch", "pagedown": "bildrunter",
+    ]
+
+    /// Tastencode: einzelne Zeichen aus der aktuellen Belegung (auf deutscher Tastatur liegt „z“ anderswo), sonst die Tabelle.
+    private func tastencode(_ roh: String) -> CGKeyCode? {
+        let n = roh.lowercased()
+        if n.count == 1, let z = n.first, let (code, _, _) = belegung[z] { return code }
+        return Eingabe.tasten[Eingabe.andereNamen[n] ?? n]
+    }
+
+    func kennt(_ name: String) -> Bool { tastencode(name) != nil }
+
+    static func flags(_ mods: [String]) -> CGEventFlags {
         var flags: CGEventFlags = []
         if mods.contains("cmd") { flags.insert(.maskCommand) }
         if mods.contains("shift") { flags.insert(.maskShift) }
         if mods.contains("alt") { flags.insert(.maskAlternate) }
         if mods.contains("ctrl") { flags.insert(.maskControl) }
+        return flags
+    }
+
+    func taste(_ name: String, mods: [String]) {
+        guard let code = tastencode(name) else { return }
+        let flags = Eingabe.flags(mods)
         let modTasten: [(String, CGKeyCode)] = [("cmd", 55), ("shift", 56), ("alt", 58), ("ctrl", 59)]
         for (m, c) in modTasten where mods.contains(m) {
             let e = CGEvent(keyboardEventSource: quelle, virtualKey: c, keyDown: true); e?.flags = flags; e?.post(tap: .cghidEventTap)
@@ -640,6 +666,8 @@ final class Zustand {
 final class Sitzung {
     let verbindung: NWConnection
     var angemeldet = false
+    /// Computer-Use-Verbindung: läuft neben der Live-Sitzung und verdrängt sie nicht.
+    var werkzeug = false
     /// Letztes Lebenszeichen vom Handy (Eingabe oder Puls).
     var zuletzt = Date()
     private var offen = 0
@@ -647,6 +675,7 @@ final class Sitzung {
     var beendet: (() -> Void)?
     var eingabe: (([String: Any]) -> Void)?
     var angemeldetCallback: (() -> Void)?
+    var befehl: (([String: Any]) -> Void)?
 
     init(_ v: NWConnection) { verbindung = v }
 
@@ -682,10 +711,14 @@ final class Sitzung {
         let json = (try? JSONSerialization.jsonObject(with: daten)) as? [String: Any] ?? [:]
         if typ == 0x10 {
             if !token.isEmpty, (json["token"] as? String) == token {
-                angemeldet = true; angemeldetCallback?()
+                angemeldet = true
+                werkzeug = (json["art"] as? String) == "werkzeug"
+                angemeldetCallback?()
             } else { log("Anmeldung abgelehnt"); stop() }
         } else if typ == 0x11, angemeldet {
             eingabe?(json)
+        } else if typ == 0x12, angemeldet {
+            befehl?(json)
         }
     }
 
@@ -725,6 +758,13 @@ final class Dienst {
     let eingabeWarteschlange = DispatchQueue(label: "eingabe")
     var warGesperrt = Zustand.gesperrt()
     var fehlstarts = 0
+    /// Offene Computer-Use-Verbindungen (nur auf main).
+    var werkzeugSitzungen: [ObjectIdentifier: Sitzung] = [:]
+    lazy var befehle = Befehle(dienst: self)
+    /// Bis hierhin bleibt ein virtueller Bildschirm auch ohne Live-Sitzung stehen: Ein Modell braucht ihn über viele Schritte.
+    private var werkzeugBis = Date.distantPast
+
+    func werkzeugGenutzt() { werkzeugBis = Date().addingTimeInterval(180) }
 
     func aufnahmeStarten() {
         aufnahme.stop()
@@ -800,7 +840,7 @@ final class Dienst {
     func wachHalten() {
         wach.systemAn()
         if sitzung == nil {
-            bildschirm.freigeben()
+            if Date() >= werkzeugBis { bildschirm.freigeben() }
             // Franks Vorgabe: der Mac geht nie in den Ruhezustand, auch das Display nicht (danach sperrt macOS den Mac
             // trotz ausgeschalteter Bildschirmsperre, und aus der Ferne lässt er sich nicht entsperren).
             if !wach.aktiv { log("Display und Rechner bleiben dauerhaft wach, kein Ruhezustand") }
@@ -891,6 +931,11 @@ final class Dienst {
             guard let self, let s else { return }
             log("angemeldet")
             self.wartend[id] = nil
+            if s.werkzeug {
+                self.werkzeugSitzungen[id] = s
+                self.werkzeugGenutzt()
+                return
+            }
             // Übernahme: alte Sitzung schließen, Bildschirm und Wachhalten bleiben (kein doppelter Umbau).
             if let alt = self.sitzung, alt !== s { self.sitzung = nil; alt.stop(); self.aufnahme.stop(); self.zustand.stop() }
             self.sitzung = s
@@ -903,6 +948,18 @@ final class Dienst {
             self.fehlstarts = 0
             self.aufnahmeStarten()
             self.zustand.start()
+        }
+        s.befehl = { [weak self, weak s] j in
+            guard let self, let s, s.werkzeug else { return }
+            let nummer = j["id"]
+            self.befehle.ausfuehren(j) { antwort, datei in
+                DispatchQueue.main.async {
+                    var a = antwort
+                    if let nummer { a["id"] = nummer }
+                    s.sendenJSON(0x05, a)
+                    if let datei { s.senden(0x06, datei) }
+                }
+            }
         }
         s.eingabe = { [weak self, weak s] j in
             guard let self, let s, self.sitzung === s else { return }
@@ -917,6 +974,7 @@ final class Dienst {
         s.beendet = { [weak self, weak s] in
             guard let self, let s else { return }
             self.wartend[id] = nil
+            self.werkzeugSitzungen[id] = nil
             guard self.sitzung === s else { return }
             log("Verbindung beendet")
             self.sitzung = nil

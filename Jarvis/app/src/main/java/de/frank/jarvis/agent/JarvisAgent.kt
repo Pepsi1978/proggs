@@ -203,8 +203,9 @@ class JarvisAgent(context: Context) {
         if (!auth.kannDenken(modell)) { beiAbbruch(if (modell.istAnthropic) "Für ${modell.label} fehlt der Anthropic-API-Schlüssel" else "Jarvis ist nicht mit ChatGPT angemeldet"); return null }
         // Regeln und Notizen über Frank schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und haben beides nur vor Augen.
         // Agenten beauftragen, programmieren lassen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten und keine Programmieraufträge.
+        // Den Mac bedient nur das Gespräch mit Frank, nie ein Hintergrundlauf ohne sein Zuschauen.
         // Die Websuche haben Agenten mit Internet und jedes Gespräch mit Frank (aktuelle Fragen direkt beantworten statt einen Agenten zu starten), die Tagesauswertung nicht.
-        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "programmieren" && it.id != "sprachsession")) }
+        val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "programmieren" && it.id != "sprachsession" && it.id != "mac")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else it }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
@@ -304,7 +305,7 @@ class JarvisAgent(context: Context) {
                 } else {
                     aufrufe.map { c -> fuehreAus(c, werkzeuge, ablageTitel, ablageDauerhaft, beiSchritt, meldeAenderung) }
                 }
-                ergebnisse.forEach { (titel, text) ->
+                ergebnisse.forEach { (titel, text, _) ->
                     genutzt[titel] = (genutzt[titel] ?: 0) + 1
                     if (text.startsWith("FEHLER: ")) { fehlerZahl++; fehlerFolge++; letzterFehler = "$titel: " + text.removePrefix("FEHLER: ").lineSequence().first().take(160) } else fehlerFolge = 0
                 }
@@ -316,16 +317,18 @@ class JarvisAgent(context: Context) {
                     "\n\nNICHT AUSGEFÜHRT (höchstens $MAX_AUFRUFE Werkzeuge je Schritt): " +
                         verworfen.joinToString("; ") { c -> c.optString("werkzeug") + " " + (c.optJSONObject("argumente") ?: JSONObject()).toString().take(300) } +
                         " – rufe sie im nächsten Schritt erneut auf."
+                val neueBilder = ergebnisse.flatMap { it.third }
                 zuege += if (ergebnisse.size == 1) {
-                    ChatTurn("user", "WERKZEUG-ERGEBNIS (${aufrufe[0].optString("werkzeug")}):\n${ergebnisse[0].second}$nichtAusgefuehrt")
+                    ChatTurn("user", "WERKZEUG-ERGEBNIS (${aufrufe[0].optString("werkzeug")}):\n${ergebnisse[0].second}$nichtAusgefuehrt", neueBilder)
                 } else {
                     ChatTurn("user", "WERKZEUG-ERGEBNISSE:\n" + aufrufe.indices.joinToString("\n\n") { i ->
                         val argumente = (aufrufe[i].optJSONObject("argumente") ?: JSONObject()).toString().take(120)
                         "(${i + 1}. ${aufrufe[i].optString("werkzeug")} $argumente):\n${ergebnisse[i].second}"
-                    } + nichtAusgefuehrt)
+                    } + nichtAusgefuehrt, neueBilder)
                 }
                 ergebnisZuege += zuege.lastIndex
                 kuerzeAeltere(zuege, ergebnisZuege, ERGEBNIS_BUDGET)
+                bilderBegrenzen(zuege, ergebnisZuege, MAX_WERKZEUG_BILDER)
                 // Tokenlimit ausgeschöpft: zwischen zwei Schritten anhalten, unten wird Frank gefragt. Eine fertige Antwort geht immer durch.
                 if (tokenGrenze > 0 && verbraucht >= tokenGrenze && (maxSchritte <= 0 || schritte < maxSchritte)) { tokenErreicht = true; return@withTimeoutOrNull null }
             }
@@ -403,7 +406,7 @@ class JarvisAgent(context: Context) {
             return null
         }
         // Nach einem Modellfehler (oft die Kontextlänge) alle Ergebnisse knapp halten, damit der Zwischenstand überhaupt durchgeht.
-        if (modellFehler != null) kuerzeAeltere(zuege, ergebnisZuege + Int.MAX_VALUE, 0)
+        if (modellFehler != null) { kuerzeAeltere(zuege, ergebnisZuege + Int.MAX_VALUE, 0); bilderBegrenzen(zuege, ergebnisZuege, 0) }
         zuege += ChatTurn("user", "ABSCHLUSS: $grund. Rufe KEIN Werkzeug mehr auf. Antworte jetzt sofort mit {\"antwort\": \"…\"} und schreibe das Ergebnis aus allem, " +
             "was du bisher hast. Sag am Anfang in einem Satz, dass es ein Zwischenstand ist und was noch fehlt. Nenne nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat.")
         val ende = withTimeoutOrNull(reserve) {
@@ -437,6 +440,18 @@ class JarvisAgent(context: Context) {
         }
     }
 
+    /** Nur die jüngsten [behalten] Bilder aus Werkzeug-Ergebnissen gehen mit: Jeder Schritt schickt den ganzen Verlauf, ältere Screenshots sind überholt. */
+    private fun bilderBegrenzen(zuege: MutableList<ChatTurn>, indizes: List<Int>, behalten: Int) {
+        var rest = behalten
+        for (i in indizes.asReversed()) {
+            val z = zuege.getOrNull(i) ?: continue
+            if (z.bilder.isEmpty()) continue
+            val bleiben = z.bilder.takeLast(rest.coerceAtLeast(0))
+            rest -= bleiben.size
+            if (bleiben.size < z.bilder.size) zuege[i] = z.copy(text = z.text + "\n(Älteres Bild nicht mehr mitgeschickt.)", bilder = bleiben)
+        }
+    }
+
     /**
      * Die Werkzeugaufrufe einer Modellantwort: ein einzelner ({"werkzeug": …}) oder mehrere ({"werkzeuge": [ … ]}).
      * Liefert die auszuführenden (höchstens [MAX_AUFRUFE]) und die verworfenen; Letztere bekommt das Modell als
@@ -450,7 +465,7 @@ class JarvisAgent(context: Context) {
         return (if (schritt.optString("werkzeug").isNotEmpty()) listOf(schritt) else emptyList()) to emptyList()
     }
 
-    /** Führt einen Aufruf aus; liefert den Titel fürs Protokoll und den Text fürs Modell. Ein Fehler bleibt beim einzelnen Werkzeug. */
+    /** Führt einen Aufruf aus; liefert den Titel fürs Protokoll, den Text und die Bilder fürs Modell. Ein Fehler bleibt beim einzelnen Werkzeug. */
     private suspend fun fuehreAus(
         aufruf: JSONObject,
         werkzeuge: List<de.frank.jarvis.faehigkeit.Werkzeug>,
@@ -458,14 +473,14 @@ class JarvisAgent(context: Context) {
         ablageDauerhaft: Boolean,
         beiSchritt: (String) -> Unit,
         beiAenderung: (String) -> Unit,
-    ): Pair<String, String> {
+    ): Triple<String, String, List<String>> {
         val name = aufruf.optString("werkzeug")
         val werkzeug = werkzeuge.firstOrNull { it.name == name }
         // JSON-null zählt als nicht angegeben (sonst läse das Werkzeug den Text „null“).
         val argumente = (aufruf.optJSONObject("argumente") ?: JSONObject()).ohneNull()
         val titel = werkzeug?.titel ?: name
         beiSchritt(titel)
-        if (werkzeug == null) return titel to "FEHLER: Das Werkzeug $name gibt es nicht."
+        if (werkzeug == null) return Triple(titel, "FEHLER: Das Werkzeug $name gibt es nicht.", emptyList())
         // Werkzeuge dürfen hier auf lange Arbeit warten (Bild, Download); Dateien ohne Titel gehören zum Agenten-Eintrag.
         // Sie lesen Dateien und Kalender: deshalb auf IO, nie auf dem Hauptfaden.
         val werkzeugBeginn = System.currentTimeMillis()
@@ -490,7 +505,7 @@ class JarvisAgent(context: Context) {
         }
         // Ein einzelnes Ergebnis höchstens so lang wie die größten Werkzeuge ohnehin liefern (Ablage-Text); ältere kürzt kuerzeAeltere.
         val text = if (r.text.length <= EIN_ERGEBNIS) r.text else r.text.take(EIN_ERGEBNIS) + "\n… (gekürzt, ${r.text.length} Zeichen)"
-        return titel to ((if (r.fehler) "FEHLER: " else "") + text)
+        return Triple(titel, (if (r.fehler) "FEHLER: " else "") + text, r.bilder)
     }
 
     /**
@@ -626,6 +641,8 @@ class JarvisAgent(context: Context) {
         private const val GESAMTBILD_MS = 15_000L
         /** Höchstens so viele Werkzeugaufrufe laufen in einem Schritt; der Rest geht als „NICHT AUSGEFÜHRT“ ans Modell zurück. */
         private const val MAX_AUFRUFE = 6
+        /** So viele Screenshots sieht das Modell höchstens gleichzeitig; mac_aufnahme liefert bis zu vier auf einmal. */
+        private const val MAX_WERKZEUG_BILDER = 4
         /** Was läuft, solange das Modell an einem Schritt denkt (für [Zeitablauf.unterbrochen]). */
         const val MODELL_DENKT = "Das Modell denkt nach"
         /** Bestand eine Antwort nur aus technischem Markup, sagt Jarvis das statt nichts oder Markup. */
