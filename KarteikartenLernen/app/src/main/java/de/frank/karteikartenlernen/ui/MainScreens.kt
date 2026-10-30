@@ -192,6 +192,10 @@ fun SettingsScreen(
                     SmallPill("Trennen", onLogout)
                 }
             }
+            Column(Modifier.fillMaxWidth().border(0.5.dp, c.border).padding(horizontal = 16.dp, vertical = 13.dp)) {
+                Text("Spracheingabe · Offline", color = c.muted, fontSize = 12.5.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(bottom = 8.dp))
+                de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+            }
             val keys = state.apiKeys
             val groqConfigured = keys.groqApiKey.isNotBlank()
             SettingRow(

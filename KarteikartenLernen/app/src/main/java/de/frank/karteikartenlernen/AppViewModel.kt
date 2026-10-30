@@ -38,6 +38,7 @@ import de.frank.karteikartenlernen.model.sampleSessions
 import de.frank.karteikartenlernen.model.sampleCards
 import de.frank.karteikartenlernen.model.advanceLearningQueue
 import de.frank.karteikartenlernen.transcription.GroqTranscriber
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import de.frank.karteikartenlernen.text.GeminiTextImprover
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
@@ -148,8 +149,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun startRecording() {
-        if (_uiState.value.mic != MicState.IDLE || !groqTranscriber.isConfigured) {
-            if (!groqTranscriber.isConfigured) {
+        val parakeet = ParakeetUeberJarvis.gewaehlt(getApplication())
+        if (_uiState.value.mic != MicState.IDLE || (!parakeet && !groqTranscriber.isConfigured)) {
+            if (!parakeet && !groqTranscriber.isConfigured) {
                 _uiState.update { it.copy(message = "Bitte in den Einstellungen den Groq-API-Schlüssel eintragen.") }
             }
             return
@@ -185,7 +187,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 start?.await() ?: error("Die Aufnahme wurde nicht gestartet.")
                 audioFile = audioRecorder.stop()
-                val transcript = groqTranscriber.transcribe(audioFile)
+                val transcript = if (ParakeetUeberJarvis.gewaehlt(getApplication())) {
+                    ParakeetUeberJarvis.transkribiere(getApplication(), audioFile)
+                } else {
+                    groqTranscriber.transcribe(audioFile)
+                }
                 transcriptionFinished(transcript)
                 sounds.play(SoundEffect.TRANSITION, _uiState.value.settings)
             } catch (cancelled: CancellationException) {
@@ -210,7 +216,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         recordingTimerJob?.cancel()
         val result = text?.takeIf(String::isNotBlank)
         _uiState.update { state ->
-            if (result == null) state.copy(mic = MicState.IDLE, message = "Groq hat keinen Text erkannt. Deine vorhandene Eingabe wurde nicht verändert.")
+            if (result == null) state.copy(mic = MicState.IDLE, message = "Es wurde kein Text erkannt. Deine vorhandene Eingabe wurde nicht verändert.")
             else {
                 val merged = appendTranscription(state.input, result)
                 val base = state.versions.take(state.versionIndex + 1)
