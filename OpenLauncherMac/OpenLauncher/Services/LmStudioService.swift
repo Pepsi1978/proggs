@@ -180,27 +180,6 @@ final class LmStudioService {
             .map { $0.element }
     }
 
-    /// Startet bei Bedarf den Server und liest danach die Modelle. Der Serverstart passiert nur,
-    /// wenn die erste Abfrage ins Leere laeuft - so bleibt der Programmstart schnell.
-    func localModelsWithServer() async -> [ModelEntry] {
-        let models = await localModels()
-        if !models.isEmpty || !LmStudioService.isInstalled { return models }
-
-        await Task.detached { _ = LmStudioService.ensureServerRunning() }.value
-
-        // "lms server start" kehrt zurueck, bevor der HTTP-Endpunkt Anfragen annimmt. Ohne
-        // Wiederholversuche liefert die naechste Abfrage deshalb eine leere Liste - der Reiter
-        // "LM Studio" bleibt dann leer, obwohl LM Studio laeuft.
-        for attempt in 0..<4 {
-            let models = await localModels()
-            if !models.isEmpty { return models }
-            if attempt < 3 { try? await Task.sleep(nanoseconds: 1_500_000_000) }
-        }
-        Logger.shared.warn("LmStudioService", "localModelsWithServer",
-                           "Server gestartet, liefert aber keine Modelle")
-        return []
-    }
-
     /// Baut den Anzeigenamen. Mit Katalogeintrag: "Qwen3.8 27B UD - unsloth (lokal)". Ohne ihn
     /// (kein lms, Modell nicht im Katalog) wie bisher aus der ID abgeleitet:
     /// "mistralai/devstral-small-2-2512" -> "Devstral Small 2 2512 (lokal)".

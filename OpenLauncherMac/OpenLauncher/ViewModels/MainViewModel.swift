@@ -551,10 +551,12 @@ final class MainViewModel {
 
     /// Liest beim Start die lokal in LM Studio geladenen/verfuegbaren Modelle und fuellt damit den
     /// Reiter "LM Studio". Ist LM Studio nicht installiert oder der Server aus, bleibt die zuletzt
-    /// bekannte Liste stehen - der Launcher startet trotzdem normal.
+    /// bekannte Liste stehen - der Launcher startet trotzdem normal. LM Studio wird hier bewusst
+    /// nicht gestartet: "lms server start" weckt die ganze App als Hintergrunddienst. Der Server
+    /// startet erst, wenn wirklich ein LM-Studio-Modell gewaehlt wird (configureProvider).
     private func refreshLmStudioModels() async {
         guard LmStudioService.isInstalled else { return }
-        let localModels = await lmStudio.localModelsWithServer()
+        let localModels = await lmStudio.localModels()
         if localModels.isEmpty { return }
         registry.syncLmStudioModels(localModels)
         modelGroups = registry.groups
