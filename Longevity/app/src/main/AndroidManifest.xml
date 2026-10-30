@@ -9,6 +9,16 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Brücke zu Jarvis (Parakeet-Offline-Transkription): nur Apps mit demselben Signierschlüssel dürfen zugreifen. -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+
+    <queries>
+        <provider android:authorities="de.frank.jarvis.parakeet" />
+    </queries>
+
     <application
         android:name=".LongevityApplication"
         android:allowBackup="true"

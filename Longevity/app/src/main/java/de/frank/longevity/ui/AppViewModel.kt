@@ -150,7 +150,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun neueIdee() {
         eText = ""; textVorKorrektur = null; korrekturFassungen = emptyList()
         zeige(Bildschirm.Neu)
-        if (einstellungen.autoMikro && einstellungen.groqKey.isNotBlank()) mikroTippen()
+        if (einstellungen.autoMikro && (einstellungen.groqKey.isNotBlank() || de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication()))) mikroTippen()
     }
 
     fun textGeaendert(neu: String) {
@@ -453,7 +453,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun mikroTippen() {
         when (aufnahme) {
             Aufnahme.AUS -> {
-                if (einstellungen.groqKey.isBlank()) { melde("Bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."); return }
+                if (einstellungen.groqKey.isBlank() && !de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication())) { melde("Bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."); return }
                 mikrofonAnfragen()
             }
             Aufnahme.LAEUFT -> aufnahmeBeenden()
@@ -495,7 +495,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val wav = mikro.stop()
                 if (wav == null) { melde("Es wurde nichts aufgenommen."); nachAufnahme = null; return@launch }
-                val text = Diktat(transcriber).transkribiere(wav).text.trim()
+                val text = if (de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication())) de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.transkribiere(getApplication(), wav)
+                else Diktat(transcriber).transkribiere(wav).text.trim()
                 if (text.isBlank()) {
                     melde("Keine Sprache erkannt.")
                     nachAufnahme = null
