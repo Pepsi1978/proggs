@@ -1,5 +1,6 @@
 package de.frank.ziele.ui
 
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
@@ -606,7 +607,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun mikroTippen(ziel: DiktatZiel) {
         when (aufnahme) {
             Aufnahme.AUS -> {
-                if (einstellungen.groqKey.isBlank()) { melde("Bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen (oder aus Jarvis übernehmen)."); return }
+                if (einstellungen.groqKey.isBlank() && !ParakeetUeberJarvis.gewaehlt(getApplication())) { melde("Bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen (oder aus Jarvis übernehmen)."); return }
                 diktatZiel = ziel
                 mikrofonAnfragen()
             }
@@ -649,7 +650,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val wav = mikro.stop()
                 if (wav == null) { melde("Es wurde nichts aufgenommen."); return@launch }
-                val text = Diktat(transcriber).transkribiere(wav).text.trim()
+                val text = if (ParakeetUeberJarvis.gewaehlt(getApplication())) ParakeetUeberJarvis.transkribiere(getApplication(), wav)
+                else Diktat(transcriber).transkribiere(wav).text.trim()
                 when {
                     text.isBlank() -> melde("Keine Sprache erkannt.")
                     wohin == DiktatZiel.KONTEXT -> { Kontext.ergaenze(getApplication(), text); melde("In die Kontextdatei übernommen ✓") }

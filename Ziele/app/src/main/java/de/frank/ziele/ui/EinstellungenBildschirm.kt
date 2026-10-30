@@ -102,6 +102,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Chip("Schlüssel aus Jarvis übernehmen", false, icon = Icons.Rounded.Link) { vm.schluesselAusJarvis { schluesselStand++ } }
                 }
                 // ---- Sprache ----
+                Block("Spracheingabe · Offline") {
+                    de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                }
                 Block("Spracheingabe · Whisper (Groq)") {
                     Feld("Groq-API-Schlüssel", e.groqKey, geheim = true) { e.groqKey = it }
                     Text("Whisper-Modell", color = f.textLeise, fontSize = 13.sp)

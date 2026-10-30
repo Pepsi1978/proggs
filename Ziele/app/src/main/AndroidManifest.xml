@@ -33,6 +33,7 @@
         <package android:name="de.frank.jarvis" />
         <provider android:authorities="de.frank.aufgaben.jarvis" />
         <provider android:authorities="de.frank.jarvis.ziele" />
+        <provider android:authorities="de.frank.jarvis.parakeet" />
     </queries>
 
     <application
