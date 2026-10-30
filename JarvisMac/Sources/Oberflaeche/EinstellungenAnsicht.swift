@@ -134,10 +134,10 @@ struct EinstellungenAnsicht: View {
                     TextField("", text: $einst.weckwort).textFieldStyle(.roundedBorder).frame(width: 200)
                         .onSubmit { Weckwort.shared.stoppen(); if einst.weckwortAn { Weckwort.shared.starten() } }
                 }
-                zeile("Stillezeit in der App", "Sekunden Stille nach deinem letzten Wort, bis das Mikrofon schließt, wenn Jarvis vorn ist: 1 bis 15, auch mit Komma. Nicht im Live-Modus.") {
+                zeile("Stillezeit in der App", "Sekunden Stille nach deinem letzten Wort, bis das Mikrofon schließt, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist: 1 bis 15, auch mit Komma. Gilt auch für ⌥⌘J, nicht im Live-Modus.") {
                     StillezeitFeld(sekunden: $einst.stilleInAppSek)
                 }
-                zeile("Stillezeit außerhalb der App", "Dasselbe, wenn Jarvis im Hintergrund ist (Fenster zu oder andere App vorn).") {
+                zeile("Stillezeit außerhalb der App", "Dasselbe in allen anderen Fällen: Das Gespräch begann im Hintergrund (Fenster zu oder andere App vorn) oder Jarvis ist nicht mehr vorn.") {
                     StillezeitFeld(sekunden: $einst.stilleAussenSek)
                 }
                 zeile("Tastenkürzel", "⌥⌘J überall: sprechen · ⌥⌘K: Jarvis öffnen · im Fenster ⌘D sprechen, ⌘L Live, ⌘N neues Gespräch.") {
@@ -374,25 +374,31 @@ struct KontenAnsicht: View {
     }
 }
 
-/// Eine Stillezeit in Sekunden; übernimmt mit Eingabetaste oder beim Verlassen des Felds, Ungültiges fällt auf den alten Wert zurück.
+/// Eine Stillezeit in Sekunden; übernimmt mit Eingabetaste oder beim Verlassen, Ungültiges zeigt kurz einen Hinweis und fällt auf den alten Wert zurück.
 private struct StillezeitFeld: View {
     @Binding var sekunden: Double
     @State private var text = ""
     @FocusState private var fokus: Bool
+    @State private var ungueltig = false
 
     var body: some View {
         HStack(spacing: 6) {
+            if ungueltig { Text("1 bis 15").font(.jarvis(12)).foregroundStyle(.red) }
             TextField("", text: $text).textFieldStyle(.roundedBorder).frame(width: 60).focused($fokus)
                 .onSubmit(uebernehmen)
                 .onChange(of: fokus) { _, drin in if !drin { uebernehmen() } }
             Text("Sekunden").font(.jarvis(12)).foregroundStyle(Farbe.text3)
         }
         .onAppear { text = Einstellungen.stilleZahl(sekunden) }
+        // Ein Klick ins Leere nimmt dem Feld nicht sicher den Fokus: Auch beim Verlassen der Seite übernehmen.
+        .onDisappear(perform: uebernehmen)
         .onChange(of: sekunden) { _, s in text = Einstellungen.stilleZahl(s) }
     }
 
     private func uebernehmen() {
-        if let s = Einstellungen.stilleAus(text) { sekunden = s }
+        let s = Einstellungen.stilleAus(text)
+        ungueltig = s == nil
+        if let s { sekunden = s }
         text = Einstellungen.stilleZahl(sekunden)
     }
 }

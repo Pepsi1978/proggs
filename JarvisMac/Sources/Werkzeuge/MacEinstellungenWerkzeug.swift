@@ -22,6 +22,15 @@ enum MacEinstellungsKatalog {
         }
     }
 
+    private static func stillezeit(_ kennung: String, _ titel: String, _ beschreibung: String, _ pfad: ReferenceWritableKeyPath<Einstellungen, Double>) -> Eintrag {
+        let e = Einstellungen.shared
+        return Eintrag(kennung: kennung, bereich: "Sprache", titel: titel, beschreibung: beschreibung,
+                       werte: "1 bis 15 Sekunden, auch mit Komma, z. B. 2,5", lesen: { Einstellungen.stilleText(e[keyPath: pfad]) }) { v in
+            guard let s = Einstellungen.stilleAus(v) else { return "Erlaubt: 1 bis 15 Sekunden, auch mit Komma" }
+            e[keyPath: pfad] = s; return nil
+        }
+    }
+
     static var alle: [Eintrag] {
         let e = Einstellungen.shared
         let v = VorleseEinstellungen.shared
@@ -70,16 +79,8 @@ enum MacEinstellungsKatalog {
                 guard let b = wahr(v) else { return "an oder aus" }
                 e.weckwortAn = b; b ? Weckwort.shared.starten() : Weckwort.shared.stoppen(); return nil
             },
-            Eintrag(kennung: "weckwort_stille_app", bereich: "Sprache", titel: "Stillezeit in der App", beschreibung: "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn Jarvis beim Weckwort vorn war; nicht im Live-Modus. Sagt Frank nur „die Stillezeit“, ist diese gemeint.",
-                    werte: "1 bis 15 Sekunden, auch mit Komma, z. B. 2,5", lesen: { Einstellungen.stilleText(e.stilleInAppSek) }) { v in
-                guard let s = Einstellungen.stilleAus(v) else { return "Erlaubt: 1 bis 15 Sekunden, auch mit Komma" }
-                e.stilleInAppSek = s; return nil
-            },
-            Eintrag(kennung: "weckwort_stille_aussen", bereich: "Sprache", titel: "Stillezeit außerhalb der App", beschreibung: "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn Jarvis beim Weckwort im Hintergrund war (Fenster zu oder andere App vorn); nicht im Live-Modus.",
-                    werte: "1 bis 15 Sekunden, auch mit Komma, z. B. 2,5", lesen: { Einstellungen.stilleText(e.stilleAussenSek) }) { v in
-                guard let s = Einstellungen.stilleAus(v) else { return "Erlaubt: 1 bis 15 Sekunden, auch mit Komma" }
-                e.stilleAussenSek = s; return nil
-            },
+            stillezeit("weckwort_stille_app", "Stillezeit in der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon, wenn das Gespräch bei Jarvis vorn begann und er noch vorn ist, per Weckwort oder ⌥⌘J; nicht im Live-Modus. Sagt Frank nur „die Stillezeit“, ist diese gemeint.", \.stilleInAppSek),
+            stillezeit("weckwort_stille_aussen", "Stillezeit außerhalb der App", "Nach so viel Stille seit Franks letztem Wort schließt das Mikrofon in allen anderen Fällen (Gespräch im Hintergrund begonnen, Jarvis nicht mehr vorn oder Bildschirm gesperrt), per Weckwort oder ⌥⌘J; nicht im Live-Modus.", \.stilleAussenSek),
             Eintrag(kennung: "weckwort", bereich: "Sprache", titel: "Weckwort-Phrase", beschreibung: "z. B. „Hey Jarvis“ oder „Okay Computer“.",
                     werte: "Text", lesen: { e.weckwort }) { v in
                 guard !v.isEmpty else { return "Leer geht nicht" }

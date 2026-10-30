@@ -187,6 +187,12 @@ final class AppSteuerung {
         NSApp.isActive && NSApp.windows.contains { $0.canBecomeMain && $0.isVisible && !$0.isMiniaturized }
     }
 
+    /// Bildschirm gesperrt oder im Ruhezustand: NSApp.isActive kann dann weiter true sein.
+    static var bildschirmAus: Bool {
+        let sitzung = CGSessionCopyCurrentDictionary() as? [String: Any]
+        return sitzung?["CGSSessionScreenIsLocked"] as? Bool == true || CGDisplayIsAsleep(CGMainDisplayID()) != 0
+    }
+
     /// „Hey Jarvis“: wie am Handy. Ist Jarvis vorn, geht das offene Gespräch weiter, sonst beginnt ein neues im Hintergrund mit der Pille.
     func weckwortErkannt() {
         guard !LiveGespraech.shared.aktiv, SprachSchleife.shared.zustand == .aus else { return }

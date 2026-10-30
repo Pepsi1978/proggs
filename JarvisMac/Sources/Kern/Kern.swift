@@ -266,23 +266,32 @@ final class Einstellungen {
     var liveModellOpenAI: String { didSet { d.set(liveModellOpenAI, forKey: "liveModellOpenAI"); Logbuch.shared.einstellung("liveModellOpenAI", "\(liveModellOpenAI)", wo: "Einstellungen") } }
     var liveModellGemini: String { didSet { d.set(liveModellGemini, forKey: "liveModellGemini"); Logbuch.shared.einstellung("liveModellGemini", "\(liveModellGemini)", wo: "Einstellungen") } }
     /// Live-Gespräch endet nach so vielen Minuten Stille, 0 = nie.
-    /// Stille nach dem letzten Wort in Sekunden, bis das Mikrofon schließt: Weckwort bei Jarvis vorn bzw. im Hintergrund (nicht Live).
+    var liveStilleMinuten: Int { didSet { d.set(liveStilleMinuten, forKey: "liveStilleMinuten"); Logbuch.shared.einstellung("liveStilleMinuten", "\(liveStilleMinuten)", wo: "Einstellungen") } }
+    /// Stille nach dem letzten Wort in Sekunden, bis das Mikrofon schließt: Gespräch bei Jarvis vorn bzw. im Hintergrund, per Weckwort oder Kürzel (nicht Live).
     var stilleInAppSek: Double { didSet { d.set(stilleInAppSek, forKey: "stilleInAppSek"); Logbuch.shared.einstellung("stilleInAppSek", "\(stilleInAppSek)", wo: "Einstellungen") } }
     var stilleAussenSek: Double { didSet { d.set(stilleAussenSek, forKey: "stilleAussenSek"); Logbuch.shared.einstellung("stilleAussenSek", "\(stilleAussenSek)", wo: "Einstellungen") } }
     static let stilleBereich = 1.0...15.0
-    /// Sekunden aus Text („2,5“, „2.5 Sekunden“), auf eine Kommastelle gerundet; nil ohne Zahl oder außerhalb der Grenzen.
+    static let stilleStandard = 4.5
+    /// Sekunden aus Text („2,5“, „2.5 Sekunden“, „Maximum“), auf eine Kommastelle gerundet. nil bei allem anderen,
+    /// auch bei anderer Einheit oder Vorzeichen: „2 Minuten“ darf nie still 2 Sekunden werden.
     static func stilleAus(_ text: String) -> Double? {
-        guard let r = text.range(of: #"\d+(?:[.,]\d+)?"#, options: .regularExpression),
-              let x = Double(text[r].replacingOccurrences(of: ",", with: ".")) else { return nil }
+        let t = text.trimmingCharacters(in: .whitespaces).lowercased()
+        if ["maximal", "maximum", "max", "voll"].contains(t) { return stilleBereich.upperBound }
+        if ["minimal", "minimum", "min"].contains(t) { return stilleBereich.lowerBound }
+        guard t.range(of: #"^\d+([.,]\d+)?\s*(s|sek\.?|sekunden?)?$"#, options: .regularExpression) != nil,
+              let r = t.range(of: #"^\d+([.,]\d+)?"#, options: .regularExpression),
+              let x = Double(t[r].replacingOccurrences(of: ",", with: ".")) else { return nil }
         let gerundet = (x * 10).rounded() / 10
         return stilleBereich.contains(gerundet) ? gerundet : nil
+    }
+    private static func stilleGeladen(_ d: UserDefaults, _ schluessel: String) -> Double {
+        min(max(d.object(forKey: schluessel) as? Double ?? stilleStandard, stilleBereich.lowerBound), stilleBereich.upperBound)
     }
     /// „2,5“ oder „2“: mit Komma nur, wenn nötig.
     static func stilleZahl(_ s: Double) -> String {
         s == s.rounded() ? String(Int(s)) : String(format: "%.1f", s).replacingOccurrences(of: ".", with: ",")
     }
     static func stilleText(_ s: Double) -> String { stilleZahl(s) + (s == 1 ? " Sekunde" : " Sekunden") }
-    var liveStilleMinuten: Int { didSet { d.set(liveStilleMinuten, forKey: "liveStilleMinuten"); Logbuch.shared.einstellung("liveStilleMinuten", "\(liveStilleMinuten)", wo: "Einstellungen") } }
     var vollzugriff: Bool { didSet { d.set(vollzugriff, forKey: "vollzugriff"); Logbuch.shared.einstellung("vollzugriff", "\(vollzugriff)", wo: "Einstellungen") } }
     var lernenAn: Bool { didSet { d.set(lernenAn, forKey: "lernenAn"); Logbuch.shared.einstellung("lernenAn", "\(lernenAn)", wo: "Einstellungen") } }
     var globalesKuerzel: Bool { didSet { d.set(globalesKuerzel, forKey: "globalesKuerzel"); Logbuch.shared.einstellung("globalesKuerzel", "\(globalesKuerzel)", wo: "Einstellungen") } }
@@ -306,8 +315,8 @@ final class Einstellungen {
         liveModellOpenAI = s("liveModellOpenAI", "gpt-live-1")
         liveModellGemini = s("liveModellGemini", "gemini-3.8-live")
         liveStilleMinuten = d.object(forKey: "liveStilleMinuten") as? Int ?? 5
-        stilleInAppSek = min(max(d.object(forKey: "stilleInAppSek") as? Double ?? 4.5, Self.stilleBereich.lowerBound), Self.stilleBereich.upperBound)
-        stilleAussenSek = min(max(d.object(forKey: "stilleAussenSek") as? Double ?? 4.5, Self.stilleBereich.lowerBound), Self.stilleBereich.upperBound)
+        stilleInAppSek = Self.stilleGeladen(d, "stilleInAppSek")
+        stilleAussenSek = Self.stilleGeladen(d, "stilleAussenSek")
         vollzugriff = b("vollzugriff", true)
         lernenAn = b("lernenAn", true)
         globalesKuerzel = b("globalesKuerzel", true)

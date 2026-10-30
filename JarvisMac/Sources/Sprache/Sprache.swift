@@ -576,18 +576,16 @@ import Observation
     private(set) var gespraech: Gespraech?
     private var aufgabe: Task<Void, Never>?
     private var lauf = 0
-    /// Das Gespräch begann bei Jarvis vorn; sonst gilt die Stillezeit für außerhalb.
-    private var inApp = false
 
+    /// [inApp]: Das Gespräch begann bei Jarvis vorn; sonst gilt die Stillezeit für außerhalb.
     func starten(in g: Gespraech, inApp: Bool = false) {
-        self.inApp = inApp
         aufgabe?.cancel()
         Diktat.shared.abbrechen()
         Stimme.shared.stopp()
         lauf += 1
         let meiner = lauf
         gespraech = g
-        aufgabe = Task { [weak self] in await self?.schleife(g, lauf: meiner) }
+        aufgabe = Task { [weak self] in await self?.schleife(g, lauf: meiner, inApp: inApp) }
     }
 
     func beenden() {
@@ -598,7 +596,7 @@ import Observation
         zustand = .aus
     }
 
-    private func schleife(_ g: Gespraech, lauf meiner: Int) async {
+    private func schleife(_ g: Gespraech, lauf meiner: Int, inApp: Bool) async {
         Weckwort.shared.pausieren()
         defer {
             Weckwort.shared.fortsetzen()
@@ -615,8 +613,8 @@ import Observation
             while Diktat.shared.aktiv && warte < 1200 && lauf == meiner { try? await Task.sleep(for: .milliseconds(50)); warte += 1 }
             guard lauf == meiner, !Task.isCancelled else { break }
             if Diktat.shared.aktiv { log("fehler", "Gesprächsmodus: Das Mikrofon wurde nicht frei"); break }
-            // Je Runde neu: Eine per Sprache geänderte Zeit gilt ab der nächsten Frage, ebenso das Verlassen des Fensters.
-            let stilleJetzt = inApp && AppSteuerung.shared.fensterVorn ? Einstellungen.shared.stilleInAppSek : Einstellungen.shared.stilleAussenSek
+            // Je Runde neu: Eine per Sprache geänderte Zeit gilt ab der nächsten Frage, ebenso das Verlassen des Fensters oder ein gesperrter Bildschirm.
+            let stilleJetzt = inApp && AppSteuerung.shared.fensterVorn && !AppSteuerung.bildschirmAus ? Einstellungen.shared.stilleInAppSek : Einstellungen.shared.stilleAussenSek
             guard let text = await Diktat.shared.hoereBisStille(maxSekunden: 120, stilleSek: stilleJetzt, wartenSek: runde == 0 ? 7 : 9) else { break }
             guard lauf == meiner, !Task.isCancelled else { break }
             if SprachBefehle.istSessionEnde(text) {
