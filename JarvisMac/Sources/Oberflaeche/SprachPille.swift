@@ -70,7 +70,7 @@ private final class PillenAnsicht: NSView {
     static let breite: CGFloat = 150
     static let hoehe: CGFloat = 44
     private static let balken = 13
-    /// Das X rechts, Mittelpunkt und Radius; geklickt werden darf der ganze rechte Rand.
+    /// Das X rechts: Abstand des Mittelpunkts vom rechten Rand und Radius.
     private static let kreuzAbstand: CGFloat = 22
     private static let kreuzRadius: CGFloat = 11
 
@@ -94,10 +94,11 @@ private final class PillenAnsicht: NSView {
     private var uhr: CADisplayLink?
     private var startPunkt: NSPoint?
     private var langDruck: Task<Void, Never>?
+    private var kreuzGedrueckt = false
 
     override init(frame: NSRect) {
         super.init(frame: frame)
-        toolTip = "Jarvis hört zu. Klick öffnet Jarvis, das X oder lange drücken beendet das Gespräch."
+        toolTip = "Klick öffnet Jarvis, das X oder lange drücken beendet das Gespräch."
     }
 
     @available(*, unavailable)
@@ -123,7 +124,7 @@ private final class PillenAnsicht: NSView {
     // MARK: Bedienung
 
     override func mouseDown(with event: NSEvent) {
-        if convert(event.locationInWindow, from: nil).x >= bounds.width - Self.kreuzAbstand * 2 { beenden(); return }
+        if imKreuz(event) { kreuzGedrueckt = true; return }
         startPunkt = event.locationInWindow
         langDruck = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
@@ -138,6 +139,11 @@ private final class PillenAnsicht: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if kreuzGedrueckt {
+            kreuzGedrueckt = false
+            if imKreuz(event) { beenden() }
+            return
+        }
         langDruck?.cancel()
         guard startPunkt != nil else { return }
         startPunkt = nil
@@ -146,12 +152,18 @@ private final class PillenAnsicht: NSView {
 
     override func rightMouseDown(with event: NSEvent) { beenden() }
 
+    /// Nur das X selbst plus wenige Punkte, damit ein Klick zum Öffnen nicht versehentlich das Gespräch beendet.
+    private func imKreuz(_ event: NSEvent) -> Bool {
+        let p = convert(event.locationInWindow, from: nil)
+        return hypot(p.x - (bounds.width - Self.kreuzAbstand), p.y - bounds.midY) <= Self.kreuzRadius + 4
+    }
+
     private func beenden() {
         langDruck?.cancel()
         startPunkt = nil
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
         if LiveGespraech.shared.aktiv {
-            log("live", "Live-Gespräch beendet", wo: "Sprachpille")
+            log("live", "Beenden über die Sprachpille", wo: "Sprachpille")
             LiveGespraech.shared.beenden()
             return
         }
@@ -170,7 +182,7 @@ private final class PillenAnsicht: NSView {
 
         let live = LiveGespraech.shared
         let frank = SprachSchleife.shared.zustand == .hoert && Diktat.shared.aktiv && !Diktat.shared.schreibtMit
-        let pegel = live.aktiv ? CGFloat(live.zustand == .spricht ? live.pegelAus : live.pegelEin)
+        let pegel = live.aktiv ? CGFloat(KugelStand.pegel)
                                : CGFloat(frank ? Diktat.shared.pegel : (Stimme.shared.spricht ? Stimme.shared.pegel : 0))
 
         let w = bounds.width, h = bounds.height

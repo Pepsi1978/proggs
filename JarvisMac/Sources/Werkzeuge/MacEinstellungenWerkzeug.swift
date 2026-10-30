@@ -101,7 +101,7 @@ enum MacEinstellungsKatalog {
             },
             Eintrag(kennung: "live_stille_ende", bereich: "Live-Gespräch", titel: "Bei Stille beenden", beschreibung: "Beendet das Live-Gespräch nach so vielen Minuten Stille; 0 = nie.",
                     werte: LiveOptionen.stilleEnde.map { String($0.minuten) }.joined(separator: " | "), lesen: { String(e.liveStilleMinuten) }) { v in
-                guard let m = Int(v), LiveOptionen.stilleEnde.contains(where: { $0.minuten == m }) else { return "2, 5, 10 oder 0" }
+                guard let m = Int(v), LiveOptionen.stilleEnde.contains(where: { $0.minuten == m }) else { return "Erlaubt: " + LiveOptionen.stilleEnde.map { String($0.minuten) }.joined(separator: ", ") }
                 e.liveStilleMinuten = m; return nil
             },
             Eintrag(kennung: "live_modell_openai", bereich: "Live-Gespräch", titel: "OpenAI-Live-Modell", beschreibung: "",

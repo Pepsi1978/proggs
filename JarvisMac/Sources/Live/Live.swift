@@ -33,6 +33,12 @@ struct LiveZeile: Identifiable, Hashable {
     @ObservationIgnored private var offeneAuftraege = 0
     @ObservationIgnored private var auftragsKette: Task<Void, Never>?
     @ObservationIgnored private var letzteAktivitaet = Date()
+    /// Stille-Ende dieser Sitzung in Minuten, beim Start gelesen wie am Handy; 0 = nie.
+    @ObservationIgnored private var stilleMinuten = 0
+    /// Kommt die Verbindung so lange nicht zustande, endet das Gespräch auch bei „Nie“.
+    private static let verbindenMaxSek: Double = 180
+    /// Ab diesem Mikrofonpegel spricht jemand: Eine lange Rede zählt nicht als Stille, auch wenn die Mitschrift ausbleibt.
+    private static let stimmPegel: Float = 0.1
     /// GPT-Live/Realtime: nicht delegierte Beiträge (Smalltalk) kommen ins Gespräch; delegierte schreibt der Agent selbst.
     @ObservationIgnored private var ausstehend: [Nachricht] = []
     @ObservationIgnored private var naechsteJarvisVomAgenten = 0
@@ -124,6 +130,7 @@ struct LiveZeile: Identifiable, Hashable {
         log("live", "Live-Gespräch beginnt: \(beschreibung)")
         neu.starten()
         letzteAktivitaet = Date()
+        stilleMinuten = e.liveStilleMinuten
         let uhr = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.takt() }
         }
@@ -153,6 +160,15 @@ struct LiveZeile: Identifiable, Hashable {
         Weckwort.shared.fortsetzen()
     }
 
+    /// Beendet nach kurzer Pause, aber nur dieselbe Sitzung: Frank kann inzwischen beendet und neu gestartet haben.
+    private func beendenNach(_ sekunden: Double) {
+        let s = sitzung
+        Task {
+            try? await Task.sleep(for: .seconds(sekunden))
+            if self.sitzung === s { self.beenden() }
+        }
+    }
+
     /// Frank tippt zum Unterbrechen (Jarvis verstummt sofort).
     func unterbrechen() { sitzung?.angetippt() }
 
@@ -165,12 +181,17 @@ struct LiveZeile: Identifiable, Hashable {
         pegelAus = ton.pegelAus
         let spricht = ton.sprichtHoerbar
         let denkt = offeneAuftraege > 0 || ((sitzung as? LiveGemini)?.weicheArbeitet ?? false)
-        if spricht || denkt { letzteAktivitaet = Date() }
+        if spricht || denkt || (sitzung.bereit && pegelEin >= Self.stimmPegel) { letzteAktivitaet = Date() }
         let neu: Zustand = !sitzung.bereit ? .verbindet : spricht ? .spricht : denkt ? .denkt : .hoert
         if neu != zustand { zustand = neu }
-        let minuten = Einstellungen.shared.liveStilleMinuten
-        if minuten > 0, Date().timeIntervalSince(letzteAktivitaet) > Double(minuten) * 60 {
-            log("live", "\(minuten) Minuten Stille: Live-Gespräch endet")
+        let ruhe = Date().timeIntervalSince(letzteAktivitaet)
+        if !sitzung.bereit && ruhe > Self.verbindenMaxSek {
+            fehler = "Live-Gespräch beendet: Die Verbindung kam nicht zustande."
+            log("live", "Verbindung kam nicht zustande: Live-Gespräch endet")
+            beenden()
+        } else if stilleMinuten > 0 && ruhe > Double(stilleMinuten) * 60 {
+            fehler = "Live-Gespräch nach \(stilleMinuten) Minuten Stille beendet."
+            log("live", "\(stilleMinuten) Minuten Stille: Live-Gespräch endet")
             beenden()
         }
     }
@@ -190,7 +211,7 @@ struct LiveZeile: Identifiable, Hashable {
         if !(sitzung?.istGemini ?? false) { ausstehend.append(Nachricht(rolle: .frank, text: text, gesprochen: true)) }
         if LiveOptionen.istBeenden(text) {
             log("live", "Frank beendet das Gespräch per Sprache")
-            Task { try? await Task.sleep(for: .seconds(1.8)); self.beenden() }
+            beendenNach(1.8)
         }
     }
 
@@ -227,7 +248,7 @@ struct LiveZeile: Identifiable, Hashable {
         let worte = auftrag.trimmingCharacters(in: .whitespacesAndNewlines)
         if LiveOptionen.istBeenden(worte) {
             s.ergebnis(kennung: kennung, text: "Bis später, Frank.")
-            Task { try? await Task.sleep(for: .seconds(2.5)); self.beenden() }
+            beendenNach(2.5)
             return
         }
         guard !worte.isEmpty else {
@@ -267,7 +288,7 @@ struct LiveZeile: Identifiable, Hashable {
             }
             if beendenGewuenscht {
                 try? await Task.sleep(for: .seconds(4))
-                self.beenden()
+                if self.sitzung === s { self.beenden() }
             }
         }
     }
