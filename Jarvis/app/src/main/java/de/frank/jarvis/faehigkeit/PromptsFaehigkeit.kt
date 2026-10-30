@@ -25,14 +25,16 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
                 "aktion" to text("speichern, aendern oder loeschen.", listOf("speichern", "aendern", "loeschen")),
                 "text" to text("Beim Speichern und Ändern: der Prompt, sinnvoll ausformuliert als klarer Auftrag in gutem Deutsch."),
                 "nummer" to zahl("Beim Ändern und Löschen: Nummer des Prompts."),
+                "erstellt" to zahl("Nur beim Löschen, optional: feste Kennung aus prompts_lesen ([id …]); geht vor nummer. Ist dazu text angegeben, wird nur gelöscht, wenn der Prompt noch genau diesen Text hat."),
                 pflicht = listOf("aktion"),
             ),
             nurLesen = false,
         ) { a ->
             val nummer = a.optInt("nummer", 0)
             if (a.optString("aktion") == "loeschen") {
-                Prompts.loesche(context, nummer)?.let { Ergebnis("Prompt ${it.nummer} gelöscht. Die folgenden Prompts sind eine Nummer aufgerückt.") }
-                    ?: Ergebnis("Prompt $nummer ließ sich nicht löschen (gibt es nicht oder Datei beschädigt).", fehler = true)
+                val erstellt = a.optLong("erstellt", 0).takeIf { it > 0 }
+                Prompts.loesche(context, nummer, erstellt, a.optString("text").takeIf { erstellt != null && it.isNotBlank() })?.let { Ergebnis("Prompt ${it.nummer} gelöscht. Die folgenden Prompts sind eine Nummer aufgerückt.") }
+                    ?: Ergebnis(if (erstellt != null) "Der Prompt ließ sich nicht löschen (inzwischen geändert oder gelöscht, oder Datei beschädigt)." else "Prompt $nummer ließ sich nicht löschen (gibt es nicht oder Datei beschädigt).", fehler = true)
             } else if (a.optString("aktion") == "aendern") {
                 val text = DiktatTrenner.ohneSchluss(a.optString("text")).trim()
                 if (Prompts.aendere(context, nummer, text)) Ergebnis("Prompt $nummer geändert.")
@@ -47,7 +49,7 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "prompts_lesen",
             titel = "Prompts lesen",
-            beschreibung = "Jarvis: liest die gespeicherten Prompts aus dem Reiter „Prompts“ der Ablage. „Welche Prompts habe ich?“ → ohne nummer. „Lies Prompt 2 vor“ → nummer 2.",
+            beschreibung = "Jarvis: liest die gespeicherten Prompts aus dem Reiter „Prompts“ der Ablage. „Welche Prompts habe ich?“ → ohne nummer. „Lies Prompt 2 vor“ → nummer 2. Das [id …] in der Kopfzeile ist die feste Kennung, nicht vorlesen.",
             schema = schema("nummer" to zahl("Optional: nur diesen Prompt.")),
             nurLesen = true,
         ) { a ->
@@ -55,10 +57,10 @@ class PromptsFaehigkeit(private val context: Context) : Faehigkeit {
             val alle = Prompts.alle(context)
             when {
                 Prompts.defekt(context) -> Ergebnis("Die Prompt-Datei ist beschädigt und wurde gesichert; Details unter Aktivität.", fehler = true)
-                nummer > 0 -> alle.firstOrNull { it.nummer == nummer }?.let { Ergebnis("Prompt ${it.nummer}${it.titel.takeIf(String::isNotEmpty)?.let { t -> " ($t)" }.orEmpty()}:\n${it.text}") }
+                nummer > 0 -> alle.firstOrNull { it.nummer == nummer }?.let { Ergebnis("Prompt ${it.nummer}${it.titel.takeIf(String::isNotEmpty)?.let { t -> " ($t)" }.orEmpty()} [id ${it.erstellt}]:\n${it.text}") }
                     ?: Ergebnis("Einen Prompt mit der Nummer $nummer gibt es nicht.", fehler = true)
                 alle.isEmpty() -> Ergebnis("Noch keine Prompts gespeichert.")
-                else -> Ergebnis(alle.joinToString("\n\n") { "Prompt ${it.nummer}${it.titel.takeIf(String::isNotEmpty)?.let { t -> " ($t)" }.orEmpty()}:\n${it.text}" })
+                else -> Ergebnis(alle.joinToString("\n\n") { "Prompt ${it.nummer}${it.titel.takeIf(String::isNotEmpty)?.let { t -> " ($t)" }.orEmpty()} [id ${it.erstellt}]:\n${it.text}" })
             }
         },
     )

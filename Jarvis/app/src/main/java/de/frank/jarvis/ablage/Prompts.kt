@@ -114,10 +114,14 @@ object Prompts {
     }
 
     @Synchronized
-    /** Löscht den Prompt auf Platz [nummer], oder mit [erstellt] genau diesen Prompt, egal auf welchem Platz er steht. */
-    fun loesche(c: Context, nummer: Int, erstellt: Long? = null): Prompt? {
+    /**
+     * Löscht den Prompt auf Platz [nummer], oder mit [erstellt] genau diesen Prompt, egal auf welchem Platz er steht.
+     * Mit [nurBeiText] nur, wenn er noch diesen Text hat: Eine inzwischen geänderte Fassung bleibt stehen.
+     */
+    fun loesche(c: Context, nummer: Int, erstellt: Long? = null, nurBeiText: String? = null): Prompt? {
         val s = lies(c)
         val weg = s.liste.firstOrNull { if (erstellt != null) it.erstellt == erstellt else it.nummer == nummer } ?: return null
+        if (nurBeiText != null && weg.text.trim() != nurBeiText.trim()) return null
         return weg.takeIf { !s.defekt && schreibe(c, (s.liste - weg).durchnummeriert()) }
     }
 

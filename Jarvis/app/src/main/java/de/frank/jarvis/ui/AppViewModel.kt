@@ -1872,8 +1872,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         promptLoeschenFrage = null
         if (!loeschen) return
         viewModelScope.launch {
-            val weg = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.loesche(getApplication(), p.nummer, p.erstellt) }
-            meldung = if (weg != null) "Prompt ${weg.nummer} gelöscht." else "Der Prompt ließ sich nicht löschen."
+            val weg = withContext(Dispatchers.IO) { de.frank.jarvis.ablage.Prompts.loesche(getApplication(), p.nummer, p.erstellt, nurBeiText = p.text) }
+            meldung = if (weg != null) "Prompt ${weg.nummer} gelöscht." else "Der Prompt wurde nicht gelöscht: Er wurde inzwischen geändert oder gelöscht, oder die Datei ist beschädigt."
         }
     }
 
