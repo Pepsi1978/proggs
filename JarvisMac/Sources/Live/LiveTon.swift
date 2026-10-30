@@ -19,7 +19,12 @@ final class LiveTon: @unchecked Sendable {
     /// PCM16 mono in `eingabeRate`, Blöcke zu 100 ms. Läuft im Audio-Faden.
     var beiMikro: ((Data) -> Void)?
     /// Mikrofon stumm (Stille statt Mikrofon an den Dienst), z. B. während eines späten Vorlesens.
-    var mikroStumm = false
+    var mikroStumm: Bool {
+        get { lock.lock(); defer { lock.unlock() }; return _mikroStumm }
+        set { lock.lock(); _mikroStumm = newValue; lock.unlock() }
+    }
+    /// Der Ton ist nach einem Gerätewechsel endgültig ausgefallen. Läuft im Ton-Faden.
+    var beiAusfall: ((String) -> Void)?
 
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
@@ -37,7 +42,12 @@ final class LiveTon: @unchecked Sendable {
     private var hoerbarBisMs: Int64 = 0
     private var _pegelEin: Float = 0
     private var _pegelAus: Float = 0
+    private var _mikroStumm = false
+    private var wandlerFehlerGemeldet = false
     private var laeuft = false
+    /// Hält Auf- und Abbau der Engine auseinander (Hauptfaden, Ton-Faden, Netzwerkfaden).
+    private let aufbauLock = NSLock()
+    private var neustartMarke = 0
     private var beobachter: NSObjectProtocol?
     private let tonFaden = DispatchQueue(label: "jarvis.live.ton", qos: .userInteractive)
 
@@ -69,10 +79,7 @@ final class LiveTon: @unchecked Sendable {
         var letzterFehler: Error?
         for versuch in 0..<3 {
             if versuch > 0 {
-                engine.inputNode.removeTap(onBus: 0)
-                player.stop()
-                engine.stop()
-                try? engine.inputNode.setVoiceProcessingEnabled(false)
+                tonAbbauen()
                 try? await Task.sleep(for: .milliseconds(400))   // nicht den Hauptfaden blockieren
             }
             do {
@@ -97,27 +104,44 @@ final class LiveTon: @unchecked Sendable {
             }
         }
         if player.engine == nil { engine.attach(player) }
-        ausgangVerbinden()
+        try hochfahren()
+        laeuft = true
+        beobachter = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil) { [weak self] _ in
+            self?.tonFaden.async { self?.neustartAnfordern() }
+        }
+    }
+
+    private func hochfahren() throws {
+        try ausgangVerbinden()
         try abgriffSetzen()
         engine.prepare()
         try engine.start()
         player.play()
-        laeuft = true
         // 250 ms Stille vorlegen, damit der Ausgang nicht leer startet (§14.2 Nr. 7).
         planeStille(ms: Self.startPolsterMs)
-        beobachter = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil) { [weak self] _ in
-            self?.tonFaden.async { self?.neuStarten() }
-        }
+    }
+
+    private func tonAbbauen() {
+        engine.inputNode.removeTap(onBus: 0)
+        player.stop()
+        engine.stop()
+        try? engine.inputNode.setVoiceProcessingEnabled(false)
+    }
+
+    private func pufferZuruecksetzen() {
+        lock.lock(); generation += 1; gepuffertFrames = 0; hoerbarBisMs = 0; letzteHoerbarMs = 0; _pegelAus = 0; lock.unlock()
     }
 
     /// Mixer und Ausgang mit fester Rate des Ausgabegeräts verbinden. Die automatische Verbindung lässt unter
     /// Voice Processing den Start mit -10875 scheitern (gemessen unter macOS 27.2). Voice Processing braucht
     /// Ein- und Ausgabe in derselben Einheit.
-    private func ausgangVerbinden() {
+    private func ausgangVerbinden() throws {
         engine.connect(player, to: engine.mainMixerNode, format: ausFormat)
         let ausgang = engine.outputNode
-        let rate = ausgang.inputFormat(forBus: 0).sampleRate
-        guard rate > 0, let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2) else { return }
+        let rate = ausgang.outputFormat(forBus: 0).sampleRate   // Rate des Geräts, nicht der bisherigen Verbindung
+        guard rate > 0, let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2) else {
+            throw NSError(domain: "JarvisLive", code: 3, userInfo: [NSLocalizedDescriptionKey: "Kein Lautsprecher verfügbar."])
+        }
         engine.connect(engine.mainMixerNode, to: ausgang, format: format)
     }
 
@@ -128,9 +152,12 @@ final class LiveTon: @unchecked Sendable {
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw NSError(domain: "JarvisLive", code: 1, userInfo: [NSLocalizedDescriptionKey: "Kein Mikrofon verfügbar."])
         }
-        let w = AVAudioConverter(from: format, to: zielFormat)
-        w?.downmix = true
+        guard let w = AVAudioConverter(from: format, to: zielFormat) else {
+            throw NSError(domain: "JarvisLive", code: 4, userInfo: [NSLocalizedDescriptionKey: "Mikrofonformat wird nicht unterstützt (\(format))."])
+        }
+        w.downmix = true
         wandler = w
+        wandlerFehlerGemeldet = false
         let blockBytes = Int(eingabeRate) * Self.blockMs / 1000 * 2
         eingang.installTap(onBus: 0, bufferSize: AVAudioFrameCount(format.sampleRate / 20), format: format) { [weak self] puffer, _ in
             guard let self, let w = self.wandler else { return }
@@ -143,6 +170,10 @@ final class LiveTon: @unchecked Sendable {
                 geliefert = true
                 status.pointee = .haveData
                 return puffer
+            }
+            if let fehler, !self.wandlerFehlerGemeldet {
+                self.wandlerFehlerGemeldet = true
+                log("fehler", "Live: Mikrofonton nicht wandelbar: \(fehler.localizedDescription)")
             }
             guard fehler == nil, aus.frameLength > 0, let p = aus.int16ChannelData?[0] else { return }
             let n = Int(aus.frameLength)
@@ -161,30 +192,50 @@ final class LiveTon: @unchecked Sendable {
         }
     }
 
+    /// Geräte melden Änderungen oft mehrfach kurz hintereinander: Erst nach 250 ms Ruhe neu verbinden.
+    private func neustartAnfordern() {
+        neustartMarke += 1
+        let marke = neustartMarke
+        tonFaden.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self, marke == self.neustartMarke else { return }
+            self.neuStarten()
+        }
+    }
+
     private func neuStarten() {
-        guard laeuft else { return }
+        aufbauLock.lock(); defer { aufbauLock.unlock() }
+        // Läuft die Engine, war es der eigene Neustart oder eine Änderung, die sie nicht gestoppt hat: sonst endlose Neustarts.
+        guard laeuft, !engine.isRunning else { return }
         log("live", "Audiogerät gewechselt, Ton wird neu verbunden")
-        engine.stop()
+        pufferZuruecksetzen()
+        player.stop()   // geplante Puffer verwerfen, ihre Rückmeldungen zählen nach dem Zurücksetzen nicht mehr
         do {
-            ausgangVerbinden()
-            try abgriffSetzen()
-            engine.prepare()
-            try engine.start()
-            player.play()
+            try hochfahren()
+            return
         } catch {
             log("fehler", "Live: Ton nach Gerätewechsel nicht wieder gestartet: \(error.localizedDescription)")
+        }
+        tonAbbauen()
+        do {
+            ohneEchoUnterdrueckung = true
+            try hochfahren()
+            log("live", "Ton nach Gerätewechsel ohne Echounterdrückung gestartet, Echosperre aktiv")
+        } catch {
+            log("fehler", "Live: Ton auch ohne Echounterdrückung nicht wieder gestartet: \(error.localizedDescription)")
+            tonAbbauen()
+            laeuft = false
+            beiAusfall?("Mikrofon oder Lautsprecher lässt sich nach dem Gerätewechsel nicht starten: \(error.localizedDescription)")
         }
     }
 
     func stoppen() {
+        aufbauLock.lock(); defer { aufbauLock.unlock() }
         laeuft = false
         if let b = beobachter { NotificationCenter.default.removeObserver(b); beobachter = nil }
-        beiMikro = nil
-        engine.inputNode.removeTap(onBus: 0)
-        lock.lock(); generation += 1; gepuffertFrames = 0; hoerbarBisMs = 0; lock.unlock()
-        player.stop()
-        engine.stop()
-        try? engine.inputNode.setVoiceProcessingEnabled(false)
+        pufferZuruecksetzen()
+        tonAbbauen()
+        beiMikro = nil   // erst nach dem Entfernen des Abgriffs, der Audio-Faden liest sie ohne Sperre
+        beiAusfall = nil
     }
 
     // MARK: Wiedergabe
@@ -257,13 +308,10 @@ final class LiveTon: @unchecked Sendable {
 
     /// Wiedergabe sofort leeren (Frank unterbricht).
     func leeren() {
-        lock.lock()
-        generation += 1
-        gepuffertFrames = 0
-        hoerbarBisMs = 0
-        _pegelAus = 0
-        lock.unlock()
+        pufferZuruecksetzen()
+        aufbauLock.lock(); defer { aufbauLock.unlock() }
         player.stop()
-        if laeuft { player.play() }
+        // play() ohne laufende Engine löst eine nicht abfangbare Ausnahme aus (etwa mitten im Gerätewechsel).
+        if laeuft && engine.isRunning { player.play() }
     }
 }

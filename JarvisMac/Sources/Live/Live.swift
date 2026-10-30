@@ -102,8 +102,22 @@ struct LiveZeile: Identifiable, Hashable {
         bruecke = b
         neu.delegate = b
         neuerTon.beiMikro = { [weak neu] pcm in neu?.mikro(pcm) }
+        neuerTon.beiAusfall = { [weak self] text in
+            Task { @MainActor in
+                guard let self else { return }
+                self.fehler = text
+                log("live", text)
+                self.beenden()
+            }
+        }
         do { try await neuerTon.starten() } catch {
+            guard zustand == .verbindet, gespraech === g else { return }
             abbrechen("Mikrofon oder Lautsprecher lässt sich nicht starten: \(error.localizedDescription)")
+            return
+        }
+        // Frank kann während des Tonstarts beendet haben.
+        guard zustand == .verbindet, gespraech === g else {
+            neuerTon.stoppen()
             return
         }
         ton = neuerTon
