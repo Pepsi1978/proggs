@@ -96,7 +96,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         if (reiter == "guthaben") GuthabenReiter(vm)
 
         // Nicht aufklappbar und auf den Reitern „Jarvis“ und „Stimme“ ganz oben: Diese Felder sollen sofort zu sehen sein.
-        if (reiter == "jarvis" || reiter == "stimme") StillezeitKarte(vm)
+        // key: Der Reiterwechsel entsorgt die Felder, damit ein Entwurf wie bisher übernommen wird.
+        if (reiter == "jarvis" || reiter == "stimme") key(reiter) { StillezeitKarte(vm) }
 
         if (reiter == "jarvis") {
             // ---------------------------------------------------------------- Kopf
@@ -615,29 +616,39 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
 private fun StillezeitKarte(vm: AppViewModel) {
     val f = LocalFarben.current
     val e = vm.einstellungen
-    Column(Modifier.fillMaxWidth().glas(f).padding(18.dp)) {
-        Text("Stillezeit: Wie lange das Mikrofon offen bleibt", color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-        Text("Nach dem Weckwort schließt das Mikrofon, wenn du so lange nichts mehr sagst: 1 bis 15 Sekunden, auch mit Komma. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-        StillezeitFeld("Stillezeit in der App", e.stilleInAppMs, vm) { e.stilleInAppMs = it }
-        StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", e.stilleAussenMs, vm) { e.stilleAussenMs = it }
+    Bereich("Stillezeit: Wie lange das Mikrofon offen bleibt", aufklappbar = false) {
+        Text("So lange bleibt das Mikrofon nach deinem letzten Wort offen, 1 bis 15 Sekunden, auch mit Komma. Sagst du nach dem Piepton gar nichts, schließt es nach 7 Sekunden, nach einer Antwort nach 9. Gilt nicht im Live-Modus.", color = f.textSchwach, fontSize = 13.sp)
+        if (!e.weckwortAn) Text("Das Weckwort ist gerade aus; du schaltest es auf dem Reiter „Stimme“ unter „Hey Jarvis“ ein.", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        StillezeitFeld("Stillezeit in der App", { e.stilleInAppMs }, vm) { e.stilleInAppMs = it }
+        StillezeitFeld("Stillezeit außerhalb der App (Hintergrund oder Bildschirm aus)", { e.stilleAussenMs }, vm) { e.stilleAussenMs = it }
     }
 }
 
-/** Eine Stillezeit in Sekunden eintragen; [ms] ist der gespeicherte Wert. Ein gültiger Wert gilt auch ohne „Übernehmen“ beim Verlassen des Bildschirms. */
+/** Eine Stillezeit in Sekunden eintragen; [lies] liefert den gespeicherten Wert. Ein gültiger Wert gilt auch ohne „Übernehmen“ beim Verlassen des Bildschirms, mit Meldung. */
 @Composable
-private fun StillezeitFeld(titel: String, ms: Int, vm: AppViewModel, setze: (Int) -> Unit) {
+private fun StillezeitFeld(titel: String, lies: () -> Int, vm: AppViewModel, setze: (Int) -> Unit) {
+    val ms = lies()
     var text by remember { mutableStateOf(Einstellungen.stilleZahl(ms)) }
+    // Der Wert, auf dem der Entwurf beruht: Hat Jarvis ihn inzwischen per Sprache geändert, gewinnt das Gesprochene.
+    var basis by remember { mutableStateOf(ms) }
     // Per Sprache geändert, während der Bildschirm offen ist: Das Feld zieht mit.
-    LaunchedEffect(ms) { text = Einstellungen.stilleZahl(ms) }
-    val aktuell by rememberUpdatedState(ms)
+    LaunchedEffect(ms) { text = Einstellungen.stilleZahl(ms); basis = ms }
+    val liesAktuell by rememberUpdatedState(lies)
     val setzeAktuell by rememberUpdatedState(setze)
     DisposableEffect(Unit) {
-        onDispose { Einstellungen.stilleMsAus(text)?.takeIf { it != aktuell }?.let { setzeAktuell(it) } }
+        onDispose {
+            val jetzt = liesAktuell()
+            if (jetzt == basis && text != Einstellungen.stilleZahl(jetzt)) {
+                val neu = Einstellungen.stilleMsAus(text)
+                if (neu == null) vm.meldung = "$titel: „$text“ nicht übernommen, bleibt bei ${Einstellungen.stilleText(jetzt)}."
+                else if (neu != jetzt) { setzeAktuell(neu); vm.meldung = "$titel: jetzt ${Einstellungen.stilleText(neu)}." }
+            }
+        }
     }
     val uebernehmen: () -> Unit = {
         val neu = Einstellungen.stilleMsAus(text)
         if (neu == null) vm.meldung = "Bitte 1 bis 15 Sekunden eintragen, auch mit Komma."
-        else { setze(neu); text = Einstellungen.stilleZahl(neu); vm.meldung = "$titel: jetzt ${Einstellungen.stilleText(neu)}." }
+        else { setze(neu); text = Einstellungen.stilleZahl(neu); basis = neu; vm.meldung = "$titel: jetzt ${Einstellungen.stilleText(neu)}." }
     }
     Unterzeile(titel)
     Row(verticalAlignment = Alignment.CenterVertically) {

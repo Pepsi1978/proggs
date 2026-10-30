@@ -359,19 +359,19 @@ fun Karte(modifier: Modifier = Modifier, toenung: Color? = null, inhalt: @Compos
     Column(modifier.fillMaxWidth().glas(f, toenung = toenung).padding(18.dp), content = inhalt)
 }
 
-/** Aufklappbarer Einstellungsbereich: Kopfzeile antippen klappt den Inhalt auf und zu. Startet zugeklappt. */
+/** Aufklappbarer Einstellungsbereich: Kopfzeile antippen klappt den Inhalt auf und zu. Startet zugeklappt; mit [aufklappbar] = false immer offen. */
 @Composable
-fun Bereich(titel: String, inhalt: @Composable ColumnScope.() -> Unit) {
+fun Bereich(titel: String, aufklappbar: Boolean = true, inhalt: @Composable ColumnScope.() -> Unit) {
     val f = LocalFarben.current
-    var offen by androidx.compose.runtime.saveable.rememberSaveable(titel) { mutableStateOf(false) }
+    var offen by androidx.compose.runtime.saveable.rememberSaveable(titel) { mutableStateOf(!aufklappbar) }
     val drehung by androidx.compose.animation.core.animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
     Column(Modifier.fillMaxWidth().glas(f)) {
         Row(
-            Modifier.fillMaxWidth().antippen { offen = !offen }.padding(horizontal = 18.dp, vertical = 16.dp),
+            Modifier.fillMaxWidth().then(if (aufklappbar) Modifier.antippen { offen = !offen } else Modifier).padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(titel, Modifier.weight(1f), color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-            Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen", Modifier.size(26.dp).graphicsLayer { rotationZ = drehung }, tint = f.textLeise)
+            if (aufklappbar) Icon(Icons.Rounded.KeyboardArrowDown, if (offen) "Zuklappen" else "Aufklappen", Modifier.size(26.dp).graphicsLayer { rotationZ = drehung }, tint = f.textLeise)
         }
         AnimatedVisibility(offen, enter = androidx.compose.animation.expandVertically() + fadeIn(), exit = androidx.compose.animation.shrinkVertically() + fadeOut()) {
             Column(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 18.dp), content = inhalt)

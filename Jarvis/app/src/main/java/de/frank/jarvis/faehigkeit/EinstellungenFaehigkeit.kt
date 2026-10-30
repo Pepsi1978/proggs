@@ -113,7 +113,7 @@ class EinstellungsKatalog(context: Context) {
 
     /** Stillezeit in Sekunden, auch mit Kommastelle. */
     private fun stillezeit(kennung: String, titel: String, beschreibung: String, lies: () -> Int, setze: (Int) -> Unit) =
-        Eintrag(kennung, "Hey Jarvis", titel, beschreibung, "1 bis 15 Sekunden, auch mit Komma, z. B. 2,5", { Einstellungen.stilleText(lies()) }) { w ->
+        Eintrag(kennung, "Hey Jarvis: Stillezeit", titel, beschreibung, "1 bis 15 Sekunden, auch mit Komma, z. B. 2,5", { Einstellungen.stilleText(lies()) }) { w ->
             setze(Einstellungen.stilleMsAus(w) ?: throw IllegalArgumentException("„$w“ passt nicht. Erlaubt: 1 bis 15 Sekunden, auch mit Komma."))
         }
 
