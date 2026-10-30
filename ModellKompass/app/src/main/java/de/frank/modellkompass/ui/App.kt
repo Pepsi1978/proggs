@@ -1,6 +1,5 @@
 package de.frank.modellkompass.ui
 
-import android.app.Activity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -27,7 +26,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +53,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Refresh
@@ -66,7 +65,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -88,7 +86,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import de.frank.modellkompass.data.Bereich
 import de.frank.modellkompass.ui.theme.LocalFarben
 import de.frank.modellkompass.ui.theme.ModellKompassTheme
@@ -107,19 +104,8 @@ fun standText(zeit: Long, muster: String = "dd.MM.yyyy, HH:mm"): String = Simple
 
 @Composable
 fun ModellKompassApp(vm: AppViewModel, activity: ComponentActivity) {
-    val system = isSystemInDarkTheme()
-    val dunkel = when (vm.einstellungen.modus) { "hell" -> false; "dunkel" -> true; else -> system }
-    ModellKompassTheme(dunkel) {
+    ModellKompassTheme(vm.einstellungen.modus) {
         val view = LocalView.current
-        // Die Symbole der Systemleisten folgen dem Modus der App, nicht dem des Handys.
-        SideEffect {
-            (view.context as? Activity)?.window?.let { fenster ->
-                WindowCompat.getInsetsController(fenster, view).apply {
-                    isAppearanceLightStatusBars = !dunkel
-                    isAppearanceLightNavigationBars = !dunkel
-                }
-            }
-        }
         // Während einer Recherche bleibt der Bildschirm an, damit Android den Lauf nicht schlafen legt.
         DisposableEffect(vm.laufAktiv) {
             view.keepScreenOn = vm.laufAktiv
@@ -141,7 +127,7 @@ fun ModellKompassApp(vm: AppViewModel, activity: ComponentActivity) {
                 label = "bildschirm",
             ) { b ->
                 when (b) {
-                    Bildschirm.Start -> StartBildschirm(vm, dunkel)
+                    Bildschirm.Start -> StartBildschirm(vm)
                     is Bildschirm.Detail -> BereichBildschirm(vm, b.bereich)
                     Bildschirm.Einstellungen -> EinstellungenBildschirm(vm, activity)
                 }
@@ -212,7 +198,7 @@ private fun Rueckfrage(vm: AppViewModel) {
 }
 
 @Composable
-private fun StartBildschirm(vm: AppViewModel, dunkel: Boolean) {
+private fun StartBildschirm(vm: AppViewModel) {
     val f = LocalFarben.current
     LazyVerticalGrid(
         GridCells.Adaptive(162.dp),
@@ -232,7 +218,11 @@ private fun StartBildschirm(vm: AppViewModel, dunkel: Boolean) {
                     if (vm.laufAktiv) RundKnopf(Icons.Rounded.Close, "Recherche abbrechen") { vm.abbrechen() }
                     else RundKnopf(Icons.Rounded.Refresh, "Aktualisieren") { vm.rueckfrageZeigen() }
                     RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.einstellungenOeffnen() }
-                    RundKnopf(if (dunkel) Icons.Rounded.LightMode else Icons.Rounded.DarkMode, if (dunkel) "Heller Modus" else "Dunkler Modus") { vm.modusWechseln(dunkel) }
+                    val modus = vm.einstellungen.modus
+                    RundKnopf(
+                        when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
+                        when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch nach der Sonne (weiter zu Dunkel)" },
+                    ) { vm.modusWechseln() }
                 }
             }
         }

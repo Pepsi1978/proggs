@@ -47,7 +47,7 @@ class Einstellungen private constructor(context: Context) {
     var hardware: String get() = s("hardware", HARDWARE_STANDARD); set(v) = put { putString("hardware", v) }
 
     // ---- Aussehen ----
-    /** system | hell | dunkel */
+    /** system (= Automatik nach der Sonne in Neuenhagen) | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
 
     companion object {

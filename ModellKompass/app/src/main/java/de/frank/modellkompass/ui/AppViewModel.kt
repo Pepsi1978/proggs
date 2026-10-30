@@ -70,7 +70,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun melde(text: String) { meldung = text }
     fun meldungWeg() { meldung = null }
 
-    fun modusWechseln(dunkelJetzt: Boolean) { einstellungen.modus = if (dunkelJetzt) "hell" else "dunkel" }
+    /** Hell → Automatisch (nach der Sonne) → Dunkel → Hell. */
+    fun modusWechseln() {
+        val neu = when (einstellungen.modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
+        einstellungen.modus = neu
+        melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch nach der Sonne" })
+    }
 
     // ================= Recherche =================
 
