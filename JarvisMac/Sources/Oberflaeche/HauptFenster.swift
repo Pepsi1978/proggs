@@ -33,6 +33,18 @@ struct HauptFenster: View {
             if let p = steuerung.promptBearbeiten { PromptEditorVollbild(prompt: p).id(p.id).foregroundStyle(Farbe.text).tint(Farbe.haupt) }
         }
         .sheet(isPresented: $guthaben.anmeldungOffen, onDismiss: { Task { await guthaben.laden(frisch: true) } }) { ConsoleAnmeldungAnsicht() }
+        // Hier und nicht in der Prompt-Liste: Das Senden verlässt die Ablage. Abbrechen gilt als Nein, der Prompt bleibt.
+        .alert("Soll der Prompt gelöscht werden?", isPresented: Binding(get: { steuerung.promptLoeschenFrage != nil }, set: { if !$0 { steuerung.promptLoeschenFrage = nil } }), presenting: steuerung.promptLoeschenFrage) { p in
+            Button("Ja", role: .destructive) { steuerung.gesendetenPromptLoeschen(p) }
+            Button("Nein", role: .cancel) {}
+        } message: { _ in
+            Text("Der Text in der Eingabe bleibt erhalten.")
+        }
+        .alert("Prompt nicht gelöscht", isPresented: Binding(get: { steuerung.promptLoeschenFehler != nil }, set: { if !$0 { steuerung.promptLoeschenFehler = nil } }), presenting: steuerung.promptLoeschenFehler) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { fehler in
+            Text(fehler)
+        }
     }
 }
 

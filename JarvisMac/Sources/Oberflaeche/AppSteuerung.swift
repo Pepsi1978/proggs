@@ -37,6 +37,9 @@ final class AppSteuerung {
     var promptStand = 0
     /// Der noch nicht gespeicherte neue Prompt: Er überlebt das Vollbild und den Wechsel des Bereichs.
     var promptEntwurf = ""
+    /// Der eben gesendete Prompt, solange die Frage offen ist, ob er aus der Ablage weg soll.
+    var promptLoeschenFrage: PromptEintrag?
+    var promptLoeschenFehler: String?
     var handyVerbunden = false
     var handyVersion = ""
     private var hotKeyRefs: [EventHotKeyRef] = []
@@ -77,6 +80,19 @@ final class AppSteuerung {
         g.projekt = imProjekt ? projekt : nil
         gespraech = g
         bereich = .gespraech
+    }
+
+    /// Ja auf die Frage nach dem Senden: löscht nur den Eintrag der Ablage, der Text in der Eingabe bleibt.
+    func gesendetenPromptLoeschen(_ p: PromptEintrag) {
+        Task {
+            // Die Nummer ist nur der Platz in der Liste und kann sich seit dem Senden verschoben haben: am Text wiederfinden.
+            guard let liste = await McpKlient.shared.text("prompts_lesen") else { promptLoeschenFehler = "Das Handy ist gerade nicht erreichbar, der Prompt wurde nicht gelöscht."; return }
+            guard let aktuell = PromptEintrag.zerlege(liste).first(where: { $0.text == p.text }) else { promptLoeschenFehler = "Dieser Prompt wurde inzwischen geändert oder gelöscht, nichts wurde gelöscht."; return }
+            let r = await McpKlient.shared.rufe("prompt_speichern", ["aktion": "loeschen", "nummer": aktuell.nummer])
+            if r.fehler { promptLoeschenFehler = r.text; return }
+            log("ablage", "Gesendeten Prompt gelöscht", wo: "Ablage/Prompts")
+            promptStand += 1
+        }
     }
 
     func oeffne(_ g: Gespraech) {

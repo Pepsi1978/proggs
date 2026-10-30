@@ -186,6 +186,7 @@ struct PromptsAnsicht: View {
                             KapselKnopf(symbol: "paperplane.fill", titel: "Senden", hervorgehoben: true) {
                                 AppSteuerung.shared.neuesGespraech()
                                 AppSteuerung.shared.entwurf = "Übergib bitte folgende Aufgabe an den Programmierer: " + p.text
+                                AppSteuerung.shared.promptLoeschenFrage = p
                             }
                         }
                     }
