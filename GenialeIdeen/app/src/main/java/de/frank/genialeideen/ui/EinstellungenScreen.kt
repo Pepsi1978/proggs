@@ -347,6 +347,11 @@ fun EinstellungenScreen(
                 GoldKnopf(text = "Eigene Stimme aufnehmen", aufTipp = aufEigeneStimme)
             }
 
+            // ---- Spracheingabe · Offline über Jarvis ----
+            Klappblock("Spracheingabe · Offline", "Parakeet über Jarvis") {
+                de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+            }
+
             // ---- Spracheingabe ----
             Klappblock("Spracheingabe", "Diktat und Filter") {
                 SchluesselFeld(

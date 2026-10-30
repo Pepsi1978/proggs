@@ -633,6 +633,18 @@ class IdeenViewModel(
         _aufnahme.value = AufnahmeStand(wirdUebertragen = true)
             try {
                 val schluessel = settings.groqApiKey
+                val parakeet = de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.gewaehlt(getApplication())
+                if (parakeet) {
+                    // Offline über Jarvis, kein stiller Rückfall auf Groq: Fehler laufen über die Übertragungs-Fehlerbehandlung unten.
+                    val text = de.frank.module.transkriptionsmodul.ParakeetUeberJarvis.transkribiere(getApplication(), wav)
+                    _aufnahme.value = AufnahmeStand()
+                    if (text.isBlank()) {
+                        zeige(Meldung("Es war nichts Verständliches zu hören.", istFehler = true))
+                        return
+                    }
+                    fertig(text)
+                    return
+                }
                 if (schluessel.isBlank()) {
                     _aufnahme.value = AufnahmeStand()
                     zeige(
