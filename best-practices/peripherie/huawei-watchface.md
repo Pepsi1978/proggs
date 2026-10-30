@@ -27,6 +27,7 @@ Geprüft: `WatchPhase/hwt.py` baut `watchface.bin` eines Theme-Studio-Exports (B
 ## §4 Wege auf die Uhr (Stand der Recherche, an einer Watch 3 nicht getestet)
 - Offiziell: Theme Studio, Export `.hwt`, Import in Huawei Health mit Entwickler-HUAWEI-ID ("Add watch faces" nur mit Berechtigung "Themes certified designer"). https://developer.huawei.com/consumer/en/codelab/theme-Watchface/
 - Gadgetbridge listet Watch 3 mit "Uploading watch faces": https://gadgetbridge.org/basics/topics/huawei-honor/
+- Kopplung behalten: Gadgetbridge auf dem Handy mit Huawei Health nutzen, Auth key = 17-stellige Account-ID (`userId` im Huawei-Cloud-Cookie), Health-Berechtigungen vorher entziehen, Uhr in Health nie entkoppeln oder löschen. Danach ist laut Doku beides nutzbar, für Gadgetbridge aber jedes Mal neu verbinden. Ob das von einem zweiten Handy aus geht, sagt die Doku nicht. https://gadgetbridge.org/basics/pairing/huawei-honor-pairing/
 - Modifizierte Huawei Health (Community, Test-Signatur, auf Samsung mehrfach fehlgeschlagen): https://faces4watch.com/download/how-to-install-custom-watch-faces-on-huawei-watch-gt-gt2-gt2e-gt2-pro-honor-watches
 - Gallery-Zifferblatt in Huawei Health ab 14.0.8.300 erlaubt nur Fotos als Hintergrund: https://consumer.huawei.com/ca/support/content/en-us15972335
 - Theme Studio für macOS ist nicht bestätigt, das Codelab verlangt Windows 10.
