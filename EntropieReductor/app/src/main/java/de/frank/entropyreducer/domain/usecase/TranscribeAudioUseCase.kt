@@ -9,6 +9,9 @@ import de.frank.entropyreducer.data.remote.TranscriptionResponse
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import de.frank.entropyreducer.util.runCatchingCancellable
+import de.frank.module.transkriptionsmodul.ParakeetUeberJarvis
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -48,9 +51,14 @@ class TranscribeAudioUseCase @Inject constructor(
     private val settings: AppSettings,
     private val analyzer: SpeechAnalyzer,
     private val diag: DiagnosticLogger,
+    @ApplicationContext private val context: Context,
 ) {
 
     suspend operator fun invoke(audioFile: File): Result<String> {
+        // Offline über Jarvis (Parakeet): hat bei Wahl Vorrang, braucht keinen Groq-Key und kein Netz.
+        // Kein stiller Rückfall auf Groq; bei Fehler bleibt die Aufnahme erhalten (wie bei Groq-Fehlern).
+        if (ParakeetUeberJarvis.gewaehlt(context)) return transkribiereMitParakeet(audioFile)
+
         val key = secrets.groqApiKey
             ?: return Result.failure(IllegalStateException("Kein Groq-Key hinterlegt"))
         var model = resolveModel(settings.whisperModelFlow.first())
@@ -115,6 +123,23 @@ class TranscribeAudioUseCase @Inject constructor(
         // Spec §20: Audio nach erfolgreicher Transkription sofort löschen.
         // Bei Fehler behalten — sonst kann der Nutzer den Eintrag später nicht
         // erneut bewerten lassen. Tageweises Cache-Aufraeumen folgt mit Stufe 2.
+        if (result.isSuccess) audioFile.delete()
+        return result
+    }
+
+    private suspend fun transkribiereMitParakeet(audioFile: File): Result<String> {
+        // Schicht 1 (Stille-Vorfilter) gilt auch hier: Aufnahme ohne Sprache gar nicht erst schicken.
+        val analysis = analyzer.analyze(audioFile)
+        if (analysis != null && analysis.voicedMs < MIN_SPEECH_MS) {
+            diag.info(
+                DiagnosticArea.GROQ,
+                "Schicht 1: Aufnahme ohne Sprachgehalt (${analysis.voicedMs} ms laut < $MIN_SPEECH_MS ms) — nicht an Jarvis gesendet",
+            )
+            audioFile.delete()
+            return Result.success("")
+        }
+        val result = runCatchingCancellable { ParakeetUeberJarvis.transkribiere(context, audioFile) }
+        result.onFailure { diag.warn(DiagnosticArea.GROQ, "Parakeet über Jarvis fehlgeschlagen: ${it.message}") }
         if (result.isSuccess) audioFile.delete()
         return result
     }

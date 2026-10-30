@@ -58,6 +58,20 @@ fun ModelsScreen(onBack: () -> Unit, vm: ModelsViewModel = hiltViewModel()) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
+                // Offline über Jarvis (Parakeet): hat bei Wahl Vorrang vor Groq Whisper.
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Text(
+                            "Spracheingabe · Offline",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cosmos.textPrimary,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        de.frank.module.transkriptionsmodul.ParakeetEinstellungen()
+                    }
+                }
+            }
+            item {
                 ModelGroup(
                     title = "Whisper-Modell (Groq)",
                     options = listOf("whisper-large-v3-turbo", "whisper-large-v3"),

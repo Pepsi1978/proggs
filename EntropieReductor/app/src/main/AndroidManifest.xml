@@ -16,6 +16,7 @@
          von BestJournal Frank fuer uns unsichtbar (resolveContentProvider == null). -->
     <queries>
         <package android:name="com.huami.watch.hmwatchmanager" />
+        <provider android:authorities="de.frank.jarvis.parakeet" />
         <provider android:authorities="com.entropyjournal.journalexport" />
         <provider android:authorities="com.entropyjournal.debug.journalexport" />
     </queries>
@@ -106,6 +107,7 @@
     <permission
         android:name="de.frank.jarvis.permission.BRUECKE"
         android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
 
     <application
         android:name=".EntropyReducerApp"
