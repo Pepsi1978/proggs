@@ -436,6 +436,7 @@
     {"versionCode": 430, "versionName": "1.8.419", "stand": "30.10.2026, 09:59 Uhr", "notiz": "Im Live-Gedächtnis gibt es den Langzeitkontext: eine Textdatei für dauerhaftes Wissen über dich, die auf Handy und Mac immer gleich ist."},
     {"versionCode": 431, "versionName": "1.8.420", "stand": "30.10.2026, 10:21 Uhr", "notiz": "Der Langzeitkontext verliert keine Entwürfe mehr, und bei Änderungen auf beiden Geräten entscheidest du, welche Fassung gilt."},
     {"versionCode": 432, "versionName": "1.8.421", "stand": "30.10.2026, 10:54 Uhr", "notiz": "Prompts bearbeitest du jetzt auf dem ganzen Bildschirm statt in einem kleinen Fenster."},
-    {"versionCode": 433, "versionName": "1.8.422", "stand": "30.10.2026, 10:55 Uhr", "notiz": "Das Wörterbuch gilt jetzt auch für Parakeet offline, und deine anderen Apps können das Modell über Jarvis mitnutzen, jede mit eigener Wortliste."}
+    {"versionCode": 433, "versionName": "1.8.422", "stand": "30.10.2026, 10:55 Uhr", "notiz": "Das Wörterbuch gilt jetzt auch für Parakeet offline, und deine anderen Apps können das Modell über Jarvis mitnutzen, jede mit eigener Wortliste."},
+    {"versionCode": 434, "versionName": "1.8.423", "stand": "30.10.2026, 10:59 Uhr", "notiz": "Andere Apps können jetzt das Offline-Modell über Jarvis nutzen, und das Wörterbuch wirkt auch bei Parakeet."}
 ]
 }
