@@ -64,13 +64,9 @@ object Installierer {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Startet die Installation im eigenen Bereich; das Ergebnis darf die Activity abwarten, ohne sie festzuhalten. */
-    fun starte(context: Context, eintrag: AppEintrag, freigegeben: Boolean = false): Deferred<Start> {
+    fun starte(context: Context, eintrag: AppEintrag): Deferred<Start> {
         val app = context.applicationContext
-        return bereich.async {
-            // Jarvis nie ohne die Frage nach dem Zeitpunkt; danach kommt der Start aus Aufschub mit freigegeben.
-            val ohneFrage = freigegeben || eintrag.paket != Aufschub.PAKET_JARVIS || Aufschub.frage(app, eintrag.paket) == Aufschub.Frage.OHNE_OVERLAY
-            if (ohneFrage) installiere(app, eintrag) else Start.GESTARTET
-        }
+        return bereich.async { installiere(app, eintrag) }
     }
 
     /**

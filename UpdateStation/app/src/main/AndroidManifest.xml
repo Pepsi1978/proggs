@@ -15,9 +15,6 @@
     <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <!-- Signatur-Erlaubnis von Jarvis: Update-Signal empfangen und Ansagen an Jarvis schicken. -->
     <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
-    <!-- Verschobene Jarvis-Installation pünktlich auslösen, auch im Hintergrund. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:name=".UpdateStationApp"
@@ -38,14 +35,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <receiver
-            android:name=".Aufschub$AufschubEmpfaenger"
-            android:exported="false" />
-
-        <receiver
-            android:name=".Aufschub$AntwortEmpfaenger"
-            android:exported="false" />
 
         <receiver
             android:name=".InstallErgebnisReceiver"

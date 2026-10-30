@@ -562,13 +562,6 @@ private fun InstallBereich(install: InstallStatus?, darfInstallieren: Boolean, k
             else "Google Drive stellt die Datei bereit …",
             null,
         )
-        InstallStatus.WartetAufAntwort -> Zeile(Icons.Rounded.TouchApp, "Jarvis fragt, wann installiert werden soll.", MaterialTheme.colorScheme.primary)
-        is InstallStatus.Geplant -> {
-            val um = java.text.SimpleDateFormat("HH:mm", java.util.Locale.GERMANY).format(java.util.Date(install.um))
-            Zeile(Icons.Rounded.TouchApp, "Installation startet um $um Uhr.", MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(10.dp))
-            OutlinedButton(onClick = onInstallieren, modifier = Modifier.fillMaxWidth()) { Text("Zeitpunkt ändern") }
-        }
         is InstallStatus.Laedt -> Fortschritt("Wird geladen … ${install.prozent} %", install.prozent / 100f)
         InstallStatus.Prueft -> Fortschritt("Prüfe Prüfsumme, Version und Signatur …", null)
         InstallStatus.WartetAufBestaetigung -> Zeile(Icons.Rounded.TouchApp, "Bitte die Installation im Systemdialog bestätigen.", MaterialTheme.colorScheme.primary)
