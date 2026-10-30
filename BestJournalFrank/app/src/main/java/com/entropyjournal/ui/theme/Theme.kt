@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.entropyjournal.ui.components.GoldenDustOverlay
@@ -261,6 +262,7 @@ fun EntropyJournalTheme(
 
     CompositionLocalProvider(
         LocalIsDarkTheme provides darkTheme,
+        LocalConfiguration provides appModusKonfiguration(darkTheme),
         LocalJournalDesignTokens provides designTokens,
         LocalHeadingScale provides clampFontScale(headingScale),
         LocalBodyScale provides clampFontScale(bodyScale),

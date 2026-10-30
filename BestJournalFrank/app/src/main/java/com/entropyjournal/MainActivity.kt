@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +30,7 @@ import androidx.fragment.app.FragmentActivity
 import com.entropyjournal.ui.navigation.AppNavGraph
 import com.entropyjournal.ui.theme.EntropyJournalTheme
 import com.entropyjournal.ui.theme.ProfileTheme
+import com.entropyjournal.ui.theme.sonneDunkel
 import com.entropyjournal.util.Constants
 import com.entropyjournal.util.SunCalculator
 import dagger.hilt.android.AndroidEntryPoint
@@ -86,7 +86,8 @@ class MainActivity : FragmentActivity() {
                     }
                 )
             }
-            val systemDark = isSystemInDarkTheme()
+            // Der gespeicherte Wert "System folgen" bedeutet seit der Sonnen-Automatik: nach der Sonne in Neuenhagen.
+            val automatikDunkel = sonneDunkel(followSystem.value)
 
             DisposableEffect(Unit) {
                 val encListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -139,7 +140,7 @@ class MainActivity : FragmentActivity() {
             val isDark =
                 when {
                     followSun.value -> sunDark.value
-                    followSystem.value -> systemDark
+                    followSystem.value -> automatikDunkel
                     else -> manualDark.value
                 }
             val headingFont = ProfileTheme.currentHeadingFont.value

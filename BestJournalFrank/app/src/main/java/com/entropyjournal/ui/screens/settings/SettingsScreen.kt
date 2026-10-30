@@ -870,7 +870,7 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // System folgen � Light phone (sun) | divider | Dark phone (moon)
+                        // Automatisch nach der Sonne � Light phone (sun) | divider | Dark phone (moon)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -884,12 +884,12 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "System folgen",
+                                        "Automatisch nach der Sonne",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     Text(
-                                        "Automatisch",
+                                        "Hell ab Sonnenaufgang, dunkel nach der Dämmerung",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -944,7 +944,7 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        "Sonnenauf-/untergang",
+                                        "Sonnenauf-/untergang am Standort",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
