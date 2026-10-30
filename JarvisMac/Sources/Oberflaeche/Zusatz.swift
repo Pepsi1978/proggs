@@ -100,24 +100,31 @@ struct PromptEintrag: Identifiable, Hashable {
     let nummer: Int
     let titel: String
     let text: String
+    /// Feste Kennung des Handys (Anlagezeitpunkt); 0 = unbekannt.
+    var erstellt: Int64 = 0
     var id: Int { nummer }
 
     static func zerlege(_ roh: String) -> [PromptEintrag] {
         var r: [PromptEintrag] = []
-        var aktuell: (Int, String)?
+        var aktuell: (Int, String, Int64)?
+        // Nur Kopfzeilen mit fester Kennung zählen, sonst hielte eine Zeile „Prompt 1:“ im Text für einen neuen Eintrag. Ältere Handy-Versionen senden keine Kennung.
+        let mitKennung = #"^Prompt \d+( \(.*\))? \[id \d+\]:\s*$"#
+        let kopf = roh.components(separatedBy: "\n").contains { $0.range(of: mitKennung, options: .regularExpression) != nil } ? mitKennung : #"^Prompt \d+( \(.*\))?:\s*$"#
         var zeilen: [String] = []
         func fertig() {
-            if let a = aktuell { r.append(PromptEintrag(nummer: a.0, titel: a.1, text: zeilen.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines))) }
+            if let a = aktuell { r.append(PromptEintrag(nummer: a.0, titel: a.1, text: zeilen.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines), erstellt: a.2)) }
             zeilen = []
         }
         for z in roh.components(separatedBy: "\n") {
             if z.hasPrefix("(Falls in diesem Gespräch") { continue }
-            if z.range(of: #"^Prompt \d+( \(.*\))?:\s*$"#, options: .regularExpression) != nil {
+            if z.range(of: kopf, options: .regularExpression) != nil {
                 let rest = z.dropFirst(7)
                 let nummer = Int(rest.prefix { $0.isNumber }) ?? 0
                 var titel = ""
                 if let a = z.firstIndex(of: "("), let b = z.lastIndex(of: ")"), a < b { titel = String(z[z.index(after: a)..<b]) }
-                fertig(); aktuell = (nummer, titel); continue
+                var erstellt: Int64 = 0
+                if let k = z.range(of: "[id ", options: .backwards) { erstellt = Int64(z[k.upperBound...].prefix { $0.isNumber }) ?? 0 }
+                fertig(); aktuell = (nummer, titel, erstellt); continue
             }
             zeilen.append(z)
         }
