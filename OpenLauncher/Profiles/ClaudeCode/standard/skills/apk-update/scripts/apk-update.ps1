@@ -854,7 +854,7 @@ if ($uploadPruefbar -and -not $Vordergrund) {
     # Sperre freigeben und als eigene Sitzung starten: So überlebt der Upload das Ende von Skript und Claude-Sitzung.
     $script:sperre.Dispose(); $script:sperre = $null
     $start = 'log=$1; shift; /usr/bin/perl -MPOSIX -e "POSIX::setsid(); exec @ARGV" "$@" </dev/null >>"$log" 2>&1 &'
-    & /bin/sh -c $start sh $protokoll (Get-Process -Id $PID).Path -NoProfile -File $PSCommandPath -Projekt $Projekt -ProggsWurzel $proggs -UpdatesWurzel $updatesDir -UploadFristMinuten 360 -UploadAuftrag "$basis.json"
+    & /bin/sh -c $start sh $protokoll (Get-Process -Id $PID).Path -NoProfile -File $PSCommandPath -Projekt $Projekt -ProggsWurzel $proggs -UpdatesWurzel $updatesDir -UploadFristMinuten 360 -UploadAuftrag "$basis.json" -OhneGeraet:$OhneGeraet
     $laeuft = $null
     foreach ($i in 1..80) {
         $laeuft = Lies-Upload-Marker $Projekt
