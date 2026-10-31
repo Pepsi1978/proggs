@@ -90,7 +90,8 @@ function aufbauen() {
   term.open($("xterm"));
   // Android holt die Tastatur bei jedem Tipper zurück, solange dieses Feld den Fokus hat, auch bei Esc oder STRG. Tippen am Handy geht nur übers Eingabefeld.
   term.textarea.inputMode = "none";
-  term.onData((d) => schicke(d));
+  // Auch xterm selbst antwortet hier auf Anfragen von tmux: Das darf kein offenes Menü schließen.
+  term.onData((d) => schicke(d, false));
   new ResizeObserver(() => passen()).observe($("xterm"));
   wischenEinrichten();
 }
@@ -109,9 +110,9 @@ function rollen(zeilen) {
   }, 100);
 }
 // Lage in der Zeichenreihe des gesamten Puffers, damit die Länge auch über Zeilen hinweg stimmt.
-let markierAnfang = 0;
+let markierAnfang = 0, markierEnde = 0, markierFlaeche = null;
 function zelle(x, y) {
-  const r = term.element.querySelector(".xterm-screen").getBoundingClientRect();
+  const r = markierFlaeche;
   const spalte = Math.max(0, Math.min(term.cols - 1, Math.floor((x - r.left) / r.width * term.cols)));
   const zeile = Math.max(0, Math.min(term.rows - 1, Math.floor((y - r.top) / r.height * term.rows)));
   return (term.buffer.active.viewportY + zeile) * term.cols + spalte;
@@ -120,8 +121,15 @@ function markierenBis(ziel) {
   const von = Math.min(markierAnfang, ziel);
   term.select(von % term.cols, Math.floor(von / term.cols), Math.abs(ziel - markierAnfang) + 1);
 }
-function markierenBeginnen(x, y) { markierAnfang = zelle(x, y); markierenBis(markierAnfang); }
-function markierenZiehen(x, y) { markierenBis(zelle(x, y)); }
+function markierenBeginnen(x, y) {
+  markierFlaeche = term.element.querySelector(".xterm-screen").getBoundingClientRect();
+  markierAnfang = markierEnde = zelle(x, y);
+  markierenBis(markierAnfang);
+}
+function markierenZiehen(x, y) {
+  const ziel = zelle(x, y);
+  if (ziel !== markierEnde) { markierEnde = ziel; markierenBis(ziel); }
+}
 function wischenEinrichten() {
   const flaeche = $("xterm");
   const zeilenHoehe = () => Math.max(8, flaeche.clientHeight / (term ? term.rows : 24));
@@ -148,6 +156,8 @@ function wischenEinrichten() {
   let halten = null, markiert = false;
   decke.addEventListener("contextmenu", (e) => e.preventDefault());
   decke.addEventListener("touchstart", (e) => {
+    // Ein zweiter Finger ist keine Haltegeste und bringt die laufende Bewegung nicht durcheinander.
+    if (e.touches.length > 1) { clearTimeout(halten); return; }
     clearInterval(schwung); y = e.touches[0].clientY; rest = 0; tempo = 0; weg = 0; zuletzt = e.timeStamp;
     const { clientX: x0, clientY: y0 } = e.touches[0];
     markiert = false;
@@ -166,6 +176,7 @@ function wischenEinrichten() {
     if (zeilen) { rest -= zeilen * zeilenHoehe(); rollen(zeilen); }
   }, { passive: false });
   decke.addEventListener("touchend", (e) => {
+    if (e.touches.length) return;
     y = null;
     clearTimeout(halten);
     if (markiert) { e.preventDefault(); markiert = false; terminalMenue(); return; }
@@ -180,16 +191,22 @@ function wischenEinrichten() {
       rollen(zeilen);
     }, 60);
   });
-  decke.addEventListener("touchcancel", () => { y = null; markiert = false; clearTimeout(halten); }, { passive: true });
+  decke.addEventListener("touchcancel", () => {
+    y = null;
+    clearTimeout(halten);
+    // Ohne Menü ließe sich die halbe Markierung nicht mehr kopieren.
+    if (markiert) { markiert = false; term.clearSelection(); }
+  }, { passive: true });
 }
-function schicke(d) {
+function schicke(d, schliessen = true) {
   rollenStoppen();
   schonGesprochen = false;
-  waehle("");
+  if (schliessen) waehle("");
   $("nach-unten").hidden = true;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d }));
   // Sonst sieht ein Strg+C im Funkloch aus, als wäre es angekommen.
-  else if (aktuell) $("titel").textContent = "Keine Verbindung, Eingabe nicht gesendet.";
+  // Bleibt bei einer offenen Sitzung stehen, bis die Verbindung wieder da ist.
+  else { hinweis("Keine Verbindung, Eingabe nicht gesendet."); if (aktuell) clearTimeout(hinweisZeit); }
 }
 function passen() {
   if (!term || seite !== "terminal") return;
@@ -228,7 +245,7 @@ function aufmachen() {
   term.reset();
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/${encodeURIComponent(name)}`);
   ws.binaryType = "arraybuffer";
-  ws.onopen = () => { $("titel").textContent = sitzungsTitel; passen(); };
+  ws.onopen = () => { clearTimeout(hinweisZeit); $("titel").textContent = sitzungsTitel; passen(); };
   ws.onmessage = (e) => term.write(new Uint8Array(e.data));
   // Abriss (Mobilfunk, Tunnel): wieder anhängen. Die Sitzung läuft in tmux weiter.
   ws.onclose = (e) => {
@@ -241,7 +258,8 @@ zweimal($("schliessen"), () => { if (aktuell) { const n = aktuell; $("schliessen
 // STRG und ALT: Ein Tipper öffnet die Leiste A bis Z zum Wischen, ein Buchstabe schickt die Tastenkombination und schließt sie.
 function waehle(art) {
   tastenWahl = art;
-  $("menue").hidden = true;
+  // Geht das Menü zu, gilt auch seine Markierung nicht mehr; ohne Menü ließe sie sich nicht mehr kopieren.
+  if (!$("menue").hidden) { $("menue").hidden = true; term?.clearSelection(); }
   $("buchstaben").hidden = !art;
   if (art) $("buchstaben").scrollLeft = 0;
   // Das Mikrofon läge sonst halb unter der Leiste, ein Tipp darauf träfe einen Buchstaben.
@@ -256,7 +274,7 @@ for (const b of "abcdefghijklmnopqrstuvwxyz") {
 for (const name of Object.keys(kombination)) $(name).addEventListener("click", () => waehle(tastenWahl === name ? "" : name));
 document.querySelectorAll("#tasten button[data-t]").forEach((b) => b.addEventListener("click", () => schicke(b.dataset.t)));
 // Der Fokus bleibt im Eingabefeld, sonst klappt die Handy-Tastatur bei jedem Tipper zu.
-for (const name of ["tasten", "buchstaben"]) $(name).addEventListener("mousedown", (e) => e.preventDefault());
+for (const name of ["tasten", "buchstaben", "menue", "stimme-tastatur"]) $(name).addEventListener("mousedown", (e) => e.preventDefault());
 // Wer weiterschreibt statt einen Buchstaben zu wählen, braucht die Leiste nicht mehr; sie läge sonst über der Eingabezeile der CLI.
 $("text").addEventListener("input", () => waehle(""));
 // Zwischenablage: In Jarvis über die Schnittstelle der App, denn die Konsole läuft im Tunnel über HTTP und sieht navigator.clipboard dort nicht.
@@ -264,53 +282,78 @@ let hinweisZeit = null;
 function hinweis(text) {
   $("titel").textContent = text;
   clearTimeout(hinweisZeit);
-  hinweisZeit = setTimeout(() => { if (aktuell) $("titel").textContent = sitzungsTitel; }, 2500);
+  hinweisZeit = setTimeout(() => { $("titel").textContent = aktuell ? sitzungsTitel : "Keine Sitzung gewählt"; }, 2500);
 }
-function kopieren(text) {
-  if (!text) return;
-  if (window.JarvisAblage) { JarvisAblage.schreiben(text); hinweis("Kopiert."); }
-  else if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => hinweis("Kopiert."), () => hinweis("Kopieren hat nicht geklappt."));
-  else hinweis("Kopieren geht hier nur in Jarvis.");
+// Antwortet, ob der Text wirklich in der Zwischenablage liegt: Ausschneiden darf sonst nichts löschen.
+async function kopieren(text) {
+  if (!text) { hinweis("Nichts zum Kopieren."); return false; }
+  let geklappt;
+  if (window.JarvisAblage) geklappt = JarvisAblage.schreiben(text);
+  else if (navigator.clipboard) geklappt = await navigator.clipboard.writeText(text).then(() => true, () => false);
+  else { hinweis("Kopieren geht hier nur in Jarvis."); return false; }
+  hinweis(geklappt ? "Kopiert." : "Kopieren hat nicht geklappt.");
+  return geklappt;
 }
 async function einfuegen(ziel) {
-  let text = "";
+  let text;
   if (window.JarvisAblage) text = JarvisAblage.lesen();
-  else if (navigator.clipboard) text = await navigator.clipboard.readText().catch(() => "");
+  else if (navigator.clipboard) text = await navigator.clipboard.readText().catch(() => null);
   else return hinweis("Einfügen geht hier nur in Jarvis.");
-  if (text) ziel(text); else hinweis("Die Zwischenablage ist leer.");
+  if (text === null) hinweis("Die Zwischenablage ließ sich nicht lesen.");
+  else if (text) ziel(text);
+  else hinweis("Die Zwischenablage ist leer.");
 }
 function menue(eintraege) {
   waehle("");
   $("menue").replaceChildren(...eintraege.map(([name, aktion]) => {
     const knopf = element("button", "", name);
-    knopf.addEventListener("click", () => { $("menue").hidden = true; $("terminal").classList.remove("wahl-offen"); term?.clearSelection(); aktion(); });
+    knopf.addEventListener("click", () => { waehle(""); aktion(); });
     return knopf;
   }));
   $("menue").hidden = false;
   $("terminal").classList.add("wahl-offen");
 }
+function insTerminal(text) {
+  if (!aktuell) return hinweis("Keine Sitzung offen.");
+  // Ohne Bracketed Paste liefe jede Zeile sofort als eigener Befehl: Dann erst ins Eingabefeld, zum Ansehen.
+  if (/[\r\n]/.test(text) && !term.modes.bracketedPasteMode) {
+    insFeld(text);
+    return hinweis("Mehrzeilig: erst im Eingabefeld, mit Senden abschicken.");
+  }
+  term.paste(text);
+}
+function feldAuswahl() {
+  const t = $("text");
+  // Ohne Fokus ist eine alte Auswahl nicht mehr zu sehen und darf nichts ersetzen.
+  return document.activeElement === t ? [t.selectionStart, t.selectionEnd] : [t.value.length, t.value.length];
+}
+function insFeld(text) { const [von, bis] = feldAuswahl(); $("text").setRangeText(text, von, bis, "end"); }
 function terminalMenue() {
   // Der Text wird jetzt festgehalten: Eine weiterlaufende CLI darf die Markierung auf dem Bildschirm überschreiben.
   const text = term.getSelection();
   menue([
     ["Kopieren", () => kopieren(text)],
-    ["Alles auswählen", () => { term.selectAll(); terminalMenue(); }],
-    ["Einfügen", () => einfuegen((t) => term.paste(t))],
+    ["Alles Sichtbare", () => { term.selectAll(); terminalMenue(); }],
+    ["Einfügen", () => einfuegen(insTerminal)],
     ["✕", () => {}],
   ]);
 }
 function feldMenue() {
   const t = $("text");
-  const auswahl = () => t.value.slice(t.selectionStart, t.selectionEnd);
+  const auswahl = () => t.value.slice(...feldAuswahl());
   menue([
-    ["Einfügen", () => einfuegen((x) => t.setRangeText(x, t.selectionStart, t.selectionEnd, "end"))],
+    ["Einfügen", () => einfuegen(insFeld)],
     ["Kopieren", () => kopieren(auswahl() || t.value)],
-    ["Ausschneiden", () => { kopieren(auswahl() || t.value); if (auswahl()) t.setRangeText("", t.selectionStart, t.selectionEnd, "end"); else t.value = ""; }],
+    ["Ausschneiden", async () => {
+      const [von, bis] = feldAuswahl();
+      const teil = von !== bis;
+      if (!await kopieren(teil ? t.value.slice(von, bis) : t.value)) return;
+      if (teil) t.setRangeText("", von, bis, "end"); else t.value = "";
+    }],
     ["Alles auswählen", () => { t.focus(); t.select(); feldMenue(); }],
     ["✕", () => {}],
   ]);
 }
-$("menue").addEventListener("mousedown", (e) => e.preventDefault());
 // Tastatur: Sie kommt nur beim Tipper ins Eingabefeld oder über den Knopf, nie bei anderen Tastern oder langem Drücken (inputmode none hält sie dann unten).
 let tastaturAn = false, letzteHoehe = window.innerHeight;
 function tastatur(an) {
@@ -321,27 +364,34 @@ function tastatur(an) {
   t.blur();
   if (an) t.focus();
 }
-$("stimme-tastatur").addEventListener("mousedown", (e) => e.preventDefault());
 $("stimme-tastatur").addEventListener("click", () => tastatur(!tastaturAn));
-// Per Zurück-Geste oder Senden geschlossen: Das Fenster wächst wieder, der Zustand muss folgen, sonst holt der nächste Tipper sie zurück.
+// Per Zurück-Geste oder Senden geschlossen: Der Zustand muss folgen, sonst holt der nächste Tipper sie zurück. Jarvis meldet das sicher, siehe ServerKonsoleActivity.
+function tastaturZu() { if (tastaturAn) tastatur(false); }
 window.addEventListener("resize", () => {
   const h = window.innerHeight;
-  if (tastaturAn && h > letzteHoehe + 100) tastatur(false);
+  if (!window.JarvisAblage && h > letzteHoehe + 100) tastaturZu();
   letzteHoehe = h;
 });
 {
   const t = $("text");
-  let halten = null, gehalten = false, x0 = 0, y0 = 0;
-  t.addEventListener("contextmenu", (e) => e.preventDefault());
+  let halten = null, gehalten = false, finger = false, x0 = 0, y0 = 0;
+  const loslassen = () => { finger = false; clearTimeout(halten); };
+  // Nur der Finger bekommt das eigene Menü: Der Rechtsklick am Rechner behält das des Browsers, und ohne nutzbare Zwischenablage bleibt auch das Handy beim eigenen.
+  t.addEventListener("contextmenu", (e) => { if (finger && (window.JarvisAblage || navigator.clipboard)) e.preventDefault(); });
   t.addEventListener("touchstart", (e) => {
-    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; gehalten = false;
+    finger = true; gehalten = false;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
     clearTimeout(halten);
-    halten = setTimeout(() => { gehalten = true; navigator.vibrate?.(20); feldMenue(); }, 500);
+    if (window.JarvisAblage || navigator.clipboard) halten = setTimeout(() => { gehalten = true; navigator.vibrate?.(20); feldMenue(); }, 500);
   }, { passive: true });
   t.addEventListener("touchmove", (e) => { if (Math.hypot(e.touches[0].clientX - x0, e.touches[0].clientY - y0) > 10) clearTimeout(halten); }, { passive: true });
-  t.addEventListener("touchend", () => clearTimeout(halten), { passive: true });
-  t.addEventListener("touchcancel", () => clearTimeout(halten), { passive: true });
-  t.addEventListener("click", () => { if (gehalten) gehalten = false; else if (!tastaturAn) tastatur(true); });
+  t.addEventListener("touchend", loslassen, { passive: true });
+  t.addEventListener("touchcancel", loslassen, { passive: true });
+  t.addEventListener("click", () => {
+    if (gehalten) { gehalten = false; return; }
+    waehle("");
+    if (!tastaturAn) tastatur(true);
+  });
 }
 $("eingabe").addEventListener("submit", (e) => {
   e.preventDefault();

@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.ViewGroup
 import android.content.pm.PackageManager
 import android.media.AudioManager
@@ -52,13 +53,15 @@ class ServerKonsoleActivity : ComponentActivity() {
     private lateinit var ansicht: WebView
     private val adresse = "http://${Fernziel.SERVER.adresse}:${Fernziel.SERVER.port}"
     private var angemeldet = false
+    private var imeWarAn = false
+    @Volatile private var letzteBeruehrung = 0L
 
     private fun anmelden() {
         angemeldet = true
         ansicht.postUrl("$adresse/anmelden", ("token=" + Uri.encode(MacSteuerung.token(this))).toByteArray())
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ansicht = WebView(this).apply {
@@ -66,6 +69,7 @@ class ServerKonsoleActivity : ComponentActivity() {
             setBackgroundColor(android.graphics.Color.parseColor("#10131A"))
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            setOnTouchListener { _, _ -> letzteBeruehrung = SystemClock.uptimeMillis(); false }
             addJavascriptInterface(Stimme(), "JarvisSprache")
             addJavascriptInterface(Ablage(), "JarvisAblage")
             webViewClient = object : WebViewClient() {
@@ -99,6 +103,10 @@ class ServerKonsoleActivity : ComponentActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(rahmen) { v, insets ->
             val r = insets.getInsets(WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.captionBar() or WindowInsetsCompat.Type.ime())
             v.setPadding(r.left, r.top, r.right, r.bottom)
+            // Die Seite kennt nur ihre Fenstergröße; ob die Tastatur zuging, weiß sicher nur Android (Aufklappen und Drehen ändern die Größe genauso).
+            val imeAn = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (imeWarAn && !imeAn) ansicht.evaluateJavascript("tastaturZu()", null)
+            imeWarAn = imeAn
             WindowInsetsCompat.CONSUMED
         }
         setContentView(rahmen)
@@ -126,10 +134,14 @@ class ServerKonsoleActivity : ComponentActivity() {
     /** Zwischenablage für die Seite: Über HTTP im Tunnel gibt es dort kein navigator.clipboard, und das Menü von Android steht beim Eingabefeld nicht bereit. */
     private inner class Ablage {
         private val dienst get() = getSystemService(ClipboardManager::class.java)
-        @JavascriptInterface fun lesen(): String = runCatching {
-            dienst.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this@ServerKonsoleActivity)?.toString()
-        }.getOrNull().orEmpty()
-        @JavascriptInterface fun schreiben(text: String) { runCatching { dienst.setPrimaryClip(ClipData.newPlainText("Server-Konsole", text)) } }
+        /** Nur direkt nach einer Berührung, damit die Seite die Ablage nie unbemerkt mitlesen kann. null = nicht lesbar, leer = nichts darin. */
+        @JavascriptInterface fun lesen(): String? {
+            if (SystemClock.uptimeMillis() - letzteBeruehrung > 5_000) return null
+            return runCatching {
+                dienst.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this@ServerKonsoleActivity)?.toString().orEmpty()
+            }.getOrNull()
+        }
+        @JavascriptInterface fun schreiben(text: String): Boolean = runCatching { dienst.setPrimaryClip(ClipData.newPlainText("Server-Konsole", text)) }.isSuccess
     }
 
     private val mikro by lazy { TranskriptionAnbindung.mikrofon(applicationContext) }
