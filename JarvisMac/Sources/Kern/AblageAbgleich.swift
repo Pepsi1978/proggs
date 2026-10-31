@@ -22,6 +22,12 @@ final class AblageAbgleich {
     @ObservationIgnored private var laeuft = false
     @ObservationIgnored private var ladeAufgabe: Task<Void, Never>?
     @ObservationIgnored private var nochmalLaden = false
+    @ObservationIgnored private var wiederholung: Task<Void, Never>?
+    @ObservationIgnored private var ladePause = 300.0
+    /** Kennung des Serverspeichers: Wechselt sie, wurde er neu aufgesetzt, und die eigene Kopie muss zurück auf ihn. */
+    @ObservationIgnored private var instanz = ""
+    /** Der erste Abgleich dieser Kopie ist durch: Vorher kennt sie vorhandene Titel und Nummern noch nicht. */
+    @ObservationIgnored private var bereit = false
     @ObservationIgnored private var laufendeLadungen: [String: Task<URL, Error>] = [:]
 
     private let ordner: URL = {
@@ -75,9 +81,22 @@ final class AblageAbgleich {
         let (daten, antwort) = try await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: Double(warten) + 30))
         guard (antwort as? HTTPURLResponse)?.statusCode == 200, let o = JSON.objekt(daten), let liste = o["docs"] as? [JSONObjekt] else { throw URLError(.badServerResponse) }
         let neu = Self.zahl(o["stand"])
-        // Nur der Server weiß sicher, dass er neu aufgesetzt wurde. Ein kleinerer Stand allein kann auch eine überholte Antwort sein („Neu laden“ neben dem Long-Polling).
-        let neuaufbau = o["neuaufbau"] as? Bool == true
-        if neuaufbau { docs = [:] } else if neu < Int64(stand) { return }
+        // Der Server wurde neu aufgesetzt oder aus einem Backup geholt: Die eigene Kopie wird nicht verworfen, sie geht zurück auf den Server.
+        if let i = o["instanz"] as? String, !i.isEmpty, i != instanz {
+            let gewechselt = !instanz.isEmpty
+            instanz = i
+            if gewechselt {
+                log("ablage", "Server wurde neu aufgesetzt, sende die eigene Kopie", wo: "Ablage")
+                for k in docs.keys { docs[k]?["stand"] = 0 }
+                stand = 0
+                speichereDocs()
+                Task { await kopieZurueckSenden() }
+                return
+            }
+        }
+        bereit = true
+        // Ein kleinerer Stand ist eine überholte Antwort („Neu laden“ neben dem Long-Polling).
+        if neu < Int64(stand) { return }
         for d in liste {
             guard let art = d["art"] as? String, let id = d["id"] as? String else { continue }
             // Eine Antwort von vor dem eigenen Speichern darf die gerade gespeicherte Fassung nicht zurückdrehen.
@@ -85,7 +104,7 @@ final class AblageAbgleich {
             docs["\(art):\(id)"] = d
         }
         guard neu != Int64(stand) || !liste.isEmpty else { return }
-        stand = max(Int(neu), neuaufbau ? 0 : stand)
+        stand = max(Int(neu), stand)
         speichereDocs()
         neuAufbauen()
         if !liste.isEmpty { log("ablage", "\(liste.count) Änderung(en) vom Server", wo: "Ablage") }
@@ -95,11 +114,13 @@ final class AblageAbgleich {
     private func ladeDocs() {
         guard let d = try? Data(contentsOf: docsDatei), let o = JSON.objekt(d) else { return }
         stand = Int(Self.zahl(o["stand"]))
+        instanz = o["instanz"] as? String ?? ""
+        bereit = stand > 0
         docs = o["docs"] as? [String: JSONObjekt] ?? [:]
     }
 
     private func speichereDocs() {
-        try? JSON.daten(["stand": stand, "docs": docs] as JSONObjekt).write(to: docsDatei, options: .atomic)
+        try? JSON.daten(["stand": stand, "docs": docs, "instanz": instanz] as JSONObjekt).write(to: docsDatei, options: .atomic)
     }
 
     /// Lädt im Hintergrund alles, was hier noch fehlt, und räumt Inhalte weg, die kein Eintrag mehr braucht.
@@ -118,11 +139,34 @@ final class AblageAbgleich {
                 if let d = try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, d < grenze { try? FileManager.default.removeItem(at: u) }
             }
             ladeAufgabe = nil
+            wiederholung?.cancel()
             if nochmalLaden { nochmalLaden = false; allesLaden() } else if fehlgeschlagen {
-                try? await Task.sleep(for: .seconds(300))
-                allesLaden()
-            }
+                // Nur eine Wiederholung zur Zeit und mit wachsendem Abstand: Eine volle Platte oder eine defekte Datei lädt sonst immer wieder Gigabytes.
+                let pause = ladePause
+                ladePause = min(ladePause * 2, 3600)
+                wiederholung = Task {
+                    try? await Task.sleep(for: .seconds(pause))
+                    if !Task.isCancelled { allesLaden() }
+                }
+            } else { ladePause = 300 }
         }
+    }
+
+    /// Alles aus der eigenen Kopie noch einmal zum Server, mit den alten Zeiten: Jüngeres dort gewinnt, und das Handy sendet seinen Teil ebenso.
+    private func kopieZurueckSenden() async {
+        for d in Array(docs.values) {
+            guard let art = d["art"] as? String, let id = d["id"] as? String, let w = d["daten"] as? JSONObjekt else { continue }
+            var inhalte: [String: URL] = [:]
+            var shas = (w["anhaenge"] as? [JSONObjekt] ?? []).compactMap { $0["sha256"] as? String }
+            if let t = w["text_sha"] as? String, !t.isEmpty { shas.append(t) }
+            for s in shas { inhalte[s] = pfad(s) }
+            try? await senden(art: art, id: id, daten: w, geaendert: Self.zahl(d["geaendert"]), geloescht: d["geloescht"] as? Bool == true, inhalte: inhalte)
+        }
+    }
+
+    /// Eine ganz neue Kopie kennt vorhandene Titel und Nummern noch nicht: Sonst entstünden Doppel oder „gibt es nicht“.
+    private func ersterAbgleich() async throws {
+        if !bereit { try await holen(warten: 0) }
     }
 
     private func benutzteInhalte() -> Set<String> {
@@ -172,7 +216,7 @@ final class AblageAbgleich {
     func text(_ e: AblageEintrag) async throws -> String {
         guard let sha = e.textSha else { return "" }
         let u = try await inhalt(sha)
-        return (try? String(contentsOf: u, encoding: .utf8)) ?? ""
+        return await Task.detached(priority: .userInitiated) { (try? String(contentsOf: u, encoding: .utf8)) ?? "" }.value
     }
 
     /// Volltextsuche: Titel, Dateinamen, Beschreibungen der Dateien und Texte; ein noch fehlender Text wird dafür geholt.
@@ -180,6 +224,7 @@ final class AblageAbgleich {
         let w = wort.lowercased()
         var r = Set<String>()
         for e in eintraege {
+            if Task.isCancelled { break }
             if e.titel.lowercased().contains(w) || e.dateien.contains(where: { $0.name.lowercased().contains(w) || $0.beschreibung.lowercased().contains(w) }) { r.insert(e.id); continue }
             guard let sha = e.textSha, let u = try? await inhalt(sha) else { continue }
             let treffer = await Task.detached(priority: .utility) { ((try? String(contentsOf: u, encoding: .utf8)) ?? "").lowercased().contains(w) }.value
@@ -197,7 +242,14 @@ final class AblageAbgleich {
         req.httpMethod = "PUT"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = JSON.daten(["daten": daten, "geaendert": geaendert, "geloescht": geloescht, "von": Self.quelle] as JSONObjekt)
-        var (antwort, kopf) = try await URLSession.shared.data(for: req)
+        // Geht nur die Antwort verloren, erkennt der Server dieselbe Fassung wieder: Nichts entsteht doppelt.
+        func schicken() async throws -> (Data, URLResponse) {
+            do { return try await URLSession.shared.data(for: req) } catch is URLError {
+                try await Task.sleep(for: .seconds(2))
+                return try await URLSession.shared.data(for: req)
+            }
+        }
+        var (antwort, kopf) = try await schicken()
         if (kopf as? HTTPURLResponse)?.statusCode == 409 {
             for sha in JSON.objekt(antwort)?["fehlend"] as? [String] ?? [] {
                 guard let datei = inhalte[sha], let hoch = URL(string: "\(basis)/blob/\(sha)") else { throw AblageFehler.inhaltFehlt }
@@ -206,7 +258,7 @@ final class AblageAbgleich {
                 let (_, k) = try await URLSession.shared.upload(for: r, fromFile: datei)
                 guard (k as? HTTPURLResponse)?.statusCode == 200 else { throw AblageFehler.hochladen }
             }
-            (antwort, kopf) = try await URLSession.shared.data(for: req)
+            (antwort, kopf) = try await schicken()
         }
         guard (kopf as? HTTPURLResponse)?.statusCode == 200 else { throw AblageFehler.server }
         guard let ok = JSON.objekt(antwort), ok["uebernommen"] as? Bool == true else { throw AblageFehler.neuereFassung }
@@ -237,6 +289,7 @@ final class AblageAbgleich {
 
     /// Neuer Text oder Ersatz bei genau gleichem Titel (wie am Handy); mit anhaengen wird ergänzt.
     func textSpeichern(titel: String, inhalt: String, anhaengen: Bool = false) async throws {
+        try await ersterAbgleich()
         let name = Self.titelSauber(titel)
         var volltext = inhalt.trimmingCharacters(in: .whitespacesAndNewlines) + "\n"
         // Wie am Handy: Ersetzt wird nur bei genau gleichem Titel, ein eindeutiger Teil des Titels genügt nur zum Anhängen.
@@ -245,7 +298,12 @@ final class AblageAbgleich {
             let teil = eintraege.filter { Self.titelSauber($0.titel).lowercased().contains(name.lowercased()) }
             if teil.count == 1 { vorhanden = teil[0] }
         }
-        if anhaengen, let v = vorhanden, v.textSha != nil { volltext = (try await text(v)) + "\n\n" + volltext }
+        if anhaengen, var v = vorhanden, v.textSha != nil {
+            // Beim Holen des Texts kann eine neuere Fassung ankommen: Angehängt wird an den Stand, der dann gilt.
+            var alt = try await text(v)
+            while let jetzt = eintraege.first(where: { $0.id == v.id }), jetzt.textSha != v.textSha { v = jetzt; alt = try await text(v) }
+            volltext = alt + "\n\n" + volltext
+        }
         let (sha, u) = try merke(Data(volltext.utf8))
         let id = vorhanden?.id ?? Self.neueId()
         let zeit = self.zeit("eintrag", id)
@@ -260,17 +318,17 @@ final class AblageAbgleich {
 
     /// Eine Datei vom Mac in die Ablage: ein eigener Eintrag mit dem Dateinamen als Titel.
     func dateiHinzufuegen(_ datei: URL) async throws {
-        let sha = try await Self.pruefsumme(datei)
-        let u = pfad(sha)
-        // Abseits des Hauptfadens: Eine große Datei legte sonst die ganze App still. Über eine Zwischendatei, das Datum zählt für das Aufräumen.
+        // Erst kopieren, dann die Prüfsumme der Kopie: Ändert sich die Datei gerade, liegt so nie falscher Inhalt unter einer Prüfsumme.
+        // Abseits des Hauptfadens: Eine große Datei legte sonst die ganze App still. Das Datum zählt für das Aufräumen.
+        let teil = blobs.appendingPathComponent(UUID().uuidString + ".teil")
         try await Task.detached(priority: .userInitiated) {
-            guard !FileManager.default.fileExists(atPath: u.path) else { return }
-            let teil = u.appendingPathExtension("teil")
-            try? FileManager.default.removeItem(at: teil)
             try FileManager.default.copyItem(at: datei, to: teil)
             try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: teil.path)
-            try FileManager.default.moveItem(at: teil, to: u)
         }.value
+        defer { try? FileManager.default.removeItem(at: teil) }
+        let sha = try await Self.pruefsumme(teil)
+        let u = pfad(sha)
+        if !FileManager.default.fileExists(atPath: u.path) { try FileManager.default.moveItem(at: teil, to: u) }
         let groesse = (try? FileManager.default.attributesOfItem(atPath: u.path)[.size] as? Int) ?? 0
         let endung = datei.pathExtension.lowercased()
         let typ = Dateiart.bestimme(endung)
@@ -333,9 +391,31 @@ final class AblageAbgleich {
 
     // MARK: Werkzeuge des Modells
 
+    /// Wie werkzeug, aber nach der Frist bekommt das Modell eine Antwort; ein großer Download läuft dann im Hintergrund weiter.
+    func werkzeugMitFrist(_ name: String, _ a: JSONObjekt, sekunden: Double) async -> WerkzeugErgebnis? {
+        final class Einmal { var fertig = false }
+        let einmal = Einmal()
+        return await withCheckedContinuation { (c: CheckedContinuation<WerkzeugErgebnis?, Never>) in
+            let ende: @MainActor (WerkzeugErgebnis?) -> Void = { r in
+                guard !einmal.fertig else { return }
+                einmal.fertig = true
+                c.resume(returning: r)
+            }
+            Task { ende(await self.werkzeug(name, a)) }
+            Task {
+                try? await Task.sleep(for: .seconds(sekunden))
+                ende(WerkzeugErgebnis(text: "Die Ablage hat nicht rechtzeitig geantwortet, eine Datei wird noch geholt. Bitte gleich noch einmal versuchen.", fehler: true))
+            }
+        }
+    }
+
     /// Was der Mac selbst am Server erledigt. Alles andere geht weiter ans Handy; dort erzeugte Einträge bekommen die Quelle des Mac über _quelle.
     func werkzeug(_ name: String, _ a: JSONObjekt) async -> WerkzeugErgebnis? {
         do {
+            switch name {
+            case "ablage_schreiben", "ablage_lesen", "ablage_loeschen", "prompts_lesen", "prompt_speichern": try await ersterAbgleich()
+            default: return nil
+            }
             switch name {
             case "ablage_schreiben":
                 guard a["als_pdf"] as? Bool != true else { return nil }
@@ -353,7 +433,9 @@ final class AblageAbgleich {
             case "ablage_loeschen":
                 // Direkte Aufrufe der App kannten nur die Kennung; Unbekanntes kann ein vorläufiges Ergebnis am Handy sein.
                 let kennung = a["eintrag_id"] as? String
-                guard let e = kennung.map({ k in eintraege.first { $0.id == k } }) ?? finde(a["titel"] as? String ?? "") else { return nil }
+                let titel = (a["titel"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                if kennung == nil && titel.isEmpty { return WerkzeugErgebnis(text: "Es fehlt der Titel des Eintrags, gelöscht wurde nichts.", fehler: true) }
+                guard let e = kennung.map({ k in eintraege.first { $0.id == k } }) ?? finde(titel) else { return nil }
                 let wunsch = (a["datei"] as? String)?.trimmingCharacters(in: .whitespaces).lowercased() ?? ""
                 if let id = a["datei_id"] as? String {
                     guard let d = e.dateien.first(where: { $0.id == id }) else { return WerkzeugErgebnis(text: "Diese Datei gibt es nicht mehr.", fehler: true) }
@@ -444,7 +526,8 @@ final class AblageAbgleich {
             guard let w = d["daten"] as? JSONObjekt, let id = d["id"] as? String else { continue }
             switch d["art"] as? String {
             case "eintrag":
-                let dateien = (w["anhaenge"] as? [JSONObjekt] ?? []).map { a in
+                // Kennungen vom Server landen in Pfaden.
+                let dateien = (w["anhaenge"] as? [JSONObjekt] ?? []).filter { Self.kennungOk($0["id"] as? String) && Self.kennungOk($0["sha256"] as? String) }.map { a in
                     AblageDatei(id: a["id"] as? String ?? "", name: a["name"] as? String ?? "", art: a["art"] as? String ?? "SONSTIGE", kategorie: a["kategorie"] as? String ?? "SONSTIGE",
                                 endung: a["endung"] as? String ?? "", groesse: Int(Self.zahl(a["groesse"])), sha: a["sha256"] as? String ?? "", beschreibung: a["beschreibung"] as? String ?? "")
                 }
@@ -471,6 +554,11 @@ final class AblageAbgleich {
         for i in ps.indices { ps[i].nummer = i + 1 }
         eintraege = neu.sorted { $0.geaendert > $1.geaendert }
         prompts = ps
+    }
+
+    private static func kennungOk(_ s: String?) -> Bool {
+        guard let s, !s.isEmpty, s.count <= 64 else { return false }
+        return s.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_" || $0 == "-") }
     }
 
     private static func quellenName(_ x: Any?) -> String {

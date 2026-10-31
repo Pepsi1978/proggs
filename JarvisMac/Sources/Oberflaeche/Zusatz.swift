@@ -18,6 +18,7 @@ struct PromptsAnsicht: View {
     @State private var abgleich = AblageAbgleich.shared
     @State private var fehler = ""
     @State private var quellenOffen = false
+    @State private var loeschFrage: PromptEintrag?
     @AppStorage("prompts.nachQuelle") private var nachQuelle = false
     @AppStorage("ablage.quellen") private var quellenWert = QuellenOrdnung.alle.joined(separator: ",")
     @State private var offen: PromptEintrag?
@@ -80,7 +81,7 @@ struct PromptsAnsicht: View {
                         HStack(spacing: 8) {
                             Spacer()
                             KleinKnopf(symbol: "trash", hilfe: "Löschen") {
-                                Task { do { try await abgleich.promptLoeschen(erstellt: p.erstellt); fehler = "" } catch { fehler = error.localizedDescription } }
+                                loeschFrage = p
                             }
                             KleinKnopf(symbol: "doc.on.doc", hilfe: "Kopieren") {
                                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(p.text, forType: .string)
@@ -94,6 +95,12 @@ struct PromptsAnsicht: View {
                         }
                     }
                 }
+            }
+        }
+        .confirmationDialog("Prompt \(loeschFrage?.nummer ?? 0) auf allen Jarvis-Versionen löschen?", isPresented: Binding(get: { loeschFrage != nil }, set: { if !$0 { loeschFrage = nil } })) {
+            Button("Löschen", role: .destructive) {
+                guard let p = loeschFrage else { return }
+                Task { do { try await abgleich.promptLoeschen(erstellt: p.erstellt); fehler = "" } catch { fehler = error.localizedDescription } }
             }
         }
     }

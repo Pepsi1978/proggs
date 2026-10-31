@@ -131,7 +131,9 @@ final class AblageDaten {
     func suchen(_ wort: String) async {
         let w = wort.trimmingCharacters(in: .whitespaces)
         guard !w.isEmpty else { treffer = nil; return }
-        treffer = await quelle.suche(w)
+        let r = await quelle.suche(w)
+        // Eine ältere Suche darf das Ergebnis der neueren nicht überschreiben.
+        if !Task.isCancelled { treffer = r }
     }
 
     func laden() async {
@@ -213,11 +215,12 @@ enum AblageLader {
         guard let d = e.datei else { throw NSError(domain: "Ablage", code: 1) }
         let quelle = try await AblageAbgleich.shared.inhalt(d.sha)
         fortschritt(1)
-        let ziel = ordner.appendingPathComponent(d.id, isDirectory: true)
+        let ziel = ordner.appendingPathComponent(d.sha, isDirectory: true)
         try FileManager.default.createDirectory(at: ziel, withIntermediateDirectories: true)
-        let url = ziel.appendingPathComponent((d.name as NSString).lastPathComponent)
-        if let a = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int, a == d.groesse { return url }
-        // Abseits des Hauptfadens: Eine große Datei legte sonst die ganze App still.
+        var name = (d.name as NSString).lastPathComponent
+        if name.isEmpty || name == "." || name == ".." || name == "/" { name = "Datei" }
+        let url = ziel.appendingPathComponent(name)
+        // Immer frisch aus der Ablage: Ein anderes Programm kann die Kopie verändert haben. Abseits des Hauptfadens: Eine große Datei legte sonst die ganze App still.
         try await Task.detached(priority: .userInitiated) {
             try? FileManager.default.removeItem(at: url)
             try FileManager.default.copyItem(at: quelle, to: url)
@@ -239,7 +242,8 @@ enum AblageLader {
 
     static func vergessen(_ d: AblageDatei) {
         let inhalt = (try? FileManager.default.contentsOfDirectory(at: ordner, includingPropertiesForKeys: nil)) ?? []
-        for u in inhalt where u.lastPathComponent.hasPrefix(d.id) { try? FileManager.default.removeItem(at: u) }
+        guard !d.sha.isEmpty else { return }
+        for u in inhalt where u.lastPathComponent.hasPrefix(d.sha) { try? FileManager.default.removeItem(at: u) }
     }
 }
 
@@ -554,8 +558,8 @@ struct AblageDetail: View {
                 let u = try await AblageLader.datei(element) { _ in }
                 switch d.art {
                 case "PDF": pdf = u
-                case "BILD", "ANIMATION", "SVG": bild = NSImage(contentsOf: u)
-                default: text = (try? String(contentsOf: u, encoding: .utf8)) ?? "(Kein lesbarer Text)"
+                case "BILD", "ANIMATION", "SVG": bild = await Task.detached(priority: .userInitiated) { NSImage(contentsOf: u) }.value
+                default: text = await Task.detached(priority: .userInitiated) { (try? String(contentsOf: u, encoding: .utf8)) ?? "(Kein lesbarer Text)" }.value
                 }
             }
         } catch { fehler = error.localizedDescription }
@@ -574,8 +578,13 @@ struct AblageDetail: View {
             let panel = NSSavePanel()
             panel.nameFieldStringValue = u.lastPathComponent
             guard panel.runModal() == .OK, let ziel = panel.url else { return }
-            try? FileManager.default.removeItem(at: ziel)
-            try FileManager.default.copyItem(at: u, to: ziel)
+            // Über eine Zwischendatei und in einem Schritt: Scheitert die Kopie, bleibt eine vorhandene Datei am Ziel erhalten.
+            try await Task.detached(priority: .userInitiated) {
+                let teil = ziel.deletingLastPathComponent().appendingPathComponent("." + ziel.lastPathComponent + ".teil")
+                try? FileManager.default.removeItem(at: teil)
+                try FileManager.default.copyItem(at: u, to: teil)
+                if FileManager.default.fileExists(atPath: ziel.path) { _ = try FileManager.default.replaceItemAt(ziel, withItemAt: teil) } else { try FileManager.default.moveItem(at: teil, to: ziel) }
+            }.value
             log("ablage", "Gesichert: \(element.name) nach \(ziel.path)", wo: "Ablage")
         } catch { fehler = error.localizedDescription }
     }
