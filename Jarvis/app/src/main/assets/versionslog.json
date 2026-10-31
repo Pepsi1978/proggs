@@ -489,6 +489,7 @@
     {"versionCode": 485, "versionName": "1.8.474", "stand": "31.10.2026, 10:50 Uhr", "notiz": "Das Fenster des aufgeklappten Prompts ragt im Querformat nicht mehr unten aus dem Bild, die Knöpfe sind vollständig zu sehen."},
     {"versionCode": 486, "versionName": "1.8.475", "stand": "31.10.2026, 10:51 Uhr", "notiz": "Die Anbindung des Hostinger-Servers ist nach dem Review robuster: klare Meldungen beim Ziel Server, Sol weicht richtig aus, die Server-Konsole meldet sich ohne Token in der Adresse an, und das Fernwartungssymbol ist nur grün, wenn ein Bildschirm erreichbar ist."},
     {"versionCode": 487, "versionName": "1.8.476", "stand": "31.10.2026, 10:53 Uhr", "notiz": "Der Abgleich der Ablage verliert nichts mehr: Änderungen auf zwei Geräten werden zusammengeführt, abhanden gekommene Dateien kommen vom Server zurück, und ein defektes Dokument hält den Rest nicht mehr auf."},
-    {"versionCode": 488, "versionName": "1.8.477", "stand": "31.10.2026, 10:58 Uhr", "notiz": "Auf dem aufgeklappten Handy öffnet sich ein Prompt jetzt im Vollbild, die Knöpfe stehen auch im Querformat vollständig unten."}
+    {"versionCode": 488, "versionName": "1.8.477", "stand": "31.10.2026, 10:58 Uhr", "notiz": "Auf dem aufgeklappten Handy öffnet sich ein Prompt jetzt im Vollbild, die Knöpfe stehen auch im Querformat vollständig unten."},
+    {"versionCode": 489, "versionName": "1.8.478", "stand": "31.10.2026, 11:00 Uhr", "notiz": "Im Querformat des aufgeklappten Handys stehen die Knöpfe eines Prompts jetzt ganz unten, der Text bekommt den übrigen Platz."}
 ]
 }
