@@ -403,7 +403,12 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
                 // Antwort auf eine offene Modellkarte dieses Gesprächs.
                 val (ausChatGpt, gespraech) = herkunft()
                 val modellWert = when (a.optString("modell").trim().lowercase()) { MODELL_SOL -> MODELL_SOL; MODELL_OPUS -> MODELL_OPUS; else -> "" }
+                // Franks Wahl vom 31.10.2026: Per Programmierbutton vor dem Diktat gewählt, steht das Modell im Auftragseinstieg und gilt
+                // verbindlich, auch gegen eine andere Angabe des Modells; dann kommen keine Knöpfe Opus/Sol mehr.
+                val knopfModell = ProgrammiererVorlage.modell(worte?.aktuell.orEmpty())
+                if (knopfModell != null) a.put("modell", knopfModell)
                 val modell = when {
+                    knopfModell != null -> knopfModell
                     ausChatGpt || gespraech.isEmpty() -> modellWert
                     offeneWahlen.values.any { it.gespraech == gespraech && it.stufe == STUFE_MODELL } ->
                         modellAusAntwort(worte?.aktuell).ifEmpty { modellWert.takeIf { modellGenannt(worte?.aktuell.orEmpty()) }.orEmpty() }

@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -43,6 +45,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.ui.graphics.graphicsLayer
@@ -88,6 +91,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.contentDescription
@@ -188,8 +192,8 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
         // ein Anhang ändert nur die Anhangsliste (der Senden-Pfeil erscheint), die Blase bleibt eingeklappt.
         val kompakt = vm.eingabeKompakt
 
-        // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen kommt; nur „Programmierer“
-        // im Plus-Menü fokussiert es. Eigener Feldzustand, damit der Cursor nach Vorspann und Diktat am Ende steht.
+        // Oben: das Textfeld. Kein automatischer Fokus, damit die Tastatur erst beim Hineintippen oder über das
+        // Tastatursymbol kommt. Eigener Feldzustand, damit der Cursor nach Vorspann und Diktat am Ende steht.
         var feld by remember { mutableStateOf(TextFieldValue(vm.entwurf, TextRange(vm.entwurf.length))) }
         // Von außen geändert (Vorspann, Diktat, nach dem Senden geleert): dann der neue Text mit dem Cursor am Ende.
         val wert = if (feld.text == vm.entwurf) feld else TextFieldValue(vm.entwurf, TextRange(vm.entwurf.length))
@@ -282,6 +286,15 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             }
             Spacer(Modifier.width(4.dp))
+            // Im Programmierauftrag spricht Frank ein; die Tastatur kommt nur über dieses kleine Symbol neben dem Mikrofon.
+            if (vm.programmiererAktiv && !kompakt) {
+                val tastaturOffen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+                Box(Modifier.size(36.dp).clip(CircleShape).antippen {
+                    if (tastaturOffen) { tastatur?.hide(); fokusVerwalter.clearFocus() } else vm.entwurfFokus = true
+                }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Keyboard, if (tastaturOffen) "Tastatur schließen" else "Tastatur öffnen", tint = if (tastaturOffen) f.primaer else f.text, modifier = Modifier.size(22.dp))
+                }
+            }
             // Diktier-Mikrofon: rot, solange es aufnimmt; der Text kommt danach ins Feld.
             Box(
                 Modifier.size(44.dp).clip(CircleShape).background(if (vm.nimmtAuf) f.gefahr else Color.Transparent).antippen { vm.diktatTippen() },
@@ -315,7 +328,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
             if (vm.nachtragMoeglich) {
                 // Im Programmiergespräch: etwa einen Zentimeter neben „Programmierer“ der Knopf „+ Nachtrag“; er setzt „Nachtrag:“ vor den Text.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.antippen { plusOffen = false; vm.programmiererEinsetzen() }.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.antippen { plusOffen = false; vm.programmiererTippen() }.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Code, null, tint = if (vm.programmiererAktiv) f.erfolg else f.text, modifier = Modifier.size(26.dp))
                         Text("Programmierer", color = f.text, fontSize = 18.sp, modifier = Modifier.padding(start = 20.dp))
                     }
@@ -326,7 +339,7 @@ fun EingabeBlase(vm: AppViewModel, modifier: Modifier = Modifier) {
                         Text("Nachtrag", color = f.text, fontSize = 18.sp, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
                     }
                 }
-            } else MenueZeile(Icons.Rounded.Code, "Programmierer", farbe = if (vm.programmiererAktiv) f.erfolg else null) { plusOffen = false; vm.programmiererEinsetzen() }
+            } else MenueZeile(Icons.Rounded.Code, "Programmierer", farbe = if (vm.programmiererAktiv) f.erfolg else null) { plusOffen = false; vm.programmiererTippen() }
             MenueZeile(Icons.Rounded.Extension, "Plugins") { plusOffen = false; pluginsOffen = true }
         }
     }
@@ -485,11 +498,11 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         // „Programmierer“, gut mit dem rechten Daumen erreichbar. Die Karte im Chat zeigt nur noch die Frage.
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Eingeklappt verschwinden sie hier sofort; dann stehen sie allein über dem Pfeil (siehe unten), nie doppelt.
-            if (karte != null && !vm.schweberEingeklappt) {
-                WahlKnoepfe(vm, karte)
-                Spacer(Modifier.width(8.dp))
+            if (!vm.schweberEingeklappt) {
+                if (vm.programmierVorwahlOffen) VorwahlKnoepfe(vm) else karte?.let { WahlKnoepfe(vm, it) }
+                if (vm.programmierVorwahlOffen || karte != null) Spacer(Modifier.width(8.dp))
             }
-            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv, { vm.programmiererEinsetzen() }) {
+            SchwebeSymbol("Neuer Programmierauftrag", vm.programmiererAktiv || vm.programmierVorwahlOffen, { vm.programmiererTippen() }) {
                 Icon(Icons.Rounded.Code, null, tint = f.text, modifier = Modifier.size(26.dp))
             }
         }
@@ -498,11 +511,11 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
         // Eingeklappt bleibt die Auswahl trotzdem sichtbar und bedienbar, direkt über dem Pfeil. Sie blendet erst ein, wenn der
         // Stapel weggeklappt ist, und verschwindet beim Aufklappen sofort: So stehen die Knöpfe nie doppelt da.
         androidx.compose.animation.AnimatedVisibility(
-            visible = vm.schweberEingeklappt && karte != null,
+            visible = vm.schweberEingeklappt && (karte != null || vm.programmierVorwahlOffen),
             enter = androidx.compose.animation.fadeIn(tween(150, delayMillis = 150)),
             exit = androidx.compose.animation.ExitTransition.None,
         ) {
-            karte?.let { WahlKnoepfe(vm, it) }
+            if (vm.programmierVorwahlOffen) VorwahlKnoepfe(vm) else karte?.let { WahlKnoepfe(vm, it) }
         }
         // Unter „Programmierer“ in der freien Bubble: Pfeil ohne Kreis und Grund, grau wie der Papierkorb. Nach unten = einklappen,
         // nach oben = wieder aufklappen. Er bleibt an seiner Stelle, die übrigen Symbole stehen ausgeklappt so hoch wie früher.
@@ -527,12 +540,23 @@ fun ProgrammierSchweber(vm: AppViewModel, modifier: Modifier = Modifier) {
  */
 @Composable
 private fun WahlKnoepfe(vm: AppViewModel, karte: Nachricht) {
-    val f = LocalFarben.current
     val id = de.frank.jarvis.data.Gespraeche.wahlId(karte.kontext)
+    AuswahlKnoepfe(wahlOptionen(karte.kontext)) { vm.programmierModell(id, it) }
+}
+
+/** Die Modellwahl direkt nach dem Antippen des Programmierbuttons, noch vor dem Diktat. */
+@Composable
+private fun VorwahlKnoepfe(vm: AppViewModel) {
+    AuswahlKnoepfe(listOf(de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_SOL to "Sol 6.1", de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit.MODELL_OPUS to "Opus 5.5")) { vm.programmierVorwahl(it) }
+}
+
+@Composable
+private fun AuswahlKnoepfe(optionen: List<Pair<String, String>>, aktion: (String) -> Unit) {
+    val f = LocalFarben.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        wahlOptionen(karte.kontext).forEachIndexed { i, (wert, label) ->
+        optionen.forEachIndexed { i, (wert, label) ->
             Box(Modifier.height(SCHWEBE_GROESSE).clip(RoundedCornerShape(SCHWEBE_GROESSE / 2))
-                .background(if (i == 0) f.text else f.flaeche).antippen { vm.programmierModell(id, wert) }
+                .background(if (i == 0) f.text else f.flaeche).antippen { aktion(wert) }
                 .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                 Text(label, color = if (i == 0) f.hgOben else f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             }

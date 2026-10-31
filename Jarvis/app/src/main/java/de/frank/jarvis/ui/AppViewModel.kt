@@ -222,7 +222,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * das Arbeitssymbol dort gehört nur Programmier-Sitzungen, die wirklich arbeiten.
      */
     val denktSichtbar: Boolean get() = sitzungId?.let { id -> laufende[id] }?.let { r ->
-        gespraech.getOrNull(r.frage)?.let { !(it.vonMir && it.text.trimStart().startsWith(ProgrammiererVorlage.VORSPANN)) } ?: true
+        gespraech.getOrNull(r.frage)?.let { !(it.vonMir && ProgrammiererVorlage.aktiv(it.text)) } ?: true
     } == true
 
     // ---- ChatGPT-Anmeldung ----
@@ -304,6 +304,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // verbunden), darf die nächste getippte Antwort nicht laut werden.
         val vorlesen = gesprochen
         gesprochen = false
+        programmierVorwahlOffen = false
         // Ob die Antwort laut wird: gesprochene Frage (Hey Jarvis, Gesprächsmodus) oder eingesprochen und von Hand gesendet.
         // Nie im Live-Gespräch, das spricht selbst.
         val antwortLaut = !liveAktiv && ((vorlesen && einstellungen.antwortenVorlesen) || (diktiert && einstellungen.diktatAntwortVorlesen))
@@ -339,7 +340,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Aus dem Plus-Menü „Programmierer“: zuverlässig als neuer Programmierauftrag übergeben. Nur beim ersten Senden; ein erneuter
         // Versuch bekommt den Hinweis nicht, sonst startete er den schon übergebenen Auftrag ein zweites Mal.
         rundeStarten(text, anhaenge, verlauf, gespraech.size - 1, antwortLaut,
-            (if (programmierer && erledigt.isEmpty()) ProgrammiererVorlage.HINWEIS else "") +
+            (if (programmierer && erledigt.isEmpty()) ProgrammiererVorlage.hinweis(text) else "") +
                 (if (DiktatTrenner.mehrteilig(text)) DiktatTrenner.HINWEIS else "") +
                 if (erledigt.isEmpty()) "" else "\n\n(Diese Frage lief schon einmal. Schon erledigt und NICHT noch einmal ausführen: $erledigt)")
         return true
@@ -898,7 +899,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun anhangWeg(a: de.frank.jarvis.data.Anhang) { anhaenge.remove(a); runCatching { a.datei.delete() } }
 
-    /** Nach „Programmierer“ gesetzt: Die Eingabeblase fokussiert das Feld einmal (Cursor am Ende) und setzt es zurück. */
+    /** Beim Tastatursymbol und beim Prompt gesetzt: Die Eingabeblase fokussiert das Feld einmal (Cursor am Ende) und setzt es zurück. */
     var entwurfFokus by mutableStateOf(false)
 
     /**
@@ -921,7 +922,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * „Programmierer“ und „Nachtrag“ leuchten genau dann grün, wenn ihr Vorspann vorn im Entwurf steht (auch beim Weiterdiktieren);
      * Abschicken oder erneutes Antippen nimmt ihn heraus, dann sind sie wieder durchsichtig. „Neue Session“ leuchtet nach dem Antippen.
      */
-    val programmiererAktiv: Boolean get() = entwurf.trimStart().startsWith(ProgrammiererVorlage.VORSPANN)
+    val programmiererAktiv: Boolean get() = ProgrammiererVorlage.aktiv(entwurf)
     val nachtragAktiv: Boolean get() = entwurf.trimStart().startsWith(NACHTRAG_VORSPANN)
     var neueSessionAktiv by mutableStateOf(false); private set
 
@@ -944,16 +945,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         neueSessionBlitz++
     }
 
+    /** Nach dem Antippen des Programmierbuttons stehen die Knöpfe „Sol 6.1“ und „Opus 5.5“ da, noch vor dem Diktat. */
+    var programmierVorwahlOffen by mutableStateOf(false); private set
+
+    /** Nimmt den Auftragseinstieg wieder aus dem Entwurf, Getipptes dahinter bleibt. */
+    private fun programmiererEntfernen() {
+        entwurf = ProgrammiererVorlage.entfernen(entwurf)
+        if (sitzungId == null) sitzungProgrammierung = false
+    }
+
+    /** Programmierbutton (Schwebesymbol und Plus-Menü): öffnet oder schließt die Modellwahl; steht der Einstieg schon im Entwurf, nimmt er ihn heraus. */
+    fun programmiererTippen() {
+        if (programmiererAktiv) programmiererEntfernen() else programmierVorwahlOffen = !programmierVorwahlOffen
+    }
+
+    /** Knopf „Sol 6.1“ oder „Opus 5.5“: setzt den Einstieg mit diesem Modell ein. Frank spricht den Auftrag ein, deshalb kommt die Tastatur nicht und geht zu, falls sie offen ist. */
+    fun programmierVorwahl(modell: String) {
+        programmierVorwahlOffen = false
+        if (sitzungId == null) sitzungProgrammierung = true
+        entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf), ProgrammiererVorlage.vorspannFuer(modell))
+        tastaturWeg++
+    }
+
     /**
-     * Plus-Menü „Programmierer“: Vorspann in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil.
-     * Steht er schon drin, nimmt ein erneutes Antippen genau ihn wieder heraus. Ein „Nachtrag:“ vorn weicht ihm.
+     * Senden-Knopf eines Prompts: Vorspann ohne Modell in den Entwurf, Getipptes bleibt dahinter; gesendet wird erst mit dem Pfeil.
+     * Steht er schon drin, nimmt ein erneutes Aufrufen genau ihn wieder heraus. Ein „Nachtrag:“ vorn weicht ihm.
      */
     fun programmiererEinsetzen() {
-        if (programmiererAktiv) {
-            entwurf = ProgrammiererVorlage.entfernen(entwurf)
-            if (sitzungId == null) sitzungProgrammierung = false
-            return
-        }
+        if (programmiererAktiv) { programmiererEntfernen(); return }
         // In einem neuen, noch leeren Gespräch: Es kommt mit der ersten Nachricht in den Reiter „Programmierung“.
         if (sitzungId == null) sitzungProgrammierung = true
         entwurf = ProgrammiererVorlage.einsetzen(ohneNachtragVorspann(entwurf))
@@ -969,6 +988,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Steht er schon drin, nimmt ein erneutes Antippen genau ihn wieder heraus. Der Programmierer-Vorspann weicht ihm.
      */
     fun nachtragEinsetzen() {
+        programmierVorwahlOffen = false
         if (nachtragAktiv) { entwurf = ohneNachtragVorspann(entwurf); return }
         val rest = ProgrammiererVorlage.entfernen(entwurf).trimStart()
         entwurf = "$NACHTRAG_VORSPANN $rest"
@@ -2911,6 +2931,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraechLeeren()
         eingabeKompakt = true
         tastaturWeg++
+        programmierVorwahlOffen = false
         knoepfeAus()
     }
 
@@ -3038,6 +3059,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         aufnahmeVerwerfen()
         eingabeKompakt = true
         tastaturWeg++
+        programmierVorwahlOffen = false
         knoepfeAus()
         viewModelScope.launch { sitzungLaden(id) }
     }
