@@ -34,6 +34,7 @@ import urllib.request
 from pathlib import Path
 
 from jarvis_review import antigravity_review_zeile
+import jarvis_agy_kontingent
 
 
 PROFIL = "minimal"
@@ -438,6 +439,7 @@ def main() -> int:
     schreib(f"Brücke gestartet ({RECHNER}, Rang ersatz)")
     raeume_auf()
     threading.Thread(target=jarvis_mac_faden, daemon=True).start()
+    threading.Thread(target=jarvis_agy_kontingent.faden, args=("mac", schreib), daemon=True).start()
     pause = 2
     # Am Mac direkt gestartete Claude-Code-Sitzungen ohne Hooks liest jarvis_lokal.py für Jarvis mit (eigener Prozess).
     scanner = Path(__file__).resolve().with_name("jarvis_lokal.py")

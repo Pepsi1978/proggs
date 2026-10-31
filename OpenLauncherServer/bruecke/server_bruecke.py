@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "kern"))
 import launcher  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Jarvis" / "werkzeuge" / "pc-bruecke"))
 from jarvis_review import antigravity_review_zeile  # noqa: E402
+import jarvis_agy_kontingent  # noqa: E402
 
 ORDNER = Path.home() / "JarvisPcBruecke"
 PROTOKOLL = ORDNER / "bruecke.log"
@@ -242,7 +243,8 @@ def main() -> int:
         return 0
     schreib("Brücke gestartet")
     threading.Thread(target=fortschritt_faden, daemon=True).start()
-    dateien = [Path(__file__), Path(launcher.__file__)]
+    threading.Thread(target=jarvis_agy_kontingent.faden, args=("server", schreib), daemon=True).start()
+    dateien = [Path(__file__), Path(launcher.__file__), Path(jarvis_agy_kontingent.__file__)]
     stand = [d.stat().st_mtime for d in dateien]
     pause, geprueft = 2, False
     letzter_scan = 0.0

@@ -60,7 +60,7 @@ internal fun KontingenteReiter(vm: AppViewModel) {
                 a.hinweis?.let { Text(it, color = if (a.limits.isEmpty() && !a.anmeldenNoetig) f.gefahr else f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp)) }
                 a.standText().takeIf { it.isNotEmpty() }?.let { Text(it, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp)) }
                 if (a.anmeldenNoetig && a.id != "codex") {
-                    Knopf(when (a.id) { "claude" -> "Bei claude.ai anmelden"; "kimi" -> "Bei Kimi anmelden"; else -> "Bei Google anmelden" }, Modifier.padding(top = 10.dp).fillMaxWidth()) { anmelden = a.id }
+                    Knopf(when (a.id) { "claude" -> "Bei claude.ai anmelden"; else -> "Bei Kimi anmelden" }, Modifier.padding(top = 10.dp).fillMaxWidth()) { anmelden = a.id }
                 }
                 if ((a.id == "claude" || a.id == "kimi") && (a.limits.isNotEmpty() || (a.anmeldenNoetig && a.hinweis?.contains("lehnt") == true))) {
                     Knopf("Abmelden", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kontingentAbmelden(a.id) }
@@ -79,7 +79,5 @@ internal fun KontingenteReiter(vm: AppViewModel) {
         // Kimi nennt nach außen kein festes Zeichen für „angemeldet“: Du siehst deine Limits im Fenster und schließt es dann selbst.
         "kimi" -> AnmeldeBrowser("Bei Kimi anmelden, danach schließen", KontingenteFaehigkeit.KIMI_SEITE, googleTauglich = true,
             fertig = { false }, onFertig = { anmelden = null; vm.kontingenteAbfragen(erzwingen = true) })
-        "gemini" -> AnmeldeBrowser("Bei Google anmelden", KontingenteFaehigkeit.GEMINI_LOGIN, googleTauglich = true,
-            fertig = { u -> GoogleGuthabenFaehigkeit.angemeldet() && u.startsWith("https://gemini.google.com") }, onFertig = { anmelden = null; vm.kontingenteAbfragen(erzwingen = true) })
     }
 }

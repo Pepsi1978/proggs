@@ -49,7 +49,8 @@ import org.json.JSONObject
  * und Hochrechnung des Tempos. Die Anbieter haben dafür keine offiziellen Schnittstellen:
  * - Claude: `claude.ai/api/organizations/<org>/usage`, aus der Seite heraus (eigene Anmeldung, die Bot-Abwehr lässt nur einen Browser durch).
  * - Codex: `chatgpt.com/backend-api/wham/usage` mit der ChatGPT-Anmeldung von Jarvis.
- * - Kimi und Gemini: Text der Seiten `kimi.ai/settings/subscription` und `gemini.google.com/usage` in einem unsichtbaren WebView.
+ * - Kimi: Text der Seite `kimi.ai/settings/subscription` in einem unsichtbaren WebView.
+ * - Gemini: Limits der Antigravity-CLI. `agy -p /usage` läuft nur am Rechner: Server und Mac melden die Werte alle drei Stunden über `kontingente_melden`.
  * Ändert ein Anbieter etwas, steht bei ihm ein Hinweis und der letzte Stand bleibt; die anderen Karten bleiben unberührt.
  */
 class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
@@ -76,6 +77,17 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             val s = withTimeoutOrNull(WERKZEUG_FRIST_MS) { stand(context, erzwingen = a.optBoolean("frisch")) } ?: gespeichert(context.applicationContext) ?: Stand(emptyList(), 0L)
             Ergebnis(if (a.optBoolean("json")) s.alsJson().toString() else s.text(), fehler = s.anbieter.all { it.limits.isEmpty() })
         },
+        Werkzeug(
+            name = "kontingente_melden",
+            titel = "Antigravity-Limits melden",
+            beschreibung = "Technisch, nur für die Rechner-Brücken: übergibt die Limits aus `agy -p /usage`. Nicht im Gespräch benutzen; zum Lesen dient kontingente_lesen.",
+            schema = schema(
+                "quelle" to text("Woher die Werte kommen.", listOf("server", "mac")),
+                "limits" to text("JSON-Liste mit name, genutzt (Prozent), fenster (Sekunden) und reset (Sekunden seit 1970)."),
+                pflicht = listOf("quelle", "limits"),
+            ),
+            nurLesen = false,
+        ) { a -> Ergebnis(antigravityMelden(context, a.optString("quelle"), a.optString("limits"))) },
     )
 
     /** Ein Limit. [genutzt] in Prozent, wie zuletzt gelesen; [reset] in Sekunden seit 1970 (0 = beginnt erst mit der nächsten Nutzung). */
@@ -176,8 +188,11 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
         private const val CLAUDE = "https://claude.ai"
         const val CLAUDE_LOGIN = "$CLAUDE/login"
         const val KIMI_SEITE = "https://www.kimi.ai/settings/subscription"
-        private const val GEMINI_SEITE = "https://gemini.google.com/usage?hl=de"
-        const val GEMINI_LOGIN = "https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fgemini.google.com%2Fusage"
+        private const val GEMINI_TITEL = "Gemini / Antigravity (Google)"
+        /** Zwei ausgefallene Meldungen im Drei-Stunden-Takt plus Spielraum: Ab hier sagt die Karte, dass der Stand alt ist. */
+        private const val ANTIGRAVITY_ALT_MS = 7 * 3_600_000L
+        /** Der Server läuft immer und ist die Hauptquelle. Der Mac zählt nur, wenn der Server einen Takt und mehr ausgelassen hat. */
+        private const val SERVER_VORRANG_MS = 4 * 3_600_000L
         val BERLIN: ZoneId = ZoneId.of("Europe/Berlin")
         private val STAND = DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'", Locale.GERMAN)
         private val UHR = DateTimeFormatter.ofPattern("HH:mm 'Uhr'", Locale.GERMAN)
@@ -304,7 +319,8 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 val alt = gespeichert(app)
                 if (!erzwingen && GespraechsFokus.stilleHinweise) return@withLock alt ?: Stand(emptyList(), 0L)
                 if (!erzwingen && alt != null) {
-                    val frist = if (alt.anbieter.any { it.hinweis != null && !it.anmeldenNoetig }) FRISCH_NACH_FEHLER_MS else FRISCH_MS
+                    // Gemini füllen Server und Mac: Ein neuer Abruf hier ändert an dessen Hinweis nichts.
+                    val frist = if (alt.anbieter.any { it.id != "gemini" && it.hinweis != null && !it.anmeldenNoetig }) FRISCH_NACH_FEHLER_MS else FRISCH_MS
                     if (System.currentTimeMillis() - alt.geholt < frist) return@withLock alt
                 }
                 laufErzwungen = erzwingen
@@ -313,11 +329,10 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                     Triple("claude", "Claude (Anthropic)") { claude(app) },
                     Triple("codex", "ChatGPT / Codex (OpenAI)") { codex(app) },
                     Triple("kimi", "Kimi") { kimi(app) },
-                    Triple("gemini", "Gemini (Google)") { gemini(app) },
                 )
                 val liste = coroutineScope {
                     abfragen.map { (id, titel, abfrage) -> async { anbieterLesen(id, titel, abfrage, alt?.von(id), erzwingen) } }.awaitAll()
-                }
+                } + antigravityAnbieter(app)
                 val s = Stand(liste, beginn)
                 val gewarnt = warnen(app, s)
                 runCatching { speichern(app, s, gewarnt) }
@@ -339,7 +354,7 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
                 val (konto, limits) = withTimeout(ANBIETER_FRIST_MS) { abfrage() }
                 // Fehlt nur ein Limit, bleibt dessen letzter Stand: Es darf nicht ohne Hinweis verschwinden.
                 val fehlen = vorher?.limits.orEmpty().filter { alt -> limits.none { it.name == alt.name } }
-                val erwartet = if (id == "kimi" || id == "gemini") 2 else 1
+                val erwartet = if (id == "kimi") 2 else 1
                 val hinweis = if (fehlen.isNotEmpty() || limits.size < erwartet) "Ein Limit ließ sich gerade nicht lesen" + (if (fehlen.isNotEmpty()) ", dort steht der letzte Stand." else ".") else null
                 Anbieter(id, titel, konto, limits + fehlen, hinweis, false, System.currentTimeMillis())
             } catch (f: TimeoutCancellationException) {
@@ -482,48 +497,43 @@ class KontingenteFaehigkeit(private val context: Context) : Faehigkeit {
             return Limit(name, p, f, ende.toEpochSecond())
         }
 
-        private val GEMINI_MONATE = mapOf("jan" to 1, "feb" to 2, "mär" to 3, "mrz" to 3, "apr" to 4, "mai" to 5, "jun" to 6, "jul" to 7, "aug" to 8, "sep" to 9, "okt" to 10, "nov" to 11, "dez" to 12)
-        private val GEMINI_GENUTZT = Regex("(\\d+(?:[.,]\\d+)?)\\s*%\\s*genutzt")
-        private val GEMINI_RESET = Regex("Wird\\s+(morgen\\s+)?(?:am\\s+(\\d{1,2})\\.\\s*([^\\s.]+)\\.?\\s+)?um\\s+(\\d{1,2}):(\\d{2})")
+        private fun antigravityDatei(context: Context) = File(context.filesDir, "kontingente-antigravity.json")
 
-        private suspend fun gemini(app: Context): Pair<String, List<Limit>> {
-            if (!GoogleGuthabenFaehigkeit.angemeldet()) throw NichtAngemeldet("Noch nicht bei Google angemeldet.")
-            val beginn = System.currentTimeMillis()
-            val text = seiteLesen(app, GEMINI_SEITE, SEITENTEXT) {
-                geminiLesen(it).size == 2 || (System.currentTimeMillis() - beginn > ANMELDEN_ERST_NACH_MS && geminiLesen(it).isEmpty() && it.contains("Anmelden"))
-            }
-            val limits = geminiLesen(text)
-            if (limits.isNotEmpty()) return "" to limits
-            throw when {
-                text.isBlank() -> IllegalStateException("Die Gemini-Seite hat nicht geladen.")
-                text.contains("Anmelden") || text.contains("Sign in") -> NichtAngemeldet("Google verlangt für Gemini eine neue Anmeldung.")
-                else -> IllegalStateException("Die Gemini-Seite ließ sich nicht lesen (Seite geändert?).")
-            }
+        private fun antigravityLimits(l: JSONArray): List<Limit> = (0 until l.length()).map { i ->
+            l.getJSONObject(i).let { Limit(it.getString("name"), it.getDouble("genutzt"), it.getLong("fenster"), it.getLong("reset")) }
         }
 
-        /** „Aktuelle Nutzung … 0 % genutzt Wird um 21:21 zurückgesetzt Wöchentliches Limit Wird am 2. Nov. um 14:21 zurückgesetzt 0 % genutzt“. */
-        private fun geminiLesen(text: String): List<Limit> {
-            val aktuell = text.lastIndexOf("Aktuelle Nutzung")
-            val woche = text.lastIndexOf("Wöchentliches Limit")
-            if (aktuell < 0 || woche < aktuell) return emptyList()
-            return listOfNotNull(
-                geminiLimit(text.substring(aktuell, woche), "Aktuelles Limit (5 Stunden)", STUNDEN5),
-                geminiLimit(text.substring(woche).substringBefore("Upgraden"), "Wochenlimit", WOCHE),
-            )
+        /** Die Gemini-Karte aus der letzten Meldung von Server oder Mac. Ihr Stand ist die Zeit der Meldung, nicht die der Abfrage hier. */
+        private fun antigravityAnbieter(app: Context): Anbieter {
+            val j = runCatching { JSONObject(antigravityDatei(app).readText()) }.getOrNull()
+                ?: return Anbieter("gemini", GEMINI_TITEL, "", emptyList(), "Noch kein Stand: Server und Mac melden die Werte alle drei Stunden.", false, 0L)
+            val geholt = j.optLong("geholt")
+            val hinweis = if (System.currentTimeMillis() - geholt > ANTIGRAVITY_ALT_MS) "Alter Stand: Server und Mac haben länger nichts gemeldet." else null
+            val quelle = if (j.optString("quelle") == "server") "über den Server" else "über den Mac"
+            return Anbieter("gemini", GEMINI_TITEL, "Antigravity-CLI $quelle", antigravityLimits(j.getJSONArray("limits")), hinweis, false, geholt)
         }
 
-        private fun geminiLimit(teil: String, name: String, fenster: Long): Limit? {
-            val p = GEMINI_GENUTZT.find(teil)?.groupValues?.get(1)?.replace(',', '.')?.toDoubleOrNull() ?: return null
-            val z = GEMINI_RESET.find(teil)?.groupValues ?: return null
-            val jetzt = LocalDateTime.now()
-            return runCatching {
-                val mitDatum = z[2].isNotEmpty()
-                val monat = if (mitDatum) GEMINI_MONATE.entries.firstOrNull { z[3].lowercase(Locale.GERMAN).startsWith(it.key) }?.value ?: return null else 0
-                var d = if (mitDatum) LocalDateTime.of(jetzt.year, monat, z[2].toInt(), z[4].toInt(), z[5].toInt())
-                else jetzt.toLocalDate().plusDays(if (z[1].isNotEmpty()) 1 else 0).atTime(z[4].toInt(), z[5].toInt())
-                if (d.isBefore(jetzt)) d = if (mitDatum) d.plusYears(1) else d.plusDays(1)
-                Limit(name, p, fenster, d.atZone(ZoneId.systemDefault()).toEpochSecond())
-            }.getOrNull()
+        /** Nimmt die Werte aus `agy -p /usage` an und zeigt sie sofort. Das sonst gespeicherte Abrufdatum bleibt, damit die anderen Anbieter im Takt bleiben. */
+        suspend fun antigravityMelden(context: Context, quelle: String, limitsJson: String): String = withContext(Dispatchers.IO) {
+            val app = context.applicationContext
+            val limits = JSONArray(limitsJson)
+            require(antigravityLimits(limits).isNotEmpty()) { "Keine Limits gemeldet." }
+            sperre.withLock {
+                val jetzt = System.currentTimeMillis()
+                val alt = runCatching { JSONObject(antigravityDatei(app).readText()) }.getOrNull()
+                if (quelle != "server" && alt?.optString("quelle") == "server" && jetzt - alt.optLong("geholt") < SERVER_VORRANG_MS) return@withLock "Nicht übernommen: Der Server hat frischere Werte."
+                val inhalt = JSONObject().put("quelle", quelle).put("geholt", jetzt).put("limits", limits).toString()
+                val neu = File(app.filesDir, "kontingente-antigravity.json.neu")
+                neu.writeText(inhalt)
+                if (!neu.renameTo(antigravityDatei(app))) { antigravityDatei(app).writeText(inhalt); neu.delete() }
+                val stand = gespeichert(app) ?: Stand(emptyList(), 0L)
+                val karte = antigravityAnbieter(app)
+                val s = Stand(stand.anbieter.filter { it.id != "gemini" } + karte, stand.geholt)
+                runCatching { speichern(app, s, gewarntLesen(app)) }
+                _frisch.value = s
+                Logbuch.netz("Antigravity-Limits gemeldet", "quelle=$quelle anzahl=${karte.limits.size}")
+                "Übernommen."
+            }
         }
 
         /**
