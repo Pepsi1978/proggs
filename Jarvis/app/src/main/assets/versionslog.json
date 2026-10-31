@@ -493,6 +493,7 @@
     {"versionCode": 489, "versionName": "1.8.478", "stand": "31.10.2026, 11:00 Uhr", "notiz": "Im Querformat des aufgeklappten Handys stehen die Knöpfe eines Prompts jetzt ganz unten, der Text bekommt den übrigen Platz."},
     {"versionCode": 490, "versionName": "1.8.479", "stand": "31.10.2026, 11:01 Uhr", "notiz": "Auch im Hochformat des aufgeklappten Handys stehen die Knöpfe eines Prompts jetzt ganz unten, der Text bekommt den übrigen Platz."},
     {"versionCode": 491, "versionName": "1.8.480", "stand": "31.10.2026, 11:02 Uhr", "notiz": "Beim Bearbeiten eines Prompts stehen Mikrofon, KI und Speichern auf dem aufgeklappten Handy jetzt ganz unten, das Textfeld wird größer."},
-    {"versionCode": 492, "versionName": "1.8.481", "stand": "31.10.2026, 11:03 Uhr", "notiz": "Beim Schreiben und Bearbeiten eines Prompts springt die Tastatur nicht mehr von selbst auf, ein neuer Knopf neben dem Mikrofon öffnet sie bei Bedarf."}
+    {"versionCode": 492, "versionName": "1.8.481", "stand": "31.10.2026, 11:03 Uhr", "notiz": "Beim Schreiben und Bearbeiten eines Prompts springt die Tastatur nicht mehr von selbst auf, ein neuer Knopf neben dem Mikrofon öffnet sie bei Bedarf."},
+    {"versionCode": 493, "versionName": "1.8.482", "stand": "31.10.2026, 11:09 Uhr", "notiz": "Die Server-Konsole läuft jetzt im Vollbild ohne Statusleiste, und ihre Reiter oben lassen sich antippen."}
 ]
 }
