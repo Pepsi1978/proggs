@@ -119,6 +119,11 @@ object Waechter {
             Logbuch.netz("Signal Update", "${nachricht.optString("projekt")} vc ${nachricht.optLong("versionCode")} an UpdateStation")
             return
         }
+        if (art == "ablage") {
+            // Eine andere Jarvis-Version hat etwas in die gemeinsame Ablage gelegt.
+            de.frank.jarvis.ablage.AblageSync.anstossen()
+            return
+        }
         if (art == "programmieren") {
             // Fortschritt oder Rückfrage einer Programmier-Sitzung am PC (Hook über den Relay): Benachrichtigung und Gespräch.
             runCatching { Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.meldungVomServer(nachricht) }

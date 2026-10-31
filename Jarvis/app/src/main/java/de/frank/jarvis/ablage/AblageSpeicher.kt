@@ -43,7 +43,10 @@ data class Eintrag(
     val herkunft: String,
     val beschreibung: String = "",
     val anhaenge: List<Anhang> = emptyList(),
+    /** Welche Jarvis-Version den Eintrag angelegt hat; leer = aus der Zeit vor dem Abgleich, also vom Handy. */
+    val quelle: String = "",
 ) {
+    val quelleName: String get() = quelle.ifBlank { AblageQuellen.HANDY }
     val hatText: Boolean get() = textDatei != null
     val hatDateien: Boolean get() = anhaenge.isNotEmpty()
     /**
@@ -57,6 +60,34 @@ data class Eintrag(
 data class Uebernahme(val eintrag: Eintrag, val anhang: Anhang, val neu: Boolean)
 
 class AblageFehler(meldung: String) : Exception(meldung)
+
+/**
+ * Die Jarvis-Versionen und ihre Reihenfolge beim Sortieren nach Quelle. Außerdem: Ein Aufruf von Jarvis Mac OS über MCP nennt seine Quelle (_quelle);
+ * der Eintrag, der daraus entsteht, trägt dann diese Quelle, auch wenn die Datei am Handy erzeugt wird.
+ */
+object AblageQuellen {
+    const val HANDY = "Jarvis Handy"
+    const val MAC = "Jarvis Mac OS"
+    const val WINDOWS = "Jarvis Windows"
+    private val kurz = linkedMapOf("handy" to HANDY, "mac" to MAC, "windows" to WINDOWS)
+    private val gemerkt = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
+
+    fun merke(titel: String, quelle: String) { gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)] = quelle.trim().take(40) to System.currentTimeMillis() }
+
+    fun fuer(titel: String): String = gemerkt[AblageSpeicher.dateiname(titel).lowercase(Locale.GERMAN)]?.takeIf { System.currentTimeMillis() - it.second < 3_600_000L }?.first ?: HANDY
+
+    /** Die gespeicherte Reihenfolge, zum Beispiel „handy,mac,windows“, als Namen; Fehlendes kommt hinten dazu. */
+    fun ordnung(wert: String): List<String> = (wert.split(',').mapNotNull { kurz[it.trim()] } + kurz.values).distinct()
+
+    fun alsWert(namen: List<String>): String = namen.mapNotNull { n -> kurz.entries.firstOrNull { it.value == n }?.key }.joinToString(",")
+
+    /** Unbekannte Quellen (eine spätere Version) stehen hinter allen bekannten. */
+    fun rang(ordnung: List<String>, quelle: String): Int = ordnung.indexOf(quelle).let { if (it < 0) ordnung.size else it }
+
+    /** Alle Reihenfolgen für die Einstellung per Sprache. */
+    val alleOrdnungen: List<Pair<String, String>> = listOf("handy,mac,windows", "handy,windows,mac", "mac,handy,windows", "mac,windows,handy", "windows,handy,mac", "windows,mac,handy")
+        .map { w -> w to w.split(',').joinToString(", dann ") { kurz.getValue(it) } }
+}
 
 /**
  * Der dauerhafte Speicher der Ablage im privaten App-Speicher. Reines Kotlin (ohne Android), damit Migration,
@@ -86,6 +117,8 @@ class AblageSpeicher private constructor(private val wurzel: File) {
      * sind dann womöglich nur aus dem Verzeichnis gefallen; das Aufräumen lässt sie deshalb dauerhaft stehen.
      */
     private val defektMerker = File(wurzel, "ablage-index.defekt")
+    /** Hier gelöschte Einträge, die der Server noch nicht kennt: Kennung und Zeitpunkt. Nur so erfahren die anderen Jarvis-Versionen davon. */
+    private val loeschungen = File(wurzel, "ablage-geloescht.json")
     private val sperre = Any()
 
     // Zustand des letzten Ladens (alles unter [sperre]).
@@ -148,7 +181,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
             val eintrag = if (vorhanden != null) {
                 vorhanden.copy(textDatei = name, geaendert = jetzt).also { neu -> liste.replaceAll { if (it.id == neu.id) neu else it } }
             } else {
-                Eintrag(neueId(), dateiname(titel), name, jetzt, jetzt, herkunft).also { liste += it }
+                Eintrag(neueId(), dateiname(titel), name, jetzt, jetzt, herkunft, quelle = AblageQuellen.fuer(titel)).also { liste += it }
             }
             speichere(liste)
             return eintrag to datei
@@ -188,7 +221,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
             val vorhanden = liste.firstOrNull { schluessel(it.titel) == schluessel(eintragTitel) }
             vorhanden?.anhaenge?.firstOrNull { it.sha256 == sha }?.let { quelle.delete(); return Uebernahme(vorhanden, it, neu = false) }
             val jetzt = System.currentTimeMillis()
-            val eintrag = vorhanden ?: Eintrag(neueId(), eintragTitel.trim().ifEmpty { anzeigeName }.take(120), null, jetzt, jetzt, herkunft, eintragBeschreibung)
+            val eintrag = vorhanden ?: Eintrag(neueId(), eintragTitel.trim().ifEmpty { anzeigeName }.take(120), null, jetzt, jetzt, herkunft, eintragBeschreibung, quelle = AblageQuellen.fuer(eintragTitel))
             val anhangId = neueId()
             val ordner = File(dateiOrdner, eintrag.id).apply { mkdirs() }
             val ziel = File(ordner, "$anhangId.$endung")
@@ -244,7 +277,65 @@ class AblageSpeicher private constructor(private val wurzel: File) {
         speichere(liste)
         e.textDatei?.let { File(textOrdner, it).delete() }
         File(dateiOrdner, e.id).deleteRecursively()
+        merkeLoeschung(e.id)
         true
+    }
+
+    // ---- Abgleich mit dem Server (AblageSync) ----
+
+    private fun lieseLoeschungen(): JSONObject = runCatching { JSONObject(loeschungen.readText()) }.getOrElse { JSONObject() }
+
+    private fun merkeLoeschung(id: String) { runCatching { schreibeAtomar(loeschungen, lieseLoeschungen().put(id, System.currentTimeMillis()).toString().toByteArray()) } }
+
+    fun offeneLoeschungen(): Map<String, Long> = synchronized(sperre) { lieseLoeschungen().let { j -> j.keys().asSequence().associateWith { j.optLong(it) } } }
+
+    fun quittiereLoeschung(id: String): Unit = synchronized(sperre) { runCatching { schreibeAtomar(loeschungen, lieseLoeschungen().apply { remove(id) }.toString().toByteArray()) } }
+
+    /** Eine andere Jarvis-Version hat den Eintrag gelöscht: entfernen, ohne das wieder als eigene Löschung zu melden. */
+    fun loescheFern(id: String): Unit = synchronized(sperre) {
+        val liste = abgeglichen().toMutableList()
+        val e = liste.firstOrNull { it.id == id } ?: return
+        liste.removeAll { it.id == id }
+        speichere(liste)
+        e.textDatei?.let { File(textOrdner, it).delete() }
+        File(dateiOrdner, e.id).deleteRecursively()
+    }
+
+    /**
+     * Übernimmt den Stand eines Eintrags vom Server. [textQuelle] = neuer Text (sonst bleibt der vorhandene, wenn [mitText]);
+     * [dateien] = neue Anhänge nach Kennung; Anhänge mit gleicher Kennung und gleichem Inhalt bleiben liegen.
+     * Alles unter der Sperre: Das Aufräumen in [abgeglichen] sieht nie eine Textdatei ohne Eintrag.
+     */
+    fun setzeFern(neu: Eintrag, mitText: Boolean, textQuelle: File?, dateien: Map<String, File>): Unit = synchronized(sperre) {
+        val liste = abgeglichen().toMutableList()
+        val alt = liste.firstOrNull { it.id == neu.id }
+        val belegt = liste.filter { it.id != neu.id }.mapNotNull { it.textDatei }.toSet()
+        val name = if (!mitText) null else alt?.textDatei?.takeIf { it !in belegt } ?: run {
+            val basis = dateiname(neu.titel)
+            generateSequence(1) { it + 1 }.map { if (it == 1) "$basis.md" else "$basis ($it).md" }.first { it !in belegt && !File(textOrdner, it).exists() }
+        }
+        if (textQuelle != null && name != null) {
+            val ziel = File(textOrdner, name)
+            ziel.delete()
+            verschiebe(textQuelle, ziel)
+        }
+        // Sonst hielte das Verzeichnis die Datei für außerhalb geändert und schöbe die Änderungszeit nach vorn.
+        if (name != null) File(textOrdner, name).setLastModified(neu.geaendert)
+        if (!mitText) alt?.textDatei?.let { File(textOrdner, it).delete() }
+        val anhaenge = neu.anhaenge.map { a ->
+            val da = alt?.anhaenge?.firstOrNull { it.id == a.id && it.sha256 == a.sha256 }
+            if (da != null) a.copy(speicher = da.speicher, vorschau = da.vorschau) else {
+                val q = dateien[a.id] ?: throw AblageFehler("Die Datei ${a.originalName} fehlt.")
+                val ziel = File(File(dateiOrdner, neu.id).apply { mkdirs() }, a.id + "." + a.endung)
+                ziel.delete()
+                verschiebe(q, ziel)
+                a.copy(speicher = ziel.relativeTo(wurzel).invariantSeparatorsPath, vorschau = null)
+            }
+        }
+        alt?.anhaenge?.filter { x -> anhaenge.none { it.id == x.id } }?.forEach { datei(it).delete(); vorschauDatei(it).delete() }
+        val ergebnis = neu.copy(textDatei = name, anhaenge = anhaenge)
+        if (alt == null) liste += ergebnis else liste.replaceAll { if (it.id == neu.id) ergebnis else it }
+        speichere(liste)
     }
 
     fun loescheAnhang(eintragId: String, anhangId: String): Boolean = synchronized(sperre) {
@@ -252,7 +343,8 @@ class AblageSpeicher private constructor(private val wurzel: File) {
         val e = liste.firstOrNull { it.id == eintragId } ?: return false
         val a = e.anhaenge.firstOrNull { it.id == anhangId } ?: return false
         val rest = e.copy(anhaenge = e.anhaenge - a, geaendert = System.currentTimeMillis())
-        if (rest.anhaenge.isEmpty() && rest.textDatei == null) liste.removeAll { it.id == eintragId } else liste.replaceAll { if (it.id == eintragId) rest else it }
+        val ganzWeg = rest.anhaenge.isEmpty() && rest.textDatei == null
+        if (ganzWeg) { liste.removeAll { it.id == eintragId }; merkeLoeschung(eintragId) } else liste.replaceAll { if (it.id == eintragId) rest else it }
         speichere(liste)
         datei(a).delete()
         vorschauDatei(a).delete()
@@ -354,7 +446,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
 
     private fun alsJson(e: Eintrag) = JSONObject()
         .put("id", e.id).put("titel", e.titel).put("text", e.textDatei ?: JSONObject.NULL)
-        .put("erstellt", e.erstellt).put("geaendert", e.geaendert).put("herkunft", e.herkunft).put("beschreibung", e.beschreibung)
+        .put("erstellt", e.erstellt).put("geaendert", e.geaendert).put("herkunft", e.herkunft).put("beschreibung", e.beschreibung).put("quelle", e.quelle)
         .put("anhaenge", JSONArray(e.anhaenge.map { a ->
             JSONObject().put("id", a.id).put("titel", a.titel).put("name", a.originalName).put("endung", a.endung).put("mime", a.mime)
                 .put("groesse", a.groesse).put("erstellt", a.erstellt).put("herkunft", a.herkunft).put("speicher", a.speicher)
@@ -381,6 +473,7 @@ class AblageSpeicher private constructor(private val wurzel: File) {
                     geaendert = e.optLong("geaendert"),
                     herkunft = e.optString("herkunft"),
                     beschreibung = e.optString("beschreibung"),
+                    quelle = e.optString("quelle"),
                     anhaenge = (0 until anhaenge.length()).mapNotNull { j ->
                         runCatching {
                             val a = anhaenge.getJSONObject(j)

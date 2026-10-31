@@ -406,6 +406,12 @@ class Einstellungen private constructor(context: Context) {
     var design: String get() = s("design", "blau"); set(v) = put { putString("design", v) }
     /** Ansicht der Ablage wie im Windows-Explorer: gross, mittel, klein (Kacheln), details oder liste. */
     var ablageAnsicht: String get() = s("ablage_ansicht", "mittel"); set(v) = put { putString("ablage_ansicht", v) }
+    /** Sortierung der Ablage: neueste, aelteste, name, groesse oder quelle. */
+    var ablageSortierung: String get() = s("ablage_sortierung", "neueste"); set(v) = put { putString("ablage_sortierung", v) }
+    /** Reihenfolge der Jarvis-Versionen beim Sortieren nach Quelle, zum Beispiel „handy,mac,windows“. */
+    var ablageQuellen: String get() = s("ablage_quellen", "handy,mac,windows"); set(v) = put { putString("ablage_quellen", v) }
+    /** Prompts nach Quelle sortiert statt in der eigenen, gezogenen Reihenfolge. */
+    var promptsNachQuelle: Boolean get() = prefs.getBoolean("prompts_nach_quelle", false); set(v) = put { putBoolean("prompts_nach_quelle", v) }
 
     companion object {
         const val STILLE_STANDARD_MS = 4_500

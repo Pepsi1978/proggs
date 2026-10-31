@@ -101,6 +101,7 @@ class JarvisDienst : Service() {
         // Nach jedem Verbinden: Rückfragen der Programmier-Sitzungen mit dem Server abgleichen. Eine Meldung, die über eine
         // halb tote Verbindung ging, ist sonst verloren, und Frank sähe die Frage nie.
         Tunnel.beiVerbunden = {
+            de.frank.jarvis.ablage.AblageSync.anstossen()
             arbeit.launch {
                 runCatching { de.frank.jarvis.faehigkeit.Register.alle(app).filterIsInstance<de.frank.jarvis.faehigkeit.ProgrammierFaehigkeit>().firstOrNull()?.fragenAbgleichen() }
                     .onFailure { Logbuch.fehler("Rückfragen abgleichen", it) }
@@ -108,6 +109,7 @@ class JarvisDienst : Service() {
         }
         // Ablage: Reste abgebrochener Übertragungen aufräumen, unterbrochene Downloads fortsetzen.
         de.frank.jarvis.ablage.AblageZentrale.beimStart(this)
+        de.frank.jarvis.ablage.AblageSync.starte(this)
         // Die erste Meldung des Rückrufs ist nur die Bestandsaufnahme: kein Abriss wegen eines Netzes aus einem früheren Dienstlauf.
         Tunnel.netzVergessen()
         runCatching { getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(netz) }

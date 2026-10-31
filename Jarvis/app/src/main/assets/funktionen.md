@@ -67,6 +67,8 @@ Was Jarvis in dieser Version kann, geprüft am Code. Werkzeugnamen in Backticks 
 
 ## Ablage, Dateien, Bilder
 
+- Gemeinsame Ablage aller Jarvis-Versionen über den Server (Hostinger): Einträge, Dateien und Prompts gleichen sich automatisch ab (`ablage/AblageSync.kt`, Relay `/j/<Geheimnis>/ablage`). Neues von einer anderen Version kommt sofort per Signal; die Quelle selbst bekommt keins. Jeder Eintrag und Prompt zeigt seine Quelle (Jarvis Handy, Jarvis Mac OS, Jarvis Windows). Sortierknopf der Ablage und im Reiter Prompts: nach Quelle, Reihenfolge der Quellen frei wählbar (je Gerät, auch per Sprache). Gelöscht wird überall; die Dateien bleiben 30 Tage auf dem Server.
+
 - Ablage für Texte und Dateien jeder Art: `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen`, `ablage_datei_speichern` (ChatGPT-Dateien, https-Adresse, Text, kleines Base64), `in_ablage_uebernehmen` (vorläufiges Ergebnis behalten). `ablage_zeigen` zeigt eine Datei als Karte (Bild, PDF-Seite, Text), vor allem im ChatGPT-Gespräch.
 - Gestaltetes PDF (Titelseite, Inhalt, Merkkästen, Tabellen, Abbildungen) nur auf ausdrücklichen Wunsch; `pdf_entwurf_pruefen` setzt probeweise. Recherchen sonst als formatierter Chattext.
 - `bild_erzeugen`: Bild oder Infografik als PNG, auf Wunsch DIN-A4-PDF.

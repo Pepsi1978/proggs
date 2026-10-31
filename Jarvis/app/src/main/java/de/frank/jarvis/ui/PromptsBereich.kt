@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
@@ -73,6 +74,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import de.frank.jarvis.ablage.AblageQuellen
 import de.frank.jarvis.ablage.Prompt
 import de.frank.jarvis.ablage.Prompts
 import de.frank.jarvis.ui.theme.LocalBewegung
@@ -126,7 +128,16 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         }
     }
     val nachId = remember(liste) { liste.orEmpty().associateBy { it.erstellt } }
-    val sortiert = remember(reihenfolge, nachId) { reihenfolge.mapNotNull(nachId::get) }
+    var nachQuelle by remember { mutableStateOf(vm.einstellungen.promptsNachQuelle) }
+    var quellenWert by remember { mutableStateOf(vm.einstellungen.ablageQuellen) }
+    var sortMenue by remember { mutableStateOf(false) }
+    var quellenOffen by remember { mutableStateOf(false) }
+    val sortiert = remember(reihenfolge, nachId, nachQuelle, quellenWert) {
+        val eigene = reihenfolge.mapNotNull(nachId::get)
+        // Sortiert umstellen ändert nur die Anzeige: Die Nummern und die eigene Reihenfolge bleiben.
+        if (nachQuelle) AblageQuellen.ordnung(quellenWert).let { o -> eigene.sortedBy { AblageQuellen.rang(o, it.quelleName) } } else eigene
+    }
+    if (quellenOffen) QuellenReihenfolge(AblageQuellen.ordnung(quellenWert), { n -> quellenWert = AblageQuellen.alsWert(n); vm.einstellungen.ablageQuellen = quellenWert; nachQuelle = true; vm.einstellungen.promptsNachQuelle = true }) { quellenOffen = false }
 
     LazyColumn(
         modifier.fillMaxWidth().reorderViewport(
@@ -146,6 +157,18 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
         ),
         state = listState, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item(key = "sortieren") {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Box {
+                    Rundknopf(Icons.AutoMirrored.Rounded.Sort, if (nachQuelle) "Sortieren: nach Quelle" else "Sortieren: eigene Reihenfolge", farbe = f.primaer) { sortMenue = true }
+                    Menue(sortMenue, { sortMenue = false }) {
+                        androidx.compose.material3.DropdownMenuItem({ Text("Eigene Reihenfolge", color = if (!nachQuelle) f.primaer else f.text) }, { nachQuelle = false; vm.einstellungen.promptsNachQuelle = false; sortMenue = false })
+                        androidx.compose.material3.DropdownMenuItem({ Text("Nach Quelle", color = if (nachQuelle) f.primaer else f.text) }, { nachQuelle = true; vm.einstellungen.promptsNachQuelle = true; sortMenue = false })
+                        androidx.compose.material3.DropdownMenuItem({ Text("Reihenfolge der Quellen …") }, { sortMenue = false; quellenOffen = true })
+                    }
+                }
+            }
+        }
         if (defekt) item(key = "defekt") {
             Text("Die Prompt-Datei ist beschädigt und wurde als prompts.json.defekt gesichert. Jarvis speichert dort nichts Neues, bis sie repariert ist; Details unter Aktivität.",
                 color = f.gefahr, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
@@ -153,19 +176,21 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
             Text("Noch keine Prompts. Tippe auf +, oder sag Jarvis: „Speicher folgendes als Prompt ab: …“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
         itemsIndexed(sortiert, key = { _, p -> p.erstellt }) { i, p ->
-            // Die Nummer ist der Platz: oben immer Prompt 1, auch während des Ziehens.
+            // Die Nummer ist der Platz: oben immer Prompt 1, auch während des Ziehens. Nach Quelle sortiert bleibt jeder Prompt bei seiner festen Nummer.
             Row(reorderItem(zustand, p.erstellt, reduziert).fillMaxWidth().glas(f, erhoeht = 0.7f), verticalAlignment = Alignment.CenterVertically) {
                 // Nur der Textteil öffnet den Prompt; der Griff bleibt frei, sonst öffnete ein abgebrochenes Ziehen den Dialog.
                 Column(Modifier.weight(1f).antippen { offen = p.erstellt }.padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
                     // Hinter der Nummer die KI-Überschrift (höchstens zwei Zeilen), damit man den Inhalt ohne Lesen erkennt.
                     Text(buildAnnotatedString {
-                        withStyle(SpanStyle(color = f.primaer)) { append("Prompt ${i + 1}") }
+                        withStyle(SpanStyle(color = f.primaer)) { append("Prompt ${if (nachQuelle) p.nummer else i + 1}") }
                         if (p.titel.isNotEmpty()) { append("  ·  "); append(p.titel) }
                     }, color = f.text, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(p.text, color = f.text, fontSize = 15.sp, lineHeight = 21.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                    Text(p.quelleName, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 }
                 // Griff rechts, gut mit dem Daumen erreichbar: lange drücken und ziehen.
-                Box(reorderHandle(zustand, p.erstellt).size(48.dp, 64.dp), contentAlignment = Alignment.Center) {
+                // Nach Quelle sortiert gibt es nichts zu ziehen: Die Reihenfolge ergibt sich dann aus der Quelle.
+                if (!nachQuelle) Box(reorderHandle(zustand, p.erstellt).size(48.dp, 64.dp), contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.DragIndicator, "Zum Verschieben lange drücken und ziehen", tint = f.textLeise)
                 }
             }
@@ -188,6 +213,7 @@ fun PromptsBereich(vm: AppViewModel, modifier: Modifier = Modifier) {
                     Box(Modifier.size(40.dp).antippen { offen = null }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, "Schließen", tint = f.textLeise) }
                 }
                 if (p.titel.isNotEmpty()) Text(p.titel, color = f.primaer, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
+                Text("Von ${p.quelleName}", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
                 Text(p.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp, modifier = Modifier.padding(vertical = 10.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()))
                 var hinweis by remember(p.erstellt) { mutableStateOf<String?>(null) }
                 // Zählt jedes lange Drücken, damit derselbe Hinweis erneut die volle Zeit stehen bleibt.

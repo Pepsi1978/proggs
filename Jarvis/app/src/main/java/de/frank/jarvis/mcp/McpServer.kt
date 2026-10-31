@@ -254,6 +254,11 @@ class McpServer(context: Context) {
         val beginn = System.currentTimeMillis()
         // JSON-null zählt als nicht angegeben (sonst läse das Werkzeug den Text „null“).
         val sauber = argumente.ohneNull()
+        // Jarvis Mac OS nennt seine Quelle: Der Eintrag, der aus diesem Aufruf entsteht, trägt sie dann in der Ablage.
+        sauber.optString("_quelle").takeIf { it.isNotBlank() }?.let { q ->
+            listOf("titel", "eintrag", "neuer_titel").forEach { k -> sauber.optString(k).takeIf { it.isNotBlank() }?.let { de.frank.jarvis.ablage.AblageQuellen.merke(it, q) } }
+            sauber.remove("_quelle")
+        }
         val leise = name == "jarvis_kontext" && sauber.optBoolean("leise")
         val ausfuehren: suspend () -> Ergebnis = {
             runCatching { werkzeug.ausfuehren(sauber) }

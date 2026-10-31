@@ -46,6 +46,8 @@ import androidx.compose.material.icons.rounded.FolderZip
 import androidx.compose.material.icons.rounded.Gif
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.InsertDriveFile
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PictureAsPdf
@@ -87,6 +89,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.graphics.BitmapFactory
+import de.frank.jarvis.ablage.AblageQuellen
 import de.frank.jarvis.ablage.AblageZentrale
 import de.frank.jarvis.ablage.Anhang
 import de.frank.jarvis.ablage.Art
@@ -114,7 +117,7 @@ private enum class Ansicht(val anzeige: String, val spalten: Int) {
     val kacheln get() = spalten > 1
 }
 
-private enum class Sortierung(val anzeige: String) { NEUESTE("Neueste zuerst"), AELTESTE("Älteste zuerst"), NAME("Name A–Z"), GROESSE("Größte zuerst") }
+private enum class Sortierung(val anzeige: String) { NEUESTE("Neueste zuerst"), AELTESTE("Älteste zuerst"), NAME("Name A–Z"), GROESSE("Größte zuerst"), QUELLE("Nach Quelle") }
 
 /**
  * Die Ablage von Jarvis: Texte und Dateien suchen, filtern, ansehen, abspielen, herunterladen, teilen und löschen.
@@ -138,7 +141,9 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
 
     var suche by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
-    var sortierung by rememberSaveable { mutableStateOf(Sortierung.NEUESTE.name) }
+    var sortierung by rememberSaveable { mutableStateOf(Sortierung.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageSortierung }?.name ?: Sortierung.NEUESTE.name) }
+    var quellenWert by remember { mutableStateOf(vm.einstellungen.ablageQuellen) }
+    var quellenOffen by remember { mutableStateOf(false) }
     var auswahl by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val ansicht = Ansicht.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageAnsicht } ?: Ansicht.MITTEL
     // Offene Ansicht: Eintrag-ID, dazu optional die Anhang-ID.
@@ -155,7 +160,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     // Filtern und Sortieren abseits des Hauptfadens, kurz entprellt; bis zum neuen Ergebnis bleibt die vorige Liste stehen.
     // null = erste Berechnung läuft noch: Erst danach darf „Nichts gefunden“ oder „Noch nichts abgelegt“ erscheinen.
     var sicht by remember { mutableStateOf<List<Eintrag>?>(null) }
-    LaunchedEffect(geladen, suche, kat, sortierung, texte) {
+    LaunchedEffect(geladen, suche, kat, sortierung, texte, quellenWert) {
         if (geladen == null) return@LaunchedEffect
         if (suche.isNotBlank()) delay(150)
         val s = suche.trim().lowercase(Locale.GERMAN)
@@ -168,6 +173,8 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Sortierung.NEUESTE -> l.sortedByDescending { it.geaendert }
                     Sortierung.AELTESTE -> l.sortedBy { it.geaendert }
                     Sortierung.NAME -> l.sortedBy { it.titel.lowercase(Locale.GERMAN) }
+                    // Erst die Versionen in der gewählten Reihenfolge, innerhalb einer Version das Neueste zuerst.
+                    Sortierung.QUELLE -> AblageQuellen.ordnung(quellenWert).let { o -> l.sortedWith(compareBy<Eintrag> { AblageQuellen.rang(o, it.quelleName) }.thenByDescending { it.geaendert }) }
                     // Größe je Eintrag einmal ermitteln, nicht bei jedem Vergleich (Dateisystem-Abfrage).
                     Sortierung.GROESSE -> withContext(Dispatchers.IO) { l.map { it to groesse(speicher, it) } }.sortedByDescending { it.second }.map { it.first }
                 }
@@ -218,6 +225,8 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         return
     }
 
+    if (quellenOffen) QuellenReihenfolge(AblageQuellen.ordnung(quellenWert), { n -> quellenWert = AblageQuellen.alsWert(n); vm.einstellungen.ablageQuellen = quellenWert; sortierung = Sortierung.QUELLE.name; vm.einstellungen.ablageSortierung = "quelle" }) { quellenOffen = false }
+
     Column(Modifier.fillMaxSize()) {
         if (auswahl.isNotEmpty()) {
             val gewaehlt = alle.filter { it.id in auswahl }
@@ -242,8 +251,9 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige, farbe = f.primaer) { sortMenue = true }
                 Menue(sortMenue, { sortMenue = false }) {
                     Sortierung.entries.forEach { s ->
-                        WahlPunkt(s.anzeige, s.name == sortierung) { sortierung = s.name; sortMenue = false }
+                        WahlPunkt(s.anzeige, s.name == sortierung) { sortierung = s.name; vm.einstellungen.ablageSortierung = s.name.lowercase(); sortMenue = false }
                     }
+                    DropdownMenuItem({ Text("Reihenfolge der Quellen …") }, { sortMenue = false; quellenOffen = true })
                 }
             }
             var ansichtMenue by remember { mutableStateOf(false) }
@@ -310,6 +320,31 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     }
 }
 
+/** Wie die Jarvis-Versionen beim Sortieren nach Quelle aufeinander folgen: oben steht, was zuerst angezeigt wird. Gilt nur auf diesem Gerät. */
+@Composable
+fun QuellenReihenfolge(ordnung: List<String>, aendern: (List<String>) -> Unit, schliessen: () -> Unit) {
+    val f = LocalFarben.current
+    var liste by remember { mutableStateOf(ordnung) }
+    fun tausche(i: Int, j: Int) { liste = liste.toMutableList().apply { val x = this[i]; this[i] = this[j]; this[j] = x }; aendern(liste) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = schliessen,
+        confirmButton = { androidx.compose.material3.TextButton(schliessen) { Text("Fertig", color = f.primaer) } },
+        title = { Text("Sortieren nach Quelle", color = f.text) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                liste.forEachIndexed { i, q ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${i + 1}. $q", Modifier.weight(1f), color = f.text, fontSize = 16.sp)
+                        if (i > 0) Rundknopf(Icons.Rounded.KeyboardArrowUp, "$q nach oben") { tausche(i, i - 1) }
+                        if (i < liste.lastIndex) Rundknopf(Icons.Rounded.KeyboardArrowDown, "$q nach unten") { tausche(i, i + 1) }
+                    }
+                }
+            }
+        },
+        containerColor = menueFlaeche(f),
+    )
+}
+
 private fun groesse(s: de.frank.jarvis.ablage.AblageSpeicher, e: Eintrag): Long = e.anhaenge.sumOf { it.groesse } + (s.textDatei(e)?.length() ?: 0)
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -322,7 +357,7 @@ private fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen
     val art = if (haupt == null) "Text" else if (e.anhaenge.size == 1) haupt.art.anzeige + " · " + haupt.endung.uppercase() else "${e.anhaenge.size} Dateien"
     // Die Textgröße kommt aus dem Dateisystem: im Hintergrund, bis dahin die Summe der Anhänge.
     val g by ladeImHintergrund(e.anhaenge.sumOf { it.groesse }, e.id, e.geaendert) { groesse(speicher, e) }
-    val meta = "$art · ${Ablage.datum(e.geaendert)} · ${Dateityp.groesse(g)}"
+    val meta = "$art · ${Ablage.datum(e.geaendert)} · ${Dateityp.groesse(g)} · ${e.quelleName}"
     Row(
         Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f, toenung = if (gewaehlt) f.primaer else null)
             .combinedClickable(onClick = tippen, onLongClick = lange, onClickLabel = "Öffnen", onLongClickLabel = "Auswählen")
@@ -403,7 +438,7 @@ private fun EintragKachel(e: Eintrag, gewaehlt: Boolean, ansicht: Ansicht, aktio
         if (ansicht != Ansicht.KLEIN) {
             Text(e.titel, Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp), color = f.text, fontSize = if (ansicht == Ansicht.GROSS) 14.sp else 12.sp,
                 fontWeight = FontWeight.Medium, maxLines = if (ansicht == Ansicht.GROSS) 2 else 1, overflow = TextOverflow.Ellipsis)
-            if (ansicht == Ansicht.GROSS) Text(Ablage.datum(e.geaendert), Modifier.padding(horizontal = 2.dp), color = f.textSchwach, fontSize = 11.sp, maxLines = 1)
+            if (ansicht == Ansicht.GROSS) Text("${Ablage.datum(e.geaendert)} · ${e.quelleName}", Modifier.padding(horizontal = 2.dp), color = f.textSchwach, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -479,7 +514,7 @@ private fun EintragAnsicht(vm: AppViewModel, e: Eintrag, aktionen: AblageAktione
     val text = gelesen?.text.orEmpty()
     val alle = remember(e) { aktionen.freigaben(e) }
     Column(Modifier.fillMaxSize()) {
-        VorschauKopf(e.titel, "${Ablage.datum(e.geaendert)} · " + (if (e.hatText) "Text" else "") + (if (e.hatText && e.hatDateien) " + " else "") +
+        VorschauKopf(e.titel, "${Ablage.datum(e.geaendert)} · ${e.quelleName} · " + (if (e.hatText) "Text" else "") + (if (e.hatText && e.hatDateien) " + " else "") +
             (if (e.hatDateien) "${e.anhaenge.size} Datei(en)" else ""), alle.singleOrNull(), aktionen, zurueck, { loeschen(null) },
             zusatz = {
                 if (e.hatText && textDatei != null) Vorleseknopf(vm, "ablage:" + textDatei.name, e.titel, text)

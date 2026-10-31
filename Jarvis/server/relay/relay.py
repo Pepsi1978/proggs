@@ -44,13 +44,22 @@ Postfach), und traegt eine id gegen doppelte Zustellung. Das Handy schreibt uebe
 Geheimnis ihrer MCP-Adresse ab (GET /j/<Geheimnis>/kanal, Long-Polling) und braucht keinen weiteren Zugang. Laeuft die Mac-App nicht,
 startet die Mac-Bruecke sie (GET /pc/mac-befehl, Long-Polling): auf Franks Wunsch (/geraet/mac-start) und bei einer Frage an den Mac,
 nicht bei einer blossen Mitteilung: Die holt sie beim naechsten Start ab, und Frank kann die App bewusst beendet haben.
+
+Neunte Aufgabe: die gemeinsame Ablage aller Jarvis-Versionen (Klasse AblageAbgleich). Einträge, Prompts und ihre Reihenfolge liegen als
+Dokumente mit fortlaufendem Stand in /data/ablage/ablage.db, Dateien und Texte nach ihrem SHA-256 unter /data/ablage/blobs. Jede Version
+meldet sich mit dem Geheimnis ihrer MCP-Adresse (/j/<Geheimnis>/ablage/...) und ihrem Namen („Jarvis Handy“, „Jarvis Mac OS“, „Jarvis Windows“).
+Neues bekommen alle anderen sofort: das Handy als {"signal": "ablage"} ueber die WebSocket, die uebrigen per Long-Polling auf /aenderungen.
+Die Quelle einer Aenderung bekommt kein Signal. Es gewinnt die juengste Aenderung (Feld geaendert); Geloeschtes bleibt als Grabstein stehen,
+seine Dateien erst 30 Tage danach weg.
 """
 import asyncio
+import hashlib
 import hmac
 import json
 import logging
 import os
 import re
+import sqlite3
 import time
 import uuid
 from datetime import date, timedelta
@@ -1404,6 +1413,176 @@ class AgentenKanal:
                 self.bruecke.ende = time.monotonic()
 
 
+ABLAGE_ORDNER = Path(os.environ.get("JARVIS_ABLAGE", "/data/ablage"))
+ABLAGE_HANDY = "Jarvis Handy"
+ABLAGE_WARTEN_S = 25
+ABLAGE_FRIST_S = 30 * 86_400          # so lange bleiben Dateien ohne Eintrag liegen (Schutz vor Fehlbedienung und Abgleichfehlern)
+ABLAGE_MAX_DATEI = 8 * 1024 ** 3
+ABLAGE_ARTEN = {"eintrag", "prompt", "ordnung"}
+ABLAGE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+ABLAGE_SHA = re.compile(r"^[0-9a-f]{64}$")
+
+
+class AblageAbgleich:
+    def __init__(self, relay: Relay):
+        self.relay = relay
+        self.blobs = ABLAGE_ORDNER / "blobs"
+        self.blobs.mkdir(parents=True, exist_ok=True)
+        self.db = sqlite3.connect(ABLAGE_ORDNER / "ablage.db")
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("""CREATE TABLE IF NOT EXISTS docs (art TEXT, id TEXT, daten TEXT, geaendert INTEGER, geloescht INTEGER,
+                           von TEXT, stand INTEGER, PRIMARY KEY (art, id))""")
+        self.db.execute("CREATE INDEX IF NOT EXISTS docs_stand ON docs (stand)")
+        self.db.commit()
+        self.warter = []  # (Name der wartenden Version, Future)
+
+    def _stand(self) -> int:
+        return self.db.execute("SELECT COALESCE(MAX(stand), 0) FROM docs").fetchone()[0]
+
+    def _pfad(self, sha: str) -> Path:
+        return self.blobs / sha
+
+    @staticmethod
+    def _dateien(daten: dict) -> list:
+        """Alle Inhalte, die ein Dokument braucht: der Text und die Anhaenge."""
+        shas = [daten.get("text_sha")] + [a.get("sha256") for a in daten.get("anhaenge") or [] if isinstance(a, dict)]
+        return [s for s in shas if isinstance(s, str) and s]
+
+    def _melden(self, von: str, stand: int) -> None:
+        """Alle anderen Versionen wecken, nie die Quelle selbst."""
+        rest = []
+        for name, warten in self.warter:
+            if name == von:
+                rest.append((name, warten))
+            elif not warten.done():
+                warten.set_result(True)
+        self.warter = rest
+        ws = self.relay.ws
+        if von != ABLAGE_HANDY and ws is not None and not ws.closed:
+            async def senden():
+                try:
+                    await ws.send_str(json.dumps({"signal": "ablage", "stand": stand}))
+                except (ConnectionError, RuntimeError):
+                    pass  # Beim naechsten Verbinden gleicht das Handy ohnehin ab.
+            _im_hintergrund(senden())
+
+    async def aenderungen(self, request: web.Request) -> web.Response:
+        if not self.relay.passt(request.match_info["geheimnis"]):
+            return web.Response(status=404, text="Not found")
+        try:
+            seit = max(0, int(request.query.get("seit", "0")))
+            warten = min(ABLAGE_WARTEN_S, max(0, int(request.query.get("warten", "0"))))
+        except ValueError:
+            return web.Response(status=400, text="Zahl erwartet")
+        geraet = request.query.get("geraet", "")[:40]
+        # Ein Stand aus der Zukunft heisst: Der Speicher wurde neu aufgesetzt. Dann alles von vorn.
+        if seit > self._stand():
+            seit = 0
+        neu = "SELECT 1 FROM docs WHERE stand > ? AND von != ? LIMIT 1"
+        if warten and self.db.execute(neu, (seit, geraet)).fetchone() is None:
+            zukunft = asyncio.get_running_loop().create_future()
+            eintrag = (geraet, zukunft)
+            self.warter.append(eintrag)
+            try:
+                await asyncio.wait_for(zukunft, warten)
+            except asyncio.TimeoutError:
+                pass
+            finally:
+                if eintrag in self.warter:
+                    self.warter.remove(eintrag)
+        zeilen = self.db.execute("SELECT art, id, daten, geaendert, geloescht, von, stand FROM docs WHERE stand > ? ORDER BY stand", (seit,)).fetchall()
+        docs = [{"art": z[0], "id": z[1], "daten": json.loads(z[2]), "geaendert": z[3], "geloescht": bool(z[4]), "von": z[5], "stand": z[6]} for z in zeilen]
+        return web.json_response({"stand": self._stand(), "docs": docs}, dumps=lambda d: json.dumps(d, ensure_ascii=False))
+
+    async def doc(self, request: web.Request) -> web.Response:
+        art, kennung = request.match_info["art"], request.match_info["id"]
+        if not self.relay.passt(request.match_info["geheimnis"]):
+            return web.Response(status=404, text="Not found")
+        if art not in ABLAGE_ARTEN or not ABLAGE_ID.match(kennung):
+            return web.Response(status=400, text="Art oder Kennung ungueltig")
+        try:
+            rumpf = await request.json()
+            geaendert = int(rumpf["geaendert"])
+            geloescht = bool(rumpf.get("geloescht"))
+            daten = rumpf.get("daten") or {}
+            von = str(rumpf["von"]).strip()[:40]
+            assert isinstance(daten, dict) and von
+        except Exception:
+            return web.Response(status=400, text="Dokument unvollstaendig")
+        zeile = self.db.execute("SELECT geaendert FROM docs WHERE art = ? AND id = ?", (art, kennung)).fetchone()
+        if zeile is not None and zeile[0] >= geaendert:
+            return web.json_response({"uebernommen": False, "stand": self._stand()})
+        if not geloescht:
+            shas = self._dateien(daten)
+            if any(not ABLAGE_SHA.match(s) for s in shas):
+                return web.Response(status=400, text="Pruefsumme ungueltig")
+            fehlend = sorted({s for s in shas if not self._pfad(s).is_file()})
+            if fehlend:
+                return web.json_response({"fehlend": fehlend}, status=409)
+        stand = self._stand() + 1
+        self.db.execute("INSERT OR REPLACE INTO docs (art, id, daten, geaendert, geloescht, von, stand) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (art, kennung, json.dumps({} if geloescht else daten, ensure_ascii=False), geaendert, int(geloescht), von, stand))
+        self.db.commit()
+        log.info("Ablage: %s %s von %s, Stand %s%s", art, kennung, von, stand, " (geloescht)" if geloescht else "")
+        self._melden(von, stand)
+        return web.json_response({"uebernommen": True, "stand": stand})
+
+    async def blob_ablegen(self, request: web.Request) -> web.Response:
+        sha = request.match_info["sha"]
+        if not self.relay.passt(request.match_info["geheimnis"]):
+            return web.Response(status=404, text="Not found")
+        if not ABLAGE_SHA.match(sha):
+            return web.Response(status=400, text="Pruefsumme ungueltig")
+        teil = self.blobs / f".{uuid.uuid4().hex}.teil"
+        pruefung = hashlib.sha256()
+        groesse = 0
+        try:
+            # Stueckweise von der Leitung auf die Platte: Der Dienst hat nur 128 MB, und client_max_size gilt nur fuer read().
+            with open(teil, "wb") as f:
+                async for stueck in request.content.iter_chunked(1024 * 1024):
+                    groesse += len(stueck)
+                    if groesse > ABLAGE_MAX_DATEI:
+                        return web.Response(status=413, text="Datei zu gross")
+                    pruefung.update(stueck)
+                    f.write(stueck)
+            if groesse == 0 or pruefung.hexdigest() != sha:
+                return web.Response(status=400, text="Pruefsumme passt nicht")
+            os.replace(teil, self._pfad(sha))
+            return web.json_response({"ok": True, "groesse": groesse})
+        finally:
+            teil.unlink(missing_ok=True)
+
+    async def blob_holen(self, request: web.Request) -> web.StreamResponse:
+        sha = request.match_info["sha"]
+        if not self.relay.passt(request.match_info["geheimnis"]) or not ABLAGE_SHA.match(sha) or not self._pfad(sha).is_file():
+            return web.Response(status=404, text="Not found")
+        return web.FileResponse(self._pfad(sha), headers={"Content-Type": "application/octet-stream"})
+
+    def aufraeumen(self) -> None:
+        benutzt = set()
+        for (daten,) in self.db.execute("SELECT daten FROM docs WHERE geloescht = 0"):
+            benutzt.update(self._dateien(json.loads(daten)))
+        grenze = time.time() - ABLAGE_FRIST_S
+        weg = 0
+        for datei in self.blobs.iterdir():
+            alt = datei.stat().st_mtime < (time.time() - 86_400 if datei.name.startswith(".") else grenze)
+            if alt and datei.name not in benutzt:
+                datei.unlink(missing_ok=True)
+                weg += 1
+        if weg:
+            log.info("Ablage: %s alte Dateien entfernt", weg)
+
+    async def waechter(self, _: web.Application) -> None:
+        async def lauf():
+            while True:
+                try:
+                    self.aufraeumen()
+                except Exception:
+                    log.exception("Ablage aufraeumen")
+                await asyncio.sleep(86_400)
+        _im_hintergrund(lauf())
+
+
 async def gesund(_: web.Request) -> web.Response:
     return web.Response(text="ok")
 
@@ -1476,6 +1655,12 @@ def app() -> web.Application:
     anwendung.router.add_get("/j/{geheimnis}/kanal", kanal.mac_abfrage)
     anwendung.router.add_post("/j/{geheimnis}/kanal", kanal.mac_sendet)
     anwendung.router.add_post("/j/{geheimnis}/kanal/quittung", kanal.mac_quittiert)
+    ablage = AblageAbgleich(relay)
+    anwendung.on_startup.append(ablage.waechter)
+    anwendung.router.add_get("/j/{geheimnis}/ablage/aenderungen", ablage.aenderungen)
+    anwendung.router.add_put("/j/{geheimnis}/ablage/doc/{art}/{id}", ablage.doc)
+    anwendung.router.add_put("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_ablegen)
+    anwendung.router.add_get("/j/{geheimnis}/ablage/blob/{sha}", ablage.blob_holen)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

@@ -170,7 +170,7 @@ fun AnhangVorschau(eintrag: Eintrag, anhang: Anhang, aktionen: AblageAktionen, z
     val text by ladeImHintergrund("", eintrag.id, eintrag.geaendert, mitText) { if (mitText) AblageZentrale.speicher(context).text(eintrag) else "" }
     val freigabe = remember(anhang.id) { aktionen.freigabe(anhang) }
     var nurInfo by rememberSaveable(anhang.id) { mutableStateOf(false) }
-    val untertitel = "${anhang.art.anzeige} · ${Dateityp.groesse(anhang.groesse)} · ${Ablage.datum(anhang.erstellt)}"
+    val untertitel = "${anhang.art.anzeige} · ${Dateityp.groesse(anhang.groesse)} · ${Ablage.datum(anhang.erstellt)} · ${eintrag.quelleName}"
     // Aufgeklappt gehört der Platz dem Text: Die Datei rückt aus dem Bild, statt unter dem Text zu liegen.
     var textOffen by rememberSaveable(anhang.id) { mutableStateOf(false) }
     // Drehung des Bildes in Grad; -1 = wie in der Datei vermerkt (EXIF).

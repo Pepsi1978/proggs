@@ -457,6 +457,11 @@ class EinstellungsKatalog(context: Context) {
                 { listOf("blau" to "Blau", "gold" to "Gold") }, { e.design }) { e.design = it },
             auswahl("ablage_ansicht", "Darstellung", "Ansicht der Ablage", "Wie die Ablage ihre Dateien zeigt.",
                 { listOf("gross" to "Große Kacheln", "mittel" to "Mittlere Kacheln", "klein" to "Kleine Kacheln", "details" to "Details", "liste" to "Liste") }, { e.ablageAnsicht }) { e.ablageAnsicht = it },
+            auswahl("ablage_sortierung", "Ablage", "Sortierung der Ablage", "Wonach die Ablage ihre Einträge ordnet; nach Quelle heißt nach der Jarvis-Version, von der sie stammen.",
+                { listOf("neueste" to "Neueste zuerst", "aelteste" to "Älteste zuerst", "name" to "Name A–Z", "groesse" to "Größte zuerst", "quelle" to "Nach Quelle") }, { e.ablageSortierung }) { e.ablageSortierung = it },
+            auswahl("ablage_quellen", "Ablage", "Reihenfolge der Quellen", "In welcher Reihenfolge Einträge und Prompts der Jarvis-Versionen beim Sortieren nach Quelle stehen.",
+                { de.frank.jarvis.ablage.AblageQuellen.alleOrdnungen }, { e.ablageQuellen }) { e.ablageQuellen = it },
+            schalter("prompts_nach_quelle", "Ablage", "Prompts nach Quelle sortieren", "Zeigt die Prompts nach ihrer Jarvis-Version sortiert statt in der eigenen Reihenfolge.", { e.promptsNachQuelle }) { e.promptsNachQuelle = it },
 
             // ---- System ----
             schalter("dienst_an", "System", "Bereitschaft im Hintergrund", "Jarvis läuft im Hintergrund (Plugin, Signale, Weckwort). Ausschalten nur in der App, sonst wäre Jarvis danach nicht mehr erreichbar.", { e.dienstAn }) {

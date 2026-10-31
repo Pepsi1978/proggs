@@ -477,6 +477,7 @@
     {"versionCode": 473, "versionName": "1.8.462", "stand": "30.10.2026, 20:54 Uhr", "notiz": "Eine Rückfrage vom Programmierer hält das Vorlesen sofort an, nach deiner Antwort läuft es an derselben Stelle weiter."},
     {"versionCode": 474, "versionName": "1.8.463", "stand": "30.10.2026, 21:06 Uhr", "notiz": "Das Anhalten des Vorlesens bei Rückfragen ist robuster: Ansagen stören keine Aufnahme mehr, und späte Antworten nehmen dem Text nicht seine Stelle."},
     {"versionCode": 475, "versionName": "1.8.464", "stand": "30.10.2026, 22:26 Uhr", "notiz": "Nach dem Absenden bleibt kein alter Text mehr im Eingabefeld zurück, und vorhandener Text steht immer sichtbar in der aufgeklappten Eingabeblase."},
-    {"versionCode": 476, "versionName": "1.8.465", "stand": "30.10.2026, 22:34 Uhr", "notiz": "Die Eingabeblase ist nach dem Review robuster: Die Tastatur öffnet zuverlässig, geht beim Gesprächswechsel zu, der Aufnahmestatus bleibt auch mit Text sichtbar und reiner Leerraum blockiert das Einklappen nicht mehr."}
+    {"versionCode": 476, "versionName": "1.8.465", "stand": "30.10.2026, 22:34 Uhr", "notiz": "Die Eingabeblase ist nach dem Review robuster: Die Tastatur öffnet zuverlässig, geht beim Gesprächswechsel zu, der Aufnahmestatus bleibt auch mit Text sichtbar und reiner Leerraum blockiert das Einklappen nicht mehr."},
+    {"versionCode": 477, "versionName": "1.8.466", "stand": "31.10.2026, 09:40 Uhr", "notiz": "Die Ablage mit Prompts gleicht sich jetzt automatisch über den Server mit allen Jarvis-Versionen ab, jeder Eintrag zeigt seine Quelle, und der Sortierknopf ordnet auf Wunsch nach Quelle."}
 ]
 }
