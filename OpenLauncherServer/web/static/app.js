@@ -87,23 +87,40 @@ function aufbauen() {
   wischenEinrichten();
 }
 // Mit dem Finger scrollen: tmux hält den Verlauf, das Terminal auf dem Handy nicht. Wischen wird zu Zeilen, ein Schwung läuft kurz nach.
-function rollen(zeilen) { if (zeilen && ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "s", n: zeilen })); }
+// Die Fläche liegt über dem Terminal: Es ersetzt beim Neuzeichnen die Zeile unter dem Finger, und danach kämen die Berührungen nirgends mehr an.
+let offeneZeilen = 0, rollZeit = null;
+function rollen(zeilen) {
+  offeneZeilen += zeilen;
+  if (rollZeit) return;
+  rollZeit = setTimeout(() => {
+    rollZeit = null;
+    if (offeneZeilen && ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "s", n: offeneZeilen }));
+    offeneZeilen = 0;
+  }, 50);
+}
 function wischenEinrichten() {
   const flaeche = $("xterm");
   const zeilenHoehe = () => Math.max(8, flaeche.clientHeight / (term ? term.rows : 24));
-  let y = null, rest = 0, tempo = 0, zuletzt = 0, schwung = null;
-  flaeche.addEventListener("touchstart", (e) => { clearInterval(schwung); y = e.touches[0].clientY; rest = 0; tempo = 0; zuletzt = e.timeStamp; }, { capture: true, passive: true });
-  flaeche.addEventListener("touchmove", (e) => {
+  flaeche.addEventListener("wheel", (e) => { e.preventDefault(); e.stopPropagation(); rollen(-Math.sign(e.deltaY) * 3); }, { capture: true, passive: false });
+  $("ende").addEventListener("click", () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "e" })); });
+  if (!("ontouchstart" in window)) return;
+  const decke = element("div", "wisch");
+  flaeche.append(decke);
+  let y = null, rest = 0, tempo = 0, zuletzt = 0, weg = 0, schwung = null;
+  decke.addEventListener("touchstart", (e) => { clearInterval(schwung); y = e.touches[0].clientY; rest = 0; tempo = 0; weg = 0; zuletzt = e.timeStamp; }, { passive: true });
+  decke.addEventListener("touchmove", (e) => {
     if (y === null) return;
-    e.preventDefault(); e.stopPropagation();
-    const neu = e.touches[0].clientY, weg = neu - y;
-    tempo = weg / Math.max(1, e.timeStamp - zuletzt);
-    zuletzt = e.timeStamp; y = neu; rest += weg;
+    e.preventDefault();
+    const neu = e.touches[0].clientY, schritt = neu - y;
+    if (e.timeStamp > zuletzt) tempo = schritt / (e.timeStamp - zuletzt);
+    zuletzt = e.timeStamp; y = neu; rest += schritt; weg += Math.abs(schritt);
     const zeilen = Math.trunc(rest / zeilenHoehe());
     if (zeilen) { rest -= zeilen * zeilenHoehe(); rollen(zeilen); }
-  }, { capture: true, passive: false });
-  flaeche.addEventListener("touchend", () => {
+  }, { passive: false });
+  decke.addEventListener("touchend", (e) => {
     y = null;
+    // Ein kurzer Tipper öffnet wie gewohnt die Tastatur des Terminals.
+    if (weg < 10) { e.preventDefault(); if (term) term.focus(); return; }
     if (Math.abs(tempo) < 0.4) return;
     schwung = setInterval(() => {
       tempo *= 0.8;
@@ -111,10 +128,8 @@ function wischenEinrichten() {
       if (!zeilen) { clearInterval(schwung); return; }
       rollen(zeilen);
     }, 60);
-  }, { capture: true, passive: true });
-  flaeche.addEventListener("touchcancel", () => { y = null; }, { capture: true, passive: true });
-  flaeche.addEventListener("wheel", (e) => { e.preventDefault(); e.stopPropagation(); rollen(-Math.sign(e.deltaY) * 3); }, { capture: true, passive: false });
-  $("ende").addEventListener("click", () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "e" })); });
+  });
+  decke.addEventListener("touchcancel", () => { y = null; }, { passive: true });
 }
 function schicke(d) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: "i", d })); }
 function passen() {

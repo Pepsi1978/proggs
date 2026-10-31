@@ -30,7 +30,8 @@ select,textarea { display:block; width:100%; margin-top:4px; background:var(--fl
 #titel { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #links { flex:none; padding:0 10px; }
 #links a { display:block; color:var(--akzent); padding:6px 0; font-size:13px; overflow-wrap:anywhere; }
-#xterm { flex:1; min-height:0; background:#000; padding:2px; touch-action:none; }
+#xterm { position:relative; flex:1; min-height:0; background:#000; padding:2px; touch-action:none; }
+.wisch { position:absolute; inset:0; z-index:20; touch-action:none; }
 #tasten { display:flex; flex:none; gap:4px; padding:5px 6px 0; overflow-x:auto; }
 #tasten button { flex:1 0 auto; padding:5px 10px; min-height:36px; font-size:14px; }
 #eingabe { display:flex; flex:none; gap:6px; padding:6px; }
