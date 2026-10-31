@@ -491,6 +491,7 @@
     {"versionCode": 487, "versionName": "1.8.476", "stand": "31.10.2026, 10:53 Uhr", "notiz": "Der Abgleich der Ablage verliert nichts mehr: Änderungen auf zwei Geräten werden zusammengeführt, abhanden gekommene Dateien kommen vom Server zurück, und ein defektes Dokument hält den Rest nicht mehr auf."},
     {"versionCode": 488, "versionName": "1.8.477", "stand": "31.10.2026, 10:58 Uhr", "notiz": "Auf dem aufgeklappten Handy öffnet sich ein Prompt jetzt im Vollbild, die Knöpfe stehen auch im Querformat vollständig unten."},
     {"versionCode": 489, "versionName": "1.8.478", "stand": "31.10.2026, 11:00 Uhr", "notiz": "Im Querformat des aufgeklappten Handys stehen die Knöpfe eines Prompts jetzt ganz unten, der Text bekommt den übrigen Platz."},
-    {"versionCode": 490, "versionName": "1.8.479", "stand": "31.10.2026, 11:01 Uhr", "notiz": "Auch im Hochformat des aufgeklappten Handys stehen die Knöpfe eines Prompts jetzt ganz unten, der Text bekommt den übrigen Platz."}
+    {"versionCode": 490, "versionName": "1.8.479", "stand": "31.10.2026, 11:01 Uhr", "notiz": "Auch im Hochformat des aufgeklappten Handys stehen die Knöpfe eines Prompts jetzt ganz unten, der Text bekommt den übrigen Platz."},
+    {"versionCode": 491, "versionName": "1.8.480", "stand": "31.10.2026, 11:02 Uhr", "notiz": "Beim Bearbeiten eines Prompts stehen Mikrofon, KI und Speichern auf dem aufgeklappten Handy jetzt ganz unten, das Textfeld wird größer."}
 ]
 }

@@ -367,8 +367,8 @@ fun PromptEbene(vm: AppViewModel) {
             else Knopf("KI", Modifier.weight(1f), Icons.Rounded.AutoAwesome, haupt = false) { vm.promptFormulieren() }
             Rund(Icons.Rounded.Save, "Speichern", f.primaer) { vm.promptSpeichern { vm.promptEingabeSchliessen() } }
         }
-        // Ohne Tastatur rund einen Zentimeter Abstand nach unten; mit Tastatur zählt jede Zeile fürs Textfeld.
-        if (WindowInsets.ime.getBottom(LocalDensity.current) == 0) Spacer(Modifier.height(63.dp))
+        // Zugeklappt ohne Tastatur rund einen Zentimeter Abstand nach unten; aufgeklappt und mit Tastatur zählt jede Zeile fürs Textfeld.
+        if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600 && WindowInsets.ime.getBottom(LocalDensity.current) == 0) Spacer(Modifier.height(63.dp))
     }
 }
 
