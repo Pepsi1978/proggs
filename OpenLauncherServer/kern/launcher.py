@@ -174,9 +174,10 @@ def _erststart_setzen(ordner: Path) -> None:
     except ValueError:
         return
     projekt = daten.get("projects", {}).get(str(PROGGS), {})
-    if daten.get("hasCompletedOnboarding") and daten.get("bypassPermissionsModeAccepted") and projekt.get("hasTrustDialogAccepted"):
+    # Der Werbedialog für die Vollbildanzeige erscheint nach der ersten Antwort und fängt jede weitere Eingabe ab, auch Nachträge.
+    if daten.get("hasCompletedOnboarding") and daten.get("bypassPermissionsModeAccepted") and projekt.get("hasTrustDialogAccepted") and daten.get("fullscreenUpsellSeenCount", 0) >= 99:
         return
-    daten.update(hasCompletedOnboarding=True, bypassPermissionsModeAccepted=True)
+    daten.update(hasCompletedOnboarding=True, bypassPermissionsModeAccepted=True, fullscreenUpsellSeenCount=99)
     daten.setdefault("theme", "dark")
     daten.setdefault("projects", {}).setdefault(str(PROGGS), {}).update(hasTrustDialogAccepted=True, hasCompletedProjectOnboarding=True)
     _schreib(pfad, json.dumps(daten, ensure_ascii=False, indent=2), 0o600)

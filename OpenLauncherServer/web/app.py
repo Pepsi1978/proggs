@@ -36,6 +36,7 @@ COOKIE = "konsole"
 COOKIE_WERT = hmac.new(TOKEN.encode(), b"server-konsole", hashlib.sha256).hexdigest()
 FEHLVERSUCHE = {"zahl": 0}
 LINK = re.compile(r"https?://[^\s\"'<>]+")
+ADRESS_TEIL = re.compile(r"[A-Za-z0-9\-._~:/?#\[\]@!$&()*+,;=%]+")
 ANMELDEN_SEITE = """<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Server-Konsole</title><body style="background:#10131a;color:#e6e9ef;font:16px system-ui;padding:24px">
 <form method="post" action="/anmelden"><p>Zugangstoken</p><input name="token" type="password" autofocus style="width:100%;padding:12px;font-size:16px">
@@ -142,8 +143,9 @@ async def _status_auffrischen() -> None:
 async def system(request: web.Request) -> web.Response:
     if not STATUS_AUFFRISCHEN["laeuft"] and time.monotonic() - STATUS_AUFFRISCHEN["zeit"] > 20:
         STATUS_AUFFRISCHEN["laeuft"] = True
-        request.app["aufgaben"].add(asyncio.create_task(_status_auffrischen()))
-        request.app["aufgaben"] = {a for a in request.app["aufgaben"] if not a.done()}
+        aufgabe = asyncio.create_task(_status_auffrischen())
+        request.app["aufgaben"].add(aufgabe)
+        aufgabe.add_done_callback(request.app["aufgaben"].discard)
 
     def lesen():
         try:
@@ -182,13 +184,34 @@ async def anmeldung(request: web.Request) -> web.Response:
     return web.json_response({"name": await _im_faden(launcher.befehl_starten, f"Anmeldung {p['name']}", umgebung + p["anmeldung"], str(d.get("cli")))})
 
 
+def _links_aus(text: str) -> list:
+    """Adressen aus der Terminalausgabe. Claude bricht lange Adressen selbst um (der Rest steht ohne Leerzeichen in den Folgezeilen); nur die erste
+    Zeile ergäbe eine abgeschnittene Adresse, und die Anmeldeseite meldete „redirect_uri fehlt“."""
+    gefunden = []
+    zeilen = text.splitlines()
+    for i, zeile in enumerate(zeilen):
+        for treffer in LINK.finditer(zeile):
+            adresse = treffer.group(0)
+            # Nur am Zeilenende einer langen Zeile kann die Adresse weitergehen.
+            if treffer.end() == len(zeile.rstrip()) and len(zeile.rstrip()) >= 40:
+                for folge in zeilen[i + 1:]:
+                    teil = folge.strip()
+                    if not ADRESS_TEIL.fullmatch(teil):
+                        break
+                    adresse += teil
+                    if len(folge.rstrip()) < 40:
+                        break
+            gefunden.append(adresse)
+    return gefunden
+
+
 async def links(request: web.Request) -> web.Response:
     """Adressen aus der Terminalausgabe: Im Handy-Terminal bricht eine lange Anmelde-Adresse um und lässt sich nicht antippen."""
     name = request.match_info["name"]
     launcher.pruefe_name(name)
     aus = await _im_faden(lambda: subprocess.run(launcher.TMUX + ["capture-pane", "-p", "-J", "-S", "-200", "-t", f"={name}:"],
                                                  capture_output=True, text=True, timeout=5).stdout)
-    einmal = list(dict.fromkeys(g.rstrip(".,;") for g in LINK.findall(aus) if len(g) > 12))
+    einmal = list(dict.fromkeys(g.rstrip(".,;") for g in _links_aus(aus) if len(g) > 12))
     return web.json_response({"links": einmal[-5:]})
 
 
