@@ -5,22 +5,25 @@ enum HelferWerkzeuge {
     private static let schloss = NSLock()
     private static let tagesGrenze = 5
 
+    /// Einträge „Schlüssel|Kennung“; ohne Kennung (neuer Helfer) passt der Schlüssel nur zu einer noch nicht vergebenen.
     private static func geladen() -> [String] { Tresor.lade([String].self, name: "helfer-bau", klartext: Pfade.unterstuetzung.appendingPathComponent(".kein-klartext-helfer-bau")) ?? [] }
 
-    static func bauSchluesselBekannt(_ s: String) -> Bool {
+    static func bauSchluesselPasst(_ s: String, kennung: String, vorhanden: Bool) -> Bool {
         schloss.lock(); defer { schloss.unlock() }
-        return !s.isEmpty && geladen().contains(s)
+        guard !s.isEmpty, !s.contains("|"), let eintrag = geladen().first(where: { $0 == s || $0.hasPrefix(s + "|") }) else { return false }
+        let gebunden = eintrag.split(separator: "|", omittingEmptySubsequences: false).dropFirst().first.map(String.init) ?? ""
+        return gebunden.isEmpty ? !vorhanden : gebunden == kennung
     }
 
     static func bauSchluesselVerbrauchen(_ s: String) {
         schloss.lock(); defer { schloss.unlock() }
-        Tresor.sichere(geladen().filter { $0 != s }, name: "helfer-bau")
+        Tresor.sichere(geladen().filter { $0 != s && !$0.hasPrefix(s + "|") }, name: "helfer-bau")
     }
 
-    private static func neuerBauSchluessel() -> String {
+    private static func neuerBauSchluessel(kennung: String) -> String {
         let s = UUID().uuidString.replacingOccurrences(of: "-", with: "")
         schloss.lock(); defer { schloss.unlock() }
-        Tresor.sichere(Array((geladen() + [s]).suffix(20)), name: "helfer-bau")
+        Tresor.sichere(Array((geladen() + [s + "|" + kennung]).suffix(20)), name: "helfer-bau")
         return s
     }
 
@@ -31,15 +34,14 @@ enum HelferWerkzeuge {
         guard !frage.isEmpty else { return nein("Die Frage fehlt.") }
         if Tresor.sperre(frage) != nil { return nein("Die Frage berührt gesperrte Zugangsdaten.") }
         let zahl = min(max(anzahl, 1), 7)
-        let gewaehlt = await MainActor.run(body: { Einstellungen.shared.rechercheModell })
-        let cli = ["sonnet", "opus", "fable"].first { $0 == modell } ?? (gewaehlt.contains("opus") ? "opus" : gewaehlt.contains("fable") ? "fable" : "sonnet")
+        let cli = ["sonnet", "opus", "fable"].first { $0 == modell } ?? "sonnet"
         let voll = "Recherchiere gründlich: \(frage)\n\nTeile die Arbeit in getrennte Fragen und nutze dafür bei Bedarf bis zu \(zahl) parallele Unteragenten mit dem Modell sonnet; nicht mehr als nötig und keine doppelten Fragen. Antworte auf Deutsch mit dem, was für die Umsetzung zählt, und mit den Quellen."
         let profil = Pfade.heim.appendingPathComponent("proggs/OpenLauncher/Profiles/ClaudeCodeMac/minimal").path
-        let sperre = "Read(/" + Pfade.heim.appendingPathComponent("SK").path + "/**)"
+        // Nur Web, kein Lesen von Dateien, außerhalb des Repos: Eine manipulierte Webseite soll hier nichts finden, das sie ausleiten kann.
         let befehl = "CLAUDE_CONFIG_DIR=\(Shell.zitiert(profil)) claude -p \(Shell.zitiert(voll)) --output-format text --model \(cli)"
-            + " --setting-sources project --strict-mcp-config --permission-mode dontAsk --tools 'WebSearch,WebFetch,Read,Grep,Glob,Task'"
-            + " --allowedTools 'WebSearch,WebFetch,Read,Grep,Glob,Task' --disallowedTools \(Shell.zitiert(sperre))"
-        let r = await Shell.zsh(befehl, ordner: Pfade.heim.appendingPathComponent("proggs").path, sekunden: 1200)
+            + " --setting-sources project --strict-mcp-config --permission-mode dontAsk --tools 'WebSearch,WebFetch,Task'"
+            + " --allowedTools 'WebSearch,WebFetch,Task'"
+        let r = await Shell.zsh(befehl, ordner: FileManager.default.temporaryDirectory.path, sekunden: 1200)
         if r.zeitAus { return nein("Die Recherche wurde nach 20 Minuten abgebrochen.") }
         if r.code != 0 { return nein(String((r.fehler.isEmpty ? r.ausgabe : r.fehler).suffix(600))) }
         return JSON.text(["ok": true, "text": Geheimnisse.schwaerzen(r.ausgabe)] as JSONObjekt)
@@ -140,11 +142,16 @@ enum HelferWerkzeuge {
             if await McpKlient.shared.werkzeuge().contains(where: { $0.name == "helfer_bauen" }) {
                 var rumpf: JSONObjekt = ["aufgabe": aufgabe, "faehigkeit": faehigkeit, "ort": "mac"]
                 if !kennung.isEmpty { rumpf["kennung"] = kennung }
-                return await McpKlient.shared.rufe("helfer_bauen", rumpf)
+                let e = await McpKlient.shared.rufe("helfer_bauen", rumpf)
+                // Eine Ablehnung des Handys bleibt seine Antwort. Nur wenn es nachweislich weg ist, geht es am Mac weiter;
+                // die frische Abfrage verhindert einen zweiten Bau, falls nur die Antwort verloren ging.
+                let weg = e.fehler && (e.text.hasPrefix("Handy-Jarvis nicht erreichbar") || e.text.hasPrefix("Jarvis ist gerade nicht erreichbar"))
+                if !weg { return e }
+                if await McpKlient.shared.werkzeuge(frisch: true).contains(where: { $0.name == "helfer_bauen" }) { return e }
             }
             guard tagesZaehlerErhoehen() else { return WerkzeugErgebnis(text: "Heute wurden schon \(tagesGrenze) Helfer direkt am Mac beauftragt; das ist die Grenze.", fehler: true) }
             guard let start = MacWerkzeuge.alle.first(where: { $0.definition.name == "openlauncher_sitzung" }) else { return WerkzeugErgebnis(text: "OpenLauncher-Weg fehlt.", fehler: true) }
-            let text = auftrag(aufgabe: aufgabe, faehigkeit: faehigkeit, kennung: kennung, schluessel: neuerBauSchluessel(), modell: modell, effort: effort)
+            let text = auftrag(aufgabe: aufgabe, faehigkeit: faehigkeit, kennung: kennung, schluessel: neuerBauSchluessel(kennung: kennung), modell: modell, effort: effort)
             let e = await start.ausfuehren(["auftrag": text, "name": "Jarvis: Helfer", "cli": "claude", "modell": "claude-opus-5-5[1m]", "profil": "minimal", "modus": "schnell", "effort": "high"])
             if e.fehler { return e }
             return WerkzeugErgebnis(text: "Das Handy ist nicht erreichbar, deshalb läuft der Helferbau direkt am Mac mit Claude Opus 5.5. Fertig ist er erst, wenn er nach bestandener Prüfung im Katalog als bereit steht (mac_helfer_suchen).")

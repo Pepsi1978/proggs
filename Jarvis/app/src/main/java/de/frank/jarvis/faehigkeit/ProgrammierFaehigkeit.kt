@@ -719,7 +719,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Versucht die Ziele der Reihe nach; [NichtDa] heißt: nichts gestartet, das nächste Ziel ist dran. */
     private suspend fun starteErstes(wahl: List<ProgrammierZiel>, appName: String, auftrag: String, review: Boolean, nummer: String, neu: Boolean,
-                                     modell: String = MODELL_OPUS, cli: String = CLI_CODEX): Ergebnis {
+                                     modell: String = MODELL_OPUS, cli: String = CLI_CODEX, nurFuerSitzung: String = ""): Ergebnis {
         val uebersprungen = mutableListOf<String>()
         val (ausChatGpt, aufrufGespraech) = herkunft()
         // Im Sprachgespräch gestellt (Hey Jarvis mit Vorlesen oder Live): dauerhaft im Auftragsbuch, damit der Abschluss später
@@ -735,7 +735,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         var gespraech = if (eigenes) "" else aufrufGespraech
         // Franks Programmierregeln gehen bewusst nicht mit: Sie sind reiner Jarvis-Kontext (wie Jarvis Aufträge steuert), keine Anweisung an die Sitzung.
         for (ziel in wahl) {
-            val mitFortschritt = auftragMitFortschritt(auftrag, when {
+            // nurFuerSitzung (Bauschlüssel) geht an die Sitzung, aber nicht in Auftragsbuch, Gespräch oder Modellkontext.
+            val mitFortschritt = auftragMitFortschritt(auftrag + nurFuerSitzung, when {
                 ziel is CodexCloud -> fortschrittCodex(nummer)
                 // Frei gewähltes Modell am Mac: Claude Code mit Hooks, OpenCode mit dem Plugin, Codex, Kimi und Antigravity melden selbst.
                 modell == MODELL_KATALOG && cli == CLI_CLAUDE -> fortschrittsAnweisung(nummer, pc = true)
@@ -1473,7 +1474,6 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             rueckfrageAnsageAbbrechen(frageId)
             return@withContext de.frank.jarvis.helfer.HelferAblauf.lokaleAntwort(app, frageId, inhalt)
         }
-        de.frank.jarvis.helfer.HelferAblauf.fristErledigt(app, frageId)
         if (!freigeben && antworten.none { it.isNotEmpty() } && text.isEmpty()) throw IllegalArgumentException("Die Antwort ist leer.")
         val eintrag = Auftragsbuch.zuFrage(app, frageId)
         val gespraech = eintrag?.optString("gespraech").orEmpty()
@@ -1511,6 +1511,7 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
             // Proxy beim Neustart) heißt nicht, dass die Sitzung weg ist: dann Fehler mit „Erneut senden“.
             val ausgang = if (code in setOf(404, 409, 410)) standVomServer(json.optString("status")) else null
             if (ausgang != null) {
+                de.frank.jarvis.helfer.HelferAblauf.fristErledigt(app, frageId)
                 stand(ausgang, json.optString("antwort_text").ifEmpty { if (ausgang in RueckfrageStand.BEANTWORTET_ALLE) "eine frühere Antwort" else "" }, grund)
                 Auftragsbuch.frageErledigt(app, frageId)
                 rueckfrageAnsageAbbrechen(frageId)
@@ -1520,6 +1521,8 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         }
         Auftragsbuch.frageErledigt(app, frageId)
         rueckfrageAnsageAbbrechen(frageId)
+        // Erst jetzt: Eine leere oder nicht zugestellte Antwort darf die laufende Frist nicht beenden.
+        de.frank.jarvis.helfer.HelferAblauf.fristErledigt(app, frageId)
         eintrag?.let { Auftragsbuch.finde(app, it.optString("id"))?.let { e -> aktivitaetMelden(e) } }
         if (freigeben) {
             stand(RueckfrageStand.AM_PC, "", "freigegeben")
@@ -1667,9 +1670,9 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
         // Ein kurzer fester Satz gleich beim Eintreffen (= Beginn des Countdowns), nach dem kurzen Ton der Benachrichtigung;
         // die Frage selbst steht im Vollbild. Franks Vorgabe vom 23.10.2026: Die Code-Review-Frage nur allgemein ansagen,
         // ohne Projekt, App, Ziel oder Inhalt der Frage.
-        val thema = frage.optJSONArray("fragen")?.optJSONObject(0)?.optString("header")?.takeIf { it.isNotBlank() && it.lowercase() != "auswahl" }?.let { " zum Thema $it" } ?: " zum Helfer $appName"
+        val thema = frage.optJSONArray("fragen")?.optJSONObject(0)?.optString("header")?.takeIf { it.isNotBlank() && it.lowercase() != "auswahl" }?.let { " zum Thema $it" } ?: " zum Helfer ${appName.removePrefix("Helfer ")}"
         val satz = if (zusatz?.optBoolean("werkzeugbau") == true) {
-            if (zusatz.optBoolean("freigabe")) "Ich brauche deine Freigabe$thema. Sie läuft nicht von selbst ab."
+            if (zusatz.optBoolean("freigabe")) "Ich brauche deine Freigabe$thema. Ohne dein Ja passiert das nicht."
             else "Ich habe eine Auswahlfrage$thema; du hast zweieinhalb Minuten Zeit zu antworten."
         } else if (review) "Eine Code-Review-Frage liegt vor, der Programmierer wartet auf deine Antwort."
             else "Eine Rückfrage vom Programmierer zu $appName muss beantwortet werden."
@@ -1692,11 +1695,14 @@ class ProgrammierFaehigkeit(private val context: Context) : Faehigkeit {
     fun neueNummerFuerHelfer(): String = Auftragsbuch.neueNummer()
 
     /** Startet die Bausitzung mit Opus 5.5 über die normale Reihenfolge der Rechner, ohne Modellkarte (die gehört zu Franks eigenen Aufträgen). */
-    suspend fun helferAuftragStarten(nummer: String, appName: String, auftrag: String): Ergebnis {
+    suspend fun helferAuftragStarten(nummer: String, appName: String, auftrag: String, nurFuerSitzung: String): Ergebnis {
         val wahl = zieleFuer("automatisch", MODELL_OPUS)
         if (wahl.isEmpty()) return Ergebnis(fehltFuer(MODELL_OPUS), fehler = true)
-        return starteErstes(wahl, appName, auftrag, review = false, nummer = nummer, neu = true, modell = MODELL_OPUS)
+        return starteErstes(wahl, appName, auftrag, review = false, nummer = nummer, neu = true, modell = MODELL_OPUS, nurFuerSitzung = nurFuerSitzung)
     }
+
+    /** Eine von selbst entschiedene eigene Frage: Ansage und angehaltenes Vorlesen freigeben. */
+    fun helferFrageErledigt(frageId: String) { helferFragen.remove(frageId); rueckfrageAnsageAbbrechen(frageId) }
 
     /** Zeigt eine eigene Auswahlfrage von Jarvis im vorhandenen Vollbild. */
     fun helferFrageAnzeigen(frageId: String, bau: JSONObject, frage: JSONObject, zusatz: JSONObject) {

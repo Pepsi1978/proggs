@@ -108,8 +108,9 @@ object KontenRegister {
     }
 
     /** Sperrt einen Zugang für alle Helfer sofort (etwa bei Verdacht auf Missbrauch); Jarvis' feste Anbindungen betrifft das nicht. */
-    fun sperren(c: Context, id: String, an: Boolean) { speicher(c).edit().putBoolean("gesperrt_$id", an).apply(); stand.value++ }
-    fun gesperrt(c: Context, id: String): Boolean = runCatching { speicher(c).getBoolean("gesperrt_$id", false) }.getOrDefault(false)
+    fun sperren(c: Context, id: String, an: Boolean): Boolean = runCatching { speicher(c).edit().putBoolean("gesperrt_$id", an).apply(); stand.value++ }.isSuccess
+    /** Im Zweifel gesperrt: Ist der Speicher unlesbar, darf eine frühere Sperre nicht still aufgehoben werden. */
+    fun gesperrt(c: Context, id: String): Boolean = runCatching { speicher(c).getBoolean("gesperrt_$id", false) }.getOrDefault(true)
 
     fun verwendetVonHelfern(c: Context, id: String): List<String> = (HelferKatalog.alle(c, true)).filter { h -> h.rechte.konten.any { it.id == id } }.map { it.name }
 
@@ -126,9 +127,12 @@ object KontenRegister {
     fun schwaerzen(c: Context, text: String): String = werte(c).fold(text) { t, w -> t.replace(w, "***") }
 
     /** Nur Namen und Stand, nie Werte: für Modell und Plugin. */
-    fun uebersicht(c: Context): String = alle(c).joinToString("\n") { k ->
-        val h = verwendetVonHelfern(c, k.id)
+    fun uebersicht(c: Context): String {
+      val katalog = HelferKatalog.alle(c, true)
+      return alle(c).joinToString("\n") { k ->
+        val h = katalog.filter { x -> x.rechte.konten.any { it.id == k.id } }.map { it.name }
         "- ${k.id}: ${k.titel} (${if (k.lesen().isBlank()) "fehlt" else "eingetragen"}${if (gesperrt(c, k.id)) ", für Helfer gesperrt" else ""})" +
             (if (h.isEmpty()) "" else ", Helfer: " + h.joinToString(", "))
+      }
     }
 }

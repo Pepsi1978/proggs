@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 /// Der allgemeine Kanal zwischen Jarvis Mac OS und Jarvis am Handy: zwei gleichberechtigte Agenten, die sich jederzeit schreiben.
@@ -18,7 +17,10 @@ final class AgentenKanal {
     private static let zeitlimit = 600.0
     private static let hoechstalter = 6.0 * 3600
     private static let gesperrt: Set<String> = ["jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden",
-                                                "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "mac_dialog", "mac_helfer_bauen", "helfer_bauen"]
+                                                "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "mac_dialog",
+                                                // Fremde Texte im Kanal lösen keine Helfer aus; ansehen (suchen, info) bleibt erlaubt.
+                                                "mac_helfer_ausfuehren", "mac_helfer_verwalten", "mac_helfer_bauen",
+                                                "helfer_ausfuehren", "helfer_verwalten", "helfer_bauen", "helfer_registrieren", "helfer_auftraege"]
     private let eingangDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-eingang.json")
     private let verlaufDatei = Pfade.unterstuetzung.appendingPathComponent("agentenkanal-verlauf.json")
 
@@ -29,6 +31,11 @@ final class AgentenKanal {
     private var arbeitet = false
     private var helferInArbeit: Set<String> = []
     private var rechercheLaeuft = false
+    private var katalogZuletzt: String?
+    private var katalogLauf: Task<Void, Never>?
+    /// Nach so vielen gescheiterten Zustellungen wird ein großes Ergebnis durch einen Hinweis ersetzt.
+    private static let zustellungen = 5
+    private static let grossAb = 64_000
     /// Hält App Nap fern: Verdeckt gestartet soll die App weiter abfragen und arbeiten.
     private var aktivitaet: NSObjectProtocol?
 
@@ -157,18 +164,37 @@ final class AgentenKanal {
             }
             if let i = eingang.firstIndex(where: { $0["id"] as? String == id }) { eingang[i]["fertige_antwort"] = antwort; sichere() }
         }
-        guard await sende(art: "antwort", text: antwort ?? "{}", antwortAuf: id, id: "antwort-\(id)") else { return false }
+        guard await sende(art: "antwort", text: antwort ?? "{}", antwortAuf: id, id: "antwort-\(id)") else {
+            // Ein großes Ergebnis, das nicht durchkommt, liegt sonst für immer im Eingang und wird bei jedem Sichern neu geschrieben.
+            if let i = eingang.firstIndex(where: { $0["id"] as? String == id }), (antwort?.utf8.count ?? 0) > Self.grossAb {
+                let versuche = (eingang[i]["zustellungen"] as? NSNumber)?.intValue ?? 0
+                eingang[i]["zustellungen"] = versuche + 1
+                if versuche + 1 >= Self.zustellungen {
+                    let pfade = ((JSON.objekt(antwort ?? "") ?? [:])["dateien"] as? [JSONObjekt] ?? []).compactMap { $0["pfad"] as? String }
+                    eingang[i]["fertige_antwort"] = JSON.text(["ok": false, "fehler": "Ergebnis zu groß für den Kanal", "pfad": pfade.joined(separator: ", ")] as JSONObjekt)
+                }
+                sichere()
+            }
+            return false
+        }
         eingang.removeAll { $0["id"] as? String == id }
         erledigt.append(id)
         sichere()
         return true
     }
 
-    /// Ändert sich der Katalog, erfährt es das Handy. Gleicher Inhalt, gleiche Kennung: Der Relay legt ihn nicht doppelt ab.
+    /// Ändert sich der Katalog, erfährt es das Handy, in der richtigen Reihenfolge. Jede Sendung hat eine eigene Kennung: Auch die Rückkehr
+    /// zu einem früheren Stand (aus und wieder an) muss ankommen. Unveränderter Inhalt geht nicht noch einmal raus.
     func katalogSenden() {
         let text = JSON.text(["helfer": HelferKatalog.shared.kanalListe()] as JSONObjekt)
-        let kennung = "helfer-katalog-" + SHA256.hash(data: Data(text.utf8)).prefix(16).map { String(format: "%02x", $0) }.joined()
-        Task { _ = await sende(art: "helfer_katalog", text: text, id: kennung) }
+        guard text != katalogZuletzt else { return }
+        katalogZuletzt = text
+        let vorher = katalogLauf
+        katalogLauf = Task {
+            await vorher?.value
+            let ok = await sende(art: "helfer_katalog", text: text, id: "helfer-katalog-" + UUID().uuidString)
+            if !ok, katalogZuletzt == text { katalogZuletzt = nil }
+        }
     }
 
     private func abarbeiten() {
@@ -275,9 +301,12 @@ final class AgentenKanal {
         var rumpf: JSONObjekt = ["id": id, "art": art, "text": text]
         if let antwortAuf { rumpf["antwort_auf"] = antwortAuf }
         if !Self.istHelfer(art), !id.contains("helfer-") { merke(id: id, von: "Mac", art: art, text: text) }
+        // Große Ergebnisse brauchen über langsames Netz ihre Zeit.
+        let groesse = text.utf8.count
+        let frist = groesse > Self.grossAb ? max(120, Double(groesse) / 50_000) : 15
         for versuch in 0..<4 {
             if versuch > 0 { try? await Task.sleep(for: .seconds(Double(1 << versuch))) }
-            if let (code, daten) = try? await anfrage(basis, rumpf: rumpf, sekunden: 15), code == 200 { return JSON.objekt(daten) ?? [:] }
+            if let (code, daten) = try? await anfrage(basis, rumpf: rumpf, sekunden: frist), code == 200 { return JSON.objekt(daten) ?? [:] }
         }
         log("fehler", "Agentenkanal: Nachricht ans Handy nicht angekommen", wo: "Agentenkanal")
         return nil

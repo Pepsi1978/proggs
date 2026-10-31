@@ -104,7 +104,7 @@ final class JarvisAgent {
 
     /// Stellt Jarvis eine Frage im Gespräch. Gibt den fertigen Antworttext zurück.
     @discardableResult
-    func frage(_ text: String, in g: Gespraech, gesprochen: Bool = false, bild: Data? = nil, ohneWerkzeuge: Set<String> = [],
+    func frage(_ text: String, in g: Gespraech, gesprochen: Bool = false, bild: Data? = nil, ohneWerkzeuge: Set<String> = [], nurWerkzeuge: Set<String>? = nil,
                onText: ((String) -> Void)? = nil) async -> String {
         // Ein Gespräch, eine Werkzeugschleife: sonst landet eine neue Frage zwischen tool_use und tool_result.
         while g.arbeitet {
@@ -136,7 +136,7 @@ final class JarvisAgent {
         let handyWerkzeuge = await mcpListe
         let lokale = MacWerkzeuge.alleLokal
         let lokaleNamen = Set(lokale.map(\.definition.name))
-        let alleWerkzeuge = (lokale.map(\.definition) + handyWerkzeuge.filter { !lokaleNamen.contains($0.name) && !McpKlient.nurFuerOberflaeche.contains($0.name) }).filter { !ohneWerkzeuge.contains($0.name) }
+        let alleWerkzeuge = (lokale.map(\.definition) + handyWerkzeuge.filter { !lokaleNamen.contains($0.name) && !McpKlient.nurFuerOberflaeche.contains($0.name) }).filter { !ohneWerkzeuge.contains($0.name) && nurWerkzeuge?.contains($0.name) != false }
         let system = await systemTeile(g: g)
         let (a, modell) = await anbieter()
         let effort = e.effort

@@ -179,11 +179,11 @@ struct KontenListe: View {
             eintrag("openai", "OpenAI (Live, GPT)", "Meldet Jarvis bei der OpenAI-Plattform an. Wird für das Live-Gespräch und GPT ohne ChatGPT-Anmeldung verwendet.", "Live-Gespräch, Jarvis' Kopf", $einst.zugang.openai)
             eintrag("gemini", "Gemini (Live)", "Meldet Jarvis bei Google AI Studio an. Wird für das Live-Gespräch mit Gemini verwendet.", "Live-Gespräch", $einst.zugang.gemini)
             eintrag("groq", "Groq (Whisper)", "Meldet Jarvis bei Groq an. Wird für die Umwandlung von Sprache in Text verwendet.", "Spracheingabe", $einst.zugang.groq)
-            eintrag("", "Google Cloud (Chirp 3 HD)", "Meldet Jarvis bei Google Cloud an. Wird für die Vorlesestimmen Chirp 3 HD verwendet.", "Vorlesen", $stimmen.zugang.google)
-            eintrag("", "Gemini TTS kostenlos", "Schlüssel eines Projekts ohne Abrechnung. Wird zuerst für die Gemini-Vorlesestimmen verwendet.", "Vorlesen", $stimmen.zugang.geminiFrei)
-            eintrag("", "Gemini TTS bezahlt", "Schlüssel eines Projekts mit Abrechnung. Wird für die Gemini-Stimmen verwendet, wenn das Kontingent erschöpft ist.", "Vorlesen", $stimmen.zugang.geminiBezahlt)
-            eintrag("", "Azure Speech", "Meldet Jarvis bei Azure Speech an. Wird für die Azure-Vorlesestimmen verwendet.", "Vorlesen", $stimmen.zugang.azure)
-            eintrag("", "Alibaba DashScope", "Meldet Jarvis bei Alibaba an. Wird für die Qwen-Stimmen und die eigene Stimme verwendet.", "Vorlesen", $stimmen.zugang.qwen)
+            eintrag("google", "Google Cloud (Chirp 3 HD)", "Meldet Jarvis bei Google Cloud an. Wird für die Vorlesestimmen Chirp 3 HD verwendet.", "Vorlesen", $stimmen.zugang.google)
+            eintrag("gemini_tts_frei", "Gemini TTS kostenlos", "Schlüssel eines Projekts ohne Abrechnung. Wird zuerst für die Gemini-Vorlesestimmen verwendet.", "Vorlesen", $stimmen.zugang.geminiFrei)
+            eintrag("gemini_tts_bezahlt", "Gemini TTS bezahlt", "Schlüssel eines Projekts mit Abrechnung. Wird für die Gemini-Stimmen verwendet, wenn das Kontingent erschöpft ist.", "Vorlesen", $stimmen.zugang.geminiBezahlt)
+            eintrag("azure", "Azure Speech", "Meldet Jarvis bei Azure Speech an. Wird für die Azure-Vorlesestimmen verwendet.", "Vorlesen", $stimmen.zugang.azure)
+            eintrag("qwen", "Alibaba DashScope", "Meldet Jarvis bei Alibaba an. Wird für die Qwen-Stimmen und die eigene Stimme verwendet.", "Vorlesen", $stimmen.zugang.qwen)
             ForEach(einst.zugang.weitere.keys.sorted(), id: \.self) { k in weiterer(k) }
             if sperre.entsperrt { neuForm } else { Text("Zum Hinzufügen oder Ändern mit Touch ID entsperren.").font(.jarvis(11)).foregroundStyle(Farbe.text3) }
         }

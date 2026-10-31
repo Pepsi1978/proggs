@@ -50,7 +50,7 @@ JarvisHelfer/<kennung>/main.py|main.sh Mac-Programm (art=skript, ort=mac)
 ## Rechte und Freigaben
 
 Ohne Freigabe läuft nur, wer höchstens eigene Dateien schreibt, erklärte Hosts ohne Konto aufruft und nur lesende Werkzeuge nutzt.
-Konten, schreibende Werkzeuge und `extern=true` brauchen Franks einmalige Freigabe in „Eigene Tools“, nur in der Oberfläche; ein Modell kann sie nicht erteilen.
+Konten, schreibende Werkzeuge, `extern=true` und die Kombination aus `rechte.netz` mit Jarvis-Werkzeugen (am Mac schon jedes `rechte.netz`, weil es dort nicht durchgesetzt wird) brauchen Franks einmalige Freigabe in „Eigene Tools“, nur in der Oberfläche; ein Modell kann sie nicht erteilen.
 Mehr Rechte in einer neuen Fassung bedeuten erneute Freigabe. Die Werkzeuge `programmieren`, `helfer_*`, `agent_starten`, `mail_senden`, Löschwerkzeuge und alles zu Einstellungen sind für Helfer gesperrt.
 
 ## Handy-Skript
@@ -69,6 +69,8 @@ function ausfuehren(eingabe) {
 - `jarvis.speicherLesen(schluessel)`, `jarvis.speicherSchreiben(schluessel, wert)`: eigener Speicher des Helfers, bleibt über Fassungen erhalten.
 - `jarvis.textDatei(name, text)` → `pfad`; `jarvis.zipDatei(name, {"pfad/in/zip": "text"})` → `pfad` (DOCX und XLSX sind solche Archive).
 - `jarvis.log(text)`.
+- Dateien zählen nur, wenn sie über `textDatei` oder `zipDatei` entstanden sind; ein selbst genannter Pfad wird ignoriert. In der Prüfung bleibt `speicherSchreiben` im Arbeitsspeicher, Dateien landen im Probeordner.
+- Agent-Helfer sehen nur die Werkzeuge aus `rechte.werkzeuge`.
 
 Grenzen: 60 s Laufzeit, keine Java-Brücke, 20 MB je Datei, 64 MB Archivinhalt vor dem Packen, 2.000 Aufrufebenen, 4 MB je HTTP-Antwort. Höchstens zwei Läufe gleichzeitig, mit niedriger Priorität.
 

@@ -31,7 +31,7 @@ object HelferZustand {
 data class HelferRechte(val netz: List<String>, val konten: List<HelferKonto>, val werkzeuge: List<String>, val extern: Boolean) {
     fun alsText(): String = buildList {
         if (netz.isNotEmpty()) add("Internet: " + netz.joinToString(", "))
-        if (konten.isNotEmpty()) add("Konten: " + konten.joinToString(", ") { it.id })
+        if (konten.isNotEmpty()) add("Konten: " + konten.joinToString(", ") { "${it.id} (nur an ${it.hosts.joinToString(", ")})" })
         if (werkzeuge.isNotEmpty()) add("Jarvis-Werkzeuge: " + werkzeuge.joinToString(", "))
         if (extern) add("wirkt nach außen")
     }.joinToString(" · ").ifEmpty { "Keine besonderen Rechte" }
@@ -122,9 +122,13 @@ object HelferKatalog {
 
     fun finde(c: Context, kennung: String): Helfer? = alle(c, true).firstOrNull { it.kennung == kennung } ?: macHelfer(c).firstOrNull { it.kennung == kennung }
 
-    fun macKatalogUebernehmen(c: Context, helfer: JSONArray) = synchronized(sperre) {
-        schreib(c, helfer, macDatei(c))
-        c.applicationContext.getSharedPreferences("helfer_mac", Context.MODE_PRIVATE).edit().putLong("gesehen", System.currentTimeMillis()).apply()
+    fun macKatalogUebernehmen(c: Context, helfer: JSONArray) {
+        synchronized(sperre) {
+            schreib(c, helfer, macDatei(c))
+            c.applicationContext.getSharedPreferences("helfer_mac", Context.MODE_PRIVATE).edit().putLong("gesehen", System.currentTimeMillis()).apply()
+        }
+        // Am Mac freigegeben: Eine Aufgabe, die darauf wartet, geht jetzt weiter.
+        macHelfer(c).filter { it.einsatzbereit }.forEach { HelferAblauf.nachFreigabe(c, it.kennung) }
     }
 
     fun macZuletztGesehen(c: Context): Long = c.applicationContext.getSharedPreferences("helfer_mac", Context.MODE_PRIVATE).getLong("gesehen", 0L)
@@ -146,17 +150,28 @@ object HelferKatalog {
         m.optString("art") !in setOf("skript", "agent") -> "art muss skript oder agent sein."
         m.optString("art") == "agent" && m.optString("rolle").length < 40 -> "Ein Agent-Helfer braucht eine ausführliche rolle."
         m.optString("art") == "skript" && m.optString("datei").let { it.isBlank() || it.contains('/') || it.contains("..") } -> "datei fehlt oder ist kein einfacher Dateiname."
-        (m.optJSONArray("tests")?.length() ?: 0) < 1 && m.optString("art") == "skript" -> "Mindestens ein Test ist Pflicht."
+        m.optString("art") == "skript" && !testsVollstaendig(m) -> "Pflicht sind mindestens ein Normalfall (erwartet ok=true) und ein Fehlerfall (ok=false), jeder Test als Objekt."
         Helfer(m).rechte.werkzeuge.firstOrNull { werkzeugGesperrt(it) } != null -> "Dieses Werkzeug ist für Helfer gesperrt: " + Helfer(m).rechte.werkzeuge.first { werkzeugGesperrt(it) }
         else -> null
+    }
+
+    private fun testsVollstaendig(m: JSONObject): Boolean {
+        val t = m.optJSONArray("tests") ?: return false
+        val alle = (0 until t.length()).map { t.opt(it) }
+        if (alle.isEmpty() || alle.any { it !is JSONObject }) return false
+        val erwartet = alle.map { (it as JSONObject).optJSONObject("erwartet")?.optBoolean("ok", true) ?: true }
+        return erwartet.any { it } && erwartet.any { !it }
     }
 
     /** Fingerabdruck der Rechte, die Frank freigeben muss. Leer = keine Freigabe nötig. Neue Rechte in neuer Fassung fragen erneut. */
     fun freigabePflicht(c: Context, h: Helfer): String {
         val r = h.rechte
         val schreibend = r.werkzeuge.filter { n -> de.frank.jarvis.faehigkeit.Register.werkzeuge(c).firstOrNull { it.name == n }?.nurLesen != true }
-        if (r.konten.isEmpty() && schreibend.isEmpty() && !r.extern) return ""
-        return (r.konten.map { "konto:${it.id}:${it.hosts.sorted()}" } + schreibend.map { "werkzeug:$it" } + (if (r.extern) listOf("extern") else emptyList())).sorted().joinToString("|")
+        // Lesen plus Netz könnte private Daten hinaustragen: Das braucht wie schreibende Werkzeuge Franks Ja.
+        val abfluss = r.netz.isNotEmpty() && r.werkzeuge.isNotEmpty()
+        if (r.konten.isEmpty() && schreibend.isEmpty() && !r.extern && !abfluss) return ""
+        return (r.konten.map { "konto:${it.id}:${it.art}:${it.hosts.sorted()}" } + schreibend.map { "werkzeug:$it" } + (if (r.extern) listOf("extern") else emptyList()) +
+            (if (abfluss) listOf("netz:${r.netz.sorted()}", "lesen:${r.werkzeuge.sorted()}") else emptyList())).sorted().joinToString("|")
     }
 
     /**
@@ -168,23 +183,32 @@ object HelferKatalog {
         val o = ordner(c, k).apply { mkdirs() }
         val akt = File(o, "aktuell")
         val alt = File(o, "vorher")
-        if (akt.exists()) {
-            alt.deleteRecursively()
-            check(akt.renameTo(alt)) { "Vorige Fassung nicht gesichert" }
-            rohListe(c).firstOrNull { it.optString("kennung") == k }?.let { File(alt, "eintrag.json").writeText(it.toString()) }
+        val zwischen = File(o, "vorher.neu").apply { deleteRecursively() }
+        val hatteAlt = akt.exists()
+        if (hatteAlt) check(akt.renameTo(zwischen)) { "Vorige Fassung nicht gesichert" }
+        if (!probeOrdner.renameTo(akt)) {
+            // Lieber die alte Fassung behalten, als einen Eintrag ohne Programm zu hinterlassen.
+            if (hatteAlt) zwischen.renameTo(akt)
+            error("Neue Fassung nicht übernommen")
         }
-        check(probeOrdner.renameTo(akt)) { "Neue Fassung nicht übernommen" }
+        if (hatteAlt) {
+            rohListe(c).firstOrNull { it.optString("kennung") == k }?.let { File(zwischen, "eintrag.json").writeText(it.toString()) }
+            alt.deleteRecursively()
+            zwischen.renameTo(alt)
+        }
         val l = rohListe(c).toMutableList()
         val bisher = l.firstOrNull { it.optString("kennung") == k }
         val e = JSONObject(manifest.toString())
-        e.remove("tests")
+        e.remove("tests"); e.remove("zustand_vorher")
         e.put("pruefung", pruefung).put("review", review)
         e.put("position", bisher?.optInt("position") ?: ((l.maxOfOrNull { it.optInt("position") } ?: -1) + 1))
         e.put("aktiv", bisher?.optBoolean("aktiv", true) ?: true)
         val pflicht = freigabePflicht(c, Helfer(e))
         val frei = bisher?.optString("freigabe").orEmpty()
         e.put("freigabe", if (pflicht == frei) frei else "")
-        e.put("zustand", if (pflicht.isEmpty() || pflicht == frei) HelferZustand.BEREIT else HelferZustand.WARTET_AUF_FREIGABE)
+        val neu = if (pflicht.isEmpty() || pflicht == frei) HelferZustand.BEREIT else HelferZustand.WARTET_AUF_FREIGABE
+        // Im Papierkorb bleibt er im Papierkorb: Eine neue Fassung holt ihn nicht ungefragt zurück.
+        if (bisher?.optString("zustand") == HelferZustand.PAPIERKORB) e.put("zustand", HelferZustand.PAPIERKORB).put("zustand_vorher", neu) else e.put("zustand", neu)
         l.removeAll { it.optString("kennung") == k }
         l += e
         schreib(c, JSONArray(l))
@@ -197,8 +221,8 @@ object HelferKatalog {
     }
 
     fun aktivieren(c: Context, kennung: String, an: Boolean) = aendere(c, kennung) { it.put("aktiv", an) }
-    fun inPapierkorb(c: Context, kennung: String) = aendere(c, kennung) { it.put("zustand_vorher", it.optString("zustand")).put("zustand", HelferZustand.PAPIERKORB) }
-    fun wiederherstellen(c: Context, kennung: String) = aendere(c, kennung) { it.put("zustand", it.optString("zustand_vorher").ifEmpty { HelferZustand.FEHLERHAFT }) }
+    fun inPapierkorb(c: Context, kennung: String) = aendere(c, kennung) { if (it.optString("zustand") != HelferZustand.PAPIERKORB) it.put("zustand_vorher", it.optString("zustand")).put("zustand", HelferZustand.PAPIERKORB) }
+    fun wiederherstellen(c: Context, kennung: String) = aendere(c, kennung) { if (it.optString("zustand") == HelferZustand.PAPIERKORB) it.put("zustand", it.optString("zustand_vorher").ifEmpty { HelferZustand.FEHLERHAFT }) }
 
     /** Setzt auf die letzte geprüfte Fassung zurück. null = es gibt keine. */
     fun rueckrollen(c: Context, kennung: String): Helfer? = synchronized(sperre) {
@@ -209,7 +233,10 @@ object HelferKatalog {
         akt.deleteRecursively()
         check(alt.renameTo(akt)) { "Vorige Fassung nicht wiederhergestellt" }
         val l = rohListe(c).toMutableList()
-        eintrag.put("position", l.firstOrNull { it.optString("kennung") == kennung }?.optInt("position") ?: eintrag.optInt("position"))
+        val jetzt = l.firstOrNull { it.optString("kennung") == kennung }
+        eintrag.put("position", jetzt?.optInt("position") ?: eintrag.optInt("position"))
+        // Franks Schalter gilt weiter: Ein deaktivierter Helfer wird durch das Rücksetzen nicht wieder aktiv.
+        eintrag.put("aktiv", jetzt?.optBoolean("aktiv", true) ?: true)
         l.removeAll { it.optString("kennung") == kennung }
         l += eintrag
         schreib(c, JSONArray(l))

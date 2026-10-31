@@ -40,6 +40,7 @@ data class HelferErgebnis(val ok: Boolean, val text: String, val daten: JSONObje
 object HelferLauf {
     private const val MAX_LAUF_MS = 60_000L
     private const val MAX_DATEI = 20 * 1024 * 1024
+    private const val MAX_ANTWORT = 2_000_000L
     private const val MAX_ENTPACKT = 64 * 1024 * 1024
     private const val MAX_HTTP_BYTES = 4_000_000L
     /** Rhino prüft die Zeitgrenze nur zwischen Befehlen; hängt ein Skript in einem Regex, gibt der Aufrufer es nach dieser Nachfrist auf. */
@@ -71,6 +72,11 @@ object HelferLauf {
     /** Was das Skript als `jarvis` sieht; alles per JSON-Text, damit keine Java-Objekte ins Skript gelangen. */
     class Bruecke(private val c: Context, private val h: Helfer, private val ausgabe: File, private val probe: Boolean, private val kontext: CoroutineContext, private val frist: Long) {
         val dateien = mutableListOf<Pair<String, String>>()
+        /** In der Prüfung bleibt der Speicher im Arbeitsspeicher: Tests dürfen ihn benutzen, ohne echte Daten anzufassen. */
+        private val probeSpeicher = JSONObject()
+        /** Einmal je Lauf: Jedes Log entschlüsselte sonst alle Schlüssel neu. */
+        private val geheimWerte by lazy { KontenRegister.werte(c) }
+        private fun geschwaerzt(t: String) = geheimWerte.fold(t) { a, w -> a.replace(w, "***") }
 
         private fun erlaubterHost(url: String, konto: HelferKonto?): Boolean {
             val u = url.toHttpUrlOrNull() ?: return false
@@ -102,7 +108,10 @@ object HelferLauf {
             val methode = o.optString("methode", "GET").uppercase()
             val rumpf = if (o.has("rumpf")) o.optString("rumpf").toRequestBody((o.optJSONObject("kopf")?.optString("Content-Type")?.ifEmpty { null } ?: "application/json").toMediaTypeOrNull()) else null
             anfrage.url(ziel).method(methode, rumpf ?: if (methode in setOf("POST", "PUT", "PATCH")) ByteArray(0).toRequestBody(null) else null)
-            HTTP.newCall(anfrage.build()).execute().use { r ->
+            // Die Laufgrenze gilt auch während des Wartens aufs Netz.
+            val rest = frist - System.currentTimeMillis()
+            check(rest > 0) { "Die Zeitgrenze des Helfers ist erreicht." }
+            HTTP.newBuilder().callTimeout(rest, TimeUnit.MILLISECONDS).build().newCall(anfrage.build()).execute().use { r ->
                 if (konto != null) KontenRegister.nutzungMerken(c, konto.id, h.name)
                 // Nur begrenzt lesen: body.string() lüde die ganze Antwort in den Speicher, bevor gekürzt wird.
                 val text = r.body?.let { b ->
@@ -118,6 +127,8 @@ object HelferLauf {
             check(name in h.rechte.werkzeuge && !HelferKatalog.werkzeugGesperrt(name)) { "Das Werkzeug $name ist für diesen Helfer nicht erlaubt." }
             val w = Register.werkzeuge(c).firstOrNull { it.name == name } ?: error("Dieses Werkzeug gibt es nicht: $name")
             check(w.nurLesen || !probe) { "In der Prüfung laufen nur lesende Werkzeuge." }
+            // Vor der Freigabe dürfen gelesene Daten nicht zusammen mit Netz in einem Testlauf stecken.
+            check(!probe || h.rechte.netz.isEmpty()) { "In der Prüfung liest ein Helfer mit Netzzugang keine Jarvis-Daten." }
             check(w.nurLesen || h.freigegebeneRechte.isNotEmpty()) { "Die Rechte dieses Helfers sind noch nicht freigegeben." }
             val rest = frist - System.currentTimeMillis()
             check(rest > 0) { "Die Zeitgrenze des Helfers ist erreicht." }
@@ -127,9 +138,9 @@ object HelferLauf {
 
         private fun speicher() = HelferKatalog.speicherDatei(c, h.kennung)
         private fun speicherJson() = runCatching { JSONObject(speicher().readText()) }.getOrDefault(JSONObject())
-        fun speicherLesen(schluessel: String): String = speicherJson().opt(schluessel)?.toString().orEmpty()
+        fun speicherLesen(schluessel: String): String = (if (probe) probeSpeicher else speicherJson()).opt(schluessel)?.toString().orEmpty()
         fun speicherSchreiben(schluessel: String, wert: String) {
-            check(!probe) { "In der Prüfung wird nichts dauerhaft gespeichert." }
+            if (probe) { probeSpeicher.put(schluessel, wert); return }
             val j = speicherJson().put(schluessel, wert)
             check(j.toString().length < 2_000_000) { "Der Speicher des Helfers ist voll." }
             speicher().parentFile?.mkdirs()
@@ -187,7 +198,7 @@ object HelferLauf {
             return d.absolutePath
         }
 
-        fun log(text: String) = Logbuch.system("Helfer ${h.kennung}", KontenRegister.schwaerzen(c, text).take(300))
+        fun log(text: String) = Logbuch.system("Helfer ${h.kennung}", geschwaerzt(text).take(300))
     }
 
     /** Macht aus der Brücke das bequeme `jarvis`-Objekt; JSON hin und zurück, sodass im Skript nur reine JS-Werte ankommen. */
@@ -236,7 +247,8 @@ var jarvis = (function (b) {
     private fun laufen(c: Context, h: Helfer, eingabe: JSONObject, ordner: File, probe: Boolean, aufrufer: CoroutineContext): HelferErgebnis {
         val beginn = System.currentTimeMillis()
         // Prüfläufe bekommen einen eigenen Ordner: Sie löschen ihre Dateien danach und dürfen kein echtes Ergebnis treffen.
-        val ausgabe = if (probe) File(ordner, PROBE_AUSGABE).apply { mkdirs() } else HelferKatalog.ausgabe(c, h.kennung)
+        // Auch echte Läufe je einen eigenen: Ein späterer Lauf überschreibt nie, was schon im Chat hängt.
+        val ausgabe = (if (probe) File(ordner, PROBE_AUSGABE) else File(HelferKatalog.ausgabe(c, h.kennung), beginn.toString() + "-" + java.util.UUID.randomUUID().toString().take(6))).apply { mkdirs() }
         val bruecke = Bruecke(c, h, ausgabe, probe, aufrufer, beginn + MAX_LAUF_MS)
         val cx = fabrik.enterContext()
         return try {
@@ -251,8 +263,8 @@ var jarvis = (function (b) {
             val roh = f.call(cx, scope, scope, arrayOf(eingabeJs))
             val json = org.mozilla.javascript.NativeJSON.stringify(cx, scope, roh, null, null)?.toString().orEmpty()
             val r = runCatching { JSONObject(json) }.getOrDefault(JSONObject().put("text", json))
-            val genannt = r.optJSONArray("dateien")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { it.optString("name") to it.optString("pfad") } } ?: emptyList()
-            HelferErgebnis(true, KontenRegister.schwaerzen(c, r.optString("text")), r.optJSONObject("daten") ?: JSONObject(), (genannt + bruecke.dateien).distinctBy { it.second }, dauerMs = System.currentTimeMillis() - beginn)
+            // Gezählt wird nur, was die Brücke selbst in diesem Lauf geschrieben hat. Ein vom Skript genannter Pfad öffnete sonst jede App-Datei.
+            HelferErgebnis(true, KontenRegister.schwaerzen(c, r.optString("text")), JSONObject(KontenRegister.schwaerzen(c, (r.optJSONObject("daten") ?: JSONObject()).toString())), bruecke.dateien.distinctBy { it.second }, dauerMs = System.currentTimeMillis() - beginn)
         } catch (e: Throwable) {
             // Auch Stack-Überlauf und Speichermangel eines Skripts dürfen Jarvis nicht mitreißen; dort nur ein fester Text, das Schwärzen bräuchte selbst Speicher.
             val grund = when (e) {
@@ -312,8 +324,8 @@ var jarvis = (function (b) {
                 r.dateien.all { File(it.second).let { d -> d.exists() && d.length() > 0 } }
             if (!ok) alle = false
             zeilen.put(JSONObject().put("name", t.optString("name")).put("ok", ok).put("dauer_ms", r.dauerMs).put("grund", if (ok) "" else (r.fehler.ifEmpty { "Ergebnis passt nicht: " + r.text.take(200) })))
-            r.dateien.forEach { runCatching { File(it.second).delete() } }
         }
+        File(ordner, PROBE_AUSGABE).deleteRecursively()
         File(ordner, PROBE_AUSGABE).deleteRecursively()
         return alle to JSONObject().put("zeit", System.currentTimeMillis() / 1000).put("ergebnis", if (alle) "${tests.length()} von ${tests.length()} Tests bestanden" else "Tests nicht bestanden").put("tests", zeilen)
     }

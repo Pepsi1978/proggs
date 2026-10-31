@@ -1,4 +1,4 @@
-<!-- stand: JarvisMac 1.0.44 -->
+<!-- stand: JarvisMac 1.0.45 -->
 Was Jarvis für macOS kann (geprüft am Code).
 
 ## Gehirn und Gedächtnis
@@ -23,7 +23,7 @@ Was Jarvis für macOS kann (geprüft am Code).
 - Einstellungen → Eigene Tools: Inhaltsverzeichnis mit Reihenfolge, Detail je Helfer (Zweck, Fähigkeiten, Aufruf, Eingaben, Ergebnis, Rechte, Grenzen, Zustand, Fassung, letzte Prüfung), Aktivieren, Deaktivieren, Freigeben, letzte Fassung, Papierkorb. Oben Pause für den Helferbau und Modell und Effort der Recherche (Vorgabe Sol 6.1, High; ohne Luna und Haiku; auch `mac_einstellungen`).
 - `mac_helfer_suchen`, `mac_helfer_info`, `mac_helfer_ausfuehren`, `mac_helfer_verwalten`, `mac_helfer_bauen` (über `helfer_bauen` des Handys; ohne Handy Sitzung am Mac mit Opus 5.5, höchstens 5 am Tag). Bau-Vorschrift: JarvisHelfer/README.md. Ein Helfer gilt erst nach bestandenen Tests auf diesem Mac als bereit; durchgefallen bleibt die bisherige Fassung. Konten, Werkzeugrechte und Wirkung nach außen braucht Franks Freigabe, nur im Bereich selbst.
 - Das Handy ruft Mac-Helfer über den Agentenkanal ohne Modell auf (`helfer_liste`, `helfer_aufruf`, `helfer_installieren`, `helfer_verwalten`, `cli_recherche`), nichts wird doppelt ausgeführt. Unterbrochene Aufrufe werden nicht wiederholt, sondern als unklar gemeldet. `cli_recherche`: Claude Code nur lesend mit bis zu 7 Unteragenten, 20 Minuten, eine zur Zeit.
-- Grenze: Mac-Helfer laufen unter Franks Benutzer und sind nicht abgeschottet. Erklärte Netz-Hosts setzt die Laufzeit nicht durch, Schutz sind Review, Freigabe und die bereinigte Umgebung.
+- Grenze: Mac-Helfer laufen unter Franks Benutzer und sind nicht abgeschottet. Erklärte Netz-Hosts setzt die Laufzeit nicht durch; deshalb braucht jeder Helfer mit Netz Franks Freigabe, dazu Review und bereinigte Umgebung. Ohne Vollzugriff laufen Helfer nicht, Tests laufen in eigenen Ordnern, Recherche am Mac nur mit Web-Werkzeugen ohne Dateizugriff, Dateien über 700 kB bleiben am Mac.
 
 ## Konten und APIs
 - Einstellungen → Konten und APIs: alle Schlüssel untereinander, je zwei kurze Sätze und „Verwendet von“, weitere Schlüssel hinzufügen, ändern, für Helfer sperren. Speicher bleibt der Tresor (Secure Enclave), Anzeige nur nach Touch ID. Das schützt den Speicher, nicht vor Missbrauch durch ein laufendes Programm unter Franks Benutzer. Helfer bekommen freigegebene Schlüssel nur für ihren Lauf als Umgebungsvariable; Ausgaben werden geschwärzt.

@@ -121,7 +121,18 @@ private fun KontoZeile(vm: AppViewModel, k: KontoEintrag, offen: Boolean, umscha
                 val a = activity ?: return@Knopf
                 nachweisen(a, { vm.meldung = it }) { sichtbar = k.lesen() }
             }
-            Knopf(if (gesperrt) "Für Helfer entsperren" else "Für Helfer sperren", Modifier.weight(1f), haupt = false) { KontenRegister.sperren(c, k.id, !gesperrt) }
+            Knopf(if (gesperrt) "Für Helfer entsperren" else "Für Helfer sperren", Modifier.weight(1f), haupt = false) {
+                if (!KontenRegister.sperren(c, k.id, !gesperrt)) vm.meldung = "Der Kontenspeicher ist gerade nicht lesbar; die Sperre bleibt, wie sie ist."
+            }
+        }
+        // Bei Verdacht auf Missbrauch: Wert entfernen, mit Bestätigung und Blick auf die Betroffenen.
+        var leerenFrage by remember(k.id) { mutableStateOf(false) }
+        if (da && k.fest) {
+            if (!leerenFrage) Knopf("Schlüssel entfernen …", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false, farbe = f.gefahr) { leerenFrage = true }
+            else {
+                Text("Danach funktioniert nicht mehr: ${k.verwendetVon}" + (if (helfer.isEmpty()) "." else ", dazu ${helfer.joinToString(", ")}."), color = f.text, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                Knopf("Ja, Schlüssel entfernen", Modifier.padding(top = 6.dp).fillMaxWidth(), farbe = f.gefahr) { k.schreiben(""); sichtbar = null; leerenFrage = false; KontenRegister.stand.value++; vm.kontoGeaendert(k.id); vm.meldung = "Entfernt." }
+            }
         }
         if (!k.fest) Knopf("Zugang entfernen", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false, farbe = f.gefahr) {
             vm.meldung = KontenRegister.entfernen(c, k.id) ?: "Entfernt."

@@ -45,6 +45,7 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val speicher by lazy { app.getSharedPreferences("agentenkanal", Context.MODE_PRIVATE) }
     private val wartende = ConcurrentHashMap<String, CompletableDeferred<String>>()
+    private val spaete = ConcurrentHashMap<String, (String) -> Unit>()
     private val inArbeit = ConcurrentHashMap.newKeySet<String>()
     /** Eine Frage nach der anderen: Das Modell soll nicht parallel zu sich selbst am selben Thema arbeiten. */
     private val reihe = Mutex()
@@ -94,21 +95,25 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
         )
     }
 
-    /** Hört der Mac gerade? Kurzes Zeitlimit: Die Antwort darf den Katalog nicht aufhalten. */
+    /**
+     * Hört der Mac gerade? Auch die laufende Brücke zählt: Der Relay startet die App dann für jede Anfrage von selbst.
+     * Kurzes Zeitlimit: Die Antwort darf den Katalog nicht aufhalten.
+     */
     suspend fun macErreichbar(): Boolean = withContext(Dispatchers.IO) {
-        runCatching { antwortJson(anfrage("/geraet/kanal/status").get().build()).let { it.optBoolean("mac_app") || it.optBoolean("bruecke") } }.getOrDefault(false)
+        runCatching { antwortJson(anfrage("/geraet/kanal/status").get().build(), KURZ_HTTP).let { it.optBoolean("mac_app") || it.optBoolean("bruecke") } }.getOrDefault(false)
     }
 
     /**
      * Anfrage an den Mac ohne Modell ([art] nach JarvisHelfer/README.md): null = keine Antwort in [warteMs]; dann kommt sie später an, wird aber
      * nie ein zweites Mal ausgeführt (dieselbe Kennung, Quittung, fertige Antwort am Mac). Taucht nicht im Kanalgespräch auf.
      */
-    suspend fun helferAnfrage(art: String, inhalt: JSONObject, warteMs: Long): String? {
-        val kennung = "helfer-" + UUID.randomUUID()
+    suspend fun helferAnfrage(art: String, inhalt: JSONObject, warteMs: Long, kennung: String = "helfer-" + UUID.randomUUID(), spaet: ((String) -> Unit)? = null): String? {
         val wartend = CompletableDeferred<String>().also { wartende[kennung] = it }
         val ok = withContext(Dispatchers.IO) { runCatching { sende(kennung, art, inhalt.toString(), null, versuche = 2) }.isSuccess }
         if (!ok) { wartende.remove(kennung); return null }
-        return try { withTimeoutOrNull(warteMs) { wartend.await() } } finally { wartende.remove(kennung) }
+        val antwort = try { withTimeoutOrNull(warteMs) { wartend.await() } } finally { wartende.remove(kennung) }
+        if (antwort == null && spaet != null) spaete[kennung] = spaet
+        return antwort
     }
 
     private fun rumpf(j: JSONObject) = j.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
@@ -202,7 +207,8 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
                     "antwort" -> if (nachricht.optString("antwort_auf").startsWith("helfer-")) {
                         // Ergebnis ohne Wartenden (der Lauf dauerte länger): nichts wiederholen, nur Bescheid sagen.
                         val wartend = wartende.remove(nachricht.optString("antwort_auf"))
-                        if (wartend != null) wartend.complete(text) else melde("Mac-Helfer fertig", runCatching { JSONObject(text).optString("text") }.getOrDefault("").ifEmpty { "Das späte Ergebnis ist da." }.take(300))
+                        val nachher = spaete.remove(nachricht.optString("antwort_auf"))
+                        if (wartend != null) wartend.complete(text) else if (nachher != null) nachher(text) else melde("Mac-Helfer fertig", runCatching { JSONObject(text).optString("text") }.getOrDefault("").ifEmpty { "Das späte Ergebnis ist da." }.take(300))
                     } else {
                         ins(GESPRAECH_MAC, "💻", text)
                         val wartend = wartende.remove(nachricht.optString("antwort_auf"))
@@ -319,6 +325,7 @@ class MacJarvisFaehigkeit(context: Context) : Faehigkeit {
         const val ZEITLIMIT_MS = 300_000L
         const val MELDUNG = 310_001
         val HTTP: OkHttpClient = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).callTimeout(25, TimeUnit.SECONDS).build()
+        val KURZ_HTTP: OkHttpClient = HTTP.newBuilder().connectTimeout(3, TimeUnit.SECONDS).readTimeout(4, TimeUnit.SECONDS).callTimeout(5, TimeUnit.SECONDS).build()
         val START_HTTP: OkHttpClient = HTTP.newBuilder().readTimeout(40, TimeUnit.SECONDS).callTimeout(45, TimeUnit.SECONDS).build()
     }
 }

@@ -85,8 +85,13 @@ FRAGE_WARTEN_S = 300      # Franks Wahl vom 18.10.2026: höchstens fünf Minuten
 # Werkzeugbau-Aufträge (Nummer beginnt mit W0, die 0 kommt in normalen Nummern nie vor): Die 150 Sekunden zählt das Handy ab der Anzeige.
 # Hier nur das Sicherheitsnetz, falls das Handy aus ist. Alle anderen Aufträge bleiben bei fünf Minuten.
 WERKZEUGBAU_WARTEN_S = 900
-if AUFTRAG.startswith("W0"):
-    FRAGE_WARTEN_S = WERKZEUGBAU_WARTEN_S
+
+
+def frage_warten_s(nummer: str) -> int:
+    return WERKZEUGBAU_WARTEN_S if nummer.startswith("W0") else 300
+
+
+FRAGE_WARTEN_S = frage_warten_s(AUFTRAG)
 PULS_S = 10               # Lebenszeichen höchstens so oft
 MAX_TEXT = 4000           # so lang darf eine Zwischenmeldung werden (sichtbar gekürzt, siehe kuerze)
 MAX_BERICHT = 60000       # der Abschlussbericht am Zugende („info“); früher galt auch hier 4000 und er endete mitten im Wort
@@ -940,8 +945,7 @@ def setze_auftrag(nummer: str) -> None:
     """Nummer der Sitzung und die Dateien, die daran hängen (Zustand, Sperre, Warter)."""
     global AUFTRAG, ZUSTAND, SPERRE, WARTER, FRAGE_WARTEN_S
     AUFTRAG = nummer
-    if nummer.startswith("W0"):
-        FRAGE_WARTEN_S = WERKZEUGBAU_WARTEN_S
+    FRAGE_WARTEN_S = frage_warten_s(nummer)
     ZUSTAND = ORDNER / f"hook-{nummer}.json"
     SPERRE = ORDNER / f"hook-{nummer}.lock"
     WARTER = ORDNER / f"warter-{nummer}.pid"
@@ -1375,7 +1379,7 @@ def frage(eingabe: dict) -> None:
     sys.stdout.flush()
     merke_frage(tool_use_id, frage_id, "beantwortet")
     frage_status(frage_id, "beantwortet", antwort=text)
-    melde_still("laeuft", ("🤖 Entscheidung von Jarvis: " if "von Jarvis" in text else "💬 Antwort von Frank: ") + text)
+    melde_still("laeuft", ("🤖 Entscheidung von Jarvis: " if re.search(r"\((automatisch von Jarvis|von Jarvis entschieden)", text) else "💬 Antwort von Frank: ") + text)
 
 
 def stop(eingabe: dict) -> None:

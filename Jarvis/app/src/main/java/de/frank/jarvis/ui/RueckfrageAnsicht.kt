@@ -154,13 +154,21 @@ private fun restzeit(r: Rueckfrage): String {
 private fun Standzeile(r: Rueckfrage, modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     if (r.werkzeugbau && r.freigabe && RueckfrageStand.beantwortbar(r.stand) && standText(r) == null) {
-        Text("🔒 Braucht deine Freigabe. Ohne deine Antwort passiert das nicht, dieser Schritt bleibt blockiert.", modifier, color = f.primaer, fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
+        Text("🔒 Braucht deine Freigabe. Ohne dein Ja passiert das nicht; nach 15 Minuten arbeitet der Programmierer ohne diesen Schritt weiter.", modifier, color = f.primaer, fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)
         return
     }
     if (r.werkzeugbau && RueckfrageStand.beantwortbar(r.stand) && standText(r) == null) {
         val kontext = androidx.compose.ui.platform.LocalContext.current.applicationContext
-        var rest by remember(r.id) { mutableStateOf(de.frank.jarvis.helfer.HelferAblauf.restSekunden(kontext, r.id)) }
-        LaunchedEffect(r.id) { while (true) { delay(1_000); rest = de.frank.jarvis.helfer.HelferAblauf.restSekunden(kontext, r.id) } }
+        var rest by remember(r.id) { mutableStateOf<Long?>(null) }
+        LaunchedEffect(r.id) {
+            // Die Datei nur lesen, bis die Frist läuft; danach wird ohne Datei und Sperre weitergezählt.
+            var ende: Long? = null
+            while (true) {
+                if (ende == null) ende = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { de.frank.jarvis.helfer.HelferAblauf.restSekunden(kontext, r.id) }?.let { System.currentTimeMillis() / 1000 + it }
+                rest = ende?.let { it - System.currentTimeMillis() / 1000 }
+                delay(1_000)
+            }
+        }
         val wahl = (0 until r.empfohlen.length()).map { r.empfohlen.optString(it) }.filter { it.isNotBlank() }.joinToString("; ").ifEmpty { "die beste Lösung nach Jarvis' Ermessen" }
         val zeit = rest?.let { if (it > 0) "Noch ${it / 60}:${"%02d".format(it % 60)} min" else "Die Zeit ist um, Jarvis entscheidet, sobald du nicht mehr schreibst" } ?: "Die 2:30 min beginnen, sobald die Frage offen ist"
         Text("$zeit. Ohne Antwort wähle ich: $wahl", modifier, color = f.primaer, fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.SemiBold)

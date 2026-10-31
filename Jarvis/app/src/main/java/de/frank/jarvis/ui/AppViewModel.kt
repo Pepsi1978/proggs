@@ -3569,12 +3569,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         meldung = "E-Mail-Einstellungen gespeichert."
     }
 
-    fun mailEntfernen() {
-        einstellungen.mailPasswort = ""
-        lagePruefen()
-        meldung = "App-Passwort entfernt."
-    }
-
     // ---- Pünktlich losfahren ----
     var standortAnfragen: () -> Unit = {}
     var standortErlaubt by mutableStateOf(false); private set

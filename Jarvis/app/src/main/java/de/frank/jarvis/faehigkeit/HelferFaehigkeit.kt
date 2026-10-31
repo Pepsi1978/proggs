@@ -15,6 +15,7 @@ import de.frank.jarvis.observability.Logbuch
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -35,10 +36,14 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = null
 
+    fun ohneRegistrieren(): Faehigkeit = object : Faehigkeit by this@HelferFaehigkeit {
+        override val werkzeuge = this@HelferFaehigkeit.werkzeuge.filter { it.name != "helfer_registrieren" }
+    }
+
     /** Für Läufe ohne Frank (Agenten, Kanal): nur ansehen; ausführen nur in der Ursprungsaufgabe eines Baus. Fremde Texte sollen hier nichts bauen oder auslösen können. */
     fun imHintergrund(): Faehigkeit = object : Faehigkeit by this@HelferFaehigkeit {
         override val id = "helfer-hintergrund"
-        override val hinweise = "EIGENE TOOLS: Hier nur helfer_suchen und helfer_info; helfer_ausfuehren nur, wenn dein Auftrag ausdrücklich einen Helfer nennt. Bauen geht hier nicht."
+        override val hinweise = "EIGENE TOOLS: In Hintergrundläufen nur helfer_suchen und helfer_info. helfer_ausfuehren geht allein für die Ursprungsaufgabe eines Werkzeugbaus. Bauen geht hier nicht."
         override val werkzeuge = this@HelferFaehigkeit.werkzeuge.filter { it.name in setOf("helfer_suchen", "helfer_info", "helfer_ausfuehren") }.map { w ->
             if (w.name != "helfer_ausfuehren") w else w.als { a ->
                 if (currentCoroutineContext()[HelferAblauf.ImLauf] == null) Ergebnis("Hintergrundläufe benutzen keine Helfer; das geht nur im Gespräch mit Frank.", fehler = true) else w.ausfuehren(a)
@@ -185,16 +190,17 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
         }
         val eingabe = a.optJSONObject("eingabe") ?: JSONObject()
         val beginn = System.currentTimeMillis()
-        val r = if (h.ort == "mac") amMac(h, eingabe) else when (h.art) {
+        val r = if (h.ort == "mac") amMac(h, eingabe, gespraechFuerSpaet()) else when (h.art) {
             "agent" -> alsAgent(h, eingabe)
             else -> HelferLauf.ausfuehren(app, h, eingabe)
         }
         Logbuch.dauer("Helfer ${h.kennung}: ${if (h.ort == "mac") "Lauf am Mac samt Kanal" else "Lauf"}", System.currentTimeMillis() - beginn, "ok=${r.ok}, eigentliche Ausführung ${r.dauerMs} ms")
         if (!r.ok) return Ergebnis("„${h.name}“ ist gescheitert: ${r.fehler}", fehler = true)
-        currentCoroutineContext()[HelferAblauf.ImLauf]?.let { it.nachweise++ }
         val (ausChatGpt, gespraech) = Register.alle(app).filterIsInstance<ProgrammierFaehigkeit>().first().herkunftFuerHelfer()
         val belegt = r.dateien.filter { File(it.second).let { d -> d.exists() && d.length() > 0 } }
         if (belegt.size != r.dateien.size) return Ergebnis("„${h.name}“ meldet Dateien, die nicht vorhanden oder leer sind: nicht erledigt.", fehler = true)
+        // Erst jetzt und nur für den Helfer dieses Baus: Ein anderer Lauf belegt die Aufgabe nicht.
+        currentCoroutineContext()[HelferAblauf.ImLauf]?.let { if (it.kennung == h.kennung) it.nachweise++ }
         if (belegt.isNotEmpty() && gespraech.isNotEmpty() && !ausChatGpt)
             ProgrammierChat.poste(app, gespraech, "📎 ${h.name}: " + belegt.joinToString(", ") { it.first }, "antwort", anhaenge = belegt.map { it.second })
         val abgelegt = if (a.optBoolean("in_ablage") && belegt.isNotEmpty()) {
@@ -211,29 +217,49 @@ class HelferFaehigkeit(context: Context) : Faehigkeit {
         val beginn = System.currentTimeMillis()
         val agent = JarvisAgent(app)
         var grund: String? = null
-        val t = runCatching { agent.versuche(eingabe.toString(), zeitlimitMs = 300_000L, rolle = h.rolle, mitInternet = h.rechte.netz.isNotEmpty(), abschluss = true, beiAbbruch = { grund = it }) }.getOrNull()
+        // Nur was der Steckbrief erklärt und Frank freigegeben hat; ohne diese Grenze hätte die Rolle alle Hintergrund-Werkzeuge.
+        val t = runCatching {
+            withContext(HelferAblauf.NurWerkzeuge(h.rechte.werkzeuge.filterNot { HelferKatalog.werkzeugGesperrt(it) }.toSet())) {
+                agent.versuche(eingabe.toString(), zeitlimitMs = 300_000L, rolle = h.rolle, mitInternet = h.rechte.netz.isNotEmpty(), abschluss = true, beiAbbruch = { grund = it })
+            }
+        }.getOrNull()
         return if (t != null) de.frank.jarvis.helfer.HelferErgebnis(true, KontenRegister.schwaerzen(app, t), dauerMs = System.currentTimeMillis() - beginn)
         else de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = grund ?: "Keine Antwort", dauerMs = System.currentTimeMillis() - beginn)
     }
 
-    private suspend fun amMac(h: Helfer, eingabe: JSONObject): de.frank.jarvis.helfer.HelferErgebnis {
-        if (!mac().macErreichbar()) return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = "Der Mac ist gerade nicht erreichbar. Nichts wurde ausgeführt." +
-            (HelferKatalog.suche(app, h.schlagworte.joinToString(" ")).firstOrNull { it.ort == "handy" && it.einsatzbereit }?.let { " Auf dem Handy gäbe es ${it.kennung}." } ?: ""))
-        val antwort = mac().helferAnfrage("helfer_aufruf", JSONObject().put("helfer", h.kennung).put("eingabe", eingabe), warteMs = 65_000L)
-            ?: return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = "Der Mac arbeitet noch oder hat die Antwort nicht rechtzeitig geliefert. Starte es NICHT neu; das Ergebnis kommt als Nachricht, sobald es da ist.")
+    private suspend fun gespraechFuerSpaet(): String = Register.alle(app).filterIsInstance<ProgrammierFaehigkeit>().first().herkunftFuerHelfer().second
+
+    /** Ein Mac-Lauf, der die Wartezeit überschritt, kam jetzt doch an: Ergebnis samt Dateien ins Gespräch, nichts wird wiederholt. */
+    private fun spaetesMacErgebnis(h: Helfer, gespraech: String, antwort: String) {
+        val r = macErgebnis(h, antwort)
+        val text = if (r.ok) "Späte Antwort von „${h.name}“: ${r.text}" else "„${h.name}“ ist am Mac gescheitert: ${r.fehler}"
+        if (gespraech.isNotEmpty()) ProgrammierChat.poste(app, gespraech, text, "antwort", anhaenge = r.dateien.map { it.second })
+    }
+
+    private fun macErgebnis(h: Helfer, antwort: String): de.frank.jarvis.helfer.HelferErgebnis {
         val j = runCatching { JSONObject(antwort) }.getOrDefault(JSONObject())
-        if (!j.optBoolean("ok")) return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = j.optString("fehler").ifEmpty { "Der Mac meldet einen Fehler." })
-        val ausgabe = HelferKatalog.ausgabe(app, h.kennung)
+        if (!j.optBoolean("ok")) return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = j.optString("fehler").ifEmpty { "Der Mac meldet einen Fehler." } + j.optString("pfad").takeIf { it.isNotEmpty() }?.let { " Das Ergebnis liegt am Mac: $it" }.orEmpty())
+        val lauf = File(HelferKatalog.ausgabe(app, h.kennung), System.currentTimeMillis().toString() + "-mac").apply { mkdirs() }
         val alleDateien = j.optJSONArray("dateien")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) } }.orEmpty()
         val zuGross = alleDateien.filter { it.optBoolean("zu_gross") }
         val hinweis = if (zuGross.isEmpty()) "" else "\nZu groß für die Übertragung, liegt am Mac: " + zuGross.joinToString(", ") { it.optString("pfad") }
         val dateien = alleDateien.filter { !it.optBoolean("zu_gross") }.map { d ->
             val name = File(d.optString("name")).name
-            val ziel = File(ausgabe, UUID.randomUUID().toString().take(6) + "-" + name)
+            val ziel = File(lauf, name)
             ziel.writeBytes(Base64.decode(d.optString("base64"), Base64.DEFAULT))
             name to ziel.absolutePath
         }
-        return de.frank.jarvis.helfer.HelferErgebnis(true, j.optString("text") + hinweis, j.optJSONObject("daten") ?: JSONObject(), dateien, dauerMs = j.optLong("dauer_ms"))
+        return de.frank.jarvis.helfer.HelferErgebnis(true, KontenRegister.schwaerzen(app, j.optString("text")) + hinweis, j.optJSONObject("daten") ?: JSONObject(), dateien, dauerMs = j.optLong("dauer_ms"))
+    }
+
+    private suspend fun amMac(h: Helfer, eingabe: JSONObject, gespraech: String): de.frank.jarvis.helfer.HelferErgebnis {
+        if (!mac().macErreichbar()) return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = "Der Mac ist gerade nicht erreichbar. Nichts wurde ausgeführt." +
+            (HelferKatalog.suche(app, h.schlagworte.joinToString(" ")).firstOrNull { it.ort == "handy" && it.einsatzbereit }?.let { " Auf dem Handy gäbe es ${it.kennung}." } ?: ""))
+        // In der Ursprungsaufgabe darf ein Mac-Helfer seine vollen zehn Minuten laufen; im Gespräch kommt ein spätes Ergebnis von selbst nach.
+        val warten = if (currentCoroutineContext()[HelferAblauf.ImLauf] != null) 640_000L else 65_000L
+        val antwort = mac().helferAnfrage("helfer_aufruf", JSONObject().put("helfer", h.kennung).put("eingabe", eingabe), warteMs = warten) { spaet -> spaetesMacErgebnis(h, gespraech, spaet) }
+            ?: return de.frank.jarvis.helfer.HelferErgebnis(false, "", fehler = "Der Mac arbeitet noch. Starte es NICHT neu; das Ergebnis kommt samt Dateien von selbst ins Gespräch.")
+        return macErgebnis(h, antwort)
     }
 
     suspend fun verwalten(kennung: String, aktion: String): Ergebnis {

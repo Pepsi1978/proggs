@@ -213,6 +213,10 @@ class JarvisAgent(context: Context) {
         val faehigkeiten = Register.alle(app).filter { (de.frank.jarvis.faehigkeit.SuchRegel.mitWebsuche(mitInternet, imGespraech = lernen) || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten" && it.id != "jarvis_mac" && it.id != "programmieren" && it.id != "sprachsession" && it.id != "mac")) }
             // Franks Einnahmeplan ändert nur das Gespräch mit ihm; Agenten und die Tagesauswertung lesen Stack-Labor nur.
             .map { if (!lernen && it is de.frank.jarvis.faehigkeit.StackLaborFaehigkeit) it.nurLesend() else if (!lernen && it is de.frank.jarvis.faehigkeit.HelferFaehigkeit) it.imHintergrund() else it }
+            // Ein Agent-Helfer bekommt nur die Werkzeuge aus seinem Steckbrief.
+            .let { liste -> currentCoroutineContext()[de.frank.jarvis.helfer.HelferAblauf.NurWerkzeuge]?.nurDiese(liste) ?: liste }
+            // Registrieren ist allein Sache der Bausitzung, nie eines Modells von Jarvis.
+            .map { if (it is de.frank.jarvis.faehigkeit.HelferFaehigkeit) it.ohneRegistrieren() else it }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
         val zuege = (gekuerzt(verlauf) + ChatTurn("user", auftrag, bilder)).toMutableList()
         val beginn = System.currentTimeMillis()

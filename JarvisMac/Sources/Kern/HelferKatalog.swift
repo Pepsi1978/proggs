@@ -32,6 +32,10 @@ final class HelferKatalog {
     static let shared = HelferKatalog()
     nonisolated static let bereit = "bereit", inPruefung = "in_pruefung", wartet = "wartet_auf_freigabe", fehlerhaft = "fehlerhaft", papierkorb = "papierkorb"
     nonisolated private static let frist = 600.0
+    /// So viele Byte Ergebnisdateien gehen höchstens mit durch den Kanal; Größeres bleibt am Mac und wird nur genannt.
+    /// Der Relay nimmt höchstens 1 MB je Nachricht (MAX_RUMPF), Base64 macht daraus ein Drittel mehr.
+    nonisolated private static let kanalDateien = 700_000
+    nonisolated private static let ohneVollzugriff = "Der Vollzugriff ist am Mac ausgeschaltet; Helfer laufen dort gerade nicht (Einstellungen → Mac)."
     nonisolated private static let gesperrteWerkzeuge = try! NSRegularExpression(pattern: "^(programmier.*|helfer_.*|mac_helfer_.*|agent_starten|mail_senden|.*loeschen|.*einstellungen.*|mac_.*|openlauncher_sitzung|terminal_befehl)$")
 
     private(set) var eintraege: [HelferEintrag] = []
@@ -177,7 +181,8 @@ final class HelferKatalog {
     nonisolated private static func brauchtFreigabe(_ m: JSONObjekt) -> Bool {
         let r = m["rechte"] as? JSONObjekt ?? [:]
         // Mac-Programme rufen keine Jarvis-Werkzeuge auf; erklärt einer trotzdem welche, entscheidet Frank.
-        return !(r["konten"] as? [Any] ?? []).isEmpty || !(r["werkzeuge"] as? [Any] ?? []).isEmpty || r["extern"] as? Bool == true
+        // Die Laufzeit setzt erklärte Hosts hier nicht durch: Wer ins Netz will, braucht deshalb immer Franks Ja.
+        return !(r["netz"] as? [Any] ?? []).isEmpty || !(r["konten"] as? [Any] ?? []).isEmpty || !(r["werkzeuge"] as? [Any] ?? []).isEmpty || r["extern"] as? Bool == true
     }
 
     nonisolated private static func signatur(_ m: JSONObjekt) -> String { JSON.text(m["rechte"] as? JSONObjekt ?? [:]) }
@@ -212,6 +217,7 @@ final class HelferKatalog {
     /// Prüft die neue Fassung auf diesem Mac. Bestanden: Sie gilt, die bisherige wird zur letzten geprüften. Durchgefallen: Die bisherige bleibt.
     func installieren(manifest m: JSONObjekt, dateien: [String: String], review: JSONObjekt) async -> JSONObjekt {
         func nein(_ t: String) -> JSONObjekt { ["ok": false, "fehler": t] }
+        guard Einstellungen.shared.vollzugriff else { return nein(Self.ohneVollzugriff) }
         if let f = Self.pruefeSteckbrief(m, dateien: dateien, review: review) { return nein(f) }
         let k = m["kennung"] as? String ?? ""
         guard installiertGerade.insert(k).inserted else { return nein("Dieser Helfer wird gerade schon geprüft.") }
@@ -231,13 +237,18 @@ final class HelferKatalog {
 
         let manifestText = JSON.text(m)
         let alt = finde(k)
-        let bewaehrt = alt.map { $0.zustand == Self.bereit || $0.zustand == Self.wartet } ?? false
-        if !bewaehrt {
+        // Im Papierkorb bleibt er dort: Eine neue Fassung wird nur vermerkt, zurückholen kann ihn allein Frank.
+        let imKorb = alt?.zustand == Self.papierkorb
+        let bewaehrt = alt.map { e in
+            let z = imKorb ? e.vorPapierkorb : e.zustand
+            return z == Self.bereit || z == Self.wartet
+        } ?? false
+        if !bewaehrt && !imKorb {
             if alt == nil {
                 let position = (eintraege.map(\.position).max() ?? -1) + 1
                 eintraege.append(HelferEintrag(kennung: k, manifestText: manifestText, zustand: Self.inPruefung, position: position))
+                sichern()
             } else { aendere(k) { $0.manifestText = manifestText; $0.zustand = Self.inPruefung } }
-            sichern()
         }
         let fehlgeschlagen = await testen(m, ordner: neu, kennung: k)
         let jetzt = Date().timeIntervalSince1970
@@ -246,7 +257,7 @@ final class HelferKatalog {
             try? fm.removeItem(at: neu)
             let ergebnis = "Prüfung von \(version) durchgefallen: \(fehlgeschlagen)"
             aendere(k) { e in
-                if !bewaehrt { e.zustand = Self.fehlerhaft }
+                if !bewaehrt && !imKorb { e.zustand = Self.fehlerhaft }
                 e.pruefungZeit = jetzt
                 e.pruefungErgebnis = bewaehrt ? ergebnis + " Die bisherige Fassung gilt weiter." : ergebnis
             }
@@ -263,7 +274,8 @@ final class HelferKatalog {
         let ergebnis = "\(anzahl) Tests bestanden auf diesem Mac; Review: \((review["befunde"] as? NSNumber)?.intValue ?? 0) Befunde, keine kritischen offen."
         aendere(k) { e in
             e.manifestText = manifestText
-            e.zustand = Self.brauchtFreigabe(m) && e.freigabe != Self.signatur(m) ? Self.wartet : Self.bereit
+            let neuerZustand = Self.brauchtFreigabe(m) && e.freigabe != Self.signatur(m) ? Self.wartet : Self.bereit
+            if imKorb { e.vorPapierkorb = neuerZustand } else { e.zustand = neuerZustand }
             e.pruefungZeit = jetzt
             e.pruefungErgebnis = ergebnis
         }
@@ -275,11 +287,14 @@ final class HelferKatalog {
     /// nil = alle Tests bestanden. Tests bekommen nie einen Schlüssel.
     private func testen(_ m: JSONObjekt, ordner neu: URL, kennung: String) async -> String? {
         let tests = m["tests"] as? [JSONObjekt] ?? []
+        // Eigener Speicher- und Ausgabeordner: Eine durchgefallene Fassung darf die Daten der geltenden nicht anfassen.
+        let probe = FileManager.default.temporaryDirectory.appendingPathComponent("helfer-probe-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: probe) }
         for t in tests {
             let name = t["name"] as? String ?? "Test"
             let erwartet = t["erwartet"] as? JSONObjekt ?? [:]
             let eingabe = t["eingabe"] as? JSONObjekt ?? [:]
-            let r = await lauf(m, ordner: neu, kennung: kennung, eingabe: JSON.text(eingabe), konten: [:], frist: 120)
+            let r = await lauf(m, ordner: neu, kennung: kennung, eingabe: JSON.text(eingabe), konten: [:], frist: 120, basis: probe)
             let sollOk = erwartet["ok"] as? Bool ?? true
             if r.ok != sollOk { return "„\(name)“: \(r.ok ? "lief durch, obwohl ein Fehler erwartet war" : "Fehler: \(String(r.fehler.prefix(300)))")" }
             let gesamt = r.text + " " + r.datenText + " " + r.fehler
@@ -289,6 +304,8 @@ final class HelferKatalog {
     }
 
     func eingangPruefen() async {
+        // Pakete warten, bis der Vollzugriff wieder an ist; sie werden weder geprüft noch verworfen.
+        guard Einstellungen.shared.vollzugriff else { return }
         let fm = FileManager.default
         guard let liste = try? fm.contentsOfDirectory(at: eingang, includingPropertiesForKeys: nil) else { return }
         for paket in liste where !paket.lastPathComponent.hasPrefix(".") {
@@ -296,20 +313,26 @@ final class HelferKatalog {
             guard let d = try? Data(contentsOf: paket.appendingPathComponent("registrierung.json")), let reg = JSON.objekt(d) else { continue }
             var ergebnis: JSONObjekt = ["ok": false, "fehler": "Unbekannter Bauschlüssel."]
             let schluessel = reg["bau_schluessel"] as? String ?? ""
-            if HelferWerkzeuge.bauSchluesselBekannt(schluessel) {
-                if let md = try? Data(contentsOf: paket.appendingPathComponent("helfer.json")), let m = JSON.objekt(md) {
+            if HelferWerkzeuge.bauSchluesselPasst(schluessel, kennung: kennung, vorhanden: finde(kennung) != nil) {
+                if let md = try? Data(contentsOf: paket.appendingPathComponent("helfer.json")), let m = JSON.objekt(md), m["kennung"] as? String == kennung {
                     var dateien: [String: String] = [:]
-                    if let e = fm.enumerator(at: paket, includingPropertiesForKeys: [.isRegularFileKey]) {
+                    var keinText: String?
+                    if let e = fm.enumerator(at: paket, includingPropertiesForKeys: [.isRegularFileKey], options: .skipsHiddenFiles) {
                         for case let u as URL in e.allObjects {
                             guard (try? u.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else { continue }
                             let rel = String(u.standardizedFileURL.path.dropFirst(paket.standardizedFileURL.path.count + 1))
                             if rel == "helfer.json" || rel == "registrierung.json" { continue }
-                            if let t = try? String(contentsOf: u, encoding: .utf8) { dateien[rel] = t }
+                            if let t = try? String(contentsOf: u, encoding: .utf8) { dateien[rel] = t } else { keinText = rel }
                         }
                     }
-                    ergebnis = await installieren(manifest: m, dateien: dateien, review: reg["review"] as? JSONObjekt ?? [:])
-                    if ergebnis["ok"] as? Bool == true { HelferWerkzeuge.bauSchluesselVerbrauchen(schluessel) }
-                } else { ergebnis = ["ok": false, "fehler": "helfer.json fehlt oder ist ungültig."] }
+                    if let keinText {
+                        // Nie still auslassen: Der Helfer wäre sonst unvollständig installiert.
+                        ergebnis = ["ok": false, "fehler": "Die Datei \(keinText) ist kein UTF-8-Text."]
+                    } else {
+                        ergebnis = await installieren(manifest: m, dateien: dateien, review: reg["review"] as? JSONObjekt ?? [:])
+                        if ergebnis["ok"] as? Bool == true { HelferWerkzeuge.bauSchluesselVerbrauchen(schluessel) }
+                    }
+                } else { ergebnis = ["ok": false, "fehler": "helfer.json fehlt, ist ungültig oder nennt nicht die Kennung des Ordners."] }
             }
             try? fm.removeItem(at: paket)
             let ok = ergebnis["ok"] as? Bool == true
@@ -325,6 +348,7 @@ final class HelferKatalog {
 
     /// Ruft einen freigegebenen Helfer auf; Frank kann ihn deaktivieren, das Modell kann Rechte nicht erweitern.
     func ausfuehren(_ k: String, eingabe: JSONObjekt) async -> Lauf {
+        guard Einstellungen.shared.vollzugriff else { return Lauf(fehler: Self.ohneVollzugriff) }
         guard let e = finde(k) else { return Lauf(fehler: "Keinen Helfer „\(k)“ gefunden.") }
         guard e.aktiv else { return Lauf(fehler: "\(e.name) ist deaktiviert.") }
         guard e.zustand == Self.bereit else {
@@ -344,6 +368,7 @@ final class HelferKatalog {
 
     private static func kontoWert(_ id: String) -> String? {
         let z = Einstellungen.shared.zugang
+        let stimmen = VorleseEinstellungen.shared.zugang
         if let w = z.weitere[id] { return w.gesperrt || w.wert.isEmpty ? nil : w.wert }
         guard !z.gesperrtFuerHelfer.contains(id) else { return nil }
         let wert: String
@@ -351,25 +376,32 @@ final class HelferKatalog {
         case "anthropic": wert = z.anthropic
         case "openai": wert = z.openai
         case "gemini": wert = z.gemini
-        case "google": wert = z.google
+        // Genau die Werte, die „Konten und APIs“ bearbeitet: Die Stimmen-Schlüssel liegen im eigenen Tresor-Eintrag.
+        case "google": wert = stimmen.google
+        case "gemini_tts_frei": wert = stimmen.geminiFrei
+        case "gemini_tts_bezahlt": wert = stimmen.geminiBezahlt
+        case "azure": wert = stimmen.azure
+        case "qwen": wert = stimmen.qwen
         case "groq": wert = z.groq
         default: return nil
         }
         return wert.isEmpty ? nil : wert
     }
 
-    private func lauf(_ m: JSONObjekt, ordner: URL, kennung: String, eingabe: String, konten: [String: String], frist: Double) async -> Lauf {
-        if m["art"] as? String == "agent" { return await agentLauf(rolle: m["rolle"] as? String ?? "", name: kennung, eingabe: eingabe, frist: frist) }
-        let basis = self.ordner(kennung)
-        return await Self.programmLauf(datei: ordner.appendingPathComponent(m["datei"] as? String ?? "main.sh"), basis: basis, eingabe: eingabe, konten: konten, frist: frist)
+    private func lauf(_ m: JSONObjekt, ordner: URL, kennung: String, eingabe: String, konten: [String: String], frist: Double, basis: URL? = nil) async -> Lauf {
+        if m["art"] as? String == "agent" {
+            let erlaubt = ((m["rechte"] as? JSONObjekt)?["werkzeuge"] as? [String] ?? []).filter { w in Self.gesperrteWerkzeuge.firstMatch(in: w, range: NSRange(w.startIndex..., in: w)) == nil }
+            return await agentLauf(rolle: m["rolle"] as? String ?? "", name: kennung, eingabe: eingabe, frist: frist, erlaubt: Set(erlaubt))
+        }
+        return await Self.programmLauf(datei: ordner.appendingPathComponent(m["datei"] as? String ?? "main.sh"), basis: basis ?? self.ordner(kennung), eingabe: eingabe, konten: konten, frist: frist)
     }
 
-    private func agentLauf(rolle: String, name: String, eingabe: String, frist: Double) async -> Lauf {
+    /// Nur die erklärten Werkzeuge: Was der Steckbrief nicht nennt, gibt es für diesen Lauf nicht, also auch keine verschachtelten Helfer.
+    private func agentLauf(rolle: String, name: String, eingabe: String, frist: Double, erlaubt: Set<String>) async -> Lauf {
         let g = GespraechsSpeicher.shared.neu()
         g.titel = "Helfer \(name)"
         let auftrag = "[EIGENES TOOL \(name) – Lauf ohne Frank]\n\(rolle)\n\nEingabe als JSON:\n\(eingabe)\n\nAntworte nur mit dem Ergebnis. Fehlt etwas Nötiges, beginne mit FEHLER:"
-        let gesperrt: Set<String> = ["jarvis_merken", "jarvis_vergessen", "jarvis_langzeitkontext_ersetzen", "mail_senden", "programmieren", "programmier_nachtrag", "programmier_antwort", "programmierer_sprechen", "agent_starten", "mac_dialog", "mac_helfer_bauen", "helfer_bauen", "mac_helfer_verwalten", "helfer_verwalten", "helfer_registrieren", "mac_einstellungen", "einstellungen", "mac_befehl", "mac_applescript", "mac_bedienen", "mac_tastatur", "terminal_befehl", "openlauncher_sitzung"]
-        let t = Task { @MainActor in await AgentenKanal.$imLauf.withValue(true) { await JarvisAgent.shared.frage(auftrag, in: g, ohneWerkzeuge: gesperrt) } }
+        let t = Task { @MainActor in await AgentenKanal.$imLauf.withValue(true) { await JarvisAgent.shared.frage(auftrag, in: g, nurWerkzeuge: erlaubt) } }
         let fertig = await mitFrist(frist) { _ = await t.value }
         if !fertig { t.cancel(); GespraechsSpeicher.shared.loeschen(g); return Lauf(fehler: "Keine Antwort innerhalb der Frist.") }
         let antwort = Geheimnisse.schwaerzen(await t.value).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -412,7 +444,12 @@ final class HelferKatalog {
         do { try p.run() } catch { return Lauf(fehler: "Der Helfer startet nicht: \(error.localizedDescription)") }
         let wachhund = Task.detached {
             try? await Task.sleep(for: .seconds(frist))
-            if p.isRunning { p.terminate(); try? await Task.sleep(for: .seconds(3)); if p.isRunning { kill(p.processIdentifier, SIGKILL) } }
+            guard p.isRunning else { return }
+            // Der ganze Baum: Sonst liefen vom Helfer gestartete Kindprozesse nach der Frist weiter.
+            let baum = prozessBaum(p.processIdentifier)
+            baum.forEach { kill($0, SIGTERM) }
+            try? await Task.sleep(for: .seconds(3))
+            baum.forEach { kill($0, SIGKILL) }
         }
         await beendet.warten()
         wachhund.cancel()
@@ -435,6 +472,20 @@ final class HelferKatalog {
         return Lauf(ok: true, text: j["text"] as? String ?? "", datenText: JSON.text(j["daten"] as? JSONObjekt ?? [:]), dateien: dateien)
     }
 
+    /// Der Prozess samt aller Nachkommen, die Kinder zuerst.
+    nonisolated private static func prozessBaum(_ wurzel: pid_t) -> [pid_t] {
+        let p = Process(), rohr = Pipe()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        p.arguments = ["-P", String(wurzel)]
+        p.standardOutput = rohr
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return [wurzel] }
+        let daten = rohr.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        let kinder = String(decoding: daten, as: UTF8.self).split(whereSeparator: \.isNewline).compactMap { pid_t($0) }
+        return kinder.flatMap(prozessBaum) + [wurzel]
+    }
+
     /// Ergebnisdateien bleiben sieben Tage.
     nonisolated private static func aufraeumen(_ ordner: URL) {
         let grenze = Date().addingTimeInterval(-7 * 86_400)
@@ -453,13 +504,13 @@ final class HelferKatalog {
         case "helfer_aufruf":
             let r = await ausfuehren(j["helfer"] as? String ?? "", eingabe: j["eingabe"] as? JSONObjekt ?? [:])
             guard r.ok else { return JSON.text(["ok": false, "fehler": r.fehler] as JSONObjekt) }
-            var rest = 6_000_000
+            var rest = Self.kanalDateien
             var dateien: [JSONObjekt] = []
             for d in r.dateien {
                 let inhalt = (try? Data(contentsOf: URL(fileURLWithPath: d.pfad))) ?? Data()
                 if inhalt.count > rest { dateien.append(["name": d.name, "zu_gross": true, "pfad": d.pfad]); continue }
                 rest -= inhalt.count
-                dateien.append(["name": d.name, "base64": inhalt.base64EncodedString()])
+                dateien.append(["name": d.name, "base64": inhalt.base64EncodedString(), "pfad": d.pfad])
             }
             return JSON.text(["ok": true, "text": r.text, "daten": JSON.objekt(r.datenText) ?? [:], "dateien": dateien, "dauer_ms": r.dauerMs] as JSONObjekt)
         case "helfer_installieren":
@@ -467,6 +518,7 @@ final class HelferKatalog {
             (j["dateien"] as? JSONObjekt ?? [:]).forEach { if let t = $0.value as? String { dateien[$0.key] = t } }
             return JSON.text(await installieren(manifest: j["manifest"] as? JSONObjekt ?? [:], dateien: dateien, review: j["review"] as? JSONObjekt ?? [:]))
         case "helfer_verwalten":
+            guard Einstellungen.shared.vollzugriff else { return JSON.text(["ok": false, "fehler": Self.ohneVollzugriff] as JSONObjekt) }
             let r = verwalten(j["helfer"] as? String ?? "", aktion: j["aktion"] as? String ?? "")
             return JSON.text(["ok": r.ok, r.ok ? "text" : "fehler": r.text] as JSONObjekt)
         case "cli_recherche":
