@@ -248,7 +248,7 @@ def main():
     <layer index="7" draw_type="single_res" res_name="{res("nabe_a")}" res_position="{MITTE - na.width // 2},{MITTE - na.height // 2}" ambient_mode="1"/>
   </element>
   <element is_support_option="false" label="date" res_preview="">
-    <layer index="1" draw_type="combined_res" res_name="{tag}" res_invalid="" res_default="" res_sign="" x_offset="0" y_offset="0" res_position="{TAG_X + MITTE},219" res_align="center" value_type="17" ambient_mode="0"/>
+    <layer index="1" draw_type="combined_res" res_name="{tag}" res_invalid="" res_default="" res_sign="" x_offset="0" y_offset="0" res_position="{TAG_X + MITTE},{MITTE}" res_align="center" value_type="17" ambient_mode="0"/>
   </element>
   <element is_support_option="false" label="background" res_preview="{res("hg")}">
     <layer index="1" draw_type="single_res" res_name="{res("hg")}" res_position="0,0" ambient_mode="0"/>

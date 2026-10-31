@@ -1,4 +1,4 @@
-"""Zeichnet die Zifferblätter SLAVA, EIGER SPEED EDITION und BERING und baut ihre .hwt-Dateien.
+"""Zeichnet die Zifferblätter SLAVA, EIGER SPEED EDITION, BERING (hell und schwarz) und Bergmann 1956 und baut ihre .hwt-Dateien.
 
 Vorlagen sind Franks Fotos der echten Uhren. Maße sind aus den Fotos auf 466 × 466 umgerechnet,
 ohne deren Perspektive, Licht und Glasreflexe. Watch Phase bleibt in bauen.py unberührt.
@@ -537,11 +537,255 @@ def bering():
     schreiben("Bering", "BERING", "BERING für die Watch 3", bering_hg(), bering_aod(), teile, teile_a, None)
 
 
+def bering_schwarz():
+    weiss = (240, 240, 236)
+    hg = Image.new("RGBA", (GROESSE * K, GROESSE * K), (0, 0, 0, 255))
+    ebene = leer()
+    bering_ebene(ebene, (*weiss, 255))
+    hg.alpha_composite(ebene)
+    teile = {
+        "h": bering_zeiger(143, 3.0, weiss),
+        "m": bering_zeiger(211, 2.6, weiss),
+        "nabe": bering_nabe(weiss, (40, 40, 40)),
+    }
+    hell = (200, 200, 196)
+    teile_a = {"h": bering_zeiger(143, 3.0, hell), "m": bering_zeiger(211, 2.6, hell), "nabe": bering_nabe(hell, (40, 40, 40))}
+    schreiben("BeringSchwarz", "BERING Schwarz", "BERING in Schwarz für die Watch 3", klein(hg), bering_aod(), teile, teile_a, None)
+
+
+# ---------- Bergmann 1956 ----------
+
+BERG_HELL = (232, 230, 220)
+SILBER_HELL = (240, 240, 236)
+SILBER_DUNKEL = (138, 138, 136)
+TAG_BERG = MITTE + 137
+DIN = "/System/Library/Fonts/Supplemental/DIN Alternate Bold.ttf"
+MENLO = "/System/Library/Fonts/Menlo.ttc"
+
+
+def berg_zahl(ebene, winkel, r, text, schrift, farbe):
+    """Text um die Mitte gedreht, Oberkante nach außen, wie die Minutenskala auf dem Foto."""
+    blatt = Image.new("RGBA", (70 * K, 40 * K), (0, 0, 0, 0))
+    ImageDraw.Draw(blatt).text((35 * K, 20 * K), text, font=schrift, fill=farbe, anchor="mm")
+    blatt = blatt.rotate(-winkel, Image.BICUBIC, expand=True)
+    x, y = radial(winkel, r, 0)
+    ebene.alpha_composite(blatt, (int(x - blatt.width / 2), int(y - blatt.height / 2)))
+
+
+def berg_ebene(ebene, aod=False, grund=BERG_HELL):
+    d = ImageDraw.Draw(ebene)
+    farbe = (*mischen((0, 0, 0), grund, 0.62 if aod else 1.0), 255)
+    for i in range(60):
+        if i % 5 == 0:
+            innen = 170 if i == 15 else 160
+            strich(d, i * 6, innen, 205, 4.2, farbe)
+        elif not aod:
+            strich(d, i * 6, 191, 205, 2.3, farbe)
+    if not aod:
+        skala = ImageFont.truetype(ARIAL, 16 * K)
+        for i in range(12):
+            text = "60" if i == 0 else f"{i * 5:02d}"
+            berg_zahl(ebene, i * 30, 220, text, skala, farbe)
+    zahl = ImageFont.truetype(DIN, 31 * K)
+    for stunde in range(1, 13):
+        if stunde == 3:
+            continue
+        x, y = radial(stunde * 30, 142, 0)
+        d.text((x, y), str(stunde), font=zahl, fill=farbe, anchor="mm")
+    text_mitte(ebene, (MITTE, MITTE - 63), "Bergmann", ImageFont.truetype(MENLO, 20 * K), farbe, abstand=2.2)
+    text_mitte(ebene, (MITTE, MITTE - 36), "1956", ImageFont.truetype(MENLO, 18 * K), farbe, abstand=3.0)
+
+
+def berg_hg():
+    y, x = np.mgrid[0:GROESSE, 0:GROESSE]
+    r = np.hypot(x + 0.5 - MITTE, y + 0.5 - MITTE)
+    hell = 21 - 9 * np.clip(r / 233, 0, 1) ** 1.4
+    flaeche = np.stack((hell, hell * 1.02, hell * 1.06), axis=-1)
+    bild = Image.fromarray(flaeche.astype(np.uint8), "RGB").convert("RGBA").resize((GROESSE * K, GROESSE * K), Image.LANCZOS)
+    ebene = leer()
+    berg_ebene(ebene)
+    d = ImageDraw.Draw(ebene)
+    cx, cy = TAG_BERG * K, MITTE * K
+    for b, h, f in ((26, 19, BERG_HELL), (24, 17, (8, 8, 9)), (20.5, 14.5, (120, 120, 118)), (19.5, 13.5, (4, 4, 5))):
+        d.rectangle((cx - b * K, cy - h * K, cx + b * K, cy + h * K), fill=(*f, 255))
+    bild.alpha_composite(schatten(ebene, 0.8, 0.5, (0.5, 0.8)))
+    return klein(bild)
+
+
+def berg_aod(grund=BERG_HELL):
+    bild = Image.new("RGBA", (GROESSE * K, GROESSE * K), (0, 0, 0, 255))
+    ebene = leer()
+    berg_ebene(ebene, aod=True, grund=grund)
+    bild.alpha_composite(ebene)
+    return klein(bild)
+
+
+def berg_ziffer(n):
+    schrift = ImageFont.truetype(DIN, 22 * K)
+    bild = Image.new("RGBA", (14 * K, 26 * K), (0, 0, 0, 0))
+    ImageDraw.Draw(bild).text((7 * K, 13 * K), str(n), font=schrift, fill=(*BERG_HELL, 255), anchor="mm")
+    return klein(bild)
+
+
+def berg_zeiger(laenge, schweif, breit, aod=False):
+    dimm = 0.72 if aod else 1.0
+    hell = (*mischen((0, 0, 0), SILBER_HELL, dimm), 255)
+    dunkel = (*mischen((0, 0, 0), SILBER_DUNKEL, dimm), 255)
+
+    def malen(d, p):
+        lanze = [(-breit * 0.75, 0), (-breit, laenge * 0.72), (0, laenge)]
+        d.polygon([p(0, -schweif), p(-breit * 0.6, -schweif), *(p(x, y) for x, y in lanze)], fill=hell)
+        d.polygon([p(0, -schweif), p(breit * 0.6, -schweif), *(p(-x, y) for x, y in lanze)], fill=dunkel)
+        e = breit * 0.34
+        d.polygon([p(-e, laenge * 0.14), p(e, laenge * 0.14), p(e, laenge * 0.8), p(0, laenge * 0.9), p(-e, laenge * 0.8)], fill=hell)
+
+    return zeiger(laenge, schweif, malen)
+
+
+def berg_sekunde():
+    def malen(d, p):
+        d.polygon([p(-1.6, -44), p(1.6, -44), p(0.5, 208), p(-0.5, 208)], fill=(*SILBER_HELL, 255))
+        d.polygon([p(0, -44), p(1.6, -44), p(0.5, 208), p(0, 208)], fill=(176, 176, 172, 255))
+
+    return zeiger(208, 44, malen)
+
+
+def berg_nabe(aod=False):
+    g = 34
+    bild = Image.new("RGBA", (g * K, g * K), (0, 0, 0, 0))
+    d = ImageDraw.Draw(bild)
+    m = g * K / 2
+    for rad, f in ((12.5, SILBER_DUNKEL), (11, (206, 206, 202)), (6.5, SILBER_DUNKEL), (5.2, SILBER_HELL), (2, SILBER_DUNKEL)):
+        q = rad * K
+        f = mischen((0, 0, 0), f, 0.72) if aod else f
+        d.ellipse((m - q, m - q, m + q, m + q), fill=(*f, 255))
+    return klein(bild)
+
+
+def bergmann():
+    teile = {
+        "h": berg_zeiger(124, 18, 6.2),
+        "m": berg_zeiger(198, 22, 5.2),
+        "s": berg_sekunde(),
+        "nabe": berg_nabe(),
+        "ziffern": [berg_ziffer(i) for i in range(10)],
+    }
+    teile_a = {"h": berg_zeiger(124, 18, 6.2, aod=True), "m": berg_zeiger(198, 22, 5.2, aod=True), "nabe": berg_nabe(aod=True)}
+    schreiben("Bergmann1956", "Bergmann 1956", "Bergmann 1956 für die Watch 3", berg_hg(), berg_aod(), teile, teile_a, TAG_BERG)
+
+
+# ---------- Bergmann 1956 Gold ----------
+
+GOLD_STUFEN = [(0.0, (98, 66, 22)), (0.35, (186, 142, 66)), (0.6, (236, 200, 120)), (0.82, (252, 230, 164)), (1.0, (255, 250, 222))]
+
+
+def metall(ebene, kegel=True):
+    """Färbt die deckenden Teile als helles Gold: Wölbung der Kanten, breite Lichtkeile, feiner Schliff."""
+    a = np.asarray(ebene.getchannel("A"), dtype=float) / 255
+    hoehe = np.asarray(ebene.getchannel("A").filter(ImageFilter.GaussianBlur(0.9 * K)), dtype=float) / 255
+    gy, gx = np.gradient(hoehe)
+    licht = -(gx * LICHT[0] + gy * LICHT[1])
+    licht = np.clip(licht / max(np.percentile(np.abs(licht[a > 0.1]), 97), 1e-6), -1, 1) if (a > 0.1).any() else licht
+    wert = 0.60 + 0.34 * licht
+    y, x = np.mgrid[0:a.shape[0], 0:a.shape[1]]
+    if kegel:
+        theta = np.arctan2(x - a.shape[1] / 2, -(y - a.shape[0] / 2))
+        wert += 0.17 * np.cos(2 * (theta - math.radians(35))) + 0.05 * np.cos(6 * theta + 1.0)
+        streifen = np.random.default_rng(1956).normal(0, 1, 1440)
+        wert += 0.022 * streifen[((theta + math.pi) / (2 * math.pi) * 1440).astype(int) % 1440]
+    else:
+        wert += 0.16 * (0.5 - y / a.shape[0])
+    wert = np.clip(wert, 0, 1)
+    stellen = [t for t, _ in GOLD_STUFEN]
+    rgb = [np.interp(wert, stellen, [f[i] for _, f in GOLD_STUFEN]) for i in range(3)]
+    aus = np.dstack((*rgb, a * 255)).clip(0, 255).astype(np.uint8)
+    return Image.fromarray(aus, "RGBA")
+
+
+def gold_hg():
+    y, x = np.mgrid[0:GROESSE, 0:GROESSE]
+    r = np.hypot(x + 0.5 - MITTE, y + 0.5 - MITTE)
+    hell = 19 - 9 * np.clip(r / 233, 0, 1) ** 1.4
+    flaeche = np.stack((hell * 1.04, hell * 1.0, hell * 0.96), axis=-1)
+    bild = Image.fromarray(flaeche.astype(np.uint8), "RGB").convert("RGBA").resize((GROESSE * K, GROESSE * K), Image.LANCZOS)
+    ebene = leer()
+    berg_ebene(ebene)
+    d = ImageDraw.Draw(ebene)
+    cx, cy = TAG_BERG * K, MITTE * K
+    # Doppelter Goldrahmen: außen, schmale Fuge, innen.
+    rahmen = [(26.5, 19.5, 255), (23.8, 16.8, 0), (21, 14.8, 255), (19.8, 13.6, 0)]
+    for b, h, wert in rahmen:
+        d.rectangle((cx - b * K, cy - h * K, cx + b * K, cy + h * K), fill=(255, 255, 255, wert))
+    bild.alpha_composite(schatten(metall(ebene), 1.0, 0.75, (0.8, 1.2)))
+    return klein(bild)
+
+
+def gold_ziffer(n):
+    schrift = ImageFont.truetype(DIN, 22 * K)
+    bild = Image.new("RGBA", (14 * K, 26 * K), (0, 0, 0, 0))
+    ImageDraw.Draw(bild).text((7 * K, 13 * K), str(n), font=schrift, fill=(255, 255, 255, 255), anchor="mm")
+    return klein(metall(bild, kegel=False))
+
+
+def gold_zeiger(laenge, schweif, breit, aod=False):
+    dimm = 0.72 if aod else 1.0
+    hell = (*mischen((0, 0, 0), (255, 236, 170), dimm), 255)
+    dunkel = (*mischen((0, 0, 0), (176, 132, 62), dimm), 255)
+    glanz = (*mischen((0, 0, 0), (255, 250, 222), dimm), 255)
+    mitte = (*mischen((0, 0, 0), (224, 184, 104), dimm), 255)
+
+    def malen(d, p):
+        lanze = [(-breit * 0.75, 0), (-breit, laenge * 0.72), (0, laenge)]
+        d.polygon([p(0, -schweif), p(-breit * 0.6, -schweif), *(p(x, y) for x, y in lanze)], fill=hell)
+        d.polygon([p(0, -schweif), p(breit * 0.6, -schweif), *(p(-x, y) for x, y in lanze)], fill=dunkel)
+        e = breit * 0.36
+        d.polygon([p(-e, laenge * 0.14), p(e, laenge * 0.14), p(e, laenge * 0.8), p(0, laenge * 0.9), p(-e, laenge * 0.8)], fill=mitte)
+        q = breit * 0.13
+        d.polygon([p(-q, laenge * 0.16), p(q, laenge * 0.16), p(q, laenge * 0.8), p(-q, laenge * 0.8)], fill=glanz)
+
+    return zeiger(laenge, schweif, malen)
+
+
+def gold_sekunde():
+    def malen(d, p):
+        d.polygon([p(-1.6, -44), p(1.6, -44), p(0.5, 208), p(-0.5, 208)], fill=(255, 236, 170, 255))
+        d.polygon([p(0, -44), p(1.6, -44), p(0.5, 208), p(0, 208)], fill=(190, 148, 76, 255))
+
+    return zeiger(208, 44, malen)
+
+
+def gold_nabe(aod=False):
+    g = 34
+    bild = Image.new("RGBA", (g * K, g * K), (0, 0, 0, 0))
+    d = ImageDraw.Draw(bild)
+    m = g * K / 2
+    for rad, f in ((12.5, (128, 92, 38)), (11, (232, 196, 118)), (6.5, (140, 102, 44)), (5.2, (255, 240, 190)), (2, (160, 118, 52))):
+        q = rad * K
+        f = mischen((0, 0, 0), f, 0.72) if aod else f
+        d.ellipse((m - q, m - q, m + q, m + q), fill=(*f, 255))
+    return klein(bild)
+
+
+def bergmann_gold():
+    teile = {
+        "h": gold_zeiger(124, 18, 6.2),
+        "m": gold_zeiger(198, 22, 5.2),
+        "s": gold_sekunde(),
+        "nabe": gold_nabe(),
+        "ziffern": [gold_ziffer(i) for i in range(10)],
+    }
+    teile_a = {"h": gold_zeiger(124, 18, 6.2, aod=True), "m": gold_zeiger(198, 22, 5.2, aod=True), "nabe": gold_nabe(aod=True)}
+    schreiben("Bergmann1956Gold", "Bergmann 1956 Gold", "Bergmann 1956 in Gold für die Watch 3", gold_hg(), berg_aod(grund=(236, 200, 120)), teile, teile_a, TAG_BERG)
+
+
 def main():
     os.makedirs(os.path.join(ORDNER, "dist"), exist_ok=True)
     slava()
     eiger()
     bering()
+    bering_schwarz()
+    bergmann()
+    bergmann_gold()
 
 
 if __name__ == "__main__":
