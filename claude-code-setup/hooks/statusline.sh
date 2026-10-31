@@ -45,7 +45,7 @@ parsed=$(echo "$input" | jq -r '
     def q_5h: ((.quota // {}) | (if is_3p then (."3p-5h" // ."gemini-5h") else (."gemini-5h" // ."3p-5h") end // ."5h" // (to_entries | map(select(.key | test("5h|five|hour|short|daily"; "i"))) | .[0].value) // null));
     def q_d7: ((.quota // {}) | (if is_3p then (."3p-weekly" // ."gemini-weekly") else (."gemini-weekly" // ."3p-weekly") end // ."weekly" // (to_entries | map(select(.key | test("week|7d|seven"; "i"))) | .[0].value) // null));
     def q_used(b): if b == null then "" elif (b.used_percentage // null) != null then (b.used_percentage | tostring) elif (b.remaining_fraction // null) != null then (((1.0 - b.remaining_fraction) * 100) | tostring) elif (b.remaining_percentage // null) != null then ((100.0 - b.remaining_percentage) | tostring) else "" end;
-    def q_resets(b): if b == null then "" elif (b.resets_at // null) != null then (b.resets_at | tostring) elif (b.reset_in_seconds // null) != null then ("+" + (b.reset_in_seconds | floor | tostring)) elif (b.reset_time // "") != "" then ((b.reset_time | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | tostring) // "") else "" end;
+    def q_resets(b): if b == null then "" elif (b.resets_at // null) != null then (b.resets_at | tostring) elif (b.reset_in_seconds // null) != null then ("+" + (b.reset_in_seconds | floor | tostring)) elif (b.reset_time // "") != "" then ((try (b.reset_time | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | tostring) catch "") // "") else "" end;
     [
         (.effort.level // .model.effort // ""),
         (.model.display_name // .model.id // "?"),
@@ -69,10 +69,24 @@ parsed=$(echo "$input" | jq -r '
     ] | join("\u001f")' 2>/dev/null)
 IFS=$'\x1f' read -r effort model cwd_raw ctx_remaining five_h_used_raw five_h_resets_raw week_used_raw week_resets_raw session_id transcript_path ctx_used_pct cost_cents lines_added lines_removed duration_s cli_version perm_mode product_name agy_email <<< "$parsed"
 
+# Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24)
+model="${model/ context)/)}"
+model="${model/ Context)/)}"
+model="${model/ Kontext)/)}"
+# Antigravity-Modellname enthaelt Effort oft schon in Klammern, z.B. "Gemini 4 Argon (Medium)" -> Effort extrahieren (falls leer) und kuerzen
+for _esuf in " (Low)" " (Medium)" " (High)" " (XHigh)" " (Max)" " (low)" " (medium)" " (high)" " (xhigh)" " (max)"; do
+    if [ "${model%$_esuf}" != "$model" ]; then
+        if [ -z "$effort" ]; then
+            _e="${_esuf# (}"
+            effort="${_e%)}"
+        fi
+        model="${model%$_esuf}"
+    fi
+done
+
 if [ -z "$effort" ]; then
-    settings="$HOME/.claude/settings.json"
-    if [ -f "$settings" ]; then
-        effort=$(jq -r '.effortLevel // "?"' "$settings" 2>/dev/null)
+    if [ "$product_name" != "antigravity" ] && [ -f "$HOME/.claude/settings.json" ]; then
+        effort=$(jq -r '.effortLevel // "?"' "$HOME/.claude/settings.json" 2>/dev/null)
     else
         effort="?"
     fi
@@ -81,15 +95,6 @@ fi
 # dort wirft ${v^^} "bad substitution" → effort_upper blieb leer → Statusline
 # zeigte nur das ⚡-Symbol ohne Wert (Frank-Bug-Report 2026-06-11).
 effort_upper=$(printf '%s' "$effort" | tr '[:lower:]' '[:upper:]')
-
-# Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24)
-model="${model/ context)/)}"
-model="${model/ Context)/)}"
-model="${model/ Kontext)/)}"
-# Antigravity-Modellname enthaelt Effort oft schon in Klammern, z.B. "Gemini 4 Argon (Medium)" -> kuerzen, da Effort daneben steht
-for _esuf in " (Low)" " (Medium)" " (High)" " (XHigh)" " (Max)" " (low)" " (medium)" " (high)" " (xhigh)" " (max)"; do
-    model="${model%$_esuf}"
-done
 
 # Windows-Pfad-Normalisierung (Frank-Bug 2026-07-08): cwd kommt auf Windows mit
 # BACKSLASHES (C:\Users\barwa\proggs). Der Pfad wird weiter unten in einen printf-
@@ -237,7 +242,7 @@ if [ -s "$fp_cache" ]; then
         _fp_from_cache=1
     fi
 fi
-if [ "$product_name" = "antigravity" ] && [ -n "$agy_email" ]; then
+if [ "$product_name" = "antigravity" ]; then
     acct_uuid="$agy_email"
 elif [ -f "$claude_json" ] && [ -z "$_fp_from_cache" ]; then
     acct_uuid=$(jq -r '.oauthAccount.accountUuid // .userID // empty' "$claude_json" 2>/dev/null)
@@ -253,7 +258,7 @@ elif [ -n "$acct_uuid" ]; then
         account_fp=$(printf '%s' "$acct_uuid" | shasum -a 256 2>/dev/null | cut -c1-16)
     fi
     [ -z "$account_fp" ] && account_fp="default"
-else
+elif [ "$product_name" != "antigravity" ]; then
     # Fallback: credentials.json-Datei direkt hashen (wie bisher; unveraendert fuer
     # Windows, wo die Datei existiert) — Datei-Hash statt String-Hash beibehalten,
     # damit bestehende Windows-State-Files nicht invalidiert werden.

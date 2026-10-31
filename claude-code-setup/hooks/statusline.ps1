@@ -24,15 +24,6 @@ if ($obj -and $obj.effort -and $obj.effort.level) {
 } elseif ($obj -and $obj.model -and $obj.model.effort) {
     $effort = [string]$obj.model.effort
 }
-if (-not $effort) {
-    try {
-        $settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'
-        $settings = Get-Content -Raw -Encoding UTF8 -Path $settingsPath | ConvertFrom-Json
-        if ($settings.effortLevel) { $effort = [string]$settings.effortLevel }
-    } catch { }
-}
-if (-not $effort) { $effort = '?' }
-$effort_upper = $effort.ToUpper()
 
 # Felder
 $model = '?'
@@ -187,8 +178,20 @@ if ($obj) {
 # Modellname kuerzen: "(1M context)" -> "(1M)" — spart Platz in der Leiste (Frank 2026-05-24).
 # PS -replace ist case-insensitiv, deckt context/Context/Kontext ab.
 $model = $model -replace ' (context|kontext)\)', ')'
-# Antigravity-Modellname enthaelt Effort oft schon in Klammern, z.B. "Gemini 4 Argon (Medium)" -> kuerzen, da Effort daneben steht
-$model = $model -replace ' \((low|medium|high|xhigh|max)\)$', ''
+# Antigravity-Modellname enthaelt Effort oft schon in Klammern, z.B. "Gemini 4 Argon (Medium)" -> Effort extrahieren (falls leer) und kuerzen
+if ($model -match ' \((low|medium|high|xhigh|max)\)$') {
+    if (-not $effort) { $effort = $Matches[1] }
+    $model = $model -replace ' \((low|medium|high|xhigh|max)\)$', ''
+}
+if (-not $effort -and $product_name -ne 'antigravity') {
+    try {
+        $settingsPath = Join-Path $env:USERPROFILE '.claude\settings.json'
+        $settings = Get-Content -Raw -Encoding UTF8 -Path $settingsPath | ConvertFrom-Json
+        if ($settings.effortLevel) { $effort = [string]$settings.effortLevel }
+    } catch { }
+}
+if (-not $effort) { $effort = '?' }
+$effort_upper = $effort.ToUpper()
 
 # Cross-Session-State-Sharing fuer rate_limits (Frank-Bug-Report 2026-05-09 Abend):
 # Jede Claude-Code-Session sieht nur ihre EIGENE letzte API-Antwort. Eine idle
@@ -263,7 +266,7 @@ try {
     $accountFp = 'default'
     $acctUuid = $null
     $claudeJson = Join-Path $env:USERPROFILE '.claude.json'
-    if ($product_name -eq 'antigravity' -and $agy_email) {
+    if ($product_name -eq 'antigravity') {
         $acctUuid = $agy_email
     } elseif (Test-Path $claudeJson) {
         try {
@@ -279,7 +282,7 @@ try {
             $hex = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
             $accountFp = $hex.Substring(0, 16).ToLower()
         } catch { $accountFp = 'default' }
-    } else {
+    } elseif ($product_name -ne 'antigravity') {
         $credFile = Join-Path $env:USERPROFILE '.claude\.credentials.json'
         if (Test-Path $credFile) {
             try {

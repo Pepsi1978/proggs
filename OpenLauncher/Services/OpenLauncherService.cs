@@ -793,7 +793,7 @@ try {
             $agyCfg | Add-Member -NotePropertyName 'toolPermission' -NotePropertyValue 'always-proceed' -Force
         }
         $slCmd = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "' + ($HOME -replace '\\', '/') + '/proggs/claude-code-setup/hooks/statusline.ps1"'
-        $slObj = [ordered]@{ type = 'command'; command = $slCmd; enabled = $true }
+        $slObj = [PSCustomObject]@{ type = 'command'; command = $slCmd; enabled = $true }
         $agyCfg | Add-Member -NotePropertyName 'statusLine' -NotePropertyValue $slObj -Force
         [System.IO.File]::WriteAllText($agySettingsPath, ($agyCfg | ConvertTo-Json -Depth 6), (New-Object System.Text.UTF8Encoding($false)))
     } catch { }

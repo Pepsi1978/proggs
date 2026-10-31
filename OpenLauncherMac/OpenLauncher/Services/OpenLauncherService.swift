@@ -527,7 +527,7 @@ final class OpenLauncherService {
             mkdir -p "$(dirname "$AGY_SETTINGS")" 2>/dev/null
             [ -f "$AGY_SETTINGS" ] || echo '{}' > "$AGY_SETTINGS"
             if command -v jq >/dev/null 2>&1; then
-                jq '.toolPermission = (.toolPermission // "always-proceed") | .statusLine = {"type": "command", "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh", "enabled": true}' "$AGY_SETTINGS" > "$AGY_SETTINGS.tmp" 2>/dev/null && mv -f "$AGY_SETTINGS.tmp" "$AGY_SETTINGS" 2>/dev/null
+                jq '.toolPermission = (.toolPermission // "always-proceed") | .statusLine = {"type": "command", "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh", "enabled": true}' "$AGY_SETTINGS" > "$AGY_SETTINGS.tmp" 2>/dev/null && mv -f "$AGY_SETTINGS.tmp" "$AGY_SETTINGS" 2>/dev/null || rm -f "$AGY_SETTINGS.tmp" 2>/dev/null
             fi
             LOGFILE=\(Shell.singleQuoted(Logger.shared.logPath))
             MODEL=\(Shell.singleQuoted(slug))
